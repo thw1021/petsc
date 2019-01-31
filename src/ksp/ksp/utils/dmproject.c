@@ -1,8 +1,9 @@
 
-#include <petsc/private/petscimpl.h>
+#include <petsc/private/dmimpl.h>
 #include <petscdm.h>     /*I "petscdm.h" I*/
 #include <petscdmplex.h> /*I "petscdmplex.h" I*/
 #include <petscksp.h>    /*I "petscksp.h" I*/
+#include <petscblaslapack.h>
 
 typedef struct _projectConstraintsCtx
 {
@@ -240,5 +241,280 @@ PetscErrorCode DMProjectField(DM dm, PetscReal time, Vec U,
   }
   ierr = DMRestoreLocalVector(dm, &localX);CHKERRQ(ierr);
   if (U != X) {ierr = DMRestoreLocalVector(dm, &localU);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
+/********************* Adaptive Interpolation **************************/
+
+/*
+  For a multigrid cycle, the interpolator $P$ is intended to accurately reproduce "smooth" functions from the
+  coarse space in the fine space, keeping the energy of the interpolant about the same. For the Laplacian on a
+  structured mesh, it is easy to determine what these low-frequency functions are. They are the Fourier modes.
+  However an arbitrary operator $A$ will have different coarse modes that we want to resolve accurately on the
+  fine grid, so that our coarse solve produces a good guess for the fine problem. How do we make sure that our
+  interpolator $P$ can do this?
+
+  We first must decide what we mean by accurate interpolation of some functions. Suppose we know the continuum
+  function $f$ that we care about, and we are only interested in a finite element description of discrete functions.
+  Then the coarse function representing $f$ is given by
+\begin{align*}
+  f^C = \sum_i f^C_i \phi^C_i,
+\end{align*}
+  and similarly the fine grid form is
+\begin{align*}
+  f^F = \sum_i f^F_i \phi^F_i.
+\end{align*}
+  Now we would like the interpolant of the coarse representer to the fine grid to be as close as possible to the
+  fine representer in a least squares sense, meaning we want to solve the minimzation problem
+\begin{align*}
+  \min_{P} \| f^F - P f^C \|_2
+\end{align*}
+Now we can express $P$ as a matrix by looking at the matrix elements $P_{ij} = \HC{\phi^F_i} P \phi^C_j$. Then we have
+\begin{align*}
+    &\HC{\phi^F_i} f^F - \HC{\phi^F_i} P f^C \\
+  = &f^F_i - \sum_j P_{ij} f^C_j
+\end{align*}
+so that our discrete optimization problem is
+\begin{align*}
+  \min_{P_{ij]} \| f^F_i - \sum_j P_{ij} f^C_j \|_2
+\end{align*}
+and we will treat each row of the interpolator as a separate optimization problem. We could allow an arbitrary sparsity
+pattern, or try to determine adaptively, as is done in sparse approximate inverse preconditioning. However, we know the
+supports of the basis functions in finite elements, and thus the naive sparsity pattern from local interpolation can be
+used.
+
+We note here that the BAMG framework of Brannick, et. al. does not use fine and coarse functions spaces, but rather a
+fine point/coarse point division which we will not employ here. Our general PETSc routine should work for both since
+the input would be the checking set (fine basis coefficients or fine space points) and the approximation set (coarse
+basis coefficients in the support or coarse points in the sparsity pattern).
+
+We can easily solve the above problem using QR factorization. However, there are many smooth functions from the coarse
+space that we want interpolated accurately, and a single $f$ would not constrain the values $P_{ij}$ well. Therefore, we
+will use several functions $f_k$ in our minimization,
+\begin{align*}
+    &\min_{P_{ij]} \sum_k w_k \| f^{F,k}_i - \sum_j P_{ij} f^{C,k}_j \|_2 \\
+  = &\min_{P_{ij]} \sum_k \| \sqrt{w_k} f^{F,k}_i - \sqrt{w_k} \sum_j P_{ij} f^{C,k}_j \|_2 \\
+  = &\min_{P_{ij]} \| W^{1/2} \vf^{F}_i - W^{1/2} \vf^{C} p_i \|_2
+\end{align*}
+where
+\begin{align*}
+  W = \begin{pmatrix} w_0 & & \\ & \ddots & \\ & & w_K \end{pmatrix}
+  \vf^{F}_i = \begin{pmatrix} f^{F,0}_i \\ \vdots \\ f^{F,K}_i \end{pmatrix}
+  \vf^{C}   = \begin{pmatrix} f^{C,0}_0 & \cdots & f^{C,0}_n \\ \vdots & \ddots &  \vdots \\ f^{C,K}_0 & \cdots & f^{C,K}_n \end{pmatrix}
+  p_i       = \begin{pmatrix} P_{i0} \\ \vdots \\ P_{in} \end{pmatrix}
+\end{align*}
+or alternatively
+\begin{align*}
+  [W]_{kk}       = w_k
+  [\vf^{F}_i]_k  = f^{F,k}_i
+  [\vf^{C}]_{kj} = f^{C,k}_j
+  [p_i]_j        = P_{ij}
+\end{align*}
+We thus have a standard least-squares problem
+\begin{align*}
+  \min_{P_{ij]} \| b - A x \|_2
+\end{align*}
+where
+\begin{align*}
+  A &= W^{1/2} \vf^{C} \\
+  b = W^{1/2} \vf^{F}_i \\
+  x = p_i
+\end{align*}
+which can be solved using LAPACK.
+
+We will typically perform this optimization on a level $l$ when the change in eigenvalue from level $l+1$ is relatively large, meaning
+\begin{align*}
+  \frac{|\lambda_l - \lambda_{l+1}|}{|\lambda_l|}.
+\end{align*}
+This indicates that the generalized eigenvector associated with that eigenvalue was not adequately represented by $P^l_{l+1}$, and the
+interpolator should be recomputed.
+*/
+PetscErrorCode DMAdaptInterpolator(DM dmc, DM dmf, Mat In, KSP smoother, PetscInt Nc, Vec vf[], Vec vc[], Mat *InAdapt, void *user)
+{
+  Mat            globalA;
+  Vec            tmp, tmp2;
+  PetscScalar   *A, *b, *x, *workscalar;
+  PetscReal     *w, *sing, *workreal, rcond = PETSC_SMALL;
+  PetscBLASInt   M, N, one = 1, irank, lwrk, info;
+  PetscInt       debug = 0, rStart, rEnd, r, maxcols = 0, k;
+  PetscBool      allocVc = PETSC_FALSE;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscLogEventBegin(DM_AdaptInterpolator,dmc,dmf,0,0);CHKERRQ(ierr);
+  ierr = PetscOptionsGetInt(NULL, NULL, "-dm_interpolator_adapt_debug", &debug, NULL);CHKERRQ(ierr);
+  ierr = MatDuplicate(In, MAT_SHARE_NONZERO_PATTERN, InAdapt);CHKERRQ(ierr);
+  ierr = MatGetOwnershipRange(In, &rStart, &rEnd);CHKERRQ(ierr);
+  #if 0
+  ierr = MatGetMaxRowLen(In, &maxcols);CHKERRQ(ierr);
+  #else
+  for (r = rStart; r < rEnd; ++r) {
+    PetscInt           ncols;
+    const PetscInt    *cols;
+    const PetscScalar *vals;
+
+    ierr = MatGetRow(In, r, &ncols, &cols, &vals);CHKERRQ(ierr);
+    maxcols = PetscMax(maxcols, ncols);
+    ierr = MatRestoreRow(In, r, &ncols, &cols, &vals);CHKERRQ(ierr);
+  }
+  #endif
+  if (Nc < maxcols) PetscPrintf(PETSC_COMM_SELF, "The number of input vectors %D < %D the maximum number of column entries\n", Nc, maxcols);
+  for (k = 0; k < Nc; ++k) {
+    char        name[PETSC_MAX_PATH_LEN];
+    const char *prefix;
+
+    ierr = PetscObjectGetOptionsPrefix((PetscObject) smoother, &prefix);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "%sCoarse Vector %D", prefix ? prefix : NULL, k);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) vc[k], name);CHKERRQ(ierr);
+    ierr = VecViewFromOptions(vc[k], NULL, "-dm_adapt_interp_view_coarse");CHKERRQ(ierr);
+    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "%sFine Vector %D", prefix ? prefix : NULL, k);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) vf[k], name);CHKERRQ(ierr);
+    ierr = VecViewFromOptions(vf[k], NULL, "-dm_adapt_interp_view_fine");CHKERRQ(ierr);
+  }
+  ierr = PetscBLASIntCast(3*PetscMin(Nc, maxcols) + PetscMax(2*PetscMin(Nc, maxcols), PetscMax(Nc, maxcols)), &lwrk);CHKERRQ(ierr);
+  ierr = PetscMalloc7(Nc*maxcols, &A, PetscMax(Nc, maxcols), &b, Nc, &w, maxcols, &x, maxcols, &sing, lwrk, &workscalar, 5*PetscMin(Nc, maxcols), &workreal);CHKERRQ(ierr);
+  /* w_k = \frac{\HC{v_k} B_l v_k}{\HC{v_k} A_l v_k} or the inverse Rayleigh quotient, which we calculate using \frac{\HC{v_k} v_k}{\HC{v_k} B^{-1}_l A_l v_k} */
+  ierr = KSPGetOperators(smoother, &globalA, NULL);CHKERRQ(ierr);
+  ierr = DMGetGlobalVector(dmf, &tmp);CHKERRQ(ierr);
+  ierr = DMGetGlobalVector(dmf, &tmp2);CHKERRQ(ierr);
+  for (k = 0; k < Nc; ++k) {
+    PetscScalar vnorm, vAnorm;
+    PetscBool   canMult = PETSC_FALSE;
+    const char *type;
+
+    w[k] = 1.0;
+    ierr = PetscObjectGetType((PetscObject) globalA, &type);CHKERRQ(ierr);
+    if (type) {ierr = MatAssembled(globalA, &canMult);CHKERRQ(ierr);}
+    if (type && canMult) {
+      ierr = VecDot(vf[k], vf[k], &vnorm);CHKERRQ(ierr);
+      ierr = MatMult(globalA, vf[k], tmp);CHKERRQ(ierr);
+#if 0
+      ierr = KSPSolve(smoother, tmp, tmp2);CHKERRQ(ierr);
+      ierr = VecDot(vf[k], tmp2, &vAnorm);CHKERRQ(ierr);
+#else
+      ierr = VecDot(vf[k], tmp, &vAnorm);CHKERRQ(ierr);
+#endif
+      w[k] = PetscRealPart(vnorm) / PetscRealPart(vAnorm);
+    }
+  }
+  ierr = DMRestoreGlobalVector(dmf, &tmp);CHKERRQ(ierr);
+  ierr = DMRestoreGlobalVector(dmf, &tmp2);CHKERRQ(ierr);
+  if (!vc) {
+    allocVc = PETSC_TRUE;
+    ierr = PetscMalloc1(Nc, &vc);CHKERRQ(ierr);
+    for (k = 0; k < Nc; ++k) {
+      ierr = MatMultTranspose(In, vf[k], vc[k]);CHKERRQ(ierr);
+      ierr = DMGetGlobalVector(dmc, &vc[k]);CHKERRQ(ierr);
+    }
+  }
+  /* Solve a LS system for each fine row */
+  for (r = rStart; r < rEnd; ++r) {
+    PetscInt           ncols, c;
+    const PetscInt    *cols;
+    const PetscScalar *vals, *a;
+
+    ierr = MatGetRow(In, r, &ncols, &cols, &vals);CHKERRQ(ierr);
+    for (k = 0; k < Nc; ++k) {
+      /* Need to fit lowest mode exactly */
+      const PetscReal wk = ((ncols == 1) && (k > 0)) ? 0.0 : PetscSqrtReal(w[k]);
+
+      /* b_k = \sqrt{w_k} f^{F,k}_r */
+      ierr = VecGetArrayRead(vf[k], &a);CHKERRQ(ierr);
+      b[k] = wk * a[r-rStart];
+      ierr = VecRestoreArrayRead(vf[k], &a);CHKERRQ(ierr);
+      /* A_{kc} = \sqrt{w_k} f^{C,k}_c */
+      /* TODO Must pull out VecScatter from In, scatter in vc[k] values up front, and access them indirectly just as in MatMult() */
+      ierr = VecGetArrayRead(vc[k], &a);CHKERRQ(ierr);
+      for (c = 0; c < ncols; ++c) {
+        /* This is element (k, c) of A */
+        A[c*Nc+k] = wk * a[cols[c]-rStart];
+      }
+      ierr = VecRestoreArrayRead(vc[k], &a);CHKERRQ(ierr);
+    }
+    ierr = PetscBLASIntCast(Nc,    &M);CHKERRQ(ierr);
+    ierr = PetscBLASIntCast(ncols, &N);CHKERRQ(ierr);
+    if (debug) {
+#if defined(PETSC_USE_COMPLEX)
+      PetscScalar *tmp;
+      PetscInt     j;
+
+      ierr = DMGetWorkArray(dmc, Nc, MPIU_SCALAR, (void *) &tmp);CHKERRQ(ierr);
+      for (j = 0; j < Nc; ++j) tmp[j] = w[j];
+      ierr = DMPrintCellMatrix(r, "Interpolator Row LS weights", Nc, 1, tmp);CHKERRQ(ierr);
+      ierr = DMPrintCellMatrix(r, "Interpolator Row LS matrix", Nc, ncols, A);CHKERRQ(ierr);
+      for (j = 0; j < Nc; ++j) tmp[j] = b[j];
+      ierr = DMPrintCellMatrix(r, "Interpolator Row LS rhs", Nc, 1, tmp);CHKERRQ(ierr);
+      ierr = DMRestoreWorkArray(dmc, Nc, MPIU_SCALAR, (void *) &tmp);CHKERRQ(ierr);
+#else
+      ierr = DMPrintCellMatrix(r, "Interpolator Row LS weights", Nc, 1, w);CHKERRQ(ierr);
+      ierr = DMPrintCellMatrix(r, "Interpolator Row LS matrix", Nc, ncols, A);CHKERRQ(ierr);
+      ierr = DMPrintCellMatrix(r, "Interpolator Row LS rhs", Nc, 1, b);CHKERRQ(ierr);
+#endif
+    }
+#if defined(PETSC_USE_COMPLEX)
+    /* ZGELSS( M, N, NRHS, A, LDA, B, LDB, S, RCOND, RANK, WORK, LWORK, RWORK, INFO) */
+    PetscStackCallBLAS("LAPACKgelss",LAPACKgelss_(&M, &N, &one, A, &M, b, M > N ? &M : &N, sing, &rcond, &irank, workscalar, &lwrk, workreal, &info));
+#else
+    /* DGELSS( M, N, NRHS, A, LDA, B, LDB, S, RCOND, RANK, WORK, LWORK, INFO) */
+    PetscStackCallBLAS("LAPACKgelss",LAPACKgelss_(&M, &N, &one, A, &M, b, M > N ? &M : &N, sing, &rcond, &irank, workscalar, &lwrk, &info));
+#endif
+    if (info < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Bad argument to GELSS");
+    if (info > 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "SVD failed to converge");
+    if (debug) {
+      ierr = PetscPrintf(PETSC_COMM_SELF, "rank %d rcond %g\n", irank, (double) rcond);CHKERRQ(ierr);
+#if defined(PETSC_USE_COMPLEX)
+      {
+        PetscScalar *tmp;
+        PetscInt     j;
+
+        ierr = DMGetWorkArray(dmc, Nc, MPIU_SCALAR, (void *) &tmp);CHKERRQ(ierr);
+        for (j = 0; j < PetscMin(Nc, ncols); ++j) tmp[j] = sing[j];
+        ierr = DMPrintCellMatrix(r, "Interpolator Row LS singular values", PetscMin(Nc, ncols), 1, tmp);CHKERRQ(ierr);
+        ierr = DMRestoreWorkArray(dmc, Nc, MPIU_SCALAR, (void *) &tmp);CHKERRQ(ierr);
+      }
+#else
+      ierr = DMPrintCellMatrix(r, "Interpolator Row LS singular values", PetscMin(Nc, ncols), 1, sing);CHKERRQ(ierr);
+#endif
+      ierr = DMPrintCellMatrix(r, "Interpolator Row LS old P", ncols, 1, vals);CHKERRQ(ierr);
+      ierr = DMPrintCellMatrix(r, "Interpolator Row LS sol", ncols, 1, b);CHKERRQ(ierr);
+    }
+    ierr = MatSetValues(*InAdapt, 1, &r, ncols, cols, b, INSERT_VALUES);CHKERRQ(ierr);
+    ierr = MatRestoreRow(In, r, &ncols, &cols, &vals);CHKERRQ(ierr);
+  }
+  ierr = PetscFree7(A, b, w, x, sing, workscalar, workreal);CHKERRQ(ierr);
+  if (allocVc) {
+    for (k = 0; k < Nc; ++k) {ierr = DMRestoreGlobalVector(dmc, &vc[k]);CHKERRQ(ierr);}
+    ierr = PetscFree(vc);CHKERRQ(ierr);
+  }
+  ierr = MatAssemblyBegin(*InAdapt, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(*InAdapt, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(DM_AdaptInterpolator,dmc,dmf,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMCheckInterpolator(DM dmf, Mat In, PetscInt Nc, Vec vc[], Vec vf[], PetscReal tol)
+{
+  Vec            tmp;
+  PetscReal      norminf, norm2, maxnorminf = 0.0, maxnorm2 = 0.0;
+  PetscInt       k;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGetGlobalVector(dmf, &tmp);CHKERRQ(ierr);
+  ierr = MatViewFromOptions(In, NULL, "-dm_interpolator_adapt_error");CHKERRQ(ierr);
+  for (k = 0; k < Nc; ++k) {
+    ierr = MatMult(In, vc[k], tmp);CHKERRQ(ierr);
+    ierr = VecAXPY(tmp, -1.0, vf[k]);CHKERRQ(ierr);
+    ierr = VecViewFromOptions(vc[k], NULL, "-dm_interpolator_adapt_error");CHKERRQ(ierr);
+    ierr = VecViewFromOptions(vf[k], NULL, "-dm_interpolator_adapt_error");CHKERRQ(ierr);
+    ierr = VecViewFromOptions(tmp, NULL, "-dm_interpolator_adapt_error");CHKERRQ(ierr);
+    ierr = VecNorm(tmp, NORM_INFINITY, &norminf);CHKERRQ(ierr);
+    ierr = VecNorm(tmp, NORM_2, &norm2);CHKERRQ(ierr);
+    maxnorminf = PetscMax(maxnorminf, norminf);
+    maxnorm2   = PetscMax(maxnorm2,   norm2);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject) dmf), "Coarse vec %D ||vf - P vc||_\\infty %g, ||vf - P vc||_2 %g\n", k, norminf, norm2);CHKERRQ(ierr);
+  }
+  ierr = DMRestoreGlobalVector(dmf, &tmp);CHKERRQ(ierr);
+  if (maxnorm2 > tol) SETERRQ2(PetscObjectComm((PetscObject) dmf), PETSC_ERR_ARG_WRONG, "max_k ||vf_k - P vc_k||_2 %g > tol %g", maxnorm2, tol);
   PetscFunctionReturn(0);
 }
