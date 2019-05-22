@@ -455,6 +455,15 @@ static PetscErrorCode DMGetCompatibility_Stag(DM dm,DM dm2,PetscBool *compatible
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode DMHasCreateInjection_Stag(DM dm, PetscBool *flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
+  PetscValidPointer(flg,2);
+  *flg = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
 /*
 Note there are several orderings in play here.
 In all cases, non-element dof are associated with the element that they are below/left/behind, and the order in 2D proceeds vertex/bottom edge/left edge/element (with all dof on each together).
@@ -735,6 +744,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Stag(DM dm)
   dm->ops->createinterpolation      = NULL;
   dm->ops->createlocalvector        = DMCreateLocalVector_Stag;
   dm->ops->creatematrix             = DMCreateMatrix_Stag;
+  dm->ops->hascreateinjection       = DMHasCreateInjection_Stag;
   dm->ops->destroy                  = DMDestroy_Stag;
   dm->ops->getneighbors             = DMGetNeighbors_Stag;
   dm->ops->globaltolocalbegin       = DMGlobalToLocalBegin_Stag;
