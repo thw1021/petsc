@@ -54,9 +54,17 @@ PETSC_INTERN PetscErrorCode DMStagInitialize(DMBoundaryType,DMBoundaryType,DMBou
 PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM);
 PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM);
 PETSC_INTERN PetscErrorCode DMSetUp_Stag_3d(DM);
+PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation1d_1_0_Private(DM,DM,Mat);
+PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation1d_1_1_Private(DM,DM,Mat);
+PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation2d_0_1_0_Private(DM,DM,Mat);
+PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation2d_0_1_1_Private(DM,DM,Mat);
 PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_1d(DM);
 PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_2d(DM);
 PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_3d(DM);
+PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_1_0_Private(DM,DM,Mat);
+PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_1_1_Private(DM,DM,Mat);
+PETSC_INTERN PetscErrorCode DMStagPopulateRestriction2d_0_1_0_Private(DM,DM,Mat);
+PETSC_INTERN PetscErrorCode DMStagPopulateRestriction2d_0_1_1_Private(DM,DM,Mat);
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_1d(DM,PetscReal,PetscReal);
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_2d(DM,PetscReal,PetscReal,PetscReal,PetscReal);
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_3d(DM,PetscReal,PetscReal,PetscReal,PetscReal,PetscReal,PetscReal);
