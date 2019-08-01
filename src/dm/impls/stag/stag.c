@@ -7,6 +7,223 @@
 #include <petsc/private/dmstagimpl.h>
 #include <petscsf.h>
 
+static PetscErrorCode DMCreateFieldDecomposition_Stag(DM dm, PetscInt *len,char ***namelist, IS **islist, DM **dmlist)
+{
+  PetscErrorCode ierr;
+  PetscInt f0,f1,f2,f3,dof0,dof1,dof2,dof3,n_entries,k,d,cnt,_len,dim;
+  DMStagStencil *stencil0,*stencil1,*stencil2,*stencil3;
+
+  ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
+  ierr = DMStagGetDOF(dm,&dof0,&dof1,&dof2,&dof3);CHKERRQ(ierr);
+  ierr = DMStagGetEntriesPerElement(dm,&n_entries);CHKERRQ(ierr);
+
+  f0 = f1 = f2 = f3 = 1;
+  if (dim == 2) {
+    f1 = 2;
+  } else if (dim == 3) {
+    f1 = 3;
+    f2 = 3;
+  }
+
+  ierr = PetscCalloc1(f0*dof0,&stencil0);CHKERRQ(ierr);
+  ierr = PetscCalloc1(f1*dof1,&stencil1);CHKERRQ(ierr);
+  ierr = PetscCalloc1(f2*dof2,&stencil2);CHKERRQ(ierr);
+  ierr = PetscCalloc1(f3*dof3,&stencil3);CHKERRQ(ierr);
+  for (k=0; k<f0; k++) {
+    for (d=0; d<dof0; d++) {
+      stencil0[dof0*k + d].i = 0; stencil0[dof0*k + d].j = 0; stencil0[dof0*k + d].j = 0;
+    }
+  }
+  for (k=0; k<f1; k++) {
+    for (d=0; d<dof1; d++) {
+      stencil1[dof1*k + d].i = 0; stencil1[dof1*k + d].j = 0; stencil1[dof1*k + d].j = 0;
+    }
+  }
+  for (k=0; k<f2; k++) {
+    for (d=0; d<dof2; d++) {
+      stencil2[dof2*k + d].i = 0; stencil2[dof2*k + d].j = 0; stencil2[dof2*k + d].j = 0;
+    }
+  }
+  for (k=0; k<f3; k++) {
+    for (d=0; d<dof3; d++) {
+      stencil3[dof3*k + d].i = 0; stencil3[dof3*k + d].j = 0; stencil3[dof3*k + d].j = 0;
+    }
+  }
+
+  _len = 0;
+  if (dof0 != 0) { _len++; }
+  if (dof1 != 0) { _len++; }
+  if (dof2 != 0) { _len++; }
+  if (dof3 != 0) { _len++; }
+  if (len) { *len = _len; }
+
+  if (islist) {
+    ierr = PetscMalloc1(_len,islist);CHKERRQ(ierr);
+
+    if (dim == 1) {
+      SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"1D is currently supported but completely untested");
+      /* vertex, element */
+      for (d=0; d<dof0; d++) {
+        stencil0[d].loc = DMSTAG_LEFT;
+        stencil0[d].c = d;
+      }
+      for (d=0; d<dof1; d++) {
+        stencil1[d].loc = DMSTAG_ELEMENT;
+        stencil1[d].c = d;
+      }
+    } else if (dim == 2) {
+      /* vertex, edge(down,left), element */
+      for (d=0; d<dof0; d++) {
+        stencil0[d].loc = DMSTAG_DOWN_LEFT;
+        stencil0[d].c = d;
+      }
+      /* edge */
+      cnt = 0;
+      for (d=0; d<dof1; d++) {
+        stencil1[cnt].loc = DMSTAG_DOWN;  stencil1[cnt].c = d;
+        cnt++;
+      }
+      for (d=0; d<dof1; d++) {
+        stencil1[cnt].loc = DMSTAG_LEFT;  stencil1[cnt].c = d;
+        cnt++;
+      }
+      /* element */
+      for (d=0; d<dof2; d++) {
+        stencil2[d].loc = DMSTAG_ELEMENT;
+        stencil2[d].c = d;
+      }
+    } else if (dim == 3) {
+      /* vertex, edge(down,left), face(down,left,back), element */
+      SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"3D is currently supported but completely untested");
+      for (d=0; d<dof0; d++) {
+        stencil0[d].loc = DMSTAG_BACK_DOWN_LEFT;
+        stencil0[d].c = d;
+      }
+      /* edges */
+      cnt = 0;
+      for (d=0; d<dof1; d++) {
+        stencil1[cnt].loc = DMSTAG_BACK_DOWN;  stencil1[cnt].c = d;
+        cnt++;
+      }
+      for (d=0; d<dof1; d++) {
+        stencil1[cnt].loc = DMSTAG_BACK_LEFT;  stencil1[cnt].c = d;
+        cnt++;
+      }
+      for (d=0; d<dof1; d++) {
+        stencil1[cnt].loc = DMSTAG_DOWN_LEFT;  stencil1[cnt].c = d;
+        cnt++;
+      }
+      /* faces */
+      cnt = 0;
+      for (d=0; d<dof2; d++) {
+        stencil2[cnt].loc = DMSTAG_BACK;  stencil1[cnt].c = d;
+        cnt++;
+      }
+      for (d=0; d<dof2; d++) {
+        stencil2[cnt].loc = DMSTAG_DOWN;  stencil1[cnt].c = d;
+        cnt++;
+      }
+      for (d=0; d<dof2; d++) {
+        stencil2[cnt].loc = DMSTAG_LEFT;  stencil1[cnt].c = d;
+        cnt++;
+      }
+      /* elements */
+      for (d=0; d<dof3; d++) {
+        stencil3[d].loc = DMSTAG_ELEMENT;
+        stencil3[d].c = d;
+      }
+    }
+
+    cnt = 0;
+    if (dof0 != 0) {
+      ierr = DMStagCreateISFromStencils(dm,f0*dof0,stencil0,&(*islist)[cnt]);CHKERRQ(ierr);CHKERRQ(ierr);
+      cnt++;
+    }
+    if (dof1 != 0) {
+      ierr = DMStagCreateISFromStencils(dm,f1*dof1,stencil1,&(*islist)[cnt]);CHKERRQ(ierr);CHKERRQ(ierr);
+      cnt++;
+    }
+    if (dof2 != 0) {
+      ierr = DMStagCreateISFromStencils(dm,f2*dof2,stencil2,&(*islist)[cnt]);CHKERRQ(ierr);CHKERRQ(ierr);
+      cnt++;
+    }
+    if (dof3 != 0) {
+      ierr = DMStagCreateISFromStencils(dm,f3*dof3,stencil3,&(*islist)[cnt]);CHKERRQ(ierr);CHKERRQ(ierr);
+      cnt++;
+    }
+  }
+
+  if (namelist) {
+    ierr = PetscMalloc1(_len,namelist);CHKERRQ(ierr);
+    cnt = 0;
+    if (dim == 1) {
+      if (dof0 != 0) {
+        PetscStrallocpy("vertex",&(*namelist)[cnt]);
+        cnt++;
+      }
+      if (dof1 != 0) {
+        PetscStrallocpy("element",&(*namelist)[cnt]);
+        cnt++;
+      }
+    } else if (dim == 2) {
+      if (dof0 != 0) {
+        PetscStrallocpy("vertex",&(*namelist)[cnt]);
+        cnt++;
+      }
+      if (dof1 != 0) {
+        PetscStrallocpy("face",&(*namelist)[cnt]);
+        cnt++;
+      }
+      if (dof2 != 0) {
+        PetscStrallocpy("element",&(*namelist)[cnt]);
+        cnt++;
+      }
+    } else if (dim == 3) {
+      if (dof0 != 0) {
+        PetscStrallocpy("vertex",&(*namelist)[cnt]);
+        cnt++;
+      }
+      if (dof1 != 0) {
+        PetscStrallocpy("edge",&(*namelist)[cnt]);
+        cnt++;
+      }
+      if (dof2 != 0) {
+        PetscStrallocpy("face",&(*namelist)[cnt]);
+        cnt++;
+      }
+      if (dof3 != 0) {
+        PetscStrallocpy("element",&(*namelist)[cnt]);
+        cnt++;
+      }
+    }
+  }
+  if (dmlist) {
+    ierr = PetscMalloc1(_len,dmlist);CHKERRQ(ierr);
+    cnt = 0;
+    if (dof0 != 0) {
+      ierr = DMStagCreateCompatibleDMStag(dm,dof0,0,0,0,&(*dmlist)[cnt]);CHKERRQ(ierr);
+      cnt++;
+    }
+    if (dof1 != 0) {
+      ierr = DMStagCreateCompatibleDMStag(dm,0,dof1,0,0,&(*dmlist)[cnt]);CHKERRQ(ierr);
+      cnt++;
+    }
+    if (dof2 != 0) {
+      ierr = DMStagCreateCompatibleDMStag(dm,0,0,dof2,0,&(*dmlist)[cnt]);CHKERRQ(ierr);
+      cnt++;
+    }
+    if (dof3 != 0) {
+      ierr = DMStagCreateCompatibleDMStag(dm,0,0,0,dof3,&(*dmlist)[cnt]);CHKERRQ(ierr);
+      cnt++;
+    }
+  }
+  ierr = PetscFree(stencil0);CHKERRQ(ierr);
+  ierr = PetscFree(stencil1);CHKERRQ(ierr);
+  ierr = PetscFree(stencil2);CHKERRQ(ierr);
+  ierr = PetscFree(stencil3);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode DMClone_Stag(DM dm,DM *newdm)
 {
   PetscErrorCode ierr;
@@ -488,5 +705,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_Stag(DM dm)
   dm->ops->clone               = DMClone_Stag;
   dm->ops->view                = DMView_Stag;
   dm->ops->getcompatibility    = DMGetCompatibility_Stag;
+  dm->ops->createfielddecomposition = DMCreateFieldDecomposition_Stag;
   PetscFunctionReturn(0);
 }
