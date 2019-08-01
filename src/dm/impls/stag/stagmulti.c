@@ -348,7 +348,7 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation2d_0_1_1_Private(DM dmc,D
 
 PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_1_0_Private(DM dmc,DM dmf,Mat A)
 {
-  PetscInt exf,startexf,nexf,nextraxf,startexc;
+  PetscInt exf,startexf,nexf,nextraxf,startexc,Nexf;
 
   PetscErrorCode ierr;
 
@@ -358,22 +358,23 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_1_0_Private(DM dmc,DM dm
 
   ierr = DMStagGetCorners(dmf,&startexf,NULL,NULL,&nexf,NULL,NULL,&nextraxf,NULL,NULL);CHKERRQ(ierr);
   ierr = DMStagGetCorners(dmc,&startexc,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+  ierr = DMStagGetGlobalSizes(dmf,&Nexf,NULL,NULL);CHKERRQ(ierr);
   for (exf=startexf; exf<startexf+nexf+nextraxf; ++exf) {
     PetscInt exc,exf_local;
     exf_local = exf-startexf;
     exc = startexc + exf_local/2;
     /* "even" vertices contribute to the overlying coarse vertex, odd vertices to the two adjacent */
     if (exf_local % 2 == 0) {
-      DMStagStencil     colf,rowc;
-      PetscInt          ir,ic;
-      const PetscScalar half = 0.5;
+      DMStagStencil colf,rowc;
+      PetscInt      ir,ic;
+      PetscScalar   weight = 0.5;
       colf.i = exf; colf.c = 0; colf.loc = DMSTAG_LEFT;
       rowc.i = exc; rowc.c = 0; rowc.loc = DMSTAG_LEFT;
       ierr = DMStagStencilToIndexLocal(dmc,1,&rowc,&ir);CHKERRQ(ierr);
       ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
-      ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&half,INSERT_VALUES);CHKERRQ(ierr);
+      weight = (exf == Nexf || exf == 0) ? 0.75 : 0.5; /* Assume a Neuman-type condition */
+      ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&weight,INSERT_VALUES);CHKERRQ(ierr);
     } else {
-      // TODO BUG this needs to have a special case at the boundary, as in 2d
       DMStagStencil     colf,rowc[2];
       PetscInt          ic,ir[2];
       const PetscScalar quarters[2] = {0.25,0.25};
@@ -390,7 +391,7 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_1_0_Private(DM dmc,DM dm
 
 PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_1_1_Private(DM dmc,DM dmf,Mat A)
 {
-  PetscInt exf,startexf,nexf,nextraxf,startexc;
+  PetscInt exf,startexf,nexf,nextraxf,startexc,Nexf;
 
   PetscErrorCode ierr;
 
@@ -400,6 +401,7 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_1_1_Private(DM dmc,DM dm
 
   ierr = DMStagGetCorners(dmf,&startexf,NULL,NULL,&nexf,NULL,NULL,&nextraxf,NULL,NULL);CHKERRQ(ierr);
   ierr = DMStagGetCorners(dmc,&startexc,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+  ierr = DMStagGetGlobalSizes(dmf,&Nexf,NULL,NULL);CHKERRQ(ierr);
   for (exf=startexf; exf<startexf+nexf+nextraxf; ++exf) {
     PetscInt exc,exf_local;
     exf_local = exf-startexf;
@@ -416,16 +418,16 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_1_1_Private(DM dmc,DM dm
     }
     /* "even" vertices contribute to the overlying coarse vertex, odd vertices to the two adjacent */
     if (exf_local % 2 == 0) {
-      DMStagStencil     colf,rowc;
-      PetscInt          ir,ic;
-      const PetscScalar half = 0.5;
+      DMStagStencil colf,rowc;
+      PetscInt      ir,ic;
+      PetscScalar   weight;
       colf.i = exf; colf.c = 0; colf.loc = DMSTAG_LEFT;
       rowc.i = exc; rowc.c = 0; rowc.loc = DMSTAG_LEFT;
       ierr = DMStagStencilToIndexLocal(dmc,1,&rowc,&ir);CHKERRQ(ierr);
       ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
-      ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&half,INSERT_VALUES);CHKERRQ(ierr);
+      weight = (exf == Nexf || exf == 0) ? 0.75 : 0.5; /* Assume a Neuman-type condition */
+      ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&weight,INSERT_VALUES);CHKERRQ(ierr);
     } else {
-      // TODO BUG this needs to have a special case at the boundary, as in 2d
       DMStagStencil     colf,rowc[2];
       PetscInt          ic,ir[2];
       const PetscScalar quarters[2] = {0.25,0.25};
