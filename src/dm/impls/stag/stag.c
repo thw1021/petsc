@@ -284,7 +284,44 @@ static PetscErrorCode DMCoarsen_Stag(DM dm,MPI_Comm comm,DM *dmc)
     }
   }
   ierr = DMSetUp(*dmc);CHKERRQ(ierr);
-  // TODO Inject (?) coordinates
+  /* For now, we use a special DMStagInterpolate() function to coarsen coordinates */
+  if (dm->coordinates) {
+    DM cdm,cdmc;
+    PetscBool isstag,isprod;
+    Vec coordinatesLocal;
+
+    ierr = DMGetCoordinateDM(dm,&cdm);CHKERRQ(ierr);
+    ierr = PetscObjectTypeCompare((PetscObject)cdm,DMSTAG,&isstag);CHKERRQ(ierr);
+    ierr = PetscObjectTypeCompare((PetscObject)cdm,DMPRODUCT,&isprod);CHKERRQ(ierr);
+    if (isstag) {
+      //Mat II;
+      /* force creation of coordinates (global/local) on coarse DM */
+      ierr = DMStagSetUniformCoordinatesExplicit(*dmc,0.0,1.0,0.0,1.0,0.0,1.0);CHKERRQ(ierr);
+      ierr = DMGetCoordinateDM(*dmc,&cdmc);CHKERRQ(ierr);
+      //ierr = DMCreateInterpolation(cdmc,cdm,&II,NULL);CHKERRQ(ierr);
+      //ierr = MatRestrict(II,dm->coordinates,(*dmc)->coordinates);CHKERRQ(ierr);
+      //ierr = MatDestroy(&II);CHKERRQ(ierr);
+      ierr = DMStagInterpolate(cdm,dm->coordinates,cdmc,(*dmc)->coordinates);CHKERRQ(ierr);
+      /* global-to-local for coordinates? */
+      ierr = DMGetCoordinatesLocal(*dmc,&coordinatesLocal);CHKERRQ(ierr);
+      ierr = DMGlobalToLocal(cdmc,(*dmc)->coordinates,INSERT_VALUES,coordinatesLocal);CHKERRQ(ierr);
+    } else if (isprod) {
+      PetscInt dim,d;
+      /* force creation of coordinates (global/local) on coarse DM */
+      ierr = DMStagSetUniformCoordinatesProduct(*dmc,0.0,1.0,0.0,1.0,0.0,1.0);CHKERRQ(ierr);
+      ierr = DMGetCoordinateDM(*dmc,&cdmc);CHKERRQ(ierr);
+      /* global-to-local for coordinates? */
+      ierr = DMGetDimension(*dmc,&dim);CHKERRQ(ierr);
+      for (d=0; d<dim; d++) {
+        DM prod,cprod;
+        ierr = DMProductGetDM(cdmc,d,&prod);CHKERRQ(ierr);
+        ierr = DMGetCoordinateDM(prod,&cprod);CHKERRQ(ierr);
+        ierr = DMGetCoordinatesLocal(prod,&coordinatesLocal);CHKERRQ(ierr);
+        ierr = DMGlobalToLocal(cprod,prod->coordinates,INSERT_VALUES,coordinatesLocal);CHKERRQ(ierr);
+      }
+      SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMPRODUCT coordinates not supported");
+    } else SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unknown coordinate DM type");
+  }
   PetscFunctionReturn(0);
 }
 
@@ -314,7 +351,7 @@ static PetscErrorCode DMRefine_Stag(DM dm,MPI_Comm comm,DM *dmc)
     }
   }
   ierr = DMSetUp(*dmc);CHKERRQ(ierr);
-  // TODO (?) Inject coordinates
+  /* Note: For now, we do not refine coordinates */
   PetscFunctionReturn(0);
 }
 

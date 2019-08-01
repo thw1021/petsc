@@ -51,6 +51,124 @@ PETSC_EXTERN PetscErrorCode DMStagCreate2d(MPI_Comm comm, DMBoundaryType bndx,DM
   PetscFunctionReturn(0);
 }
 
+PETSC_INTERN PetscErrorCode DMStagInterpolate_2d(DM dmf,Vec xf,DM dmc,Vec xc)
+{
+  PetscErrorCode ierr;
+  PetscScalar    ***LA_xf,***LA_xc;
+  PetscInt       i,j,si,sj,ni,nj,ii,jj;
+  Vec            xf_l,xc_l;
+  PetscInt       d,dof0,dof1,dof2,idx;
+
+  ierr = DMStagGetDOF(dmf,&dof0,&dof1,&dof2,NULL);CHKERRQ(ierr);
+  ierr = VecZeroEntries(xc);CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(dmf,&xf_l);CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(dmc,&xc_l);CHKERRQ(ierr);
+
+  ierr = DMGlobalToLocalBegin(dmf,xf,INSERT_VALUES,xf_l);CHKERRQ(ierr);
+  ierr = DMGlobalToLocalEnd(dmf,xf,INSERT_VALUES,xf_l);CHKERRQ(ierr);
+  ierr = DMStagGetCorners(dmc,&si,&sj,NULL,&ni,&nj,NULL,NULL,NULL,NULL); CHKERRQ(ierr);
+  ierr = DMStagVecGetArrayDOF(dmf,xf_l,&LA_xf); CHKERRQ(ierr);
+  ierr = DMStagVecGetArrayDOF(dmc,xc_l,&LA_xc); CHKERRQ(ierr);
+  // vertices
+  if (dof0 != 0) {
+    for (j=sj; j<sj+nj; j++) {
+      for (i=si; i<si+ni; i++) {
+
+        for (d=0; d<dof0; d++) {
+          PetscScalar v[4];
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_DOWN_LEFT,d,&idx); CHKERRQ(ierr);
+          v[0] = LA_xf[2*j+0][2*i+0][idx];
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_DOWN_RIGHT,d,&idx); CHKERRQ(ierr);
+          v[1] = LA_xf[2*j+0][2*i+1][idx];
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_UP_LEFT,d,&idx); CHKERRQ(ierr);
+          v[2] = LA_xf[2*j+1][2*i+0][idx];
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_UP_RIGHT,d,&idx); CHKERRQ(ierr);
+          v[3] = LA_xf[2*j+1][2*i+1][idx];
+
+          ierr = DMStagGetLocationSlot(dmc,DMSTAG_DOWN_LEFT,d,&idx); CHKERRQ(ierr);
+          LA_xc[j][i][idx] = v[0];
+          ierr = DMStagGetLocationSlot(dmc,DMSTAG_DOWN_RIGHT,d,&idx); CHKERRQ(ierr);
+          LA_xc[j][i][idx] = v[1];
+          ierr = DMStagGetLocationSlot(dmc,DMSTAG_UP_LEFT,d,&idx); CHKERRQ(ierr);
+          LA_xc[j][i][idx] = v[2];
+          ierr = DMStagGetLocationSlot(dmc,DMSTAG_UP_RIGHT,d,&idx); CHKERRQ(ierr);
+          LA_xc[j][i][idx] = v[3];
+        }
+
+      }
+    }
+  }
+
+  // edges
+  if (dof1 != 0) {
+    for (j=sj; j<sj+nj; j++) {
+      for (i=si; i<si+ni; i++) {
+
+        for (d=0; d<dof1; d++) {
+          PetscScalar v[] = {0,0,0,0};
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_DOWN,d,&idx); CHKERRQ(ierr);
+          v[0] += LA_xf[2*j+0][2*i+0][idx];
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_DOWN,d,&idx); CHKERRQ(ierr);
+          v[0] += LA_xf[2*j+0][2*i+1][idx];
+
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_LEFT,d,&idx); CHKERRQ(ierr);
+          v[1] += LA_xf[2*j+0][2*i+0][idx];
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_LEFT,d,&idx); CHKERRQ(ierr);
+          v[1] += LA_xf[2*j+1][2*i+0][idx];
+
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_RIGHT,d,&idx); CHKERRQ(ierr);
+          v[2] += LA_xf[2*j+0][2*i+1][idx];
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_RIGHT,d,&idx); CHKERRQ(ierr);
+          v[2] += LA_xf[2*j+1][2*i+1][idx];
+
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_UP,d,&idx); CHKERRQ(ierr);
+          v[3] += LA_xf[2*j+1][2*i+0][idx];
+          ierr = DMStagGetLocationSlot(dmf,DMSTAG_UP,d,&idx); CHKERRQ(ierr);
+          v[3] += LA_xf[2*j+1][2*i+1][idx];
+
+          ierr = DMStagGetLocationSlot(dmc,DMSTAG_DOWN,d,&idx); CHKERRQ(ierr);
+          LA_xc[j][i][idx] = 0.5*v[0];
+          ierr = DMStagGetLocationSlot(dmc,DMSTAG_LEFT,d,&idx); CHKERRQ(ierr);
+          LA_xc[j][i][idx] = 0.5*v[1];
+          ierr = DMStagGetLocationSlot(dmc,DMSTAG_RIGHT,d,&idx); CHKERRQ(ierr);
+          LA_xc[j][i][idx] = 0.5*v[2];
+          ierr = DMStagGetLocationSlot(dmc,DMSTAG_UP,d,&idx); CHKERRQ(ierr);
+          LA_xc[j][i][idx] = 0.5*v[3];
+        }
+
+      }
+    }
+  }
+
+  // elements
+  if (dof2 != 0) {
+    for (j=sj; j<sj+nj; j++) {
+      for (i=si; i<si+ni; i++) {
+
+        for (d=0; d<dof2; d++) {
+          PetscScalar sum = 0.0;
+          for (jj=0; jj<2; jj++) {
+            for (ii=0; ii<2; ii++) {
+              ierr = DMStagGetLocationSlot(dmf,DMSTAG_ELEMENT,d,&idx); CHKERRQ(ierr);
+              sum += LA_xf[2*j+jj][2*i+ii][idx];
+            }
+          }
+          ierr = DMStagGetLocationSlot(dmc,DMSTAG_ELEMENT,d,&idx); CHKERRQ(ierr);
+          LA_xc[j][i][idx] = 0.25 * sum;
+        }
+
+      }
+    }
+  }
+  ierr = DMStagVecRestoreArrayDOF(dmf,xf_l,&LA_xf); CHKERRQ(ierr);
+  ierr = DMStagVecRestoreArrayDOF(dmc,xc_l,&LA_xc); CHKERRQ(ierr);
+  ierr = DMLocalToGlobalBegin(dmc,xc_l,INSERT_VALUES,xc);CHKERRQ(ierr);
+  ierr = DMLocalToGlobalEnd(dmc,xc_l,INSERT_VALUES,xc);CHKERRQ(ierr);
+  ierr = VecDestroy(&xf_l);CHKERRQ(ierr);
+  ierr = VecDestroy(&xc_l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_2d(DM dm,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax)
 {
   PetscErrorCode ierr;

@@ -54,6 +54,8 @@ PETSC_INTERN PetscErrorCode DMStagInitialize(DMBoundaryType,DMBoundaryType,DMBou
 PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM);
 PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM);
 PETSC_INTERN PetscErrorCode DMSetUp_Stag_3d(DM);
+PETSC_INTERN PetscErrorCode DMStagInterpolate_2d(DM,Vec,DM,Vec);
+PETSC_INTERN PetscErrorCode DMStagInterpolate(DM,Vec,DM,Vec);
 PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation1d_1_0_Private(DM,DM,Mat);
 PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation1d_1_1_Private(DM,DM,Mat);
 PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation2d_0_1_0_Private(DM,DM,Mat);
