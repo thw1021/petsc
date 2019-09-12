@@ -521,10 +521,10 @@ int main(int argc,char **args)
    test: 
      args: -pc_asm_type basic -ksp_type mpcg -ksp_norm_type natural 
      suffix: asm_mpcg
-     output_file: output/ex71_asm_mpcg
+     output_file: output/ex71_asm_mpcg.out
    test:
      args: -pc_asm_type restrict -ksp_type mpomin -ksp_norm_type unpreconditioned
      suffix: rasm_mpomin
-     output_file: output/ex71_rasm_mpomin
+     output_file: output/ex71_rasm_mpomin.out
 
 TEST*/

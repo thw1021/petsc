@@ -37,11 +37,11 @@ typedef struct {
   PetscBool       sort_indices;        /* flag to sort subdomain indices */
   PetscBool       dm_subdomains;       /* whether DM is allowed to define subdomains */
   PetscInt        use_kernel;          /* used in multiprecond 0 no kernel, 1 1 vector/subdomain ... ; should be an enum in the end*/
-  PetscScalar     smallAbs;          /* criterion for svd truncation */
-  PCCompositeType loctype;        /* the type of composition for local solves */
+  PetscReal       smallAbs;            /* criterion for svd truncation */
+  PCCompositeType loctype;             /* the type of composition for local solves */
   MatType         sub_mat_type;        /* the type of Mat used for subdomain solves (can be MATSAME or NULL) */
   /* For multiplicative solve */
-  Mat             *lmats;               /* submatrices for overlapping multiplicative (process) subdomain */
+  Mat             *lmats;              /* submatrices for overlapping multiplicative (process) subdomain */
 } PC_ASM;
 
 static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
@@ -542,7 +542,7 @@ static PetscErrorCode PCApply_ASM(PC pc,Vec x,Vec y)
 }
 
 /*@C
-    PCApplyMP_ASM - Each block returns one search directions (instead of just one direction for all blocks).
+    PCApplyMP_ASM - Each block returns one search direction (instead of just one direction for all blocks).
 
     Input Parameters:
     pc - the preconditioner context
@@ -571,13 +571,14 @@ static PetscErrorCode PCApplyMP_ASM(PC pc, Vec x, Mat Z)
   PetscMPIInt    rank,size;
   ScatterMode    forward = SCATTER_FORWARD,reverse = SCATTER_REVERSE;
   const PetscInt *idcol,*idrows;
-  PetscScalar    *Vvalues,*arrayS,dummy;
+  PetscScalar    *Vvalues,dummy,*arraySS;
+  PetscReal      *arraySR;
   Vec            y; 
   Vec            multiplicity,locmultiplicity;
   Mat            Amat,Pmat,coarseR;
   MatNullSpace   nullsp;
   PetscMPIInt    *sd_by_pro, nn;
-  PetscInt       start,end,first,k,total,thecol,nullspcol;
+  PetscInt       start,end,first,k,total,thecol,nullspcol,coarsesize;
   PetscInt       VecGloSize,VecLocSize;
   Mat_SeqDense   *matU,*matVt,*matcoarseR;
   Mat            W,coarse_mat;
@@ -586,6 +587,9 @@ static PetscErrorCode PCApplyMP_ASM(PC pc, Vec x, Mat Z)
   IS             glo_is;
   PetscBLASInt   info;
   PetscBool      has_cst ;
+#if defined(PETSC_USE_COMPLEX)
+  PetscReal      *rwork;
+#endif
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)pc), &size);CHKERRQ(ierr);
@@ -646,10 +650,13 @@ static PetscErrorCode PCApplyMP_ASM(PC pc, Vec x, Mat Z)
       const Vec *nullvecs ;
       ierr = MatNullSpaceGetVecs(nullsp,&has_cst,&nullspcol,&nullvecs);CHKERRQ(ierr);
       nullspcol += has_cst ;
+      coarsesize = total*nullspcol;
 
       ierr = VecGetSize(multiplicity,&VecGloSize);CHKERRQ(ierr);
       ierr = VecGetLocalSize(multiplicity,&VecLocSize);CHKERRQ(ierr);
-      ierr = MatCreateAIJ(PetscObjectComm((PetscObject)pc), VecLocSize, osm->n_local_true * nullspcol, VecGloSize, total*nullspcol, 0, NULL, 0, NULL, &osm->locnullsp);CHKERRQ(ierr);
+      
+
+      ierr = MatCreateAIJ(PetscObjectComm((PetscObject)pc), VecLocSize, osm->n_local_true * nullspcol, VecGloSize, coarsesize, 0, NULL, 0, NULL, &osm->locnullsp);CHKERRQ(ierr);
       ierr = MatSetOption(osm->locnullsp, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);CHKERRQ(ierr);
       ierr = ISGetIndices(osm->lis, &idrows);CHKERRQ(ierr);
       ierr = VecGetLocalSize(osm->ly, &VVsize);CHKERRQ(ierr);
@@ -710,9 +717,9 @@ static PetscErrorCode PCApplyMP_ASM(PC pc, Vec x, Mat Z)
       ierr = VecDestroy(&multiplicity);CHKERRQ(ierr);
       ierr = VecDestroy(&locmultiplicity);CHKERRQ(ierr);
 
-      ierr = MatCreateSeqDense(PETSC_COMM_SELF, total*nullspcol, total*nullspcol, NULL, &osm->coarseU);CHKERRQ(ierr);
-      ierr = MatCreateSeqDense(PETSC_COMM_SELF, total*nullspcol, total*nullspcol, NULL, &osm->coarseVt);CHKERRQ(ierr);
-      ierr = VecCreateSeq(PETSC_COMM_SELF, total*nullspcol, &osm->coarseS);CHKERRQ(ierr);
+      ierr = MatCreateSeqDense(PETSC_COMM_SELF, coarsesize, coarsesize, NULL, &osm->coarseU);CHKERRQ(ierr);
+      ierr = MatCreateSeqDense(PETSC_COMM_SELF, coarsesize, coarsesize, NULL, &osm->coarseVt);CHKERRQ(ierr);
+      ierr = VecCreateSeq(PETSC_COMM_SELF, coarsesize, &osm->coarseS);CHKERRQ(ierr);
 
       ierr = MatCreateRedundantMatrix(coarse_mat, size, MPI_COMM_NULL, MAT_INITIAL_MATRIX, &coarseR);CHKERRQ(ierr);
       ierr = MatDestroy(&coarse_mat);CHKERRQ(ierr);
@@ -721,23 +728,46 @@ static PetscErrorCode PCApplyMP_ASM(PC pc, Vec x, Mat Z)
       matcoarseR =  (Mat_SeqDense *)coarseR->data;
       matU = (Mat_SeqDense *)osm->coarseU->data;
       matVt = (Mat_SeqDense *)osm->coarseVt->data;
-      ierr = VecGetArray(osm->coarseS,&arrayS);CHKERRQ(ierr);
+      ierr = VecGetArray(osm->coarseS,&arraySS);CHKERRQ(ierr);
+
+
+#if !defined(PETSC_USE_COMPLEX)
+      arraySR=arraySS;
+#else
+      ierr = PetscMalloc1(coarsesize,&arraySR);
+#endif
 
       if (!matcoarseR->fwork)
       {
         matcoarseR->lfwork = -1;
-        PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&nullspcol,&nullspcol,matcoarseR->v,&nullspcol,arrayS,matU->v,&nullspcol,matVt->v,&nullspcol, &dummy, &matcoarseR->lfwork, &info));
+#if !defined(PETSC_USE_COMPLEX)
+        PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&coarsesize,&coarsesize,matcoarseR->v,&coarsesize,arraySR,matU->v,&coarsesize,matVt->v,&coarsesize, &dummy, &matcoarseR->lfwork, &info));
+#else
+        PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&coarsesize,&coarsesize,matcoarseR->v,&coarsesize,arraySR,matU->v,&coarsesize,matVt->v,&coarsesize, &dummy, &matcoarseR->lfwork, rwork, &info));
+#endif
         matcoarseR->lfwork = (PetscInt)PetscRealPart(dummy);
         ierr = PetscMalloc1(matcoarseR->lfwork, &matcoarseR->fwork);CHKERRQ(ierr);
       }
-      PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&nullspcol,&nullspcol,matcoarseR->v,&nullspcol,arrayS,matU->v,&nullspcol,matVt->v,&nullspcol,matcoarseR->fwork, &matcoarseR->lfwork, &info));
+#if !defined(PETSC_USE_COMPLEX)
+      PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&coarsesize,&coarsesize,matcoarseR->v,&coarsesize,arraySR,matU->v,&coarsesize,matVt->v,&coarsesize,matcoarseR->fwork, &matcoarseR->lfwork, &info));
+#else
+      ierr = PetscMalloc1(5*coarsesize,&rwork);CHKERRQ(ierr);
+      PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&coarsesize,&coarsesize,matcoarseR->v,&coarsesize,arraySR,matU->v,&coarsesize,matVt->v,&coarsesize,matcoarseR->fwork, &matcoarseR->lfwork, rwork, &info));
+      ierr = PetscFree(rwork);CHKERRQ(ierr);
+#endif
       if (info < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_MAT_CH_ZRPVT, "Bad parameter %D", (PetscInt)info - 1);
       
-      for (k=0;k<nullspcol;++k){
-        if (arrayS[k]>osm->smallAbs) arrayS[k]=1/arrayS[k];
-        else arrayS[k]=0.;
+      for (k=0;k<coarsesize;++k){
+        if (arraySR[k]>osm->smallAbs) arraySR[k]=1./arraySR[k];
+        else arraySR[k]=0.;
       }
-      ierr = VecRestoreArray(osm->coarseS,&arrayS);CHKERRQ(ierr);  
+#if defined(PETSC_USE_COMPLEX)
+      for (k=0;k<coarsesize;++k){
+        arraySS[k] = arraySR[k]; /*conversion real to complex*/
+      }
+      PetscFree(arraySR);
+#endif
+      ierr = VecRestoreArray(osm->coarseS,&arraySS);CHKERRQ(ierr);  
       ierr = MatDestroy(&coarseR);CHKERRQ(ierr);
     }
     PetscFunctionReturn(0);
@@ -1017,7 +1047,7 @@ static PetscErrorCode PCSetFromOptions_ASM(PetscOptionItems *PetscOptionsObject,
   osm->use_kernel = 0;
   ierr = PetscOptionsInt("-pc_asm_use_kernel","Variant of kernel handling with multipreconditioning","PCASM",osm->use_kernel,&osm->use_kernel,&flg);CHKERRQ(ierr);/* PG */
   osm->smallAbs = 1.e-12;
-  ierr = PetscOptionsScalar("-pc_asm_use_kernel_svd_trunc","Truncation in svd for kernel modes","PCASM",osm->smallAbs,&osm->smallAbs,&flg);CHKERRQ(ierr);/* PG */
+  ierr = PetscOptionsReal("-pc_asm_use_kernel_svd_trunc","Truncation in svd for kernel modes","PCASM",osm->smallAbs,&osm->smallAbs,&flg);CHKERRQ(ierr);/* PG */
   flg  = PETSC_FALSE;
   ierr = PetscOptionsEnum("-pc_asm_type","Type of restriction/extension","PCASMSetType",PCASMTypes,(PetscEnum)osm->type,(PetscEnum*)&asmtype,&flg);CHKERRQ(ierr);
   if (flg) {ierr = PCASMSetType(pc,asmtype);CHKERRQ(ierr); }

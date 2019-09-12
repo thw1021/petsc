@@ -10,7 +10,7 @@
 #include <petscmat.h>
 
 typedef struct {
-  PetscScalar eigtrunc;       /*Threshold for eigenvalue-based pseudo inversion*/
+  PetscReal eigtrunc;       /*Threshold for eigenvalue-based pseudo inversion*/
 } KSP_MPOMIN;
 
 /*
@@ -39,7 +39,8 @@ static PetscErrorCode KSPSetUp_MPOMIN(KSP ksp)
 static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
 {
   PetscErrorCode ierr;
-  PetscInt       i, comm_size;
+  PetscInt       i;
+  PetscMPIInt    comm_size;
   PetscScalar    beta;
   Vec            Beta,Beta2;
   Mat            Gamma, Delta, Delta_R, Delta_RD;
@@ -64,9 +65,14 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
   IS             rows,cols;
   const PetscInt *irows,*icols;
 
-  Vec            Vdiag, Vsubdiag;
-  PetscScalar    *thediag;  
+  Vec            Vsubdiag;
+  PetscReal      *thediag;
   PetscBLASInt   info, n;
+#if defined(PETSC_USE_COMPLEX)
+  PetscReal      *rwork;
+  Mat            WW;
+#endif
+  PetscScalar    *theZdiag;
 
 
   PetscFunctionBegin;
@@ -91,8 +97,12 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
   ierr = MatDestroy(&Ztest);CHKERRQ(ierr);
   /* End of ugly reverse communication to get info from the multipreconditioner */
 
-  ierr = VecCreateSeq(MPI_COMM_SELF, n_sd + n_coarse, &Vdiag);CHKERRQ(ierr);
-  ierr = VecGetArray(Vdiag, &thediag);CHKERRQ(ierr);
+  ierr = PetscMalloc1(n_sd + n_coarse, &thediag);
+#if defined(PETSC_USE_COMPLEX)
+  ierr = PetscMalloc1(n_sd + n_coarse, &theZdiag);
+#else
+  theZdiag = thediag;
+#endif
   ierr = VecGetLocalSize(R, &VecLocSize);CHKERRQ(ierr);
   ierr = VecGetSize(R, &VecGloSize);CHKERRQ(ierr);
   n_sd += n_coarse; 
@@ -100,6 +110,11 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
   ierr = VecCreateMPI(((PetscObject)X)->comm, PETSC_DECIDE, n_sd, &Beta);CHKERRQ(ierr);
   ierr = MatCreateSeqDense(PETSC_COMM_SELF, n_sd, n_sd, NULL, &Delta_RD);CHKERRQ(ierr);
   ierr = PCGetOperators(ksp->pc, &Amat, &Pmat);CHKERRQ(ierr);
+
+#if defined(PETSC_USE_COMPLEX)
+  ierr = PetscMalloc1(3*n_sd-2, &rwork);CHKERRQ(ierr);
+#endif
+
 
   ksp->its = 0;
   if (!ksp->guess_zero){
@@ -131,7 +146,7 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
   i = 0;
   do {
     ksp->its = i+1;  
-    ierr = MatMultTranspose(W, R, Beta);CHKERRQ(ierr); /* Beta = W'*r */
+    ierr = MatMultHermitianTranspose(W, R, Beta);CHKERRQ(ierr); /* Beta = W'*r */
     ierr = VecSum(Beta, &beta);CHKERRQ(ierr);
 
     if (beta == 0.0) {
@@ -139,8 +154,14 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
       ierr        = PetscInfo(ksp,"converged due to beta = 0\n");CHKERRQ(ierr);
       break;
     }
-
+#if defined(PETSC_USE_COMPLEX)
+    ierr = MatDuplicate(W,MAT_COPY_VALUES,&WW);CHKERRQ(ierr);
+    ierr = MatConjugate(WW);
+    ierr = MatTransposeMatMult(WW, W, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Delta);CHKERRQ(ierr); /*     Delta <- W' * W                       */
+    ierr = MatDestroy(&WW);CHKERRQ(ierr);
+#else
     ierr = MatTransposeMatMult(W, W, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Delta);CHKERRQ(ierr); /*     Delta <- W' * W                       */
+#endif
     /*  This version makes use of dense algebra should be improved for larger blocks */
     ierr = MatCreateRedundantMatrix(Delta, comm_size, MPI_COMM_NULL, MAT_INITIAL_MATRIX, &Delta_R);CHKERRQ(ierr);
     ierr = MatDestroy(&Delta);CHKERRQ(ierr);
@@ -153,13 +174,20 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
     if (!mat->fwork) {
       PetscScalar dummy;
       mat->lfwork = -1;
+#if !defined(PETSC_USE_COMPLEX)
       PetscStackCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &n, mat->v, &mat->lda, thediag, &dummy, &mat->lfwork, &info));CHKERRQ(ierr);
-
+#else
+      PetscStackCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &n, mat->v, &mat->lda, thediag, &dummy, &mat->lfwork, rwork, &info));CHKERRQ(ierr);
+#endif
       mat->lfwork = (PetscInt)PetscRealPart(dummy);
       ierr = PetscMalloc1(mat->lfwork, &mat->fwork);CHKERRQ(ierr);
       ierr = PetscLogObjectMemory((PetscObject)Delta_RD, mat->lfwork * sizeof(PetscBLASInt));CHKERRQ(ierr);
     }
-    PetscStackCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &n, mat->v, &mat->lda, thediag, mat->fwork, &mat->lfwork, &info));
+#if !defined(PETSC_USE_COMPLEX)
+      PetscStackCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &n, mat->v, &mat->lda, thediag, mat->fwork, &mat->lfwork, &info));CHKERRQ(ierr);
+#else
+      PetscStackCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &n, mat->v, &mat->lda, thediag, mat->fwork, &mat->lfwork, rwork, &info));CHKERRQ(ierr);
+#endif
 
     if (info < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_MAT_CH_ZRPVT, "Bad parameter %D", (PetscInt)info - 1);
 
@@ -169,8 +197,12 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
     for (jj = 0; jj < n; ++jj) {
       if (thediag[jj] < thediag[n - 1] * ((KSP_MPOMIN *)ksp->data)->eigtrunc) {
         nkk = jj + 1;
+        thediag[jj] = 0.;
       } else {
         thediag[jj] = 1. / sqrt(thediag[jj]);
+#if defined(PETSC_USE_COMPLEX)
+        theZdiag[jj] = thediag[jj]; /*real to complex conversion*/
+#endif
       }
     }
     ngood = n - nkk;
@@ -181,7 +213,7 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
     ierr = ISGetIndices(rows,&irows);CHKERRQ(ierr);
     ierr = ISGetIndices(cols,&icols);CHKERRQ(ierr);
     ierr = VecCreateMPI(PetscObjectComm((PetscObject)ksp), PETSC_DECIDE, ngood,&Vsubdiag);CHKERRQ(ierr);
-    ierr = VecSetValues(Vsubdiag, ngood, icols, &thediag[nkk], INSERT_VALUES);CHKERRQ(ierr);
+    ierr = VecSetValues(Vsubdiag, ngood, icols, &theZdiag[nkk], INSERT_VALUES);CHKERRQ(ierr);
     ierr = VecAssemblyBegin(Vsubdiag);CHKERRQ(ierr);
     ierr = VecAssemblyEnd(Vsubdiag);CHKERRQ(ierr);
     ierr = VecCreateMPI(PetscObjectComm((PetscObject)ksp), PETSC_DECIDE, ngood, &Beta2);CHKERRQ(ierr);
@@ -208,7 +240,7 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
     ierr = MatMatMult(W, Vmat, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Wstor[i]);CHKERRQ(ierr);
     ierr = MatDiagonalScale(Pstor[i], NULL, Vsubdiag);CHKERRQ(ierr);
     ierr = MatDiagonalScale(Wstor[i], NULL, Vsubdiag);CHKERRQ(ierr);
-    ierr = MatMultTranspose(Vmat, Beta, Beta2);CHKERRQ(ierr);
+    ierr = MatMultHermitianTranspose(Vmat, Beta, Beta2);CHKERRQ(ierr);
     ierr = VecPointwiseMult(Beta2, Vsubdiag, Beta2);CHKERRQ(ierr);
     ierr = VecDestroy(&Vsubdiag);CHKERRQ(ierr);
     ierr = MatDestroy(&Vmat);CHKERRQ(ierr);
@@ -227,14 +259,20 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
     ierr = KSP_MatMatMult(ksp, Amat, P, &W, MAT_INITIAL_MATRIX);CHKERRQ(ierr); /* W <- A*P */
 
     for (jj = 0; jj < i+1; jj++) { /* Full block orthogonalization */
-        ierr = MatTransposeMatMult(Wstor[jj], W, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Gamma);CHKERRQ(ierr);
-        ierr = MatMatMult(Pstor[jj], Gamma, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Ptemp);CHKERRQ(ierr);
-        ierr = MatMatMult(Wstor[jj], Gamma, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Wtemp);CHKERRQ(ierr);
-        ierr = MatDestroy(&Gamma);CHKERRQ(ierr);
-        ierr = MatAXPY(P, -1., Ptemp, DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
-        ierr = MatAXPY(W, -1., Wtemp, DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
-        ierr = MatDestroy(&Ptemp);CHKERRQ(ierr);
-        ierr = MatDestroy(&Wtemp);CHKERRQ(ierr);
+#if defined(PETSC_USE_COMPLEX)
+      ierr = MatConjugate(Wstor[jj]);CHKERRQ(ierr); /* Ugly hack, better MatHermitianTransposeMatMult should be coded */
+#endif
+      ierr = MatTransposeMatMult(Wstor[jj], W, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Gamma);CHKERRQ(ierr);
+ #if defined(PETSC_USE_COMPLEX)
+      ierr = MatConjugate(Wstor[jj]);CHKERRQ(ierr); /* Ugly hack, better MatHermitianTransposeMatMult should be coded */
+#endif
+      ierr = MatMatMult(Pstor[jj], Gamma, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Ptemp);CHKERRQ(ierr);
+      ierr = MatMatMult(Wstor[jj], Gamma, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Wtemp);CHKERRQ(ierr);
+      ierr = MatDestroy(&Gamma);CHKERRQ(ierr);
+      ierr = MatAXPY(P, -1., Ptemp, DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
+      ierr = MatAXPY(W, -1., Wtemp, DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
+      ierr = MatDestroy(&Ptemp);CHKERRQ(ierr);
+      ierr = MatDestroy(&Wtemp);CHKERRQ(ierr);
     }
 
     if (ksp->normtype == KSP_NORM_UNPRECONDITIONED) {
@@ -255,8 +293,10 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
 
   if (i >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
 
-  ierr = VecRestoreArray(Vdiag, &thediag);CHKERRQ(ierr);
-  ierr = VecDestroy(&Vdiag);CHKERRQ(ierr);
+  ierr = PetscFree(thediag);CHKERRQ(ierr);
+#if defined(PETSC_USE_COMPLEX)
+  ierr = PetscFree(theZdiag);CHKERRQ(ierr);
+#endif
   ierr = VecDestroy(&Beta);CHKERRQ(ierr);
   ierr = MatDestroy(&Delta_RD);CHKERRQ(ierr);
   ierr = MatDestroy(&Delta_R);CHKERRQ(ierr);
@@ -272,7 +312,9 @@ static PetscErrorCode KSPSolve_MPOMIN(KSP ksp)
     ierr = MatDestroy(&Wstor[jj]);CHKERRQ(ierr);
   }
   ierr = PetscFree2(Pstor,Wstor);CHKERRQ(ierr);
-
+#if defined(PETSC_USE_COMPLEX)
+  ierr = PetscFree(rwork);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -289,7 +331,7 @@ PetscErrorCode KSPSetFromOptions_MPOMIN(PetscOptionItems *PetscOptionsObject, KS
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject, "KSP MPOMIN options");CHKERRQ(ierr);
   cg->eigtrunc = 1.e-12;
-  ierr = PetscOptionsScalar("-ksp_mp_eigtrunc", "Truncation for pseudoinversion based on eigenvalue", "KSPMPC", cg->eigtrunc, &cg->eigtrunc, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ksp_mp_eigtrunc", "Truncation for pseudoinversion based on eigenvalue", "KSPMPC", cg->eigtrunc, &cg->eigtrunc, &flg);CHKERRQ(ierr);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
