@@ -578,14 +578,14 @@ static PetscErrorCode PCApplyMP_ASM(PC pc, Vec x, Mat Z)
   Mat            Amat,Pmat,coarseR;
   MatNullSpace   nullsp;
   PetscMPIInt    *sd_by_pro, nn;
-  PetscInt       start,end,first,k,total,thecol,nullspcol,coarsesize;
+  PetscInt       start,end,first,k,total,thecol,nullspcol;
   PetscInt       VecGloSize,VecLocSize;
   Mat_SeqDense   *matU,*matVt,*matcoarseR;
   Mat            W,coarse_mat;
   Vec            rhs,rhs_R;
   VecScatter     vs;
   IS             glo_is;
-  PetscBLASInt   info;
+  PetscBLASInt   coarsesize,info;
   PetscBool      has_cst ;
 #if defined(PETSC_USE_COMPLEX)
   PetscReal      *rwork;
