@@ -88,8 +88,8 @@ static PetscErrorCode KSPSolve_MPCG(KSP ksp)
   ierr = MatCreateSeqDense(PETSC_COMM_SELF, 1, 3, NULL, &Ztest);CHKERRQ(ierr);
   ierr = KSP_PCApplyMP(ksp, R, Ztest);CHKERRQ(ierr);
   ierr = MatDenseGetArray(Ztest, &vals);CHKERRQ(ierr);
-  n_sd = (PetscInt)vals[0];
-  n_coarse = (PetscInt)vals[2];
+  n_sd = (PetscInt)PetscRealPart(vals[0]);
+  n_coarse = (PetscInt)PetscRealPart(vals[2]);
   ierr = MatDenseRestoreArray(Ztest, &vals);CHKERRQ(ierr);
   ierr = MatDestroy(&Ztest);CHKERRQ(ierr);
   /* End of ugly reverse communication to get info from the multipreconditioner */

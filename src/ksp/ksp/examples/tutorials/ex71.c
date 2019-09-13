@@ -519,9 +519,15 @@ int main(int argc,char **args)
    args:  -pde_type Elasticity -cells 10,10,10 -dim 3 -dirichlet -mat_type seqaij -ksp_converged_reason
    args:  -pc_type asm -pc_asm_overlap 1 -pc_asm_blocks 8 -sub_pc_type lu
    test: 
+     requires: !complex
      args: -pc_asm_type basic -ksp_type mpcg -ksp_norm_type natural 
      suffix: asm_mpcg
      output_file: output/ex71_asm_mpcg.out
+   test: 
+     requires: complex
+     args: -pc_asm_type basic -ksp_type mpcg -ksp_norm_type natural 
+     suffix: asm_mpcg
+     output_file: output/ex71_complex_asm_mpcg.out
    test:
      args: -pc_asm_type restrict -ksp_type mpomin -ksp_norm_type unpreconditioned
      suffix: rasm_mpomin
