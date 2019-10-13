@@ -1,6 +1,7 @@
 #include <petsc/private/pcimpl.h>  /*I "petscpc.h" I*/
 #include <petsc/private/kspimpl.h> /*  This is needed to provide the appropriate PETSC_EXTERN for KSP_Solve_FS ....*/
 #include <petscdm.h>
+#include <petscdmshell.h>
 
 const char *const PCFieldSplitSchurPreTypes[]  = {"SELF", "SELFP", "A11", "USER", "FULL", "PCFieldSplitSchurPreType", "PC_FIELDSPLIT_SCHUR_PRE_", NULL};
 const char *const PCFieldSplitSchurFactTypes[] = {"DIAG", "LOWER", "UPPER", "FULL", "PCFieldSplitSchurFactType", "PC_FIELDSPLIT_SCHUR_FACT_", NULL};
@@ -1134,6 +1135,21 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
     }
   }
 
+  if (pc->dm && jac->dm_splits) {
+    DM subdm;
+
+    ilink = jac->head;
+    while (ilink) {
+      PetscBool isshell;
+
+      PetscCheck(ilink->sctx, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Did not find scatter context for fielddecomposition restrict");
+      PetscCall(KSPGetDM(ilink->ksp, &subdm));
+      PetscCall(PetscObjectTypeCompare((PetscObject)subdm, DMSHELL, &isshell));
+      if (isshell) PetscCall(DMShellSetGlobalVector(subdm, ilink->x));
+      PetscCall(DMFieldDecompositionRestrict(pc->dm, ilink->sctx, subdm));
+      ilink = ilink->next;
+    }
+  }
   jac->suboptionsset = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
