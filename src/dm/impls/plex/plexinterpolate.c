@@ -1283,11 +1283,6 @@ PetscErrorCode DMPlexInterpolate(DM dm, DM *dmInt)
         ierr = DMPlexInterpolateFaces_Internal(odm, 1, idm);CHKERRQ(ierr);
         ierr = DMGetPointSF(odm, &sfPoint);CHKERRQ(ierr);
         {
-          /*
-            This shows it is a bad idea to have SF pre-created in DMCreate().
-            It should be just  if (sfPoint) {...}
-            SF without graph would fail in DMPlexInterpolatePointSF().
-          */
           PetscInt nroots;
           ierr = PetscSFGetGraph(sfPoint, &nroots, NULL, NULL, NULL);CHKERRQ(ierr);
           if (nroots >= 0) {ierr = DMPlexInterpolatePointSF(idm, sfPoint);CHKERRQ(ierr);}
