@@ -1,6 +1,8 @@
 #include <petsc/private/dmpleximpl.h>    /*I      "petscdmplex.h"   I*/
 #include <petsc/private/dmlabelimpl.h>   /*I      "petscdmlabel.h"  I*/
 
+static PetscErrorCode DMPlexDistributeOverlap_Internal(DM, PetscInt, PetscSF *, DM *);
+
 /*@C
   DMPlexSetAdjacencyUser - Define adjacency in the mesh using a user-provided callback
 
@@ -475,16 +477,16 @@ PetscErrorCode DMPlexCreateOverlapLabel(DM dm, PetscInt levels, PetscSection roo
   const PetscInt    *nrank, *rrank;
   PetscInt          *adj = NULL;
   PetscInt           pStart, pEnd, p, sStart, sEnd, nleaves, l;
-  PetscMPIInt        rank, size;
+  PetscMPIInt        rank;
   PetscBool          flg;
   PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   *ovLabel = NULL;
   ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  if (size == 1) PetscFunctionReturn(0);
+  ierr = DMPlexIsDistributed(dm, &flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ(comm, PETSC_ERR_SUP, "only for distributed DMPlex");
   ierr = DMGetPointSF(dm, &sfPoint);CHKERRQ(ierr);
   ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
   ierr = PetscSectionGetChart(leafSection, &sStart, &sEnd);CHKERRQ(ierr);
@@ -1588,7 +1590,10 @@ PetscErrorCode DMPlexMigrate(DM dm, PetscSF sf, DM targetDM)
 + sf - The PetscSF used for point distribution, or NULL if not needed
 - dmParallel - The distributed DMPlex object
 
-  Note: If the mesh was not distributed, the output dmParallel will be NULL.
+  Notes:
+  If the mesh was not distributed, the output dmParallel will be NULL.
+  This can happen if commsize is 1 or if the partitioning results is still non-distributed DM
+  (e.g. when the mesh size is very small compared to commsize).
 
   The user can control the definition of adjacency for the mesh using DMSetAdjacency(). They should choose the combination appropriate for the function
   representation on the mesh.
@@ -1606,7 +1611,7 @@ PetscErrorCode DMPlexDistribute(DM dm, PetscInt overlap, PetscSF *sf, DM *dmPara
   DM                     dmCoord;
   DMLabel                lblPartition, lblMigration;
   PetscSF                sfMigration, sfStratified, sfPoint;
-  PetscBool              flg, balance;
+  PetscBool              flg, balance, distributed;
   PetscMPIInt            rank, size;
   PetscErrorCode         ierr;
 
@@ -1686,6 +1691,19 @@ PetscErrorCode DMPlexDistribute(DM dm, PetscInt overlap, PetscSF *sf, DM *dmPara
   ierr = PetscObjectSetName((PetscObject) *dmParallel, "Parallel Mesh");CHKERRQ(ierr);
   ierr = DMPlexMigrate(dm, sfMigration, *dmParallel);CHKERRQ(ierr);
 
+  /* Return NULL if the resulting DM is non-distributed (can happen for mesh size << comm size) */
+  ierr = DMPlexIsDistributed(*dmParallel, &distributed);CHKERRQ(ierr);
+  if (!distributed) {
+    ierr = DMDestroy(dmParallel);CHKERRQ(ierr);
+    ierr = DMLabelDestroy(&lblPartition);CHKERRQ(ierr);
+    ierr = DMLabelDestroy(&lblMigration);CHKERRQ(ierr);
+    ierr = PetscSectionDestroy(&cellPartSection);CHKERRQ(ierr);
+    ierr = ISDestroy(&cellPart);CHKERRQ(ierr);
+    ierr = PetscSFDestroy(&sfMigration);CHKERRQ(ierr);
+    ierr = PetscLogEventEnd(DMPLEX_Distribute,dm,0,0,0);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+
   /* Build the point SF without overlap */
   ierr = DMPlexGetPartitionBalance(dm, &balance);CHKERRQ(ierr);
   ierr = DMPlexSetPartitionBalance(*dmParallel, balance);CHKERRQ(ierr);
@@ -1704,7 +1722,7 @@ PetscErrorCode DMPlexDistribute(DM dm, PetscInt overlap, PetscSF *sf, DM *dmPara
     PetscSF            sfOverlap, sfOverlapPoint;
 
     /* Add the partition overlap to the distributed DM */
-    ierr = DMPlexDistributeOverlap(*dmParallel, overlap, &sfOverlap, &dmOverlap);CHKERRQ(ierr);
+    ierr = DMPlexDistributeOverlap_Internal(*dmParallel, overlap, &sfOverlap, &dmOverlap);CHKERRQ(ierr);
     ierr = DMDestroy(dmParallel);CHKERRQ(ierr);
     *dmParallel = dmOverlap;
     if (flg) {
@@ -1781,8 +1799,28 @@ PetscErrorCode DMPlexDistribute(DM dm, PetscInt overlap, PetscSF *sf, DM *dmPara
 @*/
 PetscErrorCode DMPlexDistributeOverlap(DM dm, PetscInt overlap, PetscSF *sf, DM *dmOverlap)
 {
+  PetscBool              flg;
+  PetscErrorCode         ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(dm, overlap, 2);
+  if (sf) PetscValidPointer(sf, 3);
+  PetscValidPointer(dmOverlap, 4);
+  ierr = DMPlexIsDistributed(dm, &flg);CHKERRQ(ierr);
+  if (flg) {
+    ierr = DMPlexDistributeOverlap_Internal(dm, overlap, sf, dmOverlap);CHKERRQ(ierr);
+  } else {
+    if (sf) *sf = NULL;
+    *dmOverlap  = NULL;
+  }
+  PetscFunctionReturn(0);
+}
+
+/* All of DMPlexDistributeOverlap() without checking input DM is distributed (DMPlexIsDistributed()) */
+static PetscErrorCode DMPlexDistributeOverlap_Internal(DM dm, PetscInt overlap, PetscSF *sf, DM *dmOverlap)
+{
   MPI_Comm               comm;
-  PetscMPIInt            size, rank;
   PetscSection           rootSection, leafSection;
   IS                     rootrank, leafrank;
   DM                     dmCoord;
@@ -1791,17 +1829,9 @@ PetscErrorCode DMPlexDistributeOverlap(DM dm, PetscInt overlap, PetscSF *sf, DM 
   PetscErrorCode         ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidLogicalCollectiveInt(dm, overlap, 2);
-  if (sf) PetscValidPointer(sf, 3);
-  PetscValidPointer(dmOverlap, 4);
-
   if (sf) *sf = NULL;
   *dmOverlap  = NULL;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  if (size == 1) PetscFunctionReturn(0);
 
   ierr = PetscLogEventBegin(DMPLEX_DistributeOverlap, dm, 0, 0, 0);CHKERRQ(ierr);
   /* Compute point overlap with neighbouring processes on the distributed DM */
@@ -1943,7 +1973,6 @@ PetscErrorCode DMPlexGetGatherDM(DM dm, PetscSF *sf, DM *gatherMesh)
 PetscErrorCode DMPlexGetRedundantDM(DM dm, PetscSF *sf, DM *redundantMesh)
 {
   MPI_Comm       comm;
-  PetscMPIInt    size, rank;
   PetscInt       pStart, pEnd, p;
   PetscInt       numPoints = -1;
   PetscSF        migrationSF, sfPoint, gatherSF;
@@ -1955,17 +1984,15 @@ PetscErrorCode DMPlexGetRedundantDM(DM dm, PetscSF *sf, DM *redundantMesh)
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(redundantMesh,2);
   *redundantMesh = NULL;
-  comm = PetscObjectComm((PetscObject)dm);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  if (size == 1) {
+  if (sf)    *sf = NULL;
+  ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
+  ierr = DMPlexGetGatherDM(dm,&gatherSF,&gatherDM);CHKERRQ(ierr);
+  if (!gatherDM) {
+    /* TODO should this just return dm=NULL? */
     ierr = PetscObjectReference((PetscObject) dm);CHKERRQ(ierr);
     *redundantMesh = dm;
-    if (sf) *sf = NULL;
     PetscFunctionReturn(0);
   }
-  ierr = DMPlexGetGatherDM(dm,&gatherSF,&gatherDM);CHKERRQ(ierr);
-  if (!gatherDM) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
   ierr = DMPlexGetChart(gatherDM,&pStart,&pEnd);CHKERRQ(ierr);
   numPoints = pEnd - pStart;
   ierr = MPI_Bcast(&numPoints,1,MPIU_INT,0,comm);CHKERRQ(ierr);
