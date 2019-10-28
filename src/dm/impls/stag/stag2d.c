@@ -55,26 +55,38 @@ PETSC_INTERN PetscErrorCode DMStagInterpolate_2d(DM dmf,Vec xf,DM dmc,Vec xc)
 {
   PetscErrorCode ierr;
   PetscScalar    ***LA_xf,***LA_xc;
-  PetscInt       i,j,si,sj,ni,nj,ii,jj;
+  PetscInt       i,j,s[2],n[2],ii,jj;
   Vec            xf_l,xc_l;
-  PetscInt       d,dof0,dof1,dof2,idx;
+  PetscInt       d,dof[3],idx;
 
-  ierr = DMStagGetDOF(dmf,&dof0,&dof1,&dof2,NULL);CHKERRQ(ierr);
+  ierr = DMStagGetDOF(dmc,&dof[0],&dof[1],&dof[2],NULL);CHKERRQ(ierr);
+  ierr = DMStagGetCorners(dmc,&s[0],&s[1],NULL,&n[0],&n[1],NULL,NULL,NULL,NULL); CHKERRQ(ierr);
+#if PETSC_USE_DEBUG
+  {
+    PetscInt dof_check[3],nf[2],sf[2];
+
+    ierr = DMStagGetDOF(dmf,&dof_check[0],&dof_check[1],&dof_check[2],NULL);CHKERRQ(ierr);
+    ierr = DMStagGetCorners(dmf,&sf[0],&sf[1],NULL,&nf[0],&nf[1],NULL,NULL,NULL,NULL); CHKERRQ(ierr);
+    for (d=0; d<3; ++d) if (dof_check[d] != dof[d]) SETERRQ(PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Cannot transfer between DMStag objects with different dof on each stratum");
+    for (d=0; d<2; ++d) if (nf[d] != 2*n[d]) SETERRQ(PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Cannot transfer between DMStag objects unless there is a 2-1 coarsening");
+    for (d=0; d<2; ++d) if (sf[d] != 2*s[d]) SETERRQ(PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Cannot transfer between DMStag objects unless there is a 2-1 coarsening");
+  }
+#endif
+
   ierr = VecZeroEntries(xc);CHKERRQ(ierr);
   ierr = DMCreateLocalVector(dmf,&xf_l);CHKERRQ(ierr);
   ierr = DMCreateLocalVector(dmc,&xc_l);CHKERRQ(ierr);
 
   ierr = DMGlobalToLocalBegin(dmf,xf,INSERT_VALUES,xf_l);CHKERRQ(ierr);
   ierr = DMGlobalToLocalEnd(dmf,xf,INSERT_VALUES,xf_l);CHKERRQ(ierr);
-  ierr = DMStagGetCorners(dmc,&si,&sj,NULL,&ni,&nj,NULL,NULL,NULL,NULL); CHKERRQ(ierr);
-  ierr = DMStagVecGetArrayDOF(dmf,xf_l,&LA_xf); CHKERRQ(ierr);
-  ierr = DMStagVecGetArrayDOF(dmc,xc_l,&LA_xc); CHKERRQ(ierr);
-  // vertices
-  if (dof0 != 0) {
-    for (j=sj; j<sj+nj; j++) {
-      for (i=si; i<si+ni; i++) {
+  ierr = DMStagVecGetArray(dmf,xf_l,&LA_xf); CHKERRQ(ierr);
+  ierr = DMStagVecGetArray(dmc,xc_l,&LA_xc); CHKERRQ(ierr);
 
-        for (d=0; d<dof0; d++) {
+  /* vertices */
+  if (dof[0] != 0) {
+    for (j=s[1]; j<s[1]+n[1]; j++) {
+      for (i=s[0]; i<s[0]+n[0]; i++) {
+        for (d=0; d<dof[0]; d++) {
           PetscScalar v[4];
           ierr = DMStagGetLocationSlot(dmf,DMSTAG_DOWN_LEFT,d,&idx); CHKERRQ(ierr);
           v[0] = LA_xf[2*j+0][2*i+0][idx];
@@ -94,17 +106,15 @@ PETSC_INTERN PetscErrorCode DMStagInterpolate_2d(DM dmf,Vec xf,DM dmc,Vec xc)
           ierr = DMStagGetLocationSlot(dmc,DMSTAG_UP_RIGHT,d,&idx); CHKERRQ(ierr);
           LA_xc[j][i][idx] = v[3];
         }
-
       }
     }
   }
 
-  // edges
-  if (dof1 != 0) {
-    for (j=sj; j<sj+nj; j++) {
-      for (i=si; i<si+ni; i++) {
-
-        for (d=0; d<dof1; d++) {
+  /* edges */
+  if (dof[1] != 0) {
+    for (j=s[1]; j<s[1]+n[1]; j++) {
+      for (i=s[0]; i<s[0]+n[0]; i++) {
+        for (d=0; d<dof[1]; d++) {
           PetscScalar v[] = {0,0,0,0};
           ierr = DMStagGetLocationSlot(dmf,DMSTAG_DOWN,d,&idx); CHKERRQ(ierr);
           v[0] += LA_xf[2*j+0][2*i+0][idx];
@@ -135,17 +145,15 @@ PETSC_INTERN PetscErrorCode DMStagInterpolate_2d(DM dmf,Vec xf,DM dmc,Vec xc)
           ierr = DMStagGetLocationSlot(dmc,DMSTAG_UP,d,&idx); CHKERRQ(ierr);
           LA_xc[j][i][idx] = 0.5*v[3];
         }
-
       }
     }
   }
 
-  // elements
-  if (dof2 != 0) {
-    for (j=sj; j<sj+nj; j++) {
-      for (i=si; i<si+ni; i++) {
-
-        for (d=0; d<dof2; d++) {
+  /* elements */
+  if (dof[2] != 0) {
+    for (j=s[1]; j<s[1]+n[1]; j++) {
+      for (i=s[0]; i<s[0]+n[0]; i++) {
+        for (d=0; d<dof[2]; d++) {
           PetscScalar sum = 0.0;
           for (jj=0; jj<2; jj++) {
             for (ii=0; ii<2; ii++) {
@@ -156,12 +164,11 @@ PETSC_INTERN PetscErrorCode DMStagInterpolate_2d(DM dmf,Vec xf,DM dmc,Vec xc)
           ierr = DMStagGetLocationSlot(dmc,DMSTAG_ELEMENT,d,&idx); CHKERRQ(ierr);
           LA_xc[j][i][idx] = 0.25 * sum;
         }
-
       }
     }
   }
-  ierr = DMStagVecRestoreArrayDOF(dmf,xf_l,&LA_xf); CHKERRQ(ierr);
-  ierr = DMStagVecRestoreArrayDOF(dmc,xc_l,&LA_xc); CHKERRQ(ierr);
+  ierr = DMStagVecRestoreArray(dmf,xf_l,&LA_xf); CHKERRQ(ierr);
+  ierr = DMStagVecRestoreArray(dmc,xc_l,&LA_xc); CHKERRQ(ierr);
   ierr = DMLocalToGlobalBegin(dmc,xc_l,INSERT_VALUES,xc);CHKERRQ(ierr);
   ierr = DMLocalToGlobalEnd(dmc,xc_l,INSERT_VALUES,xc);CHKERRQ(ierr);
   ierr = VecDestroy(&xf_l);CHKERRQ(ierr);
