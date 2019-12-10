@@ -131,17 +131,21 @@ class generateExamples(Petsc):
 
     # Adding a dictionary for storing sources, objects, and tests
     # to make building the dependency tree easier
+    # gputests: GPU tests need to be run sequentially to avoid oversubscribing CPU
     self.sources={}
     self.objects={}
     self.tests={}
+    self.gputests={}
     for pkg in self.pkg_pkgs:
       self.sources[pkg]={}
       self.objects[pkg]=[]
       self.tests[pkg]={}
+      self.gputests[pkg]=[]
       for lang in LANGS:
         self.sources[pkg][lang]={}
         self.sources[pkg][lang]['srcs']=[]
         self.tests[pkg][lang]={}
+
 
     if not os.path.isdir(self.testroot_dir): os.makedirs(self.testroot_dir)
 
@@ -327,6 +331,12 @@ class generateExamples(Petsc):
     self.tests[pkg][lang][nmtest]['exfile']=os.path.join(rpath,exfile)
     self.tests[pkg][lang][nmtest]['exec']=execname
     self.tests[pkg][lang][nmtest]['argLabel']=self.getArgLabel(testDict)
+
+    if 'requires' in testDict:
+      for backend in 'cuda viennacl hybrid'.split():
+        if backend in testDict['requires'].lower():
+          nmtest=nameSpace(test,rpath)
+          self.gputests[pkg].append(nmtest)
     return
 
   def getExecname(self,exfile,rpath):
@@ -1018,6 +1028,10 @@ class generateExamples(Petsc):
 
             # Now write the args:
             fd.write(nmtest+"_ARGS := '"+self.tests[pkg][lang][ftest]['argLabel']+"'\n")
+
+      # If gpu tests, create dependency list to serialize
+      for i in range(len(self.gputests[pkg])-1):
+        fd.write('%s : %s\n' % (self.gputests[pkg][i], self.gputests[pkg][i+1]))
 
     return
 

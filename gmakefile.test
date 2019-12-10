@@ -24,6 +24,8 @@ pkgs := sys vec mat dm ksp snes ts tao
 petscconf      := $(PETSC_DIR)/$(PETSC_ARCH)/include/petscconf.h
 petscvariables := $(PETSC_DIR)/$(PETSC_ARCH)/lib/petsc/conf/petscvariables
 generatedtest  := $(TESTDIR)/testfiles
+gpuserialized  := $(TESTDIR)/testfilesgpu
+
 
 .SECONDEXPANSION:		# to expand $$(@D)/.DIR
 
@@ -92,6 +94,10 @@ $(generatedtest) : $(petscconf) $(petscvariables) $(CONFIGDIR)/gmakegentest.py $
 
 ifneq ($(filter-out clean check,$(MAKECMDGOALS:clean%=clean)),)
 include $(generatedtest)
+endif
+
+ifeq ($(GPUSERIALIZED),1)
+-include $(gpuserialized)
 endif
 
 ifeq ($(PETSC_LANGUAGE),CXXONLY)
@@ -407,6 +413,7 @@ help-test:
 	-@echo "  NP=<num proc>     Set a number of processors to pass to scripts."
 	-@echo "  FORCE=1           Force SKIP or TODO tests to run"
 	-@echo "  PRINTONLY=1       Print the command, but do not run.  For loops print first command"
+	-@echo "  GPUSERIALIZED=1   Run gpu tests sequentially (to avoid overloading gpu in parallel)"
 	-@echo "  TIMEOUT=<time>    Test timeout limit in seconds (default in config/petsc_harness.sh)"
 	-@echo "  TESTDIR='tests'   Subdirectory where tests are run ($${PETSC_DIR}/$${PETSC_ARCH}/$${TESTDIR}"
 	-@echo "                    or $${PREFIX_DIR}/$${TESTDIR}"
