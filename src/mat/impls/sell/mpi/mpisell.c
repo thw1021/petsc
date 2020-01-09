@@ -83,6 +83,7 @@ PetscErrorCode MatCreateColmap_MPISELL_Private(Mat mat)
       if (*(cp1+8*_i) == col) { \
         if (addv == ADD_VALUES) *(vp1+8*_i) += value;   \
         else                     *(vp1+8*_i) = value; \
+        inserted = PETSC_TRUE; \
         goto a_noinsert; \
       } \
     }  \
@@ -117,6 +118,7 @@ PetscErrorCode MatCreateColmap_MPISELL_Private(Mat mat)
       if (*(cp2+8*_i) == col) { \
         if (addv == ADD_VALUES) *(vp2+8*_i) += value; \
         else                     *(vp2+8*_i) = value; \
+        inserted = PETSC_TRUE; \
         goto b_noinsert; \
       } \
     } \
@@ -182,6 +184,9 @@ PetscErrorCode MatSetValues_MPISELL(Mat mat,PetscInt m,const PetscInt im[],Petsc
         if (in[j] >= cstart && in[j] < cend) {
           col   = in[j] - cstart;
           MatSetValue_SeqSELL_Private(A,row,col,value,addv,im[i],in[j],cp1,vp1,lastcol1,low1,high1); /* set one value */
+#if defined(PETSC_HAVE_CUDA)
+          if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED && found) A->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
         } else if (in[j] < 0) continue;
         else if (PetscUnlikelyDebug(in[j] >= mat->cmap->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column too large: col %D max %D",in[j],mat->cmap->N-1);
         else {
@@ -207,9 +212,13 @@ PetscErrorCode MatSetValues_MPISELL(Mat mat,PetscInt m,const PetscInt im[],Petsc
               nrow2  = b->rlen[row];
               low2   = 0;
               high2  = nrow2;
+              found  = PETSC_FALSE;
             } else if (col < 0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%D, %D) into matrix", im[i], in[j]);
           } else col = in[j];
           MatSetValue_SeqSELL_Private(B,row,col,value,addv,im[i],in[j],cp2,vp2,lastcol2,low2,high2); /* set one value */
+#if defined(PETSC_HAVE_CUDA)
+          if (B->offloadmask != PETSC_OFFLOAD_UNALLOCATED && found) B->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
         }
       }
     } else {
@@ -306,6 +315,9 @@ PetscErrorCode MatAssemblyEnd_MPISELL(Mat mat,MatAssemblyType mode)
     }
     ierr = MatStashScatterEnd_Private(&mat->stash);CHKERRQ(ierr);
   }
+#if defined(PETSC_HAVE_CUDA)
+  if (mat->offloadmask == PETSC_OFFLOAD_CPU) sell->A->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   ierr = MatAssemblyBegin(sell->A,mode);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(sell->A,mode);CHKERRQ(ierr);
 
@@ -321,6 +333,9 @@ PetscErrorCode MatAssemblyEnd_MPISELL(Mat mat,MatAssemblyType mode)
     ierr = MPIU_Allreduce(&mat->was_assembled,&other_disassembled,1,MPIU_BOOL,MPI_PROD,PetscObjectComm((PetscObject)mat));CHKERRQ(ierr);
     if (mat->was_assembled && !other_disassembled) {
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"MatDisAssemble not implemented yet\n");
+#if defined(PETSC_HAVE_CUDA)
+      sell->B->offloadmask = PETSC_OFFLOAD_BOTH; /* do not copy on the GPU when assembling inside MatDisAssemble_MPISELL */
+#endif
       ierr = MatDisAssemble_MPISELL(mat);CHKERRQ(ierr);
     }
   }
@@ -330,6 +345,9 @@ PetscErrorCode MatAssemblyEnd_MPISELL(Mat mat,MatAssemblyType mode)
   /*
   ierr = MatSetOption(sell->B,MAT_USE_INODES,PETSC_FALSE);CHKERRQ(ierr);
   */
+#if defined(PETSC_HAVE_CUDA)
+  if (mat->offloadmask == PETSC_OFFLOAD_CPU && sell->B->offloadmask != PETSC_OFFLOAD_UNALLOCATED) sell->B->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   ierr = MatAssemblyBegin(sell->B,mode);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(sell->B,mode);CHKERRQ(ierr);
   ierr = PetscFree2(sell->rowvalues,sell->rowindices);CHKERRQ(ierr);
@@ -341,6 +359,9 @@ PetscErrorCode MatAssemblyEnd_MPISELL(Mat mat,MatAssemblyType mode)
     PetscObjectState state = sell->A->nonzerostate + sell->B->nonzerostate;
     ierr = MPIU_Allreduce(&state,&mat->nonzerostate,1,MPIU_INT64,MPI_SUM,PetscObjectComm((PetscObject)mat));CHKERRQ(ierr);
   }
+#if defined(PETSC_HAVE_CUDA)
+  mat->offloadmask = PETSC_OFFLOAD_BOTH;
+#endif
   PetscFunctionReturn(0);
 }
 
