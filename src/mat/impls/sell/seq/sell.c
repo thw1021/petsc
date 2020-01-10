@@ -526,6 +526,10 @@ PetscErrorCode MatMultAdd_SeqSELL(Mat A,Vec xx,Vec yy,Vec zz)
 #endif
 
   PetscFunctionBegin;
+  if (!a->nz) {
+    ierr = VecCopy(yy,zz);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   ierr = VecGetArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecGetArrayPair(yy,zz,&y,&z);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_IMMINTRIN_H) && defined(__AVX512F__) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES)
@@ -680,32 +684,35 @@ PetscErrorCode MatMultTransposeAdd_SeqSELL(Mat A,Vec xx,Vec zz,Vec yy)
     ierr = MatMultAdd_SeqSELL(A,xx,zz,yy);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
-  if (zz != yy) { ierr = VecCopy(zz,yy);CHKERRQ(ierr); }
-  ierr = VecGetArrayRead(xx,&x);CHKERRQ(ierr);
-  ierr = VecGetArray(yy,&y);CHKERRQ(ierr);
-  for (i=0; i<a->totalslices; i++) { /* loop over slices */
-    if (i == totalslices-1 && (A->rmap->n & 0x07)) {
-      for (r=0; r<(A->rmap->n & 0x07); ++r) {
-        row        = 8*i + r;
-        nnz_in_row = a->rlen[row];
-        for (j=0; j<nnz_in_row; ++j) y[acolidx[8*j+r]] += aval[8*j+r] * x[row];
+  ierr = VecCopy(zz,yy);CHKERRQ(ierr);
+
+  if (a->nz) {
+    ierr = VecGetArrayRead(xx,&x);CHKERRQ(ierr);
+    ierr = VecGetArray(yy,&y);CHKERRQ(ierr);
+    for (i=0; i<a->totalslices; i++) { /* loop over slices */
+      if (i == totalslices-1 && (A->rmap->n & 0x07)) {
+        for (r=0; r<(A->rmap->n & 0x07); ++r) {
+          row        = 8*i + r;
+          nnz_in_row = a->rlen[row];
+          for (j=0; j<nnz_in_row; ++j) y[acolidx[8*j+r]] += aval[8*j+r] * x[row];
+        }
+        break;
       }
-      break;
+      for (j=a->sliidx[i]; j<a->sliidx[i+1]; j+=8) {
+        y[acolidx[j]]   += aval[j] * x[8*i];
+        y[acolidx[j+1]] += aval[j+1] * x[8*i+1];
+        y[acolidx[j+2]] += aval[j+2] * x[8*i+2];
+        y[acolidx[j+3]] += aval[j+3] * x[8*i+3];
+        y[acolidx[j+4]] += aval[j+4] * x[8*i+4];
+        y[acolidx[j+5]] += aval[j+5] * x[8*i+5];
+        y[acolidx[j+6]] += aval[j+6] * x[8*i+6];
+        y[acolidx[j+7]] += aval[j+7] * x[8*i+7];
+      }
     }
-    for (j=a->sliidx[i]; j<a->sliidx[i+1]; j+=8) {
-      y[acolidx[j]]   += aval[j] * x[8*i];
-      y[acolidx[j+1]] += aval[j+1] * x[8*i+1];
-      y[acolidx[j+2]] += aval[j+2] * x[8*i+2];
-      y[acolidx[j+3]] += aval[j+3] * x[8*i+3];
-      y[acolidx[j+4]] += aval[j+4] * x[8*i+4];
-      y[acolidx[j+5]] += aval[j+5] * x[8*i+5];
-      y[acolidx[j+6]] += aval[j+6] * x[8*i+6];
-      y[acolidx[j+7]] += aval[j+7] * x[8*i+7];
-    }
+    ierr = PetscLogFlops(2.0*a->nz);CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(xx,&x);CHKERRQ(ierr);
+    ierr = VecRestoreArray(yy,&y);CHKERRQ(ierr);
   }
-  ierr = PetscLogFlops(2.0*a->sliidx[a->totalslices]);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(xx,&x);CHKERRQ(ierr);
-  ierr = VecRestoreArray(yy,&y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
