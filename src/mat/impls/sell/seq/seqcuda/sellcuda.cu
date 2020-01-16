@@ -71,7 +71,6 @@ static PetscErrorCode MatSeqSELLCUDACopyToGPU(Mat A)
 __global__ void matmult_seqell_kernel(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscScalar *x,PetscScalar *y)
 {
   PetscInt       i,row,slice_id,row_in_slice,block_start,block_inc,block_end;
-  const PetscInt slice_height = 8;
   MatScalar      sum;
   /* one thread per row. Multiple rows may be assigned to one thread if block_inc is greater than the number of threads per block (blockDim.x) */
   block_inc   = blockDim.x*(nrows+gridDim.x*blockDim.x-1)/(gridDim.x*blockDim.x);
@@ -79,15 +78,13 @@ __global__ void matmult_seqell_kernel(PetscInt nrows,PetscInt totalslices,const 
   block_end   = min((blockIdx.x+1)*block_inc,nrows);
 
   for (row=block_start+threadIdx.x; row<block_end; row+=blockDim.x) {
-    slice_id     = row/slice_height;
-    row_in_slice = row%slice_height;
+    slice_id     = row/SLICE_HEIGHT;
+    row_in_slice = row%SLICE_HEIGHT;
     if (slice_id < totalslices) {
       sum = 0.0;
-      for (i=sliidx[slice_id]+row_in_slice; i<sliidx[slice_id+1]; i+=slice_height) {
-        sum += aval[i] * x[acolidx[i]];
-      }
-      if (slice_id == totalslices-1 && nrows%slice_height) { /* if last slice has padding rows */
-        if (row_in_slice < (nrows%slice_height)) y[row] = sum;
+      for (i=sliidx[slice_id]+row_in_slice; i<sliidx[slice_id+1]; i+=SLICE_HEIGHT) sum += aval[i] * x[acolidx[i]];
+      if (slice_id == totalslices-1 && nrows%SLICE_HEIGHT) { /* if last slice has padding rows */
+        if (row_in_slice < (nrows%SLICE_HEIGHT)) y[row] = sum;
       } else {
         y[row] = sum;
       }
@@ -98,7 +95,6 @@ __global__ void matmult_seqell_kernel(PetscInt nrows,PetscInt totalslices,const 
 __global__ void matmultadd_seqell_kernel(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscScalar *x,const PetscScalar *y,PetscScalar *z)
 {
   PetscInt       i,row,slice_id,row_in_slice,block_start,block_inc,block_end;
-  const PetscInt slice_height = 8;
   MatScalar      sum;
 
   /* one thread per row. Multiple rows may be assigned to one thread if block_inc is greater than the number of threads per block (blockDim.x) */
@@ -107,15 +103,13 @@ __global__ void matmultadd_seqell_kernel(PetscInt nrows,PetscInt totalslices,con
   block_end   = min((blockIdx.x+1)*block_inc,nrows);
 
   for (row=block_start+threadIdx.x; row<block_end; row+=blockDim.x) {
-    slice_id     = row/slice_height;
-    row_in_slice = row%slice_height;
+    slice_id     = row/SLICE_HEIGHT;
+    row_in_slice = row%SLICE_HEIGHT;
     if (slice_id < totalslices) {
       sum = 0.0;
-      for (i=sliidx[slice_id]+row_in_slice; i<sliidx[slice_id+1]; i+=slice_height) {
-        sum += aval[i] * x[acolidx[i]];
-      }
-      if (slice_id == totalslices-1 && nrows%slice_height) { /* if last slice has padding rows */
-        if (row_in_slice < (nrows%slice_height)) z[row] = y[row] + sum;
+      for (i=sliidx[slice_id]+row_in_slice; i<sliidx[slice_id+1]; i+=SLICE_HEIGHT) sum += aval[i] * x[acolidx[i]];
+      if (slice_id == totalslices-1 && nrows%SLICE_HEIGHT) { /* if last slice has padding rows */
+        if (row_in_slice < (nrows%SLICE_HEIGHT)) z[row] = y[row] + sum;
       } else {
         z[row] = y[row] + sum;
       }
@@ -206,8 +200,8 @@ static PetscErrorCode MatAssemblyEnd_SeqSELLCUDA(Mat A,MatAssemblyType mode)
   if (A->factortype == MAT_FACTOR_NONE) {
     ierr = MatSeqSELLCUDACopyToGPU(A);CHKERRQ(ierr);
   }
-  A->ops->mult             = MatMult_SeqSELLCUDA;
-  A->ops->multadd          = MatMultAdd_SeqSELLCUDA;
+  A->ops->mult    = MatMult_SeqSELLCUDA;
+  A->ops->multadd = MatMultAdd_SeqSELLCUDA;
   PetscFunctionReturn(0);
 }
 
@@ -243,12 +237,12 @@ static PetscErrorCode MatDuplicate_SeqSELLCUDA(Mat A,MatDuplicateOption cpvalues
     C->spptr = cudastruct;
   }
 
-  C->ops->assemblyend      = MatAssemblyEnd_SeqSELLCUDA;
-  C->ops->destroy          = MatDestroy_SeqSELLCUDA;
-  C->ops->setfromoptions   = MatSetFromOptions_SeqSELLCUDA;
-  C->ops->mult             = MatMult_SeqSELLCUDA;
-  C->ops->multadd          = MatMultAdd_SeqSELLCUDA;
-  C->ops->duplicate        = MatDuplicate_SeqSELLCUDA;
+  C->ops->assemblyend    = MatAssemblyEnd_SeqSELLCUDA;
+  C->ops->destroy        = MatDestroy_SeqSELLCUDA;
+  C->ops->setfromoptions = MatSetFromOptions_SeqSELLCUDA;
+  C->ops->mult           = MatMult_SeqSELLCUDA;
+  C->ops->multadd        = MatMultAdd_SeqSELLCUDA;
+  C->ops->duplicate      = MatDuplicate_SeqSELLCUDA;
 
   ierr = PetscObjectChangeTypeName((PetscObject)C,MATSEQSELLCUDA);CHKERRQ(ierr);
   C->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
