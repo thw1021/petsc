@@ -79,10 +79,10 @@ ierr = PetscMalloc2(BS2*new_size,&new_val,BS2*new_size,&new_colidx);CHKERRQ(ierr
 /* copy over old data into new slots by two steps: one step for data before the current slice and the other for the rest */ \
 ierr = PetscArraycpy(new_val,VAL,SIDX[SID+1]);CHKERRQ(ierr); \
 ierr = PetscArraycpy(new_colidx,COLIDX,SIDX[SID+1]);CHKERRQ(ierr); \
-ierr = PetscArraycpy(new_val+SIDX[SID+1]+8,VAL+SIDX[SID+1],SIDX[AM>>3]-SIDX[SID+1]);CHKERRQ(ierr); \
-ierr = PetscArraycpy(new_colidx+SIDX[SID+1]+8,COLIDX+SIDX[SID+1],SIDX[AM>>3]-SIDX[SID+1]);CHKERRQ(ierr); \
+ierr = PetscArraycpy(new_val+SIDX[SID+1]+8,VAL+SIDX[SID+1],SIDX[Ain->totalslices]-SIDX[SID+1]);CHKERRQ(ierr); \
+ierr = PetscArraycpy(new_colidx+SIDX[SID+1]+8,COLIDX+SIDX[SID+1],SIDX[Ain->totalslices]-SIDX[SID+1]);CHKERRQ(ierr); \
 /* update slice_idx */ \
-for (ii=SID+1;ii<=AM>>3;ii++) { SIDX[ii] += 8; } \
+for (ii=SID+1;ii<=Ain->totalslices;ii++) { SIDX[ii] += 8; } \
 /* update pointers. Notice that they point to the FIRST postion of the row */ \
 CP = new_colidx+SIDX[SID]+(ROW & 0x07); \
 VP = new_val+SIDX[SID]+(ROW & 0x07); \
