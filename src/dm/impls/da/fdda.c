@@ -597,6 +597,7 @@ PetscErrorCode  MatView_MPI_DA(Mat A,PetscViewer viewer)
   IS                is;
   MPI_Comm          comm;
   PetscViewerFormat format;
+  PetscBool         flag1,flag2;
 
   PetscFunctionBegin;
   /* Check whether we are just printing info, in which case MatView() already viewed everything we wanted to view */
@@ -615,7 +616,13 @@ PetscErrorCode  MatView_MPI_DA(Mat A,PetscViewer viewer)
   ierr = ISCreateGeneral(comm,rend-rstart,petsc,PETSC_OWN_POINTER,&is);CHKERRQ(ierr);
 
   /* call viewer on natural ordering */
-  ierr = MatCreateSubMatrix(A,is,is,MAT_INITIAL_MATRIX,&Anatural);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)A,MATMPISELL,&flag1);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)A,MATMPISELLCUDA,&flag2);CHKERRQ(ierr);
+  if (flag1 || flag2) {
+    ierr = MatConvert(A,MATAIJ,MAT_INITIAL_MATRIX,&Anatural);CHKERRQ(ierr);
+  } else {
+    ierr = MatCreateSubMatrix(A,is,is,MAT_INITIAL_MATRIX,&Anatural);CHKERRQ(ierr);
+  }
   ierr = ISDestroy(&is);CHKERRQ(ierr);
   ierr = PetscObjectGetOptionsPrefix((PetscObject)A,&prefix);CHKERRQ(ierr);
   ierr = PetscObjectSetOptionsPrefix((PetscObject)Anatural,prefix);CHKERRQ(ierr);

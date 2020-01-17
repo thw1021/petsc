@@ -152,6 +152,7 @@ PetscErrorCode MatDestroy_MPISELLCUDA(Mat A)
 
   PetscFunctionBegin;
   ierr = MatDestroy_MPISELL(A);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatConvert_mpisellcuda_mpiaij_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -173,6 +174,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISELLCUDA(Mat A)
   A->ops->destroy        = MatDestroy_MPISELLCUDA;
 
   ierr = PetscObjectChangeTypeName((PetscObject)A,MATMPISELLCUDA);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatConvert_mpisellcuda_mpiaij_C",MatConvert_MPISELL_MPIAIJ);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
