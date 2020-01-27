@@ -1392,6 +1392,7 @@ PetscErrorCode MatAssemblyEnd_SeqSELL(Mat A,MatAssemblyType mode)
   ierr = PetscInfo6(A,"Matrix size: %D X %D; storage space: %D allocated %D used (%D nonzeros+%D paddedzeros)\n",A->rmap->n,A->cmap->n,a->maxallocmat,a->sliidx[a->totalslices],a->nz,a->sliidx[a->totalslices]-a->nz);CHKERRQ(ierr);
   ierr = PetscInfo1(A,"Number of mallocs during MatSetValues() is %D\n",a->reallocs);CHKERRQ(ierr);
   ierr = PetscInfo1(A,"Maximum nonzeros in any row is %D\n",a->rlenmax);CHKERRQ(ierr);
+  a->nonzerorowcnt = 0;
   /* Set unused slots for column indices to last valid column index. Set unused slots for values to zero. This allows for a use of unmasked intrinsics -> higher performance */
   for (i=0; i<a->totalslices; ++i) {
     shift = a->sliidx[i];    /* starting index of the slice */
@@ -1406,6 +1407,7 @@ PetscErrorCode MatAssemblyEnd_SeqSELL(Mat A,MatAssemblyType mode)
       */
       lastcol = 0;
       if (nrow>0) { /* nonempty row */
+        a->nonzerorowcnt++;
         lastcol = cp[SLICE_HEIGHT*(nrow-1)+row_in_slice]; /* use the index from the last nonzero at current row */
       } else if (!row_in_slice) { /* first row of the currect slice is empty */
         for (j=1;j<SLICE_HEIGHT;j++) {
