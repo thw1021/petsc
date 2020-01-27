@@ -68,6 +68,27 @@ static PetscErrorCode MatSeqSELLCUDACopyToGPU(Mat A)
   PetscFunctionReturn(0);
 }
 
+__global__ void matmult_seqsell_basic_kernel(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscScalar *x,PetscScalar *y)
+{
+  PetscInt  i,row,slice_id,row_in_slice;
+  MatScalar sum;
+  /* one thread per row. */
+  row = blockIdx.x*blockDim.x + threadIdx.x;
+  if (row < nrows) {
+    slice_id     = row/SLICE_HEIGHT;
+    row_in_slice = row%SLICE_HEIGHT;
+    if (slice_id < totalslices) {
+      sum = 0.0;
+      for (i=sliidx[slice_id]+row_in_slice; i<sliidx[slice_id+1]; i+=SLICE_HEIGHT) sum += aval[i] * x[acolidx[i]];
+      if (slice_id == totalslices-1 && nrows%SLICE_HEIGHT) { /* if last slice has padding rows */
+        if (row_in_slice < (nrows%SLICE_HEIGHT)) y[row] = sum;
+      } else {
+        y[row] = sum;
+      }
+    }
+  }
+}
+
 __global__ void matmult_seqsell_kernel(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscScalar *x,PetscScalar *y)
 {
   PetscInt  i,row,slice_id,row_in_slice,block_start,block_inc,block_end;
@@ -96,7 +117,6 @@ __global__ void matmultadd_seqsell_kernel(PetscInt nrows,PetscInt totalslices,co
 {
   PetscInt  i,row,slice_id,row_in_slice,block_start,block_inc,block_end;
   MatScalar sum;
-
   /* one thread per row. Multiple rows may be assigned to one thread if block_inc is greater than the number of threads per block (blockDim.x) */
   block_inc   = blockDim.x*(nrows+gridDim.x*blockDim.x-1)/(gridDim.x*blockDim.x);
   block_start = blockIdx.x*block_inc;
@@ -172,22 +192,29 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
   PetscInt          *sliidx = cudastruct->sliidx;
   PetscErrorCode    ierr;
   cudaError_t       cerr;
-  dim3              block1(256,1),block2(128,2),block4(64,4),block8(32,8);
-  PetscInt          avg_width = a->sliidx[a->totalslices]/(SLICE_HEIGHT*a->totalslices);
+  PetscInt          nblocks,blocksize = 256;
 
   PetscFunctionBegin;
   ierr = MatSeqSELLCUDACopyToGPU(A);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayWrite(yy,&y);CHKERRQ(ierr);
-
-  if (avg_width > 64) {
-    matmult_seqsell_tiled_kernel<<<512,block8>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
-  } else if (avg_width > 32) {
-    matmult_seqsell_tiled_kernel<<<512,block4>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
-  } else if (avg_width > 16) {
-    matmult_seqsell_tiled_kernel<<<512,block2>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+  ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
+  nblocks = (nrows+blocksize-1)/blocksize;
+  if (nblocks >= 80) {
+    matmult_seqsell_basic_kernel<<<nblocks,blocksize>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
   } else {
-    matmult_seqsell_tiled_kernel<<<512,block1>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+    PetscInt avg_width;
+    dim3     block1(256,1),block2(128,2),block4(64,4),block8(32,8);
+    avg_width = a->sliidx[a->totalslices]/(SLICE_HEIGHT*a->totalslices);
+    if (avg_width > 64) {
+      matmult_seqsell_tiled_kernel<<<80,block8>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+    } else if (avg_width > 32) {
+      matmult_seqsell_tiled_kernel<<<80,block4>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+    } else if (avg_width > 16) {
+      matmult_seqsell_tiled_kernel<<<80,block2>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+    } else {
+      matmult_seqsell_tiled_kernel<<<80,block1>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+    }
   }
   ierr = VecCUDARestoreArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayWrite(yy,&y);CHKERRQ(ierr);
@@ -212,6 +239,7 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
 
   PetscFunctionBegin;
   ierr = MatSeqSELLCUDACopyToGPU(A);CHKERRQ(ierr);
+  ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   if (a->nz) {
     ierr = VecCUDAGetArrayRead(xx,&x);CHKERRQ(ierr);
     ierr = VecCUDAGetArrayRead(yy,&y);CHKERRQ(ierr);
