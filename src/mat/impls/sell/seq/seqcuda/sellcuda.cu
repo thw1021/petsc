@@ -51,14 +51,14 @@ static PetscErrorCode MatSeqSELLCUDACopyToGPU(Mat A)
       if (cudastruct->sliidx) {
         cerr = cudaFree(cudastruct->sliidx);CHKERRCUDA(cerr);
       }
+      cerr = cudaMalloc((void **)&(cudastruct->sliidx),(a->totalslices+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
       cerr = cudaMalloc((void **)&(cudastruct->colidx),a->maxallocmat*sizeof(PetscInt));CHKERRCUDA(cerr);
       cerr = cudaMalloc((void **)&(cudastruct->val),a->maxallocmat*sizeof(MatScalar));CHKERRCUDA(cerr);
-      cerr = cudaMalloc((void **)&(cudastruct->sliidx),(a->totalslices+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
     }
     /* copy values, nz or maxallocmat? */
+    cerr = cudaMemcpy(cudastruct->sliidx,a->sliidx,(a->totalslices+1)*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
     cerr = cudaMemcpy(cudastruct->colidx,a->colidx,a->sliidx[a->totalslices]*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
     cerr = cudaMemcpy(cudastruct->val,a->val,a->sliidx[a->totalslices]*sizeof(MatScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-    cerr = cudaMemcpy(cudastruct->sliidx,a->sliidx,(a->totalslices+1)*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
     ierr = PetscLogCpuToGpu(a->sliidx[a->totalslices]*(sizeof(MatScalar)+sizeof(PetscInt))+(a->totalslices+1)*sizeof(PetscInt));CHKERRQ(ierr);
     cudastruct->nonzerostate = A->nonzerostate;
     cerr  = WaitForGPU();CHKERRCUDA(cerr);
@@ -216,11 +216,11 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
       matmult_seqsell_tiled_kernel<<<80,block1>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
     }
   }
-  ierr = VecCUDARestoreArrayRead(xx,&x);CHKERRQ(ierr);
-  ierr = VecCUDARestoreArrayWrite(yy,&y);CHKERRQ(ierr);
   cerr = WaitForGPU();CHKERRCUDA(cerr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-  ierr = PetscLogGpuFlops(2.0*a->nz-a->nonzerorowcnt);CHKERRQ(ierr);
+  ierr = VecCUDARestoreArrayRead(xx,&x);CHKERRQ(ierr);
+  ierr = VecCUDARestoreArrayWrite(yy,&y);CHKERRQ(ierr);
+  ierr = PetscLogGpuFlops(2.0*a->nz);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -239,13 +239,15 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
 
   PetscFunctionBegin;
   ierr = MatSeqSELLCUDACopyToGPU(A);CHKERRQ(ierr);
-  ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   if (a->nz) {
     ierr = VecCUDAGetArrayRead(xx,&x);CHKERRQ(ierr);
     ierr = VecCUDAGetArrayRead(yy,&y);CHKERRQ(ierr);
     ierr = VecCUDAGetArrayWrite(zz,&z);CHKERRQ(ierr);
 
+    ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     matmultadd_seqsell_kernel<<<512,256>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
+    cerr = WaitForGPU();CHKERRCUDA(cerr);
+    ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
 
     ierr = VecCUDARestoreArrayRead(xx,&x);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(yy,&y);CHKERRQ(ierr);
@@ -253,8 +255,6 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
   } else {
     ierr = VecCopy(yy,zz);CHKERRQ(ierr);
   }
-  cerr = WaitForGPU();CHKERRCUDA(cerr);
-  ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(2.0*a->nz);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
