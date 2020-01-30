@@ -217,13 +217,13 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
     dim3     block1(256,1),block2(128,2),block4(64,4),block8(32,8);
     avg_width = a->sliidx[a->totalslices]/(SLICE_HEIGHT*a->totalslices);
     if (avg_width > 64) {
-      matmult_seqsell_tiled_kernel<<<640,block8>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+      matmult_seqsell_tiled_kernel<<<nblocks*8,block8>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
     } else if (avg_width > 32) {
-      matmult_seqsell_tiled_kernel<<<320,block4>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+      matmult_seqsell_tiled_kernel<<<nblocks*4,block4>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
     } else if (avg_width > 16) {
-      matmult_seqsell_tiled_kernel<<<160,block2>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+      matmult_seqsell_tiled_kernel<<<nblocks*2,block2>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
     } else {
-      matmult_seqsell_tiled_kernel<<<80,block1>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+      matmult_seqsell_tiled_kernel<<<nblocks,block1>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
     }
   }
   cerr = WaitForGPU();CHKERRCUDA(cerr);
@@ -263,13 +263,13 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
       dim3     block1(256,1),block2(128,2),block4(64,4),block8(32,8);
       avg_width = a->sliidx[a->totalslices]/(SLICE_HEIGHT*a->totalslices);
       if (avg_width > 64) {
-        matmultadd_seqsell_tiled_kernel<<<640,block8>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
+        matmultadd_seqsell_tiled_kernel<<<nblocks*8,block8>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
       } else if (avg_width > 32) {
-        matmultadd_seqsell_tiled_kernel<<<320,block4>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
+        matmultadd_seqsell_tiled_kernel<<<nblocks*4,block4>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
       } else if (avg_width > 16) {
-        matmultadd_seqsell_tiled_kernel<<<160,block2>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
+        matmultadd_seqsell_tiled_kernel<<<nblocks*2,block2>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
       } else {
-        matmultadd_seqsell_tiled_kernel<<<80,block1>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
+        matmultadd_seqsell_tiled_kernel<<<nblocks,block1>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
       }
     }
     cerr = WaitForGPU();CHKERRCUDA(cerr);
