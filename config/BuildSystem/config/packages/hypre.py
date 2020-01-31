@@ -23,7 +23,9 @@ class Configure(config.package.GNUPackage):
     #self.complex           = 0
     self.hastests          = 1
     self.hastestsdatafiles = 1
-    self.installwithbatch  = 0
+    x = os.getenv('PE_PRODUCT_LIST')
+    if x and x.find('CRAYPE_MIC-KNL') > -1:
+      self.installwithbatch  = 0
 
   def setupDependencies(self, framework):
     config.package.GNUPackage.setupDependencies(self, framework)
