@@ -41,7 +41,11 @@ static PetscErrorCode MatSeqSELLCUDACopyToGPU(Mat A)
   PetscFunctionBegin;
   if (A->offloadmask == PETSC_OFFLOAD_UNALLOCATED || A->offloadmask == PETSC_OFFLOAD_CPU) {
     ierr = PetscLogEventBegin(MAT_CUDACopyToGPU,A,0,0,0);CHKERRQ(ierr);
-    if (!A->assembled || A->nonzerostate != cudastruct->nonzerostate) {
+    if (A->assembled && A->nonzerostate == cudastruct->nonzerostate) {
+      /* copy values only */
+      cerr = cudaMemcpy(cudastruct->val,a->val,a->sliidx[a->totalslices]*sizeof(MatScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+      ierr = PetscLogCpuToGpu(a->sliidx[a->totalslices]*(sizeof(MatScalar)));CHKERRQ(ierr);
+    } else {
       if (cudastruct->colidx) {
         cerr = cudaFree(cudastruct->colidx);CHKERRCUDA(cerr);
       }
@@ -54,16 +58,16 @@ static PetscErrorCode MatSeqSELLCUDACopyToGPU(Mat A)
       cerr = cudaMalloc((void **)&(cudastruct->sliidx),(a->totalslices+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
       cerr = cudaMalloc((void **)&(cudastruct->colidx),a->maxallocmat*sizeof(PetscInt));CHKERRCUDA(cerr);
       cerr = cudaMalloc((void **)&(cudastruct->val),a->maxallocmat*sizeof(MatScalar));CHKERRCUDA(cerr);
+      /* copy values, nz or maxallocmat? */
+      cerr = cudaMemcpy(cudastruct->sliidx,a->sliidx,(a->totalslices+1)*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+      cerr = cudaMemcpy(cudastruct->colidx,a->colidx,a->sliidx[a->totalslices]*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+      cerr = cudaMemcpy(cudastruct->val,a->val,a->sliidx[a->totalslices]*sizeof(MatScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+      ierr = PetscLogCpuToGpu(a->sliidx[a->totalslices]*(sizeof(MatScalar)+sizeof(PetscInt))+(a->totalslices+1)*sizeof(PetscInt));CHKERRQ(ierr);
+      cudastruct->nonzerostate = A->nonzerostate;
     }
-    /* copy values, nz or maxallocmat? */
-    cerr = cudaMemcpy(cudastruct->sliidx,a->sliidx,(a->totalslices+1)*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-    cerr = cudaMemcpy(cudastruct->colidx,a->colidx,a->sliidx[a->totalslices]*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-    cerr = cudaMemcpy(cudastruct->val,a->val,a->sliidx[a->totalslices]*sizeof(MatScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-    ierr = PetscLogCpuToGpu(a->sliidx[a->totalslices]*(sizeof(MatScalar)+sizeof(PetscInt))+(a->totalslices+1)*sizeof(PetscInt));CHKERRQ(ierr);
-    cudastruct->nonzerostate = A->nonzerostate;
     cerr  = WaitForGPU();CHKERRCUDA(cerr);
-    A->offloadmask = PETSC_OFFLOAD_BOTH;
     ierr = PetscLogEventEnd(MAT_CUDACopyToGPU,A,0,0,0);CHKERRQ(ierr);
+    A->offloadmask = PETSC_OFFLOAD_BOTH;
   }
   PetscFunctionReturn(0);
 }
@@ -197,15 +201,20 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
   PetscScalar       *y;
   const PetscScalar *x;
   PetscInt          totalslices=a->totalslices,nrows = A->rmap->n;
-  MatScalar         *aval = cudastruct->val;
-  PetscInt          *acolidx = cudastruct->colidx;
-  PetscInt          *sliidx = cudastruct->sliidx;
+  MatScalar         *aval;
+  PetscInt          *acolidx;
+  PetscInt          *sliidx;
   PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscInt          nblocks,blocksize = 256;
 
   PetscFunctionBegin;
   ierr = MatSeqSELLCUDACopyToGPU(A);CHKERRQ(ierr);
+  /* cudastruct may not be available until MatSeqSELLCUDACopyToGPU() is called */ 
+  aval    = cudastruct->val;
+  acolidx = cudastruct->colidx;
+  sliidx  = cudastruct->sliidx;
+
   ierr = VecCUDAGetArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayWrite(yy,&y);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
@@ -354,7 +363,7 @@ static PetscErrorCode MatDuplicate_SeqSELLCUDA(Mat A,MatDuplicateOption cpvalues
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatConvert_SeqSELL_SeqSELLCUDA(Mat B)
+PETSC_EXTERN PetscErrorCode MatConvert_SeqSELL_SeqSELLCUDA(Mat B)
 {
   Mat_SeqSELLCUDA *cudastruct;
   PetscErrorCode  ierr;

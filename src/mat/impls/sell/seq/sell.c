@@ -1950,6 +1950,10 @@ PetscErrorCode MatSeqSELLRestoreArray(Mat A,PetscScalar **array)
   PetscFunctionReturn(0);
 }
 
+#if defined(PETSC_HAVE_CUDA)
+PETSC_EXTERN PetscErrorCode MatConvert_SeqSELL_SeqSELLCUDA(Mat);
+#endif
+
 PETSC_EXTERN PetscErrorCode MatCreate_SeqSELL(Mat B)
 {
   Mat_SeqSELL    *b;
@@ -1992,6 +1996,9 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSELL(Mat B)
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatRetrieveValues_C",MatRetrieveValues_SeqSELL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLSetPreallocation_C",MatSeqSELLSetPreallocation_SeqSELL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatConvert_seqsell_seqaij_C",MatConvert_SeqSELL_SeqAIJ);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA)
+  ierr = PetscObjectComposeFunction((PetscObject)B,"MatConvert_seqsell_seqsellcuda_C",MatConvert_SeqSELL_SeqSELLCUDA);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
