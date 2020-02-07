@@ -6,7 +6,7 @@
 #include <petscctable.h>
 
 #if defined(PETSC_HAVE_CUDA)
-  #define SLICE_HEIGHT 32
+  #define SLICE_HEIGHT 16
 #else
   #define SLICE_HEIGHT 8
 #endif
