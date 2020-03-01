@@ -248,12 +248,12 @@ static PetscReal CalculateEForCurrent(PetscReal j0, PetscReal Tev, PetscReal n, 
   c = 299792458;
   e = 1.602176e-19;
   m = 9.10938e-31;
-  if (0) {
+  if (1) {
     PetscReal betath,Ec,EHat;
     betath = sqrt(2*Tev*e/(m*c*c));
     EHat = (j0 / (n*e*c)) / (7/(sqrt(2)*2)*pow(betath,3));
     Ec =  n*lnLambda*pow(e,3) / (4*M_PI*pow(eps0,2)*m*c*c);
-    *E = EHat*Ec;
+    *E = 2*Ec;
   } else {
     PetscReal Ed,vth;
     vth = PetscSqrtReal(8*Tev*e/(m*M_PI));
@@ -336,7 +336,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
     /* ierr = getT_kev(plex, X, 0, &n_e, &Te_kev);CHKERRQ(ierr); */
     v2 = v*v;
     Te_kev = (v2*ctx->masses[0]*M_PI/8)*kev_joul; /* temperature in kev */
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "ooooo T_e(kev)=%20.13e J_0=%10.3e J_1=%10.3e n_e=%10.3e v_z=%10.3e eta_s=%10.3e E/J=%10.3e Z= %d\n",
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "DONE T_e(kev)=%20.13e J_0=%10.3e J_1=%10.3e n_e=%10.3e v_z=%10.3e eta_s=%10.3e E/J=%10.3e Z= %d\n",
                        Te_kev, j_0, j_1, n_e, v_z, spit_eta, E/J, (int)Z);CHKERRQ(ierr);
   }
   if (time==0) {
