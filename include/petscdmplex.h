@@ -13,6 +13,7 @@
 #include <petscfv.h>
 #include <petscsftypes.h>
 #include <petscdmfield.h>
+#include <petscts.h>
 
 PETSC_EXTERN PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner, DM, PetscSection, PetscSection, IS *);
 

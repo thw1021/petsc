@@ -11,6 +11,7 @@
 #include <petscvec.h>
 #include <petsc/private/petscimpl.h>
 #include <petscviewer.h>
+#include <petsc/private/dmpleximpl.h> /* for FPLandau */
 
 PETSC_EXTERN PetscBool VecRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecRegisterAll(void);
@@ -334,4 +335,18 @@ PETSC_EXTERN PetscErrorCode VecTaggerRegisterAll(void);
 PETSC_EXTERN PetscErrorCode VecTaggerComputeIS_FromBoxes(VecTagger,Vec,IS*);
 PETSC_EXTERN PetscMPIInt Petsc_Reduction_keyval;
 
+typedef struct {
+  PetscReal    *x[3];
+  PetscReal    *f[FP_MAX_SPECIES];
+  PetscReal    *df[3][FP_MAX_SPECIES];
+  PetscInt     nip; /* number of integration points */
+  PetscInt     ns; /* number of species or fields */
+  PetscInt     dim;
+} FPLandPointData;
+#if defined(PETSC_HAVE_CUDA)
+PETSC_EXTERN PetscErrorCode FPCUDATest();
+#endif
+PETSC_EXTERN PetscErrorCode FPLandauCUDAJacobian(DM,PetscQuadrature,const PetscInt[],
+						 const PetscReal [][FP_MAX_SPECIES],const PetscReal[],const PetscReal[],
+						 const FPLandPointData * const, const PetscReal[], const PetscLogEvent[],Mat);
 #endif
