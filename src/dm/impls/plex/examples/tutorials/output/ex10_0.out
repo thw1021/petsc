@@ -1,0 +1,31 @@
+[0] ProcessOptions(): Warning: num_species = 1 != number of thermal temps provided (3)
+masses:        e= 9.109e-31; ions in proton mass units:  2.000e+00  4.000e+01 ...
+charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  1.800e+01
+thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 5.802e+04. v_0= 2.965e+07 n_0= 1.000e+20 t_0= 6.469e-05
+  0) species-0: charge density= -1.6025294996611e+01 z-momentum=  6.6789475482262e-20 energy=  1.1962701933661e+05
+  0) species-1: charge density=  1.6020046245297e+01 z-momentum= -4.6336801935712e-18 energy=  1.1967503195186e+05
+  0) species-2: charge density=  2.8844946080356e-03 z-momentum= -3.4060929011265e-23 energy=  1.1960871705599e-03
+	  0) Total: charge density= -2.3642567057755e-03, momentum= -4.5669247790179e-18, energy=  2.3930205248456e+05 (m_i[0]/m_e = 3670.94, 110 cells)
+[0] DMGetDMSNES(): Creating new DMSNES
+[0] DMGetDMTS(): Creating new DMTS
+[0] DMGetDMSNESWrite(): Copying DMSNES due to write
+0 TS dt 1e-08 time 0.
+[0] DMGetDMKSP(): Creating new DMKSP
+    0 SNES Function norm 8.287378912346e-02 
+    1 SNES Function norm 2.302839492426e-07 
+    2 SNES Function norm 1.016433357794e-09 
+  Nonlinear fp_ solve converged due to CONVERGED_SNORM_RELATIVE iterations 2
+    0 SNES Function norm 8.287149589538e-02 
+    1 SNES Function norm 1.151041666611e-07 
+    2 SNES Function norm 2.078045393801e-09 
+  Nonlinear fp_ solve converged due to CONVERGED_SNORM_RELATIVE iterations 2
+    0 SNES Function norm 8.287264240143e-02 
+    1 SNES Function norm 1.152101994341e-07 
+    2 SNES Function norm 2.526210832074e-09 
+  Nonlinear fp_ solve converged due to CONVERGED_SNORM_RELATIVE iterations 2
+[0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 0.00514193, accepting step of size 1e-08
+1 TS dt 1.25e-08 time 1e-08
+  1) species-0: charge density= -1.6025294996611e+01 z-momentum= -4.2475762916351e-20 energy=  1.1962701933655e+05
+  1) species-1: charge density=  1.6020046245297e+01 z-momentum= -1.9341440850296e-17 energy=  1.1967503195178e+05
+  1) species-2: charge density=  2.8844946080356e-03 z-momentum= -1.3675397182343e-23 energy=  1.1962242025308e-03
+	  1) Total: charge density= -2.3642567057613e-03, momentum= -1.9383930288609e-17, energy=  2.3930205248456e+05 (m_i[0]/m_e = 3670.94, 110 cells)
