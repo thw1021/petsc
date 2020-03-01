@@ -611,4 +611,61 @@ PETSC_INTERN PetscErrorCode DMPlexBasisTransformApplyReal_Internal(DM, const Pet
 PETSC_INTERN PetscErrorCode DMPlexBasisTransformApply_Internal(DM, const PetscReal[], PetscBool, PetscInt, const PetscScalar *, PetscScalar *, void *);
 PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErrorCode (**)(Mat, PetscReal, Vec, Vec, PetscReal, IS, void*), void **);
 
+/* the context */
+#define FP_MAX_SPECIES 5
+#define FP_MAX_NQ 36 /* Q5 in 2D */
+typedef struct {
+  PetscBool     interpolate;                  /* Generate intermediate mesh elements */
+  PetscBool     simplex;
+  PetscFE       fe[FP_MAX_SPECIES];
+  /* geometry  */
+  PetscReal     i_radius;
+  PetscReal     e_radius;
+  PetscInt      num_sections;
+  PetscReal     radius;
+  PetscReal     re_radius;           /* radius of refinement along v_perp=0, z>0 */
+  PetscReal     vperp0_radius1;      /* radius of refinement along v_perp=0 */
+  PetscReal     vperp0_radius2;      /* radius of refinement along v_perp=0 after origin AMR refinement */
+  PetscBool     sphere;
+  PetscBool     inflate;
+  PetscInt      numRERefine;       /* refinement along v_perp=0, z > 0 */
+  PetscInt      nZRefine1;          /* origin refinement after v_perp=0 refinement */
+  PetscInt      nZRefine2;          /* origin refinement after origin AMR refinement */
+  PetscInt      maxRefIts;         /* normal AMR - refine from origin */
+  PetscInt      postAMRRefine;     /* uniform refinement of AMR */
+  PetscInt      num_species;
+  /* discretization - AMR */
+  PetscErrorCode (*errorIndicator)(PetscInt, PetscReal, PetscReal [], PetscInt, const PetscInt[], const PetscScalar[], const PetscScalar[], PetscReal *, void *);
+  PetscReal     refineTol[FP_MAX_SPECIES];
+  PetscReal     coarsenTol[FP_MAX_SPECIES];
+  /* physics */
+  PetscReal     thermal_temps[FP_MAX_SPECIES];
+  PetscReal     masses[FP_MAX_SPECIES];  /* mass of each species  */
+  PetscReal     charges[FP_MAX_SPECIES]; /* charge of each species  */
+  PetscReal     n[FP_MAX_SPECIES];       /* number density of each species  */
+  PetscReal     m_0;      /* reference mass */
+  PetscReal     v_0;      /* reference velocity */
+  PetscReal     n_0;      /* reference number density */
+  PetscReal     t_0;      /* reference time */
+  PetscReal     Ez;
+  PetscReal     epsilon0;
+  PetscReal     k;
+  PetscReal     lnLam;
+  PetscReal     electronShift; /* for tests */
+  /* diagnostics */
+  PetscInt      verbose;
+  PetscInt      plotIdx;
+  PetscReal     plotDt;
+  PetscLogEvent events[20];
+  DM            dmv;
+  /* cache */
+  Mat           J;
+  Mat           M;
+  Vec           X;
+  PetscReal     normJ; /* used to see if function changed */
+  /* derived type */
+  void          *data;
+  PetscBool     aux_bool;  /* helper */
+  PetscBool     useCUDA;
+} LandCtx;
 #endif /* _PLEXIMPL_H */
