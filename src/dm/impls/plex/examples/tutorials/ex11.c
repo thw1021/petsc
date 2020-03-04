@@ -249,9 +249,9 @@ static PetscReal CalculateEForCurrent(PetscReal j0, PetscReal Tev, PetscReal n, 
   e = 1.602176e-19;
   m = 9.10938e-31;
   if (1) {
-    PetscReal betath,Ec,EHat;
-    betath = sqrt(2*Tev*e/(m*c*c));
-    EHat = (j0 / (n*e*c)) / (7/(sqrt(2)*2)*pow(betath,3));
+    PetscReal /* betath,EHat, */Ec;
+    /* betath = sqrt(2*Tev*e/(m*c*c)); */
+    /* EHat = (j0 / (n*e*c)) / (7/(sqrt(2)*2)*pow(betath,3)); */
     Ec =  n*lnLambda*pow(e,3) / (4*M_PI*pow(eps0,2)*m*c*c);
     *E = 2*Ec;
   } else {
