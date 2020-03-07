@@ -253,7 +253,7 @@ static PetscReal CalculateEForCurrent(PetscReal j0, PetscReal Tev, PetscReal n, 
     /* betath = sqrt(2*Tev*e/(m*c*c)); */
     /* EHat = (j0 / (n*e*c)) / (7/(sqrt(2)*2)*pow(betath,3)); */
     Ec =  n*lnLambda*pow(e,3) / (4*M_PI*pow(eps0,2)*m*c*c);
-    *E = 2*Ec;
+    *E = 5*Ec;
   } else {
     PetscReal Ed,vth;
     vth = PetscSqrtReal(8*Tev*e/(m*M_PI));
@@ -735,7 +735,7 @@ int main(int argc, char **argv)
   DM             dm;
   Vec            X;
   PetscErrorCode ierr;
-  PetscInt       dim = 2, numSpecies;
+  PetscInt       dim = 2;
   TS             ts;
   Mat            J;
   PetscDS        prob;
@@ -744,12 +744,10 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
-  numSpecies = 3;
-  ierr = DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, numSpecies, "", &X, &dm); CHKERRQ(ierr);
+  ierr = DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &dm); CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-  ierr = PetscDSGetNumFields(prob, &numSpecies);CHKERRQ(ierr);
   /* context */
   rectx = (REctx*)(ctx->data = malloc(sizeof(REctx)));
   ierr = ProcessREOptions(rectx,ctx,dm,"");CHKERRQ(ierr);
@@ -787,6 +785,6 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: p4est
-    args: -Ez 0 -petscspace_degree 4 -mass_petscspace_degree 4 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info -info_exclude null,vec,mat,pc,ksp,snes,p4est,vecscatter,is -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-12 -snes_stol 1.e-12 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-6 -ts_dt 1.e-4 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 11 -domain_radius 5 -impurity_source_type pulse -malloc_debug
+    args: -Ez 0 -petscspace_degree 4 -mass_petscspace_degree 4 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info -info_exclude null,vec,mat,pc,ksp,snes,p4est,vecscatter,is -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-12 -snes_stol 1.e-12 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-6 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 11 -domain_radius 5 -impurity_source_type pulse -malloc_debug
 
 TEST*/
