@@ -42,10 +42,10 @@ PETSC_EXTERN void petscpartitionerviewfromoptions_(PetscPartitioner *part,PetscO
   FREECHAR(type,t);
 }
 
-PETSC_EXTERN void dmplexfpcreatevelocityspace_(MPI_Fint * comm,PetscInt *dim,PetscInt *numSpecies,char* name,Vec *X,DM *dm, int *ierr,PETSC_FORTRAN_CHARLEN_T len)
+PETSC_EXTERN void dmplexfpcreatevelocityspace_(MPI_Fint * comm,PetscInt *dim,char* name,Vec *X,DM *dm, int *ierr,PETSC_FORTRAN_CHARLEN_T len)
 {
   char *prefix;
   FIXCHAR(name, len, prefix);
-  *ierr = DMPlexFPCreateVelocitySpace(MPI_Comm_f2c(*(comm)),*dim,*numSpecies,prefix,X,dm);
+  *ierr = DMPlexFPCreateVelocitySpace(MPI_Comm_f2c(*(comm)),*dim,prefix,X,dm);
 }
 

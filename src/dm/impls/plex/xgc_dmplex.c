@@ -1916,10 +1916,10 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   nt = FP_MAX_SPECIES;
   for (ii=0;ii<FP_MAX_SPECIES;ii++) ctx->thermal_temps[ii] = 1.;
   ierr = PetscOptionsRealArray("-thermal_temps", "Temperature of each species [e,i_0,i_1,...] in keV", "xgc_dmplex.c", ctx->thermal_temps, &nt, &flg);CHKERRQ(ierr);
-  if (flg && nt != ctx->num_species) {
-    PetscInfo2(dummy, "Warning: num_species = %D != number of thermal temps provided (%D)\n",ctx->num_species,nt);
+  if (flg) {
+    PetscInfo1(dummy, "num_species set to number of thermal temps provided (%D)\n",nt);
     ctx->num_species = nt;
-  }
+  } else SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-thermal_temps ,t1,t2,.. must be provided to set the number of species");
   for (ii=0;ii<ctx->num_species;ii++) ctx->thermal_temps[ii] *= 1.1604525e7; /* convert to Kelvin */
   nm = FP_MAX_SPECIES-1;
   ierr = PetscOptionsRealArray("-ion_masses", "Mass of each species in units of proton mass [i_0=2,i_1=40...]", "xgc_dmplex.c", &ctx->masses[1], &nm, &flg);CHKERRQ(ierr);
@@ -2028,7 +2028,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
 .keywords: mesh
 .seealso: DMPlexCreate()
 @*/
-PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, PetscInt numSpecies, const char prefix[], Vec *X, DM *dm)
+PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char prefix[], Vec *X, DM *dm)
 {
   PetscMPIInt    size;
   PetscErrorCode ierr;
@@ -2038,8 +2038,6 @@ PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, PetscInt
   if (size!=1) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Phase space meshes should be serial (but should work in parallel)");
   if (dim!=2 && dim!=3) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Only 2D and 3D supported");
   ctx = malloc(sizeof(LandCtx));
-  ctx->num_species = numSpecies; /* this can be 0, figure it out in ProcessOptions */
-  if (numSpecies > FP_MAX_SPECIES) ctx->num_species = FP_MAX_SPECIES;
   /* process options */
   ierr = ProcessOptions(ctx,prefix);CHKERRQ(ierr);
   /* Create Mesh */
