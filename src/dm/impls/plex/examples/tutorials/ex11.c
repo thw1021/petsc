@@ -253,7 +253,7 @@ static PetscReal CalculateEForCurrent(PetscReal j0, PetscReal Tev, PetscReal n, 
     /* betath = sqrt(2*Tev*e/(m*c*c)); */
     /* EHat = (j0 / (n*e*c)) / (7/(sqrt(2)*2)*pow(betath,3)); */
     Ec =  n*lnLambda*pow(e,3) / (4*M_PI*pow(eps0,2)*m*c*c);
-    *E = 4*Ec;
+    *E = 3*Ec;
   } else {
     PetscReal Ed,vth;
     vth = PetscSqrtReal(8*Tev*e/(m*M_PI));
@@ -785,6 +785,6 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: p4est
-    args: -Ez 0 -petscspace_degree 4 -mass_petscspace_degree 4 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info -info_exclude null,vec,mat,pc,ksp,snes,p4est,vecscatter,is -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-12 -snes_stol 1.e-12 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-6 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 11 -domain_radius 5 -impurity_source_type pulse -malloc_debug
+    args: -Ez 0 -petscspace_degree 4 -mass_petscspace_degree 4 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info -info_exclude null,vec,mat,pc,ksp,snes,p4est,vecscatter,is -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-6 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 8 -domain_radius 5 -impurity_source_type pulse -malloc_debug
 
 TEST*/

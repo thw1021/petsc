@@ -9,8 +9,8 @@
 
 % See the ``Article customise'' template for come common customisations
 
-\newcommand{\TheTitle}{Runaway electron generation with High-performance, structure preserving discretizations Fokker-Plank-Landau} 
-\newcommand{\HTitle}{Runaway Electron Generation with High-performance Fokker-Plank-Landau} 
+\newcommand{\TheTitle}{Runaway electron generation with High-performance, structure preserving discretizations Fokker-Planck-Landau} 
+\newcommand{\HTitle}{Runaway Electron Generation with High-performance Fokker-Planck-Landau} 
 \newcommand{\TheAuthors}{M. F. Adams, Dylan Brennan, M. G. Knepley}
 \newcommand{\Order}[1]{\ensuremath{\mathcal{O}(#1)}}    % big O notation
 
@@ -39,7 +39,7 @@
 
 \begin{abstract}
 Runaway electron (RE) events are catastrophic to tokamak experimental reactors and pose an existential threat to the development of commercial fusion reactors.
-We seek to understand the generation of ``seed" electrons, which are the precursors of REs, with accurate velocity space models using fully conserving, structure preserving, discretizations of the Fokker-Plank collision operator in Landau form.
+We seek to understand the generation of ``seed" electrons, which are the precursors of REs, with accurate velocity space models using fully conserving, structure preserving, discretizations of the Fokker-Planck collision operator in Landau form.
 We continue the development of a high-performance implementation of these discretizations with verification studies and the extension of earlier work on vectorization to general graphical processing units (GPUs).
 We investigate seed electron generation as a function of exogenous parameters such as quench rates, heavy ion injection rates from common mitigation strategies, plasma temperature, etc.
 \end{abstract}
@@ -53,7 +53,7 @@ We investigate seed electron generation as a function of exogenous parameters su
 
 A runaway electron event can cripple fusion reactor for months and thereby threaten the mission of reactor scale experiments like ITER and the commercial viability of fusion power.
 Modeling of the generation of the precursors to runway electrons, seed electrons, is critical in developing mitigation strategies to suppress a catastrophic avalanche of runway electrons.
-The Landau form of the Fokker-Plank collision operator is the gold standard for small angle collision dominated plasmas, is fully conservative and admits fully conservative finite element discretizations \cite{Hirvijoki2016,AdamsHirvijokiKnepleyBrownIsaacMills2017}.
+The Landau form of the Fokker-Planck collision operator is the gold standard for small angle collision dominated plasmas, is fully conservative and admits fully conservative finite element discretizations \cite{Hirvijoki2016,AdamsHirvijokiKnepleyBrownIsaacMills2017}.
 The Landau operator, however, exhibits quadric complexity in both the number of mesh points ($N$, integration points) and the number of species ($S$).
 We mitigate these costs by first adapting the grid to put mesh resolution where it is needed most, that is to efficiently use our available resources to achieve uniform accuracy without over resolving smooth parts of the distribution functions as discussed in \cite{AdamsHirvijokiKnepleyBrownIsaacMills2017}.
 This reduces $N$.
@@ -76,7 +76,7 @@ where $e$ is charge, $m$ mass, ${\bm E} $ electric field, ${\bm B}$
 magnetic field, ${\bm x}$ spatial coordinate, ${\bm v}$ velocity
 coordinate, and $t$ time \cite{Vlasov1968}.
 We ignore configurations space and work only in velocity space and let ${\bm B=0}$.
-We use  the Fokker-Plank collision integral in Landau form for the collision operator for $C$ \cite{landau1936kinetic}.
+We use  the Fokker-Planck collision integral in Landau form for the collision operator for $C$ \cite{landau1936kinetic}.
 With this, the distribution function $f_{\alpha}(\bm{v},t)$ of species $\alpha$ evolves according to
 
 \begin{equation*}
