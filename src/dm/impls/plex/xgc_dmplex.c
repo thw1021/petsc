@@ -1304,11 +1304,12 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
   } else {    /* p4est, quads */
     /* Create plex mesh of Landau domain */
     if (!ctx->sphere) {
-      PetscInt    cells[] = {2,2,2};
+      PetscInt    cells[] = {8,8,8};
       PetscReal   lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
-      DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-      if (dim==2) { lo[0] = 0; cells[0] = 1; }
+      DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC};
+      if (dim==2) { lo[0] = 0; cells[0] = 4; }
       ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, dm);CHKERRQ(ierr);
+      ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr); /* needed for periodic */
       if (dim==3) ierr = PetscObjectSetName((PetscObject) *dm, "cube");
       else ierr = PetscObjectSetName((PetscObject) *dm, "half-plane");
       CHKERRQ(ierr);
