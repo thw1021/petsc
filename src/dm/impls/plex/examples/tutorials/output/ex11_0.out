@@ -1,8 +1,8 @@
 [0] ProcessOptions(): num_species set to number of thermal temps provided (2)
 masses:        e= 9.109e-31; ions in proton mass units:  2.000e+00  0.000e+00 ...
 charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  0.000e+00
-thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 0.000e+00. v_0= 2.965e+07 n_0= 1.000e+20 t_0= 6.470e-05
-[0] ProcessREOptions(): Num electrons from ions=2, T_cold= 5.800e+04, ion potential= 1.500e+01, E_z= 0.000e+00 v_0= 2.965e+07
+thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 0.000e+00. v_0= 2.965e+07 n_0= 1.000e+20 t_0= 6.470e-05 domain= 5.000e+00
+[0] ProcessREOptions(): Num electrons from ions=1, T_cold= 5.800e+04, ion potential= 1.500e+01, E_z= 0.000e+00 v_0= 2.965e+07
 [0] DMGetDMSNES(): Creating new DMSNES
 [0] DMGetDMTS(): Creating new DMTS
 [0] DMGetDMSNESWrite(): Copying DMSNES due to write
