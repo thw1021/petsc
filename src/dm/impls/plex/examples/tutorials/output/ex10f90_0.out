@@ -1,7 +1,7 @@
 [0] ProcessOptions(): num_species set to number of thermal temps provided (3)
 masses:        e= 9.109e-31; ions in proton mass units:  2.000e+00  4.000e+01 ...
 charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  1.800e+01
-thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 5.802e+04. v_0= 2.965e+07 n_0= 1.000e+20 t_0= 6.469e-05
+thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 5.802e+04. v_0= 2.965e+07 n_0= 1.000e+20 t_0= 6.469e-05 domain= 5.000e+00
   0) species-0: charge density= -1.6024980434547e+01 z-momentum= -5.7896927922865e-19 energy=  1.2018724165031e+05
   0) species-1: charge density=  1.6020046245297e+01 z-momentum= -1.8038556796586e-17 energy=  1.1967503195186e+05
   0) species-2: charge density=  2.8844946080411e-03 z-momentum= -2.5647670883383e-23 energy=  1.1960871705599e-03
