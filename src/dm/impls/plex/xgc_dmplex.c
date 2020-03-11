@@ -1428,7 +1428,7 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
       ierr = PetscFree2(flatCoords,flatCells);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject) *dm, "semi-circle");CHKERRQ(ierr);
     } else { /* cubed sphere, dim==3 */
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Phase space meshes does not support cubed sphere");
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Velocity space meshes does not support cubed sphere");
     }
   }
   ierr = PetscObjectSetOptionsPrefix((PetscObject)*dm,prefix);CHKERRQ(ierr);
@@ -1612,7 +1612,7 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
 }
 
 /*@
- DMPLexFPAddMaxwellians -
+ DMPlexFPAddMaxwellians -
 
  Input Parameters:
  .   dm
@@ -1622,7 +1622,7 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
 
  Level: beginner
  @*/
-PetscErrorCode DMPLexFPAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temps[], PetscReal ns[], void *actx)
+PetscErrorCode DMPlexFPAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temps[], PetscReal ns[], void *actx)
 {
   LandCtx        *ctx = (LandCtx*)actx;
   PetscErrorCode (*initu[FP_MAX_SPECIES])(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar [], void *);
@@ -1663,7 +1663,7 @@ static PetscErrorCode FPSetInitialCondition(DM dm, Vec X, void *actx)
   PetscFunctionBeginUser;
   if (!ctx) { ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr); }
   ierr = VecZeroEntries(X);CHKERRQ(ierr);
-  ierr = DMPLexFPAddMaxwellians(dm, X, 0.0, ctx->thermal_temps, ctx->n, ctx);CHKERRQ(ierr);
+  ierr = DMPlexFPAddMaxwellians(dm, X, 0.0, ctx->thermal_temps, ctx->n, ctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1865,8 +1865,6 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ctx->i_radius = .01;
   ctx->maxRefIts = 5;
   ctx->postAMRRefine = 0;
-  ctx->plotIdx = 0;
-  ctx->plotDt = 1.0;
   ctx->nZRefine1 = 0;
   ctx->nZRefine2 = 0;
   ctx->numRERefine = 0;
@@ -1903,7 +1901,6 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ierr = PetscOptionsInt("-amr_z_refine2",  "Number of levels to refine along v_perp=0", "xgc_dmplex.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "xgc_dmplex.c", ctx->maxRefIts, &ctx->maxRefIts, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-amr_post_refine", "Number of levels to uniformly refine after AMR", "xgc_dmplex.c", ctx->postAMRRefine, &ctx->postAMRRefine, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-plot_dt", "Plotting interval", "xgc_dmplex.c", ctx->plotDt, &ctx->plotDt, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-r0_radius1","velocity range to refine r=0 axis (for electrons)","",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-r0_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
@@ -1957,6 +1954,12 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ierr = PetscOptionsRealArray("-coarsen_tol","tolerance for coarsening cells in AMR","",ctx->coarsenTol, &ii, &flg);CHKERRQ(ierr);
   if (flg && ii != ctx->num_species) ierr = PetscInfo2(dummy, "Phase: Warning, #coarsen_tol %D != num_species %D\n",ii,ctx->num_species);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-domain_radius","Phase space size in units of electron thermal velocity","",ctx->radius,&ctx->radius, &flg);CHKERRQ(ierr);
+  if (flg && ctx->radius <= 0) { /* negative is ratio of c */
+    if (ctx->radius == 0) ctx->radius = 0.75;
+    else ctx->radius = -ctx->radius;
+    ctx->radius = ctx->radius*299792458/ctx->v_0;
+    ierr = PetscInfo1(dummy, "Change domain radius to %e\n",ctx->radius);CHKERRQ(ierr);
+  }
   ierr = PetscOptionsReal("-i_radius","Ion thermal velocity, used for circular meshes","",ctx->i_radius,&ctx->i_radius, &flg);CHKERRQ(ierr);
   if (flg && !sph_flg) ctx->sphere = PETSC_TRUE; /* you gave me an ion radius but did not set sphere, user error really */
   if (!flg) {
@@ -1975,7 +1978,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   for (ii=ctx->num_species;ii<FP_MAX_SPECIES;ii++) ctx->masses[ii] = ctx->thermal_temps[ii]  = ctx->charges[ii] = 0;
   ierr = PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units: %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->masses[2]/1.6720e-27);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", ctx->charges[0],-ctx->charges[1]/ctx->charges[0],-ctx->charges[2]/ctx->charges[0]);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. v_0=%10.3e n_0=%10.3e t_0=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1],ctx->thermal_temps[2],ctx->v_0,ctx->n_0,ctx->t_0);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. v_0=%10.3e n_0=%10.3e t_0=%10.3e domain=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1],ctx->thermal_temps[2],ctx->v_0,ctx->n_0,ctx->t_0,ctx->radius);
   CHKERRQ(ierr);
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);
   {
@@ -2012,13 +2015,13 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
 }
 
 /*@C
-  DMPlexFPCreateVelocitySpace - Create a DMPlex phase space mesh
+  DMPlexFPCreateVelocitySpace - Create a DMPlex velocity space mesh
 
   Collective on comm
 
   Input Parameters:
 +   comm  - The MPI communicator
-.   dim - phase space dimension (2 for axisymmetric, 3 for full 3X + 3V solver)
+.   dim - velocity space dimension (2 for axisymmetric, 3 for full 3X + 3V solver)
 -   numSpecies - thermal temperature
 
   Output Parameter:
@@ -2036,7 +2039,7 @@ PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const ch
   LandCtx        *ctx;
   PetscFunctionBegin;
   ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  if (size!=1) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Phase space meshes should be serial (but should work in parallel)");
+  if (size!=1) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Velocity space meshes should be serial (but should work in parallel)");
   if (dim!=2 && dim!=3) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Only 2D and 3D supported");
   ctx = malloc(sizeof(LandCtx));
   /* process options */
@@ -2068,7 +2071,7 @@ PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const ch
 }
 
 /*@
-  DMPlexFPDestroyPhaseSpace - Destroy a DMPlex phase space mesh
+  DMPlexFPDestroyPhaseSpace - Destroy a DMPlex velocity space mesh
 
   Input/Output Parameters:
   .   dm
