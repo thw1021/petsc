@@ -272,15 +272,15 @@ $J\left(q_j\right)$ is the element Jacobian at point $q_j$.
 \caption{Pseudo-code to compute Landau Jacobian $\mathbf{C}$ with state $f$}
 \label{fig:algo0}
 \end{algorithm}
-The six loops of Algorithm \ref{fig:algo0} can be processed in any
+The six loops of Algorithm \ref{fig:algo0} can be processed in just about any
 order, and blocked, giving different data access patterns, which is
 critical in optimizing performance.
-
+:
 We use one grid for all species, which has advantages and disadvantages \cite{AdamsHirvijokiKnepleyBrownIsaacMills2017}, and results in only one set of cells $G$.
 Our kernel of interest is the construction of the tensor and vector in (\ref{eq:K}) and (\ref{eq:D}).
 To optimized the processing in the kernel we build a flat array(s) of the data required in the kernel ($\bm x$, $w$, $f_{\alpha}$,  $\frac{\partial f_{\alpha}}{\partial \bm x}$,  $f_{\beta}$,  $\frac{\partial f_{\beta}}{\partial \bm x}, ... $) for all integration points ($N = | G | \cdot N_q$).
 
-Algorithm \ref{fig:algo2} shows the pseudo-code for the CUDA kernel for constructing the Landau collision integral element matrix using standard finite element processes including finite element tabulation at integration points $q_i$, $\mathbf{B}\left(q_i\right),  \mathbf{D}\left(q_i\right)$.
+Algorithm \ref{fig:algo2} shows the pseudo-code for the CUDA kernel for constructing the Landau collision integral element matrix using standard finite element processes including finite element tabulation at integration points $q_i$, $\mathcal{B}\left(q_i\right),  \mathcal{D}\left(q_i\right)$, and element Jacobian $\mathcal{J}\left(q_i\right)$.
 \begin{algorithm}[h!]
 \begin{algorithmic}[100]
 \STATE{$\mathbf{K} \left[threadID\right] \leftarrow 0$} \COMMENT{In CUDA shared memory}
@@ -288,54 +288,55 @@ Algorithm \ref{fig:algo2} shows the pseudo-code for the CUDA kernel for construc
 \STATE{$i \leftarrow blockID*blockDim + threadID $} \COMMENT{global integration point for this thread}
 %\STATE{$w_i \leftarrow w[i] $}
 %\STATE{$N \leftarrow N_q \cdot |G|$}
-\FOR[CUDA thread loop]{$j=1:N_q \cdot |G|$}
-\STATE{$\left[\mathbf{U_K}, \mathbf{U_D} \right]  \leftarrow \mathbf{LandauTensor}\left(q_i.r,q_i.z,r[j],z[j]\right)$  } 
+\FOR[fused inner element and quadrature loop]{$j=1:N_q \cdot |G|$}
+\STATE{$\left[\mathbf{U_K}, \mathbf{U_D} \right]  \leftarrow \mathbf{LandauTensor}\left(q_i.r,q_i.z,r[j],z[j]\right)$  }
 \FOR{$\alpha=1:S$}
 \FOR{$\beta=1:S$}
-\STATE{$\mathbf{K}\left[threadID\right] \left[{\alpha}\right]  \leftarrow \mathbf{K}\left[threadID\right] \left[{\alpha}\right]  + \hat{\nu}_{\alpha\beta}\frac{m_o}{m_{\alpha}}\frac{m_o}{m_{\beta}} \mathbf{U_K} \cdot df[:][\beta][j] w[j]$}
+\STATE{$\mathbf{K}\left[threadID\right] \left[{\alpha}\right]  \leftarrow \mathbf{K}\left[threadID\right] \left[{\alpha}\right]  + \hat{\nu}_{\alpha\beta}\frac{m_o}{m_{\alpha}}\frac{m_o}{m_{\beta}} \mathbf{U_K} \cdot df[\beta][j] w[j]$}
 \STATE{$\mathbf{D}\left[threadID\right] \left[{\alpha}\right]  \leftarrow \mathbf{D}\left[threadID\right]\left[{\alpha}\right] - \hat{\nu}_{\alpha\beta}\frac{m_o}{m_{\alpha}}\frac{m_o}{m_{\alpha}} \mathbf{U_D} f[\beta][j] w[j]$}
 \ENDFOR
 \ENDFOR
 \ENDFOR
 \FOR{$\alpha=1:S$}
-\STATE{$\mathbf{G2}\left[threadID \right] \left[{\alpha}\right]  \leftarrow \mathbf{J}\left(q_i\right)^{-1} \mathbf{K}\left[threadID\right]\left[{\alpha}\right]  w[i]$} \COMMENT{point integral to global space}
-\STATE{$\mathbf{G3}\left[threadID \right] \left[{\alpha}\right]  \leftarrow \mathbf{J}\left(q_i\right)^{-1} \mathbf{D}\left[threadID\right]\left[{\alpha}\right]  \mathbf{J}\left(q_i\right)^{-1} w[i]$}
+\STATE{$\mathbf{G2}\left[threadID \right] \left[{\alpha}\right]  \leftarrow \mathcal{J}\left(q_i\right)^{-T} \mathbf{K}\left[threadID\right]\left[{\alpha}\right]  w[i]$} \COMMENT{point integral to global space}
+\STATE{$\mathbf{G3}\left[threadID \right] \left[{\alpha}\right]  \leftarrow \mathcal{J}\left(q_i\right)^{-T} \mathbf{D}\left[threadID\right]\left[{\alpha}\right]  \mathcal{J}\left(q_i\right)^{-1} w[i]$}
 \ENDFOR
 \IF[On master thread in each block]{$threadID = 0$}
 %\STATE{$\mathbf{ElemMats} \left[blockID\right] \leftarrow 0$} \COMMENT{On master thread in each block}
 \FOR[Project point value to vertices of cell $i$ with standard FE process]{$i=1:N_q$}
-\STATE{$\mathbf{ElemMats}\left[blockID\right] \leftarrow \mathbf{ElemMats}\left[blockID\right]  + FE\left(\mathbf{G2}\left[ i \right], \mathbf{G3}\left[ i \right],  \mathbf{B}\left(q_i\right),  \mathbf{D}\left(q_i\right) \right)$}
+\STATE{$\mathbf{A}\left[blockID\right] \leftarrow  \mathbf{A}\left[blockID\right]  +  \mathcal{D^T}\left(q_i\right) \mathbf{G3}\left[ i \right]  \mathcal{D}\left(q_i\right)  +  \mathcal{D^T}\left(q_i\right) \mathbf{G2}\left[ i \right]  \mathcal{B}\left(q_i\right)$}
 \ENDFOR
 \ENDIF
 %\FORALL[CPU: Assemble element matrices into global Jacobian]{cells $c \in G$}
 %\STATE{$\mathbf{C} \leftarrow \mathbf{C} + GlobalAssemble\left(c, \mathbf{ElemMats}\left[c\right]  \right)$}
 %\ENDFOR
 \end{algorithmic} 
-\caption{CUDA kernel to compute $\mathbf{C}$ with input: $r$, $z$, $w$, $f$, and $df$; output:  $\mathbf{ElemMats}$ }
+\caption{CUDA kernel; input: global $r$, $z$, $w$, $f$, and $df$;
+  output: thread block's $\mathbf{A} \left[blockID\right]$ }
 \label{fig:algo2}
 \end{algorithm}
 One element is placed in each thread block and there are $N_q$ threads per block.
 These element matrices are then assembled on the CPU into the global Jacobian.
 %This algorithm is designed to minimized data movement by computing the Landau tensors on the fly, they can be precomputed, and it exploits a single mesh by hoisting the tensor kernel outside of the two inner loops over species.
-This algorithm puts the most expensive parts of the code, the Landau tensor, some of the $\Order{S^2}$ terms, and one (inner) finite element integral into a kernel that fits well on a GPU.
+This algorithm puts the Landau tensor, some of the $\Order{S^2}$ complexity terms, then inner finite element integral and the Jacobian coordinate transformation into a fully parallel kernel GPU kernel.
+The finite element projection to vertices, from each integration point, is processed on one thread in each thread block.
+This phase could be processed on each thread, however a copy of the element stiffness matrix would be required for each thread in GPU shared memory and there is not enough memory available with large number of species and high order elements.
 
 Algorithm \ref{fig:algos}
 shows the initialization of the vectors $r$, $z$, $w$, $f$, and the
-two gradient vectors $df[1]$ and $df[2]$, with $|G|$ cells in the set
+gradient vectors $df$, with $|G|$ cells in the set
 $G$, $S$ species, and weights $w_{q_i}$ at each quadrature point $i$.
-Each quadrature point $q_i$ is located at a 2D coordinate ($q_i.r$,
-$q_i.z$).
+Each quadrature point $q_i$ has a 2D coordinate ($q_i.r$,$q_i.z$).
 \begin{algorithm}[h!]
 \begin{algorithmic}[100]
 \FORALL{cells $i \in G$}
 \FORALL{quadrature points $q_i \in i$}
 \STATE{$r.append(q_i.r)$}
 \STATE{$z.append(q_i.z)$}
-\STATE{$w.append( |J\left(q_j\right)| \cdot q_j.weight \cdot q_j.r$)}
+\STATE{$w.append( |J\left(q_i\right)| \cdot q_j.weight \cdot q_i.r$)}
 \FOR{$\alpha=1:S$}
 \STATE{$f[\alpha].append(f_\alpha(q_i) $)}
-\STATE{$df[1][\alpha].append(\nabla f_\alpha(q_i)[1] $)}
-\STATE{$df[2][\alpha].append(\nabla f_\alpha(q_i)[2] $)}
+\STATE{$df[\alpha].append(\nabla f_\alpha(q_i) $)}
 \ENDFOR
 \ENDFOR
 \ENDFOR
@@ -370,10 +371,31 @@ Table \ref{tab:perf} show the time for the construction of the Jacobian matrix, 
    \label{tab:perf}
 \end{table}
 We observe that the times increase linearly with number of species, in the GPU kernel, however the serial matrix assemble times increase quadratically.
-The matrix assembly has not been optimized and one could for instance assemble the matrix with some parallelism with multi-coloring.
-If we assume that we can color this 140 cell grid with 8 colors, which is probably pessimistic, then we could expect a speed up of over 15 for this problem.
+The matrix assembly has not been parallelized.
+One can color elements and assemble them in parallel, or use a local domain decomposition and use standard parallel assembly methods.
+If we assume that we can color a 2D block structured AMR grid with 8 colors, which is probably pessimistic, then we could expect a speed up of over 15 for this problem with 140 cells.
+This should be enough to keep the matrix assembly subdominant.
 
 \section{Seed runaway electron generation}
+
+Runaway electrons (REs) are formed, to put it simply, when a disruption or mitigation mechanism causes a thermal quench, flattening the density profile in velocity space.
+This reduces the collisional drag on fast electrons in the tail of the distribution.
+A parallel electric field can accelerate these electrons whereby they see even less drag from the body of the population.
+These electrons can accelerate indefinitely, subject to relativistic effects and radiative effects.
+Relatively small populations of electrons can be accelerated to relativistic velocities and carry significant energy.
+If these REs stay on a closed flux surface they can dissipate slowly as the plasma current dissipates.
+If, however, field lines become stochastic, as in a disruption, beams of REs can hit the wall of the containment vessel and cause significant damage.
+REs are considered to be the primary threat to the mission of ITER and thus it is important to understand their behavior so that the can be avoided or effective mitigations strategies can be designed.
+
+We wish to use our highly accurate, fully nonlinear Landau collisional model to help to understand RE generation.
+We focus on the seed electron generation, the generation of populations that are the beginnings of a runaway event.
+We begin by augmenting (\ref{eq:weak-form}) with a source of cold electrons and ions, $\left(\psi,S_{\alpha}\right)$, to cause a thermal quench.
+This is a crude model of a mitigation strategy where impurities pellets are injected into the plasma.
+We assume some rate of impurity injection $S$ that is defined by some arbitrary function and assume that it is fully ionized with a temperature of $T_{cold}$.
+
+
+
+
 
 \section{Conclusion}
 

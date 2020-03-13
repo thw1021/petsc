@@ -614,6 +614,7 @@ PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErro
 /* the context */
 #define FP_MAX_SPECIES 5
 #define FP_MAX_NQ 36 /* Q5 in 2D */
+#define FP_DIM 2
 typedef struct {
   PetscBool     interpolate;                  /* Generate intermediate mesh elements */
   PetscBool     simplex;

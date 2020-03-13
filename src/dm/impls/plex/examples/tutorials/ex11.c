@@ -23,15 +23,14 @@ typedef struct REctx_struct {
   PetscReal     L;             /* inductance */
   Vec           X_0;
   PetscInt      imp_idx;       /* index for impurity ionizing sink */
-  PetscReal     pulse_time;
-  PetscInt      pulse_step;
-  PetscReal     pulse_dn_dt;
+  PetscReal     pulse_start;
+  PetscReal     pulse_width;
+  PetscReal     pulse_rate;
   PetscInt      plotIdx;
   PetscInt      plotStep;
   PetscReal     plotDt;
   PetscBool     plotting;
   Vec           imp_src;
-  PetscInt      impurityStep;
 } REctx;
 
 static const PetscReal kev_joul = 6.241506479963235e+15;
@@ -349,7 +348,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
     PetscReal E, Tev = ctx->thermal_temps[0]*8.621738e-5, n = ctx->n_0*ctx->n[0];
     CalculateE(Tev, n, ctx->lnLam, ctx->epsilon0, &E);
     ctx->Ez *= E;
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "+++++ new E=%10.3e for j0=%10.3e -- scaling Ez by %g\n",ctx->Ez,j0,E);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "+++++ new E=%10.3e scale %10.3e\n",ctx->Ez,E);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -579,6 +578,87 @@ static PetscErrorCode EConst(Vec X,  Vec X_t, PetscReal *a_E, LandCtx *ctx)
   *a_E = ctx->Ez;
   PetscFunctionReturn(0);
 }
+static const int put_source_in_lhs = 0;
+/* ------------------------------------------------------------------- */
+/*
+   FormRHSSource - Evaluates source terms F(t).
+
+   Input Parameters:
+.  ts - the TS context
+.  X - input vector
+.  ptr - optional user-defined context, as set by SNESSetFunction()
+
+   Output Parameter:
+.  F - function vector
+ */
+PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *ptr)
+{
+  PetscReal      new_imp_rate,dt;
+  LandCtx        *ctx;
+  DM             dm,plex;
+  PetscErrorCode ierr;
+  REctx         *rectx;
+  PetscInt       stepi;
+  static double  last_time = -1.;
+  PetscFunctionBeginUser;
+  ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
+  ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
+  rectx = (REctx*)ctx->data;
+  if (!rectx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no re context");
+  /* check for impurities */
+  ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
+  ierr = TSGetStepNumber(ts, &stepi);CHKERRQ(ierr);
+  ierr = rectx->impuritySrcRate(ftime,stepi,dt,&new_imp_rate,ctx);CHKERRQ(ierr);
+  if (new_imp_rate != 0) {
+    if (ftime != last_time) {
+      PetscInt       ii;
+      PetscReal      dne_dt,dni_dt,tilda_ns[FP_MAX_SPECIES],temps[FP_MAX_SPECIES];
+      PetscDS        prob; /* diagnostics only */
+      Vec            S;
+      last_time = ftime;
+      ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
+      ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
+      dni_dt = new_imp_rate*ctx->t_0; /* fully ionized immediately, normalize */
+      dne_dt = new_imp_rate*rectx->Ne_ion*ctx->t_0;
+PetscPrintf(PETSC_COMM_SELF, "\t\t***** FormRHSSource: have new_imp_rate= %10.3e dt=%g stepi=%D time= %10.3e\n",new_imp_rate,dt,stepi,ftime);
+      for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = temps[ii] = 0;
+      tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
+      temps[0]    = rectx->T_cold;    temps[rectx->imp_idx] = rectx->T_cold;
+      /* add it */
+      if (!rectx->imp_src) {
+        ierr = DMCreateGlobalVector(dm, &rectx->imp_src);CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)rectx->imp_src, "F");CHKERRQ(ierr);
+      }
+      ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
+      //ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
+      ierr = DMPlexFPAddMaxwellians(plex,S,ftime,temps,tilda_ns,ctx);CHKERRQ(ierr);
+      if (0) {
+        PetscReal n_e, n_i, n_se, n_si, tt[FP_MAX_SPECIES];
+        ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
+        ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
+        n_e = tt[0];
+        ierr = PetscDSSetObjective(prob, 0, &f0_1_n);CHKERRQ(ierr);
+        ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
+        n_i = tt[0];
+        ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
+        ierr = DMPlexComputeIntegralFEM(plex,S,tt,NULL);CHKERRQ(ierr);
+        n_se = tt[0];
+        ierr = PetscDSSetObjective(prob, 0, &f0_1_n);CHKERRQ(ierr);
+        ierr = DMPlexComputeIntegralFEM(plex,S,tt,NULL);CHKERRQ(ierr);
+        n_si = tt[0];
+        ierr = PetscPrintf(PETSC_COMM_SELF, "F_e= %10.3e F_i= %10.3e n_se= %10.3e n_si= %10.3e\n",n_e,n_i,n_se,n_si);CHKERRQ(ierr);
+      }
+      /* clean up */
+      ierr = DMDestroy(&plex);CHKERRQ(ierr);
+      ierr = PetscObjectSetName((PetscObject)S, "src");CHKERRQ(ierr);
+      ierr = VecViewFromOptions(S,NULL,"-vec_view_diagnostics");CHKERRQ(ierr);
+      ierr = MatMult(ctx->M,S,rectx->imp_src);CHKERRQ(ierr);
+      ierr = VecDestroy(&S);CHKERRQ(ierr);
+    }
+    ierr = VecCopy(rectx->imp_src,F);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
 
 #undef __FUNCT__
 #define __FUNCT__ "REIFunction"
@@ -586,10 +666,8 @@ PetscErrorCode REIFunction(TS ts,PetscReal time,Vec X,Vec X_t,Vec F,void *actx)
 {
   PetscErrorCode ierr;
   LandCtx        *ctx;
-  DM             dm,plex;
-  PetscReal      new_imp_rate,dt;
   REctx         *rectx;
-  PetscInt       stepi;
+  DM             dm;
   PetscFunctionBeginUser;
   /* check seed RE run */
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
@@ -602,52 +680,14 @@ PetscErrorCode REIFunction(TS ts,PetscReal time,Vec X,Vec X_t,Vec F,void *actx)
   /* Add Landau part */
   ierr = FPLandIFunction(ts,time,X,X_t,F,actx);CHKERRQ(ierr);
   ctx->aux_bool = PETSC_FALSE; /* clear flag */
-  /* check for impurities */
-  ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
-  ierr = TSGetStepNumber(ts, &stepi);CHKERRQ(ierr);
-  ierr = rectx->impuritySrcRate(time,stepi,dt,&new_imp_rate,ctx);CHKERRQ(ierr);
-  if (new_imp_rate != 0) { // todo
-    if (stepi != rectx->impurityStep) {
-      PetscInt       ii;
-      PetscReal      dne_dt,dni_dt,tilda_ns[FP_MAX_SPECIES],temps[FP_MAX_SPECIES];
-      PetscDS        prob; /* diagnostics only */
-      ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
-      ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-      dni_dt = -new_imp_rate*ctx->t_0; /* fully ionized immediately, normalize */
-      dne_dt = -new_imp_rate*rectx->Ne_ion*ctx->t_0;
-      ierr = PetscPrintf(PETSC_COMM_SELF, "***** Ionization model: new_imp_rate= %10.3e dne_dt= %10.3e dne_dt= %10.3e dt=%g stepi=%D impurityStep=%D\n",new_imp_rate,dne_dt,dni_dt,dt,stepi,rectx->impurityStep);CHKERRQ(ierr);
-      rectx->impurityStep = stepi;
-      for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = temps[ii] = 0;
-      tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
-      temps[0]    = rectx->T_cold;    temps[rectx->imp_idx] = rectx->T_cold;
-      /* add it */
-      if (!rectx->imp_src) {
-        ierr = DMCreateGlobalVector(dm, &rectx->imp_src);CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject)rectx->imp_src, "src");CHKERRQ(ierr);
-      }
-      ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
-      ierr = DMPlexFPAddMaxwellians(plex,rectx->imp_src,time,temps,tilda_ns,ctx);CHKERRQ(ierr);
-      if (0) {
-        PetscReal n_e, n_i, n_se, n_si, tt[FP_MAX_SPECIES];
-        ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
-        n_e = tt[0];
-        ierr = PetscDSSetObjective(prob, 0, &f0_1_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
-        n_i = tt[0];
-        ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,rectx->imp_src,tt,NULL);CHKERRQ(ierr);
-        n_se = tt[0];
-        ierr = PetscDSSetObjective(prob, 0, &f0_1_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,rectx->imp_src,tt,NULL);CHKERRQ(ierr);
-        n_si = tt[0];
-        ierr = PetscPrintf(PETSC_COMM_SELF, "F_e= %10.3e F_i= %10.3e n_se= %10.3e n_si= %10.3e\n",n_e,n_i,n_se,n_si);CHKERRQ(ierr);
-      }
-      ierr = VecViewFromOptions(rectx->imp_src,NULL,"-vec_view_diagnostics");CHKERRQ(ierr);
-      /* clean up */
-      ierr = DMDestroy(&plex);CHKERRQ(ierr);
+  if (put_source_in_lhs) {
+    Vec S;
+    ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
+    ierr = FormRHSSource(ts, time, NULL, S, NULL);CHKERRQ(ierr);
+    if (rectx->imp_src) {
+      ierr = VecAXPY(F,-1.0,rectx->imp_src);CHKERRQ(ierr);
     }
-    ierr = VecAXPY(F,1.0,rectx->imp_src);CHKERRQ(ierr);
+    ierr = VecDestroy(&S);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -675,7 +715,7 @@ static PetscErrorCode stepSrc(PetscReal time, PetscInt step, PetscReal dt, Petsc
   REctx         *rectx;
   PetscFunctionBegin;
   rectx = (REctx*)ctx->data;
-  if (time > 1.e+5) *rho = rectx->pulse_dn_dt; /* turned off */
+  if (time > 1.e+5) *rho = rectx->pulse_rate; /* turned off */
   else *rho = 0.;
   PetscFunctionReturn(0);
 }
@@ -689,18 +729,12 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscInt step, PetscReal dt, Pets
 {
   REctx *rectx;
   rectx = (REctx*)ctx->data;
-  static double last_dt = 0;
   PetscFunctionBegin;
-  if (time < rectx->pulse_time ) {
-    rectx->pulse_step = PETSC_MAX_INT; /* maybe backed up */
-    rectx->impurityStep = PETSC_MAX_INT;
-   }
-  if (time >= rectx->pulse_time && rectx->pulse_step >= step) {
-    *rho = rectx->pulse_dn_dt;
-    rectx->pulse_step = step;
-    if (dt != last_dt) rectx->impurityStep = PETSC_MAX_INT; /* redo src vector */
-   } else *rho = 0;
-  last_dt = dt;
+  if (time < rectx->pulse_start || time > rectx->pulse_start + 3*rectx->pulse_width) *rho = 0;
+  else {
+    double t = time - rectx->pulse_start, start = rectx->pulse_width, stop = 2*rectx->pulse_width, cycle = 3*rectx->pulse_width, steep = 5, xi = 0.75 - (stop - start)/(2* cycle);
+    *rho = rectx->pulse_rate * (cycle / (stop - start)) / (1 + exp(steep*(sin(2*M_PI*((t - start)/cycle + xi)) - sin(2*M_PI*xi))));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -720,11 +754,10 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   rectx->L = 2;
   rectx->X_0 = NULL;
   rectx->imp_idx = ctx->num_species - 1; /* default ionized impurity as last one */
-  rectx->pulse_time = 1;
-  rectx->pulse_step = PETSC_MAX_INT;
+  rectx->pulse_start = 1;
+  rectx->pulse_width = 1;
   rectx->plotStep = PETSC_MAX_INT;
-  rectx->impurityStep = PETSC_MAX_INT;
-  rectx->pulse_dn_dt = 1.e-1;
+  rectx->pulse_rate = 1.e-1;
   rectx->plotIdx = 0;
   rectx->imp_src = 0;
   rectx->plotDt = 1.0;
@@ -749,8 +782,9 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   ierr = PetscOptionsInt("-impurity_index", "index of sink for impurities", "none", rectx->imp_idx, &rectx->imp_idx, NULL);CHKERRQ(ierr);
   if (rectx->imp_idx >= ctx->num_species || rectx->imp_idx < 1) SETERRQ1(PETSC_COMM_SELF,1,"index of sink for impurities out of range (%D)",rectx->imp_idx);
   ierr = PetscOptionsReal("-t_cold","Temperature of cold electron and ions after ionization in keV","none",rectx->T_cold,&rectx->T_cold, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-pulse_time","Time at which pulse happens for 'pulse' source","none",rectx->pulse_time,&rectx->pulse_time, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-pulse_dn_dt","Number density of pulse for 'pulse' source","none",rectx->pulse_dn_dt,&rectx->pulse_dn_dt, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-pulse_start","Time at which pulse happens for 'pulse' source","none",rectx->pulse_start,&rectx->pulse_start, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-pulse_width","Time at which pulse happens for 'pulse' source","none",rectx->pulse_width,&rectx->pulse_width, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-pulse_rate","Number density of pulse for 'pulse' source","none",rectx->pulse_rate,&rectx->pulse_rate, NULL);CHKERRQ(ierr);
   if (ctx->electronShift==0 && !strcmp(pname,"bimaxwellian") ) PetscPrintf(PETSC_COMM_WORLD, "Warning -electron_shift 0 and 'bimaxwellian' test -- rates will not be cached\n");
   rectx->T_cold *= 1.16e7; /* convert to Kelvin */
   ierr = PetscOptionsReal("-ion_potential","Potential to ionize impurity (should be array) in ev","none",rectx->ion_potential,&rectx->ion_potential, NULL);CHKERRQ(ierr);
@@ -808,6 +842,9 @@ int main(int argc, char **argv)
   ierr = DMCreateMatrix(dm, &J);CHKERRQ(ierr);
   ierr = TSSetIFunction(ts,NULL,REIFunction,NULL);CHKERRQ(ierr);
   ierr = TSSetIJacobian(ts,J,J,REIJacobian,NULL);CHKERRQ(ierr);
+  if (!put_source_in_lhs) {
+    ierr = TSSetRHSFunction(ts,NULL,FormRHSSource,ctx);CHKERRQ(ierr);
+  }
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
   ierr = TSSetApplicationContext(ts, ctx);CHKERRQ(ierr);
@@ -834,6 +871,6 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: p4est
-    args: -Ez 0 -petscspace_degree 4 -mass_petscspace_degree 4 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info -info_exclude null,vec,mat,pc,ksp,snes,p4est,vecscatter,is -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-6 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 8 -domain_radius 5 -impurity_source_type pulse -malloc_debug
+    args: -Ez 0 -petscspace_degree 4 -mass_petscspace_degree 4 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info -info_exclude null,vec,mat,pc,ksp,snes,p4est,vecscatter,is -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-6 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 8 -domain_radius -.75 -impurity_source_type pulse -pulse_start 1e-1 -pulse_width 1e-1 -pulse_rate 3e4 -plot_dt 1e-1
 
 TEST*/
