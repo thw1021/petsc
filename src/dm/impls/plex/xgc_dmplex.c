@@ -669,7 +669,6 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 	      for (d2 = 0; d2 < dim; ++d2) {
 		elemMat[fOff] += DIq[f*dim + d]*g3[fieldA][d][d2]*DJq[g*dim + d2];
 	      }
-              // if (ej==0 && f==Nb-1 && g==Nb-1 && fOff==27) printf("%d.%d.%d mat[%d]=%20.13e D=%20.13e g2=%20.13e B=%20.13e. g3=%20.13e %20.13e\n",ej,fieldA,d,fOff,elemMat[fOff],DIq[f*dim+d],g2[fieldA][d],BJq[g],g3[fieldA][d][0],g3[fieldA][d][1]);
 	    }
 	  }
 	}
