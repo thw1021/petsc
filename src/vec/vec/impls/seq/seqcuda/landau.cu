@@ -549,8 +549,7 @@ PetscErrorCode FPLandauCUDAJacobian(DM plex, PetscQuadrature quad, const PetscIn
   ierr = PetscLogFlops(flops*nip);CHKERRQ(ierr);
 #endif
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar))); // kernel output
-  ii = FP_MAX_NQ*FP_MAX_SPECIES*3*(1+3);
-  //printf("size of shared memory %d\n",ii);
+  ii = FP_MAX_NQ*FP_MAX_SPECIES*3*(1+3); /* we could save space by #defining DIM and not use 3 */
   land_kernel<<<numGCells,Nq,ii*sizeof(PetscReal)>>>(nip,dim,totDim,numGCells,Nf,Nb,d_vj,d_Jj,d_invJj,d_nu_m0_ma,d_invMass,d_Eq_m,
 						     d_TabBD, d_quadWeights, d_foffsets, IPDataGlobalDevice, d_wiGlobal, d_elemMats);
   CHECK_LAUNCH_ERROR();
