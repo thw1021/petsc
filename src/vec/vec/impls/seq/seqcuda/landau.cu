@@ -496,6 +496,7 @@ PetscErrorCode FPLandauCUDAJacobian(DM plex, PetscQuadrature quad, const PetscIn
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
 #endif
   ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
+  if (dim!=FP_DIM) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "FP_DIM != dim");
   ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
   numGCells = cEnd - cStart;
   ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, NULL, &quadWeights);CHKERRQ(ierr);
