@@ -291,7 +291,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   PetscScalar       J,tt[FP_MAX_SPECIES];
   static PetscReal  old_ratio = 0;
   PetscBool         done=PETSC_FALSE;
-  PetscReal         spit_eta,Te_kev,E,ratio,Z;
+  PetscReal         spit_eta,Te_kev=0,E,ratio,Z;
   PetscFunctionBegin;
   if (ctx->num_species!=2) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species!=2");
   Z = -ctx->charges[1]/ctx->charges[0];
@@ -850,8 +850,28 @@ int main(int argc, char **argv)
   ierr = TSSetApplicationContext(ts, ctx);CHKERRQ(ierr);
   ierr = TSSetPostStep(ts, PostStep);CHKERRQ(ierr);
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
-  ierr = PostStep(ts);CHKERRQ(ierr);
+  if (0) {
+    PetscLogStage stage;
+    Vec X_0;
+    PetscReal dt;
+    ierr = PetscLogStageRegister("Presolve", &stage);CHKERRQ(ierr);
+    ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
+    ierr = VecDuplicate(X,&X_0);CHKERRQ(ierr);
+    ierr = VecCopy(X,X_0);CHKERRQ(ierr);
+    ierr = PostStep(ts);CHKERRQ(ierr);
+    ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
+    ierr = TSSolve(ts,X);CHKERRQ(ierr);
+    ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
+    ierr = VecCopy(X_0,X);CHKERRQ(ierr);
+    ierr = VecDestroy(&X_0);CHKERRQ(ierr);
+    ierr = TSSetTime(ts,0);CHKERRQ(ierr);
+    ierr = TSSetConvergedReason(ts,TS_CONVERGED_ITERATING);CHKERRQ(ierr);
+    ierr = TSSetStepNumber(ts,0);CHKERRQ(ierr);
+
+    ierr = PetscLogStagePop();CHKERRQ(ierr);
+  }
   /* go */
+  ierr = PostStep(ts);CHKERRQ(ierr);
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */
   ierr = DMPlexFPDestroyPhaseSpace(&dm);CHKERRQ(ierr);
