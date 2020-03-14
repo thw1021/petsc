@@ -340,6 +340,7 @@ static PetscErrorCode FPLandPointDataDestroyDevice(FPLandPointDataFlat *ld)
   CUDA_SAFE_CALL(cudaFree(ld->v));
   PetscFunctionReturn(0);
 }
+#define FP_DIM 2
 //
 // The GPU Landau kernel
 //
@@ -354,12 +355,12 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   extern __shared__ PetscReal g2_g3_qj[]; // Nq * { [Nf][dim] ; [Nf][dim][dim] }
   const PetscInt  qj = threadIdx.x, jpidx = threadIdx.x + blockIdx.x * blockDim.x, Nq = blockDim.x; // local, global index into my IP, and number of IP/cell
   const PetscInt  pntsz = dim*Nf + Nf + dim; // x[dim], f[Ns], df[dim*Nf]
-  PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SPECIES][3]    = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SPECIES][3])    &g2_g3_qj[0];
-  PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SPECIES][3][3] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SPECIES][3][3]) &g2_g3_qj[FP_MAX_NQ*FP_MAX_SPECIES*3];
+  PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SPECIES][FP_DIM]    = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SPECIES][FP_DIM])    &g2_g3_qj[0];
+  PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g2_g3_qj[FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM];
   PetscReal       nu_m0_ma[FP_MAX_SPECIES][FP_MAX_SPECIES];
   const PetscReal *iTab,*TabBD[FP_MAX_SPECIES][2],*pvj = &vj[jpidx*dim];
   const PetscReal wj = wiGlobal[jpidx];
-  PetscReal       gg2[FP_MAX_SPECIES][3],gg3[FP_MAX_SPECIES][3][3];
+  PetscReal       gg2[FP_MAX_SPECIES][FP_DIM],gg3[FP_MAX_SPECIES][FP_DIM][FP_DIM];
   PetscInt        d,f,d2,dp,d3,fieldB,ipidx,fieldA;
 
   //printf ("\t\t%3d), Thread number %d. blockIdx.x = %d blockDim.x = %d gridDim.x = %d\n", jpidx, threadIdx.x, blockIdx.x,  blockDim.x, gridDim.x);
@@ -549,7 +550,7 @@ PetscErrorCode FPLandauCUDAJacobian(DM plex, PetscQuadrature quad, const PetscIn
   ierr = PetscLogFlops(flops*nip);CHKERRQ(ierr);
 #endif
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar))); // kernel output
-  ii = FP_MAX_NQ*FP_MAX_SPECIES*3*(1+3); /* we could save space by #defining DIM and not use 3 */
+  ii = FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*(1+FP_DIM); /* we could save space by #defining DIM and not use 3 */
   land_kernel<<<numGCells,Nq,ii*sizeof(PetscReal)>>>(nip,dim,totDim,numGCells,Nf,Nb,d_vj,d_Jj,d_invJj,d_nu_m0_ma,d_invMass,d_Eq_m,
 						     d_TabBD, d_quadWeights, d_foffsets, IPDataGlobalDevice, d_wiGlobal, d_elemMats);
   CHECK_LAUNCH_ERROR();
