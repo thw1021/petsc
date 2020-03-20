@@ -15,7 +15,7 @@ static char help[] = "Runaway electron model with Landau collision operator\n\n"
 typedef struct REctx_struct {
   PetscErrorCode (*test)(TS, Vec, DM, PetscInt, PetscReal, PetscBool,  LandCtx *, struct REctx_struct *);
   PetscErrorCode (*impuritySrcRate)(PetscReal, PetscInt, PetscReal, PetscReal *, LandCtx*);
-  PetscErrorCode (*electricField)(Vec, Vec, PetscReal *, LandCtx*);
+  PetscErrorCode (*E)(Vec, Vec, PetscReal *, LandCtx*);
   PetscReal     T_cold;        /* temperature of newly ionized electrons and impurity ions */
   PetscReal     ion_potential; /* ionization potential of impurity */
   PetscInt      Ne_ion;        /* number of electrons shed in ioization of impurity */
@@ -522,55 +522,52 @@ static PetscErrorCode PostStep(TS ts)
   PetscFunctionReturn(0);
 }
 
-/* model for source of ionized impurities, profile provided by model */
-/* E = eta_spitzer(J-J_re) */
-/* static PetscErrorCode ESpitzer(Vec X,  Vec X_t, PetscReal *a_E, LandCtx *ctx) */
-/* { */
-/*   PetscErrorCode    ierr; */
-/*   PetscReal         spit_eta,Te_kev,J,J_re=0,tt[FP_MAX_SPECIES]; */
-/*   PetscDS           prob; */
-/*   DM                dm,plex; */
-/*   PetscFunctionBegin; */
-/*   ierr = VecGetDM(X, &dm);CHKERRQ(ierr); */
-/*   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr); */
-/*   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr); */
-/*   ierr = getT_kev(plex, X, 0, NULL, &Te_kev);CHKERRQ(ierr); */
-/*   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /\* kev --> J (kT) *\/ */
-/*   /\* J *\/ */
-/*   ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr); */
-/*   ierr = PetscDSSetObjective(prob, 0, &f0_j);CHKERRQ(ierr); */
-/*   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr); */
-/*   J = -ctx->n_0*ctx->v_0*tt[0]; */
-/*   /\* E = eta_spitzer(J-J_re) *\/ */
-/*   *a_E = spit_eta*(J-J_re); */
-/*   /\* cleanup *\/ */
-/*   ierr = DMDestroy(&plex);CHKERRQ(ierr); */
-/*   PetscFunctionReturn(0); */
-/* } */
 
-/* #undef __FUNCT__ */
-/* #define __FUNCT__ "EInduction" */
-/* static PetscErrorCode EInduction(Vec X, Vec X_t, PetscReal *a_E, LandCtx *ctx) */
-/* { */
-/*   REctx            *rectx = (REctx*)ctx->data; */
-/*   PetscErrorCode    ierr; */
-/*   DM                dm,plex; */
-/*   PetscScalar       dJ_dt,tt[FP_MAX_SPECIES]; */
-/*   PetscDS           prob; */
-/*   PetscFunctionBegin; */
-/*   ierr = VecGetDM(X, &dm);CHKERRQ(ierr); */
-/*   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr); */
-/*   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr); */
-/*   /\* get d current / dt *\/ */
-/*   ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr); */
-/*   ierr = PetscDSSetObjective(prob, 0, &f0_j);CHKERRQ(ierr); */
-/*   ierr = DMPlexComputeIntegralFEM(plex,X_t,tt,NULL);CHKERRQ(ierr); */
-/*   dJ_dt = -ctx->n_0*ctx->v_0*tt[0]/ctx->t_0; */
-/*   /\* E induction *\/ */
-/*   *a_E = -rectx->L*dJ_dt + rectx->Ez_initial; */
-/*   ierr = DMDestroy(&plex);CHKERRQ(ierr); */
-/*   PetscFunctionReturn(0); */
-/* } */
+/* E = eta_spitzer(J-J_re) */
+static PetscErrorCode ESpitzer(Vec X,  Vec X_t, PetscReal *a_E, LandCtx *ctx)
+{
+  PetscErrorCode    ierr;
+  PetscReal         spit_eta,Te_kev,J,J_re=0,tt[FP_MAX_SPECIES];
+  PetscDS           prob;
+  DM                dm,plex;
+  PetscFunctionBegin;
+  ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
+  ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
+  ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
+  ierr = getT_kev(plex, X, 0, NULL, &Te_kev);CHKERRQ(ierr);
+  spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
+  /* J */
+  ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr);
+  ierr = PetscDSSetObjective(prob, 0, &f0_jz);CHKERRQ(ierr);
+  ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
+  J = -ctx->n_0*ctx->v_0*tt[0];
+  *a_E = spit_eta*(J-J_re);
+  /* cleanup */
+  ierr = DMDestroy(&plex);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode EInduction(Vec X, Vec X_t, PetscReal *a_E, LandCtx *ctx)
+{
+  REctx            *rectx = (REctx*)ctx->data;
+  PetscErrorCode    ierr;
+  DM                dm,plex;
+  PetscScalar       dJ_dt,tt[FP_MAX_SPECIES];
+  PetscDS           prob;
+  PetscFunctionBegin;
+  ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
+  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
+  ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
+  /* get d current / dt */
+  ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr);
+  ierr = PetscDSSetObjective(prob, 0, &f0_jz);CHKERRQ(ierr);
+  ierr = DMPlexComputeIntegralFEM(plex,X_t,tt,NULL);CHKERRQ(ierr);
+  dJ_dt = -ctx->n_0*ctx->v_0*tt[0]/ctx->t_0;
+  /* E induction */
+  *a_E = -rectx->L*dJ_dt + rectx->Ez_initial;
+  ierr = DMDestroy(&plex);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
 static PetscErrorCode EConst(Vec X,  Vec X_t, PetscReal *a_E, LandCtx *ctx)
 {
@@ -676,7 +673,7 @@ PetscErrorCode REIFunction(TS ts,PetscReal time,Vec X,Vec X_t,Vec F,void *actx)
   rectx = (REctx*)ctx->data;
   if (!rectx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no re context");
   /* update E */
-  ierr = rectx->electricField(X, X_t, &ctx->Ez, ctx);CHKERRQ(ierr);
+  ierr = rectx->E(X, X_t, &ctx->Ez, ctx);CHKERRQ(ierr);
   /* Add Landau part */
   ierr = FPLandIFunction(ts,time,X,X_t,F,actx);CHKERRQ(ierr);
   ctx->aux_bool = PETSC_FALSE; /* clear flag */
@@ -773,7 +770,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   ierr = PetscFunctionListAdd(&testlist,"bimaxwellian",&testShift);CHKERRQ(ierr);
   ierr = PetscStrcpy(testname,"none");CHKERRQ(ierr);
   /* electric field function - can switch at runtime */
-  rectx->electricField = EConst;
+  rectx->E = EConst;
   ierr = PetscOptionsBegin(PETSC_COMM_SELF, prefix, "Options for Runaway/seed electron model", "none");CHKERRQ(ierr);
   ierr = PetscOptionsReal("-plot_dt", "Plotting interval", "xgc_dmplex.c", rectx->plotDt, &rectx->plotDt, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsFList("-impurity_source_type","Name of impurity source to run","",plist,pname,pname,sizeof(pname),NULL);CHKERRQ(ierr);
