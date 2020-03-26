@@ -466,8 +466,6 @@ static PetscErrorCode testShift(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal
   PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "PostStep"
 static PetscErrorCode PostStep(TS ts)
 {
   PetscErrorCode    ierr;
