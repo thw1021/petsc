@@ -376,6 +376,7 @@ if (ynorm/xnorm > 0.0001) { /* if the NEWTON step is small relative to the solut
     lambda = 1.0;  /* better solution is the full step Newton */
   } else {
     /* W is already a calculated in the algorithm above */
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)linesearch), "Heeho LS used\n");CHKERRQ(ierr);
     ierr = VecCopy(GradF, Y);CHKERRQ(ierr);  /* new solution is lambda*GradF */
   }
 
