@@ -139,6 +139,7 @@ PETSC_EXTERN PetscErrorCode SNESSetForceIteration(SNES,PetscBool);
 PETSC_EXTERN PetscErrorCode SNESGetIterationNumber(SNES,PetscInt*);
 PETSC_EXTERN PetscErrorCode SNESSetIterationNumber(SNES,PetscInt);
 
+PETSC_EXTERN PetscErrorCode SNESNewtonTRGetRhoFlag(SNES, PetscBool*);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetPreCheck(SNES, PetscErrorCode (*)(SNES,Vec,Vec,PetscBool*,void*),void *ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRGetPreCheck(SNES, PetscErrorCode (**)(SNES,Vec,Vec,PetscBool*,void*),void **ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetPostCheck(SNES, PetscErrorCode (*)(SNES,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void *ctx);
@@ -241,6 +242,8 @@ typedef enum {/* converged */
               SNES_CONVERGED_FNORM_RELATIVE    =  3, /* ||F|| < rtol*||F_initial|| */
               SNES_CONVERGED_SNORM_RELATIVE    =  4, /* Newton computed step size small; || delta x || < stol || x ||*/
               SNES_CONVERGED_ITS               =  5, /* maximum iterations reached */
+              SNES_BREAKOUT_INNER_ITER         =  6, /* Flag to break out of inner loop after checking custom convergence. */
+                                                     /* it is used in multi-phase flow when state changes */
               /* diverged */
               SNES_DIVERGED_FUNCTION_DOMAIN     = -1, /* the new x location passed the function is not in the domain of F */
               SNES_DIVERGED_FUNCTION_COUNT      = -2,
