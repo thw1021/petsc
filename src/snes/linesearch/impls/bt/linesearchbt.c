@@ -53,9 +53,9 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
 {
   PetscBool         changed_y,changed_w;
   PetscErrorCode    ierr;
-  Vec               X,F,Y,W,G;
+  Vec               X,F,Y,W,G,GradF,WY,GY;
   SNES              snes;
-  PetscReal         fnorm, xnorm, ynorm, gnorm;
+  PetscReal         fnorm, xnorm, ynorm, gnorm, gradfnorm, gynorm;
   PetscReal         lambda,lambdatemp,lambdaprev,minlambda,maxstep,initslope,alpha,stol;
   PetscReal         t1,t2,a,b,d;
   PetscReal         f;
@@ -88,6 +88,10 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
   ierr = VecNormEnd(Y, NORM_2, &ynorm);CHKERRQ(ierr);
   ierr = VecNormEnd(X, NORM_2, &xnorm);CHKERRQ(ierr);
 
+  ierr = VecDuplicate(Y,&GradF);CHKERRQ(ierr);
+  ierr = VecDuplicate(W,&WY);CHKERRQ(ierr);
+  ierr = VecDuplicate(G,&GY);CHKERRQ(ierr);
+
   if (ynorm == 0.0) {
     if (monitor) {
       ierr = PetscViewerASCIIAddTab(monitor,((PetscObject)linesearch)->tablevel);CHKERRQ(ierr);
@@ -117,20 +121,30 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
     f = fnorm*fnorm;
   }
 
+  ierr = VecWAXPY(WY,-1.0,Y,X);CHKERRQ(ierr);
+  ierr = (*linesearch->ops->snesfunc)(snes,WY,GY);CHKERRQ(ierr);
+  ierr = VecNorm(GY,NORM_2,&gynorm);CHKERRQ(ierr);
+
+if (ynorm/xnorm > 0.0001) { /* if the NEWTON step is small relative to the solution, continue with NEWTON full step */
+
   /* compute the initial slope */
   if (objective) {
     /* slope comes from the function (assumed to be the gradient of the objective */
     ierr = VecDotRealPart(Y,F,&initslope);CHKERRQ(ierr);
   } else {
     /* slope comes from the normal equations */
-    ierr = MatMult(jac,Y,W);CHKERRQ(ierr);
-    ierr = VecDotRealPart(F,W,&initslope);CHKERRQ(ierr);
-    if (initslope > 0.0)  initslope = -initslope;
-    if (initslope == 0.0) initslope = -1.0;
+    ierr = MatMultTranspose(jac,F,GradF);CHKERRQ(ierr);
+    ierr = VecNormBegin(GradF, NORM_2, &gradfnorm);CHKERRQ(ierr);
+    ierr = VecNormEnd(GradF, NORM_2, &gradfnorm);CHKERRQ(ierr);  
+    initslope = -gradfnorm;
+ /*   if (initslope > 0.0)  initslope = -initslope; */
+ /*   if (initslope == 0.0) initslope = -1.0; */
   }
+  
+  
 
   while (PETSC_TRUE) {
-    ierr = VecWAXPY(W,-lambda,Y,X);CHKERRQ(ierr);
+    ierr = VecWAXPY(W,-lambda,GradF,X);CHKERRQ(ierr);
     if (linesearch->ops->viproject) {
       ierr = (*linesearch->ops->viproject)(snes, W);CHKERRQ(ierr);
     }
@@ -200,7 +214,8 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
     if (lambdatemp <= .1*lambda) lambda = .1*lambda;
     else                         lambda = lambdatemp;
 
-    ierr  = VecWAXPY(W,-lambda,Y,X);CHKERRQ(ierr);
+/*    ierr  = VecWAXPY(W,-lambda,Y,X);CHKERRQ(ierr); */
+    ierr = VecWAXPY(W,-lambda,GradF,X);CHKERRQ(ierr);
     if (linesearch->ops->viproject) {
       ierr = (*linesearch->ops->viproject)(snes, W);CHKERRQ(ierr);
     }
@@ -279,7 +294,8 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
         if (lambdatemp > .5*lambda)  lambdatemp = .5*lambda;
         if (lambdatemp <= .1*lambda) lambda     = .1*lambda;
         else                         lambda     = lambdatemp;
-        ierr = VecWAXPY(W,-lambda,Y,X);CHKERRQ(ierr);
+     /*   ierr = VecWAXPY(W,-lambda,Y,X);CHKERRQ(ierr); */
+        ierr = VecWAXPY(W,-lambda,GradF,X);CHKERRQ(ierr);
         if (linesearch->ops->viproject) {
           ierr = (*linesearch->ops->viproject)(snes,W);CHKERRQ(ierr);
         }
@@ -351,6 +367,21 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
       }
     }
   }
+} else {
+  gnorm = gynorm*2.; /* if Linesearch was not used, this guarantees that gnorm < gynorm below */
+}
+  
+  if (gynorm < gnorm) {  /* really we are comparing .5 G_y^T G_y^T < .5 G^T G */
+    ierr = VecCopy(WY, W);CHKERRQ(ierr);
+    lambda = 1.0;  /* better solution is the full step Newton */
+  } else {
+    /* W is already a calculated in the algorithm above */
+    ierr = VecCopy(GradF, Y);CHKERRQ(ierr);  /* new solution is lambda*GradF */
+  }
+
+  ierr = VecDestroy(&GradF);CHKERRQ(ierr);
+  ierr = VecDestroy(&WY);CHKERRQ(ierr);
+  ierr = VecDestroy(&GY);CHKERRQ(ierr);
 
   /* postcheck */
   /* update Y to lambda*Y so that W is consistent with  X - lambda*Y */
