@@ -126,7 +126,7 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
   ierr = VecNorm(GY,NORM_2,&gynorm);CHKERRQ(ierr);
 
 if (ynorm/xnorm > linesearch->heeho) { /* if the NEWTON step is small relative to the solution, continue with NEWTON full step */
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)linesearch), "Heeho LS evaluated\n");CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "Heeho LS evaluated\n");CHKERRQ(ierr);
   /* compute the initial slope */
   if (objective) {
     /* slope comes from the function (assumed to be the gradient of the objective */
@@ -261,6 +261,10 @@ if (ynorm/xnorm > linesearch->heeho) { /* if the NEWTON step is small relative t
       /* Fit points with cubic */
       for (count = 0; count < max_its; count++) {
         if (lambda <= minlambda) {
+          gnorm = gynorm*2.;
+          break;
+        }
+        if (lambda <= minlambda) {
           if (monitor) {
             ierr = PetscViewerASCIIAddTab(monitor,((PetscObject)linesearch)->tablevel);CHKERRQ(ierr);
             ierr = PetscViewerASCIIPrintf(monitor,"    Line search: unable to find good step length! After %D tries \n",count);CHKERRQ(ierr);
@@ -376,7 +380,7 @@ if (ynorm/xnorm > linesearch->heeho) { /* if the NEWTON step is small relative t
     lambda = 1.0;  /* better solution is the full step Newton */
   } else {
     /* W is already a calculated in the algorithm above */
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)linesearch), "Heeho LS accepted lambda: %14.12e, gnorm: %14.12e\n", (double)lambda, (double)gnorm);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "Heeho LS accepted lambda: %14.12e, gnorm: %14.12e\n", (double)lambda, (double)gnorm);CHKERRQ(ierr);
     ierr = VecCopy(GradF, Y);CHKERRQ(ierr);  /* new solution is lambda*GradF */
   }
 
