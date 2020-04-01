@@ -126,7 +126,7 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
   ierr = VecNorm(GY,NORM_2,&gynorm);CHKERRQ(ierr);
 
 if (ynorm/xnorm > linesearch->heeho) { /* if the NEWTON step is small relative to the solution, continue with NEWTON full step */
-
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)linesearch), "Heeho LS evaluated\n");CHKERRQ(ierr);
   /* compute the initial slope */
   if (objective) {
     /* slope comes from the function (assumed to be the gradient of the objective */
@@ -376,7 +376,7 @@ if (ynorm/xnorm > linesearch->heeho) { /* if the NEWTON step is small relative t
     lambda = 1.0;  /* better solution is the full step Newton */
   } else {
     /* W is already a calculated in the algorithm above */
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)linesearch), "Heeho LS used\n");CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)linesearch), "Heeho LS accepted\n");CHKERRQ(ierr);
     ierr = VecCopy(GradF, Y);CHKERRQ(ierr);  /* new solution is lambda*GradF */
   }
 
