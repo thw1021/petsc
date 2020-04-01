@@ -371,12 +371,12 @@ if (ynorm/xnorm > linesearch->heeho) { /* if the NEWTON step is small relative t
   gnorm = gynorm*2.; /* if Linesearch was not used, this guarantees that gnorm < gynorm below */
 }
   
-  if (gynorm < gnorm) {  /* really we are comparing .5 G_y^T G_y^T < .5 G^T G */
+  if (gynorm < gnorm) {  /* really we are comparing .5 G_y^T G_y < .5 G^T G */
     ierr = VecCopy(WY, W);CHKERRQ(ierr);
     lambda = 1.0;  /* better solution is the full step Newton */
   } else {
     /* W is already a calculated in the algorithm above */
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)linesearch), "Heeho LS accepted\n");CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)linesearch), "Heeho LS accepted lambda: %14.12e, gnorm: %14.12e\n", (double)lambda, (double)gnorm);CHKERRQ(ierr);
     ierr = VecCopy(GradF, Y);CHKERRQ(ierr);  /* new solution is lambda*GradF */
   }
 
