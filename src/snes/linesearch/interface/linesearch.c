@@ -189,6 +189,8 @@ PetscErrorCode SNESLineSearchCreate(MPI_Comm comm, SNESLineSearch *outlinesearch
   linesearch->vec_func     = NULL;
   linesearch->vec_update   = NULL;
 
+  linesearch->heeho        = 0.0001;
+
   linesearch->lambda       = 1.0;
   linesearch->fnorm        = 1.0;
   linesearch->ynorm        = 1.0;
@@ -818,6 +820,9 @@ PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
   ierr = PetscOptionsReal("-snes_linesearch_atol","Absolute tolerance for iterative line search","SNESLineSearchSetTolerances",linesearch->atol,&linesearch->atol,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-snes_linesearch_ltol","Change in lambda tolerance for iterative line search","SNESLineSearchSetTolerances",linesearch->ltol,&linesearch->ltol,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-snes_linesearch_max_it","Maximum iterations for iterative line searches","SNESLineSearchSetTolerances",linesearch->max_its,&linesearch->max_its,NULL);CHKERRQ(ierr);
+
+  /* Heeho parameter to analyze steepest descent or not */
+  ierr = PetscOptionsReal("-snes_linesearch_heeho","Ratio of ynorm over xnorm to analyze steepest descent direction","SNESLineSearchHeeho",linesearch->heeho,&linesearch->heeho,NULL);CHKERRQ(ierr);
 
   /* damping parameters */
   ierr = PetscOptionsReal("-snes_linesearch_damping","Line search damping and initial step guess","SNESLineSearchSetDamping",linesearch->damping,&linesearch->damping,NULL);CHKERRQ(ierr);

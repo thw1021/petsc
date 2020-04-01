@@ -45,6 +45,7 @@ struct _p_LineSearch {
   Vec                  *work;
 
   PetscReal            lambda;
+  PetscReal            heeho;
 
   PetscBool            norms;
   PetscReal            fnorm;

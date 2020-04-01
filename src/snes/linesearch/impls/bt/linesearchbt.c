@@ -125,7 +125,7 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
   ierr = (*linesearch->ops->snesfunc)(snes,WY,GY);CHKERRQ(ierr);
   ierr = VecNorm(GY,NORM_2,&gynorm);CHKERRQ(ierr);
 
-if (ynorm/xnorm > 0.0001) { /* if the NEWTON step is small relative to the solution, continue with NEWTON full step */
+if (ynorm/xnorm > linesearch->heeho) { /* if the NEWTON step is small relative to the solution, continue with NEWTON full step */
 
   /* compute the initial slope */
   if (objective) {
