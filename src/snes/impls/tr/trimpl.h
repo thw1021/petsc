@@ -17,6 +17,14 @@ typedef struct {
   PetscReal      delta1;         /* used to compute trust region parameter */
   PetscReal      delta2;         /* used to compute trust region parameter */
   PetscReal      delta3;         /* used to compute trust region parameter */
+  
+  PetscReal      eta1;           /* Heeho's new TR-dogleg */
+  PetscReal      eta2;           /* Heeho's new TR-dogleg */
+  PetscReal      eta3;           /* Heeho's new TR-dogleg */
+  PetscReal      t1;             /* Heeho's new TR-dogleg */
+  PetscReal      t2;             /* Heeho's new TR-dogleg */
+  PetscReal      deltaM;         /* Heeho's new TR-dogleg */
+
   PetscReal      sigma;          /* used to detemine termination */
   PetscBool      itflag;         /* flag for convergence testing */
   PetscReal      rnorm0,ttol;    /* used for KSP convergence test */
