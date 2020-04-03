@@ -346,12 +346,6 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
     ierr = PetscPrintf(PETSC_COMM_WORLD, "DONE T_e(kev)=%20.13e J_0=%10.3e J_1=%10.3e n_e=%10.3e v_z=%10.3e eta_s=%10.3e E/J=%10.3e Z= %d\n",
                        Te_kev, j_0, j_1, n_e, v_z, spit_eta, E/J, (int)Z);CHKERRQ(ierr);
   }
-  if (time==0) {
-    PetscReal E, Tev = ctx->thermal_temps[0]*8.621738e-5, n = ctx->n_0*ctx->n[0];
-    CalculateE(Tev, n, ctx->lnLam, ctx->epsilon0, &E);
-    ctx->Ez *= E;
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "+++++ new E=%10.3e scale %10.3e\n",ctx->Ez,E);CHKERRQ(ierr);
-  }
   PetscFunctionReturn(0);
 }
 
@@ -803,6 +797,13 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
       ierr = PetscOptionsClearValue(NULL,"-dm_view_diagnostics");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-vec_view_diagnostics");CHKERRQ(ierr);
     }
+  }
+  if (1) {
+    PetscReal E, Tev = ctx->thermal_temps[0]*8.621738e-5, n = ctx->n_0*ctx->n[0];
+    LandCtx *vctx = (LandCtx *)ctx;
+    CalculateE(Tev, n, ctx->lnLam, ctx->epsilon0, &E);
+    vctx->Ez *= E;
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "+++++ new E=%10.3e scale %10.3e\n",ctx->Ez,E);CHKERRQ(ierr);
   }
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);
   PetscFunctionReturn(0);
