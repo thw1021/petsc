@@ -2008,6 +2008,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
       ierr = PetscOptionsClearValue(NULL,"-mass_dm_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-pre_dm_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-pre_vec_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-info");CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
