@@ -648,6 +648,7 @@ PetscPrintf(PETSC_COMM_SELF, "\t\t***** FormRHSSource: have new_imp_rate= %10.3e
       ierr = PetscObjectSetName((PetscObject)S, "src");CHKERRQ(ierr);
       ierr = VecViewFromOptions(S,NULL,"-vec_view_diagnostics");CHKERRQ(ierr);
       ierr = MatMult(ctx->M,S,rectx->imp_src);CHKERRQ(ierr);
+      ierr = VecCopy(S,rectx->imp_src);CHKERRQ(ierr);
       ierr = VecDestroy(&S);CHKERRQ(ierr);
     }
     ierr = VecCopy(rectx->imp_src,F);CHKERRQ(ierr);
@@ -710,7 +711,7 @@ static PetscErrorCode stepSrc(PetscReal time, PetscInt step, PetscReal dt, Petsc
   REctx         *rectx;
   PetscFunctionBegin;
   rectx = (REctx*)ctx->data;
-  if (time > 1.e+5) *rho = rectx->pulse_rate; /* turned off */
+  if (time >= rectx->pulse_start) *rho = rectx->pulse_rate;
   else *rho = 0.;
   PetscFunctionReturn(0);
 }
