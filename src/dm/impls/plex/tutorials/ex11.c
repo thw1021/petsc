@@ -419,7 +419,7 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
   }
   ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %D) time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,time,(int)ppp,ediff/lpm0,idiff/lpm1);CHKERRQ(ierr);
   /* view */
-  ierr = VecViewFromOptions(X,NULL,"-vec_view_diagnostics");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(X,NULL,"-vec_view_diff");CHKERRQ(ierr);
   ierr = VecCopy(X2,X);CHKERRQ(ierr);
   ierr = VecDestroy(&X2);CHKERRQ(ierr);
   if (islast) {
@@ -610,7 +610,8 @@ PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *ptr)
       dni_dt = new_imp_rate              *ctx->t_0; /* fully ionized immediately, normalize */
       dne_dt = new_imp_rate*rectx->Ne_ion*ctx->t_0;
 PetscPrintf(PETSC_COMM_SELF, "\t\t***** FormRHSSource: have new_imp_rate= %10.3e dt=%g stepi=%D time= %10.3e\n",new_imp_rate,dt,stepi,ftime);
-      for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = temps[ii] = 0;
+      for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
+      for (ii=1;ii<FP_MAX_SPECIES;ii++) temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
       temps[0]    = rectx->T_cold;    temps[rectx->imp_idx] = rectx->T_cold;
       /* add it */
@@ -640,7 +641,7 @@ PetscPrintf(PETSC_COMM_SELF, "\t\t***** FormRHSSource: have new_imp_rate= %10.3e
       /* clean up */
       ierr = DMDestroy(&plex);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject)S, "src");CHKERRQ(ierr);
-      ierr = VecViewFromOptions(S,NULL,"-vec_view_diagnostics");CHKERRQ(ierr);
+      ierr = VecViewFromOptions(S,NULL,"-vec_view_sources");CHKERRQ(ierr);
       ierr = VecCopy(S,rectx->imp_src);CHKERRQ(ierr);
       ierr = VecDestroy(&S);CHKERRQ(ierr);
     }
@@ -794,8 +795,10 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
     if (rank) { /* turn off output stuff for duplicate runs */
       ierr = PetscOptionsClearValue(NULL,"-dm_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-vec_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-dm_view_diagnostics");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-vec_view_diagnostics");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_view_diff");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-vec_view_diff");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_view_sources");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-vec_view_sources");CHKERRQ(ierr);
     }
   }
   if (1) {
@@ -832,7 +835,8 @@ int main(int argc, char **argv)
   ierr = ProcessREOptions(rectx,ctx,dm,"");CHKERRQ(ierr);
   ierr = DMSetOutputSequenceNumber(dm, 0, 0.0);CHKERRQ(ierr);
   ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm,NULL,"-dm_view_diagnostics");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-dm_view_sources");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-dm_view_diff");CHKERRQ(ierr);
   /* Create timestepping solver context */
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
