@@ -14,7 +14,7 @@ static char help[] = "Runaway electron model with Landau collision operator\n\n"
 /* data for runaway electron model */
 typedef struct REctx_struct {
   PetscErrorCode (*test)(TS, Vec, DM, PetscInt, PetscReal, PetscBool,  LandCtx *, struct REctx_struct *);
-  PetscErrorCode (*impuritySrcRate)(PetscReal, PetscInt, PetscReal, PetscReal *, LandCtx*);
+  PetscErrorCode (*impuritySrcRate)(PetscReal, PetscReal *, LandCtx*);
   PetscErrorCode (*E)(Vec, Vec, PetscReal *, LandCtx*);
   PetscReal     T_cold;        /* temperature of newly ionized electrons and impurity ions */
   PetscReal     ion_potential; /* ionization potential of impurity */
@@ -515,7 +515,6 @@ static PetscErrorCode PostStep(TS ts)
   PetscFunctionReturn(0);
 }
 
-
 /* E = eta_spitzer(J-J_re) */
 static PetscErrorCode ESpitzer(Vec X,  Vec X_t, PetscReal *a_E, LandCtx *ctx)
 {
@@ -589,7 +588,6 @@ PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *dumm
   DM             dm,plex;
   PetscErrorCode ierr;
   REctx         *rectx;
-  PetscInt       stepi;
   PetscFunctionBeginUser;
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
@@ -597,9 +595,8 @@ PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *dumm
   if (!rectx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no re context");
   /* check for impurities */
   ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
-  ierr = TSGetStepNumber(ts, &stepi);CHKERRQ(ierr);
-  ierr = rectx->impuritySrcRate(ftime,stepi,dt,&new_imp_rate,ctx);CHKERRQ(ierr);
-  //PetscPrintf(PETSC_COMM_SELF, "\t+++++FormRHSSource: have new_imp_rate= %10.3e dt=%g stepi=%D time= %10.3e\n",new_imp_rate,dt,stepi,ftime);
+  ierr = rectx->impuritySrcRate(ftime,&new_imp_rate,ctx);CHKERRQ(ierr);
+  //PetscPrintf(PETSC_COMM_SELF, "\t+++++FormRHSSource: have new_imp_rate= %10.3e dt=%g time= %10.3e\n",new_imp_rate,dt,ftime);
   if (new_imp_rate != 0) {
     if (new_imp_rate != rectx->current_rate) {
       PetscInt       ii;
@@ -611,7 +608,7 @@ PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *dumm
       ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
       dni_dt = new_imp_rate              *ctx->t_0; /* fully ionized immediately, normalize */
       dne_dt = new_imp_rate*rectx->Ne_ion*ctx->t_0;
-PetscPrintf(PETSC_COMM_SELF, "\t***** FormRHSSource: have new_imp_rate= %10.3e dt=%g stepi=%D time= %10.3e de/dt= %10.3e di/dt= %10.3e\n",new_imp_rate,dt,stepi,ftime,dne_dt,dni_dt);
+PetscPrintf(PETSC_COMM_SELF, "\t***** FormRHSSource: have new_imp_rate= %10.3e dt=%g time= %10.3e de/dt= %10.3e di/dt= %10.3e\n",new_imp_rate,dt,ftime,dne_dt,dni_dt);
       for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
       for (ii=1;ii<FP_MAX_SPECIES;ii++)    temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
@@ -706,7 +703,7 @@ PetscErrorCode REIJacobian(TS ts,PetscReal time,Vec X,Vec U_t,PetscReal shift,Ma
 }
 
 /* model for source of non-ionized impurities, profile provided by model, in du/dt form in normalized units (tricky because n_0 is normalized with electrons) */
-static PetscErrorCode stepSrc(PetscReal time, PetscInt step, PetscReal dt, PetscReal *rho, LandCtx *ctx)
+static PetscErrorCode stepSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
 {
   REctx         *rectx;
   PetscFunctionBegin;
@@ -715,13 +712,13 @@ static PetscErrorCode stepSrc(PetscReal time, PetscInt step, PetscReal dt, Petsc
   else *rho = 0.;
   PetscFunctionReturn(0);
 }
-static PetscErrorCode zeroSrc(PetscReal time, PetscInt step, PetscReal dt, PetscReal *rho, LandCtx *ctx)
+static PetscErrorCode zeroSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
 {
   PetscFunctionBegin;
   *rho = 0.;
   PetscFunctionReturn(0);
 }
-static PetscErrorCode pulseSrc(PetscReal time, PetscInt step, PetscReal dt, PetscReal *rho, LandCtx *ctx)
+static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
 {
   REctx *rectx;
   rectx = (REctx*)ctx->data;
