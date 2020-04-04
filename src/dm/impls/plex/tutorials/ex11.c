@@ -18,7 +18,7 @@ typedef struct REctx_struct {
   PetscErrorCode (*E)(Vec, Vec, PetscReal *, LandCtx*);
   PetscReal     T_cold;        /* temperature of newly ionized electrons and impurity ions */
   PetscReal     ion_potential; /* ionization potential of impurity */
-  PetscInt      Ne_ion;        /* number of electrons shed in ioization of impurity */
+  PetscReal     Ne_ion;        /* effective number of electrons shed in ioization of impurity */
   PetscReal     Ez_initial;
   PetscReal     L;             /* inductance */
   Vec           X_0;
@@ -575,13 +575,14 @@ static const int put_source_in_lhs = 0;
 
    Input Parameters:
 .  ts - the TS context
-.  X - input vector
-.  ptr - optional user-defined context, as set by SNESSetFunction()
+.  time -
+.  X_dummmy - input vector
+.  dummy - optional user-defined context, as set by SNESSetFunction()
 
    Output Parameter:
 .  F - function vector
  */
-PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *ptr)
+PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *dummy)
 {
   PetscReal      new_imp_rate,dt;
   LandCtx        *ctx;
@@ -598,6 +599,7 @@ PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *ptr)
   ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts, &stepi);CHKERRQ(ierr);
   ierr = rectx->impuritySrcRate(ftime,stepi,dt,&new_imp_rate,ctx);CHKERRQ(ierr);
+  //PetscPrintf(PETSC_COMM_SELF, "\t+++++FormRHSSource: have new_imp_rate= %10.3e dt=%g stepi=%D time= %10.3e\n",new_imp_rate,dt,stepi,ftime);
   if (new_imp_rate != 0) {
     if (new_imp_rate != rectx->current_rate) {
       PetscInt       ii;
@@ -609,44 +611,48 @@ PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *ptr)
       ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
       dni_dt = new_imp_rate              *ctx->t_0; /* fully ionized immediately, normalize */
       dne_dt = new_imp_rate*rectx->Ne_ion*ctx->t_0;
-PetscPrintf(PETSC_COMM_SELF, "\t\t***** FormRHSSource: have new_imp_rate= %10.3e dt=%g stepi=%D time= %10.3e\n",new_imp_rate,dt,stepi,ftime);
+PetscPrintf(PETSC_COMM_SELF, "\t***** FormRHSSource: have new_imp_rate= %10.3e dt=%g stepi=%D time= %10.3e de/dt= %10.3e di/dt= %10.3e\n",new_imp_rate,dt,stepi,ftime,dne_dt,dni_dt);
       for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
-      for (ii=1;ii<FP_MAX_SPECIES;ii++) temps[ii] = 1;
+      for (ii=1;ii<FP_MAX_SPECIES;ii++)    temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
       temps[0]    = rectx->T_cold;    temps[rectx->imp_idx] = rectx->T_cold;
       /* add it */
       if (!rectx->imp_src) {
         ierr = DMCreateGlobalVector(dm, &rectx->imp_src);CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject)rectx->imp_src, "F");CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)rectx->imp_src, "source");CHKERRQ(ierr);
       }
       ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
-      //ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
+      ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
       ierr = DMPlexFPAddMaxwellians(plex,S,ftime,temps,tilda_ns,ctx);CHKERRQ(ierr);
       if (0) {
         PetscReal n_e, n_i, n_se, n_si, tt[FP_MAX_SPECIES];
         ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
         ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
         n_e = tt[0];
-        ierr = PetscDSSetObjective(prob, 0, &f0_1_n);CHKERRQ(ierr);
+        ierr = PetscDSSetObjective(prob, 0, &f0_2_n);CHKERRQ(ierr);
         ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
         n_i = tt[0];
         ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
         ierr = DMPlexComputeIntegralFEM(plex,S,tt,NULL);CHKERRQ(ierr);
         n_se = tt[0];
-        ierr = PetscDSSetObjective(prob, 0, &f0_1_n);CHKERRQ(ierr);
+        ierr = PetscDSSetObjective(prob, 0, &f0_2_n);CHKERRQ(ierr);
         ierr = DMPlexComputeIntegralFEM(plex,S,tt,NULL);CHKERRQ(ierr);
         n_si = tt[0];
         ierr = PetscPrintf(PETSC_COMM_SELF, "F_e= %10.3e F_i= %10.3e n_se= %10.3e n_si= %10.3e\n",n_e,n_i,n_se,n_si);CHKERRQ(ierr);
       }
       /* clean up */
       ierr = DMDestroy(&plex);CHKERRQ(ierr);
-      ierr = PetscObjectSetName((PetscObject)S, "src");CHKERRQ(ierr);
-      ierr = VecViewFromOptions(S,NULL,"-vec_view_sources");CHKERRQ(ierr);
       ierr = VecCopy(S,rectx->imp_src);CHKERRQ(ierr);
+      ierr = VecViewFromOptions(rectx->imp_src,NULL,"-vec_view_sources");CHKERRQ(ierr);
       ierr = VecDestroy(&S);CHKERRQ(ierr);
     }
     ierr = VecCopy(rectx->imp_src,F);CHKERRQ(ierr);
-  } else rectx->current_rate = 0;
+  } else {
+    if (rectx->current_rate != 0 && rectx->imp_src) {
+      ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
+    }
+    rectx->current_rate = 0;
+  }
   PetscFunctionReturn(0);
 }
 
@@ -767,11 +773,13 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   rectx->E = EConst;
   ierr = PetscOptionsBegin(PETSC_COMM_SELF, prefix, "Options for Runaway/seed electron model", "none");CHKERRQ(ierr);
   ierr = PetscOptionsReal("-plot_dt", "Plotting interval", "xgc_dmplex.c", rectx->plotDt, &rectx->plotDt, NULL);CHKERRQ(ierr);
+  if (rectx->plotDt < 0) rectx->plotDt = 1e30;
+  if (rectx->plotDt == 0) rectx->plotDt = 1e-30;
   ierr = PetscOptionsFList("-impurity_source_type","Name of impurity source to run","",plist,pname,pname,sizeof(pname),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsFList("-test_type","Name of test to run","",testlist,testname,testname,sizeof(pname),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-impurity_z_effective", "number of electrons donated by ionization", "none", rectx->Ne_ion, &rectx->Ne_ion, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-impurity_index", "index of sink for impurities", "none", rectx->imp_idx, &rectx->imp_idx, NULL);CHKERRQ(ierr);
-  if (rectx->imp_idx >= ctx->num_species || rectx->imp_idx < 1) SETERRQ1(PETSC_COMM_SELF,1,"index of sink for impurities out of range (%D)",rectx->imp_idx);
+  if (rectx->imp_idx >= ctx->num_species || rectx->imp_idx < 1) SETERRQ1(PETSC_COMM_SELF,1,"index of sink for impurities ions is out of range (%D), must be > 0 && < NS",rectx->imp_idx);
+  rectx->Ne_ion = -ctx->charges[rectx->imp_idx]/ctx->charges[0];
   ierr = PetscOptionsReal("-t_cold","Temperature of cold electron and ions after ionization in keV","none",rectx->T_cold,&rectx->T_cold, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-pulse_start_time","Time at which pulse happens for 'pulse' source","none",rectx->pulse_start,&rectx->pulse_start, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-pulse_width_time","Width of pulse 'pulse' source","none",rectx->pulse_width,&rectx->pulse_width, NULL);CHKERRQ(ierr);
@@ -780,7 +788,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   rectx->T_cold *= 1.16e7; /* convert to Kelvin */
   ierr = PetscOptionsReal("-ion_potential","Potential to ionize impurity (should be array) in ev","none",rectx->ion_potential,&rectx->ion_potential, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-inductance","","none",rectx->L,&rectx->L, NULL);CHKERRQ(ierr);
-  ierr = PetscInfo5(dummy, "Num electrons from ions=%D, T_cold=%10.3e, ion potential=%10.3e, E_z=%10.3e v_0=%10.3e\n",rectx->Ne_ion,rectx->T_cold,rectx->ion_potential,ctx->Ez,ctx->v_0);CHKERRQ(ierr);
+  ierr = PetscInfo5(dummy, "Num electrons from ions=%g, T_cold=%10.3e, ion potential=%10.3e, E_z=%10.3e v_0=%10.3e\n",rectx->Ne_ion,rectx->T_cold,rectx->ion_potential,ctx->Ez,ctx->v_0);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   /* get impurity source rate function */
   ierr = PetscFunctionListFind(plist,pname,&rectx->impuritySrcRate);CHKERRQ(ierr);
@@ -844,7 +852,7 @@ int main(int argc, char **argv)
   ierr = TSSetIFunction(ts,NULL,REIFunction,NULL);CHKERRQ(ierr);
   ierr = TSSetIJacobian(ts,J,J,REIJacobian,NULL);CHKERRQ(ierr);
   if (!put_source_in_lhs) {
-    ierr = TSSetRHSFunction(ts,NULL,FormRHSSource,ctx);CHKERRQ(ierr);
+    ierr = TSSetRHSFunction(ts,NULL,FormRHSSource,NULL);CHKERRQ(ierr);
   }
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
