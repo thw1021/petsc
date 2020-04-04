@@ -3,7 +3,8 @@
 masses:        e= 9.109e-31; ions in proton mass units:  2.000e+00  0.000e+00 ...
 charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  0.000e+00
 thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 0.000e+00. v_0= 2.965e+07 n_0= 1.000e+20 t_0= 6.470e-05 domain= 7.582e+00
-[0] ProcessREOptions(): Num electrons from ions=1, T_cold= 5.800e+04, ion potential= 1.500e+01, E_z= 0.000e+00 v_0= 2.965e+07
+[0] ProcessREOptions(): Num electrons from ions=1., T_cold= 5.800e+04, ion potential= 1.500e+01, E_z= 0.000e+00 v_0= 2.965e+07
++++++ new E= 0.000e+00 scale  5.099e-02
 [0] DMGetDMSNES(): Creating new DMSNES
 [0] DMGetDMTS(): Creating new DMTS
 [0] DMGetDMSNESWrite(): Copying DMSNES due to write
@@ -52,7 +53,7 @@ thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 0.000e+00. v_0= 2.965e+07 n_0= 1.0
     7 SNES Function norm 4.425433267090e-13 
     8 SNES Function norm 4.665178935387e-14 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
-		***** FormRHSSource: have new_imp_rate=  4.975e-04 dt=0.125 stepi=1 time=  1.000e-01
+	***** FormRHSSource: have new_imp_rate=  4.975e-04 dt=0.125 stepi=1 time=  1.000e-01 de/dt=  3.219e-08 di/dt=  3.219e-08
     0 SNES Function norm 2.665493917722e-04 
     1 SNES Function norm 7.970269489486e-07 
     2 SNES Function norm 1.841319622996e-08 
@@ -69,7 +70,7 @@ thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 0.000e+00. v_0= 2.965e+07 n_0= 1.0
     5 SNES Function norm 2.455937690832e-12 
     6 SNES Function norm 1.404599098408e-13 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
-		***** FormRHSSource: have new_imp_rate=  5.192e-04 dt=0.125 stepi=1 time=  1.625e-01
+	***** FormRHSSource: have new_imp_rate=  5.192e-04 dt=0.125 stepi=1 time=  1.625e-01 de/dt=  3.360e-08 di/dt=  3.360e-08
 [0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 0.674842, accepting step of size 0.125
   2) species-0: charge density= -1.6018371940813e+01 z-momentum= -6.0282835882130e-19 energy=  1.2008542888021e+05
   2) species-1: charge density=  1.6024885680151e+01 z-momentum= -9.8338166614696e-18 energy=  1.2013832641421e+05
