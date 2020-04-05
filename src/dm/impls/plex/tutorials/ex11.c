@@ -30,6 +30,7 @@ typedef struct REctx_struct {
   PetscInt      plotIdx;
   PetscInt      plotStep;
   PetscInt      idx; /* cache */
+  PetscReal     dt; /* cache */
   PetscReal     plotDt;
   PetscBool     plotting;
   Vec           imp_src;
@@ -461,60 +462,6 @@ static PetscErrorCode testShift(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PostStep(TS ts)
-{
-  PetscErrorCode    ierr;
-  PetscInt          stepi;
-  Vec               X;
-  DM                dm,plex;
-  PetscDS           prob;
-  PetscReal         time;
-  LandCtx           *ctx;
-  REctx            *rectx;
-  TSConvergedReason reason;
-  PetscFunctionBegin;
-  ierr = TSGetApplicationContext(ts, &ctx);CHKERRQ(ierr);
-  if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
-  rectx = (REctx*)ctx->data;
-  ierr = TSGetStepNumber(ts, &stepi);CHKERRQ(ierr);
-  if (stepi > rectx->plotStep && rectx->plotting) {
-    rectx->plotting = PETSC_FALSE; /* was doing diagnostics, now done */
-    rectx->plotIdx++;
-  }
-  ierr = TSGetTime(ts, &time);CHKERRQ(ierr);
-  ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
-  if ( time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
-    ierr = TSGetSolution(ts, &X);CHKERRQ(ierr);
-    ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
-    /* print norms */
-    ierr = DMPlexFPPrintNorms(X, stepi);CHKERRQ(ierr);
-    ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
-    ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
-    /* diagnostics */
-    ierr = rectx->test(ts,X,plex,stepi,time,reason ? PETSC_TRUE : PETSC_FALSE, ctx,rectx);CHKERRQ(ierr);
-    ierr = DMDestroy(&plex);CHKERRQ(ierr);
-    /* view */
-    ierr = DMSetOutputSequenceNumber(dm, rectx->plotIdx, time*ctx->t_0);CHKERRQ(ierr);
-    ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr);
-    rectx->plotStep = stepi;
-    rectx->plotting = PETSC_TRUE;
-  }
-  if (reason) {
-    PetscReal    val,rval;
-    PetscMPIInt    rank;
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
-    ierr = TSGetSolution(ts, &X);CHKERRQ(ierr);
-    ierr = VecNorm(X,NORM_2,&val);CHKERRQ(ierr);
-    ierr = MPIU_Allreduce(&val,&rval,1,MPIU_REAL,MPIU_MAX,PETSC_COMM_WORLD);CHKERRQ(ierr);
-    if (rval != val) {
-      PetscPrintf(PETSC_COMM_SELF, " ***** [%D] ERROR max |x| = %e, my |x| = %20.13e\n",rank,rval,val);CHKERRQ(ierr);
-    } else {
-      PetscPrintf(PETSC_COMM_SELF, "[%D] parallel consistency check OK\n",rank);CHKERRQ(ierr);
-    }
-  }
-  PetscFunctionReturn(0);
-}
-
 /* E = eta_spitzer(J-J_re) */
 static PetscErrorCode ESpitzer(Vec X,  Vec X_t, PetscReal *a_E, LandCtx *ctx)
 {
@@ -567,10 +514,11 @@ static PetscErrorCode EConst(Vec X,  Vec X_t, PetscReal *a_E, LandCtx *ctx)
   *a_E = ctx->Ez;
   PetscFunctionReturn(0);
 }
+
 static const int put_source_in_lhs = 0;
 /* ------------------------------------------------------------------- */
 /*
-   FormRHSSource - Evaluates source terms F(t).
+   FormSource - Evaluates source terms F(t).
 
    Input Parameters:
 .  ts - the TS context
@@ -581,9 +529,9 @@ static const int put_source_in_lhs = 0;
    Output Parameter:
 .  F - function vector
  */
-PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *dummy)
+PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
 {
-  PetscReal      new_imp_rate,dt;
+  PetscReal      new_imp_rate;
   LandCtx        *ctx;
   DM             dm,plex;
   PetscErrorCode ierr;
@@ -594,21 +542,18 @@ PetscErrorCode FormRHSSource(TS ts,PetscReal ftime,Vec X_dummmy,Vec F,void *dumm
   rectx = (REctx*)ctx->data;
   if (!rectx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no re context");
   /* check for impurities */
-  ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
   ierr = rectx->impuritySrcRate(ftime,&new_imp_rate,ctx);CHKERRQ(ierr);
-  //PetscPrintf(PETSC_COMM_SELF, "\t+++++FormRHSSource: have new_imp_rate= %10.3e dt=%g time= %10.3e\n",new_imp_rate,dt,ftime);
   if (new_imp_rate != 0) {
     if (new_imp_rate != rectx->current_rate) {
       PetscInt       ii;
       PetscReal      dne_dt,dni_dt,tilda_ns[FP_MAX_SPECIES],temps[FP_MAX_SPECIES];
       PetscDS        prob; /* diagnostics only */
-      Vec            S;
       rectx->current_rate = new_imp_rate;
       ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
       ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-      dni_dt = new_imp_rate              *ctx->t_0; /* fully ionized immediately, normalize */
-      dne_dt = new_imp_rate*rectx->Ne_ion*ctx->t_0;
-PetscPrintf(PETSC_COMM_SELF, "\t***** FormRHSSource: have new_imp_rate= %10.3e dt=%g time= %10.3e de/dt= %10.3e di/dt= %10.3e\n",new_imp_rate,dt,ftime,dne_dt,dni_dt);
+      dni_dt = new_imp_rate              /* *ctx->t_0 */; /* fully ionized immediately, no normalize, stay in non-dim */
+      dne_dt = new_imp_rate*rectx->Ne_ion/* *ctx->t_0 */;
+PetscPrintf(PETSC_COMM_SELF, "\t***** FormSource: have new_imp_rate= %10.3e dt=%g time= %10.3e de/dt= %10.3e di/dt= %10.3e\n",new_imp_rate,rectx->dt,ftime,dne_dt,dni_dt);
       for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
       for (ii=1;ii<FP_MAX_SPECIES;ii++)    temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
@@ -618,10 +563,9 @@ PetscPrintf(PETSC_COMM_SELF, "\t***** FormRHSSource: have new_imp_rate= %10.3e d
         ierr = DMCreateGlobalVector(dm, &rectx->imp_src);CHKERRQ(ierr);
         ierr = PetscObjectSetName((PetscObject)rectx->imp_src, "source");CHKERRQ(ierr);
       }
-      ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
       ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
-      ierr = DMPlexFPAddMaxwellians(plex,S,ftime,temps,tilda_ns,ctx);CHKERRQ(ierr);
-      if (0) {
+      ierr = DMPlexFPAddMaxwellians(plex,rectx->imp_src,ftime,temps,tilda_ns,ctx);CHKERRQ(ierr);
+      if (1) {
         PetscReal n_e, n_i, n_se, n_si, tt[FP_MAX_SPECIES];
         ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
         ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
@@ -630,18 +574,28 @@ PetscPrintf(PETSC_COMM_SELF, "\t***** FormRHSSource: have new_imp_rate= %10.3e d
         ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
         n_i = tt[0];
         ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,S,tt,NULL);CHKERRQ(ierr);
+        ierr = DMPlexComputeIntegralFEM(plex,rectx->imp_src,tt,NULL);CHKERRQ(ierr);
         n_se = tt[0];
         ierr = PetscDSSetObjective(prob, 0, &f0_2_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,S,tt,NULL);CHKERRQ(ierr);
+        ierr = DMPlexComputeIntegralFEM(plex,rectx->imp_src,tt,NULL);CHKERRQ(ierr);
         n_si = tt[0];
         ierr = PetscPrintf(PETSC_COMM_SELF, "F_e= %10.3e F_i= %10.3e n_se= %10.3e n_si= %10.3e\n",n_e,n_i,n_se,n_si);CHKERRQ(ierr);
       }
       /* clean up */
       ierr = DMDestroy(&plex);CHKERRQ(ierr);
-      ierr = VecCopy(S,rectx->imp_src);CHKERRQ(ierr);
+      if (0) {
+        KSP ksp;
+        Vec S;
+        ierr = KSPCreate(PETSC_COMM_SELF,&ksp);CHKERRQ(ierr);
+        ierr = KSPSetOptionsPrefix(ksp,"mass_"); /* stokes */ CHKERRQ(ierr);
+        ierr = KSPSetOperators(ksp,ctx->M,ctx->M);CHKERRQ(ierr);
+        ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+        ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
+        ierr = KSPSolve(ksp,rectx->imp_src,S);CHKERRQ(ierr);
+        ierr = VecCopy(S,rectx->imp_src);CHKERRQ(ierr);
+        ierr = VecDestroy(&S);CHKERRQ(ierr);
+      }
       ierr = VecViewFromOptions(rectx->imp_src,NULL,"-vec_view_sources");CHKERRQ(ierr);
-      ierr = VecDestroy(&S);CHKERRQ(ierr);
     }
     ierr = VecCopy(rectx->imp_src,F);CHKERRQ(ierr);
   } else {
@@ -649,6 +603,71 @@ PetscPrintf(PETSC_COMM_SELF, "\t***** FormRHSSource: have new_imp_rate= %10.3e d
       ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
     }
     rectx->current_rate = 0;
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PostStep(TS ts)
+{
+  PetscErrorCode    ierr;
+  PetscInt          stepi;
+  Vec               X,S;
+  DM                dm,plex;
+  PetscDS           prob;
+  PetscReal         time,dt;
+  LandCtx           *ctx;
+  REctx            *rectx;
+  TSConvergedReason reason;
+  PetscFunctionBegin;
+  ierr = TSGetApplicationContext(ts, &ctx);CHKERRQ(ierr);
+  if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
+  rectx = (REctx*)ctx->data;
+  ierr = TSGetStepNumber(ts, &stepi);CHKERRQ(ierr);
+  if (stepi > rectx->plotStep && rectx->plotting) {
+    rectx->plotting = PETSC_FALSE; /* was doing diagnostics, now done */
+    rectx->plotIdx++;
+  }
+  ierr = TSGetTime(ts, &time);CHKERRQ(ierr);
+  ierr = TSGetSolution(ts, &X);CHKERRQ(ierr);
+  ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
+  ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
+  /* add source */
+  if (0) {
+    ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
+    ierr = FormSource(ts, time - rectx->dt/2., NULL, S, NULL);CHKERRQ(ierr); /* evaluate source in middle of time step */
+    ierr = VecAXPY(X,rectx->dt,S);CHKERRQ(ierr);
+    ierr = VecDestroy(&S);CHKERRQ(ierr);
+  }
+  rectx->dt = dt;
+  /* view */
+  ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
+  if ( time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
+    /* print norms */
+    ierr = DMPlexFPPrintNorms(X, stepi);CHKERRQ(ierr);
+    ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
+    ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
+    /* diagnostics */
+    ierr = rectx->test(ts,X,plex,stepi,time,reason ? PETSC_TRUE : PETSC_FALSE, ctx,rectx);CHKERRQ(ierr);
+    ierr = DMDestroy(&plex);CHKERRQ(ierr);
+    /* view */
+    ierr = DMSetOutputSequenceNumber(dm, rectx->plotIdx, time*ctx->t_0);CHKERRQ(ierr);
+    ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr);
+    rectx->plotStep = stepi;
+    rectx->plotting = PETSC_TRUE;
+  }
+  /* parallel check */
+  if (reason) {
+    PetscReal    val,rval;
+    PetscMPIInt    rank;
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+    ierr = TSGetSolution(ts, &X);CHKERRQ(ierr);
+    ierr = VecNorm(X,NORM_2,&val);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&val,&rval,1,MPIU_REAL,MPIU_MAX,PETSC_COMM_WORLD);CHKERRQ(ierr);
+    if (rval != val) {
+      PetscPrintf(PETSC_COMM_SELF, " ***** [%D] ERROR max |x| = %e, my |x| = %20.13e\n",rank,rval,val);CHKERRQ(ierr);
+    } else {
+      PetscPrintf(PETSC_COMM_SELF, "[%D] parallel consistency check OK\n",rank);CHKERRQ(ierr);
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -676,7 +695,7 @@ PetscErrorCode REIFunction(TS ts,PetscReal time,Vec X,Vec X_t,Vec F,void *actx)
   if (put_source_in_lhs) {
     Vec S;
     ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
-    ierr = FormRHSSource(ts, time, NULL, S, NULL);CHKERRQ(ierr);
+    ierr = FormSource(ts, time, NULL, S, NULL);CHKERRQ(ierr);
     if (rectx->imp_src) {
       ierr = VecAXPY(F,-1.0,rectx->imp_src);CHKERRQ(ierr);
     }
@@ -754,6 +773,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   rectx->current_rate = 0;
   rectx->plotIdx = 0;
   rectx->imp_src = 0;
+  rectx->dt = 0;
   rectx->plotDt = 1.0;
   rectx->plotting = PETSC_TRUE;
   /* Register the available impurity sources */
@@ -849,7 +869,7 @@ int main(int argc, char **argv)
   ierr = TSSetIFunction(ts,NULL,REIFunction,NULL);CHKERRQ(ierr);
   ierr = TSSetIJacobian(ts,J,J,REIJacobian,NULL);CHKERRQ(ierr);
   if (!put_source_in_lhs) {
-    ierr = TSSetRHSFunction(ts,NULL,FormRHSSource,NULL);CHKERRQ(ierr);
+    ierr = TSSetRHSFunction(ts,NULL,FormSource,NULL);CHKERRQ(ierr);
   }
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
@@ -897,6 +917,6 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: p4est
-    args: -Ez 0 -petscspace_degree 4 -mass_petscspace_degree 4 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-6 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 8 -domain_radius -.75 -impurity_source_type pulse -pulse_start_time 1e-1 -pulse_width_time 1 -pulse_rate 3e-1 -plot_dt 1e-1
+    args: -Ez 0 -petscspace_degree 2 -mass_petscspace_degree 2 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 8 -domain_radius -.75 -impurity_source_type pulse -pulse_start_time 1e-1 -pulse_width_time 10 -pulse_rate 1e-2 -t_cold .05 -plot_dt 1e-1
 
 TEST*/

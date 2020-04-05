@@ -3,77 +3,85 @@
 masses:        e= 9.109e-31; ions in proton mass units:  2.000e+00  0.000e+00 ...
 charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  0.000e+00
 thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 0.000e+00. v_0= 2.965e+07 n_0= 1.000e+20 t_0= 6.470e-05 domain= 7.582e+00
-[0] ProcessREOptions(): Num electrons from ions=1., T_cold= 5.800e+04, ion potential= 1.500e+01, E_z= 0.000e+00 v_0= 2.965e+07
+[0] ProcessREOptions(): Num electrons from ions=1., T_cold= 5.800e+05, ion potential= 1.500e+01, E_z= 0.000e+00 v_0= 2.965e+07
 +++++ new E= 0.000e+00 scale  5.099e-02
 [0] DMGetDMSNES(): Creating new DMSNES
 [0] DMGetDMTS(): Creating new DMTS
 [0] DMGetDMSNESWrite(): Copying DMSNES due to write
-  0) species-0: charge density= -1.6018371874933e+01 z-momentum= -1.6154325397110e-19 energy=  1.2008543087685e+05
-  0) species-1: charge density=  1.6024885678213e+01 z-momentum= -1.8682024664182e-17 energy=  1.2013832444036e+05
-	  0) Total: charge density=  6.5138032798977e-03, momentum= -1.8843567918153e-17, energy=  2.4022375531721e+05 (m_i[0]/m_e = 3670.94, 80 cells)
+  0) species-0: charge density= -1.6052872197725e+01 z-momentum=  3.7533056231270e-19 energy=  1.1472312033498e+05
+  0) species-1: charge density=  1.6042982531402e+01 z-momentum=  4.9797227963565e-18 energy=  1.1521625238030e+05
+	  0) Total: charge density= -9.8896663230938e-03, momentum=  5.3550533586692e-18, energy=  2.2993937271528e+05 (m_i[0]/m_e = 3670.94, 80 cells)
 0 TS dt 0.1 time 0.
 [0] DMGetDMKSP(): Creating new DMKSP
-    0 SNES Function norm 2.092996363378e-03 
-    1 SNES Function norm 6.018587506070e-06 
-    2 SNES Function norm 5.828965601208e-08 
-    3 SNES Function norm 2.995094127950e-09 
-    4 SNES Function norm 2.229313901335e-10 
-    5 SNES Function norm 1.767274889937e-11 
-    6 SNES Function norm 1.432734799039e-12 
-    7 SNES Function norm 1.191111662619e-13 
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
-    0 SNES Function norm 5.632043694115e-04 
-    1 SNES Function norm 1.310948807144e-06 
-    2 SNES Function norm 1.392452718067e-08 
-    3 SNES Function norm 4.551696366451e-10 
-    4 SNES Function norm 1.893493222577e-11 
-    5 SNES Function norm 8.486151904789e-13 
-    6 SNES Function norm 4.330781013287e-14 
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
-    0 SNES Function norm 7.758982150579e-04 
-    1 SNES Function norm 1.817399680343e-06 
-    2 SNES Function norm 1.550202398237e-08 
-    3 SNES Function norm 4.485913458902e-10 
-    4 SNES Function norm 1.827101704061e-11 
-    5 SNES Function norm 8.148870416666e-13 
-    6 SNES Function norm 4.415765400415e-14 
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
-[0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 0.393236, accepting step of size 0.1
-  1) species-0: charge density= -1.6018371874933e+01 z-momentum= -5.2476859837267e-19 energy=  1.2008542995420e+05
-  1) species-1: charge density=  1.6024885678213e+01 z-momentum=  8.2627646330492e-18 energy=  1.2013832536301e+05
-	  1) Total: charge density=  6.5138032798586e-03, momentum=  7.7379960346765e-18, energy=  2.4022375531721e+05 (m_i[0]/m_e = 3670.94, 80 cells)
-1 TS dt 0.125 time 0.1
-    0 SNES Function norm 4.721807853604e-04 
-    1 SNES Function norm 2.046580456747e-06 
-    2 SNES Function norm 6.553784300773e-08 
-    3 SNES Function norm 5.344729992525e-09 
-    4 SNES Function norm 4.907669267624e-10 
-    5 SNES Function norm 4.673088560178e-11 
-    6 SNES Function norm 4.518299353830e-12 
-    7 SNES Function norm 4.425433267090e-13 
-    8 SNES Function norm 4.665178935387e-14 
+    0 SNES Function norm 2.209385274394e-02 
+    1 SNES Function norm 1.656280165765e-04 
+    2 SNES Function norm 6.224754691809e-06 
+    3 SNES Function norm 3.758721311629e-07 
+    4 SNES Function norm 2.649149511586e-08 
+    5 SNES Function norm 1.982539252638e-09 
+    6 SNES Function norm 1.532137843837e-10 
+    7 SNES Function norm 1.204913182861e-11 
+    8 SNES Function norm 9.575854847313e-13 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
-	***** FormRHSSource: have new_imp_rate=  4.975e-04 dt=0.125 time=  1.000e-01 de/dt=  3.219e-08 di/dt=  3.219e-08
-    0 SNES Function norm 2.665493917722e-04 
-    1 SNES Function norm 7.970269489486e-07 
-    2 SNES Function norm 1.841319622996e-08 
-    3 SNES Function norm 8.542447342312e-10 
-    4 SNES Function norm 4.457787744876e-11 
-    5 SNES Function norm 2.432853255843e-12 
-    6 SNES Function norm 1.347701062123e-13 
-  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
-    0 SNES Function norm 3.285336109721e-04 
-    1 SNES Function norm 9.602918060455e-07 
-    2 SNES Function norm 1.961138067634e-08 
-    3 SNES Function norm 8.793960138447e-10 
-    4 SNES Function norm 4.534301360955e-11 
-    5 SNES Function norm 2.455937690832e-12 
-    6 SNES Function norm 1.404599098408e-13 
-  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
-	***** FormRHSSource: have new_imp_rate=  5.192e-04 dt=0.125 time=  1.625e-01 de/dt=  3.360e-08 di/dt=  3.360e-08
-[0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 0.674842, accepting step of size 0.125
-  2) species-0: charge density= -1.6018371940813e+01 z-momentum= -6.0282835882130e-19 energy=  1.2008542888021e+05
-  2) species-1: charge density=  1.6024885680151e+01 z-momentum= -9.8338166614696e-18 energy=  1.2013832641421e+05
-	  2) Total: charge density=  6.5137393379366e-03, momentum= -1.0436645020291e-17, energy=  2.4022375529442e+05 (m_i[0]/m_e = 3670.94, 80 cells)
+    0 SNES Function norm 1.401741366440e-02 
+    1 SNES Function norm 7.108839368222e-05 
+    2 SNES Function norm 1.716277137162e-06 
+    3 SNES Function norm 5.722085456704e-08 
+    4 SNES Function norm 2.219524232475e-09 
+    5 SNES Function norm 9.252736339369e-11 
+    6 SNES Function norm 4.025115522267e-12 
+    7 SNES Function norm 1.794862962314e-13 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+    0 SNES Function norm 1.573387862485e-02 
+    1 SNES Function norm 7.547354147524e-05 
+    2 SNES Function norm 1.688428705378e-06 
+    3 SNES Function norm 5.389844940874e-08 
+    4 SNES Function norm 2.056412410547e-09 
+    5 SNES Function norm 8.496130802301e-11 
+    6 SNES Function norm 3.677980933739e-12 
+    7 SNES Function norm 1.633496501290e-13 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+[0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 0.0441245, accepting step of size 0.1
+  1) species-0: charge density= -1.6052872197725e+01 z-momentum=  2.1952426732127e-19 energy=  1.1472295926016e+05
+  1) species-1: charge density=  1.6042982531402e+01 z-momentum= -3.2075034519479e-18 energy=  1.1521641345512e+05
+	  1) Total: charge density= -9.8896663231116e-03, momentum= -2.9879791846267e-18, energy=  2.2993937271528e+05 (m_i[0]/m_e = 3670.94, 80 cells)
+1 TS dt 0.125 time 0.1
+    0 SNES Function norm 1.362532469475e-02 
+    1 SNES Function norm 1.625575653231e-04 
+    2 SNES Function norm 9.562983355380e-06 
+    3 SNES Function norm 7.568162735883e-07 
+    4 SNES Function norm 6.565364466963e-08 
+    5 SNES Function norm 5.940429006650e-09 
+    6 SNES Function norm 5.494049066969e-10 
+    7 SNES Function norm 5.143038309634e-11 
+    8 SNES Function norm 4.848140125844e-12 
+    9 SNES Function norm 4.589650975072e-13 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+	***** FormSource: have new_imp_rate=  1.658e-05 dt=0.125 time=  1.000e-01 de/dt=  1.658e-05 di/dt=  1.658e-05
+F_e=  0.000e+00 F_i=  1.095e+03 n_se=  1.672e-05 n_si=  1.095e+03
+    0 SNES Function norm 1.118004532270e-02 
+    1 SNES Function norm 8.086621962727e-05 
+    2 SNES Function norm 2.735336042339e-06 
+    3 SNES Function norm 1.216777824518e-07 
+    4 SNES Function norm 5.957023731014e-09 
+    5 SNES Function norm 3.070036990139e-10 
+    6 SNES Function norm 1.631284815090e-11 
+    7 SNES Function norm 8.834424958960e-13 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+    0 SNES Function norm 1.211708778690e-02 
+    1 SNES Function norm 8.410469635483e-05 
+    2 SNES Function norm 2.693383663824e-06 
+    3 SNES Function norm 1.157129768793e-07 
+    4 SNES Function norm 5.555607962687e-09 
+    5 SNES Function norm 2.829687313894e-10 
+    6 SNES Function norm 1.492182541241e-11 
+    7 SNES Function norm 8.043100466163e-13 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+	***** FormSource: have new_imp_rate=  1.659e-05 dt=0.125 time=  1.625e-01 de/dt=  1.659e-05 di/dt=  1.659e-05
+F_e=  0.000e+00 F_i=  1.095e+03 n_se=  1.672e-05 n_si=  1.095e+03
+[0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 0.115601, accepting step of size 0.125
+  2) species-0: charge density= -1.6052905683920e+01 z-momentum=  2.8316464729806e-19 energy=  1.1472275682381e+05
+  2) species-1: charge density=  1.6042996746202e+01 z-momentum= -4.0333085785640e-18 energy=  1.1521661670457e+05
+	  2) Total: charge density= -9.9089377172206e-03, momentum= -3.7501439312659e-18, energy=  2.2993937352838e+05 (m_i[0]/m_e = 3670.94, 80 cells)
 [0] parallel consistency check OK
-2 TS dt 0.136947 time 0.225
+2 TS dt 0.15625 time 0.225
