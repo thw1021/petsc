@@ -10,7 +10,6 @@ if __name__ == '__main__':
   import configure
   configure_options = [
     '--package-prefix-hash='+petsc_hash_pkgs,
-    '--with-make-test-np=2',
     '--with-mpi-dir=/home/petsc/soft/openmpi-4.0.2-cuda',
     'COPTFLAGS=-g -O',
     'FOPTFLAGS=-g -O',
