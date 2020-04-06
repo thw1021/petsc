@@ -24,8 +24,6 @@ pkgs := sys vec mat dm ksp snes ts tao
 petscconf      := $(PETSC_DIR)/$(PETSC_ARCH)/include/petscconf.h
 petscvariables := $(PETSC_DIR)/$(PETSC_ARCH)/lib/petsc/conf/petscvariables
 generatedtest  := $(TESTDIR)/testfiles
-gpuserialized  := $(TESTDIR)/testfilesgpu
-
 
 .SECONDEXPANSION:		# to expand $$(@D)/.DIR
 
@@ -94,10 +92,6 @@ $(generatedtest) : $(petscconf) $(petscvariables) $(CONFIGDIR)/gmakegentest.py $
 
 ifneq ($(filter-out clean check,$(MAKECMDGOALS:clean%=clean)),)
 include $(generatedtest)
-endif
-
-ifeq ($(GPUSERIALIZED),1)
--include $(gpuserialized)
 endif
 
 ifeq ($(PETSC_LANGUAGE),CXXONLY)
