@@ -743,9 +743,13 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
   rectx = (REctx*)ctx->data;
   PetscFunctionBegin;
   if (time < rectx->pulse_start || time > rectx->pulse_start + 3*rectx->pulse_width) *rho = 0;
-  else {
+  else if (0) {
     double t = time - rectx->pulse_start, start = rectx->pulse_width, stop = 2*rectx->pulse_width, cycle = 3*rectx->pulse_width, steep = 5, xi = 0.75 - (stop - start)/(2* cycle);
     *rho = rectx->pulse_rate * (cycle / (stop - start)) / (1 + exp(steep*(sin(2*M_PI*((t - start)/cycle + xi)) - sin(2*M_PI*xi))));
+  } else {
+    double x = 2*(time - rectx->pulse_start)/(3*rectx->pulse_width) - 1;
+    if (x==1 || x==-1) *rho = 0;
+    else *rho = exp(-1/(1-x*x));
   }
   PetscFunctionReturn(0);
 }
