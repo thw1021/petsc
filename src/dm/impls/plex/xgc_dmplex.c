@@ -330,7 +330,7 @@ static PetscErrorCode FPLandPointDataDestroy(FPLandPointData *ld)
 PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt dim, LandCtx *ctx)
 {
   PetscErrorCode    ierr;
-  PetscInt          cStart, cEnd, GcStart,GcEnd,cEndInterior, elemMatSize;
+  PetscInt          cStart, cEnd, GcStart,GcEnd, elemMatSize;
   DM                plex = 0, Gplex = 0;
   Vec               locX,locF;
   PetscDS           prob;
@@ -364,14 +364,10 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   ierr = DMGlobalToLocalBegin(plex, globX, INSERT_VALUES, locX);CHKERRQ(ierr);
   ierr = DMGlobalToLocalEnd(plex, globX, INSERT_VALUES, locX);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(plex, 0, &cStart, &cEnd);CHKERRQ(ierr);
-  ierr = DMPlexGetHybridBounds(plex, &cEndInterior, NULL, NULL, NULL);CHKERRQ(ierr);
-  cEnd = cEndInterior < 0 ? cEnd : cEndInterior;
   ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
   ierr = DMGetGlobalSection(plex, &globalSection);CHKERRQ(ierr);
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(Gplex, 0, &GcStart, &GcEnd);CHKERRQ(ierr);
-  ierr = DMPlexGetHybridBounds(Gplex, &cEndInterior, NULL, NULL, NULL);CHKERRQ(ierr);
-  GcEnd = cEndInterior < 0 ? GcEnd : cEndInterior;
   ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
   ierr = PetscSectionGetNumFields(section, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetComponents(prob, &Ncf);CHKERRQ(ierr);
@@ -1676,7 +1672,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
   PetscBool        isForest;
   /* Vec              locX; */
   PetscQuadrature  quad;
-  PetscInt         Nq, Nf, *Nb, *Nc, cStart, cEnd, cEndInterior, c, dim, qj;
+  PetscInt         Nq, Nf, *Nb, *Nc, cStart, cEnd, c, dim, qj;
   /* PetscReal        time = 0; */
   /* PetscTabulation *Tf; */
   PetscScalar     *u, *u_x;
@@ -1695,8 +1691,6 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
   /* ierr = DMGlobalToLocalBegin(plex, sol, INSERT_VALUES, locX);CHKERRQ(ierr); */
   /* ierr = DMGlobalToLocalEnd  (plex, sol, INSERT_VALUES, locX);CHKERRQ(ierr); */
   ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
-  ierr = DMPlexGetHybridBounds(plex,&cEndInterior,NULL,NULL,NULL);CHKERRQ(ierr);
-  cEnd = (cEndInterior < 0) ? cEnd : cEndInterior;
   ierr = DMLabelCreate(PETSC_COMM_SELF,"adapt",&adaptLabel);CHKERRQ(ierr);
   ierr = PetscFEGetQuadrature(fem[0], &quad);CHKERRQ(ierr);
   ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, 0, 0 );CHKERRQ(ierr);
