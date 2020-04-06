@@ -1033,8 +1033,9 @@ class generateExamples(Petsc):
       fd.write('# GPUSERIALIZE targets')
       gputests = []
       for pkg in self.pkg_pkgs: gputests += self.gputests[pkg]
+      gputests = list(set(gputests))
       for i in range(len(gputests)-1):
-          fd.write('%s : %s\n' % (gputests[i], gputests[i+1]))
+          fd.write('%s : %s\n' % (gputests[i+1], gputests[i]))
 
     return
 
