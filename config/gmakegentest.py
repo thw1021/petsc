@@ -1030,8 +1030,11 @@ class generateExamples(Petsc):
             fd.write(nmtest+"_ARGS := '"+self.tests[pkg][lang][ftest]['argLabel']+"'\n")
 
       # If gpu tests, create dependency list to serialize
-      for i in range(len(self.gputests[pkg])-1):
-        fd.write('%s : %s\n' % (self.gputests[pkg][i], self.gputests[pkg][i+1]))
+      fd.write('# GPUSERIALIZE targets')
+      gputests = []
+      for pkg in self.pkg_pkgs: gputests += self.gputests[pkg]
+      for i in range(len(gputests)-1):
+          fd.write('%s : %s\n' % (gputests[i], gputests[i+1]))
 
     return
 
