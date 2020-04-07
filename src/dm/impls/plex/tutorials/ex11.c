@@ -746,10 +746,13 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
   else if (0) {
     double t = time - rectx->pulse_start, start = rectx->pulse_width, stop = 2*rectx->pulse_width, cycle = 3*rectx->pulse_width, steep = 5, xi = 0.75 - (stop - start)/(2* cycle);
     *rho = rectx->pulse_rate * (cycle / (stop - start)) / (1 + exp(steep*(sin(2*M_PI*((t - start)/cycle + xi)) - sin(2*M_PI*xi))));
-  } else {
+  } else if (0) {
     double x = 2*(time - rectx->pulse_start)/(3*rectx->pulse_width) - 1;
     if (x==1 || x==-1) *rho = 0;
-    else *rho = exp(-1/(1-x*x));
+    else *rho = rectx->pulse_rate * exp(-1/(1-x*x));
+  } else {
+    double x = 0.5*(sin((time-rectx->pulse_start)/(3*rectx->pulse_width)*2*M_PI - M_PI/2) + 1); /* 0:1 */
+    *rho = rectx->pulse_rate * x / (3*rectx->pulse_width);
   }
   PetscFunctionReturn(0);
 }
@@ -799,7 +802,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   ierr = PetscOptionsFList("-impurity_source_type","Name of impurity source to run","",plist,pname,pname,sizeof(pname),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsFList("-test_type","Name of test to run","",testlist,testname,testname,sizeof(pname),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-impurity_index", "index of sink for impurities", "none", rectx->imp_idx, &rectx->imp_idx, NULL);CHKERRQ(ierr);
-  if (rectx->imp_idx >= ctx->num_species || rectx->imp_idx < 1) SETERRQ1(PETSC_COMM_SELF,1,"index of sink for impurities ions is out of range (%D), must be > 0 && < NS",rectx->imp_idx);
+  if ((rectx->imp_idx >= ctx->num_species || rectx->imp_idx < 1) && ctx->num_species > 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"index of sink for impurities ions is out of range (%D), must be > 0 && < NS",rectx->imp_idx);
   rectx->Ne_ion = -ctx->charges[rectx->imp_idx]/ctx->charges[0];
   ierr = PetscOptionsReal("-t_cold","Temperature of cold electron and ions after ionization in keV","none",rectx->T_cold,&rectx->T_cold, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-pulse_start_time","Time at which pulse happens for 'pulse' source","none",rectx->pulse_start,&rectx->pulse_start, NULL);CHKERRQ(ierr);
@@ -813,9 +816,9 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   /* get impurity source rate function */
   ierr = PetscFunctionListFind(plist,pname,&rectx->impuritySrcRate);CHKERRQ(ierr);
-  if (!rectx->impuritySrcRate) SETERRQ1(PETSC_COMM_SELF,1,"No impurity source function found '%s'",pname);
+  if (!rectx->impuritySrcRate) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"No impurity source function found '%s'",pname);
   ierr = PetscFunctionListFind(testlist,testname,&rectx->test);CHKERRQ(ierr);
-  if (!rectx->test) SETERRQ1(PETSC_COMM_SELF,1,"No impurity source function found '%s'",testname);
+  if (!rectx->test) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"No impurity source function found '%s'",testname);
   ierr = PetscFunctionListDestroy(&plist);CHKERRQ(ierr);
   ierr = PetscFunctionListDestroy(&testlist);CHKERRQ(ierr);
   {
@@ -830,11 +833,10 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
       ierr = PetscOptionsClearValue(NULL,"-vec_view_sources");CHKERRQ(ierr);
     }
   }
-  if (1) {
+  if (ctx->Ez > 0) {
     PetscReal E, Tev = ctx->thermal_temps[0]*8.621738e-5, n = ctx->n_0*ctx->n[0];
-    LandCtx *vctx = (LandCtx *)ctx;
     CalculateE(Tev, n, ctx->lnLam, ctx->epsilon0, &E);
-    vctx->Ez *= E;
+    ((LandCtx*)ctx)->Ez *= E;
     ierr = PetscPrintf(PETSC_COMM_WORLD, "+++++ new E=%10.3e scale %10.3e\n",ctx->Ez,E);CHKERRQ(ierr);
   }
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);

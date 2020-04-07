@@ -1862,16 +1862,10 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ctx->nZRefine2 = 0;
   ctx->numRERefine = 0;
   ctx->num_sections = 3; /* 2, 3 or 4 */
-  /* species - [0] electrons, [1] one ion species eg, duetarium, [2] heavy impurity ion */
+  /* species - [0] electrons, [1] one ion species eg, duetarium, [2] heavy impurity ion, ... */
   ctx->charges[0] = -1;  /* electron charge (MKS) */
-  ctx->charges[1] =  1;  /* deuterium */
-  ctx->charges[2] = 18;  /* Ag */
   ctx->masses[0] = 1/1835.5; /* temporary value in proton mass */
-  ctx->masses[1] = 2.; /* deuterium */
-  ctx->masses[2] = 40; /* Ag mass */
-  ctx->n[1] = 1;      /* deuterium */
-  ctx->n[2] = 0;      /* Ag number density */
-  ctx->n[0] = ctx->charges[1]*ctx->n[1] + ctx->charges[2]*ctx->n[2]; /* quasi-neutral */
+  ctx->n[0] = 1; 
   /* constants, etc. */
   ctx->epsilon0 = 8.8542e-12; /* permittivity of free space (MKS) F/m */
   ctx->k = 1.38064852e-23; /* Boltzmann constant (MKS) J/K */
@@ -1969,9 +1963,9 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   if (ctx->sphere && (ctx->e_radius <= ctx->i_radius || ctx->radius <= ctx->e_radius)) SETERRQ3(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"bad radii: %g < %g < %g",ctx->i_radius,ctx->e_radius,ctx->radius);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   for (ii=ctx->num_species;ii<FP_MAX_SPECIES;ii++) ctx->masses[ii] = ctx->thermal_temps[ii]  = ctx->charges[ii] = 0;
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units: %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->masses[2]/1.6720e-27);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", ctx->charges[0],-ctx->charges[1]/ctx->charges[0],-ctx->charges[2]/ctx->charges[0]);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. v_0=%10.3e n_0=%10.3e t_0=%10.3e domain=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1],ctx->thermal_temps[2],ctx->v_0,ctx->n_0,ctx->t_0,ctx->radius);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->num_species>2 ? ctx->masses[2]/1.6720e-27 : 0);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->num_species>2 ? -ctx->charges[2]/ctx->charges[0] : 0);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. v_0=%10.3e n_0=%10.3e t_0=%10.3e domain=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1],ctx->num_species>2 ? ctx->thermal_temps[2] : 0,ctx->v_0,ctx->n_0,ctx->t_0,ctx->radius);
   CHKERRQ(ierr);
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);
   {
