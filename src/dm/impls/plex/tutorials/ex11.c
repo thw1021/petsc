@@ -333,7 +333,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   ratio = E/J/spit_eta;
   done = (old_ratio-ratio < 1.e-4 && stepi>20 &&0);
   ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e J= %10.3e J_re=%10.3e %.3g%% T_e(t)=%10.3e T_e(0)=%10.3e (kev) E/J to eta ratio=%g (diff=%g)\n",
-                     done ? "DONE" : "----",stepi,time,J,J_re,100*J_re/J,Te_kev,ctx->thermal_temps[0]*ctx->k*kev_joul,ratio,old_ratio-ratio);CHKERRQ(ierr);
+                     done ? "DONE" : "testSpitzer",stepi,time,J,J_re,100*J_re/J,Te_kev,ctx->thermal_temps[0]*ctx->k*kev_joul,ratio,old_ratio-ratio);CHKERRQ(ierr);
   if (done) {
     ierr = TSSetConvergedReason(ts,TS_CONVERGED_USER);CHKERRQ(ierr);
     old_ratio = 0;
