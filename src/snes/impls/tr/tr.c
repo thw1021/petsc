@@ -382,14 +382,9 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
         tau_pos = (c1 + PetscSqrtReal(PetscSqr(c1) - 4.*c0*c2)) / (2.*c0);
         tau_neg = (c1 - PetscSqrtReal(PetscSqr(c1) - 4.*c0*c2)) / (2.*c0);
         tau = PetscMax(tau_pos, tau_neg);
-        ierr = PetscPrintf(PETSC_COMM_WORLD, "SD evaluated tau: %14.12e, auk: %14.12e\n", (double)tau, (double)auk);CHKERRQ(ierr);
-        if (tau >= 0.0 && tau <= 1.0) {
-            ierr = VecScale(YCtmp, tau);CHKERRQ(ierr);
-        } else if (tau >= 1.0 && tau <= 2.0) {
-            ierr = VecScale(YNtmp, (tau-1.0));CHKERRQ(ierr);
-            ierr = VecScale(YCtmp, tau);CHKERRQ(ierr);
-            ierr = VecAXPY(YCtmp,1.0,YNtmp);CHKERRQ(ierr);
-        }
+        ierr = VecNorm(YCtmp,NORM_2,&ycnorm);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD, "SD evaluated. tau: %8.4e, ynnorm: %8.4e, ycnorm: %8.4e\n", (double)tau, (double)ynnorm, (double)ycnorm);CHKERRQ(ierr);
+        ierr = VecAXPY(YCtmp,tau,YNtmp);CHKERRQ(ierr);
         ierr = VecCopy(YCtmp, Y);CHKERRQ(ierr);
 //4      ierr = VecNorm(YCtmp,NORM_2,&ycnorm);CHKERRQ(ierr);
 //4      if (ycnorm >= delta) {  /* see if the Cauchy solution meets the criteria */
