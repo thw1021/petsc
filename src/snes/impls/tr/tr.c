@@ -57,7 +57,7 @@ static PetscErrorCode SNESTR_Converged_Private(SNES snes,PetscInt it,PetscReal x
 
   PetscFunctionBegin;
   *reason = SNES_CONVERGED_ITERATING;
-  if (neP->delta < xnorm * snes->deltatol * 1.0E-5) {
+  if (neP->delta < xnorm * snes->deltatol) {
     ierr    = PetscInfo3(snes,"Converged due to trust region param %g<%g*%g\n",(double)neP->delta,(double)xnorm,(double)snes->deltatol);CHKERRQ(ierr);
     *reason = SNES_DIVERGED_TR_DELTA;
   } else if (snes->nfuncs >= snes->max_funcs && snes->max_funcs >= 0) {
@@ -310,6 +310,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   ierr = VecNorm(F,NORM_2,&fnorm);CHKERRQ(ierr);             /* fnorm <- || F || */
   SNESCheckFunctionNorm(snes,fnorm);
   ierr = VecNorm(X,NORM_2,&xnorm);CHKERRQ(ierr);             /* fnorm <- || F || */
+  xnorm *= 1.0E-7;  /* xnorm temporarily adjusted - Heeho */
   ierr       = PetscObjectSAWsTakeAccess((PetscObject)snes);CHKERRQ(ierr);
   snes->norm = fnorm;
   ierr       = PetscObjectSAWsGrantAccess((PetscObject)snes);CHKERRQ(ierr);
@@ -381,7 +382,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
         tau_pos = (c1 + PetscSqrtReal(PetscSqr(c1) - 4.*c0*c2)) / (2.*c0);
         tau_neg = (c1 - PetscSqrtReal(PetscSqr(c1) - 4.*c0*c2)) / (2.*c0);
         tau = PetscMax(tau_pos, tau_neg);
-        
+        ierr = PetscPrintf(PETSC_COMM_WORLD, "SD evaluated tau: %14.12e, auk: %14.12e\n", (double)tau, (double)auk);CHKERRQ(ierr);
         if (tau >= 0.0 && tau <= 1.0) {
             ierr = VecScale(YCtmp, tau);CHKERRQ(ierr);
         } else if (tau >= 1.0 && tau <= 2.0) {
