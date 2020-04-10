@@ -74,11 +74,11 @@ thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 0.000e+00. v_0= 2.965e+07 n_0= 1.0
     6 SNES Function norm 1.514333061111e-11 
     7 SNES Function norm 8.167946090444e-13 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
-	***** FormSource: have new_imp_rate=  1.428e-08 dt=0.125 time=  1.625e-01 de/dt=  1.428e-08 di/dt=  1.428e-08
-F_e=  0.000e+00 F_i=  2.121e+03 n_se=  1.439e-08 n_si=  2.121e+03
-[0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 0.035524, accepting step of size 0.125
-  2) species-0: charge density= -1.6052872212138e+01 z-momentum=  3.6814378747576e-19 energy=  1.1472275416996e+05
-  2) species-1: charge density=  1.6042982537520e+01 z-momentum= -7.7249136892774e-18 energy=  1.1521661854568e+05
-	  2) Total: charge density= -9.8896746179378e-03, momentum= -7.3567699018016e-18, energy=  2.2993937271564e+05 (m_i[0]/m_e = 3670.94, 80 cells)
+	***** FormSource: have new_imp_rate=  2.856e-08 time=  1.625e-01 de/dt=  2.856e-08 di/dt=  2.856e-08
+F_e=  0.000e+00 F_i=  2.121e+03 n_se=  2.879e-08 n_si=  2.121e+03
+[0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 0.035559, accepting step of size 0.125
+  2) species-0: charge density= -1.6052872226551e+01 z-momentum=  6.8231004698432e-20 energy=  1.1472275417099e+05
+  2) species-1: charge density=  1.6042982543639e+01 z-momentum= -2.4927442045779e-17 energy=  1.1521661854500e+05
+	  2) Total: charge density= -9.8896829127675e-03, momentum= -2.4859211041081e-17, energy=  2.2993937271599e+05 (m_i[0]/m_e = 3670.94, 80 cells)
 [0] parallel consistency check OK
 2 TS dt 0.15625 time 0.225

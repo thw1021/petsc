@@ -1889,8 +1889,8 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ierr = PetscOptionsInt("-amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "xgc_dmplex.c", ctx->maxRefIts, &ctx->maxRefIts, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-amr_post_refine", "Number of levels to uniformly refine after AMR", "xgc_dmplex.c", ctx->postAMRRefine, &ctx->postAMRRefine, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-r0_radius1","velocity range to refine r=0 axis (for electrons)","",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-r0_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-z_radius1","velocity range to refine r=0 axis (for electrons)","",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-Ez","Initial parallel electric field","",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-n_0","Normalization constant for number density","",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-ln_lambda","Cross section parameter","",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
