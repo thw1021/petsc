@@ -30,7 +30,7 @@ typedef struct REctx_struct {
   PetscInt      plotIdx;
   PetscInt      plotStep;
   PetscInt      idx; /* cache */
-  PetscReal     dt; /* cache */
+  PetscReal     j; /* cache */
   PetscReal     plotDt;
   PetscBool     plotting;
   PetscBool     use_spitzer_eta;
@@ -510,10 +510,12 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
     static PetscReal  old_ratio = 1e10;
     E = ctx->Ez; /* keep real E */
     ratio = E/J/spit_eta;
-    if (old_ratio - ratio < 1.e-4 && old_ratio - ratio > 0) {
+    if ((old_ratio-ratio < 1.e-4 && old_ratio-ratio>0) || old_ratio <= ratio) {
       rectx->use_spitzer_eta = PETSC_TRUE; /* use it next time, it should be very close */
+      rectx->j = J;
+      rectx->pulse_start = time; /* start quench now */
     }
-PetscPrintf(PETSC_COMM_WORLD,"xxxx %D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s\n",stepi,time,ratio, J, E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " swithc to Spitzer E" : " keep testing");
+PetscPrintf(PETSC_COMM_WORLD,"xxxx %D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s\n",stepi,time,ratio, J, E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");
     old_ratio = ratio;
   } else if (rectx->use_spitzer_eta) {
     /* compite J_re and set E */
@@ -523,8 +525,8 @@ PetscPrintf(PETSC_COMM_WORLD,"xxxx %D) t=%10.3e ESpitzer E/J vs spitzer ratio=%2
     J_re = -ctx->n_0*ctx->v_0*tt[0];
     ierr = PetscDSSetObjective(prob, 0, &f0_re);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
-    *a_E = spit_eta*(J-J_re);
-PetscPrintf(PETSC_COMM_WORLD,"\t\t xxxx %D) ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e J_re/J=%10.3e n_re=%10.3e spit_eta=%10.3e t=%g\n",stepi,*a_E,J,Te_kev,J_re/J,tt[0],spit_eta,time);
+    *a_E = spit_eta*rectx->j; // (J-J_re);
+PetscPrintf(PETSC_COMM_WORLD,"\t\t xxxx %D) ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e J_re/J=%.3g%% j=%10.3e n_re=%10.3e spit_eta=%10.3e t=%g\n",stepi,*a_E,J,Te_kev,100*J_re/J,rectx->j,tt[0],spit_eta,time);
   }
   /* cleanup */
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
@@ -598,7 +600,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
       ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
       dni_dt = new_imp_rate              /* *ctx->t_0 */; /* fully ionized immediately, no normalize, stay in non-dim */
       dne_dt = new_imp_rate*rectx->Ne_ion/* *ctx->t_0 */;
-PetscPrintf(PETSC_COMM_SELF, "\t***** FormSource: have new_imp_rate= %10.3e dt=%g time= %10.3e de/dt= %10.3e di/dt= %10.3e\n",new_imp_rate,rectx->dt,ftime,dne_dt,dni_dt);
+PetscPrintf(PETSC_COMM_SELF, "\t***** FormSource: have new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e\n",new_imp_rate,ftime,dne_dt,dni_dt);
       for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
       for (ii=1;ii<FP_MAX_SPECIES;ii++)    temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
@@ -656,10 +658,10 @@ static PetscErrorCode PostStep(TS ts)
 {
   PetscErrorCode    ierr;
   PetscInt          stepi;
-  Vec               X,S;
+  Vec               X;
   DM                dm,plex;
   PetscDS           prob;
-  PetscReal         time,dt;
+  PetscReal         time;
   LandCtx           *ctx;
   REctx            *rectx;
   TSConvergedReason reason;
@@ -674,16 +676,7 @@ static PetscErrorCode PostStep(TS ts)
   }
   ierr = TSGetTime(ts, &time);CHKERRQ(ierr);
   ierr = TSGetSolution(ts, &X);CHKERRQ(ierr);
-  ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
-  /* add source */
-  if (0) {
-    ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
-    ierr = FormSource(ts, time - rectx->dt/2., NULL, S, NULL);CHKERRQ(ierr); /* evaluate source in middle of time step */
-    ierr = VecAXPY(X,rectx->dt,S);CHKERRQ(ierr);
-    ierr = VecDestroy(&S);CHKERRQ(ierr);
-  }
-  rectx->dt = dt;
   /* view */
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   if ( time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
@@ -802,7 +795,7 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
     if (x==1 || x==-1) *rho = 0;
     else *rho = rectx->pulse_rate * exp(-1/(1-x*x));
   } else {
-    double x = 0.5*(sin((time-rectx->pulse_start)/(3*rectx->pulse_width)*2*M_PI - M_PI/2) + 1); /* 0:1 */
+    double x = sin((time-rectx->pulse_start)/(3*rectx->pulse_width)*2*M_PI - M_PI/2) + 1; /* 0:2, integrates to 1.0 */
     *rho = rectx->pulse_rate * x / (3*rectx->pulse_width);
   }
   PetscFunctionReturn(0);
@@ -831,7 +824,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   rectx->current_rate = 0;
   rectx->plotIdx = 0;
   rectx->imp_src = 0;
-  rectx->dt = 0;
+  rectx->j = 0;
   rectx->plotDt = 1.0;
   rectx->plotting = PETSC_TRUE;
   rectx->use_spitzer_eta = PETSC_FALSE;
