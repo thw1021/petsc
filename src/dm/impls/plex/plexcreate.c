@@ -2,6 +2,8 @@
 #include <petsc/private/dmpleximpl.h>    /*I   "petscdmplex.h"   I*/
 #include <petsc/private/hashseti.h>          /*I   "petscdmplex.h"   I*/
 #include <petscsf.h>
+#include <petsc/private/kernels/blockmatmult.h>
+#include <petsc/private/kernels/blockinvert.h>
 
 PetscLogEvent DMPLEX_CreateFromFile, DMPLEX_CreateFromCellList, DMPLEX_CreateFromCellList_Coordinates;
 
@@ -2145,6 +2147,274 @@ PetscErrorCode DMPlexCreateSphereMesh(MPI_Comm comm, PetscInt dim, PetscBool sim
   ierr = DMSetCoordinatesLocal(*dm, coordinates);CHKERRQ(ierr);
   ierr = VecDestroy(&coordinates);CHKERRQ(ierr);
   ierr = PetscFree(coordsIn);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*
+  The implicit surface is
+
+     f(x) = cos(x0) + cos(x1) + cos(x2) = 0
+
+   We wish to solve
+
+         min_y || y - x ||^2  subject to f(y) = 0
+
+   Let g(y) = grad(f).  The minimization problem is equivalent to asking to satisfy
+   f(y) = 0 and (y-x) is parallel to g(y).  We do this by using Householder QR to obtain a basis for the
+   tangent space and ask for both components in the tangent space to be zero.
+
+   Take g to be a column vector and compute the "full QR" factorization Q R = g,
+   where Q = I - 2 n n^T is a symmetric orthogonal matrix.
+   The first column of Q is parallel to g so the remaining two columns span the null space.
+   Let Qn = Q[:,1:] be those remaining columns.  Then Qn Qn^T is an orthogonal projector into the tangent space.
+   Since Q is symmetric, this is equivalent to multipyling by Q and taking the last two entries.
+   In total, we have a system of 3 equations in 3 unknowns:
+
+     f(y) = 0                       1 equation
+     Qn^T (y - x) = 0               2 equations
+
+   Here, we compute the residual and Jacobian of this system.
+*/
+static void TPSNearestPointResJac_SchwarzP(const PetscScalar x[], const PetscScalar y[], PetscScalar res[], PetscScalar J[])
+{
+  PetscReal c[3] = {PetscCosReal(PetscRealPart(y[0])), PetscCosReal(PetscRealPart(y[1])), PetscCosReal(PetscRealPart(y[2]))};
+  PetscReal g[3] = {-PetscSinReal(PetscRealPart(y[0])), -PetscSinReal(PetscRealPart(y[1])), -PetscSinReal(PetscRealPart(y[2]))};
+  PetscReal n[3] = {g[0], g[1], g[2]};
+  PetscReal d[3] = {PetscRealPart(y[0] - x[0]), PetscRealPart(y[1] - x[1]), PetscRealPart(y[2] - x[2])};
+  PetscReal norm = PetscSqrtReal(PetscSqr(n[0]) + PetscSqr(n[1]) + PetscSqr(n[2]));
+  PetscReal n_y[3][3] = {}, norm_y[3], nd, nd_y[3], sign;
+
+  // Derivative of n with respect to y; only the diagonal is nonzero at this point
+  for (PetscInt i=0; i<3; i++) {
+    n_y[i][i] = -c[i];
+    norm_y[i] = 1. / norm * n[i] * n_y[i][i];
+  }
+
+  // Define the Householder reflector
+  sign = n[0] >= 0 ? 1. : -1.;
+  n[0] += norm * sign;
+  for (PetscInt i=0; i<3; i++) n_y[0][i] += norm_y[i] * sign;
+
+  norm = PetscSqrtReal(PetscSqr(n[0]) + PetscSqr(n[1]) + PetscSqr(n[2]));
+  norm_y[0] = 1. / norm * (n[0] * n_y[0][0]);
+  norm_y[1] = 1. / norm * (n[0] * n_y[0][1] + n[1] * n_y[1][1]);
+  norm_y[2] = 1. / norm * (n[0] * n_y[0][2] + n[2] * n_y[2][2]);
+
+  for (PetscInt i=0; i<3; i++) {
+    n[i] /= norm;
+    for (PetscInt j=0; j<3; j++) {
+      // note that n[i] is n_old[i]/norm when executing the code below
+      n_y[i][j] = n_y[i][j] / norm - n[i] / norm * norm_y[j];
+    }
+  }
+
+  nd = n[0] * d[0] + n[1] * d[1] + n[2] * d[2];
+  for (PetscInt i=0; i<3; i++) nd_y[i] = n[i] + n_y[0][i] * d[0] + n_y[1][i] * d[1] + n_y[2][i] * d[2];
+
+  res[0] = c[0] + c[1] + c[2];
+  res[1] = d[1] - 2 * n[1] * nd;
+  res[2] = d[2] - 2 * n[2] * nd;
+  // J[j][i] is J_{ij} (column major)
+  for (PetscInt j=0; j<3; j++) {
+    J[0 + j*3] = g[j];
+    J[1 + j*3] = (j == 1)*1. - 2 * (n_y[1][j] * nd + n[1] * nd_y[j]);
+    J[2 + j*3] = (j == 2)*1. - 2 * (n_y[2][j] * nd + n[2] * nd_y[j]);
+  }
+}
+
+/*
+   Project x to the nearest point on the implicit surface using Newton's method.
+*/
+static PetscErrorCode TPSNearestPoint_SchwarzP(PetscScalar x[])
+{
+  PetscScalar y[3] = {x[0], x[1], x[2]}; // Initial guess
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  for (PetscInt iter=0; iter<10; iter++) {
+    PetscScalar res[3], J[9];
+    PetscReal resnorm;
+    TPSNearestPointResJac_SchwarzP(x, y, res, J);
+    resnorm = PetscSqrtReal(PetscSqr(PetscRealPart(res[0])) + PetscSqr(PetscRealPart(res[1])) + PetscSqr(PetscRealPart(res[2])));
+    if (0) { // Turn on this monitor if you need to confirm quadratic convergence
+      ierr = PetscPrintf(PETSC_COMM_SELF, "[%D] res [%g %g %g]\n", iter, PetscRealPart(res[0]), PetscRealPart(res[1]), PetscRealPart(res[2]));CHKERRQ(ierr);
+    }
+    if (resnorm < PETSC_SMALL) break;
+
+    // Take the Newton step
+    ierr = PetscKernel_A_gets_inverse_A_3(J, 0., PETSC_FALSE, NULL);CHKERRQ(ierr);
+    PetscKernel_v_gets_v_minus_A_times_w_3(y, J, res);
+  }
+  for (PetscInt i=0; i<3; i++) x[i] = y[i];
+  PetscFunctionReturn(0);
+}
+
+
+/*@
+  DMPlexCreateTPSMesh - Creates a mesh of a triply-periodic surface
+
+  Collective
+
+  Input Parameters:
++ comm   - The communicator for the DM object
+. extent - Array of length 3 containing number of periods in each direction
+. thickness - Thickness in normal direction
+- refinements - Number of factor-of-2 refinements
+
+  Output Parameter:
+. dm  - The DM object
+
+  Notes:
+  This meshes the surface of the Schwarz P surface, which is the simplest member of the triply-periodic minimal surfaces.
+  https://en.wikipedia.org/wiki/Schwarz_minimal_surface#Schwarz_P_(%22Primitive%22)
+  Our implementation creates a very coarse mesh of the surface and refines (by 4-way splitting) as many times as requested.
+  On each refinement, all vertices are projected to their nearest point on the surface.
+  This projection could readily be extended to related surfaces.
+
+  Level: beginner
+
+.seealso: DMPlexCreateSphereMesh(), DMSetType(), DMCreate()
+@*/
+PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, const PetscInt extent[], PetscReal thickness, PetscInt refinements, DM *dm)
+{
+  PetscErrorCode ierr;
+  PetscMPIInt rank;
+  PetscInt topoDim = 2, spaceDim = 3, Njunctions = 0, Nvtx = 0;
+  int (*cells)[6][4][4] = NULL; // [junction, junction-face, cell, conn]
+  double *vtxCoords = NULL;
+
+  PetscFunctionBegin;
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  if (!rank) {
+    PetscInt Npipes[3], vcount;
+    PetscReal L = PETSC_PI;
+
+    Npipes[0] = (extent[0] + 1) * extent[1] * extent[2];
+    Npipes[1] = extent[0] * (extent[1] + 1) * extent[2];
+    Npipes[2] = extent[0] * extent[1] * (extent[2] + 1);
+    Njunctions = extent[0] * extent[1] * extent[2];
+    Nvtx = 4 * (Npipes[0] + Npipes[1] + Npipes[2]) + 8 * Njunctions;
+    ierr = PetscMalloc2(3*Nvtx, &vtxCoords, Njunctions, &cells);CHKERRQ(ierr);
+    // x-normal pipes
+    vcount = 0;
+    for (PetscInt i=0; i<extent[0]+1; i++) {
+      for (PetscInt j=0; j<extent[1]; j++) {
+        for (PetscInt k=0; k<extent[2]; k++) {
+          for (PetscInt l=0; l<4; l++) {
+            vtxCoords[vcount++] = (2*i - 1) * L;
+            vtxCoords[vcount++] = 2 * j * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
+            vtxCoords[vcount++] = 2 * k * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+          }
+        }
+      }
+    }
+    // y-normal pipes
+    for (PetscInt i=0; i<extent[0]; i++) {
+      for (PetscInt j=0; j<extent[1]+1; j++) {
+        for (PetscInt k=0; k<extent[2]; k++) {
+          for (PetscInt l=0; l<4; l++) {
+            vtxCoords[vcount++] = 2 * i * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+            vtxCoords[vcount++] = (2*j - 1) * L;
+            vtxCoords[vcount++] = 2 * k * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
+          }
+        }
+      }
+    }
+    // z-normal pipes
+    for (PetscInt i=0; i<extent[0]; i++) {
+      for (PetscInt j=0; j<extent[1]; j++) {
+        for (PetscInt k=0; k<extent[2]+1; k++) {
+          for (PetscInt l=0; l<4; l++) {
+            vtxCoords[vcount++] = 2 * i * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
+            vtxCoords[vcount++] = 2 * j * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+            vtxCoords[vcount++] = (2*k - 1) * L;
+          }
+        }
+      }
+    }
+    // junctions
+    for (PetscInt i=0; i<extent[0]; i++) {
+      for (PetscInt j=0; j<extent[1]; j++) {
+        for (PetscInt k=0; k<extent[2]; k++) {
+          const PetscInt J = (i*extent[1] + j)*extent[2] + k, Jvoff = (Npipes[0] + Npipes[1] + Npipes[2])*4 + J*8;
+          if (vcount / 3 != Jvoff) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected vertex count");
+          for (PetscInt ii=0; ii<2; ii++) {
+            for (PetscInt jj=0; jj<2; jj++) {
+              for (PetscInt kk=0; kk<2; kk++) {
+                double Ls = (1 - sqrt(2) / 4) * L;
+                vtxCoords[vcount++] = 2*i*L + (2*ii-1) * Ls;
+                vtxCoords[vcount++] = 2*j*L + (2*jj-1) * Ls;
+                vtxCoords[vcount++] = 2*k*L + (2*kk-1) * Ls;
+              }
+            }
+          }
+          const PetscInt jfaces[3][2][4] = {
+            {{3,1,0,2}, {7,5,4,6}}, // x-aligned
+            {{5,4,0,1}, {7,6,2,3}}, // y-aligned
+            {{6,2,0,4}, {7,3,1,5}}  // z-aligned
+          };
+          const PetscInt pipe_lo[3] = { // vertex numbers of pipes
+            ((i * extent[1] + j) * extent[2] + k)*4,
+            ((i * (extent[1] + 1) + j) * extent[2] + k + Npipes[0])*4,
+            ((i * extent[1] + j) * (extent[2]+1) + k + Npipes[0] + Npipes[1])*4
+          };
+          const PetscInt pipe_hi[3] = { // vertex numbers of pipes
+            (((i + 1) * extent[1] + j) * extent[2] + k)*4,
+            ((i * (extent[1] + 1) + j + 1) * extent[2] + k + Npipes[0])*4,
+            ((i * extent[1] + j) * (extent[2]+1) + k + 1 + Npipes[0] + Npipes[1])*4
+          };
+          for (PetscInt dir=0; dir<3; dir++) { // x,y,z
+            for (PetscInt l=0; l<4; l++) { // rotations
+              cells[J][dir*2+0][l][0] = pipe_lo[dir] + l;
+              cells[J][dir*2+0][l][1] = Jvoff + jfaces[dir][0][l];
+              cells[J][dir*2+0][l][2] = Jvoff + jfaces[dir][0][(l-1+4)%4];
+              cells[J][dir*2+0][l][3] = pipe_lo[dir] + (l-1+4)%4;
+              cells[J][dir*2+1][l][0] = Jvoff + jfaces[dir][1][l];
+              cells[J][dir*2+1][l][1] = pipe_hi[dir] + l;
+              cells[J][dir*2+1][l][2] = pipe_hi[dir] + (l-1+4)%4;
+              cells[J][dir*2+1][l][3] = Jvoff + jfaces[dir][1][(l-1+4)%4];
+            }
+          }
+        }
+      }
+    }
+  }
+  ierr = DMPlexCreateFromCellList(comm, topoDim, 24*Njunctions, Nvtx, 4, PETSC_TRUE, &cells[0][0][0][0], spaceDim, vtxCoords, dm);CHKERRQ(ierr);
+  ierr = PetscFree2(vtxCoords, cells);CHKERRQ(ierr);
+
+  {
+    DM dmserial = *dm;
+    PetscPartitioner part;
+
+    ierr = DMPlexGetPartitioner(dmserial, &part);CHKERRQ(ierr);
+    ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
+    ierr = DMPlexDistribute(dmserial, 0, NULL, dm);CHKERRQ(ierr);
+    if (*dm) { // Distribution was actually done
+      ierr = DMDestroy(&dmserial);CHKERRQ(ierr);
+    } else {
+      *dm = dmserial;
+    }
+  }
+
+  ierr = DMPlexSetRefinementUniform(*dm, PETSC_TRUE);CHKERRQ(ierr);
+  for (PetscInt refine=0; refine<refinements; refine++) {
+    PetscInt m;
+    DM dmc = *dm;
+    Vec X;
+    PetscScalar *x;
+    ierr = DMRefine(dmc, MPI_COMM_NULL, dm);CHKERRQ(ierr);
+    ierr = DMDestroy(&dmc);CHKERRQ(ierr);
+
+    ierr = DMGetCoordinatesLocal(*dm, &X);CHKERRQ(ierr);
+    ierr = VecGetLocalSize(X, &m);CHKERRQ(ierr);
+    ierr = VecGetArray(X, &x);CHKERRQ(ierr);
+    for (PetscInt i=0; i<m; i+=3) {
+      ierr = TPSNearestPoint_SchwarzP(&x[i]);CHKERRQ(ierr);
+    }
+    ierr = VecRestoreArray(X, &x);CHKERRQ(ierr);
+  }
+
+  if (thickness > 0) SETERRQ1(comm, PETSC_ERR_SUP, "Thickness %g > 0 not implemented", (double)thickness);
   PetscFunctionReturn(0);
 }
 
