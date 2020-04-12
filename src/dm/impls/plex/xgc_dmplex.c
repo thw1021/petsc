@@ -638,7 +638,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 	  }
 	  g2[fieldA][d] *= wj;
 	}
-#pragma omp simd
+#pragma omp ordered simd
 	for (d = 0; d < dim; ++d) {
 	  for (dp = 0; dp < dim; ++dp) {
 	    g3[fieldA][d][dp] = 0.0;
@@ -811,12 +811,12 @@ PetscErrorCode FPLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,Pet
   /* add mass */
   ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
   /* assemble */
-  ierr = MatAssemblyBegin(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  if (Pmat != Amat) {
-    ierr = MatAssemblyBegin(Amat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(Amat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  }
+  /* ierr = MatAssemblyBegin(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr); */
+  /* ierr = MatAssemblyEnd(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr); */
+  /* if (Pmat != Amat) { */
+  /*   ierr = MatAssemblyBegin(Amat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr); */
+  /*   ierr = MatAssemblyEnd(Amat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr); */
+  /* } */
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
 #endif
@@ -2070,8 +2070,13 @@ PetscErrorCode DMPlexFPDestroyPhaseSpace(DM *dm)
 {
   PetscErrorCode ierr,ii;
   LandCtx        *ctx;
+  PetscContainer container = NULL;
   PetscFunctionBegin;
   ierr = DMGetApplicationContext(*dm, &ctx);CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)ctx->J,"coloring", (PetscObject*)&container);CHKERRQ(ierr);
+  if (container) {
+    ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
+  }
   ierr = MatDestroy(&ctx->M);CHKERRQ(ierr);
   ierr = MatDestroy(&ctx->J);CHKERRQ(ierr);
   for (ii=0;ii<ctx->num_species;ii++) {
