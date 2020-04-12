@@ -1,10 +1,10 @@
 /*
    Implements the Landau kernal
 */
-
 #include <petscconf.h>
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
 #include <petsc/private/vecimpl.h>      /* put CUDA stuff in veccuda */
+#include <omp.h>
 
 // Macro to catch CUDA errors in CUDA runtime calls
 #define CUDA_SAFE_CALL(call)                                          \
@@ -472,6 +472,30 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
     } // qj
   }
 }
+/* < v, u > */
+static void g0_1(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                  PetscReal t, PetscReal u_tShift, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  g0[0] = 1.;
+}
+
+struct _ISColoring_ctx {
+  ISColoring coloring;
+};
+typedef struct _ISColoring_ctx * ISColoring_ctx;
+
+static PetscErrorCode destroy_coloring (void *obj)
+{
+  PetscErrorCode    ierr;
+  ISColoring_ctx    coloring_ctx = (ISColoring_ctx)obj;
+  ISColoring        isc = coloring_ctx->coloring;
+  PetscFunctionBegin;
+  ierr = ISColoringDestroy(&isc);CHKERRQ(ierr);
+  ierr = PetscFree(coloring_ctx);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
 PetscErrorCode FPLandauCUDAJacobian(DM plex, PetscQuadrature quad, const PetscInt foffsets[],
 				    const PetscReal nu_m0_ma [FP_MAX_SPECIES][FP_MAX_SPECIES],const PetscReal invMass[FP_MAX_SPECIES], const PetscReal Eq_m[FP_MAX_SPECIES],
@@ -484,13 +508,13 @@ PetscErrorCode FPLandauCUDAJacobian(DM plex, PetscQuadrature quad, const PetscIn
   const PetscReal   *quadWeights;
   PetscReal         *d_quadWeights,*d_TabBD,*iTab;
   PetscReal         *d_vj,*d_Jj,*d_invJj,*d_wiGlobal,*d_nu_m0_ma,*d_invMass,*d_Eq_m;
-  PetscScalar       *elMat,*elemMats,*d_elemMats;
+  PetscScalar       *elemMats,*d_elemMats;
   PetscLogDouble    flops;
   PetscTabulation   *Tf;
   PetscDS           prob;
   PetscSection      section, globalSection;
-  //FPLandPointData   IPDataGlobalDevice;
   FPLandPointDataFlat IPDataGlobalDevice;
+  PetscContainer    container = NULL;
   PetscFunctionBegin;
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
@@ -580,11 +604,134 @@ PetscErrorCode FPLandauCUDAJacobian(DM plex, PetscQuadrature quad, const PetscIn
   ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
-  for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
-    /* assemble matrix */
-    ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, cStart+ej, elMat, ADD_VALUES);CHKERRQ(ierr);
-    /* debug */
+  /* coloring */
+  ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
+  if (!container) { 
+    PetscSection   csection;
+    DM             colordm;
+    Vec            color_vec;
+    PetscInt       i;
+    PetscInt       numComp[1];
+    PetscInt       numDof[3];
+    PetscFE        fe;
+    PetscDS        prob;
+    Mat            mat;
+    ISColoring     iscoloring = NULL;
+    ISColoring_ctx coloring_ctx = NULL;
+    /* Create a scalar field u, a vector field v, and a surface vector field w */
+    numComp[0] = 1;
+    ierr = DMClone(plex, &colordm);CHKERRQ(ierr);
+    ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) plex), dim, 1, PETSC_FALSE, "color_", PETSC_DECIDE, &fe);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) fe, "color");CHKERRQ(ierr);
+    ierr = DMSetField(colordm, 0, NULL, (PetscObject)fe);CHKERRQ(ierr);
+    ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
+    for (i = 0; i < (dim+1); ++i) numDof[i] = 0;
+    numDof[dim]   = 1;
+    /* Create a PetscSection with this data layout */
+    ierr = DMPlexCreateSection(colordm, NULL, numComp, numDof, 0, 0, NULL, NULL, NULL, &csection);CHKERRQ(ierr);
+    /* Name the Field variables */
+    ierr = PetscSectionSetFieldName(csection, 0, "color");CHKERRQ(ierr);
+    /* Tell the DM to use this data layout */
+    ierr = DMSetLocalSection(colordm, csection);CHKERRQ(ierr);
+    ierr = DMCreateDS(colordm);CHKERRQ(ierr);
+    ierr = DMGetDS(colordm, &prob);CHKERRQ(ierr);
+    ierr = PetscDSSetJacobian(prob, 0, 0, g0_1, NULL, NULL, NULL);CHKERRQ(ierr);
+    ierr = DMViewFromOptions(colordm,NULL,"-color_dm_view");CHKERRQ(ierr);
+    ierr = DMSetAdjacency(colordm, 0, PETSC_TRUE, PETSC_TRUE);CHKERRQ(ierr);
+    ierr = DMCreateMatrix(colordm, &mat);CHKERRQ(ierr);
+    /* Create a Mat and Vec with this layout and view it */
+    ierr = DMGetGlobalVector(colordm, &color_vec);CHKERRQ(ierr);
+    ierr = DMPlexSNESComputeJacobianFEM(colordm, color_vec, mat, mat, NULL);CHKERRQ(ierr);
+    ierr = MatViewFromOptions(mat,NULL,"-color_mat_view");CHKERRQ(ierr); 
+    {
+      MatColoring     mc;
+      IS             *is;
+      PetscInt        p,size,colour,j,k;
+      const PetscInt *indices;
+      ierr = MatColoringCreate(mat,&mc);CHKERRQ(ierr);
+      ierr = MatColoringSetDistance(mc,1);CHKERRQ(ierr);
+      ierr = MatColoringSetType(mc,MATCOLORINGJP);CHKERRQ(ierr);
+      ierr = MatColoringSetFromOptions(mc);CHKERRQ(ierr);
+      ierr = MatColoringApply(mc,&iscoloring);CHKERRQ(ierr);
+      ierr = MatColoringDestroy(&mc);CHKERRQ(ierr);
+      /* view */
+      ierr = ISColoringViewFromOptions(iscoloring,NULL,"-coloring_is_view");CHKERRQ(ierr); 
+      ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is);CHKERRQ(ierr);
+      for (colour=0; colour<p; colour++) {
+	ierr = ISGetLocalSize(is[colour],&size);CHKERRQ(ierr);
+	ierr = ISGetIndices(is[colour],&indices);CHKERRQ(ierr);
+	for (j=0; j<size; j++) {
+	  PetscScalar v = (PetscScalar)colour;
+	  k = indices[j];
+	  ierr = VecSetValues(color_vec,1,&k,&v,INSERT_VALUES);
+	}
+	ierr = ISRestoreIndices(is[colour],&indices);CHKERRQ(ierr);
+      }
+      ierr = ISColoringRestoreIS(iscoloring,PETSC_USE_POINTER,&is);CHKERRQ(ierr);
+    }
+    /* view coloring */
     if (0) {
+      PetscViewer    viewer;
+      ierr = PetscViewerCreate(PETSC_COMM_WORLD, &viewer);CHKERRQ(ierr);
+      ierr = PetscViewerSetType(viewer, PETSCVIEWERVTK);CHKERRQ(ierr);
+      ierr = PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_VTK);CHKERRQ(ierr);
+      ierr = PetscViewerFileSetName(viewer, "color.vtk");CHKERRQ(ierr);
+      ierr = VecView(color_vec, viewer);CHKERRQ(ierr);
+      ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+    }
+    /* Cleanup */
+    ierr = MatDestroy(&mat);CHKERRQ(ierr);
+    ierr = DMRestoreGlobalVector(colordm, &color_vec);CHKERRQ(ierr);
+    ierr = PetscSectionDestroy(&csection);CHKERRQ(ierr);
+    ierr = DMDestroy(&colordm);CHKERRQ(ierr);
+    /* stash coloring */
+    ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
+    ierr = PetscNew(&coloring_ctx);CHKERRQ(ierr);
+    coloring_ctx->coloring = iscoloring;
+    ierr = PetscContainerSetPointer(container,(void*)coloring_ctx);CHKERRQ(ierr);
+    ierr = PetscContainerSetUserDestroy(container, destroy_coloring);CHKERRQ(ierr);
+    ierr = PetscObjectCompose((PetscObject)JacP,"coloring",(PetscObject)container);CHKERRQ(ierr);
+    if (1) {
+      int thread_id,hwthread,num_threads;
+      char name[MPI_MAX_PROCESSOR_NAME];
+      int resultlength;
+      MPI_Get_processor_name(name, &resultlength);
+#pragma omp parallel default(shared) private(hwthread, thread_id)
+      {
+	thread_id = omp_get_thread_num();
+	hwthread = sched_getcpu();
+	num_threads = omp_get_num_threads();
+	PetscPrintf(PETSC_COMM_SELF,"MPI Rank %03d of %03d on HWThread %03d of Node %s, OMP_threadID %d of %d\n", 0, 1, hwthread, name, thread_id, num_threads);
+      }
+    }
+  }
+  /* assemble with coloring */
+  if (1) {
+    IS             *is;
+    PetscInt        p,size,colour,j;
+    const PetscInt *indices;
+    ISColoring_ctx  coloring_ctx = NULL;
+    ISColoring      iscoloring;
+    ierr = PetscContainerGetPointer(container,(void**)&coloring_ctx);CHKERRQ(ierr);
+    iscoloring = coloring_ctx->coloring;
+    ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is);CHKERRQ(ierr);
+    for (colour=0; colour<p; colour++) {
+      ierr = ISGetLocalSize(is[colour],&size);CHKERRQ(ierr);
+      ierr = ISGetIndices(is[colour],&indices);CHKERRQ(ierr);
+#pragma omp parallel for shared(plex,section,globalSection,JacP,cStart,indices,totDim) private(j) schedule(static)
+      for (j=0; j<size; j++) {
+	PetscInt ej = cStart + indices[j];
+	PetscScalar *elMat = &elemMats[indices[j]*totDim*totDim];
+	/* assemble matrix */
+	DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);
+      }
+    }
+  }
+
+  ierr = PetscFree(elemMats);CHKERRQ(ierr);
+  if (0) {
+    PetscScalar *elMat;
+    for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
       PetscPrintf(PETSC_COMM_WORLD,"E mat (cuda)\n");
       for (fieldA = 0; fieldA < Nf; ++fieldA) {
 	int fieldB; PetscInt        fOff,f,g;
@@ -603,9 +750,8 @@ PetscErrorCode FPLandauCUDAJacobian(DM plex, PetscQuadrature quad, const PetscIn
 	PetscPrintf(PETSC_COMM_WORLD,"\n");
       }
       PetscPrintf(PETSC_COMM_WORLD,"\n");
-    }
-  } /* ej cells loop */
-  ierr = PetscFree(elemMats);CHKERRQ(ierr);
+    } /* ej cells loop */
+  }
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
 #endif

@@ -332,7 +332,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   E = ctx->Ez; /* keep real E */
   ratio = E/J/spit_eta;
   done = (old_ratio-ratio < 1.e-4 && stepi>20 &&0);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e J= %10.3e J_re=%10.3e %.3g%% T_e(t)=%10.3e T_e(0)=%10.3e (kev) E/J to eta ratio=%g (diff=%g)\n",
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e J= %10.3e J_re=%10.3e %.2g%% T_e(t)=%10.3e T_e(0)=%10.3e (kev) E/J to eta ratio=%g (diff=%g)\n",
                      done ? "DONE" : "testSpitzer",stepi,time,J,J_re,100*J_re/J,Te_kev,ctx->thermal_temps[0]*ctx->k*kev_joul,ratio,old_ratio-ratio);CHKERRQ(ierr);
   if (done) {
     ierr = TSSetConvergedReason(ts,TS_CONVERGED_USER);CHKERRQ(ierr);
@@ -511,9 +511,8 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
     E = ctx->Ez; /* keep real E */
     ratio = E/J/spit_eta;
     if ((old_ratio-ratio < 1.e-4 && old_ratio-ratio>0) || old_ratio <= ratio) {
-      rectx->use_spitzer_eta = PETSC_TRUE; /* use it next time, it should be very close */
+      rectx->use_spitzer_eta = PETSC_TRUE; /* use it next time */
       rectx->j = J;
-      rectx->pulse_start = time; /* start quench now */
     }
 PetscPrintf(PETSC_COMM_WORLD,"xxxx %D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s\n",stepi,time,ratio, J, E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");
     old_ratio = ratio;
@@ -526,7 +525,7 @@ PetscPrintf(PETSC_COMM_WORLD,"xxxx %D) t=%10.3e ESpitzer E/J vs spitzer ratio=%2
     ierr = PetscDSSetObjective(prob, 0, &f0_re);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
     *a_E = spit_eta*rectx->j; // (J-J_re);
-PetscPrintf(PETSC_COMM_WORLD,"\t\t xxxx %D) ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e J_re/J=%.3g%% j=%10.3e n_re=%10.3e spit_eta=%10.3e t=%g\n",stepi,*a_E,J,Te_kev,100*J_re/J,rectx->j,tt[0],spit_eta,time);
+PetscPrintf(PETSC_COMM_WORLD,"\t\t xxxx %D) ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e J_re/J=%.2g%% j=%10.3e n_re=%10.3e spit_eta=%10.3e t=%g\n",stepi,*a_E,J,Te_kev,100*J_re/J,rectx->j,tt[0],spit_eta,time);
   }
   /* cleanup */
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
