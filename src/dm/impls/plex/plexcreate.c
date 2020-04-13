@@ -2418,6 +2418,271 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, const PetscInt extent[], Petsc
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode DMPlexCreateGyroidMesh(MPI_Comm comm, const PetscInt extent[], const DMBoundaryType periodic[], PetscReal thickness, PetscInt refinements, DM *dm)
+{
+  PetscErrorCode ierr;
+  PetscMPIInt rank;
+  PetscInt topoDim = 2, spaceDim = 3;
+  PetscInt facesPerBlock = 64;
+  PetscInt vertsPerBlock = 56;
+  PetscInt numFaces = 0;
+  PetscInt numVertices = 0;
+  int (*cells)[64][4] = NULL;
+  double *vtxCoords = NULL;
+
+  PetscFunctionBegin;
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  if (!rank) {
+    /* This is a coarse mesh approximation of the gyroid shifted to being the zero of the level set
+
+           sin(pi*x)*cos(pi*(y+1/2)) + sin(pi*(y+1/2))*cos(pi*(z+1/4)) + sin(pi*(z+1/4))*cos(x)
+
+       on the cell [0,2]^3.
+
+       Think about dividing that cell into four columns, and focus on the column [0,1]x[0,1]x[0,2].
+       If you looked at the gyroid in that column at different slices of z you would see that it kind of spins
+       like a boomerang:
+
+           z = 0          z = 1/4        z = 1/2        z = 3/4
+           -----          -------        -------        -------
+
+           +       +      +       +      +       +      +   \   +
+            \                                   /            \
+             \            `-_   _-'            /              )
+              *-_            `-'            _-'              /
+           +     `-+      +       +      +-'     +      +   /   +
+
+
+
+           z = 1          z = 5/4        z = 3/2        z = 7/4
+           -----          -------        -------        -------
+
+           +-_     +      +       +      +     _-+      +   /   +
+              `-_            _-_            _-`            /
+                 \        _-'   `-_        /              (
+                  \                       /                \
+           +       +      +       +      +       +      +   \   +
+
+
+       This course mesh approximates each of these slices by two line segments,
+       and then connects the segments in consecutive layers with quadrilateral faces.
+       All of the end points of the segments are multiples of 1/4 except for the
+       point * in the picture for z = 0 above and the similar points in other layers.
+       That point is at (gamma, gamma, 0), where gamma is calculated below.
+
+       The column  [1,2]x[1,2]x[0,2] looks the same as this column;
+       The columns [1,2]x[0,1]x[0,2] and [0,1]x[1,2]x[0,2] are mirror images.
+
+       As for how this method turned into the names given to the vertices:
+       that was not systematic, it was just the way it worked out in my handwritten notes.
+    */
+
+    PetscInt extentPlus[3];
+    PetscInt numBlocks, numBlocksPlus;
+    const PetscInt A =  0,   B =  1,   C =  2,   D =  3,   E =  4,   F =  5,   G =  6,   H =  7,
+                  II =  8,   J =  9,   K = 10,   L = 11,   M = 12,   N = 13,   O = 14,   P = 15,
+                   Q = 16,   R = 17,   S = 18,   T = 19,   U = 20,   V = 21,   W = 22,   X = 23,
+                   Y = 24,   Z = 25,  Ap = 26,  Bp = 27,  Cp = 28,  Dp = 29,  Ep = 30,  Fp = 31,
+                  Gp = 32,  Hp = 33,  Ip = 34,  Jp = 35,  Kp = 36,  Lp = 37,  Mp = 38,  Np = 39,
+                  Op = 40,  Pp = 41,  Qp = 42,  Rp = 43,  Sp = 44,  Tp = 45,  Up = 46,  Vp = 47,
+                  Wp = 48,  Xp = 49,  Yp = 50,  Zp = 51,  Aq = 52,  Bq = 53,  Cq = 54,  Dq = 55;
+    const PetscInt pattern[64][4] =
+    { /* face to vertex within the coarse discretization of a single gyroid block */
+      /* layer 0 */
+      {A,C,K,G},{C,B,II,K},{D,A,H,L},{B+56*1,D,L,J},{E,B+56*1,J,N},{A+56*2,E,N,H+56*2},{F,A+56*2,G+56*2,M},{B,F,M,II},
+      /* layer 1 */
+      {G,K,Q,O},{K,II,P,Q},{L,H,O+56*1,R},{J,L,R,P},{N,J,P,S},{H+56*2,N,S,O+56*3},{M,G+56*2,O+56*2,T},{II,M,T,P},
+      /* layer 2 */
+      {O,Q,Y,U},{Q,P,W,Y},{R,O+56*1,U+56*1,Ap},{P,R,Ap,W},{S,P,X,Bp},{O+56*3,S,Bp,V+56*1},{T,O+56*2,V,Z},{P,T,Z,X},
+      /* layer 3 */
+      {U,Y,Ep,Dp},{Y,W,Cp,Ep},{Ap,U+56*1,Dp+56*1,Gp},{W,Ap,Gp,Cp},{Bp,X,Cp+56*2,Fp},{V+56*1,Bp,Fp,Dp+56*1},{Z,V,Dp,Hp},{X,Z,Hp,Cp+56*2},
+      /* layer 4 */
+      {Dp,Ep,Mp,Kp},{Ep,Cp,Ip,Mp},{Gp,Dp+56*1,Lp,Np},{Cp,Gp,Np,Jp},{Fp,Cp+56*2,Jp+56*2,Pp},{Dp+56*1,Fp,Pp,Lp},{Hp,Dp,Kp,Op},{Cp+56*2,Hp,Op,Ip+56*2},
+      /* layer 5 */
+      {Kp,Mp,Sp,Rp},{Mp,Ip,Qp,Sp},{Np,Lp,Rp,Tp},{Jp,Np,Tp,Qp+56*1},{Pp,Jp+56*2,Qp+56*3,Up},{Lp,Pp,Up,Rp},{Op,Kp,Rp,Vp},{Ip+56*2,Op,Vp,Qp+56*2},
+      /* layer 6 */
+      {Rp,Sp,Aq,Yp},{Sp,Qp,Wp,Aq},{Tp,Rp,Yp,Cq},{Qp+56*1,Tp,Cq,Wp+56*1},{Up,Qp+56*3,Xp+56*1,Dq},{Rp,Up,Dq,Zp},{Vp,Rp,Zp,Bq},{Qp+56*2,Vp,Bq,Xp},
+      /* layer 7 (the top is the periodic image of the bottom of layer 0) */
+      {Yp,Aq,C+56*4,A+56*4},{Aq,Wp,B+56*4,C+56*4},{Cq,Yp,A+56*4,D+56*4},{Wp+56*1,Cq,D+56*4,B+56*5},{Dq,Xp+56*1,B+56*5,E+56*4},{Zp,Dq,E+56*4,A+56*6},{Bq,Zp,A+56*6,F+56*4},{Xp,Bq,F+56*4,B+56*4}
+    };
+    const PetscReal gamma = PetscAcosReal((PetscSqrtReal(3.)-1.) / PetscSqrtReal(2.)) / PETSC_PI;
+    const PetscReal patternCoords[56][3] =
+    {
+      /* A  */ {1.,0.,0.},
+      /* B  */ {0.,1.,0.},
+      /* C  */ {gamma,gamma,0.},
+      /* D  */ {1.+gamma,1.-gamma,0.},
+      /* E  */ {2.-gamma,2.-gamma,0.},
+      /* F  */ {1.-gamma,1.+gamma,0.},
+
+      /* G  */ {.5,0,.25},
+      /* H  */ {1.5,0.,.25},
+      /* II */ {.5,1.,.25},
+      /* J  */ {1.5,1.,.25},
+      /* K  */ {.25,.5,.25},
+      /* L  */ {1.25,.5,.25},
+      /* M  */ {.75,1.5,.25},
+      /* N  */ {1.75,1.5,.25},
+
+      /* O  */ {0.,0.,.5},
+      /* P  */ {1.,1.,.5},
+      /* Q  */ {gamma,1.-gamma,.5},
+      /* R  */ {1.+gamma,gamma,.5},
+      /* S  */ {2.-gamma,1.+gamma,.5},
+      /* T  */ {1.-gamma,2.-gamma,.5},
+
+      /* U  */ {0.,.5,.75},
+      /* V  */ {0.,1.5,.75},
+      /* W  */ {1.,.5,.75},
+      /* X  */ {1.,1.5,.75},
+      /* Y  */ {.5,.75,.75},
+      /* Z  */ {.5,1.75,.75},
+      /* Ap */ {1.5,.25,.75},
+      /* Bp */ {1.5,1.25,.75},
+
+      /* Cp */ {1.,0.,1.},
+      /* Dp */ {0.,1.,1.},
+      /* Ep */ {1.-gamma,1.-gamma,1.},
+      /* Fp */ {1.+gamma,1.+gamma,1.},
+      /* Gp */ {2.-gamma,gamma,1.},
+      /* Hp */ {gamma,2.-gamma,1.},
+
+      /* Ip */ {.5,0.,1.25},
+      /* Jp */ {1.5,0.,1.25},
+      /* Kp */ {.5,1.,1.25},
+      /* Lp */ {1.5,1.,1.25},
+      /* Mp */ {.75,.5,1.25},
+      /* Np */ {1.75,.5,1.25},
+      /* Op */ {.25,1.5,1.25},
+      /* Pp */ {1.25,1.5,1.25},
+
+      /* Qp */ {0.,0.,1.5},
+      /* Rp */ {1.,1.,1.5},
+      /* Sp */ {1.-gamma,gamma,1.5},
+      /* Tp */ {2.-gamma,1.-gamma,1.5},
+      /* Up */ {1.+gamma,2.-gamma,1.5},
+      /* Vp */ {gamma,1.+gamma,1.5},
+
+      /* Wp */ {0.,.5,1.75},
+      /* Xp */ {0.,1.5,1.75},
+      /* Yp */ {1.,.5,1.75},
+      /* Zp */ {1.,1.5,1.75},
+      /* Aq */ {.5,.25,1.75},
+      /* Bq */ {.5,1.25,1.75},
+      /* Cq */ {1.5,.75,1.75},
+      /* Dq */ {1.5,1.75,1.75},
+    };
+    PetscBool *seen;
+    PetscInt  *vertToTrueVert;
+    PetscInt   count;
+
+    for (PetscInt i = 0; i < 3; i++) extentPlus[i]  = extent[i] + 1;
+    numBlocks = 1;
+    for (PetscInt i = 0; i < 3; i++)     numBlocks *= extent[i];
+    numBlocksPlus = 1;
+    for (PetscInt i = 0; i < 3; i++) numBlocksPlus *= extentPlus[i];
+    numFaces = numBlocks * facesPerBlock;
+    ierr = PetscMalloc1(numBlocks, &cells);CHKERRQ(ierr);
+    ierr = PetscCalloc1(numBlocksPlus * vertsPerBlock,&seen);CHKERRQ(ierr);
+    for (PetscInt k = 0; k < extent[2]; k++) {
+      for (PetscInt j = 0; j < extent[1]; j++) {
+        for (PetscInt i = 0; i < extent[0]; i++) {
+          for (PetscInt f = 0; f < facesPerBlock; f++) {
+            for (PetscInt v = 0; v < 4; v++) {
+              PetscInt vertRaw = pattern[f][v];
+              PetscInt blockidx = vertRaw / 56;
+              PetscInt patternvert = vertRaw % 56;
+              PetscInt xplus = (blockidx & 1);
+              PetscInt yplus = (blockidx & 2) >> 1;
+              PetscInt zplus = (blockidx & 4) >> 2;
+              PetscInt zcoord = (periodic && periodic[2] == DM_BOUNDARY_PERIODIC) ? ((k + zplus) % extent[2]) : (k + zplus);
+              PetscInt ycoord = (periodic && periodic[1] == DM_BOUNDARY_PERIODIC) ? ((j + yplus) % extent[1]) : (j + yplus);
+              PetscInt xcoord = (periodic && periodic[0] == DM_BOUNDARY_PERIODIC) ? ((i + xplus) % extent[0]) : (i + xplus);
+              PetscInt vert = ((zcoord * extentPlus[1] + ycoord) * extentPlus[0] + xcoord) * 56 + patternvert;
+
+              cells[(k * extent[1] + j) * extent[0] + i][f][v] = vert;
+              seen[vert] = PETSC_TRUE;
+            }
+          }
+        }
+      }
+    }
+    for (PetscInt i = 0; i < numBlocksPlus * vertsPerBlock; i++) if (seen[i]) numVertices++;
+    count = 0;
+    ierr = PetscMalloc1(numBlocksPlus * vertsPerBlock, &vertToTrueVert);CHKERRQ(ierr);
+    ierr = PetscMalloc1(numVertices * 3, &vtxCoords);CHKERRQ(ierr);
+    for (PetscInt i = 0; i < numBlocksPlus * vertsPerBlock; i++) vertToTrueVert[i] = -1;
+    for (PetscInt k = 0; k < extentPlus[2]; k++) {
+      for (PetscInt j = 0; j < extentPlus[1]; j++) {
+        for (PetscInt i = 0; i < extentPlus[0]; i++) {
+          for (PetscInt v = 0; v < vertsPerBlock; v++) {
+            PetscInt vIdx = ((k * extentPlus[1] + j) * extentPlus[0] + i) * vertsPerBlock + v;
+
+            if (seen[vIdx]) {
+              PetscInt thisVert;
+
+              vertToTrueVert[vIdx] = thisVert = count++;
+
+              for (PetscInt d = 0; d < 3; d++) vtxCoords[3 * thisVert + d] = patternCoords[v][d];
+              vtxCoords[3 * thisVert + 0] += i * 2;
+              vtxCoords[3 * thisVert + 1] += j * 2;
+              vtxCoords[3 * thisVert + 2] += k * 2;
+            }
+          }
+        }
+      }
+    }
+    for (PetscInt i = 0; i < numBlocks; i++) {
+      for (PetscInt f = 0; f < facesPerBlock; f++) {
+        for (PetscInt v = 0; v < 4; v++) {
+          cells[i][f][v] = vertToTrueVert[cells[i][f][v]];
+        }
+      }
+    }
+    ierr = PetscFree(vertToTrueVert);CHKERRQ(ierr);
+    ierr = PetscFree(seen);CHKERRQ(ierr);
+  }
+  ierr = DMPlexCreateFromCellList(comm, topoDim, numFaces, numVertices, 4, PETSC_TRUE, &cells[0][0][0], spaceDim, vtxCoords, dm);CHKERRQ(ierr);
+  ierr = PetscFree2(vtxCoords, cells);CHKERRQ(ierr);
+
+  {
+    DM dmserial = *dm;
+    PetscPartitioner part;
+
+    ierr = DMPlexGetPartitioner(dmserial, &part);CHKERRQ(ierr);
+    ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
+    ierr = DMPlexDistribute(dmserial, 0, NULL, dm);CHKERRQ(ierr);
+    if (*dm) { // Distribution was actually done
+      ierr = DMDestroy(&dmserial);CHKERRQ(ierr);
+    } else {
+      *dm = dmserial;
+    }
+  }
+
+  ierr = DMPlexSetRefinementUniform(*dm, PETSC_TRUE);CHKERRQ(ierr);
+  for (PetscInt refine=0; refine<refinements; refine++) {
+    PetscInt m;
+    DM dmc = *dm;
+    Vec X;
+    PetscScalar *x;
+    ierr = DMRefine(dmc, MPI_COMM_NULL, dm);CHKERRQ(ierr);
+    ierr = DMDestroy(&dmc);CHKERRQ(ierr);
+
+    ierr = DMGetCoordinatesLocal(*dm, &X);CHKERRQ(ierr);
+    ierr = VecGetLocalSize(X, &m);CHKERRQ(ierr);
+    ierr = VecGetArray(X, &x);CHKERRQ(ierr);
+#if 0
+    for (PetscInt i=0; i<m; i+=3) {
+      ierr = TPSNearestPoint_SchwarzP(&x[i]);CHKERRQ(ierr);
+    }
+#endif
+    ierr = VecRestoreArray(X, &x);CHKERRQ(ierr);
+  }
+
+  if (thickness > 0) SETERRQ1(comm, PETSC_ERR_SUP, "Thickness %g > 0 not implemented", (double)thickness);
+  PetscFunctionReturn(0);
+}
+
 /* External function declarations here */
 extern PetscErrorCode DMCreateInterpolation_Plex(DM dmCoarse, DM dmFine, Mat *interpolation, Vec *scaling);
 extern PetscErrorCode DMCreateInjection_Plex(DM dmCoarse, DM dmFine, Mat *mat);
