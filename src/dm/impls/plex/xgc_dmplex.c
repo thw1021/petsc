@@ -3,6 +3,7 @@
 #include <petsc/private/vecimpl.h>      /* put CUDA stuff in veccuda */
 #include <petscdm.h>
 #include <petscdmforest.h>
+#include <omp.h>
 
 /* Landau collision operator */
 
@@ -387,6 +388,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   numGCells = GcEnd - GcStart;
   ierr = PetscFEGetQuadrature(ctx->fe[0], &quad);CHKERRQ(ierr);
   ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, &quadPoints, &quadWeights);CHKERRQ(ierr);
+  if (Nb!=Nq) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq %D %D over integration or simplices?",Nb,Nq);
   globNip = numGCells*Nq;
   globNipVec = globNip + !!(globNip%(LAND_VL*LAND_VL2));
   flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nf*Nf + 165.);
@@ -527,7 +529,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   if (!JacP) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Only Jacobians, not matrix free");
 #if defined(PETSC_HAVE_CUDA)
   if (ctx->useCUDA) {
-    ierr = FPLandauCUDAJacobian(plex,quad,foffsets,nu_m0_ma,invMass,Eq_m,&IPDataGlobal,wiGlobal,ctx->events,JacP);
+    ierr = FPLandauCUDAJacobian(plex,quad,foffsets,nu_m0_ma,invMass,Eq_m,&IPDataGlobal,wiGlobal,ctx->numThreadsSubBlocks,ctx->events,JacP);
     CHKERRQ(ierr);
   } else
 #endif
@@ -1865,7 +1867,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   /* species - [0] electrons, [1] one ion species eg, duetarium, [2] heavy impurity ion, ... */
   ctx->charges[0] = -1;  /* electron charge (MKS) */
   ctx->masses[0] = 1/1835.5; /* temporary value in proton mass */
-  ctx->n[0] = 1; 
+  ctx->n[0] = 1;
   /* constants, etc. */
   ctx->epsilon0 = 8.8542e-12; /* permittivity of free space (MKS) F/m */
   ctx->k = 1.38064852e-23; /* Boltzmann constant (MKS) J/K */
@@ -1873,11 +1875,28 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ctx->n_0 = 1.e20;        /* typical plasma n, but could set it to 1 */
   ctx->Ez = 0;
   ctx->v_0 = 1; /* in electron thermal velocity */
-  ctx->useCUDA = PETSC_FALSE;
+  ctx->numThreadsSubBlocks = 1;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
   ctx->useCUDA = PETSC_TRUE;
   ierr = PetscOptionsBool("-use_cuda", "Use CUDA kernels", "xgc_dmplex.c", ctx->useCUDA, &ctx->useCUDA, NULL);CHKERRQ(ierr);
+#else
+  ctx->useCUDA = PETSC_FALSE;
+#if defined(PETSC_HAVE_OPENMP)
+  if (1) {
+    int thread_id,hwthread,num_threads;
+    char name[MPI_MAX_PROCESSOR_NAME];
+    int resultlength;
+    MPI_Get_processor_name(name, &resultlength);
+#pragma omp parallel default(shared) private(hwthread, thread_id)
+    {
+      thread_id = omp_get_thread_num();
+      hwthread = sched_getcpu();
+      num_threads = omp_get_num_threads();
+      PetscPrintf(PETSC_COMM_SELF,"MPI Rank %03d of %03d on HWThread %03d of Node %s, OMP_threadID %d of %d\n", 0, 1, hwthread, name, thread_id, num_threads);
+    }
+  }
+#endif
 #endif
   ierr = PetscOptionsReal("-electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-interpolate", "interpolate grid points in refinement", "xgc_dmplex.c", ctx->interpolate, &ctx->interpolate, NULL);CHKERRQ(ierr);
@@ -1961,6 +1980,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   }
   /* ierr = PetscInfo2(dummy, "Phase: electron radius = %g, ion radius = %g\n",ctx->e_radius,ctx->i_radius);CHKERRQ(ierr); */
   if (ctx->sphere && (ctx->e_radius <= ctx->i_radius || ctx->radius <= ctx->e_radius)) SETERRQ3(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"bad radii: %g < %g < %g",ctx->i_radius,ctx->e_radius,ctx->radius);
+  ierr = PetscOptionsInt("-num_threads_sub_blocks", "Number of threads in CUDA integration point subblock", "xgc_dmplex.c", ctx->numThreadsSubBlocks, &ctx->numThreadsSubBlocks, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   for (ii=ctx->num_species;ii<FP_MAX_SPECIES;ii++) ctx->masses[ii] = ctx->thermal_temps[ii]  = ctx->charges[ii] = 0;
   ierr = PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->num_species>2 ? ctx->masses[2]/1.6720e-27 : 0);CHKERRQ(ierr);
