@@ -354,9 +354,9 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 		 PetscScalar elemMats_out[])
 {
   extern __shared__ PetscReal g2_g3_qi[]; // Nq * { [NSubBlocks][Nf][dim] ; [NSubBlocks][Nf][dim][dim] } 
-  const PetscInt  myqi = threadIdx.x/nSubBlocks, myblock = threadIdx.x%nSubBlocks, Nq = blockDim.x/nSubBlocks, jpidx = myqi + blockIdx.x * Nq; // local IP, my block in IP, number of IP/cell, global index into my IP
+  const PetscInt  myqi = threadIdx.x/nSubBlocks, myblock = threadIdx.x%nSubBlocks, Nq = blockDim.x/nSubBlocks, myelem = blockIdx.x, jpidx = myqi + myelem * Nq; // local IP, my block in IP, number of IP/cell, global index into my IP
   const PetscInt  pntsz = dim*Nf + Nf + dim; // x[dim], f[Ns], df[dim*Nf]
-  const PetscInt  locsz = nip/nSubBlocks + !!nip%nSubBlocks, ip_start = myblock*locsz, ip_end = (myblock+1)*locsz > nip ? nip : (myblock+1)*locsz; /* this could be wrong with very few global IPs */
+  const PetscInt  locsz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = myblock*locsz, ip_end = (myblock+1)*locsz > nip ? nip : (myblock+1)*locsz; /* this could be wrong with very few global IPs */
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2_g3_qi[0];
   PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g2_g3_qi[FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM];
   PetscReal       nu_m0_ma[FP_MAX_SPECIES][FP_MAX_SPECIES];
@@ -364,7 +364,6 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   const PetscReal wj = wiGlobal[jpidx];
   PetscReal       gg2[FP_MAX_SPECIES][FP_DIM],gg3[FP_MAX_SPECIES][FP_DIM][FP_DIM];
   PetscInt        d,f,d2,dp,d3,fieldB,ipidx,fieldA;
-
   for (iTab = a_TabBD, fieldA = 0 ; fieldA < Nf ; fieldA++, iTab += Nq*Nb*(1+dim)) { // get pointers for convenience
     for (fieldB = 0; fieldB < Nf; ++fieldB) {
       nu_m0_ma[fieldA][fieldB] = a_nu_m0_ma[fieldA*FP_MAX_SPECIES + fieldB];
@@ -387,7 +386,6 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
     const PetscReal * __restrict__ df = &data[dim + Nf];
     if (dim==2) {
       PetscReal       Ud[2][2], Uk[2][2];
-      if (ipidx==jpidx) printf ("\t\t%3d), Have self, Thread number %d. blockIdx.x = %d blockDim.x = %d gridDim.x = %d\n", jpidx, threadIdx.x, blockIdx.x,  blockDim.x, gridDim.x);
 #pragma forceinline recursive
       LandauTensor2D(pvj, data[0], data[1], Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
       for (fieldA = 0; fieldA < Nf; ++fieldA) {
@@ -420,10 +418,9 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
       }
     }
   } /* IPs */
-  /* Jacobian transform */
-#pragma omp simd
+  /* Jacobian transform - g2 */
   for (fieldA = 0; fieldA < Nf; ++fieldA) {
-    gg2[fieldA][dim-1] += Eq_m[fieldA]; /* add electric field term */
+    if (myblock==0) gg2[fieldA][dim-1] += Eq_m[fieldA]; /* add electric field term */
     for (d = 0; d < dim; ++d) {
       (*g2)[myqi][myblock][fieldA][d] = 0.0;
       for (d2 = 0; d2 < dim; ++d2) {
@@ -431,7 +428,9 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
       }
       (*g2)[myqi][myblock][fieldA][d] *= wj;
     }
-#pragma omp simd
+  }
+  /* g3 */
+  for (fieldA = 0; fieldA < Nf; ++fieldA) {
     for (d = 0; d < dim; ++d) {
       for (dp = 0; dp < dim; ++dp) {
 	(*g3)[myqi][myblock][fieldA][d][dp] = 0.0;
@@ -444,21 +443,25 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
       }
     }
   }
+  // Synchronize (ensure all the data is available) and sum g2 & g3
+  __syncthreads();
   if (myblock==0) { /* on one thread, sum up */
-    for (ipidx = 1; ipidx < nSubBlocks; ++ipidx) {
-      for (fieldA = 0; fieldA < Nf; ++fieldA) {
-	for (d = 0; d < dim; ++d)
+    for (fieldA = 0; fieldA < Nf; ++fieldA) {
+      for (d = 0; d < dim; ++d) {
+	for (ipidx = 1; ipidx < nSubBlocks; ++ipidx) {
 	  (*g2)[myqi][0][fieldA][d] += (*g2)[myqi][ipidx][fieldA][d];
-	for (d = 0; d < dim; ++d) 
-	  for (dp = 0; dp < dim; ++dp)
+	  for (dp = 0; dp < dim; ++dp) {
 	    (*g3)[myqi][0][fieldA][d][dp] += (*g3)[myqi][ipidx][fieldA][d][dp];
+	  }
+	}
+	//printf("\t\t\t %d %d %d %d %20.12e %20.12e %20.12e KKK\n",myelem,myqi,fieldA,d,(*g2)[myqi][0][fieldA][d],(*g3)[myqi][0][fieldA][d][0],(*g3)[myqi][0][fieldA][d][1]);
       }
     }
   }
   // Synchronize (ensure all the data is available) and sum IP matrices
   __syncthreads();
   if (threadIdx.x==0) { // on one thread, sum up
-    PetscScalar *elemMat  = &elemMats_out[blockIdx.x*totDim*totDim]; /* my output */
+    PetscScalar *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
     int qj,ii;
     for (ii=0;ii<totDim*totDim;ii++) elemMat[ii] = 0;
     /* assemble - on the diagonal (I,I) */
@@ -469,14 +472,13 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 	for (g = 0; g < Nb; ++g) {
 	  const PetscInt j    = foffsets[fieldA] + g; /* Element matrix column */
 	  const PetscInt fOff = i*totDim + j;
-	  for (qj=0;qj<blockDim.x;qj++) {
+	  for (qj=0;qj<Nq;qj++) {
 	    const PetscReal *B = TabBD[fieldA][0], *D = TabBD[fieldA][1], *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim], *DJq = &D[qj*Nb*dim];
 	    for (d = 0; d < dim; ++d) {
 	      elemMat[fOff] += DIq[f*dim+d]*(*g2)[qj][0][fieldA][d]*BJq[g];
 	      for (d2 = 0; d2 < dim; ++d2) {
 		elemMat[fOff] += DIq[f*dim + d]*(*g3)[qj][0][fieldA][d][d2]*DJq[g*dim + d2];
 	      }
-	      // if (blockIdx.x==0 && f==Nb-1 && g==Nb-1 && fOff==27) printf("%d.%d.%d mat[%d]=%20.13e D=%20.13e g2=%20.13e B=%20.13e. g3=%20.13e %20.13e %g\n",blockIdx.x,fieldA,d,fOff,elemMat[fOff],DIq[f*dim+d],(*g2)[qj][fieldA][d],BJq[g],(*g3)[qj][fieldA][d][0],(*g3)[qj][fieldA][d][1],(*g3)[qj][fieldA][d][2]);
 	    }
 	  }
 	}
@@ -588,7 +590,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
 #endif
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar))); // kernel output
   ii = FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*(1+FP_DIM)*FP_MAX_SUB_THREAD_BLOCKS;
-  PetscPrintf(PETSC_COMM_SELF,"Call land_kernel with %g kB shared memory\n",(PetscReal)ii*sizeof(PetscReal)/1024.0);
+  /* PetscPrintf(PETSC_COMM_SELF,"Call land_kernel with %D words shared memory\n",ii); */
   land_kernel<<<numGCells,Nq*num_sub_blocks,ii*sizeof(PetscReal)>>>(nip,dim,totDim,numGCells,Nf,Nb,num_sub_blocks,d_vj,d_Jj,d_invJj,d_nu_m0_ma,d_invMass,d_Eq_m,
 								    d_TabBD, d_quadWeights, d_foffsets, IPDataGlobalDevice, d_wiGlobal, d_elemMats);
   CHECK_LAUNCH_ERROR();
@@ -742,31 +744,33 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
       }
     }
   }
-
-  ierr = PetscFree(elemMats);CHKERRQ(ierr);
   if (0) {
     PetscScalar *elMat;
     for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
-      PetscPrintf(PETSC_COMM_WORLD,"E mat (cuda)\n");
-      for (fieldA = 0; fieldA < Nf; ++fieldA) {
-	int fieldB; PetscInt        fOff,f,g;
-	for (fieldB = 0; fieldB < Nf; ++fieldB) {
-	  for (f = 0; f < Nb; ++f) {
-	    for (g = 0; g < Nb; ++g) {
-	      const PetscInt i = fieldA*Nb + f;
-	      const PetscInt j = fieldB*Nb + g; /* Element matrix column */
-	      fOff = i*totDim + j;
-	      PetscPrintf(PETSC_COMM_WORLD,"%20.13e ",elMat[fOff]);
+      if (ej==4) {
+	PetscPrintf(PETSC_COMM_WORLD,"E mat (cuda) cStart=%D\n",cStart);
+	for (fieldA = 0; fieldA < Nf; ++fieldA) {
+	  int fieldB; PetscInt        fOff,f,g;
+	  for (fieldB = 0; fieldB < Nf; ++fieldB) {
+	    for (f = 0; f < Nb; ++f) {
+	      for (g = 0; g < Nb; ++g) {
+		const PetscInt i = fieldA*Nb + f;
+		const PetscInt j = fieldB*Nb + g; /* Element matrix column */
+		fOff = i*totDim + j;
+		PetscPrintf(PETSC_COMM_WORLD,"%20.13e ",elMat[fOff]);
+	      }
+	      PetscPrintf(PETSC_COMM_WORLD," -- last matrix offset = %D\n",fOff);
 	    }
-	    PetscPrintf(PETSC_COMM_WORLD," -- last matrix offset = %D\n",fOff);
+	    PetscPrintf(PETSC_COMM_WORLD,"\n");
 	  }
 	  PetscPrintf(PETSC_COMM_WORLD,"\n");
 	}
 	PetscPrintf(PETSC_COMM_WORLD,"\n");
+	
       }
-      PetscPrintf(PETSC_COMM_WORLD,"\n");
     } /* ej cells loop */
   }
+  ierr = PetscFree(elemMats);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
