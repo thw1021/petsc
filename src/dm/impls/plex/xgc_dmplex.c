@@ -389,6 +389,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   ierr = PetscFEGetQuadrature(ctx->fe[0], &quad);CHKERRQ(ierr);
   ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, &quadPoints, &quadWeights);CHKERRQ(ierr);
   if (Nb!=Nq) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq %D %D over integration or simplices?",Nb,Nq);
+  if (Nq >FP_MAX_NQ) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %D > FP_MAX_NQ (%D)",Nq,FP_MAX_NQ);
   globNip = numGCells*Nq;
   globNipVec = globNip + !!(globNip%(LAND_VL*LAND_VL2));
   flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nf*Nf + 165.);
@@ -529,7 +530,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   if (!JacP) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Only Jacobians, not matrix free");
 #if defined(PETSC_HAVE_CUDA)
   if (ctx->useCUDA) {
-    ierr = FPLandauCUDAJacobian(plex,quad,foffsets,nu_m0_ma,invMass,Eq_m,&IPDataGlobal,wiGlobal,ctx->numThreadsSubBlocks,ctx->events,JacP);
+    ierr = FPLandauCUDAJacobian(plex,quad,foffsets,nu_m0_ma,invMass,Eq_m,&IPDataGlobal,wiGlobal,ctx->subThreadBlockSize,ctx->events,JacP);
     CHKERRQ(ierr);
   } else
 #endif
@@ -1875,7 +1876,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ctx->n_0 = 1.e20;        /* typical plasma n, but could set it to 1 */
   ctx->Ez = 0;
   ctx->v_0 = 1; /* in electron thermal velocity */
-  ctx->numThreadsSubBlocks = 1;
+  ctx->subThreadBlockSize = 1;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
   ctx->useCUDA = PETSC_TRUE;
@@ -1980,7 +1981,8 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   }
   /* ierr = PetscInfo2(dummy, "Phase: electron radius = %g, ion radius = %g\n",ctx->e_radius,ctx->i_radius);CHKERRQ(ierr); */
   if (ctx->sphere && (ctx->e_radius <= ctx->i_radius || ctx->radius <= ctx->e_radius)) SETERRQ3(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"bad radii: %g < %g < %g",ctx->i_radius,ctx->e_radius,ctx->radius);
-  ierr = PetscOptionsInt("-num_threads_sub_blocks", "Number of threads in CUDA integration point subblock", "xgc_dmplex.c", ctx->numThreadsSubBlocks, &ctx->numThreadsSubBlocks, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-sub_thread_block_size", "Number of threads in CUDA integration point subblock", "xgc_dmplex.c", ctx->subThreadBlockSize, &ctx->subThreadBlockSize, NULL);CHKERRQ(ierr);
+  if (ctx->subThreadBlockSize > FP_MAX_SUB_THREAD_BLOCKS) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"num sub threads %D > MAX %D",ctx->subThreadBlockSize,FP_MAX_SUB_THREAD_BLOCKS);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   for (ii=ctx->num_species;ii<FP_MAX_SPECIES;ii++) ctx->masses[ii] = ctx->thermal_temps[ii]  = ctx->charges[ii] = 0;
   ierr = PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->num_species>2 ? ctx->masses[2]/1.6720e-27 : 0);CHKERRQ(ierr);
@@ -2185,8 +2187,10 @@ PetscErrorCode DMPlexFPPrintNorms(Vec X, PetscInt stepi)
   ierr = DMDestroy(&plexv);CHKERRQ(ierr);
   if (ctx->num_species>1) {
     if (dim==2) {
-      PetscPrintf(PETSC_COMM_WORLD, "\n\t%3D) Total: charge density=%21.13e, momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)\n",
+      PetscPrintf(PETSC_COMM_WORLD, "\n\t%3D) Total: charge density=%21.13e, momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)",
                   stepi,densitytot,zmomentumtot,energytot,ctx->masses[1]/ctx->masses[0],cEnd-cStart);
+      if (ctx->useCUDA) PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
+      else PetscPrintf(PETSC_COMM_WORLD,"\n");
     } else {
       PetscPrintf(PETSC_COMM_WORLD, "\n\t%3D) Total: charge density=%21.13e, x-momentum=%21.13e, y-momentum=%21.13e, z-momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)\n",
                   stepi,densitytot,xmomentumtot,ymomentumtot,zmomentumtot,energytot,ctx->masses[1]/ctx->masses[0],cEnd-cStart);
