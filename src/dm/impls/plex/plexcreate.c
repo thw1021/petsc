@@ -2150,11 +2150,52 @@ PetscErrorCode DMPlexCreateSphereMesh(MPI_Comm comm, PetscInt dim, PetscBool sim
   PetscFunctionReturn(0);
 }
 
+typedef void (*TPSEvaluateFunc)(const PetscReal[], PetscReal*, PetscReal[], PetscReal(*)[3]);
+
 /*
-  The implicit surface is
+ The Schwarz P implicit surface is
 
      f(x) = cos(x0) + cos(x1) + cos(x2) = 0
+*/
+static void TPSEvaluate_SchwarzP(const PetscReal y[3], PetscReal *f, PetscReal grad[], PetscReal (*hess)[3])
+{
+  PetscReal c[3] = {PetscCosReal(y[0]), PetscCosReal(y[1]), PetscCosReal(y[2])};
+  PetscReal g[3] = {-PetscSinReal(y[0]), -PetscSinReal(y[1]), -PetscSinReal(y[2])};
+  f[0] = c[0] + c[1] + c[2];
+  for (PetscInt i=0; i<3; i++) {
+    grad[i] = g[i];
+    for (PetscInt j=0; j<3; j++) {
+      hess[i][j] = (i == j) ? -c[i] : 0.;
+    }
+  }
+}
 
+/*
+ The Gyroid implicit surface is
+
+ f(x,y,z) = sin(pi * x) * cos (pi * (y + 1/2))  + sin(pi * (y + 1/2)) * cos(pi * (z + 1/4)) + sin(pi * (z + 1/4)) * cos(pi * x)
+
+*/
+static void TPSEvaluate_Gyroid(const PetscReal y[3], PetscReal *f, PetscReal grad[], PetscReal (*hess)[3])
+{
+  PetscReal s[3] = {PetscSinReal(PETSC_PI * y[0]), PetscSinReal(PETSC_PI * (y[1] + .5)), PetscSinReal(PETSC_PI * (y[2] + .25))};
+  PetscReal c[3] = {PetscCosReal(PETSC_PI * y[0]), PetscCosReal(PETSC_PI * (y[1] + .5)), PetscCosReal(PETSC_PI * (y[2] + .25))};
+  f[0] = s[0] * c[1] + s[1] * c[2] + s[2] * c[0];
+  grad[0] = PETSC_PI * (c[0] * c[1] - s[2] * s[0]);
+  grad[1] = PETSC_PI * (c[1] * c[2] - s[0] * s[1]);
+  grad[2] = PETSC_PI * (c[2] * c[0] - s[1] * s[2]);
+  hess[0][0] = -PetscSqr(PETSC_PI) * (s[0] * c[1] + s[2] * c[0]);
+  hess[0][1] = -PetscSqr(PETSC_PI) * (c[0] * s[1]);
+  hess[0][2] = -PetscSqr(PETSC_PI) * (c[2] * s[0]);
+  hess[1][0] = -PetscSqr(PETSC_PI) * (s[1] * c[2] + s[0] * c[1]);
+  hess[1][1] = -PetscSqr(PETSC_PI) * (c[1] * s[2]);
+  hess[2][2] = -PetscSqr(PETSC_PI) * (c[0] * s[1]);
+  hess[2][0] = -PetscSqr(PETSC_PI) * (s[2] * c[0] + s[1] * c[2]);
+  hess[2][1] = -PetscSqr(PETSC_PI) * (c[2] * s[0]);
+  hess[2][2] = -PetscSqr(PETSC_PI) * (c[1] * s[2]);
+}
+
+/*
    We wish to solve
 
          min_y || y - x ||^2  subject to f(y) = 0
@@ -2175,18 +2216,17 @@ PetscErrorCode DMPlexCreateSphereMesh(MPI_Comm comm, PetscInt dim, PetscBool sim
 
    Here, we compute the residual and Jacobian of this system.
 */
-static void TPSNearestPointResJac_SchwarzP(const PetscScalar x[], const PetscScalar y[], PetscScalar res[], PetscScalar J[])
+static void TPSNearestPointResJac(TPSEvaluateFunc feval, const PetscScalar x[], const PetscScalar y[], PetscScalar res[], PetscScalar J[])
 {
-  PetscReal c[3] = {PetscCosReal(PetscRealPart(y[0])), PetscCosReal(PetscRealPart(y[1])), PetscCosReal(PetscRealPart(y[2]))};
-  PetscReal g[3] = {-PetscSinReal(PetscRealPart(y[0])), -PetscSinReal(PetscRealPart(y[1])), -PetscSinReal(PetscRealPart(y[2]))};
-  PetscReal n[3] = {g[0], g[1], g[2]};
+  PetscReal yreal[3] = {PetscRealPart(y[0]), PetscRealPart(y[1]), PetscRealPart(y[2])};
   PetscReal d[3] = {PetscRealPart(y[0] - x[0]), PetscRealPart(y[1] - x[1]), PetscRealPart(y[2] - x[2])};
-  PetscReal norm = PetscSqrtReal(PetscSqr(n[0]) + PetscSqr(n[1]) + PetscSqr(n[2]));
-  PetscReal n_y[3][3] = {}, norm_y[3], nd, nd_y[3], sign;
+  PetscReal f, grad[3], n[3], n_y[3][3], norm, norm_y[3], nd, nd_y[3], sign;
 
-  // Derivative of n with respect to y; only the diagonal is nonzero at this point
+  feval(yreal, &f, grad, n_y);
+
+  for (PetscInt i=0; i<3; i++) n[i] = grad[i];
+  norm = PetscSqrtReal(PetscSqr(n[0]) + PetscSqr(n[1]) + PetscSqr(n[2]));
   for (PetscInt i=0; i<3; i++) {
-    n_y[i][i] = -c[i];
     norm_y[i] = 1. / norm * n[i] * n_y[i][i];
   }
 
@@ -2211,12 +2251,12 @@ static void TPSNearestPointResJac_SchwarzP(const PetscScalar x[], const PetscSca
   nd = n[0] * d[0] + n[1] * d[1] + n[2] * d[2];
   for (PetscInt i=0; i<3; i++) nd_y[i] = n[i] + n_y[0][i] * d[0] + n_y[1][i] * d[1] + n_y[2][i] * d[2];
 
-  res[0] = c[0] + c[1] + c[2];
+  res[0] = f;
   res[1] = d[1] - 2 * n[1] * nd;
   res[2] = d[2] - 2 * n[2] * nd;
   // J[j][i] is J_{ij} (column major)
   for (PetscInt j=0; j<3; j++) {
-    J[0 + j*3] = g[j];
+    J[0 + j*3] = grad[j];
     J[1 + j*3] = (j == 1)*1. - 2 * (n_y[1][j] * nd + n[1] * nd_y[j]);
     J[2 + j*3] = (j == 2)*1. - 2 * (n_y[2][j] * nd + n[2] * nd_y[j]);
   }
@@ -2225,7 +2265,7 @@ static void TPSNearestPointResJac_SchwarzP(const PetscScalar x[], const PetscSca
 /*
    Project x to the nearest point on the implicit surface using Newton's method.
 */
-static PetscErrorCode TPSNearestPoint_SchwarzP(PetscScalar x[])
+static PetscErrorCode TPSNearestPoint(TPSEvaluateFunc feval, PetscScalar x[])
 {
   PetscScalar y[3] = {x[0], x[1], x[2]}; // Initial guess
   PetscErrorCode ierr;
@@ -2234,7 +2274,7 @@ static PetscErrorCode TPSNearestPoint_SchwarzP(PetscScalar x[])
   for (PetscInt iter=0; iter<10; iter++) {
     PetscScalar res[3], J[9];
     PetscReal resnorm;
-    TPSNearestPointResJac_SchwarzP(x, y, res, J);
+    TPSNearestPointResJac(feval, x, y, res, J);
     resnorm = PetscSqrtReal(PetscSqr(PetscRealPart(res[0])) + PetscSqr(PetscRealPart(res[1])) + PetscSqr(PetscRealPart(res[2])));
     if (0) { // Turn on this monitor if you need to confirm quadratic convergence
       ierr = PetscPrintf(PETSC_COMM_SELF, "[%D] res [%g %g %g]\n", iter, PetscRealPart(res[0]), PetscRealPart(res[1]), PetscRealPart(res[2]));CHKERRQ(ierr);
@@ -2409,7 +2449,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, const PetscInt extent[], Petsc
     ierr = VecGetLocalSize(X, &m);CHKERRQ(ierr);
     ierr = VecGetArray(X, &x);CHKERRQ(ierr);
     for (PetscInt i=0; i<m; i+=3) {
-      ierr = TPSNearestPoint_SchwarzP(&x[i]);CHKERRQ(ierr);
+      ierr = TPSNearestPoint(TPSEvaluate_SchwarzP, &x[i]);CHKERRQ(ierr);
     }
     ierr = VecRestoreArray(X, &x);CHKERRQ(ierr);
   }
@@ -2671,11 +2711,9 @@ PetscErrorCode DMPlexCreateGyroidMesh(MPI_Comm comm, const PetscInt extent[], co
     ierr = DMGetCoordinatesLocal(*dm, &X);CHKERRQ(ierr);
     ierr = VecGetLocalSize(X, &m);CHKERRQ(ierr);
     ierr = VecGetArray(X, &x);CHKERRQ(ierr);
-#if 0
     for (PetscInt i=0; i<m; i+=3) {
-      ierr = TPSNearestPoint_SchwarzP(&x[i]);CHKERRQ(ierr);
+      ierr = TPSNearestPoint(TPSEvaluate_Gyroid, &x[i]);CHKERRQ(ierr);
     }
-#endif
     ierr = VecRestoreArray(X, &x);CHKERRQ(ierr);
   }
 
