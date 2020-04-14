@@ -1,24 +1,42 @@
 /* Internal and DMStag-specific functions related to multigrid */
 #include <petsc/private/dmstagimpl.h>
 
-/* Perform matrix-free transfer between a fine and coarse DM. Despite
-   the name, this is doing a restriction */
-PETSC_INTERN PetscErrorCode DMStagInterpolate(DM dmf,Vec xf,DM dmc,Vec xc)
+/*@C
+  DMStagRestrictSimple - restricts data from a fine to a coarse DMStag, in the simplest way
+
+  Values on coarse cells are averages of all fine cells that they cover.
+  Thus, values on vertices are injected, values on edges are averages
+  of the underlying two fine edges, and and values on elements in
+  d dimensions are averages of 2^d underlying elements.
+
+  Input Arguments:
+  + dmf - fine DM
+  . xf - data on fine DM
+  - dmc - coarse DM
+
+  Output Arguments:
+  - xc - data on coarse DM
+
+  Level: advanced
+
+  .seealso: DMRestrict(), DMCoarsen(), DMSTAG, DMCreateInjection()
+@*/
+PetscErrorCode DMStagRestrictSimple(DM dmf,Vec xf,DM dmc,Vec xc)
 {
   PetscErrorCode ierr;
-  PetscInt dim;
+  PetscInt       dim;
+
+  PetscFunctionBegin;
   ierr = DMGetDimension(dmf,&dim);CHKERRQ(ierr);
   switch (dim) {
     case 1:
-      SETERRQ1(PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %D",dim);
+      ierr = DMStagRestrictSimple_1d(dmf,xf,dmc,xc);CHKERRQ(ierr);
       break;
     case 2:
-      ierr = DMStagInterpolate_2d(dmf,xf,dmc,xc);CHKERRQ(ierr);
-      break;
-    case 3:
-      SETERRQ1(PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %D",dim);
+      ierr = DMStagRestrictSimple_2d(dmf,xf,dmc,xc);CHKERRQ(ierr);
       break;
     default:
+      SETERRQ1(PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %D",dim);
       break;
   }
   PetscFunctionReturn(0);

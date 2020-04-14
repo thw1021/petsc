@@ -265,7 +265,7 @@ static PetscErrorCode DMCoarsen_Stag(DM dm,MPI_Comm comm,DM *dmc)
   ierr = DMSetOptionsPrefix(*dmc,((PetscObject)dm)->prefix);CHKERRQ(ierr);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   for (d=0; d<dim; ++d) {
-    if (stag->N[d] % 2 != 0) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"coarsening  not supported except for even numbers of elements in each dimension ");
+    if (stag->N[d] % 2 != 0) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"coarsening not supported except for even numbers of elements in each dimension ");
   }
   ierr = DMStagSetGlobalSizes(*dmc,stag->N[0] / 2,stag->N[1] / 2,stag->N[2] / 2);CHKERRQ(ierr);
   {
@@ -274,7 +274,7 @@ static PetscErrorCode DMCoarsen_Stag(DM dm,MPI_Comm comm,DM *dmc)
       PetscInt i;
       ierr = PetscMalloc1(stag->nRanks[d],&l[d]);CHKERRQ(ierr);
       for (i=0; i<stag->nRanks[d]; ++i) {
-        if (stag->l[d][i] % 2 != 0) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"coarsening  not supported except for even els/rank");
+        if (stag->l[d][i] % 2 != 0) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"coarsening not supported except for an even number of elements in each direction on each rank");
         l[d][i] = stag->l[d][i] / 2; /* Just halve everything */
       }
     }
@@ -284,42 +284,30 @@ static PetscErrorCode DMCoarsen_Stag(DM dm,MPI_Comm comm,DM *dmc)
     }
   }
   ierr = DMSetUp(*dmc);CHKERRQ(ierr);
-  /* For now, we use a special DMStagInterpolate() function to coarsen coordinates */
-  if (dm->coordinates) {
-    DM cdm,cdmc;
-    PetscBool isstag,isprod;
-    Vec coordinatesLocal;
 
-    ierr = DMGetCoordinateDM(dm,&cdm);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)cdm,DMSTAG,&isstag);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)cdm,DMPRODUCT,&isprod);CHKERRQ(ierr);
+  if (dm->coordinateDM) { /* Note that with product coordinates, dm->coordinates = NULL, so we check the DM */
+    DM        coordinate_dm,coordinate_dmc;
+    PetscBool isstag,isprod;
+
+    ierr = DMGetCoordinateDM(dm,&coordinate_dm);CHKERRQ(ierr);
+    ierr = PetscObjectTypeCompare((PetscObject)coordinate_dm,DMSTAG,&isstag);CHKERRQ(ierr);
+    ierr = PetscObjectTypeCompare((PetscObject)coordinate_dm,DMPRODUCT,&isprod);CHKERRQ(ierr);
     if (isstag) {
-      //Mat II;
-      /* force creation of coordinates (global/local) on coarse DM */
-      ierr = DMStagSetUniformCoordinatesExplicit(*dmc,0.0,1.0,0.0,1.0,0.0,1.0);CHKERRQ(ierr);
-      ierr = DMGetCoordinateDM(*dmc,&cdmc);CHKERRQ(ierr);
-      //ierr = DMCreateInterpolation(cdmc,cdm,&II,NULL);CHKERRQ(ierr);
-      //ierr = MatRestrict(II,dm->coordinates,(*dmc)->coordinates);CHKERRQ(ierr);
-      //ierr = MatDestroy(&II);CHKERRQ(ierr);
-      ierr = DMStagInterpolate(cdm,dm->coordinates,cdmc,(*dmc)->coordinates);CHKERRQ(ierr);
-      /* global-to-local for coordinates? */
-      ierr = DMGetCoordinatesLocal(*dmc,&coordinatesLocal);CHKERRQ(ierr);
-      ierr = DMGlobalToLocal(cdmc,(*dmc)->coordinates,INSERT_VALUES,coordinatesLocal);CHKERRQ(ierr);
+      ierr = DMStagSetUniformCoordinatesExplicit(*dmc,0.0,0.0,0.0,0.0,0.0,0.0);CHKERRQ(ierr); /* Coordinates will be overwritten */
+      ierr = DMGetCoordinateDM(*dmc,&coordinate_dmc);CHKERRQ(ierr);
+      ierr = DMStagRestrictSimple(coordinate_dm,dm->coordinates,coordinate_dmc,(*dmc)->coordinates);CHKERRQ(ierr);
     } else if (isprod) {
-      PetscInt dim,d;
-      /* force creation of coordinates (global/local) on coarse DM */
-      ierr = DMStagSetUniformCoordinatesProduct(*dmc,0.0,1.0,0.0,1.0,0.0,1.0);CHKERRQ(ierr);
-      ierr = DMGetCoordinateDM(*dmc,&cdmc);CHKERRQ(ierr);
-      /* global-to-local for coordinates? */
-      ierr = DMGetDimension(*dmc,&dim);CHKERRQ(ierr);
+      ierr = DMStagSetUniformCoordinatesProduct(*dmc,0.0,0.0,0.0,0.0,0.0,0.0);CHKERRQ(ierr); /* Coordinates will be overwritten */
+      ierr = DMGetCoordinateDM(*dmc,&coordinate_dmc);CHKERRQ(ierr);
       for (d=0; d<dim; ++d) {
-        DM prod,cprod;
-        ierr = DMProductGetDM(cdmc,d,&prod);CHKERRQ(ierr);
-        ierr = DMGetCoordinateDM(prod,&cprod);CHKERRQ(ierr);
-        ierr = DMGetCoordinatesLocal(prod,&coordinatesLocal);CHKERRQ(ierr);
-        ierr = DMGlobalToLocal(cprod,prod->coordinates,INSERT_VALUES,coordinatesLocal);CHKERRQ(ierr);
+        DM subdm_coarse,subdm_coord_coarse,subdm_fine,subdm_coord_fine;
+
+        ierr = DMProductGetDM(coordinate_dm,d,&subdm_fine);CHKERRQ(ierr);
+        ierr = DMGetCoordinateDM(subdm_fine,&subdm_coord_fine);CHKERRQ(ierr);
+        ierr = DMProductGetDM(coordinate_dmc,d,&subdm_coarse);CHKERRQ(ierr);
+        ierr = DMGetCoordinateDM(subdm_coarse,&subdm_coord_coarse);CHKERRQ(ierr);
+        ierr = DMStagRestrictSimple(subdm_coord_fine,subdm_fine->coordinates,subdm_coord_coarse,subdm_coarse->coordinates);CHKERRQ(ierr);
       }
-      SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMPRODUCT coordinates not supported");
     } else SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unknown coordinate DM type");
   }
   PetscFunctionReturn(0);
