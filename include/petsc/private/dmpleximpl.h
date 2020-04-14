@@ -612,10 +612,10 @@ PETSC_INTERN PetscErrorCode DMPlexBasisTransformApply_Internal(DM, const PetscRe
 PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErrorCode (**)(Mat, PetscReal, Vec, Vec, PetscReal, IS, void*), void **);
 
 /* the context */
-#define FP_MAX_SPECIES 10
-#define FP_MAX_NQ 25 /* Q4 */
+#define FP_MAX_SPECIES 3
+#define FP_MAX_NQ 25 /* Q3 */
 #define FP_DIM 2
-#define FP_MAX_SUB_THREAD_BLOCKS 4
+#define FP_MAX_SUB_THREAD_BLOCKS 8
 typedef struct {
   PetscBool     interpolate;                  /* Generate intermediate mesh elements */
   PetscBool     simplex;
@@ -667,6 +667,6 @@ typedef struct {
   void         *data;
   PetscBool     aux_bool;  /* helper */
   PetscBool     useCUDA;
-  PetscInt      numThreadsSubBlocks;
+  PetscInt      subThreadBlockSize;
 } LandCtx;
 #endif /* _PLEXIMPL_H */
