@@ -744,6 +744,13 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
 	PetscScalar *elMat = &elemMats[indices[j]*totDim*totDim];
 	/* assemble matrix */
 	DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);
+	if (0) {
+	  PetscInt numindices,*indices;
+	  ierr = DMPlexGetClosureIndices(plex, section, globalSection,ej,&numindices,&indices,NULL);CHKERRQ(ierr);
+	  ierr = PetscPrintf(PETSC_COMM_SELF,"Element #%D\n",ej-cStart);CHKERRQ(ierr);
+	  ierr = PetscIntView(numindices,indices,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
+	  ierr = DMPlexRestoreClosureIndices(plex, section, globalSection,ej,&numindices,&indices,NULL);CHKERRQ(ierr);
+	}
       }
     }
   }
