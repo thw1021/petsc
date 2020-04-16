@@ -309,7 +309,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   ierr = VecNorm(F,NORM_2,&fnorm);CHKERRQ(ierr);             /* fnorm <- || F || */
   SNESCheckFunctionNorm(snes,fnorm);
   ierr = VecNorm(X,NORM_2,&xnorm);CHKERRQ(ierr);             /* fnorm <- || F || */
-  xnorm *= 5.0E-6;  /* xnorm temporarily adjusted - Heeho */
+/*  xnorm *= 5.0E-6;   xnorm temporarily adjusted - Heeho */
   ierr       = PetscObjectSAWsTakeAccess((PetscObject)snes);CHKERRQ(ierr);
   snes->norm = fnorm;
   ierr       = PetscObjectSAWsGrantAccess((PetscObject)snes);CHKERRQ(ierr);
