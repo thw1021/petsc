@@ -354,7 +354,10 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 		 PetscScalar elemMats_out[])
 {
   extern __shared__ PetscReal g2_g3_qi[]; // Nq * { [NSubBlocks][Nf][dim] ; [NSubBlocks][Nf][dim][dim] } 
-  const PetscInt  myqi = threadIdx.x/nSubBlocks, myblock = threadIdx.x%nSubBlocks, Nq = blockDim.x/nSubBlocks, myelem = blockIdx.x, jpidx = myqi + myelem * Nq; // local IP, my block in IP, number of IP/cell, global index into my IP
+  const PetscInt  Nq = blockDim.x/nSubBlocks, myelem = blockIdx.x;
+  //const PetscInt  myqi = threadIdx.x/nSubBlocks, myblock = threadIdx.x%nSubBlocks;
+  const PetscInt  myqi = threadIdx.x%Nq, myblock = threadIdx.x/Nq;
+  const PetscInt  jpidx = myqi + myelem * Nq;
   const PetscInt  pntsz = dim*Nf + Nf + dim; // x[dim], f[Ns], df[dim*Nf]
   const PetscInt  locsz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = myblock*locsz, ip_end = (myblock+1)*locsz > nip ? nip : (myblock+1)*locsz; /* this could be wrong with very few global IPs */
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2_g3_qi[0];
@@ -586,7 +589,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
-  ierr = PetscLogFlops(flops*nip);CHKERRQ(ierr);
+  ierr = PetscLogGpuFlops(flops*nip);CHKERRQ(ierr);
 #endif
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar))); // kernel output
   ii = FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*(1+FP_DIM)*FP_MAX_SUB_THREAD_BLOCKS;
