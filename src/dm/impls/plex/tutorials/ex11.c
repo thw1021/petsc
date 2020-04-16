@@ -332,8 +332,8 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   E = ctx->Ez; /* keep real E */
   ratio = E/J/spit_eta;
   done = (old_ratio-ratio < 1.e-4 && stepi>20 &&0);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e J= %10.3e J_re=%10.3e %.2g%% T_e(t)=%10.3e T_e(0)=%10.3e (kev) E/J to eta ratio=%g (diff=%g)\n",
-                     done ? "DONE" : "testSpitzer",stepi,time,J,J_re,100*J_re/J,Te_kev,ctx->thermal_temps[0]*ctx->k*kev_joul,ratio,old_ratio-ratio);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e E= %10.3e J= %10.3e J_re=%10.3e %.2g%% T_e(t)=%10.3e T_e(0)=%10.3e (kev) E/J to eta ratio=%g (diff=%g)\n",
+                     done ? "DONE" : "testSpitzer",stepi,time,E,J,J_re,100*J_re/J,Te_kev,ctx->thermal_temps[0]*ctx->k*kev_joul,ratio,old_ratio-ratio);CHKERRQ(ierr);
   if (done) {
     ierr = TSSetConvergedReason(ts,TS_CONVERGED_USER);CHKERRQ(ierr);
     old_ratio = 0;
@@ -554,7 +554,7 @@ static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, 
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode EConst(Vec X,  Vec X_t, PetscInt step, PetscReal time, LandCtx *ctx, PetscReal *a_E)
+static PetscErrorCode EConstant(Vec X,  Vec X_t, PetscInt step, PetscReal time, LandCtx *ctx, PetscReal *a_E)
 {
   PetscFunctionBegin;
   *a_E = ctx->Ez;
@@ -839,7 +839,8 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   ierr = PetscFunctionListAdd(&testlist,"bimaxwellian",&testShift);CHKERRQ(ierr);
   ierr = PetscStrcpy(testname,"none");CHKERRQ(ierr);
   /* electric field function - can switch at runtime */
-  rectx->E = ESpitzer;
+  //rectx->E = ESpitzer;
+  rectx->E = EConstant;
   ierr = PetscOptionsBegin(PETSC_COMM_SELF, prefix, "Options for Runaway/seed electron model", "none");CHKERRQ(ierr);
   ierr = PetscOptionsReal("-plot_dt", "Plotting interval", "xgc_dmplex.c", rectx->plotDt, &rectx->plotDt, NULL);CHKERRQ(ierr);
   if (rectx->plotDt < 0) rectx->plotDt = 1e30;
