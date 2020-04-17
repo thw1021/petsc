@@ -39,7 +39,7 @@ typedef struct REctx_struct {
 
 static const PetscReal kev_joul = 6.241506479963235e+15;
 
-#define RE_CUT 4.
+#define RE_CUT 5.
 /* < v, ru_e*v*q > */
 static void f0_j_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
@@ -282,6 +282,9 @@ static PetscReal CalculateE(PetscReal Tev, PetscReal n, PetscReal lnLambda, Pets
     PetscReal Ec;
     Ec = n*lnLambda*pow(e,3) / (4*M_PI*pow(eps0,2)*m*c*c);
     *E = Ec;
+    PetscReal betath = sqrt(2*Tev*e/(m*c*c));
+    PetscReal j0 = Ec * 7/(sqrt(2)*2) * pow(betath,3) * n * e * c;
+    PetscPrintf(PETSC_COMM_WORLD, "CalculateE j0=%g Ec = %g\n",j0,Ec);
   } else {
     PetscReal Ed,vth;
     vth = PetscSqrtReal(8*Tev*e/(m*M_PI));
