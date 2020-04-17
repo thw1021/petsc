@@ -539,7 +539,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventBegin(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
 #endif
-    ierr = DMPlexComputeCellGeometryFEM(plex, cStart+ej, quad, vj, Jj, invJj, detJj);CHKERRQ(ierr);
+    ierr = DMPlexComputeCellGeometryFEM(plex, ej, quad, vj, Jj, invJj, detJj);CHKERRQ(ierr);
     ierr = PetscMemzero(elemMat, totDim *totDim * sizeof(PetscScalar));CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
@@ -550,7 +550,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 #endif
       PetscScalar     gg2[FP_MAX_SPECIES][3],gg3[FP_MAX_SPECIES][3][3];
       PetscScalar     g2[FP_MAX_SPECIES][3], g3[FP_MAX_SPECIES][3][3];
-      const PetscInt  nip = numGCells*Nq, jpidx = Nq*ej + qj; /* length of inner global interation, outer integration point */
+      const PetscInt  nip = numGCells*Nq, jpidx = Nq*(ej-cStart) + qj; /* length of inner global interation, outer integration point */
       PetscInt        d2,dp,d3,fieldB;
       const PetscReal wj = wiGlobal[jpidx];
       const PetscReal * __restrict__ x0 = IPDataGlobal.x[0];
@@ -679,29 +679,17 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
-    /* debug */
-    if (ctx->verbose > 4) {
-      PetscPrintf(PETSC_COMM_WORLD,"E mat\n");
-      for (fieldA = 0; fieldA < Nf; ++fieldA) {
-        int fieldB; PetscInt        fOff,f,g;
-        for (fieldB = 0; fieldB < Nf; ++fieldB) {
-          for (f = 0; f < Nb; ++f) {
-            for (g = 0; g < Nb; ++g) {
-              const PetscInt i = fieldA*Nb + f;
-              const PetscInt j = fieldB*Nb + g; /* Element matrix column */
-              fOff = i*totDim + j;
-              PetscPrintf(PETSC_COMM_WORLD,"%20.13e ",elemMat[fOff]);
-            }
-            PetscPrintf(PETSC_COMM_WORLD," -- last matrix offset = %D\n",fOff);
-          }
-          PetscPrintf(PETSC_COMM_WORLD,"\n");
-        }
-        PetscPrintf(PETSC_COMM_WORLD,"\n");
-      }
-      PetscPrintf(PETSC_COMM_WORLD,"\n");
-    }
     /* assemble matrix */
-    ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, cStart+ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
+    if (0) {
+      PetscInt numindices,*indices;
+      ierr = DMPlexGetClosureIndices(plex, section, globalSection,ej,&numindices,&indices,NULL);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"Element #%D\n",ej-cStart);CHKERRQ(ierr);
+      ierr = PetscIntView(numindices,indices,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
+      ierr = MatSetValues(JacP,numindices,indices,numindices,indices,elemMat,ADD_VALUES);CHKERRQ(ierr);
+      ierr = DMPlexRestoreClosureIndices(plex, section, globalSection,ej,&numindices,&indices,NULL);CHKERRQ(ierr);
+    } else {
+      ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
+    }
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
