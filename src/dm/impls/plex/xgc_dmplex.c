@@ -1290,10 +1290,10 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
   } else {    /* p4est, quads */
     /* Create plex mesh of Landau domain */
     if (!ctx->sphere) {
-      PetscInt    cells[] = {8,8,8};
+      PetscInt    cells[] = {4,4,4};
       PetscReal   lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
-      DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC};
-      if (dim==2) { lo[0] = 0; cells[0] = 4; }
+      DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
+      if (dim==2) { lo[0] = 0; cells[0] = 2; }
       ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, dm);CHKERRQ(ierr);
       ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr); /* needed for periodic */
       if (dim==3) ierr = PetscObjectSetName((PetscObject) *dm, "cube");
@@ -1663,7 +1663,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
   PetscBool        isForest;
   /* Vec              locX; */
   PetscQuadrature  quad;
-  PetscInt         Nq, Nf, *Nb, *Nc, cStart, cEnd, c, dim, qj;
+  PetscInt         Nq, Nf, *Nb, *Nc, cStart, cEnd, c, dim, qj, k;
   /* PetscReal        time = 0; */
   /* PetscTabulation *Tf; */
   PetscScalar     *u, *u_x;
@@ -1697,21 +1697,26 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
     }
     ierr = PetscInfo1(sol, "Phase:%s: Uniform refinement\n",__FUNCT__);
   } else if (type==2) {
-    PetscInt  rCellIdx[2] = {-1,-1}, eCellIdx[64], iCellIdx[64], eMaxIdx = -1, iMaxIdx = -1;
+    PetscInt  rCellIdx[] = {-1,-1,-1,-1}, eCellIdx[64], iCellIdx[64], eMaxIdx = -1, iMaxIdx = -1, nr = 0, nrmax = dim==3 ? 4 : 2;
     PetscReal minRad = 1.e100, r, eMinRad = 1.e100, iMinRad = 1.e100;
     for (c = 0; c < 64; c++) { eCellIdx[c] = iCellIdx[c] = -1; }
     for (c = cStart; c < cEnd; c++) {
       PetscReal    tt, v0[FP_MAX_NQ*3], detJ[FP_MAX_NQ];
       ierr = DMPlexComputeCellGeometryFEM(plex, c, quad, v0, NULL, NULL, detJ);CHKERRQ(ierr);
       for (qj = 0; qj < Nq; ++qj) {
-        r = PetscSqrtReal(PetscSqr(v0[dim*qj+0]) + PetscSqr(v0[dim*qj+1]));
-        if (r < minRad - 1.e-5) {
+        tt = PetscSqr(v0[dim*qj+0]) + PetscSqr(v0[dim*qj+1]) + PetscSqr(((dim==3) ? v0[dim*qj+2] : 0));
+	r = PetscSqrtReal(tt);
+        if (r < minRad - 1.e-6) {
           minRad = r;
-          rCellIdx[0]= c;
-          /* ierr = PetscInfo4(sol, "\t\tPhase: adaptToleranceFEM Found first inner r=%e, cell %D, qp %D/%D\n", r, c, qj+1, Nq);CHKERRQ(ierr); */
-        } else if ((r-minRad) < 1.e-8 && c != rCellIdx[0]) {
-          /* ierr = PetscInfo5(sol, "\t\t\tPhase: adaptToleranceFEM Found another inner r=%e, cell %D, qp %D/%D, d=%e\n", r, c, qj+1, Nq, r-minRad);CHKERRQ(ierr); */
-          rCellIdx[1]= c;
+	  nr = 0;
+          rCellIdx[nr++]= c;
+          ierr = PetscInfo4(sol, "\t\tPhase: adaptToleranceFEM Found first inner r=%e, cell %D, qp %D/%D\n", r, c, qj+1, Nq);CHKERRQ(ierr);
+        } else if ((r-minRad) < 1.e-8 && nr < nrmax) {
+	  for (k=0;k<nr;k++) if (c == rCellIdx[k]) break;
+	  if (k==nr) {
+	    rCellIdx[nr++]= c;
+	    ierr = PetscInfo5(sol, "\t\t\tPhase: adaptToleranceFEM Found another inner r=%e, cell %D, qp %D/%D, d=%e\n", r, c, qj+1, Nq, r-minRad);CHKERRQ(ierr);
+	  }
         }
         if (ctx->sphere) {
           if ((tt=r-ctx->e_radius) > 0) {
@@ -1738,8 +1743,9 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
         }
       }
     }
-    ierr = DMLabelSetValue(adaptLabel, rCellIdx[0], DM_ADAPT_REFINE);CHKERRQ(ierr);
-    if (rCellIdx[1]!=-1) ierr = DMLabelSetValue(adaptLabel, rCellIdx[1], DM_ADAPT_REFINE);CHKERRQ(ierr);
+    for (k=0;k<nr;k++) {
+      ierr = DMLabelSetValue(adaptLabel, rCellIdx[k], DM_ADAPT_REFINE);CHKERRQ(ierr); 
+    }
     if (ctx->sphere) {
       for (c = 0; c < eMaxIdx; c++) {
         ierr = DMLabelSetValue(adaptLabel, eCellIdx[c], DM_ADAPT_REFINE);CHKERRQ(ierr);
@@ -1765,12 +1771,13 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
       ierr = DMPlexVecGetClosure(cdm, cs, coords, c, &csize, &coef);CHKERRQ(ierr);
       Nv = csize/dim;
       for (nz = d = 0; d < Nv; d++) {
-        const PetscReal z = coef[d*dim + (dim-1)], x = coef[d*dim + 0]; /* fix for 3D */
-        if (x==0 && z==0) doit = 1;             /* refine origin */
-        else if (type==0 && (z < 0 || z > ctx->re_radius)) outside++;   /* first pass don't refine bottom */
+        PetscReal z = coef[d*dim + (dim-1)], x = PetscSqr(coef[d*dim + 0]) + PetscSqr(((dim==3) ? coef[d*dim + 1] : 0));
+	x = PetscSqrtReal(x);
+        if (x < 1e-12 && PetscAbsReal(z)<1e-12) doit = 1;             /* refine origin */
+        else if (type==0 && (z < -1e-12 || z > ctx->re_radius)) outside++;   /* first pass don't refine bottom */
         else if (type==1 && (z > ctx->vperp0_radius1 || z < -ctx->vperp0_radius1)) outside++; /* don't refine outside electron refine radius */
         else if (type==3 && (z > ctx->vperp0_radius2 || z < -ctx->vperp0_radius2)) outside++; /* don't refine outside ion refine radius */
-        if (x==0) nz++;
+        if (x < 1e-12) nz++;
       }
       ierr = DMPlexVecRestoreClosure(cdm, cs, coords, c, &csize, &coef);CHKERRQ(ierr);
       if (doit || (outside==0 && nz)) {
@@ -1880,7 +1887,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
 #pragma omp parallel default(shared) private(hwthread, thread_id)
     {
       thread_id = omp_get_thread_num();
-      hwthread = sched_getcpu();
+      hwthread = -1; //sched_getcpu();
       num_threads = omp_get_num_threads();
       PetscPrintf(PETSC_COMM_SELF,"MPI Rank %03d of %03d on HWThread %03d of Node %s, OMP_threadID %d of %d\n", 0, 1, hwthread, name, thread_id, num_threads);
     }
