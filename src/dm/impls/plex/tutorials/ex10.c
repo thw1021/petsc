@@ -9,7 +9,7 @@ int main(int argc, char **argv)
   DM             dm;
   Vec            X,X_0;
   PetscErrorCode ierr;
-  PetscInt       dim;
+  PetscInt       dim=2;
   TS             ts;
   Mat            J;
   SNES           snes;
@@ -21,7 +21,6 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
-  dim = 2;
   ierr = DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &dm); CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = VecDuplicate(X,&X_0);CHKERRQ(ierr);

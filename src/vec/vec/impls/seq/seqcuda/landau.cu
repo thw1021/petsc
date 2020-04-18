@@ -5,7 +5,6 @@
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
 #include <petsc/private/vecimpl.h>      /* put CUDA stuff in veccuda */
 #include <omp.h>
-#include <sched.h>
 
 // Macro to catch CUDA errors in CUDA runtime calls
 #define CUDA_SAFE_CALL(call)                                          \
@@ -711,14 +710,14 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
     ierr = PetscObjectCompose((PetscObject)JacP,"coloring",(PetscObject)container);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_THREADSAFETY)
     if (1) {
-      int thread_id,hwthread,num_threads;
+      int thread_id,hwthread=-1,num_threads;
       char name[MPI_MAX_PROCESSOR_NAME];
       int resultlength;
       MPI_Get_processor_name(name, &resultlength);
 #pragma omp parallel default(shared) private(hwthread, thread_id)
       {
 	thread_id = omp_get_thread_num();
-	hwthread = sched_getcpu();
+	hwthread = -1; // sched_getcpu();
 	num_threads = omp_get_num_threads();
 	PetscPrintf(PETSC_COMM_SELF,"MPI Rank %03d of %03d on HWThread %03d of Node %s, OMP_threadID %d of %d\n", 0, 1, hwthread, name, thread_id, num_threads);
       }
@@ -738,7 +737,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
     for (colour=0; colour<p; colour++) {
       ierr = ISGetLocalSize(is[colour],&size);CHKERRQ(ierr);
       ierr = ISGetIndices(is[colour],&indices);CHKERRQ(ierr);
-#pragma omp parallel for shared(plex,section,globalSection,JacP,cStart,indices,totDim) private(j) schedule(static)
+      //#pragma omp parallel for shared(plex,section,globalSection,JacP,cStart,indices,totDim) private(j) schedule(static)
       for (j=0; j<size; j++) {
 	PetscInt ej = cStart + indices[j];
 	PetscScalar *elMat = &elemMats[indices[j]*totDim*totDim];
