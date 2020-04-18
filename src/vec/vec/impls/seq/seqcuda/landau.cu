@@ -340,7 +340,9 @@ static PetscErrorCode FPLandPointDataDestroyDevice(FPLandPointDataFlat *ld)
   CUDA_SAFE_CALL(cudaFree(ld->v));
   PetscFunctionReturn(0);
 }
+#if !defined(FP_DIM)
 #define FP_DIM 2
+#endif
 //
 // The GPU Landau kernel
 //
