@@ -1697,7 +1697,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
     }
     ierr = PetscInfo1(sol, "Phase:%s: Uniform refinement\n",__FUNCT__);
   } else if (type==2) {
-    PetscInt  rCellIdx[] = {-1,-1,-1,-1}, eCellIdx[64], iCellIdx[64], eMaxIdx = -1, iMaxIdx = -1, nr = 0, nrmax = dim==3 ? 4 : 2;
+    PetscInt  rCellIdx[] = {-1,-1,-1,-1}, eCellIdx[64], iCellIdx[64], eMaxIdx = -1, iMaxIdx = -1, nr = 0, nrmax = dim==3 ? 8 : 2;
     PetscReal minRad = 1.e100, r, eMinRad = 1.e100, iMinRad = 1.e100;
     for (c = 0; c < 64; c++) { eCellIdx[c] = iCellIdx[c] = -1; }
     for (c = cStart; c < cEnd; c++) {
@@ -1774,7 +1774,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
         PetscReal z = coef[d*dim + (dim-1)], x = PetscSqr(coef[d*dim + 0]) + PetscSqr(((dim==3) ? coef[d*dim + 1] : 0));
 	x = PetscSqrtReal(x);
         if (x < 1e-12 && PetscAbsReal(z)<1e-12) doit = 1;             /* refine origin */
-        else if (type==0 && (z < -1e-12 || z > ctx->re_radius)) outside++;   /* first pass don't refine bottom */
+        else if (type==0 && (z < -1e-12 || z > ctx->re_radius+1e-12)) outside++;   /* first pass don't refine bottom */
         else if (type==1 && (z > ctx->vperp0_radius1 || z < -ctx->vperp0_radius1)) outside++; /* don't refine outside electron refine radius */
         else if (type==3 && (z > ctx->vperp0_radius2 || z < -ctx->vperp0_radius2)) outside++; /* don't refine outside ion refine radius */
         if (x < 1e-12) nz++;
