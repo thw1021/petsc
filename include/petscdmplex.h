@@ -169,6 +169,25 @@ PETSC_EXTERN PetscErrorCode DMPlexRestoreJoin(DM, PetscInt, const PetscInt [], P
 PETSC_EXTERN PetscErrorCode DMPlexGetTransitiveClosure(DM, PetscInt, PetscBool, PetscInt *, PetscInt *[]);
 PETSC_EXTERN PetscErrorCode DMPlexRestoreTransitiveClosure(DM, PetscInt, PetscBool, PetscInt *, PetscInt *[]);
 
+/*E
+   DMPlexTPSType - Type of triply-periodic surface for DMPlex
+
+$  DMPLEX_TPS_SCHWARZ_P - Schwarz Primitive surface, defined by the equation cos(x) + cos(y) + cos(z) = 0.
+$  DMPLEX_TPS_GYROID    - Gyroid surface, defined by the equation sin(x)cos(y) + sin(y)cos(z) + sin(z)cos(x) = 0
+
+   Level: intermediate
+
+   Developer Note:
+   Any additions/changes here MUST also be made in include/petsc/finclude/petscdmplex.h and src/dm/f90-mod/petscdmplex.h
+
+.seealso: DMPlexCreateTPSMesh()
+E*/
+typedef enum {
+  DMPLEX_TPS_SCHWARZ_P,
+  DMPLEX_TPS_GYROID
+} DMPlexTPSType;
+PETSC_EXTERN const char *const DMPlexTPSTypes[];
+
 /* Mesh Generation */
 PETSC_EXTERN PetscErrorCode DMPlexGenerate(DM, const char [], PetscBool , DM *);
 PETSC_EXTERN PetscErrorCode DMPlexGenerateRegister(const char[],PetscErrorCode (*)(DM,PetscBool,DM*),PetscErrorCode (*)(DM,double*,DM*),PetscInt);
@@ -180,8 +199,7 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateSquareBoundary(DM, const PetscReal [], c
 PETSC_EXTERN PetscErrorCode DMPlexCreateCubeBoundary(DM, const PetscReal [], const PetscReal [], const PetscInt []);
 PETSC_EXTERN PetscErrorCode DMPlexCreateBoxMesh(MPI_Comm, PetscInt, PetscBool, const PetscInt[], const PetscReal[], const PetscReal[], const DMBoundaryType[], PetscBool, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateSphereMesh(MPI_Comm, PetscInt, PetscBool, DM *);
-PETSC_EXTERN PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm, const PetscInt[], PetscReal, PetscInt, DM *);
-PETSC_EXTERN PetscErrorCode DMPlexCreateGyroidMesh(MPI_Comm, const PetscInt[], const DMBoundaryType[], PetscReal, PetscInt, DM *);
+PETSC_EXTERN PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm, DMPlexTPSType, const PetscInt[], const DMBoundaryType[], PetscReal, PetscInt, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateHexCylinderMesh(MPI_Comm, PetscInt, DMBoundaryType, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateWedgeCylinderMesh(MPI_Comm, PetscInt, PetscBool, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateWedgeBoxMesh(MPI_Comm, const PetscInt[], const PetscReal[], const PetscReal[], const DMBoundaryType[], PetscBool, PetscBool, DM *);

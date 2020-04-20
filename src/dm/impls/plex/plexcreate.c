@@ -2289,7 +2289,7 @@ static PetscErrorCode TPSNearestPoint(TPSEvaluateFunc feval, PetscScalar x[])
   PetscFunctionReturn(0);
 }
 
-
+const char *const DMPlexTPSTypes[] = {"SCHWARZ_P", "GYROID", "DMPlexTPSType", "DMPLEX_TPS_", NULL};
 /*@
   DMPlexCreateTPSMesh - Creates a mesh of a triply-periodic surface
 
@@ -2297,7 +2297,9 @@ static PetscErrorCode TPSNearestPoint(TPSEvaluateFunc feval, PetscScalar x[])
 
   Input Parameters:
 + comm   - The communicator for the DM object
+. tpstype - Type of triply-periodic surface
 . extent - Array of length 3 containing number of periods in each direction
+. periodic - array of length 3 with periodicity, or NULL for non-periodic
 . thickness - Thickness in normal direction
 - refinements - Number of factor-of-2 refinements
 
@@ -2315,165 +2317,121 @@ static PetscErrorCode TPSNearestPoint(TPSEvaluateFunc feval, PetscScalar x[])
 
 .seealso: DMPlexCreateSphereMesh(), DMSetType(), DMCreate()
 @*/
-PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, const PetscInt extent[], PetscReal thickness, PetscInt refinements, DM *dm)
+PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const PetscInt extent[], const DMBoundaryType periodic[], PetscReal thickness, PetscInt refinements, DM *dm)
 {
   PetscErrorCode ierr;
   PetscMPIInt rank;
-  PetscInt topoDim = 2, spaceDim = 3, Njunctions = 0, Nvtx = 0;
-  int (*cells)[6][4][4] = NULL; // [junction, junction-face, cell, conn]
+  PetscInt topoDim = 2, spaceDim = 3, numFaces = 0, numVertices = 0;
+  int *cells_flat = NULL;
   double *vtxCoords = NULL;
+  TPSEvaluateFunc evalFunc = 0;
 
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  if (!rank) {
-    PetscInt Npipes[3], vcount;
-    PetscReal L = PETSC_PI;
+  switch (tpstype) {
+  case DMPLEX_TPS_SCHWARZ_P:
+    if (!rank) {
+      int (*cells)[6][4][4] = NULL; // [junction, junction-face, cell, conn]
+      PetscInt Njunctions = 0, Npipes[3], vcount;
+      PetscReal L = PETSC_PI;
 
-    Npipes[0] = (extent[0] + 1) * extent[1] * extent[2];
-    Npipes[1] = extent[0] * (extent[1] + 1) * extent[2];
-    Npipes[2] = extent[0] * extent[1] * (extent[2] + 1);
-    Njunctions = extent[0] * extent[1] * extent[2];
-    Nvtx = 4 * (Npipes[0] + Npipes[1] + Npipes[2]) + 8 * Njunctions;
-    ierr = PetscMalloc2(3*Nvtx, &vtxCoords, Njunctions, &cells);CHKERRQ(ierr);
-    // x-normal pipes
-    vcount = 0;
-    for (PetscInt i=0; i<extent[0]+1; i++) {
-      for (PetscInt j=0; j<extent[1]; j++) {
-        for (PetscInt k=0; k<extent[2]; k++) {
-          for (PetscInt l=0; l<4; l++) {
-            vtxCoords[vcount++] = (2*i - 1) * L;
-            vtxCoords[vcount++] = 2 * j * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
-            vtxCoords[vcount++] = 2 * k * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+      Npipes[0] = (extent[0] + 1) * extent[1] * extent[2];
+      Npipes[1] = extent[0] * (extent[1] + 1) * extent[2];
+      Npipes[2] = extent[0] * extent[1] * (extent[2] + 1);
+      Njunctions = extent[0] * extent[1] * extent[2];
+      numVertices = 4 * (Npipes[0] + Npipes[1] + Npipes[2]) + 8 * Njunctions;
+      ierr = PetscMalloc2(3*numVertices, &vtxCoords, Njunctions, &cells);CHKERRQ(ierr);
+      // x-normal pipes
+      vcount = 0;
+      for (PetscInt i=0; i<extent[0]+1; i++) {
+        for (PetscInt j=0; j<extent[1]; j++) {
+          for (PetscInt k=0; k<extent[2]; k++) {
+            for (PetscInt l=0; l<4; l++) {
+              vtxCoords[vcount++] = (2*i - 1) * L;
+              vtxCoords[vcount++] = 2 * j * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = 2 * k * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+            }
           }
         }
       }
-    }
-    // y-normal pipes
-    for (PetscInt i=0; i<extent[0]; i++) {
-      for (PetscInt j=0; j<extent[1]+1; j++) {
-        for (PetscInt k=0; k<extent[2]; k++) {
-          for (PetscInt l=0; l<4; l++) {
-            vtxCoords[vcount++] = 2 * i * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
-            vtxCoords[vcount++] = (2*j - 1) * L;
-            vtxCoords[vcount++] = 2 * k * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
+      // y-normal pipes
+      for (PetscInt i=0; i<extent[0]; i++) {
+        for (PetscInt j=0; j<extent[1]+1; j++) {
+          for (PetscInt k=0; k<extent[2]; k++) {
+            for (PetscInt l=0; l<4; l++) {
+              vtxCoords[vcount++] = 2 * i * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = (2*j - 1) * L;
+              vtxCoords[vcount++] = 2 * k * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
+            }
           }
         }
       }
-    }
-    // z-normal pipes
-    for (PetscInt i=0; i<extent[0]; i++) {
-      for (PetscInt j=0; j<extent[1]; j++) {
-        for (PetscInt k=0; k<extent[2]+1; k++) {
-          for (PetscInt l=0; l<4; l++) {
-            vtxCoords[vcount++] = 2 * i * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
-            vtxCoords[vcount++] = 2 * j * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
-            vtxCoords[vcount++] = (2*k - 1) * L;
+      // z-normal pipes
+      for (PetscInt i=0; i<extent[0]; i++) {
+        for (PetscInt j=0; j<extent[1]; j++) {
+          for (PetscInt k=0; k<extent[2]+1; k++) {
+            for (PetscInt l=0; l<4; l++) {
+              vtxCoords[vcount++] = 2 * i * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = 2 * j * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = (2*k - 1) * L;
+            }
           }
         }
       }
-    }
-    // junctions
-    for (PetscInt i=0; i<extent[0]; i++) {
-      for (PetscInt j=0; j<extent[1]; j++) {
-        for (PetscInt k=0; k<extent[2]; k++) {
-          const PetscInt J = (i*extent[1] + j)*extent[2] + k, Jvoff = (Npipes[0] + Npipes[1] + Npipes[2])*4 + J*8;
-          if (vcount / 3 != Jvoff) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected vertex count");
-          for (PetscInt ii=0; ii<2; ii++) {
-            for (PetscInt jj=0; jj<2; jj++) {
-              for (PetscInt kk=0; kk<2; kk++) {
-                double Ls = (1 - sqrt(2) / 4) * L;
-                vtxCoords[vcount++] = 2*i*L + (2*ii-1) * Ls;
-                vtxCoords[vcount++] = 2*j*L + (2*jj-1) * Ls;
-                vtxCoords[vcount++] = 2*k*L + (2*kk-1) * Ls;
+      // junctions
+      for (PetscInt i=0; i<extent[0]; i++) {
+        for (PetscInt j=0; j<extent[1]; j++) {
+          for (PetscInt k=0; k<extent[2]; k++) {
+            const PetscInt J = (i*extent[1] + j)*extent[2] + k, Jvoff = (Npipes[0] + Npipes[1] + Npipes[2])*4 + J*8;
+            if (vcount / 3 != Jvoff) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected vertex count");
+            for (PetscInt ii=0; ii<2; ii++) {
+              for (PetscInt jj=0; jj<2; jj++) {
+                for (PetscInt kk=0; kk<2; kk++) {
+                  double Ls = (1 - sqrt(2) / 4) * L;
+                  vtxCoords[vcount++] = 2*i*L + (2*ii-1) * Ls;
+                  vtxCoords[vcount++] = 2*j*L + (2*jj-1) * Ls;
+                  vtxCoords[vcount++] = 2*k*L + (2*kk-1) * Ls;
+                }
+              }
+            }
+            const PetscInt jfaces[3][2][4] = {
+              {{3,1,0,2}, {7,5,4,6}}, // x-aligned
+              {{5,4,0,1}, {7,6,2,3}}, // y-aligned
+              {{6,2,0,4}, {7,3,1,5}}  // z-aligned
+            };
+            const PetscInt pipe_lo[3] = { // vertex numbers of pipes
+              ((i * extent[1] + j) * extent[2] + k)*4,
+              ((i * (extent[1] + 1) + j) * extent[2] + k + Npipes[0])*4,
+              ((i * extent[1] + j) * (extent[2]+1) + k + Npipes[0] + Npipes[1])*4
+            };
+            const PetscInt pipe_hi[3] = { // vertex numbers of pipes
+              (((i + 1) * extent[1] + j) * extent[2] + k)*4,
+              ((i * (extent[1] + 1) + j + 1) * extent[2] + k + Npipes[0])*4,
+              ((i * extent[1] + j) * (extent[2]+1) + k + 1 + Npipes[0] + Npipes[1])*4
+            };
+            for (PetscInt dir=0; dir<3; dir++) { // x,y,z
+              for (PetscInt l=0; l<4; l++) { // rotations
+                cells[J][dir*2+0][l][0] = pipe_lo[dir] + l;
+                cells[J][dir*2+0][l][1] = Jvoff + jfaces[dir][0][l];
+                cells[J][dir*2+0][l][2] = Jvoff + jfaces[dir][0][(l-1+4)%4];
+                cells[J][dir*2+0][l][3] = pipe_lo[dir] + (l-1+4)%4;
+                cells[J][dir*2+1][l][0] = Jvoff + jfaces[dir][1][l];
+                cells[J][dir*2+1][l][1] = pipe_hi[dir] + l;
+                cells[J][dir*2+1][l][2] = pipe_hi[dir] + (l-1+4)%4;
+                cells[J][dir*2+1][l][3] = Jvoff + jfaces[dir][1][(l-1+4)%4];
               }
             }
           }
-          const PetscInt jfaces[3][2][4] = {
-            {{3,1,0,2}, {7,5,4,6}}, // x-aligned
-            {{5,4,0,1}, {7,6,2,3}}, // y-aligned
-            {{6,2,0,4}, {7,3,1,5}}  // z-aligned
-          };
-          const PetscInt pipe_lo[3] = { // vertex numbers of pipes
-            ((i * extent[1] + j) * extent[2] + k)*4,
-            ((i * (extent[1] + 1) + j) * extent[2] + k + Npipes[0])*4,
-            ((i * extent[1] + j) * (extent[2]+1) + k + Npipes[0] + Npipes[1])*4
-          };
-          const PetscInt pipe_hi[3] = { // vertex numbers of pipes
-            (((i + 1) * extent[1] + j) * extent[2] + k)*4,
-            ((i * (extent[1] + 1) + j + 1) * extent[2] + k + Npipes[0])*4,
-            ((i * extent[1] + j) * (extent[2]+1) + k + 1 + Npipes[0] + Npipes[1])*4
-          };
-          for (PetscInt dir=0; dir<3; dir++) { // x,y,z
-            for (PetscInt l=0; l<4; l++) { // rotations
-              cells[J][dir*2+0][l][0] = pipe_lo[dir] + l;
-              cells[J][dir*2+0][l][1] = Jvoff + jfaces[dir][0][l];
-              cells[J][dir*2+0][l][2] = Jvoff + jfaces[dir][0][(l-1+4)%4];
-              cells[J][dir*2+0][l][3] = pipe_lo[dir] + (l-1+4)%4;
-              cells[J][dir*2+1][l][0] = Jvoff + jfaces[dir][1][l];
-              cells[J][dir*2+1][l][1] = pipe_hi[dir] + l;
-              cells[J][dir*2+1][l][2] = pipe_hi[dir] + (l-1+4)%4;
-              cells[J][dir*2+1][l][3] = Jvoff + jfaces[dir][1][(l-1+4)%4];
-            }
-          }
         }
       }
+      numFaces = 24 * Njunctions;
+      cells_flat = cells[0][0][0];
     }
-  }
-  ierr = DMPlexCreateFromCellList(comm, topoDim, 24*Njunctions, Nvtx, 4, PETSC_TRUE, &cells[0][0][0][0], spaceDim, vtxCoords, dm);CHKERRQ(ierr);
-  ierr = PetscFree2(vtxCoords, cells);CHKERRQ(ierr);
-
-  {
-    DM dmserial = *dm;
-    PetscPartitioner part;
-
-    ierr = DMPlexGetPartitioner(dmserial, &part);CHKERRQ(ierr);
-    ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
-    ierr = DMPlexDistribute(dmserial, 0, NULL, dm);CHKERRQ(ierr);
-    if (*dm) { // Distribution was actually done
-      ierr = DMDestroy(&dmserial);CHKERRQ(ierr);
-    } else {
-      *dm = dmserial;
-    }
-  }
-
-  ierr = DMPlexSetRefinementUniform(*dm, PETSC_TRUE);CHKERRQ(ierr);
-  for (PetscInt refine=0; refine<refinements; refine++) {
-    PetscInt m;
-    DM dmc = *dm;
-    Vec X;
-    PetscScalar *x;
-    ierr = DMRefine(dmc, MPI_COMM_NULL, dm);CHKERRQ(ierr);
-    ierr = DMDestroy(&dmc);CHKERRQ(ierr);
-
-    ierr = DMGetCoordinatesLocal(*dm, &X);CHKERRQ(ierr);
-    ierr = VecGetLocalSize(X, &m);CHKERRQ(ierr);
-    ierr = VecGetArray(X, &x);CHKERRQ(ierr);
-    for (PetscInt i=0; i<m; i+=3) {
-      ierr = TPSNearestPoint(TPSEvaluate_SchwarzP, &x[i]);CHKERRQ(ierr);
-    }
-    ierr = VecRestoreArray(X, &x);CHKERRQ(ierr);
-  }
-
-  if (thickness > 0) SETERRQ1(comm, PETSC_ERR_SUP, "Thickness %g > 0 not implemented", (double)thickness);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode DMPlexCreateGyroidMesh(MPI_Comm comm, const PetscInt extent[], const DMBoundaryType periodic[], PetscReal thickness, PetscInt refinements, DM *dm)
-{
-  PetscErrorCode ierr;
-  PetscMPIInt rank;
-  PetscInt topoDim = 2, spaceDim = 3;
-  PetscInt facesPerBlock = 64;
-  PetscInt vertsPerBlock = 56;
-  PetscInt numFaces = 0;
-  PetscInt numVertices = 0;
-  int (*cells)[64][4] = NULL;
-  double *vtxCoords = NULL;
-
-  PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  if (!rank) {
-    /* This is a coarse mesh approximation of the gyroid shifted to being the zero of the level set
+    evalFunc = TPSEvaluate_SchwarzP;
+    break;
+  case DMPLEX_TPS_GYROID:
+    if (!rank) {
+      /* This is a coarse mesh approximation of the gyroid shifted to being the zero of the level set
 
            sin(pi*x)*cos(pi*(y+1/2)) + sin(pi*(y+1/2))*cos(pi*(z+1/4)) + sin(pi*(z+1/4))*cos(x)
 
@@ -2515,175 +2473,183 @@ PetscErrorCode DMPlexCreateGyroidMesh(MPI_Comm comm, const PetscInt extent[], co
 
        As for how this method turned into the names given to the vertices:
        that was not systematic, it was just the way it worked out in my handwritten notes.
-    */
+      */
 
-    PetscInt extentPlus[3];
-    PetscInt numBlocks, numBlocksPlus;
-    const PetscInt A =  0,   B =  1,   C =  2,   D =  3,   E =  4,   F =  5,   G =  6,   H =  7,
-                  II =  8,   J =  9,   K = 10,   L = 11,   M = 12,   N = 13,   O = 14,   P = 15,
-                   Q = 16,   R = 17,   S = 18,   T = 19,   U = 20,   V = 21,   W = 22,   X = 23,
-                   Y = 24,   Z = 25,  Ap = 26,  Bp = 27,  Cp = 28,  Dp = 29,  Ep = 30,  Fp = 31,
-                  Gp = 32,  Hp = 33,  Ip = 34,  Jp = 35,  Kp = 36,  Lp = 37,  Mp = 38,  Np = 39,
-                  Op = 40,  Pp = 41,  Qp = 42,  Rp = 43,  Sp = 44,  Tp = 45,  Up = 46,  Vp = 47,
-                  Wp = 48,  Xp = 49,  Yp = 50,  Zp = 51,  Aq = 52,  Bq = 53,  Cq = 54,  Dq = 55;
-    const PetscInt pattern[64][4] =
-    { /* face to vertex within the coarse discretization of a single gyroid block */
-      /* layer 0 */
-      {A,C,K,G},{C,B,II,K},{D,A,H,L},{B+56*1,D,L,J},{E,B+56*1,J,N},{A+56*2,E,N,H+56*2},{F,A+56*2,G+56*2,M},{B,F,M,II},
-      /* layer 1 */
-      {G,K,Q,O},{K,II,P,Q},{L,H,O+56*1,R},{J,L,R,P},{N,J,P,S},{H+56*2,N,S,O+56*3},{M,G+56*2,O+56*2,T},{II,M,T,P},
-      /* layer 2 */
-      {O,Q,Y,U},{Q,P,W,Y},{R,O+56*1,U+56*1,Ap},{P,R,Ap,W},{S,P,X,Bp},{O+56*3,S,Bp,V+56*1},{T,O+56*2,V,Z},{P,T,Z,X},
-      /* layer 3 */
-      {U,Y,Ep,Dp},{Y,W,Cp,Ep},{Ap,U+56*1,Dp+56*1,Gp},{W,Ap,Gp,Cp},{Bp,X,Cp+56*2,Fp},{V+56*1,Bp,Fp,Dp+56*1},{Z,V,Dp,Hp},{X,Z,Hp,Cp+56*2},
-      /* layer 4 */
-      {Dp,Ep,Mp,Kp},{Ep,Cp,Ip,Mp},{Gp,Dp+56*1,Lp,Np},{Cp,Gp,Np,Jp},{Fp,Cp+56*2,Jp+56*2,Pp},{Dp+56*1,Fp,Pp,Lp},{Hp,Dp,Kp,Op},{Cp+56*2,Hp,Op,Ip+56*2},
-      /* layer 5 */
-      {Kp,Mp,Sp,Rp},{Mp,Ip,Qp,Sp},{Np,Lp,Rp,Tp},{Jp,Np,Tp,Qp+56*1},{Pp,Jp+56*2,Qp+56*3,Up},{Lp,Pp,Up,Rp},{Op,Kp,Rp,Vp},{Ip+56*2,Op,Vp,Qp+56*2},
-      /* layer 6 */
-      {Rp,Sp,Aq,Yp},{Sp,Qp,Wp,Aq},{Tp,Rp,Yp,Cq},{Qp+56*1,Tp,Cq,Wp+56*1},{Up,Qp+56*3,Xp+56*1,Dq},{Rp,Up,Dq,Zp},{Vp,Rp,Zp,Bq},{Qp+56*2,Vp,Bq,Xp},
-      /* layer 7 (the top is the periodic image of the bottom of layer 0) */
-      {Yp,Aq,C+56*4,A+56*4},{Aq,Wp,B+56*4,C+56*4},{Cq,Yp,A+56*4,D+56*4},{Wp+56*1,Cq,D+56*4,B+56*5},{Dq,Xp+56*1,B+56*5,E+56*4},{Zp,Dq,E+56*4,A+56*6},{Bq,Zp,A+56*6,F+56*4},{Xp,Bq,F+56*4,B+56*4}
-    };
-    const PetscReal gamma = PetscAcosReal((PetscSqrtReal(3.)-1.) / PetscSqrtReal(2.)) / PETSC_PI;
-    const PetscReal patternCoords[56][3] =
-    {
-      /* A  */ {1.,0.,0.},
-      /* B  */ {0.,1.,0.},
-      /* C  */ {gamma,gamma,0.},
-      /* D  */ {1.+gamma,1.-gamma,0.},
-      /* E  */ {2.-gamma,2.-gamma,0.},
-      /* F  */ {1.-gamma,1.+gamma,0.},
+      PetscInt facesPerBlock = 64;
+      PetscInt vertsPerBlock = 56;
+      PetscInt extentPlus[3];
+      PetscInt numBlocks, numBlocksPlus;
+      const PetscInt A =  0,   B =  1,   C =  2,   D =  3,   E =  4,   F =  5,   G =  6,   H =  7,
+        II =  8,   J =  9,   K = 10,   L = 11,   M = 12,   N = 13,   O = 14,   P = 15,
+        Q = 16,   R = 17,   S = 18,   T = 19,   U = 20,   V = 21,   W = 22,   X = 23,
+        Y = 24,   Z = 25,  Ap = 26,  Bp = 27,  Cp = 28,  Dp = 29,  Ep = 30,  Fp = 31,
+        Gp = 32,  Hp = 33,  Ip = 34,  Jp = 35,  Kp = 36,  Lp = 37,  Mp = 38,  Np = 39,
+        Op = 40,  Pp = 41,  Qp = 42,  Rp = 43,  Sp = 44,  Tp = 45,  Up = 46,  Vp = 47,
+        Wp = 48,  Xp = 49,  Yp = 50,  Zp = 51,  Aq = 52,  Bq = 53,  Cq = 54,  Dq = 55;
+      const PetscInt pattern[64][4] =
+        { /* face to vertex within the coarse discretization of a single gyroid block */
+          /* layer 0 */
+          {A,C,K,G},{C,B,II,K},{D,A,H,L},{B+56*1,D,L,J},{E,B+56*1,J,N},{A+56*2,E,N,H+56*2},{F,A+56*2,G+56*2,M},{B,F,M,II},
+          /* layer 1 */
+          {G,K,Q,O},{K,II,P,Q},{L,H,O+56*1,R},{J,L,R,P},{N,J,P,S},{H+56*2,N,S,O+56*3},{M,G+56*2,O+56*2,T},{II,M,T,P},
+          /* layer 2 */
+          {O,Q,Y,U},{Q,P,W,Y},{R,O+56*1,U+56*1,Ap},{P,R,Ap,W},{S,P,X,Bp},{O+56*3,S,Bp,V+56*1},{T,O+56*2,V,Z},{P,T,Z,X},
+          /* layer 3 */
+          {U,Y,Ep,Dp},{Y,W,Cp,Ep},{Ap,U+56*1,Dp+56*1,Gp},{W,Ap,Gp,Cp},{Bp,X,Cp+56*2,Fp},{V+56*1,Bp,Fp,Dp+56*1},{Z,V,Dp,Hp},{X,Z,Hp,Cp+56*2},
+          /* layer 4 */
+          {Dp,Ep,Mp,Kp},{Ep,Cp,Ip,Mp},{Gp,Dp+56*1,Lp,Np},{Cp,Gp,Np,Jp},{Fp,Cp+56*2,Jp+56*2,Pp},{Dp+56*1,Fp,Pp,Lp},{Hp,Dp,Kp,Op},{Cp+56*2,Hp,Op,Ip+56*2},
+          /* layer 5 */
+          {Kp,Mp,Sp,Rp},{Mp,Ip,Qp,Sp},{Np,Lp,Rp,Tp},{Jp,Np,Tp,Qp+56*1},{Pp,Jp+56*2,Qp+56*3,Up},{Lp,Pp,Up,Rp},{Op,Kp,Rp,Vp},{Ip+56*2,Op,Vp,Qp+56*2},
+          /* layer 6 */
+          {Rp,Sp,Aq,Yp},{Sp,Qp,Wp,Aq},{Tp,Rp,Yp,Cq},{Qp+56*1,Tp,Cq,Wp+56*1},{Up,Qp+56*3,Xp+56*1,Dq},{Rp,Up,Dq,Zp},{Vp,Rp,Zp,Bq},{Qp+56*2,Vp,Bq,Xp},
+          /* layer 7 (the top is the periodic image of the bottom of layer 0) */
+          {Yp,Aq,C+56*4,A+56*4},{Aq,Wp,B+56*4,C+56*4},{Cq,Yp,A+56*4,D+56*4},{Wp+56*1,Cq,D+56*4,B+56*5},{Dq,Xp+56*1,B+56*5,E+56*4},{Zp,Dq,E+56*4,A+56*6},{Bq,Zp,A+56*6,F+56*4},{Xp,Bq,F+56*4,B+56*4}
+        };
+      const PetscReal gamma = PetscAcosReal((PetscSqrtReal(3.)-1.) / PetscSqrtReal(2.)) / PETSC_PI;
+      const PetscReal patternCoords[56][3] =
+        {
+          /* A  */ {1.,0.,0.},
+          /* B  */ {0.,1.,0.},
+          /* C  */ {gamma,gamma,0.},
+          /* D  */ {1.+gamma,1.-gamma,0.},
+          /* E  */ {2.-gamma,2.-gamma,0.},
+          /* F  */ {1.-gamma,1.+gamma,0.},
 
-      /* G  */ {.5,0,.25},
-      /* H  */ {1.5,0.,.25},
-      /* II */ {.5,1.,.25},
-      /* J  */ {1.5,1.,.25},
-      /* K  */ {.25,.5,.25},
-      /* L  */ {1.25,.5,.25},
-      /* M  */ {.75,1.5,.25},
-      /* N  */ {1.75,1.5,.25},
+          /* G  */ {.5,0,.25},
+          /* H  */ {1.5,0.,.25},
+          /* II */ {.5,1.,.25},
+          /* J  */ {1.5,1.,.25},
+          /* K  */ {.25,.5,.25},
+          /* L  */ {1.25,.5,.25},
+          /* M  */ {.75,1.5,.25},
+          /* N  */ {1.75,1.5,.25},
 
-      /* O  */ {0.,0.,.5},
-      /* P  */ {1.,1.,.5},
-      /* Q  */ {gamma,1.-gamma,.5},
-      /* R  */ {1.+gamma,gamma,.5},
-      /* S  */ {2.-gamma,1.+gamma,.5},
-      /* T  */ {1.-gamma,2.-gamma,.5},
+          /* O  */ {0.,0.,.5},
+          /* P  */ {1.,1.,.5},
+          /* Q  */ {gamma,1.-gamma,.5},
+          /* R  */ {1.+gamma,gamma,.5},
+          /* S  */ {2.-gamma,1.+gamma,.5},
+          /* T  */ {1.-gamma,2.-gamma,.5},
 
-      /* U  */ {0.,.5,.75},
-      /* V  */ {0.,1.5,.75},
-      /* W  */ {1.,.5,.75},
-      /* X  */ {1.,1.5,.75},
-      /* Y  */ {.5,.75,.75},
-      /* Z  */ {.5,1.75,.75},
-      /* Ap */ {1.5,.25,.75},
-      /* Bp */ {1.5,1.25,.75},
+          /* U  */ {0.,.5,.75},
+          /* V  */ {0.,1.5,.75},
+          /* W  */ {1.,.5,.75},
+          /* X  */ {1.,1.5,.75},
+          /* Y  */ {.5,.75,.75},
+          /* Z  */ {.5,1.75,.75},
+          /* Ap */ {1.5,.25,.75},
+          /* Bp */ {1.5,1.25,.75},
 
-      /* Cp */ {1.,0.,1.},
-      /* Dp */ {0.,1.,1.},
-      /* Ep */ {1.-gamma,1.-gamma,1.},
-      /* Fp */ {1.+gamma,1.+gamma,1.},
-      /* Gp */ {2.-gamma,gamma,1.},
-      /* Hp */ {gamma,2.-gamma,1.},
+          /* Cp */ {1.,0.,1.},
+          /* Dp */ {0.,1.,1.},
+          /* Ep */ {1.-gamma,1.-gamma,1.},
+          /* Fp */ {1.+gamma,1.+gamma,1.},
+          /* Gp */ {2.-gamma,gamma,1.},
+          /* Hp */ {gamma,2.-gamma,1.},
 
-      /* Ip */ {.5,0.,1.25},
-      /* Jp */ {1.5,0.,1.25},
-      /* Kp */ {.5,1.,1.25},
-      /* Lp */ {1.5,1.,1.25},
-      /* Mp */ {.75,.5,1.25},
-      /* Np */ {1.75,.5,1.25},
-      /* Op */ {.25,1.5,1.25},
-      /* Pp */ {1.25,1.5,1.25},
+          /* Ip */ {.5,0.,1.25},
+          /* Jp */ {1.5,0.,1.25},
+          /* Kp */ {.5,1.,1.25},
+          /* Lp */ {1.5,1.,1.25},
+          /* Mp */ {.75,.5,1.25},
+          /* Np */ {1.75,.5,1.25},
+          /* Op */ {.25,1.5,1.25},
+          /* Pp */ {1.25,1.5,1.25},
 
-      /* Qp */ {0.,0.,1.5},
-      /* Rp */ {1.,1.,1.5},
-      /* Sp */ {1.-gamma,gamma,1.5},
-      /* Tp */ {2.-gamma,1.-gamma,1.5},
-      /* Up */ {1.+gamma,2.-gamma,1.5},
-      /* Vp */ {gamma,1.+gamma,1.5},
+          /* Qp */ {0.,0.,1.5},
+          /* Rp */ {1.,1.,1.5},
+          /* Sp */ {1.-gamma,gamma,1.5},
+          /* Tp */ {2.-gamma,1.-gamma,1.5},
+          /* Up */ {1.+gamma,2.-gamma,1.5},
+          /* Vp */ {gamma,1.+gamma,1.5},
 
-      /* Wp */ {0.,.5,1.75},
-      /* Xp */ {0.,1.5,1.75},
-      /* Yp */ {1.,.5,1.75},
-      /* Zp */ {1.,1.5,1.75},
-      /* Aq */ {.5,.25,1.75},
-      /* Bq */ {.5,1.25,1.75},
-      /* Cq */ {1.5,.75,1.75},
-      /* Dq */ {1.5,1.75,1.75},
-    };
-    PetscBool *seen;
-    PetscInt  *vertToTrueVert;
-    PetscInt   count;
+          /* Wp */ {0.,.5,1.75},
+          /* Xp */ {0.,1.5,1.75},
+          /* Yp */ {1.,.5,1.75},
+          /* Zp */ {1.,1.5,1.75},
+          /* Aq */ {.5,.25,1.75},
+          /* Bq */ {.5,1.25,1.75},
+          /* Cq */ {1.5,.75,1.75},
+          /* Dq */ {1.5,1.75,1.75},
+        };
+      int      (*cells)[64][4] = NULL;
+      PetscBool *seen;
+      PetscInt  *vertToTrueVert;
+      PetscInt  count;
 
-    for (PetscInt i = 0; i < 3; i++) extentPlus[i]  = extent[i] + 1;
-    numBlocks = 1;
-    for (PetscInt i = 0; i < 3; i++)     numBlocks *= extent[i];
-    numBlocksPlus = 1;
-    for (PetscInt i = 0; i < 3; i++) numBlocksPlus *= extentPlus[i];
-    numFaces = numBlocks * facesPerBlock;
-    ierr = PetscMalloc1(numBlocks, &cells);CHKERRQ(ierr);
-    ierr = PetscCalloc1(numBlocksPlus * vertsPerBlock,&seen);CHKERRQ(ierr);
-    for (PetscInt k = 0; k < extent[2]; k++) {
-      for (PetscInt j = 0; j < extent[1]; j++) {
-        for (PetscInt i = 0; i < extent[0]; i++) {
-          for (PetscInt f = 0; f < facesPerBlock; f++) {
-            for (PetscInt v = 0; v < 4; v++) {
-              PetscInt vertRaw = pattern[f][v];
-              PetscInt blockidx = vertRaw / 56;
-              PetscInt patternvert = vertRaw % 56;
-              PetscInt xplus = (blockidx & 1);
-              PetscInt yplus = (blockidx & 2) >> 1;
-              PetscInt zplus = (blockidx & 4) >> 2;
-              PetscInt zcoord = (periodic && periodic[2] == DM_BOUNDARY_PERIODIC) ? ((k + zplus) % extent[2]) : (k + zplus);
-              PetscInt ycoord = (periodic && periodic[1] == DM_BOUNDARY_PERIODIC) ? ((j + yplus) % extent[1]) : (j + yplus);
-              PetscInt xcoord = (periodic && periodic[0] == DM_BOUNDARY_PERIODIC) ? ((i + xplus) % extent[0]) : (i + xplus);
-              PetscInt vert = ((zcoord * extentPlus[1] + ycoord) * extentPlus[0] + xcoord) * 56 + patternvert;
+      for (PetscInt i = 0; i < 3; i++) extentPlus[i]  = extent[i] + 1;
+      numBlocks = 1;
+      for (PetscInt i = 0; i < 3; i++)     numBlocks *= extent[i];
+      numBlocksPlus = 1;
+      for (PetscInt i = 0; i < 3; i++) numBlocksPlus *= extentPlus[i];
+      numFaces = numBlocks * facesPerBlock;
+      ierr = PetscMalloc1(numBlocks, &cells);CHKERRQ(ierr);
+      ierr = PetscCalloc1(numBlocksPlus * vertsPerBlock,&seen);CHKERRQ(ierr);
+      for (PetscInt k = 0; k < extent[2]; k++) {
+        for (PetscInt j = 0; j < extent[1]; j++) {
+          for (PetscInt i = 0; i < extent[0]; i++) {
+            for (PetscInt f = 0; f < facesPerBlock; f++) {
+              for (PetscInt v = 0; v < 4; v++) {
+                PetscInt vertRaw = pattern[f][v];
+                PetscInt blockidx = vertRaw / 56;
+                PetscInt patternvert = vertRaw % 56;
+                PetscInt xplus = (blockidx & 1);
+                PetscInt yplus = (blockidx & 2) >> 1;
+                PetscInt zplus = (blockidx & 4) >> 2;
+                PetscInt zcoord = (periodic && periodic[2] == DM_BOUNDARY_PERIODIC) ? ((k + zplus) % extent[2]) : (k + zplus);
+                PetscInt ycoord = (periodic && periodic[1] == DM_BOUNDARY_PERIODIC) ? ((j + yplus) % extent[1]) : (j + yplus);
+                PetscInt xcoord = (periodic && periodic[0] == DM_BOUNDARY_PERIODIC) ? ((i + xplus) % extent[0]) : (i + xplus);
+                PetscInt vert = ((zcoord * extentPlus[1] + ycoord) * extentPlus[0] + xcoord) * 56 + patternvert;
 
-              cells[(k * extent[1] + j) * extent[0] + i][f][v] = vert;
-              seen[vert] = PETSC_TRUE;
+                cells[(k * extent[1] + j) * extent[0] + i][f][v] = vert;
+                seen[vert] = PETSC_TRUE;
+              }
             }
           }
         }
       }
-    }
-    for (PetscInt i = 0; i < numBlocksPlus * vertsPerBlock; i++) if (seen[i]) numVertices++;
-    count = 0;
-    ierr = PetscMalloc1(numBlocksPlus * vertsPerBlock, &vertToTrueVert);CHKERRQ(ierr);
-    ierr = PetscMalloc1(numVertices * 3, &vtxCoords);CHKERRQ(ierr);
-    for (PetscInt i = 0; i < numBlocksPlus * vertsPerBlock; i++) vertToTrueVert[i] = -1;
-    for (PetscInt k = 0; k < extentPlus[2]; k++) {
-      for (PetscInt j = 0; j < extentPlus[1]; j++) {
-        for (PetscInt i = 0; i < extentPlus[0]; i++) {
-          for (PetscInt v = 0; v < vertsPerBlock; v++) {
-            PetscInt vIdx = ((k * extentPlus[1] + j) * extentPlus[0] + i) * vertsPerBlock + v;
+      for (PetscInt i = 0; i < numBlocksPlus * vertsPerBlock; i++) if (seen[i]) numVertices++;
+      count = 0;
+      ierr = PetscMalloc1(numBlocksPlus * vertsPerBlock, &vertToTrueVert);CHKERRQ(ierr);
+      ierr = PetscMalloc1(numVertices * 3, &vtxCoords);CHKERRQ(ierr);
+      for (PetscInt i = 0; i < numBlocksPlus * vertsPerBlock; i++) vertToTrueVert[i] = -1;
+      for (PetscInt k = 0; k < extentPlus[2]; k++) {
+        for (PetscInt j = 0; j < extentPlus[1]; j++) {
+          for (PetscInt i = 0; i < extentPlus[0]; i++) {
+            for (PetscInt v = 0; v < vertsPerBlock; v++) {
+              PetscInt vIdx = ((k * extentPlus[1] + j) * extentPlus[0] + i) * vertsPerBlock + v;
 
-            if (seen[vIdx]) {
-              PetscInt thisVert;
+              if (seen[vIdx]) {
+                PetscInt thisVert;
 
-              vertToTrueVert[vIdx] = thisVert = count++;
+                vertToTrueVert[vIdx] = thisVert = count++;
 
-              for (PetscInt d = 0; d < 3; d++) vtxCoords[3 * thisVert + d] = patternCoords[v][d];
-              vtxCoords[3 * thisVert + 0] += i * 2;
-              vtxCoords[3 * thisVert + 1] += j * 2;
-              vtxCoords[3 * thisVert + 2] += k * 2;
+                for (PetscInt d = 0; d < 3; d++) vtxCoords[3 * thisVert + d] = patternCoords[v][d];
+                vtxCoords[3 * thisVert + 0] += i * 2;
+                vtxCoords[3 * thisVert + 1] += j * 2;
+                vtxCoords[3 * thisVert + 2] += k * 2;
+              }
             }
           }
         }
       }
-    }
-    for (PetscInt i = 0; i < numBlocks; i++) {
-      for (PetscInt f = 0; f < facesPerBlock; f++) {
-        for (PetscInt v = 0; v < 4; v++) {
-          cells[i][f][v] = vertToTrueVert[cells[i][f][v]];
+      for (PetscInt i = 0; i < numBlocks; i++) {
+        for (PetscInt f = 0; f < facesPerBlock; f++) {
+          for (PetscInt v = 0; v < 4; v++) {
+            cells[i][f][v] = vertToTrueVert[cells[i][f][v]];
+          }
         }
       }
+      ierr = PetscFree(vertToTrueVert);CHKERRQ(ierr);
+      ierr = PetscFree(seen);CHKERRQ(ierr);
+      cells_flat = cells[0][0];
     }
-    ierr = PetscFree(vertToTrueVert);CHKERRQ(ierr);
-    ierr = PetscFree(seen);CHKERRQ(ierr);
+    evalFunc = TPSEvaluate_Gyroid;
+    break;
   }
-  ierr = DMPlexCreateFromCellList(comm, topoDim, numFaces, numVertices, 4, PETSC_TRUE, &cells[0][0][0], spaceDim, vtxCoords, dm);CHKERRQ(ierr);
-  ierr = PetscFree2(vtxCoords, cells);CHKERRQ(ierr);
+
+  ierr = DMPlexCreateFromCellList(comm, topoDim, numFaces, numVertices, 4, PETSC_TRUE, cells_flat, spaceDim, vtxCoords, dm);CHKERRQ(ierr);
+  ierr = PetscFree2(vtxCoords, cells_flat);CHKERRQ(ierr);
 
   {
     DM dmserial = *dm;
@@ -2712,7 +2678,7 @@ PetscErrorCode DMPlexCreateGyroidMesh(MPI_Comm comm, const PetscInt extent[], co
     ierr = VecGetLocalSize(X, &m);CHKERRQ(ierr);
     ierr = VecGetArray(X, &x);CHKERRQ(ierr);
     for (PetscInt i=0; i<m; i+=3) {
-      ierr = TPSNearestPoint(TPSEvaluate_Gyroid, &x[i]);CHKERRQ(ierr);
+      ierr = TPSNearestPoint(evalFunc, &x[i]);CHKERRQ(ierr);
     }
     ierr = VecRestoreArray(X, &x);CHKERRQ(ierr);
   }

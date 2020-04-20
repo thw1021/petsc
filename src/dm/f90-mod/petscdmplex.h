@@ -17,3 +17,8 @@
       PetscEnum, parameter :: DMPLEX_INTERPOLATED_PARTIAL = 1
       PetscEnum, parameter :: DMPLEX_INTERPOLATED_MIXED = 2
       PetscEnum, parameter :: DMPLEX_INTERPOLATED_FULL = 3
+!
+! DMPlexTPSType
+!
+      PetscEnum, parameter :: DMPLEX_TPS_SCHWARZ_P = 0
+      PetscEnum, parameter :: DMPLEX_TPS_GYROID = 1
