@@ -1589,11 +1589,16 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
   PetscReal     v2 = 0, theta = 2*mctx->kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
   PetscFunctionBeginUser;
   /* compute the exponents, v^2 */
-  for (i = 0; i < dim-1; ++i) v2 += x[i]*x[i];
-  v2 += (x[dim-1]-mctx->shift)*(x[dim-1]-mctx->shift);
-  // for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
+  for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
   /* evaluate the Maxwellian */
   u[0] = mctx->n*pow(M_PI*theta,-1.5)*(exp(-v2/theta));
+  if (mctx->shift!=0.) {
+    v2 = 0;
+    for (i = 0; i < dim-1; ++i) v2 += x[i]*x[i];
+    v2 += (x[dim-1]-mctx->shift)*(x[dim-1]-mctx->shift);
+    /* evaluate the shifted Maxwellian */
+    u[0] += mctx->n*pow(M_PI*theta,-1.5)*(exp(-v2/theta));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1744,7 +1749,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
       }
     }
     for (k=0;k<nr;k++) {
-      ierr = DMLabelSetValue(adaptLabel, rCellIdx[k], DM_ADAPT_REFINE);CHKERRQ(ierr); 
+      ierr = DMLabelSetValue(adaptLabel, rCellIdx[k], DM_ADAPT_REFINE);CHKERRQ(ierr);
     }
     if (ctx->sphere) {
       for (c = 0; c < eMaxIdx; c++) {
@@ -1780,7 +1785,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
         if (x < 1e-12) nz++;
       }
       ierr = DMPlexVecRestoreClosure(cdm, cs, coords, c, &csize, &coef);CHKERRQ(ierr);
-      if (doit || (outside==0 && nz)) {
+      if (doit || (outside<Nv && nz)) {
         ierr = DMLabelSetValue(adaptLabel, c, DM_ADAPT_REFINE);CHKERRQ(ierr);
       }
     }
