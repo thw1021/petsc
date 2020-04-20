@@ -777,7 +777,6 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
 	  PetscPrintf(PETSC_COMM_WORLD,"\n");
 	}
 	PetscPrintf(PETSC_COMM_WORLD,"\n");
-	
       }
     } /* ej cells loop */
   }
