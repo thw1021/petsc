@@ -362,7 +362,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 {
   const PetscInt  Nq = blockDim.x/nSubBlocks, myelem = blockIdx.x;
 #if defined(FP_USE_SHARED_GPU_MEM)
-  extern __shared__ PetscReal g2_g3_qi[]; // Nq * { [NSubBlocks][Nf][dim] ; [NSubBlocks][Nf][dim][dim] } 
+  extern __shared__ PetscReal g2_g3_qi[]; // Nq * { [NSubBlocks][Nf][dim] ; [NSubBlocks][Nf][dim][dim] }
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2_g3_qi[0];
   PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g2_g3_qi[FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM];
 #else
@@ -651,7 +651,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
 #endif
   /* coloring */
   ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
-  if (!container) { 
+  if (!container) {
     PetscSection   csection;
     DM             colordm;
     Vec            color_vec;
@@ -687,7 +687,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
     /* Create a Mat and Vec with this layout and view it */
     ierr = DMGetGlobalVector(colordm, &color_vec);CHKERRQ(ierr);
     ierr = DMPlexSNESComputeJacobianFEM(colordm, color_vec, mat, mat, NULL);CHKERRQ(ierr);
-    ierr = MatViewFromOptions(mat,NULL,"-color_mat_view");CHKERRQ(ierr); 
+    ierr = MatViewFromOptions(mat,NULL,"-color_mat_view");CHKERRQ(ierr);
     {
       MatColoring     mc;
       IS             *is;
@@ -700,7 +700,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
       ierr = MatColoringApply(mc,&iscoloring);CHKERRQ(ierr);
       ierr = MatColoringDestroy(&mc);CHKERRQ(ierr);
       /* view */
-      ierr = ISColoringViewFromOptions(iscoloring,NULL,"-coloring_is_view");CHKERRQ(ierr); 
+      ierr = ISColoringViewFromOptions(iscoloring,NULL,"-coloring_is_view");CHKERRQ(ierr);
       ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is);CHKERRQ(ierr);
       for (colour=0; colour<p; colour++) {
 	ierr = ISGetLocalSize(is[colour],&size);CHKERRQ(ierr);
