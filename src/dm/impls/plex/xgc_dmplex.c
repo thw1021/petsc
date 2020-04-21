@@ -381,7 +381,8 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
       //PetscPrintf(PETSC_COMM_WORLD,"nu_m0_ma[%d,%d]=%g\n",ii,jj,nu_m0_ma[ii][jj]);
     }
     invMass[ii] = m_0/ctx->masses[ii];
-    Eq_m[ii] = -ctx->Ez * ctx->t_0 * ctx->charges[ii] / (ctx->v_0 * ctx->masses[ii]) * 2 * M_PI; /* normalize dimensionless and add the 2pi term that is not in Landau */
+    Eq_m[ii] = -ctx->Ez * ctx->t_0 * ctx->charges[ii] / (ctx->v_0 * ctx->masses[ii]); /* normalize dimensionless */
+    if (dim==2) Eq_m[ii] *=  2 * M_PI; /* add the 2pi term that is not in Landau */
   }
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   numCells = cEnd - cStart;
