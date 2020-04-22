@@ -38,6 +38,7 @@ typedef struct REctx_struct {
 } REctx;
 
 static const PetscReal kev_joul = 6.241506479963235e+15;
+static PetscBool quarter3DDomain = PETSC_FALSE;
 
 #define RE_CUT 5.
 /* < v, ru_e*v*q > */
@@ -56,6 +57,7 @@ static void f0_j_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   } else {
     if (x[2] > RE_CUT || x[2] < -RE_CUT) { /* simply a cutoff for REs. v_|| > 3 v(T_e) */
       *f0 = n_e                * x[2] * constants[0];
+      if (quarter3DDomain) *f0 *= 4;
     } else {
       *f0 = 0;
     }
@@ -77,30 +79,12 @@ static void f0_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   } else {
     if (x[2] > RE_CUT || x[2] < -RE_CUT) { /* simply a cutoff for REs. v_|| > 3 v(T_e) */
       *f0 = n_e               ;
+      if (quarter3DDomain) *f0 *= 4;
     } else {
       *f0 = 0;
     }
   }
 }
-
-/* static PetscErrorCode PrintnRE(Vec X, PetscInt stepi, PetscReal *anre) */
-/* { */
-/*   PetscErrorCode    ierr; */
-/*   DM                dm,plex; */
-/*   PetscScalar       nre[FP_MAX_SPECIES]; */
-/*   PetscDS           prob; */
-/*   PetscFunctionBegin; */
-/*   ierr = VecGetDM(X, &dm);CHKERRQ(ierr); */
-/*   if (!dm) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no DM"); */
-/*   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr); */
-/*   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr); */
-/*   ierr = PetscDSSetObjective(prob, 0, &f0_runners);CHKERRQ(ierr); */
-/*   ierr = DMPlexComputeIntegralFEM(plex,X,nre,NULL);CHKERRQ(ierr); */
-/*   ierr = DMDestroy(&plex);CHKERRQ(ierr); */
-/*   ierr = PetscPrintf(PETSC_COMM_SELF, "%3D) Runaway electrons: %20.13e\n",stepi,nre[0]);CHKERRQ(ierr); */
-/*   if (anre) *anre = nre[0]; */
-/*   PetscFunctionReturn(0); */
-/* } */
 
 /* < v, u*v*q > */
 static void f0_jz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
@@ -114,6 +98,7 @@ static void f0_jz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
     for(ii=0;ii<numConstants;ii++) f0[0] += u[ii] * 2.*M_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
   } else {
     for(ii=0;ii<numConstants;ii++) f0[0] += u[ii]                * x[2] * constants[ii]; /* n * v_|| * q  */
+    if (quarter3DDomain) *f0 *= 4;
   }
 }
 static void f0_0_jz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
@@ -126,6 +111,7 @@ static void f0_0_jz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
     *f0 = u[ii] * 2.*M_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
   } else {
     *f0 = u[ii] *                x[2] * constants[ii]; /* n * r * v_|| * q */
+    if (quarter3DDomain) *f0 *= 4;
   }
 }
 
@@ -139,21 +125,9 @@ static void f0_1_jz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
     *f0 = u[ii] * 2.*M_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
   } else {
     *f0 = u[ii] *                x[2] * constants[ii]; /* n * r * v_|| * q */
+    if (quarter3DDomain) *f0 *= 4;
   }
 }
-
-/* static void f0_2_j( PetscInt dim, PetscInt Nf, PetscInt NfAux, */
-/*                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], */
-/*                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], */
-/*                     PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0) */
-/* { */
-/*   PetscInt ii=2; */
-/*   if (dim==2) { */
-/*     *f0 = u[ii] * 2.*M_PI*x[0] * x[1] * constants[ii]; /\* n * r * v_|| * q *\/ */
-/*   } else { */
-/*     *f0 = u[ii] *                x[2] * constants[ii]; /\* n * r * v_|| * q *\/ */
-/*   } */
-/* } */
 
 /* < v, n_e > */
 static void f0_0_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
@@ -162,7 +136,10 @@ static void f0_0_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     PetscReal t, const PetscReal x[],  PetscInt y, const PetscScalar xx[], PetscScalar *f0)
 {
   if (dim==2) *f0 = 2.*M_PI*x[0]*u[0];
-  else        *f0 =              u[0];
+  else {
+    *f0 =              u[0];
+    if (quarter3DDomain) *f0 *= 4;
+  }
 }
 static void f0_1_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
@@ -170,7 +147,10 @@ static void f0_1_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     PetscReal t, const PetscReal x[],  PetscInt y, const PetscScalar xx[], PetscScalar *f0)
 {
   if (dim==2) *f0 = 2.*M_PI*x[0]*u[1];
-  else        *f0 =              u[1];
+  else {
+    *f0 =              u[1];
+    if (quarter3DDomain) *f0 *= 4;
+  }
 }
 static void f0_2_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
@@ -178,7 +158,10 @@ static void f0_2_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     PetscReal t, const PetscReal x[],  PetscInt y, const PetscScalar xx[], PetscScalar *f0)
 {
   if (dim==2) *f0 = 2.*M_PI*x[0]*u[2];
-  else        *f0 =              u[2];
+  else {
+    *f0 =              u[2];
+    if (quarter3DDomain) *f0 *= 4;
+  }
 }
 
 /* < v, n_e v_|| > */
@@ -188,7 +171,10 @@ static void f0_0_vz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     PetscReal t, const PetscReal x[],  PetscInt y, const PetscScalar xx[], PetscScalar *f0)
 {
   if (dim==2) *f0 = u[0] * 2.*M_PI*x[0] * x[1]; /* n r v_|| */
-  else        *f0 = u[0] *                x[2]; /* n v_|| */
+  else {
+    *f0 = u[0] *                x[2]; /* n v_|| */
+    if (quarter3DDomain) *f0 *= 4;
+  }
 }
 /* < v, n_e v_|| ^2 > */
 /* static void f0_0_vz2( PetscInt dim, PetscInt Nf, PetscInt NfAux, */
@@ -207,7 +193,10 @@ static void f0_0_v( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     PetscReal t, const PetscReal x[],  PetscInt y, const PetscScalar xx[], PetscScalar *f0)
 {
   if (dim==2) *f0 = u[0] * 2.*M_PI*x[0] * PetscSqrtReal(x[0]*x[0] + x[1]*x[1]);             /* n r v */
-  else        *f0 = u[0] *                PetscSqrtReal(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]); /* n v */
+  else {
+    *f0 = u[0] *                PetscSqrtReal(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]); /* n v */
+    if (quarter3DDomain) *f0 *= 4;
+  }
 }
 /* < v, n_i v > */
 static void f0_1_v( PetscInt dim, PetscInt Nf, PetscInt NfAux,
@@ -225,7 +214,10 @@ static void f0_2_v( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     PetscReal t, const PetscReal x[],  PetscInt y, const PetscScalar xx[], PetscScalar *f0)
 {
   if (dim==2) *f0 = u[2] * 2.*M_PI*x[0] * PetscSqrtReal(x[0]*x[0] + x[1]*x[1]);             /* n r v */
-  else        *f0 = u[2] *                PetscSqrtReal(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]); /* n v */
+  else {
+    *f0 = u[2] *                PetscSqrtReal(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]); /* n v */
+    if (quarter3DDomain) *f0 *= 4;
+  }
 }
 
 static PetscErrorCode getT_kev(DM plex, Vec X, PetscInt idx, PetscReal *a_n, PetscReal *a_Tkev)
@@ -842,7 +834,10 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   ierr = PetscFunctionListAdd(&testlist,"bimaxwellian",&testShift);CHKERRQ(ierr);
   ierr = PetscStrcpy(testname,"none");CHKERRQ(ierr);
   /* electric field function - can switch at runtime */
-  //rectx->E = ESpitzer;
+  if (0) {
+    rectx->E = ESpitzer;
+    rectx->E = EInduction;
+  }
   rectx->E = EConstant;
   ierr = PetscOptionsBegin(PETSC_COMM_SELF, prefix, "Options for Runaway/seed electron model", "none");CHKERRQ(ierr);
   ierr = PetscOptionsReal("-plot_dt", "Plotting interval", "xgc_dmplex.c", rectx->plotDt, &rectx->plotDt, NULL);CHKERRQ(ierr);
@@ -909,6 +904,7 @@ int main(int argc, char **argv)
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
+  quarter3DDomain = ctx->quarter3DDomain; /* ugh */
   /* context */
   rectx = (REctx*)(ctx->data = malloc(sizeof(REctx)));
   ierr = ProcessREOptions(rectx,ctx,dm,"");CHKERRQ(ierr);
@@ -971,6 +967,6 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: p4est
-    args: -Ez 0 -petscspace_degree 2 -mass_petscspace_degree 2 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 8 -domain_radius -.75 -impurity_source_type pulse -pulse_start_time 1e-1 -pulse_width_time 10 -pulse_rate 1e-2 -t_cold .05 -plot_dt 1e-1 -sub_thread_block_size 4
+    args: -Ez 0 -petscspace_degree 2 -mass_petscspace_degree 2 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 5 -domain_radius -.75 -impurity_source_type pulse -pulse_start_time 1e-1 -pulse_width_time 10 -pulse_rate 1e-2 -t_cold .05 -plot_dt 1e-1 -sub_thread_block_size 4
 
 TEST*/
