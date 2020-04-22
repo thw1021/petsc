@@ -1909,13 +1909,13 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ctx->Ez = 0;
   ctx->v_0 = 1; /* in electron thermal velocity */
   ctx->subThreadBlockSize = 1;
+  ctx->quarter3DDomain = PETSC_TRUE;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
   ctx->useCUDA = PETSC_TRUE;
   ierr = PetscOptionsBool("-use_cuda", "Use CUDA kernels", "xgc_dmplex.c", ctx->useCUDA, &ctx->useCUDA, NULL);CHKERRQ(ierr);
 #else
   ctx->useCUDA = PETSC_FALSE;
-  ctx->quarter3DDomain = PETSC_TRUE;
 #if defined(PETSC_HAVE_OPENMP)
   if (1) {
     int thread_id,hwthread,num_threads;
