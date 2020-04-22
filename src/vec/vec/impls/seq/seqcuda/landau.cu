@@ -343,9 +343,7 @@ static PetscErrorCode FPLandPointDataDestroyDevice(FPLandPointDataFlat *ld)
 #if !defined(FP_DIM)
 #define FP_DIM 2
 #endif
-#if !defined(FP_USE_SHARED_GPU_MEM)
 //#define FP_USE_SHARED_GPU_MEM
-#endif
 //
 // The GPU Landau kernel
 //
