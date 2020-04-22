@@ -57,7 +57,7 @@ static void f0_j_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   } else {
     if (x[2] > RE_CUT || x[2] < -RE_CUT) { /* simply a cutoff for REs. v_|| > 3 v(T_e) */
       *f0 = n_e                * x[2] * constants[0];
-      if (quarter3DDomain) *f0 *= 4;
+      if (quarter3DDomain) *f0 *= 4.0;
     } else {
       *f0 = 0;
     }
@@ -79,7 +79,7 @@ static void f0_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   } else {
     if (x[2] > RE_CUT || x[2] < -RE_CUT) { /* simply a cutoff for REs. v_|| > 3 v(T_e) */
       *f0 = n_e               ;
-      if (quarter3DDomain) *f0 *= 4;
+      if (quarter3DDomain) *f0 *= 4.0;
     } else {
       *f0 = 0;
     }
@@ -98,7 +98,7 @@ static void f0_jz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
     for(ii=0;ii<numConstants;ii++) f0[0] += u[ii] * 2.*M_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
   } else {
     for(ii=0;ii<numConstants;ii++) f0[0] += u[ii]                * x[2] * constants[ii]; /* n * v_|| * q  */
-    if (quarter3DDomain) *f0 *= 4;
+    if (quarter3DDomain) *f0 *= 4.0;
   }
 }
 static void f0_0_jz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
@@ -111,7 +111,7 @@ static void f0_0_jz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
     *f0 = u[ii] * 2.*M_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
   } else {
     *f0 = u[ii] *                x[2] * constants[ii]; /* n * r * v_|| * q */
-    if (quarter3DDomain) *f0 *= 4;
+    if (quarter3DDomain) *f0 *= 4.0;
   }
 }
 
@@ -125,7 +125,7 @@ static void f0_1_jz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
     *f0 = u[ii] * 2.*M_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
   } else {
     *f0 = u[ii] *                x[2] * constants[ii]; /* n * r * v_|| * q */
-    if (quarter3DDomain) *f0 *= 4;
+    if (quarter3DDomain) *f0 *= 4.0;
   }
 }
 
@@ -138,7 +138,7 @@ static void f0_0_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
   if (dim==2) *f0 = 2.*M_PI*x[0]*u[0];
   else {
     *f0 =              u[0];
-    if (quarter3DDomain) *f0 *= 4;
+    if (quarter3DDomain) *f0 *= 4.0;
   }
 }
 static void f0_1_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
@@ -149,7 +149,7 @@ static void f0_1_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
   if (dim==2) *f0 = 2.*M_PI*x[0]*u[1];
   else {
     *f0 =              u[1];
-    if (quarter3DDomain) *f0 *= 4;
+    if (quarter3DDomain) *f0 *= 4.0;
   }
 }
 static void f0_2_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
@@ -160,7 +160,7 @@ static void f0_2_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
   if (dim==2) *f0 = 2.*M_PI*x[0]*u[2];
   else {
     *f0 =              u[2];
-    if (quarter3DDomain) *f0 *= 4;
+    if (quarter3DDomain) *f0 *= 4.0;
   }
 }
 
@@ -173,18 +173,9 @@ static void f0_0_vz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
   if (dim==2) *f0 = u[0] * 2.*M_PI*x[0] * x[1]; /* n r v_|| */
   else {
     *f0 = u[0] *                x[2]; /* n v_|| */
-    if (quarter3DDomain) *f0 *= 4;
+    if (quarter3DDomain) *f0 *= 4.0;
   }
 }
-/* < v, n_e v_|| ^2 > */
-/* static void f0_0_vz2( PetscInt dim, PetscInt Nf, PetscInt NfAux, */
-/*                      const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], */
-/*                      const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], */
-/*                      PetscReal t, const PetscReal x[],  PetscInt y, const PetscScalar xx[], PetscScalar *f0) */
-/* { */
-/*   if (dim==2) *f0 = u[0] * 2.*M_PI*x[0] * x[1]*x[1]; /\* n r v_||^2 *\/ */
-/*   else        *f0 = u[0]                * x[2]*x[2]; /\* n v_||^2 *\/ */
-/* } */
 
 /* < v, n_e v > */
 static void f0_0_v( PetscInt dim, PetscInt Nf, PetscInt NfAux,
@@ -195,7 +186,7 @@ static void f0_0_v( PetscInt dim, PetscInt Nf, PetscInt NfAux,
   if (dim==2) *f0 = u[0] * 2.*M_PI*x[0] * PetscSqrtReal(x[0]*x[0] + x[1]*x[1]);             /* n r v */
   else {
     *f0 = u[0] *                PetscSqrtReal(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]); /* n v */
-    if (quarter3DDomain) *f0 *= 4;
+    if (quarter3DDomain) *f0 *= 4.0;
   }
 }
 /* < v, n_i v > */
@@ -205,7 +196,10 @@ static void f0_1_v( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     PetscReal t, const PetscReal x[],  PetscInt y, const PetscScalar xx[], PetscScalar *f0)
 {
   if (dim==2) *f0 = u[1] * 2.*M_PI*x[0] * PetscSqrtReal(x[0]*x[0] + x[1]*x[1]);             /* n r v */
-  else        *f0 = u[1] *                PetscSqrtReal(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]); /* n v */
+  else {
+    *f0 = u[1] *                PetscSqrtReal(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]); /* n v */
+    if (quarter3DDomain) *f0 *= 4.0;
+  }
 }
 /* < v, n_imp v > */
 static void f0_2_v( PetscInt dim, PetscInt Nf, PetscInt NfAux,
@@ -216,7 +210,7 @@ static void f0_2_v( PetscInt dim, PetscInt Nf, PetscInt NfAux,
   if (dim==2) *f0 = u[2] * 2.*M_PI*x[0] * PetscSqrtReal(x[0]*x[0] + x[1]*x[1]);             /* n r v */
   else {
     *f0 = u[2] *                PetscSqrtReal(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]); /* n v */
-    if (quarter3DDomain) *f0 *= 4;
+    if (quarter3DDomain) *f0 *= 4.0;
   }
 }
 
@@ -318,6 +312,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   ierr = PetscDSSetObjective(prob, 0, &f0_jz);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
   J = -ctx->n_0*ctx->v_0*tt[0];
+PetscPrintf(PETSC_COMM_WORLD, "\t\t\tJ= %10.3e tt= %10.3e \n",J,tt[0]);
   ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);

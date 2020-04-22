@@ -916,7 +916,7 @@ static void f0_s_e(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 }
 
 /* < v, ru > */
-static void f0_s_den_4(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+static void f0_s_den_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
 		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
 		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
@@ -925,25 +925,25 @@ static void f0_s_den_4(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 }
 
 /* < v, ru > */
-static void f0_s_xmom_4(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+static void f0_s_xmom_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
 		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
 		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  *f0 = x[0]*u[s_species_idx] * 4;
+  *f0 = 0;
 }
 
 /* < v, ru > */
-static void f0_s_ymom_4(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+static void f0_s_ymom_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
 		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
 		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  *f0 = x[1]*u[s_species_idx] * 4;
+  *f0 = 0;
 }
 
 /* < v, ru > */
-static void f0_s_zmom_4(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+static void f0_s_zmom_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
 		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
 		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
@@ -951,7 +951,7 @@ static void f0_s_zmom_4(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   *f0 = x[2]*u[s_species_idx] * 4;
 }
 
-static void f0_s_e_4(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+static void f0_s_e_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                   PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
@@ -1324,7 +1324,7 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
       PetscInt    cells[] = {4,4,4};
       PetscReal   lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
       DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-      if (dim==2) { lo[0] = 0; cells[1] = 8; }
+      if (dim==2) { lo[0] = 0; cells[0] = 2; }
       else if (ctx->quarter3DDomain) { lo[0] = lo[1] = 0; cells[0] = cells[1] = 2; }
       ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, dm);CHKERRQ(ierr);
       ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr); /* needed for periodic */
@@ -2207,19 +2207,19 @@ PetscErrorCode DMPlexFPPrintNorms(Vec X, PetscInt stepi)
 	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
 	energy = 0.5*ctx->n_0*ctx->v_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
       } else {
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_den_4);CHKERRQ(ierr);
+	ierr = PetscDSSetObjective(probv, 0, &f0_s_den_3Dsym);CHKERRQ(ierr);
 	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
 	density = ctx->n_0*tt[0]*ctx->charges[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_xmom_4);CHKERRQ(ierr);
+	ierr = PetscDSSetObjective(probv, 0, &f0_s_xmom_3Dsym);CHKERRQ(ierr);
 	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
 	xmomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_ymom_4);CHKERRQ(ierr);
+	ierr = PetscDSSetObjective(probv, 0, &f0_s_ymom_3Dsym);CHKERRQ(ierr);
 	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
 	ymomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_zmom_4);CHKERRQ(ierr);
+	ierr = PetscDSSetObjective(probv, 0, &f0_s_zmom_3Dsym);CHKERRQ(ierr);
 	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
 	zmomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_e_4);CHKERRQ(ierr);
+	ierr = PetscDSSetObjective(probv, 0, &f0_s_e_3Dsym);CHKERRQ(ierr);
 	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
 	energy = 0.5*ctx->n_0*ctx->v_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
       }
