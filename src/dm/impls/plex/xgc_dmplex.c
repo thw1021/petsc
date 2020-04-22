@@ -1734,7 +1734,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
     }
     ierr = PetscInfo1(sol, "Phase:%s: Uniform refinement\n",__FUNCT__);
   } else if (type==2) {
-    PetscInt  rCellIdx[] = {-1,-1,-1,-1}, eCellIdx[64], iCellIdx[64], eMaxIdx = -1, iMaxIdx = -1, nr = 0, nrmax = (dim==3 && !ctx->quarter3DDomain) ? 8 : 2;
+    PetscInt  rCellIdx[8], eCellIdx[64], iCellIdx[64], eMaxIdx = -1, iMaxIdx = -1, nr = 0, nrmax = (dim==3 && !ctx->quarter3DDomain) ? 8 : 2;
     PetscReal minRad = 1.e100, r, eMinRad = 1.e100, iMinRad = 1.e100;
     for (c = 0; c < 64; c++) { eCellIdx[c] = iCellIdx[c] = -1; }
     for (c = cStart; c < cEnd; c++) {
