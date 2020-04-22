@@ -2159,13 +2159,13 @@ typedef void (*TPSEvaluateFunc)(const PetscReal[], PetscReal*, PetscReal[], Pets
 */
 static void TPSEvaluate_SchwarzP(const PetscReal y[3], PetscReal *f, PetscReal grad[], PetscReal (*hess)[3])
 {
-  PetscReal c[3] = {PetscCosReal(y[0]), PetscCosReal(y[1]), PetscCosReal(y[2])};
-  PetscReal g[3] = {-PetscSinReal(y[0]), -PetscSinReal(y[1]), -PetscSinReal(y[2])};
+  PetscReal c[3] = {PetscCosReal(y[0] * PETSC_PI), PetscCosReal(y[1] * PETSC_PI), PetscCosReal(y[2] * PETSC_PI)};
+  PetscReal g[3] = {-PetscSinReal(y[0] * PETSC_PI), -PetscSinReal(y[1] * PETSC_PI), -PetscSinReal(y[2] * PETSC_PI)};
   f[0] = c[0] + c[1] + c[2];
   for (PetscInt i=0; i<3; i++) {
-    grad[i] = g[i];
+    grad[i] = PETSC_PI * g[i];
     for (PetscInt j=0; j<3; j++) {
-      hess[i][j] = (i == j) ? -c[i] : 0.;
+      hess[i][j] = (i == j) ? -PetscSqr(PETSC_PI) * c[i] : 0.;
     }
   }
 }
@@ -2333,7 +2333,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
     if (!rank) {
       int (*cells)[6][4][4] = NULL; // [junction, junction-face, cell, conn]
       PetscInt Njunctions = 0, Npipes[3], vcount;
-      PetscReal L = PETSC_PI;
+      PetscReal L = 1;
 
       Npipes[0] = (extent[0] + 1) * extent[1] * extent[2];
       Npipes[1] = extent[0] * (extent[1] + 1) * extent[2];
