@@ -312,7 +312,6 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   ierr = PetscDSSetObjective(prob, 0, &f0_jz);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
   J = -ctx->n_0*ctx->v_0*tt[0];
-PetscPrintf(PETSC_COMM_WORLD, "\t\t\tJ= %10.3e tt= %10.3e \n",J,tt[0]);
   ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
