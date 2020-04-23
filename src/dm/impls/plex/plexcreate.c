@@ -2354,8 +2354,10 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
       Njunctions = extent[0] * extent[1] * extent[2];
       Ncuts = 2 * (extent[0] * extent[1] + extent[1] * extent[2] + extent[2] * extent[0]);
       numVertices = 4 * (Npipes[0] + Npipes[1] + Npipes[2]) + 8 * Njunctions;
-      ierr = PetscMalloc2(3*numVertices, &vtxCoords, Njunctions, &cells);CHKERRQ(ierr);
-      ierr = PetscMalloc2(Ncuts*4, &edges, Ncuts*4, &edgeSets);CHKERRQ(ierr);
+      ierr = PetscMalloc1(3*numVertices, &vtxCoords);CHKERRQ(ierr);
+      ierr = PetscMalloc1(Njunctions, &cells);CHKERRQ(ierr);
+      ierr = PetscMalloc1(Ncuts*4, &edges);CHKERRQ(ierr);
+      ierr = PetscMalloc1(Ncuts*4, &edgeSets);CHKERRQ(ierr);
       // x-normal pipes
       vcount = 0;
       for (PetscInt i=0; i<extent[0]+1; i++) {
@@ -2678,7 +2680,8 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
   }
 
   ierr = DMPlexCreateFromCellList(comm, topoDim, numFaces, numVertices, 4, PETSC_TRUE, cells_flat, spaceDim, vtxCoords, dm);CHKERRQ(ierr);
-  ierr = PetscFree2(vtxCoords, cells_flat);CHKERRQ(ierr);
+  ierr = PetscFree(vtxCoords);CHKERRQ(ierr);
+  ierr = PetscFree(cells_flat);CHKERRQ(ierr);
 
   ierr = DMCreateLabel(*dm, "Face Sets");CHKERRQ(ierr);
   ierr = DMGetLabel(*dm, "Face Sets", &label);CHKERRQ(ierr);
@@ -2690,7 +2693,8 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
     ierr = DMLabelSetValue(label, join[0], edgeSets[e]);CHKERRQ(ierr);
     ierr = DMPlexRestoreJoin(*dm, 2, verts, &njoin, &join);CHKERRQ(ierr);
   }
-  ierr = PetscFree2(edges, edgeSets);CHKERRQ(ierr);
+  ierr = PetscFree(edges);CHKERRQ(ierr);
+  ierr = PetscFree(edgeSets);CHKERRQ(ierr);
 
   {
     DM dmserial = *dm;
