@@ -414,7 +414,8 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
        }
       }
     } else {
-      PetscReal       U[3][3];
+      PetscReal       U[3][3], R[2][2] = {{-1,1},{1,-1}};
+      for (ii=0;ii<4;ii++) {
 #pragma forceinline recursive
       LandauTensor3D(pvj,data[0], data[1], data[2],U, (ipidx==jpidx) ? 0. : 1.);
       for (fieldA = 0; fieldA < Nf; ++fieldA) {
@@ -425,9 +426,18 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 	      gg2[fieldA][d2] += nu_m0_ma[fieldA][fieldB] * invMass[fieldB] * U[d2][d3] * df[d3 + fieldB*dim] * wi;
 	      /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
 	      gg3[fieldA][d2][d3] -= nu_m0_ma[fieldA][fieldB] * invMass[fieldA] * U[d2][d3] * f[fieldB] * wi;
-           }
-         }
-       }
+	    }
+	  }
+	}
+      }
+      if (!ctx->quarter3DDomain) break;
+      data[0] *= R[0][ii%2];
+      data[1] *= R[1][ii%2];
+      for (d3 = 0; d3 < 2; ++d3) {
+        for (fieldB = 0; fieldB < Nf; ++fieldB) {
+          *df[d3 + fieldB*dim] *= R[d3][ii%2];
+        }
+      }
       }
     }
   } /* IPs */
