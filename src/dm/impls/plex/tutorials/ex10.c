@@ -18,6 +18,7 @@ int main(int argc, char **argv)
   ierr = PetscOptionsEnum("-tps_type", "Type of triply-periodic surface", NULL, DMPlexTPSTypes, (PetscEnum)tps_type, (PetscEnum*)&tps_type, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   ierr = DMPlexCreateTPSMesh(PETSC_COMM_WORLD, tps_type, extent, periodic, 0, refine, &dm);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)dm, "TPS");CHKERRQ(ierr);
   ierr = DMViewFromOptions(dm, NULL, "-dm_view");CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
   ierr = PetscFinalize();
@@ -28,16 +29,16 @@ int main(int argc, char **argv)
 
   test:
     suffix: 0
-    args: -extent 1,2,3 -refine 0
+    args: -extent 1,2,3 -dm_view -refine 0
   test:
     suffix: 1
-    args: -extent 2,3,1 -refine 1
+    args: -extent 2,3,1 -dm_view -refine 1
 
   test:
     suffix: gyroid_0
-    args: -extent 1,2,3 -refine 0 -tps_type gyroid
+    args: -extent 1,2,3 -dm_view -refine 0 -tps_type gyroid
   test:
     suffix: gyroid_1
-    args: -extent 2,3,1 -refine 1 -tps_type gyroid
+    args: -extent 2,3,1 -dm_view -refine 1 -tps_type gyroid
 
 TEST*/

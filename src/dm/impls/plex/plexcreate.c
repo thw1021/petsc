@@ -2291,7 +2291,7 @@ static PetscErrorCode TPSNearestPoint(TPSEvaluateFunc feval, PetscScalar x[])
 
 const char *const DMPlexTPSTypes[] = {"SCHWARZ_P", "GYROID", "DMPlexTPSType", "DMPLEX_TPS_", NULL};
 /*@
-  DMPlexCreateTPSMesh - Creates a mesh of a triply-periodic surface
+  DMPlexCreateTPSMesh - Create a distributed, interpolated mesh of a triply-periodic surface
 
   Collective
 
@@ -2307,11 +2307,21 @@ const char *const DMPlexTPSTypes[] = {"SCHWARZ_P", "GYROID", "DMPlexTPSType", "D
 . dm  - The DM object
 
   Notes:
-  This meshes the surface of the Schwarz P surface, which is the simplest member of the triply-periodic minimal surfaces.
-  https://en.wikipedia.org/wiki/Schwarz_minimal_surface#Schwarz_P_(%22Primitive%22)
+  This meshes the surface of the Schwarz P or Gyroid surfaces.  Schwarz P is is the simplest member of the triply-periodic minimal surfaces.
+  https://en.wikipedia.org/wiki/Schwarz_minimal_surface#Schwarz_P_(%22Primitive%22) and can be cut with "clean" boundaries.
+  The Gyroid (https://en.wikipedia.org/wiki/Gyroid) is another triply-periodic minimal surface with applications in additive manufacturing; it is much more difficult to "cut" since there are no planes of symmetry.
   Our implementation creates a very coarse mesh of the surface and refines (by 4-way splitting) as many times as requested.
   On each refinement, all vertices are projected to their nearest point on the surface.
   This projection could readily be extended to related surfaces.
+
+  The face (edge) sets for the Schwarz P surface are numbered 1(-x), 2(+x), 3(-y), 4(+y), 5(-z), 6(+z).
+  When the mesh is refined, "Face Sets" contain the new vertices (created during refinement).  Use DMPlexLabelComplete() to propagate to coarse-level vertices.
+
+  References:
+  Maskery et al, Insights into the mechanical properties of several triply periodic minimal surface lattice structures made by polymer additive manufacturing, 2017. https://doi.org/10.1016/j.polymer.2017.11.049
+
+  Developer Notes:
+  The Gyroid mesh does not currently mark boundary sets.
 
   Level: beginner
 
@@ -2321,26 +2331,31 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
 {
   PetscErrorCode ierr;
   PetscMPIInt rank;
-  PetscInt topoDim = 2, spaceDim = 3, numFaces = 0, numVertices = 0;
+  PetscInt topoDim = 2, spaceDim = 3, numFaces = 0, numVertices = 0, numEdges = 0;
+  PetscInt (*edges)[2] = NULL, *edgeSets = NULL;
   int *cells_flat = NULL;
   double *vtxCoords = NULL;
   TPSEvaluateFunc evalFunc = 0;
+  DMLabel label;
 
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
   switch (tpstype) {
   case DMPLEX_TPS_SCHWARZ_P:
+    if (periodic && (periodic[0] != DM_BOUNDARY_NONE || periodic[1] != DM_BOUNDARY_NONE || periodic[2] != DM_BOUNDARY_NONE)) SETERRQ(comm, PETSC_ERR_SUP, "Schwarz P does not support periodic meshes");
     if (!rank) {
       int (*cells)[6][4][4] = NULL; // [junction, junction-face, cell, conn]
-      PetscInt Njunctions = 0, Npipes[3], vcount;
+      PetscInt Njunctions = 0, Ncuts = 0, Npipes[3], vcount;
       PetscReal L = 1;
 
       Npipes[0] = (extent[0] + 1) * extent[1] * extent[2];
       Npipes[1] = extent[0] * (extent[1] + 1) * extent[2];
       Npipes[2] = extent[0] * extent[1] * (extent[2] + 1);
       Njunctions = extent[0] * extent[1] * extent[2];
+      Ncuts = 2 * (extent[0] * extent[1] + extent[1] * extent[2] + extent[2] * extent[0]);
       numVertices = 4 * (Npipes[0] + Npipes[1] + Npipes[2]) + 8 * Njunctions;
       ierr = PetscMalloc2(3*numVertices, &vtxCoords, Njunctions, &cells);CHKERRQ(ierr);
+      ierr = PetscMalloc2(Ncuts*4, &edges, Ncuts*4, &edgeSets);CHKERRQ(ierr);
       // x-normal pipes
       vcount = 0;
       for (PetscInt i=0; i<extent[0]+1; i++) {
@@ -2410,6 +2425,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
               ((i * extent[1] + j) * (extent[2]+1) + k + 1 + Npipes[0] + Npipes[1])*4
             };
             for (PetscInt dir=0; dir<3; dir++) { // x,y,z
+              const PetscInt ijk[3] = {i, j, k};
               for (PetscInt l=0; l<4; l++) { // rotations
                 cells[J][dir*2+0][l][0] = pipe_lo[dir] + l;
                 cells[J][dir*2+0][l][1] = Jvoff + jfaces[dir][0][l];
@@ -2419,11 +2435,24 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
                 cells[J][dir*2+1][l][1] = pipe_hi[dir] + l;
                 cells[J][dir*2+1][l][2] = pipe_hi[dir] + (l-1+4)%4;
                 cells[J][dir*2+1][l][3] = Jvoff + jfaces[dir][1][(l-1+4)%4];
+                if (ijk[dir] == 0) {
+                  edges[numEdges][0] = pipe_lo[dir] + l;
+                  edges[numEdges][1] = pipe_lo[dir] + (l+1) % 4;
+                  edgeSets[numEdges] = dir*2 + 1;
+                  numEdges++;
+                }
+                if (ijk[dir] + 1 == extent[dir]) {
+                  edges[numEdges][0] = pipe_hi[dir] + l;
+                  edges[numEdges][1] = pipe_hi[dir] + (l+1) % 4;
+                  edgeSets[numEdges] = dir*2 + 2;
+                  numEdges++;
+                }
               }
             }
           }
         }
       }
+      if (numEdges != Ncuts * 4) SETERRQ2(comm, PETSC_ERR_PLIB, "Edge count %D incompatible with number of cuts %D", numEdges, Ncuts);
       numFaces = 24 * Njunctions;
       cells_flat = cells[0][0][0];
     }
@@ -2651,6 +2680,18 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
   ierr = DMPlexCreateFromCellList(comm, topoDim, numFaces, numVertices, 4, PETSC_TRUE, cells_flat, spaceDim, vtxCoords, dm);CHKERRQ(ierr);
   ierr = PetscFree2(vtxCoords, cells_flat);CHKERRQ(ierr);
 
+  ierr = DMCreateLabel(*dm, "Face Sets");CHKERRQ(ierr);
+  ierr = DMGetLabel(*dm, "Face Sets", &label);CHKERRQ(ierr);
+  for (PetscInt e=0; e<numEdges; e++) {
+    PetscInt njoin;
+    const PetscInt *join, verts[] = {numFaces + edges[e][0], numFaces + edges[e][1]};
+    ierr = DMPlexGetJoin(*dm, 2, verts, &njoin, &join);CHKERRQ(ierr);
+    if (njoin != 1) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected unique join of vertices %D and %D", edges[e][0], edges[e][1]);
+    ierr = DMLabelSetValue(label, join[0], edgeSets[e]);CHKERRQ(ierr);
+    ierr = DMPlexRestoreJoin(*dm, 2, verts, &njoin, &join);CHKERRQ(ierr);
+  }
+  ierr = PetscFree2(edges, edgeSets);CHKERRQ(ierr);
+
   {
     DM dmserial = *dm;
     PetscPartitioner part;
@@ -2682,6 +2723,10 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
     }
     ierr = VecRestoreArray(X, &x);CHKERRQ(ierr);
   }
+
+  // Face Sets has already been propagated to new vertices during refinement; this propagates to the initial vertices.
+  ierr = DMGetLabel(*dm, "Face Sets", &label);CHKERRQ(ierr);
+  ierr = DMPlexLabelComplete(*dm, label);CHKERRQ(ierr);
 
   if (thickness > 0) SETERRQ1(comm, PETSC_ERR_SUP, "Thickness %g > 0 not implemented", (double)thickness);
   PetscFunctionReturn(0);

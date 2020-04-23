@@ -1,0 +1,10 @@
+DM Object: TPS 1 MPI processes
+  type: plex
+TPS in 2 dimensions:
+  0-cells: 429
+  1-cells: 856
+  2-cells: 384
+Labels:
+  celltype: 3 strata with value/size (0 (429), 4 (384), 1 (856))
+  depth: 3 strata with value/size (0 (429), 1 (856), 2 (384))
+  Face Sets: 0 strata with value/size ()
