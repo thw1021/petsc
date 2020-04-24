@@ -435,7 +435,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 	PetscReal ldf[3*FP_MAX_SPECIES];
 	for (fieldB = 0; fieldB < Nf; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3 + fieldB*3] = df[d3 + fieldB*3] * wi * invMass[fieldB];
 	for (dp=0;dp<4;dp++) {
-	  LandauTensor3D(pvj,lxx[0], lxx[1], data[2],U, (ipidx==jpidx) ? 0. : 1.);
+	  LandauTensor3D(pvj, lxx[0], lxx[1], data[2], U, (ipidx==jpidx) ? 0. : 1.);
 	  for (fieldA = 0; fieldA < Nf; ++fieldA) {
 	    for (fieldB = 0; fieldB < Nf; ++fieldB) {
 	      for (d2 = 0; d2 < 3; ++d2) {
@@ -443,7 +443,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 		  /* K = U * grad(f): g2 = e: i,A */
 		  gg2[fieldA][d2] += nu_m0_ma[fieldA][fieldB] * U[d2][d3] * ldf[d3 + fieldB*3];
 		  /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
-		  gg3[fieldA][d2][d3] -= nu_m0_ma[fieldA][fieldB] * invMass[fieldA] * U[d2][d3] * f[fieldB];
+		  gg3[fieldA][d2][d3] -= nu_m0_ma[fieldA][fieldB] * invMass[fieldA] * U[d2][d3] * f[fieldB] * wi;
 		}
 	      }
 	    }
