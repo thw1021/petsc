@@ -581,7 +581,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
       for (ipidx = 0; ipidx < nip; ++ipidx) {
 	const PetscReal wi = wiGlobal[ipidx];
 	const PetscReal * __restrict__ fi[FP_MAX_SPECIES];
-        PetscReal * __restrict__ dfi[3][FP_MAX_SPECIES];
+        const PetscReal * __restrict__ dfi[3][FP_MAX_SPECIES];
 	for (fieldA=0;fieldA<Nf;fieldA++) {
 	  fi[fieldA] = &f0[fieldA][ipidx];
 	  for (d = 0; d < dim; ++d) {
@@ -589,11 +589,11 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 	  }
 	}
 	if (dim==3) {
-          PetscReal *const __restrict__ xix  = &x0[ipidx];
-          PetscReal *const __restrict__ xiy  = &y0[ipidx];
-          PetscReal *const __restrict__ xiz  = &z0[ipidx];
+          const PetscReal *const __restrict__ xix  = &x0[ipidx];
+          const PetscReal *const __restrict__ xiy  = &y0[ipidx];
+          const PetscReal *const __restrict__ xiz  = &z0[ipidx];
 	  PetscReal                     U[3][3], R[2][2] = {{-1,1},{1,-1}};
-          for (ii=0;ii<4;ii++) {
+          if (!ctx->quarter3DDomain) {
 #pragma forceinline recursive
           LandauTensor3D(&vj[qj*dim],*xix,*xiy,*xiz,U, (ipidx==jpidx) ? 0. : 1.);
           for (fieldA = 0; fieldA < Nf; ++fieldA) {
@@ -608,14 +608,31 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
               }
             }
           }
-          if (!ctx->quarter3DDomain) break;
-          *xix *= R[0][ii%2];
-          *xiy *= R[1][ii%2];
-          for (d3 = 0; d3 < 2; ++d3) {
-            for (fieldB = 0; fieldB < Nf; ++fieldB) {
-              *dfi[d3][fieldB] *= R[d3][ii%2];
+          } else {
+            PetscReal lxx[2] = {*xix,*xiy};
+            PetscReal ldf[3][FP_MAX_SPECIES];
+            for (fieldB = 0; fieldB < Nf; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3][fieldB] = *dfi[d3][fieldB] * wi * invMass[fieldB];
+            for (dp=0;dp<4;dp++) {
+              LandauTensor3D(&vj[qj*dim], lxx[0], lxx[1], *xiz,U, (ipidx==jpidx) ? 0. : 1.);
+              for (fieldA = 0; fieldA < Nf; ++fieldA) {
+                for (fieldB = 0; fieldB < Nf; ++fieldB) {
+                  for (d2 = 0; d2 < 3; ++d2) {
+                    for (d3 = 0; d3 < 3; ++d3) {
+                      /* K = U * grad(f): g2 = e: i,A */
+                      gg2[fieldA][d2] += nu_m0_ma[fieldA][fieldB] * U[d2][d3] * ldf[d3][fieldB];
+                      /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
+                      gg3[fieldA][d2][d3] -= nu_m0_ma[fieldA][fieldB] * invMass[fieldA] * U[d2][d3] * *fi[fieldB] * wi;
+                    }
+                  }
+                }
+              }
+              for (d3 = 0; d3 < 2; ++d3) {
+                lxx[d3] *= R[d3][dp%2];
+                for (fieldB = 0; fieldB < Nf; ++fieldB) {
+                  ldf[d3][fieldB] *= R[d3][dp%2];
+                }
+              }
             }
-          }
           }
 	} else {
 	  const PetscReal *const __restrict__ xir  = &x0[ipidx];
