@@ -531,7 +531,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   if (!JacP) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Only Jacobians, not matrix free");
 #if defined(PETSC_HAVE_CUDA)
   if (ctx->useCUDA) {
-    ierr = FPLandauCUDAJacobian(plex,quad,foffsets,nu_m0_ma,invMass,Eq_m,&IPDataGlobal,wiGlobal,ctx->subThreadBlockSize,ctx->events,JacP);
+    ierr = FPLandauCUDAJacobian(plex,quad,foffsets,nu_m0_ma,invMass,Eq_m,&IPDataGlobal,wiGlobal,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
   } else
 #endif
