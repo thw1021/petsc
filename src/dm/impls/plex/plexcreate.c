@@ -2674,6 +2674,43 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
       ierr = PetscFree(vertToTrueVert);CHKERRQ(ierr);
       ierr = PetscFree(seen);CHKERRQ(ierr);
       cells_flat = cells[0][0];
+      numEdges = 0;
+      for (PetscInt i = 0; i < numFaces; i++) {
+        for (PetscInt e = 0; e < 4; e++) {
+          PetscInt ev[] = {cells_flat[i*4 + e], cells_flat[i*4 + ((e+1)%4)]};
+          const PetscReal *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
+
+          for (PetscInt d = 0; d < 3; d++) {
+            if (!periodic || periodic[0] != DM_BOUNDARY_PERIODIC) {
+              if (evCoords[0][d] == 0. && evCoords[1][d] == 0.) numEdges++;
+              if (evCoords[0][d] == 2.*extent[d] && evCoords[1][d] == 2.*extent[d]) numEdges++;
+            }
+          }
+        }
+      }
+      ierr = PetscMalloc1(numEdges, &edges);CHKERRQ(ierr);
+      ierr = PetscMalloc1(numEdges, &edgeSets);CHKERRQ(ierr);
+      for (PetscInt edge = 0, i = 0; i < numFaces; i++) {
+        for (PetscInt e = 0; e < 4; e++) {
+          PetscInt ev[] = {cells_flat[i*4 + e], cells_flat[i*4 + ((e+1)%4)]};
+          const PetscReal *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
+
+          for (PetscInt d = 0; d < 3; d++) {
+            if (!periodic || periodic[d] != DM_BOUNDARY_PERIODIC) {
+              if (evCoords[0][d] == 0. && evCoords[1][d] == 0.) {
+                edges[edge][0] = ev[0];
+                edges[edge][1] = ev[1];
+                edgeSets[edge++] = 2 * d;
+              }
+              if (evCoords[0][d] == 2.*extent[d] && evCoords[1][d] == 2.*extent[d]) {
+                edges[edge][0] = ev[0];
+                edges[edge][1] = ev[1];
+                edgeSets[edge++] = 2 * d + 1;
+              }
+            }
+          }
+        }
+      }
     }
     evalFunc = TPSEvaluate_Gyroid;
     break;
