@@ -256,7 +256,7 @@ static PetscErrorCode getT_kev(DM plex, Vec X, PetscInt idx, PetscReal *a_n, Pet
  /*  n        -- Electron density  */
  /*  lnLambda --   */
  /*  eps0     --  */
- /*  E        -- output E */
+ /*  E        -- output E, input \hat E */
 static PetscReal CalculateE(PetscReal Tev, PetscReal n, PetscReal lnLambda, PetscReal eps0, PetscReal *E)
 {
   PetscReal            c,e,m;
@@ -265,14 +265,14 @@ static PetscReal CalculateE(PetscReal Tev, PetscReal n, PetscReal lnLambda, Pets
   e = 1.602176e-19;
   m = 9.10938e-31;
   if (1) {
-    PetscReal Ec;
+    PetscReal Ec, Ehat = *E;
     Ec = n*lnLambda*pow(e,3) / (4*M_PI*pow(eps0,2)*m*c*c);
     *E = Ec;
     PetscReal betath = sqrt(2*Tev*e/(m*c*c));
-    PetscReal j0 = Ec * 7/(sqrt(2)*2) * pow(betath,3) * n * e * c;
+    PetscReal j0 = Ehat * 7/(sqrt(2)*2) * pow(betath,3) * n * e * c;
     PetscPrintf(PETSC_COMM_WORLD, "CalculateE j0=%g Ec = %g\n",j0,Ec);
   } else {
-    PetscReal Ed,vth;
+    PetscReal Ed, vth;
     vth = PetscSqrtReal(8*Tev*e/(m*M_PI));
     Ed =  n*lnLambda*pow(e,3) / (4*M_PI*pow(eps0,2)*m*vth*vth);
     *E = Ed;
@@ -872,7 +872,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
     }
   }
   if (ctx->Ez > 0) {
-    PetscReal E, Tev = ctx->thermal_temps[0]*8.621738e-5, n = ctx->n_0*ctx->n[0];
+    PetscReal E = ctx->Ez, Tev = ctx->thermal_temps[0]*8.621738e-5, n = ctx->n_0*ctx->n[0];
     CalculateE(Tev, n, ctx->lnLam, ctx->epsilon0, &E);
     ((LandCtx*)ctx)->Ez *= E;
   }
