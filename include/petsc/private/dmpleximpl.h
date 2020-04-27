@@ -613,7 +613,7 @@ PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErro
 
 /* the context */
 #if !defined(FP_MAX_SPECIES)
-#define FP_MAX_SPECIES 2
+#define FP_MAX_SPECIES 3
 #endif
 #if !defined(FP_MAX_NQ)
 #define FP_MAX_NQ 27 /* Q2/Q4 */

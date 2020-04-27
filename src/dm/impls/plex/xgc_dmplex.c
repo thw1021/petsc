@@ -1979,6 +1979,13 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   flg = PETSC_FALSE;
   ierr = PetscOptionsBool("-petscspace_poly_tensor", "", "xgc_dmplex.c", flg, &flg, NULL);CHKERRQ(ierr);
   ctx->simplex = flg ? PETSC_FALSE : PETSC_TRUE;
+  /* get num species */
+  {
+    PetscReal arr[100];
+    nt = 100;
+    ierr = PetscOptionsRealArray("-thermal_temps", "Temperature of each species [e,i_0,i_1,...] in keV", "xgc_dmplex.c", arr, &nt, &flg);CHKERRQ(ierr);
+    if (flg && nt > FP_MAX_SPECIES) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-thermal_temps ,t1,t2,.. number of species %D > MAX %D",nt,FP_MAX_SPECIES);
+  }
   nt = FP_MAX_SPECIES;
   for (ii=0;ii<FP_MAX_SPECIES;ii++) ctx->thermal_temps[ii] = 1.;
   ierr = PetscOptionsRealArray("-thermal_temps", "Temperature of each species [e,i_0,i_1,...] in keV", "xgc_dmplex.c", ctx->thermal_temps, &nt, &flg);CHKERRQ(ierr);
