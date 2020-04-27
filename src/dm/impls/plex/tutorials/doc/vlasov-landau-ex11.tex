@@ -70,19 +70,19 @@ species of ions in general) in a plasma is modeled with the {\it Vlasov-Maxwell-
 \cdot \nabla_x f+ \frac{\partial\bm v}{\partial t} \cdot \nabla_v f
 = \frac{\partial f}{\partial t} + {\bm v} \cdot \nabla_x f+
 \frac{e_{\alpha}}{m_{\alpha}}\left( {\bm E} + {\bm v} \times {\bm B} \right) \cdot
-\nabla_v f = C
+\nabla_v f = C + S^M\left(t\right)
 \end{equation*}
 where $e$ is charge, $m$ mass, ${\bm E} $ electric field, ${\bm B}$
 magnetic field, ${\bm x}$ spatial coordinate, ${\bm v}$ velocity
-coordinate, and $t$ time \cite{Vlasov1968}.
+coordinate,  $t$ time and $S^M\left(t\right)$ is an Maxwellian exogenous source with a given temperate $T_{cold}$ and a given number density as a function of time for electrons and a selection ion species (scaled appropriately by a given effective ionization number) \cite{Vlasov1968}.
 We ignore configurations space and work only in velocity space and let ${\bm B=0}$.
-We use  the Fokker-Planck collision integral in Landau form for the collision operator for $C$ \cite{landau1936kinetic}.
+We use  the Fokker-Planck collision integral in Landau form $C$ \cite{landau1936kinetic}.
 With this, the distribution function $f_{\alpha}(\bm{v},t)$ of species $\alpha$ evolves according to
 
 \begin{equation*}
 \label{eq:landau1}
-\frac{\partial r f_{\alpha}}{\partial t} + \frac{e_{\alpha}}{m_{\alpha}} {\bm E} \cdot \nabla f_{\alpha} = 
-\sum_{\beta}\nu_{\alpha\beta}\frac{m_o}{m_{\alpha}}\nabla \cdot\int \limits_{\bar\Omega} d\bm{\bar{v}}\;\mathbf{U}(\bm{v},\bm{\bar{v}})\cdot\left(\frac{m_o}{m_{\alpha}}\bar{f}_{\beta}\nabla f_{\alpha} - \frac{m_o}{m_{\beta}}f_{\alpha} \bar \nabla \bar{f}_{\beta}\right),
+\frac{\partial f_{\alpha}}{\partial t} + \frac{e_{\alpha}}{m_{\alpha}} {\bm E} \cdot \nabla f_{\alpha} = 
+\sum_{\beta}\nu_{\alpha\beta}\frac{m_o}{m_{\alpha}}\nabla \cdot\int \limits_{\bar\Omega} d\bm{\bar{v}}\;\mathbf{U}(\bm{v},\bm{\bar{v}})\cdot\left(\frac{m_o}{m_{\alpha}}\bar{f}_{\beta}\nabla f_{\alpha} - \frac{m_o}{m_{\beta}}f_{\alpha} \bar \nabla \bar{f}_{\beta}\right) + S^M_\alpha\left(t\right),
 \end{equation*}
 with derivatives assume to be in velocity space so that we can drop the subscripts.
 
@@ -116,7 +116,7 @@ Rewriting the equation in these normalized, dimensionless coordinates results in
 \begin{equation*}
 \label{eq:landau2}
 \frac{\partial \tilde f_{\alpha}}{\partial \tilde t}+ \tilde{\bm E}_{\alpha} \cdot \nabla \tilde f_{\alpha} = 
-\sum_{\beta} \tilde \nu_{\alpha\beta}\frac{m_o}{m_{\alpha}}\nabla \cdot\int \limits_{\bar\Omega} d\bm{\bar{x}}\;\mathbf{U}(\bm{x},\bm{\bar{x}})\cdot\left(\frac{m_o}{m_{\alpha}} \tilde {\bar{f}}_{\beta} \nabla \tilde f_{\alpha} - \frac{m_o}{m_{\beta}} \tilde f_{\alpha} {\bar  \nabla} \tilde {\bar {f}}_{\beta}\right).
+\sum_{\beta} \tilde \nu_{\alpha\beta}\frac{m_o}{m_{\alpha}}\nabla \cdot\int \limits_{\bar\Omega} d\bm{\bar{x}}\;\mathbf{U}(\bm{x},\bm{\bar{x}})\cdot\left(\frac{m_o}{m_{\alpha}} \tilde {\bar{f}}_{\beta} \nabla \tilde f_{\alpha} - \frac{m_o}{m_{\beta}} \tilde f_{\alpha} {\bar  \nabla} \tilde {\bar {f}}_{\beta}\right)  + S_M\left(t\right).
 \end{equation*}
 
 \subsection{Weak Form}
@@ -126,7 +126,7 @@ We work in gyro-averaged, axisymmetric or cylindrical coordinates $\bm{x} = \lef
 According to \cite{Hirvijoki2016,AdamsHirvijokiKnepleyBrownIsaacMills2017}, the weak form of \ref{eq:landau2} for species $\alpha$ is, given a test function $\psi(\bm{x})$,  
 \begin{equation}
 \label{eq:weak-form}
-2\pi \int \limits_{\Omega} d\bm{x} r \psi \cdot \left ( \frac{\partial  f_{\alpha}}{\partial t}  + \left ( 0, E_{\alpha} \right)  \cdot \nabla f_{\alpha}  \right)  = \sum_{\beta}\left(\psi, f_{\alpha}\right)_{\bm{K},\alpha\beta}+\left(\psi,f_{\alpha}\right)_{\mathbf{D},\alpha\beta},
+2\pi \int \limits_{\Omega} d\bm{x} r \psi \cdot \left ( \frac{\partial  f_{\alpha}}{\partial t}  + \left ( 0, E_{\alpha} \right)  \cdot \nabla f_{\alpha}  \right)  = \sum_{\beta}\left(\psi, f_{\alpha}\right)_{\bm{K},\alpha\beta}+\left(\psi,f_{\alpha}\right)_{\mathbf{D},\alpha\beta} + \left(\psi,S^M_\alpha\right) ,
 \end{equation}
 where $(\cdot,\cdot)_{\Omega}$ is the standard $L^2$ inner product in $\Omega$ and the weighted inner products present the advective and diffusive parts of the Landau collision integral
 \begin{align}
