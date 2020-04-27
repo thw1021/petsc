@@ -343,7 +343,7 @@ static PetscErrorCode FPLandPointDataDestroyDevice(FPLandPointDataFlat *ld)
 #if !defined(FP_DIM)
 #define FP_DIM 2
 #endif
-//#define FP_USE_SHARED_GPU_MEM
+// #define FP_USE_SHARED_GPU_MEM
 //
 // The GPU Landau kernel
 //
@@ -367,11 +367,11 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM       ];
   PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g3arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*FP_DIM];
 #endif
-  //const PetscInt  myqi = threadIdx.x/nSubBlocks, myblock = threadIdx.x%nSubBlocks;
-  const PetscInt  myqi = threadIdx.x%Nq, myblock = threadIdx.x/Nq;
+  /* const PetscInt  myqi = threadIdx.x/nSubBlocks, mySubBlk = threadIdx.x%nSubBlocks; -- maybe more natural way to block but less efficient */
+  const PetscInt  mythread = threadIdx.x, myqi = mythread%Nq, mySubBlk = mythread/Nq;
   const PetscInt  jpidx = myqi + myelem * Nq;
   const PetscInt  pntsz = dim*Nf + Nf + dim; // x[dim], f[Ns], df[dim*Nf]
-  const PetscInt  locsz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = myblock*locsz, ip_end = (myblock+1)*locsz > nip ? nip : (myblock+1)*locsz; /* this could be wrong with very few global IPs */
+  const PetscInt  subblocksz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
   PetscReal       nu_m0_ma[FP_MAX_SPECIES][FP_MAX_SPECIES];
   const PetscReal *iTab,*TabBD[FP_MAX_SPECIES][2],*pvj = &vj[jpidx*dim];
   const PetscReal wj = wiGlobal[jpidx];
@@ -460,32 +460,32 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   } /* IPs */
   /* Jacobian transform - g2 */
   for (fieldA = 0; fieldA < Nf; ++fieldA) {
-    if (myblock==0) gg2[fieldA][dim-1] += Eq_m[fieldA]; /* add electric field term */
+    if (mySubBlk==0) gg2[fieldA][dim-1] += Eq_m[fieldA]; /* add electric field term once per IP */
     for (d = 0; d < dim; ++d) {
-      (*g2)[myqi][myblock][fieldA][d] = 0.0;
+      (*g2)[myqi][mySubBlk][fieldA][d] = 0.0;
       for (d2 = 0; d2 < dim; ++d2) {
-	(*g2)[myqi][myblock][fieldA][d] += invJj[jpidx * dim * dim + d*dim+d2]*gg2[fieldA][d2];
+	(*g2)[myqi][mySubBlk][fieldA][d] += invJj[jpidx * dim * dim + d*dim+d2]*gg2[fieldA][d2];
       }
-      (*g2)[myqi][myblock][fieldA][d] *= wj;
+      (*g2)[myqi][mySubBlk][fieldA][d] *= wj;
     }
   }
   /* g3 */
   for (fieldA = 0; fieldA < Nf; ++fieldA) {
     for (d = 0; d < dim; ++d) {
       for (dp = 0; dp < dim; ++dp) {
-	(*g3)[myqi][myblock][fieldA][d][dp] = 0.0;
+	(*g3)[myqi][mySubBlk][fieldA][d][dp] = 0.0;
 	for (d2 = 0; d2 < dim; ++d2) {
 	  for (d3 = 0; d3 < dim; ++d3) {
-	    (*g3)[myqi][myblock][fieldA][d][dp] += invJj[jpidx * dim * dim + d*dim + d2]*gg3[fieldA][d2][d3]*invJj[jpidx * dim * dim + dp*dim + d3];
+	    (*g3)[myqi][mySubBlk][fieldA][d][dp] += invJj[jpidx * dim * dim + d*dim + d2]*gg3[fieldA][d2][d3]*invJj[jpidx * dim * dim + dp*dim + d3];
 	  }
 	}
-	(*g3)[myqi][myblock][fieldA][d][dp] *= wj;
+	(*g3)[myqi][mySubBlk][fieldA][d][dp] *= wj;
       }
     }
   }
   // Synchronize (ensure all the data is available) and sum g2 & g3
   __syncthreads();
-  if (myblock==0) { /* on one thread, sum up */
+  if (mySubBlk==0) { /* on one thread, sum up */
     for (fieldA = 0; fieldA < Nf; ++fieldA) {
       for (d = 0; d < dim; ++d) {
 	for (ipidx = 1; ipidx < nSubBlocks; ++ipidx) {
@@ -494,13 +494,12 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 	    (*g3)[myqi][0][fieldA][d][dp] += (*g3)[myqi][ipidx][fieldA][d][dp];
 	  }
 	}
-	//printf("\t\t\t %d %d %d %d %20.12e %20.12e %20.12e KKK\n",myelem,myqi,fieldA,d,(*g2)[myqi][0][fieldA][d],(*g3)[myqi][0][fieldA][d][0],(*g3)[myqi][0][fieldA][d][1]);
       }
     }
   }
   // Synchronize (ensure all the data is available) and sum IP matrices
   __syncthreads();
-  if (threadIdx.x==0) { // on one thread, sum up
+  if (mythread==0) { // on one thread, sum up
     PetscScalar *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
     int qj,ii;
     for (ii=0;ii<totDim*totDim;ii++) elemMat[ii] = 0;
@@ -638,6 +637,9 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
 #else
   {
     PetscReal  *d_g2g3;
+    /* size_t free, total; */
+    /* cudaMemGetInfo( &free, &total); */
+    /* printf("cudaMemGetInfo free=%lu total=%lu\n",free,total);    */   
     CUDA_SAFE_CALL(cudaMalloc((void **)&d_g2g3, ii*szf*numGCells)); // kernel input
     {
       PetscReal  *g2 = &d_g2g3[0];
