@@ -613,13 +613,13 @@ PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErro
 
 /* the context */
 #if !defined(FP_MAX_SPECIES)
-#define FP_MAX_SPECIES 3
+#define FP_MAX_SPECIES 2
 #endif
 #if !defined(FP_MAX_NQ)
-#define FP_MAX_NQ 64 /* Q6/Q3 */
+#define FP_MAX_NQ 27 /* Q2/Q4 */
 #endif
 #if !defined(FP_MAX_SUB_THREAD_BLOCKS)
-#define FP_MAX_SUB_THREAD_BLOCKS 4
+#define FP_MAX_SUB_THREAD_BLOCKS 8
 #endif
 typedef struct {
   PetscBool     interpolate;                  /* Generate intermediate mesh elements */
