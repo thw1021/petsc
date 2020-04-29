@@ -105,7 +105,7 @@ Define the nondimensional variables to $\tilde t = t/t_0$,  with a reference tim
 \begin{equation}
 \label{eq:ndvars}
 t_0 = \frac{8\pi m_o^2\varepsilon_0^2v_0^3}{e^4\ln\Lambda_{ee}n_0}, \quad \text{and define} \quad
-\tilde {\bm E}_{\alpha} = \frac{ e_\alpha t_0}{m_{\alpha}v_0} {\bm E}, \quad
+\tilde {\bm E} = \frac{ t_0}{v_0} {\bm E}, \quad
 \tilde \nu_{\alpha\beta} = \frac{t_0n_0}{v_0^3} \nu_{\alpha\beta}.
 \end{equation}
 Further, $d\bm{{x}} = v_0^{-3} d\bm{{v}}$, $\mathbf{U}(\bm{x},\bm{\bar{x}}) = v_0\mathbf{U}(\bm{v},\bm{\bar{v}})$  and $\frac{\partial}{\partial \bm x} = v_0\frac{\partial}{\partial \bm v }$.
@@ -115,18 +115,18 @@ Rewriting the equation in these normalized, dimensionless coordinates results in
 
 \begin{equation*}
 \label{eq:landau2}
-\frac{\partial \tilde f_{\alpha}}{\partial \tilde t}+ \tilde{\bm E}_{\alpha} \cdot \nabla \tilde f_{\alpha} = 
+\frac{\partial \tilde f_{\alpha}}{\partial \tilde t}+  \frac{ e_\alpha}{m_{\alpha}} \tilde{\bm E} \cdot \nabla \tilde f_{\alpha} = 
 \sum_{\beta} \tilde \nu_{\alpha\beta}\frac{m_o}{m_{\alpha}}\nabla \cdot\int \limits_{\bar\Omega} d\bm{\bar{x}}\;\mathbf{U}(\bm{x},\bm{\bar{x}})\cdot\left(\frac{m_o}{m_{\alpha}} \tilde {\bar{f}}_{\beta} \nabla \tilde f_{\alpha} - \frac{m_o}{m_{\beta}} \tilde f_{\alpha} {\bar  \nabla} \tilde {\bar {f}}_{\beta}\right)  + S_M\left(t\right).
 \end{equation*}
 
 \subsection{Weak Form}
 
-We continue with the weak form of (\ref{eq:ndvars}), assuming nondimensional variables.
+We continue with the weak form of (\ref{eq:ndvars}), assuming nondimensional variables to simplify notation.
 We work in gyro-averaged, axisymmetric or cylindrical coordinates $\bm{x} = \left ( r, z \right )$ and assume ${\bm E = E_{z}}$.
 According to \cite{Hirvijoki2016,AdamsHirvijokiKnepleyBrownIsaacMills2017}, the weak form of \ref{eq:landau2} for species $\alpha$ is, given a test function $\psi(\bm{x})$,  
 \begin{equation}
 \label{eq:weak-form}
-2\pi \int \limits_{\Omega} d\bm{x} r \psi \cdot \left ( \frac{\partial  f_{\alpha}}{\partial t}  + \left ( 0, E_{\alpha} \right)  \cdot \nabla f_{\alpha}  \right)  = \sum_{\beta}\left(\psi, f_{\alpha}\right)_{\bm{K},\alpha\beta}+\left(\psi,f_{\alpha}\right)_{\mathbf{D},\alpha\beta} + \left(\psi,S^M_\alpha\right) ,
+2\pi \int \limits_{\Omega} d\bm{x} r \psi \cdot \left ( \frac{\partial  f_{\alpha}}{\partial t}  + \left ( 0,  \frac{ e_\alpha}{m_{\alpha}} E_z \right)  \cdot \nabla f_{\alpha}  \right)  = \sum_{\beta}\left(\psi, f_{\alpha}\right)_{\bm{K},\alpha\beta}+\left(\psi,f_{\alpha}\right)_{\mathbf{D},\alpha\beta} + \left(\psi,S^M_\alpha\right) ,
 \end{equation}
 where $(\cdot,\cdot)_{\Omega}$ is the standard $L^2$ inner product in $\Omega$ and the weighted inner products present the advective and diffusive parts of the Landau collision integral
 \begin{align}
