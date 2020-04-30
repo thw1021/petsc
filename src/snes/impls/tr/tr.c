@@ -258,14 +258,13 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   Vec                      X,F,Y,G,Ytmp,W,GradF,YNtmp;
   Vec                      Diag;
   Vec                      YCtmp;
-  Mat                      jac; /*, jacT, hes;*/
+  Mat                      jac;
   PetscErrorCode           ierr;
   PetscInt                 maxits,i,lits;
-  PetscReal                rho,fnorm,gnorm,xnorm=0,delta,ynorm; /*gpnorm,nrm,norm1;*/
+  PetscReal                rho,fnorm,gnorm,xnorm=0,delta,ynorm;
   PetscReal                deltaM,ynnorm,f0,mp,gTy,g,nscale;
   PetscReal                auk,gfnorm,ycnorm,c0,c1,c2,tau,tau_pos,tau_neg,gTBg;
   PetscReal                yTHy;
-//1  PetscScalar              cnorm;
   KSP                      ksp;
   SNESConvergedReason      reason = SNES_CONVERGED_ITERATING;
   PetscBool                breakout = PETSC_FALSE;
@@ -311,12 +310,12 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   ierr = VecNorm(F,NORM_2,&fnorm);CHKERRQ(ierr);             /* fnorm <- || F || */
   SNESCheckFunctionNorm(snes,fnorm);
   ierr = VecNorm(X,NORM_2,&xnorm);CHKERRQ(ierr);             /* fnorm <- || F || */
-/*  xnorm *= 5.0E-6;   xnorm temporarily adjusted - Heeho */
+
   ierr       = PetscObjectSAWsTakeAccess((PetscObject)snes);CHKERRQ(ierr);
   snes->norm = fnorm;
   ierr       = PetscObjectSAWsGrantAccess((PetscObject)snes);CHKERRQ(ierr);
-  delta      = xnorm ? neP->delta0*xnorm : neP->delta0;
-  deltaM     = xnorm ? neP->deltaM*xnorm : neP->deltaM;
+  delta      = xnorm ? neP->delta0*xnorm : neP->delta0;  /* initial trust region size scaled by xnorm */
+  deltaM     = xnorm ? neP->deltaM*xnorm : neP->deltaM;  /* maximum trust region size scaled by xnorm */
   neP->delta = delta;
   ierr       = SNESLogConvergenceHistory(snes,fnorm,0);CHKERRQ(ierr);
   ierr       = SNESMonitor(snes,0,fnorm);CHKERRQ(ierr);
@@ -340,22 +339,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     
     /* calculating GradF of minimization function */
     ierr = MatMultTranspose(jac,F,GradF);CHKERRQ(ierr);  /* grad f = J^T F */
-    /* approximate Hessian with Diag(J)*J */
-//6    ierr = MatGetDiagonal(jac, Diag); CHKERRQ(ierr);    /* Diag(J) ~ J^T */
-//6    ierr = MatDiagonalScale(jac, Diag, NULL); CHKERRQ(ierr); /* now jac is Hessian approx* */
-
-//4    ierr = KSPSetOperators(snes->ksp,jac,jac);CHKERRQ(ierr);
-//4    ierr = KSPSolve(snes->ksp,GradF,YNtmp);CHKERRQ(ierr);   /* Quasi Newton Solution */
-//4    ierr = KSPGetIterationNumber(snes->ksp,&lits);CHKERRQ(ierr);
-//4    snes->linear_its += lits;
-//1    ierr = MatTranspose(jac, MAT_INITIAL_MATRIX ,&jacT);CHKERRQ(ierr);
-//1    ierr = MatMatMult(jacT,jac,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&hes);  /* hessian approx. J^T J */
-//1    ierr = KSPSetOperators(snes->ksp,hes,hes);CHKERRQ(ierr);
-//1    ierr = KSPSolve(snes->ksp,GradF,YNtmp);CHKERRQ(ierr); 
-//1    ierr = KSPGetIterationNumber(snes->ksp,&lits);CHKERRQ(ierr);
-//1    snes->linear_its += lits;
-
-    ierr = VecNorm(YNtmp,NORM_2,&ynnorm);CHKERRQ(ierr);             /* ynorm <- || Y || */
+    ierr = VecNorm(YNtmp,NORM_2,&ynnorm);CHKERRQ(ierr);  /* ynnorm <- || Y_newton || */
 
     while (1) {
       if (ynnorm <= delta) {  /* see if the Newton solution is with in the trust region */
@@ -371,12 +355,12 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
         }
         auk = PetscMin(delta/gfnorm,auk);
         ierr = VecCopy(GradF, YCtmp);CHKERRQ(ierr);
-        ierr = VecScale(YCtmp, auk);CHKERRQ(ierr);
-        ierr = VecNorm(YCtmp,NORM_2,&ycnorm);CHKERRQ(ierr);
+        ierr = VecScale(YCtmp, auk);CHKERRQ(ierr);  /* YCtmp, Cauchy solution */
+        ierr = VecNorm(YCtmp,NORM_2,&ycnorm);CHKERRQ(ierr);  /* ycnorm <- || Y_cauchy || */
         if (ycnorm >= delta) {  /* see if the Cauchy solution meets the criteria */
             ierr = VecCopy(YCtmp, Y);CHKERRQ(ierr);
             ierr = PetscPrintf(PETSC_COMM_WORLD, "DL evaluated. delta: %8.4e, ynnorm: %8.4e, ycnorm: %8.4e\n", (double)delta, (double)ynnorm, (double)ycnorm);CHKERRQ(ierr);
-        } else {  /* if not combine the solution of Cauchy and Newton*/
+        } else {  /* take ratio, tau, of Cauchy and Newton direction and step */
           ierr = VecAXPY(YNtmp,-1.0,YCtmp);CHKERRQ(ierr);  /* YCtmp = A, YNtmp = B */
           ierr = VecNorm(YNtmp,NORM_2,&c0);CHKERRQ(ierr);
           c0 = PetscSqr(c0);
@@ -384,30 +368,21 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
           c1 = 2.0*c1;
           ierr = VecNorm(YCtmp,NORM_2,&c2);CHKERRQ(ierr);
           c2 = PetscSqr(c2) - PetscSqr(delta);
-          tau_pos = (c1 + PetscSqrtReal(PetscSqr(c1) - 4.*c0*c2)) / (2.*c0);
+          tau_pos = (c1 + PetscSqrtReal(PetscSqr(c1) - 4.*c0*c2)) / (2.*c0); /* quadratic formula */
           tau_neg = (c1 - PetscSqrtReal(PetscSqr(c1) - 4.*c0*c2)) / (2.*c0);
-          tau = PetscMax(tau_pos, tau_neg);
+          tau = PetscMax(tau_pos, tau_neg);  /* can tau_neg > tau_pos? I don't think so, but just in case. */
           ierr = PetscPrintf(PETSC_COMM_WORLD, "DL evaluated. tau: %8.4e, ynnorm: %8.4e, ycnorm: %8.4e\n", (double)tau, (double)ynnorm, (double)ycnorm);CHKERRQ(ierr);
           ierr = VecAXPY(YCtmp,tau,YNtmp);CHKERRQ(ierr);
           ierr = VecCopy(YCtmp, Y);CHKERRQ(ierr);
         }
       }
-//5 just rescales Newton like the original tr.c
-//5        else {
-//5        nscale = delta/ynnorm;
-//5        ierr = VecScale(YNtmp, nscale);CHKERRQ(ierr);
-//5      }
-      
-      f0 = 0.5*PetscSqr(fnorm);
+      f0 = 0.5*PetscSqr(fnorm);  /* minimizing function f(X) */
       ierr = MatMult(jac,Y,W);CHKERRQ(ierr);  
       ierr = VecDotRealPart(W,W,&yTHy);CHKERRQ(ierr);  /* completes GradF^T J^T J GradF */
       ierr = VecDotRealPart(GradF,Y,&gTy);CHKERRQ(ierr);
-      mp = f0 - gTy + 0.5*yTHy;
-//2
-//2      f0 = 0.5*PetscSqr(fnorm);
-//2      ierr = VecDotRealPart(GradF,Y,&gTy);CHKERRQ(ierr);
-//2      mp = f0 - gTy;
-//2
+      mp = f0 - gTy + 0.5*yTHy;  /* quadratic model to satisfy */
+
+      /* Evaluate the solution to meet the improvement ratio criteria */
       ierr = SNESNewtonTRPreCheck(snes,X,Y,&changed_y);CHKERRQ(ierr);
       ierr = VecWAXPY(W,-1.0,Y,X);CHKERRQ(ierr);
       ierr = SNESNewtonTRPostCheck(snes,X,Y,W,&changed_y,&changed_w);CHKERRQ(ierr);
@@ -416,19 +391,18 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       ierr = SNESComputeFunction(snes,W,G);CHKERRQ(ierr); /*  F(X-Y) = G */
       ierr = VecNorm(G,NORM_2,&gnorm);CHKERRQ(ierr);      /* gnorm <- || g || */
       SNESCheckFunctionNorm(snes,gnorm);
-      g = 0.5*PetscSqr(gnorm);
+      g = 0.5*PetscSqr(gnorm); /* minimizing function g(W) */
       if (f0 == mp) rho = 0.0;
-      else rho = (f0 - g)/(f0 - mp);
+      else rho = (f0 - g)/(f0 - mp);  /* actual improvement over predicted improvement */
   
       if (rho < neP->eta2) {
-        delta *= neP->t1;
+        delta *= neP->t1;  /* shrink the region */
       } else if (rho > neP->eta3) {
-        delta = PetscMin(neP->t2*delta,deltaM);
+        delta = PetscMin(neP->t2*delta,deltaM); /* expand the region, but not greater than deltaM */
       }
 
       neP->delta = delta;
-      if (rho >= neP->eta1) break;
-//      else break;  /* lets just end the newton early if rho is legal */
+      if (rho >= neP->eta1) break;  /* the improvement ratio is satisfactory */
       ierr = PetscInfo(snes,"Trying again in smaller region\n");CHKERRQ(ierr);
   
       /* check to see if progress is hopeless */
@@ -468,9 +442,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       if (reason) break;
     } else break;
   }
-  
-//1  ierr = MatDestroy(&jacT);CHKERRQ(ierr);
-//1  ierr = MatDestroy(&hes);CHKERRQ(ierr);
+
   ierr = VecDestroy(&GradF);CHKERRQ(ierr);
   ierr = VecDestroy(&YNtmp);CHKERRQ(ierr);
   ierr = VecDestroy(&YCtmp);CHKERRQ(ierr);
@@ -708,7 +680,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
   snes->data  = (void*)neP;
   neP->delta  = 0.0;
   neP->delta0 = 0.1;
-  /*neP->eta1   = 0.2;*/
   neP->eta1   = 0.001;
   neP->eta2   = 0.25;
   neP->eta3   = 0.75;
@@ -719,5 +690,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
   neP->itflag = PETSC_FALSE;
   neP->rnorm0 = 0.0;
   neP->ttol   = 0.0;
+  snes->deltatol = 1.e-8;
   PetscFunctionReturn(0);
 }
