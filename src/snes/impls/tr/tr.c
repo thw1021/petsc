@@ -283,6 +283,8 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   G      = snes->work[1];
   Ytmp   = snes->work[2];
   W      = snes->work[3];
+  
+  /* work vectors needed for TRD */
   ierr = VecDuplicate(F,&GradF);CHKERRQ(ierr);
   ierr = VecDuplicate(Ytmp,&YNtmp);CHKERRQ(ierr);
   ierr = VecDuplicate(Ytmp,&YCtmp);CHKERRQ(ierr);
@@ -405,7 +407,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 //2      f0 = 0.5*PetscSqr(fnorm);
 //2      ierr = VecDotRealPart(GradF,Y,&gTy);CHKERRQ(ierr);
 //2      mp = f0 - gTy;
-
+//2
       ierr = SNESNewtonTRPreCheck(snes,X,Y,&changed_y);CHKERRQ(ierr);
       ierr = VecWAXPY(W,-1.0,Y,X);CHKERRQ(ierr);
       ierr = SNESNewtonTRPostCheck(snes,X,Y,W,&changed_y,&changed_w);CHKERRQ(ierr);
@@ -423,7 +425,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       } else if (rho > neP->eta3) {
         delta = PetscMin(neP->t2*delta,deltaM);
       }
-  
+
       neP->delta = delta;
       if (rho >= neP->eta1) break;
 //      else break;  /* lets just end the newton early if rho is legal */
