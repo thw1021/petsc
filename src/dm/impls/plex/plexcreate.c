@@ -2365,8 +2365,8 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
           for (PetscInt k=0; k<extent[2]; k++) {
             for (PetscInt l=0; l<4; l++) {
               vtxCoords[vcount++] = (2*i - 1) * L;
-              vtxCoords[vcount++] = 2 * j * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
-              vtxCoords[vcount++] = 2 * k * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = 2 * j * L + PetscCosReal((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = 2 * k * L + PetscSinReal((2*l + 1) * PETSC_PI / 4) * L / 2;
             }
           }
         }
@@ -2376,9 +2376,9 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
         for (PetscInt j=0; j<extent[1]+1; j++) {
           for (PetscInt k=0; k<extent[2]; k++) {
             for (PetscInt l=0; l<4; l++) {
-              vtxCoords[vcount++] = 2 * i * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = 2 * i * L + PetscSinReal((2*l + 1) * PETSC_PI / 4) * L / 2;
               vtxCoords[vcount++] = (2*j - 1) * L;
-              vtxCoords[vcount++] = 2 * k * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = 2 * k * L + PetscCosReal((2*l + 1) * PETSC_PI / 4) * L / 2;
             }
           }
         }
@@ -2388,8 +2388,8 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
         for (PetscInt j=0; j<extent[1]; j++) {
           for (PetscInt k=0; k<extent[2]+1; k++) {
             for (PetscInt l=0; l<4; l++) {
-              vtxCoords[vcount++] = 2 * i * L + cos((2*l + 1) * PETSC_PI / 4) * L / 2;
-              vtxCoords[vcount++] = 2 * j * L + sin((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = 2 * i * L + PetscCosReal((2*l + 1) * PETSC_PI / 4) * L / 2;
+              vtxCoords[vcount++] = 2 * j * L + PetscSinReal((2*l + 1) * PETSC_PI / 4) * L / 2;
               vtxCoords[vcount++] = (2*k - 1) * L;
             }
           }
@@ -2542,9 +2542,9 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
           /* A  */ {1.,0.,0.},
           /* B  */ {0.,1.,0.},
           /* C  */ {gamma,gamma,0.},
-          /* D  */ {1.+gamma,1.-gamma,0.},
-          /* E  */ {2.-gamma,2.-gamma,0.},
-          /* F  */ {1.-gamma,1.+gamma,0.},
+          /* D  */ {1+gamma,1-gamma,0.},
+          /* E  */ {2-gamma,2-gamma,0.},
+          /* F  */ {1-gamma,1+gamma,0.},
 
           /* G  */ {.5,0,.25},
           /* H  */ {1.5,0.,.25},
@@ -2557,10 +2557,10 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
 
           /* O  */ {0.,0.,.5},
           /* P  */ {1.,1.,.5},
-          /* Q  */ {gamma,1.-gamma,.5},
-          /* R  */ {1.+gamma,gamma,.5},
-          /* S  */ {2.-gamma,1.+gamma,.5},
-          /* T  */ {1.-gamma,2.-gamma,.5},
+          /* Q  */ {gamma,1-gamma,.5},
+          /* R  */ {1+gamma,gamma,.5},
+          /* S  */ {2-gamma,1+gamma,.5},
+          /* T  */ {1-gamma,2-gamma,.5},
 
           /* U  */ {0.,.5,.75},
           /* V  */ {0.,1.5,.75},
@@ -2573,10 +2573,10 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
 
           /* Cp */ {1.,0.,1.},
           /* Dp */ {0.,1.,1.},
-          /* Ep */ {1.-gamma,1.-gamma,1.},
-          /* Fp */ {1.+gamma,1.+gamma,1.},
-          /* Gp */ {2.-gamma,gamma,1.},
-          /* Hp */ {gamma,2.-gamma,1.},
+          /* Ep */ {1-gamma,1-gamma,1.},
+          /* Fp */ {1+gamma,1+gamma,1.},
+          /* Gp */ {2-gamma,gamma,1.},
+          /* Hp */ {gamma,2-gamma,1.},
 
           /* Ip */ {.5,0.,1.25},
           /* Jp */ {1.5,0.,1.25},
@@ -2589,10 +2589,10 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
 
           /* Qp */ {0.,0.,1.5},
           /* Rp */ {1.,1.,1.5},
-          /* Sp */ {1.-gamma,gamma,1.5},
-          /* Tp */ {2.-gamma,1.-gamma,1.5},
-          /* Up */ {1.+gamma,2.-gamma,1.5},
-          /* Vp */ {gamma,1.+gamma,1.5},
+          /* Sp */ {1-gamma,gamma,1.5},
+          /* Tp */ {2-gamma,1-gamma,1.5},
+          /* Up */ {1+gamma,2-gamma,1.5},
+          /* Vp */ {gamma,1+gamma,1.5},
 
           /* Wp */ {0.,.5,1.75},
           /* Xp */ {0.,1.5,1.75},
@@ -2678,7 +2678,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
       for (PetscInt i = 0; i < numFaces; i++) {
         for (PetscInt e = 0; e < 4; e++) {
           PetscInt ev[] = {cells_flat[i*4 + e], cells_flat[i*4 + ((e+1)%4)]};
-          const PetscReal *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
+          const double *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
 
           for (PetscInt d = 0; d < 3; d++) {
             if (!periodic || periodic[0] != DM_BOUNDARY_PERIODIC) {
@@ -2693,7 +2693,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
       for (PetscInt edge = 0, i = 0; i < numFaces; i++) {
         for (PetscInt e = 0; e < 4; e++) {
           PetscInt ev[] = {cells_flat[i*4 + e], cells_flat[i*4 + ((e+1)%4)]};
-          const PetscReal *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
+          const double *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
 
           for (PetscInt d = 0; d < 3; d++) {
             if (!periodic || periodic[d] != DM_BOUNDARY_PERIODIC) {
