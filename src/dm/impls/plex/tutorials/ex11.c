@@ -40,7 +40,7 @@ typedef struct REctx_struct {
 static const PetscReal kev_joul = 6.241506479963235e+15;
 static PetscBool quarter3DDomain = PETSC_FALSE;
 
-#define RE_CUT 5.
+#define RE_CUT 4.
 /* < v, ru_e*v*q > */
 static void f0_j_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
@@ -234,7 +234,7 @@ static PetscErrorCode getT_kev(DM plex, Vec X, PetscInt idx, PetscReal *a_n, Pet
     /* remove drift */
     ierr = PetscDSSetObjective(prob, 0, &f0_0_vz);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
-    vz = ctx->n_0*tt[0]/n; /* nondimentional */                                    printf("gett_kev vz=%g\n",vz);
+    vz = ctx->n_0*tt[0]/n; /* nondimentional */
     ierr = PetscDSSetConstants(prob, 1, &vz);CHKERRQ(ierr);
     ierr = PetscDSSetObjective(prob, 0, &f0_0_v);CHKERRQ(ierr); break;
   case 1:
