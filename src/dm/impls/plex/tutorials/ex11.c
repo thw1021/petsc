@@ -37,7 +37,7 @@ typedef struct REctx_struct {
   Vec           imp_src;
 } REctx;
 
-static const PetscReal kev_joul = 6.241506479963235e+15;
+static const PetscReal kev_joul = 6.241506479963235e+15; /* 1/1000e */
 static PetscBool quarter3DDomain = PETSC_FALSE;
 
 #define RE_CUT 4.
@@ -251,7 +251,9 @@ static PetscErrorCode getT_kev(DM plex, Vec X, PetscInt idx, PetscReal *a_n, Pet
     SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "case %D not supported",idx);
   }
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
+  //ierr = PetscDSSetConstants(prob, 0, NULL);CHKERRQ(ierr); /* remove vz */
   v = ctx->n_0*ctx->v_0*tt[0]/n;         /* remove number density to get velocity */
+  if (vz!=0) printf("getT_kev v=%g s_vz=%g\n",v,vz);
   v2 = PetscSqr(v);                      /* use real space: m^2 / s^2 */
   if (a_Tkev) *a_Tkev = (v2*mass*M_PI/8)*kev_joul; /* temperature in kev */
   if (a_n) *a_n = n;
@@ -362,7 +364,6 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
       ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
       j_1 = -ctx->n_0*ctx->v_0*tt[0];
     }
-    /* ierr = getT_kev(plex, X, 0, &n_e, &Te_kev);CHKERRQ(ierr); */
     v2 = v*v;
     Te_kev = (v2*ctx->masses[0]*M_PI/8)*kev_joul; /* temperature in kev */
     ierr = PetscPrintf(PETSC_COMM_WORLD, "DONE Te_kev=%20.13e J_0=%10.3e J_1=%10.3e n_e=%10.3e v_z=%10.3e eta_s=%10.3e E/J=%10.3e Z= %d\n",
