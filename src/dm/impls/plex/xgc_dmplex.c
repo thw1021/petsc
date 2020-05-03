@@ -170,8 +170,6 @@ PETSC_STATIC_INLINE PetscReal polevl_9( PetscReal x, PetscReal coef[] )
 /*
  *	Complete elliptic integral of the second kind
  */
-#undef __FUNCT__
-#define __FUNCT__ "ellipticE"
 PETSC_STATIC_INLINE void ellipticE(PetscReal x,PetscReal *ret)
 {
   x = 1 - x; /* where m = 1 - m1 */
@@ -180,8 +178,6 @@ PETSC_STATIC_INLINE void ellipticE(PetscReal x,PetscReal *ret)
 /*
  *	Complete elliptic integral of the first kind
  */
-#undef __FUNCT__
-#define __FUNCT__ "ellipticK"
 PETSC_STATIC_INLINE void ellipticK(PetscReal x,PetscReal *ret)
 {
   x = 1 - x; /* where m = 1 - m1 */
@@ -194,9 +190,6 @@ PETSC_STATIC_INLINE void ellipticK(PetscReal x,PetscReal *ret)
 /* since the tensor diverges for x==y but when integrated */
 /* the divergent part is antisymmetric and vanishes. This is not  */
 /* trivial, but can be proven. */
-
-#undef __FUNCT__
-#define __FUNCT__ "LandauTensor2D"
 PETSC_STATIC_INLINE void LandauTensor2D(const PetscReal x[], const PetscReal rp, const PetscReal zp, PetscReal Ud[][2], PetscReal Uk[][2])
 {
   PetscReal l,s,r=x[0],z=x[1],i1func,i2func,i3func,ks,es,pi4pow,sqrt_1s,r2,rp2,r2prp2,zmzp,zmzp2,tt;
@@ -237,9 +230,6 @@ PETSC_STATIC_INLINE void LandauTensor2D(const PetscReal x[], const PetscReal rp,
 /* since the tensor diverges for x==y but when integrated */
 /* the divergent part is antisymmetric and vanishes. This is not  */
 /* trivial, but can be proven. */
-
-#undef __FUNCT__
-#define __FUNCT__ "LandauTensor3D"
 PETSC_STATIC_INLINE void LandauTensor3D(const PetscReal x1[], const PetscReal xp, const PetscReal yp, const PetscReal zp, PetscReal U[][3], PetscReal mask)
 {
   PetscReal dx[3],inorm3,inorm,inorm2,norm2,x2[] = {xp,yp,zp};
@@ -256,11 +246,8 @@ PETSC_STATIC_INLINE void LandauTensor3D(const PetscReal x1[], const PetscReal xp
   U[1][2] = U[2][1] = -inorm3 * dx[2] * dx[1];
   U[2][0] = U[0][2] = -inorm3 * dx[0] * dx[2];
 }
-
 #define LAND_VL  1
 #define LAND_VL2 1
-#undef __FUNCT__
-#define __FUNCT__ "FPLandPointDataCreate"
 static PetscErrorCode FPLandPointDataCreate(FPLandPointData *ld, PetscInt dim, PetscInt nip, PetscInt Nf)
 {
   PetscErrorCode ierr, sz = nip + !!(nip%(LAND_VL*LAND_VL2)),jj,d;
@@ -292,8 +279,6 @@ static PetscErrorCode FPLandPointDataCreate(FPLandPointData *ld, PetscInt dim, P
   PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "FPLandPointDataDestroy"
 static PetscErrorCode FPLandPointDataDestroy(FPLandPointData *ld)
 {
   PetscErrorCode   ierr, s;
@@ -312,10 +297,7 @@ static PetscErrorCode FPLandPointDataDestroy(FPLandPointData *ld)
   }
   PetscFunctionReturn(0);
 }
-
 /* ------------------------------------------------------------------- */
-#undef __FUNCT__
-#define __FUNCT__ "FormLandau"
 /*
   FormLandau - Evaluates Jacobian matrix.
 
@@ -759,8 +741,6 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 /*@
   FPLandIFunction
 @*/
-#undef __FUNCT__
-#define __FUNCT__ "FPLandIFunction"
 PetscErrorCode FPLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void *actx)
 {
   PetscErrorCode ierr;
@@ -799,8 +779,6 @@ PetscErrorCode FPLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,vo
 /*@
   FPLandIJacobian
 @*/
-#undef __FUNCT__
-#define __FUNCT__ "FPLandIJacobian"
 PetscErrorCode FPLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
 {
   PetscErrorCode ierr;
@@ -1226,8 +1204,6 @@ static void zero_bc(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 
 #endif
 #define MATVEC2(__a,__x,__p) {int i,j; for (i=0.; i<2; i++) {__p[i] = 0; for (j=0.; j<2; j++) __p[i] += __a[i][j]*__x[j]; }}
-#undef __FUNCT__
-#define __FUNCT__ "CircleInflate"
 static void CircleInflate(PetscReal r1, PetscReal r2, PetscReal r0, PetscInt num_sections, PetscReal x, PetscReal y,
 			  PetscReal *outX, PetscReal *outY)
 {
@@ -1294,8 +1270,6 @@ static void CircleInflate(PetscReal r1, PetscReal r2, PetscReal r0, PetscInt num
   }
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "GeometryDMLandau"
 static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, const PetscReal abc[], PetscReal xyz[], void *a_ctx)
 {
   LandCtx     *ctx = (LandCtx*)a_ctx;
@@ -1315,8 +1289,6 @@ static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, co
   PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "ErrorIndicator_Simple"
 static PetscErrorCode ErrorIndicator_Simple(PetscInt dim, PetscReal volume, PetscReal x[], PetscInt Nf, const PetscInt Nc[], const PetscScalar u[], const PetscScalar u_x[], PetscReal *error, void *actx)
 {
   PetscReal err = 0.0;
@@ -1330,8 +1302,6 @@ static PetscErrorCode ErrorIndicator_Simple(PetscInt dim, PetscReal volume, Pets
   PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "LandDMCreateVMesh"
 static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const char prefix[], LandCtx *ctx, DM *dm)
 {
   PetscErrorCode ierr;
@@ -1535,8 +1505,6 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
   PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "SetupDS"
 static PetscErrorCode SetupDS(DM dm, PetscInt dim, LandCtx *ctx)
 {
   PetscErrorCode  ierr,ii;
@@ -1564,8 +1532,6 @@ static PetscErrorCode SetupDS(DM dm, PetscInt dim, LandCtx *ctx)
   PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "LandCreateMassMatrix"
 static PetscErrorCode LandCreateMassMatrix(LandCtx *ctx, Vec X, DM a_dm, Mat *Amat)
 {
   PetscDS        prob;
@@ -1638,8 +1604,6 @@ typedef struct {
   PetscReal shift;
 } MaxwellianCtx;
 
-#undef __FUNCT__
-#define __FUNCT__ "maxwellian"
 static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf_dummy, PetscScalar *u, void *actx)
 {
   MaxwellianCtx *mctx = (MaxwellianCtx*)actx;
@@ -1717,8 +1681,6 @@ static PetscErrorCode FPSetInitialCondition(DM dm, Vec X, void *actx)
   PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "adaptToleranceFEM"
 static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refineTol[], PetscReal coarsenTol[], PetscInt type, LandCtx *ctx, DM *newDM)
 {
   DM               dm, plex, adaptedDM = NULL;
@@ -1867,8 +1829,6 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
   PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "adapt"
 static PetscErrorCode adapt(DM *dm, LandCtx *ctx, Vec *uu)
 {
   PetscErrorCode  ierr;
@@ -1894,8 +1854,7 @@ static PetscErrorCode adapt(DM *dm, LandCtx *ctx, Vec *uu)
   }
   PetscFunctionReturn(0);
 }
-#undef __FUNCT__
-#define __FUNCT__ "ProcessOptions"
+
 static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
 {
   PetscErrorCode  ierr;
@@ -2184,8 +2143,6 @@ PetscErrorCode DMPlexFPDestroyPhaseSpace(DM *dm)
 
   Level: beginner
 @*/
-#undef __FUNCT__
-#define __FUNCT__ "DMPlexFPPrintNorms"
 PetscErrorCode DMPlexFPPrintNorms(Vec X, PetscInt stepi)
 {
   PetscErrorCode ierr;
