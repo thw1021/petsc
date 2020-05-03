@@ -395,7 +395,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   /* collect f data */
   if (ctx->verbose > 3)
     PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, %D local cells. %s elements, totDim=%D, Nb=%D, Nq=%D, Nf=%D, elemMatSize=%D, dim=%D\n",
-		0,__FUNCT__,Nq*numGCells,numGCells,numCells,ctx->simplex ? "SIMPLEX" : "TENSOR", totDim, Nb, Nq, Nf,
+		0,"FormLandau",Nq*numGCells,numGCells,numCells,ctx->simplex ? "SIMPLEX" : "TENSOR", totDim, Nb, Nq, Nf,
 		elemMatSize,dim);
   ierr = FPLandPointDataCreate(&IPDataLocal, dim,Nq*numCells, Nf);CHKERRQ(ierr);
   ierr = FPLandPointDataCreate(&IPDataGlobal,dim,Nq*numGCells,Nf);CHKERRQ(ierr);
@@ -1721,7 +1721,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
     for (c = cStart; c < cEnd; c++) {
       ierr = DMLabelSetValue(adaptLabel, c, DM_ADAPT_REFINE);CHKERRQ(ierr);
     }
-    ierr = PetscInfo1(sol, "Phase:%s: Uniform refinement\n",__FUNCT__);
+    ierr = PetscInfo1(sol, "Phase:%s: Uniform refinement\n","adaptToleranceFEM");
   } else if (type==2) {
     PetscInt  rCellIdx[8], eCellIdx[64], iCellIdx[64], eMaxIdx = -1, iMaxIdx = -1, nr = 0, nrmax = (dim==3 && !ctx->quarter3DDomain) ? 8 : 2;
     PetscReal minRad = 1.e100, r, eMinRad = 1.e100, iMinRad = 1.e100;
@@ -1775,14 +1775,14 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
     if (ctx->sphere) {
       for (c = 0; c < eMaxIdx; c++) {
         ierr = DMLabelSetValue(adaptLabel, eCellIdx[c], DM_ADAPT_REFINE);CHKERRQ(ierr);
-        ierr = PetscInfo3(sol, "\t\tPhase:%s: refine sphere e cell %D r=%g\n",__FUNCT__,eCellIdx[c],eMinRad);
+        ierr = PetscInfo3(sol, "\t\tPhase:%s: refine sphere e cell %D r=%g\n","adaptToleranceFEM",eCellIdx[c],eMinRad);
       }
       for (c = 0; c < iMaxIdx; c++) {
         ierr = DMLabelSetValue(adaptLabel, iCellIdx[c], DM_ADAPT_REFINE);CHKERRQ(ierr);
-        ierr = PetscInfo3(sol, "\t\tPhase:%s: refine sphere i cell %D r=%g\n",__FUNCT__,iCellIdx[c],iMinRad);
+        ierr = PetscInfo3(sol, "\t\tPhase:%s: refine sphere i cell %D r=%g\n","adaptToleranceFEM",iCellIdx[c],iMinRad);
       }
     }
-    ierr = PetscInfo4(sol, "Phase:%s: Adaptive refine origin cells %D,%D r=%g\n",__FUNCT__,rCellIdx[0],rCellIdx[1],minRad);
+    ierr = PetscInfo4(sol, "Phase:%s: Adaptive refine origin cells %D,%D r=%g\n","adaptToleranceFEM",rCellIdx[0],rCellIdx[1],minRad);
   } else if (type==0 || type==1 || type==3) { /* refine along r=0 axis */
     PetscScalar  *coef = NULL;
     Vec          coords;
@@ -1810,7 +1810,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
         ierr = DMLabelSetValue(adaptLabel, c, DM_ADAPT_REFINE);CHKERRQ(ierr);
       }
     }
-    ierr = PetscInfo1(sol, "Phase:%s: RE refinement\n",__FUNCT__);
+    ierr = PetscInfo1(sol, "Phase:%s: RE refinement\n","adaptToleranceFEM");
   }
   /* ierr = VecDestroy(&locX);CHKERRQ(ierr); */
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
@@ -1928,15 +1928,15 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ierr = PetscOptionsInt("-amr_z_refine2",  "Number of levels to refine along v_perp=0", "xgc_dmplex.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "xgc_dmplex.c", ctx->maxRefIts, &ctx->maxRefIts, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-amr_post_refine", "Number of levels to uniformly refine after AMR", "xgc_dmplex.c", ctx->postAMRRefine, &ctx->postAMRRefine, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-z_radius1","velocity range to refine r=0 axis (for electrons)","",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Ez","Initial parallel electric field","",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-n_0","Normalization constant for number density","",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-ln_lambda","Cross section parameter","",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","xgc_dmplex.c",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-z_radius1","velocity range to refine r=0 axis (for electrons)","xgc_dmplex.c",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","xgc_dmplex.c",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-Ez","Initial parallel electric field","xgc_dmplex.c",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-n_0","Normalization constant for number density","xgc_dmplex.c",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ln_lambda","Cross section parameter","xgc_dmplex.c",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "xgc_dmplex.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
   flg = PETSC_FALSE;
-  ierr = PetscOptionsBool("-petscspace_poly_tensor", "", "xgc_dmplex.c", flg, &flg, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-petscspace_poly_tensor", "xgc_dmplex.c", "xgc_dmplex.c", flg, &flg, NULL);CHKERRQ(ierr);
   ctx->simplex = flg ? PETSC_FALSE : PETSC_TRUE;
   /* get num species */
   {
@@ -1969,7 +1969,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   for (ii=0;ii<FP_MAX_SPECIES;ii++) ctx->masses[ii] *= 1.6720e-27; /* scale by proton mass kg */
   ctx->masses[0] = 9.10938356e-31; /* electron mass kg (should be about right already) */
   ctx->m_0 = ctx->masses[0]; /* arbitrary reference mass, electrons */
-  ierr = PetscOptionsReal("-v_0","Velocity to normalize with in units of initial electrons thermal velocity (not recommended to change default)","",ctx->v_0,&ctx->v_0, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-v_0","Velocity to normalize with in units of initial electrons thermal velocity (not recommended to change default)","xgc_dmplex.c",ctx->v_0,&ctx->v_0, NULL);CHKERRQ(ierr);
   ctx->v_0 *= PetscSqrtReal(ctx->k*ctx->thermal_temps[0]/(ctx->masses[0])); /* electron mean velocity in 1D (need 3D form in computing T from FE integral) */
   nc = FP_MAX_SPECIES-1;
   ierr = PetscOptionsRealArray("-ion_charges", "Charge of each species in units of proton charge [i_0=2,i_1=18,...]", "main.c", &ctx->charges[1], &nc, &flg);CHKERRQ(ierr);
@@ -1982,25 +1982,25 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   for (ii=0;ii<ctx->num_species;ii++) ctx->refineTol[ii]  = PETSC_MAX_REAL;
   for (ii=0;ii<ctx->num_species;ii++) ctx->coarsenTol[ii] = 0.;
   ii = FP_MAX_SPECIES;
-  ierr = PetscOptionsRealArray("-refine_tol","tolerance for refining cells in AMR","",ctx->refineTol, &ii, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsRealArray("-refine_tol","tolerance for refining cells in AMR","xgc_dmplex.c",ctx->refineTol, &ii, &flg);CHKERRQ(ierr);
   if (flg && ii != ctx->num_species) ierr = PetscInfo2(dummy, "Phase: Warning, #refine_tol %D != num_species %D\n",ii,ctx->num_species);CHKERRQ(ierr);
   ii = FP_MAX_SPECIES;
-  ierr = PetscOptionsRealArray("-coarsen_tol","tolerance for coarsening cells in AMR","",ctx->coarsenTol, &ii, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsRealArray("-coarsen_tol","tolerance for coarsening cells in AMR","xgc_dmplex.c",ctx->coarsenTol, &ii, &flg);CHKERRQ(ierr);
   if (flg && ii != ctx->num_species) ierr = PetscInfo2(dummy, "Phase: Warning, #coarsen_tol %D != num_species %D\n",ii,ctx->num_species);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-domain_radius","Phase space size in units of electron thermal velocity","",ctx->radius,&ctx->radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-domain_radius","Phase space size in units of electron thermal velocity","xgc_dmplex.c",ctx->radius,&ctx->radius, &flg);CHKERRQ(ierr);
   if (flg && ctx->radius <= 0) { /* negative is ratio of c */
     if (ctx->radius == 0) ctx->radius = 0.75;
     else ctx->radius = -ctx->radius;
     ctx->radius = ctx->radius*299792458/ctx->v_0;
     ierr = PetscInfo1(dummy, "Change domain radius to %e\n",ctx->radius);CHKERRQ(ierr);
   }
-  ierr = PetscOptionsReal("-i_radius","Ion thermal velocity, used for circular meshes","",ctx->i_radius,&ctx->i_radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-i_radius","Ion thermal velocity, used for circular meshes","xgc_dmplex.c",ctx->i_radius,&ctx->i_radius, &flg);CHKERRQ(ierr);
   if (flg && !sph_flg) ctx->sphere = PETSC_TRUE; /* you gave me an ion radius but did not set sphere, user error really */
   if (!flg) {
     ctx->i_radius = 1.5*PetscSqrtReal(8*ctx->k*ctx->thermal_temps[1]/ctx->masses[1]/M_PI)/ctx->v_0; /* normalized radius with thermal velocity of first ion */
     /* ierr = PetscInfo1(dummy, "Phase: Warning i_radius not provided, using 2.5 * first ion thermal temp %e\n",ctx->i_radius);CHKERRQ(ierr); */
   }
-  ierr = PetscOptionsReal("-e_radius","Electron thermal velocity, used for circular meshes","",ctx->e_radius,&ctx->e_radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-e_radius","Electron thermal velocity, used for circular meshes","xgc_dmplex.c",ctx->e_radius,&ctx->e_radius, &flg);CHKERRQ(ierr);
   if (flg && !sph_flg) ctx->sphere = PETSC_TRUE; /* you gave me an e radius but did not set sphere, user error really */
   if (!flg) {
     ctx->e_radius = 1.5*PetscSqrtReal(8*ctx->k*ctx->thermal_temps[0]/ctx->masses[0]/M_PI)/ctx->v_0; /* normalized radius with thermal velocity of electrons */
