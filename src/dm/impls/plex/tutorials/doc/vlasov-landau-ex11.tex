@@ -183,7 +183,7 @@ Maxwellians are eigenfunctions of the Landau operator.
 Multiple species with the same thermal temperature are similarly eigenfunctions of the multi-species Landau operator.
 Alas, these discrete finite functions are not eigenvectors of the our discretized operator and, as has been observed by others \cite{Hager2016}, they can not be exactly preserved, however our discretizations do converge to a stable operator.
 We demonstrate this with an electron-deuterium plasma with  $T_i=T_e=4 keV$, the domain and mesh in Figure \ref{fig:grids}. 
-We use $n_0=10^{20}$, $\ n_i = \ n_e = 1$, and run for time $\ t = 1.0$.
+We use $n_0=10^{20}$, $\ n_i = \ n_e = 1$, and run for time $\ t = 1.0$ second ($t_0 = 4.6\times 10^{-5}$).
 We refine in the polynomial degree of the finite elements, using quartic (Q2), cubic (Q3), quartic (Q4) and quintic (Q5) elements.
 
 Figure \ref{fig:stable} shows a L2-norm of the difference between the finite element solution and the exact initial Maxwellian function, normalized with the L2-norm of the Maxwellian, which includes the finite element discretization error.
@@ -272,10 +272,8 @@ $J\left(q_j\right)$ is the element Jacobian at point $q_j$.
 \caption{Pseudo-code to compute Landau Jacobian $\mathbf{C}$ with state $f$}
 \label{fig:algo0}
 \end{algorithm}
-The six loops of Algorithm \ref{fig:algo0} can be processed in just about any
-order, and blocked, giving different data access patterns, which is
+The six loops of Algorithm \ref{fig:algo0} can be processed in many orders, and blocked, giving different data access patterns, which is
 critical in optimizing performance.
-:
 We use one grid for all species, which has advantages and disadvantages \cite{AdamsHirvijokiKnepleyBrownIsaacMills2017}, and results in only one set of cells $G$.
 Our kernel of interest is the construction of the tensor and vector in (\ref{eq:K}) and (\ref{eq:D}).
 To optimized the processing in the kernel we build a flat array(s) of the data required in the kernel ($\bm x$, $w$, $f_{\alpha}$,  $\frac{\partial f_{\alpha}}{\partial \bm x}$,  $f_{\beta}$,  $\frac{\partial f_{\beta}}{\partial \bm x}, ... $) for all integration points ($N = | G | \cdot N_q$).
@@ -283,18 +281,16 @@ To optimized the processing in the kernel we build a flat array(s) of the data r
 Algorithm \ref{fig:algo2} shows the pseudo-code for the CUDA kernel for constructing the Landau collision integral element matrix using standard finite element processes including finite element tabulation at integration points $q_i$, $\mathcal{B}\left(q_i\right),  \mathcal{D}\left(q_i\right)$, and element Jacobian $\mathcal{J}\left(q_i\right)$.
 \begin{algorithm}[h!]
 \begin{algorithmic}[100]
-\STATE{$ N_q = blockDim.x/n\_sub\_blocks$} 
+\STATE{$ N_q \leftarrow blockDim.x$} 
 \STATE{$ my\_elem \leftarrow blockIdx.x $} 
-\STATE{$ my\_qi  \leftarrow  threadIdx.x\%N_q$} 
-\STATE{$ my\_sub\_blk =  threadIdx.x/N_q$}
+\STATE{$ my\_qi  \leftarrow  threadIdx.x$} 
+\STATE{$ my\_sub\_blk =  threadIdx.y$}
 \STATE{$i \leftarrow my\_qi + my\_elem * N_q $} \COMMENT{global integration point for this thread}
 \STATE{$nip  \leftarrow  gridDim.x \cdot N_q $} \COMMENT{global number of integration points}
-\STATE{$sz \leftarrow nip/n\_sub\_blocks \quad + \quad !!nip\%n\_sub\_blocks$} 
+\STATE{$sz \leftarrow nip/n\_sub\_blocks \quad + \quad !!(nip\%n\_sub\_blocks)$} 
 \STATE{$ip\_start \leftarrow my\_sub\_blk*sz$} 
 \STATE{$ip\_end \leftarrow (my\_sub\_blk+1)*sz \quad > \quad nip \quad ? \quad nip \quad : \quad (my\_sub\_blk+1)*sz$} 
-\STATE{$w_i \leftarrow w[i] $}
-\STATE{$N \leftarrow N_q \cdot |G|$}
-\FOR[fuse inner element and quadrature loop]{$j=ip\_start:ip\_end$}
+\FOR[fused inner element and quadrature loop]{$j=ip\_start:ip\_end$}
 \STATE{$\left[\mathbf{U_K}, \mathbf{U_D} \right]  \leftarrow \mathbf{LandauTensor}\left(q_i.r,q_i.z,r[j],z[j]\right)$  }
 \FOR{$\alpha=0:S$}
 \FOR{$\beta=0:S$}
@@ -303,12 +299,10 @@ Algorithm \ref{fig:algo2} shows the pseudo-code for the CUDA kernel for construc
 \ENDFOR
 \ENDFOR
 \ENDFOR
-
 \FOR{$\alpha=0:S$}
 \STATE{$\mathbf{G2}\left[my\_qi  \right] \left[my\_sub\_blk \right] \left[{\alpha}\right]  \leftarrow \mathcal{J}\left(q_i\right)^{-T} \mathbf{K}\left[my\_qi \right]  \left[my\_sub\_blk \right] \left[{\alpha}\right] w[i]$} 
 \STATE{$\mathbf{G3}\left[my\_qi  \right] \left[my\_sub\_blk \right] \left[{\alpha}\right] \leftarrow \mathcal{J}\left(q_i\right)^{-T} \mathbf{D}\left[my\_qi \right]  \left[my\_sub\_blk \right] \left[{\alpha}\right] \mathcal{J}\left(q_i\right)^{-1} w[i]$}
 \ENDFOR
-
 \IF[One sub-block in each integration point sums up sub-blocks]{$my\_sub\_blk = 0$}
 \FOR{$b=1:n\_sub\_blocks$}
 \FOR{$\alpha=0:S$}
@@ -317,26 +311,25 @@ Algorithm \ref{fig:algo2} shows the pseudo-code for the CUDA kernel for construc
 \ENDFOR
 \ENDFOR
 \ENDIF
-\IF[On master thread in each block]{$threadIdx.x = 0$}
+\IF[On master thread in each block]{$threadIdx.x +  threadIdx.y = 0$}
 %\STATE{$\mathbf{ElemMats} \left[blockID\right] \leftarrow 0$} \COMMENT{On master thread in each block}
 \FOR[Project point value to vertices of cell $i$ with standard FE process]{$i=1:N_q$}
-\STATE{$\mathbf{A}\left[my\_elem\right] \leftarrow  \mathbf{A}\left[my\_elem\right]  +  \mathcal{D^T}\left(q_i\right) \mathbf{G3}\left[ i \right]  \mathcal{D}\left(q_i\right)  +  \mathcal{D^T}\left(q_i\right) \mathbf{G2}\left[ i \right]  \mathcal{B}\left(q_i\right)$}
+\STATE{$\mathbf{A}\left[my\_elem\right] \leftarrow  \mathbf{A}\left[my\_elem\right]  +  \mathcal{D^T}\left(q_i\right) \mathbf{G3}\left[ i \right]  \left[ 0 \right]  \left[ : \right]  \mathcal{D}\left(q_i\right)  +  \mathcal{D^T}\left(q_i\right) \mathbf{G2}\left[ i \right]  \left[ 0 \right]  \left[ : \right]  \mathcal{B}\left(q_i\right)$}
 \ENDFOR
 \ENDIF
 %\FORALL[CPU: Assemble element matrices into global Jacobian]{cells $c \in G$}
 %\STATE{$\mathbf{C} \leftarrow \mathbf{C} + GlobalAssemble\left(c, \mathbf{ElemMats}\left[c\right]  \right)$}
 %\ENDFOR
 \end{algorithmic} 
-\caption{CUDA kernel; input: $r$, $z$, $w$, $f$, $df$ and $n\_sub\_blocks$;
+\caption{CUDA kernel; input: $r$, $z$, $w$, $f$, $df$;
   output: element matrix $\mathbf{A}$ }
 \label{fig:algo2}
 \end{algorithm}
-One element is placed in each thread block and there are $N_q$ threads per block.
+One element is placed in each CUDA thread block and there is a 2D array of threads $(N_q, number\_sub\_threads)$ per block, with $number\_sub\_threads$ being  a runtime parameter for the number of threads to use within each integration point.
 These element matrices are then assembled on the CPU into the global Jacobian.
 %This algorithm is designed to minimized data movement by computing the Landau tensors on the fly, they can be precomputed, and it exploits a single mesh by hoisting the tensor kernel outside of the two inner loops over species.
-This algorithm puts the Landau tensor, some of the $\Order{S^2}$ complexity terms, then inner finite element integral and the Jacobian coordinate transformation into a fully parallel kernel GPU kernel.
-The finite element projection to vertices, from each integration point, is processed on one thread in each thread block.
-This phase could be processed on each thread, however a copy of the element stiffness matrix would be required for each thread in GPU shared memory and there is not enough memory available with large number of species and high order elements.
+This loop ordering puts the Landau tensor, some of the $\Order{S^2}$ complexity terms, the inner finite element integral and the Jacobian coordinate transformation into a GPU kernel.
+A summation of the each threads $G2$ and $G2$ is accumulated by one thread at each integration point and the finite element projection to vertices, from each integration point, is processed by one thread in each thread block.
 
 Algorithm \ref{fig:algos}
 shows the initialization of the vectors $r$, $z$, $w$, $f$, and the
@@ -361,35 +354,21 @@ Each quadrature point $q_i$ has a 2D coordinate ($q_i.r$,$q_i.z$).
 \label{fig:algos}
 \end{algorithm}
 
-
 \section{Performance}
-We conduct a numerical experiment on a node with 2 IBM POWER9 CPUs and 6 Nvidia Tesla GPUs / node, using 6 MPI processes, each running the same test with one GPU.
-The test problem is similar to the problems used for verification, with 140 cells, Q4 elements (3,500 integration points).
-Table \ref{tab:perf} show the time for the construction of the Jacobian matrix, the GPU kernel, and the CPU matrix assemble.
-% Requires the booktabs if the memoir class is not being used
-\begin{table}[!h]
-   \centering
-   %\topcaption{Table captions are better up top} % requires the topcapt package
-   \begin{tabular}{@{} lccc @{}} % Column formatting, @{} suppresses leading/trailing space
-      \toprule
-%      \multicolumn{2}{c}{Item} \\
-%      \cmidrule(r){1-2} % Partial rule. (r) trims the line a little bit on the right; (l) & (lr) also possible
-      \# species & Total & GPU kernel  & matrix assembly (CPU) \\
-      \midrule
-      1  &  18 &  12 & 3.4 \\
-      2  & 40 &   22 &  14 \\
-      3  &  72 &  33 &  33 \\
-      4  & 118 &   48   & 60 \\
-      5  & 170  &   59  &  98 \\
-     \bottomrule
-   \end{tabular}
-   \caption{Times (msec) for Landau Jacobian construction.}
-   \label{tab:perf}
-\end{table}
+We use a node with 2 IBM POWER9 sockets and 6 Nvidia Tesla V100 GPUs / node, using 1 MPI process with one GPU.
+This test problem is similar to the problems used for verification, with 62 cells, Q3 elements (992 integration points).
+Figure \ref{fig:perf} show the time for the construction of the Jacobian matrix, the GPU kernel, and the CPU matrix assemble and solve.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=.6\linewidth]{./PPT/landau_time_species.png}
+\caption{Times (sec) for Landau Jacobian construction.}
+\label{fig:perf}
+\end{center}
+\end{figure}
 We observe that the times increase linearly with number of species, in the GPU kernel, however the serial matrix assemble times increase quadratically.
 The matrix assembly has not been parallelized.
 One can color elements and assemble them in parallel, or use a local domain decomposition and use standard parallel assembly methods.
-If we assume that we can color a 2D block structured AMR grid with 8 colors, which is probably pessimistic, then we could expect a speed up of over 15 for this problem with 140 cells.
+If we assume that we can color a 2D block structured AMR grid with 8 colors, then we could expect a speed up of about 8 for this problem with 62 cells.
 This should be enough to keep the matrix assembly subdominant.
 
 \section{Seed runaway electron generation}
