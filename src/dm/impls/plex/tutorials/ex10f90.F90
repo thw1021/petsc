@@ -36,7 +36,7 @@ program DMPlexTestFPInterface
   !  Create mesh (DM), read in parameters, create and add f_0 (X)
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   dim = 2
-  call DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, '', X, dm, ierr); CHKERRQ(ierr)
+  call DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, '', X, J, dm, ierr); CHKERRQ(ierr)
   call DMSetUp(dm,ierr);CHKERRQ(ierr)
   call VecDuplicate(X,X_0,ierr);CHKERRQ(ierr)
   call VecCopy(X,X_0,ierr)
@@ -59,7 +59,6 @@ program DMPlexTestFPInterface
   call PetscObjectSetOptionsPrefix(snes, 'fp_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
   call SNESGetLineSearch(snes,linesearch,ierr);CHKERRQ(ierr)
   call SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC,ierr);CHKERRQ(ierr)
-  call DMCreateMatrix(dm, J, ierr);CHKERRQ(ierr);
   call TSSetIFunction(ts,PETSC_NULL_VEC,FPLandIFunction,PETSC_NULL_VEC,ierr);CHKERRQ(ierr)
   call TSSetIJacobian(ts,J,J,FPLandIJacobian,PETSC_NULL_VEC,ierr);CHKERRQ(ierr)
   call TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER,ierr);CHKERRQ(ierr)
@@ -88,7 +87,6 @@ program DMPlexTestFPInterface
   call VecAXPY(X,mone,X_0,ierr);CHKERRQ(ierr)
   call DMPlexFPDestroyPhaseSpace(dm, ierr);CHKERRQ(ierr)
   call TSDestroy(ts, ierr);CHKERRQ(ierr)
-  call MatDestroy(J, ierr);CHKERRQ(ierr)
   call VecDestroy(X, ierr);CHKERRQ(ierr)
   call VecDestroy(X_0, ierr);CHKERRQ(ierr)
   call PetscFinalize(ierr)
