@@ -320,11 +320,11 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   PetscSection      section, globalSection;
   PetscScalar       *elemVec, *elemMat;
   PetscScalar       *uu, *u_x;
-  PetscInt          numCells,numGCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Nf,ii,jj,d,f,fieldA,globNip,globNipVec;
+  PetscInt          numCells,numGCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Nf,ii,d,f,fieldA,fieldB,globNip,globNipVec;
   PetscInt          foffsets[FP_MAX_SPECIES];
   PetscQuadrature   quad;
   PetscTabulation   *Tf;
-  PetscReal         *wiLocal, *wiGlobal, nu_m0_ma[FP_MAX_SPECIES][FP_MAX_SPECIES];
+  PetscReal         *wiLocal, *wiGlobal, nu_alpha[FP_MAX_SPECIES], nu_beta[FP_MAX_SPECIES];
   const PetscReal   *quadPoints, *quadWeights;
   FPLandPointData   IPDataLocal,IPDataGlobal;
   PetscReal         invMass[FP_MAX_SPECIES],Eq_m[FP_MAX_SPECIES],m_0=ctx->m_0; /* normalize mass -- not needed! */
@@ -354,18 +354,19 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
   ierr = PetscSectionGetNumFields(section, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetComponents(prob, &Ncf);CHKERRQ(ierr);
-  for (ii=0;ii<Nf;ii++) {
-    ierr = PetscDSGetFieldOffset(prob, ii, &foffsets[ii]);CHKERRQ(ierr);
-    for (jj=0;jj<Nf;jj++) {
-      nu_m0_ma[ii][jj] = PetscSqr(ctx->charges[ii]/m_0)*PetscSqr(ctx->charges[jj]/ctx->epsilon0)*ctx->lnLam / (8*M_PI); /* collision frequency with mass normalized */
-      nu_m0_ma[ii][jj] *= ctx->t_0*ctx->n_0/pow(ctx->v_0,3); /* normalize dimensionless */
-      nu_m0_ma[ii][jj] *= m_0/ctx->masses[ii];               /* fold in m_0/m_alpha term */
-      //PetscPrintf(PETSC_COMM_WORLD,"nu_m0_ma[%d,%d]=%g\n",ii,jj,nu_m0_ma[ii][jj]);
-    }
-    invMass[ii] = m_0/ctx->masses[ii];
-    Eq_m[ii] = -ctx->Ez * ctx->t_0 * ctx->charges[ii] / (ctx->v_0 * ctx->masses[ii]); /* normalize dimensionless */
-    if (dim==2) Eq_m[ii] *=  2 * M_PI; /* add the 2pi term that is not in Landau */
+  for (fieldA=0;fieldA<Nf;fieldA++) {
+    ierr = PetscDSGetFieldOffset(prob, fieldA, &foffsets[fieldA]);CHKERRQ(ierr);
+    invMass[fieldA] = m_0/ctx->masses[fieldA];
+    Eq_m[fieldA] = -ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
+    if (dim==2) Eq_m[fieldA] *=  2 * M_PI; /* add the 2pi term that is not in Landau */
+    nu_alpha[fieldA] = PetscSqr(ctx->charges[fieldA]/m_0)*m_0/ctx->masses[fieldA];
+    nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*M_PI) * ctx->t_0*ctx->n_0/pow(ctx->v_0,3);
   }
+  /* for (fieldA=0;fieldA<Nf;fieldA++) { */
+  /*   for (fieldB=0;fieldB<Nf;fieldB++) { */
+  /*     PetscPrintf(PETSC_COMM_WORLD,"nu_m0_ma[%d,%d]=%g diff=%g\n",fieldA,fieldB,nu_alpha[fieldA]*nu_beta[fieldB], nu_alpha[fieldA]*nu_beta[fieldB] - nu_m0_ma[fieldA][fieldB]); */
+  /*   } */
+  /* } */
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   numCells = cEnd - cStart;
   numGCells = GcEnd - GcStart;
@@ -513,7 +514,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   if (!JacP) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Only Jacobians, not matrix free");
 #if defined(PETSC_HAVE_CUDA)
   if (ctx->useCUDA) {
-    ierr = FPLandauCUDAJacobian(plex,quad,foffsets,nu_m0_ma,invMass,Eq_m,&IPDataGlobal,wiGlobal,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
+    ierr = FPLandauCUDAJacobian(plex,quad,foffsets,nu_alpha,nu_beta,invMass,Eq_m,&IPDataGlobal,wiGlobal,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
   } else
 #endif
@@ -534,7 +535,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
       PetscScalar     gg2[FP_MAX_SPECIES][3],gg3[FP_MAX_SPECIES][3][3];
       PetscScalar     g2[FP_MAX_SPECIES][3], g3[FP_MAX_SPECIES][3][3];
       const PetscInt  nip = numGCells*Nq, jpidx = Nq*(ej-cStart) + qj; /* length of inner global interation, outer integration point */
-      PetscInt        d2,dp,d3,fieldB;
+      PetscInt        d2,dp,d3;
       const PetscReal wj = wiGlobal[jpidx];
       const PetscReal * __restrict__ x0 = IPDataGlobal.x[0];
       const PetscReal * __restrict__ y0 = IPDataGlobal.x[1];
@@ -583,9 +584,9 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
               for (d2 = 0; d2 < dim; ++d2) {
                 for (d3 = 0; d3 < dim; ++d3) {
                   /* K = U * grad(f): g2=e: i,A */
-                  gg2[fieldA][d2] += nu_m0_ma[fieldA][fieldB] * invMass[fieldB] * U[d2][d3] * *dfi[d3][fieldB] * wi;
+                  gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][d3] * *dfi[d3][fieldB] * wi;
                   /* D = -U * (I \kron (fx)): g3=f: i,j,A */
-                  gg3[fieldA][d2][d3] -= nu_m0_ma[fieldA][fieldB] * invMass[fieldA] * U[d2][d3] * *fi[fieldB] * wi;
+                  gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * *fi[fieldB] * wi;
                 }
               }
             }
@@ -601,9 +602,9 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
                   for (d2 = 0; d2 < 3; ++d2) {
                     for (d3 = 0; d3 < 3; ++d3) {
                       /* K = U * grad(f): g2 = e: i,A */
-                      gg2[fieldA][d2] += nu_m0_ma[fieldA][fieldB] * U[d2][d3] * ldf[d3][fieldB];
+                      gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * U[d2][d3] * ldf[d3][fieldB];
                       /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
-                      gg3[fieldA][d2][d3] -= nu_m0_ma[fieldA][fieldB] * invMass[fieldA] * U[d2][d3] * *fi[fieldB] * wi;
+                      gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * *fi[fieldB] * wi;
                     }
                   }
                 }
@@ -627,9 +628,9 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 	      for (d2 = 0; d2 < 2; ++d2) {
 		for (d3 = 0; d3 < 2; ++d3) {
 		  /* K = U * grad(f): g2=e: i,A */
-		  gg2[fieldA][d2] += nu_m0_ma[fieldA][fieldB] * invMass[fieldB] * Uk[d2][d3] * *dfi[d3][fieldB] * wi;
+		  gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][d3] * *dfi[d3][fieldB] * wi;
 		  /* D = -U * (I \kron (fx)): g3=f: i,j,A */
-		  gg3[fieldA][d2][d3] -= nu_m0_ma[fieldA][fieldB] * invMass[fieldA] * Ud[d2][d3] * *fi[fieldB] * wi;
+		  gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * *fi[fieldB] * wi;
                 }
 	      }
 	    }
