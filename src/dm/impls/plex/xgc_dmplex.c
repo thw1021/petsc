@@ -774,7 +774,7 @@ PetscErrorCode FPLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,vo
 PetscErrorCode FPLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
 {
   PetscErrorCode ierr;
-  LandCtx        *ctx=(LandCtx*)actx;
+  LandCtx        *ctx=NULL;
   PetscScalar    unorm;
   PetscInt       dim;
   PetscFunctionBeginUser;
@@ -784,6 +784,7 @@ PetscErrorCode FPLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,Pet
     ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
     if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   }
+  if (Amat!=Pmat || Amat!=ctx->J) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Amat!=Pmat || Amat!=ctx->J");
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   /* get collision Jacobian into A */
 #if defined(PETSC_USE_LOG)
@@ -799,13 +800,6 @@ PetscErrorCode FPLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,Pet
   ierr = MatCopy(ctx->J,Pmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
   /* add mass */
   ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
-  /* assemble */
-  /* ierr = MatAssemblyBegin(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr); */
-  /* ierr = MatAssemblyEnd(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr); */
-  /* if (Pmat != Amat) { */
-  /*   ierr = MatAssemblyBegin(Amat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr); */
-  /*   ierr = MatAssemblyEnd(Amat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr); */
-  /* } */
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
 #endif
@@ -2051,17 +2045,19 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   Input Parameters:
 +   comm  - The MPI communicator
 .   dim - velocity space dimension (2 for axisymmetric, 3 for full 3X + 3V solver)
--   numSpecies - thermal temperature
+-   prefix - 
 
   Output Parameter:
 .   dm  - The DM object representing the mesh
++   X - A vector (user destroys)
+-   J - Matrix (object destroys)
 
   Level: beginner
 
 .keywords: mesh
 .seealso: DMPlexCreate()
 @*/
-PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char prefix[], Vec *X, DM *dm)
+PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char prefix[], Vec *X, Mat *J, DM *dm)
 {
   PetscMPIInt    size;
   PetscErrorCode ierr;
@@ -2095,6 +2091,7 @@ PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const ch
   ierr = DMSetApplicationContext(*dm, ctx);CHKERRQ(ierr);
   ctx->dmv = *dm;
   ierr = DMCreateMatrix(ctx->dmv, &ctx->J);CHKERRQ(ierr);
+  *J = ctx->J;
   ierr = LandCreateMassMatrix(ctx,*X,ctx->dmv,&ctx->M);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
