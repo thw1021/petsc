@@ -690,16 +690,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
     ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
     /* assemble matrix */
-    if (0) {
-      PetscInt numindices,*indices;
-      ierr = DMPlexGetClosureIndices(plex, section, globalSection,ej,&numindices,&indices,NULL);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"Element #%D\n",ej-cStart);CHKERRQ(ierr);
-      ierr = PetscIntView(numindices,indices,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
-      ierr = MatSetValues(JacP,numindices,indices,numindices,indices,elemMat,ADD_VALUES);CHKERRQ(ierr);
-      ierr = DMPlexRestoreClosureIndices(plex, section, globalSection,ej,&numindices,&indices,NULL);CHKERRQ(ierr);
-    } else {
-      ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
-    }
+    ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
