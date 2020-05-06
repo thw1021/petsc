@@ -799,12 +799,12 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
 	PetscInt numindices,*indices;
 	PetscScalar *elMat = &elemMats[clr_idxs[j]*totDim*totDim];
 	PetscScalar *valuesOrig = elMat;
-	ierr = DMPlexGetClosureIndices(plex, section, globalSection, cell, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);
+	/* ierr = DMPlexGetClosureIndices(plex, section, globalSection, cell, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr); */
 	idx_size[j] = numindices;
 	ierr = PetscMalloc2(numindices,&idx_arr[j],numindices*numindices,&new_el_mats[j]);CHKERRQ(ierr);
 	ierr = PetscMemcpy(idx_arr[j],indices,numindices*sizeof(PetscInt));CHKERRQ(ierr);
 	ierr = PetscMemcpy(new_el_mats[j],elMat,numindices*numindices*sizeof(PetscScalar));CHKERRQ(ierr);
-	ierr = DMPlexRestoreClosureIndices(plex, section, globalSection, cell, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);	
+	/* ierr = DMPlexRestoreClosureIndices(plex, section, globalSection, cell, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);	 */
 	if (elMat != valuesOrig) {ierr = DMRestoreWorkArray(plex, 0, MPIU_SCALAR, &elMat);}
       }
       /* assemble matrix */
