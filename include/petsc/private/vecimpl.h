@@ -347,6 +347,6 @@ typedef struct {
 PETSC_EXTERN PetscErrorCode FPCUDATest();
 #endif
 PETSC_EXTERN PetscErrorCode FPLandauCUDAJacobian(DM,PetscQuadrature,const PetscInt[],
-						 const PetscReal [][FP_MAX_SPECIES],const PetscReal[],const PetscReal[],
+						 const PetscReal [],const PetscReal [],const PetscReal[],const PetscReal[],
 						 const FPLandPointData * const, const PetscReal[], const PetscInt, const PetscLogEvent[], PetscBool, Mat);
 #endif
