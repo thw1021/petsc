@@ -390,7 +390,6 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
       for (d2=0;d2<dim;d2++) gg3[f][d][d2] = 0;
     }
   }
-#pragma omp simd
   const PetscReal * __restrict__ data = IPDataGlobal.v + ip_start*pntsz;
   for (ipidx = ip_start; ipidx < ip_end; ++ipidx, data += pntsz) {
     const PetscReal wi = wiGlobal[ipidx];
@@ -398,7 +397,6 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
     const PetscReal * __restrict__ df = &data[dim + Nf];
     if (dim==2) {
       PetscReal       Ud[2][2], Uk[2][2];
-#pragma forceinline recursive
       LandauTensor2D(pvj, data[0], data[1], Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
       for (fieldA = 0; fieldA < Nf; ++fieldA) {
        for (fieldB = 0; fieldB < Nf; ++fieldB) {
@@ -415,7 +413,6 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
     } else {
       PetscReal U[3][3], R[2][2] = {{-1,1},{1,-1}};
       if (!quarter3DDomain) {
-#pragma forceinline recursive
       LandauTensor3D(pvj,data[0], data[1], data[2],U, (ipidx==jpidx) ? 0. : 1.);
       for (fieldA = 0; fieldA < Nf; ++fieldA) {
 	for (fieldB = 0; fieldB < Nf; ++fieldB) {
@@ -677,7 +674,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
     PetscSection   csection;
     DM             colordm;
     Vec            color_vec;
-    PetscInt       i;
+    PetscInt       i,nc;
     PetscInt       numComp[1];
     PetscInt       numDof[3];
     PetscFE        fe;
@@ -688,6 +685,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
     /* Create a scalar field u, a vector field v, and a surface vector field w */
     numComp[0] = 1;
     ierr = DMClone(plex, &colordm);CHKERRQ(ierr);
+    /* we do not need the right degree for coloring so color_ prefix work */
     ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) plex), dim, 1, PETSC_FALSE, "color_", PETSC_DECIDE, &fe);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) fe, "color");CHKERRQ(ierr);
     ierr = DMSetField(colordm, 0, NULL, (PetscObject)fe);CHKERRQ(ierr);
@@ -713,7 +711,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
     {
       MatColoring     mc;
       IS             *is;
-      PetscInt        p,size,colour,j,k;
+      PetscInt        csize,colour,j,k;
       const PetscInt *indices;
       ierr = MatColoringCreate(mat,&mc);CHKERRQ(ierr);
       ierr = MatColoringSetDistance(mc,1);CHKERRQ(ierr);
@@ -723,11 +721,11 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
       ierr = MatColoringDestroy(&mc);CHKERRQ(ierr);
       /* view */
       ierr = ISColoringViewFromOptions(iscoloring,NULL,"-coloring_is_view");CHKERRQ(ierr);
-      ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is);CHKERRQ(ierr);
-      for (colour=0; colour<p; colour++) {
-	ierr = ISGetLocalSize(is[colour],&size);CHKERRQ(ierr);
+      ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&nc,&is);CHKERRQ(ierr);
+      for (colour=0; colour<nc; colour++) {
+	ierr = ISGetLocalSize(is[colour],&csize);CHKERRQ(ierr);
 	ierr = ISGetIndices(is[colour],&indices);CHKERRQ(ierr);
-	for (j=0; j<size; j++) {
+	for (j=0; j<csize; j++) {
 	  PetscScalar v = (PetscScalar)colour;
 	  k = indices[j];
 	  ierr = VecSetValues(color_vec,1,&k,&v,INSERT_VALUES);
@@ -758,50 +756,70 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
     ierr = PetscContainerSetPointer(container,(void*)coloring_ctx);CHKERRQ(ierr);
     ierr = PetscContainerSetUserDestroy(container, destroy_coloring);CHKERRQ(ierr);
     ierr = PetscObjectCompose((PetscObject)JacP,"coloring",(PetscObject)container);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_THREADSAFETY)
+#if defined(PETSC_HAVE_OPENMP)
     if (1) {
-      int thread_id,hwthread=-1,num_threads;
+      int thread_id,num_threads;
       char name[MPI_MAX_PROCESSOR_NAME];
       int resultlength;
       MPI_Get_processor_name(name, &resultlength);
-#pragma omp parallel default(shared) private(hwthread, thread_id)
+#pragma omp parallel default(shared) private(thread_id)
       {
 	thread_id = omp_get_thread_num();
-	hwthread = -1; // sched_getcpu();
 	num_threads = omp_get_num_threads();
-	PetscPrintf(PETSC_COMM_SELF,"MPI Rank %03d of %03d on HWThread %03d of Node %s, OMP_threadID %d of %d\n", 0, 1, hwthread, name, thread_id, num_threads);
+	PetscPrintf(PETSC_COMM_SELF, "Made coloring with %D colors. Node %s, OMP_threadID %d of %d\n", nc, name, thread_id, num_threads);
       }
     }
 #endif
-  }
-  /* assemble with coloring */
-  if (1) {
+  } 
+  if (1) { /* need DMPlexGetClosureIndices fix */
+    PetscScalar *elMat;
+    for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
+      ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
+    }
+  } else {
+    /* assemble with coloring */
     IS             *is;
-    PetscInt        p,size,colour,j;
-    const PetscInt *indices;
+    PetscInt        nc,colour,j;
+    const PetscInt *clr_idxs;
     ISColoring_ctx  coloring_ctx = NULL;
     ISColoring      iscoloring;
     ierr = PetscContainerGetPointer(container,(void**)&coloring_ctx);CHKERRQ(ierr);
     iscoloring = coloring_ctx->coloring;
-    ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is);CHKERRQ(ierr);
-    for (colour=0; colour<p; colour++) {
-      ierr = ISGetLocalSize(is[colour],&size);CHKERRQ(ierr);
-      ierr = ISGetIndices(is[colour],&indices);CHKERRQ(ierr);
-      //#pragma omp parallel for shared(plex,section,globalSection,JacP,cStart,indices,totDim) private(j) schedule(static)
-      for (j=0; j<size; j++) {
-	PetscInt ej = cStart + indices[j];
-	PetscScalar *elMat = &elemMats[indices[j]*totDim*totDim];
-	/* assemble matrix */
-	DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);
-	if (0) {
-	  PetscInt numindices,*indices;
-	  ierr = DMPlexGetClosureIndices(plex, section, globalSection,ej,&numindices,&indices,NULL);CHKERRQ(ierr);
-	  ierr = PetscPrintf(PETSC_COMM_SELF,"Element #%D\n",ej-cStart);CHKERRQ(ierr);
-	  ierr = PetscIntView(numindices,indices,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
-	  ierr = DMPlexRestoreClosureIndices(plex, section, globalSection,ej,&numindices,&indices,NULL);CHKERRQ(ierr);
-	}
+    ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&nc,&is);CHKERRQ(ierr);
+    for (colour=0; colour<nc; colour++) {
+      PetscInt    *idx_arr[64];
+      PetscScalar *new_el_mats[64];
+      PetscInt     idx_size[64],csize;
+      ierr = ISGetLocalSize(is[colour],&csize);CHKERRQ(ierr);
+      if (csize>64) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "too many elements in color. %D > %D",csize,64);
+      ierr = ISGetIndices(is[colour],&clr_idxs);CHKERRQ(ierr);
+      /* get indices and mats */
+      for (j=0; j<csize; j++) {
+	PetscInt cell = cStart + clr_idxs[j];
+	PetscInt numindices,*indices;
+	PetscScalar *elMat = &elemMats[clr_idxs[j]*totDim*totDim];
+	PetscScalar *valuesOrig = elMat;
+	ierr = DMPlexGetClosureIndices(plex, section, globalSection, cell, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);
+	idx_size[j] = numindices;
+	ierr = PetscMalloc2(numindices,&idx_arr[j],numindices*numindices,&new_el_mats[j]);CHKERRQ(ierr);
+	ierr = PetscMemcpy(idx_arr[j],indices,numindices*sizeof(PetscInt));CHKERRQ(ierr);
+	ierr = PetscMemcpy(new_el_mats[j],elMat,numindices*numindices*sizeof(PetscScalar));CHKERRQ(ierr);
+	ierr = DMPlexRestoreClosureIndices(plex, section, globalSection, cell, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);	
+	if (elMat != valuesOrig) {ierr = DMRestoreWorkArray(plex, 0, MPIU_SCALAR, &elMat);}
+      }
+      /* assemble matrix */
+#pragma omp parallel for shared(JacP,idx_size,idx_arr,new_el_mats) private(j) schedule(static)
+      for (j=0; j<csize; j++) {
+	PetscInt numindices = idx_size[j], *indices = idx_arr[j];
+	PetscScalar *elMat = new_el_mats[j];
+	MatSetValues(JacP,numindices,indices,numindices,indices,elMat,ADD_VALUES);
+      }
+      /* free */ 
+      for (j=0; j<csize; j++) {
+	ierr = PetscFree2(idx_arr[j],new_el_mats[j]);CHKERRQ(ierr);
       }
     }
+    ierr = ISColoringRestoreIS(iscoloring,PETSC_USE_POINTER,&is);CHKERRQ(ierr);
   }
   if (0) {
     PetscScalar *elMat;
