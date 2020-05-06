@@ -337,7 +337,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     ierr = SNESNewtonTRPreCheck(snes,X,YNtmp,&changed_y);CHKERRQ(ierr);
     /* if we solved unscaled Jacobian, then we here is a chance to scale it */
     if (!changed_y) ierr = SNESComputeJacobian(snes,X,snes->jacobian,snes->jacobian_pre);CHKERRQ(ierr);
-    
+
     /* calculating GradF of minimization function */
     ierr = MatMultTranspose(jac,F,GradF);CHKERRQ(ierr);  /* grad f = J^T F */
     ierr = VecNorm(YNtmp,NORM_2,&ynnorm);CHKERRQ(ierr);  /* ynnorm <- || Y_newton || */
@@ -345,8 +345,8 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     while (1) {
       if (ynnorm <= delta) {  /* see if the Newton solution is with in the trust region */
         ierr = VecCopy(YNtmp, Y);CHKERRQ(ierr);
-      } else {
-        ierr = MatMult(jac,GradF,W);CHKERRQ(ierr);  
+      } else if (neP->use_cauchy) {
+        ierr = MatMult(jac,GradF,W);CHKERRQ(ierr);
         ierr = VecDotRealPart(W,W,&gTBg);CHKERRQ(ierr);  /* completes GradF^T J^T J GradF */
         ierr = VecNorm(GradF,NORM_2,&gfnorm);CHKERRQ(ierr);  /* grad f norm <- || grad f || */
         if (gTBg <= 0.0) {
@@ -376,9 +376,15 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
           ierr = VecAXPY(YCtmp,tau,YNtmp);CHKERRQ(ierr);
           ierr = VecCopy(YCtmp, Y);CHKERRQ(ierr);
         }
+      } else {
+        /* if Cauchy is disabled, only use Newton direction */
+        auk = delta/ynnorm;
+        ierr = VecScale(YNtmp, auk);CHKERRQ(ierr);
+        ierr = VecCopy(YNtmp, Y);CHKERRQ(ierr);
       }
+      ierr = VecNorm(Y,NORM_2,&ynorm);CHKERRQ(ierr);  /* compute the final ynorm  */
       f0 = 0.5*PetscSqr(fnorm);  /* minimizing function f(X) */
-      ierr = MatMult(jac,Y,W);CHKERRQ(ierr);  
+      ierr = MatMult(jac,Y,W);CHKERRQ(ierr);
       ierr = VecDotRealPart(W,W,&yTHy);CHKERRQ(ierr);  /* completes GradF^T J^T J GradF */
       ierr = VecDotRealPart(GradF,Y,&gTy);CHKERRQ(ierr);
       mp = f0 - gTy + 0.5*yTHy;  /* quadratic model to satisfy */
@@ -597,6 +603,7 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
   neP->itflag = PETSC_FALSE;
   neP->rnorm0 = 0.0;
   neP->ttol   = 0.0;
+  neP->use_cauchy = PETSC_TRUE;
   snes->deltatol = 1.e-8;
   PetscFunctionReturn(0);
 }
