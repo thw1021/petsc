@@ -21,7 +21,7 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
-  ierr = DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &dm); CHKERRQ(ierr);
+  ierr = DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = VecDuplicate(X,&X_0);CHKERRQ(ierr);
   ierr = VecCopy(X,X_0);CHKERRQ(ierr);
@@ -37,7 +37,6 @@ int main(int argc, char **argv)
   ierr = SNESSetOptionsPrefix(snes, "fp_");CHKERRQ(ierr);  /* should get this from the dm or give it to the dm */
   ierr = SNESGetLineSearch(snes,&linesearch);CHKERRQ(ierr);
   ierr = SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC);CHKERRQ(ierr);
-  ierr = DMCreateMatrix(dm, &J);CHKERRQ(ierr);
   ierr = TSSetIFunction(ts,NULL,FPLandIFunction,NULL);CHKERRQ(ierr);
   ierr = TSSetIJacobian(ts,J,J,FPLandIJacobian,NULL);CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER);CHKERRQ(ierr);
@@ -56,7 +55,6 @@ int main(int argc, char **argv)
   /* clean up */
   ierr = DMPlexFPDestroyPhaseSpace(&dm);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
-  ierr = MatDestroy(&J);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
   ierr = VecDestroy(&X_0);CHKERRQ(ierr);
   ierr = PetscFinalize();

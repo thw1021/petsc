@@ -873,7 +873,7 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
-  ierr = DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &dm); CHKERRQ(ierr);
+  ierr = DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
