@@ -888,7 +888,7 @@ int main(int argc, char **argv)
   /* Create timestepping solver context */
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
-  ierr = DMCreateMatrix(dm, &J);CHKERRQ(ierr);
+  J = ctx->J;
   ierr = TSSetIFunction(ts,NULL,REIFunction,NULL);CHKERRQ(ierr);
   ierr = TSSetIJacobian(ts,J,J,REIJacobian,NULL);CHKERRQ(ierr);
   if (!put_source_in_lhs) {
@@ -923,7 +923,6 @@ int main(int argc, char **argv)
   /* clean up */
   ierr = DMPlexFPDestroyPhaseSpace(&dm);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
-  ierr = MatDestroy(&J);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
   if (rectx->imp_src) {
     ierr = VecDestroy(&rectx->imp_src);CHKERRQ(ierr);
