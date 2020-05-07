@@ -420,22 +420,15 @@ static PetscErrorCode DMCreateInterpolation_Stag(DM dmc, DM dmf, Mat *A,Vec *vec
   ierr = MatSetLocalToGlobalMapping(*A,ltogmf,ltogmc);CHKERRQ(ierr);
 
   if (dim == 1) {
-    if (doff[0] == 1 && doff[1] == 0) {
-      ierr = DMStagPopulateInterpolation1d_1_0_Private(dmc,dmf,*A);CHKERRQ(ierr);
-    } else if (doff[0] == 1 && doff[1] == 1) {
-      ierr = DMStagPopulateInterpolation1d_1_1_Private(dmc,dmf,*A);CHKERRQ(ierr);
-    } else SETERRQ2(PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"No default interpolation available between 1d DMStag objects with %D dof/face and %D dof/element",doff[0],doff[1]);
+    ierr = DMStagPopulateInterpolation1d_a_b_Private(dmc,dmf,*A);CHKERRQ(ierr);
   } else if (dim == 2) {
-    if (doff[0] == 0 && doff[1] == 1 && doff[2] == 0) {
-      ierr = DMStagPopulateInterpolation2d_0_1_0_Private(dmc,dmf,*A);CHKERRQ(ierr);
-    } else if (doff[0] == 0 && doff[1] == 1 && doff[2] == 1) {
-      ierr = DMStagPopulateInterpolation2d_0_1_1_Private(dmc,dmf,*A);CHKERRQ(ierr);
+    if (doff[0] == 0) {
+      ierr = DMStagPopulateInterpolation2d_0_a_b_Private(dmc,dmf,*A);CHKERRQ(ierr);
     } else SETERRQ3(PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"No default interpolation available between 2d DMStag objects with %D dof/vertex, %D dof/face and %D dof/element",doff[0],doff[1],doff[2]);
   } else if (dim == 3) {
-    if (doff[0] == 0 && doff[0] == 0 && doff[2] == 1 && doff[3] == 0) {
-      ierr = DMStagPopulateInterpolation3d_0_0_1_0_Private(dmc,dmf,*A);CHKERRQ(ierr);
+    if (doff[0] == 0 && doff[1] == 0) {
+      ierr = DMStagPopulateInterpolation3d_0_0_a_b_Private(dmc,dmf,*A);CHKERRQ(ierr);
     } else SETERRQ4(PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"No default interpolation available between 3d DMStag objects with %D dof/vertex, %D dof/edge, %D dof/face and %D dof/element",doff[0],doff[1],doff[2],doff[3]);
-    SETERRQ(PetscObjectComm((PetscObject)dmc),PETSC_ERR_ARG_OUTOFRANGE,"3D not implemented");
   } else SETERRQ1(PetscObjectComm((PetscObject)dmc),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %D",dim);
   ierr = MatAssemblyBegin(*A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(*A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -475,20 +468,14 @@ static PetscErrorCode DMCreateRestriction_Stag(DM dmc, DM dmf, Mat *A)
   ierr = MatSetLocalToGlobalMapping(*A,ltogmc,ltogmf);CHKERRQ(ierr); /* Note transpose wrt interpolation */
 
   if (dim == 1) {
-    if (doff[0] == 1 && doff[1] == 0) {
-      ierr = DMStagPopulateRestriction1d_1_0_Private(dmc,dmf,*A);CHKERRQ(ierr);
-    } else if (doff[0] == 1 && doff[1] == 1) {
-      ierr = DMStagPopulateRestriction1d_1_1_Private(dmc,dmf,*A);CHKERRQ(ierr);
-    } else SETERRQ2(PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"No default restriction available between 1d DMStag objects with %D dof/face and %D dof/element",doff[0],doff[1]);
+    ierr = DMStagPopulateRestriction1d_a_b_Private(dmc,dmf,*A);CHKERRQ(ierr);
   } else if (dim == 2) {
-    if (doff[0] == 0 && doff[1] == 1 && doff[2] == 0) {
-      ierr = DMStagPopulateRestriction2d_0_1_0_Private(dmc,dmf,*A);CHKERRQ(ierr);
-    } else if (doff[0] == 0 && doff[1] == 1 && doff[2] == 1) {
-      ierr = DMStagPopulateRestriction2d_0_1_1_Private(dmc,dmf,*A);CHKERRQ(ierr);
+    if (doff[0] == 0) {
+      ierr = DMStagPopulateRestriction2d_0_a_b_Private(dmc,dmf,*A);CHKERRQ(ierr);
     } else SETERRQ3(PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"No default restriction available between 2d DMStag objects with %D dof/vertex, %D dof/face and %D dof/element",doff[0],doff[1],doff[2]);
   } else if (dim == 3) {
-    if (doff[0] == 0 && doff[0] == 0 && doff[2] == 1 && doff[3] == 0) {
-      ierr = DMStagPopulateRestriction3d_0_0_1_0_Private(dmc,dmf,*A);CHKERRQ(ierr);
+    if (doff[0] == 0 && doff[0] == 0) {
+      ierr = DMStagPopulateRestriction3d_0_0_a_b_Private(dmc,dmf,*A);CHKERRQ(ierr);
     } else SETERRQ4(PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"No default restriction available between 3d DMStag objects with %D dof/vertex, %D dof/edge, %D dof/face and %D dof/element",doff[0],doff[1],doff[2],doff[3]);
   } else SETERRQ1(PetscObjectComm((PetscObject)dmc),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %D",dim);
 
