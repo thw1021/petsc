@@ -256,7 +256,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 {
   SNES_NEWTONTR            *neP = (SNES_NEWTONTR*)snes->data;
   Vec                      X,F,Y,G,Ytmp,W,GradF,YNtmp;
-//  PetscScalar    *X_mon, *Y_mon, *F_mon, *W_mon, *G_mon, *YN_mon, *YC_mon; /* debug */
+  PetscScalar    *X_mon, *Y_mon, *F_mon, *W_mon, *G_mon, *YN_mon, *YC_mon; /* debug */
   Vec                      Diag;
   Vec                      YCtmp;
   Mat                      jac;
@@ -325,28 +325,39 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   for (i=0; i<maxits; i++) {
     PetscBool changed_y;
     PetscBool changed_w;
-    
+
      /* dogleg method */
     ierr = SNESComputeJacobian(snes,X,snes->jacobian,snes->jacobian_pre);CHKERRQ(ierr);
     SNESCheckJacobianDomainerror(snes);
-    ierr = SNESGetJacobian(snes, &jac, NULL, NULL, NULL);CHKERRQ(ierr);
-    ierr = KSPSetOperators(snes->ksp,jac,jac);CHKERRQ(ierr);
+    ierr = KSPSetOperators(snes->ksp,snes->jacobian,snes->jacobian);CHKERRQ(ierr);
     ierr = KSPSolve(snes->ksp,F,YNtmp);CHKERRQ(ierr);   /* Quasi Newton Solution */
     ierr = KSPGetIterationNumber(snes->ksp,&lits);CHKERRQ(ierr);
     snes->linear_its += lits;
+    
+    /* monitors for debugging */
+    VecGetArrayRead(X,(const PetscScalar**)&X_mon);CHKERRQ(ierr);
+    VecGetArrayRead(YNtmp,(const PetscScalar**)&YN_mon);CHKERRQ(ierr);
+    VecGetArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
+
+    VecRestoreArrayRead(X,(const PetscScalar**)&X_mon);CHKERRQ(ierr);
+    VecRestoreArrayRead(YNtmp,(const PetscScalar**)&YN_mon);CHKERRQ(ierr);
+    VecRestoreArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
+
+    /* a chance to scale Newton solution */
     ierr = SNESNewtonTRPreCheck(snes,X,YNtmp,&changed_y);CHKERRQ(ierr);
     /* if we solved unscaled Jacobian, then we here is a chance to scale it */
-    if (!changed_y) ierr = SNESComputeJacobian(snes,X,snes->jacobian,snes->jacobian_pre);CHKERRQ(ierr);
-
+    ierr = SNESComputeJacobian(snes,X,snes->jacobian,snes->jacobian_pre);CHKERRQ(ierr);
+    ierr = SNESGetJacobian(snes, &jac, NULL, NULL, NULL);CHKERRQ(ierr);    
     /* calculating GradF of minimization function */
     ierr = MatMultTranspose(jac,F,GradF);CHKERRQ(ierr);  /* grad f = J^T F */
     ierr = VecNorm(YNtmp,NORM_2,&ynnorm);CHKERRQ(ierr);  /* ynnorm <- || Y_newton || */
-
+   
     while (1) {
+      
       if (ynnorm <= delta) {  /* see if the Newton solution is with in the trust region */
         ierr = VecCopy(YNtmp, Y);CHKERRQ(ierr);
       } else if (neP->use_cauchy) {
-        ierr = MatMult(jac,GradF,W);CHKERRQ(ierr);
+        ierr = MatMult(jac,GradF,W);CHKERRQ(ierr);  
         ierr = VecDotRealPart(W,W,&gTBg);CHKERRQ(ierr);  /* completes GradF^T J^T J GradF */
         ierr = VecNorm(GradF,NORM_2,&gfnorm);CHKERRQ(ierr);  /* grad f norm <- || grad f || */
         if (gTBg <= 0.0) {
@@ -384,20 +395,13 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       }
       ierr = VecNorm(Y,NORM_2,&ynorm);CHKERRQ(ierr);  /* compute the final ynorm  */
       f0 = 0.5*PetscSqr(fnorm);  /* minimizing function f(X) */
-      ierr = MatMult(jac,Y,W);CHKERRQ(ierr);
+      ierr = MatMult(jac,Y,W);CHKERRQ(ierr);  
       ierr = VecDotRealPart(W,W,&yTHy);CHKERRQ(ierr);  /* completes GradF^T J^T J GradF */
       ierr = VecDotRealPart(GradF,Y,&gTy);CHKERRQ(ierr);
       mp = f0 - gTy + 0.5*yTHy;  /* quadratic model to satisfy */
 
-      /* monitors for debugging */
-//      VecGetArrayRead(X,(const PetscScalar**)&X_mon);CHKERRQ(ierr);
-//      VecGetArrayRead(Y,(const PetscScalar**)&Y_mon);CHKERRQ(ierr);
-//      VecGetArrayRead(YNtmp,(const PetscScalar**)&YN_mon);CHKERRQ(ierr);
-//      VecGetArrayRead(YCtmp,(const PetscScalar**)&YC_mon);CHKERRQ(ierr);
-//      VecGetArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
-
-
       /* Evaluate the solution to meet the improvement ratio criteria */
+      ierr = SNESNewtonTRPreCheck(snes,X,Y,&changed_y);CHKERRQ(ierr);
       ierr = VecWAXPY(W,-1.0,Y,X);CHKERRQ(ierr);
       ierr = SNESNewtonTRPostCheck(snes,X,Y,W,&changed_y,&changed_w);CHKERRQ(ierr);
       if (changed_y) ierr = VecWAXPY(W,-1.0,Y,X);CHKERRQ(ierr);
@@ -410,8 +414,15 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       else rho = (f0 - g)/(f0 - mp);  /* actual improvement over predicted improvement */
 
       /* monitors for debugging */
-//      VecGetArrayRead(W,(const PetscScalar**)&W_mon);CHKERRQ(ierr);
-//      VecGetArrayRead(G,(const PetscScalar**)&G_mon);CHKERRQ(ierr);
+      VecGetArrayRead(X,(const PetscScalar**)&X_mon);CHKERRQ(ierr);
+      VecGetArrayRead(Y,(const PetscScalar**)&Y_mon);CHKERRQ(ierr);
+      VecGetArrayRead(YNtmp,(const PetscScalar**)&YN_mon);CHKERRQ(ierr);
+      VecGetArrayRead(YCtmp,(const PetscScalar**)&YC_mon);CHKERRQ(ierr);
+      VecGetArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
+
+      /* monitors for debugging */
+      VecGetArrayRead(W,(const PetscScalar**)&W_mon);CHKERRQ(ierr);
+      VecGetArrayRead(G,(const PetscScalar**)&G_mon);CHKERRQ(ierr);
   
       if (rho < neP->eta2) {
         delta *= neP->t1;  /* shrink the region */
@@ -420,13 +431,13 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       }
 
       /* monitors for debugging */ 
-//      VecRestoreArrayRead(X,(const PetscScalar**)&X_mon);CHKERRQ(ierr);
-//      VecRestoreArrayRead(Y,(const PetscScalar**)&Y_mon);CHKERRQ(ierr);
-//      VecRestoreArrayRead(YNtmp,(const PetscScalar**)&YN_mon);CHKERRQ(ierr);
-//      VecRestoreArrayRead(YCtmp,(const PetscScalar**)&YC_mon);CHKERRQ(ierr);
-//      VecRestoreArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
-//      VecRestoreArrayRead(W,(const PetscScalar**)&W_mon);CHKERRQ(ierr);
-//      VecRestoreArrayRead(G,(const PetscScalar**)&G_mon);CHKERRQ(ierr);
+      VecRestoreArrayRead(X,(const PetscScalar**)&X_mon);CHKERRQ(ierr);
+      VecRestoreArrayRead(Y,(const PetscScalar**)&Y_mon);CHKERRQ(ierr);
+      VecRestoreArrayRead(YNtmp,(const PetscScalar**)&YN_mon);CHKERRQ(ierr);
+      VecRestoreArrayRead(YCtmp,(const PetscScalar**)&YC_mon);CHKERRQ(ierr);
+      VecRestoreArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
+      VecRestoreArrayRead(W,(const PetscScalar**)&W_mon);CHKERRQ(ierr);
+      VecRestoreArrayRead(G,(const PetscScalar**)&G_mon);CHKERRQ(ierr);
 
       neP->delta = delta;
       if (rho >= neP->eta1) break;  /* the improvement ratio is satisfactory */
