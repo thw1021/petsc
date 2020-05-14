@@ -256,7 +256,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 {
   SNES_NEWTONTR            *neP = (SNES_NEWTONTR*)snes->data;
   Vec                      X,F,Y,G,Ytmp,W,GradF,YNtmp;
-  PetscScalar    *X_mon, *Y_mon, *F_mon, *W_mon, *G_mon, *YN_mon, *YC_mon; /* debug */
+//  PetscScalar    *X_mon, *Y_mon, *F_mon, *W_mon, *G_mon, *YN_mon, *YC_mon; /* debug */
   Vec                      Diag;
   Vec                      YCtmp;
   Mat                      jac;
@@ -347,7 +347,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 //    VecRestoreArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
 
     /* if we solved unscaled Jacobian, then we here is a chance to scale it */
-//    ierr = SNESComputeJacobian(snes,X,snes->jacobian,snes->jacobian_pre);CHKERRQ(ierr);
+    ierr = SNESComputeJacobian(snes,X,snes->jacobian,snes->jacobian_pre);CHKERRQ(ierr);
     ierr = SNESGetJacobian(snes, &jac, NULL, NULL, NULL);CHKERRQ(ierr);    
     /* calculating GradF of minimization function */
     ierr = MatMultTranspose(jac,F,GradF);CHKERRQ(ierr);  /* grad f = J^T F */
