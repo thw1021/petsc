@@ -378,7 +378,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 //        VecGetArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
 
         /* a chance to scale Cauchy solution */
-//        ierr = SNESNewtonTRPreCheck(snes,X,YCtmp,&changed_y);CHKERRQ(ierr);
+        ierr = SNESNewtonTRPreCheck(snes,X,YCtmp,&changed_y);CHKERRQ(ierr);
 
 //        VecRestoreArrayRead(X,(const PetscScalar**)&X_mon);CHKERRQ(ierr);
 //        VecRestoreArrayRead(YNtmp,(const PetscScalar**)&YN_mon);CHKERRQ(ierr);
