@@ -237,10 +237,88 @@ Figure \ref{fig:z} plot the value of  $\eta = E/J$ to the Spitzer $\eta_z$ as a 
 This data was run with a highly resolved mesh, 512 cells and Q5 elements resulting in 18,468 integration points, and is probably not fully resolved.
 We do see with this data that the calculated $\eta$ is within $1\%$ of the Spitzer value.
 
-
 \section{Use of graphical processing units (GPUs)}
 
-Our approach to utilizing GPUs builds on our approach to vectorizing the code for Intel's Knights Landing processor \cite{AdamsHirvijokiKnepleyBrownIsaacMills2017}.
+Our approach to utilizing GPUs builds on our approach to vectorizing the algorithm, where the input data for the inner integral is collected into an array for efficient memory processing \cite{AdamsHirvijokiKnepleyBrownIsaacMills2017}.
+This is a 1D decomposition of the data as one (vectorized) thread processed the entire kernel.
+We extend this vector model in this work with a 3D decomposition to accommodate parallelism.
+
+The first step is to simply put each global quadrature point on one thread.
+This is a 2D decomposition to elements (CUDA thread blocks) and quadrature points (CUDA threads).
+The contribution from each quadrature point is processed by one thread to construct the element matrix.
+More parallelism is introduced by decomposing the inner integral onto sub-blocks to allow for multiple threads to work on each quadrature point's inner integral.
+Each thread accumulates 
+Figure \ref{fig:3d} shows a diagram of this decomposition.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=.9\linewidth]{dataDecomposition3d.png}
+\caption{Schematic of decomposition with P2 elements, S species ({\emph{CUDA syntax}}), $N_e$ global finite elements (\emph{gridDim.x}), $N_q$ quadrature points (QP) per element (\emph{blockDim.x}), $N_s$ Sub-threads per QP(\emph{blockDim.y})
+}
+\label{fig:3d}
+\end{center}
+\end{figure}
+See Appendix \ref{app:algo3d} for details.
+
+
+\subsection{Performance}
+We use a node with 2 IBM POWER9 sockets and 6 Nvidia Tesla V100 GPUs / node, using 1 MPI process with one GPU.
+This test problem is similar to the problems used for verification, with 62 cells, Q3 elements (992 integration points).
+Figure \ref{fig:perf} show the time for the construction of the Jacobian matrix, the GPU kernel, and the CPU matrix assembly and solve.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=.6\linewidth]{./PPT/landau_time_species.png}
+\caption{Times (sec) for Landau Jacobian construction.}
+\label{fig:perf}
+\end{center}
+\end{figure}
+We observe that the times increase linearly with number of species, in the GPU kernel, however the serial matrix assembly times increase quadratically.
+The matrix assembly has not been parallelized.
+One can color elements and assemble them in parallel, or use a local domain decomposition and use standard parallel assembly methods.
+If we assume that we can color a 2D block structured AMR grid with 8 colors, then we could expect a speed up of about 8 for this problem with 62 cells.
+This should be enough to keep the matrix assembly subdominant.
+
+\section{Seed runaway electron generation}
+
+Runaway electrons (REs) are formed, to put it simply, when a disruption or mitigation mechanism causes a thermal quench, flattening the density profile in velocity space.
+This reduces the collisional drag on fast electrons in the tail of the distribution.
+A parallel electric field can accelerate these electrons whereby they see even less drag from the body of the population.
+These electrons can accelerate indefinitely, subject to relativistic effects and radiative effects.
+Relatively small populations of electrons can be accelerated to relativistic velocities and carry significant energy.
+If these REs stay on a closed flux surface they can dissipate slowly as the plasma current dissipates.
+If, however, field lines become stochastic, as in a disruption, beams of REs can hit the wall of the containment vessel and cause significant damage.
+REs are considered to be the primary threat to the mission of ITER and thus it is important to understand their behavior so that the can be avoided or effective mitigations strategies can be designed.
+
+We use our highly accurate, fully nonlinear Landau collisional model to help to understand RE generation and focus on the seed electron generation, the generation of populations that are the beginnings of a runaway event.
+Our model uses an exogenous source of impurities $S\left(t\right)$ to cause a thermal quench in the plasma.
+This source adds a term, $\left(\psi,S_{\alpha}\right)$, to the right hand side of  (\ref{eq:weak-form}) at each time step.
+This is a crude model of a mitigation strategy where impurity pellets are injected into the plasma.
+Note, REs are generated from a thermal quench caused by plasma disruptions, generally.
+Impurity injection causes a thermal quench also and is easier to model with a $0D$ model.
+We thus us a model that looks like a mitigation strategy, for convenience, to generate a thermal quench and generate REs.
+We assume that the source is fully ionized, generating a number density $n_e$ for electrons and $n_i$ for one ion species with a Maxwellian distribution and temperature of given $T_{cold}$ (eg, 5 ev).
+Thus a rate, $dn/dt$ is provided at each time step, a Maxwellian distribution for electrons is then created with $S_e = dn_e/dt =  dn/dt$, one for ions is created with $S_i = dn_i/dt =  Z dn/dt$, were $Z$ is the effective ionization of the ions, and both have a provide temperature $T_{cold}$.
+$\left(\psi,S_{\alpha}\right) = M S_\alpha$ is added as a source term to the discrete equations.
+$M$ is the finite element mass matrix in cylindrical coordinates.
+
+We consider the relationship between plasma temperature and quench rate in the generation of REs.
+We apply a constant electric field in the parallel direction of magnitude $? E_c$, where $E_c$ is the Connor-Hastie electric field $E_c =n_e e^3\ln \Lambda / \left (4 \pi \epsilon_0^2 m_e c^2\right)$ \cite{Connor1975}.
+A source term function ....
+
+\section{Conclusion}
+
+\section{Acknowledgments}
+
+ This work was partially funded from the DOE contract number
+DE-AC02-09-CH11466.  This research used resources of the National
+Energy Research Scientific Computing Center, a DOE Office of Science
+User Facility supported by the Office of Science of the
+U.S. Department of Energy under Contract No. DE-AC02-05CH11231.
+
+\appendix
+\section{Vector algorithm with 3D decomposition in CUDA}
+\label{app:algo3d}
+
+As is discussed in \cite{AdamsHirvijokiKnepleyBrownIsaacMills2017}, the basic Landau algorithm is composed of six nested loops.
 Algorithm \ref{fig:algo0} shows high level pseudo-code for construction the
 Landau Jacobian matrix, with $|G_\alpha|$ cells in the set $G_\alpha$ for species $\alpha$, $N_q$
 quadrature points in each element, distribution functions $f$, $S$
@@ -274,10 +352,17 @@ $J\left(q_j\right)$ is the element Jacobian at point $q_j$.
 \end{algorithm}
 The six loops of Algorithm \ref{fig:algo0} can be processed in many orders, and blocked, giving different data access patterns, which is
 critical in optimizing performance.
+
 We use one grid for all species, which has advantages and disadvantages \cite{AdamsHirvijokiKnepleyBrownIsaacMills2017}, and results in only one set of cells $G$.
 Our kernel of interest is the construction of the tensor and vector in (\ref{eq:K}) and (\ref{eq:D}).
-To optimized the processing in the kernel we build a flat array(s) of the data required in the kernel ($\bm x$, $w$, $f_{\alpha}$,  $\frac{\partial f_{\alpha}}{\partial \bm x}$,  $f_{\beta}$,  $\frac{\partial f_{\beta}}{\partial \bm x}, ... $) for all integration points ($N = | G | \cdot N_q$).
+To optimized the processing in the kernel we build a flat array(s) of the data required in the kernel ($\bm x$, $w$, $f_{\alpha}$,  $\frac{\partial f_{\alpha}}{\partial \bm x}$,  $f_{\beta}$,  $\frac{\partial f_{\beta}}{\partial \bm x}, ... $) for all integration points in the mesh.
 
+We  modify the original algorithm slightly, first by simply putting each global integration point on one thread.
+This is a 2D decomposition to element (CUDA blocks) and integration points (CUDA threads).
+We collect the contribution from each thread and have one thread sum the contributions from the other threads in the thread block or sub-block.
+For a 2D decomposition this amounts to one thread building the element matrix.
+
+For a 3D decomposition we use threads that work on sub-blocks of the inner integral, which requires the addition of a summation of the $G2$ and $G2$ terms at each integration point.
 Algorithm \ref{fig:algo2} shows the pseudo-code for the CUDA kernel for constructing the Landau collision integral element matrix using standard finite element processes including finite element tabulation at integration points $q_i$, $\mathcal{B}\left(q_i\right),  \mathcal{D}\left(q_i\right)$, and element Jacobian $\mathcal{J}\left(q_i\right)$.
 \begin{algorithm}[h!]
 \begin{algorithmic}[100]
@@ -327,9 +412,6 @@ Algorithm \ref{fig:algo2} shows the pseudo-code for the CUDA kernel for construc
 \end{algorithm}
 One element is placed in each CUDA thread block and there is a 2D array of threads $(N_q, number\_sub\_threads)$ per block, with $number\_sub\_threads$ being  a runtime parameter for the number of threads to use within each integration point.
 These element matrices are then assembled on the CPU into the global Jacobian.
-%This algorithm is designed to minimized data movement by computing the Landau tensors on the fly, they can be precomputed, and it exploits a single mesh by hoisting the tensor kernel outside of the two inner loops over species.
-This loop ordering puts the Landau tensor, some of the $\Order{S^2}$ complexity terms, the inner finite element integral and the Jacobian coordinate transformation into a GPU kernel.
-A summation of the each threads $G2$ and $G2$ is accumulated by one thread at each integration point and the finite element projection to vertices, from each integration point, is processed by one thread in each thread block.
 
 Algorithm \ref{fig:algos}
 shows the initialization of the vectors $r$, $z$, $w$, $f$, and the
@@ -354,59 +436,6 @@ Each quadrature point $q_i$ has a 2D coordinate ($q_i.r$,$q_i.z$).
 \label{fig:algos}
 \end{algorithm}
 
-\section{Performance}
-We use a node with 2 IBM POWER9 sockets and 6 Nvidia Tesla V100 GPUs / node, using 1 MPI process with one GPU.
-This test problem is similar to the problems used for verification, with 62 cells, Q3 elements (992 integration points).
-Figure \ref{fig:perf} show the time for the construction of the Jacobian matrix, the GPU kernel, and the CPU matrix assemble and solve.
-\begin{figure}[htbp]
-\begin{center}
-\includegraphics[width=.6\linewidth]{./PPT/landau_time_species.png}
-\caption{Times (sec) for Landau Jacobian construction.}
-\label{fig:perf}
-\end{center}
-\end{figure}
-We observe that the times increase linearly with number of species, in the GPU kernel, however the serial matrix assemble times increase quadratically.
-The matrix assembly has not been parallelized.
-One can color elements and assemble them in parallel, or use a local domain decomposition and use standard parallel assembly methods.
-If we assume that we can color a 2D block structured AMR grid with 8 colors, then we could expect a speed up of about 8 for this problem with 62 cells.
-This should be enough to keep the matrix assembly subdominant.
-
-\section{Seed runaway electron generation}
-
-Runaway electrons (REs) are formed, to put it simply, when a disruption or mitigation mechanism causes a thermal quench, flattening the density profile in velocity space.
-This reduces the collisional drag on fast electrons in the tail of the distribution.
-A parallel electric field can accelerate these electrons whereby they see even less drag from the body of the population.
-These electrons can accelerate indefinitely, subject to relativistic effects and radiative effects.
-Relatively small populations of electrons can be accelerated to relativistic velocities and carry significant energy.
-If these REs stay on a closed flux surface they can dissipate slowly as the plasma current dissipates.
-If, however, field lines become stochastic, as in a disruption, beams of REs can hit the wall of the containment vessel and cause significant damage.
-REs are considered to be the primary threat to the mission of ITER and thus it is important to understand their behavior so that the can be avoided or effective mitigations strategies can be designed.
-
-We use our highly accurate, fully nonlinear Landau collisional model to help to understand RE generation and focus on the seed electron generation, the generation of populations that are the beginnings of a runaway event.
-Our model uses an exogenous source of impurities $S\left(t\right)$ to cause a thermal quench in the plasma.
-This source adds a term, $\left(\psi,S_{\alpha}\right)$, to the right hand side of  (\ref{eq:weak-form}) at each time step.
-This is a crude model of a mitigation strategy where impurity pellets are injected into the plasma.
-Note, REs are generated from a thermal quench caused by plasma disruptions, generally.
-Impurity injection causes a thermal quench also and is easier to model with a $0D$ model.
-We thus us a model that looks like a mitigation strategy, for convenience, to generate a thermal quench and generate REs.
-We assume that the source is fully ionized, generating a number density $n_e$ for electrons and $n_i$ for one ion species with a Maxwellian distribution and temperature of given $T_{cold}$ (eg, 5 ev).
-Thus a rate, $dn/dt$ is provided at each time step, a Maxwellian distribution for electrons is then created with $S_e = dn_e/dt =  dn/dt$, one for ions is created with $S_i = dn_i/dt =  Z dn/dt$, were $Z$ is the effective ionization of the ions, and both have a provide temperature $T_{cold}$.
-$\left(\psi,S_{\alpha}\right) = M S_\alpha$ is added as a source term to the discrete equations.
-$M$ is the finite element mass matrix in cylindrical coordinates.
-
-We consider the relationship between plasma temperature and quench rate in the generation of REs.
-We apply a constant electric field in the parallel direction of magnitude $? E_c$, where $E_c$ is the Connor-Hastie electric field $E_c =n_e e^3\ln \Lambda / \left (4 \pi \epsilon_0^2 m_e c^2\right)$ \cite{Connor1975}.
-A source term function ....
-
-\section{Conclusion}
-
-\section{Acknowledgments}
-
- This work was partially funded from the DOE contract number
-DE-AC02-09-CH11466.  This research used resources of the National
-Energy Research Scientific Computing Center, a DOE Office of Science
-User Facility supported by the Office of Science of the
-U.S. Department of Energy under Contract No. DE-AC02-05CH11231.
 
 \bibliographystyle{unsrt}
 \bibliography{the}
