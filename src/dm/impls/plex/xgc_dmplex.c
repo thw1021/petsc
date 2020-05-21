@@ -549,6 +549,10 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 	f0[fieldA] = IPDataGlobal.f[fieldA];
 	for (d = 0; d < dim; ++d) df0[d][fieldA] = IPDataGlobal.df[d][fieldA];
       }
+      for (        ;fieldA<FP_MAX_SPECIES;fieldA++) {
+	f0[fieldA] = NULL;
+	for (d = 0; d < dim; ++d) df0[d][fieldA] = NULL;
+      }
       for (d=0;d<dim;d++) {
 	for (f=0;f<Nf;f++) {
 	  gg2[f][d] = 0;
@@ -2016,7 +2020,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
     ierr = PetscLogEventRegister(" Jacobian-trans", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 5 */
     ierr = PetscLogEventRegister(" Jacobian-assem", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 6 */
     ierr = PetscLogEventRegister(" Jacobian-end", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 7 */
-    ierr = PetscLogEventRegister(" Jacobian-out", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 8 */
+    ierr = PetscLogEventRegister(" Jac-geo-coloring", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 8 */
     ierr = PetscLogEventRegister("Landau Jacobian", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 9 */
     if (rank) { /* turn off output stuff for duplicate runs - do we need to add the prefix to all this? */
       ierr = PetscOptionsClearValue(NULL,"-snes_converged_reason");CHKERRQ(ierr);
