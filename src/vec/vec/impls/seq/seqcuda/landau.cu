@@ -662,7 +662,6 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscI
   CUDA_SAFE_CALL(cudaFree(d_elemMats));
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
   /* coloring */
   ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
