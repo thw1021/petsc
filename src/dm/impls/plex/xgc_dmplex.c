@@ -362,11 +362,6 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
     nu_alpha[fieldA] = PetscSqr(ctx->charges[fieldA]/m_0)*m_0/ctx->masses[fieldA];
     nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*M_PI) * ctx->t_0*ctx->n_0/pow(ctx->v_0,3);
   }
-  /* for (fieldA=0;fieldA<Nf;fieldA++) { */
-  /*   for (fieldB=0;fieldB<Nf;fieldB++) { */
-  /*     PetscPrintf(PETSC_COMM_WORLD,"nu_m0_ma[%d,%d]=%g diff=%g\n",fieldA,fieldB,nu_alpha[fieldA]*nu_beta[fieldB], nu_alpha[fieldA]*nu_beta[fieldB] - nu_m0_ma[fieldA][fieldB]); */
-  /*   } */
-  /* } */
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   numCells = cEnd - cStart;
   numGCells = GcEnd - GcStart;
@@ -389,10 +384,6 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   }
   ierr = PetscDSGetEvaluationArrays(prob, &uu, NULL, &u_x);CHKERRQ(ierr);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr); // Bf, &Df
-#if defined(PETSC_USE_LOG)
-  ierr = PetscLogEventEnd(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
-#endif
   /* collect f data */
   if (ctx->verbose > 3)
     PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, %D local cells. %s elements, totDim=%D, Nb=%D, Nq=%D, Nf=%D, elemMatSize=%D, dim=%D\n",
@@ -504,7 +495,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
     for (d = Nq*numGCells; d < globNipVec; ++d) wiGlobal[d] = 0; // vector padding (not used)
   }
 #if defined(PETSC_USE_LOG)
-  ierr = PetscLogEventEnd(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
 #endif
   /* outer element loop j is like a regular assembly loop */
 #if defined(HAVE_VTUNE) && defined(__INTEL_COMPILER)
@@ -973,7 +964,6 @@ static void f0_s_rden(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   *f0 = 2.*M_PI*x[0]*u[s_species_idx];
-  //if (fabs(u[s_species_idx]) > 1.e-3) PetscPrintf(PETSC_COMM_WORLD, "\t%D r=%e, f0_s_rden mass = %21.13e\n",s_species_idx,x[0],u[s_species_idx]);
 }
 
 /* < v, ru > */
@@ -1111,8 +1101,10 @@ static PetscErrorCode SetupDiscretization(DM dm, const PetscInt ncoefs, PetscRea
 @*/
 PetscErrorCode DMPlexFPCreate2D(MPI_Comm comm, const PetscInt a_numCells, const PetscInt a_numVertices, const PetscInt a_cells[], const double a_coords[], const double a_alpha[/* numCells */], const PetscInt a_numNeumann, const PetscInt NeumannIDs[/* ? */], const PetscScalar NeumannValues[/* ? */], DM *dm)
 {
-  PetscInt       p, numCells=a_numCells, numVertices=a_numVertices, *cells;
-  PetscReal      *coords,*alpha;
+  PetscInt       p, numCells=a_numCells, numVertices=a_numVertices;
+  int            *cells;
+  PetscReal      *alpha;
+  double         *coords; 
   DM             pdm;
   PetscMPIInt    rank, size;
   PetscErrorCode ierr;
@@ -1630,7 +1622,8 @@ PetscErrorCode DMPlexFPAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal te
 {
   LandCtx        *ctx = (LandCtx*)actx;
   PetscErrorCode (*initu[FP_MAX_SPECIES])(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar [], void *);
-  PetscErrorCode ierr,ii,dim;
+  PetscErrorCode ierr,ii;
+  PetscInt       dim;
   MaxwellianCtx  *mctxs[FP_MAX_SPECIES], data[FP_MAX_SPECIES];
   PetscFunctionBeginUser;
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
@@ -2009,19 +2002,18 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);
   {
     PetscMPIInt    rank;
-    PetscInt currevent = 0;
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
     /* PetscLogStage  setup_stage; */
-    ierr = PetscLogEventRegister("Landau Operator", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 0 */
-    ierr = PetscLogEventRegister(" Jacobian-setup", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 1 */
-    ierr = PetscLogEventRegister(" Jacobian-geom", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 2 */
-    ierr = PetscLogEventRegister(" Jacobian-kern-i", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 3 */
-    ierr = PetscLogEventRegister(" Jacobian-kernel", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 4 */
-    ierr = PetscLogEventRegister(" Jacobian-trans", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 5 */
-    ierr = PetscLogEventRegister(" Jacobian-assem", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 6 */
-    ierr = PetscLogEventRegister(" Jacobian-end", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 7 */
-    ierr = PetscLogEventRegister(" Jac-geo-coloring", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 8 */
-    ierr = PetscLogEventRegister("Landau Jacobian", DM_CLASSID, &ctx->events[currevent++]);CHKERRQ(ierr); /* 9 */
+    ierr = PetscLogEventRegister("Landau Operator", DM_CLASSID, &ctx->events[0]);CHKERRQ(ierr); /* 0 */
+    ierr = PetscLogEventRegister(" Jacobian-setup", DM_CLASSID, &ctx->events[1]);CHKERRQ(ierr); /* 1 */
+    ierr = PetscLogEventRegister(" Jacobian-kern-i", DM_CLASSID, &ctx->events[3]);CHKERRQ(ierr); /* 3 */
+    ierr = PetscLogEventRegister(" Jacobian-kernel", DM_CLASSID, &ctx->events[4]);CHKERRQ(ierr); /* 4 */
+    ierr = PetscLogEventRegister(" Jacobian-trans", DM_CLASSID, &ctx->events[5]);CHKERRQ(ierr); /* 5 */
+    ierr = PetscLogEventRegister(" Jacobian-assem", DM_CLASSID, &ctx->events[6]);CHKERRQ(ierr); /* 6 */
+    ierr = PetscLogEventRegister(" Jacobian-end", DM_CLASSID, &ctx->events[7]);CHKERRQ(ierr); /* 7 */
+    ierr = PetscLogEventRegister("  Jac-geo-color", DM_CLASSID, &ctx->events[8]);CHKERRQ(ierr); /* 8 */
+    ierr = PetscLogEventRegister("  Jac-cuda-sum", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
+    ierr = PetscLogEventRegister("Landau Jacobian", DM_CLASSID, &ctx->events[9]);CHKERRQ(ierr); /* 9 */
     if (rank) { /* turn off output stuff for duplicate runs - do we need to add the prefix to all this? */
       ierr = PetscOptionsClearValue(NULL,"-snes_converged_reason");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-ksp_converged_reason");CHKERRQ(ierr);

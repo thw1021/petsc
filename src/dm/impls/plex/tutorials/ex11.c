@@ -472,14 +472,14 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
   ierr = getT_kev(plex, X, 0, NULL, &Te_kev);CHKERRQ(ierr);
   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
   *a_E = ctx->Ez; /* no change */
-  if (!rectx->use_spitzer_eta && time > 10) {
+  if (!rectx->use_spitzer_eta && time > 20) {
     static PetscReal  old_ratio = 1e10;
     E = ctx->Ez; /* keep real E */
     ratio = E/J/spit_eta;
-    if (ratio < 1.01 || old_ratio <= ratio) {
+    if ((ratio < 1.01 && ratio > 0.99) || (old_ratio <= ratio && ratio < 1.03)) {
       rectx->use_spitzer_eta = PETSC_TRUE; /* use it next time */
       rectx->j = J;
-      /* rectx->pulse_start = time + 0.375; */ /* start quench now */
+      rectx->pulse_start = time + 1.; /* start quench now */
     }
     PetscPrintf(PETSC_COMM_WORLD,"xxxx %D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s\n",stepi,time,ratio, J, E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");
     old_ratio = ratio;
@@ -932,5 +932,10 @@ int main(int argc, char **argv)
     suffix: 0
     requires: p4est
     args: -Ez 0 -petscspace_degree 2 -mass_petscspace_degree 2 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 9 -domain_radius -.75 -impurity_source_type pulse -pulse_start_time 1e-1 -pulse_width_time 10 -pulse_rate 1e-2 -t_cold .05 -plot_dt 1e-1 -sub_thread_block_size 4
+
+  test:
+    suffix: nocuda
+    requires: p4est
+    args: -Ez 0 -petscspace_degree 2 -mass_petscspace_degree 2 -petscspace_poly_tensor 1 -mass_petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 9 -domain_radius -.75 -impurity_source_type pulse -pulse_start_time 1e-1 -pulse_width_time 10 -pulse_rate 1e-2 -t_cold .05 -plot_dt 1e-1 -sub_thread_block_size 4 -use_cuda false
 
 TEST*/
