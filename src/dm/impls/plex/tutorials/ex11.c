@@ -476,7 +476,7 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
     static PetscReal  old_ratio = 1e10;
     E = ctx->Ez; /* keep real E */
     ratio = E/J/spit_eta;
-    if ((ratio < 1.01 && ratio > 0.99) || (old_ratio <= ratio && ratio < 1.03)) {
+    if ((ratio < 1.01 && ratio > 0.99) || (old_ratio <= ratio && ratio < 1.03 && ratio > 0.97)) {
       rectx->use_spitzer_eta = PETSC_TRUE; /* use it next time */
       rectx->j = J;
       rectx->pulse_start = time + 1.; /* start quench now */
@@ -507,6 +507,7 @@ static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, 
   /* get d current / dt */
   ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_jz);CHKERRQ(ierr);
+  if (!X_t) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "X_t");
   ierr = DMPlexComputeIntegralFEM(plex,X_t,tt,NULL);CHKERRQ(ierr);
   dJ_dt = -ctx->n_0*ctx->v_0*tt[0]/ctx->t_0;
   /* E induction */
@@ -529,7 +530,6 @@ static PetscErrorCode ENone(Vec X,  Vec X_t, PetscInt step, PetscReal time, Land
   PetscFunctionReturn(0);
 }
 
-static const int put_source_in_lhs = 0;
 /* ------------------------------------------------------------------- */
 /*
    FormSource - Evaluates source terms F(t).
@@ -579,22 +579,6 @@ PetscPrintf(PETSC_COMM_SELF, "\t***** FormSource: have new_imp_rate= %10.3e time
       }
       ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
       ierr = DMPlexFPAddMaxwellians(plex,rectx->imp_src,ftime,temps,tilda_ns,ctx);CHKERRQ(ierr);
-      if (1) {
-        PetscReal n_e, n_i, n_se, n_si, tt[FP_MAX_SPECIES];
-        ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
-        n_e = tt[0];
-        ierr = PetscDSSetObjective(prob, 0, &f0_2_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,F,tt,NULL);CHKERRQ(ierr);
-        n_i = tt[0];
-        ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,rectx->imp_src,tt,NULL);CHKERRQ(ierr);
-        n_se = tt[0];
-        ierr = PetscDSSetObjective(prob, 0, &f0_2_n);CHKERRQ(ierr);
-        ierr = DMPlexComputeIntegralFEM(plex,rectx->imp_src,tt,NULL);CHKERRQ(ierr);
-        n_si = tt[0];
-        ierr = PetscPrintf(PETSC_COMM_SELF, "F_e= %10.3e F_i= %10.3e n_se= %10.3e n_si= %10.3e\n",n_e,n_i,n_se,n_si);CHKERRQ(ierr);
-      }
       /* clean up */
       ierr = DMDestroy(&plex);CHKERRQ(ierr);
       if (0) {
@@ -670,57 +654,27 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   PetscFunctionReturn(0);
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "REIFunction"
-PetscErrorCode REIFunction(TS ts,PetscReal time,Vec X,Vec X_t,Vec F,void *actx)
+PetscErrorCode PreStep(TS ts)
 {
   PetscErrorCode ierr;
   LandCtx        *ctx;
   REctx         *rectx;
   DM             dm;
+  PetscInt       stepi;
+  PetscReal      time;
+  Vec            X;
   PetscFunctionBeginUser;
   /* check seed RE run */
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
+  ierr = TSGetTime(ts,&time);CHKERRQ(ierr);
+  ierr = TSGetSolution(ts,&X);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   rectx = (REctx*)ctx->data;
   if (!rectx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no re context");
-  if (rectx->idx == 0) {
-    PetscInt stepi;
-    ierr = TSGetStepNumber(ts, &stepi);CHKERRQ(ierr);
-    /* update E */
-    ierr = rectx->E(X, X_t, stepi, time, ctx, &ctx->Ez);CHKERRQ(ierr);
-    rectx->idx = 1;
-  }
-  /* Add Landau part */
-  ierr = FPLandIFunction(ts,time,X,X_t,F,actx);CHKERRQ(ierr);
-  ctx->aux_bool = PETSC_FALSE; /* clear flag */
-  if (put_source_in_lhs) {
-    Vec S;
-    ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
-    ierr = FormSource(ts, time, NULL, S, NULL);CHKERRQ(ierr);
-    if (rectx->imp_src) {
-      ierr = VecAXPY(F,-1.0,rectx->imp_src);CHKERRQ(ierr);
-    }
-    ierr = VecDestroy(&S);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "REIJacobian"
-PetscErrorCode REIJacobian(TS ts,PetscReal time,Vec X,Vec U_t,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
-{
-  PetscErrorCode ierr;
-  LandCtx        *ctx;
-  DM             dm;
-  PetscFunctionBeginUser;
-  /* Add Landau part */
-  ierr = FPLandIJacobian(ts,time,X,U_t,shift,Amat,Pmat,actx);CHKERRQ(ierr);
-  /* check for noop */
-  ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
-  ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
-  if (ctx->aux_bool) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Does this ever make Landau Jacobian here");
+  ierr = TSGetStepNumber(ts, &stepi);CHKERRQ(ierr);
+  /* update E */
+  ierr = rectx->E(X, NULL, stepi, time, ctx, &ctx->Ez);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -844,7 +798,8 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
       ierr = PetscOptionsClearValue(NULL,"-vec_view_sources");CHKERRQ(ierr);
     }
   }
-  if (ctx->Ez > 0) {
+  /* convert E from Conner-Hastie E_c units to real */
+  {
     PetscReal E = ctx->Ez, Tev = ctx->thermal_temps[0]*8.621738e-5, n = ctx->n_0*ctx->n[0];
     CalculateE(Tev, n, ctx->lnLam, ctx->epsilon0, &E);
     ((LandCtx*)ctx)->Ez *= E;
@@ -883,35 +838,15 @@ int main(int argc, char **argv)
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
   J = ctx->J;
-  ierr = TSSetIFunction(ts,NULL,REIFunction,NULL);CHKERRQ(ierr);
-  ierr = TSSetIJacobian(ts,J,J,REIJacobian,NULL);CHKERRQ(ierr);
-  if (!put_source_in_lhs) {
-    ierr = TSSetRHSFunction(ts,NULL,FormSource,NULL);CHKERRQ(ierr);
-  }
+  ierr = TSSetIFunction(ts,NULL,FPLandIFunction,NULL);CHKERRQ(ierr);
+  ierr = TSSetIJacobian(ts,J,J,FPLandIJacobian,NULL);CHKERRQ(ierr);
+  ierr = TSSetRHSFunction(ts,NULL,FormSource,NULL);CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
   ierr = TSSetApplicationContext(ts, ctx);CHKERRQ(ierr);
   ierr = TSMonitorSet(ts,Monitor,ctx,NULL);CHKERRQ(ierr);
+  ierr = TSSetPreStep(ts,PreStep);CHKERRQ(ierr);
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
-  if (0) {
-    PetscLogStage stage;
-    Vec X_0;
-    PetscReal dt;
-    ierr = PetscLogStageRegister("Presolve", &stage);CHKERRQ(ierr);
-    ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-    ierr = VecDuplicate(X,&X_0);CHKERRQ(ierr);
-    ierr = VecCopy(X,X_0);CHKERRQ(ierr);
-    ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
-    ierr = TSSolve(ts,X);CHKERRQ(ierr);
-    ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
-    ierr = VecCopy(X_0,X);CHKERRQ(ierr);
-    ierr = VecDestroy(&X_0);CHKERRQ(ierr);
-    ierr = TSSetTime(ts,0);CHKERRQ(ierr);
-    ierr = TSSetConvergedReason(ts,TS_CONVERGED_ITERATING);CHKERRQ(ierr);
-    ierr = TSSetStepNumber(ts,0);CHKERRQ(ierr);
-
-    ierr = PetscLogStagePop();CHKERRQ(ierr);
-  }
   /* go */
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */

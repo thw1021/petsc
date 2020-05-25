@@ -1914,7 +1914,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ierr = PetscOptionsReal("-re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","xgc_dmplex.c",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-z_radius1","velocity range to refine r=0 axis (for electrons)","xgc_dmplex.c",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","xgc_dmplex.c",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Ez","Initial parallel electric field","xgc_dmplex.c",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-Ez","Initial parallel electric field in unites of Conner-Hastie criticle field","xgc_dmplex.c",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-n_0","Normalization constant for number density","xgc_dmplex.c",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-ln_lambda","Cross section parameter","xgc_dmplex.c",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "xgc_dmplex.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
