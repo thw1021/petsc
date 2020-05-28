@@ -455,7 +455,6 @@ PETSC_EXTERN PetscErrorCode DMPlexCellRefinerGetAffineFaceTransforms(DMPlexCellR
 PETSC_EXTERN PetscErrorCode DMPlexRefineUniform(DM, DMPlexCellRefiner, DM *);
 
 PETSC_EXTERN PetscErrorCode DMPlexFPPrintNorms(Vec, PetscInt);
-PETSC_EXTERN PetscErrorCode DMPlexFPCreate2D(MPI_Comm, const PetscInt, const PetscInt, const PetscInt[], const double[], const double[], const PetscInt, const PetscInt[], const PetscScalar[/* ? */], DM *dm);
 PETSC_EXTERN PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
 PETSC_EXTERN PetscErrorCode DMPlexFPDestroyPhaseSpace(DM*);
 PETSC_EXTERN PetscErrorCode DMPlexFPAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);

@@ -11,8 +11,6 @@
 #include <ittnotify.h>
 #endif
 
-static PetscInt s_species_idx = 0; /* DMPlexFPPrintNorms should compute all norms at once and avoid using this -- TODO */
-
 #if defined(__INTEL_COMPILER)
 #if defined(PETSC_USE_REAL_SINGLE)
 #define MYINVSQRT(q) invsqrtf(q)
@@ -247,13 +245,12 @@ PETSC_STATIC_INLINE void LandauTensor3D(const PetscReal x1[], const PetscReal xp
   U[2][0] = U[0][2] = -inorm3 * dx[0] * dx[2];
 }
 #define LAND_VL  1
-#define LAND_VL2 1
-static PetscErrorCode FPLandPointDataCreate(FPLandPointData *ld, PetscInt dim, PetscInt nip, PetscInt Nf)
+static PetscErrorCode FPLandPointDataCreate(FPLandPointData *ld, PetscInt dim, PetscInt nip, PetscInt Ns)
 {
-  PetscErrorCode ierr, sz = nip + !!(nip%(LAND_VL*LAND_VL2)),jj,d;
+  PetscErrorCode ierr, sz = LAND_VL*(nip/LAND_VL + !!(nip%LAND_VL)),jj,d;
   PetscFunctionBeginUser;
   ld->nip = nip;
-  ld->ns = Nf;
+  ld->ns = Ns;
   ld->dim = dim;
   if (dim==3) {
     ierr = PetscMalloc3(sz,&ld->x[0],sz,&ld->x[1],sz,&ld->x[2]);CHKERRQ(ierr);
@@ -261,7 +258,7 @@ static PetscErrorCode FPLandPointDataCreate(FPLandPointData *ld, PetscInt dim, P
     ierr = PetscMalloc2(sz,&ld->x[0],sz,&ld->x[1]);CHKERRQ(ierr);
     ld->x[2] = NULL;
   }
-  for (jj=0;jj<Nf;jj++){
+  for (jj=0;jj<Ns;jj++){
     if (dim==3) {
       ierr = PetscMalloc4(sz,&ld->f[jj],sz,&ld->df[0][jj],sz,&ld->df[1][jj],sz,&ld->df[2][jj]);CHKERRQ(ierr);
     } else {
@@ -271,7 +268,7 @@ static PetscErrorCode FPLandPointDataCreate(FPLandPointData *ld, PetscInt dim, P
   }
   for (/* void */; nip < sz ; nip++) { /* zero end, should be benign */
     for (d=0;d<dim;d++) ld->x[d][nip] = 0;
-    for (jj=0;jj<Nf;jj++) {
+    for (jj=0;jj<Ns;jj++) {
       ld->f[jj][nip] = 0;
       for (d=0;d<dim;d++) ld->df[d][jj][nip] = 0;
     }
@@ -307,55 +304,48 @@ static PetscErrorCode FPLandPointDataDestroy(FPLandPointData *ld)
 
   Output Parameters:
   .  JacP - Jacobian matrix
-  .  Bmat - optionally different preconditioning matrix
-  .  globF - optional vector for residual only calc
 */
-PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt dim, LandCtx *ctx)
+PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 {
   PetscErrorCode    ierr;
-  PetscInt          cStart, cEnd, GcStart,GcEnd, elemMatSize;
-  DM                plex = 0, Gplex = 0;
-  Vec               locX,locF;
+  PetscInt          cStart, cEnd, elemMatSize;
+  DM                plex = 0;
   PetscDS           prob;
-  PetscSection      section, globalSection;
-  PetscScalar       *elemVec, *elemMat;
-  PetscScalar       *uu, *u_x;
-  PetscInt          numCells,numGCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Nf,ii,d,f,fieldA,fieldB,globNip,globNipVec;
-  PetscInt          foffsets[FP_MAX_SPECIES];
+  PetscSection      section,globsection;
+  PetscScalar       *elemMat;
+  PetscInt          numCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Nc,Nfx,d,f,fieldA,fieldB,Nip,NipVec;
   PetscQuadrature   quad;
   PetscTabulation   *Tf;
-  PetscReal         *wiLocal, *wiGlobal, nu_alpha[FP_MAX_SPECIES], nu_beta[FP_MAX_SPECIES];
-  const PetscReal   *quadPoints, *quadWeights;
-  FPLandPointData   IPDataLocal,IPDataGlobal;
+  PetscReal         *wiGlob, nu_alpha[FP_MAX_SPECIES], nu_beta[FP_MAX_SPECIES];
+  const PetscReal   *quadPoints, *quadWeights, *BB, *DD;
+  FPLandPointData   IPData;
   PetscReal         invMass[FP_MAX_SPECIES],Eq_m[FP_MAX_SPECIES],m_0=ctx->m_0; /* normalize mass -- not needed! */
   PetscLogDouble    flops;
   PetscReal         vj[FP_MAX_NQ*3],Jj[FP_MAX_NQ*9],invJj[FP_MAX_NQ*9], detJj[FP_MAX_NQ];
+  Vec               locX;
   PetscFunctionBeginUser;
-  PetscValidHeaderSpecific(globX,VEC_CLASSID,1);
-  if (!JacP) PetscValidHeaderSpecific(globF,VEC_CLASSID,2);
-  if (JacP) PetscValidHeaderSpecific(JacP,MAT_CLASSID,3);
-  if (Bmat) PetscValidHeaderSpecific(Bmat,MAT_CLASSID,4);
-  PetscValidPointer(ctx,5);
+  PetscValidHeaderSpecific(a_X,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(JacP,MAT_CLASSID,2);
+  PetscValidPointer(ctx,4);
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
 #endif
   ierr = DMConvert(ctx->dmv, DMPLEX, &plex);CHKERRQ(ierr);
-  /* ierr = DMConvert(ctx->serial_dm, DMPLEX, &Gplex);CHKERRQ(ierr); */
-  Gplex = plex;
-  ierr = DMGetLocalVector(plex, &locX);CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(plex, &locX);CHKERRQ(ierr);
   ierr = VecZeroEntries(locX);CHKERRQ(ierr); /* zero BCs so don't set */
-  ierr = DMGlobalToLocalBegin(plex, globX, INSERT_VALUES, locX);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(plex, globX, INSERT_VALUES, locX);CHKERRQ(ierr);
+  ierr = DMGlobalToLocalBegin(plex, a_X, INSERT_VALUES, locX);CHKERRQ(ierr);
+  ierr = DMGlobalToLocalEnd  (plex, a_X, INSERT_VALUES, locX);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(plex, 0, &cStart, &cEnd);CHKERRQ(ierr);
   ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
-  ierr = DMGetGlobalSection(plex, &globalSection);CHKERRQ(ierr);
+  ierr = DMGetGlobalSection(plex, &globsection);CHKERRQ(ierr);
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
-  ierr = DMPlexGetHeightStratum(Gplex, 0, &GcStart, &GcEnd);CHKERRQ(ierr);
-  ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
-  ierr = PetscSectionGetNumFields(section, &Nf);CHKERRQ(ierr);
-  ierr = PetscDSGetComponents(prob, &Ncf);CHKERRQ(ierr);
-  for (fieldA=0;fieldA<Nf;fieldA++) {
-    ierr = PetscDSGetFieldOffset(prob, fieldA, &foffsets[fieldA]);CHKERRQ(ierr);
+  ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr); // Bf, &Df
+  BB = Tf[0]->T[0];
+  DD = Tf[0]->T[1];
+  ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0]; /* number of vertices*S */
+  ierr = PetscSectionGetNumFields(section, &Nfx);CHKERRQ(ierr);  if(Nfx!=1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nf!=1 %D",Nfx);
+  ierr = PetscDSGetComponents(prob, &Ncf);CHKERRQ(ierr); Nc = Ncf[0]; if(Nc!=ctx->num_species) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nc!=S %D",Nc);
+  for (fieldA=0;fieldA<Nc;fieldA++) {
     invMass[fieldA] = m_0/ctx->masses[fieldA];
     Eq_m[fieldA] = -ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
     if (dim==2) Eq_m[fieldA] *=  2 * M_PI; /* add the 2pi term that is not in Landau */
@@ -364,136 +354,67 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   }
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   numCells = cEnd - cStart;
-  numGCells = GcEnd - GcStart;
-  ierr = PetscFEGetQuadrature(ctx->fe[0], &quad);CHKERRQ(ierr);
+  ierr = PetscFEGetQuadrature(ctx->fe, &quad);CHKERRQ(ierr);
   ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, &quadPoints, &quadWeights);CHKERRQ(ierr);
-  if (Nb!=Nq) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq %D %D over integration or simplices?",Nb,Nq);
+  if (Nb!=Nq*ctx->num_species) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq %D %D over integration or simplices? Tf[0]->Nb=%D dim=%D",Nb,Nq,Tf[0]->Nb,dim);
   if (Nq >FP_MAX_NQ) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %D > FP_MAX_NQ (%D)",Nq,FP_MAX_NQ);
-  globNip = numGCells*Nq;
-  globNipVec = globNip + !!(globNip%(LAND_VL*LAND_VL2));
-  flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nf*Nf + 165.);
-  if (JacP) {
-    ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
-    elemMatSize = totDim*totDim; /* use DMGetWorkArray here!! */
-  } else {
-    ierr = DMGetLocalVector(plex, &locF);CHKERRQ(ierr);
-    ierr = VecZeroEntries(locF);CHKERRQ(ierr);
-    elemMatSize = 0;
-    elemMat = NULL;
-    ierr = DMGetWorkArray(plex, totDim, MPIU_SCALAR, &elemVec);CHKERRQ(ierr);
-  }
-  ierr = PetscDSGetEvaluationArrays(prob, &uu, NULL, &u_x);CHKERRQ(ierr);
-  ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr); // Bf, &Df
-  /* collect f data */
-  if (ctx->verbose > 3)
-    PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, %D local cells. %s elements, totDim=%D, Nb=%D, Nq=%D, Nf=%D, elemMatSize=%D, dim=%D\n",
-		0,"FormLandau",Nq*numGCells,numGCells,numCells,ctx->simplex ? "SIMPLEX" : "TENSOR", totDim, Nb, Nq, Nf,
-		elemMatSize,dim);
-  ierr = FPLandPointDataCreate(&IPDataLocal, dim,Nq*numCells, Nf);CHKERRQ(ierr);
-  ierr = FPLandPointDataCreate(&IPDataGlobal,dim,Nq*numGCells,Nf);CHKERRQ(ierr);
-  ierr = PetscMalloc3(elemMatSize,&elemMat,globNipVec,&wiGlobal,numCells*Nq,&wiLocal);CHKERRQ(ierr);
-  /* cache geometry and x, f and df/dx at IPs */
-  for (ej = 0; ej < numCells; ++ej) {
-    PetscInt        qj;
-    PetscScalar     *coef = NULL;
-    ierr = DMPlexComputeCellGeometryFEM(plex, cStart+ej, quad, vj, Jj, invJj, detJj);CHKERRQ(ierr);
-    ierr = DMPlexVecGetClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
-    /* create point data for cell i for Landau tensor: x, f(x), grad f(x) */
-    for (qj = 0; qj < Nq; ++qj) {
-      PetscInt    idx = (ej*Nq + qj);
-      PetscScalar refSpaceDer[3];
-      PetscInt    dOffset = 0, fOffset = 0;
-      for (d = 0; d < dim; ++d) IPDataLocal.x[d][idx] = vj[qj * dim + d]; /* coordinate */
-      wiLocal[idx] = detJj[qj] * quadWeights[qj];
-      if (dim==2) wiLocal[idx] *= IPDataLocal.x[0][idx];  /* cylindrical coordinate, w/o 2pi */
-      /* get u & du (EvaluateFieldJets) */
-      for (f = 0; f < Nf; ++f) {
-	const PetscInt   Nb = Nbf[f];
-	const PetscReal *Bq = &Tf[f]->T[0][qj*Nb];
-	const PetscReal *Dq = &Tf[f]->T[1][qj*Nb*dim];
-	PetscInt         b, e;
-	uu[fOffset] = 0.0;
-	for (d = 0; d < dim; ++d) refSpaceDer[d] = 0.0;
-	for (b = 0; b < Nb; ++b) {
-	  const PetscInt    cidx = b;
-	  uu[fOffset] += Bq[cidx]*coef[dOffset+cidx];
-	  for (d = 0; d < dim; ++d) {
-	    refSpaceDer[d] += Dq[cidx*dim+d]*coef[dOffset+cidx];
-	  }
-	}
-	for (d = 0; d < dim; ++d) {
-	  for (e = 0, u_x[fOffset*dim+d] = 0.0; e < dim; ++e) {
-	    u_x[fOffset*dim+d] += invJj[qj * dim * dim + e*dim+d]*refSpaceDer[e];
-	  }
-	}
-	fOffset += 1;
-	dOffset += Nb;
-      }
-      /* copy to IPDataLocal */
-      for (f=0;f<Nf;f++) {
-	for (d = 0; d < dim; ++d) IPDataLocal.df[d][f][idx] = u_x[f*dim+d];
-	IPDataLocal.f[f][idx] = uu[f];
-      }
+  Nip = numCells*Nq;
+  NipVec = LAND_VL*(Nip/LAND_VL + !!(Nip%LAND_VL));
+  flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nc*Nc + 165);
+  ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
+  elemMatSize = totDim*totDim;
+  {
+    PetscScalar       *uu,*u_x;
+    ierr = PetscDSGetEvaluationArrays(prob, &uu, NULL, &u_x);CHKERRQ(ierr);
+    /* collect f data */
+    if (ctx->verbose > 3) {
+      PetscInt N;
+      VecGetSize(locX,&N);
+      PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, %s elements, totDim=%D, Nb=%D, Nq=%D, elemMatSize=%D, dim=%D, Tab: Nb=%D Nc=%D Np=%D cdim=%D N=%D\n",
+                  0,"FormLandau",Nq*numCells,numCells,ctx->simplex ? "SIMPLEX" : "TENSOR", totDim, Nb, Nq, elemMatSize, dim, Tf[0]->Nb, Tf[0]->Nc, Tf[0]->Np, Tf[0]->cdim, N);
     }
-    ierr = DMPlexVecRestoreClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
+    ierr = FPLandPointDataCreate(&IPData, dim, Nq*numCells, Nc);CHKERRQ(ierr);
+    ierr = PetscMalloc2(elemMatSize,&elemMat,NipVec,&wiGlob);CHKERRQ(ierr);
+    /* cache geometry and x, f and df/dx at IPs */
+    for (ej = 0; ej < numCells; ++ej) {
+      PetscInt     qj,c,b,e;
+      PetscScalar *coef = NULL;
+      ierr = DMPlexComputeCellGeometryFEM(plex, cStart+ej, quad, vj, Jj, invJj, detJj);CHKERRQ(ierr);
+      ierr = DMPlexVecGetClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
+      /* create point data for cell i for Landau tensor: x, f(x), grad f(x) */
+      for (qj = 0; qj < Nq; ++qj) {
+        PetscInt    gidx = (ej*Nq + qj);
+        PetscScalar refSpaceDer[3*FP_MAX_SPECIES];
+        const PetscReal *Bq = &BB[qj*Nb*Nc], *Dq = &DD[qj*Nb*Nc*dim];
+        for (d = 0; d < dim; ++d) IPData.x[d][gidx] = vj[qj * dim + d]; /* coordinate */
+        wiGlob[gidx] = detJj[qj] * quadWeights[qj];
+        if (dim==2) wiGlob[gidx] *= IPData.x[0][gidx];  /* cylindrical coordinate, w/o 2pi */
+        /* get u & du (EvaluateFieldJets) */
+        for (c = 0; c < Nc; ++c) uu[c] = 0.0;
+        for (d = 0; d < dim*Nc; ++d) refSpaceDer[d] = 0.0;
+        for (c = 0; c < Nc; ++c) {
+          for (b = 0; b < Nb; ++b) {
+            const PetscInt cidx = b*Nc+c;
+            if (Bq[cidx] != 0.0) {
+              uu[c] += Bq[cidx]*coef[b];
+              for (d = 0; d < dim; ++d) refSpaceDer[c*dim+d] += Dq[cidx*dim+d]*coef[b];
+            }
+          }
+        }
+        for (c = 0; c < Nc; ++c) for (d = 0; d < dim; ++d) for (e = 0, u_x[c*dim+d] = 0.0; e < dim; ++e) {
+              u_x[c*dim+d] += invJj[e*dim+d]*refSpaceDer[c*dim+e];
+              //printf("\t\t%d) u_x=%g invJj=%g u_x=%g\n",c*dim+d,u_x[c*dim+d],invJj[e*dim+d],refSpaceDer[c*dim+e]);
+            }
+        /* copy to IPDataLocal */
+        for (c=0;c<Nc;c++) {
+          for (d = 0; d < dim; ++d) IPData.df[d][c][gidx] = u_x[c*dim+d];
+          IPData.f[c][gidx] = uu[c];
+        }
+      } /* q */
+      ierr = DMPlexVecRestoreClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
+    } /* e */
   }
-  { /* all to all to get IPDataGlobal and wi */
-    VecScatter  scat;
-    Vec         v,w;
-    PetscScalar *a;
-    /* x */
-    for (d = 0; d < dim; ++d) {
-      ierr = VecCreateMPIWithArray(PETSC_COMM_SELF,1,numCells*Nq,numGCells*Nq,IPDataLocal.x[d],&v);CHKERRQ(ierr);
-      ierr = VecScatterCreateToAll(v,&scat,&w);CHKERRQ(ierr);
-      ierr = VecScatterBegin(scat,v,w,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(scat,v,w,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecDestroy(&v);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&scat);CHKERRQ(ierr);
-      ierr = VecGetArray(w,&a);CHKERRQ(ierr);
-      ierr = PetscMemcpy(IPDataGlobal.x[d],a,numGCells*Nq*sizeof(PetscReal));CHKERRQ(ierr);
-      ierr = VecRestoreArray(w,&a);CHKERRQ(ierr);
-      ierr = VecDestroy(&w);CHKERRQ(ierr);
-    }
-    for (ii=0;ii<Nf;ii++) {
-      /* f */
-      ierr = VecCreateMPIWithArray(PETSC_COMM_SELF,1,numCells*Nq,numGCells*Nq,IPDataLocal.f[ii],&v);CHKERRQ(ierr);
-      ierr = VecScatterCreateToAll(v,&scat,&w);CHKERRQ(ierr);
-      ierr = VecScatterBegin(scat,v,w,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(scat,v,w,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecDestroy(&v);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&scat);CHKERRQ(ierr);
-      /* VecView(w,PETSC_VIEWER_STDOUT_WORLD); */
-      ierr = VecGetArray(w,&a);CHKERRQ(ierr);
-      ierr = PetscMemcpy(IPDataGlobal.f[ii],a,numGCells*Nq*sizeof(PetscReal));CHKERRQ(ierr);
-      ierr = VecRestoreArray(w,&a);CHKERRQ(ierr);
-      ierr = VecDestroy(&w);CHKERRQ(ierr);
-      /* df */
-      for (d = 0; d < dim; ++d) {
-	ierr = VecCreateMPIWithArray(PETSC_COMM_SELF,1,numCells*Nq,numGCells*Nq,IPDataLocal.df[d][ii],&v);CHKERRQ(ierr);
-	ierr = VecScatterCreateToAll(v,&scat,&w);CHKERRQ(ierr);
-	ierr = VecScatterBegin(scat,v,w,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-	ierr = VecScatterEnd(scat,v,w,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-	ierr = VecDestroy(&v);CHKERRQ(ierr);
-	ierr = VecScatterDestroy(&scat);CHKERRQ(ierr);
-	ierr = VecGetArray(w,&a);CHKERRQ(ierr);
-	ierr = PetscMemcpy(IPDataGlobal.df[d][ii],a,numGCells*Nq*sizeof(PetscReal));CHKERRQ(ierr);
-	ierr = VecRestoreArray(w,&a);CHKERRQ(ierr);
-	ierr = VecDestroy(&w);CHKERRQ(ierr);
-      }
-    }
-    /* wi */
-    ierr = VecCreateMPIWithArray(PETSC_COMM_SELF,1,numCells*Nq,numGCells*Nq,wiLocal,&v);CHKERRQ(ierr);
-    ierr = VecScatterCreateToAll(v,&scat,&w);CHKERRQ(ierr);
-    ierr = VecScatterBegin(scat,v,w,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(scat,v,w,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecDestroy(&v);CHKERRQ(ierr);
-    ierr = VecScatterDestroy(&scat);CHKERRQ(ierr);
-    ierr = VecGetArray(w,&a);CHKERRQ(ierr);
-    ierr = PetscMemcpy(wiGlobal,a,numGCells*Nq*sizeof(PetscReal));CHKERRQ(ierr);
-    ierr = VecRestoreArray(w,&a);CHKERRQ(ierr);
-    ierr = VecDestroy(&w);CHKERRQ(ierr);
-    for (d = Nq*numGCells; d < globNipVec; ++d) wiGlobal[d] = 0; // vector padding (not used)
-  }
+  ierr = DMRestoreLocalVector(plex, &locX);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
 #endif
@@ -502,10 +423,9 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
   __itt_resume(); // start VTune, again use 2 underscores
 #endif
-  if (!JacP) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Only Jacobians, not matrix free");
 #if defined(PETSC_HAVE_CUDA)
   if (ctx->useCUDA) {
-    ierr = FPLandauCUDAJacobian(plex,quad,foffsets,nu_alpha,nu_beta,invMass,Eq_m,&IPDataGlobal,wiGlobal,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
+    ierr = FPLandauCUDAJacobian(plex,quad,nu_alpha,nu_beta,invMass,Eq_m,&IPData,wiGlob,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
   } else
 #endif
@@ -525,27 +445,27 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 #endif
       PetscScalar     gg2[FP_MAX_SPECIES][3],gg3[FP_MAX_SPECIES][3][3];
       PetscScalar     g2[FP_MAX_SPECIES][3], g3[FP_MAX_SPECIES][3][3];
-      const PetscInt  nip = numGCells*Nq, jpidx = Nq*(ej-cStart) + qj; /* length of inner global interation, outer integration point */
+      const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj; /* length of inner global interation, outer integration point */
       PetscInt        d2,dp,d3;
-      const PetscReal wj = wiGlobal[jpidx];
-      const PetscReal * __restrict__ x0 = IPDataGlobal.x[0];
-      const PetscReal * __restrict__ y0 = IPDataGlobal.x[1];
-      const PetscReal * __restrict__ z0 = IPDataGlobal.x[2];
+      const PetscReal wj = wiGlob[jpidx];
+      const PetscReal * __restrict__ x0 = IPData.x[0];
+      const PetscReal * __restrict__ y0 = IPData.x[1];
+      const PetscReal * __restrict__ z0 = IPData.x[2];
       const PetscReal * __restrict__ f0[FP_MAX_SPECIES];
       const PetscReal * __restrict__ df0[3][FP_MAX_SPECIES];
 #if defined(PETSC_USE_LOG)
       ierr = PetscLogEventBegin(ctx->events[3],0,0,0,0);CHKERRQ(ierr);
 #endif
-      for (fieldA=0;fieldA<Nf;fieldA++) {
-	f0[fieldA] = IPDataGlobal.f[fieldA];
-	for (d = 0; d < dim; ++d) df0[d][fieldA] = IPDataGlobal.df[d][fieldA];
+      for (fieldA=0;fieldA<Nc;fieldA++) {
+	f0[fieldA] = IPData.f[fieldA];
+	for (d = 0; d < dim; ++d) df0[d][fieldA] = IPData.df[d][fieldA];
       }
       for (        ;fieldA<FP_MAX_SPECIES;fieldA++) {
 	f0[fieldA] = NULL;
 	for (d = 0; d < dim; ++d) df0[d][fieldA] = NULL;
       }
       for (d=0;d<dim;d++) {
-	for (f=0;f<Nf;f++) {
+	for (f=0;f<Nc;f++) {
 	  gg2[f][d] = 0;
 	  for (d2=0;d2<dim;d2++) gg3[f][d][d2] = 0;
 	}
@@ -557,10 +477,10 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 #endif
 #pragma omp simd
       for (ipidx = 0; ipidx < nip; ++ipidx) {
-	const PetscReal wi = wiGlobal[ipidx];
+	const PetscReal wi = wiGlob[ipidx];
 	const PetscReal * __restrict__ fi[FP_MAX_SPECIES];
         const PetscReal * __restrict__ dfi[3][FP_MAX_SPECIES];
-	for (fieldA=0;fieldA<Nf;fieldA++) {
+	for (fieldA=0;fieldA<Nc;fieldA++) {
 	  fi[fieldA] = &f0[fieldA][ipidx];
 	  for (d = 0; d < dim; ++d) {
 	    dfi[d][fieldA] = &df0[d][fieldA][ipidx];
@@ -574,8 +494,8 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
           if (!ctx->quarter3DDomain) {
 #pragma forceinline recursive
           LandauTensor3D(&vj[qj*dim],*xix,*xiy,*xiz,U, (ipidx==jpidx) ? 0. : 1.);
-          for (fieldA = 0; fieldA < Nf; ++fieldA) {
-            for (fieldB = 0; fieldB < Nf; ++fieldB) {
+          for (fieldA = 0; fieldA < Nc; ++fieldA) {
+            for (fieldB = 0; fieldB < Nc; ++fieldB) {
               for (d2 = 0; d2 < dim; ++d2) {
                 for (d3 = 0; d3 < dim; ++d3) {
                   /* K = U * grad(f): g2=e: i,A */
@@ -589,11 +509,11 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
           } else {
             PetscReal lxx[2] = {*xix,*xiy};
             PetscReal ldf[3][FP_MAX_SPECIES];
-            for (fieldB = 0; fieldB < Nf; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3][fieldB] = *dfi[d3][fieldB] * wi * invMass[fieldB];
+            for (fieldB = 0; fieldB < Nc; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3][fieldB] = *dfi[d3][fieldB] * wi * invMass[fieldB];
             for (dp=0;dp<4;dp++) {
               LandauTensor3D(&vj[qj*dim], lxx[0], lxx[1], *xiz,U, (ipidx==jpidx) ? 0. : 1.);
-              for (fieldA = 0; fieldA < Nf; ++fieldA) {
-                for (fieldB = 0; fieldB < Nf; ++fieldB) {
+              for (fieldA = 0; fieldA < Nc; ++fieldA) {
+                for (fieldB = 0; fieldB < Nc; ++fieldB) {
                   for (d2 = 0; d2 < 3; ++d2) {
                     for (d3 = 0; d3 < 3; ++d3) {
                       /* K = U * grad(f): g2 = e: i,A */
@@ -606,7 +526,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
               }
               for (d3 = 0; d3 < 2; ++d3) {
                 lxx[d3] *= R[d3][dp%2];
-                for (fieldB = 0; fieldB < Nf; ++fieldB) {
+                for (fieldB = 0; fieldB < Nc; ++fieldB) {
                   ldf[d3][fieldB] *= R[d3][dp%2];
                 }
               }
@@ -618,15 +538,15 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 	  PetscReal       Ud[2][2], Uk[2][2];
 #pragma forceinline recursive
 	  LandauTensor2D(&vj[qj * dim],*xir,*xiz,Ud,Uk);
-	  for (fieldA = 0; fieldA < Nf; ++fieldA) {
-	    for (fieldB = 0; fieldB < Nf; ++fieldB) {
+	  for (fieldA = 0; fieldA < Nc; ++fieldA) {
+	    for (fieldB = 0; fieldB < Nc; ++fieldB) {
 	      for (d2 = 0; d2 < 2; ++d2) {
 		for (d3 = 0; d3 < 2; ++d3) {
 		  /* K = U * grad(f): g2=e: i,A */
 		  gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][d3] * *dfi[d3][fieldB] * wi;
 		  /* D = -U * (I \kron (fx)): g3=f: i,j,A */
 		  gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * *fi[fieldB] * wi;
-                }
+                 }
 	      }
 	    }
 	  }
@@ -638,7 +558,7 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 #endif
       /* Jacobian transform */
 #pragma omp simd
-      for (fieldA = 0; fieldA < Nf; ++fieldA) {
+      for (fieldA = 0; fieldA < Nc; ++fieldA) {
         gg2[fieldA][1] += Eq_m[fieldA]; /* add electric field term */
 	for (d = 0; d < dim; ++d) {
 	  g2[fieldA][d] = 0.0;
@@ -660,33 +580,54 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
 	  }
 	}
       }
-      /* assemble - on the diagonal (I,I) */
-      for (fieldA = 0; fieldA < Nf; ++fieldA) {
-	const PetscReal *B = Tf[fieldA]->T[0], *D = Tf[fieldA]->T[1], *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim], *DJq = &D[qj*Nb*dim];
-	PetscInt        f,g;
-	for (f = 0; f < Nb; ++f) {
-	  const PetscInt i    = foffsets[fieldA] + f; /* Element matrix row */
-	  for (g = 0; g < Nb; ++g) {
-	    const PetscInt j    = foffsets[fieldA] + g; /* Element matrix column */
-	    const PetscInt fOff = i*totDim + j;
-	    for (d = 0; d < dim; ++d) {
-	      elemMat[fOff] += DIq[f*dim+d]*g2[fieldA][d]*BJq[g];
-	      for (d2 = 0; d2 < dim; ++d2) {
-		elemMat[fOff] += DIq[f*dim + d]*g3[fieldA][d][d2]*DJq[g*dim + d2];
-	      }
-	    }
-	  }
-	}
+      /* assemble */
+      {
+        const PetscReal *Bq = &BB[qj*Nb*Nc], *Dq = &DD[qj*Nb*Nc*dim];
+        for (f = 0; f < Nb; ++f) {
+          int fc,g,gc,df,dg;
+          for (fc = 0; fc < Nc; ++fc) {
+            const PetscInt fidx = f*Nc+fc; /* Test function basis index */
+            const PetscInt i    = f; /* Element matrix row */
+            for (g = 0; g < Nb; ++g) {
+              //for (gc = 0; gc < Nc; ++gc) {
+              gc = fc;
+              const PetscInt gidx = g*Nc+gc; /* Trial function basis index */
+              const PetscInt j    = g; /* Element matrix column */
+              const PetscInt fOff = i*totDim+j;
+              /* elemMat[fOff] += tmpBasisI[fidx]*g0[fc*NcJ+gc]*tmpBasisJ[gidx]; */
+              for (df = 0; df < dim; ++df) {
+                /* elemMat[fOff] += tmpBasisI[fidx]*g1[(fc*Nc+gc)*dim+df]*tmpBasisDerJ[gidx*dim+df]; */
+                /* elemMat[fOff] += tmpBasisDerI[fidx*dim+df]*g2[(fc*Nc+gc)*dim+df]*tmpBasisJ[gidx]; */
+                elemMat[fOff] += Dq[fidx*dim+df]*g2[gc][df]*Bq[gidx];
+                for (dg = 0; dg < dim; ++dg) {
+                  // elemMat[fOff] += tmpBasisDerI[fidx*dim+df]*g3[((fc*NcJ+gc)*dim+df)*dim+dg]*tmpBasisDerJ[gidx*dim+dg];
+                  elemMat[fOff] += Dq[fidx*dim+df]*g3[gc][df][dg]*Dq[gidx*dim+dg];
+                }
+              }
+            }
+          }
+        }
       }
 #if defined(PETSC_USE_LOG)
       ierr = PetscLogEventEnd(ctx->events[5],0,0,0,0);CHKERRQ(ierr);
 #endif
     } /* qj loop */
+    if (ej==-6) {
+      ierr = PetscPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr);
+      for (d = 0; d < totDim; ++d){
+        for (f = 0; f < totDim; ++f) {
+          int ci = d/Nq, cj = f/Nq, qi = d%Nq, qj = f%Nq, i = Nc*qi + ci, j = Nc*qj + cj;
+          ierr = PetscPrintf(PETSC_COMM_SELF, " %19.12e", PetscRealPart(elemMat[i*totDim + j]));CHKERRQ(ierr);
+        }
+        ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
+      }
+      //exit(13);
+    }
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
     /* assemble matrix */
-    ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
+    ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
@@ -699,29 +640,17 @@ PetscErrorCode FormLandau(Vec globX,Vec globF,Mat JacP,Mat Bmat, const PetscInt 
   ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
 #endif
   /* assemble matrix or vector */
-  if (JacP) {
-    ierr = MatAssemblyBegin(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    /* MatView(ctx->M,ctx->PETSC_VIEWER_STDOUT_WORLD); */
-    ierr = MatScale(JacP, -1.0);CHKERRQ(ierr); /* The code reflect the papers: du/dt = C, whereas PETSc use the form G(u) = du/dt - C(u) = 0 */
-  } else {
-    ierr = DMRestoreWorkArray(plex, totDim, MPIU_SCALAR, &elemVec);CHKERRQ(ierr);
-    ierr = VecZeroEntries(globF);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalBegin(plex,locF,ADD_VALUES,globF);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalEnd(plex,locF,ADD_VALUES,globF);CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(plex, &locF);CHKERRQ(ierr);
-    ierr = VecScale(globF,-1.0);CHKERRQ(ierr);
-  }
+  ierr = MatAssemblyBegin(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatScale(JacP, -1.0);CHKERRQ(ierr); /* The code reflect the papers: du/dt = C, whereas PETSc use the form G(u) = du/dt - C(u) = 0 */
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
 #endif
   /* clean up */
-  ierr = PetscFree3(elemMat,wiGlobal,wiLocal);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(plex, &locX);CHKERRQ(ierr);
+  ierr = PetscFree2(elemMat,wiGlob);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
   /* ierr = DMDestroy(&Gplex);CHKERRQ(ierr); */
-  ierr = FPLandPointDataDestroy(&IPDataGlobal);CHKERRQ(ierr);
-  ierr = FPLandPointDataDestroy(&IPDataLocal);CHKERRQ(ierr);
+  ierr = FPLandPointDataDestroy(&IPData);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -748,7 +677,7 @@ PetscErrorCode FPLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,vo
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   if (ctx->normJ!=unorm) {
     ctx->normJ = unorm;
-    ierr = FormLandau(X,NULL,ctx->J,ctx->J,dim,ctx);CHKERRQ(ierr);
+    ierr = FormLandau(X,ctx->J,dim,ctx);CHKERRQ(ierr);
     ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
   } else ctx->aux_bool = PETSC_FALSE;
   /* mat vec for op */
@@ -787,7 +716,7 @@ PetscErrorCode FPLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,Pet
 #endif
   ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
   if (ctx->normJ!=unorm) {
-    ierr = FormLandau(X,NULL,ctx->J,ctx->J,dim,ctx); CHKERRQ(ierr);
+    ierr = FormLandau(X,ctx->J,dim,ctx); CHKERRQ(ierr);
     ctx->normJ = unorm;
     ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
   } else ctx->aux_bool = PETSC_FALSE;
@@ -801,151 +730,14 @@ PetscErrorCode FPLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,Pet
   PetscFunctionReturn(0);
 }
 
-static void f0_analytic_u(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                   PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
-{
-  f0[0] = 6.0*(x[0] + x[1]);
-}
-
-static void f1_field_u(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
-{
-  PetscInt d;
-  for (d = 0; d < dim; ++d) f1[d] = /* a[0]* */u_x[d];
-}
-
-static void g3_field_uu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                 const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                 const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                 PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
-{
-  PetscInt d;
-  for (d = 0; d < dim; ++d) g3[d*dim+d] = 1/* a[0] */;
-}
-
-static void f0_bd_u(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                    PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
-{
-  PetscInt d;
-  for (d = 0, f0[0] = 0.0; d < dim; ++d) f0[0] += -n[d]*2.0*x[d];
-}
-
-static void f1_bd_zero(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                       const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                       const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                       PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
-{
-  PetscInt comp;
-  for (comp = 0; comp < dim; ++comp) f1[comp] = 0.0;
-}
-
 /* < v, u > */
 static void g0_1(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                   PetscReal t, PetscReal u_tShift, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
 {
-  g0[0] = 1.;
-}
-
-/* < v, ru > */
-static void f0_s_den(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = u[s_species_idx];
-}
-
-/* < v, ru > */
-static void f0_s_xmom(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = x[0]*u[s_species_idx]; /* x momentum */
-}
-
-/* < v, ru > */
-static void f0_s_ymom(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = x[1]*u[s_species_idx]; /* y momentum */
-}
-
-/* < v, ru > */
-static void f0_s_zmom(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = x[2]*u[s_species_idx]; /* z momentum */
-}
-
-static void f0_s_e(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                  PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  PetscInt i;
-  double tmp1 = 0.;
-  for (i = 0; i < dim; ++i) tmp1 += x[i]*x[i];
-  *f0 = tmp1*u[s_species_idx];
-}
-
-/* < v, ru > */
-static void f0_s_den_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = u[s_species_idx] * 4;
-}
-
-/* < v, ru > */
-static void f0_s_xmom_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = 0;
-}
-
-/* < v, ru > */
-static void f0_s_ymom_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = 0;
-}
-
-/* < v, ru > */
-static void f0_s_zmom_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = x[2]*u[s_species_idx] * 4;
-}
-
-static void f0_s_e_3Dsym(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                  PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  PetscInt i;
-  double tmp1 = 0.;
-  for (i = 0; i < dim; ++i) tmp1 += x[i]*x[i];
-  *f0 = tmp1*u[s_species_idx] * 4;
+  PetscInt ii;
+  for(ii=0;ii<numConstants;ii++) g0[ii*numConstants+ii] = 1.;
 }
 
 /* < v, u > */
@@ -954,225 +746,10 @@ static void g0_r(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                   PetscReal t, PetscReal u_tShift, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
 {
-  g0[0] = 2.*M_PI*x[0];
+  PetscInt ii;
+  for(ii=0;ii<numConstants;ii++) g0[ii*numConstants+ii] = 2.*M_PI*x[0];
 }
 
-/* < v, ru > */
-static void f0_s_rden(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = 2.*M_PI*x[0]*u[s_species_idx];
-}
-
-/* < v, ru > */
-static void f0_s_rmom(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = 2.*M_PI*x[0]*x[1]*u[s_species_idx];
-}
-
-static void f0_s_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                  PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  *f0 = 2.*M_PI*x[0]*(x[0]*x[0] + x[1]*x[1])*u[s_species_idx];
-}
-
-static PetscErrorCode SetupProblem(PetscDS prob)
-{
-  const PetscInt id = 1;
-  PetscErrorCode ierr;
-  PetscFunctionBeginUser;
-  ierr = PetscDSSetResidual(prob, 0, f0_analytic_u, f1_field_u);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(prob, 0, 0, NULL, NULL, NULL, g3_field_uu);CHKERRQ(ierr);
-  ierr = PetscDSSetBdResidual(prob, 0, f0_bd_u, f1_bd_zero);CHKERRQ(ierr);
-  ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL, "wall", "boundary", 0, 0, NULL, NULL, 1, &id, NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetFromOptions(prob);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode SetupMaterial(DM dm, DM dmAux)
-{
-  Vec            nu;
-  PetscErrorCode ierr;
-  PetscFunctionBegin;
-  ierr = DMCreateLocalVector(dmAux, &nu);CHKERRQ(ierr);
-  ierr = DMProjectFunctionLocal(dmAux, 0.0, /* matFuncs */NULL, NULL, INSERT_ALL_VALUES, nu);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject) dm, "A", (PetscObject) nu);CHKERRQ(ierr);
-  ierr = VecDestroy(&nu);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode SetupDiscretization(DM dm, const PetscInt ncoefs, PetscReal cc_coefs[], PetscSF sf)
-{
-  const PetscInt dim   = 2;
-  PetscFE        fe, feAux = NULL;
-  PetscDS        prob, probAux = NULL;
-  PetscMPIInt    rank, size;
-  MPI_Comm       comm;
-  PetscQuadrature q;
-  PetscErrorCode ierr;
-  PetscInt       inedges;
-  PetscReal     *outdata;
-  PetscFunctionBeginUser;
-  /* Create finite element */
-  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, 1, PETSC_TRUE, NULL, -1, &fe);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fe, "potential");CHKERRQ(ierr);
-
-  /* use sf to distribute cc_coefs (alpha) and make Aux */
-  if (sf && cc_coefs) {
-    /* get the number of cells that I will receive - inedges */
-    const PetscSFNode *remotePoints;
-    const PetscInt    *localPoints;
-    PetscInt          numRoots, numLeaves;
-    ierr = PetscSFGetGraph(sf, &numRoots, &numLeaves, &localPoints, &remotePoints);CHKERRQ(ierr);
-    /* NEED TO GET CELLS ONLY - HOW TO TELL IT? */
-    inedges = numLeaves;
-    /* get data - outdata */
-    ierr = PetscMalloc(inedges,&outdata);CHKERRQ(ierr);
-    ierr = PetscSFScatterBegin(sf,MPI_REAL,cc_coefs,outdata);CHKERRQ(ierr);
-    ierr = PetscSFScatterEnd(sf,MPI_REAL,cc_coefs,outdata);CHKERRQ(ierr);
-  } else {
-    inedges = ncoefs;
-    outdata = cc_coefs;
-  }
-  if (cc_coefs) {
-    /* give the DM the coefs, create aux data */
-    ierr = PetscFECreateDefault(comm, dim, 1, PETSC_TRUE, "coef_", -1, &feAux);CHKERRQ(ierr);
-    ierr = PetscFEGetQuadrature(fe, &q);CHKERRQ(ierr);
-    ierr = PetscFESetQuadrature(feAux, q);CHKERRQ(ierr);
-    ierr = PetscDSCreate(comm,&probAux);CHKERRQ(ierr);
-    ierr = PetscDSSetDiscretization(probAux, 0, (PetscObject) feAux);CHKERRQ(ierr);
-  }
-  /* Set discretization and boundary conditions for each mesh */
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-  ierr = PetscDSSetDiscretization(prob, 0, (PetscObject) fe);CHKERRQ(ierr);
-  ierr = SetupProblem(prob);CHKERRQ(ierr);
-  if (cc_coefs) {
-    DM coordDM;
-    DM dmAux;
-    ierr = DMGetCoordinateDM(dm,&coordDM);CHKERRQ(ierr);
-    ierr = DMClone(dm, &dmAux);CHKERRQ(ierr);
-    ierr = DMSetCoordinateDM(dmAux, coordDM);CHKERRQ(ierr);
-    ierr = DMSetField(dmAux,0, NULL, (PetscObject)feAux);CHKERRQ(ierr);
-    ierr = PetscObjectCompose((PetscObject) dm, "dmAux", (PetscObject) dmAux);CHKERRQ(ierr);
-    ierr = SetupMaterial(dm, dmAux);CHKERRQ(ierr);
-    ierr = DMDestroy(&dmAux);CHKERRQ(ierr);
-    ierr = PetscFEDestroy(&feAux);CHKERRQ(ierr);
-    ierr = PetscDSDestroy(&probAux);CHKERRQ(ierr);
-    ierr = PetscFree(outdata);CHKERRQ(ierr);
-  }
-  ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
-
-  PetscFunctionReturn(0);
-}
-
-/*@
-  DMPlexFPCreate2D - Create a DMPlex mesh from a cell list (not used)
-
-  Collective on comm
-
-  Input Parameters:
-+   comm  - The MPI communicator
-.   numCells
--   numVertices
-.   a_cells
-.   a_coords
-.   a_alpha
-.   a_numNeumann
-.   NeumannIDs
-.   NeumannValues
-
-  Output Parameter:
-.   dm  - The DM object representing the mesh
-
-  Level: beginner
-
-.keywords: mesh
-.seealso: DMPlexCreate()
-@*/
-PetscErrorCode DMPlexFPCreate2D(MPI_Comm comm, const PetscInt a_numCells, const PetscInt a_numVertices, const PetscInt a_cells[], const double a_coords[], const double a_alpha[/* numCells */], const PetscInt a_numNeumann, const PetscInt NeumannIDs[/* ? */], const PetscScalar NeumannValues[/* ? */], DM *dm)
-{
-  PetscInt       p, numCells=a_numCells, numVertices=a_numVertices;
-  int            *cells;
-  PetscReal      *alpha;
-  double         *coords; 
-  DM             pdm;
-  PetscMPIInt    rank, size;
-  PetscErrorCode ierr;
-  PetscSF        sf;
-
-  PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  if (!rank) {
-    ierr = PetscMalloc1(2*numVertices, &coords);CHKERRQ(ierr);
-    ierr = PetscMalloc1(3*numCells, &cells);CHKERRQ(ierr);
-    for(p=0;p<numVertices;p++) {
-      coords[2*p]   = a_coords[p];
-      coords[2*p+1] = a_coords[p+numVertices];
-    }
-    for(p=0;p<numCells;p++) {
-      cells[3*p]   = a_cells[p];
-      cells[3*p+1] = a_cells[p+numCells];
-      cells[3*p+2] = a_cells[p+2*numCells];
-    }
-    ierr = DMPlexCreateFromCellList(comm, 2, numCells, numVertices, 3, PETSC_TRUE, cells, 2, coords, dm);CHKERRQ(ierr);
-    ierr = PetscFree(coords);CHKERRQ(ierr);
-    ierr = PetscFree(cells);CHKERRQ(ierr);
-  } else {
-    ierr = DMPlexCreateFromCellList(comm, 2, 0, 0, 3, PETSC_TRUE, NULL, 2, NULL, dm);CHKERRQ(ierr);
-  }
-
-  /* Redistribute mesh over processes using a partitioner */
-  ierr = DMPlexDistribute(*dm, 0, &sf, &pdm);CHKERRQ(ierr);
-  if (pdm) {
-    ierr = DMDestroy(dm);CHKERRQ(ierr);
-    *dm  = pdm;
-    ierr = PetscObjectSetName((PetscObject) *dm, "Distributed Mesh");CHKERRQ(ierr);
-  } else {
-    ierr = PetscObjectSetName((PetscObject) *dm, "Serial Mesh");CHKERRQ(ierr);
-    sf = NULL;
-  }
-  /* Check for flipped first cell */
-  {
-    PetscReal v0[3], J[9], invJ[9], detJ;
-    ierr = DMPlexComputeCellGeometryFEM(*dm, 0, NULL, v0, J, invJ, &detJ);CHKERRQ(ierr);
-    if (detJ < 0) {
-      ierr = DMPlexReverseCell(*dm, 0);CHKERRQ(ierr);
-      ierr = DMPlexComputeCellGeometryFEM(*dm, 0, NULL, v0, J, invJ, &detJ);CHKERRQ(ierr);
-      if (detJ < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Something is wrong");
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "We flipped the mesh, OK just want to know if this happens, and on all processors");
-    }
-  }
-  if (!a_alpha) {
-    DMLabel        label;
-    /* Mark boundary in serial while NeumannIDs are valid */
-    ierr = DMCreateLabel(*dm, "boundary");CHKERRQ(ierr);
-    ierr = DMGetLabel(*dm, "boundary", &label);CHKERRQ(ierr);
-    ierr = DMPlexMarkBoundaryFaces(*dm, 1, label);CHKERRQ(ierr);
-    ierr = DMPlexLabelComplete(*dm, label);CHKERRQ(ierr);
-  } else {
-    /* Want to set faces somehow */
-
-  }
-  ierr = DMSetFromOptions(*dm);CHKERRQ(ierr); /* refinement done here */
-
-  ierr = PetscMalloc1(numCells, &alpha);CHKERRQ(ierr);
-  for(p=0;p<numCells;p++) alpha[p] = a_alpha[p];
-  ierr = SetupDiscretization(*dm, numCells, alpha, sf);CHKERRQ(ierr);
-  ierr = PetscFree(alpha);CHKERRQ(ierr);
-
-  PetscFunctionReturn(0);
-}
 
 /* #define LAND_ADD_BCS */
 #if defined(LAND_ADD_BCS)
@@ -1181,7 +758,8 @@ static void zero_bc(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                     PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar uexact[])
 {
-  uexact[0] = 0;
+  PetscInt ii;
+  for(ii=0;ii<numConstants;ii++) uexact[ii] = 0;
 }
 
 #endif
@@ -1489,79 +1067,73 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
 
 static PetscErrorCode SetupDS(DM dm, PetscInt dim, LandCtx *ctx)
 {
-  PetscErrorCode  ierr,ii;
-  PetscDS         prob;
+  PetscErrorCode  ierr;
   PetscFunctionBeginUser;
-  /* FEM prob */;
-  for (ii=0;ii<ctx->num_species;ii++) {
-    char     buf[256];
-    if (ii==0) ierr = PetscSNPrintf(buf, 256, "e");
-    else ierr = PetscSNPrintf(buf, 256, "i%D", ii);
-    CHKERRQ(ierr);
-    /* Setup Discretization - FEM */
-    ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), dim, 1, ctx->simplex, NULL, PETSC_DECIDE, &ctx->fe[ii]);CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject) ctx->fe[ii], buf);CHKERRQ(ierr);
-    ierr = DMSetField(dm, ii, NULL, (PetscObject) ctx->fe[ii]);CHKERRQ(ierr);
-  }
+  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), dim, ctx->num_species, ctx->simplex, NULL, PETSC_DECIDE, &ctx->fe);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) ctx->fe, "f");CHKERRQ(ierr);
+  ierr = DMSetField(dm, 0, NULL, (PetscObject) ctx->fe);CHKERRQ(ierr);
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-  for (ii=0;ii<ctx->num_species;ii++) {
 #if defined(LAND_ADD_BCS)
+  {
+    PetscDS prob;
     PetscInt id=1;
-    ierr = PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "wall", "marker", ii, 0, NULL, (void (*)()) zero_bc, 1, &id, ctx);CHKERRQ(ierr);
+    ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
+    ierr = PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)()) zero_bc, 1, &id, ctx);CHKERRQ(ierr);
+  }
 #endif
+  if (1) {
+    PetscInt        ii;
+    PetscSection    section;
+    ierr = DMGetSection(dm, &section);CHKERRQ(ierr);
+    for(ii=0;ii<ctx->num_species;ii++ ){
+      char buf[256];
+      if (ii==0) ierr = PetscSNPrintf(buf, 256, "e");
+      else ierr = PetscSNPrintf(buf, 256, "i%D", ii);
+      ierr = PetscSectionSetComponentName(section, 0, ii, buf);CHKERRQ(ierr);
+    }
   }
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode LandCreateMassMatrix(LandCtx *ctx, Vec X, DM a_dm, Mat *Amat)
 {
-  PetscDS        prob;
   DM             massDM;
-  PetscFE        fe;
+  PetscDS        prob;
+  PetscInt       dim,N1=1,N2;
   PetscErrorCode ierr;
-  PetscInt       dim,N1=1,N2,ii;
-  const char     prefix[] = "mass_";
+
   PetscFunctionBeginUser;
   ierr = DMGetDimension(a_dm, &dim);CHKERRQ(ierr);
-  /* ierr = DMClone(a_dm, &massDM);CHKERRQ(ierr); THIS RESULTS IN SEGV IN DMCreateMatrix */
-  /* ierr = DMCopyDisc(a_dm, massDM);CHKERRQ(ierr); */
-  massDM = a_dm;
-  for (ii=0;ii<ctx->num_species;ii++) {
-    ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) massDM), dim, 1, ctx->simplex, prefix, PETSC_DECIDE, &fe);CHKERRQ(ierr);
-    ierr = DMSetField(massDM, ii, NULL, (PetscObject) fe);CHKERRQ(ierr);
-    ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
-  }
+  ierr = DMClone(a_dm, &massDM);CHKERRQ(ierr);
+  ierr = DMCopyFields(a_dm, massDM);CHKERRQ(ierr);
   ierr = DMCreateDS(massDM);CHKERRQ(ierr);
   ierr = DMGetDS(massDM, &prob);CHKERRQ(ierr);
-  for (ii=0;ii<ctx->num_species;ii++) {
-    if (dim==3) ierr = PetscDSSetJacobian(prob, ii, ii, g0_1, NULL, NULL, NULL);
-    else ierr = PetscDSSetJacobian(prob, ii, ii, g0_r, NULL, NULL, NULL);
-    CHKERRQ(ierr);
+  if (dim==3) {ierr = PetscDSSetJacobian(prob, 0, 0, g0_1, NULL, NULL, NULL);CHKERRQ(ierr);}
+  else        {ierr = PetscDSSetJacobian(prob, 0, 0, g0_r, NULL, NULL, NULL);CHKERRQ(ierr);}
+  ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr);
 #if defined(LAND_ADD_BCS)
-    ierr = PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "wall", "marker", ii, 0, NULL, (void (*)()) zero_bc, 1, &N1, ctx);CHKERRQ(ierr);
+  ierr = DMAddBoundary(massDM, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)()) zero_bc, 1, &N1, ctx);CHKERRQ(ierr);
 #endif
-  }
   ierr = DMViewFromOptions(massDM,NULL,"-mass_dm_view");CHKERRQ(ierr);
   ierr = DMCreateMatrix(massDM, Amat);CHKERRQ(ierr);
   {
     Vec locX;
     DM  plex;
     ierr = DMConvert(massDM, DMPLEX, &plex);CHKERRQ(ierr);
-    ierr = DMCreateLocalVector(massDM, &locX);CHKERRQ(ierr);
-    ierr = DMGlobalToLocalBegin(massDM, X, INSERT_VALUES, locX);CHKERRQ(ierr);
-    ierr = DMGlobalToLocalEnd  (massDM, X, INSERT_VALUES, locX);CHKERRQ(ierr);
+    ierr = DMGetLocalVector(massDM, &locX);CHKERRQ(ierr);
+    /* Mass matrix is independent of the input, so no need to fill locX */
     ierr = DMPlexSNESComputeJacobianFEM(plex, locX, *Amat, *Amat, ctx);CHKERRQ(ierr);
-    ierr = VecDestroy(&locX);CHKERRQ(ierr);
+    ierr = DMRestoreLocalVector(massDM, &locX);CHKERRQ(ierr);
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
   }
-  /* ierr = DMDestroy(&massDM);CHKERRQ(ierr); */
+  ierr = DMDestroy(&massDM);CHKERRQ(ierr);
   ierr = MatGetSize(ctx->J, &N1, NULL);CHKERRQ(ierr);
   ierr = MatGetSize(*Amat, &N2, NULL);CHKERRQ(ierr);
   if (N1 != N2) SETERRQ2(PetscObjectComm((PetscObject) a_dm), PETSC_ERR_PLIB, "Incorrect matrix sizes: |Jacobian| = %D, |Mass|=%D",N1,N2);
   ierr = MatViewFromOptions(*Amat,NULL,"-mass_mat_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
 /* Define a Maxwellian function for testing out the operator. */
 
  /* Using cartesian velocity space coordinates, the particle */
@@ -1581,28 +1153,30 @@ static PetscErrorCode LandCreateMassMatrix(LandCtx *ctx, Vec X, DM a_dm, Mat *Am
 
 typedef struct {
   LandCtx   *ctx;
-  PetscReal kT_m;
-  PetscReal n;
+  PetscReal kT_m[FP_MAX_SPECIES];
+  PetscReal n[FP_MAX_SPECIES];
   PetscReal shift;
 } MaxwellianCtx;
 
 static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf_dummy, PetscScalar *u, void *actx)
 {
-  MaxwellianCtx *mctx = (MaxwellianCtx*)actx;
-  LandCtx       *ctx = mctx->ctx;
-  PetscInt      i;
-  PetscReal     v2 = 0, theta = 2*mctx->kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
+  MaxwellianCtx  *mctxs = (MaxwellianCtx*)actx;
+  LandCtx        *ctx = mctxs->ctx;
+  PetscInt        i,ii;
   PetscFunctionBeginUser;
-  /* compute the exponents, v^2 */
-  for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
-  /* evaluate the Maxwellian */
-  u[0] = mctx->n*pow(M_PI*theta,-1.5)*(exp(-v2/theta));
-  if (mctx->shift!=0.) {
-    v2 = 0;
-    for (i = 0; i < dim-1; ++i) v2 += x[i]*x[i];
-    v2 += (x[dim-1]-mctx->shift)*(x[dim-1]-mctx->shift);
-    /* evaluate the shifted Maxwellian */
-    u[0] += mctx->n*pow(M_PI*theta,-1.5)*(exp(-v2/theta));
+  for (ii=0;ii<ctx->num_species;ii++) {
+    PetscReal     v2 = 0, theta = 2*mctxs->kT_m[ii]/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
+    /* compute the exponents, v^2 */
+    for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
+    /* evaluate the Maxwellian */
+    u[ii] = mctxs->n[ii]*pow(M_PI*theta,-1.5)*(exp(-v2/theta));
+    if (ii==0 && mctxs->shift!=0.) {
+      v2 = 0;
+      for (i = 0; i < dim-1; ++i) v2 += x[i]*x[i];
+      v2 += (x[dim-1]-mctxs->shift)*(x[dim-1]-mctxs->shift);
+      /* evaluate the shifted Maxwellian */
+      u[ii] += mctxs->n[ii]*pow(M_PI*theta,-1.5)*(exp(-v2/theta));
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -1621,24 +1195,23 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
 PetscErrorCode DMPlexFPAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temps[], PetscReal ns[], void *actx)
 {
   LandCtx        *ctx = (LandCtx*)actx;
-  PetscErrorCode (*initu[FP_MAX_SPECIES])(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar [], void *);
+  PetscErrorCode (*initu[2])(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar [], void *);
   PetscErrorCode ierr,ii;
   PetscInt       dim;
-  MaxwellianCtx  *mctxs[FP_MAX_SPECIES], data[FP_MAX_SPECIES];
+  MaxwellianCtx  mctxs,*amctxs[2];
   PetscFunctionBeginUser;
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   if (!ctx) { ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr); }
   for (ii=0;ii<ctx->num_species;ii++) {
-    mctxs[ii] = &data[ii];
-    data[ii].ctx = ctx;
-    data[ii].kT_m = ctx->k*temps[ii]/ctx->masses[ii]; /* kT/m */
-    data[ii].n = ns[ii];
-    initu[ii] = maxwellian;
-    data[ii].shift = 0;
+    mctxs.kT_m[ii] = ctx->k*temps[ii]/ctx->masses[ii]; /* kT/m */
+    mctxs.n[ii] = ns[ii];
   }
-  data[0].shift = ctx->electronShift;
+  mctxs.ctx = ctx;
+  mctxs.shift = ctx->electronShift;
   /* need to make ADD_ALL_VALUES work - TODO */
-  ierr = DMProjectFunction(dm, time, initu, (void**)mctxs, INSERT_ALL_VALUES, X);CHKERRQ(ierr);
+  initu[0] = &maxwellian;
+  amctxs[0] = &mctxs;
+  ierr = DMProjectFunction(dm, time, &initu[0], (void**)amctxs, INSERT_ALL_VALUES, X);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1664,17 +1237,13 @@ static PetscErrorCode FPSetInitialCondition(DM dm, Vec X, void *actx)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refineTol[], PetscReal coarsenTol[], PetscInt type, LandCtx *ctx, DM *newDM)
+static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTol[], PetscReal coarsenTol[], PetscInt type, LandCtx *ctx, DM *newDM)
 {
   DM               dm, plex, adaptedDM = NULL;
   PetscDS          prob;
-  /* PetscSection     section; */
   PetscBool        isForest;
-  /* Vec              locX; */
   PetscQuadrature  quad;
-  PetscInt         Nq, Nf, *Nb, *Nc, cStart, cEnd, c, dim, qj, k;
-  /* PetscReal        time = 0; */
-  /* PetscTabulation *Tf; */
+  PetscInt         Nq, *Nb, *Nc, cStart, cEnd, c, dim, qj, k;
   PetscScalar     *u, *u_x;
   DMLabel          adaptLabel = NULL;
   PetscErrorCode   ierr;
@@ -1692,11 +1261,9 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem[], Vec sol, PetscReal refine
   /* ierr = DMGlobalToLocalEnd  (plex, sol, INSERT_VALUES, locX);CHKERRQ(ierr); */
   ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
   ierr = DMLabelCreate(PETSC_COMM_SELF,"adapt",&adaptLabel);CHKERRQ(ierr);
-  ierr = PetscFEGetQuadrature(fem[0], &quad);CHKERRQ(ierr);
+  ierr = PetscFEGetQuadrature(fem, &quad);CHKERRQ(ierr);
   ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, 0, 0 );CHKERRQ(ierr);
   if (Nq >FP_MAX_NQ) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %D > FP_MAX_NQ (%D)",Nq,FP_MAX_NQ);
-  /* ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr); */
-  ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetDimensions(prob, &Nb);CHKERRQ(ierr);
   ierr = PetscDSGetComponents(prob, &Nc);CHKERRQ(ierr);
   ierr = PetscDSGetEvaluationArrays(prob, &u, NULL, &u_x);CHKERRQ(ierr);
@@ -1829,7 +1396,7 @@ static PetscErrorCode adapt(DM *dm, LandCtx *ctx, Vec *uu)
         ierr = DMDestroy(dm);CHKERRQ(ierr);
         ierr = VecDestroy(uu);CHKERRQ(ierr);
         ierr = DMCreateGlobalVector(dmNew,uu);CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject) *uu, "f");CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject) *uu, "u");CHKERRQ(ierr);
         ierr = FPSetInitialCondition(dmNew, *uu, ctx);CHKERRQ(ierr);
         *dm = dmNew;
       }
@@ -1882,7 +1449,6 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
   ctx->useCUDA = PETSC_TRUE;
-  ierr = PetscOptionsBool("-use_cuda", "Use CUDA kernels", "xgc_dmplex.c", ctx->useCUDA, &ctx->useCUDA, NULL);CHKERRQ(ierr);
 #else
   ctx->useCUDA = PETSC_FALSE;
 #if defined(PETSC_HAVE_OPENMP)
@@ -1901,6 +1467,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   }
 #endif
 #endif
+  ierr = PetscOptionsBool("-use_cuda", "Use CUDA kernels", "xgc_dmplex.c", ctx->useCUDA, &ctx->useCUDA, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-interpolate", "interpolate grid points in refinement", "xgc_dmplex.c", ctx->interpolate, &ctx->interpolate, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-sphere", "use sphere/semi-circle domain instead of rectangle", "xgc_dmplex.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
@@ -2073,7 +1640,7 @@ PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const ch
   ierr = SetupDS(*dm,dim,ctx);CHKERRQ(ierr);
   /* set initial state */
   ierr = DMCreateGlobalVector(*dm,X);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) *X, "f");CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) *X, "u");CHKERRQ(ierr);
   /* initial static refinement, no solve */
   ierr = FPSetInitialCondition(*dm, *X, ctx);CHKERRQ(ierr);
   ierr = VecViewFromOptions(*X, NULL, "-pre_vec_view");CHKERRQ(ierr);
@@ -2102,7 +1669,7 @@ PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const ch
 @*/
 PetscErrorCode DMPlexFPDestroyPhaseSpace(DM *dm)
 {
-  PetscErrorCode ierr,ii;
+  PetscErrorCode ierr;
   LandCtx        *ctx;
   PetscContainer container = NULL;
   PetscFunctionBegin;
@@ -2113,13 +1680,79 @@ PetscErrorCode DMPlexFPDestroyPhaseSpace(DM *dm)
   }
   ierr = MatDestroy(&ctx->M);CHKERRQ(ierr);
   ierr = MatDestroy(&ctx->J);CHKERRQ(ierr);
-  for (ii=0;ii<ctx->num_species;ii++) {
-    ierr = PetscFEDestroy(&ctx->fe[ii]);CHKERRQ(ierr);
-  }
+  ierr = PetscFEDestroy(&ctx->fe);CHKERRQ(ierr);
   free(ctx);
   ierr = DMDestroy(dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+/* < v, ru > */
+static void f0_s_den(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                     PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+{
+  PetscInt ii = (PetscInt)constants[0];
+  // for(ii=0;ii<numConstants;ii++)
+  f0[0] = u[ii];
+}
+
+/* < v, ru > */
+static void f0_s_mom(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+{
+  PetscInt ii = (PetscInt)constants[0], jj = (PetscInt)constants[1];
+  //for(ii=0;ii<numConstants;ii++)
+  f0[0] = x[jj]*u[ii]; /* x momentum */
+}
+
+static void f0_s_v2(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+{
+  PetscInt i, ii = (PetscInt)constants[0];
+  //for(ii=0;ii<numConstants;ii++) {
+  double tmp1 = 0.;
+  for (i = 0; i < dim; ++i) tmp1 += x[i]*x[i];
+  f0[0] = tmp1*u[ii];
+}
+
+/* < v, ru > */
+static void f0_s_rden(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                      const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                      const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                      PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+{
+  PetscInt ii = (PetscInt)constants[0];
+  //for(ii=0;ii<numConstants;ii++)
+  f0[0] = 2.*M_PI*x[0]*u[ii];
+}
+
+/* < v, ru > */
+static void f0_s_rmom(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                      const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                      const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                      PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+{
+  PetscInt ii = (PetscInt)constants[0];
+  //for(ii=0;ii<numConstants;ii++)
+  f0[0] = 2.*M_PI*x[0]*x[1]*u[ii];
+}
+
+static void f0_s_rv2(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                     PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+{
+  PetscInt ii = (PetscInt)constants[0];
+  //for(ii=0;ii<numConstants;ii++)
+  f0[0] =              2.*M_PI*x[0]*(x[0]*x[0] + x[1]*x[1])*u[ii];
+  if (dim==3) f0[0] += 2.*M_PI*x[0]*(x[2]*x[2]            )*u[ii];
+}
+
 /*@
   DMPlexFPPrintNorms
 
@@ -2132,99 +1765,82 @@ PetscErrorCode DMPlexFPPrintNorms(Vec X, PetscInt stepi)
 {
   PetscErrorCode ierr;
   LandCtx        *ctx;
-  PetscDS        probv;
-  DM             plexv,dm;
-  PetscInt       cStart, cEnd, dim;
-  PetscScalar    xmomentumtot=0, ymomentumtot=0, zmomentumtot=0, energytot=0, densitytot=0;
-  PetscScalar    xmomentum,  ymomentum,  zmomentum, energy, density, tt[FP_MAX_SPECIES];
+  PetscDS        prob;
+  DM             plex,dm;
+  PetscInt       cStart, cEnd, dim, ii;
+  PetscScalar    xmomentumtot=0, ymomentumtot=0, zmomentumtot=0, energytot=0, densitytot=0, tt;
+  PetscScalar    xmomentum[FP_MAX_SPECIES],  ymomentum[FP_MAX_SPECIES],  zmomentum[FP_MAX_SPECIES], energy[FP_MAX_SPECIES], density[FP_MAX_SPECIES];
   PetscFunctionBegin;
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   if (!dm) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no DM");
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
-  ierr = DMConvert(ctx->dmv, DMPLEX, &plexv);CHKERRQ(ierr);
-  ierr = DMCreateDS(plexv);CHKERRQ(ierr);
-  ierr = DMGetDS(plexv, &probv);CHKERRQ(ierr);
+  ierr = DMConvert(ctx->dmv, DMPLEX, &plex);CHKERRQ(ierr);
+  ierr = DMCreateDS(plex);CHKERRQ(ierr);
+  ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   /* print momentum and energy */
-  for (s_species_idx=0;s_species_idx<ctx->num_species;s_species_idx++) {
+  for (ii=0;ii<ctx->num_species;ii++) {
+    PetscReal user[2] = {ii,ctx->charges[ii]};
     if (dim==2) { /* 2/3X + 3V (cylindrical coordinates) */
-      ierr = PetscDSSetObjective(probv, 0, &f0_s_rden);CHKERRQ(ierr);
-      ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-      density = ctx->n_0*tt[0]*ctx->charges[s_species_idx];
-      /* density = ctx->n_0*tt[0]*ctx->masses[s_species_idx]; */
-      ierr = PetscDSSetObjective(probv, 0, &f0_s_rmom);CHKERRQ(ierr);
-      ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-      zmomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-      ierr = PetscDSSetObjective(probv, 0, &f0_s_re);CHKERRQ(ierr);
-      ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-      energy = 0.5*ctx->n_0*ctx->v_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%3D) species-%D: charge density= %20.13e z-momentum= %20.13e energy= %20.13e",
-                         stepi,s_species_idx,density,zmomentum,energy);
-      CHKERRQ(ierr);
-      zmomentumtot += zmomentum;
-      energytot  += energy;
-      densitytot += density;
+      ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
+      ierr = PetscDSSetObjective(prob, 0, &f0_s_rden);CHKERRQ(ierr);
+      ierr = DMPlexComputeIntegralFEM(plex,X,&tt,ctx);CHKERRQ(ierr);
+      density[ii] = tt*ctx->n_0*ctx->charges[ii];
+      ierr = PetscDSSetObjective(prob, 0, &f0_s_rmom);CHKERRQ(ierr);
+      ierr = DMPlexComputeIntegralFEM(plex,X,&tt,ctx);CHKERRQ(ierr);
+      zmomentum[ii] = tt*ctx->n_0*ctx->v_0*ctx->masses[ii];
+      ierr = PetscDSSetObjective(prob, 0, &f0_s_rv2);CHKERRQ(ierr);
+      ierr = DMPlexComputeIntegralFEM(plex,X,&tt,ctx);CHKERRQ(ierr);
+      energy[ii] = tt*0.5*ctx->n_0*ctx->v_0*ctx->v_0*ctx->masses[ii];
+      PetscPrintf(PETSC_COMM_WORLD, "%3D) species-%D: charge density= %20.13e z-momentum= %20.13e energy= %20.13e\n",stepi,ii,density[ii],zmomentum[ii],energy[ii]);
+      zmomentumtot += zmomentum[ii];
+      energytot  += energy[ii];
+      densitytot += density[ii];
     } else { /* 2/3X + 3V */
-      if (!ctx->quarter3DDomain) {
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_den);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	density = ctx->n_0*tt[0]*ctx->charges[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_xmom);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	xmomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_ymom);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	ymomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_zmom);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	zmomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_e);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	energy = 0.5*ctx->n_0*ctx->v_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-      } else {
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_den_3Dsym);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	density = ctx->n_0*tt[0]*ctx->charges[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_xmom_3Dsym);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	xmomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_ymom_3Dsym);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	ymomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_zmom_3Dsym);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	zmomentum = ctx->n_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-	ierr = PetscDSSetObjective(probv, 0, &f0_s_e_3Dsym);CHKERRQ(ierr);
-	ierr = DMPlexComputeIntegralFEM(plexv,X,tt,ctx);CHKERRQ(ierr);
-	energy = 0.5*ctx->n_0*ctx->v_0*ctx->v_0*tt[0]*ctx->masses[s_species_idx];
-      }
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%3D) species %D: density=%20.13e, x-momentum=%20.13e, y-momentum=%20.13e, z-momentum=%20.13e, energy=%21.13e",
-                         stepi,s_species_idx,density,xmomentum,ymomentum,zmomentum,energy);
+      ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
+      ierr = PetscDSSetObjective(prob, 0, &f0_s_den);CHKERRQ(ierr);
+      ierr = DMPlexComputeIntegralFEM(plex,X,&tt,ctx);CHKERRQ(ierr);
+      density[ii] = tt*ctx->n_0*ctx->charges[ii];
+      ierr = PetscDSSetObjective(prob, 0, &f0_s_mom);CHKERRQ(ierr);
+      user[1] = 0;
+      ierr = DMPlexComputeIntegralFEM(plex,X,&tt,ctx);CHKERRQ(ierr);
+      xmomentum[ii]  = tt*ctx->n_0*ctx->v_0*ctx->masses[ii];
+      user[1] = 1;
+      ierr = DMPlexComputeIntegralFEM(plex,X,&tt,ctx);CHKERRQ(ierr);
+      ymomentum[ii] = tt*ctx->n_0*ctx->v_0*ctx->masses[ii];
+      user[1] = 2;
+      ierr = DMPlexComputeIntegralFEM(plex,X,&tt,ctx);CHKERRQ(ierr);
+      zmomentum[ii] = tt*ctx->n_0*ctx->v_0*ctx->masses[ii];
+      ierr = PetscDSSetObjective(prob, 0, &f0_s_v2);CHKERRQ(ierr);
+      ierr = DMPlexComputeIntegralFEM(plex,X,&tt,ctx);CHKERRQ(ierr);
+      energy[ii]    = 0.5*tt*ctx->n_0*ctx->v_0*ctx->v_0*ctx->masses[ii];
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%3D) species %D: density=%20.13e, x-momentum=%20.13e, y-momentum=%20.13e, z-momentum=%20.13e, energy=%21.13e\n",
+                         stepi,ii,density[ii],xmomentum[ii],ymomentum[ii],zmomentum[ii],energy[ii]);
       CHKERRQ(ierr);
-
-      xmomentumtot += xmomentum;
-      ymomentumtot += ymomentum;
-      zmomentumtot += zmomentum;
-      energytot  += energy;
-      densitytot += density;
+      xmomentumtot += xmomentum[ii];
+      ymomentumtot += ymomentum[ii];
+      zmomentumtot += zmomentum[ii];
+      energytot  += energy[ii];
+      densitytot += density[ii];
     }
-    if (s_species_idx<ctx->num_species-1) PetscPrintf(PETSC_COMM_WORLD, "\n");
   }
-  ierr = DMPlexGetHeightStratum(plexv,0,&cStart,&cEnd);CHKERRQ(ierr);
-  ierr = DMDestroy(&plexv);CHKERRQ(ierr);
+  /* totals */
+  ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
+  ierr = DMDestroy(&plex);CHKERRQ(ierr);
   if (ctx->num_species>1) {
     if (dim==2) {
-      PetscPrintf(PETSC_COMM_WORLD, "\n\t%3D) Total: charge density=%21.13e, momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)",
+      PetscPrintf(PETSC_COMM_WORLD, "\t%3D) Total: charge density=%21.13e, momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)",
                   stepi,densitytot,zmomentumtot,energytot,ctx->masses[1]/ctx->masses[0],cEnd-cStart);
-      if (ctx->useCUDA) PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
-      else PetscPrintf(PETSC_COMM_WORLD,"\n");
     } else {
-      PetscPrintf(PETSC_COMM_WORLD, "\n\t%3D) Total: charge density=%21.13e, x-momentum=%21.13e, y-momentum=%21.13e, z-momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)\n",
+      PetscPrintf(PETSC_COMM_WORLD, "\t%3D) Total: charge density=%21.13e, x-momentum=%21.13e, y-momentum=%21.13e, z-momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)",
                   stepi,densitytot,xmomentumtot,ymomentumtot,zmomentumtot,energytot,ctx->masses[1]/ctx->masses[0],cEnd-cStart);
     }
   } else {
-    PetscPrintf(PETSC_COMM_WORLD, " -- %D cells\n",cEnd-cStart);
+    PetscPrintf(PETSC_COMM_WORLD, " -- %D cells",cEnd-cStart);
   }
+  if (ctx->useCUDA) PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
+  else PetscPrintf(PETSC_COMM_WORLD,"\n");
+
   PetscFunctionReturn(0);
 }
