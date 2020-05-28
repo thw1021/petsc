@@ -27,10 +27,12 @@ int main(int argc,char ** argv)
   const PetscInt   *vtx,*edges;
   Vec              X,F;
   SNES             snes;
+  PetscBool        viewX=PETSC_FALSE;
   SNESConvergedReason reason;
 
   ierr = PetscInitialize(&argc,&argv,"wateroptions",help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&crank);CHKERRQ(ierr);
+  ierr = PetscOptionsGetBool(NULL,NULL,"-viewX",&viewX,NULL);CHKERRQ(ierr);
 
   /* Create an empty network object */
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&networkdm);CHKERRQ(ierr);
@@ -115,6 +117,7 @@ int main(int argc,char ** argv)
 
   ierr = SNESSolve(snes,NULL,X);CHKERRQ(ierr);
   ierr = SNESGetConvergedReason(snes,&reason);CHKERRQ(ierr);
+
   if (reason < 0) SETERRQ(PETSC_COMM_SELF,0,"No solution found for the water network");
   /* ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr); */
 
