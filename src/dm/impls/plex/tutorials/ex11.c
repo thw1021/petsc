@@ -314,7 +314,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   PetscBool         done=PETSC_FALSE;
   PetscReal         spit_eta,Te_kev=0,E,ratio,Z,n_e;
   PetscFunctionBegin;
-  if (ctx->num_species<2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species<2 %D",ctx->num_species);
+  if (ctx->num_species<2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D < 2",ctx->num_species);
   Z = -ctx->charges[1]/ctx->charges[0];
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_0_n);CHKERRQ(ierr);
@@ -333,7 +333,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   E = ctx->Ez; /* keep real E */
   ratio = E/J/spit_eta;
   done = (old_ratio-ratio < 1.e-4 && stepi>20 &&0);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.2g %% Te_kev= %10.3e E/J to eta ratio=%g (diff=%g)\n",
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e E/J to eta ratio=%g (diff=%g)\n",
                      done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,E,J,J_re,100*J_re/J,Te_kev,ratio,old_ratio-ratio);CHKERRQ(ierr);
   if (done) {
     ierr = TSSetConvergedReason(ts,TS_CONVERGED_USER);CHKERRQ(ierr);
@@ -613,7 +613,6 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   TSConvergedReason reason;
   PetscErrorCode ierr;
   PetscFunctionBeginUser;
-  
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   if (stepi > rectx->plotStep && rectx->plotting) {
     rectx->plotting = PETSC_FALSE; /* was doing diagnostics, now done */
@@ -636,7 +635,6 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     rectx->plotting = PETSC_TRUE;
   }
   /* parallel check */
-  
   if (reason) {
     PetscReal    val,rval;
     PetscMPIInt    rank;
