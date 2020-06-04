@@ -625,5 +625,9 @@ int main(int argc, char **argv)
     suffix: 2d_p1_adj_0
     requires: triangle
     args: -potential_petscspace_degree 1 -dm_refine 2 -adjoint -adjoint_petscspace_degree 1 -error_petscspace_degree 0
+  test:
+    suffix: 2d_p2_morley
+    requires: triangle
+    args: -potential_petscspace_degree 2 -dm_refine 2 -convest_num_refine 3 -snes_convergence_estimate -potential_petscdualspace_type morley
 
 TEST*/

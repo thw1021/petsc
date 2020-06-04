@@ -37,11 +37,11 @@ typedef struct {
 } AppCtx;
 
 /* u = 1 */
-PetscErrorCode constant(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nf, PetscScalar *u, void *ctx)
+PetscErrorCode constant(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
   AppCtx   *user = (AppCtx *) ctx;
   PetscInt d;
-  for (d = 0; d < user->dim; ++d) u[d] = user->constants[d];
+  for (d = 0; d < Nc; ++d) u[d] = user->constants[d];
   return 0;
 }
 PetscErrorCode constantDer(PetscInt dim, PetscReal time, const PetscReal coords[], const PetscReal n[], PetscInt Nf, PetscScalar *u, void *ctx)
@@ -53,16 +53,16 @@ PetscErrorCode constantDer(PetscInt dim, PetscReal time, const PetscReal coords[
 }
 
 /* u = x */
-PetscErrorCode linear(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nf, PetscScalar *u, void *ctx)
+PetscErrorCode linear(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
   PetscInt d;
-  for (d = 0; d < dim; ++d) u[d] = coords[d];
+  for (d = 0; d < Nc; ++d) u[d] = coords[d];
   return 0;
 }
-PetscErrorCode linearDer(PetscInt dim, PetscReal time, const PetscReal coords[], const PetscReal n[], PetscInt Nf, PetscScalar *u, void *ctx)
+PetscErrorCode linearDer(PetscInt dim, PetscReal time, const PetscReal coords[], const PetscReal n[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
   PetscInt d, e;
-  for (d = 0; d < dim; ++d) {
+  for (d = 0; d < Nc; ++d) {
     u[d] = 0.0;
     for (e = 0; e < dim; ++e) u[d] += (d == e ? 1.0 : 0.0) * n[e];
   }
@@ -1254,6 +1254,27 @@ int main(int argc, char **argv)
     args: -petscspace_degree 1 -petscdualspace_type bdm \
           -petscdualspace_lagrange_tensor 1 \
           -use_da 0 -simplex 0 -num_comp 2 -qorder 1 -porder 2
+
+  # 2D Morley on a triangle
+  test:
+    suffix: morley_2d_0
+    requires: triangle
+    args: -num_comp 1 -petscspace_degree 2 -petscdualspace_type morley -qorder 2
+
+  test:
+    suffix: morley_2d_1
+    requires: triangle
+    args: -num_comp 1 -petscspace_degree 2 -petscdualspace_type morley -qorder 2 -porder 1
+
+  test:
+    suffix: morley_2d_2
+    requires: triangle
+    args: -num_comp 1 -petscspace_degree 2 -petscdualspace_type morley -qorder 2 -porder 2
+
+  test:
+    suffix: morley_2d_3
+    requires: triangle
+    args: -num_comp 1 -petscspace_degree 2 -petscdualspace_type morley -qorder 2 -porder 3
 
   # Test high order quadrature
   test:

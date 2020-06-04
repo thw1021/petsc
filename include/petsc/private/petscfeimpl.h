@@ -157,6 +157,11 @@ typedef struct {
   PetscInt *numDof;
 } PetscDualSpace_Simple;
 
+typedef struct {
+  PetscInt size;
+  PetscInt* numDof;
+} PetscDualSpace_Morley;
+
 typedef struct _PetscFEOps *PetscFEOps;
 struct _PetscFEOps {
   PetscErrorCode (*setfromoptions)(PetscOptionItems*,PetscFE);

@@ -2,7 +2,7 @@
 ALL: lib
 
 LIBBASE  = libpetscdm
-DIRS     = lagrange simple refined
+DIRS     = lagrange simple refined morley
 LOCDIR   = src/dm/dt/dualspace/impls
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

@@ -147,6 +147,7 @@ PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Lagrange(PetscDualSpace);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Lagrange_BDM(PetscDualSpace);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Simple(PetscDualSpace);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Refined(PetscDualSpace);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Morley(PetscDualSpace);
 
 /*@C
   PetscDualSpaceRegisterAll - Registers all of the PetscDualSpace components in the PetscFE package.
@@ -172,6 +173,7 @@ PetscErrorCode PetscDualSpaceRegisterAll(void)
   ierr = PetscDualSpaceRegister("bdm",                  PetscDualSpaceCreate_Lagrange);CHKERRQ(ierr);
   ierr = PetscDualSpaceRegister(PETSCDUALSPACESIMPLE,   PetscDualSpaceCreate_Simple);CHKERRQ(ierr);
   ierr = PetscDualSpaceRegister(PETSCDUALSPACEREFINED,  PetscDualSpaceCreate_Refined);CHKERRQ(ierr);
+  ierr = PetscDualSpaceRegister(PETSCDUALSPACEMORLEY,   PetscDualSpaceCreate_Morley);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

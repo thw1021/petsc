@@ -1,0 +1,6 @@
+Function tests FAIL for order 3 at tolerance 1e-10 error 0.251425
+Function tests FAIL for order 3 derivatives at tolerance 1e-10 error 2.14224
+Interpolation tests FAIL for order 3 at tolerance 1e-10 error 0.305935
+Interpolation tests FAIL for order 3 derivatives at tolerance 1e-10 error 3.68927
+Interpolation tests FAIL for order 3 at tolerance 1e-10 error 0.462337
+Interpolation tests FAIL for order 3 derivatives at tolerance 1e-10 error 1.59819

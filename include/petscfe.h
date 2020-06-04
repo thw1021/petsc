@@ -103,6 +103,7 @@ typedef const char *PetscDualSpaceType;
 #define PETSCDUALSPACELAGRANGE "lagrange"
 #define PETSCDUALSPACESIMPLE   "simple"
 #define PETSCDUALSPACEREFINED  "refined"
+#define PETSCDUALSPACEMORLEY   "morley"
 
 PETSC_EXTERN PetscFunctionList PetscDualSpaceList;
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate(MPI_Comm, PetscDualSpace *);
@@ -169,6 +170,9 @@ PETSC_EXTERN PetscErrorCode PetscDualSpaceLagrangeGetTrimmed(PetscDualSpace, Pet
 PETSC_EXTERN PetscErrorCode PetscDualSpaceLagrangeSetTrimmed(PetscDualSpace, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceLagrangeGetNodeType(PetscDualSpace, PetscDTNodeType *, PetscBool *, PetscReal *);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceLagrangeSetNodeType(PetscDualSpace, PetscDTNodeType, PetscBool, PetscReal);
+
+PETSC_EXTERN PetscErrorCode PetscDualSpaceMorleyGetSize(PetscDualSpace, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceMorleySetSize(PetscDualSpace, PetscInt);
 
 PETSC_EXTERN PetscErrorCode PetscDualSpaceGetHeightSubspace(PetscDualSpace,PetscInt,PetscDualSpace *);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceGetPointSubspace(PetscDualSpace,PetscInt,PetscDualSpace *);
