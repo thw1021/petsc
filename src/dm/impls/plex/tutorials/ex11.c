@@ -706,18 +706,25 @@ int main(int argc, char **argv)
   ierr = TSMonitorSet(ts,Monitor,ctx,NULL);CHKERRQ(ierr);
   ierr = TSSetPreStep(ts,PreStep);CHKERRQ(ierr);
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
+  ierr = MatSetOption(J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
-  if (0) {
+  if (1) {
     PetscLogStage stage;
-    ierr = MatSetOption(J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
+    Vec           vec;
+    PetscRandom   rctx;
+    ierr = PetscRandomCreate(PETSC_COMM_SELF,&rctx);CHKERRQ(ierr);
+    ierr = PetscRandomSetFromOptions(rctx);CHKERRQ(ierr);
+    ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
+    ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
+    ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
     ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-    ierr = FPLandIJacobian(ts,0.0,X,X,1.0,J,J,ctx);CHKERRQ(ierr);
+    ierr = FPLandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
-    ierr = MatViewFromOptions(J,NULL,"-j_mat_view");CHKERRQ(ierr);
-    ierr = VecViewFromOptions(X,NULL,"-x_vec_view");CHKERRQ(ierr);
+    ierr = VecDestroy(&vec);CHKERRQ(ierr);
   }
 #endif
+  ierr = VecViewFromOptions(X,NULL,"-x_vec_view");CHKERRQ(ierr);
   /* go */
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */

@@ -395,10 +395,8 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
         for (c = 0; c < Nc; ++c) {
           for (b = 0; b < Nb; ++b) {
             const PetscInt cidx = b*Nc+c;
-            if (Bq[cidx] != 0.0) {
-              uu[c] += Bq[cidx]*coef[b];
-              for (d = 0; d < dim; ++d) refSpaceDer[c*dim+d] += Dq[cidx*dim+d]*coef[b];
-            }
+            uu[c] += Bq[cidx]*coef[b];
+            for (d = 0; d < dim; ++d) refSpaceDer[c*dim+d] += Dq[cidx*dim+d]*coef[b];
           }
         }
         for (c = 0; c < Nc; ++c) for (d = 0; d < dim; ++d) for (e = 0, u_x[c*dim+d] = 0.0; e < dim; ++e) {
@@ -1478,6 +1476,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ierr = PetscOptionsInt("-amr_z_refine2",  "Number of levels to refine along v_perp=0", "xgc_dmplex.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "xgc_dmplex.c", ctx->maxRefIts, &ctx->maxRefIts, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-amr_post_refine", "Number of levels to uniformly refine after AMR", "xgc_dmplex.c", ctx->postAMRRefine, &ctx->postAMRRefine, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-verbose", "", "xgc_dmplex.c", ctx->verbose, &ctx->verbose, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","xgc_dmplex.c",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-z_radius1","velocity range to refine r=0 axis (for electrons)","xgc_dmplex.c",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","xgc_dmplex.c",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
