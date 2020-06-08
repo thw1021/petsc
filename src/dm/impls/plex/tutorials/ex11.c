@@ -708,17 +708,17 @@ int main(int argc, char **argv)
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
   ierr = MatSetOption(J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
-  if (1) {
+  if (0) {
     PetscLogStage stage;
     Vec           vec;
     PetscRandom   rctx;
+    ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
+    ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
     ierr = PetscRandomCreate(PETSC_COMM_SELF,&rctx);CHKERRQ(ierr);
     ierr = PetscRandomSetFromOptions(rctx);CHKERRQ(ierr);
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
     ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
     ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
-    ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
-    ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
     ierr = FPLandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
@@ -743,7 +743,7 @@ int main(int argc, char **argv)
 
   test:
     suffix: 0
-    requires: p4est !complex
+    requires: p4est !complex cuda
     args: -Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 9 -domain_radius -.75 -impurity_source_type pulse -pulse_start_time 1e-1 -pulse_width_time 10 -pulse_rate 1e-2 -t_cold .05 -plot_dt 1e-1 -sub_thread_block_size 4
 
   test:
