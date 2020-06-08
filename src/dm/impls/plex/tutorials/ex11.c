@@ -728,7 +728,7 @@ int main(int argc, char **argv)
   /* go */
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */
-  ierr = DMPlexFPDestroyPhaseSpace(&dm);CHKERRQ(ierr);
+  ierr = DMPlexFPDestroyVelocitySpace(&dm);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
   if (rectx->imp_src) {

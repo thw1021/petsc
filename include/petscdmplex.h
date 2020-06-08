@@ -454,11 +454,11 @@ PETSC_EXTERN PetscErrorCode DMPlexCellRefinerGetAffineTransforms(DMPlexCellRefin
 PETSC_EXTERN PetscErrorCode DMPlexCellRefinerGetAffineFaceTransforms(DMPlexCellRefiner, DMPolytopeType, PetscInt *, PetscReal *[], PetscReal *[], PetscReal *[], PetscReal *[]);
 PETSC_EXTERN PetscErrorCode DMPlexRefineUniform(DM, DMPlexCellRefiner, DM *);
 
+/* Fokker-Planck-Landau */
 PETSC_EXTERN PetscErrorCode DMPlexFPPrintNorms(Vec, PetscInt);
 PETSC_EXTERN PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
-PETSC_EXTERN PetscErrorCode DMPlexFPDestroyPhaseSpace(DM*);
+PETSC_EXTERN PetscErrorCode DMPlexFPDestroyVelocitySpace(DM*);
 PETSC_EXTERN PetscErrorCode DMPlexFPAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);
-/* Landau/FP */
 PETSC_EXTERN PetscErrorCode FPLandIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
 PETSC_EXTERN PetscErrorCode FPLandIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
 

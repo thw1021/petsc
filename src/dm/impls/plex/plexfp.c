@@ -228,6 +228,7 @@ PETSC_STATIC_INLINE void LandauTensor2D(const PetscReal x[], const PetscReal rp,
 /* since the tensor diverges for x==y but when integrated */
 /* the divergent part is antisymmetric and vanishes. This is not  */
 /* trivial, but can be proven. */
+#if FP_DIM==3
 PETSC_STATIC_INLINE void LandauTensor3D(const PetscReal x1[], const PetscReal xp, const PetscReal yp, const PetscReal zp, PetscReal U[][3], PetscReal mask)
 {
   PetscReal dx[3],inorm3,inorm,inorm2,norm2,x2[] = {xp,yp,zp};
@@ -244,54 +245,40 @@ PETSC_STATIC_INLINE void LandauTensor3D(const PetscReal x1[], const PetscReal xp
   U[1][2] = U[2][1] = -inorm3 * dx[2] * dx[1];
   U[2][0] = U[0][2] = -inorm3 * dx[0] * dx[2];
 }
+#endif
 #define LAND_VL  1
-static PetscErrorCode FPLandPointDataCreate(FPLandPointData *IPData, PetscInt dim, PetscInt nip, PetscInt Ns)
+static PetscErrorCode FPLandPointDataCreate(PetscReal **IPData, PetscInt dim, PetscInt nip, PetscInt Ns)
 {
-  PetscErrorCode ierr, sz = LAND_VL*(nip/LAND_VL + !!(nip%LAND_VL)),jj,d;
+  PetscErrorCode  ierr, d, s, jj, nip_pad = LAND_VL*(nip/LAND_VL + !!(nip%LAND_VL)), pnt_sz = (dim + Ns*(1+dim));
+  PetscReal       *pdata;
   PetscFunctionBeginUser;
-  IPData->nip = nip;
-  IPData->ns = Ns;
-  IPData->dim = dim;
-  if (dim==3) {
-    ierr = PetscMalloc3(sz,&IPData->x[0],sz,&IPData->x[1],sz,&IPData->x[2]);CHKERRQ(ierr);
-  } else {
-    ierr = PetscMalloc2(sz,&IPData->x[0],sz,&IPData->x[1]);CHKERRQ(ierr);
-    IPData->x[2] = NULL;
-  }
-  for (jj=0;jj<Ns;jj++){
-    if (dim==3) {
-      ierr = PetscMalloc4(sz,&IPData->f[jj],sz,&IPData->df[0][jj],sz,&IPData->df[1][jj],sz,&IPData->df[2][jj]);CHKERRQ(ierr);
-    } else {
-      ierr = PetscMalloc3(sz,&IPData->f[jj],sz,&IPData->df[0][jj],sz,&IPData->df[1][jj]);CHKERRQ(ierr);
-      IPData->df[2][jj] = NULL;
+  ierr = PetscMalloc(nip_pad*pnt_sz*sizeof(PetscReal),IPData);CHKERRQ(ierr);
+  /* debug */
+  for (jj=0, pdata = *IPData; jj<nip; jj++, pdata += pnt_sz){
+    FPLandPointData *fplpt = (FPLandPointData*)pdata; /* [dim + NS*(1+dim)] */
+    for(d=0;d<dim;d++) fplpt->crd[d] = 0./0.;
+    for(s=0;s<Ns;s++) {
+      fplpt->fdf[s].f = 0./0.;
+      for(d=0;d<dim;d++) fplpt->fdf[s].df[d] = 0./0.;
     }
   }
-  for (/* void */; nip < sz ; nip++) { /* zero end, should be benign */
-    for (d=0;d<dim;d++) IPData->x[d][nip] = 0;
-    for (jj=0;jj<Ns;jj++) {
-      IPData->f[jj][nip] = 0;
-      for (d=0;d<dim;d++) IPData->df[d][jj][nip] = 0;
+  /* pad with zeros in case we vectorize into this */
+  for (jj=nip, pdata = *IPData + nip*pnt_sz; jj < nip_pad; jj++, pdata += pnt_sz){
+    FPLandPointData *fplpt = (FPLandPointData*)pdata; /* [dim + NS*(1+dim)] */
+    for(d=0;d<dim;d++) fplpt->crd[d] = -1;
+    for(s=0;s<Ns;s++) {
+      fplpt->fdf[s].f = 0;
+      for(d=0;d<dim;d++) fplpt->fdf[s].df[d] = 0;
     }
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode FPLandPointDataDestroy(FPLandPointData *IPData)
+static PetscErrorCode FPLandPointDataDestroy(PetscReal *IPData)
 {
-  PetscErrorCode   ierr, s;
+  PetscErrorCode   ierr;
   PetscFunctionBeginUser;
-  for (s=0;s<IPData->ns;s++) {
-    if (IPData->dim==3) {
-      ierr = PetscFree4(IPData->f[s],IPData->df[0][s],IPData->df[1][s],IPData->df[2][s]);CHKERRQ(ierr);
-    } else {
-      ierr = PetscFree3(IPData->f[s],IPData->df[0][s],IPData->df[1][s]);CHKERRQ(ierr);
-    }
-  }
-  if (IPData->dim==3) {
-    ierr = PetscFree3(IPData->x[0],IPData->x[1],IPData->x[2]);CHKERRQ(ierr);
-  } else {
-    ierr = PetscFree2(IPData->x[0],IPData->x[1]);CHKERRQ(ierr);
-  }
+  ierr = PetscFree(IPData);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 /* ------------------------------------------------------------------- */
@@ -313,12 +300,12 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
   PetscDS           prob;
   PetscSection      section,globsection;
   PetscScalar       *elemMat;
-  PetscInt          numCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Nc,Nfx,d,f,fieldA,fieldB,Nip,NipVec;
+  PetscInt          numCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Nc,Nfx,d,f,fieldA,fieldB,Nip,NipVec,ipdata_sz;
   PetscQuadrature   quad;
   PetscTabulation   *Tf;
   PetscReal         *wiGlob, nu_alpha[FP_MAX_SPECIES], nu_beta[FP_MAX_SPECIES];
   const PetscReal   *quadPoints, *quadWeights, *BB, *DD;
-  FPLandPointData   IPData;
+  PetscReal         *IPData;
   PetscReal         invMass[FP_MAX_SPECIES],Eq_m[FP_MAX_SPECIES],m_0=ctx->m_0; /* normalize mass -- not needed! */
   PetscLogDouble    flops;
   PetscReal         vj[FP_MAX_NQ*3],Jj[FP_MAX_NQ*9],invJj[FP_MAX_NQ*9], detJj[FP_MAX_NQ];
@@ -374,6 +361,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
                   0,"FormLandau",Nq*numCells,numCells,ctx->simplex ? "SIMPLEX" : "TENSOR", totDim, Nb, Nq, elemMatSize, dim, Tf[0]->Nb, Tf[0]->Nc, Tf[0]->Np, Tf[0]->cdim, N);
     }
     ierr = FPLandPointDataCreate(&IPData, dim, Nq*numCells, Nc);CHKERRQ(ierr);
+    ipdata_sz = (dim + Nc*(1+dim));
     ierr = PetscMalloc2(elemMatSize,&elemMat,NipVec,&wiGlob);CHKERRQ(ierr);
     /* cache geometry and x, f and df/dx at IPs */
     for (ej = 0; ej < numCells; ++ej) {
@@ -384,11 +372,14 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
       /* create point data for cell i for Landau tensor: x, f(x), grad f(x) */
       for (qj = 0; qj < Nq; ++qj) {
         PetscInt    gidx = (ej*Nq + qj);
+        FPLandPointData *pnt_data = (FPLandPointData*)(IPData + gidx*ipdata_sz);
         PetscScalar refSpaceDer[3*FP_MAX_SPECIES];
         const PetscReal *Bq = &BB[qj*Nb*Nc], *Dq = &DD[qj*Nb*Nc*dim];
-        for (d = 0; d < dim; ++d) IPData.x[d][gidx] = vj[qj * dim + d]; /* coordinate */
+        for (d = 0; d < dim; ++d) pnt_data->crd[d] = vj[qj * dim + d]; /* coordinate */
         wiGlob[gidx] = detJj[qj] * quadWeights[qj];
-        if (dim==2) wiGlob[gidx] *= IPData.x[0][gidx];  /* cylindrical coordinate, w/o 2pi */
+#if FP_DIM==2
+        wiGlob[gidx] *= pnt_data->r;  /* cylindrical coordinate, w/o 2pi */
+#endif
         /* get u & du (EvaluateFieldJets) */
         for (c = 0; c < Nc; ++c) uu[c] = 0.0;
         for (d = 0; d < dim*Nc; ++d) refSpaceDer[d] = 0.0;
@@ -405,8 +396,8 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
             }
         /* copy to IPDataLocal */
         for (c=0;c<Nc;c++) {
-          for (d = 0; d < dim; ++d) IPData.df[d][c][gidx] = u_x[c*dim+d];
-          IPData.f[c][gidx] = uu[c];
+          pnt_data->fdf[c].f = uu[c];
+          for (d = 0; d < dim; ++d) pnt_data->fdf[c].df[d] = u_x[c*dim+d];
         }
       } /* q */
       ierr = DMPlexVecRestoreClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
@@ -443,22 +434,9 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
       const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj; /* length of inner global interation, outer integration point */
       PetscInt        d2,dp,d3;
       const PetscReal wj = wiGlob[jpidx];
-      const PetscReal * __restrict__ x0 = IPData.x[0];
-      const PetscReal * __restrict__ y0 = IPData.x[1];
-      const PetscReal * __restrict__ z0 = IPData.x[2];
-      const PetscReal * __restrict__ f0[FP_MAX_SPECIES];
-      const PetscReal * __restrict__ df0[3][FP_MAX_SPECIES];
 #if defined(PETSC_USE_LOG)
       ierr = PetscLogEventBegin(ctx->events[3],0,0,0,0);CHKERRQ(ierr);
 #endif
-      for (fieldA=0;fieldA<Nc;fieldA++) {
-	f0[fieldA] = IPData.f[fieldA];
-	for (d = 0; d < dim; ++d) df0[d][fieldA] = IPData.df[d][fieldA];
-      }
-      for (        ;fieldA<FP_MAX_SPECIES;fieldA++) {
-	f0[fieldA] = NULL;
-	for (d = 0; d < dim; ++d) df0[d][fieldA] = NULL;
-      }
       for (d=0;d<dim;d++) {
 	for (f=0;f<Nc;f++) {
 	  gg2[f][d] = 0;
@@ -473,40 +451,31 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 #pragma omp simd
       for (ipidx = 0; ipidx < nip; ++ipidx) {
 	const PetscReal wi = wiGlob[ipidx];
-	const PetscReal * __restrict__ fi[FP_MAX_SPECIES];
-        const PetscReal * __restrict__ dfi[3][FP_MAX_SPECIES];
-	for (fieldA=0;fieldA<Nc;fieldA++) {
-	  fi[fieldA] = &f0[fieldA][ipidx];
-	  for (d = 0; d < dim; ++d) {
-	    dfi[d][fieldA] = &df0[d][fieldA][ipidx];
-	  }
-	}
+        const FPLandPointData * const __restrict__ fplpt = (FPLandPointData*)(IPData + ipidx*ipdata_sz);
 	if (dim==3) {
-          const PetscReal *const __restrict__ xix  = &x0[ipidx];
-          const PetscReal *const __restrict__ xiy  = &y0[ipidx];
-          const PetscReal *const __restrict__ xiz  = &z0[ipidx];
-	  PetscReal                     U[3][3], R[2][2] = {{-1,1},{1,-1}};
+#if FP_DIM==3
+	  PetscReal U[3][3], R[2][2] = {{-1,1},{1,-1}};
           if (!ctx->quarter3DDomain) {
 #pragma forceinline recursive
-          LandauTensor3D(&vj[qj*dim],*xix,*xiy,*xiz,U, (ipidx==jpidx) ? 0. : 1.);
+          LandauTensor3D(&vj[qj*dim], fplpt->x, fplpt->y, fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
           for (fieldA = 0; fieldA < Nc; ++fieldA) {
             for (fieldB = 0; fieldB < Nc; ++fieldB) {
               for (d2 = 0; d2 < dim; ++d2) {
                 for (d3 = 0; d3 < dim; ++d3) {
                   /* K = U * grad(f): g2=e: i,A */
-                  gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][d3] * *dfi[d3][fieldB] * wi;
+                  gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][d3] * fplpt->fdf[fieldB].df[d3] * wi;
                   /* D = -U * (I \kron (fx)): g3=f: i,j,A */
-                  gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * *fi[fieldB] * wi;
+                  gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * fplpt->fdf[fieldB].f * wi;
                 }
               }
             }
           }
           } else {
-            PetscReal lxx[2] = {*xix,*xiy};
+            PetscReal lxx[2] = {fplpt->x, fplpt->y};
             PetscReal ldf[3][FP_MAX_SPECIES];
-            for (fieldB = 0; fieldB < Nc; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3][fieldB] = *dfi[d3][fieldB] * wi * invMass[fieldB];
+            for (fieldB = 0; fieldB < Nc; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3][fieldB] = fplpt->fdf[fieldB].df[d3] * wi * invMass[fieldB];
             for (dp=0;dp<4;dp++) {
-              LandauTensor3D(&vj[qj*dim], lxx[0], lxx[1], *xiz,U, (ipidx==jpidx) ? 0. : 1.);
+              LandauTensor3D(&vj[qj*dim], lxx[0], lxx[1], fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
               for (fieldA = 0; fieldA < Nc; ++fieldA) {
                 for (fieldB = 0; fieldB < Nc; ++fieldB) {
                   for (d2 = 0; d2 < 3; ++d2) {
@@ -514,7 +483,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
                       /* K = U * grad(f): g2 = e: i,A */
                       gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * U[d2][d3] * ldf[d3][fieldB];
                       /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
-                      gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * *fi[fieldB] * wi;
+                      gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * fplpt->fdf[fieldB].f * wi;
                     }
                   }
                 }
@@ -527,21 +496,20 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
               }
             }
           }
+#endif
 	} else {
-	  const PetscReal *const __restrict__ xir  = &x0[ipidx];
-	  const PetscReal *const __restrict__ xiz  = &y0[ipidx];
-	  PetscReal       Ud[2][2], Uk[2][2];
+	  PetscReal Ud[2][2], Uk[2][2];
 #pragma forceinline recursive
-	  LandauTensor2D(&vj[qj * dim],*xir,*xiz,Ud,Uk);
+	  LandauTensor2D(&vj[qj * dim],  fplpt->r, fplpt->z ,Ud, Uk);
 	  for (fieldA = 0; fieldA < Nc; ++fieldA) {
 	    for (fieldB = 0; fieldB < Nc; ++fieldB) {
 	      for (d2 = 0; d2 < 2; ++d2) {
 		for (d3 = 0; d3 < 2; ++d3) {
 		  /* K = U * grad(f): g2=e: i,A */
-		  gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][d3] * *dfi[d3][fieldB] * wi;
+		  gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][d3] * fplpt->fdf[fieldB].df[d3] * wi;
 		  /* D = -U * (I \kron (fx)): g3=f: i,j,A */
-		  gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * *fi[fieldB] * wi;
-                 }
+		  gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * fplpt->fdf[fieldB].f * wi;
+                }
 	      }
 	    }
 	  }
@@ -645,7 +613,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
   ierr = PetscFree2(elemMat,wiGlob);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
   /* ierr = DMDestroy(&Gplex);CHKERRQ(ierr); */
-  ierr = FPLandPointDataDestroy(&IPData);CHKERRQ(ierr);
+  ierr = FPLandPointDataDestroy(IPData);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1604,7 +1572,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   Input Parameters:
 +   comm  - The MPI communicator
 .   dim - velocity space dimension (2 for axisymmetric, 3 for full 3X + 3V solver)
--   prefix - 
+-   prefix -
 
   Output Parameter:
 .   dm  - The DM object representing the mesh
@@ -1656,14 +1624,14 @@ PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const ch
 }
 
 /*@
-  DMPlexFPDestroyPhaseSpace - Destroy a DMPlex velocity space mesh
+  DMPlexFPDestroyVelocitySpace - Destroy a DMPlex velocity space mesh
 
   Input/Output Parameters:
   .   dm
 
   Level: beginner
 @*/
-PetscErrorCode DMPlexFPDestroyPhaseSpace(DM *dm)
+PetscErrorCode DMPlexFPDestroyVelocitySpace(DM *dm)
 {
   PetscErrorCode ierr;
   LandCtx        *ctx;
