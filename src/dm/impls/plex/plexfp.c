@@ -427,8 +427,8 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
     ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
 #endif
     for (qj = 0; qj < Nq; ++qj) {
-      PetscScalar     gg2[FP_MAX_SPECIES][3],gg3[FP_MAX_SPECIES][3][3];
-      PetscScalar     g2[FP_MAX_SPECIES][3], g3[FP_MAX_SPECIES][3][3];
+      PetscScalar     gg2[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM],gg3[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM];
+      PetscScalar     g2[FP_MAX_SPECIES][FP_DIM], g3[FP_MAX_SPECIES][FP_DIM][FP_DIM];
       const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj; /* length of inner global interation, outer integration point */
       PetscInt        d2,dp,d3;
       const PetscReal wj = wiGlob[jpidx];
@@ -437,8 +437,8 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 #endif
       for (d=0;d<dim;d++) {
 	for (f=0;f<Nc;f++) {
-	  gg2[f][d] = 0;
-	  for (d2=0;d2<dim;d2++) gg3[f][d][d2] = 0;
+	  gg2[1][1][f][d] = 0;
+	  for (d2=0;d2<dim;d2++) gg3[1][1][f][d][d2] = 0;
 	}
       }
 #if defined(PETSC_USE_LOG)
@@ -461,9 +461,9 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
               for (d2 = 0; d2 < dim; ++d2) {
                 for (d3 = 0; d3 < dim; ++d3) {
                   /* K = U * grad(f): g2=e: i,A */
-                  gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][d3] * fplpt->fdf[fieldB].df[d3] * wi;
+                  gg2[1][1][fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][d3] * fplpt->fdf[fieldB].df[d3] * wi;
                   /* D = -U * (I \kron (fx)): g3=f: i,j,A */
-                  gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * fplpt->fdf[fieldB].f * wi;
+                  gg3[1][1][fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * fplpt->fdf[fieldB].f * wi;
                 }
               }
             }
@@ -479,9 +479,9 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
                   for (d2 = 0; d2 < 3; ++d2) {
                     for (d3 = 0; d3 < 3; ++d3) {
                       /* K = U * grad(f): g2 = e: i,A */
-                      gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * U[d2][d3] * ldf[d3][fieldB];
+                      gg2[1][1][fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * U[d2][d3] * ldf[d3][fieldB];
                       /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
-                      gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * fplpt->fdf[fieldB].f * wi;
+                      gg3[1][1][fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * fplpt->fdf[fieldB].f * wi;
                     }
                   }
                 }
@@ -504,9 +504,9 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 	      for (d2 = 0; d2 < 2; ++d2) {
 		for (d3 = 0; d3 < 2; ++d3) {
 		  /* K = U * grad(f): g2=e: i,A */
-		  gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][d3] * fplpt->fdf[fieldB].df[d3] * wi;
+		  gg2[1][1][fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][d3] * fplpt->fdf[fieldB].df[d3] * wi;
 		  /* D = -U * (I \kron (fx)): g3=f: i,j,A */
-		  gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * fplpt->fdf[fieldB].f * wi;
+		  gg3[1][1][fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * fplpt->fdf[fieldB].f * wi;
                 }
 	      }
 	    }
@@ -520,11 +520,11 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
       /* Jacobian transform */
 #pragma omp simd
       for (fieldA = 0; fieldA < Nc; ++fieldA) {
-        gg2[fieldA][1] += Eq_m[fieldA]; /* add electric field term */
+        gg2[1][1][fieldA][1] += Eq_m[fieldA]; /* add electric field term */
 	for (d = 0; d < dim; ++d) {
 	  g2[fieldA][d] = 0.0;
 	  for (d2 = 0; d2 < dim; ++d2) {
-	    g2[fieldA][d] += invJj[qj * dim * dim + d*dim+d2]*gg2[fieldA][d2];
+	    g2[fieldA][d] += invJj[qj * dim * dim + d*dim+d2]*gg2[1][1][fieldA][d2];
 	  }
 	  g2[fieldA][d] *= wj;
 	}
@@ -534,7 +534,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 	    g3[fieldA][d][dp] = 0.0;
 	    for (d2 = 0; d2 < dim; ++d2) {
 	      for (d3 = 0; d3 < dim; ++d3) {
-		g3[fieldA][d][dp] += invJj[qj * dim * dim + d*dim + d2] * gg3[fieldA][d2][d3] * invJj[qj * dim * dim + dp*dim + d3];
+		g3[fieldA][d][dp] += invJj[qj * dim * dim + d*dim + d2] * gg3[1][1][fieldA][d2][d3] * invJj[qj * dim * dim + dp*dim + d3];
 	      }
 	    }
 	    g3[fieldA][d][dp] *= wj;
