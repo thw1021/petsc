@@ -676,4 +676,19 @@ typedef struct {
   PetscBool     useCUDA;
   PetscInt      subThreadBlockSize;
 } LandCtx;
+
+typedef struct {
+  PetscReal    *x[3];
+  PetscReal    *f[FP_MAX_SPECIES];
+  PetscReal    *df[3][FP_MAX_SPECIES];
+  PetscInt     nip; /* number of integration points */
+  PetscInt     ns; /* number of species or fields */
+  PetscInt     dim;
+} FPLandPointData;
+#if defined(PETSC_HAVE_CUDA)
+PETSC_EXTERN PetscErrorCode FPCUDATest();
+#endif
+PETSC_EXTERN PetscErrorCode FPLandauCUDAJacobian( DM,PetscQuadrature,const PetscReal [],const PetscReal [], const PetscReal[], const PetscReal[],
+                                                  const FPLandPointData * const, const PetscReal[], const PetscInt, const PetscLogEvent[], PetscBool, Mat);
+
 #endif /* _PLEXIMPL_H */
