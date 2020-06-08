@@ -680,15 +680,6 @@ typedef struct {
   PetscInt      subThreadBlockSize;
 } LandCtx;
 
-/* typedef struct { */
-/*   PetscInt     nip; /\* number of integration points *\/ */
-/*   PetscInt     ns;  /\* number of species or fields *\/ */
-/*   PetscInt     dim; */
-/*   PetscReal    *x[FP_DIM]; /\* nip *\/ */
-/*   PetscReal    *f[FP_MAX_SPECIES]; /\* nip*ns *\/ */
-/*   PetscReal    *df[FP_DIM][FP_MAX_SPECIES]; /\* nip*ns*dim *\/ */
-/* } FPLandPointData; */
-
 typedef struct {
   PetscReal     f;
   PetscReal     df[FP_DIM];
@@ -696,10 +687,12 @@ typedef struct {
 
 typedef struct {
   PetscReal     crd[0];
+  union {
+    PetscReal   x;
+    PetscReal   r;
+  };
 #if FP_DIM==3
-  PetscReal     x,y;
-#else
-  PetscReal     r;
+  PetscReal     y;
 #endif
   PetscReal     z;
   FPLandFDF     fdf[0];
