@@ -377,9 +377,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
         const PetscReal *Bq = &BB[qj*Nb*Nc], *Dq = &DD[qj*Nb*Nc*dim];
         for (d = 0; d < dim; ++d) pnt_data->crd[d] = vj[qj * dim + d]; /* coordinate */
         wiGlob[gidx] = detJj[qj] * quadWeights[qj];
-#if FP_DIM==2
-        wiGlob[gidx] *= pnt_data->r;  /* cylindrical coordinate, w/o 2pi */
-#endif
+        if (dim==2) wiGlob[gidx] *= pnt_data->r;  /* cylindrical coordinate, w/o 2pi */
         /* get u & du (EvaluateFieldJets) */
         for (c = 0; c < Nc; ++c) uu[c] = 0.0;
         for (d = 0; d < dim*Nc; ++d) refSpaceDer[d] = 0.0;
@@ -414,7 +412,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 #endif
 #if defined(PETSC_HAVE_CUDA)
   if (ctx->useCUDA) {
-    ierr = FPLandauCUDAJacobian(plex,quad,nu_alpha,nu_beta,invMass,Eq_m,&IPData,wiGlob,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
+    ierr = FPLandauCUDAJacobian(plex,quad,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
   } else
 #endif

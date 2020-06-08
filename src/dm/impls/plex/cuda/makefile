@@ -2,18 +2,18 @@
 -include ../../../../../petscdir.mk
 ALL: lib
 
-CPPFLAGS = ${NETCFD_INCLUDE} ${EXODUSII_INCLUDE}
+CPPFLAGS = 
 CFLAGS   =
 FFLAGS   =
 SOURCEC  = 
 SOURCECU = landau.cu
 SOURCEF  =
 SOURCEH  =
-DIRS     = generators tests tutorials
+DIRS     = 
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPLEX
-LOCDIR   = src/dm/impls/plex/
+LOCDIR   = src/dm/impls/plex/cuda
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

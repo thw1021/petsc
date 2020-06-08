@@ -304,7 +304,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 #endif
   const PetscInt  mythread = threadIdx.x + blockDim.x*threadIdx.y, myqi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlocks = blockDim.y;
   const PetscInt  jpidx = myqi + myelem * Nq;
-  const ipdata_sz = (dim + Nc*(1+dim)); // x[dim], f[Ns], df[dim*Nc]
+  const PetscInt  ipdata_sz = (dim + Nc*(1+dim)); // x[dim], f[Ns], df[dim*Nc]
   const PetscInt  subblocksz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
   const PetscReal *pvj = &vj[jpidx*dim];
   const PetscReal wj = wiGlobal[jpidx];
@@ -336,9 +336,11 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
        }
       }
     } else {
-      PetscReal U[3][3], R[2][2] = {{-1,1},{1,-1}};
+      PetscReal U[3][3];
       if (!quarter3DDomain) {
-      LandauTensor3D(pvj, fplpt->x, fplpt->y, fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
+#if FP_DIM==3
+	LandauTensor3D(pvj, fplpt->x, fplpt->y, fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
+#endif
       for (fieldA = 0; fieldA < Nc; ++fieldA) {
 	for (fieldB = 0; fieldB < Nc; ++fieldB) {
 	  for (d2 = 0; d2 < 3; ++d2) {
@@ -352,7 +354,8 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 	}
       }
       } else {
-	PetscReal lxx[] = {fplpt->x, fplpt->y};
+#if FP_DIM==3
+	PetscReal lxx[] = {fplpt->x, fplpt->y}, R[2][2] = {{-1,1},{1,-1}};
 	PetscReal ldf[3*FP_MAX_SPECIES];
 	for (fieldB = 0; fieldB < Nc; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3 + fieldB*3] = fplpt->fdf[fieldB].df[d3] * wi * invMass[fieldB];
 	for (dp=0;dp<4;dp++) {
@@ -376,6 +379,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 	    }
 	  }
 	}
+#endif
       }
     }
   } /* IPs */
