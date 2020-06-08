@@ -724,14 +724,14 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, PetscQuadrature quad, const PetscR
 #if defined(PETSC_HAVE_OPENMP)
     if (1) {
       int thread_id,num_threads;
-      char name[MPI_MAX_PROCESSOR_NAME];
-      int resultlength;
-      MPI_Get_processor_name(name, &resultlength);
+      //char name[MPI_MAX_PROCESSOR_NAME];
+      // int resultlength;
+      //MPI_Get_processor_name(name, &resultlength);
 #pragma omp parallel default(shared) private(thread_id)
       {
 	thread_id = omp_get_thread_num();
 	num_threads = omp_get_num_threads();
-	PetscPrintf(PETSC_COMM_WORLD, "Made coloring with %D colors. Node %s, OMP_threadID %d of %d\n", nc, name, thread_id, num_threads);
+	PetscPrintf(PETSC_COMM_WORLD, "Made coloring with %D colors. OMP_threadID %d of %d\n", nc, thread_id, num_threads);
       }
     }
 #endif
