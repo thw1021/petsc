@@ -85,7 +85,7 @@ program DMPlexTestFPInterface
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   mone = -1.
   call VecAXPY(X,mone,X_0,ierr);CHKERRQ(ierr)
-  call DMPlexFPDestroyPhaseSpace(dm, ierr);CHKERRQ(ierr)
+  call DMPlexFPDestroyVelocitySpace(dm, ierr);CHKERRQ(ierr)
   call TSDestroy(ts, ierr);CHKERRQ(ierr)
   call VecDestroy(X, ierr);CHKERRQ(ierr)
   call VecDestroy(X_0, ierr);CHKERRQ(ierr)

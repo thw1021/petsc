@@ -611,7 +611,10 @@ PETSC_INTERN PetscErrorCode DMPlexBasisTransformApplyReal_Internal(DM, const Pet
 PETSC_INTERN PetscErrorCode DMPlexBasisTransformApply_Internal(DM, const PetscReal[], PetscBool, PetscInt, const PetscScalar *, PetscScalar *, void *);
 PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErrorCode (**)(Mat, PetscReal, Vec, Vec, PetscReal, IS, void*), void **);
 
-/* the context */
+/* the Fokker-Planck-Landau context */
+#if !defined(FP_DIM)
+#define FP_DIM 2
+#endif
 #if !defined(FP_MAX_SPECIES)
 #define FP_MAX_SPECIES 4
 #endif
@@ -677,18 +680,32 @@ typedef struct {
   PetscInt      subThreadBlockSize;
 } LandCtx;
 
+/* typedef struct { */
+/*   PetscInt     nip; /\* number of integration points *\/ */
+/*   PetscInt     ns;  /\* number of species or fields *\/ */
+/*   PetscInt     dim; */
+/*   PetscReal    *x[FP_DIM]; /\* nip *\/ */
+/*   PetscReal    *f[FP_MAX_SPECIES]; /\* nip*ns *\/ */
+/*   PetscReal    *df[FP_DIM][FP_MAX_SPECIES]; /\* nip*ns*dim *\/ */
+/* } FPLandPointData; */
+
 typedef struct {
-  PetscReal    *x[3];
-  PetscReal    *f[FP_MAX_SPECIES];
-  PetscReal    *df[3][FP_MAX_SPECIES];
-  PetscInt     nip; /* number of integration points */
-  PetscInt     ns; /* number of species or fields */
-  PetscInt     dim;
-} FPLandPointData;
-#if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode FPCUDATest();
+  PetscReal     f;
+  PetscReal     df[FP_DIM];
+} FPLandFDF;
+
+typedef struct {
+  PetscReal     crd[0];
+#if FP_DIM==3
+  PetscReal     x,y;
+#else
+  PetscReal     r;
 #endif
-PETSC_EXTERN PetscErrorCode FPLandauCUDAJacobian( DM,PetscQuadrature,const PetscReal [],const PetscReal [], const PetscReal[], const PetscReal[],
-                                                  const FPLandPointData * const, const PetscReal[], const PetscInt, const PetscLogEvent[], PetscBool, Mat);
+  PetscReal     z;
+  FPLandFDF     fdf[0];
+} FPLandPointData;
+
+PETSC_EXTERN PetscErrorCode FPLandauCUDAJacobian( DM, PetscQuadrature, const PetscReal [],const PetscReal [], const PetscReal[], const PetscReal[],
+                                                  const PetscReal * const, const PetscReal[], const PetscInt, const PetscLogEvent[], PetscBool, Mat);
 
 #endif /* _PLEXIMPL_H */
