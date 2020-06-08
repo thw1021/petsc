@@ -245,52 +245,52 @@ PETSC_STATIC_INLINE void LandauTensor3D(const PetscReal x1[], const PetscReal xp
   U[2][0] = U[0][2] = -inorm3 * dx[0] * dx[2];
 }
 #define LAND_VL  1
-static PetscErrorCode FPLandPointDataCreate(FPLandPointData *ld, PetscInt dim, PetscInt nip, PetscInt Ns)
+static PetscErrorCode FPLandPointDataCreate(FPLandPointData *IPData, PetscInt dim, PetscInt nip, PetscInt Ns)
 {
   PetscErrorCode ierr, sz = LAND_VL*(nip/LAND_VL + !!(nip%LAND_VL)),jj,d;
   PetscFunctionBeginUser;
-  ld->nip = nip;
-  ld->ns = Ns;
-  ld->dim = dim;
+  IPData->nip = nip;
+  IPData->ns = Ns;
+  IPData->dim = dim;
   if (dim==3) {
-    ierr = PetscMalloc3(sz,&ld->x[0],sz,&ld->x[1],sz,&ld->x[2]);CHKERRQ(ierr);
+    ierr = PetscMalloc3(sz,&IPData->x[0],sz,&IPData->x[1],sz,&IPData->x[2]);CHKERRQ(ierr);
   } else {
-    ierr = PetscMalloc2(sz,&ld->x[0],sz,&ld->x[1]);CHKERRQ(ierr);
-    ld->x[2] = NULL;
+    ierr = PetscMalloc2(sz,&IPData->x[0],sz,&IPData->x[1]);CHKERRQ(ierr);
+    IPData->x[2] = NULL;
   }
   for (jj=0;jj<Ns;jj++){
     if (dim==3) {
-      ierr = PetscMalloc4(sz,&ld->f[jj],sz,&ld->df[0][jj],sz,&ld->df[1][jj],sz,&ld->df[2][jj]);CHKERRQ(ierr);
+      ierr = PetscMalloc4(sz,&IPData->f[jj],sz,&IPData->df[0][jj],sz,&IPData->df[1][jj],sz,&IPData->df[2][jj]);CHKERRQ(ierr);
     } else {
-      ierr = PetscMalloc3(sz,&ld->f[jj],sz,&ld->df[0][jj],sz,&ld->df[1][jj]);CHKERRQ(ierr);
-      ld->df[2][jj] = NULL;
+      ierr = PetscMalloc3(sz,&IPData->f[jj],sz,&IPData->df[0][jj],sz,&IPData->df[1][jj]);CHKERRQ(ierr);
+      IPData->df[2][jj] = NULL;
     }
   }
   for (/* void */; nip < sz ; nip++) { /* zero end, should be benign */
-    for (d=0;d<dim;d++) ld->x[d][nip] = 0;
+    for (d=0;d<dim;d++) IPData->x[d][nip] = 0;
     for (jj=0;jj<Ns;jj++) {
-      ld->f[jj][nip] = 0;
-      for (d=0;d<dim;d++) ld->df[d][jj][nip] = 0;
+      IPData->f[jj][nip] = 0;
+      for (d=0;d<dim;d++) IPData->df[d][jj][nip] = 0;
     }
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode FPLandPointDataDestroy(FPLandPointData *ld)
+static PetscErrorCode FPLandPointDataDestroy(FPLandPointData *IPData)
 {
   PetscErrorCode   ierr, s;
   PetscFunctionBeginUser;
-  for (s=0;s<ld->ns;s++) {
-    if (ld->dim==3) {
-      ierr = PetscFree4(ld->f[s],ld->df[0][s],ld->df[1][s],ld->df[2][s]);CHKERRQ(ierr);
+  for (s=0;s<IPData->ns;s++) {
+    if (IPData->dim==3) {
+      ierr = PetscFree4(IPData->f[s],IPData->df[0][s],IPData->df[1][s],IPData->df[2][s]);CHKERRQ(ierr);
     } else {
-      ierr = PetscFree3(ld->f[s],ld->df[0][s],ld->df[1][s]);CHKERRQ(ierr);
+      ierr = PetscFree3(IPData->f[s],IPData->df[0][s],IPData->df[1][s]);CHKERRQ(ierr);
     }
   }
-  if (ld->dim==3) {
-    ierr = PetscFree3(ld->x[0],ld->x[1],ld->x[2]);CHKERRQ(ierr);
+  if (IPData->dim==3) {
+    ierr = PetscFree3(IPData->x[0],IPData->x[1],IPData->x[2]);CHKERRQ(ierr);
   } else {
-    ierr = PetscFree2(ld->x[0],ld->x[1]);CHKERRQ(ierr);
+    ierr = PetscFree2(IPData->x[0],IPData->x[1]);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -438,9 +438,6 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
     ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
 #endif
     for (qj = 0; qj < Nq; ++qj) {
-#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1300)
-      __declspec(align(PETSC_MEMALIGN))
-#endif
       PetscScalar     gg2[FP_MAX_SPECIES][3],gg3[FP_MAX_SPECIES][3][3];
       PetscScalar     g2[FP_MAX_SPECIES][3], g3[FP_MAX_SPECIES][3][3];
       const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj; /* length of inner global interation, outer integration point */

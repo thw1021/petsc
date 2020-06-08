@@ -4,7 +4,7 @@ ALL: lib
 CFLAGS   =
 FFLAGS   =
 SOURCEC  = veccuda.c
-SOURCECU = veccuda2.cu vecscattercuda.cu landau.cu
+SOURCECU = veccuda2.cu vecscattercuda.cu
 SOURCEF  =
 SOURCEH  = ../../../../../../include/petsc/private/cudavecimpl.h
 LIBBASE  = libpetscvec
