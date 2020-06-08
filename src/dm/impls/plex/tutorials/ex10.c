@@ -53,7 +53,7 @@ int main(int argc, char **argv)
   ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr);
   ierr = VecAXPY(X,-1,X_0);CHKERRQ(ierr);
   /* clean up */
-  ierr = DMPlexFPDestroyPhaseSpace(&dm);CHKERRQ(ierr);
+  ierr = DMPlexFPDestroyVelocitySpace(&dm);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
   ierr = VecDestroy(&X_0);CHKERRQ(ierr);
