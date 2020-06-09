@@ -68,15 +68,14 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
   PetscDS           prob;
   PetscSection      section,globsection;
   PetscScalar       *elemMat;
-  PetscInt          numCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Nc,Nfx,d,f,fieldA,Nip,NipVec,ipdata_sz;
+  PetscInt          numCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Nc,Nfx,d,f,fieldA,Nip,nip_pad,ipdata_sz;
   PetscQuadrature   quad;
   PetscTabulation   *Tf;
   PetscReal         *wiGlob, nu_alpha[FP_MAX_SPECIES], nu_beta[FP_MAX_SPECIES];
-  const PetscReal   *quadPoints, *quadWeights, *BB, *DD;
-  PetscReal         *IPData;
+  const PetscReal   *quadWeights, *BB, *DD;
+  PetscReal         *IPData,*invJ,*invJ_a;
   PetscReal         invMass[FP_MAX_SPECIES],Eq_m[FP_MAX_SPECIES],m_0=ctx->m_0; /* normalize mass -- not needed! */
   PetscLogDouble    flops;
-  PetscReal         vj[FP_MAX_NQ*FP_DIM],invJj[FP_MAX_NQ*FP_DIM*FP_DIM], detJj[FP_MAX_NQ], Jdummy[FP_MAX_NQ*FP_DIM*FP_DIM];
   Vec               locX;
   PetscFunctionBeginUser;
   PetscValidHeaderSpecific(a_X,VEC_CLASSID,1);
@@ -110,11 +109,11 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   numCells = cEnd - cStart;
   ierr = PetscFEGetQuadrature(ctx->fe, &quad);CHKERRQ(ierr);
-  ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, &quadPoints, &quadWeights);CHKERRQ(ierr);
+  ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, NULL, &quadWeights);CHKERRQ(ierr);
   if (Nb!=Nq*ctx->num_species) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq %D %D over integration or simplices? Tf[0]->Nb=%D dim=%D",Nb,Nq,Tf[0]->Nb,dim);
   if (Nq >FP_MAX_NQ) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %D > FP_MAX_NQ (%D)",Nq,FP_MAX_NQ);
   Nip = numCells*Nq;
-  NipVec = LAND_VL*(Nip/LAND_VL + !!(Nip%LAND_VL));
+  nip_pad = LAND_VL*(Nip/LAND_VL + !!(Nip%LAND_VL));
   flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nc*Nc + 165);
   ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
   elemMatSize = totDim*totDim;
@@ -130,12 +129,13 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
     }
     ierr = FPLandPointDataCreate(&IPData, dim, Nq*numCells, Nc);CHKERRQ(ierr);
     ipdata_sz = (dim + Nc*(1+dim));
-    ierr = PetscMalloc2(elemMatSize,&elemMat,NipVec,&wiGlob);CHKERRQ(ierr);
+    ierr = PetscMalloc3(elemMatSize,&elemMat,nip_pad,&wiGlob,nip_pad*dim*dim,&invJ_a);CHKERRQ(ierr);
     /* cache geometry and x, f and df/dx at IPs */
-    for (ej = 0; ej < numCells; ++ej) {
+    for (ej = 0, invJ = invJ_a ; ej < numCells; ++ej, invJ += Nq*dim*dim) {
+      PetscReal    vj[FP_MAX_NQ*FP_DIM],detJj[FP_MAX_NQ], Jdummy[FP_MAX_NQ*FP_DIM*FP_DIM];
       PetscInt     qj,c,b,e;
       PetscScalar *coef = NULL;
-      ierr = DMPlexComputeCellGeometryFEM(plex, cStart+ej, quad, vj, Jdummy, invJj, detJj);CHKERRQ(ierr);
+      ierr = DMPlexComputeCellGeometryFEM(plex, cStart+ej, quad, vj, Jdummy, invJ, detJj);CHKERRQ(ierr);
       ierr = DMPlexVecGetClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
       /* create point data for cell i for Landau tensor: x, f(x), grad f(x) */
       for (qj = 0; qj < Nq; ++qj) {
@@ -159,9 +159,11 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
             }
           }
         }
-        for (c = 0; c < Nc; ++c) for (d = 0; d < dim; ++d) for (e = 0, u_x[c*dim+d] = 0.0; e < dim; ++e) {
-              u_x[c*dim+d] += invJj[e*dim+d]*refSpaceDer[c*dim+e];
-              //printf("\t\t%d) u_x=%e invJj=%e u_x=%e\n",c*dim+d,u_x[c*dim+d],invJj[e*dim+d],refSpaceDer[c*dim+e]);
+        for (c = 0; c < Nc; ++c)
+          for (d = 0; d < dim; ++d)
+            for (e = 0, u_x[c*dim+d] = 0.0; e < dim; ++e) {
+              u_x[c*dim+d] += invJ[qj*dim*dim + e*dim+d]*refSpaceDer[c*dim+e];
+              //printf("\t\t%d) u_x=%e invJ=%e u_x=%e\n",c*dim+d,u_x[c*dim+d],invJ[qj*dim*dim + e*dim+d],refSpaceDer[c*dim+e]);
             }
         /* copy to IPDataLocal */
         for (c=0;c<Nc;c++) {
@@ -183,16 +185,15 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 #endif
 #if defined(PETSC_HAVE_CUDA)
   if (ctx->useCUDA) {
-    ierr = FPLandauCUDAJacobian(plex,quad,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
+    ierr = FPLandauCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
   } else
 #endif
-  for (ej = cStart; ej < cEnd; ++ej) {
+  for (ej = cStart, invJ = invJ_a; ej < cEnd; ++ej, invJ += Nq*dim*dim) {
     PetscInt     qj;
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventBegin(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
 #endif
-    ierr = DMPlexComputeCellGeometryFEM(plex, ej, quad, vj, Jdummy, invJj, detJj);CHKERRQ(ierr);
     ierr = PetscMemzero(elemMat, totDim *totDim * sizeof(PetscScalar));CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
@@ -205,7 +206,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
       ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
       ierr = PetscLogFlops(flops);CHKERRQ(ierr);
 #endif
-      landau_inner_integral(zero, zero, one, zero, nip, wj, jpidx, Nc, dim, IPData, wiGlob, &invJj[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, g2, g3);
+      landau_inner_integral(zero, zero, one, zero, nip, wj, jpidx, Nc, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, g2, g3);
       /* assemble */
       {
         const PetscReal *Bq = &BB[qj*Nb*Nc], *Dq = &DD[qj*Nb*Nc*dim];
@@ -273,7 +274,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
   ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
 #endif
   /* clean up */
-  ierr = PetscFree2(elemMat,wiGlob);CHKERRQ(ierr);
+  ierr = PetscFree3(elemMat,wiGlob,invJ_a);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
   /* ierr = DMDestroy(&Gplex);CHKERRQ(ierr); */
   ierr = FPLandPointDataDestroy(IPData);CHKERRQ(ierr);

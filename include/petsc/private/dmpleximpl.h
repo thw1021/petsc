@@ -690,6 +690,7 @@ typedef struct {
 } FPLandFDF;
 
 typedef struct {
+  /* coordinate */
   PetscReal     crd[0];
   union {
     PetscReal   x;
@@ -699,10 +700,13 @@ typedef struct {
   PetscReal     y;
 #endif
   PetscReal     z;
+  /* f; df data [Nc] */
   FPLandFDF     fdf[0];
 } FPLandPointData;
 
-PETSC_EXTERN PetscErrorCode FPLandauCUDAJacobian( DM, PetscQuadrature, const PetscReal [],const PetscReal [], const PetscReal[], const PetscReal[],
-                                                  const PetscReal * const, const PetscReal[], const PetscInt, const PetscLogEvent[], PetscBool, Mat);
+#if defined(PETSC_HAVE_CUDA)
+PETSC_EXTERN PetscErrorCode FPLandauCUDAJacobian( DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
+                                                  const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
+#endif
 
 #endif /* _PLEXIMPL_H */
