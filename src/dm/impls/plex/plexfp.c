@@ -185,7 +185,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 #endif
 #if defined(PETSC_HAVE_CUDA)
   if (ctx->useCUDA) {
-    ierr = FPLandauCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
+    ierr = FPLandauCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
   } else
 #endif
@@ -199,14 +199,13 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
     ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
 #endif
     for (qj = 0; qj < Nq; ++qj) {
-      PetscScalar     g2[1][1][FP_MAX_SPECIES][FP_DIM], g3[1][1][FP_MAX_SPECIES][FP_DIM][FP_DIM];
+      PetscScalar     g2[1][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM], g3[1][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM];
       const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj, one = 1, zero = 0; /* length of inner global interation, outer integration point */
-      const PetscReal wj = wiGlob[jpidx];
 #if defined(PETSC_USE_LOG)
       ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
       ierr = PetscLogFlops(flops);CHKERRQ(ierr);
 #endif
-      landau_inner_integral(zero, zero, one, zero, nip, wj, jpidx, Nc, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, g2, g3);
+      landau_inner_integral(zero, zero, one, zero, nip, jpidx, Nc, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, g2, g3);
       /* assemble */
       {
         const PetscReal *Bq = &BB[qj*Nb*Nc], *Dq = &DD[qj*Nb*Nc*dim];

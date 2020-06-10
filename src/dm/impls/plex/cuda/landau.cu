@@ -67,9 +67,8 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   const PetscInt  mythread = threadIdx.x + blockDim.x*threadIdx.y, myqi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlocks = blockDim.y;
   const PetscInt  jpidx = myqi + myelem * Nq;
   const PetscInt  subblocksz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
-  const PetscReal wj = wiGlobal[jpidx];
 
-  landau_inner_integral(myqi, mySubBlk, nSubBlocks, ip_start, ip_end, wj, jpidx, Nc, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, *g2, *g3);
+  landau_inner_integral(myqi, mySubBlk, nSubBlocks, ip_start, ip_end, jpidx, Nc, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, *g2, *g3);
  
   // Synchronize (ensure all the data is available) and sum IP matrices
   __syncthreads();
@@ -187,10 +186,6 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
   // collect geometry
   flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nc*Nc + 165.);
   nip_dim2 = Nq*numGCells*dim*dim;
-  /* for (ej = cStart, invJj = invJj_a; ej < cEnd; ++ej, invJj += Nq*dim*dim) { */
-  /*   PetscReal  detJ[FP_MAX_NQ], Jj[FP_MAX_NQ*FP_DIM*FP_DIM]; */
-  /*   ierr = DMPlexComputeCellGeometryFEM(plex, cStart+ej, quad, NULL, Jj, invJj, detJ);CHKERRQ(ierr); */
-  /* } */
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_invJj, nip_dim2*szf)); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice));
 #if defined(PETSC_USE_LOG)
