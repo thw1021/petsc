@@ -8,12 +8,12 @@ CalculateE j0=0. Ec = 0.0509908
 [0] DMGetDMSNES(): Creating new DMSNES
 [0] DMGetDMTS(): Creating new DMTS
 [0] DMGetDMSNESWrite(): Copying DMSNES due to write
-Made coloring with 9 colors. OMP_threadID 0 of 1
 0 TS dt 0.1 time 0.
   0) species-0: charge density= -1.6060025942303e+01 z-momentum=  1.4864413567484e-19 energy=  1.1463213518682e+05
   0) species-1: charge density=  1.6042982531402e+01 z-momentum= -1.1316948496685e-18 energy=  1.1521625238030e+05
 	  0) Total: charge density= -1.7043410901660e-02, momentum= -9.8305071399367e-19, energy=  2.2984838756712e+05 (m_i[0]/m_e = 3670.94, 62 cells), 4 sub threads
 [0] DMGetDMKSP(): Creating new DMKSP
+Made coloring with 9 colors. OMP_threadID 0 of 1
     0 SNES Function norm 2.261529472711e-02 
     1 SNES Function norm 1.695646144716e-04 
     2 SNES Function norm 6.443507248166e-06 
