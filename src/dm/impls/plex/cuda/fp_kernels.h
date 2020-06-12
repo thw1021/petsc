@@ -256,71 +256,71 @@ landau_inner_integral( const PetscInt myqi, const PetscInt mySubBlk, const Petsc
     PetscReal       Ud[2][2], Uk[2][2];
     LandauTensor2D(vj, fplpt->r, fplpt->z, Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
     for (fieldB = 0; fieldB < Nc; ++fieldB) {
-    for (fieldA = 0; fieldA < Nc; ++fieldA) {
-    for (d2 = 0; d2 < 2; ++d2) {
-    for (d3 = 0; d3 < 2; ++d3) {
-    /* K = U * grad(f): g2=e: i,A */
-    gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][d3] * fdf[fieldB].df[d3] * wi;
-    /* D = -U * (I \kron (fx)): g3=f: i,j,A */
-    gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * fdf[fieldB].f * wi;
-  }
-  }
-  }
-  }
+      for (fieldA = 0; fieldA < Nc; ++fieldA) {
+        for (d2 = 0; d2 < 2; ++d2) {
+          for (d3 = 0; d3 < 2; ++d3) {
+            /* K = U * grad(f): g2=e: i,A */
+            gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][d3] * fdf[fieldB].df[d3] * wi;
+            /* D = -U * (I \kron (fx)): g3=f: i,j,A */
+            gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * fdf[fieldB].f * wi;
+          }
+        }
+      }
+    }
 #else
     PetscReal U[3][3];
     if (!quarter3DDomain) {
-    LandauTensor3D(vj, fplpt->x, fplpt->y, fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
-    for (fieldA = 0; fieldA < Nc; ++fieldA) {
-    for (fieldB = 0; fieldB < Nc; ++fieldB) {
-    for (d2 = 0; d2 < 3; ++d2) {
-    for (d3 = 0; d3 < 3; ++d3) {
-    /* K = U * grad(f): g2 = e: i,A */
-    gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][d3] * fplpt->fdf[fieldB].df[d3] * wi;
-    /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
-    gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * fplpt->fdf[fieldB].f * wi;
-  }
-  }
-  }
-  }
-  } else {
-    PetscReal lxx[] = {fplpt->x, fplpt->y}, R[2][2] = {{-1,1},{1,-1}};
-    PetscReal ldf[3*FP_MAX_SPECIES];
-    for (fieldB = 0; fieldB < Nc; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3 + fieldB*3] = fplpt->fdf[fieldB].df[d3] * wi * invMass[fieldB];
-    for (dp=0;dp<4;dp++) {
-    LandauTensor3D(vj, lxx[0], lxx[1], fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
-    for (fieldA = 0; fieldA < Nc; ++fieldA) {
-    for (fieldB = 0; fieldB < Nc; ++fieldB) {
-    for (d2 = 0; d2 < 3; ++d2) {
-    for (d3 = 0; d3 < 3; ++d3) {
-    /* K = U * grad(f): g2 = e: i,A */
-    gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * U[d2][d3] * ldf[d3 + fieldB*3];
-    /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
-    gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * f[fieldB] * wi;
-  }
-  }
-  }
-  }
-    for (d3 = 0; d3 < 2; ++d3) {
-    lxx[d3] *= R[d3][dp%2];
-    for (fieldB = 0; fieldB < Nc; ++fieldB) {
-    ldf[d3 + fieldB*3] *= R[d3][dp%2];
-  }
-  }
-  }
-  }
+      LandauTensor3D(vj, fplpt->x, fplpt->y, fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
+      for (fieldA = 0; fieldA < Nc; ++fieldA) {
+        for (fieldB = 0; fieldB < Nc; ++fieldB) {
+          for (d2 = 0; d2 < 3; ++d2) {
+            for (d3 = 0; d3 < 3; ++d3) {
+              /* K = U * grad(f): g2 = e: i,A */
+              gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][d3] * fplpt->fdf[fieldB].df[d3] * wi;
+              /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
+              gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * fplpt->fdf[fieldB].f * wi;
+            }
+          }
+        }
+      }
+    } else {
+      PetscReal lxx[] = {fplpt->x, fplpt->y}, R[2][2] = {{-1,1},{1,-1}};
+      PetscReal ldf[3*FP_MAX_SPECIES];
+      for (fieldB = 0; fieldB < Nc; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3 + fieldB*3] = fplpt->fdf[fieldB].df[d3] * wi * invMass[fieldB];
+      for (dp=0;dp<4;dp++) {
+        LandauTensor3D(vj, lxx[0], lxx[1], fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
+        for (fieldA = 0; fieldA < Nc; ++fieldA) {
+          for (fieldB = 0; fieldB < Nc; ++fieldB) {
+            for (d2 = 0; d2 < 3; ++d2) {
+              for (d3 = 0; d3 < 3; ++d3) {
+                /* K = U * grad(f): g2 = e: i,A */
+                gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * U[d2][d3] * ldf[d3 + fieldB*3];
+                /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
+                gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * f[fieldB] * wi;
+              }
+            }
+          }
+        }
+        for (d3 = 0; d3 < 2; ++d3) {
+          lxx[d3] *= R[d3][dp%2];
+          for (fieldB = 0; fieldB < Nc; ++fieldB) {
+            ldf[d3 + fieldB*3] *= R[d3][dp%2];
+          }
+        }
+      }
+    }
 #endif
   } /* IPs */
-    /* Jacobian transform - g2 */
+  /* Jacobian transform - g2 */
   for (fieldA = 0; fieldA < Nc; ++fieldA) {
     if (mySubBlk==0) gg2[fieldA][dim-1] += Eq_m[fieldA]; /* add electric field term once per IP */
     for (d = 0; d < dim; ++d) {
-    g2[myqi][mySubBlk][fieldA][d] = 0.0;
-    for (d2 = 0; d2 < dim; ++d2) {
-    g2[myqi][mySubBlk][fieldA][d] += invJj[d*dim+d2]*gg2[fieldA][d2];
-  }
-    g2[myqi][mySubBlk][fieldA][d] *= wj;
-  }
+      g2[myqi][mySubBlk][fieldA][d] = 0.0;
+      for (d2 = 0; d2 < dim; ++d2) {
+        g2[myqi][mySubBlk][fieldA][d] += invJj[d*dim+d2]*gg2[fieldA][d2];
+      }
+      g2[myqi][mySubBlk][fieldA][d] *= wj;
+    }
   }
   /* g3 */
   for (fieldA = 0; fieldA < Nc; ++fieldA) {
