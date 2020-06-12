@@ -406,8 +406,9 @@ void assemble_kernel(const PetscInt nidx_arr[], PetscInt *idx_arr[], PetscScalar
       /* 	printf("\t\tin[l] < 0 ?????\n"); */
       /* 	continue; */
       /* } */
+      while (l<n && (value = v[l + k*n]) == 0.0) l++;
+      if (l==n) break;
       col = in[l];
-      value = v[l + k*n];
       if (col <= lastcol) low = 0;
       else high = nrow;
       lastcol = col;
