@@ -220,13 +220,9 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
               const PetscInt gidx = g*Nc+gc; /* Trial function basis index */
               const PetscInt j    = g; /* Element matrix column */
               const PetscInt fOff = i*totDim+j;
-              /* elemMat[fOff] += tmpBasisI[fidx]*g0[fc*NcJ+gc]*tmpBasisJ[gidx]; */
               for (df = 0; df < dim; ++df) {
-                /* elemMat[fOff] += tmpBasisI[fidx]*g1[(fc*Nc+gc)*dim+df]*tmpBasisDerJ[gidx*dim+df]; */
-                /* elemMat[fOff] += tmpBasisDerI[fidx*dim+df]*g2[(fc*Nc+gc)*dim+df]*tmpBasisJ[gidx]; */
                 elemMat[fOff] += Dq[fidx*dim+df]*g2[0][0][gc][df]*Bq[gidx];
                 for (dg = 0; dg < dim; ++dg) {
-                  // elemMat[fOff] += tmpBasisDerI[fidx*dim+df]*g3[((fc*NcJ+gc)*dim+df)*dim+dg]*tmpBasisDerJ[gidx*dim+dg];
                   elemMat[fOff] += Dq[fidx*dim+df]*g3[0][0][gc][df][dg]*Dq[gidx*dim+dg];
                 }
               }
