@@ -46,10 +46,9 @@ do {                                                                  \
 // The GPU Landau kernel
 //
 __global__
-void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, const PetscInt Nc, const PetscInt Nb, const PetscReal invJj[],
+void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, const PetscInt Nf, const PetscInt Nb, const PetscReal invJj[],
 		 const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
-		 const PetscReal * const BB, const PetscReal * const DD,
-		 const PetscReal * const IPDataGlobal, const PetscReal wiGlobal[],
+		 const PetscReal * const a_TabBD, const PetscReal * const IPDataGlobal, const PetscReal wiGlobal[],
 #if !defined(FP_USE_SHARED_GPU_MEM)
 		 PetscReal *g2arr, PetscReal *g3arr,
 #endif
@@ -57,7 +56,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 {
   const PetscInt  Nq = blockDim.x, myelem = blockIdx.x;
 #if defined(FP_USE_SHARED_GPU_MEM)
-  extern __shared__ PetscReal g2_g3_qi[]; // Nq * { [NSubBlocks][Nc][dim] ; [NSubBlocks][Nc][dim][dim] }
+  extern __shared__ PetscReal g2_g3_qi[]; // Nq * { [NSubBlocks][Nf][dim] ; [NSubBlocks][Nf][dim][dim] }
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2_g3_qi[0];
   PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g2_g3_qi[FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM];
 #else
@@ -67,31 +66,34 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   const PetscInt  mythread = threadIdx.x + blockDim.x*threadIdx.y, myqi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlocks = blockDim.y;
   const PetscInt  jpidx = myqi + myelem * Nq;
   const PetscInt  subblocksz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
+  const PetscReal *iTab,*TabBD[FP_MAX_SPECIES][2];
 
-  landau_inner_integral(myqi, mySubBlk, nSubBlocks, ip_start, ip_end, jpidx, Nc, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, *g2, *g3);
- 
+  landau_inner_integral(myqi, mySubBlk, nSubBlocks, ip_start, ip_end, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, *g2, *g3);
+
   // Synchronize (ensure all the data is available) and sum IP matrices
   __syncthreads();
   if (mythread==0) { // on one thread, sum up
-    int ii,qj,f,d;
+    int ii,qj,f,d,fc,g,gc,df,dg,fieldA;
     PetscScalar *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
     for (ii=0;ii<totDim*totDim;ii++) elemMat[ii] = 0;
-    for (qj=0;qj<Nq;qj++) {
-      const PetscReal *Bq = &BB[qj*Nb*Nc], *Dq = &DD[qj*Nb*Nc*dim];
+    for (iTab = a_TabBD, fieldA = 0 ; fieldA < Nf ; fieldA++, iTab += Nq*Nb*(1+dim)) { // get pointers for convenience
+      TabBD[fieldA][0] = iTab;
+      TabBD[fieldA][1] = &iTab[Nq*Nb];
+    }
+    /* assemble - on the diagonal (I,I) */
+    for (fieldA = 0; fieldA < Nf; ++fieldA) {
+      PetscInt        f,g;
       for (f = 0; f < Nb; ++f) {
-	int fc,g,gc,df,dg;
-	for (fc = 0; fc < Nc; ++fc) {
-	  const PetscInt fidx = f*Nc+fc; /* Test function basis index */
-	  const PetscInt i    = f; /* Element matrix row */
-	  for (g = 0; g < Nb; ++g) {
-	    gc = fc;
-	    const PetscInt gidx = g*Nc+gc; /* Trial function basis index */
-	    const PetscInt j    = g; /* Element matrix column */
-	    const PetscInt fOff = i*totDim+j;
-	    for (df = 0; df < dim; ++df) {
-	      elemMat[fOff] += Dq[fidx*dim+df]*(*g2)[qj][0][gc][df]*Bq[gidx];
-	      for (dg = 0; dg < dim; ++dg) {
-		elemMat[fOff] += Dq[fidx*dim + df]*(*g3)[qj][0][gc][df][dg]*Dq[gidx*dim + dg];
+	const PetscInt i    = fieldA*Nq + f; /* Element matrix row */
+	for (g = 0; g < Nb; ++g) {
+	  const PetscInt j    = fieldA*Nq + g; /* Element matrix column */
+	  const PetscInt fOff = i*totDim + j;
+	  for (qj=0;qj<Nq;qj++) {
+	    const PetscReal *B = TabBD[fieldA][0], *D = TabBD[fieldA][1], *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim], *DJq = &D[qj*Nb*dim];
+	    for (d = 0; d < dim; ++d) {
+	      elemMat[fOff] += DIq[f*dim+d]*(*g2)[qj][0][fieldA][d]*BJq[g];
+	      for (d2 = 0; d2 < dim; ++d2) {
+		elemMat[fOff] += DIq[f*dim + d]*(*g3)[qj][0][fieldA][d][d2]*DJq[g*dim + d2];
 	      }
 	    }
 	  }
@@ -101,8 +103,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
     if (myelem==-6) {
       printf("GPU Element matrix\n");
       for (d = 0; d < totDim; ++d){
-        for (f = 0; f < totDim; ++f)
-          printf(" %17.10e", elemMat[d*totDim + f]);
+        for (f = 0; f < totDim; ++f) printf(" %17.10e", elemMat[d*totDim + f]);
         printf("\n");
       }
     }
@@ -135,9 +136,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
 				     Mat JacP)
 {
   PetscErrorCode    ierr;
-  PetscInt          ii,ej,*Nbf,Nb,nip_dim2,cStart,cEnd,Nfx,Nc,dim,numGCells,totDim,nip,szf=sizeof(PetscReal);
-  const PetscReal   *BB, *DD;
-  PetscReal         *d_BB,*d_DD;
+  PetscInt          ii,ej,*Nbf,Nb,nip_dim2,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(PetscReal);
   PetscReal         *d_invJj,*d_wiGlobal,*d_nu_alpha,*d_nu_beta,*d_invMass,*d_Eq_m;
   PetscScalar       *elemMats,*d_elemMats;
   PetscLogDouble    flops;
@@ -156,35 +155,34 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
   numGCells = cEnd - cStart;
   nip  = numGCells*Nq; /* length of inner global iteration */
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
+  ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
-  ierr = PetscDSGetNumFields(prob, &Nfx);CHKERRQ(ierr); if(Nfx!=1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nf!=1 %D",Nfx);
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
-  Nc = Tf[0]->Nc;
-  if (Nb!=Nq*Nc)SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq*Nc");
-  BB = Tf[0]->T[0];
-  DD = Tf[0]->T[1];
+  if (Nb!=Nq*Nf)SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq*Nf");
   ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
   ierr = DMGetGlobalSection(plex, &globalSection);CHKERRQ(ierr);
   // create data
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_IPDataGlobal, nip*(dim + Nc*(dim+1))*szf )); // kernel input
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_nu_alpha, Nc*szf)); // kernel input
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_nu_beta,  Nc*szf)); // kernel input
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_invMass,  Nc*szf)); // kernel input
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_Eq_m,     Nc*szf)); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(d_IPDataGlobal, IPDataGlobal, nip*(dim + Nc*(dim+1))*szf, cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMemcpy(d_nu_alpha, nu_alpha, Nc*szf,                             cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMemcpy(d_nu_beta,  nu_beta,  Nc*szf,                             cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMemcpy(d_invMass,  invMass,  Nc*szf,                             cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMemcpy(d_Eq_m,     Eq_m,     Nc*szf,                             cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_BB,    Nc*Nq*Nb*szf)); // kernel input
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_DD,    Nc*Nq*Nb*dim*szf)); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(d_BB, BB, Nq*Nb*Nc*szf,     cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMemcpy(d_DD, DD, Nq*Nb*Nc*dim*szf, cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMalloc((void **)&d_IPDataGlobal, nip*(dim + Nf*(dim+1))*szf )); // kernel input
+  CUDA_SAFE_CALL(cudaMalloc((void **)&d_nu_alpha, Nf*szf)); // kernel input
+  CUDA_SAFE_CALL(cudaMalloc((void **)&d_nu_beta,  Nf*szf)); // kernel input
+  CUDA_SAFE_CALL(cudaMalloc((void **)&d_invMass,  Nf*szf)); // kernel input
+  CUDA_SAFE_CALL(cudaMalloc((void **)&d_Eq_m,     Nf*szf)); // kernel input
+  CUDA_SAFE_CALL(cudaMemcpy(d_IPDataGlobal, IPDataGlobal, nip*(dim + Nf*(dim+1))*szf, cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMemcpy(d_nu_alpha, nu_alpha, Nf*szf,                             cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMemcpy(d_nu_beta,  nu_beta,  Nf*szf,                             cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMemcpy(d_invMass,  invMass,  Nf*szf,                             cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMemcpy(d_Eq_m,     Eq_m,     Nf*szf,                             cudaMemcpyHostToDevice));
+
+  CUDA_SAFE_CALL(cudaMalloc((void **)&d_TabBD,    Nf*Nq*Nb*(1+dim)*szf)); // kernel input
+  for (ii=0,iTab=d_TabBD;ii<Nf;ii++,iTab += Nq*Nb*(1+dim)) {
+    CUDA_SAFE_CALL(cudaMemcpy( iTab,        Tf[ii]->T[0], Nq*Nb*szf,     cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(cudaMemcpy(&iTab[Nq*Nb], Tf[ii]->T[1], Nq*Nb*dim*szf, cudaMemcpyHostToDevice));
+  }
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_wiGlobal,           Nq*numGCells*szf)); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(          d_wiGlobal, wiGlobal, Nq*numGCells*szf,   cudaMemcpyHostToDevice));
   // collect geometry
-  flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nc*Nc + 165.);
+  flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nf*Nf + 165.);
   nip_dim2 = Nq*numGCells*dim*dim;
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_invJj, nip_dim2*szf)); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice));
@@ -200,15 +198,15 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
     ii = FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*(1+FP_DIM)*FP_MAX_SUB_THREAD_BLOCKS;
 #if defined(FP_USE_SHARED_GPU_MEM)
     /* PetscPrintf(PETSC_COMM_SELF,"Call land_kernel with %D words shared memory\n",ii); */
-    land_kernel<<<numGCells,dimBlock,ii*szf>>>( nip,dim,totDim,Nc,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
-						d_BB, d_DD, d_IPDataGlobal, d_wiGlobal, quarter3DDomain, d_elemMats);
+    land_kernel<<<numGCells,dimBlock,ii*szf>>>( nip,dim,totDim,Nf,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
+						d_TabBD, d_IPDataGlobal, d_wiGlobal, quarter3DDomain, d_elemMats);
     CHECK_LAUNCH_ERROR();
 #else
     CUDA_SAFE_CALL(cudaMalloc((void **)&d_g2g3, ii*szf*numGCells)); // kernel input
     PetscReal  *g2 = &d_g2g3[0];
     PetscReal  *g3 = &d_g2g3[FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*numGCells];
-    land_kernel<<<numGCells,dimBlock>>>( nip,dim,totDim,Nc,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
-					 d_BB, d_DD, d_IPDataGlobal, d_wiGlobal, g2, g3, quarter3DDomain, d_elemMats);
+    land_kernel<<<numGCells,dimBlock>>>( nip,dim,totDim,Nf,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
+					 d_TabBD, d_IPDataGlobal, d_wiGlobal, g2, g3, quarter3DDomain, d_elemMats);
     CHECK_LAUNCH_ERROR();
     CUDA_SAFE_CALL (cudaDeviceSynchronize());
     CUDA_SAFE_CALL(cudaFree(d_g2g3));
@@ -226,8 +224,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
   CUDA_SAFE_CALL(cudaFree(d_nu_beta));
   CUDA_SAFE_CALL(cudaFree(d_invMass));
   CUDA_SAFE_CALL(cudaFree(d_Eq_m));
-  CUDA_SAFE_CALL(cudaFree(d_BB));
-  CUDA_SAFE_CALL(cudaFree(d_DD));
+  CUDA_SAFE_CALL(cudaFree(d_TabBD));
   ierr = PetscMalloc1(totDim*totDim*numGCells,&elemMats);CHKERRQ(ierr);
   CUDA_SAFE_CALL(cudaMemcpy(elemMats, d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar), cudaMemcpyDeviceToHost));
   CUDA_SAFE_CALL(cudaFree(d_elemMats));
