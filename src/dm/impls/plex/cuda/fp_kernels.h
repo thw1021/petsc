@@ -255,8 +255,8 @@ landau_inner_integral( const PetscInt myqi, const PetscInt mySubBlk, const Petsc
 #if FP_DIM==2
     PetscReal       Ud[2][2], Uk[2][2];
     LandauTensor2D(vj, fplpt->r, fplpt->z, Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
-    for (fieldB = 0; fieldB < Nc; ++fieldB) {
-      for (fieldA = 0; fieldA < Nc; ++fieldA) {
+    for (fieldA = 0; fieldA < Nc; ++fieldA) {
+      for (fieldB = 0; fieldB < Nc; ++fieldB) {
         for (d2 = 0; d2 < 2; ++d2) {
           for (d3 = 0; d3 < 2; ++d3) {
             /* K = U * grad(f): g2=e: i,A */

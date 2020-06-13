@@ -66,14 +66,14 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   const PetscInt  mythread = threadIdx.x + blockDim.x*threadIdx.y, myqi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlocks = blockDim.y;
   const PetscInt  jpidx = myqi + myelem * Nq;
   const PetscInt  subblocksz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
-  const PetscReal *iTab,*TabBD[FP_MAX_SPECIES][2];
 
   landau_inner_integral(myqi, mySubBlk, nSubBlocks, ip_start, ip_end, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, *g2, *g3);
 
   // Synchronize (ensure all the data is available) and sum IP matrices
   __syncthreads();
   if (mythread==0) { // on one thread, sum up
-    int ii,qj,f,d,fc,g,gc,df,dg,fieldA;
+    const PetscReal *iTab,*TabBD[FP_MAX_SPECIES][2];
+    int ii,fieldA,d,f,qj;
     PetscScalar *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
     for (ii=0;ii<totDim*totDim;ii++) elemMat[ii] = 0;
     for (iTab = a_TabBD, fieldA = 0 ; fieldA < Nf ; fieldA++, iTab += Nq*Nb*(1+dim)) { // get pointers for convenience
@@ -82,7 +82,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
     }
     /* assemble - on the diagonal (I,I) */
     for (fieldA = 0; fieldA < Nf; ++fieldA) {
-      PetscInt        f,g;
+      PetscInt  d2,g;
       for (f = 0; f < Nb; ++f) {
 	const PetscInt i    = fieldA*Nq + f; /* Element matrix row */
 	for (g = 0; g < Nb; ++g) {
@@ -137,8 +137,8 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
 {
   PetscErrorCode    ierr;
   PetscInt          ii,ej,*Nbf,Nb,nip_dim2,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(PetscReal);
-  PetscReal         *d_invJj,*d_wiGlobal,*d_nu_alpha,*d_nu_beta,*d_invMass,*d_Eq_m;
-  PetscScalar       *elemMats,*d_elemMats;
+  PetscReal         *d_TabBD,*d_invJj,*d_wiGlobal,*d_nu_alpha,*d_nu_beta,*d_invMass,*d_Eq_m;
+  PetscScalar       *elemMats,*d_elemMats,  *iTab;
   PetscLogDouble    flops;
   PetscTabulation   *Tf;
   PetscDS           prob;
@@ -159,7 +159,6 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
   ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
-  if (Nb!=Nq*Nf)SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq*Nf");
   ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
   ierr = DMGetGlobalSection(plex, &globalSection);CHKERRQ(ierr);
   // create data
