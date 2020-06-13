@@ -78,7 +78,6 @@ static void f0_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                   PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   int ii = (int)constants[0];
-  //for(ii=0;ii<numConstants;ii++)
   if (dim==2) f0[0] = 2.*M_PI*x[0]*u[ii];
   else {
     f0[0] =                        u[ii];
@@ -93,7 +92,6 @@ static void f0_vz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
                    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   int ii = (int)constants[0];
-  //for(ii=0;ii<numConstants;ii++)
   if (dim==2) f0[0] = u[ii] * 2.*M_PI*x[0] * x[1]; /* n r v_|| */
   else {
     f0[0] =           u[ii] *                x[2]; /* n v_|| */
