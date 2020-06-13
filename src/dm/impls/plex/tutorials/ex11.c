@@ -708,7 +708,7 @@ int main(int argc, char **argv)
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
   ierr = MatSetOption(J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
-  if (0) {
+  if (1) {
     PetscLogStage stage;
     Vec           vec;
     PetscRandom   rctx;
@@ -720,8 +720,8 @@ int main(int argc, char **argv)
     ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
     ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
     ierr = FPLandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
-    ierr = PetscLogStagePop();CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
+    ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
 #endif
   ierr = VecViewFromOptions(X,NULL,"-x_vec_view");CHKERRQ(ierr);
