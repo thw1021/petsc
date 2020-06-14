@@ -63,6 +63,7 @@ static void f0_jz_sum( PetscInt dim, PetscInt Nf, PetscInt NfAux,
 		   PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   PetscInt ii;
+  f0[0] = 0;
   if (dim==2) {
     for(ii=0;ii<numConstants;ii++) f0[0] += u[ii] * 2.*M_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
   } else {
@@ -315,7 +316,7 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
 static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time, LandCtx *ctx, PetscReal *a_E)
 {
   PetscErrorCode    ierr;
-  PetscReal         spit_eta,Te_kev,J,E,ratio,tt[FP_MAX_SPECIES];
+  PetscReal         spit_eta,Te_kev,J,ratio,tt[FP_MAX_SPECIES];
   PetscDS           prob;
   DM                dm,plex;
   REctx             *rectx = (REctx*)ctx->data;
@@ -331,21 +332,22 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
   ierr = getTe_kev(plex, X, NULL, &Te_kev);CHKERRQ(ierr);
   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
   *a_E = ctx->Ez; /* no change */
-  if (!rectx->use_spitzer_eta && time > 20) {
+  if (!rectx->use_spitzer_eta && time > 10) {
     static PetscReal  old_ratio = 1e10;
-    E = ctx->Ez; /* keep real E */
-    ratio = E/J/spit_eta;
+    ratio = *a_E/J/spit_eta;
     if ((ratio < 1.01 && ratio > 0.99) || (old_ratio <= ratio && ratio < 1.03 && ratio > 0.97)) {
       rectx->use_spitzer_eta = PETSC_TRUE; /* use it next time */
       rectx->j = J;
       rectx->pulse_start = time + 1.; /* start quench now */
     }
-    PetscPrintf(PETSC_COMM_WORLD,"xxxx %D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s\n",stepi,time,ratio, J, E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");
+    PetscPrintf(PETSC_COMM_WORLD,"\t\t%D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s xxx\n",stepi,time,ratio, J, *a_E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");
     old_ratio = ratio;
   } else if (rectx->use_spitzer_eta) {
     /* set E */
     *a_E = spit_eta*J;
-    PetscPrintf(PETSC_COMM_WORLD,"\t\t yyyyy %D) ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g\n",stepi,*a_E,J,Te_kev,spit_eta,time);
+    PetscPrintf(PETSC_COMM_WORLD,"\t%D) use ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g yyy\n",stepi,*a_E,J,Te_kev,spit_eta,time);
+  } else {
+    PetscPrintf(PETSC_COMM_WORLD,"\t\t\t%D) ESpitzer delay E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g ratio=%20.13e www\n",stepi,*a_E,J,Te_kev,spit_eta,time,ctx->Ez/J/spit_eta);
   }
   /* cleanup */
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
@@ -426,7 +428,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
       ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
       dni_dt = new_imp_rate              /* *ctx->t_0 */; /* fully ionized immediately, no normalize, stay in non-dim */
       dne_dt = new_imp_rate*rectx->Ne_ion/* *ctx->t_0 */;
-PetscPrintf(PETSC_COMM_SELF, "\t***** FormSource: have new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e\n",new_imp_rate,ftime,dne_dt,dni_dt);
+      PetscPrintf(PETSC_COMM_SELF, "\tFormSource: have new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt);
       for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
       for (ii=1;ii<FP_MAX_SPECIES;ii++)    temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
