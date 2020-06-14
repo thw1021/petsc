@@ -360,7 +360,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
 #endif
-  if (0) {
+  if (1) {
     PetscScalar *elMat;
     for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
       ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
