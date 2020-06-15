@@ -4,111 +4,116 @@ static char help[] = "This example tests subnetwork coupling. \n\
 /* T
   Concepts: DMNetwork
 */
-
 #include <petscdmnetwork.h>
 
 int main(int argc,char ** argv)
 {
-  PetscErrorCode    ierr;
-  PetscMPIInt       size, rank;
-  DM                dmnetwork;
-  PetscInt          i,j,nsubnet,nsubnetCouple=0,numVertices[3],numEdges[3],numEdgesCouple[1],*edgelist[3],*edgelist_couple=NULL;
+  PetscErrorCode ierr;
+  PetscMPIInt    size,rank;
+  DM             dmnetwork;
+  PetscInt       i,j,nsubnet,nsubnetCouple=0,numVertices[10],numEdges[10],numVtxCouple[1],*edgelist[10],*edgelist_couple=NULL,ne,nv;
+  const PetscInt *vtx,*edges;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  //ierr = PetscOptionsGetInt(NULL,NULL,"-seed",&seed,NULL);CHKERRQ(ierr);
 
-  /* Create a network which consists of subnetworks */
-  /* initialization */
-  //nsubnet = (PetscInt)size;
-  nsubnet = 3;
+  /* Create a network of subnetworks */
+  if (size == 1) nsubnet = 2;
+  else nsubnet = (PetscInt)size;
+  ierr = PetscOptionsGetInt(NULL,NULL,"-nsubnet",&nsubnet,NULL);CHKERRQ(ierr);
+  if (nsubnet > 10) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"nsubnet cannot >10 for this example");
+
   for (i=0; i<nsubnet; i++) {
-    numVertices[i] = 0;
-    numEdges[i]    = 0;
+    numVertices[i] = 0; numEdges[i] = 0;
   }
-  numEdgesCouple[0] = 0;
+  numVtxCouple[0] = 0;
 
+  /* when size>1, process[i] creates subnetwork[i] */
   for (i=0; i<nsubnet; i++) {
-    //if (rank == i) {
-      numVertices[i] = 4;
-      numEdges[i]    = 3;
+    if (i == 0 && (size == 1 || (rank == i && size >1))) {
+      numVertices[i] = 4; numEdges[i] = 3;
       ierr = PetscMalloc1(2*numEdges[i],&edgelist[i]);CHKERRQ(ierr);
+      edgelist[i][0] = 0; edgelist[i][1] = 2;
+      edgelist[i][2] = 2; edgelist[i][3] = 1;
+      edgelist[i][4] = 1; edgelist[i][5] = 3;
 
-      if (i == 0) {
-        edgelist[i][0] = 0; edgelist[i][1] = 2;
-        edgelist[i][2] = 2; edgelist[i][3] = 1;
-        edgelist[i][4] = 1; edgelist[i][5] = 3;
-      } else if (i == 1) {
-        edgelist[i][0] = 0; edgelist[i][1] = 3;
-        edgelist[i][2] = 3; edgelist[i][3] = 2;
-        edgelist[i][4] = 2; edgelist[i][5] = 1;
-      } else {
-        for (j=0; j< numEdges[i]; j++) {
-          edgelist[i][2*j] = j; edgelist[i][2*j+1] = j+1;
-        }
+    } else if (i == 1 && (size == 1 || (rank == i && size >1))) {
+      numVertices[i] = 4; numEdges[i] = 3;
+      ierr = PetscMalloc1(2*numEdges[i],&edgelist[i]);CHKERRQ(ierr);
+      edgelist[i][0] = 0; edgelist[i][1] = 3;
+      edgelist[i][2] = 3; edgelist[i][3] = 2;
+      edgelist[i][4] = 2; edgelist[i][5] = 1;
+
+    } else if (i>1 && (size == 1 || (rank == i && size >1))){
+      numVertices[i] = 4; numEdges[i] = 3;
+      ierr = PetscMalloc1(2*numEdges[i],&edgelist[i]);CHKERRQ(ierr);
+      for (j=0; j< numEdges[i]; j++) {
+        edgelist[i][2*j] = j; edgelist[i][2*j+1] = j+1;
       }
-      //}
+    }
   }
 
-  /* Coupling edges between subnetworks */
-  nsubnetCouple = 1; /* global */
-  numEdgesCouple[0] = 0;
-  if (rank == 0) {
-    numEdgesCouple[0] = nsubnet - 1;
+  /* Set coupling vertices between subnetworks -- all processes hold this info */
+  nsubnetCouple   = 1; /* global */
+  numVtxCouple[0] = nsubnet - 1;
 
-    ierr = PetscMalloc1(4*numEdgesCouple[0],&edgelist_couple);CHKERRQ(ierr);
-    for (j=0; j<numEdgesCouple[0]; j++) {
-      edgelist_couple[4*j+0] = 0; edgelist_couple[4*j+1] = 0; /* from node: net[0] vertex[0] */
-      edgelist_couple[4*j+2] = j+1; edgelist_couple[4*j+3] = 0; /* to node: net[j] vertex[0] */
-    }
+  ierr = PetscMalloc1(4*numVtxCouple[0],&edgelist_couple);CHKERRQ(ierr);
+  for (j=0; j<numVtxCouple[0]; j++) {
+    edgelist_couple[4*j+0] = 0;   edgelist_couple[4*j+1] = 0; /* CV_from: net[0] vertex[0] */
+    edgelist_couple[4*j+2] = j+1; edgelist_couple[4*j+3] = 0; /* CV_to  : net[j+1] vertex[0] */
   }
 
   /* Create a dmnetwork */
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&dmnetwork);CHKERRQ(ierr);
 
   /* Set number of vertices and edges */
-  ierr = DMNetworkSetSizes(dmnetwork,nsubnet,numVertices,numEdges,nsubnetCouple,numEdgesCouple);CHKERRQ(ierr);
+  ierr = DMNetworkSetSizes(dmnetwork,nsubnet,numVertices,numEdges,nsubnetCouple,numVtxCouple);CHKERRQ(ierr);
 
   /* Add edge connectivity */
   ierr = DMNetworkSetEdgeList(dmnetwork,edgelist,&edgelist_couple);CHKERRQ(ierr);
 
-  /* Set up the network layout */
+  /* Setup the network layout */
   ierr = DMNetworkLayoutSetUp(dmnetwork);CHKERRQ(ierr);
   ierr = DMSetUp(dmnetwork);CHKERRQ(ierr);
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
-  PetscInt       ne,nv,e;
-  const PetscInt *vtx,*edges,*vcone;
+  /* Get SubnetworkInfo() */
   for (i=0; i<nsubnet; i++) {
     ierr = DMNetworkGetSubnetworkInfo(dmnetwork,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-    printf("\n[%d] subnet[%d]: ne %d, nv %d\n",rank,i,ne,nv);
-    for (e=0; e<ne; e++) {
-      ierr = DMNetworkGetConnectedVertices(dmnetwork,edges[e],&vcone);CHKERRQ(ierr);
-      printf("edges[%d]= %d: %D --> %D\n",e,edges[e],vcone[0],vcone[1]);
+    if (ne) {
+      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%d]: ne %d, nv %d\n",rank,i,ne,nv);CHKERRQ(ierr);
+ #if 0
+      PetscInt vfrom,vto,e;
+      const PetscInt *vcone;
+      for (e=0; e<ne; e++) {
+        ierr = DMNetworkGetConnectedVertices(dmnetwork,edges[e],&vcone);CHKERRQ(ierr);
+        ierr = DMNetworkGetGlobalVertexIndex(dmnetwork,vcone[0],&vfrom);CHKERRQ(ierr);
+        ierr = DMNetworkGetGlobalVertexIndex(dmnetwork,vcone[1],&vto);CHKERRQ(ierr);
+        //printf("edges[%d]= %d: %d --> %d\n",e,edges[e],vfrom,vto);
+      }
+ #endif
     }
   }
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
+  /* Get SubnetworkCoupleInfo() */
   ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
-  printf("\n[%d] coupling info: nv %d\n",rank,nv);CHKERRQ(ierr);
   if (nv) {
-    for (i=0; i<nv; i++) {
-      printf(" vtx[%d] = %d\n",i,vtx[i]);
-    }
+    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] coupling info: nv %d\n",rank,nv);CHKERRQ(ierr);
+    for (i=0; i<nv; i++) printf(" cvtx[%d] = %d\n",i,vtx[i]);
   }
 
   /* Free work space */
   for (i=0; i<nsubnet; i++) {
-    //if (rank == i) {
-      ierr = PetscFree(edgelist[i]);CHKERRQ(ierr);
-      //}
+    if (size == 1 || rank == i) {ierr = PetscFree(edgelist[i]);CHKERRQ(ierr);}
   }
-  if (rank == 0) {ierr = PetscFree(edgelist_couple);CHKERRQ(ierr);}
+  ierr = PetscFree(edgelist_couple);CHKERRQ(ierr);
 
   ierr = DMDestroy(&dmnetwork);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 
