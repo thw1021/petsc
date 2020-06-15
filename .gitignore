@@ -38,7 +38,6 @@ src/python/*
 *.pyc
 *~
 *.orig
-\#*#
 .nagged
 ex[0-9]
 ex[0-9]f
