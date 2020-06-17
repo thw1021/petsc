@@ -11,7 +11,7 @@ int main(int argc,char ** argv)
   PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   DM             dmnetwork;
-  PetscInt       i,j,nsubnet,nsubnetCouple=0,numVertices[10],numEdges[10],numVtxCouple[1],*edgelist[10],*edgelist_couple=NULL,ne,nv;
+  PetscInt       i,j,net,nsubnet,nsubnetCouple=0,numVertices[10],numEdges[10],numVtxCouple[1],*edgelist[10],*edgelist_couple=NULL,ne,nv;
   const PetscInt *vtx,*edges;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
@@ -75,26 +75,33 @@ int main(int argc,char ** argv)
 
   /* Setup the network layout */
   ierr = DMNetworkLayoutSetUp(dmnetwork);CHKERRQ(ierr);
-  ierr = DMSetUp(dmnetwork);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
   /* Get SubnetworkInfo() */
-  for (i=0; i<nsubnet; i++) {
-    ierr = DMNetworkGetSubnetworkInfo(dmnetwork,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  for (net=0; net<nsubnet; net++) {
+    ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     if (ne) {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%d]: ne %d, nv %d\n",rank,i,ne,nv);CHKERRQ(ierr);
- #if 0
-      PetscInt vfrom,vto,e;
-      const PetscInt *vcone;
-      for (e=0; e<ne; e++) {
-        ierr = DMNetworkGetConnectedVertices(dmnetwork,edges[e],&vcone);CHKERRQ(ierr);
-        ierr = DMNetworkGetGlobalVertexIndex(dmnetwork,vcone[0],&vfrom);CHKERRQ(ierr);
-        ierr = DMNetworkGetGlobalVertexIndex(dmnetwork,vcone[1],&vto);CHKERRQ(ierr);
-        //printf("edges[%d]= %d: %d --> %d\n",e,edges[e],vfrom,vto);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%d]: ne %d, nv %d\n",rank,net,ne,nv);CHKERRQ(ierr);
+    }
+
+    if (nv) {
+      PetscInt v;
+      for (v=0; v<nv; v++) {
+        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] net %d, vtx %d\n",rank,net,vtx[v]);CHKERRQ(ierr);
+        if (net == 0) {
+          ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],1);CHKERRQ(ierr);
+        } else { // net > 0
+          if (v == 0) {
+            ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],2);CHKERRQ(ierr); //must be same as its coupling vertex!!!
+          } else {
+            ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],2);CHKERRQ(ierr);
+          }
+        }
       }
- #endif
     }
   }
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+
+  ierr = DMSetUp(dmnetwork);CHKERRQ(ierr);
   ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
   /* Get SubnetworkCoupleInfo() */
@@ -104,7 +111,13 @@ int main(int argc,char ** argv)
     for (i=0; i<nv; i++) printf(" cvtx[%d] = %d\n",i,vtx[i]);
   }
 
+  Vec X;
+  ierr = DMCreateGlobalVector(dmnetwork,&X);CHKERRQ(ierr);
+  ierr = VecSet(X,0.0);CHKERRQ(ierr);
+  ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+
   /* Free work space */
+  ierr = VecDestroy(&X);CHKERRQ(ierr);
   for (i=0; i<nsubnet; i++) {
     if (size == 1 || rank == i) {ierr = PetscFree(edgelist[i]);CHKERRQ(ierr);}
   }
