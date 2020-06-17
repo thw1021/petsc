@@ -104,8 +104,8 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt Nsubnet,PetscInt nV[], PetscInt 
     network->subnet[i].nvtx   = nV[i]; /* local nvtx, without ghost */
 
     /* GLOBAL subnet[].vStart and vEnd, used by DMNetworkLayoutSetUp() */
-    network->subnet[i].vStart = network->NVertices;
-    network->subnet[i].vEnd   = network->subnet[i].vStart + network->subnet[i].Nvtx;
+    network->subnet[i].vStart = network->NVertices; /* global vStart of subnet[i] */
+    network->subnet[i].vEnd   = network->subnet[i].vStart + network->subnet[i].Nvtx; /* global vEnd of subnet[i] */
 
     network->nVertices += nV[i];
     network->NVertices += network->subnet[i].Nvtx;
@@ -313,9 +313,11 @@ PetscErrorCode DMNetworkLayoutSetUp_new(DM dm)
   gidx = 0;
   for (net=0; net<nsubnet; net++) {
     for (idx=0; idx<network->subnet[net].Nvtx; idx++) {
-      if (network->subnet[net].nvtx) {
-        if (i != network->subnet[net].vStart + idx - vrange[rank]) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"i %d != %d + %d (net %d)",i,network->subnet[net].vStart,idx,net);
+      #if 1
+      if (network->subnet[net].nvtx && gidx >= vrange[rank]) {
+        if (i != network->subnet[net].vStart + idx - vrange[rank]) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"i %d != %d + %d (net %d) - %d(vrange)",i,network->subnet[net].vStart,idx,net,vrange[rank]);
       }
+      #endif
 
       PetscInt gidx_from = gidx;
       ierr = IsCouplingVertex(Ncedge,cedges,net,idx,&gidx_from,&cvtype);CHKERRQ(ierr);
@@ -354,7 +356,7 @@ PetscErrorCode DMNetworkLayoutSetUp_new(DM dm)
       /* vto */
       idx = network->subnet[net].vStart + network->subnet[net].edgelist[2*j+1]- vrange[rank];
       edges[2*ctr+1] = vidxlTog[idx];
-      //printf("[%d] %d --> %d\n",rank,edges[2*ctr],edges[2*ctr+1]);
+      printf("[%d] %d --> %d\n",rank,edges[2*ctr],edges[2*ctr+1]);
       ctr++;
       //printf(" [%d] . %d --> %d\n",net,network->subnet[net].edgelist[2*j],network->subnet[net].edgelist[2*j+1]);
     }
@@ -503,11 +505,9 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   const PetscInt *cone;
   MPI_Comm       comm;
   PetscMPIInt    size,rank;
-  PetscBool      old=PETSC_FALSE;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsGetBool(NULL,NULL,"-old",&old,NULL);CHKERRQ(ierr);
-  if (!old) {
+  if (network->ncsubnet) {
     ierr = DMNetworkLayoutSetUp_new(dm);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
