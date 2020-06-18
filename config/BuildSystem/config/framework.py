@@ -422,6 +422,11 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     # Lahey/Fujitsu
     lines = [s for s in lines if s.find('Encountered 0 errors') < 0]
     output = reduce(lambda s, t: s+t, lines, '')
+    # Cray GPU system at Nersc
+    lines = [s for s in lines if s.find('No supported cpu target is set, CRAY_CPU_TARGET=x86-64 will be used.') < 0]
+    lines = [s for s in lines if s.find('Load a valid targeting module or set CRAY_CPU_TARGET') < 0]
+    # pgi dumps filename on stderr - but returns 0 errorcode'
+    lines = [s for s in lines if lines != 'conftest.c:']
     log.write("Preprocess stderr after filtering:"+output+":\n")
     return output
 
@@ -463,6 +468,11 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = [s for s in lines if s.find('Successful compile:') < 0]
       # Lahey/Fujitsu
       lines = [s for s in lines if s.find('Encountered 0 errors') < 0]
+      # Cray GPU system at Nersc
+      lines = [s for s in lines if s.find('No supported cpu target is set, CRAY_CPU_TARGET=x86-64 will be used.') < 0]
+      lines = [s for s in lines if s.find('Load a valid targeting module or set CRAY_CPU_TARGET') < 0]
+      # pgi dumps filename on stderr - but returns 0 errorcode'
+      lines = [s for s in lines if lines != 'conftest.c:']
       output = reduce(lambda s, t: s+t, lines, '')
     return output
 
@@ -482,6 +492,11 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = [s for s in lines if s.find('INFO: linux target') < 0]
       # Lahey/Fujitsu
       lines = [s for s in lines if s.find('Encountered 0 errors') < 0]
+      # Cray GPU system at Nersc
+      lines = [s for s in lines if s.find('No supported cpu target is set, CRAY_CPU_TARGET=x86-64 will be used.') < 0]
+      lines = [s for s in lines if s.find('Load a valid targeting module or set CRAY_CPU_TARGET') < 0]
+      # pgi dumps filename on stderr - but returns 0 errorcode'
+      lines = [s for s in lines if lines != 'conftest.c:']
       output = reduce(lambda s, t: s+t, lines, '')
     return output
 
