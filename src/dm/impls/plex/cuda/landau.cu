@@ -63,31 +63,30 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM       ];
   PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g3arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*FP_DIM];
 #endif
-  const PetscInt  mythread = threadIdx.x + blockDim.x*threadIdx.y, myqi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlocks = blockDim.y;
+  const PetscInt  myqi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlocks = blockDim.y;
   const PetscInt  jpidx = myqi + myelem * Nq;
   const PetscInt  subblocksz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
 
   landau_inner_integral(myqi, mySubBlk, nSubBlocks, ip_start, ip_end, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, *g2, *g3);
 
-  // Synchronize (ensure all the data is available) and sum IP matrices
-  __syncthreads();
-  if (mythread==0) { // on one thread, sum up
+  /* FE matrix construction */
+  __syncthreads();   // Synchronize (ensure all the data is available) and sum IP matrices
+  {
     const PetscReal *iTab,*TabBD[FP_MAX_SPECIES][2];
-    int ii,fieldA,d,f,qj;
-    PetscScalar *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
-    for (ii=0;ii<totDim*totDim;ii++) elemMat[ii] = 0;
+    int              fieldA,d,f,qj,d2,g;
+    PetscScalar     *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
     for (iTab = a_TabBD, fieldA = 0 ; fieldA < Nf ; fieldA++, iTab += Nq*Nb*(1+dim)) { // get pointers for convenience
       TabBD[fieldA][0] = iTab;
       TabBD[fieldA][1] = &iTab[Nq*Nb];
     }
     /* assemble - on the diagonal (I,I) */
-    for (fieldA = 0; fieldA < Nf; ++fieldA) {
-      PetscInt  d2,g;
-      for (f = 0; f < Nb; ++f) {
-	const PetscInt i    = fieldA*Nq + f; /* Element matrix row */
+    for (fieldA = threadIdx.y; fieldA < Nf ; fieldA += blockDim.y) {
+      for (f = threadIdx.x; f < Nb ; f += blockDim.x) {
+	const PetscInt i = fieldA*Nb + f; /* Element matrix row */
 	for (g = 0; g < Nb; ++g) {
-	  const PetscInt j    = fieldA*Nq + g; /* Element matrix column */
+	  const PetscInt j    = fieldA*Nb + g; /* Element matrix column */
 	  const PetscInt fOff = i*totDim + j;
+	  elemMat[fOff] = 0;
 	  for (qj=0;qj<Nq;qj++) {
 	    const PetscReal *B = TabBD[fieldA][0], *D = TabBD[fieldA][1], *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim], *DJq = &D[qj*Nb*dim];
 	    for (d = 0; d < dim; ++d) {
@@ -101,10 +100,15 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
       }
     }
     if (myelem==-6) {
-      printf("GPU Element matrix\n");
-      for (d = 0; d < totDim; ++d){
-        for (f = 0; f < totDim; ++f) printf(" %17.10e", elemMat[d*totDim + f]);
-        printf("\n");
+      if (threadIdx.x==0 && threadIdx.y==0) {
+	__syncthreads();
+	printf("GPU Element matrix\n"); 
+	for (d = 0; d < totDim; ++d){
+	  for (f = 0; f < totDim; ++f) printf(" %17.10e", elemMat[d*totDim + f]);
+	  printf("\n");
+	}
+      } else {
+	__syncthreads();
       }
     }
   }
@@ -157,6 +161,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
+  if (Nq != Nb) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nq != Nb. %D  %D",Nq,Nb);
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
   ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
