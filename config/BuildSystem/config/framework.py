@@ -426,7 +426,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     lines = [s for s in lines if s.find('Load a valid targeting module or set CRAY_CPU_TARGET') < 0]
     # pgi dumps filename on stderr - but returns 0 errorcode'
     lines = [s for s in lines if lines != 'conftest.c:']
-    output = reduce(lambda s, t: s+t, lines, '\n')
+    if lines: output = reduce(lambda s, t: s+t, lines, '\n')
+    else: output = ''
     log.write("Preprocess stderr after filtering:\n"+output+":\n")
     return output
 
@@ -474,7 +475,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = [s for s in lines if s.find('Load a valid targeting module or set CRAY_CPU_TARGET') < 0]
       # pgi dumps filename on stderr - but returns 0 errorcode'
       lines = [s for s in lines if lines != 'conftest.c:']
-      output = reduce(lambda s, t: s+t, lines, '\n')
+      if lines: output = reduce(lambda s, t: s+t, lines, '\n')
+      else: output = ''
       log.write("Compiler stderr after filtering:\n"+output+":\n")
     return output
 
@@ -500,7 +502,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = [s for s in lines if s.find('Load a valid targeting module or set CRAY_CPU_TARGET') < 0]
       # pgi dumps filename on stderr - but returns 0 errorcode'
       lines = [s for s in lines if lines != 'conftest.c:']
-      output = reduce(lambda s, t: s+t, lines, '')
+      if lines: output = reduce(lambda s, t: s+t, lines, '\n')
+      else: output = ''
       log.write("Linker stderr after filtering:\n"+output+":\n")
     return output
 
