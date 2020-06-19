@@ -183,75 +183,79 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
   __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
   __itt_resume(); // start VTune, again use 2 underscores
 #endif
-#if defined(PETSC_HAVE_CUDA)
   if (ctx->useCUDA) {
+#if defined(PETSC_HAVE_CUDA)
     ierr = FPLandauCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
-  } else
 #endif
-  for (ej = cStart, invJ = invJ_a; ej < cEnd; ++ej, invJ += Nq*dim*dim) {
-    PetscInt     qj;
-#if defined(PETSC_USE_LOG)
-    ierr = PetscLogEventBegin(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
-#endif
-    ierr = PetscMemzero(elemMat, totDim *totDim * sizeof(PetscScalar));CHKERRQ(ierr);
-#if defined(PETSC_USE_LOG)
-    ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
-#endif
-    for (qj = 0; qj < Nq; ++qj) {
-      PetscScalar     g2[1][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM], g3[1][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM];
-      const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj, one = 1, zero = 0; /* length of inner global interation, outer integration point */
-#if defined(PETSC_USE_LOG)
-      ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
-      ierr = PetscLogFlops(flops);CHKERRQ(ierr);
-#endif
-      landau_inner_integral(zero, zero, one, zero, nip, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, g2, g3);
-#if defined(PETSC_USE_LOG)
-      ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
-      ierr = PetscLogEventBegin(ctx->events[5],0,0,0,0);CHKERRQ(ierr);
-#endif
-      /* assemble - on the diagonal (I,I) */
-      for (fieldA = 0; fieldA < Nf; ++fieldA) {
-	const PetscReal *B = Tf[fieldA]->T[0], *D = Tf[fieldA]->T[1], *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim], *DJq = &D[qj*Nb*dim];
-	PetscInt        f,g,d2;
-	for (f = 0; f < Nb; ++f) {
-	  const PetscInt i    = fieldA*Nq + f; /* Element matrix row */
-	  for (g = 0; g < Nb; ++g) {
-	    const PetscInt j    = fieldA*Nq + g; /* Element matrix column */
-	    const PetscInt fOff = i*totDim + j;
-	    for (d = 0; d < dim; ++d) {
-	      elemMat[fOff] += DIq[f*dim+d]*g2[0][0][fieldA][d]*BJq[g];
-	      for (d2 = 0; d2 < dim; ++d2) {
-		elemMat[fOff] += DIq[f*dim + d]*g3[0][0][fieldA][d][d2]*DJq[g*dim + d2];
-	      }
-	    }
-	  }
-	}
-      }
-#if defined(PETSC_USE_LOG)
-      ierr = PetscLogEventEnd(ctx->events[5],0,0,0,0);CHKERRQ(ierr);
-#endif
-    } /* qj loop */
-#if defined(PETSC_USE_LOG)
-    ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
-#endif
-    /* assemble matrix */
-    ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
-#if defined(PETSC_USE_LOG)
-    ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
-#endif
-    if (ej==-6) {
-      ierr = PetscPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr);
-      for (d = 0; d < totDim; ++d){
-        for (f = 0; f < totDim; ++f) {
-          int i = d, j = f;
-          ierr = PetscPrintf(PETSC_COMM_SELF, " %19.12e", PetscRealPart(elemMat[i*totDim + j]));CHKERRQ(ierr);
-        }
-        ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
-      }
-      //exit(13);
+  } else {
+    PetscReal *Tables,*iTab;
+    ierr = PetscMalloc1(Nf*Nq*Nb*(1+dim), &Tables);CHKERRQ(ierr);
+    for (fieldA=0,iTab=Tables;fieldA<Nf;fieldA++,iTab += Nq*Nb*(1+dim)) {
+      ierr = PetscMemcpy(iTab,         Tf[fieldA]->T[0], Nq*Nb*sizeof(PetscReal));CHKERRQ(ierr);
+      ierr = PetscMemcpy(&iTab[Nq*Nb], Tf[fieldA]->T[1], Nq*Nb*dim*sizeof(PetscReal));CHKERRQ(ierr);
     }
-  } /* ej cells loop, not cuda */
+    for (ej = cStart, invJ = invJ_a; ej < cEnd; ++ej, invJ += Nq*dim*dim) {
+      PetscInt     qj;
+#if defined(PETSC_USE_LOG)
+      ierr = PetscLogEventBegin(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
+#endif
+      ierr = PetscMemzero(elemMat, totDim *totDim * sizeof(PetscScalar));CHKERRQ(ierr);
+#if defined(PETSC_USE_LOG)
+      ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
+#endif
+      for (qj = 0; qj < Nq; ++qj) {
+        PetscScalar     g2[1][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM], g3[1][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM];
+        const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj, one = 1, zero = 0; /* length of inner global interation, outer integration point */
+#if defined(PETSC_USE_LOG)
+        ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
+        ierr = PetscLogFlops(flops);CHKERRQ(ierr);
+#endif
+        landau_inner_integral(zero, one, zero, one, zero, nip, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tables, elemMat, g2, g3);
+#if defined(PETSC_USE_LOG)
+        ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
+#endif
+        /* /\* assemble - on the diagonal (I,I) *\/ */
+        /* for (fieldA = 0; fieldA < Nf; ++fieldA) { */
+        /*   const PetscReal *B = Tf[fieldA]->T[0], *D = Tf[fieldA]->T[1], *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim], *DJq = &D[qj*Nb*dim]; */
+        /*   PetscInt        f,g,d2; */
+        /*   for (f = 0; f < Nb; ++f) { */
+        /*     const PetscInt i    = fieldA*Nq + f; /\* Element matrix row *\/ */
+        /*     for (g = 0; g < Nb; ++g) { */
+        /*       const PetscInt j    = fieldA*Nq + g; /\* Element matrix column *\/ */
+        /*       const PetscInt fOff = i*totDim + j; */
+        /*       for (d = 0; d < dim; ++d) { */
+        /*         elemMat[fOff] += DIq[f*dim+d]*g2[0][0][fieldA][d]*BJq[g]; */
+        /*         for (d2 = 0; d2 < dim; ++d2) { */
+        /*           elemMat[fOff] += DIq[f*dim + d]*g3[0][0][fieldA][d][d2]*DJq[g*dim + d2]; */
+        /*         } */
+        /*       } */
+        /*     } */
+        /*   } */
+        /*         } */
+      } /* qj loop */
+#if defined(PETSC_USE_LOG)
+      ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
+#endif
+      /* assemble matrix */
+      ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
+#if defined(PETSC_USE_LOG)
+      ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
+#endif
+      if (ej==-1) {
+        ierr = PetscPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr);
+        for (d = 0; d < totDim; ++d){
+          for (f = 0; f < totDim; ++f) {
+            int i = d, j = f;
+            ierr = PetscPrintf(PETSC_COMM_SELF, " %19.12e", PetscRealPart(elemMat[i*totDim + j]));CHKERRQ(ierr);
+          }
+          ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
+        }
+        exit(13);
+      }
+    } /* ej cells loop, not cuda */
+    ierr = PetscFree(Tables);CHKERRQ(ierr);
+  }
 #if defined(HAVE_VTUNE) && defined(__INTEL_COMPILER)
   __itt_pause(); // stop VTune
   __SSC_MARK(0x222); // stop SDE tracing
@@ -375,7 +379,7 @@ static void zero_bc(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                     PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar uexact[])
 {
-  uexact[ii] = 0;
+  uexact[0] = 0;
 }
 
 #endif

@@ -63,55 +63,16 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM       ];
   PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g3arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*FP_DIM];
 #endif
-  const PetscInt  myqi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlocks = blockDim.y;
-  const PetscInt  jpidx = myqi + myelem * Nq;
-  const PetscInt  subblocksz = nip/nSubBlocks + !!(nip%nSubBlocks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
+  const PetscInt  myQi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlks = blockDim.y;
+  const PetscInt  jpidx = myQi + myelem * Nq;
+  const PetscInt  subblocksz = nip/nSubBlks + !!(nip%nSubBlks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
+  PetscScalar     *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
 
-  landau_inner_integral(myqi, mySubBlk, nSubBlocks, ip_start, ip_end, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, *g2, *g3);
-
-  /* FE matrix construction */
-  __syncthreads();   // Synchronize (ensure all the data is available) and sum IP matrices
-  {
-    const PetscReal *iTab,*TabBD[FP_MAX_SPECIES][2];
-    int              fieldA,d,f,qj,d2,g;
-    PetscScalar     *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
-    for (iTab = a_TabBD, fieldA = 0 ; fieldA < Nf ; fieldA++, iTab += Nq*Nb*(1+dim)) { // get pointers for convenience
-      TabBD[fieldA][0] = iTab;
-      TabBD[fieldA][1] = &iTab[Nq*Nb];
-    }
-    /* assemble - on the diagonal (I,I) */
-    for (fieldA = threadIdx.y; fieldA < Nf ; fieldA += blockDim.y) {
-      for (f = threadIdx.x; f < Nb ; f += blockDim.x) {
-	const PetscInt i = fieldA*Nb + f; /* Element matrix row */
-	for (g = 0; g < Nb; ++g) {
-	  const PetscInt j    = fieldA*Nb + g; /* Element matrix column */
-	  const PetscInt fOff = i*totDim + j;
-	  elemMat[fOff] = 0;
-	  for (qj=0;qj<Nq;qj++) {
-	    const PetscReal *B = TabBD[fieldA][0], *D = TabBD[fieldA][1], *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim], *DJq = &D[qj*Nb*dim];
-	    for (d = 0; d < dim; ++d) {
-	      elemMat[fOff] += DIq[f*dim+d]*(*g2)[qj][0][fieldA][d]*BJq[g];
-	      for (d2 = 0; d2 < dim; ++d2) {
-		elemMat[fOff] += DIq[f*dim + d]*(*g3)[qj][0][fieldA][d][d2]*DJq[g*dim + d2];
-	      }
-	    }
-	  }
-	}
-      }
-    }
-    if (myelem==-6) {
-      if (threadIdx.x==0 && threadIdx.y==0) {
-	__syncthreads();
-	printf("GPU Element matrix\n"); 
-	for (d = 0; d < totDim; ++d){
-	  for (f = 0; f < totDim; ++f) printf(" %17.10e", elemMat[d*totDim + f]);
-	  printf("\n");
-	}
-      } else {
-	__syncthreads();
-      }
-    }
+  if (threadIdx.x==0 && threadIdx.y==0) {
+    memset(elemMat, 0, totDim*totDim*sizeof(PetscScalar));
   }
+
+  landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, a_TabBD, elemMat, *g2, *g3);
 }
 
 struct _ISColoring_ctx {
@@ -369,6 +330,15 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
     PetscScalar *elMat;
     for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
       ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
+      if (ej==-1) {
+	int d,f;
+	printf("GPU Element matrix\n"); 
+	for (d = 0; d < totDim; ++d){
+	  for (f = 0; f < totDim; ++f) printf(" %17.10e", elMat[d*totDim + f]);
+	  printf("\n");
+	}
+	exit(12);
+      }
     }
   } else if (0) { /* OMP assembly */
     ierr = assemble_omp_private(cStart, cEnd, totDim, plex, section, globalSection, JacP, elemMats, container);CHKERRQ(ierr);

@@ -229,34 +229,36 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal 
 }
 
 /* landau_inner_integral() */
-/* Compute g2 and g3 for element */
+/* Compute g2 and g3 for element, assemble into eleme matrix */
 PETSC_DEVICE_FUNC_DECL void
-landau_inner_integral( const PetscInt myqi, const PetscInt mySubBlk, const PetscInt nSubBlocks, const PetscInt ip_start, const PetscInt ip_end, const PetscInt jpidx,
-                       const PetscInt Nc, const PetscInt dim, const PetscReal * const IPDataGlobal, const PetscReal wiGlobal[], const PetscReal invJj[],
+landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt mySubBlk, const PetscInt nSubBlks, const PetscInt ip_start, const PetscInt ip_end, /* decomposition args, not discretization */
+                       const PetscInt jpidx, const PetscInt Nf, const PetscInt dim, const PetscReal * const IPDataGlobal, const PetscReal wiGlobal[], const PetscReal invJj[],
                        const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[], PetscBool quarter3DDomain,
-                       PetscReal g2[/* FP_MAX_NQ */][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM], PetscReal g3[/* FP_MAX_NQ */][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] )
+                       const PetscInt Nq, const PetscInt Nb, const PetscInt qj_start, const PetscInt qj_end, const PetscReal * const a_TabBD, PetscScalar *elemMat, /* discretization args; local output */
+                       PetscReal g2[/* FP_MAX_NQ */][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM], PetscReal g3[/* FP_MAX_NQ */][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] /* shared memory buffers */
+                       )
 {
-  PetscReal       gg2[FP_MAX_SPECIES][FP_DIM],gg3[FP_MAX_SPECIES][FP_DIM][FP_DIM];
-  const PetscInt  ipdata_sz = (dim + Nc*(1+dim));
-  PetscInt        d,f,d2,dp,d3,fieldB,ipidx,fieldA;
+  PetscReal                                  gg2[FP_MAX_SPECIES][FP_DIM],gg3[FP_MAX_SPECIES][FP_DIM][FP_DIM];
+  const PetscInt                             ipdata_sz = (dim + Nf*(1+dim));
+  PetscInt                                   d,f,d2,dp,d3,fieldB,ipidx,fieldA;
   const FPLandPointData * const __restrict__ fplpt_j = (FPLandPointData*)(IPDataGlobal + jpidx*ipdata_sz);
-  const PetscReal * const vj = fplpt_j->crd, wj = wiGlobal[jpidx];
+  const PetscReal * const __restrict__       vj = fplpt_j->crd, wj = wiGlobal[jpidx];
   // create g2 & g3
   for (d=0;d<dim;d++) { // clear accumulation data D & K
-    for (f=0;f<Nc;f++) {
+    for (f=0;f<Nf;f++) {
       gg2[f][d] = 0;
       for (d2=0;d2<dim;d2++) gg3[f][d][d2] = 0;
     }
   }
   for (ipidx = ip_start; ipidx < ip_end; ++ipidx) {
     const FPLandPointData * const __restrict__ fplpt = (FPLandPointData*)(IPDataGlobal + ipidx*ipdata_sz);
-    const FPLandFDF * const __restrict__ fdf = &fplpt->fdf[0];
+    const FPLandFDF * const __restrict__       fdf = &fplpt->fdf[0];
     const PetscReal wi = wiGlobal[ipidx];
 #if FP_DIM==2
     PetscReal       Ud[2][2], Uk[2][2];
     LandauTensor2D(vj, fplpt->r, fplpt->z, Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
-    for (fieldA = 0; fieldA < Nc; ++fieldA) {
-      for (fieldB = 0; fieldB < Nc; ++fieldB) {
+    for (fieldA = 0; fieldA < Nf; ++fieldA) {
+      for (fieldB = 0; fieldB < Nf; ++fieldB) {
         for (d2 = 0; d2 < 2; ++d2) {
           for (d3 = 0; d3 < 2; ++d3) {
             /* K = U * grad(f): g2=e: i,A */
@@ -271,8 +273,8 @@ landau_inner_integral( const PetscInt myqi, const PetscInt mySubBlk, const Petsc
     PetscReal U[3][3];
     if (!quarter3DDomain) {
       LandauTensor3D(vj, fplpt->x, fplpt->y, fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
-      for (fieldA = 0; fieldA < Nc; ++fieldA) {
-        for (fieldB = 0; fieldB < Nc; ++fieldB) {
+      for (fieldA = 0; fieldA < Nf; ++fieldA) {
+        for (fieldB = 0; fieldB < Nf; ++fieldB) {
           for (d2 = 0; d2 < 3; ++d2) {
             for (d3 = 0; d3 < 3; ++d3) {
               /* K = U * grad(f): g2 = e: i,A */
@@ -286,11 +288,11 @@ landau_inner_integral( const PetscInt myqi, const PetscInt mySubBlk, const Petsc
     } else {
       PetscReal lxx[] = {fplpt->x, fplpt->y}, R[2][2] = {{-1,1},{1,-1}};
       PetscReal ldf[3*FP_MAX_SPECIES];
-      for (fieldB = 0; fieldB < Nc; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3 + fieldB*3] = fplpt->fdf[fieldB].df[d3] * wi * invMass[fieldB];
+      for (fieldB = 0; fieldB < Nf; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3 + fieldB*3] = fplpt->fdf[fieldB].df[d3] * wi * invMass[fieldB];
       for (dp=0;dp<4;dp++) {
         LandauTensor3D(vj, lxx[0], lxx[1], fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
-        for (fieldA = 0; fieldA < Nc; ++fieldA) {
-          for (fieldB = 0; fieldB < Nc; ++fieldB) {
+        for (fieldA = 0; fieldA < Nf; ++fieldA) {
+          for (fieldB = 0; fieldB < Nf; ++fieldB) {
             for (d2 = 0; d2 < 3; ++d2) {
               for (d3 = 0; d3 < 3; ++d3) {
                 /* K = U * grad(f): g2 = e: i,A */
@@ -303,7 +305,7 @@ landau_inner_integral( const PetscInt myqi, const PetscInt mySubBlk, const Petsc
         }
         for (d3 = 0; d3 < 2; ++d3) {
           lxx[d3] *= R[d3][dp%2];
-          for (fieldB = 0; fieldB < Nc; ++fieldB) {
+          for (fieldB = 0; fieldB < Nf; ++fieldB) {
             ldf[d3 + fieldB*3] *= R[d3][dp%2];
           }
         }
@@ -312,39 +314,70 @@ landau_inner_integral( const PetscInt myqi, const PetscInt mySubBlk, const Petsc
 #endif
   } /* IPs */
   /* Jacobian transform - g2 */
-  for (fieldA = 0; fieldA < Nc; ++fieldA) {
+  for (fieldA = 0; fieldA < Nf; ++fieldA) {
     if (mySubBlk==0) gg2[fieldA][dim-1] += Eq_m[fieldA]; /* add electric field term once per IP */
     for (d = 0; d < dim; ++d) {
-      g2[myqi][mySubBlk][fieldA][d] = 0.0;
+      g2[myQi][mySubBlk][fieldA][d] = 0.0;
       for (d2 = 0; d2 < dim; ++d2) {
-        g2[myqi][mySubBlk][fieldA][d] += invJj[d*dim+d2]*gg2[fieldA][d2];
+        g2[myQi][mySubBlk][fieldA][d] += invJj[d*dim+d2]*gg2[fieldA][d2];
       }
-      g2[myqi][mySubBlk][fieldA][d] *= wj;
+      g2[myQi][mySubBlk][fieldA][d] *= wj;
     }
   }
   /* g3 */
-  for (fieldA = 0; fieldA < Nc; ++fieldA) {
+  for (fieldA = 0; fieldA < Nf; ++fieldA) {
     for (d = 0; d < dim; ++d) {
       for (dp = 0; dp < dim; ++dp) {
-	g3[myqi][mySubBlk][fieldA][d][dp] = 0.0;
+	g3[myQi][mySubBlk][fieldA][d][dp] = 0.0;
 	for (d2 = 0; d2 < dim; ++d2) {
 	  for (d3 = 0; d3 < dim; ++d3) {
-	    g3[myqi][mySubBlk][fieldA][d][dp] += invJj[d*dim + d2]*gg3[fieldA][d2][d3]*invJj[dp*dim + d3];
+	    g3[myQi][mySubBlk][fieldA][d][dp] += invJj[d*dim + d2]*gg3[fieldA][d2][d3]*invJj[dp*dim + d3];
 	  }
 	}
-	g3[myqi][mySubBlk][fieldA][d][dp] *= wj;
+	g3[myQi][mySubBlk][fieldA][d][dp] *= wj;
       }
     }
   }
   // Synchronize (ensure all the data is available) and sum g2 & g3
   PETSC_DEVICE_SYNC;
-  if (mySubBlk==0) { /* on one thread, sum up g2 & g3 (noop with one subblock) */
-    for (fieldA = 0; fieldA < Nc; ++fieldA) {
+  if (mySubBlk==0) { /* on one thread, sum up g2 & g3 (noop with one subblock) -- could parallelize! */
+    for (fieldA = 0; fieldA < Nf; ++fieldA) {
       for (d = 0; d < dim; ++d) {
-	for (d3 = 1; d3 < nSubBlocks; ++d3) {
-	  g2[myqi][0][fieldA][d] += g2[myqi][d3][fieldA][d];
+	for (d3 = 1; d3 < nSubBlks; ++d3) {
+	  g2[myQi][0][fieldA][d] += g2[myQi][d3][fieldA][d];
 	  for (dp = 0; dp < dim; ++dp) {
-	    g3[myqi][0][fieldA][d][dp] += g3[myqi][d3][fieldA][d][dp];
+	    g3[myQi][0][fieldA][d][dp] += g3[myQi][d3][fieldA][d][dp];
+	  }
+	}
+      }
+    }
+  }
+
+  /* FE matrix construction */
+  PETSC_DEVICE_SYNC;   // Synchronize (ensure all the data is available) and sum IP matrices
+  {
+    const PetscReal  *iTab,*TabBD[FP_MAX_SPECIES][2];
+    PetscInt         fieldA,d,f,qj,qj_0,d2,g,totDim=Nb*Nf;
+    for (iTab = a_TabBD, fieldA = 0 ; fieldA < Nf ; fieldA++, iTab += Nq*Nb*(1+dim)) {
+      TabBD[fieldA][0] = iTab;
+      TabBD[fieldA][1] = &iTab[Nq*Nb];
+    }
+    /* assemble - on the diagonal (I,I) */
+    for (fieldA = mySubBlk; fieldA < Nf ; fieldA += nSubBlks) {
+      const PetscReal *B = TabBD[fieldA][0], *D = TabBD[fieldA][1];
+      for (f = myQi; f < Nb ; f += nQi) {
+	const PetscInt i = fieldA*Nb + f; /* Element matrix row */
+	for (g = 0; g < Nb; ++g) {
+	  const PetscInt j    = fieldA*Nb + g; /* Element matrix column */
+	  const PetscInt fOff = i*totDim + j;
+	  for (qj=qj_start,qj_0=0;qj<qj_end;qj++,qj_0++) {
+	    const PetscReal *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim];
+	    for (d = 0; d < dim; ++d) {
+	      elemMat[fOff] += DIq[f*dim+d]*g2[qj_0][0][fieldA][d]*BJq[g];
+	      for (d2 = 0; d2 < dim; ++d2) {
+		elemMat[fOff] += DIq[f*dim + d]*g3[qj_0][0][fieldA][d][d2]*DIq[g*dim + d2];
+	      }
+	    }
 	  }
 	}
       }
