@@ -206,10 +206,11 @@ PetscErrorCode GetListofEdges_Water(WATERDATA *water,PetscInt *edgelist)
 PetscErrorCode SetInitialGuess_Water(DM networkdm,Vec localX,PetscInt nv,PetscInt ne, const PetscInt *vtx, const PetscInt *edges,void* appctx)
 {
   PetscErrorCode ierr;
-  PetscInt       i,offset,key;
+  PetscInt       i,offset,key,ncomp;
   PetscBool      ghostvtex,iscouplev;
   VERTEX_Water   vertex;
   PetscScalar    *xarr;
+  void*          component;
 
   PetscFunctionBegin;
   ierr = VecGetArray(localX,&xarr);CHKERRQ(ierr);
