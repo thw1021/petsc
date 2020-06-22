@@ -48,10 +48,9 @@ typedef struct {
 } DMNetworkEdgeInfo;
 
 typedef struct {
-  PetscInt gidx_from; /* global idx of the coupling vertex, shared by from/to vertices in the integrated network */
+  PetscInt gidx_from; /* global idx of the coupling vertex, shared by to/from vertices in the integrated network */
   PetscInt vfrom_net,vfrom_idx; /* subnet number and local idx for from_vertex */
-  PetscInt nvto; /* num of to_vertices, i.e., vertex [to_net,to_idx] couples vertex [vfrom_net, vfrom_dix] */
-  PetscInt *vto; /* array: vto[2*j]=vto_net[j], vto[2*j+1]=vto_idx[j], j=0,...,nvto-1 */
+  PetscInt vto_net,vto_idx;     /* subnet number and local idx for to_vertex; vfrom_net < vto_net! */
 } CEdge;
 typedef enum {CVNONE=-1, CVFROM=0, CVTO=1} CVertexType;
 
