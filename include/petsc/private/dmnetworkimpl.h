@@ -48,6 +48,13 @@ typedef struct {
 } DMNetworkEdgeInfo;
 
 typedef struct {
+  PetscInt gidx_from; /* global idx of the coupling vertex, shared by to/from vertices in the integrated network */
+  PetscInt vfrom_net,vfrom_idx; /* subnet number and local idx for from_vertex */
+  PetscInt vto_net,vto_idx;     /* subnet number and local idx for to_vertex; vfrom_net < vto_net! */
+} CEdge;
+typedef enum {CVNONE=-1, CVFROM=0, CVTO=1} CVertexType;
+
+typedef struct {
   PetscInt  Nvtx, nvtx;     /* Number of global/local vertices */
   PetscInt  Nedge,nedge;    /* Number of global/local edges */
   PetscInt  eStart, eEnd;   /* Range of edge numbers (start, end+1) */
@@ -85,6 +92,8 @@ typedef struct {
   PetscInt                          ncsubnet; /* Global number of coupling subnetworks */
   DMSubnetwork                      *subnet;  /* Subnetworks */
   PetscInt                          *subnetvtx; /* Maps local vertex to local subnetwork's vertex */
+  CEdge                             *cvtx; /* Array of coupling vertices */
+  PetscInt                          ncvtx; /* Num of entries in cvtx */
 
   PetscBool                         userEdgeJacobian,userVertexJacobian;  /* Global flag for using user's sub Jacobians */
   Mat                               *Je;  /* Pointer array to hold local sub Jacobians for edges, 3 elements for an edge */
