@@ -6,13 +6,29 @@ static char help[] = "This example tests subnetwork coupling. \n\
 */
 #include <petscdmnetwork.h>
 
+struct _p_Comp0{
+  PetscInt id;
+} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
+typedef struct _p_Comp0 *Comp0;
+
+struct _p_Comp1{
+  PetscInt id;
+} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
+typedef struct _p_Comp1 *Comp1;
+
 int main(int argc,char ** argv)
 {
   PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   DM             dmnetwork;
-  PetscInt       i,j,net,nsubnet,nsubnetCouple=0,numVertices[10],numEdges[10],numVtxCouple[1],*edgelist[10],*edgelist_couple=NULL,ne,nv;
+  PetscInt       i,j,net,nsubnet,ne,nv,nvar,v,ncomp,offset,compkey0,compkey1;
+  PetscInt       nsubnetCouple=0,numVertices[10],numEdges[10],numVtxCouple[1],*edgelist[10],*edgelist_couple=NULL;
   const PetscInt *vtx,*edges;
+  PetscBool      iscouplev,ghost,distribute=PETSC_TRUE;
+  Vec            X;
+  Comp0          comp0;
+  Comp1          comp1;
+  PetscScalar    *array;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
@@ -67,6 +83,9 @@ int main(int argc,char ** argv)
   /* Create a dmnetwork */
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&dmnetwork);CHKERRQ(ierr);
 
+  ierr = DMNetworkRegisterComponent(dmnetwork,"comp0",sizeof(struct _p_Comp0),&compkey0);CHKERRQ(ierr);
+  ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(struct _p_Comp1),&compkey1);CHKERRQ(ierr);
+
   /* Set number of vertices and edges */
   ierr = DMNetworkSetSizes(dmnetwork,nsubnet,numVertices,numEdges,nsubnetCouple,numVtxCouple);CHKERRQ(ierr);
 
@@ -83,37 +102,70 @@ int main(int argc,char ** argv)
       ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%d]: ne %d, nv %d\n",rank,net,ne,nv);CHKERRQ(ierr);
     }
 
-    if (nv) {
-      PetscInt v;
-      for (v=0; v<nv; v++) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] net %d, vtx %d\n",rank,net,vtx[v]);CHKERRQ(ierr);
-        if (net == 0) {
-          ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],1);CHKERRQ(ierr);
-        } else { // net > 0
-          if (v == 0) {
-            ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],2);CHKERRQ(ierr); //must be same as its coupling vertex!!!
-          } else {
-            ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],2);CHKERRQ(ierr);
-          }
-        }
+    for (v=0; v<nv; v++) {
+      ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[v],&iscouplev);CHKERRQ(ierr);
+      if (iscouplev) continue;
+
+      if (!net) {
+        ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],1);CHKERRQ(ierr);
+      } else {
+        ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],2);CHKERRQ(ierr);
       }
     }
   }
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
-  ierr = DMSetUp(dmnetwork);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
-
-  /* Get SubnetworkCoupleInfo() */
+  /* At the coupling vertex, add componenets and associated num of variables */
   ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
-  if (nv) {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] coupling info: nv %d\n",rank,nv);CHKERRQ(ierr);
-    for (i=0; i<nv; i++) printf(" cvtx[%d] = %d\n",i,vtx[i]);
+  for (i=0; i<nv; i++) {
+    ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey0,&comp0);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey1,&comp1);CHKERRQ(ierr);
+
+    ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[i],0,1);CHKERRQ(ierr);
+    ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[i],1,2);CHKERRQ(ierr);
   }
 
-  Vec X;
+  if (size > 1) {  /* must be called before DMSetUp()???. Other partitioners do not work yet??? -- cause crash in proc[0]! */
+    DM               plexdm;
+    PetscPartitioner part;
+    ierr = DMNetworkGetPlex(dmnetwork,&plexdm);CHKERRQ(ierr);
+    ierr = DMPlexGetPartitioner(plexdm, &part);CHKERRQ(ierr);
+    ierr = PetscPartitionerSetType(part,PETSCPARTITIONERSIMPLE);CHKERRQ(ierr);
+    ierr = PetscOptionsSetValue(NULL,"-dm_plex_csr_via_mat","true");CHKERRQ(ierr); /* for parmetis */
+  }
+
+  /* Setup dmnetwork */
+  ierr = DMSetUp(dmnetwork);CHKERRQ(ierr);
+
+  ierr = PetscOptionsGetBool(NULL,NULL,"-distribute",&distribute,NULL);CHKERRQ(ierr);
+  if (distribute) {
+    ierr = DMNetworkDistribute(&dmnetwork,0);CHKERRQ(ierr);
+    ierr = DMView(dmnetwork,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  }
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+
+  /* Create a global vector */
   ierr = DMCreateGlobalVector(dmnetwork,&X);CHKERRQ(ierr);
   ierr = VecSet(X,0.0);CHKERRQ(ierr);
+
+  /* Set X values at the coupling vertex */
+  ierr = VecGetArray(X,&array);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
+  printf("[%d] coupling nv %d\n",rank,nv);
+  for (v=0; v<nv; v++) {
+    ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[v],&ghost);CHKERRQ(ierr);
+    //printf("[%d] coupling nv %d, v %d, ghost %d\n",rank,nv,vtx[v],ghost);
+    if (ghost) continue;
+
+    ierr = DMNetworkGetNumComponents(dmnetwork,vtx[v],&ncomp);CHKERRQ(ierr);
+    printf("[%d] coupling nv %d, v %d, ghost %d; ncomp %d\n",rank,nv,vtx[v],ghost,ncomp);
+    for (j=0; j<ncomp; j++) {
+      ierr = DMNetworkGetComponentNumVariables(dmnetwork,vtx[v],j,&nvar);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentVariableOffset(dmnetwork,vtx[v],j,&offset);CHKERRQ(ierr);
+      printf(" [%d] cvtx[%d] = %d; comp %d, nvar %d, offset %d\n",rank,v,vtx[v],j,nvar,offset);
+      for (i=0; i<nvar; i++) array[offset+i] += j + 1.0;
+    }
+  }
+  ierr = VecRestoreArray(X,&array);CHKERRQ(ierr);
   ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   /* Free work space */
