@@ -1373,8 +1373,7 @@ static void f0_s_rv2(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                      PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   PetscInt ii = (PetscInt)constants[0];
-  f0[0] =              2.*M_PI*x[0]*(x[0]*x[0] + x[1]*x[1])*u[ii];
-  if (dim==3) f0[0] += 2.*M_PI*x[0]*(x[2]*x[2]            )*u[ii];
+  f0[0] =  2.*M_PI*x[0]*(x[0]*x[0] + x[1]*x[1])*u[ii];
 }
 
 /*@
