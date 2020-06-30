@@ -15,6 +15,7 @@ import shutil
 import operator
 import optparse
 import sys
+import subprocess
 from   time import gmtime,strftime
 
 thisfile = os.path.abspath(inspect.getfile(inspect.currentframe()))
@@ -32,57 +33,57 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
         shutil.rmtree(gcov_dir)
     os.mkdir(gcov_dir)
     print("Running gcov\n")
-    for root,dirs,files in os.walk(os.path.join(petsc_dir,"src")):
-        # Directories to skip
-        if (root.find('tests') != -1) | (root.find('tutorials') != -1) | (root.find('benchmarks') != -1)| (root.find('examples') != -1) | (root.find('src'+os.sep+'dm'+os.sep+'mesh') != -1) | (root.find('draw'+os.sep+'impls'+os.sep+'win32') != -1) | (root.find('impls'+os.sep+'python') != -1) :
-            continue
-        os.chdir(root)
-        for file_name in files:
-            csrc_file = file_name.endswith('.c')
-            if csrc_file:
-                c_file = file_name.split('.c')[0]
-                OBJDIR = os.path.join(petsc_dir, petsc_arch, 'obj')
-                objpath = os.path.join(OBJDIR, os.path.relpath(c_file, os.path.join(petsc_dir,"src")))
-                gcov_graph_file = objpath+".gcno"
-                gcov_data_file  = objpath+".gcda"
-                if os.path.isfile(gcov_graph_file) and os.path.isfile(gcov_data_file):
-                    # gcov created .gcno and .gcda files => create .gcov file,parse it and save the untested code line
-                    # numbers in .lines file
-                    os.system('gcov --object-directory "%s" "%s"' % (os.path.dirname(gcov_data_file), file_name))
-                    gcov_file = file_name+".gcov"
-                    try:
-                        gcov_fid = open(gcov_file,'r')
-                        root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
-                        lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+file_name+'.lines'),'w')
-                        for line in gcov_fid:
-                            if line.find("#####") > 0:
-                                line_num = line.split(":")[1].strip()
-                                print("""%s"""%(line_num), file=lines_fid)
-                        gcov_fid.close()
-                        lines_fid.close()
-                    except IOError:
-                        continue
-                else:
-                    # gcov did not create .gcno or .gcda file,save the source code line numbers to .lines file
-                    file_id = open(file_name,'r')
+    files  = subprocess.check_output('make showsrc', shell=True).decode(sys.stdout.encoding).split()
+    for file_name in files:
+        root = os.path.join(petsc_dir,os.path.dirname(file_name))
+        csrc_file = file_name.endswith('.c')
+        if csrc_file:
+            c_file = file_name.split('.c')[0]
+            OBJDIR = os.path.join(petsc_dir, petsc_arch, 'obj')
+            objpath = os.path.join(OBJDIR, os.path.relpath(c_file, os.path.join(petsc_dir,"src")))
+            gcov_graph_file = objpath+".gcno"
+            gcov_data_file  = objpath+".gcda"
+            if os.path.isfile(gcov_graph_file) and os.path.isfile(gcov_data_file):
+                # gcov created .gcno and .gcda files => create .gcov file,parse it and save the untested code line
+                # numbers in .lines file
+                dir = os.getcwd()
+                os.chdir(os.path.dirname(os.path.join(petsc_dir,file_name)))
+                os.system('gcov --object-directory "%s" "%s"' % (os.path.dirname(gcov_data_file), os.path.basename(file_name)))
+                os.chdir(dir)
+                gcov_file = file_name+".gcov"
+                try:
+                    gcov_fid = open(gcov_file,'r')
                     root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
-                    lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+file_name+'.lines'),'w')
-                    nlines = 0
-                    line_num = 1
-                    in_comment = 0
-                    for line in file_id:
-                        if line.strip() == '':
-                            line_num += 1
-                        else:
-                            if line.lstrip().startswith('/*'):
-                                in_comment = 1
-                            if in_comment == 0:
-                                print("""%s"""%(line_num), file=lines_fid)
-                            if in_comment & (line.find('*/') != -1):
-                                in_comment = 0
-                            line_num += 1
-                    file_id.close()
+                    lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.lines'),'w')
+                    for line in gcov_fid:
+                        if line.find("#####") > 0:
+                            line_num = line.split(":")[1].strip()
+                            print("""%s"""%(line_num), file=lines_fid)
+                    gcov_fid.close()
                     lines_fid.close()
+                except IOError:
+                    continue
+            else:
+                # gcov did not create .gcno or .gcda file,save the source code line numbers to .lines file
+                file_id = open(file_name,'r')
+                root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
+                lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.lines'),'w')
+                nlines = 0
+                line_num = 1
+                in_comment = 0
+                for line in file_id:
+                    if line.strip() == '':
+                        line_num += 1
+                    else:
+                        if line.lstrip().startswith('/*'):
+                            in_comment = 1
+                        if in_comment == 0:
+                            print("""%s"""%(line_num), file=lines_fid)
+                        if in_comment & (line.find('*/') != -1):
+                            in_comment = 0
+                        line_num += 1
+                file_id.close()
+                lines_fid.close()
     print("""Finshed running gcov on PETSc source code""")
     return
 
