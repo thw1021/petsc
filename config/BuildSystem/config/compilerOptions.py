@@ -39,6 +39,7 @@ class CompilerOptions(config.base.Configure):
         flags.append('-g3')
       elif bopt == 'gcov':
         flags.extend(['--coverage','-Og']) # --coverage is equal to -fprofile-arcs -ftest-coverage. Use -Og to have accurate coverage result and fine performance
+        self.addDefine('USE_GCOV', 1)
       elif bopt == 'O':
         flags.append('-g')
         if config.setCompilers.Configure.isClang(compiler, self.log):
@@ -128,6 +129,7 @@ class CompilerOptions(config.base.Configure):
         flags.append('-g')
       elif bopt == 'gcov':
         flags.extend(['--coverage','-Og'])
+        
       elif bopt in ['O']:
         flags.append('-g')
         if 'USER' in os.environ:
