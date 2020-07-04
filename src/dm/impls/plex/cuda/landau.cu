@@ -7,7 +7,7 @@
 #include <petsc/private/kernels/petscaxpy.h>
 #include <omp.h>
 
-#define PETSC_DEVICE_SYNC __syncthreads()
+#define PETSC_THREAD_SYNC __syncthreads()
 #define PETSC_DEVICE_FUNC_DECL __device__
 #define PETSC_DEVICE_DATA_DECL __constant__
 #include "fp_kernels.h"
@@ -54,7 +54,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 #endif
 		 PetscBool quarter3DDomain, PetscScalar elemMats_out[])
 {
-  const PetscInt  Nq = blockDim.x, myelem = blockIdx.x;
+  const PetscInt  Nq = blockDim.y, myelem = blockIdx.x;
 #if defined(FP_USE_SHARED_GPU_MEM)
   extern __shared__ PetscReal g2_g3_qi[]; // Nq * { [NSubBlocks][Nf][dim] ; [NSubBlocks][Nf][dim][dim] }
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2_g3_qi[0];
@@ -63,7 +63,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM       ];
   PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g3arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*FP_DIM];
 #endif
-  const PetscInt  myQi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlks = blockDim.y;
+  const PetscInt  myQi = threadIdx.y, mySubBlk = threadIdx.x, nSubBlks = blockDim.x;
   const PetscInt  jpidx = myQi + myelem * Nq;
   const PetscInt  subblocksz = nip/nSubBlks + !!(nip%nSubBlks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
   PetscScalar     *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
@@ -71,8 +71,12 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   if (threadIdx.x==0 && threadIdx.y==0) {
     memset(elemMat, 0, totDim*totDim*sizeof(PetscScalar));
   }
-
-  landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, a_TabBD, elemMat, *g2, *g3);
+  __syncthreads();
+  if (0) {
+    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, 1, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, a_TabBD, elemMat, *g2, *g3);
+  } else {
+    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, mySubBlk, nip, nSubBlks, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, a_TabBD, elemMat, *g2, *g3);
+  }
 }
 
 struct _ISColoring_ctx {
@@ -153,12 +157,13 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
   CUDA_SAFE_CALL(cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice));
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr); // remove in real application
   ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(flops*nip);CHKERRQ(ierr);
 #endif
   {
     PetscReal  *d_g2g3;
-    dim3 dimBlock(Nq,num_sub_blocks);
+    dim3 dimBlock(num_sub_blocks,Nq);
     CUDA_SAFE_CALL(cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar))); // kernel output
     ii = FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*(1+FP_DIM)*FP_MAX_SUB_THREAD_BLOCKS;
 #if defined(FP_USE_SHARED_GPU_MEM)
