@@ -9,7 +9,7 @@
 #endif
 
 /* Landau collision operator */
-#define PETSC_DEVICE_SYNC
+#define PETSC_THREAD_SYNC
 #define PETSC_DEVICE_FUNC_DECL
 #define PETSC_DEVICE_DATA_DECL
 #include "./cuda/fp_kernels.h"
@@ -58,7 +58,7 @@ static PetscErrorCode FPLandPointDataDestroy(PetscReal *IPData)
   .  actx - optional user-defined context
 
   Output Parameters:
-  .  JacP - Jacobian matrix
+  .  J0acP - Jacobian matrix
 */
 PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 {
@@ -211,28 +211,10 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
         ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
         ierr = PetscLogFlops(flops);CHKERRQ(ierr);
 #endif
-        landau_inner_integral(zero, one, zero, one, zero, nip, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tables, elemMat, g2, g3);
+        landau_inner_integral(zero, one, zero, one, zero, nip, 1, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tables, elemMat, g2, g3);
 #if defined(PETSC_USE_LOG)
         ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
 #endif
-        /* /\* assemble - on the diagonal (I,I) *\/ */
-        /* for (fieldA = 0; fieldA < Nf; ++fieldA) { */
-        /*   const PetscReal *B = Tf[fieldA]->T[0], *D = Tf[fieldA]->T[1], *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim], *DJq = &D[qj*Nb*dim]; */
-        /*   PetscInt        f,g,d2; */
-        /*   for (f = 0; f < Nb; ++f) { */
-        /*     const PetscInt i    = fieldA*Nq + f; /\* Element matrix row *\/ */
-        /*     for (g = 0; g < Nb; ++g) { */
-        /*       const PetscInt j    = fieldA*Nq + g; /\* Element matrix column *\/ */
-        /*       const PetscInt fOff = i*totDim + j; */
-        /*       for (d = 0; d < dim; ++d) { */
-        /*         elemMat[fOff] += DIq[f*dim+d]*g2[0][0][fieldA][d]*BJq[g]; */
-        /*         for (d2 = 0; d2 < dim; ++d2) { */
-        /*           elemMat[fOff] += DIq[f*dim + d]*g3[0][0][fieldA][d][d2]*DJq[g*dim + d2]; */
-        /*         } */
-        /*       } */
-        /*     } */
-        /*   } */
-        /*         } */
       } /* qj loop */
 #if defined(PETSC_USE_LOG)
       ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
@@ -296,6 +278,7 @@ PetscErrorCode FPLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,vo
   }
   ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr); // remove in real application
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
 #endif
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
@@ -1200,12 +1183,12 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
     /* PetscLogStage  setup_stage; */
     ierr = PetscLogEventRegister("Landau Operator", DM_CLASSID, &ctx->events[0]);CHKERRQ(ierr); /* 0 */
-    ierr = PetscLogEventRegister(" Jacobian-setup", DM_CLASSID, &ctx->events[1]);CHKERRQ(ierr); /* 1 */
-    ierr = PetscLogEventRegister(" Jacobian-kern-i", DM_CLASSID, &ctx->events[3]);CHKERRQ(ierr); /* 3 */
-    ierr = PetscLogEventRegister(" Jacobian-kernel", DM_CLASSID, &ctx->events[4]);CHKERRQ(ierr); /* 4 */
-    ierr = PetscLogEventRegister(" Jacobian-trans", DM_CLASSID, &ctx->events[5]);CHKERRQ(ierr); /* 5 */
-    ierr = PetscLogEventRegister(" Jacobian-assem", DM_CLASSID, &ctx->events[6]);CHKERRQ(ierr); /* 6 */
-    ierr = PetscLogEventRegister(" Jacobian-end", DM_CLASSID, &ctx->events[7]);CHKERRQ(ierr); /* 7 */
+    ierr = PetscLogEventRegister(" Jac-vector", DM_CLASSID, &ctx->events[1]);CHKERRQ(ierr); /* 1 */
+    ierr = PetscLogEventRegister(" Jac-kern-init", DM_CLASSID, &ctx->events[3]);CHKERRQ(ierr); /* 3 */
+    ierr = PetscLogEventRegister(" Jac-kernel", DM_CLASSID, &ctx->events[4]);CHKERRQ(ierr); /* 4 */
+    ierr = PetscLogEventRegister(" Jac-kernel-post", DM_CLASSID, &ctx->events[5]);CHKERRQ(ierr); /* 5 */
+    ierr = PetscLogEventRegister(" Jac-assemble", DM_CLASSID, &ctx->events[6]);CHKERRQ(ierr); /* 6 */
+    ierr = PetscLogEventRegister(" Jac-end", DM_CLASSID, &ctx->events[7]);CHKERRQ(ierr); /* 7 */
     ierr = PetscLogEventRegister("  Jac-geo-color", DM_CLASSID, &ctx->events[8]);CHKERRQ(ierr); /* 8 */
     ierr = PetscLogEventRegister("  Jac-cuda-sum", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
     ierr = PetscLogEventRegister("Landau Jacobian", DM_CLASSID, &ctx->events[9]);CHKERRQ(ierr); /* 9 */

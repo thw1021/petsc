@@ -231,7 +231,7 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal 
 /* landau_inner_integral() */
 /* Compute g2 and g3 for element, assemble into eleme matrix */
 PETSC_DEVICE_FUNC_DECL void
-landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt mySubBlk, const PetscInt nSubBlks, const PetscInt ip_start, const PetscInt ip_end, /* decomposition args, not discretization */
+landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt mySubBlk, const PetscInt nSubBlks, const PetscInt ip_start, const PetscInt ip_end, const PetscInt ip_stride, /* decomposition args, not discretization */
                        const PetscInt jpidx, const PetscInt Nf, const PetscInt dim, const PetscReal * const IPDataGlobal, const PetscReal wiGlobal[], const PetscReal invJj[],
                        const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[], PetscBool quarter3DDomain,
                        const PetscInt Nq, const PetscInt Nb, const PetscInt qj_start, const PetscInt qj_end, const PetscReal * const a_TabBD, PetscScalar *elemMat, /* discretization args; local output */
@@ -250,7 +250,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
       for (d2=0;d2<dim;d2++) gg3[f][d][d2] = 0;
     }
   }
-  for (ipidx = ip_start; ipidx < ip_end; ++ipidx) {
+  for (ipidx = ip_start; ipidx < ip_end; ipidx += ip_stride) {
     const FPLandPointData * const __restrict__ fplpt = (FPLandPointData*)(IPDataGlobal + ipidx*ipdata_sz);
     const FPLandFDF * const __restrict__       fdf = &fplpt->fdf[0];
     const PetscReal wi = wiGlobal[ipidx];
@@ -339,7 +339,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
     }
   }
   // Synchronize (ensure all the data is available) and sum g2 & g3
-  PETSC_DEVICE_SYNC;
+  PETSC_THREAD_SYNC;
   if (mySubBlk==0) { /* on one thread, sum up g2 & g3 (noop with one subblock) -- could parallelize! */
     for (fieldA = 0; fieldA < Nf; ++fieldA) {
       for (d = 0; d < dim; ++d) {
@@ -354,7 +354,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
   }
 
   /* FE matrix construction */
-  PETSC_DEVICE_SYNC;   // Synchronize (ensure all the data is available) and sum IP matrices
+  PETSC_THREAD_SYNC;   // Synchronize (ensure all the data is available) and sum IP matrices
   {
     const PetscReal  *iTab,*TabBD[FP_MAX_SPECIES][2];
     PetscInt         fieldA,d,f,qj,qj_0,d2,g,totDim=Nb*Nf;
