@@ -477,10 +477,10 @@ update-web:
 #  See script for details
 #
 gcov:
-	-@$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --run_gcov --petsc_arch ${PETSC_ARCH}
+	@$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --run_gcov --petsc_arch ${PETSC_ARCH}
 
 mergegcov:
-	-@$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --merge_gcov --loc=${LOC} --petsc_arch ${PETSC_ARCH}
+	@$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --merge_gcov --loc=${LOC} --petsc_arch ${PETSC_ARCH}
 
 
 ########################

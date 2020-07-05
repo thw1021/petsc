@@ -902,6 +902,7 @@ class generateExamples(Petsc):
       files.sort()
       if "/tests" not in root and "/tutorials" not in root: continue
       if "dSYM" in root: continue
+      if "build" in root: continue
       if os.path.basename(root.rstrip("/")) == 'output': continue
       if self.verbose: print(root)
       self.genPetscTests(root,dirs,files,dataDict)

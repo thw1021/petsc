@@ -15,7 +15,9 @@ import shutil
 import operator
 import optparse
 import sys
+import subprocess
 from   time import gmtime,strftime
+import tempfile
 
 thisfile = os.path.abspath(inspect.getfile(inspect.currentframe()))
 pdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(thisfile)))))
@@ -28,73 +30,68 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
     #    xxx.c.lines files in gcov_dir
 
     print("Creating directory to save .lines files\n")
-    if os.path.isdir(gcov_dir):
-        shutil.rmtree(gcov_dir)
-    os.mkdir(gcov_dir)
     print("Running gcov\n")
-    for root,dirs,files in os.walk(os.path.join(petsc_dir,"src")):
-        # Directories to skip
-        if (root.find('tests') != -1) | (root.find('tutorials') != -1) | (root.find('benchmarks') != -1)| (root.find('examples') != -1) | (root.find('src'+os.sep+'dm'+os.sep+'mesh') != -1) | (root.find('draw'+os.sep+'impls'+os.sep+'win32') != -1) | (root.find('impls'+os.sep+'python') != -1) :
-            continue
-        os.chdir(root)
-        for file_name in files:
-            csrc_file = file_name.endswith('.c')
-            if csrc_file:
-                c_file = file_name.split('.c')[0]
-                OBJDIR = os.path.join(petsc_dir, petsc_arch, 'obj')
-                objpath = os.path.join(OBJDIR, os.path.relpath(c_file, os.path.join(petsc_dir,"src")))
-                gcov_graph_file = objpath+".gcno"
-                gcov_data_file  = objpath+".gcda"
-                if os.path.isfile(gcov_graph_file) and os.path.isfile(gcov_data_file):
-                    # gcov created .gcno and .gcda files => create .gcov file,parse it and save the untested code line
-                    # numbers in .lines file
-                    os.system('gcov --object-directory "%s" "%s"' % (os.path.dirname(gcov_data_file), file_name))
-                    gcov_file = file_name+".gcov"
-                    try:
-                        gcov_fid = open(gcov_file,'r')
-                        root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
-                        lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+file_name+'.lines'),'w')
-                        for line in gcov_fid:
-                            if line.find("#####") > 0:
-                                line_num = line.split(":")[1].strip()
-                                print("""%s"""%(line_num), file=lines_fid)
-                        gcov_fid.close()
-                        lines_fid.close()
-                    except IOError:
-                        continue
+    # avoid errors of the type: UnicodeDecodeError: 'utf-8' codec can't decode byte 0x88 in position 7892: invalid start byte
+    files  = subprocess.check_output('make -f gmakefile showcsrc', shell=True).decode(encoding='UTF-8',errors='replace').split()
+    for file_name in files:
+        root = os.path.join(petsc_dir,os.path.dirname(file_name))
+        c_file = file_name.split('.c')[0]
+        OBJDIR = os.path.join(petsc_dir, petsc_arch, 'obj')
+        objpath = os.path.join(OBJDIR, os.path.relpath(c_file, os.path.join(petsc_dir,"src")))
+        gcov_graph_file = objpath+".gcno"
+        gcov_data_file  = objpath+".gcda"
+        if os.path.isfile(gcov_graph_file) and os.path.isfile(gcov_data_file):
+            # gcov created .gcno and .gcda files => create .gcov file,parse it and save the untested code line
+            # numbers in .lines file
+            dir = os.getcwd()
+            os.chdir(os.path.dirname(os.path.join(petsc_dir,file_name)))
+            os.system('gcov --object-directory "%s" "%s"' % (os.path.dirname(gcov_data_file), os.path.basename(file_name)))
+            os.chdir(dir)
+            gcov_file = file_name+".gcov"
+            try:
+                gcov_fid = open(gcov_file,'r')
+                root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
+                lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.lines'),'w')
+                for line in gcov_fid:
+                    if line.find("#####") > 0:
+                        line_num = line.split(":")[1].strip()
+                        print("""%s"""%(line_num), file=lines_fid)
+                gcov_fid.close()
+                lines_fid.close()
+            except IOError:
+                continue
+        else:
+            # gcov did not create .gcno or .gcda file,save the source code line numbers to .lines file
+            file_id = open(file_name,'r')
+            root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
+            lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.lines'),'w')
+            nlines = 0
+            line_num = 1
+            in_comment = 0
+            for line in file_id:
+                if line.strip() == '':
+                    line_num += 1
                 else:
-                    # gcov did not create .gcno or .gcda file,save the source code line numbers to .lines file
-                    file_id = open(file_name,'r')
-                    root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
-                    lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+file_name+'.lines'),'w')
-                    nlines = 0
-                    line_num = 1
-                    in_comment = 0
-                    for line in file_id:
-                        if line.strip() == '':
-                            line_num += 1
-                        else:
-                            if line.lstrip().startswith('/*'):
-                                in_comment = 1
-                            if in_comment == 0:
-                                print("""%s"""%(line_num), file=lines_fid)
-                            if in_comment & (line.find('*/') != -1):
-                                in_comment = 0
-                            line_num += 1
-                    file_id.close()
-                    lines_fid.close()
+                    if line.lstrip().startswith('/*'):
+                        in_comment = 1
+                    if in_comment == 0:
+                        print("""%s"""%(line_num), file=lines_fid)
+                    if in_comment & (line.find('*/') != -1):
+                        in_comment = 0
+                    line_num += 1
+            file_id.close()
+            lines_fid.close()
     print("""Finshed running gcov on PETSc source code""")
     return
 
-def make_tarball(dirname,petsc_dir,petsc_arch):
+def make_tarball(gcov_dir,petsc_dir,petsc_arch):
 
     # Create tarball of .lines files stored in gcov_dir
     print("""Creating tarball in %s to store gcov results files""" %(petsc_dir))
     curdir=os.path.abspath(os.path.curdir)
-    os.chdir(dirname)
+    os.chdir(gcov_dir)
     os.system("tar -czf "+petsc_dir+os.sep+"gcov.tar.gz *.lines")
     os.chdir(petsc_dir)
-    shutil.rmtree(dirname)
     # Copy file so artifacts in CI propogate without overwriting
     shutil.copyfile('gcov.tar.gz',os.path.join(petsc_arch,'gcov.tar.gz'))
     print("""Tarball created in %s"""%(petsc_dir))
@@ -112,9 +109,6 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     # Stage 4: Create HTML pages having statistics and hyperlinks to HTML source code           files (files are sorted by filename and percentage code tested)
     #  Stores the main HTML pages in LOC if LOC is defined via command line argument o-wise it uses the default PETSC_DIR
 
-    if os.path.isdir(gcov_dir):
-        shutil.rmtree(gcov_dir)
-    os.makedirs(gcov_dir)
     cwd = os.getcwd()
     # -------------------------- Stage 1 -------------------------------
     len_tarballs = len(tarballs)
@@ -172,7 +166,7 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
         out_fid.close()
 
     # Remove directories created by extracting tar files
-    print("Removing temporary directories")
+    print("Removing temporary directories created from tar files")
     for j in range(0,len(tmp_dirs)):
         shutil.rmtree(tmp_dirs[j][0])
 
@@ -250,6 +244,7 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
             line = line_temp.split('\n')[0]
             if(line.find(temp_string) != -1):
                 nsrc_lines = int(line.split(':')[0].split('line')[1].split('"')[0].lstrip())
+                print(inhtml_file+" "+str(nsrc_lines))
                 src_line = 1;
             if (line_ctr < nlines_not_tested):
                 temp_line = 'line'+src_not_tested_lines[file_ctr][line_ctr]
@@ -310,7 +305,9 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
 
         output_list.append(temp_list)
 
-    shutil.rmtree(gcov_dir)
+    if nsrc_files_not_tested == nfiles_not_processed:
+      raise RuntimeError("Unable to process any files, you must run make alldoc before running make gcovmerge")
+
     # ------------------------------- End of Stage 3 ----------------------------------------
 
     # ------------------------------- Stage 4 ----------------------------------------------
@@ -389,7 +386,7 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     out_fid.close()
 
     print("End of gcov script")
-    print("""See index_gcov1.html in %s""" % (LOC))
+    print("""See %s""" % os.path.join(LOC,'index_gcov1.html'))
     return
 
 def main():
@@ -412,11 +409,6 @@ def main():
                       action='store_true',default=False)
     options, args = parser.parse_args()
 
-    if 'USER' in os.environ:
-      USER = os.environ['USER']
-    else:
-      USER = 'petsc_ci'
-    gcov_dir = "/tmp/gcov-"+USER
 
     if options.petsc_dir:
         petsc_dir = options.petsc_dir
@@ -433,9 +425,11 @@ def main():
             return
 
     if options.run_gcov:
+        gcov_dir = tempfile.mkdtemp()
         print("Running gcov and creating tarball")
         run_gcov(gcov_dir,petsc_dir,petsc_arch)
         make_tarball(gcov_dir,petsc_dir,petsc_arch)
+        shutil.rmtree(gcov_dir)
     elif options.merge_gcov:
         print("Creating main html page")
         # check to see if LOC is given
@@ -458,7 +452,9 @@ def main():
           print("No coverage tarballs found")
           return
 
+        gcov_dir = tempfile.mkdtemp()
         make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI)
+        shutil.rmtree(gcov_dir)
     else:
         parser.print_usage()
 
