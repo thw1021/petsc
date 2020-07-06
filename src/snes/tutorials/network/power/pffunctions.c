@@ -338,7 +338,7 @@ PetscErrorCode SetInitialGuess_Power(DM networkdm,Vec localX,PetscInt nv,PetscIn
   VERTEX_Power   bus;
   PetscInt       i;
   GEN            gen;
-  PetscBool      ghostvtex;
+  PetscBool      ghostvtex,iscouplev;
   PetscScalar    *xarr;
   PetscInt       key,numComps,j,offset;
   void*          component;
@@ -352,21 +352,22 @@ PetscErrorCode SetInitialGuess_Power(DM networkdm,Vec localX,PetscInt nv,PetscIn
   ierr = VecGetArray(localX,&xarr);CHKERRQ(ierr);
   for (i = 0; i < nv; i++) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
-    if (ghostvtex) continue;
+    ierr = DMNetworkIsCouplingVertex(networkdm,vtx[i],&iscouplev);CHKERRQ(ierr);
+    if (ghostvtex ||iscouplev) continue;
 
     ierr = DMNetworkGetVariableOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&numComps);CHKERRQ(ierr);
     for (j=0; j < numComps; j++) {
       ierr = DMNetworkGetComponent(networkdm,vtx[i],j,&key,&component);CHKERRQ(ierr);
       if (key == User->compkey_bus) {
-        bus = (VERTEX_Power)(component);
-        xarr[offset] = bus->va*PETSC_PI/180.0;
-        xarr[offset+1] = bus->vm;
+	bus = (VERTEX_Power)(component);
+	xarr[offset] = bus->va*PETSC_PI/180.0;
+	xarr[offset+1] = bus->vm;
       } else if (key == User->compkey_gen) {
-        gen = (GEN)(component);
-        if (!gen->status) continue;
-        xarr[offset+1] = gen->vs;
-        break;
+	gen = (GEN)(component);
+	if (!gen->status) continue;
+	xarr[offset+1] = gen->vs;
+	break;
       }
     }
   }
