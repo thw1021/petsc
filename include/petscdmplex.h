@@ -455,11 +455,11 @@ PETSC_EXTERN PetscErrorCode DMPlexCellRefinerGetAffineFaceTransforms(DMPlexCellR
 PETSC_EXTERN PetscErrorCode DMPlexRefineUniform(DM, DMPlexCellRefiner, DM *);
 
 /* Fokker-Planck-Landau */
-PETSC_EXTERN PetscErrorCode DMPlexFPPrintNorms(Vec, PetscInt);
-PETSC_EXTERN PetscErrorCode DMPlexFPCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
-PETSC_EXTERN PetscErrorCode DMPlexFPDestroyVelocitySpace(DM*);
-PETSC_EXTERN PetscErrorCode DMPlexFPAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);
-PETSC_EXTERN PetscErrorCode FPLandIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
-PETSC_EXTERN PetscErrorCode FPLandIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
+PETSC_EXTERN PetscErrorCode DMPlexLandPrintNorms(Vec, PetscInt);
+PETSC_EXTERN PetscErrorCode DMPlexLandCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
+PETSC_EXTERN PetscErrorCode DMPlexLandDestroyVelocitySpace(DM*);
+PETSC_EXTERN PetscErrorCode DMPlexLandAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);
+PETSC_EXTERN PetscErrorCode LandIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
+PETSC_EXTERN PetscErrorCode LandIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
 
 #endif

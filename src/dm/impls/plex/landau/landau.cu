@@ -10,7 +10,7 @@
 #define PETSC_THREAD_SYNC __syncthreads()
 #define PETSC_DEVICE_FUNC_DECL __device__
 #define PETSC_DEVICE_DATA_DECL __constant__
-#include "fp_kernels.h"
+#include "land_kernel.h"
 
 // Macro to catch CUDA errors in CUDA runtime calls
 #define CUDA_SAFE_CALL(call)                                          \
@@ -41,7 +41,7 @@ do {                                                                  \
     }                                                                 \
 } while (0)
 
-// #define FP_USE_SHARED_GPU_MEM
+// #define LAND_USE_SHARED_GPU_MEM
 //j
 // The GPU Landau kernel
 //
@@ -49,19 +49,19 @@ __global__
 void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, const PetscInt Nf, const PetscInt Nb, const PetscReal invJj[],
 		 const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
 		 const PetscReal * const a_TabBD, const PetscReal * const IPDataGlobal, const PetscReal wiGlobal[],
-#if !defined(FP_USE_SHARED_GPU_MEM)
+#if !defined(LAND_USE_SHARED_GPU_MEM)
 		 PetscReal *g2arr, PetscReal *g3arr,
 #endif
 		 PetscBool quarter3DDomain, PetscScalar elemMats_out[])
 {
   const PetscInt  Nq = blockDim.x, myelem = blockIdx.x;
-#if defined(FP_USE_SHARED_GPU_MEM)
+#if defined(LAND_USE_SHARED_GPU_MEM)
   extern __shared__ PetscReal g2_g3_qi[]; // Nq * { [NSubBlocks][Nf][dim] ; [NSubBlocks][Nf][dim][dim] }
-  PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2_g3_qi[0];
-  PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g2_g3_qi[FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM];
+  PetscReal       (*g2)[LAND_MAX_NQ][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM]         = (PetscReal (*)[LAND_MAX_NQ][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM])         &g2_g3_qi[0];
+  PetscReal       (*g3)[LAND_MAX_NQ][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM] = (PetscReal (*)[LAND_MAX_NQ][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM]) &g2_g3_qi[LAND_MAX_SUB_THREAD_BLOCKS*LAND_MAX_NQ*LAND_MAX_SPECIES*LAND_DIM];
 #else
-  PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM       ];
-  PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g3arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*FP_DIM];
+  PetscReal       (*g2)[LAND_MAX_NQ][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM]         = (PetscReal (*)[LAND_MAX_NQ][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM])         &g2arr[myelem*LAND_MAX_SUB_THREAD_BLOCKS*LAND_MAX_NQ*LAND_MAX_SPECIES*LAND_DIM       ];
+  PetscReal       (*g3)[LAND_MAX_NQ][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM] = (PetscReal (*)[LAND_MAX_NQ][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM]) &g3arr[myelem*LAND_MAX_SUB_THREAD_BLOCKS*LAND_MAX_NQ*LAND_MAX_SPECIES*LAND_DIM*LAND_DIM];
 #endif
   const PetscInt  myQi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlks = blockDim.y;
   const PetscInt  jpidx = myQi + myelem * Nq;
@@ -99,7 +99,7 @@ __global__ void assemble_kernel(const PetscInt nidx_arr[], PetscInt *idx_arr[], 
 static PetscErrorCode assemble_omp_private(PetscInt cStart, PetscInt cEnd, PetscInt totDim, DM plex, PetscSection section, PetscSection globalSection, Mat JacP, PetscScalar elemMats[], PetscContainer container);
 static PetscErrorCode assemble_cuda_private(PetscInt cStart, PetscInt cEnd, PetscInt totDim, DM plex, PetscSection section, PetscSection globalSection, Mat JacP, PetscScalar elemMats[], PetscContainer container, const PetscLogEvent events[]);
 
-PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_alpha[],const PetscReal nu_beta[],
+PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_alpha[],const PetscReal nu_beta[],
 				     const PetscReal invMass[], const PetscReal Eq_m[], const PetscReal * const IPDataGlobal,
 				     const PetscReal wiGlobal[], const PetscReal invJj[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain, 
 				     Mat JacP)
@@ -119,7 +119,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
 #endif
   ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
-  if (dim!=FP_DIM) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "FP_DIM != dim");
+  if (dim!=LAND_DIM) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "LAND_DIM != dim");
   ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
   numGCells = cEnd - cStart;
   nip  = numGCells*Nq; /* length of inner global iteration */
@@ -165,8 +165,8 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
     PetscReal  *d_g2g3;
     dim3 dimBlock(Nq,num_sub_blocks);
     CUDA_SAFE_CALL(cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar))); // kernel output
-    ii = FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*(1+FP_DIM)*FP_MAX_SUB_THREAD_BLOCKS;
-#if defined(FP_USE_SHARED_GPU_MEM)
+    ii = LAND_MAX_NQ*LAND_MAX_SPECIES*LAND_DIM*(1+LAND_DIM)*LAND_MAX_SUB_THREAD_BLOCKS;
+#if defined(LAND_USE_SHARED_GPU_MEM)
     /* PetscPrintf(PETSC_COMM_SELF,"Call land_kernel with %D words shared memory\n",ii); */
     land_kernel<<<numGCells,dimBlock,ii*szf>>>( nip,dim,totDim,Nf,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
 						d_TabBD, d_IPDataGlobal, d_wiGlobal, quarter3DDomain, d_elemMats);
@@ -174,7 +174,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
 #else
     CUDA_SAFE_CALL(cudaMalloc((void **)&d_g2g3, ii*szf*numGCells)); // kernel input
     PetscReal  *g2 = &d_g2g3[0];
-    PetscReal  *g3 = &d_g2g3[FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*numGCells];
+    PetscReal  *g3 = &d_g2g3[LAND_MAX_SUB_THREAD_BLOCKS*LAND_MAX_NQ*LAND_MAX_SPECIES*LAND_DIM*numGCells];
     land_kernel<<<numGCells,dimBlock>>>( nip,dim,totDim,Nf,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
 					 d_TabBD, d_IPDataGlobal, d_wiGlobal, g2, g3, quarter3DDomain, d_elemMats);
     CHECK_LAUNCH_ERROR();
@@ -458,22 +458,22 @@ static PetscErrorCode assemble_omp_private(PetscInt cStart, PetscInt cEnd, Petsc
 static PetscErrorCode assemble_cuda_private(PetscInt cStart, PetscInt cEnd, PetscInt totDim, DM plex, PetscSection section, PetscSection globalSection, Mat JacP, PetscScalar elemMats[], PetscContainer container, const PetscLogEvent events[])
 {
   PetscErrorCode    ierr;
-#define FP_MAX_COLORS 16
-#define FP_MAX_ELEMS 512
-  Mat_SeqAIJ             h_mats[FP_MAX_COLORS], *jaca = (Mat_SeqAIJ *)JacP->data, *d_mats;
+#define LAND_MAX_COLORS 16
+#define LAND_MAX_ELEMS 512
+  Mat_SeqAIJ             h_mats[LAND_MAX_COLORS], *jaca = (Mat_SeqAIJ *)JacP->data, *d_mats;
   const PetscInt         nelems = cEnd - cStart, nnz = jaca->i[JacP->rmap->n], N = JacP->rmap->n;  /* serial */
   const ISColoringValue *colors;
   ISColoringValue       *d_colors,colour;
-  PetscInt              *h_idx_arr[FP_MAX_ELEMS], h_nidx_arr[FP_MAX_ELEMS], *d_nidx_arr, **d_idx_arr,nc,ej,j,cell;
-  PetscScalar           *h_new_el_mats[FP_MAX_ELEMS], *val_buf, **d_new_el_mats;
+  PetscInt              *h_idx_arr[LAND_MAX_ELEMS], h_nidx_arr[LAND_MAX_ELEMS], *d_nidx_arr, **d_idx_arr,nc,ej,j,cell;
+  PetscScalar           *h_new_el_mats[LAND_MAX_ELEMS], *val_buf, **d_new_el_mats;
   ISColoring_ctx         coloring_ctx = NULL;
   ISColoring             iscoloring;
   ierr = PetscContainerGetPointer(container,(void**)&coloring_ctx);CHKERRQ(ierr);
   iscoloring = coloring_ctx->coloring;
   /* get colors */
   ierr = ISColoringGetColors(iscoloring, &j, &nc, &colors);CHKERRQ(ierr);
-  if (nelems>FP_MAX_ELEMS) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "too many elements. %D > %D",nelems,FP_MAX_ELEMS);
-  if (nc>FP_MAX_COLORS) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "too many colors. %D > %D",nc,FP_MAX_COLORS);
+  if (nelems>LAND_MAX_ELEMS) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "too many elements. %D > %D",nelems,LAND_MAX_ELEMS);
+  if (nc>LAND_MAX_COLORS) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "too many colors. %D > %D",nc,LAND_MAX_COLORS);
   /* colors for kernel */
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_colors,         nelems*sizeof(ISColoringValue))); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(          d_colors, colors, nelems*sizeof(ISColoringValue), cudaMemcpyHostToDevice));
