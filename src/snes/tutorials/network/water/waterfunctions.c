@@ -79,7 +79,8 @@ PetscErrorCode FormFunction_Water(DM networkdm,Vec localX,Vec localF,PetscInt nv
     if (ghostvtex) continue;
 
     ierr = DMNetworkGetVariableOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponent(networkdm,vtx[i],0,&key,(void**)&vertex);CHKERRQ(ierr);
+    ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&ncomp);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vtx[i],ncomp-1,&key,(void**)&vertex);CHKERRQ(ierr);
 
     if (vertex->type == VERTEX_TYPE_JUNCTION) {
       farr[offset] -= vertex->junc.demand;
@@ -206,25 +207,20 @@ PetscErrorCode SetInitialGuess_Water(DM networkdm,Vec localX,PetscInt nv,PetscIn
 {
   PetscErrorCode ierr;
   PetscInt       i,offset,key,ncomp;
-  PetscBool      ghostvtex;
+  PetscBool      ghostvtex,iscouplev;
   VERTEX_Water   vertex;
   PetscScalar    *xarr;
+  void*          component;
 
   PetscFunctionBegin;
   ierr = VecGetArray(localX,&xarr);CHKERRQ(ierr);
   for (i=0; i < nv; i++) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
-    if (ghostvtex) continue;
-    ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&ncomp);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponentVariableOffset(networkdm,vtx[i],ncomp-1,&offset);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponent(networkdm,vtx[i],0,&key,(void**)&vertex);CHKERRQ(ierr);
-    //ierr = DMNetworkGetComponent(networkdm,vtx[i],ncomp-1,&key,(void**)&vertex);CHKERRQ(ierr); //needs fix!
-    if (ncomp > 1) { /* the vertex coupling power subnet */
-      printf("SetInitialGuess_Water: v %d, ncomp %d, vertex->type %d; key %d; vertex %p\n",vtx[i],ncomp,vertex->type,key,vertex);
-      vertex->type = VERTEX_TYPE_JUNCTION;
-      printf("SetInitialGuess_Water: v %d, ncomp %d, vertex->type %d; key %d; vertex %p\n",vtx[i],ncomp,vertex->type,key,vertex);
-    }
+    ierr = DMNetworkIsCouplingVertex(networkdm,vtx[i],&iscouplev);CHKERRQ(ierr);
+    if (ghostvtex || iscouplev) continue;
 
+    ierr = DMNetworkGetComponent(networkdm,vtx[i],0,&key,(void**)&vertex);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentVariableOffset(networkdm,vtx[i],0,&offset);CHKERRQ(ierr);
     if (vertex->type == VERTEX_TYPE_JUNCTION) {
       xarr[offset] = 100;
     } else if (vertex->type == VERTEX_TYPE_RESERVOIR) {
