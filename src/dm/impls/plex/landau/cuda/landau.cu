@@ -10,7 +10,7 @@
 #define PETSC_THREAD_SYNC __syncthreads()
 #define PETSC_DEVICE_FUNC_DECL __device__
 #define PETSC_DEVICE_DATA_DECL __constant__
-#include "land_kernel.h"
+#include "../land_kernel.h"
 
 // Macro to catch CUDA errors in CUDA runtime calls
 #define CUDA_SAFE_CALL(call)                                          \
