@@ -1,5 +1,4 @@
 
-
 #if defined(__INTEL_COMPILER)
 #if defined(PETSC_USE_REAL_SINGLE)
 #define MYINVSQRT(q) invsqrtf(q)
