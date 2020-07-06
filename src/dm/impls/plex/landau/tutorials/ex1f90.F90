@@ -6,14 +6,14 @@
 !
 !
 ! Contributed by Mark Adams
-program DMPlexTestFPInterface
+program DMPlexTestLandInterface
   use petscts
   use petscdmplex
 #include <petsc/finclude/petscts.h>
 #include <petsc/finclude/petscdmplex.h>
   implicit none
-  external FPLandIFunction
-  external FPLandIJacobian
+  external LandLandIFunction
+  external LandLandIJacobian
   DM             dm
   PetscInt       dim
   PetscInt       ii
@@ -36,7 +36,7 @@ program DMPlexTestFPInterface
   !  Create mesh (DM), read in parameters, create and add f_0 (X)
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   dim = 2
-  call DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, '', X, J, dm, ierr); CHKERRQ(ierr)
+  call DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, '', X, J, dm, ierr); CHKERRQ(ierr)
   call DMSetUp(dm,ierr);CHKERRQ(ierr)
   call VecDuplicate(X,X_0,ierr);CHKERRQ(ierr)
   call VecCopy(X,X_0,ierr)
@@ -44,7 +44,7 @@ program DMPlexTestFPInterface
   !  View
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   ii = 0
-  call DMPlexFPPrintNorms(X,ii,ierr);CHKERRQ(ierr)
+  call DMPlexLandPrintNorms(X,ii,ierr);CHKERRQ(ierr)
   mone = 0;
   call DMSetOutputSequenceNumber(dm, ii, mone, ierr);CHKERRQ(ierr);
   call PetscObjectViewFromOptions(dm,PETSC_NULL_VEC,'-dm_view',ierr);CHKERRQ(ierr)
@@ -53,20 +53,20 @@ program DMPlexTestFPInterface
   !    Create timestepping solver context
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   call TSCreate(PETSC_COMM_SELF,ts,ierr);CHKERRQ(ierr)
-  call PetscObjectSetOptionsPrefix(ts, 'fp_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
+  call PetscObjectSetOptionsPrefix(ts, 'land_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
   call TSSetDM(ts,dm,ierr);CHKERRQ(ierr)
   call TSGetSNES(ts,snes,ierr);CHKERRQ(ierr)
-  call PetscObjectSetOptionsPrefix(snes, 'fp_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
+  call PetscObjectSetOptionsPrefix(snes, 'land_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
   call SNESGetLineSearch(snes,linesearch,ierr);CHKERRQ(ierr)
   call SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC,ierr);CHKERRQ(ierr)
-  call TSSetIFunction(ts,PETSC_NULL_VEC,FPLandIFunction,PETSC_NULL_VEC,ierr);CHKERRQ(ierr)
-  call TSSetIJacobian(ts,J,J,FPLandIJacobian,PETSC_NULL_VEC,ierr);CHKERRQ(ierr)
+  call TSSetIFunction(ts,PETSC_NULL_VEC,LandLandIFunction,PETSC_NULL_VEC,ierr);CHKERRQ(ierr)
+  call TSSetIJacobian(ts,J,J,LandLandIJacobian,PETSC_NULL_VEC,ierr);CHKERRQ(ierr)
   call TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER,ierr);CHKERRQ(ierr)
 
   call SNESGetKSP(snes,ksp,ierr);CHKERRQ(ierr)
-  call PetscObjectSetOptionsPrefix(ksp, 'fp_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
+  call PetscObjectSetOptionsPrefix(ksp, 'land_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
   call KSPGetPC(ksp,pc,ierr);CHKERRQ(ierr)
-  call PetscObjectSetOptionsPrefix(pc, 'fp_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
+  call PetscObjectSetOptionsPrefix(pc, 'land_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
 
   call TSSetFromOptions(ts,ierr);CHKERRQ(ierr)
   call TSSetSolution(ts,X,ierr);CHKERRQ(ierr)
@@ -76,7 +76,7 @@ program DMPlexTestFPInterface
   call TSSolve(ts,X,ierr);CHKERRQ(ierr)
   ! call TSGetSolution(ts, X, ierr);CHKERRQ(ierr);
   ii = 1
-  call DMPlexFPPrintNorms(X,ii,ierr);CHKERRQ(ierr)
+  call DMPlexLandPrintNorms(X,ii,ierr);CHKERRQ(ierr)
   call TSGetTime(ts, mone, ierr);CHKERRQ(ierr);
   call DMSetOutputSequenceNumber(dm, ii, mone, ierr);CHKERRQ(ierr);
   call PetscObjectViewFromOptions(X,PETSC_NULL_VEC,'-vec_view',ierr);CHKERRQ(ierr)
@@ -85,12 +85,12 @@ program DMPlexTestFPInterface
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   mone = -1.
   call VecAXPY(X,mone,X_0,ierr);CHKERRQ(ierr)
-  call DMPlexFPDestroyVelocitySpace(dm, ierr);CHKERRQ(ierr)
+  call DMPlexLandDestroyVelocitySpace(dm, ierr);CHKERRQ(ierr)
   call TSDestroy(ts, ierr);CHKERRQ(ierr)
   call VecDestroy(X, ierr);CHKERRQ(ierr)
   call VecDestroy(X_0, ierr);CHKERRQ(ierr)
   call PetscFinalize(ierr)
-end program DMPlexTestFPInterface
+end program DMPlexTestLandInterface
 
 !/*TEST
 !  build:
@@ -99,6 +99,6 @@ end program DMPlexTestFPInterface
 !  test:
 !    suffix: 0
 !    requires: p4est
-!    args: -petscspace_degree 4 -petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2,40 -ion_charges 1,18 -thermal_temps 5,5,.005 -n 1.00018,1,1e-5 -n_0 1e20 -fp_ts_monitor -fp_snes_rtol 1.e-6 -fp_snes_monitor -fp_snes_converged_reason -fp_ts_type arkimex -fp_ts_arkimex_type 1bee -fp_ts_max_snes_failures -1 -fp_ts_rtol 1e-4 -fp_ts_dt 1.e-6 -fp_ts_max_time 1 -fp_ts_adapt_clip .5,1.25 -fp_ts_adapt_scale_solve_failed 0.75 -fp_ts_adapt_time_step_increase_delay 5 -fp_ts_max_steps 1 -fp_pc_type lu -fp_ksp_type preonly -amr_levels_max 17 -domain_radius 5 -amr_re_levels 0 -re_radius 1 -amr_z_refine1 1 -amr_z_refine2 0 -amr_post_refine 0 -z_radius1 .1 -z_radius2 .1
+!    args: -petscspace_degree 4 -petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2,40 -ion_charges 1,18 -thermal_temps 5,5,.005 -n 1.00018,1,1e-5 -n_0 1e20 -land_ts_monitor -land_snes_rtol 1.e-6 -land_snes_monitor -land_snes_converged_reason -land_ts_type arkimex -land_ts_arkimex_type 1bee -land_ts_max_snes_failures -1 -land_ts_rtol 1e-4 -land_ts_dt 1.e-6 -land_ts_max_time 1 -land_ts_adapt_clip .5,1.25 -land_ts_adapt_scale_solve_failed 0.75 -land_ts_adapt_time_step_increase_delay 5 -land_ts_max_steps 1 -land_pc_type lu -land_ksp_type preonly -amr_levels_max 17 -domain_radius 5 -amr_re_levels 0 -re_radius 1 -amr_z_refine1 1 -amr_z_refine2 0 -amr_post_refine 0 -z_radius1 .1 -z_radius2 .1
 !
 !TEST*/
