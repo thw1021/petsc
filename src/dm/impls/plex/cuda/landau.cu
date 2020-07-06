@@ -54,7 +54,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
 #endif
 		 PetscBool quarter3DDomain, PetscScalar elemMats_out[])
 {
-  const PetscInt  Nq = blockDim.y, myelem = blockIdx.x;
+  const PetscInt  Nq = blockDim.x, myelem = blockIdx.x;
 #if defined(FP_USE_SHARED_GPU_MEM)
   extern __shared__ PetscReal g2_g3_qi[]; // Nq * { [NSubBlocks][Nf][dim] ; [NSubBlocks][Nf][dim][dim] }
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2_g3_qi[0];
@@ -63,7 +63,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   PetscReal       (*g2)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM]         = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM])         &g2arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM       ];
   PetscReal       (*g3)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM] = (PetscReal (*)[FP_MAX_NQ][FP_MAX_SUB_THREAD_BLOCKS][FP_MAX_SPECIES][FP_DIM][FP_DIM]) &g3arr[myelem*FP_MAX_SUB_THREAD_BLOCKS*FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*FP_DIM];
 #endif
-  const PetscInt  myQi = threadIdx.y, mySubBlk = threadIdx.x, nSubBlks = blockDim.x;
+  const PetscInt  myQi = threadIdx.x, mySubBlk = threadIdx.y, nSubBlks = blockDim.y;
   const PetscInt  jpidx = myQi + myelem * Nq;
   const PetscInt  subblocksz = nip/nSubBlks + !!(nip%nSubBlks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
   PetscScalar     *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
@@ -72,7 +72,7 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
     memset(elemMat, 0, totDim*totDim*sizeof(PetscScalar));
   }
   __syncthreads();
-  if (0) {
+  if (1) {
     landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, 1, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, a_TabBD, elemMat, *g2, *g3);
   } else {
     landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, mySubBlk, nip, nSubBlks, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, a_TabBD, elemMat, *g2, *g3);
@@ -163,7 +163,7 @@ PetscErrorCode FPLandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal
 #endif
   {
     PetscReal  *d_g2g3;
-    dim3 dimBlock(num_sub_blocks,Nq);
+    dim3 dimBlock(Nq,num_sub_blocks);
     CUDA_SAFE_CALL(cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar))); // kernel output
     ii = FP_MAX_NQ*FP_MAX_SPECIES*FP_DIM*(1+FP_DIM)*FP_MAX_SUB_THREAD_BLOCKS;
 #if defined(FP_USE_SHARED_GPU_MEM)
