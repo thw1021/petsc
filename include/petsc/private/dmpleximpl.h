@@ -612,26 +612,26 @@ PETSC_INTERN PetscErrorCode DMPlexBasisTransformApply_Internal(DM, const PetscRe
 PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErrorCode (**)(Mat, PetscReal, Vec, Vec, PetscReal, IS, void*), void **);
 
 /* the Fokker-Planck-Landau context */
-#if !defined(FP_DIM)
-#define FP_DIM 2
+#if !defined(LAND_DIM)
+#define LAND_DIM 2
 #endif
-#if !defined(FP_MAX_SPECIES)
-#define FP_MAX_SPECIES 10
+#if !defined(LAND_MAX_SPECIES)
+#define LAND_MAX_SPECIES 10
 #endif
-#if !defined(FP_MAX_NQ)
-#define FP_MAX_NQ 25
+#if !defined(LAND_MAX_NQ)
+#define LAND_MAX_NQ 25
 #endif
-#if !defined(FP_MAX_SUB_THREAD_BLOCKS)
+#if !defined(LAND_MAX_SUB_THREAD_BLOCKS)
 #if defined(PETSC_HAVE_CUDA)
-#define FP_MAX_SUB_THREAD_BLOCKS 8
+#define LAND_MAX_SUB_THREAD_BLOCKS 8
 #else
-#define FP_MAX_SUB_THREAD_BLOCKS 1
+#define LAND_MAX_SUB_THREAD_BLOCKS 1
 #endif
 #endif
 typedef struct {
   PetscBool     interpolate;                  /* Generate intermediate mesh elements */
   PetscBool     simplex;
-  PetscFE       fe[FP_MAX_SPECIES];
+  PetscFE       fe[LAND_MAX_SPECIES];
   /* geometry  */
   PetscReal     i_radius;
   PetscReal     e_radius;
@@ -650,13 +650,13 @@ typedef struct {
   PetscBool     quarter3DDomain;   /* bilateral symetry, 1/4 x-y domain */
   /* discretization - AMR */
   PetscErrorCode (*errorIndicator)(PetscInt, PetscReal, PetscReal [], PetscInt, const PetscInt[], const PetscScalar[], const PetscScalar[], PetscReal *, void *);
-  PetscReal     refineTol[FP_MAX_SPECIES];
-  PetscReal     coarsenTol[FP_MAX_SPECIES];
+  PetscReal     refineTol[LAND_MAX_SPECIES];
+  PetscReal     coarsenTol[LAND_MAX_SPECIES];
   /* physics */
-  PetscReal     thermal_temps[FP_MAX_SPECIES];
-  PetscReal     masses[FP_MAX_SPECIES];  /* mass of each species  */
-  PetscReal     charges[FP_MAX_SPECIES]; /* charge of each species  */
-  PetscReal     n[FP_MAX_SPECIES];       /* number density of each species  */
+  PetscReal     thermal_temps[LAND_MAX_SPECIES];
+  PetscReal     masses[LAND_MAX_SPECIES];  /* mass of each species  */
+  PetscReal     charges[LAND_MAX_SPECIES]; /* charge of each species  */
+  PetscReal     n[LAND_MAX_SPECIES];       /* number density of each species  */
   PetscReal     m_0;      /* reference mass */
   PetscReal     v_0;      /* reference velocity */
   PetscReal     n_0;      /* reference number density */
@@ -686,8 +686,8 @@ typedef struct {
 
 typedef struct {
   PetscReal     f;
-  PetscReal     df[FP_DIM];
-} FPLandFDF;
+  PetscReal     df[LAND_DIM];
+} LandFDF;
 
 typedef struct {
   /* coordinate */
@@ -696,17 +696,17 @@ typedef struct {
     PetscReal   x;
     PetscReal   r;
   };
-#if FP_DIM==3
+#if LAND_DIM==3
   PetscReal     y;
 #endif
   PetscReal     z;
   /* f; df data [Nc] */
-  FPLandFDF     fdf[0];
-} FPLandPointData;
+  LandFDF     fdf[0];
+} LandPointData;
 
 #if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode FPLandauCUDAJacobian( DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
-                                                  const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
+PETSC_EXTERN PetscErrorCode LandauCUDAJacobian( DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
+                                                const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
 #endif
 
 #endif /* _PLEXIMPL_H */

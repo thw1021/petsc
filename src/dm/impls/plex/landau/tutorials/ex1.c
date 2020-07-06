@@ -21,11 +21,11 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
-  ierr = DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
+  ierr = DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = VecDuplicate(X,&X_0);CHKERRQ(ierr);
   ierr = VecCopy(X,X_0);CHKERRQ(ierr);
-  ierr = DMPlexFPPrintNorms(X,0);CHKERRQ(ierr);
+  ierr = DMPlexLandPrintNorms(X,0);CHKERRQ(ierr);
   ierr = DMSetOutputSequenceNumber(dm, 0, 0.0);CHKERRQ(ierr);
   ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
   ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr);
@@ -37,8 +37,8 @@ int main(int argc, char **argv)
   ierr = SNESSetOptionsPrefix(snes, "fp_");CHKERRQ(ierr);  /* should get this from the dm or give it to the dm */
   ierr = SNESGetLineSearch(snes,&linesearch);CHKERRQ(ierr);
   ierr = SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC);CHKERRQ(ierr);
-  ierr = TSSetIFunction(ts,NULL,FPLandIFunction,NULL);CHKERRQ(ierr);
-  ierr = TSSetIJacobian(ts,J,J,FPLandIJacobian,NULL);CHKERRQ(ierr);
+  ierr = TSSetIFunction(ts,NULL,LandIFunction,NULL);CHKERRQ(ierr);
+  ierr = TSSetIJacobian(ts,J,J,LandIJacobian,NULL);CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER);CHKERRQ(ierr);
   ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
   ierr = KSPSetOptionsPrefix(ksp, "fp_");CHKERRQ(ierr);  /* should get this from the dm or give it to the dm */
@@ -47,13 +47,13 @@ int main(int argc, char **argv)
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
-  ierr = DMPlexFPPrintNorms(X,1);CHKERRQ(ierr);
+  ierr = DMPlexLandPrintNorms(X,1);CHKERRQ(ierr);
   ierr = TSGetTime(ts, &time);CHKERRQ(ierr);
   ierr = DMSetOutputSequenceNumber(dm, 1, time);CHKERRQ(ierr);
   ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr);
   ierr = VecAXPY(X,-1,X_0);CHKERRQ(ierr);
   /* clean up */
-  ierr = DMPlexFPDestroyVelocitySpace(&dm);CHKERRQ(ierr);
+  ierr = DMPlexLandDestroyVelocitySpace(&dm);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
   ierr = VecDestroy(&X_0);CHKERRQ(ierr);

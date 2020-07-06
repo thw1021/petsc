@@ -1,19 +1,14 @@
-#requirespackage 'PETSC_HAVE_CUDA'
--include ../../../../../petscdir.mk
+-include ../../../../../../petscdir.mk
+#requiresdefine   'PETSC_HAVE_FORTRAN'
 ALL: lib
-
-CPPFLAGS = 
 CFLAGS   =
 FFLAGS   =
-SOURCEC  = 
-SOURCECU = landau.cu
+SOURCEC  = zplexlandcreate.c
 SOURCEF  =
 SOURCEH  =
-DIRS     = 
+DIRS     =
 LIBBASE  = libpetscdm
-MANSEC   = DM
-SUBMANSEC= DMPLEX
-LOCDIR   = src/dm/impls/plex/cuda
+LOCDIR   = src/dm/impls/plex/landau/ftn-custom/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

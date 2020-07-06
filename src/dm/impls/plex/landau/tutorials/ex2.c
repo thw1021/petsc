@@ -123,7 +123,7 @@ static PetscErrorCode getTe_kev(DM plex, Vec X, PetscReal *a_n, PetscReal *a_Tke
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   {
     PetscDS        prob;
-    PetscReal      tt[FP_MAX_SPECIES],v2, v, n, vz, user[2] = {0.,ctx->charges[0]};
+    PetscReal      tt[LAND_MAX_SPECIES],v2, v, n, vz, user[2] = {0.,ctx->charges[0]};
     ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
     ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
     ierr = PetscDSSetObjective(prob, 0, &f0_n);CHKERRQ(ierr);
@@ -193,7 +193,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
 {
   PetscErrorCode    ierr;
   PetscDS           prob;
-  PetscScalar       J,J_re,tt[FP_MAX_SPECIES];
+  PetscScalar       J,J_re,tt[LAND_MAX_SPECIES];
   static PetscReal  old_ratio = 0;
   PetscBool         done=PETSC_FALSE;
   PetscReal         spit_eta,Te_kev=0,E,ratio,Z,n_e, user[2] = {0.,ctx->charges[0]};
@@ -271,7 +271,7 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
   PetscErrorCode    ierr;
   PetscDS           prob;
   Vec               X2;
-  PetscReal         ediff,idiff=0,tt[FP_MAX_SPECIES],lpm0,lpm1=1;
+  PetscReal         ediff,idiff=0,tt[LAND_MAX_SPECIES],lpm0,lpm1=1;
   DM                dm;
   PetscFunctionBegin;
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
@@ -316,7 +316,7 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
 static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time, LandCtx *ctx, PetscReal *a_E)
 {
   PetscErrorCode    ierr;
-  PetscReal         spit_eta,Te_kev,J,ratio,tt[FP_MAX_SPECIES];
+  PetscReal         spit_eta,Te_kev,J,ratio,tt[LAND_MAX_SPECIES];
   PetscDS           prob;
   DM                dm,plex;
   REctx             *rectx = (REctx*)ctx->data;
@@ -359,7 +359,7 @@ static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, 
   REctx            *rectx = (REctx*)ctx->data;
   PetscErrorCode    ierr;
   DM                dm,plex;
-  PetscScalar       dJ_dt,tt[FP_MAX_SPECIES];
+  PetscScalar       dJ_dt,tt[LAND_MAX_SPECIES];
   PetscDS           prob;
   PetscFunctionBegin;
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
@@ -421,7 +421,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
   if (new_imp_rate != 0) {
     if (new_imp_rate != rectx->current_rate) {
       PetscInt       ii;
-      PetscReal      dne_dt,dni_dt,tilda_ns[FP_MAX_SPECIES],temps[FP_MAX_SPECIES];
+      PetscReal      dne_dt,dni_dt,tilda_ns[LAND_MAX_SPECIES],temps[LAND_MAX_SPECIES];
       PetscDS        prob; /* diagnostics only */
       rectx->current_rate = new_imp_rate;
       ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
@@ -429,8 +429,8 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
       dni_dt = new_imp_rate              /* *ctx->t_0 */; /* fully ionized immediately, no normalize, stay in non-dim */
       dne_dt = new_imp_rate*rectx->Ne_ion/* *ctx->t_0 */;
       PetscPrintf(PETSC_COMM_SELF, "\tFormSource: have new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt);
-      for (ii=1;ii<FP_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
-      for (ii=1;ii<FP_MAX_SPECIES;ii++)    temps[ii] = 1;
+      for (ii=1;ii<LAND_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
+      for (ii=1;ii<LAND_MAX_SPECIES;ii++)    temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
       temps[0]    = rectx->T_cold;    temps[rectx->imp_idx] = rectx->T_cold;
       /* add it */
@@ -439,7 +439,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
         ierr = PetscObjectSetName((PetscObject)rectx->imp_src, "source");CHKERRQ(ierr);
       }
       ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
-      ierr = DMPlexFPAddMaxwellians(plex,rectx->imp_src,ftime,temps,tilda_ns,ctx);CHKERRQ(ierr);
+      ierr = DMPlexLandAddMaxwellians(plex,rectx->imp_src,ftime,temps,tilda_ns,ctx);CHKERRQ(ierr);
       /* clean up */
       ierr = DMDestroy(&plex);CHKERRQ(ierr);
       if (0) {
@@ -483,7 +483,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   if ( time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
     /* print norms */
-    ierr = DMPlexFPPrintNorms(X, stepi);CHKERRQ(ierr);
+    ierr = DMPlexLandPrintNorms(X, stepi);CHKERRQ(ierr);
     ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
     ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
     /* diagnostics */
@@ -681,7 +681,7 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
-  ierr = DMPlexFPCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
+  ierr = DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
@@ -697,8 +697,8 @@ int main(int argc, char **argv)
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
   J = ctx->J;
-  ierr = TSSetIFunction(ts,NULL,FPLandIFunction,NULL);CHKERRQ(ierr);
-  ierr = TSSetIJacobian(ts,J,J,FPLandIJacobian,NULL);CHKERRQ(ierr);
+  ierr = TSSetIFunction(ts,NULL,LandIFunction,NULL);CHKERRQ(ierr);
+  ierr = TSSetIJacobian(ts,J,J,LandIJacobian,NULL);CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,FormSource,NULL);CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
@@ -719,7 +719,7 @@ int main(int argc, char **argv)
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
     ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
     ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
-    ierr = FPLandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
+    ierr = LandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
@@ -728,7 +728,7 @@ int main(int argc, char **argv)
   /* go */
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */
-  ierr = DMPlexFPDestroyVelocitySpace(&dm);CHKERRQ(ierr);
+  ierr = DMPlexLandDestroyVelocitySpace(&dm);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
   if (rectx->imp_src) {
