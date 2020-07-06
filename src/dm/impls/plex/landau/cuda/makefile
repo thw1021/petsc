@@ -1,18 +1,18 @@
--include ../../../../../petscdir.mk
-ALL: lib
+#requirespackage 'PETSC_HAVE_CUDA'
+-include ../../../../../../petscdir.mk
 
 CPPFLAGS =
 CFLAGS   =
 FFLAGS   =
-SOURCEC  = plexland.c
-SOURCECU =
+SOURCEC  =
+SOURCECU = landau.cu
 SOURCEF  =
-SOURCEH  = land_kernel.h
-DIRS     = tutorials cuda
+SOURCEH  =
+DIRS     =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPLEX
-LOCDIR   = src/dm/impls/plex/landau
+LOCDIR   = src/dm/impls/plex/landau/cuda
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
