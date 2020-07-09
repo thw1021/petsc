@@ -138,10 +138,10 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
       ierr = DMPlexVecGetClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
       /* create point data for cell i for Landau tensor: x, f(x), grad f(x) */
       for (qj = 0; qj < Nq; ++qj) {
-        PetscInt    gidx = (ej*Nq + qj);
-        LandPointData *pnt_data = (LandPointData*)(IPData + gidx*ipdata_sz);
-        PetscScalar refSpaceDer[LAND_DIM];
-        PetscInt    dOffset = 0, fOffset = 0;
+        PetscInt       gidx = (ej*Nq + qj);
+        LandPointData  *pnt_data = (LandPointData*)(IPData + gidx*ipdata_sz);
+        PetscScalar    refSpaceDer[LAND_DIM];
+        PetscInt       dOffset = 0, fOffset = 0;
         for (d = 0; d < dim; ++d) pnt_data->crd[d] = vj[qj * dim + d]; /* coordinate */
         wiGlob[gidx] = detJj[qj] * quadWeights[qj];
         if (dim==2) wiGlob[gidx] *= pnt_data->r;  /* cylindrical coordinate, w/o 2pi */
