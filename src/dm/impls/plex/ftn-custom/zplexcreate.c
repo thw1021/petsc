@@ -31,12 +31,4 @@ PETSC_EXTERN void dmplexcreatefromfile_(MPI_Fint *comm, char* name, PetscBool *i
   FREECHAR(name, filename);
 }
 
-PETSC_EXTERN void petscpartitionerviewfromoptions_(PetscPartitioner *part,PetscObject obj,char* type,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
-{
-  char *t;
-
-  FIXCHAR(type,len,t);
-  *ierr = PetscPartitionerViewFromOptions(*part,obj,t);if (*ierr) return;
-  FREECHAR(type,t);
-}
 
