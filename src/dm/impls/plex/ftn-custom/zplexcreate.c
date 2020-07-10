@@ -4,11 +4,9 @@
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
 #define dmplexcreateboxmesh_  DMPLEXCREATEBOXMESH
 #define dmplexcreatefromfile_ DMPLEXCREATEFROMFILE
-#define petscpartitionerviewfromoptions_ PETSCPARTITIONERVIEWFROMOPTIONS
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
 #define dmplexcreateboxmesh_  dmplexcreateboxmesh
 #define dmplexcreatefromfile_ dmplexcreatefromfile
-#define petscpartitionerviewfromoptions_ petscpartitionerviewfromoptions
 #endif
 
 /* Definitions of Fortran Wrapper routines */
