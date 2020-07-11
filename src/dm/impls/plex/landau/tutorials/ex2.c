@@ -137,7 +137,7 @@ static PetscErrorCode getTe_kev(DM plex, Vec X, PetscReal *a_n, PetscReal *a_Tke
     ierr = PetscDSSetObjective(prob, 0, &f0_ve_shift);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
     v = ctx->n_0*ctx->v_0*tt[0]/n;         /* remove number density to get velocity */
-    if (vz!=0) printf("getTe_kev v=%g vz=%g\n",v,vz);
+    if (vz!=0) printf("getTe_kev v=%e vz=%e\n",v,vz);
     v2 = PetscSqr(v);                      /* use real space: m^2 / s^2 */
     if (a_Tkev) *a_Tkev = (v2*ctx->masses[0]*M_PI/8)*kev_joul; /* temperature in kev */
     if (a_n) *a_n = n;
@@ -163,7 +163,7 @@ static PetscReal CalculateE(PetscReal Tev, PetscReal n, PetscReal lnLambda, Pets
     *E = Ec;
     PetscReal betath = sqrt(2*Tev*e/(m*c*c));
     PetscReal j0 = Ehat * 7/(sqrt(2)*2) * pow(betath,3) * n * e * c;
-    PetscPrintf(PETSC_COMM_WORLD, "CalculateE j0=%g Ec = %g\n",j0,Ec);
+    PetscPrintf(PETSC_COMM_WORLD, "CalculateE j0=%e Ec = %e\n",j0,Ec);
   } else {
     PetscReal Ed, vth;
     vth = PetscSqrtReal(8*Tev*e/(m*M_PI));

@@ -255,7 +255,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
     const PetscReal                          wi = wiGlobal[ipidx];
 #if LAND_DIM==2
     PetscReal       Ud[2][2], Uk[2][2];
-    LandauTensor2D(vj, fplpt->r, fplpt->z, Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
+    LandauTensor2D(vj, fplpt->crd[0], fplpt->crd[1], Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
     for (fieldA = 0; fieldA < Nf; ++fieldA) {
       for (fieldB = 0; fieldB < Nf; ++fieldB) {
         for (d2 = 0; d2 < 2; ++d2) {
@@ -271,7 +271,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
 #else
     PetscReal U[3][3];
     if (!quarter3DDomain) {
-      LandauTensor3D(vj, fplpt->x, fplpt->y, fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);
+      LandauTensor3D(vj, fplpt->crd[0], fplpt->crd[1], fplpt->crd[2], U, (ipidx==jpidx) ? 0. : 1.);
       for (fieldA = 0; fieldA < Nf; ++fieldA) {
         for (fieldB = 0; fieldB < Nf; ++fieldB) {
           for (d2 = 0; d2 < 3; ++d2) {
@@ -285,7 +285,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
         }
       }
     } else {
-      PetscReal lxx[] = {fplpt->x, fplpt->y}, R[2][2] = {{-1,1},{1,-1}};
+      PetscReal lxx[] = {fplpt->crd[0], fplpt->crd[1]}, R[2][2] = {{-1,1},{1,-1}};
       PetscReal ldf[3*LAND_MAX_SPECIES];
       for (fieldB = 0; fieldB < Nf; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3 + fieldB*3] = fplpt->fdf[fieldB].df[d3] * wi * invMass[fieldB];
       for (dp=0;dp<4;dp++) {
