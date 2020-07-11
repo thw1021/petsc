@@ -210,7 +210,7 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal 
   /* else mask = 0; */
   s = mask*2*r*rp/l; /* mask for vectorization */
   tt = 1./(1+s);
-  pi4pow = 4*M_PI*MYINVSQRT(PetscSqr(l)*l);
+  pi4pow = 4*PETSC_PI*MYINVSQRT(PetscSqr(l)*l);
   sqrt_1s = MYSQRT(1.+s);
   /* sp.ellipe(2.*s/(1.+s)) */
   ellipticE(2*s*tt,&es); /* 44 flops * 2 + 75 = 163 flops including 2 logs, 1 sqrt, 1 pow, 21 mult */
@@ -240,7 +240,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
   PetscReal                                  gg2[LAND_MAX_SPECIES][LAND_DIM],gg3[LAND_MAX_SPECIES][LAND_DIM][LAND_DIM];
   const PetscInt                             ipdata_sz = (dim + Nf*(1+dim));
   PetscInt                                   d,f,d2,dp,d3,fieldB,ipidx,fieldA;
-  const LandPointData * const __restrict__ fplpt_j = (LandPointData*)(IPDataGlobal + jpidx*ipdata_sz);
+  const LandPointData * const __restrict__   fplpt_j = (LandPointData*)(IPDataGlobal + jpidx*ipdata_sz);
   const PetscReal * const __restrict__       vj = fplpt_j->crd, wj = wiGlobal[jpidx];
   // create g2 & g3
   for (d=0;d<dim;d++) { // clear accumulation data D & K
@@ -252,7 +252,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
   for (ipidx = ip_start; ipidx < ip_end; ipidx += ip_stride) {
     const LandPointData * const __restrict__ fplpt = (LandPointData*)(IPDataGlobal + ipidx*ipdata_sz);
     const LandFDF * const __restrict__       fdf = &fplpt->fdf[0];
-    const PetscReal wi = wiGlobal[ipidx];
+    const PetscReal                          wi = wiGlobal[ipidx];
 #if LAND_DIM==2
     PetscReal       Ud[2][2], Uk[2][2];
     LandauTensor2D(vj, fplpt->r, fplpt->z, Ud, Uk, (ipidx==jpidx) ? 0. : 1.);

@@ -94,7 +94,7 @@ end program DMPlexTestLandInterface
 !
 !  test:
 !    suffix: 0
-!    requires: p4est
-!    args: -petscspace_degree 4 -petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2,40 -ion_charges 1,18 -thermal_temps 5,5,.005 -n 1.00018,1,1e-5 -n_0 1e20 -land_ts_monitor -land_snes_rtol 1.e-6 -land_snes_monitor -land_snes_converged_reason -land_ts_type arkimex -land_ts_arkimex_type 1bee -land_ts_max_snes_failures -1 -land_ts_rtol 1e-4 -land_ts_dt 1.e-6 -land_ts_max_time 1 -land_ts_adapt_clip .5,1.25 -land_ts_adapt_scale_solve_failed 0.75 -land_ts_adapt_time_step_increase_delay 5 -land_ts_max_steps 1 -land_pc_type lu -land_ksp_type preonly -amr_levels_max 7 -domain_radius 5 -amr_re_levels 0 -re_radius 1 -amr_z_refine1 1 -amr_z_refine2 0 -amr_post_refine 0 -z_radius1 .1 -z_radius2 .1
+!    requires: p4est !complex
+!    args: -petscspace_degree 4 -petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2,4 -ion_charges 1,8 -thermal_temps 5,5,.5 -n 1.00018,1,1e-5 -n_0 1e20 -land_ts_monitor -land_snes_rtol 1.e-6 -land_snes_monitor -land_snes_converged_reason -land_ts_type arkimex -land_ts_arkimex_type 1bee -land_ts_max_snes_failures -1 -land_ts_rtol 1e-4 -land_ts_dt 1.e-6 -land_ts_max_time 1 -land_ts_adapt_clip .5,1.25 -land_ts_adapt_scale_solve_failed 0.75 -land_ts_adapt_time_step_increase_delay 5 -land_ts_max_steps 1 -land_pc_type lu -land_ksp_type preonly -amr_levels_max 7 -domain_radius 5 -amr_re_levels 0 -re_radius 1 -amr_z_refine1 1 -amr_z_refine2 0 -amr_post_refine 0 -z_radius1 .1 -z_radius2 .1
 !
 !TEST*/
