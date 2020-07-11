@@ -138,7 +138,7 @@ static PetscErrorCode getTe_kev(DM plex, Vec X, PetscReal *a_n, PetscReal *a_Tke
     ierr = PetscDSSetObjective(prob, 0, &f0_ve_shift);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
     v = ctx->n_0*ctx->v_0*PetscRealPart(tt[0])/n;         /* remove number density to get velocity */
-    if (vz!=0) printf("getTe_kev v=%e vz=%e\n",v,vz);
+    if (vz!=0) printf("getTe_kev v=%e vz=%e\n",(double)v,(double)PetscRealPart(vz));
     v2 = PetscSqr(v);                      /* use real space: m^2 / s^2 */
     if (a_Tkev) *a_Tkev = (v2*ctx->masses[0]*M_PI/8)*kev_joul; /* temperature in kev */
     if (a_n) *a_n = n;
@@ -153,17 +153,15 @@ static PetscErrorCode getTe_kev(DM plex, Vec X, PetscReal *a_n, PetscReal *a_Tke
  /*  E        -- output E, input \hat E */
 static PetscReal CalculateE(PetscReal Tev, PetscReal n, PetscReal lnLambda, PetscReal eps0, PetscReal *E)
 {
-  PetscReal            c,e,m;
+  PetscReal c,e,m;
   PetscFunctionBegin;
   c = 299792458;
   e = 1.602176e-19;
   m = 9.10938e-31;
   if (1) {
-    PetscReal Ec, Ehat = *E;
+    double Ec, Ehat = *E, betath = sqrt(2*Tev*e/(m*c*c)), j0 = Ehat * 7/(sqrt(2)*2) * pow(betath,3) * n * e * c;
     Ec = n*lnLambda*pow(e,3) / (4*M_PI*pow(eps0,2)*m*c*c);
     *E = Ec;
-    PetscReal betath = sqrt(2*Tev*e/(m*c*c));
-    PetscReal j0 = Ehat * 7/(sqrt(2)*2) * pow(betath,3) * n * e * c;
     PetscPrintf(PETSC_COMM_WORLD, "CalculateE j0=%e Ec = %e\n",j0,Ec);
   } else {
     PetscReal Ed, vth;
@@ -240,8 +238,8 @@ static void f0_0_diff_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                           const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                           PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  LandCtx        *ctx = (LandCtx *)constants;
-  REctx          *rectx = (REctx*)ctx->data;
+  LandCtx         *ctx = (LandCtx *)constants;
+  REctx           *rectx = (REctx*)ctx->data;
   PetscInt        ii = rectx->idx, i;
   const PetscReal kT_m = ctx->k*ctx->thermal_temps[ii]/ctx->masses[ii]; /* kT/m */
   const PetscReal n = ctx->n[ii];
@@ -256,8 +254,8 @@ static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                           const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                           PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  LandCtx        *ctx = (LandCtx *)constants;
-  REctx          *rectx = (REctx*)ctx->data;
+  LandCtx         *ctx = (LandCtx *)constants;
+  REctx           *rectx = (REctx*)ctx->data;
   PetscInt        ii = rectx->idx, i;
   const PetscReal kT_m = ctx->k*ctx->thermal_temps[ii]/ctx->masses[ii]; /* kT/m */
   const PetscReal n = ctx->n[ii];
@@ -273,7 +271,8 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
   PetscErrorCode    ierr;
   PetscDS           prob;
   Vec               X2;
-  PetscReal         ediff,idiff=0,tt[LAND_MAX_SPECIES],lpm0,lpm1=1;
+  PetscReal         ediff,idiff=0,lpm0,lpm1=1;
+  PetscScalar       tt[LAND_MAX_SPECIES];
   DM                dm;
   PetscFunctionBegin;
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
@@ -318,7 +317,8 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
 static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time, LandCtx *ctx, PetscReal *a_E)
 {
   PetscErrorCode    ierr;
-  PetscReal         spit_eta,Te_kev,J,ratio,tt[LAND_MAX_SPECIES];
+  PetscReal         spit_eta,Te_kev,J,ratio;
+  PetscScalar       tt[LAND_MAX_SPECIES];
   PetscDS           prob;
   DM                dm,plex;
   REctx             *rectx = (REctx*)ctx->data;
@@ -358,7 +358,7 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
 
 static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, LandCtx *ctx, PetscReal *a_E)
 {
-  REctx            *rectx = (REctx*)ctx->data;
+  REctx             *rectx = (REctx*)ctx->data;
   PetscErrorCode    ierr;
   DM                dm,plex;
   PetscScalar       dJ_dt,tt[LAND_MAX_SPECIES];
@@ -412,7 +412,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
   LandCtx        *ctx;
   DM             dm,plex;
   PetscErrorCode ierr;
-  REctx         *rectx;
+  REctx          *rectx;
   PetscFunctionBeginUser;
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
@@ -469,12 +469,12 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
 }
 PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
 {
-  LandCtx       *ctx = (LandCtx*) actx;   /* user-defined application context */
-  REctx         *rectx = (REctx*)ctx->data;
-  DM             dm,plex;
-  PetscDS        prob;
+  LandCtx           *ctx = (LandCtx*) actx;   /* user-defined application context */
+  REctx             *rectx = (REctx*)ctx->data;
+  DM                dm,plex;
+  PetscDS           prob;
   TSConvergedReason reason;
-  PetscErrorCode ierr;
+  PetscErrorCode    ierr;
   PetscFunctionBeginUser;
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   if (stepi > rectx->plotStep && rectx->plotting) {
@@ -519,7 +519,7 @@ PetscErrorCode PreStep(TS ts)
 {
   PetscErrorCode ierr;
   LandCtx        *ctx;
-  REctx         *rectx;
+  REctx          *rectx;
   DM             dm;
   PetscInt       stepi;
   PetscReal      time;
