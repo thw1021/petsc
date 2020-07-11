@@ -346,10 +346,8 @@ PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal n
 	exit(12);
       }
     }
-#if defined(PETSC_HAVE_OPENMP)
   } else if (0) { /* OMP assembly */
     ierr = assemble_omp_private(cStart, cEnd, totDim, plex, section, globalSection, JacP, elemMats, container);CHKERRQ(ierr);
-#endif
   } else {  /* gpu assembly */
     ierr = assemble_cuda_private(cStart, cEnd, totDim, plex, section, globalSection, JacP, elemMats, container, events);CHKERRQ(ierr);
   }
@@ -409,6 +407,7 @@ void assemble_kernel(const PetscInt nidx_arr[], PetscInt *idx_arr[], PetscScalar
     }
   }
 }
+
 static PetscErrorCode assemble_omp_private(PetscInt cStart, PetscInt cEnd, PetscInt totDim, DM plex, PetscSection section, PetscSection globalSection, Mat JacP, PetscScalar elemMats[], PetscContainer container)
 {
   PetscErrorCode  ierr;
