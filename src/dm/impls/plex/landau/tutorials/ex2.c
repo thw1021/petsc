@@ -193,11 +193,10 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   PetscErrorCode    ierr;
   PetscInt          ii;
   PetscDS           prob;
-  PetscScalar       J,J_re,tt[LAND_MAX_SPECIES];
   static PetscReal  old_ratio = 0;
   PetscBool         done=PETSC_FALSE;
-  PetscReal         spit_eta,Te_kev=0,E,ratio,Z,n_e;
-  PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LAND_MAX_SPECIES];
+  PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e;
+  PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LAND_MAX_SPECIES],tt[LAND_MAX_SPECIES];
   PetscFunctionBegin;
   if (ctx->num_species<2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D < 2",ctx->num_species);
   for (ii=0;ii<ctx->num_species;ii++) constants[ii] = ctx->charges[ii];
@@ -219,9 +218,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],Z,ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
   E = ctx->Ez; /* keep real E */
   ratio = E/J/spit_eta;
-  done = (old_ratio-ratio < 1.e-4 && stepi>20 && PETSC_FALSE);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e E/J to eta ratio=%g (diff=%g)\n",
-                     done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,E,J,J_re,100*J_re/J,Te_kev,ratio,old_ratio-ratio);CHKERRQ(ierr);
+  done = PETSC_FALSE;
   if (done) {
     ierr = TSSetConvergedReason(ts,TS_CONVERGED_USER);CHKERRQ(ierr);
     old_ratio = 0;
@@ -231,6 +228,8 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
     old_ratio = ratio;
     if (reason) done = PETSC_TRUE;
   }
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e E/J to eta ratio=%g (diff=%g)\n",
+                     done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,E,J,J_re,100*J_re/J,Te_kev,ratio,old_ratio-ratio);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -248,7 +247,7 @@ static void f0_0_diff_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   PetscReal       diff, f_maxwell, v2 = 0, theta = 2*kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
   f_maxwell = n*pow(PETSC_PI*theta,-1.5)*(exp(-v2/theta));
-  diff = 2.*PETSC_PI*x[0]*(u[ii] - f_maxwell);
+  diff = 2.*PETSC_PI*x[0]*(PetscRealPart(u[ii]) - f_maxwell);
   f0[0] = pow(diff,ppp);
 }
 static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
