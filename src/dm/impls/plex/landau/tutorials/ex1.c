@@ -16,7 +16,7 @@ int main(int argc, char **argv)
   KSP            ksp;
   PC             pc;
   SNESLineSearch linesearch;
-  PetscScalar    time;
+  PetscReal      time;
 
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
