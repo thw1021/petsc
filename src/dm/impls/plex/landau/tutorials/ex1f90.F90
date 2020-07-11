@@ -26,7 +26,7 @@ program DMPlexTestLandInterface
   PC             pc
   SNESLineSearch linesearch
   PetscReal      mone
-
+  PetscScalar    scalar
   call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
   if (ierr .ne. 0) then
      print*,'Unable to initialize PETSc'
@@ -79,8 +79,8 @@ program DMPlexTestLandInterface
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   !  remove f_0
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  mone = -1.
-  call VecAXPY(X,mone,X_0,ierr);CHKERRQ(ierr)
+  scalar = -1.
+  call VecAXPY(X,scalar,X_0,ierr);CHKERRQ(ierr)
   call DMPlexLandDestroyVelocitySpace(dm, ierr);CHKERRQ(ierr)
   call TSDestroy(ts, ierr);CHKERRQ(ierr)
   call VecDestroy(X, ierr);CHKERRQ(ierr)
