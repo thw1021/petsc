@@ -3,8 +3,8 @@
 */
 #include <petscconf.h>
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
-#include <../src/mat/impls/aij/seq/aij.h>  /* put CUDA SeqAIJ */
-#include <petsc/private/kernels/petscaxpy.h>
+//#include <../src/mat/impls/aij/seq/aij.h>  /* put CUDA SeqAIJ */
+//#include <petsc/private/kernels/petscaxpy.h>
 #if defined(PETSC_HAVE_OPENMP)
 #include <omp.h>
 #endif
@@ -101,9 +101,9 @@ static PetscErrorCode assemble_omp_private(PetscInt cStart, PetscInt cEnd, Petsc
 static PetscErrorCode assemble_cuda_private(PetscInt cStart, PetscInt cEnd, PetscInt totDim, DM plex, PetscSection section, PetscSection globalSection, Mat JacP, PetscScalar elemMats[], PetscContainer container, const PetscLogEvent events[]);
 
 PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_alpha[],const PetscReal nu_beta[],
-				     const PetscReal invMass[], const PetscReal Eq_m[], const PetscReal * const IPDataGlobal,
-				     const PetscReal wiGlobal[], const PetscReal invJj[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain, 
-				     Mat JacP)
+				   const PetscReal invMass[], const PetscReal Eq_m[], const PetscReal * const IPDataGlobal,
+				   const PetscReal wiGlobal[], const PetscReal invJj[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain, 
+				   Mat JacP)
 {
   PetscErrorCode    ierr;
   PetscInt          ii,ej,*Nbf,Nb,nip_dim2,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(PetscReal);
