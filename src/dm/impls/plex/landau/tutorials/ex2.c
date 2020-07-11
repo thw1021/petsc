@@ -191,25 +191,27 @@ static PetscErrorCode testNone(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal 
 static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandCtx *ctx, REctx *rectx)
 {
   PetscErrorCode    ierr;
+  PetscInt          ii;
   PetscDS           prob;
   PetscScalar       J,J_re,tt[LAND_MAX_SPECIES];
   static PetscReal  old_ratio = 0;
   PetscBool         done=PETSC_FALSE;
   PetscReal         spit_eta,Te_kev=0,E,ratio,Z,n_e;
-  PetscScalar       user[2] = {0.,ctx->charges[0]};
+  PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LAND_MAX_SPECIES];
   PetscFunctionBegin;
   if (ctx->num_species<2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D < 2",ctx->num_species);
+  for (ii=0;ii<ctx->num_species;ii++) constants[ii] = PetscRealPart(ctx->charges[ii]);
   Z = -ctx->charges[1]/ctx->charges[0];
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_n);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
   n_e = PetscRealPart(tt[0])*ctx->n_0;
-  ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr);
+  ierr = PetscDSSetConstants(prob, ctx->num_species, constants);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
   J = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
-  ierr = PetscDSSetConstants(prob, 1, &ctx->charges[0]);CHKERRQ(ierr);
+  ierr = PetscDSSetConstants(prob, 1, &constants[0]);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
   J_re = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
@@ -269,12 +271,14 @@ static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandCtx *ctx, REctx *rectx)
 {
   PetscErrorCode    ierr;
+  PetscInt          ii;
   PetscDS           prob;
   Vec               X2;
   PetscReal         ediff,idiff=0,lpm0,lpm1=1;
-  PetscScalar       tt[LAND_MAX_SPECIES];
+  PetscScalar       tt[LAND_MAX_SPECIES], constants[LAND_MAX_SPECIES];
   DM                dm;
   PetscFunctionBegin;
+  for (ii=0;ii<ctx->num_species;ii++) constants[ii] = PetscRealPart(ctx->charges[ii]);
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   ierr = VecDuplicate(X,&X2);CHKERRQ(ierr);
@@ -317,17 +321,19 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
 static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time, LandCtx *ctx, PetscReal *a_E)
 {
   PetscErrorCode    ierr;
+  PetscInt          ii;
   PetscReal         spit_eta,Te_kev,J,ratio;
-  PetscScalar       tt[LAND_MAX_SPECIES];
+  PetscScalar       tt[LAND_MAX_SPECIES], constants[LAND_MAX_SPECIES];
   PetscDS           prob;
   DM                dm,plex;
   REctx             *rectx = (REctx*)ctx->data;
   PetscFunctionBegin;
+  for (ii=0;ii<ctx->num_species;ii++) constants[ii] = PetscRealPart(ctx->charges[ii]);
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   /* J */
-  ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr);
+  ierr = PetscDSSetConstants(prob, ctx->num_species, constants);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
   J = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
@@ -360,15 +366,17 @@ static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, 
 {
   REctx             *rectx = (REctx*)ctx->data;
   PetscErrorCode    ierr;
+  PetscInt          ii;
   DM                dm,plex;
-  PetscScalar       dJ_dt,tt[LAND_MAX_SPECIES];
+  PetscScalar       dJ_dt,tt[LAND_MAX_SPECIES], constants[LAND_MAX_SPECIES];
   PetscDS           prob;
   PetscFunctionBegin;
+  for (ii=0;ii<ctx->num_species;ii++) constants[ii] = PetscRealPart(ctx->charges[ii]);
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
   /* get d current / dt */
-  ierr = PetscDSSetConstants(prob, ctx->num_species, ctx->charges);CHKERRQ(ierr);
+  ierr = PetscDSSetConstants(prob, ctx->num_species, constants);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
   if (!X_t) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "X_t");
   ierr = DMPlexComputeIntegralFEM(plex,X_t,tt,NULL);CHKERRQ(ierr);
