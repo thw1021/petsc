@@ -655,7 +655,7 @@ typedef struct {
   /* physics */
   PetscReal     thermal_temps[LAND_MAX_SPECIES];
   PetscReal     masses[LAND_MAX_SPECIES];  /* mass of each species  */
-  PetscScalar   charges[LAND_MAX_SPECIES]; /* charge of each species  */
+  PetscReal     charges[LAND_MAX_SPECIES]; /* charge of each species  */
   PetscReal     n[LAND_MAX_SPECIES];       /* number density of each species  */
   PetscReal     m_0;      /* reference mass */
   PetscReal     v_0;      /* reference velocity */
