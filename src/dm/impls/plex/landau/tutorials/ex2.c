@@ -271,14 +271,12 @@ static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandCtx *ctx, REctx *rectx)
 {
   PetscErrorCode    ierr;
-  PetscInt          ii;
   PetscDS           prob;
   Vec               X2;
   PetscReal         ediff,idiff=0,lpm0,lpm1=1;
-  PetscScalar       tt[LAND_MAX_SPECIES], constants[LAND_MAX_SPECIES];
+  PetscScalar       tt[LAND_MAX_SPECIES];
   DM                dm;
   PetscFunctionBegin;
-  for (ii=0;ii<ctx->num_species;ii++) constants[ii] = PetscRealPart(ctx->charges[ii]);
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   ierr = VecDuplicate(X,&X2);CHKERRQ(ierr);
