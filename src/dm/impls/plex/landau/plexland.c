@@ -117,8 +117,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
   elemMatSize = totDim*totDim;
   {
     static int         cc = 0;
-    PetscScalar       *uu,*u_x;
-    ierr = PetscDSGetEvaluationArrays(prob, &uu, NULL, &u_x);CHKERRQ(ierr);
+    PetscScalar        uu[LAND_MAX_SPECIES],u_x[LAND_MAX_SPECIES*LAND_DIM];
     /* collect f data */
     if (ctx->verbose > 3 || (ctx->verbose > 0 && cc++ == 0)) {
       PetscInt N;
@@ -144,7 +143,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
         PetscInt       dOffset = 0, fOffset = 0;
         for (d = 0; d < dim; ++d) pnt_data->crd[d] = vj[qj * dim + d]; /* coordinate */
         wiGlob[gidx] = detJj[qj] * quadWeights[qj];
-        if (dim==2) wiGlob[gidx] *= pnt_data->r;  /* cylindrical coordinate, w/o 2pi */
+        if (dim==2) wiGlob[gidx] *= pnt_data->crd[0];  /* cylindrical coordinate, w/o 2pi */
         /* get u & du (EvaluateFieldJets) */
         for (f = 0; f < Nf; ++f) {
           const PetscReal *Bq = &Tf[f]->T[0][qj*Nb];
@@ -167,8 +166,8 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
         }
         /* copy to IPDataLocal */
         for (f=0;f<Nf;f++) {
-          pnt_data->fdf[f].f = uu[f];
-          for (d = 0; d < dim; ++d) pnt_data->fdf[f].df[d] = u_x[f*dim+d];
+          pnt_data->fdf[f].f = PetscRealPart(uu[f]);
+          for (d = 0; d < dim; ++d) pnt_data->fdf[f].df[d] = PetscRealPart(u_x[f*dim+d]);
         }
       } /* q */
       ierr = DMPlexVecRestoreClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
@@ -460,7 +459,7 @@ static PetscErrorCode ErrorIndicator_Simple(PetscInt dim, PetscReal volume, Pets
   for (j = 0; j < dim; ++j) {
     err += PetscSqr(PetscRealPart(u_x[f*dim+j]));
   }
-  err = u[f]; /* just use rho */
+  err = PetscRealPart(u[f]); /* just use rho */
   *error = volume * err; /* * (ctx->axisymmetric ? 2.*PETSC_PI * r : 1); */
   PetscFunctionReturn(0);
 }
@@ -855,7 +854,6 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
   PetscBool        isForest;
   PetscQuadrature  quad;
   PetscInt         Nq, *Nb, cStart, cEnd, c, dim, qj, k;
-  PetscScalar     *u, *u_x;
   DMLabel          adaptLabel = NULL;
   PetscErrorCode   ierr;
   PetscFunctionBegin;
@@ -863,20 +861,14 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-  /* ierr = DMGetSection(dm, &section);CHKERRQ(ierr); */
   ierr = DMIsForest(dm, &isForest);CHKERRQ(ierr);
   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
-  /* ierr = DMCreateLocalVector(plex, &locX);CHKERRQ(ierr); */
-  /* ierr = DMPlexInsertBoundaryValues(plex, PETSC_TRUE, locX, time, NULL, NULL, NULL);CHKERRQ(ierr); */
-  /* ierr = DMGlobalToLocalBegin(plex, sol, INSERT_VALUES, locX);CHKERRQ(ierr); */
-  /* ierr = DMGlobalToLocalEnd  (plex, sol, INSERT_VALUES, locX);CHKERRQ(ierr); */
   ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
   ierr = DMLabelCreate(PETSC_COMM_SELF,"adapt",&adaptLabel);CHKERRQ(ierr);
   ierr = PetscFEGetQuadrature(fem, &quad);CHKERRQ(ierr);
   ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, 0, 0 );CHKERRQ(ierr);
   if (Nq >LAND_MAX_NQ) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %D > LAND_MAX_NQ (%D)",Nq,LAND_MAX_NQ);
   ierr = PetscDSGetDimensions(prob, &Nb);CHKERRQ(ierr);
-  ierr = PetscDSGetEvaluationArrays(prob, &u, NULL, &u_x);CHKERRQ(ierr);
   if (type==4) {
     for (c = cStart; c < cEnd; c++) {
       ierr = DMLabelSetValue(adaptLabel, c, DM_ADAPT_REFINE);CHKERRQ(ierr);
@@ -1305,7 +1297,7 @@ static void f0_s_den(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                      const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                      PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  PetscInt ii = (PetscInt)constants[0];
+  PetscInt ii = (PetscInt)PetscRealPart(constants[0]);
   f0[0] = u[ii];
 }
 
@@ -1315,7 +1307,7 @@ static void f0_s_mom(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
 		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  PetscInt ii = (PetscInt)constants[0], jj = (PetscInt)constants[1];
+  PetscInt ii = (PetscInt)PetscRealPart(constants[0]), jj = (PetscInt)PetscRealPart(constants[1]);
   f0[0] = x[jj]*u[ii]; /* x momentum */
 }
 
@@ -1324,7 +1316,7 @@ static void f0_s_v2(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                     PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  PetscInt i, ii = (PetscInt)constants[0];
+  PetscInt i, ii = (PetscInt)PetscRealPart(constants[0]);
   double tmp1 = 0.;
   for (i = 0; i < dim; ++i) tmp1 += x[i]*x[i];
   f0[0] = tmp1*u[ii];
@@ -1336,7 +1328,7 @@ static void f0_s_rden(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                       const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                       PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  PetscInt ii = (PetscInt)constants[0];
+  PetscInt ii = (PetscInt)PetscRealPart(constants[0]);
   f0[0] = 2.*PETSC_PI*x[0]*u[ii];
 }
 
@@ -1346,7 +1338,7 @@ static void f0_s_rmom(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                       const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                       PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  PetscInt ii = (PetscInt)constants[0];
+  PetscInt ii = (PetscInt)PetscRealPart(constants[0]);
   f0[0] = 2.*PETSC_PI*x[0]*x[1]*u[ii];
 }
 
@@ -1355,7 +1347,7 @@ static void f0_s_rv2(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                      const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                      PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  PetscInt ii = (PetscInt)constants[0];
+  PetscInt ii = (PetscInt)PetscRealPart(constants[0]);
   f0[0] =  2.*PETSC_PI*x[0]*(x[0]*x[0] + x[1]*x[1])*u[ii];
 }
 

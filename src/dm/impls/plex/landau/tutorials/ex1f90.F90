@@ -25,7 +25,7 @@ program DMPlexTestLandInterface
   KSP            ksp
   PC             pc
   SNESLineSearch linesearch
-  PetscScalar    mone
+  PetscReal      mone
 
   call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
   if (ierr .ne. 0) then

@@ -691,17 +691,9 @@ typedef struct {
 
 typedef struct {
   /* coordinate */
-  PetscReal     crd[0];
-  union {
-    PetscReal   x;
-    PetscReal   r;
-  };
-#if LAND_DIM==3
-  PetscReal     y;
-#endif
-  PetscReal     z;
+  PetscReal   crd[LAND_DIM];
   /* f; df data [Nc] */
-  LandFDF     fdf[0];
+  LandFDF     fdf[LAND_MAX_SPECIES];
 } LandPointData;
 
 #if defined(PETSC_HAVE_CUDA)
