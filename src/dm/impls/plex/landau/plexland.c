@@ -949,7 +949,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
       ierr = DMPlexVecGetClosure(cdm, cs, coords, c, &csize, &coef);CHKERRQ(ierr);
       Nv = csize/dim;
       for (nz = d = 0; d < Nv; d++) {
-        PetscReal z = coef[d*dim + (dim-1)], x = PetscSqr(coef[d*dim + 0]) + PetscSqr(((dim==3) ? coef[d*dim + 1] : 0));
+        PetscReal z = PetscRealPart(coef[d*dim + (dim-1)]), x = PetscSqr(coef[d*dim + 0]) + PetscSqr(((dim==3) ? coef[d*dim + 1] : 0));
 	x = PetscSqrtReal(x);
         if (x < 1e-12 && PetscAbsReal(z)<1e-12) doit = 1;             /* refine origin */
         else if (type==0 && (z < -1e-12 || z > ctx->re_radius+1e-12)) outside++;   /* first pass don't refine bottom */
