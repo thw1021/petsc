@@ -3,7 +3,9 @@
 #include <petsc/private/vecimpl.h>      /* put CUDA stuff in veccuda */
 #include <petscdm.h>
 #include <petscdmforest.h>
+#if defined(PETSC_HAVE_OPENMP)
 #include <omp.h>
+#endif
 #if defined(HAVE_VTUNE) && defined(__INTEL_COMPILER)
 #include <ittnotify.h>
 #endif
