@@ -237,11 +237,11 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
                        PetscReal g2[/* LAND_MAX_NQ */][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM], PetscReal g3[/* LAND_MAX_NQ */][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM] /* shared memory buffers */
                        )
 {
-  PetscReal                                  gg2[LAND_MAX_SPECIES][LAND_DIM],gg3[LAND_MAX_SPECIES][LAND_DIM][LAND_DIM];
-  const PetscInt                             ipdata_sz = (dim + Nf*(1+dim));
-  PetscInt                                   d,f,d2,dp,d3,fieldB,ipidx,fieldA;
-  const LandPointData * const __restrict__   fplpt_j = (LandPointData*)(IPDataGlobal + jpidx*ipdata_sz);
-  const PetscReal * const __restrict__       vj = fplpt_j->crd, wj = wiGlobal[jpidx];
+  PetscReal                   gg2[LAND_MAX_SPECIES][LAND_DIM],gg3[LAND_MAX_SPECIES][LAND_DIM][LAND_DIM];
+  const PetscInt              ipdata_sz = (dim + Nf*(1+dim));
+  PetscInt                    d,f,d2,dp,d3,fieldB,ipidx,fieldA;
+  const LandPointData * const fplpt_j = (LandPointData*)(IPDataGlobal + jpidx*ipdata_sz);
+  const PetscReal * const     vj = fplpt_j->crd, wj = wiGlobal[jpidx];
   // create g2 & g3
   for (d=0;d<dim;d++) { // clear accumulation data D & K
     for (f=0;f<Nf;f++) {
@@ -250,9 +250,9 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
     }
   }
   for (ipidx = ip_start; ipidx < ip_end; ipidx += ip_stride) {
-    const LandPointData * const __restrict__ fplpt = (LandPointData*)(IPDataGlobal + ipidx*ipdata_sz);
-    const LandFDF * const __restrict__       fdf = &fplpt->fdf[0];
-    const PetscReal                          wi = wiGlobal[ipidx];
+    const LandPointData * const fplpt = (LandPointData*)(IPDataGlobal + ipidx*ipdata_sz);
+    const LandFDF * const       fdf = &fplpt->fdf[0];
+    const PetscReal             wi = wiGlobal[ipidx];
 #if LAND_DIM==2
     PetscReal       Ud[2][2], Uk[2][2];
     LandauTensor2D(vj, fplpt->crd[0], fplpt->crd[1], Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
