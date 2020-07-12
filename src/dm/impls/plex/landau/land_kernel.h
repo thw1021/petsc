@@ -1,16 +1,6 @@
 
-#if defined(__INTEL_COMPILER)
-#if defined(PETSC_USE_REAL_SINGLE)
-#define LAND_INVSQRT(q) invsqrtf(q)
-#define LAND_SQRT(q) sqrtf(q)
-#else
-#define LAND_INVSQRT(q) invsqrt(q)
-#define LAND_SQRT(q) sqrt(q)
-#endif
-#else
 #define LAND_INVSQRT(q) (1./PetscSqrtReal(q))
 #define LAND_SQRT(q) PetscSqrtReal(q)
-#endif
 
 #if defined(PETSC_USE_REAL_SINGLE)
 #define LAND_SMALL 1.e-12F
