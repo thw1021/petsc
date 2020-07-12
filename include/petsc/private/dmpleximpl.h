@@ -701,6 +701,9 @@ typedef struct {
 PETSC_EXTERN PetscErrorCode LandCUDAJacobian( DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
                                               const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
 #endif
+#if defined(PETSC_HAVE_KOKKOS)
 PETSC_EXTERN PetscErrorCode LandKokkosJacobian( DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
                                                 const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
+#endif
+
 #endif /* _PLEXIMPL_H */
