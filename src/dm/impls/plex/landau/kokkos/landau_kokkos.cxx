@@ -33,7 +33,7 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, const PetscReal n
                                    Mat JacP)
 {
   PetscErrorCode    ierr;
-  PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,nip,fieldA,ej;
+  PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,fieldA,ej;
   PetscTabulation   *Tf;
   PetscDS           prob;
   PetscSection      section, globalSection;
@@ -47,7 +47,6 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, const PetscReal n
   if (dim!=LAND_DIM) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "LAND_DIM != dim");
   ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
   numCells = cEnd - cStart;
-  nip  = numCells*Nq; /* length of inner global iteration */
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
@@ -62,6 +61,7 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, const PetscReal n
     const PetscReal *invJ;
     PetscReal       *iTab,*Tables;
     PetscScalar     *elemMat;
+    const PetscInt  nip = numCells*Nq;
     ierr = PetscMalloc2(Nf*Nq*Nb*(1+dim), &Tables, totDim*totDim, &elemMat);CHKERRQ(ierr);
     for (fieldA=0,iTab=Tables;fieldA<Nf;fieldA++,iTab += Nq*Nb*(1+dim)) {
       ierr = PetscMemcpy(iTab,         Tf[fieldA]->T[0], Nq*Nb*sizeof(PetscReal));CHKERRQ(ierr);
@@ -78,7 +78,7 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, const PetscReal n
 #endif
       for (qj = 0; qj < Nq; ++qj) {
         PetscReal       g2[1][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM], g3[1][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM];
-        const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj, one = 1, zero = 0; /* length of inner global interation, outer integration point */
+        const PetscInt  jpidx = Nq*(ej-cStart) + qj, one = 1, zero = 0; /* length of inner global interation, outer integration point */
 #if defined(PETSC_USE_LOG)
         ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
         ierr = PetscLogFlops(flops);CHKERRQ(ierr);
