@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     Kokkos::parallel_reduce(
                             10,
                             KOKKOS_LAMBDA(const int i, double& lsum) {
-                              lsum += a(i, 0) * a(i, 1) / (a(i, 2) + 0.1);
+                              lsum += a(i, 0) * a(i, 1) / (a(i, 2) + 0.0000001);
                             },
                             sum);
     printf("Result: %f\n", sum);

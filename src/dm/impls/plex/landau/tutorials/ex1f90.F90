@@ -36,55 +36,55 @@ program DMPlexTestLandInterface
   !  Create mesh (DM), read in parameters, create and add f_0 (X)
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   dim = 2
-  call DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, '', X, J, dm, ierr); CHKERRQ(ierr)
-  call DMSetUp(dm,ierr);CHKERRQ(ierr)
-  call VecDuplicate(X,X_0,ierr);CHKERRQ(ierr)
+  call DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, '', X, J, dm, ierr); CHKERRA(ierr)
+  call DMSetUp(dm,ierr);CHKERRA(ierr)
+  call VecDuplicate(X,X_0,ierr);CHKERRA(ierr)
   call VecCopy(X,X_0,ierr)
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   !  View
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   ii = 0
-  call DMPlexLandPrintNorms(X,ii,ierr);CHKERRQ(ierr)
+  call DMPlexLandPrintNorms(X,ii,ierr);CHKERRA(ierr)
   mone = 0;
-  call DMSetOutputSequenceNumber(dm, ii, mone, ierr);CHKERRQ(ierr);
+  call DMSetOutputSequenceNumber(dm, ii, mone, ierr);CHKERRA(ierr);
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   !    Create timestepping solver context
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  call TSCreate(PETSC_COMM_SELF,ts,ierr);CHKERRQ(ierr)
-  call TSSetOptionsPrefix(ts, 'land_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
-  call TSSetDM(ts,dm,ierr);CHKERRQ(ierr)
-  call TSGetSNES(ts,snes,ierr);CHKERRQ(ierr)
-  call SNESSetOptionsPrefix(snes, 'land_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
-  call SNESGetLineSearch(snes,linesearch,ierr);CHKERRQ(ierr)
-  call SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC,ierr);CHKERRQ(ierr)
-  call TSSetIFunction(ts,PETSC_NULL_VEC,LandIFunction,PETSC_NULL_VEC,ierr);CHKERRQ(ierr)
-  call TSSetIJacobian(ts,J,J,LandIJacobian,PETSC_NULL_VEC,ierr);CHKERRQ(ierr)
-  call TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER,ierr);CHKERRQ(ierr)
+  call TSCreate(PETSC_COMM_SELF,ts,ierr);CHKERRA(ierr)
+  call TSSetOptionsPrefix(ts, 'land_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
+  call TSSetDM(ts,dm,ierr);CHKERRA(ierr)
+  call TSGetSNES(ts,snes,ierr);CHKERRA(ierr)
+  call SNESSetOptionsPrefix(snes, 'land_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
+  call SNESGetLineSearch(snes,linesearch,ierr);CHKERRA(ierr)
+  call SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC,ierr);CHKERRA(ierr)
+  call TSSetIFunction(ts,PETSC_NULL_VEC,LandIFunction,PETSC_NULL_VEC,ierr);CHKERRA(ierr)
+  call TSSetIJacobian(ts,J,J,LandIJacobian,PETSC_NULL_VEC,ierr);CHKERRA(ierr)
+  call TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER,ierr);CHKERRA(ierr)
 
-  call SNESGetKSP(snes,ksp,ierr);CHKERRQ(ierr)
-  call KSPSetOptionsPrefix(ksp, 'land_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
-  call KSPGetPC(ksp,pc,ierr);CHKERRQ(ierr)
-  call PCSetOptionsPrefix(pc, 'land_', ierr);CHKERRQ(ierr) ! should get this from the dm or give it to the dm
+  call SNESGetKSP(snes,ksp,ierr);CHKERRA(ierr)
+  call KSPSetOptionsPrefix(ksp, 'land_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
+  call KSPGetPC(ksp,pc,ierr);CHKERRA(ierr)
+  call PCSetOptionsPrefix(pc, 'land_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
 
-  call TSSetFromOptions(ts,ierr);CHKERRQ(ierr)
-  call TSSetSolution(ts,X,ierr);CHKERRQ(ierr)
+  call TSSetFromOptions(ts,ierr);CHKERRA(ierr)
+  call TSSetSolution(ts,X,ierr);CHKERRA(ierr)
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   !  Solve nonlinear system
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  call TSSolve(ts,X,ierr);CHKERRQ(ierr)
+  call TSSolve(ts,X,ierr);CHKERRA(ierr)
   ii = 1
-  call DMPlexLandPrintNorms(X,ii,ierr);CHKERRQ(ierr)
-  call TSGetTime(ts, mone, ierr);CHKERRQ(ierr);
-  call DMSetOutputSequenceNumber(dm, ii, mone, ierr);CHKERRQ(ierr);
+  call DMPlexLandPrintNorms(X,ii,ierr);CHKERRA(ierr)
+  call TSGetTime(ts, mone, ierr);CHKERRA(ierr);
+  call DMSetOutputSequenceNumber(dm, ii, mone, ierr);CHKERRA(ierr);
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   !  remove f_0
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   scalar = -1.
-  call VecAXPY(X,scalar,X_0,ierr);CHKERRQ(ierr)
-  call DMPlexLandDestroyVelocitySpace(dm, ierr);CHKERRQ(ierr)
-  call TSDestroy(ts, ierr);CHKERRQ(ierr)
-  call VecDestroy(X, ierr);CHKERRQ(ierr)
-  call VecDestroy(X_0, ierr);CHKERRQ(ierr)
+  call VecAXPY(X,scalar,X_0,ierr);CHKERRA(ierr)
+  call DMPlexLandDestroyVelocitySpace(dm, ierr);CHKERRA(ierr)
+  call TSDestroy(ts, ierr);CHKERRA(ierr)
+  call VecDestroy(X, ierr);CHKERRA(ierr)
+  call VecDestroy(X_0, ierr);CHKERRA(ierr)
   call PetscFinalize(ierr)
 end program DMPlexTestLandInterface
 

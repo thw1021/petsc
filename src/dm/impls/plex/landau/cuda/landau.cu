@@ -108,12 +108,12 @@ PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal n
   PetscErrorCode    ierr;
   PetscInt          ii,ej,*Nbf,Nb,nip_dim2,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(PetscReal);
   PetscReal         *d_TabBD,*d_invJj,*d_wiGlobal,*d_nu_alpha,*d_nu_beta,*d_invMass,*d_Eq_m;
-  PetscScalar       *elemMats,*d_elemMats,  *iTab;
+  PetscScalar       *elemMats,*d_elemMats;
   PetscLogDouble    flops;
   PetscTabulation   *Tf;
   PetscDS           prob;
   PetscSection      section, globalSection;
-  PetscReal        *d_IPDataGlobal;
+  PetscReal        *d_IPDataGlobal,  *iTab;
   PetscContainer    container = NULL;
   PetscFunctionBegin;
 #if defined(PETSC_USE_LOG)
