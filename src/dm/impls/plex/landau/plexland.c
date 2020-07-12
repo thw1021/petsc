@@ -191,14 +191,14 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
 #else
     SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
-  } if (ctx->deviceType == LAND_KOKKOS) {
+  } else if (ctx->deviceType == LAND_KOKKOS) {
 #if defined(PETSC_HAVE_KOKKOS)
     ierr =LandKokkosJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
 #else
     SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
-  } else {
+  } else { /* CPU version */
     PetscReal *Tables,*iTab;
     ierr = PetscMalloc1(Nf*Nq*Nb*(1+dim), &Tables);CHKERRQ(ierr);
     for (fieldA=0,iTab=Tables;fieldA<Nf;fieldA++,iTab += Nq*Nb*(1+dim)) {
