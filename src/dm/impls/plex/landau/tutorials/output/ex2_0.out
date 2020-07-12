@@ -8,7 +8,7 @@ CalculateE j0=0. Ec = 0.0509908
 [0] DMGetDMSNES(): Creating new DMSNES
 [0] DMGetDMTS(): Creating new DMTS
 [0] DMGetDMSNESWrite(): Copying DMSNES due to write
-[0]FormLandau: 558 IPs, 62 cells, TENSOR elements, totDim=18, Nb=9, Nq=9, elemMatSize=324, dim=2, Tab: Nb=9 Nf=2 Np=9 cdim=2 N=702 CUDA=1
+[0]FormLandau: 558 IPs, 62 cells, TENSOR elements, totDim=18, Nb=9, Nq=9, elemMatSize=324, dim=2, Tab: Nb=9 Nf=2 Np=9 cdim=2 N=702
 Made coloring with 9 colors. OMP_threadID 0 of 1
 0 TS dt 0.1 time 0.
   0) species-0: charge density= -1.6060025942303e+01 z-momentum=  2.4001694721847e-19 energy=  1.1463213518682e+05

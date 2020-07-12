@@ -1,5 +1,10 @@
-#include <petscdmplex.h>
-
+#include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
+#include <petsc/private/vecimpl.h>      /* put CUDA stuff in veccuda */
+#include <petscdm.h>
+#include <petscdmforest.h>
+#if defined(PETSC_HAVE_OPENMP)
+#include <omp.h>
+#endif
 //
 // First Kokkos::View (multidimensional array) example:
 //   1. Start up Kokkos
@@ -14,10 +19,10 @@
 //#include <Kokkos_Core.hpp>
 //#include <cstdio>
 
-PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, const PetscReal nu_alpha[],const PetscReal nu_beta[],
-                                     const PetscReal invMass[], const PetscReal Eq_m[], const PetscReal * const IPDataGlobal,
-                                     const PetscReal wiGlobal[], const PetscReal invJj[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain, 
-                                     Mat JacP)
+PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, const PetscReal nu_alpha[],const PetscReal nu_beta[],
+                                   const PetscReal invMass[], const PetscReal Eq_m[], const PetscReal * const IPDataGlobal,
+                                   const PetscReal wiGlobal[], const PetscReal invJj[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain,
+                                   Mat JacP)
 {
   PetscErrorCode    ierr;
   /* PetscInt          ii,ej,*Nbf,Nb,nip_dim2,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(PetscReal); */

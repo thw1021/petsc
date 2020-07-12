@@ -628,60 +628,61 @@ PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErro
 #define LAND_MAX_SUB_THREAD_BLOCKS 1
 #endif
 #endif
+typedef enum {LAND_CUDA, LAND_KOKKOS, LAND_CPU} LandDeviceType;
 typedef struct {
-  PetscBool     interpolate;                  /* Generate intermediate mesh elements */
-  PetscBool     simplex;
-  PetscFE       fe[LAND_MAX_SPECIES];
+  PetscBool      interpolate;                  /* Generate intermediate mesh elements */
+  PetscBool      simplex;
+  PetscFE        fe[LAND_MAX_SPECIES];
   /* geometry  */
-  PetscReal     i_radius;
-  PetscReal     e_radius;
-  PetscInt      num_sections;
-  PetscReal     radius;
-  PetscReal     re_radius;           /* radius of refinement along v_perp=0, z>0 */
-  PetscReal     vperp0_radius1;      /* radius of refinement along v_perp=0 */
-  PetscReal     vperp0_radius2;      /* radius of refinement along v_perp=0 after origin AMR refinement */
-  PetscBool     sphere;
-  PetscBool     inflate;
-  PetscInt      numRERefine;       /* refinement along v_perp=0, z > 0 */
-  PetscInt      nZRefine1;          /* origin refinement after v_perp=0 refinement */
-  PetscInt      nZRefine2;          /* origin refinement after origin AMR refinement */
-  PetscInt      maxRefIts;         /* normal AMR - refine from origin */
-  PetscInt      postAMRRefine;     /* uniform refinement of AMR */
-  PetscBool     quarter3DDomain;   /* bilateral symetry, 1/4 x-y domain */
+  PetscReal      i_radius;
+  PetscReal      e_radius;
+  PetscInt       num_sections;
+  PetscReal      radius;
+  PetscReal      re_radius;           /* radius of refinement along v_perp=0, z>0 */
+  PetscReal      vperp0_radius1;      /* radius of refinement along v_perp=0 */
+  PetscReal      vperp0_radius2;      /* radius of refinement along v_perp=0 after origin AMR refinement */
+  PetscBool      sphere;
+  PetscBool      inflate;
+  PetscInt       numRERefine;       /* refinement along v_perp=0, z > 0 */
+  PetscInt       nZRefine1;          /* origin refinement after v_perp=0 refinement */
+  PetscInt       nZRefine2;          /* origin refinement after origin AMR refinement */
+  PetscInt       maxRefIts;         /* normal AMR - refine from origin */
+  PetscInt       postAMRRefine;     /* uniform refinement of AMR */
+  PetscBool      quarter3DDomain;   /* bilateral symetry, 1/4 x-y domain */
   /* discretization - AMR */
   PetscErrorCode (*errorIndicator)(PetscInt, PetscReal, PetscReal [], PetscInt, const PetscInt[], const PetscScalar[], const PetscScalar[], PetscReal *, void *);
-  PetscReal     refineTol[LAND_MAX_SPECIES];
-  PetscReal     coarsenTol[LAND_MAX_SPECIES];
+  PetscReal      refineTol[LAND_MAX_SPECIES];
+  PetscReal      coarsenTol[LAND_MAX_SPECIES];
   /* physics */
-  PetscReal     thermal_temps[LAND_MAX_SPECIES];
-  PetscReal     masses[LAND_MAX_SPECIES];  /* mass of each species  */
-  PetscReal     charges[LAND_MAX_SPECIES]; /* charge of each species  */
-  PetscReal     n[LAND_MAX_SPECIES];       /* number density of each species  */
-  PetscReal     m_0;      /* reference mass */
-  PetscReal     v_0;      /* reference velocity */
-  PetscReal     n_0;      /* reference number density */
-  PetscReal     t_0;      /* reference time */
-  PetscReal     Ez;
-  PetscReal     epsilon0;
-  PetscReal     k;
-  PetscReal     lnLam;
-  PetscReal     electronShift; /* for tests */
-  PetscInt      num_species;
+  PetscReal      thermal_temps[LAND_MAX_SPECIES];
+  PetscReal      masses[LAND_MAX_SPECIES];  /* mass of each species  */
+  PetscReal      charges[LAND_MAX_SPECIES]; /* charge of each species  */
+  PetscReal      n[LAND_MAX_SPECIES];       /* number density of each species  */
+  PetscReal      m_0;      /* reference mass */
+  PetscReal      v_0;      /* reference velocity */
+  PetscReal      n_0;      /* reference number density */
+  PetscReal      t_0;      /* reference time */
+  PetscReal      Ez;
+  PetscReal      epsilon0;
+  PetscReal      k;
+  PetscReal      lnLam;
+  PetscReal      electronShift; /* for tests */
+  PetscInt       num_species;
   /* diagnostics */
-  PetscInt      verbose;
-  PetscLogEvent events[20];
-  DM            dmv;
+  PetscInt       verbose;
+  PetscLogEvent  events[20];
+  DM             dmv;
   /* cache */
-  Mat           J;
-  Mat           M;
-  Vec           X;
-  PetscReal     normJ; /* used to see if function changed */
+  Mat            J;
+  Mat            M;
+  Vec            X;
+  PetscReal      normJ; /* used to see if function changed */
   /* derived type */
-  void         *data;
-  PetscBool     aux_bool;  /* helper */
+  void          *data;
+  PetscBool      aux_bool;  /* helper */
   /* computing */
-  PetscBool     useCUDA;
-  PetscInt      subThreadBlockSize;
+  LandDeviceType deviceType;
+  PetscInt       subThreadBlockSize;
 } LandCtx;
 
 typedef struct {
@@ -697,8 +698,9 @@ typedef struct {
 } LandPointData;
 
 #if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode LandauCUDAJacobian( DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
-                                                const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
+PETSC_EXTERN PetscErrorCode LandCUDAJacobian( DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
+                                              const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
 #endif
-
+PETSC_EXTERN PetscErrorCode LandKokkosJacobian( DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
+                                                const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
 #endif /* _PLEXIMPL_H */
