@@ -12,7 +12,7 @@ static char help[] = "Simople Kokkos test\n\n";
 // Compare this example to 03_simple_view, which uses functors to
 // define the loop bodies of the parallel_for and parallel_reduce.
 //
-
+#if defined(FIX_KOKKOS)
 #include <Kokkos_Core.hpp>
 #include <cstdio>
 
@@ -27,11 +27,12 @@ static char help[] = "Simople Kokkos test\n\n";
 // The first dimension of the View is the dimension over which it is
 // efficient for Kokkos to parallelize.
 typedef Kokkos::View<double * [3]> view_type;
-
+#endif
 int main(int argc, char* argv[])
 {
   PetscErrorCode ierr;
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
+#if defined(FIX_KOKKOS)
   Kokkos::initialize(argc, argv);
   {
     // Allocate the View.  The first dimension is a run-time parameter
@@ -84,6 +85,7 @@ int main(int argc, char* argv[])
 #endif
   }
   Kokkos::finalize();
+#endif
   ierr = PetscFinalize();
 }
 
