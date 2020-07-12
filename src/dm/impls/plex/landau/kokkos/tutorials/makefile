@@ -5,8 +5,8 @@ FFLAGS	        =
 CPPFLAGS        = -I${KOKKOS_DIR}/include -Wl,-rpath,${KOKKOS_DIR}/lib -L${KOKKOS_DIR}/lib -lkokkoscontainers.3.1.1 -lkokkoscore.3.1.1
 FPPFLAGS        =
 LOCDIR          = src/dm/impls/plex/landau/kokkos/tutorials/
-EXAMPLESCXX     = ex1.cxx
-EXAMPLESC       = ex2.c
+EXAMPLESCXX     = 
+EXAMPLESC       = 
 EXAMPLESF       = 
 MANSEC          = DM
 

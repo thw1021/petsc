@@ -3,7 +3,7 @@
 */
 #include <petscconf.h>
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
-//#include <../src/mat/impls/aij/seq/aij.h>  /* put CUDA SeqAIJ */
+#include <../src/mat/impls/aij/seq/aij.h>  /* put CUDA SeqAIJ */
 //#include <petsc/private/kernels/petscaxpy.h>
 #if defined(PETSC_HAVE_OPENMP)
 #include <omp.h>
