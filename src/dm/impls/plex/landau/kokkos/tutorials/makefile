@@ -1,3 +1,4 @@
+#requireslanguage CPP
 -include ../../../../../../../petscdir.mk
 
 CFLAGS	        =
@@ -5,7 +6,7 @@ FFLAGS	        =
 CPPFLAGS        = -I${KOKKOS_DIR}/include -Wl,-rpath,${KOKKOS_DIR}/lib -L${KOKKOS_DIR}/lib -lkokkoscontainers.3.1.1 -lkokkoscore.3.1.1 -D FIX_KOKKOS
 FPPFLAGS        =
 LOCDIR          = src/dm/impls/plex/landau/kokkos/tutorials/
-EXAMPLESCXX     =
+EXAMPLESCXX     = ex1.cxx
 EXAMPLESC       =
 EXAMPLESF       =
 MANSEC          = DM
