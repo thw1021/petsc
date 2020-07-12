@@ -1,4 +1,4 @@
-#requireslanguage CPP
+#requiresdefine 'PETSC_HAVE_KOKKOS'
 -include ../../../../../../../petscdir.mk
 
 CFLAGS	        =

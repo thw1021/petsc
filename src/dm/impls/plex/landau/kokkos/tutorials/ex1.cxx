@@ -1,4 +1,4 @@
-static char help[] = "Simople Kokkos test\n\n";
+static char help[] = "Simple Kokkos test\n\n";
 
 #include <petscdmplex.h>
 
