@@ -13,7 +13,7 @@
 /* Landau collision operator */
 #define PETSC_THREAD_SYNC
 #define PETSC_DEVICE_FUNC_DECL static
-#define PETSC_DEVICE_DATA_DECL
+#define PETSC_DEVICE_DATA_DECL static
 #include "land_kernel.h"
 
 #define LAND_VL  1
