@@ -1,3 +1,4 @@
+#requireslanguage CPP
 -include ../../../../../../petscdir.mk
 ALL: lib
 
