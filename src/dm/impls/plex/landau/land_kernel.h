@@ -5,11 +5,11 @@
 #if defined(PETSC_USE_REAL_SINGLE)
 #define LAND_SMALL 1.e-12F
 #define LAND_VERYSMALL 1.e-30F
-#define LAND_LOG logf
+#define LAND_LOG PetscLogReal
 #else
 #define LAND_SMALL 1.e-12
 #define LAND_VERYSMALL 1.e-300
-#define LAND_LOG log
+#define LAND_LOG PetscLogReal
 #endif
 
 #if defined(PETSC_USE_REAL_SINGLE)
