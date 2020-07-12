@@ -311,19 +311,20 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
     ierr = PetscContainerSetPointer(container,(void*)coloring_ctx);CHKERRQ(ierr);
     ierr = PetscContainerSetUserDestroy(container, destroy_coloring);CHKERRQ(ierr);
     ierr = PetscObjectCompose((PetscObject)JacP,"coloring",(PetscObject)container);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_OPENMP)
     if (1) {
-      int thread_id,num_threads;
+      int thread_id=0,num_threads=1;
       //char name[MPI_MAX_PROCESSOR_NAME];
       // int resultlength;
       //MPI_Get_processor_name(name, &resultlength);
+#if defined(PETSC_HAVE_OPENMP)
 #pragma omp parallel default(shared) private(thread_id)
       {
 	thread_id = omp_get_thread_num();
 	num_threads = omp_get_num_threads();
 	PetscPrintf(PETSC_COMM_WORLD, "Made coloring with %D colors. OMP_threadID %d of %d\n", nc, thread_id, num_threads);
       }
-    }
+#else
+      PetscPrintf(PETSC_COMM_WORLD, "Made coloring with %D colors. OMP_threadID %d of %d\n", nc, thread_id, num_threads);
 #endif
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);

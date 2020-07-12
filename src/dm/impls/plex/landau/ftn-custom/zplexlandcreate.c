@@ -14,4 +14,5 @@ PETSC_EXTERN void dmplexlandcreatevelocityspace_(MPI_Fint * comm,PetscInt *dim,c
   char *prefix;
   FIXCHAR(name, len, prefix);
   *ierr = DMPlexLandCreateVelocitySpace(MPI_Comm_f2c(*(comm)),*dim,prefix,X,J,dm);
+  FREECHAR(name, prefix);
 }

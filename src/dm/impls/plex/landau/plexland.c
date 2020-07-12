@@ -104,7 +104,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
     Eq_m[fieldA] = -ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
     if (dim==2) Eq_m[fieldA] *=  2 * PETSC_PI; /* add the 2pi term that is not in Landau */
     nu_alpha[fieldA] = PetscSqr(ctx->charges[fieldA]/m_0)*m_0/ctx->masses[fieldA];
-    nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/pow(ctx->v_0,3);
+    nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0,3);
   }
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   numCells = cEnd - cStart;
@@ -437,7 +437,7 @@ static void CircleInflate(PetscReal r1, PetscReal r2, PetscReal r0, PetscInt num
     PetscReal fact,tt,rs,re, rr = PetscSqrtReal(PetscSqr(*outX) + PetscSqr(*outY));
     if (rr > r2) { rs = r2; re = r0; fact = outfact;} /* outer zone */
     else {         rs = r1; re = r2; fact = efact;} /* electron zone */
-    tt = (rs + pow((rr - rs)/(re - rs),fact) * (re-rs)) / rr;
+    tt = (rs + PetscPowReal((rr - rs)/(re - rs),fact) * (re-rs)) / rr;
     *outX *= tt;
     *outY *= tt;
   }
@@ -790,13 +790,13 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
   /* compute the exponents, v^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
   /* evaluate the Maxwellian */
-  u[0] = mctx->n*pow(PETSC_PI*theta,-1.5)*(exp(-v2/theta));
+  u[0] = mctx->n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta));
   if (mctx->shift!=0.) {
     v2 = 0;
     for (i = 0; i < dim-1; ++i) v2 += x[i]*x[i];
     v2 += (x[dim-1]-mctx->shift)*(x[dim-1]-mctx->shift);
     /* evaluate the shifted Maxwellian */
-    u[0] += mctx->n*pow(PETSC_PI*theta,-1.5)*(exp(-v2/theta));
+    u[0] += mctx->n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta));
   }
   PetscFunctionReturn(0);
 }
@@ -1152,7 +1152,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
     SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"num charges %D != num species %D",nc,ctx->num_species-1);
   }
   for (ii=0;ii<LAND_MAX_SPECIES;ii++) ctx->charges[ii] *= 1.6022e-19; /* electron/proton charge (MKS) */
-  ctx->t_0 = 8*PETSC_PI*PetscSqr(ctx->epsilon0*ctx->m_0/PetscSqr(ctx->charges[0]))/ctx->lnLam/ctx->n_0*pow(ctx->v_0,3); /* note, this t_0 makes nu[0,0]=1 */
+  ctx->t_0 = 8*PETSC_PI*PetscSqr(ctx->epsilon0*ctx->m_0/PetscSqr(ctx->charges[0]))/ctx->lnLam/ctx->n_0*PetscPowReal(ctx->v_0,3); /* note, this t_0 makes nu[0,0]=1 */
   /* geometry */
   for (ii=0;ii<ctx->num_species;ii++) ctx->refineTol[ii]  = PETSC_MAX_REAL;
   for (ii=0;ii<ctx->num_species;ii++) ctx->coarsenTol[ii] = 0.;
