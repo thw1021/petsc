@@ -327,8 +327,9 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
       PetscPrintf(PETSC_COMM_WORLD, "Made coloring with %D colors. OMP_threadID %d of %d\n", nc, thread_id, num_threads);
 #endif
 #if defined(PETSC_USE_LOG)
-    ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
+      ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
 #endif
+    }
   }
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
