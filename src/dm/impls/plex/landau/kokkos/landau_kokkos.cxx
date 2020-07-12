@@ -1,6 +1,7 @@
 /*
    Implements the Kokkos kernel
 */
+#include <petscconf.h>
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
 #if defined(PETSC_HAVE_OPENMP)
 #include <omp.h>
