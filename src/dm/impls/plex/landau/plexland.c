@@ -184,11 +184,14 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
   __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
   __itt_resume(); // start VTune, again use 2 underscores
 #endif
-  if (ctx->useCUDA) {
+  if (ctx->deviceType == LAND_CUDA) {
 #if defined(PETSC_HAVE_CUDA)
-    ierr = LandauCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
+    ierr = LandCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
 #endif
+  } if (ctx->deviceType == LAND_KOKKOS) {
+    ierr =LandKokkosJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
+    CHKERRQ(ierr);
   } else {
     PetscReal *Tables,*iTab;
     ierr = PetscMalloc1(Nf*Nq*Nb*(1+dim), &Tables);CHKERRQ(ierr);
@@ -1011,10 +1014,11 @@ static PetscErrorCode adapt(DM *dm, LandCtx *ctx, Vec *uu)
 
 static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
 {
-  PetscErrorCode  ierr;
-  PetscBool       flg, sph_flg;
-  PetscInt        ii,nt,nm,nc;
-  DM              dummy;
+  PetscErrorCode    ierr;
+  PetscBool         flg, sph_flg;
+  PetscInt          ii,nt,nm,nc;
+  DM                dummy;
+  char              opstring[256];
   PetscFunctionBeginUser;
   ierr = DMCreate(PETSC_COMM_WORLD,&dummy);CHKERRQ(ierr);
   /* get options - initialize context */
@@ -1052,9 +1056,9 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ctx->quarter3DDomain = PETSC_FALSE;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
-  ctx->useCUDA = PETSC_TRUE;
+  ctx->deviceType = LAND_CUDA;
 #else
-  ctx->useCUDA = PETSC_FALSE;
+  ctx->deviceType = LAND_CPU;
 #if defined(PETSC_HAVE_OPENMP)
   if (1) {
     int  thread_id,hwthread,num_threads;
@@ -1071,28 +1075,38 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   }
 #endif
 #endif
-  ierr = PetscOptionsBool("-use_cuda", "Use CUDA kernels", "xgc_dmplex.c", ctx->useCUDA, &ctx->useCUDA, NULL);CHKERRQ(ierr);
+  ierr = PetscStrcpy(opstring,"cpu");CHKERRQ(ierr);
+  ierr = PetscOptionsString("-landau_device_type","Use kernels on 'cpu', 'cuda', or 'kokkos'","plexland.c",opstring,opstring,256,NULL);CHKERRQ(ierr);
+  ierr = PetscStrcmp("cpu",opstring,&flg);CHKERRQ(ierr);
+  if (flg) ctx->deviceType = LAND_CPU;
+  else {
+    ierr = PetscStrcmp("cuda",opstring,&flg);CHKERRQ(ierr);
+    if (flg) ctx->deviceType = LAND_CUDA;
+    else {
+      ierr = PetscStrcmp("kokkos",opstring,&flg);CHKERRQ(ierr);
+      if (flg) ctx->deviceType = LAND_KOKKOS;
+      else SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s",opstring);
+    }
+  }
   ierr = PetscOptionsReal("-electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-interpolate", "interpolate grid points in refinement", "xgc_dmplex.c", ctx->interpolate, &ctx->interpolate, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-sphere", "use sphere/semi-circle domain instead of rectangle", "xgc_dmplex.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-inflate", "With sphere, inflate for curved edges (no AMR)", "xgc_dmplex.c", ctx->inflate, &ctx->inflate, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-quarter_3d_domain", "Use symmetry in 3D to model 1/4 of domain", "xgc_dmplex.c", ctx->quarter3DDomain, &ctx->quarter3DDomain, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "xgc_dmplex.c", ctx->numRERefine, &ctx->numRERefine, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_z_refine1",  "Number of levels to refine along v_perp=0", "xgc_dmplex.c", ctx->nZRefine1, &ctx->nZRefine1, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_z_refine2",  "Number of levels to refine along v_perp=0", "xgc_dmplex.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "xgc_dmplex.c", ctx->maxRefIts, &ctx->maxRefIts, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_post_refine", "Number of levels to uniformly refine after AMR", "xgc_dmplex.c", ctx->postAMRRefine, &ctx->postAMRRefine, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-verbose", "", "xgc_dmplex.c", ctx->verbose, &ctx->verbose, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","xgc_dmplex.c",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-z_radius1","velocity range to refine r=0 axis (for electrons)","xgc_dmplex.c",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","xgc_dmplex.c",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Ez","Initial parallel electric field in unites of Conner-Hastie criticle field","xgc_dmplex.c",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-n_0","Normalization constant for number density","xgc_dmplex.c",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-ln_lambda","Cross section parameter","xgc_dmplex.c",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "xgc_dmplex.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
-  flg = PETSC_FALSE;
-  ierr = PetscOptionsBool("-petscspace_poly_tensor", "xgc_dmplex.c", "xgc_dmplex.c", flg, &flg, NULL);CHKERRQ(ierr);
-  ctx->simplex = flg ? PETSC_FALSE : PETSC_TRUE;
+  ierr = PetscOptionsBool("-interpolate", "interpolate grid points in refinement", "plexland.c", ctx->interpolate, &ctx->interpolate, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-inflate", "With sphere, inflate for curved edges (no AMR)", "plexland.c", ctx->inflate, &ctx->inflate, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-quarter_3d_domain", "Use symmetry in 3D to model 1/4 of domain", "plexland.c", ctx->quarter3DDomain, &ctx->quarter3DDomain, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &ctx->numRERefine, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-amr_z_refine1",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-amr_z_refine2",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "plexland.c", ctx->maxRefIts, &ctx->maxRefIts, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-amr_post_refine", "Number of levels to uniformly refine after AMR", "plexland.c", ctx->postAMRRefine, &ctx->postAMRRefine, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-verbose", "", "plexland.c", ctx->verbose, &ctx->verbose, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","plexland.c",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-z_radius1","velocity range to refine r=0 axis (for electrons)","plexland.c",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","plexland.c",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-Ez","Initial parallel electric field in unites of Conner-Hastie criticle field","plexland.c",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-n_0","Normalization constant for number density","plexland.c",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ln_lambda","Cross section parameter","plexland.c",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "plexland.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
+  ctx->simplex = PETSC_FALSE;
   /* get num species */
   {
     PetscReal arr[100];
@@ -1438,7 +1452,7 @@ PetscErrorCode DMPlexLandPrintNorms(Vec X, PetscInt stepi)
   } else {
     PetscPrintf(PETSC_COMM_WORLD, " -- %D cells",cEnd-cStart);
   }
-  if (ctx->useCUDA) PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
+  if (ctx->deviceType != LAND_CPU) PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
   else PetscPrintf(PETSC_COMM_WORLD,"\n");
 
   PetscFunctionReturn(0);
