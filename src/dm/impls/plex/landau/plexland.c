@@ -1063,8 +1063,13 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
   ctx->deviceType = LAND_CUDA;
+  ierr = PetscStrcpy(opstring,"cuda");CHKERRQ(ierr);
+#elif defined(PETSC_HAVE_KOKKOS)
+  ctx->deviceType = LAND_KOKKOS;
+  ierr = PetscStrcpy(opstring,"kokkos");CHKERRQ(ierr);
 #else
   ctx->deviceType = LAND_CPU;
+  ierr = PetscStrcpy(opstring,"cpu");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_OPENMP)
   if (1) {
     int  thread_id,hwthread,num_threads;
@@ -1081,7 +1086,6 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   }
 #endif
 #endif
-  ierr = PetscStrcpy(opstring,"cpu");CHKERRQ(ierr);
   ierr = PetscOptionsString("-landau_device_type","Use kernels on 'cpu', 'cuda', or 'kokkos'","plexland.c",opstring,opstring,256,NULL);CHKERRQ(ierr);
   ierr = PetscStrcmp("cpu",opstring,&flg);CHKERRQ(ierr);
   if (flg) ctx->deviceType = LAND_CPU;
