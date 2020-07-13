@@ -1,4 +1,5 @@
 #requiresdefine 'PETSC_HAVE_KOKKOS'
+#requiresscalar !complex
 -include ../../../../../../../petscdir.mk
 
 CFLAGS	        =
