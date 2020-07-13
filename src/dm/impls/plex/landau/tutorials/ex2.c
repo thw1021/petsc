@@ -727,7 +727,7 @@ int main(int argc, char **argv)
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
     ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
     ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
-    ierr = LandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
+    ierr = DMPlexLandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
