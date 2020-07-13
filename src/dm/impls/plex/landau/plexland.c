@@ -121,7 +121,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
     static int         cc = 0;
     PetscScalar        uu[LAND_MAX_SPECIES],u_x[LAND_MAX_SPECIES*LAND_DIM];
     /* collect f data */
-    if (ctx->verbose > 1 || (ctx->verbose > 0 && cc++ == 0)) {
+    if (ctx->verbose > 2 || (ctx->verbose > 0 && cc++ == 0)) {
       PetscInt N;
       VecGetSize(locX,&N);
       PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, %s elements, totDim=%D, Nb=%D, Nq=%D, elemMatSize=%D, dim=%D, Tab: Nb=%D Nf=%D Np=%D cdim=%D N=%D\n",
