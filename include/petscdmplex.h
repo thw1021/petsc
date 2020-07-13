@@ -13,7 +13,6 @@
 #include <petscfv.h>
 #include <petscsftypes.h>
 #include <petscdmfield.h>
-#include <petscts.h>
 
 PETSC_EXTERN PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner, DM, PetscSection, PetscSection, IS *);
 
@@ -459,7 +458,5 @@ PETSC_EXTERN PetscErrorCode DMPlexLandPrintNorms(Vec, PetscInt);
 PETSC_EXTERN PetscErrorCode DMPlexLandCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
 PETSC_EXTERN PetscErrorCode DMPlexLandDestroyVelocitySpace(DM*);
 PETSC_EXTERN PetscErrorCode DMPlexLandAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);
-PETSC_EXTERN PetscErrorCode LandIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
-PETSC_EXTERN PetscErrorCode LandIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
 
 #endif

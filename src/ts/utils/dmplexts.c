@@ -426,3 +426,81 @@ PetscErrorCode DMTSCheckFromOptions(TS ts, Vec u)
   ierr = VecDestroy(&sol);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+/*@
+  LandIFunction
+@*/
+PETSC_EXTERN PetscErrorCode DMPlexLandFormLandau(Vec a_X, Mat JacP, const PetscInt dim, void *a_ctx);
+PetscErrorCode LandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void *actx)
+{
+  PetscErrorCode ierr;
+  LandCtx        *ctx=(LandCtx*)actx;
+  PetscReal      unorm;
+  PetscInt       dim;
+  PetscFunctionBeginUser;
+  if (PETSC_TRUE) {
+    DM dm;
+    ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
+    ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
+    if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
+  }
+  ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
+#if defined(PETSC_USE_LOG)
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr); // remove in real application
+  ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
+#endif
+  ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
+  if (ctx->normJ!=unorm) {
+    ctx->normJ = unorm;
+    ierr = DMPlexLandFormLandau(X,ctx->J,dim,(void*)ctx);CHKERRQ(ierr);
+    ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
+  } else ctx->aux_bool = PETSC_FALSE;
+  /* mat vec for op */
+  ierr = MatMult(ctx->J,X,F);CHKERRQ(ierr);CHKERRQ(ierr); /* C*f */
+  /* add time term */
+  if (X_t) {
+    ierr = MatMultAdd(ctx->M,X_t,F,F);CHKERRQ(ierr);
+  }
+#if defined(PETSC_USE_LOG)
+  ierr = PetscLogEventEnd(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
+#endif
+  PetscFunctionReturn(0);
+}
+
+/*@
+  LandIJacobian
+@*/
+PetscErrorCode LandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
+{
+  PetscErrorCode ierr;
+  LandCtx        *ctx=NULL;
+  PetscReal      unorm;
+  PetscInt       dim;
+  PetscFunctionBeginUser;
+  if (1) {
+    DM dm;
+    ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
+    ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
+    if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
+  }
+  if (Amat!=Pmat || Amat!=ctx->J) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Amat!=Pmat || Amat!=ctx->J");
+  ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
+  /* get collision Jacobian into A */
+#if defined(PETSC_USE_LOG)
+  ierr = PetscLogEventBegin(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
+#endif
+  ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
+  if (ctx->normJ!=unorm) {
+    ierr = DMPlexLandFormLandau(X,ctx->J,dim,(void*)ctx); CHKERRQ(ierr);
+    ctx->normJ = unorm;
+    ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
+  } else ctx->aux_bool = PETSC_FALSE;
+  /* add C */
+  ierr = MatCopy(ctx->J,Pmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+  /* add mass */
+  ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+#if defined(PETSC_USE_LOG)
+  ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
+#endif
+  PetscFunctionReturn(0);
+}
