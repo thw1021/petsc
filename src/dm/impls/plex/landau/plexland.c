@@ -1028,6 +1028,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   PetscFunctionBeginUser;
   ierr = DMCreate(PETSC_COMM_WORLD,&dummy);CHKERRQ(ierr);
   /* get options - initialize context */
+  ctx->normJ = 0;
   ctx->verbose = 1;
   ctx->interpolate = PETSC_TRUE;
   ctx->simplex = PETSC_FALSE;
