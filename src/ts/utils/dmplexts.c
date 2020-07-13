@@ -427,11 +427,11 @@ PetscErrorCode DMTSCheckFromOptions(TS ts, Vec u)
   PetscFunctionReturn(0);
 }
 
-PETSC_EXTERN PetscErrorCode DMPlexLandFormLandau(Vec a_X, Mat JacP, const PetscInt dim, void *a_ctx);
+PETSC_INTERN PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt dim, void *a_ctx);
 /*@
-  LandIFunction
+  DMPlexLandIFunction
 @*/
-PetscErrorCode LandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void *actx)
+PetscErrorCode DMPlexLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void *actx)
 {
   PetscErrorCode ierr;
   LandCtx        *ctx=(LandCtx*)actx;
@@ -452,7 +452,7 @@ PetscErrorCode LandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   if (ctx->normJ!=unorm) {
     ctx->normJ = unorm;
-    ierr = DMPlexLandFormLandau(X,ctx->J,dim,(void*)ctx);CHKERRQ(ierr);
+    ierr = DMPlexLandFormLandau_Internal(X,ctx->J,dim,(void*)ctx);CHKERRQ(ierr);
     ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
   } else ctx->aux_bool = PETSC_FALSE;
   /* mat vec for op */
@@ -468,9 +468,9 @@ PetscErrorCode LandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void
 }
 
 /*@
-  LandIJacobian
+  DMPlexLandIJacobian
 @*/
-PetscErrorCode LandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
+PetscErrorCode DMPlexLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
 {
   PetscErrorCode ierr;
   LandCtx        *ctx=NULL;
@@ -491,7 +491,7 @@ PetscErrorCode LandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,Petsc
 #endif
   ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
   if (ctx->normJ!=unorm) {
-    ierr = DMPlexLandFormLandau(X,ctx->J,dim,(void*)ctx); CHKERRQ(ierr);
+    ierr = DMPlexLandFormLandau_Internal(X,ctx->J,dim,(void*)ctx); CHKERRQ(ierr);
     ctx->normJ = unorm;
     ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
   } else ctx->aux_bool = PETSC_FALSE;
