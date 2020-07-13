@@ -159,14 +159,14 @@ static PetscReal CalculateE(PetscReal Tev, PetscReal n, PetscReal lnLambda, Pets
   e = 1.602176e-19;
   m = 9.10938e-31;
   if (1) {
-    double Ec, Ehat = *E, betath = sqrt(2*Tev*e/(m*c*c)), j0 = Ehat * 7/(sqrt(2)*2) * pow(betath,3) * n * e * c;
-    Ec = n*lnLambda*pow(e,3) / (4*PETSC_PI*pow(eps0,2)*m*c*c);
+    double Ec, Ehat = *E, betath = PetscSqrtReal(2*Tev*e/(m*c*c)), j0 = Ehat * 7/(PetscSqrtReal(2)*2) * PetscPowReal(betath,3) * n * e * c;
+    Ec = n*lnLambda*PetscPowReal(e,3) / (4*PETSC_PI*PetscPowReal(eps0,2)*m*c*c);
     *E = Ec;
     PetscPrintf(PETSC_COMM_WORLD, "CalculateE j0=%g Ec = %g\n",j0,Ec);
   } else {
     PetscReal Ed, vth;
     vth = PetscSqrtReal(8*Tev*e/(m*PETSC_PI));
-    Ed =  n*lnLambda*pow(e,3) / (4*PETSC_PI*pow(eps0,2)*m*vth*vth);
+    Ed =  n*lnLambda*PetscPowReal(e,3) / (4*PETSC_PI*PetscPowReal(eps0,2)*m*vth*vth);
     *E = Ed;
   }
   PetscFunctionReturn(0);
@@ -175,7 +175,7 @@ static PetscReal CalculateE(PetscReal Tev, PetscReal n, PetscReal lnLambda, Pets
 static PetscReal Spitzer(PetscReal m_e, PetscReal e, PetscReal Z, PetscReal epsilon0,  PetscReal lnLam, PetscReal kTe_joules)
 {
   PetscReal Fz = (1+1.198*Z+0.222*Z*Z)/(1+2.966*Z+0.753*Z*Z), eta;
-  eta = Fz*4./3.*PetscSqrtReal(2.*PETSC_PI)*Z*PetscSqrtReal(m_e)*PetscSqr(e)*lnLam*pow(4*PETSC_PI*epsilon0,-2.)*pow(kTe_joules,-1.5);
+  eta = Fz*4./3.*PetscSqrtReal(2.*PETSC_PI)*Z*PetscSqrtReal(m_e)*PetscSqr(e)*lnLam*PetscPowReal(4*PETSC_PI*epsilon0,-2.)*PetscPowReal(kTe_joules,-1.5);
   /* PetscPrintf(PETSC_COMM_SELF, "Fz=%20.13e SpitzEr=%10.3e Z=%g\n",Fz,eta,Z); */
   return eta;
 }
@@ -246,9 +246,9 @@ static void f0_0_diff_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   const PetscReal n = ctx->n[ii];
   PetscReal       diff, f_maxwell, v2 = 0, theta = 2*kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
-  f_maxwell = n*pow(PETSC_PI*theta,-1.5)*(exp(-v2/theta));
+  f_maxwell = n*PetscPowReal(PETSC_PI*theta,-1.5)*(exp(-v2/theta));
   diff = 2.*PETSC_PI*x[0]*(PetscRealPart(u[ii]) - f_maxwell);
-  f0[0] = pow(diff,ppp);
+  f0[0] = PetscPowReal(diff,ppp);
 }
 static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                           const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
@@ -262,8 +262,8 @@ static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   const PetscReal n = ctx->n[ii];
   PetscReal       f_maxwell, v2 = 0, theta = 2*kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
-  f_maxwell = 2.*PETSC_PI*x[0] * n*pow(PETSC_PI*theta,-1.5)*(exp(-v2/theta));
-  f0[0] = pow(f_maxwell,ppp);
+  f_maxwell = 2.*PETSC_PI*x[0] * n*PetscPowReal(PETSC_PI*theta,-1.5)*(exp(-v2/theta));
+  f0[0] = PetscPowReal(f_maxwell,ppp);
 }
 
 /*  */
@@ -289,18 +289,18 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
   rectx->idx = 0;
   ierr = PetscDSSetObjective(prob, 0, &f0_0_diff_lp);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X2,tt,NULL);CHKERRQ(ierr);
-  ediff = pow(PetscRealPart(tt[0]),1./ppp);
+  ediff = PetscPowReal(PetscRealPart(tt[0]),1./ppp);
   ierr = PetscDSSetObjective(prob, 0, &f0_0_maxwellian_lp);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X2,tt,NULL);CHKERRQ(ierr);
-  lpm0 = pow(PetscRealPart(tt[0]),1./ppp);
+  lpm0 = PetscPowReal(PetscRealPart(tt[0]),1./ppp);
   if (ctx->num_species>1) {
     rectx->idx = 1;
     ierr = PetscDSSetObjective(prob, 0, &f0_0_diff_lp);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X2,tt,NULL);CHKERRQ(ierr);
-    idiff = pow(PetscRealPart(tt[0]),1./ppp);
+    idiff = PetscPowReal(PetscRealPart(tt[0]),1./ppp);
     ierr = PetscDSSetObjective(prob, 0, &f0_0_maxwellian_lp);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X2,tt,NULL);CHKERRQ(ierr);
-    lpm1 = pow(PetscRealPart(tt[0]),1./ppp);
+    lpm1 = PetscPowReal(PetscRealPart(tt[0]),1./ppp);
   }
   ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %D) time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,time,(int)ppp,ediff/lpm0,idiff/lpm1);CHKERRQ(ierr);
   /* view */
@@ -569,13 +569,13 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
   if (time < rectx->pulse_start || time > rectx->pulse_start + 3*rectx->pulse_width) *rho = 0;
   else if (0) {
     double t = time - rectx->pulse_start, start = rectx->pulse_width, stop = 2*rectx->pulse_width, cycle = 3*rectx->pulse_width, steep = 5, xi = 0.75 - (stop - start)/(2* cycle);
-    *rho = rectx->pulse_rate * (cycle / (stop - start)) / (1 + exp(steep*(sin(2*PETSC_PI*((t - start)/cycle + xi)) - sin(2*PETSC_PI*xi))));
+    *rho = rectx->pulse_rate * (cycle / (stop - start)) / (1 + exp(steep*(PetscSinReal(2*PETSC_PI*((t - start)/cycle + xi)) - PetscSinReal(2*PETSC_PI*xi))));
   } else if (0) {
     double x = 2*(time - rectx->pulse_start)/(3*rectx->pulse_width) - 1;
     if (x==1 || x==-1) *rho = 0;
     else *rho = rectx->pulse_rate * exp(-1/(1-x*x));
   } else {
-    double x = sin((time-rectx->pulse_start)/(3*rectx->pulse_width)*2*PETSC_PI - PETSC_PI/2) + 1; /* 0:2, integrates to 1.0 */
+    double x = PetscSinReal((time-rectx->pulse_start)/(3*rectx->pulse_width)*2*PETSC_PI - PETSC_PI/2) + 1; /* 0:2, integrates to 1.0 */
     *rho = rectx->pulse_rate * x / (3*rectx->pulse_width);
   }
   PetscFunctionReturn(0);
