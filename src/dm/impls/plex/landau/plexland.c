@@ -121,7 +121,7 @@ PetscErrorCode FormLandau(Vec a_X, Mat JacP, const PetscInt dim, LandCtx *ctx)
     static int         cc = 0;
     PetscScalar        uu[LAND_MAX_SPECIES],u_x[LAND_MAX_SPECIES*LAND_DIM];
     /* collect f data */
-    if (ctx->verbose > 3 || (ctx->verbose > 0 && cc++ == 0)) {
+    if (ctx->verbose > 1 || (ctx->verbose > 0 && cc++ == 0)) {
       PetscInt N;
       VecGetSize(locX,&N);
       PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, %s elements, totDim=%D, Nb=%D, Nq=%D, elemMatSize=%D, dim=%D, Tab: Nb=%D Nf=%D Np=%D cdim=%D N=%D\n",
@@ -654,7 +654,7 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
     char      convType[256];
     PetscBool flg;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Mesh conversion options", "DMPLEX");CHKERRQ(ierr);
-    ierr = PetscOptionsFList("-dm_type","Convert DMPlex to another format (should not be Plex!)","ex6f.c",DMList,DMPLEX,convType,256,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsFList("-dm_land_type","Convert DMPlex to another format (should not be Plex!)","ex6f.c",DMList,DMPLEX,convType,256,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();
     if (flg) {
       DM dmforest;
@@ -736,7 +736,7 @@ static PetscErrorCode LandCreateMassMatrix(LandCtx *ctx, Vec X, DM a_dm, Mat *Am
 #if defined(LAND_ADD_BCS)
   ierr = DMAddBoundary(massDM, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)()) zero_bc, 1, &N1, ctx);CHKERRQ(ierr);
 #endif
-  ierr = DMViewFromOptions(massDM,NULL,"-mass_dm_view");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(massDM,NULL,"-dm_land_mass_dm_view");CHKERRQ(ierr);
   ierr = DMCreateMatrix(massDM, Amat);CHKERRQ(ierr);
   {
     Vec locX;
@@ -752,7 +752,7 @@ static PetscErrorCode LandCreateMassMatrix(LandCtx *ctx, Vec X, DM a_dm, Mat *Am
   ierr = MatGetSize(ctx->J, &N1, NULL);CHKERRQ(ierr);
   ierr = MatGetSize(*Amat, &N2, NULL);CHKERRQ(ierr);
   if (N1 != N2) SETERRQ2(PetscObjectComm((PetscObject) a_dm), PETSC_ERR_PLIB, "Incorrect matrix sizes: |Jacobian| = %D, |Mass|=%D",N1,N2);
-  ierr = MatViewFromOptions(*Amat,NULL,"-mass_mat_view");CHKERRQ(ierr);
+  ierr = MatViewFromOptions(*Amat,NULL,"-dm_land_mass_mat_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1028,7 +1028,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   PetscFunctionBeginUser;
   ierr = DMCreate(PETSC_COMM_WORLD,&dummy);CHKERRQ(ierr);
   /* get options - initialize context */
-  ctx->verbose = 3;
+  ctx->verbose = 1;
   ctx->interpolate = PETSC_TRUE;
   ctx->simplex = PETSC_FALSE;
   ctx->sphere = PETSC_FALSE;
@@ -1086,7 +1086,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   }
 #endif
 #endif
-  ierr = PetscOptionsString("-landau_device_type","Use kernels on 'cpu', 'cuda', or 'kokkos'","plexland.c",opstring,opstring,256,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsString("-dm_land_device_type","Use kernels on 'cpu', 'cuda', or 'kokkos'","plexland.c",opstring,opstring,256,NULL);CHKERRQ(ierr);
   ierr = PetscStrcmp("cpu",opstring,&flg);CHKERRQ(ierr);
   if (flg) ctx->deviceType = LAND_CPU;
   else {
@@ -1095,50 +1095,49 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
     else {
       ierr = PetscStrcmp("kokkos",opstring,&flg);CHKERRQ(ierr);
       if (flg) ctx->deviceType = LAND_KOKKOS;
-      else SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s",opstring);
+      else SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-dm_land_device_type %s",opstring);
     }
   }
-  ierr = PetscOptionsReal("-electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-interpolate", "interpolate grid points in refinement", "plexland.c", ctx->interpolate, &ctx->interpolate, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-inflate", "With sphere, inflate for curved edges (no AMR)", "plexland.c", ctx->inflate, &ctx->inflate, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-quarter_3d_domain", "Use symmetry in 3D to model 1/4 of domain", "plexland.c", ctx->quarter3DDomain, &ctx->quarter3DDomain, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &ctx->numRERefine, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_z_refine1",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_z_refine2",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "plexland.c", ctx->maxRefIts, &ctx->maxRefIts, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-amr_post_refine", "Number of levels to uniformly refine after AMR", "plexland.c", ctx->postAMRRefine, &ctx->postAMRRefine, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-verbose", "", "plexland.c", ctx->verbose, &ctx->verbose, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","plexland.c",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-z_radius1","velocity range to refine r=0 axis (for electrons)","plexland.c",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","plexland.c",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Ez","Initial parallel electric field in unites of Conner-Hastie criticle field","plexland.c",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-n_0","Normalization constant for number density","plexland.c",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-ln_lambda","Cross section parameter","plexland.c",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "plexland.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-dm_land_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-dm_land_inflate", "With sphere, inflate for curved edges (no AMR)", "plexland.c", ctx->inflate, &ctx->inflate, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-dm_land_quarter_3d_domain", "Use symmetry in 3D to model 1/4 of domain", "plexland.c", ctx->quarter3DDomain, &ctx->quarter3DDomain, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_land_amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &ctx->numRERefine, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_land_amr_z_refine1",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_land_amr_z_refine2",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_land_amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "plexland.c", ctx->maxRefIts, &ctx->maxRefIts, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_land_amr_post_refine", "Number of levels to uniformly refine after AMR", "plexland.c", ctx->postAMRRefine, &ctx->postAMRRefine, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_land_verbose", "", "plexland.c", ctx->verbose, &ctx->verbose, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","plexland.c",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_z_radius1","velocity range to refine r=0 axis (for electrons)","plexland.c",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","plexland.c",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_Ez","Initial parallel electric field in unites of Conner-Hastie criticle field","plexland.c",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_n_0","Normalization constant for number density","plexland.c",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_ln_lambda","Cross section parameter","plexland.c",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_land_num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "plexland.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
   ctx->simplex = PETSC_FALSE;
   /* get num species */
   {
     PetscReal arr[100];
     nt = 100;
-    ierr = PetscOptionsRealArray("-thermal_temps", "Temperature of each species [e,i_0,i_1,...] in keV", "xgc_dmplex.c", arr, &nt, &flg);CHKERRQ(ierr);
+    ierr = PetscOptionsRealArray("-dm_land_thermal_temps", "Temperature of each species [e,i_0,i_1,...] in keV", "xgc_dmplex.c", arr, &nt, &flg);CHKERRQ(ierr);
     if (flg && nt > LAND_MAX_SPECIES) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-thermal_temps ,t1,t2,.. number of species %D > MAX %D",nt,LAND_MAX_SPECIES);
   }
   nt = LAND_MAX_SPECIES;
   for (ii=0;ii<LAND_MAX_SPECIES;ii++) ctx->thermal_temps[ii] = 1.;
-  ierr = PetscOptionsRealArray("-thermal_temps", "Temperature of each species [e,i_0,i_1,...] in keV", "xgc_dmplex.c", ctx->thermal_temps, &nt, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsRealArray("-dm_land_thermal_temps", "Temperature of each species [e,i_0,i_1,...] in keV", "xgc_dmplex.c", ctx->thermal_temps, &nt, &flg);CHKERRQ(ierr);
   if (flg) {
     PetscInfo1(dummy, "num_species set to number of thermal temps provided (%D)\n",nt);
     ctx->num_species = nt;
-  } else SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-thermal_temps ,t1,t2,.. must be provided to set the number of species");
+  } else SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-dm_land_thermal_temps ,t1,t2,.. must be provided to set the number of species");
   for (ii=0;ii<ctx->num_species;ii++) ctx->thermal_temps[ii] *= 1.1604525e7; /* convert to Kelvin */
   nm = LAND_MAX_SPECIES-1;
-  ierr = PetscOptionsRealArray("-ion_masses", "Mass of each species in units of proton mass [i_0=2,i_1=40...]", "xgc_dmplex.c", &ctx->masses[1], &nm, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsRealArray("-dm_land_ion_masses", "Mass of each species in units of proton mass [i_0=2,i_1=40...]", "xgc_dmplex.c", &ctx->masses[1], &nm, &flg);CHKERRQ(ierr);
   if (flg && nm != ctx->num_species-1) {
     SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"num ion masses %D != num species %D",nm,ctx->num_species-1);
   }
   nm = LAND_MAX_SPECIES;
-  ierr = PetscOptionsRealArray("-n", "Normalized (by -n_0) number density of each species", "xgc_dmplex.c", ctx->n, &nm, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsRealArray("-dm_land_n", "Normalized (by -n_0) number density of each species", "xgc_dmplex.c", ctx->n, &nm, &flg);CHKERRQ(ierr);
   if (flg && nm != ctx->num_species) {
     SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"wrong num n: %D != num species %D",nm,ctx->num_species);
   }
@@ -1148,10 +1147,10 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   for (ii=0;ii<LAND_MAX_SPECIES;ii++) ctx->masses[ii] *= 1.6720e-27; /* scale by proton mass kg */
   ctx->masses[0] = 9.10938356e-31; /* electron mass kg (should be about right already) */
   ctx->m_0 = ctx->masses[0]; /* arbitrary reference mass, electrons */
-  ierr = PetscOptionsReal("-v_0","Velocity to normalize with in units of initial electrons thermal velocity (not recommended to change default)","xgc_dmplex.c",ctx->v_0,&ctx->v_0, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_v_0","Velocity to normalize with in units of initial electrons thermal velocity (not recommended to change default)","xgc_dmplex.c",ctx->v_0,&ctx->v_0, NULL);CHKERRQ(ierr);
   ctx->v_0 *= PetscSqrtReal(ctx->k*ctx->thermal_temps[0]/(ctx->masses[0])); /* electron mean velocity in 1D (need 3D form in computing T from FE integral) */
   nc = LAND_MAX_SPECIES-1;
-  ierr = PetscOptionsRealArray("-ion_charges", "Charge of each species in units of proton charge [i_0=2,i_1=18,...]", "main.c", &ctx->charges[1], &nc, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsRealArray("-dm_land_ion_charges", "Charge of each species in units of proton charge [i_0=2,i_1=18,...]", "main.c", &ctx->charges[1], &nc, &flg);CHKERRQ(ierr);
   if (flg && nc != ctx->num_species-1) {
     SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"num charges %D != num species %D",nc,ctx->num_species-1);
   }
@@ -1161,25 +1160,25 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   for (ii=0;ii<ctx->num_species;ii++) ctx->refineTol[ii]  = PETSC_MAX_REAL;
   for (ii=0;ii<ctx->num_species;ii++) ctx->coarsenTol[ii] = 0.;
   ii = LAND_MAX_SPECIES;
-  ierr = PetscOptionsRealArray("-refine_tol","tolerance for refining cells in AMR","xgc_dmplex.c",ctx->refineTol, &ii, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsRealArray("-dm_land_refine_tol","tolerance for refining cells in AMR","xgc_dmplex.c",ctx->refineTol, &ii, &flg);CHKERRQ(ierr);
   if (flg && ii != ctx->num_species) ierr = PetscInfo2(dummy, "Phase: Warning, #refine_tol %D != num_species %D\n",ii,ctx->num_species);CHKERRQ(ierr);
   ii = LAND_MAX_SPECIES;
-  ierr = PetscOptionsRealArray("-coarsen_tol","tolerance for coarsening cells in AMR","xgc_dmplex.c",ctx->coarsenTol, &ii, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsRealArray("-dm_land_coarsen_tol","tolerance for coarsening cells in AMR","xgc_dmplex.c",ctx->coarsenTol, &ii, &flg);CHKERRQ(ierr);
   if (flg && ii != ctx->num_species) ierr = PetscInfo2(dummy, "Phase: Warning, #coarsen_tol %D != num_species %D\n",ii,ctx->num_species);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-domain_radius","Phase space size in units of electron thermal velocity","xgc_dmplex.c",ctx->radius,&ctx->radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_domain_radius","Phase space size in units of electron thermal velocity","xgc_dmplex.c",ctx->radius,&ctx->radius, &flg);CHKERRQ(ierr);
   if (flg && ctx->radius <= 0) { /* negative is ratio of c */
     if (ctx->radius == 0) ctx->radius = 0.75;
     else ctx->radius = -ctx->radius;
     ctx->radius = ctx->radius*299792458/ctx->v_0;
     ierr = PetscInfo1(dummy, "Change domain radius to %e\n",ctx->radius);CHKERRQ(ierr);
   }
-  ierr = PetscOptionsReal("-i_radius","Ion thermal velocity, used for circular meshes","xgc_dmplex.c",ctx->i_radius,&ctx->i_radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_i_radius","Ion thermal velocity, used for circular meshes","xgc_dmplex.c",ctx->i_radius,&ctx->i_radius, &flg);CHKERRQ(ierr);
   if (flg && !sph_flg) ctx->sphere = PETSC_TRUE; /* you gave me an ion radius but did not set sphere, user error really */
   if (!flg) {
     ctx->i_radius = 1.5*PetscSqrtReal(8*ctx->k*ctx->thermal_temps[1]/ctx->masses[1]/PETSC_PI)/ctx->v_0; /* normalized radius with thermal velocity of first ion */
     /* ierr = PetscInfo1(dummy, "Phase: Warning i_radius not provided, using 2.5 * first ion thermal temp %e\n",ctx->i_radius);CHKERRQ(ierr); */
   }
-  ierr = PetscOptionsReal("-e_radius","Electron thermal velocity, used for circular meshes","xgc_dmplex.c",ctx->e_radius,&ctx->e_radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_land_e_radius","Electron thermal velocity, used for circular meshes","xgc_dmplex.c",ctx->e_radius,&ctx->e_radius, &flg);CHKERRQ(ierr);
   if (flg && !sph_flg) ctx->sphere = PETSC_TRUE; /* you gave me an e radius but did not set sphere, user error really */
   if (!flg) {
     ctx->e_radius = 1.5*PetscSqrtReal(8*ctx->k*ctx->thermal_temps[0]/ctx->masses[0]/PETSC_PI)/ctx->v_0; /* normalized radius with thermal velocity of electrons */
@@ -1187,7 +1186,7 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   }
   /* ierr = PetscInfo2(dummy, "Phase: electron radius = %g, ion radius = %g\n",ctx->e_radius,ctx->i_radius);CHKERRQ(ierr); */
   if (ctx->sphere && (ctx->e_radius <= ctx->i_radius || ctx->radius <= ctx->e_radius)) SETERRQ3(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"bad radii: %g < %g < %g",ctx->i_radius,ctx->e_radius,ctx->radius);
-  ierr = PetscOptionsInt("-sub_thread_block_size", "Number of threads in CUDA integration point subblock", "xgc_dmplex.c", ctx->subThreadBlockSize, &ctx->subThreadBlockSize, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_land_sub_thread_block_size", "Number of threads in CUDA integration point subblock", "xgc_dmplex.c", ctx->subThreadBlockSize, &ctx->subThreadBlockSize, NULL);CHKERRQ(ierr);
   if (ctx->subThreadBlockSize > LAND_MAX_SUB_THREAD_BLOCKS) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"num sub threads %D > MAX %D",ctx->subThreadBlockSize,LAND_MAX_SUB_THREAD_BLOCKS);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   for (ii=ctx->num_species;ii<LAND_MAX_SPECIES;ii++) ctx->masses[ii] = ctx->thermal_temps[ii]  = ctx->charges[ii] = 0;
@@ -1217,12 +1216,12 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
       ierr = PetscOptionsClearValue(NULL,"-ksp_monitor");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-ts_monitor");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-ts_adapt_monitor");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-amr_dm_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-amr_vec_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-mass_mat_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-mass_dm_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-pre_dm_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-pre_vec_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_land_amr_dm_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_land_amr_vec_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_land_mass_mat_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_land_mass_dm_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_land_pre_dm_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_land_pre_vec_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-info");CHKERRQ(ierr);
     }
   }
@@ -1263,7 +1262,7 @@ PetscErrorCode DMPlexLandCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const 
   ierr = ProcessOptions(ctx,prefix);CHKERRQ(ierr);
   /* Create Mesh */
   ierr = LandDMCreateVMesh(comm, dim, prefix, ctx, dm);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(*dm,NULL,"-pre_dm_view");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(*dm,NULL,"-dm_land_pre_dm_view");CHKERRQ(ierr);
   ierr = DMSetApplicationContext(*dm, ctx);CHKERRQ(ierr);
   /* create FEM */
   ierr = SetupDS(*dm,dim,ctx);CHKERRQ(ierr);
@@ -1272,13 +1271,13 @@ PetscErrorCode DMPlexLandCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const 
   ierr = PetscObjectSetName((PetscObject) *X, "u");CHKERRQ(ierr);
   /* initial static refinement, no solve */
   ierr = LandSetInitialCondition(*dm, *X, ctx);CHKERRQ(ierr);
-  ierr = VecViewFromOptions(*X, NULL, "-pre_vec_view");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(*X, NULL, "-dm_land_pre_vec_view");CHKERRQ(ierr);
   /* forest refinement */
   if (ctx->errorIndicator) {
     /* AMR */
     ierr = adapt(dm,ctx,X);CHKERRQ(ierr);
-    ierr = DMViewFromOptions(*dm,NULL,"-amr_dm_view");CHKERRQ(ierr);
-    ierr = VecViewFromOptions(*X, NULL, "-amr_vec_view");CHKERRQ(ierr);
+    ierr = DMViewFromOptions(*dm,NULL,"-dm_land_amr_dm_view");CHKERRQ(ierr);
+    ierr = VecViewFromOptions(*X, NULL, "-dm_land_amr_vec_view");CHKERRQ(ierr);
   }
   ierr = DMSetApplicationContext(*dm, ctx);CHKERRQ(ierr);
   ctx->dmv = *dm;
@@ -1462,7 +1461,7 @@ PetscErrorCode DMPlexLandPrintNorms(Vec X, PetscInt stepi)
   } else {
     PetscPrintf(PETSC_COMM_WORLD, " -- %D cells",cEnd-cStart);
   }
-  if (ctx->deviceType != LAND_CPU) PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
+  if (ctx->deviceType != LAND_CPU && ctx->verbose > 1) PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
   else PetscPrintf(PETSC_COMM_WORLD,"\n");
 
   PetscFunctionReturn(0);

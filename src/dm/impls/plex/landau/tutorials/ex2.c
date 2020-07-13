@@ -304,7 +304,7 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
   }
   ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %D) time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,time,(int)ppp,ediff/lpm0,idiff/lpm1);CHKERRQ(ierr);
   /* view */
-  ierr = VecViewFromOptions(X,NULL,"-vec_view_diff");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(X,NULL,"-ex2_vec_view_diff");CHKERRQ(ierr);
   ierr = VecCopy(X2,X);CHKERRQ(ierr);
   ierr = VecDestroy(&X2);CHKERRQ(ierr);
   if (islast) {
@@ -462,7 +462,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
         ierr = VecCopy(S,rectx->imp_src);CHKERRQ(ierr);
         ierr = VecDestroy(&S);CHKERRQ(ierr);
       }
-      ierr = VecViewFromOptions(rectx->imp_src,NULL,"-vec_view_sources");CHKERRQ(ierr);
+      ierr = VecViewFromOptions(rectx->imp_src,NULL,"-ex2_vec_view_sources");CHKERRQ(ierr);
     }
     ierr = VecCopy(rectx->imp_src,F);CHKERRQ(ierr);
   } else {
@@ -499,7 +499,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
     /* view */
     ierr = DMSetOutputSequenceNumber(dm, rectx->plotIdx, time*ctx->t_0);CHKERRQ(ierr);
-    ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr);
+    ierr = VecViewFromOptions(X,NULL,"-ex2_vec_view");CHKERRQ(ierr);
     rectx->plotStep = stepi;
     rectx->plotting = PETSC_TRUE;
   }
@@ -625,22 +625,22 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   ierr = PetscStrcpy(ename,"constant");CHKERRQ(ierr);
 
   ierr = PetscOptionsBegin(PETSC_COMM_SELF, prefix, "Options for Runaway/seed electron model", "none");CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-plot_dt", "Plotting interval", "xgc_dmplex.c", rectx->plotDt, &rectx->plotDt, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ex2_plot_dt", "Plotting interval", "xgc_dmplex.c", rectx->plotDt, &rectx->plotDt, NULL);CHKERRQ(ierr);
   if (rectx->plotDt < 0) rectx->plotDt = 1e30;
   if (rectx->plotDt == 0) rectx->plotDt = 1e-30;
-  ierr = PetscOptionsFList("-impurity_source_type","Name of impurity source to run","",plist,pname,pname,sizeof(pname),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-test_type","Name of test to run","",testlist,testname,testname,sizeof(pname),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-impurity_index", "index of sink for impurities", "none", rectx->imp_idx, &rectx->imp_idx, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsFList("-ex2_impurity_source_type","Name of impurity source to run","",plist,pname,pname,sizeof(pname),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsFList("-ex2_test_type","Name of test to run","",testlist,testname,testname,sizeof(pname),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-ex2_impurity_index", "index of sink for impurities", "none", rectx->imp_idx, &rectx->imp_idx, NULL);CHKERRQ(ierr);
   if ((rectx->imp_idx >= ctx->num_species || rectx->imp_idx < 1) && ctx->num_species > 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"index of sink for impurities ions is out of range (%D), must be > 0 && < NS",rectx->imp_idx);
-  ierr = PetscOptionsFList("-e_field_type","Electric field type","",elist,ename,ename,sizeof(ename),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsFList("-ex2_e_field_type","Electric field type","",elist,ename,ename,sizeof(ename),NULL);CHKERRQ(ierr);
   rectx->Ne_ion = -ctx->charges[rectx->imp_idx]/ctx->charges[0];
-  ierr = PetscOptionsReal("-t_cold","Temperature of cold electron and ions after ionization in keV","none",rectx->T_cold,&rectx->T_cold, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-pulse_start_time","Time at which pulse happens for 'pulse' source","none",rectx->pulse_start,&rectx->pulse_start, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-pulse_width_time","Width of pulse 'pulse' source","none",rectx->pulse_width,&rectx->pulse_width, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-pulse_rate","Number density of pulse for 'pulse' source","none",rectx->pulse_rate,&rectx->pulse_rate, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ex2_t_cold","Temperature of cold electron and ions after ionization in keV","none",rectx->T_cold,&rectx->T_cold, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ex2_pulse_start_time","Time at which pulse happens for 'pulse' source","none",rectx->pulse_start,&rectx->pulse_start, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ex2_pulse_width_time","Width of pulse 'pulse' source","none",rectx->pulse_width,&rectx->pulse_width, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ex2_pulse_rate","Number density of pulse for 'pulse' source","none",rectx->pulse_rate,&rectx->pulse_rate, NULL);CHKERRQ(ierr);
   rectx->T_cold *= 1.16e7; /* convert to Kelvin */
-  ierr = PetscOptionsReal("-ion_potential","Potential to ionize impurity (should be array) in ev","none",rectx->ion_potential,&rectx->ion_potential, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-inductance","","none",rectx->L,&rectx->L, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ex2_ion_potential","Potential to ionize impurity (should be array) in ev","none",rectx->ion_potential,&rectx->ion_potential, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ex2_inductance","","none",rectx->L,&rectx->L, NULL);CHKERRQ(ierr);
   ierr = PetscInfo5(dummy, "Num electrons from ions=%g, T_cold=%10.3e, ion potential=%10.3e, E_z=%10.3e v_0=%10.3e\n",rectx->Ne_ion,rectx->T_cold,rectx->ion_potential,ctx->Ez,ctx->v_0);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   /* get impurity source rate function */
@@ -657,12 +657,12 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
     PetscMPIInt    rank;
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
     if (rank) { /* turn off output stuff for duplicate runs */
-      ierr = PetscOptionsClearValue(NULL,"-dm_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-vec_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-dm_view_diff");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-vec_view_diff");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-dm_view_sources");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-vec_view_sources");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-ex2_dm_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-ex2_vec_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-ex2_dm_view_diff");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-ex2_vec_view_diff");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-ex2_dm_view_sources");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-ex2_vec_view_sources");CHKERRQ(ierr);
     }
   }
   /* convert E from Conner-Hastie E_c units to real */
@@ -687,7 +687,7 @@ int main(int argc, char **argv)
   LandCtx        *ctx;
   REctx         *rectx;
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetInt(NULL,NULL, "-ex2_dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
   ierr = DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
@@ -698,9 +698,9 @@ int main(int argc, char **argv)
   rectx = (REctx*)(ctx->data = malloc(sizeof(REctx)));
   ierr = ProcessREOptions(rectx,ctx,dm,"");CHKERRQ(ierr);
   ierr = DMSetOutputSequenceNumber(dm, 0, 0.0);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm,NULL,"-dm_view_sources");CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm,NULL,"-dm_view_diff");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-ex2_dm_view");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-ex2_dm_view_sources");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-ex2_dm_view_diff");CHKERRQ(ierr);
   /* Create timestepping solver context */
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
@@ -732,7 +732,7 @@ int main(int argc, char **argv)
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
 #endif
-  ierr = VecViewFromOptions(X,NULL,"-x_vec_view");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(X,NULL,"-ex2_x_vec_view");CHKERRQ(ierr);
   /* go */
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */
@@ -752,11 +752,11 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: p4est !complex cuda
-    args: -Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 9 -domain_radius -.75 -impurity_source_type pulse -pulse_start_time 1e-1 -pulse_width_time 10 -pulse_rate 1e-2 -t_cold .05 -plot_dt 1e-1 -sub_thread_block_size 4 -landau_device_type cuda
+    args: -dm_land_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_land_type p4est -info :dm,tsadapt -dm_land_ion_masses 2 -dm_land_ion_charges 1 -dm_land_thermal_temps 5,5 -dm_land_n 2,2 -dm_land_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_land_amr_levels_max 9 -dm_land_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_land_sub_thread_block_size 4 -dm_land_device_type cuda -dm_land_verbose 2 -options_left
 
   test:
     suffix: nocuda
     requires: p4est !complex
-    args: -Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_type p4est -info :dm,tsadapt -ion_masses 2 -ion_charges 1 -thermal_temps 5,5 -n 2,2 -n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -amr_levels_max 9 -domain_radius -.75 -impurity_source_type pulse -pulse_start_time 1e-1 -pulse_width_time 10 -pulse_rate 1e-2 -t_cold .05 -plot_dt 1e-1 -landau_device_type cpu
+    args: -dm_land_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_land_type p4est -info :dm,tsadapt -dm_land_ion_masses 2 -dm_land_ion_charges 1 -dm_land_thermal_temps 5,5 -dm_land_n 2,2 -dm_land_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_land_amr_levels_max 9 -dm_land_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_land_device_type cpu
 
 TEST*/
