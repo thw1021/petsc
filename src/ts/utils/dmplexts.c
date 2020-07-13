@@ -427,10 +427,10 @@ PetscErrorCode DMTSCheckFromOptions(TS ts, Vec u)
   PetscFunctionReturn(0);
 }
 
+PETSC_EXTERN PetscErrorCode DMPlexLandFormLandau(Vec a_X, Mat JacP, const PetscInt dim, void *a_ctx);
 /*@
   LandIFunction
 @*/
-PETSC_EXTERN PetscErrorCode DMPlexLandFormLandau(Vec a_X, Mat JacP, const PetscInt dim, void *a_ctx);
 PetscErrorCode LandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void *actx)
 {
   PetscErrorCode ierr;
