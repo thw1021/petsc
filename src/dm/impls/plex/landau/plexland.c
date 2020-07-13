@@ -1462,7 +1462,7 @@ PetscErrorCode DMPlexLandPrintNorms(Vec X, PetscInt stepi)
   } else {
     PetscPrintf(PETSC_COMM_WORLD, " -- %D cells",cEnd-cStart);
   }
-  if (ctx->deviceType != LAND_CPU && ctx->verbose > 1) PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
+  if (ctx->deviceType != LAND_CPU) PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
   else PetscPrintf(PETSC_COMM_WORLD,"\n");
 
   PetscFunctionReturn(0);

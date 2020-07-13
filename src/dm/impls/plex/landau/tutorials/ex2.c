@@ -246,7 +246,7 @@ static void f0_0_diff_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   const PetscReal n = ctx->n[ii];
   PetscReal       diff, f_maxwell, v2 = 0, theta = 2*kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
-  f_maxwell = n*PetscPowReal(PETSC_PI*theta,-1.5)*(exp(-v2/theta));
+  f_maxwell = n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta));
   diff = 2.*PETSC_PI*x[0]*(PetscRealPart(u[ii]) - f_maxwell);
   f0[0] = PetscPowReal(diff,ppp);
 }
@@ -262,7 +262,7 @@ static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   const PetscReal n = ctx->n[ii];
   PetscReal       f_maxwell, v2 = 0, theta = 2*kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
-  f_maxwell = 2.*PETSC_PI*x[0] * n*PetscPowReal(PETSC_PI*theta,-1.5)*(exp(-v2/theta));
+  f_maxwell = 2.*PETSC_PI*x[0] * n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta));
   f0[0] = PetscPowReal(f_maxwell,ppp);
 }
 
@@ -569,11 +569,11 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
   if (time < rectx->pulse_start || time > rectx->pulse_start + 3*rectx->pulse_width) *rho = 0;
   else if (0) {
     double t = time - rectx->pulse_start, start = rectx->pulse_width, stop = 2*rectx->pulse_width, cycle = 3*rectx->pulse_width, steep = 5, xi = 0.75 - (stop - start)/(2* cycle);
-    *rho = rectx->pulse_rate * (cycle / (stop - start)) / (1 + exp(steep*(PetscSinReal(2*PETSC_PI*((t - start)/cycle + xi)) - PetscSinReal(2*PETSC_PI*xi))));
+    *rho = rectx->pulse_rate * (cycle / (stop - start)) / (1 + PetscExpReal(steep*(PetscSinReal(2*PETSC_PI*((t - start)/cycle + xi)) - PetscSinReal(2*PETSC_PI*xi))));
   } else if (0) {
     double x = 2*(time - rectx->pulse_start)/(3*rectx->pulse_width) - 1;
     if (x==1 || x==-1) *rho = 0;
-    else *rho = rectx->pulse_rate * exp(-1/(1-x*x));
+    else *rho = rectx->pulse_rate * PetscExpReal(-1/(1-x*x));
   } else {
     double x = PetscSinReal((time-rectx->pulse_start)/(3*rectx->pulse_width)*2*PETSC_PI - PETSC_PI/2) + 1; /* 0:2, integrates to 1.0 */
     *rho = rectx->pulse_rate * x / (3*rectx->pulse_width);
@@ -752,7 +752,7 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: p4est !complex cuda
-    args: -dm_land_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_land_type p4est -info :dm,tsadapt -dm_land_ion_masses 2 -dm_land_ion_charges 1 -dm_land_thermal_temps 5,5 -dm_land_n 2,2 -dm_land_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_land_amr_levels_max 9 -dm_land_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_land_sub_thread_block_size 4 -dm_land_device_type cuda -dm_land_verbose 2 -options_left
+    args: -dm_land_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_land_type p4est -info :dm,tsadapt -dm_land_ion_masses 2 -dm_land_ion_charges 1 -dm_land_thermal_temps 5,5 -dm_land_n 2,2 -dm_land_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_land_amr_levels_max 9 -dm_land_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_land_sub_thread_block_size 4 -dm_land_device_type cuda -dm_land_verbose 2
 
   test:
     suffix: nocuda
