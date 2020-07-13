@@ -313,9 +313,6 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
     ierr = PetscObjectCompose((PetscObject)JacP,"coloring",(PetscObject)container);CHKERRQ(ierr);
     if (1) {
       int thread_id=0,num_threads=1;
-      //char name[MPI_MAX_PROCESSOR_NAME];
-      // int resultlength;
-      //MPI_Get_processor_name(name, &resultlength);
 #if defined(PETSC_HAVE_OPENMP)
 #pragma omp parallel default(shared) private(thread_id)
       {
