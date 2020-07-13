@@ -53,16 +53,17 @@ static PetscErrorCode LandPointDataDestroy(PetscReal *IPData)
 }
 /* ------------------------------------------------------------------- */
 /*
-  FormLandau - Evaluates Jacobian matrix.
+  DMPlexLandFormLandau_Internal - Evaluates Jacobian matrix.
 
   Input Parameters:
   .  globX - input vector
   .  actx - optional user-defined context
+  .  dim - dimension
 
   Output Parameters:
-  .  J0acP - Jacobian matrix
+  .  J0acP - Jacobian matrix filled, not created
 */
-PetscErrorCode DMPlexLandFormLandau(Vec a_X, Mat JacP, const PetscInt dim, void *a_ctx)
+PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt dim, void *a_ctx)
 {
   LandCtx           *ctx = (LandCtx*)a_ctx;
   PetscErrorCode    ierr;

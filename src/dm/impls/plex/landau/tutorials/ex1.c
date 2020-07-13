@@ -37,8 +37,8 @@ int main(int argc, char **argv)
   ierr = SNESSetOptionsPrefix(snes, "ex1_");CHKERRQ(ierr);  /* should get this from the dm or give it to the dm */
   ierr = SNESGetLineSearch(snes,&linesearch);CHKERRQ(ierr);
   ierr = SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC);CHKERRQ(ierr);
-  ierr = TSSetIFunction(ts,NULL,LandIFunction,NULL);CHKERRQ(ierr);
-  ierr = TSSetIJacobian(ts,J,J,LandIJacobian,NULL);CHKERRQ(ierr);
+  ierr = TSSetIFunction(ts,NULL,DMPlexLandIFunction,NULL);CHKERRQ(ierr);
+  ierr = TSSetIJacobian(ts,J,J,DMPlexLandIJacobian,NULL);CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER);CHKERRQ(ierr);
   ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
   ierr = KSPSetOptionsPrefix(ksp, "ex1_");CHKERRQ(ierr);  /* should get this from the dm or give it to the dm */
