@@ -1,5 +1,6 @@
 static char help[] = "Simple Kokkos test\n\n";
 
+#define PETSC_SKIP_CXX_COMPLEX_FIX
 #include <petscdmplex.h>
 
 //
