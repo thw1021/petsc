@@ -12,8 +12,8 @@ program DMPlexTestLandInterface
 #include <petsc/finclude/petscts.h>
 #include <petsc/finclude/petscdmplex.h>
   implicit none
-  external LandIFunction
-  external LandIJacobian
+  external DMPlexLandIFunction
+  external DMPlexLandIJacobian
   DM             dm
   PetscInt       dim
   PetscInt       ii
@@ -57,8 +57,8 @@ program DMPlexTestLandInterface
   call SNESSetOptionsPrefix(snes, 'ex1f90_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
   call SNESGetLineSearch(snes,linesearch,ierr);CHKERRA(ierr)
   call SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC,ierr);CHKERRA(ierr)
-  call TSSetIFunction(ts,PETSC_NULL_VEC,LandIFunction,PETSC_NULL_VEC,ierr);CHKERRA(ierr)
-  call TSSetIJacobian(ts,J,J,LandIJacobian,PETSC_NULL_VEC,ierr);CHKERRA(ierr)
+  call TSSetIFunction(ts,PETSC_NULL_VEC,DMPlexLandIFunction,PETSC_NULL_VEC,ierr);CHKERRA(ierr)
+  call TSSetIJacobian(ts,J,J,DMPlexLandIJacobian,PETSC_NULL_VEC,ierr);CHKERRA(ierr)
   call TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER,ierr);CHKERRA(ierr)
 
   call SNESGetKSP(snes,ksp,ierr);CHKERRA(ierr)

@@ -705,8 +705,8 @@ int main(int argc, char **argv)
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
   J = ctx->J;
-  ierr = TSSetIFunction(ts,NULL,LandIFunction,NULL);CHKERRQ(ierr);
-  ierr = TSSetIJacobian(ts,J,J,LandIJacobian,NULL);CHKERRQ(ierr);
+  ierr = TSSetIFunction(ts,NULL,DMPlexLandIFunction,NULL);CHKERRQ(ierr);
+  ierr = TSSetIJacobian(ts,J,J,DMPlexLandIJacobian,NULL);CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,FormSource,NULL);CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
