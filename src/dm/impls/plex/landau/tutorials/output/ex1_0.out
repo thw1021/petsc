@@ -14,13 +14,13 @@ thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 5.802e+06. v_0= 2.965e+07 n_0= 1.0
 [0]FormLandau: 1400 IPs, 56 cells, TENSOR elements, totDim=75, Nb=25, Nq=25, elemMatSize=5625, dim=2, Tab: Nb=25 Nf=3 Np=25 cdim=2 N=3339
     0 SNES Function norm 1.071936445738e-03 
     1 SNES Function norm 6.444301838859e-10 
-  Nonlinear fp_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear ex1_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
     0 SNES Function norm 1.071864893575e-03 
     1 SNES Function norm 3.260096389285e-10 
-  Nonlinear fp_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear ex1_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
     0 SNES Function norm 1.071900414527e-03 
     1 SNES Function norm 3.238236800191e-10 
-  Nonlinear fp_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear ex1_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
 [0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 8.49532e-06, accepting step of size 1e-06
 1 TS dt 1.25e-06 time 1e-06
   1) species-0: charge density= -1.6024250714143e+01 z-momentum=  2.8121884413584e-20 energy=  1.2018267949393e+05
