@@ -11,7 +11,6 @@
 #include <petscvec.h>
 #include <petsc/private/petscimpl.h>
 #include <petscviewer.h>
-#include <petsc/private/dmpleximpl.h> /* for FPLandau */
 
 PETSC_EXTERN PetscBool VecRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecRegisterAll(void);
