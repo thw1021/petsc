@@ -258,25 +258,6 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
   PetscFunctionReturn(0);
 }
 
-/* < v, u > */
-static void g0_1( PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                  PetscReal t, PetscReal u_tShift, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
-{
-  g0[0] = 1.;
-}
-
-/* < v, u > */
-static void g0_r( PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                  PetscReal t, PetscReal u_tShift, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
-{
-  g0[0] = 2.*PETSC_PI*x[0];
-}
-
-/* #define LAND_ADD_BCS */
 #if defined(LAND_ADD_BCS)
 static void zero_bc(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
@@ -531,27 +512,6 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
     }
   }
   ierr = PetscObjectSetOptionsPrefix((PetscObject)*dm,prefix);CHKERRQ(ierr);
-#if defined(LAND_ADD_BCS)
-  if (1) { /* mark BCs */
-    DMLabel  label;
-    PetscInt fStart, fEnd, f;
-    ierr = DMCreateLabel(*dm, "marker");CHKERRQ(ierr);
-    ierr = DMGetLabel(*dm, "marker", &label);CHKERRQ(ierr);
-    ierr = DMPlexGetHeightStratum(*dm, 1, &fStart, &fEnd);CHKERRQ(ierr);
-    for (f = fStart; f < fEnd; ++f) {
-      PetscInt supportSize;
-      ierr = DMPlexGetSupportSize(*dm, f, &supportSize);CHKERRQ(ierr);
-      if (supportSize == 1) {
-	PetscReal c[3];
-	ierr = DMPlexComputeCellGeometryFVM(*dm, f, NULL, c, NULL);CHKERRQ(ierr);
-	if (PetscAbsReal(c[0]) >1.e-12) {
-	  ierr = DMLabelSetValue(label, f, 1);CHKERRQ(ierr);
-	}
-      }
-    }
-    ierr = DMPlexLabelComplete(*dm, label);CHKERRQ(ierr);
-  }
-#endif
   /* distribute */
   /* ierr = DMPlexDistribute(*dm, 0, NULL, &dm2);CHKERRQ(ierr); */
   /* if (dm2) { */
@@ -605,14 +565,6 @@ static PetscErrorCode SetupDS(DM dm, PetscInt dim, LandCtx *ctx)
     ierr = DMSetField(dm, ii, NULL, (PetscObject) ctx->fe[ii]);CHKERRQ(ierr);
   }
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
-#if defined(LAND_ADD_BCS)
-  {
-    PetscDS  prob;
-    PetscInt id=1;
-    ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-    ierr = PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)()) zero_bc, 1, &id, ctx);CHKERRQ(ierr);
-  }
-#endif
   if (1) {
     PetscInt        ii;
     PetscSection    section;
@@ -624,46 +576,6 @@ static PetscErrorCode SetupDS(DM dm, PetscInt dim, LandCtx *ctx)
       ierr = PetscSectionSetComponentName(section, ii, 0, buf);CHKERRQ(ierr);
     }
   }
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode LandCreateMassMatrix(LandCtx *ctx, Vec X, DM a_dm, Mat *Amat)
-{
-  DM             massDM;
-  PetscDS        prob;
-  PetscInt       ii,dim,N1=1,N2;
-  PetscErrorCode ierr;
-
-  PetscFunctionBeginUser;
-  ierr = DMGetDimension(a_dm, &dim);CHKERRQ(ierr);
-  ierr = DMClone(a_dm, &massDM);CHKERRQ(ierr);
-  ierr = DMCopyFields(a_dm, massDM);CHKERRQ(ierr);
-  ierr = DMCreateDS(massDM);CHKERRQ(ierr);
-  ierr = DMGetDS(massDM, &prob);CHKERRQ(ierr);
-  for (ii=0;ii<ctx->num_species;ii++) {
-    if (dim==3) {ierr = PetscDSSetJacobian(prob, ii, ii, g0_1, NULL, NULL, NULL);CHKERRQ(ierr);}
-    else        {ierr = PetscDSSetJacobian(prob, ii, ii, g0_r, NULL, NULL, NULL);CHKERRQ(ierr);}
-  }
-#if defined(LAND_ADD_BCS)
-  ierr = DMAddBoundary(massDM, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)()) zero_bc, 1, &N1, ctx);CHKERRQ(ierr);
-#endif
-  ierr = DMViewFromOptions(massDM,NULL,"-dm_land_mass_dm_view");CHKERRQ(ierr);
-  ierr = DMCreateMatrix(massDM, Amat);CHKERRQ(ierr);
-  {
-    Vec locX;
-    DM  plex;
-    ierr = DMConvert(massDM, DMPLEX, &plex);CHKERRQ(ierr);
-    ierr = DMGetLocalVector(massDM, &locX);CHKERRQ(ierr);
-    /* Mass matrix is independent of the input, so no need to fill locX */
-    ierr = DMPlexSNESComputeJacobianFEM(plex, locX, *Amat, *Amat, ctx);CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(massDM, &locX);CHKERRQ(ierr);
-    ierr = DMDestroy(&plex);CHKERRQ(ierr);
-  }
-  ierr = DMDestroy(&massDM);CHKERRQ(ierr);
-  ierr = MatGetSize(ctx->J, &N1, NULL);CHKERRQ(ierr);
-  ierr = MatGetSize(*Amat, &N2, NULL);CHKERRQ(ierr);
-  if (N1 != N2) SETERRQ2(PetscObjectComm((PetscObject) a_dm), PETSC_ERR_PLIB, "Incorrect matrix sizes: |Jacobian| = %D, |Mass|=%D",N1,N2);
-  ierr = MatViewFromOptions(*Amat,NULL,"-dm_land_mass_mat_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1195,7 +1107,6 @@ PetscErrorCode DMPlexLandCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const 
   ctx->dmv = *dm;
   ierr = DMCreateMatrix(ctx->dmv, &ctx->J);CHKERRQ(ierr);
   *J = ctx->J;
-  ierr = LandCreateMassMatrix(ctx,*X,ctx->dmv,&ctx->M);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
