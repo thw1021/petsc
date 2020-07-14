@@ -690,6 +690,7 @@ int main(int argc, char **argv)
   ierr = PetscOptionsGetInt(NULL,NULL, "-ex2_dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
   ierr = DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
+  ierr = DMPlexLandCreateMassMatrix(dm, X, NULL); CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
