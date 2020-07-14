@@ -82,9 +82,8 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
   PetscValidHeaderSpecific(a_X,VEC_CLASSID,1);
   PetscValidHeaderSpecific(JacP,MAT_CLASSID,2);
   PetscValidPointer(ctx,4);
-#if defined(PETSC_USE_LOG)
+
   ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
-#endif
   ierr = DMConvert(ctx->dmv, DMPLEX, &plex);CHKERRQ(ierr);
   ierr = DMCreateLocalVector(plex, &locX);CHKERRQ(ierr);
   ierr = VecZeroEntries(locX);CHKERRQ(ierr); /* zero BCs so don't set */
@@ -175,9 +174,8 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
     } /* e */
   }
   ierr = DMRestoreLocalVector(plex, &locX);CHKERRQ(ierr);
-#if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
-#endif
+
   /* outer element loop j is like a regular assembly loop */
 #if defined(HAVE_VTUNE) && defined(__INTEL_COMPILER)
   __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
@@ -206,33 +204,25 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
     }
     for (ej = cStart, invJ = invJ_a; ej < cEnd; ++ej, invJ += Nq*dim*dim) {
       PetscInt     qj;
-#if defined(PETSC_USE_LOG)
+
       ierr = PetscLogEventBegin(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
-#endif
       ierr = PetscMemzero(elemMat, totDim *totDim * sizeof(PetscScalar));CHKERRQ(ierr);
-#if defined(PETSC_USE_LOG)
       ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
-#endif
+
       for (qj = 0; qj < Nq; ++qj) {
         PetscReal       g2[1][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM], g3[1][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM];
         const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj, one = 1, zero = 0; /* length of inner global interation, outer integration point */
-#if defined(PETSC_USE_LOG)
+
         ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
         ierr = PetscLogFlops(flops);CHKERRQ(ierr);
-#endif
         landau_inner_integral(zero, one, zero, one, zero, nip, 1, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tables, elemMat, g2, g3);
-#if defined(PETSC_USE_LOG)
         ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
-#endif
       } /* qj loop */
-#if defined(PETSC_USE_LOG)
-      ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
-#endif
       /* assemble matrix */
+      ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
       ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
-#if defined(PETSC_USE_LOG)
       ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
-#endif
+
       if (ej==-1) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr);
         for (d = 0; d < totDim; ++d){
@@ -251,16 +241,14 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
   __itt_pause(); // stop VTune
   __SSC_MARK(0x222); // stop SDE tracing
 #endif
-#if defined(PETSC_USE_LOG)
-  ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
-#endif
+
   /* assemble matrix or vector */
+  ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatScale(JacP, -1.0);CHKERRQ(ierr); /* The code reflect the papers: du/dt = C, whereas PETSc use the form G(u) = du/dt - C(u) = 0 */
-#if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
-#endif
+
   /* clean up */
   ierr = PetscFree3(elemMat,wiGlob,invJ_a);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
@@ -296,8 +284,8 @@ static void zero_bc(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 {
   uexact[0] = 0;
 }
-
 #endif
+
 #define MATVEC2(__a,__x,__p) {int i,j; for (i=0.; i<2; i++) {__p[i] = 0; for (j=0.; j<2; j++) __p[i] += __a[i][j]*__x[j]; }}
 static void CircleInflate(PetscReal r1, PetscReal r2, PetscReal r0, PetscInt num_sections, PetscReal x, PetscReal y,
 			  PetscReal *outX, PetscReal *outY)
