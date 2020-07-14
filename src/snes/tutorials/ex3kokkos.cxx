@@ -7,13 +7,10 @@ The command line options include:\n\
   -check_tol <tol>: set tolerance for iterate checking\n\
   -user_precond : activate a (trivial) user-defined preconditioner\n\n";
 
-/*T
-   Concepts: SNES^basic parallel example
-   Concepts: SNES^setting a user-defined monitoring routine
-   Processors: n
-T*/
 
-
+/*
+    This is the same as ex3.c except it uses Kokkos to set the initial conditions
+*/
 
 /*
    Include "petscdm.h" so that we can use data management objects (DMs)
@@ -30,6 +27,8 @@ T*/
      petscksp.h    - linear solvers
 */
 
+#include <Kokkos_Core.hpp>
+#include <Kokkos_OffsetView.hpp>
 #include <petscdm.h>
 #include <petscdmda.h>
 #include <petscsnes.h>
@@ -90,9 +89,9 @@ int main(int argc,char **argv)
   StepCheckCtx   checkP;               /* step-checking context */
   SetSubKSPCtx   checkP1;
   PetscBool      pre_check,post_check,post_setsubksp; /* flag indicating whether we're checking candidate iterates */
-  PetscScalar    xp,*FF,*UU,none = -1.0;
+  PetscScalar    *FF,*UU,none = -1.0;
   PetscErrorCode ierr;
-  PetscInt       its,N = 5,i,maxit,maxf,xs,xm;
+  PetscInt       its,N = 5,maxit,maxf,xs,xm;
   PetscReal      abstol,rtol,stol,norm;
   PetscBool      flg,viewinitial = PETSC_FALSE;
 
@@ -105,7 +104,6 @@ int main(int argc,char **argv)
   ctx.sjerr = PETSC_FALSE;
   ierr  = PetscOptionsGetBool(NULL,NULL,"-test_jacobian_domain_error",&ctx.sjerr,NULL);CHKERRQ(ierr);
   ierr  = PetscOptionsGetBool(NULL,NULL,"-view_initial",&viewinitial,NULL);CHKERRQ(ierr);
-
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create nonlinear solver context
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -249,24 +247,43 @@ int main(int argc,char **argv)
   /*
      Get pointers to vector data
   */
-  ierr = DMDAVecGetArray(ctx.da,F,&FF);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(ctx.da,U,&UU);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(F,&FF);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(U,&UU);CHKERRQ(ierr);
+
+  Kokkos::initialize( argc, argv );
 
   /*
-     Compute local vector entries
+    OMP_NUM_THREADS
+    OMP_PROC_BIND=spread OMP_PLACES=threads
   */
+  /* introduce a view object; reference like object  */
+  Kokkos::Experimental::OffsetView<PetscScalar*> xFF(Kokkos::View<PetscScalar*>(FF,xm-xs),{xs}), xUU(Kokkos::View<PetscScalar*>(UU,xm-xs),{xs});
+
+  PetscReal xpbase = xs*ctx.h;
+  Kokkos:: parallel_for(Kokkos::RangePolicy<> (xs,xm), KOKKOS_LAMBDA ( int j ) {
+    PetscReal xp = xpbase + j*ctx.h;
+    xFF(j) = 6.0*xp + PetscPowScalar(xp+1.e-12,6.0); /* +1.e-12 is to prevent 0^6 */
+    xUU(j) = xp*xp*xp;
+  });
+
+  Kokkos::finalize(); 
+
+  /*
+     Compute local vector entries; non-Kokkos
   xp = ctx.h*xs;
+  parallel_for(
   for (i=xs; i<xs+xm; i++) {
-    FF[i] = 6.0*xp + PetscPowScalar(xp+1.e-12,6.0); /* +1.e-12 is to prevent 0^6 */
+    FF[i] = 6.0*xp + PetscPowScalar(xp+1.e-12,6.0);
     UU[i] = xp*xp*xp;
     xp   += ctx.h;
   }
+  */
 
   /*
      Restore vectors
   */
-  ierr = DMDAVecRestoreArray(ctx.da,F,&FF);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(ctx.da,U,&UU);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(F,&FF);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(U,&UU);CHKERRQ(ierr);
   if (viewinitial) {
     ierr = VecView(U,0);CHKERRQ(ierr);
     ierr = VecView(F,0);CHKERRQ(ierr);
@@ -665,12 +682,12 @@ PetscErrorCode PostSetSubKSP(SNESLineSearch linesearch,Vec xcurrent,Vec y,Vec x,
   ierr    = KSPGetIterationNumber(sub_ksp,&sub_its);CHKERRQ(ierr); /* inner KSP iteration number */
 
   if (iter) {
-    ierr      = PetscPrintf(PETSC_COMM_WORLD,"    ...PostCheck snes iteration %D, ksp_it %D %D, subksp_it %D\n",iter,check->its0,its,sub_its);CHKERRQ(ierr);
+    ierr      = PetscPrintf(PETSC_COMM_WORLD,"    ...PostCheck snes iteration %D, ksp_it %d %d, subksp_it %d\n",iter,check->its0,its,sub_its);CHKERRQ(ierr);
     ksp_ratio = ((PetscReal)(its))/check->its0;
     maxit     = (PetscInt)(ksp_ratio*sub_its + 0.5);
     if (maxit < 2) maxit = 2;
     ierr = KSPSetTolerances(sub_ksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,maxit);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"    ...ksp_ratio %g, new maxit %D\n\n",(double)ksp_ratio,maxit);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"    ...ksp_ratio %g, new maxit %d\n\n",ksp_ratio,maxit);CHKERRQ(ierr);
   }
   check->its0 = its; /* save current outer KSP iteration number */
   PetscFunctionReturn(0);
@@ -700,66 +717,8 @@ PetscErrorCode MatrixFreePreconditioner(PC pc,Vec x,Vec y)
 /*TEST
 
    test:
-      args: -nox -snes_monitor_cancel -snes_monitor_short -ksp_gmres_cgs_refinement_type refine_always
+     requires: kokkos double !complex !single
+     args: -view_initial
+     output_file: output/ex3_12.out
 
-   test:
-      suffix: 2
-      nsize: 3
-      args: -nox -pc_type asm -mat_type mpiaij -snes_monitor_cancel -snes_monitor_short -ksp_gmres_cgs_refinement_type refine_always
-
-   test:
-      suffix: 3
-      nsize: 2
-      args: -nox -snes_monitor_cancel -snes_monitor_short -ksp_gmres_cgs_refinement_type refine_always
-
-   test:
-      suffix: 4
-      args: -nox -pre_check_iterates -post_check_iterates
-
-   test:
-      suffix: 5
-      requires: double !complex !single
-      nsize: 2
-      args: -nox -snes_test_jacobian  -snes_test_jacobian_view
-
-   test:
-      suffix: 6
-      requires: double !complex !single
-      nsize: 4
-      args: -test_jacobian_domain_error -snes_converged_reason -snes_check_jacobian_domain_error 1
-
-   test:
-      suffix: 7
-      requires: double !complex !single
-      nsize: 4
-      args: -test_jacobian_domain_error -snes_converged_reason -snes_type newtontr -snes_check_jacobian_domain_error 1
-
-   test:
-      suffix: 8
-      requires: double !complex !single
-      nsize: 4
-      args: -test_jacobian_domain_error -snes_converged_reason -snes_type vinewtonrsls -snes_check_jacobian_domain_error 1
-
-   test:
-      suffix: 9
-      requires: double !complex !single
-      nsize: 4
-      args: -test_jacobian_domain_error -snes_converged_reason -snes_type vinewtonssls -snes_check_jacobian_domain_error 1
-
-   test:
-      suffix: 10
-      requires: double !complex !single
-      nsize: 4
-      args: -test_jacobian_domain_error -snes_converged_reason -snes_type qn -snes_qn_scale_type jacobian -snes_check_jacobian_domain_error 1
-
-   test:
-      suffix: 11
-      requires: double !complex !single
-      nsize: 4
-      args: -test_jacobian_domain_error -snes_converged_reason -snes_type ms -snes_ms_type m62 -snes_ms_damping 0.9 -snes_check_jacobian_domain_error 1
-
-   test:
-      suffix: 12
-      args: -view_initial
- 
 TEST*/
