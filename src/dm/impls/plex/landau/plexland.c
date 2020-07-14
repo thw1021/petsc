@@ -1,7 +1,4 @@
-#include <petsc/private/tsimpl.h>       /*I   "petscts.h"   I*/
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
-#include <petsc/private/vecimpl.h>      /* put CUDA stuff in veccuda */
-#include <petscdm.h>
 #include <petscdmforest.h>
 #if defined(PETSC_HAVE_OPENMP)
 #include <omp.h>
