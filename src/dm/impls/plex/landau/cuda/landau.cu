@@ -116,9 +116,8 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
   PetscReal        *d_IPDataGlobal,  *iTab;
   PetscContainer    container = NULL;
   PetscFunctionBegin;
-#if defined(PETSC_USE_LOG)
+
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
-#endif
   ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
   if (dim!=LAND_DIM) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "LAND_DIM != dim");
   ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
@@ -156,12 +155,10 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
   nip_dim2 = Nq*numGCells*dim*dim;
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_invJj, nip_dim2*szf)); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice));
-#if defined(PETSC_USE_LOG)
+
   ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr); // remove in real application
   ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(flops*nip);CHKERRQ(ierr);
-#endif
   {
     PetscReal  *d_g2g3;
     dim3 dimBlock(Nq,num_sub_blocks);
@@ -183,10 +180,9 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
     CUDA_SAFE_CALL(cudaFree(d_g2g3));
   }
 #endif
-#if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
-#endif
+
   // delete device data
   CUDA_SAFE_CALL(cudaFree(d_IPDataGlobal));
   CUDA_SAFE_CALL(cudaFree(d_invJj));
@@ -199,9 +195,8 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
   ierr = PetscMalloc1(totDim*totDim*numGCells,&elemMats);CHKERRQ(ierr);
   CUDA_SAFE_CALL(cudaMemcpy(elemMats, d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar), cudaMemcpyDeviceToHost));
   CUDA_SAFE_CALL(cudaFree(d_elemMats));
-#if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
-#endif
+
   /* coloring */
   ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
   if (!container) {
@@ -219,9 +214,8 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
     PetscFE        fe;
     DM             colordm;
     PetscSection   csection;
-#if defined(PETSC_USE_LOG)
+
     ierr = PetscLogEventBegin(events[8],0,0,0,0);CHKERRQ(ierr);
-#endif
     /* create cell centered DM */
     ierr = DMClone(plex, &colordm);CHKERRQ(ierr);
     ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) plex), dim, 1, PETSC_FALSE, "color_", PETSC_DECIDE, &fe);CHKERRQ(ierr);
@@ -323,14 +317,11 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
 #else
       PetscPrintf(PETSC_COMM_WORLD, "Made coloring with %D colors. OMP_threadID %d of %d\n", nc, thread_id, num_threads);
 #endif
-#if defined(PETSC_USE_LOG)
       ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
-#endif
     }
   }
-#if defined(PETSC_USE_LOG)
   ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
-#endif
+
   if (1) {
     PetscScalar *elMat;
     for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
@@ -351,9 +342,8 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
     ierr = assemble_cuda_private(cStart, cEnd, totDim, plex, section, globalSection, JacP, elemMats, container, events);CHKERRQ(ierr);
   }
   ierr = PetscFree(elemMats);CHKERRQ(ierr);
-#if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
-#endif
+
   PetscFunctionReturn(0);
 }
 
@@ -526,9 +516,8 @@ static PetscErrorCode assemble_cuda_private(PetscInt cStart, PetscInt cEnd, Pets
   CUDA_SAFE_CALL(cudaFree(d_idx_arr));
   CUDA_SAFE_CALL(cudaFree(d_new_el_mats));
   /* copy & add Mat data back to CPU to JacP */
-#if defined(PETSC_USE_LOG)
+
   ierr = PetscLogEventBegin(events[2],0,0,0,0);CHKERRQ(ierr);
-#endif
   ierr = PetscMalloc1(nnz,&val_buf);CHKERRQ(ierr);
   ierr = PetscMemzero(jaca->a,nnz*sizeof(PetscScalar));CHKERRQ(ierr);
   for (colour=0; colour<nc; colour++) {
@@ -537,9 +526,8 @@ static PetscErrorCode assemble_cuda_private(PetscInt cStart, PetscInt cEnd, Pets
     PetscKernelAXPY(jaca->a,1.0,val_buf,nnz);
   }
   ierr = PetscFree(val_buf);CHKERRQ(ierr);
-#if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(events[2],0,0,0,0);CHKERRQ(ierr);
-#endif
+
   for (colour=0; colour<nc; colour++) {
     Mat_SeqAIJ *a = &h_mats[colour];
     /* destroy mat */
