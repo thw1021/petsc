@@ -1,4 +1,5 @@
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
+#include <petsc/private/snesimpl.h>     /*I "petscsnes.h"   I*/
 #include <petscdmforest.h>
 #if defined(PETSC_HAVE_OPENMP)
 #include <omp.h>
