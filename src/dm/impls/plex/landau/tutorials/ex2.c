@@ -705,7 +705,6 @@ int main(int argc, char **argv)
   /* Create timestepping solver context */
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
-  J = ctx->J;
   ierr = TSSetIFunction(ts,NULL,DMPlexLandIFunction,NULL);CHKERRQ(ierr);
   ierr = TSSetIJacobian(ts,J,J,DMPlexLandIJacobian,NULL);CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,FormSource,NULL);CHKERRQ(ierr);
@@ -716,7 +715,6 @@ int main(int argc, char **argv)
   ierr = TSSetPreStep(ts,PreStep);CHKERRQ(ierr);
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
   ierr = MatSetOption(J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
-#if defined(PETSC_USE_LOG)
   if (1) {
     PetscLogStage stage;
     Vec           vec;
@@ -732,7 +730,6 @@ int main(int argc, char **argv)
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
-#endif
   ierr = VecViewFromOptions(X,NULL,"-ex2_x_vec_view");CHKERRQ(ierr);
   /* go */
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
