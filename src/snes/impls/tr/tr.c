@@ -340,14 +340,14 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 //    VecGetArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
     
     /* a chance to scale Newton solution */
-    ierr = SNESNewtonTRPreCheck(snes,X,YNtmp,&changed_y);CHKERRQ(ierr);
+// v1.0    ierr = SNESNewtonTRPreCheck(snes,X,YNtmp,&changed_y);CHKERRQ(ierr);
 
 //    VecRestoreArrayRead(X,(const PetscScalar**)&X_mon);CHKERRQ(ierr);
 //    VecRestoreArrayRead(YNtmp,(const PetscScalar**)&YN_mon);CHKERRQ(ierr);
 //    VecRestoreArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
 
     /* if we solved unscaled Jacobian, then we here is a chance to scale it */
-    ierr = SNESComputeJacobian(snes,X,snes->jacobian,snes->jacobian_pre);CHKERRQ(ierr);
+// v1.0    ierr = SNESComputeJacobian(snes,X,snes->jacobian,snes->jacobian_pre);CHKERRQ(ierr);
     ierr = SNESGetJacobian(snes, &jac, NULL, NULL, NULL);CHKERRQ(ierr);    
     /* calculating GradF of minimization function */
     ierr = MatMultTranspose(jac,F,GradF);CHKERRQ(ierr);  /* grad f = J^T F */
@@ -378,7 +378,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 //        VecGetArrayRead(F,(const PetscScalar**)&F_mon);CHKERRQ(ierr);
 
         /* a chance to scale Cauchy solution */
-        ierr = SNESNewtonTRPreCheck(snes,X,YCtmp,&changed_y);CHKERRQ(ierr);
+// v1.0        ierr = SNESNewtonTRPreCheck(snes,X,YCtmp,&changed_y);CHKERRQ(ierr);
 
 //        VecRestoreArrayRead(X,(const PetscScalar**)&X_mon);CHKERRQ(ierr);
 //        VecRestoreArrayRead(YNtmp,(const PetscScalar**)&YN_mon);CHKERRQ(ierr);
@@ -425,7 +425,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       mp = f0 - gTy + 0.5*yTHy;  /* quadratic model to satisfy */
 
       /* Evaluate the solution to meet the improvement ratio criteria */
-//      ierr = SNESNewtonTRPreCheck(snes,X,Y,&changed_y);CHKERRQ(ierr);
+      ierr = SNESNewtonTRPreCheck(snes,X,Y,&changed_y);CHKERRQ(ierr);
       ierr = VecWAXPY(W,-1.0,Y,X);CHKERRQ(ierr);
       ierr = SNESNewtonTRPostCheck(snes,X,Y,W,&changed_y,&changed_w);CHKERRQ(ierr);
       if (changed_y) ierr = VecWAXPY(W,-1.0,Y,X);CHKERRQ(ierr);
