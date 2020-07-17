@@ -190,12 +190,12 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
     SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
   } else if (ctx->deviceType == LAND_KOKKOS) {
-#if defined(PETSC_HAVE_KOKKOS)
-    ierr =LandKokkosJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
+    //#if defined(PETSC_HAVE_KOKKOS)
+    ierr = LandKokkosJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
-#else
-    SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
-#endif
+    //#else
+    //SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
+    //#endif
   } else { /* CPU version */
     PetscReal *Tables,*iTab;
     ierr = PetscMalloc1(Nf*Nq*Nb*(1+dim), &Tables);CHKERRQ(ierr);
