@@ -303,29 +303,27 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
     }
 #endif
   } /* IPs */
+  /* add electric field term once per IP */
+  if (mySubBlk==0) {
+    for (fieldA = 0; fieldA < Nf; ++fieldA) {
+      gg2[fieldA][dim-1] += Eq_m[fieldA];
+    }
+  }
   /* Jacobian transform - g2 */
   for (fieldA = 0; fieldA < Nf; ++fieldA) {
-    if (mySubBlk==0) gg2[fieldA][dim-1] += Eq_m[fieldA]; /* add electric field term once per IP */
     for (d = 0; d < dim; ++d) {
       g2[myQi][mySubBlk][fieldA][d] = 0.0;
       for (d2 = 0; d2 < dim; ++d2) {
         g2[myQi][mySubBlk][fieldA][d] += invJj[d*dim+d2]*gg2[fieldA][d2];
-      }
-      g2[myQi][mySubBlk][fieldA][d] *= wj;
-    }
-  }
-  /* g3 */
-  for (fieldA = 0; fieldA < Nf; ++fieldA) {
-    for (d = 0; d < dim; ++d) {
-      for (dp = 0; dp < dim; ++dp) {
-	g3[myQi][mySubBlk][fieldA][d][dp] = 0.0;
-	for (d2 = 0; d2 < dim; ++d2) {
-	  for (d3 = 0; d3 < dim; ++d3) {
-	    g3[myQi][mySubBlk][fieldA][d][dp] += invJj[d*dim + d2]*gg3[fieldA][d2][d3]*invJj[dp*dim + d3];
+        g3[myQi][mySubBlk][fieldA][d][d2] = 0.0;
+	for (d3 = 0; d3 < dim; ++d3) {
+	  for (dp = 0; dp < dim; ++dp) {
+	    g3[myQi][mySubBlk][fieldA][d][d2] += invJj[d*dim + d3]*gg3[fieldA][d3][dp]*invJj[d2*dim + dp];
 	  }
 	}
-	g3[myQi][mySubBlk][fieldA][d][dp] *= wj;
+        g3[myQi][mySubBlk][fieldA][d][d2] *= wj;
       }
+      g2[myQi][mySubBlk][fieldA][d] *= wj;
     }
   }
   // Synchronize (ensure all the data is available) and sum g2 & g3
