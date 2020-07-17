@@ -224,7 +224,7 @@ PETSC_DEVICE_FUNC_DECL void
 landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt mySubBlk, const PetscInt nSubBlks, const PetscInt ip_start, const PetscInt ip_end, const PetscInt ip_stride, /* decomposition args, not discretization */
                        const PetscInt jpidx, const PetscInt Nf, const PetscInt dim, const PetscReal * const IPDataGlobal, const PetscReal wiGlobal[], const PetscReal invJj[],
                        const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[], PetscBool quarter3DDomain,
-                       const PetscInt Nq, const PetscInt Nb, const PetscInt qj_start, const PetscInt qj_end, const PetscReal * const a_TabBD, PetscScalar *elemMat, /* discretization args; local output */
+                       const PetscInt Nq, const PetscInt Nb, const PetscInt qj_start, const PetscInt qj_end, const PetscReal * const BB, const PetscReal * const DD, PetscScalar *elemMat, /* discretization args; local output */
                        PetscReal g2[/* LAND_MAX_NQ */][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM], PetscReal g3[/* LAND_MAX_NQ */][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM] /* shared memory buffers */
                        )
 {
@@ -344,22 +344,16 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
   /* FE matrix construction */
   PETSC_THREAD_SYNC;   // Synchronize (ensure all the data is available) and sum IP matrices
   {
-    const PetscReal  *iTab,*TabBD[LAND_MAX_SPECIES][2];
-    PetscInt         fieldA,d,f,qj,qj_0,d2,g,totDim=Nb*Nf;
-    for (iTab = a_TabBD, fieldA = 0 ; fieldA < Nf ; fieldA++, iTab += Nq*Nb*(1+dim)) {
-      TabBD[fieldA][0] = iTab;
-      TabBD[fieldA][1] = &iTab[Nq*Nb];
-    }
+    PetscInt  fieldA,d,f,qj,qj_0,d2,g,totDim=Nb*Nf;
     /* assemble - on the diagonal (I,I) */
     for (fieldA = mySubBlk; fieldA < Nf ; fieldA += nSubBlks) {
-      const PetscReal *B = TabBD[fieldA][0], *D = TabBD[fieldA][1];
       for (f = myQi; f < Nb ; f += nQi) {
 	const PetscInt i = fieldA*Nb + f; /* Element matrix row */
 	for (g = 0; g < Nb; ++g) {
 	  const PetscInt j    = fieldA*Nb + g; /* Element matrix column */
 	  const PetscInt fOff = i*totDim + j;
 	  for (qj=qj_start,qj_0=0;qj<qj_end;qj++,qj_0++) {
-	    const PetscReal *BJq = &B[qj*Nb], *DIq = &D[qj*Nb*dim];
+	    const PetscReal *BJq = &BB[qj*Nb], *DIq = &DD[qj*Nb*dim];
 	    for (d = 0; d < dim; ++d) {
 	      elemMat[fOff] += DIq[f*dim+d]*g2[qj_0][0][fieldA][d]*BJq[g];
 	      for (d2 = 0; d2 < dim; ++d2) {
