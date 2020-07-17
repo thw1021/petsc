@@ -83,6 +83,8 @@ int main(int argc, char* argv[])
                             },
                             sum);
     printf("Result: %f\n", sum);
+#else
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "no KOKKOS_ENABLE_CXX11_DISPATCH_LAMBDA");
 #endif
   }
   Kokkos::finalize();
