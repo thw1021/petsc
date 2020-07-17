@@ -219,6 +219,8 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   E = ctx->Ez; /* keep real E */
   ratio = E/J/spit_eta;
   done = PETSC_FALSE;
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e E/J to eta ratio=%g (diff=%g)\n",
+                     done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,E,J,J_re,100*J_re/J,Te_kev,ratio,old_ratio-ratio);CHKERRQ(ierr);
   if (done) {
     ierr = TSSetConvergedReason(ts,TS_CONVERGED_USER);CHKERRQ(ierr);
     old_ratio = 0;
@@ -228,8 +230,6 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
     old_ratio = ratio;
     if (reason) done = PETSC_TRUE;
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e E/J to eta ratio=%g (diff=%g)\n",
-                     done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,E,J,J_re,100*J_re/J,Te_kev,ratio,old_ratio-ratio);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -345,14 +345,14 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
       rectx->j = J;
       rectx->pulse_start = time + 1.; /* start quench now */
     }
-    PetscPrintf(PETSC_COMM_WORLD,"\t\t%D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s xxx\n",stepi,time,ratio, J, *a_E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");
+    PetscPrintf(PETSC_COMM_WORLD,"\t\t%D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s\n",stepi,time,ratio, J, *a_E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");
     old_ratio = ratio;
   } else if (rectx->use_spitzer_eta) {
     /* set E */
     *a_E = spit_eta*J;
-    PetscPrintf(PETSC_COMM_WORLD,"\t%D) use ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g yyy\n",stepi,*a_E,J,Te_kev,spit_eta,time);
+    PetscPrintf(PETSC_COMM_WORLD,"\t%D) use ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g\n",stepi,*a_E,J,Te_kev,spit_eta,time);
   } else {
-    PetscPrintf(PETSC_COMM_WORLD,"\t\t\t%D) ESpitzer delay E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g ratio=%20.13e www\n",stepi,*a_E,J,Te_kev,spit_eta,time,ctx->Ez/J/spit_eta);
+    PetscPrintf(PETSC_COMM_WORLD,"\t\t\t%D) ESpitzer delay E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g ratio=%20.13e\n",stepi,*a_E,J,Te_kev,spit_eta,time,ctx->Ez/J/spit_eta);
   }
   /* cleanup */
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
