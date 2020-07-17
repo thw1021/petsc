@@ -197,26 +197,18 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
     //SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
     //#endif
   } else { /* CPU version */
-    PetscReal *Tables,*iTab;
-    ierr = PetscMalloc1(Nf*Nq*Nb*(1+dim), &Tables);CHKERRQ(ierr);
-    for (fieldA=0,iTab=Tables;fieldA<Nf;fieldA++,iTab += Nq*Nb*(1+dim)) {
-      ierr = PetscMemcpy(iTab,         Tf[fieldA]->T[0], Nq*Nb*sizeof(PetscReal));CHKERRQ(ierr);
-      ierr = PetscMemcpy(&iTab[Nq*Nb], Tf[fieldA]->T[1], Nq*Nb*dim*sizeof(PetscReal));CHKERRQ(ierr);
-    }
     for (ej = cStart, invJ = invJ_a; ej < cEnd; ++ej, invJ += Nq*dim*dim) {
       PetscInt     qj;
-
       ierr = PetscLogEventBegin(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
       ierr = PetscMemzero(elemMat, totDim *totDim * sizeof(PetscScalar));CHKERRQ(ierr);
       ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
-
       for (qj = 0; qj < Nq; ++qj) {
         PetscReal       g2[1][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM], g3[1][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM];
         const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj, one = 1, zero = 0; /* length of inner global interation, outer integration point */
 
         ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
         ierr = PetscLogFlops(flops);CHKERRQ(ierr);
-        landau_inner_integral(zero, one, zero, one, zero, nip, 1, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tables, elemMat, g2, g3);
+        landau_inner_integral(zero, one, zero, one, zero, nip, 1, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tf[0]->T[0], Tf[0]->T[1], elemMat, g2, g3);
         ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
       } /* qj loop */
       /* assemble matrix */
@@ -236,7 +228,6 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
         exit(13);
       }
     } /* ej cells loop, not cuda */
-    ierr = PetscFree(Tables);CHKERRQ(ierr);
   }
 #if defined(HAVE_VTUNE) && defined(__INTEL_COMPILER)
   __itt_pause(); // stop VTune
