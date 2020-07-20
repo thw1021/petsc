@@ -11,7 +11,6 @@
 /* Landau collision operator */
 #define PETSC_THREAD_SYNC
 #define PETSC_DEVICE_FUNC_DECL static
-#define PETSC_DEVICE_DATA_DECL static
 #include "land_kernel.h"
 
 #define LAND_VL  1
@@ -190,12 +189,12 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
     SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
   } else if (ctx->deviceType == LAND_KOKKOS) {
-    //#if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS)
     ierr = LandKokkosJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);
     CHKERRQ(ierr);
-    //#else
-    //SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
-    //#endif
+#else
+    SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
+#endif
   } else { /* CPU version */
     for (ej = cStart, invJ = invJ_a; ej < cEnd; ++ej, invJ += Nq*dim*dim) {
       PetscInt     qj;
@@ -838,7 +837,6 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   PetscBool         flg, sph_flg;
   PetscInt          ii,nt,nm,nc;
   DM                dummy;
-  char              opstring[256];
   PetscFunctionBeginUser;
   ierr = DMCreate(PETSC_COMM_WORLD,&dummy);CHKERRQ(ierr);
   /* get options - initialize context */
@@ -875,16 +873,6 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   ctx->v_0 = 1; /* in electron thermal velocity */
   ctx->subThreadBlockSize = 1;
   ctx->quarter3DDomain = PETSC_FALSE;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
-#if defined(PETSC_HAVE_CUDA)
-  ctx->deviceType = LAND_CUDA;
-  ierr = PetscStrcpy(opstring,"cuda");CHKERRQ(ierr);
-#elif defined(PETSC_HAVE_KOKKOS)
-  ctx->deviceType = LAND_KOKKOS;
-  ierr = PetscStrcpy(opstring,"kokkos");CHKERRQ(ierr);
-#else
-  ctx->deviceType = LAND_CPU;
-  ierr = PetscStrcpy(opstring,"cpu");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_OPENMP)
   if (1) {
     int  thread_id,hwthread,num_threads;
@@ -900,23 +888,34 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
     }
   }
 #endif
-#endif
-  ierr = PetscOptionsString("-dm_land_device_type","Use kernels on 'cpu', 'cuda', or 'kokkos'","plexland.c",opstring,opstring,256,NULL);CHKERRQ(ierr);
-  ierr = PetscStrcmp("cpu",opstring,&flg);CHKERRQ(ierr);
-  if (flg) ctx->deviceType = LAND_CPU;
-  else {
-    ierr = PetscStrcmp("cuda",opstring,&flg);CHKERRQ(ierr);
-    if (flg) ctx->deviceType = LAND_CUDA;
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_VIENNACL)
+  ctx->deviceType = LAND_CUDA;
+  {
+    char opstring[256];
+    ierr = PetscStrcpy(opstring,"cuda");CHKERRQ(ierr);
+    ierr = PetscOptionsString("-dm_land_device_type","Use kernels on 'cpu', 'cuda', or 'kokkos'","plexland.c",opstring,opstring,256,NULL);CHKERRQ(ierr);
+    ierr = PetscStrcmp("cpu",opstring,&flg);CHKERRQ(ierr);
+    if (flg) ctx->deviceType = LAND_CPU;
     else {
-      ierr = PetscStrcmp("kokkos",opstring,&flg);CHKERRQ(ierr);
-      if (flg) ctx->deviceType = LAND_KOKKOS;
-      else SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-dm_land_device_type %s",opstring);
+      ierr = PetscStrcmp("cuda",opstring,&flg);CHKERRQ(ierr);
+      if (flg) ctx->deviceType = LAND_CUDA;
+      else {
+        ierr = PetscStrcmp("kokkos",opstring,&flg);CHKERRQ(ierr);
+        if (flg) ctx->deviceType = LAND_KOKKOS;
+        else SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-dm_land_device_type %s",opstring);
+      }
     }
   }
+#elif defined(PETSC_HAVE_KOKKOS)
+  ctx->deviceType = LAND_KOKKOS;
+#else
+  ctx->deviceType = LAND_CPU;
+#endif
   ierr = PetscOptionsReal("-dm_land_electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_land_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_land_inflate", "With sphere, inflate for curved edges (no AMR)", "plexland.c", ctx->inflate, &ctx->inflate, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_land_quarter_3d_domain", "Use symmetry in 3D to model 1/4 of domain", "plexland.c", ctx->quarter3DDomain, &ctx->quarter3DDomain, NULL);CHKERRQ(ierr);
+  /* ierr = PetscOptionsBool("-dm_land_quarter_3d_domain", "Use symmetry in 3D to model 1/4 of domain", "plexland.c", ctx->quarter3DDomain, &ctx->quarter3DDomain, NULL);CHKERRQ(ierr); */
   ierr = PetscOptionsInt("-dm_land_amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &ctx->numRERefine, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_land_amr_z_refine1",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_land_amr_z_refine2",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
