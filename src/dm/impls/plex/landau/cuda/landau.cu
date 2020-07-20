@@ -10,7 +10,6 @@
 #endif
 #define PETSC_THREAD_SYNC __syncthreads()
 #define PETSC_DEVICE_FUNC_DECL __device__
-#define PETSC_DEVICE_DATA_DECL __constant__
 #include "../land_kernel.h"
 
 // Macro to catch CUDA errors in CUDA runtime calls
@@ -74,9 +73,9 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   }
   __syncthreads();
   if (1) {
-    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, 1, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD,elemMat, *g2, *g3); /* compact */
+    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, 1,        jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3); /* compact */
   } else {
-    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, mySubBlk, nip, nSubBlks, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3); /* spread */
+    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, mySubBlk,    nip, nSubBlks, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3); /* spread */
   }
 }
 
