@@ -21,7 +21,7 @@ int main(int argc,char ** argv)
   PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   DM             dmnetwork;
-  PetscInt       i,j,net,nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,goffset,row,key;
+  PetscInt       i,j,net,nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,goffset,row;
   PetscInt       nsubnetCouple=0,numVertices[10],numEdges[10],numVtxCouple[1],*edgelist[10],*edgelist_couple=NULL;
   const PetscInt *vtx,*edges;
   PetscBool      iscouplev,ghost,distribute=PETSC_TRUE;
@@ -100,13 +100,9 @@ int main(int argc,char ** argv)
   /* Setup the network layout */
   ierr = DMNetworkLayoutSetUp(dmnetwork);CHKERRQ(ierr);
 
-  /* Get SubnetworkInfo(); Add num of nvar=1 to subnet[0] and nvar=2 to other subnets, excluding coupling vertex */
+  /* Get SubnetworkInfo(); Add nvar=1 to subnet[0] and nvar=2 to other subnets, excluding coupling vertex */
   for (net=0; net<nsubnet; net++) {
     ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-    if (ne) {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%d]: ne %d, nv %d\n",rank,net,ne,nv);CHKERRQ(ierr);
-    }
-
     for (v=0; v<nv; v++) {
       ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[v],&iscouplev);CHKERRQ(ierr);
       if (iscouplev) continue;
@@ -122,13 +118,9 @@ int main(int argc,char ** argv)
   /* At the coupling vertex, add componenets 'comp0' 'comp1', and the associated num of variables */
   /* All processors must do it, thus component must have same values for different processors -- do not know why? */
   ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
-  printf("[%d] CoupleInfoCoupleInfo: ncv %d\n",rank,nv);
-
   for (i=0; i<nv; i++) {
     ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey0,&comp0[0]);CHKERRQ(ierr);
-    //printf("[%d] add comp0 %p at %d; comp0->id %d\n",rank,&comp0[0],vtx[i],comp0[0].id);CHKERRQ(ierr);
     ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey1,&comp1[0]);CHKERRQ(ierr);
-    //printf("[%d] add comp1 %p at %d; comp1->val %g\n",rank,&comp1[0],vtx[i],comp1[0].val);CHKERRQ(ierr);
     ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[i],0,1);CHKERRQ(ierr);
     ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[i],1,2);CHKERRQ(ierr);
   }
@@ -146,7 +138,7 @@ int main(int argc,char ** argv)
   /* Setup dmnetwork */
   ierr = DMSetUp(dmnetwork);CHKERRQ(ierr);
 
-  /* Redistribute the network layout -- use '-distribute false' to skip */
+  /* Redistribute the network layout; use '-distribute false' to skip */
   ierr = PetscOptionsGetBool(NULL,NULL,"-distribute",&distribute,NULL);CHKERRQ(ierr);
   if (distribute) {
     ierr = DMNetworkDistribute(&dmnetwork,0);CHKERRQ(ierr);
@@ -161,28 +153,14 @@ int main(int argc,char ** argv)
   ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
   for (v=0; v<nv; v++) {
     ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[v],&ghost);CHKERRQ(ierr);
-    //printf("[%d] coupling nv %d, v %d, ghost %d\n",rank,nv,vtx[v],ghost);
     if (ghost) continue;
 
+    /* only one process holds a non-ghost vertex */
     ierr = DMNetworkGetNumComponents(dmnetwork,vtx[v],&ncomp);CHKERRQ(ierr);
-    printf("[%d] coupling nv %d, v %d, ghost %d; ncomp %d\n",rank,nv,vtx[v],ghost,ncomp);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] coupling nv %D, v %D; ncomp %D\n",rank,nv,vtx[v],ncomp);CHKERRQ(ierr);
     for (j=0; j<ncomp; j++) {
-#if 0 /* test: mpiexec -n 4 ./ex3 -petscpartitioner_type parmetis -distribute 1 */
-      Comp0 comp_0;
-      Comp1 comp_1;
-      if (j == 0) {
-        ierr = DMNetworkGetComponent(dmnetwork,vtx[v],j,&key,(void**)&comp_0);CHKERRQ(ierr);
-        ierr = DMNetworkGetComponentNumVariables(dmnetwork,vtx[v],j,&nvar);CHKERRQ(ierr);
-        printf("[%d] get comp0->id %d at %d; key %d; nvar %d\n",rank,comp_0->id,vtx[v],key,nvar);
-      } else if (j == 1) {
-        ierr = DMNetworkGetComponent(dmnetwork,vtx[v],j,&key,(void**)&comp_1);CHKERRQ(ierr);
-        ierr = DMNetworkGetComponentNumVariables(dmnetwork,vtx[v],j,&nvar);CHKERRQ(ierr);
-        printf("[%d] get comp1->val %g at %d; key %d; nvar %d\n",rank,comp_1->val,vtx[v],key,nvar);
-      }
-#endif
       ierr = DMNetworkGetComponentNumVariables(dmnetwork,vtx[v],j,&nvar);CHKERRQ(ierr);
       ierr = DMNetworkGetComponentVariableGlobalOffset(dmnetwork,vtx[v],j,&goffset);CHKERRQ(ierr);
-      //printf(" [%d] cvtx[%d] = %d; comp %d, nvar %d, goffset %d\n",rank,v,vtx[v],j,nvar,goffset);
       for (i=0; i<nvar; i++) {
         row = goffset + i;
         val = j + 1.0;
@@ -213,25 +191,16 @@ int main(int argc,char ** argv)
       requires: !single double define(PETSC_HAVE_ATTRIBUTEALIGNED)
 
    test:
-      args: -ksp_converged_reason
+      args:
 
    test:
       suffix: 2
       nsize: 2
-      args: -petscpartitioner_type simple -pc_type asm -sub_pc_type ilu -ksp_converged_reason
+      args: -options_left no
 
    test:
       suffix: 3
       nsize: 4
-      args: -petscpartitioner_type simple -pc_type asm -sub_pc_type lu -sub_pc_factor_shift_type nonzero -ksp_converged_reason
-
-   test:
-      suffix: graphindex
-      args: -n 20 -vertex_global_section_view -edge_global_section_view
-
-   test:
-      suffix: graphindex_2
-      nsize: 2
-      args: -petscpartitioner_type simple -n 20 -vertex_global_section_view -edge_global_section_view
+      args: -options_left no
 
 TEST*/
