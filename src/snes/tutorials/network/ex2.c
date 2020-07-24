@@ -512,7 +512,7 @@ int main(int argc,char **argv)
   ierr = PetscFree(edgelist_couple);CHKERRQ(ierr);
 
   /* Re-distribute networkdm to multiple processes for better job balance */
-  if (distribute) {
+  if (size >1 && distribute) {
     ierr = DMNetworkDistribute(&networkdm,0);CHKERRQ(ierr);
     if (viewDM) {
       ierr = PetscPrintf(PETSC_COMM_WORLD,"\nAfter DMNetworkDistribute, DMView:\n");CHKERRQ(ierr);
@@ -522,24 +522,14 @@ int main(int argc,char **argv)
 
   /* Test DMNetworkGetSubnetworkInfo() and DMNetworkGetSubnetworkCoupleInfo() */
   if (test) {
-    PetscInt  v,gidx,e,vfrom,vto;
+    PetscInt  v,gidx;
     PetscBool ghost;
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
     for (i=0; i<nsubnet; i++) {
       ierr = DMNetworkGetSubnetworkInfo(networkdm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, subnet[%d] ne %d, nv %d\n",rank,i,ne,nv);
       ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
-#if 0
-      for (e=0; e<ne; e++) {
-        const PetscInt    *cone;
-        if (e == 1) {
-          ierr = DMNetworkGetConnectedVertices(networkdm,e,&cone);CHKERRQ(ierr);
-          ierr = DMNetworkGetGlobalVertexIndex(networkdm,cone[0],&vfrom);CHKERRQ(ierr);
-          ierr = DMNetworkGetGlobalVertexIndex(networkdm,cone[1],&vto);CHKERRQ(ierr);
-          ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%d] e %d: %d %d --> %d %d\n",rank,i,edges[e],cone[0],vfrom,cone[1],vto);
-        }
-      }
- #endif
+
       for (v=0; v<nv; v++) {
         ierr = DMNetworkIsGhostVertex(networkdm,vtx[v],&ghost);CHKERRQ(ierr);
         ierr = DMNetworkGetGlobalVertexIndex(networkdm,vtx[v],&gidx);CHKERRQ(ierr);
@@ -550,10 +540,10 @@ int main(int argc,char **argv)
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
     ierr = DMNetworkGetSubnetworkCoupleInfo(networkdm,0,&nv,&vtx);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, subnetCouple nv %d\n",rank,nv);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, num of coupling vertices nv = %d\n",rank,nv);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkGetGlobalVertexIndex(networkdm,vtx[v],&gidx);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] cv %d %d\n",rank,vtx[v],gidx);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] cv %d, gidx=%d\n",rank,vtx[v],gidx);
     }
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
   }

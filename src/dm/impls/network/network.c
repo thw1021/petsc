@@ -195,19 +195,24 @@ PetscErrorCode DMNetworkSetEdgeList(DM dm,PetscInt *edgelist[],PetscInt *edgelis
  */
 static PetscErrorCode CouplingVtxGetInfo(PetscInt ncvtx,CEdge *cedges,PetscInt gidx,CVertexType *cvtype,PetscInt *cedges_idx)
 {
-  PetscInt i;
+  PetscInt    i;
+  CVertexType type;
 
   PetscFunctionBegin;
-  *cvtype = CVNONE;
-  if (cedges_idx) *cedges_idx = -1;
-  if (!ncvtx) PetscFunctionReturn(0);
+  type = CVNONE;
+  if (!ncvtx) {
+    if (cedges_idx) *cedges_idx = -1;
+    if (cvtype)     *cvtype     = type;
+    PetscFunctionReturn(0);
+  }
 
   for (i=0; i<ncvtx; i++) {
     if (gidx == cedges[i].gidx_from) {
-      *cvtype = CVFROM;
+      type = CVFROM;
       break;
     }
   }
+  if (cvtype) *cvtype = type;
   if (cedges_idx) *cedges_idx = i;
   PetscFunctionReturn(0);
 }
@@ -528,13 +533,9 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   if (k != network->subnet[nsubnet].nvtx) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"k %D != %D csubnet.nvtx",k,network->subnet[nsubnet].nvtx);
 
   ierr = PetscFree2(vidxlTog,eowners);CHKERRQ(ierr);
-  if (size == 1) {
-    ierr = PetscFree(cedges[0].vto);CHKERRQ(ierr);
-    ierr = PetscFree(cedges);CHKERRQ(ierr);
-  } else {
-    network->cvtx  = cedges;
-    network->ncvtx = ncv;
-  }
+
+  network->cvtx  = cedges;
+  network->ncvtx = ncv;
   PetscFunctionReturn(0);
 }
 
@@ -1684,7 +1685,6 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   }
 
   /* Coupling vertices are global info */
-  newDMnetwork->subnet[nsubnet].nvtx  = 0;// set by PetscCalloc1() above!!!
   newDMnetwork->subnet[nsubnet].Nvtx  = oldDMnetwork->subnet[nsubnet].Nvtx;
 
   /* Get local nedges and nvtx for subnetworks */
@@ -1704,7 +1704,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
     ierr = CouplingVtxGetInfo(oldDMnetwork->ncvtx,oldDMnetwork->cvtx,gidx,&cvtype,&cedges_idx);CHKERRQ(ierr);
     if (cvtype == CVNONE) {
       newDMnetwork->subnet[header->subnetid].nvtx++;
-    } else {
+    } else { /* a coupling vertex belongs to more than one subnetworks, thus it is being counted by multiple subnets */
       from_net = oldDMnetwork->cvtx[cedges_idx].vfrom_net;
       newDMnetwork->subnet[from_net].nvtx++;
       for (j=0; j<oldDMnetwork->cvtx[cedges_idx].nvto; j++) {
@@ -1715,12 +1715,10 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
     }
   }
 
-  nv = 0; /* total local nvtx for subnetworks */
-  for (j=0; j<nsubnet; j++) {
-    nv += newDMnetwork->subnet[j].nvtx;
-    //printf("[%d] subnet[%d].nvtx = %d\n",rank,j,newDMnetwork->subnet[j].nvtx);
-  }
-  nv += newDMnetwork->subnet[nsubnet].Nvtx;
+  /* Get total local nvtx for subnetworks */
+  nv = 0;
+  for (j=0; j<nsubnet; j++) nv += newDMnetwork->subnet[j].nvtx;
+  nv += newDMnetwork->subnet[nsubnet].Nvtx; /* add global num of coupling vertices */
 
   /* Now create the vertices and edge arrays for the subnetworks */
   ierr = PetscCalloc1(nv,&newDMnetwork->subnetvtx);CHKERRQ(ierr);
@@ -1765,6 +1763,9 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
     }
   }
   newDMnetwork->subnet[nsubnet].nvtx  = nv; /* local num of coupling vertices */
+  newDMnetwork->ncvtx                 = oldDMnetwork->ncvtx;
+  newDMnetwork->cvtx                  = oldDMnetwork->cvtx;
+  oldDMnetwork->cvtx                  = NULL;
   //printf("[%d] Distribute local ncv %d\n",rank,nv);
 
   newDM->setupcalled = (*dm)->setupcalled;
@@ -2628,10 +2629,8 @@ PetscErrorCode DMDestroy_Network(DM dm)
 PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
 {
   PetscErrorCode ierr;
-  DM_Network     *network = (DM_Network*)dm->data;
   PetscBool      iascii;
   PetscMPIInt    rank;
-  PetscInt       p,nsubnet;
 
   PetscFunctionBegin;
   if (!dm->setupcalled) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE,"Must call DMSetUp() first");
@@ -2640,46 +2639,54 @@ PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
-    const PetscInt    *cone,*vtx,*edges;
-    PetscInt          vfrom,vto,i,j,nv,ne;
+    const PetscInt *cone,*vtx,*edges;
+    PetscInt       vfrom,vto,i,j,nv,ne,ncv,p,nsubnet;
+    DM_Network     *network = (DM_Network*)dm->data;
 
     nsubnet = network->nsubnet - network->ncsubnet; /* num of subnetworks */
+    if (!rank) {
+      ierr = PetscPrintf(PETSC_COMM_SELF,"  NSubnets: %D; NEdges: %D; NVertices: %D; NCoupleVertices: %D.\n",nsubnet,network->NEdges,network->NVertices,network->ncvtx);CHKERRQ(ierr);
+    }
+
+    ierr = DMNetworkGetSubnetworkCoupleInfo(dm,0,&ncv,&vtx);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-    //ierr = PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] nsubnet: %D; nsubnetCouple: %D; nEdges: %D; nVertices: %D\n",rank,nsubnet,network->ncsubnet,network->nEdges,network->nVertices);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] nsubnet: %D; nsubnetCouple: %D; nEdges: %D; nVertices: %D; NVertices: %D\n",rank,nsubnet,network->ncsubnet,network->nEdges,network->nVertices,network->NVertices);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] nEdges: %D; nVertices: %D; nCoupleVertices: %D\n",rank,network->nEdges,network->nVertices,ncv);CHKERRQ(ierr);
 
     for (i=0; i<nsubnet; i++) {
       ierr = DMNetworkGetSubnetworkInfo(dm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
       if (ne) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "     Subnet %D: nEdges %D, nVertices %D\n",i,ne,nv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "     Subnet %D: nEdges %D, nVertices(include coupling vertices) %D\n",i,ne,nv);CHKERRQ(ierr);
         for (j=0; j<ne; j++) {
           p = edges[j];
           ierr = DMNetworkGetConnectedVertices(dm,p,&cone);CHKERRQ(ierr);
           ierr = DMNetworkGetGlobalVertexIndex(dm,cone[0],&vfrom);CHKERRQ(ierr);
           ierr = DMNetworkGetGlobalVertexIndex(dm,cone[1],&vto);CHKERRQ(ierr);
           ierr = DMNetworkGetGlobalEdgeIndex(dm,edges[j],&p);CHKERRQ(ierr);
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer, "       edge %D: %D----> %D\n",p,vfrom,vto);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer, "       edge %D: %D ----> %D\n",p,vfrom,vto);CHKERRQ(ierr);
         }
       }
     }
-#if 0
-    /* Coupling subnets */
-    nsubnet = network->nsubnet;
-    for (; i<nsubnet; i++) {
-      ierr = DMNetworkGetSubnetworkInfo(dm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-      if (ne) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "     Subnet %D (couple): nEdges %D, nVertices %D\n",i,ne,nv);CHKERRQ(ierr);
-        for (j=0; j<ne; j++) {
-          p = edges[j];
-          ierr = DMNetworkGetConnectedVertices(dm,p,&cone);CHKERRQ(ierr);
-          ierr = DMNetworkGetGlobalVertexIndex(dm,cone[0],&vfrom);CHKERRQ(ierr);
-          ierr = DMNetworkGetGlobalVertexIndex(dm,cone[1],&vto);CHKERRQ(ierr);
-          ierr = DMNetworkGetGlobalEdgeIndex(dm,edges[j],&p);CHKERRQ(ierr);
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer, "       edge %D: %D----> %D\n",p,vfrom,vto);CHKERRQ(ierr);
+
+    /* Coupling vertices */
+    ierr = DMNetworkGetSubnetworkCoupleInfo(dm,0,&ncv,&vtx);CHKERRQ(ierr);
+    if (ncv) {
+      CEdge       *cedges = network->cvtx;
+      PetscInt    gidx,cedges_idx,nvto,vfrom_net,vfrom_idx,*cvto;
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer, "     CoupleVertices:\n");CHKERRQ(ierr);
+      for (i=0; i<ncv; i++) {
+        ierr = DMNetworkGetGlobalVertexIndex(dm,vtx[i],&gidx);CHKERRQ(ierr);
+        ierr = CouplingVtxGetInfo(ncv,cedges,gidx,NULL,&cedges_idx);CHKERRQ(ierr);
+        nvto = cedges[cedges_idx].nvto;
+
+        vfrom_net = cedges[cedges_idx].vfrom_net;
+        vfrom_idx = cedges[cedges_idx].vfrom_idx;
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "       cvtx %D: global index %D, subnet[%D].%D ----> \n",i,gidx,vfrom_net,vfrom_idx);CHKERRQ(ierr);
+        for (j=0; j<nvto; j++) {
+          cvto = cedges[cedges_idx].vto + 2*j;
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer, "                                           ----> subnet[%D].%D\n",cvto[0],cvto[1]);CHKERRQ(ierr);
         }
       }
     }
-#endif
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
   } else SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMNetwork writing", ((PetscObject)viewer)->type_name);
