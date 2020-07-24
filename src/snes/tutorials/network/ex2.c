@@ -335,13 +335,13 @@ int main(int argc,char **argv)
   }
   numEdgesCouple[0] = 0;
 
-  /* proc[0] READ THE DATA FOR THE FIRST SUBNETWORK: Electric Power Grid */
-  //if (rank == 0) { //currently, coupling info must be available for all processes!!!
+  /* All processes READ THE DATA FOR THE FIRST SUBNETWORK: Electric Power Grid */
+  /* used for coupling vertex, because currently the coupling info must be available in all processes!!! */
     ierr = PetscOptionsGetString(NULL,NULL,"-pfdata",pfdata_file,PETSC_MAX_PATH_LEN-1,NULL);CHKERRQ(ierr);
     ierr = PetscNew(&pfdata);CHKERRQ(ierr);
     ierr = PFReadMatPowerData(pfdata,pfdata_file);CHKERRQ(ierr);
     Sbase = pfdata->sbase;
-  if (rank == 0) {
+  if (rank == 0) { /* proc[0] will create Electric Power Grid */
     numEdges[0]    = pfdata->nbranch;
     numVertices[0] = pfdata->nbus;
 
@@ -355,8 +355,8 @@ int main(int argc,char **argv)
   /* If external option activated. Introduce error in jacobian */
   ierr = PetscOptionsHasName(NULL,NULL, "-jac_error", &appctx_power->jac_error);CHKERRQ(ierr);
 
-  /* proc[1] GET DATA FOR THE SECOND SUBNETWORK: Water */
-  //if (size == 1 || (size > 1 && rank == 1)) {
+  /* All processes READ THE DATA FOR THE SECOND SUBNETWORK: Water */
+  /* used for coupling vertex, because currently the coupling info must be available in all processes!!! */
     ierr = PetscNew(&waterdata);CHKERRQ(ierr);
     ierr = PetscOptionsGetString(NULL,NULL,"-waterdata",waterdata_file,PETSC_MAX_PATH_LEN-1,NULL);CHKERRQ(ierr);
     ierr = WaterReadData(waterdata,waterdata_file);CHKERRQ(ierr);
@@ -368,7 +368,7 @@ int main(int argc,char **argv)
   }
 
   /* All processes get data for the coupling subnetwork */
-  nsubnetCouple = 1;
+  nsubnetCouple     = 1;
   numEdgesCouple[0] = 1;
 
   ierr = PetscMalloc1(4*numEdgesCouple[0],&edgelist_couple);CHKERRQ(ierr);
@@ -454,7 +454,7 @@ int main(int argc,char **argv)
   /* ADD VARIABLES AND COMPONENTS FOR THE WATER SUBNETWORK */
   /*-------------------------------------------------------*/
   ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-  if (rank == 1) {
+  if (size == 1 || rank == 1) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Water network: nv %D, ne %D\n",rank,nv,ne);CHKERRQ(ierr);
   }
 
