@@ -122,7 +122,6 @@ int main(int argc,char ** argv)
   /* At the coupling vertex, add componenets 'comp0' 'comp1', and the associated num of variables */
   /* All processors must do it, thus component must have same values for different processors -- do not know why? */
   ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
-  printf("[%d] CoupleInfoCoupleInfo: ncv %d\n",rank,nv);
 
   for (i=0; i<nv; i++) {
     ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey0,&comp0[0]);CHKERRQ(ierr);
@@ -167,19 +166,6 @@ int main(int argc,char ** argv)
     ierr = DMNetworkGetNumComponents(dmnetwork,vtx[v],&ncomp);CHKERRQ(ierr);
     printf("[%d] coupling nv %d, v %d, ghost %d; ncomp %d\n",rank,nv,vtx[v],ghost,ncomp);
     for (j=0; j<ncomp; j++) {
-#if 0 /* test: mpiexec -n 4 ./ex3 -petscpartitioner_type parmetis -distribute 1 */
-      Comp0 comp_0;
-      Comp1 comp_1;
-      if (j == 0) {
-        ierr = DMNetworkGetComponent(dmnetwork,vtx[v],j,&key,(void**)&comp_0);CHKERRQ(ierr);
-        ierr = DMNetworkGetComponentNumVariables(dmnetwork,vtx[v],j,&nvar);CHKERRQ(ierr);
-        printf("[%d] get comp0->id %d at %d; key %d; nvar %d\n",rank,comp_0->id,vtx[v],key,nvar);
-      } else if (j == 1) {
-        ierr = DMNetworkGetComponent(dmnetwork,vtx[v],j,&key,(void**)&comp_1);CHKERRQ(ierr);
-        ierr = DMNetworkGetComponentNumVariables(dmnetwork,vtx[v],j,&nvar);CHKERRQ(ierr);
-        printf("[%d] get comp1->val %g at %d; key %d; nvar %d\n",rank,comp_1->val,vtx[v],key,nvar);
-      }
-#endif
       ierr = DMNetworkGetComponentNumVariables(dmnetwork,vtx[v],j,&nvar);CHKERRQ(ierr);
       ierr = DMNetworkGetComponentVariableGlobalOffset(dmnetwork,vtx[v],j,&goffset);CHKERRQ(ierr);
       //printf(" [%d] cvtx[%d] = %d; comp %d, nvar %d, goffset %d\n",rank,v,vtx[v],j,nvar,goffset);
