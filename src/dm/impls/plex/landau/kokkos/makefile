@@ -18,4 +18,4 @@ LOCDIR   = src/dm/impls/plex/landau/kokkos
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${PETSC_DIR}/lib/petsc/conf/test
-2
+
