@@ -11,10 +11,10 @@ int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
   PetscInt       i,l,n=100,r=10,d=1;
-  PetscInt       *X,*Y,*Z;
+  PetscInt       *X,*X1,*Y,*Z;
   PetscReal      val;
   PetscRandom    rdm;
-  PetscLogDouble time;
+  PetscLogDouble time, time1;
   PetscMPIInt    size;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
@@ -26,25 +26,34 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetInt(NULL,NULL,"-d",&d,NULL);CHKERRQ(ierr);
   if (n<1 || r<1 || d<1 || d>n) SETERRQ3(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Wrong input n=%D,r=%D,d=%d. They must be >=1 and n>=d\n",n,r,d);
 
-  ierr = PetscCalloc3(n,&X,n,&Y,n,&Z);CHKERRQ(ierr);
+  ierr = PetscCalloc4(n,&X,n,&X1,n,&Y,n,&Z);CHKERRQ(ierr);
   ierr = PetscRandomCreate(PETSC_COMM_SELF,&rdm);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rdm);CHKERRQ(ierr);
 
   time = 0.0;
+  time1 = 0.0;
   for (l=0; l<r; l++) { /* r loops */
     for (i=0; i<n; i++) { /* Init X[] */
       ierr = PetscRandomGetValueReal(rdm,&val);CHKERRQ(ierr);
       X[i] = val*PETSC_MAX_INT;
       if (d > 1) X[i] = X[i] % (n/d);
+      X1[i] = X[i];
     }
+
+    ierr = PetscTimeSubtract(&time1);CHKERRQ(ierr);
+    ierr = PetscTimSortInt(n,X1);CHKERRQ(ierr);
+    ierr = PetscTimeAdd(&time1);CHKERRQ(ierr);
 
     ierr = PetscTimeSubtract(&time);CHKERRQ(ierr);
     ierr = PetscSortInt(n,X);CHKERRQ(ierr);
     ierr = PetscTimeAdd(&time);CHKERRQ(ierr);
 
     for (i=0; i<n-1; i++) {if (X[i] > X[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscSortInt() produced wrong results!");}
+    for (i=0; i<n; i++) {if (X[i] != X1[i]) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() X1[%D]:%D does not match PetscSortInt() X[%D]:%D!",i,X1[i],i,X[i]);}
+    for (i=0; i<n-1; i++) {if (X1[i] > X1[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() produced wrong results!");}
   }
   ierr = PetscPrintf(PETSC_COMM_SELF,"PetscSortInt()              with %D integers, %D duplicate(s) per unique value took %g seconds\n",n,d,time/r);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"PetscTimSortInt()           with %D integers, %D duplicate(s) per unique value took %g seconds\n",n,d,time1/r);CHKERRQ(ierr);
 
   time = 0.0;
   for (l=0; l<r; l++) { /* r loops */
@@ -64,7 +73,7 @@ int main(int argc,char **argv)
   ierr = PetscPrintf(PETSC_COMM_SELF,"SUCCEEDED\n");CHKERRQ(ierr);
 
   ierr = PetscRandomDestroy(&rdm);CHKERRQ(ierr);
-  ierr = PetscFree3(X,Y,Z);CHKERRQ(ierr);
+  ierr = PetscFree4(X,X1,Y,Z);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
