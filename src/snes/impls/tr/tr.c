@@ -349,8 +349,6 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     /* if we solved unscaled Jacobian, then we here is a chance to scale it */
 // v1.0    ierr = SNESComputeJacobian(snes,X,snes->jacobian,snes->jacobian_pre);CHKERRQ(ierr);
     ierr = SNESGetJacobian(snes, &jac, NULL, NULL, NULL);CHKERRQ(ierr);    
-    /* calculating GradF of minimization function */
-    ierr = MatMultTranspose(jac,F,GradF);CHKERRQ(ierr);  /* grad f = J^T F */
     ierr = VecNorm(YNtmp,NORM_2,&ynnorm);CHKERRQ(ierr);  /* ynnorm <- || Y_newton || */
    
     while (1) {
@@ -358,6 +356,8 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       if (ynnorm <= delta) {  /* see if the Newton solution is with in the trust region */
         ierr = VecCopy(YNtmp, Y);CHKERRQ(ierr);
       } else if (neP->use_cauchy) {
+        /* calculating GradF of minimization function */
+        ierr = MatMultTranspose(jac,F,GradF);CHKERRQ(ierr);  /* grad f = J^T F */      
         ierr = MatMult(jac,GradF,W);CHKERRQ(ierr);  
         ierr = VecDotRealPart(W,W,&gTBg);CHKERRQ(ierr);  /* completes GradF^T J^T J GradF */
         ierr = VecNorm(GradF,NORM_2,&gfnorm);CHKERRQ(ierr);  /* grad f norm <- || grad f || */
