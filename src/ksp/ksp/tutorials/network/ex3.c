@@ -21,7 +21,7 @@ int main(int argc,char ** argv)
   PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   DM             dmnetwork;
-  PetscInt       i,j,net,nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,goffset,row,key;
+  PetscInt       i,j,net,nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,goffset,row;
   PetscInt       nsubnetCouple=0,numVertices[10],numEdges[10],numVtxCouple[1],*edgelist[10],*edgelist_couple=NULL;
   const PetscInt *vtx,*edges;
   PetscBool      iscouplev,ghost,distribute=PETSC_TRUE;
