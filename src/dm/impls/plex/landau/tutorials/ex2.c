@@ -138,7 +138,6 @@ static PetscErrorCode getTe_kev(DM plex, Vec X, PetscReal *a_n, PetscReal *a_Tke
     ierr = PetscDSSetObjective(prob, 0, &f0_ve_shift);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
     v = ctx->n_0*ctx->v_0*PetscRealPart(tt[0])/n;         /* remove number density to get velocity */
-    if (vz!=0) printf("getTe_kev v=%g vz=%g\n",(double)v,(double)PetscRealPart(vz));
     v2 = PetscSqr(v);                      /* use real space: m^2 / s^2 */
     if (a_Tkev) *a_Tkev = (v2*ctx->masses[0]*PETSC_PI/8)*kev_joul; /* temperature in kev */
     if (a_n) *a_n = n;
@@ -176,7 +175,6 @@ static PetscReal Spitzer(PetscReal m_e, PetscReal e, PetscReal Z, PetscReal epsi
 {
   PetscReal Fz = (1+1.198*Z+0.222*Z*Z)/(1+2.966*Z+0.753*Z*Z), eta;
   eta = Fz*4./3.*PetscSqrtReal(2.*PETSC_PI)*Z*PetscSqrtReal(m_e)*PetscSqr(e)*lnLam*PetscPowReal(4*PETSC_PI*epsilon0,-2.)*PetscPowReal(kTe_joules,-1.5);
-  /* PetscPrintf(PETSC_COMM_SELF, "Fz=%20.13e SpitzEr=%10.3e Z=%g\n",Fz,eta,Z); */
   return eta;
 }
 

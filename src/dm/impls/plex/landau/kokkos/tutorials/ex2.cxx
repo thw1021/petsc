@@ -259,14 +259,14 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
     for (ej = cStart ; ej < cEnd; ++ej) {
       const PetscScalar *elMat = &h_elem_mats(ej-cStart,0);
       ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
-      if (ej==0) {
+      if (ej==0 ||1) {
         int d,f;
         printf("Kokkos Element matrix\n");
         for (d = 0; d < totDim; ++d){
           for (f = 0; f < totDim; ++f) printf(" %17.10e",  PetscRealPart(elMat[d*totDim + f]));
           printf("\n");
         }
-        exit(12);
+        //exit(12);
       }
     }
     //ierr = PetscFree(elemMats);CHKERRQ(ierr);
@@ -274,14 +274,14 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
   }
   PetscFunctionReturn(0);
 }
-
+ 
 int main(int argc, char* argv[])
 {
   DM             dm;
   Vec            X;
   PetscErrorCode ierr;
   PetscInt       dim = 2;
-  TS             ts;
+  // TS             ts;
   Mat            J;
   PetscDS        prob;
   LandCtx        *ctx;
@@ -301,13 +301,13 @@ int main(int argc, char* argv[])
   ierr = DMViewFromOptions(dm,NULL,"-ex2_dm_view_sources");CHKERRQ(ierr);
   ierr = DMViewFromOptions(dm,NULL,"-ex2_dm_view_diff");CHKERRQ(ierr);
   /* Create timestepping solver context */
-  ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
-  ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
-  ierr = TSSetIFunction(ts,NULL,DMPlexLandIFunction,NULL);CHKERRQ(ierr);
-  ierr = TSSetIJacobian(ts,J,J,DMPlexLandIJacobian,NULL);CHKERRQ(ierr);
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
-  ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
-  ierr = TSSetApplicationContext(ts, ctx);CHKERRQ(ierr);
+  // ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
+  // ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
+  // ierr = TSSetIFunction(ts,NULL,DMPlexLandIFunction,NULL);CHKERRQ(ierr);
+  // ierr = TSSetIJacobian(ts,J,J,DMPlexLandIJacobian,NULL);CHKERRQ(ierr);
+  // ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+  // ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
+  // ierr = TSSetApplicationContext(ts, ctx);CHKERRQ(ierr);
   ierr = MatSetOption(J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
   if (1) {
     PetscLogStage stage;
@@ -320,16 +320,17 @@ int main(int argc, char* argv[])
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
     ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
     ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
-    ierr = DMPlexLandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
+    // ierr = DMPlexLandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
+    ierr = DMPlexLandFormLandau_Internal(X,ctx->J,dim,(void*)ctx);CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
   ierr = VecViewFromOptions(X,NULL,"-ex2_x_vec_view");CHKERRQ(ierr);
   /* go */
-  ierr = TSSolve(ts,X);CHKERRQ(ierr);
+  // ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */
   ierr = DMPlexLandDestroyVelocitySpace(&dm);CHKERRQ(ierr);
-  ierr = TSDestroy(&ts);CHKERRQ(ierr);
+  // ierr = TSDestroy(&ts);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
 #if defined(FIX_KOKKOS)
   Kokkos::finalize();
