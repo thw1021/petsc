@@ -95,6 +95,7 @@ int main(int argc, char* argv[])
 /*TEST
 
   test:
+    requires: kokkos
     suffix: 0
     args: -info :~sys
 

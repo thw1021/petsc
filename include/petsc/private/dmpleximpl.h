@@ -703,8 +703,11 @@ PETSC_EXTERN PetscErrorCode LandCUDAJacobian(DM, const PetscInt, const PetscReal
                                              const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
 #endif
 #if defined(PETSC_HAVE_KOKKOS)
+/* TODO: this won't work if PETSc is built with C++ */
+#if !defined(__cplusplus)
 PETSC_EXTERN PetscErrorCode LandKokkosJacobian(DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
                                                const PetscReal * const, const PetscReal[], const PetscReal [],const PetscInt, const PetscLogEvent[], PetscBool, Mat);
+#endif
 #endif
 
 #endif /* _PLEXIMPL_H */
