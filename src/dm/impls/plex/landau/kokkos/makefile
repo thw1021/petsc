@@ -1,11 +1,11 @@
-#requiresdefine 'PETSC_HAVE_KOKKOS'
+#requirespackage 'PETSC_HAVE_KOKKOS'
 -include ../../../../../../petscdir.mk
 ALL: lib
 
 CPPFLAGS =
 CFLAGS   =
 FFLAGS   =
-SOURCECXX= landau_kokkos.cxx
+SOURCECXX= landau_kokkos.kok.cxx
 SOURCECU =
 SOURCEF  =
 SOURCEH  =
