@@ -21,5 +21,10 @@ if __name__ == '__main__':
     '--with-blaslapack-dir='+os.environ['MKLROOT'],
     '--with-mkl_pardiso-dir='+os.environ['MKLROOT'],
     '--with-mkl_cpardiso-dir='+os.environ['MKLROOT'],
+    '--download-superlu_dist',
+    '--download-metis',
+    '--download-parmetis',
+    '--download-ptscotch'
+    '--download-superlu_dist'    
   ]
   configure.petsc_configure(configure_options)
