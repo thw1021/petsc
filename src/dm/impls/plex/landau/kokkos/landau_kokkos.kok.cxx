@@ -79,6 +79,7 @@ namespace Kokkos { //reduction identity must be defined in Kokkos namespace
   };
 }
 
+extern "C"  {
 PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alpha[], PetscReal nu_beta[],
                                    PetscReal invMass[], PetscReal Eq_m[], PetscReal * const IPDataGlobal,
                                    PetscReal wiGlobal[], PetscReal invJ[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain,
@@ -275,4 +276,5 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
     ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
+}
 }
