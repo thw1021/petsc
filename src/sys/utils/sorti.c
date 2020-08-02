@@ -1069,16 +1069,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt arr[]
   PetscFunctionReturn(0);
 }
 
-#define COMPUTE_MINRUN(n,minrun)                                        \
-  do {                                                                  \
-    PetscInt t = n, r = 0; /* becomes 1 if the least significant bits contain at least one off bit */ \
-    while (t >= 64) {                                                   \
-      r |= t & 1;                                                       \
-      t >>= 1;                                                          \
-    }                                                                   \
-    minrun = t + r;                                                     \
-  } while(0)
-
 /* Start left look right. Looking for e.g. B[0] in A or mergelo. l inclusive, r inclusive. Output also inclusive */
 PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchLeftInt(PetscInt arr[], PetscInt l, PetscInt r, PetscInt x, PetscInt *m)
 {
@@ -1133,105 +1123,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchRightInt(PetscInt arr[], Pet
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscTimSortMergeCollapse_Private(PetscInt arr[], PetscInt **stack, PetscBool force, PetscInt *stacksize)
-{
-  PetscInt i;
-
-  PetscFunctionBegin;
-  PetscValidPointer(arr,1);
-  PetscValidPointer(stack,3);
-  PetscValidIntPointer(stacksize,5);
-  i = *stacksize;
-  while (i) {
-    PetscInt       l, m, r, itemp;
-    PetscInt       *A, *B, *C;
-    PetscErrorCode ierr;
-
-    itemp = i;
-    switch (i) {
-    case 1:
-      A = stack[i-1];
-      B = stack[i];
-      if (force || (A[1] < B[1])) {
-        l = A[0];
-        m = B[0];
-        r = B[0]+B[1];
-        /* Search A for B insertion */
-        PetscGallopSearchLeftInt(arr, A[0], B[0]-1, arr[B[0]], &l);
-        PetscGallopSearchRightInt(arr, B[0], B[0]+B[1]-1, arr[B[0]-1], &r);
-        if (m-l <= r-m) {
-          ierr = PetscTimSortMergeIntLo_Private(arr, l, m, r);CHKERRQ(ierr);
-        } else {
-          ierr = PetscTimSortMergeIntHi_Private(arr, l, m, r);CHKERRQ(ierr);
-        }
-        /* Update A with merge */
-        A[1] += B[1];
-        /* Prune old B */
-        B[0] = 0;
-        B[1] = 0;
-        i--;
-      }
-      break; /* switch-case */
-    default:
-      /* i > 2, i.e. C exists */
-      A = stack[i-2];
-      B = stack[i-1];
-      C = stack[i];
-      if (A[1] <= B[1]+C[1]) {
-        if (A[1] < C[1]) {
-          /* merge B into A */
-          mergeAB:
-          l = A[0];
-          m = B[0];
-          r = B[0]+B[1];
-          /* Search A for B insertion */
-          PetscGallopSearchLeftInt(arr, A[0], B[0]-1, arr[B[0]], &l);
-          PetscGallopSearchRightInt(arr, B[0], B[0]+B[1]-1, arr[B[0]-1], &r);
-          if (m-l <= r-m) {
-            ierr = PetscTimSortMergeIntLo_Private(arr, l, m, r);CHKERRQ(ierr);
-          } else {
-            ierr = PetscTimSortMergeIntHi_Private(arr, l, m, r);CHKERRQ(ierr);
-          }
-          /* Update A with merge */
-          A[1] += B[1];
-          /* Push C up the stack */
-          B[0] = C[0];
-          B[1] = C[1];
-        } else {
-          /* merge C into B */
-          mergeBC:
-          l = B[0];
-          m = C[0];
-          r = C[0]+C[1];
-          PetscGallopSearchLeftInt(arr, B[0], C[0]-1, arr[C[0]], &l);
-          PetscGallopSearchRightInt(arr, C[0], C[0]+C[1]-1, arr[C[0]-1], &r);
-          if (m-l <= r-m) {
-            ierr = PetscTimSortMergeIntLo_Private(arr, l, m, r);CHKERRQ(ierr);
-          } else {
-            ierr = PetscTimSortMergeIntHi_Private(arr, l, m, r);CHKERRQ(ierr);
-          }
-          /* Update B with merge */
-          B[1] += C[1];
-        }
-      } else if (B[1] <= C[1]) {
-        /* merge C into B */
-        goto mergeBC;
-      } else if (force) {
-        if (C[1]) goto mergeBC;
-        if (B[1]) goto mergeAB;
-      } else break; /* Nothing to be done, break switch-case dont want to alter stack */
-      /* prune old C */
-      C[0] = 0;
-      C[1] = 0;
-      i--;
-      break; /* switch-case */
-    }
-    if (itemp == i) break; /* while */
-  }
-  *stacksize = i;
-  PetscFunctionReturn(0);
-}
-
 PETSC_STATIC_INLINE PetscErrorCode PetscInsertionSortInt_Private(PetscInt arr[], PetscInt left, PetscInt right)
 {
   PetscInt i, t, j;
@@ -1248,6 +1139,114 @@ PETSC_STATIC_INLINE PetscErrorCode PetscInsertionSortInt_Private(PetscInt arr[],
   PetscFunctionReturn(0);
 }
 
+typedef struct {
+  PetscInt start;
+  PetscInt size;
+} PetscTimSortStack;
+
+PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSortStack *stack, PetscBool force, PetscInt *stacksize)
+{
+  PetscInt i;
+
+  PetscFunctionBegin;
+  PetscValidPointer(arr,1);
+  PetscValidPointer(stack,2);
+  PetscValidIntPointer(stacksize,4);
+  i = *stacksize;
+  while (i) {
+    PetscInt       l, m, r, itemp;
+    PetscErrorCode ierr;
+
+    itemp = i;
+    switch (i) {
+    case 1:
+      //A = stack[i-1];
+      //B = stack[i];
+      if (force || (stack[i-1].size < stack[i].size)) {
+        m = stack[i].start;
+        /* Search A for B[0] insertion */
+        PetscGallopSearchLeftInt(arr, stack[i-1].start, stack[i].start-1, arr[stack[i].start], &l);
+        if (l < m-1) { /* l == m-1 means sorted */
+          /* Search B for A[-1] insertion */
+          PetscGallopSearchRightInt(arr, stack[i].start, stack[i].start+stack[i].size-1, arr[stack[i].start-1], &r);
+          if (m-l <= r-m) {
+            ierr = PetscTimSortMergeIntLo_Private(arr, l, m, r);CHKERRQ(ierr);
+          } else {
+            ierr = PetscTimSortMergeIntHi_Private(arr, l, m, r);CHKERRQ(ierr);
+          }
+        }
+        /* Update A with merge */
+        stack[i-1].size += stack[i].size;
+        /* Prune old B */
+        stack[i].start = 0;
+        stack[i].size = 0;
+        i--;
+      }
+      break; /* switch-case */
+    default:
+      /* i > 2, i.e. C exists */
+      //A = stack[i-2];
+      //B = stack[i-1];
+      //C = stack[i];
+      if (stack[i-2].size <= stack[i-1].size+stack[i].size) {
+        if (stack[i-2].size < stack[i].size) {
+          /* merge B into A */
+          mergeAB:
+          m = stack[i-1].start;
+          /* Search A for B[0] insertion */
+          PetscGallopSearchLeftInt(arr, stack[i-2].start, stack[i-1].start-1, arr[stack[i-1].start], &l);
+          if (l < m-1) {
+            /* Search B for A[-1] insertion */
+            PetscGallopSearchRightInt(arr, stack[i-1].start, stack[i-1].start+stack[i-1].size-1, arr[stack[i-1].start-1], &r);
+            if (m-l <= r-m) {
+              ierr = PetscTimSortMergeIntLo_Private(arr, l, m, r);CHKERRQ(ierr);
+            } else {
+              ierr = PetscTimSortMergeIntHi_Private(arr, l, m, r);CHKERRQ(ierr);
+            }
+          }
+          /* Update A with merge */
+          stack[i-2].size += stack[i-1].size;
+          /* Push C up the stack */
+          stack[i-1].start = stack[i].start;
+          stack[i-1].size = stack[i].size;
+        } else {
+          /* merge C into B */
+          mergeBC:
+          m = stack[i].start;
+          /* Search B for C[0] insertion */
+          PetscGallopSearchLeftInt(arr, stack[i-1].start, stack[i].start-1, arr[stack[i].start], &l);
+          if (l < m-1) {
+            /* Search C for B[-1] insertion */
+            PetscGallopSearchRightInt(arr, stack[i].start, stack[i].start+stack[i].size-1, arr[stack[i].start-1], &r);
+            if (m-l <= r-m) {
+              ierr = PetscTimSortMergeIntLo_Private(arr, l, m, r);CHKERRQ(ierr);
+            } else {
+              ierr = PetscTimSortMergeIntHi_Private(arr, l, m, r);CHKERRQ(ierr);
+            }
+          }
+          /* Update B with merge */
+          stack[i-1].size += stack[i].size;
+        }
+      } else if (stack[i-1].size <= stack[i].size) {
+        /* merge C into B */
+        goto mergeBC;
+      } else if (force) {
+        /* Force check this low since preceding logic should ensure merges will be balanced */
+        if (stack[i].size)   goto mergeBC;
+        if (stack[i-1].size) goto mergeAB;
+      } else break; /* Nothing to be done, break switch-case dont want to alter stack */
+      /* prune old C */
+      stack[i].start = 0;
+      stack[i].size = 0;
+      i--;
+      break; /* switch-case */
+    }
+    if (itemp == i) break; /* while */
+  }
+  *stacksize = i;
+  PetscFunctionReturn(0);
+}
+
 #define TIM_SORT_LOG PetscRealConstant(1.44042009041)
 PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
 {
@@ -1258,9 +1257,9 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
   if (n < 64) {
     ierr = PetscSortInt(n, arr);CHKERRQ(ierr);
   } else {
-    PetscInt  i = 0, minrun, runstart = 0, runend, stacksize = (PetscInt)(PetscLog2Real((PetscReal)n)*TIM_SORT_LOG)+1;
+    PetscInt          i = 0, minrun, runstart = 0, runend, stacksize = (PetscInt)(PetscLog2Real((PetscReal)n)*TIM_SORT_LOG)+1;
     /* stacksize  = log_phi(n)+1 = log_2(n)/log_2(phi)+1 */
-    PetscInt  runstack[stacksize][2];
+    PetscTimSortStack runstack[stacksize];
 
     /* Compute minrun. Minrun should be (32, 65) such that N/minrun
      is a power of 2 or one minus a power of 2 */
@@ -1280,15 +1279,14 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
         runend++;
       }
       PetscInsertionSortInt_Private(arr, runstart, runend);
-      /* could also be struct */
-      runstack[i][0] = runstart;
-      runstack[i][1] = runend-runstart+1;
-      ierr = PetscTimSortMergeCollapse_Private(arr, (PetscInt **) runstack, PETSC_FALSE, &i);CHKERRQ(ierr);
+      runstack[i].start = runstart;
+      runstack[i].size = runend-runstart+1;
+      ierr = PetscTimSortMergeCollapseInt_Private(arr, runstack, PETSC_FALSE, &i);CHKERRQ(ierr);
       i++;
       runstart = runend+1;
     }
-    if (i) i--; /* Have been inside while, so discard last i++ */
-    ierr = PetscTimSortMergeCollapse_Private(arr, (PetscInt **) runstack, PETSC_TRUE, &i);CHKERRQ(ierr);
+    if (PetscLikely(i)) i--; /* Have been inside while, so discard last i++ */
+    ierr = PetscTimSortMergeCollapseInt_Private(arr, runstack, PETSC_TRUE, &i);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
