@@ -1028,10 +1028,11 @@ PetscErrorCode PetscParallelSortedInt(MPI_Comm comm, PetscInt n, const PetscInt 
 PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt arr[], PetscInt left, PetscInt mid, PetscInt right)
 {
   PetscInt       i = 0, j = mid, k = left, llen = mid-left;
-  PetscInt       tarr[llen];
+  PetscInt       *tarr;
   PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
+  ierr = PetscMalloc1(llen, &tarr);CHKERRQ(ierr);
   ierr = PetscArraycpy(tarr, arr+left, llen);CHKERRQ(ierr);
   while ((i < llen) && (j <= right)) {
     if (tarr[i] < arr[j]) {
@@ -1044,16 +1045,18 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt arr[]
     k++;
   }
   if (i<llen) {ierr = PetscArraycpy(arr+k, tarr+i, llen-i);CHKERRQ(ierr);}
+  ierr = PetscFree(tarr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt arr[], PetscInt left, PetscInt mid, PetscInt right)
 {
   PetscInt       i = right-mid, j = mid-1, k = right, rlen = right-mid+1;
-  PetscInt       tarr[rlen];
+  PetscInt       *tarr;
   PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
+  ierr = PetscMalloc1(rlen, &tarr);CHKERRQ(ierr);
   ierr = PetscArraycpy(tarr, arr+mid, rlen);CHKERRQ(ierr);
   while ((i >= 0) && (j >= left)) {
     if (tarr[i] > arr[j]) {
@@ -1066,6 +1069,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt arr[]
     k--;
   }
   if (i >= 0) {ierr = PetscArraycpy(arr+left, tarr, i+1);CHKERRQ(ierr);}
+  ierr = PetscFree(tarr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1247,7 +1251,6 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
   PetscFunctionReturn(0);
 }
 
-#define TIM_SORT_LOG PetscRealConstant(1.44042009041)
 PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
 {
   PetscErrorCode  ierr;
@@ -1257,12 +1260,13 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
   if (n < 64) {
     ierr = PetscSortInt(n, arr);CHKERRQ(ierr);
   } else {
-    PetscInt          i = 0, minrun, runstart = 0, runend, stacksize = (PetscInt)(PetscLog2Real((PetscReal)n)*TIM_SORT_LOG)+1;
-    /* stacksize  = log_phi(n)+1 = log_2(n)/log_2(phi)+1 */
-    PetscTimSortStack runstack[stacksize];
+    PetscInt          stacksize = 0, minrun, runstart = 0, runend;
+    PetscTimSortStack runstack[128];
+    /* stacksize  = log_phi(n) = log_2(n)/log_2(phi), so 128 is enough for ~5.614e26 elements.
+     It is so unlikely that this limit is reached that this is __never__ checked for */
 
     /* Compute minrun. Minrun should be (32, 65) such that N/minrun
-     is a power of 2 or one minus a power of 2 */
+     is a power of 2 or one plus a power of 2 */
     {
       PetscInt t = n, r = 0; /* becomes 1 if the least significant bits contain at least one off bit */
       while (t >= 64) {
@@ -1279,14 +1283,14 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
         runend++;
       }
       PetscInsertionSortInt_Private(arr, runstart, runend);
-      runstack[i].start = runstart;
-      runstack[i].size = runend-runstart+1;
-      ierr = PetscTimSortMergeCollapseInt_Private(arr, runstack, PETSC_FALSE, &i);CHKERRQ(ierr);
-      i++;
+      runstack[stacksize].start = runstart;
+      runstack[stacksize].size = runend-runstart+1;
+      ierr = PetscTimSortMergeCollapseInt_Private(arr, runstack, PETSC_FALSE, &stacksize);CHKERRQ(ierr);
+      stacksize++;
       runstart = runend+1;
     }
-    if (PetscLikely(i)) i--; /* Have been inside while, so discard last i++ */
-    ierr = PetscTimSortMergeCollapseInt_Private(arr, runstack, PETSC_TRUE, &i);CHKERRQ(ierr);
+    if (PetscLikely(stacksize)) stacksize--; /* Have been inside while, so discard last i++ */
+    ierr = PetscTimSortMergeCollapseInt_Private(arr, runstack, PETSC_TRUE, &stacksize);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
