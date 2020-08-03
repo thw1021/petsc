@@ -49,7 +49,7 @@ int main(int argc,char **argv)
     ierr = PetscTimeAdd(&time);CHKERRQ(ierr);
 
     for (i=0; i<n-1; i++) {if (X[i] > X[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscSortInt() produced wrong results!");}
-    for (i=0; i<n; i++) {if (X[i] != X1[i]) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() X1[%D]:%D does not match PetscSortInt() X[%D]:%D!",i,X1[i],i,X[i]);}
+    for (i=0; i<n; i++) {if (X[i] != X1[i]) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() rep %D X1[%D]:%D does not match PetscSortInt() X[%D]:%D!",l,i,X1[i],i,X[i]);}
     for (i=0; i<n-1; i++) {if (X1[i] > X1[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() produced wrong results!");}
   }
   ierr = PetscPrintf(PETSC_COMM_SELF,"PetscSortInt()              with %D integers, %D duplicate(s) per unique value took %g seconds\n",n,d,time/r);CHKERRQ(ierr);
@@ -81,8 +81,7 @@ int main(int argc,char **argv)
 /*TEST
 
    test:
-      args: -n 1000 -r 1 -d 1
+      args: -n 1000 -r 10 -d 1
       # Do not need to output timing results for test
       filter: grep -v "per unique value took"
-
 TEST*/

@@ -1053,7 +1053,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt arr[]
   PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
-  ierr = PetscMalloc1(right-mid+1, &tarr);CHKERRQ(ierr);
+  ierr = PetscMalloc1(rlen, &tarr);CHKERRQ(ierr);
   ierr = PetscArraycpy(tarr, arr+mid, rlen);CHKERRQ(ierr);
   while ((i >= 0) && (j >= left)) {
     if (tarr[i] > arr[j]) {
@@ -1082,7 +1082,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchLeftInt(PetscInt arr[], Pets
     cur += (k <<= 1) + 1; ++k;
   }
   /* standard binary search but take last 0 mid 0 cur 1 into account*/
-  while (last < cur - 1) {
+  while (cur > last + 1) {
     mid = last + ((cur - last) >> 1);
     if (x > arr[mid]) {
       last = mid;
@@ -1291,7 +1291,7 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
       }
       minrun = t + r;
     }
-    while (runstart < n-1) {
+    while (runstart < n) {
       runend = PetscMin(runstart+minrun, n-1);
       /* Check if additional entries are at least partially ordered */
       while (runend < n-1) {
@@ -1305,7 +1305,8 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
       ++stacksize;
       runstart = runend+1;
     }
-    if (PetscLikely(stacksize)) --stacksize; /* Have been inside while, so discard last i++ */
+    /* Have been inside while, so discard last stacksize++ */
+    if (PetscLikely(stacksize)) --stacksize;
     ierr = PetscTimSortMergeCollapseInt_Private(arr, runstack, PETSC_TRUE, &stacksize);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
