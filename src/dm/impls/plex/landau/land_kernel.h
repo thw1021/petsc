@@ -3,7 +3,7 @@
 /* landau_inner_integral() */
 /* Compute g2 and g3 for element, assemble into eleme matrix */
 PETSC_DEVICE_FUNC_DECL void
-landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt mySubBlk, const PetscInt nSubBlks, const PetscInt ip_start, const PetscInt ip_end, const PetscInt ip_stride, /* decomposition args, not discretization */
+landau_inner_integral( const PetscInt myQi, const PetscInt qi_inc, const PetscInt mySubBlk, const PetscInt nSubBlks, const PetscInt ip_start, const PetscInt ip_end, const PetscInt ip_stride, /* decomposition args, not discretization */
                        const PetscInt jpidx, const PetscInt Nf, const PetscInt dim, const PetscReal * const IPDataGlobal, const PetscReal wiGlobal[], const PetscReal invJj[],
                        const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[], PetscBool quarter3DDomain,
                        const PetscInt Nq, const PetscInt Nb, const PetscInt qj_start, const PetscInt qj_end, const PetscReal * const BB, const PetscReal * const DD, PetscScalar *elemMat, /* discretization args; local output */
@@ -97,10 +97,12 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
       g2[myQi][mySubBlk][fieldA][d] = 0.0;
       for (d2 = 0; d2 < dim; ++d2) {
         g2[myQi][mySubBlk][fieldA][d] += invJj[d*dim+d2]*gg2[fieldA][d2];
+        //printf("\t:g2[%d][%d][%d]=%g\n",fieldA,qj_start,d,g2[myQi][mySubBlk][fieldA][d]);
         g3[myQi][mySubBlk][fieldA][d][d2] = 0.0;
 	for (d3 = 0; d3 < dim; ++d3) {
 	  for (dp = 0; dp < dim; ++dp) {
 	    g3[myQi][mySubBlk][fieldA][d][d2] += invJj[d*dim + d3]*gg3[fieldA][d3][dp]*invJj[d2*dim + dp];
+            //printf("\t\t\t: g3=%g\n",g3[myQi][mySubBlk][fieldA][d][d2]);
 	  }
 	}
         g3[myQi][mySubBlk][fieldA][d][d2] *= wj;
@@ -129,7 +131,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
     PetscInt  fieldA,d,f,qj,qj_0,d2,g,totDim=Nb*Nf;
     /* assemble - on the diagonal (I,I) */
     for (fieldA = mySubBlk; fieldA < Nf ; fieldA += nSubBlks) {
-      for (f = myQi; f < Nb ; f += nQi) {
+      for (f = myQi; f < Nb ; f += qi_inc) { /* vectorizing here, maybe */
 	const PetscInt i = fieldA*Nb + f; /* Element matrix row */
 	for (g = 0; g < Nb; ++g) {
 	  const PetscInt j    = fieldA*Nb + g; /* Element matrix column */
@@ -138,6 +140,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt nQi, const PetscInt m
 	    const PetscReal *BJq = &BB[qj*Nb], *DIq = &DD[qj*Nb*dim];
 	    for (d = 0; d < dim; ++d) {
 	      elemMat[fOff] += DIq[f*dim+d]*g2[qj_0][0][fieldA][d]*BJq[g];
+              //printf("\t\t: mat[%d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n",fOff,elemMat[fOff],f*dim+d,DIq[f*dim+d],fieldA,qj,d,g2[qj_0][0][fieldA][d],BJq[g]);
 	      for (d2 = 0; d2 < dim; ++d2) {
 		elemMat[fOff] += DIq[f*dim + d]*g3[qj_0][0][fieldA][d][d2]*DIq[g*dim + d2];
 	      }
