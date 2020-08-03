@@ -2,7 +2,7 @@
 
 CFLAGS	        =
 FFLAGS	        =
-CPPFLAGS        = 
+CPPFLAGS        =
 FPPFLAGS        =
 LOCDIR          = src/dm/impls/plex/landau/kokkos/tutorials/
 EXAMPLESCXX     = ex1.kok.cxx ex2.kok.cxx
