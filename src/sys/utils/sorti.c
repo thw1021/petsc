@@ -1025,6 +1025,9 @@ PetscErrorCode PetscParallelSortedInt(MPI_Comm comm, PetscInt n, const PetscInt 
   PetscFunctionReturn(0);
 }
 
+/* Mergesort where size of left half <= size of right half, so mergesort is done left to right. Arr should be pointer to
+ complete array, left is first index of left array, mid is first index of right array, right is last index of right
+ array */
 PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt arr[], PetscInt left, PetscInt mid, PetscInt right)
 {
   PetscInt       i = 0, j = mid, k = left, llen = mid-left;
@@ -1046,6 +1049,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt arr[]
   PetscFunctionReturn(0);
 }
 
+/* Mergesort where size of right half < size of left half, so mergesort is done right to left. Arr should be pointer to
+ complete array, left is first index of left array, mid is first index of right array, right is last index of right
+ array */
 PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt arr[], PetscInt left, PetscInt mid, PetscInt right)
 {
   PetscInt       i = right-mid, j = mid-1, k = right, rlen = right-mid+1;
@@ -1121,6 +1127,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchRightInt(PetscInt arr[], Pet
   PetscFunctionReturn(0);
 }
 
+/* left and right are inclusive */
 PETSC_STATIC_INLINE PetscErrorCode PetscInsertionSortInt_Private(PetscInt arr[], PetscInt left, PetscInt right)
 {
   PetscInt i, t, j;
@@ -1252,13 +1259,17 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
 .  X  - sorted array of integers
 
    Note:
-   Timsort makes the assumption that input data is already partially ordered, or contains adjacent contiguous sections
+   Timsort makes the assumption that input data is already likely partially ordered, or that it contains contiguous sections
    (termed 'runs') where the data is nondecreasing (but not necessarily globally ordered). Given this assumption, it
    repeatedly triggers attempts throughout to merge adjacent runs by searching for insertion points and subsequently
    bulk-copying the ordered runs into place if these points are found.
 
    However if the data is truly unordered (as is the case with random data) the possible gains from these searches are
-   expected __not__ to repay their costs and so this algorithm suffers potentially significant performance losses.
+   expected __not__ to repay their costs. But given that mergesort builds exactly such ordered
+ subsections as it moves through the array, the performance losses previously suffered during the search phases are
+ minimized.
+
+   For arrays of size < 64, PetscSortInt() is used instead, so it is advised that the user call this routine directly.
 
    A detailed description of the algorithm may be found here: https://bugs.python.org/file4451/timsort.txt
 
@@ -1291,6 +1302,9 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
       }
       minrun = t + r;
     }
+#if defined(PETSC_USE_DEBUG)
+    if (minrun < 32 || minrun > 65) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %D not in range (32,65)",minrun);
+#endif
     while (runstart < n) {
       runend = PetscMin(runstart+minrun, n-1);
       /* Check if additional entries are at least partially ordered */
