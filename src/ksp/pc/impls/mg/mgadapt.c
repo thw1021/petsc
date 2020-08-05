@@ -95,7 +95,7 @@ static PetscErrorCode PCMGCreateCoarseSpaceDefault_Private(PC pc, PetscInt level
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PCMGCreateCoarseSpacePolynomial(PC pc, PetscInt level, DM dm, KSP ksp, PetscInt Nc, const Vec initialGuess[], Vec **coarseSpace)
+static PetscErrorCode PCMGCreateCoarseSpace_Polynomial(PC pc, PetscInt level, DM dm, KSP ksp, PetscInt Nc, const Vec initialGuess[], Vec **coarseSpace)
 {
   PetscErrorCode ierr;
 
@@ -104,7 +104,7 @@ PetscErrorCode PCMGCreateCoarseSpacePolynomial(PC pc, PetscInt level, DM dm, KSP
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PCMGCreateCoarseSpaceHarmonic(PC pc, PetscInt level, DM dm, KSP ksp, PetscInt Nc, const Vec initialGuess[], Vec **coarseSpace)
+PetscErrorCode PCMGCreateCoarseSpace_Harmonic(PC pc, PetscInt level, DM dm, KSP ksp, PetscInt Nc, const Vec initialGuess[], Vec **coarseSpace)
 {
   PetscErrorCode ierr;
 
@@ -140,8 +140,8 @@ PetscErrorCode PCMGComputeCoarseSpace_Internal(PC pc, PetscInt l, PCMGCoarseSpac
 
   PetscFunctionBegin;
   switch (cstype) {
-  case PCMG_POLYNOMIAL: coarseConstructor = &PCMGCreateCoarseSpacePolynomial;break;
-  case PCMG_HARMONIC:   coarseConstructor = &PCMGCreateCoarseSpaceHarmonic;break;
+  case PCMG_POLYNOMIAL: coarseConstructor = &PCMGCreateCoarseSpace_Polynomial;break;
+  case PCMG_HARMONIC:   coarseConstructor = &PCMGCreateCoarseSpace_Harmonic;break;
   case PCMG_EIGENVECTOR:
     if (l > 0) {ierr = PCMGGetCoarseSpaceConstructor("BAMG_MEV", &coarseConstructor);CHKERRQ(ierr);}
     else       {ierr = PCMGGetCoarseSpaceConstructor("BAMG_EV", &coarseConstructor);CHKERRQ(ierr);}
