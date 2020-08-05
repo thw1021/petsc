@@ -207,7 +207,7 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
 
         ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
         ierr = PetscLogFlops(flops);CHKERRQ(ierr);
-        landau_inner_integral(zero, one, zero, one, zero, nip, 1, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tf[0]->T[0], Tf[0]->T[1], elemMat, g2, g3);
+        landau_inner_integral(zero, one, zero, one, zero, nip, 1, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tf[0]->T[0], Tf[0]->T[1], elemMat, g2, g3, ej==1);
         ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
       } /* qj loop */
       /* assemble matrix */
@@ -215,16 +215,16 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
       ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
       ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
 
-      if (ej==-1) {
+      if (ej==1) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr);
         for (d = 0; d < totDim; ++d){
           for (f = 0; f < totDim; ++f) printf(" %17.10e",  PetscRealPart(elemMat[d*totDim + f]));
           ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
         }
-        //exit(13);
       }
     } /* ej cells loop, not cuda */
   }
+PetscSleep(2); exit(13);
 #if defined(HAVE_VTUNE) && defined(__INTEL_COMPILER)
   __itt_pause(); // stop VTune
   __SSC_MARK(0x222); // stop SDE tracing
@@ -887,16 +887,18 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
   }
 #endif
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
-#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_VIENNACL)
-  ctx->deviceType = LAND_CUDA;
-#elif defined(PETSC_HAVE_KOKKOS)
-  ctx->deviceType = LAND_KOKKOS;
-#else
-  ctx->deviceType = LAND_CPU;
-#endif
   {
     char opstring[256];
+#if defined(PETSC_HAVE_KOKKOS)
+    ctx->deviceType = LAND_KOKKOS;
+    ierr = PetscStrcpy(opstring,"kokkos");CHKERRQ(ierr);
+#elif defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_VIENNACL)
+    ctx->deviceType = LAND_CUDA;
     ierr = PetscStrcpy(opstring,"cuda");CHKERRQ(ierr);
+#else
+    ctx->deviceType = LAND_CPU;
+    ierr = PetscStrcpy(opstring,"cpu");CHKERRQ(ierr);
+#endif
     ierr = PetscOptionsString("-dm_land_device_type","Use kernels on 'cpu', 'cuda', or 'kokkos'","plexland.c",opstring,opstring,256,NULL);CHKERRQ(ierr);
     ierr = PetscStrcmp("cpu",opstring,&flg);CHKERRQ(ierr);
     if (flg) ctx->deviceType = LAND_CPU;

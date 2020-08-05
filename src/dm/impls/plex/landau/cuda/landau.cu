@@ -73,9 +73,9 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   }
   __syncthreads();
   if (1) {
-    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, 1,        jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3); /* compact */
+    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, 1,        jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3, PETSC_FALSE); /* compact */
   } else {
-    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, mySubBlk,    nip, nSubBlks, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3); /* spread */
+    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, mySubBlk,    nip, nSubBlks, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3, PETSC_FALSE); /* spread */
   }
 }
 
