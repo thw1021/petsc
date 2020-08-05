@@ -1096,7 +1096,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt *tarr
   PetscInt       i = right-mid, j = mid-1, k = right, rlen = right-mid+1, gallopleft = 0, gallopright = 0;
   PetscErrorCode ierr;
 
-  PetscFunctionBeginHot;
+  PetscFunctionBegin;
   ierr = PetscArraycpy(tarr, arr+mid, rlen);CHKERRQ(ierr);
   while ((i >= 0) && (j >= left)) {
     if (tarr[i] > arr[j]) {
@@ -1206,7 +1206,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscInsertionSortInt_Private(PetscInt arr[],
 {
   PetscInt i, t, j;
 
-  PetscFunctionBeginHot;
+  PetscFunctionBegin;
   for (i = left+1; i <= right; ++i) {
     t = arr[i]; j = i-1;
     while ((j >= left) && (t < arr[j])) {
@@ -1232,7 +1232,7 @@ typedef struct {
 PETSC_STATIC_INLINE PetscErrorCode PetscTimSortResizeBuffer_Private(PetscTimSortBuffer *buff, PetscInt newSize)
 {
   PetscFunctionBegin;
-  if (newSize <= buff->size) PetscFunctionReturn(0);
+  if (PetscUnlikely(newSize <= buff->size)) PetscFunctionReturn(0);
   {
     /* Can't be larger than n, there is merit to simply allocating buff to n to begin with */
     PetscErrorCode ierr, newMax = PetscMin(newSize*newSize, buff->maxsize);
@@ -1249,8 +1249,9 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(stack,2);
-  PetscValidIntPointer(stacksize,4);
+  PetscValidPointer(buff,2);
+  PetscValidPointer(stack,3);
+  PetscValidIntPointer(stacksize,5);
   i = *stacksize;
   while (i) {
     PetscInt l, m, r, itemp;
