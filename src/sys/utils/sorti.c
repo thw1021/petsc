@@ -1034,14 +1034,12 @@ static PetscInt MIN_GALLOP_GLOBAL = 7;
 /* Mergesort where size of left half <= size of right half, so mergesort is done left to right. Arr should be pointer to
  complete array, left is first index of left array, mid is first index of right array, right is last index of right
  array */
-PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt arr[], PetscInt left, PetscInt mid, PetscInt right)
+PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt *tarr, PetscInt arr[], PetscInt left, PetscInt mid, PetscInt right)
 {
   PetscInt       i = 0, j = mid, k = left, llen = mid-left, gallopleft = 0, gallopright = 0;
-  PetscInt       *tarr;
   PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
-  ierr = PetscMalloc1(llen, &tarr);CHKERRQ(ierr);
   ierr = PetscArraycpy(tarr, arr+left, llen);CHKERRQ(ierr);
   while ((i < llen) && (j <= right)) {
     if (tarr[i] < arr[j]) {
@@ -1087,21 +1085,18 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt arr[]
     }
   }
   if (i<llen) {ierr = PetscArraycpy(arr+k, tarr+i, llen-i);CHKERRQ(ierr);}
-  ierr = PetscFree(tarr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /* Mergesort where size of right half < size of left half, so mergesort is done right to left. Arr should be pointer to
  complete array, left is first index of left array, mid is first index of right array, right is last index of right
  array */
-PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt arr[], PetscInt left, PetscInt mid, PetscInt right)
+PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt *tarr, PetscInt arr[], PetscInt left, PetscInt mid, PetscInt right)
 {
   PetscInt       i = right-mid, j = mid-1, k = right, rlen = right-mid+1, gallopleft = 0, gallopright = 0;
-  PetscInt       *tarr;
   PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
-  ierr = PetscMalloc1(rlen, &tarr);CHKERRQ(ierr);
   ierr = PetscArraycpy(tarr, arr+mid, rlen);CHKERRQ(ierr);
   while ((i >= 0) && (j >= left)) {
     if (tarr[i] > arr[j]) {
@@ -1147,7 +1142,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt arr[]
     }
   }
   if (i >= 0) {ierr = PetscArraycpy(arr+left, tarr, i+1);CHKERRQ(ierr);}
-  ierr = PetscFree(tarr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1229,17 +1223,37 @@ typedef struct {
   PetscInt size;
 } PetscTimSortStack;
 
-PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSortStack *stack, PetscBool force, PetscInt *stacksize)
+typedef struct {
+  PetscInt maxsize;
+  PetscInt size;
+  PetscInt *ptr;
+} PetscTimSortBuffer;
+
+PETSC_STATIC_INLINE PetscErrorCode PetscTimSortResizeBuffer_Private(PetscTimSortBuffer *buff, PetscInt newSize)
 {
-  PetscInt i;
+  PetscFunctionBegin;
+  if (newSize <= buff->size) PetscFunctionReturn(0);
+  {
+    /* Can't be larger than n, there is merit to simply allocating buff to n to begin with */
+    PetscErrorCode ierr, newMax = PetscMin(newSize*newSize, buff->maxsize);
+    ierr = PetscFree(buff->ptr);CHKERRQ(ierr);
+    ierr = PetscMalloc1(newMax, &buff->ptr);CHKERRQ(ierr);
+    buff->size = newMax;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSortBuffer *buff, PetscTimSortStack *stack, PetscBool force, PetscInt *stacksize)
+{
+  PetscInt       i;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(stack,2);
   PetscValidIntPointer(stacksize,4);
   i = *stacksize;
   while (i) {
-    PetscInt       l, m, r, itemp;
-    PetscErrorCode ierr;
+    PetscInt l, m, r, itemp;
 
     itemp = i;
     switch (i) {
@@ -1254,9 +1268,11 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
           /* Search B for A[-1] insertion */
           PetscGallopSearchRightInt(arr, stack[i].start, stack[i].start+stack[i].size-1, arr[stack[i].start-1], &r);
           if (m-l <= r-m) {
-            ierr = PetscTimSortMergeIntLo_Private(arr, l, m, r);CHKERRQ(ierr);
+            ierr = PetscTimSortResizeBuffer_Private(buff, m-l+1);CHKERRQ(ierr);
+            ierr = PetscTimSortMergeIntLo_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
           } else {
-            ierr = PetscTimSortMergeIntHi_Private(arr, l, m, r);CHKERRQ(ierr);
+            ierr = PetscTimSortResizeBuffer_Private(buff, r-m+1);CHKERRQ(ierr);
+            ierr = PetscTimSortMergeIntHi_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
           }
         }
         /* Update A with merge */
@@ -1277,9 +1293,11 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
             /* Search B for A[-1] insertion */
             PetscGallopSearchRightInt(arr, stack[i-1].start, stack[i-1].start+stack[i-1].size-1, arr[stack[i-1].start-1], &r);
             if (m-l <= r-m) {
-              ierr = PetscTimSortMergeIntLo_Private(arr, l, m, r);CHKERRQ(ierr);
+              ierr = PetscTimSortResizeBuffer_Private(buff, m-l+1);CHKERRQ(ierr);
+              ierr = PetscTimSortMergeIntLo_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
             } else {
-              ierr = PetscTimSortMergeIntHi_Private(arr, l, m, r);CHKERRQ(ierr);
+              ierr = PetscTimSortResizeBuffer_Private(buff, r-m+1);CHKERRQ(ierr);
+              ierr = PetscTimSortMergeIntHi_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
             }
           }
           /* Update A with merge */
@@ -1297,9 +1315,11 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
             /* Search C for B[-1] insertion */
             PetscGallopSearchRightInt(arr, stack[i].start, stack[i].start+stack[i].size-1, arr[stack[i].start-1], &r);
             if (m-l <= r-m) {
-              ierr = PetscTimSortMergeIntLo_Private(arr, l, m, r);CHKERRQ(ierr);
+              ierr = PetscTimSortResizeBuffer_Private(buff, m-l+1);CHKERRQ(ierr);
+              ierr = PetscTimSortMergeIntLo_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
             } else {
-              ierr = PetscTimSortMergeIntHi_Private(arr, l, m, r);CHKERRQ(ierr);
+              ierr = PetscTimSortResizeBuffer_Private(buff, r-m+1);CHKERRQ(ierr);
+              ierr = PetscTimSortMergeIntHi_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
             }
           }
           /* Update B with merge */
@@ -1362,8 +1382,9 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
   if (n < 64) {
     ierr = PetscSortInt(n, arr);CHKERRQ(ierr);
   } else {
-    PetscInt          stacksize = 0, minrun, runstart = 0, runend;
-    PetscTimSortStack runstack[128];
+    PetscInt           stacksize = 0, minrun, runstart = 0, runend;
+    PetscTimSortStack  runstack[128];
+    PetscTimSortBuffer buff;
     /* stacksize  = log_phi(n) = log_2(n)/log_2(phi), so 128 is enough for ~5.614e26 elements.
      It is so unlikely that this limit is reached that this is __never__ checked for */
 
@@ -1380,6 +1401,9 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
 #if defined(PETSC_USE_DEBUG)
     if (minrun < 32 || minrun > 65) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %D not in range (32,65)",minrun);
 #endif
+    ierr = PetscMalloc1(minrun, &buff.ptr);CHKERRQ(ierr);
+    buff.size = minrun;
+    buff.maxsize = n;
     while (runstart < n) {
       runend = PetscMin(runstart+minrun, n-1);
       /* Check if additional entries are at least partially ordered */
@@ -1390,14 +1414,15 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
       PetscInsertionSortInt_Private(arr, runstart, runend);
       runstack[stacksize].start = runstart;
       runstack[stacksize].size = runend-runstart+1;
-      ierr = PetscTimSortMergeCollapseInt_Private(arr, runstack, PETSC_FALSE, &stacksize);CHKERRQ(ierr);
+      ierr = PetscTimSortMergeCollapseInt_Private(arr, &buff, runstack, PETSC_FALSE, &stacksize);CHKERRQ(ierr);
       ++stacksize;
       runstart = runend+1;
     }
     /* Have been inside while, so discard last stacksize++ */
     --stacksize;
-    ierr = PetscTimSortMergeCollapseInt_Private(arr, runstack, PETSC_TRUE, &stacksize);CHKERRQ(ierr);
+    ierr = PetscTimSortMergeCollapseInt_Private(arr, &buff, runstack, PETSC_TRUE, &stacksize);CHKERRQ(ierr);
     MIN_GALLOP_GLOBAL = 7;
+    ierr = PetscFree(buff.ptr);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
