@@ -5,6 +5,7 @@
  */
 #include <petsc/private/petscimpl.h>                /*I  "petscsys.h"  I*/
 #include <petsc/private/hashseti.h>
+static PetscInt qsortctr = 0, tsortctr = 0;
 
 #define MEDIAN3(v,a,b,c)                                                        \
   (v[a]<v[b]                                                                    \
@@ -125,17 +126,21 @@
   do {                                                                           \
     PetscInt i,j,p,l,r,hi=n-1;                                                   \
     if (n < 8) {                                                                 \
+      ++qsortctr;                                                                \
       for (i=0; i<n; i++) {                                                      \
         pivot = X[i];                                                            \
         for (j=i+1; j<n; j++) {                                                  \
           if (pivot > X[j]) {                                                    \
             SWAP1(X[i],X[j],t1);                                                 \
+            qsortctr += 3;                                                       \
             pivot = X[i];                                                        \
           }                                                                      \
+          ++qsortctr;                                                            \
         }                                                                        \
       }                                                                          \
     } else {                                                                     \
       p     = MEDIAN(X,hi);                                                      \
+      qsortctr += 4;                                                             \
       pivot = X[p];                                                              \
       TwoWayPartition1(X,pivot,t1,0,hi,l,r);                                     \
       ierr  = FuncName(l,X);CHKERRQ(ierr);                                       \
@@ -256,6 +261,19 @@ PetscErrorCode  PetscSortInt(PetscInt n,PetscInt X[])
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode qsortresetctr(void)
+{
+  PetscFunctionBegin;
+  qsortctr = 0;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode qsortgetctr(PetscInt *ctr)
+{
+  PetscFunctionBegin;
+  *ctr = qsortctr;
+  PetscFunctionReturn(0);
+}
 /*@
    PetscSortReverseInt - Sorts an array of integers in place in decreasing order.
 
@@ -1042,12 +1060,15 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt *tarr
   PetscFunctionBeginHot;
   ierr = PetscArraycpy(tarr, arr+left, llen);CHKERRQ(ierr);
   while ((i < llen) && (j <= right)) {
+    ++tsortctr;
     if (tarr[i] < arr[j]) {
+      ++tsortctr;
       arr[k++] = tarr[i++];
       gallopright = 0;
       if (++gallopleft >= MIN_GALLOP_GLOBAL) {
         PetscInt l1, l2;
         do {
+          ++tsortctr;
           /* search temp for right[j], can move up to that of temp into arr immediately */
           PetscGallopSearchLeftInt(tarr, i, llen-1, arr[j], &l1);
           ierr = PetscArraycpy(arr+k, tarr+i, l1-i);CHKERRQ(ierr);
@@ -1063,11 +1084,13 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt *tarr
         ++MIN_GALLOP_GLOBAL;
       }
     } else {
+      ++tsortctr;
       arr[k++] = arr[j++];
       gallopleft = 0;
       if (++gallopright >= MIN_GALLOP_GLOBAL) {
         PetscInt l1, l2;
         do {
+          ++tsortctr;
           /* search right for temp[i], can move up to that many of right into arr */
           PetscGallopSearchLeftInt(arr, j, right, tarr[i], &l2);
           ierr = PetscArraymove(arr+k, arr+j, l2-j);CHKERRQ(ierr);
@@ -1084,7 +1107,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt *tarr
       }
     }
   }
-  if (i<llen) {ierr = PetscArraycpy(arr+k, tarr+i, llen-i);CHKERRQ(ierr);}
+  if (i<llen) {++tsortctr; ierr = PetscArraycpy(arr+k, tarr+i, llen-i);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -1099,12 +1122,15 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt *tarr
   PetscFunctionBegin;
   ierr = PetscArraycpy(tarr, arr+mid, rlen);CHKERRQ(ierr);
   while ((i >= 0) && (j >= left)) {
+    ++tsortctr;
     if (tarr[i] > arr[j]) {
+      ++tsortctr;
       arr[k--] = tarr[i--];
       gallopleft = 0;
       if (++gallopright >= MIN_GALLOP_GLOBAL) {
         PetscInt l1, l2;
         do {
+          ++tsortctr;
           /* search temp for left[j], can copy up to that many of temp into arr */
           PetscGallopSearchRightInt(tarr, 0, i, arr[j], &l1);CHKERRQ(ierr);
           ierr = PetscArraycpy(arr+k-(i-l1)+1, tarr+l1+1, i-l1);CHKERRQ(ierr);
@@ -1120,11 +1146,13 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt *tarr
         ++MIN_GALLOP_GLOBAL;
       }
     } else {
+      ++tsortctr;
       arr[k--] = arr[j--];
       gallopright = 0;
       if (++gallopleft >= MIN_GALLOP_GLOBAL) {
         PetscInt l1, l2;
         do {
+          ++tsortctr;
           /* search left for temp[i], can move up to that many of left up arr */
           PetscGallopSearchRightInt(arr, left, j, tarr[i], &l2);
           ierr = PetscArraymove(arr+k-(j-l2)+1, arr+j-(j-l2)+1, j-l2);CHKERRQ(ierr);
@@ -1141,7 +1169,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt *tarr
       }
     }
   }
-  if (i >= 0) {ierr = PetscArraycpy(arr+left, tarr, i+1);CHKERRQ(ierr);}
+  if (i >= 0) {++tsortctr; ierr = PetscArraycpy(arr+left, tarr, i+1);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -1152,16 +1180,18 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchLeftInt(PetscInt arr[], Pets
   PetscInt       last = l, k = 1, mid, cur = l+1;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(r-l <= 1)) {*m = l;PetscFunctionReturn(0);}
-  if (x < arr[l]) {*m = l;PetscFunctionReturn(0);}
+  if (PetscUnlikely(r-l <= 1)) {++tsortctr; *m = l;PetscFunctionReturn(0);}
+  if (x < arr[l]) {++tsortctr; *m = l;PetscFunctionReturn(0);}
   while (1) {
-    if (cur > r) {cur = r; break;}
-    if (x < arr[cur]) break;
+    ++tsortctr;
+    if (cur > r) {++tsortctr; cur = r; break;}
+    if (x < arr[cur]) {++tsortctr; break;}
     last = cur;
     cur += (k <<= 1) + 1; ++k;
   }
   /* standard binary search but take last 0 mid 0 cur 1 into account*/
   while (cur > last + 1) {
+    ++tsortctr;
     mid = last + ((cur - last) >> 1);
     if (x < arr[mid]) {
       cur = mid;
@@ -1180,16 +1210,18 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchRightInt(PetscInt arr[], Pet
   PetscInt       last = r, k = 1, mid, cur = r-1;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(r-l <= 1)) {*m = r;PetscFunctionReturn(0);}
-  if (x > arr[r]) {*m = r;PetscFunctionReturn(0);}
+  if (PetscUnlikely(r-l <= 1)) {++tsortctr; *m = r;PetscFunctionReturn(0);}
+  if (x > arr[r]) {++tsortctr; *m = r;PetscFunctionReturn(0);}
   while (1) {
-    if (cur < l) {cur = l; break;}
-    if (x > arr[cur]) break;
+    ++tsortctr;
+    if (cur < l) {++tsortctr; cur = l; break;}
+    if (x > arr[cur]) {++tsortctr; break;}
     last = cur;
     cur -= (k <<= 1) + 1; ++k;
   }
   /* standard binary search but take last r-1 mid r-1 cur r-2 into account*/
   while (last > cur + 1) {
+    ++tsortctr;
     mid = last - ((last - cur) >> 1);
     if (x > arr[mid]) {
       cur = mid;
@@ -1212,8 +1244,30 @@ PETSC_STATIC_INLINE PetscErrorCode PetscInsertionSortInt_Private(PetscInt arr[],
     while ((j >= left) && (t < arr[j])) {
       arr[j+1] = arr[j];
       --j;
+      ++tsortctr;
     }
     arr[j+1] = t;
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscBinaryInsertionSortInt_Private(PetscInt arr[], PetscInt n)
+{
+  PetscInt i, loc, j, k, t;
+  PetscFunctionBegin;
+  for (i = 1; i < n; ++i)
+  {
+    j = i - 1;
+    t = a[i];
+    PetscGallopSearchLeftInt(arr, 0, j, t, &loc);
+    //loc = binarySearch(a, selected, 0, j);
+    // Move all elements after location to create space
+    while (j >= loc)
+    {
+      a[j+1] = a[j];
+      --j;
+    }
+    a[j+1] = selected;
   }
   PetscFunctionReturn(0);
 }
@@ -1259,19 +1313,24 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
     itemp = i;
     switch (i) {
     case 1:
+      ++tsortctr;
       /* A = stack[i-1], B = stack[i] */
       if ((stack[i-1].size < stack[i].size) || force) {
+        ++tsortctr;
         m = stack[i].start;
         /* Search A for B[0] insertion */
         PetscGallopSearchLeftInt(arr, stack[i-1].start, stack[i].start-1, arr[stack[i].start], &l);
         /* l == m-1 means sorted */
         if (l < m-1) {
+          ++tsortctr;
           /* Search B for A[-1] insertion */
           PetscGallopSearchRightInt(arr, stack[i].start, stack[i].start+stack[i].size-1, arr[stack[i].start-1], &r);
           if (m-l <= r-m) {
+            ++tsortctr;
             ierr = PetscTimSortResizeBuffer_Private(buff, m-l+1);CHKERRQ(ierr);
             ierr = PetscTimSortMergeIntLo_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
           } else {
+            ++tsortctr;
             ierr = PetscTimSortResizeBuffer_Private(buff, r-m+1);CHKERRQ(ierr);
             ierr = PetscTimSortMergeIntHi_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
           }
@@ -1286,17 +1345,21 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
        A = stack[i-2], B = stack[i-1], C = stack[i]; */
       if (stack[i-2].size <= stack[i-1].size+stack[i].size) {
         if (stack[i-2].size < stack[i].size) {
+          ++tsortctr;
           /* merge B into A */
           m = stack[i-1].start;
           /* Search A for B[0] insertion */
           PetscGallopSearchLeftInt(arr, stack[i-2].start, stack[i-1].start-1, arr[stack[i-1].start], &l);
           if (l < m-1) {
+            ++tsortctr;
             /* Search B for A[-1] insertion */
             PetscGallopSearchRightInt(arr, stack[i-1].start, stack[i-1].start+stack[i-1].size-1, arr[stack[i-1].start-1], &r);
             if (m-l <= r-m) {
+              ++tsortctr;
               ierr = PetscTimSortResizeBuffer_Private(buff, m-l+1);CHKERRQ(ierr);
               ierr = PetscTimSortMergeIntLo_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
             } else {
+              ++tsortctr;
               ierr = PetscTimSortResizeBuffer_Private(buff, r-m+1);CHKERRQ(ierr);
               ierr = PetscTimSortMergeIntHi_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
             }
@@ -1313,12 +1376,15 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
           /* Search B for C[0] insertion */
           PetscGallopSearchLeftInt(arr, stack[i-1].start, stack[i].start-1, arr[stack[i].start], &l);
           if (l < m-1) {
+            ++tsortctr;
             /* Search C for B[-1] insertion */
             PetscGallopSearchRightInt(arr, stack[i].start, stack[i].start+stack[i].size-1, arr[stack[i].start-1], &r);
             if (m-l <= r-m) {
+              ++tsortctr;
               ierr = PetscTimSortResizeBuffer_Private(buff, m-l+1);CHKERRQ(ierr);
               ierr = PetscTimSortMergeIntLo_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
             } else {
+              ++tsortctr;
               ierr = PetscTimSortResizeBuffer_Private(buff, r-m+1);CHKERRQ(ierr);
               ierr = PetscTimSortMergeIntHi_Private(buff->ptr, arr, l, m, r);CHKERRQ(ierr);
             }
@@ -1327,6 +1393,7 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
           stack[i-1].size += stack[i].size;
         }
       } else if ((stack[i-1].size <= stack[i].size) || force) {
+        ++tsortctr;
         /* Force check this low since preceding logic should ensure merges will be balanced */
         /* merge C into B */
         goto mergeBC;
@@ -1336,7 +1403,7 @@ PetscErrorCode PetscTimSortMergeCollapseInt_Private(PetscInt arr[], PetscTimSort
     }
     /* Hold out hope that this is only a rough patch */
     MIN_GALLOP_GLOBAL = PetscMin(MIN_GALLOP_GLOBAL, 12);
-    if (itemp == i) break; /* while */
+    if (itemp == i) {++tsortctr; break;} /* while */
   }
   *stacksize = i;
   PetscFunctionReturn(0);
@@ -1389,6 +1456,7 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
     /* stacksize  = log_phi(n) = log_2(n)/log_2(phi), so 128 is enough for ~5.614e26 elements.
      It is so unlikely that this limit is reached that this is __never__ checked for */
 
+    tsortctr = 0;
     /* Compute minrun. Minrun should be (32, 65) such that N/minrun
      is a power of 2 or one plus a power of 2 */
     {
@@ -1396,6 +1464,7 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
       while (t >= 64) {
         r |= t & 1;
         t >>= 1;
+        tsortctr += 2;
       }
       minrun = t + r;
     }
@@ -1406,11 +1475,13 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
     buff.size = minrun;
     buff.maxsize = n;
     while (runstart < n) {
+      ++tsortctr;
       runend = PetscMin(runstart+minrun, n-1);
       /* Check if additional entries are at least partially ordered */
       while (runend < n-1) {
         if (arr[runend] > arr[runend+1]) break;
         ++runend;
+        ++tsortctr;
       }
       PetscInsertionSortInt_Private(arr, runstart, runend);
       runstack[stacksize].start = runstart;
@@ -1425,5 +1496,12 @@ PetscErrorCode PetscTimSortInt(PetscInt n, PetscInt arr[])
     MIN_GALLOP_GLOBAL = 7;
     ierr = PetscFree(buff.ptr);CHKERRQ(ierr);
   }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode tsortgetctr(PetscInt *ctr)
+{
+  PetscFunctionBegin;
+  *ctr = tsortctr;
   PetscFunctionReturn(0);
 }
