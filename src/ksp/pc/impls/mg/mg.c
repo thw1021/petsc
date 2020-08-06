@@ -1235,7 +1235,7 @@ PetscErrorCode PCMGGetAdaptInterpolation(PC pc, PetscBool *adapt)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidPointer(adapt, 2);
-  ierr = PetscTryMethod(pc,"PCMGGetAdaptInterpolation_C",(PC,PetscBool*),(pc,adapt));CHKERRQ(ierr);
+  ierr = PetscUseMethod(pc,"PCMGGetAdaptInterpolation_C",(PC,PetscBool*),(pc,adapt));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
