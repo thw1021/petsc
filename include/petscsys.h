@@ -2397,6 +2397,9 @@ PETSC_EXTERN PetscErrorCode PetscSortedInt(PetscInt,const PetscInt[],PetscBool*)
 PETSC_EXTERN PetscErrorCode PetscSortedMPIInt(PetscInt,const PetscMPIInt[],PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscSortedReal(PetscInt,const PetscReal[],PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscSortInt(PetscInt,PetscInt[]);
+PETSC_EXTERN PetscErrorCode qsortresetctr(void);
+PETSC_EXTERN PetscErrorCode qsortgetctr(PetscInt*);
+PETSC_EXTERN PetscErrorCode tsortgetctr(PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscTimSortInt(PetscInt,PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortReverseInt(PetscInt,PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortedRemoveDupsInt(PetscInt*,PetscInt[]);
