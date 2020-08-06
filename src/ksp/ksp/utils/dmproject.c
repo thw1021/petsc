@@ -321,8 +321,8 @@ PetscErrorCode DMAdaptInterpolator(DM dmc, DM dmf, Mat In, KSP smoother, PetscIn
     allocVc = PETSC_TRUE;
     ierr = PetscMalloc1(Nc, &vc);CHKERRQ(ierr);
     for (k = 0; k < Nc; ++k) {
-      ierr = MatMultTranspose(In, vf[k], vc[k]);CHKERRQ(ierr);
       ierr = DMGetGlobalVector(dmc, &vc[k]);CHKERRQ(ierr);
+      ierr = MatMultTranspose(In, vf[k], vc[k]);CHKERRQ(ierr);
     }
   }
   /* Solve a LS system for each fine row */
