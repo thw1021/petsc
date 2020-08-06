@@ -824,22 +824,20 @@ osx-xsdk-opt:
 analyze-pipeline:
   extends: .test
   stage: .post
-  image: jedbrown/mpich-ccache
   tags:
-    - docker
+    - check-ci-settings
   dependencies:
   variables:
-    PYTHON: python3
     # Need a dummy TEST_ARCH that comes from artifacts
     TEST_ARCH: arch-ci-linux-pkgs-gcov
   allow_failure: true
   before_script:
     - date
+    - hostname
   script:
-  - python3 ./configure --with-mpi=0 --with-fc=0 --with-cxx=0 --download-sowing --download-c2html
+  - ./configure --with-mpi=0 --with-fc=0 --with-cxx=0 --download-sowing --download-c2html
   - make alldoc
-#  - make mergegcov LOC=$PWD
-  - ${PYTHON} lib/petsc/bin/maint/gcov.py --merge_gcov --loc=${PWD} --petsc_arch ${TEST_ARCH}
+  - ./lib/petsc/bin/maint/gcov.py --merge_gcov --loc=${PWD} --petsc_arch ${TEST_ARCH}
   - ls
   - ls arch*/*
   artifacts:
