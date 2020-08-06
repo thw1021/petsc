@@ -825,7 +825,7 @@ analyze-pipeline:
   extends: .test
   stage: .post
   tags:
-    - check-ci-settings
+    - gce-nfs
   dependencies:
   variables:
     # Need a dummy TEST_ARCH that comes from artifacts
@@ -836,6 +836,7 @@ analyze-pipeline:
     - hostname
   script:
   - ./configure --with-mpi=0 --with-fc=0 --with-cxx=0 --download-sowing --download-c2html
+  - make alldoc LOC=${PWD} DOCSETDATE_PRUNE_LIST="" GONULL=""
   - ./lib/petsc/bin/maint/gcov.py --merge_gcov --loc=${PWD} --petsc_arch ${TEST_ARCH}
   artifacts:
     name: "$CI_JOB_NAME"
