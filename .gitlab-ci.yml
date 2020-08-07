@@ -832,14 +832,14 @@ analyze-pipeline:
     - hostname
   script:
   - ./configure --with-mpi=0 --with-fc=0 --with-cxx=0 --download-c2html
-  - make srchtml LOC=${PWD}
+  - make srchtml
   - ./lib/petsc/bin/maint/gcov.py --merge_gcov --petsc_arch ${TEST_ARCH}
   artifacts:
     name: "$CI_JOB_NAME"
     when: always
     paths:
     - index_gcov.html
-    - arch-*-gcov/*
+    - ${TEST_ARCH}/*
     expire_in: 4 days
 #
 #

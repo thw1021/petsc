@@ -55,36 +55,22 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
                 gcov_fid = open(gcov_file,'r')
                 root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
                 lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.lines'),'w')
+                nsrc_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.nsrc'),'w')
+                nsrc = 0
                 for line in gcov_fid:
                     if line.find("#####") > 0:
                         line_num = line.split(":")[1].strip()
                         if src[int(line_num)-1].find('SETERRQ') == -1:
                             print("""%s"""%(line_num), file=lines_fid)
+                            nsrc += 1
+                    elif not line.find("-:") == -1:
+                      nsrc += 1
+                print(nsrc,nsrc_fid)
                 gcov_fid.close()
+                nsrc_fid.close()
                 lines_fid.close()
             except IOError:
                 continue
-        else:
-            # gcov did not create .gcno or .gcda file, save the source code line numbers to .lines file
-            file_id = open(file_name,'r')
-            root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
-            lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.lines'),'w')
-            nlines = 0
-            line_num = 1
-            in_comment = 0
-            for line in file_id:
-                if line.strip() == '':
-                    line_num += 1
-                else:
-                    if line.lstrip().startswith('/*'):
-                        in_comment = 1
-                    if in_comment == 0:
-                        print("""%s"""%(line_num), file=lines_fid)
-                    if in_comment & (line.find('*/') != -1):
-                        in_comment = 0
-                    line_num += 1
-            file_id.close()
-            lines_fid.close()
     print("""Finshed running gcov on PETSc source code""")
     return
 
@@ -229,7 +215,7 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
             inhtml_fid = open(inhtml_file,"r")
         except IOError:
             # Error check for files not opened correctly or file names not parsed correctly in stage 1
-            fileopen_error.append([src_not_tested_path[file_ctr],src_not_tested_filename[file_ctr]])
+            fileopen_error.append([inhtml_file])
             nfiles_not_processed += 1
             continue
         temp_list = []
@@ -309,7 +295,8 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
         output_list.append(temp_list)
 
     if nsrc_files_not_tested == nfiles_not_processed:
-      raise RuntimeError("Unable to process any files, you must run make alldoc before running make gcovmerge")
+      print(fileopen_error)
+      raise RuntimeError("Unable to process any files, you must run make srchtml before running make mergegcov")
 
     # ------------------------------- End of Stage 3 ----------------------------------------
 
@@ -390,7 +377,8 @@ def main():
         print("Running gcov and creating tarball")
         run_gcov(gcov_dir,petsc_dir,petsc_arch)
         make_tarball(gcov_dir,petsc_dir,petsc_arch)
-        shutil.rmtree(gcov_dir)
+        #shutil.rmtree(gcov_dir)
+        print(gcov_dir)
     elif options.merge_gcov:
         print("Creating main html page")
         tarballs = glob.glob(os.path.join(petsc_dir,'*.tar.gz'))
