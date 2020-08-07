@@ -4,7 +4,7 @@
 #       Run gcov on the results of "make alltests" and create tar ball containing coverage results for one machine
 #           ./gcov.py --run_gcov
 #       Generate html pages showing coverage by merging tar balls from multiple machines (index_gcov1.html and index_gcov2.html)
-#           ./gcov.py --merge_gcov [LOC] tarballs
+#           ./gcov.py --merge_gcov  tarballs
 #
 
 from __future__ import print_function
@@ -102,7 +102,7 @@ def make_tarball(gcov_dir,petsc_dir,petsc_arch):
     os.chdir(curdir)
     return
 
-def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
+def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
 
     # Create index_gcov webpages using information processed from
     # running gcov
@@ -111,7 +111,7 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     # Stage 2: Process .lines files
     # Stage 3: Create marked HTML source code files
     # Stage 4: Create HTML pages having statistics and hyperlinks to HTML source code           files (files are sorted by filename and percentage code tested)
-    #  Stores the main HTML pages in LOC if LOC is defined via command line argument o-wise it uses the default PETSC_DIR
+    #  Stores the main HTML pages in PETSC_DIR/PETSC_ARCH/obj
 
     cwd = os.getcwd()
     # -------------------------- Stage 1 -------------------------------
@@ -220,10 +220,11 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     ntotal_lines_not_tested = 0
     output_list = []
     nfiles_not_processed = 0
-    sep = LOC+os.sep
+    sep = petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep
     for file_ctr in range(0,file_len):
-        inhtml_file = petsc_dir+os.sep+src_not_tested_path[file_ctr]+os.sep+src_not_tested_filename[file_ctr]+'.html'
-        outhtml_file = LOC+os.sep+src_not_tested_path[file_ctr]+os.sep+src_not_tested_filename[file_ctr]+'.gcov.html'
+        dir = petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+src_not_tested_path[file_ctr].replace('src'+os.sep,'')
+        inhtml_file = dir+os.sep+src_not_tested_filename[file_ctr]+'.html'
+        outhtml_file = dir+os.sep+src_not_tested_filename[file_ctr]+'.gcov.html'
         try:
             inhtml_fid = open(inhtml_file,"r")
         except IOError:
@@ -233,7 +234,7 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
             continue
         temp_list = []
         temp_list.append(src_not_tested_filename[file_ctr])
-        temp_list.append(outhtml_file.split(sep)[1]) # Relative path of hyperlink
+        temp_list.append(outhtml_file) # Relative path of hyperlink
         temp_list.append(src_not_tested_nlines[file_ctr])
 
         outhtml_fid = open(outhtml_file,"w")
@@ -317,7 +318,7 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     print("Creating main HTML page")
     # Create the main html file
     date_time = strftime("%x %X %Z")
-    outfile_name = LOC+os.sep+'index_gcov.html'
+    outfile_name = petsc_dir+os.sep+'index_gcov.html'
     out_fid = open(outfile_name,'w')
     print("""<html>
     <head>
@@ -349,7 +350,7 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     out_fid.close()
 
     print("End of gcov script")
-    print("""See %s""" % os.path.join(LOC,outfile_name))
+    print("""See %s""" % os.path.join(petsc_dir,outfile_name))
     return
 
 def main():
@@ -360,9 +361,6 @@ def main():
                       default='')
     parser.add_option('-a', '--petsc_arch', dest='petsc_arch',
                       help='Location of PETSC_ARCH',
-                      default='')
-    parser.add_option('-l', '--loc', dest='loc',
-                      help='Location',
                       default='')
     parser.add_option('-r', '--run_gcov', dest='run_gcov',
                       help='Running gcov and printing tarball',
@@ -395,20 +393,12 @@ def main():
         shutil.rmtree(gcov_dir)
     elif options.merge_gcov:
         print("Creating main html page")
-        # check to see if LOC is given
-        if options.loc:
-            print("Using %s to save the main HTML file pages" % (options.loc))
-            LOC = options.loc
-        else:
-            print("No Directory specified for saving main HTML file pages, using PETSc root directory")
-            LOC = petsc_dir
-
-        tarballs = glob.glob(os.path.join(LOC,'*.tar.gz'))
+        tarballs = glob.glob(os.path.join(petsc_dir,'*.tar.gz'))
 
         # Gitlab CI organizes things differently
         isCI=False
         if len(tarballs)==0:
-          tarballs=glob.glob(os.path.join(LOC,'arch-*/gcov.tar.gz'))
+          tarballs=glob.glob(os.path.join(petsc_dir,'arch-*/gcov.tar.gz'))
           isCI=True
 
         if len(tarballs)==0:
@@ -416,7 +406,7 @@ def main():
           return
 
         gcov_dir = tempfile.mkdtemp()
-        make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI)
+        make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI)
         shutil.rmtree(gcov_dir)
     else:
         parser.print_usage()

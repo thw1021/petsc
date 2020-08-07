@@ -1,16 +1,12 @@
 #
-# stage-1 take only a few minutes and generally run on the cloud; they do not run the full test suite or external packages.
+# stage-1 take only a few minutes; they do not run the full test suite or external packages.
 #
 # stage-2 runs on MCS systems and may take 10 to 15 minutes. They run the full test suite but with limited mixture of external packages
 #
 # stage-3 runs on MCS systems and may take an hour or more. They run the full test suite and heavily test external packages, utilize valgrind etc
-#         (not yet implemented)
 #
 # The stage-(n) tests are only started if all of the stage-(n-1) tests run without error
 #   You can limit the testing by using the variable STAGE with value 1 or 2
-#
-# By default the test branch is merged to master before testing. (not yet implemented)
-#   You can limite this by using the variable MERGETOMASTER with value 0 (not yet implemented)
 #
 
 stages:
@@ -835,14 +831,14 @@ analyze-pipeline:
     - date
     - hostname
   script:
-  - ./configure --with-mpi=0 --with-fc=0 --with-cxx=0 --download-sowing --download-c2html
-  - make alldoc LOC=${PWD} DOCSETDATE_PRUNE_LIST="" GONULL=""
-  - ./lib/petsc/bin/maint/gcov.py --merge_gcov --loc=${PWD} --petsc_arch ${TEST_ARCH}
+  - ./configure --with-mpi=0 --with-fc=0 --with-cxx=0 --download-c2html
+  - make srchtml LOC=${PWD}
+  - ./lib/petsc/bin/maint/gcov.py --merge_gcov --petsc_arch ${TEST_ARCH}
   artifacts:
     name: "$CI_JOB_NAME"
     when: always
     paths:
-    - i*.html
+    - index_gcov.html
     - arch-*-gcov/*
     expire_in: 4 days
 #
