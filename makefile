@@ -438,6 +438,10 @@ chk_concepts_dir: chk_loc
 	@if [ ! -d "${LOC}/docs/manualpages/concepts" ]; then \
 	  echo Making directory ${LOC}/docs/manualpages/concepts for library; ${MKDIR} ${LOC}/docs/manualpages/concepts; fi
 
+# Builds simple html versions of the source without links, used by make mergecov
+srchtml: chk_loc
+	-${OMAKE_SELF} ACTION=simplehtml PETSC_DIR=${PETSC_DIR} alltree LOC=${LOC}
+
 ###########################################################
 # targets to build distribution and update docs
 ###########################################################

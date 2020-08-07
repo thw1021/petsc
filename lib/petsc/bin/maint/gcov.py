@@ -49,19 +49,23 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
             os.chdir(dir)
             gcov_file = file_name+".gcov"
             try:
+                src_fid = open(file_name,'r')
+                src = src_fid.read().split('\n')
+                src_fid.close()
                 gcov_fid = open(gcov_file,'r')
                 root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
                 lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.lines'),'w')
                 for line in gcov_fid:
                     if line.find("#####") > 0:
                         line_num = line.split(":")[1].strip()
-                        print("""%s"""%(line_num), file=lines_fid)
+                        if src[int(line_num)-1].find('SETERRQ') == -1:
+                            print("""%s"""%(line_num), file=lines_fid)
                 gcov_fid.close()
                 lines_fid.close()
             except IOError:
                 continue
         else:
-            # gcov did not create .gcno or .gcda file,save the source code line numbers to .lines file
+            # gcov did not create .gcno or .gcda file, save the source code line numbers to .lines file
             file_id = open(file_name,'r')
             root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
             lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.lines'),'w')
@@ -139,7 +143,6 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     print("Merging files")
     nfiles = tmp_dirs[0][1]
     files_dir1 = os.listdir(tmp_dirs[0][0])
-    print(files_dir1)
     for i in range(0,nfiles):
         out_file = os.path.join(gcov_dir,files_dir1[i])
         out_fid  = open(out_file,'w')
@@ -244,7 +247,6 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
             line = line_temp.split('\n')[0]
             if(line.find(temp_string) != -1):
                 nsrc_lines = int(line.split(':')[0].split('line')[1].split('"')[0].lstrip())
-                print(inhtml_file+" "+str(nsrc_lines))
                 src_line = 1;
             if (line_ctr < nlines_not_tested):
                 temp_line = 'line'+src_not_tested_lines[file_ctr][line_ctr]
@@ -314,46 +316,9 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     # Create Main HTML page containing statistics and marked HTML file links
     print("Creating main HTML page")
     # Create the main html file
-    # ----------------------------- index_gcov1.html has results sorted by file name ----------------------------------
-    # ----------------------------- index_gcov2.html has results sorted by % code tested ------------------------------
     date_time = strftime("%x %X %Z")
-    outfile_name1 = LOC+os.sep+'index_gcov1.html'
-    outfile_name2 = LOC+os.sep+'index_gcov2.html'
-    out_fid = open(outfile_name1,'w')
-    print("""<html>
-    <head>
-      <title>PETSc:Code Testing Statistics</title>
-    </head>
-    <body style="background-color: rgb(213, 234, 255);">""", file=out_fid)
-    print("""<center>%s</center>"""%(date_time), file=out_fid)
-    print("""<h2><center>Gcov statistics </center></h2>""", file=out_fid)
-    print("""<center><font size = "4">Number of source code files = %s</font></center>""" %(nsrc_files), file=out_fid)
-    print("""<center><font size = "4">Number of source code files not tested fully = %s</font></center>""" %(nsrc_files_not_tested), file=out_fid)
-    if float(nsrc_files) > 0: ratio = float(nsrc_files_not_tested)/float(nsrc_files)*100.0
-    else: ratio = 0.0
-    print("""<center><font size = "4">Percentage of source code files not tested fully = %3.2f</font></center><br>""" %(ratio), file=out_fid)
-    print("""<center><font size = "4">Total number of source code lines = %s</font></center>""" %(ntotal_lines), file=out_fid)
-    print("""<center><font size = "4">Total number of source code lines not tested = %s</font></center>""" %(ntotal_lines_not_tested), file=out_fid)
-    if float(ntotal_lines) > 0: ratio = float(ntotal_lines_not_tested)/float(ntotal_lines)*100.0
-    else: ratio = 0.0
-    print("""<center><font size = "4">Percentage of source code lines not tested = %3.2f</font></center>""" %ratio, file=out_fid)
-    print("""<hr>
-    <a href = %s>See statistics sorted by percent code tested</a>""" % ('index_gcov2.html'), file=out_fid)
-    print("""<br><br>
-    <h4><u><center>Statistics sorted by file name</center></u></h4>""", file=out_fid)
-    print("""<table border="1" align = "center">
-    <tr><th>Source Code</th><th>Lines in source code</th><th>Number of lines not tested</th><th>% Code not tested</th></tr>""", file=out_fid)
-
-    output_list.sort(key=lambda x:x[0].lower())
-    for file_ctr in range(0,nsrc_files_not_tested-nfiles_not_processed):
-        print("<tr><td><a href = %s>%s</a></td><td>%s</td><td>%s</td><td>%3.2f</td></tr>" % (output_list[file_ctr][1],output_list[file_ctr][0],output_list[file_ctr][3],output_list[file_ctr][2],output_list[file_ctr][4]), file=out_fid)
-
-    print("""</body>
-    </html>""", file=out_fid)
-    out_fid.close()
-
-    # ----------------------------- index_gcov2.html has results sorted by percentage code tested ----------------------------------
-    out_fid = open(outfile_name2,'w')
+    outfile_name = LOC+os.sep+'index_gcov.html'
+    out_fid = open(outfile_name,'w')
     print("""<html>
     <head>
       <title>PETSc:Code Testing Statistics</title>
@@ -371,8 +336,6 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     if float(ntotal_lines) > 0: ratio = float(ntotal_lines_not_tested)/float(ntotal_lines)*100.0
     else: ratio = 0.0
     print("""<center><font size = "4">Percentage of source code lines not tested = %3.2f</font></center>""" % ratio, file=out_fid)
-    print("""<hr>
-    <a href = %s>See statistics sorted by file name</a>""" % ('index_gcov1.html'), file=out_fid)
     print("""<br><br>
     <h4><u><center>Statistics sorted by percent code tested</center></u></h4>""", file=out_fid)
     print("""<table border="1" align = "center">
@@ -386,7 +349,7 @@ def make_htmlpage(gcov_dir,petsc_dir,LOC,tarballs,isCI):
     out_fid.close()
 
     print("End of gcov script")
-    print("""See %s""" % os.path.join(LOC,'index_gcov1.html'))
+    print("""See %s""" % os.path.join(LOC,outfile_name))
     return
 
 def main():
