@@ -73,9 +73,9 @@ void land_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, 
   }
   __syncthreads();
   if (1) {
-    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, 1,        jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3, PETSC_FALSE); /* compact */
+    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, 1,        jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3, myelem); /* compact */
   } else {
-    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, mySubBlk,    nip, nSubBlks, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3, PETSC_FALSE); /* spread */
+    landau_inner_integral(myQi, Nq, mySubBlk, nSubBlks, mySubBlk,    nip, nSubBlks, jpidx, Nf, dim, IPDataGlobal, wiGlobal, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, quarter3DDomain, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3, myelem); /* spread */
   }
 }
 
@@ -197,7 +197,7 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
   CUDA_SAFE_CALL(cudaFree(d_elemMats));
   ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
 
-  /* coloring */
+  /* coloring -- move out of here for Kokkos*/
   ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
   if (!container) {
     PetscInt        cell,i,nc,Nv;
@@ -320,8 +320,8 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
       ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
     }
   }
-  ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
 
+  ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
   if (1) {
     PetscScalar *elMat;
     for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
