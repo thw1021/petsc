@@ -36,6 +36,7 @@ int main(int argc,char **argv)
   ierr = PetscRandomSetFromOptions(rdm);CHKERRQ(ierr);
 
   ierr = PetscCalloc1(n, &XT);CHKERRQ(ierr);
+
   for (i=0; i<n; ++i) {
     ierr = PetscRandomGetValueReal(rdm,&val);CHKERRQ(ierr);
     XT[i] = val*PETSC_MAX_INT;
@@ -44,36 +45,32 @@ int main(int argc,char **argv)
 
   time = 0.0;
   time1 = 0.0;
-  if (vwr) {ierr = PetscIntView(n, X, vwr);CHKERRQ(ierr);}
+  if (vwr) {ierr = PetscIntView(n, XT, vwr);CHKERRQ(ierr);}
+  /*
   ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
   ierr = VecSetSizes(x,PETSC_DECIDE,1000000000);CHKERRQ(ierr);
   ierr = VecSetFromOptions(x);CHKERRQ(ierr);
   ierr = VecSetRandom(x,rdm);CHKERRQ(ierr);
+   */
   for (l=0; l<r; l++) { /* r loops */
-    ierr = PetscArraycpy(X,XT,n);CHKERRQ(ierr);
-    ierr = PetscArraycpy(X1,XT,n);CHKERRQ(ierr);
-    /*
+    //ierr = PetscArraycpy(X,XT,n);CHKERRQ(ierr);
+    //ierr = PetscArraycpy(X1,XT,n);CHKERRQ(ierr);
     for (i=0; i<n; i++) { // Init X[]
       ierr = PetscRandomGetValueReal(rdm,&val);CHKERRQ(ierr);
       X[i] = val*PETSC_MAX_INT;
       if (d > 1) X[i] = X[i] % (n/d);
       X1[i] = X[i];
     }
-     */
-    ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
-    ierr = qsortresetctr();CHKERRQ(ierr);
+
+    //ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
     ierr = PetscTimeSubtract(&time);CHKERRQ(ierr);
     ierr = PetscSortInt(n,X);CHKERRQ(ierr);
     ierr = PetscTimeAdd(&time);CHKERRQ(ierr);
-    ierr = qsortgetctr(&qctr);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "QSORT COUNTER = %D\n", qctr);CHKERRQ(ierr);
-    ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
 
+    //ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
     ierr = PetscTimeSubtract(&time1);CHKERRQ(ierr);
     ierr = PetscTimSortInt(n,X1);CHKERRQ(ierr);
     ierr = PetscTimeAdd(&time1);CHKERRQ(ierr);
-    ierr = tsortgetctr(&tctr);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "TIMSORT COUNTER = %D\n", tctr);CHKERRQ(ierr);
 
     for (i=0; i<n-1; i++) {if (X[i] > X[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscSortInt() produced wrong results!");}
     for (i=0; i<n; i++) {if (X[i] != X1[i]) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() rep %D X1[%D]:%D does not match PetscSortInt() X[%D]:%D!",l,i,X1[i],i,X[i]);}
