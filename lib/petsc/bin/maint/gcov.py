@@ -63,9 +63,9 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
                         if src[int(line_num)-1].find('SETERRQ') == -1:
                             print("""%s"""%(line_num), file=lines_fid)
                             nsrc += 1
-                    elif not line.find("-:") == -1:
+                    elif line.find("-:") == -1:
                       nsrc += 1
-                print(nsrc,nsrc_fid)
+                print(nsrc,file=nsrc_fid)
                 gcov_fid.close()
                 nsrc_fid.close()
                 lines_fid.close()
@@ -80,7 +80,7 @@ def make_tarball(gcov_dir,petsc_dir,petsc_arch):
     print("""Creating tarball in %s to store gcov results files""" %(petsc_dir))
     curdir=os.path.abspath(os.path.curdir)
     os.chdir(gcov_dir)
-    os.system("tar -czf "+petsc_dir+os.sep+"gcov.tar.gz *.lines")
+    os.system("tar -czf "+petsc_dir+os.sep+"gcov.tar.gz *.lines *.nsrc")
     os.chdir(petsc_dir)
     # Copy file so artifacts in CI propogate without overwriting
     shutil.copyfile('gcov.tar.gz',os.path.join(petsc_arch,'gcov.tar.gz'))
@@ -113,7 +113,7 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
         tmp.append(dir)
         os.mkdir(dir)
         os.system("cd "+dir+";gunzip -c "+tarballs[i] + "|tar -xof -")
-        tmp.append(len(os.listdir(dir)))
+        tmp.append(int(len(os.listdir(dir))/2))
         tmp_dirs.append(tmp)
 
     # each list in tmp_dirs contains the directory name and number of files in it
@@ -122,13 +122,18 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
     # 2) Gcov runs fine on atleast one machine = Unequal number of files in the tarballs.The smaller tarballs are subset of the largest tarball(s)
     # 3) Gcov doesn't run correctly on any of the machines...possibly different files in tarballs
 
+    # TODO: the code below seems to use the number of files and list of files from only the first tarball. This means it will
+    #       missing any files that are not tested in the first tarball. Needs to be fixed to use the union of all the files
+
     # Case 2 is implemented for now...sort the tmp_dirs list in reverse order according to the number of files in each directory
     tmp_dirs.sort(key=operator.itemgetter(1),reverse=True)
 
     # Create temporary gcov directory to store .lines files
     print("Merging files")
+    for j in range(0,len(tmp_dirs)):
+      os.system('cp %s/*.nsrc %s' % (tmp_dirs[j][0],gcov_dir))
     nfiles = tmp_dirs[0][1]
-    files_dir1 = os.listdir(tmp_dirs[0][0])
+    files_dir1 = [i for i in os.listdir(tmp_dirs[0][0]) if i.endswith('.lines')]
     for i in range(0,nfiles):
         out_file = os.path.join(gcov_dir,files_dir1[i])
         out_fid  = open(out_file,'w')
@@ -163,13 +168,14 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
 
     # ------------------------ Stage 2 -------------------------------------
     print("Processing .lines files in %s" %(gcov_dir))
-    gcov_filenames = os.listdir(gcov_dir)
+    gcov_filenames = [i for i in os.listdir(gcov_dir) if i.endswith('.lines')]
     nsrc_files = 0;
     nsrc_files_not_tested = 0;
     src_not_tested_path = [];
     src_not_tested_filename = [];
     src_not_tested_lines = [];
     src_not_tested_nlines = [];
+    src_not_tested_nsrc = [] # number of source lines in each file
     ctr = 0;
     print("Processing gcov files")
     for file in gcov_filenames:
@@ -191,6 +197,10 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
             src_not_tested_path.append(src_file[:k])
             src_not_tested_lines.append(lines_not_tested)
             src_not_tested_nlines.append(nlines_not_tested)
+            nsrc_fid = open(gcov_file.replace('.lines','.nsrc'),'r')
+            nsrc = nsrc_fid.read()
+            nsrc_fid.close()
+            src_not_tested_nsrc.append(nsrc)
         nsrc_files += 1
         gcov_fid.close()
 
@@ -223,6 +233,8 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
         temp_list.append(outhtml_file) # Relative path of hyperlink
         temp_list.append(src_not_tested_nlines[file_ctr])
 
+        nsrc_lines = int(src_not_tested_nsrc[file_ctr])
+
         outhtml_fid = open(outhtml_file,"w")
         lines_not_tested = src_not_tested_lines[file_ctr]
         nlines_not_tested = src_not_tested_nlines[file_ctr]
@@ -233,7 +245,6 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
             pre_issue_fix = 0
             line = line_temp.split('\n')[0]
             if(line.find(temp_string) != -1):
-                nsrc_lines = int(line.split(':')[0].split('line')[1].split('"')[0].lstrip())
                 src_line = 1;
             if (line_ctr < nlines_not_tested):
                 temp_line = 'line'+src_not_tested_lines[file_ctr][line_ctr]
@@ -377,8 +388,7 @@ def main():
         print("Running gcov and creating tarball")
         run_gcov(gcov_dir,petsc_dir,petsc_arch)
         make_tarball(gcov_dir,petsc_dir,petsc_arch)
-        #shutil.rmtree(gcov_dir)
-        print(gcov_dir)
+        shutil.rmtree(gcov_dir)
     elif options.merge_gcov:
         print("Creating main html page")
         tarballs = glob.glob(os.path.join(petsc_dir,'*.tar.gz'))
