@@ -155,7 +155,7 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
     Kokkos::deep_copy (d_invJ, h_invJ);
     ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_VIENNACL) // add Kokkos-GPU ???
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_VIENNACL)
     ierr = PetscLogGpuFlops(flops*nip);CHKERRQ(ierr);
     if (ctx->deviceType == LAND_CPU) PetscInfo(plex, "Warning: Landau selected CPU but no support for Kokkos using GPU\n");
 #else
