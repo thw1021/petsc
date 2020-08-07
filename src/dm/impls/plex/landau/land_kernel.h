@@ -8,7 +8,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt qi_inc, const PetscIn
                        const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[], PetscBool quarter3DDomain,
                        const PetscInt Nq, const PetscInt Nb, const PetscInt qj_start, const PetscInt qj_end, const PetscReal * const BB, const PetscReal * const DD, PetscScalar *elemMat, /* discretization args; local output */
                        PetscReal g2[/* LAND_MAX_NQ */][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM], PetscReal g3[/* LAND_MAX_NQ */][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM] /* shared memory buffers */
-                       , PetscBool print)
+                       , PetscInt myelem)
 {
   PetscReal                   gg2[LAND_MAX_SPECIES][LAND_DIM],gg3[LAND_MAX_SPECIES][LAND_DIM][LAND_DIM];
   const PetscInt              ipdata_sz = (dim + Nf*(1+dim));
@@ -91,6 +91,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt qi_inc, const PetscIn
       gg2[fieldA][dim-1] += Eq_m[fieldA];
     }
   }
+  //intf("%d %d gg2[1][1]=%g\n",myelem,qj_start,gg2[1][dim-1]);
   /* Jacobian transform - g2 */
   for (fieldA = 0; fieldA < Nf; ++fieldA) {
     for (d = 0; d < dim; ++d) {
@@ -102,7 +103,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt qi_inc, const PetscIn
 	for (d3 = 0; d3 < dim; ++d3) {
 	  for (dp = 0; dp < dim; ++dp) {
 	    g3[myQi][mySubBlk][fieldA][d][d2] += invJj[d*dim + d3]*gg3[fieldA][d3][dp]*invJj[d2*dim + dp];
-            //printf("\t\t\t: g3=%g\n",g3[myQi][mySubBlk][fieldA][d][d2]);
+            //printf("\t\t\t:%d %d %d %d g3=%g\n",qj_start,fieldA,d,d2,g3[myQi][mySubBlk][fieldA][d][d2]);
 	  }
 	}
         g3[myQi][mySubBlk][fieldA][d][d2] *= wj;
@@ -140,7 +141,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt qi_inc, const PetscIn
 	    const PetscReal *BJq = &BB[qj*Nb], *DIq = &DD[qj*Nb*dim];
 	    for (d = 0; d < dim; ++d) {
 	      elemMat[fOff] += DIq[f*dim+d]*g2[qj_0][0][fieldA][d]*BJq[g];
-              if (print) printf("\t\t: mat[%d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n",fOff,elemMat[fOff],f*dim+d,DIq[f*dim+d],fieldA,qj,d,g2[qj_0][0][fieldA][d],BJq[g]);
+              //intf("\tmat[%d %d %d %d %d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n", print, fOff,fieldA,qj,d, elemMat[fOff],f*dim+d,DIq[f*dim+d],fieldA,qj,d,g2[qj_0][0][fieldA][d],BJq[g]);
 	      for (d2 = 0; d2 < dim; ++d2) {
 		elemMat[fOff] += DIq[f*dim + d]*g3[qj_0][0][fieldA][d][d2]*DIq[g*dim + d2];
 	      }
