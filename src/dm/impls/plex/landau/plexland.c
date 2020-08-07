@@ -207,7 +207,7 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
 
         ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
         ierr = PetscLogFlops(flops);CHKERRQ(ierr);
-        landau_inner_integral(zero, one, zero, one, zero, nip, 1, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tf[0]->T[0], Tf[0]->T[1], elemMat, g2, g3, ej==1);
+        landau_inner_integral(zero, one, zero, one, zero, nip, 1, jpidx, Nf, dim, IPData, wiGlob, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, ctx->quarter3DDomain, Nq, Nb, qj, qj+1, Tf[0]->T[0], Tf[0]->T[1], elemMat, g2, g3, ej);
         ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
       } /* qj loop */
       /* assemble matrix */
@@ -215,16 +215,16 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
       ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
       ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
 
-      if (ej==1) {
+      if (ej==-1) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr);
         for (d = 0; d < totDim; ++d){
-          for (f = 0; f < totDim; ++f) printf(" %17.10e",  PetscRealPart(elemMat[d*totDim + f]));
-          ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
+          for (f = 0; f < totDim; ++f) printf(" %17.9e",  PetscRealPart(elemMat[d*totDim + f]));
+          printf("\n");CHKERRQ(ierr);
         }
       }
     } /* ej cells loop, not cuda */
   }
-PetscSleep(2); exit(13);
+  // PetscSleep(2); exit(13);
 #if defined(HAVE_VTUNE) && defined(__INTEL_COMPILER)
   __itt_pause(); // stop VTune
   __SSC_MARK(0x222); // stop SDE tracing
@@ -813,7 +813,7 @@ static PetscErrorCode adapt(DM *dm, LandCtx *ctx, Vec *uu)
       DM  dmNew = NULL;
       ierr = adaptToleranceFEM(ctx->fe[0], *uu, ctx->refineTol, ctx->coarsenTol, type, ctx, &dmNew);CHKERRQ(ierr);
       if (!dmNew) {
-        exit(13);
+        exit(113);
         break;
       } else {
         ierr = DMDestroy(dm);CHKERRQ(ierr);

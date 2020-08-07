@@ -302,7 +302,7 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
   }
   ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %D) time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,time,(int)ppp,ediff/lpm0,idiff/lpm1);CHKERRQ(ierr);
   /* view */
-  ierr = VecViewFromOptions(X,NULL,"-ex2_vec_view_diff");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(X,NULL,"-vec_view_diff");CHKERRQ(ierr);
   ierr = VecCopy(X2,X);CHKERRQ(ierr);
   ierr = VecDestroy(&X2);CHKERRQ(ierr);
   if (islast) {
@@ -460,7 +460,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
         ierr = VecCopy(S,rectx->imp_src);CHKERRQ(ierr);
         ierr = VecDestroy(&S);CHKERRQ(ierr);
       }
-      ierr = VecViewFromOptions(rectx->imp_src,NULL,"-ex2_vec_view_sources");CHKERRQ(ierr);
+      ierr = VecViewFromOptions(rectx->imp_src,NULL,"-vec_view_sources");CHKERRQ(ierr);
     }
     ierr = VecCopy(rectx->imp_src,F);CHKERRQ(ierr);
   } else {
@@ -497,7 +497,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
     /* view */
     ierr = DMSetOutputSequenceNumber(dm, rectx->plotIdx, time*ctx->t_0);CHKERRQ(ierr);
-    ierr = VecViewFromOptions(X,NULL,"-ex2_vec_view");CHKERRQ(ierr);
+    ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr);
     rectx->plotStep = stepi;
     rectx->plotting = PETSC_TRUE;
   }
@@ -627,7 +627,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   if (rectx->plotDt < 0) rectx->plotDt = 1e30;
   if (rectx->plotDt == 0) rectx->plotDt = 1e-30;
   ierr = PetscOptionsFList("-ex2_impurity_source_type","Name of impurity source to run","",plist,pname,pname,sizeof(pname),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-ex2_test_type","Name of test to run","",testlist,testname,testname,sizeof(pname),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsFList("-ex2_test_type","Name of test to run","",testlist,testname,testname,sizeof(testname),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-ex2_impurity_index", "index of sink for impurities", "none", rectx->imp_idx, &rectx->imp_idx, NULL);CHKERRQ(ierr);
   if ((rectx->imp_idx >= ctx->num_species || rectx->imp_idx < 1) && ctx->num_species > 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"index of sink for impurities ions is out of range (%D), must be > 0 && < NS",rectx->imp_idx);
   ierr = PetscOptionsFList("-ex2_e_field_type","Electric field type","",elist,ename,ename,sizeof(ename),NULL);CHKERRQ(ierr);
@@ -655,12 +655,12 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
     PetscMPIInt    rank;
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
     if (rank) { /* turn off output stuff for duplicate runs */
-      ierr = PetscOptionsClearValue(NULL,"-ex2_dm_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-ex2_vec_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-ex2_dm_view_diff");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-ex2_vec_view_diff");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-ex2_dm_view_sources");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-ex2_vec_view_sources");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-vec_view");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_view_diff");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-vec_view_diff");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-dm_view_sources");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-vec_view_sources");CHKERRQ(ierr);
     }
   }
   /* convert E from Conner-Hastie E_c units to real */
@@ -685,7 +685,7 @@ int main(int argc, char **argv)
   LandCtx        *ctx;
   REctx         *rectx;
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetInt(NULL,NULL, "-ex2_dim", &dim, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
   ierr = DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
   ierr = DMPlexLandCreateMassMatrix(dm, X, NULL); CHKERRQ(ierr);
@@ -697,9 +697,9 @@ int main(int argc, char **argv)
   rectx = (REctx*)(ctx->data = malloc(sizeof(REctx)));
   ierr = ProcessREOptions(rectx,ctx,dm,"");CHKERRQ(ierr);
   ierr = DMSetOutputSequenceNumber(dm, 0, 0.0);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm,NULL,"-ex2_dm_view");CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm,NULL,"-ex2_dm_view_sources");CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm,NULL,"-ex2_dm_view_diff");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-dm_view_sources");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-dm_view_diff");CHKERRQ(ierr);
   /* Create timestepping solver context */
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
@@ -728,7 +728,7 @@ int main(int argc, char **argv)
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
-  ierr = VecViewFromOptions(X,NULL,"-ex2_x_vec_view");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr);
   /* go */
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */

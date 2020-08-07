@@ -5,9 +5,6 @@ static char help[] = "Landau test\n\n";
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
 #include <petscts.h>
 
-#include <Kokkos_Core.hpp>
-#include <cstdio>
-
 int main(int argc, char* argv[])
 {
   DM             dm;
@@ -19,7 +16,6 @@ int main(int argc, char* argv[])
   PetscDS        prob;
   LandCtx        *ctx;
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
-  Kokkos::initialize(argc, argv);
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
   ierr = DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
@@ -65,7 +61,6 @@ int main(int argc, char* argv[])
   ierr = DMPlexLandDestroyVelocitySpace(&dm);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
-  Kokkos::finalize();
   ierr = PetscFinalize();
 }
 
