@@ -440,7 +440,7 @@ chk_concepts_dir: chk_loc
 
 # Builds simple html versions of the source without links into the $PETSC_ARCH/obj directory, used by make mergecov
 srchtml: 
-	-${OMAKE_SELF} ACTION=simplehtml PETSC_DIR=${PETSC_DIR} alltree
+	-${OMAKE_SELF} ACTION=simplehtml PETSC_DIR=${PETSC_DIR} alltree_makefile
 
 ###########################################################
 # targets to build distribution and update docs

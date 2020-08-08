@@ -26,10 +26,10 @@ sys.path.insert(0, os.path.join(pdir, 'config'))
 def run_gcov(gcov_dir,petsc_dir,petsc_arch):
 
     # 1. Runs gcov
-    # 2. Saves the untested source code line numbers in
-    #    xxx.c.lines files in gcov_dir
+    # 2. Saves the tested source code line numbers and detected source code lines in
+    #    xxx.c.tested and xxx.c.code files in gcov_dir
 
-    print("Creating directory to save .lines files\n")
+    print("Creating directory to save .tested and .code files\n")
     print("Running gcov\n")
     # avoid errors of the type: UnicodeDecodeError: 'utf-8' codec can't decode byte 0x88 in position 7892: invalid start byte
     files  = subprocess.check_output('make -f gmakefile showcsrc', shell=True).decode(encoding='UTF-8',errors='replace').split()
@@ -41,8 +41,8 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
         gcov_graph_file = objpath+".gcno"
         gcov_data_file  = objpath+".gcda"
         if os.path.isfile(gcov_graph_file) and os.path.isfile(gcov_data_file):
-            # gcov created .gcno and .gcda files => create .gcov file,parse it and save the untested code line
-            # numbers in .lines file
+            # gcov created .gcno and .gcda files => create .gcov file,parse it and save the tested code line
+            # numbers in .tested file
             dir = os.getcwd()
             os.chdir(os.path.dirname(os.path.join(petsc_dir,file_name)))
             os.system('gcov --object-directory "%s" "%s"' % (os.path.dirname(gcov_data_file), os.path.basename(file_name)))
@@ -53,22 +53,19 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
                 src = src_fid.read().split('\n')
                 src_fid.close()
                 gcov_fid = open(gcov_file,'r')
-                root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'_')
-                lines_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.lines'),'w')
-                nsrc_fid = open(os.path.join(gcov_dir,root_tmp1+'_'+os.path.basename(file_name)+'.nsrc'),'w')
+                root_tmp1 = root.split(petsc_dir+os.sep)[1].replace(os.sep,'__')
+                tested_fid = open(os.path.join(gcov_dir,root_tmp1+'__'+os.path.basename(file_name)+'.tested'),'w')
+                code_fid = open(os.path.join(gcov_dir,root_tmp1+'__'+os.path.basename(file_name)+'.code'),'w')
                 nsrc = 0
                 for line in gcov_fid:
-                    if line.find("#####") > 0:
-                        line_num = line.split(":")[1].strip()
-                        if src[int(line_num)-1].find('SETERRQ') == -1:
-                            print("""%s"""%(line_num), file=lines_fid)
-                            nsrc += 1
-                    elif line.find("-:") == -1:
-                      nsrc += 1
-                print(nsrc,file=nsrc_fid)
+                    line_num = line.split(":")[1].strip()
+                    if line.find("#####") == -1 and line.find("-:") == -1:
+                        print("""%s"""%(line_num), file=tested_fid)
+                    if line.find("-:") == -1 and int(line_num) > 0 and src[int(line_num)-1].find('SETERRQ') == -1:
+                        print("""%s"""%(line_num), file=code_fid)
                 gcov_fid.close()
-                nsrc_fid.close()
-                lines_fid.close()
+                code_fid.close()
+                tested_fid.close()
             except IOError:
                 continue
     print("""Finshed running gcov on PETSc source code""")
@@ -80,7 +77,7 @@ def make_tarball(gcov_dir,petsc_dir,petsc_arch):
     print("""Creating tarball in %s to store gcov results files""" %(petsc_dir))
     curdir=os.path.abspath(os.path.curdir)
     os.chdir(gcov_dir)
-    os.system("tar -czf "+petsc_dir+os.sep+"gcov.tar.gz *.lines *.nsrc")
+    os.system("tar -czf "+petsc_dir+os.sep+"gcov.tar.gz *.tested *.code")
     os.chdir(petsc_dir)
     # Copy file so artifacts in CI propogate without overwriting
     shutil.copyfile('gcov.tar.gz',os.path.join(petsc_arch,'gcov.tar.gz'))
@@ -93,225 +90,111 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
     # Create index_gcov webpages using information processed from
     # running gcov
     # This is done in four stages
-    # Stage 1: Extract tar balls,merge files and dump .lines files in gcov_dir
-    # Stage 2: Process .lines files
-    # Stage 3: Create marked HTML source code files
-    # Stage 4: Create HTML pages having statistics and hyperlinks to HTML source code           files (files are sorted by filename and percentage code tested)
-    #  Stores the main HTML pages in PETSC_DIR/PETSC_ARCH/obj
+    # Stage 1: Extract tar balls, merge data from files into tested{} and code{}
+    # Stage 2: Create marked HTML source code files
+    # Stage 3: Create HTML page having statistics and hyperlinks to HTML source code files
 
     cwd = os.getcwd()
     # -------------------------- Stage 1 -------------------------------
-    len_tarballs = len(tarballs)
-
-    print("%s tarballs found\n%s" %(len_tarballs,tarballs))
+    print("%s tarballs found\n%s" %(len(tarballs),tarballs))
     print("Extracting gcov directories from tar balls")
-    #  Each tar file consists of a bunch of *.line files NOT inside a directory
+    #  Each tar file consists of a bunch of *.tested and *.code files NOT inside a directory
     tmp_dirs = []
-    for i in range(0,len_tarballs):
-        tmp = []
+    for i in range(0,len(tarballs)):
         dir = os.path.join(gcov_dir,str(i))
-        tmp.append(dir)
         os.mkdir(dir)
         os.system("cd "+dir+";gunzip -c "+tarballs[i] + "|tar -xof -")
-        tmp.append(int(len(os.listdir(dir))/2))
-        tmp_dirs.append(tmp)
+        tmp_dirs.append(dir)
 
-    # each list in tmp_dirs contains the directory name and number of files in it
-    # Cases to consider for gcov
-    # 1) Gcov runs fine on all machines = Equal number of files in all the tarballs.
-    # 2) Gcov runs fine on atleast one machine = Unequal number of files in the tarballs.The smaller tarballs are subset of the largest tarball(s)
-    # 3) Gcov doesn't run correctly on any of the machines...possibly different files in tarballs
+    # There may be an unequal number of files in the tarballs
 
-    # TODO: the code below seems to use the number of files and list of files from only the first tarball. This means it will
-    #       missing any files that are not tested in the first tarball. Needs to be fixed to use the union of all the files
-
-    # Case 2 is implemented for now...sort the tmp_dirs list in reverse order according to the number of files in each directory
-    tmp_dirs.sort(key=operator.itemgetter(1),reverse=True)
-
-    # Create temporary gcov directory to store .lines files
-    print("Merging files")
-    for j in range(0,len(tmp_dirs)):
-      os.system('cp %s/*.nsrc %s' % (tmp_dirs[j][0],gcov_dir))
-    nfiles = tmp_dirs[0][1]
-    files_dir1 = [i for i in os.listdir(tmp_dirs[0][0]) if i.endswith('.lines')]
-    for i in range(0,nfiles):
-        out_file = os.path.join(gcov_dir,files_dir1[i])
-        out_fid  = open(out_file,'w')
-
-        in_file = os.path.join(tmp_dirs[0][0],files_dir1[i])
-        in_fid = open(in_file,'r')
-        lines = in_fid.readlines()
-        in_fid.close()
-        for j in range(1,len(tmp_dirs)):
-            in_file = os.path.join(tmp_dirs[j][0],files_dir1[i])
-            try:
-                in_fid = open(in_file,'r')
-            except IOError:
-                continue
-            new_lines = in_fid.readlines()
-            lines = list(set(lines)&set(new_lines)) # Find intersection
-            in_fid.close()
-
-        if(len(lines) != 0):
-            lines.sort(key=int)
-            out_fid.writelines(lines)
-            out_fid.flush()
-
-        out_fid.close()
+    # Merge data from all the .tested and .code files for each tarball
+    print("Merging data from files")
+    tested = {}  # for each line of each file has a 1 indicating it that line was tested
+    code = {}  # for each line of each file has a 1 indicating if that line is source code (due to #ifdef different tarballs may have different source code lines)
+    for j in tmp_dirs:
+      files_dir1 = [i for i in os.listdir(j) if i.endswith('.tested')]
+      for i in files_dir1:
+          ii = i.replace('.tested','')
+          in_file = os.path.join(j,i)
+          in_fid = open(in_file,'r')
+          testlines = in_fid.readlines()
+          in_fid.close()
+          if not ii in tested: tested[ii] = {}
+          for line in testlines:
+              tested[ii][int(line)-1] = 1
+          in_file = os.path.join(j,i.replace('tested','code'))
+          in_fid = open(in_file,'r')
+          codelines = in_fid.readlines()
+          in_fid.close()
+          if not ii in code: code[ii] = {}
+          for line in codelines:
+              code[ii][int(line)-1] = 1
 
     # Remove directories created by extracting tar files
     print("Removing temporary directories created from tar files")
-    for j in range(0,len(tmp_dirs)):
-        shutil.rmtree(tmp_dirs[j][0])
+    for j in tmp_dirs:
+        shutil.rmtree(j)
 
-    # ------------------------- End of Stage 1 ---------------------------------
-
-    # ------------------------ Stage 2 -------------------------------------
-    print("Processing .lines files in %s" %(gcov_dir))
-    gcov_filenames = [i for i in os.listdir(gcov_dir) if i.endswith('.lines')]
-    nsrc_files = 0;
-    nsrc_files_not_tested = 0;
-    src_not_tested_path = [];
-    src_not_tested_filename = [];
-    src_not_tested_lines = [];
-    src_not_tested_nlines = [];
-    src_not_tested_nsrc = [] # number of source lines in each file
-    ctr = 0;
-    print("Processing gcov files")
-    for file in gcov_filenames:
-        tmp_filename = file.replace('_',os.sep)
-        src_file = tmp_filename.split('.lines')[0]
-        gcov_file = gcov_dir+os.sep+file
-        gcov_fid = open(gcov_file,'r')
-        nlines_not_tested = 0
-        lines_not_tested = []
-        for line in gcov_fid:
-            nlines_not_tested += 1
-            temp_line1 = line.lstrip()
-            temp_line2 = temp_line1.strip('\n')
-            lines_not_tested.append(temp_line2)
-        if nlines_not_tested :
-            nsrc_files_not_tested += 1
-            k = src_file.rfind(os.sep)
-            src_not_tested_filename.append(src_file[k+1:])
-            src_not_tested_path.append(src_file[:k])
-            src_not_tested_lines.append(lines_not_tested)
-            src_not_tested_nlines.append(nlines_not_tested)
-            nsrc_fid = open(gcov_file.replace('.lines','.nsrc'),'r')
-            nsrc = nsrc_fid.read()
-            nsrc_fid.close()
-            src_not_tested_nsrc.append(nsrc)
-        nsrc_files += 1
-        gcov_fid.close()
-
-    # ------------------------- End of Stage 2 --------------------------
-
-    # ---------------------- Stage 3 -----------------------------------
+    # ---------------------- Stage 2 -----------------------------------
     print("Creating marked HTML files")
     temp_string = '<a name'
     spaces_12 = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp'
-    file_len = len(src_not_tested_nlines)
-    fileopen_error = [];
     ntotal_lines = 0
     ntotal_lines_not_tested = 0
     output_list = []
     nfiles_not_processed = 0
     sep = petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep
-    for file_ctr in range(0,file_len):
-        dir = petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+src_not_tested_path[file_ctr].replace('src'+os.sep,'')
-        inhtml_file = dir+os.sep+src_not_tested_filename[file_ctr]+'.html'
-        outhtml_file = dir+os.sep+src_not_tested_filename[file_ctr]+'.gcov.html'
+    nsrc_files = 0
+    nsrc_files_not_tested = 0
+    for file in tested:
+        nsrc_files += 1
+        dir = os.path.dirname(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
+        f = os.path.basename(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
+        inhtml_file = os.path.join(dir,f+'.html')
+        outhtml_file = os.path.join(dir,f+'.gcov.html')
         try:
             inhtml_fid = open(inhtml_file,"r")
         except IOError:
             # Error check for files not opened correctly or file names not parsed correctly in stage 1
-            fileopen_error.append([inhtml_file])
-            nfiles_not_processed += 1
-            continue
-        temp_list = []
-        temp_list.append(src_not_tested_filename[file_ctr])
-        temp_list.append(outhtml_file) # Relative path of hyperlink
-        temp_list.append(src_not_tested_nlines[file_ctr])
+            raise RuntimeError("Cannot locate html file %s, run make srchtml first" % inhtml_file)
+        lines = inhtml_fid.read().split('\n')
+        inhtml_fid.close()
 
-        nsrc_lines = int(src_not_tested_nsrc[file_ctr])
+        temp_list = []
+        temp_list.append(file.replace('__',os.sep))
+        temp_list.append(outhtml_file) # Relative path of hyperlink
 
         outhtml_fid = open(outhtml_file,"w")
-        lines_not_tested = src_not_tested_lines[file_ctr]
-        nlines_not_tested = src_not_tested_nlines[file_ctr]
-        line_ctr = 0
-        last_line_blank = 0
-        src_line = 0
-        for line_temp in inhtml_fid:
-            pre_issue_fix = 0
-            line = line_temp.split('\n')[0]
-            if(line.find(temp_string) != -1):
-                src_line = 1;
-            if (line_ctr < nlines_not_tested):
-                temp_line = 'line'+src_not_tested_lines[file_ctr][line_ctr]
-                if (line.find(temp_line) != -1):
-                    # Untested line
-                    if(line.startswith('<pre width=')):
-                        num = line.find('>')
-                        temp_outline = line[:num+1]+'<font color="red">Untested :&nbsp;&nbsp;</font>'+line[num+1:]
-                    else:
-                        temp_outline = '<font color="red">Untested :&nbsp;&nbsp;</font>'+line
-
-                    line_ctr += 1
-                else:
-                    if(line.startswith('<pre width=')):
-                        pre_issue_fix = 1;
-                        num = line.find('>')
-                    if(line.find(temp_string) != -1):
-                        line_num = int(line.split(':')[0].split('line')[1].split('"')[0].lstrip())
-
-                        if (line_num > int(src_not_tested_lines[file_ctr][line_ctr])):
-                            while (int(src_not_tested_lines[file_ctr][line_ctr]) < line_num):
-                                line_ctr += 1
-                                if(line_ctr == nlines_not_tested):
-                                    last_line_blank = 1
-                                    temp_outline = spaces_12+line
-                                    break
-                            if (last_line_blank == 0):
-                                temp_line = 'line'+src_not_tested_lines[file_ctr][line_ctr]
-                                if(line.find(temp_line) != -1):
-                                    temp_outline =  '<font color="red">Untested :&nbsp;&nbsp</font>'+line
-                                    line_ctr += 1
-                                else:
-                                    if pre_issue_fix:
-                                        temp_outline = line[:num+1]+spaces_12+line[num+1:]
-                                    else:
-                                        temp_outline = spaces_12+line
-                        else:
-                            if pre_issue_fix:
-                                temp_outline = line[:num+1]+spaces_12+line[num+1:]
-                            else:
-                                temp_outline = spaces_12+line
-                    else:
-                        temp_outline = spaces_12+line
+        not_tested = 0
+        n_code = 0
+        for i in range(0,len(lines)):
+            line = lines[i]
+            if not i-10 in tested[file] and i-10 in code[file]:
+               if line.startswith('<pre width='):
+                  num = line.find('>')
+                  temp_outline = line[:num+1]+'<font color="red">Untested :&nbsp;&nbsp;</font>'+line[num+1:]
+               else:
+                  temp_outline = '<font color="red">Untested :&nbsp;&nbsp;</font>'+line
+               not_tested += 1
             else:
-                temp_outline = spaces_12+line
+               temp_outline = spaces_12+line
             print(temp_outline, file=outhtml_fid)
-            outhtml_fid.flush()
-
-        inhtml_fid.close()
+            if i-10 in code[file]: n_code += 1
         outhtml_fid.close()
+        nsrc_files_not_tested += (not_tested > 0)
 
-        ntotal_lines += nsrc_lines
-        ntotal_lines_not_tested += src_not_tested_nlines[file_ctr]
-        per_code_not_tested = float(src_not_tested_nlines[file_ctr])/float(nsrc_lines)*100.0
+        ntotal_lines += n_code
+        ntotal_lines_not_tested += not_tested
+        per_code_not_tested = float(not_tested)/float(n_code)*100.0
 
-        temp_list.append(nsrc_lines)
+        temp_list.append(n_code)
+        temp_list.append(not_tested)
         temp_list.append(per_code_not_tested)
 
         output_list.append(temp_list)
 
-    if nsrc_files_not_tested == nfiles_not_processed:
-      print(fileopen_error)
-      raise RuntimeError("Unable to process any files, you must run make srchtml before running make mergegcov")
-
-    # ------------------------------- End of Stage 3 ----------------------------------------
-
-    # ------------------------------- Stage 4 ----------------------------------------------
+    # ------------------------------- Stage 3 ----------------------------------------------
     # Create Main HTML page containing statistics and marked HTML file links
     print("Creating main HTML page")
     # Create the main html file
@@ -336,12 +219,11 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
     else: ratio = 0.0
     print("""<center><font size = "4">Percentage of source code lines not tested = %3.2f</font></center>""" % ratio, file=out_fid)
     print("""<br><br>
-    <h4><u><center>Statistics sorted by percent code tested</center></u></h4>""", file=out_fid)
     print("""<table border="1" align = "center">
     <tr><th>Source Code</th><th>Lines in source code</th><th>Number of lines not tested</th><th>% Code not tested</th></tr>""", file=out_fid)
     output_list.sort(key=operator.itemgetter(4),reverse=True)
     for file_ctr in range(0,nsrc_files_not_tested-nfiles_not_processed):
-        print("<tr><td><a href = %s>%s</a></td><td>%s</td><td>%s</td><td>%3.2f</td></tr>" % (output_list[file_ctr][1],output_list[file_ctr][0],output_list[file_ctr][3],output_list[file_ctr][2],output_list[file_ctr][4]), file=out_fid)
+        print("<tr><td><a href = %s>%s</a></td><td>%s</td><td>%s</td><td>%3.2f</td></tr>" % (output_list[file_ctr][1],output_list[file_ctr][0],output_list[file_ctr][2],output_list[file_ctr][3],output_list[file_ctr][4]), file=out_fid)
 
     print("""</body>
     </html>""", file=out_fid)

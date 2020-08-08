@@ -566,8 +566,7 @@ simplehtml: chk_c2html
               if [ ! -d $${loc}/$${idir} ]; then ${MKDIR} -p $${loc}/$${idir}; fi ; \
               ${RM} $${loc}/$$i.html; \
               sed -e "s/CHKERRQ(ierr);//g" -e "s/PetscFunctionReturn(0)/return(0)/g"  -e "s/ierr [ ]*= //g"  -e "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | ${C2HTML} -n  | \
-              awk '{ sub(/<pre width="80">/,"<pre width=\"80\">\n"); print }'  | ${PYTHON} ${PETSC_DIR}/lib/petsc/bin/maint/fixinclude.py $$i $${PETSC_DIR} | \
-              egrep -v '(PetscValid|PetscFunctionBegin|PetscCheck|PetscErrorCode ierr;|#if !defined\(__|#define __|#undef __|EXTERN_C )'   > $${loc}/$$i.html ; \
+              awk '{ sub(/<pre width="80">/,"<pre width=\"80\">\n"); print }'  | ${PYTHON} ${PETSC_DIR}/lib/petsc/bin/maint/fixinclude.py $$i $${PETSC_DIR} > $${loc}/$$i.html ; \
 	    fi; \
          done
 

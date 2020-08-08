@@ -831,7 +831,7 @@ analyze-pipeline:
     - date
     - hostname
   script:
-  - ./configure --with-mpi=0 --with-fc=0 --with-cxx=0 --download-c2html
+  - ./configure --with-mpi=0 --with-cxx=0 --download-c2html
   - make srchtml
   - ./lib/petsc/bin/maint/gcov.py --merge_gcov --petsc_arch ${TEST_ARCH}
   artifacts:
