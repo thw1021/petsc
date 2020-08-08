@@ -218,7 +218,6 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
     if float(ntotal_lines) > 0: ratio = float(ntotal_lines_not_tested)/float(ntotal_lines)*100.0
     else: ratio = 0.0
     print("""<center><font size = "4">Percentage of source code lines not tested = %3.2f</font></center>""" % ratio, file=out_fid)
-    print("""<br><br>
     print("""<table border="1" align = "center">
     <tr><th>Source Code</th><th>Lines in source code</th><th>Number of lines not tested</th><th>% Code not tested</th></tr>""", file=out_fid)
     output_list.sort(key=operator.itemgetter(4),reverse=True)
