@@ -85,6 +85,29 @@ def make_tarball(gcov_dir,petsc_dir,petsc_arch):
     os.chdir(curdir)
     return
 
+def print_htmltable(nsrc_files,nsrc_files_not_tested,ntotal_lines,ntotal_lines_not_tested,output_list,lang,out_fid):
+    print("""<h2><center>Coverage data %s</center></h2>""" % lang, file=out_fid)
+    if lang == 'C':
+        print("""<center><font size = "4"><a href = #fortran>Statistics for Fortran stubs</a></font></center>""", file=out_fid)
+    if lang == 'Fortran stubs':
+        print("""<a name = fortran></a>""", file=out_fid)
+    print("""<center><font size = "4">Number of source code files = %s</font></center>""" %(nsrc_files), file=out_fid)
+    print("""<center><font size = "4">Number of source code files not tested fully = %s</font></center>""" %(nsrc_files_not_tested), file=out_fid)
+    if float(nsrc_files) > 0: ratio = float(nsrc_files_not_tested)/float(nsrc_files)*100.0
+    else: ratio = 0.0
+    print("""<center><font size = "4">Percentage of source code files not tested fully = %3.2f</font></center><br>""" %ratio, file=out_fid)
+    print("""<center><font size = "4">Total number of source code lines = %s</font></center>""" %(ntotal_lines), file=out_fid)
+    print("""<center><font size = "4">Total number of source code lines not tested = %s</font></center>""" %(ntotal_lines_not_tested), file=out_fid)
+    if float(ntotal_lines) > 0: ratio = float(ntotal_lines_not_tested)/float(ntotal_lines)*100.0
+    else: ratio = 0.0
+    print("""<center><font size = "4">Percentage of source code lines not tested = %3.2f</font></center>""" % ratio, file=out_fid)
+    print("""<table border="1" align = "center"><tr><th>Source Code</th><th>Lines in source code</th><th>Number of lines not tested</th><th>% Code not tested</th></tr>""", file=out_fid)
+    output_list.sort(key=operator.itemgetter(4),reverse=True)
+    for file_ctr in range(0,nsrc_files_not_tested):
+        print("<tr><td><a href = %s>%s</a></td><td>%s</td><td>%s</td><td>%3.2f</td></tr>" % (output_list[file_ctr][1],output_list[file_ctr][0],output_list[file_ctr][2],output_list[file_ctr][3],output_list[file_ctr][4]), file=out_fid)
+    print("""</table></p>""", file=out_fid)
+
+
 def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
     # Create index_gcov webpages using information processed from running gcov
 
@@ -103,12 +126,14 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
     print("Creating HTML files")
     temp_string = '<a name'
     spaces_12 = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp'
+    sep = petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep
 
     date_time = strftime("%x %X %Z")
     outfile_name = petsc_dir+os.sep+'index_gcov.html'
     out_fid = open(outfile_name,'w')
     print("""<html><head><title>PETSc:Code Testing Statistics</title></head><body style="background-color: rgb(213, 234, 255);">""", file=out_fid)
     print("""<center>%s</center>"""%(date_time), file=out_fid)
+
     for lang in ['C','Fortran stubs']:
 
       print("Extracting data from files for %s" % lang)
@@ -137,11 +162,10 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
             for line in codelines:
                 code[ii][int(line)-1] = 1
 
+        print("Building html files for %s" % lang)
         ntotal_lines = 0
         ntotal_lines_not_tested = 0
         output_list = []
-        nfiles_not_processed = 0
-        sep = petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep
         nsrc_files = 0
         nsrc_files_not_tested = 0
         for file in tested:
@@ -191,27 +215,25 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
 
             output_list.append(temp_list)
 
-        print("""<h2><center>Coverage data %s</center></h2>""" % lang, file=out_fid)
-        if lang == 'C':
-            print("""<center><font size = "4"><a href = #fortran>Statistics for Fortran stubs</a></font></center>""", file=out_fid)
-        if lang == 'Fortran stubs':
-            print("""<a name = fortran></a>""", file=out_fid)
-        print("""<center><font size = "4">Number of source code files = %s</font></center>""" %(nsrc_files), file=out_fid)
-        print("""<center><font size = "4">Number of source code files not tested fully = %s</font></center>""" %(nsrc_files_not_tested), file=out_fid)
-        if float(nsrc_files) > 0: ratio = float(nsrc_files_not_tested)/float(nsrc_files)*100.0
-        else: ratio = 0.0
-        print("""<center><font size = "4">Percentage of source code files not tested fully = %3.2f</font></center><br>""" %ratio, file=out_fid)
-        print("""<center><font size = "4">Total number of source code lines = %s</font></center>""" %(ntotal_lines), file=out_fid)
-        print("""<center><font size = "4">Total number of source code lines not tested = %s</font></center>""" %(ntotal_lines_not_tested), file=out_fid)
-        if float(ntotal_lines) > 0: ratio = float(ntotal_lines_not_tested)/float(ntotal_lines)*100.0
-        else: ratio = 0.0
-        print("""<center><font size = "4">Percentage of source code lines not tested = %3.2f</font></center>""" % ratio, file=out_fid)
-        print("""<table border="1" align = "center"><tr><th>Source Code</th><th>Lines in source code</th><th>Number of lines not tested</th><th>% Code not tested</th></tr>""", file=out_fid)
-        output_list.sort(key=operator.itemgetter(4),reverse=True)
-        for file_ctr in range(0,nsrc_files_not_tested-nfiles_not_processed):
-            print("<tr><td><a href = %s>%s</a></td><td>%s</td><td>%s</td><td>%3.2f</td></tr>" % (output_list[file_ctr][1],output_list[file_ctr][0],output_list[file_ctr][2],output_list[file_ctr][3],output_list[file_ctr][4]), file=out_fid)
-        print("""</table></p>""", file=out_fid)
+        # Gather information on changes to source code and new source code 
+        diff = str(subprocess.check_output('git diff master | grep "diff "| cut -d" " -f4 | sed "s?^b/??g"', shell=True).decode(encoding='UTF-8',errors='replace')).split('\n')
+        diff = [ i for i in diff if i.endswith('.c')]
+        print(diff)
+        for file in diff:
+           ii = file.replace(os.sep,'__')
+           print(ii)
+           if ii in tested:
+              diff = str(subprocess.check_output('git blame HEAD.. '+file+' | grep -v "\^"', shell=True).decode(encoding='UTF-8',errors='replace')).split('\n')
+              for line in diff:
+                  if len(line) > 0:
+                      print(line)
+                      line = line[:line.find(')')]
+                      c = int(line[line.rfind(' '):])-1
+                      print(c)
+                      if c in code[ii] and not line in tested[ii]:
+                          print("Line not tested %d" % c)
 
+        print_htmltable(nsrc_files,nsrc_files_not_tested,ntotal_lines,ntotal_lines_not_tested,output_list,lang,out_fid)
     print("""</body></html>""", file=out_fid)
     out_fid.close()
 
