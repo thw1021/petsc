@@ -841,7 +841,7 @@ analyze-pipeline:
     name: "$CI_JOB_NAME"
     when: always
     paths:
-    - ${PETSC_ARCH}/*
+    - arch-ci-analyze-pipeline/*
     expire_in: 4 days
 #
 #
