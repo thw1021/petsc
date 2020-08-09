@@ -51,7 +51,7 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
             # numbers in .tested file
             dir = os.getcwd()
             os.chdir(os.path.dirname(os.path.join(petsc_dir,file_name)))
-            subprocess.run('gcov '+relative_only+' '+ignore_h+' --object-directory "%s" "%s"' % (os.path.dirname(gcov_data_file), os.path.basename(file_name)),shell=True,check=False,capture_output=True)
+            os.system('gcov '+relative_only+' '+ignore_h+' --object-directory "%s" "%s" > /dev/null 2>&1' % (os.path.dirname(gcov_data_file), os.path.basename(file_name)))
             os.chdir(dir)
             gcov_file = file_name+".gcov"
             try:
