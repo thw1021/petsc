@@ -31,6 +31,12 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
 
     print("Creating directory to save .tested and .code files\n")
     print("Running gcov\n")
+    help = str(subprocess.check_output('gcov -h', shell=True).decode(encoding='UTF-8',errors='replace'))
+    if help.find('--relative-only') > -1: relative_only = '--relative-only'
+    else: relative_only = ''
+    if help.find('--ignore-filename-regex') > -1: ignore_h = '--ignore-filename-regex="*.h" '
+    else: ignore_h = ''
+
     # avoid errors of the type: UnicodeDecodeError: 'utf-8' codec can't decode byte 0x88 in position 7892: invalid start byte
     files  = subprocess.check_output('make -f gmakefile showcsrc', shell=True).decode(encoding='UTF-8',errors='replace').split()
     for file_name in files:
@@ -45,7 +51,7 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
             # numbers in .tested file
             dir = os.getcwd()
             os.chdir(os.path.dirname(os.path.join(petsc_dir,file_name)))
-            os.system('gcov --object-directory "%s" "%s"' % (os.path.dirname(gcov_data_file), os.path.basename(file_name)))
+            subprocess.run('gcov '+relative_only+' '+ignore_h+' --object-directory "%s" "%s"' % (os.path.dirname(gcov_data_file), os.path.basename(file_name)),shell=True,check=False,capture_output=True)
             os.chdir(dir)
             gcov_file = file_name+".gcov"
             try:
