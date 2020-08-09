@@ -44,9 +44,9 @@ int main(int argc,char **argv)
   time = 0.0;
   time1 = 0.0;
   if (vwr) {ierr = PetscIntView(n, XT, vwr);CHKERRQ(ierr);}
+  ierr = PetscViewerDestroy(&vwr);CHKERRQ(ierr);
   ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
   ierr = VecSetSizes(x,PETSC_DECIDE,100000000);CHKERRQ(ierr);
-  //ierr = VecSetSizes(x,PETSC_DECIDE,1);CHKERRQ(ierr);
   ierr = VecSetFromOptions(x);CHKERRQ(ierr);
   ierr = VecSetRandom(x,rdm);CHKERRQ(ierr);
   for (l=0; l<r; l++) { /* r loops */
@@ -80,6 +80,7 @@ int main(int argc,char **argv)
   ierr = PetscPrintf(PETSC_COMM_SELF,"PetscSortInt()              with %D integers, %D duplicate(s) per unique value took %g seconds\n",n,d,time/r);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_SELF,"PetscTimSortInt()           with %D integers, %D duplicate(s) per unique value took %g seconds\n",n,d,time1/r);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_SELF,"Speedup of PetscTimSortInt() was %g (0:1 = slower, >1 means faster)\n",time/time1);CHKERRQ(ierr);
+  ierr = VecDestroy(&x);CHKERRQ(ierr);
 
   time = 0.0;
   for (l=0; l<r; l++) { /* r loops */
@@ -99,7 +100,6 @@ int main(int argc,char **argv)
   ierr = PetscPrintf(PETSC_COMM_SELF,"SUCCEEDED\n");CHKERRQ(ierr);
 
   ierr = PetscRandomDestroy(&rdm);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&vwr);CHKERRQ(ierr);
   ierr = PetscFree5(X,X1,XT,Y,Z);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
