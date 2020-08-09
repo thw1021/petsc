@@ -191,8 +191,8 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
         nsrc_files_not_tested = 0
         for file in tested:
             nsrc_files += 1
-            dir = os.path.dirname(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
-            f = os.path.basename(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
+            dir = os.path.dirname(petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
+            f = os.path.basename(petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
             inhtml_file = os.path.join(dir,f+'.html')
             outhtml_file = os.path.join(dir,f+'.gcov.html')
             try:
@@ -265,8 +265,8 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
                  temp_list = []
                  temp_list.append(file.replace('__',os.sep))
 
-                 dir = os.path.dirname(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
-                 f = os.path.basename(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
+                 dir = os.path.dirname(petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
+                 f = os.path.basename(petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
                  inhtml_file = os.path.join(dir,f+'.html')
                  outshtml_file = os.path.join(dir,f+'.gcov_changed.html')
                  temp_list.append(outshtml_file) # Relative path of hyperlink
