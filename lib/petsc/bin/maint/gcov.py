@@ -232,6 +232,7 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
            print(ii)
            if ii in tested:
               diff = str(subprocess.check_output('git blame master.. '+file+' | grep -v "\^"', shell=True).decode(encoding='UTF-8',errors='replace')).split('\n')
+              lines_not_tested = {}
               for line in diff:
                   if len(line) > 0:
                       print(line)
@@ -243,6 +244,32 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
                           if not line in tested[ii]:
                               t_nsrc_lines_not_tested += 1
                               print("Line not tested %d" % c)
+                              lines_not_tested[c] = 1
+              if t_nsrc_lines_not_tested:
+                 dir = os.path.dirname(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
+                 f = os.path.basename(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
+                 inhtml_file = os.path.join(dir,f+'.html')
+                 outshtml_file = os.path.join(dir,f+'.gcov_changed.html')
+                 outshtml_fid = open(outshtml_file,"w")
+                 try:
+                    inhtml_fid = open(inhtml_file,"r")
+                 except IOError:
+                    # Error check for files not opened correctly or file names not parsed correctly in stage 1
+                    raise RuntimeError("Cannot locate html file %s, run make srchtml first" % inhtml_file)
+                 lines = inhtml_fid.read().split('\n')
+                 inhtml_fid.close()
+                 for i in range(0,len(lines)):
+                    line = lines[i]
+                    if i-10 in lines_not_tested and i-10 in code[ii]:
+                      if line.startswith('<pre width='):
+                         num = line.find('>')
+                         temp_outline = line[:num+1]+'<font color="red">Untested :&nbsp;&nbsp;</font>'+line[num+1:]
+                      else:
+                         temp_outline = '<font color="red">Untested :&nbsp;&nbsp;</font>'+line
+                    else:
+                      temp_outline = spaces_12+line
+                    print(temp_outline, file=outshtml_fid)
+                 outshtml_fid.close()
            else:
               new_nsrc_files += 1
               new_nsrc_files_not_tested += 1

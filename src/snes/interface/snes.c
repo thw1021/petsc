@@ -1,4 +1,3 @@
-
 #include <petsc/private/snesimpl.h>      /*I "petscsnes.h"  I*/
 #include <petscdmshell.h>
 #include <petscdraw.h>
@@ -33,9 +32,7 @@ PetscLogEvent SNES_Solve, SNES_Setup, SNES_FunctionEval, SNES_JacobianEval, SNES
 
 .seealso: SNESGetErrorIfNotConverged(), KSPGetErrorIfNotConverged(), KSPSetErrorIFNotConverged()
 @*/
-change
-dssdsd
-PetscErrorCode  SNESSetErrorIfNotConverged(SNES snes,PetscBool flg)
+PetscErrorCode SNESSetErrorIfNotConverged(SNES snes,PetscBool flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
