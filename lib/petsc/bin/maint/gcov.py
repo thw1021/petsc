@@ -58,7 +58,14 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
                 code_fid = open(os.path.join(gcov_dir,root_tmp1+'__'+os.path.basename(file_name)+'.code'),'w')
                 nsrc = 0
                 for line in gcov_fid:
-                    line_num = line.split(":")[1].strip()
+                    try:
+                       line_num = line.split(":")[1].strip()
+                    except Exception as e:
+                       print("Error processing %s, invalid gcov data, skipping data for file" % gcov_file)
+                       print("  Error message %s" % str(e))
+                       print("  Line %s" % line)
+                       line_num = 0
+                       continue
                     if line.find("#####") == -1 and line.find("-:") == -1:
                         print("""%s"""%(line_num), file=tested_fid)
                     if line.find("-:") == -1 and int(line_num) > 0 and src[int(line_num)-1].find('SETERRQ') == -1:
@@ -66,7 +73,13 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
                 gcov_fid.close()
                 code_fid.close()
                 tested_fid.close()
-            except IOError:
+            except IOError as e:
+                print("IO error processing %s, skipping data for file" % gcov_file)
+                print("  Error message %s" % str(e))
+                continue
+            except Exception as e:
+                print("Error processing %s, skipping data for file" % gcov_file)
+                print("  Error message %s" % str(e))
                 continue
     print("""Finshed running gcov on PETSc source code""")
     return
