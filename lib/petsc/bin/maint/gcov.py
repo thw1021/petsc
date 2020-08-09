@@ -142,7 +142,7 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
     sep = petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep
 
     date_time = strftime("%x %X %Z")
-    outfile_name = petsc_dir+os.sep+'index_gcov.html'
+    outfile_name = petsc_dir+os.sep+petsc_arch+os.sep+'index_gcov.html'
     out_fid = open(outfile_name,'w')
     print("""<html><head><title>PETSc:Code Testing Statistics</title></head><body style="background-color: rgb(213, 234, 255);">""", file=out_fid)
     print("""<center>%s</center>"""%(date_time), file=out_fid)
@@ -191,10 +191,11 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
         nsrc_files_not_tested = 0
         for file in tested:
             nsrc_files += 1
-            dir = os.path.dirname(petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
-            f = os.path.basename(petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
+            dir = os.path.dirname(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
+            f = os.path.basename(file[5:].replace('__',os.sep))
             inhtml_file = os.path.join(dir,f+'.html')
             outhtml_file = os.path.join(dir,f+'.gcov.html')
+            path = os.path.join(os.path.dirname('obj'+os.sep+file[5:].replace('__',os.sep)),f+'.gcov.html')
             try:
                 inhtml_fid = open(inhtml_file,"r")
             except IOError:
@@ -205,7 +206,7 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
 
             temp_list = []
             temp_list.append(file.replace('__',os.sep))
-            temp_list.append(outhtml_file) # Relative path of hyperlink
+            temp_list.append(path) # Relative path of hyperlink
 
             outhtml_fid = open(outhtml_file,"w")
             not_tested = 0
@@ -221,6 +222,7 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
                    not_tested += 1
                 else:
                    temp_outline = spaces_12+line
+                print(temp_outline,file = outhtml_fid)
                 if i-10 in code[file]: n_code += 1
             outhtml_fid.close()
             nsrc_files_not_tested += (not_tested > 0)
@@ -266,10 +268,11 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
                  temp_list.append(file.replace('__',os.sep))
 
                  dir = os.path.dirname(petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
-                 f = os.path.basename(petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
+                 f = os.path.basename(os.sep+file[4:].replace('__',os.sep))
                  inhtml_file = os.path.join(dir,f+'.html')
                  outshtml_file = os.path.join(dir,f+'.gcov_changed.html')
-                 temp_list.append(outshtml_file) # Relative path of hyperlink
+                 path = os.path.join(os.path.dirname('obj'+os.sep+file[4:].replace('__',os.sep)),f+'.gcov_changed.html')
+                 temp_list.append(path) # Relative path of hyperlink
                  outshtml_fid = open(outshtml_file,"w")
                  try:
                     inhtml_fid = open(inhtml_file,"r")
