@@ -64,15 +64,11 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
                        print("Error processing %s, invalid gcov data, skipping data for file" % gcov_file)
                        print("  Error message %s" % str(e))
                        print("  Line %s" % line)
-                       line_num = 0
-                       continue
+                       break
                     if line.find("#####") == -1 and line.find("-:") == -1:
                         print("""%s"""%(line_num), file=tested_fid)
                     if line.find("-:") == -1 and int(line_num) > 0 and src[int(line_num)-1].find('SETERRQ') == -1:
                         print("""%s"""%(line_num), file=code_fid)
-                gcov_fid.close()
-                code_fid.close()
-                tested_fid.close()
             except IOError as e:
                 print("IO error processing %s, skipping data for file" % gcov_file)
                 print("  Error message %s" % str(e))
@@ -81,6 +77,13 @@ def run_gcov(gcov_dir,petsc_dir,petsc_arch):
                 print("Error processing %s, skipping data for file" % gcov_file)
                 print("  Error message %s" % str(e))
                 continue
+            try:
+                gcov_fid.close()
+                code_fid.close()
+                tested_fid.close()
+            except:
+                pass
+
     print("""Finshed running gcov on PETSc source code""")
     return
 
@@ -165,7 +168,13 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
             in_fid.close()
             if not ii in tested: tested[ii] = {}
             for line in testlines:
-                tested[ii][int(line)-1] = 1
+                try:
+                  tested[ii][int(line)-1] = 1
+                except Exception as e:
+                  print("  Error processing %s" % in_file)
+                  print("  Invalid tested data, skipping file")
+                  print("  Error message %s" % str(e))
+                  print("  Line:%s" % line)
             in_file = os.path.join(j,i.replace('tested','code'))
             in_fid = open(in_file,'r')
             codelines = in_fid.readlines()
