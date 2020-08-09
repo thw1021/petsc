@@ -828,7 +828,7 @@ analyze-pipeline:
     - linux-matlab-ilp64-gcov
     - linux-gcov
   variables:
-    PETSC__ARCH: arch-ci-linux-pkgs-gcov
+    PETSC__ARCH: arch-ci-analyze-pipeline
   allow_failure: true
   before_script:
     - date
