@@ -1028,9 +1028,8 @@ PetscErrorCode PetscParallelSortedInt(MPI_Comm comm, PetscInt n, const PetscInt 
 PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchLeftInt_Private(PetscInt[],PetscInt,PetscInt,PetscInt,PetscInt*);
 PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchRightInt_Private(PetscInt[],PetscInt,PetscInt,PetscInt,PetscInt*);
 
-static const PetscInt MIN_GALLOP_CONST_GLOBAL = 8;
+#define MIN_GALLOP_CONST_GLOBAL 8
 static PetscInt MIN_GALLOP_GLOBAL = MIN_GALLOP_CONST_GLOBAL;
-#define NOOP ((void)(0))
 
 /* Mergesort where size of left half <= size of right half, so mergesort is done left to right. Arr should be pointer to
  complete array, left is first index of left array, mid is first index of right array, right is last index of right
@@ -1050,7 +1049,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt *tarr
         PetscInt l1, l2, diff1, diff2;
         ++MIN_GALLOP_GLOBAL;
         do {
-          MIN_GALLOP_GLOBAL > 1 ? --MIN_GALLOP_GLOBAL : NOOP;
+          if (MIN_GALLOP_GLOBAL > 1) --MIN_GALLOP_GLOBAL;
           /* search temp for right[j], can move up to that of temp into arr immediately */
           ierr = PetscGallopSearchLeftInt_Private(tarr, i, llen-1, arr[j], &l1);CHKERRQ(ierr);
           diff1 = l1-i;
@@ -1074,7 +1073,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntLo_Private(PetscInt *tarr
         PetscInt l1, l2, diff1, diff2;
         ++MIN_GALLOP_GLOBAL;
         do {
-          MIN_GALLOP_GLOBAL > 1 ? --MIN_GALLOP_GLOBAL : NOOP;
+          if (MIN_GALLOP_GLOBAL > 1) --MIN_GALLOP_GLOBAL;
           /* search right for temp[i], can move up to that many of right into arr */
           ierr = PetscGallopSearchLeftInt_Private(arr, j, right, tarr[i], &l2);CHKERRQ(ierr);
           diff2 = l2-j;
@@ -1114,7 +1113,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt *tarr
         PetscInt l1, l2, diff1, diff2;
         ++MIN_GALLOP_GLOBAL;
         do {
-          MIN_GALLOP_GLOBAL > 1 ? --MIN_GALLOP_GLOBAL : NOOP;
+          if (MIN_GALLOP_GLOBAL > 1) --MIN_GALLOP_GLOBAL;
           /* search temp for left[j], can copy up to that many of temp into arr */
           ierr = PetscGallopSearchRightInt_Private(tarr, 0, i, arr[j], &l1);CHKERRQ(ierr);
           diff1 = i-l1;
@@ -1137,8 +1136,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeIntHi_Private(PetscInt *tarr
         PetscInt l1, l2, diff1, diff2;
         ++MIN_GALLOP_GLOBAL;
         do {
-          MIN_GALLOP_GLOBAL > 1 ? --MIN_GALLOP_GLOBAL : NOOP;
-            //MIN_GALLOP_GLOBAL -= MIN_GALLOP_GLOBAL > 1;
+          if (MIN_GALLOP_GLOBAL > 1) --MIN_GALLOP_GLOBAL;
           /* search left for temp[i], can move up to that many of left up arr */
           ierr = PetscGallopSearchRightInt_Private(arr, left, j, tarr[i], &l2);CHKERRQ(ierr);
           diff2 = j-l2;
@@ -1275,10 +1273,10 @@ typedef struct {
 PETSC_STATIC_INLINE PetscErrorCode PetscTimSortResizeBuffer_Private(PetscTimSortBuffer *buff, PetscInt newSize)
 {
   PetscFunctionBegin;
-  if (PetscUnlikely(newSize <= buff->size)) PetscFunctionReturn(0);
+  if (PetscLikely(newSize <= buff->size)) PetscFunctionReturn(0);
   {
     /* Can't be larger than n, there is merit to simply allocating buff to n to begin with */
-    PetscErrorCode ierr, newMax = PetscMin(newSize*newSize, buff->maxsize);
+    PetscErrorCode ierr, newMax = PetscMin(newSize*buff->size, buff->maxsize);
     ierr = PetscFree(buff->ptr);CHKERRQ(ierr);
     ierr = PetscMalloc1(newMax, &buff->ptr);CHKERRQ(ierr);
     buff->size = newMax;
@@ -1295,7 +1293,6 @@ static PetscErrorCode PetscTimSortForceCollapseInt_Private(PetscInt arr[], Petsc
     PetscInt       l, m = stack[stacksize].start, r;
     PetscErrorCode ierr;
 
-    MIN_GALLOP_GLOBAL = 7;
     /* A = stack[i-1], B = stack[i] */
     /* Search A for B[0] insertion */
     ierr = PetscGallopSearchLeftInt_Private(arr, stack[stacksize-1].start, stack[stacksize].start-1, arr[stack[stacksize].start], &l);CHKERRQ(ierr);
@@ -1425,10 +1422,10 @@ static PetscErrorCode PetscTimSortBuildRun_Private(PetscInt arr[], PetscInt n, P
     }
     {
       PetscInt lo = runstart, hi = ri, t;
-      while (lo < hi) {
+      do {
         SWAP1(arr[lo],arr[hi],t);
         ++lo; --hi;
-      }
+      } while (lo < hi);
     }
   } else {
     ++ri;
@@ -1444,9 +1441,10 @@ static PetscErrorCode PetscTimSortBuildRun_Private(PetscInt arr[], PetscInt n, P
   }
 #endif
   if (ri < re) {
-    /* the attempt failed, this section likely contains random data. If ri got close to minrun (within 50%) then we can
-     be pretty confident that the binary search will pay off, if not, resort to linear search */
+    /* the attempt failed, this section likely contains random data. If ri got close to minrun (within 50%) then we try
+     binary search */
     if (ri-runstart <= minrun >> 1) {
+      ++MIN_GALLOP_GLOBAL; /* didn't get close hedge our bets against random data */
       PetscInsertionSortInt_Private(arr, runstart, ri, re);
     } else {
       PetscBinaryInsertionSortInt_Private(arr, runstart, ri, re);
