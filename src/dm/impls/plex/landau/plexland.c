@@ -1037,8 +1037,6 @@ static PetscErrorCode ProcessOptions(LandCtx *ctx, const char prefix[])
       ierr = PetscOptionsClearValue(NULL,"-ts_adapt_monitor");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-dm_land_amr_dm_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-dm_land_amr_vec_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-dm_land_mass_mat_view");CHKERRQ(ierr);
-      ierr = PetscOptionsClearValue(NULL,"-dm_land_mass_dm_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-dm_land_pre_dm_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-dm_land_pre_vec_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-info");CHKERRQ(ierr);
