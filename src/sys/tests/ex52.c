@@ -13,13 +13,14 @@ int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
   PetscInt       i,l,n=100,r=10,d=1;
-  PetscInt       *X,*X1,*XT,*Y,*Z;
+  PetscInt       *X,*X1,*XR,*XSO,*Y,*Z;
   PetscReal      val,norm1;
-  PetscRandom    rdm;
+  PetscRandom    rdm,rdm2;
   PetscLogDouble time, time1;
   PetscMPIInt    size;
   PetscViewer    vwr;
   Vec            x;
+  PetscBool      order=PETSC_FALSE;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
@@ -28,38 +29,47 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-r",&r,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-d",&d,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetBool(NULL,NULL,"-order",NULL,&order);CHKERRQ(ierr);
+  printf("%s\n", order ? "SEMI ORDERED" : "RANDOM SET");
   ierr = PetscOptionsGetViewer(PETSC_COMM_WORLD,NULL,NULL,"-array_view",&vwr,NULL,NULL);CHKERRQ(ierr);
   if (n<1 || r<1 || d<1 || d>n) SETERRQ3(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Wrong input n=%D,r=%D,d=%d. They must be >=1 and n>=d\n",n,r,d);
 
-  ierr = PetscCalloc5(n,&X,n,&X1,n,&XT,n,&Y,n,&Z);CHKERRQ(ierr);
+  ierr = PetscCalloc6(n,&X,n,&X1,n,&XR,n,&XSO,n,&Y,n,&Z);CHKERRQ(ierr);
   ierr = PetscRandomCreate(PETSC_COMM_SELF,&rdm);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rdm);CHKERRQ(ierr);
 
   for (i=0; i<n; ++i) {
     ierr = PetscRandomGetValueReal(rdm,&val);CHKERRQ(ierr);
-    XT[i] = val*PETSC_MAX_INT;
-    if (d > 1) XT[i] = XT[i] % (n/d);
+    XR[i] = val*PETSC_MAX_INT;
+    if (d > 1) XR[i] = XR[i] % (n/d);
+    XSO[i] = i;
+    if (d > 1) XSO[i] = XSO[i] % (n/d);
   }
+
+  PetscReal nreal = (PetscReal) n;
+  ierr = PetscRandomCreate(PETSC_COMM_SELF,&rdm2);CHKERRQ(ierr);
+  ierr = PetscRandomSetInterval(rdm2,0,nreal);CHKERRQ(ierr);
+  for (i = 0; i < n/10; ++i) {
+    PetscInt swapi, t;
+    ierr = PetscRandomGetValueReal(rdm2,&val);CHKERRQ(ierr);
+    swapi = (PetscInt) val;
+    t = XSO[swapi-1];
+    XSO[swapi-1] = XSO[swapi];
+    XSO[swapi] = t;
+  }
+  ierr = PetscRandomDestroy(&rdm2);CHKERRQ(ierr);
 
   time = 0.0;
   time1 = 0.0;
-  if (vwr) {ierr = PetscIntView(n, XT, vwr);CHKERRQ(ierr);}
+  if (vwr) {ierr = PetscIntView(n, order ? XSO : XR, vwr);CHKERRQ(ierr);}
   ierr = PetscViewerDestroy(&vwr);CHKERRQ(ierr);
   ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
   ierr = VecSetSizes(x,PETSC_DECIDE,100000000);CHKERRQ(ierr);
   ierr = VecSetFromOptions(x);CHKERRQ(ierr);
   ierr = VecSetRandom(x,rdm);CHKERRQ(ierr);
   for (l=0; l<r; l++) { /* r loops */
-    ierr = PetscArraycpy(X,XT,n);CHKERRQ(ierr);
-    ierr = PetscArraycpy(X1,XT,n);CHKERRQ(ierr);
-    /*
-    for (i=0; i<n; i++) { // Init X[]
-      ierr = PetscRandomGetValueReal(rdm,&val);CHKERRQ(ierr);
-      X[i] = val*PETSC_MAX_INT;
-      if (d > 1) X[i] = X[i] % (n/d);
-      X1[i] = X[i];
-    }
-     */
+    ierr = PetscArraycpy(X,order ? XSO : XR,n);CHKERRQ(ierr);
+    ierr = PetscArraycpy(X1,order ? XSO : XR,n);CHKERRQ(ierr);
 
     ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
     ierr = PetscTimeSubtract(&time);CHKERRQ(ierr);
@@ -100,7 +110,7 @@ int main(int argc,char **argv)
   ierr = PetscPrintf(PETSC_COMM_SELF,"SUCCEEDED\n");CHKERRQ(ierr);
 
   ierr = PetscRandomDestroy(&rdm);CHKERRQ(ierr);
-  ierr = PetscFree5(X,X1,XT,Y,Z);CHKERRQ(ierr);
+  ierr = PetscFree6(X,X1,XR,XSO,Y,Z);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
