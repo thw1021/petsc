@@ -697,6 +697,8 @@ typedef struct {
   LandFDF     fdf[LAND_MAX_SPECIES];
 } LandPointData;
 
+PETSC_EXTERN PetscErrorCode DMPlexLandAssembleOpenMP(PetscInt cStart, PetscInt cEnd, PetscInt totDim, DM plex, PetscSection section, PetscSection globalSection, Mat JacP, PetscScalar elemMats[], PetscContainer container);
+PETSC_EXTERN PetscErrorCode DMPlexLandCreateColoring(Mat, DM, PetscContainer *);
 PETSC_EXTERN PetscErrorCode DMPlexLandFormLandau_Internal(Vec, Mat, const PetscInt, void *);
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode LandCUDAJacobian(DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
