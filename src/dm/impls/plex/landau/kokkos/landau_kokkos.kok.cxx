@@ -85,7 +85,7 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
                                    Mat JacP)
 {
   PetscErrorCode    ierr;
-  PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,ej,nip;
+  PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,nip;
   PetscTabulation   *Tf;
   PetscDS           prob;
   PetscSection      section, globalSection;
@@ -277,20 +277,36 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
     Kokkos::deep_copy (h_elem_mats, d_elem_mats);
     ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
-    for (ej = cStart ; ej < cEnd; ++ej) {
-      const PetscScalar *elMat = &h_elem_mats(ej-cStart,0);
-      ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
-      if (ej==-1) {
-        int d,f;
-        printf("Kokkos Element matrix %d/%d\n",1,numCells);
-        for (d = 0; d < totDim; ++d){
-          for (f = 0; f < totDim; ++f) printf(" %17.9e",  PetscRealPart(elMat[d*totDim + f]));
-          printf("\n");
+#if defined(PETSC_HAVE_OPENMP)
+    {
+      PetscContainer container = NULL;
+      ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
+      if (!container) {
+        ierr = PetscLogEventBegin(events[8],0,0,0,0);CHKERRQ(ierr);
+        ierr = DMPlexLandCreateColoring(JacP, plex, &container);CHKERRQ(ierr);
+        ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
+      }
+      ierr = DMPlexLandAssembleOpenMP(cStart, cEnd, totDim, plex, section, globalSection, JacP, &h_elem_mats(0,0), container);CHKERRQ(ierr);
+    }
+#else
+    {
+      PetscInt ej;
+      for (ej = cStart ; ej < cEnd; ++ej) {
+        const PetscScalar *elMat = &h_elem_mats(ej-cStart,0);
+        ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
+        if (ej==-1) {
+          int d,f;
+          printf("Kokkos Element matrix %d/%d\n",1,numCells);
+          for (d = 0; d < totDim; ++d){
+            for (f = 0; f < totDim; ++f) printf(" %17.9e",  PetscRealPart(elMat[d*totDim + f]));
+            printf("\n");
+          }
         }
       }
     }
+#endif
     ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
-}
+} // extern "C"
