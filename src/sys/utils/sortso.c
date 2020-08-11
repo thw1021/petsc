@@ -491,7 +491,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortBuildRun_Private(PetscInt n, void
 */
 PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, PetscInt (*cmp)(const void *, const void *))
 {
-  PetscInt           stacksize = 0, minrun, runstart = 0, runend;
+  PetscInt           stacksize = 0, minrun, runstart = 0, runend = 0;
   PetscTimSortStack  runstack[128];
   PetscTimSortBuffer buff;
   PetscErrorCode     ierr;
