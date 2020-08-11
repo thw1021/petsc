@@ -67,9 +67,14 @@ static PetscErrorCode PetscSortReal_Private(PetscReal *v,PetscInt right)
 +  n  - number of values
 -  v  - array of doubles
 
+   Notes:
+   This function serves as an alternative to PetscRealSortSemiOrdered(), and may perform faster especially if the array
+   is completely random. There are exceptions to this and so it is __highly__ recomended that the user benchmark their
+   code to see which routine is fastest.
+
    Level: intermediate
 
-.seealso: PetscSortInt(), PetscSortRealWithPermutation(), PetscSortRealWithArrayInt()
+.seealso: PetscRealSortSemiOrdered(), PetscSortInt(), PetscSortRealWithPermutation(), PetscSortRealWithArrayInt()
 @*/
 PetscErrorCode  PetscSortReal(PetscInt n,PetscReal v[])
 {
@@ -349,3 +354,46 @@ PetscErrorCode  PetscSortSplitReal(PetscInt ncut,PetscInt n,PetscReal a[],PetscI
   PetscFunctionReturn(0);
 }
 
+PETSC_STATIC_INLINE PetscInt Compare_PetscReal_Private(const void *left, const void *right)
+{
+  PetscReal l = *(PetscReal *) left, r = *(PetscReal *) right;
+  return l < r ? -1 : l == r ? 0 : 1;
+}
+
+/*@
+   PetscRealSortSemiOrdered - Sorts an array of PetscReals in place in increasing order.
+
+   Not Collective
+
+   Input Parameters:
++  n   - number of values
+-  arr - array of PetscReals
+
+   Output Parameters:
+.  arr - sorted array of integers
+
+   Notes:
+   If the array is less than 64 entries long PetscSortReal() is automatically used.
+
+   This function serves as an alternative to PetscSortReal(). While this function works for any array of PetscReals it is
+   significantly faster if the array is not totally random. There are exceptions to this and so it is __highly__
+   recomended that the user benchmark their code to see which routine is fastest.
+
+   Level: intermediate
+
+.seealso: PetscTimSort(), PetscSortReal(), PetscSortRealWithPermutation()
+@*/
+PetscErrorCode PetscRealSortSemiOrdered(PetscInt n, PetscReal arr[])
+{
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  PetscValidIntPointer(arr,2);
+  if (n == 1) PetscFunctionReturn(0);
+  if (n < 64) {
+    ierr = PetscSortReal(n, arr);CHKERRQ(ierr);
+  } else {
+    ierr = PetscTimSort(n, arr, sizeof(arr[0]), Compare_PetscReal_Private);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
