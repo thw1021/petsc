@@ -623,7 +623,7 @@ PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErro
 #endif
 #if !defined(LAND_MAX_SUB_THREAD_BLOCKS)
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_KOKKOS)
-#define LAND_MAX_SUB_THREAD_BLOCKS 8
+#define LAND_MAX_SUB_THREAD_BLOCKS 4
 #else
 #define LAND_MAX_SUB_THREAD_BLOCKS 1
 #endif

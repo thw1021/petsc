@@ -181,6 +181,7 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
   __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
   __itt_resume(); // start VTune, again use 2 underscores
 #endif
+  MPI_Barrier(PETSC_COMM_WORLD);
   if (ctx->deviceType == LAND_CUDA) {
 #if defined(PETSC_HAVE_CUDA)
     ierr = LandCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,IPData,wiGlob,invJ_a,ctx->subThreadBlockSize,ctx->events,ctx->quarter3DDomain,JacP);

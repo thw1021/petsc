@@ -41,7 +41,7 @@ do {                                                                  \
     }                                                                 \
 } while (0)
 
-// #define LAND_USE_SHARED_GPU_MEM
+#define LAND_USE_SHARED_GPU_MEM
 //j
 // The GPU Landau kernel
 //
@@ -136,29 +136,30 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
   CUDA_SAFE_CALL(cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice));
 
   ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
+
   ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(flops*nip);CHKERRQ(ierr);
   {
-    PetscReal  *d_g2g3;
     dim3 dimBlock(Nq,num_sub_blocks);
     CUDA_SAFE_CALL(cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar))); // kernel output
     ii = LAND_MAX_NQ*LAND_MAX_SPECIES*LAND_DIM*(1+LAND_DIM)*LAND_MAX_SUB_THREAD_BLOCKS;
 #if defined(LAND_USE_SHARED_GPU_MEM)
-    /* PetscPrintf(PETSC_COMM_SELF,"Call land_kernel with %D words shared memory\n",ii); */
+    // PetscPrintf(PETSC_COMM_SELF,"Call land_kernel with %D kB shared memory\n",ii*8/1024);
     land_kernel<<<numGCells,dimBlock,ii*szf>>>( nip,dim,totDim,Nf,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
 						d_BB, d_DD, d_IPDataGlobal, d_wiGlobal, quarter3DDomain, d_elemMats);
     CHECK_LAUNCH_ERROR();
 #else
+    PetscReal  *d_g2g3;
     CUDA_SAFE_CALL(cudaMalloc((void **)&d_g2g3, ii*szf*numGCells)); // kernel input
     PetscReal  *g2 = &d_g2g3[0];
     PetscReal  *g3 = &d_g2g3[LAND_MAX_SUB_THREAD_BLOCKS*LAND_MAX_NQ*LAND_MAX_SPECIES*LAND_DIM*numGCells];
-    land_kernel<<<numGCells,dimBlock>>>( nip,dim,totDim,Nf,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
-					 d_BB, d_DD, d_IPDataGlobal, d_wiGlobal, g2, g3, quarter3DDomain, d_elemMats);
+    land_kernel<<<numGCells,dimBlock>>>(nip,dim,totDim,Nf,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
+					d_BB, d_DD, d_IPDataGlobal, d_wiGlobal, g2, g3, quarter3DDomain, d_elemMats);
     CHECK_LAUNCH_ERROR();
     CUDA_SAFE_CALL (cudaDeviceSynchronize());
     CUDA_SAFE_CALL(cudaFree(d_g2g3));
-  }
 #endif
+  }
   ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
 
@@ -176,6 +177,7 @@ PetscErrorCode LandCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_
   CUDA_SAFE_CALL(cudaMemcpy(elemMats, d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar), cudaMemcpyDeviceToHost));
   CUDA_SAFE_CALL(cudaFree(d_elemMats));
   ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
+
   ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
   if (1) {
     PetscScalar *elMat;
