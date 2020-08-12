@@ -1,4 +1,3 @@
-MPI Rank 000 of 001 on HWThread -01 of Node h25n10, OMP_threadID 0 of 1
 [0] ProcessOptions(): num_species set to number of thermal temps provided (2)
 [0] ProcessOptions(): Change domain radius to 7.582042e+00
 masses:        e= 9.109e-31; ions in proton mass units:    2.000e+00  0.000e+00 ...
