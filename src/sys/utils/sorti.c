@@ -1035,18 +1035,6 @@ PetscErrorCode PetscParallelSortedInt(MPI_Comm comm, PetscInt n, const PetscInt 
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscInt Compare_PetscMPIInt_Private(const void *left, const void *right)
-{
-  PetscMPIInt l = *(PetscMPIInt *) left, r = *(PetscMPIInt *) right;
-  return l < r ? -1 : l == r ? 0 : 1;
-}
-
-PETSC_STATIC_INLINE PetscInt Compare_PetscInt_Private(const void *left, const void *right)
-{
-  PetscInt l = *(PetscInt *) left, r = *(PetscInt *) right;
-  return l < r ? -1 : l == r ? 0 : 1;
-}
-
 /*@
    PetscIntSortSemiOrdered - Sorts an array of integers in place in increasing order.
 
