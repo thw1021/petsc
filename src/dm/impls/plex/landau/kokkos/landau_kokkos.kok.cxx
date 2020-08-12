@@ -165,7 +165,7 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
     using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
     using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
     int scr_bytes = g2_scr_t::shmem_size(Nf,Nq,dim) +  g3_scr_t::shmem_size(Nf,Nq,dim,dim);
-#define KOKKOS_SHARED_LEVEL 0
+#define KOKKOS_SHARED_LEVEL 1
     //PetscInfo2(plex, "shared memory size: %D kB in level %d\n",Nf*Nq*dim*(dim+1)*sizeof(PetscReal)/1024,KOKKOS_SHARED_LEVEL);
     int conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
     Kokkos::parallel_for("Landau_elements", Kokkos::TeamPolicy<>( numCells, team_size, num_sub_blocks ).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
