@@ -78,12 +78,12 @@ int main(int argc,char **argv)
 
     ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
     ierr = PetscTimeSubtract(&time1);CHKERRQ(ierr);
-    ierr = PetscTimSortInt(n,X1);CHKERRQ(ierr);
+    ierr = PetscIntSortSemiOrdered(n,X1);CHKERRQ(ierr);
     ierr = PetscTimeAdd(&time1);CHKERRQ(ierr);
 
     for (i=0; i<n-1; i++) {if (X[i] > X[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscSortInt() produced wrong results!");}
-    for (i=0; i<n-1; i++) {if (X1[i] > X1[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() produced wrong results!");}
     for (i=0; i<n; i++) {if (X[i] != X1[i]) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() rep %D X1[%D]:%D does not match PetscSortInt() X[%D]:%D!",l,i,X1[i],i,X[i]);}
+    for (i=0; i<n-1; i++) {if (X1[i] > X1[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() produced wrong results!");}
     ierr = PetscArrayzero(X,n);CHKERRQ(ierr);
     ierr = PetscArrayzero(X1,n);CHKERRQ(ierr);
   }
