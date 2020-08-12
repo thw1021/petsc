@@ -165,13 +165,15 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
     using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
     using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
     int scr_bytes = g2_scr_t::shmem_size(Nf,Nq,dim) +  g3_scr_t::shmem_size(Nf,Nq,dim,dim);
+#define KOKKOS_SHARED_LEVEL 0
+    //PetscInfo2(plex, "shared memory size: %D kB in level %d\n",Nf*Nq*dim*(dim+1)*sizeof(PetscReal)/1024,KOKKOS_SHARED_LEVEL);
     int conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
-    Kokkos::parallel_for("Landau_E", Kokkos::TeamPolicy<>( numCells, team_size, num_sub_blocks ).set_scratch_size(0, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
+    Kokkos::parallel_for("Landau_elements", Kokkos::TeamPolicy<>( numCells, team_size, num_sub_blocks ).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
         const PetscInt  myelem = team.league_rank();
-        g2_scr_t        g2(team.team_scratch(0),Nf,Nq,dim);
-        g3_scr_t        g3(team.team_scratch(0),Nf,Nq,dim,dim);
+        g2_scr_t        g2(team.team_scratch(KOKKOS_SHARED_LEVEL),Nf,Nq,dim);
+        g3_scr_t        g3(team.team_scratch(KOKKOS_SHARED_LEVEL),Nf,Nq,dim,dim);
         // get g2[] & g3[]
-        Kokkos::parallel_for( Kokkos::TeamThreadRange(team,0,Nq), [=] (int myQi) {
+        Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nq), [=] (int myQi) {
             using Kokkos::parallel_reduce;
             const PetscInt              jpidx = myQi + myelem * Nq;
             const PetscReal     * const invJj = &d_invJ(jpidx*dim*dim);
@@ -217,11 +219,11 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
                 }
 #endif
               }, Kokkos::Sum<landau_inner_red::ValueType>(gg) );
-            Kokkos::parallel_for( Kokkos::ThreadVectorRange (team, Nf), [&] ( const int& fieldA ) {
+            Kokkos::parallel_for(Kokkos::ThreadVectorRange (team, Nf), [&] ( const int& fieldA ) {
                 gg.gg2[fieldA][dim-1] += d_Eq_m[fieldA];
               });
             //kkos::single(Kokkos::PerThread(team), [&]() {
-            Kokkos::parallel_for( Kokkos::ThreadVectorRange (team, Nf), [=] ( const int& fieldA ) {
+            Kokkos::parallel_for(Kokkos::ThreadVectorRange (team, Nf), [=] ( const int& fieldA ) {
                 int d,d2,d3,dp;
                 //printf("%d %d %d gg2[][1]=%18.10e\n",myelem,myQi,fieldA,gg.gg2[fieldA][dim-1]);
                 /* Jacobian transform - g2, g3 - per thread (2D) */
@@ -247,8 +249,8 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
         /* assemble - on the diagonal (I,I) */
         //Kokkos::single(Kokkos::PerTeam(team), [&]() {
         { // int fieldA,blk_i;
-          Kokkos::parallel_for( Kokkos::TeamThreadRange(team,0,Nb), [=] (int blk_i) {
-              Kokkos::parallel_for( Kokkos::ThreadVectorRange(team,0,Nf), [=] (int fieldA) {
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nb), [=] (int blk_i) {
+              Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,Nf), [=] (int fieldA) {
                   //for (fieldA = 0; fieldA < Nf; ++fieldA) {
                   //for (blk_i = 0; blk_i < Nb; ++blk_i) {
                   int blk_j,qj,d,d2;
@@ -276,6 +278,7 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
     ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
     Kokkos::deep_copy (h_elem_mats, d_elem_mats);
     ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
+
     ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_OPENMP)
     {
