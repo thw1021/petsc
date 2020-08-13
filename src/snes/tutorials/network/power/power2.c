@@ -632,19 +632,16 @@ int main(int argc,char ** argv)
      depends: PFReadData.c pffunctions.c
      requires: !complex double define(PETSC_HAVE_ATTRIBUTEALIGNED)
 
-
    test:
      args: -snes_rtol 1.e-3
      localrunfiles: poweroptions case9.m
-     output_file: output/power2_1.out
-     requires: double !complex
+     output_file: output/power_1.out
 
    test:
      suffix: 2
      args: -snes_rtol 1.e-3 -petscpartitioner_type simple
      nsize: 4
      localrunfiles: poweroptions case9.m
-     output_file: output/power2_1.out
-     requires: double !complex
+     output_file: output/power_1.out
 
 TEST*/
