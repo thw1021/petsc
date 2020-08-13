@@ -7,13 +7,13 @@ landau_inner_integral( const PetscInt myQi, const PetscInt qi_inc, const PetscIn
                        const PetscInt jpidx, const PetscInt Nf, const PetscInt dim, const PetscReal * const IPDataGlobal, const PetscReal wiGlobal[], const PetscReal invJj[],
                        const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[], PetscBool quarter3DDomain,
                        const PetscInt Nq, const PetscInt Nb, const PetscInt qj_start, const PetscInt qj_end, const PetscReal * const BB, const PetscReal * const DD, PetscScalar *elemMat, /* discretization args; local output */
-                       PetscReal g2[/* LAND_MAX_NQ */][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM], PetscReal g3[/* LAND_MAX_NQ */][LAND_MAX_SUB_THREAD_BLOCKS][LAND_MAX_SPECIES][LAND_DIM][LAND_DIM] /* shared memory buffers */
+                       PetscReal g2[/* LANDAU_MAX_NQ */][LANDAU_MAX_SUB_THREAD_BLOCKS][LANDAU_MAX_SPECIES][LANDAU_DIM], PetscReal g3[/* LANDAU_MAX_NQ */][LANDAU_MAX_SUB_THREAD_BLOCKS][LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM] /* shared memory buffers */
                        , PetscInt myelem)
 {
-  PetscReal                   gg2[LAND_MAX_SPECIES][LAND_DIM],gg3[LAND_MAX_SPECIES][LAND_DIM][LAND_DIM];
+  PetscReal                   gg2[LANDAU_MAX_SPECIES][LANDAU_DIM],gg3[LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM];
   const PetscInt              ipdata_sz = (dim + Nf*(1+dim));
   PetscInt                    d,f,d2,dp,d3,fieldB,ipidx,fieldA;
-  const LandPointData * const fplpt_j = (LandPointData*)(IPDataGlobal + jpidx*ipdata_sz);
+  const LandauPointData * const fplpt_j = (LandauPointData*)(IPDataGlobal + jpidx*ipdata_sz);
   const PetscReal * const     vj = fplpt_j->crd, wj = wiGlobal[jpidx];
   // create g2 & g3
   for (d=0;d<dim;d++) { // clear accumulation data D & K
@@ -23,10 +23,10 @@ landau_inner_integral( const PetscInt myQi, const PetscInt qi_inc, const PetscIn
     }
   }
   for (ipidx = ip_start; ipidx < ip_end; ipidx += ip_stride) {
-    const LandPointData * const fplpt = (LandPointData*)(IPDataGlobal + ipidx*ipdata_sz);
-    const LandFDF * const       fdf = &fplpt->fdf[0];
+    const LandauPointData * const fplpt = (LandauPointData*)(IPDataGlobal + ipidx*ipdata_sz);
+    const LandauFDF * const       fdf = &fplpt->fdf[0];
     const PetscReal             wi = wiGlobal[ipidx];
-#if LAND_DIM==2
+#if LANDAU_DIM==2
     PetscReal       Ud[2][2], Uk[2][2];
     LandauTensor2D(vj, fplpt->crd[0], fplpt->crd[1], Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
     for (fieldA = 0; fieldA < Nf; ++fieldA) {
@@ -59,7 +59,7 @@ landau_inner_integral( const PetscInt myQi, const PetscInt qi_inc, const PetscIn
       }
     } else {
       PetscReal lxx[] = {fplpt->crd[0], fplpt->crd[1]}, R[2][2] = {{-1,1},{1,-1}};
-      PetscReal ldf[3*LAND_MAX_SPECIES];
+      PetscReal ldf[3*LANDAU_MAX_SPECIES];
       for (fieldB = 0; fieldB < Nf; ++fieldB) for (d3 = 0; d3 < 3; ++d3) ldf[d3 + fieldB*3] = fplpt->fdf[fieldB].df[d3] * wi * invMass[fieldB];
       for (dp=0;dp<4;dp++) {
         LandauTensor3D(vj, lxx[0], lxx[1], fplpt->z, U, (ipidx==jpidx) ? 0. : 1.);

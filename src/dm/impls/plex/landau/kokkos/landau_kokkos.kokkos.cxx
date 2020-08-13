@@ -1,12 +1,11 @@
 /*
    Implements the Kokkos kernel
 */
-#include <petscconf.h>
-#include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
 
 #define PETSC_SKIP_CXX_COMPLEX_FIX
 #include <petscconf.h>
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
+#include <petsc/private/landauimpl.h>   /*I   "petsclandau.h"   I*/
 #include <petscts.h>
 #include <Kokkos_Core.hpp>
 #include <cstdio>
@@ -17,15 +16,15 @@ typedef Kokkos::TeamPolicy<>::member_type team_member;
 namespace landau_inner_red {  // namespace helps with name resolution in reduction identity
   template< class ScalarType, int Nf >
   struct array_type {
-    ScalarType gg2[Nf][LAND_DIM];
-    ScalarType gg3[Nf][LAND_DIM][LAND_DIM];
+    ScalarType gg2[Nf][LANDAU_DIM];
+    ScalarType gg3[Nf][LANDAU_DIM][LANDAU_DIM];
 
     KOKKOS_INLINE_FUNCTION   // Default constructor - Initialize to 0's
     array_type() {
       for (int i = 0; i < Nf; i++ ){
-        for (int j = 0; j < LAND_DIM; j++ ){
+        for (int j = 0; j < LANDAU_DIM; j++ ){
           gg2[i][j] = 0;
-          for (int k = 0; k < LAND_DIM; k++ ){
+          for (int k = 0; k < LANDAU_DIM; k++ ){
             gg3[i][j][k] = 0;
           }
         }
@@ -34,9 +33,9 @@ namespace landau_inner_red {  // namespace helps with name resolution in reducti
     KOKKOS_INLINE_FUNCTION   // Copy Constructor
     array_type(const array_type & rhs) {
       for (int i = 0; i < Nf; i++ ){
-        for (int j = 0; j < LAND_DIM; j++ ){
+        for (int j = 0; j < LANDAU_DIM; j++ ){
           gg2[i][j] = rhs.gg2[i][j];
-          for (int k = 0; k < LAND_DIM; k++ ){
+          for (int k = 0; k < LANDAU_DIM; k++ ){
             gg3[i][j][k] = rhs.gg3[i][j][k];
           }
         }
@@ -45,9 +44,9 @@ namespace landau_inner_red {  // namespace helps with name resolution in reducti
     KOKKOS_INLINE_FUNCTION   // add operator
     array_type& operator += (const array_type& src) {
       for (int i = 0; i < Nf; i++ ){
-        for (int j = 0; j < LAND_DIM; j++ ){
+        for (int j = 0; j < LANDAU_DIM; j++ ){
           gg2[i][j] += src.gg2[i][j];
-          for (int k = 0; k < LAND_DIM; k++ ){
+          for (int k = 0; k < LANDAU_DIM; k++ ){
             gg3[i][j][k] += src.gg3[i][j][k];
           }
         }
@@ -57,16 +56,16 @@ namespace landau_inner_red {  // namespace helps with name resolution in reducti
     KOKKOS_INLINE_FUNCTION   // volatile add operator
     void operator += (const volatile array_type& src) volatile {
       for (int i = 0; i < Nf; i++ ){
-        for (int j = 0; j < LAND_DIM; j++ ){
+        for (int j = 0; j < LANDAU_DIM; j++ ){
           gg2[i][j] += src.gg2[i][j];
-          for (int k = 0; k < LAND_DIM; k++ ){
+          for (int k = 0; k < LANDAU_DIM; k++ ){
             gg3[i][j][k] += src.gg3[i][j][k];
           }
         }
       }
     }
   };
-  typedef array_type<PetscReal,LAND_MAX_SPECIES> ValueType;  // used to simplify code below
+  typedef array_type<PetscReal,LANDAU_MAX_SPECIES> ValueType;  // used to simplify code below
 }
 
 namespace Kokkos { //reduction identity must be defined in Kokkos namespace
@@ -79,7 +78,7 @@ namespace Kokkos { //reduction identity must be defined in Kokkos namespace
 }
 
 extern "C"  {
-PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alpha[], PetscReal nu_beta[],
+PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alpha[], PetscReal nu_beta[],
                                    PetscReal invMass[], PetscReal Eq_m[], PetscReal * const IPDataGlobal,
                                    PetscReal wiGlobal[], PetscReal invJ[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain,
                                    Mat JacP)
@@ -91,13 +90,13 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
   PetscSection      section, globalSection;
   PetscLogDouble    flops;
   PetscReal         *BB,*DD;
-  LandCtx           *ctx;
+  LandauCtx           *ctx;
   PetscFunctionBegin;
 
   ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
-  if (dim!=LAND_DIM) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "LAND_DIM != dim");
+  if (dim!=LANDAU_DIM) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "LANDAU_DIM != dim");
   ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
   numCells = cEnd - cStart;
   nip = numCells*Nq;
@@ -161,7 +160,7 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
     ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_VIENNACL)
     ierr = PetscLogGpuFlops(flops*nip);CHKERRQ(ierr);
-    if (ctx->deviceType == LAND_CPU) PetscInfo(plex, "Warning: Landau selected CPU but no support for Kokkos using GPU\n");
+    if (ctx->deviceType == LANDAU_CPU) PetscInfo(plex, "Warning: Landau selected CPU but no support for Kokkos using GPU\n");
 #else
     ierr = PetscLogFlops(flops*nip);CHKERRQ(ierr);
 #endif
@@ -178,16 +177,16 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
             const PetscInt              jpidx = myQi + myelem * Nq;
             const PetscReal     * const invJj = &d_invJ(jpidx*dim*dim);
             const PetscInt              ipdata_sz = (dim + Nf*(1+dim));
-            const LandPointData * const fplpt_j = (LandPointData*)(&d_ipdata(jpidx*ipdata_sz));
+            const LandauPointData * const fplpt_j = (LandauPointData*)(&d_ipdata(jpidx*ipdata_sz));
             const PetscReal     * const vj = fplpt_j->crd, wj = d_wiGlobal[jpidx];
             // reduce on g22 and g33 for IP jpidx
             landau_inner_red::ValueType gg;
             Kokkos::parallel_reduce( Kokkos::ThreadVectorRange (team, nip), [=] ( const int& ipidx, landau_inner_red::ValueType & ggg) {
-                const LandPointData * const fplpt = (LandPointData*)(&d_ipdata(ipidx*ipdata_sz));
-                const LandFDF * const       fdf = &fplpt->fdf[0];
+                const LandauPointData * const fplpt = (LandauPointData*)(&d_ipdata(ipidx*ipdata_sz));
+                const LandauFDF * const       fdf = &fplpt->fdf[0];
                 const PetscReal             wi = d_wiGlobal[ipidx];
                 PetscInt                    fieldA,fieldB,d2,d3;
-#if LAND_DIM==2
+#if LANDAU_DIM==2
                 PetscReal                   Ud[2][2], Uk[2][2];
                 LandauTensor2D(vj, fplpt->crd[0], fplpt->crd[1], Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
                 for (fieldA = 0; fieldA < Nf; ++fieldA) {
@@ -287,10 +286,10 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
       ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
       if (!container) {
         ierr = PetscLogEventBegin(events[8],0,0,0,0);CHKERRQ(ierr);
-        ierr = DMPlexLandCreateColoring(JacP, plex, &container);CHKERRQ(ierr);
+        ierr = LandauCreateColoring(JacP, plex, &container);CHKERRQ(ierr);
         ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
       }
-      ierr = DMPlexLandAssembleOpenMP(cStart, cEnd, totDim, plex, section, globalSection, JacP, &h_elem_mats(0,0), container);CHKERRQ(ierr);
+      ierr = LandauAssembleOpenMP(cStart, cEnd, totDim, plex, section, globalSection, JacP, &h_elem_mats(0,0), container);CHKERRQ(ierr);
     }
 #else
     {

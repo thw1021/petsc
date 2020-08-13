@@ -1,4 +1,5 @@
 #include <petsc/private/dmpleximpl.h> /*I "petscdmplex.h" I*/
+#include <petsc/private/landauimpl.h>
 #include <petsc/private/tsimpl.h>     /*I "petscts.h" I*/
 #include <petsc/private/snesimpl.h>
 #include <petscds.h>
@@ -427,14 +428,14 @@ PetscErrorCode DMTSCheckFromOptions(TS ts, Vec u)
   PetscFunctionReturn(0);
 }
 
-PETSC_EXTERN PetscErrorCode DMPlexLandFormLandau_Internal(Vec, Mat, const PetscInt, void *);
+PETSC_EXTERN PetscErrorCode LandauFormJacobian_Internal(Vec, Mat, const PetscInt, void *);
 /*@
-  DMPlexLandIFunction
+  LandauIFunction
 @*/
-PetscErrorCode DMPlexLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void *actx)
+PetscErrorCode LandauIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void *actx)
 {
   PetscErrorCode ierr;
-  LandCtx        *ctx=(LandCtx*)actx;
+  LandauCtx        *ctx=(LandauCtx*)actx;
   PetscReal      unorm;
   PetscInt       dim;
   PetscFunctionBeginUser;
@@ -450,7 +451,7 @@ PetscErrorCode DMPlexLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec 
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   if (ctx->normJ!=unorm) {
     ctx->normJ = unorm;
-    ierr = DMPlexLandFormLandau_Internal(X,ctx->J,dim,(void*)ctx);CHKERRQ(ierr);
+    ierr = LandauFormJacobian_Internal(X,ctx->J,dim,(void*)ctx);CHKERRQ(ierr);
     ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
   } else ctx->aux_bool = PETSC_FALSE;
   /* mat vec for op */
@@ -464,12 +465,12 @@ PetscErrorCode DMPlexLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec 
 }
 
 /*@
-  DMPlexLandIJacobian
+  LandauIJacobian
 @*/
-PetscErrorCode DMPlexLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
+PetscErrorCode LandauIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
 {
   PetscErrorCode ierr;
-  LandCtx        *ctx=NULL;
+  LandauCtx        *ctx=(LandauCtx*)actx;
   PetscReal      unorm;
   PetscInt       dim;
   PetscFunctionBeginUser;
@@ -487,7 +488,7 @@ PetscErrorCode DMPlexLandIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy
 #endif
   ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
   if (ctx->normJ!=unorm) {
-    ierr = DMPlexLandFormLandau_Internal(X,ctx->J,dim,(void*)ctx); CHKERRQ(ierr);
+    ierr = LandauFormJacobian_Internal(X,ctx->J,dim,(void*)ctx); CHKERRQ(ierr);
     ctx->normJ = unorm;
     ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
   } else ctx->aux_bool = PETSC_FALSE;

@@ -902,6 +902,6 @@ PETSC_EXTERN PetscErrorCode DMSNESCheckFromOptions(SNES,Vec);
 PETSC_EXTERN PetscErrorCode DMPlexAdaptInterpolator(DM, DM, Mat, KSP, PetscInt, Vec[], Vec[], Mat *, void *);
 
 /* Landau */
-PETSC_EXTERN PetscErrorCode DMPlexLandCreateMassMatrix(DM dm, Vec X, Mat *Amat);
+PETSC_EXTERN PetscErrorCode LandauCreateMassMatrix(DM dm, Vec X, Mat *Amat);
 
 #endif
