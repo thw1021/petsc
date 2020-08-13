@@ -122,6 +122,10 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
   SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "no KOKKOS_ENABLE_CXX11_DISPATCH_LAMBDA");
 #endif
   {
+    using scr_mem_t = Kokkos::DefaultExecutionSpace::scratch_memory_space;
+    using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
+    using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
+    const int scr_bytes = g2_scr_t::shmem_size(Nf,Nq,dim) +  g3_scr_t::shmem_size(Nf,Nq,dim,dim);
     ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
     Kokkos::View<PetscScalar**, Kokkos::LayoutRight> d_elem_mats( "element matrices", numCells, totDim*totDim);
     Kokkos::View<PetscScalar**, Kokkos::LayoutRight>::HostMirror h_elem_mats = Kokkos::create_mirror_view(d_elem_mats);
@@ -161,10 +165,6 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
 #else
     ierr = PetscLogFlops(flops*nip);CHKERRQ(ierr);
 #endif
-    using scr_mem_t = Kokkos::DefaultExecutionSpace::scratch_memory_space;
-    using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
-    using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
-    int scr_bytes = g2_scr_t::shmem_size(Nf,Nq,dim) +  g3_scr_t::shmem_size(Nf,Nq,dim,dim);
 #define KOKKOS_SHARED_LEVEL 1
     //PetscInfo2(plex, "shared memory size: %D kB in level %d\n",Nf*Nq*dim*(dim+1)*sizeof(PetscReal)/1024,KOKKOS_SHARED_LEVEL);
     int conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
@@ -273,6 +273,7 @@ PetscErrorCode LandKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alph
             });
         }
       });
+
     ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
 
     ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);

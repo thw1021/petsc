@@ -445,10 +445,8 @@ PetscErrorCode DMPlexLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec 
     if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   }
   ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
-#if defined(PETSC_USE_LOG)
   ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr); // remove in real application
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
-#endif
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   if (ctx->normJ!=unorm) {
     ctx->normJ = unorm;
@@ -461,9 +459,7 @@ PetscErrorCode DMPlexLandIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec 
   if (X_t) {
     ierr = MatMultAdd(ctx->M,X_t,F,F);CHKERRQ(ierr);
   }
-#if defined(PETSC_USE_LOG)
   ierr = PetscLogEventEnd(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
-#endif
   PetscFunctionReturn(0);
 }
 
