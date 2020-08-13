@@ -385,8 +385,8 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
       PetscInt       numCells,cells[16][4],i,j;
       PetscInt       numVerts;
       PetscReal      inner_radius1 = ctx->i_radius, inner_radius2 = ctx->e_radius;
-      double         *flatCoords = NULL;
-      int            *flatCells = NULL, *pcell;
+      PetscReal      *flatCoords = NULL;
+      PetscInt       *flatCells = NULL, *pcell;
       if (ctx->num_sections==2) {
 #if 1
 	numCells = 5;
@@ -399,10 +399,10 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
 	for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
 	ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
 	{
-	  double (*coords)[2] = (double (*) [2]) flatCoords;
+	  PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
 	  for (j = 0; j < numVerts-1; j++) {
-	    double z, r, theta = -PETSC_PI/2 + (j%3) * PETSC_PI/2;
-	    double rad = (j >= 6) ? inner_radius1 : (j >= 3) ? inner_radius2 : ctx->radius;
+	    PetscReal z, r, theta = -PETSC_PI/2 + (j%3) * PETSC_PI/2;
+	    PetscReal rad = (j >= 6) ? inner_radius1 : (j >= 3) ? inner_radius2 : ctx->radius;
 	    z = rad * sin(theta);
 	    coords[j][1] = z;
 	    r = rad * cos(theta);
@@ -420,12 +420,12 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
         for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
 	ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
 	{
-	  double (*coords)[2] = (double (*) [2]) flatCoords;
+	  PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
 	  PetscInt j;
 	  for (j = 0; j < 8; j++) {
-            double z, r;
-	    double theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3.;
-	    double rad = ctx->radius * ((j < 4) ? 0.5 : 1.0);
+            PetscReal z, r;
+	    PetscReal theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3.;
+	    PetscReal rad = ctx->radius * ((j < 4) ? 0.5 : 1.0);
 	    z = rad * sin(theta);
 	    coords[j][1] = z;
 	    r = rad * cos(theta);
@@ -446,10 +446,10 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
 	for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
 	ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
 	{
-	  double (*coords)[2] = (double (*) [2]) flatCoords;
+	  PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
 	  for (j = 0; j < numVerts; j++) {
-	    double z, r, theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3;
-	    double rad = (j >= 8) ? inner_radius1 : (j >= 4) ? inner_radius2 : ctx->radius;
+	    PetscReal z, r, theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3;
+	    PetscReal rad = (j >= 8) ? inner_radius1 : (j >= 4) ? inner_radius2 : ctx->radius;
 	    z = rad * sin(theta);
 	    coords[j][1] = z;
 	    r = rad * cos(theta);
@@ -472,10 +472,10 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
 	for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
 	ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
 	{
-	  double (*coords)[2] = (double (*) [2]) flatCoords;
+	  PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
 	  for (j = 0; j < numVerts-1; j++) {
-	    double z, r, theta = -PETSC_PI/2 + (j%5) * PETSC_PI/4;
-	    double rad = (j >= 10) ? inner_radius1 : (j >= 5) ? inner_radius2 : ctx->radius;
+	    PetscReal z, r, theta = -PETSC_PI/2 + (j%5) * PETSC_PI/4;
+	    PetscReal rad = (j >= 10) ? inner_radius1 : (j >= 5) ? inner_radius2 : ctx->radius;
 	    z = rad * sin(theta);
 	    coords[j][1] = z;
 	    r = rad * cos(theta);
