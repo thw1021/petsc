@@ -492,7 +492,7 @@ static PetscErrorCode LandDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const
 	pcell[0] = cells[j][0]; pcell[1] = cells[j][1];
 	pcell[2] = cells[j][2]; pcell[3] = cells[j][3];
       }
-      ierr = DMPlexCreateFromCellList(comm,2,numCells,numVerts,4,ctx->interpolate,flatCells,2,flatCoords,dm);CHKERRQ(ierr);
+      ierr = DMPlexCreateFromCellListPetsc(comm,2,numCells,numVerts,4,ctx->interpolate,flatCells,2,flatCoords,dm);CHKERRQ(ierr);
       ierr = PetscFree2(flatCoords,flatCells);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject) *dm, "semi-circle");CHKERRQ(ierr);
     } else { /* cubed sphere, dim==3 */
