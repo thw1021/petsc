@@ -218,8 +218,8 @@ PetscErrorCode DMPlexLandFormLandau_Internal(Vec a_X, Mat JacP, const PetscInt d
       if (ej==-1) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr);
         for (d = 0; d < totDim; ++d){
-          for (f = 0; f < totDim; ++f) printf(" %17.9e",  PetscRealPart(elemMat[d*totDim + f]));
-          printf("\n");CHKERRQ(ierr);
+          for (f = 0; f < totDim; ++f) PetscPrintf(PETSC_COMM_SELF," %17.9e",  PetscRealPart(elemMat[d*totDim + f]));
+           PetscPrintf(PETSC_COMM_SELF,"\n");CHKERRQ(ierr);
         }
       }
     } /* ej cells loop, not cuda */
