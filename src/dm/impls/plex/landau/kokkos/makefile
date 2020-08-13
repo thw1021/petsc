@@ -5,11 +5,11 @@ ALL: lib
 CPPFLAGS =
 CFLAGS   =
 FFLAGS   =
-SOURCEKOK= landau_kokkos.kokkos.cxx
+SOURCEKOKKOS = landau_kokkos.kokkos.cxx
 SOURCECU =
 SOURCEF  =
 SOURCEH  =
-DIRS     = 
+DIRS     =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPLEX
