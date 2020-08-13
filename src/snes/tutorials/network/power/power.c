@@ -252,12 +252,10 @@ int main(int argc,char ** argv)
      depends: PFReadData.c pffunctions.c
      requires: !complex double define(PETSC_HAVE_ATTRIBUTEALIGNED)
 
-
    test:
      args: -snes_rtol 1.e-3
      localrunfiles: poweroptions case9.m
      output_file: output/power_1.out
-     requires: double !complex define(PETSC_HAVE_ATTRIBUTEALIGNED)
 
    test:
      suffix: 2
@@ -265,6 +263,5 @@ int main(int argc,char ** argv)
      nsize: 4
      localrunfiles: poweroptions case9.m
      output_file: output/power_1.out
-     requires: double !complex define(PETSC_HAVE_ATTRIBUTEALIGNED)
 
 TEST*/
