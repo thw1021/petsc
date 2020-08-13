@@ -1,4 +1,5 @@
 #include <petsc/private/dmpleximpl.h>   /*I "petscdmplex.h" I*/
+#include <petsc/private/landauimpl.h>
 #include <petsc/private/snesimpl.h>     /*I "petscsnes.h"   I*/
 #include <petscds.h>
 #include <petscblaslapack.h>
@@ -1713,7 +1714,7 @@ static void g0_r( PetscInt dim, PetscInt Nf, PetscInt NfAux,
 }
 
 /*@
-  DMPlexLandCreateMassMatrix - Create mass matrix for Landau
+  LandauCreateMassMatrix - Create mass matrix for Landau
 
   Input Parameters:
 + dm   - the DM object
@@ -1724,13 +1725,13 @@ static void g0_r( PetscInt dim, PetscInt Nf, PetscInt NfAux,
 
   Level: beginner
 @*/
-PetscErrorCode DMPlexLandCreateMassMatrix(DM dm, Vec X, Mat *Amat)
+PetscErrorCode LandauCreateMassMatrix(DM dm, Vec X, Mat *Amat)
 {
   DM             massDM;
   PetscDS        prob;
   PetscInt       ii,dim,N1=1,N2;
   PetscErrorCode ierr;
-  LandCtx        *ctx;
+  LandauCtx        *ctx;
   Mat            M;
 
   PetscFunctionBeginUser;
@@ -1748,7 +1749,7 @@ PetscErrorCode DMPlexLandCreateMassMatrix(DM dm, Vec X, Mat *Amat)
     if (dim==3) {ierr = PetscDSSetJacobian(prob, ii, ii, g0_1, NULL, NULL, NULL);CHKERRQ(ierr);}
     else        {ierr = PetscDSSetJacobian(prob, ii, ii, g0_r, NULL, NULL, NULL);CHKERRQ(ierr);}
   }
-  ierr = DMViewFromOptions(massDM,NULL,"-dm_land_mass_dm_view");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(massDM,NULL,"-dm_landau_mass_dm_view");CHKERRQ(ierr);
   ierr = DMCreateMatrix(massDM, &M);CHKERRQ(ierr);
   {
     Vec locX;
@@ -1764,7 +1765,7 @@ PetscErrorCode DMPlexLandCreateMassMatrix(DM dm, Vec X, Mat *Amat)
   ierr = MatGetSize(ctx->J, &N1, NULL);CHKERRQ(ierr);
   ierr = MatGetSize(M, &N2, NULL);CHKERRQ(ierr);
   if (N1 != N2) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Incorrect matrix sizes: |Jacobian| = %D, |Mass|=%D",N1,N2);
-  ierr = MatViewFromOptions(M,NULL,"-dm_land_mass_mat_view");CHKERRQ(ierr);
+  ierr = MatViewFromOptions(M,NULL,"-dm_landau_mass_mat_view");CHKERRQ(ierr);
   ctx->M = M; /* this could be a noop, a = a */
   if (Amat) *Amat = M;
   PetscFunctionReturn(0);

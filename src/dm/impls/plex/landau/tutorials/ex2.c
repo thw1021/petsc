@@ -1,13 +1,14 @@
 static char help[] = "Runaway electron model with Landau collision operator\n\n";
 
 #include <petsc/private/dmpleximpl.h>
+#include <petsc/private/landauimpl.h>
 #include <petscts.h>
 
 /* data for runaway electron model */
 typedef struct REctx_struct {
-  PetscErrorCode (*test)(TS, Vec, DM, PetscInt, PetscReal, PetscBool,  LandCtx *, struct REctx_struct *);
-  PetscErrorCode (*impuritySrcRate)(PetscReal, PetscReal *, LandCtx*);
-  PetscErrorCode (*E)(Vec, Vec, PetscInt, PetscReal, LandCtx*, PetscReal *);
+  PetscErrorCode (*test)(TS, Vec, DM, PetscInt, PetscReal, PetscBool,  LandauCtx *, struct REctx_struct *);
+  PetscErrorCode (*impuritySrcRate)(PetscReal, PetscReal *, LandauCtx*);
+  PetscErrorCode (*E)(Vec, Vec, PetscInt, PetscReal, LandauCtx*, PetscReal *);
   PetscReal     T_cold;        /* temperature of newly ionized electrons and impurity ions */
   PetscReal     ion_potential; /* ionization potential of impurity */
   PetscReal     Ne_ion;        /* effective number of electrons shed in ioization of impurity */
@@ -117,14 +118,14 @@ static void f0_ve_shift( PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode getTe_kev(DM plex, Vec X, PetscReal *a_n, PetscReal *a_Tkev)
 {
   PetscErrorCode ierr;
-  LandCtx        *ctx;
+  LandauCtx        *ctx;
   PetscFunctionBeginUser;
   ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   {
     PetscDS        prob;
     PetscReal      v2, v, n;
-    PetscScalar    tt[LAND_MAX_SPECIES],user[2] = {0.,ctx->charges[0]}, vz;
+    PetscScalar    tt[LANDAU_MAX_SPECIES],user[2] = {0.,ctx->charges[0]}, vz;
     ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
     ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
     ierr = PetscDSSetObjective(prob, 0, &f0_n);CHKERRQ(ierr);
@@ -179,14 +180,14 @@ static PetscReal Spitzer(PetscReal m_e, PetscReal e, PetscReal Z, PetscReal epsi
 }
 
 /*  */
-static PetscErrorCode testNone(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandCtx *ctx, REctx *rectx)
+static PetscErrorCode testNone(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandauCtx *ctx, REctx *rectx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(0);
 }
 
 /*  */
-static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandCtx *ctx, REctx *rectx)
+static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandauCtx *ctx, REctx *rectx)
 {
   PetscErrorCode    ierr;
   PetscInt          ii;
@@ -194,7 +195,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   static PetscReal  old_ratio = 0;
   PetscBool         done=PETSC_FALSE;
   PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e;
-  PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LAND_MAX_SPECIES],tt[LAND_MAX_SPECIES];
+  PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LANDAU_MAX_SPECIES],tt[LANDAU_MAX_SPECIES];
   PetscFunctionBegin;
   if (ctx->num_species<2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D < 2",ctx->num_species);
   for (ii=0;ii<ctx->num_species;ii++) constants[ii] = ctx->charges[ii];
@@ -237,7 +238,7 @@ static void f0_0_diff_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                           const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                           PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  LandCtx         *ctx = (LandCtx *)constants;
+  LandauCtx         *ctx = (LandauCtx *)constants;
   REctx           *rectx = (REctx*)ctx->data;
   PetscInt        ii = rectx->idx, i;
   const PetscReal kT_m = ctx->k*ctx->thermal_temps[ii]/ctx->masses[ii]; /* kT/m */
@@ -253,7 +254,7 @@ static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                           const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                           PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  LandCtx         *ctx = (LandCtx *)constants;
+  LandauCtx         *ctx = (LandauCtx *)constants;
   REctx           *rectx = (REctx*)ctx->data;
   PetscInt        ii = rectx->idx, i;
   const PetscReal kT_m = ctx->k*ctx->thermal_temps[ii]/ctx->masses[ii]; /* kT/m */
@@ -265,13 +266,13 @@ static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 }
 
 /*  */
-static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandCtx *ctx, REctx *rectx)
+static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandauCtx *ctx, REctx *rectx)
 {
   PetscErrorCode    ierr;
   PetscDS           prob;
   Vec               X2;
   PetscReal         ediff,idiff=0,lpm0,lpm1=1;
-  PetscScalar       tt[LAND_MAX_SPECIES];
+  PetscScalar       tt[LANDAU_MAX_SPECIES];
   DM                dm;
   PetscFunctionBegin;
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
@@ -283,7 +284,7 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
     ierr = VecCopy(X,rectx->X_0);CHKERRQ(ierr);
   }
   ierr = VecAXPY(X,-1.0,rectx->X_0);CHKERRQ(ierr);
-  ierr = PetscDSSetConstants(prob, sizeof(LandCtx)/sizeof(PetscScalar), (PetscScalar*)ctx);CHKERRQ(ierr);
+  ierr = PetscDSSetConstants(prob, sizeof(LandauCtx)/sizeof(PetscScalar), (PetscScalar*)ctx);CHKERRQ(ierr);
   rectx->idx = 0;
   ierr = PetscDSSetObjective(prob, 0, &f0_0_diff_lp);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X2,tt,NULL);CHKERRQ(ierr);
@@ -313,12 +314,12 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
 }
 
 /* E = eta_spitzer(Te-vz)*J */
-static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time, LandCtx *ctx, PetscReal *a_E)
+static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time, LandauCtx *ctx, PetscReal *a_E)
 {
   PetscErrorCode    ierr;
   PetscInt          ii;
   PetscReal         spit_eta,Te_kev,J,ratio;
-  PetscScalar       tt[LAND_MAX_SPECIES], constants[LAND_MAX_SPECIES];
+  PetscScalar       tt[LANDAU_MAX_SPECIES], constants[LANDAU_MAX_SPECIES];
   PetscDS           prob;
   DM                dm,plex;
   REctx             *rectx = (REctx*)ctx->data;
@@ -357,13 +358,13 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, LandCtx *ctx, PetscReal *a_E)
+static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, LandauCtx *ctx, PetscReal *a_E)
 {
   REctx             *rectx = (REctx*)ctx->data;
   PetscErrorCode    ierr;
   PetscInt          ii;
   DM                dm,plex;
-  PetscScalar       tt[LAND_MAX_SPECIES], constants[LAND_MAX_SPECIES];
+  PetscScalar       tt[LANDAU_MAX_SPECIES], constants[LANDAU_MAX_SPECIES];
   PetscReal         dJ_dt;
   PetscDS           prob;
   PetscFunctionBegin;
@@ -383,14 +384,14 @@ static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, 
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode EConstant(Vec X,  Vec X_t, PetscInt step, PetscReal time, LandCtx *ctx, PetscReal *a_E)
+static PetscErrorCode EConstant(Vec X,  Vec X_t, PetscInt step, PetscReal time, LandauCtx *ctx, PetscReal *a_E)
 {
   PetscFunctionBegin;
   *a_E = ctx->Ez;
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode ENone(Vec X,  Vec X_t, PetscInt step, PetscReal time, LandCtx *ctx, PetscReal *a_E)
+static PetscErrorCode ENone(Vec X,  Vec X_t, PetscInt step, PetscReal time, LandauCtx *ctx, PetscReal *a_E)
 {
   PetscFunctionBegin;
   *a_E = 0;
@@ -413,7 +414,7 @@ static PetscErrorCode ENone(Vec X,  Vec X_t, PetscInt step, PetscReal time, Land
 PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
 {
   PetscReal      new_imp_rate;
-  LandCtx        *ctx;
+  LandauCtx        *ctx;
   DM             dm,plex;
   PetscErrorCode ierr;
   REctx          *rectx;
@@ -427,7 +428,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
   if (new_imp_rate != 0) {
     if (new_imp_rate != rectx->current_rate) {
       PetscInt       ii;
-      PetscReal      dne_dt,dni_dt,tilda_ns[LAND_MAX_SPECIES],temps[LAND_MAX_SPECIES];
+      PetscReal      dne_dt,dni_dt,tilda_ns[LANDAU_MAX_SPECIES],temps[LANDAU_MAX_SPECIES];
       PetscDS        prob; /* diagnostics only */
       rectx->current_rate = new_imp_rate;
       ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
@@ -435,8 +436,8 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
       dni_dt = new_imp_rate              /* *ctx->t_0 */; /* fully ionized immediately, no normalize, stay in non-dim */
       dne_dt = new_imp_rate*rectx->Ne_ion/* *ctx->t_0 */;
       PetscPrintf(PETSC_COMM_SELF, "\tFormSource: have new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt);
-      for (ii=1;ii<LAND_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
-      for (ii=1;ii<LAND_MAX_SPECIES;ii++)    temps[ii] = 1;
+      for (ii=1;ii<LANDAU_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
+      for (ii=1;ii<LANDAU_MAX_SPECIES;ii++)    temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
       temps[0]    = rectx->T_cold;    temps[rectx->imp_idx] = rectx->T_cold;
       /* add it */
@@ -445,7 +446,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
         ierr = PetscObjectSetName((PetscObject)rectx->imp_src, "source");CHKERRQ(ierr);
       }
       ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
-      ierr = DMPlexLandAddMaxwellians(plex,rectx->imp_src,ftime,temps,tilda_ns,ctx);CHKERRQ(ierr);
+      ierr = LandauAddMaxwellians(plex,rectx->imp_src,ftime,temps,tilda_ns,ctx);CHKERRQ(ierr);
       /* clean up */
       ierr = DMDestroy(&plex);CHKERRQ(ierr);
       if (0) {
@@ -473,7 +474,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
 }
 PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
 {
-  LandCtx           *ctx = (LandCtx*) actx;   /* user-defined application context */
+  LandauCtx           *ctx = (LandauCtx*) actx;   /* user-defined application context */
   REctx             *rectx = (REctx*)ctx->data;
   DM                dm,plex;
   PetscDS           prob;
@@ -489,7 +490,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   if ( time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
     /* print norms */
-    ierr = DMPlexLandPrintNorms(X, stepi);CHKERRQ(ierr);
+    ierr = LandauPrintNorms(X, stepi);CHKERRQ(ierr);
     ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
     ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
     /* diagnostics */
@@ -522,7 +523,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
 PetscErrorCode PreStep(TS ts)
 {
   PetscErrorCode ierr;
-  LandCtx        *ctx;
+  LandauCtx        *ctx;
   REctx          *rectx;
   DM             dm;
   PetscInt       stepi;
@@ -544,7 +545,7 @@ PetscErrorCode PreStep(TS ts)
 }
 
 /* model for source of non-ionized impurities, profile provided by model, in du/dt form in normalized units (tricky because n_0 is normalized with electrons) */
-static PetscErrorCode stepSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
+static PetscErrorCode stepSrc(PetscReal time, PetscReal *rho, LandauCtx *ctx)
 {
   REctx         *rectx;
   PetscFunctionBegin;
@@ -553,13 +554,13 @@ static PetscErrorCode stepSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
   else *rho = 0.;
   PetscFunctionReturn(0);
 }
-static PetscErrorCode zeroSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
+static PetscErrorCode zeroSrc(PetscReal time, PetscReal *rho, LandauCtx *ctx)
 {
   PetscFunctionBegin;
   *rho = 0.;
   PetscFunctionReturn(0);
 }
-static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
+static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandauCtx *ctx)
 {
   REctx *rectx;
   rectx = (REctx*)ctx->data;
@@ -581,7 +582,7 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandCtx *ctx)
 
 #undef __FUNCT__
 #define __FUNCT__ "ProcessREOptions"
-static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, const char prefix[])
+static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm, const char prefix[])
 {
   PetscErrorCode    ierr;
   PetscFunctionList plist = NULL, testlist = NULL, elist = NULL;
@@ -667,7 +668,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandCtx *ctx, DM dm, 
   {
     PetscReal E = ctx->Ez, Tev = ctx->thermal_temps[0]*8.621738e-5, n = ctx->n_0*ctx->n[0];
     CalculateE(Tev, n, ctx->lnLam, ctx->epsilon0, &E);
-    ((LandCtx*)ctx)->Ez *= E;
+    ((LandauCtx*)ctx)->Ez *= E;
   }
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -682,13 +683,13 @@ int main(int argc, char **argv)
   TS             ts;
   Mat            J;
   PetscDS        prob;
-  LandCtx        *ctx;
+  LandauCtx        *ctx;
   REctx         *rectx;
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
-  ierr = DMPlexLandCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
-  ierr = DMPlexLandCreateMassMatrix(dm, X, NULL); CHKERRQ(ierr);
+  ierr = LandauCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
+  ierr = LandauCreateMassMatrix(dm, X, NULL); CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
@@ -703,8 +704,8 @@ int main(int argc, char **argv)
   /* Create timestepping solver context */
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
-  ierr = TSSetIFunction(ts,NULL,DMPlexLandIFunction,NULL);CHKERRQ(ierr);
-  ierr = TSSetIJacobian(ts,J,J,DMPlexLandIJacobian,NULL);CHKERRQ(ierr);
+  ierr = TSSetIFunction(ts,NULL,LandauIFunction,NULL);CHKERRQ(ierr);
+  ierr = TSSetIJacobian(ts,J,J,LandauIJacobian,NULL);CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,FormSource,NULL);CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
@@ -724,7 +725,7 @@ int main(int argc, char **argv)
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
     ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
     ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
-    ierr = DMPlexLandIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
+    ierr = LandauIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
@@ -732,7 +733,7 @@ int main(int argc, char **argv)
   /* go */
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */
-  ierr = DMPlexLandDestroyVelocitySpace(&dm);CHKERRQ(ierr);
+  ierr = LandauDestroyVelocitySpace(&dm);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
   if (rectx->imp_src) {
@@ -748,26 +749,26 @@ int main(int argc, char **argv)
   test:
     suffix: cuda
     requires: p4est !complex cuda
-    args: -dm_land_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_land_type p4est -info :dm,tsadapt -dm_land_ion_masses 2 -dm_land_ion_charges 1 -dm_land_thermal_temps 5,5 -dm_land_n 2,2 -dm_land_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_land_amr_levels_max 9 -dm_land_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_land_sub_thread_block_size 4 -dm_refine 1 -dm_land_device_type cuda -dm_land_verbose 2
+    args: -dm_landau_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p4est -info :dm,tsadapt -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_landau_amr_levels_max 9 -dm_landau_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_landau_sub_thread_block_size 4 -dm_refine 1 -dm_landau_device_type cuda -dm_landau_verbose 2
 
   test:
     suffix: 0
     requires: p4est !complex
-    args: -dm_land_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_land_type p4est -info :dm,tsadapt -dm_land_ion_masses 2 -dm_land_ion_charges 1 -dm_land_thermal_temps 5,5 -dm_land_n 2,2 -dm_land_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_land_amr_levels_max 9 -dm_land_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 1 -dm_land_device_type cpu
+    args: -dm_landau_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p4est -info :dm,tsadapt -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_landau_amr_levels_max 9 -dm_landau_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 1 -dm_landau_device_type cpu
 
   test:
     suffix: kokkos_omp
     requires: p4est !complex kokkos openmp
-    args: -dm_land_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_land_type p4est -info :dm,tsadapt -dm_land_ion_masses 2 -dm_land_ion_charges 1 -dm_land_thermal_temps 5,5 -dm_land_n 2,2 -dm_land_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_land_amr_levels_max 9 -dm_land_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 0 -dm_land_device_type kokkos
+    args: -dm_landau_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p4est -info :dm,tsadapt -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_landau_amr_levels_max 9 -dm_landau_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 0 -dm_landau_device_type kokkos
 
   test:
     suffix: kokkos_cuda
     requires: p4est !complex kokkos cuda
-    args: -dm_land_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_land_type p4est -info :dm,tsadapt -dm_land_ion_masses 2 -dm_land_ion_charges 1 -dm_land_thermal_temps 5,5 -dm_land_n 2,2 -dm_land_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_land_amr_levels_max 9 -dm_land_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 0 -dm_land_sub_thread_block_size 2 -dm_land_device_type kokkos
+    args: -dm_landau_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p4est -info :dm,tsadapt -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_landau_amr_levels_max 9 -dm_landau_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 0 -dm_landau_sub_thread_block_size 2 -dm_landau_device_type kokkos
 
   test:
     suffix: kokkos_serial
     requires: p4est !complex kokkos !cuda !openmp
-    args: -dm_land_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_land_type p4est -info :dm,tsadapt -dm_land_ion_masses 2 -dm_land_ion_charges 1 -dm_land_thermal_temps 5,5 -dm_land_n 2,2 -dm_land_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_land_amr_levels_max 9 -dm_land_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 0 -dm_land_device_type kokkos
+    args: -dm_landau_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p4est -info :dm,tsadapt -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_landau_amr_levels_max 9 -dm_landau_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 0 -dm_landau_device_type kokkos
 
 TEST*/
