@@ -576,8 +576,8 @@ PETSC_EXTERN PetscErrorCode DMDATSSetIJacobianLocal(DM,PetscErrorCode (*)(DMDALo
 PETSC_EXTERN PetscErrorCode DMPlexTSGetGeometryFVM(DM,Vec*,Vec*,PetscReal*);
 PETSC_EXTERN PetscErrorCode DMPlexTSGetGradientDM(DM,PetscFV,DM*);
 
-PETSC_EXTERN PetscErrorCode DMPlexLandIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
-PETSC_EXTERN PetscErrorCode DMPlexLandIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
+PETSC_EXTERN PetscErrorCode LandauIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
+PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
 
 typedef struct _n_TSMonitorLGCtx*  TSMonitorLGCtx;
 typedef struct {
