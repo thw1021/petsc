@@ -728,7 +728,7 @@ int main(int argc, char **argv)
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
-  ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr); // inital condition (monitor plots after step)
   /* go */
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   /* clean up */
