@@ -5,7 +5,7 @@ ALL: lib
 CPPFLAGS =
 CFLAGS   =
 FFLAGS   =
-SOURCEKOK= landau_kokkos.kok.cxx
+SOURCEKOK= landau_kokkos.kokkos.cxx
 SOURCECU =
 SOURCEF  =
 SOURCEH  =
