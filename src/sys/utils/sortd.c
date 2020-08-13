@@ -354,12 +354,6 @@ PetscErrorCode  PetscSortSplitReal(PetscInt ncut,PetscInt n,PetscReal a[],PetscI
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscInt Compare_PetscReal_Private(const void *left, const void *right)
-{
-  PetscReal l = *(PetscReal *) left, r = *(PetscReal *) right;
-  return l < r ? -1 : l == r ? 0 : 1;
-}
-
 /*@
    PetscRealSortSemiOrdered - Sorts an array of PetscReals in place in increasing order.
 
@@ -393,7 +387,7 @@ PetscErrorCode PetscRealSortSemiOrdered(PetscInt n, PetscReal arr[])
   if (n < 64) {
     ierr = PetscSortReal(n, arr);CHKERRQ(ierr);
   } else {
-    ierr = PetscTimSort(n, arr, sizeof(arr[0]), Compare_PetscReal_Private);CHKERRQ(ierr);
+    ierr = PetscTimSort(n, arr);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
