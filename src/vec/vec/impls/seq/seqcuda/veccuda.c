@@ -82,6 +82,7 @@ PetscErrorCode VecCopy_SeqCUDA_Private(Vec xin,Vec yin)
     ierr = PetscArraycpy(ya,xa,xin->map->n);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(xin,&xa);CHKERRQ(ierr);
     ierr = VecRestoreArray(yin,&ya);CHKERRQ(ierr);
+    yin->offloadmask = PETSC_OFFLOAD_CPU;
   }
   PetscFunctionReturn(0);
 }
@@ -298,8 +299,6 @@ PetscErrorCode VecCreate_SeqCUDA(Vec V)
   ierr = VecCUDAAllocateCheck(V);CHKERRQ(ierr);
   ierr = VecCreate_SeqCUDA_Private(V,((Vec_CUDA*)V->spptr)->GPUarray_allocated);CHKERRQ(ierr);
   ierr = VecCUDAAllocateCheckHost(V);CHKERRQ(ierr);
-  ierr = VecSet(V,0.0);CHKERRQ(ierr);
-  ierr = VecSet_Seq(V,0.0);CHKERRQ(ierr);
   V->offloadmask = PETSC_OFFLOAD_BOTH;
   PetscFunctionReturn(0);
 }
