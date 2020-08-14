@@ -1,16 +1,6 @@
 #define LANDAU_INVSQRT(q) (1./PetscSqrtReal(q))
 #define LANDAU_SQRT(q) PetscSqrtReal(q)
 
-#if defined(PETSC_USE_REAL_SINGLE)
-#define LANDAU_SMALL 1.e-12F
-#define LANDAU_VERYSMALL 1.e-30F
-#define LANDAU_LOG PetscLogReal
-#else
-#define LANDAU_SMALL 1.e-12
-#define LANDAU_VERYSMALL 1.e-300
-#define LANDAU_LOG PetscLogReal
-#endif
-
 /* elliptic functions
  */
 PETSC_DEVICE_FUNC_DECL PetscReal polevl_10( PetscReal x, PetscReal coef[] )
@@ -88,7 +78,7 @@ PETSC_DEVICE_FUNC_DECL void ellipticE(PetscReal x,PetscReal *ret)
   };
 #endif
   x = 1 - x; /* where m = 1 - m1 */
-  *ret = polevl_10(x,P2) - LANDAU_LOG(x) * (x * polevl_9(x,Q2));
+  *ret = polevl_10(x,P2) - PetscLogReal(x) * (x * polevl_9(x,Q2));
 }
 /*
  *	Complete elliptic integral of the first kind
@@ -155,7 +145,7 @@ PETSC_DEVICE_FUNC_DECL void ellipticK(PetscReal x,PetscReal *ret)
     };
 #endif
   x = 1 - x; /* where m = 1 - m1 */
-  *ret = polevl_10(x,P1) - LANDAU_LOG(x) * polevl_10(x,Q1);
+  *ret = polevl_10(x,P1) - PetscLogReal(x) * polevl_10(x,Q1);
 }
 
 
@@ -170,7 +160,7 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor3D(const PetscReal x1[], const PetscReal
 {
   PetscReal dx[3],inorm3,inorm,inorm2,norm2,x2[] = {xp,yp,zp};
   PetscInt  d;
-  for (d = 0, norm2 = LANDAU_VERYSMALL; d < 3; ++d) {
+  for (d = 0, norm2 = PETSC_MACHINE_EPSILON; d < 3; ++d) {
     dx[d] = x2[d] - x1[d];
     norm2 += dx[d] * dx[d];
   }
@@ -194,9 +184,9 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal 
   zmzp2=PetscSqr(zmzp);
   r2prp2=r2+rp2;
   l = r2 + rp2 + zmzp2;
-  /* if      ( zmzp2 >  LANDAU_SMALL) mask = 1; */
-  /* else if ( (tt=(r-rp)) >  LANDAU_SMALL) mask = 1; */
-  /* else if (  tt         < -LANDAU_SMALL) mask = 1; */
+  /* if      ( zmzp2 >  PETSC_SMALL) mask = 1; */
+  /* else if ( (tt=(r-rp)) >  PETSC_SMALL) mask = 1; */
+  /* else if (  tt         < -PETSC_SMALL) mask = 1; */
   /* else mask = 0; */
   s = mask*2*r*rp/l; /* mask for vectorization */
   tt = 1./(1+s);
@@ -208,8 +198,8 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal 
   ellipticK(2*s*tt,&ks); /* 44 flops + 75 in rest, 21 mult */
   /* mask is needed here just for single precision */
   i2func = 2./((1-s)*sqrt_1s) * es;
-  i1func = 4./(PetscSqr(s)*sqrt_1s + LANDAU_VERYSMALL) * mask * ( ks - (1.+s) * es);
-  i3func = 2./((1-s)*(s)*sqrt_1s + LANDAU_VERYSMALL) * (es - (1-s) * ks);
+  i1func = 4./(PetscSqr(s)*sqrt_1s + PETSC_MACHINE_EPSILON) * mask * ( ks - (1.+s) * es);
+  i3func = 2./((1-s)*(s)*sqrt_1s + PETSC_MACHINE_EPSILON) * (es - (1-s) * ks);
   Ud[0][0]=                    pi4pow*(rp2*i1func+PetscSqr(zmzp)*i2func);
   Ud[0][1]=Ud[1][0]=Uk[0][1]= -pi4pow*(zmzp)*(r*i2func-rp*i3func);
   Uk[1][1]=Ud[1][1]=           pi4pow*((r2prp2)*i2func-2*r*rp*i3func)*mask;
