@@ -6,7 +6,7 @@
 PETSC_DEVICE_FUNC_DECL PetscReal polevl_10( PetscReal x, PetscReal coef[] )
 {
   PetscReal ans;
-  int       i;
+  PetscInt  i;
   ans = coef[0];
   for (i=1; i<11; i++) ans = ans * x + coef[i];
   return( ans );
@@ -14,7 +14,7 @@ PETSC_DEVICE_FUNC_DECL PetscReal polevl_10( PetscReal x, PetscReal coef[] )
 PETSC_DEVICE_FUNC_DECL PetscReal polevl_9( PetscReal x, PetscReal coef[] )
 {
   PetscReal ans;
-  int       i;
+  PetscInt  i;
   ans = coef[0];
   for (i=1; i<10; i++) ans = ans * x + coef[i];
   return( ans );
