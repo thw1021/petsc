@@ -2,6 +2,7 @@
    Implements the Landau kernel
 */
 #include <petscconf.h>
+#include <petsc/private/dmpleximpl.h>   /*I  "dmpleximpl.h"   I*/
 #include <petsc/private/landauimpl.h>   /*I  "landauimpl.h"   I*/
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <petsc/private/kernels/petscaxpy.h>
