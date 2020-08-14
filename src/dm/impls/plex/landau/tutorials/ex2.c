@@ -737,7 +737,7 @@ int main(int argc, char **argv)
     /* LandauIJacobian */
     ierr = PetscLogStageRegister("LandauIJacobian", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-    for (ii=0;ii<100;ii++){
+    for (ii=0;ii<10;ii++){
       ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
       ierr = LandauIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
     }

@@ -1452,7 +1452,7 @@ PetscErrorCode LandauAssembleOpenMP(PetscInt cStart, PetscInt cEnd, PetscInt tot
     }
     /* assemble matrix */
     //#pragma omp parallel default(JacP,idx_size,idx_arr,new_el_mats,colour,clr_idxs)  private(j)
-#pragma omp parallel for private(j)
+    //#pragma omp parallel for private(j)
     for (j=0; j<csize; j++) {
       PetscInt numindices = idx_size[j], *indices = idx_arr[j];
       PetscScalar *elMat = new_el_mats[j];
