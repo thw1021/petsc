@@ -183,7 +183,7 @@ static PetscReal Spitzer(PetscReal m_e, PetscReal e, PetscReal Z, PetscReal epsi
 /*  */
 static PetscErrorCode testNone(TS ts, Vec X, DM plex, PetscInt stepi, PetscReal time, PetscBool islast, LandauCtx *ctx, REctx *rectx)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscFunctionReturn(0);
 }
 
@@ -198,7 +198,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e;
   PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LANDAU_MAX_SPECIES],tt[LANDAU_MAX_SPECIES];
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   if (ctx->num_species<2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D < 2",ctx->num_species);
   for (ii=0;ii<ctx->num_species;ii++) constants[ii] = ctx->charges[ii];
   Z = -ctx->charges[1]/ctx->charges[0];
@@ -277,7 +277,7 @@ static PetscErrorCode testStable(TS ts, Vec X, DM plex, PetscInt stepi, PetscRea
   PetscScalar       tt[LANDAU_MAX_SPECIES];
   DM                dm;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   ierr = VecDuplicate(X,&X2);CHKERRQ(ierr);
@@ -327,7 +327,7 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
   DM                dm,plex;
   REctx             *rectx = (REctx*)ctx->data;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   for (ii=0;ii<ctx->num_species;ii++) constants[ii] = ctx->charges[ii];
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
@@ -372,7 +372,7 @@ static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, 
   PetscReal         dJ_dt;
   PetscDS           prob;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   for (ii=0;ii<ctx->num_species;ii++) constants[ii] = ctx->charges[ii];
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
@@ -391,14 +391,14 @@ static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, 
 
 static PetscErrorCode EConstant(Vec X,  Vec X_t, PetscInt step, PetscReal time, LandauCtx *ctx, PetscReal *a_E)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   *a_E = ctx->Ez;
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode ENone(Vec X,  Vec X_t, PetscInt step, PetscReal time, LandauCtx *ctx, PetscReal *a_E)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   *a_E = 0;
   PetscFunctionReturn(0);
 }
@@ -554,14 +554,14 @@ static PetscErrorCode stepSrc(PetscReal time, PetscReal *rho, LandauCtx *ctx)
 {
   REctx         *rectx = (REctx*)ctx->data;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   if (time >= rectx->pulse_start) *rho = rectx->pulse_rate;
   else *rho = 0.;
   PetscFunctionReturn(0);
 }
 static PetscErrorCode zeroSrc(PetscReal time, PetscReal *rho, LandauCtx *ctx)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   *rho = 0.;
   PetscFunctionReturn(0);
 }
@@ -569,7 +569,7 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandauCtx *ctx)
 {
   REctx *rectx = (REctx*)ctx->data;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   if (time < rectx->pulse_start || time > rectx->pulse_start + 3*rectx->pulse_width) *rho = 0;
   else if (0) {
     double t = time - rectx->pulse_start, start = rectx->pulse_width, stop = 2*rectx->pulse_width, cycle = 3*rectx->pulse_width, steep = 5, xi = 0.75 - (stop - start)/(2* cycle);
