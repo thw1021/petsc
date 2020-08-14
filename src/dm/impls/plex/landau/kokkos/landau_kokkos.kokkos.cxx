@@ -272,7 +272,7 @@ PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_al
             });
         }
       });
-
+    Kokkos::fence();
     ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
 
     ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
