@@ -3,7 +3,7 @@
 ALL: lib
 CFLAGS   =
 FFLAGS   =
-SOURCEC  = zplexlandcreate.c
+SOURCEC  = zlandaucreate.c
 SOURCEF  =
 SOURCEH  =
 DIRS     =

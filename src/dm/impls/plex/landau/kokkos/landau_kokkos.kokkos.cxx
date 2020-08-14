@@ -91,8 +91,8 @@ PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_al
   PetscLogDouble    flops;
   PetscReal         *BB,*DD;
   LandauCtx           *ctx;
-  PetscFunctionBegin;
 
+  PetscFunctionBegin;
   ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
