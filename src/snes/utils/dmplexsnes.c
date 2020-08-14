@@ -1717,26 +1717,25 @@ static void g0_r( PetscInt dim, PetscInt Nf, PetscInt NfAux,
   LandauCreateMassMatrix - Create mass matrix for Landau
 
   Input Parameters:
-+ dm   - the DM object
-- X    - representative SNES vector
++ dm     - the DM object
+- Xdummy - representative SNES vector
 
  Output Parameters:
 + Amat - The mass matrix (optional), mass matrix is added to the DM context (belongs to DM)
 
   Level: beginner
 @*/
-PetscErrorCode LandauCreateMassMatrix(DM dm, Vec X, Mat *Amat)
+PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
 {
   DM             massDM;
   PetscDS        prob;
   PetscInt       ii,dim,N1=1,N2;
   PetscErrorCode ierr;
-  LandauCtx        *ctx;
+  LandauCtx      *ctx;
   Mat            M;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  PetscValidHeaderSpecific(X,VEC_CLASSID,2);
   if (Amat) PetscValidPointer(Amat,3);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
