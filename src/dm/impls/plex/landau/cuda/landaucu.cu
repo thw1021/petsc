@@ -118,12 +118,10 @@ PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal n
   CUDA_SAFE_CALL(cudaMemcpy(d_nu_beta,  nu_beta,  Nf*szf,                             cudaMemcpyHostToDevice));
   CUDA_SAFE_CALL(cudaMemcpy(d_invMass,  invMass,  Nf*szf,                             cudaMemcpyHostToDevice));
   CUDA_SAFE_CALL(cudaMemcpy(d_Eq_m,     Eq_m,     Nf*szf,                             cudaMemcpyHostToDevice));
-
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_BB,              Nq*Nb*szf));     // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(          d_BB, Tf[0]->T[0], Nq*Nb*szf,   cudaMemcpyHostToDevice));
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_DD,              Nq*Nb*dim*szf)); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(          d_DD, Tf[0]->T[1], Nq*Nb*dim*szf,   cudaMemcpyHostToDevice));
-
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_wiGlobal,           Nq*numGCells*szf)); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(          d_wiGlobal, wiGlobal, Nq*numGCells*szf,   cudaMemcpyHostToDevice));
   // collect geometry
@@ -131,7 +129,6 @@ PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal n
   nip_dim2 = Nq*numGCells*dim*dim;
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_invJj, nip_dim2*szf)); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice));
-
   ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
 
   ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
@@ -158,9 +155,8 @@ PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal n
 #endif
   }
   ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
-
   // delete device data
+  ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
   CUDA_SAFE_CALL(cudaFree(d_IPDataGlobal));
   CUDA_SAFE_CALL(cudaFree(d_invJj));
   CUDA_SAFE_CALL(cudaFree(d_wiGlobal));
