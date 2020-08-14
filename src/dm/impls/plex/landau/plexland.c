@@ -19,7 +19,7 @@ static PetscErrorCode LandauPointDataCreate(PetscReal **IPData, PetscInt dim, Pe
 {
   PetscErrorCode  ierr, d, s, jj, nip_pad = LANDAU_VL*(nip/LANDAU_VL + !!(nip%LANDAU_VL)), pnt_sz = (dim + Ns*(1+dim));
   PetscReal       *pdata;
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   ierr = PetscMalloc(nip_pad*pnt_sz*sizeof(PetscReal),IPData);CHKERRQ(ierr);
   /* debug */
   /* for (jj=0, pdata = *IPData; jj<nip; jj++, pdata += pnt_sz){ */
@@ -45,7 +45,7 @@ static PetscErrorCode LandauPointDataCreate(PetscReal **IPData, PetscInt dim, Pe
 static PetscErrorCode LandauPointDataDestroy(PetscReal *IPData)
 {
   PetscErrorCode   ierr;
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   ierr = PetscFree(IPData);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -79,7 +79,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   PetscReal         invMass[LANDAU_MAX_SPECIES],Eq_m[LANDAU_MAX_SPECIES],m_0=ctx->m_0; /* normalize mass -- not needed! */
   PetscLogDouble    flops;
   Vec               locX;
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(a_X,VEC_CLASSID,1);
   PetscValidHeaderSpecific(JacP,MAT_CLASSID,2);
   PetscValidPointer(ctx,4);
@@ -346,7 +346,7 @@ static PetscErrorCode ErrorIndicator_Simple(PetscInt dim, PetscReal volume, Pets
 {
   PetscReal err = 0.0;
   PetscInt  f = *(PetscInt*)actx, j;
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   for (j = 0; j < dim; ++j) {
     err += PetscSqr(PetscRealPart(u_x[f*dim+j]));
   }
@@ -403,9 +403,9 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
 	  for (j = 0; j < numVerts-1; j++) {
 	    PetscReal z, r, theta = -PETSC_PI/2 + (j%3) * PETSC_PI/2;
 	    PetscReal rad = (j >= 6) ? inner_radius1 : (j >= 3) ? inner_radius2 : ctx->radius;
-	    z = rad * sin(theta);
+	    z = rad * PetscSinReal(theta);
 	    coords[j][1] = z;
-	    r = rad * cos(theta);
+	    r = rad * PetscCosReal(theta);
 	    coords[j][0] = r;
 	  }
 	  coords[numVerts-1][0] = coords[numVerts-1][1] = 0;
@@ -426,9 +426,9 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
             PetscReal z, r;
 	    PetscReal theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3.;
 	    PetscReal rad = ctx->radius * ((j < 4) ? 0.5 : 1.0);
-	    z = rad * sin(theta);
+	    z = rad * PetscSinReal(theta);
 	    coords[j][1] = z;
-	    r = rad * cos(theta);
+	    r = rad * PetscCosReal(theta);
 	    coords[j][0] = r;
 	  }
 	}
@@ -450,9 +450,9 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
 	  for (j = 0; j < numVerts; j++) {
 	    PetscReal z, r, theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3;
 	    PetscReal rad = (j >= 8) ? inner_radius1 : (j >= 4) ? inner_radius2 : ctx->radius;
-	    z = rad * sin(theta);
+	    z = rad * PetscSinReal(theta);
 	    coords[j][1] = z;
-	    r = rad * cos(theta);
+	    r = rad * PetscCosReal(theta);
 	    coords[j][0] = r;
 	  }
 	}
@@ -476,9 +476,9 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
 	  for (j = 0; j < numVerts-1; j++) {
 	    PetscReal z, r, theta = -PETSC_PI/2 + (j%5) * PETSC_PI/4;
 	    PetscReal rad = (j >= 10) ? inner_radius1 : (j >= 5) ? inner_radius2 : ctx->radius;
-	    z = rad * sin(theta);
+	    z = rad * PetscSinReal(theta);
 	    coords[j][1] = z;
-	    r = rad * cos(theta);
+	    r = rad * PetscCosReal(theta);
 	    coords[j][0] = r;
 	  }
 	  coords[numVerts-1][0] = coords[numVerts-1][1] = 0;
@@ -541,7 +541,7 @@ static PetscErrorCode SetupDS(DM dm, PetscInt dim, LandauCtx *ctx)
 {
   PetscErrorCode  ierr;
   PetscInt        ii;
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   for (ii=0;ii<ctx->num_species;ii++) {
     char     buf[256];
     if (ii==0) ierr = PetscSNPrintf(buf, 256, "e");
@@ -597,7 +597,7 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
   LandauCtx     *ctx = mctx->ctx;
   PetscInt      i;
   PetscReal     v2 = 0, theta = 2*mctx->kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   /* compute the exponents, v^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
   /* evaluate the Maxwellian */
@@ -630,7 +630,7 @@ PetscErrorCode LandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temp
   PetscErrorCode ierr,ii;
   PetscInt       dim;
   MaxwellianCtx  *mctxs[LANDAU_MAX_SPECIES], data[LANDAU_MAX_SPECIES];
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   if (!ctx) { ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr); }
   for (ii=0;ii<ctx->num_species;ii++) {
@@ -662,7 +662,7 @@ static PetscErrorCode LandauSetInitialCondition(DM dm, Vec X, void *actx)
 {
   LandauCtx        *ctx = (LandauCtx*)actx;
   PetscErrorCode ierr;
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   if (!ctx) { ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr); }
   ierr = VecZeroEntries(X);CHKERRQ(ierr);
   ierr = LandauAddMaxwellians(dm, X, 0.0, ctx->thermal_temps, ctx->n, ctx);CHKERRQ(ierr);
@@ -808,7 +808,7 @@ static PetscErrorCode adapt(DM *dm, LandauCtx *ctx, Vec *uu)
   PetscErrorCode  ierr;
   PetscInt        type, limits[5] = {ctx->numRERefine,ctx->nZRefine1,ctx->maxRefIts,ctx->nZRefine2,ctx->postAMRRefine};
   PetscInt        adaptIter;
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   for (type=0;type<5;type++) {
     for (adaptIter = 0; adaptIter<limits[type];adaptIter++) {
       DM  dmNew = NULL;
@@ -835,7 +835,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscBool         flg, sph_flg;
   PetscInt          ii,nt,nm,nc;
   DM                dummy;
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   ierr = DMCreate(PETSC_COMM_WORLD,&dummy);CHKERRQ(ierr);
   /* get options - initialize context */
   ctx->normJ = 0;
@@ -1451,7 +1451,8 @@ PetscErrorCode LandauAssembleOpenMP(PetscInt cStart, PetscInt cEnd, PetscInt tot
       if (elMat != valuesOrig) {ierr = DMRestoreWorkArray(plex, numindices*numindices, MPIU_SCALAR, &elMat);}
     }
     /* assemble matrix */
-#pragma omp parallel for shared(JacP,idx_size,idx_arr,new_el_mats,colour,clr_idxs) private(j) schedule(static)
+    //#pragma omp parallel default(JacP,idx_size,idx_arr,new_el_mats,colour,clr_idxs)  private(j)
+#pragma omp parallel for private(j)
     for (j=0; j<csize; j++) {
       PetscInt numindices = idx_size[j], *indices = idx_arr[j];
       PetscScalar *elMat = new_el_mats[j];

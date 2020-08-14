@@ -438,7 +438,8 @@ PetscErrorCode LandauIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,vo
   LandauCtx        *ctx=(LandauCtx*)actx;
   PetscReal      unorm;
   PetscInt       dim;
-  PetscFunctionBeginUser;
+
+  PetscFunctionBegin;
   if (PETSC_TRUE) {
     DM dm;
     ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
@@ -473,7 +474,8 @@ PetscErrorCode LandauIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,Pet
   LandauCtx        *ctx=(LandauCtx*)actx;
   PetscReal      unorm;
   PetscInt       dim;
-  PetscFunctionBeginUser;
+
+  PetscFunctionBegin;
   if (1) {
     DM dm;
     ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
