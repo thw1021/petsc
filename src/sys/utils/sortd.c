@@ -387,7 +387,8 @@ PetscErrorCode PetscRealSortSemiOrdered(PetscInt n, PetscReal arr[])
   if (n < 64) {
     ierr = PetscSortReal(n, arr);CHKERRQ(ierr);
   } else {
-    ierr = PetscTimSort(n, arr);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+    //ierr = PetscTimSort(n, arr);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
