@@ -78,7 +78,7 @@ static PetscErrorCode LandauAssembleCuda(PetscInt cStart, PetscInt cEnd, PetscIn
 __global__ void assemble_kernel(const PetscInt nidx_arr[], PetscInt *idx_arr[], PetscScalar *el_mats[], const ISColoringValue colors[], Mat_SeqAIJ mats[]);
 PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal nu_alpha[],const PetscReal nu_beta[],
 				 const PetscReal invMass[], const PetscReal Eq_m[], const PetscReal * const IPDataGlobal,
-				 const PetscReal wiGlobal[], const PetscReal invJj[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain, 
+				 const PetscReal wiGlobal[], const PetscReal invJj[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain,
 				 Mat JacP)
 {
   PetscErrorCode    ierr;
@@ -90,6 +90,7 @@ PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal n
   PetscDS           prob;
   PetscSection      section, globalSection;
   PetscReal        *d_IPDataGlobal;
+  PetscBool         cuda_assemble = PETSC_FALSE;
   PetscFunctionBegin;
 
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
@@ -175,13 +176,13 @@ PetscErrorCode LandauCUDAJacobian( DM plex, const PetscInt Nq, const PetscReal n
   ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
 
   ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
-  {
+  if (!cuda_assemble) {
     PetscScalar *elMat;
     for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
       ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
       if (ej==-1) {
 	int d,f;
-	printf("GPU Element matrix\n"); 
+	printf("GPU Element matrix\n");
 	for (d = 0; d < totDim; ++d){
 	  for (f = 0; f < totDim; ++f) printf(" %17.10e",  PetscRealPart(elMat[d*totDim + f]));
 	  printf("\n");
