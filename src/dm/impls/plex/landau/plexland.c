@@ -1221,7 +1221,7 @@ PetscErrorCode LandauPrintNorms(Vec X, PetscInt stepi)
       zmomentumtot += zmomentum[ii];
       energytot  += energy[ii];
       densitytot += density[ii];
-      PetscPrintf(PETSC_COMM_WORLD, "%3D) species-%D: charge density= %20.13e z-momentum= %20.13e energy= %20.13e",stepi,ii,density[ii],zmomentum[ii],energy[ii]);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%3D) species-%D: charge density= %20.13e z-momentum= %20.13e energy= %20.13e",stepi,ii,density[ii],zmomentum[ii],energy[ii]);CHKERRQ(ierr);
     } else { /* 2/3X + 3V */
       ierr = PetscDSSetObjective(prob, 0, &f0_s_den);CHKERRQ(ierr);
       ierr = DMPlexComputeIntegralFEM(plex,X,tt,ctx);CHKERRQ(ierr);
@@ -1255,24 +1255,16 @@ PetscErrorCode LandauPrintNorms(Vec X, PetscInt stepi)
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
   if (ctx->num_species>1) {
     if (dim==2) {
-      PetscPrintf(PETSC_COMM_WORLD, "\t%3D) Total: charge density=%21.13e, momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)",
-                  stepi,densitytot,zmomentumtot,energytot,ctx->masses[1]/ctx->masses[0],cEnd-cStart);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "\t%3D) Total: charge density=%21.13e, momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)",
+                  stepi,densitytot,zmomentumtot,energytot,ctx->masses[1]/ctx->masses[0],cEnd-cStart);CHKERRQ(ierr);
     } else {
-      PetscPrintf(PETSC_COMM_WORLD, "\t%3D) Total: charge density=%21.13e, x-momentum=%21.13e, y-momentum=%21.13e, z-momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)",
-                  stepi,densitytot,xmomentumtot,ymomentumtot,zmomentumtot,energytot,ctx->masses[1]/ctx->masses[0],cEnd-cStart);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "\t%3D) Total: charge density=%21.13e, x-momentum=%21.13e, y-momentum=%21.13e, z-momentum=%21.13e, energy=%21.13e (m_i[0]/m_e = %g, %D cells)",
+                  stepi,densitytot,xmomentumtot,ymomentumtot,zmomentumtot,energytot,ctx->masses[1]/ctx->masses[0],cEnd-cStart);CHKERRQ(ierr);
     }
   } else {
-    PetscPrintf(PETSC_COMM_WORLD, " -- %D cells",cEnd-cStart);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, " -- %D cells",cEnd-cStart);CHKERRQ(ierr);
   }
-#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_VIENNACL)
-  if (ctx->deviceType != LANDAU_CPU) {
-    PetscPrintf(PETSC_COMM_WORLD, ", %D sub threads\n",ctx->subThreadBlockSize);
-  } else {
-    PetscPrintf(PETSC_COMM_WORLD,"\n");
-  }
-#else
-  PetscPrintf(PETSC_COMM_WORLD,"\n");
-#endif
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
