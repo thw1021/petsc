@@ -1929,7 +1929,7 @@ PetscErrorCode PetscFECreateLagrange(MPI_Comm comm, PetscInt dim, PetscInt Nc, P
   ierr = PetscDualSpaceSetUp(Q);CHKERRQ(ierr);
   /* Create element */
   ierr = PetscFECreate(comm, fem);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(name, 64, "P%d", (int) k);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(name, sizeof(name), "%s%D", isSimplex? "P" : "Q", k);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) *fem, name);CHKERRQ(ierr);
   ierr = PetscFESetType(*fem, PETSCFEBASIC);CHKERRQ(ierr);
   ierr = PetscFESetBasisSpace(*fem, P);CHKERRQ(ierr);
