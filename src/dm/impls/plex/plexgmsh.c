@@ -128,7 +128,7 @@ static PetscErrorCode GmshCellInfoSetUp(void)
       SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported Gmsh element type %d", _ct_); \
     if (GmshCellMap[_ct_].polytope == DM_POLYTOPE_UNKNOWN) \
       SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported Gmsh element type %d", _ct_); \
-  } while(0)
+  } while (0)
 
 
 typedef struct {
