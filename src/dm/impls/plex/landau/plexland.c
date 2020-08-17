@@ -870,7 +870,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->n_0 = 1.e20;        /* typical plasma n, but could set it to 1 */
   ctx->Ez = 0;
   ctx->v_0 = 1; /* in electron thermal velocity */
-  ctx->subThreadBlockSize = 1;
+  ctx->subThreadBlockSize = 1; /* for device and maybe OMP */
   ctx->quarter3DDomain = PETSC_FALSE;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
   {
@@ -878,17 +878,23 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
 #if defined(PETSC_HAVE_KOKKOS)
     ctx->deviceType = LANDAU_KOKKOS;
     ierr = PetscStrcpy(opstring,"kokkos");CHKERRQ(ierr);
-#elif defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_VIENNACL)
+#if !defined(PETSC_HAVE_CUDA)
+    ctx->subThreadBlockSize = 0;
+#endif
+#elif defined(PETSC_HAVE_CUDA)
     ctx->deviceType = LANDAU_CUDA;
     ierr = PetscStrcpy(opstring,"cuda");CHKERRQ(ierr);
 #else
     ctx->deviceType = LANDAU_CPU;
     ierr = PetscStrcpy(opstring,"cpu");CHKERRQ(ierr);
+    ctx->subThreadBlockSize = 0;
 #endif
     ierr = PetscOptionsString("-dm_landau_device_type","Use kernels on 'cpu', 'cuda', or 'kokkos'","plexland.c",opstring,opstring,256,NULL);CHKERRQ(ierr);
     ierr = PetscStrcmp("cpu",opstring,&flg);CHKERRQ(ierr);
-    if (flg) ctx->deviceType = LANDAU_CPU;
-    else {
+    if (flg) {
+      ctx->deviceType = LANDAU_CPU;
+      ctx->subThreadBlockSize = 0;
+    } else {
       ierr = PetscStrcmp("cuda",opstring,&flg);CHKERRQ(ierr);
       if (flg) ctx->deviceType = LANDAU_CUDA;
       else {
@@ -995,10 +1001,12 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   if (ctx->subThreadBlockSize > LANDAU_MAX_SUB_THREAD_BLOCKS) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"num sub threads %D > MAX %D",ctx->subThreadBlockSize,LANDAU_MAX_SUB_THREAD_BLOCKS);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   for (ii=ctx->num_species;ii<LANDAU_MAX_SPECIES;ii++) ctx->masses[ii] = ctx->thermal_temps[ii]  = ctx->charges[ii] = 0;
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->num_species>2 ? ctx->masses[2]/1.6720e-27 : 0);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->num_species>2 ? -ctx->charges[2]/ctx->charges[0] : 0);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. v_0=%10.3e n_0=%10.3e t_0=%10.3e domain=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1],ctx->num_species>2 ? ctx->thermal_temps[2] : 0,ctx->v_0,ctx->n_0,ctx->t_0,ctx->radius);
-  CHKERRQ(ierr);
+  if (ctx->verbose > 0) {
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->num_species>2 ? ctx->masses[2]/1.6720e-27 : 0);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->num_species>2 ? -ctx->charges[2]/ctx->charges[0] : 0);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. v_0=%10.3e n_0=%10.3e t_0=%10.3e domain=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1],ctx->num_species>2 ? ctx->thermal_temps[2] : 0,ctx->v_0,ctx->n_0,ctx->t_0,ctx->radius);
+    CHKERRQ(ierr);
+  }
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);
   {
     PetscMPIInt    rank;
@@ -1264,7 +1272,9 @@ PetscErrorCode LandauPrintNorms(Vec X, PetscInt stepi)
   } else {
     ierr = PetscPrintf(PETSC_COMM_WORLD, " -- %D cells",cEnd-cStart);CHKERRQ(ierr);
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
+  if (ctx->verbose > 1) ierr = PetscPrintf(PETSC_COMM_WORLD,", %D sub (vector) threads\n",ctx->subThreadBlockSize);
+  else ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");
+  CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
