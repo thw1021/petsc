@@ -36,9 +36,6 @@ variables:
 #     Set with CI/CD Pipelines - Run Pipeline
       - web
       - merge_requests
-    variables:
-      - $CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"
-      - $CI_MERGE_REQUEST_EVENT_TYPE == null
   dependencies: []
 
 check-ci-settings:
@@ -113,9 +110,9 @@ c99-mlib-static-py2:
 
 checksource:
   extends: .test
-  stage: stage-1
+  stage: .pre
   tags:
-    - stage1
+    - pre
   script:
     - python3 ./configure --with-mpi=0 --with-fc=0 --with-cxx=0
     - make checkbadSource SHELL=bash
@@ -123,11 +120,22 @@ checksource:
 
 check-py-vermin:
   extends: .test
-  stage: stage-1
+  stage: .pre
   tags:
-    - stage1
+    - pre
   script:
     - vermin -vv  -t=2.6- -t=3.4- config
+
+approve:
+  extends: .test
+  stage: .pre
+  when: manual
+  allow_failure: false
+  tags:
+    - pre
+  script:
+    - echo "Pipeline approved"
+
 #
 # This provides the basic order of operations and options template for stage-2,3 tests.
 # Not all stage-2,3 need to follow this template, but most will.
