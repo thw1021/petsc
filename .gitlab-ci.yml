@@ -117,6 +117,21 @@ checksource:
     - python3 ./configure --with-mpi=0 --with-fc=0 --with-cxx=0
     - make checkbadSource SHELL=bash
     - make -f gmakefile check_output SHELL=bash
+
+pause-for-approval:
+  extends: .test
+  stage: .pre
+  tags:
+    - stage1
+  only:
+    refs:
+      - merge_requests
+    variables:
+      - $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
+  script:
+    - echo "pause-for-approval has no script to run"
+  variables:
+    GIT_STRATEGY: none
   when: manual
   allow_failure: false
 
