@@ -1,10 +1,7 @@
 #include <petsc/private/dmpleximpl.h>   /*I "petscdmplex.h" I*/
 #include <petsclandau.h>                /*I "petsclandau.h"   I*/
-//#include <petsc/private/snesimpl.h>   /*I "petscsnes.h"   I*/
+#include <petscts.h>
 #include <petscdmforest.h>
-#if defined(PETSC_HAVE_OPENMP)
-#include <omp.h>
-#endif
 #if defined(HAVE_VTUNE) && defined(__INTEL_COMPILER)
 #include <ittnotify.h>
 #endif
@@ -1410,15 +1407,7 @@ PetscErrorCode LandauCreateColoring(Mat JacP, DM plex, PetscContainer *container
   ierr = PetscContainerSetUserDestroy(*container, destroy_coloring);CHKERRQ(ierr);
   ierr = PetscObjectCompose((PetscObject)JacP,"coloring",(PetscObject)*container);CHKERRQ(ierr);
   if (ctx->verbose > 0) {
-#if defined(PETSC_HAVE_OPENMP)
-    int thread_id=0,num_threads=1;
-#pragma omp parallel default(shared) private(thread_id)
-    thread_id = omp_get_thread_num();
-    num_threads = omp_get_num_threads();
-    PetscPrintf(PETSC_COMM_WORLD, "Made coloring with %D colors. OMP_threadID %d of %d\n", nc, thread_id, num_threads);
-#else
     PetscPrintf(PETSC_COMM_WORLD, "Made coloring with %D colors\n", nc);
-#endif
   }
   PetscFunctionReturn(0);
   }
