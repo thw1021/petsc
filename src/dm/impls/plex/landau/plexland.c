@@ -1540,7 +1540,7 @@ PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
 PetscErrorCode LandauIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void *actx)
 {
   PetscErrorCode ierr;
-  LandauCtx        *ctx=(LandauCtx*)actx;
+  LandauCtx      *ctx=(LandauCtx*)actx;
   PetscReal      unorm;
   PetscInt       dim;
 
@@ -1576,7 +1576,7 @@ PetscErrorCode LandauIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,vo
 PetscErrorCode LandauIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
 {
   PetscErrorCode ierr;
-  LandauCtx        *ctx=(LandauCtx*)actx;
+  LandauCtx      *ctx=(LandauCtx*)actx;
   PetscReal      unorm;
   PetscInt       dim;
 
