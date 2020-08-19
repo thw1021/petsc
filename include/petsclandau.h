@@ -1,11 +1,19 @@
-#if !defined(_LANDAUIMPL_H)
-#define _LANDAUIMPL_H
+#if !defined(PETSCLANDAU_H)
+#define PETSCLANDAU_H
 
 //#include <petscmat.h>       /*I      "petscmat.h"          I*/
 #include <petscdmplex.h> /*I      "petscdmplex.h"    I*/
-//#include <petscbt.h>
+#include <petscts.h>
 //#include <petscsf.h>
 //#include <petsc/private/dmimpl.h>
+
+PETSC_EXTERN PetscErrorCode LandauPrintNorms(Vec, PetscInt);
+PETSC_EXTERN PetscErrorCode LandauCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
+PETSC_EXTERN PetscErrorCode LandauDestroyVelocitySpace(DM*);
+PETSC_EXTERN PetscErrorCode LandauAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);
+PETSC_EXTERN PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat);
+PETSC_EXTERN PetscErrorCode LandauIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
+PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
 
 /* the Fokker-Planck-Landau context */
 #if !defined(LANDAU_DIM)
@@ -18,7 +26,7 @@
 #define LANDAU_MAX_NQ 25
 #endif
 #if !defined(LANDAU_MAX_SUB_THREAD_BLOCKS)
-#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_CUDA)
 #define LANDAU_MAX_SUB_THREAD_BLOCKS 4
 #else
 #define LANDAU_MAX_SUB_THREAD_BLOCKS 1
@@ -108,4 +116,4 @@ PETSC_EXTERN PetscErrorCode LandauKokkosJacobian(DM, const PetscInt, const Petsc
 #endif
 #endif
 
-#endif /* _LANDAUIMPL_H */
+#endif /* PETSCLANDAU_H */

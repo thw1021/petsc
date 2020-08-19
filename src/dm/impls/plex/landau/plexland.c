@@ -1,6 +1,6 @@
 #include <petsc/private/dmpleximpl.h>   /*I "petscdmplex.h" I*/
-#include <petsc/private/landauimpl.h>
-#include <petsc/private/snesimpl.h>     /*I "petscsnes.h"   I*/
+#include <petsclandau.h>                /*I "petsclandau.h"   I*/
+//#include <petsc/private/snesimpl.h>   /*I "petscsnes.h"   I*/
 #include <petscdmforest.h>
 #if defined(PETSC_HAVE_OPENMP)
 #include <omp.h>
@@ -1542,5 +1542,80 @@ PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
   ierr = MatViewFromOptions(M,NULL,"-dm_landau_mass_mat_view");CHKERRQ(ierr);
   ctx->M = M; /* this could be a noop, a = a */
   if (Amat) *Amat = M;
+  PetscFunctionReturn(0);
+}
+
+/*@
+  LandauIFunction
+@*/
+PetscErrorCode LandauIFunction(TS ts,PetscReal time_dummy,Vec X,Vec X_t,Vec F,void *actx)
+{
+  PetscErrorCode ierr;
+  LandauCtx        *ctx=(LandauCtx*)actx;
+  PetscReal      unorm;
+  PetscInt       dim;
+
+  PetscFunctionBegin;
+  if (PETSC_TRUE) {
+    DM dm;
+    ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
+    ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
+    if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
+  }
+  ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr); // remove in real application
+  ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
+  ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
+  if (ctx->normJ!=unorm) {
+    ctx->normJ = unorm;
+    ierr = LandauFormJacobian_Internal(X,ctx->J,dim,(void*)ctx);CHKERRQ(ierr);
+    ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
+  } else ctx->aux_bool = PETSC_FALSE;
+  /* mat vec for op */
+  ierr = MatMult(ctx->J,X,F);CHKERRQ(ierr);CHKERRQ(ierr); /* C*f */
+  /* add time term */
+  if (X_t) {
+    ierr = MatMultAdd(ctx->M,X_t,F,F);CHKERRQ(ierr);
+  }
+  ierr = PetscLogEventEnd(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  LandauIJacobian
+@*/
+PetscErrorCode LandauIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,PetscReal shift,Mat Amat,Mat Pmat,void *actx)
+{
+  PetscErrorCode ierr;
+  LandauCtx        *ctx=(LandauCtx*)actx;
+  PetscReal      unorm;
+  PetscInt       dim;
+
+  PetscFunctionBegin;
+  if (1) {
+    DM dm;
+    ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
+    ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
+    if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
+  }
+  if (Amat!=Pmat || Amat!=ctx->J) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Amat!=Pmat || Amat!=ctx->J");
+  ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
+  /* get collision Jacobian into A */
+#if defined(PETSC_USE_LOG)
+  ierr = PetscLogEventBegin(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
+#endif
+  ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
+  if (ctx->normJ!=unorm) {
+    ierr = LandauFormJacobian_Internal(X,ctx->J,dim,(void*)ctx); CHKERRQ(ierr);
+    ctx->normJ = unorm;
+    ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a new Jacobian */
+  } else ctx->aux_bool = PETSC_FALSE;
+  /* add C */
+  ierr = MatCopy(ctx->J,Pmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+  /* add mass */
+  ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+#if defined(PETSC_USE_LOG)
+  ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
