@@ -901,7 +901,4 @@ PETSC_EXTERN PetscErrorCode DMSNESCheckJacobian(SNES,DM,Vec,PetscReal,PetscBool*
 PETSC_EXTERN PetscErrorCode DMSNESCheckFromOptions(SNES,Vec);
 PETSC_EXTERN PetscErrorCode DMPlexAdaptInterpolator(DM, DM, Mat, KSP, PetscInt, Vec[], Vec[], Mat *, void *);
 
-/* Landau */
-PETSC_EXTERN PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat);
-
 #endif
