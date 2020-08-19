@@ -1,5 +1,4 @@
 #include <petsc/private/dmpleximpl.h>   /*I "petscdmplex.h" I*/
-#include <petsc/private/landauimpl.h>
 #include <petsc/private/snesimpl.h>     /*I "petscsnes.h"   I*/
 #include <petscds.h>
 #include <petscblaslapack.h>

@@ -5,7 +5,7 @@
 #define PETSC_SKIP_CXX_COMPLEX_FIX
 #include <petscconf.h>
 #include <petsc/private/dmpleximpl.h>   /*I   "petscdmplex.h"   I*/
-#include <petsc/private/landauimpl.h>   /*I   "petsclandau.h"   I*/
+#include <petsclandau.h>
 #include <petscts.h>
 #include <Kokkos_Core.hpp>
 #include <cstdio>

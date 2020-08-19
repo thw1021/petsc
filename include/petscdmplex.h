@@ -453,11 +453,4 @@ PETSC_EXTERN PetscErrorCode DMPlexCellRefinerGetAffineTransforms(DMPlexCellRefin
 PETSC_EXTERN PetscErrorCode DMPlexCellRefinerGetAffineFaceTransforms(DMPlexCellRefiner, DMPolytopeType, PetscInt *, PetscReal *[], PetscReal *[], PetscReal *[], PetscReal *[]);
 PETSC_EXTERN PetscErrorCode DMPlexRefineUniform(DM, DMPlexCellRefiner, DM *);
 
-/* Fokker-Planck-Landau */
-PETSC_EXTERN PetscErrorCode LandauPrintNorms(Vec, PetscInt);
-PETSC_EXTERN PetscErrorCode LandauCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
-PETSC_EXTERN PetscErrorCode LandauDestroyVelocitySpace(DM*);
-PETSC_EXTERN PetscErrorCode LandauAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);
-PETSC_EXTERN PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat);
-
 #endif
