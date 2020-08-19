@@ -1,7 +1,7 @@
 static char help[] = "Runaway electron model with Landau collision operator\n\n";
 
 #include <petscdmplex.h>
-#include <petsc/private/landauimpl.h>
+#include <petsclandau.h>
 #include <petscts.h>
 #include <petscds.h>
 
