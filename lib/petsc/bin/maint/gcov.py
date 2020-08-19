@@ -188,139 +188,136 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
             for line in codelines:
                 code[ii][int(line)-1] = 1
 
-        print("Building html files for %s" % lang)
-        ntotal_lines = 0
-        ntotal_lines_not_tested = 0
-        output_list = []
-        nsrc_files = 0
-        nsrc_files_not_tested = 0
-        for file in tested:
-            nsrc_files += 1
-            dir = os.path.dirname(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
-            f = os.path.basename(file[5:].replace('__',os.sep))
-            inhtml_file = os.path.join(dir,f+'.html')
-            outhtml_file = os.path.join(dir,f+'.gcov.html')
-            path = os.path.join(os.path.dirname('obj'+os.sep+file[5:].replace('__',os.sep)),f+'.gcov.html')
-            try:
-                inhtml_fid = open(inhtml_file,"r")
-            except IOError:
-                # Error check for files not opened correctly or file names not parsed correctly in stage 1
-                raise RuntimeError("Cannot locate html file %s, run make srchtml first" % inhtml_file)
-            lines = inhtml_fid.read().split('\n')
-            inhtml_fid.close()
+      print("Building html files for %s" % lang)
+      ntotal_lines = 0
+      ntotal_lines_not_tested = 0
+      output_list = []
+      nsrc_files = 0
+      nsrc_files_not_tested = 0
+      for file in tested:
+          nsrc_files += 1
+          dir = os.path.dirname(petsc_dir+os.sep+petsc_arch+os.sep+'obj'+os.sep+file[5:].replace('__',os.sep))
+          f = os.path.basename(file[5:].replace('__',os.sep))
+          inhtml_file = os.path.join(dir,f+'.html')
+          outhtml_file = os.path.join(dir,f+'.gcov.html')
+          path = os.path.join(os.path.dirname('obj'+os.sep+file[5:].replace('__',os.sep)),f+'.gcov.html')
+          try:
+              inhtml_fid = open(inhtml_file,"r")
+          except IOError:
+              # Error check for files not opened correctly or file names not parsed correctly in stage 1
+              raise RuntimeError("Cannot locate html file %s, run make srchtml first" % inhtml_file)
+          lines = inhtml_fid.read().split('\n')
+          inhtml_fid.close()
 
+          temp_list = []
+          temp_list.append(file.replace('__',os.sep))
+          temp_list.append(path) # Relative path of hyperlink
+
+          outhtml_fid = open(outhtml_file,"w")
+          not_tested = 0
+          n_code = 0
+          for i in range(0,len(lines)):
+              line = lines[i]
+              if not i-10 in tested[file] and i-10 in code[file]:
+                 if line.startswith('<pre width='):
+                    num = line.find('>')
+                    temp_outline = line[:num+1]+'<font color="red">Untested :&nbsp;&nbsp;</font>'+line[num+1:]
+                 else:
+                    temp_outline = '<font color="red">Untested :&nbsp;&nbsp;</font>'+line
+                 not_tested += 1
+              else:
+                 temp_outline = spaces_12+line
+              print(temp_outline,file = outhtml_fid)
+              if i-10 in code[file]: n_code += 1
+          outhtml_fid.close()
+          nsrc_files_not_tested += (not_tested > 0)
+
+          ntotal_lines += n_code
+          ntotal_lines_not_tested += not_tested
+          if n_code == 0:
+             if not_tested > 0:
+                 raise RuntimeError("Number source code lines is zero but number of untested lines is positive")
+             else:
+                 per_code_not_tested = 0
+          else:
+             per_code_not_tested = float(not_tested)/float(n_code)*100.0
+
+          temp_list.append(n_code)
+          temp_list.append(not_tested)
+          temp_list.append(per_code_not_tested)
+          output_list.append(temp_list)
+
+      # Gather information on changes to source code and new source code
+      new_nsrc_files = 0
+      new_nsrc_files_not_tested = 0
+      new_ntotal_lines = 0
+      new_ntotal_lines_not_tested = 0
+      new_output_list = []
+      diff = str(subprocess.check_output('git diff --name-only origin/master...', shell=True).decode(encoding='UTF-8',errors='replace')).split('\n')
+      if lang == 'C':
+         diff = [ i for i in diff if i.endswith('.c') and not i.find('ftn-') > -1 and not i.find('f90-') > -1]
+      if lang == 'Fortran stubs':
+         diff = [i for i in diff if i.endswith('.c') and (i.find('ftn-') > -1 or i.find('f90-') > -1)]
+      for file in diff:
+         t_nsrc_lines = 0
+         t_nsrc_lines_not_tested = 0
+         ii = file.replace(os.sep,'__')
+         diff = str(subprocess.check_output('git blame origin/master.. '+file+' | grep -v "\^"', shell=True).decode(encoding='UTF-8',errors='replace')).split('\n')
+         lines_not_tested = {}
+         for line in diff:
+             if len(line) > 0:
+                 line = line[:line.find(')')]
+                 c = int(line[line.rfind(' '):])-1
+                 if not ii in code or c in code[ii]:
+                     t_nsrc_lines += 1
+                     if ii not in tested or not line in tested[ii]:
+                         t_nsrc_lines_not_tested += 1
+                         lines_not_tested[c] = 1
+         if t_nsrc_lines_not_tested:
             temp_list = []
             temp_list.append(file.replace('__',os.sep))
+
+            dir = os.path.dirname(petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
+            f = os.path.basename(os.sep+file[4:].replace('__',os.sep))
+            inhtml_file = os.path.join(dir,f+'.html')
+            outshtml_file = os.path.join(dir,f+'.gcov_changed.html')
+            path = os.path.join(os.path.dirname('obj'+os.sep+file[4:].replace('__',os.sep)),f+'.gcov_changed.html')
             temp_list.append(path) # Relative path of hyperlink
-
-            outhtml_fid = open(outhtml_file,"w")
-            not_tested = 0
-            n_code = 0
+            outshtml_fid = open(outshtml_file,"w")
+            try:
+               inhtml_fid = open(inhtml_file,"r")
+            except IOError:
+               # Error check for files not opened correctly or file names not parsed correctly in stage 1
+               raise RuntimeError("Cannot locate html file %s, run make srchtml first" % inhtml_file)
+            lines = inhtml_fid.read().split('\n')
+            inhtml_fid.close()
             for i in range(0,len(lines)):
-                line = lines[i]
-                if not i-10 in tested[file] and i-10 in code[file]:
-                   if line.startswith('<pre width='):
-                      num = line.find('>')
-                      temp_outline = line[:num+1]+'<font color="red">Untested :&nbsp;&nbsp;</font>'+line[num+1:]
-                   else:
-                      temp_outline = '<font color="red">Untested :&nbsp;&nbsp;</font>'+line
-                   not_tested += 1
-                else:
-                   temp_outline = spaces_12+line
-                print(temp_outline,file = outhtml_fid)
-                if i-10 in code[file]: n_code += 1
-            outhtml_fid.close()
-            nsrc_files_not_tested += (not_tested > 0)
-
-            ntotal_lines += n_code
-            ntotal_lines_not_tested += not_tested
-            if n_code == 0:
-               if not_tested > 0:
-                   raise RuntimeError("Number source code lines is zero but number of untested lines is positive")
-               else:
-                   per_code_not_tested = 0
-            else:
-               per_code_not_tested = float(not_tested)/float(n_code)*100.0
-
-            temp_list.append(n_code)
-            temp_list.append(not_tested)
-            temp_list.append(per_code_not_tested)
-            output_list.append(temp_list)
-
-        # Gather information on changes to source code and new source code
-        new_nsrc_files = 0
-        new_nsrc_files_not_tested = 0
-        new_ntotal_lines = 0
-        new_ntotal_lines_not_tested = 0
-        new_output_list = []
-        diff = str(subprocess.check_output('git diff --name-only origin/master...', shell=True).decode(encoding='UTF-8',errors='replace')).split('\n')
-        if lang == 'C':
-           diff = [ i for i in diff if i.endswith('.c') and not i.find('ftn-') > -1 and not i.find('f90-') > -1]
-        if lang == 'Fortran stubs':
-           diff = [i for i in diff if i.endswith('.c') and (i.find('ftn-') > -1 or i.find('f90-') > -1)]
-        for file in diff:
-           t_nsrc_lines = 0
-           t_nsrc_lines_not_tested = 0
-           ii = file.replace(os.sep,'__')
-           if ii in tested:
-              diff = str(subprocess.check_output('git blame origin/master.. '+file+' | grep -v "\^"', shell=True).decode(encoding='UTF-8',errors='replace')).split('\n')
-              lines_not_tested = {}
-              for line in diff:
-                  if len(line) > 0:
-                      line = line[:line.find(')')]
-                      c = int(line[line.rfind(' '):])-1
-                      if c in code[ii]:
-                          t_nsrc_lines += 1
-                          if not line in tested[ii]:
-                              t_nsrc_lines_not_tested += 1
-                              lines_not_tested[c] = 1
-              if t_nsrc_lines_not_tested:
-                 temp_list = []
-                 temp_list.append(file.replace('__',os.sep))
-
-                 dir = os.path.dirname(petsc_arch+os.sep+'obj'+os.sep+file[4:].replace('__',os.sep))
-                 f = os.path.basename(os.sep+file[4:].replace('__',os.sep))
-                 inhtml_file = os.path.join(dir,f+'.html')
-                 outshtml_file = os.path.join(dir,f+'.gcov_changed.html')
-                 path = os.path.join(os.path.dirname('obj'+os.sep+file[4:].replace('__',os.sep)),f+'.gcov_changed.html')
-                 temp_list.append(path) # Relative path of hyperlink
-                 outshtml_fid = open(outshtml_file,"w")
-                 try:
-                    inhtml_fid = open(inhtml_file,"r")
-                 except IOError:
-                    # Error check for files not opened correctly or file names not parsed correctly in stage 1
-                    raise RuntimeError("Cannot locate html file %s, run make srchtml first" % inhtml_file)
-                 lines = inhtml_fid.read().split('\n')
-                 inhtml_fid.close()
-                 for i in range(0,len(lines)):
-                    line = lines[i]
-                    if i-10 in lines_not_tested and i-10 in code[ii]:
-                      if line.startswith('<pre width='):
-                         num = line.find('>')
-                         temp_outline = line[:num+1]+'<font color="red">Untested :&nbsp;&nbsp;</font>'+line[num+1:]
-                      else:
-                         temp_outline = '<font color="red">Untested :&nbsp;&nbsp;</font>'+line
-                    else:
-                      temp_outline = spaces_12+line
-                    print(temp_outline, file=outshtml_fid)
-                 outshtml_fid.close()
-                 new_nsrc_files += (t_nsrc_lines > 0)
-                 new_nsrc_files_not_tested += (t_nsrc_lines_not_tested > 0)
-                 new_ntotal_lines += t_nsrc_lines
-                 new_ntotal_lines_not_tested += t_nsrc_lines_not_tested
-                 temp_list.append(t_nsrc_lines)
-                 temp_list.append(t_nsrc_lines_not_tested)
-                 if t_nsrc_lines == 0:
-                     raise RuntimeError("Number source code lines is zero but number of untested lines is positive")
+               line = lines[i]
+               if i-10 in lines_not_tested and (not ii in code or i-10 in code[ii]):
+                 if line.startswith('<pre width='):
+                    num = line.find('>')
+                    temp_outline = line[:num+1]+'<font color="red">Untested :&nbsp;&nbsp;</font>'+line[num+1:]
                  else:
-                    per_code_not_tested = float(t_nsrc_lines_not_tested)/float(t_nsrc_lines)*100.0
-                 temp_list.append(per_code_not_tested)
-                 new_output_list.append(temp_list)
-           else:
-              raise RuntimeError("New file is not listed as tested %s" % file)
+                    temp_outline = '<font color="red">Untested :&nbsp;&nbsp;</font>'+line
+               else:
+                 temp_outline = spaces_12+line
+               print(temp_outline, file=outshtml_fid)
+            outshtml_fid.close()
+            new_nsrc_files += (t_nsrc_lines > 0)
+            new_nsrc_files_not_tested += (t_nsrc_lines_not_tested > 0)
+            new_ntotal_lines += t_nsrc_lines
+            new_ntotal_lines_not_tested += t_nsrc_lines_not_tested
+            temp_list.append(t_nsrc_lines)
+            temp_list.append(t_nsrc_lines_not_tested)
+            if t_nsrc_lines == 0:
+                raise RuntimeError("Number source code lines is zero but number of untested lines is positive")
+            else:
+               per_code_not_tested = float(t_nsrc_lines_not_tested)/float(t_nsrc_lines)*100.0
+            temp_list.append(per_code_not_tested)
+            new_output_list.append(temp_list)
 
-        print_htmltable(new_nsrc_files,new_nsrc_files_not_tested,new_ntotal_lines,new_ntotal_lines_not_tested,new_output_list,'changes in '+lang,out_fid)
-        print_htmltable(nsrc_files,nsrc_files_not_tested,ntotal_lines,ntotal_lines_not_tested,output_list,lang,out_fid)
+      print_htmltable(new_nsrc_files,new_nsrc_files_not_tested,new_ntotal_lines,new_ntotal_lines_not_tested,new_output_list,'changes in '+lang,out_fid)
+      print_htmltable(nsrc_files,nsrc_files_not_tested,ntotal_lines,ntotal_lines_not_tested,output_list,lang,out_fid)
     print("""</body></html>""", file=out_fid)
     out_fid.close()
 
