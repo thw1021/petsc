@@ -458,5 +458,6 @@ PETSC_EXTERN PetscErrorCode LandauPrintNorms(Vec, PetscInt);
 PETSC_EXTERN PetscErrorCode LandauCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
 PETSC_EXTERN PetscErrorCode LandauDestroyVelocitySpace(DM*);
 PETSC_EXTERN PetscErrorCode LandauAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);
+PETSC_EXTERN PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat);
 
 #endif

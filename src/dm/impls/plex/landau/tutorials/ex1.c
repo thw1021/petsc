@@ -1,7 +1,6 @@
 static char help[] = "Landau collision operator driver\n\n";
 
-#include <petsc/private/dmpleximpl.h>
-#include <petsc/private/landauimpl.h>
+#include <petscdmplex.h>
 #include <petscts.h>
 
 int main(int argc, char **argv)

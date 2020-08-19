@@ -900,7 +900,4 @@ PETSC_EXTERN PetscErrorCode DMSNESCheckResidual(SNES,DM,Vec,PetscReal,PetscReal*
 PETSC_EXTERN PetscErrorCode DMSNESCheckJacobian(SNES,DM,Vec,PetscReal,PetscBool*,PetscReal*);
 PETSC_EXTERN PetscErrorCode DMSNESCheckFromOptions(SNES,Vec);
 
-/* Landau */
-PETSC_EXTERN PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat);
-
 #endif
