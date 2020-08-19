@@ -121,10 +121,11 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     PetscScalar        uu[LANDAU_MAX_SPECIES],u_x[LANDAU_MAX_SPECIES*LANDAU_DIM];
     /* collect f data */
     if (ctx->verbose > 2 || (ctx->verbose > 0 && cc++ == 0)) {
-      PetscInt N;
+      PetscInt N,Nloc;
       ierr = MatGetSize(JacP,&N,NULL);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, %s elements, totDim=%D, Nb=%D, Nq=%D, elemMatSize=%D, dim=%D, Tab: Nb=%D Nf=%D Np=%D cdim=%D N=%D\n",
-                         0,"FormLandau",Nq*numCells,numCells,ctx->simplex ? "SIMPLEX" : "TENSOR", totDim, Nb, Nq, elemMatSize, dim, Tf[0]->Nb, Nf, Tf[0]->Np, Tf[0]->cdim, N);CHKERRQ(ierr);
+      ierr = VecGetSize(locX,&Nloc);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, %s elements, totDim=%D, Nb=%D, Nq=%D, elemMatSize=%D, dim=%D, Tab: Nb=%D Nf=%D Np=%D cdim=%D N=%D N_loc=%D\n",
+                         0,"FormLandau",Nq*numCells,numCells,ctx->simplex ? "SIMPLEX" : "TENSOR", totDim, Nb, Nq, elemMatSize, dim, Tf[0]->Nb, Nf, Tf[0]->Np, Tf[0]->cdim, N, Nloc);CHKERRQ(ierr);
     }
     ierr = LandauPointDataCreate(&IPData, dim, Nq*numCells, Nf);CHKERRQ(ierr);
     ipdata_sz = (dim + Nf*(1+dim));
@@ -1467,5 +1468,79 @@ PetscErrorCode LandauAssembleOpenMP(PetscInt cStart, PetscInt cEnd, PetscInt tot
     }
   }
   ierr = ISColoringRestoreIS(iscoloring,PETSC_USE_POINTER,&is);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/* < v, u > */
+static void g0_1( PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                  PetscReal t, PetscReal u_tShift, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  g0[0] = 1.;
+}
+
+/* < v, u > */
+static void g0_r( PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                  PetscReal t, PetscReal u_tShift, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  g0[0] = 2.*PETSC_PI*x[0];
+}
+
+/*@
+  LandauCreateMassMatrix - Create mass matrix for Landau
+
+  Input Parameters:
++ dm     - the DM object
+
+ Output Parameters:
++ Amat - The mass matrix (optional), mass matrix is added to the DM context (belongs to DM)
+
+  Level: beginner
+@*/
+PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
+{
+  DM             massDM;
+  PetscDS        prob;
+  PetscInt       ii,dim,N1=1,N2;
+  PetscErrorCode ierr;
+  LandauCtx      *ctx;
+  Mat            M;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
+  if (Amat) PetscValidPointer(Amat,3);
+  ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
+  if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
+  ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+  ierr = DMClone(dm, &massDM);CHKERRQ(ierr);
+  ierr = DMCopyFields(dm, massDM);CHKERRQ(ierr);
+  ierr = DMCreateDS(massDM);CHKERRQ(ierr);
+  ierr = DMGetDS(massDM, &prob);CHKERRQ(ierr);
+  for (ii=0;ii<ctx->num_species;ii++) {
+    if (dim==3) {ierr = PetscDSSetJacobian(prob, ii, ii, g0_1, NULL, NULL, NULL);CHKERRQ(ierr);}
+    else        {ierr = PetscDSSetJacobian(prob, ii, ii, g0_r, NULL, NULL, NULL);CHKERRQ(ierr);}
+  }
+  ierr = DMViewFromOptions(massDM,NULL,"-dm_landau_mass_dm_view");CHKERRQ(ierr);
+  ierr = DMCreateMatrix(massDM, &M);CHKERRQ(ierr);
+  {
+    Vec locX;
+    DM  plex;
+    ierr = DMConvert(massDM, DMPLEX, &plex);CHKERRQ(ierr);
+    ierr = DMGetLocalVector(massDM, &locX);CHKERRQ(ierr);
+    /* Mass matrix is independent of the input, so no need to fill locX */
+    ierr = DMPlexSNESComputeJacobianFEM(plex, locX, M, M, ctx);CHKERRQ(ierr);
+    ierr = DMRestoreLocalVector(massDM, &locX);CHKERRQ(ierr);
+    ierr = DMDestroy(&plex);CHKERRQ(ierr);
+  }
+  ierr = DMDestroy(&massDM);CHKERRQ(ierr);
+  ierr = MatGetSize(ctx->J, &N1, NULL);CHKERRQ(ierr);
+  ierr = MatGetSize(M, &N2, NULL);CHKERRQ(ierr);
+  if (N1 != N2) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Incorrect matrix sizes: |Jacobian| = %D, |Mass|=%D",N1,N2);
+  ierr = MatViewFromOptions(M,NULL,"-dm_landau_mass_mat_view");CHKERRQ(ierr);
+  ctx->M = M; /* this could be a noop, a = a */
+  if (Amat) *Amat = M;
   PetscFunctionReturn(0);
 }

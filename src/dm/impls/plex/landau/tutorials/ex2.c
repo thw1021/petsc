@@ -1,8 +1,9 @@
 static char help[] = "Runaway electron model with Landau collision operator\n\n";
 
-#include <petsc/private/dmpleximpl.h>
+#include <petscdmplex.h>
 #include <petsc/private/landauimpl.h>
 #include <petscts.h>
+#include <petscds.h>
 
 /* data for runaway electron model */
 typedef struct REctx_struct {
@@ -348,14 +349,14 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
       rectx->j = J;
       rectx->pulse_start = time + 1.; /* start quench now */
     }
-    PetscPrintf(PETSC_COMM_WORLD,"\t\t%D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s\n",stepi,time,ratio, J, *a_E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\t\t%D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s\n",stepi,time,ratio, J, *a_E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");CHKERRQ(ierr);
     old_ratio = ratio;
   } else if (rectx->use_spitzer_eta) {
     /* set E */
     *a_E = spit_eta*J;
-    PetscPrintf(PETSC_COMM_WORLD,"\t%D) use ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g\n",stepi,*a_E,J,Te_kev,spit_eta,time);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\t%D) use ESpitzer E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g\n",stepi,*a_E,J,Te_kev,spit_eta,time);CHKERRQ(ierr);
   } else {
-    PetscPrintf(PETSC_COMM_WORLD,"\t\t\t%D) ESpitzer delay E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g ratio=%20.13e\n",stepi,*a_E,J,Te_kev,spit_eta,time,ctx->Ez/J/spit_eta);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\t\t\t%D) ESpitzer delay E=%10.3e J=%10.3e Te_kev=%10.3e spit_eta=%10.3e t=%g ratio=%20.13e\n",stepi,*a_E,J,Te_kev,spit_eta,time,ctx->Ez/J/spit_eta);CHKERRQ(ierr);
   }
   /* cleanup */
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
@@ -416,7 +417,7 @@ static PetscErrorCode ENone(Vec X,  Vec X_t, PetscInt step, PetscReal time, Land
    Output Parameter:
 .  F - function vector
  */
-PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
+static PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
 {
   PetscReal      new_imp_rate;
   LandauCtx      *ctx;
@@ -440,7 +441,7 @@ PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void *dummy)
       ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
       dni_dt = new_imp_rate              /* *ctx->t_0 */; /* fully ionized immediately, no normalize, stay in non-dim */
       dne_dt = new_imp_rate*rectx->Ne_ion/* *ctx->t_0 */;
-      PetscPrintf(PETSC_COMM_SELF, "\tFormSource: have new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt);
+      ierr = PetscPrintf(PETSC_COMM_SELF, "\tFormSource: have new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt);CHKERRQ(ierr);
       for (ii=1;ii<LANDAU_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
       for (ii=1;ii<LANDAU_MAX_SPECIES;ii++)    temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
@@ -691,6 +692,7 @@ int main(int argc, char **argv)
   PetscDS        prob;
   LandauCtx      *ctx;
   REctx          *rectx;
+
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
@@ -701,7 +703,8 @@ int main(int argc, char **argv)
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
   s_quarter3DDomain_notused = ctx->quarter3DDomain; /* ugh */
   /* context */
-  rectx = (REctx*)(ctx->data = malloc(sizeof(REctx)));
+  ierr = PetscNew(&rectx);CHKERRQ(ierr);
+  ctx->data = rectx;
   ierr = ProcessREOptions(rectx,ctx,dm,"");CHKERRQ(ierr);
   ierr = DMSetOutputSequenceNumber(dm, 0, 0.0);CHKERRQ(ierr);
   ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
@@ -755,7 +758,7 @@ int main(int argc, char **argv)
   if (rectx->imp_src) {
     ierr = VecDestroy(&rectx->imp_src);CHKERRQ(ierr);
   }
-  free(rectx);
+  ierr = PetscFree(rectx);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }

@@ -36,8 +36,8 @@ program DMPlexTestLandauInterface
   !  Create mesh (DM), read in parameters, create and add f_0 (X)
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   dim = 2
-  call LandauCreateVelocitySpace(PETSC_COMM_SELF, dim, '', X, J, dm, ierr); CHKERRA(ierr)
-  call LandauCreateMassMatrix(dm, PETSC_NULL_MAT, ierr); CHKERRA(ierr)
+  call LandauCreateVelocitySpace(PETSC_COMM_SELF, dim, '', X, J, dm, ierr);CHKERRA(ierr)
+  call LandauCreateMassMatrix(dm, PETSC_NULL_MAT, ierr);CHKERRA(ierr)
   call DMSetUp(dm,ierr);CHKERRA(ierr)
   call VecDuplicate(X,X_0,ierr);CHKERRA(ierr)
   call VecCopy(X,X_0,ierr)
