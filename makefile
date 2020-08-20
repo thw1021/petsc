@@ -418,7 +418,7 @@ sphinx-docs-html:
         . ${PETSC_SPHINX_ENV}/bin/activate; \
         pip install -r src/docs/sphinx_docs/requirements.txt; \
       fi
-	@. ${PETSC_SPHINX_ENV}/bin/activate && ${OMAKE} -C ${PETSC_SPHINX_ROOT} html
+	@. ${PETSC_SPHINX_ENV}/bin/activate && ${OMAKE} -C ${PETSC_SPHINX_ROOT} dirhtml
 
 sphinx-docs-clean:
 	${OMAKE} -C ${PETSC_SPHINX_ROOT} clean
