@@ -1,5 +1,5 @@
 #requirespackage 'PETSC_HAVE_CUDA'
--include ../../../../../../petscdir.mk
+-include ../../../../../petscdir.mk
 
 CPPFLAGS =
 CFLAGS   =
@@ -9,10 +9,10 @@ SOURCECU = landaucu.cu
 SOURCEF  =
 SOURCEH  =
 DIRS     =
-LIBBASE  = libpetscdm
-MANSEC   = DM
-SUBMANSEC= DMPLEX
-LOCDIR   = src/dm/impls/plex/landau/cuda
+LIBBASE  = libpetscts
+MANSEC   = TS
+SUBMANSEC= LANDAU
+LOCDIR   = src/ts/utils/dmplexlandau/cuda
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
