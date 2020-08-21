@@ -250,7 +250,7 @@ PetscErrorCode TaoPDIPMInitializeSolution(Tao tao)
   ierr = VecRestoreArrayRead(tao->solution,&xarr);CHKERRQ(ierr);
 
   /* Initialize X.lambdae = 0.0 */
-  if (pdipm->lambdae){
+  if (pdipm->lambdae) {
     ierr = VecSet(pdipm->lambdae,0.0);CHKERRQ(ierr);
   }
   /* Initialize X.lambdai = push_init_lambdai, X.z = push_init_slack */
