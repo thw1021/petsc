@@ -20,6 +20,7 @@ if __name__ == '__main__':
     '--with-sycl-dir=/opt/intel/inteloneapi/compiler/latest/linux',
     '--with-precision=double',
     '--with-clanguage=c',
+    '--download-viennacl=1',
   ]
 
   configure.petsc_configure(configure_options)
