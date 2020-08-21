@@ -104,6 +104,9 @@ static PetscErrorCode MatDestroy_SuperLU_DIST(Mat A)
   }
   ierr = PetscFree(A->data);CHKERRQ(ierr);
   /* clear composed functions */
+
+  sddsfsf
+    
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatFactorGetSolverType_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSuperluDistGetDiagU_C",NULL);CHKERRQ(ierr);
 
