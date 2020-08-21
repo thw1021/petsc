@@ -250,7 +250,7 @@ PetscErrorCode TaoPDIPMInitializeSolution(Tao tao)
   ierr = VecRestoreArrayRead(tao->solution,&xarr);CHKERRQ(ierr);
 
   /* Initialize X.lambdae = 0.0 */
-  if (pdipm->Ng){
+  if (pdipm->lambdae){
     ierr = VecSet(pdipm->lambdae,0.0);CHKERRQ(ierr);
   }
   /* Initialize X.lambdai = push_init_lambdai, X.z = push_init_slack */
@@ -673,6 +673,8 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
   Vec                dummy;
 
   PetscFunctionBegin;
+  if (!tao->constraints_equality && !tao->constraints_inequality) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_NULL,"Equality and inequality contraints are not set. Either set them or switch to a different algorithm");
+
   /* Initialize all variables */
   ierr = TaoPDIPMInitializeSolution(tao);CHKERRQ(ierr);
 
