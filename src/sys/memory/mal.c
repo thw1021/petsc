@@ -29,7 +29,7 @@ PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem,PetscBool clear,int line
 #if defined(PETSC_HAVE_MEMKIND)
   int            err;
 #endif
-  
+
   if (!mem) {*result = NULL; return 0;}
 #if defined(PETSC_HAVE_MEMKIND)
   {
