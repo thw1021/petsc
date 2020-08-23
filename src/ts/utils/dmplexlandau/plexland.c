@@ -833,6 +833,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscBool         flg, sph_flg;
   PetscInt          ii,nt,nm,nc;
   DM                dummy;
+
   PetscFunctionBegin;
   ierr = DMCreate(PETSC_COMM_WORLD,&dummy);CHKERRQ(ierr);
   /* get options - initialize context */
