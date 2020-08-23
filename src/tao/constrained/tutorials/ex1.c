@@ -169,7 +169,7 @@ PetscErrorCode InitializeProblem(AppCtx *user)
 
   ierr = MatCreate(PETSC_COMM_WORLD,&user->Ai);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&user->H);CHKERRQ(ierr);
- 
+
   ierr = MatSetSizes(user->Ai,niloc,nloc,user->ni,user->n);CHKERRQ(ierr);
   ierr = MatSetSizes(user->H,nloc,nloc,user->n,user->n);CHKERRQ(ierr);
 
