@@ -26,5 +26,6 @@ src/ts/event/             @abhyshr @caidao22 @BarrySmith
 
 /config/*                 @krugers @knepley @sbalay @BarrySmith
 gmakefile*                @krugers @jedbrown @BarrySmith
+.gitlab*.yml              @sbalay @jedbrown
 /lib/petsc                @krugers @sbalay
 
