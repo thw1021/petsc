@@ -78,7 +78,7 @@ int main(int argc,char **argv)
 
     ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
     ierr = PetscTimeSubtract(&time1);CHKERRQ(ierr);
-    ierr = PetscIntSortSemiOrdered(n,X1);CHKERRQ(ierr);
+    ierr = PetscTimSort(n,X1);CHKERRQ(ierr);
     ierr = PetscTimeAdd(&time1);CHKERRQ(ierr);
 
     for (i=0; i<n-1; i++) {if (X[i] > X[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscSortInt() produced wrong results!");}
