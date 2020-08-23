@@ -676,6 +676,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
   PetscInt         Nq, *Nb, cStart, cEnd, c, dim, qj, k;
   DMLabel          adaptLabel = NULL;
   PetscErrorCode   ierr;
+
   PetscFunctionBegin;
   ierr = VecGetDM(sol, &dm);CHKERRQ(ierr);
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
