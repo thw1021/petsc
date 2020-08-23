@@ -1,7 +1,6 @@
 #if !defined(PETSCLANDAU_H)
 #define PETSCLANDAU_H
 
-//#include <petscmat.h>       /*I      "petscmat.h"          I*/
 #include <petscdmplex.h> /*I      "petscdmplex.h"    I*/
 #include <petscts.h>
 //#include <petscsf.h>
