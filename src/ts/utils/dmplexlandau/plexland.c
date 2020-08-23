@@ -626,7 +626,7 @@ PetscErrorCode LandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temp
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
  LandauSetInitialCondition - Addes Maxwellians with context
 
 Collective on X
@@ -643,7 +643,7 @@ Collective on X
 .keywords: mesh
 .seealso: LandauCreateVelocitySpace(), LandauAddMaxwellians()
 @*/
-static PetscErrorCode LandauSetInitialCondition(DM dm, Vec X, void *actx)
+PetscErrorCode LandauSetInitialCondition(DM dm, Vec X, void *actx)
 {
   LandauCtx        *ctx = (LandauCtx*)actx;
   PetscErrorCode ierr;
