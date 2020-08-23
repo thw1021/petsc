@@ -240,7 +240,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   /* clean up */
   ierr = PetscFree3(elemMat,wiGlob,invJ_a);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
-  /* ierr = DMDestroy(&Gplex);CHKERRQ(ierr); */
   ierr = LandauPointDataDestroy(IPData);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
