@@ -271,7 +271,6 @@ PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
 
   ierr = VecScatterBegin(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterEnd(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-  
 
   if (!rank){
     if (!user->noeqflag){
@@ -279,7 +278,6 @@ PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
     }
 
     ierr = VecGetArrayRead(Diseq,&di);CHKERRQ(ierr);  /* places inequality constraint dual into array */
-    
     if (!user->noeqflag){
       val = 2.0 * (1 + de[0] + di[0] - di[1]);
       ierr = VecRestoreArrayRead(Deseq,&de);CHKERRQ(ierr);
