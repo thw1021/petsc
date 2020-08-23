@@ -805,6 +805,7 @@ static PetscErrorCode adapt(DM *dm, LandauCtx *ctx, Vec *uu)
   PetscErrorCode  ierr;
   PetscInt        type, limits[5] = {ctx->numRERefine,ctx->nZRefine1,ctx->maxRefIts,ctx->nZRefine2,ctx->postAMRRefine};
   PetscInt        adaptIter;
+
   PetscFunctionBegin;
   for (type=0;type<5;type++) {
     for (adaptIter = 0; adaptIter<limits[type];adaptIter++) {
