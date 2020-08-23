@@ -627,6 +627,7 @@ PetscErrorCode LandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temp
   PetscErrorCode ierr,ii;
   PetscInt       dim;
   MaxwellianCtx  *mctxs[LANDAU_MAX_SPECIES], data[LANDAU_MAX_SPECIES];
+
   PetscFunctionBegin;
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   if (!ctx) { ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr); }
