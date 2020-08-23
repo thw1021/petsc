@@ -30,7 +30,6 @@ static PetscInt Map(PetscInt i, PetscInt j, PetscInt s)
   return ((2*s-j+1)*j/2+i-j);
 }
 
-
 static PetscErrorCode TSEvaluateStep_EIMEX(TS ts,PetscInt order,Vec X,PetscBool *done)
 {
   TS_EIMEX        *ext = (TS_EIMEX*)ts->data;
@@ -40,7 +39,6 @@ static PetscErrorCode TSEvaluateStep_EIMEX(TS ts,PetscInt order,Vec X,PetscBool 
   ierr = VecCopy(ext->T[Map(ext->row_ind,ext->col_ind,ns)],X);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode TSStage_EIMEX(TS ts,PetscInt istage)
 {
@@ -70,10 +68,8 @@ static PetscErrorCode TSStage_EIMEX(TS ts,PetscInt istage)
     ierr = TSGetAdapt(ts,&adapt);CHKERRQ(ierr);
     ierr = TSAdaptCheckStage(adapt,ts,ext->ctime,Y,&accept);CHKERRQ(ierr);
   }
-
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode TSStep_EIMEX(TS ts)
 {
@@ -144,7 +140,7 @@ static PetscErrorCode TSStep_EIMEX(TS ts)
         }/*end while*/
 
         if (ext->nstages == ext->max_rows){
-                ierr = PetscInfo(ts,"Max number of rows has been used\n");CHKERRQ(ierr);
+          ierr = PetscInfo(ts,"Max number of rows has been used\n");CHKERRQ(ierr);
         }
   }/*end if ext->ord_adapt*/
   ts->ptime += ts->time_step;
@@ -181,7 +177,6 @@ static PetscErrorCode TSInterpolate_EIMEX(TS ts,PetscReal itime,Vec X)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode TSReset_EIMEX(TS ts)
 {
   TS_EIMEX        *ext = (TS_EIMEX*)ts->data;
@@ -211,10 +206,8 @@ static PetscErrorCode TSDestroy_EIMEX(TS ts)
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSEIMEXSetMaxRows_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSEIMEXSetRowCol_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSEIMEXSetOrdAdapt_C",NULL);CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode TSEIMEXGetVecs(TS ts,DM dm,Vec *Z,Vec *Ydot,Vec *YdotI, Vec *YdotRHS)
 {
@@ -245,7 +238,6 @@ static PetscErrorCode TSEIMEXGetVecs(TS ts,DM dm,Vec *Z,Vec *Ydot,Vec *YdotI, Ve
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode TSEIMEXRestoreVecs(TS ts,DM dm,Vec *Z,Vec *Ydot,Vec *YdotI,Vec *YdotRHS)
 {
   PetscErrorCode ierr;
@@ -273,7 +265,6 @@ static PetscErrorCode TSEIMEXRestoreVecs(TS ts,DM dm,Vec *Z,Vec *Ydot,Vec *YdotI
   }
   PetscFunctionReturn(0);
 }
-
 
 /*
   This defines the nonlinear equation that is to be solved with SNES
@@ -350,7 +341,6 @@ static PetscErrorCode DMRestrictHook_TSEIMEX(DM fine,Mat restrct,Vec rscale,Mat 
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode TSSetUp_EIMEX(TS ts)
 {
   TS_EIMEX       *ext = (TS_EIMEX*)ts->data;
@@ -425,7 +415,6 @@ static PetscErrorCode TSView_EIMEX(TS ts,PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-
 /*@C
   TSEIMEXSetMaxRows - Set the maximum number of rows for EIMEX schemes
 
@@ -447,7 +436,6 @@ PetscErrorCode TSEIMEXSetMaxRows(TS ts, PetscInt nrows)
   ierr = PetscTryMethod(ts,"TSEIMEXSetMaxRows_C",(TS,PetscInt),(ts,nrows));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*@C
   TSEIMEXSetRowCol - Set the type index in the T table for the return value
@@ -471,7 +459,6 @@ PetscErrorCode TSEIMEXSetRowCol(TS ts, PetscInt row, PetscInt col)
   PetscFunctionReturn(0);
 }
 
-
 /*@C
   TSEIMEXSetOrdAdapt - Set the order adaptativity
 
@@ -493,7 +480,6 @@ PetscErrorCode TSEIMEXSetOrdAdapt(TS ts, PetscBool flg)
   ierr = PetscTryMethod(ts,"TSEIMEXSetOrdAdapt_C",(TS,PetscBool),(ts,flg));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode TSEIMEXSetMaxRows_EIMEX(TS ts,PetscInt nrows)
 {
