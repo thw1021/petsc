@@ -1309,6 +1309,7 @@ PetscErrorCode LandauCreateColoring(Mat JacP, DM plex, PetscContainer *container
   PetscSection   csection, section, globalSection;
   PetscDS        prob;
   LandauCtx      *ctx;
+
   PetscFunctionBegin;
   ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
   ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
