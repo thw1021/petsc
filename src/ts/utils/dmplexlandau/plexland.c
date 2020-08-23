@@ -600,7 +600,7 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
 
 .keywords: mesh
 .seealso: LandauCreateVelocitySpace(), LandauSetInitialCondition()
- @*/
+@*/
 PetscErrorCode LandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temps[], PetscReal ns[], void *actx)
 {
   LandauCtx      *ctx = (LandauCtx*)actx;
