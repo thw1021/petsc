@@ -474,7 +474,6 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
       ierr = PetscFree2(flatCoords,flatCells);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject) *dm, "semi-circle");CHKERRQ(ierr);
     } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Velocity space meshes does not support cubed sphere");
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Velocity space meshes does not support cubed sphere");
   }
   ierr = PetscObjectSetOptionsPrefix((PetscObject)*dm,prefix);CHKERRQ(ierr);
 
@@ -1077,7 +1076,7 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
   LandauDestroyVelocitySpace - Destroy a DMPlex velocity space mesh
 
   Collective on dm
@@ -1480,7 +1479,7 @@ static void g0_r( PetscInt dim, PetscInt Nf, PetscInt NfAux,
   g0[0] = 2.*PETSC_PI*x[0];
 }
 
-/*@C
+/*@
   LandauCreateMassMatrix - Create mass matrix for Landau
 
   Collective on dm
