@@ -949,7 +949,6 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   nm = LANDAU_MAX_SPECIES;
   ierr = PetscOptionsRealArray("-dm_landau_n", "Normalized (by -n_0) number density of each species", "plexland.c", ctx->n, &nm, &flg);CHKERRQ(ierr);
   if (flg && nm != ctx->num_species) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"wrong num n: %D != num species %D",nm,ctx->num_species);
-  }
   ctx->n_0 *= ctx->n[0]; /* normalized number density */
   for (ii=1;ii<ctx->num_species;ii++) ctx->n[ii] = ctx->n[ii]/ctx->n[0];
   ctx->n[0] = 1;
