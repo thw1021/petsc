@@ -4036,7 +4036,7 @@ PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A)
       This routine may be called multiple times with different nonzero patterns (or the same nonzero pattern). The nonzero
       structure will be the union of all the previous nonzero structures.
 
-    Developers Notes:
+    Developer Notes:
       An optimization could be added to the implementation where it checks if the i, and j are identical to the current i and j and 
       then just copies the v values directly with PetscMemcpy().
 
