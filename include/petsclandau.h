@@ -3,7 +3,6 @@
 
 #include <petscdmplex.h> /*I      "petscdmplex.h"    I*/
 #include <petscts.h>
-//#include <petscsf.h>
 //#include <petsc/private/dmimpl.h>
 
 PETSC_EXTERN PetscErrorCode LandauPrintNorms(Vec, PetscInt);
