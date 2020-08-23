@@ -482,7 +482,7 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
 	  }
 	  coords[numVerts-1][0] = coords[numVerts-1][1] = 0;
 	}
-      }
+      } else {
       else {
         numCells = 0;
 	numVerts = 0;
