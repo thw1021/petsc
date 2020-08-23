@@ -321,7 +321,10 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
             temp_list.append(per_code_not_tested)
             new_output_list.append(temp_list)
 
-      branchname = str(subprocess.check_output('command git rev-parse --abbrev-ref HEAD', shell=True).decode(encoding='UTF-8',errors='replace'))
+      if os.getenv('CI_COMMIT_BRANCH'):
+          branchname = os.getenv('CI_COMMIT_BRANCH')
+      else:
+          branchname = str(subprocess.check_output('command git rev-parse --abbrev-ref HEAD', shell=True).decode(encoding='UTF-8',errors='replace'))
       print_htmltable(new_nsrc_files,new_nsrc_files_not_tested,new_ntotal_lines,new_ntotal_lines_not_tested,new_output_list,out_fid,'Changes in '+lang+' coverage data for branch '+branchname,'Lines marked with Untested are lines changed in the branch that are not tested')
       print_htmltable(nsrc_files,nsrc_files_not_tested,ntotal_lines,ntotal_lines_not_tested,output_list,out_fid,lang+' coverage data','Lines marked with Untested are any source code that has not been tested')
     print("""</body></html>""", file=out_fid)
