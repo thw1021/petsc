@@ -359,6 +359,7 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
   PetscReal      radius = ctx->radius;
   size_t         len;
   char           fname[128] = ""; /* we can add a file if we want */
+
   PetscFunctionBegin;
   /* create DM */
   ierr = PetscStrlen(fname, &len);CHKERRQ(ierr);
