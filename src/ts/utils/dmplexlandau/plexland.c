@@ -493,7 +493,7 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
       ierr = DMPlexCreateFromCellListPetsc(comm,2,numCells,numVerts,4,ctx->interpolate,flatCells,2,flatCoords,dm);CHKERRQ(ierr);
       ierr = PetscFree2(flatCoords,flatCells);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject) *dm, "semi-circle");CHKERRQ(ierr);
-    } else { /* cubed sphere, dim==3 */
+    } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Velocity space meshes does not support cubed sphere");
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Velocity space meshes does not support cubed sphere");
     }
   }
