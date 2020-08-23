@@ -725,7 +725,6 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
               eMaxIdx = 0;
               eCellIdx[eMaxIdx++] = c;
             } else if (eMaxIdx > 0 && (tt-eMinRad) <= 1.e-5 && c != eCellIdx[eMaxIdx-1]) {
-            else if (eMaxIdx > 0 && (tt-eMinRad) <= 1.e-5 && c != eCellIdx[eMaxIdx-1]) {
               eCellIdx[eMaxIdx++] = c;
             }
           }
