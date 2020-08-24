@@ -1156,7 +1156,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_GLEE(TS ts)
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-#if !defined(PETSC_USE_DYNAMIC_LIBRARIES)
+#if !defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
   ierr = TSGLEEInitializePackage();CHKERRQ(ierr);
 #endif
 
