@@ -5845,6 +5845,35 @@ or  the option
 
 This chapter needs to be written. For now, see the manual pages (and linked examples) for \lstinline{KSPSetDM()} and \lstinline{SNESSetDM()}.
 
+Smoothing on each level of the hierarchy is handled by a \lstinline{KSP} held by the \lstinline{PCMG}, or in the
+nonlinear case, a \lstinline{SNES} held by \lstinline{SNESFAS}. The \lstinline{DM} for each level is associated with the
+smoother using \lstinline{KSPSetDM()} and \lstinline{SNESSetDM()}.
+
+The linear operators which carry out interpolation and restriction (usually of type \lstinline{MATMAIJ}) are held by
+the \lstinline{PCMG}/\lstinline{SNESFAS}, and generated automatically by the \lstinline{DM} using information about the
+discretization. Below we briefly discuss the different operations:
+
+\paragraph{Interpolation} transfers a function from the coarse space to the fine space. We would like this process to be
+accurate for the functions resolved by the coarse grid, in particular the approximate solution computed there. By
+default, we create these matrices using local interpolation of the fine grid dual basis functions in the coarse
+basis. However, an adaptive procedure can optimize the coefficients of the interpolator to reproduce pairs of
+coarse/fine functions which should approximate the lowest modes of the generalized eigenproblem
+\begin{align*}
+  A x = \lambda M x
+\end{align*}
+where $A$ is the system matrix and $M$ is the smoother. Note that for defect-correction MG, the interpolated solution
+from the coarse space need not be as accurate as the fine solution, for the same reason that updates in iterative
+refinement can be less accurate. However, in FAS or in the final interpolation step for each level of Full Multigrid, we
+must have interpolation as accurate as the fine solution since we are moving the entire solution itself.
+
+\paragraph{Injection} should accurately transfer the fine solution to the coarse grid. Accuracy here means that the
+action of a coarse dual function on either should produce approximately the same result. In the structured grid case,
+this means that we just use the same values on coarse points. This can result in aliasing.
+
+\paragraph{Restriction} is intended to transfer the fine residual to the coarse space. Here we use averaging (often the
+transpose of the interpolation operation) to damp out the fine space contributions. Thus, it is less accurate than
+injection, but avoids aliasing of the high modes.
+
 %------------------------------------------------------------------
 \cleardoublepage
 \chapter{DMPlex: Unstructured Grids in PETSc}
