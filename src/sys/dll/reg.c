@@ -62,7 +62,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
   char           *libname[32];
   PetscErrorCode ierr;
   PetscInt       nmax,i;
-#if defined(PETSC_USE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
+#if defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
   PetscBool      preload;
 #endif
 #if defined(PETSC_HAVE_ELEMENTAL)
@@ -77,7 +77,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
     ierr = PetscFree(libname[i]);CHKERRQ(ierr);
   }
 
-#if !defined(PETSC_USE_DYNAMIC_LIBRARIES) || !defined(PETSC_USE_SHARED_LIBRARIES)
+#if !defined(PETSC_HAVE_DYNAMIC_LIBRARIES) || !defined(PETSC_USE_SHARED_LIBRARIES)
   /*
       This just initializes the most basic PETSc stuff.
 
