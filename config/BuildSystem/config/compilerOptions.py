@@ -26,7 +26,7 @@ class CompilerOptions(config.base.Configure):
         if not (config.setCompilers.Configure.isDarwin(self.log) and config.setCompilers.Configure.isGNU(compiler, self.log)):
           flags.extend(['-fstack-protector'])
         if config.setCompilers.Configure.isDarwinCatalina(self.log) and config.setCompilers.Configure.isClang(compiler, self.log):
-          flags.extend(['-fno-stack-check'])
+          flags.extend(['-fno-stack-check','-Wno-implicit-function-declaration'])
         flags.extend(['-mfp16-format=ieee']) #  arm for utilizing 16 bit storage of floating point
         if config.setCompilers.Configure.isClang(compiler, self.log):
           flags.extend(['-Qunused-arguments'])
