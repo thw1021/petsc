@@ -2,7 +2,7 @@
 
 # Used by the makefile lib/petsc/conf/rules html to replace #includes in the source files with links when possible
 
-import sys, os, re
+import sys, os, re, codecs
 
 if __name__ == "__main__":
   if (len(sys.argv) < 3): sys.exit(1)
@@ -11,9 +11,10 @@ if __name__ == "__main__":
   root = os.path.relpath(os.path.realpath(petscdir),os.path.realpath(os.getcwd()))
   froot = os.path.relpath(os.path.realpath(petscdir),os.path.dirname(os.path.realpath(filename)))
 
-  fd = open(0, 'rb')
-  # avoid errors of the type: UnicodeDecodeError: 'utf-8' codec can't decode byte 0x88 in position 7892: invalid start byte
-  lines = fd.read().decode(encoding='UTF-8',errors='replace')
+  # using sys.stdin produced UnicodeDecodeError: 'utf-8' codec can't decode byte 0x88 in position 7892: invalid start byte on Barry's Mac
+  # that is due to non-ASCII characters in source files
+  fd = codecs.open('/dev/stdin','r',encoding='utf-8',errors='replace')
+  lines = fd.read()
   for line in lines:
     if 'include' in line:
       ins = re.search('#include [ ]*&lt;',line)
