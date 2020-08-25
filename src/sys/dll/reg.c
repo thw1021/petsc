@@ -110,6 +110,13 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
     if (!found) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to locate PETSc TS dynamic library \n You cannot move the dynamic libraries!");
 #endif
   }
+#if defined(PETSC_HAVE_BAMG)
+  {
+    PetscBool found;
+    ierr = PetscLoadDynamicLibrary("bamg",&found);CHKERRQ(ierr);
+    if (!found) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to locate PETSc BAMG dynamic library \n You cannot move the dynamic libraries!");
+  }
+#endif
 #endif
 
   nmax = 32;
