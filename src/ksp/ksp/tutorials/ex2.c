@@ -327,4 +327,9 @@ int main(int argc,char **args)
    test:
       suffix: pipeprcg_rcw
       args: -ksp_monitor_short -ksp_type pipeprcg -recompute_w false -m 9 -n 9
+
+   test:
+      suffix: pipecg2
+      args: -ksp_monitor_short -ksp_type pipecg2 -m 9 -n 9
+      
  TEST*/

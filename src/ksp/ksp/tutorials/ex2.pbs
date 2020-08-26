@@ -1,0 +1,20 @@
+#!/bin/sh 
+#This job should be redirected to small queue
+#PBS -N ex2
+#PBS -l select=1:ncpus=24
+#PBS -l walltime=00:08:00
+#PBS -l place=scatter
+#PBS -l accelerator_type="None"
+#PBS -V 
+. /opt/modules/default/init/sh
+cd /mnt/lustre/cds/cdsmanas/petsc/src/ksp/ksp/tutorials
+
+export MPICH_NEMESIS_ASYNC_PROGRESS=1
+export MPICH_MAX_THREAD_SAFETY=multiple
+export MPICH_GNI_USE_UNASSIGNED_CPUS=enabled
+export MPICH_GNI_MAX_EAGER_MSG_SIZE=1536
+export MPICH_SMP_SINGLE_COPY_SIZE=1024
+export MPICH_USE_DMAPP_COLL=1
+export MPICH_SHARED_MEM_COLL_OPT=1
+
+aprun -j 1 -n 1 -N 1  ./ex2 -ksp_monitor_short -ksp_type pipecg2  -m 9 -n 9

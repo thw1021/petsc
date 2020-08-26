@@ -1,0 +1,18 @@
+Warning: no access to tty (Inappropriate ioctl for device).
+Thus no job control in this shell.
+KSP type: cg
+The master process took 1.504075 seconds to run. World_Size = 24 
+ Norm of error 8.29371 iterations 1000
+Application 520714 resources: utime ~39s, stime ~2s, Rss ~33312, inblocks ~13658, outblocks ~0
+KSP type: pipecg
+The master process took 2.595310 seconds to run. World_Size = 24 
+ Norm of error 8.22303 iterations 1001
+Application 520715 resources: utime ~64s, stime ~2s, Rss ~36368, inblocks ~13756, outblocks ~0
+KSP type: pipelcg
+The master process took 2.862591 seconds to run. World_Size = 24 
+ Norm of error 8.29318 iterations 1000
+Application 520716 resources: utime ~71s, stime ~3s, Rss ~38344, inblocks ~13304, outblocks ~0
+KSP type: pipecg2
+The master process took 3.202265 seconds to run. World_Size = 24 
+ Norm of error 8.19904 iterations 998
+Application 520717 resources: utime ~80s, stime ~2s, Rss ~39948, inblocks ~14450, outblocks ~0
