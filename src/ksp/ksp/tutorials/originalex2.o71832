@@ -1,0 +1,42 @@
+Warning: no access to tty (Inappropriate ioctl for device).
+Thus no job control in this shell.
+KSP type: cg
+Vecops =  0.68186807632446289062 seconds
+ SPMV =  1.97844529151916503906 seconds
+ PC =  0.88267874717712402344 seconds
+ Allreduce =  -0.29119372367858886719 seconds
+ Without initialization =  3.24344491958618164062 seconds
+ Time per iteration =  0.00324344491958618178 seconds
+ Total time =  3.25673294067382812500 seconds
+ Vecops =  20.937181 %
+ SPMV =  60.749387 %
+ PC =  27.103197 %
+ Allreduce =  -8.941283 %
+ The master process took 3.260809 seconds to run. World_Size = 24 
+ Norm of error 8.29371 iterations 1000
+Application 520640 resources: utime ~81s, stime ~2s, Rss ~32512, inblocks ~15060, outblocks ~0
+KSP type: pipecg
+Vecops =  1.20653223991394042969 seconds
+ SPMV =  2.03167772293090820312 seconds
+ PC =  0.89937615394592285156 seconds
+ Allreduce =  2.93604016304016113281 seconds
+ Without initialization =  4.13532209396362304688 seconds
+ Time per iteration =  0.00413532209396362278 seconds
+ Total time =  4.14986491203308105469 seconds
+ Vecops =  29.074012 %
+ SPMV =  48.957683 %
+ PC =  21.672420 %
+ Allreduce =  70.750259 %
+ Overlap percentage =  99.659430 %
+ The master process took 4.155199 seconds to run. World_Size = 24 
+ Norm of error 8.29371 iterations 1000
+Application 520641 resources: utime ~102s, stime ~2s, Rss ~35564, inblocks ~15584, outblocks ~0
+KSP type: pipelcg
+Outer Iteration 0
+The master process took 4.662399 seconds to run. World_Size = 24 
+ Norm of error 8.29371 iterations 999
+Application 520642 resources: utime ~114s, stime ~3s, Rss ~37580, inblocks ~14586, outblocks ~0
+KSP type: pipecg2
+The master process took 4.885865 seconds to run. World_Size = 24 
+ Norm of error 8.19904 iterations 998
+Application 520643 resources: utime ~118s, stime ~3s, Rss ~39352, inblocks ~14570, outblocks ~0
