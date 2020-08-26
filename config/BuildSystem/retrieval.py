@@ -58,12 +58,24 @@ class Retriever(logger.Logger):
     if url.startswith('dir://'):
       import shutil
       dir = url[6:]
-      if not os.path.isdir(dir): raise RuntimeError('Url begins with dir:// but is not a directory')
+      if not os.path.isdir(dir): raise RuntimeError('Url begins with link:// but it is not pointing to a directory')
 
       if os.path.isdir(os.path.join(root,os.path.basename(dir))): shutil.rmtree(os.path.join(root,os.path.basename(dir)))
       if os.path.isfile(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
 
       shutil.copytree(dir,os.path.join(root,os.path.basename(dir)))
+      return
+
+    if url.startswith('link://'):
+      import shutil
+      dir = url[7:]
+      if not os.path.isdir(dir): raise RuntimeError('Url begins with dir:// but is not a directory')
+
+      if os.path.islink(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
+      if os.path.isfile(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
+      if os.path.isdir(os.path.join(root,os.path.basename(dir))): shutil.rmtree(os.path.join(root,os.path.basename(dir)))
+      print('xxx',dir,os.path.join(root,os.path.basename(dir)),os.path.abspath(dir))
+      os.symlink(os.path.abspath(dir),os.path.join(root,os.path.basename(dir)))
       return
 
     if url.startswith('git://'):
