@@ -21,10 +21,10 @@ namespace landau_inner_red {  // namespace helps with name resolution in reducti
 
     KOKKOS_INLINE_FUNCTION   // Default constructor - Initialize to 0's
     array_type() {
-      for (int i = 0; i < Nf; i++ ){
-        for (int j = 0; j < LANDAU_DIM; j++ ){
+      for (int i = 0; i < Nf; i++){
+        for (int j = 0; j < LANDAU_DIM; j++){
           gg2[i][j] = 0;
-          for (int k = 0; k < LANDAU_DIM; k++ ){
+          for (int k = 0; k < LANDAU_DIM; k++){
             gg3[i][j][k] = 0;
           }
         }
@@ -32,10 +32,10 @@ namespace landau_inner_red {  // namespace helps with name resolution in reducti
     }
     KOKKOS_INLINE_FUNCTION   // Copy Constructor
     array_type(const array_type & rhs) {
-      for (int i = 0; i < Nf; i++ ){
-        for (int j = 0; j < LANDAU_DIM; j++ ){
+      for (int i = 0; i < Nf; i++){
+        for (int j = 0; j < LANDAU_DIM; j++){
           gg2[i][j] = rhs.gg2[i][j];
-          for (int k = 0; k < LANDAU_DIM; k++ ){
+          for (int k = 0; k < LANDAU_DIM; k++){
             gg3[i][j][k] = rhs.gg3[i][j][k];
           }
         }
@@ -43,10 +43,10 @@ namespace landau_inner_red {  // namespace helps with name resolution in reducti
     }
     KOKKOS_INLINE_FUNCTION   // add operator
     array_type& operator += (const array_type& src) {
-      for (int i = 0; i < Nf; i++ ){
-        for (int j = 0; j < LANDAU_DIM; j++ ){
+      for (int i = 0; i < Nf; i++){
+        for (int j = 0; j < LANDAU_DIM; j++){
           gg2[i][j] += src.gg2[i][j];
-          for (int k = 0; k < LANDAU_DIM; k++ ){
+          for (int k = 0; k < LANDAU_DIM; k++){
             gg3[i][j][k] += src.gg3[i][j][k];
           }
         }
@@ -55,10 +55,10 @@ namespace landau_inner_red {  // namespace helps with name resolution in reducti
     }
     KOKKOS_INLINE_FUNCTION   // volatile add operator
     void operator += (const volatile array_type& src) volatile {
-      for (int i = 0; i < Nf; i++ ){
-        for (int j = 0; j < LANDAU_DIM; j++ ){
+      for (int i = 0; i < Nf; i++){
+        for (int j = 0; j < LANDAU_DIM; j++){
           gg2[i][j] += src.gg2[i][j];
-          for (int k = 0; k < LANDAU_DIM; k++ ){
+          for (int k = 0; k < LANDAU_DIM; k++){
             gg3[i][j][k] += src.gg3[i][j][k];
           }
         }
@@ -78,7 +78,7 @@ namespace Kokkos { //reduction identity must be defined in Kokkos namespace
 }
 
 extern "C"  {
-PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_alpha[], PetscReal nu_beta[],
+PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alpha[], PetscReal nu_beta[],
                                    PetscReal invMass[], PetscReal Eq_m[], PetscReal * const IPDataGlobal,
                                    PetscReal wiGlobal[], PetscReal invJ[], const PetscInt num_sub_blocks, const PetscLogEvent events[], PetscBool quarter3DDomain,
                                    Mat JacP)
@@ -113,7 +113,7 @@ PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_al
   if (!Kokkos::is_initialized()){
     int argc = 1;
     char string[1][32], *argv[1] = {string[0]};
-    ierr = PetscStrcpy(string[0],"landau"); CHKERRQ(ierr);
+    ierr = PetscStrcpy(string[0],"landau");CHKERRQ(ierr);
     Kokkos::initialize(argc, argv);
   }
 #if defined(KOKKOS_ENABLE_CXX11_DISPATCH_LAMBDA)
@@ -126,7 +126,7 @@ PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_al
     using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
     const int scr_bytes = g2_scr_t::shmem_size(Nf,Nq,dim) +  g3_scr_t::shmem_size(Nf,Nq,dim,dim);
     ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
-    Kokkos::View<PetscScalar**, Kokkos::LayoutRight> d_elem_mats( "element matrices", numCells, totDim*totDim);
+    Kokkos::View<PetscScalar**, Kokkos::LayoutRight> d_elem_mats("element matrices", numCells, totDim*totDim);
     Kokkos::View<PetscScalar**, Kokkos::LayoutRight>::HostMirror h_elem_mats = Kokkos::create_mirror_view(d_elem_mats);
     const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_alpha (nu_alpha, Nf);
     Kokkos::View<PetscReal*, Kokkos::LayoutLeft> d_alpha ("nu_alpha", Nf);
@@ -167,7 +167,7 @@ PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_al
 #define KOKKOS_SHARED_LEVEL 1
     //PetscInfo2(plex, "shared memory size: %D kB in level %d\n",Nf*Nq*dim*(dim+1)*sizeof(PetscReal)/1024,KOKKOS_SHARED_LEVEL);
     int conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
-    Kokkos::parallel_for("Landau_elements", Kokkos::TeamPolicy<>( numCells, team_size, num_sub_blocks ).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
+    Kokkos::parallel_for("Landau_elements", Kokkos::TeamPolicy<>(numCells, team_size, num_sub_blocks).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
         const PetscInt  myelem = team.league_rank();
         g2_scr_t        g2(team.team_scratch(KOKKOS_SHARED_LEVEL),Nf,Nq,dim);
         g3_scr_t        g3(team.team_scratch(KOKKOS_SHARED_LEVEL),Nf,Nq,dim,dim);
@@ -181,7 +181,7 @@ PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_al
             const PetscReal     * const vj = fplpt_j->crd, wj = d_wiGlobal[jpidx];
             // reduce on g22 and g33 for IP jpidx
             landau_inner_red::ValueType gg;
-            Kokkos::parallel_reduce( Kokkos::ThreadVectorRange (team, nip), [=] ( const int& ipidx, landau_inner_red::ValueType & ggg) {
+            Kokkos::parallel_reduce(Kokkos::ThreadVectorRange (team, nip), [=] (const int& ipidx, landau_inner_red::ValueType & ggg) {
                 const LandauPointData * const fplpt = (LandauPointData*)(&d_ipdata(ipidx*ipdata_sz));
                 const LandauFDF * const       fdf = &fplpt->fdf[0];
                 const PetscReal             wi = d_wiGlobal[ipidx];
@@ -217,12 +217,12 @@ PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_al
                   }
                 }
 #endif
-              }, Kokkos::Sum<landau_inner_red::ValueType>(gg) );
-            Kokkos::parallel_for(Kokkos::ThreadVectorRange (team, Nf), [&] ( const int& fieldA ) {
+              }, Kokkos::Sum<landau_inner_red::ValueType>(gg));
+            Kokkos::parallel_for(Kokkos::ThreadVectorRange (team, Nf), [&] (const int& fieldA) {
                 gg.gg2[fieldA][dim-1] += d_Eq_m[fieldA];
               });
             //kkos::single(Kokkos::PerThread(team), [&]() {
-            Kokkos::parallel_for(Kokkos::ThreadVectorRange (team, Nf), [=] ( const int& fieldA ) {
+            Kokkos::parallel_for(Kokkos::ThreadVectorRange (team, Nf), [=] (const int& fieldA) {
                 int d,d2,d3,dp;
                 //printf("%d %d %d gg2[][1]=%18.10e\n",myelem,myQi,fieldA,gg.gg2[fieldA][dim-1]);
                 /* Jacobian transform - g2, g3 - per thread (2D) */
@@ -257,7 +257,7 @@ PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal nu_al
                   for (blk_j = 0; blk_j < Nb; ++blk_j) {
                     const PetscInt j    = fieldA*Nb + blk_j; /* Element matrix column */
                     const PetscInt fOff = i*totDim + j;
-                    for ( qj = 0 ; qj < Nq ; qj++) { // look at others integration points
+                    for (qj = 0 ; qj < Nq ; qj++) { // look at others integration points
                       const PetscReal *BJq = &d_BB[qj*Nb], *DIq = &d_DD[qj*Nb*dim];
                       for (d = 0; d < dim; ++d) {
                         d_elem_mats(myelem,fOff) += DIq[blk_i*dim+d]*g2(fieldA,qj,d)*BJq[blk_j];

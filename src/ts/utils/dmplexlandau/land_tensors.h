@@ -3,24 +3,24 @@
 
 /* elliptic functions
  */
-PETSC_DEVICE_FUNC_DECL PetscReal polevl_10( PetscReal x, PetscReal coef[] )
+PETSC_DEVICE_FUNC_DECL PetscReal polevl_10(PetscReal x, PetscReal coef[])
 {
   PetscReal ans;
   PetscInt  i;
   ans = coef[0];
   for (i=1; i<11; i++) ans = ans * x + coef[i];
-  return( ans );
+  return(ans);
 }
-PETSC_DEVICE_FUNC_DECL PetscReal polevl_9( PetscReal x, PetscReal coef[] )
+PETSC_DEVICE_FUNC_DECL PetscReal polevl_9(PetscReal x, PetscReal coef[])
 {
   PetscReal ans;
   PetscInt  i;
   ans = coef[0];
   for (i=1; i<10; i++) ans = ans * x + coef[i];
-  return( ans );
+  return(ans);
 }
 /*
- *	Complete elliptic integral of the second kind
+ *      Complete elliptic integral of the second kind
  */
 PETSC_DEVICE_FUNC_DECL void ellipticE(PetscReal x,PetscReal *ret)
 {
@@ -81,7 +81,7 @@ PETSC_DEVICE_FUNC_DECL void ellipticE(PetscReal x,PetscReal *ret)
   *ret = polevl_10(x,P2) - PetscLogReal(x) * (x * polevl_9(x,Q2));
 }
 /*
- *	Complete elliptic integral of the first kind
+ *      Complete elliptic integral of the first kind
  */
 PETSC_DEVICE_FUNC_DECL void ellipticK(PetscReal x,PetscReal *ret)
 {
@@ -184,9 +184,9 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal 
   zmzp2=PetscSqr(zmzp);
   r2prp2=r2+rp2;
   l = r2 + rp2 + zmzp2;
-  /* if      ( zmzp2 >  PETSC_SMALL) mask = 1; */
-  /* else if ( (tt=(r-rp)) >  PETSC_SMALL) mask = 1; */
-  /* else if (  tt         < -PETSC_SMALL) mask = 1; */
+  /* if      (zmzp2 >  PETSC_SMALL) mask = 1; */
+  /* else if ((tt=(r-rp)) >  PETSC_SMALL) mask = 1; */
+  /* else if  (tt         < -PETSC_SMALL) mask = 1; */
   /* else mask = 0; */
   s = mask*2*r*rp/l; /* mask for vectorization */
   tt = 1./(1+s);
@@ -198,7 +198,7 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal 
   ellipticK(2*s*tt,&ks); /* 44 flops + 75 in rest, 21 mult */
   /* mask is needed here just for single precision */
   i2func = 2./((1-s)*sqrt_1s) * es;
-  i1func = 4./(PetscSqr(s)*sqrt_1s + PETSC_MACHINE_EPSILON) * mask * ( ks - (1.+s) * es);
+  i1func = 4./(PetscSqr(s)*sqrt_1s + PETSC_MACHINE_EPSILON) * mask * (ks - (1.+s) * es);
   i3func = 2./((1-s)*(s)*sqrt_1s + PETSC_MACHINE_EPSILON) * (es - (1-s) * ks);
   Ud[0][0]=                    pi4pow*(rp2*i1func+PetscSqr(zmzp)*i2func);
   Ud[0][1]=Ud[1][0]=Uk[0][1]= -pi4pow*(zmzp)*(r*i2func-rp*i3func);

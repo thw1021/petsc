@@ -1,8 +1,8 @@
 ! test phase space (Maxwellian) mesh construction (serial)
 !
 !run:
-!	-${MPIEXEC} ....
-!	-@${PETSC_DIR}/lib/petsc/bin/petsc_gen_xdmf.py *.h5
+!       -${MPIEXEC} ....
+!       -@${PETSC_DIR}/lib/petsc/bin/petsc_gen_xdmf.py *.h5
 !
 !
 ! Contributed by Mark Adams

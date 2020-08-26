@@ -37,9 +37,9 @@ static PetscBool s_quarter3DDomain_notused = PETSC_FALSE;
 #define RE_CUT 5.
 /* < v, u_re * v * q > */
 static void f0_j_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+                    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   PetscReal n_e = PetscRealPart(u[0]);
   if (dim==2) {
@@ -59,23 +59,23 @@ static void f0_j_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 }
 
 /* sum < v, u*v*q > */
-static void f0_jz_sum( PetscInt dim, PetscInt Nf, PetscInt NfAux,
-		   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-		   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-		   PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+static void f0_jz_sum(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                   PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   PetscInt ii;
   f0[0] = 0;
   if (dim==2) {
-    for(ii=0;ii<numConstants;ii++) f0[0] += u[ii] * 2.*PETSC_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
+    for (ii=0;ii<numConstants;ii++) f0[0] += u[ii] * 2.*PETSC_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
   } else {
-    for(ii=0;ii<numConstants;ii++) f0[0] += u[ii]                * x[2] * constants[ii]; /* n * v_|| * q  */
+    for (ii=0;ii<numConstants;ii++) f0[0] += u[ii]                * x[2] * constants[ii]; /* n * v_|| * q  */
     if (s_quarter3DDomain_notused) *f0 *= 4.0;
   }
 }
 
 /* < v, n_e > */
-static void f0_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
+static void f0_n(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                   PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
@@ -89,7 +89,7 @@ static void f0_n( PetscInt dim, PetscInt Nf, PetscInt NfAux,
 }
 
 /* < v, n_e v_|| > */
-static void f0_vz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
+static void f0_vz(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
                    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                    PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
@@ -103,7 +103,7 @@ static void f0_vz( PetscInt dim, PetscInt Nf, PetscInt NfAux,
 }
 
 /* < v, n_e (v-shift) > */
-static void f0_ve_shift( PetscInt dim, PetscInt Nf, PetscInt NfAux,
+static void f0_ve_shift(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                          PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
@@ -459,7 +459,7 @@ static PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void 
         KSP ksp;
         Vec S;
         ierr = KSPCreate(PETSC_COMM_SELF,&ksp);CHKERRQ(ierr);
-        ierr = KSPSetOptionsPrefix(ksp,"mass_"); /* stokes */ CHKERRQ(ierr);
+        ierr = KSPSetOptionsPrefix(ksp,"mass_");CHKERRQ(ierr); /* stokes */
         ierr = KSPSetOperators(ksp,ctx->M,ctx->M);CHKERRQ(ierr);
         ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
         ierr = DMCreateGlobalVector(dm, &S);CHKERRQ(ierr);
@@ -495,7 +495,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   }
   /* view */
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
-  if ( time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
+  if (time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
     /* print norms */
     ierr = LandauPrintNorms(X, stepi);CHKERRQ(ierr);
     ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
@@ -696,8 +696,8 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
-  ierr = LandauCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm); CHKERRQ(ierr);
-  ierr = LandauCreateMassMatrix(dm, NULL); CHKERRQ(ierr);
+  ierr = LandauCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &dm);CHKERRQ(ierr);
+  ierr = LandauCreateMassMatrix(dm, NULL);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
