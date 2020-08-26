@@ -487,7 +487,9 @@ PETSC_INTERN PetscErrorCode MatGetInfo_CHOLMOD(Mat F,MatInfoType flag,MatInfo *i
 }
 
 /*MC
-  MATSOLVERCHOLMOD = "cholmod" - A matrix type providing direct solvers (Cholesky) for sequential matrices
+  MATSOLVERCHOLMOD
+
+  A matrix type providing direct solvers (Cholesky) for sequential matrices
   via the external package CHOLMOD.
 
   Use ./configure --download-suitesparse to install PETSc to use CHOLMOD

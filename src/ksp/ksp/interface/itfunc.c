@@ -465,8 +465,8 @@ static PetscErrorCode KSPReasonView_Internal(KSP ksp, PetscViewer viewer, PetscV
 
 
    Options Database Keys:
-.  -ksp_converged_reason - print reason for converged or diverged, also prints number of iterations
-.  -ksp_converged_reason ::failed - only print reason and number of iterations when diverged
++  -ksp_converged_reason - print reason for converged or diverged, also prints number of iterations
+-  -ksp_converged_reason ::failed - only print reason and number of iterations when diverged
 
    Level: beginner
 
