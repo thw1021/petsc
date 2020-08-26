@@ -20,6 +20,7 @@ int main(int argc,char **argv)
   PetscMPIInt    size;
   PetscViewer    vwr;
   Vec            x;
+  unsigned long  seed;
   PetscBool      order=PETSC_FALSE;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
@@ -37,6 +38,9 @@ int main(int argc,char **argv)
   ierr = PetscCalloc6(n,&X,n,&X1,n,&XR,n,&XSO,n,&Y,n,&Z);CHKERRQ(ierr);
   ierr = PetscRandomCreate(PETSC_COMM_SELF,&rdm);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rdm);CHKERRQ(ierr);
+  ierr = PetscRandomGetSeed(rdm, &seed);CHKERRQ(ierr);
+
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "Random seed: %lu\n", seed);CHKERRQ(ierr);
 
   for (i=0; i<n; ++i) {
     ierr = PetscRandomGetValueReal(rdm,&val);CHKERRQ(ierr);
@@ -72,24 +76,24 @@ int main(int argc,char **argv)
     ierr = PetscArraycpy(X1,order ? XSO : XR,n);CHKERRQ(ierr);
 
     ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
+    ierr = PetscTimeSubtract(&time1);CHKERRQ(ierr);
+    ierr = PetscIntSortSemiOrdered(n,X1);CHKERRQ(ierr);
+    ierr = PetscTimeAdd(&time1);CHKERRQ(ierr);
+
+    ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
     ierr = PetscTimeSubtract(&time);CHKERRQ(ierr);
     ierr = PetscSortInt(n,X);CHKERRQ(ierr);
     ierr = PetscTimeAdd(&time);CHKERRQ(ierr);
 
-    ierr = VecNorm(x,NORM_1,&norm1);CHKERRQ(ierr);
-    ierr = PetscTimeSubtract(&time1);CHKERRQ(ierr);
-    ierr = PetscTimSort(n,X1);CHKERRQ(ierr);
-    ierr = PetscTimeAdd(&time1);CHKERRQ(ierr);
-
     for (i=0; i<n-1; i++) {if (X[i] > X[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscSortInt() produced wrong results!");}
-    for (i=0; i<n; i++) {if (X[i] != X1[i]) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() rep %D X1[%D]:%D does not match PetscSortInt() X[%D]:%D!",l,i,X1[i],i,X[i]);}
-    for (i=0; i<n-1; i++) {if (X1[i] > X1[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSortInt() produced wrong results!");}
+    for (i=0; i<n; i++) {if (X[i] != X1[i]) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscIntSortSemiOrdered() rep %D X1[%D]:%D does not match PetscSortInt() X[%D]:%D!",l,i,X1[i],i,X[i]);}
+    for (i=0; i<n-1; i++) {if (X1[i] > X1[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscIntSortSemiOrdered() produced wrong results!");}
     ierr = PetscArrayzero(X,n);CHKERRQ(ierr);
     ierr = PetscArrayzero(X1,n);CHKERRQ(ierr);
   }
   ierr = PetscPrintf(PETSC_COMM_SELF,"PetscSortInt()              with %D integers, %D duplicate(s) per unique value took %g seconds\n",n,d,time/r);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"PetscTimSortInt()           with %D integers, %D duplicate(s) per unique value took %g seconds\n",n,d,time1/r);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Speedup of PetscTimSortInt() was %g (0:1 = slower, >1 means faster)\n",time/time1);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"PetscIntSortSemiOrdered()   with %D integers, %D duplicate(s) per unique value took %g seconds\n",n,d,time1/r);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"Speedup of PetscIntSortSemiOrdered() was %g (0:1 = slower, >1 means faster)\n",time/time1);CHKERRQ(ierr);
   ierr = VecDestroy(&x);CHKERRQ(ierr);
 
   time = 0.0;
