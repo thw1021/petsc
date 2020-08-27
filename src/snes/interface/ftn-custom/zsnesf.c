@@ -33,6 +33,7 @@
 #define snesmonitorsolution_             SNESMONITORSOLUTION
 #define snesmonitorsolutionupdate_       SNESMONITORSOLUTIONUPDATE
 #define snesmonitorset_                  SNESMONITORSET
+#define snesnewtontrgetrhoflag_          SNESNEWTONTRGETRHOFLAG
 #define snesnewtontrsetprecheck_         SNESNEWTONTRSETPRECHECK
 #define snesnewtontrsetpostcheck_        SNESNEWTONTRSETPOSTCHECK
 #define snesviewfromoptions_             SNESVIEWFROMOPTIONS
@@ -67,6 +68,7 @@
 #define snesmonitorsolution_             snesmonitorsolution
 #define snesmonitorsolutionupdate_       snesmonitorsolutionupdate
 #define snesmonitorset_                  snesmonitorset
+#define snesnewtontrgetrhoflag_          snesnewtontrgetrhoflag
 #define snesnewtontrsetprecheck_         snesnewtontrsetprecheck
 #define snesnewtontrsetpostcheck_        snesnewtontrsetpostcheck
 #define snesviewfromoptions_             snesviewfromoptions
@@ -90,6 +92,11 @@ static struct {
   PetscFortranCallbackId trpostcheck_pgiptr;
 #endif
 } _cb;
+
+PETSC_EXTERN void  snesnewtontrgetrhoflag_(SNES *snes,PetscBool *rho_flag, int *__ierr){
+  *__ierr = SNESNewtonTRGetRhoFlag(
+     *snes,rho_flag);
+}
 
 static PetscErrorCode ourtrprecheckfunction(SNES snes,Vec x,Vec y,PetscBool *changed_y,void *ctx)
 {

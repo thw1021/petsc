@@ -28,7 +28,8 @@ typedef struct {
   PetscReal      sigma;          /* used to detemine termination */
   PetscBool      itflag;         /* flag for convergence testing */
   PetscBool      use_cauchy;     /* flag to use/not use Cauchy step and direction (S&D) */
-  PetscBool      use_auto_scale_multiphase; /* flag to use/not use autoscaling for Cauchy S&D for multiphase*/
+  PetscBool      auto_scale_multiphase; /* flag to use/not use autoscaling for Cauchy S&D for multiphase*/
+  PetscBool      rho_satisfied;  /* flag for whether inner iteration satisfied rho */
   PetscReal      rnorm0,ttol;    /* used for KSP convergence test */
   PetscErrorCode (*precheck)(SNES,Vec,Vec,PetscBool*,void*);
   void           *precheckctx;
