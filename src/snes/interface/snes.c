@@ -4268,7 +4268,7 @@ PetscErrorCode SNESScaleStep_Private(SNES snes,Vec y,PetscReal *fnorm,PetscReal 
 }
 
 /*@
-   SNESReasonView - Displays the reason a SNES solve converged or diverged to a viewer
+   SNESConvergedReasonView - Displays the reason a SNES solve converged or diverged to a viewer
 
    Collective on SNES
 
@@ -4284,10 +4284,10 @@ PetscErrorCode SNESScaleStep_Private(SNES snes,Vec y,PetscReal *fnorm,PetscReal 
 
    Level: beginner
 
-.seealso: SNESCreate(), SNESSetUp(), SNESDestroy(), SNESSetTolerances(), SNESConvergedDefault()
+.seealso: SNESCreate(), SNESSetUp(), SNESDestroy(), SNESSetTolerances(), SNESConvergedDefault(), SNESGetConvergedReason(), SNESConvergedReasonViewFromOptions()
 
 @*/
-PetscErrorCode  SNESReasonView(SNES snes,PetscViewer viewer)
+PetscErrorCode  SNESConvergedReasonView(SNES snes,PetscViewer viewer)
 {
   PetscViewerFormat format;
   PetscBool         isAscii;
@@ -4337,7 +4337,7 @@ PetscErrorCode  SNESReasonView(SNES snes,PetscViewer viewer)
 }
 
 /*@C
-  SNESReasonViewFromOptions - Processes command line options to determine if/how a SNESReason is to be viewed.
+  SNESConvergedReasonViewFromOptions - Processes command line options to determine if/how a SNESReason is to be viewed.
 
   Collective on SNES
 
@@ -4346,8 +4346,10 @@ PetscErrorCode  SNESReasonView(SNES snes,PetscViewer viewer)
 
   Level: intermediate
 
+.seealso: SNESCreate(), SNESSetUp(), SNESDestroy(), SNESSetTolerances(), SNESConvergedDefault(), SNESGetConvergedReason(), SNESConvergedReasonView()
+
 @*/
-PetscErrorCode SNESReasonViewFromOptions(SNES snes)
+PetscErrorCode SNESConvergedReasonViewFromOptions(SNES snes)
 {
   PetscErrorCode    ierr;
   PetscViewer       viewer;
@@ -4361,7 +4363,7 @@ PetscErrorCode SNESReasonViewFromOptions(SNES snes)
   ierr   = PetscOptionsGetViewer(PetscObjectComm((PetscObject)snes),((PetscObject)snes)->options,((PetscObject)snes)->prefix,"-snes_converged_reason",&viewer,&format,&flg);CHKERRQ(ierr);
   if (flg) {
     ierr = PetscViewerPushFormat(viewer,format);CHKERRQ(ierr);
-    ierr = SNESReasonView(snes,viewer);CHKERRQ(ierr);
+    ierr = SNESConvergedReasonView(snes,viewer);CHKERRQ(ierr);
     ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
     ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
   }
@@ -4524,7 +4526,7 @@ PetscErrorCode  SNESSolve(SNES snes,Vec b,Vec x)
 
     ierr = PetscOptionsGetViewer(PetscObjectComm((PetscObject)snes),((PetscObject)snes)->options,((PetscObject)snes)->prefix,"-snes_test_local_min",NULL,NULL,&flg);CHKERRQ(ierr);
     if (flg && !PetscPreLoadingOn) { ierr = SNESTestLocalMin(snes);CHKERRQ(ierr); }
-    ierr = SNESReasonViewFromOptions(snes);CHKERRQ(ierr);
+    ierr = SNESConvergedReasonViewFromOptions(snes);CHKERRQ(ierr);
 
     if (snes->errorifnotconverged && snes->reason < 0) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_NOT_CONVERGED,"SNESSolve has not converged");
     if (snes->reason < 0) break;
