@@ -8,8 +8,6 @@
       This is called once, usually automatically by KSPSolve() or KSPSetUp()
      but can be called directly by KSPSetUp()
 */
-
-
   PetscErrorCode KSPSetUp_PIPECG2(KSP ksp)
 {
   PetscErrorCode ierr;
@@ -27,7 +25,7 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
 {
   PetscErrorCode ierr;
   PetscInt       i,n;
-  PetscScalar    alpha[2] ,beta[2], gamma[2],delta[2], lambda[10];
+  PetscScalar    alpha[2],beta[2],gamma[2],delta[2],lambda[10];
   PetscReal      dp    = 0.0;
   Vec            X,B,Z,P,W,Q,U,M,N,R,S,C,D,E,F,G[2],H[2],A1,B1;
   Mat            Amat,Pmat;
@@ -37,7 +35,6 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
   MPI_Status     stat;
 
   PetscFunctionBegin;
-
   pcomm = PetscObjectComm((PetscObject)ksp);
   ierr = PCGetDiagonalScale(ksp->pc,&diagonalscale);CHKERRQ(ierr);
   if (diagonalscale) SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
@@ -64,14 +61,13 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
   A1 = ksp->work[17];
   B1 = ksp->work[18];
 
-  PetscMemzero(alpha,2*sizeof(PetscScalar));
-  PetscMemzero(beta,2*sizeof(PetscScalar));
-  PetscMemzero(gamma,2*sizeof(PetscScalar));
-  PetscMemzero(delta,2*sizeof(PetscScalar));
-  PetscMemzero(lambda,10*sizeof(PetscScalar));
+  ierr = PetscArrayzero(alpha,2*sizeof(PetscScalar));CHKERRQ(ierr);
+  ierr = PetscArrayzero(beta,2*sizeof(PetscScalar));CHKERRQ(ierr);
+  ierr = PetscArrayzero(gamma,2*sizeof(PetscScalar));CHKERRQ(ierr);
+  ierr = PetscArrayzero(delta,2*sizeof(PetscScalar));CHKERRQ(ierr);
+  ierr = PetscArrayzero(lambda,2*sizeof(PetscScalar));CHKERRQ(ierr);
 
   ierr = VecGetLocalSize(B,&n);CHKERRQ(ierr);
-
   ierr = PCGetOperators(ksp->pc,&Amat,&Pmat);CHKERRQ(ierr);
 
   ksp->its = 0;
@@ -83,15 +79,14 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
   }
 
   ierr = KSP_PCApply(ksp,R,U);CHKERRQ(ierr);     		/*  u <- Br  */
-  
   ierr = KSP_MatMult(ksp,Amat,U,W);CHKERRQ(ierr);               /*  w <- Au  */ 
 
-  ierr =VecMergedDot(U, W, R,ksp->normtype,&gamma[0], &delta[0], &dp); CHKERRQ(ierr);	/*  gamma  <- r'*u , delta <- w'*u , dp <- u'*u or r'*r or r'*u                                                                                            depending on ksp_norm_type  */    
+  ierr =VecMergedDot(U,W,R,ksp->normtype,&gamma[0],&delta[0],&dp);CHKERRQ(ierr);	/*  gamma  <- r'*u , delta <- w'*u , dp <- u'*u or r'*r or r'*u                                                                                            depending on ksp_norm_type  */    
   lambda[7]= gamma[0];
   lambda[8]= delta[0];
   lambda[9] = dp;
 
-  ierr = MPI_Iallreduce(MPI_IN_PLACE,&lambda[7],3,MPI_DOUBLE,MPI_SUM,pcomm,&req); CHKERRQ(ierr);
+  ierr = MPI_Iallreduce(MPI_IN_PLACE,&lambda[7],3,MPI_DOUBLE,MPI_SUM,pcomm,&req);CHKERRQ(ierr);
   
   ierr = KSP_PCApply(ksp,W,M);CHKERRQ(ierr);			/*  m <- Bw  */
   ierr = KSP_MatMult(ksp,Amat,M,N);CHKERRQ(ierr);		/*  n <- Am  */
@@ -102,15 +97,15 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
   ierr = KSP_PCApply(ksp,H[0],E);CHKERRQ(ierr);        		/*  e <- Bh  */ 
   ierr = KSP_MatMult(ksp,Amat,E,F);CHKERRQ(ierr);		/*  f <- Ae  */
 
-  ierr = MPI_Wait(&req,&stat); CHKERRQ(ierr);
+  ierr = MPI_Wait(&req,&stat);CHKERRQ(ierr);
 
   gamma[0] =lambda[7];
   delta[0] = lambda[8];
   dp    = PetscSqrtReal(PetscAbsScalar(lambda[9]));
  
   VecMergedDot2(N,M,W,&lambda[1],&lambda[4]);			/*  lambda_1 <- w'*m , lambda_4 <- n'*m  */
-  ierr = MPI_Allreduce(MPI_IN_PLACE,&lambda[1],1,MPI_DOUBLE,MPI_SUM,pcomm); CHKERRQ(ierr);
-  ierr = MPI_Allreduce(MPI_IN_PLACE,&lambda[4],1,MPI_DOUBLE,MPI_SUM,pcomm); CHKERRQ(ierr);
+  ierr = MPI_Allreduce(MPI_IN_PLACE,&lambda[1],1,MPI_DOUBLE,MPI_SUM,pcomm);CHKERRQ(ierr);
+  ierr = MPI_Allreduce(MPI_IN_PLACE,&lambda[4],1,MPI_DOUBLE,MPI_SUM,pcomm);CHKERRQ(ierr);
 
 
   ierr       = KSPLogResidualHistory(ksp,dp);CHKERRQ(ierr);
@@ -122,11 +117,8 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
   if (ksp->reason) PetscFunctionReturn(0);
 
   double alphaold=0.0;
-  for(i =0; i<ksp->max_it; i+=2  )
-   {    
-    if (i == 0) 
-    {
-
+  for(i =0; i<ksp->max_it; i+=2  ) {    
+    if (i == 0) {
       beta[0] = 0;
       alpha[0] = gamma[0] / delta[0];
 
@@ -136,72 +128,62 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
       beta[1]  = gamma[1] / gamma[0];
       alpha[1] = gamma[1] / (delta[1] - beta[1] / alpha[0] * gamma[1]);
       
-      ierr= VecMergedOpsShort(X,R,Z,W,P,Q,C,D,G[0],H[0],G[1],H[1],S, A1, B1, E, F, M, N,U, ksp->normtype,beta[0],alpha[0], beta[1], alpha[1], lambda);
+      ierr= VecMergedOpsShort(X,R,Z,W,P,Q,C,D,G[0],H[0],G[1],H[1],S,A1,B1,E,F,M,N,U,ksp->normtype,beta[0],alpha[0], beta[1],alpha[1],lambda);
       CHKERRQ(ierr);  
-    } 
-
-    else 
-    {
-
-      beta[0]  = gamma[1] / gamma[0];
-      alpha[0] = gamma[1] / (delta[1] - beta[0] / alpha[1] * gamma[1]);
+    } else {
+        beta[0]  = gamma[1] / gamma[0];
+        alpha[0] = gamma[1] / (delta[1] - beta[0] / alpha[1] * gamma[1]);
  
-      gamma[0] = gamma[1];
-      delta[0] = delta[1];
+        gamma[0] = gamma[1];
+        delta[0] = delta[1];
 
-      gamma[1] = gamma[0] -2*alpha[0] *( delta[0] + beta[0] * lambda[0]) + //
-		 alpha[0] * alpha[0] * (lambda[1] + beta[0] * lambda[2] + beta[0] * lambda[2] + beta[0] * beta[0] * lambda[3]);
+        gamma[1] = gamma[0] -2*alpha[0] *( delta[0] + beta[0] * lambda[0]) + //
+		   alpha[0] * alpha[0] * (lambda[1] + beta[0] * lambda[2] + beta[0] * lambda[2] + beta[0] * beta[0] * lambda[3]);
 
-      delta[1] = delta[0] - alpha[0] * (lambda[1] + beta[0]* lambda[2]) - //
-	         alpha[0] *(lambda[1] + beta[0] * lambda[2]) + //
-		 alpha[0]*alpha[0] * (lambda[4] + beta[0] * lambda[5] + beta[0] *lambda[5] + beta[0] * beta[0] * lambda[6]);
+        delta[1] = delta[0] - alpha[0] * (lambda[1] + beta[0]* lambda[2]) - //
+	           alpha[0] *(lambda[1] + beta[0] * lambda[2]) + //
+		   alpha[0]*alpha[0] * (lambda[4] + beta[0] * lambda[5] + beta[0] *lambda[5] + beta[0] * beta[0] * lambda[6]);
 
-      beta[1]  = gamma[1] / gamma[0];
-      alpha[1] = gamma[1] / (delta[1] - beta[1] / alpha[0] * gamma[1]);
+        beta[1]  = gamma[1] / gamma[0];
+        alpha[1] = gamma[1] / (delta[1] - beta[1] / alpha[0] * gamma[1]);
 
-      ierr=  VecMergedOps(X,R,Z,W,P,Q,C,D,G[0],H[0],G[1],H[1],S,A1,B1,E,F,M,N,U, ksp->normtype,beta[0],alpha[0], beta[1], alpha[1], lambda, alphaold); 
-      CHKERRQ(ierr);
+        ierr=  VecMergedOps(X,R,Z,W,P,Q,C,D,G[0],H[0],G[1],H[1],S,A1,B1,E,F,M,N,U,ksp->normtype,beta[0],alpha[0],beta[1],alpha[1],lambda,alphaold);
+	CHKERRQ(ierr);
     }
 
-
-  gamma[0] = gamma[1];
-  delta[0] = delta[1];
+    gamma[0] = gamma[1];
+    delta[0] = delta[1];
  
-  ierr = MPI_Iallreduce(MPI_IN_PLACE,lambda,10,MPI_DOUBLE,MPI_SUM,pcomm,&req); CHKERRQ(ierr);  /* Calculating the lambdas, gamma, delta and dp */
+    ierr = MPI_Iallreduce(MPI_IN_PLACE,lambda,10,MPI_DOUBLE,MPI_SUM,pcomm,&req);CHKERRQ(ierr);  /* Calculating the lambdas, gamma, delta and dp */
 
-  ierr = KSP_PCApply(ksp,N,G[0]);CHKERRQ(ierr);			/*  g <- Bn  */
-  ierr = KSP_MatMult(ksp,Amat,G[0],H[0]);CHKERRQ(ierr);		/*  h <- Ag  */      
+    ierr = KSP_PCApply(ksp,N,G[0]);CHKERRQ(ierr);			/*  g <- Bn  */
+    ierr = KSP_MatMult(ksp,Amat,G[0],H[0]);CHKERRQ(ierr);		/*  h <- Ag  */      
 
-  ierr = KSP_PCApply(ksp,H[0],E);CHKERRQ(ierr);      		/*  e <- Bh  */
-  ierr = KSP_MatMult(ksp,Amat,E,F);CHKERRQ(ierr); 		/*  f <- Ae */
+    ierr = KSP_PCApply(ksp,H[0],E);CHKERRQ(ierr);      		/*  e <- Bh  */
+    ierr = KSP_MatMult(ksp,Amat,E,F);CHKERRQ(ierr); 		/*  f <- Ae */
 
-  ierr = MPI_Wait(&req,&stat); CHKERRQ(ierr);
+    ierr = MPI_Wait(&req,&stat);CHKERRQ(ierr);
 
-  gamma[1] =lambda[7];
-  delta[1] = lambda[8];
-  dp    = PetscSqrtReal(PetscAbsScalar(lambda[9]));
+    gamma[1] =lambda[7];
+    delta[1] = lambda[8];
+    dp    = PetscSqrtReal(PetscAbsScalar(lambda[9]));
 
-  alphaold = alpha[1];
+    alphaold = alpha[1];
+    ksp->its = i;
 
-
-  ksp->its = i;
-
-  if (i > 0) 
-    {
-     if (ksp->normtype == KSP_NORM_NATURAL) dp = PetscSqrtReal(PetscAbsScalar(gamma[0]));
-     else if (ksp->normtype == KSP_NORM_NONE) dp = 0.0;
+    if (i > 0) {
+      if (ksp->normtype == KSP_NORM_NATURAL) dp = PetscSqrtReal(PetscAbsScalar(gamma[0]));
+      else if (ksp->normtype == KSP_NORM_NONE) dp = 0.0;
 
       ksp->rnorm = dp;
       ierr = KSPLogResidualHistory(ksp,dp);CHKERRQ(ierr);
       ierr = KSPMonitor(ksp,i,dp);CHKERRQ(ierr);
       ierr = (*ksp->converged)(ksp,i,dp,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
       if (ksp->reason) break;
-     }
-
-   }
+    }
+  }
 
   if (i >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
-
   PetscFunctionReturn(0);
 }
 
