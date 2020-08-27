@@ -74,7 +74,6 @@ class Retriever(logger.Logger):
       if os.path.islink(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
       if os.path.isfile(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
       if os.path.isdir(os.path.join(root,os.path.basename(dir))): shutil.rmtree(os.path.join(root,os.path.basename(dir)))
-      print('xxx',dir,os.path.join(root,os.path.basename(dir)),os.path.abspath(dir))
       os.symlink(os.path.abspath(dir),os.path.join(root,os.path.basename(dir)))
       return
 
