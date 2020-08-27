@@ -546,16 +546,16 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
   MIN_GALLOP_GLOBAL = MIN_GALLOP_CONST_GLOBAL;
   while (runstart < n) {
     /* Check if additional entries are at least partially ordered and build natural run */
-    ierr = PetscTimSortBuildRun_Private(n, arr, buff.ptr, size, cmp, minrun, runstart, &runend);CHKERRQ(ierr);
+    ierr = PetscTimSortBuildRun_Private(n, (char *)arr, buff.ptr, size, cmp, minrun, runstart, &runend);CHKERRQ(ierr);
     runstack[stacksize].start = runstart;
     runstack[stacksize].size = runend-runstart+1;
-    ierr = PetscTimSortMergeCollapse_Private(arr, size, cmp, &buff, runstack, &stacksize);CHKERRQ(ierr);
+    ierr = PetscTimSortMergeCollapse_Private((char *)arr, size, cmp, &buff, runstack, &stacksize);CHKERRQ(ierr);
     ++stacksize;
     runstart = runend+1;
   }
   /* Have been inside while, so discard last stacksize++ */
   --stacksize;
-  ierr = PetscTimSortForceCollapse_Private(arr, size, cmp, &buff, runstack, stacksize);CHKERRQ(ierr);
+  ierr = PetscTimSortForceCollapse_Private((char *)arr, size, cmp, &buff, runstack, stacksize);CHKERRQ(ierr);
   ierr = PetscFree(buff.ptr);CHKERRQ(ierr);
   MIN_GALLOP_GLOBAL = MIN_GALLOP_CONST_GLOBAL;
   PetscFunctionReturn(0);
