@@ -763,7 +763,7 @@ PetscErrorCode DMCreateMatrix_DA(DM da, Mat *J)
       } else {
         DMBoundaryType bx;
         PetscMPIInt  size;
-        ierr = DMDAGetInfo(da,0,0,0,0,0,0,0,0,0,&bx,0,0,0);CHKERRQ(ierr);
+        ierr = DMDAGetInfo(da,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,&bx,NULL,NULL,NULL);CHKERRQ(ierr);
         ierr = MPI_Comm_size(PetscObjectComm((PetscObject)da),&size);CHKERRQ(ierr);
         if (size == 1 && bx == DM_BOUNDARY_NONE) {
           ierr = DMCreateMatrix_DA_1d_SeqAIJ_NoPreallocation(da,A,PETSC_FALSE);CHKERRQ(ierr);
@@ -1783,11 +1783,11 @@ PetscErrorCode DMCreateMatrix_DA_1d_SeqAIJ_NoPreallocation(DM da,Mat J,PetscBool
          nc - number of components per grid point
          col - number of colors needed in one direction for single component problem
   */
-  ierr = DMDAGetInfo(da,&dim,&m,0,0,0,0,0,&nc,&s,&bx,0,0,0);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(da,&dim,&m,NULL,NULL,NULL,NULL,NULL,&nc,&s,&bx,NULL,NULL,NULL);CHKERRQ(ierr);
   col  = 2*s + 1;
 
-  ierr = DMDAGetCorners(da,&xs,0,0,&nx,0,0);CHKERRQ(ierr);
-  ierr = DMDAGetGhostCorners(da,&gxs,0,0,&gnx,0,0);CHKERRQ(ierr);
+  ierr = DMDAGetCorners(da,&xs,NULL,NULL,&nx,NULL,NULL);CHKERRQ(ierr);
+  ierr = DMDAGetGhostCorners(da,&gxs,NULL,NULL,&gnx,NULL,NULL);CHKERRQ(ierr);
 
   ierr = MatSetBlockSize(J,nc);CHKERRQ(ierr);
   ierr = MatSeqAIJSetTotalPreallocation(J,nx*nc*col*nc);CHKERRQ(ierr);
