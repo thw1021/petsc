@@ -1,11 +1,6 @@
 #include <petsc/private/kspimpl.h>
-#include <../src/vec/vec/impls/dvecimpl.h>
-#include <petscksp.h>
-#include <petscblaslapack.h>
-
-/*   Include the auxillary functions needed by pipecg2.c"    */
-
-#include "auxillaryfunctions.h"
+/*   Include the auxillary functions needed by pipecg2.c    */
+#include "auxillaryfunctions.c"
 
 /*
      KSPSetUp_PIPECG2 - Sets up the workspace needed by the PIPECG method.
@@ -28,7 +23,6 @@
 /*
  KSPSolve_PIPECG2 - This routine actually applies the PIPECG2 method
 */
-
 static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
 {
   PetscErrorCode ierr;
@@ -212,10 +206,10 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
 }
 
 /*MC
-   KSPPIPECG2 - Pipelined conjugate gradient method.
+   KSPPIPECG2 - Pipelined conjugate gradient method with a single non-blocking allreduce per two iterations.
 
    This method has only a single non-blocking reduction per two iterations, compared to 2 blocking for standard CG.  The
-   non-blocking reduction is overlapped by two matrix-vector product and two preconditioner application.
+   non-blocking reduction is overlapped by two matrix-vector products and two preconditioner applications.
 
    Level: intermediate
 
@@ -224,7 +218,7 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
    See the FAQ on the PETSc website for details.
 
    Contributed by:
-   Manasi Tiwari, Computational and Data Sciences, Indian Insitute of Science, Bangalore
+   Manasi Tiwari, Computational and Data Sciences, Indian Institute of Science, Bangalore
 
    Reference:
    Manasi Tiwari and Sathish Vadhiyar, "Pipelined Conjugate Gradient Methods for Distributed Memory Systems",

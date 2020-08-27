@@ -2,11 +2,7 @@
    Merged vector operations that load vectors from memory once and use
    the data multiple times by performing vector operations element-wise.
 */
-
-
 /*   VecMergedDot function merges the dot products for gamma, delta and dp */
-#undef __FUNCT__
-#define __FUNCT__ "VecMergedDot"
 PetscErrorCode VecMergedDot(Vec U,Vec W,Vec R,PetscInt normtype,PetscScalar *ru, PetscScalar *wu, PetscScalar *uu)
 { 
  const PetscScalar *__restrict PU, *__restrict PW, *__restrict PR;
@@ -65,8 +61,6 @@ PetscErrorCode VecMergedDot(Vec U,Vec W,Vec R,PetscInt normtype,PetscScalar *ru,
 
 
 /*   VecMergedDot2 function merges the dot products for lambda_1 and lambda_4 */
-#undef __FUNCT__
-#define __FUNCT__ "VecMergedDot2"
 PetscErrorCode VecMergedDot2(Vec N,Vec M,Vec W,PetscScalar *wm, PetscScalar *nm)
 {
    const PetscScalar *__restrict PN, *__restrict PM, *__restrict PW;
@@ -100,8 +94,6 @@ PetscErrorCode VecMergedDot2(Vec N,Vec M,Vec W,PetscScalar *wm, PetscScalar *nm)
 }
 
 /*   VecMergedOpsShort function merges the dot products, AXPY and SAXPY operations for all vectors for iteration 0  */
-#undef __FUNCT__
-#define __FUNCT__ "VecMergedOpsShort"
 PetscErrorCode VecMergedOpsShort(Vec vx,Vec vr,Vec vz,Vec vw,Vec vp,Vec vq,Vec vc, Vec vd,Vec vg0,Vec vh0,Vec vg1,Vec vh1,Vec vs, Vec va1, Vec vb1, Vec ve,Vec vf,Vec vm,Vec vn, Vec vu, PetscInt normtype,PetscScalar beta0,PetscScalar alpha0, PetscScalar beta1, PetscScalar alpha1, PetscScalar *lambda)
 { 
  PetscScalar       *__restrict px, *__restrict pr, *__restrict pz, *__restrict pw;
@@ -309,10 +301,7 @@ PetscErrorCode VecMergedOpsShort(Vec vx,Vec vr,Vec vz,Vec vw,Vec vp,Vec vq,Vec v
 }
 
 
-/*   VecMergedOpsShort function merges the dot products, AXPY and SAXPY operations for all vectors for iteration > 0  */
-
-#undef __FUNCT__
-#define __FUNCT__ "VecMergedOps"
+/*   VecMergedOps function merges the dot products, AXPY and SAXPY operations for all vectors for iteration > 0  */
 PetscErrorCode VecMergedOps(Vec vx,Vec vr,Vec vz,Vec vw,Vec vp,Vec vq,Vec vc, Vec vd,Vec vg0,Vec vh0,Vec vg1,Vec vh1,Vec vs, Vec va1, Vec vb1, Vec ve,Vec vf,Vec vm,Vec vn, Vec vu, PetscInt normtype,PetscScalar beta0,PetscScalar alpha0, PetscScalar beta1, PetscScalar alpha1, PetscScalar *lambda, PetscScalar alphaold)
 {  PetscScalar       *__restrict px, *__restrict pr, *__restrict pz, *__restrict pw;
    PetscScalar       *__restrict pp, *__restrict pq;

@@ -1,5 +1,0 @@
-module swap PrgEnv-cray PrgEnv-gnu
-module load craype-haswell
-module load cray-mpich
-module load dmapp/7.1.1-7.0.1.1_4.43__g38cf134.ari
-setenv CRAYPE_LINK_TYPE dynamic
