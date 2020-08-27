@@ -38,17 +38,24 @@ PETSC_STATIC_INLINE void _memmove(char *dest, const char *src, size_t size)
 }
 
 /* Start left look right. Looking for e.g. B[0] in A or mergelo. l inclusive, r inclusive. Returns first m such that arr[m] >
- x. Output also inclusive */
+ x. Output also inclusive.
+
+ NOTE: Both gallopsearch functions CANNOT distinguish between inserting AFTER the entire array vs inserting at entry n!! For example for an array:
+
+   {0,1,2,3,4,5}
+
+   when looking to insert "5" this routine will return *m = 6, but when looking to insert "6" it will ALSO return *m = 6.
+  */
 PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchLeft_Private(const char *arr, size_t size, CompFunc cmp, PetscInt l, PetscInt r, const char *x, PetscInt *m)
 {
   PetscInt last = l, k = 1, mid, cur = l+1;
 
   PetscFunctionBegin;
-  if ((*cmp)(x, arr+r*size) >= 0) {*m = r; PetscFunctionReturn(0);}
   if (PetscUnlikelyDebug(r < l)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"r %D < l %D in PetscGallopSearchLeft",r,l);
+  *m = r;
+  if ((*cmp)(x, arr+r*size) >= 0) PetscFunctionReturn(0);
   *m = l;
   if ((*cmp)(x, (arr)+l*size) < 0 || PetscUnlikely(!(r-l))) PetscFunctionReturn(0);
-  //if ((*cmp)(x, (arr)+r*size) >= 0) {printf("HIBOUND x %d arr+r %d l %d r %d\n", *(PetscInt *)x, *(PetscInt *)(arr+r*size), l, r);*m = r+1;PetscFunctionReturn(0);}
   while (PETSC_TRUE) {
     if (PetscUnlikely(cur > r)) {cur = r; break;}
     if ((*cmp)(x, (arr)+cur*size) < 0) break;
@@ -77,10 +84,10 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchRight_Private(const char *ar
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(r < l)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"r %D < l %D in PetscGallopSearchRight",r,l);
-  if ((*cmp)(x, arr+l*size) <= 0) {*m = l; PetscFunctionReturn(0);}
+  *m = l;
+  if ((*cmp)(x, arr+l*size) <= 0) PetscFunctionReturn(0);
   *m = r;
   if ((*cmp)(x, (arr)+r*size) > 0 || PetscUnlikely(!(r-l))) PetscFunctionReturn(0);
-  //if ((*cmp)(x, (arr)+l*size) <= 0) {printf("RIGHT LOBOUND x %d arr+l %d l %d r %d\n", *(PetscInt *)x, *(PetscInt *)(arr+l*size), l, r);*m = l;PetscFunctionReturn(0);}
   while (PETSC_TRUE) {
     if (PetscUnlikely(cur < l)) {cur = l; break;}
     if ((*cmp)(x, (arr)+cur*size) > 0) break;
@@ -118,7 +125,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeLo_Private(char *arr, char *
       ++k;
       gallopright = 0;
       if (++i < llen && ++gallopleft >= MIN_GALLOP_GLOBAL) {
-        PetscInt l1, l2, diff1, diff2;
+        PetscInt l1 = 0, l2 = 0, diff1, diff2;
         do {
           if (MIN_GALLOP_GLOBAL > 1) --MIN_GALLOP_GLOBAL;
           /* search temp for right[j], can move up to that of temp into arr immediately */
@@ -142,7 +149,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeLo_Private(char *arr, char *
       ++k;
       gallopleft = 0;
       if (++j <= right && ++gallopright >= MIN_GALLOP_GLOBAL) {
-        PetscInt l1, l2, diff1, diff2;
+        PetscInt l1 = 0, l2 = 0, diff1, diff2;
         do {
           if (MIN_GALLOP_GLOBAL > 1) --MIN_GALLOP_GLOBAL;
           /* search right for temp[i], can move up to that many of right into arr */
@@ -184,7 +191,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeHi_Private(char *arr, char *
       --k;
       gallopleft = 0;
       if (--i >= 0 && ++gallopright >= MIN_GALLOP_GLOBAL) {
-        PetscInt l1, l2, diff1, diff2;
+        PetscInt l1 = 0, l2 = 0, diff1, diff2;
         do {
           if (MIN_GALLOP_GLOBAL > 1) --MIN_GALLOP_GLOBAL;
           /* search temp for left[j], can copy up to that many of temp into arr */
@@ -208,7 +215,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeHi_Private(char *arr, char *
       --k;
       gallopright = 0;
       if (--j >= left && ++gallopleft >= MIN_GALLOP_GLOBAL) {
-        PetscInt l1, l2, diff1, diff2;
+        PetscInt l1 = 0, l2 = 0, diff1, diff2;
         do {
           if (MIN_GALLOP_GLOBAL > 1) --MIN_GALLOP_GLOBAL;
           /* search left for temp[i], can move up to that many of left up arr */

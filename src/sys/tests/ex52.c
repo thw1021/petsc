@@ -20,7 +20,7 @@ int main(int argc,char **argv)
   PetscMPIInt    size;
   PetscViewer    vwr;
   Vec            x;
-  unsigned long  seed;
+  unsigned long  seedr, seedo;
   PetscBool      order=PETSC_FALSE;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
@@ -31,16 +31,13 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetInt(NULL,NULL,"-r",&r,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-d",&d,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-order",NULL,&order);CHKERRQ(ierr);
-  printf("%s\n", order ? "SEMI ORDERED" : "RANDOM SET");
   ierr = PetscOptionsGetViewer(PETSC_COMM_WORLD,NULL,NULL,"-array_view",&vwr,NULL,NULL);CHKERRQ(ierr);
   if (n<1 || r<1 || d<1 || d>n) SETERRQ3(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Wrong input n=%D,r=%D,d=%d. They must be >=1 and n>=d\n",n,r,d);
 
   ierr = PetscCalloc6(n,&X,n,&X1,n,&XR,n,&XSO,n,&Y,n,&Z);CHKERRQ(ierr);
   ierr = PetscRandomCreate(PETSC_COMM_SELF,&rdm);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rdm);CHKERRQ(ierr);
-  ierr = PetscRandomGetSeed(rdm, &seed);CHKERRQ(ierr);
-
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "Random seed: %lu\n", seed);CHKERRQ(ierr);
+  ierr = PetscRandomGetSeed(rdm, &seedr);CHKERRQ(ierr);
 
   for (i=0; i<n; ++i) {
     ierr = PetscRandomGetValueReal(rdm,&val);CHKERRQ(ierr);
@@ -52,6 +49,7 @@ int main(int argc,char **argv)
 
   PetscReal nreal = (PetscReal) n;
   ierr = PetscRandomCreate(PETSC_COMM_SELF,&rdm2);CHKERRQ(ierr);
+  ierr = PetscRandomGetSeed(rdm, &seedo);CHKERRQ(ierr);
   ierr = PetscRandomSetInterval(rdm2,0,nreal);CHKERRQ(ierr);
   for (i = 0; i < n/10; ++i) {
     PetscInt swapi, t;
@@ -86,8 +84,8 @@ int main(int argc,char **argv)
     ierr = PetscTimeAdd(&time);CHKERRQ(ierr);
 
     for (i=0; i<n-1; i++) {if (X[i] > X[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscSortInt() produced wrong results!");}
-    for (i=0; i<n; i++) {if (X[i] != X1[i]) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscIntSortSemiOrdered() rep %D X1[%D]:%D does not match PetscSortInt() X[%D]:%D!",l,i,X1[i],i,X[i]);}
-    for (i=0; i<n-1; i++) {if (X1[i] > X1[i+1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscIntSortSemiOrdered() produced wrong results!");}
+    for (i=0; i<n; i++) {if (X[i] != X1[i]) SETERRQ7(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscIntSortSemiOrdered() rep %D X1[%D]:%D does not match PetscSortInt() X[%D]:%D! randomSeed %lu, orderedSeed %lu",l,i,X1[i],i,X[i],seedr,seedo);}
+    for (i=0; i<n-1; i++) {if (X1[i] > X1[i+1]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscIntSortSemiOrdered() produced wrong results! randomSeed %lu orderedSeed %lu",seedr,seedo);}
     ierr = PetscArrayzero(X,n);CHKERRQ(ierr);
     ierr = PetscArrayzero(X1,n);CHKERRQ(ierr);
   }
@@ -124,5 +122,5 @@ int main(int argc,char **argv)
    test:
       args: -n 1000 -r 10 -d 1
       # Do not need to output timing results for test
-      filter: grep -v "per unique value took"
+      filter: grep -vE "per unique value took|Speedup of "
 TEST*/
