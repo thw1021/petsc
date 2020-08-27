@@ -201,17 +201,6 @@ PetscErrorCode VecPlaceArray_SeqCUDA(Vec vin,const PetscScalar *a)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecReplaceArray_SeqCUDA(Vec vin,const PetscScalar *a)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = VecCUDACopyFromGPU(vin);CHKERRQ(ierr);
-  ierr = VecReplaceArray_Seq(vin,a);CHKERRQ(ierr);
-  vin->offloadmask = PETSC_OFFLOAD_CPU;
-  PetscFunctionReturn(0);
-}
-
 /*@
  VecCreateSeqCUDA - Creates a standard, sequential array-style vector.
 
@@ -366,7 +355,7 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->waxpy                  = VecWAXPY_Seq;
     V->ops->dotnorm2               = NULL;
     V->ops->placearray             = VecPlaceArray_Seq;
-    V->ops->replacearray           = VecReplaceArray_Seq;
+    V->ops->replacearray           = NULL;
     V->ops->resetarray             = VecResetArray_Seq;
     V->ops->duplicate              = VecDuplicate_Seq;
     V->ops->conjugate              = VecConjugate_Seq;
@@ -399,7 +388,7 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->waxpy                  = VecWAXPY_SeqCUDA;
     V->ops->dotnorm2               = VecDotNorm2_SeqCUDA;
     V->ops->placearray             = VecPlaceArray_SeqCUDA;
-    V->ops->replacearray           = VecReplaceArray_SeqCUDA;
+    V->ops->replacearray           = NULL;
     V->ops->resetarray             = VecResetArray_SeqCUDA;
     V->ops->destroy                = VecDestroy_SeqCUDA;
     V->ops->duplicate              = VecDuplicate_SeqCUDA;
