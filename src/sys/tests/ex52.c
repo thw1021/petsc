@@ -1,4 +1,4 @@
-static char help[] = "A benchmark for testing PetscSortInt(), PetscSortIntSemiOrdered, PetscSortIntWithArrayPair(), and PetscSortIntWithArray()\n\
+static char help[] = "A benchmark for testing PetscSortInt(), PetscSortIntSemiOrdered(), PetscSortIntWithArrayPair(), PetscIntSortSemiOrderedWithArray(), and PetscSortIntWithArray()\n\
   The array is filled with random numbers, but one can control average duplicates for each unique integer with the -d option.\n\
   Usage:\n\
    mpirun -n 1 ./ex52 -n <length of the array to sort>, default=100 \n\
