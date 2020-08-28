@@ -9,7 +9,7 @@ class Configure(config.package.CMakePackage):
     self.versionname      = 'SUPERLU_MAJOR_VERSION.SUPERLU_MINOR_VERSION.SUPERLU_PATCH_VERSION'
     self.gitcommit        = 'a3d5233' # master mar-15-2020
     self.download         = ['git://https://github.com/xiaoyeli/superlu','https://github.com/xiaoyeli/superlu/archive/'+self.gitcommit+'.tar.gz']
-    self.downloaddirnames  = ['SuperLU','superlu']
+    self.downloaddirnames  = ['superlu']
     self.functions        = ['set_default_options']
     self.includes         = ['slu_ddefs.h']
     self.liblist          = [['libsuperlu.a']]
