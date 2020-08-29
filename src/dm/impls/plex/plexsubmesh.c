@@ -3031,12 +3031,14 @@ static PetscErrorCode DMPlexCreateSubmeshGeneric_Interpolated(DM dm, DMLabel lab
     DMLabel         depth;
     IS              pointIS;
     const PetscInt *points;
-    PetscInt        numPoints;
+    PetscInt        numPoints=0;
 
     ierr = DMPlexGetDepthLabel(dm, &depth);CHKERRQ(ierr);
-    ierr = DMLabelGetStratumSize(label, value, &numPoints);CHKERRQ(ierr);
     ierr = DMLabelGetStratumIS(label, value, &pointIS);CHKERRQ(ierr);
-    if (pointIS) {ierr = ISGetIndices(pointIS, &points);CHKERRQ(ierr);}
+    if (pointIS) {
+      ierr = ISGetIndices(pointIS, &points);CHKERRQ(ierr);
+      ierr = ISGetLocalSize(points, &numPoints);CHKERRQ(ierr);
+    }
     for (p = 0; p < numPoints; ++p) {
       PetscInt *closure = NULL;
       PetscInt  closureSize, c, pdim;
