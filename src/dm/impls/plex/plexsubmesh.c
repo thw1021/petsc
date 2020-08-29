@@ -3036,7 +3036,7 @@ static PetscErrorCode DMPlexCreateSubmeshGeneric_Interpolated(DM dm, DMLabel lab
     ierr = DMPlexGetDepthLabel(dm, &depth);CHKERRQ(ierr);
     ierr = DMLabelGetStratumSize(label, value, &numPoints);CHKERRQ(ierr);
     ierr = DMLabelGetStratumIS(label, value, &pointIS);CHKERRQ(ierr);
-    ierr = ISGetIndices(pointIS, &points);CHKERRQ(ierr);
+    if (pointIS) {ierr = ISGetIndices(pointIS, &points);CHKERRQ(ierr);}
     for (p = 0; p < numPoints; ++p) {
       PetscInt *closure = NULL;
       PetscInt  closureSize, c, pdim;
@@ -3048,7 +3048,7 @@ static PetscErrorCode DMPlexCreateSubmeshGeneric_Interpolated(DM dm, DMLabel lab
       }
       ierr = DMPlexRestoreTransitiveClosure(dm, points[p], PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
     }
-    ierr = ISRestoreIndices(pointIS, &points);CHKERRQ(ierr);
+    if (pointIS) {ierr = ISRestoreIndices(pointIS, &points);CHKERRQ(ierr);}
     ierr = ISDestroy(&pointIS);CHKERRQ(ierr);
   }
   /* Setup chart */
