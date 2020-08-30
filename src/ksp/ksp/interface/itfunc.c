@@ -479,7 +479,7 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
   KSPConvergedReasonViewFromOptions - Processes command line options to determine if/how a KSPReason is to be viewed.
 
   Collective on ksp
