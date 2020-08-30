@@ -213,7 +213,7 @@ PETSC_EXTERN void kspsetcomputeoperators_(KSP *ksp,void (*func)(KSP*,Vec*,void*,
   if (!*ierr) dmkspsetcomputeoperators_(&dm,func,ctx,ierr);
 }
 
-PETSC_EXTERN void kspconvergedreasonview_(KSP *ksp,PetscViewer *viewer, int *ierr)
+PETSC_EXTERN void kspconvergedreasonview_(KSP *ksp,PetscViewer *viewer, PetscErrorCode *ierr)
 {
   PetscViewer v;
   PetscPatchDefaultViewers_Fortran(viewer,v);
