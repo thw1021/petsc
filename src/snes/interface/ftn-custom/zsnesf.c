@@ -437,7 +437,7 @@ PETSC_EXTERN void snesviewfromoptions_(SNES *ao,PetscObject obj,char* type,Petsc
   FREECHAR(type,t);
 }
 
-PETSC_EXTERN void snesconvergedreasonview_(SNES *snes,PetscViewer *viewer, int *ierr)
+PETSC_EXTERN void snesconvergedreasonview_(SNES *snes,PetscViewer *viewer, PetscErrorCode *ierr)
 {
   PetscViewer v;
   PetscPatchDefaultViewers_Fortran(viewer,v);
