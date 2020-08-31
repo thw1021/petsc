@@ -398,7 +398,8 @@ PetscErrorCode MatPartitioningDestroy_Party(MatPartitioning part)
 
    Notes:
     See http://wwwcs.upb.de/fachbereich/AG/monien/RESEARCH/PART/party.html
-    Does not using MatPartitioningSetUseEdgeWeights()
+
+    Does not support using MatPartitioningSetUseEdgeWeights()
 
 .seealso: MatPartitioningSetType(), MatPartitioningType
 
