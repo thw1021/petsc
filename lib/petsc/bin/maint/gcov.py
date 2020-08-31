@@ -134,6 +134,7 @@ def print_htmltable(nsrc_files,nsrc_files_not_tested,ntotal_lines,ntotal_lines_n
 def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
     # Create index_gcov webpages using information processed from running gcov
 
+    founduntestedsource = 0
     cwd = os.getcwd()
     print("%s tarballs found\n%s" %(len(tarballs),tarballs))
     print("Extracting gcov directories from tar balls")
@@ -281,6 +282,7 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
                      if ii in tested and not c in tested[ii]:
                          t_nsrc_lines_not_tested += 1
                          lines_not_tested[c] = 1
+         if t_nsrc_lines_not_tested: founduntestedsource = 1
          if t_nsrc_lines_not_tested:
             temp_list = []
             temp_list.append(file.replace('__',os.sep))
@@ -339,7 +341,7 @@ def make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI):
 
     print("End of gcov script")
     print("""See %s""" % os.path.join(petsc_dir,outfile_name))
-    return
+    return founduntestedsource
 
 def main():
 
@@ -394,8 +396,12 @@ def main():
           return
 
         gcov_dir = tempfile.mkdtemp()
-        make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI)
+        founduntestedsource = make_htmlpage(gcov_dir,petsc_dir,petsc_arch,tarballs,isCI)
         shutil.rmtree(gcov_dir)
+        if founduntestedsource:
+          print("The branch has untested changes to lines of source code or new source code. Thus must all be tested before a is MR accepted")
+          print("See %s in the artifacts for this job." % os.path.join('arch-ci-analyze-pipeline','index_gcov.html'))
+          exit(1)
     else:
         parser.print_usage()
 
