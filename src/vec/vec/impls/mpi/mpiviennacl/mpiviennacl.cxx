@@ -371,32 +371,25 @@ PetscErrorCode  VecCreateMPIViennaCLWithArrays(MPI_Comm comm,PetscInt bs,PetscIn
   PetscFunctionBegin;
   ierr = VecCreateMPIViennaCLWithArray(comm,bs,n,N,viennaclvec,vv);CHKERRQ(ierr);
 
-  if (viennaclvec && cpuarray)
-  {
+  if (viennaclvec && cpuarray) {
     Vec_MPI *s         = (Vec_MPI*)((*vv)->data);
     s->array           = (PetscScalar*)cpuarray;
     (*vv)->offloadmask = PETSC_OFFLOAD_BOTH;
-  }
-  else if (!viennaclvec)
-  {
+  } else if (!viennaclvec) {
     Vec_MPI *s         = (Vec_MPI*)((*vv)->data);
     s->array           = (PetscScalar*)cpuarray;
     (*vv)->offloadmask =  PETSC_OFFLOAD_CPU;
     // allocate device data
-    ierr = VecViennaCLAllocateCheck(*vv); CHKERRQ(ierr);
-  }
-  else if (!cpuarray)
-  {
+    ierr = VecViennaCLAllocateCheck(*vv);CHKERRQ(ierr);
+  } else if (!cpuarray) {
     (*vv)->offloadmask = PETSC_OFFLOAD_GPU;
     // allocate host data
-    ierr = VecViennaCLAllocateCheckHost(*vv); CHKERRQ(ierr);
-  }
-  else
-  {
+    ierr = VecViennaCLAllocateCheckHost(*vv);CHKERRQ(ierr);
+  } else {
     // allocate device data
-    ierr = VecViennaCLAllocateCheck(*vv); CHKERRQ(ierr);
+    ierr = VecViennaCLAllocateCheck(*vv);CHKERRQ(ierr);
     // allocate host data
-    ierr = VecViennaCLAllocateCheckHost(*vv); CHKERRQ(ierr);
+    ierr = VecViennaCLAllocateCheckHost(*vv);CHKERRQ(ierr);
     ierr = VecSet(*vv,0.0);CHKERRQ(ierr);
     ierr = VecSet_Seq(*vv,0.0);CHKERRQ(ierr);
     (*vv)->offloadmask = PETSC_OFFLOAD_BOTH;
