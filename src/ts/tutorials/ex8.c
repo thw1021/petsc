@@ -420,7 +420,9 @@ int main(int argc,char **argv)
   ierr = TSGetStepRejections(ts,&rejects);CHKERRQ(ierr);
   ierr = TSGetSNESIterations(ts,&nonlinits);CHKERRQ(ierr);
   ierr = TSGetKSPIterations(ts,&linits);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"steps %D (%D rejected, %D SNES fails), ftime %g, nonlinits %D, linits %D\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits);CHKERRQ(ierr);
+    if (use_monitor) {
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"steps %D (%D rejected, %D SNES fails), ftime %g, nonlinits %D, linits %D\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits);CHKERRQ(ierr);
+    }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.  All PETSc objects should be destroyed when they
@@ -456,5 +458,12 @@ int main(int argc,char **argv)
       suffix: 3
       requires: !single !complex
       args: -ts_atol 1e-2 -ts_rtol 1e-2 -ts_max_time 15 -ts_type arkimex -ts_arkimex_type 2e -problem_type orego -ts_arkimex_initial_guess_extrapolate 1
+
+    test:
+      suffix: 4
+
+    test:
+      suffix: 5
+      args: -snes_lag_jacobian 20 -snes_lag_jacobian_persists
 
 TEST*/
