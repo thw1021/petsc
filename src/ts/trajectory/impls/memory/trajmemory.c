@@ -36,6 +36,7 @@ typedef struct _Stack {
   PetscInt      stacksize;
   PetscInt      top;
   StackElement  *container;
+  PetscInt      nallocated;
   PetscInt      numY;
   PetscBool     solution_only;
   PetscBool     use_dram;
@@ -108,6 +109,10 @@ static PetscErrorCode ElementCreate(TS ts,Stack *stack,StackElement *e)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  if (stack->top < stack->stacksize-1 && stack->container[stack->top+1]) {
+    *e = stack->container[stack->top+1];
+    PetscFunctionReturn(0);
+  }
   if (stack->use_dram) {
     ierr = PetscMallocSetDRAM();CHKERRQ(ierr);
   }
@@ -121,6 +126,7 @@ static PetscErrorCode ElementCreate(TS ts,Stack *stack,StackElement *e)
   if (stack->use_dram) {
     ierr = PetscMallocResetDRAM();CHKERRQ(ierr);
   }
+  stack->nallocated++;
   PetscFunctionReturn(0);
 }
 
@@ -167,6 +173,7 @@ static PetscErrorCode ElementDestroy(Stack *stack,StackElement e)
   if (stack->use_dram) {
     ierr = PetscMallocResetDRAM();CHKERRQ(ierr);
   }
+  stack->nallocated--;
   PetscFunctionReturn(0);
 }
 
@@ -177,7 +184,7 @@ static PetscErrorCode StackResize(Stack *stack,PetscInt newsize)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMalloc1(newsize*sizeof(StackElement),&newcontainer);CHKERRQ(ierr);
+  ierr = PetscCalloc1(newsize*sizeof(StackElement),&newcontainer);CHKERRQ(ierr);
   for (i=0;i<stack->stacksize;i++) {
     newcontainer[i] = stack->container[i];
   }
@@ -211,7 +218,7 @@ static PetscErrorCode StackTop(Stack *stack,StackElement *e)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode StackCreate(Stack *stack,PetscInt size,PetscInt ny)
+static PetscErrorCode StackInit(Stack *stack,PetscInt size,PetscInt ny)
 {
   PetscErrorCode ierr;
 
@@ -219,23 +226,23 @@ static PetscErrorCode StackCreate(Stack *stack,PetscInt size,PetscInt ny)
   stack->top  = -1;
   stack->numY = ny;
 
-  ierr = PetscMalloc1(size,&stack->container);CHKERRQ(ierr);
+  if (!stack->container) {
+    ierr = PetscCalloc1(size,&stack->container);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode StackDestroy(Stack *stack)
 {
-  PetscInt       i,n;
-  StackElement   e = NULL;
+  PetscInt       i;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!stack->container) PetscFunctionReturn(0);
   if (stack->top > -1) {
-    n = stack->top+1; /* number of elements in the stack */
-    for (i=0;i<n;i++) {
-      ierr = StackPop(stack,&e);CHKERRQ(ierr);
-      ierr = ElementDestroy(stack,e);CHKERRQ(ierr);
+    if (stack->top+1 > stack->nallocated) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Stack size does not match element counter %D",stack->nallocated);
+    for (i=0; i<stack->nallocated; i++) {
+      ierr = ElementDestroy(stack,stack->container[i]);CHKERRQ(ierr);
     }
   }
   ierr = PetscFree(stack->container);CHKERRQ(ierr);
@@ -578,7 +585,6 @@ static PetscErrorCode SetTrajN(TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscRe
     if (stack->solution_only) {
       /* get rid of the solution at second last step */
       ierr = StackPop(stack,&e);CHKERRQ(ierr);
-      ierr = ElementDestroy(stack,e);CHKERRQ(ierr);
     }
     PetscFunctionReturn(0);
   }
@@ -650,7 +656,6 @@ static PetscErrorCode GetTrajN(TS ts,TJScheduler *tjsch,PetscInt stepnum)
     ierr = ReCompute(ts,tjsch,e->stepnum,stepnum);CHKERRQ(ierr);
   }
   ierr = StackPop(stack,&e);CHKERRQ(ierr);
-  ierr = ElementDestroy(stack,e);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1785,27 +1790,24 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
   stack->stacksize = PetscMax(stack->stacksize,1);
   tjsch->recompute = PETSC_FALSE;
   ierr = TSGetStages(ts,&numY,PETSC_IGNORE);CHKERRQ(ierr);
-  ierr = StackCreate(stack,stack->stacksize,numY);CHKERRQ(ierr);
+  ierr = StackInit(stack,stack->stacksize,numY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode TSTrajectoryReset_Memory(TSTrajectory tj)
 {
+#if defined(PETSC_HAVE_REVOLVE)
   TJScheduler    *tjsch = (TJScheduler*)tj->data;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tjsch->stype > TWO_LEVEL_NOREVOLVE) {
-#if defined(PETSC_HAVE_REVOLVE)
     revolve_reset();
     if (tjsch->stype == TWO_LEVEL_TWO_REVOLVE) {
       revolve2_reset();
       ierr = PetscFree(tjsch->diskstack.container);CHKERRQ(ierr);
     }
-#endif
   }
-  ierr = StackDestroy(&tjsch->stack);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_REVOLVE)
   if (tjsch->stype > TWO_LEVEL_NOREVOLVE) {
     ierr = PetscFree(tjsch->rctx);CHKERRQ(ierr);
     ierr = PetscFree(tjsch->rctx2);CHKERRQ(ierr);
@@ -1820,6 +1822,7 @@ static PetscErrorCode TSTrajectoryDestroy_Memory(TSTrajectory tj)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = StackDestroy(&tjsch->stack);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&tjsch->viewer);CHKERRQ(ierr);
   ierr = PetscFree(tjsch);CHKERRQ(ierr);
   PetscFunctionReturn(0);
