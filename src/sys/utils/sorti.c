@@ -234,7 +234,7 @@ PetscErrorCode  PetscSortedInt(PetscInt n,const PetscInt X[],PetscBool *sorted)
 }
 
 /*@
-   PetscSortInt - Sorts an array of integers in place in increasing order.
+   PetscIntSortSemiOrdered - Sorts an array of integers in place in increasing order.
 
    Not Collective
 
@@ -251,7 +251,7 @@ PetscErrorCode  PetscSortedInt(PetscInt n,const PetscInt X[],PetscBool *sorted)
 
 .seealso: PetscIntSortSemiOrdered(), PetscSortReal(), PetscSortIntWithPermutation()
 @*/
-PetscErrorCode  PetscSortInt(PetscInt n,PetscInt X[])
+PetscErrorCode  PetscIntSortSemiOrdered(PetscInt n,PetscInt X[])
 {
   PetscErrorCode ierr;
   PetscInt       pivot,t1;
