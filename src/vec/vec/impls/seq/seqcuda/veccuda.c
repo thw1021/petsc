@@ -339,9 +339,6 @@ PetscErrorCode  VecCreateSeqCUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,c
    VecCreateSeqCUDAWithArrays - Creates a CUDA sequential array-style vector,
    where the user provides the array space to store the vector values.
 
-   If both cpuarray and gpuarray are provided, the caller must ensure that
-   the provided arrays have identical values.
-
    Collective
 
    Input Parameter:
@@ -355,6 +352,9 @@ PetscErrorCode  VecCreateSeqCUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,c
 .  V - the vector
 
    Notes:
+   If both cpuarray and gpuarray are provided, the caller must ensure that
+   the provided arrays have identical values.
+
    PETSc does NOT free the provided arrays when the vector is destroyed via
    VecDestroy(). The user should not free the array until the vector is
    destroyed.
