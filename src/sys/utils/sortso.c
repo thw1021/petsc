@@ -1120,14 +1120,14 @@ PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *
 
 .seealso: PetscTimSort(), PetscSortInt(), PetscSortIntWithPermutation()
 @*/
-PetscErrorCode PetscIntSortSemiOrdered(PetscInt n, PetscInt arr[])
+PetscErrorCode PetscSortInt(PetscInt n, PetscInt arr[])
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidIntPointer(arr,2);
   if (n == 1) PetscFunctionReturn(0);
   if (n < 64) {
-    ierr = PetscSortInt(n, arr);CHKERRQ(ierr);
+    ierr = PetscIntSortSemiOrdered(n, arr);CHKERRQ(ierr);
   } else {
     ierr = PetscTimSort(n, arr, sizeof(PetscInt), Compare_PetscInt_Private);CHKERRQ(ierr);
   }
