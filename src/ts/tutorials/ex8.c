@@ -457,4 +457,11 @@ int main(int argc,char **argv)
       requires: !single !complex
       args: -ts_atol 1e-2 -ts_rtol 1e-2 -ts_max_time 15 -ts_type arkimex -ts_arkimex_type 2e -problem_type orego -ts_arkimex_initial_guess_extrapolate 1
 
+    test:
+      suffix: 4
+
+    test:
+      suffix: 5
+      args: -snes_lag_jacobian 20 -snes_lag_jacobian_persists
+
 TEST*/
