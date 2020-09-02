@@ -339,11 +339,11 @@ PetscErrorCode  VecCreateSeqCUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,c
    VecCreateSeqCUDAWithArrays - Creates a CUDA sequential array-style vector,
    where the user provides the array space to store the vector values.
 
-   - if only cpuarray is NULL, then memory for the CPU data is allocated.
-   - if only gpuarray is NULL, then memory for the GPU data is allocated.
-   - if both cpuarray and gpuarray are provided, the caller must assure that
-     the provided arrays have identical values.
-   - if both cpuarray and gpuarray are NULL, then both are allocated.
+   If cpuarray/gpuarray is NULL, data for the same is not allocated and can be
+   allocated by calling VecCUDAAllocateCheckHost()/VecCUDAAllocateCheck().
+
+   If both cpuarray and gpuarray are provided, the caller must ensure that
+   the provided arrays have identical values.
 
    Collective
 
@@ -365,7 +365,8 @@ PetscErrorCode  VecCreateSeqCUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,c
    Level: intermediate
 
 .seealso: VecCreateMPICUDAWithArrays(), VecCreate(), VecCreateSeqWithArray(),
-          VecCUDAPlaceArray(), VecCreateSeqCUDAWithArray()
+          VecCUDAPlaceArray(), VecCreateSeqCUDAWithArray(),
+          VecCUDAAllocateCheck(), VecCUDAAllocateCheckHost()
 @*/
 PetscErrorCode  VecCreateSeqCUDAWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,const PetscScalar cpuarray[],const PetscScalar gpuarray[],Vec *V)
 {
@@ -380,26 +381,18 @@ PetscErrorCode  VecCreateSeqCUDAWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,
   // set V's gpuarray to be gpuarray, do not allocate memory on host yet.
   ierr = VecCreateSeqCUDAWithArray(comm,bs,n,gpuarray,V);CHKERRQ(ierr);
 
-  if (gpuarray && cpuarray) {
+  if (cpuarray && gpuarray) {
     Vec_Seq *s = (Vec_Seq*)((*V)->data);
     s->array = (PetscScalar*)cpuarray;
     (*V)->offloadmask = PETSC_OFFLOAD_BOTH;
-  } else if (!gpuarray) {
+  } else if (cpuarray) {
     Vec_Seq *s = (Vec_Seq*)((*V)->data);
     s->array = (PetscScalar*)cpuarray;
     (*V)->offloadmask = PETSC_OFFLOAD_CPU;
-    // allocate device data
-    ierr = VecCUDAAllocateCheck(*V);CHKERRQ(ierr);
-  } else if (!cpuarray) {
+  } else if (gpuarray) {
     (*V)->offloadmask = PETSC_OFFLOAD_GPU;
-    // allocate host data
-    ierr = VecCUDAAllocateCheckHost(*V);CHKERRQ(ierr);
   } else {
-    ierr = VecCUDAAllocateCheck(*V);CHKERRQ(ierr);
-    ierr = VecCUDAAllocateCheckHost(*V);CHKERRQ(ierr);
-    ierr = VecSet(*V,0.0);CHKERRQ(ierr);
-    ierr = VecSet_Seq(*V,0.0);CHKERRQ(ierr);
-    (*V)->offloadmask = PETSC_OFFLOAD_BOTH;
+    (*V)->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
   }
 
   PetscFunctionReturn(0);
