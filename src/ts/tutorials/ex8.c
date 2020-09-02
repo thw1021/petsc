@@ -420,7 +420,9 @@ int main(int argc,char **argv)
   ierr = TSGetStepRejections(ts,&rejects);CHKERRQ(ierr);
   ierr = TSGetSNESIterations(ts,&nonlinits);CHKERRQ(ierr);
   ierr = TSGetKSPIterations(ts,&linits);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"steps %D (%D rejected, %D SNES fails), ftime %g, nonlinits %D, linits %D\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits);CHKERRQ(ierr);
+    if (use_monitor) {
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"steps %D (%D rejected, %D SNES fails), ftime %g, nonlinits %D, linits %D\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits);CHKERRQ(ierr);
+    }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.  All PETSc objects should be destroyed when they
