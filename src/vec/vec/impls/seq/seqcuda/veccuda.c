@@ -339,9 +339,6 @@ PetscErrorCode  VecCreateSeqCUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,c
    VecCreateSeqCUDAWithArrays - Creates a CUDA sequential array-style vector,
    where the user provides the array space to store the vector values.
 
-   If cpuarray/gpuarray is NULL, data for the same is not allocated and can be
-   allocated by calling VecCUDAAllocateCheckHost()/VecCUDAAllocateCheck().
-
    If both cpuarray and gpuarray are provided, the caller must ensure that
    the provided arrays have identical values.
 
@@ -366,7 +363,7 @@ PetscErrorCode  VecCreateSeqCUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,c
 
 .seealso: VecCreateMPICUDAWithArrays(), VecCreate(), VecCreateSeqWithArray(),
           VecCUDAPlaceArray(), VecCreateSeqCUDAWithArray(),
-          VecCUDAAllocateCheck(), VecCUDAAllocateCheckHost()
+          VecCUDAAllocateCheckHost()
 @*/
 PetscErrorCode  VecCreateSeqCUDAWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,const PetscScalar cpuarray[],const PetscScalar gpuarray[],Vec *V)
 {

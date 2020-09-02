@@ -272,9 +272,6 @@ PetscErrorCode  VecCreateMPICUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,P
    VecCreateMPICUDAWithArrays - Creates a parallel, array-style vector,
    where the user provides the GPU array space to store the vector values.
 
-   If cpuarray/gpuarray is NULL, data for the same is not allocated and can be
-   allocated by calling VecCUDAAllocateCheckHost()/VecCUDAAllocateCheck().
-
    If both cpuarray and gpuarray are provided, the caller must ensure that
    the provided arrays have identical values.
 
@@ -304,7 +301,7 @@ PetscErrorCode  VecCreateMPICUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,P
 .seealso: VecCreateSeqCUDAWithArrays(), VecCreateMPIWithArray(), VecCreateSeqWithArray(),
           VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
           VecCreateMPI(), VecCreateGhostWithArray(), VecCUDAPlaceArray(), VecPlaceArray(),
-          VecCUDAAllocateCheck(), VecCUDAAllocateCheckHost()
+          VecCUDAAllocateCheckHost()
 @*/
 PetscErrorCode  VecCreateMPICUDAWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar cpuarray[],const PetscScalar gpuarray[],Vec *vv)
 {
