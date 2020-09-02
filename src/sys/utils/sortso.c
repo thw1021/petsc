@@ -1124,8 +1124,8 @@ PetscErrorCode PetscSortInt(PetscInt n, PetscInt arr[])
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
+  if (n <= 1) PetscFunctionReturn(0);
   PetscValidIntPointer(arr,2);
-  if (n == 1) PetscFunctionReturn(0);
   if (n < 64) {
     ierr = PetscIntSortSemiOrdered(n, arr);CHKERRQ(ierr);
   } else {
