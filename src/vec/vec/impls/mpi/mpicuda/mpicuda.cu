@@ -313,32 +313,25 @@ PetscErrorCode  VecCreateMPICUDAWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,
   PetscFunctionBegin;
   ierr = VecCreateMPICUDAWithArray(comm,bs,n,N,gpuarray,vv);CHKERRQ(ierr);
 
-  if (gpuarray && cpuarray)
-  {
+  if (gpuarray && cpuarray) {
     Vec_MPI *s         = (Vec_MPI*)((*vv)->data);
     s->array           = (PetscScalar*)cpuarray;
     (*vv)->offloadmask = PETSC_OFFLOAD_BOTH;
-  }
-  else if (!gpuarray)
-  {
+  } else if (!gpuarray) {
     Vec_MPI *s         = (Vec_MPI*)((*vv)->data);
     s->array           = (PetscScalar*)cpuarray;
     (*vv)->offloadmask =  PETSC_OFFLOAD_CPU;
     // allocate device data
-    ierr = VecCUDAAllocateCheck(*vv); CHKERRQ(ierr);
-  }
-  else if (!cpuarray)
-  {
+    ierr = VecCUDAAllocateCheck(*vv);CHKERRQ(ierr);
+  } else if (!cpuarray) {
     (*vv)->offloadmask = PETSC_OFFLOAD_GPU;
     // allocate host data
-    ierr = VecCUDAAllocateCheckHost(*vv); CHKERRQ(ierr);
-  }
-  else
-  {
+    ierr = VecCUDAAllocateCheckHost(*vv);CHKERRQ(ierr);
+  } else {
     // allocate device data
-    ierr = VecCUDAAllocateCheck(*vv); CHKERRQ(ierr);
+    ierr = VecCUDAAllocateCheck(*vv);CHKERRQ(ierr);
     // allocate host data
-    ierr = VecCUDAAllocateCheckHost(*vv); CHKERRQ(ierr);
+    ierr = VecCUDAAllocateCheckHost(*vv);CHKERRQ(ierr);
     ierr = VecSet(*vv,0.0);CHKERRQ(ierr);
     ierr = VecSet_Seq(*vv,0.0);CHKERRQ(ierr);
     (*vv)->offloadmask = PETSC_OFFLOAD_BOTH;
