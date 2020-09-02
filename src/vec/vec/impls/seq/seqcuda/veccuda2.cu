@@ -851,8 +851,8 @@ PetscErrorCode VecScale_SeqCUDA(Vec xin,PetscScalar alpha)
     ierr = VecCUDARestoreArray(xin,&xarray);CHKERRQ(ierr);
     err  = WaitForCUDA();CHKERRCUDA(err);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+    ierr = PetscLogGpuFlops(xin->map->n);CHKERRQ(ierr);
   }
-  ierr = PetscLogGpuFlops(xin->map->n);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -904,14 +904,17 @@ PetscErrorCode VecCopy_SeqCUDA(Vec xin,Vec yin)
         err = cudaMemcpy(yarray,xarray,yin->map->n*sizeof(PetscScalar),cudaMemcpyDeviceToDevice);CHKERRCUDA(err);
       } else {
         err = cudaMemcpy(yarray,xarray,yin->map->n*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+	ierr = PetscLogGpuToCpu((yin->map->n)*sizeof(PetscScalar));CHKERRQ(ierr);
       }
       err  = WaitForCUDA();CHKERRCUDA(err);
       ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
       ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
       if (yiscuda) {
         ierr = VecCUDARestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
+        yin->offloadmask = PETSC_OFFLOAD_GPU;
       } else {
         ierr = VecRestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
+        yin->offloadmask = PETSC_OFFLOAD_CPU;
       }
     } else if (xin->offloadmask == PETSC_OFFLOAD_CPU) {
       /* copy in CPU if we are on the CPU */
@@ -930,6 +933,7 @@ PetscErrorCode VecCopy_SeqCUDA(Vec xin,Vec yin)
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
+        yin->offloadmask = PETSC_OFFLOAD_GPU;
       } else if (yin->offloadmask == PETSC_OFFLOAD_BOTH) {
         /* xin and yin are both valid in both places (or yin was unallocated before the earlier call to allocatecheck
            default to copy in GPU (this is an arbitrary choice) */
@@ -940,6 +944,7 @@ PetscErrorCode VecCopy_SeqCUDA(Vec xin,Vec yin)
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
+        yin->offloadmask = PETSC_OFFLOAD_GPU;
       } else {
         ierr = VecCopy_SeqCUDA_Private(xin,yin);CHKERRQ(ierr);
       }
