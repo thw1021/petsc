@@ -126,6 +126,7 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   THRUSTARRAY                       *workVector;
   cusparseHandle_t                  handle;   /* a handle to the cusparse library */
   PetscInt                          nnz;      /* number of nonzeros ... need this for accurate logging between ICC and ILU */
+  Mat                               cudaMat;  /* Matrix on device for, eg, assembly */
 };
 #endif
 
@@ -141,6 +142,7 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseHandle_t             handle;          /* a handle to the cusparse library ... this may not be owned (if we're working in parallel i.e. multiGPUs) */
   PetscObjectState             nonzerostate;    /* track nonzero state to possibly recreate the GPU matrix */
   PetscBool                    transgen;        /* whether or not to generate explicit transpose for MatMultTranspose operations */
+  Mat                          cudaMat;         /* Matrix on device for, eg, assembly */
 };
 
 PETSC_INTERN PetscErrorCode MatCUSPARSECopyToGPU(Mat);
