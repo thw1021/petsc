@@ -276,7 +276,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   Mat                      jac;
   PetscErrorCode           ierr;
   PetscInt                 maxits,i,j,lits,bs,inner_count;
-  PetscReal                rho,fnorm,gnorm,xnorm=0,delta,ynorm,temp_xnorm;
+  PetscReal                rho,fnorm,gnorm,xnorm=0,delta,ynorm,temp_xnorm,temp_ynorm;
   PetscReal                deltaM,ynnorm,f0,mp,gTy,g,nscale;
   PetscReal                auk,gfnorm,ycnorm,c0,c1,c2,tau,tau_pos,tau_neg,gTBg;
   PetscReal                yTHy;
@@ -467,11 +467,13 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
             /* TR inner algorithm does not need scaled X after calculating delta in outer iteration */
             /* need to scale back X to match Y and provide proper update to the external code */
             ierr = VecStrideScale(X, j, inorms[j]);
-            ierr = VecNorm(X,NORM_2,&temp_xnorm);CHKERRQ(ierr);
           }
         }
+        if (inner_count == 0) ierr = VecNorm(X,NORM_2,&temp_xnorm);CHKERRQ(ierr);
+        ierr = VecNorm(Y,NORM_2,&temp_ynorm);CHKERRQ(ierr);
       } else {
         temp_xnorm = xnorm;
+        temp_ynorm = ynorm;
       }
       inner_count++;
 
@@ -513,6 +515,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
         if (bs > 1 && neP->auto_scale_multiphase) {
           neP->delta = delta/xnorm;
           xnorm = temp_xnorm;
+          ynorm = temp_ynorm;
         }
         neP->rho_satisfied = PETSC_TRUE;
         break;  /* the improvement ratio is satisfactory */
@@ -521,11 +524,11 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   
       /* check to see if progress is hopeless */
       neP->itflag = PETSC_FALSE;
-      /* both delta and xnorm are either scaled or unscaled */
+      /* both delta, ynorm, and xnorm are either scaled or unscaled */
       ierr        = SNESTR_Converged_Private(snes,snes->iter,xnorm,ynorm,fnorm,&reason,snes->cnvP);CHKERRQ(ierr);
       if (!reason) {
-         /* temp_xnorm is always scaled */
-         ierr = (*snes->ops->converged)(snes,snes->iter,temp_xnorm,ynorm,fnorm,&reason,snes->cnvP);CHKERRQ(ierr);
+         /* temp_xnorm, temp_ynorm is always scaled */
+         ierr = (*snes->ops->converged)(snes,snes->iter,temp_xnorm,temp_ynorm,fnorm,&reason,snes->cnvP);CHKERRQ(ierr);
       }
       /* if multiphase state changes, break out inner iteration */
       if (reason == SNES_BREAKOUT_INNER_ITER) {
@@ -533,6 +536,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
           /* unscale delta and xnorm before going to the next outer iteration */
           neP->delta = delta/xnorm;
           xnorm = temp_xnorm;
+          ynorm = temp_ynorm;
         }
         reason = SNES_CONVERGED_ITERATING; 
         break;  
