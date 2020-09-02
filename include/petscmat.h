@@ -107,6 +107,9 @@ typedef const char* MatType;
 #define MATLMVMDIAGBROYDEN   "lmvmdiagbroyden"
 #define MATCONSTANTDIAGONAL  "constantdiagonal"
 #define MATHARA              "hara"
+#define MATAIJCUDA           "aijcuda"
+#define MATSEQAIJCUDA        "seqaijcuda"
+#define MATMPIAIJCUDA        "mpiaijcuda"
 
 /*J
     MatSolverType - String with the name of a PETSc matrix solver type.
