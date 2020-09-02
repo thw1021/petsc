@@ -9,6 +9,9 @@
 #include <petscconf.h>
 #include <../src/mat/impls/aij/seq/aij.h>          /*I "petscmat.h" I*/
 
+#undef VecType
+#include <../src/mat/impls/aij/seq/seqcusparse/cusparsematimpl.h>
+
 // Macro to catch CUDA errors in CUDA runtime calls
 #define CUDA_SAFE_CALL(call)                                          \
 do {                                                                  \
@@ -44,10 +47,10 @@ __device__ void MatSetValues_SeqAIJCUDA(Mat A,PetscInt m,const PetscInt im[],Pet
   PetscErrorCode ierr;
   Mat            cudamat, *pCudaMat;
   //Mat_SeqAIJ     *amat = (Mat_SeqAIJ*)A->data;
-  PetscInt       *aj,lastcol = -1, n;
+  PetscInt       *aj,lastcol = -1;
   MatScalar      *ap=NULL,value=0.0,*aa;
   PetscInt       *ai,*ailen;
-  
+
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) {
     Mat_SeqAIJCUSPARSE *b = (Mat_SeqAIJCUSPARSE*)A->spptr;
@@ -65,8 +68,6 @@ __device__ void MatSetValues_SeqAIJCUDA(Mat A,PetscInt m,const PetscInt im[],Pet
   ailen = cudamat->ilen;
   aj = cudamat->j;
   aa = cudamat->a;
-  n = cudamat->rmap->n;
-
   for (k=0; k<m; k++) { /* loop over added rows */
     row = im[k];
     if (row < 0) continue;
@@ -76,6 +77,7 @@ __device__ void MatSetValues_SeqAIJCUDA(Mat A,PetscInt m,const PetscInt im[],Pet
     low  = 0;
     high = nrow;
     for (l=0; l<n; l++) { /* loop over added columns */
+      if (in[l] < 0) continue;
       while (l<n && (value = v[l + k*n]) == 0.0) l++;
       if (l==n) break;
       col = in[l];
@@ -88,9 +90,10 @@ __device__ void MatSetValues_SeqAIJCUDA(Mat A,PetscInt m,const PetscInt im[],Pet
         else low = t;
       }
       for (i=low; i<high; i++) {
-        // if (rp[i] > col) break;
+        if (rp[i] > col) break;
         if (rp[i] == col) {
-	  ap[i] += value;
+	  if (is == ADD_VALUES) ap[i] += value;
+	  else ap[i] = value;
 	  low = i + 1;
           goto noinsert;
         }
