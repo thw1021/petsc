@@ -1087,9 +1087,6 @@ PETSC_EXTERN PetscErrorCode  VecCreateSeqViennaCLWithArray(MPI_Comm comm,PetscIn
    VecCreateSeqViennaCLWithArrays - Creates a ViennaCL sequential vector, where
    the user provides the array space to store the vector values.
 
-   If cpuarray/viennaclvec is NULL, data for the same is not allocated and can
-   be allocated by calling VecViennaCLAllocateCheckHost()/VecViennaCLAllocateCheck().
-
    If both cpuarray and viennaclvec are provided, the caller must ensure that
    the provided arrays have identical values.
 
@@ -1114,7 +1111,7 @@ PETSC_EXTERN PetscErrorCode  VecCreateSeqViennaCLWithArray(MPI_Comm comm,PetscIn
 
 .seealso: VecCreateMPIViennaCLWithArrays(), VecCreate(), VecCreateSeqWithArray(),
           VecViennaCLPlaceArray(), VecPlaceArray(), VecCreateSeqCUDAWithArrays(),
-          VecViennaCLAllocateCheck(), VecViennaCLAllocateCheckHost()
+          VecViennaCLAllocateCheckHost()
 @*/
 PetscErrorCode  VecCreateSeqViennaCLWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,const PetscScalar cpuarray[],const ViennaCLVector* viennaclvec,Vec *V)
 {

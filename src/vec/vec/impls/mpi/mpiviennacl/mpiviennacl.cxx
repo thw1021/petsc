@@ -330,9 +330,6 @@ PetscErrorCode  VecCreateMPIViennaCLWithArray(MPI_Comm comm,PetscInt bs,PetscInt
    VecCreateMPIViennaCLWithArrays - Creates a parallel, array-style vector,
    where the user provides the ViennaCL vector to store the vector values.
 
-   If cpuarray/viennaclvec is NULL, data for the same is not allocated and can
-   be allocated by calling VecViennaCLAllocateCheckHost()/VecViennaCLAllocateCheck().
-
    If both cpuarray and viennaclvec are provided, the caller must ensure that
    the provided arrays have identical values.
 
@@ -363,7 +360,7 @@ PetscErrorCode  VecCreateMPIViennaCLWithArray(MPI_Comm comm,PetscInt bs,PetscInt
           VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
           VecCreateMPI(), VecCreateGhostWithArray(), VecViennaCLPlaceArray(),
           VecPlaceArray(), VecCreateMPICUDAWithArrays(),
-          VecViennaCLAllocateCheck(), VecViennaCLAllocateCheckHost()
+          VecViennaCLAllocateCheckHost()
 @*/
 PetscErrorCode  VecCreateMPIViennaCLWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar cpuarray[],const ViennaCLVector *viennaclvec,Vec *vv)
 {
