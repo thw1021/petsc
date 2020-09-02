@@ -330,9 +330,6 @@ PetscErrorCode  VecCreateMPIViennaCLWithArray(MPI_Comm comm,PetscInt bs,PetscInt
    VecCreateMPIViennaCLWithArrays - Creates a parallel, array-style vector,
    where the user provides the ViennaCL vector to store the vector values.
 
-   If both cpuarray and viennaclvec are provided, the caller must ensure that
-   the provided arrays have identical values.
-
    Collective
 
    Input Parameters:
@@ -347,6 +344,9 @@ PetscErrorCode  VecCreateMPIViennaCLWithArray(MPI_Comm comm,PetscInt bs,PetscInt
 .  vv - the vector
 
    Notes:
+   If both cpuarray and viennaclvec are provided, the caller must ensure that
+   the provided arrays have identical values.
+
    Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the
    same type as an existing vector.
 

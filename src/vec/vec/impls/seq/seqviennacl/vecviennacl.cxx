@@ -1087,9 +1087,6 @@ PETSC_EXTERN PetscErrorCode  VecCreateSeqViennaCLWithArray(MPI_Comm comm,PetscIn
    VecCreateSeqViennaCLWithArrays - Creates a ViennaCL sequential vector, where
    the user provides the array space to store the vector values.
 
-   If both cpuarray and viennaclvec are provided, the caller must ensure that
-   the provided arrays have identical values.
-
    Collective
 
    Input Parameter:
@@ -1103,6 +1100,9 @@ PETSC_EXTERN PetscErrorCode  VecCreateSeqViennaCLWithArray(MPI_Comm comm,PetscIn
 .  V - the vector
 
    Notes:
+   If both cpuarray and viennaclvec are provided, the caller must ensure that
+   the provided arrays have identical values.
+
    PETSc does NOT free the provided arrays when the vector is destroyed via
    VecDestroy(). The user should not free the array until the vector is
    destroyed.
