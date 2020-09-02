@@ -1087,10 +1087,11 @@ PETSC_EXTERN PetscErrorCode  VecCreateSeqViennaCLWithArray(MPI_Comm comm,PetscIn
    VecCreateSeqViennaCLWithArrays - Creates a ViennaCL sequential vector, where
    the user provides the array space to store the vector values.
 
-   - if only cpuarray is NULL, then memory for the CPU data is allocated.
-   - if only viennaclvec is NULL, then memory for the underlying ViennaCL vector is allocated.
-   - if both cpuarray and viennaclvec are provided, the caller must ensure that the provided arrays have identical values.
-   - if both cpuarray and viennaclvec are NULL, then both are allocated.
+   If cpuarray/viennaclvec is NULL, data for the same is not allocated and can
+   be allocated by calling VecViennaCLAllocateCheckHost()/VecViennaCLAllocateCheck().
+
+   If both cpuarray and viennaclvec are provided, the caller must ensure that
+   the provided arrays have identical values.
 
    Collective
 
@@ -1112,7 +1113,8 @@ PETSC_EXTERN PetscErrorCode  VecCreateSeqViennaCLWithArray(MPI_Comm comm,PetscIn
    Level: intermediate
 
 .seealso: VecCreateMPIViennaCLWithArrays(), VecCreate(), VecCreateSeqWithArray(),
-          VecViennaCLPlaceArray(), VecPlaceArray(), VecCreateSeqCUDAWithArrays()
+          VecViennaCLPlaceArray(), VecPlaceArray(), VecCreateSeqCUDAWithArrays(),
+          VecViennaCLAllocateCheck(), VecViennaCLAllocateCheckHost()
 @*/
 PetscErrorCode  VecCreateSeqViennaCLWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,const PetscScalar cpuarray[],const ViennaCLVector* viennaclvec,Vec *V)
 {
@@ -1127,26 +1129,18 @@ PetscErrorCode  VecCreateSeqViennaCLWithArrays(MPI_Comm comm,PetscInt bs,PetscIn
   // set V's viennaclvec to be viennaclvec, do not allocate memory on host yet.
   ierr = VecCreateSeqViennaCLWithArray(comm,bs,n,viennaclvec,V);CHKERRQ(ierr);
 
-  if (viennaclvec && cpuarray) {
+  if (cpuarray && viennaclvec) {
     Vec_Seq *s = (Vec_Seq*)((*V)->data);
     s->array = (PetscScalar*)cpuarray;
     (*V)->offloadmask = PETSC_OFFLOAD_BOTH;
-  } else if (!viennaclvec) {
+  } else if (cpuarray) {
     Vec_Seq *s = (Vec_Seq*)((*V)->data);
     s->array = (PetscScalar*)cpuarray;
     (*V)->offloadmask = PETSC_OFFLOAD_CPU;
-    // allocate device data
-    ierr = VecViennaCLAllocateCheck(*V);CHKERRQ(ierr);
-  } else if (!cpuarray) {
+  } else if (viennaclvec) {
     (*V)->offloadmask = PETSC_OFFLOAD_GPU;
-    // allocate host data
-    ierr = VecViennaCLAllocateCheckHost(*V);CHKERRQ(ierr);
   } else {
-    ierr = VecViennaCLAllocateCheck(*V);CHKERRQ(ierr);
-    ierr = VecViennaCLAllocateCheckHost(*V);CHKERRQ(ierr);
-    ierr = VecSet(*V,0.0);CHKERRQ(ierr);
-    ierr = VecSet_Seq(*V,0.0);CHKERRQ(ierr);
-    (*V)->offloadmask = PETSC_OFFLOAD_BOTH;
+    (*V)->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
   }
 
   PetscFunctionReturn(0);

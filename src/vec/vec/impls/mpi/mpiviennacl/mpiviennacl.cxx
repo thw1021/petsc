@@ -330,10 +330,11 @@ PetscErrorCode  VecCreateMPIViennaCLWithArray(MPI_Comm comm,PetscInt bs,PetscInt
    VecCreateMPIViennaCLWithArrays - Creates a parallel, array-style vector,
    where the user provides the ViennaCL vector to store the vector values.
 
-   - if only cpuarray is NULL, then memory for the CPU data is allocated.
-   - if only viennaclvec is NULL, then memory for the underlying ViennaCL vector is allocated.
-   - if both cpuarray and viennaclvec are provided, the caller must ensure that the provided arrays have identical values.
-   - if both cpuarray and viennaclvec are NULL, then both are allocated.
+   If cpuarray/viennaclvec is NULL, data for the same is not allocated and can
+   be allocated by calling VecViennaCLAllocateCheckHost()/VecViennaCLAllocateCheck().
+
+   If both cpuarray and viennaclvec are provided, the caller must ensure that
+   the provided arrays have identical values.
 
    Collective
 
@@ -361,8 +362,8 @@ PetscErrorCode  VecCreateMPIViennaCLWithArray(MPI_Comm comm,PetscInt bs,PetscInt
 .seealso: VecCreateSeqViennaCLWithArrays(), VecCreateMPIWithArray()
           VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
           VecCreateMPI(), VecCreateGhostWithArray(), VecViennaCLPlaceArray(),
-          VecPlaceArray(), VecCreateMPICUDAWithArrays()
-
+          VecPlaceArray(), VecCreateMPICUDAWithArrays(),
+          VecViennaCLAllocateCheck(), VecViennaCLAllocateCheckHost()
 @*/
 PetscErrorCode  VecCreateMPIViennaCLWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar cpuarray[],const ViennaCLVector *viennaclvec,Vec *vv)
 {
@@ -371,28 +372,18 @@ PetscErrorCode  VecCreateMPIViennaCLWithArrays(MPI_Comm comm,PetscInt bs,PetscIn
   PetscFunctionBegin;
   ierr = VecCreateMPIViennaCLWithArray(comm,bs,n,N,viennaclvec,vv);CHKERRQ(ierr);
 
-  if (viennaclvec && cpuarray) {
+  if (cpuarray && viennaclvec) {
     Vec_MPI *s         = (Vec_MPI*)((*vv)->data);
     s->array           = (PetscScalar*)cpuarray;
     (*vv)->offloadmask = PETSC_OFFLOAD_BOTH;
-  } else if (!viennaclvec) {
+  } else if (cpuarray) {
     Vec_MPI *s         = (Vec_MPI*)((*vv)->data);
     s->array           = (PetscScalar*)cpuarray;
     (*vv)->offloadmask =  PETSC_OFFLOAD_CPU;
-    // allocate device data
-    ierr = VecViennaCLAllocateCheck(*vv);CHKERRQ(ierr);
-  } else if (!cpuarray) {
+  } else if (viennaclvec) {
     (*vv)->offloadmask = PETSC_OFFLOAD_GPU;
-    // allocate host data
-    ierr = VecViennaCLAllocateCheckHost(*vv);CHKERRQ(ierr);
   } else {
-    // allocate device data
-    ierr = VecViennaCLAllocateCheck(*vv);CHKERRQ(ierr);
-    // allocate host data
-    ierr = VecViennaCLAllocateCheckHost(*vv);CHKERRQ(ierr);
-    ierr = VecSet(*vv,0.0);CHKERRQ(ierr);
-    ierr = VecSet_Seq(*vv,0.0);CHKERRQ(ierr);
-    (*vv)->offloadmask = PETSC_OFFLOAD_BOTH;
+    (*vv)->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
   }
 
   PetscFunctionReturn(0);
