@@ -542,19 +542,19 @@ typedef struct {
 } PetscTimSortStack PETSC_ATTRIBUTEALIGNED(2*sizeof(PetscInt));
 
 typedef struct {
-  char     *ptr PETSC_ATTRIBUTEALIGNED(PETSC_MEMALIGN);
-  PetscInt size;
-  PetscInt maxsize;
+  char   *ptr PETSC_ATTRIBUTEALIGNED(PETSC_MEMALIGN);
+  size_t size;
+  size_t maxsize;
 } PetscTimSortBuffer;
 
-PETSC_STATIC_INLINE PetscErrorCode PetscTimSortResizeBuffer_Private(PetscTimSortBuffer *buff, PetscInt newSize)
+PETSC_STATIC_INLINE PetscErrorCode PetscTimSortResizeBuffer_Private(PetscTimSortBuffer *buff, size_t newSize)
 {
   PetscFunctionBegin;
   if (PetscLikely(newSize <= buff->size)) PetscFunctionReturn(0);
   {
     /* Can't be larger than n, there is merit to simply allocating buff to n to begin with */
     PetscErrorCode ierr;
-    PetscInt       newMax = PetscMin(newSize*newSize, buff->maxsize);
+    size_t         newMax = PetscMin(newSize*newSize, buff->maxsize);
     ierr = PetscFree(buff->ptr);CHKERRQ(ierr);
     ierr = PetscMalloc1(newMax, &buff->ptr);CHKERRQ(ierr);
     buff->size = newMax;
@@ -971,9 +971,9 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
   }
   if (PetscUnlikelyDebug(minrun < 32 || minrun > 65)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %D not in range (32,65)",minrun);
   ierr = PetscInfo1(NULL, "minrun = %D\n", minrun);CHKERRQ(ierr);
-  ierr = PetscMalloc1(minrun*size, &buff.ptr);CHKERRQ(ierr);
-  buff.size = minrun*size;
-  buff.maxsize = n*size;
+  ierr = PetscMalloc1((size_t) minrun*size, &buff.ptr);CHKERRQ(ierr);
+  buff.size = (size_t) minrun*size;
+  buff.maxsize = (size_t) n*size;
   MIN_GALLOP_GLOBAL = MIN_GALLOP_CONST_GLOBAL;
   while (runstart < n) {
     /* Check if additional entries are at least partially ordered and build natural run */
@@ -1072,12 +1072,12 @@ PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *
   }
   if (PetscUnlikelyDebug(minrun < 32 || minrun > 65)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %D not in range (32,65)",minrun);
   ierr = PetscInfo1(NULL, "minrun = %D\n", minrun);CHKERRQ(ierr);
-  ierr = PetscMalloc1(minrun*asize, &abuff.ptr);CHKERRQ(ierr);
-  abuff.size = minrun*asize;
-  abuff.maxsize = n*asize;
-  ierr = PetscMalloc1(minrun*bsize, &bbuff.ptr);CHKERRQ(ierr);
-  bbuff.size = minrun*bsize;
-  bbuff.maxsize = n*bsize;
+  ierr = PetscMalloc1((size_t) minrun*asize, &abuff.ptr);CHKERRQ(ierr);
+  abuff.size = (size_t) minrun*asize;
+  abuff.maxsize = (size_t) n*asize;
+  ierr = PetscMalloc1((size_t) minrun*bsize, &bbuff.ptr);CHKERRQ(ierr);
+  bbuff.size = (size_t) minrun*bsize;
+  bbuff.maxsize = (size_t) n*bsize;
   MIN_GALLOP_GLOBAL = MIN_GALLOP_CONST_GLOBAL;
   while (runstart < n) {
     /* Check if additional entries are at least partially ordered and build natural run */
