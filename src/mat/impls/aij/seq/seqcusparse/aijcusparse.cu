@@ -2212,6 +2212,7 @@ static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Destroy(Mat_SeqAIJCUSPARSETriF
   }
   PetscFunctionReturn(0);
 }
+
 #else
 
 /* The following stubs are only provided to satisfy the linker */
