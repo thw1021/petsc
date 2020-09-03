@@ -112,6 +112,23 @@ struct Mat_SeqAIJCUSPARSEMultStruct {
   PetscScalar        *beta_one; /* pointer to a device "scalar" storing the beta parameter in the SpMV as one */
 };
 
+/* This is a struct holding Mat metadata for, eg, matsetvalues */
+struct Mat_SeqAIJCUDA_GPUData {
+  PetscInt   *i;
+  PetscInt   *ilen;
+  PetscInt   *j;
+  PetscInt   *imax;
+  PetscScalr *a;
+  __device__ void (*setvalues)(Mat_SeqAIJCUDA_GPUData *, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
+  PetscInt   n;
+  PetscInt   ignorezeroentries;
+  PetscInt   nonew;
+  PetscInt   nonzerostate;
+  PetscInt   offloadmask;
+  PetscInt   nonzerorowcnt;
+  PetscInt   rmax;
+};
+
 #if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
 
 /* This is a larger struct holding all the triangular factors for a solve, transpose solve, and
@@ -126,7 +143,7 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   THRUSTARRAY                       *workVector;
   cusparseHandle_t                  handle;   /* a handle to the cusparse library */
   PetscInt                          nnz;      /* number of nonzeros ... need this for accurate logging between ICC and ILU */
-  Mat                               cudaMat;  /* Matrix on device for, eg, assembly */
+  Mat_SeqAIJCUDA_GPUData            *cudaMat;  /* Matrix on device for, eg, assembly */
 };
 #endif
 
@@ -142,7 +159,7 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseHandle_t             handle;          /* a handle to the cusparse library ... this may not be owned (if we're working in parallel i.e. multiGPUs) */
   PetscObjectState             nonzerostate;    /* track nonzero state to possibly recreate the GPU matrix */
   PetscBool                    transgen;        /* whether or not to generate explicit transpose for MatMultTranspose operations */
-  Mat                          cudaMat;         /* Matrix on device for, eg, assembly */
+  Mat_SeqAIJCUDA_GPUData       *cudaMat;         /* Matrix on device for, eg, assembly */
 };
 
 PETSC_INTERN PetscErrorCode MatCUSPARSECopyToGPU(Mat);
