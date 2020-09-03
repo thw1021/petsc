@@ -107,6 +107,9 @@ typedef const char* MatType;
 #define MATLMVMDIAGBROYDEN   "lmvmdiagbroyden"
 #define MATCONSTANTDIAGONAL  "constantdiagonal"
 #define MATHARA              "hara"
+#define MATAIJCUDA           "aijcuda"
+#define MATSEQAIJCUDA        "seqaijcuda"
+#define MATMPIAIJCUDA        "mpiaijcuda"
 
 /*J
     MatSolverType - String with the name of a PETSc matrix solver type.
@@ -1935,6 +1938,11 @@ PETSC_EXTERN PetscErrorCode MatDenseCUDARestoreArray(Mat,PetscScalar**);
 PETSC_EXTERN PetscErrorCode MatDenseCUDAPlaceArray(Mat,const PetscScalar*);
 PETSC_EXTERN PetscErrorCode MatDenseCUDAReplaceArray(Mat,const PetscScalar*);
 PETSC_EXTERN PetscErrorCode MatDenseCUDAResetArray(Mat);
+
+PETSC_EXTERN PetscErrorCode MatCreateSeqAIJCUDA(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],Mat*);
+PETSC_EXTERN PetscErrorCode MatCreateAIJCUDA(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[],Mat*);
+PETSC_EXTERN PetscErrorCode MatCUSPARSEGetCudaData(Mat,void**);
+
 #endif
 
 #if defined(PETSC_HAVE_VIENNACL)

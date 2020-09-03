@@ -2207,3 +2207,5 @@ static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Destroy(Mat_SeqAIJCUSPARSETriF
   }
   PetscFunctionReturn(0);
 }
+
+#include "./aijcuda.cu"

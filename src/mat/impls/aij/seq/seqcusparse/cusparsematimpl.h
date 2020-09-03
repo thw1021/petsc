@@ -109,6 +109,24 @@ struct Mat_SeqAIJCUSPARSEMultStruct {
   PetscScalar        *beta_one; /* pointer to a device "scalar" storing the beta parameter in the SpMV as one */
 };
 
+/* This is a struct holding Mat metadata for, eg, matsetvalues */
+struct Mat_SeqAIJCUDA_GPUData {
+  PetscInt    *i;
+  PetscInt    *ilen;
+  PetscInt    *j;
+  PetscInt    *imax;
+  PetscScalar *a;
+  PetscInt    n;
+  PetscInt    nnz;
+  PetscInt    ignorezeroentries;
+  PetscInt    nonew;
+  PetscInt    nonzerostate;
+  PetscInt    offloadmask;
+  PetscInt    nonzerorowcnt;
+  PetscInt    rmax;
+  //void (*setvalues)(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
+};
+
 /* This is a larger struct holding all the triangular factors for a solve, transpose solve, and
  any indices used in a reordering */
 struct Mat_SeqAIJCUSPARSETriFactors {
@@ -121,6 +139,7 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   THRUSTARRAY                       *workVector;
   cusparseHandle_t                  handle;   /* a handle to the cusparse library */
   PetscInt                          nnz;      /* number of nonzeros ... need this for accurate logging between ICC and ILU */
+  Mat_SeqAIJCUDA_GPUData            *cudaMat;  /* Matrix on device for, eg, assembly */
 };
 
 /* This is a larger struct holding all the matrices for a SpMV, and SpMV Tranpose */
@@ -135,10 +154,13 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseHandle_t             handle;          /* a handle to the cusparse library ... this may not be owned (if we're working in parallel i.e. multiGPUs) */
   PetscObjectState             nonzerostate;    /* track nonzero state to possibly recreate the GPU matrix */
   PetscBool                    transgen;        /* whether or not to generate explicit transpose for MatMultTranspose operations */
+  Mat_SeqAIJCUDA_GPUData       *cudaMat;         /* Matrix on device for, eg, assembly */
 };
 
 PETSC_INTERN PetscErrorCode MatCUSPARSECopyToGPU(Mat);
 PETSC_INTERN PetscErrorCode MatCUSPARSESetStream(Mat, const cudaStream_t stream);
 PETSC_INTERN PetscErrorCode MatCUSPARSESetHandle(Mat, const cusparseHandle_t handle);
 PETSC_INTERN PetscErrorCode MatCUSPARSEClearHandle(Mat);
+PETSC_EXTERN __device__ void MatSetValues_SeqAIJCUDA_device(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
+
 #endif
