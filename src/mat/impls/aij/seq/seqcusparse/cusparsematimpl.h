@@ -153,19 +153,20 @@ struct Mat_SeqAIJCUSPARSETriFactorStruct {
 
 /* This is a struct holding Mat metadata for, eg, matsetvalues */
 struct Mat_SeqAIJCUDA_GPUData {
-  PetscInt   *i;
-  PetscInt   *ilen;
-  PetscInt   *j;
-  PetscInt   *imax;
-  PetscScalr *a;
-  __device__ void (*setvalues)(Mat_SeqAIJCUDA_GPUData *, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
-  PetscInt   n;
-  PetscInt   ignorezeroentries;
-  PetscInt   nonew;
-  PetscInt   nonzerostate;
-  PetscInt   offloadmask;
-  PetscInt   nonzerorowcnt;
-  PetscInt   rmax;
+  PetscInt    *i;
+  PetscInt    *ilen;
+  PetscInt    *j;
+  PetscInt    *imax;
+  PetscScalar *a;
+  PetscInt    n;
+  PetscInt    nnz;
+  PetscInt    ignorezeroentries;
+  PetscInt    nonew;
+  PetscInt    nonzerostate;
+  PetscInt    offloadmask;
+  PetscInt    nonzerorowcnt;
+  PetscInt    rmax;
+  //void (*setvalues)(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 };
 
 /* This is a larger struct holding all the triangular factors for a solve, transpose solve, and any indices used in a reordering */
@@ -232,4 +233,6 @@ PETSC_INTERN PetscErrorCode MatCUSPARSECopyToGPU(Mat);
 PETSC_INTERN PetscErrorCode MatCUSPARSESetStream(Mat, const cudaStream_t stream);
 PETSC_INTERN PetscErrorCode MatCUSPARSESetHandle(Mat, const cusparseHandle_t handle);
 PETSC_INTERN PetscErrorCode MatCUSPARSEClearHandle(Mat);
+PETSC_EXTERN __device__ void MatSetValues_SeqAIJCUDA_device(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
+
 #endif
