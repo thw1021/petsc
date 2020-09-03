@@ -547,14 +547,14 @@ typedef struct {
   PetscInt maxsize;
 } PetscTimSortBuffer;
 
-PETSC_STATIC_INLINE PetscErrorCode PetscTimSortResizeBuffer_Private(PetscTimSortBuffer *buff, PetscInt newSize)
+PETSC_STATIC_INLINE PetscErrorCode PetscTimSortResizeBuffer_Private(PetscTimSortBuffer *buff, size_t newSize)
 {
   PetscFunctionBegin;
   if (PetscLikely(newSize <= buff->size)) PetscFunctionReturn(0);
   {
     /* Can't be larger than n, there is merit to simply allocating buff to n to begin with */
     PetscErrorCode ierr;
-    PetscInt       newMax = PetscMin(newSize*newSize, buff->maxsize);
+    size_t         newMax = PetscMin(newSize*newSize, buff->maxsize);
     ierr = PetscFree(buff->ptr);CHKERRQ(ierr);
     ierr = PetscMalloc1(newMax, &buff->ptr);CHKERRQ(ierr);
     buff->size = newMax;
