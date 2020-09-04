@@ -162,7 +162,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUDA(Mat A, MatAssemblyType mode)
   PetscFunctionBegin;
   if (mode == MAT_FLUSH_ASSEMBLY) PetscFunctionReturn(0); // ???
   if (A->was_assembled && A->ass_nonzerostate == A->nonzerostate) PetscFunctionReturn(0); // ???
-  
+
   if (A->factortype == MAT_FACTOR_NONE) {
     Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
     a = spptr->cudaMat;
@@ -172,7 +172,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUDA(Mat A, MatAssemblyType mode)
   }
 
   MatAssemblyEnd_SeqAIJCUDA_device<<<1,1>>>(a); // serial
-  
+
   PetscFunctionReturn(0);
 }
 
@@ -223,7 +223,7 @@ PetscErrorCode MatDestroy_SeqAIJCUDA(Mat A)
     mat = spptr->cudaMat;
     spptr->cudaMat = NULL;
   }
-  
+
   if (mat->i) CUDA_SAFE_CALL(cudaFree(mat->i));
   if (mat->ilen) CUDA_SAFE_CALL(cudaFree(mat->ilen));
   if (mat->j) CUDA_SAFE_CALL(cudaFree(mat->j));
@@ -231,7 +231,7 @@ PetscErrorCode MatDestroy_SeqAIJCUDA(Mat A)
   if (mat->imax) CUDA_SAFE_CALL(cudaFree(mat->imax));
 
   CUDA_SAFE_CALL(cudaFree(mat));
-  
+
   ierr = MatDestroy_MatMatCusparse(A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -335,19 +335,15 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUDA(Mat A, MatType mtype, M
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat->a,               (nnz)*sizeof(PetscScalar))); // kernel output
   CUDA_SAFE_CALL(cudaMemcpy(          d_mat->a,    jaca->a,   (nnz)*sizeof(PetscScalar), cudaMemcpyHostToDevice));
   ierr = PetscInfo7(A,"MatConvert_SeqAIJ_SeqAIJCUDA: n=%D rmax=%D  ignorezeroentries=%D nonew=%D nonzerostate=%D offloadmask=%D nonzerorowcnt=%D\n",h_mat.n, h_mat.rmax, h_mat.ignorezeroentries, h_mat.nonew, h_mat.nonzerostate, h_mat.offloadmask,jaca->nonzerorowcnt);CHKERRQ(ierr);
-
-  // we could free the host data ... maybe this does that if the matrix is empty, which it should be ...
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  
+ 
   B->ops->assemblyend    = MatAssemblyEnd_SeqAIJCUDA;
   B->ops->destroy        = MatDestroy_SeqAIJCUDA;
   B->ops->duplicate      = MatDuplicate_SeqAIJCUDA;
   B->ops->setvalues      = NULL; // we don't want to mix
   B->ops->zeroentries    = MatZeroEntries_SeqAIJCUDA;
 
-  A->offloadmask = PETSC_OFFLOAD_GPU; // 
-  
+  A->offloadmask = PETSC_OFFLOAD_GPU; //
+
   ierr = PetscInfo(A,"MatConvert_SeqAIJ_SeqAIJCUDA: Converted to CUDA matrix (ready to go)\n");CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)B,MATSEQAIJCUDA);CHKERRQ(ierr);
   PetscFunctionReturn(0);
