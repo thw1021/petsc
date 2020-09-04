@@ -1,0 +1,7 @@
+solver type: arkimex
+IFunction:   1
+IJacobian:   1
+RHSFunction: 1
+RHSJacobian: 1
+relative error at tf = 1.000000 from 224 steps:  |u-u_exact|/|u_exact| =  8.400e-02
+WARNING: relative error unusually large ... bad options for ODE form?

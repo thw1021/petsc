@@ -1,0 +1,6 @@
+solver type: bdf
+IFunction:   1
+IJacobian:   1
+RHSFunction: 1
+RHSJacobian: 1
+relative error at tf = 1.000000 from 54 steps:  |u-u_exact|/|u_exact| =  3.319e-06

@@ -1,0 +1,6 @@
+solver type: rosw
+IFunction:   1
+IJacobian:   1
+RHSFunction: 1
+RHSJacobian: 0
+relative error at tf = 1.000000 from 41 steps:  |u-u_exact|/|u_exact| =  4.470e-04
