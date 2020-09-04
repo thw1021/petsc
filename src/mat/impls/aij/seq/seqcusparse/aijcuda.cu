@@ -67,7 +67,6 @@ __device__ void MatSetValues_SeqAIJCUDA_device(Mat_SeqAIJCUDA_GPUData *a, PetscI
   PetscBool      ignorezeroentries = (PetscBool)a->ignorezeroentries;
   PetscBool      inserted          = PETSC_FALSE;
 
-  PetscFunctionBegin;
   for (k=0; k<m; k++) { /* loop over added rows */
     row = im[k];
     if (row < 0) continue;
@@ -236,6 +235,47 @@ PetscErrorCode MatDestroy_SeqAIJCUDA(Mat A)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode MatConvert_SeqAIJCUDA_private(Mat A)
+{
+  PetscErrorCode          ierr;
+  Mat_SeqAIJ              *jaca = (Mat_SeqAIJ*)A->data;
+  Mat_SeqAIJCUDA_GPUData  h_mat, *d_mat;
+  PetscInt                N =  A->rmap->n, nnz = jaca->i[N];
+
+  PetscFunctionBegin;
+  CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat,  sizeof(Mat_SeqAIJCUDA_GPUData)));
+  if (A->factortype == MAT_FACTOR_NONE) {
+    Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
+    spptr->cudaMat = d_mat;
+  } else {
+    Mat_SeqAIJCUSPARSETriFactors *spptr = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
+    spptr->cudaMat = d_mat;
+  }
+  h_mat.n = N;
+  h_mat.nnz = 0;
+  h_mat.ignorezeroentries = jaca->ignorezeroentries;
+  h_mat.nonew =jaca->nonew;
+  h_mat.nonzerostate =A->nonzerostate;
+  h_mat.offloadmask = A->offloadmask;
+  h_mat.nonzerorowcnt =jaca->nonzerorowcnt;
+  h_mat.rmax = jaca->rmax;
+  // copy data
+  CUDA_SAFE_CALL(cudaMalloc((void **)&h_mat.i,               (N+1)*sizeof(PetscInt))); // kernel input
+  CUDA_SAFE_CALL(cudaMemcpy(          h_mat.i,    jaca->i,   (N+1)*sizeof(PetscInt), cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMalloc((void **)&h_mat.ilen,            (N)*sizeof(PetscInt))); // kernel input
+  CUDA_SAFE_CALL(cudaMemcpy(          h_mat.ilen, jaca->ilen,(N)*sizeof(PetscInt), cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMalloc((void **)&h_mat.imax,            (N)*sizeof(PetscInt))); // kernel input
+  CUDA_SAFE_CALL(cudaMemcpy(          h_mat.imax, jaca->imax,(N)*sizeof(PetscInt), cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMalloc((void **)&h_mat.j,               (nnz)*sizeof(PetscInt))); // kernel input
+  CUDA_SAFE_CALL(cudaMemcpy(          h_mat.j,    jaca->j,   (nnz)*sizeof(PetscInt), cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMalloc((void **)&h_mat.a,               (nnz)*sizeof(PetscScalar))); // kernel output
+  CUDA_SAFE_CALL(cudaMemcpy(          h_mat.a,    jaca->a,   (nnz)*sizeof(PetscScalar), cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMemcpy(          d_mat, &h_mat, sizeof(Mat_SeqAIJCUDA_GPUData), cudaMemcpyHostToDevice));
+  ierr = PetscInfo7(A,"PetscErrorCodeMatConvert_SeqAIJCUDA_private: n=%D rmax=%D  ignorezeroentries=%D nonew=%D nonzerostate=%D nonzerorowcnt=%D nnz=%D\n",h_mat.n, h_mat.rmax, h_mat.ignorezeroentries, h_mat.nonew, h_mat.nonzerostate,jaca->nonzerorowcnt,nnz);CHKERRQ(ierr);
+
+  PetscFunctionReturn(0);
+}
+
 /* --------------------------------------------------------------------------------*/
 /*@
    MatCreateSeqAIJCUDA - Creates a sparse matrix in AIJ (compressed row) format
@@ -272,21 +312,20 @@ PetscErrorCode  MatCreateSeqAIJCUDA(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt
   ierr = MatSetSizes(*A,m,n,m,n);CHKERRQ(ierr);
   ierr = MatSetType(*A,MATSEQAIJCUDA);CHKERRQ(ierr);
   ierr = MatSeqAIJSetPreallocation_SeqAIJ(*A,nz,(PetscInt*)nnz);CHKERRQ(ierr);
+  ierr = MatConvert_SeqAIJCUDA_private(*A);CHKERRQ(ierr);
   ierr = PetscInfo2(*A,"MatCreateSeqAIJCUDA: %D X %D CUDA matrix created\n",m,n);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PETSC_EXTERN PetscErrorCode MatDuplicate_SeqAIJCUDA(Mat A,MatDuplicateOption cpvalues,Mat *B);
-__device__ void (*p_setvalues)(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode) = MatSetValues_SeqAIJCUDA_device;
+__device__ void (*MatSetValues_SeqAIJCUDA_static)(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode) = MatSetValues_SeqAIJCUDA_device;
 // constructor
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUDA(Mat A, MatType mtype, MatReuse reuse, Mat* newmat)
 {
   PetscErrorCode          ierr;
-  Mat_SeqAIJ              *jaca = (Mat_SeqAIJ*)A->data;
+
   Mat                     B;
   PetscBool               flgcusparse, flgaij;
-  Mat_SeqAIJCUDA_GPUData  h_mat, *d_mat;
-  PetscInt                N =  A->rmap->n, nnz = jaca->i[N];
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidPointer(newmat,4);
@@ -296,8 +335,9 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUDA(Mat A, MatType mtype, M
     ierr = MatConvert_SeqAIJ_SeqAIJCUSPARSE(*newmat,MATSEQAIJCUSPARSE,MAT_INPLACE_MATRIX,newmat);CHKERRQ(ierr);
   } else if (reuse == MAT_REUSE_MATRIX) {
     ierr = MatCopy(A,*newmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr); // AIJ
-  }
+  } else newmat = &A;
   B = *newmat;
+
   ierr = PetscObjectTypeCompare(((PetscObject)B),MATSEQAIJCUSPARSE,&flgcusparse);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare(((PetscObject)B),MATSEQAIJ,&flgaij);CHKERRQ(ierr);
   if (!flgcusparse && !flgaij) SETERRQ1(PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Not for type %s",((PetscObject)B)->type_name);
@@ -306,36 +346,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUDA(Mat A, MatType mtype, M
     ierr = MatConvert_SeqAIJ_SeqAIJCUSPARSE(B,MATSEQAIJCUSPARSE,MAT_INPLACE_MATRIX,&B);CHKERRQ(ierr);
   }
   *newmat = B;
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat,  sizeof(Mat_SeqAIJCUDA_GPUData)));
-  if (B->factortype == MAT_FACTOR_NONE) {
-    Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
-    spptr->cudaMat = d_mat;
-  } else {
-    Mat_SeqAIJCUSPARSETriFactors *spptr = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
-    spptr->cudaMat = d_mat;
-  }
-  h_mat.n = A->rmap->n;
-  h_mat.nnz = 0;
-  h_mat.ignorezeroentries = jaca->ignorezeroentries;
-  h_mat.nonew =jaca->nonew;
-  h_mat.nonzerostate =A->nonzerostate;
-  h_mat.offloadmask = A->offloadmask;
-  h_mat.nonzerorowcnt =jaca->nonzerorowcnt;
-  h_mat.rmax = jaca->rmax;
-  CUDA_SAFE_CALL(cudaMemcpy( &h_mat, &d_mat, sizeof(Mat_SeqAIJCUDA_GPUData), cudaMemcpyHostToDevice));
-  // copy data
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat->i,               (N+1)*sizeof(PetscInt))); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(          d_mat->i,    jaca->i,   (N+1)*sizeof(PetscInt), cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat->ilen,            (N)*sizeof(PetscInt))); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(          d_mat->ilen, jaca->ilen,(N)*sizeof(PetscInt), cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat->imax,            (N)*sizeof(PetscInt))); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(          d_mat->imax, jaca->imax,(N)*sizeof(PetscInt), cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat->j,               (nnz)*sizeof(PetscInt))); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(          d_mat->j,    jaca->j,   (nnz)*sizeof(PetscInt), cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat->a,               (nnz)*sizeof(PetscScalar))); // kernel output
-  CUDA_SAFE_CALL(cudaMemcpy(          d_mat->a,    jaca->a,   (nnz)*sizeof(PetscScalar), cudaMemcpyHostToDevice));
-  ierr = PetscInfo7(A,"MatConvert_SeqAIJ_SeqAIJCUDA: n=%D rmax=%D  ignorezeroentries=%D nonew=%D nonzerostate=%D offloadmask=%D nonzerorowcnt=%D\n",h_mat.n, h_mat.rmax, h_mat.ignorezeroentries, h_mat.nonew, h_mat.nonzerostate, h_mat.offloadmask,jaca->nonzerorowcnt);CHKERRQ(ierr);
- 
+
   B->ops->assemblyend    = MatAssemblyEnd_SeqAIJCUDA;
   B->ops->destroy        = MatDestroy_SeqAIJCUDA;
   B->ops->duplicate      = MatDuplicate_SeqAIJCUDA;
@@ -365,8 +376,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJCUDA(Mat B)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
-  ierr = MatCreate_SeqAIJ(B);CHKERRQ(ierr);
+  ierr = MatCreate_SeqAIJCUSPARSE(B);CHKERRQ(ierr);
   ierr = MatConvert_SeqAIJ_SeqAIJCUDA(B,MATSEQAIJCUDA,MAT_INPLACE_MATRIX,&B);CHKERRQ(ierr);
   ierr = PetscInfo(B,"MatCreate_SeqAIJCUDA called\n");CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -376,6 +386,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJCUDA(Mat B)
 {
   PetscFunctionBegin;
   SETERRQ(PetscObjectComm((PetscObject)B),PETSC_ERR_SUP,"MatCreate_MPIAIJCUDA not supported");
-  PetscFunctionReturn(0);
+  //PetscFunctionReturn(0);
 }
 
