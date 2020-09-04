@@ -910,10 +910,8 @@ PetscErrorCode VecCopy_SeqCUDA(Vec xin,Vec yin)
       ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
       if (yiscuda) {
         ierr = VecCUDARestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
-        yin->offloadmask = PETSC_OFFLOAD_GPU;
       } else {
         ierr = VecRestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
-        yin->offloadmask = PETSC_OFFLOAD_CPU;
       }
     } else if (xin->offloadmask == PETSC_OFFLOAD_CPU) {
       /* copy in CPU if we are on the CPU */
@@ -932,7 +930,6 @@ PetscErrorCode VecCopy_SeqCUDA(Vec xin,Vec yin)
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
-        yin->offloadmask = PETSC_OFFLOAD_GPU;
       } else if (yin->offloadmask == PETSC_OFFLOAD_BOTH) {
         /* xin and yin are both valid in both places (or yin was unallocated before the earlier call to allocatecheck
            default to copy in GPU (this is an arbitrary choice) */
@@ -943,7 +940,6 @@ PetscErrorCode VecCopy_SeqCUDA(Vec xin,Vec yin)
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
-        yin->offloadmask = PETSC_OFFLOAD_GPU;
       } else {
         ierr = VecCopy_SeqCUDA_Private(xin,yin);CHKERRQ(ierr);
       }
