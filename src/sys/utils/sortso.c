@@ -1098,7 +1098,7 @@ PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *
 }
 
 /*@
-   PetscSortInt - Sorts an array of integers in place in increasing order.
+   PetscIntSortSemiOrdered - Sorts an array of integers in place in increasing order.
 
    Not Collective
 
@@ -1120,14 +1120,14 @@ PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *
 
 .seealso: PetscTimSort(), PetscSortInt(), PetscSortIntWithPermutation()
 @*/
-PetscErrorCode PetscSortInt(PetscInt n, PetscInt arr[])
+PetscErrorCode PetscIntSortSemiOrdered(PetscInt n, PetscInt arr[])
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
   if (n <= 1) PetscFunctionReturn(0);
   PetscValidIntPointer(arr,2);
   if (n < 64) {
-    ierr = PetscIntSortSemiOrdered(n, arr);CHKERRQ(ierr);
+    ierr = PetscSortInt(n, arr);CHKERRQ(ierr);
   } else {
     ierr = PetscTimSort(n, arr, sizeof(PetscInt), Compare_PetscInt_Private);CHKERRQ(ierr);
   }
@@ -1247,9 +1247,9 @@ PetscErrorCode PetscMPIIntSortSemiOrderedWithArray(PetscInt n, PetscMPIInt arr1[
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
+  if (n <= 1) PetscFunctionReturn(0);
   PetscValidIntPointer(arr1,2);
   PetscValidIntPointer(arr2,3);
-  if (n == 1) PetscFunctionReturn(0);
   if (n < 64) {
     ierr = PetscSortMPIIntWithArray(n, arr1, arr2);CHKERRQ(ierr);
   } else {
@@ -1286,12 +1286,12 @@ PetscErrorCode PetscRealSortSemiOrdered(PetscInt n, PetscReal arr[])
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  PetscValidIntPointer(arr,2);
-  if (n == 1) PetscFunctionReturn(0);
+  if (n <= 1) PetscFunctionReturn(0);
+  PetscValidRealPointer(arr,2);
   if (n < 64) {
     ierr = PetscSortReal(n, arr);CHKERRQ(ierr);
   } else {
-    ierr = PetscTimSort(n, arr, sizeof(PetscInt), Compare_PetscReal_Private);CHKERRQ(ierr);
+    ierr = PetscTimSort(n, arr, sizeof(PetscReal), Compare_PetscReal_Private);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1326,9 +1326,9 @@ PetscErrorCode PetscRealSortSemiOrderedWithArrayInt(PetscInt n, PetscReal arr1[]
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
+  if (n <= 1) PetscFunctionReturn(0);
   PetscValidRealPointer(arr1,2);
   PetscValidIntPointer(arr2,3);
-  if (n == 1) PetscFunctionReturn(0);
   if (n < 64) {
     ierr = PetscSortRealWithArrayInt(n, arr1, arr2);CHKERRQ(ierr);
   } else {
