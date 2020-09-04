@@ -1,5 +1,6 @@
 static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n";
 
+#include <petscmat.h>
 #include <../../src/mat/impls/aij/seq/seqcusparse/cusparsematimpl.h>
 
 // Macro to catch CUDA errors in kernel launches
@@ -21,30 +22,32 @@ do {                                                                  \
     }                                                                 \
 } while (0)
 
+__device__ void (*MatSetValues_SeqAIJCUDA_static)(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
+
 __global__
 void assemble(PetscInt  n, Mat_SeqAIJCUDA_GPUData *cuda_mat)
 {
   const PetscInt  Nq = blockDim.x, myelem = blockIdx.x;
   PetscInt        i;
   PetscScalar     values[] = {-1,2,-1};
-
+  printf("in assemble!!!!! %d %d\n",Nq,myelem);
   for (i=0; i<n; i++) {
     if (i==0) {
       PetscInt js[] = {0, 1};
-      MatSetValues_SeqAIJCUDA_device(cuda_mat,(PetscInt)1,&i,(PetscInt)2,js,&values[1],INSERT_VALUES);
+      MatSetValues_SeqAIJCUDA_static(cuda_mat,(PetscInt)1,&i,(PetscInt)2,js,&values[1],INSERT_VALUES);
     } else if (i==n-1) {
       PetscInt js[] = {n-2, n-1};
-      MatSetValues_SeqAIJCUDA_device(cuda_mat,(PetscInt)1,&i,(PetscInt)2,js,values,INSERT_VALUES);
+      MatSetValues_SeqAIJCUDA_static(cuda_mat,(PetscInt)1,&i,(PetscInt)2,js,values,INSERT_VALUES);
     } else {
       PetscInt js[] = {i-1, i, i+1};
-      MatSetValues_SeqAIJCUDA_device(cuda_mat,(PetscInt)1,&i,(PetscInt)3,js,values,INSERT_VALUES);
+      MatSetValues_SeqAIJCUDA_static(cuda_mat,(PetscInt)1,&i,(PetscInt)3,js,values,INSERT_VALUES);
     }
   }
 }
 
 int main(int argc,char **args)
 {
-  PetscErrorCode         ierr;  
+  PetscErrorCode         ierr;
   Mat                    A;
   PetscInt               n=2, nz=2;
   Mat_SeqAIJCUDA_GPUData *cuda_mat;
@@ -54,7 +57,7 @@ int main(int argc,char **args)
   ierr = PetscOptionsGetInt(NULL,NULL, "-n", &n, NULL);CHKERRQ(ierr);
   if (nz>n) nz=n;
   ierr = MatCreateSeqAIJCUDA(PETSC_COMM_SELF,n,n,nz,NULL,&A);CHKERRQ(ierr);
-  ierr = MatCUSPARSEGetCudaData(A,&cuda_mat);CHKERRQ(ierr);
+  ierr = MatCUSPARSEGetCudaData(A,(void**)&cuda_mat);CHKERRQ(ierr);
 
   assemble<<<1,1>>>(n,cuda_mat);CHECK_LAUNCH_ERROR();
 
