@@ -328,7 +328,6 @@ PetscErrorCode  VecCreateSeqCUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,c
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create VECSEQ on more than one process");
   ierr = VecCreate_SeqCUDA_Private(*V,array);CHKERRQ(ierr);
-  (*V)->offloadmask = PETSC_OFFLOAD_GPU;
   PetscFunctionReturn(0);
 }
 
@@ -447,7 +446,6 @@ PetscErrorCode VecCreate_SeqCUDA_Private(Vec V,const PetscScalar *array)
       veccuda = (Vec_CUDA*)V->spptr;
       veccuda->stream = 0; /* using default stream */
       veccuda->GPUarray_allocated = 0;
-      V->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
 
       pinned_memory_min = 0;
       /* Need to parse command line for minimum size to use for pinned memory allocations on host here.
@@ -459,6 +457,7 @@ PetscErrorCode VecCreate_SeqCUDA_Private(Vec V,const PetscScalar *array)
     }
     veccuda = (Vec_CUDA*)V->spptr;
     veccuda->GPUarray = (PetscScalar*)array;
+    V->offloadmask = PETSC_OFFLOAD_GPU;
   }
   PetscFunctionReturn(0);
 }
