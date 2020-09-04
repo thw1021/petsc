@@ -167,6 +167,8 @@ PETSC_INTERN PetscErrorCode MatCUSPARSECopyToGPU(Mat);
 PETSC_INTERN PetscErrorCode MatCUSPARSESetStream(Mat, const cudaStream_t stream);
 PETSC_INTERN PetscErrorCode MatCUSPARSESetHandle(Mat, const cusparseHandle_t handle);
 PETSC_INTERN PetscErrorCode MatCUSPARSEClearHandle(Mat);
+
+
 PETSC_EXTERN __device__ void MatSetValues_SeqAIJCUDA_device(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 
 #endif
