@@ -475,7 +475,7 @@ static PetscErrorCode MatAssemblyEnd_SeqBAIJMKL(Mat A, MatAssemblyType mode)
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
    MatCreateSeqBAIJMKL - Creates a sparse matrix of type SEQBAIJMKL.
    This type inherits from BAIJ and is largely identical, but uses sparse BLAS
    routines from Intel MKL whenever possible.
