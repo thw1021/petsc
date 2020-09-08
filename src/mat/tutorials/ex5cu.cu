@@ -27,7 +27,7 @@ int main(int argc,char **args)
 {
   PetscErrorCode         ierr;
   Mat                    A;
-  PetscInt               n=2, nz=2;
+  PetscInt               n=2, nz=3;
   Mat_SeqAIJCUDA_GPUData *d_mat;
   PetscLogEvent          event;
   Vec                    x,y;
@@ -41,13 +41,10 @@ int main(int argc,char **args)
     nz=n;
   }
   ierr = PetscLogEventRegister("GPU operator", MAT_CLASSID, &event);CHKERRQ(ierr);
-  ierr = MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,nz,NULL,0,NULL,&A);CHKERRQ(ierr);
-  // ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  // ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n);CHKERRQ(ierr);
-  ierr = MatSetType(A,MATAIJCUSPARSE);CHKERRQ(ierr);
+  ierr = MatCreateAIJCUSPARSE(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,nz,NULL,0,NULL,&A);CHKERRQ(ierr);
   ierr = MatCUSPARSECreateCudaMat(A);CHKERRQ(ierr);
-  //ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-  ierr = MatSetUp(A);CHKERRQ(ierr);
+  // ierr = MatSetFromOptions(A);CHKERRQ(ierr);
+  // ierr = MatSetUp(A);CHKERRQ(ierr); 
 
   ierr = MatCUSPARSEGetCudaMat(A,(void**)&d_mat);CHKERRQ(ierr);
 

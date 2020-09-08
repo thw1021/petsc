@@ -1,6 +1,5 @@
-[0] MatSetUp(): Warning not preallocating matrix storage
-[0] MatSetUp_SeqAIJCUSPARSE(): MatSetUp_SeqAIJCUSPARSE: create Cuda Mat n=11 rmax=0 nonzerorowcnt=0 nnz=55
-[0] MatAssemblyEnd_SeqAIJ(): Matrix size: 11 X 11; storage space: 24 unneeded,31 used
+[0] MatCUSPARSECreateCudaMat(): MatCUSPARSECreateCudaMat: create Cuda Mat n=11 rmax=0 nonzerorowcnt=0 nnz=33
+[0] MatAssemblyEnd_SeqAIJ(): Matrix size: 11 X 11; storage space: 2 unneeded,31 used
 [0] MatAssemblyEnd_SeqAIJ(): Number of mallocs during MatSetValues() is 0
 [0] MatAssemblyEnd_SeqAIJ(): Maximum nonzeros in any row is 3
 [0] MatCheckCompressedRow(): Found the ratio (num_zerorows 0)/(num_localrows 11) < 0.6. Do not use CompressedRow routines.
