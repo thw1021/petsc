@@ -163,7 +163,6 @@ struct Mat_SeqAIJCUDA_GPUData {
   PetscInt    ignorezeroentries;
   PetscInt    nonew;
   PetscInt    nonzerostate;
-  PetscInt    offloadmask;
   PetscInt    nonzerorowcnt;
   PetscInt    rmax;
   //void        (*setvalues)(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
