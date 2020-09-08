@@ -55,8 +55,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISELL(Mat);
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJCUSPARSE(Mat);
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJCUSPARSE(Mat);
-PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJCUDA(Mat);
-PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJCUDA(Mat);
 #endif
 
 #if defined(PETSC_HAVE_VIENNACL)
@@ -176,9 +174,6 @@ PetscErrorCode  MatRegisterAll(void)
   ierr = MatRegisterRootName(MATAIJCUSPARSE,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE);CHKERRQ(ierr);
   ierr = MatRegister(MATSEQAIJCUSPARSE, MatCreate_SeqAIJCUSPARSE);CHKERRQ(ierr);
   ierr = MatRegister(MATMPIAIJCUSPARSE, MatCreate_MPIAIJCUSPARSE);CHKERRQ(ierr);
-  ierr = MatRegisterRootName(MATAIJCUDA,MATSEQAIJCUDA,MATMPIAIJCUDA);CHKERRQ(ierr);
-  ierr = MatRegister(MATSEQAIJCUDA, MatCreate_SeqAIJCUDA);CHKERRQ(ierr);
-  ierr = MatRegister(MATMPIAIJCUDA, MatCreate_MPIAIJCUDA);CHKERRQ(ierr);
 #endif
 
 #if defined(PETSC_HAVE_VIENNACL)
