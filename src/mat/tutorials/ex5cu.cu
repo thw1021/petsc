@@ -75,7 +75,7 @@ int main(int argc,char **args)
       requires: cuda
 
    testset:
-      args: -n 11 -mat_type aijcusparse -mat_view -vec_view -info :mat
+      args: -n 11 -mat_view -vec_view -info :mat
       output_file: output/ex5cu_1.out
       test:
         suffix: 1
