@@ -1045,7 +1045,7 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
 
   A detailed description of the algorithm may be found here: https://bugs.python.org/file4451/timsort.txt
 
-  Level: intermediate
+  Level: developer
 
 .seealso: PetscTimSort(), PetscIntSortSemiOrderedWithArray(), PetscRealSortSemiOrderedWithArrayInt(), PetscMPIIntSortSemiOrderedWithArray()
 */
