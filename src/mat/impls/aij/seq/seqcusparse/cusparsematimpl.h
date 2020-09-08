@@ -171,8 +171,8 @@ PETSC_INTERN PetscErrorCode MatCUSPARSEClearHandle(Mat);
 static __device__
 void PetscMemmove_device(void *a, void *b, size_t n)
 {
-  if (n > 0 && !a) printf("Trying to copy to null pointer");
-  if (n > 0 && !b) printf("Trying to copy from a null pointer");
+  if (n > 0 && !a) printf("Trying to copy to null pointer\n");
+  if (n > 0 && !b) printf("Trying to copy from a null pointer\n");
   if (a < b) {
     if ((char*)a <= ((char*)b - n)) memcpy(a,b,n);
     else {
@@ -200,7 +200,7 @@ void MatSetValues_SeqAIJCUSPARSE_device(Mat_SeqAIJCUDA_GPUData *a, PetscInt m,co
   for (k=0; k<m; k++) { /* loop over added rows */
     row = im[k];
     if (row < 0) continue;
-    if (row >= a->n) printf("MatSetValues_SeqAIJCUDA_device: row >= a->n");
+    if (row >= a->n) printf("MatSetValues_SeqAIJCUDA_device: row %d >= a->n %d\n",row,a->n);
     rp   = aj + ai[row];
     ap = aa + ai[row];
     rmax = imax[row]; nrow = ailen[row];
@@ -208,7 +208,7 @@ void MatSetValues_SeqAIJCUSPARSE_device(Mat_SeqAIJCUDA_GPUData *a, PetscInt m,co
     high = nrow;
     for (l=0; l<n; l++) { /* loop over added columns */
       if (in[l] < 0) continue;
-      if (in[l] >= a->n) printf("MatSetValues_SeqAIJCUDA_device: in[%d]=%d >= a->n (square serial)",l,in[l]);
+      if (in[l] >= a->n) printf("MatSetValues_SeqAIJCUDA_device: in[%d]=%d >= a->n %d (square serial)\n",(int)l,(int)in[l],(int)a->n);
       col = in[l];
       //if (v) value = roworiented ? v[l + k*n] : v[k + l*m];
       if (v) value = v[l + k*n];
@@ -224,19 +224,19 @@ void MatSetValues_SeqAIJCUSPARSE_device(Mat_SeqAIJCUDA_GPUData *a, PetscInt m,co
       for (i=low; i<high; i++) {
         if (rp[i] > col) break;
         if (rp[i] == col) {
-	  if (v) {
-	    if (is == ADD_VALUES) {
-	      ap[i] += value;
-	    }
-	    else ap[i] = value;
-	  }
-	  low = i + 1;
+          if (v) {
+            if (is == ADD_VALUES) {
+              ap[i] += value;
+            }
+            else ap[i] = value;
+          }
+          low = i + 1;
           goto noinsert;
         }
       }
       if (value == 0.0 && ignorezeroentries && row != col) goto noinsert;
       if (nonew == 1) goto noinsert;
-      if (nonew == -1) printf("MatSetValues_SeqAIJCUDA_device: Inserting a new nonzero at (%d,%d) in the matrix",row,col);
+      if (nonew == -1) printf("MatSetValues_SeqAIJCUDA_device: Inserting a new nonzero at (%d,%d) in the matrix\n",(int)row,(int)col);
       if (nrow >= rmax) printf("ERROR, ran out of preallocated space in row %d\n",(int)row);
       N = nrow++ - 1; a->nz++; high++;
       /* shift up all the later entries in this row */
