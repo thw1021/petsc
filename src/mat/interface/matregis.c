@@ -1,5 +1,6 @@
 
 #include <petsc/private/matimpl.h>  /*I "petscmat.h" I*/
+#include <petscpkg_version.h>
 
 PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat);
 PETSC_EXTERN PetscErrorCode MatCreate_MAIJ(Mat);
@@ -170,7 +171,7 @@ PetscErrorCode  MatRegisterAll(void)
   ierr = MatRegister(MATMPISELL,         MatCreate_MPISELL);CHKERRQ(ierr);
   ierr = MatRegister(MATSEQSELL,         MatCreate_SeqSELL);CHKERRQ(ierr);
 
-#if defined(PETSC_HAVE_CUDA)
+#if defined(PETSC_HAVE_CUDA) && PETSC_PKG_CUDA_VERSION_LT(11,0,0)
   ierr = MatRegisterRootName(MATAIJCUSPARSE,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE);CHKERRQ(ierr);
   ierr = MatRegister(MATSEQAIJCUSPARSE, MatCreate_SeqAIJCUSPARSE);CHKERRQ(ierr);
   ierr = MatRegister(MATMPIAIJCUSPARSE, MatCreate_MPIAIJCUSPARSE);CHKERRQ(ierr);
