@@ -38,74 +38,14 @@ do {                                                                  \
     }                                                                 \
 } while (0)
 
-static __device__ 
-void PetscMemmove_cuda(void *a, void *b, size_t n)
-{
-  if (n > 0 && !a) printf("Trying to copy to null pointer");
-  if (n > 0 && !b) printf("Trying to copy from a null pointer");
-  if (a < b) {
-    if ((char*)a <= ((char*)b - n)) memcpy(a,b,n);
-    else {
-      memcpy(a, b, (int)((char*)b - (char*)a));
-      PetscMemmove_cuda(b,(char*)b + (int)((char*)b - (char*)a),n - (int)((char*)b - (char*)a));
-    }
-  } else {
-    if (b <= ((char*)a - n)) memcpy(a,b,n);
-    else {
-      memcpy((char*)b + n,(char*)b + (n - (int)((char*)a - (char*)b)),(int)((char*)a - (char*)b));
-      PetscMemmove_cuda(a,b,n - (int)((char*)a - (char*)b));
-    }
-  }
-}
-
-// serial now
-static __global__
-void MatAssemblyEnd_SeqAIJCUDA_cuda(Mat_SeqAIJCUDA_GPUData *a)
-{
-  PetscInt       fshift = 0,i,*ai = a->i,*aj = a->j,*imax = a->imax;
-  PetscInt       m = a->n,*ip,N,*ailen = a->ilen,rmax = 0;
-  PetscScalar    *aa    = a->a,*ap;
-
-  if (m) rmax = ailen[0]; /* determine row with most nonzeros */
-  for (i=1; i<m; i++) {
-    /* move each row back by the amount of empty slots (fshift) before it*/
-    fshift += imax[i-1] - ailen[i-1];
-    rmax    = PetscMax(rmax,ailen[i]);
-    if (fshift) {
-      ip = aj + ai[i];
-      ap = aa + ai[i];
-      N  = ailen[i];
-      //ierr = PetscArraymove(ip-fshift,ip,N);CHKERRQ(ierr);
-      PetscMemmove_cuda(ip-fshift,ip,N*sizeof(PetscInt));
-      //ierr = PetscArraymove(ap-fshift,ap,N);CHKERRQ(ierr);
-      PetscMemmove_cuda(ap-fshift,ap,N*sizeof(PetscScalar));
-    }
-    ai[i] = ai[i-1] + ailen[i-1];
-  }
-  if (m) {
-    fshift += imax[m-1] - ailen[m-1];
-    ai[m]   = ai[m-1] + ailen[m-1];
-  }
-  /* reset ilen and imax for each row */
-  a->nonzerorowcnt = 0;
-  for (i=0; i<m; i++) {
-    ailen[i] = imax[i] = ai[i+1] - ai[i];
-    a->nonzerorowcnt += ((ai[i+1] - ai[i]) > 0);
-  }
-  a->nz   = ai[m];
-  a->rmax = rmax;
-}
-
 static PetscErrorCode MatAssemblyEnd_SeqAIJCUDA(Mat A, MatAssemblyType mode)
 {
   Mat_SeqAIJCUDA_GPUData *d_mat, h_mat;
   Mat_SeqAIJ             *a = (Mat_SeqAIJ*)A->data;
   PetscInt                n = A->rmap->n, nnz = a->i[n]; 
+  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
-  if (mode == MAT_FLUSH_ASSEMBLY) PetscFunctionReturn(0); // ???
-  // if (A->was_assembled && A->ass_nonzerostate == A->nonzerostate) PetscFunctionReturn(0); // ???
-
   if (A->factortype == MAT_FACTOR_NONE) {
     Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
     d_mat = spptr->cudaMat;
@@ -113,23 +53,23 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUDA(Mat A, MatAssemblyType mode)
     Mat_SeqAIJCUSPARSETriFactors *spptr = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
     d_mat = spptr->cudaMat;
   }
-
-  MatAssemblyEnd_SeqAIJCUDA_cuda<<<1,1>>>(d_mat); // serial
-  CUDA_SAFE_CALL (cudaDeviceSynchronize());
-  
   // copy back to CPU (move someplace else later)
   CUDA_SAFE_CALL(cudaMemcpy( &h_mat, d_mat, sizeof(Mat_SeqAIJCUDA_GPUData), cudaMemcpyDeviceToHost));
-  a->rmax         = h_mat.rmax;
-  a->nz           = h_mat.nz;
-  A->nonzerostate = h_mat.nonzerostate;
-
+  a->nz            = h_mat.nz;
+  A->nonzerostate  = h_mat.nonzerostate;
+  a->nonzerorowcnt = h_mat.nonzerorowcnt;
+  a->rmax          = h_mat.rmax;  
   CUDA_SAFE_CALL(cudaMemcpy( a->i,    h_mat.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost));
-
   nnz = a->i[n];
   CUDA_SAFE_CALL(cudaMemcpy( a->ilen, h_mat.ilen, (n)*sizeof(PetscInt),     cudaMemcpyDeviceToHost));
   CUDA_SAFE_CALL(cudaMemcpy( a->imax, h_mat.imax, (n)*sizeof(PetscInt),     cudaMemcpyDeviceToHost));
   CUDA_SAFE_CALL(cudaMemcpy( a->j,    h_mat.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost));
   CUDA_SAFE_CALL(cudaMemcpy( a->a,    h_mat.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost));
+
+  A->offloadmask = PETSC_OFFLOAD_CPU; // MatCUSPARSE can now copy to its GPU data structure
+
+  ierr = MatAssemblyEnd_SeqAIJCUSPARSE( A, mode);CHKERRQ(ierr);
+
   PetscFunctionReturn(0);
 }
 
@@ -193,15 +133,14 @@ PetscErrorCode MatDestroy_SeqAIJCUDA(Mat A)
   PetscFunctionReturn(0);
 }
 
-// core constructor
-static PetscErrorCode CreateGPUMat_SeqAIJCUDA_private(Mat A)
+PetscErrorCode MatSetUp_SeqAIJCUDA(Mat A)
 {
   PetscErrorCode          ierr;
-  Mat_SeqAIJ              *jaca = (Mat_SeqAIJ*)A->data;
-  Mat_SeqAIJCUDA_GPUData  h_mat, *d_mat, **p_d_mat;
-  PetscInt                N =  A->rmap->n, nnz = jaca->i[N];
+  Mat_SeqAIJCUDA_GPUData  **p_d_mat;
 
   PetscFunctionBegin;
+  ierr = MatSetUp_SeqAIJ(A);CHKERRQ(ierr);
+  // create GPU Mat
   if (A->factortype == MAT_FACTOR_NONE) {
     Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
     p_d_mat = &spptr->cudaMat;
@@ -210,14 +149,15 @@ static PetscErrorCode CreateGPUMat_SeqAIJCUDA_private(Mat A)
     p_d_mat = &spptr->cudaMat;
   }
   if (!*p_d_mat) {
-    CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat,  sizeof(Mat_SeqAIJCUDA_GPUData)));
-    *p_d_mat = d_mat;
+    // create and copy
+    Mat_SeqAIJCUDA_GPUData  h_mat, *d_mat;
+    Mat_SeqAIJ              *jaca = (Mat_SeqAIJ*)A->data;
+    PetscInt                N =  A->rmap->n, nnz = jaca->i[N];
     h_mat.n = N;
     h_mat.nz = 0;
     h_mat.ignorezeroentries = jaca->ignorezeroentries;
     h_mat.nonew =jaca->nonew;
     h_mat.nonzerostate =A->nonzerostate;
-    h_mat.offloadmask = A->offloadmask;
     h_mat.nonzerorowcnt =jaca->nonzerorowcnt;
     h_mat.rmax = jaca->rmax;
     // copy data
@@ -231,19 +171,13 @@ static PetscErrorCode CreateGPUMat_SeqAIJCUDA_private(Mat A)
     CUDA_SAFE_CALL(cudaMemcpy(          h_mat.j,    jaca->j,   (nnz)*sizeof(PetscInt), cudaMemcpyHostToDevice));
     CUDA_SAFE_CALL(cudaMalloc((void **)&h_mat.a,               (nnz)*sizeof(PetscScalar))); // kernel output
     CUDA_SAFE_CALL(cudaMemcpy(          h_mat.a,    jaca->a,   (nnz)*sizeof(PetscScalar), cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(cudaMalloc((void **)&d_mat,  sizeof(Mat_SeqAIJCUDA_GPUData)));
     CUDA_SAFE_CALL(cudaMemcpy(          d_mat, &h_mat, sizeof(Mat_SeqAIJCUDA_GPUData), cudaMemcpyHostToDevice));
-    ierr = PetscInfo7(A,"CreateGPUMat_SeqAIJCUDA_private: n=%D rmax=%D  ignorezeroentries=%D nonew=%D nonzerostate=%D nonzerorowcnt=%D nnz=%D\n",h_mat.n, h_mat.rmax, h_mat.ignorezeroentries, h_mat.nonew, h_mat.nonzerostate,jaca->nonzerorowcnt,nnz);CHKERRQ(ierr);
+
+    ierr = PetscInfo7(A,"MatSetUp_SeqAIJCUDA: n=%D rmax=%D  nonzerorowcnt=%D nonew=%D nonzerostate=%D nonzerorowcnt=%D nnz=%D\n",h_mat.n, h_mat.rmax, h_mat.nonzerorowcnt, h_mat.nonew, h_mat.nonzerostate,jaca->nonzerorowcnt,nnz);CHKERRQ(ierr);
+
+    *p_d_mat = d_mat;
   }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatSetUp_SeqAIJCUDA(Mat A)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = MatSetUp_SeqAIJ(A);CHKERRQ(ierr);
-  ierr = CreateGPUMat_SeqAIJCUDA_private(A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -293,6 +227,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUDA(Mat A, MatType mtype, M
   PetscErrorCode          ierr;
   Mat                     B;
   PetscBool               flgcusparse, flgaij, flg;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidPointer(newmat,4);
@@ -322,8 +257,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUDA(Mat A, MatType mtype, M
     B->ops->setvalues      = NULL; // we don't want to mix
     B->ops->zeroentries    = MatZeroEntries_SeqAIJCUDA;
     B->ops->setup          = MatSetUp_SeqAIJCUDA;
-    
-    A->offloadmask = PETSC_OFFLOAD_GPU; //
     
     ierr = PetscObjectChangeTypeName((PetscObject)B,MATSEQAIJCUDA);CHKERRQ(ierr);
   }
