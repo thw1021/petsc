@@ -2933,7 +2933,7 @@ PetscErrorCode PetscOptionsGetScalarArray(PetscOptions options,const char pre[],
    Level: beginner
 
    Notes:
-   Note that the nmax parameter is used for both input and output.
+   The nmax parameter is used for both input and output.
 
    The user should pass in an array of pointers to char, to hold all the
    strings returned by this function.
