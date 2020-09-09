@@ -2048,7 +2048,6 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
   PetscFunctionReturn(0);
 }
 
-PETSC_EXTERN PetscErrorCode MatZeroEntries_SeqAIJ(Mat);
 static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
 {
   Mat_SeqAIJCUDA_GPUData *mat;
