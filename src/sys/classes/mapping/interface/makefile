@@ -1,9 +1,11 @@
-
 ALL: lib
-SOURCEH   =
-DIRS      = viewer draw matlabengine random bag mapping
-LOCDIR    = src/sys/classes/
-MANSEC    = Sys
+
+SOURCEH  =
+SOURCEC  = mapping.c
+DIRS     =
+LIBBASE  = libpetscsys
+LOCDIR   = src/sys/classes/mapping/interface/
+MANSEC   = Mapping
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
