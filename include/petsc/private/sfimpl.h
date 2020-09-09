@@ -34,7 +34,7 @@ typedef enum {PETSCSF_ROOT2LEAF=0, PETSCSF_LEAF2ROOT} PetscSFDirection;
 typedef enum {PETSCSF_BCAST=0, PETSCSF_REDUCE, PETSCSF_FETCH} PetscSFOperation;
 typedef enum {PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE} PetscMemType;
 /* When doing device-aware MPI, a backend refers to the SF/device interface */
-typedef enum {PETSC_BACKEND_INVALID=0,PETSCSF_BACKEND_CUDA,PETSCSF_BACKEND_KOKKOS} PetscSFBackend;
+typedef enum {PETSCSF_BACKEND_INVALID=0,PETSCSF_BACKEND_CUDA,PETSCSF_BACKEND_KOKKOS} PetscSFBackend;
 
 struct _PetscSFOps {
   PetscErrorCode (*Reset)(PetscSF);
