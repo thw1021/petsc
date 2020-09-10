@@ -16,7 +16,7 @@ if __name__ == '__main__':
     '--with-cxx=0',
     '--with-fc=0',
     '--with-mpi=0',
-    'DATAFILESPATH=c:/cygwin64/home/glci/datafiles',
+    'DATAFILESPATH=c:/cygwin64/home/'+os.getenv('USER')+'/datafiles',
   ]
   configure.petsc_configure(configure_options)
 
