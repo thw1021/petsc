@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 
-#include <../src/vec/vec/impls/seq/seqcuda/cudavecimpl.h>
+#include <petsc/private/cudavecimpl.h>
 #include <../src/mat/impls/sell/seq/sell.h>  /*I   "petscmat.h"  I*/
 
 typedef struct {
@@ -65,7 +65,7 @@ static PetscErrorCode MatSeqSELLCUDACopyToGPU(Mat A)
       ierr = PetscLogCpuToGpu(a->sliidx[a->totalslices]*(sizeof(MatScalar)+sizeof(PetscInt))+(a->totalslices+1)*sizeof(PetscInt));CHKERRQ(ierr);
       cudastruct->nonzerostate = A->nonzerostate;
     }
-    cerr  = WaitForGPU();CHKERRCUDA(cerr);
+    cerr  = WaitForCUDA();CHKERRCUDA(cerr);
     ierr = PetscLogEventEnd(MAT_CUDACopyToGPU,A,0,0,0);CHKERRQ(ierr);
     A->offloadmask = PETSC_OFFLOAD_BOTH;
   }
@@ -235,7 +235,7 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
       matmult_seqsell_tiled_kernel<<<nblocks,block1>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
     }
   }
-  cerr = WaitForGPU();CHKERRCUDA(cerr);
+  cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayWrite(yy,&y);CHKERRQ(ierr);
@@ -281,7 +281,7 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
         matmultadd_seqsell_tiled_kernel<<<nblocks,block1>>>(nrows,totalslices,acolidx,aval,sliidx,x,y,z);
       }
     }
-    cerr = WaitForGPU();CHKERRCUDA(cerr);
+    cerr = WaitForCUDA();CHKERRCUDA(cerr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(xx,&x);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(yy,&y);CHKERRQ(ierr);
