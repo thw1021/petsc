@@ -326,7 +326,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
   ierr = VecNorm(F,NORM_2,&fnorm);CHKERRQ(ierr);             /* fnorm <- || F || */
   SNESCheckFunctionNorm(snes,fnorm);
-  ierr = VecNorm(X,NORM_2,&xnorm);CHKERRQ(ierr);             /* fnorm <- || F || */
+  ierr = VecNorm(X,NORM_2,&xnorm);CHKERRQ(ierr);             /* xnorm <- || X || */
   ierr       = PetscObjectSAWsTakeAccess((PetscObject)snes);CHKERRQ(ierr);
   snes->norm = fnorm;
   ierr       = PetscObjectSAWsGrantAccess((PetscObject)snes);CHKERRQ(ierr);
@@ -349,6 +349,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     SNESCheckJacobianDomainerror(snes);
     ierr = KSPSetOperators(snes->ksp,snes->jacobian,snes->jacobian);CHKERRQ(ierr);
     ierr = KSPSolve(snes->ksp,F,YNtmp);CHKERRQ(ierr);   /* Quasi Newton Solution */
+    SNESCheckKSPSolve(snes);  /* this is necessary but old tr.c did not have it either*/
     ierr = KSPGetIterationNumber(snes->ksp,&lits);CHKERRQ(ierr);
     ierr = SNESGetJacobian(snes, &jac, NULL, NULL, NULL);CHKERRQ(ierr);
     snes->linear_its += lits;
