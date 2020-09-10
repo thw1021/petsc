@@ -120,15 +120,15 @@ checksource:
 
 pause-for-approval:
   extends: .test
-  stage: .pre
+  stage: stage-1
   tags:
     - stage1
-  only:
-    refs:
-      - merge_requests
-    variables:
-      - $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
-      - $CI_MERGE_REQUEST_EVENT_TYPE == "detached"
+  #only:
+  #  refs:
+  #    - merge_requests
+  #  variables:
+  #    - $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
+  #    - $CI_MERGE_REQUEST_EVENT_TYPE == "detached"
   script:
     - echo "pause-for-approval has no script to run"
   variables:
@@ -176,6 +176,10 @@ check-py-vermin:
     expire_in: 4 days
   variables:
     OPENBLAS_NUM_THREADS: 1
+
+.stage-11:
+  extends: .stage-23
+  stage: stage-1
 
 .stage-2:
   extends: .stage-23
@@ -330,19 +334,19 @@ linux-gcc-complex-opt:
 
 mswin-uni:
   extends:
-    - .stage-2
+    - .stage-11
     - .mswin_test
   tags:
-    - name:ps5-2
+    - name:petsc-win01
   variables:
     TEST_ARCH: arch-ci-mswin-uni
 
 mswin-gnu:
   extends:
-    - .stage-2
+    - .stage-11
     - .mswin_test
   tags:
-    - name:ps5-3
+    - name:petsc-win01
   variables:
     TEST_ARCH: arch-ci-mswin-gnu
     MAKE_CFLAGS: -Werror
@@ -765,28 +769,28 @@ linux-64idx-i8-uni:
 
 mswin-intel-cxx-cmplx:
   extends:
-    - .stage-3
+    - .stage-11
     - .mswin_test
   tags:
-    - name:ps5
+    - name:petsc-win01
   variables:
     TEST_ARCH: arch-ci-mswin-intel-cxx-cmplx
 
 mswin-intel:
   extends:
-    - .stage-3
+    - .stage-11
     - .mswin_test
   tags:
-    - name:ps5
+    - name:petsc-win01
   variables:
     TEST_ARCH: arch-ci-mswin-intel
 
 mswin-opt-impi:
   extends:
-    - .stage-3
+    - .stage-11
     - .mswin_test
   tags:
-    - name:ps4
+    - name:petsc-win01
   variables:
     TEST_ARCH: arch-ci-mswin-opt-impi
     DISABLE_TESTS: 1
