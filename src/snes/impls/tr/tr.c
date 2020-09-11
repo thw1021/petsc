@@ -352,7 +352,6 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     SNESCheckKSPSolve(snes);  /* this is necessary but old tr.c did not have it either*/
     ierr = KSPGetIterationNumber(snes->ksp,&lits);CHKERRQ(ierr);
     ierr = SNESGetJacobian(snes, &jac, NULL, NULL, NULL);CHKERRQ(ierr);
-    snes->linear_its += lits;
     
     /* rescale Jacobian, Newton solution update, and re-calculate delta for multiphase */
     if (bs > 1 && neP->auto_scale_multiphase) {
