@@ -363,7 +363,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
       for (j=0; j < nc; j++) {
         while (aj[j] >= cranges[proc+1]) proc++;
         cols[0] = aj[j] - cranges[proc] + Jranges[proc];
-        ierr = MatSetValue(Jpre,row,cols[0],aa[j],INSERT_VALUES);CHKERRQ(ierr);
+        ierr = MatSetValue(Jpre,row,cols[0],-aa[j],INSERT_VALUES);CHKERRQ(ierr);
       }
     ierr = MatRestoreRow(tao->jacobian_inequality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
     }
@@ -531,7 +531,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
     larr = Xarr+pdipm->off_lambdai;
     zarr = Xarr+pdipm->off_z;
     for (i=0; i<pdipm->nci; i++) {
-      Farr[pdipm->off_lambdai + i] = carr[i] - zarr[i];
+      Farr[pdipm->off_lambdai + i] = -carr[i] + zarr[i];
       Farr[pdipm->off_z       + i] = zarr[i]*larr[i] - pdipm->mu;
     }
     ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
@@ -1108,7 +1108,7 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
       }
       ierr = MatRestoreRow(tao->jacobian_inequality,i+rjstart,&nc,&aj,NULL);CHKERRQ(ierr);
     }
-    /* -I */
+    /* I */
     for (i=0; i < pdipm->nh; i++){
       row = rstart + pdipm->off_lambdai + i;
       col = rstart + pdipm->off_z + i;
@@ -1130,7 +1130,7 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
       ierr = MatPreallocateSet(row,1,&col,dnz,onz);CHKERRQ(ierr);
     }
     ierr = MatRestoreRow(pdipm->Jci_xb,i+Jcrstart,&nc,&cols,NULL);CHKERRQ(ierr);
-    /* -I */
+    /* I */
     col = rstart + pdipm->off_z + pdipm->nh + i;
     ierr = MatPreallocateSet(row,1,&col,dnz,onz);CHKERRQ(ierr);
   }
@@ -1195,7 +1195,7 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
     }
   }
 
-  /* Row block of K: [ grad Ci, 0, 0, -I] */
+  /* Row block of K: [ -grad Ci, 0, 0, I] */
   ierr = MatGetOwnershipRange(pdipm->Jci_xb,&Jcrstart,NULL);CHKERRQ(ierr);
   for (i=0; i < pdipm->nci - pdipm->nh; i++){
     row = rstart + pdipm->off_lambdai + pdipm->nh + i;
@@ -1206,18 +1206,18 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
       while (cols[j] >= cranges[proc+1]) proc++;
       col = cols[j] - cranges[proc] + Jranges[proc];
       ierr = MatSetValue(J,col,row,-aa[j],INSERT_VALUES);CHKERRQ(ierr);
-      ierr = MatSetValue(J,row,col,aa[j],INSERT_VALUES);CHKERRQ(ierr);
+      ierr = MatSetValue(J,row,col,-aa[j],INSERT_VALUES);CHKERRQ(ierr);
     }
     ierr = MatRestoreRow(pdipm->Jci_xb,i+Jcrstart,&nc,&cols,&aa);CHKERRQ(ierr);
 
     col = rstart + pdipm->off_z + pdipm->nh + i;
-    ierr = MatSetValue(J,row,col,-1,INSERT_VALUES);CHKERRQ(ierr);
+    ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
   }
 
   for (i=0; i < pdipm->nh; i++){
     row = rstart + pdipm->off_lambdai + i;
     col = rstart + pdipm->off_z + i;
-    ierr = MatSetValue(J,row,col,-1,INSERT_VALUES);CHKERRQ(ierr);
+    ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
   }
 
   if (pdipm->Nxfixed) {
