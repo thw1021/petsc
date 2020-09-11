@@ -325,6 +325,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
 
   ierr = VecGetArrayRead(X,&Xarr);CHKERRQ(ierr);
 
+  #if 0
   /* (2) insert Z and Ci to Jpre -- overwrite existing values */
   for (i=0; i < pdipm->nci; i++) {
     row     = Jrstart + pdipm->off_z + i;
@@ -332,8 +333,17 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
     cols[1] = row;
     vals[0] = Xarr[pdipm->off_z + i];
     vals[1] = Xarr[pdipm->off_lambdai + i];
+    printf("z[%d] = %f \t lambdai[%d] = %f \n",i,Xarr[pdipm->off_z + i],i,Xarr[pdipm->off_lambdai + i]);
     ierr = MatSetValues(Jpre,1,&row,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
   }
+  #else
+    for (i=0; i < pdipm->nci; i++) {
+        row     = Jrstart + pdipm->off_z + i;
+        vals[0] = Xarr[pdipm->off_lambdai + i]/Xarr[pdipm->off_z + i];
+        ierr = MatSetValue(Jpre,row,row,vals[0],INSERT_VALUES);CHKERRQ(ierr);
+        printf("z[%d] = %f \t lambdai[%d] = %f \n",i,Xarr[pdipm->off_z + i],i,Xarr[pdipm->off_lambdai + i]);
+    }
+  #endif
 
   /* (3) insert 2nd row block of Jpre: [ grad g, 0, 0, 0] */
   if (pdipm->Ng) {
@@ -523,6 +533,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
   }
   ierr = VecNorm(pdipm->ce,NORM_2,&cnorm[0]);CHKERRQ(ierr);
 
+  #if 0
   if (pdipm->Nci) {
     /* (3) L3 = ci(x) - z;
        (4) L4 = Z * Lambdai * e - mu * e
@@ -531,11 +542,28 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
     larr = Xarr+pdipm->off_lambdai;
     zarr = Xarr+pdipm->off_z;
     for (i=0; i<pdipm->nci; i++) {
-      Farr[pdipm->off_lambdai + i] = -carr[i] + zarr[i];
+      Farr[pdipm->off_lambdai + i] = zarr[i] - carr[i];
       Farr[pdipm->off_z       + i] = zarr[i]*larr[i] - pdipm->mu;
     }
     ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
   }
+  #else
+  if (pdipm->Nci) {
+      /* (3) L3 = ci(x) - z;
+        (4) L4 = Lambdai * e - mu/z *e
+      */
+      ierr = VecGetArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
+      larr = Xarr+pdipm->off_lambdai;
+      zarr = Xarr+pdipm->off_z;
+      for (i=0; i<pdipm->nci; i++) {
+        Farr[pdipm->off_lambdai + i] = zarr[i] - carr[i];
+        Farr[pdipm->off_z       + i] = larr[i] - pdipm->mu/zarr[i];
+      }
+      ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
+    }
+
+  #endif
+
 
   ierr = VecPlaceArray(pdipm->ci,Farr+pdipm->off_lambdai);CHKERRQ(ierr);
   ierr = VecNorm(pdipm->ci,NORM_2,&cnorm[1]);CHKERRQ(ierr);
@@ -550,6 +578,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 
   tao->residual = PetscSqrtReal(res[0]*res[0] + res[1]*res[1]);
   tao->cnorm    = PetscSqrtReal(cnorm[0]*cnorm[0] + cnorm[1]*cnorm[1]);
+  printf("res0 = %f \t res1 = %f\n",res[0], res[1]);
 
   ierr = VecRestoreArrayRead(X,&Xarr);CHKERRQ(ierr);
   ierr = VecRestoreArray(F,&Farr);CHKERRQ(ierr);
@@ -1219,6 +1248,14 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
     col = rstart + pdipm->off_z + i;
     ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
   }
+
+  /* Row block of K: [ 0, 0, I, ...] */
+   for (i=0; i < pdipm->nci; i++){
+    row = rstart + pdipm->off_z + i;
+    col = rstart + pdipm->off_lambdai + i;
+    ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
+  }
+
 
   if (pdipm->Nxfixed) {
     ierr = MatDestroy(&Jce_xfixed_trans);CHKERRQ(ierr);
