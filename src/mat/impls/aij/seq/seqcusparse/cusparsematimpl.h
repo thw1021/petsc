@@ -179,7 +179,6 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   THRUSTARRAY                       *workVector;
   cusparseHandle_t                  handle;   /* a handle to the cusparse library */
   PetscInt                          nnz;      /* number of nonzeros ... need this for accurate logging between ICC and ILU */
-  Mat_SeqAIJCUDA_GPUData            *cudaMat;  /* Matrix on device for, eg, assembly */
 };
 
 struct Mat_CusparseSpMV {
@@ -225,97 +224,12 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseSpMVAlg_t            spmvAlg;
   cusparseSpMMAlg_t            spmmAlg;
  #endif
-  Mat                          cudaMat;
+  PetscSplitCSRDataStructure   *deviceMat;       /* Matrix on device for, eg, assembly */
 };
 
 PETSC_INTERN PetscErrorCode MatCUSPARSECopyToGPU(Mat);
 PETSC_INTERN PetscErrorCode MatCUSPARSESetStream(Mat, const cudaStream_t stream);
 PETSC_INTERN PetscErrorCode MatCUSPARSESetHandle(Mat, const cusparseHandle_t handle);
 PETSC_INTERN PetscErrorCode MatCUSPARSEClearHandle(Mat);
-
-// MatSetValues on device. Cuda seems to need code and not pointers to device methods
-static __device__
-void PetscMemmove_device(void *a, void *b, size_t n)
-{
-  if (n > 0 && !a) printf("Trying to copy to null pointer\n");
-  if (n > 0 && !b) printf("Trying to copy from a null pointer\n");
-  if (a < b) {
-    if ((char*)a <= ((char*)b - n)) memcpy(a,b,n);
-    else {
-      memcpy(a, b, (int)((char*)b - (char*)a));
-      PetscMemmove_device(b,(char*)b + (int)((char*)b - (char*)a),n - (int)((char*)b - (char*)a));
-    }
-  } else {
-    if (b <= ((char*)a - n)) memcpy(a,b,n);
-    else {
-      memcpy((char*)b + n,(char*)b + (n - (int)((char*)a - (char*)b)),(int)((char*)a - (char*)b));
-      PetscMemmove_device(a,b,n - (int)((char*)a - (char*)b));
-    }
-  }
-}
-
-static __device__
-void MatSetValues_SeqAIJCUSPARSE_device(Mat_SeqAIJCUDA_GPUData *a, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is)
-{
-  PetscInt       *rp,k,low,high,t,row,nrow,i,col,l,rmax,N;
-  PetscInt       *imax = a->imax,*ai = a->i,*ailen = a->ilen;
-  PetscInt       *aj = a->j,nonew = a->nonew,lastcol = -1;
-  MatScalar      *ap=NULL,value=0.0,*aa = a->a;
-  PetscBool      ignorezeroentries = (a->ignorezeroentries==0) ? PETSC_FALSE : PETSC_TRUE;
-
-  for (k=0; k<m; k++) { /* loop over added rows */
-    row = im[k];
-    if (row < 0) continue;
-    if (row >= a->n) printf("MatSetValues_SeqAIJCUDA_device: row %d >= a->n %d\n",row,a->n);
-    rp   = aj + ai[row];
-    ap = aa + ai[row];
-    rmax = imax[row]; nrow = ailen[row];
-    low  = 0;
-    high = nrow;
-    for (l=0; l<n; l++) { /* loop over added columns */
-      if (in[l] < 0) continue;
-      if (in[l] >= a->n) printf("MatSetValues_SeqAIJCUDA_device: in[%d]=%d >= a->n %d (square serial)\n",(int)l,(int)in[l],(int)a->n);
-      col = in[l];
-      //if (v) value = roworiented ? v[l + k*n] : v[k + l*m];
-      if (v) value = v[l + k*n];
-      if (value == 0.0 && ignorezeroentries && is == ADD_VALUES && row != col) continue;
-      if (col <= lastcol) low = 0;
-      else high = nrow;
-      lastcol = col;
-      while (high-low > 5) {
-        t = (low+high)/2;
-        if (rp[t] > col) high = t;
-        else low = t;
-      }
-      for (i=low; i<high; i++) {
-        if (rp[i] > col) break;
-        if (rp[i] == col) {
-          if (v) {
-            if (is == ADD_VALUES) {
-              ap[i] += value;
-            }
-            else ap[i] = value;
-          }
-          low = i + 1;
-          goto noinsert;
-        }
-      }
-      if (value == 0.0 && ignorezeroentries && row != col) goto noinsert;
-      if (nonew == 1) goto noinsert;
-      if (nonew == -1) printf("MatSetValues_SeqAIJCUDA_device: Inserting a new nonzero at (%d,%d) in the matrix\n",(int)row,(int)col);
-      if (nrow >= rmax) printf("ERROR, ran out of preallocated space in row %d\n",(int)row);
-      N = nrow++ - 1; a->nz++; high++;
-      /* shift up all the later entries in this row */
-      PetscMemmove_device(rp+i+1,rp+i,(N-i+1)*sizeof(PetscInt));
-      rp[i] = col;
-      PetscMemmove_device(ap+i+1,ap+i,(N-i+1)*sizeof(PetscScalar));
-      ap[i] = value;
-      low = i + 1;
-      a->nonzerostate++; // should be A
-noinsert:;
-    }
-    ailen[row] = nrow;
-  }
-}
 
 #endif
