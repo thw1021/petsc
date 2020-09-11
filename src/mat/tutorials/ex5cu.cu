@@ -2,9 +2,10 @@ static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n
 
 #include <petscmat.h>
 #include <petscaijdevice.h>
+#include <petsccublas.h>
 
 __global__
-void assemble(PetscInt  n, Mat_AIJDeviceData *d_mat)
+void assemble(PetscInt  n, PetscSplitCSRDataStructure *d_mat)
 {
   const PetscInt  inc = blockDim.x, my0 = blockIdx.x;
   PetscInt        i;
@@ -25,13 +26,13 @@ void assemble(PetscInt  n, Mat_AIJDeviceData *d_mat)
 
 int main(int argc,char **args)
 {
-  PetscErrorCode ierr;
-  Mat            A;
-  PetscInt       n=2, nz=3;
-  PetscSplitCSRDataStructure  *d_mat;
-  PetscLogEvent  event;
-  Vec            x,y;
-  cudaError_t    cerr;
+  PetscErrorCode               ierr;
+  Mat                          A;
+  PetscInt                     n=2, nz=3;
+  PetscSplitCSRDataStructure   *d_mat;
+  PetscLogEvent                event;
+  Vec                          x,y;
+  cudaError_t                  cerr;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-nz_row", &nz, NULL);CHKERRQ(ierr); // does not work?
