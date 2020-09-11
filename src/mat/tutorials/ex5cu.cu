@@ -1,10 +1,10 @@
 static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n";
 
 #include <petscmat.h>
-#include <../../src/mat/impls/aij/seq/seqcusparse/cusparsematimpl.h>
+#include <petscaijdevice.h>
 
 __global__
-void assemble(PetscInt  n, Mat_SeqAIJCUDA_GPUData *d_mat)
+void assemble(PetscInt  n, Mat_AIJDeviceData *d_mat)
 {
   const PetscInt  inc = blockDim.x, my0 = blockIdx.x;
   PetscInt        i;
@@ -12,26 +12,26 @@ void assemble(PetscInt  n, Mat_SeqAIJCUDA_GPUData *d_mat)
   for (i=my0; i<n; i+=inc) {
     if (i==0) {
       PetscInt js[] = {0, 1};
-      MatSetValues_SeqAIJCUSPARSE_device(d_mat,(PetscInt)1,&i,(PetscInt)2,js,&values[1],INSERT_VALUES);
+      MatSetValues_AIJ_device(d_mat,(PetscInt)1,&i,(PetscInt)2,js,&values[1],INSERT_VALUES);
     } else if (i==n-1) {
       PetscInt js[] = {n-2, n-1};
-      MatSetValues_SeqAIJCUSPARSE_device(d_mat,(PetscInt)1,&i,(PetscInt)2,js,values,INSERT_VALUES);
+      MatSetValues_AIJ_device(d_mat,(PetscInt)1,&i,(PetscInt)2,js,values,INSERT_VALUES);
     } else {
       PetscInt js[] = {i-1, i, i+1};
-      MatSetValues_SeqAIJCUSPARSE_device(d_mat,(PetscInt)1,&i,(PetscInt)3,js,values,INSERT_VALUES);
+      MatSetValues_AIJ_device(d_mat,(PetscInt)1,&i,(PetscInt)3,js,values,INSERT_VALUES);
     }
   }
 }
 
 int main(int argc,char **args)
 {
-  PetscErrorCode         ierr;
-  Mat                    A;
-  PetscInt               n=2, nz=3;
-  Mat_SeqAIJCUDA_GPUData *d_mat;
-  PetscLogEvent          event;
-  Vec                    x,y;
-  cudaError_t                           cerr;
+  PetscErrorCode ierr;
+  Mat            A;
+  PetscInt       n=2, nz=3;
+  PetscSplitCSRDataStructure  *d_mat;
+  PetscLogEvent  event;
+  Vec            x,y;
+  cudaError_t    cerr;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-nz_row", &nz, NULL);CHKERRQ(ierr); // does not work?
@@ -42,11 +42,8 @@ int main(int argc,char **args)
   }
   ierr = PetscLogEventRegister("GPU operator", MAT_CLASSID, &event);CHKERRQ(ierr);
   ierr = MatCreateAIJCUSPARSE(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,nz,NULL,0,NULL,&A);CHKERRQ(ierr);
-  ierr = MatCUSPARSECreateCudaMat(A);CHKERRQ(ierr);
-  // ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-  // ierr = MatSetUp(A);CHKERRQ(ierr); 
-
-  ierr = MatCUSPARSEGetCudaMat(A,(void**)&d_mat);CHKERRQ(ierr);
+  ierr = MatSetFromOptions(A);CHKERRQ(ierr);
+  ierr = MatCUSPARSEGetDeviceMat(A,PETSC_TRUE,&d_mat);CHKERRQ(ierr);
 
   ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
   assemble<<<512,1>>>(n,d_mat);

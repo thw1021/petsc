@@ -416,6 +416,30 @@ typedef struct { /* used by MatProduct() */
   PetscErrorCode (*destroy)(void*); /* destroy routine */
 } Mat_Product;
 
+#define CSRDataStructure(datatype)        \
+  PetscInt    *i; \
+  PetscInt    *ilen;\
+  PetscInt    *j;\
+  PetscInt    *imax;\
+  datatype    *a;\
+  PetscInt    n;\
+  PetscInt    nz;\
+  PetscInt    ignorezeroentries;\
+  PetscInt    nonew;\
+  PetscInt    nonzerostate;\
+  PetscInt    nonzerorowcnt;\
+  PetscInt    rmax;
+
+typedef struct {
+  CSRDataStructure(PetscScalar)
+} PetscCSRDataStructure;
+
+typedef struct {
+  PetscInt              cstart,cend,rstart,rend;
+  PetscCSRDataStructure diag,offdiag;
+  PetscInt              *colmap;
+} PetscSplitCSRDataStructure;
+
 struct _p_Mat {
   PETSCHEADER(struct _MatOps);
   PetscLayout            rmap,cmap;
