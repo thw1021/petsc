@@ -449,7 +449,8 @@ PetscErrorCode MatCUSPARSEGetDeviceMat(Mat A, PetscBool allocate, PetscSplitCSRD
       Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
       p_d_mat = &spptr->deviceMat;
     } else {
-      Mat_MPIAIJCUSPARSE *spptr = (Mat_MPIAIJCUSPARSE*)A->spptr;
+      Mat_MPIAIJ         *aij = (Mat_MPIAIJ*)A->data;
+      Mat_MPIAIJCUSPARSE *spptr = (Mat_MPIAIJCUSPARSE*)aij->spptr;
       p_d_mat = &spptr->deviceMat;
     }
   } else {
