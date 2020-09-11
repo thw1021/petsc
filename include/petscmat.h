@@ -1923,6 +1923,10 @@ PETSC_EXTERN PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,Pets
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetFormat(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat);
 PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSESetGenerateTranspose(Mat,PetscBool);
 
+typedef struct _p_SplitCSRMat PetscSplitCSRDataStructure;
+
+PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMat(Mat,PetscBool,PetscSplitCSRDataStructure**);
+
 PETSC_EXTERN PetscErrorCode MatCreateDenseCUDA(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscScalar[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateSeqDenseCUDA(MPI_Comm,PetscInt,PetscInt,PetscScalar[],Mat*);
 PETSC_EXTERN PetscErrorCode MatMPIDenseCUDASetPreallocation(Mat,PetscScalar[]);
@@ -1936,8 +1940,6 @@ PETSC_EXTERN PetscErrorCode MatDenseCUDARestoreArray(Mat,PetscScalar**);
 PETSC_EXTERN PetscErrorCode MatDenseCUDAPlaceArray(Mat,const PetscScalar*);
 PETSC_EXTERN PetscErrorCode MatDenseCUDAReplaceArray(Mat,const PetscScalar*);
 PETSC_EXTERN PetscErrorCode MatDenseCUDAResetArray(Mat);
-
-PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMat(Mat,PetscBool,PetscSplitCSRDataStructure*);
 
 #endif
 

@@ -434,11 +434,11 @@ typedef struct {
   CSRDataStructure(PetscScalar)
 } PetscCSRDataStructure;
 
-typedef struct {
+struct _p_SplitCSRMat {
   PetscInt              cstart,cend,rstart,rend;
   PetscCSRDataStructure diag,offdiag;
   PetscInt              *colmap;
-} PetscSplitCSRDataStructure;
+};
 
 struct _p_Mat {
   PETSCHEADER(struct _MatOps);
