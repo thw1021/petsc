@@ -1937,8 +1937,7 @@ PETSC_EXTERN PetscErrorCode MatDenseCUDAPlaceArray(Mat,const PetscScalar*);
 PETSC_EXTERN PetscErrorCode MatDenseCUDAReplaceArray(Mat,const PetscScalar*);
 PETSC_EXTERN PetscErrorCode MatDenseCUDAResetArray(Mat);
 
-PETSC_EXTERN PetscErrorCode MatCUSPARSEGetCudaMat(Mat,void**);
-PETSC_EXTERN PetscErrorCode MatCUSPARSECreateCudaMat(Mat);
+PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMat(Mat,PetscBool,PetscSplitCSRDataStructure*);
 
 #endif
 
