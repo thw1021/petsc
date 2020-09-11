@@ -5,17 +5,17 @@ static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n
 #include <petsccublas.h>
 
 __global__
-void assemble(PetscInt  n, PetscSplitCSRDataStructure *d_mat)
+void assemble(PetscInt start, PetscInt end, PetscInt N, PetscSplitCSRDataStructure *d_mat)
 {
   const PetscInt  inc = blockDim.x, my0 = blockIdx.x;
   PetscInt        i;
   PetscScalar     values[] = {-1,2,-1};
-  for (i=my0; i<n; i+=inc) {
+  for (i=start+my0; i<end; i+=inc) {
     if (i==0) {
       PetscInt js[] = {0, 1};
       MatSetValues_AIJ_device(d_mat,(PetscInt)1,&i,(PetscInt)2,js,&values[1],INSERT_VALUES);
-    } else if (i==n-1) {
-      PetscInt js[] = {n-2, n-1};
+    } else if (i==N-1) {
+      PetscInt js[] = {i-1, i};
       MatSetValues_AIJ_device(d_mat,(PetscInt)1,&i,(PetscInt)2,js,values,INSERT_VALUES);
     } else {
       PetscInt js[] = {i-1, i, i+1};
@@ -28,7 +28,7 @@ int main(int argc,char **args)
 {
   PetscErrorCode               ierr;
   Mat                          A;
-  PetscInt                     n=2, nz=3;
+  PetscInt                     n=3, nz=3, Istart, Iend;
   PetscSplitCSRDataStructure   *d_mat;
   PetscLogEvent                event;
   Vec                          x,y;
@@ -47,7 +47,8 @@ int main(int argc,char **args)
   ierr = MatCUSPARSEGetDeviceMat(A,PETSC_TRUE,&d_mat);CHKERRQ(ierr);
 
   ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
-  assemble<<<512,1>>>(n,d_mat);
+  ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
+  assemble<<<512,1>>>(Istart, Iend, n, d_mat);
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(event,0,0,0,0);CHKERRQ(ierr);
 
