@@ -29,88 +29,89 @@ void PetscMemmove_device(void *a, void *b, size_t n)
 
 #define MatSetValues_SeqAIJ_A_Private(row,col,value,addv,orow,ocol)     \
   {                                                                     \
-    if (col <= lastcol1)  low1 = 0;                                     \
-    else                 high1 = nrow1;                                 \
-    lastcol1 = col;                                                     \
-    while (high1-low1 > 5) {                                            \
-      t = (low1+high1)/2;                                               \
-      if (rp1[t] > col) high1 = t;                                      \
-      else              low1  = t;                                      \
-    }                                                                   \
-    for (_i=low1; _i<high1; _i++) {                                     \
-      if (rp1[_i] > col) break;                                         \
-      if (rp1[_i] == col) {                                             \
-        if (addv == ADD_VALUES) {                                       \
-          ap1[_i] += value;                                             \
-        }                                                               \
-        else         ap1[_i] = value;                                   \
-        inserted = PETSC_TRUE;                                          \
-        goto a_noinsert;                                                \
+  if (col <= lastcol1)  low1 = 0;                                       \
+  else                 high1 = nrow1;                                   \
+  lastcol1 = col;                                                       \
+  while (high1-low1 > 5) {                                              \
+    t = (low1+high1)/2;                                                 \
+    if (rp1[t] > col) high1 = t;                                        \
+    else              low1  = t;                                        \
+  }                                                                     \
+  for (_i=low1; _i<high1; _i++) {                                       \
+    if (rp1[_i] > col) break;                                           \
+    if (rp1[_i] == col) {                                               \
+      if (addv == ADD_VALUES) {                                         \
+        ap1[_i] += value;                                               \
       }                                                                 \
+      else         ap1[_i] = value;                                     \
+      inserted = PETSC_TRUE;                                            \
+      goto a_noinsert;                                                  \
     }                                                                   \
-    if (value == 0.0 && ignorezeroentries && row != col) {low1 = 0; high1 = nrow1;goto a_noinsert;} \
-    if (nonew == 1) {low1 = 0; high1 = nrow1; goto a_noinsert;}         \
-    if (nonew == -1) {                                                  \
-      printf("A: Inserting a new nonzero at global row/column (%d, %d) into matrix\n", orow, ocol); \
-      *ierr = 1;                                                        \
-    } else if (nrow1 >= rmax1) {                                        \
-      printf("B: ERROR, ran out of preallocated space in row %d\n", orow); \
-      *ierr = 2;                                                        \
-    } else {                                                            \
-      N = nrow1++ - 1; d_mat->diag.nz++; high1++;                       \
-      /* shift up all the later entries in this row */                  \
-      PetscMemmove_device(rp1+_i+1,rp1+_i,(N-_i+1)*sizeof(PetscInt));   \
-      PetscMemmove_device(ap1+_i+1,ap1+_i,(N-_i+1)*sizeof(PetscScalar)); \
-      rp1[_i] = col;                                                    \
-      ap1[_i] = value;                                                  \
-      d_mat->diag.nonzerostate++;                                       \
-      a_noinsert: ;                                                     \
-      ailen[row] = nrow1;                                               \
-    }
+  }                                                                     \
+  if (value == 0.0 && ignorezeroentries && row != col) {low1 = 0; high1 = nrow1;goto a_noinsert;} \
+  if (nonew == 1) {low1 = 0; high1 = nrow1; goto a_noinsert;}           \
+  if (nonew == -1) {                                                    \
+    printf("A: Inserting a new nonzero at global row/column (%d, %d) into matrix\n", orow, ocol); \
+    *ierr = 1;                                                          \
+  } else if (nrow1 >= rmax1) {                                          \
+    printf("B: ERROR, ran out of preallocated space in row %d\n", orow); \
+    *ierr = 2;                                                          \
+  } else {                                                              \
+    N = nrow1++ - 1; d_mat->diag.nz++; high1++;                         \
+    /* shift up all the later entries in this row */                    \
+    PetscMemmove_device(rp1+_i+1,rp1+_i,(N-_i+1)*sizeof(PetscInt));     \
+    PetscMemmove_device(ap1+_i+1,ap1+_i,(N-_i+1)*sizeof(PetscScalar));  \
+    rp1[_i] = col;                                                      \
+    ap1[_i] = value;                                                    \
+    d_mat->diag.nonzerostate++;                                         \
+    a_noinsert: ;                                                       \
+    ailen[row] = nrow1;                                                 \
+  }                                                                     \
 }
 #define MatSetValues_SeqAIJ_B_Private(row,col,value,addv,orow,ocol)     \
   {                                                                     \
-    if (col <= lastcol2) low2 = 0;                                      \
-    else high2 = nrow2;                                                 \
-    lastcol2 = col;                                                     \
-    while (high2-low2 > 5) {                                            \
-      t = (low2+high2)/2;                                               \
-      if (rp2[t] > col) high2 = t;                                      \
-      else             low2  = t;                                       \
-    }                                                                   \
-    for (_i=low2; _i<high2; _i++) {                                     \
-      if (rp2[_i] > col) break;                                         \
-      if (rp2[_i] == col) {                                             \
-        if (addv == ADD_VALUES) {                                       \
-          ap2[_i] += value;                                             \
-        }                                                               \
-        else                    ap2[_i] = value;                        \
-        inserted = PETSC_TRUE;                                          \
-        goto b_noinsert;                                                \
+  if (col <= lastcol2) low2 = 0;                                        \
+  else high2 = nrow2;                                                   \
+  lastcol2 = col;                                                       \
+  while (high2-low2 > 5) {                                              \
+    t = (low2+high2)/2;                                                 \
+    if (rp2[t] > col) high2 = t;                                        \
+    else             low2  = t;                                         \
+  }                                                                     \
+  for (_i=low2; _i<high2; _i++) {                                       \
+    if (rp2[_i] > col) break;                                           \
+    if (rp2[_i] == col) {                                               \
+      if (addv == ADD_VALUES) {                                         \
+        ap2[_i] += value;                                               \
       }                                                                 \
+      else                    ap2[_i] = value;                          \
+      inserted = PETSC_TRUE;                                            \
+      goto b_noinsert;                                                  \
     }                                                                   \
-    if (value == 0.0 && ignorezeroentries) {low2 = 0; high2 = nrow2; goto b_noinsert;} \
-    if (nonew == 1) {low2 = 0; high2 = nrow2; goto b_noinsert;}         \
-    if (nonew == -1) {                                                  \
-      printf("B Inserting a new nonzero at global row/column (%d, %d) into matrix\n", orow, ocol); \
-      *ierr = 1;                                                        \
-    } else if (nrow2 >= rmax2) {                                        \
-      printf("B ERROR, ran out of preallocated space in row %d\n", orow); \
-      *ierr = 2;                                                        \
-    } else {                                                            \
-      N = nrow2++ - 1; d_mat->offdiag.nz++; high2++;                    \
-      /* shift up all the later entries in this row */                  \
-      PetscMemmove_device(rp2+_i+1,rp2+_i,(N-_i+1)*sizeof(PetscInt));   \
-      PetscMemmove_device(ap2+_i+1,ap2+_i,(N-_i+1)*sizeof(PetscScalar)); \
-      rp2[_i] = col;                                                    \
-      ap2[_i] = value;                                                  \
-      d_mat->offdiag.nonzerostate++;                                    \
-      b_noinsert: ;                                                     \
-      bilen[row] = nrow2;                                               \
-    }
+  }                                                                     \
+  if (value == 0.0 && ignorezeroentries) {low2 = 0; high2 = nrow2; goto b_noinsert;} \
+  if (nonew == 1) {low2 = 0; high2 = nrow2; goto b_noinsert;}           \
+  if (nonew == -1) {                                                    \
+    printf("B Inserting a new nonzero at global row/column (%d, %d) into matrix\n", orow, ocol); \
+    *ierr = 1;                                                          \
+  } else if (nrow2 >= rmax2) {                                          \
+    printf("B ERROR, ran out of preallocated space in row %d\n", orow); \
+    *ierr = 2;                                                          \
+  } else {                                                              \
+    N = nrow2++ - 1; d_mat->offdiag.nz++; high2++;                      \
+    /* shift up all the later entries in this row */                    \
+    PetscMemmove_device(rp2+_i+1,rp2+_i,(N-_i+1)*sizeof(PetscInt));     \
+    PetscMemmove_device(ap2+_i+1,ap2+_i,(N-_i+1)*sizeof(PetscScalar));  \
+    rp2[_i] = col;                                                      \
+    ap2[_i] = value;                                                    \
+    d_mat->offdiag.nonzerostate++;                                      \
+    b_noinsert: ;                                                       \
+    bilen[row] = nrow2;                                                 \
+  }                                                                     \
 }
+
 #if defined(PETSC_HAVE_CUDA)
-static __device__
+  static __device__
 #endif // PETSC_HAVE_CUDA
 void MatSetValues_AIJ_device(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
 {
