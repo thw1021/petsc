@@ -1925,7 +1925,7 @@ PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSESetGenerateTranspose(Mat,PetscBool)
 
 typedef struct _p_SplitCSRMat PetscSplitCSRDataStructure;
 
-PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMat(Mat,PetscBool,PetscSplitCSRDataStructure**);
+PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure**);
 
 PETSC_EXTERN PetscErrorCode MatCreateDenseCUDA(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscScalar[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateSeqDenseCUDA(MPI_Comm,PetscInt,PetscInt,PetscScalar[],Mat*);
