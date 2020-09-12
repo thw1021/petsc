@@ -5,21 +5,22 @@ static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n
 #include <petsccublas.h>
 
 __global__
-void assemble(PetscInt start, PetscInt end, PetscInt N, PetscSplitCSRDataStructure *d_mat)
+void assemble(PetscInt start, PetscInt end, PetscInt N, PetscMPIInt rank, PetscSplitCSRDataStructure *d_mat)
 {
   const PetscInt  inc = blockDim.x, my0 = blockIdx.x;
   PetscInt        i;
   PetscScalar     values[] = {-1,2,-1};
+  PetscErrorCode  ierr;
   for (i=start+my0; i<end; i+=inc) {
     if (i==0) {
       PetscInt js[] = {0, 1};
-      MatSetValues_AIJ_device(d_mat,(PetscInt)1,&i,(PetscInt)2,js,&values[1],INSERT_VALUES);
+      MatSetValues_AIJ_device(d_mat,1,&i,2,js,&values[1],INSERT_VALUES,&ierr);
     } else if (i==N-1) {
       PetscInt js[] = {i-1, i};
-      MatSetValues_AIJ_device(d_mat,(PetscInt)1,&i,(PetscInt)2,js,values,INSERT_VALUES);
+      MatSetValues_AIJ_device(d_mat,1,&i,2,js,values,INSERT_VALUES,&ierr);
     } else {
       PetscInt js[] = {i-1, i, i+1};
-      MatSetValues_AIJ_device(d_mat,(PetscInt)1,&i,(PetscInt)3,js,values,INSERT_VALUES);
+      MatSetValues_AIJ_device(d_mat,1,&i,3,js,values,INSERT_VALUES,&ierr);
     }
   }
 }
@@ -28,27 +29,29 @@ int main(int argc,char **args)
 {
   PetscErrorCode               ierr;
   Mat                          A;
-  PetscInt                     n=3, nz=3, Istart, Iend;
+  PetscInt                     N=3, nz=3, Istart, Iend;
   PetscSplitCSRDataStructure   *d_mat;
   PetscLogEvent                event;
   Vec                          x,y;
   cudaError_t                  cerr;
+  PetscMPIInt                  rank;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-nz_row", &nz, NULL);CHKERRQ(ierr); // does not work?
-  ierr = PetscOptionsGetInt(NULL,NULL, "-n", &n, NULL);CHKERRQ(ierr);
-  if (nz>n) {
+  ierr = PetscOptionsGetInt(NULL,NULL, "-n", &N, NULL);CHKERRQ(ierr);
+  if (nz>N) {
     PetscPrintf(PETSC_COMM_WORLD,"warning decreasing nz\n");
-    nz=n;
+    nz=N;
   }
   ierr = PetscLogEventRegister("GPU operator", MAT_CLASSID, &event);CHKERRQ(ierr);
-  ierr = MatCreateAIJCUSPARSE(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,nz,NULL,0,NULL,&A);CHKERRQ(ierr);
+  ierr = MatCreateAIJCUSPARSE(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,N,N,nz,NULL,0,NULL,&A);CHKERRQ(ierr);
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-  ierr = MatCUSPARSEGetDeviceMat(A,PETSC_TRUE,&d_mat);CHKERRQ(ierr);
+  ierr = MatCUSPARSEGetDeviceMatWrite(A,&d_mat);CHKERRQ(ierr);
 
   ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
-  assemble<<<512,1>>>(Istart, Iend, n, d_mat);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  assemble<<<2,1>>>(Istart, Iend, N, rank, d_mat);
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(event,0,0,0,0);CHKERRQ(ierr);
 
