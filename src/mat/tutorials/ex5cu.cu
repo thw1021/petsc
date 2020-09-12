@@ -7,20 +7,27 @@ static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n
 __global__
 void assemble(PetscInt start, PetscInt end, PetscInt N, PetscMPIInt rank, PetscSplitCSRDataStructure *d_mat)
 {
-  const PetscInt  inc = blockDim.x, my0 = blockIdx.x;
+  const PetscInt  inc = blockDim.x, my0 = threadIdx.x;
   PetscInt        i;
   PetscScalar     values[] = {-1,2,-1};
   PetscErrorCode  ierr;
+  printf("[%d.%d] start=%d end=%d N=%d eq=%d\n",rank,my0,start,end,N,start+my0);
   for (i=start+my0; i<end; i+=inc) {
     if (i==0) {
       PetscInt js[] = {0, 1};
       MatSetValues_AIJ_device(d_mat,1,&i,2,js,&values[1],INSERT_VALUES,&ierr);
+      printf("\tb[%d.%d] inc=%d. add row %d. (%d)\n",rank,my0,inc,i,ierr);
+      if (ierr) return;
     } else if (i==N-1) {
       PetscInt js[] = {i-1, i};
       MatSetValues_AIJ_device(d_mat,1,&i,2,js,values,INSERT_VALUES,&ierr);
+      printf("\t\t\te[%d.%d]add row %d. (%d)\n",rank,my0,i,ierr);
+      if (ierr) return;
     } else {
       PetscInt js[] = {i-1, i, i+1};
       MatSetValues_AIJ_device(d_mat,1,&i,3,js,values,INSERT_VALUES,&ierr);
+      printf("\t\t[%d.%d]add row %d. (%d)\n",rank,my0,i,ierr);
+      if (ierr) return;
     }
   }
 }
@@ -29,7 +36,7 @@ int main(int argc,char **args)
 {
   PetscErrorCode               ierr;
   Mat                          A;
-  PetscInt                     N=3, nz=3, Istart, Iend;
+  PetscInt                     N=3, n, nz=3, Istart, Iend;
   PetscSplitCSRDataStructure   *d_mat;
   PetscLogEvent                event;
   Vec                          x,y;
@@ -50,11 +57,13 @@ int main(int argc,char **args)
 
   ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  assemble<<<2,1>>>(Istart, Iend, N, rank, d_mat);
+  n = Iend - Istart;
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  assemble<<<1,n>>>(Istart, Iend, N, rank, d_mat);
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(event,0,0,0,0);CHKERRQ(ierr);
-
+  fflush(stdout);
+  PetscSleep(1);
   // assemble end on CPU for now
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
