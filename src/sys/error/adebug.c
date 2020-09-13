@@ -173,7 +173,7 @@ PetscErrorCode  PetscSetDebuggerFromString(const char *string)
    Level: advanced
 
    Notes:
-      When -start_in_debugger -debugger_nodes x,y,z is used this prevents the processes NOT listed in x,y,z from calling MPI_Abort and
+      When -start_in_debugger -debugger_ranks x,y,z is used this prevents the processes NOT listed in x,y,z from calling MPI_Abort and
       killing the user's debugging sessions.
 
 
