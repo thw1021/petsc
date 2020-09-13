@@ -1876,7 +1876,7 @@ PetscErrorCode PetscInitializeMUMPS(Mat A,Mat_MUMPS *mumps)
   mumps->reqs = NULL;
   mumps->tag  = 0;
 
-  /* It looks MUMPS does not dup the input comm. In petsc we'd better dup a new comm for MUMPS to avoid msg mismatches. */
+  /* It looks MUMPS does not dup the input comm. Dup a new comm for MUMPS to avoid any tag mismatches. */
   if (mumps->mumps_comm != MPI_COMM_NULL) {
     ierr = MPI_Comm_dup(mumps->mumps_comm,&newcomm);CHKERRQ(ierr);
     mumps->mumps_comm = newcomm;
