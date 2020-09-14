@@ -2438,7 +2438,14 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
     ierr = VecDestroy(&diagV);CHKERRQ(ierr);
     ierr = VecRestoreArrayWrite(v,&diagA);CHKERRQ(ierr);
     PetscFunctionReturn(0);
-  } else if (n == 0) PetscFunctionReturn(0);
+  } else if (n == 0) {
+    if (m) {
+      ierr = VecGetArrayWrite(v,&a);CHKERRQ(ierr);
+      for (r = 0; r < m; r++) {a[r] = PETSC_MIN_REAL; if (idx) idx[r] = -1;}
+      ierr = VecRestoreArrayWrite(v,&a);CHKERRQ(ierr);
+    }
+    PetscFunctionReturn(0);
+  }
 
   ierr = PetscMalloc2(m,&diagIdx,m,&offdiagIdx);CHKERRQ(ierr);
   ierr = VecCreateSeq(PETSC_COMM_SELF, m, &diagV);CHKERRQ(ierr);
@@ -2458,7 +2465,7 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
       offdiagA[r] = 0.0;
 
       /* Find first hole in the cmap */
-      for (; j<ncols; j++) {
+      for (j=0; j<ncols; j++) {
         col = cmap[bj[j]]; /* global column number = cmap[B column number] */
         if (col > j && j < cstart) {
           offdiagIdx[r] = j; /* global column number of first implicit 0.0 */
@@ -2488,7 +2495,7 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
   }
 
   ierr = VecGetArrayWrite(v,    &a);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(diagV,&diagA);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(diagV,(const PetscScalar**)&diagA);CHKERRQ(ierr);
   for (r = 0; r < m; ++r) {
     if (PetscRealPart(diagA[r]) > PetscRealPart(offdiagA[r])) {
       a[r] = diagA[r];
@@ -2506,7 +2513,7 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
     }
   }
   ierr = VecRestoreArrayWrite(v,       &a);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(diagV,   &diagA);CHKERRQ(ierr);
+  ierr = VecRestoreArrayRead(diagV,   (const PetscScalar**)&diagA);CHKERRQ(ierr);
   ierr = VecRestoreArrayWrite(offdiagV,&offdiagA);CHKERRQ(ierr);
   ierr = VecDestroy(&diagV);CHKERRQ(ierr);
   ierr = VecDestroy(&offdiagV);CHKERRQ(ierr);
