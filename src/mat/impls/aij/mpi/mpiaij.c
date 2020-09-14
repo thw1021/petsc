@@ -2432,7 +2432,7 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
   PetscFunctionBegin;
   /* When a process holds entire A and other processes have no entry */
   if (A->cmap->N == n) {
-    ierr = VecGetArray(v,&diagA);CHKERRQ(ierr);
+    ierr = VecGetArrayWrite(v,&diagA);CHKERRQ(ierr);
     ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,m,diagA,&diagV);CHKERRQ(ierr);
     ierr = MatGetRowMax(mat->A,diagV,idx);CHKERRQ(ierr);
     ierr = VecDestroy(&diagV);CHKERRQ(ierr);
