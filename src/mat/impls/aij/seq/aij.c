@@ -3095,7 +3095,7 @@ PetscErrorCode MatGetRowMax_SeqAIJ(Mat A,Vec v,PetscInt idx[])
     } else {  /* row is sparse so already KNOW maximum is 0.0 or higher */
       x[i] = 0.0;
       if (idx) {
-        for (; j<ncols; j++) { /* find first implicit 0.0 in the row */
+        for (j=0; j<ncols; j++) { /* find first implicit 0.0 in the row */
           if (aj[j] > j) {
             idx[i] = j;
             break;
