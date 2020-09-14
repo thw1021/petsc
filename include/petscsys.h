@@ -1636,7 +1636,6 @@ PETSC_EXTERN PetscErrorCode PetscIntView(PetscInt,const PetscInt[],PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscRealView(PetscInt,const PetscReal[],PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt,const PetscScalar[],PetscViewer);
 
-#include <stddef.h>
 #include <string.h>             /* for memcpy, memset */
 #include <stdlib.h>
 
