@@ -2458,7 +2458,6 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
       offdiagA[r] = 0.0;
 
       /* Find first hole in the cmap */
-      j = 0;
       for (; j<ncols; j++) {
         col = cmap[bj[j]]; /* global column number = cmap[B column number] */
         if (col > j && j < cstart) {
