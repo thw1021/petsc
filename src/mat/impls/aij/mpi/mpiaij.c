@@ -2436,7 +2436,7 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
     ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,m,diagA,&diagV);CHKERRQ(ierr);
     ierr = MatGetRowMax(mat->A,diagV,idx);CHKERRQ(ierr);
     ierr = VecDestroy(&diagV);CHKERRQ(ierr);
-    ierr = VecRestoreArray(v,&diagA);CHKERRQ(ierr);
+    ierr = VecRestoreArrayWrite(v,&diagA);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   } else if (n == 0) PetscFunctionReturn(0);
 
