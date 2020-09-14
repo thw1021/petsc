@@ -2487,7 +2487,7 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
     }
   }
 
-  ierr = VecGetArray(v,    &a);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(v,    &a);CHKERRQ(ierr);
   ierr = VecGetArrayRead(diagV,&diagA);CHKERRQ(ierr);
   for (r = 0; r < m; ++r) {
     if (PetscRealPart(diagA[r]) > PetscRealPart(offdiagA[r])) {
