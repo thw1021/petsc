@@ -2449,7 +2449,7 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
   ba = b->a;
   bi = b->i;
   bj = b->j;
-  ierr = VecGetArray(offdiagV, &offdiagA);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(offdiagV, &offdiagA);CHKERRQ(ierr);
   for (r = 0; r < m; r++) {
     ncols = bi[r+1] - bi[r];
     if (ncols == A->cmap->N - n) { /* Brow is dense */
