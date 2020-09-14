@@ -325,7 +325,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
 
   ierr = VecGetArrayRead(X,&Xarr);CHKERRQ(ierr);
 
-  #if 0
+  #if 1
   /* (2) insert Z and Ci to Jpre -- overwrite existing values */
   for (i=0; i < pdipm->nci; i++) {
     row     = Jrstart + pdipm->off_z + i;
@@ -339,8 +339,11 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
   #else
     for (i=0; i < pdipm->nci; i++) {
         row     = Jrstart + pdipm->off_z + i;
-        vals[0] = Xarr[pdipm->off_lambdai + i]/Xarr[pdipm->off_z + i];
-        ierr = MatSetValue(Jpre,row,row,vals[0],INSERT_VALUES);CHKERRQ(ierr);
+        cols[0] = Jrstart + pdipm->off_lambdai + i;
+        cols[1] = row;
+        vals[0] = 1.0;
+        vals[1] = Xarr[pdipm->off_lambdai + i]/Xarr[pdipm->off_z + i];
+        ierr = MatSetValues(Jpre,1,&row,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
         printf("z[%d] = %f \t lambdai[%d] = %f \n",i,Xarr[pdipm->off_z + i],i,Xarr[pdipm->off_lambdai + i]);
     }
   #endif
@@ -533,7 +536,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
   }
   ierr = VecNorm(pdipm->ce,NORM_2,&cnorm[0]);CHKERRQ(ierr);
 
-  #if 0
+  #if 1
   if (pdipm->Nci) {
     /* (3) L3 = ci(x) - z;
        (4) L4 = Z * Lambdai * e - mu * e
