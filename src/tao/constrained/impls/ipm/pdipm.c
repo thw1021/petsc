@@ -311,19 +311,9 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
   ierr = MatGetOwnershipRangesColumn(tao->hessian,&cranges);CHKERRQ(ierr);
 
   ierr = VecGetArrayRead(X,&Xarr);CHKERRQ(ierr);
-
-  #if 0
-  /* (2) insert Z and Ci to Jpre -- overwrite existing values */
-  for (i=0; i < pdipm->nci; i++) {
-    row     = Jrstart + pdipm->off_z + i;
-    cols[0] = Jrstart + pdipm->off_lambdai + i;
-    cols[1] = row;
-    vals[0] = Xarr[pdipm->off_z + i];
-    vals[1] = Xarr[pdipm->off_lambdai + i];
-    printf("z[%d] = %f \t lambdai[%d] = %f \n",i,Xarr[pdipm->off_z + i],i,Xarr[pdipm->off_lambdai + i]);
-    ierr = MatSetValues(Jpre,1,&row,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
-  }
-  #else
+  
+  
+  if (pdipm->solve_symetric_kkt){// 1 for eq 17 revised pdipm doc 0 for eq 18 (symetric KKT)
     for (i=0; i < pdipm->nci; i++) {
         row     = Jrstart + pdipm->off_z + i;
         cols[0] = Jrstart + pdipm->off_lambdai + i;
@@ -331,9 +321,19 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
         vals[0] = 1.0;
         vals[1] = Xarr[pdipm->off_lambdai + i]/Xarr[pdipm->off_z + i];
         ierr = MatSetValues(Jpre,1,&row,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
-        printf("z[%d] = %f \t lambdai[%d] = %f \n",i,Xarr[pdipm->off_z + i],i,Xarr[pdipm->off_lambdai + i]);
     }
-  #endif
+  }
+  else{
+    /* (2) insert Z and Ci to Jpre -- overwrite existing values */
+    for (i=0; i < pdipm->nci; i++) {
+      row     = Jrstart + pdipm->off_z + i;
+      cols[0] = Jrstart + pdipm->off_lambdai + i;
+      cols[1] = row;
+      vals[0] = Xarr[pdipm->off_z + i];
+      vals[1] = Xarr[pdipm->off_lambdai + i];
+      ierr = MatSetValues(Jpre,1,&row,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
+    }
+  }
 
   /* (3) insert 2nd row block of Jpre: [ grad g, 0, 0, 0] */
   if(pdipm->Ng) {
@@ -453,7 +453,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
   PetscErrorCode ierr;
   Tao            tao=(Tao)ctx;
   TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
-  PetscScalar    *Farr;
+  PetscScalar    *Farr,*tmparr;
   Vec            x,L1;
   PetscInt       i;
   PetscReal      res[2],cnorm[2];
@@ -522,22 +522,8 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
   }
   ierr = VecNorm(pdipm->ce,NORM_2,&cnorm[0]);CHKERRQ(ierr);
 
-  #if 0
   if (pdipm->Nci) {
-    /* (3) L3 = ci(x) - z;
-       (4) L4 = Z * Lambdai * e - mu * e
-    */
-    ierr = VecGetArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
-    larr = Xarr+pdipm->off_lambdai;
-    zarr = Xarr+pdipm->off_z;
-    for (i=0; i<pdipm->nci; i++) {
-      Farr[pdipm->off_lambdai + i] = zarr[i] - carr[i];
-      Farr[pdipm->off_z       + i] = zarr[i]*larr[i] - pdipm->mu;
-    }
-    ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
-  }
-  #else
-  if (pdipm->Nci) {
+    if (pdipm->solve_symetric_kkt){    
       /* (3) L3 = ci(x) - z;
         (4) L4 = Lambdai * e - mu/z *e
       */
@@ -550,8 +536,21 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
       }
       ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
     }
+    else{
+      /* (3) L3 = ci(x) - z;
+        (4) L4 = Z * Lambdai * e - mu * e
+      */
+      ierr = VecGetArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
+      larr = Xarr+pdipm->off_lambdai;
+      zarr = Xarr+pdipm->off_z;
+      for (i=0; i<pdipm->nci; i++) {
+        Farr[pdipm->off_lambdai + i] = zarr[i] - carr[i];
+        Farr[pdipm->off_z       + i] = zarr[i]*larr[i] - pdipm->mu;
+      }
+      ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
+    }
+  }
 
-  #endif
 
 
   ierr = VecPlaceArray(pdipm->ci,Farr+pdipm->off_lambdai);CHKERRQ(ierr);
@@ -559,13 +558,39 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
   ierr = VecResetArray(pdipm->ci);CHKERRQ(ierr);
 
   /* note: pdipm->z is not changed below */
-  ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
-  ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
-  ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
+  if (pdipm->solve_symetric_kkt){    
+    ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
+
+    if (pdipm->Nci) {
+      zarr = Xarr+pdipm->off_z;
+      VecGetArray(pdipm->z,&tmparr);
+      for (i=0; i<pdipm->nci; i++) {
+            tmparr[i] = tmparr[i]*Xarr[pdipm->off_z       + i];
+      }
+      ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
+    }
+
+    ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
+
+    if (pdipm->Nci) {
+      zarr = Xarr+pdipm->off_z;
+      VecGetArray(pdipm->z,&tmparr);
+      for (i=0; i<pdipm->nci; i++) {
+            tmparr[i] = tmparr[i]/Xarr[pdipm->off_z       + i];
+      }
+      ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
+    }
+
+    ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
+  }
+  else{
+    ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
+    ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
+    ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
+  }
 
   tao->residual = PetscSqrtReal(res[0]*res[0] + res[1]*res[1]);
   tao->cnorm    = PetscSqrtReal(cnorm[0]*cnorm[0] + cnorm[1]*cnorm[1]);
-  printf("res0 = %f \t res1 = %f\n",res[0], res[1]);
 
   ierr = VecRestoreArrayRead(X,&Xarr);CHKERRQ(ierr);
   ierr = VecRestoreArray(F,&Farr);CHKERRQ(ierr);
@@ -1335,6 +1360,7 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
   ierr = PetscOptionsReal("-tao_pdipm_push_init_lambdai","parameter to push initial (inequality) dual variables away from bounds",NULL,pdipm->push_init_lambdai,&pdipm->push_init_lambdai,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-tao_pdipm_solve_reduced_kkt","Solve reduced KKT system using Schur-complement",NULL,pdipm->solve_reduced_kkt,&pdipm->solve_reduced_kkt,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-tao_pdipm_mu_update_factor","Update scalar for barrier parameter (mu) update",NULL,pdipm->mu_update_factor,&pdipm->mu_update_factor,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-tao_pdipm_symetric_kkt","Solve non reduced symetric KKT system",NULL,pdipm->solve_symetric_kkt,&pdipm->solve_symetric_kkt,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1379,6 +1405,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->push_init_slack   = 1.0;
   pdipm->push_init_lambdai = 1.0;
   pdipm->solve_reduced_kkt = PETSC_FALSE;
+  pdipm->solve_symetric_kkt = PETSC_FALSE;
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
