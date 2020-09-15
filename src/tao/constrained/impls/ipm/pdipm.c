@@ -325,7 +325,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
 
   ierr = VecGetArrayRead(X,&Xarr);CHKERRQ(ierr);
 
-  #if 1
+  #if 0
   /* (2) insert Z and Ci to Jpre -- overwrite existing values */
   for (i=0; i < pdipm->nci; i++) {
     row     = Jrstart + pdipm->off_z + i;
@@ -370,7 +370,6 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
     ierr = MatGetOwnershipRange(tao->jacobian_inequality,&rjstart,NULL);CHKERRQ(ierr);
     for (i=0; i < pdipm->nh; i++){
       row = Jrstart + pdipm->off_lambdai + i;
-
       ierr = MatGetRow(tao->jacobian_inequality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
       proc = 0;
       for (j=0; j < nc; j++) {
@@ -536,7 +535,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
   }
   ierr = VecNorm(pdipm->ce,NORM_2,&cnorm[0]);CHKERRQ(ierr);
 
-  #if 1
+  #if 0
   if (pdipm->Nci) {
     /* (3) L3 = ci(x) - z;
        (4) L4 = Z * Lambdai * e - mu * e
