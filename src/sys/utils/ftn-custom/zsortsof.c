@@ -9,12 +9,24 @@
 #define petsctimsortwitharray_ petsctimsortwitharray
 #endif
 
-PETSC_EXTERN void petsctimsort_(PetscInt n, void *arr, size_t size, int (*cmp)(void *, void *), PetscErrorCode *ierr)
+int cmp_via_fortran(void *a, void *b, void *ctx)
 {
+  int result;
+  struct {
+    void (*f_)(void *a, void *b, void *c, int *res);
+    void *fctx;
+  } *fc = ctx;
+  fc->f_(a, b, fc->fctx, &result);
+  return result;
+}
+
+PETSC_EXTERN void petsctimsort_(PetscInt n, void *arr, size_t size, void (*cmp)(void *, void *), void *, PetscErrorCode *ierr)
+{
+
   *ierr = PetscTimSort(n,arr,size,cmp);
 }
 
-PETSC_EXTERN void petsctimsortwitharray_(PetscInt n, void *arr, size_t asize, void *barr, size_t bsize, int (*cmp)(void *, void *), PetscErrorCode *ierr)
+PETSC_EXTERN void petsctimsortwitharray_(PetscInt n, void *arr, size_t asize, void *barr, size_t bsize, void (*cmp)(void *, void *), void *, PetscErrorCode *ierr)
 {
   *ierr = PetscTimSortWithArray(n,arr,asize,barr,bszie,cmp);
 }
