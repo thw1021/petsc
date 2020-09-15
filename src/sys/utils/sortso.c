@@ -897,7 +897,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortBuildRunWithArray_Private(char *a
   PetscFunctionReturn(0);
 }
 
-/*
+/*@C
   PetscTimSort - Sorts an array in place in increasing order using Tim Peters adaptive sorting algorithm.
 
   Not Collective
@@ -948,7 +948,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortBuildRunWithArray_Private(char *a
   Level: developer
 
 .seealso: PetscTimSortWithArray(), PetscIntSortSemiOrdered(), PetscRealSortSemiOrdered(), PetscMPIIntSortSemiOrdered()
-*/
+@*/
 PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const void *, const void *))
 {
   PetscInt           stacksize = 0, minrun, runstart = 0, runend = 0;
@@ -993,7 +993,7 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
   PetscFunctionReturn(0);
 }
 
-/*
+/*@C
   PetscTimSortWithArray - Sorts an array in place in increasing order using Tim Peters adaptive sorting algorithm and
   reorders a second array to match the first. The arrays need not be the same type.
 
@@ -1050,7 +1050,7 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
   Level: developer
 
 .seealso: PetscTimSort(), PetscIntSortSemiOrderedWithArray(), PetscRealSortSemiOrderedWithArrayInt(), PetscMPIIntSortSemiOrderedWithArray()
-*/
+@*/
 PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *barr, size_t bsize, int (*cmp)(const void *, const void *))
 {
   PetscInt           stacksize = 0, minrun, runstart = 0, runend = 0;
