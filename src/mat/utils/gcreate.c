@@ -427,13 +427,15 @@ PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat A,Mat *C)
 }
 
 /*@
-     MatBindToCPU - marks a matrix to temporarily stay on the CPU and perform computations on the CPU
+   MatBindToCPU - marks a matrix to temporarily stay on the CPU and perform computations on the CPU
 
    Input Parameters:
 +   A - the matrix
 -   flg - bind to the CPU if value of PETSC_TRUE
 
    Level: intermediate
+
+.seealso: MatIsBoundToCPU()
 @*/
 PetscErrorCode MatBindToCPU(Mat A,PetscBool flg)
 {
@@ -596,4 +598,26 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
     ierr = MatSetValuesCOO_Basic(A,coo_v,imode);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
+}
+
+/*@
+   MatIsBoundToCPU - Indicates whether a matrix has been bound to the CPU (marked as temporarily staying on the CPU and performing all computations on the CPU)
+
+   Input Parameters:
++   A - the matrix
+-   isbound - flag indicated whether the matrix is bound to the CPU
+
+   Level: intermediate
+
+.seealso: MatBindToCPU()
+@*/
+PetscErrorCode MatIsBoundToCPU(Mat A,PetscBool *isbound)
+{
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  *isbound = A->boundtocpu;
+  PetscFunctionReturn(0);
+#else
+  *isbound = PETSC_TRUE;
+  return 0;
+#endif
 }

@@ -1863,6 +1863,8 @@ PetscErrorCode VecSetInf(Vec xin)
 -   flg - bind to the CPU if value of PETSC_TRUE
 
    Level: intermediate
+
+.seealso: VecIsBoundToCPU()
 @*/
 PetscErrorCode VecBindToCPU(Vec v,PetscBool flg)
 {
@@ -1877,6 +1879,28 @@ PetscErrorCode VecBindToCPU(Vec v,PetscBool flg)
   }
   PetscFunctionReturn(0);
 #else
+  return 0;
+#endif
+}
+
+/*@
+   VecIsBoundToCPU - Indicates whether a vector has been bound to the CPU (marked as temporarily staying on the CPU and performing all computations on the CPU)
+
+   Input Parameters:
++   v - the vector
+-   isbound - flag indicated whether the vector is bound to the CPU
+
+   Level: intermediate
+
+.seealso: VecBindToCPU()
+@*/
+PetscErrorCode VecIsBoundToCPU(Vec v,PetscBool *isbound)
+{
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  *isbound = v->boundtocpu;
+  PetscFunctionReturn(0);
+#else
+  *isbound = PETSC_TRUE;
   return 0;
 #endif
 }
