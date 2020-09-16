@@ -13,7 +13,7 @@ PETSC_STATIC_INLINE int Compare_PetscInt_Private(const void *left, const void *r
   return (l < r) ? -1 : (l > r);
 }
 
-PETSC_STATIC_INLINE int Compare_PetscReal_Private(const void *left, const void *right, PETSC_UNUSED, void *ctx)
+PETSC_STATIC_INLINE int Compare_PetscReal_Private(const void *left, const void *right, PETSC_UNUSED void *ctx)
 {
   PetscReal l = *(PetscReal *) left, r = *(PetscReal *) right;
   return (l < r) ? -1 : (l > r);
@@ -747,7 +747,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortMergeCollapseWithArray_Private(ch
           if ((*cmp)(arr+(stack[i-1].start-1)*asize, arr+(stack[i-1].start)*asize, ctx) > 0) {
             m = stack[i-1].start;
             /* Search A for B[0] insertion */
-            ierr = PetscGallopSearchLeft_Private(arr, asize, cmp, ctxstack[i-2].start, stack[i-1].start-1, (arr)+(stack[i-1].start)*asize, &l);CHKERRQ(ierr);
+            ierr = PetscGallopSearchLeft_Private(arr, asize, cmp, ctx, stack[i-2].start, stack[i-1].start-1, (arr)+(stack[i-1].start)*asize, &l);CHKERRQ(ierr);
             /* Search B for A[-1] insertion */
             ierr = PetscGallopSearchRight_Private(arr, asize, cmp, ctx, stack[i-1].start, stack[i-1].start+stack[i-1].size-1, (arr)+(stack[i-1].start-1)*asize, &r);CHKERRQ(ierr);
             if (m-l <= r-m) {
