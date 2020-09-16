@@ -1,7 +1,7 @@
 ALL: lib
 
 SOURCEH  =
-SOURCEC  = mapping.c
+SOURCEC  = mapping.c mappingreg.c mappingregall.c
 DIRS     =
 LIBBASE  = libpetscsys
 LOCDIR   = src/sys/classes/mapping/interface/

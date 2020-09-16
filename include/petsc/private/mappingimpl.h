@@ -1,11 +1,29 @@
 #if !defined(PETSCMAPPINGIMPL_H)
 #define PETSCMAPPINGIMPL_H
 
-#include <petsc/private/petscimpl.h>
 #include <petscmapping.h>
+#include <petsc/private/petscimpl.h>
+
+PETSC_EXTERN PetscBool PetscMappingRegisterAllCalled;
+PETSC_EXTERN PetscErrorCode PetscMappingRegisterAll(void);
+
+typedef struct _PetscMappingOps *PetscMappingOps;
+struct _PetscMappingOps {
+  PetscErrorCode (*create)(MPI_Comm,PetscMapping*);
+  PetscErrorCode (*destroy)(PetscMapping*);
+  PetscErrorCode (*view)(PetscMapping,PetscViewer);
+  PetscErrorCode (*setup)(PetscMapping);
+  PetscErrorCode (*setfromoptions)(PetscMapping);
+  PetscErrorCode (*sort)(PetscMapping);
+  PetscErrorCode (*sorted)(PetscMapping);
+  PetscErrorCode (*getkeys)(PetscMapping,PetscInt*,const PetscInt*[]);
+  PetscErrorCode (*getvalues)(PetscMapping,PetscInt*,const PetscInt*[]);
+  PetscErrorCode (*restorekeys)(PetscMapping,PetscInt,const PetscInt*[]);
+  PetscErrorCode (*restorevalues)(PetscMapping,PetscInt,const PetscInt*[]);
+};
 
 struct _p_PetscMapping {
-  PETSCHEADER(int);
+  PETSCHEADER(struct _PetscMappingOps);
   PetscMapping      *maps;  /* n-recurvise map objects */
   PetscInt          *keys;  /* "keys" to depth 1 "values" */
   PetscInt          *cidx;  /* cached depth 1 "values" */
@@ -16,6 +34,8 @@ struct _p_PetscMapping {
   PetscBool         iallocated; /* are cidx copied */
   PetscBool         kallocated; /* are keys copied */
   PetscBool         mallocated; /* are maps copied */
+  PetscBool         setup;
+  void              *data;
 };
 
 #endif
