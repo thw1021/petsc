@@ -486,6 +486,7 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
       DM dmforest;
       ierr = DMConvert(*dm,convType,&dmforest);CHKERRQ(ierr);
       if (dmforest) {
+        dmforest->prealloc_only = (*dm)->prealloc_only;
         PetscBool isForest;
         ierr = PetscObjectSetOptionsPrefix((PetscObject)dmforest,prefix);CHKERRQ(ierr);
         ierr = DMIsForest(dmforest,&isForest);CHKERRQ(ierr);
@@ -780,6 +781,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
     ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
     ierr = PetscInfo2(sol, "\tPhase: adaptToleranceFEM: %D cells, %d total quadrature points\n",cEnd-cStart,Nq*(cEnd-cStart));CHKERRQ(ierr);
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
+    adaptedDM->prealloc_only = dm->prealloc_only;
   }
   PetscFunctionReturn(0);
 }
@@ -1071,6 +1073,7 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   ierr = DMSetApplicationContext(*dm, ctx);CHKERRQ(ierr);
   ctx->dmv = *dm;
   ierr = DMCreateMatrix(ctx->dmv, &ctx->J);CHKERRQ(ierr);
+  ierr = MatSetOption(ctx->J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
   if (J) *J = ctx->J;
   PetscFunctionReturn(0);
 }
@@ -1502,6 +1505,7 @@ PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMClone(dm, &massDM);CHKERRQ(ierr);
+  massDM->prealloc_only = dm->prealloc_only;
   ierr = DMCopyFields(dm, massDM);CHKERRQ(ierr);
   ierr = DMCreateDS(massDM);CHKERRQ(ierr);
   ierr = DMGetDS(massDM, &prob);CHKERRQ(ierr);
@@ -1511,12 +1515,14 @@ PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
   }
   ierr = DMViewFromOptions(massDM,NULL,"-dm_landau_mass_dm_view");CHKERRQ(ierr);
   ierr = DMCreateMatrix(massDM, &M);CHKERRQ(ierr);
+  ierr = MatSetOption(M, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
   {
     Vec locX;
     DM  plex;
     ierr = DMConvert(massDM, DMPLEX, &plex);CHKERRQ(ierr);
     ierr = DMGetLocalVector(massDM, &locX);CHKERRQ(ierr);
     /* Mass matrix is independent of the input, so no need to fill locX */
+    plex->prealloc_only = massDM->prealloc_only;
     ierr = DMPlexSNESComputeJacobianFEM(plex, locX, M, M, ctx);CHKERRQ(ierr);
     ierr = DMRestoreLocalVector(massDM, &locX);CHKERRQ(ierr);
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
@@ -1525,6 +1531,7 @@ PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
   ierr = MatGetSize(ctx->J, &N1, NULL);CHKERRQ(ierr);
   ierr = MatGetSize(M, &N2, NULL);CHKERRQ(ierr);
   if (N1 != N2) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Incorrect matrix sizes: |Jacobian| = %D, |Mass|=%D",N1,N2);
+  ierr = PetscObjectSetName((PetscObject)M, "mass");CHKERRQ(ierr);
   ierr = MatViewFromOptions(M,NULL,"-dm_landau_mass_mat_view");CHKERRQ(ierr);
   ctx->M = M; /* this could be a noop, a = a */
   if (Amat) *Amat = M;
@@ -1637,6 +1644,15 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   /* add C */
   ierr = MatCopy(ctx->J,Pmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
   /* add mass */
+  {
+    MatInfo info1, info2;
+    double  nz_1, nz_2;
+    ierr = MatGetInfo(Pmat,MAT_LOCAL,&info1);CHKERRQ(ierr);
+    nz_1 = info1.nz_allocated;
+    ierr = MatGetInfo(ctx->M,MAT_LOCAL,&info2);CHKERRQ(ierr);
+    nz_2 = info2.nz_allocated;
+    ierr = PetscInfo2(ts, "\t\tnnz A = %g, nnz M = %g\n",nz_1,nz_2);CHKERRQ(ierr);
+  }
   ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
