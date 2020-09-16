@@ -1,45 +1,11 @@
+/*
+ This file should contain all "core" ops that every petsc impls is expected to provide a function for, i.e. every
+ function in _PetscMappingOps
+ */
 #include <petsc/private/mappingimpl.h>
 #include <petscmapping.h>
 
-PetscClassId PETSC_MAPPING_CLASSID;
-
-static PetscBool PetscMappingPackageInitialized = PETSC_FALSE;
-
-PetscErrorCode PetscMappingFinalizePackage(void)
-{
-  PetscFunctionBegin;
-  PetscMappingPackageInitialized = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscMappingInitializePackage(void)
-{
-  char           logList[256];
-  PetscBool      opt;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (PetscMappingPackageInitialized) PetscFunctionReturn(0);
-  PetscMappingPackageInitialized = PETSC_TRUE;
-  ierr = PetscClassIdRegister("Mapping",&PETSC_MAPPING_CLASSID);CHKERRQ(ierr);
-  {
-    PetscClassId classids[1];
-
-    classids[0] = PETSC_MAPPING_CLASSID;
-    ierr = PetscInfoProcessClass("mapping", 1, classids);CHKERRQ(ierr);
-  }
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
-  if (opt) {
-    PetscBool pkg;
-
-    ierr = PetscStrInList("mapping",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(PETSC_MAPPING_CLASSID);CHKERRQ(ierr);}
-  }
-  ierr = PetscRegisterFinalize(PetscMappingFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscMappingClear(PetscMapping *m)
+PETSC_STATIC_INLINE PetscErrorCode PetscMappingClear_Base(PetscMapping *m)
 {
   PetscFunctionBegin;
   (*m)->maps = NULL;
@@ -62,10 +28,100 @@ PetscErrorCode PetscMappingCreate(MPI_Comm comm, PetscMapping *m)
   PetscValidPointer(m,2);
   ierr = PetscMappingInitializePackage();CHKERRQ(ierr);
   ierr = PetscHeaderCreate(*m,PETSC_MAPPING_CLASSID,"PetscMapping","Mapping","IS",comm,PetscMappingDestroy,PetscMappingView);CHKERRQ(ierr);
-  ierr = PetscMappingClear(m);CHKERRQ(ierr);
+  ierr = PetscMappingClear_Base(m);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscMappingDestroy(PetscMapping *m)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (!*m) PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(*m,PETSC_MAPPING_CLASSID,1);
+  ierr = PetscMappingClear_Base(m);CHKERRQ(ierr);
+  if ((*m)->ops->destroy) {
+    ierr = (*(*m)->ops->destroy)(m);CHKERRQ(ierr);
+  }
+  ierr = PetscHeaderDestroy(m);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscMappingSetType(PetscMapping m, PetscMappingType type)
+{
+  PetscErrorCode (*create)(PetscMapping);
+  PetscBool      sametype;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
+  ierr = PetscObjectTypeCompare((PetscObject) m, type, &sametype);CHKERRQ(ierr);
+  if (sametype) PetscFunctionReturn(0);
+
+  ierr = PetscMappingRegisterAll();CHKERRQ(ierr);
+  ierr = PetscFunctionListFind(PetscMappingList, type, &create);CHKERRQ(ierr);
+  if (!create) SETERRQ1(PetscObjectComm((PetscObject) m),PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscMapping type: %s", type);
+
+  if (m->ops->destroy) {
+    ierr = (*m->ops->destroy)(&m);CHKERRQ(ierr);
+  }
+  ierr = PetscMemzero(m->ops, sizeof(*m->ops));CHKERRQ(ierr);
+  ierr = PetscObjectChangeTypeName((PetscObject) m, type);CHKERRQ(ierr);
+  ierr = (*create)(m);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscMappingGetType(PetscMapping m, PetscMappingType *type)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
+  PetscValidPointer(type,2);
+  ierr = PetscMappingRegisterAll();CHKERRQ(ierr);
+  *type = ((PetscObject) m)->type_name;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscMappingView(PetscMapping m, PetscViewer vwr)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
+  if (m->ops->view) {
+    ierr = (*m->ops->view)(m,vwr);CHKERRQ(ierr);
+  } else {
+    ierr = PetscObjectView((PetscObject) m, vwr);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscMappingSetUp(PetscMapping m)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
+  if (m->setup) PetscFunctionReturn(0);
+  if (m->ops->setup) {
+    PetscErrorCode ierr;
+    ierr = (*m->ops->setup)(m);CHKERRQ(ierr);
+  }
+  m->setup = PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscMappingSetFromOptions(PetscMapping m)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
+  if (m->ops->setfromoptions) {
+    PetscErrorCode ierr;
+    ierr = (*m->ops->setfromoptions)(m);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/*
 PetscErrorCode PetscMappingDestroy(PetscMapping *m)
 {
   PetscErrorCode ierr;
@@ -85,16 +141,6 @@ PetscErrorCode PetscMappingDestroy(PetscMapping *m)
   ierr = PetscFree((*m)->keys);CHKERRQ(ierr);
   ierr = PetscMappingClear(m);CHKERRQ(ierr);
   ierr = PetscHeaderDestroy(m);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscMappingView(PetscMapping m, PetscViewer vwr)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
-  ierr = PetscObjectView((PetscObject) m, vwr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -236,8 +282,8 @@ PetscErrorCode PetscMappingValidate(PetscMapping m)
   case MAPS_VALID:
   {
     PetscInt nidx = 0;
-    /* maps are more up to date, assume entire recursive structure is ok too */
-    /* so we read the level 1 keys from every local map and populate keys and dof */
+ // maps are more up to date, assume entire recursive structure is ok too
+// so we read the level 1 keys from every local map and populate keys and dof
     if (m->iallocated) {
       ierr = PetscFree(m->cidx);CHKERRQ(ierr);
       ierr = PetscFree(m->dof);CHKERRQ(ierr);
@@ -254,15 +300,15 @@ PetscErrorCode PetscMappingValidate(PetscMapping m)
   }
   case INDICES_VALID:
   {
-    /* cidx is more up to date, clear entire recursive map structure */
-    /* repopulate from cidx and dof */
+    // cidx is more up to date, clear entire recursive map structure
+    // repopulate from cidx and dof
     MPI_Comm     comm;
     PetscMapping *newm;
     PetscInt     offset = 0;
 
     ierr = PetscObjectGetComm((PetscObject) m, &comm);CHKERRQ(ierr);
     ierr = PetscMalloc1(nblade, &newm);CHKERRQ(ierr);
-    /* For now clear the recursive map structure, TODO handle remapping maybe? */
+ // For now clear the recursive map structure, TODO handle remapping maybe?
     for (i = 0; i < nblade; ++i) {
       ierr = PetscMappingDestroy(&(m->maps[i]));CHKERRQ(ierr);
       ierr = PetscMappingCreate(comm, &newm[i]);CHKERRQ(ierr);
@@ -294,3 +340,4 @@ PetscErrorCode PetscMappingGetSize(PetscMapping m, PetscInt *nidx, PetscInt *nbl
   }
   PetscFunctionReturn(0);
 }
+*/
