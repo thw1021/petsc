@@ -722,15 +722,17 @@ int main(int argc, char **argv)
   ierr = TSMonitorSet(ts,Monitor,ctx,NULL);CHKERRQ(ierr);
   ierr = TSSetPreStep(ts,PreStep);CHKERRQ(ierr);
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
-  ierr = MatSetOption(J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
   { /* warm up an test just LandauIJacobian */
 #if defined(PETSC_USE_LOG)
     PetscLogStage stage;
 #endif
     Vec           vec;
     PetscRandom   rctx;
+<<<<<<< HEAD
     PetscInt      ii;
 
+=======
+>>>>>>> wip: fixing Plex with no preallocation in DMCreateMatrix (Plex and Forest)
     ierr = PetscRandomCreate(PETSC_COMM_SELF,&rctx);CHKERRQ(ierr);
     ierr = PetscRandomSetFromOptions(rctx);CHKERRQ(ierr);
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
@@ -739,14 +741,6 @@ int main(int argc, char **argv)
     ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
     ierr = LandauIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
-    ierr = PetscLogStagePop();CHKERRQ(ierr);
-    /* LandauIJacobian */
-    ierr = PetscLogStageRegister("LandauIJacobian", &stage);CHKERRQ(ierr);
-    ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-    for (ii=0;ii<10;ii++){
-      ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
-      ierr = LandauIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
-    }
     ierr = PetscLogStagePop();CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
