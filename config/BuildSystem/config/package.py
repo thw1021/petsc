@@ -262,6 +262,8 @@ class Package(config.base.Configure):
     return outflags
 
   def updatePackageCFlags(self,flags):
+  '''Removes and adds to the current configure compiler flags options appropriate for compiling external packages'''
+  '''Mostly these turn off various warnings or errors the compilers may produce'''
     outflags = self.removeWarningFlags(flags.split())
     with self.Language('C'):
       if config.setCompilers.Configure.isDarwinCatalina(self.log) and config.setCompilers.Configure.isClang(self.getCompiler(), self.log):
