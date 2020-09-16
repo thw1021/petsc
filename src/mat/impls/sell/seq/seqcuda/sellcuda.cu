@@ -239,7 +239,7 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayWrite(yy,&y);CHKERRQ(ierr);
-  ierr = PetscLogGpuFlops(2.0*a->nz);CHKERRQ(ierr);
+  ierr = PetscLogGpuFlops(2.0*a->nz-a->nonzerorowcnt);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
