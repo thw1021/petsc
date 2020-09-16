@@ -52,6 +52,7 @@ PetscErrorCode  DMCreate(MPI_Comm comm,DM *dm)
   v->setupcalled              = PETSC_FALSE;
   v->setfromoptionscalled     = PETSC_FALSE;
   v->ltogmap                  = NULL;
+  v->bind_below               = 0;
   v->bs                       = 1;
   v->coloringtype             = IS_COLORING_GLOBAL;
   ierr                        = PetscSFCreate(comm, &v->sf);CHKERRQ(ierr);
@@ -803,7 +804,8 @@ PetscErrorCode  DMSetUp(DM dm)
 +   -dm_preallocate_only - Only preallocate the matrix for DMCreateMatrix(), but do not fill it with zeros
 .   -dm_vec_type <type>  - type of vector to create inside DM
 .   -dm_mat_type <type>  - type of matrix to create inside DM
--   -dm_is_coloring_type - <global or local>
+.   -dm_is_coloring_type - <global or local>
+-   -dm_bind_below <n>   - bind (force execution on CPU) for Vec and Mat objects with local size (number of vector entries or matrix rows) below n
 
     DMPLEX Specific Checks
 +   -dm_plex_check_symmetry        - Check that the adjacency information in the mesh is symmetric - DMPlexCheckSymmetry()
@@ -842,6 +844,7 @@ PetscErrorCode DMSetFromOptions(DM dm)
     ierr = DMSetMatType(dm,typeName);CHKERRQ(ierr);
   }
   ierr = PetscOptionsEnum("-dm_is_coloring_type","Global or local coloring of Jacobian","DMSetISColoringType",ISColoringTypes,(PetscEnum)dm->coloringtype,(PetscEnum*)&dm->coloringtype,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_bind_below","Set the size threshold (in entries) below which the Vec is bound to the CPU","VecBindToCPU",dm->bind_below,&dm->bind_below,&flg);CHKERRQ(ierr);
   if (dm->ops->setfromoptions) {
     ierr = (*dm->ops->setfromoptions)(PetscOptionsObject,dm);CHKERRQ(ierr);
   }
