@@ -8706,6 +8706,7 @@ PetscErrorCode DMAdaptLabel(DM dm, DMLabel label, DM *dmAdapt)
   *dmAdapt = NULL;
   if (!dm->ops->adaptlabel) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMAdaptLabel",((PetscObject)dm)->type_name);
   ierr = (dm->ops->adaptlabel)(dm, label, dmAdapt);CHKERRQ(ierr);
+  if ((*dmAdapt)->prealloc_only != dm->prealloc_only) (*dmAdapt)->prealloc_only = dm->prealloc_only;  /* maybe this should go .... */
   PetscFunctionReturn(0);
 }
 
