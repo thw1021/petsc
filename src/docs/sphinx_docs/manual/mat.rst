@@ -3,8 +3,6 @@
 Matrices
 --------
 
-.. include:: temp_edit_needed_banner.inc
-
 PETSc provides a variety of matrix implementations because no single
 matrix format is appropriate for all problems. Currently, we support
 dense storage and compressed sparse row storage (both sequential and
@@ -41,7 +39,7 @@ controls memory allocation. This routine facilitates switching among
 various matrix types, for example, to determine the format that is most
 efficient for a certain application. By default, ``MatCreate()`` employs
 the sparse AIJ format, which is discussed in detail
-Section `2.1.1 <#sec_matsparse>`__. See the manual pages for further
+:any:`sec_matsparse`. See the manual pages for further
 information about available matrix formats.
 
 To insert or add entries to a matrix, one can call a variant of
@@ -146,7 +144,7 @@ should be specified after the first matrix has been fully assembled.
 This option ensures that certain data structures and communication
 information will be reused (instead of regenerated) during successive
 steps, thereby increasing efficiency. See
-```$PETSC_DIR/src/ksp/ksp/tutorials/ex5.c`` <https://www.mcs.anl.gov/petsc/petsc-current/src/ksp/ksp/tutorials/ex5.c.html>`__
+`KSP Tutorial ex5 <https://www.mcs.anl.gov/petsc/petsc-current/src/ksp/ksp/tutorials/ex5.c.html>`__
 for a simple example of solving two linear systems that use the same
 matrix data structure.
 
@@ -163,7 +161,7 @@ this matrix format for large-scale applications. Additional formats
 generally much more efficient for problems with multiple degrees of
 freedom per node) are discussed below. Beginning users need not concern
 themselves initially with such details and may wish to proceed directly
-to Section `2.2 <#sec_matoptions>`__. However, when an application code
+to :any:`sec_matoptions`. However, when an application code
 progresses to the point of tuning for efficiency and/or generating
 timing results, it is *crucial* to read this information.
 
@@ -467,49 +465,46 @@ secant condition. The limited-memory variants do not store the full
 explicit Jacobian, and instead compute forward products and inverse
 applications based on a fixed number of stored update vectors.
 
-.. container::
-   :name: tab_matlmvmimpl
+.. list-table:: PETSc LMVM matrix implementations.
+  :name: tab_matlmvmimpl
+  :header-rows: 1
 
-   .. table:: PETSc LMVM matrix implementations.
-
-      +-----------------------------------------+----------------+----------------+--------------+
-      | **Method**                              | **PETSc Type** | **Name**       | **Property** |
-      +=========================================+================+================+==============+
-      | "Good" Broyden                          | `              | ``lmvmbrdn``   | Square       |
-      |                                         | `MATLMVMBrdn`` |                |              |
-      | :cite:`griewank2012broyden`             |                |                |              |
-      +-----------------------------------------+----------------+----------------+--------------+
-      | "Bad" Broyden                           | ``MA           | `              | Square       |
-      |                                         | TLMVMBadBrdn`` | `lmvmbadbrdn`` |              |
-      | :cite:`griewank2012broyden`             |                |                |              |
-      +-----------------------------------------+----------------+----------------+--------------+
-      | Symmetric                               | ``MATLMVMSR1`` | ``lmvmsr1``    | Symmetric    |
-      | Rank-1                                  |                |                |              |
-      | :cite:`NW99`                            |                |                |              |
-      +-----------------------------------------+----------------+----------------+--------------+
-      | Davidon-F                               | ``MATLMVMDFP`` | ``lmvmdfp``    | SPD          |
-      | letcher-Powell                          |                |                |              |
-      | (DFP)                                   |                |                |              |
-      | :cite:`NW99`                            |                |                |              |
-      +-----------------------------------------+----------------+----------------+--------------+
-      | Broy                                    | `              | ``lmvmbfgs``   | SPD          |
-      | den-Fletcher-G                          | `MATLMVMBFGS`` |                |              |
-      | oldfarb-Shanno                          |                |                |              |
-      | (BFGS)                                  |                |                |              |
-      | :cite:`NW99`                            |                |                |              |
-      +-----------------------------------------+----------------+----------------+--------------+
-      | Restricted                              | ``MA           | `              | SPD          |
-      | Broyden Family                          | TLMVMSymBrdn`` | `lmvmsymbrdn`` |              |
-      | :cite:`erway2017solving`                |                |                |              |
-      +-----------------------------------------+----------------+----------------+--------------+
-      | Restricted                              | ``MAT          | ``             | SPD          |
-      | Broyden Family                          | LMVMDiagBrdn`` | lmvmdiagbrdn`` |              |
-      | (full-memory                            |                |                |              |
-      | diagonal)                               |                |                |              |
-      +-----------------------------------------+----------------+----------------+--------------+
+  * - Method
+    - PETSc Type
+    - Name
+    - Property
+  * - "Good" Broyden   :cite:`griewank2012broyden`
+    - ``MATLMVMBrdn``
+    - ``lmvmbrdn``
+    - Square
+  * - "Bad" Broyden :cite:`griewank2012broyden`
+    - ``MATLMVMBadBrdn``
+    - ``lmvmbadbrdn``
+    - Square
+  * - Symmetric Rank-1 :cite:`NW99`
+    - ``MATLMVMSR1``
+    - ``lmvmsr1``
+    - Symmetric
+  * - Davidon-Fletcher-Powell (DFP) :cite:`NW99`
+    - ``MATLMVMDFP``
+    - ``lmvmdfp``
+    - SPD
+  * - Broyden-Fletcher-Goldfarb-Shanno (BFGS)
+       :cite:`NW99`
+    - ``MATLMVMBFGS``
+    - ``lmvmbfgs``
+    - SPD
+  * - Restricted Broyden Family :cite:`erway2017solving`
+    - ``MATLMVMSymBrdn``
+    - ``lmvmsymbrdn``
+    - SPD
+  * - Restricted Broyden Family (full-memory diagonal)
+    - ``MATLMVMDiagBrdn``
+    - ``lmvmdiagbrdn``
+    - SPD
 
 PETSc implements seven different LMVM matrices listed in the
-Table `2.1 <#tab_matlmvmimpl>`__. They can be created using the
+table above. They can be created using the
 ``MatCreate()`` and ``MatSetType()`` workflow, and share a number of
 common interface functions. We will review the most important ones
 below:
@@ -647,7 +642,7 @@ matrices for each block (“nested”). These formats have different
 performance characteristics depending on the operation being performed.
 In particular, many preconditioners require a monolithic format, but
 some that are very effective for solving block systems (see
-Section `3.5 <#sec_block_matrices>`__) are more efficient when a nested
+:any:`sec_block_matrices`) are more efficient when a nested
 format is used. In order to stay flexible, we would like to be able to
 use the same code to assemble block matrices in both monolithic and
 nested formats. Additionally, for software maintainability and testing,
@@ -655,7 +650,7 @@ especially in a multi-physics context where different groups might be
 responsible for assembling each of the blocks, it is desirable to be
 able to use exactly the same code to assemble a single block
 independently as to assemble it as part of a larger system. To do this,
-we introduce the four spaces shown in Figure `2.1 <#fig_localspaces>`__.
+we introduce the four spaces shown in :numref:`fig_localspaces`.
 
 -  The monolithic global space is the space in which the Krylov and
    Newton solvers operate, with collective semantics across the entire
@@ -709,7 +704,7 @@ assembly functions (which are not collective). The index sets
 matrices, in which case the MATNEST format can be specified using
 ``-prefix_dm_mat_type nest`` and MATAIJ can be specified using
 ``-prefix_dm_mat_type aij``. See
-```$PETSC_DIR/src/snes/tutorials/ex28.c`` <https://www.mcs.anl.gov/petsc/petsc-current/src/snes/tutorials/ex28.c.html>`__
+`SNES Tutorail ex28 <https://www.mcs.anl.gov/petsc/petsc-current/src/snes/tutorials/ex28.c.html>`__
 for a simple example using this interface.
 
 .. _sec_matoptions:
@@ -783,56 +778,42 @@ Also one can use
 
 where ``viewer`` was obtained with ``PetscViewerDrawOpen()``. Additional
 viewers and options are given in the ``MatView()`` man page and
-Section `5.3 <#sec_viewers>`__.
+:any:`sec_viewers`.
 
-.. container::
-   :name: fig_matrixops
+.. list-table:: PETSc Matrix Operations
+  :name: fig_matrixops
+  :header-rows: 1
 
-   .. table:: PETSc Matrix Operations
-
-      +----------------------------------+----------------------------------+
-      | **Function Name**                | **Operation**                    |
-      +==================================+==================================+
-      | ``MatAXPY(Mat Y, PetscSca        | :math:`Y = Y + a*X`              |
-      | lar a, Mat X, MatStructure s);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | ``MatMult(Mat A,Vec x, Vec y);`` | :math:`y = A*x`                  |
-      +----------------------------------+----------------------------------+
-      | ``MatMult                        | :math:`z = y + A*x`              |
-      | Add(Mat A,Vec x, Vec y,Vec z);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | ``MatMult                        | :math:`y = A^{T}*x`              |
-      | Transpose(Mat A,Vec x, Vec y);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | ``MatMultTransposeAd             | :math:`z = y + A^{T}*x`          |
-      | d(Mat A, Vec x, Vec y, Vec z);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | ``MatNorm(Mat A                  | :math:`r = ||A||_{type}`         |
-      | ,NormType type, PetscReal *r);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | ``MatDia                         | :math:`A =                       |
-      | gonalScale(Mat A,Vec l,Vec r);`` | \hbox{diag}(l)*A*\hbox{diag}(r)` |
-      +----------------------------------+----------------------------------+
-      | ``                               | :math:`A = a*A`                  |
-      | MatScale(Mat A,PetscScalar a);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | ``MatConvert                     | :math:`B = A`                    |
-      | (Mat A, MatType type, Mat *B);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | ``MatCopy(                       | :math:`B = A`                    |
-      | Mat A, Mat B, MatStructure s);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | `                                | :math:`x = \hbox{diag}(A)`       |
-      | `MatGetDiagonal(Mat A, Vec x);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | ``MatTrans                       | :math:`B = A^{T}`                |
-      | pose(Mat A, MatReuse, Mat* B);`` |                                  |
-      +----------------------------------+----------------------------------+
-      | ``MatZeroEntries(Mat A);``       | :math:`A = 0`                    |
-      +----------------------------------+----------------------------------+
-      | ``M                              | :math:`Y =  Y + a*I`             |
-      | atShift(Mat Y, PetscScalar a);`` |                                  |
-      +----------------------------------+----------------------------------+
+  * - Function Name
+    - Operation
+  * - ``MatAXPY(Mat Y, PetscScalar a, Mat X, MatStructure s);``
+    - :math:`Y = Y + a*X`
+  * - ``MatMult(Mat A,Vec x, Vec y);``
+    - :math:`y = A*x`
+  * - ``MatMultAdd(Mat A,Vec x, Vec y,Vec z);``
+    - :math:`z = y + A*x`
+  * - ``MatMultTranspose(Mat A,Vec x, Vec y);``
+    - :math:`y = A^{T}*x`
+  * - ``MatMultTransposeAdd(Mat A, Vec x, Vec y, Vec z);``
+    - :math:`z = y + A^{T}*x`
+  * - ``MatNorm(Mat A,NormType type, PetscReal *r);``
+    - :math:`r = A_{type}`
+  * - ``MatDiagonalScale(Mat A,Vec l,Vec r);``
+    - :math:`A = \text{diag}(l)*A*\text{diag}(r)`
+  * - ``MatScale(Mat A,PetscScalar a);``
+    - :math:`A = a*A`
+  * - ``MatConvert(Mat A, MatType type, Mat *B);``
+    - :math:`B = A`
+  * - ``MatCopy(Mat A, Mat B, MatStructure s);``
+    - :math:`B = A`
+  * - ``MatGetDiagonal(Mat A, Vec x);``
+    - :math:`x = \text{diag}(A)`
+  * - ``MatTranspose(Mat A, MatReuse, Mat* B);``
+    - :math:`B = A^{T}`
+  * - ``MatZeroEntries(Mat A);``
+    - :math:`A = 0`
+  * - ``MatShift(Mat Y, PetscScalar a);``
+    - :math:`Y =  Y + a*I`
 
 The ``NormType`` argument to ``MatNorm()`` is one of ``NORM_1``,
 ``NORM_INFINITY``, and ``NORM_FROBENIUS``.
@@ -879,7 +860,7 @@ discussed in the following chapters.
 
 The routine ``MatShellSetOperation()`` can be used to set any other
 matrix operations as well. The file
-```$PETSC_DIR/include/petscmat.h`` <https://www.mcs.anl.gov/petsc/petsc-current/include/petscmat.h.html>`__
+``$PETSC_DIR/include/petscmat.h`` (`source <https://www.mcs.anl.gov/petsc/petsc-current/include/petscmat.h.html>`__).
 provides a complete list of matrix operations, which have the form
 ``MATOP_<OPERATION>``, where ``<OPERATION>`` is the name (in all capital
 letters) of the user interface routine (for example, ``MatMult()``
@@ -900,7 +881,7 @@ urge anyone who introduces such changes to use caution, since it would
 be very easy to accidentally create a bug in the new routine that could
 affect other routines as well.
 
-See also Section `4.5 <#sec_nlmatrixfree>`__ for details on one set of
+See also :any:`sec_nlmatrixfree` for details on one set of
 helpful utilities for using the matrix-free approach for nonlinear
 solvers.
 
@@ -1024,7 +1005,7 @@ Another matrix routine of interest is
 which converts the matrix ``mat`` to new matrix, ``M``, that has either
 the same or different format. Set ``newtype`` to ``MATSAME`` to copy the
 matrix, keeping the same matrix format. See
-```$PETSC_DIR/include/petscmat.h`` <https://www.mcs.anl.gov/petsc/petsc-current/include/petscmat.h.html>`__
+``$PETSC_DIR/include/petscmat.h`` (`source <https://www.mcs.anl.gov/petsc/petsc-current/include/petscmat.h.html>`__)
 for other available matrix types; standard ones are ``MATSEQDENSE``,
 ``MATSEQAIJ``, ``MATMPIAIJ``, ``MATSEQBAIJ`` and ``MATMPIBAIJ``.
 
@@ -1067,7 +1048,7 @@ However, this does not mean it need be done in a separate, sequential
 program; rather, it should be done before one sets up the parallel grid
 data structures in the actual program. PETSc provides an interface to
 the ParMETIS (developed by George Karypis; see
-```$PETSC_DIR/docs/installation.html`` <https://www.mcs.anl.gov/petsc/documentation/installation.html>`__.
+`the PETSc installation instructions <https://www.mcs.anl.gov/petsc/documentation/installation.html>`__.
 for directions on installing PETSc to use ParMETIS) to allow the
 partitioning to be done in parallel. PETSc does not currently provide
 directly support for dynamic repartitioning, load balancing by migrating
@@ -1155,7 +1136,7 @@ process. The command
 
    AOCreateBasicIS(isg,NULL,&ao);
 
-generates, see Section `1.3.1 <#sec_ao>`__, an AO object that can be
+generates, see :any:`sec_ao`, an AO object that can be
 used in conjunction with the ``is`` and ``isg`` to move the relevant
 grid information to the correct process and renumber the nodes etc. In
 this context, the new ordering is the “application” ordering so

@@ -3,8 +3,6 @@
 Hints for Performance Tuning
 ----------------------------
 
-.. include:: temp_edit_needed_banner.inc
-
 This chapter provides hints on how to get to achieve best performance
 with PETSc, particularly on distributed-memory machines with multiple
 CPU sockets per node. We focus on machine-related performance
@@ -52,13 +50,13 @@ entries of each vector, the operation is embarrasingly parallel.
    over the number of processes used. One can get close to peak memory
    bandwidth with only a few processes.
 
-As Fig. `4.1 <#fig_stream_intel>`__ shows, the performance gains due to
+As :numref`fig_stream_intel` shows, the performance gains due to
 parallelization on different multi- and many-core CPUs quickly
 saturates. The reason is that only a fraction of the total number of CPU
 cores is required to saturate the memory channels. For example, a
 dual-socket system equipped with Haswell 12-core Xeon CPUs achieves more
 than 80 percent of achievable peak memory bandwidth with only four
-processes per socket (8 total), cf. Fig. `4.1 <#fig_stream_intel>`__.
+processes per socket (8 total), cf. :numref:`fig_stream_intel`.
 Consequently, running with more than 8 MPI ranks on such a system will
 not increase performance substantially. For the same reason, PETSc-based
 applications usually do not benefit from hyper-threading.
@@ -107,7 +105,7 @@ Non-Uniform Memory Access (NUMA) and Process Placement
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 CPUs in nodes with more than one CPU socket are internally connected via
-a high-speed fabric, cf. Fig. `4.2 <#fig_numa>`__, to enable data
+a high-speed fabric, cf. :numref:`fig_numa`, to enable data
 exchange as well as cache coherency. Because main memory on modern
 systems is connected via the integrated memory controllers on each CPU,
 memory is accessed in a non-uniform way: A process running on one socket
@@ -238,7 +236,7 @@ only the first memory channel is fully saturated at 25.5 GB/sec.
 
 | One must not assume that ``mpirun`` uses good defaults. To
   demonstrate, compare the full output of ``make streams`` from
-  Section `4.1.1 <#subsec:bandwidth-vs-processes>`__ on the left with
+  :any:`subsec:bandwidth-vs-processes` on the left with
   the results on the right obtained by passing
   ``--bind-to core --map-by socket``:
 
@@ -478,7 +476,7 @@ Profiling
 
 Users should not spend time optimizing a code until after having
 determined where it spends the bulk of its time on realistically sized
-problems. As discussed in detail in Chapter `3 <#ch_profiling>`__, the
+problems. As discussed in detail in :any:`ch_profiling`, the
 PETSc routines automatically log performance data if certain runtime
 options are specified.
 
@@ -526,7 +524,7 @@ lower data motion. Typical examples are:
    reducing the number of ``PetscMalloc()`` calls may be warranted. For
    example, reusing space or allocating large chunks and dividing it
    into pieces can produce a significant savings in allocation overhead.
-   Section `4.2.7 <#sec_dsreuse>`__ gives details.
+   :any:`sec_dsreuse` gives details.
 
 Aggressive aggregation of data may result in inflexible datastructures
 and code that is hard to maintain. We advise users to keep these
@@ -545,7 +543,7 @@ and ``MatCreateAIJ()`` for compressed, sparse row formats, instead of
 the generic ``MatCreate()`` routine. For problems with multiple degrees
 of freedom per node, the block, compressed, sparse row formats, created
 by ``MatCreateSeqBAIJ()`` and ``MatCreateBAIJ()``, can significantly
-enhance performance. Section `2.1.1 <#sec_matsparse>`__ includes
+enhance performance. :any:`sec_matsparse` includes
 extensive details and examples regarding preallocation.
 
 .. _sec_symbolfactor:
@@ -642,9 +640,9 @@ a user-defined context. In C and C++ such a context is merely a
 structure in which various objects can be stashed; in Fortran a user
 context can be an integer array that contains both parameters and
 pointers to PETSc objects. See
-```${PETSC_DIR}/snes/tutorials/ex5.c`` <https://www.mcs.anl.gov/petsc/petsc-current/src/snes/tutorials/ex5.c.html>`__
+`SNES Tutorial ex5 <https://www.mcs.anl.gov/petsc/petsc-current/src/snes/tutorials/ex5.c.html>`__
 and
-```${PETSC_DIR}/snes/tutorials/ex5f.F90`` <https://www.mcs.anl.gov/petsc/petsc-current/src/snes/tutorials/ex5f.F90.html>`__
+`SNES Tutorial ex5f <https://www.mcs.anl.gov/petsc/petsc-current/src/snes/tutorials/ex5f.F90.html>`__
 for examples of user-defined application contexts in C and Fortran,
 respectively.
 
@@ -670,7 +668,7 @@ the solvers accordingly.
 -  Use the option ``-info`` to print details about the solvers’
    operation.
 
--  Use the PETSc monitoring discussed in Chapter `3 <#ch_profiling>`__
+-  Use the PETSc monitoring discussed in :any:`ch_profiling`
    to evaluate the performance of various numerical methods.
 
 .. _sec_slestips:
@@ -678,7 +676,7 @@ the solvers accordingly.
 Tips for Efficient Use of Linear Solvers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As discussed in Chapter `[ch_ksp] <#ch_ksp>`__, the default linear
+As discussed in :any:`chapter_ksp`, the default linear
 solvers are
 
 -  | uniprocess: GMRES(30) with ILU(0) preconditioning
@@ -700,12 +698,12 @@ solvers, as discussed throughout the manual.
 In particular, note that the default restart parameter for GMRES is 30,
 which may be too small for some large-scale problems. One can alter this
 parameter with the option ``-ksp_gmres_restar <restart>`` or by calling
-``KSPGMRESSetRestart()``. Section `[sec_ksp] <#sec_ksp>`__ gives
+``KSPGMRESSetRestart()``. :any:`sec_ksp` gives
 information on setting alternative GMRES orthogonalization routines,
 which may provide much better parallel performance.
 
 For elliptic problems one often obtains good performance and scalability
-with multigrid solvers. Consult Section `3.4.5 <#sec_amg>`__ for
+with multigrid solvers. Consult :any:`sec_amg` for
 available options. Our experience is that GAMG works particularly well
 for elasticity problems, whereas hypre does well for scalar problems.
 
@@ -734,7 +732,7 @@ them.
 -  **Overhead of timing routines on certain machines**: On certain
    machines, even calling the system clock in order to time routines is
    slow; this skews all of the flop rates and timing results. The file
-   ```$PETSC_DIR/src/benchmarks/PetscTime.c`` <https://www.mcs.anl.gov/petsc/petsc-current/src/benchmarks/PetscTime.c.html>`__
+   ``$PETSC_DIR/src/benchmarks/PetscTime.c`` (`source <https://www.mcs.anl.gov/petsc/petsc-current/src/benchmarks/PetscTime.c.html>`__)
    contains a simple test problem that will approximate the amount of
    time required to get the current time in a running program. On good
    systems it will on the order of :math:`10^{-6}` seconds or less.
@@ -753,7 +751,7 @@ them.
 -  **Inconsistent timings**: Inconsistent timings are likely due to
    other users on the machine, thrashing (using more virtual memory than
    available physical memory), or paging in of the initial executable.
-   Section `3.8 <#sec_profaccuracy>`__ provides information on
+   :any:`sec_profaccuracy` provides information on
    overcoming paging overhead when profiling a code. We have found on
    all systems that if you follow all the advise above your timings will
    be consistent within a variation of less than five percent.

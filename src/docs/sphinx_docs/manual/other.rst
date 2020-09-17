@@ -1,8 +1,6 @@
 Other PETSc Features
 --------------------
 
-.. include:: temp_edit_needed_banner.inc
-
 PETSc on a process subset
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -52,7 +50,7 @@ One could then override this choice at runtime with the option
    -ksp_type tfqmr
 
 to select the Transpose-Free QMR algorithm. (See
-Chapter `[ch_ksp] <#ch_ksp>`__ for details.)
+:any:`chapter_ksp` for details.)
 
 The remainder of this section discusses details of runtime options.
 
@@ -209,8 +207,8 @@ Here ``obj`` is any PETSc object of type ``XXX``, where ``XXX`` is
    object to be drawn in a default X window.
 
 -  Passing in a viewer obtained by ``PetscViewerDrawOpen()`` causes the
-   object to be displayed graphically. See Section
-   `5.9 <#sec_graphics>`__ for more on PETSc’s graphics support.
+   object to be displayed graphically. See
+   :any:`sec_graphics` for more on PETSc’s graphics support.
 
 -  To save an object to a file in ASCII format, the user creates the
    viewer object with the command
@@ -227,7 +225,7 @@ Here ``obj`` is any PETSc object of type ``XXX``, where ``XXX`` is
 -  Vector and matrix objects can be passed to a running MATLAB process
    with a viewer created by
    ``PetscViewerSocketOpen(MPI_Comm comm,char *machine,int port,PetscViewer *viewer)``.
-   For more, see Section `2.2 <#sec_matlabsocket>`__.
+   For more, see :any:`sec_matlabsocket`.
 
 The user can control the format of ASCII printed objects with viewers
 created by ``PetscViewerASCIIOpen()`` by calling
@@ -545,14 +543,14 @@ basic “scalar” datatype, given in PETSc codes by ``PetscScalar``, is
 defined as ``complex`` (or ``complex<double>`` for machines using
 templated complex class libraries). To work with complex numbers, the
 user should run ``./configure`` with the additional option
-``--with-scalar-type=complex``. The file
-```${PETSC_DIR}/src/docs/website/documentation/installation.html`` <https://www.mcs.anl.gov/petsc/documentation/installation.html>`__
-provides detailed instructions for installing PETSc. You can use
+``--with-scalar-type=complex``. The
+`installation instructions <https://www.mcs.anl.gov/petsc/documentation/installation.html>`__
+provide detailed instructions for installing PETSc. You can use
 ``--with-clanguage=c`` (the default) to use the C99 complex numbers or
 ``--with-clanguage=c++`` to use the C++ complex type [9]_.
 
 Recall that each variant of the PETSc libraries is stored in a different
-directory, given by ``${PETSC_DIR}/lib/${PETSC_ARCH``
+directory, given by ``${PETSC_DIR}/lib/${PETSC_ARCH}``
 
 according to the architecture. Thus, the libraries for complex numbers
 are maintained separately from those for real numbers. When using any of
@@ -564,10 +562,10 @@ working *only* with real numbers in a code, one should use a version of
 PETSc for real numbers for best efficiency.
 
 The program
-```${PETSC_DIR}/src/ksp/ksp/tutorials/ex11.c`` <https://www.mcs.anl.gov/petsc/petsc-current/src/ksp/ksp/tutorials/ex11.c.html>`__
+`KSP Tutorial ex11 <https://www.mcs.anl.gov/petsc/petsc-current/src/ksp/ksp/tutorials/ex11.c.html>`__
 solves a linear system with a complex coefficient matrix. Its Fortran
 counterpart is
-```${PETSC_DIR}/src/ksp/ksp/tutorials/ex11f.F90`` <https://www.mcs.anl.gov/petsc/petsc-current/src/ksp/ksp/tutorials/ex11f.F90.html>`__.
+`KSP Tutorial ex11f <https://www.mcs.anl.gov/petsc/petsc-current/src/ksp/ksp/tutorials/ex11f.F90.html>`__.
 
 Parallel Communication
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -588,7 +586,7 @@ interactively with PETSc programs. We urge users to generate their
 publication-quality graphics using a professional graphics package. If a
 user wants to hook certain packages into PETSc, he or she should send a
 message to
-```petsc-maint@mcs.anl.gov`` <mailto:petsc-maint@mcs.anl.gov>`__; we
+`petsc-maint@mcs.anl.gov <mailto:petsc-maint@mcs.anl.gov>`__; we
 will see whether it is reasonable to try to provide direct interfaces.
 
 Windows as PetscViewers
@@ -603,8 +601,8 @@ may first create a viewer using the command
 
 This viewer may be passed to any of the ``XXXView()`` routines.
 Alternately, one may use command-line options to quickly specify viewer
-formats, including ``PetscDraw``-based ones; see Section
-`5.3.1 <#sec_viewfromoptions>`__.
+formats, including ``PetscDraw``-based ones; see
+:any:`sec_viewfromoptions`.
 
 To draw directly into the viewer, one must obtain the ``PetscDraw``
 object with the command
@@ -725,7 +723,7 @@ PETSc includes a set of routines for manipulating simple two-dimensional
 graphs. These routines, which begin with ``PetscDrawAxisDraw()``, are
 usually not used directly by the application programmer. Instead, the
 programmer employs the line graph routines to draw simple line graphs.
-As shown in the program, within Figure `[fig_plot] <#fig_plot>`__, line
+As shown in the :ref:`listing below <listing_draw_test_ex3>`, line
 graphs are created with the command
 
 ::
@@ -792,14 +790,27 @@ will prevent any windows from being opened or any drawing actions to be
 done. This is useful for running large jobs when the graphics overhead
 is too large, or for timing.
 
+The full example, `Draw Test ex3 <https://www.mcs.anl.gov/petsc/petsc-current/src/sys/classes/draw/tests/ex3.c.html>`__,
+follows.
+
+.. _listing_draw_test_ex3:
+
+.. admonition:: Listing: ``src/classes/draw/tests/ex3.c``
+   :name: snes-ex1
+
+   .. literalinclude:: ../../../sys/classes/draw/tests/ex3.c
+      :end-before: /*TEST
+
+
+
 Graphical Convergence Monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For both the linear and nonlinear solvers default routines allow one to
 graphically monitor convergence of the iterative method. These are
 accessed via the command line with ``-ksp_monitor_lg_residualnorm`` and
-``-snes_monitor_lg_residualnorm``. See also Sections
-`3.3.3 <#sec_kspmonitor>`__ and `4.3.2 <#sec_snesmonitor>`__.
+``-snes_monitor_lg_residualnorm``. See also
+:any:`sec_kspmonitor` and :any:`sec_snesmonitor`.
 
 The two functions used are ``KSPMonitorLGResidualNorm()`` and
 ``KSPMonitorLGResidualNormCreate()``. These can easily be modified to
@@ -1156,7 +1167,7 @@ libraries inside your iOS XCode projects; see the examples in
 the Apple ``Accelerate.framework``.
 
 .. [8]
-   ```https://bitbucket.org/saws/saws/wiki/Home`` <https://bitbucket.org/saws/saws/wiki/Home>`__
+   `Saws wiki on Bitbucket <https://bitbucket.org/saws/saws/wiki/Home>`__
 
 .. [9]
    Note that this option is not required to use PETSc with C++
