@@ -43,11 +43,11 @@ static PetscErrorCode IFunctionImplicit(TS ts,PetscReal t,Vec Y,Vec Ydot,Vec F,v
   ierr = VecGetArrayRead(Ydot,&ydot);CHKERRQ(ierr);
   ierr = VecGetArrayWrite(F,&f);CHKERRQ(ierr);
 
-  f[0]= PetscSinReal(200*PETSC_PI*t)/2500. - y[0]/1000. - ydot[0]/1.e6 + ydot[1]/1.e6;
-  f[1]=0.0006666766666666667 -  PetscExpReal((500*(y[1] - y[2]))/13.)/1.e8 - y[1]/4500. + ydot[0]/1.e6 - ydot[1]/1.e6;
-  f[2]=-1.e-6 +  PetscExpReal((500*(y[1] - y[2]))/13.)/1.e6 - y[2]/9000. - ydot[2]/500000.;
-  f[3]=0.0006676566666666666 - (99* PetscExpReal((500*(y[1] - y[2]))/13.))/1.e8 - y[3]/9000. - (3*ydot[3])/1.e6 + (3*ydot[4])/1.e6;
-  f[4]=-y[4]/9000. + (3*ydot[3])/1.e6 - (3*ydot[4])/1.e6;
+  f[0] = ydot[0]/1.e6 - ydot[1]/1.e6 - PetscSinReal(200*PETSC_PI*t)/2500. + y[0]/1000.;
+  f[1] = -ydot[0]/1.e6 + ydot[1]/1.e6 - 0.0006666766666666667 +  PetscExpReal((500*(y[1] - y[2]))/13.)/1.e8 + y[1]/4500.;
+  f[2] = ydot[2]/500000. + 1.e-6 -  PetscExpReal((500*(y[1] - y[2]))/13.)/1.e6 + y[2]/9000.;
+  f[3] = (3*ydot[3])/1.e6 - (3*ydot[4])/1.e6 - 0.0006676566666666666 + (99* PetscExpReal((500*(y[1] - y[2]))/13.))/1.e8 + y[3]/9000.;
+  f[4] = (3*ydot[4])/1.e6 - (3*ydot[3])/1.e6 + y[4]/9000.;
 
   ierr = VecRestoreArrayRead(Y,&y);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(Ydot,&ydot);CHKERRQ(ierr);
@@ -71,19 +71,19 @@ static PetscErrorCode IJacobianImplicit(TS ts,PetscReal t,Vec Y,Vec Ydot,PetscRe
 
   ierr = PetscMemzero(J,sizeof(J));CHKERRQ(ierr);
 
-  J[0][0]=-0.001 - a/1.e6;
-  J[0][1]=a/1.e6;
-  J[1][0]=a/1.e6;
-  J[1][1]=-0.00022222222222222223 - a/1.e6 -  PetscExpReal((500*(y[1] - y[2]))/13.)/2.6e6;
-  J[1][2]= PetscExpReal((500*(y[1] - y[2]))/13.)/2.6e6;
-  J[2][1]= PetscExpReal((500*(y[1] - y[2]))/13.)/26000.;
-  J[2][2]=-0.00011111111111111112 - a/500000. -  PetscExpReal((500*(y[1] - y[2]))/13.)/26000.;
-  J[3][1]=(-99* PetscExpReal((500*(y[1] - y[2]))/13.))/2.6e6;
-  J[3][2]=(99* PetscExpReal((500*(y[1] - y[2]))/13.))/2.6e6;
-  J[3][3]=-0.00011111111111111112 - (3*a)/1.e6;
-  J[3][4]=(3*a)/1.e6;
-  J[4][3]=(3*a)/1.e6;
-  J[4][4]=-0.00011111111111111112 - (3*a)/1.e6;
+  J[0][0]= a/1.e6 + 0.001;
+  J[0][1]= -a/1.e6;
+  J[1][0]= -a/1.e6;
+  J[1][1]= a/1.e6 + 0.00022222222222222223 +  PetscExpReal((500*(y[1] - y[2]))/13.)/2.6e6;
+  J[1][2]= -PetscExpReal((500*(y[1] - y[2]))/13.)/2.6e6;
+  J[2][1]= -PetscExpReal((500*(y[1] - y[2]))/13.)/26000.;
+  J[2][2]= a/500000 + 0.00011111111111111112 +  PetscExpReal((500*(y[1] - y[2]))/13.)/26000.;
+  J[3][1]= (99*PetscExpReal((500*(y[1] - y[2]))/13.))/2.6e6;
+  J[3][2]= (-99*PetscExpReal((500*(y[1] - y[2]))/13.))/2.6e6;
+  J[3][3]= (3*a)/1.e6 + 0.00011111111111111112;
+  J[3][4]= -(3*a)/1.e6;
+  J[4][3]= -(3*a)/1.e6;
+  J[4][4]= (3*a)/1.e6 + 0.00011111111111111112 ;
 
 
   ierr = MatSetValues(B,5,rowcol,5,rowcol,&J[0][0],INSERT_VALUES);CHKERRQ(ierr);
@@ -141,8 +141,9 @@ int main(int argc,char **argv)
   ierr = TSCreate(PETSC_COMM_WORLD,&ts);CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR);CHKERRQ(ierr);
   ierr = TSSetType(ts,TSARKIMEX);CHKERRQ(ierr);
+  /* Must use ARKIMEX with fully implicit stages since mass matrix is not the indentity */
+  ierr = TSARKIMEXSetType(ts,TSARKIMEXPRSSP2);CHKERRQ(ierr);
   ierr = TSSetEquationType(ts,TS_EQ_DAE_IMPLICIT_INDEX1);CHKERRQ(ierr);
-  ierr = TSARKIMEXSetFullyImplicit(ts,PETSC_TRUE);CHKERRQ(ierr);
   /*ierr = TSSetType(ts,TSROSW);CHKERRQ(ierr);*/
   ierr = TSSetIFunction(ts,NULL,IFunctionImplicit,NULL);CHKERRQ(ierr);
   ierr = TSSetIJacobian(ts,A,A,IJacobianImplicit,NULL);CHKERRQ(ierr);
@@ -179,5 +180,6 @@ int main(int argc,char **argv)
     build:
       requires: !single !complex
     test:
+      args: -ts_monitor
 
 TEST*/
