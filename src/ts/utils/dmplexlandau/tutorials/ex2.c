@@ -740,10 +740,11 @@ int main(int argc, char **argv)
     ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
     ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-    ierr = LandauIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
+    ierr = LandauIJacobian(ts,0.0,vec,vec,0.0,J,J,ctx);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
+    ierr = MatViewFromOptions(J,NULL,"-initial_mat_view");CHKERRQ(ierr);
   }
   ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr); // inital condition (monitor plots after step)
   /* go */
