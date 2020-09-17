@@ -351,7 +351,7 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
       PetscInt       cells[] = {2,2,2};
       PetscReal      lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
       DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-      if (dim==2) { lo[0] = 0; cells[0] = 1; }
+      if (dim==2) { lo[0] = 0; cells[0] = 1; lo[1] = 0; cells[1] = 1; }
       else if (ctx->quarter3DDomain) { lo[0] = lo[1] = 0; cells[0] = cells[1] = 2; }
       ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, dm);CHKERRQ(ierr);
       ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr); /* needed for periodic */
@@ -486,7 +486,6 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
       DM dmforest;
       ierr = DMConvert(*dm,convType,&dmforest);CHKERRQ(ierr);
       if (dmforest) {
-        dmforest->prealloc_only = (*dm)->prealloc_only;
         PetscBool isForest;
         ierr = PetscObjectSetOptionsPrefix((PetscObject)dmforest,prefix);CHKERRQ(ierr);
         ierr = DMIsForest(dmforest,&isForest);CHKERRQ(ierr);
@@ -779,7 +778,6 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
     ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
     ierr = PetscInfo2(sol, "\tPhase: adaptToleranceFEM: %D cells, %d total quadrature points\n",cEnd-cStart,Nq*(cEnd-cStart));CHKERRQ(ierr);
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
-    adaptedDM->prealloc_only = dm->prealloc_only;
   }
   PetscFunctionReturn(0);
 }
@@ -1501,7 +1499,6 @@ PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMClone(dm, &massDM);CHKERRQ(ierr);
-  massDM->prealloc_only = dm->prealloc_only;
   ierr = DMCopyFields(dm, massDM);CHKERRQ(ierr);
   ierr = DMCreateDS(massDM);CHKERRQ(ierr);
   ierr = DMGetDS(massDM, &prob);CHKERRQ(ierr);
@@ -1518,7 +1515,7 @@ PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
     ierr = DMConvert(massDM, DMPLEX, &plex);CHKERRQ(ierr);
     ierr = DMGetLocalVector(massDM, &locX);CHKERRQ(ierr);
     /* Mass matrix is independent of the input, so no need to fill locX */
-    plex->prealloc_only = massDM->prealloc_only;
+    if (plex->prealloc_only != massDM->prealloc_only) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "plex->prealloc_only = massDM->prealloc_only %D, =%D",plex->prealloc_only,massDM->prealloc_only);
     ierr = DMPlexSNESComputeJacobianFEM(plex, locX, M, M, ctx);CHKERRQ(ierr);
     ierr = DMRestoreLocalVector(massDM, &locX);CHKERRQ(ierr);
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
