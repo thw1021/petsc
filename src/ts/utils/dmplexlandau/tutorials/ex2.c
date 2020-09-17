@@ -728,11 +728,6 @@ int main(int argc, char **argv)
 #endif
     Vec           vec;
     PetscRandom   rctx;
-<<<<<<< HEAD
-    PetscInt      ii;
-
-=======
->>>>>>> wip: fixing Plex with no preallocation in DMCreateMatrix (Plex and Forest)
     ierr = PetscRandomCreate(PETSC_COMM_SELF,&rctx);CHKERRQ(ierr);
     ierr = PetscRandomSetFromOptions(rctx);CHKERRQ(ierr);
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
@@ -740,7 +735,7 @@ int main(int argc, char **argv)
     ierr = VecSetRandom(vec,rctx);CHKERRQ(ierr);
     ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-    ierr = LandauIJacobian(ts,0.0,vec,vec,0.0,J,J,ctx);CHKERRQ(ierr);
+    ierr = LandauIJacobian(ts,0.0,vec,vec,1.0,J,J,ctx);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
     ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
