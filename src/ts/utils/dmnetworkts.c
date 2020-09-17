@@ -3,7 +3,7 @@
 #include <petscdraw.h>
 
 /*
-   TSMonitorLGCtxDestroy - Destroys  line graph contexts that where created with TSMonitorLGCtxCreate_Network().
+   TSMonitorLGCtxDestroy - Destroys  line graph contexts that where created with TSMonitorLGCtxNetworkCreate().
 
    Collective on TSMonitorLGCtx_Network
 
