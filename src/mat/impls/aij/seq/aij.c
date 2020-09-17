@@ -995,7 +995,7 @@ PetscErrorCode MatView_SeqAIJ_ASCII(Mat A,PetscViewer viewer)
             ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->j[j],(double)PetscRealPart(a->a[j]));CHKERRQ(ierr);
           }
 #else
-          ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->j[j],(double)a->a[j]);CHKERRQ(ierr);
+          if (a->a[j] != 0.0||1) {ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->j[j],(double)a->a[j]);CHKERRQ(ierr);}
 #endif
         }
         ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
