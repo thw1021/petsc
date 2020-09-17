@@ -70,6 +70,16 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   PetscValidHeaderSpecific(JacP,MAT_CLASSID,2);
   PetscValidPointer(ctx,4);
 
+  {
+    PetscBool flg;
+    ierr = MatGetOption(JacP,MAT_IGNORE_ZERO_ENTRIES,&flg);CHKERRQ(ierr);
+    if (!flg) {
+      ierr = MatSetOption(JacP, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
+      ierr = MatGetOption(JacP,MAT_IGNORE_ZERO_ENTRIES,&flg);CHKERRQ(ierr);
+      if (!flg) SETERRQ1(PetscObjectComm((PetscObject)JacP),PETSC_ERR_SUP,"!MAT_IGNORE_ZERO_ENTRIES %p",JacP);
+    }
+  }
+
   ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
   ierr = DMConvert(ctx->dmv, DMPLEX, &plex);CHKERRQ(ierr);
   ierr = DMCreateLocalVector(plex, &locX);CHKERRQ(ierr);
@@ -178,6 +188,9 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
   } else { /* CPU version */
+    PetscBool flg;
+    ierr = MatGetOption(JacP,MAT_IGNORE_ZERO_ENTRIES,&flg);CHKERRQ(ierr);
+    if (!flg) SETERRQ(PetscObjectComm((PetscObject)JacP),PETSC_ERR_SUP,"!MAT_IGNORE_ZERO_ENTRIES");
     for (ej = cStart, invJ = invJ_a; ej < cEnd; ++ej, invJ += Nq*dim*dim) {
       PetscInt     qj;
       ierr = PetscLogEventBegin(ctx->events[3],0,0,0,0);CHKERRQ(ierr);
@@ -487,12 +500,14 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
       ierr = DMConvert(*dm,convType,&dmforest);CHKERRQ(ierr);
       if (dmforest) {
         PetscBool isForest;
+        if (dmforest->prealloc_only != (*dm)->prealloc_only) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"plex->prealloc_only != dm->prealloc_only");
         ierr = PetscObjectSetOptionsPrefix((PetscObject)dmforest,prefix);CHKERRQ(ierr);
         ierr = DMIsForest(dmforest,&isForest);CHKERRQ(ierr);
         if (isForest) {
           if (ctx->sphere && ctx->inflate) {
             ierr = DMForestSetBaseCoordinateMapping(dmforest,GeometryDMLandau,ctx);CHKERRQ(ierr);
           }
+          if (dmforest->prealloc_only != (*dm)->prealloc_only) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"plex->prealloc_only != dm->prealloc_only");
           ierr = DMDestroy(dm);CHKERRQ(ierr);
           *dm = dmforest;
           ctx->errorIndicator = ErrorIndicator_Simple; /* flag for Forest */
@@ -1041,6 +1056,7 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   PetscMPIInt    size;
   PetscErrorCode ierr;
   LandauCtx      *ctx;
+  PetscBool      prealloc_only;
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
@@ -1051,6 +1067,7 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   ierr = ProcessOptions(ctx,prefix);CHKERRQ(ierr);
   /* Create Mesh */
   ierr = LandauDMCreateVMesh(comm, dim, prefix, ctx, dm);CHKERRQ(ierr);
+  prealloc_only = (*dm)->prealloc_only;
   ierr = DMViewFromOptions(*dm,NULL,"-dm_landau_pre_dm_view");CHKERRQ(ierr);
   ierr = DMSetApplicationContext(*dm, ctx);CHKERRQ(ierr);
   /* create FEM */
@@ -1065,11 +1082,13 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   if (ctx->errorIndicator) {
     /* AMR */
     ierr = adapt(dm,ctx,X);CHKERRQ(ierr);
+    if ((*dm)->prealloc_only != prealloc_only) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"(*dm)->prealloc_only != prealloc_only");
     ierr = DMViewFromOptions(*dm,NULL,"-dm_landau_amr_dm_view");CHKERRQ(ierr);
     ierr = VecViewFromOptions(*X, NULL, "-dm_landau_amr_vec_view");CHKERRQ(ierr);
   }
   ierr = DMSetApplicationContext(*dm, ctx);CHKERRQ(ierr);
   ctx->dmv = *dm;
+  if (ctx->dmv->prealloc_only != prealloc_only) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"ctx->dmv->prealloc_only != prealloc_only");
   ierr = DMCreateMatrix(ctx->dmv, &ctx->J);CHKERRQ(ierr);
   ierr = MatSetOption(ctx->J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
   if (J) *J = ctx->J;
@@ -1519,7 +1538,7 @@ PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat)
     ierr = DMConvert(massDM, DMPLEX, &plex);CHKERRQ(ierr);
     ierr = DMGetLocalVector(massDM, &locX);CHKERRQ(ierr);
     /* Mass matrix is independent of the input, so no need to fill locX */
-    if (plex->prealloc_only != massDM->prealloc_only) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "plex->prealloc_only = massDM->prealloc_only %D, =%D",plex->prealloc_only,massDM->prealloc_only);
+    if (plex->prealloc_only != dm->prealloc_only) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "plex->prealloc_only = massDM->prealloc_only %D, =%D",plex->prealloc_only,massDM->prealloc_only);
     ierr = DMPlexSNESComputeJacobianFEM(plex, locX, M, M, ctx);CHKERRQ(ierr);
     ierr = DMRestoreLocalVector(massDM, &locX);CHKERRQ(ierr);
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
@@ -1568,7 +1587,6 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr); // remove in real application
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   if (ctx->normJ != unorm) {
@@ -1621,6 +1639,14 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   DM dm;
 
   PetscFunctionBegin;
+
+  PetscPrintf(PETSC_COMM_WORLD, "LandauIJacobian %p %p %p %g %g\n",Amat,Pmat,ctx->J,time_dummy,shift);
+  {
+    PetscBool flg;
+    ierr = MatGetOption(Amat,MAT_IGNORE_ZERO_ENTRIES,&flg);CHKERRQ(ierr);
+    if (!flg) SETERRQ1(PetscObjectComm((PetscObject)Amat),PETSC_ERR_SUP,"!MAT_IGNORE_ZERO_ENTRIES %p",Amat);
+  }
+
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
@@ -1639,18 +1665,18 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
     ierr = PetscInfo3(ts, "Skip Landau Jacobian t=%g, shift=%g shift*|u|=%20.12e\n",(double)time_dummy,(double)shift,(double)shift*unorm);CHKERRQ(ierr);
   }
   /* add C */
-  ierr = MatCopy(ctx->J,Pmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
-  /* add mass */
-  {
+  if (ctx->J != Pmat) {
     MatInfo info1, info2;
     double  nz_1, nz_2;
     ierr = MatGetInfo(Pmat,MAT_LOCAL,&info1);CHKERRQ(ierr);
     nz_1 = info1.nz_allocated;
-    ierr = MatGetInfo(ctx->M,MAT_LOCAL,&info2);CHKERRQ(ierr);
+    ierr = MatGetInfo(ctx->J,MAT_LOCAL,&info2);CHKERRQ(ierr);
     nz_2 = info2.nz_allocated;
     ierr = PetscInfo2(ts, "\t\tnnz A = %g, nnz M = %g\n",nz_1,nz_2);CHKERRQ(ierr);
   }
-  ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+  ierr = MatCopy(ctx->J,Pmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+  /* add mass */
+  ierr = MatAXPY(Pmat,shift,ctx->M,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
