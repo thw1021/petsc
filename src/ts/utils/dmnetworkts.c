@@ -137,7 +137,7 @@ PetscErrorCode  TSMonitorLGCtxNetworkSolution(TS ts,PetscInt step,PetscReal ptim
     ierr = VecGetArray(uv,&yv);CHKERRQ(ierr);
     ierr = VecGetLocalSize(uv,&n);CHKERRQ(ierr);
     for (j=0; j<n; j++) {
-      if (PetscScalarRealPart(yv[j]) <= 0.0) yv[j] = -12;
+      if (PetscRealPart(yv[j]) <= 0.0) yv[j] = -12;
       else            yv[j] = PetscLog10Real(yv[j]);
     }
     xv = yv;
