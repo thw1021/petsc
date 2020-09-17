@@ -137,7 +137,7 @@ PetscErrorCode  TSMonitorLGCtxNetworkSolution(TS ts,PetscInt step,PetscReal ptim
     ierr = VecGetArray(uv,&yv);CHKERRQ(ierr);
     ierr = VecGetLocalSize(uv,&n);CHKERRQ(ierr);
     for (j=0; j<n; j++) {
-      if (yv[j] <= 0) yv[j] = -12;
+      if (PetscScalarRealPart(yv[j]) <= 0.0) yv[j] = -12;
       else            yv[j] = PetscLog10Real(yv[j]);
     }
     xv = yv;
@@ -153,7 +153,7 @@ PetscErrorCode  TSMonitorLGCtxNetworkSolution(TS ts,PetscInt step,PetscReal ptim
     if (!nvar) continue;
 
     ierr = DMNetworkGetVariableOffset(dm,e,&offset);CHKERRQ(ierr);
-    ierr = PetscDrawLGAddCommonPoint(ctx->lg[i],ptime,xv+offset);CHKERRQ(ierr);
+    ierr = PetscDrawLGAddCommonPoint(ctx->lg[i],ptime,(PetscReal*)(xv+offset));CHKERRQ(ierr);
     i++;
   }
 
@@ -164,7 +164,7 @@ PetscErrorCode  TSMonitorLGCtxNetworkSolution(TS ts,PetscInt step,PetscReal ptim
     if (!nvar) continue;
 
     ierr = DMNetworkGetVariableOffset(dm,v,&offset);CHKERRQ(ierr);
-    ierr = PetscDrawLGAddCommonPoint(ctx->lg[i],ptime,xv+offset);CHKERRQ(ierr);
+    ierr = PetscDrawLGAddCommonPoint(ctx->lg[i],ptime,(PetscReal*)(xv+offset));CHKERRQ(ierr);
     i++;
   }
   if (ctx->semilogy) {
