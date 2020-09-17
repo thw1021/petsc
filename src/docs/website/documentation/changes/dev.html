@@ -161,6 +161,7 @@
       <h4>Mat:</h4>
       <ul>
           <li>Add MatSetLayouts().</li>
+          <li>Add UNKNOW_NONZERO_PATTERN as new value for MatStructure. It indicates that the relationship is unknown, when set the AIJ matrices check if the two matrices have identical patterns and if so use the faster code.</li>
           <li>Add MatSeqAIJSetTotalPreallocation(Mat,PetscInt) for efficient row by row setting of a matrix without requiring preallocating for each row</li>
           <li>Add full support for MKL sparse matrix-matrix products in MATSEQAIJMKL</li>
           <li>Fix few bugs for MATSEQSBAIJ when missing diagonal entries</li>
@@ -205,7 +206,11 @@
       </ul>
       <h4>SNESLineSearch:</h4>
       <h4>TS:</h4>
-      <h4>TAO:</h4>
+        <ul>
+          <li>Add TSSetMatStructure() to indicate the relationship between the nonzero structures of the I Jacobian and the RHS Jacobian.</li>
+          <li>Automatically set the MatStructure flag of TS to SAME_NONZERO_PATTERN if the RHS matrix is obtained with a MatDuplicate() from the I Jacobian.</li>
+        </ul>
+       <h4>TAO:</h4>
         <ul>
           <li>Add lm regularizer to TAOBRGN. This regularizer turns BRGN into a Levenberg-Marquardt algorithm. TAOBRGNGetDamping() vector returns the damping vector used by this regularizer.</li>
         </ul>
