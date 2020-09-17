@@ -118,6 +118,9 @@
       <h4>PetscSection:</h4>
       <h4>PetscPartitioner:</h4>
       <h4>Mat:</h4>
+      <ul>
+          <li>Add UNKNOW_NONZERO_PATTERN as new value for MatStructure. It indicates that the relationship is unknown, when set the AIJ matrices check if the two matrices have identical patterns and if so use the faster code.</li>
+        </ul>
       <h4>PC:</h4>
       <h4>KSP:</h4>
       <h4>SNES:</h4>
@@ -126,7 +129,10 @@
       </ul>
       <h4>SNESLineSearch:</h4>
       <h4>TS:</h4>
-      <h4>TAO:</h4>
+        <ul>
+          <li>Add TSSetMatStructure() to indicate the relationship between the nonzero structures of the I Jacobian and the RHS Jacobian.</li>
+          <li>Automatically set the MatStructure flag of TS to SAME_NONZERO_PATTERN if the RHS matrix is obtained with a MatDuplicate() from the I Jacobian.</li>
+        </ul>
       <h4>DM/DA:</h4>
       <h4>DMPlex:</h4>
       <h4>DT:</h4>
