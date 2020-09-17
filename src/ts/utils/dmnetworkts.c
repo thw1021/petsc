@@ -95,7 +95,7 @@ PetscErrorCode  TSMonitorLGCtxNetworkCreate(TS ts,const char host[],const char l
 .  step - current time-step
 .  ptime - current time
 .  u - current solution
--  dctx - the TSMonitorLGCtx object that contains all the options for the monitoring, this is created with TSMonitorLGCtxCreateNetwork()
+-  dctx - the TSMonitorLGCtxNetwork object that contains all the options for the monitoring, this is created with TSMonitorLGCtxCreateNetwork()
 
    Options Database:
 .   -ts_monitor_lg_solution_variables
