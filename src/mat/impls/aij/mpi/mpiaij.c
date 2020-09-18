@@ -2321,9 +2321,7 @@ PetscErrorCode MatGetRowMaxAbs_MPIAIJ(Mat A,Vec v,PetscInt idx[])
   }
 
   ierr = VecCreateSeq(PETSC_COMM_SELF,m,&vB);CHKERRQ(ierr);
-  if (idx) {
-    ierr = PetscMalloc1(m,&idxb);CHKERRQ(ierr);
-  }
+  if (idx) {ierr = PetscMalloc1(m,&idxb);CHKERRQ(ierr);}
   ierr = MatGetRowMaxAbs(a->B,vB,idxb);CHKERRQ(ierr);
 
   ierr = VecGetArrayWrite(v,&vv);CHKERRQ(ierr);
