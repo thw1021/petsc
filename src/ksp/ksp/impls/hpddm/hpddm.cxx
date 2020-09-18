@@ -285,8 +285,8 @@ static PetscErrorCode KSPSolve_HPDDM(KSP ksp)
   ierr = PetscCitationsRegister(hpddmCitationKSP, &citeKSP);CHKERRQ(ierr);
   ierr = KSPGetOperators(ksp, &A, NULL);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompareAny((PetscObject)A, &flg, MATSEQKAIJ, MATMPIKAIJ, "");CHKERRQ(ierr);
-  ierr = VecGetArray(ksp->vec_sol, &x);CHKERRQ(ierr);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(ksp->vec_rhs, &b);CHKERRQ(ierr);CHKERRQ(ierr);
+  ierr = VecGetArray(ksp->vec_sol, &x);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(ksp->vec_rhs, &b);CHKERRQ(ierr);
   if (!flg) {
     ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
     ierr = PetscObjectTypeCompareAny((PetscObject)pc, &flg, PCFIELDSPLIT);CHKERRQ(ierr);
