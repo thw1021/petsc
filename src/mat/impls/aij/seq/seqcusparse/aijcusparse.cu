@@ -1119,7 +1119,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEGenerateTransposeForMult(Mat A)
     matstructT->mat = matrixT;
 
    #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-    stat = cusparseCreateCsr(&matstruct->matDescr,
+    stat = cusparseCreateCsr(&matstructT->matDescr,
                              matrixT->num_rows, matrixT->num_cols, matrixT->num_entries,
                              matrixT->row_offsets->data().get(), matrixT->column_indices->data().get(),
                              matrixT->values->data().get(),
@@ -1595,12 +1595,14 @@ static PetscErrorCode MatSeqAIJCUSPARSECopyToGPU(Mat A)
           /* assign the pointer */
           matstruct->mat = mat;
          #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-          stat = cusparseCreateCsr(&matstruct->matDescr,
-                                   mat->num_rows, mat->num_cols, mat->num_entries,
-                                   mat->row_offsets->data().get(), mat->column_indices->data().get(),
-                                   mat->values->data().get(),
-                                   CUSPARSE_INDEX_32I,CUSPARSE_INDEX_32I, /* row offset, col idx type due to THRUSTINTARRAY32 */
-                                   CUSPARSE_INDEX_BASE_ZERO,cusparse_scalartype);CHKERRCUSPARSE(stat);
+          if (mat->num_rows) { /* cusparse errors on empty matrices! */
+            stat = cusparseCreateCsr(&matstruct->matDescr,
+                                    mat->num_rows, mat->num_cols, mat->num_entries,
+                                    mat->row_offsets->data().get(), mat->column_indices->data().get(),
+                                    mat->values->data().get(),
+                                    CUSPARSE_INDEX_32I,CUSPARSE_INDEX_32I, /* row offset, col idx types due to THRUSTINTARRAY32 */
+                                    CUSPARSE_INDEX_BASE_ZERO,cusparse_scalartype);CHKERRCUSPARSE(stat);
+          }
          #endif
         } else if (cusparsestruct->format==MAT_CUSPARSE_ELL || cusparsestruct->format==MAT_CUSPARSE_HYB) {
          #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
@@ -1799,6 +1801,14 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   if (!mmdata->initialized) {
     stat = cusparseCreateDnMat(&mmdata->matBDescr,B->rmap->n,B->cmap->n,blda,(void*)barray,cusparse_scalartype,CUSPARSE_ORDER_COL);CHKERRCUSPARSE(stat);
     stat = cusparseCreateDnMat(&mmdata->matCDescr,m,n,clda,(void*)carray,cusparse_scalartype,CUSPARSE_ORDER_COL);CHKERRCUSPARSE(stat); /* matCDescr is for C or mmdata->X */
+    if (!mat->matDescr) {
+      stat = cusparseCreateCsr(&mat->matDescr,
+                              csrmat->num_rows, csrmat->num_cols, csrmat->num_entries,
+                              csrmat->row_offsets->data().get(), csrmat->column_indices->data().get(),
+                              csrmat->values->data().get(),
+                              CUSPARSE_INDEX_32I,CUSPARSE_INDEX_32I, /* row offset, col idx types due to THRUSTINTARRAY32 */
+                              CUSPARSE_INDEX_BASE_ZERO,cusparse_scalartype);CHKERRCUSPARSE(stat);
+    }
     stat = cusparseSpMM_bufferSize(cusp->handle,opA,opB,mat->alpha_one,
                                    mat->matDescr,mmdata->matBDescr,mat->beta_zero,
                                    mmdata->matCDescr,cusparse_scalartype,
@@ -1806,7 +1816,8 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
     cerr = cudaMalloc(&mmdata->spmmBuffer,mmdata->spmmBufferSize);CHKERRCUDA(cerr);
     mmdata->initialized = PETSC_TRUE;
   } else {
-    /* to be safe, always update pointers of the dense mats */
+    /* to be safe, always update pointers of the mats */
+    stat = cusparseSpMatSetValues(mat->matDescr,csrmat->values->data().get());CHKERRCUSPARSE(stat);
     stat = cusparseDnMatSetValues(mmdata->matBDescr,(void*)barray);CHKERRCUSPARSE(stat);
     stat = cusparseDnMatSetValues(mmdata->matCDescr,(void*)carray);CHKERRCUSPARSE(stat);
   }
@@ -2514,7 +2525,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSEMult
 
    #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
     Mat_SeqAIJCUSPARSEMultStruct *mdata = *matstruct;
-    stat = cusparseDestroySpMat(mdata->matDescr);CHKERRCUSPARSE(stat);
+    if (mdata->matDescr) {stat = cusparseDestroySpMat(mdata->matDescr);CHKERRCUSPARSE(stat);}
     for (int i=0; i<3; i++) {
       if (mdata->cuSpMV[i].initialized) {
         err  = cudaFree(mdata->cuSpMV[i].spmvBuffer);CHKERRCUDA(err);

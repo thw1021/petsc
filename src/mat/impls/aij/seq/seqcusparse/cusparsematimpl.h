@@ -182,7 +182,7 @@ struct Mat_SeqAIJCUSPARSEMultStruct {
  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   cusparseSpMatDescr_t  matDescr;  /* descriptor for the matrix, used by SpMV and SpMM */
   Mat_CusparseSpMV      cuSpMV[3]; /* different Mat_CusparseSpMV structs for no-transpose, transpose, conj-transpose */
-  Mat_SeqAIJCUSPARSEMultStruct() {
+  Mat_SeqAIJCUSPARSEMultStruct() : matDescr(NULL) {
     for (int i=0; i<3; i++) cuSpMV[i].initialized = PETSC_FALSE;
   }
  #endif
@@ -202,7 +202,7 @@ struct Mat_SeqAIJCUSPARSE {
   PetscBool                    transgen;        /* whether or not to generate explicit transpose for MatMultTranspose operations */
  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   size_t                       csr2cscBufferSize; /* stuff used to compute the matTranspose above */
-  void                         *csr2cscBuffer;
+  void                         *csr2cscBuffer;    /* This is used as a C struct and is calloc'ed by PetscNewLog() */
   cusparseCsr2CscAlg_t         csr2cscAlg;        /* algorithms can be selected from command line options */
   cusparseSpMVAlg_t            spmvAlg;
   cusparseSpMMAlg_t            spmmAlg;
