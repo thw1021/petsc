@@ -74,7 +74,7 @@ static PetscErrorCode PetscViewerGetSubViewer_Binary(PetscViewer viewer,MPI_Comm
       case FILE_MODE_READ:   amode = MPI_MODE_RDONLY; break;
       case FILE_MODE_WRITE:  amode = MPI_MODE_WRONLY; break;
       case FILE_MODE_APPEND: amode = MPI_MODE_WRONLY; break;
-      default: SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported file mode %s",PetscFileModes[vbinary->filemode]);
+      default: SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported file mode %s",PetscFileModes[vbinary->filemode]); /* LCOV_EXCL_LINE */
       }
       ierr = MPI_File_open(PETSC_COMM_SELF,vbinary->filename,amode,MPI_INFO_NULL,&vbinary->mfsub);CHKERRQ(ierr);
     }
@@ -1397,7 +1397,7 @@ static PetscErrorCode PetscViewerFileSetUp_BinaryMPIIO(PetscViewer viewer)
   case FILE_MODE_READ:   amode = MPI_MODE_RDONLY; break;
   case FILE_MODE_WRITE:  amode = MPI_MODE_WRONLY | MPI_MODE_CREATE; break;
   case FILE_MODE_APPEND: amode = MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_APPEND; break;
-  default: SETERRQ1(PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Unsupported file mode %s",PetscFileModes[vbinary->filemode]);
+  default: SETERRQ1(PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Unsupported file mode %s",PetscFileModes[vbinary->filemode]); /* LCOV_EXCL_LINE */
   }
   ierr = MPI_File_open(PetscObjectComm((PetscObject)viewer),vbinary->filename,amode,MPI_INFO_NULL,&vbinary->mfdes);CHKERRQ(ierr);
   /*
