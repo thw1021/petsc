@@ -2,7 +2,22 @@
 static char help[] = "Transistor amplifier.\n";
 
 /*F
-  M y'=f(t,y)
+ ` This example illustrates the implementation of an implicit DAE index-1 of form M y'=f(t,y) with singular mass matrix, where
+
+     [ -C1  C1           ]
+     [  C1 -C1           ]
+  M =[        -C2        ]; Ck = k * 1e-06
+     [            -C3  C3]
+     [             C3 -C3]
+
+
+        [ -(U(t) - y[0])/1000                    ]
+        [ -6/R + y[1]/4500 + 0.01 * h(y[1]-y[2]) ]
+f(t,y)= [ y[2]/R - h(y[1]-y[2]) ]
+        [ (y[3]-6)/9000 + 0.99 * h([y1]-y[2]) ]
+        [ y[4]/9000 ]
+
+U(t) = 0.4 * Sin(200 Pi t); h[V] = 1e-06 * Exp(V/0.026 - 1) `
 
   Useful options: -ts_monitor_lg_solution -ts_monitor_lg_timestep -lg_indicate_data_points 0
 F*/
