@@ -2,8 +2,11 @@ static char help[] = "Runaway electron model with Landau collision operator\n\n"
 
 #include <petscdmplex.h>
 #include <petsclandau.h>
-#include <petscts.h>
+//#include <petscts.h>
 #include <petscds.h>
+#include <petsc/private/tsimpl.h>     /*I "petscts.h" I*/
+
+#include <petsc/private/dmimpl.h>
 
 /* data for runaway electron model */
 typedef struct REctx_struct {
@@ -692,6 +695,7 @@ int main(int argc, char **argv)
   PetscDS        prob;
   LandauCtx      *ctx;
   REctx          *rectx;
+  DMTS           tsdm;
 
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
@@ -719,10 +723,12 @@ int main(int argc, char **argv)
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
   ierr = TSSetApplicationContext(ts, ctx);CHKERRQ(ierr);
+  ierr = DMGetDMTS(dm,&tsdm);CHKERRQ(ierr);
+  tsdm->ijacobianctx = ctx;
   ierr = TSMonitorSet(ts,Monitor,ctx,NULL);CHKERRQ(ierr);
   ierr = TSSetPreStep(ts,PreStep);CHKERRQ(ierr);
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
-  if (0) { /* warm up an test just LandauIJacobian */
+  if (1) { /* warm up an test just LandauIJacobian */
     PetscLogStage stage;
     Vec           vec;
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
