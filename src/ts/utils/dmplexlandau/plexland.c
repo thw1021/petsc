@@ -192,17 +192,18 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       } /* qj loop */
       ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
       /* assemble matrix */
-      ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
-      ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
-      ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
 
-      if (ej==-1) {
+      ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
+      ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);
+      if (ej==-1 || ierr) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr);
         for (d = 0; d < totDim; ++d){
           for (f = 0; f < totDim; ++f) PetscPrintf(PETSC_COMM_SELF," %17.9e",  PetscRealPart(elemMat[d*totDim + f]));
           PetscPrintf(PETSC_COMM_SELF,"\n");CHKERRQ(ierr);
         }
       }
+      CHKERRQ(ierr);
+      ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
     } /* ej cells loop, not cuda */
   }
   // PetscSleep(2); exit(13);
@@ -1642,19 +1643,24 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
     ctx->aux_bool = PETSC_FALSE;
     ierr = PetscInfo3(ts, "Skip Landau Jacobian t=%g, shift=%g shift*|u|=%20.12e\n",(double)time_dummy,(double)shift,(double)shift*unorm);CHKERRQ(ierr);
   }
-  /* add C */
-  if (ctx->J != Pmat) {
+  ierr = MatCopy(ctx->J,Pmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr); // these are the same
+  {
     MatInfo info1, info2;
     double  nz_1, nz_2;
     ierr = MatGetInfo(Pmat,MAT_LOCAL,&info1);CHKERRQ(ierr);
     nz_1 = info1.nz_allocated;
     ierr = MatGetInfo(ctx->J,MAT_LOCAL,&info2);CHKERRQ(ierr);
     nz_2 = info2.nz_allocated;
-    ierr = PetscInfo2(ts, "\t\tnnz A = %g, nnz M = %g\n",nz_1,nz_2);CHKERRQ(ierr);
+    if (0){
+      ierr = PetscInfo2(ts, "\t\tnnz A = %g, nnz M = %g\n",nz_1,nz_2);CHKERRQ(ierr);
+    }
+    /* add mass */
+    if (nz_1 != nz_2||1) {
+      ierr = MatAXPY(Pmat,shift,ctx->M,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
+    } else {
+      ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+    }
   }
-  ierr = MatCopy(ctx->J,Pmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
-  /* add mass */
-  ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
