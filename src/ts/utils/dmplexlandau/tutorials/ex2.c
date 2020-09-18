@@ -2,11 +2,8 @@ static char help[] = "Runaway electron model with Landau collision operator\n\n"
 
 #include <petscdmplex.h>
 #include <petsclandau.h>
-//#include <petscts.h>
+#include <petscts.h>
 #include <petscds.h>
-#include <petsc/private/tsimpl.h>     /*I "petscts.h" I*/
-
-#include <petsc/private/dmimpl.h>
 
 /* data for runaway electron model */
 typedef struct REctx_struct {
@@ -695,7 +692,6 @@ int main(int argc, char **argv)
   PetscDS        prob;
   LandauCtx      *ctx;
   REctx          *rectx;
-  DMTS           tsdm;
 
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
@@ -723,8 +719,6 @@ int main(int argc, char **argv)
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
   ierr = TSSetApplicationContext(ts, ctx);CHKERRQ(ierr);
-  ierr = DMGetDMTS(dm,&tsdm);CHKERRQ(ierr);
-  tsdm->ijacobianctx = ctx;
   ierr = TSMonitorSet(ts,Monitor,ctx,NULL);CHKERRQ(ierr);
   ierr = TSSetPreStep(ts,PreStep);CHKERRQ(ierr);
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
@@ -736,14 +730,6 @@ int main(int argc, char **argv)
     /* warm up */
     ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-
-    {
-      PetscBool flg;
-      ierr = MatGetOption(J,MAT_IGNORE_ZERO_ENTRIES,&flg);CHKERRQ(ierr);
-      if (!flg) SETERRQ1(PetscObjectComm((PetscObject)J),PETSC_ERR_SUP,"!MAT_IGNORE_ZERO_ENTRIES %p",J);
-    }
-    PetscPrintf(PETSC_COMM_WORLD, "call LandauIJacobian %p\n",J);
-
     ierr = LandauIJacobian(ts, 0.0, vec, vec, 0.0, J, J, ctx);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)J, "Jacobian");CHKERRQ(ierr);
     ierr = MatViewFromOptions(J,NULL,"-initial_mat_view");CHKERRQ(ierr);

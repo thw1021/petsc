@@ -70,16 +70,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   PetscValidHeaderSpecific(JacP,MAT_CLASSID,2);
   PetscValidPointer(ctx,4);
 
-  {
-    PetscBool flg;
-    ierr = MatGetOption(JacP,MAT_IGNORE_ZERO_ENTRIES,&flg);CHKERRQ(ierr);
-    if (!flg) {
-      ierr = MatSetOption(JacP, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
-      ierr = MatGetOption(JacP,MAT_IGNORE_ZERO_ENTRIES,&flg);CHKERRQ(ierr);
-      if (!flg) SETERRQ1(PetscObjectComm((PetscObject)JacP),PETSC_ERR_SUP,"!MAT_IGNORE_ZERO_ENTRIES %p",JacP);
-    }
-  }
-
   ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
   ierr = DMConvert(ctx->dmv, DMPLEX, &plex);CHKERRQ(ierr);
   ierr = DMCreateLocalVector(plex, &locX);CHKERRQ(ierr);
@@ -188,9 +178,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
   } else { /* CPU version */
-    PetscBool flg;
-    ierr = MatGetOption(JacP,MAT_IGNORE_ZERO_ENTRIES,&flg);CHKERRQ(ierr);
-    if (!flg) SETERRQ(PetscObjectComm((PetscObject)JacP),PETSC_ERR_SUP,"!MAT_IGNORE_ZERO_ENTRIES");
     for (ej = cStart, invJ = invJ_a; ej < cEnd; ++ej, invJ += Nq*dim*dim) {
       PetscInt     qj;
       ierr = PetscLogEventBegin(ctx->events[3],0,0,0,0);CHKERRQ(ierr);
@@ -1632,14 +1619,6 @@ PetscErrorCode LandauIJacobian(TS ts,PetscReal time_dummy,Vec X,Vec U_tdummy,Pet
   DM dm;
 
   PetscFunctionBegin;
-
-  PetscPrintf(PETSC_COMM_WORLD, "LandauIJacobian %p %p %p %g %g\n",Amat,Pmat,ctx->J,time_dummy,shift);
-  {
-    PetscBool flg;
-    ierr = MatGetOption(Amat,MAT_IGNORE_ZERO_ENTRIES,&flg);CHKERRQ(ierr);
-    if (!flg) SETERRQ1(PetscObjectComm((PetscObject)Amat),PETSC_ERR_SUP,"!MAT_IGNORE_ZERO_ENTRIES %p",Amat);
-  }
-
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
