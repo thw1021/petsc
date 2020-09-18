@@ -1,4 +1,6 @@
 #include <petsc/private/petschpddm.h> /*I "petscksp.h" I*/
+#include <petsc/private/pcimpl.h>
+#include <petsc/private/pcfieldsplitimpl.h>
 
 /* static array length */
 #define ALEN(a) (sizeof(a)/sizeof((a)[0]))
@@ -266,21 +268,91 @@ PETSC_STATIC_INLINE PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscSc
 static PetscErrorCode KSPSolve_HPDDM(KSP ksp)
 {
   KSP_HPDDM         *data = (KSP_HPDDM*)ksp->data;
-  Mat               A, B;
+  KSP               schur;
+  PC                pc;
+  Mat               A, B, view;
+  Vec               vec;
   PetscScalar       *x, *bt = NULL, **ptr;
   const PetscScalar *b;
-  PetscInt          i, j, n;
+  PetscInt          i, j, n, N, m, M;
+  char              prefix[256];
   PetscBool         flg;
+  PC_FieldSplit     *jac;
+  PC_FieldSplitLink ilink;
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   ierr = PetscCitationsRegister(hpddmCitationKSP, &citeKSP);CHKERRQ(ierr);
   ierr = KSPGetOperators(ksp, &A, NULL);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompareAny((PetscObject)A, &flg, MATSEQKAIJ, MATMPIKAIJ, "");CHKERRQ(ierr);
-  ierr = VecGetArray(ksp->vec_sol, &x);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(ksp->vec_rhs, &b);CHKERRQ(ierr);
+  ierr = VecGetArray(ksp->vec_sol, &x);CHKERRQ(ierr);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(ksp->vec_rhs, &b);CHKERRQ(ierr);CHKERRQ(ierr);
   if (!flg) {
-    ierr = KSPSolve_HPDDM_Private(ksp, b, x, 1);CHKERRQ(ierr);
+    ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
+    ierr = PetscObjectTypeCompareAny((PetscObject)pc, &flg, PCFIELDSPLIT);CHKERRQ(ierr);
+    if (flg) {
+      flg = PETSC_FALSE;
+      ierr = PetscOptionsGetBool(NULL, ((PetscObject)ksp)->prefix, "-fieldsplit_matsolve", &flg, NULL);CHKERRQ(ierr);
+    }
+    if (!flg) {
+      ierr = KSPSolve_HPDDM_Private(ksp, b, x, 1);CHKERRQ(ierr);
+    } else {
+      jac = (PC_FieldSplit*)pc->data;
+      ilink = jac->head;
+      /* [A  B] [u] = [f]
+       * [C  D] [v]   [l] */
+      if (jac->type != PC_COMPOSITE_SCHUR) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Unsupported  composition", (int)jac->type);
+      ierr = MatGetLocalSize(jac->B, &m, NULL);CHKERRQ(ierr);
+      ierr = MatGetSize(jac->B, &M, &N);CHKERRQ(ierr);
+      ierr = MatCreateDense(PetscObjectComm((PetscObject)ksp), m, PETSC_DECIDE, M, N + 1, NULL, &B);CHKERRQ(ierr);
+      ierr = MatDenseGetSubMatrix(B, 0, N, &view);CHKERRQ(ierr);
+      ierr = MatConvert(jac->B, MATDENSE, MAT_REUSE_MATRIX, &view);CHKERRQ(ierr);
+      ierr = MatDenseRestoreSubMatrix(B, &view);CHKERRQ(ierr);
+      ierr = MatDenseGetColumnVecWrite(B, N, &vec);CHKERRQ(ierr);
+      ierr = VecScatterBegin(ilink->sctx, ksp->vec_rhs, vec, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+      ierr = VecScatterEnd(ilink->sctx, ksp->vec_rhs, vec, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+      ierr = MatDenseRestoreColumnVecWrite(B, N, &vec);CHKERRQ(ierr);
+      ierr = MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &A);CHKERRQ(ierr);
+      ierr = MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+      ierr = MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+      ierr = KSPMatSolve(ilink->ksp, B, A);CHKERRQ(ierr);                                /* A^-1 * [B  f] */
+      ierr = MatDestroy(&B);CHKERRQ(ierr);
+      ierr = MatMatMult(jac->C, A, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &B);CHKERRQ(ierr); /* C * A^-1 * [B  f] */
+      ierr = MatDestroy(&A);CHKERRQ(ierr);
+      ierr = MatDenseGetColumnVecWrite(B, N, &vec);CHKERRQ(ierr);
+      ierr = VecScale(vec, -1.0);CHKERRQ(ierr);
+      ierr = VecScatterBegin(ilink->next->sctx, ksp->vec_rhs, vec, ADD_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+      ierr = VecScatterEnd(ilink->next->sctx, ksp->vec_rhs, vec, ADD_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+      ierr = VecAXPBY(ilink->next->x, -1.0, 0.0, vec);CHKERRQ(ierr);                     /* l - C * A^-1 * f */
+      ierr = MatDenseRestoreColumnVecWrite(B, N, &vec);CHKERRQ(ierr);
+      ierr = MatDenseGetSubMatrix(B, 0, N, &view);CHKERRQ(ierr);
+      ierr = KSPGetOperators(ilink->next->ksp, &A, NULL);CHKERRQ(ierr);
+      ierr = MatGetSize(A, &M, &N);CHKERRQ(ierr);
+      if (N != PETSC_DECIDE && M != PETSC_DECIDE) {
+        ierr = MatAXPY(view, -1.0, A, SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);             /* D - C * A^-1 * B */
+      }
+      ierr = KSPCreate(PetscObjectComm((PetscObject)ksp), &schur);CHKERRQ(ierr);
+      ierr = KSPSetOperators(schur, view, view);CHKERRQ(ierr); /* Mat and RHS are _both_ scaled by -1.0 */
+      ierr = PetscSNPrintf(prefix, sizeof(prefix), "%sfieldsplit_matsolve_", ((PetscObject)ksp)->prefix ? ((PetscObject)ksp)->prefix : "");CHKERRQ(ierr);
+      ierr = KSPSetOptionsPrefix(schur, prefix);CHKERRQ(ierr);
+      ierr = KSPSetFromOptions(schur);CHKERRQ(ierr);
+      ierr = KSPSolve(schur, ilink->next->x, ilink->next->y);CHKERRQ(ierr);              /* (D - C * A^-1 * B)^-1 * (l - C * A^-1 * f) */
+      ierr = KSPDestroy(&schur);CHKERRQ(ierr);
+      ierr = MatDenseRestoreSubMatrix(B, &view);CHKERRQ(ierr);
+      ierr = MatDestroy(&view);CHKERRQ(ierr);
+      ierr = MatDestroy(&B);CHKERRQ(ierr);
+      ierr = VecScatterBegin(ilink->next->sctx, ilink->next->y, ksp->vec_sol, INSERT_VALUES, SCATTER_REVERSE);CHKERRQ(ierr);
+      ierr = VecScatterEnd(ilink->next->sctx, ilink->next->y, ksp->vec_sol, INSERT_VALUES, SCATTER_REVERSE);CHKERRQ(ierr);
+      ierr = MatMult(jac->B, ilink->next->y, ilink->x);CHKERRQ(ierr);                   /* B * (D - C * A^-1 * B)^-1 * (l - C * A^-1 * f) */
+      ierr = VecScale(ilink->x, -1.0);CHKERRQ(ierr);
+      ierr = VecScatterBegin(ilink->sctx, ksp->vec_rhs, ilink->x, ADD_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+      ierr = VecScatterEnd(ilink->sctx, ksp->vec_rhs, ilink->x, ADD_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+      ierr = KSPSolve(ilink->ksp, ilink->x, ilink->y);CHKERRQ(ierr);                    /* A^-1 * (f - B * (D - C * A^-1 * B)^-1 * [l - C * A^-1 * f]) */
+      ierr = VecScatterBegin(ilink->sctx, ilink->y, ksp->vec_sol, INSERT_VALUES, SCATTER_REVERSE);CHKERRQ(ierr);
+      ierr = VecScatterEnd(ilink->sctx, ilink->y, ksp->vec_sol, INSERT_VALUES, SCATTER_REVERSE);CHKERRQ(ierr);
+      ksp->its = ilink->ksp->its;
+      ksp->reason = ilink->ksp->reason;
+    }
   } else {
     ierr = MatKAIJGetScaledIdentity(A, &flg);CHKERRQ(ierr);
     ierr = MatKAIJGetAIJ(A, &B);CHKERRQ(ierr);
