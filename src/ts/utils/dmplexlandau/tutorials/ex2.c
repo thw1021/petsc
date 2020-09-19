@@ -723,7 +723,9 @@ int main(int argc, char **argv)
   ierr = TSSetPreStep(ts,PreStep);CHKERRQ(ierr);
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
   if (1) { /* warm up an test just LandauIJacobian */
+    #if defined PETSC_GAMG_USE_LOG
     PetscLogStage stage;
+    #endif
     Vec           vec;
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
     ierr = VecSet(vec,1.);CHKERRQ(ierr);
