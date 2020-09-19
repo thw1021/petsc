@@ -730,8 +730,10 @@ int main(int argc, char **argv)
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
     ierr = VecSet(vec,1.);CHKERRQ(ierr);
     /* warm up */
+    #if defined PETSC_GAMG_USE_LOG
     ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
+    #endif
     ierr = LandauIJacobian(ts, 0.0, vec, vec, 0.0, J, J, ctx);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)J, "Jacobian");CHKERRQ(ierr);
     ierr = MatViewFromOptions(J,NULL,"-initial_mat_view");CHKERRQ(ierr);
@@ -740,7 +742,9 @@ int main(int argc, char **argv)
     ierr = LandauIJacobian(ts, 0.0, vec, vec, 1.0, J, J, ctx);CHKERRQ(ierr);
     ierr = MatViewFromOptions(J,NULL,"-initial_mat_view");CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)J, "Jacobian");CHKERRQ(ierr);
+    #if defined PETSC_GAMG_USE_LOG
     ierr = PetscLogStagePop();CHKERRQ(ierr);
+    #endif
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
   }
   ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr); // inital condition (monitor plots after step)
