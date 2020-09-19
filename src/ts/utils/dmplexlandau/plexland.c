@@ -199,7 +199,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         ierr = PetscPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr);
         for (d = 0; d < totDim; ++d){
           for (f = 0; f < totDim; ++f) PetscPrintf(PETSC_COMM_SELF," %17.9e",  PetscRealPart(elemMat[d*totDim + f]));
-          PetscPrintf(PETSC_COMM_SELF,"\n");CHKERRQ(ierr);
+           ierr = PetscPrintf(PETSC_COMM_SELF,"\n");CHKERRQ(ierr);
         }
       }
       CHKERRQ(ierr);
