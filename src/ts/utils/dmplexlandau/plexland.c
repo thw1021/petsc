@@ -1655,8 +1655,9 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
       ierr = PetscInfo2(ts, "\t\tnnz A = %g, nnz M = %g\n",nz_1,nz_2);CHKERRQ(ierr);
     }
     /* add mass */
-    if (nz_1 != nz_2||1) {
+    if (nz_1 != nz_2) {
       ierr = MatAXPY(Pmat,shift,ctx->M,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
+      SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "nz_1 != nz_2 %g %g",nz_1,nz_2);
     } else {
       ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
     }
