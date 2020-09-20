@@ -80,18 +80,18 @@ class Configure(config.package.CMakePackage):
     args.append('-DUnitTest_LIBRARIES="'+self.libraries.toStringNoDupes(self.unittestcpp.lib)+'"')
     args.append('-DUnitTest_INCLUDE_DIRS='+os.path.join(self.unittestcpp.directory,'include','UnitTest++','UnitTest++'))
 
-    self.framework.pushLanguage('C')
-    args.append('-DMPI_C_COMPILER="'+self.framework.getCompiler()+'"')
-    self.framework.popLanguage()
+    self.pushLanguage('C')
+    args.append('-DMPI_C_COMPILER="'+self.getCompiler()+'"')
+    self.popLanguage()
 
-    self.framework.pushLanguage('Cxx')
-    args.append('-DMPI_CXX_COMPILER="'+self.framework.getCompiler()+'"')
-    self.framework.popLanguage()
+    self.pushLanguage('Cxx')
+    args.append('-DMPI_CXX_COMPILER="'+self.getCompiler()+'"')
+    self.popLanguage()
 
     if hasattr(self.setCompilers, 'FC'):
-      self.framework.pushLanguage('FC')
-      args.append('-DMPI_Fortran_COMPILER="'+self.framework.getCompiler()+'"')
-      self.framework.popLanguage()
+      self.pushLanguage('FC')
+      args.append('-DMPI_Fortran_COMPILER="'+self.getCompiler()+'"')
+      self.popLanguage()
     else:
       args.append('-DTrilinos_ENABLE_Fortran=OFF')
 
