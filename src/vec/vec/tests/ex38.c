@@ -97,5 +97,9 @@ int main(int argc, char *argv[])
         requires: viennacl
         suffix:  viennacl
         args: -vec_type viennacl
+      test:
+        requires: kokkos
+        suffix: kokkos
+        args: -vec_type kokkos
 
 TEST*/

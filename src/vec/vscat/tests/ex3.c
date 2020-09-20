@@ -30,7 +30,7 @@ int main(int argc,char **argv)
   /* Create vector x over shared memory */
   ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
   ierr = VecSetSizes(x,n,PETSC_DECIDE);CHKERRQ(ierr);
-  ierr = VecSetType(x,VECNODE);CHKERRQ(ierr);
+  //ierr = VecSetType(x,VECNODE);CHKERRQ(ierr);
   ierr = VecSetFromOptions(x);CHKERRQ(ierr);
 
   ierr = VecGetOwnershipRange(x,&low,NULL);CHKERRQ(ierr);

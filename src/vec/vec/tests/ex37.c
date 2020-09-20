@@ -294,9 +294,18 @@ int main(int argc, char **args)
       nsize: 2
       args: -explicit_is 0
 
-   test:
-      suffix: 4
+   testset:
       nsize: 2
       args: -explicit_is 1
+      output_file: output/ex37_4.out
+      filter: grep -v "  type:"
+
+      test:
+        suffix: 4
+
+      test:
+        requires: kokkos
+        suffix: kokkos
+        args: -vec_type kokkos
 
 TEST*/
