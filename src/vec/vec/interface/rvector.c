@@ -1402,6 +1402,7 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
             }
             break;
           case PETSC_OFFLOAD_UNALLOCATED:
+          case PETSC_OFFLOAD_VECKOKKOS:
             SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"This should not happen");
             break;
           }
@@ -1632,7 +1633,8 @@ PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
 #if defined(PETSC_HAVE_KOKKOS)
     if (x->offloadmask == PETSC_OFFLOAD_VECKOKKOS) { /* offloadmask here works as a tag quickly saying this is a VecKokkos */
       ierr = VecKokkosSyncHost(x);CHKERRQ(ierr);
-      goto finish_sync;
+      *a   = *((PetscScalar**)x->data);
+      PetscFunctionReturn(0);
     }
 #endif
 #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
@@ -1662,7 +1664,6 @@ PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
       }
     }
 #endif
-finish_sync:
     *a = *((PetscScalar**)x->data);
   } else {
     if (x->ops->getarray) {
@@ -1795,7 +1796,8 @@ PetscErrorCode VecGetArrayRead(Vec x,const PetscScalar **a)
 #if defined(PETSC_HAVE_KOKKOS)
     if (x->offloadmask == PETSC_OFFLOAD_VECKOKKOS) {
       ierr = VecKokkosSyncHost(x);CHKERRQ(ierr);
-      goto finish_sync;
+      *a   = *((PetscScalar **)x->data);
+      PetscFunctionReturn(0);
     }
 #endif
 #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
@@ -1813,7 +1815,6 @@ PetscErrorCode VecGetArrayRead(Vec x,const PetscScalar **a)
       }
     }
 #endif
-finish_sync:
     *a = *((PetscScalar **)x->data);
   } else if (x->ops->getarrayread) {
     ierr = (*x->ops->getarrayread)(x,a);CHKERRQ(ierr);
@@ -1974,19 +1975,18 @@ PetscErrorCode VecRestoreArray(Vec x,PetscScalar **a)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   if (x->petscnative) {
-#if defined(PETSC_HAVE_KOKKOS)
-    if (x->offloadmask == PETSC_OFFLOAD_VECKOKKOS) {
-      ierr = VecKokkosModifyHost(x);CHKERRQ(ierr);
-      goto finish_modify;
+   #if defined(PETSC_HAVE_KOKKOS)
+    if (x->offloadmask == PETSC_OFFLOAD_VECKOKKOS) {ierr = VecKokkosModifyHost(x);CHKERRQ(ierr);}
+    else
+   #endif
+    {
+     #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+      x->offloadmask = PETSC_OFFLOAD_CPU;
+     #endif
     }
-#endif
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
-    x->offloadmask = PETSC_OFFLOAD_CPU;
-#endif
   } else {
     ierr = (*x->ops->restorearray)(x,a);CHKERRQ(ierr);
   }
-finish_modify:
   if (a) *a = NULL;
   ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -2058,10 +2058,8 @@ PetscErrorCode VecRestoreArrayWrite(Vec x,PetscScalar **a)
 #if defined(PETSC_HAVE_KOKKOS)
   if (x->offloadmask == PETSC_OFFLOAD_VECKOKKOS) {
     ierr = VecKokkosModifyHost(x);CHKERRQ(ierr);
-    goto finish;
-  }
+  } else
 #endif
-
   if (x->petscnative) {
 #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
     x->offloadmask = PETSC_OFFLOAD_CPU;
@@ -2074,7 +2072,6 @@ PetscErrorCode VecRestoreArrayWrite(Vec x,PetscScalar **a)
     }
   }
 
-finish:
   if (a) *a = NULL;
   ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
   PetscFunctionReturn(0);

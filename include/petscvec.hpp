@@ -12,10 +12,10 @@
   using HostMemorySpace                    = Kokkos::HostSpace;
   using PetscScalarKokkosDualView_t        = Kokkos::DualView<PetscScalar*>;
 
-  using PetscScalarViewDevice_t      = Kokkos::View<PetscScalar*,DeviceMemorySpace>;
-  using PetscScalarViewHost_t        = PetscScalarViewDevice_t::HostMirror;
-  using ConstPetscScalarViewDevice_t = Kokkos::View<const PetscScalar*,DeviceMemorySpace>;
-  using ConstPetscScalarViewHost_t   = ConstPetscScalarViewDevice_t::HostMirror;
+  using PetscScalarViewDevice_t            = Kokkos::View<PetscScalar*,DeviceMemorySpace>;
+  using PetscScalarViewHost_t              = PetscScalarViewDevice_t::HostMirror;
+  using ConstPetscScalarViewDevice_t       = Kokkos::View<const PetscScalar*,DeviceMemorySpace>;
+  using ConstPetscScalarViewHost_t         = ConstPetscScalarViewDevice_t::HostMirror;
 
   PETSC_EXTERN PetscErrorCode VecKokkosGetDeviceView(Vec,PetscScalarViewDevice_t*);
   PETSC_EXTERN PetscErrorCode VecKokkosRestoreDeviceView(Vec,PetscScalarViewDevice_t*);

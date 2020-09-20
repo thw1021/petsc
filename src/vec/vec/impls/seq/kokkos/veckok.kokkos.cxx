@@ -23,7 +23,7 @@
       PetscBool        isKokkos = PETSC_FALSE; \
       ierr = PetscObjectTypeCompareAny((PetscObject)(v),&isKokkos,VECSEQKOKKOS,VECMPIKOKKOS,VECKOKKOS,"");CHKERRQ(ierr); \
       if (!isKokkos) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Calling VECKOKKOS methods on a non-VECKOKKOS object"); \
-    } while(0)
+    } while (0)
 #else
   #define VecErrorIfNotKokkos(v) 0
 #endif
@@ -217,7 +217,7 @@ PetscErrorCode VecMin_SeqKokkos(Vec xin,PetscInt *p,PetscReal *val)
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   ierr = VecKokkosGetDeviceViewRead(xin,&xv);CHKERRQ(ierr);
   Kokkos::parallel_reduce("VecMin",xin->map->n,KOKKOS_LAMBDA(PetscInt i,MinLocValue_t& lminloc) {
-    if(xv(i) < lminloc.val) {
+    if (xv(i) < lminloc.val) {
       lminloc.val = xv(i);
       lminloc.loc = i;
     }
@@ -241,7 +241,7 @@ PetscErrorCode VecMax_SeqKokkos(Vec xin,PetscInt *p,PetscReal *val)
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   ierr = VecKokkosGetDeviceViewRead(xin,&xv);CHKERRQ(ierr);
   Kokkos::parallel_reduce("VecMax",xin->map->n,KOKKOS_LAMBDA(PetscInt i,MaxLocValue_t& lmaxloc) {
-    if(xv(i) > lmaxloc.val) {
+    if (xv(i) > lmaxloc.val) {
       lmaxloc.val = xv(i);
       lmaxloc.loc = i;
     }
@@ -769,7 +769,7 @@ struct DotNorm2 {
   }
 };
 
-/* dp	= y^H x, nm	= y^H y */
+/* dp = y^H x, nm = y^H y */
 PetscErrorCode VecDotNorm2_SeqKokkos(Vec xin, Vec yin, PetscScalar *dp, PetscScalar *nm)
 {
   PetscErrorCode                  ierr;
