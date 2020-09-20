@@ -1,4 +1,5 @@
 
+#include "petscviewer.h"
 static char help[] = "Bilinear elements on the unit square for Laplacian.  To test the parallel\n\
 matrix assembly, the matrix is intentionally laid out across processors\n\
 differently from the way it is assembled.  Input arguments are:\n\
@@ -166,6 +167,13 @@ int main(int argc,char **args)
       suffix: 2
       nsize: 2
       args: -pc_type jacobi -ksp_monitor_short -m 5 -ksp_gmres_cgs_refinement_type refine_always
+
+    test:
+      suffix: 2_kokkos
+      nsize: 2
+      args: -pc_type jacobi -ksp_monitor_short -m 5 -ksp_gmres_cgs_refinement_type refine_always -mat_type aijkokkos -vec_type kokkos
+      output_file: output/ex3_2.out
+      requires: kokkos
 
     test:
       suffix: nocheby

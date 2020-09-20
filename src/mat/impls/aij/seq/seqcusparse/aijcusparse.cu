@@ -2025,7 +2025,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUSPARSE(Mat A, MatType mtyp
   B = *newmat;
 
   ierr = PetscFree(B->defaultvectype);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(VECCUDA,&B->defaultvectype);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(VECKOKKOS,&B->defaultvectype);CHKERRQ(ierr);
 
   if (reuse != MAT_REUSE_MATRIX && !B->spptr) {
     if (B->factortype == MAT_FACTOR_NONE) {
