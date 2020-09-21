@@ -119,7 +119,7 @@ int main(int argc,char **args)
   ierr = VecNorm(e,NORM_INFINITY,&enorm);CHKERRQ(ierr);
   if (enorm > PETSC_MACHINE_EPSILON) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"max+min > PETSC_MACHINE_EPSILON ");
   for (j = 0; j < n; j++) {
-    if (imin[j] != imax[j]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"imin %D != imax %D",imin[j],imax[j]);
+    if (imin[j] != imax[j]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"imin[%D] %D != imax %D",j,imin[j],imax[j]);
   }
 
   /* MatGetRowMaxAbs() */
@@ -147,8 +147,10 @@ int main(int argc,char **args)
     ierr = MatConvert(A,MATDENSE,MAT_INITIAL_MATRIX,&Adense);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"MatGetRowMax for seqdense matrix\n");CHKERRQ(ierr);
     ierr = MatGetRowMax(Adense,max_d,imax);CHKERRQ(ierr);
-    ierr = VecEqual(max_d,max,&flg);CHKERRQ(ierr);
-    if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"max_d != max");
+
+    ierr = VecWAXPY(e,-1.0,max,max_d);CHKERRQ(ierr); /* e = -max + max_d */
+    ierr = VecNorm(e,NORM_INFINITY,&enorm);CHKERRQ(ierr);
+    if (enorm > PETSC_MACHINE_EPSILON) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"norm(-max + max_d) %g > PETSC_MACHINE_EPSILON",enorm);
 
     ierr = MatScale(Adense,-1.0);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"MatGetRowMin for seqdense matrix\n");CHKERRQ(ierr);
@@ -159,14 +161,15 @@ int main(int argc,char **args)
     if (enorm > PETSC_MACHINE_EPSILON) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"max+min > PETSC_MACHINE_EPSILON ");
     for (j = 0; j < n; j++) {
       if (imin[j] != imax[j]) {
-        SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"imin %D != imax %D for seqdense matrix",imin[j],imax[j]);
+        SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"imin[%D] %D != imax %D for seqdense matrix",j,imin[j],imax[j]);
       }
     }
 
     ierr = PetscPrintf(PETSC_COMM_WORLD,"MatGetRowMaxAbs for seqdense matrix\n");CHKERRQ(ierr);
     ierr = MatGetRowMaxAbs(Adense,maxabs_d,imaxabs);CHKERRQ(ierr);
-    ierr = VecEqual(maxabs_d,maxabs,&flg);CHKERRQ(ierr);
-    if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"maxabs_d != maxabs");
+    ierr = VecWAXPY(e,-1.0,maxabs,maxabs_d);CHKERRQ(ierr); /* e = -maxabs + maxabs_d */
+    ierr = VecNorm(e,NORM_INFINITY,&enorm);CHKERRQ(ierr);
+    if (enorm > PETSC_MACHINE_EPSILON) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"norm(-maxabs + maxabs_d) %g > PETSC_MACHINE_EPSILON",enorm);
 
     ierr = MatDestroy(&Adense);CHKERRQ(ierr);
     ierr = VecDestroy(&max_d);CHKERRQ(ierr);
@@ -181,10 +184,12 @@ int main(int argc,char **args)
     ierr = MatGetRowMaxAbs(A,maxabsB,NULL);CHKERRQ(ierr);
     ierr = MatGetRowMaxAbs(A,maxabsB,imaxabsB);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\n MatGetRowMaxAbs for MPIBAIJ matrix\n");CHKERRQ(ierr);
-    ierr = VecEqual(maxabs,maxabsB,&flg);CHKERRQ(ierr);
-    if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"maxabs != maxabsB");
+    ierr = VecWAXPY(e,-1.0,maxabs,maxabsB);CHKERRQ(ierr); /* e = -maxabs + maxabsB */
+    ierr = VecNorm(e,NORM_INFINITY,&enorm);CHKERRQ(ierr);
+    if (enorm > PETSC_MACHINE_EPSILON) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"norm(-maxabs + maxabs_d) %g > PETSC_MACHINE_EPSILON",enorm);
+
     for (j = 0; j < n; j++) {
-      if (imaxabs[j] != imaxabsB[j]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"imaxabs %D != imaxabsB %D",imin[j],imax[j]);
+      if (imaxabs[j] != imaxabsB[j]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"imaxabs[%D] %D != imaxabsB %D",j,imin[j],imax[j]);
     }
     ierr = MatDestroy(&B);CHKERRQ(ierr);
     ierr = VecDestroy(&maxabsB);CHKERRQ(ierr);
