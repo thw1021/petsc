@@ -2321,7 +2321,7 @@ PetscErrorCode MatGetRowMaxAbs_MPIAIJ(Mat A,Vec v,PetscInt idx[])
   }
 
   ierr = VecCreateSeq(PETSC_COMM_SELF,m,&vB);CHKERRQ(ierr);
-  if (idx) {ierr = PetscMalloc1(m,&idxb);CHKERRQ(ierr);}
+  ierr = PetscMalloc1(m,&idxb);CHKERRQ(ierr);
   ierr = MatGetRowMaxAbs(a->B,vB,idxb);CHKERRQ(ierr);
 
   ierr = VecGetArrayWrite(v,&vv);CHKERRQ(ierr);
@@ -2332,7 +2332,7 @@ PetscErrorCode MatGetRowMaxAbs_MPIAIJ(Mat A,Vec v,PetscInt idx[])
       if (idx) idx[i] = a->garray[idxb[i]];
     } else {
       vv[i] = va[i];
-      if (idx && PetscAbsScalar(va[i]) == PetscAbsScalar(vb[i]) && idx[i] > a->garray[idxb[i]])
+      if (idx && PetscAbsScalar(va[i]) == PetscAbsScalar(vb[i]) && idxb[i] != -1 && idx[i] > a->garray[idxb[i]])
         idx[i] = a->garray[idxb[i]];
     }
   }
