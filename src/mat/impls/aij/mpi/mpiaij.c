@@ -2405,7 +2405,7 @@ PetscErrorCode MatGetRowMinAbs_MPIAIJ(Mat A, Vec v, PetscInt idx[])
           break;
         }
       }
-      if (j == ncols && B->cmap->N < A->cmap->N - n) {
+      if (j == ncols && ncols < A->cmap->N - n) {
         /* a hole is outside compressed Bcols */
         if (ncols == 0) {
           if (cstart) {
@@ -2483,7 +2483,7 @@ PetscErrorCode MatGetRowMin_MPIAIJ(Mat A,Vec v,PetscInt idx[])
     PetscFunctionReturn(0);
   }
 
-  ierr = PetscMalloc2(m,&diagIdx,m,&offdiagIdx);CHKERRQ(ierr);
+  ierr = PetscCalloc2(m,&diagIdx,m,&offdiagIdx);CHKERRQ(ierr);
   ierr = VecCreateSeq(PETSC_COMM_SELF, m, &diagV);CHKERRQ(ierr);
   ierr = VecCreateSeq(PETSC_COMM_SELF, m, &offdiagV);CHKERRQ(ierr);
   ierr = MatGetRowMin(mat->A, diagV, diagIdx);CHKERRQ(ierr);
@@ -2511,7 +2511,7 @@ PetscErrorCode MatGetRowMin_MPIAIJ(Mat A,Vec v,PetscInt idx[])
           break;
         }
       }
-      if (j == ncols && B->cmap->N < A->cmap->N - n) {
+      if (j == ncols && ncols < A->cmap->N - n) {
         /* a hole is outside compressed Bcols */
         if (ncols == 0) {
           if (cstart) {
@@ -2617,7 +2617,7 @@ PetscErrorCode MatGetRowMax_MPIAIJ(Mat A,Vec v,PetscInt idx[])
           break;
         }
       }
-      if (j == ncols && B->cmap->N < A->cmap->N - n) {
+      if (j == ncols && ncols < A->cmap->N - n) {
         /* a hole is outside compressed Bcols */
         if (ncols == 0) {
           if (cstart) {
