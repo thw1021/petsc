@@ -15,7 +15,6 @@ if __name__ == '__main__':
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',
     '--with-cuda-dir=/usr/local/cuda-11.0',
-    'CPPFLAGS=-DTHRUST_IGNORE_DEPRECATED_CPP_DIALECT',
   ]
 
   configure.petsc_configure(configure_options)
