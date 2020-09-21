@@ -14,7 +14,6 @@ int main(int argc,char **args)
   PetscScalar    values[N];
   PetscErrorCode ierr;
   PetscMPIInt    size,rank;
-  PetscBool      flg;
   PetscReal      enorm;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
