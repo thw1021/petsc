@@ -3,11 +3,13 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.version          = '5.2.1'
+    self.version          = '5.3.3'
+    self.minversion       = '5.2.1'
     self.versionname      = 'MUMPS_VERSION'
     self.gitcommit        = 'v'+self.version+'-p2'
     self.download         = ['git://https://bitbucket.org/petsc/pkg-mumps.git',
                              'https://bitbucket.org/petsc/pkg-mumps/get/'+self.gitcommit+'.tar.gz']
+    self.download_darwin  = ['https://bitbucket.org/petsc/pkg-mumps/get/v5.2.1-p2.tar.gz']
     self.downloaddirnames = ['petsc-pkg-mumps','MUMPS']
     self.liblist          = [['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a'],
                             ['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a','libpthread.a'],
@@ -115,7 +117,9 @@ class Configure(config.package.Package):
       extra_fcflags = '-dusty -dcfuns '
     elif config.setCompilers.Configure.isGfortran100plus(self.setCompilers.getCompiler(), self.log):
       extra_fcflags = '-fallow-argument-mismatch '
-    g.write('OPTF    = '+extra_fcflags+self.setCompilers.getCompilerFlags().replace('-Wall','').replace('-Wshadow','').replace('-Mfree','') +'\n')
+    g.write('OPTF    = '+extra_fcflags+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+'\n')
+    if self.blasLapack.checkForRoutine('dgemmt'):
+      g.write('OPTF   += -DGEMMT_AVAILABLE \n')
     g.write('OUTF = -o \n')
     self.setCompilers.popLanguage()
 
@@ -140,7 +144,7 @@ class Configure(config.package.Package):
     g.write('INCSEQ  = -I$(topdir)/libseq\n')
     g.write('LIBSEQ  =  $(LAPACK) -L$(topdir)/libseq -lmpiseq\n')
     g.write('LIBBLAS = '+self.libraries.toString(self.blasLapack.dlib)+'\n')
-    g.write('OPTL    = -O -I.\n')
+    g.write('OPTL    = '+self.setCompilers.getLinkerFlags()+'\n')
     g.write('INCS = $(INCPAR)\n')
     g.write('LIBS = $(LIBPAR)\n')
     if self.argDB['with-mumps-serial']:

@@ -1976,7 +1976,7 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
   /* step 1: sanitize input */
   ierr = PetscObjectGetComm((PetscObject) sp, &comm);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)sp, "bdm", &isbdm);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)sp, PETSCDUALSPACEBDM, &isbdm);CHKERRQ(ierr);
   if (isbdm) {
     sp->k = -(dim-1); /* form degree of H-div */
     ierr = PetscObjectChangeTypeName((PetscObject)sp, PETSCDUALSPACELAGRANGE);CHKERRQ(ierr);
@@ -2094,7 +2094,7 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
           ierr = DMPlexGetConeSize(dm, q, &coneSize);CHKERRQ(ierr);
           ierr = DMPlexGetCone(dm, q, &cone);CHKERRQ(ierr);
           for (c = 0; c < coneSize; c++) if (cone[c] == p) break;
-          if (c == coneSize) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "cone/suppport mismatch");
+          if (c == coneSize) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "cone/support mismatch");
           ierr = PetscDualSpaceGetDM(qsp, &qdm);CHKERRQ(ierr);
           ierr = DMPlexGetCone(qdm, 0, &refCone);CHKERRQ(ierr);
           /* get the equivalent dual space from the support dual space */
@@ -2332,8 +2332,8 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
           PetscLagNodeIndices intNodeIndicesMerged = NULL;
           Mat              matMerged = NULL;
 
-          ierr = MatGetSize(intMat, &nDof, 0);CHKERRQ(ierr);
-          ierr = MatGetSize(intMat2, &nDof2, 0);CHKERRQ(ierr);
+          ierr = MatGetSize(intMat, &nDof, NULL);CHKERRQ(ierr);
+          ierr = MatGetSize(intMat2, &nDof2, NULL);CHKERRQ(ierr);
           ierr = PetscQuadraturePointsMerge(intNodes, intNodes2, &merged, &toMerged, &toMerged2);CHKERRQ(ierr);
           ierr = PetscQuadratureGetData(merged, NULL, NULL, &nM, NULL, NULL);CHKERRQ(ierr);
           ierr = MatricesMerge(intMat, intMat2, dim, formDegree, nM, toMerged, toMerged2, &matMerged);CHKERRQ(ierr);
@@ -2455,10 +2455,10 @@ PetscErrorCode PetscDualSpaceCreateInteriorSymmetryMatrix_Lagrange(PetscDualSpac
       if (d < nodeIdxDim) break;
     }
     /* permOrnt[[n, nEnd)] is a group of dofs that, under the symmetry are at the same location */
-#if defined(PETSC_USE_DEBUG)
+
     /* the symmetry had better map the group of dofs with the same permuted nodeIdx
      * to a group of dofs with the same size, otherwise we messed up */
-    {
+    if (PetscDefined(USE_DEBUG)) {
       PetscInt m;
       PetscInt *nind = &(intNodeIndices->nodeIdx[perm[n] * nodeIdxDim]);
 
@@ -2472,7 +2472,6 @@ PetscErrorCode PetscDualSpaceCreateInteriorSymmetryMatrix_Lagrange(PetscDualSpac
       }
       if (m < nEnd) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Dofs with same index after symmetry not same block size");
     }
-#endif
     groupSize = nEnd - n;
     /* each pushforward dof vector will be expressed in a basis of the unpermuted dofs */
     for (m = n; m < nEnd; m++) nnz[permOrnt[m]] = groupSize;
@@ -3063,4 +3062,3 @@ PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Lagrange(PetscDualSpace sp)
   ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscDualSpaceLagrangeSetNodeType_C", PetscDualSpaceLagrangeSetNodeType_Lagrange);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-

@@ -14,6 +14,8 @@
 static char      PetscDebugger[PETSC_MAX_PATH_LEN];
 static char      DebugTerminal[PETSC_MAX_PATH_LEN];
 static PetscBool Xterm = PETSC_TRUE;
+PetscBool        petscwaitonerror = PETSC_FALSE;
+PetscBool        petscindebugger  = PETSC_FALSE;
 
 /*@C
    PetscSetDebugTerminal - Sets the terminal to use (instead of xterm) for debugging.
@@ -46,7 +48,7 @@ PetscErrorCode  PetscSetDebugTerminal(const char terminal[])
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscStrcpy(DebugTerminal,terminal);CHKERRQ(ierr);
+  ierr = PetscStrncpy(DebugTerminal,terminal,sizeof(DebugTerminal));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -78,9 +80,9 @@ PetscErrorCode  PetscSetDebugger(const char debugger[],PetscBool xterm)
 
   PetscFunctionBegin;
   if (debugger) {
-    ierr = PetscStrcpy(PetscDebugger,debugger);CHKERRQ(ierr);
+    ierr = PetscStrncpy(PetscDebugger,debugger,sizeof(PetscDebugger));CHKERRQ(ierr);
   }
-  Xterm = xterm;
+  if (Xterm) Xterm = xterm;
   PetscFunctionReturn(0);
 }
 
@@ -162,6 +164,26 @@ PetscErrorCode  PetscSetDebuggerFromString(const char *string)
   PetscFunctionReturn(0);
 }
 
+/*@
+   PetscWaitOnError - If an error is detected and the process would normally exit the main program with MPI_Abort() sleep instead
+                      of exiting.
+
+   Not Collective
+
+   Level: advanced
+
+   Notes:
+      When -start_in_debugger -debugger_ranks x,y,z is used this prevents the processes NOT listed in x,y,z from calling MPI_Abort and
+      killing the user's debugging sessions.
+
+
+.seealso: PetscSetDebugger(), PetscAttachDebugger()
+@*/
+PetscErrorCode  PetscWaitOnError()
+{
+  petscwaitonerror  = PETSC_TRUE;
+  return 0;
+}
 
 /*@
    PetscAttachDebugger - Attaches the debugger to the running process.
@@ -191,8 +213,8 @@ PetscErrorCode  PetscAttachDebugger(void)
   (*PetscErrorPrintf)("On Windows use Developer Studio(MSDEV)\n");
   PETSCABORT(PETSC_COMM_WORLD,PETSC_ERR_SUP_SYS);
 #else
-  ierr = PetscGetDisplay(display,128);CHKERRQ(ierr);
-  ierr = PetscGetProgramName(program,PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  ierr = PetscGetDisplay(display,sizeof(display));CHKERRQ(ierr);
+  ierr = PetscGetProgramName(program,sizeof(program));CHKERRQ(ierr);
   if (ierr) {
     (*PetscErrorPrintf)("Cannot determine program name\n");
     PetscFunctionReturn(1);
@@ -206,6 +228,7 @@ PetscErrorCode  PetscAttachDebugger(void)
     (*PetscErrorPrintf)("Error in fork() attaching debugger\n");
     PetscFunctionReturn(1);
   }
+  petscindebugger = PETSC_TRUE;
 
   /*
       Swap role the parent and child. This is (I think) so that control c typed
@@ -222,7 +245,7 @@ PetscErrorCode  PetscAttachDebugger(void)
     PetscInt   j,jj;
     PetscBool  isdbx,isidb,isxldb,isxxgdb,isups,isxdb,isworkshop,isddd,iskdbg,islldb;
 
-    ierr = PetscGetHostName(hostname,64);CHKERRQ(ierr);
+    ierr = PetscGetHostName(hostname,sizeof(hostname));CHKERRQ(ierr);
     /*
          We need to send a continue signal to the "child" process on the
        alpha, otherwise it just stays off forever
@@ -297,7 +320,10 @@ PetscErrorCode  PetscAttachDebugger(void)
       }
       args[j++] = PetscDebugger;
       jj = j;
-      args[j++] = program; args[j++] = pid; args[j++] = NULL;
+      /* this is for default gdb */
+      args[j++] = program;
+      args[j++] = pid;
+      args[j++] = NULL;
 
       if (isidb) {
         j = jj;
@@ -437,7 +463,7 @@ PetscErrorCode  PetscAttachDebuggerErrorHandler(MPI_Comm comm,int line,const cha
   (*PetscErrorPrintf)("%s() line %d in %s %s\n",fun,line,file,mess);
 
   ierr = PetscAttachDebugger();
-  if (ierr) abort(); /* call abort because don't want to kill other MPI processes that may successfully attach to debugger */    
+  if (ierr) abort(); /* call abort because don't want to kill other MPI processes that may successfully attach to debugger */
   PetscFunctionReturn(0);
 }
 
@@ -475,13 +501,13 @@ PetscErrorCode  PetscStopForDebugger(void)
 #else
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
   if (ierr) rank = 0; /* ignore error since this may be already in error handler */
-  ierr = PetscGetHostName(hostname,256);
+  ierr = PetscGetHostName(hostname,sizeof(hostname));
   if (ierr) {
     (*PetscErrorPrintf)("Cannot determine hostname; just continuing program\n");
     PetscFunctionReturn(0);
   }
 
-  ierr = PetscGetProgramName(program,256);
+  ierr = PetscGetProgramName(program,sizeof(program));
   if (ierr) {
     (*PetscErrorPrintf)("Cannot determine program name; just continuing program\n");
     PetscFunctionReturn(0);
@@ -547,6 +573,3 @@ PetscErrorCode  PetscStopForDebugger(void)
 #endif
   PetscFunctionReturn(0);
 }
-
-
-

@@ -133,7 +133,8 @@ static PetscErrorCode ISRestoreIndices_General(IS in,const PetscInt *idx[])
   IS_General *sub = (IS_General*)in->data;
 
   PetscFunctionBegin;
-  if (*idx != sub->idx) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from ISGetIndices()");
+   /* F90Array1dCreate() inside ISRestoreArrayF90() does not keep array when zero length array */
+  if (in->map->n > 0  && *idx != sub->idx) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from ISGetIndices()");
   PetscFunctionReturn(0);
 }
 
@@ -163,8 +164,7 @@ static PetscErrorCode ISInvertPermutation_General(IS is,PetscInt nlocal,IS *isou
     /* get the part we need */
     if (nlocal == PETSC_DECIDE) nlocal = n;
     ierr = MPI_Scan(&nlocal,&nstart,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)is));CHKERRQ(ierr);
-#if defined(PETSC_USE_DEBUG)
-    {
+    if (PetscDefined(USE_DEBUG)) {
       PetscInt    N;
       PetscMPIInt rank;
       ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)is),&rank);CHKERRQ(ierr);
@@ -173,7 +173,6 @@ static PetscErrorCode ISInvertPermutation_General(IS is,PetscInt nlocal,IS *isou
         if (nstart != N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Sum of nlocal lengths %d != total IS length %d",nstart,N);
       }
     }
-#endif
     nstart -= nlocal;
     ierr    = ISGetIndices(nistmp,&idx);CHKERRQ(ierr);
     ierr    = ISCreateGeneral(PetscObjectComm((PetscObject)is),nlocal,idx+nstart,PETSC_COPY_VALUES,isout);CHKERRQ(ierr);
@@ -399,7 +398,7 @@ static PetscErrorCode ISSort_General(IS is)
 
   PetscFunctionBegin;
   ierr = PetscLayoutGetLocalSize(is->map, &n);CHKERRQ(ierr);
-  ierr = PetscSortInt(n,sub->idx);CHKERRQ(ierr);
+  ierr = PetscIntSortSemiOrdered(n,sub->idx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

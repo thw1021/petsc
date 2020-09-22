@@ -73,7 +73,7 @@ SNES Object: 3 MPI processes
     PC Object: (fieldsplit_x_velocity_) 3 MPI processes
       type: bjacobi
         number of blocks = 3
-        Local solve is same for all blocks, in the following KSP and PC objects:
+        Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:
       KSP Object: (fieldsplit_x_velocity_sub_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -93,7 +93,6 @@ SNES Object: 3 MPI processes
                 rows=21, cols=21
                 package used to perform factorization: petsc
                 total: nonzeros=85, allocated nonzeros=85
-                total number of mallocs used during MatSetValues calls=0
                   not using I-node routines
         linear system matrix = precond matrix:
         Mat Object: (fieldsplit_x_velocity_) 1 MPI processes
@@ -119,7 +118,7 @@ SNES Object: 3 MPI processes
     PC Object: (fieldsplit_y_velocity_) 3 MPI processes
       type: bjacobi
         number of blocks = 3
-        Local solve is same for all blocks, in the following KSP and PC objects:
+        Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:
       KSP Object: (fieldsplit_y_velocity_sub_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -139,7 +138,6 @@ SNES Object: 3 MPI processes
                 rows=21, cols=21
                 package used to perform factorization: petsc
                 total: nonzeros=85, allocated nonzeros=85
-                total number of mallocs used during MatSetValues calls=0
                   not using I-node routines
         linear system matrix = precond matrix:
         Mat Object: (fieldsplit_y_velocity_) 1 MPI processes
@@ -165,7 +163,7 @@ SNES Object: 3 MPI processes
     PC Object: (fieldsplit_Omega_) 3 MPI processes
       type: bjacobi
         number of blocks = 3
-        Local solve is same for all blocks, in the following KSP and PC objects:
+        Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:
       KSP Object: (fieldsplit_Omega_sub_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -185,7 +183,6 @@ SNES Object: 3 MPI processes
                 rows=21, cols=21
                 package used to perform factorization: petsc
                 total: nonzeros=85, allocated nonzeros=85
-                total number of mallocs used during MatSetValues calls=0
                   not using I-node routines
         linear system matrix = precond matrix:
         Mat Object: (fieldsplit_Omega_) 1 MPI processes
@@ -211,7 +208,7 @@ SNES Object: 3 MPI processes
     PC Object: (fieldsplit_temperature_) 3 MPI processes
       type: bjacobi
         number of blocks = 3
-        Local solve is same for all blocks, in the following KSP and PC objects:
+        Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:
       KSP Object: (fieldsplit_temperature_sub_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -231,7 +228,6 @@ SNES Object: 3 MPI processes
                 rows=21, cols=21
                 package used to perform factorization: petsc
                 total: nonzeros=85, allocated nonzeros=85
-                total number of mallocs used during MatSetValues calls=0
                   not using I-node routines
         linear system matrix = precond matrix:
         Mat Object: (fieldsplit_temperature_) 1 MPI processes

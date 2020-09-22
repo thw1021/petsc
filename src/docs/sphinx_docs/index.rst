@@ -10,7 +10,8 @@ PETSc |version| Documentation
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    manual/index
+   guides/guide_to_examples
    developers/index

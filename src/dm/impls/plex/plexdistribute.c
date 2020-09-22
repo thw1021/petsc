@@ -366,11 +366,11 @@ PetscErrorCode DMPlexCreateTwoSidedProcessSF(DM dm, PetscSF sfPoint, PetscSectio
   for (l = 0; l < numLeaves; ++l) {PetscBTSet(neighbors, remotePoints[l].rank);}
   /* Calculate edges */
   PetscBTClear(neighbors, rank);
-  for(proc = 0, numNeighbors = 0; proc < size; ++proc) {if (PetscBTLookup(neighbors, proc)) ++numNeighbors;}
+  for (proc = 0, numNeighbors = 0; proc < size; ++proc) {if (PetscBTLookup(neighbors, proc)) ++numNeighbors;}
   ierr = PetscMalloc1(numNeighbors, &ranksNew);CHKERRQ(ierr);
   ierr = PetscMalloc1(numNeighbors, &localPointsNew);CHKERRQ(ierr);
   ierr = PetscMalloc1(numNeighbors, &remotePointsNew);CHKERRQ(ierr);
-  for(proc = 0, n = 0; proc < size; ++proc) {
+  for (proc = 0, n = 0; proc < size; ++proc) {
     if (PetscBTLookup(neighbors, proc)) {
       ranksNew[n]              = proc;
       localPointsNew[n]        = proc;
@@ -741,7 +741,9 @@ PetscErrorCode DMPlexStratifyMigrationSF(DM dm, PetscSF sf, PetscSF *migrationSF
   {
     PetscInt depths[4], dims[4], shift = 0, i, c;
 
-    /* Cells (depth), Vertices (0), Faces (depth-1), Edges (1) */
+    /* Cells (depth), Vertices (0), Faces (depth-1), Edges (1)
+         Consider DM_POLYTOPE_FV_GHOST and DM_POLYTOPE_INTERIOR_GHOST as cells
+     */
     depths[0] = depth; depths[1] = 0; depths[2] = depth-1; depths[3] = 1;
     dims[0]   = dim;   dims[1]   = 0; dims[2]   = dim-1;   dims[3]   = 1;
     for (i = 0; i <= depth; ++i) {
@@ -749,7 +751,7 @@ PetscErrorCode DMPlexStratifyMigrationSF(DM dm, PetscSF sf, PetscSF *migrationSF
       const PetscInt dim = dims[i];
 
       for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
-        if (DMPolytopeTypeGetDim((DMPolytopeType) c) != dim && !(i == 0 && c == DM_POLYTOPE_FV_GHOST)) continue;
+        if (DMPolytopeTypeGetDim((DMPolytopeType) c) != dim && !(i == 0 && (c == DM_POLYTOPE_FV_GHOST || c == DM_POLYTOPE_INTERIOR_GHOST))) continue;
         ctShift[c] = shift;
         shift     += ctRecv[c];
       }
@@ -759,7 +761,7 @@ PetscErrorCode DMPlexStratifyMigrationSF(DM dm, PetscSF sf, PetscSF *migrationSF
     for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
       const PetscInt ctDim = DMPolytopeTypeGetDim((DMPolytopeType) c);
 
-      if ((ctDim < 0 || ctDim > dim) && c != DM_POLYTOPE_FV_GHOST) {
+      if ((ctDim < 0 || ctDim > dim) && (c != DM_POLYTOPE_FV_GHOST && c != DM_POLYTOPE_INTERIOR_GHOST)) {
         ctShift[c] = shift;
         shift     += ctRecv[c];
       }
@@ -975,8 +977,7 @@ static PetscErrorCode DMPlexDistributeCones(DM dm, PetscSF migrationSF, ISLocalT
   }
   ierr = PetscSectionGetStorageSize(newConeSection, &newConesSize);CHKERRQ(ierr);
   ierr = ISGlobalToLocalMappingApplyBlock(renumbering, IS_GTOLM_MASK, newConesSize, newCones, NULL, newCones);CHKERRQ(ierr);
-#if defined(PETSC_USE_DEBUG)
-  {
+  if (PetscDefined(USE_DEBUG)) {
     PetscInt  p;
     PetscBool valid = PETSC_TRUE;
     for (p = 0; p < newConesSize; ++p) {
@@ -984,7 +985,6 @@ static PetscErrorCode DMPlexDistributeCones(DM dm, PetscSF migrationSF, ISLocalT
     }
     if (!valid) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid global to local map");
   }
-#endif
   ierr = PetscOptionsHasName(((PetscObject) dm)->options,((PetscObject) dm)->prefix, "-cones_view", &flg);CHKERRQ(ierr);
   if (flg) {
     ierr = PetscPrintf(comm, "Serial Cone Section:\n");CHKERRQ(ierr);
@@ -1180,8 +1180,7 @@ static PetscErrorCode DMPlexDistributeSetupTree(DM dm, PetscSF migrationSF, ISLo
     ierr = PetscSFBcastBegin(parentSF, MPIU_INT, origChildIDs, newChildIDs);CHKERRQ(ierr);
     ierr = PetscSFBcastEnd(parentSF, MPIU_INT, origChildIDs, newChildIDs);CHKERRQ(ierr);
     ierr = ISGlobalToLocalMappingApplyBlock(renumbering,IS_GTOLM_MASK, newParentSize, newParents, NULL, newParents);CHKERRQ(ierr);
-#if defined(PETSC_USE_DEBUG)
-    {
+    if (PetscDefined(USE_DEBUG)) {
       PetscInt  p;
       PetscBool valid = PETSC_TRUE;
       for (p = 0; p < newParentSize; ++p) {
@@ -1189,7 +1188,6 @@ static PetscErrorCode DMPlexDistributeSetupTree(DM dm, PetscSF migrationSF, ISLo
       }
       if (!valid) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid global to local map");
     }
-#endif
     ierr = PetscOptionsHasName(((PetscObject) dm)->options,((PetscObject) dm)->prefix, "-parents_view", &flg);CHKERRQ(ierr);
     if (flg) {
       ierr = PetscPrintf(comm, "Serial Parent Section: \n");CHKERRQ(ierr);

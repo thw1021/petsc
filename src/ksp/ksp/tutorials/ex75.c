@@ -9,12 +9,11 @@ int main(int argc,char **args)
   KSP            ksp;        /* linear solver context */
 #if defined(PETSC_HAVE_HPDDM)
   Mat            U;          /* deflation space */
-  PetscBool      flg;
 #endif
   PetscInt       i,j,nmat = 10;
   PetscViewer    viewer;
   char           dir[PETSC_MAX_PATH_LEN],name[256];
-  PetscBool      reset = PETSC_FALSE;
+  PetscBool      flg,reset = PETSC_FALSE;
   PetscErrorCode ierr;
 
   ierr = PetscInitialize(&argc,&args,NULL,help);if (ierr) return ierr;
@@ -40,8 +39,8 @@ int main(int argc,char **args)
     ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
     ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
     ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_HPDDM)
     ierr = PetscObjectTypeCompare((PetscObject)ksp,KSPHPDDM,&flg);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HPDDM)
     if (flg && reset) {
       ierr = KSPHPDDMGetDeflationSpace(ksp,&U);CHKERRQ(ierr);
       ierr = KSPReset(ksp);CHKERRQ(ierr);
@@ -89,10 +88,21 @@ int main(int argc,char **args)
         suffix: 2_par
         output_file: output/ex75_2.out
 
-   test:
+   testset:
       requires: hpddm datafilespath double !complex !define(PETSC_USE_64BIT_INDICES)
-      suffix: 2_icc
       nsize: 1
-      args: -nmat 3 -pc_type icc -ksp_converged_reason -ksp_type hpddm -ksp_max_it 1000 -ksp_gmres_restart 40 -ksp_rtol 1e-10 -ksp_hpddm_type gcrodr -ksp_hpddm_recycle 20 -reset {{false true}shared output} -load_dir ${DATAFILESPATH}/matrices/hpddm/GCRODR
+      args: -nmat 3 -pc_type icc -ksp_converged_reason -ksp_type hpddm -ksp_max_it 1000 -ksp_gmres_restart 40 -ksp_rtol 1e-10 -ksp_hpddm_type {{gcrodr bgcrodr}shared output} -ksp_hpddm_recycle 20 -reset {{false true}shared output} -load_dir ${DATAFILESPATH}/matrices/hpddm/GCRODR
+      test:
+        suffix: 2_icc
+        args:
+      test:
+        suffix: 2_icc_atol
+        args: -ksp_atol 1e-12
+
+   test:
+      requires: hpddm datafilespath double !complex !define(PETSC_USE_64BIT_INDICES) slepc
+      nsize: 2
+      suffix: symmetric
+      args: -nmat 3 -pc_type jacobi -ksp_converged_reason -ksp_type hpddm -ksp_max_it 1000 -ksp_gmres_restart 40 -ksp_atol 1e-11 -ksp_hpddm_type bgcrodr -ksp_hpddm_recycle 20 -reset {{false true}shared output} -load_dir ${DATAFILESPATH}/matrices/hpddm/GCRODR -ksp_hpddm_recycle_symmetric true
 
 TEST*/

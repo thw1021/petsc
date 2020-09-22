@@ -16,13 +16,14 @@ class Configure(config.package.GNUPackage):
   def setupDependencies(self, framework):
     config.package.GNUPackage.setupDependencies(self, framework)
     self.compilerFlags   = framework.require('config.compilerFlags', self)
+    self.cuda            = framework.require('config.packages.cuda',self)
     return
 
   def setupHelp(self, help):
     config.package.GNUPackage.setupHelp(self,help)
     import nargs
     help.addArgument('MPI', '-download-mpich-pm=<hydra, gforker or mpd>',              nargs.Arg(None, 'hydra', 'Launcher for MPI processes'))
-    help.addArgument('MPI', '-download-mpich-device=<ch3:nemesis or see mpich2 docs>', nargs.Arg(None, 'ch3:sock', 'Communicator for MPI processes'))
+    help.addArgument('MPI', '-download-mpich-device=<ch3:nemesis or see MPICH docs>', nargs.Arg(None, None, 'Communicator for MPI processes'))
     return
 
   def checkDownload(self):
@@ -37,6 +38,8 @@ class Configure(config.package.GNUPackage):
       self.installDir = self.defaultInstallDir
       self.updateCompilers(self.installDir,'mpicc','mpicxx','mpif77','mpif90')
       return self.installDir
+    if self.cuda.found:
+      self.logPrintBox('***** WARNING: CUDA enabled! Its best to use --download-openmpi instead of --download-mpich as it provides CUDA enabled MPI! ****')
     if self.argDB['download-'+self.downloadname.lower()]:
       return self.getInstallDir()
     return ''
@@ -44,13 +47,17 @@ class Configure(config.package.GNUPackage):
   def formGNUConfigureArgs(self):
     '''MPICH has many specific extra configure arguments'''
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
-    if 'download-mpich-device' in self.argDB:
-      args.append('--with-device='+self.argDB['download-mpich-device'])
     args.append('--with-pm='+self.argDB['download-mpich-pm'])
     # make sure MPICH does not build with optimization for debug version of PETSc, so we can debug through MPICH
     if self.compilerFlags.debugging:
       args.append("--enable-fast=no")
       args.append("--enable-error-messages=all")
+      mpich_device = 'ch3:sock'
+    else:
+      mpich_device = 'ch3:nemesis'
+    if 'download-mpich-device' in self.argDB:
+      mpich_device = self.argDB['download-mpich-device']
+    args.append('--with-device='+mpich_device)
     # make MPICH behave properly for valgrind
     args.append('--enable-g=meminit')
     if not self.sharedLibraries.useShared and config.setCompilers.Configure.isDarwin(self.log):

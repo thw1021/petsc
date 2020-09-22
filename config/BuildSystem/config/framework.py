@@ -107,6 +107,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.createChildren()
     # Create argDB for user specified options only
     self.clArgDB = dict([(nargs.Arg.parseArgument(arg)[0], arg) for arg in self.clArgs])
+    self.defineDict = {}
     return
 
   def __getstate__(self):
@@ -643,16 +644,13 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.actions.addArgument('Framework', 'RDict update', 'Substitutions were stored in RDict with parent '+str(argDB.parentDirectory))
     return
 
-  def outputDefine(self, f, name, value = None, comment = ''):
+  def outputDefine(self, f, name, value = None):
     '''Define "name" to "value" in the configuration header'''
     # we need to keep the libraries in this list and simply not print them at the end
     # because libraries.havelib() is used to find library in this list we had to list the libraries in the
     # list even though we don't need them in petscconf.h
     # two packages have LIB in there name so we have to include them here
     if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
-    if comment:
-      for line in comment.split('\n'):
-        if line: f.write('/* '+line+' */\n')
     if value:
       f.write('#define '+name+' '+str(value)+'\n')
     else:
@@ -700,27 +698,24 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     if prefix:         prefix = prefix+'_'
     return prefix+name
 
-  def outputDefines(self, f, child, prefix = None):
+  def processDefines(self, child, prefix = None):
     '''If the child contains a dictionary named "defines", the entries are output as defines in the config header.
     The prefix to each define is calculated as follows:
     - If the prefix argument is given, this is used, otherwise
     - If the child contains "headerPrefix", this is used, otherwise
     - If the module containing the child class is not "__main__", this is used, otherwise
     - No prefix is used
-    If the child contains a dictionary named "help", then a help string will be added before the define
     '''
     if not hasattr(child, 'defines') or not isinstance(child.defines, dict): return
-    if hasattr(child, 'help') and isinstance(child.help, dict):
-      help = child.help
-    else:
-      help = {}
-    for pair in sorted(child.defines.items()):
+    for pair in child.defines.items():
       if not pair[1]: continue
-      if pair[0] in help:
-        self.outputDefine(f, self.getFullDefineName(child, pair[0], prefix), pair[1], help[pair[0]])
-      else:
-        self.outputDefine(f, self.getFullDefineName(child, pair[0], prefix), pair[1])
+      item = (self.getFullDefineName(child, pair[0], prefix), pair[1])
+      self.defineDict.update({item[0] : item})
     return
+
+  def outputDefines(self, f):
+    for item in sorted(self.defineDict):
+      self.outputDefine(f, *self.defineDict[item])
 
   def outputPkgVersion(self, f, child):
     '''If the child contains a tuple named "version_tuple", the entries are output in the config package header.'''
@@ -831,9 +826,10 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     f.write('#define '+guard+'\n\n')
     if hasattr(self, 'headerTop'):
       f.write(str(self.headerTop)+'\n')
-    self.outputDefines(f, self, prefix)
+    self.processDefines(self, prefix)
     for child in self.childGraph.vertices:
-      self.outputDefines(f, child, prefix)
+      self.processDefines(child, prefix)
+    self.outputDefines(f)
     if hasattr(self, 'headerBottom'):
       f.write(str(self.headerBottom)+'\n')
     f.write('#endif\n')
@@ -1202,7 +1198,10 @@ class Framework(config.base.Configure, script.LanguageProcessor):
           if 'with-'+dep.package in self.framework.clArgDB and self.argDB['with-'+dep.package]: found = 1
           if 'with-'+dep.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-lib']: found = 1
           if 'with-'+dep.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-dir']: found = 1
-          if not found: msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. Perhaps you want --download-'+dep.package+'\n'
+          if not found:
+            if dep.download: emsg = '--download-'+dep.package+' or '
+            else: emsg = ''
+            msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. \n  Perhaps you want '+emsg+'--with-'+dep.package+'-dir=directory or  --with-'+dep.package+'-lib=libraries and --with-'+dep.package+'-include=directory\n'
         if msg: raise RuntimeError(msg)
         if child.cxx and ('with-cxx' in self.framework.clArgDB) and (self.argDB['with-cxx'] == '0'): raise RuntimeError('Package '+child.package+' requested requires C++ but compiler turned off.')
         if child.fc and ('with-fc' in self.framework.clArgDB) and (self.argDB['with-fc'] == '0'): raise RuntimeError('Package '+child.package+' requested requires Fortran but compiler turned off.')

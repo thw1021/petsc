@@ -90,7 +90,7 @@
     Experienced users can set the error handler with PetscPushErrorHandler().
 
    Fortran Notes:
-      SETERRQ() may be called from Fortran subroutines but SETERRA() must be called from the 
+      SETERRQ() may be called from Fortran subroutines but SETERRA() must be called from the
       Fortran main program.
 
 .seealso: PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), CHKERRQ(), CHKMEMQ, SETERRQ1(), SETERRQ2(), SETERRQ3()
@@ -461,11 +461,12 @@ M*/
 .seealso: PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), CHKMEMQ, SETERRQ1(), SETERRQ2(), SETERRQ2()
 M*/
 #define CHKERRQ(ierr)          do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) return PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");} while (0)
-#define CHKERRV(ierr)          do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");return;}} while(0)
+#define CHKERRV(ierr)          do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");return;}} while (0)
 #define CHKERRABORT(comm,ierr) do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");MPI_Abort(comm,ierr);}} while (0)
 #define CHKERRCONTINUE(ierr)   do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");}} while (0)
 
 PETSC_EXTERN PetscErrorCode PetscAbortFindSourceFile_Private(const char*,PetscInt*);
+PETSC_EXTERN PetscBool petscwaitonerror,petscindebugger;
 
 /*MC
    PETSCABORT - Call MPI_Abort with an informative error code
@@ -480,15 +481,18 @@ PETSC_EXTERN PetscErrorCode PetscAbortFindSourceFile_Private(const char*,PetscIn
 +  comm - A communicator, so that the error can be collective
 -  ierr - nonzero error code, see the list of standard error codes in include/petscerror.h
 
-   Level: beginner
+   Level: advanced
 
-   Notes: We pass MPI_Abort() an error code of format XX_YYYY_ZZZ, where XX, YYYY are an index and line number of the file
+   Notes:
+   We pass MPI_Abort() an error code of format XX_YYYY_ZZZ, where XX, YYYY are an index and line number of the file
    where PETSCABORT is called, respectively. ZZZ is the PETSc error code.
 
    If XX is zero, this means that the call was made in the routine main().
    If XX is one, that means 1) the file is not in PETSc (it may be in users code); OR 2) the file is in PETSc but PetscAbortSourceFiles[]
      is out of date. PETSc developers have to update it.
    Otherwise, look up the value of XX in the table PetscAbortSourceFiles[] in src/sys/error/err.c to map XX back to the source file where the PETSCABORT() was called.
+
+   If the option -start_in_debugger was used then this calls abort() to stop the program in the debugger.
 
 M*/
 #define PETSCABORT(comm,ierr)  \
@@ -497,7 +501,9 @@ M*/
       PetscMPIInt    errcode;                                         \
       PetscAbortFindSourceFile_Private(__FILE__,&idx);                \
       errcode = (PetscMPIInt)(idx*10000000 + __LINE__*1000 + ierr);   \
-      MPI_Abort(comm,errcode);                                        \
+      if (petscwaitonerror) PetscSleep(1000);                         \
+      if (petscindebugger) abort();                                   \
+      else MPI_Abort(comm,errcode);                                   \
    } while (0)
 
 /*MC
@@ -546,12 +552,12 @@ M*/
 
 .seealso: PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), CHKERRQ(), CHKMEMQ
 M*/
-#define CHKERRXX(ierr)  do {if (PetscUnlikely(ierr)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr,PETSC_ERROR_IN_CXX,0);}} while(0)
+#define CHKERRXX(ierr)  do {if (PetscUnlikely(ierr)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr,PETSC_ERROR_IN_CXX,0);}} while (0)
 
 #endif
 
 #if defined(PETSC_HAVE_CUDA)
-#define CHKERRCUSOLVER(err) do {if (PetscUnlikely(err)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"CUSOLVER error %d",err);} while(0)
+#define CHKERRCUSOLVER(err) do {if (PetscUnlikely(err)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"CUSOLVER error %d",err);} while (0)
 #endif
 /*MC
    CHKMEMQ - Checks the memory for corruption, calls error handler if any is detected
@@ -579,7 +585,7 @@ M*/
 .seealso: PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), CHKMEMQ, SETERRQ1(), SETERRQ2(), SETERRQ3(),
           PetscMallocValidate()
 M*/
-#define CHKMEMQ do {PetscErrorCode _7_ierr = PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__);CHKERRQ(_7_ierr);} while(0)
+#define CHKMEMQ do {PetscErrorCode _7_ierr = PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__);CHKERRQ(_7_ierr);} while (0)
 
 #define CHKMEMA PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__)
 
@@ -663,6 +669,7 @@ typedef enum {PETSC_FP_TRAP_OFF=0,PETSC_FP_TRAP_ON=1} PetscFPTrap;
 PETSC_EXTERN PetscErrorCode PetscSetFPTrap(PetscFPTrap);
 PETSC_EXTERN PetscErrorCode PetscFPTrapPush(PetscFPTrap);
 PETSC_EXTERN PetscErrorCode PetscFPTrapPop(void);
+PETSC_EXTERN PetscErrorCode PetscDetermineInitialFPTrap(void);
 
 /*
       Allows the code to build a stack frame as it runs
@@ -917,7 +924,7 @@ PETSC_STATIC_INLINE PetscBool PetscStackActive(void) {return PETSC_FALSE;}
 
 
 */
-#define PetscStackCall(name,routine) do { PetscStackPush(name);routine;PetscStackPop; } while(0)
+#define PetscStackCall(name,routine) do { PetscStackPush(name);routine;PetscStackPop; } while (0)
 
 /*
     PetscStackCallStandard - Calls an external library routine after pushing the name of the routine on the stack.

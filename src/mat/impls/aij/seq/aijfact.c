@@ -118,6 +118,7 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_petsc(Mat A,MatFactorType ftype,
 
   ierr = PetscFree((*B)->solvertype);CHKERRQ(ierr);
   ierr = PetscStrallocpy(MATSOLVERPETSC,&(*B)->solvertype);CHKERRQ(ierr);
+  (*B)->useordering = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -244,8 +245,8 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ_inplace(Mat B,Mat A,IS isrow,IS iscol,
   b->j    = bj;
   b->i    = bi;
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -384,8 +385,8 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B,Mat A,IS isrow,IS iscol,const Ma
   b->j    = bj;
   b->i    = bi;
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -1812,8 +1813,8 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS isrow,IS iscol,cons
   b->j    = bj;
   b->i    = bi;
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -2008,8 +2009,8 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS isrow,IS is
   b->i = bi;
   for (i=0; i<n; i++) bdiag[i] += bi[i];
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -2520,8 +2521,8 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const MatFacto
   b->i             = ui;
   b->diag          = udiag;
   b->free_diag     = PETSC_TRUE;
-  b->ilen          = 0;
-  b->imax          = 0;
+  b->ilen          = NULL;
+  b->imax          = NULL;
   b->row           = perm;
   b->col           = perm;
   ierr             = PetscObjectReference((PetscObject)perm);CHKERRQ(ierr);
@@ -2733,8 +2734,8 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS perm,const 
   b->i         = ui;
   b->diag      = udiag;
   b->free_diag = PETSC_TRUE;
-  b->ilen      = 0;
-  b->imax      = 0;
+  b->ilen      = NULL;
+  b->imax      = NULL;
   b->row       = perm;
   b->col       = perm;
 
@@ -2893,8 +2894,8 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const Mat
   b->i         = ui;
   b->diag      = udiag;
   b->free_diag = PETSC_TRUE;
-  b->ilen      = 0;
-  b->imax      = 0;
+  b->ilen      = NULL;
+  b->imax      = NULL;
   b->row       = perm;
   b->col       = perm;
 
@@ -3070,9 +3071,9 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS perm,c
 
   b->j    = uj;
   b->i    = ui;
-  b->diag = 0;
-  b->ilen = 0;
-  b->imax = 0;
+  b->diag = NULL;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = perm;
   b->col  = perm;
 
@@ -3255,8 +3256,8 @@ PetscErrorCode MatILUDTFactor_SeqAIJ(Mat A,IS isrow,IS iscol,const MatFactorInfo
   b->j    = bj;
   b->i    = bi;
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -3419,10 +3420,10 @@ PetscErrorCode MatILUDTFactor_SeqAIJ(Mat A,IS isrow,IS iscol,const MatFactorInfo
     B->ops->solve = MatSolve_SeqAIJ;
   }
 
-  B->ops->solveadd          = 0;
-  B->ops->solvetranspose    = 0;
-  B->ops->solvetransposeadd = 0;
-  B->ops->matsolve          = 0;
+  B->ops->solveadd          = NULL;
+  B->ops->solvetranspose    = NULL;
+  B->ops->solvetransposeadd = NULL;
+  B->ops->matsolve          = NULL;
   B->assembled              = PETSC_TRUE;
   B->preallocated           = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -3540,10 +3541,10 @@ PetscErrorCode  MatILUDTFactorNumeric_SeqAIJ(Mat fact,Mat A,const MatFactorInfo 
   } else {
     C->ops->solve = MatSolve_SeqAIJ;
   }
-  C->ops->solveadd          = 0;
-  C->ops->solvetranspose    = 0;
-  C->ops->solvetransposeadd = 0;
-  C->ops->matsolve          = 0;
+  C->ops->solveadd          = NULL;
+  C->ops->solvetranspose    = NULL;
+  C->ops->solvetransposeadd = NULL;
+  C->ops->matsolve          = NULL;
   C->assembled              = PETSC_TRUE;
   C->preallocated           = PETSC_TRUE;
 

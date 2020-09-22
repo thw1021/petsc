@@ -1209,7 +1209,7 @@ PetscErrorCode MatDestroy_SeqBAIJ(Mat A)
   ierr = MatDestroy(&a->parent);CHKERRQ(ierr);
   ierr = PetscFree(A->data);CHKERRQ(ierr);
 
-  ierr = PetscObjectChangeTypeName((PetscObject)A,0);CHKERRQ(ierr);
+  ierr = PetscObjectChangeTypeName((PetscObject)A,NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqBAIJGetArray_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqBAIJRestoreArray_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatInvertBlockDiagonal_C",NULL);CHKERRQ(ierr);
@@ -1294,7 +1294,7 @@ PetscErrorCode MatGetRow_SeqBAIJ_private(Mat A,PetscInt row,PetscInt *nz,PetscIn
   *nz = bs*M;
 
   if (v) {
-    *v = 0;
+    *v = NULL;
     if (*nz) {
       ierr = PetscMalloc1(*nz,v);CHKERRQ(ierr);
       for (i=0; i<M; i++) { /* for each block in the block row */
@@ -1306,7 +1306,7 @@ PetscErrorCode MatGetRow_SeqBAIJ_private(Mat A,PetscInt row,PetscInt *nz,PetscIn
   }
 
   if (idx) {
-    *idx = 0;
+    *idx = NULL;
     if (*nz) {
       ierr = PetscMalloc1(*nz,idx);CHKERRQ(ierr);
       for (i=0; i<M; i++) { /* for each block in the block row */
@@ -1784,9 +1784,7 @@ PetscErrorCode MatSetValuesBlocked_SeqBAIJ(Mat A,PetscInt m,const PetscInt im[],
   for (k=0; k<m; k++) { /* loop over added rows */
     row = im[k];
     if (row < 0) continue;
-#if defined(PETSC_USE_DEBUG)
-    if (row >= a->mbs) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Block row index too large %D max %D",row,a->mbs-1);
-#endif
+    if (PetscUnlikelyDebug(row >= a->mbs)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Block row index too large %D max %D",row,a->mbs-1);
     rp   = aj + ai[row];
     if (!A->structure_only) ap = aa + bs2*ai[row];
     rmax = imax[row];
@@ -1795,9 +1793,7 @@ PetscErrorCode MatSetValuesBlocked_SeqBAIJ(Mat A,PetscInt m,const PetscInt im[],
     high = nrow;
     for (l=0; l<n; l++) { /* loop over added columns */
       if (in[l] < 0) continue;
-#if defined(PETSC_USE_DEBUG)
-      if (in[l] >= a->nbs) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Block column index too large %D max %D",in[l],a->nbs-1);
-#endif
+      if (PetscUnlikelyDebug(in[l] >= a->nbs)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Block column index too large %D max %D",in[l],a->nbs-1);
       col = in[l];
       if (!A->structure_only) {
         if (roworiented) {
@@ -1940,7 +1936,7 @@ PetscErrorCode MatAssemblyEnd_SeqBAIJ(Mat A,MatAssemblyType mode)
   if (fshift && a->diag) {
     ierr    = PetscFree(a->diag);CHKERRQ(ierr);
     ierr    = PetscLogObjectMemory((PetscObject)A,-(mbs+1)*sizeof(PetscInt));CHKERRQ(ierr);
-    a->diag = 0;
+    a->diag = NULL;
   }
   if (fshift && a->nounused == -1) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB, "Unused space detected in matrix: %D X %D block size %D, %D unneeded", m, A->cmap->n, A->rmap->bs, fshift*bs2);
   ierr = PetscInfo5(A,"Matrix size: %D X %D, block size %D; storage space: %D unneeded, %D used\n",m,A->cmap->n,A->rmap->bs,fshift*bs2,a->nz*bs2);CHKERRQ(ierr);
@@ -2059,9 +2055,7 @@ PetscErrorCode MatZeroRows_SeqBAIJ(Mat A,PetscInt is_n,const PetscInt is_idx[],P
         baij->ilen[row/bs] = 0;
       } /* end (diag == 0.0) */
     } else { /* (sizes[i] != bs) */
-#if defined(PETSC_USE_DEBUG)
-      if (sizes[i] != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Internal Error. Value should be 1");
-#endif
+      if (PetscUnlikelyDebug(sizes[i] != 1)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Internal Error. Value should be 1");
       for (k=0; k<count; k++) {
         aa[0] =  zero;
         aa   += bs;
@@ -2157,9 +2151,7 @@ PetscErrorCode MatSetValues_SeqBAIJ(Mat A,PetscInt m,const PetscInt im[],PetscIn
     row  = im[k];
     brow = row/bs;
     if (row < 0) continue;
-#if defined(PETSC_USE_DEBUG)
-    if (row >= A->rmap->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %D max %D",row,A->rmap->N-1);
-#endif
+    if (PetscUnlikelyDebug(row >= A->rmap->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %D max %D",row,A->rmap->N-1);
     rp   = aj + ai[brow];
     if (!A->structure_only) ap = aa + bs2*ai[brow];
     rmax = imax[brow];
@@ -2168,9 +2160,7 @@ PetscErrorCode MatSetValues_SeqBAIJ(Mat A,PetscInt m,const PetscInt im[],PetscIn
     high = nrow;
     for (l=0; l<n; l++) { /* loop over added columns */
       if (in[l] < 0) continue;
-#if defined(PETSC_USE_DEBUG)
-      if (in[l] >= A->cmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column too large: col %D max %D",in[l],A->cmap->n-1);
-#endif
+      if (PetscUnlikelyDebug(in[l] >= A->cmap->n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column too large: col %D max %D",in[l],A->cmap->n-1);
       col  = in[l]; bcol = col/bs;
       ridx = row % bs; cidx = col % bs;
       if (!A->structure_only) {
@@ -2381,7 +2371,7 @@ PetscErrorCode MatSetUp_SeqBAIJ(Mat A)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MatSeqBAIJSetPreallocation(A,A->rmap->bs,PETSC_DEFAULT,0);CHKERRQ(ierr);
+  ierr = MatSeqBAIJSetPreallocation(A,A->rmap->bs,PETSC_DEFAULT,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2472,7 +2462,7 @@ PetscErrorCode MatImaginaryPart_SeqBAIJ(Mat A)
 }
 
 /*
-    Code almost idential to MatGetColumnIJ_SeqAIJ() should share common code
+    Code almost identical to MatGetColumnIJ_SeqAIJ() should share common code
 */
 PetscErrorCode MatGetColumnIJ_SeqBAIJ(Mat A,PetscInt oshift,PetscBool symmetric,PetscBool inodecompressed,PetscInt *nn,const PetscInt *ia[],const PetscInt *ja[],PetscBool  *done)
 {
@@ -2601,143 +2591,143 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqBAIJ,
                                /* 4*/  MatMultAdd_SeqBAIJ_N,
                                        MatMultTranspose_SeqBAIJ,
                                        MatMultTransposeAdd_SeqBAIJ,
-                                       0,
-                                       0,
-                                       0,
-                               /* 10*/ 0,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                               /* 10*/ NULL,
                                        MatLUFactor_SeqBAIJ,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
                                        MatTranspose_SeqBAIJ,
                                /* 15*/ MatGetInfo_SeqBAIJ,
                                        MatEqual_SeqBAIJ,
                                        MatGetDiagonal_SeqBAIJ,
                                        MatDiagonalScale_SeqBAIJ,
                                        MatNorm_SeqBAIJ,
-                               /* 20*/ 0,
+                               /* 20*/ NULL,
                                        MatAssemblyEnd_SeqBAIJ,
                                        MatSetOption_SeqBAIJ,
                                        MatZeroEntries_SeqBAIJ,
                                /* 24*/ MatZeroRows_SeqBAIJ,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
                                /* 29*/ MatSetUp_SeqBAIJ,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
                                /* 34*/ MatDuplicate_SeqBAIJ,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
                                        MatILUFactor_SeqBAIJ,
-                                       0,
+                                       NULL,
                                /* 39*/ MatAXPY_SeqBAIJ,
                                        MatCreateSubMatrices_SeqBAIJ,
                                        MatIncreaseOverlap_SeqBAIJ,
                                        MatGetValues_SeqBAIJ,
                                        MatCopy_SeqBAIJ,
-                               /* 44*/ 0,
+                               /* 44*/ NULL,
                                        MatScale_SeqBAIJ,
                                        MatShift_SeqBAIJ,
-                                       0,
+                                       NULL,
                                        MatZeroRowsColumns_SeqBAIJ,
-                               /* 49*/ 0,
+                               /* 49*/ NULL,
                                        MatGetRowIJ_SeqBAIJ,
                                        MatRestoreRowIJ_SeqBAIJ,
                                        MatGetColumnIJ_SeqBAIJ,
                                        MatRestoreColumnIJ_SeqBAIJ,
                                /* 54*/ MatFDColoringCreate_SeqXAIJ,
-                                       0,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
+                                       NULL,
                                        MatSetValuesBlocked_SeqBAIJ,
                                /* 59*/ MatCreateSubMatrix_SeqBAIJ,
                                        MatDestroy_SeqBAIJ,
                                        MatView_SeqBAIJ,
-                                       0,
-                                       0,
-                               /* 64*/ 0,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
+                               /* 64*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
                                /* 69*/ MatGetRowMaxAbs_SeqBAIJ,
-                                       0,
+                                       NULL,
                                        MatConvert_Basic,
-                                       0,
-                                       0,
-                               /* 74*/ 0,
+                                       NULL,
+                                       NULL,
+                               /* 74*/ NULL,
                                        MatFDColoringApply_BAIJ,
-                                       0,
-                                       0,
-                                       0,
-                               /* 79*/ 0,
-                                       0,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                               /* 79*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
                                        MatLoad_SeqBAIJ,
-                               /* 84*/ 0,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
-                               /* 89*/ 0,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
-                               /* 94*/ 0,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
-                               /* 99*/ 0,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
-                               /*104*/ 0,
+                               /* 84*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                               /* 89*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                               /* 94*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                               /* 99*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                               /*104*/ NULL,
                                        MatRealPart_SeqBAIJ,
                                        MatImaginaryPart_SeqBAIJ,
-                                       0,
-                                       0,
-                               /*109*/ 0,
-                                       0,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
+                               /*109*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
                                        MatMissingDiagonal_SeqBAIJ,
-                               /*114*/ 0,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
-                               /*119*/ 0,
-                                       0,
+                               /*114*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                               /*119*/ NULL,
+                                       NULL,
                                        MatMultHermitianTranspose_SeqBAIJ,
                                        MatMultHermitianTransposeAdd_SeqBAIJ,
-                                       0,
-                               /*124*/ 0,
-                                       0,
+                                       NULL,
+                               /*124*/ NULL,
+                                       NULL,
                                        MatInvertBlockDiagonal_SeqBAIJ,
-                                       0,
-                                       0,
-                               /*129*/ 0,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
-                               /*134*/ 0,
-                                       0,
-                                       0,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
+                               /*129*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                               /*134*/ NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       NULL,
                                /*139*/ MatSetBlockSizes_Default,
-                                       0,
-                                       0,
+                                       NULL,
+                                       NULL,
                                        MatFDColoringSetUp_SeqXAIJ,
-                                       0,
+                                       NULL,
                                 /*144*/MatCreateMPIMatConcatenateSeqMat_SeqBAIJ,
                                        MatDestroySubMatrices_SeqBAIJ
 };
@@ -2944,7 +2934,7 @@ PetscErrorCode  MatSeqBAIJSetPreallocation_SeqBAIJ(Mat B,PetscInt bs,PetscInt nz
 PetscErrorCode MatSeqBAIJSetPreallocationCSR_SeqBAIJ(Mat B,PetscInt bs,const PetscInt ii[],const PetscInt jj[],const PetscScalar V[])
 {
   PetscInt       i,m,nz,nz_max=0,*nnz;
-  PetscScalar    *values=0;
+  PetscScalar    *values=NULL;
   PetscBool      roworiented = ((Mat_SeqBAIJ*)B->data)->roworiented;
   PetscErrorCode ierr;
 
@@ -3071,16 +3061,16 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJ(Mat B)
   B->data = (void*)b;
   ierr    = PetscMemcpy(B->ops,&MatOps_Values,sizeof(struct _MatOps));CHKERRQ(ierr);
 
-  b->row          = 0;
-  b->col          = 0;
-  b->icol         = 0;
+  b->row          = NULL;
+  b->col          = NULL;
+  b->icol         = NULL;
   b->reallocs     = 0;
-  b->saved_values = 0;
+  b->saved_values = NULL;
 
   b->roworiented        = PETSC_TRUE;
   b->nonew              = 0;
-  b->diag               = 0;
-  B->spptr              = 0;
+  b->diag               = NULL;
+  B->spptr              = NULL;
   B->info.nz_unneeded   = (PetscReal)b->maxnz*b->bs2;
   b->keepnonzeropattern = PETSC_FALSE;
 
@@ -3186,7 +3176,7 @@ PetscErrorCode MatDuplicateNoCreate_SeqBAIJ(Mat C,Mat A,MatDuplicateOption cpval
       for (i=0; i<mbs; i++) c->diag[i] = a->diag[i];
       c->free_diag = PETSC_TRUE;
     }
-  } else c->diag = 0;
+  } else c->diag = NULL;
 
   c->nz         = a->nz;
   c->maxnz      = a->nz;         /* Since we allocate exactly the right amount */
@@ -3528,7 +3518,7 @@ PetscErrorCode  MatCreateSeqBAIJWithArrays(MPI_Comm comm,PetscInt bs,PetscInt m,
   ierr = MatCreate(comm,mat);CHKERRQ(ierr);
   ierr = MatSetSizes(*mat,m,n,m,n);CHKERRQ(ierr);
   ierr = MatSetType(*mat,MATSEQBAIJ);CHKERRQ(ierr);
-  ierr = MatSeqBAIJSetPreallocation(*mat,bs,MAT_SKIP_ALLOCATION,0);CHKERRQ(ierr);
+  ierr = MatSeqBAIJSetPreallocation(*mat,bs,MAT_SKIP_ALLOCATION,NULL);CHKERRQ(ierr);
   baij = (Mat_SeqBAIJ*)(*mat)->data;
   ierr = PetscMalloc2(m,&baij->imax,m,&baij->ilen);CHKERRQ(ierr);
   ierr = PetscLogObjectMemory((PetscObject)*mat,2*m*sizeof(PetscInt));CHKERRQ(ierr);
@@ -3544,16 +3534,14 @@ PetscErrorCode  MatCreateSeqBAIJWithArrays(MPI_Comm comm,PetscInt bs,PetscInt m,
 
   for (ii=0; ii<m; ii++) {
     baij->ilen[ii] = baij->imax[ii] = i[ii+1] - i[ii];
-#if defined(PETSC_USE_DEBUG)
-    if (i[ii+1] - i[ii] < 0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative row length in i (row indices) row = %d length = %d",ii,i[ii+1] - i[ii]);
-#endif
+    if (PetscUnlikelyDebug(i[ii+1] - i[ii] < 0)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative row length in i (row indices) row = %d length = %d",ii,i[ii+1] - i[ii]);
   }
-#if defined(PETSC_USE_DEBUG)
-  for (ii=0; ii<baij->i[m]; ii++) {
-    if (j[ii] < 0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative column index at location = %d index = %d",ii,j[ii]);
-    if (j[ii] > n - 1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column index to large at location = %d index = %d",ii,j[ii]);
+  if (PetscDefined(USE_DEBUG)) {
+    for (ii=0; ii<baij->i[m]; ii++) {
+      if (j[ii] < 0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative column index at location = %d index = %d",ii,j[ii]);
+      if (j[ii] > n - 1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column index to large at location = %d index = %d",ii,j[ii]);
+    }
   }
-#endif
 
   ierr = MatAssemblyBegin(*mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(*mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);

@@ -126,7 +126,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
 #endif
         }
       }
-    } else if (format == PETSC_VIEWER_ASCII_VTK || format == PETSC_VIEWER_ASCII_VTK_CELL) {
+    } else if (format == PETSC_VIEWER_ASCII_VTK_DEPRECATED || format == PETSC_VIEWER_ASCII_VTK_CELL_DEPRECATED) {
       /*
         state 0: No header has been output
         state 1: Only POINT_DATA has been output
@@ -150,7 +150,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
       ierr = VecGetLocalSize(xin, &nLen);CHKERRQ(ierr);
       ierr = PetscMPIIntCast(nLen,&n);CHKERRQ(ierr);
       ierr = VecGetBlockSize(xin, &bs);CHKERRQ(ierr);
-      if (format == PETSC_VIEWER_ASCII_VTK) {
+      if (format == PETSC_VIEWER_ASCII_VTK_DEPRECATED) {
         if (outputState == 0) {
           outputState = 1;
           doOutput    = 1;
@@ -214,7 +214,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
           ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
         }
       }
-    } else if (format == PETSC_VIEWER_ASCII_VTK_COORDS) {
+    } else if (format == PETSC_VIEWER_ASCII_VTK_COORDS_DEPRECATED) {
       PetscInt bs, b;
 
       ierr = VecGetLocalSize(xin, &nLen);CHKERRQ(ierr);
@@ -370,7 +370,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
     if (format == PETSC_VIEWER_ASCII_INFO || format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
       /* Rank 0 is not trying to receive anything, so don't send anything */
     } else {
-      if (format == PETSC_VIEWER_ASCII_MATLAB || format == PETSC_VIEWER_ASCII_VTK || format == PETSC_VIEWER_ASCII_VTK_CELL) {
+      if (format == PETSC_VIEWER_ASCII_MATLAB || format == PETSC_VIEWER_ASCII_VTK_DEPRECATED || format == PETSC_VIEWER_ASCII_VTK_CELL_DEPRECATED) {
         /* this may be a collective operation so make sure everyone calls it */
         ierr = PetscObjectGetName((PetscObject)xin,&name);CHKERRQ(ierr);
       }
@@ -663,7 +663,7 @@ PetscErrorCode VecView_MPI_HDF5(Vec xin, PetscViewer viewer)
   chunkDims[dim] = PetscMax(1, dims[dim]);
   chunksize      *= chunkDims[dim];
   /* hdf5 chunks must be less than 4GB */
-  if (chunksize > PETSC_HDF5_MAX_CHUNKSIZE/64 ) {
+  if (chunksize > PETSC_HDF5_MAX_CHUNKSIZE/64) {
     if (bs > 1 || dim2) {
       if (chunkDims[dim-2] > (PetscInt)PetscSqrtReal((PetscReal)(PETSC_HDF5_MAX_CHUNKSIZE/128))) {
         chunkDims[dim-2] = (PetscInt)PetscSqrtReal((PetscReal)(PETSC_HDF5_MAX_CHUNKSIZE/128));
@@ -708,7 +708,7 @@ PetscErrorCode VecView_MPI_HDF5(Vec xin, PetscViewer viewer)
 
   /* Create the dataset with default properties and close filespace */
   ierr = PetscObjectGetName((PetscObject) xin, &vecname);CHKERRQ(ierr);
-  if (!H5Lexists(group, vecname, H5P_DEFAULT)) {
+  if (H5Lexists(group, vecname, H5P_DEFAULT) < 1) {
     /* Create chunk */
     PetscStackCallHDF5Return(chunkspace,H5Pcreate,(H5P_DATASET_CREATE));
     PetscStackCallHDF5(H5Pset_chunk,(chunkspace, dim, chunkDims));
@@ -888,9 +888,7 @@ PetscErrorCode VecGetValues_MPI(Vec xin,PetscInt ni,const PetscInt ix[],PetscSca
   for (i=0; i<ni; i++) {
     if (xin->stash.ignorenegidx && ix[i] < 0) continue;
     tmp = ix[i] - start;
-#if defined(PETSC_USE_DEBUG)
-    if (tmp < 0 || tmp >= xin->map->n) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Can only get local values, trying %D",ix[i]);
-#endif
+    if (PetscUnlikelyDebug(tmp < 0 || tmp >= xin->map->n)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Can only get local values, trying %D",ix[i]);
     y[i] = xx[tmp];
   }
   ierr = VecRestoreArrayRead(xin,&xx);CHKERRQ(ierr);
@@ -906,40 +904,32 @@ PetscErrorCode VecSetValues_MPI(Vec xin,PetscInt ni,const PetscInt ix[],const Pe
   PetscScalar    *xx;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_DEBUG)
-  if (xin->stash.insertmode == INSERT_VALUES && addv == ADD_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You have already inserted values; you cannot now add");
-  else if (xin->stash.insertmode == ADD_VALUES && addv == INSERT_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You have already added values; you cannot now insert");
-#endif
+  if (PetscDefined(USE_DEBUG)) {
+    if (xin->stash.insertmode == INSERT_VALUES && addv == ADD_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You have already inserted values; you cannot now add");
+    else if (xin->stash.insertmode == ADD_VALUES && addv == INSERT_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You have already added values; you cannot now insert");
+  }
   ierr = VecGetArray(xin,&xx);CHKERRQ(ierr);
   xin->stash.insertmode = addv;
 
   if (addv == INSERT_VALUES) {
     for (i=0; i<ni; i++) {
       if (xin->stash.ignorenegidx && ix[i] < 0) continue;
-#if defined(PETSC_USE_DEBUG)
-      if (ix[i] < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D cannot be negative",ix[i]);
-#endif
+      if (PetscUnlikelyDebug(ix[i] < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D cannot be negative",ix[i]);
       if ((row = ix[i]) >= start && row < end) {
         xx[row-start] = y[i];
       } else if (!xin->stash.donotstash) {
-#if defined(PETSC_USE_DEBUG)
-        if (ix[i] >= xin->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D maximum %D",ix[i],xin->map->N);
-#endif
+        if (PetscUnlikelyDebug(ix[i] >= xin->map->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D maximum %D",ix[i],xin->map->N);
         ierr = VecStashValue_Private(&xin->stash,row,y[i]);CHKERRQ(ierr);
       }
     }
   } else {
     for (i=0; i<ni; i++) {
       if (xin->stash.ignorenegidx && ix[i] < 0) continue;
-#if defined(PETSC_USE_DEBUG)
-      if (ix[i] < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D cannot be negative",ix[i]);
-#endif
+      if (PetscUnlikelyDebug(ix[i] < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D cannot be negative",ix[i]);
       if ((row = ix[i]) >= start && row < end) {
         xx[row-start] += y[i];
       } else if (!xin->stash.donotstash) {
-#if defined(PETSC_USE_DEBUG)
-        if (ix[i] >= xin->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D maximum %D",ix[i],xin->map->N);
-#endif
+        if (PetscUnlikelyDebug(ix[i] >= xin->map->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D maximum %D",ix[i],xin->map->N);
         ierr = VecStashValue_Private(&xin->stash,row,y[i]);CHKERRQ(ierr);
       }
     }
@@ -958,10 +948,10 @@ PetscErrorCode VecSetValuesBlocked_MPI(Vec xin,PetscInt ni,const PetscInt ix[],c
 
   PetscFunctionBegin;
   ierr = VecGetArray(xin,&xx);CHKERRQ(ierr);
-#if defined(PETSC_USE_DEBUG)
-  if (xin->stash.insertmode == INSERT_VALUES && addv == ADD_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You have already inserted values; you cannot now add");
-  else if (xin->stash.insertmode == ADD_VALUES && addv == INSERT_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You have already added values; you cannot now insert");
-#endif
+  if (PetscDefined(USE_DEBUG)) {
+    if (xin->stash.insertmode == INSERT_VALUES && addv == ADD_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You have already inserted values; you cannot now add");
+    else if (xin->stash.insertmode == ADD_VALUES && addv == INSERT_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You have already added values; you cannot now insert");
+  }
   xin->stash.insertmode = addv;
 
   if (addv == INSERT_VALUES) {
@@ -970,9 +960,7 @@ PetscErrorCode VecSetValuesBlocked_MPI(Vec xin,PetscInt ni,const PetscInt ix[],c
         for (j=0; j<bs; j++) xx[row-start+j] = y[j];
       } else if (!xin->stash.donotstash) {
         if (ix[i] < 0) { y += bs; continue; }
-#if defined(PETSC_USE_DEBUG)
-        if (ix[i] >= xin->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D max %D",ix[i],xin->map->N);
-#endif
+        if (PetscUnlikelyDebug(ix[i] >= xin->map->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D max %D",ix[i],xin->map->N);
         ierr = VecStashValuesBlocked_Private(&xin->bstash,ix[i],y);CHKERRQ(ierr);
       }
       y += bs;
@@ -983,9 +971,7 @@ PetscErrorCode VecSetValuesBlocked_MPI(Vec xin,PetscInt ni,const PetscInt ix[],c
         for (j=0; j<bs; j++) xx[row-start+j] += y[j];
       } else if (!xin->stash.donotstash) {
         if (ix[i] < 0) { y += bs; continue; }
-#if defined(PETSC_USE_DEBUG)
-        if (ix[i] > xin->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D max %D",ix[i],xin->map->N);
-#endif
+        if (PetscUnlikelyDebug(ix[i] > xin->map->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %D max %D",ix[i],xin->map->N);
         ierr = VecStashValuesBlocked_Private(&xin->bstash,ix[i],y);CHKERRQ(ierr);
       }
       y += bs;
