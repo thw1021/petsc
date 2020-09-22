@@ -2700,62 +2700,7 @@ PetscErrorCode MatCUSPARSEGetCudaMat(Mat A, void **B)
     Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
     *B = (void*)spptr->cudaMat;
   } else {
-    Mat_SeqAIJCUSPARSETriFactors *spptr = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
-    *B = (void*)spptr->cudaMat;
-  }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatCUSPARSECreateCudaMat(Mat A)
-{
-  Mat_SeqAIJCUDA_GPUData  **p_d_mat;
-
-  PetscFunctionBegin;
-  // create GPU Mat
-  if (A->factortype == MAT_FACTOR_NONE) {
-    Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
-    p_d_mat = &spptr->cudaMat;
-  } else {
-    Mat_SeqAIJCUSPARSETriFactors *spptr = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
-    p_d_mat = &spptr->cudaMat;
-  }
-  if (!*p_d_mat) {
-    cudaError_t            err;
-    PetscErrorCode         ierr;
-    Mat_SeqAIJCUDA_GPUData *d_mat, h_mat;
-    // create and copy
-    err = cudaMalloc((void **)&d_mat,  sizeof(Mat_SeqAIJCUDA_GPUData));CHKERRCUDA(err);
-    err = cudaMemset( d_mat, 0,        sizeof(Mat_SeqAIJCUDA_GPUData));CHKERRCUDA(err);
-    *p_d_mat = d_mat;
-    // copy data in now
-    if (!A->preallocated && A->ops->setup) {
-      ierr = PetscInfo(A,"Warning not preallocating matrix storage\n");CHKERRQ(ierr);
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Matrix not preallocated");
-    } else {
-      Mat_SeqAIJ     *jaca = (Mat_SeqAIJ*)A->data; // serial!!!
-      PetscInt       n = A->rmap->n, nnz = jaca->i[n];
-      h_mat.n = n;
-      h_mat.nz = 0;
-      h_mat.ignorezeroentries = jaca->ignorezeroentries;
-      h_mat.nonew =jaca->nonew;
-      h_mat.nonzerostate =A->nonzerostate;
-      h_mat.nonzerorowcnt =jaca->nonzerorowcnt;
-      h_mat.rmax = jaca->rmax;
-      // copy data
-      err = cudaMalloc((void **)&h_mat.i,               (n+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-      err = cudaMemcpy(          h_mat.i,    jaca->i,   (n+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-      err = cudaMalloc((void **)&h_mat.ilen,            (n)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-      err = cudaMemcpy(          h_mat.ilen, jaca->ilen,(n)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-      err = cudaMalloc((void **)&h_mat.imax,            (n)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-      err = cudaMemcpy(          h_mat.imax, jaca->imax,(n)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-      err = cudaMalloc((void **)&h_mat.j,               (nnz)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-      err = cudaMemcpy(          h_mat.j,    jaca->j,   (nnz)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-      err = cudaMalloc((void **)&h_mat.a,               (nnz)*sizeof(PetscScalar));CHKERRCUDA(err); // kernel output
-      err = cudaMemcpy(          h_mat.a,    jaca->a,   (nnz)*sizeof(PetscScalar), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-      err = cudaMemcpy(          d_mat, &h_mat, sizeof(Mat_SeqAIJCUDA_GPUData), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-
-      ierr = PetscInfo4(A,"MatCUSPARSECreateCudaMat: create Cuda Mat n=%D rmax=%D nonzerorowcnt=%D nnz=%D\n",h_mat.n, h_mat.rmax, h_mat.nonzerorowcnt, nnz);CHKERRQ(ierr);
-    }
+    *B = NULL;
   }
   PetscFunctionReturn(0);
 }
