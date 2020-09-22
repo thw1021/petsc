@@ -169,7 +169,8 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   PetscSplitCSRDataStructure *d_mat = cusparseStruct->deviceMat;
 
   PetscFunctionBegin;
-  if (d_mat) { // replicate MatAssemblyEnd_MPIAIJ semantics (yuck)
+  ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
+  if (d_mat) {
     Mat_SeqAIJ                 *jaca = (Mat_SeqAIJ*)mpiaij->A->data;
     Mat_SeqAIJ                 *jacb = (Mat_SeqAIJ*)mpiaij->B->data;
     PetscSplitCSRDataStructure h_mat;
@@ -256,7 +257,7 @@ PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
     if (h_mat.offdiag.j)    {err = cudaFree(h_mat.offdiag.j);CHKERRCUDA(err);}
     if (h_mat.offdiag.a)    {err = cudaFree(h_mat.offdiag.a);CHKERRCUDA(err);}
     if (h_mat.offdiag.imax) {err = cudaFree(h_mat.offdiag.imax);CHKERRCUDA(err);}
-    if (h_mat.colmap) {err = cudaFree(h_mat.colmap);CHKERRCUDA(err);}
+    if (h_mat.colmap)       {err = cudaFree(h_mat.colmap);CHKERRCUDA(err);}
     err =                    cudaFree(d_mat);CHKERRCUDA(err);
   }
   try {
@@ -444,19 +445,23 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     *B = NULL;
     PetscFunctionReturn(0);
   }
+  // act like MatSetValues because not called on host
+  if (A->assembled) {
+    if (!A->was_assembled) {
+      SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Need AIJ assembled matrix to sort column indices (in parallel for off diagonal block setup)");
+    }
+  } else {
+    SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Need assemble matrix");
+  }
   if (!*p_d_mat) {
     cudaError_t                 err;
-    PetscSplitCSRDataStructure  *d_mat, h_mat;
+    PetscGetCSRDataStructure  *d_mat, h_mat;
     Mat_SeqAIJ                  *jaca;
-    PetscInt                    n = A->rmap->n, nnz;
-    if (!A->preallocated && A->ops->setup) {
-      ierr = PetscInfo(A,"Warning not preallocating matrix storage\n");CHKERRQ(ierr);
-      SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Matrix not preallocated");
-    }
+    PetscInt                    i, n = A->rmap->n, nnz;
     // create and copy
     err = cudaMalloc((void **)&d_mat, sizeof(PetscSplitCSRDataStructure));CHKERRCUDA(err);
     err = cudaMemset( d_mat, 0,       sizeof(PetscSplitCSRDataStructure));CHKERRCUDA(err);
-    *B = *p_d_mat = d_mat;
+    *B = *p_d_mat = d_mat; // return it, set it in Mat, and set it up
     if (size == 1) {
       jaca = (Mat_SeqAIJ*)A->data;
       h_mat.rstart = 0; h_mat.rend = A->rmap->n;
@@ -466,9 +471,19 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     } else {
       Mat_MPIAIJ  *aij = (Mat_MPIAIJ*)A->data;
       Mat_SeqAIJ  *jacb;
+      if (!aij->garray) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPIAIJ Matrix was assembled but is missing garray");
       if (aij->B->rmap->n != aij->A->rmap->n) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Only support aij->B->rmap->n == aij->A->rmap->n");
-      aij->donotstash = PETSC_TRUE;       // no stashing now
+      // create colmap
+      aij->donotstash = PETSC_TRUE;
       A->nooffprocentries = PETSC_TRUE;
+      #if defined(PETSC_USE_CTABLE)
+      #error "can not use CTABLE with device assemble"
+      #else
+      ierr = PetscCalloc1(A->cmap->N+1,&aij->colmap);CHKERRQ(ierr);
+      ierr = PetscLogObjectMemory((PetscObject)A,(A->cmap->N+1)*sizeof(PetscInt));CHKERRQ(ierr);
+      for (i=0; i<n; i++) aij->colmap[aij->garray[i]] = i+1;
+      ierr = PetscInfo(A,"Setup colmap\n");CHKERRQ(ierr);
+      #endif
       // allocate B copy data
       jaca = (Mat_SeqAIJ*)aij->A->data;
       jacb = (Mat_SeqAIJ*)aij->B->data;
@@ -516,16 +531,6 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     ierr = PetscInfo4(A,"Create device Mat n=%D rmax=%D nonzerorowcnt=%D nnz=%D\n",h_mat.diag.n, h_mat.diag.rmax, h_mat.diag.nonzerorowcnt, nnz);CHKERRQ(ierr);
   } else {
     *B = *p_d_mat;
-    if (A->assembled) {
-      A->was_assembled = PETSC_TRUE;
-      if (size > 1) {
-	Mat_MPIAIJ  *aij = (Mat_MPIAIJ*)A->data;
-	if (!aij->colmap) { // this is done in matsetvalues, but we need to do it on the host
-	  ierr = MatCreateColmap_MPIAIJ_Private(A);CHKERRQ(ierr);
-	  ierr = PetscInfo(A,"Setup colmap\n");CHKERRQ(ierr);
-	}
-      }
-    }
   }
   A->assembled = PETSC_FALSE; // ready to write with matsetvalues
   PetscFunctionReturn(0);
