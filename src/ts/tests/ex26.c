@@ -3,8 +3,8 @@ static char help[] = "Solves the trival ODE 2 du/dt = 1, u(0) = 0. \n\n";
 #include <petscts.h>
 #include <petscpc.h>
 
-static PetscErrorCode IFunction(TS,PetscReal,Vec,Vec,Vec,void*);
-static PetscErrorCode IJacobian(TS,PetscReal,Vec,Vec,PetscReal,Mat,Mat,void*);
+PetscErrorCode IFunction(TS,PetscReal,Vec,Vec,Vec,void*);
+PetscErrorCode IJacobian(TS,PetscReal,Vec,Vec,PetscReal,Mat,Mat,void*);
 
 int main(int argc,char **argv)
 {
