@@ -4,29 +4,6 @@
 #include <petscmat.h>
 #include <petsc/private/matimpl.h>
 
-#if defined(PETSC_HAVE_CUDA)
-// MatSetValues on device. Cuda seems to need code and not pointers to device methods
-static __device__
-void PetscMemmove_device(void *a, void *b, size_t n)
-{
-  if (n > 0 && !a) printf("Trying to copy to null pointer\n");
-  if (n > 0 && !b) printf("Trying to copy from a null pointer\n");
-  if (a < b) {
-    if ((char*)a <= ((char*)b - n)) memcpy(a,b,n);
-    else {
-      memcpy(a, b, (int)((char*)b - (char*)a));
-      PetscMemmove_device(b,(char*)b + (int)((char*)b - (char*)a),n - (int)((char*)b - (char*)a));
-    }
-  } else {
-    if (b <= ((char*)a - n)) memcpy(a,b,n);
-    else {
-      memcpy((char*)b + n,(char*)b + (n - (int)((char*)a - (char*)b)),(int)((char*)a - (char*)b));
-      PetscMemmove_device(a,b,n - (int)((char*)a - (char*)b));
-    }
-  }
-}
-#endif // PETSC_HAVE_CUDA
-
 #define MatSetValues_SeqAIJ_A_Private(row,col,value,addv,orow,ocol)     \
   {                                                                     \
   if (col <= lastcol1)  low1 = 0;                                       \
@@ -44,30 +21,24 @@ void PetscMemmove_device(void *a, void *b, size_t n)
         ap1[_i] += value;                                               \
       }                                                                 \
       else         ap1[_i] = value;                                     \
-      inserted = PETSC_TRUE;                                            \
-      goto a_noinsert;                                                  \
+      /*inserted = PETSC_TRUE;*/                                        \
+      break;                                                            \
     }                                                                   \
   }                                                                     \
-  if (value == 0.0 && ignorezeroentries && row != col) {low1 = 0; high1 = nrow1;goto a_noinsert;} \
-  if (nonew == 1) {low1 = 0; high1 = nrow1; goto a_noinsert;}           \
-  if (nonew == -1) {                                                    \
+  if (value == 0.0 && ignorezeroentries && row != col) {low1 = 0; high1 = nrow1;} \
+  else if (nonew == 1) {low1 = 0; high1 = nrow1;}                       \
+  else if (nonew == -1) {                                               \
     printf("A: Inserting a new nonzero at global row/column (%d, %d) into matrix\n", orow, ocol); \
     *ierr = 1;                                                          \
   } else if (nrow1 >= rmax1) {                                          \
-    printf("B: ERROR, ran out of preallocated space in row %d\n", orow); \
+    printf("A: ERROR, ran out of preallocated space in row %d\n", orow);\
     *ierr = 2;                                                          \
   } else {                                                              \
-    N = nrow1++ - 1; d_mat->diag.nz++; high1++;                         \
-    /* shift up all the later entries in this row */                    \
-    PetscMemmove_device(rp1+_i+1,rp1+_i,(N-_i+1)*sizeof(PetscInt));     \
-    PetscMemmove_device(ap1+_i+1,ap1+_i,(N-_i+1)*sizeof(PetscScalar));  \
-    rp1[_i] = col;                                                      \
-    ap1[_i] = value;                                                    \
-    d_mat->diag.nonzerostate++;                                         \
-    a_noinsert: ;                                                       \
-    ailen[row] = nrow1;                                                 \
+    printf("A: column %d not found in row %d\n", col, orow);            \
+    *ierr = 3;                                                          \
   }                                                                     \
 }
+
 #define MatSetValues_SeqAIJ_B_Private(row,col,value,addv,orow,ocol)     \
   {                                                                     \
   if (col <= lastcol2) low2 = 0;                                        \
@@ -85,28 +56,21 @@ void PetscMemmove_device(void *a, void *b, size_t n)
         ap2[_i] += value;                                               \
       }                                                                 \
       else                    ap2[_i] = value;                          \
-      inserted = PETSC_TRUE;                                            \
-      goto b_noinsert;                                                  \
+      /*inserted = PETSC_TRUE;*/                                        \
+      break;                                                            \
     }                                                                   \
   }                                                                     \
-  if (value == 0.0 && ignorezeroentries) {low2 = 0; high2 = nrow2; goto b_noinsert;} \
-  if (nonew == 1) {low2 = 0; high2 = nrow2; goto b_noinsert;}           \
-  if (nonew == -1) {                                                    \
-    printf("B Inserting a new nonzero at global row/column (%d, %d) into matrix\n", orow, ocol); \
+  if (value == 0.0 && ignorezeroentries) {low2 = 0; high2 = nrow2; }    \
+  else if (nonew == 1) {low2 = 0; high2 = nrow2; }                      \
+  else if (nonew == -1) {                                                    \
+    printf("B: Inserting a new nonzero at global row/column (%d, %d) into matrix\n", orow, ocol); \
     *ierr = 1;                                                          \
   } else if (nrow2 >= rmax2) {                                          \
-    printf("B ERROR, ran out of preallocated space in row %d\n", orow); \
+    printf("B: ERROR, ran out of preallocated space in row %d\n", orow);\
     *ierr = 2;                                                          \
   } else {                                                              \
-    N = nrow2++ - 1; d_mat->offdiag.nz++; high2++;                      \
-    /* shift up all the later entries in this row */                    \
-    PetscMemmove_device(rp2+_i+1,rp2+_i,(N-_i+1)*sizeof(PetscInt));     \
-    PetscMemmove_device(ap2+_i+1,ap2+_i,(N-_i+1)*sizeof(PetscScalar));  \
-    rp2[_i] = col;                                                      \
-    ap2[_i] = value;                                                    \
-    d_mat->offdiag.nonzerostate++;                                      \
-    b_noinsert: ;                                                       \
-    bilen[row] = nrow2;                                                 \
+    printf("B: column %d not found in row %d\n", col, orow);  \
+    *ierr = 3;                                                          \
   }                                                                     \
 }
 
@@ -126,7 +90,7 @@ void MatSetValues_AIJ_device(PetscSplitCSRDataStructure *d_mat, PetscInt m,const
   PetscBool roworiented = PETSC_TRUE;
   PetscInt  i,j,rstart  = d_mat->rstart,rend = d_mat->rend;
   PetscInt  cstart      = d_mat->rstart,cend = d_mat->rend,row,col;
-  PetscBool inserted = PETSC_FALSE;
+  //PetscBool inserted = PETSC_FALSE;
 
   *ierr = 0;
   for (i=0; i<m; i++) {
@@ -162,19 +126,18 @@ void MatSetValues_AIJ_device(PetscSplitCSRDataStructure *d_mat, PetscInt m,const
           continue;
           // else if (PetscUnlikelyDebug(in[j] >= mat->cmap->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column too large: col %D max %D",in[j],mat->cmap->N-1);
         } else {
-          if (d_mat->colmap) {
-#if defined(PETSC_USE_CTABLE)
-#error
-            PetscTableFind(aij->colmap,in[j]+1,&col); // todo
-            col--;
-#else
-            col = d_mat->colmap[in[j]] - 1;
-#endif
-            printf("\tAssembled off proc col %d\n",col);
-          } else {
-            col = in[j];
-            printf("Not assembled off proc col %d\n",col);
+          // if (mat->was_assembled)
+          if (!d_mat->colmap) {
+            printf("ERROR, !d_mat->colmap\n");
+            return;
           }
+          #if defined(PETSC_USE_CTABLE)
+          #error
+          PetscTableFind(aij->colmap,in[j]+1,&col); // todo
+          col--;
+          #else
+          col = d_mat->colmap[in[j]] - 1;
+          #endif
           if (col < 0) printf("ERROR col %d not found (%d)\n",in[j],col);
           MatSetValues_SeqAIJ_B_Private(row,col,value,is,im[i],in[j]);
           if (*ierr) return;
@@ -185,6 +148,7 @@ void MatSetValues_AIJ_device(PetscSplitCSRDataStructure *d_mat, PetscInt m,const
       printf("ERROR, off processor rows not supported. No stash. row %d\n",(int)im[i]);
     }
   }
+  //if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) A->offloadmask = PETSC_OFFLOAD_CPU;
 }
 
 #endif // __PETSCAIJDEVICE_H
