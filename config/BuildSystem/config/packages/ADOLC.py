@@ -4,7 +4,8 @@ class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
     self.version          = '2.7.2'
-    self.download         = ['https://www.coin-or.org/download/source/ADOL-C/ADOL-C-' + self.version + '.tgz']
+    self.gitcommit        = '0787a35'
+    self.download         = ['https://github.com/coin-or/ADOL-C.git','https://www.coin-or.org/download/source/ADOL-C/ADOL-C-' + self.version + '.tgz']
     self.includes         = ['adolc/adolc.h']
     self.liblist          = [['libadolc.a']]
     self.functions        = ['myalloc2','myfree2']
@@ -12,7 +13,7 @@ class Configure(config.package.GNUPackage):
     self.requirescxx11    = 1
     self.precisions       = ['double']
     self.complex          = 0
-    self.downloaddirnames = ['ADOL-C-' + self.version]
+    self.downloaddirnames = ['ADOL-C']
     return
 
   def setupDependencies(self, framework):
