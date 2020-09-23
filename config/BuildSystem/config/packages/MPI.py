@@ -285,7 +285,7 @@ shared libraries and run with --known-mpi-shared-libraries=1')
                 self.getExecutable('host')
                 if hasattr(self,'host'):
                   try:
-                    (ok, err, ret) = Configure.executeShellCommand(self.host + ' '+ hostname, timeout = 10, log = self.log, threads = 1)
+                    (ok, err, ret) = Configure.executeShellCommand(self.host + ' '+ hostname, timeout = 60, log = self.log, threads = 1)
                     self.logPrint("Return code from host: %s\n" % ret)
                     # host works even with broken VPN is is not a useful test
                   except:
