@@ -2276,7 +2276,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A,MatAssemblyType mode)
   if (A->factortype == MAT_FACTOR_NONE) {
     d_mat = ((Mat_SeqAIJCUSPARSE*)A->spptr)->deviceMat;
   }
-  if (d_mat) {
+  if (d_mat && d_mat->do_assembly_end) {
     Mat_SeqAIJ                 *a = (Mat_SeqAIJ*)A->data;
     PetscSplitCSRDataStructure h_mat;
     cudaError_t                err;
@@ -2284,8 +2284,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A,MatAssemblyType mode)
     // copy back to CPU (move someplace else later)
     err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     a->nz            = h_mat.diag.nz;
-    A->nonzerostate  = h_mat.diag.nonzerostate; // ???
-    a->nonzerorowcnt = h_mat.diag.nonzerorowcnt;
+    A->nonzerostate  = h_mat.diag.nonzerostate;
     a->rmax          = h_mat.diag.rmax;
     err = cudaMemcpy( a->i,    h_mat.diag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     nnz = a->i[n];
@@ -2445,18 +2444,19 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
 
 static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
 {
-  PetscSplitCSRDataStructure  *mat = NULL;
+  PetscSplitCSRDataStructure  *d_mat = NULL;
   PetscErrorCode               ierr;
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) {
     Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
-    mat = spptr->deviceMat;
+    d_mat = spptr->deviceMat;
   }
-  if (mat) {
+  if (d_mat) {
     Mat_SeqAIJ   *a = (Mat_SeqAIJ*)A->data;
     PetscInt     n = A->rmap->n, nnz = a->i[n];
     cudaError_t  err;
-    err = cudaMemset( mat->diag.a, 0, (nnz)*sizeof(PetscScalar));CHKERRCUDA(err);
+    err = cudaMemset( d_mat->diag.a, 0, (nnz)*sizeof(PetscScalar));CHKERRCUDA(err);
+    PetscInfo2(A,"11111 %d = %p\n",nnz,d_mat->diag.a);
   }
   ierr = MatZeroEntries_SeqAIJ(A);CHKERRQ(ierr);
 
@@ -2688,19 +2688,6 @@ static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Destroy(Mat_SeqAIJCUSPARSETriF
       stat = cusparseDestroy(handle);CHKERRCUSPARSE(stat);
     }
     ierr = PetscFree(*trifactors);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-// get GPU pointer to stripped down Mat
-PetscErrorCode MatCUSPARSEGetCudaMat(Mat A, void **B)
-{
-  PetscFunctionBegin;
-  if (A->factortype == MAT_FACTOR_NONE) {
-    Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
-    *B = (void*)spptr->cudaMat;
-  } else {
-    *B = NULL;
   }
   PetscFunctionReturn(0);
 }
