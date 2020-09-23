@@ -319,7 +319,7 @@ Unable to run hostname to check the network')
     includes = '#include <mpi.h>'
     body = 'MPI_Init(0,0);\nMPI_Finalize();\n'
     try:
-      ok = self.checkRun(includes, body, executor = self.mpiexec, timeout = 30, threads = 1)
+      ok = self.checkRun(includes, body, executor = self.mpiexec, timeout = 60, threads = 1)
       if not ok: raise RuntimeError(error_message)
     except RuntimeError as e:
       if str(e).find('Runaway process exceeded time limit') > -1:
