@@ -9,9 +9,11 @@
 #define petsctimsortwitharray_ petsctimsortwitharray
 #endif
 
+typedef void (*ConstCompare)(const void*,const void*,void*,int*);
 struct fc_c {
-  void (*fcmp)(void *a, void *b, void *c, int *res);
-  void *fctx;
+  ConstCompare fcmp;
+  //void (*fcmp)(const void *a, const void *b, void *c, int *res);
+  void        *fctx;
 };
 
 PETSC_STATIC_INLINE int cmp_via_fortran(const void *a, const void *b, void *ctx)
@@ -22,7 +24,7 @@ PETSC_STATIC_INLINE int cmp_via_fortran(const void *a, const void *b, void *ctx)
   return result;
 }
 
-PETSC_EXTERN void petsctimsort_(PetscInt n, void *arr, size_t size, void (*cmp)(void *, void *, void *, int *), void *ctx, PetscErrorCode *ierr)
+PETSC_EXTERN void petsctimsort_(PetscInt n, void *arr, size_t size, void (*cmp)(const void *, const void *, void *, int *), void *ctx, PetscErrorCode *ierr)
 {
   struct fc_c fc = {cmp, ctx};
   *ierr = PetscTimSort(n,arr,size,cmp_via_fortran,&fc);

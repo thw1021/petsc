@@ -1,20 +1,21 @@
 !
 !  Test Fortran binding of sort routines
 !
-module UserModule
 #include "petsc/finclude/petsc.h"
+module UserModule
   use petsc
-  type User
+  implicit none
+  public :: CompareIntegers
+  type, public :: User
+     PetscInt :: junk
   end type User
-end module UserModule
-
+  contains
 subroutine CompareIntegers(a,b,ctx,res)
-  use UserModule
   implicit none
 
-  PetscInt, intent(in)  :: a,b
-  PetscInt, intent(out) :: res
-  type(User)            :: ctx
+  PetscInt,pointer   :: a,b
+  type(User),pointer :: ctx
+  integer,pointer    :: res
 
   if (a .lt. b) then
      res = -1
@@ -24,6 +25,7 @@ subroutine CompareIntegers(a,b,ctx,res)
      res = 1
   end if
 end subroutine CompareIntegers
+end module UserModule
 
 program main
 
@@ -38,8 +40,9 @@ program main
   PetscScalar             s(N)
   PetscReal               r(N)
   PetscMPIInt,parameter:: two=2, five=5, seven=7
-  type(User)              ctx
-  external                CompareIntegers
+  type(User),pointer::    ctx
+  PetscInt                dummyint, i
+  PetscSizeT              sizeofentry
 
   call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
 
@@ -52,9 +55,19 @@ program main
   mz = [five, seven, two]
   s  = [1.0, 2.0, 3.0]
   r  = [1.0, 2.0, 3.0]
-
+  sizeofentry = sizeof(dummyint)
+  nullify(ctx)
+  allocate(ctx)
   call PetscSortInt(N,x,ierr)
-  call PetscTimSort(N,x1,PetscSizeT,CompareIntegers,ctx,ierr)
+  call PetscTimSort(N,x1,sizeofentry,CompareIntegers,ctx,ierr)
+  do i = 1,N
+     print *, i,x1(i)
+     print *, i,x(i)
+     if (x1(i) .ne. x(i)) then
+        print *, "Arrays do not match"
+        stop
+     end if
+  end do
   call PetscSortIntWithArray(N,y,x,ierr)
   call PetscSortIntWithArrayPair(N,x,y,z,ierr)
 
