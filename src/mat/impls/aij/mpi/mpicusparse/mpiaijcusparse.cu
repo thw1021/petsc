@@ -172,7 +172,7 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
   if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) {
     ierr = VecSetType(mpiaij->lvec,VECSEQCUDA);CHKERRQ(ierr);
-    ierr = PetscInfo1(A,"Set CUDA vec type (once) deviceMat=%d\n",d_mat);CHKERRQ(ierr);
+    ierr = PetscInfo1(A,"Set CUDA vec type (once) deviceMat=%p\n",d_mat);CHKERRQ(ierr);
   }
   if (d_mat) {
     Mat_SeqAIJ                 *jaca = (Mat_SeqAIJ*)mpiaij->A->data;
@@ -180,6 +180,7 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
     PetscSplitCSRDataStructure h_mat;
     cudaError_t                err;
     PetscInt                   n = A->rmap->n, nnz;
+    ierr = PetscInfo(A,"Have device matrix\n");CHKERRQ(ierr);
     err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     // A
     jaca->nz         = h_mat.diag.nz;
@@ -219,6 +220,7 @@ PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
   PetscFunctionBegin;
   if (cusparseStruct->deviceMat) {
     PetscSplitCSRDataStructure *d_mat = cusparseStruct->deviceMat, h_mat;
+    ierr = PetscInfo(A,"Have device matrix\n");CHKERRQ(ierr);
     err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     if (h_mat.diag.i)    {err = cudaFree(h_mat.diag.i);CHKERRCUDA(err);}
     if (h_mat.diag.ilen) {err = cudaFree(h_mat.diag.ilen);CHKERRCUDA(err);}
@@ -278,6 +280,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat B, MatType mtyp
     cusparseStruct->offdiagGPUMatFormat = MAT_CUSPARSE_CSR;
     cusparseStruct->stream              = 0;
     stat = cusparseCreate(&(cusparseStruct->handle));CHKERRCUSPARSE(stat);
+    cusparseStruct->deviceMat = NULL;
   }
 
   A->ops->assemblyend    = MatAssemblyEnd_MPIAIJCUSPARSE;
@@ -423,7 +426,7 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     if (A->was_assembled) {
       SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Need AIJ was_assembled matrix to sort column indices (in parallel for off diagonal block setup)");
     }
-    A->was_assembled = PETSC_TRUE; // this is done (lazy) in MatAssemble but we are not calling it anymore
+    A->was_assembled = PETSC_TRUE; // this is done (lazy) in MatAssemble but we are not calling it anymore - done in AIJ AssemblyEnd, need here?
   } else {
     SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Need assemble matrix");
   }
@@ -433,6 +436,7 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     Mat_SeqAIJ                  *jaca;
     PetscInt                    i, n = A->rmap->n, nnz;
     // create and copy
+    ierr = PetscInfo(A,"Create device matrix\n");CHKERRQ(ierr);
     err = cudaMalloc((void **)&d_mat, sizeof(PetscSplitCSRDataStructure));CHKERRCUDA(err);
     err = cudaMemset( d_mat, 0,       sizeof(PetscSplitCSRDataStructure));CHKERRCUDA(err);
     *B = *p_d_mat = d_mat; // return it, set it in Mat, and set it up
@@ -461,7 +465,6 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       ierr = PetscCalloc1(A->cmap->N+1,&aij->colmap);CHKERRQ(ierr);
       ierr = PetscLogObjectMemory((PetscObject)A,(A->cmap->N+1)*sizeof(PetscInt));CHKERRQ(ierr);
       for (i=0; i<n; i++) aij->colmap[aij->garray[i]] = i+1;
-      ierr = PetscInfo(A,"Setup colmap\n");CHKERRQ(ierr);
 #endif
       // allocate B copy data
       h_mat.rstart = A->rmap->rstart; h_mat.rend = A->rmap->rend;
