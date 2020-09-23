@@ -82,6 +82,14 @@ html_favicon = os.path.join('..','website','images','PETSc_RGB-logo.png')
 
 # -- Options for LaTeX output --------------------------------------------
 
+latex_engine = 'xelatex'
+
+# Specify how to arrange the documents into LaTeX files.
+# This allows building only the manual.
+latex_documents = [
+        ('manual/index', 'manual.tex', 'PETSc Users Manual', author, 'manual', False)
+        ]
+
 latex_additional_files = [
     'manual/anl_tech_report/ArgonneLogo.pdf',
     'manual/anl_tech_report/ArgonneReportTemplateLastPage.pdf',
@@ -100,6 +108,10 @@ r'''
 \printindex
 \input{last.inc}
 ''',
+    'fontpkg': r'''
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+'''
 }
 
 
