@@ -875,7 +875,8 @@ PetscErrorCode TSComputeIFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec Y,PetscBo
 static PetscErrorCode TSRecoverRHSJacobian(TS ts,Mat A,Mat B)
 {
   PetscErrorCode   ierr;
-
+  if (A != ts->Arhs) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Invalid Amat");
+  if (B != ts->Brhs) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Invalid Bmat");
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
 
@@ -885,7 +886,7 @@ static PetscErrorCode TSRecoverRHSJacobian(TS ts,Mat A,Mat B)
   if (ts->rhsjacobian.scale == -1.) {
     ierr = MatScale(A,-1);CHKERRQ(ierr);
   }
-  if (B && B == ts->Brhs && A != B) {
+if (A != B) {
     if (ts->rhsjacobian.shift) {
       ierr = MatShift(B,-ts->rhsjacobian.shift);CHKERRQ(ierr);
     }
