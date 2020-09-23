@@ -906,7 +906,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortBuildRunWithArray_Private(char *a
 + n    - number of values
 . arr  - array to be sorted
 . size - size in bytes of the datatype held in arr
-- cmp  - function pointer to comparison function
+. cmp  - function pointer to comparison function
+- ctx  - optional context to be passed to comparison function, NULL if not needed
 
   Output Parameters:
 . arr  - sorted array
@@ -920,14 +921,16 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTimSortBuildRunWithArray_Private(char *a
   order:
 
 .vb
-  int my_increasing_comparison_function(const void *left, const void *right) {
+  int my_increasing_comparison_function(const void *left, const void *right, void *ctx) {
     my_type l = *(my_type *) left, r = *(my_type *) right;
     return (l < r) ? -1 : (l > r);
   }
 .ve
+  Note the context is unused here but you may use it to pass and subsequently access whatever information required
+  inside the comparison function. The context pointer will unaltered except for any changes made inside the comparison function.
   Then pass the function
 .vb
-  PetscTimSort(n, arr, sizeof(arr[0]), my_increasing_comparison_function)
+  PetscTimSort(n, arr, sizeof(arr[0]), my_increasing_comparison_function, ctx)
 .ve
 
   Notes: Timsort makes the assumption that input data is already likely partially ordered, or that it contains
@@ -1005,7 +1008,8 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
 . asize - size in bytes of the datatype held in arr
 . barr  - array to be reordered
 . asize - size in bytes of the datatype held in barr
-- cmp   - function pointer to comparison function
+. cmp   - function pointer to comparison function
+- ctx   - optional context to be passed to comparison function, NULL if not needed
 
   Output Parameters:
 + arr  - sorted array
@@ -1019,14 +1023,16 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
   increasing order:
 
 .vb
-  int my_increasing_comparison_function(const void *left, const void *right) {
+  int my_increasing_comparison_function(const void *left, const void *right, void *ctx) {
     my_type l = *(my_type *) left, r = *(my_type *) right;
     return (l < r) ? -1 : (l > r);
   }
 .ve
+  Note the context is unused here but you may use it to pass and subsequently access whatever information required
+  inside the comparison function. The context pointer will unaltered except for any changes made inside the comparison function.
   Then pass the function
 .vb
-  PetscTimSortWithArray(n, arr, sizeof(arr[0]), barr, sizeof(barr[0]), my_increasing_comparison_function)
+  PetscTimSortWithArray(n, arr, sizeof(arr[0]), barr, sizeof(barr[0]), my_increasing_comparison_function, ctx)
 .ve
 
   Notes:
