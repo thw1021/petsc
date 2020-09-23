@@ -295,7 +295,7 @@ shared libraries and run with --known-mpi-shared-libraries=1')
                 self.getExecutable('traceroute', path = ['/usr/sbin'], useDefaultPath = 1)
                 if hasattr(self,'traceroute'):
                   try:
-                    (ok, err, ret) = Configure.executeShellCommand(self.traceroute + ' ' + hostname, timeout = 10, log = self.log, threads = 1)
+                    (ok, err, ret) = Configure.executeShellCommand(self.traceroute + ' ' + hostname, timeout = 60, log = self.log, threads = 1)
                     self.logPrint("Return code from traceroute: %s\n" % ret)
                     if not ret: hostnameworks = 1
                   except:
