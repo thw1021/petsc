@@ -257,7 +257,7 @@ shared libraries and run with --known-mpi-shared-libraries=1')
       self.getExecutable('hostname')
       if not hostnameworks and hasattr(self,'hostname'):
         try:
-          (hostname, err, ret) = Configure.executeShellCommand(self.hostname, timeout = 10, log = self.log, threads = 1)
+          (hostname, err, ret) = Configure.executeShellCommand(self.hostname, timeout = 60, log = self.log, threads = 1)
           self.logPrint("Return code from hostname: %s\n" % ret)
         except:
           self.logPrint("Exception: Unable to get result from hostname, skipping network checks\n")
