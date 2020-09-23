@@ -21,22 +21,12 @@
         ap1[_i] += value;                                               \
       }                                                                 \
       else         ap1[_i] = value;                                     \
-      /*inserted = PETSC_TRUE;*/                                        \
+      inserted = PETSC_TRUE;                                        \
       break;                                                            \
     }                                                                   \
   }                                                                     \
   if (value == 0.0 && ignorezeroentries && row != col) {low1 = 0; high1 = nrow1;} \
-  else if (nonew == 1) {low1 = 0; high1 = nrow1;}                       \
-  else if (nonew == -1) {                                               \
-    printf("A: Inserting a new nonzero at global row/column (%d, %d) into matrix\n", orow, ocol); \
-    *ierr = 1;                                                          \
-  } else if (nrow1 >= rmax1) {                                          \
-    printf("A: ERROR, ran out of preallocated space in row %d\n", orow);\
-    *ierr = 2;                                                          \
-  } else {                                                              \
-    printf("A: column %d not found in row %d\n", col, orow);            \
-    *ierr = 3;                                                          \
-  }                                                                     \
+  else {low1 = 0; high1 = nrow1;}                       \
 }
 
 #define MatSetValues_SeqAIJ_B_Private(row,col,value,addv,orow,ocol)     \
@@ -56,41 +46,30 @@
         ap2[_i] += value;                                               \
       }                                                                 \
       else                    ap2[_i] = value;                          \
-      /*inserted = PETSC_TRUE;*/                                        \
+      inserted = PETSC_TRUE;                                        \
       break;                                                            \
     }                                                                   \
   }                                                                     \
   if (value == 0.0 && ignorezeroentries) {low2 = 0; high2 = nrow2; }    \
-  else if (nonew == 1) {low2 = 0; high2 = nrow2; }                      \
-  else if (nonew == -1) {                                                    \
-    printf("B: Inserting a new nonzero at global row/column (%d, %d) into matrix\n", orow, ocol); \
-    *ierr = 1;                                                          \
-  } else if (nrow2 >= rmax2) {                                          \
-    printf("B: ERROR, ran out of preallocated space in row %d\n", orow);\
-    *ierr = 2;                                                          \
-  } else {                                                              \
-    printf("B: column %d not found in row %d\n", col, orow);  \
-    *ierr = 3;                                                          \
-  }                                                                     \
+  else { low2 = 0; high2 = nrow2; }                                     \
 }
 
 #if defined(PETSC_HAVE_CUDA)
   static __device__
 #endif // PETSC_HAVE_CUDA
-void MatSetValues_AIJ_device(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
+void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
 {
   MatScalar value=0.0;
   PetscInt  *aimax = d_mat->diag.imax,*ai = d_mat->diag.i,*ailen = d_mat->diag.ilen;
-  PetscInt  *aj = d_mat->diag.j, nonew = d_mat->diag.nonew; // same for A and B
+  PetscInt  *aj = d_mat->diag.j;
   PetscBool ignorezeroentries = (d_mat->diag.ignorezeroentries==0) ? PETSC_FALSE : PETSC_TRUE;
   PetscInt  *bimax = d_mat->offdiag.imax,*bi = d_mat->offdiag.i, *bilen = d_mat->offdiag.ilen, *bj = d_mat->offdiag.j;
   MatScalar *ba = d_mat->offdiag.a, *aa = d_mat->diag.a;
-  PetscInt  *rp1,*rp2=NULL,nrow1,nrow2,_i,rmax1,rmax2,N,low1,high1,low2,high2,t,lastcol1,lastcol2;
+  PetscInt  *rp1,*rp2=NULL,nrow1,nrow2,_i,low1,high1,low2,high2,t,lastcol1,lastcol2;
   MatScalar *ap1,*ap2=NULL;
-  PetscBool roworiented = PETSC_TRUE;
+  PetscBool roworiented = PETSC_TRUE, inserted;
   PetscInt  i,j,rstart  = d_mat->rstart,rend = d_mat->rend;
   PetscInt  cstart      = d_mat->rstart,cend = d_mat->rend,row,col;
-  //PetscBool inserted = PETSC_FALSE;
 
   *ierr = 0;
   for (i=0; i<m; i++) {
@@ -101,7 +80,6 @@ void MatSetValues_AIJ_device(PetscSplitCSRDataStructure *d_mat, PetscInt m,const
       lastcol1 = -1;
       rp1      = aj + ai[row];
       ap1      = aa + ai[row];
-      rmax1    = aimax[row];
       nrow1    = ailen[row];
       low1     = 0;
       high1    = nrow1;
@@ -109,7 +87,6 @@ void MatSetValues_AIJ_device(PetscSplitCSRDataStructure *d_mat, PetscInt m,const
         lastcol2 = -1;
         rp2      = bj + bi[row];
         ap2      = ba + bi[row];
-        rmax2    = bimax[row];
         nrow2    = bilen[row];
         low2     = 0;
         high2    = nrow2;
@@ -119,8 +96,11 @@ void MatSetValues_AIJ_device(PetscSplitCSRDataStructure *d_mat, PetscInt m,const
         if (ignorezeroentries && value == 0.0 && (is == ADD_VALUES) && im[i] != in[j]) continue;
         if (in[j] >= cstart && in[j] < cend) {
           col   = in[j] - cstart;
+          inserted = PETSC_FALSE;
           MatSetValues_SeqAIJ_A_Private(row,col,value,is,im[i],in[j]);
           if (*ierr) return;
+          if (!inserted) printf("ERROR, MatSetValuesDevice %d,%d not found\n",row,col);
+          d_mat->diag.nonzerostate++;
           //if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) A->offloadmask = PETSC_OFFLOAD_CPU;
         } else if (in[j] < 0) {
           continue;
@@ -131,16 +111,19 @@ void MatSetValues_AIJ_device(PetscSplitCSRDataStructure *d_mat, PetscInt m,const
             printf("ERROR, !d_mat->colmap\n");
             return;
           }
-          #if defined(PETSC_USE_CTABLE)
-          #error
+#if defined(PETSC_USE_CTABLE)
+#error
           PetscTableFind(aij->colmap,in[j]+1,&col); // todo
           col--;
-          #else
+#else
           col = d_mat->colmap[in[j]] - 1;
-          #endif
+#endif
           if (col < 0) printf("ERROR col %d not found (%d)\n",in[j],col);
+          inserted = PETSC_FALSE;
           MatSetValues_SeqAIJ_B_Private(row,col,value,is,im[i],in[j]);
           if (*ierr) return;
+          if (!inserted) printf("ERROR, MatSetValuesDevice %d,%d not found\n",row,col);
+          d_mat->offdiag.nonzerostate++;
           //if (B->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) B->offloadmask = PETSC_OFFLOAD_CPU;
         }
       }

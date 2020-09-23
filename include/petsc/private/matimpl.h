@@ -425,10 +425,8 @@ typedef struct { /* used by MatProduct() */
   PetscInt    n;\
   PetscInt    nz;\
   PetscInt    ignorezeroentries;\
-  PetscInt    nonew;\
   PetscInt    nonzerostate;\
-  PetscInt    nonzerorowcnt;\
-  PetscInt    rmax;
+  PetscInt    rmax; // not used
 
 typedef struct {
   CSRDataStructure(PetscScalar)
@@ -438,6 +436,7 @@ struct _p_SplitCSRMat {
   PetscInt              cstart,cend,rstart,rend;
   PetscCSRDataStructure diag,offdiag;
   PetscInt              *colmap;
+  PetscBool             do_assembly_end;
 };
 
 struct _p_Mat {
