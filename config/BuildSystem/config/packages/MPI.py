@@ -274,7 +274,7 @@ shared libraries and run with --known-mpi-shared-libraries=1')
               else:
                 count = ' -c 2 '
               try:
-                (ok, err, ret) = Configure.executeShellCommand(self.ping + count + hostname, timeout = 10, log = self.log, threads = 1)
+                (ok, err, ret) = Configure.executeShellCommand(self.ping + count + hostname, timeout = 60, log = self.log, threads = 1)
                 self.logPrint("Return code from ping: %s\n" % ret)
                 if not ret: hostnameworks = 1
               except:
