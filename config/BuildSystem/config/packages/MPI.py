@@ -248,7 +248,7 @@ shared libraries and run with --known-mpi-shared-libraries=1')
       self.getExecutable('socketfilterfw', path = ['/usr/libexec/ApplicationFirewall'])
       if hasattr(self,'socketfilterfw'):
         try:
-          (result, err, ret) = Configure.executeShellCommand(self.socketfilterfw + ' --getglobalstate', timeout = 10, log = self.log, threads = 1)
+          (result, err, ret) = Configure.executeShellCommand(self.socketfilterfw + ' --getglobalstate', timeout = 60, log = self.log, threads = 1)
           if result.find("Firewall is enabled") > -1:  hostnameworks = 1
         except:
           self.logPrint("Exception: Unable to get result from socketfilterfw\n")
