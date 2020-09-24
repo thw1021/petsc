@@ -1391,6 +1391,7 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
 +   -tao_pdipm_push_init_lambdai - parameter to push initial dual variables away from bounds (> 0)
 .   -tao_pdipm_push_init_slack  - parameter to push initial slack variables away from bounds (> 0)
 -   -tao_pdipm_mu_update_factor - update scalar for barrier parameter (mu) update (> 0)
+    -tao_pdipm_symetric_kkt     - Solve non reduced symetric KKT system
 
   Level: beginner
 M*/
