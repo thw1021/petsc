@@ -25,8 +25,6 @@
       break;                                                            \
     }                                                                   \
   }                                                                     \
-  if (value == 0.0 && ignorezeroentries && row != col) {low1 = 0; high1 = nrow1;} \
-  else {low1 = 0; high1 = nrow1;}                       \
 }
 
 #define MatSetValues_SeqAIJ_B_Private(row,col,value,addv,orow,ocol)     \
@@ -50,8 +48,6 @@
       break;                                                            \
     }                                                                   \
   }                                                                     \
-  if (value == 0.0 && ignorezeroentries) {low2 = 0; high2 = nrow2; }    \
-  else { low2 = 0; high2 = nrow2; }                                     \
 }
 
 #if defined(PETSC_HAVE_CUDA)
@@ -60,10 +56,10 @@
 void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
 {
   MatScalar value=0.0;
-  PetscInt  *aimax = d_mat->diag.imax,*ai = d_mat->diag.i,*ailen = d_mat->diag.ilen;
+  PetscInt  *ai = d_mat->diag.i,*ailen = d_mat->diag.ilen;
   PetscInt  *aj = d_mat->diag.j;
   PetscBool ignorezeroentries = (d_mat->diag.ignorezeroentries==0) ? PETSC_FALSE : PETSC_TRUE;
-  PetscInt  *bimax = d_mat->offdiag.imax,*bi = d_mat->offdiag.i, *bilen = d_mat->offdiag.ilen, *bj = d_mat->offdiag.j;
+  PetscInt  *bi = d_mat->offdiag.i, *bilen = d_mat->offdiag.ilen, *bj = d_mat->offdiag.j;
   MatScalar *ba = d_mat->offdiag.a, *aa = d_mat->diag.a;
   PetscInt  *rp1,*rp2=NULL,nrow1,nrow2,_i,low1,high1,low2,high2,t,lastcol1,lastcol2;
   MatScalar *ap1,*ap2=NULL;
@@ -99,8 +95,7 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
           inserted = PETSC_FALSE;
           MatSetValues_SeqAIJ_A_Private(row,col,value,is,im[i],in[j]);
           if (*ierr) return;
-          if (!inserted) printf("ERROR, MatSetValuesDevice %d,%d not found\n",row,col);
-          d_mat->diag.nonzerostate++;
+          if (!inserted) printf("ERROR, MatSetValuesDevice A: %d,%d not found\n",row,col);
           //if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) A->offloadmask = PETSC_OFFLOAD_CPU;
         } else if (in[j] < 0) {
           continue;
@@ -118,12 +113,21 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
 #else
           col = d_mat->colmap[in[j]] - 1;
 #endif
-          if (col < 0) printf("ERROR col %d not found (%d)\n",in[j],col);
+          if (col < 0) {
+            int ii;
+            printf("ERROR col %d not found, colmap:\n",in[j]);
+            for(ii=0;d_mat->colmap[ii]>=0;ii++)printf(" %d ",d_mat->colmap[ii]);
+            printf("\n");
+            *ierr = 1;
+            return;
+          }
           inserted = PETSC_FALSE;
           MatSetValues_SeqAIJ_B_Private(row,col,value,is,im[i],in[j]);
+          if (!inserted) {
+            printf("ERROR, MatSetValuesDevice B: row %d, loc col %d, global col %d not found\n",row,col,in[j]);
+            *ierr = 1;
+          }
           if (*ierr) return;
-          if (!inserted) printf("ERROR, MatSetValuesDevice %d,%d not found\n",row,col);
-          d_mat->offdiag.nonzerostate++;
           //if (B->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) B->offloadmask = PETSC_OFFLOAD_CPU;
         }
       }

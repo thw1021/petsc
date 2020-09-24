@@ -416,17 +416,13 @@ typedef struct { /* used by MatProduct() */
   PetscErrorCode (*destroy)(void*); /* destroy routine */
 } Mat_Product;
 
-#define CSRDataStructure(datatype)        \
+#define CSRDataStructure(datatype)  \
   PetscInt    *i; \
   PetscInt    *ilen;\
   PetscInt    *j;\
-  PetscInt    *imax;\
   datatype    *a;\
   PetscInt    n;\
-  PetscInt    nz;\
-  PetscInt    ignorezeroentries;\
-  PetscInt    nonzerostate;\
-  PetscInt    rmax; // not used
+  PetscInt    ignorezeroentries;
 
 typedef struct {
   CSRDataStructure(PetscScalar)
@@ -436,7 +432,7 @@ struct _p_SplitCSRMat {
   PetscInt              cstart,cend,rstart,rend;
   PetscCSRDataStructure diag,offdiag;
   PetscInt              *colmap;
-  PetscBool             do_assembly_end;
+  PetscBool             seq;
 };
 
 struct _p_Mat {
