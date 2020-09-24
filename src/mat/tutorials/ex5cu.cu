@@ -113,7 +113,7 @@ int main(int argc,char **args)
 /*TEST
 
    build:
-      requires: cuda
+      requires: cuda !define(PETSC_USE_CTABLE)
 
    test:
       suffix: 0
