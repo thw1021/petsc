@@ -20,7 +20,7 @@
       if (addv == ADD_VALUES) {                                         \
         ap1[_i] += value;                                               \
       }                                                                 \
-      else         ap1[_i] = value;                                     \
+      else ap1[_i] = value;                                     \
       inserted = PETSC_TRUE;                                        \
       break;                                                            \
     }                                                                   \
@@ -43,7 +43,7 @@
       if (addv == ADD_VALUES) {                                         \
         ap2[_i] += value;                                               \
       }                                                                 \
-      else                    ap2[_i] = value;                          \
+      else ap2[_i] = value;                          \
       inserted = PETSC_TRUE;                                        \
       break;                                                            \
     }                                                                   \
@@ -116,7 +116,7 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
           if (col < 0) {
             int ii;
             printf("ERROR col %d not found, colmap:\n",in[j]);
-            for(ii=0;d_mat->colmap[ii]>=0;ii++)printf(" %d ",d_mat->colmap[ii]);
+            for (ii=0;d_mat->colmap[ii]>=0;ii++)printf(" %d ",d_mat->colmap[ii]);
             printf("\n");
             *ierr = 1;
             return;
