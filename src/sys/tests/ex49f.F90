@@ -1,46 +1,64 @@
 !
 !  Test Fortran binding of sort routines
 !
-#include "petsc/finclude/petsc.h"
-module UserModule
+module UserContext
   use petsc
+#include "petsc/finclude/petsc.h"
   implicit none
-  public :: CompareIntegers
-  type, public :: User
-     PetscInt :: junk
-  end type User
-  contains
-subroutine CompareIntegers(a,b,ctx,res)
-  implicit none
+  type uctx
+     PetscInt junk
+  end type uctx
+contains
+  subroutine CompareIntegers(a,b,ctx,res)
+    implicit none
 
-  PetscInt,pointer   :: a,b
-  type(User),pointer :: ctx
-  integer,pointer    :: res
+    PetscInt :: a,b
+    type(uctx) :: ctx
+    integer  :: res
 
-  if (a .lt. b) then
-     res = -1
-  else if (a .eq. b) then
-     res = 0
-  else
-     res = 1
-  end if
-end subroutine CompareIntegers
-end module UserModule
+    if (a .lt. b) then
+       res = -1
+    else if (a .eq. b) then
+       res = 0
+    else
+       res = 1
+    end if
+    res = -1
+    return
+  end subroutine CompareIntegers
+end module UserContext
+
+module UserContextInterface
+  use UserContext
+  ! interface PetscTimSort
+  !    subroutine PetscTimSort(n,arr,size,compar,ctx,ierr)
+  !      use UserContext
+  !      PetscInt n
+  !      PetscVoid,pointer :: arr
+  !      PetscSizeT size
+  !      external compar
+  !      type(uctx) ctx
+  !      PetscErrorCode ierr
+  !    end subroutine PetscTimSort
+  ! end interface PetscTimSort
+end module UserContextInterface
 
 program main
 
-  use UserModule
+  use UserContext
+  use UserContextInterface
   implicit none
 
   PetscErrorCode          ierr
   PetscInt,parameter::    N=3
   PetscMPIInt,parameter:: mN=3
-  PetscInt                x(N),x1(N),y(N),z(N)
+  PetscInt                x(N),y(N),z(N)
+  PetscInt                x1(N)
   PetscMPIInt             mx(N),my(N),mz(N)
   PetscScalar             s(N)
   PetscReal               r(N)
   PetscMPIInt,parameter:: two=2, five=5, seven=7
-  type(User),pointer::    ctx
+  type(uctx)::            ctx
   PetscInt                dummyint, i
   PetscSizeT              sizeofentry
 
@@ -56,8 +74,7 @@ program main
   s  = [1.0, 2.0, 3.0]
   r  = [1.0, 2.0, 3.0]
   sizeofentry = sizeof(dummyint)
-  nullify(ctx)
-  allocate(ctx)
+  ctx%junk = 1
   call PetscSortInt(N,x,ierr)
   call PetscTimSort(N,x1,sizeofentry,CompareIntegers,ctx,ierr)
   do i = 1,N
