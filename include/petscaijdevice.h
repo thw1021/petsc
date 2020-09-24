@@ -107,9 +107,11 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
             return;
           }
 #if defined(PETSC_USE_CTABLE)
-#error
-          PetscTableFind(aij->colmap,in[j]+1,&col); // todo
-          col--;
+          printf("Can not use PETSC_USE_CTABLE with device assembly. configure with --with-ctable=0\n");
+          *ierr = 1;
+          return;
+          //PetscTableFind(aij->colmap,in[j]+1,&col); // todo
+          //col--;
 #else
           col = d_mat->colmap[in[j]] - 1;
 #endif
