@@ -415,11 +415,11 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
   // act like MatSetValues because not called on host
   if (A->assembled) {
     if (A->was_assembled) {
-      SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Need AIJ was_assembled matrix to sort column indices (in parallel for off diagonal block setup)");
+      SETERRQ(comm,PETSC_ERR_SUP,"Need AIJ was_assembled matrix to sort column indices (in parallel for off diagonal block setup)");
     }
     A->was_assembled = PETSC_TRUE; // this is done (lazy) in MatAssemble but we are not calling it anymore - done in AIJ AssemblyEnd, need here?
   } else {
-    SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Need assemble matrix");
+    SETERRQ(comm,PETSC_ERR_SUP,"Need assemble matrix");
   }
   if (!*p_d_mat) {
     cudaError_t                 err;
@@ -445,13 +445,13 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       jaca = (Mat_SeqAIJ*)aij->A->data;
       jacb = (Mat_SeqAIJ*)aij->B->data;
       if (!aij->garray) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPIAIJ Matrix was assembled but is missing garray");
-      if (aij->B->rmap->n != aij->A->rmap->n) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Only support aij->B->rmap->n == aij->A->rmap->n");
+      if (aij->B->rmap->n != aij->A->rmap->n) SETERRQ(comm,PETSC_ERR_SUP,"Only support aij->B->rmap->n == aij->A->rmap->n");
       // create colmap - this is ussually done (lazy) in MatSetValues
       aij->donotstash = PETSC_TRUE;
       aij->A->nooffprocentries = aij->B->nooffprocentries = A->nooffprocentries = PETSC_TRUE;
       jaca->nonew = jacb->nonew = PETSC_TRUE; // no more dissassembly
 #if defined(PETSC_USE_CTABLE)
-#error "can not use CTABLE with device assemble"
+      SETERRQ(comm,PETSC_ERR_SUP,"Devioce metadata does not support ctable (--with-ctable=0)");
 #else
       ierr = PetscCalloc1(A->cmap->N+1,&aij->colmap);CHKERRQ(ierr);
       aij->colmap[A->cmap->N] = -9;
