@@ -95,7 +95,7 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
           inserted = PETSC_FALSE;
           MatSetValues_SeqAIJ_A_Private(row,col,value,is,im[i],in[j]);
           if (*ierr) return;
-          if (!inserted) printf("ERROR, MatSetValuesDevice A: %d,%d not found\n",row,col);
+          if (!inserted) printf("ERROR, MatSetValuesDevice A: %d,%d not found\n",(int)row,(int)col);
           //if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) A->offloadmask = PETSC_OFFLOAD_CPU;
         } else if (in[j] < 0) {
           continue;
@@ -117,8 +117,8 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
 #endif
           if (col < 0) {
             int ii;
-            printf("ERROR col %d not found, colmap:\n",in[j]);
-            for (ii=0;d_mat->colmap[ii]>=0;ii++)printf(" %d ",d_mat->colmap[ii]);
+            printf("ERROR col %d not found, colmap:\n",(int)in[j]);
+            for (ii=0;d_mat->colmap[ii]>=0;ii++)printf(" %d ",(int)d_mat->colmap[ii]);
             printf("\n");
             *ierr = 1;
             return;
@@ -126,7 +126,7 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
           inserted = PETSC_FALSE;
           MatSetValues_SeqAIJ_B_Private(row,col,value,is,im[i],in[j]);
           if (!inserted) {
-            printf("ERROR, MatSetValuesDevice B: row %d, loc col %d, global col %d not found\n",row,col,in[j]);
+            printf("ERROR, MatSetValuesDevice B: row %d, loc col %d, global col %d not found\n",(int)row,(int)col,(int)in[j]);
             *ierr = 1;
           }
           if (*ierr) return;
