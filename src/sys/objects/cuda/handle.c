@@ -83,7 +83,7 @@ PetscErrorCode PetscCUSOLVERDnInitializeHandle(void)
   PetscFunctionBegin;
   if (!cusolverdnhandle) {
     for (int i=0; i<3; i++) {
-      cerr = cusolverDnCreate(&cusolverdnhandle);CHKERRCUSOLVER(cerr);
+      cerr = cusolverDnCreate(&cusolverdnhandle);
       if (cerr == CUSOLVER_STATUS_SUCCESS) break;
       if (cerr != CUSOLVER_STATUS_ALLOC_FAILED) CHKERRCUSOLVER(cerr);
       if (i < 2) {ierr = PetscSleep(3);CHKERRQ(ierr);}
