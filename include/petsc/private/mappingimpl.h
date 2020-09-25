@@ -16,23 +16,22 @@ struct _PetscMappingOps {
   PetscErrorCode (*setfromoptions)(PetscMapping);
   PetscErrorCode (*sort)(PetscMapping);
   PetscErrorCode (*sorted)(PetscMapping);
-  PetscErrorCode (*getkeys)(PetscMapping,PetscInt*,const PetscInt*[]);
   PetscErrorCode (*getvalues)(PetscMapping,PetscInt*,const PetscInt*[]);
-  PetscErrorCode (*restorekeys)(PetscMapping,PetscInt,const PetscInt*[]);
   PetscErrorCode (*restorevalues)(PetscMapping,PetscInt,const PetscInt*[]);
 };
 
 typedef struct _n_PetscMappingContiguous *PetscMappingContiguous;
-struct {
+struct _n_PetscMappingContiguous {
   PetscInt  keyStart, keyEnd;  /* section-like start end */
   PetscInt  keyStartGlobal;    /* offset into global key array */
-} _n_PetscMappingContiguous;
+};
 
-typedef struct _n_PetscMappingNonContiguous *PetscMappingNonContiguous;
-struct {
+typedef struct _n_PetscMappingDisContiguous *PetscMappingDisContiguous;
+struct _n_PetscMappingDisContiguous {
   PetscInt  *keys;             /* local key array */
   PetscInt  *keyIndexGlobal;   /* locations of keys in global key array */
-} _n_PetscMappingNonContiguous;
+  PetscBool alloced;
+};
 
 struct _p_PetscMapping {
   PETSCHEADER(struct _PetscMappingOps);
@@ -40,30 +39,13 @@ struct _p_PetscMapping {
   PetscMapping permutation;              /* permutation of keys */
   union {
     PetscMappingContiguous    contig;    /* section-like use */
-    PetscMappingNonContiguous noncontig; /* multi-map-like use */
+    PetscMappingDisContiguous discontig; /* multi-map-like use */
   };
   PetscInt     nKeysLocal;               /* always cached regardless of contig or not */
-  PetscBool    contiguous;               /* are the keys contiguous? */
+  PetscInt     nKeysGlobal;               /* always cached regardless of contig or not */
+  PetscMappingState kstorage;               /* are the keys contiguous? */
   PetscBool    sorted;
+  PetscBool    setup;
   void         *data;                    /* impls, contains *idx */
 };
-
-#if (0)
-struct _p_PetscMapping {
-  PETSCHEADER(struct _PetscMappingOps);
-  PetscMapping      *maps;  /* n-recurvise map objects */
-  PetscInt          *keys;  /* "keys" to depth 1 "values" */
-  PetscInt          *cidx;  /* cached depth 1 "values" */
-  PetscInt          *dof;   /* number of depth 1 "values" per "key" */
-  PetscInt          nidx;   /* number of total depth 1 "values" in the map */
-  PetscInt          nblade; /* number of "keys" to the map */
-  PetscMappingState valid;  /* are maps more up to date than cidx or vice versa */
-  PetscBool         iallocated; /* are cidx copied */
-  PetscBool         kallocated; /* are keys copied */
-  PetscBool         mallocated; /* are maps copied */
-  PetscBool         setup;
-  void              *data;
-};
-#endif
-
 #endif
