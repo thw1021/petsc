@@ -1,8 +1,9 @@
 ALL: lib
 
-SOURCEH   = ../../../../include/petscmapping.h ../../../../include/petsc/private/mappingimpl.h
+SOURCEH   = ../../../../include/petscim.h ../../../../include/petsc/private/imimpl.h \
+           ../../../../include/petsc/private/imtrivialimpl.h
 SOURCEC   =
-DIRS      = interface
+DIRS      = interface impls
 LOCDIR    = src/sys/classes/mapping
 MANSEC    = Sys
 SUBMANSEC = Mapping
