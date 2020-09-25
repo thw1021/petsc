@@ -425,7 +425,7 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     cudaError_t                 err;
     PetscSplitCSRDataStructure  *d_mat, h_mat;
     Mat_SeqAIJ                  *jaca;
-    PetscInt                    i, n = A->rmap->n, nnz;
+    PetscInt                    n = A->rmap->n, nnz;
     // create and copy
     ierr = PetscInfo(A,"Create device matrix\n");CHKERRQ(ierr);
     err = cudaMalloc((void **)&d_mat, sizeof(PetscSplitCSRDataStructure));CHKERRCUDA(err);
@@ -456,7 +456,10 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       ierr = PetscCalloc1(A->cmap->N+1,&aij->colmap);CHKERRQ(ierr);
       aij->colmap[A->cmap->N] = -9;
       ierr = PetscLogObjectMemory((PetscObject)A,(A->cmap->N+1)*sizeof(PetscInt));CHKERRQ(ierr);
-      for (err=0; err<aij->B->cmap->n; err++) aij->colmap[aij->garray[err]] = err+1; /* avoid unused var with an 'i' */
+      {
+	PetscInt ii;
+	for (ii=0; ii<aij->B->cmap->n; ii++) aij->colmap[aij->garray[ii]] = ii+1;
+      }
       if(aij->colmap[A->cmap->N] != -9) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"aij->colmap[A->cmap->N] != -9");
 #endif
       // allocate B copy data
