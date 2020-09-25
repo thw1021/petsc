@@ -16,44 +16,26 @@ contains
     type(uctx) :: ctx
     integer  :: res
 
-    if (a .lt. b) then
+    if (a < b) then
        res = -1
-    else if (a .eq. b) then
+    else if (a == b) then
        res = 0
     else
        res = 1
     end if
-    res = -1
     return
   end subroutine CompareIntegers
 end module UserContext
 
-module UserContextInterface
-  use UserContext
-  ! interface PetscTimSort
-  !    subroutine PetscTimSort(n,arr,size,compar,ctx,ierr)
-  !      use UserContext
-  !      PetscInt n
-  !      PetscVoid,pointer :: arr
-  !      PetscSizeT size
-  !      external compar
-  !      type(uctx) ctx
-  !      PetscErrorCode ierr
-  !    end subroutine PetscTimSort
-  ! end interface PetscTimSort
-end module UserContextInterface
-
 program main
 
   use UserContext
-  use UserContextInterface
   implicit none
 
   PetscErrorCode          ierr
   PetscInt,parameter::    N=3
   PetscMPIInt,parameter:: mN=3
-  PetscInt                x(N),y(N),z(N)
-  PetscInt                x1(N)
+  PetscInt                x(N),x1(N),y(N),z(N)
   PetscMPIInt             mx(N),my(N),mz(N)
   PetscScalar             s(N)
   PetscReal               r(N)
@@ -78,11 +60,8 @@ program main
   call PetscSortInt(N,x,ierr)
   call PetscTimSort(N,x1,sizeofentry,CompareIntegers,ctx,ierr)
   do i = 1,N
-     print *, i,x1(i)
-     print *, i,x(i)
      if (x1(i) .ne. x(i)) then
-        print *, "Arrays do not match"
-        stop
+        SETERRA(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscTimSort and PetscSortInt arrays did not match")
      end if
   end do
   call PetscSortIntWithArray(N,y,x,ierr)

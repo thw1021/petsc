@@ -16,7 +16,7 @@ struct fc_c {
   void        *fctx;
 };
 
-PETSC_STATIC_INLINE int cmp_via_fortran(const void *a, const void *b, void *ctx)
+int cmp_via_fortran(const void *a, const void *b, void *ctx)
 {
   int result;
   struct fc_c *fc = ctx;
@@ -24,14 +24,14 @@ PETSC_STATIC_INLINE int cmp_via_fortran(const void *a, const void *b, void *ctx)
   return result;
 }
 
-PETSC_EXTERN void petsctimsort_(PetscInt n, void *arr, size_t size, void (*cmp)(void *, void *, void *, int *), void *ctx, PetscErrorCode *ierr)
-{
-  struct fc_c fc = {(ConstCompare)cmp, ctx};
-  *ierr = PetscTimSort(n,arr,size,cmp_via_fortran,&fc);
-}
-
-PETSC_EXTERN void petsctimsortwitharray_(PetscInt n, void *arr, size_t asize, void *barr, size_t bsize, void (*cmp)(const void *, const void *, void *, int *), void *ctx, PetscErrorCode *ierr)
+PETSC_EXTERN void petsctimsort_(PetscInt *n, void *arr, size_t *size, void (*cmp)(const void *, const void *, void *, int *), void *ctx, PetscErrorCode *ierr)
 {
   struct fc_c fc = {cmp, ctx};
-  *ierr = PetscTimSortWithArray(n,arr,asize,barr,bsize,cmp_via_fortran,&fc);
+  *ierr = PetscTimSort(*n,arr,*size,cmp_via_fortran,&fc);
+}
+
+PETSC_EXTERN void petsctimsortwitharray_(PetscInt *n, void *arr, size_t *asize, void *barr, size_t *bsize, void (*cmp)(const void *, const void *, void *, int *), void *ctx, PetscErrorCode *ierr)
+{
+  struct fc_c fc = {cmp, ctx};
+  *ierr = PetscTimSortWithArray(*n,arr,*asize,barr,*bsize,cmp_via_fortran,&fc);
 }
