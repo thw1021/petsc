@@ -133,11 +133,9 @@ kill-merge-request:
       - $GITLAB_USER_NAME == "Barry Smith"
   script:
     - exit 1
-  variables:
-    GIT_STRATEGY: none
 
 pause-for-approval:
-  extends: .test
+  extends: kill-merge-request
   stage: .pre
   tags:
     - stage1
