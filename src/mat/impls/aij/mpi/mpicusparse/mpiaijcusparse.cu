@@ -180,7 +180,7 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
     // A
     err = cudaMemcpy( jaca->i,    h_mat.diag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     nnz = jaca->i[n];
-if (jaca->nz != nnz) printf("ERROR, jaca->nz != nnz %d %d\n", jaca->nz, nnz);
+    if (jaca->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jaca->nz != nnz %d %d\n", jaca->nz, nnz);
     ierr = PetscInfo2(A,"copy GPU data to host. n=%D nnz=%D\n",n, nnz);CHKERRQ(ierr);
     err = cudaMemcpy( jaca->ilen, h_mat.diag.ilen, (n)*sizeof(PetscInt),     cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     err = cudaMemcpy( jaca->j,    h_mat.diag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
@@ -188,7 +188,7 @@ if (jaca->nz != nnz) printf("ERROR, jaca->nz != nnz %d %d\n", jaca->nz, nnz);
     // B
     err = cudaMemcpy( jacb->i,    h_mat.offdiag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     nnz = jacb->i[n];
-if (jacb->nz != nnz) printf("ERROR, jacb->nz != nnz %d %d\n", jacb->nz, nnz);
+    if (jacb->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jacb->nz != nnz %d %d\n", jacb->nz, nnz);
     err = cudaMemcpy( jacb->ilen, h_mat.offdiag.ilen, (n)*sizeof(PetscInt),     cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     err = cudaMemcpy( jacb->j,    h_mat.offdiag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     err = cudaMemcpy( jacb->a,    h_mat.offdiag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
