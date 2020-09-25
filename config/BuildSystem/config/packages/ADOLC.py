@@ -25,7 +25,10 @@ class Configure(config.package.GNUPackage):
 
   def formGNUConfigureArgs(self):
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
+    args.append('--without-boost')
     if self.colpack.found:
       args.append('--enable-sparse')
-      args.append('--with-colpack-dir="'+self.colpack.directory+'"')
+      args.append('--with-colpack="'+self.colpack.directory+'"')
+    else:
+      args.append('--without-colpack')
     return args

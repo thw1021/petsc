@@ -12,7 +12,6 @@ class Configure(config.package.CMakePackage):
     self.cxx           = 1
     self.precisions    = ['double']
     self.complex       = 0
-    self.builddir      = 'yes'
     self.cmakelistsdir = 'build/cmake'
     return
 
@@ -31,4 +30,5 @@ class Configure(config.package.CMakePackage):
       args.append('-DENABLE_OPENMP=ON')
     else:
       args.append('-DENABLE_OPENMP=OFF')
+    args.append('-DCMAKE_INSTALL_LIBDIR:STRING="lib"')
     return args
