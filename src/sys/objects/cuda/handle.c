@@ -40,7 +40,7 @@ PetscErrorCode PetscCUBLASInitializeHandle(void)
     for (int i=0; i<3; i++) {
       cberr = cublasCreate(&cublasv2handle);
       if (cberr == CUBLAS_STATUS_SUCCESS) break;
-      if (cberr != CUBLAS_STATUS_ALLOC_FAILED) CHKERRCUBLAS(cberr);
+      if (cberr != CUBLAS_STATUS_ALLOC_FAILED && cberr != CUBLAS_STATUS_NOT_INITIALIZED) CHKERRCUBLAS(cberr);
       if (i < 2) {ierr = PetscSleep(3);CHKERRQ(ierr);}
     }
     if (cberr) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize cuBLAS");
