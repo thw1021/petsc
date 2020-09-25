@@ -18,11 +18,16 @@ class Configure(config.package.GNUPackage):
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
-    self.deps = []
+    self.colpack = framework.require('config.packages.ColPack', self)
+    self.deps    = [self.colpack]
     return
 
   def formGNUConfigureArgs(self):
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
-    args.append('--enable-sparse')
-    args.append('--with-colpack-dir=$PETSC_ARCH/externalpackages/git.colpack')
+    args.append('--without-boost')
+    if self.colpack.found:
+      args.append('--enable-sparse')
+      args.append('--with-colpack="'+self.colpack.directory+'"')
+    else:
+      args.append('--without-colpack')
     return args
