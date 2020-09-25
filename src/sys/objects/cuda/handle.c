@@ -38,7 +38,7 @@ PetscErrorCode PetscCUBLASInitializeHandle(void)
   PetscFunctionBegin;
   if (!cublasv2handle) {
     for (int i=0; i<3; i++) {
-      cberr = cublasCreate(&cublasv2handle);CHKERRCUBLAS(cberr);
+      cberr = cublasCreate(&cublasv2handle);
       if (cberr == CUBLAS_STATUS_SUCCESS) break;
       if (cberr != CUBLAS_STATUS_ALLOC_FAILED) CHKERRCUBLAS(cberr);
       if (i < 2) {ierr = PetscSleep(3);CHKERRQ(ierr);}
