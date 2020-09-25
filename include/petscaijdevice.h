@@ -18,36 +18,36 @@
     if (rp1[_i] > col) break;                                           \
     if (rp1[_i] == col) {                                               \
       if (addv == ADD_VALUES) {                                         \
-        ap1[_i] += value;                                               \
-      }                                                                 \
-      else ap1[_i] = value;                                     \
-      inserted = PETSC_TRUE;                                        \
-      break;                                                            \
-    }                                                                   \
-  }                                                                     \
+        MatScalar old = atomicAdd(&ap1[_i],value); printf("old=%g\n",old); \
+      }                                                                \
+      else ap1[_i] = value;                                            \
+      inserted = PETSC_TRUE;                                           \
+      break;                                                           \
+    }                                                                  \
+  }                                                                    \
 }
 
-#define MatSetValues_SeqAIJ_B_Private(row,col,value,addv,orow,ocol)     \
-  {                                                                     \
-  if (col <= lastcol2) low2 = 0;                                        \
-  else high2 = nrow2;                                                   \
-  lastcol2 = col;                                                       \
-  while (high2-low2 > 5) {                                              \
-    t = (low2+high2)/2;                                                 \
-    if (rp2[t] > col) high2 = t;                                        \
-    else             low2  = t;                                         \
-  }                                                                     \
-  for (_i=low2; _i<high2; _i++) {                                       \
-    if (rp2[_i] > col) break;                                           \
-    if (rp2[_i] == col) {                                               \
-      if (addv == ADD_VALUES) {                                         \
-        ap2[_i] += value;                                               \
-      }                                                                 \
-      else ap2[_i] = value;                          \
-      inserted = PETSC_TRUE;                                        \
-      break;                                                            \
-    }                                                                   \
-  }                                                                     \
+#define MatSetValues_SeqAIJ_B_Private(row,col,value,addv,orow,ocol)    \
+  {                                                                    \
+  if (col <= lastcol2) low2 = 0;                                       \
+  else high2 = nrow2;                                                  \
+  lastcol2 = col;                                                      \
+  while (high2-low2 > 5) {                                             \
+    t = (low2+high2)/2;                                                \
+    if (rp2[t] > col) high2 = t;                                       \
+    else             low2  = t;                                        \
+  }                                                                    \
+  for (_i=low2; _i<high2; _i++) {                                      \
+    if (rp2[_i] > col) break;                                          \
+    if (rp2[_i] == col) {                                              \
+      if (addv == ADD_VALUES) {                                        \
+        MatScalar old = atomicAdd(&ap2[_i],value); printf("old=%g\n",old); \
+      }                                                                \
+      else ap2[_i] = value;                                            \
+      inserted = PETSC_TRUE;                                           \
+      break;                                                           \
+    }                                                                  \
+  }                                                                    \
 }
 
 #if defined(PETSC_HAVE_CUDA)
