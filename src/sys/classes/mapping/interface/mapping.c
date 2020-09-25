@@ -8,15 +8,21 @@
 PETSC_STATIC_INLINE PetscErrorCode PetscMappingClear_Base(PetscMapping *m)
 {
   PetscFunctionBegin;
-  (*m)->maps = NULL;
-  (*m)->keys = NULL;
-  (*m)->cidx = NULL;
-  (*m)->dof = NULL;
-  (*m)->nidx = -1;
-  (*m)->nblade = -1;
-  (*m)->valid = NONE_VALID;
-  (*m)->iallocated = PETSC_FALSE;
-  (*m)->mallocated = PETSC_FALSE;
+  (*m)->map = NULL;
+  (*m)->permutation = NULL;
+  (*m)->nKeysLocal = PETSC_DEFAULT;
+  (*m)->nKeysGlobal = PETSC_DEFAULT;
+  (*m)->sorted = PETSC_FALSE;
+  if ((*m)->kstorage) {
+    PetscErrorCode ierr;
+    if ((*m)->kstorage == IM_CONTIG) {ierr = PetscFree((*m)->contig);CHKERRQ(ierr);}
+    else {ierr = PetscFree((*m)->discontig);CHKERRQ(ierr);}
+  }
+  (*m)->kstorage = IM_INVALID;
+  (*m)->contig = NULL;
+  (*m)->discontig = NULL;
+  (*m)->data = NULL;
+  (*m)->setup = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -39,10 +45,10 @@ PetscErrorCode PetscMappingDestroy(PetscMapping *m)
   PetscFunctionBegin;
   if (!*m) PetscFunctionReturn(0);
   PetscValidHeaderSpecific(*m,PETSC_MAPPING_CLASSID,1);
-  ierr = PetscMappingClear_Base(m);CHKERRQ(ierr);
   if ((*m)->ops->destroy) {
     ierr = (*(*m)->ops->destroy)(m);CHKERRQ(ierr);
   }
+  ierr = PetscMappingClear_Base(m);CHKERRQ(ierr);
   ierr = PetscHeaderDestroy(m);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -102,6 +108,7 @@ PetscErrorCode PetscMappingSetUp(PetscMapping m)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
   if (m->setup) PetscFunctionReturn(0);
+  if (!(m->kstorage)) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Map must be set as contiguous or non contiguous before setup");
   if (m->ops->setup) {
     PetscErrorCode ierr;
     ierr = (*m->ops->setup)(m);CHKERRQ(ierr);
@@ -121,223 +128,118 @@ PetscErrorCode PetscMappingSetFromOptions(PetscMapping m)
   PetscFunctionReturn(0);
 }
 
-/*
-PetscErrorCode PetscMappingDestroy(PetscMapping *m)
+PetscErrorCode PetscMappingGetKeyState(PetscMapping m, PetscMappingState *state)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!*m) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific(*m,PETSC_MAPPING_CLASSID,1);
-  if ((*m)->mallocated) {
-    PetscInt i, nblade = (*m)->nblade;
-
-    for (i = 0; i < nblade; ++i) {ierr = PetscMappingDestroy(&((*m)->maps[i]));CHKERRQ(ierr);}
-  }
-  if ((*m)->iallocated) {
-    ierr = PetscFree((*m)->cidx);CHKERRQ(ierr);
-    ierr = PetscFree((*m)->dof);CHKERRQ(ierr);
-  }
-  ierr = PetscFree((*m)->keys);CHKERRQ(ierr);
-  ierr = PetscMappingClear(m);CHKERRQ(ierr);
-  ierr = PetscHeaderDestroy(m);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
+  PetscValidPointer(state,2);
+  *state = m->kstorage;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscMappingSetKeys(PetscMapping m, PetscInt n, const PetscInt keys[], PetscCopyMode mode)
+PetscErrorCode PetscMappingSetKeysContiguous(PetscMapping m, PetscInt keyStart, PetscInt keyEnd)
 {
+  MPI_Comm       comm;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
-  if (n < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of keys %D < 0",n);
+  ierr = PetscObjectGetComm((PetscObject) m, &comm);CHKERRQ(ierr);
+  if (PetscDefined(USE_DEBUG)) {
+    if (m->setup) SETERRQ(comm,PETSC_ERR_ARG_WRONGSTATE,"Cannot change keys on already setup map");
+    if (m->kstorage == IM_DISCONTIG) SETERRQ(comm,PETSC_ERR_ARG_WRONGSTATE,"Mapping is already of type discontiguous");
+    if (keyEnd < keyStart) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"KeyEnd %D < KeyStart %D contiguous keys must be increasing", keyEnd, keyStart);
+  }
+  ierr = PetscFree(m->contig);CHKERRQ(ierr);
+  ierr = PetscNewLog(m, &(m->contig));CHKERRQ(ierr);
+  m->contig->keyStart = keyStart;
+  m->contig->keyEnd = keyEnd;
+  m->nKeysLocal = keyEnd-keyStart;
+  ierr = MPIU_Allreduce(&m->nKeysLocal,&(m->nKeysGlobal),1,MPIU_INT,MPI_SUM,comm);CHKERRQ(ierr);
+  m->kstorage = IM_CONTIG;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscMappingGetKeysContiguous(PetscMapping m, PetscInt *keyStart, PetscInt *keyEnd)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
+  if (PetscDefined(USE_DEBUG)) {
+    if (m->kstorage == IM_DISCONTIG) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping is not contiguous");
+    if (m->kstorage == IM_INVALID) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping has no valid keys");
+  }
+  if (keyStart) *keyStart = m->contig->keyStart;
+  if (keyEnd) *keyEnd = m->contig->keyEnd;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscMappingSetKeysDiscontiguous(PetscMapping m, PetscInt n, const PetscInt keys[], PetscCopyMode mode)
+{
+  MPI_Comm       comm;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
   PetscValidIntPointer(keys,3);
-  switch(mode) {
+  ierr = PetscObjectGetComm((PetscObject) m, &comm);CHKERRQ(ierr);
+  if (PetscDefined(USE_DEBUG)) {
+    if (m->setup) SETERRQ(comm,PETSC_ERR_ARG_WRONGSTATE,"Cannot change keys on already setup map");
+    if (m->kstorage == IM_CONTIG) SETERRQ(comm,PETSC_ERR_ARG_WRONGSTATE,"Mapping is already of type contiguous");
+    if (n < 0) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"Number of keys %D < 0", n);
+  }
+  if (m->discontig->alloced) {
+    ierr = PetscFree(m->discontig->keys);CHKERRQ(ierr);
+    ierr = PetscFree(m->discontig->keyIndexGlobal);CHKERRQ(ierr);
+  }
+  ierr = PetscFree(m->discontig);CHKERRQ(ierr);
+  ierr = PetscNewLog(m, &(m->discontig));CHKERRQ(ierr);
+  switch (mode) {
   case PETSC_COPY_VALUES:
-    if (m->kallocated) {ierr = PetscFree(m->keys);CHKERRQ(ierr);}
-    ierr = PetscMalloc1(n, &(m->keys));CHKERRQ(ierr);
-    ierr = PetscArraycpy(m->keys, keys, n);CHKERRQ(ierr);
-    ierr = PetscLogObjectMemory((PetscObject) m, n*sizeof(PetscInt));CHKERRQ(ierr);
-    m->kallocated = PETSC_TRUE;
+    ierr = PetscMalloc1(n, &(m->discontig));CHKERRQ(ierr);
+    ierr = PetscArraycpy(m->discontig->keys, keys, n);CHKERRQ(ierr);
+    ierr = PetscLogObjectMemory((PetscObject)m,n*sizeof(PetscInt));CHKERRQ(ierr);
+    m->discontig->alloced = PETSC_TRUE;
     break;
   case PETSC_OWN_POINTER:
-    if (m->kallocated) {ierr = PetscFree(m->keys);CHKERRQ(ierr);}
-    m->keys = (PetscInt *)keys;
-    ierr = PetscLogObjectMemory((PetscObject) m, n*sizeof(PetscInt));CHKERRQ(ierr);
-    m->kallocated = PETSC_TRUE;
+    m->discontig->keys = (PetscInt *)keys;
+    ierr = PetscLogObjectMemory((PetscObject)m,n*sizeof(PetscInt));CHKERRQ(ierr);
+    m->discontig->alloced = PETSC_TRUE;
     break;
   case PETSC_USE_POINTER:
-    m->keys = (PetscInt *)keys;
-    m->kallocated = PETSC_FALSE;
+    m->discontig->keys = (PetscInt *)keys;
+    m->discontig->alloced = PETSC_FALSE;
     break;
   default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"PetscCopyMode %D invalid",(PetscInt)mode);
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscCopyMode");
     break;
   }
-  m->nblade = n;
-  m->valid = KEY_VALID;
+  m->nKeysLocal = n;
+  ierr = MPIU_Allreduce(&m->nKeysLocal,&(m->nKeysGlobal),1,MPIU_INT,MPI_SUM,comm);CHKERRQ(ierr);
+  m->kstorage = IM_DISCONTIG;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscMappingSetIndices(PetscMapping m, PetscInt n, const PetscInt dof[], PetscInt ni, const PetscInt indices[], PetscCopyMode mode)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
-  if (n < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"length %D < 0",n);
-  PetscValidIntPointer(dof,3);
-  PetscValidIntPointer(indices,5);
-  switch(mode) {
-  case PETSC_COPY_VALUES:
-    if (m->iallocated) {
-      ierr = PetscFree(m->cidx);CHKERRQ(ierr);
-      ierr = PetscFree(m->dof);CHKERRQ(ierr);
-    }
-    ierr = PetscMalloc2(n, &(m->dof), ni, &(m->cidx));CHKERRQ(ierr);
-    ierr = PetscArraycpy(m->dof, dof, n);CHKERRQ(ierr);
-    ierr = PetscArraycpy(m->cidx, indices, ni);CHKERRQ(ierr);
-    ierr = PetscLogObjectMemory((PetscObject) m, (n+ni)*sizeof(PetscInt));CHKERRQ(ierr);
-    m->iallocated = PETSC_TRUE;
-    break;
-  case PETSC_OWN_POINTER:
-    if (m->iallocated) {
-      ierr = PetscFree(m->cidx);CHKERRQ(ierr);
-      ierr = PetscFree(m->dof);CHKERRQ(ierr);
-    }
-    m->cidx = (PetscInt *)indices;
-    m->dof = (PetscInt *)dof;
-    ierr = PetscLogObjectMemory((PetscObject) m, (n+ni)*sizeof(PetscInt));CHKERRQ(ierr);
-    m->iallocated = PETSC_TRUE;
-    break;
-  case PETSC_USE_POINTER:
-    m->cidx = (PetscInt *)indices;
-    m->dof = (PetscInt *)dof;
-    m->iallocated = PETSC_FALSE;
-    break;
-  default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"PetscCopyMode %D invalid",(PetscInt)mode);
-    break;
-  }
-  m->nblade = n;
-  m->nidx   = ni;
-  m->valid  = INDICES_VALID;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscMappingSetMaps(PetscMapping m, PetscInt n, const PetscMapping maps[], PetscCopyMode mode)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
-  if (n < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of maps %D < 0",n);
-  PetscValidPointer(maps,3);
-  PetscValidHeaderSpecific(*maps,PETSC_MAPPING_CLASSID,3);
-  switch(mode) {
-  case PETSC_COPY_VALUES:
-    if (m->mallocated) {ierr = PetscFree(m->maps);CHKERRQ(ierr);}
-    ierr = PetscMalloc1(n, &(m->maps));CHKERRQ(ierr);
-    ierr = PetscArraycpy(m->maps, maps, n);CHKERRQ(ierr);
-    ierr = PetscLogObjectMemory((PetscObject) m, n*sizeof(PetscMapping));CHKERRQ(ierr);
-    m->mallocated = PETSC_TRUE;
-    break;
-  case PETSC_OWN_POINTER:
-    if (m->mallocated) {ierr = PetscFree(m->maps);CHKERRQ(ierr);}
-    m->maps = (PetscMapping *)maps;
-    ierr = PetscLogObjectMemory((PetscObject) m, n*sizeof(PetscMapping));CHKERRQ(ierr);
-    m->mallocated = PETSC_TRUE;
-    break;
-  case PETSC_USE_POINTER:
-    m->maps = (PetscMapping *)maps;
-    m->mallocated = PETSC_FALSE;
-    break;
-  default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"PetscCopyMode %D invalid",(PetscInt)mode);
-    break;
-  }
-  m->nblade = n;
-  m->valid = MAPS_VALID;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscMappingValidate(PetscMapping m)
-{
-  PetscInt       i, nblade, offset = 0;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
-  nblade = m->nblade;
-  switch(m->valid) {
-  case ALL_VALID:
-    PetscFunctionReturn(0);
-    break;
-  case KEY_VALID:
-    PetscFunctionReturn(0);
-    break;
-  case NONE_VALID:
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscMapping leaf map not set up");CHKERRQ(ierr);
-    break;
-  case MAPS_VALID:
-  {
-    PetscInt nidx = 0;
- // maps are more up to date, assume entire recursive structure is ok too
-// so we read the level 1 keys from every local map and populate keys and dof
-    if (m->iallocated) {
-      ierr = PetscFree(m->cidx);CHKERRQ(ierr);
-      ierr = PetscFree(m->dof);CHKERRQ(ierr);
-    }
-    for (i = 0; i < nblade; ++i) {nidx += m->maps[i]->nblade;}
-    ierr = PetscMalloc2(nidx, &(m->cidx), nblade, &(m->dof));CHKERRQ(ierr);
-    for (i = 0; i < nblade; ++i) {
-      ierr = PetscArraycpy(m->cidx+offset, m->maps[i]->keys, m->maps[i]->nblade);CHKERRQ(ierr);
-      m->dof[i] = m->maps[i]->nblade;
-      offset += m->maps[i]->nblade;
-    }
-    m->nidx = nidx;
-    break;
-  }
-  case INDICES_VALID:
-  {
-    // cidx is more up to date, clear entire recursive map structure
-    // repopulate from cidx and dof
-    MPI_Comm     comm;
-    PetscMapping *newm;
-    PetscInt     offset = 0;
-
-    ierr = PetscObjectGetComm((PetscObject) m, &comm);CHKERRQ(ierr);
-    ierr = PetscMalloc1(nblade, &newm);CHKERRQ(ierr);
- // For now clear the recursive map structure, TODO handle remapping maybe?
-    for (i = 0; i < nblade; ++i) {
-      ierr = PetscMappingDestroy(&(m->maps[i]));CHKERRQ(ierr);
-      ierr = PetscMappingCreate(comm, &newm[i]);CHKERRQ(ierr);
-      ierr = PetscMappingSetKeys(newm[i], m->dof[i], &(m->cidx[offset]), PETSC_COPY_VALUES);CHKERRQ(ierr);
-      offset += m->dof[i];
-    }
-    ierr = PetscMappingSetMaps(m, nblade, newm, PETSC_OWN_POINTER);CHKERRQ(ierr);
-    break;
-  }
-  default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid PetscMappingState %D",(PetscInt)m->valid);
-    break;
-  }
-  m->valid = ALL_VALID;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscMappingGetSize(PetscMapping m, PetscInt *nidx, PetscInt *nblade)
+PetscErrorCode PetscMappingGetKeysDiscontiguous(PetscMapping m, const PetscInt *keys[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
-  if (nidx) {
-    PetscValidIntPointer(nidx,2);
-    *nidx = m->nidx;
+  PetscValidIntPointer(keys,2);
+  if (PetscDefined(USE_DEBUG)) {
+    if (m->kstorage == IM_CONTIG) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping is of type contiguous");
+    if (m->kstorage == IM_INVALID) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping has no valid keys");
   }
-  if (nblade) {
-    PetscValidIntPointer(nblade,3);
-    *nblade = m->nblade;
+  *keys = m->discontig->keys;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscMappingRestoreKeysDiscontiguous(PetscMapping m, const PetscInt *keys[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,PETSC_MAPPING_CLASSID,1);
+  PetscValidIntPointer(keys,2);
+  if (PetscDefined(USE_DEBUG)) {
+    if (m->kstorage == IM_CONTIG) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping is of type contiguous");
+    if (*keys != m->discontig->keys) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from PetscMappingGetKeysDiscontiguous()");
   }
   PetscFunctionReturn(0);
 }
-*/
