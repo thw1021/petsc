@@ -1,17 +1,17 @@
-#include <petsc/private/mappingimpl.h>
+#include <petsc/private/imimpl.h>
 
-PetscBool PetscMappingRegisterAllCalled = PETSC_FALSE;
+PetscBool IMRegisterAllCalled = PETSC_FALSE;
 
-PETSC_EXTERN PetscErrorCode PetscMappingCreate_Trivial(PetscMapping);
+PETSC_EXTERN PetscErrorCode IMCreate_Trivial(IM);
 
-PetscErrorCode PetscMappingRegisterAll(void)
+PetscErrorCode IMRegisterAll(void)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscMappingRegisterAllCalled) PetscFunctionReturn(0);
-  PetscMappingRegisterAllCalled = PETSC_TRUE;
+  if (IMRegisterAllCalled) PetscFunctionReturn(0);
+  IMRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscMappingRegister(PETSCMAPPINGTRIVIAL, PetscMappingCreate_Trivial);CHKERRQ(ierr);
+  ierr = IMRegister(IMTRIVIAL, IMCreate_Trivial);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

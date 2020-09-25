@@ -1,24 +1,24 @@
-#include <petsc/private/mappingtrivialimpl.h>
+#include <petsc/private/imtrivialimpl.h>
 
-PetscErrorCode PetscMappingCreate_Trivial(PetscMapping m)
+PetscErrorCode IMCreate_Trivial(IM m)
 {
-  PetscMapping_Trivial *pmt;
-  PetscErrorCode       ierr;
+  IM_Trivial     *pmt;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = PetscNewLog(m, &pmt);CHKERRQ(ierr);
   m->data = (void *)pmt;
-  m->ops->destroy = PetscMappingDestroy_Trivial;
+  m->ops->destroy = IMDestroy_Trivial;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscMappingDestroy_Trivial(PetscMapping m)
+PetscErrorCode IMDestroy_Trivial(IM *m)
 {
-  PetscMapping_Trivial *pmt = (PetscMapping_Trivial *)m->data;
+  IM_Trivial *pmt = (IM_Trivial *)(*m)->data;
   PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   ierr = PetscFree(pmt->idx);CHKERRQ(ierr);
-  ierr = PetscFree(m->data);CHKERRQ(ierr);
+  ierr = PetscFree((*m)->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
