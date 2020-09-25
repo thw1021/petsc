@@ -73,6 +73,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
         indices[aj[B->i[i] + j]] = 1;
       }
     }
+
     /* form array of columns we need */
     ierr = PetscMalloc1(ec+1,&garray);CHKERRQ(ierr);
     ec   = 0;
