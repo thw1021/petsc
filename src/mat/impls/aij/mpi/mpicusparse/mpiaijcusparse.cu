@@ -456,7 +456,7 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       ierr = PetscCalloc1(A->cmap->N+1,&aij->colmap);CHKERRQ(ierr);
       aij->colmap[A->cmap->N] = -9;
       ierr = PetscLogObjectMemory((PetscObject)A,(A->cmap->N+1)*sizeof(PetscInt));CHKERRQ(ierr);
-      for (i=0; i<aij->B->cmap->n; i++) aij->colmap[aij->garray[i]] = i+1;
+      for (err=0; err<aij->B->cmap->n; err++) aij->colmap[aij->garray[err]] = err+1; /* avoid unused var with an 'i' */
       if(aij->colmap[A->cmap->N] != -9) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"aij->colmap[A->cmap->N] != -9");
 #endif
       // allocate B copy data
