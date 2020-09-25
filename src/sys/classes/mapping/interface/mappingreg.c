@@ -1,50 +1,50 @@
-#include <petsc/private/mappingimpl.h>
+#include <petsc/private/imimpl.h>
 
-PetscClassId      PETSC_MAPPING_CLASSID;
-PetscFunctionList PetscMappingList = NULL;
-static PetscBool  PetscMappingPackageInitialized = PETSC_FALSE;
+PetscClassId      IM_CLASSID;
+PetscFunctionList IMList = NULL;
+static PetscBool  IMPackageInitialized = PETSC_FALSE;
 
-PetscErrorCode PetscMappingFinalizePackage(void)
+PetscErrorCode IMFinalizePackage(void)
 {
   PetscFunctionBegin;
-  PetscMappingPackageInitialized = PETSC_FALSE;
+  IMPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscMappingInitializePackage(void)
+PetscErrorCode IMInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscMappingPackageInitialized) PetscFunctionReturn(0);
-  PetscMappingPackageInitialized = PETSC_TRUE;
-  ierr = PetscClassIdRegister("Mapping",&PETSC_MAPPING_CLASSID);CHKERRQ(ierr);
+  if (IMPackageInitialized) PetscFunctionReturn(0);
+  IMPackageInitialized = PETSC_TRUE;
+  ierr = PetscClassIdRegister("IM",&IM_CLASSID);CHKERRQ(ierr);
   {
     PetscClassId classids[1];
 
-    classids[0] = PETSC_MAPPING_CLASSID;
-    ierr = PetscInfoProcessClass("mapping", 1, classids);CHKERRQ(ierr);
+    classids[0] = IM_CLASSID;
+    ierr = PetscInfoProcessClass("IM", 1, classids);CHKERRQ(ierr);
   }
   ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
   if (opt) {
     PetscBool pkg;
 
-    ierr = PetscStrInList("mapping",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(PETSC_MAPPING_CLASSID);CHKERRQ(ierr);}
+    ierr = PetscStrInList("im",logList,',',&pkg);CHKERRQ(ierr);
+    if (pkg) {ierr = PetscLogEventExcludeClass(IM_CLASSID);CHKERRQ(ierr);}
   }
-  ierr = PetscMappingRegisterAll();CHKERRQ(ierr);
-  ierr = PetscRegisterFinalize(PetscMappingFinalizePackage);CHKERRQ(ierr);
+  ierr = IMRegisterAll();CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(IMFinalizePackage);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscMappingRegister(const char tname[], PetscErrorCode (*create)(PetscMapping))
+PetscErrorCode IMRegister(const char tname[], PetscErrorCode (*create)(IM))
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMappingInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&PetscMappingList, tname, create);CHKERRQ(ierr);
+  ierr = IMInitializePackage();CHKERRQ(ierr);
+  ierr = PetscFunctionListAdd(&IMList, tname, create);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
