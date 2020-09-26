@@ -209,14 +209,12 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
     nnz = jaca->i[n];
     if (jaca->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jaca->nz != nnz %d %d\n", jaca->nz, nnz);
     ierr = PetscInfo2(A,"copy GPU data to host. n=%D nnz=%D\n",n, nnz);CHKERRQ(ierr);
-    err = cudaMemcpy( jaca->ilen, h_mat.diag.ilen, (n)*sizeof(PetscInt),     cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     err = cudaMemcpy( jaca->j,    h_mat.diag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     err = cudaMemcpy( jaca->a,    h_mat.diag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     // B
     err = cudaMemcpy( jacb->i,    h_mat.offdiag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     nnz = jacb->i[n];
     if (jacb->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jacb->nz != nnz %d %d\n", jacb->nz, nnz);
-    err = cudaMemcpy( jacb->ilen, h_mat.offdiag.ilen, (n)*sizeof(PetscInt),     cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     err = cudaMemcpy( jacb->j,    h_mat.offdiag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     err = cudaMemcpy( jacb->a,    h_mat.offdiag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
   }
@@ -243,11 +241,9 @@ PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
     ierr = PetscInfo(A,"Have device matrix\n");CHKERRQ(ierr);
     err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     if (h_mat.diag.i)    {err = cudaFree(h_mat.diag.i);CHKERRCUDA(err);}
-    if (h_mat.diag.ilen) {err = cudaFree(h_mat.diag.ilen);CHKERRCUDA(err);}
     if (h_mat.diag.j)    {err = cudaFree(h_mat.diag.j);CHKERRCUDA(err);}
     if (h_mat.diag.a)    {err = cudaFree(h_mat.diag.a);CHKERRCUDA(err);}
     if (h_mat.offdiag.i)    {err = cudaFree(h_mat.offdiag.i);CHKERRCUDA(err);}
-    if (h_mat.offdiag.ilen) {err = cudaFree(h_mat.offdiag.ilen);CHKERRCUDA(err);}
     if (h_mat.offdiag.j)    {err = cudaFree(h_mat.offdiag.j);CHKERRCUDA(err);}
     if (h_mat.offdiag.a)    {err = cudaFree(h_mat.offdiag.a);CHKERRCUDA(err);}
     if (h_mat.colmap)       {err = cudaFree(h_mat.colmap);CHKERRCUDA(err);}
@@ -463,7 +459,7 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       jaca = (Mat_SeqAIJ*)A->data;
       h_mat.rstart = 0; h_mat.rend = A->rmap->n;
       h_mat.cstart = 0; h_mat.cend = A->cmap->n;
-      h_mat.offdiag.i = h_mat.offdiag.ilen = h_mat.offdiag.j = NULL;
+      h_mat.offdiag.i = h_mat.offdiag.j = NULL;
       h_mat.offdiag.a = NULL;
       h_mat.seq = PETSC_TRUE;
     } else {
@@ -498,8 +494,6 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       nnz = jacb->i[n];
       err = cudaMalloc((void **)&h_mat.offdiag.i,               (n+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
       err = cudaMemcpy(          h_mat.offdiag.i,    jacb->i,   (n+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-      err = cudaMalloc((void **)&h_mat.offdiag.ilen,            (n)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-      err = cudaMemcpy(          h_mat.offdiag.ilen, jacb->ilen,(n)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
       err = cudaMalloc((void **)&h_mat.offdiag.j,               (nnz)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
       err = cudaMemcpy(          h_mat.offdiag.j,    jacb->j,   (nnz)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
       err = cudaMalloc((void **)&h_mat.offdiag.a,               (nnz)*sizeof(PetscScalar));CHKERRCUDA(err); // kernel output
@@ -516,8 +510,6 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     ierr = MPI_Comm_rank(comm,&h_mat.rank);CHKERRQ(ierr);
     err = cudaMalloc((void **)&h_mat.diag.i,               (n+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
     err = cudaMemcpy(          h_mat.diag.i,    jaca->i,   (n+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-    err = cudaMalloc((void **)&h_mat.diag.ilen,            (n)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-    err = cudaMemcpy(          h_mat.diag.ilen, jaca->ilen,(n)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
     err = cudaMalloc((void **)&h_mat.diag.j,               (nnz)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
     err = cudaMemcpy(          h_mat.diag.j,    jaca->j,   (nnz)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
     err = cudaMalloc((void **)&h_mat.diag.a,               (nnz)*sizeof(PetscScalar));CHKERRCUDA(err); // kernel output

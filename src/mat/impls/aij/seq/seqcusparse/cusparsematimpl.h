@@ -151,23 +151,6 @@ struct Mat_SeqAIJCUSPARSETriFactorStruct {
  #endif
 };
 
-/* This is a struct holding Mat metadata for, eg, matsetvalues */
-struct Mat_SeqAIJCUDA_GPUData {
-  PetscInt    *i;
-  PetscInt    *ilen;
-  PetscInt    *j;
-  PetscInt    *imax;
-  PetscScalar *a;
-  PetscInt    n;
-  PetscInt    nz;
-  PetscInt    ignorezeroentries;
-  PetscInt    nonew;
-  PetscInt    nonzerostate;
-  PetscInt    nonzerorowcnt;
-  PetscInt    rmax;
-  //void        (*setvalues)(Mat_SeqAIJCUDA_GPUData*, PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
-};
-
 /* This is a larger struct holding all the triangular factors for a solve, transpose solve, and any indices used in a reordering */
 struct Mat_SeqAIJCUSPARSETriFactors {
   Mat_SeqAIJCUSPARSETriFactorStruct *loTriFactorPtr; /* pointer for lower triangular (factored matrix) on GPU */

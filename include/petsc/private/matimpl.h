@@ -418,7 +418,6 @@ typedef struct { /* used by MatProduct() */
 
 #define CSRDataStructure(datatype)  \
   PetscInt    *i; \
-  PetscInt    *ilen;\
   PetscInt    *j;\
   datatype    *a;\
   PetscInt    n;\

@@ -56,10 +56,10 @@
 void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
 {
   MatScalar value=0.0;
-  PetscInt  *ai = d_mat->diag.i,*ailen = d_mat->diag.ilen;
+  PetscInt  *ai = d_mat->diag.i;
   PetscInt  *aj = d_mat->diag.j;
   PetscBool ignorezeroentries = (d_mat->diag.ignorezeroentries==0) ? PETSC_FALSE : PETSC_TRUE;
-  PetscInt  *bi = d_mat->offdiag.i, *bilen = d_mat->offdiag.ilen, *bj = d_mat->offdiag.j;
+  PetscInt  *bi = d_mat->offdiag.i, *bj = d_mat->offdiag.j;
   MatScalar *ba = d_mat->offdiag.a, *aa = d_mat->diag.a;
   PetscInt  *rp1,*rp2=NULL,nrow1,nrow2,_i,low1,high1,low2,high2,t,lastcol1,lastcol2;
   MatScalar *ap1,*ap2=NULL;
@@ -74,14 +74,14 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
       lastcol1 = -1;
       rp1      = aj + ai[row];
       ap1      = aa + ai[row];
-      nrow1    = ailen[row];
+      nrow1    = ai[row+1] - ai[row];
       low1     = 0;
       high1    = nrow1;
       if (bj) {
         lastcol2 = -1;
         rp2      = bj + bi[row];
         ap2      = ba + bi[row];
-        nrow2    = bilen[row];
+        nrow2    = bi[row+1] - bi[row];
         low2     = 0;
         high2    = nrow2;
       }
