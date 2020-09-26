@@ -118,8 +118,24 @@ checksource:
     - make checkbadSource SHELL=bash
     - make -f gmakefile check_output SHELL=bash
 
-pause-for-approval:
+# exit on merge request pipelines because Barry hates them
+kill-merge-request:
   extends: .test
+  stage: .pre
+  tags:
+    - stage1
+  only:
+    refs:
+      - merge_requests
+    variables:
+      - $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
+      - $CI_MERGE_REQUEST_EVENT_TYPE == "detached"
+      - $GITLAB_USER_NAME == "Barry Smith"
+  script:
+    - curl --request "DELETE" --header "PRIVATE-TOKEN:$CI_JOB_TOKEN" "https://gitlab.com/api/v4/projects/13882401/pipelines/$CI_PIPELINE_ID"
+
+pause-for-approval:
+  extends: kill-merge-request
   stage: .pre
   tags:
     - stage1
