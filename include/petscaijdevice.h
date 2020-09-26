@@ -18,7 +18,7 @@
     if (rp1[_i] > col) break;                                           \
     if (rp1[_i] == col) {                                               \
       if (addv == ADD_VALUES) {                                         \
-        MatScalar old = atomicAdd(&ap1[_i],value); printf("old=%g\n",old); \
+        atomicAdd(&ap1[_i],value); \
       }                                                                \
       else ap1[_i] = value;                                            \
       inserted = PETSC_TRUE;                                           \
@@ -41,7 +41,7 @@
     if (rp2[_i] > col) break;                                          \
     if (rp2[_i] == col) {                                              \
       if (addv == ADD_VALUES) {                                        \
-        MatScalar old = atomicAdd(&ap2[_i],value); printf("old=%g\n",old); \
+        atomicAdd(&ap2[_i],value);                                     \
       }                                                                \
       else ap2[_i] = value;                                            \
       inserted = PETSC_TRUE;                                           \
@@ -110,8 +110,6 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
           printf("Can not use PETSC_USE_CTABLE with device assembly. configure with --with-ctable=0\n");
           *ierr = 1;
           return;
-          //PetscTableFind(aij->colmap,in[j]+1,&col); // todo
-          //col--;
 #else
           col = d_mat->colmap[in[j]] - 1;
 #endif
@@ -134,7 +132,7 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
         }
       }
     } else {
-      printf("ERROR, off processor rows not supported. No stash. row %d\n",(int)im[i]);
+      printf("[%d] Warning, off processor rows not supported. No stash. row %d\n",d_mat->rank,(int)im[i]);
     }
   }
   //if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) A->offloadmask = PETSC_OFFLOAD_CPU;
