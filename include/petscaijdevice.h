@@ -35,7 +35,7 @@
   while (high2-low2 > 5) {                                             \
     t = (low2+high2)/2;                                                \
     if (rp2[t] > col) high2 = t;                                       \
-    else             low2  = t;                                        \
+    else              low2  = t;                                       \
   }                                                                    \
   for (_i=low2; _i<high2; _i++) {                                      \
     if (rp2[_i] > col) break;                                          \
@@ -69,9 +69,7 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
 
   *ierr = 0;
   for (i=0; i<m; i++) {
-    if (im[i] < 0) continue;
-    //if (PetscUnlikelyDebug(im[i] >= mat->rmap->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %d max %d",im[i],mat->rmap->N-1);
-    if (im[i] >= rstart && im[i] < rend) {
+    if (im[i] >= rstart && im[i] < rend) { // ignore off processor rows
       row      = im[i] - rstart;
       lastcol1 = -1;
       rp1      = aj + ai[row];
@@ -94,16 +92,16 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
           col   = in[j] - cstart;
           inserted = PETSC_FALSE;
           MatSetValues_SeqAIJ_A_Private(row,col,value,is,im[i],in[j]);
-          if (*ierr) return;
-          if (!inserted) printf("ERROR, MatSetValuesDevice A: %d,%d not found\n",(int)row,(int)col);
-          //if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) A->offloadmask = PETSC_OFFLOAD_CPU;
+          if (!inserted) {
+            printf("ERROR, MatSetValuesDevice A: %d,%d not found\n",(int)row,(int)col);
+            *ierr = 1;
+          }
         } else if (in[j] < 0) {
-          continue;
-          // else if (PetscUnlikelyDebug(in[j] >= mat->cmap->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column too large: col %D max %D",in[j],mat->cmap->N-1);
+          continue; // need to checm for > N also
         } else {
-          // if (mat->was_assembled)
           if (!d_mat->colmap) {
             printf("ERROR, !d_mat->colmap\n");
+            *ierr = 1;
             return;
           }
 #if defined(PETSC_USE_CTABLE)
@@ -127,15 +125,11 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
             printf("ERROR, MatSetValuesDevice B: row %d, loc col %d, global col %d not found\n",(int)row,(int)col,(int)in[j]);
             *ierr = 1;
           }
-          if (*ierr) return;
-          //if (B->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) B->offloadmask = PETSC_OFFLOAD_CPU;
         }
+        if (*ierr) return;
       }
-    } else {
-      printf("[%d] Warning, off processor rows not supported. No stash. row %d\n",d_mat->rank,(int)im[i]);
     }
   }
-  //if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) A->offloadmask = PETSC_OFFLOAD_CPU;
 }
 
 #endif // __PETSCAIJDEVICE_H

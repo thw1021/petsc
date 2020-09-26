@@ -26,8 +26,6 @@ Process [1]
 0.
 0.
 0.
-[0] Warning, off processor rows not supported. No stash. row 6
-[1] Warning, off processor rows not supported. No stash. row 5
 Mat Object: 2 MPI processes
   type: mpiaijcusparse
 row 0: (0, 2.)  (1, -1.) 
