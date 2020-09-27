@@ -212,7 +212,7 @@ PetscErrorCode  PetscPopErrorHandler(void)
    the calling sequence
 $     SETERRQ(comm,number,mess)
 
-   PetscIgnoreErrorHandler() does the same thing as this function, but is depreciated, you should use this function.
+   PetscIgnoreErrorHandler() does the same thing as this function, but is deprecated, you should use this function.
 
    Use PetscPushErrorHandler() to set the desired error handler.
 
