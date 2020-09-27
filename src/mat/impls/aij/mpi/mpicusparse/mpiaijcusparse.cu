@@ -9,8 +9,8 @@
 
 PetscErrorCode  MatMPIAIJSetPreallocation_MPIAIJCUSPARSE(Mat B,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[])
 {
-  Mat_MPIAIJ         *b              = (Mat_MPIAIJ*)B->data;
-  Mat_MPIAIJCUSPARSE *cusparseStruct = (Mat_MPIAIJCUSPARSE*)b->spptr;
+  Mat_MPIAIJ         *b               = (Mat_MPIAIJ*)B->data;
+  Mat_MPIAIJCUSPARSE * cusparseStruct = (Mat_MPIAIJCUSPARSE*)b->spptr;
   PetscErrorCode     ierr;
   PetscInt           i;
 
@@ -197,27 +197,8 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   PetscInt                    nnz_state = A->nonzerostate;
   PetscFunctionBegin;
   if (d_mat) {
-    //Mat_SeqAIJ                 *jaca = (Mat_SeqAIJ*)mpiaij->A->data;
-    //Mat_SeqAIJ                 *jacb = (Mat_SeqAIJ*)mpiaij->B->data;
-    // PetscSplitCSRDataStructure h_mat;
     cudaError_t                err;
     err = cudaMemcpy( &nnz_state, &d_mat->nonzerostate, sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    //PetscInt                   n = A->rmap->n, nnz;
-    ierr = PetscInfo(A,"Have device matrix\n");CHKERRQ(ierr);
-    // err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    // // A
-    // err = cudaMemcpy( jaca->i,    h_mat.diag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    // nnz = jaca->i[n];
-    // if (jaca->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jaca->nz != nnz %d %d\n", jaca->nz, nnz);
-    // ierr = PetscInfo2(A,"copy GPU data to host. n=%D nnz=%D\n",n, nnz);CHKERRQ(ierr);
-    // err = cudaMemcpy( jaca->j,    h_mat.diag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    // err = cudaMemcpy( jaca->a,    h_mat.diag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    // // B
-    // err = cudaMemcpy( jacb->i,    h_mat.offdiag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    // nnz = jacb->i[n];
-    // if (jacb->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jacb->nz != nnz %d %d\n", jacb->nz, nnz);
-    // err = cudaMemcpy( jacb->j,    h_mat.offdiag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    // err = cudaMemcpy( jacb->a,    h_mat.offdiag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
   }
   ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
   if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) {
@@ -225,7 +206,7 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
     ierr = PetscInfo1(A,"Set CUDA vec type (once) deviceMat=%p\n",d_mat);CHKERRQ(ierr);
   }
   if (nnz_state > A->nonzerostate) {
-    A->offloadmask = PETSC_OFFLOAD_GPU;
+    A->offloadmask = PETSC_OFFLOAD_GPU; // if we assembled on the device
   }
 
   PetscFunctionReturn(0);
