@@ -2291,7 +2291,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A,MatAssemblyType mode)
   } else if (nnz_state > A->nonzerostate) {
     A->offloadmask = PETSC_OFFLOAD_GPU;
   }
-  
+
   PetscFunctionReturn(0);
 }
 
