@@ -7,16 +7,15 @@ static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n
 
 
 __global__
-void assemble_device(PetscSplitCSRDataStructure *d_mat, PetscInt start, PetscInt end, PetscInt Ne, PetscMPIInt rank)
+void assemble_device(PetscSplitCSRDataStructure *d_mat, PetscInt start, PetscInt end, PetscInt Ne, PetscMPIInt rank, PetscErrorCode *ierr)
 {
   const PetscInt  inc = blockDim.x, my0 = threadIdx.x;
   PetscInt        i;
   PetscScalar     values[] = {1,-1,-1,1.1};
-  PetscErrorCode  ierr;
   for (i=start+my0; i<end; i+=inc) {
     PetscInt js[] = {i-1, i};
-    MatSetValuesDevice(d_mat,2,js,2,js,values,ADD_VALUES,&ierr);
-    if (ierr) return;
+    MatSetValuesDevice(d_mat,2,js,2,js,values,ADD_VALUES,ierr);
+    if (*ierr) return;
   }
 }
 
@@ -60,7 +59,7 @@ int main(int argc,char **args)
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
 
   // assemble end on CPU. We are not doing it redudent here, and ignoring off proc entries, but we could
-  assemble_mat(A, Istart, Iend, N, rank);
+  assemble_mat(A, Istart, Iend, N, rank);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
@@ -74,7 +73,7 @@ int main(int argc,char **args)
   ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
   ierr = MatCUSPARSEGetDeviceMatWrite(A,&d_mat);CHKERRQ(ierr);
   ierr = MatZeroEntries(A);CHKERRQ(ierr); // needed?
-  assemble_device<<<1,num_threads>>>(d_mat, Istart, Iend, N, rank);
+  assemble_device<<<1,num_threads>>>(d_mat, Istart, Iend, N, rank, &ierr);
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   fflush(stdout);
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
