@@ -1,5 +1,5 @@
 #include "petsc/private/petscimpl.h"
-#include "petscsystypes.h"
+#include <petscsystypes.h>
 #include <petscerror.h>
 #include <petscvec.hpp>
 
