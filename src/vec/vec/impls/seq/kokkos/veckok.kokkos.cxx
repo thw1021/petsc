@@ -168,7 +168,7 @@ PetscErrorCode VecSetRandom_SeqKokkos(Vec xin,PetscRandom r)
   PetscFunctionBegin;
   ierr = VecGetArray(xin,&xx);CHKERRQ(ierr); /* TODO: generate randoms directly on device */
   for (i=0; i<n; i++) { ierr = PetscRandomGetValue(r,&xx[i]);CHKERRQ(ierr); }
-  ierr = VecRestoreArray(xin,&xx);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(xin,&xx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
