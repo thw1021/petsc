@@ -4,30 +4,30 @@
 #include <petscmat.h>
 #include <petsc/private/matimpl.h>
 
-#define MatSetValues_SeqAIJ_A_Private(row,col,value,addv,orow,ocol)     \
-  {                                                                     \
-  if (col <= lastcol1)  low1 = 0;                                       \
-  else                 high1 = nrow1;                                   \
-  lastcol1 = col;                                                       \
-  while (high1-low1 > 5) {                                              \
-    t = (low1+high1)/2;                                                 \
-    if (rp1[t] > col) high1 = t;                                        \
-    else              low1  = t;                                        \
-  }                                                                     \
-  for (_i=low1; _i<high1; _i++) {                                       \
-    if (rp1[_i] > col) break;                                           \
-    if (rp1[_i] == col) {                                               \
-      if (addv == ADD_VALUES) {                                         \
-        atomicAdd(&ap1[_i],value); \
+#define MatSetValues_SeqAIJ_A_Private(row,col,value,addv)    \
+  {                                                                    \
+  if (col <= lastcol1)  low1 = 0;                                      \
+  else                 high1 = nrow1;                                  \
+  lastcol1 = col;                                                      \
+  while (high1-low1 > 5) {                                             \
+    t = (low1+high1)/2;                                                \
+    if (rp1[t] > col) high1 = t;                                       \
+    else              low1  = t;                                       \
+  }                                                                    \
+  for (_i=low1; _i<high1; _i++) {                                      \
+    if (rp1[_i] > col) break;                                          \
+    if (rp1[_i] == col) {                                              \
+      if (addv == ADD_VALUES) {                                        \
+        atomicAdd(&ap1[_i],value);                                     \
       }                                                                \
       else ap1[_i] = value;                                            \
-      inserted = PETSC_TRUE;                                           \
+      inserted = 1; atomicAdd(&d_mat->nonzerostate,1);  \
       break;                                                           \
     }                                                                  \
   }                                                                    \
 }
 
-#define MatSetValues_SeqAIJ_B_Private(row,col,value,addv,orow,ocol)    \
+#define MatSetValues_SeqAIJ_B_Private(row,col,value,addv)    \
   {                                                                    \
   if (col <= lastcol2) low2 = 0;                                       \
   else high2 = nrow2;                                                  \
@@ -44,15 +44,15 @@
         atomicAdd(&ap2[_i],value);                                     \
       }                                                                \
       else ap2[_i] = value;                                            \
-      inserted = PETSC_TRUE;                                           \
+      inserted = 1; atomicAdd(&d_mat->nonzerostate,1);  \
       break;                                                           \
     }                                                                  \
   }                                                                    \
 }
 
 #if defined(PETSC_HAVE_CUDA)
-  static __device__
-#endif // PETSC_HAVE_CUDA
+static __device__
+#endif
 void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
 {
   MatScalar value=0.0;
@@ -61,9 +61,9 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
   PetscBool ignorezeroentries = (d_mat->diag.ignorezeroentries==0) ? PETSC_FALSE : PETSC_TRUE;
   PetscInt  *bi = d_mat->offdiag.i, *bj = d_mat->offdiag.j;
   MatScalar *ba = d_mat->offdiag.a, *aa = d_mat->diag.a;
-  PetscInt  *rp1,*rp2=NULL,nrow1,nrow2,_i,low1,high1,low2,high2,t,lastcol1,lastcol2;
+  PetscInt  *rp1,*rp2=NULL,nrow1,nrow2,_i,low1,high1,low2,high2,t,lastcol1,lastcol2,inserted;
   MatScalar *ap1,*ap2=NULL;
-  PetscBool roworiented = PETSC_TRUE, inserted;
+  PetscBool roworiented = PETSC_TRUE;
   PetscInt  i,j,rstart  = d_mat->rstart,rend = d_mat->rend;
   PetscInt  cstart      = d_mat->rstart,cend = d_mat->rend,row,col;
 
@@ -90,10 +90,10 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
         if (ignorezeroentries && value == 0.0 && (is == ADD_VALUES) && im[i] != in[j]) continue;
         if (in[j] >= cstart && in[j] < cend) {
           col   = in[j] - cstart;
-          inserted = PETSC_FALSE;
-          MatSetValues_SeqAIJ_A_Private(row,col,value,is,im[i],in[j]);
+          inserted = 0;
+          MatSetValues_SeqAIJ_A_Private(row,col,value,is);
           if (!inserted) {
-            printf("ERROR, MatSetValuesDevice A: %d,%d not found\n",(int)row,(int)col);
+            printf("[%d]ERROR, MatSetValuesDevice A: %d,%d not found\n",(int)d_mat->rank, (int)row,(int)col);
             *ierr = 1;
           }
         } else if (in[j] < 0) {
@@ -119,10 +119,13 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
             *ierr = 1;
             return;
           }
-          inserted = PETSC_FALSE;
-          MatSetValues_SeqAIJ_B_Private(row,col,value,is,im[i],in[j]);
+          inserted = 0;
+          MatSetValues_SeqAIJ_B_Private(row,col,value,is);
           if (!inserted) {
-            printf("ERROR, MatSetValuesDevice B: row %d, loc col %d, global col %d not found\n",(int)row,(int)col,(int)in[j]);
+            printf("[%d]ERROR, MatSetValuesDevice B: row %d, loc col %d, global col %d not found. nrow2=%d\n", (int)d_mat->rank, (int)row, (int)col, (int)in[j], nrow2);
+            int ii;
+            for (ii=0;d_mat->colmap[ii]>=0;ii++) printf(" %d ",(int)d_mat->colmap[ii]);
+            printf("\n");
             *ierr = 1;
           }
         }

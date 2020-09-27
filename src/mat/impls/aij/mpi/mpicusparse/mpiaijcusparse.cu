@@ -194,34 +194,38 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   Mat_MPIAIJ                 *mpiaij = (Mat_MPIAIJ*)A->data;
   Mat_MPIAIJCUSPARSE         *cusparseStruct = (Mat_MPIAIJCUSPARSE*)mpiaij->spptr;
   PetscSplitCSRDataStructure *d_mat = cusparseStruct->deviceMat;
-
+  PetscInt                    nnz_state = A->nonzerostate;
   PetscFunctionBegin;
   if (d_mat) {
-    Mat_SeqAIJ                 *jaca = (Mat_SeqAIJ*)mpiaij->A->data;
-    Mat_SeqAIJ                 *jacb = (Mat_SeqAIJ*)mpiaij->B->data;
-    PetscSplitCSRDataStructure h_mat;
+    //Mat_SeqAIJ                 *jaca = (Mat_SeqAIJ*)mpiaij->A->data;
+    //Mat_SeqAIJ                 *jacb = (Mat_SeqAIJ*)mpiaij->B->data;
+    // PetscSplitCSRDataStructure h_mat;
     cudaError_t                err;
-    PetscInt                   n = A->rmap->n, nnz;
+    err = cudaMemcpy( &nnz_state, &d_mat->nonzerostate, sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    //PetscInt                   n = A->rmap->n, nnz;
     ierr = PetscInfo(A,"Have device matrix\n");CHKERRQ(ierr);
-    err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    // A
-    err = cudaMemcpy( jaca->i,    h_mat.diag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    nnz = jaca->i[n];
-    if (jaca->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jaca->nz != nnz %d %d\n", jaca->nz, nnz);
-    ierr = PetscInfo2(A,"copy GPU data to host. n=%D nnz=%D\n",n, nnz);CHKERRQ(ierr);
-    err = cudaMemcpy( jaca->j,    h_mat.diag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    err = cudaMemcpy( jaca->a,    h_mat.diag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    // B
-    err = cudaMemcpy( jacb->i,    h_mat.offdiag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    nnz = jacb->i[n];
-    if (jacb->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jacb->nz != nnz %d %d\n", jacb->nz, nnz);
-    err = cudaMemcpy( jacb->j,    h_mat.offdiag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    err = cudaMemcpy( jacb->a,    h_mat.offdiag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    // err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    // // A
+    // err = cudaMemcpy( jaca->i,    h_mat.diag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    // nnz = jaca->i[n];
+    // if (jaca->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jaca->nz != nnz %d %d\n", jaca->nz, nnz);
+    // ierr = PetscInfo2(A,"copy GPU data to host. n=%D nnz=%D\n",n, nnz);CHKERRQ(ierr);
+    // err = cudaMemcpy( jaca->j,    h_mat.diag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    // err = cudaMemcpy( jaca->a,    h_mat.diag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    // // B
+    // err = cudaMemcpy( jacb->i,    h_mat.offdiag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    // nnz = jacb->i[n];
+    // if (jacb->nz != nnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ERROR, jacb->nz != nnz %d %d\n", jacb->nz, nnz);
+    // err = cudaMemcpy( jacb->j,    h_mat.offdiag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    // err = cudaMemcpy( jacb->a,    h_mat.offdiag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
   }
   ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
   if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) {
     ierr = VecSetType(mpiaij->lvec,VECSEQCUDA);CHKERRQ(ierr);
     ierr = PetscInfo1(A,"Set CUDA vec type (once) deviceMat=%p\n",d_mat);CHKERRQ(ierr);
+  }
+  if (nnz_state > A->nonzerostate) {
+    A->offloadmask = PETSC_OFFLOAD_GPU;
   }
 
   PetscFunctionReturn(0);
@@ -230,28 +234,30 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
 PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
 {
   PetscErrorCode     ierr;
-  Mat_MPIAIJ         *a              = (Mat_MPIAIJ*)A->data;
-  Mat_MPIAIJCUSPARSE *cusparseStruct = (Mat_MPIAIJCUSPARSE*)a->spptr;
+  Mat_MPIAIJ         *aij            = (Mat_MPIAIJ*)A->data;
+  Mat_MPIAIJCUSPARSE *cusparseStruct = (Mat_MPIAIJCUSPARSE*)aij->spptr;
   cudaError_t        err;
   cusparseStatus_t   stat;
 
   PetscFunctionBegin;
   if (cusparseStruct->deviceMat) {
+    Mat_SeqAIJ                 *jaca = (Mat_SeqAIJ*)aij->A->data;
+    Mat_SeqAIJ                 *jacb = (Mat_SeqAIJ*)aij->B->data;
     PetscSplitCSRDataStructure *d_mat = cusparseStruct->deviceMat, h_mat;
     ierr = PetscInfo(A,"Have device matrix\n");CHKERRQ(ierr);
     err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    if (h_mat.diag.i)    {err = cudaFree(h_mat.diag.i);CHKERRCUDA(err);}
-    if (h_mat.diag.j)    {err = cudaFree(h_mat.diag.j);CHKERRCUDA(err);}
-    if (h_mat.diag.a)    {err = cudaFree(h_mat.diag.a);CHKERRCUDA(err);}
-    if (h_mat.offdiag.i)    {err = cudaFree(h_mat.offdiag.i);CHKERRCUDA(err);}
-    if (h_mat.offdiag.j)    {err = cudaFree(h_mat.offdiag.j);CHKERRCUDA(err);}
-    if (h_mat.offdiag.a)    {err = cudaFree(h_mat.offdiag.a);CHKERRCUDA(err);}
-    if (h_mat.colmap)       {err = cudaFree(h_mat.colmap);CHKERRCUDA(err);}
-    err =                    cudaFree(d_mat);CHKERRCUDA(err);
+    if (jaca->compressedrow.use) {
+      err = cudaFree(h_mat.diag.i);CHKERRCUDA(err);
+    }
+    if (jacb->compressedrow.use) {
+      err = cudaFree(h_mat.offdiag.i);CHKERRCUDA(err);
+    }
+    err = cudaFree(h_mat.colmap);CHKERRCUDA(err);
+    err = cudaFree(d_mat);CHKERRCUDA(err);
   }
   try {
-    if (a->A) { ierr = MatCUSPARSEClearHandle(a->A);CHKERRQ(ierr); }
-    if (a->B) { ierr = MatCUSPARSEClearHandle(a->B);CHKERRQ(ierr); }
+    if (aij->A) { ierr = MatCUSPARSEClearHandle(aij->A);CHKERRQ(ierr); }
+    if (aij->B) { ierr = MatCUSPARSEClearHandle(aij->B);CHKERRQ(ierr); }
     stat = cusparseDestroy(cusparseStruct->handle);CHKERRCUSPARSE(stat);
     if (cusparseStruct->stream) {
       err = cudaStreamDestroy(cusparseStruct->stream);CHKERRCUDA(err);
@@ -417,21 +423,58 @@ M*/
 PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
 {
   PetscSplitCSRDataStructure **p_d_mat;
-  PetscMPIInt                size;
+  PetscMPIInt                size,rank;
   MPI_Comm                   comm;
   PetscErrorCode             ierr;
+  int                        *ai,*bi,*aj,*bj;
+  PetscScalar                *aa,*ba;
+
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
   if (A->factortype == MAT_FACTOR_NONE) {
+    CsrMatrix *matrixA,*matrixB=NULL;
     if (size == 1) {
-      Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
-      p_d_mat = &spptr->deviceMat;
+      Mat_SeqAIJCUSPARSE *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
+      p_d_mat = &cusparsestruct->deviceMat;
+      Mat_SeqAIJCUSPARSEMultStruct *matstruct = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestruct->mat;
+      if (cusparsestruct->format==MAT_CUSPARSE_CSR) {
+	matrixA = (CsrMatrix*)matstruct->mat;
+	bi = bj = NULL; ba = NULL;
+      } else {
+	SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Device Mat needs MAT_CUSPARSE_CSR");
+      }
     } else {
       Mat_MPIAIJ         *aij = (Mat_MPIAIJ*)A->data;
       Mat_MPIAIJCUSPARSE *spptr = (Mat_MPIAIJCUSPARSE*)aij->spptr;
       p_d_mat = &spptr->deviceMat;
+      Mat_SeqAIJCUSPARSE *cusparsestructA = (Mat_SeqAIJCUSPARSE*)aij->A->spptr;
+      Mat_SeqAIJCUSPARSE *cusparsestructB = (Mat_SeqAIJCUSPARSE*)aij->B->spptr;
+      Mat_SeqAIJCUSPARSEMultStruct *matstructA = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestructA->mat;
+      Mat_SeqAIJCUSPARSEMultStruct *matstructB = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestructB->mat;
+      if (cusparsestructA->format==MAT_CUSPARSE_CSR) {
+	if (cusparsestructB->format!=MAT_CUSPARSE_CSR) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Device Mat B needs MAT_CUSPARSE_CSR");
+	matrixA = (CsrMatrix*)matstructA->mat;
+	matrixB = (CsrMatrix*)matstructB->mat;
+	bi = thrust::raw_pointer_cast(matrixB->row_offsets->data()); 
+	bj = thrust::raw_pointer_cast(matrixB->column_indices->data()); 
+	ba = thrust::raw_pointer_cast(matrixB->values->data());
+	if (rank==-1) { 
+	  for(unsigned int i = 0; i < matrixB->row_offsets->size(); i++)
+	    std::cout << "\trow_offsets[" << i << "] = " << (*matrixB->row_offsets)[i] << std::endl;
+	  for(unsigned int i = 0; i < matrixB->column_indices->size(); i++)
+	    std::cout << "\tcolumn_indices[" << i << "] = " << (*matrixB->column_indices)[i] << std::endl;
+	  for(unsigned int i = 0; i < matrixB->values->size(); i++)
+	    std::cout << "\tvalues[" << i << "] = " << (*matrixB->values)[i] << std::endl;
+	}
+      } else {
+	SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Device Mat A needs MAT_CUSPARSE_CSR");
+      }
     }
+    ai = thrust::raw_pointer_cast(matrixA->row_offsets->data()); 
+    aj = thrust::raw_pointer_cast(matrixA->column_indices->data()); 
+    aa = thrust::raw_pointer_cast(matrixA->values->data());
   } else {
     *B = NULL;
     PetscFunctionReturn(0);
@@ -457,6 +500,7 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     *B = *p_d_mat = d_mat; // return it, set it in Mat, and set it up
     if (size == 1) {
       jaca = (Mat_SeqAIJ*)A->data;
+      h_mat.nonzerostate = A->nonzerostate;
       h_mat.rstart = 0; h_mat.rend = A->rmap->n;
       h_mat.cstart = 0; h_mat.cend = A->cmap->n;
       h_mat.offdiag.i = h_mat.offdiag.j = NULL;
@@ -468,6 +512,7 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       h_mat.seq = PETSC_FALSE; // for MatAssemblyEnd_SeqAIJCUSPARSE
       jaca = (Mat_SeqAIJ*)aij->A->data;
       jacb = (Mat_SeqAIJ*)aij->B->data;
+      h_mat.nonzerostate = aij->A->nonzerostate; // just keep one nonzero state?
       //((Mat_SeqAIJCUSPARSE*)aij->A->spptr)->deviceMat = d_mat;
       //((Mat_SeqAIJCUSPARSE*)aij->B->spptr)->deviceMat = d_mat;
       if (!aij->garray) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPIAIJ Matrix was assembled but is missing garray");
@@ -492,12 +537,16 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       h_mat.rstart = A->rmap->rstart; h_mat.rend = A->rmap->rend;
       h_mat.cstart = A->cmap->rstart; h_mat.cend = A->cmap->rend;
       nnz = jacb->i[n];
-      err = cudaMalloc((void **)&h_mat.offdiag.i,               (n+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-      err = cudaMemcpy(          h_mat.offdiag.i,    jacb->i,   (n+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-      err = cudaMalloc((void **)&h_mat.offdiag.j,               (nnz)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-      err = cudaMemcpy(          h_mat.offdiag.j,    jacb->j,   (nnz)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-      err = cudaMalloc((void **)&h_mat.offdiag.a,               (nnz)*sizeof(PetscScalar));CHKERRCUDA(err); // kernel output
-      // err = cudaMemcpy(          h_mat.offdiag.a,    jacb->a,   (nnz)*sizeof(PetscScalar), cudaMemcpyHostToDevice);CHKERRCUDA(err);
+
+      if (jacb->compressedrow.use) {
+	err = cudaMalloc((void **)&h_mat.offdiag.i,               (n+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
+	err = cudaMemcpy(          h_mat.offdiag.i,    jacb->i,   (n+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
+      } else {
+	h_mat.offdiag.i = bi;
+      }
+      h_mat.offdiag.j = bj;
+      h_mat.offdiag.a = ba;
+
       err = cudaMalloc((void **)&h_mat.colmap,                  (A->cmap->N+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel output
       err = cudaMemcpy(          h_mat.colmap,    aij->colmap,  (A->cmap->N+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
       h_mat.offdiag.ignorezeroentries = jacb->ignorezeroentries;
@@ -508,12 +557,14 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     h_mat.diag.n = n;
     h_mat.diag.ignorezeroentries = jaca->ignorezeroentries;
     ierr = MPI_Comm_rank(comm,&h_mat.rank);CHKERRQ(ierr);
-    err = cudaMalloc((void **)&h_mat.diag.i,               (n+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-    err = cudaMemcpy(          h_mat.diag.i,    jaca->i,   (n+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-    err = cudaMalloc((void **)&h_mat.diag.j,               (nnz)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-    err = cudaMemcpy(          h_mat.diag.j,    jaca->j,   (nnz)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
-    err = cudaMalloc((void **)&h_mat.diag.a,               (nnz)*sizeof(PetscScalar));CHKERRCUDA(err); // kernel output
-    // err = cudaMemcpy(          h_mat.diag.a,    jaca->a,   (nnz)*sizeof(PetscScalar), cudaMemcpyHostToDevice);CHKERRCUDA(err);
+    if (jaca->compressedrow.use) {
+      err = cudaMalloc((void **)&h_mat.diag.i,               (n+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
+      err = cudaMemcpy(          h_mat.diag.i,    jaca->i,   (n+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
+    } else {
+      h_mat.diag.i = ai;
+    }
+    h_mat.diag.j = aj;
+    h_mat.diag.a = aa;
     // copy pointers and metdata to device
     err = cudaMemcpy(          d_mat, &h_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyHostToDevice);CHKERRCUDA(err);
     ierr = PetscInfo2(A,"Create device Mat n=%D nnz=%D\n",h_mat.diag.n, nnz);CHKERRQ(ierr);

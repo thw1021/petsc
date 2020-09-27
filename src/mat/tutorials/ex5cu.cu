@@ -11,7 +11,7 @@ void assemble_device(PetscSplitCSRDataStructure *d_mat, PetscInt start, PetscInt
 {
   const PetscInt  inc = blockDim.x, my0 = threadIdx.x;
   PetscInt        i;
-  PetscScalar     values[] = {1,-1,-1,1};
+  PetscScalar     values[] = {1,-1,-1,1.1};
   PetscErrorCode  ierr;
   for (i=start+my0; i<end; i+=inc) {
     PetscInt js[] = {i-1, i};
@@ -23,7 +23,7 @@ void assemble_device(PetscSplitCSRDataStructure *d_mat, PetscInt start, PetscInt
 void assemble_mat(Mat A, PetscInt start, PetscInt end, PetscInt Ne, PetscMPIInt rank)
 {
   PetscInt        i;
-  PetscScalar     values[] = {1,-1,-1,1};
+  PetscScalar     values[] = {1,-1,-1,1.1};
   PetscErrorCode  ierr;
   for (i=start; i<end; i++) {
     PetscInt js[] = {i-1, i};
@@ -59,7 +59,7 @@ int main(int argc,char **args)
   ierr = MatCreateVecs(A,&x,&y);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
 
-  // assemble end on CPU
+  // assemble end on CPU. We are not doing it redudent here, and ignoring off proc entries, but we could
   assemble_mat(A, Istart, Iend, N, rank);
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -70,7 +70,7 @@ int main(int argc,char **args)
   ierr = VecViewFromOptions(y,NULL,"-vec_view");CHKERRQ(ierr);
 
   // assemble on GPU
-  if (Iend<N) Iend++; // elements
+  if (Iend<N) Iend++; // elements, ignore off processor entries so do redundent
   ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
   ierr = MatCUSPARSEGetDeviceMatWrite(A,&d_mat);CHKERRQ(ierr);
   ierr = MatZeroEntries(A);CHKERRQ(ierr); // needed?
@@ -99,7 +99,7 @@ int main(int argc,char **args)
 
    test:
       suffix: 0
-      args: -n 11 -mat_view -vec_view
+      args: -n 11 -vec_view
       nsize:  2
 
 TEST*/

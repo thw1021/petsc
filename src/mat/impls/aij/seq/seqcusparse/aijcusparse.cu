@@ -2270,35 +2270,40 @@ static PetscErrorCode MatMultTransposeAdd_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec
 static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A,MatAssemblyType mode)
 {
   PetscErrorCode              ierr;
-  PetscSplitCSRDataStructure  *d_mat = NULL;
-
+  PetscSplitCSRDataStructure  *d_mat = NULL, h_mat;
+  PetscBool                   is_seq = PETSC_TRUE;
+  PetscInt                    nnz_state = A->nonzerostate;
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) {
     d_mat = ((Mat_SeqAIJCUSPARSE*)A->spptr)->deviceMat;
   }
   if (d_mat) {
     cudaError_t err;
-    PetscBool   doit;
     ierr = PetscInfo(A,"Assemble device matrix\n");CHKERRQ(ierr);
-    err = cudaMemcpy( &doit, &d_mat->seq, sizeof(PetscBool), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    if (doit) { /* */
-      Mat_SeqAIJ                 *a = (Mat_SeqAIJ*)A->data;
-      PetscSplitCSRDataStructure h_mat;
-      PetscInt                   n =  A->rmap->n, nnz = a->i[n];
-      // copy back to CPU (move someplace else later)
-      err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-      err = cudaMemcpy( a->i,    h_mat.diag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-      nnz = a->i[n];
-      err = cudaMemcpy( a->j,    h_mat.diag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-      err = cudaMemcpy( a->a,    h_mat.diag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-      A->offloadmask = PETSC_OFFLOAD_CPU; // MatCUSPARSE can now copy data to its GPU data structure
-    }
+    err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    nnz_state = h_mat.nonzerostate;
+    is_seq = h_mat.seq;
+    //   if (is_seq) { /* copy to CPU */
+    //     Mat_SeqAIJ                 *a = (Mat_SeqAIJ*)A->data;
+    //     PetscSplitCSRDataStructure h_mat;
+    //     PetscInt                   n =  A->rmap->n, nnz = a->i[n];
+    //     // copy back to CPU (move someplace else later)
+    //     err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    //     err = cudaMemcpy( a->i,    h_mat.diag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    //     nnz = a->i[n];
+    //     err = cudaMemcpy( a->j,    h_mat.diag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    //     err = cudaMemcpy( a->a,    h_mat.diag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    //     A->offloadmask = PETSC_OFFLOAD_CPU; // MatCUSPARSE can now copy data to its GPU data structure
+    //   }
   }
-  ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr); // this does very little if assembled on GPU - call it?
   if (mode == MAT_FLUSH_ASSEMBLY || A->boundtocpu) PetscFunctionReturn(0);
-  if (A->factortype == MAT_FACTOR_NONE) {
+  if (A->factortype == MAT_FACTOR_NONE && A->nonzerostate > nnz_state && is_seq) { // assembled on CPU eventhough equiped for GPU
     ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
+  } else if (nnz_state > A->nonzerostate) {
+    A->offloadmask = PETSC_OFFLOAD_GPU;
   }
+  
   PetscFunctionReturn(0);
 }
 
@@ -2376,14 +2381,17 @@ static PetscErrorCode MatDestroy_SeqAIJCUSPARSE(Mat A)
     ierr = MatSeqAIJCUSPARSETriFactors_Destroy((Mat_SeqAIJCUSPARSETriFactors**)&A->spptr);CHKERRQ(ierr);
   }
   if (d_mat) {
-    PetscSplitCSRDataStructure h_mat;
+    Mat_SeqAIJ                 *a = (Mat_SeqAIJ*)A->data;
     cudaError_t                err;
+    PetscSplitCSRDataStructure h_mat;
     ierr = PetscInfo(A,"Have device matrix\n");CHKERRQ(ierr);
     err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    if (h_mat.diag.i)    {err = cudaFree(h_mat.diag.i);CHKERRCUDA(err);}
-    if (h_mat.diag.j)    {err = cudaFree(h_mat.diag.j);CHKERRCUDA(err);}
-    if (h_mat.diag.a)    {err = cudaFree(h_mat.diag.a);CHKERRCUDA(err);}
-     err =                    cudaFree(d_mat);CHKERRCUDA(err);
+    if (h_mat.seq) {
+      if (a->compressedrow.use) {
+ 	err = cudaFree(h_mat.diag.i);CHKERRCUDA(err);
+      }
+      err = cudaFree(d_mat);CHKERRCUDA(err);
+    }
   }
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatCUSPARSESetFormat_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",NULL);CHKERRQ(ierr);
@@ -2460,6 +2468,8 @@ static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
     err = cudaMemset( vals, 0, (nnz)*sizeof(PetscScalar));CHKERRCUDA(err);
   }
   ierr = MatZeroEntries_SeqAIJ(A);CHKERRQ(ierr);
+
+  A->offloadmask = PETSC_OFFLOAD_BOTH;
 
   PetscFunctionReturn(0);
 }
