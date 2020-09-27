@@ -35,7 +35,7 @@ class Configure(config.package.CMakePackage):
     return
 
   def versionToStandardForm(self,ver):
-    '''Converts from kokkos 30101 notation to standard notation 3.1.01'''
+    '''Converts from Kokkos kernels 30101 notation to standard notation 3.1.01'''
     return ".".join(map(str,[int(ver)//10000, int(ver)//100%100, int(ver)%100]))
 
   def toString(self,string):
