@@ -133,7 +133,6 @@ class Configure(config.package.Package):
               self.log.write('Unable to parse CUDA capability\n')
 
     if hasattr(self,'gencodearch'):
-      print("something"+self.gencodearch+"somethingelse")
       if self.gencodearch == 'all':
         print('all')
         for gen in ['52','60','61','70','75']:
