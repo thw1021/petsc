@@ -17,14 +17,19 @@ class Configure(config.package.Package):
     self.complex           = 1
     self.hastests          = 0
     self.hastestsdatafiles = 0
-    self.gencodearch       = ''
     return
 
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
-    help.addArgument('CUDA', '-with-cuda-gencodearch', nargs.ArgInt(None, 0, 'Cuda architecture for code generation (may be used by external packages)'))
+    help.addArgument('CUDA', '-with-cuda-gencodearch', nargs.ArgString(None, None, 'Cuda architecture for code generation, for example 70, (this may be used by external packages), use all to build a fat binary for distribution'))
     return
+
+  def __str__(self):
+    output  = config.package.Package.__str__(self)
+    if hasattr(self,'gencodearch'):
+      output += '  CUDA SM '+self.gencodearch+'\n'
+    return output
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
@@ -100,9 +105,44 @@ class Configure(config.package.Package):
     if self.thrust.found:
       self.log.write('Overriding the thrust library in CUDAToolkit with a user-specified one\n')
       self.include = self.thrust.include+self.include
-    gencodearch = self.argDB['with-cuda-gencodearch']
-    if gencodearch:
-      self.gencodearch = str(gencodearch)
+
+    if 'with-cuda-gencodearch' in self.framework.clArgDB:
+      print("found it "+self.argDB['with-cuda-gencodearch'])
+      self.gencodearch = self.argDB['with-cuda-gencodearch']
+    else:
+      import os
+      self.pushLanguage('CUDA')
+      petscNvcc = self.getCompiler()
+      self.popLanguage()
+      self.getExecutable(petscNvcc,getFullPath=1,resultName='systemNvcc')
+      if hasattr(self,'systemNvcc'):
+        cudaDir = os.path.dirname(os.path.dirname(self.systemNvcc))
+        dq = os.path.join(cudaDir,'extras','demo_suite')
+        self.getExecutable('deviceQuery',path = dq)
+        if hasattr(self,'deviceQuery'):
+          try:
+            (out, err, ret) = Configure.executeShellCommand(self.deviceQuery + ' | grep "CUDA Capability"',timeout = 60, log = self.log, threads = 1)
+          except:
+            self.log.write('deviceQuery failed\n')
+          else:
+            try:
+              out = out.split('\n')[0]
+              sm = out[-3:]
+              self.gencodearch = str(int(10*float(sm)))
+            except:
+              self.log.write('Unable to parse CUDA capability\n')
+
+    if hasattr(self,'gencodearch'):
+      if self.gencodearch == 'all':
+        for gen in ['52','60','61','70','75']:
+          print(gen)
+          self.setCompilers.CUDAFLAGS += ' -gencode arch=compute_'+gen+',code=sm_'+gen+' '
+          print(self.setCompilers.CUDAFLAGS)
+      else:
+        print('not all')
+        self.setCompilers.CUDAFLAGS += ' -gencode arch=compute_'+self.gencodearch+',code=sm_'+self.gencodearch+' '
+        print(self.setCompilers.CUDAFLAGS)
+
     self.addDefine('HAVE_CUDA','1')
     if not self.version_tuple:
       self.checkVersion(); # set version_tuple
