@@ -137,7 +137,7 @@ class Configure(config.package.Package):
         for gen in ['52','60','61','70','75']:
           print(gen)
           self.setCompilers.CUDAFLAGS += ' -gencode arch=compute_'+gen+',code=sm_'+gen+' '
-          print(self.setCompilers.CUDAFLAGS)
+          self.log.write(self.setCompilers.CUDAFLAGS+'\n')
       else:
         print('not all')
         self.setCompilers.CUDAFLAGS += ' -gencode arch=compute_'+self.gencodearch+',code=sm_'+self.gencodearch+' '
