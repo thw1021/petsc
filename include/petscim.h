@@ -8,12 +8,13 @@ PETSC_EXTERN PetscClassId      IM_CLASSID;
 PETSC_EXTERN PetscFunctionList IMList;
 
 typedef const char* IMType;
-#define IMTRIVIAL "trivial"
+#define IMMAP   "map"
+#define IMBASIC "basic"
 
 PETSC_EXTERN PetscErrorCode IMInitializePackage(void);
 PETSC_EXTERN PetscErrorCode IMFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode IMRegister(const char[],PetscErrorCode(*)(IM));
-PETSC_EXTERN PetscErrorCode IMRegiserAll(void);
+
 PETSC_EXTERN PetscErrorCode IMCreate(MPI_Comm,IM*);
 PETSC_EXTERN PetscErrorCode IMDestroy(IM*);
 PETSC_EXTERN PetscErrorCode IMSetType(IM,IMType);
