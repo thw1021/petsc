@@ -134,7 +134,6 @@ class Configure(config.package.Package):
 
     if hasattr(self,'gencodearch'):
       if self.gencodearch == 'all':
-        print('all')
         for gen in ['52','60','61','70','75']:
           print(gen)
           self.setCompilers.CUDAFLAGS += ' -gencode arch=compute_'+gen+',code=sm_'+gen+' '
