@@ -203,7 +203,6 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
   if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) {
     ierr = VecSetType(mpiaij->lvec,VECSEQCUDA);CHKERRQ(ierr);
-    ierr = PetscInfo1(A,"Set CUDA vec type (once) deviceMat=%p\n",d_mat);CHKERRQ(ierr);
   }
   if (nnz_state > A->nonzerostate) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // if we assembled on the device
