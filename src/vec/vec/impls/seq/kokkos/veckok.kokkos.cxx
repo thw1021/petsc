@@ -7,7 +7,7 @@
 #include "Kokkos_Parallel_Reduce.hpp"
 #include <petsc/private/petscimpl.h>
 #include "petscmath.h"
-#include "petscviewer.h"
+#include <petscviewer.h>
 #include <KokkosBlas.hpp>
 
 #include <petscconf.h>
