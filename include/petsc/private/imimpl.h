@@ -4,7 +4,7 @@
 #include <petscim.h>
 #include <petsc/private/petscimpl.h>
 
-PETSC_EXTERN PetscBool IMRegisterAllCalled;
+PETSC_EXTERN PetscBool      IMRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode IMRegisterAll(void);
 
 typedef struct _IMOps *IMOps;
@@ -47,4 +47,26 @@ struct _p_IM {
   PetscBool          setup;
   void              *data;        /* impls, contains *idx */
 };
+
+PETSC_STATIC_INLINE PetscErrorCode IMResetBase_Private(IM *m)
+{
+  PetscFunctionBegin;
+  (*m)->map = NULL;
+  (*m)->permutation = NULL;
+  (*m)->nKeys[IM_LOCAL] = PETSC_DEFAULT;
+  (*m)->nKeys[IM_GLOBAL] = PETSC_DEFAULT;
+  (*m)->sorted[IM_LOCAL] = PETSC_FALSE;
+  (*m)->sorted[IM_GLOBAL] = PETSC_FALSE;
+  if ((*m)->kstorage) {
+    PetscErrorCode ierr;
+    if ((*m)->kstorage == IM_CONTIG) {ierr = PetscFree((*m)->contig);CHKERRQ(ierr);}
+    else {ierr = PetscFree((*m)->discontig);CHKERRQ(ierr);}
+  }
+  (*m)->kstorage = IM_INVALID;
+  (*m)->contig = NULL;
+  (*m)->discontig = NULL;
+  (*m)->data = NULL;
+  (*m)->setup = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
 #endif

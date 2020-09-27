@@ -5,28 +5,6 @@
 #include <petsc/private/imimpl.h>
 #include <petscim.h>
 
-PETSC_STATIC_INLINE PetscErrorCode IMClear_Base(IM *m)
-{
-  PetscFunctionBegin;
-  (*m)->map = NULL;
-  (*m)->permutation = NULL;
-  (*m)->nKeys[IM_LOCAL] = PETSC_DEFAULT;
-  (*m)->nKeys[IM_GLOBAL] = PETSC_DEFAULT;
-  (*m)->sorted[IM_LOCAL] = PETSC_FALSE;
-  (*m)->sorted[IM_GLOBAL] = PETSC_FALSE;
-  if ((*m)->kstorage) {
-    PetscErrorCode ierr;
-    if ((*m)->kstorage == IM_CONTIG) {ierr = PetscFree((*m)->contig);CHKERRQ(ierr);}
-    else {ierr = PetscFree((*m)->discontig);CHKERRQ(ierr);}
-  }
-  (*m)->kstorage = IM_INVALID;
-  (*m)->contig = NULL;
-  (*m)->discontig = NULL;
-  (*m)->data = NULL;
-  (*m)->setup = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
 PetscErrorCode IMCreate(MPI_Comm comm, IM *m)
 {
   PetscErrorCode ierr;
@@ -35,7 +13,7 @@ PetscErrorCode IMCreate(MPI_Comm comm, IM *m)
   PetscValidPointer(m,3);
   ierr = IMInitializePackage();CHKERRQ(ierr);
   ierr = PetscHeaderCreate(*m,IM_CLASSID,"IM","Mapping","IM",comm,IMDestroy,IMView);CHKERRQ(ierr);
-  ierr = IMClear_Base(m);CHKERRQ(ierr);
+  ierr = IMResetBase_Private(m);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -49,7 +27,7 @@ PetscErrorCode IMDestroy(IM *m)
   if ((*m)->ops->destroy) {
     ierr = (*(*m)->ops->destroy)(m);CHKERRQ(ierr);
   }
-  ierr = IMClear_Base(m);CHKERRQ(ierr);
+  ierr = IMResetBase_Private(m);CHKERRQ(ierr);
   ierr = PetscHeaderDestroy(m);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
