@@ -6,7 +6,7 @@
 #include "Kokkos_Parallel.hpp"
 #include "Kokkos_Parallel_Reduce.hpp"
 #include <petsc/private/petscimpl.h>
-#include "petscmath.h"
+#include <petscmath.h>
 #include <petscviewer.h>
 #include <KokkosBlas.hpp>
 
