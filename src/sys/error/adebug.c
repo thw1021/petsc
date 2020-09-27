@@ -426,7 +426,7 @@ PetscErrorCode  PetscAttachDebugger(void)
 -  ctx - error handler context
 
    Options Database Keys:
-+  -on_error_attach_debugger [noxterm,dbx,xxgdb,xdb,xldb,gdb] [-display name] - Activatesc debugger attachment
++  -on_error_attach_debugger [noxterm,dbx,xxgdb,xdb,xldb,gdb] [-display name] - Activates debugger attachment
 -  -start_in_debugger [noxterm,dbx,xxgdb,xdb,xldb,gdb] [-display name] [-debugger_ranks m,n]
 
    Level: developer
