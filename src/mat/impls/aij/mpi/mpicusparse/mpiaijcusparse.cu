@@ -437,10 +437,10 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
 	if (cusparsestructB->format!=MAT_CUSPARSE_CSR) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Device Mat B needs MAT_CUSPARSE_CSR");
 	matrixA = (CsrMatrix*)matstructA->mat;
 	matrixB = (CsrMatrix*)matstructB->mat;
-	bi = thrust::raw_pointer_cast(matrixB->row_offsets->data()); 
-	bj = thrust::raw_pointer_cast(matrixB->column_indices->data()); 
+	bi = thrust::raw_pointer_cast(matrixB->row_offsets->data());
+	bj = thrust::raw_pointer_cast(matrixB->column_indices->data());
 	ba = thrust::raw_pointer_cast(matrixB->values->data());
-	if (rank==-1) { 
+	if (rank==-1) {
 	  for(unsigned int i = 0; i < matrixB->row_offsets->size(); i++)
 	    std::cout << "\trow_offsets[" << i << "] = " << (*matrixB->row_offsets)[i] << std::endl;
 	  for(unsigned int i = 0; i < matrixB->column_indices->size(); i++)
@@ -452,8 +452,8 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
 	SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Device Mat A needs MAT_CUSPARSE_CSR");
       }
     }
-    ai = thrust::raw_pointer_cast(matrixA->row_offsets->data()); 
-    aj = thrust::raw_pointer_cast(matrixA->column_indices->data()); 
+    ai = thrust::raw_pointer_cast(matrixA->row_offsets->data());
+    aj = thrust::raw_pointer_cast(matrixA->column_indices->data());
     aa = thrust::raw_pointer_cast(matrixA->values->data());
   } else {
     *B = NULL;
@@ -493,8 +493,6 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       jaca = (Mat_SeqAIJ*)aij->A->data;
       jacb = (Mat_SeqAIJ*)aij->B->data;
       h_mat.nonzerostate = aij->A->nonzerostate; // just keep one nonzero state?
-      //((Mat_SeqAIJCUSPARSE*)aij->A->spptr)->deviceMat = d_mat;
-      //((Mat_SeqAIJCUSPARSE*)aij->B->spptr)->deviceMat = d_mat;
       if (!aij->garray) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPIAIJ Matrix was assembled but is missing garray");
       if (aij->B->rmap->n != aij->A->rmap->n) SETERRQ(comm,PETSC_ERR_SUP,"Only support aij->B->rmap->n == aij->A->rmap->n");
       // create colmap - this is ussually done (lazy) in MatSetValues
@@ -519,8 +517,8 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
       nnz = jacb->i[n];
 
       if (jacb->compressedrow.use) {
-	err = cudaMalloc((void **)&h_mat.offdiag.i,               (n+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-	err = cudaMemcpy(          h_mat.offdiag.i,    jacb->i,   (n+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
+	err = cudaMalloc((void **)&h_mat.offdiag.i,               (n+1)*sizeof(int));CHKERRCUDA(err); // kernel input
+	err = cudaMemcpy(          h_mat.offdiag.i,    jacb->i,   (n+1)*sizeof(int), cudaMemcpyHostToDevice);CHKERRCUDA(err);
       } else {
 	h_mat.offdiag.i = bi;
       }
@@ -538,8 +536,8 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     h_mat.diag.ignorezeroentries = jaca->ignorezeroentries;
     ierr = MPI_Comm_rank(comm,&h_mat.rank);CHKERRQ(ierr);
     if (jaca->compressedrow.use) {
-      err = cudaMalloc((void **)&h_mat.diag.i,               (n+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel input
-      err = cudaMemcpy(          h_mat.diag.i,    jaca->i,   (n+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
+      err = cudaMalloc((void **)&h_mat.diag.i,               (n+1)*sizeof(int));CHKERRCUDA(err); // kernel input
+      err = cudaMemcpy(          h_mat.diag.i,    jaca->i,   (n+1)*sizeof(int), cudaMemcpyHostToDevice);CHKERRCUDA(err);
     } else {
       h_mat.diag.i = ai;
     }

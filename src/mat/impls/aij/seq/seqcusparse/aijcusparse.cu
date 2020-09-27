@@ -2283,22 +2283,10 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A,MatAssemblyType mode)
     err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
     nnz_state = h_mat.nonzerostate;
     is_seq = h_mat.seq;
-    //   if (is_seq) { /* copy to CPU */
-    //     Mat_SeqAIJ                 *a = (Mat_SeqAIJ*)A->data;
-    //     PetscSplitCSRDataStructure h_mat;
-    //     PetscInt                   n =  A->rmap->n, nnz = a->i[n];
-    //     // copy back to CPU (move someplace else later)
-    //     err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    //     err = cudaMemcpy( a->i,    h_mat.diag.i,    (n+1)*sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    //     nnz = a->i[n];
-    //     err = cudaMemcpy( a->j,    h_mat.diag.j,    (nnz)*sizeof(PetscInt),   cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    //     err = cudaMemcpy( a->a,    h_mat.diag.a,    (nnz)*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    //     A->offloadmask = PETSC_OFFLOAD_CPU; // MatCUSPARSE can now copy data to its GPU data structure
-    //   }
   }
   ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr); // this does very little if assembled on GPU - call it?
   if (mode == MAT_FLUSH_ASSEMBLY || A->boundtocpu) PetscFunctionReturn(0);
-  if (A->factortype == MAT_FACTOR_NONE && A->nonzerostate > nnz_state && is_seq) { // assembled on CPU eventhough equiped for GPU
+  if (A->factortype == MAT_FACTOR_NONE && A->nonzerostate >= nnz_state && is_seq) { // assembled on CPU eventhough equiped for GPU
     ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
   } else if (nnz_state > A->nonzerostate) {
     A->offloadmask = PETSC_OFFLOAD_GPU;
