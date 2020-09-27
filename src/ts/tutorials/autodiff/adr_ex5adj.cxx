@@ -511,6 +511,8 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
   ierr = DMDAVecRestoreArrayRead(da,localU,&u);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArrayRead(da,Udot,&udot);CHKERRQ(ierr);
 
+  ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
+
   /* Destroy AFields appropriately */
   f_a += info.gys;
   u_a += info.gys;
