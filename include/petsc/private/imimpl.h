@@ -59,7 +59,7 @@ PETSC_STATIC_INLINE PetscErrorCode IMResetBase_Private(IM *m)
   (*m)->sorted[IM_GLOBAL] = PETSC_FALSE;
   if ((*m)->kstorage) {
     PetscErrorCode ierr;
-    if ((*m)->kstorage == IM_CONTIG) {ierr = PetscFree((*m)->contig);CHKERRQ(ierr);}
+    if ((*m)->kstorage == IM_CONTIGUOUS) {ierr = PetscFree((*m)->contig);CHKERRQ(ierr);}
     else {ierr = PetscFree((*m)->discontig);CHKERRQ(ierr);}
   }
   (*m)->kstorage = IM_INVALID;
