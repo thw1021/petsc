@@ -69,4 +69,14 @@ int main(int argc,char **argv)
       filter: grep -v type
       requires: cuda
 
+   testset:
+      requires: hip
+      filter: grep -v type
+      args: -vec_type hip
+      output_file: output/ex4_1.out
+      test:
+        suffix: hip
+      test:
+        suffix: hip2
+        nsize: 2
 TEST*/
