@@ -13,7 +13,7 @@ PetscDLLibrary PetscDLLibrariesLoaded = NULL;
 
 #if defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
 
-PetscErrorCode  PetscLoadDynamicLibrary(const char *name,PetscBool  *found)
+static PetscErrorCode  PetscLoadDynamicLibrary(const char *name,PetscBool  *found)
 {
   char           libs[PETSC_MAX_PATH_LEN],dlib[PETSC_MAX_PATH_LEN];
   PetscErrorCode ierr;
@@ -36,7 +36,7 @@ PetscErrorCode  PetscLoadDynamicLibrary(const char *name,PetscBool  *found)
 }
 #endif
 
-#if defined(PETSC_HAVE_THREADSAFETY)
+#if !defined(PETSC_USE_SHARED_LIBRARIES) && defined(PETSC_USE_SINGLE_LIBRARY)
 PETSC_EXTERN PetscErrorCode AOInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscSFInitializePackage(void);
 #if !defined(PETSC_USE_COMPLEX)
@@ -50,6 +50,7 @@ PETSC_EXTERN PetscErrorCode PCInitializePackage(void);
 PETSC_EXTERN PetscErrorCode KSPInitializePackage(void);
 PETSC_EXTERN PetscErrorCode SNESInitializePackage(void);
 PETSC_EXTERN PetscErrorCode TSInitializePackage(void);
+PETSC_EXTERN PetscErrorCode TaoInitializePackage(void);
 static MPI_Comm PETSC_COMM_WORLD_INNER = 0,PETSC_COMM_SELF_INNER = 0;
 #endif
 
@@ -62,14 +63,17 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
   char           *libname[32];
   PetscErrorCode ierr;
   PetscInt       nmax,i;
-#if defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
-  PetscBool      preload;
-#endif
+  PetscBool      preload = PETSC_FALSE;
 #if defined(PETSC_HAVE_ELEMENTAL)
   PetscBool      PetscInitialized = PetscInitializeCalled;
 #endif
 
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_THREADSAFETY)
+  /* These must be all initialized here because it is not safe for individual threads to call these initialize routines */
+  preload = PETSC_TRUE;
+#endif
+
   nmax = 32;
   ierr = PetscOptionsGetStringArray(NULL,NULL,"-dll_prepend",libname,&nmax,NULL);CHKERRQ(ierr);
   for (i=0; i<nmax; i++) {
@@ -77,18 +81,11 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
     ierr = PetscFree(libname[i]);CHKERRQ(ierr);
   }
 
-#if !defined(PETSC_HAVE_DYNAMIC_LIBRARIES) || !defined(PETSC_USE_SHARED_LIBRARIES)
-  /*
-      This just initializes the most basic PETSc stuff.
-
-    The classes, from PetscDraw to PetscTS, are initialized the first
-    time an XXCreate() is called.
-  */
-  ierr = PetscSysInitializePackage();CHKERRQ(ierr);
-#else
-  preload = PETSC_FALSE;
-  ierr = PetscOptionsGetBool(NULL,NULL,"-dynamic_library_preload",&preload,NULL);CHKERRQ(ierr);
-  if (preload) {
+  ierr = PetscOptionsGetBool(NULL,NULL,"-library_preload",&preload,NULL);CHKERRQ(ierr);
+  if (!preload) {
+    ierr = PetscSysInitializePackage();CHKERRQ(ierr);
+  } else {
+#if defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
     PetscBool found;
 #if defined(PETSC_USE_SINGLE_LIBRARY)
     ierr = PetscLoadDynamicLibrary("",&found);CHKERRQ(ierr);
@@ -108,9 +105,10 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
     if (!found) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to locate PETSc SNES dynamic library \n You cannot move the dynamic libraries!");
     ierr = PetscLoadDynamicLibrary("ts",&found);CHKERRQ(ierr);
     if (!found) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to locate PETSc TS dynamic library \n You cannot move the dynamic libraries!");
+    ierr = PetscLoadDynamicLibrary("tao",&found);CHKERRQ(ierr);
+    if (!found) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to locate Tao dynamic library \n You cannot move the dynamic libraries!");
 #endif
-  }
-#endif
+#elif defined(PETSC_USE_SINGLE_LIBRARY)
 #if defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
 #if defined(PETSC_HAVE_BAMG)
   {
@@ -120,16 +118,6 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
   }
 #endif
 #endif
-
-  nmax = 32;
-  ierr = PetscOptionsGetStringArray(NULL,NULL,"-dll_append",libname,&nmax,NULL);CHKERRQ(ierr);
-  for (i=0; i<nmax; i++) {
-    ierr = PetscDLLibraryAppend(PETSC_COMM_WORLD,&PetscDLLibrariesLoaded,libname[i]);CHKERRQ(ierr);
-    ierr = PetscFree(libname[i]);CHKERRQ(ierr);
-  }
-
-#if defined(PETSC_HAVE_THREADSAFETY)
-  /* These must be done here because it is not safe for individual threads to call these initialize routines */
   ierr = AOInitializePackage();CHKERRQ(ierr);
   ierr = PetscSFInitializePackage();CHKERRQ(ierr);
 #if !defined(PETSC_USE_COMPLEX)
@@ -143,9 +131,21 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
   ierr = KSPInitializePackage();CHKERRQ(ierr);
   ierr = SNESInitializePackage();CHKERRQ(ierr);
   ierr = TSInitializePackage();CHKERRQ(ierr);
+  ierr = TaoInitializePackage();CHKERRQ(ierr);
   ierr = PetscCommDuplicate(PETSC_COMM_SELF,&PETSC_COMM_SELF_INNER,NULL);CHKERRQ(ierr);
   ierr = PetscCommDuplicate(PETSC_COMM_WORLD,&PETSC_COMM_WORLD_INNER,NULL);CHKERRQ(ierr);
+#else
+  SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Cannot use -library_preload with multiple non-shared PETSc libraries");
 #endif
+  }
+
+  nmax = 32;
+  ierr = PetscOptionsGetStringArray(NULL,NULL,"-dll_append",libname,&nmax,NULL);CHKERRQ(ierr);
+  for (i=0; i<nmax; i++) {
+    ierr = PetscDLLibraryAppend(PETSC_COMM_WORLD,&PetscDLLibrariesLoaded,libname[i]);CHKERRQ(ierr);
+    ierr = PetscFree(libname[i]);CHKERRQ(ierr);
+  }
+
 #if defined(PETSC_HAVE_ELEMENTAL)
   /* in Fortran, PetscInitializeCalled is set to PETSC_TRUE before PetscInitialize_DynamicLibraries() */
   /* in C, it is not the case, but the value is forced to PETSC_TRUE so that PetscRegisterFinalize() is called */
