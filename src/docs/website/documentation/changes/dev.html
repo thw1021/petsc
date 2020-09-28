@@ -183,6 +183,7 @@
           <li>Add support for MatMultHermitianTranspose with SEQAIJCUSPARSE</li>
           <li>Remove default generation of explicit matrix for MatMultTranspose operations with SEQAIJCUSPARSE. Users can still require it via MatSeqAIJCUSPARSESetGenerateTranspose</li>
           <li>Add MatOrderingType external returns a NULL ordering to allow solver types  MATSOLVERUMFPACK and MATSOLVERCHOLMOD to use their orderings
+          <li>Experimental: Add support for assembling AIJ (CUSPARSE) matrix on the Cuda device with MatSetValuesDevice(), MatCUSPARSEGetDeviceMatWrite()</li>
         </ul>
       <h4>PC:</h4>
         <ul>
