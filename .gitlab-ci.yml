@@ -66,7 +66,7 @@ check-ci-settings:
   script:
     - ${PYTHON} ./configure --with-debugging=0 COPTFLAGS='-O -march=native' CXXOPTFLAGS='-O -march=native' FOPTFLAGS='-O -march=native' ${CONFIG_OPTS}
     - make CFLAGS=-Werror CXXFLAGS=-Werror FFLAGS=-Werror
-    - make CFLAGS=-Werror CXXFLAGS=-Werror FFLAGS=-Werror allgtests-tap search="${TEST_SEARCH}" TIMEOUT=${TIMEOUT}
+    - make CFLAGS=-Werror CXXFLAGS=-Werror FFLAGS=-Werror allgtests-tap search="${TEST_SEARCH}" ${TEST_QUERY} TIMEOUT=${TIMEOUT}
   after_script:
     - date
     - ccache --show-stats
@@ -299,6 +299,7 @@ linux-cuda-double:
   variables:
     PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -cuda_initialize 0
     TEST_ARCH: arch-ci-linux-cuda-double
+    TEST_QUERY: query="requires" queryval="cuda"
 
 linux-gcc-quad-64idx-dbg:
   extends:
@@ -415,6 +416,7 @@ linux-cuda-double-64idx:
   variables:
     PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -cuda_initialize 0
     TEST_ARCH: arch-ci-linux-cuda-double-64idx
+    TEST_QUERY: query="requires" queryval="cuda"
 
 linux-cuda-single-cxx:
   extends:
@@ -425,6 +427,7 @@ linux-cuda-single-cxx:
   variables:
     PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -cuda_initialize 0 -use_gpu_aware_mpi 0
     TEST_ARCH: arch-ci-linux-cuda-single-cxx
+    TEST_QUERY: query="requires" queryval="cuda"
 
 linux-without-fc:
   extends:
