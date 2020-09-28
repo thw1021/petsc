@@ -5,12 +5,13 @@ typedef struct _p_IM *IM;
 
 typedef enum {
   IM_INVALID = 0,
-  IM_CONTIG = 1,
-  IM_DISCONTIG = 2
+  IM_CONTIGUOUS = 1,
+  IM_DISCONTIGUOUS = 2
 } IMState;
 
 typedef enum {
   IM_LOCAL = 0,
-  IM_GLOBAL = 1
+  IM_GLOBAL = 1,
+  IM_MAX_MODE = 2
 } IMOpMode;
 #endif
