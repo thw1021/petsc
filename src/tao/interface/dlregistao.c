@@ -85,7 +85,7 @@ PetscErrorCode TaoInitializePackage(void)
 . path - library path
 */
 
-PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_tao(void)
+PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petsctao(void)
 {
     PetscErrorCode ierr;
 
