@@ -47,8 +47,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGetMemType(const void *data,PetscMemType
     hipError_t                   cerr;
     struct hipPointerAttribute_t attr;
     enum hipMemoryType           mtype;
-    cerr = hipPointerGetAttributes(&attr,data); /* Do not check error since before CUDA 11.0, passing a host pointer returns cudaErrorInvalidValue */
-    hipGetLastError(); /* Reset the last error */
+    cerr = hipPointerGetAttributes(&attr,data); 
+     /* hipGetLastError(); Reset the last error */
     mtype = attr.memoryType;
     if (cerr == hipSuccess && mtype == hipMemoryTypeDevice) *type = PETSC_MEMTYPE_DEVICE;
   }
@@ -308,7 +308,14 @@ PetscErrorCode PetscSFSetUp(PetscSF sf)
     sf->ops->Free   = PetscSFFree_Cuda;
   }
 #endif
+#if defined(PETSC_HAVE_HIP)
+  if (sf->backend == PETSCSF_BACKEND_HIP) {
+    sf->ops->Malloc = PetscSFMalloc_HIP;
+    sf->ops->Free   = PetscSFFree_HIP;
+  }
+#endif
 
+#
 #if defined(PETSC_HAVE_KOKKOS)
   if (sf->backend == PETSCSF_BACKEND_KOKKOS) {
     sf->ops->Malloc = PetscSFMalloc_Kokkos;

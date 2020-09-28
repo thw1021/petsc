@@ -6,6 +6,9 @@
 #if defined(PETSC_HAVE_CUDA)
 #include <petsc/private/cudavecimpl.h>
 #endif
+#if defined(PETSC_HAVE_HIP)
+#include <petsc/private/hipvecimpl.h>
+#endif
 
 typedef struct {
   PetscSF           sf;     /* the whole scatter, including local and remote */
@@ -36,6 +39,18 @@ static PetscErrorCode VecScatterBegin_SF(VecScatter vscat,Vec x,Vec y,InsertMode
       if (x->offloadmask == PETSC_OFFLOAD_GPU) {
         if (x->spptr && vscat->spptr) {ierr = VecCUDACopyFromGPUSome_Public(x,(PetscCUDAIndices)vscat->spptr,mode);CHKERRQ(ierr);}
         else {ierr = VecCUDACopyFromGPU(x);CHKERRQ(ierr);}
+      }
+      vscat->xdata = *((PetscScalar**)x->data);
+    } else
+#endif
+#if defined(PETSC_HAVE_HIP)
+    PetscBool is_hiptype = PETSC_FALSE;
+    ierr = PetscObjectTypeCompareAny((PetscObject)x,&is_hiptype,VECSEQHIP,VECMPIHIP,VECHIP,"");CHKERRQ(ierr);
+    if (is_hiptype) {
+      VecHIPAllocateCheckHost(x);
+      if (x->offloadmask == PETSC_OFFLOAD_GPU) {
+        if (x->spptr && vscat->spptr) {ierr = VecHIPCopyFromGPUSome_Public(x,(PetscHIPIndices)vscat->spptr,mode);CHKERRQ(ierr);}
+        else {ierr = VecHIPCopyFromGPU(x);CHKERRQ(ierr);}
       }
       vscat->xdata = *((PetscScalar**)x->data);
     } else
@@ -217,6 +232,10 @@ static PetscErrorCode VecScatterRemap_SF(VecScatter vscat,const PetscInt *tomap,
 #if defined(PETSC_HAVE_DEVICE)
   /* Free the irootloc copy on device. We allocate a new copy and get the updated value on demand. See PetscSFLinkGetRootPackOptAndIndices() */
   for (i=0; i<2; i++) {ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,bas->irootloc_d[i]);CHKERRQ(ierr);}
+#endif
+#if defined(PETSC_HAVE_HIP)
+  /* Free the irootloc copy on device. We allocate a new copy and get the updated value on demand. See PetscSFGetRootIndicesWithMemType_Basic() */
+  for (i=0; i<2; i++) {if (bas->irootloc_d[i]) {hipError_t err = hipFree(bas->irootloc_d[i]);CHKERRHIP(err);bas->irootloc_d[i]=NULL;}}
 #endif
   /* Destroy and then rebuild root packing optimizations since indices are changed */
   ierr = PetscSFResetPackFields(sf);CHKERRQ(ierr);

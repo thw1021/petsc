@@ -9,6 +9,7 @@
   #include <hip/hip_runtime.h>
 #endif
 
+
 static PetscInt petsc_checkpointer_intensity = 1;
 
 /*@
