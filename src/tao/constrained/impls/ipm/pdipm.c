@@ -324,9 +324,8 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
   ierr = MatGetOwnershipRangesColumn(tao->hessian,&cranges);CHKERRQ(ierr);
 
   ierr = VecGetArrayRead(X,&Xarr);CHKERRQ(ierr);
-  
-  
-  if (pdipm->solve_symetric_kkt){// 1 for eq 17 revised pdipm doc 0 for eq 18 (symetric KKT)
+
+  if (pdipm->solve_symetric_kkt){ /* 1 for eq 17 revised pdipm doc 0 for eq 18 (symetric KKT) */
     for (i=0; i < pdipm->nci; i++) {
         row     = Jrstart + pdipm->off_z + i;
         cols[0] = Jrstart + pdipm->off_lambdai + i;
@@ -335,8 +334,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
         vals[1] = Xarr[pdipm->off_lambdai + i]/Xarr[pdipm->off_z + i];
         ierr = MatSetValues(Jpre,1,&row,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
     }
-  }
-  else{
+  } else {
     /* (2) insert Z and Ci to Jpre -- overwrite existing values */
     for (i=0; i < pdipm->nci; i++) {
       row     = Jrstart + pdipm->off_z + i;
@@ -536,7 +534,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
   ierr = VecNorm(pdipm->ce,NORM_2,&cnorm[0]);CHKERRQ(ierr);
 
   if (pdipm->Nci) {
-    if (pdipm->solve_symetric_kkt){    
+    if (pdipm->solve_symetric_kkt){
       /* (3) L3 = ci(x) - z;
         (4) L4 = Lambdai * e - mu/z *e
       */
@@ -548,8 +546,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
         Farr[pdipm->off_z       + i] = larr[i] - pdipm->mu/zarr[i];
       }
       ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
-    }
-    else{
+    } else {
       /* (3) L3 = ci(x) - z;
         (4) L4 = Z * Lambdai * e - mu * e
       */
