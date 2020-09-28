@@ -7746,7 +7746,8 @@ PetscErrorCode TSGetUseSplitRHSFunction(TS ts, PetscBool *use_splitrhsfunction)
 
    Level: intermediate
 
-   Notes: When the relationship between the nonzero structures is know and supplied the solution process can be much faster
+   Notes:
+     When the relationship between the nonzero structures is known and supplied the solution process can be much faster
 
 .seealso: MatAXPY(), MatStructure
  @*/
