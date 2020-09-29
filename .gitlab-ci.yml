@@ -52,6 +52,7 @@ check-ci-settings:
   tags:
     - stage1
   before_script:
+    - printenv
     - date
     - hostname
     - grep PRETTY_NAME /etc/os-release
