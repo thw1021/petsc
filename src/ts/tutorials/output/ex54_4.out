@@ -1,0 +1,6 @@
+solver type: cn
+IFunction:   1
+IJacobian:   0
+RHSFunction: 1
+RHSJacobian: 0
+relative error at tf = 1.000000 from 100 steps:  |u-u_exact|/|u_exact| =  6.766e-05

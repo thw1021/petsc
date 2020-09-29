@@ -1,0 +1,6 @@
+solver type: arkimex
+IFunction:   1
+IJacobian:   1
+RHSFunction: 1
+RHSJacobian: 0
+relative error at tf = 1.000000 from 24 steps:  |u-u_exact|/|u_exact| =  1.378e-03
