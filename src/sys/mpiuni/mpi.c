@@ -7,6 +7,16 @@
 #error "Wrong mpi.h included! require mpi.h from MPIUNI"
 #endif
 
+#include <petsc/private/petscimpl.h> /* for PetscCUPMInitialized */
+
+#if defined(PETSC_HAVE_CUDA)
+  #include <cuda_runtime.h>
+#endif
+
+#if defined(PETSC_HAVE_HIP)
+  #include <hip/hip_runtime.h>
+#endif
+
 #define MPI_SUCCESS 0
 #define MPI_FAILURE 1
 
@@ -51,15 +61,19 @@ extern "C" {
 /*
    To avoid problems with prototypes to the system memcpy() it is duplicated here
 */
-int MPIUNI_Memcpy(void *a,const void *b,int n)
+int MPIUNI_Memcpy(void *dst,const void *src,int n)
 {
-  int  i;
-  char *aa= (char*)a;
-  char *bb= (char*)b;
+  if (dst == MPI_IN_PLACE || dst == MPIUNIF_mpi_in_place) return MPI_SUCCESS;
+  if (src == MPI_IN_PLACE || src == MPIUNIF_mpi_in_place) return MPI_SUCCESS;
+  if (!n) return MPI_SUCCESS;
 
-  if (a == MPI_IN_PLACE || a == MPIUNIF_mpi_in_place) return MPI_SUCCESS;
-  if (b == MPI_IN_PLACE || b == MPIUNIF_mpi_in_place) return MPI_SUCCESS;
-  for (i=0; i<n; i++) aa[i] = bb[i];
+  /* GPU-aware MPIUNI. Use synchronous copy per MPI semantics */
+#if defined(PETSC_HAVE_CUDA)
+  if (PetscCUDAInitialized) {cudaError_t cerr = cudaMemcpy(dst,src,n,cudaMemcpyDefault);if (cerr != cudaSuccess) return MPI_FAILURE;} else
+#elif defined(PETSC_HAVE_HIP)
+  if (PetscHIPInitialized)  {hipError_t  cerr = hipMemcpy(dst,src,n,hipMemcpyDefault);  if (cerr != hipSuccess)  return MPI_FAILURE;} else
+#endif
+  {memcpy(dst,src,n);}
   return MPI_SUCCESS;
 }
 
@@ -136,8 +150,8 @@ static int Keyval_setup(void)
 {
   attr[CommIdx(MPI_COMM_WORLD)][0].active        = 1;
   attr[CommIdx(MPI_COMM_WORLD)][0].attribute_val = &mpi_tag_ub;
-  attr[CommIdx(MPI_COMM_SELF )][0].active        = 1;
-  attr[CommIdx(MPI_COMM_SELF )][0].attribute_val = &mpi_tag_ub;
+  attr[CommIdx(MPI_COMM_SELF)][0].active        = 1;
+  attr[CommIdx(MPI_COMM_SELF)][0].attribute_val = &mpi_tag_ub;
   attr_keyval[0].active                          = 1;
   return MPI_SUCCESS;
 }

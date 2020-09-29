@@ -1,7 +1,6 @@
 import config.base
 
 import os
-import re
 
 class Configure(config.base.Configure):
   def __init__(self, framework):
@@ -213,6 +212,41 @@ class Configure(config.base.Configure):
     else:
       self.log.write('User turned off visibility attributes')
 
+  def checkMaxPathLen(self):
+    import re
+    HASHLINESPACE = ' *(?:\n#.*\n *)*'
+    self.log.write('Determining PETSC_MAX_PATH_LEN\n')
+    include = ''
+    if self.headers.haveHeader('sys/param.h'):
+      include = (include + '\n#include <sys/param.h>')
+    if self.headers.haveHeader('sys/types.h'):
+      include = (include + '\n#include <sys/types.h>')
+    length = include + '''
+#if defined(MAXPATHLEN)
+#  define PETSC_MAX_PATH_LEN MAXPATHLEN
+#elif defined(MAX_PATH)
+#  define PETSC_MAX_PATH_LEN MAX_PATH
+#elif defined(_MAX_PATH)
+#  define PETSC_MAX_PATH_LEN _MAX_PATH
+#else
+#  define PETSC_MAX_PATH_LEN 4096
+#endif
+#define xstr(s) str(s)
+#define str(s) #s
+char petsc_max_path_len[] = xstr(PETSC_MAX_PATH_LEN);
+'''
+    MaxPathLength = 'unknown'
+    if self.checkCompile(length):
+      buf = self.outputPreprocess(length)
+      try:
+        MaxPathLength = re.compile('\nchar petsc_max_path_len\s?\[\s?\] = '+HASHLINESPACE+'\"([0-9]+)\"'+HASHLINESPACE+';').search(buf).group(1)
+      except:
+        raise RuntimeError('Unable to determine PETSC_MAX_PATH_LEN')
+    if MaxPathLength == 'unknown' or not MaxPathLength.isdigit():
+      raise RuntimeError('Unable to determine PETSC_MAX_PATH_LEN')
+    else:
+      self.addDefine('MAX_PATH_LEN',MaxPathLength)
+
 
   def configure(self):
     self.executeTest(self.check_struct_sigaction)
@@ -235,4 +269,5 @@ class Configure(config.base.Configure):
                      'size_t': (8, 4)}.items():
       self.executeTest(self.checkSizeof, args=[t, sizes])
     self.executeTest(self.checkVisibility)
+    self.executeTest(self.checkMaxPathLen)
     return

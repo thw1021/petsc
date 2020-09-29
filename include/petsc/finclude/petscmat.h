@@ -55,12 +55,13 @@
 
 #define MATCOARSEN_MIS 'mis'
 
+#define MATCOLORINGJP      'jp'
+#define MATCOLORINGPOWER   'power'
 #define MATCOLORINGNATURAL 'natural'
 #define MATCOLORINGSL      'sl'
 #define MATCOLORINGLF      'lf'
 #define MATCOLORINGID      'id'
 #define MATCOLORINGGREEDY  'greedy'
-#define MATCOLORINGJP      'jp'
 
 #define MATORDERINGNATURAL   'natural'
 #define MATORDERINGNATURAL_OR_ND 'natural_or_nd'
@@ -72,6 +73,7 @@
 #define MATORDERINGWBM       'wbm'
 #define MATORDERINGSPECTRAL  'spectral'
 #define MATORDERINGAMD       'amd'
+#define MATORDERINGEXTERNAL  'external'
 !
 !  Matrix types
 !
@@ -110,6 +112,7 @@
 #define MATSEQDENSECUDA    'seqdensecuda'
 #define MATMPIDENSE        'mpidense'
 #define MATELEMENTAL       'elemental'
+#define MATSCALAPACK       'scalapack'
 #define MATBAIJ            'baij'
 #define MATSEQBAIJ         'seqbaij'
 #define MATMPIBAIJ         'mpibaij'
@@ -150,6 +153,7 @@
 #define MATLMVMSYMBROYDEN  'lmvmsymbroyden'
 #define MATLMVMSYMBADBROYDEN 'lmvmsymbadbroyden'
 #define MATLMVMDIAGBROYDEN 'lmvmdiagbroyden'
+#define MATHARA            'hara'
 
 !
 ! MatMFFDType values
@@ -168,6 +172,7 @@
 #define MATSOLVERSPARSEELEMENTAL 'sparseelemental'
 #define MATSOLVERKLU             'klu'
 #define MATSOLVERELEMENTAL       'elemental'
+#define MATSOLVERSCALAPACK       'scalapack'
 #define MATSOLVERESSL            'essl'
 #define MATSOLVERLUSOL           'lusol'
 #define MATSOLVERMUMPS           'mumps'

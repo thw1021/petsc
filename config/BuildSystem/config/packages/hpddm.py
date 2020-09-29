@@ -3,10 +3,9 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self,framework):
     config.package.Package.__init__(self,framework)
-    self.gitcommit              = '21c972f' # master may-15-2020
+    self.gitcommit              = '882ec10' # master aug-30-2020
     self.download               = ['git://https://github.com/hpddm/hpddm','https://github.com/hpddm/hpddm/archive/'+self.gitcommit+'.tar.gz']
-    self.version                = '2.0.5'
-    self.minversion             = '2.0.3' # prior versions are not handling KSPHPDDM options properly
+    self.minversion             = '2.0.7'
     self.versionname            = 'HPDDM_VERSION'
     self.versioninclude         = 'HPDDM_define.hpp'
     self.requirescxx11          = 1
@@ -39,10 +38,10 @@ class Configure(config.package.Package):
     if self.slepc.found and not self.checkSharedLibrariesEnabled():
       raise RuntimeError('Shared libraries enabled needed to build PCHPDDM')
     buildDir = os.path.join(self.packageDir,'petsc-build')
-    self.setCompilers.pushLanguage('Cxx')
-    cxx = self.setCompilers.getCompiler()
-    cxxflags = self.setCompilers.getCompilerFlags()
-    self.setCompilers.popLanguage()
+    self.pushLanguage('Cxx')
+    cxx = self.getCompiler()
+    cxxflags = self.getCompilerFlags()
+    self.popLanguage()
     if self.framework.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
       PETSC_DIR  = os.path.abspath(os.path.expanduser(self.argDB['prefix']))
       PETSC_ARCH = ''
@@ -54,9 +53,9 @@ class Configure(config.package.Package):
     incDir = os.path.join(prefix,'include')
     libDir = os.path.join(prefix,'lib')
     if self.installSudo:
-       newuser = self.installSudo+' -u $${SUDO_USER} '
+      newuser = self.installSudo+' -u $${SUDO_USER} '
     else:
-       newuser = ''
+      newuser = ''
     self.addMakeMacro('HPDDM','yes')
     self.include = [incDir]
     if not hasattr(self.framework,'packages'):
@@ -85,9 +84,9 @@ class Configure(config.package.Package):
         self.compilers.CXXPPFLAGS = oldFlags
         # check for Windows-specific define
         if self.sharedLibraries.getMakeMacro('PETSC_DLL_EXPORTS'):
-            cxxflags += ' -Dpetsc_EXPORTS'
-            # need to explicitly link to PETSc and BLAS on Windows
-            ldflags += ' '+self.libraries.toStringNoDupes([os.path.join(libDir,'libpetsc.'+self.setCompilers.sharedLibraryExt),self.libraries.toStringNoDupes(self.blasLapack.lib)])
+          cxxflags += ' -Dpetsc_EXPORTS'
+          # need to explicitly link to PETSc and BLAS on Windows
+          ldflags += ' '+self.libraries.toStringNoDupes([os.path.join(libDir,'libpetsc.'+self.setCompilers.sharedLibraryExt),self.libraries.toStringNoDupes(self.blasLapack.lib)])
         self.addMakeRule('hpddmcopy','',\
                            ['@echo "*** Copying HPDDM ***"',\
                             '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/hpddm.errorflg',\

@@ -240,15 +240,15 @@ PetscErrorCode VecScatterCopy_PtoP_X(VecScatter in,VecScatter out)
   out_to->local.n                    = in_to->local.n;
   out_to->local.nonmatching_computed = PETSC_FALSE;
   out_to->local.n_nonmatching        = 0;
-  out_to->local.slots_nonmatching    = 0;
+  out_to->local.slots_nonmatching    = NULL;
   if (in_to->local.n) {
     ierr = PetscMalloc1(in_to->local.n,&out_to->local.vslots);CHKERRQ(ierr);
     ierr = PetscMalloc1(in_from->local.n,&out_from->local.vslots);CHKERRQ(ierr);
     ierr = PetscArraycpy(out_to->local.vslots,in_to->local.vslots,in_to->local.n);CHKERRQ(ierr);
     ierr = PetscArraycpy(out_from->local.vslots,in_from->local.vslots,in_from->local.n);CHKERRQ(ierr);
   } else {
-    out_to->local.vslots   = 0;
-    out_from->local.vslots = 0;
+    out_to->local.vslots   = NULL;
+    out_from->local.vslots = NULL;
   }
 
   /* allocate entire receive context */
@@ -271,7 +271,7 @@ PetscErrorCode VecScatterCopy_PtoP_X(VecScatter in,VecScatter out)
   out_from->local.n                    = in_from->local.n;
   out_from->local.nonmatching_computed = PETSC_FALSE;
   out_from->local.n_nonmatching        = 0;
-  out_from->local.slots_nonmatching    = 0;
+  out_from->local.slots_nonmatching    = NULL;
 
   /*
       set up the request arrays for use with isend_init() and irecv_init()
@@ -392,15 +392,15 @@ PetscErrorCode VecScatterCopy_PtoP_AllToAll(VecScatter in,VecScatter out)
   out_to->local.n                    = in_to->local.n;
   out_to->local.nonmatching_computed = PETSC_FALSE;
   out_to->local.n_nonmatching        = 0;
-  out_to->local.slots_nonmatching    = 0;
+  out_to->local.slots_nonmatching    = NULL;
   if (in_to->local.n) {
     ierr = PetscMalloc1(in_to->local.n,&out_to->local.vslots);CHKERRQ(ierr);
     ierr = PetscMalloc1(in_from->local.n,&out_from->local.vslots);CHKERRQ(ierr);
     ierr = PetscArraycpy(out_to->local.vslots,in_to->local.vslots,in_to->local.n);CHKERRQ(ierr);
     ierr = PetscArraycpy(out_from->local.vslots,in_from->local.vslots,in_from->local.n);CHKERRQ(ierr);
   } else {
-    out_to->local.vslots   = 0;
-    out_from->local.vslots = 0;
+    out_to->local.vslots   = NULL;
+    out_from->local.vslots = NULL;
   }
 
   /* allocate entire receive context */
@@ -420,7 +420,7 @@ PetscErrorCode VecScatterCopy_PtoP_AllToAll(VecScatter in,VecScatter out)
   out_from->local.n                    = in_from->local.n;
   out_from->local.nonmatching_computed = PETSC_FALSE;
   out_from->local.n_nonmatching        = 0;
-  out_from->local.slots_nonmatching    = 0;
+  out_from->local.slots_nonmatching    = NULL;
 
   PetscFunctionReturn(0);
 }
@@ -2030,7 +2030,7 @@ PETSC_STATIC_INLINE PetscErrorCode Scatter_bs(PetscInt n,const PetscInt *indices
     for (i=0; i<n; i++) {
       idx        = *indicesx++;
       idy        = *indicesy++;
-      for (j=0; j<bs; j++ )  y[idy+j] += x[idx+j];
+      for (j=0; j<bs; j++)  y[idy+j] += x[idx+j];
     }
     break;
 #if !defined(PETSC_USE_COMPLEX)
@@ -2038,7 +2038,7 @@ PETSC_STATIC_INLINE PetscErrorCode Scatter_bs(PetscInt n,const PetscInt *indices
     for (i=0; i<n; i++) {
       idx       = *indicesx++;
       idy       = *indicesy++;
-      for (j=0; j<bs; j++ )  y[idy+j] = PetscMax(y[idy+j],x[idx+j]);
+      for (j=0; j<bs; j++)  y[idy+j] = PetscMax(y[idy+j],x[idx+j]);
     }
 #else
   case MAX_VALUES:
@@ -2423,9 +2423,9 @@ PetscErrorCode VecScatterCreateLocal_PtoS_MPI3(PetscInt nx,const PetscInt *inidx
     ierr = PetscLogObjectMemory((PetscObject)ctx,2*nt*sizeof(PetscInt));CHKERRQ(ierr);
   } else {
     from->local.n      = 0;
-    from->local.vslots = 0;
+    from->local.vslots = NULL;
     to->local.n        = 0;
-    to->local.vslots   = 0;
+    to->local.vslots   = NULL;
   }
 
   /* Get the shared memory address for all processes we will be copying data from */
@@ -2455,10 +2455,10 @@ PetscErrorCode VecScatterCreateLocal_PtoS_MPI3(PetscInt nx,const PetscInt *inidx
 
   from->local.nonmatching_computed = PETSC_FALSE;
   from->local.n_nonmatching        = 0;
-  from->local.slots_nonmatching    = 0;
+  from->local.slots_nonmatching    = NULL;
   to->local.nonmatching_computed   = PETSC_FALSE;
   to->local.n_nonmatching          = 0;
-  to->local.slots_nonmatching      = 0;
+  to->local.slots_nonmatching      = NULL;
 
   from->format = VEC_SCATTER_MPI_GENERAL;
   to->format   = VEC_SCATTER_MPI_GENERAL;
@@ -2532,11 +2532,11 @@ PetscErrorCode VecScatterCreateCommon_PtoS_MPI3(VecScatter_MPI_General *from,Vec
   }
   ierr = PetscInfo1(ctx,"Using blocksize %D scatter\n",bs);CHKERRQ(ierr);
 
-#if defined(PETSC_USE_DEBUG)
-  ierr = MPIU_Allreduce(&bs,&i,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&bs,&n,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
-  if (bs!=i || bs!=n) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Blocks size %D != %D or %D",bs,i,n);
-#endif
+  if (PetscDefined(USE_DEBUG)) {
+    ierr = MPIU_Allreduce(&bs,&i,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&bs,&n,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+    if (bs!=i || bs!=n) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Blocks size %D != %D or %D",bs,i,n);
+  }
 
   ierr = VecScatterGetType(ctx,&type);CHKERRQ(ierr);
   ierr = PetscStrcmp(type,"mpi3node",&mpi3node);CHKERRQ(ierr);
@@ -2686,8 +2686,8 @@ PetscErrorCode VecScatterCreateLocal_StoP_MPI3(PetscInt nx,const PetscInt *inidx
   to->sstatus   = from->sstatus;
   to->rstatus   = from->rstatus;
 
-  from->sstatus = 0;
-  from->rstatus = 0;
+  from->sstatus = NULL;
+  from->rstatus = NULL;
   waits              = from->rev_requests;
   from->rev_requests = from->requests;
   from->requests     = waits;
@@ -2713,9 +2713,7 @@ PetscErrorCode VecScatterCreateLocal_PtoP_MPI3(PetscInt nx,const PetscInt *inidx
   MPI_Request    *send_waits = NULL,*recv_waits = NULL;
   MPI_Status     recv_status,*send_status = NULL;
   PetscBool      duplicate = PETSC_FALSE;
-#if defined(PETSC_USE_DEBUG)
   PetscBool      found = PETSC_FALSE;
-#endif
 
   PetscFunctionBegin;
   ierr = PetscObjectGetNewTag((PetscObject)ctx,&tag);CHKERRQ(ierr);
@@ -2745,16 +2743,12 @@ PetscErrorCode VecScatterCreateLocal_PtoP_MPI3(PetscInt nx,const PetscInt *inidx
       if (idx >= owners[j] && idx < owners[j+1]) {
         nprocs[j]++;
         owner[i] = j;
-#if defined(PETSC_USE_DEBUG)
         found = PETSC_TRUE;
-#endif
         break;
       }
     }
-#if defined(PETSC_USE_DEBUG)
-    if (!found) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Index %D out of range",idx);
+    if (PetscUnlikelyDebug(!found)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Index %D out of range",idx);
     found = PETSC_FALSE;
-#endif
   }
   nsends = 0;
   for (i=0; i<size; i++) nsends += (nprocs[i] > 0);

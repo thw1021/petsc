@@ -337,6 +337,10 @@ PetscErrorCode MatHeaderMerge(Mat A,Mat *C)
   Mat_Product    *product;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
+  PetscValidHeaderSpecific(*C,MAT_CLASSID,2);
+  if (A == *C) PetscFunctionReturn(0);
+  PetscCheckSameComm(A,1,*C,2);
   /* save the parts of A we need */
   Abops = ((PetscObject)A)->bops[0];
   Aops  = A->ops[0];
@@ -347,8 +351,8 @@ PetscErrorCode MatHeaderMerge(Mat A,Mat *C)
   product = A->product;
 
   /* zero these so the destroy below does not free them */
-  ((PetscObject)A)->type_name = 0;
-  ((PetscObject)A)->name      = 0;
+  ((PetscObject)A)->type_name = NULL;
+  ((PetscObject)A)->name      = NULL;
 
   /* free all the interior data structures from mat */
   ierr = (*A->ops->destroy)(A);CHKERRQ(ierr);
@@ -372,8 +376,8 @@ PetscErrorCode MatHeaderMerge(Mat A,Mat *C)
   A->product                  = product;
 
   /* since these two are copied into A we do not want them destroyed in C */
-  ((PetscObject)*C)->qlist = 0;
-  ((PetscObject)*C)->olist = 0;
+  ((PetscObject)*C)->qlist = NULL;
+  ((PetscObject)*C)->olist = NULL;
 
   ierr = PetscHeaderDestroy(C);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -393,6 +397,7 @@ PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat A,Mat *C)
   PetscInt         refct;
   PetscObjectState state;
   struct _p_Mat    buffer;
+  MatStencilInfo   stencil;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -402,13 +407,15 @@ PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat A,Mat *C)
   if (((PetscObject)*C)->refct != 1) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_ARG_WRONGSTATE,"Object C has refct %D > 1, would leave hanging reference",((PetscObject)*C)->refct);
 
   /* swap C and A */
-  refct = ((PetscObject)A)->refct;
-  state = ((PetscObject)A)->state;
+  refct   = ((PetscObject)A)->refct;
+  state   = ((PetscObject)A)->state;
+  stencil = A->stencil;
   ierr  = PetscMemcpy(&buffer,A,sizeof(struct _p_Mat));CHKERRQ(ierr);
   ierr  = PetscMemcpy(A,*C,sizeof(struct _p_Mat));CHKERRQ(ierr);
   ierr  = PetscMemcpy(*C,&buffer,sizeof(struct _p_Mat));CHKERRQ(ierr);
-  ((PetscObject)A)->refct = refct;
-  ((PetscObject)A)->state = state + 1;
+  ((PetscObject)A)->refct   = refct;
+  ((PetscObject)A)->state   = state + 1;
+  A->stencil                = stencil;
 
   ((PetscObject)*C)->refct = 1;
   ierr = MatShellSetOperation(*C,MATOP_DESTROY,(void(*)(void))NULL);CHKERRQ(ierr);
@@ -431,6 +438,8 @@ PetscErrorCode MatBindToCPU(Mat A,PetscBool flg)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
+  PetscValidLogicalCollectiveBool(A,flg,2);
   if (A->boundtocpu == flg) PetscFunctionReturn(0);
   A->boundtocpu = flg;
   if (A->ops->bindtocpu) {
@@ -438,6 +447,9 @@ PetscErrorCode MatBindToCPU(Mat A,PetscBool flg)
   }
   PetscFunctionReturn(0);
 #else
-  return 0;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
+  PetscValidLogicalCollectiveBool(A,flg,2);
+  PetscFunctionReturn(0);
 #endif
 }

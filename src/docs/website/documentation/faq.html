@@ -38,12 +38,13 @@
             <li><a href="license.html">License</a></li>
             <li><a href="linearsolvertable.html">Linear Solver Table</a></li>
             <li><a href="nonlinearsolvertable.html">Nonlinear Solver Table</a></li>
+	    <li><a href="taosolvertable.html">TAO Solver Table</a></li>
           </ul>
         </li>
         <li><a href="../publications/index.html">Applications/Publications</a></li>
         <li><a href="../miscellaneous/index.html">Miscellaneous</a></li>
         <li><a href="../miscellaneous/external.html">External Software</a></li>
-        <li><a href="../developers/index.html">Developers Site</a></li>
+        <li><a href="https://docs.petsc.org/en/latest/developers/index.html">Developers Site</a></li>
       </ul>
     </div>
 
@@ -94,14 +95,19 @@
         <li><a href="#gfortran">What Fortran compiler do you recommend for the Apple Mac OS X?</a></li>
         <li><a href="#packagelocations">How can I find the URL locations of the packages you install using --download-PACKAGE?</a></li>
         <li><a href="#multiplempis">How to fix the problem: PETSc was configured with one MPICH or OpenMPI mpi.h version but now appears to be compiling using a different MPICH OpenMPI mpi.h version</a></li>
-        <li><a href="#PetscOptionsInsertFile">What does it mean when make check gives:</a>
+        <li><a href="#mpi-network-misconfigure">What does it mean when make check gives:</a>
             <pre>
 Possible error running C/C++ src/snes/tutorials/ex19 with 2 MPI processes
 See https://www.mcs.anl.gov/petsc/documentation/faq.html
 [0]PETSC ERROR: #1 PetscOptionsInsertFile() line 563 in /Users/barrysmith/Src/PETSc/src/sys/objects/options.c
 [0]PETSC ERROR: #2 PetscOptionsInsert() line 720 in /Users/barrysmith/Src/PETSc/src/sys/objects/options.c
 [0]PETSC ERROR: #3 PetscInitialize() line 828 in /Users/barrysmith/Src/PETSc/src/sys/objects/pinit.c
-            </pre></li>
+            </pre>
+            or you get the message
+            <pre>
+Error in first MPI collective call, this indicates a network problem, it could be caused by an incorrect mpiexec or having VPN running:
+            </pre>
+        </li>
       </ul>
 
       <h4><a href="#usage">Usage</a></h4>
@@ -138,6 +144,7 @@ See https://www.mcs.anl.gov/petsc/documentation/faq.html
         <li><a href="#hermitian">Can PETSc work with Hermitian matrices?</a></li>
         <li><a href="#matreassembly">How do I efficiently assemble a bunch of very similar matrices (say in a time loop)?</a></li>
         <li><a href="#resize">Can one resize or change the size of PETSc matrices or vectors?</a></li>
+        <li><a href="#mumpsnullspace">How can one compute the nullspace of a sparse matrix with MUMPS?</a></li>
       </ul>
 
       <h4><a href="#Execution">Execution</a></h4>
@@ -180,6 +187,7 @@ See https://www.mcs.anl.gov/petsc/documentation/faq.html
         <li><a href="#doubleits">Why do some Krylov methods seem to print two residual norms per iteration?</a></li>
         <li><a href="#dylib">Unable to locate PETSc dynamic library /home/balay/spetsc/lib/libg/linux/libpetsc</a></li>
         <li><a href="#bisect">How do I determine what update to PETSc broke my code?</a></li>
+        <li><a href="#openmpithreaderror">How to fix the error PMIX ERROR: ERROR in file gds_ds12_lock_pthread.c?</a></li>
       </ul>
 
       <h4><a href="#shared-libraries">Shared Libraries</a></h4>
@@ -644,7 +652,7 @@ See https://www.mcs.anl.gov/petsc/documentation/faq.html
   </ul>
 
 
-      <h3><a name="PetscOptionsInsertFile">What does it mean when make check gives:</a></h3>
+      <h3><a name="mpi-network-misconfigure">What does it mean when make check gives:</a></h3>
             <pre>
 Possible error running C/C++ src/snes/tutorials/ex19 with 2 MPI processes
 See https://www.mcs.anl.gov/petsc/documentation/faq.html
@@ -653,8 +661,16 @@ See https://www.mcs.anl.gov/petsc/documentation/faq.html
 [0]PETSC ERROR: #3 PetscInitialize() line 828 in /Users/barrysmith/Src/PETSc/src/sys/objects/pinit.c
 </pre></li>
 
-      <p>
-        The machine has a funky network configuration and for some reason MPICH is unable to communicate between processes with the socket connections it has established. This can happen even if you are running MPICH on just one machine. Often you will find that ping `hostname` fails with this network configuration; that is processes on the machine cannot even connect to the same machine. You can try completely disconnecting your machine from the network and see if make check then works or speaking with your system adminstrator. You can also use the ./configure options --download-mpich --download-mpich-device=ch3:nemesis
+       <p>
+      You are using the wrong mpiexec for the MPI you have linked PETSc with.
+       </p>
+
+       <p>
+      You have VPN enabled on your machine whose network settings may not play well with MPI
+       </p>
+
+       <p>
+        The machine has a funky network configuration and for some reason MPICH is unable to communicate between processes with the socket connections it has established. This can happen even if you are running MPICH on just one machine. Often you will find that ping `hostname` fails with this network configuration; that is processes on the machine cannot even connect to the same machine. You can try completely disconnecting your machine from the network and see if make check then works or speaking with your system administrator. You can also use the ./configure options --download-mpich --download-mpich-device=ch3:nemesis
       </p>
 
       <hr>
@@ -785,7 +801,7 @@ PetscErrorCode mypetscvfprintf(FILE *fd, const char format[], va_list Argp) {
         and several others. You may see the available ASM options by using
         <code>-pc_type asm -help</code> Also, see the procedural interfaces in the
         manual pages, with names <code>PCASMxxxx()</code> and check the index of the
-        <a href="https://www.mcs.anl.gov/petsc/petsc-current/docs/manual.pdf">users manual</a>
+        <a href="https://docs.petsc.org/en/latest/manual">users manual</a>
         for <code>PCASMxxx</code>().
       </p>
 
@@ -943,7 +959,7 @@ PetscErrorCode mypetscvfprintf(FILE *fd, const char format[], va_list Argp) {
 
       <h3><a name="makefiles">How do I compile and link may own PETSc application codes and can I use my own makefiles or rules for compiling code, rather than PETSc's?</a></h3>
 
-      See the section of the <a href="https://www.mcs.anl.gov/petsc/petsc-current/docs/manual.pdf">users manual</a> called Writing Application Codes with PETSc. This provides a
+      See the <a href="https://docs.petsc.org/en/latest/manual/getting_started/#writing-application-codes-with-petsc">section of the users manual</a> on writing application codes with PETSc. This provides a
       simple makefile that can be used to compiler user code. You are free to modify this makefile or completely replace it with your own makefile. 
 
       <h3><a name="cmake">Can I use CMake to build my own project that depends on PETSc?</a></h3>
@@ -1335,6 +1351,23 @@ PETSC_COMM_WORLD = NewComm;
 
       No, once the vector or matrices sizes have been set and the matrices or vectors are fully usuable one cannot change the size of the matrices or vectors or number of processors they live on. One may create new vectors and copy, for example using VecScatterCreate(), the old values from the previous vector.
 
+     <h3><a name="mumpsnullspace">How can one compute the nullspace of a sparse matrix with MUMPS?</a></h3>
+
+      <pre>
+      Mat F,work,V;
+      PetscInt N;
+
+      MatGetFactor(A,MATSOLVERMUMPS,MAT_FACTOR_LU,&F);
+      MatMumpsSetIcntl(F,24,1);
+      MatMumpsSetIcntl(F,25,1);
+      MatLUFactorSymbolic(F,A,NULL,NULL,NULL);
+      MatLUFactorNumeric(F,A,NULL);
+      MatMumpsGetInfog(F,28,&N);   /* this is the dimension of the null space */
+      MatDenseCreate(comm,rows,N,PETSC_DETERMINE,PETSC_DETERMINE,NULL,&V);    /* this will contain the null space in the columns */
+      MatDuplicate(V,MAT_DO_NOT_COPY_VALUES,&work);
+      MatMatSolve(F,work,V);
+     </pre>
+
       <hr>
 
       <h2><a name="execution">Execution</a></h2>
@@ -1367,7 +1400,7 @@ PETSC_COMM_WORLD = NewComm;
 
       <h3><a name="efficient-assembly">Assembling large sparse matrices takes a long time. What can I do make this process faster? or MatSetValues() is so slow, what can I do to speed it up?</a></h3>
 
-      See the <a href="https://www.mcs.anl.gov/petsc/petsc-current/docs/manual.pdf#nameddest=ch_performance">Performance chapter of the users manual</a> for many tips on this.
+      See the <a href="https://docs.petsc.org/en/latest/manual/performance/">Performance chapter of the users manual</a> for many tips on this.
 
       <ol>
         <li>
@@ -1389,7 +1422,7 @@ PETSC_COMM_WORLD = NewComm;
       <p>Preallocation of matrix memory is crucial for good performance for large problems, see:</p>
 
       <ul>
-        <li><a href="https://www.mcs.anl.gov/petsc/petsc-current/docs/manual.pdf#sec_matsparse">https://www.mcs.anl.gov/petsc/petsc-current/docs/manual.pdf#sec_matsparse</a></li>
+        <li><a href="https://docs.petsc.org/en/latest/manual/mat/#sparse-matrices">the users manual on sparse matrices</a></li>
         <li><a href="https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/Mat/MatCreateAIJ.html">https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/Mat/MatCreateMPIAIJ.html</a></li>
       </ul>
 
@@ -1407,7 +1440,7 @@ PETSC_COMM_WORLD = NewComm;
 
       <h3><a name="log-view">How can I generate performance summaries with PETSc?</a></h3>
 
-      Use these options at runtime: -log_view. See the <a href="https://www.mcs.anl.gov/petsc/petsc-current/docs/manual.pdf#nameddest=ch_performance">Performance chapter of the users manual</a>
+      Use these options at runtime: -log_view. See the <a href="https://docs.petsc.org/en/latest/manual/performance/">Performance chapter of the users manual</a>
       for information on interpreting the summary data. If using the PETSc
       (non)linear solvers, one can also specify -snes_view or -ksp_view for
       a printout of solver info. Only the highest level PETSc object used needs
@@ -2178,10 +2211,18 @@ source /opt/intel/idb/10.1.012/bin/idbvars.sh
           See <a href="https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-bisect.html">git-bisect(1)</a>
           and the <a href="https://git-scm.com/book/en/Git-Tools-Debugging-with-Git">debugging
           section of the Git Book</a> for more debugging tips.
-        <li>
+        </li>
       </ul>
 
       <hr>
+
+      <h3><a name="openmpithreaderror">How to fix the error  PMIX ERROR: ERROR in file gds_ds12_lock_pthread.c?</a></h3>
+
+        This seems to be an error when using OpenMPI and OpenBLAS with threads (or perhaps other packages that use threads). </p>
+
+        export PMIX_MCA_gds=hash</p>
+
+        Should resolve the problem.
 
       <h2><a name="shared-libraries">Shared Libraries</a></h2>
 

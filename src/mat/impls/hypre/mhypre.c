@@ -58,10 +58,7 @@ static PetscErrorCode MatHYPRE_IJMatrixPreallocate(Mat A_d, Mat A_o, HYPRE_IJMat
   }
   if (done_d) {    /* set number of nonzeros in HYPRE IJ matrix */
     if (!done_o) { /* only diagonal part */
-      ierr = PetscMalloc1(n_d,&nnz_o);CHKERRQ(ierr);
-      for (i=0; i<n_d; i++) {
-        nnz_o[i] = 0;
-      }
+      ierr = PetscCalloc1(n_d,&nnz_o);CHKERRQ(ierr);
     }
 #if PETSC_PKG_HYPRE_VERSION_GE(2,16,0)
     { /* If we don't do this, the columns of the matrix will be all zeros! */
@@ -70,8 +67,11 @@ static PetscErrorCode MatHYPRE_IJMatrixPreallocate(Mat A_d, Mat A_o, HYPRE_IJMat
       hypre_AuxParCSRMatrixDestroy(aux_matrix);
       hypre_IJMatrixTranslator(ij) = NULL;
       PetscStackCallStandard(HYPRE_IJMatrixSetDiagOffdSizes,(ij,nnz_d,nnz_o));
+      /* it seems they partially fixed it in 2.19.0 */
+#if PETSC_PKG_HYPRE_VERSION_LT(2,19,0)
       aux_matrix = (hypre_AuxParCSRMatrix*)hypre_IJMatrixTranslator(ij);
       hypre_AuxParCSRMatrixNeedAux(aux_matrix) = 1;
+#endif
     }
 #else
     PetscStackCallStandard(HYPRE_IJMatrixSetDiagOffdSizes,(ij,nnz_d,nnz_o));
@@ -394,7 +394,8 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
     hB   = (Mat_HYPRE*)(M->data);
     if (reuse == MAT_INITIAL_MATRIX) *B = M;
   }
-  ierr = MatSetOption(*B,MAT_SORTED_FULL,PETSC_TRUE); /* "perfect" preallocation, so no need for hypre_AuxParCSRMatrixNeedAux */
+  ierr = MatSetOption(*B,MAT_SORTED_FULL,PETSC_TRUE);CHKERRQ(ierr); /* "perfect" preallocation, so no need for hypre_AuxParCSRMatrixNeedAux */
+  ierr = MatSetOption(*B,MAT_NO_OFF_PROC_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatHYPRE_CreateFromMat(A,hB);CHKERRQ(ierr);
   ierr = MatHYPRE_IJMatrixCopy(A,hB->ij);CHKERRQ(ierr);
   if (reuse == MAT_INPLACE_MATRIX) {
@@ -988,7 +989,7 @@ static PetscErrorCode MatProductSetFromOptions_HYPRE_AB(Mat C)
     C->ops->productsymbolic = MatProductSymbolic_AB_HYPRE;
     C->ops->matmultnumeric  = MatMatMultNumeric_HYPRE_HYPRE;
     PetscFunctionReturn(0);
-  } else SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_SUP,"A must be Hyper type");
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1054,7 +1055,8 @@ static PetscErrorCode MatProductSetFromOptions_HYPRE(Mat C)
   case MATPRODUCT_PtAP:
     ierr = MatProductSetFromOptions_HYPRE_PtAP(C);CHKERRQ(ierr);
     break;
-  default: SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_SUP,"Mat Product type %s is not supported for HYPRE and HYPRE matrices",MatProductTypes[product->type]);
+  default:
+    break;
   }
   PetscFunctionReturn(0);
 }
@@ -1191,7 +1193,7 @@ static PetscErrorCode MatAssemblyEnd_HYPRE(Mat A, MatAssemblyType mode)
       ierr = MatStashScatterGetMesg_Private(&A->stash,&n,&row,&col,&val,&flg);CHKERRQ(ierr);
       if (!flg) break;
 
-      for (i=0; i<n; ) {
+      for (i=0; i<n;) {
         /* Now identify the consecutive vals belonging to the same row */
         for (j=i,rstart=row[j]; j<n; j++) {
           if (row[j] != rstart) break;
@@ -1210,7 +1212,7 @@ static PetscErrorCode MatAssemblyEnd_HYPRE(Mat A, MatAssemblyType mode)
   PetscStackCallStandard(HYPRE_IJMatrixAssemble,(hA->ij));
   /* The assembly routine destroys the aux_matrix, we recreate it here by calling HYPRE_IJMatrixInitialize */
   /* If the option MAT_SORTED_FULL is set to true, the indices and values can be passed to hypre directly, so we don't need the aux_matrix */
-  if(!hA->sorted_full) {
+  if (!hA->sorted_full) {
     hypre_AuxParCSRMatrix *aux_matrix;
 
     /* call destroy just to make sure we do not leak anything */
@@ -1222,7 +1224,11 @@ static PetscErrorCode MatAssemblyEnd_HYPRE(Mat A, MatAssemblyType mode)
     PetscStackCallStandard(HYPRE_IJMatrixInitialize,(hA->ij));
     aux_matrix = (hypre_AuxParCSRMatrix*)hypre_IJMatrixTranslator(hA->ij);
     hypre_AuxParCSRMatrixNeedAux(aux_matrix) = 1; /* see comment in MatHYPRESetPreallocation_HYPRE */
+#if PETSC_PKG_HYPRE_VERSION_LT(2,19,0)
     PetscStackCallStandard(hypre_AuxParCSRMatrixInitialize,(aux_matrix));
+#else
+    PetscStackCallStandard(hypre_AuxParCSRMatrixInitialize_v2,(aux_matrix,HYPRE_MEMORY_HOST));
+#endif
   }
   if (hA->x) PetscFunctionReturn(0);
   ierr = PetscLayoutSetUp(A->rmap);CHKERRQ(ierr);
@@ -1369,9 +1375,7 @@ static PetscErrorCode MatHYPRESetPreallocation_HYPRE(Mat A, PetscInt dnz, const 
     if (!onnz) {
       ierr = PetscMalloc1(A->rmap->n,&honnz);CHKERRQ(ierr);
       for (i=0;i<A->rmap->n;i++) honnz[i] = onz;
-    } else {
-      honnz = (HYPRE_Int*)onnz;
-    }
+    } else honnz = (HYPRE_Int*)onnz;
     /* SetDiagOffdSizes sets hypre_AuxParCSRMatrixNeedAux(aux_matrix) = 0, since it seems
        they assume the user will input the entire row values, properly sorted
        In PETSc, we don't make such an assumption and set this flag to 1,
@@ -1974,13 +1978,11 @@ static PetscErrorCode MatGetDiagonal_HYPRE(Mat A, Vec d)
   PetscFunctionBegin;
   ierr = MatHasCongruentLayouts(A,&cong);CHKERRQ(ierr);
   if (!cong) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Only for square matrices with same local distributions of rows and columns");
-#if defined(PETSC_USE_DEBUG)
-  {
+  if (PetscDefined(USE_DEBUG)) {
     PetscBool miss;
     ierr = MatMissingDiagonal(A,&miss,NULL);CHKERRQ(ierr);
     if (miss && A->rmap->n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented when diagonal entries are missing");
   }
-#endif
   ierr = MatHYPREGetParCSR_HYPRE(A,&parcsr);CHKERRQ(ierr);
   dmat = hypre_ParCSRMatrixDiag(parcsr);
   if (dmat) {

@@ -65,7 +65,7 @@ PetscErrorCode  SNESMonitorResidual(SNES snes,PetscInt its,PetscReal fgnorm,Pets
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,4);
-  ierr = SNESGetFunction(snes,&x,0,0);CHKERRQ(ierr);
+  ierr = SNESGetFunction(snes,&x,NULL,NULL);CHKERRQ(ierr);
   ierr = PetscViewerPushFormat(viewer,vf->format);CHKERRQ(ierr);
   ierr = VecView(x,viewer);CHKERRQ(ierr);
   ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
@@ -343,7 +343,7 @@ PetscErrorCode SNESMonitorJacUpdateSpectrum(SNES snes,PetscInt it,PetscReal fnor
   PetscErrorCode ierr;
   PetscErrorCode (*func)(SNES,Vec,Mat,Mat,void*);
   PetscInt       n,i;
-  PetscBLASInt   nb,lwork;
+  PetscBLASInt   nb = 0,lwork;
   PetscReal      *eigr,*eigi;
   PetscScalar    *work;
   PetscScalar    *a;
@@ -402,7 +402,7 @@ PetscErrorCode  SNESMonitorRange_Private(SNES snes,PetscInt it,PetscReal *per)
   PetscScalar    *r;
 
   PetscFunctionBegin;
-  ierr  = SNESGetFunction(snes,&resid,0,0);CHKERRQ(ierr);
+  ierr  = SNESGetFunction(snes,&resid,NULL,NULL);CHKERRQ(ierr);
   ierr  = VecNorm(resid,NORM_INFINITY,&rmax);CHKERRQ(ierr);
   ierr  = VecGetLocalSize(resid,&n);CHKERRQ(ierr);
   ierr  = VecGetSize(resid,&N);CHKERRQ(ierr);

@@ -26,7 +26,7 @@ int main(int argc,char **argv)
 
   ierr = PetscInitialize(&argc,&argv,0,help);if (ierr) return ierr;
   /* Load the data from a file */
-  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,sizeof(file),&flg);CHKERRQ(ierr);
   if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must indicate binary file with the -f option");
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file,FILE_MODE_READ,&fd);CHKERRQ(ierr);
 
@@ -78,12 +78,12 @@ int main(int argc,char **argv)
       requires: cuda
 
    test:
-      requires: cuda datafilespath double !complex !define(PETSC_USE_64BIT_INDICES)
+      requires: cuda datafilespath double !complex !define(PETSC_USE_64BIT_INDICES) !CUDA_VERSION_11PLUS
       args: -f ${DATAFILESPATH}/matrices/cfd.2.10 -mat_type seqaijcusparse -pc_factor_mat_solver_type cusparse -mat_cusparse_storage_format ell -vec_type cuda -pc_type ilu
 
    test:
       suffix: 2
-      requires: cuda datafilespath double !complex !define(PETSC_USE_64BIT_INDICES)
+      requires: cuda datafilespath double !complex !define(PETSC_USE_64BIT_INDICES) !CUDA_VERSION_11PLUS
       args: -f ${DATAFILESPATH}/matrices/shallow_water1 -mat_type seqaijcusparse -pc_factor_mat_solver_type cusparse -mat_cusparse_storage_format hyb -vec_type cuda -ksp_type cg -pc_type icc
 
    test:
@@ -98,7 +98,7 @@ int main(int argc,char **argv)
 
    testset:
       nsize: 2
-      requires: cuda datafilespath double !complex !define(PETSC_USE_64BIT_INDICES)
+      requires: cuda datafilespath double !complex !define(PETSC_USE_64BIT_INDICES) !CUDA_VERSION_11PLUS
       args: -f ${DATAFILESPATH}/matrices/shallow_water1 -mat_type mpiaijcusparse -mat_cusparse_mult_diag_storage_format hyb -pc_type none -vec_type cuda
       test:
         suffix: 5

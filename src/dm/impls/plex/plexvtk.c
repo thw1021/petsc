@@ -121,8 +121,7 @@ static PetscErrorCode DMPlexVTKWriteCells_ASCII(DM dm, FILE *fp, PetscInt *total
   ierr     = PetscMalloc1(maxCells, &corners);CHKERRQ(ierr);
   ierr     = PetscFPrintf(comm, fp, "CELLS %D %D\n", totCells, totCorners+totCells);CHKERRQ(ierr);
   if (!rank) {
-    PetscInt *remoteVertices;
-    PetscInt *vertices;
+    PetscInt *remoteVertices, *vertices;
 
     ierr = PetscMalloc1(maxCorners, &vertices);CHKERRQ(ierr);
     for (c = cStart, numCells = 0; c < cEnd; ++c) {
@@ -542,7 +541,7 @@ static PetscErrorCode DMPlexVTKWriteAll_ASCII(DM dm, PetscViewer viewer)
             PetscInt        n = 0, q;
 
             ierr = PetscSectionGetChart(section, &qStart, &qEnd);CHKERRQ(ierr);
-            ierr = DMPlexCreateSubpointIS(dm, &subpointIS);CHKERRQ(ierr);
+            ierr = DMPlexGetSubpointIS(dm, &subpointIS);CHKERRQ(ierr);
             if (subpointIS) {
               ierr = ISGetLocalSize(subpointIS, &n);CHKERRQ(ierr);
               ierr = ISGetIndices(subpointIS, &ind);CHKERRQ(ierr);
@@ -564,7 +563,6 @@ static PetscErrorCode DMPlexVTKWriteAll_ASCII(DM dm, PetscViewer viewer)
             }
             if (subpointIS) {
               ierr = ISRestoreIndices(subpointIS, &ind);CHKERRQ(ierr);
-              ierr = ISDestroy(&subpointIS);CHKERRQ(ierr);
             }
             /* No need to setup section */
             section = newSection;
@@ -681,7 +679,7 @@ PetscErrorCode DMPlexVTKWriteAll(PetscObject odm, PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERVTK, &isvtk);CHKERRQ(ierr);
   if (!isvtk) SETERRQ1(PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_INCOMP, "Cannot use viewer type %s", ((PetscObject)viewer)->type_name);
   switch (viewer->format) {
-  case PETSC_VIEWER_ASCII_VTK:
+  case PETSC_VIEWER_ASCII_VTK_DEPRECATED:
     ierr = DMPlexVTKWriteAll_ASCII(dm, viewer);CHKERRQ(ierr);
     break;
   case PETSC_VIEWER_VTK_VTU:

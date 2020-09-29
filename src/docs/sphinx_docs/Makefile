@@ -1,5 +1,4 @@
-# Minimal makefile for Sphinx documentation
-#
+# Initially generated with sphinx-quickstart
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.
@@ -9,7 +8,7 @@ SOURCEDIR     = .
 BUILDDIR      = _build
 LINKCHECKDIR  = _build/linkcheck
 
-# Put it first so that "make" without argument is like "make help".
+# First so that "make" without arguments is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 

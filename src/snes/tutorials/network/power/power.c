@@ -80,7 +80,9 @@ int main(int argc,char ** argv)
   PetscInt         i;
   DM               networkdm;
   UserCtx_Power    User;
+#if defined(PETSC_USE_LOG)
   PetscLogStage    stage1,stage2;
+#endif
   PetscMPIInt      rank;
   PetscInt         eStart, eEnd, vStart, vEnd,j;
   PetscInt         genj,loadj;
@@ -109,7 +111,7 @@ int main(int argc,char ** argv)
     if (!crank) {
       /*    READ DATA */
       /* Only rank 0 reads the data */
-      ierr = PetscOptionsGetString(NULL,NULL,"-pfdata",pfdata_file,PETSC_MAX_PATH_LEN-1,NULL);CHKERRQ(ierr);
+      ierr = PetscOptionsGetString(NULL,NULL,"-pfdata",pfdata_file,sizeof(pfdata_file),NULL);CHKERRQ(ierr);
       ierr = PetscNew(&pfdata);CHKERRQ(ierr);
       ierr = PFReadMatPowerData(pfdata,pfdata_file);CHKERRQ(ierr);
       User.Sbase = pfdata->sbase;

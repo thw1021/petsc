@@ -47,7 +47,7 @@ SNES Object: 2 MPI processes
   PC Object: 2 MPI processes
     type: bjacobi
       number of blocks = 2
-      Local solve is same for all blocks, in the following KSP and PC objects:
+      Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:
     KSP Object: (sub_) 1 MPI processes
       type: preonly
       maximum iterations=10000, initial guess is zero
@@ -67,7 +67,6 @@ SNES Object: 2 MPI processes
               rows=32, cols=32, bs=4
               package used to perform factorization: petsc
               total: nonzeros=448, allocated nonzeros=448
-              total number of mallocs used during MatSetValues calls=0
                   block size is 4
       linear system matrix = precond matrix:
       Mat Object: 1 MPI processes

@@ -10,7 +10,7 @@ PC Object: 1 MPI processes
   type: asm
     total subdomain blocks = 1, amount of overlap = 1
     restriction/interpolation type - RESTRICT
-    Local solve is same for all blocks, in the following KSP and PC objects:
+    Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:
     KSP Object: (sub_) 1 MPI processes
       type: preonly
       maximum iterations=10000, initial guess is zero
@@ -30,7 +30,6 @@ PC Object: 1 MPI processes
               rows=64, cols=64
               package used to perform factorization: petsc
               total: nonzeros=288, allocated nonzeros=288
-              total number of mallocs used during MatSetValues calls=0
                 not using I-node routines
       linear system matrix = precond matrix:
       Mat Object: 1 MPI processes
