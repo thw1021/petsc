@@ -108,6 +108,9 @@ PetscErrorCode IMView(IM m, PetscViewer vwr)
 
 PetscErrorCode IMSetUp(IM m)
 {
+
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   PetscValidType(m,1);
@@ -116,7 +119,6 @@ PetscErrorCode IMSetUp(IM m)
     if (!(m->kstorage)) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Map must be set as contiguous or non contiguous before setup");
   }
   if (m->ops->setup) {
-    PetscErrorCode ierr;
     ierr = (*m->ops->setup)(m);CHKERRQ(ierr);
   }
   m->setup = PETSC_TRUE;
@@ -134,6 +136,8 @@ PetscErrorCode IMSetFromOptions(IM m)
   PetscFunctionReturn(0);
 }
 
+/* JUST SET NUMBER OF KEYS */
+/* NOT COLLECTIVE */
 PetscErrorCode IMGetKeyState(IM m, IMState *state)
 {
   PetscFunctionBegin;
@@ -143,66 +147,82 @@ PetscErrorCode IMGetKeyState(IM m, IMState *state)
   PetscFunctionReturn(0);
 }
 
+/* NOT COLLECTIVE */
+PetscErrorCode IMGetNumKeys(IM m, IMOpMode mode, PetscInt *n)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  PetscValidIntPointer(n,3);
+  *n = m->nKeys[mode];
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode IMSetNumKeys(IM m, IMOpMode mode, PetscInt n)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  m->nKeys[mode] = n;
+  PetscFunctionReturn(0);
+}
+
+/* SET/GET KEYS DIRECTLY */
+/* NOT COLLECTIVE, keyStart = keyEnd = PETSC_DETERMINE */
 PetscErrorCode IMSetKeysContiguous(IM m, PetscInt keyStart, PetscInt keyEnd)
 {
-  MPI_Comm       comm;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
-  ierr = PetscObjectGetComm((PetscObject) m, &comm);CHKERRQ(ierr);
+  ierr = IMCheckKeyState_Private(m, IM_CONTIGUOUS);CHKERRQ(ierr);
   if (PetscDefined(USE_DEBUG)) {
-    if (m->setup) SETERRQ(comm,PETSC_ERR_ARG_WRONGSTATE,"Cannot change keys on already setup map");
-    if (m->kstorage == IM_DISCONTIGUOUS) SETERRQ(comm,PETSC_ERR_ARG_WRONGSTATE,"Mapping is already of type discontiguous");
     if (keyEnd < keyStart) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"KeyEnd %D < KeyStart %D contiguous keys must be increasing", keyEnd, keyStart);
+    if (m->nKeys[IM_LOCAL] && ((keyEnd-keyStart) != m->nKeys[IM_LOCAL])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Number of keys previously set %D != %D keyrange given",m->nKeys[IM_LOCAL],keyEnd-keyStart);
   }
-  ierr = PetscFree(m->contig);CHKERRQ(ierr);
-  ierr = PetscNewLog(m, &(m->contig));CHKERRQ(ierr);
+  if (!(m->contig)) {
+    ierr = PetscNewLog(m, &(m->contig));CHKERRQ(ierr);
+  }
   m->kstorage = IM_CONTIGUOUS;
   m->contig->keyStart = keyStart;
   m->contig->keyEnd = keyEnd;
-  m->nKeys[IM_LOCAL] = keyEnd-keyStart;
-  ierr = MPIU_Allreduce(&m->nKeys[IM_LOCAL],&(m->nKeys[IM_GLOBAL]),1,MPIU_INT,MPI_SUM,comm);CHKERRQ(ierr);
+  m->contig->keyStartGlobal = PETSC_DETERMINE;
+  m->nKeys[IM_LOCAL] = keyEnd-keyStart ? keyEnd-keyStart : PETSC_DETERMINE;
   PetscFunctionReturn(0);
 }
 
+/* NOT COLLECTIVE */
 PetscErrorCode IMGetKeysContiguous(IM m, PetscInt *keyStart, PetscInt *keyEnd)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
-  if (PetscDefined(USE_DEBUG)) {
-    if (m->kstorage == IM_DISCONTIGUOUS) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping is not contiguous");
-    if (m->kstorage == IM_INVALID) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping has no valid keys");
-  }
+  ierr = IMCheckKeyState_Private(m, IM_CONTIGUOUS);CHKERRQ(ierr);
   if (keyStart) *keyStart = m->contig->keyStart;
   if (keyEnd) *keyEnd = m->contig->keyEnd;
   PetscFunctionReturn(0);
 }
 
+/* NOT COLLECTIVE */
 PetscErrorCode IMSetKeysDiscontiguous(IM m, PetscInt n, const PetscInt keys[], PetscCopyMode mode)
 {
-  MPI_Comm       comm;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   PetscValidIntPointer(keys,3);
-  ierr = PetscObjectGetComm((PetscObject) m, &comm);CHKERRQ(ierr);
+  ierr = IMCheckKeyState_Private(m, IM_DISCONTIGUOUS);CHKERRQ(ierr);
   if (PetscDefined(USE_DEBUG)) {
-    if (m->setup) SETERRQ(comm,PETSC_ERR_ARG_WRONGSTATE,"Cannot change keys on already setup map");
-    if (m->kstorage == IM_CONTIGUOUS) SETERRQ(comm,PETSC_ERR_ARG_WRONGSTATE,"Mapping is already of type contiguous");
     if (n < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of keys %D < 0", n);
+    if (m->nKeys[IM_LOCAL] && (n != m->nKeys[IM_LOCAL])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Number of keys previously set %D != %D keyrange given",m->nKeys[IM_LOCAL],n);
   }
   if (m->discontig) {
     if (m->discontig->alloced) {
       ierr = PetscFree(m->discontig->keys);CHKERRQ(ierr);
       ierr = PetscFree(m->discontig->keyIndexGlobal);CHKERRQ(ierr);
-      ierr = PetscFree(m->discontig);CHKERRQ(ierr);
-    } else {
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"CONTIG FREED WITH OWN POINTER");
     }
+  } else {
+    ierr = PetscNewLog(m, &(m->discontig));CHKERRQ(ierr);
   }
-  ierr = PetscNewLog(m, &(m->discontig));CHKERRQ(ierr);
   switch (mode) {
   case PETSC_COPY_VALUES:
     ierr = PetscMalloc1(n, &(m->discontig->keys));CHKERRQ(ierr);
@@ -224,45 +244,40 @@ PetscErrorCode IMSetKeysDiscontiguous(IM m, PetscInt n, const PetscInt keys[], P
     break;
   }
   m->nKeys[IM_LOCAL] = n;
-  ierr = MPIU_Allreduce(&m->nKeys[IM_LOCAL],&(m->nKeys[IM_GLOBAL]),1,MPIU_INT,MPI_SUM,comm);CHKERRQ(ierr);
   m->kstorage = IM_DISCONTIGUOUS;
   PetscFunctionReturn(0);
 }
 
+/* NOT COLLECTIVE */
 PetscErrorCode IMGetKeysDiscontiguous(IM m, const PetscInt *keys[])
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   PetscValidIntPointer(keys,2);
-  if (PetscDefined(USE_DEBUG)) {
-    if (m->kstorage == IM_CONTIGUOUS) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping is of type contiguous");
-    if (m->kstorage == IM_INVALID) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping has no valid keys");
-  }
+  ierr = IMCheckKeyState_Private(m, IM_DISCONTIGUOUS);CHKERRQ(ierr);
   *keys = m->discontig->keys;
   PetscFunctionReturn(0);
 }
 
+/* NOT COLLECTIVE */
 PetscErrorCode IMRestoreKeysDiscontiguous(IM m, const PetscInt *keys[])
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   PetscValidIntPointer(keys,2);
+  ierr = IMCheckKeyState_Private(m, IM_DISCONTIGUOUS);CHKERRQ(ierr);
   if (PetscDefined(USE_DEBUG)) {
-    if (m->kstorage == IM_CONTIGUOUS) SETERRQ(PetscObjectComm((PetscObject)m),PETSC_ERR_ARG_WRONGSTATE,"Mapping is of type contiguous");
     if (*keys != m->discontig->keys) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from IMGetKeysDiscontiguous()");
   }
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMGetKeySize(IM m, IMOpMode mode, PetscInt *n)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(m,IM_CLASSID,1);
-  PetscValidIntPointer(n,3);
-  *n = m->nKeys[mode];
-  PetscFunctionReturn(0);
-}
-
+/* UTIL FUNCTIONS */
+/* POSSIBLY COLLECTIVE */
 PetscErrorCode IMSort(IM m, IMOpMode mode)
 {
   PetscErrorCode ierr;
