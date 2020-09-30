@@ -41,6 +41,8 @@ PetscErrorCode IMBasicCreateFromSizes(MPI_Comm comm, PetscInt n, PetscInt N, IM 
   PetscFunctionBegin;
   ierr = IMCreate(comm, m);CHKERRQ(ierr);
   ierr = IMSetType(*m, IMBASIC);CHKERRQ(ierr);
-  ierr = IMSetKeysContiguous(*m, 0, PetscMax(n,0));CHKERRQ(ierr);
+  ierr = IMSetKeyState(*m, IM_CONTIGUOUS);CHKERRQ(ierr);
+  ierr = IMSetNumKeys(*m, n, N);CHKERRQ(ierr);
+  ierr = IMSetUp(*m);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
