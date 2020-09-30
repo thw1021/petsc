@@ -6,7 +6,7 @@ typedef struct _p_IM *IM;
 typedef enum {
   IM_INVALID = 0,
   IM_CONTIGUOUS = 1,
-  IM_DISCONTIGUOUS = 2
+  IM_ARRAY = 2
 } IMState;
 
 typedef enum {

@@ -13,6 +13,7 @@ typedef const char* IMType;
 
 PETSC_EXTERN const char* const IMStates[];
 
+/* GENERAL */
 PETSC_EXTERN PetscErrorCode IMInitializePackage(void);
 PETSC_EXTERN PetscErrorCode IMFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode IMRegister(const char[],PetscErrorCode(*)(IM));
@@ -26,12 +27,17 @@ PETSC_EXTERN PetscErrorCode IMSetUp(IM);
 PETSC_EXTERN PetscErrorCode IMSetFromOptions(IM);
 
 PETSC_EXTERN PetscErrorCode IMGetKeyState(IM,IMState*);
-PETSC_EXTERN PetscErrorCode IMSetKeysContiguous(IM,PetscInt,PetscInt);
-PETSC_EXTERN PetscErrorCode IMGetKeysContiguous(IM,PetscInt*,PetscInt*);
-
-PETSC_EXTERN PetscErrorCode IMSetKeysDiscontiguous(IM,PetscInt,const PetscInt[],PetscCopyMode);
-PETSC_EXTERN PetscErrorCode IMGetKeysDiscontiguous(IM,const PetscInt*[]);
-PETSC_EXTERN PetscErrorCode IMRestoreKeysDiscontiguous(IM,const PetscInt*[]);
-
+PETSC_EXTERN PetscErrorCode IMSetKeyState(IM,IMState);
+PETSC_EXTERN PetscErrorCode IMSetNumKeys(IM,PetscInt,PetscInt);
 PETSC_EXTERN PetscErrorCode IMGetNumKeys(IM,IMOpMode,PetscInt*);
+
+PETSC_EXTERN PetscErrorCode IMContiguousSetKeyInterval(IM,PetscInt,PetscInt);
+PETSC_EXTERN PetscErrorCode IMContiguousGetKeyInterval(IM,PetscInt*,PetscInt*);
+
+PETSC_EXTERN PetscErrorCode IMArraySetKeyArray(IM,PetscInt,const PetscInt[],PetscBool,PetscCopyMode);
+PETSC_EXTERN PetscErrorCode IMArrayGetKeyArray(IM,const PetscInt*[]);
+PETSC_EXTERN PetscErrorCode IMArrayRestoreKeyArray(IM,const PetscInt*[]);
+
+/* IM_BASIC */
+PETSC_EXTERN PetscErrorCode IMBasicCreateFromSizes(MPI_Comm,PetscInt,PetscInt,IM*);
 #endif
