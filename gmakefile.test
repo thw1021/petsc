@@ -50,6 +50,9 @@ else				# Show the full command line
   TESTFLAGS += -v
 endif
 
+ifeq ($(GPUSERIALIZED),1)
+  GMAKEGENTEST_OPTS += --serialize   #Serialize gpu tests
+endif
 ifeq ($(FORCE),1)
   TESTFLAGS += -f    # force test execution
 endif
@@ -91,7 +94,7 @@ ifdef TIMEOUT
 endif
 
 $(generatedtest) : $(petscconf) $(petscvariables) $(CONFIGDIR)/gmakegentest.py $(TESTDIR)/.DIR | $$(@D)/.DIR
-	$(PYTHON) $(CONFIGDIR)/gmakegentest.py --petsc-dir=$(PETSC_DIR) --petsc-arch=$(PETSC_ARCH) --testdir=$(TESTDIR)
+	$(PYTHON) $(CONFIGDIR)/gmakegentest.py $(GMAKEGENTEST_OPTS) --petsc-dir=$(PETSC_DIR) --petsc-arch=$(PETSC_ARCH) --testdir=$(TESTDIR)
 
 ifneq ($(filter-out clean check,$(MAKECMDGOALS:clean%=clean)),)
 include $(generatedtest)
