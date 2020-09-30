@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
   ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  if (rank) istart = 5;
+  if (rank) {n = 5, istart = 5;}
 
   ierr = IMCreate(comm, &m);CHKERRQ(ierr);
   ierr = IMSetType(m, IMBASIC);CHKERRQ(ierr);
