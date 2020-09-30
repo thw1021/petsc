@@ -33,5 +33,5 @@ PETSC_EXTERN PetscErrorCode IMSetKeysDiscontiguous(IM,PetscInt,const PetscInt[],
 PETSC_EXTERN PetscErrorCode IMGetKeysDiscontiguous(IM,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode IMRestoreKeysDiscontiguous(IM,const PetscInt*[]);
 
-PETSC_EXTERN PetscErrorCode IMGetKeySize(IM,IMOpMode,PetscInt*);
+PETSC_EXTERN PetscErrorCode IMGetNumKeys(IM,IMOpMode,PetscInt*);
 #endif
