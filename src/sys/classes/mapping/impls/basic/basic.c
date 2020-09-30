@@ -29,8 +29,18 @@ PetscErrorCode IMSetup_Basic(IM m)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)m, &comm);CHKERRQ(ierr);
-  ierr = PetscSplitOwnership(comm, &m->nKeys[IM_LOCAL], &m->nKeys[IM_GLOBAL]);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF, "%D %D\n", m->nKeys[IM_LOCAL], m->nKeys[IM_GLOBAL]);CHKERRQ(ierr);
+  ierr = PetscObjectGetComm((PetscObject)m,  &comm);CHKERRQ(ierr);
+  ierr = PetscSplitOwnership(comm, &(m->nKeys[IM_LOCAL]), &(m->nKeys[IM_GLOBAL]));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode IMBasicCreateFromSizes(MPI_Comm comm, PetscInt n, PetscInt N, IM *m)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = IMCreate(comm, m);CHKERRQ(ierr);
+  ierr = IMSetType(*m, IMBASIC);CHKERRQ(ierr);
+  ierr = IMSetKeysContiguous(*m, 0, PetscMax(n,0));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
