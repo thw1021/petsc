@@ -3,46 +3,48 @@
 Getting Started
 ---------------
 
-PETSc consists of a variety of libraries (similar to classes in C++),
+PETSc consists of a collection of packages,
 which are discussed in detail in later parts of the manual (:doc:`programming` and :doc:`additional`).
-Each library manipulates a particular family of objects (for instance,
-vectors) and the operations one would like to perform on the objects.
-The objects and operations in PETSc are derived from our long
-experiences with scientific computation. Some of the PETSc modules deal
-with
+Each package contains a family of classes, for instance, one such family are the classes to manipulate
+vectors. Almost all packages are named after the main class in the package.
+The PETSc packages include
 
--  index sets (``IS``), including permutations, for indexing into
+-  index sets (whose main class is ``IS``), including permutations, for indexing into
    vectors, renumbering, etc;
 
--  vectors (``Vec``);
+-  vectors (whose main class is ``Vec``);
 
--  matrices (``Mat``) (generally sparse);
+-  matrices (whose main class is ``Mat``) (generally sparse);
 
--  over thirty Krylov subspace methods (``KSP``);
+-  over thirty Krylov subspace methods (the main class is ``KSP``);
 
 -  dozens of preconditioners, including multigrid, block solvers, and
-   sparse direct solvers (``PC``);
+   sparse direct solvers (the main class is ``PC``);
 
--  nonlinear solvers (``SNES``);
+-  nonlinear solvers (the main class is ``SNES``);
 
 -  timesteppers for solving time-dependent (nonlinear) PDEs, including
    support for differential algebraic equations, and the computation of
-   adjoints (sensitivities/gradients of the solutions); and (``TS``)
+   adjoints (sensitivities/gradients of the solutions) (the main class is ``TS``);
 
 -  managing interactions between mesh data structures and vectors,
-   matrices, and solvers (``DM``);
+   matrices, and solvers (the main class is ``DM``);
 
-Each consists of an abstract interface (simply a set of calling
-sequences) and one or more implementations using particular data
+-   scalable optimization algorithms (the main class is ``Tao``); and
+
+-   non-mathematical classes for loading data, interacting with the operating system, etc (this package is called ``sys``).
+
+Each class consist of an abstract interface (simply a set of calling
+sequences; an abstract base class in C++) and one or more implementations for particular data
 structures. Thus, PETSc provides clean and effective codes for the
-various phases of solving PDEs, with a uniform approach for each class
+various phases of solving PDEs, with a uniform approach for each type
 of problem. This design enables easy comparison and use of different
 algorithms (for example, to experiment with different Krylov subspace
 methods, preconditioners, or truncated Newton methods). Hence, PETSc
 provides a rich environment for modeling scientific applications as well
 as for rapid algorithm design and prototyping.
 
-The libraries enable easy customization and extension of both algorithms
+The classes enable easy customization and extension of both algorithms
 and implementations. This approach promotes code reuse and flexibility,
 and separates the issues of parallelism from the choice of algorithms.
 The PETSc infrastructure creates a foundation for building large-scale
@@ -75,11 +77,7 @@ The manual is divided into three parts:
 presents two simple examples of solving linear systems with PETSc. This
 section conveys the typical style used throughout the library and
 enables the application programmer to begin using the software
-immediately. Part I is also distributed separately for individuals
-interested in an overview of the PETSc software, excluding the details
-of library usage. Readers of this separate distribution of Part I should
-note that all references within the text to particular chapters and
-sections indicate locations in the complete users manual.
+immediately. 
 
 :doc:`programming` explains in detail the use of the various PETSc libraries, such
 as vectors, matrices, index sets, linear and nonlinear solvers, and
@@ -88,9 +86,7 @@ profiling, the options database, viewers, error handling, and some
 details of PETSc design.
 
 PETSc has evolved to become quite a comprehensive package, and therefore
-this manual can be rather intimidating for new users. We
-recommend that one initially read the entire document before proceeding
-with serious use of PETSc, but bear in mind that PETSc can be used
+this manual can be rather intimidating for new users. Bear in mind that PETSc can be used
 efficiently before one understands all of the material presented here.
 Furthermore, the definitive reference for any PETSc function is always
 the online manual page.
@@ -100,8 +96,9 @@ The manual pages provide hyperlinked indices (organized by both concept
 and routine name) to the tutorial examples and enable easy movement
 among related topics.
 
-Emacs and Vi/Vim users may find the ``etags``/``ctags`` option to be
-extremely useful for exploring the PETSc source code. Details of this
+`Visual Studio Code <https://code.visualstudio.com/>`__ , Eclipse, Emacs, and Vim users may find their development environment's options for
+searching in the source code (for example, ``etags`` ``ctags`` for Emacs and Vim) are
+extremely useful for exploring the PETSc source code. Details of these
 feature are provided in :any:`sec-emacs`.
 
 The complete PETSc distribution, manual pages, and additional information are available via the
@@ -111,13 +108,12 @@ changes in recent versions of PETSc, machines that we currently support,
 and a frequently asked questions (FAQ) list.
 
 **Note to Fortran Programmers**: In most of the manual, the examples and calling sequences are given
-for the C/C++ family of programming languages. However, pure Fortran
-programmers can use most of the functionality of PETSc from Fortran,
+for the C/C++ family of programming languages. However, Fortran
+programmers can use all of the functionality of PETSc from Fortran,
 with only minor differences in the user interface.
 :any:`chapter_fortran` provides a discussion of the differences between
 using PETSc from Fortran and C, as well as several complete Fortran
-examples. This chapter also introduces some routines that support
-direct use of Fortran90 pointers.
+examples. 
 
 **Note to Python Programmers**: To program with PETSc in Python you need to install the
 PETSc4py package developed by Lisandro Dalcin. This can be done by
