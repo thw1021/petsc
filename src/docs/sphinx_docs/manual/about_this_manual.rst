@@ -55,9 +55,15 @@ A list of publications and web sites that feature work involving PETSc
 may be found at https://www.mcs.anl.gov/petsc/publications/.
 
 You can submit corrections to this document at https://docs.petsc.org/en/latest/manual/ by 
-pulling down on the tab at the lower right corner of this window and selecting Edit.
-Once you have edited the document type a summary of your
+pulling down on the tab at the lower right corner of the browser window and selecting Edit.
+Once you have edited the document, at the bottom of the page, type a summary of your
 changes in the Commit Message box, type a branch name in Target Branch box, and press the Commit Changes button.
+On the merge commit page select Satish Balay as the assignee and select Workflow:Ready-to-Merge and docs-only as the Labels.
+
+.. raw:: html
+
+    <iframe width="560" height="315" src="http://www.youtube.com/embed/JAqEWUotGks?rel=0" frameborder="0" allowfullscreen></iframe>
+
 You can also send corrections to
 ``petsc-maint@mcs.anl.gov``.
 
