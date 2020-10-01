@@ -403,7 +403,7 @@ M*/
 PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
 {
 #if defined(PETSC_USE_CTABLE)
-  SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Devioce metadata does not support ctable (--with-ctable=0)");
+  SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Device metadata does not support ctable (--with-ctable=0)");
 #else
   PetscSplitCSRDataStructure **p_d_mat;
   PetscMPIInt                size,rank;
