@@ -23,7 +23,7 @@ storage formats of the matrices.
 Creating and Assembling Matrices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The simplest routine for forming a PETSc matrix, ``A``, is followed by
+The simplest approaching for forming a PETSc matrix, ``A``, is 
 
 ::
 
