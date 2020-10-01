@@ -11,6 +11,7 @@ typedef struct {
 PETSC_EXTERN PetscErrorCode IMCreate_Basic(IM);
 PETSC_EXTERN PetscErrorCode IMDestroy_Basic(IM*);
 PETSC_EXTERN PetscErrorCode IMSetup_Basic(IM);
+PETSC_EXTERN PetscErrorCode IMPermute_Basic(IM,IM);
 
 PETSC_STATIC_INLINE PetscErrorCode IMResetBasic_Private(IM_Basic *m)
 {
