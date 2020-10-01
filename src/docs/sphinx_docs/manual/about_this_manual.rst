@@ -54,7 +54,11 @@ information on contacting support.
 A list of publications and web sites that feature work involving PETSc
 may be found at https://www.mcs.anl.gov/petsc/publications/.
 
-We welcome any reports of corrections for this document at
+You can submit corrections to this document at https://docs.petsc.org/en/latest/manual/ by 
+pulling down on the tab at the lower right corner of this window and selecting Edit.
+Once you have edited the document type a summary of your
+changes in the Commit Message box, type a branch name in Target Branch box, and press the Commit Changes button.
+You can also send corrections to
 ``petsc-maint@mcs.anl.gov``.
 
 Manual pages and example usage :
