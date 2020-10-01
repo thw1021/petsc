@@ -5,7 +5,8 @@ static char help[] = "Test Index Map\n";
 int main(int argc, char **argv)
 {
   IM             m, m2;
-  PetscInt       n = 10, keyStart = 0, keyEnd = 10;
+  PetscInt       *arr;
+  PetscInt       i, n = 10, keyStart = 0, keyEnd = 10;
   PetscMPIInt    rank, size;
   MPI_Comm       comm;
   PetscErrorCode ierr;
@@ -14,16 +15,22 @@ int main(int argc, char **argv)
   comm = PETSC_COMM_WORLD;
   ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  if (rank) n = 5;
+  if (rank) n = rank*n;
 
+  ierr = PetscMalloc1(n, &arr);CHKERRQ(ierr);
+  for (i = 0; i <  n; ++i) arr[i] = rank;
   ierr = IMCreate(comm, &m);CHKERRQ(ierr);
   ierr = IMSetType(m, IMBASIC);CHKERRQ(ierr);
-  ierr = IMContiguousSetKeyInterval(m, keyStart, keyEnd);CHKERRQ(ierr);
+  ierr = IMArraySetKeyArray(m, n, arr, PETSC_TRUE, PETSC_COPY_VALUES);CHKERRQ(ierr);
   ierr = IMSetUp(m);CHKERRQ(ierr);
-  //ierr = IMView(m, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  ierr = IMView(m, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = IMDestroy(&m);CHKERRQ(ierr);
 
-  ierr = IMBasicCreateFromSizes(comm, n, PETSC_DECIDE, &m2);CHKERRQ(ierr);
+  ierr = IMBasicCreateFromSizes(comm, IM_CONTIGUOUS, n, PETSC_DECIDE, &m2);CHKERRQ(ierr);
+  ierr = IMView(m2, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  ierr = IMDestroy(&m2);CHKERRQ(ierr);
+
+  ierr = IMBasicCreateFromSizes(comm, IM_ARRAY, n, PETSC_DECIDE, &m2);CHKERRQ(ierr);
   ierr = IMView(m2, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = IMDestroy(&m2);CHKERRQ(ierr);
 
