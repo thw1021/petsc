@@ -21,7 +21,7 @@ int main(int argc, char **argv)
   for (i = 0; i <  n; ++i) arr[i] = rank;
   ierr = IMCreate(comm, &m);CHKERRQ(ierr);
   ierr = IMSetType(m, IMBASIC);CHKERRQ(ierr);
-  ierr = IMArraySetKeyArray(m, n, arr, PETSC_TRUE, PETSC_COPY_VALUES);CHKERRQ(ierr);
+  ierr = IMSetKeyArray(m, n, arr, PETSC_TRUE, PETSC_COPY_VALUES);CHKERRQ(ierr);
   ierr = IMSetUp(m);CHKERRQ(ierr);
   ierr = IMView(m, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = IMDestroy(&m);CHKERRQ(ierr);

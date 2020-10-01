@@ -15,9 +15,10 @@ struct _IMOps {
   PetscErrorCode (*setup)(IM);
   PetscErrorCode (*setfromoptions)(IM);
   PetscErrorCode (*sort)(IM,IMOpMode);
+  PetscErrorCode (*convertkeys)(IM,IMState);
   PetscErrorCode (*getvalues)(IM,PetscInt*,const PetscInt*[]);
   PetscErrorCode (*restorevalues)(IM,PetscInt,const PetscInt*[]);
-  PetscErrorCode (*permute)(IM);
+  PetscErrorCode (*permute)(IM,IM);
 };
 
 typedef struct _n_IMContiguous *IMContiguous;
@@ -84,6 +85,7 @@ PETSC_STATIC_INLINE PetscErrorCode IMSetupKeyState_Private(IM m, IMState newstat
       ierr = PetscFree(m->discontig->keyIndexGlobal);CHKERRQ(ierr);
       m->sorted[IM_LOCAL] = PETSC_FALSE;
     } else if (m->kstorage == IM_CONTIGUOUS) {
+      ierr = PetscFree(m->contig->globalRanges);CHKERRQ(ierr);
       m->sorted[IM_LOCAL] = PETSC_TRUE;
     }
   } else {
