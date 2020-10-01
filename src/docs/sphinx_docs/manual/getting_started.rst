@@ -3,12 +3,12 @@
 Getting Started
 ---------------
 
-PETSc consists of a variety of libraries (similar to classes in C++),
+PETSc consists of a variety of libraries,
 which are discussed in detail in later parts of the manual (:doc:`programming` and :doc:`additional`).
 Each library manipulates a particular family of objects (for instance,
 vectors) and the operations one would like to perform on the objects.
 The objects and operations in PETSc are derived from our long
-experiences with scientific computation. Some of the PETSc modules deal
+experiences with scientific computation. Some of the PETSc libraries deal
 with
 
 -  index sets (``IS``), including permutations, for indexing into
@@ -27,13 +27,15 @@ with
 
 -  timesteppers for solving time-dependent (nonlinear) PDEs, including
    support for differential algebraic equations, and the computation of
-   adjoints (sensitivities/gradients of the solutions); and (``TS``)
+   adjoints (sensitivities/gradients of the solutions) (``TS``); 
 
 -  managing interactions between mesh data structures and vectors,
-   matrices, and solvers (``DM``);
+   matrices, and solvers (``DM``); and
 
-Each consists of an abstract interface (simply a set of calling
-sequences) and one or more implementations using particular data
+   scalable optimization algorithms (``Tao``).
+
+Each object consist of an abstract interface (simply a set of calling
+sequences; an abstract base class in C++) and one or more implementations using particular data
 structures. Thus, PETSc provides clean and effective codes for the
 various phases of solving PDEs, with a uniform approach for each class
 of problem. This design enables easy comparison and use of different
@@ -75,11 +77,7 @@ The manual is divided into three parts:
 presents two simple examples of solving linear systems with PETSc. This
 section conveys the typical style used throughout the library and
 enables the application programmer to begin using the software
-immediately. Part I is also distributed separately for individuals
-interested in an overview of the PETSc software, excluding the details
-of library usage. Readers of this separate distribution of Part I should
-note that all references within the text to particular chapters and
-sections indicate locations in the complete users manual.
+immediately. 
 
 :doc:`programming` explains in detail the use of the various PETSc libraries, such
 as vectors, matrices, index sets, linear and nonlinear solvers, and
@@ -88,9 +86,7 @@ profiling, the options database, viewers, error handling, and some
 details of PETSc design.
 
 PETSc has evolved to become quite a comprehensive package, and therefore
-this manual can be rather intimidating for new users. We
-recommend that one initially read the entire document before proceeding
-with serious use of PETSc, but bear in mind that PETSc can be used
+this manual can be rather intimidating for new users. Bear in mind that PETSc can be used
 efficiently before one understands all of the material presented here.
 Furthermore, the definitive reference for any PETSc function is always
 the online manual page.
@@ -100,8 +96,9 @@ The manual pages provide hyperlinked indices (organized by both concept
 and routine name) to the tutorial examples and enable easy movement
 among related topics.
 
-Emacs and Vi/Vim users may find the ``etags``/``ctags`` option to be
-extremely useful for exploring the PETSc source code. Details of this
+Microsoft Visual Studio, Eclipse, Emacs, and Vim users may find their development environment's options for
+searching in the source code (for example, ``etags`` ``ctags`` for Emacs and Vim) are
+extremely useful for exploring the PETSc source code. Details of these
 feature are provided in :any:`sec-emacs`.
 
 The complete PETSc distribution, manual pages, and additional information are available via the
@@ -111,7 +108,7 @@ changes in recent versions of PETSc, machines that we currently support,
 and a frequently asked questions (FAQ) list.
 
 **Note to Fortran Programmers**: In most of the manual, the examples and calling sequences are given
-for the C/C++ family of programming languages. However, pure Fortran
+for the C/C++ family of programming languages. However, Fortran
 programmers can use most of the functionality of PETSc from Fortran,
 with only minor differences in the user interface.
 :any:`chapter_fortran` provides a discussion of the differences between
