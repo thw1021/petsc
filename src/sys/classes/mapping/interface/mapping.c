@@ -73,36 +73,59 @@ PetscErrorCode IMGetType(IM m, IMType *type)
 
 PetscErrorCode IMView(IM m, PetscViewer vwr)
 {
-  PetscBool      iascii;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  PetscValidType(m,1);
+  if (!vwr) {ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)m), &vwr);CHKERRQ(ierr);}
   PetscValidHeaderSpecific(vwr,PETSC_VIEWER_CLASSID,2);
-  ierr = PetscObjectPrintClassNamePrefixType((PetscObject) m, vwr);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject) vwr, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {
-    PetscInt    i, nloc = m->nKeys[IM_LOCAL], nglob = m->nKeys[IM_GLOBAL];
-    PetscMPIInt rank;
-
-    ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) m), &rank);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(vwr, "key storage: %s\n", IMStates[m->kstorage]);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(vwr, "global n keys: %D\n", nglob);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPushSynchronized(vwr);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(vwr, "[%d] local n keys: %D\n", rank, nloc);CHKERRQ(ierr);
-    if (m->kstorage == IM_CONTIGUOUS) {
-      ierr = PetscViewerASCIISynchronizedPrintf(vwr, "[%d] [%D, %D) \n", rank, m->contig->keyStart, m->contig->keyEnd);CHKERRQ(ierr);
-    } else {
-      for (i = 0; i < nloc; ++i) {
-        ierr = PetscViewerASCIISynchronizedPrintf(vwr, "[%d] %D: %D\n", rank, i, m->discontig->keys[i]);CHKERRQ(ierr);
-      }
-    }
-    ierr = PetscViewerFlush(vwr);CHKERRQ(ierr);
-    if (m->ops->view) {
-      ierr = (*m->ops->view)(m,vwr);CHKERRQ(ierr);
-    }
-    ierr = PetscViewerASCIIPopSynchronized(vwr);CHKERRQ(ierr);
+  PetscCheckSameComm(m,1,vwr,2);
+  if (PetscDefined(USE_DEBUG)) {
+    if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must setup map before viewing");
   }
+  ierr = PetscObjectPrintClassNamePrefixType((PetscObject) m, vwr);CHKERRQ(ierr);
+  if (m->ops->view) {
+    ierr = (*m->ops->view)(m,vwr);CHKERRQ(ierr);
+  } else {
+    PetscBool iascii;
+
+    ierr = PetscObjectTypeCompare((PetscObject) vwr, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
+    if (iascii) {
+      PetscInt    i;
+      PetscMPIInt rank, size;
+
+      ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) m), &rank);CHKERRQ(ierr);
+      ierr = MPI_Comm_size(PetscObjectComm((PetscObject) m), &size);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(vwr, "IMState: %s\n", IMStates[m->kstorage]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(vwr, "N keys:  %D\n", m->nKeys[IM_GLOBAL]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(vwr, "Globally sorted: %s\n", m->sorted[IM_GLOBAL] ? "PETSC_TRUE" : "PETSC_FALSE");CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPushSynchronized(vwr);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(vwr, "Locally sorted:  %s\n", m->sorted[IM_LOCAL] ? "PETSC_TRUE" : "PETSC_FALSE");CHKERRQ(ierr);
+      if (m->kstorage == IM_CONTIGUOUS) {
+        for (i = 0; i < size; ++i) {
+          const PetscInt n = m->contig->globalRanges[2*i+1]-m->contig->globalRanges[2*i];
+          ierr = PetscViewerASCIIPrintf(vwr, "[%D] %D: [%D, %D) \n", i, n, m->contig->globalRanges[2*i], m->contig->globalRanges[2*i+1]);CHKERRQ(ierr);
+        }
+      } else {
+        for (i = 0; i < m->nKeys[IM_LOCAL]; ++i) {
+          ierr = PetscViewerASCIISynchronizedPrintf(vwr, "[%d] %D: %D\n", rank, i, m->discontig->keys[i]);CHKERRQ(ierr);
+        }
+      }
+      ierr = PetscViewerFlush(vwr);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPopSynchronized(vwr);CHKERRQ(ierr);
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode IMViewFromOptions(IM m, PetscObject obj, const char name[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  ierr = PetscObjectViewFromOptions((PetscObject)m, obj, name);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -117,13 +140,16 @@ PetscErrorCode IMSetUp(IM m)
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   PetscValidType(m,1);
   PetscValidLogicalCollectiveEnum(m,m->kstorage,1);
-  if (m->setup) PetscFunctionReturn(0);
+  PetscValidLogicalCollectiveEnum(m,m->keysetcalled,1);
+  if (m->setupcalled) PetscFunctionReturn(0);
   ierr = PetscObjectGetComm((PetscObject)m, &comm);CHKERRQ(ierr);
   if (PetscDefined(USE_DEBUG)) {
     if (!(m->kstorage)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map must be set as contiguous or non contiguous before setup");
   }
+  m->setupcalled = PETSC_TRUE;
   ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
+  /* If user supplied local size generate global size, if user gave global generate local */
   ierr = PetscSplitOwnership(comm, &(m->nKeys[IM_LOCAL]), &(m->nKeys[IM_GLOBAL]));CHKERRQ(ierr);
   switch (m->kstorage) {
   case IM_CONTIGUOUS:
@@ -131,49 +157,96 @@ PetscErrorCode IMSetUp(IM m)
     PetscInt chunk[2];
 
     /* Interval not explicitly set, only sizes */
-    if (!(m->keySet)) m->contig->keyEnd = m->nKeys[IM_LOCAL];
+    if (!(m->keysetcalled)) m->contig->keyEnd = m->nKeys[IM_LOCAL];
     chunk[0] = m->contig->keyStart, chunk[1] = m->contig->keyEnd;
     if (!(m->contig->globalRanges)) {
       ierr = PetscMalloc1(2*size, &(m->contig->globalRanges));CHKERRQ(ierr);
       ierr = PetscLogObjectMemory((PetscObject)m, 2*size*sizeof(PetscInt));CHKERRQ(ierr);
     }
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Inside setup -> contig, keystart %D keyend %D\n", chunk[0], chunk[1]);CHKERRQ(ierr);
     ierr = MPI_Allgather(chunk, 2, MPIU_INT, m->contig->globalRanges, 2, MPIU_INT, comm);CHKERRQ(ierr);
-    if (!(m->keySet)) {
+    if (!(m->keysetcalled)) {
       PetscInt i, n = 0;
       for (i = 1; i <= size-1; ++i) {
         n += m->contig->globalRanges[2*i-1]-m->contig->globalRanges[2*i-2];
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"n %D\n", n);CHKERRQ(ierr);
         m->contig->globalRanges[2*i] += n;
         m->contig->globalRanges[2*i+1] += n;
       }
       m->contig->keyStart = m->contig->globalRanges[2*rank];
       m->contig->keyEnd = m->contig->globalRanges[2*rank+1];
     }
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Printing\n");CHKERRQ(ierr);
-    ierr = PetscIntView(2*size, m->contig->globalRanges, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     break;
   }
   case IM_ARRAY:
+  {
+    PetscInt i, sum = 0;
+
+    ierr = MPI_Exscan(&(m->nKeys[IM_LOCAL]), &sum, 1, MPIU_INT, MPI_SUM, comm);CHKERRQ(ierr);
+    if (!(m->discontig->keyIndexGlobal)) {
+      ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &(m->discontig->keyIndexGlobal));CHKERRQ(ierr);
+      ierr = PetscLogObjectMemory((PetscObject)m, (m->nKeys[IM_LOCAL])*sizeof(PetscInt));CHKERRQ(ierr);
+    }
+    for (i = 0; i < m->nKeys[IM_LOCAL]; ++i) m->discontig->keyIndexGlobal[i] = sum+i;
+    if (!(m->keysetcalled)) {
+      ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &(m->discontig->keys));CHKERRQ(ierr);
+      ierr = PetscLogObjectMemory((PetscObject)m, (m->nKeys[IM_LOCAL])*sizeof(PetscInt));CHKERRQ(ierr);
+      for (i = 0; i < m->nKeys[IM_LOCAL]; ++i) m->discontig->keys[i] = sum+i;
+    }
     break;
+  }
   default:
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid IMState");
+    break;
   }
   if (m->ops->setup) {
     ierr = (*m->ops->setup)(m);CHKERRQ(ierr);
   }
-  m->setup = PETSC_TRUE;
+  ierr = IMViewFromOptions(m, NULL, "-im_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode IMSetFromOptions(IM m)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  ierr = PetscObjectOptionsBegin((PetscObject)m);CHKERRQ(ierr);
   if (m->ops->setfromoptions) {
-    PetscErrorCode ierr;
     ierr = (*m->ops->setfromoptions)(m);CHKERRQ(ierr);
   }
+  ierr = PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) m);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/* LOGICALLY COLLECTIVE, CANNOT OVERRIDE */
+PetscErrorCode IMSetKeyStateAndSizes(IM m, IMState state, PetscInt n, PetscInt N)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  PetscValidLogicalCollectiveEnum(m,state,2);
+  if (PetscDefined(USE_DEBUG)) {
+    if (m->setupcalled) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change key state or number of keys on setup map");
+    //if (m->keysetcalled) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Keys already explicitly set cannot override");
+  }
+  ierr = IMSetupKeyState_Private(m, state);CHKERRQ(ierr);
+  m->nKeys[IM_LOCAL] = n;
+  m->nKeys[IM_GLOBAL] = N;
+  PetscFunctionReturn(0);
+}
+
+/* NOT COLLECTIVE, MUST BE SETUP */
+PetscErrorCode IMGetNumKeys(IM m, IMOpMode mode, PetscInt *n)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  PetscValidIntPointer(n,3);
+  if (PetscDefined(USE_DEBUG)) {
+    if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map must be setup first call IMSetup()");
+  }
+  *n = m->nKeys[mode];
   PetscFunctionReturn(0);
 }
 
@@ -188,70 +261,23 @@ PetscErrorCode IMGetKeyState(IM m, IMState *state)
   PetscFunctionReturn(0);
 }
 
-/* LOGICALLY COLLECTIVE */
-PetscErrorCode IMSetKeyState(IM m, IMState state)
+/* SET/GET KEYS DIRECTLY */
+/* LOGICALLY COLLECTIVE, CAN OVERRIDE */
+PetscErrorCode IMContiguousSetKeyInterval(IM m, PetscInt keyStart, PetscInt keyEnd)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
-  PetscValidLogicalCollectiveEnum(m,state,2);
   if (PetscDefined(USE_DEBUG)) {
-    if (m->setup) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change key state on setup map");
-  }
-  ierr = IMReplaceKeyStateWithNew_Private(m, state);CHKERRQ(ierr);
-  m->keySet = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-/* NOT COLLECTIVE, MUST BE SETUP */
-PetscErrorCode IMGetNumKeys(IM m, IMOpMode mode, PetscInt *n)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(m,IM_CLASSID,1);
-  PetscValidIntPointer(n,3);
-  if (PetscDefined(USE_DEBUG)) {
-    if ((mode == IM_GLOBAL) && !(m->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping must be setup to retrieve global number of keys");
-  }
-  *n = m->nKeys[mode];
-  PetscFunctionReturn(0);
-}
-
-/* NOT COLLECTIVE */
-PetscErrorCode IMSetNumKeys(IM m, PetscInt n, PetscInt N)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(m,IM_CLASSID,1);
-  if (PetscDefined(USE_DEBUG)) {
-    if (m->setup) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change keys on setup map");
-  }
-  m->nKeys[IM_LOCAL] = n;
-  m->nKeys[IM_GLOBAL] = N;
-  m->keySet = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-/* SET/GET KEYS DIRECTLY */
-/* LOGICALLY COLLECTIVE */
-PetscErrorCode IMContiguousSetKeyInterval(IM m, PetscInt keyStart, PetscInt keyEnd)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(m,IM_CLASSID,1);
-  if (PetscDefined(USE_DEBUG)) {
-    if (m->setup) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change keys on setup map");
-    if (m->kstorage && (m->kstorage != IM_CONTIGUOUS)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping has already been set to %s, use IMConvertKeys() to change",IMStates[m->kstorage]);
+    if (m->setupcalled) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change keys on setup map");
     if (keyEnd < keyStart) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"KeyEnd %D < KeyStart %D contiguous keys must be increasing", keyEnd, keyStart);
   }
-  if (!(m->contig)) {
-    PetscErrorCode ierr;
-    ierr = PetscNewLog(m, &(m->contig));CHKERRQ(ierr);
-  }
+  ierr = IMSetupKeyState_Private(m, IM_CONTIGUOUS);CHKERRQ(ierr);
   m->contig->keyStart = keyStart;
   m->contig->keyEnd = keyEnd;
   m->nKeys[IM_LOCAL] = keyEnd-keyStart;
-  m->kstorage = IM_CONTIGUOUS;
-  m->sorted[IM_LOCAL] = PETSC_TRUE;
-  m->keySet = PETSC_TRUE;
+  m->keysetcalled = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -262,6 +288,7 @@ PetscErrorCode IMContiguousGetKeyInterval(IM m, PetscInt *keyStart, PetscInt *ke
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   if (PetscDefined(USE_DEBUG)) {
     const IMState state = IM_CONTIGUOUS;
+    if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map must be setup first call IMSetup()");
     if (m->kstorage && (m->kstorage != state)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping keystorage is of type %d not %s",IMStates[m->kstorage], IMStates[state]);
   }
   if (keyStart) *keyStart = m->contig->keyStart;
@@ -269,7 +296,34 @@ PetscErrorCode IMContiguousGetKeyInterval(IM m, PetscInt *keyStart, PetscInt *ke
   PetscFunctionReturn(0);
 }
 
-/* NOT COLLECTIVE */
+PetscErrorCode IMContiguousGetGlobalKeyIntervals(IM m, const PetscInt *ranges[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  PetscValidIntPointer(ranges,2);
+  if (PetscDefined(USE_DEBUG)) {
+    const IMState state = IM_CONTIGUOUS;
+    if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map must be setup first call IMSetup()");
+    if (m->kstorage && (m->kstorage != state)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping keystorage is of type %d not %s",IMStates[m->kstorage], IMStates[state]);
+  }
+  *ranges = m->contig->globalRanges;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode IMContiguousRestoreGlobalKeyIntervals(IM m, const PetscInt *keys[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  PetscValidIntPointer(keys,2);
+  if (PetscDefined(USE_DEBUG)) {
+    const IMState state = IM_CONTIGUOUS;
+    if (m->kstorage && (m->kstorage != state)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping keystorage is of type %d not %s",IMStates[m->kstorage], IMStates[state]);
+    if (*keys != m->contig->globalRanges) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from IMGetGlobalKeyIntervals()");
+  }
+  PetscFunctionReturn(0);
+}
+
+/* NOT COLLECTIVE, CAN OVERRIDE */
 PetscErrorCode IMArraySetKeyArray(IM m, PetscInt n, const PetscInt keys[], PetscBool issorted, PetscCopyMode mode)
 {
   PetscErrorCode ierr;
@@ -278,19 +332,11 @@ PetscErrorCode IMArraySetKeyArray(IM m, PetscInt n, const PetscInt keys[], Petsc
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   PetscValidIntPointer(keys,3);
   if (PetscDefined(USE_DEBUG)) {
-    if (m->setup) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change keys on setup map");
+    if (m->setupcalled) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change keys on setup map");
     if (m->kstorage && (m->kstorage != IM_ARRAY)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping has already been set to %s, use IMConvertKeys() to change",IMStates[m->kstorage]);
     if (n < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of keys %D < 0", n);
   }
-  if (m->discontig) {
-    if (m->discontig->alloced) {
-      ierr = PetscFree(m->discontig->keys);CHKERRQ(ierr);
-      ierr = PetscFree(m->discontig->keyIndexGlobal);CHKERRQ(ierr);
-      ierr = PetscLogObjectMemory((PetscObject)m, -(m->nKeys[IM_LOCAL])*sizeof(PetscInt));CHKERRQ(ierr);
-    }
-  } else {
-    ierr = PetscNewLog(m, &(m->discontig));CHKERRQ(ierr);
-  }
+  ierr = IMSetupKeyState_Private(m, IM_ARRAY);CHKERRQ(ierr);
   switch (mode) {
   case PETSC_COPY_VALUES:
     ierr = PetscMalloc1(n, &(m->discontig->keys));CHKERRQ(ierr);
@@ -312,9 +358,8 @@ PetscErrorCode IMArraySetKeyArray(IM m, PetscInt n, const PetscInt keys[], Petsc
     break;
   }
   m->nKeys[IM_LOCAL] = n;
-  m->kstorage = IM_ARRAY;
   m->sorted[IM_LOCAL] = issorted;
-  m->keySet = PETSC_TRUE;
+  m->keysetcalled = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -326,6 +371,7 @@ PetscErrorCode IMArrayGetKeyArray(IM m, const PetscInt *keys[])
   PetscValidIntPointer(keys,2);
   if (PetscDefined(USE_DEBUG)) {
     const IMState state = IM_ARRAY;
+    if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map must be setup first call IMSetup()");
     if (m->kstorage && (m->kstorage != state)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping keystorage is not %s", IMStates[state]);
   }
   *keys = m->discontig->keys;
@@ -339,7 +385,8 @@ PetscErrorCode IMArrayRestoreKeyArray(IM m, const PetscInt *keys[])
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   PetscValidIntPointer(keys,2);
   if (PetscDefined(USE_DEBUG)) {
-    if (m->kstorage && (m->kstorage != IM_ARRAY)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping keystorage is not discontiguous");
+    const IMState state = IM_ARRAY;
+    if (m->kstorage && (m->kstorage != state)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping keystorage is of type %d not %s",IMStates[m->kstorage], IMStates[state]);
     if (*keys != m->discontig->keys) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from IMGetKeysDiscontiguous()");
   }
   PetscFunctionReturn(0);
@@ -389,7 +436,7 @@ PetscErrorCode IMSort(IM m, IMOpMode mode)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMSetIsSorted(IM m, PetscBool sorted)
+PetscErrorCode IMSetSorted(IM m, PetscBool sorted)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
