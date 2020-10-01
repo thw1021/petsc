@@ -23,26 +23,20 @@ PetscErrorCode IMDestroy_Basic(IM *m)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMSetup_Basic(IM m)
+PetscErrorCode IMSetup_Basic(PETSC_UNUSED IM m)
 {
-  MPI_Comm       comm;
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)m,  &comm);CHKERRQ(ierr);
-  ierr = PetscSplitOwnership(comm, &(m->nKeys[IM_LOCAL]), &(m->nKeys[IM_GLOBAL]));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMBasicCreateFromSizes(MPI_Comm comm, PetscInt n, PetscInt N, IM *m)
+PetscErrorCode IMBasicCreateFromSizes(MPI_Comm comm, IMState state, PetscInt n, PetscInt N, IM *m)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = IMCreate(comm, m);CHKERRQ(ierr);
   ierr = IMSetType(*m, IMBASIC);CHKERRQ(ierr);
-  ierr = IMSetKeyState(*m, IM_CONTIGUOUS);CHKERRQ(ierr);
-  ierr = IMSetNumKeys(*m, n, N);CHKERRQ(ierr);
+  ierr = IMSetKeyStateAndSizes(*m, state, n, N);CHKERRQ(ierr);
   ierr = IMSetUp(*m);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

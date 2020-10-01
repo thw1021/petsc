@@ -43,8 +43,8 @@ struct _p_IM {
   PetscInt        nKeys[2];     /* local/global always cached regardless of contig or not */
   IMState         kstorage;     /* are the keys contiguous? */
   PetscBool       sorted[2];    /* are local/global keys sorted */
-  PetscBool       keySet;       /* keys were explicitly set, not from sizes */
-  PetscBool       setup;        /* is  __everything__ setup, locks everything */
+  PetscBool       keysetcalled; /* keys were explicitly set, not from sizes */
+  PetscBool       setupcalled;  /* is  __everything__ setup, locks everything */
   void           *data;         /* impls, contains *idx */
 };
 
@@ -59,31 +59,54 @@ PETSC_STATIC_INLINE PetscErrorCode IMClearKeyState_Private(IM m)
   } else if (m->discontig) {
     if (m->discontig->alloced) {
       ierr = PetscFree(m->discontig->keys);CHKERRQ(ierr);
-      ierr = PetscFree(m->discontig->keyIndexGlobal);CHKERRQ(ierr);
     }
+    ierr = PetscFree(m->discontig->keyIndexGlobal);CHKERRQ(ierr);
     ierr = PetscFree(m->discontig);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode IMReplaceKeyStateWithNew_Private(IM m, IMState newstate)
+/*
+ If kstorage == newstate and newstate is valid, frees discontig keys. Sets m->sorted true for contig, false for
+ arrray. Sets nKeys to PETSC_DECIDE for local and global, and kstorage.
+*/
+PETSC_STATIC_INLINE PetscErrorCode IMSetupKeyState_Private(IM m, IMState newstate)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = IMClearKeyState_Private(m);CHKERRQ(ierr);
-  if (newstate) {
-    if (newstate == IM_CONTIGUOUS) {
-      ierr = PetscNewLog(m, &(m->contig));CHKERRQ(ierr);
-    } else if (newstate == IM_ARRAY) {
-      ierr = PetscNewLog(m, &(m->discontig));CHKERRQ(ierr);
-    } else {
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown IMState");
+  if (m->kstorage == newstate) {
+    /* If m->kstorage is set these are guaranteed to exist */
+    if (m->kstorage == IM_ARRAY) {
+      if (m->discontig->alloced) {
+        ierr = PetscFree(m->discontig->keys);CHKERRQ(ierr);
+      }
+      ierr = PetscFree(m->discontig->keyIndexGlobal);CHKERRQ(ierr);
+      m->sorted[IM_LOCAL] = PETSC_FALSE;
+    } else if (m->kstorage == IM_CONTIGUOUS) {
+      m->sorted[IM_LOCAL] = PETSC_TRUE;
+    }
+  } else {
+    ierr = IMClearKeyState_Private(m);CHKERRQ(ierr);
+    /* Is newstate not IM_INVALID */
+    if (newstate) {
+      if (newstate == IM_CONTIGUOUS) {
+        ierr = PetscNewLog(m, &(m->contig));CHKERRQ(ierr);
+        m->sorted[IM_LOCAL] = PETSC_TRUE;
+      } else if (newstate == IM_ARRAY) {
+        ierr = PetscNewLog(m, &(m->discontig));CHKERRQ(ierr);
+        m->sorted[IM_LOCAL] = PETSC_FALSE;
+      } else {
+        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown IMState");
+      }
     }
   }
+  m->nKeys[IM_LOCAL] = PETSC_DECIDE;
+  m->nKeys[IM_GLOBAL] = PETSC_DECIDE;
   m->kstorage = newstate;
   PetscFunctionReturn(0);
 }
+
 PETSC_STATIC_INLINE PetscErrorCode IMResetBase_Private(IM *m)
 {
   PetscErrorCode ierr;
@@ -98,8 +121,8 @@ PETSC_STATIC_INLINE PetscErrorCode IMResetBase_Private(IM *m)
   (*m)->kstorage          = IM_INVALID;
   (*m)->sorted[IM_LOCAL]  = PETSC_FALSE;
   (*m)->sorted[IM_GLOBAL] = PETSC_FALSE;
-  (*m)->keySet            = PETSC_FALSE;
-  (*m)->setup             = PETSC_FALSE;
+  (*m)->keysetcalled      = PETSC_FALSE;
+  (*m)->setupcalled       = PETSC_FALSE;
   (*m)->data              = NULL;
   PetscFunctionReturn(0);
 }
