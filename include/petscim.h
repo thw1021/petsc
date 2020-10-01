@@ -23,12 +23,12 @@ PETSC_EXTERN PetscErrorCode IMDestroy(IM*);
 PETSC_EXTERN PetscErrorCode IMSetType(IM,IMType);
 PETSC_EXTERN PetscErrorCode IMGetType(IM,IMType*);
 PETSC_EXTERN PetscErrorCode IMView(IM,PetscViewer);
+PETSC_EXTERN PetscErrorCode IMViewFromOptions(IM,PetscObject,const char[]);
 PETSC_EXTERN PetscErrorCode IMSetUp(IM);
 PETSC_EXTERN PetscErrorCode IMSetFromOptions(IM);
 
+PETSC_EXTERN PetscErrorCode IMSetKeyStateAndSizes(IM,IMState,PetscInt,PetscInt);
 PETSC_EXTERN PetscErrorCode IMGetKeyState(IM,IMState*);
-PETSC_EXTERN PetscErrorCode IMSetKeyState(IM,IMState);
-PETSC_EXTERN PetscErrorCode IMSetNumKeys(IM,PetscInt,PetscInt);
 PETSC_EXTERN PetscErrorCode IMGetNumKeys(IM,IMOpMode,PetscInt*);
 
 PETSC_EXTERN PetscErrorCode IMContiguousSetKeyInterval(IM,PetscInt,PetscInt);
@@ -39,5 +39,5 @@ PETSC_EXTERN PetscErrorCode IMArrayGetKeyArray(IM,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode IMArrayRestoreKeyArray(IM,const PetscInt*[]);
 
 /* IM_BASIC */
-PETSC_EXTERN PetscErrorCode IMBasicCreateFromSizes(MPI_Comm,PetscInt,PetscInt,IM*);
+PETSC_EXTERN PetscErrorCode IMBasicCreateFromSizes(MPI_Comm,IMState,PetscInt,PetscInt,IM*);
 #endif
