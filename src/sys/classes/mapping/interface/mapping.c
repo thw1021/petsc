@@ -263,7 +263,7 @@ PetscErrorCode IMGetKeyState(IM m, IMState *state)
 
 /* SET/GET KEYS DIRECTLY */
 /* LOGICALLY COLLECTIVE, CAN OVERRIDE */
-PetscErrorCode IMContiguousSetKeyInterval(IM m, PetscInt keyStart, PetscInt keyEnd)
+PetscErrorCode IMSetKeyInterval(IM m, PetscInt keyStart, PetscInt keyEnd)
 {
   PetscErrorCode ierr;
 
@@ -282,7 +282,7 @@ PetscErrorCode IMContiguousSetKeyInterval(IM m, PetscInt keyStart, PetscInt keyE
 }
 
 /* NOT COLLECTIVE */
-PetscErrorCode IMContiguousGetKeyInterval(IM m, PetscInt *keyStart, PetscInt *keyEnd)
+PetscErrorCode IMGetKeyInterval(IM m, PetscInt *keyStart, PetscInt *keyEnd)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
@@ -296,21 +296,21 @@ PetscErrorCode IMContiguousGetKeyInterval(IM m, PetscInt *keyStart, PetscInt *ke
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMContiguousGetGlobalKeyIntervals(IM m, const PetscInt *ranges[])
+PetscErrorCode IMGetGlobalKeyIntervals(IM m, const PetscInt *keys[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
-  PetscValidIntPointer(ranges,2);
+  PetscValidIntPointer(keys,2);
   if (PetscDefined(USE_DEBUG)) {
     const IMState state = IM_CONTIGUOUS;
     if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map must be setup first call IMSetup()");
     if (m->kstorage && (m->kstorage != state)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping keystorage is of type %d not %s",IMStates[m->kstorage], IMStates[state]);
   }
-  *ranges = m->contig->globalRanges;
+  *keys = m->contig->globalRanges;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMContiguousRestoreGlobalKeyIntervals(IM m, const PetscInt *keys[])
+PetscErrorCode IMRestoreGlobalKeyIntervals(IM m, const PetscInt *keys[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
@@ -324,7 +324,7 @@ PetscErrorCode IMContiguousRestoreGlobalKeyIntervals(IM m, const PetscInt *keys[
 }
 
 /* NOT COLLECTIVE, CAN OVERRIDE */
-PetscErrorCode IMArraySetKeyArray(IM m, PetscInt n, const PetscInt keys[], PetscBool issorted, PetscCopyMode mode)
+PetscErrorCode IMSetKeyArray(IM m, PetscInt n, const PetscInt keys[], PetscBool issorted, PetscCopyMode mode)
 {
   PetscErrorCode ierr;
 
@@ -364,7 +364,7 @@ PetscErrorCode IMArraySetKeyArray(IM m, PetscInt n, const PetscInt keys[], Petsc
 }
 
 /* NOT COLLECTIVE */
-PetscErrorCode IMArrayGetKeyArray(IM m, const PetscInt *keys[])
+PetscErrorCode IMGetKeyArray(IM m, const PetscInt *keys[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
@@ -379,7 +379,7 @@ PetscErrorCode IMArrayGetKeyArray(IM m, const PetscInt *keys[])
 }
 
 /* NOT COLLECTIVE */
-PetscErrorCode IMArrayRestoreKeyArray(IM m, const PetscInt *keys[])
+PetscErrorCode IMRestoreKeyArray(IM m, const PetscInt *keys[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
@@ -393,26 +393,29 @@ PetscErrorCode IMArrayRestoreKeyArray(IM m, const PetscInt *keys[])
 }
 
 /* UTIL FUNCTIONS */
-/* POSSIBLY COLLECTIVE */
+/* LOGICALLY COLLECTIVE, ONE OF THE ONLY FUNCTIONS THAT INVALIDATES SETUP */
 PetscErrorCode IMConvertKeyState(IM m, IMState newstate)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not yet implemented");
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  if (PetscDefined(USE_DEBUG)) {
+    if (!(m->keysetcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for maps built without explicit keys set");
+  }
   if (m->kstorage == newstate) PetscFunctionReturn(0);
+  m->setupcalled = PETSC_FALSE;
   if (!(m->kstorage)) {
-    m->kstorage = newstate;
+    ierr = IMSetupKeyState_Private(m, newstate);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
-  /* not equal and not null, so old state must be discontiguous */
-  if (newstate == IM_CONTIGUOUS) {
-    PetscInt keyStart, keyEnd;
+  switch (newstate) {
+  case IM_CONTIGUOUS:
+  {
+    PetscInt keyStart, keyEnd, nKeysSaved[2] = {m->nKeys[IM_LOCAL], m->nKeys[IM_GLOBAL]};
 
     if (!(m->sorted[IM_LOCAL])) {
       ierr = PetscIntSortSemiOrdered(m->nKeys[IM_LOCAL], m->discontig->keys);CHKERRQ(ierr);
-      m->sorted[IM_LOCAL] = PETSC_TRUE;
     }
     keyStart = m->discontig->keys[0];
     keyEnd = m->discontig->keys[m->nKeys[IM_LOCAL]-1];
@@ -420,6 +423,43 @@ PetscErrorCode IMConvertKeyState(IM m, IMState newstate)
       if (keyEnd < keyStart) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"KeyEnd %D < KeyStart %D from discontiguous but contiguous keys must be increasing",keyEnd,keyStart);
       if (m->nKeys[IM_LOCAL] && ((keyEnd-keyStart) != m->nKeys[IM_LOCAL])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Number of keys previously set %D != %D keyrange given",m->nKeys[IM_LOCAL],keyEnd-keyStart);
     }
+    ierr = IMSetupKeyState_Private(m, IM_CONTIGUOUS);CHKERRQ(ierr);
+    /* Need to save and set these since they are reset in setupkeystate */
+    m->nKeys[IM_LOCAL] = nKeysSaved[0];
+    m->nKeys[IM_GLOBAL] = nKeysSaved[1];
+    m->contig->keyStart = keyStart;
+    m->contig->keyEnd = keyEnd;
+    break;
+  }
+  case IM_ARRAY:
+  {
+    PetscInt i, keyStart = m->contig->keyStart, nKeysSaved[2] = {m->nKeys[IM_LOCAL], m->nKeys[IM_GLOBAL]};
+
+    if (PetscDefined(USE_DEBUG)) {
+      PetscInt keyEnd = m->contig->keyEnd;
+      if (keyEnd < keyStart) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"KeyEnd %D < KeyStart %D from discontiguous but contiguous keys must be increasing",keyEnd,keyStart);
+      if (m->nKeys[IM_LOCAL] && ((keyEnd-keyStart) != m->nKeys[IM_LOCAL])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Number of keys previously set %D != %D keyrange given",m->nKeys[IM_LOCAL],keyEnd-keyStart);
+    }
+    ierr = IMSetupKeyState_Private(m, IM_ARRAY);CHKERRQ(ierr);
+    m->nKeys[IM_LOCAL] = nKeysSaved[0];
+    m->nKeys[IM_GLOBAL] = nKeysSaved[0];
+    /* Interval always locally sorted so conversion means also locally sorted */
+    m->sorted[IM_LOCAL] = PETSC_TRUE;
+<<<<<<< HEAD
+    m->discontig->alloced = PETSC_TRUE;
+=======
+>>>>>>> 647ddb0874b2603db770e97c15c575749f56c478
+    ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &(m->discontig->keys));CHKERRQ(ierr);
+    ierr = PetscLogObjectMemory((PetscObject) m, (m->nKeys[IM_LOCAL])*sizeof(PetscInt));CHKERRQ(ierr);
+    for (i = 0; i < m->nKeys[IM_LOCAL]; ++i) m->discontig->keys[i] = keyStart+i;
+    break;
+  }
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown IMState");
+    break;
+  }
+  if (m->ops->convertkeys) {
+    ierr = (*m->ops->convertkeys)(m, newstate);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -432,14 +472,69 @@ PetscErrorCode IMSort(IM m, IMOpMode mode)
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   PetscValidType(m,1);
   PetscValidLogicalCollectiveEnum(m,mode,2);
+  if (m->sorted[mode]) PetscFunctionReturn(0);
   ierr = (*m->ops->sort)(m,mode);CHKERRQ(ierr);
+  m->sorted[mode] = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMSetSorted(IM m, PetscBool sorted)
+PetscErrorCode IMPermute(IM m, IM pm)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  PetscValidType(m,1);
+  PetscValidHeaderSpecific(m,IM_CLASSID,2);
+  PetscValidType(pm,2);
+  if (PetscDefined(USE_DEBUG)) {
+    PetscBool isbasic;
+
+    if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map to be permuted must be setup first");
+    if (!(pm->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Permuation map must be setup first");
+    if (m->nKeys[IM_LOCAL] > pm->nKeys[IM_LOCAL]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Cannot permute map with local size %D with smaller map of local size %D",m->nKeys[IM_LOCAL],pm->nKeys[IM_LOCAL]);
+    ierr = PetscObjectTypeCompare((PetscObject) m, IMBASIC, &isbasic);CHKERRQ(ierr);
+    if (!(isbasic)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Permuation map must be of type %s", IMBASIC);
+  }
+  if (m->ops->permute) {
+    ierr = (*m->ops->permute)(m,pm);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode IMSetSorted(IM m, IMOpMode mode, PetscBool sorted)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+<<<<<<< HEAD
+  PetscValidType(m,1);
+  PetscValidHeaderSpecific(m,IM_CLASSID,2);
+  PetscValidType(pm,2);
+  if (PetscDefined(USE_DEBUG)) {
+    PetscBool isbasic;
+
+    if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map to be permuted must be setup first");
+    if (!(pm->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Permuation map must be setup first");
+    if (m->nKeys[IM_LOCAL] > pm->nKeys[IM_LOCAL]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Cannot permute map with local size %D with smaller map of local size %D",m->nKeys[IM_LOCAL],pm->nKeys[IM_LOCAL]);
+    ierr = PetscObjectTypeCompare((PetscObject) m, IMBASIC, &isbasic);CHKERRQ(ierr);
+    if (!(isbasic)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Permuation map must be of type %s", IMBASIC);
+  }
+  if (m->ops->permute) {
+    ierr = (*m->ops->permute)(m,pm);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode IMSetSorted(IM m, IMOpMode mode, PetscBool sorted)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
+=======
+>>>>>>> 647ddb0874b2603db770e97c15c575749f56c478
+  PetscValidLogicalCollectiveEnum(m,mode,2);
+  m->sorted[mode] = sorted;
   PetscFunctionReturn(0);
 }
 
