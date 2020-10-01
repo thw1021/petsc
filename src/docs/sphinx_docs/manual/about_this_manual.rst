@@ -58,6 +58,11 @@ You can submit corrections to this document at https://docs.petsc.org/en/latest/
 pulling down on the tab at the lower right corner of this window and selecting Edit.
 Once you have edited the document type a summary of your
 changes in the Commit Message box, type a branch name in Target Branch box, and press the Commit Changes button.
+
+.. raw:: html
+
+    <iframe width="560" height="315" src="http://www.youtube.com/embed/9x06zJFsVgY?rel=0" frameborder="0" allowfullscreen></iframe>
+
 You can also send corrections to
 ``petsc-maint@mcs.anl.gov``.
 
