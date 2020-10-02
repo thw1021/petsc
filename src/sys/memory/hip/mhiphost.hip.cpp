@@ -1,7 +1,7 @@
 #include <petscsys.h>             /*I   "petscsys.h"   I*/
 #include <petschipblas.h>          /* Needed to provide CHKERRHIP() */
 
-extern "C"
+PETSC_EXTERN "C"
 PetscErrorCode PetscHIPHostMalloc(size_t a,PetscBool clear,int lineno,const char function[],const char filename[],void **result)
 {
   hipError_t ierr;
@@ -9,7 +9,7 @@ PetscErrorCode PetscHIPHostMalloc(size_t a,PetscBool clear,int lineno,const char
   return 0;
 }
 
-extern "C"
+PETSC_EXTERN "C"
 PetscErrorCode PetscHIPHostFree(void *aa,int lineno,const char function[],const char filename[])
 {
   hipError_t ierr;
@@ -17,7 +17,7 @@ PetscErrorCode PetscHIPHostFree(void *aa,int lineno,const char function[],const 
   return 0;
 }
 
-extern "C"
+PETSC_EXTERN "C"
 PetscErrorCode PetscHIPHostRealloc(size_t a,int lineno,const char function[],const char filename[],void **result)
 {
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"HIP has no Realloc()");
@@ -41,7 +41,7 @@ static PetscErrorCode (*PetscFreeOld)(void*,int,const char[],const char[]);
 
 .seealso: PetscMallocResetHIPHost()
 @*/
-extern "C"
+PETSC_EXTERN "C"
 PetscErrorCode PetscMallocSetHIPHost(void)
 {
   PetscFunctionBegin;
@@ -64,7 +64,7 @@ PetscErrorCode PetscMallocSetHIPHost(void)
 
 .seealso: PetscMallocSetHIPHost()
 @*/
-extern "C"
+PETSC_EXTERN "C"
 PetscErrorCode PetscMallocResetHIPHost(void)
 {
   PetscFunctionBegin;

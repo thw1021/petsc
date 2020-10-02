@@ -82,10 +82,9 @@ def stripsplit(line):
   return line[len('#requires'):].replace("'","").split()
 
 PetscPKGS = 'sys vec mat dm ksp snes ts tao'.split()
-#SEK # the key is actually the language suffix, it won't work for suffixes such as 'kokkos.cxx' so use an _ and replace the _ as needed with . 
-LANGS = dict(kokkos_cxx='KOKKOS', c='C', cxx='CXX', cpp='CPP', cu='CU', F='F', F90='F90', hip_cpp='HIP', sycl='SYCL.CXX')
-#SEK LANGS = dict(c='C', cxx='CXX', cpp='CPP', cu='CU', F='F', F90='F90', hip='HIP', sycl='SYCL')
-#SEK LANGSEXT = dict(c='c', cxx='cxx', cpp='cpp', cu='cu', F='F', F90='F90', hip='hip.cpp', sycl='sycl.cxx')
+# the key is actually the language suffix, it won't work for suffixes such as 'kokkos.cxx' so use an _ and replace the _ as needed with . 
+LANGS = dict(kokkos_cxx='KOKKOS', c='C', cxx='CXX', cpp='CPP', cu='CU', F='F',
+             F90='F90', hip_cpp='HIP', sycl_cxx='SYCL.CXX')
 
 class debuglogger(object):
     def __init__(self, log):

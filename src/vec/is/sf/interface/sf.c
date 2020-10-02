@@ -48,7 +48,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGetMemType(const void *data,PetscMemType
     struct hipPointerAttribute_t attr;
     enum hipMemoryType           mtype;
     cerr = hipPointerGetAttributes(&attr,data);
-     /* hipGetLastError(); Reset the last error */
+    hipGetLastError(); /* Reset the last error */
     mtype = attr.memoryType;
     if (cerr == hipSuccess && mtype == hipMemoryTypeDevice) *type = PETSC_MEMTYPE_DEVICE;
   }

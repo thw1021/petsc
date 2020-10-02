@@ -769,7 +769,7 @@ PETSC_EXTERN const char* PetscHIPBLASGetErrorName(hipblasStatus_t status)
     case HIPBLAS_STATUS_EXECUTION_FAILED: return "HIPBLAS_STATUS_EXECUTION_FAILED";
     case HIPBLAS_STATUS_INTERNAL_ERROR:   return "HIPBLAS_STATUS_INTERNAL_ERROR";
     case HIPBLAS_STATUS_NOT_SUPPORTED:    return "HIPBLAS_STATUS_NOT_SUPPORTED";
-    default:                             return "unknown error";
+    default:                              return "unknown error";
   }
 }
 #endif
