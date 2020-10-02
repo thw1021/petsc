@@ -1268,7 +1268,25 @@ PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
       ierr = ISGetSize(is,&N);CHKERRQ(ierr);
       ierr = ISGetLocalSize(is,&n);CHKERRQ(ierr);
       ierr = VecGetBlockSize(X,&bs);CHKERRQ(ierr);
-      if (n%bs || bs == 1) bs = -1; /* Do not decide block size if we do not have to */
+
+      /* Do not decide block size if we do not have to -- must be done on all processes */
+      if (bs == 1) {
+        bs = -1;
+      } else {
+        MPI_Comm    comm;
+        PetscMPIInt size;
+        PetscInt    i,*Yn;
+
+        ierr = PetscObjectGetComm((PetscObject)X,&comm);CHKERRQ(ierr);
+        ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+        ierr = PetscMalloc1(size,&Yn);CHKERRQ(ierr);
+        ierr = MPI_Allgather(&n,1,MPIU_INT,Yn,1,MPIU_INT,comm);CHKERRQ(ierr);
+        for (i=0; i<size; i++) {
+          if (Yn[i]%bs) { bs = -1; break; }
+        }
+        ierr = PetscFree(Yn);CHKERRQ(ierr);
+      }
+
 #if defined(PETSC_HAVE_CUDA)
       ierr = PetscObjectTypeCompareAny((PetscObject)X,&iscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
       if (iscuda) {
