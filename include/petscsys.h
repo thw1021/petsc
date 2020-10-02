@@ -532,6 +532,9 @@ PETSC_EXTERN PetscBool      PetscHIPSynchronize;
 PETSC_EXTERN PetscErrorCode PetscHIPInitialize(MPI_Comm,PetscInt);
 PETSC_EXTERN PetscErrorCode PetscHIPInitializeCheck(void);
 #endif
+#if defined(PETSC_HAVE_HIP)
+PETSC_EXTERN PetscErrorCode PetscHIPInitialize(MPI_Comm,PetscInt);
+#endif
 
 #if defined(PETSC_HAVE_ELEMENTAL)
 PETSC_EXTERN PetscErrorCode PetscElementalInitializePackage(void);
@@ -1257,6 +1260,11 @@ PETSC_EXTERN PetscErrorCode PetscMallocResetDRAM(void);
 PETSC_EXTERN PetscErrorCode PetscMallocSetCUDAHost(void);
 PETSC_EXTERN PetscErrorCode PetscMallocResetCUDAHost(void);
 #endif
+#if defined(PETSC_HAVE_HIP)
+PETSC_EXTERN PetscErrorCode PetscMallocSetHIPHost(void);
+PETSC_EXTERN PetscErrorCode PetscMallocResetHIPHost(void);
+#endif
+
 
 #define MPIU_PETSCLOGDOUBLE  MPI_DOUBLE
 #define MPIU_2PETSCLOGDOUBLE MPI_2DOUBLE_PRECISION

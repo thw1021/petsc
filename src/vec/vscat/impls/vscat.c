@@ -10,6 +10,9 @@
 #if defined(PETSC_HAVE_CUDA)
 #include <petsc/private/cudavecimpl.h>
 #endif
+#if defined(PETSC_HAVE_HIP)
+#include <petsc/private/hipvecimpl.h>
+#endif
 
 /*
       This is special scatter code for when the entire parallel vector is copied to each processor.
