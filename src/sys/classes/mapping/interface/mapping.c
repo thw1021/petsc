@@ -445,10 +445,7 @@ PetscErrorCode IMConvertKeyState(IM m, IMState newstate)
     m->nKeys[IM_GLOBAL] = nKeysSaved[0];
     /* Interval always locally sorted so conversion means also locally sorted */
     m->sorted[IM_LOCAL] = PETSC_TRUE;
-<<<<<<< HEAD
     m->discontig->alloced = PETSC_TRUE;
-=======
->>>>>>> 647ddb0874b2603db770e97c15c575749f56c478
     ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &(m->discontig->keys));CHKERRQ(ierr);
     ierr = PetscLogObjectMemory((PetscObject) m, (m->nKeys[IM_LOCAL])*sizeof(PetscInt));CHKERRQ(ierr);
     for (i = 0; i < m->nKeys[IM_LOCAL]; ++i) m->discontig->keys[i] = keyStart+i;
@@ -504,35 +501,8 @@ PetscErrorCode IMPermute(IM m, IM pm)
 
 PetscErrorCode IMSetSorted(IM m, IMOpMode mode, PetscBool sorted)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
-<<<<<<< HEAD
-  PetscValidType(m,1);
-  PetscValidHeaderSpecific(m,IM_CLASSID,2);
-  PetscValidType(pm,2);
-  if (PetscDefined(USE_DEBUG)) {
-    PetscBool isbasic;
-
-    if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map to be permuted must be setup first");
-    if (!(pm->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Permuation map must be setup first");
-    if (m->nKeys[IM_LOCAL] > pm->nKeys[IM_LOCAL]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Cannot permute map with local size %D with smaller map of local size %D",m->nKeys[IM_LOCAL],pm->nKeys[IM_LOCAL]);
-    ierr = PetscObjectTypeCompare((PetscObject) m, IMBASIC, &isbasic);CHKERRQ(ierr);
-    if (!(isbasic)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Permuation map must be of type %s", IMBASIC);
-  }
-  if (m->ops->permute) {
-    ierr = (*m->ops->permute)(m,pm);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode IMSetSorted(IM m, IMOpMode mode, PetscBool sorted)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(m,IM_CLASSID,1);
-=======
->>>>>>> 647ddb0874b2603db770e97c15c575749f56c478
   PetscValidLogicalCollectiveEnum(m,mode,2);
   m->sorted[mode] = sorted;
   PetscFunctionReturn(0);
