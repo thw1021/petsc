@@ -62,7 +62,6 @@ int main(int argc,char **argv)
   DM             da,*subda;
   PetscInt       i,dim=3;
   PetscMPIInt    size,rank;
-  PetscBool      collective=PETSC_FALSE;
   Vec            v;
   Vec            slvec,sgvec;
   IS             *ois,*iis;
@@ -106,7 +105,7 @@ int main(int argc,char **argv)
     upper.k = info.zs+info.zm;
 
     /* test the patch IS as a thing to scatter to/from */
-    ierr = DMDACreatePatchIS(da,&lower,&upper,&patchis, collective);CHKERRQ(ierr);
+    ierr = DMDACreatePatchIS(da,&lower,&upper,&patchis);CHKERRQ(ierr);
     ierr = DMGetGlobalVector(da,&largevec);CHKERRQ(ierr);
 
     ierr = VecCreate(PETSC_COMM_SELF,&smallvec);CHKERRQ(ierr);
