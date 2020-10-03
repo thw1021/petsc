@@ -27,16 +27,14 @@ PETSC_EXTERN PetscErrorCode IMViewFromOptions(IM,PetscObject,const char[]);
 PETSC_EXTERN PetscErrorCode IMSetUp(IM);
 PETSC_EXTERN PetscErrorCode IMSetFromOptions(IM);
 
-PETSC_EXTERN PetscErrorCode IMSetKeyStateAndSizes(IM,IMState,PetscInt,PetscInt);
+PETSC_EXTERN PetscErrorCode IMGenerateDefault(MPI_Comm,IMType,IMState,PetscInt,PetscInt,IM*);
 PETSC_EXTERN PetscErrorCode IMGetKeyState(IM,IMState*);
 PETSC_EXTERN PetscErrorCode IMGetNumKeys(IM,IMOpMode,PetscInt*);
 
 PETSC_EXTERN PetscErrorCode IMSetKeyInterval(IM,PetscInt,PetscInt);
 PETSC_EXTERN PetscErrorCode IMGetKeyInterval(IM,PetscInt*,PetscInt*);
-PETSC_EXTERN PetscErrorCode IMGetGlobalKeyIntervals(IM,const PetscInt*[]);
-PETSC_EXTERN PetscErrorCode IMRestoreGlobalKeyIntervals(IM,const PetscInt*[]);
 
-PETSC_EXTERN PetscErrorCode IMSetKeyArray(IM,PetscInt,const PetscInt[],PetscBool,PetscCopyMode);
+PETSC_EXTERN PetscErrorCode IMSetKeyArray(IM,PetscInt,const PetscInt[],PetscCopyMode);
 PETSC_EXTERN PetscErrorCode IMGetKeyArray(IM,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode IMRestoreKeyArray(IM,const PetscInt*[]);
 
@@ -49,4 +47,4 @@ PETSC_EXTERN PetscErrorCode IMSorted(IM,IMOpMode,PetscBool*);
 /* IM_BASIC */
 PETSC_EXTERN PetscErrorCode IMBasicCreateFromSizes(MPI_Comm,IMState,PetscInt,PetscInt,IM*);
 PETSC_EXTERN PetscErrorCode IMBasicCreateFromRanges(MPI_Comm,IMState,const PetscInt[],PetscCopyMode,IM*);
-#endif
+#endif /* PETSCIM_H */
