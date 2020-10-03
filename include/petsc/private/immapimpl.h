@@ -1,5 +1,5 @@
-#if !defined(_PETSCIMMAPIMPL_H)
-#define _PETSCIMMAPIMPL_H
+#if !defined(PETSCIMMAPIMPL_H)
+#define PETSCIMMAPIMPL_H
 
 #include <petsc/private/imimpl.h>
 #include <petscim.h>
@@ -11,5 +11,5 @@ typedef struct {
 } IM_Map;
 
 PETSC_EXTERN PetscErrorCode IMCreate_Map(IM);
-PETSC_EXTERN PetscErrorCode IMDestroy_Map(IM*);
-#endif
+PETSC_EXTERN PetscErrorCode IMDestroy_Map(IM);
+#endif /* PETSCIMMAPIMPL_H */

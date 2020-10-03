@@ -6,7 +6,7 @@ int main(int argc, char **argv)
 {
   IM             m, m2;
   PetscInt       *arr;
-  PetscInt       i, n = 10, keyStart = 0, keyEnd = 10;
+  PetscInt       i, n = 10;
   PetscMPIInt    rank, size;
   MPI_Comm       comm;
   PetscErrorCode ierr;

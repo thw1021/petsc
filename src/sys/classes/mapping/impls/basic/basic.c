@@ -2,31 +2,37 @@
 
 PetscErrorCode IMCreate_Basic(IM m)
 {
-  IM_Basic       *imb;
+  IM_Basic       *mb;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscNewLog(m, &imb);CHKERRQ(ierr);
-  ierr = IMResetBasic_Private(imb);CHKERRQ(ierr);
-  m->data = (void *)imb;
+  ierr = PetscNewLog(m, &mb);CHKERRQ(ierr);
+  ierr = IMInitializeBasic_Private(mb);CHKERRQ(ierr);
+  m->data = (void *)mb;
   m->ops->destroy = IMDestroy_Basic;
   m->ops->setup = IMSetup_Basic;
   m->ops->permute = IMPermute_Basic;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMDestroy_Basic(IM *m)
+PetscErrorCode IMDestroy_Basic(IM m)
 {
+  IM_Basic       *mb = (IM_Basic *) m->data;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree((*m)->data);CHKERRQ(ierr);
+  ierr = IMDestroyBasic_Private(mb);CHKERRQ(ierr);
+  ierr = PetscFree(mb);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMSetup_Basic(PETSC_UNUSED IM m)
+PetscErrorCode IMSetup_Basic(IM m)
 {
+  IM_Basic *mb = (IM_Basic *) m->data;
+
   PetscFunctionBegin;
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"TODO");
+  mb->locked = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -36,8 +42,10 @@ PetscErrorCode IMPermute_Basic(IM m, IM pm)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"TODO");
+#if (0)
   switch (m->kstorage) {
-  case IM_CONTIGUOUS:
+  case IM_INTERVAL:
     ierr = PetscInfo1(m,"Input index is %s, makes no sense to permute\n", IMStates[m->kstorage]);CHKERRQ(ierr);
     PetscFunctionReturn(0);
     break;
@@ -53,8 +61,8 @@ PetscErrorCode IMPermute_Basic(IM m, IM pm)
     ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &tmp);CHKERRQ(ierr);
     ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &tmp2);CHKERRQ(ierr);
     for (i = 0; i < m->nKeys[IM_LOCAL]; ++i) {
-      tmp[i] = m->discontig->keys[pm->discontig->keys[i]];
-      tmp2[i] = m->discontig->keyIndexGlobal[pm->discontig->keys[i]];
+      tmp[i] = m->array->keys[pm->discontig->keys[i]];
+      tmp2[i] = m->array->keyIndexGlobal[pm->discontig->keys[i]];
     }
     if (m->discontig->alloced) {
       ierr = PetscFree(m->discontig->keys);CHKERRQ(ierr);
@@ -71,6 +79,7 @@ PetscErrorCode IMPermute_Basic(IM m, IM pm)
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown IMState");
     break;
   }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -79,10 +88,7 @@ PetscErrorCode IMBasicCreateFromSizes(MPI_Comm comm, IMState state, PetscInt n, 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = IMCreate(comm, m);CHKERRQ(ierr);
-  ierr = IMSetType(*m, IMBASIC);CHKERRQ(ierr);
-  ierr = IMSetKeyStateAndSizes(*m, state, n, N);CHKERRQ(ierr);
-  ierr = IMSetUp(*m);CHKERRQ(ierr);
+  ierr = IMGenerateDefault(comm, IMBASIC, state, n, N, m);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -92,6 +98,7 @@ PetscErrorCode IMBasicCreateFromRanges(MPI_Comm comm, IMState state, const Petsc
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"TODO");
   ierr = IMCreate(comm, m);CHKERRQ(ierr);
   ierr = IMSetType(*m, IMBASIC);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
