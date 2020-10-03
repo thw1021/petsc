@@ -2,23 +2,23 @@
 
 PetscErrorCode IMCreate_Map(IM m)
 {
-  IM_Map         *immap;
+  IM_Map         *mm;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscNewLog(m, &immap);CHKERRQ(ierr);
-  m->data = (void *)immap;
+  ierr = PetscNewLog(m, &mm);CHKERRQ(ierr);
+  m->data = (void *)mm;
   m->ops->destroy = IMDestroy_Map;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMDestroy_Map(IM *m)
+PetscErrorCode IMDestroy_Map(IM m)
 {
-  IM_Map          *immap = (IM_Map *)(*m)->data;
+  IM_Map          *mm = (IM_Map *) m->data;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree(immap->idx);CHKERRQ(ierr);
-  ierr = PetscFree((*m)->data);CHKERRQ(ierr);
+  ierr = PetscFree(mm->idx);CHKERRQ(ierr);
+  ierr = PetscFree(mm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
