@@ -3,7 +3,7 @@
 /*@
   DMDACreatePatchIS - Creates an index set corresponding to a patch of the DA.
 
-  Optionally Collective
+  Collective
 
   Input Parameters:
 +  da - the DMDA
