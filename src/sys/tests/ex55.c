@@ -6,7 +6,7 @@ int main(int argc, char **argv)
 {
   IM             m, m2;
   PetscInt       *arr;
-  PetscInt       i, n = 10;
+  PetscInt       i, n = 10, N = PETSC_DECIDE;
   PetscMPIInt    rank, size;
   MPI_Comm       comm;
   PetscErrorCode ierr;
@@ -21,16 +21,17 @@ int main(int argc, char **argv)
   for (i = 0; i <  n; ++i) arr[i] = rank;
   ierr = IMCreate(comm, &m);CHKERRQ(ierr);
   ierr = IMSetType(m, IMBASIC);CHKERRQ(ierr);
-  ierr = IMSetKeyArray(m, n, arr, PETSC_TRUE, PETSC_COPY_VALUES);CHKERRQ(ierr);
+  ierr = IMSetKeyArray(m, n, arr, PETSC_COPY_VALUES);CHKERRQ(ierr);
+  ierr = IMSetSorted(m, IM_LOCAL, PETSC_TRUE);CHKERRQ(ierr);
   ierr = IMSetUp(m);CHKERRQ(ierr);
   ierr = IMView(m, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = IMDestroy(&m);CHKERRQ(ierr);
 
-  ierr = IMBasicCreateFromSizes(comm, IM_CONTIGUOUS, n, PETSC_DECIDE, &m2);CHKERRQ(ierr);
+  ierr = IMBasicCreateFromSizes(comm, IM_INTERVAL, n, N, *m2);CHKERRQ(ierr);
   ierr = IMView(m2, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = IMDestroy(&m2);CHKERRQ(ierr);
 
-  ierr = IMBasicCreateFromSizes(comm, IM_ARRAY, n, PETSC_DECIDE, &m2);CHKERRQ(ierr);
+  ierr = IMBasicCreateFromSizes(comm, IM_ARRAY, n, N, *m2);CHKERRQ(ierr);
   ierr = IMView(m2, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = IMDestroy(&m2);CHKERRQ(ierr);
 
