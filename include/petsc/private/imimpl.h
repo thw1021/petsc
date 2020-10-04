@@ -16,14 +16,14 @@ struct _IMOps {
   PetscErrorCode (*setfromoptions)(IM);
   PetscErrorCode (*sort)(IM,IMOpMode);
   PetscErrorCode (*convertkeys)(IM,IMState);
-  PetscErrorCode (*getvalues)(IM,PetscInt*,const PetscInt*[]);
+  PetscErrorCode (*getindices)(IM,const PetscInt*[]);
   PetscErrorCode (*restorevalues)(IM,PetscInt,const PetscInt*[]);
   PetscErrorCode (*permute)(IM,IM);
 };
 
 typedef struct _n_IMInterval *IMInterval;
 struct _n_IMInterval {
-  PetscInt         keyStart, keyEnd; /* section-like start end */
+  PetscInt         keyStart, keyEnd; /* local section-like start end */
   PetscObjectState state;
 };
 
