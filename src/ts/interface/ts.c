@@ -1043,16 +1043,6 @@ PetscErrorCode TSComputeIJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal shi
       }
       ts->rhsjacobian.scale = -1;
       ts->rhsjacobian.shift = shift;
-      ierr = SNESGetUseMatrixFree(ts->snes,NULL,&flg);CHKERRQ(ierr);
-      /* since -snes_mf_operator uses the full SNES function it does not need to be shifted or scaled here */
-      if (!flg) {
-        ierr = MatScale(A,-1);CHKERRQ(ierr);
-        ierr = MatShift(A,shift);CHKERRQ(ierr);
-      }
-      if (A != B) {
-        ierr = MatScale(B,-1);CHKERRQ(ierr);
-        ierr = MatShift(B,shift);CHKERRQ(ierr);
-      }
     } else if (Arhs) {          /* Both IJacobian and RHSJacobian */
       if (!ijacobian) {         /* No IJacobian provided, but we have a separate RHS matrix */
         ierr = MatZeroEntries(A);CHKERRQ(ierr);
@@ -1062,6 +1052,7 @@ PetscErrorCode TSComputeIJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal shi
           ierr = MatShift(B,shift);CHKERRQ(ierr);
         }
       }
+      ierr = TSComputeRHSJacobian(ts,t,U,Arhs,Brhs);CHKERRQ(ierr);
       ierr = MatAXPY(A,-1,Arhs,ts->axpy_pattern);CHKERRQ(ierr);
       if (A != B) {
         ierr = MatAXPY(B,-1,Brhs,ts->axpy_pattern);CHKERRQ(ierr);
