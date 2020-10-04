@@ -67,7 +67,7 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONG,"Lower and Upper stencils are identical! Please check inputs.");
   }
 
-  ierr = PetscMalloc(nindices*dof,&indices);CHKERRQ(ierr);
+  ierr = PetscMalloc1(nindices*dof,&indices);CHKERRQ(ierr);
   idx = 0;
   me = ms + mw;
   if (N>1) ne = ns + nw;
@@ -124,7 +124,7 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     k++;
   } while (k<upper->k-oz);
 
-  /*ierr = PetscRealloc((size_t)(idx*sizeof(PetscInt)), (void*)&indices);CHKERRQ(ierr);*/
+  ierr = PetscRealloc((size_t)(idx*sizeof(PetscInt)), (void*)&indices);CHKERRQ(ierr);
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject)da),idx,indices,PETSC_OWN_POINTER,is);CHKERRQ(ierr);
   PetscFunctionReturn(ierr);
 }
