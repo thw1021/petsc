@@ -12,6 +12,7 @@ PetscErrorCode IMCreate_Basic(IM m)
   m->ops->destroy = IMDestroy_Basic;
   m->ops->setup = IMSetup_Basic;
   m->ops->permute = IMPermute_Basic;
+  m->ops->getindices = IMGetIndices_Basic;
   PetscFunctionReturn(0);
 }
 
@@ -28,11 +29,52 @@ PetscErrorCode IMDestroy_Basic(IM m)
 
 PetscErrorCode IMSetup_Basic(IM m)
 {
-  IM_Basic *mb = (IM_Basic *) m->data;
+  IM_Basic       *mb = (IM_Basic *) m->data;
+  PetscInt       min, max, send[2];
+  PetscMPIInt    size;
+  MPI_Comm       comm;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"TODO");
-  mb->locked = PETSC_TRUE;
+  ierr = PetscObjectGetComm((PetscObject) m, &comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
+  ierr = PetscCalloc1(2*size, &(mb->globalRanges));CHKERRQ(ierr);
+  switch (m->kstorage) {
+  case IM_INTERVAL:
+    min = m->interval->keyStart;
+    max = m->interval->keyEnd;
+    break;
+  case IM_ARRAY:
+    if (m->sorted[IM_LOCAL]) {
+      min = m->array->keys[0];
+      max = m->array->keys[m->nKeys[IM_LOCAL]-1];
+    } else {
+      PetscInt *keycopy;
+
+      ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &keycopy);CHKERRQ(ierr);
+      ierr = PetscArraycpy(keycopy, m->array->keys, m->nKeys[IM_LOCAL]);CHKERRQ(ierr);
+      ierr = PetscIntSortSemiOrdered(m->nKeys[IM_LOCAL], keycopy);CHKERRQ(ierr);
+      min = keycopy[0];
+      max = keycopy[m->nKeys[IM_LOCAL]-1];
+      ierr = PetscFree(keycopy);CHKERRQ(ierr);
+    }
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid IMState");
+    break;
+  }
+  send[0] = min, send[1] = max;
+  ierr = MPI_Allgather(send, 2, MPIU_INT, mb->globalRanges, 2, MPIU_INT, comm);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode IMGetIndices_Basic(IM m, const PetscInt *idx[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = IMConvertKeyState(m, IM_ARRAY);CHKERRQ(ierr);
+  *idx = m->array->keys;
   PetscFunctionReturn(0);
 }
 
@@ -42,44 +84,29 @@ PetscErrorCode IMPermute_Basic(IM m, IM pm)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"TODO");
-#if (0)
   switch (m->kstorage) {
   case IM_INTERVAL:
-    ierr = PetscInfo1(m,"Input index is %s, makes no sense to permute\n", IMStates[m->kstorage]);CHKERRQ(ierr);
+    if (PetscDefined(USE_DEBUG)) {
+      ierr = PetscInfo1(m,"Input index is %s, makes no sense to permute\n", IMStates[m->kstorage]);CHKERRQ(ierr);
+    }
     PetscFunctionReturn(0);
     break;
   case IM_ARRAY:
   {
-    IMState  ostate = pm->kstorage;
-    PetscInt *tmp, *tmp2;
+    PetscInt *tmp;
     PetscInt i;
 
     ierr = IMConvertKeyState(pm, IM_ARRAY);CHKERRQ(ierr);
-    ierr = IMSetUp(pm);CHKERRQ(ierr);
-    /* Need to do this separately since they are freed separately */
     ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &tmp);CHKERRQ(ierr);
-    ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &tmp2);CHKERRQ(ierr);
-    for (i = 0; i < m->nKeys[IM_LOCAL]; ++i) {
-      tmp[i] = m->array->keys[pm->discontig->keys[i]];
-      tmp2[i] = m->array->keyIndexGlobal[pm->discontig->keys[i]];
-    }
-    if (m->discontig->alloced) {
-      ierr = PetscFree(m->discontig->keys);CHKERRQ(ierr);
-    }
-    ierr = PetscFree(m->discontig->keyIndexGlobal);CHKERRQ(ierr);
-    m->discontig->keys = tmp;
-    m->discontig->keyIndexGlobal = tmp2;
-    m->discontig->alloced = PETSC_TRUE;
-    ierr = IMConvertKeyState(pm, ostate);CHKERRQ(ierr);
-    ierr = IMSetUp(pm);CHKERRQ(ierr);
+    for (i = 0; i < m->nKeys[IM_LOCAL]; ++i) tmp[i] = m->array->keys[pm->array->keys[i]];
+    ierr = PetscArraycpy(m->array->keys, tmp, m->nKeys[IM_LOCAL]);CHKERRQ(ierr);
+    ierr = PetscFree(tmp);CHKERRQ(ierr);
     break;
   }
   default:
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown IMState");
     break;
   }
-#endif
   PetscFunctionReturn(0);
 }
 
