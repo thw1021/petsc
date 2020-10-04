@@ -5,19 +5,19 @@
 #include <petscim.h>
 
 typedef struct {
-  PetscBool locked;
   PetscInt  *globalRanges;
+  PetscInt  rstart, rend;
 } IM_Basic;
 
 PETSC_EXTERN PetscErrorCode IMCreate_Basic(IM);
 PETSC_EXTERN PetscErrorCode IMSetup_Basic(IM);
 PETSC_EXTERN PetscErrorCode IMDestroy_Basic(IM);
+PETSC_EXTERN PetscErrorCode IMGetIndices_Basic(IM,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode IMPermute_Basic(IM,IM);
 
-PETSC_STATIC_INLINE PetscErrorCode IMInitializeBasic_Private(IM_Basic *mb)
+PETSC_STATIC_INLINE PetscErrorCode IMInitializeBasic_Private(PETSC_UNUSED IM_Basic *mb)
 {
   PetscFunctionBegin;
-  mb->locked = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -27,7 +27,6 @@ PETSC_STATIC_INLINE PetscErrorCode IMDestroyBasic_Private(IM_Basic *mb)
 
   PetscFunctionBegin;
   ierr = PetscFree(mb->globalRanges);CHKERRQ(ierr);
-  mb->locked = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 #endif /* PETSCIMBASICIMPL_H */

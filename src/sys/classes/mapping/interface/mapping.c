@@ -99,7 +99,7 @@ PetscErrorCode IMView(IM m, PetscViewer vwr)
     ierr = PetscViewerASCIIPushSynchronized(vwr);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(vwr, "Locally sorted:  %s\n", m->sorted[IM_LOCAL] ? "PETSC_TRUE" : "PETSC_FALSE");CHKERRQ(ierr);
     if (m->kstorage == IM_INTERVAL) {
-      ierr = PetscViewerASCIISynchronizedPrintf(vwr, "[%d] [%D %D)\n", rank, m->interval->keyStart, m->interval->keyEnd);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(vwr, "[%d] [%D, %D]\n", rank, m->interval->keyStart, m->interval->keyEnd);CHKERRQ(ierr);
     } else {
       PetscInt i;
 
@@ -129,7 +129,7 @@ PetscErrorCode IMViewFromOptions(IM m, PetscObject obj, const char name[])
 /* COLLECTIVE, EVERYONE MUST HAVE SAME TYPE OF STORAGE */
 PetscErrorCode IMSetUp(IM m)
 {
-  PetscInt         sum;
+  PetscInt         sum = 0;
   PetscObjectState state;
   MPI_Comm         comm;
   PetscErrorCode   ierr;
@@ -154,7 +154,7 @@ PetscErrorCode IMSetUp(IM m)
     if (m->generated) {
       ierr = MPI_Exscan(&(m->nKeys[IM_LOCAL]), &sum, 1, MPIU_INT, MPI_SUM, comm);CHKERRQ(ierr);
       m->interval->keyStart = sum;
-      m->interval->keyEnd = sum + m->nKeys[IM_LOCAL];
+      m->interval->keyEnd = sum + m->nKeys[IM_LOCAL]-1;
     }
     m->interval->state = state;
     break;
@@ -206,6 +206,9 @@ PetscErrorCode IMGenerateDefault(MPI_Comm comm, IMType type, IMState state, Pets
   ierr = IMCreate(comm, &m_);CHKERRQ(ierr);
   PetscValidLogicalCollectiveEnum(m_,state,3);
   ierr = IMSetType(m_, type);CHKERRQ(ierr);
+  /* Generated maps are always increasing linear maps and therefore sorted */
+  m_->sorted[IM_LOCAL] = PETSC_TRUE;
+  m_->sorted[IM_GLOBAL] = PETSC_TRUE;
   m_->kstorage = state;
   m_->nKeys[IM_LOCAL] = n;
   m_->nKeys[IM_GLOBAL] = N;
@@ -264,7 +267,7 @@ PetscErrorCode IMGetKeyInterval(IM m, PetscInt *keyStart, PetscInt *keyEnd)
   if (PetscDefined(USE_DEBUG)) {
     const IMState state = IM_INTERVAL;
     if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map must be setup first call IMSetup()");
-    if (m->kstorage >= 0  && (m->kstorage != state)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping keystorage is of type %d not %s",IMStates[m->kstorage], IMStates[state]);
+    if (m->kstorage >= 0  && (m->kstorage != state)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Mapping keystorage is of type %d not %s use IMConvertKeys() to swap",IMStates[m->kstorage], IMStates[state]);
   }
   if (keyStart) *keyStart = m->interval->keyStart;
   if (keyEnd) *keyEnd = m->interval->keyEnd;
@@ -340,7 +343,23 @@ PetscErrorCode IMRestoreKeyArray(IM m, const PetscInt *keys[])
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode IMGetIndices(IM m, const PetscInt *idx[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(m,IM_CLASSID,1);
+  PetscValidType(m,1);
+  PetscValidIntPointer(idx,1);
+  if (PetscDefined(USE_DEBUG)) {
+    if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map must be setup first call IMSetup()");
+  }
+  ierr = (*m->ops->getindices)(m, idx);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /* UTIL FUNCTIONS */
+/* TODO */
 PetscErrorCode IMConvertKeyState(IM m, IMState newstate)
 {
   PetscErrorCode ierr;
@@ -352,7 +371,7 @@ PetscErrorCode IMConvertKeyState(IM m, IMState newstate)
     if (m->kstorage < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map has no valid key state to convert");
   }
   if (m->kstorage == newstate) PetscFunctionReturn(0);
-  /* Since this can potentially throw more key-dependant impls out of what defer to impls */
+  /* Since this can potentially throw more key-dependant impls out of whack defer to impls */
   if (m->ops->convertkeys) {
     ierr = (*m->ops->convertkeys)(m, newstate);CHKERRQ(ierr);
   } else {
@@ -361,26 +380,33 @@ PetscErrorCode IMConvertKeyState(IM m, IMState newstate)
     ierr = PetscObjectStateGet((PetscObject)m, &state);CHKERRQ(ierr);
     switch (newstate) {
     case IM_INTERVAL:
-      if (!(m->sorted[IM_LOCAL])) {
-        ierr = PetscIntSortSemiOrdered(m->nKeys[IM_LOCAL], m->array->keys);CHKERRQ(ierr);
+      /* TODO Should check state? */
+      if (m->sorted[IM_LOCAL] && (state == m->array->state)) {
+        m->interval->keyStart = m->array->keys[0];
+        m->interval->keyEnd = m->array->keys[m->nKeys[IM_LOCAL]-1];
+      } else {
+        PetscInt *keycopy;
+
+        ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &keycopy);CHKERRQ(ierr);
+        ierr = PetscArraycpy(keycopy, m->array->keys, m->nKeys[IM_LOCAL]);CHKERRQ(ierr);
+        ierr = PetscIntSortSemiOrdered(m->nKeys[IM_LOCAL], keycopy);CHKERRQ(ierr);
+        m->interval->keyStart = keycopy[0];
+        m->interval->keyEnd = keycopy[m->nKeys[IM_LOCAL]-1];
+        ierr = PetscFree(keycopy);CHKERRQ(ierr);
       }
-      /* Need to save and set these since they are reset in setupkeystate */
-      m->interval->keyStart = m->array->keys[0];
-      m->interval->keyEnd = m->array->keys[m->nKeys[IM_LOCAL]-1];
       m->interval->state = state;
-      m->sorted[IM_LOCAL] = PETSC_TRUE;
+      /* Local sort is tricky here, since it really only applies to the key array */
       break;
     case IM_ARRAY:
     {
-      PetscInt i, keyStart = m->interval->keyStart, keyEnd = m->interval->keyEnd;
+      const PetscInt keyStart = m->interval->keyStart, keyEnd = m->interval->keyEnd;
+      PetscInt       i;
 
       if (PetscDefined(USE_DEBUG)) {
         if (m->nKeys[IM_LOCAL] >= 0 && ((keyEnd-keyStart) != m->nKeys[IM_LOCAL])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Number of keys previously set %D > %D keyrange given",m->nKeys[IM_LOCAL],keyEnd-keyStart);
       }
       /* Interval always locally sorted so conversion means also locally sorted */
-      if (m->array->alloced) {
-        ierr = PetscFree(m->array->keys);CHKERRQ(ierr);
-      }
+      if (m->array->alloced) {ierr = PetscFree(m->array->keys);CHKERRQ(ierr);}
       ierr = PetscMalloc1(m->nKeys[IM_LOCAL], &(m->array->keys));CHKERRQ(ierr);
       ierr = PetscLogObjectMemory((PetscObject) m, (m->nKeys[IM_LOCAL])*sizeof(PetscInt));CHKERRQ(ierr);
       for (i = 0; i < m->nKeys[IM_LOCAL]; ++i) m->array->keys[i] = keyStart+i;
@@ -422,17 +448,13 @@ PetscErrorCode IMPermute(IM m, IM pm)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   PetscValidType(m,1);
-  PetscValidHeaderSpecific(m,IM_CLASSID,2);
-  PetscValidType(pm,2);
+  PetscValidHeaderSpecificType(m,IM_CLASSID,2,IMBASIC);
   if (PetscDefined(USE_DEBUG)) {
-    PetscBool isbasic;
-
     if (!(m->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Map to be permuted must be setup first");
     if (!(pm->setupcalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Permuation map must be setup first");
     if (m->nKeys[IM_LOCAL] > pm->nKeys[IM_LOCAL]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Cannot permute map with local size %D with smaller map of local size %D",m->nKeys[IM_LOCAL],pm->nKeys[IM_LOCAL]);
-    ierr = PetscObjectTypeCompare((PetscObject) m, IMBASIC, &isbasic);CHKERRQ(ierr);
-    if (!(isbasic)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Permuation map must be of type %s", IMBASIC);
   }
+  ierr = IMConvertKeyState(pm, IM_ARRAY);CHKERRQ(ierr);
   if (m->ops->permute) {
     ierr = (*m->ops->permute)(m,pm);CHKERRQ(ierr);
   }
