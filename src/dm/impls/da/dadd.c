@@ -24,7 +24,7 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
   PetscInt       me=1,ne=1,pe=1;
   PetscInt       ii,jj,kk;
   PetscInt       si,sj,sk;
-  PetscInt       i,j,k,l,idx;
+  PetscInt       i,j,k,l,idx=0;
   PetscInt       base;
   PetscInt       xm=1,ym=1,zm=1;
   PetscInt       ox,oy,oz;
@@ -68,10 +68,14 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
   }
 
   ierr = PetscMalloc1(nindices*dof,&indices);CHKERRQ(ierr);
-  idx = 0;
+
   me = ms + mw;
   if (N>1) ne = ns + nw;
   if (P>1) pe = ps + pw;
+  /*IS shouldn't care about DM offsets*/
+  ms = ms - ox; me = me - ox;
+  ns = ns - oy; ne = ne - oy;
+  ps = ps - oz; pe = pe - oz;
 
   if (!valid_k) {
     k = 0;
@@ -83,6 +87,12 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     upper->j=0;
     lower->j=0;
   }
+
+  /* compute the vector base on owning processor */
+  xm = me - ms;
+  ym = ne - ns;
+  zm = pe - ps;
+  base = ms*ym*zm + ns*M*zm + ps*M*N;
 
   /* do while loops to ensure the block gets entered once,
      regardless of control condition being met, necessary for
@@ -107,11 +117,6 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
         if (kk>=ps && kk<=pe-1) {
           if (jj>=ns && jj<=ne-1) {
             if (ii>=ms && ii<=me-1) {
-              /* compute the vector base on owning processor */
-              xm = me - ms;
-              ym = ne - ns;
-              zm = pe - ps;
-              base = ms*ym*zm + ns*M*zm + ps*M*N;
               /* compute the local coordinates on owning processor */
               si = ii - ms;
               sj = jj - ns;
