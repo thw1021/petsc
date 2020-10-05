@@ -586,7 +586,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
           zarr = Xarr+pdipm->off_z;
           VecGetArray(pdipm->z,&tmparr);
           for (i=0; i<pdipm->nci; i++) {
-                tmparr[i] = tmparr[i]/Xarr[pdipm->off_z       + i];
+            tmparr[i] = tmparr[i]/Xarr[pdipm->off_z + i];
           }
           ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
         }
