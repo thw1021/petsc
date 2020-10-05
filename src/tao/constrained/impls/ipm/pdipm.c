@@ -235,10 +235,10 @@ PetscErrorCode TaoPDIPMSetUpBounds(Tao tao)
 */
 PetscErrorCode TaoPDIPMInitializeSolution(Tao tao)
 {
-  PetscErrorCode ierr;
-  TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
-  PetscScalar    *Xarr,*z,*lambdai;
-  PetscInt       i;
+  PetscErrorCode    ierr;
+  TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
+  PetscScalar       *Xarr,*z,*lambdai;
+  PetscInt          i;
   const PetscScalar *xarr,*h;
 
   PetscFunctionBegin;
@@ -325,7 +325,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
 
   ierr = VecGetArrayRead(X,&Xarr);CHKERRQ(ierr);
 
-  if (pdipm->solve_symetric_kkt){ /* 1 for eq 17 revised pdipm doc 0 for eq 18 (symetric KKT) */
+  if (pdipm->solve_symetric_kkt) { /* 1 for eq 17 revised pdipm doc 0 for eq 18 (symetric KKT) */
     for (i=0; i < pdipm->nci; i++) {
         row     = Jrstart + pdipm->off_z + i;
         cols[0] = Jrstart + pdipm->off_lambdai + i;
@@ -375,7 +375,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
         cols[0] = aj[j] - cranges[proc] + Jranges[proc];
         ierr = MatSetValue(Jpre,row,cols[0],-aa[j],INSERT_VALUES);CHKERRQ(ierr);
       }
-    ierr = MatRestoreRow(tao->jacobian_inequality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
+      ierr = MatRestoreRow(tao->jacobian_inequality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
     }
   }
 
@@ -392,7 +392,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
   ierr = VecResetArray(pdipm->x);CHKERRQ(ierr);
 
   ierr = MatGetOwnershipRange(tao->hessian,&rjstart,NULL);CHKERRQ(ierr);
-  for (i=0; i<pdipm->nx; i++){
+  for (i=0; i<pdipm->nx; i++) {
     row = Jrstart + i;
 
     /* insert Wxx */
@@ -461,13 +461,13 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
 */
 PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
-  Tao            tao=(Tao)ctx;
-  TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
-  PetscScalar    *Farr,*tmparr;
-  Vec            x,L1;
-  PetscInt       i;
-  PetscReal      res[2],cnorm[2];
+  PetscErrorCode    ierr;
+  Tao               tao=(Tao)ctx;
+  TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
+  PetscScalar       *Farr,*tmparr;
+  Vec               x,L1;
+  PetscInt          i;
+  PetscReal         res[2],cnorm[2];
   const PetscScalar *Xarr,*carr,*zarr,*larr;
 
   PetscFunctionBegin;
@@ -561,42 +561,38 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
     }
   }
 
-
-
   ierr = VecPlaceArray(pdipm->ci,Farr+pdipm->off_lambdai);CHKERRQ(ierr);
   ierr = VecNorm(pdipm->ci,NORM_2,&cnorm[1]);CHKERRQ(ierr);
   ierr = VecResetArray(pdipm->ci);CHKERRQ(ierr);
 
   /* note: pdipm->z is not changed below */
   if (pdipm->z) {
-      if (pdipm->solve_symetric_kkt){    
-        ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
+    if (pdipm->solve_symetric_kkt){
+      ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
 
-        if (pdipm->Nci) {
-          zarr = Xarr+pdipm->off_z;
-          VecGetArray(pdipm->z,&tmparr);
-          for (i=0; i<pdipm->nci; i++) {
-            tmparr[i] = tmparr[i]*Xarr[pdipm->off_z + i];
-          }
-          ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
-        }
-
-        ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
-        if (pdipm->Nci) {
-          zarr = Xarr+pdipm->off_z;
-          VecGetArray(pdipm->z,&tmparr);
-          for (i=0; i<pdipm->nci; i++) {
-            tmparr[i] = tmparr[i]/Xarr[pdipm->off_z + i];
-          }
-          ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
-        }
-        ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
-      } else{
-        ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
-        ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
-        ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
+      if (pdipm->Nci) {
+        zarr = Xarr+pdipm->off_z;
+        ierr = VecGetArrayWrite(pdipm->z,&tmparr);CHKERRQ(ierr);
+        for (i=0; i<pdipm->nci; i++) tmparr[i] *= Xarr[pdipm->off_z + i];
+        ierr = VecRestoreArrayWrite(pdipm->z,&tmparr);CHKERRQ(ierr);
       }
-    } else res[1] = 0.0;
+
+      ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
+      if (pdipm->Nci) {
+        zarr = Xarr+pdipm->off_z;
+        VecGetArray(pdipm->z,&tmparr);
+        for (i=0; i<pdipm->nci; i++) {
+          tmparr[i] = tmparr[i]/Xarr[pdipm->off_z + i];
+        }
+        ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
+      }
+      ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
+    } else {
+      ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
+      ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
+      ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
+    }
+  } else res[1] = 0.0;
 
   tao->residual = PetscSqrtReal(res[0]*res[0] + res[1]*res[1]);
   tao->cnorm    = PetscSqrtReal(cnorm[0]*cnorm[0] + cnorm[1]*cnorm[1]);
@@ -622,16 +618,15 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 */
 PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
 {
-  PetscErrorCode ierr;
-  Tao            tao=(Tao)ctx;
-  TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
-  SNES           snes;
-  Vec            X,F,Y,W,G;
-  PetscInt       i,iter;
-  PetscReal      alpha_p=1.0,alpha_d=1.0,alpha[4];
-  PetscScalar    *Xarr,*z,*lambdai,dot;
+  PetscErrorCode    ierr;
+  Tao               tao=(Tao)ctx;
+  TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
+  SNES              snes;
+  Vec               X,F,Y,W,G;
+  PetscInt          i,iter;
+  PetscReal         alpha_p=1.0,alpha_d=1.0,alpha[4];
+  PetscScalar       *Xarr,*z,*lambdai,dot,*taosolarr;
   const PetscScalar *dXarr,*dz,*dlambdai;
-  PetscScalar    *taosolarr;
 
   PetscFunctionBegin;
   ierr = SNESLineSearchGetSNES(linesearch,&snes);CHKERRQ(ierr);
@@ -790,18 +785,18 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
 */
 PetscErrorCode TaoSetup_PDIPM(Tao tao)
 {
-  TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
-  PetscErrorCode ierr;
-  MPI_Comm       comm;
-  PetscMPIInt    rank,size;
-  PetscInt       row,col,Jcrstart,Jcrend,k,tmp,nc,proc,*nh_all,*ng_all;
-  PetscInt       offset,*xa,*xb,i,j,rstart,rend;
-  PetscScalar    one=1.0,neg_one=-1.0,*Xarr;
+  TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
+  PetscErrorCode    ierr;
+  MPI_Comm          comm;
+  PetscMPIInt       rank,size;
+  PetscInt          row,col,Jcrstart,Jcrend,k,tmp,nc,proc,*nh_all,*ng_all;
+  PetscInt          offset,*xa,*xb,i,j,rstart,rend;
+  PetscScalar       one=1.0,neg_one=-1.0,*Xarr;
   const PetscInt    *cols,*rranges,*cranges,*aj,*ranges;
   const PetscScalar *aa;
-  Mat            J,jac_equality_trans,jac_inequality_trans;
-  Mat            Jce_xfixed_trans,Jci_xb_trans;
-  PetscInt       *dnz,*onz,rjstart,nx_all,*nce_all,*Jranges,cols1[2];
+  Mat               J,jac_equality_trans,jac_inequality_trans;
+  Mat               Jce_xfixed_trans,Jci_xb_trans;
+  PetscInt          *dnz,*onz,rjstart,nx_all,*nce_all,*Jranges,cols1[2];
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)tao,&comm);CHKERRQ(ierr);
