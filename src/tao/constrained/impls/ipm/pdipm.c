@@ -576,25 +576,22 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
           zarr = Xarr+pdipm->off_z;
           VecGetArray(pdipm->z,&tmparr);
           for (i=0; i<pdipm->nci; i++) {
-                tmparr[i] = tmparr[i]*Xarr[pdipm->off_z       + i];
+            tmparr[i] = tmparr[i]*Xarr[pdipm->off_z + i];
           }
           ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
         }
 
         ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
-
         if (pdipm->Nci) {
           zarr = Xarr+pdipm->off_z;
           VecGetArray(pdipm->z,&tmparr);
           for (i=0; i<pdipm->nci; i++) {
-                tmparr[i] = tmparr[i]/Xarr[pdipm->off_z       + i];
+            tmparr[i] = tmparr[i]/Xarr[pdipm->off_z + i];
           }
           ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
         }
-
         ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
-      }
-      else{
+      } else{
         ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
         ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
         ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
@@ -1271,27 +1268,14 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
     row = rstart + pdipm->off_lambdai + i;
     col = rstart + pdipm->off_z + i;
     ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
-<<<<<<< HEAD
   }
 
   /* Row block of K: [ 0, 0, I, ...] */
-   for (i=0; i < pdipm->nci; i++){
+  for (i=0; i < pdipm->nci; i++){
     row = rstart + pdipm->off_z + i;
     col = rstart + pdipm->off_lambdai + i;
     ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
   }
-
-=======
-  }
-
-  /* Row block of K: [ 0, 0, I, ...] */
-   for (i=0; i < pdipm->nci; i++){
-    row = rstart + pdipm->off_z + i;
-    col = rstart + pdipm->off_lambdai + i;
-    ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
-  }
-
->>>>>>> ff6d2b16d21da35747684bbcb2e6ba3ac83643f2
 
   if (pdipm->Nxfixed) {
     ierr = MatDestroy(&Jce_xfixed_trans);CHKERRQ(ierr);
@@ -1399,8 +1383,8 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
   Option Database Keys:
 +   -tao_pdipm_push_init_lambdai - parameter to push initial dual variables away from bounds (> 0)
 .   -tao_pdipm_push_init_slack  - parameter to push initial slack variables away from bounds (> 0)
--   -tao_pdipm_mu_update_factor - update scalar for barrier parameter (mu) update (> 0)
-    -tao_pdipm_symetric_kkt     - Solve non reduced symetric KKT system
+.   -tao_pdipm_mu_update_factor - update scalar for barrier parameter (mu) update (> 0)
+   - -tao_pdipm_symetric_kkt     - Solve non reduced symetric KKT system
 
   Level: beginner
 M*/
