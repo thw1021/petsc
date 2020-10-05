@@ -1379,7 +1379,7 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
 +   -tao_pdipm_push_init_lambdai - parameter to push initial dual variables away from bounds (> 0)
 .   -tao_pdipm_push_init_slack  - parameter to push initial slack variables away from bounds (> 0)
 .   -tao_pdipm_mu_update_factor - update scalar for barrier parameter (mu) update (> 0)
-   - -tao_pdipm_symetric_kkt     - Solve non reduced symetric KKT system
+-   -tao_pdipm_symetric_kkt     - Solve non-reduced symetric KKT system
 
   Level: beginner
 M*/
@@ -1410,10 +1410,10 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
 
-  pdipm->push_init_slack   = 1.0;
-  pdipm->push_init_lambdai = 1.0;
-  pdipm->solve_reduced_kkt = PETSC_FALSE;
-  pdipm->solve_symetric_kkt = PETSC_FALSE;
+  pdipm->push_init_slack    = 1.0;
+  pdipm->push_init_lambdai  = 1.0;
+  pdipm->solve_reduced_kkt  = PETSC_FALSE;
+  pdipm->solve_symetric_kkt = PETSC_TRUE;
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
