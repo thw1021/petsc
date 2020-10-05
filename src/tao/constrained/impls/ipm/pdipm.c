@@ -1268,27 +1268,14 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
     row = rstart + pdipm->off_lambdai + i;
     col = rstart + pdipm->off_z + i;
     ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
-<<<<<<< HEAD
   }
 
   /* Row block of K: [ 0, 0, I, ...] */
-   for (i=0; i < pdipm->nci; i++){
+  for (i=0; i < pdipm->nci; i++){
     row = rstart + pdipm->off_z + i;
     col = rstart + pdipm->off_lambdai + i;
     ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
   }
-
-=======
-  }
-
-  /* Row block of K: [ 0, 0, I, ...] */
-   for (i=0; i < pdipm->nci; i++){
-    row = rstart + pdipm->off_z + i;
-    col = rstart + pdipm->off_lambdai + i;
-    ierr = MatSetValue(J,row,col,1,INSERT_VALUES);CHKERRQ(ierr);
-  }
-
->>>>>>> ff6d2b16d21da35747684bbcb2e6ba3ac83643f2
 
   if (pdipm->Nxfixed) {
     ierr = MatDestroy(&Jce_xfixed_trans);CHKERRQ(ierr);
