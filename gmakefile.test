@@ -50,6 +50,9 @@ else				# Show the full command line
   TESTFLAGS += -v
 endif
 
+ifeq ($(GPUSERIALIZED),1)
+  GMAKEGENTEST_OPTS += --serialize   #Serialize gpu tests
+endif
 ifeq ($(FORCE),1)
   TESTFLAGS += -f    # force test execution
 endif
@@ -91,7 +94,7 @@ ifdef TIMEOUT
 endif
 
 $(generatedtest) : $(petscconf) $(petscvariables) $(CONFIGDIR)/gmakegentest.py $(TESTDIR)/.DIR | $$(@D)/.DIR
-	$(PYTHON) $(CONFIGDIR)/gmakegentest.py --petsc-dir=$(PETSC_DIR) --petsc-arch=$(PETSC_ARCH) --testdir=$(TESTDIR)
+	$(PYTHON) $(CONFIGDIR)/gmakegentest.py $(GMAKEGENTEST_OPTS) --petsc-dir=$(PETSC_DIR) --petsc-arch=$(PETSC_ARCH) --testdir=$(TESTDIR)
 
 ifneq ($(filter-out clean check,$(MAKECMDGOALS:clean%=clean)),)
 include $(generatedtest)
@@ -411,6 +414,7 @@ help-test:
 	-@echo "  NP=<num proc>     Set a number of processors to pass to scripts."
 	-@echo "  FORCE=1           Force SKIP or TODO tests to run"
 	-@echo "  PRINTONLY=1       Print the command, but do not run.  For loops print first command"
+	-@echo "  GPUSERIALIZED=1   Run gpu tests sequentially (to avoid overloading gpu in parallel)"
 	-@echo "  TIMEOUT=<time>    Test timeout limit in seconds (default in config/petsc_harness.sh)"
 	-@echo "  TESTDIR='tests'   Subdirectory where tests are run ($${PETSC_DIR}/$${PETSC_ARCH}/$${TESTDIR}"
 	-@echo "                    or $${PREFIX_DIR}/$${TESTDIR}"
