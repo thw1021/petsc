@@ -98,6 +98,12 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
         ii = i;
         jj = j;
         kk = k;
+        if (ii < 0) ii = M + ii;
+        if (jj < 0) jj = N + jj;
+        if (kk < 0) kk = P + kk;
+        if (ii > M-1) ii = ii - M;
+        if (jj > N-1) jj = jj - N;
+        if (kk > P-1) kk = kk - P;
         if (kk>=ps && kk<=pe-1) {
           if (jj>=ns && jj<=ne-1) {
             if (ii>=ms && ii<=me-1) {
