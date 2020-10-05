@@ -590,7 +590,6 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
           }
           ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
         }
-
         ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
       }
       else{
