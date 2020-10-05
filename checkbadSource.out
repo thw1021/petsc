@@ -1,0 +1,10 @@
+Tabs in file -----------------------------------------
+White space at end of line ---------------------------
+Space after ( ----------------------------------------
+Space before ) ---------------------------------------
+Space before CHKERRQ ---------------------------------
+No space after if, for or while -----------------------------
+Two ;; -----------------------------
+Missing if (ierr) return(ierr); -----------------------------
+DOS file (with DOS newlines)--------------------------
+{ before SETERRQ --------------------------
