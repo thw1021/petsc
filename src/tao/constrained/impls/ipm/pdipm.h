@@ -69,6 +69,7 @@ typedef struct {
   PetscReal push_init_slack;      /* Push initial slack variables (z) away from bounds */
   PetscReal push_init_lambdai;    /* Push initial inequality variables (lambdai) away from bounds */
   PetscBool solve_reduced_kkt;    /* Solve Reduced KKT with fieldsplit */
+  PetscBool solve_symetric_kkt;    /* Solve Reduced KKT with fieldsplit */
 
   SNES           snes; /* Nonlinear solver */
   Mat            jac_equality_trans,jac_inequality_trans; /* working matrices */
