@@ -1150,12 +1150,8 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
       ierr = PCSetType(epc, PCJACOBI);CHKERRQ(ierr);  /* smoother in smoothed agg. */
 
       /* solve - keep stuff out of logging */
-      ierr = PetscLogEventDeactivate(KSP_Solve);CHKERRQ(ierr);
-      ierr = PetscLogEventDeactivate(PC_Apply);CHKERRQ(ierr);
       ierr = KSPSolve(eksp, bb, xx);CHKERRQ(ierr);
       ierr = KSPCheckSolve(eksp,pc,xx);CHKERRQ(ierr);
-      ierr = PetscLogEventActivate(KSP_Solve);CHKERRQ(ierr);
-      ierr = PetscLogEventActivate(PC_Apply);CHKERRQ(ierr);
 
       ierr = KSPComputeExtremeSingularValues(eksp, &emax, &emin);CHKERRQ(ierr);
       ierr = PetscInfo3(pc,"Smooth P0: max eigen=%e min=%e PC=%s\n",(double)emax,(double)emin,PCJACOBI);CHKERRQ(ierr);
