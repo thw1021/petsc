@@ -69,7 +69,6 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
   PetscInt       Istart,Iend,Ii,jj,kk,ncols,nloc,NN,MM,bs;
   MPI_Comm       comm;
   Mat            Gmat;
-  MatType        mtype;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)Amat,&comm);CHKERRQ(ierr);
@@ -97,7 +96,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     ierr = PetscMalloc2(nloc, &d_nnz,isseqaij ? 0 : nloc, &o_nnz);CHKERRQ(ierr);
 
     if (isseqaij) {
-      PetscInt       max_d_nnz;
+      PetscInt max_d_nnz;
 
       /*
           Determine exact preallocation count for (sequential) scalar matrix
@@ -144,11 +143,10 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     } else SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"Require AIJ matrix type");
 
     /* get scalar copy (norms) of matrix */
-    ierr = MatGetType(Amat,&mtype);CHKERRQ(ierr);
     ierr = MatCreate(comm, &Gmat);CHKERRQ(ierr);
     ierr = MatSetSizes(Gmat,nloc,nloc,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
     ierr = MatSetBlockSizes(Gmat, 1, 1);CHKERRQ(ierr);
-    ierr = MatSetType(Gmat, mtype);CHKERRQ(ierr);
+    ierr = MatSetType(Gmat, MATAIJ);CHKERRQ(ierr);
     ierr = MatSeqAIJSetPreallocation(Gmat,0,d_nnz);CHKERRQ(ierr);
     ierr = MatMPIAIJSetPreallocation(Gmat,0,d_nnz,0,o_nnz);CHKERRQ(ierr);
     ierr = PetscFree2(d_nnz,o_nnz);CHKERRQ(ierr);
@@ -169,6 +167,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     /* just copy scalar matrix - abs() not taken here but scaled later */
     ierr = MatDuplicate(Amat, MAT_COPY_VALUES, &Gmat);CHKERRQ(ierr);
   }
+  ierr = MatPropagateSymmetryOptions(Amat, Gmat);CHKERRQ(ierr);
 
 #if defined PETSC_GAMG_USE_LOG
   ierr = PetscLogEventEnd(petsc_gamg_setup_events[GRAPH],0,0,0,0);CHKERRQ(ierr);
@@ -207,7 +206,6 @@ PetscErrorCode PCGAMGFilterGraph(Mat *a_Gmat,PetscReal vfilter,PetscBool symm)
   const PetscInt    *idx;
   PetscInt          *d_nnz, *o_nnz;
   Vec               diag;
-  MatType           mtype;
 
   PetscFunctionBegin;
 #if defined PETSC_GAMG_USE_LOG
@@ -277,11 +275,10 @@ PetscErrorCode PCGAMGFilterGraph(Mat *a_Gmat,PetscReal vfilter,PetscBool symm)
     if (d_nnz[jj] > nloc) d_nnz[jj] = nloc;
     if (o_nnz[jj] > (MM-nloc)) o_nnz[jj] = MM - nloc;
   }
-  ierr = MatGetType(Gmat,&mtype);CHKERRQ(ierr);
   ierr = MatCreate(comm, &tGmat);CHKERRQ(ierr);
   ierr = MatSetSizes(tGmat,nloc,nloc,MM,MM);CHKERRQ(ierr);
   ierr = MatSetBlockSizes(tGmat, 1, 1);CHKERRQ(ierr);
-  ierr = MatSetType(tGmat, mtype);CHKERRQ(ierr);
+  ierr = MatSetType(tGmat, MATAIJ);CHKERRQ(ierr);
   ierr = MatSeqAIJSetPreallocation(tGmat,0,d_nnz);CHKERRQ(ierr);
   ierr = MatMPIAIJSetPreallocation(tGmat,0,d_nnz,0,o_nnz);CHKERRQ(ierr);
   ierr = PetscFree2(d_nnz,o_nnz);CHKERRQ(ierr);
@@ -311,7 +308,11 @@ PetscErrorCode PCGAMGFilterGraph(Mat *a_Gmat,PetscReal vfilter,PetscBool symm)
   }
   ierr = MatAssemblyBegin(tGmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(tGmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-
+  if (symm) {
+    ierr = MatSetOption(tGmat,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
+  } else {
+    ierr = MatPropagateSymmetryOptions(Gmat,tGmat);CHKERRQ(ierr);
+  }
 #if defined PETSC_GAMG_USE_LOG
   ierr = PetscLogEventEnd(petsc_gamg_setup_events[GRAPH],0,0,0,0);CHKERRQ(ierr);
 #endif
@@ -439,4 +440,3 @@ PetscErrorCode PCGAMGHashTableAdd(PCGAMGHashTable *a_tab, PetscInt a_key, PetscI
   }
   PetscFunctionReturn(0);
 }
-
