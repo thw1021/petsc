@@ -189,16 +189,19 @@ int main(int argc,char **argv)
 /*TEST
 
    test:
+      diff_args: -j
       suffix: 11_A
       args: -mat_type seqaij -rectA
       filter: grep -v "Mat Object"
 
    test:
+      diff_args: -j
       suffix: 12_A
       args: -mat_type seqdense -rectA
       filter: grep -v type | grep -v "Mat Object"
 
    test:
+      diff_args: -j
       requires: cuda
       suffix: 12_A_cuda
       args: -mat_type seqdensecuda -rectA
@@ -206,16 +209,27 @@ int main(int argc,char **argv)
       filter: grep -v type | grep -v "Mat Object"
 
    test:
+      diff_args: -j
+      requires: kokkos
+      suffix: 12_A_kokkos
+      args: -mat_type seqaijkokkos -rectA
+      output_file: output/ex2_12_A.out
+      filter: grep -v type | grep -v "Mat Object"
+
+   test:
+      diff_args: -j
       suffix: 11_B
       args: -mat_type seqaij -rectB
       filter: grep -v "Mat Object"
 
    test:
+      diff_args: -j
       suffix: 12_B
       args: -mat_type seqdense -rectB
       filter: grep -v type | grep -v "Mat Object"
 
    test:
+      diff_args: -j
       requires: cuda
       suffix: 12_B_cuda
       args: -mat_type seqdensecuda -rectB
@@ -223,16 +237,27 @@ int main(int argc,char **argv)
       filter: grep -v type | grep -v "Mat Object"
 
    test:
+      diff_args: -j
+      requires: kokkos
+      suffix: 12_B_kokkos
+      args: -mat_type seqaijkokkos -rectB
+      output_file: output/ex2_12_B.out
+      filter: grep -v type | grep -v "Mat Object"
+
+   test:
+      diff_args: -j
       suffix: 21
       args: -mat_type mpiaij
       filter: grep -v type | grep -v "MPI processes"
 
    test:
+      diff_args: -j
       suffix: 22
       args: -mat_type mpidense
       filter: grep -v type | grep -v "Mat Object"
 
    test:
+      diff_args: -j
       requires: cuda
       suffix: 22_cuda
       output_file: output/ex2_22.out
@@ -240,18 +265,29 @@ int main(int argc,char **argv)
       filter: grep -v type | grep -v "Mat Object"
 
    test:
+      diff_args: -j
+      requires: kokkos
+      suffix: 22_kokkos
+      output_file: output/ex2_22.out
+      args: -mat_type mpiaijkokkos
+      filter: grep -v type | grep -v "Mat Object"
+
+   test:
+      diff_args: -j
       suffix: 23
       nsize: 3
       args: -mat_type mpiaij
       filter: grep -v type | grep -v "MPI processes"
 
    test:
+      diff_args: -j
       suffix: 24
       nsize: 3
       args: -mat_type mpidense
       filter: grep -v type | grep -v "Mat Object"
 
    test:
+      diff_args: -j
       requires: cuda
       suffix: 24_cuda
       nsize: 3
@@ -260,6 +296,7 @@ int main(int argc,char **argv)
       filter: grep -v type | grep -v "Mat Object"
 
    test:
+      diff_args: -j
       suffix: 2_aijcusparse_1
       args: -mat_type mpiaijcusparse
       output_file: output/ex2_21.out
@@ -267,6 +304,15 @@ int main(int argc,char **argv)
       filter: grep -v type | grep -v "MPI processes"
 
    test:
+      diff_args: -j
+      suffix: 2_aijkokkos_1
+      args: -mat_type mpiaijkokkos
+      output_file: output/ex2_21.out
+      requires: kokkos
+      filter: grep -v type | grep -v "MPI processes"
+
+   test:
+      diff_args: -j
       suffix: 2_aijcusparse_2
       nsize: 3
       args: -mat_type mpiaijcusparse
@@ -275,23 +321,36 @@ int main(int argc,char **argv)
       filter: grep -v type | grep -v "MPI processes"
 
    test:
+      diff_args: -j
+      suffix: 2_aijkokkos_2
+      nsize: 3
+      args: -mat_type mpiaijkokkos
+      output_file: output/ex2_23.out
+      requires: kokkos
+      filter: grep -v type | grep -v "MPI processes"
+
+   test:
+      diff_args: -j
       suffix: 3
       nsize: 2
       args: -mat_type mpiaij -rectA
 
    test:
+      diff_args: -j
       suffix: 3_aijcusparse
       nsize: 2
       args: -mat_type mpiaijcusparse -rectA
       requires: cuda
 
    test:
+      diff_args: -j
       suffix: 4
       nsize: 2
       args: -mat_type mpidense -rectA
       filter: grep -v type | grep -v "MPI processes"
 
    test:
+      diff_args: -j
       requires: cuda
       suffix: 4_cuda
       nsize: 2
@@ -300,6 +359,7 @@ int main(int argc,char **argv)
       filter: grep -v type | grep -v "MPI processes"
 
    test:
+      diff_args: -j
       suffix: aijcusparse_1
       args: -mat_type seqaijcusparse -rectA
       filter: grep -v "Mat Object"
@@ -307,6 +367,7 @@ int main(int argc,char **argv)
       requires: cuda
 
    test:
+      diff_args: -j
       suffix: aijcusparse_2
       args: -mat_type seqaijcusparse -rectB
       filter: grep -v "Mat Object"
