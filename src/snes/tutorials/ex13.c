@@ -14,6 +14,10 @@ typedef struct {
   PetscBool spectral; /* Look at the spectrum along planes in the solution */
   PetscBool shear;    /* Shear the domain */
   PetscBool adjoint;  /* Solve the adjoint problem */
+  PetscBool benchmark;
+  PetscInt  cells[3];
+  PetscInt  processGrid[3];
+  PetscInt  nodeGrid[3];
 } AppCtx;
 
 static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
@@ -85,16 +89,26 @@ static void g3_uu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscErrorCode ierr;
+  PetscInt       asz, dim=2; /* should be default of DMPLex (yuck) */
 
   PetscFunctionBeginUser;
   options->shear    = PETSC_FALSE;
   options->spectral = PETSC_FALSE;
   options->adjoint  = PETSC_FALSE;
-
+  options->benchmark= PETSC_FALSE;
+  for(asz=0;asz<3;asz++) options->processGrid[asz] = options->cells[asz] = options->nodeGrid[asz] = 1;
   ierr = PetscOptionsBegin(comm, "", "Poisson Problem Options", "DMPLEX");CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_plex_box_dim","dim in ex13","ex13.c",dim,&dim,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-shear", "Shear the domain", "ex13.c", options->shear, &options->shear, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-spectral", "Look at the spectrum along planes of the solution", "ex13.c", options->spectral, &options->spectral, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-adjoint", "Solve the adjoint problem", "ex13.c", options->adjoint, &options->adjoint, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-benchmark", "Solve the benchmark problem", "ex13.c", options->benchmark, &options->benchmark, NULL);CHKERRQ(ierr);
+  asz  = dim;
+  ierr = PetscOptionsIntArray("-dm_plex_box_faces","Mesh size for benchmarking ex13","ex13.c",options->cells,&asz,NULL);CHKERRQ(ierr);
+  asz  = dim;
+  ierr = PetscOptionsIntArray("-process_grid_size","Number of processors in each dimension","ex13.c",options->processGrid,&asz,NULL);CHKERRQ(ierr);
+  asz  = dim;
+  ierr = PetscOptionsIntArray("-node_grid_size","Number of processors in each dimension","ex13.c",options->nodeGrid,&asz,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
@@ -137,6 +151,7 @@ static PetscErrorCode CreateSpectralPlanes(DM dm, PetscInt numPlanes, const Pets
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
   PetscErrorCode ierr;
+  PetscInt       dim;
 
   PetscFunctionBeginUser;
   /* Create box mesh */
@@ -164,6 +179,92 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 
   ierr = PetscObjectSetName((PetscObject) *dm, "Mesh");CHKERRQ(ierr);
   ierr = DMSetApplicationContext(*dm, user);CHKERRQ(ierr);
+  if (user->benchmark) {
+    PetscPartitioner part;
+    PetscInt         cEnd, ii, np,cells_proc[3],procs_node[3];
+    PetscMPIInt      rank, size;
+    ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
+    ierr = DMPlexGetHeightStratum(*dm, 0, NULL, &cEnd);CHKERRQ(ierr);
+    ierr = DMGetDimension(*dm, &dim);CHKERRQ(ierr);
+    for(ii=0,np=1;ii<dim;ii++) np *= user->processGrid[ii]; /* check number of processors */
+    if (np!=size)SETERRQ2(comm,PETSC_ERR_SUP,"invalid process grid, sum procs = %D, -n %D",np, size);
+    for(ii=0,np=1;ii<dim;ii++) np *= user->cells[ii];
+    ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
+    if (np!=cEnd)SETERRQ2(comm,PETSC_ERR_SUP," cell grid %D != num cells = %D",np,cEnd);
+    for(ii=0;ii<dim;ii++) {
+      if (user->processGrid[ii]%user->nodeGrid[ii]) SETERRQ3(comm,PETSC_ERR_SUP,"dir %D, invalid node grid size %D, process grid %D",ii,user->nodeGrid[ii],user->processGrid[ii]);
+      procs_node[ii] = user->processGrid[ii]/user->nodeGrid[ii];
+      if (user->cells[ii]%user->processGrid[ii]) SETERRQ3(comm,PETSC_ERR_SUP,"dir %D, invalid process grid size %D, cells %D",ii,user->processGrid[ii],user->cells[ii]);
+      cells_proc[ii] = user->cells[ii]/user->processGrid[ii];
+      PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
+    }
+    for(/* */;ii<3;ii++) {
+      procs_node[ii] = cells_proc[ii] = 1;
+      PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
+    }
+    ierr = DMPlexGetPartitioner(*dm, &part);CHKERRQ(ierr);
+    ierr = PetscPartitionerSetType(part, PETSCPARTITIONERSHELL);CHKERRQ(ierr);
+    if (!rank) {
+      PetscInt  *sizes = NULL,pi,pj,pk,ni,nj,nk,ci,cj,ck,pid=0;
+      PetscInt  *points = NULL;
+      ierr = PetscMalloc2(size, &sizes, cEnd, &points);CHKERRQ(ierr);
+      for(ii=0,np=1;ii<dim;ii++) np *= cells_proc[ii];
+      for(ii=0;ii<size;ii++) sizes[ii] = np;
+      for(ii=0;ii<cEnd;ii++) points[ii] = -1;
+      for(nk=0;nk<user->nodeGrid[2];nk++) { /* node loop */
+        PetscInt idx_2 = nk*cells_proc[2]*procs_node[2]*user->cells[0]*user->cells[1];
+        for(nj=0;nj<user->nodeGrid[1];nj++) { /* node loop */
+          PetscInt idx_1 = idx_2 + nj*cells_proc[1]*procs_node[1]*user->cells[0];
+          for(ni=0;ni<user->nodeGrid[0];ni++) { /* node loop */
+            PetscInt idx_0 = idx_1 + ni*cells_proc[0]*procs_node[0];
+            for(pk=0;pk<procs_node[2];pk++) { /* process loop */
+              PetscInt idx_22 = idx_0 + pk*cells_proc[2]*user->cells[0]*user->cells[1];
+              for(pj=0;pj<procs_node[1];pj++) { /* process loop */
+                PetscInt idx_11 = idx_22 + pj*cells_proc[1]*user->cells[0];
+                for(pi=0;pi<procs_node[0];pi++) { /* process loop */
+                  PetscInt idx_00 = idx_11 + pi*cells_proc[0];
+                  for(ck=0;ck<cells_proc[2];ck++) { /* cell loop */
+                    PetscInt idx_222 = idx_00 + ck*user->cells[0]*user->cells[1];
+                    for(cj=0;cj<cells_proc[1];cj++) { /* cell loop */
+                      PetscInt idx_111 = idx_222 + cj*user->cells[0];
+                      for(ci=0;ci<cells_proc[0];ci++) { /* cell loop */
+                        PetscInt idx_000 = idx_111 + ci;
+                        points[idx_000] = pid;
+                      }
+                    }
+                  }
+                  pid++;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (pid!=size) SETERRQ2(comm,PETSC_ERR_SUP,"pid %D != size %D",pid,size);
+      /* view */
+      ierr = PetscPrintf(comm, "points:\n");CHKERRQ(ierr);
+      pid=0;
+      for(ck=0;ck<user->cells[2];ck++) {
+        for(cj=0;cj<user->cells[1];cj++) {
+          for(ci=0;ci<user->cells[0];ci++) {
+            ierr = PetscPrintf(comm, "%3D",points[pid++]);CHKERRQ(ierr);
+          }
+          ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
+        }
+        ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
+      }
+      ierr = PetscPrintf(comm, "sizes: ");CHKERRQ(ierr);
+      for(ck=0;ck<size;ck++) ierr = PetscPrintf(comm, " %D",sizes[ck]);
+      CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
+      ierr = PetscPartitionerSetType(part, PETSCPARTITIONERSHELL);CHKERRQ(ierr);
+      ierr = PetscPartitionerShellSetPartition(part, size, sizes, points);CHKERRQ(ierr);
+      ierr = PetscFree2(sizes, points);CHKERRQ(ierr);
+    } else {
+      ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
+    }
+  }
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   if (user->spectral) {
@@ -376,6 +477,21 @@ int main(int argc, char **argv)
   ierr = DMPlexSetSNESLocalFEM(dm, &user, &user, &user);CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
   ierr = SNESSolve(snes, NULL, u);CHKERRQ(ierr);
+  /* Benchmark system */
+  if (user.benchmark) {
+    PetscLogStage stage;
+    KSP           ksp;
+    Vec           b;
+    ierr = SNESGetKSP(snes, &ksp);CHKERRQ(ierr);
+    ierr = SNESGetSolution(snes, &u);CHKERRQ(ierr);
+    ierr = VecZeroEntries(u);CHKERRQ(ierr);
+    ierr = SNESGetFunction(snes, &b, NULL, NULL);CHKERRQ(ierr);
+    ierr = SNESComputeFunction(snes, u, b);CHKERRQ(ierr);
+    ierr = PetscLogStageRegister("KSP Solve only", &stage);CHKERRQ(ierr);
+    ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
+    ierr = KSPSolve(ksp, b, u);CHKERRQ(ierr);
+    ierr = PetscLogStagePop();CHKERRQ(ierr);
+  }
   ierr = SNESGetSolution(snes, &u);CHKERRQ(ierr);
   ierr = VecViewFromOptions(u, NULL, "-potential_view");CHKERRQ(ierr);
   if (user.spectral) {
