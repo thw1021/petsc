@@ -47,7 +47,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGetMemType(const void *data,PetscMemType
     hipError_t                   cerr;
     struct hipPointerAttribute_t attr;
     enum hipMemoryType           mtype;
-    cerr = hipPointerGetAttributes(&attr,data); /* Do not check error since before CUDA 11.0, passing a host pointer returns cudaErrorInvalidValue */
+    cerr = hipPointerGetAttributes(&attr,data);
     hipGetLastError(); /* Reset the last error */
     mtype = attr.memoryType;
     if (cerr == hipSuccess && mtype == hipMemoryTypeDevice) *type = PETSC_MEMTYPE_DEVICE;
@@ -105,10 +105,13 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
   b->use_gpu_aware_mpi    = use_gpu_aware_mpi;
   b->use_stream_aware_mpi = PETSC_FALSE;
   b->use_default_stream   = PETSC_TRUE; /* The assumption is true for PETSc internal use of SF */
+  /* TODO:  Need to make runtime? */
   #if defined(PETSC_HAVE_KOKKOS) /* Prefer kokkos over cuda*/
     b->backend = PETSCSF_BACKEND_KOKKOS;
   #elif defined(PETSC_HAVE_CUDA)
     b->backend = PETSCSF_BACKEND_CUDA;
+  #elif defined(PETSC_HAVE_HIP)
+    b->backend = PETSCSF_BACKEND_HIP;
   #endif
 #endif
   *sf = b;
@@ -308,7 +311,14 @@ PetscErrorCode PetscSFSetUp(PetscSF sf)
     sf->ops->Free   = PetscSFFree_Cuda;
   }
 #endif
+#if defined(PETSC_HAVE_HIP)
+  if (sf->backend == PETSCSF_BACKEND_HIP) {
+    sf->ops->Malloc = PetscSFMalloc_HIP;
+    sf->ops->Free   = PetscSFFree_HIP;
+  }
+#endif
 
+#
 #if defined(PETSC_HAVE_KOKKOS)
   if (sf->backend == PETSCSF_BACKEND_KOKKOS) {
     sf->ops->Malloc = PetscSFMalloc_Kokkos;
@@ -360,19 +370,25 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
 #if defined(PETSC_HAVE_DEVICE)
   {
     char        backendstr[32] = {0};
-    PetscBool   isCuda = PETSC_FALSE,isKokkos = PETSC_FALSE,set;
+    PetscBool   isCuda = PETSC_FALSE,isHip = PETSC_FALSE,isKokkos = PETSC_FALSE,set;
     /* Change the defaults set in PetscSFCreate() with command line options */
     ierr = PetscOptionsBool("-sf_use_default_stream","Assume SF's input and output root/leafdata is computed on the default stream","PetscSFSetFromOptions",sf->use_default_stream,&sf->use_default_stream,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-sf_use_stream_aware_mpi","Assume the underlying MPI is cuda-stream aware","PetscSFSetFromOptions",sf->use_stream_aware_mpi,&sf->use_stream_aware_mpi,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsString("-sf_backend","Select the device backend SF uses","PetscSFSetFromOptions",NULL,backendstr,sizeof(backendstr),&set);CHKERRQ(ierr);
     ierr = PetscStrcasecmp("cuda",backendstr,&isCuda);CHKERRQ(ierr);
     ierr = PetscStrcasecmp("kokkos",backendstr,&isKokkos);CHKERRQ(ierr);
+    ierr = PetscStrcasecmp("hip",backendstr,&isHip);CHKERRQ(ierr);
   #if defined(PETSC_HAVE_CUDA)
     if (isCuda) sf->backend = PETSCSF_BACKEND_CUDA;
     else if (isKokkos) sf->backend = PETSCSF_BACKEND_KOKKOS;
+    else if (isHip) sf->backend = PETSCSF_BACKEND_HIP;
     else if (set) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported on cuda devices. You may choose cuda or kokkos (if installed)", backendstr);
   #elif defined(PETSC_HAVE_KOKKOS)
     if (set && !isKokkos) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported. You can only choose kokkos", backendstr);
+  #endif
+  #if defined(PETSC_HAVE_HIP)
+    if (isHip) sf->backend = PETSCSF_BACKEND_HIP;
+    else if (set) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported on hip devices. You may choose cuda or kokkos (if installed)", backendstr);
   #endif
   }
 #endif
