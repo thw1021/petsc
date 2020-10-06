@@ -216,9 +216,9 @@ class Logger(args.ArgumentProcessor):
 
   def logPrintDivider(self, debugLevel = -1, debugSection = None, single = 0):
     if single:
-      self.logPrint('-------------------------------------------------------------------------------', debugLevel = debugLevel, debugSection = debugSection)
+      self.logPrint('---------------------------------------------------------------------------------------------', indent = 0, debugLevel = debugLevel, debugSection = debugSection)
     else:
-      self.logPrint('===============================================================================', debugLevel = debugLevel, debugSection = debugSection)
+      self.logPrint('=============================================================================================', indent = 0, debugLevel = debugLevel, debugSection = debugSection)
     return
 
   def logPrintBox(self,msg, debugLevel = -1, debugSection = 'screen', indent = 1, comm = None):
