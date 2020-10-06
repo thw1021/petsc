@@ -897,7 +897,7 @@ PetscErrorCode  SNESSetFromOptions(SNES snes)
   PetscBool      flg,pcset,persist,set;
   PetscInt       i,indx,lag,grids;
   const char     *deft        = SNESNEWTONLS;
-  const char     *convtests[] = {"default","skip"};
+  const char     *convtests[] = {"default","skip","correct_pressure"};
   SNESKSPEW      *kctx        = NULL;
   char           type[256], monfilename[PETSC_MAX_PATH_LEN];
   PetscErrorCode ierr;
@@ -952,11 +952,12 @@ PetscErrorCode  SNESSetFromOptions(SNES snes)
     ierr = SNESSetGridSequence(snes,grids);CHKERRQ(ierr);
   }
 
-  ierr = PetscOptionsEList("-snes_convergence_test","Convergence test","SNESSetConvergenceTest",convtests,2,"default",&indx,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsEList("-snes_convergence_test","Convergence test","SNESSetConvergenceTest",convtests,sizeof(convtests)/sizeof(char*),"default",&indx,&flg);CHKERRQ(ierr);
   if (flg) {
     switch (indx) {
     case 0: ierr = SNESSetConvergenceTest(snes,SNESConvergedDefault,NULL,NULL);CHKERRQ(ierr); break;
-    case 1: ierr = SNESSetConvergenceTest(snes,SNESConvergedSkip,NULL,NULL);CHKERRQ(ierr);    break;
+    case 1: ierr = SNESSetConvergenceTest(snes,SNESConvergedSkip,NULL,NULL);CHKERRQ(ierr); break;
+    case 2: ierr = SNESSetConvergenceTest(snes,SNESConvergedCorrectPressure,NULL,NULL);CHKERRQ(ierr); break;
     }
   }
 
