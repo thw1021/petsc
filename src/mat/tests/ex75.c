@@ -92,7 +92,7 @@ int main(int argc,char **args)
   ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
 
   /* Get SBAIJ matrix sA from A */
-  ierr = MatConvert(A,MATSBAIJ,MAT_INITIAL_MATRIX,&sA);;CHKERRQ(ierr);
+  ierr = MatConvert(A,MATSBAIJ,MAT_INITIAL_MATRIX,&sA);CHKERRQ(ierr);
 
   /* Test MatGetSize(), MatGetLocalSize() */
   ierr = MatGetSize(sA, &i,&j);CHKERRQ(ierr);
