@@ -358,7 +358,7 @@ Writing Commit Messages
    PETSc itself and the message should state its impact on users.
 
    If this affects any known issues, include "fix #ISSUENUMBER" or
-   "see #ISSUENUM" in the message (without quotes). Bitbucket will create
+   "see #ISSUENUM" in the message (without quotes). GitLab will create
    a link to the issue as well as a link from the issue to this commit,
    notifying anyone that was watching the issue. Feel free to link to
    mailing list discussions or [petsc-maint #NUMBER].
