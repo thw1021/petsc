@@ -170,7 +170,7 @@ Git Instructions
 Setup
 -----
 
--  Set your name: ``git config --global user.name  "Barry Smith"``
+-  Set your name: ``git config --global user.name  "Your Name"``
 -  Set your email: ``git config --global user.email "me@example.com"``
 
 Safety
