@@ -8,7 +8,7 @@ Integration Branches
 This section explains the workflow used by maintainers to create the
 integration branches.
 
--  ``master`` (soon to be renamed ``main``) : stable platform for new development
+-  ``master`` (soon to be renamed) : stable platform for new development used by the developers and some users.
 -  ``release`` : bug fixes against the latest release
 
 Branch ``master``
