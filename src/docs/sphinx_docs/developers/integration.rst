@@ -116,7 +116,7 @@ Submit merge requests for suggestions on design, etc.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 -  You do not need to test the code before submitting
--  Make sure to select WIP at the top of the MR page
+-  Make sure to select DRAFT at the top of the MR page
 -  select the additional label Workflow:Request-For-Comment
 -  There is also a button ``Add a task list`` (next to numbered list) if
    you edit any Markdown-supporting text area. You can use this to add
