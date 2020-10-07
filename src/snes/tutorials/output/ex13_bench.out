@@ -1,0 +1,59 @@
+DM Object: Mesh 16 MPI processes
+  type: plex
+Mesh in 2 dimensions:
+  0-cells: 81 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+  1-cells: 144 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+  2-cells: 64 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+Labels:
+  marker: 1 strata with value/size (1 (64))
+  Face Sets: 4 strata with value/size (4 (8), 2 (8), 1 (8), 3 (8))
+  depth: 3 strata with value/size (0 (81), 1 (144), 2 (64))
+  celltype: 3 strata with value/size (4 (64), 0 (81), 1 (144))
+0) cells_proc=2 procs_node=2 processGrid=4 cells=8 nodeGrid=2
+1) cells_proc=2 procs_node=2 processGrid=4 cells=8 nodeGrid=2
+2) cells_proc=1 procs_node=1 processGrid=1 cells=1 nodeGrid=1
+points:
+     0     0     1     1     4     4     5     5
+     0     0     1     1     4     4     5     5
+     2     2     3     3     6     6     7     7
+     2     2     3     3     6     6     7     7
+     8     8     9     9    12    12    13    13
+     8     8     9     9    12    12    13    13
+    10    10    11    11    14    14    15    15
+    10    10    11    11    14    14    15    15
+
+DM Object: Mesh 16 MPI processes
+  type: plex
+Mesh in 2 dimensions:
+  0-cells: 27 27 27 27 27 27 27 27 27 27 27 27 27 27 27 27
+  1-cells: 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42
+  2-cells: 16 16 16 16 16 16 16 16 16 16 16 16 16 16 16 16
+Labels:
+  celltype: 3 strata with value/size (0 (27), 1 (42), 4 (16))
+  depth: 3 strata with value/size (0 (27), 1 (42), 2 (16))
+  marker: 1 strata with value/size (1 (21))
+  Face Sets: 2 strata with value/size (1 (12), 4 (3))
+    0 KSP Residual norm 20.1634 
+    1 KSP Residual norm 3.66673 
+    2 KSP Residual norm 0.636793 
+    3 KSP Residual norm 0.11113 
+    4 KSP Residual norm 0.0238241 
+    5 KSP Residual norm 0.00454155 
+    6 KSP Residual norm 0.000800465 
+    7 KSP Residual norm 0.000134335 
+    0 KSP Residual norm 0.000134335 
+    1 KSP Residual norm 4.82446e-05 
+    2 KSP Residual norm 7.17827e-06 
+    3 KSP Residual norm 1.00178e-06 
+    4 KSP Residual norm 2.16007e-07 
+    5 KSP Residual norm 3.14452e-08 
+    6 KSP Residual norm 5.60404e-09 
+    7 KSP Residual norm 1.07524e-09 
+    0 KSP Residual norm 20.1634 
+    1 KSP Residual norm 3.66673 
+    2 KSP Residual norm 0.636793 
+    3 KSP Residual norm 0.11113 
+    4 KSP Residual norm 0.0238241 
+    5 KSP Residual norm 0.00454155 
+    6 KSP Residual norm 0.000800465 
+    7 KSP Residual norm 0.000134335 
