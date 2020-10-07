@@ -33,27 +33,3 @@ Labels:
   depth: 3 strata with value/size (0 (27), 1 (42), 2 (16))
   marker: 1 strata with value/size (1 (21))
   Face Sets: 2 strata with value/size (1 (12), 4 (3))
-    0 KSP Residual norm 20.1634 
-    1 KSP Residual norm 3.66673 
-    2 KSP Residual norm 0.636793 
-    3 KSP Residual norm 0.11113 
-    4 KSP Residual norm 0.0238241 
-    5 KSP Residual norm 0.00454155 
-    6 KSP Residual norm 0.000800465 
-    7 KSP Residual norm 0.000134335 
-    0 KSP Residual norm 0.000134335 
-    1 KSP Residual norm 4.82446e-05 
-    2 KSP Residual norm 7.17827e-06 
-    3 KSP Residual norm 1.00178e-06 
-    4 KSP Residual norm 2.16007e-07 
-    5 KSP Residual norm 3.14452e-08 
-    6 KSP Residual norm 5.60404e-09 
-    7 KSP Residual norm 1.07524e-09 
-    0 KSP Residual norm 20.1634 
-    1 KSP Residual norm 3.66673 
-    2 KSP Residual norm 0.636793 
-    3 KSP Residual norm 0.11113 
-    4 KSP Residual norm 0.0238241 
-    5 KSP Residual norm 0.00454155 
-    6 KSP Residual norm 0.000800465 
-    7 KSP Residual norm 0.000134335 
