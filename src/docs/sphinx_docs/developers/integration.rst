@@ -5,16 +5,10 @@ PETSc Integration Workflows
 Integration Branches
 ====================
 
-This section explains the workflow used by maintainers to create the
-integration branches.
-
--  ``master`` (soon to be renamed) : stable platform for new development used by the developers and some users.
--  ``release`` : bug fixes against the latest release
-
 Branch ``master``
 -----------------
 
-The ``master`` branch contains all features and bug fixes that are believed to be
+The ``master`` branch (soon to be renamed) contains all features and bug fixes that are believed to be
 stable and will be in the next release. Users developing software based
 on recently-added features in PETSc should follow ``master``:
 
