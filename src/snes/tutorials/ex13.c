@@ -96,7 +96,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->spectral = PETSC_FALSE;
   options->adjoint  = PETSC_FALSE;
   options->benchmark= PETSC_FALSE;
-  for(asz=0;asz<3;asz++) options->processGrid[asz] = options->cells[asz] = options->nodeGrid[asz] = 1;
+  for (asz=0;asz<3;asz++) options->processGrid[asz] = options->cells[asz] = options->nodeGrid[asz] = 1;
   ierr = PetscOptionsBegin(comm, "", "Poisson Problem Options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_plex_box_dim","dim in ex13","ex13.c",dim,&dim,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-shear", "Shear the domain", "ex13.c", options->shear, &options->shear, NULL);CHKERRQ(ierr);
@@ -188,45 +188,45 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
     ierr = DMPlexGetHeightStratum(*dm, 0, NULL, &cEnd);CHKERRQ(ierr);
     ierr = DMGetDimension(*dm, &dim);CHKERRQ(ierr);
-    for(ii=0,np=1;ii<dim;ii++) np *= user->processGrid[ii]; /* check number of processors */
+    for (ii=0,np=1;ii<dim;ii++) np *= user->processGrid[ii]; /* check number of processors */
     if (np!=size)SETERRQ2(comm,PETSC_ERR_SUP,"invalid process grid sum = %D, -n %D",np, size);
-    for(ii=0,np=1;ii<dim;ii++) np *= user->cells[ii];
+    for (ii=0,np=1;ii<dim;ii++) np *= user->cells[ii];
     ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
     if (!rank) {
       if (np!=cEnd)SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP," cell grid %D != num cells = %D",np,cEnd);
-      for(ii=0;ii<dim;ii++) {
+      for (ii=0;ii<dim;ii++) {
         if (user->processGrid[ii]%user->nodeGrid[ii]) SETERRQ3(comm,PETSC_ERR_SUP,"dir %D, invalid node grid size %D, process grid %D",ii,user->nodeGrid[ii],user->processGrid[ii]);
         procs_node[ii] = user->processGrid[ii]/user->nodeGrid[ii];
         if (user->cells[ii]%user->processGrid[ii]) SETERRQ3(comm,PETSC_ERR_SUP,"dir %D, invalid process grid size %D, cells %D",ii,user->processGrid[ii],user->cells[ii]);
         cells_proc[ii] = user->cells[ii]/user->processGrid[ii];
         PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
       }
-      for(/* */;ii<3;ii++) {
+      for (/* */;ii<3;ii++) {
         procs_node[ii] = cells_proc[ii] = 1;
         PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
       }
       PetscInt  pi,pj,pk,ni,nj,nk,ci,cj,ck,pid=0;
       ierr = PetscMalloc2(size, &sizes, cEnd, &points);CHKERRQ(ierr);
-      for(ii=0,np=1;ii<dim;ii++) np *= cells_proc[ii];
-      for(ii=0;ii<size;ii++) sizes[ii] = np;
-      for(ii=0;ii<cEnd;ii++) points[ii] = -1;
-      for(nk=0;nk<user->nodeGrid[2];nk++) { /* node loop */
+      for (ii=0,np=1;ii<dim;ii++) np *= cells_proc[ii];
+      for (ii=0;ii<size;ii++) sizes[ii] = np;
+      for (ii=0;ii<cEnd;ii++) points[ii] = -1;
+      for (nk=0;nk<user->nodeGrid[2];nk++) { /* node loop */
         PetscInt idx_2 = nk*cells_proc[2]*procs_node[2]*user->cells[0]*user->cells[1];
-        for(nj=0;nj<user->nodeGrid[1];nj++) { /* node loop */
+        for (nj=0;nj<user->nodeGrid[1];nj++) { /* node loop */
           PetscInt idx_1 = idx_2 + nj*cells_proc[1]*procs_node[1]*user->cells[0];
-          for(ni=0;ni<user->nodeGrid[0];ni++) { /* node loop */
+          for (ni=0;ni<user->nodeGrid[0];ni++) { /* node loop */
             PetscInt idx_0 = idx_1 + ni*cells_proc[0]*procs_node[0];
-            for(pk=0;pk<procs_node[2];pk++) { /* process loop */
+            for (pk=0;pk<procs_node[2];pk++) { /* process loop */
               PetscInt idx_22 = idx_0 + pk*cells_proc[2]*user->cells[0]*user->cells[1];
-              for(pj=0;pj<procs_node[1];pj++) { /* process loop */
+              for (pj=0;pj<procs_node[1];pj++) { /* process loop */
                 PetscInt idx_11 = idx_22 + pj*cells_proc[1]*user->cells[0];
-                for(pi=0;pi<procs_node[0];pi++) { /* process loop */
+                for (pi=0;pi<procs_node[0];pi++) { /* process loop */
                   PetscInt idx_00 = idx_11 + pi*cells_proc[0];
-                  for(ck=0;ck<cells_proc[2];ck++) { /* cell loop */
+                  for (ck=0;ck<cells_proc[2];ck++) { /* cell loop */
                     PetscInt idx_222 = idx_00 + ck*user->cells[0]*user->cells[1];
-                    for(cj=0;cj<cells_proc[1];cj++) { /* cell loop */
+                    for (cj=0;cj<cells_proc[1];cj++) { /* cell loop */
                       PetscInt idx_111 = idx_222 + cj*user->cells[0];
-                      for(ci=0;ci<cells_proc[0];ci++) { /* cell loop */
+                      for (ci=0;ci<cells_proc[0];ci++) { /* cell loop */
                         PetscInt idx_000 = idx_111 + ci;
                         points[idx_000] = pid;
                       }
@@ -243,9 +243,9 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       /* view */
       ierr = PetscPrintf(comm, "points:\n");CHKERRQ(ierr);
       pid=0;
-      for(ck=0;ck<user->cells[2];ck++) {
-        for(cj=0;cj<user->cells[1];cj++) {
-          for(ci=0;ci<user->cells[0];ci++) {
+      for (ck=0;ck<user->cells[2];ck++) {
+        for (cj=0;cj<user->cells[1];cj++) {
+          for (ci=0;ci<user->cells[0];ci++) {
             ierr = PetscPrintf(comm, "%6D",points[pid++]);CHKERRQ(ierr);
           }
           ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
