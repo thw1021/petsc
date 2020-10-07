@@ -183,31 +183,29 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     PetscPartitioner part;
     PetscInt         cEnd, ii, np,cells_proc[3],procs_node[3];
     PetscMPIInt      rank, size;
+    PetscInt         *sizes = NULL, *points = NULL;
     ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
     ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
     ierr = DMPlexGetHeightStratum(*dm, 0, NULL, &cEnd);CHKERRQ(ierr);
     ierr = DMGetDimension(*dm, &dim);CHKERRQ(ierr);
     for(ii=0,np=1;ii<dim;ii++) np *= user->processGrid[ii]; /* check number of processors */
-    if (np!=size)SETERRQ2(comm,PETSC_ERR_SUP,"invalid process grid, sum procs = %D, -n %D",np, size);
+    if (np!=size)SETERRQ2(comm,PETSC_ERR_SUP,"invalid process grid sum = %D, -n %D",np, size);
     for(ii=0,np=1;ii<dim;ii++) np *= user->cells[ii];
     ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
-    if (np!=cEnd)SETERRQ2(comm,PETSC_ERR_SUP," cell grid %D != num cells = %D",np,cEnd);
-    for(ii=0;ii<dim;ii++) {
-      if (user->processGrid[ii]%user->nodeGrid[ii]) SETERRQ3(comm,PETSC_ERR_SUP,"dir %D, invalid node grid size %D, process grid %D",ii,user->nodeGrid[ii],user->processGrid[ii]);
-      procs_node[ii] = user->processGrid[ii]/user->nodeGrid[ii];
-      if (user->cells[ii]%user->processGrid[ii]) SETERRQ3(comm,PETSC_ERR_SUP,"dir %D, invalid process grid size %D, cells %D",ii,user->processGrid[ii],user->cells[ii]);
-      cells_proc[ii] = user->cells[ii]/user->processGrid[ii];
-      PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
-    }
-    for(/* */;ii<3;ii++) {
-      procs_node[ii] = cells_proc[ii] = 1;
-      PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
-    }
-    ierr = DMPlexGetPartitioner(*dm, &part);CHKERRQ(ierr);
-    ierr = PetscPartitionerSetType(part, PETSCPARTITIONERSHELL);CHKERRQ(ierr);
     if (!rank) {
-      PetscInt  *sizes = NULL,pi,pj,pk,ni,nj,nk,ci,cj,ck,pid=0;
-      PetscInt  *points = NULL;
+      if (np!=cEnd)SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP," cell grid %D != num cells = %D",np,cEnd);
+      for(ii=0;ii<dim;ii++) {
+        if (user->processGrid[ii]%user->nodeGrid[ii]) SETERRQ3(comm,PETSC_ERR_SUP,"dir %D, invalid node grid size %D, process grid %D",ii,user->nodeGrid[ii],user->processGrid[ii]);
+        procs_node[ii] = user->processGrid[ii]/user->nodeGrid[ii];
+        if (user->cells[ii]%user->processGrid[ii]) SETERRQ3(comm,PETSC_ERR_SUP,"dir %D, invalid process grid size %D, cells %D",ii,user->processGrid[ii],user->cells[ii]);
+        cells_proc[ii] = user->cells[ii]/user->processGrid[ii];
+        PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
+      }
+      for(/* */;ii<3;ii++) {
+        procs_node[ii] = cells_proc[ii] = 1;
+        PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
+      }
+      PetscInt  pi,pj,pk,ni,nj,nk,ci,cj,ck,pid=0;
       ierr = PetscMalloc2(size, &sizes, cEnd, &points);CHKERRQ(ierr);
       for(ii=0,np=1;ii<dim;ii++) np *= cells_proc[ii];
       for(ii=0;ii<size;ii++) sizes[ii] = np;
@@ -248,22 +246,17 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       for(ck=0;ck<user->cells[2];ck++) {
         for(cj=0;cj<user->cells[1];cj++) {
           for(ci=0;ci<user->cells[0];ci++) {
-            ierr = PetscPrintf(comm, "%3D",points[pid++]);CHKERRQ(ierr);
+            ierr = PetscPrintf(comm, "%6D",points[pid++]);CHKERRQ(ierr);
           }
           ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
         }
         ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
       }
-      ierr = PetscPrintf(comm, "sizes: ");CHKERRQ(ierr);
-      for(ck=0;ck<size;ck++) ierr = PetscPrintf(comm, " %D",sizes[ck]);
-      CHKERRQ(ierr);
-      ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
-      ierr = PetscPartitionerSetType(part, PETSCPARTITIONERSHELL);CHKERRQ(ierr);
-      ierr = PetscPartitionerShellSetPartition(part, size, sizes, points);CHKERRQ(ierr);
-      ierr = PetscFree2(sizes, points);CHKERRQ(ierr);
-    } else {
-      ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
     }
+    ierr = DMPlexGetPartitioner(*dm, &part);CHKERRQ(ierr);
+    ierr = PetscPartitionerSetType(part, PETSCPARTITIONERSHELL);CHKERRQ(ierr);
+    ierr = PetscPartitionerShellSetPartition(part, size, sizes, points);CHKERRQ(ierr);
+    ierr = PetscFree2(sizes, points);CHKERRQ(ierr);
   }
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
