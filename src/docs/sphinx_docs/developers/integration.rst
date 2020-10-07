@@ -157,7 +157,7 @@ Docs-only changes
 
 To allow for small, quick changes to documentation, if you have made
 **absolutely sure** that your changes only affect documentation, you may
-create your merge request, immediately add “docs”, “docs-only”, and
+create your merge request, immediately add 
 “Workflow:Review-docs” labels, and assign to an integrator
 (currently @sbalay) to merge.
 
