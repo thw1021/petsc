@@ -385,7 +385,7 @@ Formatted tags in commit messages:
 
    Funded-by: My funding source
    Project: My project name
-   Time: n hours
+   \spend 1h  or 30m
 
    Some possible values for Funded-by:
    * P-ECP - preliminary work on the Exascale Computing Project
