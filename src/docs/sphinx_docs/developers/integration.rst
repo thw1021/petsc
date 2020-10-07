@@ -20,16 +20,6 @@ on recently-added features in PETSc should follow ``master``:
 
 New feature branches should start from ``master``.
 
-After a feature branch has been
-tested and is deemed stable, it can be merged to ``master``.
-
-.. code-block:: none
-
-   (master) $ git merge loginname/topic-purpose    # Maintainers ONLY!
-
-After running local tests, ``master`` can be pushed. New releases will
-be tagged on ``master``.
-
 Branch ``release``
 ------------------
 
