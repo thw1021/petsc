@@ -174,7 +174,6 @@ We use labels to track related groups of activities. To follow labels
 and click Subscribe on the right side of the table. All merge requests
 and issue submissions should supply appropriate labels.
 
-Also see the `PETSc GitLab wiki <https://gitlab.com/petsc/petsc/-/wikis/home>`__ for
 GitLab-specific notes.
 
 Git Instructions
