@@ -172,6 +172,9 @@ Setup
 
 -  Set your name: ``git config --global user.name  "Your Name"``
 -  Set your email: ``git config --global user.email "me@example.com"``
+-  Do not push local branches nonexistent on upstream by default:
+   ``git config --global push.default simple`` (older versions of git
+   require ``git config --global push.default tracking``)
 
 Safety
 ------
@@ -187,15 +190,6 @@ Run this once to avoid accidentally pushing more branches than intended:
 
 Quick Summary of Git Commands for PETSc Developers
 --------------------------------------------------
-
-Setup
-^^^^^
-
--  Set your name: ``git config --global user.name  "Barry Smith"``
--  Set your email: ``git config --global user.email "me@example.com"``
--  Do not push local branches nonexistent on upstream by default:
-   ``git config --global push.default simple`` (older versions of git
-   require ``git config --global push.default tracking``)
 
 Starting and Working on a New Feature Branch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
