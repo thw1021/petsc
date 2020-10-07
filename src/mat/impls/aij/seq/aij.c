@@ -1489,6 +1489,10 @@ PetscErrorCode MatMult_SeqAIJ(Mat A,Vec xx,Vec yy)
 #endif
 
   PetscFunctionBegin;
+  if (a->inode.use && a->inode.checked) {
+    ierr = MatMult_SeqAIJ_Inode(A,xx,yy);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   ierr = VecGetArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecGetArray(yy,&y);CHKERRQ(ierr);
   ii   = a->i;
@@ -1641,6 +1645,10 @@ PetscErrorCode MatMultAdd_SeqAIJ(Mat A,Vec xx,Vec yy,Vec zz)
   PetscBool         usecprow=a->compressedrow.use;
 
   PetscFunctionBegin;
+  if (a->inode.use && a->inode.checked) {
+    ierr = MatMultAdd_SeqAIJ_Inode(A,xx,yy,zz);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   ierr = VecGetArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecGetArrayPair(yy,zz,&y,&z);CHKERRQ(ierr);
   if (usecprow) { /* use compressed row format */
@@ -1943,6 +1951,10 @@ PetscErrorCode MatSOR_SeqAIJ(Mat A,Vec bb,PetscReal omega,MatSORType flag,PetscR
   const PetscInt    *idx,*diag;
 
   PetscFunctionBegin;
+  if (a->inode.use && a->inode.checked && omega == 1.0 && fshift == 0.0) {
+    ierr = MatSOR_SeqAIJ_Inode(A,bb,omega,flag,fshift,its,lits,xx);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   its = its*lits;
 
   if (fshift != a->fshift || omega != a->omega) a->idiagvalid = PETSC_FALSE; /* must recompute idiag[] */
