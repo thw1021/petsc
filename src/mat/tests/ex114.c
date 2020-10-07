@@ -193,7 +193,7 @@ int main(int argc,char **args)
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\n MatGetRowMaxAbs for BAIJ matrix\n");CHKERRQ(ierr);
     ierr = VecWAXPY(e,-1.0,maxabs,maxabsB);CHKERRQ(ierr); /* e = -maxabs + maxabsB */
     ierr = VecNorm(e,NORM_INFINITY,&enorm);CHKERRQ(ierr);
-    if (enorm > PETSC_MACHINE_EPSILON) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"norm(-maxabs + maxabs_d) %g > PETSC_MACHINE_EPSILON",enorm);
+    if (enorm > PETSC_MACHINE_EPSILON) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"norm(-maxabs + maxabs_d) %g > PETSC_MACHINE_EPSILON",(double) enorm);
 
     for (j = 0; j < n; j++) {
       if (imaxabs[j] != imaxabsB[j]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"imaxabs[%D] %D != imaxabsB %D",j,imin[j],imax[j]);
