@@ -739,5 +739,9 @@ int main(int argc, char **argv)
     suffix: 2d_p1_adj_0
     requires: triangle
     args: -potential_petscspace_degree 1 -dm_refine 1 -adjoint -adjoint_petscspace_degree 1 -error_petscspace_degree 0
+  test:
+    suffix: bench
+    nsize: 16
+    args: -dm_plex_box_dim 2 -dm_plex_box_faces 8,8 -ksp_type cg -pc_type gamg -dm_plex_box_simplex 0 -dm_refine 1 -potential_petscspace_degree 2 -ksp_monitor_short -dm_distribute -petscpartitioner_type simple -dm_plex_box_lower 0,0 -dm_plex_box_upper 1,1 -process_grid_size 4,4 -node_grid_size 2,2 -benchmark true -dm_view
 
 TEST*/
