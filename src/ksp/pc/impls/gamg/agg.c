@@ -1137,6 +1137,8 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
       ierr = KSPGetPC(eksp, &epc);CHKERRQ(ierr);
       ierr = PCSetType(epc, PCJACOBI);CHKERRQ(ierr);  /* smoother in smoothed agg. */
 
+      ierr = KSPSetFromOptions(eksp);CHKERRQ(ierr);
+      ierr = KSPSetComputeSingularValues(eksp,PETSC_TRUE);CHKERRQ(ierr);
       ierr = KSPSolve(eksp, bb, xx);CHKERRQ(ierr);
       ierr = KSPCheckSolve(eksp,pc,xx);CHKERRQ(ierr);
 

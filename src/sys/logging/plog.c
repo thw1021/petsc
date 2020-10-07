@@ -839,7 +839,7 @@ PetscErrorCode  PetscLogEventActivate(PetscLogEvent event)
 
   Level: advanced
 
-.seealso: PlogEventActivate(), PlogEventDeactivatePush(), PetscLogEventDeactivatePop()
+.seealso: PetscLogEventActivate(), PetscLogEventDeactivatePush(), PetscLogEventDeactivatePop()
 @*/
 PetscErrorCode  PetscLogEventDeactivate(PetscLogEvent event)
 {
@@ -876,7 +876,7 @@ PetscErrorCode  PetscLogEventDeactivate(PetscLogEvent event)
 
   Level: advanced
 
-.seealso: PlogEventActivate(), PetscLogEventDeactivatePop()
+.seealso: PetscLogEventActivate(), PetscLogEventDeactivatePop()
 @*/
 PetscErrorCode  PetscLogEventDeactivatePush(PetscLogEvent event)
 {
@@ -913,7 +913,7 @@ PetscErrorCode  PetscLogEventDeactivatePush(PetscLogEvent event)
 
   Level: advanced
 
-.seealso: PlogEventActivate(), PetscLogEventDeactivatePush()
+.seealso: PetscLogEventActivate(), PetscLogEventDeactivatePush()
 @*/
 PetscErrorCode  PetscLogEventDeactivatePop(PetscLogEvent event)
 {
