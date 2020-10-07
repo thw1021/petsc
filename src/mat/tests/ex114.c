@@ -178,10 +178,12 @@ int main(int argc,char **args)
   { /* BAIJ matrix */
     Mat               B;
     Vec               maxabsB,maxabsB2;
-    PetscInt          bs=2,imaxabsB[M],imaxabsB2[bs*M],rstart,rend,cstart,cend,ncols,col,Brows[bs],Bcols[bs];
+    PetscInt          bs=2,*imaxabsB,*imaxabsB2,rstart,rend,cstart,cend,ncols,col,Brows[2],Bcols[2];
     const PetscInt    *cols;
     const PetscScalar *vals,*vals2;
-    PetscScalar       Bvals[bs*bs];
+    PetscScalar       Bvals[4];
+
+    ierr = PetscMalloc2(M,&imaxabsB,bs*M,&imaxabsB2);CHKERRQ(ierr);
 
     /* bs = 1 */
     ierr = MatConvert(A,MATMPIBAIJ,MAT_INITIAL_MATRIX,&B);CHKERRQ(ierr);
@@ -244,6 +246,7 @@ int main(int argc,char **args)
     ierr = VecDestroy(&maxabsB);CHKERRQ(ierr);
     ierr = MatDestroy(&B);CHKERRQ(ierr);
     ierr = VecDestroy(&maxabsB2);CHKERRQ(ierr);
+    ierr = PetscFree2(imaxabsB,imaxabsB2);CHKERRQ(ierr);
   }
 
   ierr = VecDestroy(&min);CHKERRQ(ierr);
