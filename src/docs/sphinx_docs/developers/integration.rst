@@ -398,7 +398,7 @@ Commit message template:
 
    Funded-by:
    Project:
-   Time:
+   \spend
    Reported-by:
    Thanks-to:
 
