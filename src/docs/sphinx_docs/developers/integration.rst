@@ -163,7 +163,7 @@ create your merge request, immediately add
 
 If in doubt, use the normal review process.
 
-Remember that documentation changes should be made the the ``release``
+Remember that documentation changes should be made to the ``release``
 branch if they apply to the release version of PETSc.
 
 GitLab Instructions
