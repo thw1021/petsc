@@ -387,12 +387,6 @@ Formatted tags in commit messages:
    Project: My project name
    \spend 1h  or 30m
 
-   Some possible values for Funded-by:
-   * P-ECP - preliminary work on the Exascale Computing Project
-   * IDEAS - work on interoperability/bug fixes with Hypre, SuperLU, Trilinos
-   * PETSc-ODEs - work funded by Emil, Lois, Barry's base ASCRC program
-   * PETSc-hierarchical - work funded by the base ASCR program in hierarchical solvers
-
 Commit message template:
 
 .. code-block:: none
