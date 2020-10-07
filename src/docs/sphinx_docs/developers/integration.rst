@@ -274,14 +274,12 @@ Reading Commit Logs
 
    -  At any path: ``git log ..master``
    -  Only affecting a path: ``git log ..master src/dm/impls/plex/``
-   -  In my branch, but not yet in ``next``: ``git log next.. src/dm/``
    -  Tabulated by author:
       ``git shortlog v3.3..master src/dm/impls/plex``
 
 -  Showing branches:
 
    -  Not yet stable: ``git branch --all --no-merged master``
-   -  Being tested by early users: ``git branch --all --merged next``
    -  Will be in the next release: ``git branch --all --merged master``
    -  Remove ``--all`` to the above to not include remote tracking
       branches (work you have not interacted with yet).
@@ -291,10 +289,9 @@ Reading Commit Logs
    -  Find the bad line (e.g., using a debugger)
    -  Find the commit that introduced it: ``git blame path/to/file``
    -  Find the branch containing that commit:
-      ``git branch --contains COMMIT`` (usually one topic branch, plus
-      ``next``)
+      ``git branch --contains COMMIT`` (usually one topic branch)
    -  Fix bug: ``git checkout topic-branch-name``, fix bug,
-      ``git commit``, and merge to ``next``, etc.
+      ``git commit``, make Merge Request, etc.
 
 Miscellaneous
 ^^^^^^^^^^^^^
@@ -499,8 +496,8 @@ You can continue to work on this branch, and use ``git push`` to make
 your changes visible. Only push on *your* branches.
 
 If you have long-running development of a feature, you will probably
-fall behind the master branch. If your branch has not been merged to
-another branch (e.g., ``next``) yet, you can replay your changes on top
+fall behind the master branch. 
+You can replay your changes on top
 of the latest ``master`` using
 
 .. code-block:: bash
@@ -536,8 +533,7 @@ the command
 Topic branches do not normally contain merge commits, but it is
 acceptable to merge from ``master`` or from other topic branches if your
 topic depends on a feature or bug fix introduced there. When making such
-a merge, use the commit message to state the reason for the merge. Never
-merge ``next`` into your branch.
+a merge, use the commit message to state the reason for the merge.
 
 For further philosophy on merges, see
 
@@ -549,102 +545,6 @@ For further philosophy on merges, see
    upstream <http://yarchive.net/comp/linux/git_merges_from_upstream.html>`__
 -  `petsc-dev mailing
    list <http://lists.mcs.anl.gov/pipermail/petsc-dev/2013-March/011728.html>`__
-
-Long running development
-------------------------
-
-If you support a particular physics code, like
-`PyLith <http://www.geodynamics.org/cig/software/pylith>`__, you will
-want to certify that a certain branch incorporates new features that it
-needs, as well as passes all PETSc tests and follows the latest
-development. This tracking branch can be called something like
-``knepley/pylith``. You develop new features in separate feature
-branches, and integrate into next. Then
-
-.. code-block:: bash
-
-   (next) $ git pull  # get changes from upstream
-   (next) $ git merge knepley/new-feature-for-pylith
-
-run tests with application, and
-
-.. code-block:: bash
-
-   (next) $ git push origin next next:knepley/pylith
-
-so that you push your local branch ‘next’ that you just tested with the
-application to both ‘next’ and ‘knepley/pylith’.
-
-Application users then follow ‘knepley/pylith’, which is just marking
-the state of ‘next’ the last time you tested it. Since it’s always
-marking a point on ‘next’, it will fast-forward, so the user just clones
-PETSc, then
-
-.. code-block:: bash
-
-   $ git checkout knepley/pylith
-
-and from then on, they will get your the tested state with
-
-.. code-block:: bash
-
-   (knepley/pylith) $ git pull
-
-
-Racy integration
-----------------
-
-Two people occasionally attempt to merge at about the same time, in
-which someone will lose the race. It usually goes like this: you
-checkout ‘somebranch’, pull to make sure you have everything from
-upstream (you didn’t forget this, right?), merge ‘my/topic-branch’,
-test, and attempt to push, getting an error like:
-
-.. code-block:: bash
-
-   To git@gitlab.com:petsc/petsc
-    ! [rejected]        next -> next (fetch first)
-   error: failed to push some refs to 'git@gitlab.com:petsc/petsc'
-   hint: Updates were rejected because the remote contains work that you do
-   hint: not have locally. This is usually caused by another repository pushing
-   hint: to the same ref. You may want to first merge the remote changes (e.g.,
-   hint: 'git pull') before pushing again.
-   hint: See the 'Note about fast-forwards' in 'git push --help' for details.
-
-**Do NOT perform a non-fast-forward pull on an integration branch.**
-(Doing so creates messy history that `does not summarize
-nicely <http://git-blame.blogspot.com/2013/09/fun-with-first-parent-history.html>`__
-with ``git log --first-parent``.) Instead, you have two choices. The
-cleanest is to gracefully lose the race and merge again.
-**Recommended:**
-
-.. code-block:: bash
-
-   $ git reset --hard origin/next
-   $ git merge my/topic-branch
-   ... build and test ...
-   $ git push
-
-This produces clean history with no evidence that you encountered a race
-and had to try again. `Junio explains in
-detail <http://git-blame.blogspot.com/2015/03/fun-with-non-fast-forward.html>`__
-why this is preferable. If your merge had significant conflicts or if
-the testing you just did was especially onerous, you can switch hats and
-merge the result:
-
-.. code-block:: bash
-
-   $ git reset --hard origin/next
-   $ git merge ORIG_HEAD
-     # edit commit message to state which branch was actually merged
-     # due to losing a race to the integration branch.
-   ... build and test ...
-   $ git push
-
-This keeps both merge commits (which is a record that there was a race,
-usually perceived as clutter) but ``git log --first-parent`` still
-produces an accurate and concise summary.
-
 
 Nightly Builds
 ==============
