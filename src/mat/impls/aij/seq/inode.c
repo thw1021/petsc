@@ -4033,6 +4033,28 @@ PetscErrorCode MatMultDiagonalBlock_SeqAIJ_Inode(Mat A,Vec bb,Vec xx)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode MatSeqAIJ_Inode_ResetOps(Mat A)
+{
+  Mat_SeqAIJ *a = (Mat_SeqAIJ*)A->data;
+
+  PetscFunctionBegin;
+  a->inode.node_count       = 0;
+  a->inode.size             = NULL;
+  a->inode.use              = PETSC_FALSE;
+  a->inode.checked          = PETSC_FALSE;
+  a->inode.mat_nonzerostate = -1;
+  A->ops->mult              = MatMult_SeqAIJ;
+  A->ops->sor               = MatSOR_SeqAIJ;
+  A->ops->multadd           = MatMultAdd_SeqAIJ;
+  A->ops->getrowij          = MatGetRowIJ_SeqAIJ;
+  A->ops->restorerowij      = MatRestoreRowIJ_SeqAIJ;
+  A->ops->getcolumnij       = MatGetColumnIJ_SeqAIJ;
+  A->ops->restorecolumnij   = MatRestoreColumnIJ_SeqAIJ;
+  A->ops->coloringpatch     = NULL;
+  A->ops->multdiagonalblock = NULL;
+  PetscFunctionReturn(0);
+}
+
 /*
     samestructure indicates that the matrix has not changed its nonzero structure so we
     do not need to recompute the inodes
@@ -4046,7 +4068,11 @@ PetscErrorCode MatSeqAIJCheckInode(Mat A)
   const PetscInt *idx,*idy,*ii;
 
   PetscFunctionBegin;
-  if (!a->inode.use) PetscFunctionReturn(0);
+  if (!a->inode.use) { /* derived types set it to false -> we reset the operations only if the matrix is of type SeqAIJ */ 
+    ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&flag);CHKERRQ(ierr);
+    if (flag) { ierr = MatSeqAIJ_Inode_ResetOps(A);CHKERRQ(ierr); }
+    PetscFunctionReturn(0);
+  }
   if (a->inode.checked && A->nonzerostate == a->inode.mat_nonzerostate) PetscFunctionReturn(0);
 
   m = A->rmap->n;
@@ -4074,38 +4100,10 @@ PetscErrorCode MatSeqAIJCheckInode(Mat A)
     i                = j;
   }
 
-  {
-    PetscBool is_cudatype;
-    ierr = PetscObjectTypeCompareAny((PetscObject)A,&is_cudatype, MATAIJCUSPARSE, MATSEQAIJCUSPARSE, MATMPIAIJCUSPARSE, MATAIJVIENNACL, MATSEQAIJVIENNACL, MATMPIAIJVIENNACL,"");CHKERRQ(ierr);
-    if (is_cudatype) {
-      ierr = PetscInfo(A,"Not using Inode routines on GPU matrix\n");CHKERRQ(ierr);
-      ierr = PetscFree(ns);CHKERRQ(ierr);
-      a->inode.node_count       = 0;
-      a->inode.size             = NULL;
-      a->inode.use              = PETSC_FALSE;
-      a->inode.checked          = PETSC_TRUE;
-      a->inode.mat_nonzerostate = A->nonzerostate;
-      PetscFunctionReturn(0);
-    }
-  }
-
   /* If not enough inodes found,, do not use inode version of the routines */
   if (!m || node_count > .8*m) {
     ierr = PetscFree(ns);CHKERRQ(ierr);
-
-    a->inode.node_count       = 0;
-    a->inode.size             = NULL;
-    a->inode.use              = PETSC_FALSE;
-    A->ops->mult              = MatMult_SeqAIJ;
-    A->ops->sor               = MatSOR_SeqAIJ;
-    A->ops->multadd           = MatMultAdd_SeqAIJ;
-    A->ops->getrowij          = MatGetRowIJ_SeqAIJ;
-    A->ops->restorerowij      = MatRestoreRowIJ_SeqAIJ;
-    A->ops->getcolumnij       = MatGetColumnIJ_SeqAIJ;
-    A->ops->restorecolumnij   = MatRestoreColumnIJ_SeqAIJ;
-    A->ops->coloringpatch     = NULL;
-    A->ops->multdiagonalblock = NULL;
-
+    ierr = MatSeqAIJ_Inode_ResetOps(A);CHKERRQ(ierr);
     ierr = PetscInfo2(A,"Found %D nodes out of %D rows. Not using Inode routines\n",node_count,m);CHKERRQ(ierr);
   } else {
     if (!A->factortype) {
