@@ -34,7 +34,7 @@ Branch ``release``
 ------------------
 
 The ``release`` branch provides bug-fix patches for the latest release.
-Bug fixes that are relevant to the release should be started here:
+Bug fixes for the release should be started here:
 
 .. code-block:: none
 
