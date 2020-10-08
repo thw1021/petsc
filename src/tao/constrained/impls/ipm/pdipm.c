@@ -325,12 +325,12 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
 
   ierr = VecGetArrayRead(X,&Xarr);CHKERRQ(ierr);
 
-  if (pdipm->solve_symetric_kkt) { /* 1 for eq 17 revised pdipm doc 0 for eq 18 (symetric KKT) */
+  if (pdipm->solve_symmetric_kkt) { /* 1 for eq 17 revised pdipm doc 0 for eq 18 (symmetric KKT) */
+    vals[0] = 1.0;
     for (i=0; i < pdipm->nci; i++) {
         row     = Jrstart + pdipm->off_z + i;
         cols[0] = Jrstart + pdipm->off_lambdai + i;
         cols[1] = row;
-        vals[0] = 1.0;
         vals[1] = Xarr[pdipm->off_lambdai + i]/Xarr[pdipm->off_z + i];
         ierr = MatSetValues(Jpre,1,&row,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
     }
@@ -534,9 +534,9 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
   ierr = VecNorm(pdipm->ce,NORM_2,&cnorm[0]);CHKERRQ(ierr);
 
   if (pdipm->Nci) {
-    if (pdipm->solve_symetric_kkt){
+    if (pdipm->solve_symmetric_kkt) {
       /* (3) L3 = ci(x) - z;
-        (4) L4 = Lambdai * e - mu/z *e
+         (4) L4 = Lambdai * e - mu/z *e
       */
       ierr = VecGetArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
       larr = Xarr+pdipm->off_lambdai;
@@ -548,7 +548,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
       ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
     } else {
       /* (3) L3 = ci(x) - z;
-        (4) L4 = Z * Lambdai * e - mu * e
+         (4) L4 = Z * Lambdai * e - mu * e
       */
       ierr = VecGetArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
       larr = Xarr+pdipm->off_lambdai;
@@ -567,9 +567,8 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 
   /* note: pdipm->z is not changed below */
   if (pdipm->z) {
-    if (pdipm->solve_symetric_kkt){
+    if (pdipm->solve_symmetric_kkt) {
       ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
-
       if (pdipm->Nci) {
         zarr = Xarr+pdipm->off_z;
         ierr = VecGetArrayWrite(pdipm->z,&tmparr);CHKERRQ(ierr);
@@ -579,10 +578,10 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 
       ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
       if (pdipm->Nci) {
-        zarr = Xarr+pdipm->off_z;
-        VecGetArray(pdipm->z,&tmparr);
+        zarr = Xarr+pdipm->off_z;CHKERRQ(ierr);
+        ierr = VecGetArray(pdipm->z,&tmparr);
         for (i=0; i<pdipm->nci; i++) {
-          tmparr[i] = tmparr[i]/Xarr[pdipm->off_z + i];
+          tmparr[i] /= Xarr[pdipm->off_z + i];
         }
         ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
       }
@@ -1367,7 +1366,7 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
   ierr = PetscOptionsReal("-tao_pdipm_push_init_lambdai","parameter to push initial (inequality) dual variables away from bounds",NULL,pdipm->push_init_lambdai,&pdipm->push_init_lambdai,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-tao_pdipm_solve_reduced_kkt","Solve reduced KKT system using Schur-complement",NULL,pdipm->solve_reduced_kkt,&pdipm->solve_reduced_kkt,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-tao_pdipm_mu_update_factor","Update scalar for barrier parameter (mu) update",NULL,pdipm->mu_update_factor,&pdipm->mu_update_factor,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-tao_pdipm_symetric_kkt","Solve non reduced symetric KKT system",NULL,pdipm->solve_symetric_kkt,&pdipm->solve_symetric_kkt,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-tao_pdipm_symmetric_kkt","Solve non reduced symmetric KKT system",NULL,pdipm->solve_symmetric_kkt,&pdipm->solve_symmetric_kkt,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1377,9 +1376,9 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
 
   Option Database Keys:
 +   -tao_pdipm_push_init_lambdai - parameter to push initial dual variables away from bounds (> 0)
-.   -tao_pdipm_push_init_slack  - parameter to push initial slack variables away from bounds (> 0)
+.   -tao_pdipm_push_init_slack - parameter to push initial slack variables away from bounds (> 0)
 .   -tao_pdipm_mu_update_factor - update scalar for barrier parameter (mu) update (> 0)
--   -tao_pdipm_symetric_kkt     - Solve non-reduced symetric KKT system
+-   -tao_pdipm_symmetric_kkt - Solve non-reduced symmetric KKT system
 
   Level: beginner
 M*/
@@ -1410,10 +1409,10 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
 
-  pdipm->push_init_slack    = 1.0;
-  pdipm->push_init_lambdai  = 1.0;
-  pdipm->solve_reduced_kkt  = PETSC_FALSE;
-  pdipm->solve_symetric_kkt = PETSC_TRUE;
+  pdipm->push_init_slack     = 1.0;
+  pdipm->push_init_lambdai   = 1.0;
+  pdipm->solve_reduced_kkt   = PETSC_FALSE;
+  pdipm->solve_symmetric_kkt = PETSC_TRUE;
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
