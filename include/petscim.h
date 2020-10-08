@@ -26,7 +26,7 @@ PETSC_EXTERN PetscErrorCode IMViewFromOptions(IM,PetscObject,const char[]);
 PETSC_EXTERN PetscErrorCode IMSetUp(IM);
 PETSC_EXTERN PetscErrorCode IMSetFromOptions(IM);
 
-PETSC_EXTERN PetscErrorCode IMSetIndices(IM,PetscInt,const PetscInt*[],PetscCopyMode);
+PETSC_EXTERN PetscErrorCode IMSetIndices(IM,PetscInt,const PetscInt[],PetscCopyMode);
 PETSC_EXTERN PetscErrorCode IMGetIndices(IM,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode IMGetSizes(IM,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode IMGetLayout(IM,IM*);
@@ -35,6 +35,9 @@ PETSC_EXTERN PetscErrorCode IMRestoreIndices(IM,const PetscInt*[]);
 
 /* IMLAYOUT */
 PETSC_EXTERN PetscErrorCode IMLayoutCreate(MPI_Comm,IM*);
-PETSC_EXTERN PetscErrorCode IMLayoutSetFromMapping(IM,PetscInt,const PetscInt*[],PetscCopyMode);
+PETSC_EXTERN PetscErrorCode IMLayoutSetFromMapping(IM,PetscInt,const PetscInt[],PetscCopyMode);
 PETSC_EXTERN PetscErrorCode IMLayoutSetFromSizes(IM,PetscInt,PetscInt);
+
+/* IMBASIC */
+PETSC_EXTERN PetscErrorCode IMBasicCreateFromIndices(MPI_Comm,PetscInt,const PetscInt[],PetscCopyMode,IM*);
 #endif /* PETSCIM_H */

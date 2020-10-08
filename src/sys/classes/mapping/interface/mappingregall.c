@@ -2,6 +2,7 @@
 
 PetscBool IMRegisterAllCalled = PETSC_FALSE;
 
+PETSC_EXTERN PetscErrorCode IMCreate_Layout(IM);
 PETSC_EXTERN PetscErrorCode IMCreate_Basic(IM);
 PETSC_EXTERN PetscErrorCode IMCreate_Map(IM);
 
@@ -13,6 +14,7 @@ PetscErrorCode IMRegisterAll(void)
   if (IMRegisterAllCalled) PetscFunctionReturn(0);
   IMRegisterAllCalled = PETSC_TRUE;
 
+  ierr = IMRegister(IMLAYOUT, IMCreate_Layout);CHKERRQ(ierr);
   ierr = IMRegister(IMBASIC, IMCreate_Basic);CHKERRQ(ierr);
   ierr = IMRegister(IMMAP, IMCreate_Map);CHKERRQ(ierr);
   PetscFunctionReturn(0);
