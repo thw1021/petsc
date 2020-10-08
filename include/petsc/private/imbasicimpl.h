@@ -9,11 +9,11 @@ typedef struct {
   PetscInt  rstart, rend;
 } IM_Basic;
 
-PETSC_EXTERN PetscErrorCode IMCreate_Basic(IM);
-PETSC_EXTERN PetscErrorCode IMSetup_Basic(IM);
-PETSC_EXTERN PetscErrorCode IMDestroy_Basic(IM);
-PETSC_EXTERN PetscErrorCode IMGetIndices_Basic(IM,const PetscInt*[]);
-PETSC_EXTERN PetscErrorCode IMPermute_Basic(IM,IM);
+PETSC_INTERN PetscErrorCode IMCreate_Basic(IM);
+PETSC_INTERN PetscErrorCode IMSetup_Basic(IM);
+PETSC_INTERN PetscErrorCode IMDestroy_Basic(IM);
+PETSC_INTERN PetscErrorCode IMGetIndices_Basic(IM,const PetscInt*[]);
+PETSC_INTERN PetscErrorCode IMPermute_Basic(IM,IM);
 
 PETSC_STATIC_INLINE PetscErrorCode IMInitializeBasic_Private(PETSC_UNUSED IM_Basic *mb)
 {

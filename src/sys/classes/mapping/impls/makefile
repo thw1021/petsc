@@ -1,7 +1,7 @@
 -include ../../../../../petscdir.mk
 ALL: lib
 
-DIRS      = basic map
+DIRS      = layout basic map
 LOCDIR    = src/sys/classes/mapping/impls/
 MANSEC    = Sys
 SUBMANSEC = Mapping
