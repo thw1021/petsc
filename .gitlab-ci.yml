@@ -408,7 +408,6 @@ linux-sycl-double:
   variables:
     TEST_ARCH: arch-ci-linux-sycl-double
     INIT_SCRIPT: /home/glci/bin/ci-inteloneapi.sh
-    DISABLE_TESTS: 1
 
 linux-c-exodus-dbg:
   extends:

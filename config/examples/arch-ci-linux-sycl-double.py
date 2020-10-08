@@ -10,7 +10,8 @@ if __name__ == '__main__':
   import configure
   configure_options = [
     '--package-prefix-hash='+petsc_hash_pkgs,
-    '--with-mpi-dir=/opt/intel/inteloneapi/mpi/latest',
+    #'--with-mpi-dir=/opt/intel/inteloneapi/mpi/latest',
+    '--with-mpi-dir=/home/glci/soft/mpich-3.3.2-intel',
     'COPTFLAGS=-g -O',
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',
@@ -18,6 +19,7 @@ if __name__ == '__main__':
     '--with-sycl=1',
     '--with-syclcxx=dpcpp',
     '--with-sycl-dir=/opt/intel/inteloneapi/compiler/latest/linux',
+    '--with-blaslapack-dir='+os.environ['MKLROOT'],
     '--with-precision=double',
     '--with-clanguage=c',
   ]
