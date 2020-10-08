@@ -199,11 +199,11 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
         procs_node[ii] = user->processGrid[ii]/user->nodeGrid[ii];
         if (user->cells[ii]%user->processGrid[ii]) SETERRQ3(comm,PETSC_ERR_SUP,"dir %D, invalid process grid size %D, cells %D",ii,user->processGrid[ii],user->cells[ii]);
         cells_proc[ii] = user->cells[ii]/user->processGrid[ii];
-        PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
+        ierr = PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);CHKERRQ(ierr);
       }
       for (/* */;ii<3;ii++) {
         procs_node[ii] = cells_proc[ii] = 1;
-        PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);
+        ierr = PetscPrintf(comm, "%D) cells_proc=%D procs_node=%D processGrid=%D cells=%D nodeGrid=%D\n",ii,cells_proc[ii],procs_node[ii],user->processGrid[ii],user->cells[ii],user->nodeGrid[ii]);CHKERRQ(ierr);
       }
       PetscInt  pi,pj,pk,ni,nj,nk,ci,cj,ck,pid=0;
       ierr = PetscMalloc2(size, &sizes, cEnd, &points);CHKERRQ(ierr);
