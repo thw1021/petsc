@@ -2756,10 +2756,4 @@ PETSC_EXTERN PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint,PetscMPIInt,MPI_In
 PETSC_EXTERN PetscErrorCode MPIU_Win_shared_query(MPI_Win,PetscMPIInt,MPI_Aint*,PetscMPIInt*,void*);
 #endif
 
-/*
-    Returned from PETSc functions that are called from MPI, such as related to attributes
-*/
-PETSC_EXTERN PetscMPIInt PETSC_MPI_ERROR_CLASS;
-PETSC_EXTERN PetscMPIInt PETSC_MPI_ERROR_CODE;
-
 #endif
