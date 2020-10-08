@@ -56,7 +56,7 @@ Before filing a merge request
 -  If and only if the tests are perfect then submit a merge request (MR)
    otherwise fix your branch, test locally and submit a new pipeline.
 -  Do not overdo requesting testing; it is a limited resource, so if you
-   realize you don’t need a test you started, cancel it.
+   realize a currently running test pipeline is no longer needed, cancel it.
 
 Check test results
 ^^^^^^^^^^^^^^^^^^
