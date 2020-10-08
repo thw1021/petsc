@@ -5,8 +5,7 @@ SOURCEC  =
 SOURCEF  =
 SOURCEH  =
 TAODOCS  =  \
-	   tex/tao.bib tex/tao-patches.html tex/tao-benchmarks.html \
-	   tex/tao-components.html tex/tao-patches*
+	   tao_tex/tao.bib
 
 DOCS     = manualpages/sec/header_* \
            tex/petsc.bib website/index.html \
