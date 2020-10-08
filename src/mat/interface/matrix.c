@@ -9931,7 +9931,7 @@ PetscErrorCode MatFindOffBlockDiagonalEntries(Mat mat,IS *is)
 
   Level: advanced
 
-.seealso: MatInvertBockDiagonalMat
+.seealso: MatInvertVariableBlockDiagonalMat()
 @*/
 PetscErrorCode MatInvertBlockDiagonal(Mat mat,const PetscScalar **values)
 {
@@ -9964,7 +9964,7 @@ PetscErrorCode MatInvertBlockDiagonal(Mat mat,const PetscScalar **values)
 
   Level: advanced
 
-.seealso: MatInvertBockDiagonal()
+.seealso: MatInvertBlockDiagonal()
 @*/
 PetscErrorCode MatInvertVariableBlockDiagonal(Mat mat,PetscInt nblocks,const PetscInt *bsizes,PetscScalar *values)
 {
@@ -9994,7 +9994,7 @@ PetscErrorCode MatInvertVariableBlockDiagonal(Mat mat,PetscInt nblocks,const Pet
 
   Level: advanced
 
-.seealso: MatInvertBockDiagonal()
+.seealso: MatInvertBlockDiagonal()
 @*/
 PetscErrorCode MatInvertBlockDiagonalMat(Mat A,Mat C)
 {

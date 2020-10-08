@@ -377,12 +377,14 @@ static PetscErrorCode PCSetFromOptions_Jacobi(PetscOptionItems *PetscOptionsObje
     By using KSPSetPCSide(ksp,PC_SYMMETRIC) or -ksp_pc_side symmetric
          can scale each side of the matrix by the square root of the diagonal entries.
 
-         Zero entries along the diagonal are replaced with the value 1.0
+    Zero entries along the diagonal are replaced with the value 1.0
+
+    See PCPBJACOBI for fixed point block size, PCVPBJACOBI for variable point block, and PCBJACOBI for large size blocks
 
          See PCPBJACOBI for a point-block Jacobi preconditioner
 
 .seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
-           PCJacobiSetType(), PCJacobiSetUseAbs(), PCJacobiGetUseAbs(), PCPBJACOBI
+           PCJacobiSetType(), PCJacobiSetUseAbs(), PCJacobiGetUseAbs(), PCPBJACOBI, PCBJACOBI, PCVPBJACOBI 
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)

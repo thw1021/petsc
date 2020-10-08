@@ -328,7 +328,7 @@ static PetscErrorCode PCView_PBJacobi(PC pc,PetscViewer viewer)
 
 
    Notes:
-    See PCJACOBI for point Jacobi preconditioning
+    See PCJACOBI for diagonal Jacobi, PCVPBJACOBI for variable point block, and PCBJACOBI for large size blocks
 
    This works for AIJ and BAIJ matrices and uses the blocksize provided to the matrix
 
@@ -347,7 +347,7 @@ static PetscErrorCode PCView_PBJacobi(PC pc,PetscViewer viewer)
    Level: beginner
 
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC, PCJACOBI
+.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC, PCJACOBI, PCVPBJACOBI, PCBJACOBI
 
 M*/
 

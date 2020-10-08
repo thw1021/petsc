@@ -508,6 +508,8 @@ PetscErrorCode  PCBJacobiGetLocalBlocks(PC pc, PetscInt *blocks, const PetscInt 
 -  -pc_bjacobi_blocks <n> - use n total blocks
 
    Notes:
+    See PCJACOBI for diagonal Jacobi, PCVPBJACOBI for variable point block, and PCPBJACOBI for fixed size point block
+
     Each processor can have one or more blocks, or a single block can be shared by several processes. Defaults to one block per processor.
 
      To set options on the solvers for each block append -sub_ to all the KSP, KSP, and PC
@@ -529,7 +531,7 @@ PetscErrorCode  PCBJacobiGetLocalBlocks(PC pc, PetscInt *blocks, const PetscInt 
 
 .seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
            PCASM, PCSetUseAmat(), PCGetUseAmat(), PCBJacobiGetSubKSP(), PCBJacobiSetTotalBlocks(),
-           PCBJacobiSetLocalBlocks(), PCSetModifySubMatrices()
+           PCBJacobiSetLocalBlocks(), PCSetModifySubMatrices(), PCJACOBI, PCVPBJACOBI, PCPBJACOBI
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_BJacobi(PC pc)
