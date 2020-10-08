@@ -7,19 +7,19 @@ Integration branches
 
 .. _sec_master_branch:
 
-``master`` branch
------------------
+``master``
+----------
 
 The ``master`` branch (soon to be renamed) contains all features and bug fixes that are believed to be
-stable and will be in the next release. Users developing software based
+stable and will be in the next release (e.g. 3.15.0). Users developing software based
 on recently-added features in PETSc should follow ``master``:
 
 New feature branches should start from ``master``.
 
 .. _sec_release_branch:
 
-``release`` branch
-------------------
+``release``
+-----------
 
 The ``release`` branch provides bug-fix patches for the latest release.
 Bug fixes for the release should be started here:
@@ -29,7 +29,7 @@ Bug fixes for the release should be started here:
    $ git checkout -b yourname/fix-component-name release
 
 As with new features, it will be tested and later merged to
-``release`` and ``master``. Maintenance releases are tagged on ``release``.
+``release`` and ``master``. Patch releases (e.g. 3.15.1) are tagged on ``release``.
 
 
 Contributing workflows
@@ -49,32 +49,37 @@ Before filing a merge request
 -  Include tests which cover any changes to the source code.
 -  Before submitting the merge request (MR), run the full test suite -
    i.e ``make alltests TIMEOUT=600`` on your machine
--  Rebase the feature branch over latest ``master`` [so that latest copy of
-   ``.gitlab-ci.yaml`` is used], and push
--  Go to https://gitlab.com/petsc/petsc/pipelines/new and submit your
-   feature branch
--  If and only if the tests are perfect then submit a merge request (MR)
-   otherwise fix your branch, test locally and submit a new pipeline.
+
+
+Submit merge request
+--------------------
+
+-  ``git push`` prints a URL that can be used to create a merge request.
+   Alternatively, use `GitLab's web interface <https://gitlab.com/petsc/petsc/merge_requests/new>`__.
+-  select the correct destination (:any:`sec_master_branch` or :any:`sec_release_branch`).
+-  select appropriate `labels <https://gitlab.com/petsc/petsc/-/labels>`__ including "Workflow:Review"
+-  If the merge request resolves an outstanding `issue <https://gitlab.com/petsc/petsc/issues>`__), you should include a `closing
+   pattern <https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#default-closing-pattern>`__
+   such as "Fixes #123" in the MR’s description so that issue gets
+   closed once the MR is merged.
+-  If the MR is from the main repository, un-pause the pipelines. If the MR
+   is from a fork, another developer will do this for you.
 -  Do not overdo requesting testing; it is a limited resource, so if you
    realize a currently running test pipeline is no longer needed, cancel it.
 
-Check test results
-^^^^^^^^^^^^^^^^^^
+More on MR pipelines
+^^^^^^^^^^^^^^^^^^^^
 
--  If you submit a pipeline you should receive an email when it
-   completes (with or without error).
--  You can also go to the pipelines page at
-   https://gitlab.com/petsc/petsc/pipelines .
 -  For an MR, the test pipeline status is displayed near the top of the
    MR page.
--  Please report all “odd” errors in the testing that don’t seem related
-   to your branch in issue https://gitlab.com/petsc/petsc/issues/360.
+-  Please report all "odd" errors in the testing that don’t seem related
+   to your branch in `issue 360 <https://gitlab.com/petsc/petsc/issues/360>`__.
 
    1. Check the current current threads to see if it is listed and add
-      it there. Otherwise, create a new thread.
-   2. Also put a message like “This is related to CI (#360)”, in your
-      MR/issue. It will then automatically appear in the #360
-      discussion, which helps to track what’s going on at the moment.
+      it there, with a link to your MR (e.g. ``!1234``). Otherwise, create a new thread.
+   2. Click the three dots in the top right of the thread and select
+      "copy link"
+   3. Add this link in your MR description.
 
 -  Note that the retry button does NOT use any changes to the branch
    when it retries - it retries exactly what it previously tried. To
@@ -82,22 +87,6 @@ Check test results
    start a new pipeline, immediately cancel that pipeline and select
    individual jobs to retry (using the little retry button to the right
    of job name).
--  For errors that occur in the cloud testing you can use
-   ``docker run -it --rm -v $(pwd):/build jedbrown/mpich-ccache bash``
-   which will drop you into a container with the PETSc repository as the
-   working directory in the container.
-
-Submit merge request
---------------------
-
--  ``git push`` prints a url that can be used to create a merge request.
-   Alternatively, use https://gitlab.com/petsc/petsc/merge_requests/new
--  select the correct destination (``master`` or ``release``).
--  select appropriate `labels <https://gitlab.com/petsc/petsc/-/labels>`__ including "Workflow:Review"
--  If the merge request resolves an outstanding `issue <https://gitlab.com/petsc/petsc/issues>`__), you should include a `closing
-   pattern <https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#default-closing-pattern>`__
-   such as "Fixes #123" in the MR’s description so that issue gets
-   closed once the MR is merged.
 
 Submit merge requests for suggestions on design, etc.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -150,7 +139,7 @@ to review and merge.
 
 If in doubt, use the normal review process.
 
-Remember that documentation changes should be made to the :any:`sec_release_branch`
+Remember that documentation changes should be made to the :any:`the release branch <sec_release_branch>`
 if they apply to the release version of PETSc.
 
 GitLab instructions
