@@ -472,7 +472,9 @@ int main(int argc, char **argv)
   ierr = SNESSolve(snes, NULL, u);CHKERRQ(ierr);
   /* Benchmark system */
   if (user.benchmark) {
+#if defined(PETSC_USE_LOG)
     PetscLogStage stage;
+#endif
     KSP           ksp;
     Vec           b;
     ierr = SNESGetKSP(snes, &ksp);CHKERRQ(ierr);
