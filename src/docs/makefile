@@ -7,7 +7,7 @@ SOURCEH  =
 TAODOCS  =  \
 	   tao_tex/tao.bib
 
-DOCS     = manualpages/sec/header_* \
+DOCS     = manualpages-sec/header_* \
            tex/petsc.bib website/index.html \
            website/download/index.html \
            website/download/petsc-patches.html website/publications/index.html \
