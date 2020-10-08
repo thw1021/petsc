@@ -987,7 +987,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);
   {
     PetscMPIInt    rank;
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
     /* PetscLogStage  setup_stage; */
     ierr = PetscLogEventRegister("Landau Operator", DM_CLASSID, &ctx->events[0]);CHKERRQ(ierr); /* 0 */
     ierr = PetscLogEventRegister(" Jac-vector", DM_CLASSID, &ctx->events[1]);CHKERRQ(ierr); /* 1 */
@@ -1043,7 +1043,7 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   LandauCtx      *ctx;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   if (size!=1) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Velocity space meshes should be serial (but should work in parallel)");
   if (dim!=2 && dim!=3) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Only 2D and 3D supported");
   ctx = (LandauCtx*)malloc(sizeof(LandauCtx));
@@ -1564,7 +1564,7 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr); // remove in real application
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   if (ctx->normJ != unorm) {
