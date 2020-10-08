@@ -61,7 +61,7 @@ PetscErrorCode PETSCMAP1(VecScatterBegin)(VecScatter ctx,Vec xin,Vec yin,InsertM
 
   if (!(mode & SCATTER_LOCAL)) {
     /* post receives since they were not previously posted    */
-    ierr = MPI_Startall_irecv(from->starts[nrecvs]*bs,MPIU_SCALAR,nrecvs,rwaits);CHKERRQ(ierr);
+    ierr = MPI_Startall_irecv(from->starts[nrecvs]*bs,MPIU_SCALAR,nrecvs,rwaits);CHKERRMPI(ierr);
 
     if (to->sharedspace) {
       /* Pack the send data into my shared memory buffer  --- this is the normal forward scatter */
@@ -77,7 +77,7 @@ PetscErrorCode PETSCMAP1(VecScatterBegin)(VecScatter ctx,Vec xin,Vec yin,InsertM
     /* this version packs and sends one at a time */
     for (i=0; i<nsends; i++) {
       PETSCMAP1(Pack)(sstarts[i+1]-sstarts[i],indices + sstarts[i],xv,svalues + bs*sstarts[i],bs);
-      ierr = MPI_Start_isend((sstarts[i+1]-sstarts[i])*bs,MPIU_SCALAR,swaits+i);CHKERRQ(ierr);
+      ierr = MPI_Start_isend((sstarts[i+1]-sstarts[i])*bs,MPIU_SCALAR,swaits+i);CHKERRMPI(ierr);
     }
   }
 
@@ -143,12 +143,12 @@ PetscErrorCode PETSCMAP1(VecScatterEnd)(VecScatter ctx,Vec xin,Vec yin,InsertMod
   rstarts = from->starts;
 
 
-  ierr = MPI_Barrier(PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+  ierr = MPI_Barrier(PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
 
   /* unpack one at a time */
   count = nrecvs;
   while (count) {
-    ierr = MPI_Waitany(nrecvs,rwaits,&imdex,&xrstatus);CHKERRQ(ierr);
+    ierr = MPI_Waitany(nrecvs,rwaits,&imdex,&xrstatus);CHKERRMPI(ierr);
     /* unpack receives into our local space */
     ierr = PETSCMAP1(UnPack)(rstarts[imdex+1] - rstarts[imdex],rvalues + bs*rstarts[imdex],indices + rstarts[imdex],yv,addv,bs);CHKERRQ(ierr);
     count--;
@@ -165,10 +165,10 @@ PetscErrorCode PETSCMAP1(VecScatterEnd)(VecScatter ctx,Vec xin,Vec yin,InsertMod
       }
     }
   }
-  ierr = MPI_Barrier(PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+  ierr = MPI_Barrier(PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
 
   /* wait on sends */
-  if (nsends) {ierr = MPI_Waitall(nsends,swaits,sstatus);CHKERRQ(ierr);}
+  if (nsends) {ierr = MPI_Waitall(nsends,swaits,sstatus);CHKERRMPI(ierr);}
   ierr = VecRestoreArray(yin,&yv);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -210,12 +210,12 @@ PetscErrorCode PETSCMAP1(VecScatterBeginMPI3Node)(VecScatter ctx,Vec xin,Vec yin
 
   if (!(mode & SCATTER_LOCAL)) {
     /* post receives since they were not previously posted    */
-    ierr = MPI_Startall_irecv(from->starts[nrecvs]*bs,MPIU_SCALAR,nrecvs,rwaits);CHKERRQ(ierr);
+    ierr = MPI_Startall_irecv(from->starts[nrecvs]*bs,MPIU_SCALAR,nrecvs,rwaits);CHKERRMPI(ierr);
 
     /* this version packs and sends one at a time */
     for (i=0; i<nsends; i++) {
       PETSCMAP1(Pack)(sstarts[i+1]-sstarts[i],indices + sstarts[i],xv,svalues + bs*sstarts[i],bs);
-      ierr = MPI_Start_isend((sstarts[i+1]-sstarts[i])*bs,MPIU_SCALAR,swaits+i);CHKERRQ(ierr);
+      ierr = MPI_Start_isend((sstarts[i+1]-sstarts[i])*bs,MPIU_SCALAR,swaits+i);CHKERRMPI(ierr);
     }
   }
 
@@ -295,7 +295,7 @@ PetscErrorCode PETSCMAP1(VecScatterEndMPI3Node)(VecScatter ctx,Vec xin,Vec yin,I
   /* unpack one at a time */
   count = nrecvs;
   while (count) {
-    ierr = MPI_Waitany(nrecvs,rwaits,&imdex,&xrstatus);CHKERRQ(ierr);
+    ierr = MPI_Waitany(nrecvs,rwaits,&imdex,&xrstatus);CHKERRMPI(ierr);
     /* unpack receives into our local space */
     ierr = PETSCMAP1(UnPack)(rstarts[imdex+1] - rstarts[imdex],rvalues + bs*rstarts[imdex],indices + rstarts[imdex],yv,addv,bs);CHKERRQ(ierr);
     count--;
@@ -303,12 +303,12 @@ PetscErrorCode PETSCMAP1(VecScatterEndMPI3Node)(VecScatter ctx,Vec xin,Vec yin,I
 
   /* handle processes that share the same shared memory communicator */
 #if defined(PETSC_MEMSHARE_SAFE)
-  ierr = MPI_Barrier(mscomm);CHKERRQ(ierr);
+  ierr = MPI_Barrier(mscomm);CHKERRMPI(ierr);
 #endif
 
   /* check if xin is sequential */
   ierr = PetscObjectGetComm((PetscObject)xin,&veccomm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(veccomm,&xsize);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(veccomm,&xsize);CHKERRMPI(ierr);
 
   if (xsize == 1 || from->sharedspace) { /* 'from->sharedspace' indicates this core's shared memory will be written */
     /* StoP: read sequential local xvalues, then write to shared yvalues */
@@ -331,7 +331,7 @@ PetscErrorCode PETSCMAP1(VecScatterEndMPI3Node)(VecScatter ctx,Vec xin,Vec yin,I
           if (sharedspace[-1] != yv[-1]) {
             if (PetscRealPart(sharedspace[-1] - yv[-1]) > 0.0) {
               PetscMPIInt msrank;
-              ierr = MPI_Comm_rank(mscomm,&msrank);CHKERRQ(ierr);
+              ierr = MPI_Comm_rank(mscomm,&msrank);CHKERRMPI(ierr);
               SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"[%d] statecnt %g > [%d] my_statecnt %g",i,PetscRealPart(sharedspace[-1]),msrank,PetscRealPart(yv[-1]));
             }
             /* i-the core has not reached the current object statecnt yet, wait ... */
@@ -374,7 +374,7 @@ PetscErrorCode PETSCMAP1(VecScatterEndMPI3Node)(VecScatter ctx,Vec xin,Vec yin,I
           if (sharedspace[-1] != xv[-1]) {
             if (PetscRealPart(sharedspace[-1] - xv[-1]) > 0.0) {
               PetscMPIInt msrank;
-              ierr = MPI_Comm_rank(mscomm,&msrank);CHKERRQ(ierr);
+              ierr = MPI_Comm_rank(mscomm,&msrank);CHKERRMPI(ierr);
               SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"[%d] statecnt %g > [%d] my_statecnt %g",i,PetscRealPart(sharedspace[-1]),msrank,PetscRealPart(xv[-1]));
             }
             /* i-the core has not reached the current object state cnt yet, wait ... */
@@ -399,10 +399,10 @@ PetscErrorCode PETSCMAP1(VecScatterEndMPI3Node)(VecScatter ctx,Vec xin,Vec yin,I
     ierr = VecRestoreArrayRead(xin,&xv);CHKERRQ(ierr);
   }
   /* output y is parallel, ensure it is done -- would lose performance */
-  ierr = MPI_Barrier(mscomm);CHKERRQ(ierr);
+  ierr = MPI_Barrier(mscomm);CHKERRMPI(ierr);
 
   /* wait on sends */
-  if (nsends) {ierr = MPI_Waitall(nsends,swaits,sstatus);CHKERRQ(ierr);}
+  if (nsends) {ierr = MPI_Waitall(nsends,swaits,sstatus);CHKERRMPI(ierr);}
   ierr = VecRestoreArray(yin,&yv);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
