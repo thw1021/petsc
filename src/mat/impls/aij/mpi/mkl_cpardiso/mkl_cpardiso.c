@@ -346,7 +346,7 @@ PetscErrorCode MatDestroy_MKL_CPARDISO(Mat A)
   if (mat_mkl_cpardiso->ConvertToTriples != MatCopy_seqaij_seqaij_MKL_CPARDISO) {
     ierr = PetscFree3(mat_mkl_cpardiso->ia,mat_mkl_cpardiso->ja,mat_mkl_cpardiso->a);CHKERRQ(ierr);
   }
-  ierr = MPI_Comm_free(&(mat_mkl_cpardiso->comm_mkl_cpardiso));CHKERRQ(ierr);
+  ierr = MPI_Comm_free(&(mat_mkl_cpardiso->comm_mkl_cpardiso));CHKERRMPI(ierr);
   ierr = PetscFree(A->data);CHKERRQ(ierr);
 
   /* clear composed functions */
@@ -597,8 +597,8 @@ PetscErrorCode PetscInitialize_MKL_CPARDISO(Mat A, Mat_MKL_CPARDISO *mat_mkl_cpa
 
   PetscFunctionBegin;
 
-  ierr = MPI_Comm_dup(PetscObjectComm((PetscObject)A),&(mat_mkl_cpardiso->comm_mkl_cpardiso));CHKERRQ(ierr);
-  ierr = MPI_Comm_size(mat_mkl_cpardiso->comm_mkl_cpardiso, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_dup(PetscObjectComm((PetscObject)A),&(mat_mkl_cpardiso->comm_mkl_cpardiso));CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(mat_mkl_cpardiso->comm_mkl_cpardiso, &size);CHKERRMPI(ierr);
 
   mat_mkl_cpardiso->CleanUp = PETSC_FALSE;
   mat_mkl_cpardiso->maxfct = 1;
