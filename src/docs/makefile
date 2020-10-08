@@ -8,7 +8,7 @@ TAODOCS  =  \
 	   tao_tex/tao.bib
 
 DOCS     = manualpages-sec/header_* \
-           tex/petsc.bib website/index.html \
+           tex/petsc.bib tex/petscapp.bib tex/petscconsult.bib website/index.html \
            website/download/index.html \
            website/download/petsc-patches.html website/publications/index.html \
            website/features/index.html website/features/details.html website/features/diagram.html \
