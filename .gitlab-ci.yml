@@ -407,8 +407,7 @@ linux-sycl-double:
     - os:linux, name:pj01
   variables:
     TEST_ARCH: arch-ci-linux-sycl-double
-    INIT_SCRIPT: /home/glci/bin/ci-inteloneapi.sh
-    DISABLE_TESTS: 1
+    INIT_SCRIPT: /home/glci/bin/ci-inteloneapi-noimpi.sh
 
 linux-c-exodus-dbg:
   extends:
