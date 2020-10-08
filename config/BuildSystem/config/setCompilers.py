@@ -861,6 +861,8 @@ class Configure(config.base.Configure):
     elif 'with-sycl-dir' in self.argDB:
       syclPath = os.path.join(self.argDB['with-sycl-dir'], 'bin','dpcpp')
       yield syclPath
+    else:
+      yield 'dpcpp'
     return
 
   def checkSYCLCompiler(self):
