@@ -32,7 +32,7 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_Tetgen(DM boundary, PetscBool interpo
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)boundary,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = DMPlexGetDepthStratum(boundary, 0, &vStart, &vEnd);CHKERRQ(ierr);
   ierr = DMGetLabel(boundary, labelName, &label);CHKERRQ(ierr);
 
@@ -197,7 +197,7 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_Tetgen(DM dm, double *maxVolumes, DM *d
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = DMPlexGetDepth(dm, &depth);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&depth, &depthGlobal, 1, MPIU_INT, MPI_MAX, comm);CHKERRQ(ierr);
   ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);

@@ -2965,7 +2965,7 @@ PetscErrorCode DMPlexCreateProcessSF(DM dm, PetscSF sfPoint, IS *processRanks, P
   PetscValidHeaderSpecific(sfPoint, PETSCSF_CLASSID, 2);
   if (processRanks) {PetscValidPointer(processRanks, 3);}
   if (sfProcess)    {PetscValidPointer(sfProcess, 4);}
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject) dm), &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject) dm), &size);CHKERRMPI(ierr);
   ierr = PetscSFGetGraph(sfPoint, &numRoots, &numLeaves, &localPoints, &remotePoints);CHKERRQ(ierr);
   ierr = PetscMalloc1(numLeaves, &ranks);CHKERRQ(ierr);
   for (l = 0; l < numLeaves; ++l) {
@@ -3031,13 +3031,13 @@ static PetscErrorCode DMPlexCellRefinerCreateSF(DMPlexCellRefiner cr, DM rdm)
   ierr = DMPlexCreateProcessSF(dm, sf, &processRanks, &sfProcess);CHKERRQ(ierr);
   ierr = ISGetLocalSize(processRanks, &numNeighbors);CHKERRQ(ierr);
   ierr = PetscMalloc2(ctSize*numNeighbors, &ctStartRem, ctSize*numNeighbors, &ctStartNewRem);CHKERRQ(ierr);
-  ierr = MPI_Type_contiguous(ctSize, MPIU_INT, &ctType);CHKERRQ(ierr);
-  ierr = MPI_Type_commit(&ctType);CHKERRQ(ierr);
+  ierr = MPI_Type_contiguous(ctSize, MPIU_INT, &ctType);CHKERRMPI(ierr);
+  ierr = MPI_Type_commit(&ctType);CHKERRMPI(ierr);
   ierr = PetscSFBcastBegin(sfProcess, ctType, cr->ctStart, ctStartRem);CHKERRQ(ierr);
   ierr = PetscSFBcastEnd(sfProcess, ctType, cr->ctStart, ctStartRem);CHKERRQ(ierr);
   ierr = PetscSFBcastBegin(sfProcess, ctType, cr->ctStartNew, ctStartNewRem);CHKERRQ(ierr);
   ierr = PetscSFBcastEnd(sfProcess, ctType, cr->ctStartNew, ctStartNewRem);CHKERRQ(ierr);
-  ierr = MPI_Type_free(&ctType);CHKERRQ(ierr);
+  ierr = MPI_Type_free(&ctType);CHKERRMPI(ierr);
   ierr = PetscSFDestroy(&sfProcess);CHKERRQ(ierr);
   ierr = PetscMalloc1(numNeighbors, &crRem);CHKERRQ(ierr);
   for (n = 0; n < numNeighbors; ++n) {

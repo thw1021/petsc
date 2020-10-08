@@ -47,7 +47,7 @@ static PetscErrorCode VecScatterBegin_MPI_ToAll(VecScatter ctx,Vec x,Vec y,Inser
       MPI_Comm    comm;
       PetscMPIInt rank;
       ierr = PetscObjectGetComm((PetscObject)y,&comm);CHKERRQ(ierr);
-      ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+      ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
       if (scat->work1) xvt = scat->work1;
       else {
         ierr        = PetscMalloc1(xx_n,&xvt);CHKERRQ(ierr);
@@ -59,8 +59,8 @@ static PetscErrorCode VecScatterBegin_MPI_ToAll(VecScatter ctx,Vec x,Vec y,Inser
           ierr        = PetscMalloc1(xx_n,&xvt2);CHKERRQ(ierr);
           scat->work2 = xvt2;
         }
-        ierr = MPI_Gatherv(yv,yy_n,MPIU_SCALAR,xvt2,scat->count,disply,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
-        ierr = MPI_Reduce(xv,xvt,xx_n,MPIU_SCALAR,MPIU_SUM,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+        ierr = MPI_Gatherv(yv,yy_n,MPIU_SCALAR,xvt2,scat->count,disply,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
+        ierr = MPI_Reduce(xv,xvt,xx_n,MPIU_SCALAR,MPIU_SUM,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
         if (addv == ADD_VALUES) {
           for (i=0; i<xx_n; i++) xvt[i] += xvt2[i];
 #if !defined(PETSC_USE_COMPLEX)
@@ -68,11 +68,11 @@ static PetscErrorCode VecScatterBegin_MPI_ToAll(VecScatter ctx,Vec x,Vec y,Inser
           for (i=0; i<xx_n; i++) xvt[i] = PetscMax(xvt[i],xvt2[i]);
 #endif
         } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Wrong insert option");
-        ierr = MPI_Scatterv(xvt,scat->count,disply,MPIU_SCALAR,yv,yy_n,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+        ierr = MPI_Scatterv(xvt,scat->count,disply,MPIU_SCALAR,yv,yy_n,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
       } else {
-        ierr = MPI_Gatherv(yv,yy_n,MPIU_SCALAR,NULL,NULL,NULL,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
-        ierr = MPI_Reduce(xv,xvt,xx_n,MPIU_SCALAR,MPIU_SUM,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
-        ierr = MPI_Scatterv(NULL,scat->count,disply,MPIU_SCALAR,yv,yy_n,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+        ierr = MPI_Gatherv(yv,yy_n,MPIU_SCALAR,NULL,NULL,NULL,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
+        ierr = MPI_Reduce(xv,xvt,xx_n,MPIU_SCALAR,MPIU_SUM,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
+        ierr = MPI_Scatterv(NULL,scat->count,disply,MPIU_SCALAR,yv,yy_n,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
       }
     }
   } else {
@@ -82,14 +82,14 @@ static PetscErrorCode VecScatterBegin_MPI_ToAll(VecScatter ctx,Vec x,Vec y,Inser
     PetscMPIInt          *displx = scat->displx;
 
     if (addv == INSERT_VALUES) {
-      ierr = MPI_Allgatherv(xv,xx_n,MPIU_SCALAR,yv,scat->count,displx,MPIU_SCALAR,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+      ierr = MPI_Allgatherv(xv,xx_n,MPIU_SCALAR,yv,scat->count,displx,MPIU_SCALAR,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
     } else {
       if (scat->work1) yvt = scat->work1;
       else {
         ierr        = PetscMalloc1(yy_n,&yvt);CHKERRQ(ierr);
         scat->work1 = yvt;
       }
-      ierr = MPI_Allgatherv(xv,xx_n,MPIU_SCALAR,yvt,scat->count,displx,MPIU_SCALAR,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+      ierr = MPI_Allgatherv(xv,xx_n,MPIU_SCALAR,yvt,scat->count,displx,MPIU_SCALAR,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
       if (addv == ADD_VALUES) {
         for (i=0; i<yy_n; i++) yv[i] += yvt[i];
 #if !defined(PETSC_USE_COMPLEX)
@@ -136,7 +136,7 @@ static PetscErrorCode VecScatterBegin_MPI_ToOne(VecScatter ctx,Vec x,Vec y,Inser
   ierr = VecGetArray(y,&yv);CHKERRQ(ierr);
 
   ierr = PetscObjectGetComm((PetscObject)x,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   /* --------  Reverse scatter; spread from processor 0 to other processors */
   if (mode & SCATTER_REVERSE) {
@@ -146,16 +146,16 @@ static PetscErrorCode VecScatterBegin_MPI_ToOne(VecScatter ctx,Vec x,Vec y,Inser
     PetscMPIInt          *disply = scat->displx;
 
     if (addv == INSERT_VALUES) {
-      ierr = MPI_Scatterv((PetscScalar*)xv,scat->count,disply,MPIU_SCALAR,yv,yy_n,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+      ierr = MPI_Scatterv((PetscScalar*)xv,scat->count,disply,MPIU_SCALAR,yv,yy_n,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
     } else {
       if (scat->work2) yvt = scat->work2;
       else {
         PetscInt xx_nt;
-        ierr = MPI_Allreduce(&xx_n,&xx_nt,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)y));CHKERRQ(ierr);
+        ierr = MPI_Allreduce(&xx_n,&xx_nt,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)y));CHKERRMPI(ierr);
         ierr        = PetscMalloc1(xx_nt,&yvt);CHKERRQ(ierr);
         scat->work2 = yvt;
       }
-      ierr = MPI_Scatterv((PetscScalar*)xv,scat->count,disply,MPIU_SCALAR,yvt,yy_n,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+      ierr = MPI_Scatterv((PetscScalar*)xv,scat->count,disply,MPIU_SCALAR,yvt,yy_n,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
       if (addv == ADD_VALUES) {
         for (i=0; i<yy_n; i++) yv[i] += yvt[i];
 #if !defined(PETSC_USE_COMPLEX)
@@ -172,7 +172,7 @@ static PetscErrorCode VecScatterBegin_MPI_ToOne(VecScatter ctx,Vec x,Vec y,Inser
     PetscMPIInt          *displx = scat->displx;
 
     if (addv == INSERT_VALUES) {
-      ierr = MPI_Gatherv((PetscScalar*)xv,xx_n,MPIU_SCALAR,yv,scat->count,displx,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+      ierr = MPI_Gatherv((PetscScalar*)xv,xx_n,MPIU_SCALAR,yv,scat->count,displx,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
     } else {
       if (!rank) {
         if (scat->work1) yvt = scat->work1;
@@ -181,7 +181,7 @@ static PetscErrorCode VecScatterBegin_MPI_ToOne(VecScatter ctx,Vec x,Vec y,Inser
           scat->work1 = yvt;
         }
       }
-      ierr = MPI_Gatherv((PetscScalar*)xv,xx_n,MPIU_SCALAR,yvt,scat->count,displx,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRQ(ierr);
+      ierr = MPI_Gatherv((PetscScalar*)xv,xx_n,MPIU_SCALAR,yvt,scat->count,displx,MPIU_SCALAR,0,PetscObjectComm((PetscObject)ctx));CHKERRMPI(ierr);
       if (!rank) {
         if (addv == ADD_VALUES) {
           for (i=0; i<yy_n; i++) yv[i] += yvt[i];
@@ -408,7 +408,7 @@ static PetscErrorCode VecScatterCreate_PtoS(VecScatter ctx,PetscErrorCode (*vecs
     if (min >= start && max < end) islocal = PETSC_TRUE;
     else islocal = PETSC_FALSE;
     /* cannot use MPIU_Allreduce() since this call matches with the MPI_Allreduce() in the else statement below */
-    ierr = MPI_Allreduce(&islocal,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&islocal,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
     if (cando) {
       ierr               = PetscMalloc2(1,&to12,1,&from12);CHKERRQ(ierr);
       to12->n            = nx;
@@ -430,7 +430,7 @@ static PetscErrorCode VecScatterCreate_PtoS(VecScatter ctx,PetscErrorCode (*vecs
       goto functionend;
     }
   } else {
-    ierr = MPI_Allreduce(&islocal,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&islocal,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
   }
 
   /* test for special case of all processors getting entire vector */
@@ -452,7 +452,7 @@ static PetscErrorCode VecScatterCreate_PtoS(VecScatter ctx,PetscErrorCode (*vecs
     else if (from_first == 0 && from_step == 1 && from_first == to_first && from_step == to_step) totalv = PETSC_TRUE;
     else totalv = PETSC_FALSE;
     /* cannot use MPIU_Allreduce() since this call matches with the MPI_Allreduce() in the else statement below */
-    ierr = MPI_Allreduce(&totalv,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&totalv,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
 
 #if defined(PETSC_USE_64BIT_INDICES)
     if (cando && (yin->map->N < PETSC_MPI_INT_MAX)) {
@@ -482,7 +482,7 @@ static PetscErrorCode VecScatterCreate_PtoS(VecScatter ctx,PetscErrorCode (*vecs
       goto functionend;
     }
   } else {
-    ierr = MPI_Allreduce(&totalv,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&totalv,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
   }
 
   /* test for special case of processor 0 getting entire vector */
@@ -495,7 +495,7 @@ static PetscErrorCode VecScatterCreate_PtoS(VecScatter ctx,PetscErrorCode (*vecs
     VecScatter_MPI_ToAll *sto = NULL;
 
     ierr = PetscObjectGetComm((PetscObject)xin,&comm);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
     ierr = ISGetLocalSize(ix,&nx);CHKERRQ(ierr);
     ierr = ISStrideGetInfo(ix,&from_first,&from_step);CHKERRQ(ierr);
     ierr = ISGetLocalSize(iy,&ny);CHKERRQ(ierr);
@@ -512,7 +512,7 @@ static PetscErrorCode VecScatterCreate_PtoS(VecScatter ctx,PetscErrorCode (*vecs
       else     totalv = PETSC_FALSE;
     }
     /* cannot use MPIU_Allreduce() since this call matches with the MPI_Allreduce() in the else statement below */
-    ierr = MPI_Allreduce(&totalv,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&totalv,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
 
 #if defined(PETSC_USE_64BIT_INDICES)
     if (cando && (yin->map->N < PETSC_MPI_INT_MAX)) {
@@ -542,7 +542,7 @@ static PetscErrorCode VecScatterCreate_PtoS(VecScatter ctx,PetscErrorCode (*vecs
       goto functionend;
     }
   } else {
-    ierr = MPI_Allreduce(&totalv,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&totalv,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
   }
 
   /* Case 2-d */
@@ -651,7 +651,7 @@ static PetscErrorCode VecScatterCreate_PtoS(VecScatter ctx,PetscErrorCode (*vecs
     if (min >= start && max < end) islocal = PETSC_TRUE;
     else islocal = PETSC_FALSE;
     /* cannot use MPIU_Allreduce() since this call matches with the MPI_Allreduce() in the else statement below */
-    ierr = MPI_Allreduce(&islocal,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)yin));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&islocal,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)yin));CHKERRMPI(ierr);
     if (cando) {
       ierr              = PetscMalloc2(1,&to,1,&from);CHKERRQ(ierr);
       to->n             = nx;
@@ -673,7 +673,7 @@ static PetscErrorCode VecScatterCreate_PtoS(VecScatter ctx,PetscErrorCode (*vecs
       goto functionend;
     }
   } else {
-    ierr = MPI_Allreduce(&islocal,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)yin));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&islocal,&cando,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)yin));CHKERRMPI(ierr);
   }
   /* special case block to stride */
   if (ix_type == IS_BLOCK_ID && iy_type == IS_STRIDE_ID) {
@@ -771,14 +771,14 @@ static PetscErrorCode VecScatterGetInputVecType_private(VecScatter ctx,PetscInt 
       numbering
   */
   ierr = PetscObjectGetComm((PetscObject)xin,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   if (size > 1) {
     xin_type = VEC_MPI_ID;
   } else xin_type = VEC_SEQ_ID;
   *xin_type1 = xin_type;
 
   ierr = PetscObjectGetComm((PetscObject)yin,&ycomm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(ycomm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(ycomm,&size);CHKERRMPI(ierr);
   if (size > 1) {
     yin_type = VEC_MPI_ID;
   } else yin_type = VEC_SEQ_ID;
