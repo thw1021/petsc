@@ -180,7 +180,7 @@ PetscErrorCode IMSetFromOptions(IM m)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMSetIndices(IM m, PetscInt n, const PetscInt *idx[], PetscCopyMode mode)
+PetscErrorCode IMSetIndices(IM m, PetscInt n, const PetscInt idx[], PetscCopyMode mode)
 {
   PetscErrorCode ierr;
 

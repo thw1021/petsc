@@ -5,8 +5,7 @@
 #include <petscim.h>
 
 typedef struct {
-  PetscInt  *globalRanges;
-  PetscInt  rstart, rend;
+  PetscInt  bs, stride;
 } IM_Basic;
 
 PETSC_INTERN PetscErrorCode IMCreate_Basic(IM);
@@ -15,9 +14,11 @@ PETSC_INTERN PetscErrorCode IMDestroy_Basic(IM);
 PETSC_INTERN PetscErrorCode IMGetIndices_Basic(IM,const PetscInt*[]);
 PETSC_INTERN PetscErrorCode IMPermute_Basic(IM,IM);
 
-PETSC_STATIC_INLINE PetscErrorCode IMInitializeBasic_Private(PETSC_UNUSED IM_Basic *mb)
+PETSC_STATIC_INLINE PetscErrorCode IMInitializeBasic_Private(IM_Basic *mb)
 {
   PetscFunctionBegin;
+  mb->bs     = PETSC_DECIDE;
+  mb->stride = PETSC_DECIDE;
   PetscFunctionReturn(0);
 }
 
@@ -26,7 +27,7 @@ PETSC_STATIC_INLINE PetscErrorCode IMDestroyBasic_Private(IM_Basic *mb)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree(mb->globalRanges);CHKERRQ(ierr);
+  ierr = IMInitializeBasic_Private(mb);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 #endif /* PETSCIMBASICIMPL_H */

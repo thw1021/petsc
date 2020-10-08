@@ -40,9 +40,23 @@ PetscErrorCode IMGetIndices_Basic(IM m, const PetscInt *idx[])
   PetscFunctionReturn(0);
 }
 
-/* Must take IM_BASIC as input for both, and m must be IM_ARRAY since permuting interval makes no sense here */
+/* Must take IMBASIC as input for both, and m must be IM_ARRAY since permuting interval makes no sense here */
 PetscErrorCode IMPermute_Basic(IM m, IM pm)
 {
   PetscFunctionBegin;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode IMBasicCreateFromIndices(MPI_Comm comm, PetscInt n, const PetscInt idx[], PetscCopyMode mode, IM *mb)
+{
+  IM             mt;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = IMCreate(comm, &mt);CHKERRQ(ierr);
+  ierr = IMSetType(mt, IMBASIC);CHKERRQ(ierr);
+  ierr = IMSetIndices(mt, n, idx, mode);CHKERRQ(ierr);
+  ierr = IMSetUp(mt);CHKERRQ(ierr);
+  *mb = mt;
   PetscFunctionReturn(0);
 }

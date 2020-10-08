@@ -72,7 +72,7 @@ PetscErrorCode IMLayoutCreate(MPI_Comm comm, IM *m)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode IMLayoutSetFromMapping(IM m, PetscInt n, const PetscInt *glob[], PetscCopyMode mode)
+PetscErrorCode IMLayoutSetFromMapping(IM m, PetscInt n, const PetscInt glob[], PetscCopyMode mode)
 {
   PetscErrorCode ierr;
 
@@ -96,7 +96,7 @@ PetscErrorCode IMLayoutSetFromSizes(IM m, PetscInt n, PetscInt N)
   ierr = MPI_Exscan(&n, &sum, 1, MPIU_INT, MPI_SUM, comm);CHKERRQ(ierr);
   ierr = PetscMalloc1(n, &arr);CHKERRQ(ierr);
   for (i = 0; i < n; ++i) arr[i] = sum+i;
-  ierr = IMSetIndices(m, n, (const PetscInt **) &arr, PETSC_OWN_POINTER);CHKERRQ(ierr);
+  ierr = IMSetIndices(m, n, arr, PETSC_OWN_POINTER);CHKERRQ(ierr);
   m->nIdx[IM_GLOBAL] = N;
   m->sorted[IM_LOCAL] = IM_TRUE;
   m->sorted[IM_GLOBAL] = IM_TRUE;
