@@ -668,7 +668,7 @@ PETSC_STATIC_INLINE int PetscMPIParallelComm(MPI_Comm comm)
 #define PetscLogEventExcludeClass(a)       0
 #define PetscLogEventActivate(a)           0
 #define PetscLogEventDeactivate(a)         0
-#define PetscLogEventDeactivatePush(a)     0
+#define PetscLogEventDeactivatePop(a)     0
 #define PetscLogEventActivateClass(a)      0
 #define PetscLogEventDeactivateClass(a)    0
 #define PetscLogEventSetActiveAll(a,b)     0
