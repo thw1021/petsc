@@ -11,12 +11,10 @@ Integration branches
 ----------
 
 The ``master`` branch (soon to be renamed) contains all features and bug fixes that are believed to be
-stable and will be in the next major release. Users developing software based
-on recently-added features in PETSc should follow ``master``:
+stable and will be in the next feature release (e.g. version 3.14.0). Users developing software based
+on recently-added features in PETSc should follow ``master``.
 
 New feature branches should start from ``master``.
-
-Note: petsc-3.15.0 is the next major release after petsc-3.14.x
 
 .. _sec_release_branch:
 
@@ -31,9 +29,7 @@ Bug fixes for the release should be started here:
    $ git checkout -b yourname/fix-component-name release
 
 As with new features, it will be tested and later merged to
-``release`` and ``master``. Patch releases (e.g. 3.15.1) are tagged on ``release``.
-
-Note: petsc-3.14.1 is the next maintenance release after petsc-3.14.0
+``release`` and ``master``. Maintenance releases (e.g. version 3.14.1) are tagged on ``release``.
 
 
 Contributing workflows
