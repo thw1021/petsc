@@ -7247,6 +7247,54 @@ PetscErrorCode MatSetBlockSize(Mat mat,PetscInt bs)
 }
 
 /*@
+   MatComputeVariableBlockSizes - Given a matrix whose only nonzeros are in blocks along the diagonal this computes and stores
+         the sizes of these blocks.
+
+   Logically Collective on Mat
+
+   Input Parameter:
+.  mat - the matrix
+
+   Notes:
+     There can be zeros within the blocks
+
+   Level: intermediate
+
+.seealso: MatCreateSeqBAIJ(), MatCreateBAIJ(), MatGetBlockSize(), MatSetBlockSizes(), MatGetBlockSizes(), MatGetVariableBlockSizes(), MatSetVariableBlockSizes()
+@*/
+PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
+{
+  PetscErrorCode  ierr;
+  PetscInt        bs,nblocks = 0, *bsizes,i = 0,j,n;
+  const PetscInt *ia,*ja;
+  PetscBool       done;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
+  ierr = MatGetRowIJ(mat,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
+  if (!done) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Unable to get IJ structure from matrix");
+  ierr = PetscMalloc1(n,&bsizes);CHKERRQ(ierr);
+  while (i<n) {
+    if (ja[ia[i+1]-1] < i) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Matrix does not have expected block diagonal structure; entry to left of diagonal when should be on diagonal %D",ja[ia[i]]);
+    bs = ja[ia[i+1]-1] - i + 1; /* block size of next block */
+    tryagain:
+    for (j=i+1; j<bs; j++) { /* confirm that next block is of this size */
+      if (ja[ia[j+1]-1] < i) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Matrix has nonzero below expected block diagonal structure");
+      if (ja[ia[j+1]-1] > i + bs) {
+        bs = ja[ia[j+1]-1] - i + 1;
+        goto tryagain;
+      }
+    }
+    bsizes[nblocks++] = bs;
+    i = i + bs;
+  }
+  ierr = MatSetVariableBlockSizes(mat,nblocks,bsizes);CHKERRQ(ierr);
+  ierr = PetscFree(bsizes);CHKERRQ(ierr);
+  ierr = MatRestoreRowIJ(mat,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
    MatSetVariableBlockSizes - Sets a diagonal blocks of the matrix that need not be of the same size
 
    Logically Collective on Mat
@@ -7261,7 +7309,7 @@ PetscErrorCode MatSetBlockSize(Mat mat,PetscInt bs)
 
    Level: intermediate
 
-.seealso: MatCreateSeqBAIJ(), MatCreateBAIJ(), MatGetBlockSize(), MatSetBlockSizes(), MatGetBlockSizes(), MatGetVariableBlockSizes()
+.seealso: MatCreateSeqBAIJ(), MatCreateBAIJ(), MatGetBlockSize(), MatSetBlockSizes(), MatGetBlockSizes(), MatGetVariableBlockSizes(), MatComputeVariableBlockSizes()
 @*/
 PetscErrorCode MatSetVariableBlockSizes(Mat mat,PetscInt nblocks,PetscInt *bsizes)
 {
@@ -7297,7 +7345,7 @@ PetscErrorCode MatSetVariableBlockSizes(Mat mat,PetscInt nblocks,PetscInt *bsize
 
    Level: intermediate
 
-.seealso: MatCreateSeqBAIJ(), MatCreateBAIJ(), MatGetBlockSize(), MatSetBlockSizes(), MatGetBlockSizes(), MatSetVariableBlockSizes()
+.seealso: MatCreateSeqBAIJ(), MatCreateBAIJ(), MatGetBlockSize(), MatSetBlockSizes(), MatGetBlockSizes(), MatSetVariableBlockSizes(), MatComputeVariableBlockSizes()
 @*/
 PetscErrorCode MatGetVariableBlockSizes(Mat mat,PetscInt *nblocks,const PetscInt **bsizes)
 {
@@ -9931,7 +9979,7 @@ PetscErrorCode MatFindOffBlockDiagonalEntries(Mat mat,IS *is)
 
   Level: advanced
 
-.seealso: MatInvertVariableBlockDiagonalMat()
+.seealso: MatInvertVariableBlockDiagonalMat(), MatInvertBlockDiagonalMat()
 @*/
 PetscErrorCode MatInvertBlockDiagonal(Mat mat,const PetscScalar **values)
 {
@@ -9964,7 +10012,7 @@ PetscErrorCode MatInvertBlockDiagonal(Mat mat,const PetscScalar **values)
 
   Level: advanced
 
-.seealso: MatInvertBlockDiagonal()
+.seealso: MatInvertBlockDiagonal(), MatSetVariableBlockSizes(), MatInvertVariableBlockDiagonalMat()
 @*/
 PetscErrorCode MatInvertVariableBlockDiagonal(Mat mat,PetscInt nblocks,const PetscInt *bsizes,PetscScalar *values)
 {
@@ -9976,6 +10024,71 @@ PetscErrorCode MatInvertVariableBlockDiagonal(Mat mat,PetscInt nblocks,const Pet
   if (mat->factortype) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   if (!mat->ops->invertvariableblockdiagonal) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not supported for type",((PetscObject)mat)->type_name);
   ierr = (*mat->ops->invertvariableblockdiagonal)(mat,nblocks,bsizes,values);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  MatInvertVariableBlockDiagonalMat - set matrix C to be the inverted block diagonal of matrix A
+
+  Collective on Mat
+
+  Input Parameters:
+. A - the matrix
+
+  Output Parameters:
+. C - matrix with inverted block diagonal of A.  This matrix should be created and may have its type set.
+
+  Notes: the blocksize of the matrix is used to determine the blocks on the diagonal of C
+
+  Level: advanced
+
+.seealso: MatInvertBlockDiagonal(), MatComputeBlockDiagonal()
+@*/
+PetscErrorCode MatInvertVariableBlockDiagonalMat(Mat A,Mat C)
+{
+  PetscErrorCode     ierr;
+  PetscScalar        *vals;
+  PetscInt          *dnnz;
+  PetscInt           m,rstart,*rows,bs,i,j,cnt = 0,maxbs = 0,row = 0,nvals = 0;
+  PetscInt           nblocks;
+  const PetscInt     *bsizes;
+
+  PetscFunctionBegin;
+  if (!A->bsizes) {
+    ierr = MatComputeVariableBlockSizes(A);CHKERRQ(ierr);
+  }
+  ierr = MatGetVariableBlockSizes(A,&nblocks,&bsizes);CHKERRQ(ierr);
+  for (i=0; i<nblocks;i++) nvals += bsizes[i]*bsizes[i];
+  ierr = PetscMalloc1(nvals,&vals);CHKERRQ(ierr);
+  ierr = MatInvertVariableBlockDiagonal(A,nblocks,bsizes,vals);CHKERRQ(ierr);
+  ierr = MatGetLocalSize(A,&m,NULL);CHKERRQ(ierr);
+  ierr = MatSetLayouts(C,A->rmap,A->cmap);CHKERRQ(ierr);
+  ierr = PetscMalloc1(m,&dnnz);CHKERRQ(ierr);
+  for (i=0; i<nblocks; i++) {
+    for (j=0; j<bsizes[i]; j++) {
+      dnnz[cnt] = bsizes[i];
+      cnt++;
+    }
+    maxbs = PetscMax(maxbs,bsizes[i]);
+  }
+  cnt = 0;
+  ierr = MatXAIJSetPreallocation(C,1,dnnz,NULL,NULL,NULL);CHKERRQ(ierr);
+  ierr = PetscFree(dnnz);CHKERRQ(ierr);
+  ierr = MatGetOwnershipRange(C,&rstart,NULL);CHKERRQ(ierr);
+  ierr = PetscMalloc1(maxbs,&rows);CHKERRQ(ierr);
+  for (i=0; i<nblocks; i++) {
+    bs = bsizes[i];
+    for (j=0; j<bs; j++) {
+      rows[j] = rstart + row + j;
+    }
+    ierr = MatSetValues(C,bs,rows,bs,rows,&vals[cnt],INSERT_VALUES);CHKERRQ(ierr);
+    row += bs;
+    cnt += bs*bs;
+  }
+  ierr = PetscFree(vals);CHKERRQ(ierr);
+  ierr = PetscFree(rows);CHKERRQ(ierr);
+  ierr = MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -10001,15 +10114,13 @@ PetscErrorCode MatInvertBlockDiagonalMat(Mat A,Mat C)
   PetscErrorCode     ierr;
   const PetscScalar *vals;
   PetscInt          *dnnz;
-  PetscInt           M,N,m,n,rstart,rend,bs,i,j;
+  PetscInt           m,rstart,rend,bs,i,j;
 
   PetscFunctionBegin;
   ierr = MatInvertBlockDiagonal(A,&vals);CHKERRQ(ierr);
   ierr = MatGetBlockSize(A,&bs);CHKERRQ(ierr);
-  ierr = MatGetSize(A,&M,&N);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(A,&m,&n);CHKERRQ(ierr);
-  ierr = MatSetSizes(C,m,n,M,N);CHKERRQ(ierr);
-  ierr = MatSetBlockSize(C,bs);CHKERRQ(ierr);
+  ierr = MatGetLocalSize(A,&m,NULL);CHKERRQ(ierr);
+  ierr = MatSetLayouts(C,A->rmap,A->cmap);CHKERRQ(ierr);
   ierr = PetscMalloc1(m/bs,&dnnz);CHKERRQ(ierr);
   for (j = 0; j < m/bs; j++) dnnz[j] = 1;
   ierr = MatXAIJSetPreallocation(C,bs,dnnz,NULL,NULL,NULL);CHKERRQ(ierr);
