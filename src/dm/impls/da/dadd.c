@@ -1,4 +1,5 @@
 #include <petsc/private/dmdaimpl.h>  /*I   "petscdmda.h"   I*/
+#include <petsc/private/viewerhdf5impl.h>
 
 /*@
   DMDACreatePatchIS - Creates an index set corresponding to a patch of the DA.
@@ -8,7 +9,8 @@
   Input Parameters:
 +  da - the DMDA
 .  lower - a matstencil with i, j and k corresponding to the lower corner of the patch
--  upper - a matstencil with i, j and k corresponding to the upper corner of the patch
+.  upper - a matstencil with i, j and k corresponding to the upper corner of the patch
+-  offproc - return off proc vals
 
   Output Parameters:
 .  is - the IS corresponding to the patch
@@ -17,18 +19,20 @@
 
 .seealso: DMDACreateDomainDecomposition(), DMDACreateDomainDecompositionScatters()
 @*/
-PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *is)
+PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *is, PetscBool offproc)
 {
   PetscInt       ms=0,ns=0,ps=0;
   PetscInt       mw=0,nw=0,pw=0;
   PetscInt       me=1,ne=1,pe=1;
+  PetscInt       mr=0,nr=0,pr=0;
   PetscInt       ii,jj,kk;
   PetscInt       si,sj,sk;
   PetscInt       i,j,k,l,idx=0;
   PetscInt       base;
   PetscInt       xm=1,ym=1,zm=1;
   PetscInt       ox,oy,oz;
-  PetscInt       M,N,P,dof;
+  PetscInt       m,n,p,M,N,P,dof;
+  const PetscInt *lx,*ly,*lz;
   PetscInt       nindices;
   PetscInt       *indices;
   DM_DA          *dd = (DM_DA*)da->data;
@@ -38,7 +42,9 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
 
   PetscFunctionBegin;
   M = dd->M; N = dd->N; P = dd->P;
+  m = dd->m;n = dd->n;p=dd->p;
   dof = dd->w;
+
   ierr = DMDAGetOffset(da,&ox,&oy,&oz,NULL,NULL,NULL);CHKERRQ(ierr);
   ierr = DMDAGetCorners(da, &ms, &ns, &ps, &mw, &nw, &pw);CHKERRQ(ierr);
 
@@ -66,82 +72,166 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
   } else {
     SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONG,"Lower and Upper stencils are identical! Please check inputs.");
   }
-
   ierr = PetscMalloc1(nindices*dof,&indices);CHKERRQ(ierr);
 
-  me = ms + mw;
-  if (N>1) ne = ns + nw;
-  if (P>1) pe = ps + pw;
-  /*IS shouldn't care about DM offsets*/
-  ms = ms - ox; me = me - ox;
-  ns = ns - oy; ne = ne - oy;
-  ps = ps - oz; pe = pe - oz;
-
-  if (!valid_k) {
-    k = 0;
-    upper->k=0;
-    lower->k=0;
+  if (offproc) {
+    ierr = DMDAGetOwnershipRanges(da,&lx,&ly,&lz);CHKERRQ(ierr);
+    /* start at index 0 on processor 0 */
+    mr = 0;
+    nr = 0;
+    pr = 0;
+    ms = 0;
+    ns = 0;
+    ps = 0;
+    if (lx) me = lx[0];
+    if (ly) ne = ly[0];
+    if (lz) pe = lz[0];
+    for (k=lower->k-oz;k<upper->k-oz;k++) {
+      for (j=lower->j-oy;j < upper->j-oy;j++) {
+        for (i=lower->i-ox;i < upper->i-ox;i++) {
+          /* "actual" indices rather than ones outside of the domain */
+          ii = i;
+          jj = j;
+          kk = k;
+          if (ii < 0) ii = M + ii;
+          if (jj < 0) jj = N + jj;
+          if (kk < 0) kk = P + kk;
+          if (ii > M-1) ii = ii - M;
+          if (jj > N-1) jj = jj - N;
+          if (kk > P-1) kk = kk - P;
+          /* gone out of processor range on x axis */
+          while (ii > me-1 || ii < ms) {
+            if (mr == m-1) {
+              ms = 0;
+              me = lx[0];
+              mr = 0;
+            } else {
+              mr++;
+              ms = me;
+              me += lx[mr];
+            }
+          }
+          /* gone out of processor range on y axis */
+          while (jj > ne-1 || jj < ns) {
+            if (nr == n-1) {
+              ns = 0;
+              ne = ly[0];
+              nr = 0;
+            } else {
+              nr++;
+              ns = ne;
+              ne += ly[nr];
+            }
+          }
+          /* gone out of processor range on z axis */
+          while (kk > pe-1 || kk < ps) {
+            if (pr == p-1) {
+              ps = 0;
+              pe = lz[0];
+              pr = 0;
+            } else {
+              pr++;
+              ps = pe;
+              pe += lz[pr];
+            }
+          }
+          /* compute the vector base on owning processor */
+          xm = me - ms;
+          ym = ne - ns;
+          zm = pe - ps;
+          base = ms*ym*zm + ns*M*zm + ps*M*N;
+          /* compute the local coordinates on owning processor */
+          si = ii - ms;
+          sj = jj - ns;
+          sk = kk - ps;
+          for (l=0;l<dof;l++) {
+            indices[idx] = l + dof*(base + si + xm*sj + xm*ym*sk);
+            idx++;
+          }
+        }
+      }
+    }
   }
-  if (!valid_j) {
-    j = 0;
-    upper->j=0;
-    lower->j=0;
-  }
 
-  /* compute the vector base on owning processor */
-  xm = me - ms;
-  ym = ne - ns;
-  zm = pe - ps;
-  base = ms*ym*zm + ns*M*zm + ps*M*N;
+  if (!offproc){
+    me = ms + mw;
+    if (N>1) ne = ns + nw;
+    if (P>1) pe = ps + pw;
+    /*IS shouldn't care about DM offsets*/
+    ms = ms - ox; me = me - ox;
+    ns = ns - oy; ne = ne - oy;
+    ps = ps - oz; pe = pe - oz;
 
-  /* do while loops to ensure the block gets entered once,
-     regardless of control condition being met, necessary for
-     cases when skip_i/j/k is true
-     */
-  if (skip_k) k = upper->k-oz; else k = lower->k-oz;
-  do {
-    if (skip_j) j = upper->j-oy; else j = lower->j-oy;
+    if (!valid_k) {
+      k = 0;
+      upper->k=0;
+      lower->k=0;
+    }
+    if (!valid_j) {
+      j = 0;
+      upper->j=0;
+      lower->j=0;
+    }
+
+    /* compute the vector base on owning processor */
+    xm = me - ms;
+    ym = ne - ns;
+    zm = pe - ps;
+    base = ms*ym*zm + ns*M*zm + ps*M*N;
+
+    /* do while loops to ensure the block gets entered once,
+       regardless of control condition being met, necessary for
+       cases when skip_i/j/k is true
+       */
+    if (skip_k) k = upper->k-oz; else k = lower->k-oz;
     do {
-      if (skip_i) i = upper->i-ox; else i = lower->i-ox;
+      if (skip_j) j = upper->j-oy; else j = lower->j-oy;
       do {
-        /* "actual" indices rather than ones outside of the domain */
-        ii = i;
-        jj = j;
-        kk = k;
-        if (ii < 0) ii = M + ii;
-        if (jj < 0) jj = N + jj;
-        if (kk < 0) kk = P + kk;
-        if (ii > M-1) ii = ii - M;
-        if (jj > N-1) jj = jj - N;
-        if (kk > P-1) kk = kk - P;
-        if (kk>=ps && kk<=pe-1) {
-          if (jj>=ns && jj<=ne-1) {
-            if (ii>=ms && ii<=me-1) {
-              /* compute the local coordinates on owning processor */
-              si = ii - ms;
-              sj = jj - ns;
-              sk = kk - ps;
-              for (l=0;l<dof;l++) {
-                indices[idx] = l + dof*(base + si + xm*sj + xm*ym*sk);
-                idx++;
+        if (skip_i) i = upper->i-ox; else i = lower->i-ox;
+        do {
+          /* "actual" indices rather than ones outside of the domain */
+          ii = i;
+          jj = j;
+          kk = k;
+          if (kk>=ps && kk<=pe-1) {
+            if (jj>=ns && jj<=ne-1) {
+              if (ii>=ms && ii<=me-1) {
+
+                if (ii < 0) ii = M + ii;
+                if (jj < 0) jj = N + jj;
+                if (kk < 0) kk = P + kk;
+                if (ii > M-1) ii = ii - M;
+                if (jj > N-1) jj = jj - N;
+                if (kk > P-1) kk = kk - P;
+
+                /* compute the local coordinates on owning processor */
+                si = ii - ms;
+                sj = jj - ns;
+                sk = kk - ps;
+                for (l=0;l<dof;l++) {
+                  indices[idx] = l + dof*(base + si + xm*sj + xm*ym*sk);
+                  idx++;
+                }
               }
             }
           }
-        }
-        i++;
-      } while (i<upper->i-ox);
-      j++;
-    } while (j<upper->j-oy);
-    k++;
-  } while (k<upper->k-oz);
+          i++;
+        } while (i<upper->i-ox);
+        j++;
+      } while (j<upper->j-oy);
+      k++;
+    } while (k<upper->k-oz);
 
-  ierr = PetscRealloc((size_t)(idx*sizeof(PetscInt)), (void*)&indices);CHKERRQ(ierr);
+    ierr = PetscRealloc((size_t)(idx*sizeof(PetscInt)), (void*)&indices);CHKERRQ(ierr);
+  }
+
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject)da),idx,indices,PETSC_OWN_POINTER,is);CHKERRQ(ierr);
   PetscFunctionReturn(ierr);
 }
 
 PetscErrorCode DMDASubDomainDA_Private(DM dm, PetscInt *nlocal, DM **sdm)
 {
+
   DM             *da;
   PetscInt       dim,size,i,j,k,idx;
   PetscErrorCode ierr;
@@ -298,9 +388,9 @@ PetscErrorCode DMDASubDomainDA_Private(DM dm, PetscInt *nlocal, DM **sdm)
 }
 
 /*
- Fills the local vector problem on the subdomain from the global problem.
+  Fills the local vector problem on the subdomain from the global problem.
 
- Right now this assumes one subdomain per processor.
+  Right now this assumes one subdomain per processor.
 
 */
 PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM *subdms,VecScatter **iscat,VecScatter **oscat, VecScatter **lscat)
@@ -324,7 +414,7 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
   for (i = 0; i < nsubdms; i++) {
     subdm = subdms[i];
     ierr  = DMDAGetLocalInfo(subdm,&subinfo);CHKERRQ(ierr);
-    ierr = DMDAGetNonOverlappingRegion(subdm,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
+    ierr  = DMDAGetNonOverlappingRegion(subdm,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
 
     /* create the global and subdomain index sets for the inner domain */
     lower.i = xs;
@@ -333,8 +423,8 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
     upper.i = xs+xm;
     upper.j = ys+ym;
     upper.k = zs+zm;
-    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&idis);CHKERRQ(ierr);
-    ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&isis);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&idis,PETSC_TRUE);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&isis,PETSC_TRUE);CHKERRQ(ierr);
 
     /* create the global and subdomain index sets for the outer subdomain */
     lower.i = subinfo.xs;
@@ -343,8 +433,8 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
     upper.i = subinfo.xs+subinfo.xm;
     upper.j = subinfo.ys+subinfo.ym;
     upper.k = subinfo.zs+subinfo.zm;
-    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&odis);CHKERRQ(ierr);
-    ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&osis);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&odis,PETSC_TRUE);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&osis,PETSC_TRUE);CHKERRQ(ierr);
 
     /* global and subdomain ISes for the local indices of the subdomain */
     /* todo - make this not loop over at nonperiodic boundaries, which will be more involved */
@@ -354,8 +444,7 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
     upper.i = subinfo.gxs+subinfo.gxm;
     upper.j = subinfo.gys+subinfo.gym;
     upper.k = subinfo.gzs+subinfo.gzm;
-
-    ierr = DMDACreatePatchIS(dm,&lower,&upper,&gdis);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&gdis,PETSC_TRUE);CHKERRQ(ierr);
 
     /* form the scatter */
     ierr = DMGetGlobalVector(dm,&dvec);CHKERRQ(ierr);
@@ -403,7 +492,7 @@ PetscErrorCode DMDASubDomainIS_Private(DM dm,PetscInt n,DM *subdm,IS **iis,IS **
       upper.i = info.xs+info.xm;
       upper.j = info.ys+info.ym;
       upper.k = info.zs+info.zm;
-      ierr = DMDACreatePatchIS(dm,&lower,&upper,&(*iis)[i]);CHKERRQ(ierr);
+      ierr = DMDACreatePatchIS(dm,&lower,&upper,&(*iis)[i],PETSC_TRUE);CHKERRQ(ierr);
     }
 
     if (ois) {
@@ -414,7 +503,7 @@ PetscErrorCode DMDASubDomainIS_Private(DM dm,PetscInt n,DM *subdm,IS **iis,IS **
       upper.i = subinfo.xs+subinfo.xm;
       upper.j = subinfo.ys+subinfo.ym;
       upper.k = subinfo.zs+subinfo.zm;
-      ierr    = DMDACreatePatchIS(dm,&lower,&upper,&(*ois)[i]);CHKERRQ(ierr);
+      ierr    = DMDACreatePatchIS(dm,&lower,&upper,&(*ois)[i],PETSC_TRUE);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(ierr);
