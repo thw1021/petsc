@@ -51,7 +51,7 @@ int main(int argc,char **argv)
 #endif
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&srank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&srank);CHKERRMPI(ierr);
 
   ierr = PetscLogStageRegister("Setup",&stages[0]);CHKERRQ(ierr);
   ierr = PetscLogStageRegister("MatMult MPI",&stages[1]);CHKERRQ(ierr);
@@ -99,7 +99,7 @@ int main(int argc,char **argv)
 
   /* Compute y = C*x */
   /*-----------------*/
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
   ierr = PetscLogStagePush(stages[1]);CHKERRQ(ierr);
   for (i=0; i<its; i++) {
     ierr = MatMult(C,x,y);CHKERRQ(ierr);
