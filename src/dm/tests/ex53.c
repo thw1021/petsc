@@ -14,23 +14,23 @@ sliceid - set the location where the slice will be extraced from the parent vect
 
 int main(int argc,char **argv)
 {
-
-  PetscMPIInt    rank, size;             /* MPI rank and size */
-  PetscInt       mx=4,my=4,mz=4;         /* Dimensions of parent vector */
-  PetscInt       sliceid=2;              /* k (z) index to pick the slice */
-  PetscInt       sliceaxis=2;            /* Select axis along which the slice will be extracted */
-  PetscInt       dim=3;                  /* Dimension of the parent vector */
-  PetscInt       i,j,k;                  /* Iteration indices */
-  PetscInt       ixs,iys,izs;            /* Corner indices for 3D vector */
-  PetscInt       ixm,iym,izm;            /* Widths of parent vector */
-  PetscScalar    ***vecdata3d;           /* Pointer to access 3d parent vector */
-  PetscScalar    **vecdata2d;            /* Pointer to access 2d parent vector */
-  DM             da;                     /* 2D/3D DMDA object */
-  Vec            vec_full;               /* Parent vector */
-  Vec            vec_slice;              /* Slice vector */
-  MatStencil     lower, upper;           /* Stencils to select slice */
-  IS             selectis;               /* IS to select slice and extract subvector */
-  PetscErrorCode ierr;                   /* error checking */
+  PetscMPIInt    rank, size;                    /* MPI rank and size */
+  PetscInt       mx=4,my=4,mz=4;                /* Dimensions of parent vector */
+  PetscInt       sliceid=2;                     /* k (z) index to pick the slice */
+  PetscInt       sliceaxis=2;                   /* Select axis along which the slice will be extracted */
+  PetscInt       dim=3;                         /* Dimension of the parent vector */
+  PetscInt       i,j,k;                         /* Iteration indices */
+  PetscInt       ixs,iys,izs;                   /* Corner indices for 3D vector */
+  PetscInt       ixm,iym,izm;                   /* Widths of parent vector */
+  PetscScalar    ***vecdata3d;                  /* Pointer to access 3d parent vector */
+  PetscScalar    **vecdata2d;                   /* Pointer to access 2d parent vector */
+  DM             da;                            /* 2D/3D DMDA object */
+  Vec            vec_full;                      /* Parent vector */
+  Vec            vec_slice;                     /* Slice vector */
+  MatStencil     lower, upper;                  /* Stencils to select slice */
+  IS             selectis;                      /* IS to select slice and extract subvector */
+  PetscBool      patchis_offproc = PETSC_FALSE; /* flag to DMDACreatePatchIS indicating that off-proc values are to be ignored */
+  PetscErrorCode ierr;                          /* error checking */
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize program and set problem parameters
@@ -116,7 +116,7 @@ int main(int argc,char **argv)
     lower.i = 0;  lower.j = 0;  lower.k = sliceid; lower.c = 1;
     upper.i = mx; upper.j = my; upper.k = sliceid; upper.c = 1;
   }
-  ierr = DMDACreatePatchIS(da, &lower, &upper, &selectis);CHKERRQ(ierr);
+  ierr = DMDACreatePatchIS(da, &lower, &upper, &selectis, patchis_offproc);CHKERRQ(ierr);
   ierr = ISView(selectis, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -135,6 +135,8 @@ int main(int argc,char **argv)
      Restore subvector, destroy data structures and exit.
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = VecRestoreSubVector(vec_full, selectis, &vec_slice);CHKERRQ(ierr);
+
+  ierr = ISDestroy(&selectis);CHKERRQ(ierr);
   ierr = DMDestroy(&da);CHKERRQ(ierr);
   ierr = VecDestroy(&vec_full);CHKERRQ(ierr);
 
