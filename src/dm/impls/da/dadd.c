@@ -1,4 +1,5 @@
 #include <petsc/private/dmdaimpl.h>  /*I   "petscdmda.h"   I*/
+#include <petsc/private/viewerhdf5impl.h>
 
 /*@
   DMDACreatePatchIS - Creates an index set corresponding to a patch of the DA.
@@ -6,14 +7,14 @@
   Collective
 
   Input Parameters:
-+  da - the DMDA
-.  lower - a matstencil with i, j and k corresponding to the lower corner of the patch
--  upper - a matstencil with i, j and k corresponding to the upper corner of the patch
+  +  da - the DMDA
+  .  lower - a matstencil with i, j and k corresponding to the lower corner of the patch
+  -  upper - a matstencil with i, j and k corresponding to the upper corner of the patch
 
   Output Parameters:
-.  is - the IS corresponding to the patch
+  .  is - the IS corresponding to the patch
 
-  Level: developer
+Level: developer
 
 .seealso: DMDACreateDomainDecomposition(), DMDACreateDomainDecompositionScatters()
 @*/
@@ -28,7 +29,7 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
   PetscInt       base;
   PetscInt       xm=1,ym=1,zm=1;
   PetscInt       ox,oy,oz;
-  PetscInt       M,N,P,dof;
+  PetscInt       M,N,P,dof,xol,yol,zol,s;
   PetscInt       nindices;
   PetscInt       *indices;
   DM_DA          *dd = (DM_DA*)da->data;
@@ -39,6 +40,10 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
   PetscFunctionBegin;
   M = dd->M; N = dd->N; P = dd->P;
   dof = dd->w;
+  xol = dd->xol;
+  yol = dd->yol;
+  zol = dd->zol;
+  s   = dd->s;
   ierr = DMDAGetOffset(da,&ox,&oy,&oz,NULL,NULL,NULL);CHKERRQ(ierr);
   ierr = DMDAGetCorners(da, &ms, &ns, &ps, &mw, &nw, &pw);CHKERRQ(ierr);
 
@@ -66,7 +71,6 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
   } else {
     SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONG,"Lower and Upper stencils are identical! Please check inputs.");
   }
-
   ierr = PetscMalloc1(nindices*dof,&indices);CHKERRQ(ierr);
 
   me = ms + mw;
@@ -114,9 +118,18 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
         if (ii > M-1) ii = ii - M;
         if (jj > N-1) jj = jj - N;
         if (kk > P-1) kk = kk - P;
-        if (kk>=ps && kk<=pe-1) {
-          if (jj>=ns && jj<=ne-1) {
-            if (ii>=ms && ii<=me-1) {
+
+        if (!(ii>=ms-xol && ii<=me-1+xol)) {
+          ierr = PetscPrintf(PETSC_COMM_SELF, "ii = %d, ms = %d, me-1 = %d, s = %d\n", ii, ms, me-1, xol);CHKERRQ(ierr);
+        }
+
+        if (!(jj>=ns-yol && jj<=ne-1+yol)) {
+          ierr = PetscPrintf(PETSC_COMM_SELF, "jj = %d, ns = %d, ne-1 = %d, s = %d\n", jj, ns, ne-1, yol);CHKERRQ(ierr);
+        }
+
+        if (kk>=ps-zol && kk<=pe-1+zol) {
+          if (jj>=ns-yol && jj<=ne-1+yol) {
+            if (ii>=ms-xol && ii<=me-1+xol) {
               /* compute the local coordinates on owning processor */
               si = ii - ms;
               sj = jj - ns;
@@ -137,11 +150,13 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
 
   ierr = PetscRealloc((size_t)(idx*sizeof(PetscInt)), (void*)&indices);CHKERRQ(ierr);
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject)da),idx,indices,PETSC_OWN_POINTER,is);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"idx is : %d, nindices*dof is %d\n", idx, nindices*dof);CHKERRQ(ierr);
   PetscFunctionReturn(ierr);
 }
 
 PetscErrorCode DMDASubDomainDA_Private(DM dm, PetscInt *nlocal, DM **sdm)
 {
+
   DM             *da;
   PetscInt       dim,size,i,j,k,idx;
   PetscErrorCode ierr;
@@ -298,21 +313,25 @@ PetscErrorCode DMDASubDomainDA_Private(DM dm, PetscInt *nlocal, DM **sdm)
 }
 
 /*
- Fills the local vector problem on the subdomain from the global problem.
+   Fills the local vector problem on the subdomain from the global problem.
 
- Right now this assumes one subdomain per processor.
+   Right now this assumes one subdomain per processor.
 
 */
 PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM *subdms,VecScatter **iscat,VecScatter **oscat, VecScatter **lscat)
 {
   PetscErrorCode ierr;
+  PetscMPIInt    rank;
   DMDALocalInfo  info,subinfo;
   DM             subdm;
   MatStencil     upper,lower;
   IS             idis,isis,odis,osis,gdis;
   Vec            svec,dvec,slvec;
   PetscInt       xm,ym,zm,xs,ys,zs;
+  PetscViewer    is_hdf5_viewer;
   PetscInt       i;
+  PetscInt       vecsize;
+  char           fname[256];
 
   PetscFunctionBegin;
   /* allocate the arrays of scatters */
@@ -320,11 +339,12 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
   if (oscat) {ierr = PetscMalloc1(nsubdms,oscat);CHKERRQ(ierr);}
   if (lscat) {ierr = PetscMalloc1(nsubdms,lscat);CHKERRQ(ierr);}
 
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
   ierr  = DMDAGetLocalInfo(dm,&info);CHKERRQ(ierr);
   for (i = 0; i < nsubdms; i++) {
     subdm = subdms[i];
     ierr  = DMDAGetLocalInfo(subdm,&subinfo);CHKERRQ(ierr);
-    ierr = DMDAGetNonOverlappingRegion(subdm,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
+    ierr  = DMDAGetNonOverlappingRegion(subdm,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
 
     /* create the global and subdomain index sets for the inner domain */
     lower.i = xs;
@@ -333,8 +353,21 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
     upper.i = xs+xm;
     upper.j = ys+ym;
     upper.k = zs+zm;
+    ierr    = PetscPrintf(PETSC_COMM_SELF,"\n innerID index sets! \n");
     ierr    = DMDACreatePatchIS(dm,&lower,&upper,&idis);CHKERRQ(ierr);
+    ierr    = PetscViewerHDF5Open(PETSC_COMM_WORLD, "inner_id_is.h5", FILE_MODE_WRITE,&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscObjectSetName((PetscObject) idis,"ID_IS");CHKERRQ(ierr);
+    ierr    = ISView(idis, is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscViewerDestroy(&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscBarrier(NULL);
+    ierr    = PetscPrintf(PETSC_COMM_SELF,"\n innerIS index sets! \n");
     ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&isis);CHKERRQ(ierr);
+    sprintf(fname,"inner_is_is_%d.h5",(int) rank);
+    ierr    = PetscViewerHDF5Open(PETSC_COMM_SELF, fname,FILE_MODE_WRITE,&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscObjectSetName((PetscObject) isis,"IS_IS");CHKERRQ(ierr);
+    ierr    = ISView(isis, is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscViewerDestroy(&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscBarrier(NULL);
 
     /* create the global and subdomain index sets for the outer subdomain */
     lower.i = subinfo.xs;
@@ -343,8 +376,21 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
     upper.i = subinfo.xs+subinfo.xm;
     upper.j = subinfo.ys+subinfo.ym;
     upper.k = subinfo.zs+subinfo.zm;
+    ierr    = PetscPrintf(PETSC_COMM_SELF,"\nouter OD index sets! \n");
     ierr    = DMDACreatePatchIS(dm,&lower,&upper,&odis);CHKERRQ(ierr);
+    ierr    = PetscViewerHDF5Open(PETSC_COMM_WORLD, "outer_od_is.h5", FILE_MODE_WRITE,&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscObjectSetName((PetscObject) odis,"OD_IS");CHKERRQ(ierr);
+    ierr    = ISView(odis, is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscViewerDestroy(&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscBarrier(NULL);
+    ierr    = PetscPrintf(PETSC_COMM_SELF,"\nouter OS index sets! \n");
     ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&osis);CHKERRQ(ierr);
+    sprintf(fname,"outer_os_is_%d.h5",(int) rank);
+    ierr    = PetscViewerHDF5Open(PETSC_COMM_SELF, fname,FILE_MODE_WRITE,&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscObjectSetName((PetscObject) osis,"OS_IS");CHKERRQ(ierr);
+    ierr    = ISView(osis, is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscViewerDestroy(&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscBarrier(NULL);
 
     /* global and subdomain ISes for the local indices of the subdomain */
     /* todo - make this not loop over at nonperiodic boundaries, which will be more involved */
@@ -354,13 +400,30 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
     upper.i = subinfo.gxs+subinfo.gxm;
     upper.j = subinfo.gys+subinfo.gym;
     upper.k = subinfo.gzs+subinfo.gzm;
-
-    ierr = DMDACreatePatchIS(dm,&lower,&upper,&gdis);CHKERRQ(ierr);
+    PetscPrintf(PETSC_COMM_SELF,"\nGD index sets! \n");
+    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&gdis);CHKERRQ(ierr);
+    ierr    = PetscViewerHDF5Open(PETSC_COMM_WORLD, "outer_gd_is.h5", FILE_MODE_WRITE,&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscObjectSetName((PetscObject) gdis,"GD_IS");CHKERRQ(ierr);
+    ierr    = ISView(gdis, is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscViewerDestroy(&is_hdf5_viewer);CHKERRQ(ierr);
+    ierr    = PetscBarrier(NULL);
 
     /* form the scatter */
     ierr = DMGetGlobalVector(dm,&dvec);CHKERRQ(ierr);
     ierr = DMGetGlobalVector(subdm,&svec);CHKERRQ(ierr);
     ierr = DMGetLocalVector(subdm,&slvec);CHKERRQ(ierr);
+
+    ierr = PetscBarrier(NULL);
+    ierr = VecGetSize(dvec, &vecsize);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF, "dvec size is : %d\n", vecsize);CHKERRQ(ierr);
+
+    ierr = PetscBarrier(NULL);
+    ierr = VecGetSize(svec, &vecsize);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF, "svec size is : %d\n", vecsize);CHKERRQ(ierr);
+
+    ierr = PetscBarrier(NULL);
+    ierr = VecGetSize(slvec, &vecsize);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF, "slvec size is : %d\n", vecsize);CHKERRQ(ierr);
 
     if (iscat) {ierr = VecScatterCreate(dvec,idis,svec,isis,&(*iscat)[i]);CHKERRQ(ierr);}
     if (oscat) {ierr = VecScatterCreate(dvec,odis,svec,osis,&(*oscat)[i]);CHKERRQ(ierr);}
