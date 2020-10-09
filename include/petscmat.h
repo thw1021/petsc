@@ -383,6 +383,7 @@ PETSC_EXTERN PetscErrorCode MatGetTrace(Mat,PetscScalar*);
 PETSC_EXTERN PetscErrorCode MatInvertBlockDiagonal(Mat,const PetscScalar **);
 PETSC_EXTERN PetscErrorCode MatInvertVariableBlockDiagonal(Mat,PetscInt,const PetscInt*,PetscScalar*);
 PETSC_EXTERN PetscErrorCode MatInvertBlockDiagonalMat(Mat,Mat);
+PETSC_EXTERN PetscErrorCode MatInvertVariableBlockDiagonalMat(Mat,Mat);
 
 /* ------------------------------------------------------------*/
 PETSC_EXTERN PetscErrorCode MatSetValues(Mat,PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
@@ -512,6 +513,7 @@ PETSC_EXTERN PetscErrorCode MatSetBlockSizes(Mat,PetscInt,PetscInt);
 PETSC_EXTERN PetscErrorCode MatSetBlockSizesFromMats(Mat,Mat,Mat);
 PETSC_EXTERN PetscErrorCode MatSetVariableBlockSizes(Mat,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode MatGetVariableBlockSizes(Mat,PetscInt*,const PetscInt**);
+PETSC_EXTERN PetscErrorCode MatComputeVariableBlockSizes(Mat);
 
 PETSC_EXTERN PetscErrorCode MatDenseGetColumn(Mat,PetscInt,PetscScalar*[]);
 PETSC_EXTERN PetscErrorCode MatDenseRestoreColumn(Mat,PetscScalar*[]);
