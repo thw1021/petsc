@@ -169,7 +169,7 @@ Docs-only changes
 To allow for small, quick changes to documentation, if you have made
 **absolutely sure** that your changes only affect documentation, you may
 create your merge request, add the
-“workflow::Review-docs” label, and assign to an integrator
+“workflow::Docs-Review-Merge” label, and assign to an integrator
 to review and merge.
 
 If in doubt, use the normal review process.
