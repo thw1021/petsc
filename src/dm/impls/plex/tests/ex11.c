@@ -80,7 +80,7 @@ static PetscErrorCode TestEmptyStrata(MPI_Comm comm)
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   /* A 3D box with two adjacent cells, sharing one face and four vertices */
   ierr = DMCreate(comm, &dm);CHKERRQ(ierr);
   ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
@@ -138,7 +138,7 @@ static PetscErrorCode TestEmptyStrata(MPI_Comm comm)
       }
     }
     ierr = DMLabelGetNumValues(label, &numValues);CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&numValues, &maxValues, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject) dm));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&numValues, &maxValues, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject) dm));CHKERRMPI(ierr);
     for (v = numValues; v < maxValues; ++v) {ierr = DMLabelAddStratum(label,v);CHKERRQ(ierr);}
   }
   {
@@ -195,7 +195,7 @@ static PetscErrorCode TestDistribution(MPI_Comm comm)
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = PetscOptionsGetString(NULL, NULL, "-filename", filename, sizeof(filename), &flg);CHKERRQ(ierr);
   if (!flg) PetscFunctionReturn(0);
   ierr = PetscOptionsGetInt(NULL, NULL, "-overlap", &overlap, NULL);CHKERRQ(ierr);
