@@ -1730,7 +1730,7 @@ PetscErrorCode VecGetArrayInPlace_Internal(Vec x,PetscScalar **a,PetscMemType *m
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  ierr   = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
   if (mtype) *mtype = PETSC_MEMTYPE_HOST;
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   if (x->offloadmask == PETSC_OFFLOAD_VECKOKKOS) {
@@ -1906,7 +1906,7 @@ PetscErrorCode VecGetArrayReadInPlace_Internal(Vec x,const PetscScalar **a,Petsc
     PetscBool is_cudatype = PETSC_FALSE;
     ierr = PetscObjectTypeCompareAny((PetscObject)x,&is_cudatype,VECSEQCUDA,VECMPICUDA,VECCUDA,"");CHKERRQ(ierr);
     if (is_cudatype) {
-      ierr   = VecCUDAGetArrayRead(x,a);CHKERRQ(ierr);
+      ierr = VecCUDAGetArrayRead(x,a);CHKERRQ(ierr);
       if (mtype) *mtype = PETSC_MEMTYPE_DEVICE;
       PetscFunctionReturn(0);
     }

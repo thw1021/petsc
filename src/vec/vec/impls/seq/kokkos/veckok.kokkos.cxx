@@ -5,7 +5,7 @@
 #include "Kokkos_Macros.hpp"
 #include "Kokkos_Parallel.hpp"
 #include "Kokkos_Parallel_Reduce.hpp"
-#include "petsc/private/sfimpl.h"
+#include <petsc/private/sfimpl.h>
 #include <petsc/private/petscimpl.h>
 #include <petscmath.h>
 #include <petscviewer.h>
