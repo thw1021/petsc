@@ -116,7 +116,7 @@ int main(int argc,char **argv)
     lower.i = 0;  lower.j = 0;  lower.k = sliceid; lower.c = 1;
     upper.i = mx; upper.j = my; upper.k = sliceid; upper.c = 1;
   }
-  ierr = DMDACreatePatchIS(da, &lower, &upper, &selectis);CHKERRQ(ierr);
+  ierr = DMDACreatePatchIS(da, &lower, &upper, &selectis, PETSC_FALSE);CHKERRQ(ierr);
   ierr = ISView(selectis, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -135,6 +135,8 @@ int main(int argc,char **argv)
      Restore subvector, destroy data structures and exit.
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = VecRestoreSubVector(vec_full, selectis, &vec_slice);CHKERRQ(ierr);
+
+  ierr = ISDestroy(&selectis);CHKERRQ(ierr);
   ierr = DMDestroy(&da);CHKERRQ(ierr);
   ierr = VecDestroy(&vec_full);CHKERRQ(ierr);
 

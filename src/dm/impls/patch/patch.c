@@ -96,7 +96,7 @@ PetscErrorCode DMPatchZoom(DM dm, Vec X, MatStencil lower, MatStencil upper, MPI
   loclower.j = blower.j + syr; locupper.j = blower.j + eyr;
   loclower.k = blower.k + szr; locupper.k = blower.k + ezr;
 
-  ierr = DMDACreatePatchIS(dm, &loclower, &locupper, &is);CHKERRQ(ierr);
+  ierr = DMDACreatePatchIS(dm, &loclower, &locupper, &is, PETSC_TRUE);CHKERRQ(ierr);
   ierr = ISGetIndices(is, &indices);CHKERRQ(ierr);
 
   q = 0;
@@ -129,7 +129,7 @@ PetscErrorCode DMPatchZoom(DM dm, Vec X, MatStencil lower, MatStencil upper, MPI
   loclower.j = blower.j + syb; locupper.j = blower.j + syb+myb;
   loclower.k = blower.k + szb; locupper.k = blower.k + szb+mzb;
 
-  ierr = DMDACreatePatchIS(dm, &loclower, &locupper, &is);CHKERRQ(ierr);
+  ierr = DMDACreatePatchIS(dm, &loclower, &locupper, &is, PETSC_TRUE);CHKERRQ(ierr);
   ierr = ISGetIndices(is, &indices);CHKERRQ(ierr);
 
   q = 0;
