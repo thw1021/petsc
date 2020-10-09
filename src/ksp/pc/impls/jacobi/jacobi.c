@@ -384,7 +384,7 @@ static PetscErrorCode PCSetFromOptions_Jacobi(PetscOptionItems *PetscOptionsObje
          See PCPBJACOBI for a point-block Jacobi preconditioner
 
 .seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
-           PCJacobiSetType(), PCJacobiSetUseAbs(), PCJacobiGetUseAbs(), PCPBJACOBI, PCBJACOBI, PCVPBJACOBI 
+           PCJacobiSetType(), PCJacobiSetUseAbs(), PCJacobiGetUseAbs(), PCPBJACOBI, PCBJACOBI, PCVPBJACOBI
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
