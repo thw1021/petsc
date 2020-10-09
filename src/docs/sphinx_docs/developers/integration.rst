@@ -11,10 +11,12 @@ Integration branches
 ----------
 
 The ``master`` branch (soon to be renamed) contains all features and bug fixes that are believed to be
-stable and will be in the next release (e.g. 3.15.0). Users developing software based
+stable and will be in the next major release. Users developing software based
 on recently-added features in PETSc should follow ``master``:
 
 New feature branches should start from ``master``.
+
+Note: petsc-3.15.0 is the next major release after petsc-3.14.x
 
 .. _sec_release_branch:
 
@@ -30,6 +32,8 @@ Bug fixes for the release should be started here:
 
 As with new features, it will be tested and later merged to
 ``release`` and ``master``. Patch releases (e.g. 3.15.1) are tagged on ``release``.
+
+Note: petsc-3.14.1 is the next maintenance release after petsc-3.14.0
 
 
 Contributing workflows
@@ -47,8 +51,10 @@ Before filing a merge request
    separate contributions, submit them in sequence with different
    branches instead of all at once.
 -  Include tests which cover any changes to the source code.
--  Before submitting the merge request (MR), run the full test suite -
-   i.e ``make alltests TIMEOUT=600`` on your machine
+-  Run the full test suite on your machine -
+   i.e ``make alltests TIMEOUT=600``
+-  Run source checker on your machine -
+   i.e ``make checkbadSource``
 
 
 Submit merge request
@@ -56,22 +62,54 @@ Submit merge request
 
 -  ``git push`` prints a URL that can be used to create a merge request.
    Alternatively, use `GitLab's web interface <https://gitlab.com/petsc/petsc/merge_requests/new>`__.
--  select the correct destination (:any:`sec_master_branch` or :any:`sec_release_branch`).
--  select appropriate `labels <https://gitlab.com/petsc/petsc/-/labels>`__ including "Workflow:Review"
+-  Select the correct target branch (:any:`sec_master_branch` or :any:`sec_release_branch`).
+-  Select appropriate `labels <https://gitlab.com/petsc/petsc/-/labels>`__ including "workflow::Pipeline-Testing"
 -  If the merge request resolves an outstanding `issue <https://gitlab.com/petsc/petsc/issues>`__), you should include a `closing
    pattern <https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#default-closing-pattern>`__
    such as "Fixes #123" in the MR’s description so that issue gets
    closed once the MR is merged.
--  If the MR is from the main repository, un-pause the pipelines. If the MR
-   is from a fork, another developer will do this for you.
--  Do not overdo requesting testing; it is a limited resource, so if you
-   realize a currently running test pipeline is no longer needed, cancel it.
+
+Merge request from a fork
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+-  To use the web interface option - use the fork web page, merge requests, new merge request.
+-  Select the correct target repository ``petsc/petsc`` (along with the target branch)
+-  Assign the MR to one of the developers.
+-  Fork users lack permissions to use pipeline resources or set labels
+   mentioned in the workflow below. Hence one of the developers would
+   have to help with these processes. (If necessary - ping a developer
+   in the comments section of the MR page)
+
+Test using gitlab pipelines
+--------------------------
+
+-  Test pipelines can be started/controlled from the ``Pipelines`` tab
+   on MR page.  When a merge request is created a pipeline is
+   automatically started (with a merge with destination branch) - but
+   goes into pause state.
+-  To run this pipeline `un-pause` this already started pipeline (or
+   start a new one if necessary).
+-  The test pipeline status is displayed near the top of the MR page
+   (and in the pipelines tab)
 
 More on MR pipelines
 ^^^^^^^^^^^^^^^^^^^^
 
--  For an MR, the test pipeline status is displayed near the top of the
-   MR page.
+-  Do not overdo requesting testing; it is a limited resource, so if you
+   realize a currently running test pipeline is no longer needed, cancel it.
+-  When there are failures in a some jobs - and a fix is pushed for
+   these failures, one can try re-testing only with the previously
+   failed jobs, before running the full pipeline. To do this, start a
+   new pipeline (if one is not already auto-started by the MR), cancel
+   the pipeline on the pipeline page (this cancels all the jobs in the
+   pipeline), now retry the selected jobs by using the little retry
+   button to the right of job name. If the selected jobs are
+   successful - one can run the full pipeline by using the retry
+   button at the top of the page.
+-  Note the retry button at the top of pipeline page does NOT use any
+   new changes to the branch when it retries - it retries exactly the
+   same git commit that was previously tried (and skips the already
+   successful jobs).
 -  Please report all "odd" errors in the testing that don’t seem related
    to your branch in `issue 360 <https://gitlab.com/petsc/petsc/issues/360>`__.
 
@@ -81,25 +119,22 @@ More on MR pipelines
       "copy link"
    3. Add this link in your MR description.
 
--  Note that the retry button does NOT use any changes to the branch
-   when it retries - it retries exactly what it previously tried. To
-   test a fix on one or several specific systems: push the branch and
-   start a new pipeline, immediately cancel that pipeline and select
-   individual jobs to retry (using the little retry button to the right
-   of job name).
 
 Submit merge requests for suggestions on design, etc.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 -  You do not need to test the code before submitting
 -  Make sure to select DRAFT at the top of the MR page
--  select the additional label "Workflow:Request-For-Comment"
+-  select the additional label "workflow::Request-For-Comment"
 -  There is also a button ``Add a task list`` (next to numbered list) if
    you edit any Markdown-supporting text area. You can use this to add
    task lists to a WIP MR.
 
 Merge request review process
 ----------------------------
+
+- Once the MR is tested and ready for review, change the label on the
+  MR page to "workflow::Review"
 
 It is the **submitter’s** responsibility to track the progress of the MR
 and ensure it gets merged to master (or release). If the pipeline tests
@@ -123,10 +158,10 @@ manner they may Assign (upper right corner of the screen) to potential
 reviewers and request in the discussion these same people to review by @
 mentioning them.
 
-When the merge has been approved, all the tests work, and all the
-threads have been resolved the **submitter** must set a label to
-"Workflow:Ready-For-Merge" and assign (upper right corner of the screen)
-the MR to Satish (@sbalay) so he can merge it.
+When the merge has been approved (requires codeowners, integrator
+approvals), all the tests work, and all the threads have been resolved
+the **submitter** must set a label to "workflow::Ready-For-Merge" (can
+also assign the MR to (@sbalay) if necessary)
 
 Docs-only changes
 ^^^^^^^^^^^^^^^^^
@@ -134,7 +169,7 @@ Docs-only changes
 To allow for small, quick changes to documentation, if you have made
 **absolutely sure** that your changes only affect documentation, you may
 create your merge request, add the
-“Workflow:Review-docs” labels, and assign to an integrator
+“workflow::Review-docs” label, and assign to an integrator
 to review and merge.
 
 If in doubt, use the normal review process.
@@ -517,9 +552,3 @@ For further philosophy on merges, see
    upstream <http://yarchive.net/comp/linux/git_merges_from_upstream.html>`__
 -  `petsc-dev mailing
    list <http://lists.mcs.anl.gov/pipermail/petsc-dev/2013-March/011728.html>`__
-
-Nightly builds
-==============
-
-Logs for the nightly builds are at
-http://ftp.mcs.anl.gov/pub/petsc/nightlylogs/index.html
