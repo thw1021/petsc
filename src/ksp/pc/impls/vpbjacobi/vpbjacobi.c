@@ -97,7 +97,6 @@ static PetscErrorCode PCApply_VPBJacobi(PC pc,Vec x,Vec y)
   PetscFunctionReturn(0);
 }
 
-/* -------------------------------------------------------------------------- */
 static PetscErrorCode PCSetUp_VPBJacobi(PC pc)
 {
   PC_VPBJacobi    *jac = (PC_VPBJacobi*)pc->data;
@@ -122,7 +121,7 @@ static PetscErrorCode PCSetUp_VPBJacobi(PC pc)
   pc->ops->apply = PCApply_VPBJacobi;
   PetscFunctionReturn(0);
 }
-/* -------------------------------------------------------------------------- */
+
 static PetscErrorCode PCDestroy_VPBJacobi(PC pc)
 {
   PC_VPBJacobi    *jac = (PC_VPBJacobi*)pc->data;
@@ -137,7 +136,6 @@ static PetscErrorCode PCDestroy_VPBJacobi(PC pc)
   PetscFunctionReturn(0);
 }
 
-/* -------------------------------------------------------------------------- */
 /*MC
      PCVPBJACOBI - Variable size point block Jacobi preconditioner
 
@@ -149,7 +147,8 @@ static PetscErrorCode PCDestroy_VPBJacobi(PC pc)
    Uses dense LU factorization with partial pivoting to invert the blocks; if a zero pivot
    is detected a PETSc error is generated.
 
-   One must call MatSetVariableBlockSizes() to use this preconditioner
+   One must call MatSetVariableBlockSizes() to use this preconditioner. Each block can only be located on a single proccess.
+
    Developer Notes:
     This should support the PCSetErrorIfFailure() flag set to PETSC_TRUE to allow
    the factorization to continue even after a zero pivot is found resulting in a Nan and hence
