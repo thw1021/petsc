@@ -876,7 +876,7 @@ PetscErrorCode  PetscLogEventDeactivate(PetscLogEvent event)
 
   Level: advanced
 
-.seealso: PlogEventActivate(), PetscLogEventDeactivatePop()
+.seealso: PetscLogEventActivate(), PetscLogEventDeactivatePop()
 @*/
 PetscErrorCode  PetscLogEventDeactivatePush(PetscLogEvent event)
 {
