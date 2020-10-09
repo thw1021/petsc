@@ -69,8 +69,8 @@ static PetscErrorCode VecDestroy_Node(Vec v)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Win_free(&vs->win);CHKERRQ(ierr);
-  ierr = MPI_Comm_free(&vs->shmcomm);CHKERRQ(ierr);
+  ierr = MPI_Win_free(&vs->win);CHKERRMPI(ierr);
+  ierr = MPI_Comm_free(&vs->shmcomm);CHKERRMPI(ierr);
   ierr = PetscFree(vs->winarray);CHKERRQ(ierr);
   ierr = PetscFree(vs);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -346,14 +346,14 @@ PETSC_EXTERN PetscErrorCode VecCreate_Node(Vec v)
     PetscInt    i;
     MPI_Aint    sz;
 
-    ierr = MPI_Comm_split_type(PetscObjectComm((PetscObject)v),MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,&shmcomm);CHKERRQ(ierr);
+    ierr = MPI_Comm_split_type(PetscObjectComm((PetscObject)v),MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,&shmcomm);CHKERRMPI(ierr);
     ierr = MPIU_Win_allocate_shared((n+1)*sizeof(PetscScalar),sizeof(PetscScalar),MPI_INFO_NULL,shmcomm,&s->array,&win);CHKERRQ(ierr);
     ierr               = PetscLogObjectMemory((PetscObject)v,(n+1)*sizeof(PetscScalar));CHKERRQ(ierr);
     ierr               = PetscArrayzero(s->array,n+1);CHKERRQ(ierr);
     s->array++;    /* create initial space for object state counter */
 
-    ierr = MPI_Comm_size(shmcomm,&msize);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(shmcomm,&mrank);CHKERRQ(ierr);
+    ierr = MPI_Comm_size(shmcomm,&msize);CHKERRMPI(ierr);
+    ierr = MPI_Comm_rank(shmcomm,&mrank);CHKERRMPI(ierr);
     ierr = PetscMalloc1(msize,&s->winarray);CHKERRQ(ierr);
     for (i=0; i<msize; i++) {
       if (i != mrank) {
