@@ -839,6 +839,11 @@ static PetscErrorCode DMPlexCellRefinerRefine_None(DMPlexCellRefiner cr, DMPolyt
   static PetscInt       tquadpC[] = {DM_POLYTOPE_QUADRILATERAL, 1, 0, 0, DM_POLYTOPE_QUADRILATERAL, 1, 1, 0,
                                      DM_POLYTOPE_SEG_PRISM_TENSOR, 1, 2, 0, DM_POLYTOPE_SEG_PRISM_TENSOR, 1, 3, 0, DM_POLYTOPE_SEG_PRISM_TENSOR, 1, 4, 0, DM_POLYTOPE_SEG_PRISM_TENSOR, 1, 5, 0};
   static PetscInt       tquadpO[] = {0, 0, 0, 0, 0, 0};
+  static DMPolytopeType pyrT[]    = {DM_POLYTOPE_PYRAMID};
+  static PetscInt       pyrS[]    = {1};
+  static PetscInt       pyrC[]    = {DM_POLYTOPE_QUADRILATERAL, 1, 0, 0, DM_POLYTOPE_TRIANGLE, 1, 1, 0,
+                                     DM_POLYTOPE_TRIANGLE, 1, 2, 0, DM_POLYTOPE_TRIANGLE, 1, 3, 0, DM_POLYTOPE_TRIANGLE, 1, 4, 0};
+  static PetscInt       pyrO[]    = {0, 0, 0, 0, 0};
 
   PetscFunctionBegin;
   switch (source) {
@@ -853,6 +858,7 @@ static PetscErrorCode DMPlexCellRefinerRefine_None(DMPlexCellRefiner cr, DMPolyt
     case DM_POLYTOPE_TRI_PRISM:          *Nt = 1; *target = tripT;   *size = tripS;   *cone = tripC;   *ornt = tripO;   break;
     case DM_POLYTOPE_TRI_PRISM_TENSOR:   *Nt = 1; *target = ttripT;  *size = ttripS;  *cone = ttripC;  *ornt = ttripO;  break;
     case DM_POLYTOPE_QUAD_PRISM_TENSOR:  *Nt = 1; *target = tquadpT; *size = tquadpS; *cone = tquadpC; *ornt = tquadpO; break;
+    case DM_POLYTOPE_PYRAMID:            *Nt = 1; *target = pyrT;    *size = pyrS;    *cone = pyrC;    *ornt = pyrO;    break;
     default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No refinement strategy for %s", DMPolytopeTypes[source]);
   }
   PetscFunctionReturn(0);
@@ -1205,6 +1211,7 @@ static PetscErrorCode DMPlexCellRefinerRefine_Regular(DMPlexCellRefiner cr, DMPo
                                       0, 0,  0,  0,  0, -1,
                                       0, 0, -1,  0,  0,  0,
                                       0, 0,  0, -1,  0,  0};
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (source) {
@@ -1219,6 +1226,10 @@ static PetscErrorCode DMPlexCellRefinerRefine_Regular(DMPlexCellRefiner cr, DMPo
     case DM_POLYTOPE_TRI_PRISM:          *Nt = 4; *target = tripT;   *size = tripS;   *cone = tripC;   *ornt = tripO;   break;
     case DM_POLYTOPE_TRI_PRISM_TENSOR:   *Nt = 2; *target = ttripT;  *size = ttripS;  *cone = ttripC;  *ornt = ttripO;  break;
     case DM_POLYTOPE_QUAD_PRISM_TENSOR:  *Nt = 3; *target = tquadpT; *size = tquadpS; *cone = tquadpC; *ornt = tquadpO; break;
+    /* TODO FIx pyramids: For now, we just ignore them */
+    case DM_POLYTOPE_PYRAMID:
+      ierr = DMPlexCellRefinerRefine_None(cr, source, Nt, target, size, cone, ornt);CHKERRQ(ierr);
+      break;
     default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No refinement strategy for %s", DMPolytopeTypes[source]);
   }
   PetscFunctionReturn(0);
