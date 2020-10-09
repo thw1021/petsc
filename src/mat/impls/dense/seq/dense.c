@@ -3731,3 +3731,67 @@ PetscErrorCode MatDenseRestoreSubMatrix(Mat A,Mat *v)
   ierr = PetscUseMethod(A,"MatDenseRestoreSubMatrix_C",(Mat,Mat*),(A,v));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+#include <petscblaslapack.h>
+#include <petsc/private/kernels/blockinvert.h>
+
+PetscErrorCode MatSeqDenseInvert(Mat A)
+{
+  Mat_SeqDense    *a = (Mat_SeqDense*) A->data;
+  PetscErrorCode  ierr;
+  PetscInt        bs = A->rmap->n;
+  MatScalar       *values = a->v;
+  const PetscReal shift = 0.0;
+  PetscBool       allowzeropivot = PetscNot(A->erroriffailure),zeropivotdetected=PETSC_FALSE;
+
+  PetscFunctionBegin;
+  /* factor and invert each block */
+  switch (bs) {
+  case 1:
+    values[0] = (PetscScalar)1.0 / (values[0] + shift);
+    break;
+  case 2:
+    ierr  = PetscKernel_A_gets_inverse_A_2(values,shift,allowzeropivot,&zeropivotdetected);CHKERRQ(ierr);
+    if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+    break;
+  case 3:
+    ierr  = PetscKernel_A_gets_inverse_A_3(values,shift,allowzeropivot,&zeropivotdetected);CHKERRQ(ierr);
+    if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+    break;
+  case 4:
+    ierr  = PetscKernel_A_gets_inverse_A_4(values,shift,allowzeropivot,&zeropivotdetected);CHKERRQ(ierr);
+    if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+    break;
+  case 5:
+  {
+    PetscScalar work[25];
+    PetscInt    ipvt[5];
+
+    ierr  = PetscKernel_A_gets_inverse_A_5(values,ipvt,work,shift,allowzeropivot,&zeropivotdetected);CHKERRQ(ierr);
+    if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+  }
+    break;
+  case 6:
+    ierr  = PetscKernel_A_gets_inverse_A_6(values,shift,allowzeropivot,&zeropivotdetected);CHKERRQ(ierr);
+    if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+    break;
+  case 7:
+    ierr  = PetscKernel_A_gets_inverse_A_7(values,shift,allowzeropivot,&zeropivotdetected);CHKERRQ(ierr);
+    if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+    break;
+  default:
+  {
+    PetscInt    *v_pivots,*IJ,j;
+    PetscScalar *v_work;
+
+    ierr = PetscMalloc3(bs,&v_work,bs,&v_pivots,bs,&IJ);CHKERRQ(ierr);
+    for (j=0; j<bs; j++) {
+      IJ[j] = j;
+    }
+    ierr = PetscKernel_A_gets_inverse_A(bs,values,v_pivots,v_work,allowzeropivot,&zeropivotdetected);CHKERRQ(ierr);
+    if (zeropivotdetected) A->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+    ierr = PetscFree3(v_work,v_pivots,IJ);CHKERRQ(ierr);
+  }
+  }
+  PetscFunctionReturn(0);
+}
