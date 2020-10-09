@@ -541,7 +541,7 @@ M*/
 #define CHKERRMPI(ierr) \
 do {                       \
   if (PetscUnlikely(ierr)) { \
-    char        name[128]; \
+    char        name[MPI_MAX_ERROR_STRING]; \
     PetscMPIInt dlength;\
     MPI_Error_string(ierr,(char*)name,&dlength);                        \
     SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_MPI,"MPI error %d %s",(int)ierr,name); \
