@@ -67,8 +67,8 @@ PetscErrorCode  PetscMatlabEngineCreate(MPI_Comm comm,const char machine[],Petsc
   if (!e->ep) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Unable to start MATLAB engine on %s",machine);
   engOutputBuffer(e->ep,e->buffer,1024);
 
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   sprintf(buffer,"MPI_Comm_rank = %d; MPI_Comm_size = %d;\n",rank,size);
   engEvalString(e->ep, buffer);
   if (mgiven) {
@@ -194,7 +194,7 @@ PetscErrorCode  PetscMatlabEnginePrintOutput(PetscMatlabEngine mengine,FILE *fd)
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)mengine),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)mengine),&rank);CHKERRMPI(ierr);
   ierr = PetscSynchronizedFPrintf(PetscObjectComm((PetscObject)mengine),fd,"[%d]%s",rank,mengine->buffer);CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(PetscObjectComm((PetscObject)mengine),fd);CHKERRQ(ierr);
   PetscFunctionReturn(0);

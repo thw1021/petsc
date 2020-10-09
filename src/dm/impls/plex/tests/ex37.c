@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
   ierr = PetscInitialize(&argc, &argv, NULL, help); if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
   ierr = ProcessOptions(comm, &ctx);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   if (!rank) {
     /* Open EGADs file and load EGADs model data */
     ierr = EG_open(&context);CHKERRQ(ierr);
