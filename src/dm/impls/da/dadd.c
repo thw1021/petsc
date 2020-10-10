@@ -1,5 +1,4 @@
 #include <petsc/private/dmdaimpl.h>  /*I   "petscdmda.h"   I*/
-#include <petsc/private/viewerhdf5impl.h>
 
 /*@
   DMDACreatePatchIS - Creates an index set corresponding to a patch of the DA.
