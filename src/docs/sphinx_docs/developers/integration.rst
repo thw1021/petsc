@@ -11,7 +11,7 @@ Integration branches
 ----------
 
 The ``master`` branch (soon to be renamed) contains all features and bug fixes that are believed to be
-stable and will be in the next feature release (e.g. version 3.14.0). Users developing software based
+stable and will be in the next release (e.g. version 3.14). Users developing software based
 on recently-added features in PETSc should follow ``master``.
 
 New feature branches should start from ``master``.
