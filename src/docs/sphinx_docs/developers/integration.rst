@@ -29,7 +29,7 @@ Bug fixes for the release should be started here:
    $ git checkout -b yourname/fix-component-name release
 
 As with new features, it will be tested and later merged to
-``release`` and ``master``. Maintenance releases (e.g. version 3.14.1) are tagged on ``release``.
+``release`` and ``master``. Bug-fix updates (e.g. 3.14.1) are tagged on ``release`` (e.g. v3.14.1).
 
 
 Contributing workflows
