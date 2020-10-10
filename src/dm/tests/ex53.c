@@ -135,6 +135,8 @@ int main(int argc,char **argv)
      Restore subvector, destroy data structures and exit.
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = VecRestoreSubVector(vec_full, selectis, &vec_slice);CHKERRQ(ierr);
+
+  ierr = ISDestroy(&selectis);CHKERRQ(ierr);
   ierr = DMDestroy(&da);CHKERRQ(ierr);
   ierr = VecDestroy(&vec_full);CHKERRQ(ierr);
 
