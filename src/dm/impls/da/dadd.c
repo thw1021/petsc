@@ -10,7 +10,7 @@
 +  da - the DMDA
 .  lower - a matstencil with i, j and k corresponding to the lower corner of the patch
 .  upper - a matstencil with i, j and k corresponding to the upper corner of the patch
--  offprocoverlap - return off proc vals
+-  offproc - return off proc vals
 
   Output Parameters:
 .  is - the IS corresponding to the patch
@@ -73,76 +73,6 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONG,"Lower and Upper stencils are identical! Please check inputs.");
   }
   ierr = PetscMalloc1(nindices*dof,&indices);CHKERRQ(ierr);
-
-  if (!offproc){
-    me = ms + mw;
-    if (N>1) ne = ns + nw;
-    if (P>1) pe = ps + pw;
-    /*IS shouldn't care about DM offsets*/
-    ms = ms - ox; me = me - ox;
-    ns = ns - oy; ne = ne - oy;
-    ps = ps - oz; pe = pe - oz;
-
-    if (!valid_k) {
-      k = 0;
-      upper->k=0;
-      lower->k=0;
-    }
-    if (!valid_j) {
-      j = 0;
-      upper->j=0;
-      lower->j=0;
-    }
-
-    /* compute the vector base on owning processor */
-    xm = me - ms;
-    ym = ne - ns;
-    zm = pe - ps;
-    base = ms*ym*zm + ns*M*zm + ps*M*N;
-
-    /* do while loops to ensure the block gets entered once,
-       regardless of control condition being met, necessary for
-       cases when skip_i/j/k is true
-       */
-    if (skip_k) k = upper->k-oz; else k = lower->k-oz;
-    do {
-      if (skip_j) j = upper->j-oy; else j = lower->j-oy;
-      do {
-        if (skip_i) i = upper->i-ox; else i = lower->i-ox;
-        do {
-          /* "actual" indices rather than ones outside of the domain */
-          ii = i;
-          jj = j;
-          kk = k;
-          if (kk>=ps && kk<=pe-1) {
-            if (jj>=ns && jj<=ne-1) {
-              if (ii>=ms && ii<=me-1) {
-
-                if (ii < 0) ii = M + ii;
-                if (jj < 0) jj = N + jj;
-                if (kk < 0) kk = P + kk;
-                if (ii > M-1) ii = ii - M;
-                if (jj > N-1) jj = jj - N;
-                if (kk > P-1) kk = kk - P;
-
-                /* compute the local coordinates on owning processor */
-                si = ii - ms;
-                sj = jj - ns;
-                sk = kk - ps;
-                for (l=0;l<dof;l++) {
-                  indices[idx] = l + dof*(base + si + xm*sj + xm*ym*sk);
-                  idx++;
-                }
-              }
-            }
-          }
-          i++;
-        } while (i<upper->i-ox);
-        j++;
-      } while (j<upper->j-oy);
-      k++;
-    } while (k<upper->k-oz);
-  }
 
   if (offproc) {
     ierr = DMDAGetOwnershipRanges(da,&lx,&ly,&lz);CHKERRQ(ierr);
@@ -222,9 +152,80 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
       }
     }
   }
-  ierr = PetscRealloc((size_t)(idx*sizeof(PetscInt)), (void*)&indices);CHKERRQ(ierr);
+
+  if (!offproc){
+    me = ms + mw;
+    if (N>1) ne = ns + nw;
+    if (P>1) pe = ps + pw;
+    /*IS shouldn't care about DM offsets*/
+    ms = ms - ox; me = me - ox;
+    ns = ns - oy; ne = ne - oy;
+    ps = ps - oz; pe = pe - oz;
+
+    if (!valid_k) {
+      k = 0;
+      upper->k=0;
+      lower->k=0;
+    }
+    if (!valid_j) {
+      j = 0;
+      upper->j=0;
+      lower->j=0;
+    }
+
+    /* compute the vector base on owning processor */
+    xm = me - ms;
+    ym = ne - ns;
+    zm = pe - ps;
+    base = ms*ym*zm + ns*M*zm + ps*M*N;
+
+    /* do while loops to ensure the block gets entered once,
+       regardless of control condition being met, necessary for
+       cases when skip_i/j/k is true
+       */
+    if (skip_k) k = upper->k-oz; else k = lower->k-oz;
+    do {
+      if (skip_j) j = upper->j-oy; else j = lower->j-oy;
+      do {
+        if (skip_i) i = upper->i-ox; else i = lower->i-ox;
+        do {
+          /* "actual" indices rather than ones outside of the domain */
+          ii = i;
+          jj = j;
+          kk = k;
+          if (kk>=ps && kk<=pe-1) {
+            if (jj>=ns && jj<=ne-1) {
+              if (ii>=ms && ii<=me-1) {
+
+                if (ii < 0) ii = M + ii;
+                if (jj < 0) jj = N + jj;
+                if (kk < 0) kk = P + kk;
+                if (ii > M-1) ii = ii - M;
+                if (jj > N-1) jj = jj - N;
+                if (kk > P-1) kk = kk - P;
+
+                /* compute the local coordinates on owning processor */
+                si = ii - ms;
+                sj = jj - ns;
+                sk = kk - ps;
+                for (l=0;l<dof;l++) {
+                  indices[idx] = l + dof*(base + si + xm*sj + xm*ym*sk);
+                  idx++;
+                }
+              }
+            }
+          }
+          i++;
+        } while (i<upper->i-ox);
+        j++;
+      } while (j<upper->j-oy);
+      k++;
+    } while (k<upper->k-oz);
+
+    ierr = PetscRealloc((size_t)(idx*sizeof(PetscInt)), (void*)&indices);CHKERRQ(ierr);
+  }
+
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject)da),idx,indices,PETSC_OWN_POINTER,is);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"idx is : %d, nindices*dof is %d\n", idx, nindices*dof);CHKERRQ(ierr);
   PetscFunctionReturn(ierr);
 }
 
