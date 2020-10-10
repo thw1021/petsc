@@ -48,6 +48,10 @@ PetscErrorCode PCReset_GAMG(PC pc)
   PetscFunctionReturn(0);
 }
 
+#if defined(PETSC_HAVE_CUDA)
+  #include <cuda_runtime.h>
+#endif
+
 /* -------------------------------------------------------------------------- */
 /*
    PCGAMGCreateLevel_GAMG: create coarse op with RAP.  repartition and/or reduce number
@@ -102,7 +106,30 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
     if (!new_size) new_size = 1; /* not likely, posible? */
     else if (new_size >= nactive) new_size = nactive; /* no change, rare */
   }
-
+#if defined(PETSC_HAVE_CUDA)
+  if (pc_gamg->current_level == -1) {
+    PetscShmComm pshmcomm;
+    PetscMPIInt  locrank;
+    MPI_Comm     loccomm;
+    PetscInt     s_nnodes,r_nnodes, new_new_size;
+    cudaError_t  cerr;
+    int          devCount;
+    ierr = PetscShmCommGet(comm,&pshmcomm);CHKERRQ(ierr);
+    ierr = PetscShmCommGetMpiShmComm(pshmcomm,&loccomm);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(loccomm, &locrank);CHKERRQ(ierr);
+    s_nnodes = locrank ? 1 : 0;
+    ierr = MPI_Allreduce(&s_nnodes,&r_nnodes,1,MPIU_INT,MPI_SUM,comm);CHKERRQ(ierr);
+    if(size%r_nnodes) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of nodes np=%D nnodes%D",size,r_nnodes);
+    devCount = 0;
+    cerr = cudaGetDeviceCount(&devCount);
+    cudaGetLastError(); /* Reset the last error */
+    if (cerr == cudaSuccess && devCount >= 1) { /* There are devices */
+      new_new_size = size/r_nnodes * devCount;
+      if (new_new_size < new_size) new_size = new_new_size;
+      ierr = PetscInfo3(pc,"Fine grid with Cuda. %D nodes. Change new active set size %D --> %D\n",r_nnodes,nactive,new_new_size);CHKERRQ(ierr);
+    }
+  }
+#endif
   if (new_size==nactive) {
     *a_Amat_crs = Cmat; /* output - no repartitioning or reduction - could bail here */
     if (new_size < size) {
