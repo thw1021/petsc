@@ -4,8 +4,8 @@ class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
     self.version          = '2.7.2'
-    self.gitcommit        = 'ac89ea4' # master sep-26-2020
-    self.download         = ['git://https://github.com/coin-or/ADOL-C.git','https://www.coin-or.org/download/source/ADOL-C/ADOL-C-' + self.version + '.tgz']
+    self.gitcommit        = 'e0a331581e4912a9b0e2f478aedb95bd7154b80d' # barry/fix-swig-lib64 10/10/202
+    self.download         = ['git://https://github.com/petsc/ADOL-C.git']
     self.includes         = ['adolc/adolc.h']
     self.liblist          = [['libadolc.a']]
     self.functions        = ['myalloc2','myfree2']
