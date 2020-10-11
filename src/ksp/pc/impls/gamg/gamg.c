@@ -865,7 +865,7 @@ PetscErrorCode PCDestroy_GAMG(PC pc)
 
    Level: intermediate
 
-.seealso: PCGAMGSetCoarseEqLim()
+.seealso: PCGAMGSetCoarseEqLim(), PCGAMGSetProcessReductionFactors()
 @*/
 PetscErrorCode  PCGAMGSetProcEqLim(PC pc, PetscInt n)
 {
@@ -904,7 +904,7 @@ static PetscErrorCode PCGAMGSetProcEqLim_GAMG(PC pc, PetscInt n)
 
    Level: intermediate
 
-.seealso: PCGAMGSetProcEqLim()
+.seealso: PCGAMGSetProcEqLim(), PCGAMGSetProcessReductionFactors()
 @*/
 PetscErrorCode PCGAMGSetCoarseEqLim(PC pc, PetscInt n)
 {
