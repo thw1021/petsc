@@ -94,15 +94,21 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
     ncrs = ncrs_eq/bs;
   }
   /* get number of PEs to make active 'new_size', reduce, can be any integer 1-P */
-  if (is_last && !pc_gamg->use_parallel_coarse_grid_solver) new_size = 1;
-  else {
+  if (pc_gamg->level_reduction_factors[pc_gamg->current_level] > 0) {
+    if (nactive%pc_gamg->level_reduction_factors[pc_gamg->current_level]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of active process %D wrt reduction factor %D",nactive,pc_gamg->level_reduction_factors[pc_gamg->current_level]);
+    new_size = nactive/pc_gamg->level_reduction_factors[pc_gamg->current_level];
+    ierr = PetscInfo1(pc,"Manually setting reduction to %D active processoes\n",new_size);CHKERRQ(ierr);
+  } else if (is_last && !pc_gamg->use_parallel_coarse_grid_solver) {
+    new_size = 1;
+    ierr = PetscInfo1(pc,"Force coarsest grid reduction to %D active processoes\n",new_size);CHKERRQ(ierr);
+  } else {
     PetscInt ncrs_eq_glob;
     ierr     = MatGetSize(Cmat, &ncrs_eq_glob, NULL);CHKERRQ(ierr);
     new_size = (PetscMPIInt)((float)ncrs_eq_glob/(float)pc_gamg->min_eq_proc + 0.5); /* hardwire min. number of eq/proc */
     if (!new_size) new_size = 1; /* not likely, posible? */
     else if (new_size >= nactive) new_size = nactive; /* no change, rare */
+    ierr = PetscInfo1(pc,"Coarse grid reduction to %D active processoes\n",new_size);CHKERRQ(ierr);
   }
-
   if (new_size==nactive) {
     *a_Amat_crs = Cmat; /* output - no repartitioning or reduction - could bail here */
     if (new_size < size) {
@@ -859,7 +865,7 @@ PetscErrorCode PCDestroy_GAMG(PC pc)
 
    Level: intermediate
 
-.seealso: PCGAMGSetCoarseEqLim()
+.seealso: PCGAMGSetCoarseEqLim(), PCGAMGSetProcessReductionFactors()
 @*/
 PetscErrorCode  PCGAMGSetProcEqLim(PC pc, PetscInt n)
 {
@@ -898,7 +904,7 @@ static PetscErrorCode PCGAMGSetProcEqLim_GAMG(PC pc, PetscInt n)
 
    Level: intermediate
 
-.seealso: PCGAMGSetProcEqLim()
+.seealso: PCGAMGSetProcEqLim(), PCGAMGSetProcessReductionFactors()
 @*/
 PetscErrorCode PCGAMGSetCoarseEqLim(PC pc, PetscInt n)
 {
@@ -1341,7 +1347,7 @@ static PetscErrorCode PCGAMGSetNlevels_GAMG(PC pc, PetscInt n)
 
    Input Parameters:
 +  pc - the preconditioner context
-.  threshold - array of threshold values for finest n levels; 0.0 means keep all nonzero entries in the graph; negative means keep even zero entries in the graph
+.  v - array of threshold values for finest n levels; 0.0 means keep all nonzero entries in the graph; negative means keep even zero entries in the graph
 -  n - number of threshold values provided in array
 
    Options Database Key:
@@ -1378,6 +1384,45 @@ static PetscErrorCode PCGAMGSetThreshold_GAMG(PC pc, PetscReal v[], PetscInt n)
   PetscFunctionBegin;
   for (i=0; i<PetscMin(n,PETSC_MG_MAXLEVELS); i++) pc_gamg->threshold[i] = v[i];
   for (; i<PETSC_MG_MAXLEVELS; i++) pc_gamg->threshold[i] = pc_gamg->threshold[i-1]*pc_gamg->threshold_scale;
+  PetscFunctionReturn(0);
+}
+
+/*@
+   PCGAMGSetProcessReductionFactors - Set manual schedual for process reduction on coarse grids
+
+   Not collective on PC
+
+   Input Parameters:
++  pc - the preconditioner context
+.  v - array of reduction factors
+-  n - number of values provided in array
+
+   Options Database Key:
+.  -pc_gamg_process_reduction_factors <factors>
+
+   Level: intermediate
+
+.seealso: PCGAMGSetProcEqLim(), PCGAMGSetCoarseEqLim()
+@*/
+PetscErrorCode PCGAMGSetProcessReductionFactors(PC pc, PetscInt v[], PetscInt n)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
+  if (n) PetscValidIntPointer(v,2);
+  ierr = PetscTryMethod(pc,"PCGAMGSetProcessReductionFactors_C",(PC,PetscInt[],PetscInt),(pc,v,n));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PCGAMGSetProcessReductionFactors_GAMG(PC pc, PetscInt v[], PetscInt n)
+{
+  PC_MG   *mg      = (PC_MG*)pc->data;
+  PC_GAMG *pc_gamg = (PC_GAMG*)mg->innerctx;
+  PetscInt i;
+  PetscFunctionBegin;
+  for (i=0; i<PetscMin(n,PETSC_MG_MAXLEVELS); i++) pc_gamg->level_reduction_factors[i] = v[i];
+  for (; i<PETSC_MG_MAXLEVELS; i++) pc_gamg->level_reduction_factors[i] = -1;
   PetscFunctionReturn(0);
 }
 
@@ -1628,6 +1673,11 @@ PetscErrorCode PCSetFromOptions_GAMG(PetscOptionItems *PetscOptionsObject,PC pc)
     i = n;
     do {pc_gamg->threshold[i] = pc_gamg->threshold[i-1]*pc_gamg->threshold_scale;} while (++i<PETSC_MG_MAXLEVELS);
   }
+  n = PETSC_MG_MAXLEVELS;
+  ierr = PetscOptionsIntArray("-pc_gamg_process_reduction_factors","Manual schedule of coarse grid reduction factors that overrides internal heuristics","PCGAMGSetProcessReductionFactors",pc_gamg->level_reduction_factors,&n,&flag);CHKERRQ(ierr);
+  if (!flag) i = 0;
+  else i = n;
+  do {pc_gamg->level_reduction_factors[i] = -1;} while (++i<PETSC_MG_MAXLEVELS);
   ierr = PetscOptionsInt("-pc_mg_levels","Set number of MG levels","PCGAMGSetNlevels",pc_gamg->Nlevels,&pc_gamg->Nlevels,NULL);CHKERRQ(ierr);
   {
     PetscReal eminmax[2] = {0., 0.};
@@ -1735,6 +1785,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGSetCpuPinCoarseGrids_C",PCGAMGSetCpuPinCoarseGrids_GAMG);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGSetCoarseGridLayoutType_C",PCGAMGSetCoarseGridLayoutType_GAMG);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGSetThreshold_C",PCGAMGSetThreshold_GAMG);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGSetProcessReductionFactors_C",PCGAMGSetProcessReductionFactors_GAMG);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGSetThresholdScale_C",PCGAMGSetThresholdScale_GAMG);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGSetType_C",PCGAMGSetType_GAMG);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGGetType_C",PCGAMGGetType_GAMG);CHKERRQ(ierr);
