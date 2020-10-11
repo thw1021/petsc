@@ -1387,7 +1387,7 @@ static PetscErrorCode PCGAMGSetThreshold_GAMG(PC pc, PetscReal v[], PetscInt n)
   PetscFunctionReturn(0);
 }
 
-/*@`%g
+/*@
    PCGAMGSetProcessReductionFactors - Set manual schedual for process reduction on coarse grids
 
    Not collective on PC
