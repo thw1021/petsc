@@ -95,7 +95,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
   }
   /* get number of PEs to make active 'new_size', reduce, can be any integer 1-P */
   if (pc_gamg->level_reduction_factors[pc_gamg->current_level] > 0) {
-    if(nactive%pc_gamg->level_reduction_factors[pc_gamg->current_level]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of active process %D wrt reduction factor %D",nactive,pc_gamg->level_reduction_factors[pc_gamg->current_level]);
+    if (nactive%pc_gamg->level_reduction_factors[pc_gamg->current_level]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of active process %D wrt reduction factor %D",nactive,pc_gamg->level_reduction_factors[pc_gamg->current_level]);
     new_size = nactive/pc_gamg->level_reduction_factors[pc_gamg->current_level];
     ierr = PetscInfo1(pc,"Manually setting reduction to %D active processoes\n",new_size);CHKERRQ(ierr);
   } else if (is_last && !pc_gamg->use_parallel_coarse_grid_solver) {
