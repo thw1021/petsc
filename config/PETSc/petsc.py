@@ -63,30 +63,6 @@ class Configure(config.base.Configure):
     help.addArgument('PETSc', '-with-petsc-shared=<bool>',         nargs.ArgBool(None, 1, 'Require that the PETSc library be shared'))
     return
 
-  def setupPackageDependencies(self, framework):
-    import sys
-
-    petscConf = None
-    for (name, (petscDir, petscArch)) in self.getLocations():
-      petscPythonDir = os.path.join(petscDir, 'config')
-      sys.path.append(petscPythonDir)
-      confPath = os.path.join(petscDir, petscArch,'lib','petsc','conf')
-      petscConf = framework.loadFramework(confPath)
-      if petscConf:
-        self.logPrint('Loaded PETSc-AS configuration ('+name+') from '+confPath)
-        self.location = (petscDir, petscArch)
-        self.trial[self.location] = name
-        break
-      else:
-        self.logPrint('PETSc-AS has no cached configuration in '+confPath)
-        sys.path.reverse()
-        sys.path.remove(petscPythonDir)
-        sys.path.reverse()
-    if not petscConf:
-      self.downloadPETSc()
-    framework.addPackageDependency(petscConf, confPath)
-    return
-
   def setupDependencies(self, framework):
     config.base.Configure.setupDependencies(self, framework)
     self.languages  = framework.require('PETSc.options.languages', self)
@@ -106,54 +82,6 @@ class Configure(config.base.Configure):
     else:
       raise InvalidPETScError('Must set PETSC_ARCH or use --with-petsc-arch')
     return
-
-  def getLocations(self):
-    '''Return all allowable locations for PETSc'''
-    if hasattr(self, '_configured'):
-      key =(self.dir, self.arch)
-      yield (self.working[key], key)
-      raise InvalidPETScError('Configured PETSc is not usable')
-    if self.framework.argDB['download-petsc'] == 1:
-      yield self.downloadPETSc()
-      raise InvalidPETScError('Downloaded PETSc is not usable')
-    if 'with-petsc-dir' in self.framework.argDB:
-      petscDir = self.framework.argDB['with-petsc-dir']
-      for petscArch in self.getPETScArch(petscDir):
-        yield ('User specified installation root', (petscDir, petscArch))
-      raise InvalidPETScError('No working architecitures in '+str(petscDir))
-    elif 'PETSC_DIR' in os.environ:
-      petscDir = os.environ['PETSC_DIR']
-      for petscArch in self.getPETScArch(petscDir):
-        yield ('User specified installation root', (petscDir, petscArch))
-      raise InvalidPETScError('No working architecitures in '+str(petscDir))
-    else:
-      for petscArch in self.getPETScArch(petscDir):
-        yield ('Default compiler locations', ('', petscArch))
-      petscDirRE = re.compile(r'(PETSC|pets)c(-.*)?')
-      trialDirs = []
-      for packageDir in self.framework.argDB['with-packages-search-path']:
-        if os.path.isdir(packageDir):
-          for d in os.listdir(packageDir):
-            if petscDirRE.match(d):
-              trialDirs.append(('Package directory installation root', os.path.join(packageDir, d)))
-      usrLocal = os.path.join('/usr', 'local')
-      if os.path.isdir(os.path.join('/usr', 'local')):
-        trialDirs.append(('Frequent user install location (/usr/local)', usrLocal))
-        for d in os.listdir(usrLocal):
-          if petscDirRE.match(d):
-            trialDirs.append(('Frequent user install location (/usr/local/'+d+')', os.path.join(usrLocal, d)))
-      if 'HOME' in os.environ and os.path.isdir(os.environ['HOME']):
-        for d in os.listdir(os.environ['HOME']):
-          if petscDirRE.match(d):
-            trialDirs.append(('Frequent user install location (~/'+d+')', os.path.join(os.environ['HOME'], d)))
-    return
-
-  def downloadPETSc(self):
-    if self.framework.argDB['download-petsc'] == 0:
-      raise RuntimeError('No functioning PETSc located')
-    # Download and build PETSc
-    #   Use only the already configured objects from this run
-    raise RuntimeError('Not implemented')
 
   def getDir(self):
     if self.location:

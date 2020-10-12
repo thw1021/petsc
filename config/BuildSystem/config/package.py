@@ -342,7 +342,9 @@ class Package(config.base.Configure):
 
   def getSearchDirectories(self):
     '''By default, do not search any particular directories, but try compiler default paths'''
-    return ['']
+    dir = ['']
+    dir.append(self.argDB['with-packages-search-path'])
+    return dir
 
   def getInstallDir(self):
     '''Calls self.Install() to install the package'''
