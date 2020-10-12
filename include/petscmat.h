@@ -270,6 +270,7 @@ PETSC_EXTERN PetscFunctionList MatPartitioningList;
 .seealso: MatCopy(), MatAXPY()
 E*/
 typedef enum {DIFFERENT_NONZERO_PATTERN,SUBSET_NONZERO_PATTERN,SAME_NONZERO_PATTERN,UNKNOWN_NONZERO_PATTERN} MatStructure;
+PETSC_EXTERN const char *const MatStructures[];
 
 #if defined PETSC_HAVE_MKL_SPARSE
 PETSC_EXTERN PetscErrorCode MatCreateSeqAIJMKL(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],Mat*);
