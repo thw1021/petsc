@@ -9513,9 +9513,9 @@ PetscErrorCode MatMatMult(Mat A,Mat B,MatReuse scall,PetscReal fill,Mat *C)
    and for pairs of MPIDense matrices.
 
    Options Database Keys:
-.  -matmattransmult_mpidense_mpidense_via {allgatherv,cyclic} - Choose between algorthims for MPIDense matrices: the
-                                                                first redundantly copies the transposed B matrix on each process and requiers O(log P) communication complexity;
-                                                                the second never stores more than one portion of the B matrix at a time by requires O(P) communication complexity.
+.  -matmattransmult_mpidense_mpidense_via {allgatherv,cyclic} - Choose between algorithms for MPIDense matrices: the
+              first redundantly copies the transposed B matrix on each process and requiers O(log P) communication complexity;
+              the second never stores more than one portion of the B matrix at a time by requires O(P) communication complexity.
 
    Level: intermediate
 
@@ -9553,7 +9553,7 @@ PetscErrorCode MatMatTransposeMult(Mat A,Mat B,MatReuse scall,PetscReal fill,Mat
    actually needed.
 
    This routine is currently implemented for pairs of AIJ matrices and pairs of SeqDense matrices and classes
-   which inherit from SeqAIJ.  C will be of same type as the input matrices.
+   which inherit from SeqAIJ.  C will be of the same type as the input matrices.
 
    Level: intermediate
 
@@ -9593,11 +9593,11 @@ PetscErrorCode MatTransposeMatMult(Mat A,Mat B,MatReuse scall,PetscReal fill,Mat
    actually needed.
 
    If you have many matrices with the same non-zero structure to multiply, you
-   should use MAT_REUSE_MATRIX in all calls but the first or
+   should use MAT_REUSE_MATRIX in all calls but the first
 
    Level: intermediate
 
-.seealso: MatMatMult, MatPtAP()
+.seealso: MatMatMult, MatPtAP(), MatMatTransposeMult(), MatTransposeMatMult()
 @*/
 PetscErrorCode MatMatMatMult(Mat A,Mat B,Mat C,MatReuse scall,PetscReal fill,Mat *D)
 {
@@ -9625,7 +9625,7 @@ PetscErrorCode MatMatMatMult(Mat A,Mat B,Mat C,MatReuse scall,PetscReal fill,Mat
 }
 
 /*@
-   MatCreateRedundantMatrix - Create redundant matrices and put them into processors of subcommunicators.
+   MatCreateRedundantMatrix - Create redundant matrices and put them into subcommunicators.
 
    Collective on Mat
 
@@ -9642,7 +9642,7 @@ PetscErrorCode MatMatMatMult(Mat A,Mat B,Mat C,MatReuse scall,PetscReal fill,Mat
    MAT_REUSE_MATRIX can only be used when the nonzero structure of the
    original matrix has not changed from that last call to MatCreateRedundantMatrix().
 
-   This routine creates the duplicated matrices in subcommunicators; you should NOT create them before
+   This routine creates the duplicated matrices in the subcommunicators; you should NOT create them before
    calling it.
 
    Level: advanced
@@ -9765,10 +9765,10 @@ PetscErrorCode MatCreateRedundantMatrix(Mat mat,PetscInt nsubcomm,MPI_Comm subco
 
   Notes:
   The submatrix partition across processors is dictated by 'subComm' a
-  communicator obtained by com_split(comm). The comm_split
+  communicator obtained by MPI_comm_split(). The subComm
   is not restriced to be grouped with consecutive original ranks.
 
-  Due the comm_split() usage, the parallel layout of the submatrices
+  Due the MPI_Comm_split() usage, the parallel layout of the submatrices
   map directly to the layout of the original matrix [wrt the local
   row,col partitioning]. So the original 'DiagonalMat' naturally maps
   into the 'DiagonalMat' of the subMat, hence it is used directly from
@@ -9776,7 +9776,6 @@ PetscErrorCode MatCreateRedundantMatrix(Mat mat,PetscInt nsubcomm,MPI_Comm subco
   reconstructed with MatSetValues()
 
   Level: advanced
-
 
 .seealso: MatCreateSubMatrices()
 @*/
