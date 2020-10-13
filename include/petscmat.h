@@ -286,6 +286,9 @@ PETSC_EXTERN PetscErrorCode MatCreateSeqSELL(MPI_Comm,PetscInt,PetscInt,PetscInt
 PETSC_EXTERN PetscErrorCode MatCreateSELL(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatSeqSELLSetPreallocation(Mat,PetscInt,const PetscInt[]);
 PETSC_EXTERN PetscErrorCode MatMPISELLSetPreallocation(Mat,PetscInt,const PetscInt[],PetscInt,const PetscInt[]);
+PETSC_EXTERN PetscErrorCode MatSeqSELLIrregularity(Mat,PetscReal*);
+PETSC_EXTERN PetscErrorCode MatSeqSELLMaxSliceWidth(Mat,PetscInt*);
+PETSC_EXTERN PetscErrorCode MatSeqSELLAvgSliceWidth(Mat,PetscReal*);
 
 PETSC_EXTERN PetscErrorCode MatCreateSeqDense(MPI_Comm,PetscInt,PetscInt,PetscScalar[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateDense(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscScalar[],Mat*);
