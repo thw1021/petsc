@@ -15,6 +15,19 @@
 PETSC_INTERN PetscErrorCode MatMatMultSymbolic_AIJ_AIJ_wHYPRE(Mat,Mat,PetscReal,Mat);
 #endif
 
+PETSC_INTERN PetscErrorCode MatProductSymbolic_ABt_MPIAIJ_MPIAIJ(Mat C)
+{
+  PetscErrorCode      ierr;
+  Mat_Product         *product = C->product;
+  Mat                 B=product->B;
+
+  PetscFunctionBegin;
+  ierr = MatTranspose(B,MAT_INITIAL_MATRIX,&product->B);CHKERRQ(ierr);
+  ierr = MatDestroy(&B);CHKERRQ(ierr);
+  ierr = MatProductSymbolic_AB_MPIAIJ_MPIAIJ(C);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 PETSC_INTERN PetscErrorCode MatProductSymbolic_AB_MPIAIJ_MPIAIJ(Mat C)
 {
   PetscErrorCode      ierr;
@@ -2099,7 +2112,6 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_AB(Mat C)
   PetscFunctionBegin;
   /* Check matrix local sizes */
   ierr = PetscObjectGetComm((PetscObject)C,&comm);CHKERRQ(ierr);
-  if (A->cmap->rstart != B->rmap->rstart || A->cmap->rend != B->rmap->rend) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Matrix local dimensions are incompatible, (%D, %D) != (%D,%D)",A->cmap->rstart,A->cmap->rend,B->rmap->rstart,B->rmap->rend);
 
   /* Set "nonscalable" as default algorithm */
   ierr = PetscStrcmp(C->product->alg,"default",&flg);CHKERRQ(ierr);
@@ -2142,6 +2154,16 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_AB(Mat C)
   }
 
   C->ops->productsymbolic = MatProductSymbolic_AB_MPIAIJ_MPIAIJ;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode MatProductSetFromOptions_MPIAIJ_ABt(Mat C)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatProductSetFromOptions_MPIAIJ_AB(C);CHKERRQ(ierr);
+  C->ops->productsymbolic = MatProductSymbolic_ABt_MPIAIJ_MPIAIJ;
   PetscFunctionReturn(0);
 }
 
@@ -2332,6 +2354,9 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJ(Mat C)
   switch (product->type) {
   case MATPRODUCT_AB:
     ierr = MatProductSetFromOptions_MPIAIJ_AB(C);CHKERRQ(ierr);
+    break;
+  case MATPRODUCT_ABt:
+    ierr = MatProductSetFromOptions_MPIAIJ_ABt(C);CHKERRQ(ierr);
     break;
   case MATPRODUCT_AtB:
     ierr = MatProductSetFromOptions_MPIAIJ_AtB(C);CHKERRQ(ierr);
