@@ -479,7 +479,8 @@ struct _p_Mat {
   MatFactorError         factorerrortype;               /* type of error in factorization */
   PetscReal              factorerror_zeropivot_value;   /* If numerical zero pivot was detected this is the computed value */
   PetscInt               factorerror_zeropivot_row;     /* Row where zero pivot was detected */
-  PetscInt               nblocks,*bsizes;   /* support for MatSetVariableBlockSizes() */
+  PetscInt               nblocks,*bsizes;    /* support for MatSetVariableBlockSizes() */
+  PetscInt               p_cstart,p_rank,p_cend,n_rank; /* support for parallel MatComputeVariableBlockSizes() */
   char                   *defaultvectype;
   Mat_Product            *product;
 };

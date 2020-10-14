@@ -6997,7 +6997,7 @@ PetscErrorCode MatDestroySubMatrices(PetscInt n,Mat *mat[])
 }
 
 /*@C
-   MatGetSeqNonzeroStructure - Extracts the sequential nonzero structure from a matrix.
+   MatGetSeqNonzeroStructure - Extracts the nonzero structure from a matrix and stores it, in its entirety, on each process
 
    Collective on Mat
 
@@ -7250,13 +7250,15 @@ PetscErrorCode MatSetBlockSize(Mat mat,PetscInt bs)
    MatComputeVariableBlockSizes - Given a matrix whose only nonzeros are in blocks along the diagonal this computes and stores
          the sizes of these blocks.
 
-   Logically Collective on Mat
+   Collective on mat
 
    Input Parameter:
 .  mat - the matrix
 
    Notes:
      There can be zeros within the blocks
+
+     The blocks can overlap between processes
 
    Level: intermediate
 
@@ -7265,33 +7267,36 @@ PetscErrorCode MatSetBlockSize(Mat mat,PetscInt bs)
 PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
 {
   PetscErrorCode  ierr;
-  PetscInt        bs,nblocks = 0, *bsizes,i = 0,j,n;
+  PetscInt        n,nblocks = 0, *bsizes,i = 0,env = 0, tbs = 0;
   const PetscInt *ia,*ja;
-  PetscBool       done;
+  PetscBool       set,flag,done;
+  Mat             A = mat;
 
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  ierr = MatGetRowIJ(mat,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
-  if (!done) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Unable to get IJ structure from matrix");
-  ierr = PetscMalloc1(n,&bsizes);CHKERRQ(ierr);
-  while (i<n) {
-    if (ja[ia[i+1]-1] < i) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Matrix does not have expected block diagonal structure; entry to left of diagonal when should be on diagonal %D",ja[ia[i]]);
-    bs = ja[ia[i+1]-1] - i + 1; /* block size of next block */
-    tryagain:
-    for (j=i+1; j<bs; j++) { /* confirm that next block is of this size */
-      if (ja[ia[j+1]-1] < i) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Matrix has nonzero below expected block diagonal structure");
-      if (ja[ia[j+1]-1] > i + bs) {
-        bs = ja[ia[j+1]-1] - i + 1;
-        goto tryagain;
-      }
-    }
-    bsizes[nblocks++] = bs;
-    i = i + bs;
-  }
-  ierr = MatSetVariableBlockSizes(mat,nblocks,bsizes);CHKERRQ(ierr);
-  ierr = PetscFree(bsizes);CHKERRQ(ierr);
-  ierr = MatRestoreRowIJ(mat,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+ PetscFunctionBegin;
+ PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
+ ierr = MatIsSymmetricKnown(mat,&set,&flag);CHKERRQ(ierr);
+ if (!set || !flag) {
+   /* TOO: only needs nonzero structure of transpose */
+   ierr = MatTranspose(mat,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
+   ierr = MatAXPY(A,1.0,mat,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
+ }
+ ierr = MatGetRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
+ if (!done) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Unable to get IJ structure from matrix");
+ ierr = PetscMalloc1(n,&bsizes);CHKERRQ(ierr);
+ for (i=0; i<n; i++) {
+   env = PetscMax(env,ja[ia[i+1]-1]);
+   if (env == i) {
+     bsizes[nblocks++] = 1 + i - tbs;
+     tbs = 1 + i;
+   }
+ }
+ if (!set || !flag) {
+   ierr = MatDestroy(&A);CHKERRQ(ierr);
+ }
+ ierr = MatSetVariableBlockSizes(mat,nblocks,bsizes);CHKERRQ(ierr);
+ ierr = PetscFree(bsizes);CHKERRQ(ierr);
+ ierr = MatRestoreRowIJ(mat,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
+ PetscFunctionReturn(0);
 }
 
 /*@

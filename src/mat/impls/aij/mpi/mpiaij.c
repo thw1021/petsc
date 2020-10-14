@@ -6,6 +6,30 @@
 #include <petscsf.h>
 #include <petsc/private/hashmapi.h>
 
+PetscErrorCode MatGetRowIJ_MPIAIJ(Mat A,PetscInt oshift,PetscBool symmetric,PetscBool inodecompressed,PetscInt *m,const PetscInt *ia[],const PetscInt *ja[],PetscBool  *done)
+{
+  PetscErrorCode ierr;
+  Mat            B;
+
+  PetscFunctionBegin;
+  ierr = MatMPIAIJGetLocalMat(A,MAT_INITIAL_MATRIX,&B);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject)A,"MatGetRowIJ_MPIAIJ",(PetscObject)B);CHKERRQ(ierr);
+  ierr = MatGetRowIJ(B,oshift,symmetric,inodecompressed,m,ia,ja,done);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatRestoreRowIJ_MPIAIJ(Mat A,PetscInt oshift,PetscBool symmetric,PetscBool inodecompressed,PetscInt *m,const PetscInt *ia[],const PetscInt *ja[],PetscBool  *done)
+{
+  PetscErrorCode ierr;
+  Mat            B;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectQuery((PetscObject)A,"MatGetRowIJ_MPIAIJ",(PetscObject*)&B);CHKERRQ(ierr);
+  ierr = MatRestoreRowIJ(B,oshift,symmetric,inodecompressed,m,ia,ja,done);CHKERRQ(ierr);
+  ierr = MatDestroy(&B);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*MC
    MATAIJ - MATAIJ = "aij" - A matrix type to be used for sparse matrices.
 
@@ -2846,8 +2870,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        MatDiagonalSet_MPIAIJ,
                                        MatZeroRowsColumns_MPIAIJ,
                                 /*49*/ MatSetRandom_MPIAIJ,
-                                       NULL,
-                                       NULL,
+                                       MatGetRowIJ_MPIAIJ,
+                                       MatRestoreRowIJ_MPIAIJ,
                                        NULL,
                                        NULL,
                                 /*54*/ MatFDColoringCreate_MPIXAIJ,
@@ -6330,3 +6354,4 @@ PETSC_EXTERN void matsetvaluesmpiaij_(Mat *mmat,PetscInt *mm,const PetscInt im[]
   }
   PetscFunctionReturnVoid();
 }
+
