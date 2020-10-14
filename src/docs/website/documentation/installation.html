@@ -174,6 +174,13 @@ that use Fortran (for example, MUMPS requires Fortran) you can use --with-fc=0 f
           </li>
 
           <li>
+            Same as above - but install in a user specified (prefix) location.
+            <ul>
+              <li>./configure --prefix=/home/user/soft/petsc-install --with-cc=gcc --with-cxx=0 --with-fc=0 --download-f2cblaslapack --download-mpich</li>
+            </ul>
+          </li>
+
+          <li>
             If BLAS, LAPACK, MPI sources (in &quot;-devel&quot; packages in most distros) are already installed in default system/compiler locations and mpicc,
             mpif90, mpiexec are available via PATH - configure does not require any additional options.
             <ul>
