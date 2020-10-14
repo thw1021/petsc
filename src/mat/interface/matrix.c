@@ -9532,6 +9532,9 @@ PetscErrorCode MatMatTransposeMult(Mat A,Mat B,MatReuse scall,PetscReal fill,Mat
 
   PetscFunctionBegin;
   ierr = MatProduct_Private(A,B,scall,fill,MATPRODUCT_ABt,C);CHKERRQ(ierr);
+  if (A == B) {
+    ierr = MatSetOption(*C,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
