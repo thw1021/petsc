@@ -7246,6 +7246,12 @@ PetscErrorCode MatSetBlockSize(Mat mat,PetscInt bs)
   PetscFunctionReturn(0);
 }
 
+type struct {
+  PetscInt rank;
+  PetscInt parallel;
+  PetscInt cstart;
+} MatComputeVariableBlockSizeData;
+
 /*@
    MatComputeVariableBlockSizes - Given a matrix whose only nonzeros are in blocks along the diagonal this computes and stores
          the sizes of these blocks.
@@ -7264,6 +7270,85 @@ PetscErrorCode MatSetBlockSize(Mat mat,PetscInt bs)
 
 .seealso: MatCreateSeqBAIJ(), MatCreateBAIJ(), MatGetBlockSize(), MatSetBlockSizes(), MatGetBlockSizes(), MatGetVariableBlockSizes(), MatSetVariableBlockSizes()
 @*/
+PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
+{
+  PetscErrorCode  ierr;
+  PetscInt        n,nblocks = 0, *bsizes,i = 0,env = 0, senv = 0,  cstart;
+  const PetscInt *ia,*ja;
+  PetscBool       set,flag,done;
+  Mat             A = mat;
+  MPI_Comm        comm;
+  PetscMPIInt     rank,size,tag;
+  MPI_Status      status;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
+  ierr = MatIsSymmetricKnown(mat,&set,&flag);CHKERRQ(ierr);
+  if (!set || !flag) {
+    /* TOO: only needs nonzero structure of transpose */
+    ierr = MatTranspose(mat,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
+    ierr = MatAXPY(A,1.0,mat,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
+    ierr = MatGetRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
+  } else {
+    ierr = MatMPIAIJGetLocalMat(mat,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
+    ierr = PetscObjectCompose((PtscObject)A,"MatGetRowIJ_MPIAIJ",(PetscObject)B);CHKERRQ(ierr);
+    ierr = MatGetRowIJ(A,oshift,symmetric,inodecompressed,m,ia,ja,done);CHKERRQ(ierr);
+  }
+  if (!done) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Unable to get IJ structure from matrix");
+
+  ierr = MatGetLocalSize(mat,&n,NULL);CHKERRQ(ierr);
+  ierr = PetscObjectGetNewTag((PetscObject)mat,&tag);CHKERRQ(ierr);
+  ierr = PetscObjectGetComm((PetscObject)mat,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  if (rank > 0) {
+    ierr = MPI_Recv(&senv,1,MPIU_INT,rank-1,tag,comm,&status);CHKERRQ(ierr);
+    env  = senv;
+  }
+  if (rank < size-1) {
+    for (i=0; i<n; i++) {
+      senv = PetscMax(senv,ja[ia[i+1]-1]);
+    }
+    ierr = MPI_Send(&senv,1,MPIU_INT,rank+1,tag,comm);CHKERRQ(ierr);
+  }
+  ierr = PetscMalloc1(n,&bsizes);CHKERRQ(ierr);
+  if (!rank) cstart = 0;
+  if (rank > 0) {
+    ierr = MPI_Recv(&rbuff,,sizeof(sbuff)/sizeof(PetscInt),MPIU_INT,rank-1,tag,comm,&status);CHKERRQ(ierr);
+  } else {
+    rbuff.rank    = -1;
+    rbuff.cstart  = 0;
+    ruff.parallel = 0;
+  }
+  ierr = MatGetOwnershipRangeColumn(mat,&cstart,NULL);CHKERRQ(ierr);
+  for (i=0; i<n; i++) {
+    env = PetscMax(env,ja[ia[i+1]-1]);
+    if (env == i+cstart) {
+      bsizes[nblocks++] = 1 + i - tbs;
+      rbuff.cstart = cstart + i + 1;
+    }
+  }
+  if (rank < size-1) {
+    sbuff.rank  = rbuff.rank > 0 ? rbuff.rank + 1 : -1;
+    sbuff.parallel += rbuff.cstart < (cstart + n);
+    ierr = MPI_Send(&sbuff,sizeof(sbuff)/sizeof(PetscInt),MPIU_INT,rank+1,tag,comm);CHKERRQ(ierr);
+  }
+  ierr = MatRestoreRowIJ(mat,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
+  if (!set || !flag) {
+    ierr = MatDestroy(&A);CHKERRQ(ierr);
+  } else {
+    ierr = PetscObjectCompose((PetscObject)mat,"localmat",(PetscObject)A);CHKERRQ(ierr);
+  }
+  ierr = MatSetVariableBlockSizes(mat,nblocks,bsizes);CHKERRQ(ierr);
+  ierr = PetscFree(bsizes);CHKERRQ(ierr);
+
+  PetscFunctionReturn(0);
+}
+
+p_cstart,p_rank,p_cend,n_rank;
+
+
+#if defined(roo)
 PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
 {
   PetscErrorCode  ierr;
@@ -7298,6 +7383,8 @@ PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
  ierr = MatRestoreRowIJ(mat,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
  PetscFunctionReturn(0);
 }
+#endif
+
 
 /*@
    MatSetVariableBlockSizes - Sets a diagonal blocks of the matrix that need not be of the same size
