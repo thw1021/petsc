@@ -159,20 +159,6 @@ approvals), all the tests work, and all the threads have been resolved
 the **submitter** must set a label to "workflow::Ready-For-Merge" (can
 also assign the MR to (@sbalay) if necessary)
 
-Docs-only changes
-^^^^^^^^^^^^^^^^^
-
-To allow for small, quick changes to documentation, if you have made
-**absolutely sure** that your changes only affect documentation, you may
-create your merge request, add the
-“workflow::Docs-Review-Merge” label, and assign to an integrator
-to review and merge.
-
-If in doubt, use the normal review process.
-
-Remember that documentation changes should be made to the :any:`the release branch <sec_release_branch>`
-if they apply to the release version of PETSc.
-
 GitLab instructions
 ===================
 
