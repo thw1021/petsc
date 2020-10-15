@@ -101,6 +101,29 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
   } else if (is_last && !pc_gamg->use_parallel_coarse_grid_solver) {
     new_size = 1;
     ierr = PetscInfo1(pc,"Force coarsest grid reduction to %D active processoes\n",new_size);CHKERRQ(ierr);
+  } else if (/* pc_gamg->level_reduction_factors[pc_gamg->current_level]==0 && */ PetscDefined(PETSC_HAVE_CUDA) && pc_gamg->current_level == 0) { /* do we want to hard wire this? */
+#if defined(PETSC_HAVE_CUDA)
+    PetscShmComm pshmcomm;
+    PetscMPIInt  locrank;
+    MPI_Comm     loccomm;
+    PetscInt     s_nnodes,r_nnodes, new_new_size;
+    cudaError_t  cerr;
+    int          devCount;
+    ierr = PetscShmCommGet(comm,&pshmcomm);CHKERRQ(ierr);
+    ierr = PetscShmCommGetMpiShmComm(pshmcomm,&loccomm);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(loccomm, &locrank);CHKERRQ(ierr);
+    s_nnodes = locrank ? 1 : 0;
+    ierr = MPI_Allreduce(&s_nnodes,&r_nnodes,1,MPIU_INT,MPI_SUM,comm);CHKERRQ(ierr);
+    if(size%r_nnodes) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of nodes np=%D nnodes%D",size,r_nnodes);
+    devCount = 0;
+    cerr = cudaGetDeviceCount(&devCount);
+    cudaGetLastError(); /* Reset the last error */
+    if (cerr == cudaSuccess && devCount >= 1) { /* There are devices */
+      new_new_size = size/r_nnodes * devCount;
+      if (new_new_size < new_size) new_size = new_new_size;
+      ierr = PetscInfo3(pc,"Fine grid with Cuda. %D nodes. Change new active set size %D --> %D\n",r_nnodes,nactive,new_new_size);CHKERRQ(ierr);
+    }
+#endif
   } else {
     PetscInt ncrs_eq_glob;
     ierr     = MatGetSize(Cmat, &ncrs_eq_glob, NULL);CHKERRQ(ierr);
@@ -1422,7 +1445,7 @@ static PetscErrorCode PCGAMGSetRankReductionFactors_GAMG(PC pc, PetscInt v[], Pe
   PetscInt i;
   PetscFunctionBegin;
   for (i=0; i<PetscMin(n,PETSC_MG_MAXLEVELS); i++) pc_gamg->level_reduction_factors[i] = v[i];
-  for (; i<PETSC_MG_MAXLEVELS; i++) pc_gamg->level_reduction_factors[i] = -1;
+  for (; i<PETSC_MG_MAXLEVELS; i++) pc_gamg->level_reduction_factors[i] = -1; /* 0 is for first level on device ??? */
   PetscFunctionReturn(0);
 }
 
@@ -1674,7 +1697,7 @@ PetscErrorCode PCSetFromOptions_GAMG(PetscOptionItems *PetscOptionsObject,PC pc)
     do {pc_gamg->threshold[i] = pc_gamg->threshold[i-1]*pc_gamg->threshold_scale;} while (++i<PETSC_MG_MAXLEVELS);
   }
   n = PETSC_MG_MAXLEVELS;
-  ierr = PetscOptionsIntArray("-pc_gamg_rank_reduction_factors","Manual schedule of coarse grid reduction factors that overrides internal heuristics","PCGAMGSetRankReductionFactors",pc_gamg->level_reduction_factors,&n,&flag);CHKERRQ(ierr);
+  ierr = PetscOptionsIntArray("-pc_gamg_rank_reduction_factors","Manual schedule of coarse grid reduction factors that overrides internal heuristics (0,... for reduce first coarse level to (Cuda) device???)","PCGAMGSetRankReductionFactors",pc_gamg->level_reduction_factors,&n,&flag);CHKERRQ(ierr);
   if (!flag) i = 0;
   else i = n;
   do {pc_gamg->level_reduction_factors[i] = -1;} while (++i<PETSC_MG_MAXLEVELS);
