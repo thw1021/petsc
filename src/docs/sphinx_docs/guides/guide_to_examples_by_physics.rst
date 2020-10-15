@@ -123,7 +123,7 @@ The incompressible Navier-Stokes equations
 
 .. math::
 
-    \frac{\partial u}{\partial t} + u\cdot\nabla u - \nabla \cdot \left(\frac{\mu}{2} \left(\nabla u + \nabla u^T\right)\right) + \nabla p + f = 0
+    \frac{\partial u}{\partial t} + u\cdot\nabla u - \nabla \cdot \left(\mu \left(\nabla u + \nabla u^T\right)\right) + \nabla p + f = 0
 
 .. math::
 
