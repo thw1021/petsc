@@ -84,7 +84,7 @@ The Stokes equations
 
 .. math::
 
-    -\nabla \cdot \left(\frac{\mu}{2} \left(\nabla u + \nabla u^T \right)\right) + \nabla p + f = 0
+    -\nabla \cdot \left(\mu \left(\nabla u + \nabla u^T \right)\right) + \nabla p + f = 0
 
 .. math::
 
