@@ -120,16 +120,7 @@ PetscErrorCode VecKokkosRestoreDeviceViewWrite(Vec v,PetscScalarViewDevice_t* dv
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecKokkosGetArrayInPlace(Vec v,PetscScalar** array)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = VecKokkosGetArrayInPlace_Internal(v,array,NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecKokkosGetArrayInPlace_Internal(Vec v,PetscScalar** array,PetscMemType *mtype)
+PetscErrorCode VecKokkosGetArrayInPlace(Vec v,PetscScalar** array,PetscMemType *mtype)
 {
   Vec_Kokkos  *veckok = static_cast<Vec_Kokkos*>(v->spptr);
 
@@ -163,16 +154,7 @@ PetscErrorCode VecKokkosRestoreArrayInPlace(Vec v,PetscScalar** array)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecKokkosGetArrayReadInPlace(Vec v,const PetscScalar** array)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = VecKokkosGetArrayReadInPlace_Internal(v,array,NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecKokkosGetArrayReadInPlace_Internal(Vec v,const PetscScalar** array,PetscMemType *mtype)
+PetscErrorCode VecKokkosGetArrayReadInPlace(Vec v,const PetscScalar** array,PetscMemType *mtype)
 {
   Vec_Kokkos  *veckok = static_cast<Vec_Kokkos*>(v->spptr);
 
