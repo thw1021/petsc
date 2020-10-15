@@ -1699,7 +1699,7 @@ PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
 }
 
 /*@C
-   VecGetArrayInPlace_Internal - Like VecGetArray(), but if this is a CUDA vector and it is currently offloaded to GPU,
+   VecGetArrayInPlace - Like VecGetArray(), but if this is a CUDA vector and it is currently offloaded to GPU,
    the returned pointer will be a GPU pointer to the GPU memory that contains this processor's portion of the
    vector data. Otherwise, it functions as VecGetArray().
 
@@ -1709,22 +1709,15 @@ PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
 .  x - the vector
 
    Output Parameter:
-.  a - location to put pointer to the array
++  a - location to put pointer to the array
+-  mtype - memory type of the array
 
    Level: beginner
 
 .seealso: VecRestoreArrayInPlace(), VecRestoreArrayInPlace(), VecRestoreArray(), VecGetArrayRead(), VecGetArrays(), VecGetArrayF90(), VecGetArrayReadF90(),
           VecPlaceArray(), VecGetArray2d(), VecGetArrayPair(), VecRestoreArrayPair(), VecGetArrayWrite(), VecRestoreArrayWrite()
 @*/
-PetscErrorCode VecGetArrayInPlace(Vec x,PetscScalar **a)
-{
-  PetscErrorCode ierr;
-  PetscFunctionBegin;
-  ierr = VecGetArrayInPlace_Internal(x,a,NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecGetArrayInPlace_Internal(Vec x,PetscScalar **a,PetscMemType *mtype)
+PetscErrorCode VecGetArrayInPlace(Vec x,PetscScalar **a,PetscMemType *mtype)
 {
   PetscErrorCode ierr;
 
@@ -1734,7 +1727,7 @@ PetscErrorCode VecGetArrayInPlace_Internal(Vec x,PetscScalar **a,PetscMemType *m
   if (mtype) *mtype = PETSC_MEMTYPE_HOST;
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   if (x->offloadmask == PETSC_OFFLOAD_VECKOKKOS) {
-    ierr = VecKokkosGetArrayInPlace_Internal(x,a,mtype);CHKERRQ(ierr);
+    ierr = VecKokkosGetArrayInPlace(x,a,mtype);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
 #endif
@@ -1869,7 +1862,8 @@ PetscErrorCode VecGetArrayRead(Vec x,const PetscScalar **a)
 .  x - the vector
 
    Output Parameter:
-.  a - the array
++  a - the array
+-  mtype - memory type of the array
 
    Level: beginner
 
@@ -1879,15 +1873,7 @@ PetscErrorCode VecGetArrayRead(Vec x,const PetscScalar **a)
 
 .seealso: VecRestoreArrayReadInPlace(), VecGetArray(), VecRestoreArray(), VecGetArrayPair(), VecRestoreArrayPair(), VecGetArrayInPlace()
 @*/
-PetscErrorCode VecGetArrayReadInPlace(Vec x,const PetscScalar **a)
-{
-  PetscErrorCode ierr;
-  PetscFunctionBegin;
-  ierr = VecGetArrayReadInPlace_Internal(x,a,NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecGetArrayReadInPlace_Internal(Vec x,const PetscScalar **a,PetscMemType *mtype)
+PetscErrorCode VecGetArrayReadInPlace(Vec x,const PetscScalar **a,PetscMemType *mtype)
 {
   PetscErrorCode ierr;
 
@@ -1896,7 +1882,7 @@ PetscErrorCode VecGetArrayReadInPlace_Internal(Vec x,const PetscScalar **a,Petsc
   if (mtype) *mtype = PETSC_MEMTYPE_HOST;
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   if (x->offloadmask == PETSC_OFFLOAD_VECKOKKOS) {
-    ierr = VecKokkosGetArrayReadInPlace_Internal(x,a,mtype);CHKERRQ(ierr);
+    ierr = VecKokkosGetArrayReadInPlace(x,a,mtype);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
 #endif
