@@ -7,7 +7,7 @@
 #include <petsc/private/fortranimpl.h>
 #endif
 
-static PetscErrorCode (*loadedSym)(HPDDM::Schwarz<PetscScalar>* const, IS const, IS, const Mat, Mat, std::vector<Vec>, PetscInt* const, PC_HPDDM_Level** const) = NULL;
+static PetscErrorCode (*loadedSym)(HPDDM::Schwarz<PetscScalar>* const, IS, Mat, Mat, Mat, std::vector<Vec>, PC_HPDDM_Level** const) = NULL;
 
 static PetscBool PCHPDDMPackageInitialized = PETSC_FALSE;
 static PetscBool citePC = PETSC_FALSE;
@@ -696,7 +696,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
 {
   PC_HPDDM                 *data = (PC_HPDDM*)pc->data;
   PC                       inner;
-  Mat                      *sub, A, P, N, C, uaux = NULL;
+  Mat                      *sub, A, P, N, C, uaux = NULL, weighted;
   Vec                      xin, v;
   std::vector<Vec>         initial;
   IS                       is[1], loc, uis = data->is;
@@ -893,13 +893,60 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
         ierr = VecDestroy(&xin);CHKERRQ(ierr);
       }
       if (data->levels[0]->P) {
-        /* if the pattern is the same and PCSetUp has previously succeeded, reuse HPDDM buffers and connectivity */
+        /* if the pattern is the same and PCSetUp() has previously succeeded, reuse HPDDM buffers and connectivity */
         ierr = HPDDM::Schwarz<PetscScalar>::destroy(data->levels[0], pc->setupcalled < 1 || pc->flag == DIFFERENT_NONZERO_PATTERN ? PETSC_TRUE : PETSC_FALSE);CHKERRQ(ierr);
       }
       if (!data->levels[0]->P) data->levels[0]->P = new HPDDM::Schwarz<PetscScalar>();
-      ierr = (*loadedSym)(data->levels[0]->P, loc, data->is, sub[0], ismatis ? C : data->aux, initial, &data->N, data->levels);CHKERRQ(ierr);
-      if (!data->Neumann)
+      if (data->log_separate) {
+        ierr = PetscLogEventBegin(PC_HPDDM_SetUp[0], data->levels[0]->ksp, 0, 0, 0);CHKERRQ(ierr);
+      } else {
+        ierr = PetscLogEventBegin(PC_HPDDM_Strc, data->levels[0]->ksp, 0, 0, 0);CHKERRQ(ierr);
+      }
+      /* HPDDM internal data structure */
+      ierr = data->levels[0]->P->structure(loc, data->is, sub[0], ismatis ? C : data->aux, data->levels);CHKERRQ(ierr);
+      if (!data->log_separate) {
+        ierr = PetscLogEventEnd(PC_HPDDM_Strc, data->levels[0]->ksp, 0, 0, 0);CHKERRQ(ierr);
+      }
+      /* matrix pencil of the generalized eigenvalue problem on the overlap (GenEO) */
+      if (!data->B) {
+        ierr = MatDuplicate(sub[0], MAT_COPY_VALUES, &weighted);CHKERRQ(ierr);
+        ierr = MatDiagonalScale(weighted, data->levels[0]->D, data->levels[0]->D);CHKERRQ(ierr);
+      } else weighted = data->B;
+      /* SLEPc is used inside the loaded symbol */
+      ierr = (*loadedSym)(data->levels[0]->P, data->is, ismatis ? C : data->aux, weighted, data->B, initial, data->levels);CHKERRQ(ierr);
+      if (data->log_separate) {
+        ierr = PetscLogEventEnd(PC_HPDDM_SetUp[0], data->levels[0]->ksp, 0, 0, 0);CHKERRQ(ierr);
+      }
+      if (ismatis) {
+        ierr = MatISGetLocalMat(C, &N);CHKERRQ(ierr);
+      } else N = data->aux;
+      P = sub[0];
+      /* going through the grid hierarchy */
+      for (n = 1; n < data->N; ++n) {
+        if (data->log_separate) {
+          ierr = PetscLogEventBegin(PC_HPDDM_SetUp[n], data->levels[n]->ksp, 0, 0, 0);CHKERRQ(ierr);
+        }
+        /* method composed in the loaded symbol since there, SLEPc is used as well */
+        ierr = PetscUseMethod(data->levels[0]->ksp, "PCHPDDMSetUp_Private_C", (Mat*, Mat*, PetscInt, PetscInt* const, PC_HPDDM_Level** const), (&P, &N, n, &data->N, data->levels));CHKERRQ(ierr);
+        if (data->log_separate) {
+          ierr = PetscLogEventEnd(PC_HPDDM_SetUp[n], data->levels[n]->ksp, 0, 0, 0);CHKERRQ(ierr);
+        }
+      }
+      /* reset to NULL to avoid any faulty use */
+      ierr = PetscObjectComposeFunction((PetscObject)data->levels[0]->ksp, "PCHPDDMSetUp_Private_C", NULL);CHKERRQ(ierr);
+      if (ismatis) {
+        /* matching PetscObjectReference() above */
+        ierr = PetscObjectDereference((PetscObject)C);CHKERRQ(ierr);
+      }
+      for (n = 0; n < data->N - 1; ++n)
+        if (data->levels[n]->P) {
+          /* HPDDM internal work buffers */
+          data->levels[n]->P->setBuffer();
+          data->levels[n]->P->super::start();
+        }
+      if (!data->Neumann) {
         ierr = MatDestroySubMatrices(1, &sub);CHKERRQ(ierr);
+      }
       if (ismatis) data->is = NULL;
       for (n = 0; n < data->N - 1 + (reused > 0); ++n) {
         if (data->levels[n]->P) {
@@ -1160,17 +1207,17 @@ PetscErrorCode PCHPDDMInitializePackage(void)
   PCHPDDMPackageInitialized = PETSC_TRUE;
   ierr = PetscRegisterFinalize(PCHPDDMFinalizePackage);CHKERRQ(ierr);
   /* general events registered once during package initialization */
-  /* these events are not triggered in libpetsc,                  */
+  /* some of these events are not triggered in libpetsc,          */
   /* but rather directly in libhpddm_petsc,                       */
   /* which is in charge of performing the following operations    */
 
   /* domain decomposition structure from Pmat sparsity pattern    */
   ierr = PetscLogEventRegister("PCHPDDMStrc", PC_CLASSID, &PC_HPDDM_Strc);CHKERRQ(ierr);
-  /* Galerkin product, redistribution, and setup                  */
+  /* Galerkin product, redistribution, and setup (not triggered in libpetsc)                */
   ierr = PetscLogEventRegister("PCHPDDMPtAP", PC_CLASSID, &PC_HPDDM_PtAP);CHKERRQ(ierr);
-  /* Galerkin product with summation, redistribution, and setup   */
+  /* Galerkin product with summation, redistribution, and setup (not triggered in libpetsc) */
   ierr = PetscLogEventRegister("PCHPDDMPtBP", PC_CLASSID, &PC_HPDDM_PtBP);CHKERRQ(ierr);
-  /* next level construction using PtAP and PtBP                  */
+  /* next level construction using PtAP and PtBP (not triggered in libpetsc)                */
   ierr = PetscLogEventRegister("PCHPDDMNext", PC_CLASSID, &PC_HPDDM_Next);CHKERRQ(ierr);
   static_assert(PETSC_HPDDM_MAXLEVELS <= 9, "PETSC_HPDDM_MAXLEVELS value is too high");
   for (i = 1; i < PETSC_HPDDM_MAXLEVELS; ++i) {
