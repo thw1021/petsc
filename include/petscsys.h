@@ -152,7 +152,7 @@ $   #if PetscDefined(USE_DEBUG)
 $     ...
 $   #else
 
-  Either way evaluates true if PETSC_USE_DEBUG is defined (merely defined or defined to 1) or undefined.  This macro
+  Either way, it evaluates true if PETSC_USE_DEBUG is defined (merely defined or defined to 1), and false if PETSC_USE_DEBUG is undefined.  This macro
   should not be used if its argument may be defined to a non-empty value other than 1.
 
   Developer Notes:
