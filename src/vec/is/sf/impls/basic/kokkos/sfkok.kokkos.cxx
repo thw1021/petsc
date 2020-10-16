@@ -468,15 +468,20 @@ PetscErrorCode PetscSFFree_Kokkos(PetscMemType mtype,void* ptr)
 /* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
 PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype unit)
 {
-  PetscErrorCode ierr;
-  PetscInt       nSignedChar=0,nUnsignedChar=0,nInt=0,nPetscInt=0,nPetscReal=0;
-  PetscBool      is2Int,is2PetscInt;
+  PetscErrorCode     ierr;
+  PetscInt           nSignedChar=0,nUnsignedChar=0,nInt=0,nPetscInt=0,nPetscReal=0;
+  PetscBool          is2Int,is2PetscInt;
 #if defined(PETSC_HAVE_COMPLEX)
-  PetscInt       nPetscComplex=0;
+  PetscInt           nPetscComplex=0;
 #endif
+  static PetscBool   kinitChecked=PETSC_FALSE;
 
   PetscFunctionBegin;
   if (link->deviceinited) PetscFunctionReturn(0);
+  if (!kinitChecked) {
+    ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
+    kinitChecked = PETSC_TRUE;
+  }
   ierr = MPIPetsc_Type_compare_contig(unit,MPI_SIGNED_CHAR,  &nSignedChar);CHKERRQ(ierr);
   ierr = MPIPetsc_Type_compare_contig(unit,MPI_UNSIGNED_CHAR,&nUnsignedChar);CHKERRQ(ierr);
   /* MPI_CHAR is treated below as a dumb type that does not support reduction according to MPI standard */
