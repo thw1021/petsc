@@ -60,7 +60,7 @@ print:
 %.o: %.cxx
 	$(COMPILE.cc) $(OUTPUT_OPTION) $<
 %.o : %.cu
-	$(CUDAC) -c $(CUDAC_FLAGS) $(CUDA_INCLUDE) -o $@ $<
+	$(CUDAC) -c $(CPPFLAGS) $(CUDAC_FLAGS) $(CUDA_INCLUDE) -o $@ $<
 
 # For a multi-file case, suppose you have the source files a.F90, b.c, and c.cxx
 # (with a program statement appearing in a.F90 or main() appearing in the C or
