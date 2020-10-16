@@ -28,16 +28,13 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
   int                   devId = -1;
 
   PetscFunctionBegin;
+#if defined(KOKKOS_ENABLE_CUDA)
+  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+#elif defined(KOKKOS_ENABLE_HIP)
+  ierr = PetscHIPInitializeCheck();CHKERRQ(ierr);
+#endif
   if (!Kokkos::is_initialized()) {
-   #if defined(KOKKOS_ENABLE_CUDA)
-    ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
-    cudaGetDevice(&devId);
-   #elif defined(KOKKOS_ENABLE_HIP) /* Kokkos does not support CUDA and HIP at the same time */
-    ierr = PetscHIPInitializeCheck();CHKERRQ(ierr);
-    hipGetDevice(&devId);
-   #endif
-    args.device_id   = devId;
-    Kokkos::initialize(args);
+    ierr = PetscKokkosInitialize_Private();CHKERRQ(ierr);
     PetscBeganKokkos = PETSC_TRUE;
   }
   PetscKokkosInitialized = PETSC_TRUE;
