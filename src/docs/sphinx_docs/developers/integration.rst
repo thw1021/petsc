@@ -206,7 +206,7 @@ You can see the failed jobs by clicking on the  X.
    <div name="raw_11" id="thumbwrap"> <a class="thumb" href="#raw_11"><img src="../../_images/find-exact-bad-job.png" alt=""><span><img src="../../_images/find-exact-bad-job.png" alt=""></span></a> </div></p>
    <div class="clearfix"></div>
 
-A job consists of many ``examples``, each test is a run of an example with a particular set of command line options
+A job consists of many "examples". Each test is a run of an example with a particular set of command line options
 
 A failure in running the job's tests will have ``FAILED`` and a list of the failed tests
 
