@@ -133,7 +133,7 @@ create your merge request, add the
 ``docs-only`` label and you do not need to submit the MR to a pipeline.
 
 Documentation changes should be made to the :any:`the release branch <sec_release_branch>`
-if they apply to the release version of PETSc.
+if they apply to the release version of PETSc. This includes all developer's documentation.
 
 Feed-back MR
 ^^^^^^^^^^^^
