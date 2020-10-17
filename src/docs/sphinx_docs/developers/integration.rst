@@ -136,7 +136,7 @@ Documentation changes should be made to the :any:`the release branch <sec_releas
 if they apply to the release version of PETSc. This includes all developer's documentation.
 
 Feedback MR
-^^^^^^^^^^^^
+^^^^^^^^^^^
 
 -  Select the  label  :any:`Workflow::Request-For-Comment <workflow_labels>` and make sure to select DRAFT at the top of the MR page
 -  There is also a button ``Add a task list`` (next to numbered list) if
