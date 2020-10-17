@@ -198,7 +198,7 @@ A pipeline consists of ``Stages`` each with multiple ``Jobs``, each of these is 
    <div name="raw_10" id="thumbwrap"> <a class="thumb" href="#raw_10"><img src="../../_images/show-failure.png" alt=""><span><img src="../../_images/show-failure.png" alt=""></span></a> </div></p>
    <div class="clearfix"></div>
 
-You can see the failed jobs by click on the  X.
+You can see the failed jobs by clicking on the  X.
 
 
 .. raw:: html
