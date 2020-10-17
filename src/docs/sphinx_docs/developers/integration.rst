@@ -358,7 +358,7 @@ Workflow labels
 
 The MR process, including testing and reviewing, is managed by the ``Workflow`` labels that indicate the state of the MR. The standard workflow has three steps.
 
--  ``Workflow::Pipeline-Testing`` The user is testing their branch, generally, unless asked, no one else has a reason to look at such MR.
+-  ``Workflow::Pipeline-Testing`` The user is testing their branch. Generally, unless asked, no one else has a reason to look at such an MR.
 -  ``Workflow::Review`` The user would like their branch reviewed.
 -  ``Workflow::Ready-For-Merge`` The MR has passed all tests, passed the review, has no outstanding threads, and has been :any:`squashed <sec_squash_excessive_commits>`.
 
