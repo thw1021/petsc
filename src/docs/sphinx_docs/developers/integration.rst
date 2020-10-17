@@ -348,7 +348,7 @@ mentioning them.
    <div name="raw_23" id="thumbwrap"> <a class="thumb" href="#raw_23"><img src="../../_images/mr-assign.png" alt=""><span><img src="../../_images/mr-assign.png" alt=""></span></a> </div></p>
    <div class="clearfix"></div>
 
-When the merge has been approved, the pipeline passes, the commits have been :any:`squashed <sec_squash_excessive_commits>`, all the threads have been resolved
+When the merge has been approved, the pipeline passes, the commits have been :any:`squashed <sec_squash_excessive_commits>`, and all the threads have been resolved,
 the **submitter** must set the label to  :any:`Workflow::Ready-For-Merge <workflow_labels>`.
 
 .. _workflow_labels:
