@@ -367,7 +367,7 @@ The submitter of the MR is responsible for changing the ``workflow`` label  appr
 Some MRs may begin with either of the following ``Workflow`` states.
 
 -  ``Workflow::Request-For-Comment`` The branch is not being requested to be merged but the user would like feedback on the branch
--  ``Workflow::In-Development`` The developer is working on the branch. Other developers not involved in the branch have generally no reason to look at these MR.
+-  ``Workflow::In-Development`` The developer is working on the branch. Other developers not involved in the branch have generally no reason to look at these MRs.
 
 Both of these should also be marked as ``Draft`` on the MR page.
 These two states are usually eventually converted by the developer to ``Workflow::Review``
