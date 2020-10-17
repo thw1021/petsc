@@ -522,7 +522,7 @@ Starting a new feature branch
 
 -  Obtain the PETSc source
    
-   - If you have write access to the PETSc `GitLab <https:gitlab.com/petsc/petsc>`_ repository
+   - If you have write access to the PETSc `GitLab <https:gitlab.com/petsc/petsc>`__ repository
 
      - ``git clone git@gitlab.com/petsc/petsc``  (or just use a clone you already have)
 
