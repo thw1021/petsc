@@ -254,7 +254,7 @@ Basic checks         Job 1                   Job 1      Job 1    Accumulation of
 MR reviewing
 ============
 
-Once the MR has passed the pipeline, it has been approved, all threads have been resolved,  and :any:`the excess commits squashed <sec_squash_excessive_commits>` it ready for review.
+Once the MR has passed the pipeline, it has been approved, all threads have been resolved,  and :any:`the excess commits squashed <sec_squash_excessive_commits>`, it is ready for review.
 Change the label on the
 MR page to :any:`Workflow::Review <workflow_labels>`.
 
