@@ -496,7 +496,7 @@ PETSC_ARCH in our prompt, e.g.
    $ git checkout release
     ~/Src/petsc (release<) arch-complex
 
-The < indicates that our copy of release is behind the repository we are
+The ``<`` indicates that our copy of release is behind the repository we are
 pulling from. To achieve this we have the following in our .profile (for
 bash)
 
