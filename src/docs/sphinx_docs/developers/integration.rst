@@ -759,7 +759,7 @@ If the branch has already been pushed this means the ``squashed`` branch you hav
 
 
 to update the remote branch with your copy. This must be done with extreme care and only if you know someone else has not changed the  remote copy of the branch,
-otherwise you will lose those changes. ``Never`` do a ``git pull`` after you rebase since that will bring over the old values and insert them back into the document
+otherwise you will lose those changes. **Never** do a ``git pull`` after you rebase since that will bring over the old values and insert them back into the document
 making a mess of the material and its history.
 
 You can use ``git log`` to see the recent changes to your branch and help determine what commits should be ``squashed``.
