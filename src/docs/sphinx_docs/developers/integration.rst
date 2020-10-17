@@ -225,7 +225,7 @@ Search for ``not ok`` in the jobs output to find the exact failure
 This test failed because the example did not free all its objects
 
 
-:any::`more_test_failures`
+:any:`more_test_failures`
 
 The pipelines organization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
