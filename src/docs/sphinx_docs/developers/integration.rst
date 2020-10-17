@@ -453,7 +453,7 @@ button at the top of the pipeline
 
 The retry button at the top of of a previous pipeline or job does NOT use any
 new changes to the branch you have pushed since that pipeline was started - it retries exactly the
-same git commit that was previously tried, the job ``retry`` should only be used in this
+same git commit that was previously tried. The job ``retry`` should only be used in this way
 when you suspect the testing system has some intermittent error that is unrelated to your branch.
 
 Please report all "odd" errors in the testing that don’t seem related
