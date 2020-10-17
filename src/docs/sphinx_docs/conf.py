@@ -138,3 +138,7 @@ graphviz_dot = str(result)
 highlight_language = 'c'
 autosummary_generate = True
 numfig = True
+
+
+html_static_path = ['_static']
+html_css_files = ['css/pop-up.css']
