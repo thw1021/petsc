@@ -364,7 +364,7 @@ The MR process, including testing and reviewing, is managed by the ``Workflow`` 
 
 The submitter of the MR is responsible for changing the ``workflow`` label  appropriately during the MR process.
 
-Some MR may begin with either of the following ``Workflow`` states.
+Some MRs may begin with either of the following ``Workflow`` states.
 
 -  ``Workflow::Request-For-Comment`` The branch is not being requested to be merged but the user would like feedback on the branch
 -  ``Workflow::In-Development`` The developer is working on the branch. Other developers not involved in the branch have generally no reason to look at these MR.
