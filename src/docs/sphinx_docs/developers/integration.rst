@@ -442,7 +442,7 @@ It will then look like this
    <div class="clearfix"></div>
 
 If the selected jobs are
-successful - then run the rest of the pipeline by using the ``Retry``
+successful, run the rest of the pipeline by using the ``Retry``
 button at the top of the pipeline
 
 .. raw:: html
