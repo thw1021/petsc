@@ -135,7 +135,7 @@ create your merge request, add the
 Documentation changes should be made to the :any:`the release branch <sec_release_branch>`
 if they apply to the release version of PETSc. This includes all developer's documentation.
 
-Feed-back MR
+Feedback MR
 ^^^^^^^^^^^^
 
 -  Select the  label  :any:`Workflow::Request-For-Comment <workflow_labels>` and make sure to select DRAFT at the top of the MR page
