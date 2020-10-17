@@ -518,7 +518,7 @@ To get tab-completion for git commands, first download and then source
 .. _sec_developing_a_new_feature:
 
 Starting a new feature branch
---------------------------------------------
+-----------------------------
 
 -  Obtain the PETSc source
    
