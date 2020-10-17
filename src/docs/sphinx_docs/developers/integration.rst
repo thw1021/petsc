@@ -372,7 +372,7 @@ Some MRs may begin with either of the following ``Workflow`` states.
 Both of these should also be marked as ``Draft`` on the MR page.
 These two states are usually eventually converted by the developer to ``Workflow::Review``
 
-You can run the pipelines on MR in any workflow state.
+You can run the pipelines on an MR in any workflow state.
 
 
 .. _more_test_failures:
