@@ -528,7 +528,7 @@ Starting a new feature branch
 
    - Otherwise
 
-     - `Create a fork <https://gitlab.com/petsc/petsc/-/forks/new>`_ (A fork is merely your own, complete private copy of the PETSc repository on ``GitLab``)
+     - `Create a fork <https://gitlab.com/petsc/petsc/-/forks/new>`__ (A fork is merely your own, complete private copy of the PETSc repository on ``GitLab``)
      - You will be asked to ``Select a namespace to fork the project``, click the green ``Select`` button
      - If you already have a clone on your machine of the PETSc repository you would like to reuse
 
