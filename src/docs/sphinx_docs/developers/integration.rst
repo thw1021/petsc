@@ -770,7 +770,7 @@ It is better to ``squash`` your commits regularly than to wait until you have a 
 Further reading
 ^^^^^^^^^^^^^^^
 
--  http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
+-  `` Tim Pope: A Note About Git Commit Messages <http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html>``__
 -  `Junio Hamano: Fun with merges and purposes of
    branches <http://gitster.livejournal.com/42247.html>`__
 -  `LWN: Rebasing and merging: some git best
