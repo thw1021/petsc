@@ -416,7 +416,7 @@ You can download the ``configure.log`` file to find the problem by using the ``B
    <div name="raw_28" id="thumbwrap"> <a class="thumb" href="#raw_28"><img src="../../_images/pipeline-configure-browse.png" alt=""><span><img src="../../_images/pipeline-configure-browse.png" alt=""></span></a> </div></p>
    <div class="clearfix"></div>
 
-When there are failures in some jobs - and a fix has been pushed, one can save time by testing only the previously
+When there are failures in some jobs and a fix has been pushed, one can save time by testing only the previously
 failed jobs, before running the full pipeline. To do this, ``un-pause`` a
 new pipeline (do **not** retry the previous pipeline from before your most recent push), cancel
 the pipeline on the pipeline page,
