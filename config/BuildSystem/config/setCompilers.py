@@ -212,6 +212,20 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
+  def isGfortran(compiler, log):
+    '''returns true if the compiler is gfortran'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
+      output = output +  error
+      import re
+      if output.find('GNU Fortran') > -1:
+        return 1
+      else:
+        return 0
+    except RuntimeError:
+      pass
+
+  @staticmethod
   def isGfortran45x(compiler, log):
     '''returns true if the compiler is gfortran-4.5.x'''
     try:

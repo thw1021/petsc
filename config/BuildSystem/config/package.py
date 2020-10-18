@@ -49,7 +49,8 @@ class Package(config.base.Configure):
     self.linkedbypetsc          = 1    # 1 indicates PETSc shared libraries (and PETSc executables) need to link against this library
     self.gitcommit              = None # Git commit to use for downloads
     self.gitcommitmaster        = None # Git commit to use for petsc/master or similar non-release branches
-    self.download               = []   # list of URLs where repository or tarballs may be found (git is tested before tarballs)
+    self.download               = None # list of URLs where repository or tarballs may be found (git is tested before tarballs)
+    self.giturl                 = None # URL of the form site.com:projectid.packagename:commit
     self.deps                   = []   # other packages whose dlib or include we depend on, usually we also use self.framework.require()
     self.odeps                  = []   # dependent packages that are optional
     self.defaultLanguage        = 'C'  # The language in which to run tests
@@ -158,9 +159,9 @@ class Package(config.base.Configure):
       help.addArgument(self.PACKAGE,'-with-'+self.package+'-pkg-config=<dir>', nargs.ArgDir(None, None, 'Look for '+self.name+' using pkg-config utility optional directory to look in',mustExist = 1))
       help.addArgument(self.PACKAGE,'-with-'+self.package+'-include=<dirs>',nargs.ArgDirList(None,None,'Indicate the directory of the '+self.name+' include files'))
       help.addArgument(self.PACKAGE,'-with-'+self.package+'-lib=<libraries: e.g. [/Users/..../lib'+self.package+'.a,...]>',nargs.ArgLibrary(None,None,'Indicate the '+self.name+' libraries'))
-    if self.download:
+    if self.download or self.giturl:
       help.addArgument(self.PACKAGE, '-download-'+self.package+'=<no,yes,filename,url>', nargs.ArgDownload(None, 0, 'Download and install '+self.name))
-      help.addArgument(self.PACKAGE, '-download-'+self.package+'-commit=commitid', nargs.ArgString(None, 0, 'The commit id from a git repository to use for the build of '+self.name))
+      help.addArgument(self.PACKAGE, '-download-'+self.package+'-commit=commitid', nargs.ArgString(None, '', 'The commit id from a git repository to use for the build of '+self.name))
       help.addDownload(self.package,self.download)
     return
 
@@ -170,8 +171,7 @@ class Package(config.base.Configure):
     package:      The lowercase name
     PACKAGE:      The uppercase name
     pkgname:      The name of pkg-config (.pc) file
-    downloadname:     Name for download option (usually name)
-    downloaddirnames: names for downloaded directory (first part of string) (usually downloadname)
+    downloaddirnames: names for downloaded directory (first part of string) (usually package)
     '''
     import sys
     if hasattr(sys.modules.get(self.__module__), '__file__'):
@@ -181,8 +181,7 @@ class Package(config.base.Configure):
     self.PACKAGE          = self.name.upper()
     self.package          = self.name.lower()
     self.pkgname          = self.package
-    self.downloadname     = self.name
-    self.downloaddirnames = [self.downloadname];
+    self.downloaddirnames = [self.name];
     return
 
   def getDefaultPrecision(self):
@@ -468,11 +467,6 @@ class Package(config.base.Configure):
     if not found: args.append(key+'="'+value+'"')
 
   def generateGuesses(self):
-    #if 'download-'+self.package in self.argDB and self.argDB['download-'+self.package]:
-      #self.checkPackageInDefaultLocations('install '+self.package)
-    #if not self.package == 'mpi' and 'with-'+self.package+'-dir' in self.argDB and not self.argDB['with-'+self.package+'-dir'] == os.path.join('/usr','local'):
-      #self.checkPackageInDefaultLocations('use '+self.package+' installed at '+self.argDB['with-'+self.package+'-dir'])
-
     d = self.checkDownload()
     if d:
       if not self.liblist or not self.liblist[0] or self.builtafterpetsc :
@@ -584,7 +578,7 @@ class Package(config.base.Configure):
 
     if not self.lookforbydefault or ('with-'+self.package in self.framework.clArgDB and self.argDB['with-'+self.package]):
       mesg = 'Unable to find '+self.package+' in default locations!\nPerhaps you can specify with --with-'+self.package+'-dir=<directory>\nIf you do not want '+self.name+', then give --with-'+self.package+'=0'
-      if self.download: mesg +='\nYou might also consider using --download-'+self.package+' instead'
+      if self.download or self.giturl: mesg +='\nYou might also consider using --download-'+self.package+' instead'
       if self.alternativedownload: mesg +='\nYou might also consider using --download-'+self.alternativedownload+' instead'
       raise RuntimeError(mesg)
 
@@ -592,9 +586,9 @@ class Package(config.base.Configure):
     '''Check if we should download the package, returning the install directory or the empty string indicating installation'''
     if not self.download:
       return ''
-    if self.argDB['with-batch'] and self.argDB['download-'+self.package] and not (hasattr(self.setCompilers,'cross_cc') or self.installwithbatch): raise RuntimeError('--download-'+self.name+' cannot be used on batch systems. You must either\n\
-    1) load the appropriate module on your system and use --with-'+self.name+' or \n\
-    2) locate its installation on your machine or install it yourself and use --with-'+self.name+'-dir=path\n')
+    if self.argDB['with-batch'] and self.argDB['download-'+self.package] and not (hasattr(self.setCompilers,'cross_cc') or self.installwithbatch): raise RuntimeError('--download-'+self.package+' cannot be used on batch systems. You must either\n\
+    1) load the appropriate module on your system and use --with-'+self.package+' or \n\
+    2) locate its installation on your machine or install it yourself and use --with-'+self.package+'-dir=path\n')
 
     if 'package-prefix-hash' in self.argDB and self.argDB['package-prefix-hash'] == 'reuse' and not hasattr(self,'postProcess') and not self.builtafterpetsc: # package already built in prefix hash location so reuse it
       self.installDir = self.defaultInstallDir
@@ -603,7 +597,7 @@ class Package(config.base.Configure):
       if self.license and not os.path.isfile('.'+self.package+'_license'):
         self.logClear()
         self.logPrint("**************************************************************************************************", debugSection='screen')
-        self.logPrint('Please register to use '+self.downloadname+' at '+self.license, debugSection='screen')
+        self.logPrint('Please register to use '+self.name+' at '+self.license, debugSection='screen')
         self.logPrint("**************************************************************************************************\n", debugSection='screen')
         fd = open('.'+self.package+'_license','w')
         fd.close()
@@ -784,13 +778,13 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
         download_urls.append(url.replace('http://','ftp://'))
         download_urls.append(url.replace('http://ftp.mcs.anl.gov/pub/petsc/','https://www.mcs.anl.gov/petsc/mirror/'))
       # prefer giturl from a petsc gitclone, and tarball urls from a petsc tarball.
-      if git_urls:
-        if not hasattr(self.sourceControl, 'git'):
-          self.logPrint('Git not found - skipping giturls: '+str(git_urls)+'\n')
-        elif isClone or 'with-git' in self.framework.clArgDB:
-          download_urls = git_urls+download_urls
-        else:
-          download_urls = download_urls+git_urls
+    if git_urls:
+      if not hasattr(self.sourceControl, 'git'):
+        self.logPrint('Git not found - skipping giturls: '+str(git_urls)+'\n')
+      elif isClone or 'with-git' in self.framework.clArgDB:
+        download_urls = git_urls+download_urls
+      else:
+        download_urls = download_urls+git_urls
     # now attempt to download each url until any one succeeds.
     err =''
     for url in download_urls:
@@ -872,12 +866,12 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
       if not hasattr(package, 'found'):
         raise RuntimeError('Package '+package.name+' does not have found attribute!')
       if not package.found:
-        if self.argDB['with-'+package.package] == 1:
-          raise RuntimeError('Package '+package.PACKAGE+' needed by '+self.name+' failed to configure.\nMail configure.log to petsc-maint@mcs.anl.gov.')
+        if self.argDB['with-'+self.package] == 1:
+          raise RuntimeError('Package '+package.package+' needed by '+self.name+' failed to configure.\nMail configure.log to petsc-maint@mcs.anl.gov.')
         else:
           str = ''
-          if package.download: str = ' or --download-'+package.package
-          raise RuntimeError('Did not find package '+package.PACKAGE+' needed by '+self.name+'.\nEnable the package using --with-'+package.package+str)
+          if package.download or package.giturl: str = ' or --download-'+packages
+          raise RuntimeError('Did not find package '+self.package+' needed by '+self.name+'.\nEnable the package using --with-'+self.package+str)
     for package in self.odeps:
       if not hasattr(package, 'found'):
         raise RuntimeError('Package '+package.name+' does not have found attribute!')
@@ -996,16 +990,16 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
         raise RuntimeError('Cannot use '+self.name+' without enabling C++14, see --with-cxx-dialect=C++14')
       if self.requirescxx11 and self.compilers.cxxdialect not in ['C++11','C++14']:
         raise RuntimeError('Cannot use '+self.name+' without enabling C++11, see --with-cxx-dialect=C++11')
-      if self.download and self.argDB.get('download-'+self.downloadname.lower()) and not self.downloadonWindows and (self.setCompilers.CC.find('win32fe') >= 0):
-        raise RuntimeError('External package '+self.name+' does not support --download-'+self.downloadname.lower()+' with Microsoft compilers')
+      if (self.download or self.giturl) and self.argDB.get('download-'+self.package) and not self.downloadonWindows and (self.setCompilers.CC.find('win32fe') >= 0):
+        raise RuntimeError('External package '+self.name+' does not support --download-'+self.package+' with Microsoft compilers')
       if not self.defaultPrecision.lower() in self.precisions:
         raise RuntimeError('Cannot use '+self.name+' with '+self.defaultPrecision.lower()+', it is not available in this precision')
       if not self.complex and self.defaultScalarType.lower() == 'complex':
         raise RuntimeError('Cannot use '+self.name+' with complex numbers it is not coded for this capability')
       if self.defaultIndexSize == 64 and self.requires32bitint:
         raise RuntimeError('Cannot use '+self.name+' with 64 bit integers, it is not coded for this capability')
-    if not self.download and 'download-'+self.downloadname.lower() in self.argDB and self.argDB['download-'+self.downloadname.lower()]:
-      raise RuntimeError('External package '+self.name+' does not support --download-'+self.downloadname.lower())
+    if not self.download and not self.giturl and 'download-'+self.package in self.argDB and self.argDB['download-'+self.package]:
+      raise RuntimeError('External package '+self.name+' does not support --download-'+self.package)
     return
 
   def versionToStandardForm(self,version):
@@ -1097,7 +1091,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
       return
 
     suggest = ''
-    if self.download: suggest = '\nSuggest using --download-'+self.package+' for a compatible '+self.name
+    if self.download or self.giturl: suggest = '\nSuggest using --download-'+self.package+' for a compatible '+self.name
     if self.minversion:
       if self.versionToTuple(self.minversion) > foundversiontuple:
         raise RuntimeError(self.package+' version is '+self.foundversion+' this version of PETSc needs at least '+self.minversion+suggest+'\n')
@@ -1112,18 +1106,56 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
         self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.package+' PETSc is tested with '+dropPatch(self.version)+suggest)
     return
 
+  def parseGitURL(self,url):
+    self.log.write('url '+ url + '\n')
+    try:
+      [url,self.gitcommit] = url.split(':')
+    except:
+      url    = self.giturl
+      if not hasattr(self,'gitcommit'): self.gitcommit = ''
+    if url.endswith('/'): url = url[0:-1]
+    try:
+      urlparts = url.split('/')
+    except:
+      raise RuntimeError("Bad giturl "+self.giturl)
+    site = urlparts[0]
+    if len(urlparts) == 1: urlparts.extend([self.name,self.name])
+    if len(urlparts) < 3: raise RuntimeError("Bad giturl "+str(urlparts))
+    giturl = urlparts[1]+'/'+urlparts[2]
+    self.log.write('giturl '+ giturl + '\n')
+    if site == 'github.com':
+      tarurl =  urlparts[1]+'/'+urlparts[2]+'/archive/'+self.gitcommit+'.tar.gz'
+    elif site == 'bitbucket.org':
+      tarurl =  urlparts[1]+'/'+urlparts[2]+'/get/'+self.gitcommit+'.tar.gz'
+    elif site == 'gitlab.com':
+      tarurl = urlparts[1]+'/'+urlparts[2]+'/-/archive/'+self.gitcommit+'/'+urlparts[2]+'-'+self.gitcommit+'.tar.gz'
+    else:
+      return ['git://https://'+site+'/'+giturl]
+    self.log.write('tarurl '+ giturl + '\n')
+    return ['git://https://'+site+'/'+giturl,'https://'+site+''+tarurl]
+
+  def selectDownload(self):
+    '''Allows package to provide different download based on its own criteria'''
+    '''Also parses giturl into a self.download and self.gitcommit'''
+    if self.giturl:
+      self.download = self.parseGitURL(self.giturl)
+
+    if self.download and self.argDB['download-'+self.package] and (not self.framework.batchBodies or self.installwithbatch):
+      if isinstance(self.argDB['download-'+self.package], str) and (self.argDB['download-'+self.package].find('//') == -1):
+        self.download = self.parseGitURL(self.argDB['download-'+self.package])
+
   def configure(self):
-    if hasattr(self, 'download_solaris') and config.setCompilers.Configure.isSolaris(self.log):
-      self.download = self.download_solaris
-    if hasattr(self, 'download_darwin') and config.setCompilers.Configure.isDarwin(self.log):
-      self.download = self.download_darwin
-    if self.download and self.argDB['download-'+self.downloadname.lower()] and (not self.framework.batchBodies or self.installwithbatch):
+    self.selectDownload()
+    for ost in ['Darwin','Solaris']:
+      if hasattr(self, 'download_'+ost.lower()) and eval('config.setCompilers.Configure.is'+ost+'(self.log)'):
+        self.log.write('Using self.download_'+ost.lower()+'\n')
+        self.download = eval('self.download_'+ost.lower())
+
+    if self.download and  'download-'+self.package+'-commit' in self.argDB and self.argDB['download-'+self.package+'-commit']:
+      self.gitcommit = self.argDB['download-'+self.package+'-commit']
+
+    if self.download and self.argDB['download-'+self.package] and (not self.framework.batchBodies or self.installwithbatch):
       self.argDB['with-'+self.package] = 1
-      downloadPackageVal = self.argDB['download-'+self.downloadname.lower()]
-      if isinstance(downloadPackageVal, str):
-        self.download = [downloadPackageVal]
-    if self.download and self.argDB['download-'+self.downloadname.lower()+'-commit']:
-      self.gitcommit = self.argDB['download-'+self.downloadname.lower()+'-commit']
     elif self.gitcommitmaster and not self.petscdir.versionRelease:
       self.gitcommit = self.gitcommitmaster
     if not 'with-'+self.package in self.argDB:
@@ -1295,10 +1327,10 @@ Brief overview of how BuildSystem\'s configuration of packages works.
     self.name             - derived from module name                      [string]
     self.package          - lowercase name                                [string]
     self.PACKAGE          - uppercase name                                [string]
-    self.downloadname     - same as self.name (usage a bit inconsistent)  [string]
     self.downloaddirnames - same as self.name (usage a bit inconsistent)  [string]
   Package subclass typically sets up the following state variables:
     self.download         - url to download source from                   [string]
+    self.giturl           - git url to download source from
     self.includes         - names of header files to locate               [list of strings]
     self.liblist          - names of library files to locate              [list of lists of strings]
     self.functions        - names of functions to locate in libraries     [list of strings]
@@ -1368,7 +1400,7 @@ Brief overview of how BuildSystem\'s configuration of packages works.
   Install along with two generic services, installNeeded and postInstall, which are provided by the parent class and
   can be used in implementing a custom Install.
     Comment: Note that configure decides whether to configure the package, in part, based on whether
-             self.download is a non-empty list at the beginning of configure.
+             self.download or self.gitutl is a non-empty list at the beginning of configure.
              This means that resetting self.download cannot take place later than this.
              On the other hand, constructing the correct self.download here might be premature, as it might result
              in unnecessary prompts for user input, only to discover later that a download is not required.
@@ -1398,12 +1430,7 @@ Brief overview of how BuildSystem\'s configuration of packages works.
         ...
         checkDownload:
           ...
-          check val = argDB[\'download-\'self.downloadname.tolower()\']
-          /*
-           note the inconsistency with setupHelp: it declares \'download-\'self.package
-           Thus, in order for the correct variable to be queried here, we have to have
-           self.downloadname.tolower() == self.package
-          */
+          check val = argDB[\'download-\'self.package\']
           if val is a string, set self.download = [val]
           check the package license
           getInstallDir:
@@ -1417,11 +1444,6 @@ Brief overview of how BuildSystem\'s configuration of packages works.
             self.packageDir = /* this dir is where the source is unpacked and built */
             self.getDir():
               ...
-              if a package dir starting with self.downloadname does not exist already
-                create the package dir
-                downLoad():
-                  ...
-                  download and unpack the source to self.packageDir,
             Install():
             /* This must be implemented by a package subclass */
 
@@ -1624,8 +1646,8 @@ class GNUPackage(Package):
   def Install(self):
     ##### getInstallDir calls this, and it sets up self.packageDir (source download), self.confDir and self.installDir
     args = self.formGNUConfigureArgs()  # allow package to change self.packageDir
-    if self.download and self.argDB['download-'+self.downloadname.lower()+'-configure-arguments']:
-       args.append(self.argDB['download-'+self.downloadname.lower()+'-configure-arguments'])
+    if self.download and self.argDB['download-'+self.package+'-configure-arguments']:
+       args.append(self.argDB['download-'+self.package+'-configure-arguments'])
     args = ' '.join(args)
     conffile = os.path.join(self.packageDir,self.package+'.petscconf')
     fd = open(conffile, 'w')
@@ -1737,8 +1759,8 @@ class CMakePackage(Package):
   def Install(self):
     import os
     args = self.formCMakeConfigureArgs()
-    if self.download and 'download-'+self.downloadname.lower()+'-cmake-arguments' in self.framework.clArgDB:
-       args.append(self.argDB['download-'+self.downloadname.lower()+'-cmake-arguments'])
+    if self.download and 'download-'+self.package+'-cmake-arguments' in self.framework.clArgDB:
+       args.append(self.argDB['download-'+self.package+'-cmake-arguments'])
     args = ' '.join(args)
     conffile = os.path.join(self.packageDir,self.package+'.petscconf')
     fd = open(conffile, 'w')
