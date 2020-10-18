@@ -9,7 +9,6 @@ class Configure(config.package.Package):
     self.gitcommit        = 'v'+self.version+'-p1'
     self.download         = ['git://https://bitbucket.org/petsc/pkg-mumps.git',
                              'https://bitbucket.org/petsc/pkg-mumps/get/'+self.gitcommit+'.tar.gz']
-    self.download_darwin  = ['https://bitbucket.org/petsc/pkg-mumps/get/v5.2.1-p2.tar.gz']
     self.downloaddirnames = ['petsc-pkg-mumps','MUMPS']
     self.liblist          = [['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a'],
                             ['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a','libpthread.a'],
@@ -58,6 +57,23 @@ class Configure(config.package.Package):
       if not self.mpi.usingMPIUni:
         raise RuntimeError('Serial MUMPS version is only compatible with MPIUni\nReconfigure using --with-mpi=0')
     return
+
+  def selectDownload(self):
+    '''Recent versions of MUMPS fail with gfortran when MacOS Clang is less than Version 12'''
+    if config.setCompilers.Configure.isDarwin(self.log) and config.setCompilers.Configure.isGfortran(self.getCompiler('FC'), self.log):
+       if self.getExecutable('clang'):
+         try:
+           (output, error, status) = config.base.Configure.executeShellCommand(self.clang+' --version | head -1', log = self.log)
+           self.log.write('Output from clang --version '+output+'\n')
+           version = int(output.split(' ')[3].split('.')[0])
+           self.log.write('Version clang --version '+str(version)+'\n')
+         except:
+           version = 0
+       else:
+         version = 0
+       if version < 12:
+         self.log.write('Using Mumps version 5.2.1-p2\n')
+         self.download = ['https://bitbucket.org/petsc/pkg-mumps/get/v5.2.1-p2.tar.gz']
 
   def Install(self):
     import os
