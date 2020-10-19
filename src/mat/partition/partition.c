@@ -462,10 +462,14 @@ PetscErrorCode  MatPartitioningViewImbalance(MatPartitioning matp, IS partitioni
 @*/
 PetscErrorCode  MatPartitioningSetAdjacency(MatPartitioning part,Mat adj)
 {
+  PetscErrorCode  ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidHeaderSpecific(adj,MAT_CLASSID,2);
+  ierr = MatDestroy(&part->adj);CHKERRQ(ierr);
   part->adj = adj;
+  ierr = PetscObjectReference((PetscObject)adj);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -495,6 +499,7 @@ PetscErrorCode  MatPartitioningDestroy(MatPartitioning *part)
   }
   ierr = PetscFree((*part)->vertex_weights);CHKERRQ(ierr);
   ierr = PetscFree((*part)->part_weights);CHKERRQ(ierr);
+  ierr = MatDestroy(&(*part)->adj);CHKERRQ(ierr);
   ierr = PetscHeaderDestroy(part);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
