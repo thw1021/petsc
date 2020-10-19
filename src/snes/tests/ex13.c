@@ -167,16 +167,19 @@ int main(int argc, char **argv)
 #if defined(PETSC_USE_LOG)
     PetscLogStage stage;
 #endif
-    KSP           ksp;
-    Vec           b;
+    KSP       ksp;
+    Vec       b;
+    PetscInt  i;
     ierr = SNESGetKSP(snes, &ksp);CHKERRQ(ierr);
     ierr = SNESGetSolution(snes, &u);CHKERRQ(ierr);
-    ierr = VecZeroEntries(u);CHKERRQ(ierr);
     ierr = SNESGetFunction(snes, &b, NULL, NULL);CHKERRQ(ierr);
     ierr = SNESComputeFunction(snes, u, b);CHKERRQ(ierr);
     ierr = PetscLogStageRegister("KSP Solve only", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-    ierr = KSPSolve(ksp, b, u);CHKERRQ(ierr);
+    for (i=0;i<10;i++) {
+      ierr = VecZeroEntries(u);CHKERRQ(ierr);
+      ierr = KSPSolve(ksp, b, u);CHKERRQ(ierr);
+    }
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
   ierr = SNESGetSolution(snes, &u);CHKERRQ(ierr);
