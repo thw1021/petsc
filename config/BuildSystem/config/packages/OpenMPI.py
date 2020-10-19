@@ -45,12 +45,12 @@ class Configure(config.package.GNUPackage):
     return args
 
   def checkDownload(self):
-    if self.argDB['download-'+self.downloadname.lower()] and  'package-prefix-hash' in self.argDB and self.argDB['package-prefix-hash'] == 'reuse':
+    if self.argDB['download-'+self.package] and  'package-prefix-hash' in self.argDB and self.argDB['package-prefix-hash'] == 'reuse':
       self.logWrite('Reusing package prefix install of '+self.defaultInstallDir+' for OpenMPI')
       self.installDir = self.defaultInstallDir
       self.updateCompilers(self.installDir,'mpicc','mpicxx','mpif77','mpif90')
       return self.installDir
-    if self.argDB['download-'+self.downloadname.lower()]:
+    if self.argDB['download-'+self.package]:
       return self.getInstallDir()
     return ''
 

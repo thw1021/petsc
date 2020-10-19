@@ -3,20 +3,6 @@ try:
   import readline
 except ImportError: pass
 
-def getInteractive():
-  return isInteractive
-
-def setInteractive(interactive):
-  global isInteractive
-  isInteractive = interactive
-  return
-
-def checkInteractive(key):
-  if not isInteractive:
-    raise ValueError('Value not set for key '+str(key))
-  return
-setInteractive(1)
-
 class Arg(object):
   '''This is the base class for all objects contained in RDict. Access to the raw argument values is
 provided by getValue() and setValue(). These objects can be thought of as type objects for the
@@ -139,9 +125,6 @@ tests will cause ValueError.
       return str(map(str, self.value))
     return str(self.value)
 
-  def getEntryPrompt(self):
-    return 'Please enter value for '+str(self.key)+': '
-
   def getKey(self):
     '''Returns the key. SHOULD MAKE THIS A PROPERTY'''
     return self.key
@@ -154,16 +137,7 @@ tests will cause ValueError.
   def getValue(self):
     '''Returns the value. SHOULD MAKE THIS A PROPERTY'''
     if not self.isValueSet():
-      checkInteractive(self.key)
-      if self.help: print(self.help)
-      while 1:
-        try:
-          self.setValue(Arg.parseValue(raw_input(self.getEntryPrompt())))
-          break
-        except KeyboardInterrupt:
-          raise KeyError('Could not find value for key '+str(self.key))
-        except TypeError as e:
-          print(str(e))
+      return None
     return self.value
 
   def checkKey(self):
@@ -185,9 +159,6 @@ class ArgBool(Arg):
     Arg.__init__(self, key, value, help, isTemporary, deprecated)
     return
 
-  def getEntryPrompt(self):
-    return 'Please enter boolean value for '+str(self.key)+': '
-
   def setValue(self, value):
     '''Set the value. SHOULD MAKE THIS A PROPERTY'''
     self.checkKey()
@@ -204,50 +175,6 @@ class ArgBool(Arg):
     self.value = value
     return
 
-class ArgFuzzyBool(Arg):
-  '''Arguments that represent boolean values of an extended set'''
-  def __init__(self, key, value = None, help = '', isTemporary = 0, deprecated = False):
-    Arg.__init__(self, key, value, help, isTemporary, deprecated)
-    return
-
-  def valueName(self, value):
-    if value == 0:
-      return 'no'
-    elif value == 1:
-      return 'yes'
-    elif value == 2:
-      return 'ifneeded'
-    return str(value)
-
-  def __str__(self):
-    if not self.isValueSet():
-      return 'Empty '+str(self.__class__)
-    elif isinstance(self.value, list):
-      return str(map(self.valueName, self.value))
-    return self.valueName(self.value)
-
-  def getEntryPrompt(self):
-    return 'Please enter fuzzy boolean value for '+str(self.key)+': '
-
-  def setValue(self, value):
-    '''Set the value. SHOULD MAKE THIS A PROPERTY'''
-    self.checkKey()
-    try:
-      if   value == '0':        value = 0
-      elif value == '1':        value = 1
-      elif value == 'no':       value = 0
-      elif value == 'yes':      value = 1
-      elif value == 'false':    value = 0
-      elif value == 'true':     value = 1
-      elif value == 'maybe':    value = 2
-      elif value == 'ifneeded': value = 2
-      elif value == 'client':   value = 2
-      elif value == 'server':   value = 3
-      else:                     value = int(value)
-    except:
-      raise TypeError('Invalid fuzzy boolean value: '+str(value)+' for key '+str(self.key))
-    self.value = value
-    return
 
 class ArgInt(Arg):
   '''Arguments that represent integer numbers'''
@@ -256,9 +183,6 @@ class ArgInt(Arg):
     self.max = max
     Arg.__init__(self, key, value, help, isTemporary, deprecated)
     return
-
-  def getEntryPrompt(self):
-    return 'Please enter integer value for '+str(self.key)+': '
 
   def setValue(self, value):
     '''Set the value. SHOULD MAKE THIS A PROPERTY'''
@@ -280,9 +204,6 @@ class ArgReal(Arg):
     Arg.__init__(self, key, value, help, isTemporary, deprecated)
     return
 
-  def getEntryPrompt(self):
-    return 'Please enter floating point value for '+str(self.key)+': '
-
   def setValue(self, value):
     '''Set the value. SHOULD MAKE THIS A PROPERTY'''
     self.checkKey()
@@ -301,16 +222,6 @@ class ArgDir(Arg):
     self.mustExist = mustExist
     Arg.__init__(self, key, value, help, isTemporary, deprecated)
     return
-
-  def getEntryPrompt(self):
-    return 'Please enter directory for '+str(self.key)+': '
-
-  def getValue(self):
-    '''Returns the value. SHOULD MAKE THIS A PROPERTY'''
-    if not self.isValueSet():
-      checkInteractive(self.key)
-      return Arg.getValue(self)
-    return self.value
 
   def setValue(self, value):
     '''Set the value. SHOULD MAKE THIS A PROPERTY'''
@@ -332,16 +243,6 @@ class ArgDirList(Arg):
     self.mustExist = mustExist
     Arg.__init__(self, key, value, help, isTemporary, deprecated)
     return
-
-  def getEntryPrompt(self):
-    return 'Please enter directory list for '+str(self.key)+': '
-
-  def getValue(self):
-    '''Returns the value. SHOULD MAKE THIS A PROPERTY'''
-    if not self.isValueSet():
-      checkInteractive(self.key)
-      return Arg.getValue(self)
-    return self.value
 
   def setValue(self, value):
     '''Set the value. SHOULD MAKE THIS A PROPERTY'''
@@ -368,16 +269,6 @@ class ArgFile(Arg):
     Arg.__init__(self, key, value, help, isTemporary, deprecated)
     return
 
-  def getEntryPrompt(self):
-    return 'Please enter file path for '+str(self.key)+': '
-
-  def getValue(self):
-    '''Returns the value. SHOULD MAKE THIS A PROPERTY'''
-    if not self.isValueSet():
-      checkInteractive(self.key)
-      return Arg.getValue(self)
-    return self.value
-
   def setValue(self, value):
     '''Set the value. SHOULD MAKE THIS A PROPERTY'''
     import os
@@ -398,16 +289,6 @@ class ArgFileList(Arg):
     self.mustExist = mustExist
     Arg.__init__(self, key, value, help, isTemporary, deprecated)
     return
-
-  def getEntryPrompt(self):
-    return 'Please enter file list for '+str(self.key)+': '
-
-  def getValue(self):
-    '''Returns the value. SHOULD MAKE THIS A PROPERTY'''
-    if not self.isValueSet():
-      checkInteractive(self.key)
-      return Arg.getValue(self)
-    return self.value
 
   def setValue(self, value):
     '''Set the value. SHOULD MAKE THIS A PROPERTY'''
@@ -434,16 +315,6 @@ class ArgLibrary(Arg):
     Arg.__init__(self, key, value, help, isTemporary, deprecated)
     return
 
-  def getEntryPrompt(self):
-    return 'Please enter library for '+str(self.key)+': '
-
-  def getValue(self):
-    '''Returns the value. SHOULD MAKE THIS A PROPERTY'''
-    if not self.isValueSet():
-      checkInteractive(self.key)
-      return Arg.getValue(self)
-    return self.value
-
   def setValue(self, value):
     '''Set the value. SHOULD MAKE THIS A PROPERTY'''
     import os
@@ -461,16 +332,6 @@ class ArgExecutable(Arg):
     self.mustExist = mustExist
     Arg.__init__(self, key, value, help, isTemporary, deprecated)
     return
-
-  def getEntryPrompt(self):
-    return 'Please enter executable for '+str(self.key)+': '
-
-  def getValue(self):
-    '''Returns the value. SHOULD MAKE THIS A PROPERTY'''
-    if not self.isValueSet():
-      checkInteractive(self.key)
-      return Arg.getValue(self)
-    return self.value
 
   def checkExecutable(self, dir, name):
     import os
@@ -538,9 +399,6 @@ class ArgDownload(Arg):
       return str(map(self.valueName, self.value))
     return self.valueName(self.value)
 
-  def getEntryPrompt(self):
-    return 'Please enter download value for '+str(self.key)+': '
-
   def setValue(self, value):
     '''Set the value. SHOULD MAKE THIS A PROPERTY'''
     import os
@@ -569,7 +427,5 @@ class ArgDownload(Arg):
             value = 'git://'+os.path.abspath(value)
           else:
             value = 'dir://'+os.path.abspath(value)
-        else:
-          raise ValueError('Invalid download location: '+str(value)+' for key '+str(self.key))
     self.value = value
     return
