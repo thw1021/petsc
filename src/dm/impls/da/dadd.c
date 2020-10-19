@@ -9,20 +9,20 @@
 +  da - the DMDA
 .  lower - a matstencil with i, j and k corresponding to the lower corner of the patch
 .  upper - a matstencil with i, j and k corresponding to the upper corner of the patch
--  offproc - indicate whether the returned IS will contain off proc vals
+-  offproc - indicate whether the returned IS will contain off process indices
 
   Output Parameters:
 .  is - the IS corresponding to the patch
 
   Level: developer
 
-  Notes:
-  This routine always returns an IS on the DMDA's comm, if offproc is set to PETSC_TRUE,
-  the routine returns an IS with all the indices requested regardless of whether these indices
-  are present on the mpi-rank or not. Thus, it is upon the caller to ensure that
-  the indices returned in this mode are appropriate. If offproc is set to PETSC_FALSE,
-  the IS only returns the subset of indices that are present on the mpi-rank and there
-  is no duplication of indices.
+Notes:
+This routine always returns an IS on the DMDA's comm, if offproc is set to PETSC_TRUE,
+the routine returns an IS with all the indices requested regardless of whether these indices
+are present on the requesting rank or not. Thus, it is upon the caller to ensure that
+the indices returned in this mode are appropriate. If offproc is set to PETSC_FALSE,
+the IS only returns the subset of indices that are present on the requesting rank and there
+is no duplication of indices.
 
 .seealso: DMDACreateDomainDecomposition(), DMDACreateDomainDecompositionScatters()
 @*/
@@ -73,9 +73,8 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
   }
   if (PetscLikely(nindices<0)) {
     nindices = nindices*(-1);
-  } else {
-    SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONG,"Lower and Upper stencils are identical! Please check inputs.");
-  }
+  } else SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONG,"Lower and Upper stencils are identical! Please check inputs.");
+
   ierr = PetscMalloc1(nindices*dof,&indices);CHKERRQ(ierr);
   ierr = DMDAGetOffset(da,&ox,&oy,&oz,NULL,NULL,NULL);CHKERRQ(ierr);
 
@@ -240,12 +239,11 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
   }
 
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject)da),idx,indices,PETSC_OWN_POINTER,is);CHKERRQ(ierr);
-  PetscFunctionReturn(ierr);
+  PetscFunctionReturn(0);
 }
 
 PetscErrorCode DMDASubDomainDA_Private(DM dm, PetscInt *nlocal, DM **sdm)
 {
-
   DM             *da;
   PetscInt       dim,size,i,j,k,idx;
   PetscErrorCode ierr;
@@ -398,7 +396,7 @@ PetscErrorCode DMDASubDomainDA_Private(DM dm, PetscInt *nlocal, DM **sdm)
     zs += zm;
   }
   *sdm = da;
-  PetscFunctionReturn(ierr);
+  PetscFunctionReturn(0);
 }
 
 /*
@@ -522,7 +520,7 @@ PetscErrorCode DMDASubDomainIS_Private(DM dm,PetscInt n,DM *subdm,IS **iis,IS **
       ierr    = DMDACreatePatchIS(dm,&lower,&upper,&(*ois)[i],patchis_offproc);CHKERRQ(ierr);
     }
   }
-  PetscFunctionReturn(ierr);
+  PetscFunctionReturn(0);
 }
 
 PetscErrorCode DMCreateDomainDecomposition_DA(DM dm,PetscInt *len,char ***names,IS **iis,IS **ois,DM **subdm)
@@ -545,5 +543,5 @@ PetscErrorCode DMCreateDomainDecomposition_DA(DM dm,PetscInt *len,char ***names,
     }
   }
   if (len) *len = n;
-  PetscFunctionReturn(ierr);
+  PetscFunctionReturn(0);
 }
