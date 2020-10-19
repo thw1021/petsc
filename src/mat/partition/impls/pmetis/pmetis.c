@@ -1,10 +1,6 @@
 
 #include <../src/mat/impls/adj/mpi/mpiadj.h>    /*I "petscmat.h" I*/
 
-/*
-   Currently using ParMetis-4.0.2
-*/
-
 #include <parmetis.h>
 
 /*
