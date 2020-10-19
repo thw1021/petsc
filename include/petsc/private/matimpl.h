@@ -10,12 +10,10 @@ PETSC_EXTERN PetscBool MatRegisterAllCalled;
 PETSC_EXTERN PetscBool MatSeqAIJRegisterAllCalled;
 PETSC_EXTERN PetscBool MatOrderingRegisterAllCalled;
 PETSC_EXTERN PetscBool MatColoringRegisterAllCalled;
-PETSC_EXTERN PetscBool MatPartitioningRegisterAllCalled;
 PETSC_EXTERN PetscBool MatCoarsenRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode MatRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatOrderingRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatColoringRegisterAll(void);
-PETSC_EXTERN PetscErrorCode MatPartitioningRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatCoarsenRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatSeqAIJRegisterAll(void);
 
@@ -506,35 +504,6 @@ PETSC_INTERN PetscErrorCode MatZeroRowsMapLocal_Private(Mat,PetscInt,const Petsc
 */
 PETSC_INTERN PetscErrorCode MatView_Binary_BlockSizes(Mat,PetscViewer);
 PETSC_INTERN PetscErrorCode MatLoad_Binary_BlockSizes(Mat,PetscViewer);
-
-
-/*
-    Object for partitioning graphs
-*/
-
-typedef struct _MatPartitioningOps *MatPartitioningOps;
-struct _MatPartitioningOps {
-  PetscErrorCode (*apply)(MatPartitioning,IS*);
-  PetscErrorCode (*applynd)(MatPartitioning,IS*);
-  PetscErrorCode (*setfromoptions)(PetscOptionItems*,MatPartitioning);
-  PetscErrorCode (*destroy)(MatPartitioning);
-  PetscErrorCode (*view)(MatPartitioning,PetscViewer);
-  PetscErrorCode (*improve)(MatPartitioning,IS*);
-};
-
-struct _p_MatPartitioning {
-  PETSCHEADER(struct _MatPartitioningOps);
-  Mat         adj;
-  PetscInt    *vertex_weights;
-  PetscReal   *part_weights;
-  PetscInt    n;                                 /* number of partitions */
-  void        *data;
-  PetscInt    setupcalled;
-  PetscBool   use_edge_weights;  /* A flag indicates whether or not to use edge weights */
-};
-
-/* needed for parallel nested dissection by ParMetis and PTSCOTCH */
-PETSC_INTERN PetscErrorCode MatPartitioningSizesToSep_Private(PetscInt,PetscInt[],PetscInt[],PetscInt[]);
 
 /*
     Object for coarsen graphs
@@ -1736,8 +1705,6 @@ PETSC_EXTERN PetscLogEvent MAT_GetColoring;
 PETSC_EXTERN PetscLogEvent MAT_GetOrdering;
 PETSC_EXTERN PetscLogEvent MAT_RedundantMat;
 PETSC_EXTERN PetscLogEvent MAT_IncreaseOverlap;
-PETSC_EXTERN PetscLogEvent MAT_Partitioning;
-PETSC_EXTERN PetscLogEvent MAT_PartitioningND;
 PETSC_EXTERN PetscLogEvent MAT_Coarsen;
 PETSC_EXTERN PetscLogEvent MAT_ZeroEntries;
 PETSC_EXTERN PetscLogEvent MAT_Load;

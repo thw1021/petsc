@@ -6,7 +6,7 @@ static char help[] = "Example of using graph partitioning with a matrix in which
    Processors: n
 T*/
 
-#include <petscmat.h>
+#include <petscmatpartitioning.h>
 
 int main(int argc, char **args)
 {

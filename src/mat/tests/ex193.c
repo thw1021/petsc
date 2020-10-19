@@ -8,7 +8,7 @@
  * An example demonstrates how to use hierarchical partitioning approach
  */
 
-#include <petscmat.h>
+#include <petscmatpartitioning.h>
 
 static char help[] = "Illustrates use of hierarchical partitioning.\n";
 

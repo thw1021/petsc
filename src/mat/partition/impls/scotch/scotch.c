@@ -1,5 +1,5 @@
-
-#include <../src/mat/impls/adj/mpi/mpiadj.h>       /*I "petscmat.h" I*/
+#include <petsc/private/matpartitioningimpl.h> /*I "petscmatpartitioning.h" I*/
+#include <../src/mat/impls/adj/mpi/mpiadj.h>
 
 EXTERN_C_BEGIN
 #include <ptscotch.h>

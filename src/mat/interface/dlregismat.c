@@ -1,5 +1,6 @@
 
 #include <petsc/private/matimpl.h>
+#include <petsc/private/matpartitioningimpl.h>
 
 const char       *MatOptions_Shifted[] = {"UNUSED_NONZERO_LOCATION_ERR",
                                   "ROW_ORIENTED",

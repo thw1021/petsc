@@ -2,6 +2,7 @@
 #define __is_h
 
 #include <petscsf.h>
+#include <petscmatpartitioning.h>
 #include <petsc/private/matimpl.h>
 
 typedef struct {

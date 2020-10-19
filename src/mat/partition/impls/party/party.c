@@ -1,5 +1,5 @@
-
-#include <../src/mat/impls/adj/mpi/mpiadj.h>       /*I "petscmat.h" I*/
+#include <petsc/private/matpartitioningimpl.h> /*I "petscmatpartitioning.h" I*/
+#include <../src/mat/impls/adj/mpi/mpiadj.h>
 
 #if defined(PETSC_HAVE_UNISTD_H)
 #include <unistd.h>

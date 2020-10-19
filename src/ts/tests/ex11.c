@@ -1,5 +1,6 @@
 static char help[] = "Demonstrates previous memory leak for XXXRegister()\n\n";
 
+#include <petscmatpartitioning.h>
 #include <petscts.h>
 #include <petsccharacteristic.h>
 #include <petscdraw.h>

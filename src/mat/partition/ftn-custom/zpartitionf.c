@@ -1,6 +1,6 @@
 #include <../src/mat/impls/adj/mpi/mpiadj.h>
 #include <petsc/private/fortranimpl.h>
-#include <petscmat.h>
+#include <petsc/private/matpartitioningimpl.h>
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
 #define matpartitioningsetvertexweights_ MATPARTITIONINGSETVERTEXWEIGHTS

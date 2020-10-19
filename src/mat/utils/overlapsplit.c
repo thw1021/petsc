@@ -5,6 +5,7 @@
  */
 
 #include <petscsf.h>
+#include <petscmatpartitioning.h>
 #include <petsc/private/matimpl.h>
 
 /*

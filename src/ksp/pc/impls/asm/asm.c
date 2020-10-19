@@ -11,6 +11,7 @@
 */
 
 #include <../src/ksp/pc/impls/asm/asm.h> /*I "petscpc.h" I*/
+#include <petscmatpartitioning.h>
 
 static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
 {

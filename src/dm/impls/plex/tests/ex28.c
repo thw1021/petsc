@@ -1,8 +1,6 @@
 static char help[] = "Compare parallel partitioning strategies using matrix graphs\n\n";
 
-#include <petscmat.h>
-
-
+#include <petscmatpartitioning.h>
 
 int main(int argc, char **args)
 {
