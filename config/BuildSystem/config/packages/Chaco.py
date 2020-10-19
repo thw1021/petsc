@@ -4,8 +4,7 @@ class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
     self.gitcommit         = 'v2.2-p3'
-    self.download          = ['git://https://bitbucket.org/petsc/pkg-chaco.git',
-                              'https://bitbucket.org/petsc/pkg-chaco/get/'+self.gitcommit+'.tar.gz']
+    self.gitdownload       = ['bitbucket.org','petsc']
     self.downloaddirnames  = ['petsc-pkg-chaco','Chaco']
     self.functions         = ['interface']
     self.includes          = [] #Chaco does not have an include file
