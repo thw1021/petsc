@@ -70,8 +70,8 @@ class Configure(config.package.CMakePackage):
       self.foundversion = output
 
     args = self.formCMakeConfigureArgs()
-    if self.download and self.argDB['download-'+self.downloadname.lower()+'-cmake-arguments']:
-       args.append(self.argDB['download-'+self.downloadname.lower()+'-cmake-arguments'])
+    if self.download and self.argDB['download-'+self.package+'-cmake-arguments']:
+       args.append(self.argDB['download-'+self.package+'-cmake-arguments'])
     args = ' '.join(args)
     conffile = os.path.join(self.packageDir,self.package+'.petscconf')
     fd = open(conffile, 'w')
