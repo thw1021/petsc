@@ -5,10 +5,10 @@ sliceaxis - Integer describing the axis along which the sice will be selected (0
 sliceid - set the location where the slice will be extraced from the parent vector\n";
 
 /*
- This test checks the functionality of DMDACreatePatchIS when
- extracting a 2D vector from a 3D vector and 1D vector from a
- 2D vector.
-*/
+   This test checks the functionality of DMDACreatePatchIS when
+   extracting a 2D vector from a 3D vector and 1D vector from a
+   2D vector.
+   */
 
 #include <petscdmda.h>
 
@@ -51,24 +51,24 @@ int main(int argc,char **argv)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
   if (dim==3) {
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
-        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
-        DMDA_STENCIL_STAR,
-        mx, my, mz,
-        PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
-        1, 1,
-        NULL, NULL, NULL,
-        &da);CHKERRQ(ierr);
+                        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+                        DMDA_STENCIL_STAR,
+                        mx, my, mz,
+                        PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
+                        1, 1,
+                        NULL, NULL, NULL,
+                        &da);CHKERRQ(ierr);
     ierr = DMSetFromOptions(da);CHKERRQ(ierr);
     ierr = DMSetUp(da);CHKERRQ(ierr);
   } else {
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
-        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
-        DMDA_STENCIL_STAR,
-        mx, my,
-        PETSC_DECIDE, PETSC_DECIDE,
-        1, 1,
-        NULL, NULL,
-        &da);CHKERRQ(ierr);
+                        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+                        DMDA_STENCIL_STAR,
+                        mx, my,
+                        PETSC_DECIDE, PETSC_DECIDE,
+                        1, 1,
+                        NULL, NULL,
+                        &da);CHKERRQ(ierr);
     ierr = DMSetFromOptions(da);CHKERRQ(ierr);
     ierr = DMSetUp(da);CHKERRQ(ierr);
   }
@@ -146,28 +146,28 @@ int main(int argc,char **argv)
 
 /*TEST
 
-  test:
-    nsize: 1
-    args:  -sliceaxis 0
+    test:
+      nsize: 1
+      args: -sliceaxis 0
 
-  test:
-    suffix: 2
-    nsize:  2
-    args:   -sliceaxis 1
+    test:
+      suffix: 2
+      nsize:  2
+      args: -sliceaxis 1
 
-  test:
-    suffix: 3
-    nsize:  4
-    args:   -sliceaxis 2
+    test:
+      suffix: 3
+      nsize:  4
+      args:  -sliceaxis 2
 
-  test:
-    suffix: 4
-    nsize:  2
-    args: -sliceaxis 1 -dim 2
+    test:
+      suffix: 4
+      nsize:  2
+      args: -sliceaxis 1 -dim 2
 
-  test:
-    suffix: 5
-    nsize:  3
-    args: -sliceaxis 0 -dim 2
+    test:
+      suffix: 5
+      nsize:  3
+      args: -sliceaxis 0 -dim 2
 
 TEST*/
