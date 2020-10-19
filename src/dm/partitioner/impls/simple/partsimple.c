@@ -66,7 +66,7 @@ static PetscErrorCode PetscPartitionerPartition_Simple_Grid(PetscPartitioner par
   const PetscInt          *nodes = p->nodeGrid;
   const PetscInt          *procs = p->processGrid;
   PetscInt                *cellproc, *offsets, cells[3] = {1, 1, 1}, pcells[3] = {1, 1, 1};
-  PetscInt                 Np    = 1, Nc = 1, Nlc = 1, Nr, np, nk, nj, ni, pk, pj, pi, ck, cj, ci, i;
+  PetscInt                 Np    = 1, Nlc = 1, Nr, np, nk, nj, ni, pk, pj, pi, ck, cj, ci, i;
   MPI_Comm                 comm;
   PetscMPIInt              size;
   PetscErrorCode           ierr;
@@ -89,9 +89,11 @@ static PetscErrorCode PetscPartitionerPartition_Simple_Grid(PetscPartitioner par
       Nr       /= 2;
     }
   }
-  for (i = 0; i < 3; ++i) Nc *= cells[i];
-  if (numVertices % Nc) SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Number of cells %D != %D computed cell grid size", numVertices, Nc);
-  for (i = 0; i < p->gridDim; ++i) {pcells[i] = cells[i] / (nodes[i]*procs[i]); Nlc *= pcells[i];}
+  if (numVertices && Nr != 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Odd number of cells %D. Must be nprocs*2^k", numVertices);
+  for (i = 0; i < p->gridDim; ++i) {
+    if (cells[i] %  (nodes[i]*procs[i])) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "dir %D. Number of cells (%D) mod number of processors %D", i, cells[i], nodes[i]*procs[i]);
+    pcells[i] = cells[i] / (nodes[i]*procs[i]); Nlc *= pcells[i];
+  }
   /* Compute sizes */
   for (np = 0; np < nparts; ++np) {ierr = PetscSectionSetDof(partSection, np, numVertices/nparts);CHKERRQ(ierr);}
   ierr = PetscSectionSetUp(partSection);CHKERRQ(ierr);

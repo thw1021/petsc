@@ -196,9 +196,9 @@ int main(int argc, char **argv)
 
   test:
     suffix: bench
-    nsize: 16
-    args: -dm_plex_box_dim 2 -dm_plex_box_simplex 0 -dm_plex_box_faces 8,8 -dm_refine 1 -dm_distribute \
-          -petscpartitioner_type simple -petscpartitioner_simple_process_grid 2,2 -petscpartitioner_simple_node_grid 2,2 \
+    nsize: 4
+    args: -dm_plex_box_dim 3 -dm_plex_box_simplex 0 -dm_plex_box_faces 2,2,8 -dm_refine 1 -dm_distribute \
+          -petscpartitioner_type simple -petscpartitioner_simple_process_grid 1,1,2 -petscpartitioner_simple_node_grid 1,1,2 \
           -potential_petscspace_degree 2 -ksp_type cg -pc_type gamg \
           -benchmark -dm_view
 
