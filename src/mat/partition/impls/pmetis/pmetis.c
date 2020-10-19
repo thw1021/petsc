@@ -393,40 +393,6 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Parmetis(MatPartitioning part)
 }
 
 /*@
- MatMeshToVertexGraph -   This routine does not exist because ParMETIS does not provide the functionality.  Uses the ParMETIS package to
-                       convert a Mat that represents a mesh to a Mat the represents the graph of the coupling
-                       between vertices of the cells and is suitable for partitioning with the MatPartitioning object. Use this to partition
-                       vertices of a mesh. More likely you should use MatMeshToCellGraph()
-
-   Collective on Mat
-
-   Input Parameter:
-+     mesh - the graph that represents the mesh
--     ncommonnodes - mesh elements that share this number of common nodes are considered neighbors, use 2 for triangles and
-                     quadrilaterials, 3 for tetrahedrals and 4 for hexahedrals
-
-   Output Parameter:
-.     dual - the dual graph
-
-   Notes:
-     Currently requires ParMetis to be installed and uses ParMETIS_V3_Mesh2Dual()
-
-     The columns of each row of the Mat mesh are the global vertex numbers of the vertices of that rows cell. The number of rows in mesh is
-     number of cells, the number of columns is the number of vertices.
-
-   Level: advanced
-
-.seealso: MatMeshToCellGraph(), MatCreateMPIAdj(), MatPartitioningCreate()
-
-@*/
-PetscErrorCode MatMeshToVertexGraph(Mat mesh,PetscInt ncommonnodes,Mat *dual)
-{
-  PetscFunctionBegin;
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"ParMETIS does not provide this functionality");
-  PetscFunctionReturn(0);
-}
-
-/*@
      MatMeshToCellGraph -   Uses the ParMETIS package to convert a Mat that represents a mesh to a Mat the represents the graph of the coupling
                        between cells (the "dual" graph) and is suitable for partitioning with the MatPartitioning object. Use this to partition
                        cells of a mesh.
