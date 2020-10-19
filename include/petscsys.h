@@ -159,7 +159,7 @@ $   #else
 
   To avoid prepending "PETSC_", say to add custom checks in user code, one can use e.g.
 
-$  #define FooDefined(d) PetscDefined_(FOO_ ## x)
+$  #define FooDefined(d) PetscDefined_(FOO_ ## d)
 
   Developer Notes:
   Getting something that works in C and CPP for an arg that may or may not be defined is tricky.  Here, if we have
