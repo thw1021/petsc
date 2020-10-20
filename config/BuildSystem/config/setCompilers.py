@@ -813,6 +813,7 @@ class Configure(config.base.Configure):
         del self.argDB['HIPCC']
       return
     self.mesg = 'in generateHIPCompilerGuesses'
+    found = False
     for compiler in self.generateHIPCompilerGuesses():
       try:
         if self.getExecutable(compiler, resultName = 'HIPCC'):
@@ -830,12 +831,15 @@ class Configure(config.base.Configure):
               raise RuntimeError('Error: Could not determine CUDA version from hipcc')
           else:
             self.compilerVersionHIP = compilerVersion[0]
+          found = True
           break
       except RuntimeError as e:
         self.mesg = str(e)
-        self.logPrint('HERE Error testing HIP compiler: '+str(e))
+        self.logPrint('Error testing HIP compiler: '+str(e))
         self.delMakeMacro('HIPCC')
         del self.HIPCC
+    if not found: 
+        raise RuntimeError("Cannot find working HIP compiler")
     return
 
   def generateHIPPreprocessorGuesses(self):

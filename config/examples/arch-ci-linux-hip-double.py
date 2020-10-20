@@ -20,6 +20,7 @@ if __name__ == '__main__':
     '--with-hip-dir=/opt/rocm',
     '--with-precision=double',
     '--with-clanguage=c',
+    '--download-fblaslapack=1',
   ]
 
   configure.petsc_configure(configure_options)
