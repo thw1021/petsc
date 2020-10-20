@@ -27,12 +27,10 @@ int main(int argc,char ** argv)
   const PetscInt   *vtx,*edges;
   Vec              X,F;
   SNES             snes;
-  PetscBool        viewX=PETSC_FALSE;
   SNESConvergedReason reason;
 
   ierr = PetscInitialize(&argc,&argv,"wateroptions",help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&crank);CHKERRMPI(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-viewX",&viewX,NULL);CHKERRQ(ierr);
 
   /* Create an empty network object */
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&networkdm);CHKERRQ(ierr);
