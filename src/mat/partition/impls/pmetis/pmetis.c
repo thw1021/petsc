@@ -9,9 +9,7 @@
 typedef struct {
   PetscInt  cuts;         /* number of cuts made (output) */
   PetscInt  foldfactor;
-  PetscInt  parallel;     /* use parallel partitioner for coarse problem */
   PetscInt  indexing;     /* 0 indicates C indexing, 1 Fortran */
-  PetscInt  printout;     /* indicates if one wishes Metis to print info */
   PetscBool repartition;
 } MatPartitioning_Parmetis;
 
@@ -54,7 +52,7 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
     PetscInt   *xadj    = adj->i;
     PetscInt   *adjncy  = adj->j;
     PetscInt   *NDorder = NULL;
-    PetscInt   itmp     = 0,wgtflag=0, numflag=0, ncon=1, nparts=part->n, options[24], i, j;
+    PetscInt   wgtflag=0, numflag=0, ncon=1, nparts=part->n, options[24], i, j;
     real_t     *tpwgts,*ubvec,itr=0.1;
 
     ierr = PetscObjectGetComm((PetscObject)pmat,&pcomm);CHKERRQ(ierr);
@@ -85,7 +83,6 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
     if (part->vertex_weights && !adj->values) wgtflag = 2;
     if (part->vertex_weights && adj->values && part->use_edge_weights) wgtflag = 3;
 
-    if (PetscLogPrintInfo) {itmp = pmetis->printout; pmetis->printout = 127;}
     ierr = PetscMalloc1(ncon*nparts,&tpwgts);CHKERRQ(ierr);
     for (i=0; i<ncon; i++) {
       for (j=0; j<nparts; j++) {
@@ -145,7 +142,6 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
 
     ierr = PetscFree(tpwgts);CHKERRQ(ierr);
     ierr = PetscFree(ubvec);CHKERRQ(ierr);
-    if (PetscLogPrintInfo) pmetis->printout = itmp;
 
     if (bs > 1) {
       PetscInt i,j,*newlocals;
@@ -239,38 +235,12 @@ PetscErrorCode MatPartitioningView_Parmetis(MatPartitioning part,PetscViewer vie
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)part),&rank);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
-    if (pmetis->parallel == 2) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  Using parallel coarse grid partitioner\n");CHKERRQ(ierr);
-    } else {
-      ierr = PetscViewerASCIIPrintf(viewer,"  Using sequential coarse grid partitioner\n");CHKERRQ(ierr);
-    }
     ierr = PetscViewerASCIIPrintf(viewer,"  Using %D fold factor\n",pmetis->foldfactor);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIISynchronizedPrintf(viewer,"  [%d]Number of cuts found %D\n",rank,pmetis->cuts);CHKERRQ(ierr);
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
-}
-
-/*@
-     MatPartitioningParmetisSetCoarseSequential - Use the sequential code to
-         do the partitioning of the coarse grid.
-
-  Logically Collective on MatPartitioning
-
-  Input Parameter:
-.  part - the partitioning context
-
-   Level: advanced
-
-@*/
-PetscErrorCode  MatPartitioningParmetisSetCoarseSequential(MatPartitioning part)
-{
-  MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
-
-  PetscFunctionBegin;
-  pmetis->parallel = 1;
   PetscFunctionReturn(0);
 }
 
@@ -323,10 +293,6 @@ PetscErrorCode MatPartitioningSetFromOptions_Parmetis(PetscOptionItems *PetscOpt
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"Set ParMeTiS partitioning options");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-mat_partitioning_parmetis_coarse_sequential","Use sequential coarse partitioner","MatPartitioningParmetisSetCoarseSequential",flag,&flag,NULL);CHKERRQ(ierr);
-  if (flag) {
-    ierr = MatPartitioningParmetisSetCoarseSequential(part);CHKERRQ(ierr);
-  }
   ierr = PetscOptionsBool("-mat_partitioning_parmetis_repartition","","MatPartitioningParmetisSetRepartition",flag,&flag,NULL);CHKERRQ(ierr);
   if (flag){
     ierr =  MatPartitioningParmetisSetRepartition(part);CHKERRQ(ierr);
@@ -378,9 +344,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Parmetis(MatPartitioning part)
 
   pmetis->cuts       = 0;   /* output variable */
   pmetis->foldfactor = 150; /*folding factor */
-  pmetis->parallel   = 2;   /* use parallel partitioner for coarse grid */
   pmetis->indexing   = 0;   /* index numbering starts from 0 */
-  pmetis->printout   = 0;   /* print no output while running */
   pmetis->repartition      = PETSC_FALSE;
 
   part->ops->apply          = MatPartitioningApply_Parmetis;
