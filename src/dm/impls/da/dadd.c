@@ -111,7 +111,7 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     /*
        do..while loops to ensure the block gets entered once,
        regardless of control condition being met, necessary for
-       cases when skip_i/j/k is true
+       cases when a subset of skip_i/j/k is true
     */
     if (skip_k) k = upper->k-oz; else k = lower->k-oz;
     do {
@@ -209,7 +209,7 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     /*
        do..while loops to ensure the block gets entered once,
        regardless of control condition being met, necessary for
-       cases when skip_i/j/k is true
+       cases when a subset of skip_i/j/k is true
     */
     if (skip_k) k = upper->k-oz; else k = lower->k-oz;
     do {
