@@ -406,7 +406,7 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
   PetscInt       xm,ym,zm,xs,ys,zs;
   PetscInt       i;
   PetscBool      dm_patchis_offproc = PETSC_TRUE;
-  PetscBool      subdm_patchis_offproc = PETSC_FALSE;
+  PetscBool      subdm_patchis_offproc = PETSC_TRUE;
 
   PetscFunctionBegin;
   /* allocate the arrays of scatters */
