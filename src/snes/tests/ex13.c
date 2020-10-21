@@ -10,7 +10,7 @@ and eventually adaptivity.\n\n\n";
 #include <petscconvest.h>
 
 typedef struct {
-  PetscBool benchmark;
+  PetscInt  nit;
 } AppCtx;
 
 
@@ -54,8 +54,9 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
+  options->nit = 10;
   ierr = PetscOptionsBegin(comm, "", "Poisson Problem Options", "DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-benchmark", "Solve the benchmark problem", "ex13.c", options->benchmark, &options->benchmark, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-benchmark_it", "Solve the benchmark problem this many times", "ex13.c", options->nit, &options->nit, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
@@ -163,7 +164,7 @@ int main(int argc, char **argv)
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
   ierr = SNESSolve(snes, NULL, u);CHKERRQ(ierr);
   /* Benchmark system */
-  if (user.benchmark) {
+  if (user.nit) {
 #if defined(PETSC_USE_LOG)
     PetscLogStage stage;
 #endif
@@ -176,7 +177,7 @@ int main(int argc, char **argv)
     ierr = SNESComputeFunction(snes, u, b);CHKERRQ(ierr);
     ierr = PetscLogStageRegister("KSP Solve only", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-    for (i=0;i<10;i++) {
+    for (i=0;i<user.nit;i++) {
       ierr = VecZeroEntries(u);CHKERRQ(ierr);
       ierr = KSPSolve(ksp, b, u);CHKERRQ(ierr);
     }
@@ -199,16 +200,22 @@ int main(int argc, char **argv)
     nsize: 4
     args: -dm_plex_box_dim 3 -dm_plex_box_simplex 0 -dm_plex_box_faces 2,2,8 -dm_refine 1 -dm_distribute \
           -petscpartitioner_type simple -petscpartitioner_simple_process_grid 1,1,2 -petscpartitioner_simple_node_grid 1,1,2 \
-          -potential_petscspace_degree 2 -ksp_type cg -pc_type gamg \
-          -benchmark -dm_view
+          -potential_petscspace_degree 2 -ksp_type cg -pc_type gamg -benchmark_it 1 -dm_view -snes_rtol 1.e-4
 
   test:
-   suffix: 0
+   suffix: cuda
    nsize: 4
    requires: cuda
    args: -dm_plex_box_dim 2 -dm_plex_box_faces 4,4 -dm_refine 3 -petscpartitioner_simple_process_grid 2,2 \
      -petscpartitioner_simple_node_grid 1,1 -potential_petscspace_degree 2 -dm_distribute -petscpartitioner_type simple \
-     -dm_plex_box_simplex 0 -snes_monitor -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_process_eq_limit 400 \
-     -pc_gamg_coarse_eq_limit 10 -dm_mat_type aijcusparse -dm_vec_type cuda -benchmark -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.e-12
+     -dm_plex_box_simplex 0 -snes_monitor_short -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_process_eq_limit 400 -ksp_norm_type unpreconditioned \
+     -pc_gamg_coarse_eq_limit 10 -snes_converged_reason -ksp_converged_reason -snes_rtol 1.e-4 -dm_mat_type aijcusparse -dm_vec_type cuda
 
+  test:
+    nsize: 4
+    requires: kokkos_kernels
+    suffix: kokkos
+    args: -dm_plex_box_dim 2 -dm_plex_box_faces 2,8 -dm_distribute -petscpartitioner_type simple -petscpartitioner_simple_process_grid 2,1 \
+          -petscpartitioner_simple_node_grid 2,1 -dm_plex_box_simplex 0 -potential_petscspace_degree 1 -dm_refine 1 -ksp_type cg -pc_type gamg -ksp_norm_type unpreconditioned \
+          -mg_levels_esteig_ksp_type cg -mg_levels_pc_type jacobi -ksp_converged_reason -snes_monitor_short -snes_rtol 1.e-4 -dm_view -dm_mat_type aijkokkos -dm_vec_type kokkos
 TEST*/
