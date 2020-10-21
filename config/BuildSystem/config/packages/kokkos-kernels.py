@@ -49,7 +49,7 @@ class Configure(config.package.CMakePackage):
 
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
-    KokkosRoot = self.kokkos.installDir
+    KokkosRoot = self.kokkos.directory
     args.append('-DKokkos_ROOT='+KokkosRoot)
     if self.cuda.found:
       self.system = 'CUDA'
