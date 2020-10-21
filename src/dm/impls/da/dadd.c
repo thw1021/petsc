@@ -405,8 +405,7 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
   Vec            svec,dvec,slvec;
   PetscInt       xm,ym,zm,xs,ys,zs;
   PetscInt       i;
-  PetscBool      dm_patchis_offproc = PETSC_TRUE;
-  PetscBool      subdm_patchis_offproc = PETSC_TRUE;
+  PetscBool      patchis_offproc = PETSC_TRUE;
 
   PetscFunctionBegin;
   /* allocate the arrays of scatters */
@@ -427,8 +426,8 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
     upper.i = xs+xm;
     upper.j = ys+ym;
     upper.k = zs+zm;
-    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&idis,dm_patchis_offproc);CHKERRQ(ierr);
-    ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&isis,subdm_patchis_offproc);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&idis,patchis_offproc);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&isis,patchis_offproc);CHKERRQ(ierr);
 
     /* create the global and subdomain index sets for the outer subdomain */
     lower.i = subinfo.xs;
@@ -437,8 +436,8 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
     upper.i = subinfo.xs+subinfo.xm;
     upper.j = subinfo.ys+subinfo.ym;
     upper.k = subinfo.zs+subinfo.zm;
-    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&odis,dm_patchis_offproc);CHKERRQ(ierr);
-    ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&osis,subdm_patchis_offproc);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&odis,patchis_offproc);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(subdm,&lower,&upper,&osis,patchis_offproc);CHKERRQ(ierr);
 
     /* global and subdomain ISes for the local indices of the subdomain */
     /* todo - make this not loop over at nonperiodic boundaries, which will be more involved */
@@ -448,7 +447,7 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
     upper.i = subinfo.gxs+subinfo.gxm;
     upper.j = subinfo.gys+subinfo.gym;
     upper.k = subinfo.gzs+subinfo.gzm;
-    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&gdis,dm_patchis_offproc);CHKERRQ(ierr);
+    ierr    = DMDACreatePatchIS(dm,&lower,&upper,&gdis,patchis_offproc);CHKERRQ(ierr);
 
     /* form the scatter */
     ierr = DMGetGlobalVector(dm,&dvec);CHKERRQ(ierr);
