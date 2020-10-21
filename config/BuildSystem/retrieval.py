@@ -89,7 +89,7 @@ class Retriever(logger.Logger):
       if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
 
       try:
-        config.base.Configure.executeShellCommand(self.sourceControl.git+' clone '+dir+' '+newgitrepo, log = self.log)
+        config.base.Configure.executeShellCommand(self.sourceControl.git+' clone --recursive '+dir+' '+newgitrepo, log = self.log)
       except  RuntimeError as e:
         self.logPrint('ERROR: '+str(e))
         err = str(e)
