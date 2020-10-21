@@ -72,7 +72,9 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     }
   }
   if (PetscLikely(nindices<0)) {
-    nindices = nindices*(-1);
+    if (PetscUnlikely(skip_i && skip_j && skip_k)) {
+      nindices = 0;
+    } else nindices = nindices*(-1);
   } else SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONG,"Lower and Upper stencils are identical! Please check inputs.");
 
   ierr = PetscMalloc1(nindices*dof,&indices);CHKERRQ(ierr);
@@ -101,6 +103,9 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     if (lx) me = lx[0];
     if (ly) ne = ly[0];
     if (lz) pe = lz[0];
+    /* if no indices are to be returned, create an empty is,
+       this prevents hanging in while loops */
+    if (skip_i && skip_j && skip_k) goto createis;
     /* do while loops to ensure the block gets entered once,
        regardless of control condition being met, necessary for
        cases when skip_i/j/k is true
@@ -228,6 +233,7 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     ierr = PetscRealloc((size_t)(idx*sizeof(PetscInt)), (void*)&indices);CHKERRQ(ierr);
   }
 
+  createis:
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject)da),idx,indices,PETSC_OWN_POINTER,is);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
