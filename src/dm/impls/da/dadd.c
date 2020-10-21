@@ -103,13 +103,16 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     if (lx) me = lx[0];
     if (ly) ne = ly[0];
     if (lz) pe = lz[0];
-    /* if no indices are to be returned, create an empty is,
-       this prevents hanging in while loops */
+    /*
+       If no indices are to be returned, create an empty is,
+       this prevents hanging in while loops
+    */
     if (skip_i && skip_j && skip_k) goto createis;
-    /* do while loops to ensure the block gets entered once,
+    /*
+       do..while loops to ensure the block gets entered once,
        regardless of control condition being met, necessary for
        cases when skip_i/j/k is true
-       */
+    */
     if (skip_k) k = upper->k-oz; else k = lower->k-oz;
     do {
       if (skip_j) j = upper->j-oy; else j = lower->j-oy;
@@ -198,11 +201,16 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
     ym = ne - ns;
     zm = pe - ps;
     base = ms*ym*zm + ns*M*zm + ps*M*N;
-
-    /* do while loops to ensure the block gets entered once,
+    /*
+       if no indices are to be returned, create an empty is,
+       this prevents hanging in while loops
+    */
+    if (skip_i && skip_j && skip_k) goto createis;
+    /*
+       do..while loops to ensure the block gets entered once,
        regardless of control condition being met, necessary for
        cases when skip_i/j/k is true
-       */
+    */
     if (skip_k) k = upper->k-oz; else k = lower->k-oz;
     do {
       if (skip_j) j = upper->j-oy; else j = lower->j-oy;
