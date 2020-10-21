@@ -62,88 +62,111 @@ Unable to download package %s from: %s
     return url
 
   def genericRetrieve(self, url, root, package):
-    '''Fetch package from version control repository or tarfile indicated by URL and extract it into root'''
+    '''Fetch the gzipped tarfile indicated by url and expand it into root
+       - All the logic for removing old versions, updating etc. must move'''
 
-    parsed = urlparse_local.urlparse(url)
-    if parsed[0] == 'dir':
-      f = self.dirRetrieve
-    elif parsed[0] == 'link':
-      f = self.linkRetrieve
-    elif parsed[0] == 'git':
-      f = self.gitRetrieve
-    elif parsed[0] == 'ssh'   and parsed[2].endswith('.git'):
-      f = self.gitRetrieve
-    elif parsed[0] == 'https' and parsed[2].endswith('.git'):
-      f = self.gitRetrieve
-    elif parsed[0] == 'hg':
-      f = self.hgRetrieve
-    elif parsed[0] == 'ssh' and parsed[1].startswith('hg@'):
-      f = self.hgRetrieve
-    elif os.path.isdir(url):
-      if self.isDirectoryGitRepo(url):
-        f = self.gitRetrieve
-      else:
-        f = self.dirRetrieve
-    else:
-      f = self.tarballRetrieve
-    return f(url, root, package)
+    # copy a directory
+    if url.startswith('dir://'):
+      import shutil
+      dir = url[6:]
+      if not os.path.isdir(dir): raise RuntimeError('Url begins with dir:// but is not a directory')
 
-  def dirRetrieve(self, url, root, package):
-    self.logPrint('Retrieving %s as directory' % url, 3, 'install')
-    d = self.removePrefix(url, 'dir://')
-    if not os.path.isdir(d): raise RuntimeError('URL %s is not a directory' % url)
+      if os.path.isdir(os.path.join(root,os.path.basename(dir))): shutil.rmtree(os.path.join(root,os.path.basename(dir)))
+      if os.path.isfile(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
 
-    t = os.path.join(root,os.path.basename(d))
-    self.removeTarget(t)
-    shutil.copytree(d,t)
+      shutil.copytree(dir,os.path.join(root,os.path.basename(dir)))
+      return
 
-  def linkRetrieve(self, url, root, package):
-    self.logPrint('Retrieving %s as link' % url, 3, 'install')
-    d = self.removePrefix(url, 'link://')
-    if not os.path.isdir(d): raise RuntimeError('URL %s is not pointing to a directory' % url)
+    if url.startswith('link://'):
+      import shutil
+      dir = url[7:]
+      if not os.path.isdir(dir): raise RuntimeError('Url begins with link:// but it is not pointing to a directory')
 
-    t = os.path.join(root,os.path.basename(d))
-    self.removeTarget(t)
-    os.symlink(os.path.abspath(d),t)
+      if os.path.islink(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
+      if os.path.isfile(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
+      if os.path.isdir(os.path.join(root,os.path.basename(dir))): shutil.rmtree(os.path.join(root,os.path.basename(dir)))
+      os.symlink(os.path.abspath(dir),os.path.join(root,os.path.basename(dir)))
+      return
 
-  def gitRetrieve(self, url, root, package):
-    self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
-    if not hasattr(self.sourceControl, 'git'):
-      raise RuntimeError('self.sourceControl.git not set')
-    d = self.removePrefix(url, 'git://')
-    if os.path.isdir(d) and not self.isDirectoryGitRepo(d):
-      raise RuntimeError('URL %s is a directory but not a git repository' % url)
+    if url.startswith('git://'):
+      if not hasattr(self.sourceControl, 'git'): return
+      import shutil
+      dir = url[6:]
+      if os.path.isdir(dir):
+        if not os.path.isdir(os.path.join(dir,'.git')): raise RuntimeError('Url begins with git:// and is a directory but but does not have a .git subdirectory')
 
-    newgitrepo = os.path.join(root,'git.'+package)
-    self.removeTarget(newgitrepo)
+      newgitrepo = os.path.join(root,'git.'+package)
+      if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
+      if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
 
-    try:
-      config.base.Configure.executeShellCommand('%s clone %s %s' % (self.sourceControl.git, d, newgitrepo), log = self.log)
-    except  RuntimeError as e:
-      self.logPrint('ERROR: '+str(e))
-      err = str(e)
-      failureMessage = self.getDownloadFailureMessage(package, url)
-      raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
+      try:
+        config.base.Configure.executeShellCommand(self.sourceControl.git+' clone --recursive '+dir+' '+newgitrepo, log = self.log)
+      except  RuntimeError as e:
+        self.logPrint('ERROR: '+str(e))
+        err = str(e)
+        failureMessage = '''\
+Unable to download package %s from: %s
+* If URL specified manually - perhaps there is a typo?
+* If your network is disconnected - please reconnect and rerun ./configure
+* Or perhaps you have a firewall blocking the download
+* You can run with --with-packages-download-dir=/adirectory and ./configure will instruct you what packages to download manually
+* or you can download the above URL manually, to /yourselectedlocation
+  and use the configure option:
+  --download-%s=/yourselectedlocation
+''' % (package.upper(), url, package)
+        raise RuntimeError('Unable to download '+package+'\n'+err+failureMessage)
+      return
 
-  def hgRetrieve(self, url, root, package):
-    self.logPrint('Retrieving %s as hg repo' % url, 3, 'install')
-    if not hasattr(self.sourceControl, 'hg'):
-      raise RuntimeError('self.sourceControl.hg not set')
-    d = self.removePrefix(url, 'hg://')
+    if url.startswith('hg://'):
+      if not hasattr(self.sourceControl, 'hg'): return
 
-    newgitrepo = os.path.join(root,'hg.'+package)
-    self.removeTarget(newgitrepo)
-    try:
-      config.base.Configure.executeShellCommand('%s clone %s %s' % (self.sourceControl.hg, d, newgitrepo), log = self.log)
-    except  RuntimeError as e:
-      self.logPrint('ERROR: '+str(e))
-      err = str(e)
-      failureMessage = self.getDownloadFailureMessage(package, url)
-      raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
+      newgitrepo = os.path.join(root,'hg.'+package)
+      if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
+      if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
+      try:
+        config.base.Configure.executeShellCommand(self.sourceControl.hg+' clone '+url[5:]+' '+newgitrepo)
+      except  RuntimeError as e:
+        self.logPrint('ERROR: '+str(e))
+        err = str(e)
+        failureMessage = '''\
+Unable to download package %s from: %s
+* If URL specified manually - perhaps there is a typo?
+* If your network is disconnected - please reconnect and rerun ./configure
+* Or perhaps you have a firewall blocking the download
+* You can run with --with-packages-download-dir=/adirectory and ./configure will instruct you what packages to download manually
+* or you can download the above URL manually, to /yourselectedlocation
+  and use the configure option:
+  --download-%s=/yourselectedlocation
+''' % (package.upper(), url, package)
+        raise RuntimeError('Unable to download '+package+'\n'+err+failureMessage)
+      return
 
-  def tarballRetrieve(self, url, root, package):
-    parsed = urlparse_local.urlparse(url)
-    filename = os.path.basename(parsed[2])
+    if url.startswith('ssh://hg@'):
+      if not hasattr(self.sourceControl, 'hg'): return
+
+      newgitrepo = os.path.join(root,'hg.'+package)
+      if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
+      if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
+      try:
+        config.base.Configure.executeShellCommand(self.sourceControl.hg+' clone '+url+' '+newgitrepo)
+      except  RuntimeError as e:
+        self.logPrint('ERROR: '+str(e))
+        err = str(e)
+        failureMessage = '''\
+Unable to download package %s from: %s
+* If URL specified manually - perhaps there is a typo?
+* If your network is disconnected - please reconnect and rerun ./configure
+* Or perhaps you have a firewall blocking the download
+* You can run with --with-packages-download-dir=/adirectory and ./configure will instruct you what packages to download manually
+* or you can download the above URL manually, to /yourselectedlocation
+  and use the configure option:
+  --download-%s=/yourselectedlocation
+''' % (package.upper(), url, package)
+        raise RuntimeError('Unable to download '+package+'\n'+err+failureMessage)
+      return
+
+    # get the tarball file name from the URL
+    filename = os.path.basename(urlparse_local.urlparse(url)[2])
     localFile = os.path.join(root,'_d_'+filename)
     self.logPrint('Retrieving %s as tarball to %s' % (url,localFile) , 3, 'install')
     ext =  os.path.splitext(localFile)[1]
