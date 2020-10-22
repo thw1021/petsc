@@ -742,15 +742,14 @@ PetscErrorCode DMNetworkGetSubnetworkInfo(DM dm,PetscInt id,PetscInt *nv, PetscI
 }
 
 /*@C
-  DMNetworkGetSubnetworkCoupleInfo - Returns the info for the coupling subnetwork
+  DMNetworkGetSubnetworkSharedVertices - Returns the info for the shared vertices
 
   Input Parameters:
-+ dm - the DM object
-- id   - the ID (integer) of the coupling subnetwork (remove!)
+. dm - the DM object
 
   Output Parameters:
-+ ne - number of edges (local)
-- edge  - local edges for this coupling subnetwork
++ nsv - number of shared vertices (local)
+- svtx  - local shared vertices
 
   Notes:
   Cannot call this routine before DMNetworkLayoutSetup()
@@ -759,18 +758,18 @@ PetscErrorCode DMNetworkGetSubnetworkInfo(DM dm,PetscInt id,PetscInt *nv, PetscI
 
 .seealso: DMNetworkGetSubnetworkInfo, DMNetworkLayoutSetUp, DMNetworkCreate
 @*/
-PetscErrorCode DMNetworkGetSubnetworkCoupleInfo(DM dm,PetscInt id,PetscInt *nv,const PetscInt **vtx)
+PetscErrorCode DMNetworkGetSubnetworkSharedVertices(DM dm,PetscInt *nsv,const PetscInt **svtx)
 {
   DM_Network *net = (DM_Network*)dm->data;
   PetscInt   nsubnet = net->nsubnet;
 
   PetscFunctionBegin;
   if (net->ncsubnet) {
-    *nv  = net->subnet[nsubnet].nvtx;
-    *vtx = net->subnet[nsubnet].vertices;
+    *nsv  = net->subnet[nsubnet].nvtx;
+    *svtx = net->subnet[nsubnet].vertices;
   } else {
-    *nv  = 0;
-    *vtx = NULL;
+    *nsv  = 0;
+    *svtx = NULL;
   }
   PetscFunctionReturn(0);
 }
@@ -1898,7 +1897,7 @@ PetscErrorCode DMNetworkIsCouplingVertex(DM dm,PetscInt p,PetscBool *iscouplev)
 
   PetscFunctionBegin;
   *iscouplev = PETSC_FALSE;
-  ierr = DMNetworkGetSubnetworkCoupleInfo(dm,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nv,&vtx);CHKERRQ(ierr);
   for (i=0; i<nv; i++) {
     if (p == vtx[i]) {
       *iscouplev = PETSC_TRUE;
@@ -2620,7 +2619,7 @@ PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
       ierr = PetscPrintf(PETSC_COMM_SELF,"  NSubnets: %D; NEdges: %D; NVertices: %D; NCoupleVertices: %D.\n",nsubnet,network->NEdges,network->NVertices,network->ncvtx);CHKERRQ(ierr);
     }
 
-    ierr = DMNetworkGetSubnetworkCoupleInfo(dm,0,&ncv,&vtx);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetworkSharedVertices(dm,&ncv,&vtx);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] nEdges: %D; nVertices: %D; nCoupleVertices: %D\n",rank,network->nEdges,network->nVertices,ncv);CHKERRQ(ierr);
 
@@ -2640,7 +2639,7 @@ PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
     }
 
     /* Coupling vertices */
-    ierr = DMNetworkGetSubnetworkCoupleInfo(dm,0,&ncv,&vtx);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetworkSharedVertices(dm,&ncv,&vtx);CHKERRQ(ierr);
     if (ncv) {
       CEdge       *cedges = network->cvtx;
       PetscInt    gidx,cedges_idx,nvto,vfrom_net,vfrom_idx,*cvto;
