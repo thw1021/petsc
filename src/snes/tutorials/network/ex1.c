@@ -174,9 +174,9 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
   }
 
   /* Illustrate how to access the coupling vertex of the subnetworks without doing anything to F yet */
-  ierr = DMNetworkGetSubnetworkCoupleInfo(networkdm,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
   for (v=0; v<nv; v++) {
-    PetscInt       key,ncomp,nvar,nconnedges,k,e,keye,j,goffset[3];
+    PetscInt       key,ncomp,nvar,nconnedges,k,e,keye,goffset[3];
     void*          component;
     const PetscInt *connedges;
 
@@ -266,7 +266,7 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
 
   /* Set initial guess at the coupling vertex */
   ierr = VecGetArray(localX,&xarr);CHKERRQ(ierr);
-  ierr = DMNetworkGetSubnetworkCoupleInfo(networkdm,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
   for (i=0; i<nv; i++) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghost);CHKERRQ(ierr);
     if (ghost) continue;
@@ -313,7 +313,7 @@ int main(int argc,char **argv)
   DM               networkdm;
   PetscLogStage    stage[4];
   PetscMPIInt      rank,size;
-  PetscInt         nsubnet=2,nsubnetCouple=0,numVertices[2],numEdges[2],numEdgesCouple[1];
+  PetscInt         nsubnet=2,numVertices[2],numEdges[2],numEdgesCouple[1];
   PetscInt         i,j,nv,ne,*edgelist[2];
   const PetscInt   *vtx,*edges;
   Vec              X,F;
@@ -339,7 +339,7 @@ int main(int argc,char **argv)
   PetscInt            *edgelist_water = NULL;
 
   /* Coupling subnetwork */
-  PetscInt            *edgelist_couple = NULL;
+  PetscInt           asvtx,bsvtx;
 
   ierr = PetscInitialize(&argc,&argv,"ex1options",help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
@@ -390,14 +390,6 @@ int main(int argc,char **argv)
     numEdges[1]    = waterdata->nedge;
     numVertices[1] = waterdata->nvertex;
   }
-
-  /* All processes get data for the coupling subnetwork */
-  nsubnetCouple     = 1;
-  numEdgesCouple[0] = 1;
-
-  ierr = PetscMalloc1(4*numEdgesCouple[0],&edgelist_couple);CHKERRQ(ierr);
-  edgelist_couple[0] = 0; edgelist_couple[1] = 4; /* from node: net[0] vertex[4] */
-  edgelist_couple[2] = 1; edgelist_couple[3] = 0; /* to node:   net[1] vertex[0] */
   PetscLogStagePop();
 
   /* (2) Create a network consist of two subnetworks */
@@ -431,12 +423,16 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] Total local nvertices %D + %D = %D, nedges %D + %D = %D\n",rank,numVertices[0],numVertices[1],numVertices[0]+numVertices[1],numEdges[0],numEdges[1],numEdges[0]+numEdges[1]);CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
-  ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,nsubnetCouple,numEdgesCouple);CHKERRQ(ierr);
+  ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,0,0);CHKERRQ(ierr);
+
+  /* vertex subnet[0].4 shares with vertex subnet[1].0 */
+  asvtx = 4; bsvtx = 0;
+  ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,0,1,1,&asvtx,&bsvtx);CHKERRQ(ierr);
 
   /* Add edge connectivity */
   edgelist[0] = edgelist_power;
   edgelist[1] = edgelist_water;
-  ierr = DMNetworkSetEdgeList(networkdm,edgelist,&edgelist_couple);CHKERRQ(ierr);
+  ierr = DMNetworkSetEdgeList(networkdm,edgelist);CHKERRQ(ierr);
 
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
@@ -487,7 +483,7 @@ int main(int argc,char **argv)
 
   /* ADD VARIABLES AND COMPONENTS AT THE COUPLING VERTEX: net[0].4 coupls with net[1].0 */
   /*------------------------------------------------------------------------------------*/
-  ierr = DMNetworkGetSubnetworkCoupleInfo(networkdm,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
   /* printf("\n[%d] coupling info: cnv %d\n",rank,nv);CHKERRQ(ierr); */
   for (i = 0; i < nv; i++) { /* proc[0] and proc[1] hold the same coupling info, thus have nv=1; nv=0 in other processes */
     /* power */
@@ -522,8 +518,6 @@ int main(int argc,char **argv)
   ierr = PetscFree(waterdata->edge);CHKERRQ(ierr);
   ierr = PetscFree(waterdata);CHKERRQ(ierr);
 
-  ierr = PetscFree(edgelist_couple);CHKERRQ(ierr);
-
   /* Re-distribute networkdm to multiple processes for better job balance */
   if (size >1 && distribute) {
     ierr = DMNetworkDistribute(&networkdm,0);CHKERRQ(ierr);
@@ -533,7 +527,7 @@ int main(int argc,char **argv)
     }
   }
 
-  /* Test DMNetworkGetSubnetworkInfo() and DMNetworkGetSubnetworkCoupleInfo() */
+  /* Test DMNetworkGetSubnetworkInfo() and DMNetworkGetSubnetworkSharedVertices() */
   if (test) {
     PetscInt  v,gidx;
     PetscBool ghost;
@@ -552,7 +546,7 @@ int main(int argc,char **argv)
     }
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
-    ierr = DMNetworkGetSubnetworkCoupleInfo(networkdm,0,&nv,&vtx);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, num of coupling vertices nv = %d\n",rank,nv);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkGetGlobalVertexIndex(networkdm,vtx[v],&gidx);CHKERRQ(ierr);
@@ -699,16 +693,16 @@ int main(int argc,char **argv)
      depends: power/PFReadData.c power/pffunctions.c water/waterreaddata.c water/waterfunctions.c
 
    test:
-      args: -coupled_snes_converged_reason -options_left no
+      args: -coupled_snes_converged_reason -options_left no -viewDM
       localrunfiles: ex1options power/case9.m water/sample1.inp
-      output_file: output/ex2.out
+      output_file: output/ex1.out
 
    test:
       suffix: 2
       nsize: 3
       args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type parmetis
       localrunfiles: ex1options power/case9.m water/sample1.inp
-      output_file: output/ex2_2.out
+      output_file: output/ex1_2.out
       requires: parmetis
 
    test:
@@ -716,13 +710,13 @@ int main(int argc,char **argv)
       nsize: 3
       args: -coupled_snes_converged_reason -options_left no -distribute false
       localrunfiles: ex1options power/case9.m water/sample1.inp
-      output_file: output/ex2_2.out
+      output_file: output/ex1_2.out
 
    test:
       suffix: 4
       nsize: 4
-      args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type simple
+      args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type simple -viewDM
       localrunfiles: ex1options power/case9.m water/sample1.inp
-      output_file: output/ex2_4.out
+      output_file: output/ex1_4.out
 
 TEST*/

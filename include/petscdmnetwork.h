@@ -17,7 +17,7 @@ typedef PetscInt DMNetworkComponentGenericDataType;
 PETSC_EXTERN PetscErrorCode DMNetworkCreate(MPI_Comm,DM*);
 PETSC_EXTERN PetscErrorCode DMNetworkSetSizes(DM,PetscInt,PetscInt[],PetscInt[],PetscInt,PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMNetworkGetSizes(DM,PetscInt*,PetscInt*);
-PETSC_EXTERN PetscErrorCode DMNetworkSetEdgeList(DM,PetscInt*[],PetscInt*[]);
+PETSC_EXTERN PetscErrorCode DMNetworkSetEdgeList(DM,PetscInt*[]);
 PETSC_EXTERN PetscErrorCode DMNetworkLayoutSetUp(DM);
 PETSC_EXTERN PetscErrorCode DMNetworkRegisterComponent(DM,const char*,size_t,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVertexRange(DM,PetscInt*,PetscInt*);
@@ -53,7 +53,8 @@ PETSC_EXTERN PetscErrorCode DMNetworkGetGlobalEdgeIndex(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetGlobalVertexIndex(DM,PetscInt,PetscInt*);
 
 PETSC_EXTERN PetscErrorCode DMNetworkGetSubnetworkInfo(DM,PetscInt,PetscInt*,PetscInt*,const PetscInt**,const PetscInt**);
-PETSC_EXTERN PetscErrorCode DMNetworkGetSubnetworkCoupleInfo(DM,PetscInt,PetscInt*,const PetscInt**);
+PETSC_EXTERN PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM,PetscInt,PetscInt,PetscInt,PetscInt[],PetscInt[]);
+PETSC_EXTERN PetscErrorCode DMNetworkGetSubnetworkSharedVertices(DM,PetscInt*,const PetscInt**);
 
 typedef struct _p_DMNetworkMonitorList *DMNetworkMonitorList;
 struct _p_DMNetworkMonitorList
