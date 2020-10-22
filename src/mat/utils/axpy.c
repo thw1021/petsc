@@ -123,6 +123,7 @@ PetscErrorCode MatAXPY_Basic_Preallocate(Mat Y, Mat X, Mat *B)
     ierr = MatCreate(PetscObjectComm((PetscObject)Y),&preallocator);CHKERRQ(ierr);
     ierr = MatSetType(preallocator,MATPREALLOCATOR);CHKERRQ(ierr);
     ierr = MatSetSizes(preallocator,m,n,M,N);CHKERRQ(ierr);
+    ierr = MatSetLayouts(preallocator,Y->rmap,Y->cmap);CHKERRQ(ierr);
     ierr = MatSetUp(preallocator);CHKERRQ(ierr);
     ierr = MatGetOwnershipRange(preallocator,&rstart,&rend);CHKERRQ(ierr);
     for (r = rstart; r < rend; ++r) {
