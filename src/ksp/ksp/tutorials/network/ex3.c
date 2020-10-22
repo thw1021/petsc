@@ -117,7 +117,7 @@ int main(int argc,char ** argv)
 
   /* At the coupling vertex, add componenets 'comp0' 'comp1', and the associated num of variables */
   /* All processors must do it, thus component must have same values for different processors -- do not know why? */
-  ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(dmnetwork,&nv,&vtx);CHKERRQ(ierr);
   for (i=0; i<nv; i++) {
     ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey0,&comp0[0]);CHKERRQ(ierr);
     ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey1,&comp1[0]);CHKERRQ(ierr);
@@ -150,7 +150,7 @@ int main(int argc,char ** argv)
   ierr = VecSet(X,0.0);CHKERRQ(ierr);
 
   /* Set X values at the coupling vertex */
-  ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(dmnetwork,&nv,&vtx);CHKERRQ(ierr);
   for (v=0; v<nv; v++) {
     ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[v],&ghost);CHKERRQ(ierr);
     if (ghost) continue;
