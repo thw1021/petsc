@@ -1491,6 +1491,7 @@ PetscErrorCode VecGetLocalVectorRead(Vec v,Vec w)
     ierr = VecGetArrayRead(v,(const PetscScalar**)&a);CHKERRQ(ierr);
     ierr = VecPlaceArray(w,a);CHKERRQ(ierr);
   }
+  ierr = VecLockReadPush(w);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1523,6 +1524,7 @@ PetscErrorCode VecRestoreLocalVectorRead(Vec v,Vec w)
     ierr = VecRestoreArrayRead(v,(const PetscScalar**)&a);CHKERRQ(ierr);
     ierr = VecResetArray(w);CHKERRQ(ierr);
   }
+  ierr = VecLockReadPop(w);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1600,6 +1602,7 @@ PetscErrorCode VecRestoreLocalVector(Vec v,Vec w)
     ierr = VecRestoreArray(v,&a);CHKERRQ(ierr);
     ierr = VecResetArray(w);CHKERRQ(ierr);
   }
+  ierr = PetscObjectStateIncrease((PetscObject)v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
