@@ -92,7 +92,12 @@ int main(int argc,char ** argv)
   ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(struct _p_Comp1),&compkey1);CHKERRQ(ierr);
 
   /* Set number of vertices and edges -- nsubnetCouple is ignored and will be removed from API */
-  ierr = DMNetworkSetSizes(dmnetwork,nsubnet,numVertices,numEdges,nsubnetCouple,numVtxCouple);CHKERRQ(ierr);
+  ierr = DMNetworkSetSizes(dmnetwork,nsubnet,numVertices,numEdges,0,numVtxCouple);CHKERRQ(ierr);
+
+  /* Add shared vertices */
+  for (j=0; j<numVtxCouple[0]; j++) {
+    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j+1,1,&edgelist_couple[4*j+1],&edgelist_couple[4*j+3]);CHKERRQ(ierr);
+  }
 
   /* Add edge connectivity */
   ierr = DMNetworkSetEdgeList(dmnetwork,edgelist,&edgelist_couple);CHKERRQ(ierr);
@@ -117,7 +122,7 @@ int main(int argc,char ** argv)
 
   /* At the coupling vertex, add componenets 'comp0' 'comp1', and the associated num of variables */
   /* All processors must do it, thus component must have same values for different processors -- do not know why? */
-  ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(dmnetwork,&nv,&vtx);CHKERRQ(ierr);
   for (i=0; i<nv; i++) {
     ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey0,&comp0[0]);CHKERRQ(ierr);
     ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey1,&comp1[0]);CHKERRQ(ierr);
@@ -150,7 +155,7 @@ int main(int argc,char ** argv)
   ierr = VecSet(X,0.0);CHKERRQ(ierr);
 
   /* Set X values at the coupling vertex */
-  ierr = DMNetworkGetSubnetworkCoupleInfo(dmnetwork,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(dmnetwork,&nv,&vtx);CHKERRQ(ierr);
   for (v=0; v<nv; v++) {
     ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[v],&ghost);CHKERRQ(ierr);
     if (ghost) continue;

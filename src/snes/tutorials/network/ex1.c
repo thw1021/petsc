@@ -174,7 +174,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
   }
 
   /* Illustrate how to access the coupling vertex of the subnetworks without doing anything to F yet */
-  ierr = DMNetworkGetSubnetworkCoupleInfo(networkdm,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
   for (v=0; v<nv; v++) {
     PetscInt       key,ncomp,nvar,nconnedges,k,e,keye,j,goffset[3];
     void*          component;
@@ -266,7 +266,7 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
 
   /* Set initial guess at the coupling vertex */
   ierr = VecGetArray(localX,&xarr);CHKERRQ(ierr);
-  ierr = DMNetworkGetSubnetworkCoupleInfo(networkdm,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
   for (i=0; i<nv; i++) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghost);CHKERRQ(ierr);
     if (ghost) continue;
@@ -432,6 +432,7 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
   ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,nsubnetCouple,numEdgesCouple);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,0,1,1,&edgelist_couple[1],&edgelist_couple[3]);CHKERRQ(ierr);
 
   /* Add edge connectivity */
   edgelist[0] = edgelist_power;
@@ -487,7 +488,7 @@ int main(int argc,char **argv)
 
   /* ADD VARIABLES AND COMPONENTS AT THE COUPLING VERTEX: net[0].4 coupls with net[1].0 */
   /*------------------------------------------------------------------------------------*/
-  ierr = DMNetworkGetSubnetworkCoupleInfo(networkdm,0,&nv,&vtx);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
   /* printf("\n[%d] coupling info: cnv %d\n",rank,nv);CHKERRQ(ierr); */
   for (i = 0; i < nv; i++) { /* proc[0] and proc[1] hold the same coupling info, thus have nv=1; nv=0 in other processes */
     /* power */
@@ -533,7 +534,7 @@ int main(int argc,char **argv)
     }
   }
 
-  /* Test DMNetworkGetSubnetworkInfo() and DMNetworkGetSubnetworkCoupleInfo() */
+  /* Test DMNetworkGetSubnetworkInfo() and DMNetworkGetSubnetworkSharedVertices() */
   if (test) {
     PetscInt  v,gidx;
     PetscBool ghost;
@@ -552,7 +553,7 @@ int main(int argc,char **argv)
     }
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
-    ierr = DMNetworkGetSubnetworkCoupleInfo(networkdm,0,&nv,&vtx);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, num of coupling vertices nv = %d\n",rank,nv);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkGetGlobalVertexIndex(networkdm,vtx[v],&gidx);CHKERRQ(ierr);
@@ -699,7 +700,7 @@ int main(int argc,char **argv)
      depends: power/PFReadData.c power/pffunctions.c water/waterreaddata.c water/waterfunctions.c
 
    test:
-      args: -coupled_snes_converged_reason -options_left no
+      args: -coupled_snes_converged_reason -options_left no -viewDM
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex2.out
 
@@ -721,7 +722,7 @@ int main(int argc,char **argv)
    test:
       suffix: 4
       nsize: 4
-      args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type simple
+      args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type simple -viewDM
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex2_4.out
 
