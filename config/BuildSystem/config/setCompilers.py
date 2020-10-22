@@ -808,10 +808,8 @@ class Configure(config.base.Configure):
 
   def checkHIPCompiler(self):
     '''Locate a functional HIP compiler'''
-    hipRequested=False
     if ('with-hipcc' in self.argDB and self.argDB['with-hipcc'] == '0'):
       if 'HIPCC' in self.argDB:
-        hipRequested=True
         del self.argDB['HIPCC']
       return
     self.mesg = 'in generateHIPCompilerGuesses'
@@ -841,11 +839,8 @@ class Configure(config.base.Configure):
         self.delMakeMacro('HIPCC')
         del self.HIPCC
     if not found: 
-        if hipRequested:
-           raise RuntimeError("Cannot find working HIP compiler")
-        else:
-           # Hip is not generally required
-           self.logPrint("Cannot find working HIP compiler")
+        # Hip is not generally required
+        self.logPrint("Cannot find working HIP compiler")
     return
 
   def generateHIPPreprocessorGuesses(self):
