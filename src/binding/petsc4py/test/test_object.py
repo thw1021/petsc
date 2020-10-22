@@ -190,7 +190,7 @@ class TestObjectVec(BaseTestObject, unittest.TestCase):
         self.obj.assemble()
 
 class TestObjectScatter(BaseTestObject, unittest.TestCase):
-    CLASS  = PETSc.Scatter
+    CLASS  = PETSc.SF
     FACTORY = 'create'
     def setUp(self):
         v1, v2 = PETSc.Vec().createSeq(0), PETSc.Vec().createSeq(0)
