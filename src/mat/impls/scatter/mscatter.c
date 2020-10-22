@@ -274,7 +274,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_Scatter(Mat A)
   PetscFunctionReturn(0);
 }
 
-#include <petsc/private/vecscatterimpl.h>
+#include <petsc/private/sfimpl.h>
 /*@C
    MatCreateScatter - Creates a new matrix based on a VecScatter
 
@@ -338,7 +338,7 @@ PetscErrorCode  MatScatterSetVecScatter(Mat mat,VecScatter scatter)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidHeaderSpecific(scatter,VEC_SCATTER_CLASSID,2);
+  PetscValidHeaderSpecific(scatter,PETSCSF_CLASSID,2);
   PetscCheckSameComm((PetscObject)scatter,1,(PetscObject)mat,2);
   if (mat->rmap->n != scatter->to_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of local rows in matrix %D not equal local scatter size %D",mat->rmap->n,scatter->to_n);
   if (mat->cmap->n != scatter->from_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of local columns in matrix %D not equal local scatter size %D",mat->cmap->n,scatter->from_n);
