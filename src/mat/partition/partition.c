@@ -655,6 +655,7 @@ PetscErrorCode  MatPartitioningCreate(MPI_Comm comm,MatPartitioning *newp)
 
   ierr    = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
   part->n = (PetscInt)size;
+  part->bs = 1;
 
   *newp = part;
   PetscFunctionReturn(0);
@@ -860,9 +861,12 @@ PetscErrorCode  MatPartitioningSetFromOptions(MatPartitioning part)
 
 //TODO manpage
 //TODO event
+/* guarantee that part->adj is MATMPIADJ on a subcommunicator containing only processes with nonzero number of rows */
 PetscErrorCode MatPartitioningSetUp(MatPartitioning part)
 {
   PetscErrorCode           ierr;
+  PetscBool                flg;
+  Mat                      amat,pmat;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
@@ -871,9 +875,29 @@ PetscErrorCode MatPartitioningSetUp(MatPartitioning part)
   if (part->adj->factortype) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   if (!part->ops->apply)     SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Must set type with MatPartitioningSetFromOptions() or MatPartitioningSetType()");
 
+  ierr = PetscObjectTypeCompare((PetscObject)part->adj,MATMPIADJ,&flg);CHKERRQ(ierr);
+  if (flg) {
+    amat = part->adj;
+    ierr = PetscObjectReference((PetscObject)amat);CHKERRQ(ierr);
+  } else {
+    /* bs indicates if the converted matrix is "reduced" from the original and hence the
+       resulting partition results need to be stretched to match the original matrix */
+    ierr = MatConvert(part->adj,MATMPIADJ,MAT_INITIAL_MATRIX,&amat);CHKERRQ(ierr);
+    if (amat->rmap->n > 0) part->bs = part->adj->rmap->n/amat->rmap->n;
+  }
+  if (part->parallel) {
+   ierr = MatMPIAdjCreateNonemptySubcommMat(amat,&pmat);CHKERRQ(ierr);
+  } else {
+   ierr = MatMPIAdjToSeq(amat,&pmat);CHKERRQ(ierr);
+  }
+  ierr = MatDestroy(&amat);CHKERRQ(ierr);
+  ierr = MatDestroy(&part->adj_work);CHKERRQ(ierr);
+  part->adj_work = pmat;
+
   if (part->ops->setup) {
     ierr = (*part->ops->setup)(part);CHKERRQ(ierr);
   }
+  ierr = MPI_Barrier(PetscObjectComm((PetscObject)part));CHKERRQ(ierr);
   part->setupcalled = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -889,6 +913,7 @@ PetscErrorCode  MatPartitioningReset(MatPartitioning part)
   if (part->ops->reset) {
     ierr = (part->ops->reset)(part);CHKERRQ(ierr);
   }
+  ierr = MatDestroy(&part->adj_work);CHKERRQ(ierr);
   part->setupcalled = PETSC_FALSE;
   PetscFunctionReturn(0);
 }

@@ -25,26 +25,11 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
   MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
   PetscErrorCode           ierr;
   PetscInt                 *locals = NULL;
-  Mat                      mat     = part->adj,amat,pmat;
-  PetscBool                flg;
-  PetscInt                 bs = 1;
+  Mat                      pmat    = part->adj_work;
+  PetscInt                 bs      = part->bs;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
-  PetscValidPointer(partitioning,4);
-  ierr = PetscObjectTypeCompare((PetscObject)mat,MATMPIADJ,&flg);CHKERRQ(ierr);
-  if (flg) {
-    amat = mat;
-    ierr = PetscObjectReference((PetscObject)amat);CHKERRQ(ierr);
-  } else {
-    /* bs indicates if the converted matrix is "reduced" from the original and hence the
-       resulting partition results need to be stretched to match the original matrix */
-    ierr = MatConvert(mat,MATMPIADJ,MAT_INITIAL_MATRIX,&amat);CHKERRQ(ierr);
-    if (amat->rmap->n > 0) bs = mat->rmap->n/amat->rmap->n;
-  }
-  ierr = MatMPIAdjCreateNonemptySubcommMat(amat,&pmat);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PetscObjectComm((PetscObject)part));CHKERRQ(ierr);
-
+  //TODO handle this on interface level?
   if (pmat) {
     MPI_Comm   pcomm,comm;
     Mat_MPIAdj *adj     = (Mat_MPIAdj*)pmat->data;
@@ -187,8 +172,6 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
       ierr = ISDestroy(&ndis);CHKERRQ(ierr);
     }
   }
-  ierr = MatDestroy(&pmat);CHKERRQ(ierr);
-  ierr = MatDestroy(&amat);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

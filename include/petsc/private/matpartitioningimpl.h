@@ -22,7 +22,7 @@ struct _MatPartitioningOps {
 
 struct _p_MatPartitioning {
   PETSCHEADER(struct _MatPartitioningOps);
-  Mat         adj;
+  Mat         adj,adj_work;
   PetscInt    *vertex_weights;
   PetscBool   use_vertex_weights;
   PetscReal   *part_weights;
@@ -31,6 +31,9 @@ struct _p_MatPartitioning {
   void        *data;
   PetscBool   setupcalled;
   PetscBool   use_edge_weights;  /* A flag indicates whether or not to use edge weights */
+  /* bs indicates if the converted matrix is "reduced" from the original and hence the
+     resulting partition results need to be stretched to match the original matrix */
+  PetscInt    bs;
   PetscBool   parallel;
 };
 
