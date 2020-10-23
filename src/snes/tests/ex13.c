@@ -171,8 +171,10 @@ int main(int argc, char **argv)
     KSP       ksp;
     Vec       b;
     PetscInt  i;
+    ierr = PetscOptionsClearValue(NULL,"-ksp_monitor");CHKERRQ(ierr);
     ierr = SNESGetKSP(snes, &ksp);CHKERRQ(ierr);
     ierr = SNESGetSolution(snes, &u);CHKERRQ(ierr);
+    ierr = VecSet(u, 0.0);CHKERRQ(ierr);
     ierr = SNESGetFunction(snes, &b, NULL, NULL);CHKERRQ(ierr);
     ierr = SNESComputeFunction(snes, u, b);CHKERRQ(ierr);
     ierr = PetscLogStageRegister("KSP Solve only", &stage);CHKERRQ(ierr);
