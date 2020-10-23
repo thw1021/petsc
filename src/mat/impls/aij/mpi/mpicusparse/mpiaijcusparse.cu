@@ -46,6 +46,7 @@ static PetscErrorCode MatXAIJSetValuesCOO_MPIAIJCUSPARSE(Mat A, PetscInt n, cons
   }
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(MAT_CUSPARSESetVCOO,A,0,0,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)A);CHKERRQ(ierr);
   A->num_ass++;
   A->assembled        = PETSC_TRUE;
   A->ass_nonzerostate = A->nonzerostate;
