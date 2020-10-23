@@ -65,18 +65,19 @@ typedef struct _n_PetscSFPackOpt *PetscSFPackOpt;
 
 struct _p_PetscSF {
   PETSCHEADER(struct _PetscSFOps);
-  /* Fields used by VecScatter */
-  PetscInt          from_n,to_n;   /* Recorded local sizes of the input from/to vectors in VecScatterCreate(). Used subsequently for error checking. */
-  PetscBool         beginandendtogether;  /* Indicates that the scatter begin and end  function are called together, VecScatterEnd() is then treated as a nop */
-  PetscBool         packongpu;     /* For GPU vectors, pack needed entries on GPU instead of pulling the whole vector down to CPU and then packing on CPU */
-  const PetscScalar *xdata;        /* Vector data to read from */
-  PetscScalar       *ydata;        /* Vector data to write to. The two pointers are recorded in VecScatterBegin. Memory is not managed by SF. */
-  PetscSF           lsf;           /* The local part of the scatter, used in SCATTER_LOCAL. Built on demand. */
-  PetscInt          bs;            /* Block size */
-  MPI_Datatype      unit;          /* one unit = bs PetscScalars */
-  PetscBool         vscat_logging; /* Indicate if VecScatter log events are happening. If yes, avoid duplicated SF logging to have clear -log_view */
+  struct { /* Fields needed to implement VecScatter behavior */
+    PetscInt          from_n,to_n;   /* Recorded local sizes of the input from/to vectors in VecScatterCreate(). Used subsequently for error checking. */
+    PetscBool         beginandendtogether;  /* Indicates that the scatter begin and end  function are called together, VecScatterEnd() is then treated as a nop */
+    PetscBool         packongpu;     /* For GPU vectors, pack needed entries on GPU instead of pulling the whole vector down to CPU and then packing on CPU */
+    const PetscScalar *xdata;        /* Vector data to read from */
+    PetscScalar       *ydata;        /* Vector data to write to. The two pointers are recorded in VecScatterBegin. Memory is not managed by SF. */
+    PetscSF           lsf;           /* The local part of the scatter, used in SCATTER_LOCAL. Built on demand. */
+    PetscInt          bs;            /* Block size, determined by IS passed to VecScatterCreate */
+    MPI_Datatype      unit;          /* one unit = bs PetscScalars */
+    PetscBool         logging;       /* Indicate if vscat log events are happening. If yes, avoid duplicated SF logging to have clear -log_view */
+  } vscat;
 
-  /* Fields created by SF */
+  /* Fields for generic PetscSF functionality */
   PetscInt        nroots;          /* Number of root vertices on current process (candidates for incoming edges) */
   PetscInt        nleaves;         /* Number of leaf vertices on current process (this process specifies a root for each leaf) */
   PetscInt        *mine;           /* Location of leaves in leafdata arrays provided to the communication routines */

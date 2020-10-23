@@ -25,40 +25,41 @@ functionend:
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecScatterBegin_Internal(VecScatter vscat,Vec x,Vec y,InsertMode addv,ScatterMode mode)
+static PetscErrorCode VecScatterBegin_Internal(VecScatter sf,Vec x,Vec y,InsertMode addv,ScatterMode mode)
 {
   PetscErrorCode ierr;
-  PetscSF        sf=NULL;
+  PetscSF        wsf=NULL; /* either sf or its local part */
   MPI_Op         mop=MPI_OP_NULL;
   PetscMPIInt    size;
   PetscMemType   xmtype=PETSC_MEMTYPE_HOST,ymtype=PETSC_MEMTYPE_HOST;
 
   PetscFunctionBegin;
   if (x != y) {ierr = VecLockReadPush(x);CHKERRQ(ierr);}
-  if (vscat->use_gpu_aware_mpi || vscat->packongpu) {
-    ierr = VecGetArrayReadAndMemType(x,&vscat->xdata,&xmtype);CHKERRQ(ierr);
+  if (sf->use_gpu_aware_mpi || sf->vscat.packongpu) {
+    ierr = VecGetArrayReadAndMemType(x,&sf->vscat.xdata,&xmtype);CHKERRQ(ierr);
   } else {
-    ierr = VecGetArrayRead(x,&vscat->xdata);CHKERRQ(ierr);
+    ierr = VecGetArrayRead(x,&sf->vscat.xdata);CHKERRQ(ierr);
   }
 
   if (x != y) {
-    if (vscat->use_gpu_aware_mpi || vscat->packongpu) {ierr = VecGetArrayAndMemType(y,&vscat->ydata,&ymtype);CHKERRQ(ierr);}
-    else {ierr = VecGetArray(y,&vscat->ydata);CHKERRQ(ierr);}
+    if (sf->use_gpu_aware_mpi || sf->vscat.packongpu) {ierr = VecGetArrayAndMemType(y,&sf->vscat.ydata,&ymtype);CHKERRQ(ierr);}
+    else {ierr = VecGetArray(y,&sf->vscat.ydata);CHKERRQ(ierr);}
   } else {
-    vscat->ydata = (PetscScalar *)vscat->xdata;
-    ymtype       = xmtype;
+    sf->vscat.ydata = (PetscScalar *)sf->vscat.xdata;
+    ymtype          = xmtype;
   }
   ierr = VecLockWriteSet_Private(y,PETSC_TRUE);CHKERRQ(ierr);
 
   /* SCATTER_LOCAL indicates ignoring inter-process communication */
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)vscat),&size);CHKERRQ(ierr);
-  if ((mode & SCATTER_LOCAL) && size > 1) { /* Lazy creation of vscat->lsf since SCATTER_LOCAL is uncommon */
-    if (!vscat->lsf) {ierr = PetscSFCreateLocalSF_Private(vscat,&vscat->lsf);CHKERRQ(ierr);}
-    sf = vscat->lsf;
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)sf),&size);CHKERRQ(ierr);
+  if ((mode & SCATTER_LOCAL) && size > 1) { /* Lazy creation of sf->vscat.lsf since SCATTER_LOCAL is uncommon */
+    if (!sf->vscat.lsf) {ierr = PetscSFCreateLocalSF_Private(sf,&sf->vscat.lsf);CHKERRQ(ierr);}
+    wsf = sf->vscat.lsf;
   } else {
-    sf = vscat;
+    wsf = sf;
   }
 
+  /* Note xdata/ydata is always recorded on sf (not lsf) above */
   if (addv == INSERT_VALUES)   mop = MPIU_REPLACE;
   else if (addv == ADD_VALUES) mop = MPIU_SUM; /* Petsc defines its own MPI datatype and SUM operation for __float128 etc. */
   else if (addv == MAX_VALUES) mop = MPIU_MAX;
@@ -66,24 +67,24 @@ static PetscErrorCode VecScatterBegin_Internal(VecScatter vscat,Vec x,Vec y,Inse
   else SETERRQ1(PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"Unsupported InsertMode %D in VecScatterBegin/End",addv);
 
   if (mode & SCATTER_REVERSE) { /* REVERSE indicates leaves to root scatter. Note that x and y are swapped in input */
-    ierr = PetscSFReduceWithMemTypeBegin(sf,vscat->unit,xmtype,vscat->xdata,ymtype,vscat->ydata,mop);CHKERRQ(ierr);
+    ierr = PetscSFReduceWithMemTypeBegin(wsf,sf->vscat.unit,xmtype,sf->vscat.xdata,ymtype,sf->vscat.ydata,mop);CHKERRQ(ierr);
   } else { /* FORWARD indicates x to y scatter, where x is root and y is leaf */
-    ierr = PetscSFBcastAndOpWithMemTypeBegin(sf,vscat->unit,xmtype,vscat->xdata,ymtype,vscat->ydata,mop);CHKERRQ(ierr);
+    ierr = PetscSFBcastAndOpWithMemTypeBegin(wsf,sf->vscat.unit,xmtype,sf->vscat.xdata,ymtype,sf->vscat.ydata,mop);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecScatterEnd_Internal(VecScatter vscat,Vec x,Vec y,InsertMode addv,ScatterMode mode)
+static PetscErrorCode VecScatterEnd_Internal(VecScatter sf,Vec x,Vec y,InsertMode addv,ScatterMode mode)
 {
   PetscErrorCode ierr;
-  PetscSF        sf=NULL;
+  PetscSF        wsf=NULL;
   MPI_Op         mop=MPI_OP_NULL;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
   /* SCATTER_LOCAL indicates ignoring inter-process communication */
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)vscat),&size);CHKERRQ(ierr);
-  sf = ((mode & SCATTER_LOCAL) && size > 1) ? vscat->lsf : vscat;
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)sf),&size);CHKERRQ(ierr);
+  wsf  = ((mode & SCATTER_LOCAL) && size > 1) ? sf->vscat.lsf : sf;
 
   if (addv == INSERT_VALUES)   mop = MPIU_REPLACE;
   else if (addv == ADD_VALUES) mop = MPIU_SUM;
@@ -92,32 +93,31 @@ static PetscErrorCode VecScatterEnd_Internal(VecScatter vscat,Vec x,Vec y,Insert
   else SETERRQ1(PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"Unsupported InsertMode %D in VecScatterBegin/End",addv);
 
   if (mode & SCATTER_REVERSE) { /* reverse scatter sends leaves to roots. Note that x and y are swapped in input */
-    ierr = PetscSFReduceEnd(sf,vscat->unit,vscat->xdata,vscat->ydata,mop);CHKERRQ(ierr);
+    ierr = PetscSFReduceEnd(wsf,sf->vscat.unit,sf->vscat.xdata,sf->vscat.ydata,mop);CHKERRQ(ierr);
   } else { /* forward scatter sends roots to leaves, i.e., x to y */
-    ierr = PetscSFBcastAndOpEnd(sf,vscat->unit,vscat->xdata,vscat->ydata,mop);CHKERRQ(ierr);
+    ierr = PetscSFBcastAndOpEnd(wsf,sf->vscat.unit,sf->vscat.xdata,sf->vscat.ydata,mop);CHKERRQ(ierr);
   }
 
   if (x != y) {
-    if (vscat->use_gpu_aware_mpi || vscat->packongpu) {ierr = VecRestoreArrayReadAndMemType(x,&vscat->xdata);CHKERRQ(ierr);}
-    else {ierr = VecRestoreArrayRead(x,&vscat->xdata);CHKERRQ(ierr);}
+    if (sf->use_gpu_aware_mpi || sf->vscat.packongpu) {ierr = VecRestoreArrayReadAndMemType(x,&sf->vscat.xdata);CHKERRQ(ierr);}
+    else {ierr = VecRestoreArrayRead(x,&sf->vscat.xdata);CHKERRQ(ierr);}
     ierr = VecLockReadPop(x);CHKERRQ(ierr);
   }
 
-  if (vscat->use_gpu_aware_mpi || vscat->packongpu) {ierr = VecRestoreArrayAndMemType(y,&vscat->ydata);CHKERRQ(ierr);}
-  else {ierr = VecRestoreArray(y,&vscat->ydata);CHKERRQ(ierr);}
+  if (sf->use_gpu_aware_mpi || sf->vscat.packongpu) {ierr = VecRestoreArrayAndMemType(y,&sf->vscat.ydata);CHKERRQ(ierr);}
+  else {ierr = VecRestoreArray(y,&sf->vscat.ydata);CHKERRQ(ierr);}
   ierr = VecLockWriteSet_Private(y,PETSC_FALSE);CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
 }
 
-/* VecScatterRemap provides a light way to slightly modify a VecScatter. Suppose the input vscat scatters
+/* VecScatterRemap provides a light way to slightly modify a VecScatter. Suppose the input sf scatters
    x[i] to y[j], tomap gives a plan to change vscat to scatter x[tomap[i]] to y[j]. Note that in SF,
    x is roots. That means we need to change incoming stuffs such as bas->irootloc[].
  */
-static PetscErrorCode VecScatterRemap_Internal(VecScatter vscat,const PetscInt *tomap,const PetscInt *frommap)
+static PetscErrorCode VecScatterRemap_Internal(VecScatter sf,const PetscInt *tomap,const PetscInt *frommap)
 {
-  PetscSF        sf = vscat;
-  PetscInt       i,bs = sf->bs;
+  PetscInt       i,bs = sf->vscat.bs;
   PetscMPIInt    size;
   PetscBool      ident = PETSC_TRUE,isbasic,isneighbor;
   PetscSFType    type;
@@ -138,7 +138,7 @@ static PetscErrorCode VecScatterRemap_Internal(VecScatter vscat,const PetscInt *
   /* Since the indices changed, we must also update the local SF. But we do not do it since
      lsf is rarely used. We just destroy lsf and rebuild it on demand from updated sf.
   */
-  if (sf->lsf) {ierr = PetscSFDestroy(&sf->lsf);CHKERRQ(ierr);}
+  if (sf->vscat.lsf) {ierr = PetscSFDestroy(&sf->vscat.lsf);CHKERRQ(ierr);}
 
   ierr = PetscSFGetType(sf,&type);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)sf,PETSCSFBASIC,&isbasic);CHKERRQ(ierr);
@@ -181,7 +181,7 @@ static PetscErrorCode VecScatterRemap_Internal(VecScatter vscat,const PetscInt *
 /* Given a parallel VecScatter context, return number of procs and vector entries involved in remote (i.e., off-process) communication
 
   Input Parameters:
-+ ctx   - the context (must be a parallel vecscatter)
++ sf   - the context (must be a parallel vecscatter)
 - send  - true to select the send info (i.e., todata), otherwise to select the recv info (i.e., fromdata)
 
   Output parameters:
@@ -195,17 +195,16 @@ static PetscErrorCode VecScatterRemap_Internal(VecScatter vscat,const PetscInt *
   Sometimes PETSc internally needs to use the matrix-vector-multiply vecscatter context for other purposes. The client code
   usually only uses MPI_Send/Recv. This group of subroutines provides info needed for such uses.
  */
-PetscErrorCode VecScatterGetRemoteCount_Private(VecScatter vscat,PetscBool send,PetscInt *num_procs,PetscInt *num_entries)
+PetscErrorCode VecScatterGetRemoteCount_Private(VecScatter sf,PetscBool send,PetscInt *num_procs,PetscInt *num_entries)
 {
   PetscErrorCode    ierr;
-  PetscSF           sf = vscat;
   PetscInt          nranks,remote_start;
   PetscMPIInt       rank;
   const PetscInt    *offset;
   const PetscMPIInt *ranks;
 
   PetscFunctionBegin;
-  ierr = PetscSFSetUp(vscat);CHKERRQ(ierr);
+  ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)sf),&rank);CHKERRQ(ierr);
 
   /* This routine is mainly used for MatMult's Mvctx. In Mvctx, we scatter an MPI vector x to a sequential vector lvec.
@@ -230,7 +229,7 @@ PetscErrorCode VecScatterGetRemoteCount_Private(VecScatter vscat,PetscBool send,
    Any output parameter can be NULL.
 
   Input Parameters:
-+ ctx   - the context
++ sf   - the context
 - send  - true to select the send info (i.e., todata), otherwise to select the recv info (i.e., fromdata)
 
   Output parameters:
@@ -245,17 +244,16 @@ PetscErrorCode VecScatterGetRemoteCount_Private(VecScatter vscat,PetscBool send,
 
   .seealso: VecScatterRestoreRemote_Private(), VecScatterGetRemoteOrdered_Private()
  */
-PetscErrorCode VecScatterGetRemote_Private(VecScatter vscat,PetscBool send,PetscInt *n,const PetscInt **starts,const PetscInt **indices,const PetscMPIInt **procs,PetscInt *bs)
+PetscErrorCode VecScatterGetRemote_Private(VecScatter sf,PetscBool send,PetscInt *n,const PetscInt **starts,const PetscInt **indices,const PetscMPIInt **procs,PetscInt *bs)
 {
   PetscErrorCode    ierr;
-  PetscSF           sf = vscat;
   PetscInt          nranks,remote_start;
   PetscMPIInt       rank;
   const PetscInt    *offset,*location;
   const PetscMPIInt *ranks;
 
   PetscFunctionBegin;
-  ierr = PetscSFSetUp(vscat);CHKERRQ(ierr);
+  ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)sf),&rank);CHKERRQ(ierr);
 
   if (send) {ierr = PetscSFGetLeafRanks(sf,&nranks,&ranks,&offset,&location);CHKERRQ(ierr);}
@@ -282,7 +280,7 @@ PetscErrorCode VecScatterGetRemote_Private(VecScatter vscat,PetscBool send,Petsc
    processors returned in procs must be sorted in ascending order. Any output parameter can be NULL.
 
   Input Parameters:
-+ ctx   - the context
++ sf   - the context
 - send  - true to select the send info (i.e., todata), otherwise to select the recv info (i.e., fromdata)
 
   Output parameters:
@@ -300,12 +298,12 @@ PetscErrorCode VecScatterGetRemote_Private(VecScatter vscat,PetscBool send,Petsc
   Notes:
   Output parameters like starts, indices must also be adapted according to the sorted ranks.
  */
-PetscErrorCode VecScatterGetRemoteOrdered_Private(VecScatter vscat,PetscBool send,PetscInt *n,const PetscInt **starts,const PetscInt **indices,const PetscMPIInt **procs,PetscInt *bs)
+PetscErrorCode VecScatterGetRemoteOrdered_Private(VecScatter sf,PetscBool send,PetscInt *n,const PetscInt **starts,const PetscInt **indices,const PetscMPIInt **procs,PetscInt *bs)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecScatterGetRemote_Private(vscat,send,n,starts,indices,procs,bs);CHKERRQ(ierr);
+  ierr = VecScatterGetRemote_Private(sf,send,n,starts,indices,procs,bs);CHKERRQ(ierr);
   if (PetscUnlikelyDebug(n && procs)) {
     PetscInt i;
     /* from back to front to also handle cases *n=0 */
@@ -318,7 +316,7 @@ PetscErrorCode VecScatterGetRemoteOrdered_Private(VecScatter vscat,PetscBool sen
    an implementation to free memory allocated in the VecScatterGetRemote_Private call.
 
   Input Parameters:
-+ ctx   - the context
++ sf   - the context
 - send  - true to select the send info (i.e., todata), otherwise to select the recv info (i.e., fromdata)
 
   Output parameters:
@@ -330,7 +328,7 @@ PetscErrorCode VecScatterGetRemoteOrdered_Private(VecScatter vscat,PetscBool sen
 
   .seealso: VecScatterGetRemote_Private()
  */
-PetscErrorCode VecScatterRestoreRemote_Private(VecScatter vscat,PetscBool send,PetscInt *n,const PetscInt **starts,const PetscInt **indices,const PetscMPIInt **procs,PetscInt *bs)
+PetscErrorCode VecScatterRestoreRemote_Private(VecScatter sf,PetscBool send,PetscInt *n,const PetscInt **starts,const PetscInt **indices,const PetscMPIInt **procs,PetscInt *bs)
 {
   PetscFunctionBegin;
   if (starts)   *starts  = NULL;
@@ -343,7 +341,7 @@ PetscErrorCode VecScatterRestoreRemote_Private(VecScatter vscat,PetscBool send,P
    an implementation to free memory allocated in the VecScatterGetRemoteOrdered_Private call.
 
   Input Parameters:
-+ ctx   - the context
++ sf   - the context
 - send  - true to select the send info (i.e., todata), otherwise to select the recv info (i.e., fromdata)
 
   Output parameters:
@@ -355,11 +353,11 @@ PetscErrorCode VecScatterRestoreRemote_Private(VecScatter vscat,PetscBool send,P
 
   .seealso: VecScatterGetRemoteOrdered_Private()
  */
-PetscErrorCode VecScatterRestoreRemoteOrdered_Private(VecScatter vscat,PetscBool send,PetscInt *n,const PetscInt **starts,const PetscInt **indices,const PetscMPIInt **procs,PetscInt *bs)
+PetscErrorCode VecScatterRestoreRemoteOrdered_Private(VecScatter sf,PetscBool send,PetscInt *n,const PetscInt **starts,const PetscInt **indices,const PetscMPIInt **procs,PetscInt *bs)
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = VecScatterRestoreRemote_Private(vscat,send,n,starts,indices,procs,bs);CHKERRQ(ierr);
+  ierr = VecScatterRestoreRemote_Private(sf,send,n,starts,indices,procs,bs);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -369,17 +367,17 @@ PetscErrorCode VecScatterRestoreRemoteOrdered_Private(VecScatter vscat,PetscBool
    Collective on VecScatter
 
    Input Parameter:
-.  ctx - the scatter context
+.  sf - the scatter context
 
    Level: intermediate
 
 .seealso: VecScatterCreate(), VecScatterCopy()
 @*/
-PetscErrorCode VecScatterSetUp(VecScatter vscat)
+PetscErrorCode VecScatterSetUp(VecScatter sf)
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = PetscSFSetUp(vscat);CHKERRQ(ierr);
+  ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -389,7 +387,7 @@ PetscErrorCode VecScatterSetUp(VecScatter vscat)
   Collective on VecScatter
 
   Input Parameters:
-+ vscat - The VecScatter (SF) object
++ sf - The VecScatter (SF) object
 - type - The name of the vector scatter type
 
   Options Database Key:
@@ -402,12 +400,12 @@ PetscErrorCode VecScatterSetUp(VecScatter vscat)
 
 .seealso: VecScatterGetType(), VecScatterCreate()
 @*/
-PetscErrorCode VecScatterSetType(VecScatter vscat, VecScatterType type)
+PetscErrorCode VecScatterSetType(VecScatter sf, VecScatterType type)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscSFSetType(vscat,type);CHKERRQ(ierr);
+  ierr = PetscSFSetType(sf,type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -417,7 +415,7 @@ PetscErrorCode VecScatterSetType(VecScatter vscat, VecScatterType type)
   Not Collective
 
   Input Parameter:
-. vscat  - The vector scatter (SF)
+. sf  - The vector scatter (SF)
 
   Output Parameter:
 . type - The vector scatter type name
@@ -426,11 +424,11 @@ PetscErrorCode VecScatterSetType(VecScatter vscat, VecScatterType type)
 
 .seealso: VecScatterSetType(), VecScatterCreate()
 @*/
-PetscErrorCode VecScatterGetType(VecScatter vscat, VecScatterType *type)
+PetscErrorCode VecScatterGetType(VecScatter sf, VecScatterType *type)
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = PetscSFGetType(vscat,type);CHKERRQ(ierr);
+  ierr = PetscSFGetType(sf,type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -459,7 +457,7 @@ PetscErrorCode VecScatterRegister(const char sname[], PetscErrorCode (*function)
    Not Collective
 
    Input Parameter:
-.   ctx - scatter context created with VecScatterCreate()
+.   sf - scatter context created with VecScatterCreate()
 
    Output Parameter:
 .   flg - PETSC_TRUE if the VecScatterBegin/End() are all done during the VecScatterBegin()
@@ -468,11 +466,11 @@ PetscErrorCode VecScatterRegister(const char sname[], PetscErrorCode (*function)
 
 .seealso: VecScatterCreate(), VecScatterEnd(), VecScatterBegin()
 @*/
-PetscErrorCode  VecScatterGetMerged(VecScatter ctx,PetscBool *flg)
+PetscErrorCode  VecScatterGetMerged(VecScatter sf,PetscBool *flg)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ctx,PETSCSF_CLASSID,1);
-  if (flg) *flg = ctx->beginandendtogether;
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
+  if (flg) *flg = sf->vscat.beginandendtogether;
   PetscFunctionReturn(0);
 }
 /*@
@@ -481,18 +479,18 @@ PetscErrorCode  VecScatterGetMerged(VecScatter ctx,PetscBool *flg)
    Collective on VecScatter
 
    Input Parameter:
-.  ctx - the scatter context
+.  sf - the scatter context
 
    Level: intermediate
 
 .seealso: VecScatterCreate(), VecScatterCopy()
 @*/
-PetscErrorCode VecScatterDestroy(VecScatter *ctx)
+PetscErrorCode VecScatterDestroy(VecScatter *sf)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscSFDestroy(ctx);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(sf);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -502,23 +500,23 @@ PetscErrorCode VecScatterDestroy(VecScatter *ctx)
    Collective on VecScatter
 
    Input Parameter:
-.  sctx - the scatter context
+.  sf - the scatter context
 
    Output Parameter:
-.  newctx - the context copy
+.  newsf - the context copy
 
    Level: advanced
 
 .seealso: VecScatterCreate(), VecScatterDestroy()
 @*/
-PetscErrorCode  VecScatterCopy(VecScatter sctx,VecScatter *newctx)
+PetscErrorCode  VecScatterCopy(VecScatter sf,VecScatter *newsf)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(newctx,2);
-  ierr = PetscSFDuplicate(sctx,PETSCSF_DUPLICATE_GRAPH,newctx);CHKERRQ(ierr);
-  ierr = PetscSFSetUp(*newctx);CHKERRQ(ierr);
+  PetscValidPointer(newsf,2);
+  ierr = PetscSFDuplicate(sf,PETSCSF_DUPLICATE_GRAPH,newsf);CHKERRQ(ierr);
+  ierr = PetscSFSetUp(*newsf);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -528,20 +526,20 @@ PetscErrorCode  VecScatterCopy(VecScatter sctx,VecScatter *newctx)
    Collective on VecScatter
 
    Input Parameters:
-+  A - the scatter context
++  sf - the scatter context
 .  obj - Optional object
 -  name - command line option
 
    Level: intermediate
 .seealso:  VecScatter, VecScatterView, PetscObjectViewFromOptions(), VecScatterCreate()
 @*/
-PetscErrorCode  VecScatterViewFromOptions(VecScatter vscat,PetscObject obj,const char name[])
+PetscErrorCode  VecScatterViewFromOptions(VecScatter sf,PetscObject obj,const char name[])
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(vscat,PETSCSF_CLASSID,1);
-  ierr = PetscObjectViewFromOptions((PetscObject)vscat,obj,name);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
+  ierr = PetscObjectViewFromOptions((PetscObject)sf,obj,name);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -552,18 +550,18 @@ PetscErrorCode  VecScatterViewFromOptions(VecScatter vscat,PetscObject obj,const
    Collective on VecScatter
 
    Input Parameters:
-+  ctx - the scatter context
++  sf - the scatter context
 -  viewer - the viewer for displaying the context
 
    Level: intermediate
 
 @*/
-PetscErrorCode  VecScatterView(VecScatter ctx,PetscViewer viewer)
+PetscErrorCode  VecScatterView(VecScatter sf,PetscViewer viewer)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscSFView(ctx,viewer);CHKERRQ(ierr);
+  ierr = PetscSFView(sf,viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -574,7 +572,7 @@ PetscErrorCode  VecScatterView(VecScatter ctx,PetscViewer viewer)
    Collective on VecScatter
 
    Input Parameters:
-+  scat    - vector scatter context
++  sf    - vector scatter context
 .  tomap   - remapping plan for "to" indices (may be NULL).
 -  frommap - remapping plan for "from" indices (may be NULL)
 
@@ -590,18 +588,18 @@ PetscErrorCode  VecScatterView(VecScatter ctx,PetscViewer viewer)
      This is backwards from the paralllel case!
 
 @*/
-PetscErrorCode  VecScatterRemap(VecScatter scat,PetscInt tomap[],PetscInt frommap[])
+PetscErrorCode  VecScatterRemap(VecScatter sf,PetscInt tomap[],PetscInt frommap[])
 {
   PetscInt               ierr;
 
   PetscFunctionBegin;
   if (tomap)   PetscValidIntPointer(tomap,2);
   if (frommap) PetscValidIntPointer(frommap,3);
-  ierr = VecScatterRemap_Internal(scat,tomap,frommap);CHKERRQ(ierr);
+  ierr = VecScatterRemap_Internal(sf,tomap,frommap);CHKERRQ(ierr);
   if (frommap) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unable to remap the FROM in scatters yet");
   /* Mark then vector lengths as unknown because we do not know the lengths of the remapped vectors */
-  scat->from_n = -1;
-  scat->to_n   = -1;
+  sf->vscat.from_n = -1;
+  sf->vscat.to_n   = -1;
   PetscFunctionReturn(0);
 }
 
@@ -611,7 +609,7 @@ PetscErrorCode  VecScatterRemap(VecScatter scat,PetscInt tomap[],PetscInt fromma
   Collective on VecScatter
 
   Input Parameter:
-. vscat - The vector scatter
+. sf - The vector scatter
 
   Notes:
     To see all options, run your program with the -help option, or consult the users manual.
@@ -622,19 +620,21 @@ PetscErrorCode  VecScatterRemap(VecScatter scat,PetscInt tomap[],PetscInt fromma
 
 .seealso: VecScatterCreate(), VecScatterDestroy(), VecScatterSetUp()
 @*/
-PetscErrorCode VecScatterSetFromOptions(VecScatter vscat)
+PetscErrorCode VecScatterSetFromOptions(VecScatter sf)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(vscat,PETSCSF_CLASSID,1);
-  ierr = PetscObjectOptionsBegin((PetscObject)vscat);CHKERRQ(ierr);
-  vscat->beginandendtogether = PETSC_FALSE;
-  ierr = PetscOptionsBool("-vecscatter_merge","Use combined (merged) vector scatter begin and end","VecScatterCreate",vscat->beginandendtogether,&vscat->beginandendtogether,NULL);CHKERRQ(ierr);
-  if (vscat->beginandendtogether) {ierr = PetscInfo(vscat,"Using combined (merged) vector scatter begin and end\n");CHKERRQ(ierr);}
-  ierr = PetscOptionsBool("-vecscatter_packongpu","For GPU vectors, pack needed entries on GPU, then copy packed data to CPU, then do MPI","VecScatterCreate",vscat->packongpu,&vscat->packongpu,NULL);CHKERRQ(ierr);
-  vscat->packongpu = PETSC_TRUE;
-  if (vscat->packongpu) {ierr = PetscInfo(vscat,"For GPU vectors, pack needed entries on GPU, then copy packed data to CPU, then do MPI\n");CHKERRQ(ierr);}
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
+  ierr = PetscObjectOptionsBegin((PetscObject)sf);CHKERRQ(ierr);
+
+  sf->vscat.beginandendtogether = PETSC_FALSE;
+  ierr = PetscOptionsBool("-vecscatter_merge","Use combined (merged) vector scatter begin and end","VecScatterCreate",sf->vscat.beginandendtogether,&sf->vscat.beginandendtogether,NULL);CHKERRQ(ierr);
+  if (sf->vscat.beginandendtogether) {ierr = PetscInfo(sf,"Using combined (merged) vector scatter begin and end\n");CHKERRQ(ierr);}
+
+  sf->vscat.packongpu = PETSC_TRUE;
+  ierr = PetscOptionsBool("-vecscatter_packongpu","For GPU vectors, pack needed entries on GPU, then copy packed data to CPU, then do MPI","VecScatterCreate",sf->vscat.packongpu,&sf->vscat.packongpu,NULL);CHKERRQ(ierr);
+  if (sf->vscat.packongpu) {ierr = PetscInfo(sf,"For GPU vectors, pack needed entries on GPU, then copy packed data to CPU, then do MPI\n");CHKERRQ(ierr);}
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -654,7 +654,7 @@ PetscErrorCode VecScatterSetFromOptions(VecScatter vscat)
 -  iy - the indices of yin to hold results (if NULL fills entire vector yin)
 
    Output Parameter:
-.  newctx - location to store the new scatter context
+.  newsf - location to store the new scatter (SF) context
 
    Options Database Keys:
 +  -vecscatter_view         - Prints detail of communications
@@ -690,7 +690,7 @@ PetscErrorCode VecScatterSetFromOptions(VecScatter vscat)
 
 .seealso: VecScatterDestroy(), VecScatterCreateToAll(), VecScatterCreateToZero(), PetscSFCreate()
 @*/
-PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newctx)
+PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newsf)
 {
   PetscErrorCode ierr;
   MPI_Comm       xcomm,ycomm,bigcomm;
@@ -704,10 +704,10 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newctx)
   ISTypeID       ixid,iyid;
   PetscInt       bs,bsx,bsy,min,max,m[2],ixfirst,ixstep,iyfirst,iystep;
   PetscBool      can_do_block_opt=PETSC_FALSE;
-  VecScatter     vscat=NULL;
+  PetscSF        sf;
 
   PetscFunctionBegin;
-  PetscValidPointer(newctx,5);
+  PetscValidPointer(newsf,5);
   if (!ix && !iy) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot pass default in for both input and output indices");
 
   /* Get comm from x and y */
@@ -804,9 +804,9 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newctx)
     ierr   = MPIU_Allreduce(MPI_IN_PLACE,pattern,2,MPIU_INT,MPI_LAND,xcomm);CHKERRQ(ierr);
 
     if (pattern[0] || pattern[1]) {
-      ierr = PetscSFCreate(xcomm,&vscat);CHKERRQ(ierr);
-      ierr = PetscSFSetFromOptions(vscat);CHKERRQ(ierr);
-      ierr = PetscSFSetGraphWithPattern(vscat,map,pattern[0] ? PETSCSF_PATTERN_ALLGATHER : PETSCSF_PATTERN_GATHER);CHKERRQ(ierr);
+      ierr = PetscSFCreate(xcomm,&sf);CHKERRQ(ierr);
+      ierr = PetscSFSetFromOptions(sf);CHKERRQ(ierr);
+      ierr = PetscSFSetGraphWithPattern(sf,map,pattern[0] ? PETSCSF_PATTERN_ALLGATHER : PETSCSF_PATTERN_GATHER);CHKERRQ(ierr);
       goto functionend; /* No further analysis needed. What a big win! */
     }
   }
@@ -1083,10 +1083,10 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newctx)
   /* MUST build SF on xx's comm, which is not necessarily identical to yy's comm.
      In SF's view, xx contains the roots (i.e., the remote) and iremote[].rank are ranks in xx's comm.
      yy contains leaves, which are local and can be thought as part of PETSC_COMM_SELF. */
-  ierr = PetscSFCreate(PetscObjectComm((PetscObject)xx),&vscat);CHKERRQ(ierr);
-  ierr = PetscSFSetFromOptions(vscat);CHKERRQ(ierr);
+  ierr = PetscSFCreate(PetscObjectComm((PetscObject)xx),&sf);CHKERRQ(ierr);
+  ierr = PetscSFSetFromOptions(sf);CHKERRQ(ierr);
   ierr = VecGetLocalSize(xx,&nroots);CHKERRQ(ierr);
-  ierr = PetscSFSetGraph(vscat,nroots,nleaves,ilocal,PETSC_OWN_POINTER,iremote,PETSC_OWN_POINTER);CHKERRQ(ierr); /* Give ilocal/iremote to petsc and no need to free them here */
+  ierr = PetscSFSetGraph(sf,nroots,nleaves,ilocal,PETSC_OWN_POINTER,iremote,PETSC_OWN_POINTER);CHKERRQ(ierr); /* Give ilocal/iremote to petsc and no need to free them here */
 
   /* Free memory no longer needed */
   ierr = ISRestoreIndices(ixx,&xindices);CHKERRQ(ierr);
@@ -1101,22 +1101,22 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newctx)
   }
 
 functionend:
-  vscat->bs = bs;
-  if (vscat->bs > 1) {
-    ierr = MPI_Type_contiguous(vscat->bs,MPIU_SCALAR,&vscat->unit);CHKERRQ(ierr);
-    ierr = MPI_Type_commit(&vscat->unit);CHKERRQ(ierr);
+  sf->vscat.bs = bs;
+  if (sf->vscat.bs > 1) {
+    ierr = MPI_Type_contiguous(sf->vscat.bs,MPIU_SCALAR,&sf->vscat.unit);CHKERRQ(ierr);
+    ierr = MPI_Type_commit(&sf->vscat.unit);CHKERRQ(ierr);
   } else {
-    vscat->unit = MPIU_SCALAR;
+    sf->vscat.unit = MPIU_SCALAR;
   }
-  ierr = VecGetLocalSize(x,&vscat->from_n);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(y,&vscat->to_n);CHKERRQ(ierr);
+  ierr = VecGetLocalSize(x,&sf->vscat.from_n);CHKERRQ(ierr);
+  ierr = VecGetLocalSize(y,&sf->vscat.to_n);CHKERRQ(ierr);
   if (!ix_old) {ierr = ISDestroy(&ix);CHKERRQ(ierr);} /* We created helper ix, iy. Free them */
   if (!iy_old) {ierr = ISDestroy(&iy);CHKERRQ(ierr);}
 
   /* Set default */
-  ierr = VecScatterSetFromOptions(vscat);CHKERRQ(ierr);
+  ierr = VecScatterSetFromOptions(sf);CHKERRQ(ierr);
 
-  *newctx = vscat;
+  *newsf = sf;
   PetscFunctionReturn(0);
 }
 
@@ -1270,7 +1270,7 @@ PetscErrorCode  VecScatterCreateToZero(Vec vin,VecScatter *ctx,Vec *vout)
    Neighbor-wise Collective on VecScatter
 
    Input Parameters:
-+  ctx - scatter context generated by VecScatterCreate()
++  sf - scatter context generated by VecScatterCreate()
 .  x - the vector from which we scatter
 .  y - the vector to which we scatter
 .  addv - either ADD_VALUES, MAX_VALUES, MIN_VALUES or INSERT_VALUES, with INSERT_VALUES mode any location
@@ -1307,13 +1307,13 @@ PetscErrorCode  VecScatterCreateToZero(Vec vin,VecScatter *ctx,Vec *vout)
 
 .seealso: VecScatterCreate(), VecScatterEnd()
 @*/
-PetscErrorCode  VecScatterBegin(VecScatter ctx,Vec x,Vec y,InsertMode addv,ScatterMode mode)
+PetscErrorCode  VecScatterBegin(VecScatter sf,Vec x,Vec y,InsertMode addv,ScatterMode mode)
 {
   PetscErrorCode ierr;
   PetscInt       to_n,from_n;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ctx,PETSCSF_CLASSID,1);
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   if (PetscDefined(USE_DEBUG)) {
@@ -1323,27 +1323,27 @@ PetscErrorCode  VecScatterBegin(VecScatter ctx,Vec x,Vec y,InsertMode addv,Scatt
      vector lengths are unknown (for example with mapped scatters) and thus
      no error checking is performed.
      */
-    if (ctx->from_n >= 0 && ctx->to_n >= 0) {
+    if (sf->vscat.from_n >= 0 && sf->vscat.to_n >= 0) {
       ierr = VecGetLocalSize(x,&from_n);CHKERRQ(ierr);
       ierr = VecGetLocalSize(y,&to_n);CHKERRQ(ierr);
       if (mode & SCATTER_REVERSE) {
-        if (to_n != ctx->from_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Vector wrong size %D for scatter %D (scatter reverse and vector to != ctx from size)",to_n,ctx->from_n);
-        if (from_n != ctx->to_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Vector wrong size %D for scatter %D (scatter reverse and vector from != ctx to size)",from_n,ctx->to_n);
+        if (to_n != sf->vscat.from_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Vector wrong size %D for scatter %D (scatter reverse and vector to != sf from size)",to_n,sf->vscat.from_n);
+        if (from_n != sf->vscat.to_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Vector wrong size %D for scatter %D (scatter reverse and vector from != sf to size)",from_n,sf->vscat.to_n);
       } else {
-        if (to_n != ctx->to_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Vector wrong size %D for scatter %D (scatter forward and vector to != ctx to size)",to_n,ctx->to_n);
-        if (from_n != ctx->from_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Vector wrong size %D for scatter %D (scatter forward and vector from != ctx from size)",from_n,ctx->from_n);
+        if (to_n != sf->vscat.to_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Vector wrong size %D for scatter %D (scatter forward and vector to != sf to size)",to_n,sf->vscat.to_n);
+        if (from_n != sf->vscat.from_n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Vector wrong size %D for scatter %D (scatter forward and vector from != sf from size)",from_n,sf->vscat.from_n);
       }
     }
   }
 
-  ctx->vscat_logging = PETSC_TRUE;
-  ierr = PetscLogEventBegin(VEC_ScatterBegin,ctx,x,y,0);CHKERRQ(ierr);
-  ierr = VecScatterBegin_Internal(ctx,x,y,addv,mode);CHKERRQ(ierr);
-  if (ctx->beginandendtogether) {
-    ierr = VecScatterEnd_Internal(ctx,x,y,addv,mode);CHKERRQ(ierr);
+  sf->vscat.logging = PETSC_TRUE;
+  ierr = PetscLogEventBegin(VEC_ScatterBegin,sf,x,y,0);CHKERRQ(ierr);
+  ierr = VecScatterBegin_Internal(sf,x,y,addv,mode);CHKERRQ(ierr);
+  if (sf->vscat.beginandendtogether) {
+    ierr = VecScatterEnd_Internal(sf,x,y,addv,mode);CHKERRQ(ierr);
   }
-  ierr = PetscLogEventEnd(VEC_ScatterBegin,ctx,x,y,0);CHKERRQ(ierr);
-  ctx->vscat_logging = PETSC_FALSE;
+  ierr = PetscLogEventEnd(VEC_ScatterBegin,sf,x,y,0);CHKERRQ(ierr);
+  sf->vscat.logging = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -1354,7 +1354,7 @@ PetscErrorCode  VecScatterBegin(VecScatter ctx,Vec x,Vec y,InsertMode addv,Scatt
    Neighbor-wise Collective on VecScatter
 
    Input Parameters:
-+  ctx - scatter context generated by VecScatterCreate()
++  sf - scatter context generated by VecScatterCreate()
 .  x - the vector from which we scatter
 .  y - the vector to which we scatter
 .  addv - one of ADD_VALUES, MAX_VALUES, MIN_VALUES or INSERT_VALUES
@@ -1370,20 +1370,20 @@ PetscErrorCode  VecScatterBegin(VecScatter ctx,Vec x,Vec y,InsertMode addv,Scatt
 
 .seealso: VecScatterBegin(), VecScatterCreate()
 @*/
-PetscErrorCode  VecScatterEnd(VecScatter ctx,Vec x,Vec y,InsertMode addv,ScatterMode mode)
+PetscErrorCode  VecScatterEnd(VecScatter sf,Vec x,Vec y,InsertMode addv,ScatterMode mode)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ctx,PETSCSF_CLASSID,1);
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
-  if (!ctx->beginandendtogether) {
-    ctx->vscat_logging = PETSC_TRUE;
-    ierr = PetscLogEventBegin(VEC_ScatterEnd,ctx,x,y,0);CHKERRQ(ierr);
-    ierr = VecScatterEnd_Internal(ctx,x,y,addv,mode);CHKERRQ(ierr);
-    ierr = PetscLogEventEnd(VEC_ScatterEnd,ctx,x,y,0);CHKERRQ(ierr);
-    ctx->vscat_logging = PETSC_FALSE;
+  if (!sf->vscat.beginandendtogether) {
+    sf->vscat.logging = PETSC_TRUE;
+    ierr = PetscLogEventBegin(VEC_ScatterEnd,sf,x,y,0);CHKERRQ(ierr);
+    ierr = VecScatterEnd_Internal(sf,x,y,addv,mode);CHKERRQ(ierr);
+    ierr = PetscLogEventEnd(VEC_ScatterEnd,sf,x,y,0);CHKERRQ(ierr);
+    sf->vscat.logging = PETSC_FALSE;
   }
   PetscFunctionReturn(0);
 }
