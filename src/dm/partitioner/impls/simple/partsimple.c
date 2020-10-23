@@ -62,7 +62,7 @@ static PetscErrorCode PetscPartitionerSetFromOptions_Simple(PetscOptionItems *Pe
 
 static PetscErrorCode PetscPartitionerPartition_Simple_Grid(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertSection, PetscSection targetSection, PetscSection partSection, IS *partition)
 {
-  PetscPartitioner_Simple *p     = (PetscPartitioner_Simple *) part->data;
+  PetscPartitioner_Simple *p = (PetscPartitioner_Simple *) part->data;
   const PetscInt          *nodes = p->nodeGrid;
   const PetscInt          *procs = p->processGrid;
   PetscInt                *cellproc, *offsets, cells[3] = {1, 1, 1}, pcells[3] = {1, 1, 1};
