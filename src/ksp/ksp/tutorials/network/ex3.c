@@ -92,7 +92,12 @@ int main(int argc,char ** argv)
   ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(struct _p_Comp1),&compkey1);CHKERRQ(ierr);
 
   /* Set number of vertices and edges -- nsubnetCouple is ignored and will be removed from API */
-  ierr = DMNetworkSetSizes(dmnetwork,nsubnet,numVertices,numEdges,nsubnetCouple,numVtxCouple);CHKERRQ(ierr);
+  ierr = DMNetworkSetSizes(dmnetwork,nsubnet,numVertices,numEdges,0,numVtxCouple);CHKERRQ(ierr);
+
+  /* Add shared vertices */
+  for (j=0; j<numVtxCouple[0]; j++) {
+    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j+1,1,&edgelist_couple[4*j+1],&edgelist_couple[4*j+3]);CHKERRQ(ierr);
+  }
 
   /* Add edge connectivity */
   ierr = DMNetworkSetEdgeList(dmnetwork,edgelist,&edgelist_couple);CHKERRQ(ierr);

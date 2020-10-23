@@ -53,6 +53,7 @@ PETSC_EXTERN PetscErrorCode DMNetworkGetGlobalEdgeIndex(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetGlobalVertexIndex(DM,PetscInt,PetscInt*);
 
 PETSC_EXTERN PetscErrorCode DMNetworkGetSubnetworkInfo(DM,PetscInt,PetscInt*,PetscInt*,const PetscInt**,const PetscInt**);
+PETSC_EXTERN PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM,PetscInt,PetscInt,PetscInt,PetscInt[],PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMNetworkGetSubnetworkSharedVertices(DM,PetscInt*,const PetscInt**);
 
 typedef struct _p_DMNetworkMonitorList *DMNetworkMonitorList;
