@@ -27,6 +27,7 @@ struct _p_MatPartitioning {
   void        *data;
   PetscInt    setupcalled;
   PetscBool   use_edge_weights;  /* A flag indicates whether or not to use edge weights */
+  PetscBool   parallel;
 };
 
 /* needed for parallel nested dissection by ParMetis and PTSCOTCH */

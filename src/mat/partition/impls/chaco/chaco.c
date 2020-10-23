@@ -721,6 +721,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Chaco(MatPartitioning part)
   chaco->eigtol        = 0.001;
   chaco->verbose       = PETSC_FALSE;
 
+  part->parallel            = PETSC_FALSE;
   part->ops->apply          = MatPartitioningApply_Chaco;
   part->ops->view           = MatPartitioningView_Chaco;
   part->ops->destroy        = MatPartitioningDestroy_Chaco;

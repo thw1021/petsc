@@ -470,6 +470,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_PTScotch(MatPartitioning part)
   scotch->imbalance = 0.01;
   scotch->strategy  = SCOTCH_STRATDEFAULT;
 
+  part->parallel            = PETSC_TRUE;
   part->ops->apply          = MatPartitioningApply_PTScotch;
   part->ops->applynd        = MatPartitioningApplyND_PTScotch;
   part->ops->view           = MatPartitioningView_PTScotch;

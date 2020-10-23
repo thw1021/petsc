@@ -347,6 +347,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Parmetis(MatPartitioning part)
   pmetis->indexing   = 0;   /* index numbering starts from 0 */
   pmetis->repartition      = PETSC_FALSE;
 
+  part->parallel            = PETSC_TRUE;
   part->ops->apply          = MatPartitioningApply_Parmetis;
   part->ops->applynd        = MatPartitioningApplyND_Parmetis;
   part->ops->improve        = MatPartitioningImprove_Parmetis;

@@ -423,6 +423,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Party(MatPartitioning part)
   party->verbose      = PETSC_FALSE;
   party->nbvtxcoarsed = 200;
 
+  part->parallel            = PETSC_FALSE;
   part->ops->apply          = MatPartitioningApply_Party;
   part->ops->view           = MatPartitioningView_Party;
   part->ops->destroy        = MatPartitioningDestroy_Party;

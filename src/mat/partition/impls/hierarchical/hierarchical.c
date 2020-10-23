@@ -581,6 +581,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Hierarchical(MatPartitioning p
   hpart->coarseMatPart      = NULL;
   hpart->fineMatPart        = NULL;
 
+  part->parallel            = PETSC_TRUE;
   part->ops->apply          = MatPartitioningApply_Hierarchical;
   part->ops->view           = MatPartitioningView_Hierarchical;
   part->ops->destroy        = MatPartitioningDestroy_Hierarchical;
