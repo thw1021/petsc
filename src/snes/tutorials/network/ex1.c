@@ -432,6 +432,7 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
   ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,nsubnetCouple,numEdgesCouple);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,0,1,1,&edgelist_couple[1],&edgelist_couple[3]);CHKERRQ(ierr);
 
   /* Add edge connectivity */
   edgelist[0] = edgelist_power;
@@ -699,7 +700,7 @@ int main(int argc,char **argv)
      depends: power/PFReadData.c power/pffunctions.c water/waterreaddata.c water/waterfunctions.c
 
    test:
-      args: -coupled_snes_converged_reason -options_left no
+      args: -coupled_snes_converged_reason -options_left no -viewDM
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex2.out
 
@@ -721,7 +722,7 @@ int main(int argc,char **argv)
    test:
       suffix: 4
       nsize: 4
-      args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type simple
+      args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type simple -viewDM
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex2_4.out
 
