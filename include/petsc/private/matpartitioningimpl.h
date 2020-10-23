@@ -16,6 +16,8 @@ struct _MatPartitioningOps {
   PetscErrorCode (*destroy)(MatPartitioning);
   PetscErrorCode (*view)(MatPartitioning,PetscViewer);
   PetscErrorCode (*improve)(MatPartitioning,IS*);
+  PetscErrorCode (*setup)(MatPartitioning);
+  PetscErrorCode (*reset)(MatPartitioning);
 };
 
 struct _p_MatPartitioning {
@@ -27,7 +29,7 @@ struct _p_MatPartitioning {
   PetscBool   use_part_weights;
   PetscInt    n;                                 /* number of partitions */
   void        *data;
-  PetscInt    setupcalled;
+  PetscBool   setupcalled;
   PetscBool   use_edge_weights;  /* A flag indicates whether or not to use edge weights */
   PetscBool   parallel;
 };
