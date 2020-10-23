@@ -894,7 +894,8 @@ PetscErrorCode MatPartitioningSetUp(MatPartitioning part)
   ierr = MatDestroy(&part->adj_work);CHKERRQ(ierr);
   part->adj_work = pmat;
 
-  if (part->ops->setup) {
+  /* Run setup only on ranks which have non-null adj_work */
+  if (pmat && part->ops->setup) {
     ierr = (*part->ops->setup)(part);CHKERRQ(ierr);
   }
   ierr = MPI_Barrier(PetscObjectComm((PetscObject)part));CHKERRQ(ierr);
