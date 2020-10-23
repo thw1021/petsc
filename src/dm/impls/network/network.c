@@ -69,7 +69,7 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt Nsubnet,PetscInt nV[], PetscInt 
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*) dm->data;
-  PetscInt       a[2],b[2],i,NsubnetCouple;
+  PetscInt       a[2],b[2],i;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -83,12 +83,12 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt Nsubnet,PetscInt nV[], PetscInt 
 
   if (!nV || !nE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Local vertex size or edge size must be provided");
 
-  if (nec) {
-    NsubnetCouple = 1;
-  } else NsubnetCouple = 0; /* internal use */
+  //if (nec) {
+  //NsubnetCouple = 0;
+  //} else NsubnetCouple = 0; /* internal use */
 
   network->nsubnet  = Nsubnet;
-  network->ncsubnet = NsubnetCouple;
+  network->ncsubnet = 0;
   ierr = PetscCalloc1(Nsubnet+1,&network->subnet);CHKERRQ(ierr); /* network->subnet[Nsubnet] is used for shared vertices */
 
   /* ----------------------------------------------------------
@@ -301,7 +301,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       numCorners=2,spacedim=2,dim=1; /* One dimensional network */
+  PetscInt       numCorners=2,dim=1; /* One dimensional network */
   PetscReal      *vertexcoords=NULL;
   PetscInt       i,j,ctr,*eowners,np,*edges,*subnetvtx,vStart,*vrange,*recvcounts,*displs;
   PetscInt       k,*vidxlTog,*edgelist_couple=NULL,ncv,nsubnet=network->nsubnet;
@@ -540,8 +540,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       numCorners=2,spacedim=2,dim=1; /* One dimensional network */
-  PetscReal      *vertexcoords=NULL;
+  PetscInt       numCorners=2,dim=1; /* One dimensional network */
   PetscInt       i,j,ctr,nsubnet,*eowners,np,*edges,*subnetvtx,vStart;
   PetscInt       k,netid,vid, *vidxlTog,*edgelist_couple=NULL;
   const PetscInt *cone;
@@ -757,6 +756,7 @@ PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetid,PetscI
   DM_Network *network = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
+  network->ncsubnet = 1;
   //printf("DMNetworkAddSubnetworkSharedVertices...net[%d].%d -> net[%d].%d\n",anetid,asvtx[0],bnetid,bsvtx[0]);
   network->ncvtx++;
   PetscFunctionReturn(0);

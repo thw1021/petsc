@@ -176,7 +176,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
   /* Illustrate how to access the coupling vertex of the subnetworks without doing anything to F yet */
   ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
   for (v=0; v<nv; v++) {
-    PetscInt       key,ncomp,nvar,nconnedges,k,e,keye,j,goffset[3];
+    PetscInt       key,ncomp,nvar,nconnedges,k,e,keye,goffset[3];
     void*          component;
     const PetscInt *connedges;
 
@@ -313,7 +313,7 @@ int main(int argc,char **argv)
   DM               networkdm;
   PetscLogStage    stage[4];
   PetscMPIInt      rank,size;
-  PetscInt         nsubnet=2,nsubnetCouple=0,numVertices[2],numEdges[2],numEdgesCouple[1];
+  PetscInt         nsubnet=2,numVertices[2],numEdges[2],numEdgesCouple[1];
   PetscInt         i,j,nv,ne,*edgelist[2];
   const PetscInt   *vtx,*edges;
   Vec              X,F;
@@ -392,7 +392,6 @@ int main(int argc,char **argv)
   }
 
   /* All processes get data for the coupling subnetwork */
-  nsubnetCouple     = 1;
   numEdgesCouple[0] = 1;
 
   ierr = PetscMalloc1(4*numEdgesCouple[0],&edgelist_couple);CHKERRQ(ierr);
@@ -431,7 +430,7 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] Total local nvertices %D + %D = %D, nedges %D + %D = %D\n",rank,numVertices[0],numVertices[1],numVertices[0]+numVertices[1],numEdges[0],numEdges[1],numEdges[0]+numEdges[1]);CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
-  ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,nsubnetCouple,numEdgesCouple);CHKERRQ(ierr);
+  ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,0,0);CHKERRQ(ierr);
   ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,0,1,1,&edgelist_couple[1],&edgelist_couple[3]);CHKERRQ(ierr);
 
   /* Add edge connectivity */
@@ -702,14 +701,14 @@ int main(int argc,char **argv)
    test:
       args: -coupled_snes_converged_reason -options_left no -viewDM
       localrunfiles: ex1options power/case9.m water/sample1.inp
-      output_file: output/ex2.out
+      output_file: output/ex1.out
 
    test:
       suffix: 2
       nsize: 3
       args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type parmetis
       localrunfiles: ex1options power/case9.m water/sample1.inp
-      output_file: output/ex2_2.out
+      output_file: output/ex1_2.out
       requires: parmetis
 
    test:
@@ -717,13 +716,13 @@ int main(int argc,char **argv)
       nsize: 3
       args: -coupled_snes_converged_reason -options_left no -distribute false
       localrunfiles: ex1options power/case9.m water/sample1.inp
-      output_file: output/ex2_2.out
+      output_file: output/ex1_2.out
 
    test:
       suffix: 4
       nsize: 4
       args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type simple -viewDM
       localrunfiles: ex1options power/case9.m water/sample1.inp
-      output_file: output/ex2_4.out
+      output_file: output/ex1_4.out
 
 TEST*/
