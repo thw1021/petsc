@@ -339,7 +339,7 @@ int main(int argc,char **argv)
   PetscInt            *edgelist_water = NULL;
 
   /* Coupling subnetwork */
-  PetscInt            *edgelist_couple = NULL;
+  PetscInt           asvtx,bsvtx;
 
   ierr = PetscInitialize(&argc,&argv,"ex1options",help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
@@ -390,13 +390,6 @@ int main(int argc,char **argv)
     numEdges[1]    = waterdata->nedge;
     numVertices[1] = waterdata->nvertex;
   }
-
-  /* All processes get data for the coupling subnetwork */
-  numEdgesCouple[0] = 1;
-
-  ierr = PetscMalloc1(4*numEdgesCouple[0],&edgelist_couple);CHKERRQ(ierr);
-  edgelist_couple[0] = 0; edgelist_couple[1] = 4; /* from node: net[0] vertex[4] */
-  edgelist_couple[2] = 1; edgelist_couple[3] = 0; /* to node:   net[1] vertex[0] */
   PetscLogStagePop();
 
   /* (2) Create a network consist of two subnetworks */
@@ -431,12 +424,15 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
   ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,0,0);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,0,1,1,&edgelist_couple[1],&edgelist_couple[3]);CHKERRQ(ierr);
+
+  /* vertex subnet[0].4 shares with vertex subnet[1].0 */
+  asvtx = 4; bsvtx = 0;
+  ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,0,1,1,&asvtx,&bsvtx);CHKERRQ(ierr);
 
   /* Add edge connectivity */
   edgelist[0] = edgelist_power;
   edgelist[1] = edgelist_water;
-  ierr = DMNetworkSetEdgeList(networkdm,edgelist,&edgelist_couple);CHKERRQ(ierr);
+  ierr = DMNetworkSetEdgeList(networkdm,edgelist);CHKERRQ(ierr);
 
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
@@ -521,8 +517,6 @@ int main(int argc,char **argv)
   ierr = PetscFree(waterdata->vertex);CHKERRQ(ierr);
   ierr = PetscFree(waterdata->edge);CHKERRQ(ierr);
   ierr = PetscFree(waterdata);CHKERRQ(ierr);
-
-  ierr = PetscFree(edgelist_couple);CHKERRQ(ierr);
 
   /* Re-distribute networkdm to multiple processes for better job balance */
   if (size >1 && distribute) {

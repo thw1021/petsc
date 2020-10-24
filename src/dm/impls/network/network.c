@@ -124,19 +124,19 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt Nsubnet,PetscInt nV[], PetscInt 
   }
 
   /* coupling subnetwork -- global info now */
-  if (network->ncsubnet) {
+  network->ncvtx = 0;
 #if 0
+  if (network->ncsubnet) {
     /* rm below? */
     i = Nsubnet;
     network->subnet[i].nvtx   = 0; /* We design coupling subnetwork such that it does not have its own vertices */
     network->subnet[i].Nvtx   = 0;
     network->subnet[i].vStart = network->nVertices;
     network->subnet[i].vEnd   = network->subnet[i].vStart;
-#endif
     /* Below are used by DMNetworkLayoutSetUp_Coupling() */
     //network->ncvtx = nec[0]; /* global num of edges connecting shared vertices between subnetworks */
-    network->ncvtx = 0;
   }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -147,8 +147,7 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt Nsubnet,PetscInt nV[], PetscInt 
 
   Input Parameters:
 + dm - the dm object
-. edgelist - list of edges for each subnetwork
-- edgelistCouple - list of edges for each coupling subnetwork
+- edgelist - list of edges for each subnetwork
 
   Notes:
   There is no copy involved in this operation, only the pointer is referenced. The edgelist should
@@ -157,33 +156,25 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt Nsubnet,PetscInt nV[], PetscInt 
   Level: beginner
 
   Example usage:
-  Consider the following 2 separate networks and a coupling network:
-
+  Consider the following 2 separate networks:
 .vb
  network 0: v0 -> v1 -> v2 -> v3
  network 1: v1 -> v2 -> v0
- coupling network: network 1: v2 -> network 0: v0
 .ve
 
  The resulting input
    edgelist[0] = [0 1 | 1 2 | 2 3];
    edgelist[1] = [1 2 | 2 0]
-   edgelistCouple[0] = [(network)1 (v)2 (network)0 (v)0].
 
 .seealso: DMNetworkCreate, DMNetworkSetSizes
 @*/
-PetscErrorCode DMNetworkSetEdgeList(DM dm,PetscInt *edgelist[],PetscInt *edgelistCouple[])
+PetscErrorCode DMNetworkSetEdgeList(DM dm,PetscInt *edgelist[])
 {
   DM_Network *network = (DM_Network*) dm->data;
   PetscInt   i;
 
   PetscFunctionBegin;
   for (i=0; i<network->nsubnet; i++) network->subnet[i].edgelist = edgelist[i];
-  if (network->ncsubnet) {
-    PetscInt j = 0;
-    if (!edgelistCouple) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Must provide edgelist_couple");
-    while (i < network->nsubnet+network->ncsubnet) network->subnet[i++].edgelist = edgelistCouple[j++];
-  }
   PetscFunctionReturn(0);
 }
 
@@ -304,7 +295,8 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   PetscInt       numCorners=2,dim=1; /* One dimensional network */
   PetscReal      *vertexcoords=NULL;
   PetscInt       i,j,ctr,*eowners,np,*edges,*subnetvtx,vStart,*vrange,*recvcounts,*displs;
-  PetscInt       k,*vidxlTog,*edgelist_couple=NULL,ncv,nsubnet=network->nsubnet;
+  PetscInt       k,*vidxlTog,ncv,nsubnet=network->nsubnet;
+  PetscInt       *sedgelist=network->sedgelist;
   const PetscInt *cone;
   MPI_Comm       comm;
   PetscMPIInt    size,rank;
@@ -321,10 +313,8 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 
   /* (1) Create cvs[]: coupling vertices via copying edgelist_couple */
   /* --------------------------------------------------------------- */
-  edgelist_couple = network->subnet[nsubnet].edgelist;
-
   /* ncv: global number of coupling vertices */
-  ierr = CouplingVtxCreate(network->ncvtx,edgelist_couple,&ncv,&cvs);CHKERRQ(ierr);
+  ierr = CouplingVtxCreate(network->ncvtx,sedgelist,&ncv,&cvs);CHKERRQ(ierr);
 
   /* (2) Create the local integrated 'edges' by concatenating input local edgelists of the subnetworks */
   /*     Coupling to_vertices are merged to its from_vertices                                          */
@@ -515,6 +505,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 
   network->cvtx  = cvs;
   network->ncvtx = ncv;
+  ierr = PetscFree(sedgelist);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -753,12 +744,25 @@ PetscErrorCode DMNetworkGetSubnetworkInfo(DM dm,PetscInt id,PetscInt *nv, PetscI
 @*/
 PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetid,PetscInt bnetid,PetscInt nsvtx,PetscInt asvtx[],PetscInt bsvtx[])
 {
-  DM_Network *network = (DM_Network*)dm->data;
+  PetscErrorCode ierr;
+  DM_Network     *network = (DM_Network*)dm->data;
+  PetscInt       i,nsubnet = network->nsubnet,*sedgelist,ncvtx=network->ncvtx;
 
   PetscFunctionBegin;
-  network->ncsubnet = 1;
-  //printf("DMNetworkAddSubnetworkSharedVertices...net[%d].%d -> net[%d].%d\n",anetid,asvtx[0],bnetid,bsvtx[0]);
-  network->ncvtx++;
+  if (!ncvtx) {
+    network->ncsubnet = 1;
+    /* allocate network->sedgelist to hold at most 2*nsubnet pairs of shared vertices */
+    ierr = PetscMalloc1(2*4*nsubnet,&network->sedgelist);CHKERRQ(ierr);
+  }
+
+  sedgelist = network->sedgelist;
+  for (i=0; i<nsvtx; i++) {
+    sedgelist[4*ncvtx]   = anetid; sedgelist[4*ncvtx+1] = asvtx[0];
+    sedgelist[4*ncvtx+2] = bnetid; sedgelist[4*ncvtx+3] = bsvtx[0];
+    ncvtx++;
+  }
+  if (ncvtx > 2*nsubnet) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"allocate more space for coupling edgelist");
+  network->ncvtx = ncvtx;
   PetscFunctionReturn(0);
 }
 
