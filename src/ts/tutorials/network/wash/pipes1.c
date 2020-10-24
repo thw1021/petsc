@@ -660,7 +660,7 @@ int main(int argc,char ** argv)
 
   /* Add local edge connectivity */
   edgelists[0] = edgelist;
-  ierr = DMNetworkSetEdgeList(networkdm,edgelists,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkSetEdgeList(networkdm,edgelists);CHKERRQ(ierr);
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
 
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);

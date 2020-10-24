@@ -1008,7 +1008,7 @@ int main(int argc,char ** argv)
   ierr = DMNetworkSetSizes(networkdm,1,&numVertices,&numEdges,0,NULL);CHKERRQ(ierr);
 
   /* Add edge connectivity */
-  ierr = DMNetworkSetEdgeList(networkdm,&edgelist,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkSetEdgeList(networkdm,&edgelist);CHKERRQ(ierr);
 
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);

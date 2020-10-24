@@ -22,7 +22,7 @@ int main(int argc,char ** argv)
   PetscMPIInt    size,rank;
   DM             dmnetwork;
   PetscInt       i,j,net,nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,goffset,row;
-  PetscInt       nsubnetCouple=0,numVertices[10],numEdges[10],numVtxCouple[1],*edgelist[10],*edgelist_couple=NULL;
+  PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
   const PetscInt *vtx,*edges;
   PetscBool      iscouplev,ghost,distribute=PETSC_TRUE;
   Vec            X;
@@ -43,7 +43,6 @@ int main(int argc,char ** argv)
   for (i=0; i<nsubnet; i++) {
     numVertices[i] = 0; numEdges[i] = 0;
   }
-  numVtxCouple[0] = 0;
 
   /* when size>1, process[i] creates subnetwork[i] */
   for (i=0; i<nsubnet; i++) {
@@ -70,16 +69,6 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Set coupling vertices between subnetworks -- all processes hold this info */
-  nsubnetCouple   = 1; /* global */
-  numVtxCouple[0] = nsubnet - 1;
-
-  ierr = PetscMalloc1(4*numVtxCouple[0],&edgelist_couple);CHKERRQ(ierr);
-  for (j=0; j<numVtxCouple[0]; j++) {
-    edgelist_couple[4*j+0] = 0;   edgelist_couple[4*j+1] = 0; /* CV_from: net[0] vertex[0] */
-    edgelist_couple[4*j+2] = j+1; edgelist_couple[4*j+3] = 0; /* CV_to  : net[j+1] vertex[0] */
-  }
-
   /* Create componnets to be added to the coupling vertex.
    -- Current implimentation requires that the component must take same values on all processors */
   ierr = PetscMalloc2(1,&comp0,1,&comp1);CHKERRQ(ierr);
@@ -94,13 +83,15 @@ int main(int argc,char ** argv)
   /* Set number of vertices and edges -- nsubnetCouple is ignored and will be removed from API */
   ierr = DMNetworkSetSizes(dmnetwork,nsubnet,numVertices,numEdges,0,0);CHKERRQ(ierr);
 
-  /* Add shared vertices */
-  for (j=0; j<numVtxCouple[0]; j++) {
-    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j+1,1,&edgelist_couple[4*j+1],&edgelist_couple[4*j+3]);CHKERRQ(ierr);
+  /* Add shared vertices -- all processes hold this info */
+  asvtx = bsvtx = 0;
+  for (j=1; j<nsubnet; j++) {
+    /* vertex subnet[0].0 shares with vertex subnet[j].0 */
+    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,1,&asvtx,&bsvtx);CHKERRQ(ierr);
   }
 
   /* Add edge connectivity */
-  ierr = DMNetworkSetEdgeList(dmnetwork,edgelist,&edgelist_couple);CHKERRQ(ierr);
+  ierr = DMNetworkSetEdgeList(dmnetwork,edgelist);CHKERRQ(ierr);
 
   /* Setup the network layout */
   ierr = DMNetworkLayoutSetUp(dmnetwork);CHKERRQ(ierr);
@@ -182,7 +173,6 @@ int main(int argc,char ** argv)
   for (i=0; i<nsubnet; i++) {
     if (size == 1 || rank == i) {ierr = PetscFree(edgelist[i]);CHKERRQ(ierr);}
   }
-  ierr = PetscFree(edgelist_couple);CHKERRQ(ierr);
   ierr = PetscFree2(comp0,comp1);CHKERRQ(ierr);
 
   ierr = DMDestroy(&dmnetwork);CHKERRQ(ierr);
