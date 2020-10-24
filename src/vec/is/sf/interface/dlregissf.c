@@ -3,6 +3,7 @@
 static PetscBool PetscSFPackageInitialized = PETSC_FALSE;
 
 PetscClassId  PETSCSF_CLASSID;
+PetscClassId  VEC_SCATTER_CLASSID;
 
 PetscLogEvent PETSCSF_SetGraph;
 PetscLogEvent PETSCSF_SetUp;
@@ -41,6 +42,7 @@ PetscErrorCode PetscSFInitializePackage(void)
   PetscSFPackageInitialized = PETSC_TRUE;
   /* Register Class */
   ierr = PetscClassIdRegister("Star Forest Graph", &PETSCSF_CLASSID);CHKERRQ(ierr);
+  VEC_SCATTER_CLASSID = PETSCSF_CLASSID;
   /* Register Constructors */
   ierr = PetscSFRegisterAll();CHKERRQ(ierr);
   /* Register Events */

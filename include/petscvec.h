@@ -108,6 +108,7 @@ PETSC_EXTERN PetscErrorCode VecScatterCreate(Vec,IS,Vec,IS,VecScatter*);
 #define    REAL_FILE_CLASSID 1211213
 #define    VEC_FILE_CLASSID 1211214
 PETSC_EXTERN PetscClassId VEC_CLASSID;
+PETSC_EXTERN PetscClassId VEC_SCATTER_CLASSID;
 PETSC_EXTERN PetscClassId PETSCSF_CLASSID;
 
 PETSC_EXTERN PetscErrorCode VecInitializePackage(void);
