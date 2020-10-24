@@ -95,6 +95,7 @@ typedef struct {
   PetscInt                          *subnetvtx; /* Maps local vertex to local subnetwork's vertex */
   CEdge                             *cvtx; /* Array of coupling vertices */
   PetscInt                          ncvtx; /* Num of entries in cvtx */
+  PetscInt                          *sedgelist; /* edge list of shared vertices */
 
   PetscBool                         userEdgeJacobian,userVertexJacobian;  /* Global flag for using user's sub Jacobians */
   Mat                               *Je;  /* Pointer array to hold local sub Jacobians for edges, 3 elements for an edge */
