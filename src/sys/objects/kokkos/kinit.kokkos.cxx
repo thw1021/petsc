@@ -16,6 +16,7 @@ PetscErrorCode PetscKokkosInitialize_Private(void)
 #endif
   args.device_id = devId;
   Kokkos::initialize(args);
+  PetscBeganKokkos = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -44,9 +45,6 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
 #elif defined(KOKKOS_ENABLE_HIP)
   ierr = PetscHIPInitializeCheck();CHKERRQ(ierr);
 #endif
-  if (!Kokkos::is_initialized()) {
-    ierr = PetscKokkosInitialize_Private();CHKERRQ(ierr);
-    PetscBeganKokkos = PETSC_TRUE;
-  }
+  if (!Kokkos::is_initialized()) {ierr = PetscKokkosInitialize_Private();CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
