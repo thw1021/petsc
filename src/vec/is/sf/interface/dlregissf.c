@@ -42,7 +42,8 @@ PetscErrorCode PetscSFInitializePackage(void)
   PetscSFPackageInitialized = PETSC_TRUE;
   /* Register Class */
   ierr = PetscClassIdRegister("Star Forest Graph", &PETSCSF_CLASSID);CHKERRQ(ierr);
-  VEC_SCATTER_CLASSID = PETSCSF_CLASSID;
+  ierr = PetscClassIdRegister("Star Forest Graph", &VEC_SCATTER_CLASSID);CHKERRQ(ierr);
+  // VEC_SCATTER_CLASSID = PETSCSF_CLASSID;
   /* Register Constructors */
   ierr = PetscSFRegisterAll();CHKERRQ(ierr);
   /* Register Events */
