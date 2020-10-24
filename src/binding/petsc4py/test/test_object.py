@@ -32,6 +32,8 @@ class BaseTestObject(object):
         self.assertEqual(logcls.id, classid)
 
     def testClass(self):
+        if not isinstance(self.obj, self.CLASS):
+          import pdb; pdb.set_trace()
         self.assertTrue(isinstance(self.obj, self.CLASS))
         self.assertTrue(type(self.obj) is self.CLASS)
 
