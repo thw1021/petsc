@@ -32,6 +32,8 @@ class BaseTestObject(object):
         self.assertEqual(logcls.id, classid)
 
     def testClass(self):
+        if not isinstance(self.obj, self.CLASS):
+          import pdb; pdb.set_trace()
         self.assertTrue(isinstance(self.obj, self.CLASS))
         self.assertTrue(type(self.obj) is self.CLASS)
 
@@ -190,7 +192,7 @@ class TestObjectVec(BaseTestObject, unittest.TestCase):
         self.obj.assemble()
 
 class TestObjectScatter(BaseTestObject, unittest.TestCase):
-    CLASS  = PETSc.Scatter
+    CLASS  = PETSc.SF
     FACTORY = 'create'
     def setUp(self):
         v1, v2 = PETSc.Vec().createSeq(0), PETSc.Vec().createSeq(0)
