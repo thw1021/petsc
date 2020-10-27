@@ -242,11 +242,9 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
   Mat                      mat  = part->adj;
   Mat_MPIAdj               *adj = (Mat_MPIAdj*)mat->data;
   PetscBool                flg,distributed;
-  PetscBool                proc_weight_flg;
   PetscInt                 i,j,p,bs=1,nold;
   PetscInt                 *NDorder = NULL;
-  PetscReal                *vwgttab,deltval;
-  SCOTCH_Num               *locals,*velotab,*veloloctab,*edloloctab,vertlocnbr,edgelocnbr,nparts=part->n;
+  SCOTCH_Num               *locals,*velotab=NULL,*veloloctab,*edloloctab,vertlocnbr,edgelocnbr,nparts=part->n;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)part,&pcomm);CHKERRQ(ierr);
@@ -262,9 +260,6 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
     if (mat->rmap->n > 0) bs = nold/mat->rmap->n;
     adj  = (Mat_MPIAdj*)mat->data;
   }
-
-  proc_weight_flg = part->part_weights ? PETSC_TRUE : PETSC_FALSE;
-  ierr = PetscOptionsGetBool(NULL, NULL, "-mat_partitioning_ptscotch_proc_weight", &proc_weight_flg, NULL);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(mat->rmap->n+1,&locals);CHKERRQ(ierr);
 
@@ -301,13 +296,13 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
     SETERRQ(pcomm,PETSC_ERR_SUP,"Need libptscotchparmetis.a compiled with -DSCOTCH_METIS_PREFIX");
 #endif
   } else {
-    velotab = NULL;
-    if (proc_weight_flg) {
+    if (part->use_part_weights && part->part_weights) {
+      PetscReal *vwgttab,deltval;
+
       ierr = PetscMalloc1(nparts,&vwgttab);CHKERRQ(ierr);
       ierr = PetscMalloc1(nparts,&velotab);CHKERRQ(ierr);
       for (j=0; j<nparts; j++) {
-        if (part->part_weights) vwgttab[j] = part->part_weights[j]*nparts;
-        else vwgttab[j] = 1.0;
+        vwgttab[j] = part->part_weights[j]*nparts;
       }
       for (i=0; i<nparts; i++) {
         deltval = PetscAbsReal(vwgttab[i]-PetscFloorReal(vwgttab[i]+0.5));
@@ -321,8 +316,8 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
 
     vertlocnbr = mat->rmap->range[rank+1] - mat->rmap->range[rank];
     edgelocnbr = adj->i[vertlocnbr];
-    veloloctab = part->vertex_weights;
-    edloloctab = part->use_edge_weights? adj->values:NULL;
+    veloloctab = part->use_vertex_weights ? part->vertex_weights : NULL;
+    edloloctab = part->use_edge_weights   ? adj->values : NULL;
 
     /* detect whether all vertices are located at the same process in original graph */
     for (p = 0; !mat->rmap->range[p+1] && p < nparts; ++p);

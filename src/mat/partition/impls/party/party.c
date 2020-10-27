@@ -43,6 +43,7 @@ static PetscErrorCode MatPartitioningApply_Party(MatPartitioning part,IS *partit
 
   PetscFunctionBegin;
   if (part->use_edge_weights) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_SUP,"Party does not support edge weights");
+  if (part->use_part_weights) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_SUP,"Party does not support partition weights");
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)mat),&size);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)mat),&rank);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)mat,MATMPIADJ,&flg);CHKERRQ(ierr);
@@ -79,6 +80,7 @@ static PetscErrorCode MatPartitioningApply_Party(MatPartitioning part,IS *partit
   edge_p   = adj->i;                   /* start of edge list for each vertex */
   edge     = adj->j;                   /* edge list data */
   vertex_w = part->vertex_weights;     /* weights for all vertices */
+  if (!part->use_vertex_weights) vertex_w = NULL;
   p        = part->n;                  /* number of parts to create */
   redl     = party->nbvtxcoarsed;      /* how many vertices to coarsen down to? */
   rec      = party->recursive ? 1 : 0; /* recursive bisection */

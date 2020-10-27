@@ -54,6 +54,7 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
     PetscInt   *NDorder = NULL;
     PetscInt   wgtflag=0, numflag=0, ncon=1, nparts=part->n, options[24], i, j;
     real_t     *tpwgts,*ubvec,itr=0.1;
+    idx_t      *vwgt, *adjwgt;
 
     ierr = PetscObjectGetComm((PetscObject)pmat,&pcomm);CHKERRQ(ierr);
     if (PetscDefined(PETSC_USE_DEBUG)) {
@@ -79,14 +80,17 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
       ierr = ISDestroy(partitioning);CHKERRQ(ierr);
     }
 
-    if (adj->values && part->use_edge_weights && !part->vertex_weights) wgtflag = 1;
-    if (part->vertex_weights && !adj->values) wgtflag = 2;
-    if (part->vertex_weights && adj->values && part->use_edge_weights) wgtflag = 3;
+    vwgt    = part->use_vertex_weights ? (idx_t*)part->vertex_weights : NULL;
+    adjwgt  = part->use_edge_weights   ? (idx_t*)adj->values : NULL;
+    wgtflag = 0;                        /* no edge/vertex weights */
+    if  (adjwgt && !vwgt) wgtflag = 1;  /* weights on edges only */
+    if (!adjwgt &&  vwgt) wgtflag = 2;  /* weights on vertices only */
+    if  (adjwgt &&  vwgt) wgtflag = 3;  /* weights on both edges and vertices */
 
     ierr = PetscMalloc1(ncon*nparts,&tpwgts);CHKERRQ(ierr);
     for (i=0; i<ncon; i++) {
       for (j=0; j<nparts; j++) {
-        if (part->part_weights) {
+        if (part->use_part_weights && part->part_weights) {
           tpwgts[i*nparts+j] = part->part_weights[i*nparts+j];
         } else {
           tpwgts[i*nparts+j] = 1./nparts;
@@ -109,7 +113,7 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
       ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
       ierr = PetscMalloc1(pmat->rmap->n,&NDorder);CHKERRQ(ierr);
       ierr = PetscMalloc3(2*size,&sizes,4*size,&seps,size,&level);CHKERRQ(ierr);
-      PetscStackCallParmetis(ParMETIS_V32_NodeND,((idx_t*)vtxdist,(idx_t*)xadj,(idx_t*)adjncy,(idx_t*)part->vertex_weights,(idx_t*)&numflag,&mtype,&rtype,&p_nseps,&s_nseps,&ubfrac,NULL/* seed */,NULL/* dbglvl */,(idx_t*)NDorder,(idx_t*)(sizes),&comm));
+      PetscStackCallParmetis(ParMETIS_V32_NodeND,((idx_t*)vtxdist,(idx_t*)xadj,(idx_t*)adjncy,vwgt,(idx_t*)&numflag,&mtype,&rtype,&p_nseps,&s_nseps,&ubfrac,NULL/* seed */,NULL/* dbglvl */,(idx_t*)NDorder,(idx_t*)(sizes),&comm));
       log2size = PetscLog2Real(size);
       subd = PetscPowInt(2,log2size);
       ierr = MatPartitioningSizesToSep_Private(subd,sizes,seps,level);CHKERRQ(ierr);
@@ -131,11 +135,11 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
       ierr = PetscFree3(sizes,seps,level);CHKERRQ(ierr);
     } else {
       if (pmetis->repartition) {
-        PetscStackCallParmetis(ParMETIS_V3_AdaptiveRepart,((idx_t*)vtxdist,(idx_t*)xadj,(idx_t*)adjncy,(idx_t*)part->vertex_weights,(idx_t*)part->vertex_weights,(idx_t*)adj->values,(idx_t*)&wgtflag,(idx_t*)&numflag,(idx_t*)&ncon,(idx_t*)&nparts,tpwgts,ubvec,&itr,(idx_t*)options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&comm));
+        PetscStackCallParmetis(ParMETIS_V3_AdaptiveRepart,((idx_t*)vtxdist,(idx_t*)xadj,(idx_t*)adjncy,vwgt,vwgt,adjwgt,(idx_t*)&wgtflag,(idx_t*)&numflag,(idx_t*)&ncon,(idx_t*)&nparts,tpwgts,ubvec,&itr,(idx_t*)options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&comm));
       } else if (isImprove) {
-        PetscStackCallParmetis(ParMETIS_V3_RefineKway,((idx_t*)vtxdist,(idx_t*)xadj,(idx_t*)adjncy,(idx_t*)part->vertex_weights,(idx_t*)adj->values,(idx_t*)&wgtflag,(idx_t*)&numflag,(idx_t*)&ncon,(idx_t*)&nparts,tpwgts,ubvec,(idx_t*)options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&comm));
+        PetscStackCallParmetis(ParMETIS_V3_RefineKway,((idx_t*)vtxdist,(idx_t*)xadj,(idx_t*)adjncy,vwgt,adjwgt,(idx_t*)&wgtflag,(idx_t*)&numflag,(idx_t*)&ncon,(idx_t*)&nparts,tpwgts,ubvec,(idx_t*)options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&comm));
       } else {
-        PetscStackCallParmetis(ParMETIS_V3_PartKway,((idx_t*)vtxdist,(idx_t*)xadj,(idx_t*)adjncy,(idx_t*)part->vertex_weights,(idx_t*)adj->values,(idx_t*)&wgtflag,(idx_t*)&numflag,(idx_t*)&ncon,(idx_t*)&nparts,tpwgts,ubvec,(idx_t*)options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&comm));
+        PetscStackCallParmetis(ParMETIS_V3_PartKway,((idx_t*)vtxdist,(idx_t*)xadj,(idx_t*)adjncy,vwgt,adjwgt,(idx_t*)&wgtflag,(idx_t*)&numflag,(idx_t*)&ncon,(idx_t*)&nparts,tpwgts,ubvec,(idx_t*)options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&comm));
       }
     }
     ierr = MPI_Comm_free(&comm);CHKERRQ(ierr);
