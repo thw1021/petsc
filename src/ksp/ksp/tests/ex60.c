@@ -93,7 +93,7 @@ int main(int argc,char **args)
       args: -ksp_view
 
    test:
-      requires: kokkos
+      requires: kokkos_kernels
       suffix: 0_kokkos
       args: -ksp_view -mat_type aijkokkos
 
@@ -108,7 +108,7 @@ int main(int argc,char **args)
       args: -ksp_view
 
    test:
-      requires: kokkos
+      requires: kokkos_kernels
       suffix: 1_kokkos
       nsize: 4
       args: -ksp_view -mat_type aijkokkos
@@ -125,7 +125,7 @@ int main(int argc,char **args)
       args: -user_subdomains -ksp_view
 
    test:
-      requires: kokkos
+      requires: kokkos_kernels
       suffix: 2_kokkos
       nsize: 4
       args: -user_subdomains -ksp_view -mat_type aijkokkos

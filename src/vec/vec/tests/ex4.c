@@ -78,7 +78,7 @@ int main(int argc,char **argv)
       args: -vec_type kokkos
       output_file: output/ex4_1.out
       filter: grep -v type
-      requires: kokkos
+      requires: kokkos_kernels
 
    test:
       diff_args: -j
@@ -87,6 +87,6 @@ int main(int argc,char **argv)
       args: -vec_type kokkos
       output_file: output/ex4_1.out
       filter: grep -v type
-      requires: kokkos
+      requires: kokkos_kernels
 
 TEST*/
