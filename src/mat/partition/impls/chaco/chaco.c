@@ -79,6 +79,7 @@ static PetscErrorCode MatPartitioningApply_Chaco(MatPartitioning part,IS *partit
 
   PetscFunctionBegin;
   if (part->use_edge_weights) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_SUP,"Chaco does not support edge weights");
+  if (part->use_part_weights) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_SUP,"Chaco does not support partition weights");
   FREE_GRAPH = 0; /* otherwise Chaco will attempt to free memory for adjacency graph */
   ierr       = MPI_Comm_size(PetscObjectComm((PetscObject)mat),&size);CHKERRQ(ierr);
   ierr       = MPI_Comm_rank(PetscObjectComm((PetscObject)mat),&rank);CHKERRQ(ierr);
@@ -115,6 +116,7 @@ static PetscErrorCode MatPartitioningApply_Chaco(MatPartitioning part,IS *partit
   nvtxs         = mat->rmap->N;           /* number of vertices in full graph */
   start         = adj->i;                 /* start of edge list for each vertex */
   vwgts         = part->vertex_weights;   /* weights for all vertices */
+  if (!part->use_vertex_weights) vwgts = NULL;
   architecture  = 1;                      /* 0 => hypercube, d => d-dimensional mesh */
   ndims_tot     = 0;                      /* total number of cube dimensions to divide */
   mesh_dims[0]  = part->n;                /* dimensions of mesh of processors */
