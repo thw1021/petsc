@@ -263,7 +263,7 @@ int main(int argc,char ** argv)
   PetscInt          componentkey[2];
   Node              *node;
   Branch            *branch;
-  PetscInt          nV[1],nE[1],*edgelists[1];
+  PetscInt          *edgelists[1];
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
@@ -275,13 +275,10 @@ int main(int argc,char ** argv)
   }
 
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&networkdm);CHKERRQ(ierr);
-
   ierr = DMNetworkRegisterComponent(networkdm,"nstr",sizeof(Node),&componentkey[0]);CHKERRQ(ierr);
   ierr = DMNetworkRegisterComponent(networkdm,"bsrt",sizeof(Branch),&componentkey[1]);CHKERRQ(ierr);
 
-
   /* Set number of nodes/edges */
-  nV[0] = nnode; nE[0] = nbranch;
   ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
   ierr = DMNetworkAddSubnetwork(networkdm,"",nnode,nbranch,NULL);CHKERRQ(ierr);
 
