@@ -1,28 +1,30 @@
+#include "Kokkos_HostSpace.hpp"
 #if !defined(VECKOKKOSIMPL_HPP)
 #define VECKOKKOSIMPL_HPP
 
-#include <petscveckokkos.hpp>
+#include <petscvec_kokkos.hpp>
 #include <Kokkos_Core.hpp>
 
 struct Vec_Kokkos {
   PetscScalar  *d_array;           /* this always holds the device data */
   PetscScalar  *d_array_allocated; /* if the array was allocated by PETSc this is its pointer */
 
-  PetscScalarViewHost_t            h_v;
-  PetscScalarViewDevice_t          d_v;
-  PetscScalarKokkosDualView_t      dual_v;
+  PetscScalarKokkosViewHost      h_v;
+  PetscScalarKokkosView          d_v;
+  PetscScalarKokkosDualView      dual_v;
 
   Vec_Kokkos(PetscInt n,PetscScalar *h_array_,PetscScalar *d_array_,PetscScalar *d_array_allocated_ = NULL)
     : d_array(d_array_),
       d_array_allocated(d_array_allocated_),
-      h_v(h_array_,n),
-      d_v(d_array_,n),
-      dual_v(d_v,h_v){}
+      h_v(h_array_,n), d_v(d_array_,n)
+  {
+    dual_v = PetscScalarKokkosDualView(d_v,h_v);
+  }
 
   ~Vec_Kokkos()
   {
-    if (!std::is_same<DeviceMemorySpace,HostMemorySpace>::value) {
-      Kokkos::kokkos_free<DeviceMemorySpace>(d_array_allocated);
+    if (!std::is_same<DefaultMemorySpace,Kokkos::HostSpace>::value) {
+      Kokkos::kokkos_free<DefaultMemorySpace>(d_array_allocated);
     }
   }
 };
