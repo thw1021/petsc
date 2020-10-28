@@ -313,7 +313,7 @@ int main(int argc,char **argv)
   DM               networkdm;
   PetscLogStage    stage[4];
   PetscMPIInt      rank,size;
-  PetscInt         Nsubnet=2,numVertices[2],numEdges[2],numEdgesCouple[1];
+  PetscInt         Nsubnet=2,numVertices[2],numEdges[2];
   PetscInt         i,j,nv,ne,*edgelist[2];
   const PetscInt   *vtx,*edges;
   Vec              X,F;
@@ -354,7 +354,6 @@ int main(int argc,char **argv)
     numVertices[i] = 0;
     numEdges[i]    = 0;
   }
-  numEdgesCouple[0] = 0;
 
   /* All processes READ THE DATA FOR THE FIRST SUBNETWORK: Electric Power Grid */
   /* used for coupling vertex, because currently the coupling info must be available in all processes!!! */
