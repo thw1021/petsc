@@ -656,7 +656,8 @@ int main(int argc,char ** argv)
   pipes       = wash->pipe;
 
   /* Set up the network layout */
-  ierr = DMNetworkSetSizes(networkdm,1,&nvertices,&nedges,0,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"",nvertices,nedges,NULL);CHKERRQ(ierr);
 
   /* Add local edge connectivity */
   edgelists[0] = edgelist;

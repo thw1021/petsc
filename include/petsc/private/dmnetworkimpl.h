@@ -63,6 +63,7 @@ typedef struct {
   PetscInt  *edgelist;      /* User provided list of edges. Each edge has the format [from to] where from and to are the vertices covering the edge */
   PetscInt  *vertices;      /* Vertices for this subnetwork. These are mapped to the vertex numbers for the whole network */
   PetscInt  *edges;         /* Edges for this subnetwork. These are mapped to the edge numbers for the whole network */
+  char      name[32-sizeof(PetscInt)];
 } DMSubnetwork;
 
 typedef struct {
@@ -89,13 +90,13 @@ typedef struct {
   PetscInt                          dataheadersize;
   DMNetworkComponentGenericDataType *componentdataarray; /* Array to hold the data */
 
-  PetscInt                          nsubnet;  /* Global number of subnetworks, including coupling subnetworks */
-  PetscInt                          ncsubnet; /* Global number of coupling subnetworks */
-  DMSubnetwork                      *subnet;  /* Subnetworks */
-  PetscInt                          *subnetvtx; /* Maps local vertex to local subnetwork's vertex */
-  CEdge                             *cvtx; /* Array of coupling vertices */
-  PetscInt                          ncvtx; /* Num of entries in cvtx */
-  PetscInt                          *sedgelist; /* edge list of shared vertices */
+  PetscInt                          nsubnet,Nsubnet; /* Local and global number of subnetworks */
+  PetscInt                          ncsubnet;        /* Global number of coupling subnetworks */
+  DMSubnetwork                      *subnet;         /* Subnetworks */
+  PetscInt                          *subnetvtx;      /* Maps local vertex to local subnetwork's vertex */
+  CEdge                             *cvtx;           /* Array of coupling vertices */
+  PetscInt                          ncvtx;           /* Num of entries in cvtx */
+  PetscInt                          *sedgelist;      /* edge list of shared vertices */
 
   PetscBool                         userEdgeJacobian,userVertexJacobian;  /* Global flag for using user's sub Jacobians */
   Mat                               *Je;  /* Pointer array to hold local sub Jacobians for edges, 3 elements for an edge */
