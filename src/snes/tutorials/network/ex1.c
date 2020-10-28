@@ -313,7 +313,7 @@ int main(int argc,char **argv)
   DM               networkdm;
   PetscLogStage    stage[4];
   PetscMPIInt      rank,size;
-  PetscInt         nsubnet=2,numVertices[2],numEdges[2],numEdgesCouple[1];
+  PetscInt         Nsubnet=2,numVertices[2],numEdges[2],numEdgesCouple[1];
   PetscInt         i,j,nv,ne,*edgelist[2];
   const PetscInt   *vtx,*edges;
   Vec              X,F;
@@ -350,7 +350,7 @@ int main(int argc,char **argv)
   ierr = PetscLogStageRegister("Read Data",&stage[0]);CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage[0]);CHKERRQ(ierr);
 
-  for (i=0; i<nsubnet; i++) {
+  for (i=0; i<Nsubnet; i++) {
     numVertices[i] = 0;
     numEdges[i]    = 0;
   }
@@ -423,7 +423,9 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] Total local nvertices %D + %D = %D, nedges %D + %D = %D\n",rank,numVertices[0],numVertices[1],numVertices[0]+numVertices[1],numEdges[0],numEdges[1],numEdges[0]+numEdges[1]);CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
-  ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,0,0);CHKERRQ(ierr);
+  ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"power",numVertices[0],numEdges[0],NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"water",numVertices[1],numEdges[1],NULL);CHKERRQ(ierr);
 
   /* vertex subnet[0].4 shares with vertex subnet[1].0 */
   asvtx = 4; bsvtx = 0;
@@ -532,7 +534,7 @@ int main(int argc,char **argv)
     PetscInt  v,gidx;
     PetscBool ghost;
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
-    for (i=0; i<nsubnet; i++) {
+    for (i=0; i<Nsubnet; i++) {
       ierr = DMNetworkGetSubnetworkInfo(networkdm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, subnet[%d] ne %d, nv %d\n",rank,i,ne,nv);
       ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
@@ -574,7 +576,7 @@ int main(int argc,char **argv)
   /* Create coupled snes */
   /*-------------------- */
   ierr = PetscPrintf(PETSC_COMM_WORLD,"SNES_coupled setup ......\n");CHKERRQ(ierr);
-  user.subsnes_id = nsubnet;
+  user.subsnes_id = Nsubnet;
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
   ierr = SNESSetDM(snes,networkdm);CHKERRQ(ierr);
   ierr = SNESSetOptionsPrefix(snes,"coupled_");CHKERRQ(ierr);
@@ -657,7 +659,7 @@ int main(int argc,char **argv)
     user.subsnes_id = 1;
     ierr = SNESSolve(snes_water,NULL,X);CHKERRQ(ierr);
 #endif
-    user.subsnes_id = nsubnet;
+    user.subsnes_id = Nsubnet;
     ierr = SNESSolve(snes,NULL,X);CHKERRQ(ierr);
 
     ierr = SNESGetConvergedReason(snes,&reason);CHKERRQ(ierr);
