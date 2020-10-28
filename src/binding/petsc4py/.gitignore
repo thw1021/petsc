@@ -11,6 +11,7 @@ __pycache__
 *.pyc
 *.pyo
 .tox
+petsc4py.PETSc.c
 
 ## Please don't mess with .gitignore. If you really hate `git status`
 ## showing Cython-generated files, please add the following lines
