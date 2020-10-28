@@ -80,8 +80,13 @@ int main(int argc,char ** argv)
   ierr = DMNetworkRegisterComponent(dmnetwork,"comp0",sizeof(struct _p_Comp0),&compkey0);CHKERRQ(ierr);
   ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(struct _p_Comp1),&compkey1);CHKERRQ(ierr);
 
-  /* Set number of vertices and edges -- nsubnetCouple is ignored and will be removed from API */
-  ierr = DMNetworkSetSizes(dmnetwork,nsubnet,numVertices,numEdges,0,0);CHKERRQ(ierr);
+  /* Set number of subnetworks, number of vertices and edges */
+  ierr = DMNetworkSetSizes(dmnetwork,PETSC_DECIDE,nsubnet);CHKERRQ(ierr);
+
+  for (i=0; i<nsubnet; i++) {
+    PetscInt netNum = -1;
+    ierr = DMNetworkAddSubnetwork(dmnetwork,NULL,numVertices[i],numEdges[i],&netNum);CHKERRQ(ierr);
+  }
 
   /* Add shared vertices -- all processes hold this info */
   asvtx = bsvtx = 0;
