@@ -437,7 +437,6 @@ int main(int argc,char ** argv)
 #endif
   PetscMPIInt      rank;
   PetscInt         nsubnet = 2;
-  PetscInt         numVertices[2],numEdges[2];
   PetscInt         *edgelist[2];
   PetscInt         nv,ne;
   const PetscInt   *vtx;
@@ -502,9 +501,9 @@ int main(int argc,char ** argv)
     PetscLogStagePush(stage2);
 
     /* Set number of nodes/edges */
-    numVertices[0] = numVertices1; numVertices[1] = numVertices2;
-    numEdges[0] = numEdges1; numEdges[1] = numEdges2;
-    ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,0,NULL);CHKERRQ(ierr);
+    ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,nsubnet);CHKERRQ(ierr);
+    ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices1,numEdges1,NULL);CHKERRQ(ierr);
+    ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices2,numEdges2,NULL);CHKERRQ(ierr);
 
     edgelist[0] = edgelist1; edgelist[1] = edgelist2;
 
