@@ -10,26 +10,26 @@ The PETSc test system consists of
 Details on using the harness may be found in the :doc:`user's manual </manual/tests>`.
 
 
-Determining errors of a given run
-----------------------------------
+Determining the failed jobs of a given run
+------------------------------------------
 
 The running of the test harness will show which tests fail, but you may not have
 logged the output or run without showing the full error.  The best way of 
-examining the error is with this command:
+examining the errors is with this command:
 
 .. code-block:: bash
 
     $EDITOR $PETSC_ARCH/tests/test*err.log
 
-From the gitlab page, failed jobs can have all of the log files downloaded from
-the artifacts download tab on the right side:
+This method can also be used for pipeline jobs. Failed jobs can have all of the
+log files downloaded from the artifacts download tab on the right side:
 
 .. figure:: images/test-artifacts.png
    :alt: Test Artifacts at Gitlab
 
    Test artifacts can be downloaded from gitlab.
 
-To see the list of all tests that failed from the last run, you can run this command::
+To see the list of all tests that failed from the last run, you can also run this command::
 
     make -f gmakefile.test print-test test-fail=1
 
@@ -37,7 +37,7 @@ To print it out in a column format::
 
     make -f gmakefile.test print-test test-fail=1 | tr ' ' '\n' | sort
 
-Once you have an idea of what tests failed, the question is how to debug them.
+Once you know which tests failed, the question is how to debug them.
 
 Introduction to debugging workflows
 -----------------------------------
@@ -54,7 +54,8 @@ Consider this line from running the PETSc test system::
 The string `vec_is_sf_tests-ex1_basic_1` gives the following information:
 
    + The file generating the tests is found in `$PETSC_DIR/src/vec/is/sf/tests/ex1.c`
-   + The makefile target is `vec_is_sf_tests-ex1_basic_1`
+   + The makefile target for the *test* is `vec_is_sf_tests-ex1_basic_1`
+   + The makefile target for the *executable* is `$PETSC_ARCH/tests/vec/is/sf/tests/ex1`
    + The shell script running the test is located at: `$PETSC_DIR/$PETSC_ARCH/tests/vec/is/sf/tests/runex1_basic_1.sh`
 
 Let's say that you want to debug a single test as part of development.  There
@@ -136,25 +137,18 @@ To compile the test and run it:
 
    make -f gmakefile test search=vec_is_sf_tests-ex1_basic_1
 
-For the normal compile and edit, running the entire harness with search can be
+This can consist of your basic workflow.  However,
+for the normal compile and edit, running the entire harness with search can be
 cumbersome.  So first get the command:
 
 .. code-block:: bash
 
-   > make -f gmakefile test search=vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
-   /scratch/kruger/contrib/petsc-mpich-cxx/bin/mpiexec -n 1 arch-mpich-cxx-py3/tests/vec/is/sf/tests/ex1
-
-A basic workflow is something similar to:
-
-.. code-block:: bash
-
+     make -f gmakefile vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
+     <copy command>
      <edit>
-     runex1_basic_1.sh -C
-     <edit>
+     make -f gmakefile $PETSC_ARCH/tests/vec/is/sf/tests/ex1
+     /scratch/kruger/contrib/petsc-mpich-cxx/bin/mpiexec -n 1 arch-mpich-cxx-py3/tests/vec/is/sf/tests/ex1
      ...
-     runex1_basic_1.sh -m  # If need to update results 
-     ...
-     runex1_basic_1.sh -V  # Make sure valgrind clean
      cd $PETSC_DIR
      git commit -a
 
