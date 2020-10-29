@@ -1,3 +1,9 @@
+initial dm1
+  -distributed? FALSE
+  -interpolated? full
+initial dm2
+  -distributed? FALSE
+  -interpolated? full
 Graph Partitioner: 4 MPI Processes
   type: ptscotch
   edge cut: 0

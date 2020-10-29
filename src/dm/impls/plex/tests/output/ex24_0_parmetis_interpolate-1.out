@@ -1,0 +1,9 @@
+initial dm1
+  -distributed? FALSE
+  -interpolated? full
+initial dm2
+  -distributed? FALSE
+  -interpolated? full
+ISs are equal
+PetscSections are equal
+Distributed DMs are equal

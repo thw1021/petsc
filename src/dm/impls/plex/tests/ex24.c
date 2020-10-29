@@ -27,7 +27,6 @@ typedef struct {
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscInt dim;
-  PetscBool repartition = PETSC_TRUE;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -50,13 +49,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   if (dim) options->dim = dim;
   ierr = PetscStrncpy(options->partitioning,MATPARTITIONINGPARMETIS,sizeof(options->partitioning));CHKERRQ(ierr);
   ierr = PetscOptionsString("-partitioning","The mat partitioning type to test","None",options->partitioning, options->partitioning,sizeof(options->partitioning),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-repartition", "Partition again after the first partition?", FILENAME, repartition, &repartition, NULL);CHKERRQ(ierr);
-  if (repartition) {
-    ierr = PetscStrncpy(options->repartitioning,MATPARTITIONINGPARMETIS,64);CHKERRQ(ierr);
-    ierr = PetscOptionsString("-repartitioning","The mat partitioning type to test (second partitioning)","None", options->repartitioning, options->repartitioning,sizeof(options->repartitioning),NULL);CHKERRQ(ierr);
-  } else {
-    options->repartitioning[0] = '\0';
-  }
+  options->repartitioning[0] = '\0';
+  ierr = PetscOptionsString("-repartitioning","The mat partitioning type to test (second partitioning)","None", options->repartitioning, options->repartitioning,sizeof(options->repartitioning),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-tpweight", "Use target partition weights", FILENAME, options->tpw, &options->tpw, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();
   PetscFunctionReturn(0);
@@ -116,6 +110,15 @@ int main(int argc, char **argv)
   ierr = CreateMesh(comm, &user, &dm1);CHKERRQ(ierr);
   ierr = CreateMesh(comm, &user, &dm2);CHKERRQ(ierr);
 
+  {
+    DMPlexInterpolatedFlag interpolated;
+    ierr = DMPlexIsDistributed(dm1, &flg);CHKERRQ(ierr);
+    ierr = DMPlexIsInterpolated(dm1, &interpolated);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "initial dm1\n  -distributed? %s\n  -interpolated? %s\n", PetscBools[flg], DMPlexInterpolatedFlags[interpolated]);CHKERRQ(ierr);
+    ierr = DMPlexIsDistributed(dm2, &flg);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "initial dm2\n  -distributed? %s\n  -interpolated? %s\n", PetscBools[flg], DMPlexInterpolatedFlags[interpolated]);CHKERRQ(ierr);
+  }
+
   if (user.tpw) {
     ierr = PetscSectionCreate(comm, &tpws);CHKERRQ(ierr);
     ierr = PetscSectionSetChart(tpws, 0, size);CHKERRQ(ierr);
@@ -156,7 +159,8 @@ int main(int argc, char **argv)
   /* compare the two ISs */
   if (user.compare_is) {
     ierr = ISEqualUnsorted(is1g, is2g, &flg);CHKERRQ(ierr);
-    if (!flg) {ierr = PetscPrintf(comm, "ISs are not equal with type %s with size %d.\n",user.partitioning,size);CHKERRQ(ierr);}
+    if (!flg) {ierr = PetscPrintf(comm, "ISs are not equal\n");CHKERRQ(ierr);}
+    else      {ierr = PetscPrintf(comm, "ISs are equal\n");CHKERRQ(ierr);}
   }
   ierr = ISDestroy(&is1g);CHKERRQ(ierr);
   ierr = ISDestroy(&is2g);CHKERRQ(ierr);
@@ -166,7 +170,8 @@ int main(int argc, char **argv)
   ierr = PetscSectionViewFromOptions(s2, NULL, "-seq_s2_view");CHKERRQ(ierr);
   if (user.compare_is) {
     ierr = PetscSectionCompare(s1, s2, &flg);CHKERRQ(ierr);
-    if (!flg) {ierr = PetscPrintf(comm, "PetscSections are not equal with %s with size %d.\n",user.partitioning,size);CHKERRQ(ierr);}
+    if (!flg) {ierr = PetscPrintf(comm, "PetscSections are not equal\n");CHKERRQ(ierr);}
+    else      {ierr = PetscPrintf(comm, "PetscSections are equal\n");CHKERRQ(ierr);}
   }
 
   /* distribute both DMs */
@@ -184,8 +189,24 @@ int main(int argc, char **argv)
   ierr = DMDestroy(&dm1);CHKERRQ(ierr);
   ierr = DMDestroy(&dm2);CHKERRQ(ierr);
 
-  /* if distributed DMs are NULL (sequential case), then quit */
-  if (!dmdist1 && !dmdist2) return ierr;
+  /* if distributed DMs are NULL (sequential case), then assume equality and quit */
+  if (!dmdist1 || !dmdist2) {
+    ierr = DMDestroy(&dmdist1);CHKERRQ(ierr);
+    ierr = DMDestroy(&dmdist2);CHKERRQ(ierr);
+    if (user.compare_dm) {
+      ierr = PetscPrintf(comm, "Distributed DMs are equal\n");CHKERRQ(ierr);
+    }
+    if (user.repartitioning[0]) {
+      if (user.compare_is) {
+        ierr = PetscPrintf(comm, "Distributed ISs are equal.\n");CHKERRQ(ierr);
+        ierr = PetscPrintf(comm, "Distributed PetscSections are equal\n");CHKERRQ(ierr);
+      }
+      if (user.compare_dm) {
+        ierr = PetscPrintf(comm, "Redistributed DMs are equal\n");CHKERRQ(ierr);
+      }
+    }
+    goto cleanup;
+  }
 
   ierr = DMViewFromOptions(dmdist1, NULL, "-dm_dist1_view");CHKERRQ(ierr);
   ierr = DMViewFromOptions(dmdist2, NULL, "-dm_dist2_view");CHKERRQ(ierr);
@@ -193,11 +214,12 @@ int main(int argc, char **argv)
   /* compare the two distributed DMs */
   if (user.compare_dm) {
     ierr = DMPlexEqual(dmdist1, dmdist2, &flg);CHKERRQ(ierr);
-    if (!flg) {ierr = PetscPrintf(comm, "Distributed DMs are not equal %s with size %d.\n",user.partitioning,size);CHKERRQ(ierr);}
+    if (!flg) {ierr = PetscPrintf(comm, "Distributed DMs are not equal\n");CHKERRQ(ierr);}
+    else      {ierr = PetscPrintf(comm, "Distributed DMs are equal\n");CHKERRQ(ierr);}
   }
 
   /* if repartitioning is disabled, then quit */
-  if (user.repartitioning[0] == '\0') return ierr;
+  if (!user.repartitioning[0]) goto cleanup;
 
   if (user.tpw) {
     ierr = PetscSectionCreate(comm, &tpws);CHKERRQ(ierr);
@@ -236,7 +258,8 @@ int main(int argc, char **argv)
   ierr = ISViewFromOptions(is2g, NULL, "-dist_is2_view");CHKERRQ(ierr);
   if (user.compare_is) {
     ierr = ISEqualUnsorted(is1g, is2g, &flg);CHKERRQ(ierr);
-    if (!flg) {ierr = PetscPrintf(comm, "Distributed ISs are not equal, with %s with size %d.\n",user.repartitioning,size);CHKERRQ(ierr);}
+    if (!flg) {ierr = PetscPrintf(comm, "Distributed ISs are not equal.\n");CHKERRQ(ierr);}
+    else      {ierr = PetscPrintf(comm, "Distributed ISs are equal.\n");CHKERRQ(ierr);}
   }
   ierr = ISDestroy(&is1g);CHKERRQ(ierr);
   ierr = ISDestroy(&is2g);CHKERRQ(ierr);
@@ -246,7 +269,8 @@ int main(int argc, char **argv)
   ierr = PetscSectionViewFromOptions(s2, NULL, "-dist_s2_view");CHKERRQ(ierr);
   if (user.compare_is) {
     ierr = PetscSectionCompare(s1, s2, &flg);CHKERRQ(ierr);
-    if (!flg) {ierr = PetscPrintf(comm, "Distributed PetscSections are not equal, with %s with size %d.\n",user.repartitioning,size);CHKERRQ(ierr);}
+    if (!flg) {ierr = PetscPrintf(comm, "Distributed PetscSections are not equal\n");CHKERRQ(ierr);}
+    else      {ierr = PetscPrintf(comm, "Distributed PetscSections are equal\n");CHKERRQ(ierr);}
   }
 
   /* redistribute both distributed DMs */
@@ -256,11 +280,13 @@ int main(int argc, char **argv)
   ierr = DMPlexDistribute(dmdist2, 0, NULL, &dm2);CHKERRQ(ierr);
 
   /* compare the two distributed DMs */
-  if (!user.interpolate) {
+  if (user.compare_dm) {
     ierr = DMPlexEqual(dm1, dm2, &flg);CHKERRQ(ierr);
-    if (!flg) {ierr = PetscPrintf(comm, "Redistributed DMs are not equal, with %s with size %d.\n",user.repartitioning,size);CHKERRQ(ierr);}
+    if (!flg) {ierr = PetscPrintf(comm, "Redistributed DMs are not equal\n");CHKERRQ(ierr);}
+    else      {ierr = PetscPrintf(comm, "Redistributed DMs are equal\n");CHKERRQ(ierr);}
   }
 
+cleanup:
   /* cleanup */
   ierr = PetscSectionDestroy(&tpws);CHKERRQ(ierr);
   ierr = PetscSectionDestroy(&s1);CHKERRQ(ierr);
@@ -277,21 +303,42 @@ int main(int argc, char **argv)
 
 /*TEST
 
-  test:
+  testset:
     # partition sequential mesh loaded from Exodus file
-    suffix: 0
     nsize: {{1 2 3 4 8}}
-    requires: chaco parmetis ptscotch exodusii
-    args: -filename ${PETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo -interpolate
-    args: -partitioning {{chaco parmetis ptscotch}} -repartitioning {{parmetis ptscotch}} -tpweight {{0 1}}
-  test:
-    # repartition mesh already partitioned naively by MED loader
-    suffix: 1
+    requires: exodusii
+    args: -filename ${PETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo
+    test:
+      suffix: 0_chaco
+      requires: chaco
+      args: -interpolate {{0 1}separate output}
+      args: -partitioning chaco -tpweight 0 -compare_is -compare_dm
+    test:
+      suffix: 0_parmetis
+      requires: parmetis
+      args: -interpolate {{0 1}separate output}
+      args: -partitioning parmetis -tpweight {{0 1}} -compare_is -compare_dm
+    test:
+      suffix: 0_ptscotch
+      requires: ptscotch
+      args: -interpolate {{0 1}separate output}
+      args: -partitioning ptscotch -tpweight {{0 1}}
+  testset:
+    # partition sequential mesh loaded from Exodus file using simple partitioner and repartition
     nsize: {{1 2 3 4 8}}
-    TODO: MED
-    requires: parmetis ptscotch med
-    args: -filename ${PETSC_DIR}/share/petsc/datafiles/meshes/cylinder.med -interpolate
-    args: -repartition 0 -partitioning {{parmetis ptscotch}}
+    requires: exodusii
+    args: -filename ${PETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo
+    args: -interpolate 1
+    args: -p1_petscpartitioner_type simple
+    args: -p2_petscpartitioner_type simple
+    test:
+      suffix: 1_parmetis
+      requires: parmetis
+      args: -repartitioning parmetis -tpweight {{0 1}} -compare_is -compare_dm
+    test:
+      suffix: 1_ptscotch
+      requires: ptscotch
+      args: -repartitioning ptscotch -tpweight {{0 1}}
   test:
     # partition mesh generated by ctetgen using scotch, then repartition with scotch, diff view
     suffix: 3
@@ -299,12 +346,28 @@ int main(int argc, char **argv)
     requires: ptscotch ctetgen
     args: -faces 2,3,2 -partitioning ptscotch -repartitioning ptscotch -interpolate
     args: -p1_petscpartitioner_view -p2_petscpartitioner_view -dp1_petscpartitioner_view -dp2_petscpartitioner_view -tpweight {{0 1}}
-  test:
+  testset:
     # partition mesh generated by ctetgen using partitioners supported both by MatPartitioning and PetscPartitioner
-    suffix: 4
-    nsize: {{1 2 3 4 8}}
-    requires: chaco parmetis ptscotch ctetgen
-    args: -faces {{2,3,4  5,4,3  7,11,5}} -partitioning {{chaco parmetis ptscotch}} -repartitioning {{parmetis ptscotch}} -interpolate -tpweight {{0 1}}
+    #nsize: {{1 2 3 4 8}}
+    nsize: 2
+    requires: ctetgen
+    args: -simplex {{0 1}}
+    args: -faces {{2,3,4  7,11,5}}
+    test:
+      suffix: 4_chaco
+      requires: chaco
+      args: -interpolate {{0 1}separate output}
+      args: -partitioning chaco -tpweight 0 -compare_is -compare_dm
+    test:
+      suffix: 4_parmetis
+      requires: parmetis
+      args: -interpolate {{0 1}separate output}
+      args: -partitioning parmetis -tpweight {{0 1}} -compare_is -compare_dm
+    test:
+      suffix: 4_ptscotch
+      requires: ptscotch
+      args: -interpolate {{0 1}separate output}
+      args: -partitioning ptscotch -tpweight {{0 1}}
 
 TEST*/
 
