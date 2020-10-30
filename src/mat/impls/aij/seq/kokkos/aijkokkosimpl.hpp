@@ -4,12 +4,12 @@
 #include "Kokkos_Core.hpp"
 #include <Kokkos_DualView.hpp>
 #include "KokkosSparse_CrsMatrix.hpp"
-#include <petscveckokkos.hpp>
+#include <petscvec_kokkos.hpp>
 
 using MatRowMap_t                = PetscInt; /* RowMap, not RowOffset, to distinguish from Kokkos OffsetView */
 using MatColumnIndex_t           = PetscInt;
 using MatValue_t                 = PetscScalar;
-using MatDevice_t                = typename Kokkos::Device<DeviceExecutionSpace,DeviceMemorySpace>;
+using MatDevice_t                = typename Kokkos::Device<DefaultExecutionSpace,DefaultMemorySpace>;
 
 using KokkosCsrMatrix_t          = typename KokkosSparse::CrsMatrix<MatValue_t,MatColumnIndex_t,MatDevice_t,void/* MemoryTraits */,MatRowMap_t>;
 using KokkosCsrGraph_t           = typename KokkosCsrMatrix_t::staticcrsgraph_type;
@@ -43,9 +43,9 @@ struct Mat_SeqAIJKokkos {
    : i_h(i,nrows+1),
      j_h(j,nnz),
      a_h(a,nnz),
-     i_d(Kokkos::create_mirror_view_and_copy(DeviceMemorySpace(),i_h)),
-     j_d(Kokkos::create_mirror_view_and_copy(DeviceMemorySpace(),j_h)),
-     a_d(Kokkos::create_mirror_view_and_copy(DeviceMemorySpace(),a_h)),
+     i_d(Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(),i_h)),
+     j_d(Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(),j_h)),
+     a_d(Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(),a_h)),
      a_dual(a_d,a_h),
      csr("AIJKokkos",nrows,ncols,nnz,a_d,i_d,j_d)
      {};
