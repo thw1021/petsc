@@ -705,7 +705,7 @@ class Package(config.base.Configure):
         if self.gitcommit:
           raise RuntimeError('Unable to locate commit: '+self.gitcommit+' in repository: '+self.packageDir+'.\n\
 If its a commit/tag that is not found - perhaps the repo URL changed. If so, delete '+self.packageDir+' and rerun configure.\n\
-If its a remote branch, use: origin/'+gitcommit+' for commit.')
+If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
         else:
           raise RuntimeError('No gitcommit specified for package '+self.package+' but its directory '+self.packageDir+' is supposed to be a git repository.\n\
 Try to delete '+self.packageDir+' and rerun configure.')
