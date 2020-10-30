@@ -703,7 +703,7 @@ class Package(config.base.Configure):
         gitcommit_hash,err,ret = config.base.Configure.executeShellCommand([self.sourceControl.git, 'rev-parse', self.gitcommit], cwd=self.packageDir, log = self.log)
       except:
         if self.gitcommit:
-          raise RuntimeError('Unable to locate commit: '+gitcommit+' in repository: '+self.packageDir+'.\n\
+          raise RuntimeError('Unable to locate commit: '+self.gitcommit+' in repository: '+self.packageDir+'.\n\
 If its a commit/tag that is not found - perhaps the repo URL changed. If so, delete '+self.packageDir+' and rerun configure.\n\
 If its a remote branch, use: origin/'+gitcommit+' for commit.')
         else:
