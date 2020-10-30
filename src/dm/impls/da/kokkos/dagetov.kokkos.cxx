@@ -2,34 +2,24 @@
 #include <petsc/private/dmdaimpl.h>
 #include <petscdmda_kokkos.hpp>
 
-PETSC_STATIC_INLINE PetscErrorCode DMDAVecGetShape(DM da,Vec vec,
-                                                   PetscInt* _xs, PetscInt* _ys, PetscInt* _zs, PetscInt* _xm, PetscInt* _ym, PetscInt* _zm,
-                                                   PetscInt *_gxs,PetscInt* _gys,PetscInt* _gzs,PetscInt* _gxm,PetscInt* _gym,PetscInt* _gzm,
-                                                   PetscInt* _N,  PetscInt* _dim,PetscInt* _dof)
-{
-  PetscErrorCode                               ierr;
-  PetscInt                                     xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof;
-
-  PetscFunctionBegin;
-  ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
-  ierr = DMDAGetGhostCorners(da,&gxs,&gys,&gzs,&gxm,&gym,&gzm);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da,&dim,NULL,NULL,NULL,NULL,NULL,NULL,&dof,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
-  /* Handle case where user passes in global vector as opposed to local */
-  ierr = VecGetLocalSize(vec,&N);CHKERRQ(ierr);
-  if (N == xm*ym*zm*dof) {
-    gxm = xm; gym = ym; gzm = zm;
-    gxs = xs; gys = ys; gzs = zs;
-  } else if (N != gxm*gym*gzm*dof) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMDA local sizes %D %D\n",N,xm*ym*zm*dof,gxm*gym*gzm*dof);
-
-  if (dim != 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"KokkosOffsetView is 1D but DMDA is %DD\n",dim);
-  *_xs  = xs;  *_ys  = ys;  *_zs  = zs;  *_xm  = xm;  *_ym  = ym;  *_zm  = zm;
-  *_gxs = gxs; *_gys = gys; *_gzs = gzs; *_gxm = gxm; *_gym = gym; *_gzm = gzm;
-  *_N   = N;   *_dim = dim; *_dof = dof;
-  PetscFunctionReturn(0);
-}
+/* Use macro instead of inlined function just to avoid annoying warnings like: 'dof' may be used uninitialized in this function [-Wmaybe-uninitialized] */
+#define DMDA_VEC_GET_SHAPE(da,vec,xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof) \
+do { \
+  PetscErrorCode ierr; \
+  ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr); \
+  ierr = DMDAGetGhostCorners(da,&gxs,&gys,&gzs,&gxm,&gym,&gzm);CHKERRQ(ierr); \
+  ierr = DMDAGetInfo(da,&dim,NULL,NULL,NULL,NULL,NULL,NULL,&dof,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr); \
+  /* Handle case where user passes in global vector as opposed to local */ \
+  ierr = VecGetLocalSize(vec,&N);CHKERRQ(ierr); \
+  if (N == xm*ym*zm*dof) { \
+    gxm = xm; gym = ym; gzm = zm; \
+    gxs = xs; gys = ys; gzs = zs; \
+  } else if (N != gxm*gym*gzm*dof) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMDA local sizes %D %D\n",N,xm*ym*zm*dof,gxm*gym*gzm*dof); \
+  if (dim != 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"KokkosOffsetView is 1D but DMDA is %DD\n",dim); \
+} while (0)
 
 template<class MemorySpace>
-PetscErrorCode  DMDAVecGetKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffsetView1DType<MemorySpace> *ov,PetscBool overwrite)
+PetscErrorCode DMDAVecGetKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffsetView1DType<MemorySpace> *ov,PetscBool overwrite)
 {
   PetscErrorCode                               ierr;
   PetscInt                                     xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof;
@@ -39,14 +29,14 @@ PetscErrorCode  DMDAVecGetKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffset
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscValidPointer(ov,3);
-  ierr = DMDAVecGetShape(da,vec,&xs,&ys,&zs,&xm,&ym,&zm,&gxs,&gys,&gzs,&gxm,&gym,&gzm,&N,&dim,&dof);CHKERRQ(ierr);
+  DMDA_VEC_GET_SHAPE(da,vec,xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof);
   ierr = VecGetKokkosView(vec,&kv,overwrite);CHKERRQ(ierr);
   *ov  = PetscScalarKokkosOffsetView1DType<MemorySpace>(kv,{gxs*dof}); /* View to OffsetView by giving the start. The extent is already known. */
   PetscFunctionReturn(0);
 }
 
 template<class MemorySpace>
-PetscErrorCode  DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffsetView1DType<MemorySpace> *ov,PetscBool overwrite)
+PetscErrorCode DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffsetView1DType<MemorySpace> *ov,PetscBool overwrite)
 {
   PetscErrorCode                               ierr;
   PetscScalarKokkosViewType<MemorySpace>       kv;
@@ -61,7 +51,7 @@ PetscErrorCode  DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOf
 }
 
 template<class MemorySpace>
-PetscErrorCode  DMDAVecGetKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosOffsetView1DType<MemorySpace> *ov)
+PetscErrorCode DMDAVecGetKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosOffsetView1DType<MemorySpace> *ov)
 {
   PetscErrorCode                               ierr;
   PetscInt                                     xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof;
@@ -71,14 +61,14 @@ PetscErrorCode  DMDAVecGetKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosO
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscValidPointer(ov,3);
-  ierr = DMDAVecGetShape(da,vec,&xs,&ys,&zs,&xm,&ym,&zm,&gxs,&gys,&gzs,&gxm,&gym,&gzm,&N,&dim,&dof);CHKERRQ(ierr);
+  DMDA_VEC_GET_SHAPE(da,vec,xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof);
   ierr = VecGetKokkosView(vec,&kv);CHKERRQ(ierr);
   *ov  = ConstPetscScalarKokkosOffsetView1DType<MemorySpace>(kv,{gxs*dof}); /* View to OffsetView */
   PetscFunctionReturn(0);
 }
 
 template<class MemorySpace>
-PetscErrorCode  DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosOffsetView1DType<MemorySpace> *ov)
+PetscErrorCode DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosOffsetView1DType<MemorySpace> *ov)
 {
   PetscErrorCode                               ierr;
   ConstPetscScalarKokkosViewType<MemorySpace>  kv;
@@ -93,7 +83,7 @@ PetscErrorCode  DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKok
 }
 
 template<class MemorySpace>
-PetscErrorCode  DMDAVecGetKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffsetView2DType<MemorySpace> *ov,PetscBool overwrite)
+PetscErrorCode DMDAVecGetKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffsetView2DType<MemorySpace> *ov,PetscBool overwrite)
 {
   PetscErrorCode                               ierr;
   PetscInt                                     xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof;
@@ -103,14 +93,14 @@ PetscErrorCode  DMDAVecGetKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffset
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscValidPointer(ov,3);
-  ierr = DMDAVecGetShape(da,vec,&xs,&ys,&zs,&xm,&ym,&zm,&gxs,&gys,&gzs,&gxm,&gym,&gzm,&N,&dim,&dof);CHKERRQ(ierr);
+  DMDA_VEC_GET_SHAPE(da,vec,xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof);
   ierr = VecGetKokkosView(vec,&kv,overwrite);CHKERRQ(ierr);
   *ov  = PetscScalarKokkosOffsetView2DType<MemorySpace>(kv.data(), {gxs*dof,(gxs+gxm)*dof}, {gys*dof,(gys+gym)*dof}); /* View to OffsetView */
   PetscFunctionReturn(0);
 }
 
 template<class MemorySpace>
-PetscErrorCode  DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffsetView2DType<MemorySpace> *ov,PetscBool overwrite)
+PetscErrorCode DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOffsetView2DType<MemorySpace> *ov,PetscBool overwrite)
 {
   PetscErrorCode                             ierr;
   PetscScalarKokkosViewType<MemorySpace>     kv;
@@ -126,7 +116,7 @@ PetscErrorCode  DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,PetscScalarKokkosOf
 }
 
 template<class MemorySpace>
-PetscErrorCode  DMDAVecGetKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosOffsetView2DType<MemorySpace> *ov)
+PetscErrorCode DMDAVecGetKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosOffsetView2DType<MemorySpace> *ov)
 {
   PetscErrorCode                               ierr;
   PetscInt                                     xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof;
@@ -136,14 +126,14 @@ PetscErrorCode  DMDAVecGetKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosO
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscValidPointer(ov,3);
-  ierr = DMDAVecGetShape(da,vec,&xs,&ys,&zs,&xm,&ym,&zm,&gxs,&gys,&gzs,&gxm,&gym,&gzm,&N,&dim,&dof);CHKERRQ(ierr);
+  DMDA_VEC_GET_SHAPE(da,vec,xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof);
   ierr = VecGetKokkosView(vec,&kv);CHKERRQ(ierr);
   *ov  = ConstPetscScalarKokkosOffsetView2DType<MemorySpace>(kv.data(), {gxs*dof,(gxs+gxm)*dof}, {gys*dof,(gys+gym)*dof}); /* View to OffsetView */
   PetscFunctionReturn(0);
 }
 
 template<class MemorySpace>
-PetscErrorCode  DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosOffsetView2DType<MemorySpace> *ov)
+PetscErrorCode DMDAVecRestoreKokkosOffsetView(DM da,Vec vec,ConstPetscScalarKokkosOffsetView2DType<MemorySpace> *ov)
 {
   PetscErrorCode                               ierr;
   ConstPetscScalarKokkosViewType<MemorySpace>  kv;
