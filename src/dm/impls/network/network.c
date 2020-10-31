@@ -1072,7 +1072,7 @@ PetscErrorCode DMNetworkGetComponent(DM dm, PetscInt p, PetscInt compnum, PetscI
 
 .seealso: DMNetworkGetVertexRange, DMNetworkGetEdgeRange, DMNetworkRegisterComponent
 @*/
-PetscErrorCode DMNetworkAddComponent(DM dm, PetscInt p,PetscInt componentkey,void* compvalue)
+PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void* compvalue)
 {
   DM_Network               *network = (DM_Network*)dm->data;
   DMNetworkComponent       *component = &network->component[componentkey];
@@ -1431,6 +1431,62 @@ PetscErrorCode DMNetworkSetNumVariables(DM dm,PetscInt p,PetscInt nvar)
 
   PetscFunctionBegin;
   ierr = PetscSectionSetDof(network->DofSection,p,nvar);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMNetworkAddComponentAndNumVariables - Adds a network component and number of variables at the given point (vertex/edge)
+
+  Not Collective
+
+  Input Parameters:
++ dm           - The DMNetworkObject
+. netnum       - subnetwork number
+. p            - the vertex/edge point
+. componentkey - component key returned while registering the component
+. compvalue    - pointer to the data structure for the component
+- nvar         - number of variables for the component at the vertex/edge point
+
+  Level: beginner
+
+.seealso: DMNetworkAddComponent, DMNetworkSetNumVariables
+@*/
+PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt componentkey,void* compvalue,PetscInt nvar)
+{
+  PetscErrorCode           ierr;
+  DM_Network               *network = (DM_Network*)dm->data;
+  DMNetworkComponent       *component = &network->component[componentkey];
+  DMNetworkComponentHeader header = &network->header[p];
+  DMNetworkComponentValue  cvalue = &network->cvalue[p];
+
+  PetscFunctionBegin;
+#if 0
+  PetscBool   iscouplev=PETSC_FALSE;
+  PetscMPIInt rank;
+  MPI_Comm    comm;
+
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = DMNetworkIsCouplingVertex(dm,p,&iscouplev);CHKERRQ(ierr);
+  if (iscouplev) {
+    printf("[%d] p %d is a sv, compkey %d, compvalue %p, nvar %d\n\n",rank,p,componentkey,compvalue,nvar);
+    PetscFunctionReturn(0);
+  }
+#endif
+
+  /* Modified from DMNetworkAddComponent() and DMNetworkSetComponentNumVariables() */
+  if (header->ndata == MAX_DATA_AT_POINT) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components at a point exceeds the max %D",MAX_DATA_AT_POINT);
+
+  header->size[header->ndata] = component->size;
+  ierr = PetscSectionAddDof(network->DataSection,p,component->size);CHKERRQ(ierr);
+  header->key[header->ndata] = componentkey;
+  if (header->ndata != 0) header->offset[header->ndata] = header->offset[header->ndata-1] + header->size[header->ndata-1];
+  header->nvar[header->ndata] = 0;
+
+  cvalue->data[header->ndata] = (void*)compvalue;
+
+  ierr = DMNetworkSetComponentNumVariables(dm,p,header->ndata,nvar);CHKERRQ(ierr);
+  header->ndata++;
   PetscFunctionReturn(0);
 }
 
@@ -1983,6 +2039,22 @@ PetscErrorCode DMSetUp_Network(DM dm)
   DM_Network     *network=(DM_Network*)dm->data;
 
   PetscFunctionBegin;
+  #if 0
+  //------------------------------
+  MPI_Comm       comm;
+  PetscMPIInt    rank;
+  PetscInt       sv,nsv;
+  const PetscInt *svtx;
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
+  for (sv=0; sv<nsv; sv++) {
+    DMNetworkComponentHeader header = &network->header[svtx[sv]];
+    printf("[%d] DMSetUp_Network: sv %d, header->ndata %d\n",rank,svtx[sv],header->ndata);
+  }
+  //------------------------------------------
+  #endif
+
   ierr = DMNetworkComponentSetUp(dm);CHKERRQ(ierr);
   ierr = DMNetworkVariablesSetUp(dm);CHKERRQ(ierr);
 

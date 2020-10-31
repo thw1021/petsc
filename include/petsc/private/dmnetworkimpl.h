@@ -13,7 +13,7 @@ typedef struct _p_DMNetworkComponentHeader *DMNetworkComponentHeader;
 struct _p_DMNetworkComponentHeader {
   PetscInt index;    /* index for user input global edge and vertex */
   PetscInt subnetid; /* Id for subnetwork */
-  PetscInt ndata;
+  PetscInt ndata;    /* number of components */
   PetscInt size[MAX_DATA_AT_POINT];
   PetscInt key[MAX_DATA_AT_POINT];
   PetscInt offset[MAX_DATA_AT_POINT];
