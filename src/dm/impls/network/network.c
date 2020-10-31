@@ -314,6 +314,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   PetscInt       net,idx,gidx,offset,e,v,vfrom,vto;
   CVertexType    cvtype;
   CEdge          *cvs=NULL;
+  PetscSection   sectiong;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
@@ -517,6 +518,10 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   network->cvtx  = cvs;
   network->ncvtx = ncv;
   ierr = PetscFree(sedgelist);CHKERRQ(ierr);
+
+  /* Create a global section to be used by DMNetworkIsGhostVertex() which is a non-collective routine */
+  ierr = DMGetGlobalSection(network->plex,&sectiong);CHKERRQ(ierr);
+  //ierr = PetscSectionView(sectiong,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -973,7 +978,7 @@ PetscErrorCode DMNetworkGetGlobalVertexIndex(DM dm,PetscInt p,PetscInt *index)
   PetscFunctionReturn(0);
 }
 
-/*
+/*@
   DMNetworkGetComponentKeyOffset - Gets the type along with the offset for indexing the
                                     component value from the component data array
 
@@ -1002,7 +1007,7 @@ PetscErrorCode DMNetworkGetGlobalVertexIndex(DM dm,PetscInt p,PetscInt *index)
   Level: intermediate
 
 .seealso: DMNetworkGetNumComponents, DMNetworkGetComponentDataArray,
-*/
+@*/
 PetscErrorCode DMNetworkGetComponentKeyOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *compkey,PetscInt *offset)
 {
   PetscErrorCode           ierr;
@@ -1072,7 +1077,7 @@ PetscErrorCode DMNetworkGetComponent(DM dm, PetscInt p, PetscInt compnum, PetscI
 
 .seealso: DMNetworkGetVertexRange, DMNetworkGetEdgeRange, DMNetworkRegisterComponent
 @*/
-PetscErrorCode DMNetworkAddComponent(DM dm, PetscInt p,PetscInt componentkey,void* compvalue)
+PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void* compvalue)
 {
   DM_Network               *network = (DM_Network*)dm->data;
   DMNetworkComponent       *component = &network->component[componentkey];
@@ -1083,13 +1088,18 @@ PetscErrorCode DMNetworkAddComponent(DM dm, PetscInt p,PetscInt componentkey,voi
   PetscFunctionBegin;
   if (header->ndata == MAX_DATA_AT_POINT) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components at a point exceeds the max %D",MAX_DATA_AT_POINT);
 
+  /* (a) stores the size of the component in a section called DataSection (the size is already set when the component is registered) */
   header->size[header->ndata] = component->size;
   ierr = PetscSectionAddDof(network->DataSection,p,component->size);CHKERRQ(ierr);
   header->key[header->ndata] = componentkey;
+
+  /* (b) calculates an offset for where this component data will be located in a contiguous memory chunk having data for all components */
   if (header->ndata != 0) header->offset[header->ndata] = header->offset[header->ndata-1] + header->size[header->ndata-1];
   header->nvar[header->ndata] = 0;
 
+  /* (c) copies pointer for the component data location. */
   cvalue->data[header->ndata] = (void*)compvalue;
+
   header->ndata++;
   PetscFunctionReturn(0);
 }
@@ -1119,13 +1129,6 @@ PetscErrorCode DMNetworkSetComponentNumVariables(DM dm,PetscInt p,PetscInt compn
   ierr = DMNetworkAddNumVariables(dm,p,nvar);CHKERRQ(ierr);
   header->nvar[compnum] = nvar;
   if (compnum != 0) header->offsetvarrel[compnum] = header->offsetvarrel[compnum-1] + header->nvar[compnum-1];
-#if 0
-  PetscInt                 i;
-  for (i=1; i<=compnum; i++) {
-    header->offsetvarrel[i] = header->offsetvarrel[i-1] + header->nvar[i-1];
-    printf(" offsetvarrel[%d] = %d\n",i,header->offsetvarrel[i]);
-  }
-#endif
   PetscFunctionReturn(0);
 }
 
@@ -1434,8 +1437,67 @@ PetscErrorCode DMNetworkSetNumVariables(DM dm,PetscInt p,PetscInt nvar)
   PetscFunctionReturn(0);
 }
 
-/* Sets up the array that holds the data for all components and its associated section. This
-   function is called during DMSetUp() */
+/*@
+  DMNetworkAddComponentAndNumVariables - Adds a network component and number of variables at the given point (vertex/edge)
+
+  Not Collective
+
+  Input Parameters:
++ dm           - The DMNetworkObject
+. netnum       - subnetwork number
+. p            - the vertex/edge point
+. componentkey - component key returned while registering the component
+. compvalue    - pointer to the data structure for the component
+- nvar         - number of variables for the component at the vertex/edge point
+
+  Level: beginner
+
+.seealso: DMNetworkAddComponent, DMNetworkSetNumVariables
+@*/
+PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt componentkey,void* compvalue,PetscInt nvar)
+{
+  PetscErrorCode           ierr;
+  DM_Network               *network = (DM_Network*)dm->data;
+  DMNetworkComponent       *component = &network->component[componentkey];
+  DMNetworkComponentHeader header = &network->header[p];
+  DMNetworkComponentValue  cvalue = &network->cvalue[p];
+
+  PetscFunctionBegin;
+#if 0
+  PetscBool   iscouplev=PETSC_FALSE;
+  PetscMPIInt rank;
+  MPI_Comm    comm;
+
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = DMNetworkIsCouplingVertex(dm,p,&iscouplev);CHKERRQ(ierr);
+  if (iscouplev) {
+    printf("[%d] AddComponentAndNumVar: p %d is a sv, compkey %d, compvalue %p, nvar %d\n\n",rank,p,componentkey,compvalue,nvar);
+  }
+#endif
+
+  /* Modified from DMNetworkAddComponent() and DMNetworkSetComponentNumVariables() */
+  if (header->ndata == MAX_DATA_AT_POINT) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components at a point exceeds the max %D",MAX_DATA_AT_POINT);
+
+  header->size[header->ndata] = component->size;
+  ierr = PetscSectionAddDof(network->DataSection,p,component->size);CHKERRQ(ierr);
+  header->key[header->ndata] = componentkey;
+  if (header->ndata != 0) header->offset[header->ndata] = header->offset[header->ndata-1] + header->size[header->ndata-1];
+  header->nvar[header->ndata] = 0;
+  cvalue->data[header->ndata] = (void*)compvalue;
+
+  ierr = DMNetworkSetComponentNumVariables(dm,p,header->ndata,nvar);CHKERRQ(ierr);
+  header->ndata++;
+  PetscFunctionReturn(0);
+}
+
+#include <petsc/private/sfimpl.h> /*I "petscsf.h" I*/
+
+/*
+ Sets up the array that holds the data for all components and its associated section. This
+   function is called during DMSetUp().
+ It copies the data for all components in a contiguous array called componentdataarray. The component data is stored pointwise with an additional ‘header’ (metadata) stored for each point. The header has metadata information such as number of components at each point, number of variables for each component, offsets for the components data, etc.
+*/
 PetscErrorCode DMNetworkComponentSetUp(DM dm)
 {
   PetscErrorCode           ierr;
@@ -1446,6 +1508,99 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   DMNetworkComponentGenericDataType *componentdataarray;
 
   PetscFunctionBegin;
+  PetscMPIInt rank,size;
+  MPI_Comm    comm;
+  PetscInt    nsv;
+  const PetscInt *svtx;
+
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Barrier(comm);CHKERRQ(ierr);
+
+  if (size > 1) {
+    PetscSF        sf = network->plex->sf;
+    const PetscInt *degree;
+    PetscMPIInt    tag,proc,flg,leaf[size],leaf_idx[size];
+    PetscInt       sbuf[1],rbuf[1],ncomp_orig,nvar[size];;
+    MPI_Request    s_waits[size],r_req;
+    MPI_Status     s_status[size],r_status;
+
+    ierr = PetscSFComputeDegreeBegin(sf,&degree);CHKERRQ(ierr);
+    ierr = PetscSFComputeDegreeEnd(sf,&degree);CHKERRQ(ierr);
+
+    //ierr = PetscSFView(sf,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    //ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"## Root degrees\n");CHKERRQ(ierr);
+    //ierr = PetscIntView(sf->nroots,degree,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+
+#if 1 //NEW -- ghost shared vertices needs nvar to be matched with the owener's , not for component!!!
+
+    ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
+    for (p=0; p<nsv; p++) {
+      header = &network->header[svtx[p]];
+      ncomp_orig = header->ndata;
+
+      ierr = PetscSectionGetDof(network->DofSection,svtx[p],&nvar[rank]);CHKERRQ(ierr);
+      //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] nvar %d\n",rank,nvar[rank]);
+
+      /* (1) root recv from leaves about their ranks and index of shared vertex */
+      /* -----------------------------------------------------------------------*/
+      if (degree[svtx[p]]) {
+        //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] root: ncomp %d; v %d, nvar %d; sfdegree %d\n",rank,ncomp_orig,svtx[p],nvar[rank],degree[svtx[p]]);CHKERRQ(ierr);
+
+        tag = svtx[p];
+        i = 0;
+        while (i < degree[svtx[p]]) { /* num of leaves */
+          ierr = MPI_Iprobe(MPI_ANY_SOURCE,tag,comm,&flg,&r_status);CHKERRQ(ierr);
+          if (flg) {
+            proc = r_status.MPI_SOURCE;
+            ierr = MPI_Irecv(rbuf,1,MPIU_INT,proc,r_status.MPI_TAG,comm,&r_req);CHKERRQ(ierr);
+            ierr = MPI_Wait(&r_req,&r_status);CHKERRQ(ierr);
+            leaf[i]     = proc;
+            leaf_idx[i] = rbuf[0];
+            //printf("[%d] root recv from [%d] with leaf sv %d\n",rank,proc,rbuf[0]);
+            i++;
+          }
+        }
+      } else {
+        /* svtx[p] is a leaf, find its owner's rank and index */
+        for (i=0; i<sf->nleaves; i++) {
+          if (sf->mine[i] == svtx[p]) {
+            //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] leaf: ncomp %d; v %d, nvar %d; remote([%d], %d)\n",rank,ncomp_orig,svtx[p],nvar[rank],sf->remote[i].rank,sf->remote[i].index);CHKERRQ(ierr);
+            sbuf[0] = svtx[p];
+            proc    = sf->remote[i].rank;
+            tag     = sf->remote[i].index;
+            ierr = MPI_Isend(sbuf,1,MPIU_INT,proc,tag,comm,&s_waits[0]);CHKERRQ(ierr);
+            ierr = MPI_Wait(&s_waits[0],&s_status[0]);CHKERRQ(ierr);
+            //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] leaf send to [%d]\n",rank,proc);CHKERRQ(ierr);
+            break;
+          }
+        }
+      }
+
+      /* (2) leaves recv nvar from the root */
+      /* -----------------------------------*/
+      if (degree[svtx[p]] == 0) { /* leaf processor recv nvar from the root */
+        proc = sf->remote[i].rank;
+        tag  = svtx[p];
+        ierr = MPI_Irecv(rbuf,1,MPIU_INT,proc,tag,comm,&r_req);CHKERRQ(ierr);
+        ierr = MPI_Wait(&r_req,&r_status);CHKERRQ(ierr); //??? ex1 hangs here
+        //printf("[%d] leaf recv from root [%d] with nvar %d; tag %d\n",rank,proc,rbuf[0],tag);
+        ierr = DMNetworkAddNumVariables(dm,svtx[p],rbuf[0]);CHKERRQ(ierr);
+      } else { /* root processor sends nvar to its leaves */
+        sbuf[0] = nvar[rank];
+        for (i=0; i<degree[svtx[p]]; i++) {
+          proc = leaf[i];
+          tag  = leaf_idx[i];
+          ierr = MPI_Isend(sbuf,1,MPIU_INT,proc,tag,comm,&s_waits[i]);CHKERRQ(ierr);
+          //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] send nvar %d to [%d], tag %d\n",rank,sbuf[0],proc,tag);CHKERRQ(ierr);
+        }
+        ierr = MPI_Waitall(degree[svtx[p]],s_waits,s_status);CHKERRQ(ierr);
+      }
+    } /* endof for (p=0; p<nsv; p++) */
+#endif //NEW
+  } /* endof if (size > 1) */
+
   ierr = PetscSectionSetUp(network->DataSection);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(network->DataSection,&arr_size);CHKERRQ(ierr);
   ierr = PetscMalloc1(arr_size,&network->componentdataarray);CHKERRQ(ierr);
@@ -1458,6 +1613,7 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
     /* Copy data */
     cvalue = &network->cvalue[p];
     ncomp = header->ndata;
+
     for (i = 0; i < ncomp; i++) {
       offset = offsetp + network->dataheadersize + header->offset[i];
       ierr = PetscMemcpy(componentdataarray+offset,cvalue->data[i],header->size[i]*sizeof(DMNetworkComponentGenericDataType));CHKERRQ(ierr);
@@ -1632,6 +1788,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   if (size == 1) PetscFunctionReturn(0);
 
+  /* This routine moves the component data to the appropriate processors. It makes use of the DataSection and the componentdataarray to move the component data to appropriate processors and returns a new DataSection and new componentdataarray. */
 #if 0
   PetscMPIInt rank;
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
@@ -1644,15 +1801,15 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   ierr = DMPlexGetPartitioner(oldDMnetwork->plex,&part);CHKERRQ(ierr);
   ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
 
-  /* Distribute plex dm and dof section */
+  /* Distribute plex dm */
   ierr = DMPlexDistribute(oldDMnetwork->plex,overlap,&pointsf,&newDMnetwork->plex);CHKERRQ(ierr);
 
   /* Distribute dof section */
-  ierr = PetscSectionCreate(PetscObjectComm((PetscObject)*dm),&newDMnetwork->DofSection);CHKERRQ(ierr);
+  ierr = PetscSectionCreate(comm,&newDMnetwork->DofSection);CHKERRQ(ierr);
   ierr = PetscSFDistributeSection(pointsf,oldDMnetwork->DofSection,NULL,newDMnetwork->DofSection);CHKERRQ(ierr);
-  ierr = PetscSectionCreate(PetscObjectComm((PetscObject)*dm),&newDMnetwork->DataSection);CHKERRQ(ierr);
 
   /* Distribute data and associated section */
+  ierr = PetscSectionCreate(comm,&newDMnetwork->DataSection);CHKERRQ(ierr);
   ierr = DMPlexDistributeData(newDMnetwork->plex,pointsf,oldDMnetwork->DataSection,MPIU_INT,(void*)oldDMnetwork->componentdataarray,newDMnetwork->DataSection,(void**)&newDMnetwork->componentdataarray);CHKERRQ(ierr);
 
   ierr = PetscSectionGetChart(newDMnetwork->DataSection,&newDMnetwork->pStart,&newDMnetwork->pEnd);CHKERRQ(ierr);
@@ -1969,7 +2126,6 @@ PetscErrorCode DMNetworkIsGhostVertex(DM dm,PetscInt p,PetscBool *isghost)
   PetscSection   sectiong;
 
   PetscFunctionBegin;
-  if (!dm->setupcalled) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE,"Must call DMSetUp() first");
   *isghost = PETSC_FALSE;
   ierr = DMGetGlobalSection(network->plex,&sectiong);CHKERRQ(ierr);
   ierr = PetscSectionGetOffset(sectiong,p,&offsetg);CHKERRQ(ierr);
