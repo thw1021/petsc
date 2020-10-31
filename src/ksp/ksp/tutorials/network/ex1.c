@@ -274,14 +274,14 @@ int main(int argc,char ** argv)
     for (i = eStart; i < eEnd; i++) {
       ierr = DMNetworkAddComponent(dmnetwork,i,componentkey[1],&branch[i-eStart]);CHKERRQ(ierr);
       /* Add number of variables */
-      ierr = DMNetworkAddNumVariables(dmnetwork,i,1);CHKERRQ(ierr);
+      ierr = DMNetworkSetComponentNumVariables(dmnetwork,i,1,1);CHKERRQ(ierr);
     }
 
     ierr = DMNetworkGetVertexRange(dmnetwork,&vStart,&vEnd);CHKERRQ(ierr);
     for (i = vStart; i < vEnd; i++) {
       ierr = DMNetworkAddComponent(dmnetwork,i,componentkey[0],&node[i-vStart]);CHKERRQ(ierr);
       /* Add number of variables */
-      ierr = DMNetworkAddNumVariables(dmnetwork,i,1);CHKERRQ(ierr);
+      ierr = DMNetworkSetComponentNumVariables(dmnetwork,i,0,1);CHKERRQ(ierr);
     }
   }
 
