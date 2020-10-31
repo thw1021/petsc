@@ -21,7 +21,7 @@ int main(int argc,char ** argv)
   PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   DM             dmnetwork;
-  PetscInt       i,j,net,nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,goffset,row;
+  PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,goffset,row;
   PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
   const PetscInt *vtx,*edges;
   PetscBool      iscouplev,ghost,distribute=PETSC_TRUE;
@@ -35,17 +35,15 @@ int main(int argc,char ** argv)
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
 
   /* Create a network of subnetworks */
-  if (size == 1) nsubnet = 2;
-  else nsubnet = (PetscInt)size;
-  ierr = PetscOptionsGetInt(NULL,NULL,"-nsubnet",&nsubnet,NULL);CHKERRQ(ierr);
-  if (nsubnet > 10) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"nsubnet cannot >10 for this example");
+  if (size == 1) Nsubnet = 2;
+  else Nsubnet = (PetscInt)size;
+  ierr = PetscOptionsGetInt(NULL,NULL,"-Nsubnet",&Nsubnet,NULL);CHKERRQ(ierr);
+  if (Nsubnet > 10) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Nsubnet cannot >10 for this example");
 
-  for (i=0; i<nsubnet; i++) {
-    numVertices[i] = 0; numEdges[i] = 0;
-  }
+  for (i=0; i<Nsubnet; i++) {numVertices[i] = 0; numEdges[i] = 0;}
 
   /* when size>1, process[i] creates subnetwork[i] */
-  for (i=0; i<nsubnet; i++) {
+  for (i=0; i<Nsubnet; i++) {
     if (i == 0 && (size == 1 || (rank == i && size >1))) {
       numVertices[i] = 4; numEdges[i] = 3;
       ierr = PetscMalloc1(2*numEdges[i],&edgelist[i]);CHKERRQ(ierr);
@@ -81,16 +79,16 @@ int main(int argc,char ** argv)
   ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(struct _p_Comp1),&compkey1);CHKERRQ(ierr);
 
   /* Set number of subnetworks, number of vertices and edges */
-  ierr = DMNetworkSetSizes(dmnetwork,PETSC_DECIDE,nsubnet);CHKERRQ(ierr);
+  ierr = DMNetworkSetSizes(dmnetwork,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
 
-  for (i=0; i<nsubnet; i++) {
+  for (i=0; i<Nsubnet; i++) {
     PetscInt netNum = -1;
     ierr = DMNetworkAddSubnetwork(dmnetwork,NULL,numVertices[i],numEdges[i],&netNum);CHKERRQ(ierr);
   }
 
   /* Add shared vertices -- all processes hold this info */
   asvtx = bsvtx = 0;
-  for (j=1; j<nsubnet; j++) {
+  for (j=1; j<Nsubnet; j++) {
     /* vertex subnet[0].0 shares with vertex subnet[j].0 */
     ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,1,&asvtx,&bsvtx);CHKERRQ(ierr);
   }
@@ -102,30 +100,52 @@ int main(int argc,char ** argv)
   ierr = DMNetworkLayoutSetUp(dmnetwork);CHKERRQ(ierr);
 
   /* Get SubnetworkInfo(); Add nvar=1 to subnet[0] and nvar=2 to other subnets, excluding coupling vertex */
-  for (net=0; net<nsubnet; net++) {
+  for (net=0; net<Nsubnet; net++) {
     ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[v],&iscouplev);CHKERRQ(ierr);
-      if (iscouplev) continue;
+      if (iscouplev) {
+ #if 0
+        // current version requirs all processess add componenets and nvar at the shared vertices!
+        //printf("[%d] net %d, v[%d]=%d is a shared vertex\n",rank,net,v,vtx[v]);
+        if (net == 0) {
+          //printf("[%d] net %d, v[%d]=%d is a shared vertex, add comp0[0]\n",rank,net,v,vtx[v]);
+          ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0[0],1);CHKERRQ(ierr);
+          //ierr = DMNetworkAddComponent(dmnetwork,vtx[v],compkey0,&comp0[0]);CHKERRQ(ierr);
+          //ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[v],0,1);CHKERRQ(ierr);
+        }
+        if (net == 1) {
+          //printf("[%d] net %d, v[%d]=%d is a shared vertex, add comp1\n",rank,net,v,vtx[v]);
+          ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1[0],2);CHKERRQ(ierr);
+          //ierr = DMNetworkAddComponent(dmnetwork,vtx[v],compkey1,&comp1[0]);CHKERRQ(ierr);
+          //ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[v],1,2);CHKERRQ(ierr);
+        }
+#endif
+        continue;
+      }
 
       if (!net) {
-        ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],1);CHKERRQ(ierr);
+        ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[v],0,1);CHKERRQ(ierr);
       } else {
-        ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],2);CHKERRQ(ierr);
+        ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[v],1,2);CHKERRQ(ierr);
       }
     }
   }
-
+#if 1
   /* At the coupling vertex, add componenets 'comp0' 'comp1', and the associated num of variables */
   /* All processors must do it, thus component must have same values for different processors -- do not know why? */
   ierr = DMNetworkGetSubnetworkSharedVertices(dmnetwork,&nv,&vtx);CHKERRQ(ierr);
+  //printf("[%d] nsv %d, sv %d\n",rank,nv,vtx[0]);
   for (i=0; i<nv; i++) {
-    ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey0,&comp0[0]);CHKERRQ(ierr);
-    ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey1,&comp1[0]);CHKERRQ(ierr);
-    ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[i],0,1);CHKERRQ(ierr);
-    ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[i],1,2);CHKERRQ(ierr);
-  }
+    ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[i],compkey0,&comp0[0],1);CHKERRQ(ierr);
+    //ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey0,&comp0[0]);CHKERRQ(ierr);
+    //ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[i],0,1);CHKERRQ(ierr);
 
+    ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[i],compkey1,&comp1[0],2);CHKERRQ(ierr);
+    //ierr = DMNetworkAddComponent(dmnetwork,vtx[i],compkey1,&comp1[0]);CHKERRQ(ierr);
+    //ierr = DMNetworkSetComponentNumVariables(dmnetwork,vtx[i],1,2);CHKERRQ(ierr);
+  }
+#endif
   /* Enable runtime option of graph partition type -- must be called before DMSetUp() */
   if (size > 1) {
     DM               plexdm;
@@ -175,7 +195,7 @@ int main(int argc,char ** argv)
 
   /* Free work space */
   ierr = VecDestroy(&X);CHKERRQ(ierr);
-  for (i=0; i<nsubnet; i++) {
+  for (i=0; i<Nsubnet; i++) {
     if (size == 1 || rank == i) {ierr = PetscFree(edgelist[i]);CHKERRQ(ierr);}
   }
   ierr = PetscFree2(comp0,comp1);CHKERRQ(ierr);
