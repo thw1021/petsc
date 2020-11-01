@@ -1999,7 +1999,101 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   PetscFunctionReturn(0);
 }
 
-PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqDense(Mat);
+//PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqDense(Mat);
+
+static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
+{
+  Mat_Product        *product = C->product;
+  Mat                A,B;
+  PetscInt           m,n;
+  PetscBool          cisdense,flg;
+  PetscErrorCode     ierr;
+  MatMatCusparse     *mmdata;
+  Mat_SeqAIJCUSPARSE *Acusp,*Bcusp;
+  Mat_SeqAIJCUSPARSEMultStruct *Amat,*Bmat;
+  CsrMatrix* *Acsr,*Bcsr;
+  cusparseStatus_t   stat;
+  PetscScalar alpha = 1.0;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C,1);
+  if (C->product->data) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Product data not empty");
+  A    = product->A;
+  B    = product->B;
+  ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for type %s",((PetscObject)A)->type_name);
+  ierr = PetscObjectTypeCompare((PetscObject)b,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for B of type %s",((PetscObject)B)->type_name);
+  Acusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
+  Bcusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
+  if (Acusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Only for MAT_CUSPARSE_CSR format");
+  if (Bcusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Only for MAT_CUSPARSE_CSR format");
+  Amat = Acusp->mat;
+  Bmat = Bcusp->mat;
+  if (!Amat) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing A mult struct");
+  if (!Bmat) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing B mult struct");
+  Acsr = (CsrMatrix*)Amat->mat;
+  Bcsr = (CsrMatrix*)Bmat->mat;
+  if (!Acsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing A CSR struct");
+  if (!Bcsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing B CSR struct");
+  switch (product->type) {
+  case MATPRODUCT_AB:
+    m = A->rmap->n;
+    n = B->cmap->n;
+    break;
+  case MATPRODUCT_AtB:
+    m = A->cmap->n;
+    n = B->cmap->n;
+    break;
+  case MATPRODUCT_ABt:
+    m = A->rmap->n;
+    n = B->rmap->n;
+    break;
+  case MATPRODUCT_PtAP:
+    m = B->cmap->n;
+    n = B->cmap->n;
+    break;
+  case MATPRODUCT_RARt:
+    m = B->rmap->n;
+    n = B->rmap->n;
+    break;
+  default:
+    SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Unsupported product type %s",MatProductTypes[product->type]);
+  }
+  ierr = MatSetSizes(C,m,n,m,n);CHKERRQ(ierr);
+  ierr = MatSetType(C,MATSEQAIJCUSPARSE);CHKERRQ(ierr);
+
+  /* product data */
+  ierr = PetscNew(&mmdata);CHKERRQ(ierr);
+  stat = cusparseCreateCsrgemm2Info(&mmdata->info);CHKERRCUSPARSE(stat);
+  stat = cusparseDcsrgemm2_bufferSizeExt(handle, A->rmap->n, B->cmap->n, A->cmap->n, &alpha,
+                                         Amat->matDescr, nnzA, csrRowPtrA, csrColIndA,
+                                         Bmat->matDescr, nnzB, csrRowPtrB, csrColIndB,
+                                         descrD, nnzD, csrRowPtrD, csrColIndD,
+                                         &beta,
+                                         info,
+                                         &bufferSize);
+cudaMalloc(&buffer, bufferSize);
+
+// step 3: compute csrRowPtrC
+cudaMalloc((void**)&csrRowPtrC, sizeof(int)*(m+1));
+cusparseXcsrgemm2Nnz(handle, m, n, k, 
+        descrA, nnzA, csrRowPtrA, csrColIndA,
+        descrB, nnzB, csrRowPtrB, csrColIndB,
+        &beta
+        descrD, nnzD, csrRowPtrD, csrColIndD,
+        descrC, csrRowPtrC, nnzTotalDevHostPtr,
+        info, buffer );
+
+
+  C->product->data    = mmdata;
+
+
+
+  C->product->destroy = MatDestroy_MatMatCusparse;
+  C->ops->productnumeric = MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE;
+  PetscFunctionReturn(0);
+}
 
 /* handles dense B */
 static PetscErrorCode MatProductSetFromOptions_SeqAIJCUSPARSE(Mat C)
@@ -2011,18 +2105,33 @@ static PetscErrorCode MatProductSetFromOptions_SeqAIJCUSPARSE(Mat C)
   MatCheckProduct(C,1);
   if (!product->A) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing A");
   if (product->A->boundtocpu) {
-    ierr = MatProductSetFromOptions_SeqAIJ_SeqDense(C);CHKERRQ(ierr);
-    PetscFunctionReturn(0);
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"WTF");
+    //ierr = MatProductSetFromOptions_SeqAIJ_SeqDense(C);CHKERRQ(ierr);
+    //PetscFunctionReturn(0);
   }
-  switch (product->type) {
-  case MATPRODUCT_AB:
-  case MATPRODUCT_AtB:
-  case MATPRODUCT_ABt:
-  case MATPRODUCT_PtAP:
-  case MATPRODUCT_RARt:
-    C->ops->productsymbolic = MatProductSymbolic_SeqAIJCUSPARSE_SeqDENSECUDA;
-  default:
-    break;
+  ierr = PetscObjectBaseTypeCompare((PetscObject)product->B,MATSEQDENSE,&isdense);CHKERRQ(ierr);
+  if (isdense) {
+    switch (product->type) {
+    case MATPRODUCT_AB:
+    case MATPRODUCT_AtB:
+    case MATPRODUCT_ABt:
+    case MATPRODUCT_PtAP:
+    case MATPRODUCT_RARt:
+      C->ops->productsymbolic = MatProductSymbolic_SeqAIJCUSPARSE_SeqDENSECUDA;
+    default:
+      break;
+    }
+  } else { /* sparse */
+    switch (product->type) {
+    case MATPRODUCT_AB:
+    //case MATPRODUCT_AtB:
+    //case MATPRODUCT_ABt:
+    //case MATPRODUCT_PtAP:
+    //case MATPRODUCT_RARt:
+      C->ops->productsymbolic = MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE;
+    default:
+      break;
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -2382,6 +2491,7 @@ static PetscErrorCode MatDestroy_SeqAIJCUSPARSE(Mat A)
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatCUSPARSESetFormat_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqaijcusparse_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatFactorGetSolverType_C",NULL);CHKERRQ(ierr);
   ierr = MatDestroy_SeqAIJ(A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -2422,6 +2532,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
     A->ops->multhermitiantransposeadd = NULL;
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",NULL);CHKERRQ(ierr);
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",NULL);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqaijcusparse_C",NULL);CHKERRQ(ierr);
   } else {
     A->ops->mult                      = MatMult_SeqAIJCUSPARSE;
     A->ops->multadd                   = MatMultAdd_SeqAIJCUSPARSE;
@@ -2431,6 +2542,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
     A->ops->multhermitiantransposeadd = MatMultHermitianTransposeAdd_SeqAIJCUSPARSE;
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqaijcusparse_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
   }
   A->boundtocpu = flg;
   a->inode.use = flg;
