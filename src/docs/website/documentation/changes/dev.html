@@ -109,17 +109,38 @@
 
       <!-- Please use Imperative with first letter cap, e.g. Add, Improve, Change etc. WITHOUT dot at the end -->
       <h4>General:</h4>
+        <ul>
+          <li>Add PetscKokkosInitializeCheck(), which initializes Kokkos if it is not yet initialized</li>
+        </ul>
       <h4>Configure/Build:</h4>
       <h4>IS:</h4>
       <h4>PetscDraw:</h4>
       <h4>VecScatter / PetscSF:</h4>
+        <ul>
+          <li>VecScatter is now the same type as PetscSF, in other words, we have typedef PetscSF VecScatter</li>
+          <li>Remove VecScatter types VECSCATTER{SEQ,MPI1,MPI3,MPI3NODE,SF}. One can use all PetcSF types as VecScatter types</li>
+        </ul>
       <h4>PF:</h4>
       <h4>Vec:</h4>
+        <ul>
+          <li>Change Vec{Get,Restore}Array{Read}Inplace to Vec{Get,Restore}Array{Read}AndMemType() and add an extra argument to also return the memory type of the array</li>
+        </ul>
       <h4>PetscSection:</h4>
       <h4>PetscPartitioner:</h4>
       <h4>Mat:</h4>
       <h4>PC:</h4>
+      <ul>
+        <li>Add PCGAMGSetRankReductionFactors(), provide an array, <tt>-pc_gamg_rank_reduction_factors factors</tt>, tp specify factor by which to reduce active processors on coarse grids in PCGAMG that overrides default heuristics </li>
+      </ul>
       <h4>KSP:</h4>
+       <ul>
+         <li>Add <tt>-all_ksp_monitor</tt> which turns on monitoring for all KSP solvers regardless of their prefix. This is useful for monitor solvers
+           with inner solvers such as PCMG, PCGAMG, PCFIELDSPLIT.
+         </li>
+         <li>Add support for monitor KSPPREONLY. This is useful for monitor solvers
+           with inner solvers such as PCMG, PCGAMG, PCFIELDSPLIT.
+         </li>
+      </ul>
       <h4>SNES:</h4>
       <ul>
         <li>Add SNESConvergedCorrectPressure(), which can be selected using <tt>-snes_convergence_test correct_pressure</tt></li>
@@ -128,7 +149,13 @@
       <h4>TS:</h4>
       <h4>TAO:</h4>
       <h4>DM/DA:</h4>
+      <ul>
+        <li>Change DMDACreatePatchIS() to collective operation and add an extra rgument to indicate whether off processor values will be returned.
+      </ul>
       <h4>DMPlex:</h4>
+      <ul>
+        <li>Using -petscpartitioner_simple_node_grid and -petscpartitioner_simple_process_grid, the Simple partitioner can now make grid partitions</li>
+      </ul>
       <h4>DT:</h4>
       <h4>PetscViewer:</h4>
       <h4>SYS:</h4>

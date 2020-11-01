@@ -248,6 +248,8 @@ PetscErrorCode PetscSFDestroy(PetscSF *sf)
   if (--((PetscObject)(*sf))->refct > 0) {*sf = NULL; PetscFunctionReturn(0);}
   ierr = PetscSFReset(*sf);CHKERRQ(ierr);
   if ((*sf)->ops->Destroy) {ierr = (*(*sf)->ops->Destroy)(*sf);CHKERRQ(ierr);}
+  ierr = PetscSFDestroy(&(*sf)->vscat.lsf);CHKERRQ(ierr);
+  if ((*sf)->vscat.bs > 1) {ierr = MPI_Type_free(&(*sf)->vscat.unit);CHKERRQ(ierr);}
   ierr = PetscHeaderDestroy(sf);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -706,6 +708,7 @@ PetscErrorCode PetscSFDuplicate(PetscSF sf,PetscSFDuplicateOption opt,PetscSF *n
 {
   PetscSFType    type;
   PetscErrorCode ierr;
+  MPI_Datatype   dtype=MPIU_SCALAR;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -726,6 +729,14 @@ PetscErrorCode PetscSFDuplicate(PetscSF sf,PetscSFDuplicateOption opt,PetscSF *n
       ierr = PetscSFSetGraphWithPattern(*newsf,sf->map,sf->pattern);CHKERRQ(ierr);
     }
   }
+  /* Since oldtype is committed, so is newtype, according to MPI */
+  if (sf->vscat.bs > 1) {ierr = MPI_Type_dup(sf->vscat.unit,&dtype);CHKERRQ(ierr);}
+  (*newsf)->vscat.bs     = sf->vscat.bs;
+  (*newsf)->vscat.unit   = dtype;
+  (*newsf)->vscat.to_n   = sf->vscat.to_n;
+  (*newsf)->vscat.from_n = sf->vscat.from_n;
+  /* Do not copy lsf. Build it on demand since it is rarely used */
+
 #if defined(PETSC_HAVE_DEVICE)
   (*newsf)->backend              = sf->backend;
   (*newsf)->use_default_stream   = sf->use_default_stream;
@@ -1406,7 +1417,11 @@ PetscErrorCode PetscSFCreateEmbeddedLeafSF(PetscSF sf,PetscInt nselected,const P
 
    Level: intermediate
 
-.seealso: PetscSFBcastAndOpEnd(), PetscSFBcastBegin(), PetscSFBcastEnd()
+   Notes:
+    When petsc is configured with device support, it will use its own mechanism to figure out whether the given data pointers
+    are host pointers or device pointers, which may incur a noticable cost. If you already knew the info, you should
+    use PetscSFBcastAndOpWithMemTypeBegin() instead.
+.seealso: PetscSFBcastAndOpEnd(), PetscSFBcastBegin(), PetscSFBcastEnd(), PetscSFBcastAndOpWithMemTypeBegin()
 @*/
 PetscErrorCode PetscSFBcastAndOpBegin(PetscSF sf,MPI_Datatype unit,const void *rootdata,void *leafdata,MPI_Op op)
 {
@@ -1416,11 +1431,44 @@ PetscErrorCode PetscSFBcastAndOpBegin(PetscSF sf,MPI_Datatype unit,const void *r
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
   ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(PETSCSF_BcastAndOpBegin,sf,0,0,0);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventBegin(PETSCSF_BcastAndOpBegin,sf,0,0,0);CHKERRQ(ierr);}
   ierr = PetscGetMemType(rootdata,&rootmtype);CHKERRQ(ierr);
   ierr = PetscGetMemType(leafdata,&leafmtype);CHKERRQ(ierr);
   ierr = (*sf->ops->BcastAndOpBegin)(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PETSCSF_BcastAndOpBegin,sf,0,0,0);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventEnd(PETSCSF_BcastAndOpBegin,sf,0,0,0);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
+/*@C
+   PetscSFBcastAndOpWithMemTypeBegin - begin pointwise broadcast with root value being reduced to leaf value with explicit memory types, to be concluded with call to PetscSFBcastAndOpEnd()
+
+   Collective on PetscSF
+
+   Input Arguments:
++  sf - star forest on which to communicate
+.  unit - data type associated with each node
+.  rootmtype - memory type of rootdata
+.  rootdata - buffer to broadcast
+.  leafmtype - memory type of leafdata
+-  op - operation to use for reduction
+
+   Output Arguments:
+.  leafdata - buffer to be reduced with values from each leaf's respective root
+
+   Level: intermediate
+
+.seealso: PetscSFBcastAndOpEnd(), PetscSFBcastBegin(), PetscSFBcastEnd(),PetscSFBcastAndOpBegin()
+@*/
+PetscErrorCode PetscSFBcastAndOpWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
+  ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventBegin(PETSCSF_BcastAndOpBegin,sf,0,0,0);CHKERRQ(ierr);}
+  ierr = (*sf->ops->BcastAndOpBegin)(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventEnd(PETSCSF_BcastAndOpBegin,sf,0,0,0);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -1448,9 +1496,9 @@ PetscErrorCode PetscSFBcastAndOpEnd(PetscSF sf,MPI_Datatype unit,const void *roo
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
-  ierr = PetscLogEventBegin(PETSCSF_BcastAndOpEnd,sf,0,0,0);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventBegin(PETSCSF_BcastAndOpEnd,sf,0,0,0);CHKERRQ(ierr);}
   ierr = (*sf->ops->BcastAndOpEnd)(sf,unit,rootdata,leafdata,op);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PETSCSF_BcastAndOpEnd,sf,0,0,0);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventEnd(PETSCSF_BcastAndOpEnd,sf,0,0,0);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -1470,7 +1518,12 @@ PetscErrorCode PetscSFBcastAndOpEnd(PetscSF sf,MPI_Datatype unit,const void *roo
 
    Level: intermediate
 
-.seealso: PetscSFBcastBegin()
+   Notes:
+    When petsc is configured with device support, it will use its own mechanism to figure out whether the given data pointers
+    are host pointers or device pointers, which may incur a noticable cost. If you already knew the info, you should
+    use PetscSFReduceWithMemTypeBegin() instead.
+
+.seealso: PetscSFBcastBegin(), PetscSFReduceWithMemTypeBegin()
 @*/
 PetscErrorCode PetscSFReduceBegin(PetscSF sf,MPI_Datatype unit,const void *leafdata,void *rootdata,MPI_Op op)
 {
@@ -1480,11 +1533,44 @@ PetscErrorCode PetscSFReduceBegin(PetscSF sf,MPI_Datatype unit,const void *leafd
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
   ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(PETSCSF_ReduceBegin,sf,0,0,0);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventBegin(PETSCSF_ReduceBegin,sf,0,0,0);CHKERRQ(ierr);}
   ierr = PetscGetMemType(rootdata,&rootmtype);CHKERRQ(ierr);
   ierr = PetscGetMemType(leafdata,&leafmtype);CHKERRQ(ierr);
   ierr = (sf->ops->ReduceBegin)(sf,unit,leafmtype,leafdata,rootmtype,rootdata,op);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PETSCSF_ReduceBegin,sf,0,0,0);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventEnd(PETSCSF_ReduceBegin,sf,0,0,0);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
+/*@C
+   PetscSFReduceWithMemTypeBegin - begin reduction of leafdata into rootdata with explicit memory types, to be completed with call to PetscSFReduceEnd()
+
+   Collective
+
+   Input Arguments:
++  sf - star forest
+.  unit - data type
+.  leafmtype - memory type of leafdata
+.  leafdata - values to reduce
+.  rootmtype - memory type of rootdata
+-  op - reduction operation
+
+   Output Arguments:
+.  rootdata - result of reduction of values from all leaves of each root
+
+   Level: intermediate
+
+.seealso: PetscSFBcastBegin(), PetscSFReduceBegin()
+@*/
+PetscErrorCode PetscSFReduceWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
+  ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventBegin(PETSCSF_ReduceBegin,sf,0,0,0);CHKERRQ(ierr);}
+  ierr = (sf->ops->ReduceBegin)(sf,unit,leafmtype,leafdata,rootmtype,rootdata,op);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventEnd(PETSCSF_ReduceBegin,sf,0,0,0);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -1512,9 +1598,9 @@ PetscErrorCode PetscSFReduceEnd(PetscSF sf,MPI_Datatype unit,const void *leafdat
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
-  ierr = PetscLogEventBegin(PETSCSF_ReduceEnd,sf,0,0,0);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventBegin(PETSCSF_ReduceEnd,sf,0,0,0);CHKERRQ(ierr);}
   ierr = (*sf->ops->ReduceEnd)(sf,unit,leafdata,rootdata,op);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PETSCSF_ReduceEnd,sf,0,0,0);CHKERRQ(ierr);
+  if (!sf->vscat.logging) {ierr = PetscLogEventEnd(PETSCSF_ReduceEnd,sf,0,0,0);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 

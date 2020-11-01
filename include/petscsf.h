@@ -4,19 +4,11 @@
 #if !defined(PETSCSF_H)
 #define PETSCSF_H
 #include <petscsys.h>
-#include <petscis.h>
 #include <petscsftypes.h>
+#include <petscvec.h> /* for Vec, VecScatter etc */
 
 PETSC_EXTERN PetscClassId PETSCSF_CLASSID;
 
-/*J
-    PetscSFType - String with the name of a PetscSF type
-
-   Level: beginner
-
-.seealso: PetscSFSetType(), PetscSF
-J*/
-typedef const char *PetscSFType;
 #define PETSCSFBASIC      "basic"
 #define PETSCSFNEIGHBOR   "neighbor"
 #define PETSCSFALLGATHERV "allgatherv"
@@ -120,16 +112,27 @@ PETSC_EXTERN PetscErrorCode PetscSFGetGroups(PetscSF,MPI_Group*,MPI_Group*);
 PETSC_EXTERN PetscErrorCode PetscSFGetMultiSF(PetscSF,PetscSF*);
 PETSC_EXTERN PetscErrorCode PetscSFCreateInverseSF(PetscSF,PetscSF*);
 
+PETSC_EXTERN PetscErrorCode PetscSFSetGraphLayout(PetscSF,PetscLayout,PetscInt,const PetscInt*,PetscCopyMode,const PetscInt*);
+PETSC_EXTERN PetscErrorCode PetscSFSetGraphSection(PetscSF,PetscSection,PetscSection);
+PETSC_EXTERN PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF, PetscSection, PetscSection, PetscInt **);
+PETSC_EXTERN PetscErrorCode PetscSFDistributeSection(PetscSF, PetscSection, PetscInt **, PetscSection);
+PETSC_EXTERN PetscErrorCode PetscSFCreateSectionSF(PetscSF, PetscSection, PetscInt [], PetscSection, PetscSF *);
+
 /* Reduce rootdata to leafdata using provided operation */
 PETSC_EXTERN PetscErrorCode PetscSFBcastAndOpBegin(PetscSF,MPI_Datatype,const void*,void*,MPI_Op)
   PetscAttrMPIPointerWithType(3,2) PetscAttrMPIPointerWithType(4,2);
 PETSC_EXTERN PetscErrorCode PetscSFBcastAndOpEnd(PetscSF,MPI_Datatype,const void*,void*,MPI_Op)
   PetscAttrMPIPointerWithType(3,2) PetscAttrMPIPointerWithType(4,2);
+PETSC_EXTERN PetscErrorCode PetscSFBcastAndOpWithMemTypeBegin(PetscSF,MPI_Datatype,PetscMemType,const void*,PetscMemType,void*,MPI_Op)
+  PetscAttrMPIPointerWithType(4,2) PetscAttrMPIPointerWithType(6,2);
+
 /* Reduce leafdata into rootdata using provided operation */
 PETSC_EXTERN PetscErrorCode PetscSFReduceBegin(PetscSF,MPI_Datatype,const void*,void *,MPI_Op)
   PetscAttrMPIPointerWithType(3,2) PetscAttrMPIPointerWithType(4,2);
 PETSC_EXTERN PetscErrorCode PetscSFReduceEnd(PetscSF,MPI_Datatype,const void*,void*,MPI_Op)
   PetscAttrMPIPointerWithType(3,2) PetscAttrMPIPointerWithType(4,2);
+PETSC_EXTERN PetscErrorCode PetscSFReduceWithMemTypeBegin(PetscSF,MPI_Datatype,PetscMemType,const void*,PetscMemType,void *,MPI_Op)
+  PetscAttrMPIPointerWithType(4,2) PetscAttrMPIPointerWithType(6,2);
 /* Atomically modifies (using provided operation) rootdata using leafdata from each leaf, value at root at time of modification is returned in leafupdate. */
 PETSC_EXTERN PetscErrorCode PetscSFFetchAndOpBegin(PetscSF,MPI_Datatype,void*,const void*,void*,MPI_Op)
   PetscAttrMPIPointerWithType(3,2) PetscAttrMPIPointerWithType(4,2) PetscAttrMPIPointerWithType(5,2);
@@ -187,6 +190,10 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFGetRanks(PetscSF sf,PetscInt *nranks,c
 @*/
 PETSC_STATIC_INLINE PetscErrorCode PetscSFBcastBegin(PetscSF sf,MPI_Datatype unit,const void* rootdata,void* leafdata) {
   return PetscSFBcastAndOpBegin(sf,unit,rootdata,leafdata,MPIU_REPLACE);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscSFBcastWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void* rootdata,PetscMemType leafmtype,void* leafdata) {
+  return PetscSFBcastAndOpWithMemTypeBegin(sf,unit,rootmtype,rootdata,leafmtype,leafdata,MPIU_REPLACE);
 }
 
 /*@C

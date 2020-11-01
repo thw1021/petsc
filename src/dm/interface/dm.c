@@ -1,3 +1,4 @@
+#include <petscvec.h>
 #include <petsc/private/dmimpl.h>           /*I      "petscdm.h"          I*/
 #include <petsc/private/dmlabelimpl.h>      /*I      "petscdmlabel.h"     I*/
 #include <petsc/private/petscdsimpl.h>      /*I      "petscds.h"     I*/
@@ -16,7 +17,7 @@ PetscLogEvent DM_Convert, DM_GlobalToLocal, DM_LocalToGlobal, DM_LocalToLocal, D
 
 const char *const DMBoundaryTypes[] = {"NONE","GHOSTED","MIRROR","PERIODIC","TWIST","DMBoundaryType","DM_BOUNDARY_", NULL};
 const char *const DMBoundaryConditionTypes[] = {"INVALID","ESSENTIAL","NATURAL","INVALID","INVALID","ESSENTIAL_FIELD","NATURAL_FIELD","INVALID","INVALID","INVALID","NATURAL_RIEMANN","DMBoundaryConditionType","DM_BC_", NULL};
-const char *const DMPolytopeTypes[] = {"vertex", "segment", "tensor_segment", "triangle", "quadrilateral", "tensor_quad", "tetrahedron", "hexahedron", "triangular_prism", "tensor_triangular_prism", "tensor_quadrilateral_prism", "FV_ghost_cell", "interior_ghost_cell", "unknown", "invalid", "DMPolytopeType", "DM_POLYTOPE_", NULL};
+const char *const DMPolytopeTypes[] = {"vertex", "segment", "tensor_segment", "triangle", "quadrilateral", "tensor_quad", "tetrahedron", "hexahedron", "triangular_prism", "tensor_triangular_prism", "tensor_quadrilateral_prism", "pyramid", "FV_ghost_cell", "interior_ghost_cell", "unknown", "invalid", "DMPolytopeType", "DM_POLYTOPE_", NULL};
 /*@
   DMCreate - Creates an empty DM object. The type can then be set with DMSetType().
 
@@ -128,6 +129,7 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   ierr = DMCopyLabels(dm, *newdm, PETSC_COPY_VALUES, PETSC_TRUE);CHKERRQ(ierr);
   (*newdm)->leveldown  = dm->leveldown;
   (*newdm)->levelup    = dm->levelup;
+  (*newdm)->prealloc_only = dm->prealloc_only;
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMSetDimension(*newdm, dim);CHKERRQ(ierr);
   if (dm->ops->clone) {
@@ -941,7 +943,7 @@ PetscErrorCode  DMView(DM dm,PetscViewer v)
 
     Level: beginner
 
-.seealso DMDestroy(), DMView(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
+.seealso DMCreateLocalVector(), DMGetGlobalVector(), DMDestroy(), DMView(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
 
 @*/
 PetscErrorCode  DMCreateGlobalVector(DM dm,Vec *vec)
@@ -975,7 +977,7 @@ PetscErrorCode  DMCreateGlobalVector(DM dm,Vec *vec)
 
     Level: beginner
 
-.seealso DMDestroy(), DMView(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
+.seealso DMCreateGlobalVector(), DMGetLocalVector(), DMDestroy(), DMView(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
 
 @*/
 PetscErrorCode  DMCreateLocalVector(DM dm,Vec *vec)
@@ -2492,6 +2494,7 @@ PetscErrorCode  DMGlobalToLocalBegin(DM dm,Vec g,InsertMode mode,Vec l)
   PetscErrorCode          ierr;
   DMGlobalToLocalHookLink link;
 
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   for (link=dm->gtolhook; link; link=link->next) {
@@ -2503,13 +2506,14 @@ PetscErrorCode  DMGlobalToLocalBegin(DM dm,Vec g,InsertMode mode,Vec l)
   if (sf) {
     const PetscScalar *gArray;
     PetscScalar       *lArray;
+    PetscMemType      lmtype,gmtype;
 
     if (mode == ADD_VALUES) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %D", mode);
-    ierr = VecGetArrayInPlace(l, &lArray);CHKERRQ(ierr);
-    ierr = VecGetArrayReadInPlace(g, &gArray);CHKERRQ(ierr);
-    ierr = PetscSFBcastBegin(sf, MPIU_SCALAR, gArray, lArray);CHKERRQ(ierr);
-    ierr = VecRestoreArrayInPlace(l, &lArray);CHKERRQ(ierr);
-    ierr = VecRestoreArrayReadInPlace(g, &gArray);CHKERRQ(ierr);
+    ierr = VecGetArrayAndMemType(l, &lArray, &lmtype);CHKERRQ(ierr);
+    ierr = VecGetArrayReadAndMemType(g, &gArray, &gmtype);CHKERRQ(ierr);
+    ierr = PetscSFBcastWithMemTypeBegin(sf, MPIU_SCALAR, gmtype, gArray, lmtype, lArray);CHKERRQ(ierr);
+    ierr = VecRestoreArrayAndMemType(l, &lArray);CHKERRQ(ierr);
+    ierr = VecRestoreArrayReadAndMemType(g, &gArray);CHKERRQ(ierr);
   } else {
     if (!dm->ops->globaltolocalbegin) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMGlobalToLocalBegin() for type %s",((PetscObject)dm)->type_name);
     ierr = (*dm->ops->globaltolocalbegin)(dm,g,mode == INSERT_ALL_VALUES ? INSERT_VALUES : (mode == ADD_ALL_VALUES ? ADD_VALUES : mode),l);CHKERRQ(ierr);
@@ -2541,6 +2545,7 @@ PetscErrorCode  DMGlobalToLocalEnd(DM dm,Vec g,InsertMode mode,Vec l)
   PetscScalar            *lArray;
   PetscBool               transform;
   DMGlobalToLocalHookLink link;
+  PetscMemType            lmtype,gmtype;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -2549,11 +2554,11 @@ PetscErrorCode  DMGlobalToLocalEnd(DM dm,Vec g,InsertMode mode,Vec l)
   if (sf) {
     if (mode == ADD_VALUES) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %D", mode);
 
-    ierr = VecGetArrayInPlace(l, &lArray);CHKERRQ(ierr);
-    ierr = VecGetArrayReadInPlace(g, &gArray);CHKERRQ(ierr);
+    ierr = VecGetArrayAndMemType(l, &lArray, &lmtype);CHKERRQ(ierr);
+    ierr = VecGetArrayReadAndMemType(g, &gArray, &gmtype);CHKERRQ(ierr);
     ierr = PetscSFBcastEnd(sf, MPIU_SCALAR, gArray, lArray);CHKERRQ(ierr);
-    ierr = VecRestoreArrayInPlace(l, &lArray);CHKERRQ(ierr);
-    ierr = VecRestoreArrayReadInPlace(g, &gArray);CHKERRQ(ierr);
+    ierr = VecRestoreArrayAndMemType(l, &lArray);CHKERRQ(ierr);
+    ierr = VecRestoreArrayReadAndMemType(g, &gArray);CHKERRQ(ierr);
     if (transform) {ierr = DMPlexGlobalToLocalBasis(dm, l);CHKERRQ(ierr);}
   } else {
     if (!dm->ops->globaltolocalend) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMGlobalToLocalEnd() for type %s",((PetscObject)dm)->type_name);
@@ -2718,6 +2723,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
   PetscScalar            *gArray;
   PetscBool               isInsert, transform, l_inplace = PETSC_FALSE, g_inplace = PETSC_FALSE;
   PetscErrorCode          ierr;
+  PetscMemType            lmtype=PETSC_MEMTYPE_HOST,gmtype=PETSC_MEMTYPE_HOST;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -2751,17 +2757,17 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
     } else if (isInsert) {
       ierr = VecGetArrayRead(l, &lArray);CHKERRQ(ierr);
     } else {
-      ierr = VecGetArrayReadInPlace(l, &lArray);CHKERRQ(ierr);
+      ierr = VecGetArrayReadAndMemType(l, &lArray, &lmtype);CHKERRQ(ierr);
       l_inplace = PETSC_TRUE;
     }
     if (s && isInsert) {
       ierr = VecGetArray(g, &gArray);CHKERRQ(ierr);
     } else {
-      ierr = VecGetArrayInPlace(g, &gArray);CHKERRQ(ierr);
+      ierr = VecGetArrayAndMemType(g, &gArray, &gmtype);CHKERRQ(ierr);
       g_inplace = PETSC_TRUE;
     }
     if (sf && !isInsert) {
-      ierr = PetscSFReduceBegin(sf, MPIU_SCALAR, lArray, gArray, MPIU_SUM);CHKERRQ(ierr);
+      ierr = PetscSFReduceWithMemTypeBegin(sf, MPIU_SCALAR, lmtype, lArray, gmtype, gArray, MPIU_SUM);CHKERRQ(ierr);
     } else if (s && isInsert) {
       PetscInt gStart, pStart, pEnd, p;
 
@@ -2797,7 +2803,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
       }
     }
     if (g_inplace) {
-      ierr = VecRestoreArrayInPlace(g, &gArray);CHKERRQ(ierr);
+      ierr = VecRestoreArrayAndMemType(g, &gArray);CHKERRQ(ierr);
     } else {
       ierr = VecRestoreArray(g, &gArray);CHKERRQ(ierr);
     }
@@ -2805,7 +2811,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
       ierr = VecRestoreArrayRead(tmpl, &lArray);CHKERRQ(ierr);
       ierr = DMRestoreNamedLocalVector(dm, "__petsc_dm_transform_local_copy", &tmpl);CHKERRQ(ierr);
     } else if (l_inplace) {
-      ierr = VecRestoreArrayReadInPlace(l, &lArray);CHKERRQ(ierr);
+      ierr = VecRestoreArrayReadAndMemType(l, &lArray);CHKERRQ(ierr);
     } else {
       ierr = VecRestoreArrayRead(l, &lArray);CHKERRQ(ierr);
     }
@@ -2864,17 +2870,17 @@ PetscErrorCode  DMLocalToGlobalEnd(DM dm,Vec l,InsertMode mode,Vec g)
       ierr = DMGetNamedLocalVector(dm, "__petsc_dm_transform_local_copy", &tmpl);CHKERRQ(ierr);
       ierr = VecGetArrayRead(tmpl, &lArray);CHKERRQ(ierr);
     } else {
-      ierr = VecGetArrayReadInPlace(l, &lArray);CHKERRQ(ierr);
+      ierr = VecGetArrayReadAndMemType(l, &lArray, NULL);CHKERRQ(ierr);
     }
-    ierr = VecGetArrayInPlace(g, &gArray);CHKERRQ(ierr);
+    ierr = VecGetArrayAndMemType(g, &gArray, NULL);CHKERRQ(ierr);
     ierr = PetscSFReduceEnd(sf, MPIU_SCALAR, lArray, gArray, MPIU_SUM);CHKERRQ(ierr);
     if (transform) {
       ierr = VecRestoreArrayRead(tmpl, &lArray);CHKERRQ(ierr);
       ierr = DMRestoreNamedLocalVector(dm, "__petsc_dm_transform_local_copy", &tmpl);CHKERRQ(ierr);
     } else {
-      ierr = VecRestoreArrayReadInPlace(l, &lArray);CHKERRQ(ierr);
+      ierr = VecRestoreArrayReadAndMemType(l, &lArray);CHKERRQ(ierr);
     }
-    ierr = VecRestoreArrayInPlace(g, &gArray);CHKERRQ(ierr);
+    ierr = VecRestoreArrayAndMemType(g, &gArray);CHKERRQ(ierr);
   } else if (s && isInsert) {
   } else {
     if (!dm->ops->localtoglobalend) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMLocalToGlobalEnd() for type %s",((PetscObject)dm)->type_name);
@@ -3791,6 +3797,7 @@ foundconv:
       const DMBoundaryType *bd;
       ierr = DMGetPeriodicity(dm, &isper, &maxCell, &L, &bd);CHKERRQ(ierr);
       ierr = DMSetPeriodicity(*M, isper, maxCell,  L,  bd);CHKERRQ(ierr);
+      (*M)->prealloc_only = dm->prealloc_only;
     }
     ierr = PetscLogEventEnd(DM_Convert,dm,0,0,0);CHKERRQ(ierr);
   }
@@ -4486,78 +4493,11 @@ PetscErrorCode DMSetSectionSF(DM dm, PetscSF sf)
 @*/
 PetscErrorCode DMCreateSectionSF(DM dm, PetscSection localSection, PetscSection globalSection)
 {
-  MPI_Comm       comm;
-  PetscLayout    layout;
-  const PetscInt *ranges;
-  PetscInt       *local;
-  PetscSFNode    *remote;
-  PetscInt       pStart, pEnd, p, nroots, nleaves = 0, l;
-  PetscMPIInt    size, rank;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  ierr = PetscSectionGetChart(globalSection, &pStart, &pEnd);CHKERRQ(ierr);
-  ierr = PetscSectionGetConstrainedStorageSize(globalSection, &nroots);CHKERRQ(ierr);
-  ierr = PetscLayoutCreate(comm, &layout);CHKERRQ(ierr);
-  ierr = PetscLayoutSetBlockSize(layout, 1);CHKERRQ(ierr);
-  ierr = PetscLayoutSetLocalSize(layout, nroots);CHKERRQ(ierr);
-  ierr = PetscLayoutSetUp(layout);CHKERRQ(ierr);
-  ierr = PetscLayoutGetRanges(layout, &ranges);CHKERRQ(ierr);
-  for (p = pStart; p < pEnd; ++p) {
-    PetscInt gdof, gcdof;
-
-    ierr = PetscSectionGetDof(globalSection, p, &gdof);CHKERRQ(ierr);
-    ierr = PetscSectionGetConstraintDof(globalSection, p, &gcdof);CHKERRQ(ierr);
-    if (gcdof > (gdof < 0 ? -(gdof+1) : gdof)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point %d has %d constraints > %d dof", p, gcdof, (gdof < 0 ? -(gdof+1) : gdof));
-    nleaves += gdof < 0 ? -(gdof+1)-gcdof : gdof-gcdof;
-  }
-  ierr = PetscMalloc1(nleaves, &local);CHKERRQ(ierr);
-  ierr = PetscMalloc1(nleaves, &remote);CHKERRQ(ierr);
-  for (p = pStart, l = 0; p < pEnd; ++p) {
-    const PetscInt *cind;
-    PetscInt       dof, cdof, off, gdof, gcdof, goff, gsize, d, c;
-
-    ierr = PetscSectionGetDof(localSection, p, &dof);CHKERRQ(ierr);
-    ierr = PetscSectionGetOffset(localSection, p, &off);CHKERRQ(ierr);
-    ierr = PetscSectionGetConstraintDof(localSection, p, &cdof);CHKERRQ(ierr);
-    ierr = PetscSectionGetConstraintIndices(localSection, p, &cind);CHKERRQ(ierr);
-    ierr = PetscSectionGetDof(globalSection, p, &gdof);CHKERRQ(ierr);
-    ierr = PetscSectionGetConstraintDof(globalSection, p, &gcdof);CHKERRQ(ierr);
-    ierr = PetscSectionGetOffset(globalSection, p, &goff);CHKERRQ(ierr);
-    if (!gdof) continue; /* Censored point */
-    gsize = gdof < 0 ? -(gdof+1)-gcdof : gdof-gcdof;
-    if (gsize != dof-cdof) {
-      if (gsize != dof) SETERRQ4(comm, PETSC_ERR_ARG_WRONG, "Global dof %d for point %d is neither the constrained size %d, nor the unconstrained %d", gsize, p, dof-cdof, dof);
-      cdof = 0; /* Ignore constraints */
-    }
-    for (d = 0, c = 0; d < dof; ++d) {
-      if ((c < cdof) && (cind[c] == d)) {++c; continue;}
-      local[l+d-c] = off+d;
-    }
-    if (gdof < 0) {
-      for (d = 0; d < gsize; ++d, ++l) {
-        PetscInt offset = -(goff+1) + d, r;
-
-        ierr = PetscFindInt(offset,size+1,ranges,&r);CHKERRQ(ierr);
-        if (r < 0) r = -(r+2);
-        if ((r < 0) || (r >= size)) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point %d mapped to invalid process %d (%d, %d)", p, r, gdof, goff);
-        remote[l].rank  = r;
-        remote[l].index = offset - ranges[r];
-      }
-    } else {
-      for (d = 0; d < gsize; ++d, ++l) {
-        remote[l].rank  = rank;
-        remote[l].index = goff+d - ranges[rank];
-      }
-    }
-  }
-  if (l != nleaves) SETERRQ2(comm, PETSC_ERR_PLIB, "Iteration error, l %d != nleaves %d", l, nleaves);
-  ierr = PetscLayoutDestroy(&layout);CHKERRQ(ierr);
-  ierr = PetscSFSetGraph(dm->sectionSF, nroots, nleaves, local, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER);CHKERRQ(ierr);
+  ierr = PetscSFSetGraphSection(dm->sectionSF, localSection, globalSection);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -8736,6 +8676,7 @@ PetscErrorCode DMAdaptLabel(DM dm, DMLabel label, DM *dmAdapt)
   *dmAdapt = NULL;
   if (!dm->ops->adaptlabel) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMAdaptLabel",((PetscObject)dm)->type_name);
   ierr = (dm->ops->adaptlabel)(dm, label, dmAdapt);CHKERRQ(ierr);
+  if (*dmAdapt) (*dmAdapt)->prealloc_only = dm->prealloc_only;  /* maybe this should go .... */
   PetscFunctionReturn(0);
 }
 

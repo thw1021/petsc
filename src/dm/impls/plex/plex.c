@@ -2993,6 +2993,7 @@ PetscErrorCode DMPlexComputeCellType_Internal(DM dm, PetscInt p, PetscInt pdepth
             default: break;
           }
           break;
+        case 5: ct = DM_POLYTOPE_PYRAMID;break;
         case 6: ct = DM_POLYTOPE_TRI_PRISM_TENSOR;break;
         case 8: ct = DM_POLYTOPE_HEXAHEDRON;break;
         default: break;
@@ -3019,7 +3020,19 @@ PetscErrorCode DMPlexComputeCellType_Internal(DM dm, PetscInt p, PetscInt pdepth
         case 3:
           switch (coneSize) {
             case 4: ct = DM_POLYTOPE_TETRAHEDRON;break;
-            case 5: ct = DM_POLYTOPE_TRI_PRISM_TENSOR;break;
+            case 5:
+            {
+              const PetscInt *cone;
+              PetscInt        faceConeSize;
+
+              ierr = DMPlexGetCone(dm, p, &cone);CHKERRQ(ierr);
+              ierr = DMPlexGetConeSize(dm, cone[0], &faceConeSize);CHKERRQ(ierr);
+              switch (faceConeSize) {
+                case 3: ct = DM_POLYTOPE_TRI_PRISM_TENSOR;break;
+                case 4: ct = DM_POLYTOPE_PYRAMID;break;
+              }
+            }
+            break;
             case 6: ct = DM_POLYTOPE_HEXAHEDRON;break;
             default: break;
           }
@@ -7219,7 +7232,9 @@ PetscErrorCode DMPlexCreateRankField(DM dm, Vec *ranks)
   PetscFE        fe;
   PetscScalar   *r;
   PetscMPIInt    rank;
+  DMPolytopeType ct;
   PetscInt       dim, cStart, cEnd, c;
+  PetscBool      simplex;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
@@ -7228,12 +7243,14 @@ PetscErrorCode DMPlexCreateRankField(DM dm, Vec *ranks)
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &rank);CHKERRQ(ierr);
   ierr = DMClone(dm, &rdm);CHKERRQ(ierr);
   ierr = DMGetDimension(rdm, &dim);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) rdm), dim, 1, PETSC_TRUE, "PETSc___rank_", -1, &fe);CHKERRQ(ierr);
+  ierr = DMPlexGetHeightStratum(rdm, 0, &cStart, &cEnd);CHKERRQ(ierr);
+  ierr = DMPlexGetCellType(dm, cStart, &ct);CHKERRQ(ierr);
+  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct)+1 ? PETSC_TRUE : PETSC_FALSE;
+  ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, simplex, "PETSc___rank_", -1, &fe);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) fe, "rank");CHKERRQ(ierr);
   ierr = DMSetField(rdm, 0, NULL, (PetscObject) fe);CHKERRQ(ierr);
   ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
   ierr = DMCreateDS(rdm);CHKERRQ(ierr);
-  ierr = DMPlexGetHeightStratum(rdm, 0, &cStart, &cEnd);CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(rdm, ranks);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) *ranks, "partition");CHKERRQ(ierr);
   ierr = VecGetArray(*ranks, &r);CHKERRQ(ierr);

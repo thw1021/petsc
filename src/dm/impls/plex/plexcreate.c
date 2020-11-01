@@ -3652,9 +3652,10 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], PetscB
   const char    *extHDF5    = ".h5";
   const char    *extMed     = ".med";
   const char    *extPLY     = ".ply";
+  const char    *extEGADS   = ".egadslite";
   const char    *extCV      = ".dat";
   size_t         len;
-  PetscBool      isGmsh, isGmsh2, isGmsh4, isCGNS, isExodus, isGenesis, isFluent, isHDF5, isMed, isPLY, isCV;
+  PetscBool      isGmsh, isGmsh2, isGmsh4, isCGNS, isExodus, isGenesis, isFluent, isHDF5, isMed, isPLY, isEGADS, isCV;
   PetscMPIInt    rank;
   PetscErrorCode ierr;
 
@@ -3676,6 +3677,7 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], PetscB
   ierr = PetscStrncmp(&filename[PetscMax(0,len-3)], extHDF5,    3, &isHDF5);CHKERRQ(ierr);
   ierr = PetscStrncmp(&filename[PetscMax(0,len-4)], extMed,     4, &isMed);CHKERRQ(ierr);
   ierr = PetscStrncmp(&filename[PetscMax(0,len-4)], extPLY,     4, &isPLY);CHKERRQ(ierr);
+  ierr = PetscStrncmp(&filename[PetscMax(0,len-10)], extEGADS,   9, &isEGADS);CHKERRQ(ierr);
   ierr = PetscStrncmp(&filename[PetscMax(0,len-4)], extCV,      4, &isCV);CHKERRQ(ierr);
   if (isGmsh || isGmsh2 || isGmsh4) {
     ierr = DMPlexCreateGmshFromFile(comm, filename, interpolate, dm);CHKERRQ(ierr);
@@ -3716,6 +3718,15 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], PetscB
     ierr = DMPlexCreateMedFromFile(comm, filename, interpolate, dm);CHKERRQ(ierr);
   } else if (isPLY) {
     ierr = DMPlexCreatePLYFromFile(comm, filename, interpolate, dm);CHKERRQ(ierr);
+  } else if (isEGADS) {
+    ierr = DMPlexCreateEGADSFromFile(comm, filename, dm);CHKERRQ(ierr);
+    if (!interpolate) {
+      DM udm;
+
+      ierr = DMPlexUninterpolate(*dm, &udm);CHKERRQ(ierr);
+      ierr = DMDestroy(dm);CHKERRQ(ierr);
+      *dm  = udm;
+    }
   } else if (isCV) {
     ierr = DMPlexCreateCellVertexFromFile(comm, filename, interpolate, dm);CHKERRQ(ierr);
   } else SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot load file %s: unrecognized extension", filename);
@@ -3735,6 +3746,9 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], PetscB
   Output Parameter:
 . refdm - The reference cell
 
+  Options Database Keys:
+. -dm_plex_ref_type <ct> - Specify the celltyoe for the reference cell
+
   Level: intermediate
 
 .seealso: DMPlexCreateReferenceCell(), DMPlexCreateBoxMesh()
@@ -3746,6 +3760,7 @@ PetscErrorCode DMPlexCreateReferenceCellByType(MPI_Comm comm, DMPolytopeType ct,
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = PetscOptionsGetEnum(NULL, NULL, "-dm_plex_ref_type", DMPolytopeTypes, (PetscEnum *) &ct, NULL);CHKERRQ(ierr);
   ierr = DMCreate(comm, &rdm);CHKERRQ(ierr);
   ierr = DMSetType(rdm, DMPLEX);CHKERRQ(ierr);
   switch (ct) {
@@ -3868,6 +3883,19 @@ PetscErrorCode DMPlexCreateReferenceCellByType(MPI_Comm comm, DMPolytopeType ct,
       PetscInt    coneOrientations[8] = {0, 0, 0, 0, 0, 0, 0, 0};
       PetscScalar vertexCoords[24]    = {-1.0, -1.0, -1.0,  1.0, -1.0, -1.0,  1.0, 1.0, -1.0,  -1.0, 1.0, -1.0,
                                          -1.0, -1.0,  1.0,  1.0, -1.0,  1.0,  1.0, 1.0,  1.0,  -1.0, 1.0,  1.0};
+
+      ierr = DMSetDimension(rdm, 3);CHKERRQ(ierr);
+      ierr = DMPlexCreateFromDAG(rdm, 1, numPoints, coneSize, cones, coneOrientations, vertexCoords);CHKERRQ(ierr);
+    }
+    break;
+    case DM_POLYTOPE_PYRAMID:
+    {
+      PetscInt    numPoints[2]        = {5, 1};
+      PetscInt    coneSize[6]         = {5, 0, 0, 0, 0, 0};
+      PetscInt    cones[5]            = {1, 4, 3, 2, 5};
+      PetscInt    coneOrientations[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+      PetscScalar vertexCoords[24]    = {-1.0, -1.0, -1.0,  1.0, -1.0, -1.0,  1.0, 1.0, -1.0,  -1.0, 1.0, -1.0,
+                                          0.0,  0.0,  1.0};
 
       ierr = DMSetDimension(rdm, 3);CHKERRQ(ierr);
       ierr = DMPlexCreateFromDAG(rdm, 1, numPoints, coneSize, cones, coneOrientations, vertexCoords);CHKERRQ(ierr);
