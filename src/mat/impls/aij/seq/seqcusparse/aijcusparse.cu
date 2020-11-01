@@ -1725,7 +1725,6 @@ struct MatMatCusparse {
   PetscScalar          *Bt;
   Mat                  X;
   csrgemm2Info_t       csrinfo;
-  cusparseMatDescr_t   dummy;
   size_t               mmBufferSize;
   void                 *mmBuffer;
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
@@ -1746,7 +1745,6 @@ static PetscErrorCode MatDestroy_MatMatCusparse(void *data)
   PetscFunctionBegin;
   cerr = cudaFree(mmdata->Bt);CHKERRCUDA(cerr);
   if (mmdata->csrinfo)    { stat = cusparseDestroyCsrgemm2Info(mmdata->csrinfo);CHKERRCUSPARSE(stat); }
-  if (mmdata->dummy)      { stat = cusparseDestroyMatDescr(mmdata->dummy);CHKERRCUSPARSE(stat); }
   if (mmdata->mmBuffer)   { cerr = cudaFree(mmdata->mmBuffer);CHKERRCUDA(cerr); }
  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   if (mmdata->matBDescr)  { stat = cusparseDestroyDnMat(mmdata->matBDescr);CHKERRCUSPARSE(stat); }
@@ -2013,16 +2011,17 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
 {
   Mat_Product        *product = C->product;
   Mat                A,B;
-  PetscInt           m,n;
+  PetscInt           i,m,n;
   PetscBool          flg;
   PetscErrorCode     ierr;
   MatMatCusparse     *mmdata;
-  Mat_SeqAIJCUSPARSE *Acusp,*Bcusp;
-  Mat_SeqAIJCUSPARSEMultStruct *Amat,*Bmat;
-  CsrMatrix         *Acsr,*Bcsr;
+  Mat_SeqAIJCUSPARSE *Acusp,*Bcusp,*Ccusp;
+  Mat_SeqAIJCUSPARSEMultStruct *Amat,*Bmat,*Cmat;
+  CsrMatrix         *Acsr,*Bcsr,*Ccsr;
   cusparseStatus_t   stat;
   PetscScalar alpha = 1.0;
   cudaError_t                  cerr;
+  Mat_SeqAIJ                   *c;
 
   PetscFunctionBegin;
   MatCheckProduct(C,1);
@@ -2071,34 +2070,71 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   }
   ierr = MatSetSizes(C,m,n,m,n);CHKERRQ(ierr);
   ierr = MatSetType(C,MATSEQAIJCUSPARSE);CHKERRQ(ierr);
+  c    = (Mat_SeqAIJ*)C->data;
+  c->compressedrow.use = PETSC_FALSE;
 
   /* product data */
   ierr = PetscNew(&mmdata);CHKERRQ(ierr);
   stat = cusparseCreateCsrgemm2Info(&mmdata->csrinfo);CHKERRCUSPARSE(stat);
-  stat = cusparseCreateMatDescr(&mmdata->dummy);CHKERRCUSPARSE(stat);
   stat = cusparse_csr_spgemm_buf(Acusp->handle, A->rmap->n, B->cmap->n, A->cmap->n, &alpha,
-                                 mmdata->dummy, Acsr->num_entries, Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
-                                 mmdata->dummy, Bcsr->num_entries, Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
-                                 NULL, NULL, 0, NULL, NULL,
-                                 mmdata->csrinfo,
-                                 &mmdata->mmBufferSize);
+                                 Amat->descr, Acsr->num_entries, Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
+                                 Bmat->descr, Bcsr->num_entries, Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
+                                 NULL, /* beta */
+                                 NULL, 0, NULL, NULL,
+                                 mmdata->csrinfo,&mmdata->mmBufferSize);CHKERRCUSPARSE(stat);
   cerr = cudaMalloc(&mmdata->mmBuffer, mmdata->mmBufferSize);CHKERRCUDA(cerr);
 
+  /* create cusparse matrix */
+  Cmat = new Mat_SeqAIJCUSPARSEMultStruct;
+  Ccsr = new CsrMatrix;
+  Ccusp = (Mat_SeqAIJCUSPARSE*)C->spptr;
+  Ccusp->nrows = m;
+  Ccusp->mat = Cmat;
+  Ccusp->mat->mat = Ccsr;
+  Ccsr->num_rows = m;
+  Ccsr->num_cols = n;
+  Ccsr->row_offsets = new THRUSTINTARRAY32(m+1);
+
+  stat = cusparseCreateMatDescr(&Cmat->descr);CHKERRCUSPARSE(stat);
+  stat = cusparseSetMatIndexBase(Cmat->descr, CUSPARSE_INDEX_BASE_ZERO);CHKERRCUSPARSE(stat);
+  stat = cusparseSetMatType(Cmat->descr, CUSPARSE_MATRIX_TYPE_GENERAL);CHKERRCUSPARSE(stat);
+  cerr = cudaMalloc((void **)&(Cmat->alpha_one),sizeof(PetscScalar));CHKERRCUDA(cerr);
+  cerr = cudaMalloc((void **)&(Cmat->beta_zero),sizeof(PetscScalar));CHKERRCUDA(cerr);
+  cerr = cudaMalloc((void **)&(Cmat->beta_one), sizeof(PetscScalar));CHKERRCUDA(cerr);
+  cerr = cudaMemcpy(Cmat->alpha_one,&PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+  cerr = cudaMemcpy(Cmat->beta_zero,&PETSC_CUSPARSE_ZERO,sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+  cerr = cudaMemcpy(Cmat->beta_one, &PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+  stat = cusparseSetPointerMode(Ccusp->handle, CUSPARSE_POINTER_MODE_DEVICE);CHKERRCUSPARSE(stat);
+
+  stat = cusparseXcsrgemm2Nnz(Ccusp->handle, A->rmap->n, B->cmap->n, A->cmap->n, 
+                              Amat->descr, Acsr->num_entries, Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
+                              Bmat->descr, Bcsr->num_entries, Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
+                              NULL, 0, NULL, NULL,
+                              Cmat->descr, Ccsr->row_offsets->data().get(), &c->nz,
+                              mmdata->csrinfo,mmdata->mmBuffer);CHKERRCUSPARSE(stat);
+  Ccsr->column_indices = new THRUSTINTARRAY32(c->nz);
+  Ccsr->values = new THRUSTARRAY(c->nz);
+//nonzerostate + CPU alloc
+    c->singlemalloc = PETSC_FALSE;
+    c->free_a       = PETSC_TRUE;
+    c->free_ij      = PETSC_TRUE;
+    ierr = PetscMalloc1(m,&c->i);CHKERRQ(ierr);
+// FUCK
+    cerr = cudaMemcpy(c->i,Ccsr->row_offsets->data().get(),m*sizeof(PetscInt),cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
+    c->maxnz = c->nz;
+    ierr = PetscMalloc1(c->nz,&c->a);CHKERRQ(ierr);
+    ierr = PetscMalloc1(c->nz,&c->j);CHKERRQ(ierr);
+    //cerr = cudaMemcpy(c->j,d_j.data().get(),a->nz*sizeof(PetscInt),cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
+    ierr = PetscMalloc1(m,&c->ilen);CHKERRQ(ierr);
+    ierr = PetscMalloc1(m,&c->imax);CHKERRQ(ierr);
+    for (i = 0; i < m; i++) {
+      const PetscInt nnzr = c->i[i+1] - c->i[i];
+      //nzr += (PetscInt)!!(nnzr);
+      c->ilen[i] = c->imax[i] = nnzr;
+    }
+    C->preallocated = PETSC_TRUE;
 #if 0
-// step 3: compute csrRowPtrC
-cudaMalloc((void**)&csrRowPtrC, sizeof(int)*(m+1));
-cusparseXcsrgemm2Nnz(handle, m, n, k, 
-        descrA, nnzA, csrRowPtrA, csrColIndA,
-        descrB, nnzB, csrRowPtrB, csrColIndB,
-        &beta
-        descrD, nnzD, csrRowPtrD, csrColIndD,
-        descrC, csrRowPtrC, nnzTotalDevHostPtr,
-        info, buffer );
-
-
-
-
-
+    //ierr = PetscLogGpuToCpu((A->rmap->n+a->nz)*sizeof(PetscInt));CHKERRQ(ierr);
   C->ops->productnumeric = MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE;
 #endif
   C->product->destroy = MatDestroy_MatMatCusparse;
