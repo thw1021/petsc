@@ -79,8 +79,8 @@ static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSETriFac
 static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Destroy(Mat_SeqAIJCUSPARSETriFactors**);
 static PetscErrorCode MatSeqAIJCUSPARSE_Destroy(Mat_SeqAIJCUSPARSE**);
 
-PETSC_INTERN PetscErrorCode MatXAIJSetPreallocationCOO_SeqAIJCUSPARSE(Mat,PetscInt,const PetscInt[],const PetscInt[]);
-PETSC_INTERN PetscErrorCode MatXAIJSetValuesCOO_SeqAIJCUSPARSE(Mat,PetscInt,const PetscScalar[],InsertMode);
+PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat,PetscInt,const PetscInt[],const PetscInt[]);
+PETSC_INTERN PetscErrorCode MatSetValuesCOO_SeqAIJCUSPARSE(Mat,const PetscScalar[],InsertMode);
 
 PetscErrorCode MatCUSPARSESetStream(Mat A,const cudaStream_t stream)
 {
@@ -2527,8 +2527,8 @@ static PetscErrorCode MatDestroy_SeqAIJCUSPARSE(Mat A)
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatFactorGetSolverType_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetPreallocationCOO_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetValuesCOO_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",NULL);CHKERRQ(ierr);
   ierr = MatDestroy_SeqAIJ(A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2563,8 +2563,8 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
     A->ops->multhermitiantransposeadd = NULL;
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",NULL);CHKERRQ(ierr);
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",NULL);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetPreallocationCOO_C",NULL);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetValuesCOO_C",NULL);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",NULL);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",NULL);CHKERRQ(ierr);
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqAIJGetArray_C",MatSeqAIJGetArray_SeqAIJ);CHKERRQ(ierr);
   } else {
     A->ops->mult                      = MatMult_SeqAIJCUSPARSE;
@@ -2575,8 +2575,8 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
     A->ops->multhermitiantransposeadd = MatMultHermitianTransposeAdd_SeqAIJCUSPARSE;
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetPreallocationCOO_C",MatXAIJSetPreallocationCOO_SeqAIJCUSPARSE);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetValuesCOO_C",MatXAIJSetValuesCOO_SeqAIJCUSPARSE);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",MatSetPreallocationCOO_SeqAIJCUSPARSE);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",MatSetValuesCOO_SeqAIJCUSPARSE);CHKERRQ(ierr);
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqAIJGetArray_C",MatSeqAIJGetArray_SeqAIJCUSPARSE);CHKERRQ(ierr);
   }
   A->boundtocpu = flg;
@@ -2894,23 +2894,23 @@ struct IJSum
 };
 
 #include <thrust/iterator/discard_iterator.h>
-PETSC_INTERN PetscErrorCode MatXAIJSetValuesCOO_SeqAIJCUSPARSE(Mat A, PetscInt n, const PetscScalar v[], InsertMode imode)
+PETSC_INTERN PetscErrorCode MatSetValuesCOO_SeqAIJCUSPARSE(Mat A, const PetscScalar v[], InsertMode imode)
 {
   Mat_SeqAIJCUSPARSE *cusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
   CsrMatrix          *matrix;
   PetscErrorCode     ierr;
   cudaError_t        cerr;
+  PetscInt           n;
 
   PetscFunctionBegin;
   if (!cusp) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing CUSPARSE struct");
   if (!cusp->mat) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing CUSPARSE CsrMatrix");
-  if (n && !cusp->cooPerm) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_COR,"Invalid n %D != 0",n);
-  if (!n) {
+  if (!cusp->cooPerm) {
     ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
-  if (cusp->cooPerm && cusp->cooPerm->size() != (size_t)n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Invalid n %D != %D",n,(PetscInt)cusp->cooPerm->size());
+  n = cusp->cooPerm->size();
   matrix = (CsrMatrix*)cusp->mat->mat;
   if (!matrix->values) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing CUDA memory");
   if (!cusp->cooPerm_v) { cusp->cooPerm_v = new THRUSTARRAY(n); }
@@ -2960,7 +2960,7 @@ PETSC_INTERN PetscErrorCode MatXAIJSetValuesCOO_SeqAIJCUSPARSE(Mat A, PetscInt n
 }
 
 #include <thrust/binary_search.h>
-PETSC_INTERN PetscErrorCode MatXAIJSetPreallocationCOO_SeqAIJCUSPARSE(Mat A, PetscInt n, const PetscInt coo_i[], const PetscInt coo_j[])
+PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat A, PetscInt n, const PetscInt coo_i[], const PetscInt coo_j[])
 {
   PetscErrorCode     ierr;
   Mat_SeqAIJCUSPARSE *cusp = (Mat_SeqAIJCUSPARSE*)A->spptr;

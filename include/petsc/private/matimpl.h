@@ -238,8 +238,8 @@ PETSC_INTERN PetscErrorCode MatDiagonalSet_Default(Mat,Vec,InsertMode);
 #if defined(PETSC_HAVE_SCALAPACK)
 PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat,MatType,MatReuse,Mat*);
 #endif
-PETSC_INTERN PetscErrorCode MatXAIJSetPreallocationCOO_Basic(Mat,PetscInt,const PetscInt[],const PetscInt[]);
-PETSC_INTERN PetscErrorCode MatXAIJSetValuesCOO_Basic(Mat,PetscInt,const PetscScalar[],InsertMode);
+PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat,PetscInt,const PetscInt[],const PetscInt[]);
+PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat,const PetscScalar[],InsertMode);
 
 PETSC_INTERN PetscErrorCode MatProductSymbolic_AB(Mat);
 PETSC_INTERN PetscErrorCode MatProductNumeric_AB(Mat);

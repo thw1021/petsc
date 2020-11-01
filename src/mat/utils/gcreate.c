@@ -457,7 +457,7 @@ PetscErrorCode MatBindToCPU(Mat A,PetscBool flg)
 #endif
 }
 
-PetscErrorCode MatXAIJSetValuesCOO_Basic(Mat A,PetscInt ncoo,const PetscScalar coo_v[],InsertMode imode)
+PetscErrorCode MatSetValuesCOO_Basic(Mat A,const PetscScalar coo_v[],InsertMode imode)
 {
   IS             is_coo_i,is_coo_j;
   const PetscInt *coo_i,*coo_j;
@@ -473,10 +473,9 @@ PetscErrorCode MatXAIJSetValuesCOO_Basic(Mat A,PetscInt ncoo,const PetscScalar c
   ierr = ISGetLocalSize(is_coo_i,&n_i);CHKERRQ(ierr);
   ierr = ISGetLocalSize(is_coo_j,&n_j);CHKERRQ(ierr);
   if (n_i != n_j)  SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong local size %D != %D",n_i,n_j);
-  if (n_i != ncoo) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong local size %D != %D",n_i,ncoo);
   ierr = ISGetIndices(is_coo_i,&coo_i);CHKERRQ(ierr);
   ierr = ISGetIndices(is_coo_j,&coo_j);CHKERRQ(ierr);
-  for (n = 0; n < ncoo; n++) {
+  for (n = 0; n < n_i; n++) {
     ierr = MatSetValue(A,coo_i[n],coo_j[n],coo_v ? coo_v[n] : zero,imode);CHKERRQ(ierr);
   }
   ierr = ISRestoreIndices(is_coo_i,&coo_i);CHKERRQ(ierr);
@@ -486,7 +485,7 @@ PetscErrorCode MatXAIJSetValuesCOO_Basic(Mat A,PetscInt ncoo,const PetscScalar c
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode MatXAIJSetPreallocationCOO_Basic(Mat A,PetscInt ncoo,const PetscInt coo_i[],const PetscInt coo_j[])
+PetscErrorCode MatSetPreallocationCOO_Basic(Mat A,PetscInt ncoo,const PetscInt coo_i[],const PetscInt coo_j[])
 {
   Mat            preallocator;
   IS             is_coo_i,is_coo_j;
@@ -518,7 +517,24 @@ PetscErrorCode MatXAIJSetPreallocationCOO_Basic(Mat A,PetscInt ncoo,const PetscI
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode MatXAIJSetPreallocationCOO(Mat A,PetscInt ncoo,const PetscInt coo_i[],const PetscInt coo_j[])
+/*@C
+   MatSetPreallocationCOO - set preallocation for matrices using a coordinate format of the entries
+
+   Collective on Mat
+
+   Input Arguments:
++  A - matrix being preallocated
+.  ncoo - number of entries in the locally owned part of the parallel matrix
+.  coo_i - row indices
+-  coo_j - column indices
+
+   Level: beginner
+
+   Notes: Entries can be repeated. Currently optimized for cuSPARSE matrices only.
+
+.seealso: MatSetValuesCOO(), MatSeqAIJSetPreallocation(), MatMPIAIJSetPreallocation(), MatSeqBAIJSetPreallocation(), MatMPIBAIJSetPreallocation(), MatSeqSBAIJSetPreallocation(), MatMPISBAIJSetPreallocation()
+@*/
+PetscErrorCode MatSetPreallocationCOO(Mat A,PetscInt ncoo,const PetscInt coo_i[],const PetscInt coo_j[])
 {
   PetscErrorCode (*f)(Mat,PetscInt,const PetscInt[],const PetscInt[]) = NULL;
   PetscErrorCode ierr;
@@ -537,18 +553,35 @@ PetscErrorCode MatXAIJSetPreallocationCOO(Mat A,PetscInt ncoo,const PetscInt coo
       if (coo_j[i] < 0 || coo_j[i] >= A->cmap->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Invalid col index %D! Must be in [0,%D)",coo_j[i],A->cmap->N);
     }
   }
-  ierr = PetscObjectQueryFunction((PetscObject)A,"MatXAIJSetPreallocationCOO_C",&f);CHKERRQ(ierr);
+  ierr = PetscObjectQueryFunction((PetscObject)A,"MatSetPreallocationCOO_C",&f);CHKERRQ(ierr);
   if (f) {
     ierr = (*f)(A,ncoo,coo_i,coo_j);CHKERRQ(ierr);
   } else { /* allow fallback, very slow */
-    ierr = MatXAIJSetPreallocationCOO_Basic(A,ncoo,coo_i,coo_j);CHKERRQ(ierr);
+    ierr = MatSetPreallocationCOO_Basic(A,ncoo,coo_i,coo_j);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode MatXAIJSetValuesCOO(Mat A, PetscInt ncoo, const PetscScalar coo_v[], InsertMode imode)
+/*@C
+   MatSetValuesCOO - set values at once in a matrix preallocated using MatSetPreallocationCOO
+
+   Collective on Mat
+
+   Input Arguments:
++  A - matrix being preallocated
+.  coo_v - the matrix values
+-  imode - the insert mode
+
+   Level: beginner
+
+   Notes: The values must follow the order of the indices prescribed with MatSetPreallocationCOO().
+          Currently optimized for cuSPARSE matrices only.
+
+.seealso: MatSetPreallocationCOO(), InsertMode, INSERT_VALUES, ADD_VALUES
+@*/
+PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imode)
 {
-  PetscErrorCode (*f)(Mat,PetscInt,const PetscScalar[],InsertMode) = NULL;
+  PetscErrorCode (*f)(Mat,const PetscScalar[],InsertMode) = NULL;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -556,11 +589,11 @@ PetscErrorCode MatXAIJSetValuesCOO(Mat A, PetscInt ncoo, const PetscScalar coo_v
   PetscValidType(A,1);
   MatCheckPreallocated(A,1);
   PetscValidLogicalCollectiveEnum(A,imode,4);
-  ierr = PetscObjectQueryFunction((PetscObject)A,"MatXAIJSetValuesCOO_C",&f);CHKERRQ(ierr);
+  ierr = PetscObjectQueryFunction((PetscObject)A,"MatSetValuesCOO_C",&f);CHKERRQ(ierr);
   if (f) {
-    ierr = (*f)(A,ncoo,coo_v,imode);CHKERRQ(ierr);
+    ierr = (*f)(A,coo_v,imode);CHKERRQ(ierr);
   } else { /* allow fallback */
-    ierr = MatXAIJSetValuesCOO_Basic(A,ncoo,coo_v,imode);CHKERRQ(ierr);
+    ierr = MatSetValuesCOO_Basic(A,coo_v,imode);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

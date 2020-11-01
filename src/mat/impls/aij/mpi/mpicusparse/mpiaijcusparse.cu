@@ -8,8 +8,8 @@
 #include <../src/mat/impls/aij/mpi/mpicusparse/mpicusparsematimpl.h>
 #include <thrust/advance.h>
 
-PETSC_INTERN PetscErrorCode MatXAIJSetPreallocationCOO_SeqAIJCUSPARSE(Mat,PetscInt,const PetscInt[],const PetscInt[]);
-PETSC_INTERN PetscErrorCode MatXAIJSetValuesCOO_SeqAIJCUSPARSE(Mat,PetscInt,const PetscScalar[],InsertMode);
+PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat,PetscInt,const PetscInt[],const PetscInt[]);
+PETSC_INTERN PetscErrorCode MatSetValuesCOO_SeqAIJCUSPARSE(Mat,const PetscScalar[],InsertMode);
 
 struct VecCUDAEquals
 {
@@ -21,10 +21,11 @@ struct VecCUDAEquals
   }
 };
 
-static PetscErrorCode MatXAIJSetValuesCOO_MPIAIJCUSPARSE(Mat A, PetscInt n, const PetscScalar v[], InsertMode imode)
+static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE(Mat A, const PetscScalar v[], InsertMode imode)
 {
   Mat_MPIAIJ         *a = (Mat_MPIAIJ*)A->data;
   Mat_MPIAIJCUSPARSE *cusp = (Mat_MPIAIJCUSPARSE*)a->spptr;
+  PetscInt           n = cusp->coo_nd + cusp->coo_no;
   PetscErrorCode     ierr;
   cudaError_t        cerr;
 
@@ -38,11 +39,11 @@ static PetscErrorCode MatXAIJSetValuesCOO_MPIAIJCUSPARSE(Mat A, PetscInt n, cons
     auto zieit = thrust::make_zip_iterator(thrust::make_tuple(thrust::make_permutation_iterator(w.begin(),cusp->coo_p->end()),
                                                               cusp->coo_pw->end()));
     thrust::for_each(zibit,zieit,VecCUDAEquals());
-    ierr = MatXAIJSetValuesCOO_SeqAIJCUSPARSE(a->A,cusp->coo_nd,cusp->coo_pw->data().get(),imode);CHKERRQ(ierr);
-    ierr = MatXAIJSetValuesCOO_SeqAIJCUSPARSE(a->B,cusp->coo_no,cusp->coo_pw->data().get()+cusp->coo_nd,imode);CHKERRQ(ierr);
+    ierr = MatSetValuesCOO_SeqAIJCUSPARSE(a->A,cusp->coo_pw->data().get(),imode);CHKERRQ(ierr);
+    ierr = MatSetValuesCOO_SeqAIJCUSPARSE(a->B,cusp->coo_pw->data().get()+cusp->coo_nd,imode);CHKERRQ(ierr);
   } else {
-    ierr = MatXAIJSetValuesCOO_SeqAIJCUSPARSE(a->A,cusp->coo_nd,v,imode);CHKERRQ(ierr);
-    ierr = MatXAIJSetValuesCOO_SeqAIJCUSPARSE(a->B,cusp->coo_no,v ? v+cusp->coo_nd : NULL,imode);CHKERRQ(ierr);
+    ierr = MatSetValuesCOO_SeqAIJCUSPARSE(a->A,v,imode);CHKERRQ(ierr);
+    ierr = MatSetValuesCOO_SeqAIJCUSPARSE(a->B,v ? v+cusp->coo_nd : NULL,imode);CHKERRQ(ierr);
   }
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(MAT_CUSPARSESetVCOO,A,0,0,0);CHKERRQ(ierr);
@@ -91,7 +92,7 @@ struct GlobToLoc
   }
 };
 
-static PetscErrorCode MatXAIJSetPreallocationCOO_MPIAIJCUSPARSE(Mat B, PetscInt n, const PetscInt coo_i[], const PetscInt coo_j[])
+static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat B, PetscInt n, const PetscInt coo_i[], const PetscInt coo_j[])
 {
   Mat_MPIAIJ             *b = (Mat_MPIAIJ*)B->data;
   Mat_MPIAIJCUSPARSE     *cusp = (Mat_MPIAIJCUSPARSE*)b->spptr;
@@ -166,8 +167,8 @@ static PetscErrorCode MatXAIJSetPreallocationCOO_MPIAIJCUSPARSE(Mat B, PetscInt 
   ierr = PetscLogObjectParent((PetscObject)B,(PetscObject)b->B);CHKERRQ(ierr);
 
   /* GPU memory, cusparse specific call handles it internally */
-  ierr = MatXAIJSetPreallocationCOO_SeqAIJCUSPARSE(b->A,cusp->coo_nd,d_i.data().get(),d_j.data().get());CHKERRQ(ierr);
-  ierr = MatXAIJSetPreallocationCOO_SeqAIJCUSPARSE(b->B,cusp->coo_no,d_i.data().get()+cusp->coo_nd,jj);CHKERRQ(ierr);
+  ierr = MatSetPreallocationCOO_SeqAIJCUSPARSE(b->A,cusp->coo_nd,d_i.data().get(),d_j.data().get());CHKERRQ(ierr);
+  ierr = MatSetPreallocationCOO_SeqAIJCUSPARSE(b->B,cusp->coo_no,d_i.data().get()+cusp->coo_nd,jj);CHKERRQ(ierr);
   ierr = PetscFree(jj);CHKERRQ(ierr);
 
   ierr = MatCUSPARSESetFormat(b->A,MAT_CUSPARSE_MULT,cusp->diagGPUMatFormat);CHKERRQ(ierr);
@@ -436,8 +437,8 @@ PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Mat_MPIAIJCUSPARSE error: %s", ex);
   }
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatMPIAIJSetPreallocation_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetPreallocationCOO_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetValuesCOO_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatCUSPARSESetFormat_C",NULL);CHKERRQ(ierr);
   ierr = MatDestroy_MPIAIJ(A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -493,8 +494,8 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat B, MatType mtyp
   ierr = PetscObjectChangeTypeName((PetscObject)A,MATMPIAIJCUSPARSE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatMPIAIJSetPreallocation_C",MatMPIAIJSetPreallocation_MPIAIJCUSPARSE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatCUSPARSESetFormat_C",MatCUSPARSESetFormat_MPIAIJCUSPARSE);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetPreallocationCOO_C",MatXAIJSetPreallocationCOO_MPIAIJCUSPARSE);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatXAIJSetValuesCOO_C",MatXAIJSetValuesCOO_MPIAIJCUSPARSE);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",MatSetPreallocationCOO_MPIAIJCUSPARSE);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",MatSetValuesCOO_MPIAIJCUSPARSE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
