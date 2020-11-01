@@ -1761,12 +1761,23 @@ PetscErrorCode MatConvert_MPIAIJ_MPISELL(Mat A,MatType newtype,MatReuse reuse,Ma
   if (reuse == MAT_REUSE_MATRIX) {
     B = *newmat;
   } else {
+    Mat_SeqAIJ *Aa = (Mat_SeqAIJ*)a->A->data,*Ba = (Mat_SeqAIJ*)a->B->data;
+    PetscInt i,d_nz = 0,o_nz = 0,m = A->rmap->N,n = A->cmap->N,lm = A->rmap->n,ln = A->cmap->n;
+    PetscInt *d_nnz,*o_nnz;
+    ierr = PetscMalloc2(lm,&d_nnz,lm,&o_nnz);CHKERRQ(ierr);
+    for (i=0; i<lm; i++) {
+      d_nnz[i] = Aa->i[i+1] - Aa->i[i];
+      o_nnz[i] = Ba->i[i+1] - Ba->i[i];
+      if (d_nnz[i] > d_nz) d_nz = d_nnz[i];
+      if (o_nnz[i] > o_nz) o_nz = o_nnz[i];
+    }
     ierr = MatCreate(PetscObjectComm((PetscObject)A),&B);CHKERRQ(ierr);
     ierr = MatSetType(B,MATMPISELL);CHKERRQ(ierr);
-    ierr = MatSetSizes(B,A->rmap->n,A->cmap->n,A->rmap->N,A->cmap->N);CHKERRQ(ierr);
+    ierr = MatSetSizes(B,lm,ln,m,n);CHKERRQ(ierr);
     ierr = MatSetBlockSizes(B,A->rmap->bs,A->cmap->bs);CHKERRQ(ierr);
-    ierr = MatSeqAIJSetPreallocation(B,0,NULL);CHKERRQ(ierr);
-    ierr = MatMPIAIJSetPreallocation(B,0,NULL,0,NULL);CHKERRQ(ierr);
+    ierr = MatSeqSELLSetPreallocation(B,d_nz,d_nnz);CHKERRQ(ierr);
+    ierr = MatMPISELLSetPreallocation(B,d_nz,d_nnz,o_nz,o_nnz);CHKERRQ(ierr);
+    ierr = PetscFree2(d_nnz,o_nnz);CHKERRQ(ierr);
   }
   b    = (Mat_MPISELL*) B->data;
 
@@ -1776,13 +1787,10 @@ PetscErrorCode MatConvert_MPIAIJ_MPISELL(Mat A,MatType newtype,MatReuse reuse,Ma
   } else {
     ierr = MatDestroy(&b->A);CHKERRQ(ierr);
     ierr = MatDestroy(&b->B);CHKERRQ(ierr);
-    ierr = MatDisAssemble_MPIAIJ(A);CHKERRQ(ierr);
     ierr = MatConvert_SeqAIJ_SeqSELL(a->A, MATSEQSELL, MAT_INITIAL_MATRIX, &b->A);CHKERRQ(ierr);
     ierr = MatConvert_SeqAIJ_SeqSELL(a->B, MATSEQSELL, MAT_INITIAL_MATRIX, &b->B);CHKERRQ(ierr);
     ierr = MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   }
 
   if (reuse == MAT_INPLACE_MATRIX) {
