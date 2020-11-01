@@ -1,4 +1,4 @@
-static char help[] = "Test MatXAIJSetPreallocationCOO and MatXAIJSetValuesCOO\n\n";
+static char help[] = "Test MatSetPreallocationCOO and MatSetValuesCOO\n\n";
 
 #include <petscmat.h>
 #define MyMatView(a,b) PetscPrintf(PetscObjectComm((PetscObject)(a)),"LINE %d\n",__LINE__),MatView(a,b);
@@ -58,12 +58,12 @@ PetscInt main(PetscInt argc,char **args)
   }
 
   /* test with repeated entries */
-  ierr = MatXAIJSetPreallocationCOO(A,n1,i1,j1);CHKERRQ(ierr);
-  ierr = MatXAIJSetValuesCOO(A,n1,v1,ADD_VALUES);CHKERRQ(ierr);
+  ierr = MatSetPreallocationCOO(A,n1,i1,j1);CHKERRQ(ierr);
+  ierr = MatSetValuesCOO(A,v1,ADD_VALUES);CHKERRQ(ierr);
   ierr = MyMatView(A,NULL);CHKERRQ(ierr);
   ierr = MatMult(A,x,y);CHKERRQ(ierr);
   ierr = MyVecView(y,NULL);CHKERRQ(ierr);
-  ierr = MatXAIJSetValuesCOO(A,n1,v2,ADD_VALUES);CHKERRQ(ierr);
+  ierr = MatSetValuesCOO(A,v2,ADD_VALUES);CHKERRQ(ierr);
   ierr = MyMatView(A,NULL);CHKERRQ(ierr);
   ierr = MatMultAdd(A,x,y,y);CHKERRQ(ierr);
   ierr = MyVecView(y,NULL);CHKERRQ(ierr);
@@ -77,21 +77,21 @@ PetscInt main(PetscInt argc,char **args)
   ierr = MatDestroy(&At);CHKERRQ(ierr);
 
   /* test with unique entries */
-  ierr = MatXAIJSetPreallocationCOO(A,n2,i2,j2);CHKERRQ(ierr);
-  ierr = MatXAIJSetValuesCOO(A,n2,v1,ADD_VALUES);CHKERRQ(ierr);
+  ierr = MatSetPreallocationCOO(A,n2,i2,j2);CHKERRQ(ierr);
+  ierr = MatSetValuesCOO(A,v1,ADD_VALUES);CHKERRQ(ierr);
   ierr = MyMatView(A,NULL);CHKERRQ(ierr);
   ierr = MatMult(A,x,y);CHKERRQ(ierr);
   ierr = MyVecView(y,NULL);CHKERRQ(ierr);
-  ierr = MatXAIJSetValuesCOO(A,n2,v2,ADD_VALUES);CHKERRQ(ierr);
+  ierr = MatSetValuesCOO(A,v2,ADD_VALUES);CHKERRQ(ierr);
   ierr = MyMatView(A,NULL);CHKERRQ(ierr);
   ierr = MatMultAdd(A,x,y,z);CHKERRQ(ierr);
   ierr = MyVecView(z,NULL);CHKERRQ(ierr);
-  ierr = MatXAIJSetPreallocationCOO(A,n2,i2,j2);CHKERRQ(ierr);
-  ierr = MatXAIJSetValuesCOO(A,n2,v1,INSERT_VALUES);CHKERRQ(ierr);
+  ierr = MatSetPreallocationCOO(A,n2,i2,j2);CHKERRQ(ierr);
+  ierr = MatSetValuesCOO(A,v1,INSERT_VALUES);CHKERRQ(ierr);
   ierr = MyMatView(A,NULL);CHKERRQ(ierr);
   ierr = MatMult(A,x,y);CHKERRQ(ierr);
   ierr = MyVecView(y,NULL);CHKERRQ(ierr);
-  ierr = MatXAIJSetValuesCOO(A,n2,v2,INSERT_VALUES);CHKERRQ(ierr);
+  ierr = MatSetValuesCOO(A,v2,INSERT_VALUES);CHKERRQ(ierr);
   ierr = MyMatView(A,NULL);CHKERRQ(ierr);
   ierr = MatMultAdd(A,x,y,z);CHKERRQ(ierr);
   ierr = MyVecView(z,NULL);CHKERRQ(ierr);
@@ -143,12 +143,12 @@ PetscInt main(PetscInt argc,char **args)
     ierr = MatSeqAIJRestoreArrayRead(lA,&vA);CHKERRQ(ierr);
     ierr = MatSeqAIJRestoreArrayRead(lB,&vB);CHKERRQ(ierr);
 
-    ierr = MatXAIJSetPreallocationCOO(A,nnz,coo_i,coo_j);CHKERRQ(ierr);
-    ierr = MatXAIJSetValuesCOO(A,nnz,coo_v,ADD_VALUES);CHKERRQ(ierr);
+    ierr = MatSetPreallocationCOO(A,nnz,coo_i,coo_j);CHKERRQ(ierr);
+    ierr = MatSetValuesCOO(A,coo_v,ADD_VALUES);CHKERRQ(ierr);
     ierr = MyMatView(A,NULL);CHKERRQ(ierr);
     ierr = MatMult(A,x,y);CHKERRQ(ierr);
     ierr = MyVecView(y,NULL);CHKERRQ(ierr);
-    ierr = MatXAIJSetValuesCOO(A,nnz,coo_v,INSERT_VALUES);CHKERRQ(ierr);
+    ierr = MatSetValuesCOO(A,coo_v,INSERT_VALUES);CHKERRQ(ierr);
     ierr = MyMatView(A,NULL);CHKERRQ(ierr);
     ierr = MatMult(A,x,y);CHKERRQ(ierr);
     ierr = MyVecView(y,NULL);CHKERRQ(ierr);
