@@ -9,14 +9,14 @@ int main(int argc,char **args)
 {
   PetscErrorCode ierr;
   PetscInt       m,n;
-  PetscReal      norm,ratio,norm2;
+  PetscReal      norm,norm2;
   Vec            b,u,u2;
   Mat            A;
   char           file[PETSC_MAX_PATH_LEN];
   PetscViewer    fd;
   PetscBool      flg,test_sell = PETSC_FALSE, verify_sell = PETSC_FALSE;
-  PetscInt       maxslicewidth;
-  PetscReal      avgslicewidth;
+  PetscInt       size,maxslicewidth;
+  PetscReal      ratio,avgslicewidth;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
 
@@ -49,20 +49,30 @@ int main(int argc,char **args)
 
   if (test_sell) {
     if (verify_sell) {
+#if defined(PETSC_HAVE_CUDA)
       Mat B;
       ierr = MatConvert(A,MATAIJCUSPARSE,MAT_INITIAL_MATRIX,&B);CHKERRQ(ierr);
       ierr = VecDuplicate(b,&u2);CHKERRQ(ierr);
       ierr = MatMult(B,b,u2);CHKERRQ(ierr);
       ierr = MatDestroy(&B);CHKERRQ(ierr);
+#else
+      ierr = VecDuplicate(b,&u2);CHKERRQ(ierr);
+      ierr = MatMult(A,b,u2);CHKERRQ(ierr);
+#endif
     }
     /* two-step convert is much faster than the basic convert */
     ierr = MatConvert(A,MATSELL,MAT_INPLACE_MATRIX,&A);CHKERRQ(ierr);
+    ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+    if (size == 1) {
+      ierr = MatSeqSELLGetFillRatio(A,&ratio);CHKERRQ(ierr);
+      ierr = MatSeqSELLGetMaxSliceWidth(A,&maxslicewidth);CHKERRQ(ierr);
+      ierr = MatSeqSELLGetAvgSliceWidth(A,&avgslicewidth);CHKERRQ(ierr);
+    }
+#if defined(PETSC_HAVE_CUDA)
     ierr = MatConvert(A,MATSELLCUDA,MAT_INPLACE_MATRIX,&A);CHKERRQ(ierr);
-    ierr = MatSeqSELLGetFillRatio(A,&ratio);CHKERRQ(ierr);
-    ierr = MatSeqSELLGetMaxSliceWidth(A,&maxslicewidth);CHKERRQ(ierr);
-    ierr = MatSeqSELLGetAvgSliceWidth(A,&avgslicewidth);CHKERRQ(ierr);
   } else {
     ierr = MatConvert(A,MATAIJCUSPARSE,MAT_INPLACE_MATRIX,&A);CHKERRQ(ierr);
+#endif
   }
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
   /* Timing MatMult */
@@ -82,8 +92,14 @@ int main(int argc,char **args)
   if (!verify_sell) {
     PetscLogEvent      event;
     PetscEventPerfInfo eventInfo;
-    PetscReal          gpuflopRate;
+    PetscReal          maxt;
+#if defined(PETSC_HAVE_CUDA)
+    PetscReal 	       gtotf,gmaxt;
+#else
+    PetscReal          totf;
+#endif
 
+#if defined(PETSC_HAVE_CUDA)
     if (test_sell) {
       ierr = PetscLogEventGetId("MatCUDACopyTo",&event);CHKERRQ(ierr);
     } else {
@@ -91,15 +107,32 @@ int main(int argc,char **args)
     }
     ierr = PetscLogEventGetPerfInfo(PETSC_DETERMINE, event, &eventInfo);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD, "%.4e ", eventInfo.time);CHKERRQ(ierr);
+#endif
 
     ierr = PetscLogEventGetId("MatMult",&event);CHKERRQ(ierr);
     ierr = PetscLogEventGetPerfInfo(PETSC_DETERMINE, event, &eventInfo);CHKERRQ(ierr);
-    gpuflopRate = eventInfo.GpuFlops/eventInfo.GpuTime;
-    if (test_sell) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e %.6lf %d %.2lf\n", gpuflopRate/1.e6,eventInfo.GpuTime,eventInfo.time,ratio,maxslicewidth,avgslicewidth);CHKERRQ(ierr);
+
+#if defined(PETSC_HAVE_CUDA)
+    ierr = MPI_Allreduce(&eventInfo.GpuFlops, &gtotf, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, PETSC_COMM_WORLD);CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&eventInfo.GpuTime, &gmaxt, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, PETSC_COMM_WORLD);CHKERRQ(ierr);
+#else
+    ierr = MPI_Allreduce(&eventInfo.flops, &totf, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, PETSC_COMM_WORLD);CHKERRQ(ierr);
+#endif
+    ierr = MPI_Allreduce(&eventInfo.time, &maxt, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, PETSC_COMM_WORLD);CHKERRQ(ierr);
+
+#if defined(PETSC_HAVE_CUDA)
+    if (test_sell && size == 1) {
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e %.6lf %d %.2lf\n", gtotf/gmaxt/1.e6,gmaxt,maxt,ratio,maxslicewidth,avgslicewidth);CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e\n", gpuflopRate/1.e6,eventInfo.GpuTime,eventInfo.time);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e\n", gtotf/gmaxt/1.e6,gmaxt,maxt);CHKERRQ(ierr);
     }
+#else
+    if (test_sell) {
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e\n", totf/maxt/1.e6,maxt);CHKERRQ(ierr);
+    } else {
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e\n", totf/maxt/1.e6,maxt);CHKERRQ(ierr);
+    }
+#endif
   }
   ierr = PetscFinalize();
   return ierr;
