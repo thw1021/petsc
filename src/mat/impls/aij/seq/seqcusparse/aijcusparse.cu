@@ -2009,7 +2009,101 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
 
 static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
 {
+  Mat_Product                  *product = C->product;
+  Mat                          A,B;
+  MatMatCusparse               *mmdata;
+  Mat_SeqAIJCUSPARSE           *Acusp,*Bcusp,*Ccusp;
+  Mat_SeqAIJ                   *a,*b,*c;
+  Mat_SeqAIJCUSPARSEMultStruct *Amat,*Bmat,*Cmat;
+  CsrMatrix                    *Acsr,*Bcsr,*Ccsr;
+  PetscScalar                  alpha = 1.0;
+  PetscInt                     m,n,k;
+  PetscBool                    flg;
+  PetscErrorCode               ierr;
+  cusparseStatus_t             stat;
+  cudaError_t                  cerr;
+  MatProductType               ptype;
+
   PetscFunctionBegin;
+  MatCheckProduct(C,1);
+  if (C->product->data) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Product data not empty");
+  A    = product->A;
+  B    = product->B;
+  ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for type %s",((PetscObject)A)->type_name);
+  ierr = PetscObjectTypeCompare((PetscObject)B,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for B of type %s",((PetscObject)B)->type_name);
+  ierr = PetscObjectTypeCompare((PetscObject)C,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for C of type %s",((PetscObject)C)->type_name);
+  a = (Mat_SeqAIJ*)A->data;
+  b = (Mat_SeqAIJ*)B->data;
+  c = (Mat_SeqAIJ*)C->data;
+  if (a->compressedrow.use) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for matrices in compressed row format");
+  if (b->compressedrow.use) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for matrices in compressed row format");
+  if (c->compressedrow.use) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for matrices in compressed row format");
+  Acusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
+  Bcusp = (Mat_SeqAIJCUSPARSE*)B->spptr;
+  Ccusp = (Mat_SeqAIJCUSPARSE*)C->spptr;
+  if (Acusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Only for MAT_CUSPARSE_CSR format");
+  if (Bcusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Only for MAT_CUSPARSE_CSR format");
+  if (Ccusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Only for MAT_CUSPARSE_CSR format");
+  ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
+  ierr = MatSeqAIJCUSPARSECopyToGPU(B);CHKERRQ(ierr);
+  Cmat = Ccusp->mat;
+
+  ptype = product->type;
+  if (A->symmetric && ptype == MATPRODUCT_AtB) ptype = MATPRODUCT_AB;
+  if (B->symmetric && ptype == MATPRODUCT_ABt) ptype = MATPRODUCT_AB;
+  switch (ptype) {
+  case MATPRODUCT_AB:
+    m = A->rmap->n;
+    n = B->cmap->n;
+    k = A->cmap->n;
+    Amat = Acusp->mat;
+    Bmat = Bcusp->mat;
+    break;
+  case MATPRODUCT_AtB:
+    m = A->cmap->n;
+    n = B->cmap->n;
+    k = A->rmap->n;
+    Amat = Acusp->matTranspose;
+    Bmat = Bcusp->mat;
+    break;
+  case MATPRODUCT_ABt:
+    m = A->rmap->n;
+    n = B->rmap->n;
+    k = A->cmap->n;
+    Amat = Acusp->mat;
+    Bmat = Bcusp->matTranspose;
+    break;
+  default:
+    SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Unsupported product type %s",MatProductTypes[product->type]);
+  }
+  if (!Amat) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing A mult struct for product type %s",MatProductTypes[ptype]);
+  if (!Bmat) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing B mult struct for product type %s",MatProductTypes[ptype]);
+  if (!Cmat) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing C mult struct for product type %s",MatProductTypes[ptype]);
+  Acsr = (CsrMatrix*)Amat->mat;
+  Bcsr = (CsrMatrix*)Bmat->mat;
+  Ccsr = (CsrMatrix*)Cmat->mat;
+  if (!Acsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing A CSR struct");
+  if (!Bcsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing B CSR struct");
+  if (!Ccsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing C CSR struct");
+
+  mmdata = (MatMatCusparse*)product->data;
+
+  stat = cusparse_csr_spgemm(Ccusp->handle, m, n, k, &alpha,
+                             Amat->descr, Acsr->num_entries, Acsr->values->data().get(), Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
+                             Bmat->descr, Bcsr->num_entries, Bcsr->values->data().get(), Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
+                             NULL,
+                             NULL, 0, NULL, NULL, NULL,
+                             Cmat->descr, Ccsr->values->data().get(), Ccsr->row_offsets->data().get(), Ccsr->column_indices->data().get(),
+                             mmdata->csrinfo,mmdata->mmBuffer);CHKERRCUSPARSE(stat);
+  C->offloadmask = PETSC_OFFLOAD_GPU;
+  ierr = MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  /* we can remove these calls when MatSeqAIJGetArray operations are used everywhere! */
+  C->offloadmask = PETSC_OFFLOAD_BOTH;
+  cerr = cudaMemcpy(c->a,Ccsr->values->data().get(),c->nz*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -2023,11 +2117,12 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   Mat_SeqAIJCUSPARSEMultStruct *Amat,*Bmat,*Cmat;
   CsrMatrix                    *Acsr,*Bcsr,*Ccsr;
   PetscScalar                  alpha = 1.0;
-  PetscInt                     i,m,n;
+  PetscInt                     i,m,n,k;
   PetscBool                    flg;
   PetscErrorCode               ierr;
   cusparseStatus_t             stat;
   cudaError_t                  cerr;
+  MatProductType               ptype;
 
   PetscFunctionBegin;
   MatCheckProduct(C,1);
@@ -2043,50 +2138,57 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   if (a->compressedrow.use) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for matrices in compressed row format");
   if (b->compressedrow.use) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for matrices in compressed row format");
   Acusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
-  Bcusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
+  Bcusp = (Mat_SeqAIJCUSPARSE*)B->spptr;
   if (Acusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Only for MAT_CUSPARSE_CSR format");
   if (Bcusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Only for MAT_CUSPARSE_CSR format");
-  Amat = Acusp->mat;
-  Bmat = Bcusp->mat;
-  if (!Amat) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing A mult struct");
-  if (!Bmat) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing B mult struct");
-  Acsr = (CsrMatrix*)Amat->mat;
-  Bcsr = (CsrMatrix*)Bmat->mat;
-  if (!Acsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing A CSR struct");
-  if (!Bcsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing B CSR struct");
-  switch (product->type) {
+  ptype = product->type;
+  if (A->symmetric && ptype == MATPRODUCT_AtB) ptype = MATPRODUCT_AB;
+  if (B->symmetric && ptype == MATPRODUCT_ABt) ptype = MATPRODUCT_AB;
+  switch (ptype) {
   case MATPRODUCT_AB:
     m = A->rmap->n;
     n = B->cmap->n;
+    k = A->cmap->n;
+    Amat = Acusp->mat;
+    Bmat = Bcusp->mat;
     break;
   case MATPRODUCT_AtB:
     m = A->cmap->n;
     n = B->cmap->n;
+    k = A->rmap->n;
+    ierr = MatSeqAIJCUSPARSEGenerateTransposeForMult(A);CHKERRQ(ierr);
+    Amat = Acusp->matTranspose;
+    Bmat = Bcusp->mat;
     break;
   case MATPRODUCT_ABt:
     m = A->rmap->n;
     n = B->rmap->n;
-    break;
-  case MATPRODUCT_PtAP:
-    m = B->cmap->n;
-    n = B->cmap->n;
-    break;
-  case MATPRODUCT_RARt:
-    m = B->rmap->n;
-    n = B->rmap->n;
+    k = A->cmap->n;
+    ierr = MatSeqAIJCUSPARSEGenerateTransposeForMult(B);CHKERRQ(ierr);
+    Amat = Acusp->mat;
+    Bmat = Bcusp->matTranspose;
     break;
   default:
     SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Unsupported product type %s",MatProductTypes[product->type]);
   }
+  if (!Amat) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing A mult struct for product type %s",MatProductTypes[ptype]);
+  if (!Bmat) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing B mult struct for product type %s",MatProductTypes[ptype]);
+  Acsr = (CsrMatrix*)Amat->mat;
+  Bcsr = (CsrMatrix*)Bmat->mat;
+  if (!Acsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing A CSR struct");
+  if (!Bcsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing B CSR struct");
+
   ierr = MatSetSizes(C,m,n,m,n);CHKERRQ(ierr);
   ierr = MatSetType(C,MATSEQAIJCUSPARSE);CHKERRQ(ierr);
-  c    = (Mat_SeqAIJ*)C->data;
+
+  /* disable compressedrow */
+  c = (Mat_SeqAIJ*)C->data;
   c->compressedrow.use = PETSC_FALSE;
 
   /* product data */
   ierr = PetscNew(&mmdata);CHKERRQ(ierr);
   stat = cusparseCreateCsrgemm2Info(&mmdata->csrinfo);CHKERRCUSPARSE(stat);
-  stat = cusparse_csr_spgemm_buf(Acusp->handle, A->rmap->n, B->cmap->n, A->cmap->n, &alpha,
+  stat = cusparse_csr_spgemm_buf(Acusp->handle, m, n, k, &alpha,
                                  Amat->descr, Acsr->num_entries, Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
                                  Bmat->descr, Bcsr->num_entries, Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
                                  NULL, /* beta */
@@ -2116,7 +2218,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   cerr = cudaMemcpy(Cmat->beta_one, &PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
   stat = cusparseSetPointerMode(Ccusp->handle, CUSPARSE_POINTER_MODE_DEVICE);CHKERRCUSPARSE(stat);
 
-  stat = cusparseXcsrgemm2Nnz(Ccusp->handle, A->rmap->n, B->cmap->n, A->cmap->n,
+  stat = cusparseXcsrgemm2Nnz(Ccusp->handle, m, n, k,
                               Amat->descr, Acsr->num_entries, Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
                               Bmat->descr, Bcsr->num_entries, Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
                               NULL, 0, NULL, NULL,
@@ -2124,7 +2226,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
                               mmdata->csrinfo,mmdata->mmBuffer);CHKERRCUSPARSE(stat);
   Ccsr->column_indices = new THRUSTINTARRAY32(c->nz);
 
-  stat = cusparse_csr_spgemm(Ccusp->handle, A->rmap->n, B->cmap->n, A->cmap->n, &alpha,
+  stat = cusparse_csr_spgemm(Ccusp->handle, m, n, k, &alpha,
                              Amat->descr, Acsr->num_entries, NULL, Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
                              Bmat->descr, Bcsr->num_entries, NULL, Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
                              NULL,
