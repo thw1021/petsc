@@ -1724,29 +1724,33 @@ struct MatMatCusparse {
   PetscBool            cisdense;
   PetscScalar          *Bt;
   Mat                  X;
+  csrgemm2Info_t       csrinfo;
+  cusparseMatDescr_t   dummy;
+  size_t               mmBufferSize;
+  void                 *mmBuffer;
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   PetscBool            initialized;   /* C = alpha op(A) op(B) + beta C */
   cusparseDnMatDescr_t matBDescr;
   cusparseDnMatDescr_t matCDescr;
-  size_t               spmmBufferSize;
-  void                 *spmmBuffer;
   PetscInt             Blda,Clda; /* Record leading dimensions of B and C here to detect changes*/
 #endif
 };
 
 static PetscErrorCode MatDestroy_MatMatCusparse(void *data)
 {
-  PetscErrorCode ierr;
-  MatMatCusparse *mmdata = (MatMatCusparse *)data;
-  cudaError_t    cerr;
+  PetscErrorCode   ierr;
+  MatMatCusparse   *mmdata = (MatMatCusparse *)data;
+  cudaError_t      cerr;
+  cusparseStatus_t stat;
 
   PetscFunctionBegin;
   cerr = cudaFree(mmdata->Bt);CHKERRCUDA(cerr);
+  if (mmdata->csrinfo)    { stat = cusparseDestroyCsrgemm2Info(mmdata->csrinfo);CHKERRCUSPARSE(stat); }
+  if (mmdata->dummy)      { stat = cusparseDestroyMatDescr(mmdata->dummy);CHKERRCUSPARSE(stat); }
+  if (mmdata->mmBuffer)   { cerr = cudaFree(mmdata->mmBuffer);CHKERRCUDA(cerr); }
  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-  cusparseStatus_t stat;
-  if (mmdata->matBDescr)  {stat = cusparseDestroyDnMat(mmdata->matBDescr);CHKERRCUSPARSE(stat);}
-  if (mmdata->matCDescr)  {stat = cusparseDestroyDnMat(mmdata->matCDescr);CHKERRCUSPARSE(stat);}
-  if (mmdata->spmmBuffer) {cerr = cudaFree(mmdata->spmmBuffer);CHKERRCUDA(cerr);}
+  if (mmdata->matBDescr)  { stat = cusparseDestroyDnMat(mmdata->matBDescr);CHKERRCUSPARSE(stat); }
+  if (mmdata->matCDescr)  { stat = cusparseDestroyDnMat(mmdata->matCDescr);CHKERRCUSPARSE(stat); }
  #endif
   ierr = MatDestroy(&mmdata->X);CHKERRQ(ierr);
   ierr = PetscFree(data);CHKERRQ(ierr);
@@ -1834,8 +1838,9 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   cusparseOperation_t opB = (product->type == MATPRODUCT_ABt || product->type == MATPRODUCT_RARt) ? CUSPARSE_OPERATION_TRANSPOSE : CUSPARSE_OPERATION_NON_TRANSPOSE;
-  /* (re)allcoate spmmBuffer if not initialized or LDAs are different */
+  /* (re)allcoate mmBuffer if not initialized or LDAs are different */
   if (!mmdata->initialized || mmdata->Blda != blda || mmdata->Clda != clda) {
+    size_t mmBufferSize;
     if (mmdata->initialized && mmdata->Blda != blda) {stat = cusparseDestroyDnMat(mmdata->matBDescr);CHKERRCUSPARSE(stat); mmdata->matBDescr = NULL;}
     if (!mmdata->matBDescr) {
       stat         = cusparseCreateDnMat(&mmdata->matBDescr,B->rmap->n,B->cmap->n,blda,(void*)barray,cusparse_scalartype,CUSPARSE_ORDER_COL);CHKERRCUSPARSE(stat);
@@ -1859,9 +1864,12 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
     stat = cusparseSpMM_bufferSize(cusp->handle,opA,opB,mat->alpha_one,
                                    mat->matDescr,mmdata->matBDescr,mat->beta_zero,
                                    mmdata->matCDescr,cusparse_scalartype,
-                                   cusp->spmmAlg,&mmdata->spmmBufferSize);CHKERRCUSPARSE(stat);
-    if (mmdata->spmmBuffer) {cerr = cudaFree(mmdata->spmmBuffer);CHKERRCUDA(cerr);}
-    cerr = cudaMalloc(&mmdata->spmmBuffer,mmdata->spmmBufferSize);CHKERRCUDA(cerr);
+                                   cusp->spmmAlg,&mmBufferSize);CHKERRCUSPARSE(stat);
+    if ((mmdata->mmBuffer && mmdata->mmBufferSize < bufferSize) || !mmdata->mmBuffer) {
+      cerr = cudaFree(mmdata->mmBuffer);CHKERRCUDA(cerr);
+      cerr = cudaMalloc(&mmdata->mmBuffer,mmBufferSize);CHKERRCUDA(cerr);
+      mmdata->mmBufferSize = mmBufferSize;
+    }
     mmdata->initialized = PETSC_TRUE;
   } else {
     /* to be safe, always update pointers of the mats */
@@ -1874,7 +1882,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   stat = cusparseSpMM(cusp->handle,opA,opB,mat->alpha_one,
                       mat->matDescr,mmdata->matBDescr,mat->beta_zero,
                       mmdata->matCDescr,cusparse_scalartype,
-                      cusp->spmmAlg,mmdata->spmmBuffer);CHKERRCUSPARSE(stat);
+                      cusp->spmmAlg,mmdata->mmBuffer);CHKERRCUSPARSE(stat);
  #else
   PetscInt k;
   /* cusparseXcsrmm does not support transpose on B */
@@ -2006,14 +2014,15 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   Mat_Product        *product = C->product;
   Mat                A,B;
   PetscInt           m,n;
-  PetscBool          cisdense,flg;
+  PetscBool          flg;
   PetscErrorCode     ierr;
   MatMatCusparse     *mmdata;
   Mat_SeqAIJCUSPARSE *Acusp,*Bcusp;
   Mat_SeqAIJCUSPARSEMultStruct *Amat,*Bmat;
-  CsrMatrix* *Acsr,*Bcsr;
+  CsrMatrix         *Acsr,*Bcsr;
   cusparseStatus_t   stat;
   PetscScalar alpha = 1.0;
+  cudaError_t                  cerr;
 
   PetscFunctionBegin;
   MatCheckProduct(C,1);
@@ -2022,7 +2031,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   B    = product->B;
   ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
   if (!flg) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for type %s",((PetscObject)A)->type_name);
-  ierr = PetscObjectTypeCompare((PetscObject)b,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)B,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
   if (!flg) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for B of type %s",((PetscObject)B)->type_name);
   Acusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
   Bcusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
@@ -2065,16 +2074,17 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
 
   /* product data */
   ierr = PetscNew(&mmdata);CHKERRQ(ierr);
-  stat = cusparseCreateCsrgemm2Info(&mmdata->info);CHKERRCUSPARSE(stat);
-  stat = cusparseDcsrgemm2_bufferSizeExt(handle, A->rmap->n, B->cmap->n, A->cmap->n, &alpha,
-                                         Amat->matDescr, nnzA, csrRowPtrA, csrColIndA,
-                                         Bmat->matDescr, nnzB, csrRowPtrB, csrColIndB,
-                                         descrD, nnzD, csrRowPtrD, csrColIndD,
-                                         &beta,
-                                         info,
-                                         &bufferSize);
-cudaMalloc(&buffer, bufferSize);
+  stat = cusparseCreateCsrgemm2Info(&mmdata->csrinfo);CHKERRCUSPARSE(stat);
+  stat = cusparseCreateMatDescr(&mmdata->dummy);CHKERRCUSPARSE(stat);
+  stat = cusparse_csr_spgemm_buf(Acusp->handle, A->rmap->n, B->cmap->n, A->cmap->n, &alpha,
+                                 mmdata->dummy, Acsr->num_entries, Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
+                                 mmdata->dummy, Bcsr->num_entries, Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
+                                 NULL, NULL, 0, NULL, NULL,
+                                 mmdata->csrinfo,
+                                 &mmdata->mmBufferSize);
+  cerr = cudaMalloc(&mmdata->mmBuffer, mmdata->mmBufferSize);CHKERRCUDA(cerr);
 
+#if 0
 // step 3: compute csrRowPtrC
 cudaMalloc((void**)&csrRowPtrC, sizeof(int)*(m+1));
 cusparseXcsrgemm2Nnz(handle, m, n, k, 
@@ -2086,20 +2096,22 @@ cusparseXcsrgemm2Nnz(handle, m, n, k,
         info, buffer );
 
 
-  C->product->data    = mmdata;
 
 
 
-  C->product->destroy = MatDestroy_MatMatCusparse;
   C->ops->productnumeric = MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE;
+#endif
+  C->product->destroy = MatDestroy_MatMatCusparse;
+  C->product->data    = mmdata;
   PetscFunctionReturn(0);
 }
 
-/* handles dense B */
+/* handles sparse or dense B */
 static PetscErrorCode MatProductSetFromOptions_SeqAIJCUSPARSE(Mat C)
 {
   Mat_Product    *product = C->product;
   PetscErrorCode ierr;
+  PetscBool      isdense;
 
   PetscFunctionBegin;
   MatCheckProduct(C,1);
