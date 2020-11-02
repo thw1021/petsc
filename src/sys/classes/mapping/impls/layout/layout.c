@@ -8,7 +8,7 @@ PetscErrorCode IMCreate_Layout(IM m)
   PetscFunctionBegin;
   ierr = PetscNewLog(m, &ml);CHKERRQ(ierr);
   ierr = IMInitializeLayout_Private(ml);CHKERRQ(ierr);
-  m->echelon = 1234; /* need better way of telling it not to make a map */
+  m->allowedMap = PETSC_FALSE;
   m->data = (void *)ml;
   m->ops->destroy = IMDestroy_Layout;
   m->ops->setup = IMSetUp_Layout;
@@ -54,8 +54,8 @@ PetscErrorCode IMSetUp_Layout(IM m)
     ierr = PetscFree(tmp);CHKERRQ(ierr);
   }
   ierr = MPI_Allgather(minmax, 2, MPIU_INT, ml->ranges, 2, MPIU_INT, comm);CHKERRQ(ierr);
-  ml->rstart = ml->ranges[2*rank];
-  ml->rend   = ml->ranges[2*rank+1];
+  ml->rstart    = ml->ranges[2*rank];
+  ml->rend      = ml->ranges[2*rank+1];
   PetscFunctionReturn(0);
 }
 

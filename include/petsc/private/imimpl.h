@@ -34,7 +34,7 @@ struct _p_IM {
   PetscInt   nIdx[IM_MAX_MODE]; /* local/global keys */
   IMBool     sorted[IM_MAX_MODE];
   IM         map;
-  PetscInt   echelon;           /* levels of depth which this map is from the parent map, every generation is 1 rank higher */
+  PetscBool  allowedMap;
   PetscBool  alloced;
   PetscBool  setupcalled;       /* is  __everything__ setup, locks everything */
   PetscObjectState cstate;
@@ -50,7 +50,7 @@ PETSC_STATIC_INLINE PetscErrorCode IMInitializeBase_Private(IM m)
   m->sorted[IM_LOCAL]  = IM_UNKNOWN;
   m->sorted[IM_GLOBAL] = IM_UNKNOWN;
   m->map               = NULL;
-  m->echelon           = 0;
+  m->allowedMap        = PETSC_FALSE;
   m->alloced           = PETSC_TRUE;
   m->setupcalled       = PETSC_FALSE;
   PetscFunctionReturn(0);

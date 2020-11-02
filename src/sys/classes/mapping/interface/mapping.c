@@ -24,14 +24,12 @@ PetscErrorCode IMCreateChild(IM m, IM *c)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,IM_CLASSID,1);
   ierr = IMCreate(PetscObjectComm((PetscObject) m), c);CHKERRQ(ierr);
-  (*c)->echelon = m->echelon+1;
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode IMSetChild(IM m, IM c)
 {
   PetscFunctionBegin;
-
   PetscFunctionReturn(0);
 }
 
@@ -115,7 +113,7 @@ PetscErrorCode IMView(IM m, PetscViewer vwr)
     ierr = PetscViewerASCIIPushSynchronized(vwr);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(vwr, "Locally sorted:  %s\n", m->sorted[IM_LOCAL] ? "PETSC_TRUE" : "PETSC_FALSE");CHKERRQ(ierr);
     for (i = 0; i < m->nIdx[IM_LOCAL]; ++i) {
-      ierr = PetscViewerASCIISynchronizedPrintf(vwr, "[%d] %D: %D\n", rank, i, m->idx[i]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(vwr, "[%d] %D : %D -> %D\n", rank, m->allowedMap ? m->map->idx[i] : i, i, m->idx[i]);CHKERRQ(ierr);
     }
     ierr = PetscViewerFlush(vwr);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(vwr);CHKERRQ(ierr);
@@ -149,8 +147,8 @@ PetscErrorCode IMSetUp(IM m)
   /* If user supplied local size generate global size, if user gave global generate local */
   ierr = PetscObjectGetComm((PetscObject) m, &comm);CHKERRQ(ierr);
   ierr = PetscSplitOwnership(comm, &m->nIdx[IM_LOCAL], &m->nIdx[IM_GLOBAL]);CHKERRQ(ierr);
-  if (!(m->echelon) && !(m->map)) {
-    ierr = IMCreateChild(m, &m->map);CHKERRQ(ierr);
+  if ((m->allowedMap) && !(m->map)) {
+    ierr = IMCreate(comm, &m->map);CHKERRQ(ierr);
     ierr = IMSetType(m->map, IMLAYOUT);CHKERRQ(ierr);
     ierr = IMLayoutSetFromSizes(m->map, m->nIdx[IM_LOCAL], m->nIdx[IM_GLOBAL]);CHKERRQ(ierr);
     ierr = IMSetUp(m->map);CHKERRQ(ierr);
