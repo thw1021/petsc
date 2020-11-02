@@ -37,6 +37,7 @@ if __name__ == '__main__':
     '--with-shared-libraries',
     '--download-magma',
     '--with-magma-fortran-bindings=0',
+    '--download-sionlib',
   ]
 
   configure.petsc_configure(configure_options)
