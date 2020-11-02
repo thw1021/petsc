@@ -257,6 +257,7 @@ class Package(config.base.Configure):
         outflags.append(flag)
     return ' '.join(outflags)
 
+  # TODO: move down to the setCompilers() level since they are used by Petsc.Configure not just here
   def removeWarningFlags(self,flags):
     outflags = []
     for flag in flags:

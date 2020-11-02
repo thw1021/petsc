@@ -265,6 +265,7 @@ prepend-path PATH "%s"
     # Sometimes we need C compiler, even if built with C++
     self.setCompilers.pushLanguage('C')
     self.addMakeMacro('CC_FLAGS',self.setCompilers.getCompilerFlags())
+    self.addMakeMacro('CC_FLAGS_EXTERNAL',self.mpi.updatePackageCFlags(self.getCompilerFlags()))
     self.setCompilers.popLanguage()
 
     # And sometimes we need a C++ compiler even when PETSc is built with C
@@ -273,6 +274,7 @@ prepend-path PATH "%s"
       self.addDefine('HAVE_CXX','1')
       self.addMakeMacro('CXXPP_FLAGS',self.setCompilers.CXXPPFLAGS)
       self.addMakeMacro('CXX_FLAGS',self.setCompilers.getCompilerFlags())
+      self.addMakeMacro('CXX_FLAGS_EXTERNAL',self.mpi.updatePackageCxxFlags(self.getCompilerFlags()))
       cxx_linker = self.setCompilers.getLinker()
       self.addMakeMacro('CXX_LINKER',cxx_linker)
       self.addMakeMacro('CXX_LINKER_FLAGS',self.setCompilers.getLinkerFlags())
@@ -315,6 +317,7 @@ prepend-path PATH "%s"
 
       # compiler values
       self.addMakeMacro('FC_FLAGS',self.setCompilers.getCompilerFlags())
+      self.addMakeMacro('FC_FLAGS_EXTERNAL',self.mpi.updatePackageFFlags(self.getCompilerFlags()))
       self.setCompilers.popLanguage()
       # .o or .obj
       self.addMakeMacro('FC_SUFFIX','o')
