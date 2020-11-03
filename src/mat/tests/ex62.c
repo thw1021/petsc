@@ -32,34 +32,47 @@ int main(int argc,char **args)
   PetscInt       i,j,*idxn,M,N,nzp,PN,rstart,rend;
   PetscReal      norm;
   PetscRandom    rdm;
-  char           file[2][128];
+  char           file[2][PETSC_MAX_PATH_LEN] = { "", ""};
   PetscScalar    *a,rval,alpha;
   PetscBool      Test_MatMatMult=PETSC_TRUE,Test_MatTrMat=PETSC_TRUE,Test_MatMatTr=PETSC_TRUE;
-  PetscBool      Test_MatPtAP=PETSC_TRUE,Test_MatRARt=PETSC_TRUE,flg,seqaij;
+  PetscBool      Test_MatPtAP=PETSC_TRUE,Test_MatRARt=PETSC_TRUE,flg,seqaij,flgA,flgB;
   MatInfo        info;
   MatType        mattype;
+  const char     *deft = MATAIJ;
+  char           A_mattype[256], B_mattype[256];
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
 
   /*  Load the matrices A_save and B */
-  ierr = PetscOptionsGetString(NULL,NULL,"-fA",file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"Must indicate a file name for small matrix A with the -fA option.");
-  ierr = PetscOptionsGetString(NULL,NULL,"-fB",file[1],sizeof(file[1]),&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"Must indicate a file name for small matrix B with the -fB option.");
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","","");CHKERRQ(ierr);
+  ierr = PetscOptionsString("-fA","Path for matrix A","",file[0],file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"Must indicate a file name for matrix A with the -fA option.");
+  ierr = PetscOptionsString("-fB","Path for matrix B","",file[1],file[1],sizeof(file[1]),&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"Must indicate a file name for matrix B with the -fB option.");
+  ierr = PetscOptionsFList("-A_mat_type","Matrix type","MatSetType",MatList,deft,A_mattype,256,&flgA);CHKERRQ(ierr);
+  ierr = PetscOptionsFList("-B_mat_type","Matrix type","MatSetType",MatList,deft,B_mattype,256,&flgB);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[0],FILE_MODE_READ,&viewer);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&A_save);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A_save);CHKERRQ(ierr);
   ierr = MatLoad(A_save,viewer);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
 
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[1],FILE_MODE_READ,&viewer);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&B);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(B);CHKERRQ(ierr);
   ierr = MatLoad(B,viewer);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+
+  if (flgA) {
+    ierr = MatConvert(A_save,A_mattype,MAT_INPLACE_MATRIX,&A_save);CHKERRQ(ierr);
+  }
+  if (flgB) {
+    ierr = MatConvert(B,B_mattype,MAT_INPLACE_MATRIX,&B);CHKERRQ(ierr);
+  }
+  ierr = MatSetFromOptions(A_save);CHKERRQ(ierr);
+  ierr = MatSetFromOptions(B);CHKERRQ(ierr);
 
   ierr = MatGetType(B,&mattype);CHKERRQ(ierr);
 
@@ -87,7 +100,6 @@ int main(int argc,char **args)
     ierr = MatHasOperation(C,MATOP_PRODUCTSYMBOLIC,&flg);CHKERRQ(ierr);
     ierr = MatProductSymbolic(C);CHKERRQ(ierr);
     ierr = MatProductNumeric(C);CHKERRQ(ierr);
-
     /* Test reuse symbolic C */
     alpha = 0.9;
     ierr = MatScale(A,alpha);CHKERRQ(ierr);
@@ -116,11 +128,13 @@ int main(int argc,char **args)
     ierr = MatDestroy(&C);CHKERRQ(ierr);
 
     /* Test MatMatMult() for dense and aij matrices */
-    ierr = MatConvert(A_save,MATDENSE,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
-    ierr = MatMatMult(A,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
-    ierr = MatDestroy(&C);CHKERRQ(ierr);
-    ierr = MatDestroy(&A);CHKERRQ(ierr);
-
+    ierr = PetscObjectTypeCompareAny((PetscObject)A,&flg,MATSEQAIJ,MATMPIAIJ,"");CHKERRQ(ierr);
+    if (flg) {
+      ierr = MatConvert(A_save,MATDENSE,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
+      ierr = MatMatMult(A,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
+      ierr = MatDestroy(&C);CHKERRQ(ierr);
+      ierr = MatDestroy(&A);CHKERRQ(ierr);
+    }
   }
 
   /* Create P and R = P^T  */
@@ -145,8 +159,10 @@ int main(int argc,char **args)
   }
   ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatSetFromOptions(P);CHKERRQ(ierr);
 
   ierr = MatTranspose(P,MAT_INITIAL_MATRIX,&R);CHKERRQ(ierr);
+  ierr = MatSetFromOptions(R);CHKERRQ(ierr);
 
   /* 2) MatTransposeMatMult() */
   /* ------------------------ */
@@ -189,8 +205,8 @@ int main(int argc,char **args)
   /* ------------------------ */
   if (Test_MatMatTr) {
     /* C = B*R^T */
-    ierr = PetscObjectTypeCompare((PetscObject)B,MATSEQAIJ,&seqaij);CHKERRQ(ierr);
-    if (size == 1 && seqaij) {
+    ierr = PetscObjectBaseTypeCompare((PetscObject)B,MATSEQAIJ,&seqaij);CHKERRQ(ierr);
+    if (seqaij) {
       ierr = MatMatTransposeMult(B,R,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
       ierr = MatSetOptionsPrefix(C,"ABt_");CHKERRQ(ierr); /* enable '-ABt_' for matrix C */
       ierr = MatGetInfo(C,MAT_GLOBAL_SUM,&info);CHKERRQ(ierr);
@@ -231,13 +247,12 @@ int main(int argc,char **args)
     ierr = MatPtAP(A,P,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
 
     /* Test MAT_REUSE_MATRIX - reuse symbolic C */
-    alpha=1.0;
+    alpha = 1.0;
     for (i=0; i<2; i++) {
       alpha -= 0.1;
       ierr   = MatScale(A,alpha);CHKERRQ(ierr);
       ierr   = MatPtAP(A,P,MAT_REUSE_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
     }
-
     ierr = MatPtAPMultEqual(A,P,C,10,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatPtAP");
 
@@ -363,4 +378,15 @@ int main(int argc,char **args)
      args: -fA ${DATAFILESPATH}/matrices/medium -fB ${DATAFILESPATH}/matrices/medium -AB_matproduct_ab_via hypre -matmatmult_via hypre -PtAP_matproduct_ptap_via hypre -matptap_via hypre
      output_file: output/ex62_1.out
 
+   test:
+     suffix: 14_seqaij
+     requires: !complex double !define(PETSC_USE_64BIT_INDICES)
+     args: -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     output_file: output/ex62_1.out
+
+   test:
+     suffix: 14_seqaijcusparse
+     requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES)
+     args: -A_mat_type aijcusparse -B_mat_type aijcusparse -mat_cusparse_transgen -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     output_file: output/ex62_1.out
 TEST*/
