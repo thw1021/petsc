@@ -2002,8 +2002,6 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   PetscFunctionReturn(0);
 }
 
-//PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqDense(Mat);
-
 static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
 {
   Mat_Product                  *product = C->product;
@@ -2084,11 +2082,13 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   if (!Acsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing A CSR struct");
   if (!Bcsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing B CSR struct");
   if (!Ccsr) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing C CSR struct");
-
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+#else
   stat = cusparse_csr_spgemm(Ccusp->handle, CUSPARSE_OPERATION_NON_TRANSPOSE, CUSPARSE_OPERATION_NON_TRANSPOSE, m, n, k,
                              Amat->descr, Acsr->num_entries, Acsr->values->data().get(), Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
                              Bmat->descr, Bcsr->num_entries, Bcsr->values->data().get(), Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
                              Cmat->descr, Ccsr->values->data().get(), Ccsr->row_offsets->data().get(), Ccsr->column_indices->data().get());CHKERRCUSPARSE(stat);
+#endif
   C->offloadmask = PETSC_OFFLOAD_GPU;
   ierr = MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -2199,6 +2199,8 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   cerr = cudaMemcpy(Cmat->beta_one, &PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
 
   /* product data */
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+#else
   stat = cusparseSetPointerMode(Ccusp->handle, CUSPARSE_POINTER_MODE_HOST);CHKERRCUSPARSE(stat);
   stat = cusparseXcsrgemmNnz (Ccusp->handle, CUSPARSE_OPERATION_NON_TRANSPOSE, CUSPARSE_OPERATION_NON_TRANSPOSE, m, n, k,
                               Amat->descr, Acsr->num_entries, Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
@@ -2215,7 +2217,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
                              Amat->descr, Acsr->num_entries, Acsr->values->data().get(), Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
                              Bmat->descr, Bcsr->num_entries, Bcsr->values->data().get(), Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
                              Cmat->descr, Ccsr->values->data().get(), Ccsr->row_offsets->data().get(), Ccsr->column_indices->data().get());CHKERRCUSPARSE(stat);
-
+#endif
   c->singlemalloc = PETSC_FALSE;
   c->free_a       = PETSC_TRUE;
   c->free_ij      = PETSC_TRUE;
