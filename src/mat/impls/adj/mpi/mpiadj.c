@@ -716,6 +716,11 @@ PetscErrorCode  MatMPIAdjToSeq_MPIAdj(Mat A,Mat *B)
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)A),&size);CHKERRQ(ierr);
+  if (size == 1) {
+    ierr   = PetscObjectReference((PetscObject)A);CHKERRQ(ierr);
+    *B = A;
+    PetscFunctionReturn(0);
+  }
   ierr = MatGetSize(A,&M,&N);CHKERRQ(ierr);
   ierr = MatGetLocalSize(A,&m,NULL);CHKERRQ(ierr);
   nz   = adj->nz;
@@ -809,7 +814,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAdj(Mat B)
 }
 
 /*@C
-   MatMPIAdjToSeq - Converts an parallel MPIAdj matrix to complete MPIAdj on each process (needed by sequential preconditioners)
+   MatMPIAdjToSeq - Converts an parallel MPIAdj matrix to complete MPIAdj on each process (needed by sequential partitioners)
 
    Logically Collective
 

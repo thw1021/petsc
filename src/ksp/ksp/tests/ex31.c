@@ -11,6 +11,7 @@ T*/
 
 
 #include <petscksp.h>
+#include <petscmatpartitioning.h>
 
 int main(int argc,char **args)
 {

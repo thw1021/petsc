@@ -40,7 +40,7 @@ T*/
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
 #include <petscksp.h>
-#include <petscmat.h>
+#include <petscmatpartitioning.h>
 
 
 int main(int argc,char **args)

@@ -14,7 +14,7 @@ T*/
      petscis.h     - index sets
      petscviewer.h - viewers
 */
-#include <petscmat.h>
+#include <petscmatpartitioning.h>
 
 int main(int argc,char **args)
 {

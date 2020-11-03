@@ -25,6 +25,7 @@ It is copied and intended to move dirty codes from ksp/tutorials/ex10.c and simp
    Processors: n
 T*/
 
+#include <petscmatpartitioning.h>
 #include <petscksp.h>
 
 int main(int argc,char **args)

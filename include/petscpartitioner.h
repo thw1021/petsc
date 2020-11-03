@@ -50,7 +50,7 @@ PETSC_EXTERN PetscErrorCode PetscPartitionerShellSetRandom(PetscPartitioner, Pet
 PETSC_EXTERN PetscErrorCode PetscPartitionerShellGetRandom(PetscPartitioner, PetscBool*);
 
 /* We should implement MatPartitioning with PetscPartitioner */
-#include <petscmat.h>
+#include <petscmatpartitioning.h>
 #define PETSCPARTITIONERMATPARTITIONING "matpartitioning"
 PETSC_EXTERN PetscErrorCode PetscPartitionerMatPartitioningGetMatPartitioning(PetscPartitioner, MatPartitioning*);
 

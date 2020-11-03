@@ -1,5 +1,5 @@
 
-#include <petsc/private/matimpl.h>               /*I "petscmat.h" I*/
+#include <petsc/private/matpartitioningimpl.h>   /*I "petscmatpartitioning.h" I*/
 
 /* Logging support */
 PetscClassId MAT_PARTITIONING_CLASSID;
@@ -462,10 +462,14 @@ PetscErrorCode  MatPartitioningViewImbalance(MatPartitioning matp, IS partitioni
 @*/
 PetscErrorCode  MatPartitioningSetAdjacency(MatPartitioning part,Mat adj)
 {
+  PetscErrorCode  ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidHeaderSpecific(adj,MAT_CLASSID,2);
+  ierr = MatDestroy(&part->adj);CHKERRQ(ierr);
   part->adj = adj;
+  ierr = PetscObjectReference((PetscObject)adj);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -495,6 +499,7 @@ PetscErrorCode  MatPartitioningDestroy(MatPartitioning *part)
   }
   ierr = PetscFree((*part)->vertex_weights);CHKERRQ(ierr);
   ierr = PetscFree((*part)->part_weights);CHKERRQ(ierr);
+  ierr = MatDestroy(&(*part)->adj);CHKERRQ(ierr);
   ierr = PetscHeaderDestroy(part);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -524,6 +529,7 @@ PetscErrorCode  MatPartitioningSetVertexWeights(MatPartitioning part,const Petsc
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   ierr = PetscFree(part->vertex_weights);CHKERRQ(ierr);
   part->vertex_weights = (PetscInt*)weights;
+  if (weights) part->use_vertex_weights = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -557,6 +563,7 @@ PetscErrorCode  MatPartitioningSetPartitionWeights(MatPartitioning part,const Pe
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   ierr = PetscFree(part->part_weights);CHKERRQ(ierr);
   part->part_weights = (PetscReal*)weights;
+  if (weights) part->use_part_weights = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -782,12 +789,12 @@ PetscErrorCode  MatPartitioningSetType(MatPartitioning part,MatPartitioningType 
    Input Parameter:
 .  part - the partitioning context.
 
-   Options Database Command:
-$  -mat_partitioning_type  <type>
-$      Use -help for a list of available methods
-$      (for instance, parmetis)
-$  -mat_partitioning_nparts - number of subgraphs
-
+   Options Database:
++  -mat_partitioning_type <type> - partitioner type, see MatPartitioningType
+.  -mat_partitioning_nparts - number of subgraphs
+.  -mat_partitioning_use_edge_weights - whether or not to use edge weights
+.  -mat_partitioning_use_vertex_weights - whether or not to use vertex weights
+-  -mat_partitioning_use_partition_weights - whether or not to use partition weights
 
    Notes:
     If the partitioner has not been set by the user it uses one of the installed partitioner such as ParMetis. If there are
@@ -825,9 +832,10 @@ PetscErrorCode  MatPartitioningSetFromOptions(MatPartitioning part)
     ierr = MatPartitioningSetType(part,type);CHKERRQ(ierr);
   }
 
-  ierr = PetscOptionsInt("-mat_partitioning_nparts","number of fine parts",NULL,part->n,& part->n,&flag);CHKERRQ(ierr);
-
-  ierr = PetscOptionsBool("-mat_partitioning_use_edge_weights","whether or not to use edge weights",NULL,part->use_edge_weights,&part->use_edge_weights,&flag);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-mat_partitioning_nparts","number of fine parts",NULL,part->n,& part->n,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-mat_partitioning_use_edge_weights","whether or not to use edge weights",NULL,part->use_edge_weights,&part->use_edge_weights,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-mat_partitioning_use_vertex_weights","whether or not to use vertex weights",NULL,part->use_vertex_weights,&part->use_vertex_weights,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-mat_partitioning_use_partition_weights","whether or not to use partition weights",NULL,part->use_part_weights,&part->use_part_weights,NULL);CHKERRQ(ierr);
 
   /*
     Set the type if it was never set.
