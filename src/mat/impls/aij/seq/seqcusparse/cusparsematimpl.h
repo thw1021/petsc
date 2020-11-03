@@ -84,8 +84,7 @@ do { \
       #define cusparse_hyb_spmv(a,b,c,d,e,f,g,h)                 cusparseChybmv((a),(b),(cuComplex*)(c),(d),(e),(cuComplex*)(f),(cuComplex*)(g),(cuComplex*)(h))
       #define cusparse_csr2hyb(a,b,c,d,e,f,g,h,i,j)              cusparseCcsr2hyb((a),(b),(c),(d),(cuComplex*)(e),(f),(g),(h),(i),(j))
       #define cusparse_hyb2csr(a,b,c,d,e,f)                      cusparseChyb2csr((a),(b),(c),(cuComplex*)(d),(e),(f))
-      #define cusparse_csr_spgemm(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,buf) cusparseCcsrgemm2(a,b,c,d,(cuComplex*)e,f,g,(cuComplex*)h,i,j,k,l,(cuComplex*)m,n,o,(cuComplex*)p,q,r,(cuComplex*)s,t,u,v,w,x,y,z,buf)
-      #define cusparse_csr_spgemm_buf(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t)             cusparseCcsrgemm2_bufferSizeExt(a,,b,c,d,(cuComplex*)e,f,g,h,i,j,k,l,m,(cuComplex*)n,o,p,q,r,s,t)
+      #define cusparse_csr_spgemm(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t) cusparseCcsrgemm(a,b,c,d,e,f,g,h,(cuComplex*)i,j,k,l,m,(cuComplex*)n,o,p,q,(cuComplex*)r,s,t)
     #elif defined(PETSC_USE_REAL_DOUBLE)
       #define cusparse_solve(a,b,c,d,e,f,g,h,i,j,k)              cusparseZcsrsv_solve((a),(b),(c),(cuDoubleComplex*)(d),(e),(cuDoubleComplex*)(f),(g),(h),(i),(cuDoubleComplex*)(j),(cuDoubleComplex*)(k))
       #define cusparse_analysis(a,b,c,d,e,f,g,h,i)               cusparseZcsrsv_analysis((a),(b),(c),(d),(e),(cuDoubleComplex*)(f),(g),(h),(i))
@@ -95,8 +94,7 @@ do { \
       #define cusparse_hyb_spmv(a,b,c,d,e,f,g,h)                 cusparseZhybmv((a),(b),(cuDoubleComplex*)(c),(d),(e),(cuDoubleComplex*)(f),(cuDoubleComplex*)(g),(cuDoubleComplex*)(h))
       #define cusparse_csr2hyb(a,b,c,d,e,f,g,h,i,j)              cusparseZcsr2hyb((a),(b),(c),(d),(cuDoubleComplex*)(e),(f),(g),(h),(i),(j))
       #define cusparse_hyb2csr(a,b,c,d,e,f)                      cusparseZhyb2csr((a),(b),(c),(cuDoubleComplex*)(d),(e),(f))
-      #define cusparse_csr_spgemm(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,buf) cusparseZcsrgemm2(a,b,c,d,(cuDoubleComplex*)e,f,g,(cuDoubleComplex*)h,i,j,k,l,(cuDoubleComplex*)m,n,o,(cuDoubleComplex*)p,q,r,(cuDoubleComplex*)s,t,u,v,w,x,y,z,buf)
-      #define cusparse_csr_spgemm_buf(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t)             cusparseZcsrgemm2_bufferSizeExt(a,,b,c,d,(cuDoubleComplex*)e,f,g,h,i,j,k,l,m,(cuDoubleComplex*)n,o,p,q,r,s,t)
+      #define cusparse_csr_spgemm(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t) cusparseZcsrgemm(a,b,c,d,e,f,g,h,(cuDoubleComplex*)i,j,k,l,m,(cuDoubleComplex*)n,o,p,q,(cuDoubleComplex*)r,s,t)
     #endif
   #else
     #if defined(PETSC_USE_REAL_SINGLE)
@@ -108,8 +106,7 @@ do { \
       #define cusparse_hyb_spmv cusparseShybmv
       #define cusparse_csr2hyb  cusparseScsr2hyb
       #define cusparse_hyb2csr  cusparseShyb2csr
-      #define cusparse_csr_spgemm     cusparseScsrgemm2
-      #define cusparse_csr_spgemm_buf cusparseScsrgemm2_bufferSizeExt
+      #define cusparse_csr_spgemm  cusparseScsrgemm
     #elif defined(PETSC_USE_REAL_DOUBLE)
       #define cusparse_solve    cusparseDcsrsv_solve
       #define cusparse_analysis cusparseDcsrsv_analysis
@@ -119,8 +116,7 @@ do { \
       #define cusparse_hyb_spmv cusparseDhybmv
       #define cusparse_csr2hyb  cusparseDcsr2hyb
       #define cusparse_hyb2csr  cusparseDhyb2csr
-      #define cusparse_csr_spgemm     cusparseDcsrgemm2
-      #define cusparse_csr_spgemm_buf cusparseDcsrgemm2_bufferSizeExt
+      #define cusparse_csr_spgemm cusparseDcsrgemm
     #endif
   #endif
 #endif
