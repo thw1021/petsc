@@ -196,7 +196,7 @@ template<typename Type> struct Maxloc {
 __device__ static double atomicExch(double* address,double val) {return __longlong_as_double(atomicExch((unsigned long long int*)address,__double_as_longlong(val)));}
 
 #if defined(PETSC_USE_64BIT_INDICES)
-__device__ static PetscInt atomicExch(PetscInt* address,PetscInt val) {return (PetscInt)(atomicExch((unsigned long long int*)address,(unsigned long long int)val));}
+__device__ static long long int atomicExch(long long int* address,long long int val) {return (long long int)(atomicExch((unsigned long long int*)address,(unsigned long long int)val));}
 #endif
 
 template<typename Type> struct AtomicInsert {__device__ Type operator() (Type& x,Type y) const {return atomicExch(&x,y);}};
@@ -251,7 +251,7 @@ template<> struct AtomicInsert<PetscComplex> {
 */
 
 #if defined(PETSC_USE_64BIT_INDICES)
-__device__ static PetscInt atomicAdd(PetscInt* address,PetscInt val) {return (PetscInt)atomicAdd((unsigned long long int*)address,(unsigned long long int)val);}
+__device__ static long long int atomicAdd(long long int* address,long long int val) {return (long long int)atomicAdd((unsigned long long int*)address,(unsigned long long int)val);}
 #endif
 
 template<typename Type> struct AtomicAdd {__device__ Type operator() (Type& x,Type y) const {return atomicAdd(&x,y);}};
@@ -347,15 +347,15 @@ __device__ static int atomicMult(int* address,int val)
 }
 
 #if defined(PETSC_USE_64BIT_INDICES)
-__device__ static int atomicMult(PetscInt* address,PetscInt val)
+__device__ static long long int atomicMult(long long int* address,long long int val)
 {
   unsigned long long int *address_as_ull = (unsigned long long int*)(address);
   unsigned long long int old = *address_as_ull, assumed;
   do {
     assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val*(PetscInt)assumed));
+    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val*(long long int)assumed));
   } while (assumed != old);
-  return (PetscInt)old;
+  return (long long int)old;
 }
 #endif
 
@@ -434,26 +434,26 @@ __device__ static float atomicMax(float* address,float val)
   So we add extra conditions defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 320)
 */
 #if defined(PETSC_USE_64BIT_INDICES) && defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 320)
-__device__ static PetscInt atomicMin(PetscInt* address,PetscInt val)
+__device__ static long long int atomicMin(long long int* address,long long int val)
 {
   unsigned long long int *address_as_ull = (unsigned long long int*)(address);
   unsigned long long int old = *address_as_ull, assumed;
   do {
     assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(PetscMin(val,(PetscInt)assumed)));
+    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(PetscMin(val,(long long int)assumed)));
   } while (assumed != old);
-  return (PetscInt)old;
+  return (long long int)old;
 }
 
-__device__ static PetscInt atomicMax(PetscInt* address,PetscInt val)
+__device__ static long long int atomicMax(long long int* address,long long int val)
 {
   unsigned long long int *address_as_ull = (unsigned long long int*)(address);
   unsigned long long int old = *address_as_ull, assumed;
   do {
     assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(PetscMax(val,(PetscInt)assumed)));
+    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(PetscMax(val,(long long int)assumed)));
   } while (assumed != old);
-  return (PetscInt)old;
+  return (long long int)old;
 }
 #endif
 
@@ -479,47 +479,38 @@ template<typename Type> struct AtomicMax {__device__ Type operator() (Type& x,Ty
   atomicOr() and atomicXor are similar.
 */
 
-#if defined(PETSC_USE_64BIT_INDICES)
-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 320) /* Why 320? see comments at atomicMin(PetscInt* address,PetscInt val) */
-__device__ static PetscInt atomicAnd(PetscInt* address,PetscInt val)
+#if defined(PETSC_USE_64BIT_INDICES) && defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 320) /* Why 320? see comments at atomicMin(PetscInt* address,PetscInt val) */
+__device__ static long long int atomicAnd(long long int* address,long long int val)
 {
   unsigned long long int *address_as_ull = (unsigned long long int*)(address);
   unsigned long long int old = *address_as_ull, assumed;
   do {
     assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val & (PetscInt)assumed));
+    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val & (long long int)assumed));
   } while (assumed != old);
-  return (PetscInt)old;
+  return (long long int)old;
 }
-__device__ static PetscInt atomicOr(PetscInt* address,PetscInt val)
+__device__ static long long int atomicOr(long long int* address,long long int val)
 {
   unsigned long long int *address_as_ull = (unsigned long long int*)(address);
   unsigned long long int old = *address_as_ull, assumed;
   do {
     assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val | (PetscInt)assumed));
+    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val | (long long int)assumed));
   } while (assumed != old);
-  return (PetscInt)old;
+  return (long long int)old;
 }
 
-__device__ static PetscInt atomicXor(PetscInt* address,PetscInt val)
+__device__ static long long int atomicXor(long long int* address,long long int val)
 {
   unsigned long long int *address_as_ull = (unsigned long long int*)(address);
   unsigned long long int old = *address_as_ull, assumed;
   do {
     assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val ^ (PetscInt)assumed));
+    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val ^ (long long int)assumed));
   } while (assumed != old);
-  return (PetscInt)old;
+  return (long long int)old;
 }
-#else
-/*
- See also comments at atomicMin(PetscInt* address,PetscInt val)
-__device__ static PetscInt atomicAnd(PetscInt* address,PetscInt val) {return (PetscInt)atomicAnd((unsigned long long int*)address,(unsigned long long int)val);}
-__device__ static PetscInt atomicOr (PetscInt* address,PetscInt val) {return (PetscInt)atomicOr ((unsigned long long int*)address,(unsigned long long int)val);}
-__device__ static PetscInt atomicXor(PetscInt* address,PetscInt val) {return (PetscInt)atomicXor((unsigned long long int*)address,(unsigned long long int)val);}
-*/
-#endif
 #endif
 
 template<typename Type> struct AtomicBAND {__device__ Type operator() (Type& x,Type y) const {return atomicAnd(&x,y);}};
@@ -934,18 +925,16 @@ PetscErrorCode PetscSFLinkSetUp_Cuda(PetscSF sf,PetscSFLink link,MPI_Datatype un
     else if (nPetscReal == 4) PackInit_RealType<PetscReal,4,1>(link); else if (nPetscReal%4 == 0) PackInit_RealType<PetscReal,4,0>(link);
     else if (nPetscReal == 2) PackInit_RealType<PetscReal,2,1>(link); else if (nPetscReal%2 == 0) PackInit_RealType<PetscReal,2,0>(link);
     else if (nPetscReal == 1) PackInit_RealType<PetscReal,1,1>(link); else if (nPetscReal%1 == 0) PackInit_RealType<PetscReal,1,0>(link);
-  } else if (nPetscInt) {
-    if      (nPetscInt == 8) PackInit_IntegerType<PetscInt,8,1>(link); else if (nPetscInt%8 == 0) PackInit_IntegerType<PetscInt,8,0>(link);
-    else if (nPetscInt == 4) PackInit_IntegerType<PetscInt,4,1>(link); else if (nPetscInt%4 == 0) PackInit_IntegerType<PetscInt,4,0>(link);
-    else if (nPetscInt == 2) PackInit_IntegerType<PetscInt,2,1>(link); else if (nPetscInt%2 == 0) PackInit_IntegerType<PetscInt,2,0>(link);
-    else if (nPetscInt == 1) PackInit_IntegerType<PetscInt,1,1>(link); else if (nPetscInt%1 == 0) PackInit_IntegerType<PetscInt,1,0>(link);
-#if defined(PETSC_USE_64BIT_INDICES)
+  } else if (nPetscInt && sizeof(PetscInt) == sizeof(long long int)) {
+    if      (nPetscInt == 8) PackInit_IntegerType<long long int,8,1>(link); else if (nPetscInt%8 == 0) PackInit_IntegerType<long long int,8,0>(link);
+    else if (nPetscInt == 4) PackInit_IntegerType<long long int,4,1>(link); else if (nPetscInt%4 == 0) PackInit_IntegerType<long long int,4,0>(link);
+    else if (nPetscInt == 2) PackInit_IntegerType<long long int,2,1>(link); else if (nPetscInt%2 == 0) PackInit_IntegerType<long long int,2,0>(link);
+    else if (nPetscInt == 1) PackInit_IntegerType<long long int,1,1>(link); else if (nPetscInt%1 == 0) PackInit_IntegerType<long long int,1,0>(link);
   } else if (nInt) {
     if      (nInt == 8) PackInit_IntegerType<int,8,1>(link); else if (nInt%8 == 0) PackInit_IntegerType<int,8,0>(link);
     else if (nInt == 4) PackInit_IntegerType<int,4,1>(link); else if (nInt%4 == 0) PackInit_IntegerType<int,4,0>(link);
     else if (nInt == 2) PackInit_IntegerType<int,2,1>(link); else if (nInt%2 == 0) PackInit_IntegerType<int,2,0>(link);
     else if (nInt == 1) PackInit_IntegerType<int,1,1>(link); else if (nInt%1 == 0) PackInit_IntegerType<int,1,0>(link);
-#endif
   } else if (nSignedChar) {
     if      (nSignedChar == 8) PackInit_IntegerType<SignedChar,8,1>(link); else if (nSignedChar%8 == 0) PackInit_IntegerType<SignedChar,8,0>(link);
     else if (nSignedChar == 4) PackInit_IntegerType<SignedChar,4,1>(link); else if (nSignedChar%4 == 0) PackInit_IntegerType<SignedChar,4,0>(link);
