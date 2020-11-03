@@ -1607,8 +1607,6 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
   #endif
   ierr = PetscFPrintf(comm, fd, "------------------------------------------------------------------------------------------------------------------------\n");CHKERRQ(ierr);
 
-  ierr = PetscLogViewWarnDebugging(comm,fd);CHKERRQ(ierr);
-
   /* Report events */
   ierr = PetscFPrintf(comm, fd,"Event                Count      Time (sec)     Flop                              --- Global ---  --- Stage ----  Total");CHKERRQ(ierr);
   if (PetscLogMemory) {
@@ -1882,8 +1880,6 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
 
   /* Cleanup */
   ierr = PetscFPrintf(comm, fd, "\n");CHKERRQ(ierr);
-  ierr = PetscLogViewWarnNoGpuAwareMpi(comm,fd);CHKERRQ(ierr);
-  ierr = PetscLogViewWarnDebugging(comm,fd);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
