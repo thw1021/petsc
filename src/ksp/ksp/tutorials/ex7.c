@@ -75,6 +75,7 @@ int main(int argc,char **args)
   }
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
 
   /*
      Create parallel vectors
@@ -303,6 +304,8 @@ int main(int argc,char **args)
         nsize: {{1 2}separate output}
         requires: cuda
         args: -mat_type aijcusparse -vec_type cuda
+        # triggers cusparse MatTransposeMat operation when squaring the graph
+        args: -pc_gamg_sym_graph 0 -pc_gamg_threshold -1 -pc_gamg_square_graph 1
       test:
         suffix: gamg_kokkos
         nsize: {{1 2}separate output}
