@@ -1170,8 +1170,8 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
 
   /* smooth P0 */
   for (jj = 0; jj < pc_gamg_agg->nsmooths; jj++) {
-    Mat       tMat;
-    Vec       diag;
+    Mat tMat;
+    Vec diag;
 
 #if defined PETSC_GAMG_USE_LOG
     ierr = PetscLogEventBegin(petsc_gamg_setup_events[SET9],0,0,0,0);CHKERRQ(ierr);
