@@ -55,7 +55,7 @@ class Configure(config.package.CMakePackage):
 
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
-    KokkosRoot = self.kokkos.installDir
+    KokkosRoot = self.kokkos.directory
     args.append('-DKokkos_ROOT='+KokkosRoot)
     # By default it installs in lib64, change it to lib
     args.append('-DCMAKE_INSTALL_LIBDIR:STRING=lib')
