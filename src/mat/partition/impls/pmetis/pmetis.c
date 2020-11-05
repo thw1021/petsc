@@ -95,7 +95,7 @@ static PetscErrorCode MatPartitioningSetUp_Parmetis(MatPartitioning part)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part, PetscBool isImprove, IS *partitioning)
+static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part, IS *partitioning)
 {
   MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
   PetscErrorCode           ierr;
@@ -115,20 +115,9 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
 
     ierr = PetscMalloc1(pmat->rmap->n,&locals);CHKERRQ(ierr);
 
-    if (isImprove) {
-      PetscInt       i;
-      const PetscInt *part_indices;
-      PetscValidHeaderSpecific(*partitioning,IS_CLASSID,4);
-      ierr = ISGetIndices(*partitioning,&part_indices);CHKERRQ(ierr);
-      for (i=0; i<pmat->rmap->n; i++) locals[i] = part_indices[i*bs];
-      ierr = ISRestoreIndices(*partitioning,&part_indices);CHKERRQ(ierr);
-      ierr = ISDestroy(partitioning);CHKERRQ(ierr);
-    }
-
     if (pmetis->repartition) {
+      //TODO should this be separate, like MatPartitioningAdaptiveRepart
       PetscStackCallParmetis(ParMETIS_V3_AdaptiveRepart,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,&itr,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
-    } else if (isImprove) {
-      PetscStackCallParmetis(ParMETIS_V3_RefineKway,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
     } else {
       PetscStackCallParmetis(ParMETIS_V3_PartKway,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
     }
@@ -253,7 +242,7 @@ static PetscErrorCode MatPartitioningApply_Parmetis(MatPartitioning part, IS *pa
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MatPartitioningApply_Parmetis_Private(part, PETSC_FALSE, partitioning);CHKERRQ(ierr);
+  ierr = MatPartitioningApply_Parmetis_Private(part, partitioning);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -262,10 +251,48 @@ static PetscErrorCode MatPartitioningApply_Parmetis(MatPartitioning part, IS *pa
 */
 static PetscErrorCode MatPartitioningImprove_Parmetis(MatPartitioning part, IS *partitioning)
 {
-  PetscErrorCode ierr;
+  MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
+  PetscErrorCode           ierr;
+  PetscInt                 *locals = NULL;
+  Mat                      pmat    = part->adj_work;
+  PetscInt                 bs      = part->bs;
 
   PetscFunctionBegin;
-  ierr = MatPartitioningApply_Parmetis_Private(part, PETSC_TRUE, partitioning);CHKERRQ(ierr);
+  //TODO handle this on interface level?
+  if (pmat) {
+    Mat_MPIAdj *adj     = (Mat_MPIAdj*)pmat->data;
+    idx_t      *vtxdist = (idx_t*) pmat->rmap->range;
+    idx_t      *xadj    = (idx_t*) adj->i;
+    idx_t      *adjncy  = (idx_t*) adj->j;
+    idx_t      numflag=0, nparts=part->n;
+    PetscInt   i;
+    const PetscInt *part_indices;
+
+    ierr = PetscMalloc1(pmat->rmap->n,&locals);CHKERRQ(ierr);
+
+    ierr = ISGetIndices(*partitioning,&part_indices);CHKERRQ(ierr);
+    for (i=0; i<pmat->rmap->n; i++) locals[i] = part_indices[i*bs];
+    ierr = ISRestoreIndices(*partitioning,&part_indices);CHKERRQ(ierr);
+    ierr = ISDestroy(partitioning);CHKERRQ(ierr);
+
+    PetscStackCallParmetis(ParMETIS_V3_RefineKway,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
+
+    if (bs > 1) {
+      PetscInt i,j,*newlocals;
+      ierr = PetscMalloc1(bs*pmat->rmap->n,&newlocals);CHKERRQ(ierr);
+      for (i=0; i<pmat->rmap->n; i++) {
+        for (j=0; j<bs; j++) {
+          newlocals[bs*i + j] = locals[i];
+        }
+      }
+      ierr = PetscFree(locals);CHKERRQ(ierr);
+      ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),bs*pmat->rmap->n,newlocals,PETSC_OWN_POINTER,partitioning);CHKERRQ(ierr);
+    } else {
+      ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),pmat->rmap->n,locals,PETSC_OWN_POINTER,partitioning);CHKERRQ(ierr);
+    }
+  } else {
+    ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),0,NULL,PETSC_COPY_VALUES,partitioning);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
