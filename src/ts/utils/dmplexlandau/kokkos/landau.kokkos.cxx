@@ -70,17 +70,55 @@ namespace Kokkos { //reduction identity must be defined in Kokkos namespace
 }
 
 extern "C"  {
+PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *maps, pointInterpolationP4est (*pointMaps)[LANDAU_MAX_Q_FACE])
+{
+  PetscErrorCode    ierr;
+  PetscInt          ej,q;
+  PetscFunctionBegin;
+
+  // allocate and copy point datamaps->gIdx[eidx][field][q]
+  ierr = PetscMalloc(maps->num_reduced * sizeof *maps->c_maps, &maps->c_maps);CHKERRQ(ierr);
+  // ierr = PetscPrintf(PETSC_COMM_SELF,"================= c_maps size %D --> %D (%g)\n",MAP_BF_SIZE,maps->num_reduced,(float)MAP_BF_SIZE/(float)(maps->num_reduced+1));CHKERRQ(ierr);
+  for (ej = 0; ej < maps->num_reduced; ++ej) {
+    //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\tconstrant %3D) ",ej);
+    for (q = 0; q < maps->num_face; ++q) {
+      maps->c_maps[ej][q].scale = pointMaps[ej][q].scale;
+      maps->c_maps[ej][q].gid = pointMaps[ej][q].gid;
+      //ierr = PetscPrintf(PETSC_COMM_SELF,"\t %3D - %13.5e ; ",maps->maps[ej][q].gid,maps->maps[ej][q].scale = pointMaps[ej][q].scale);CHKERRQ(ierr);
+    }
+    //ierr = PetscPrintf(PETSC_COMM_SELF,"\n");
+  }
+
+
+
+
+
+
+
+
+  PetscFunctionReturn(0);
+}
+PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *maps)
+{
+
+
+
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alpha[], PetscReal nu_beta[], PetscReal invMass[], PetscReal Eq_m[],
                                     const LandauIPData *const IPData, PetscReal invJ[], const PetscInt num_sub_blocks, const PetscLogEvent events[], Mat JacP)
 {
   PetscErrorCode    ierr;
-  PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,ipdatasz;
+  PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,ipdatasz,global_elem_mat_sz;
   PetscTabulation   *Tf;
   PetscDS           prob;
   PetscSection      section, globalSection;
   PetscLogDouble    flops;
   PetscReal         *BB,*DD;
   LandauCtx         *ctx;
+  //void *d_mat=NULL; // TODO
+  P4estVertexMaps   *h_maps, *d_maps=NULL;
 
   PetscFunctionBegin;
   ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
@@ -95,6 +133,27 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
   if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
+
+  if (ctx->gpu_assembly) {
+    PetscContainer container;
+    ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
+    if (container) { // not here first call
+      ierr = PetscContainerGetPointer(container, (void **) &h_maps);CHKERRQ(ierr);
+      if (h_maps->data) {
+        d_maps = (P4estVertexMaps*)h_maps->data;
+      } else {
+        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
+      }
+      // this does the setup the first time called
+      // ierr = MatKokkosGetDeviceMatWrite(JacP,&d_mat);CHKERRQ(ierr);
+      global_elem_mat_sz = 0;
+    } else { // kernel output - first call assembled on device
+      global_elem_mat_sz = numCells;
+    }
+  } else {
+    global_elem_mat_sz = numCells; // no device assembly
+  }
+
   BB   = Tf[0]->T[0]; DD = Tf[0]->T[1];
   ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
   ierr = DMGetGlobalSection(plex, &globalSection);CHKERRQ(ierr);
@@ -107,8 +166,6 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
     const int scr_bytes = 2*(g2_scr_t::shmem_size(dim,Nf,Nq) + g3_scr_t::shmem_size(dim,dim,Nf,Nq));
     ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
-    Kokkos::View<PetscScalar**, Kokkos::LayoutRight> d_elem_mats("element matrices", numCells, totDim*totDim);
-    Kokkos::View<PetscScalar**, Kokkos::LayoutRight>::HostMirror h_elem_mats = Kokkos::create_mirror_view(d_elem_mats);
     const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_alpha (nu_alpha, Nf);
     Kokkos::View<PetscReal*, Kokkos::LayoutLeft> d_alpha ("nu_alpha", Nf);
     const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_beta (nu_beta, Nf);
@@ -125,6 +182,8 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     Kokkos::View<LandauIPReal*, Kokkos::LayoutLeft> d_ipdata_raw ("ipdata", ipdatasz);
     const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_invJ (invJ,IPData->nip_*dim*dim);
     Kokkos::View<PetscReal*, Kokkos::LayoutLeft> d_invJ ("invJ", IPData->nip_*dim*dim);
+    Kokkos::View<PetscScalar**, Kokkos::LayoutRight> d_elem_mats("element matrices", global_elem_mat_sz, totDim*totDim);
+    Kokkos::View<PetscScalar**, Kokkos::LayoutRight>::HostMirror h_elem_mats = Kokkos::create_mirror_view(d_elem_mats);
 
     Kokkos::deep_copy (d_ipdata_raw, h_ipdata_raw);
     Kokkos::deep_copy (d_alpha, h_alpha);
@@ -265,22 +324,30 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
         //Kokkos::single(Kokkos::PerTeam(team), [&]() {
         Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nb), [=] (int blk_i) {
             Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,(int)Nf), [=] (int fieldA) {
-                //for (fieldA = 0; fieldA < Nf; ++fieldA) {
-                //for (blk_i = 0; blk_i < Nb; ++blk_i) {
                 int blk_j,qj,d,d2;
                 const PetscInt i = fieldA*Nb + blk_i; /* Element matrix row */
                 for (blk_j = 0; blk_j < Nb; ++blk_j) {
                   const PetscInt j    = fieldA*Nb + blk_j; /* Element matrix column */
                   const PetscInt fOff = i*totDim + j;
+                  PetscScalar t = global_elem_mat_sz ? d_elem_mats(myelem,fOff) : 0;
                   for (qj = 0 ; qj < Nq ; qj++) { // look at others integration points
                     const PetscReal *BJq = &d_BB[qj*Nb], *DIq = &d_DD[qj*Nb*dim];
                     for (d = 0; d < dim; ++d) {
-                      d_elem_mats(myelem,fOff) += DIq[blk_i*dim+d]*g2(d,fieldA,qj)*BJq[blk_j];
+                      t += DIq[blk_i*dim+d]*g2(d,fieldA,qj)*BJq[blk_j];
                       //printf("\tmat[%d %d %d %d %d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n",myelem,fOff,fieldA,qj,d,d_elem_mats(myelem,fOff),blk_i*dim+d,DIq[blk_i*dim+d],fieldA,qj,d,g2(fieldA,qj,d),BJq[blk_j]);
                       for (d2 = 0; d2 < dim; ++d2) {
-                        d_elem_mats(myelem,fOff) += DIq[blk_i*dim + d]*g3(d,d2,fieldA,qj)*DIq[blk_j*dim + d2];
+                        t += DIq[blk_i*dim + d]*g3(d,d2,fieldA,qj)*DIq[blk_j*dim + d2];
                       }
                     }
+                  }
+                  if (global_elem_mat_sz) d_elem_mats(myelem,fOff) = t;
+                  else {
+                    // Kokkos Mat assemble
+
+
+
+
+
                   }
                 }
               });
@@ -292,19 +359,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     Kokkos::deep_copy (h_elem_mats, d_elem_mats);
     ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_OPENMP)
-    {
-      PetscContainer container = NULL;
-      ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
-      if (!container) {
-        ierr = PetscLogEventBegin(events[8],0,0,0,0);CHKERRQ(ierr);
-        ierr = LandauCreateColoring(JacP, plex, &container);CHKERRQ(ierr);
-        ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
-      }
-      ierr = LandauAssembleOpenMP(cStart, cEnd, totDim, plex, section, globalSection, JacP, &h_elem_mats(0,0), container);CHKERRQ(ierr);
-    }
-#else
-    {
+    if (global_elem_mat_sz) {
       PetscInt ej;
       for (ej = cStart ; ej < cEnd; ++ej) {
         const PetscScalar *elMat = &h_elem_mats(ej-cStart,0);
@@ -318,8 +373,11 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
           }
         }
       }
+    } else {
+      // anything to do to cleanup GPU assembly
+
+
     }
-#endif
     ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
