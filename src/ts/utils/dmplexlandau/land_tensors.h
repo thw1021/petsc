@@ -148,14 +148,12 @@ PETSC_DEVICE_FUNC_DECL void ellipticK(PetscReal x,PetscReal *ret)
   *ret = polevl_10(x,P1) - PetscLogReal(x) * polevl_10(x,Q1);
 }
 
-
 /* integration point functions */
 /* Evaluates the tensor U=(I-(x-y)(x-y)/(x-y)^2)/|x-y| at point x,y */
 /* if x==y we will return zero. This is not the correct result */
 /* since the tensor diverges for x==y but when integrated */
 /* the divergent part is antisymmetric and vanishes. This is not  */
 /* trivial, but can be proven. */
-#if LANDAU_DIM==3
 PETSC_DEVICE_FUNC_DECL void LandauTensor3D(const PetscReal x1[], const PetscReal xp, const PetscReal yp, const PetscReal zp, PetscReal U[][3], PetscReal mask)
 {
   PetscReal dx[3],inorm3,inorm,inorm2,norm2,x2[] = {xp,yp,zp};
@@ -172,7 +170,7 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor3D(const PetscReal x1[], const PetscReal
   U[1][2] = U[2][1] = -inorm3 * dx[2] * dx[1];
   U[2][0] = U[0][2] = -inorm3 * dx[0] * dx[2];
 }
-#else
+
 PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal rp, const PetscReal zp, PetscReal Ud[][2], PetscReal Uk[][2], const PetscReal mask)
 {
   PetscReal l,s,r=x[0],z=x[1],i1func,i2func,i3func,ks,es,pi4pow,sqrt_1s,r2,rp2,r2prp2,zmzp,zmzp2,tt;
@@ -206,4 +204,4 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal 
   Uk[0][0]=                    pi4pow*(zmzp2*i3func+r*rp*i1func);
   Uk[1][0]=                   -pi4pow*(zmzp)*(r*i3func-rp*i2func); /* 48 mults + 21 + 21 = 90 mults and divs */
 }
-#endif
+
