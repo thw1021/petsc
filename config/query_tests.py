@@ -39,48 +39,84 @@ from gmakegentest import nameSpace
 
 """
 
-def query(invDict,label):
+def query(invDict,fields,labels):
     """
     Search the keys using fnmatch to find matching names and return list with
     the results 
     """
-    results=[]
-    if 'name' in invDict:
-        return fnmatch.filter(invDict['name'],label)
+    setlist=[]  # setlist is a list of lists that set opertions will operate on
+    llist=labels.replace('|',',').split(',')
+    i=-1
+    for field in fields.replace('|',',').split(','):
+        i+=1
+        label=llist[i]
+        if field == 'name':
+            setlist.append(fnmatch.filter(invDict['name'],label))
+            continue
 
-    for key in invDict:
-        if fnmatch.filter([key],label):
-            # Do not return values with not unless label itself has not
-            if label.startswith('!') and not key.startswith('!'): continue
-            if not label.startswith('!') and key.startswith('!'): continue
-            results += invDict[key]
+        for key in invDict[field]:
+            if fnmatch.filter([key],label):
+                # Do not return values with not unless label itself has not
+                if label.startswith('!') and not key.startswith('!'): continue
+                if not label.startswith('!') and key.startswith('!'): continue
+                setlist.append(invDict[field][key])
 
-    return results
+    # Now process the union and intersection operators based on setlist
+    allresults=[]
+    # Union
+    i=-1
+    for ufield in fields.split(','):
+       i+=1
+       if '|' in ufield:
+         # Intersection
+         label=llist[i]
+         results=set(setlist[i])
+         for field in ufield.split('|')[1:]:
+             i+=1
+             label=llist[i]
+             results=results.intersection(set(setlist[i]))
+         allresults+=list(results)
+       else:
+         allresults+=setlist[i]
 
-def get_inverse_dictionary(dataDict,field,srcdir):
+    # remove duplicate entries and sort to give consistent results
+    uniqlist=list(set(allresults))
+    uniqlist.sort()
+    return  uniqlist
+
+def get_inverse_dictionary(dataDict,fields,srcdir):
     """
     Create a dictionary with the values of field as the keys, and the name of
     the tests as the results.
     """
     invDict={}
-    if field == 'name': invDict['name']=[]
-    for root in dataDict:
-      for exfile in dataDict[root]:
-        for test in dataDict[root][exfile]:
-          if test in testparse.buildkeys: continue
-          defroot = testparse.getDefaultOutputFileRoot(test)
-          name=nameSpace(defroot,os.path.relpath(root,srcdir))
-          if field == 'name':
-              invDict['name'].append(name)
-              continue
-          if field not in dataDict[root][exfile][test]: continue
-          values=dataDict[root][exfile][test][field]
+    # Comma-delimited lists denote union
+    for field in fields.replace('|',',').split(','):
+        if field not in invDict:
+            if field == 'name':
+                 invDict[field]=[]   # List for ease
+            else:
+                 invDict[field]={}
+        for root in dataDict:
+          for exfile in dataDict[root]:
+            for test in dataDict[root][exfile]:
+              if test in testparse.buildkeys: continue
+              defroot = testparse.getDefaultOutputFileRoot(test)
+              fname=nameSpace(defroot,os.path.relpath(root,srcdir))
+              if field == 'name':
+                  invDict['name'].append(fname)
+                  continue
+              if field not in dataDict[root][exfile][test]: continue
+              values=dataDict[root][exfile][test][field]
 
-          for val in values.split():
-              if val in invDict:
-                  invDict[val].append(name)
-              else:
-                  invDict[val] = [name]
+              for val in values.split():
+                  if val in invDict[field]:
+                      invDict[field][val].append(fname)
+                  else:
+                      invDict[field][val] = [fname]
+              # remove duplicate entries (more than 1 requires in a test file)
+              invDict[field][val]=list(set(invDict[field][val]))
+
     return invDict
 
 def get_gmakegentest_data(testdir,petsc_dir,petsc_arch):
@@ -110,7 +146,6 @@ def walktree(top):
     dataDict = {}
     alldatafiles = []
     for root, dirs, files in os.walk(top, topdown=False):
-        if "examples" not in root: continue
         if root == 'output': continue
         if '.dSYM' in root: continue
         if verbose: print(root)
@@ -130,7 +165,8 @@ def walktree(top):
 
     return dataDict
 
-def do_query(use_source, startdir, srcdir, testdir, petsc_dir, petsc_arch, field, label):
+def do_query(use_source, startdir, srcdir, testdir, petsc_dir, petsc_arch,
+             fields, labels):
     """
     Do the actual query
     This part of the code is placed here instead of main()
@@ -144,11 +180,11 @@ def do_query(use_source, startdir, srcdir, testdir, petsc_dir, petsc_arch, field
         dataDict=get_gmakegentest_data(testdir, petsc_dir, petsc_arch)
 
     # Get inverse dictionary for searching
-    invDict=get_inverse_dictionary(dataDict, field, srcdir)
+    invDict=get_inverse_dictionary(dataDict, fields, srcdir)
     #print(invDict)
 
     # Now do query
-    resList=query(invDict, label)
+    resList=query(invDict, fields, labels)
 
     # Print in flat list suitable for use by gmakefile.test
     print(' '.join(resList))
