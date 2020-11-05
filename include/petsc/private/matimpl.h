@@ -239,6 +239,10 @@ PETSC_INTERN PetscErrorCode MatDiagonalSet_Default(Mat,Vec,InsertMode);
 PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat,MatType,MatReuse,Mat*);
 #endif
 
+/* these callbacks rely on the old matrix function pointers for
+   matmat operations. They are unsafe, and should be removed.
+   However, the amount of work needed to clean up all the
+   implementations is not negligible */
 PETSC_INTERN PetscErrorCode MatProductSymbolic_AB(Mat);
 PETSC_INTERN PetscErrorCode MatProductNumeric_AB(Mat);
 PETSC_INTERN PetscErrorCode MatProductSymbolic_AtB(Mat);
@@ -249,7 +253,12 @@ PETSC_INTERN PetscErrorCode MatProductNumeric_PtAP(Mat);
 PETSC_INTERN PetscErrorCode MatProductNumeric_RARt(Mat);
 PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC(Mat);
 PETSC_INTERN PetscErrorCode MatProductNumeric_ABC(Mat);
+
 PETSC_INTERN PetscErrorCode MatProductCreate_Private(Mat,Mat,Mat,Mat);
+/* this callback handles all the different triple products and
+   does not rely on the function pointers; used by cuSPARSE and KOKKOS-KERNELS */
+PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
+
 
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckPreallocated(A,arg) do {                              \
