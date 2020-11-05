@@ -95,7 +95,7 @@ static PetscErrorCode MatPartitioningSetUp_Parmetis(MatPartitioning part)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part, PetscBool useND, PetscBool isImprove, IS *partitioning)
+static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part, PetscBool isImprove, IS *partitioning)
 {
   MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
   PetscErrorCode           ierr;
@@ -110,7 +110,6 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
     idx_t      *vtxdist = (idx_t*) pmat->rmap->range;
     idx_t      *xadj    = (idx_t*) adj->i;
     idx_t      *adjncy  = (idx_t*) adj->j;
-    PetscInt   *NDorder = NULL;
     idx_t      numflag=0, nparts=part->n;
     real_t     itr=0.1;
 
@@ -126,44 +125,12 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
       ierr = ISDestroy(partitioning);CHKERRQ(ierr);
     }
 
-    if (useND) {
-      PetscInt    *sizes, *seps, log2size, subd, *level;
-      PetscInt    i;
-      PetscMPIInt size;
-      idx_t       mtype = PARMETIS_MTYPE_GLOBAL, rtype = PARMETIS_SRTYPE_2PHASE, p_nseps = 1, s_nseps = 1;
-      real_t      ubfrac = 1.05;
-
-      ierr = MPI_Comm_size(pmetis->comm,&size);CHKERRQ(ierr);
-      ierr = PetscMalloc1(pmat->rmap->n,&NDorder);CHKERRQ(ierr);
-      ierr = PetscMalloc3(2*size,&sizes,4*size,&seps,size,&level);CHKERRQ(ierr);
-      PetscStackCallParmetis(ParMETIS_V32_NodeND,(vtxdist,xadj,adjncy,pmetis->vwgt,&numflag,&mtype,&rtype,&p_nseps,&s_nseps,&ubfrac,NULL/* seed */,NULL/* dbglvl */,(idx_t*)NDorder,(idx_t*)sizes,&pmetis->comm));
-      log2size = PetscLog2Real(size);
-      subd = PetscPowInt(2,log2size);
-      ierr = MatPartitioningSizesToSep_Private(subd,sizes,seps,level);CHKERRQ(ierr);
-      for (i=0;i<pmat->rmap->n;i++) {
-        PetscInt loc;
-
-        ierr = PetscFindInt(NDorder[i],2*subd,seps,&loc);CHKERRQ(ierr);
-        if (loc < 0) {
-          loc = -(loc+1);
-          if (loc%2) { /* part of subdomain */
-            locals[i] = loc/2;
-          } else {
-            ierr = PetscFindInt(NDorder[i],2*(subd-1),seps+2*subd,&loc);CHKERRQ(ierr);
-            loc = loc < 0 ? -(loc+1)/2 : loc/2;
-            locals[i] = level[loc];
-          }
-        } else locals[i] = loc/2;
-      }
-      ierr = PetscFree3(sizes,seps,level);CHKERRQ(ierr);
+    if (pmetis->repartition) {
+      PetscStackCallParmetis(ParMETIS_V3_AdaptiveRepart,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,&itr,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
+    } else if (isImprove) {
+      PetscStackCallParmetis(ParMETIS_V3_RefineKway,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
     } else {
-      if (pmetis->repartition) {
-        PetscStackCallParmetis(ParMETIS_V3_AdaptiveRepart,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,&itr,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
-      } else if (isImprove) {
-        PetscStackCallParmetis(ParMETIS_V3_RefineKway,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
-      } else {
-        PetscStackCallParmetis(ParMETIS_V3_PartKway,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
-      }
+      PetscStackCallParmetis(ParMETIS_V3_PartKway,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
     }
 
     if (bs > 1) {
@@ -179,7 +146,78 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
     } else {
       ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),pmat->rmap->n,locals,PETSC_OWN_POINTER,partitioning);CHKERRQ(ierr);
     }
-    if (useND) {
+  } else {
+    ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),0,NULL,PETSC_COPY_VALUES,partitioning);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/*
+   Uses the ParMETIS parallel matrix partitioner to compute a nested dissection ordering of the matrix in parallel
+*/
+static PetscErrorCode MatPartitioningApplyND_Parmetis(MatPartitioning part, IS *partitioning)
+{
+  MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
+  PetscErrorCode           ierr;
+  PetscInt                 *locals = NULL;
+  Mat                      pmat    = part->adj_work;
+  PetscInt                 bs      = part->bs;
+
+  PetscFunctionBegin;
+  //TODO handle this on interface level?
+  if (pmat) {
+    Mat_MPIAdj  *adj     = (Mat_MPIAdj*)pmat->data;
+    idx_t       *vtxdist = (idx_t*) pmat->rmap->range;
+    idx_t       *xadj    = (idx_t*) adj->i;
+    idx_t       *adjncy  = (idx_t*) adj->j;
+    PetscInt    *NDorder = NULL;
+    idx_t       numflag=0;
+    PetscInt    *sizes, *seps, log2size, subd, *level;
+    PetscInt    i;
+    PetscMPIInt size;
+    idx_t       mtype = PARMETIS_MTYPE_GLOBAL, rtype = PARMETIS_SRTYPE_2PHASE, p_nseps = 1, s_nseps = 1;
+    real_t      ubfrac = 1.05;
+
+    ierr = PetscMalloc1(pmat->rmap->n,&locals);CHKERRQ(ierr);
+
+    ierr = MPI_Comm_size(pmetis->comm,&size);CHKERRQ(ierr);
+    ierr = PetscMalloc1(pmat->rmap->n,&NDorder);CHKERRQ(ierr);
+    ierr = PetscMalloc3(2*size,&sizes,4*size,&seps,size,&level);CHKERRQ(ierr);
+    PetscStackCallParmetis(ParMETIS_V32_NodeND,(vtxdist,xadj,adjncy,pmetis->vwgt,&numflag,&mtype,&rtype,&p_nseps,&s_nseps,&ubfrac,NULL/* seed */,NULL/* dbglvl */,(idx_t*)NDorder,(idx_t*)sizes,&pmetis->comm));
+    log2size = PetscLog2Real(size);
+    subd = PetscPowInt(2,log2size);
+    ierr = MatPartitioningSizesToSep_Private(subd,sizes,seps,level);CHKERRQ(ierr);
+    for (i=0;i<pmat->rmap->n;i++) {
+      PetscInt loc;
+
+      ierr = PetscFindInt(NDorder[i],2*subd,seps,&loc);CHKERRQ(ierr);
+      if (loc < 0) {
+        loc = -(loc+1);
+        if (loc%2) { /* part of subdomain */
+          locals[i] = loc/2;
+        } else {
+          ierr = PetscFindInt(NDorder[i],2*(subd-1),seps+2*subd,&loc);CHKERRQ(ierr);
+          loc = loc < 0 ? -(loc+1)/2 : loc/2;
+          locals[i] = level[loc];
+        }
+      } else locals[i] = loc/2;
+    }
+    ierr = PetscFree3(sizes,seps,level);CHKERRQ(ierr);
+
+    if (bs > 1) {
+      PetscInt i,j,*newlocals;
+      ierr = PetscMalloc1(bs*pmat->rmap->n,&newlocals);CHKERRQ(ierr);
+      for (i=0; i<pmat->rmap->n; i++) {
+        for (j=0; j<bs; j++) {
+          newlocals[bs*i + j] = locals[i];
+        }
+      }
+      ierr = PetscFree(locals);CHKERRQ(ierr);
+      ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),bs*pmat->rmap->n,newlocals,PETSC_OWN_POINTER,partitioning);CHKERRQ(ierr);
+    } else {
+      ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),pmat->rmap->n,locals,PETSC_OWN_POINTER,partitioning);CHKERRQ(ierr);
+    }
+    {
       IS ndis;
 
       if (bs > 1) {
@@ -192,32 +230,18 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
       ierr = ISDestroy(&ndis);CHKERRQ(ierr);
     }
   } else {
+    IS ndis;
+
     ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),0,NULL,PETSC_COPY_VALUES,partitioning);CHKERRQ(ierr);
-    if (useND) {
-      IS ndis;
-
-      if (bs > 1) {
-        ierr = ISCreateBlock(PetscObjectComm((PetscObject)part),bs,0,NULL,PETSC_COPY_VALUES,&ndis);CHKERRQ(ierr);
-      } else {
-        ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),0,NULL,PETSC_COPY_VALUES,&ndis);CHKERRQ(ierr);
-      }
-      ierr = ISSetPermutation(ndis);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject)(*partitioning),"_petsc_matpartitioning_ndorder",(PetscObject)ndis);CHKERRQ(ierr);
-      ierr = ISDestroy(&ndis);CHKERRQ(ierr);
+    if (bs > 1) {
+      ierr = ISCreateBlock(PetscObjectComm((PetscObject)part),bs,0,NULL,PETSC_COPY_VALUES,&ndis);CHKERRQ(ierr);
+    } else {
+      ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),0,NULL,PETSC_COPY_VALUES,&ndis);CHKERRQ(ierr);
     }
+    ierr = ISSetPermutation(ndis);CHKERRQ(ierr);
+    ierr = PetscObjectCompose((PetscObject)(*partitioning),"_petsc_matpartitioning_ndorder",(PetscObject)ndis);CHKERRQ(ierr);
+    ierr = ISDestroy(&ndis);CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
-}
-
-/*
-   Uses the ParMETIS parallel matrix partitioner to compute a nested dissection ordering of the matrix in parallel
-*/
-static PetscErrorCode MatPartitioningApplyND_Parmetis(MatPartitioning part, IS *partitioning)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = MatPartitioningApply_Parmetis_Private(part, PETSC_TRUE, PETSC_FALSE, partitioning);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -229,7 +253,7 @@ static PetscErrorCode MatPartitioningApply_Parmetis(MatPartitioning part, IS *pa
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MatPartitioningApply_Parmetis_Private(part, PETSC_FALSE, PETSC_FALSE, partitioning);CHKERRQ(ierr);
+  ierr = MatPartitioningApply_Parmetis_Private(part, PETSC_FALSE, partitioning);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -241,7 +265,7 @@ static PetscErrorCode MatPartitioningImprove_Parmetis(MatPartitioning part, IS *
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MatPartitioningApply_Parmetis_Private(part, PETSC_FALSE, PETSC_TRUE, partitioning);CHKERRQ(ierr);
+  ierr = MatPartitioningApply_Parmetis_Private(part, PETSC_TRUE, partitioning);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
