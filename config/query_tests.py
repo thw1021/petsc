@@ -50,8 +50,8 @@ def pathToLabel(path):
   Because the scripts have a non-unique naming, the pretty-printing
   needs to convey the srcdir and srcfile.  There are two ways of doing this.
   """
-  # Strip off any top-leveld directories
-  path=path.replace(pdir,'')
+  # Strip off any top-level directories or spaces
+  path=path.strip().replace(pdir,'')
   path=path.replace('src/','')
   if isFile(path):
     prefix=os.path.dirname(path).replace("/","_")
@@ -61,6 +61,31 @@ def pathToLabel(path):
     path=path.rstrip('/')
     label=path.replace("/","_")+"-*"
   return label
+
+def get_value(varset):
+  """
+  Searching args is a bit funky:
+  Consider
+      args:  -ksp_monitor_short -pc_type ml -ksp_max_it 3
+  Search terms are:
+    ksp_monitor, 'pc_type ml', ksp_max_it
+  Also ignore all loops
+    -pc_fieldsplit_diag_use_amat {{0 1}}
+  Gives: pc_fieldsplit_diag_use_amat as the search term
+  Also ignore -f ...  (use matrices from file) because I'll assume
+   that this kind of information isn't needed for testing.  If it's
+   a separate search than just grep it
+  """
+  if varset.startswith('-f '): return None
+
+  # First  remove loops
+  value=re.sub('{{.*}}','',varset)
+  # Next remove -
+  value=varset.lstrip("-")
+  # Get rid of numbers
+  value=re.sub(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?",'',value)
+  # return without spaces
+  return value.strip()
 
 def query(invDict,fields,labels):
     """
@@ -79,12 +104,16 @@ def query(invDict,fields,labels):
             setlist.append(fnmatch.filter(invDict['name'],label))
             continue
 
+        foundLabel=False   # easy to do if you misspell argument search
         for key in invDict[field]:
             if fnmatch.filter([key],label):
-                # Do not return values with not unless label itself has not
-                if label.startswith('!') and not key.startswith('!'): continue
-                if not label.startswith('!') and key.startswith('!'): continue
-                setlist.append(invDict[field][key])
+              foundLabel=True
+              # Do not return values with not unless label itself has not
+              if label.startswith('!') and not key.startswith('!'): continue
+              if not label.startswith('!') and key.startswith('!'): continue
+              setlist.append(invDict[field][key])
+        if not foundLabel:
+          setlist.append([])
 
     # Now process the union and intersection operators based on setlist
     allresults=[]
@@ -134,13 +163,25 @@ def get_inverse_dictionary(dataDict,fields,srcdir):
               if field not in dataDict[root][exfile][test]: continue
               values=dataDict[root][exfile][test][field]
 
-              for val in values.split():
+              if not field == 'args' and not field == 'diff_args':
+                for val in values.split():
+                    if val in invDict[field]:
+                        invDict[field][val].append(fname)
+                    else:
+                        invDict[field][val] = [fname]
+              else:
+                # Args are funky.  
+                for varset in re.split('(^|\W)-(?=[a-zA-Z])',values):
+                  val=get_value(varset)
+                  if not val: continue
                   if val in invDict[field]:
-                      invDict[field][val].append(fname)
+                    invDict[field][val].append(fname)
                   else:
-                      invDict[field][val] = [fname]
-              # remove duplicate entries (more than 1 requires in a test file)
-              invDict[field][val]=list(set(invDict[field][val]))
+                    invDict[field][val] = [fname]
+        # remove duplicate entries (multiple test/file)
+        if not field == 'name':
+          for val in invDict[field]:
+            invDict[field][val]=list(set(invDict[field][val]))
 
     return invDict
 
@@ -191,7 +232,7 @@ def walktree(top):
     return dataDict
 
 def do_query(use_source, startdir, srcdir, testdir, petsc_dir, petsc_arch,
-             fields, labels):
+             fields, labels, searchin):
     """
     Do the actual query
     This part of the code is placed here instead of main()
@@ -210,6 +251,14 @@ def do_query(use_source, startdir, srcdir, testdir, petsc_dir, petsc_arch,
 
     # Now do query
     resList=query(invDict, fields, labels)
+
+    # Filter results using searchin
+    newresList=[]
+    if searchin.strip():
+        for key in resList:
+            if fnmatch.filter([key],searchin):
+              newresList.append(key)
+        resList=newresList
 
     # Print in flat list suitable for use by gmakefile.test
     print(' '.join(resList))
@@ -236,6 +285,9 @@ def main():
     parser.add_option('-u', '--use-source', action="store_false",
                       dest='use_source',
                       help='Query all sources rather than those configured in PETSC_ARCH')
+    parser.add_option('-i', '--searchin', dest='searchin',
+                      help='Filter results from the arguments',
+                      default='')
 
     opts, args = parser.parse_args()
 
@@ -251,6 +303,7 @@ def main():
     # Process arguments and options -- mostly just paths here
     field=args[0]
     match=args[1]
+    searchin=opts.searchin
 
     petsc_dir = opts.petsc_dir
     petsc_arch = opts.petsc_arch
@@ -288,7 +341,7 @@ def main():
 
     # Do the actual query
     do_query(opts.use_source, startdir, petsc_full_src, petsc_full_test,
-             petsc_dir, petsc_arch, field, match)
+             petsc_dir, petsc_arch, field, match, searchin)
 
     return
 
