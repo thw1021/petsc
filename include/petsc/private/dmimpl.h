@@ -168,6 +168,18 @@ typedef struct _n_Space {
   IS      fields; /* Map from DS field numbers to original field numbers in the DM */
 } DMSpace;
 
+struct _p_UniversalLabel {
+  DM         dm;      /* The DM target for the universal label */
+  DMLabel    label;   /* The universal label */
+  PetscInt   Nl;      /* Number of labels in dm */
+  PetscInt   Nv;      /* Total number of values in all dm labels */
+  PetscBool *active;  /* Flags active labels in dm */
+  PetscInt  *bits;    /* Starting bit for values of each label */
+  PetscInt  *masks;   /* Masks to pull out label value bits for each label */
+  PetscInt  *offsets; /* Starting offset for label values for each label */
+  PetscInt  *values;  /* Original label values before renumbering */
+};
+
 PETSC_INTERN PetscErrorCode DMDestroyLabelLinkList_Internal(DM);
 
 #define MAXDMMONITORS 5

@@ -7860,6 +7860,157 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all)
   }
   PetscFunctionReturn(0);
 }
+/*
+  Many mesh programs, such as Triangle and TetGen, allow only a single label for each mesh point. Therefore, we would
+  like to encode all label IDs using a single, universal label. We can do this by assigning an integer to every
+  (label, id) pair in the DM.
+
+  However, a mesh point can have multiple labels, so we must separate all these values. We will assign a bit range to
+  each label.
+*/
+PetscErrorCode DMUniveralLabelCreate(DM dm, DMUniversalLabel *universal)
+{
+  DMUniversalLabel ul;
+  PetscInt         pStart, pEnd, p, l;
+  PetscErrorCode   ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscMalloc1(1, &ul);CHKERRQ(ierr);
+  ul->dm = dm;
+  ierr = DMLabelCreate(PETSC_COMM_SELF, "universal", &ul->label);CHKERRQ(ierr);
+  ierr = DMGetNumLabels(dm, &ul->Nl);CHKERRQ(ierr);
+  ierr = PetscCalloc4(ul->Nl, &ul->active, ul->Nl+1, &ul->offsets, ul->Nl+1, &ul->bits, ul->Nl, &ul->masks);CHKERRQ(ierr);
+  ul->Nv = 0;
+  for (l = 0; l < ul->Nl; ++l) {
+    DMLabel     label;
+    PetscInt    nv;
+    PetscBool   isdepth, iscelltype;
+    const char *name;
+
+    ierr = DMGetLabelName(dm, l, &name);CHKERRQ(ierr);
+    ierr = PetscStrncmp(name, "depth", 6, &isdepth);CHKERRQ(ierr);
+    ierr = PetscStrncmp(name, "celltype", 9, &iscelltype);CHKERRQ(ierr);
+    ul->active[l] = !(isdepth || iscelltype) ? PETSC_TRUE : PETSC_FALSE;
+    if (!ul->active[l]) continue;
+    ierr = DMGetLabelByNum(dm, l, &label);CHKERRQ(ierr);
+    ierr = DMLabelGetNumValues(label, &nv);CHKERRQ(ierr);
+    ul->Nv += nv;
+    ul->offsets[l+1] = nv;
+    ul->bits[l+1]    = PetscCeilReal(PetscLog2Real(nv+1));
+  }
+  for (l = 1; l <= ul->Nl; ++l) {
+    ul->offsets[l] = ul->offsets[l-1] + ul->offsets[l];
+    ul->bits[l]    = ul->bits[l-1]    + ul->bits[l];
+  }
+  for (l = 0; l < ul->Nl; ++l) {
+    PetscInt b;
+
+    ul->masks[l] = 0;
+    for (b = ul->bits[l]; b < ul->bits[l+1]; ++b) ul->masks[l] |= 1 << b;
+  }
+  ierr = PetscMalloc1(ul->Nv, &ul->values);CHKERRQ(ierr);
+  for (l = 0; l < ul->Nl; ++l) {
+    DMLabel         label;
+    IS              valueIS;
+    const PetscInt *varr;
+    PetscInt        nv, v;
+
+    if (!ul->active[l]) continue;
+    ierr = DMGetLabelByNum(dm, l, &label);CHKERRQ(ierr);
+    ierr = DMLabelGetNumValues(label, &nv);CHKERRQ(ierr);
+    ierr = DMLabelGetValueIS(label, &valueIS);CHKERRQ(ierr);
+    ierr = ISGetIndices(valueIS, &varr);CHKERRQ(ierr);
+    for (v = 0; v < nv; ++v) {
+      ul->values[ul->offsets[l]+v] = varr[v];
+    }
+    ierr = ISRestoreIndices(valueIS, &varr);CHKERRQ(ierr);
+    ierr = ISDestroy(&valueIS);CHKERRQ(ierr);
+    ierr = PetscSortInt(nv, &ul->values[ul->offsets[l]]);CHKERRQ(ierr);
+  }
+  ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
+  for (p = pStart; p < pEnd; ++p) {
+    PetscInt  uval = 0;
+    PetscBool marked = PETSC_FALSE;
+
+    for (l = 0; l < ul->Nl; ++l) {
+      DMLabel  label;
+      PetscInt val, defval, loc, nv = ul->offsets[l+1]-ul->offsets[l];
+
+      if (!ul->active[l]) continue;
+      ierr = DMGetLabelByNum(dm, l, &label);CHKERRQ(ierr);
+      ierr = DMLabelGetValue(label, p, &val);CHKERRQ(ierr);
+      ierr = DMLabelGetDefaultValue(label, &defval);CHKERRQ(ierr);
+      if (val == defval) continue;
+      marked = PETSC_TRUE;
+      ierr = PetscFindInt(val, nv, &ul->values[ul->offsets[l]], &loc);CHKERRQ(ierr);
+      if (loc < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Label value %D not found in compression array", val);
+      uval += (loc+1) << ul->bits[l];
+    }
+    if (marked) {ierr = DMLabelSetValue(ul->label, p, uval);CHKERRQ(ierr);}
+  }
+  *universal = ul;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMUniveralLabelDestroy(DMUniversalLabel *universal)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMLabelDestroy(&(*universal)->label);CHKERRQ(ierr);
+  ierr = PetscFree4((*universal)->active, (*universal)->offsets, (*universal)->bits, (*universal)->masks);CHKERRQ(ierr);
+  ierr = PetscFree((*universal)->values);CHKERRQ(ierr);
+  ierr = PetscFree(*universal);CHKERRQ(ierr);
+  *universal = NULL;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMUniversalLabelGetLabel(DMUniversalLabel ul, DMLabel *ulabel)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(ulabel, 2);
+  *ulabel = ul->label;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMUniversalLabelCreateLabels(DMUniversalLabel ul, DM dm)
+{
+  PetscInt       Nl = ul->Nl, l;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  for (l = 0; l < Nl; ++l) {
+    const char *name;
+
+    if (!ul->active[l]) continue;
+    ierr = DMGetLabelName(ul->dm, l, &name);CHKERRQ(ierr);
+    ierr = DMCreateLabel(dm, name);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMUniversalLabelSetLabelValue(DMUniversalLabel ul, DM dm, PetscBool includeInactive, PetscInt p, PetscInt value)
+{
+  PetscInt       Nl, l, m = 0;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGetNumLabels(dm, &Nl);CHKERRQ(ierr);
+  for (l = 0; l < Nl; ++l) {
+    if (ul->active[l]) {
+      DMLabel  label;
+      PetscInt lval = (value & ul->masks[l]) >> ul->bits[l];
+
+      if (lval) {
+        ierr = DMGetLabelByNum(dm, includeInactive ? l : m, &label);CHKERRQ(ierr);
+        ierr = DMLabelSetValue(label, p, ul->values[ul->offsets[l]+lval-1]);CHKERRQ(ierr);
+      }
+      ++m;
+    }
+  }
+  PetscFunctionReturn(0);
+}
 
 /*@
   DMGetCoarseDM - Get the coarse mesh from which this was obtained by refinement

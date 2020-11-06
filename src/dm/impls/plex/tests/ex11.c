@@ -187,7 +187,7 @@ static PetscErrorCode TestDistribution(MPI_Comm comm)
   DM               dm, dmDist;
   PetscPartitioner part;
   DMLabel          label;
-  char             filename[2048];
+  char             filename[PETSC_MAX_PATH_LEN];
   const char      *name    = "test label";
   PetscInt         overlap = 0, cStart, cEnd, c;
   PetscMPIInt      rank;
@@ -222,6 +222,82 @@ static PetscErrorCode TestDistribution(MPI_Comm comm)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode TestUniversalLabel(MPI_Comm comm)
+{
+  DM               dm1, dm2;
+  DMLabel          bd1, bd2, ulabel;
+  DMUniversalLabel universal;
+  PetscInt         pStart, pEnd, p;
+  PetscBool        run, flg, flg2;
+  char             filename[PETSC_MAX_PATH_LEN];
+  char             bdfilename[PETSC_MAX_PATH_LEN];
+  PetscErrorCode   ierr;
+
+  PetscFunctionBeginUser;
+  ierr = PetscOptionsGetBool(NULL, NULL, "-universal", &run, NULL);CHKERRQ(ierr);
+  if (!run) PetscFunctionReturn(0);
+  ierr = PetscOptionsGetString(NULL, NULL, "-filename", filename, sizeof(filename), &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL, NULL, "-bd_filename", bdfilename, sizeof(bdfilename), &flg2);CHKERRQ(ierr);
+  if (flg) {
+    ierr = DMPlexCreateFromFile(comm, filename, PETSC_TRUE, &dm1);CHKERRQ(ierr);
+  } else if (flg2) {
+    DM bd;
+
+    ierr = DMPlexCreateFromFile(comm, bdfilename, PETSC_TRUE, &bd);CHKERRQ(ierr);
+    ierr = DMPlexGenerate(bd, NULL, PETSC_TRUE, &dm1);CHKERRQ(ierr);
+    ierr = DMDestroy(&bd);CHKERRQ(ierr);
+  } else {
+    ierr = DMPlexCreateBoxMesh(comm, 2, PETSC_TRUE, NULL, NULL, NULL, NULL, PETSC_TRUE, &dm1);CHKERRQ(ierr);
+    ierr = DMCreateLabel(dm1, "Boundary Faces");CHKERRQ(ierr);
+    ierr = DMGetLabel(dm1, "Boundary Faces", &bd1);CHKERRQ(ierr);
+    ierr = DMPlexMarkBoundaryFaces(dm1, 13, bd1);CHKERRQ(ierr);
+    ierr = DMCreateLabel(dm1, "Boundary");CHKERRQ(ierr);
+    ierr = DMGetLabel(dm1, "Boundary", &bd2);CHKERRQ(ierr);
+    ierr = DMPlexMarkBoundaryFaces(dm1, 121, bd2);CHKERRQ(ierr);
+    ierr = DMPlexLabelComplete(dm1, bd2);CHKERRQ(ierr);
+  }
+  ierr = PetscObjectSetName((PetscObject) dm1, "First Mesh");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm1, NULL, "-dm_view");CHKERRQ(ierr);
+
+  ierr = DMUniveralLabelCreate(dm1, &universal);CHKERRQ(ierr);
+  ierr = DMUniversalLabelGetLabel(universal, &ulabel);CHKERRQ(ierr);
+  ierr = PetscObjectViewFromOptions((PetscObject) ulabel, NULL, "-universal_view");CHKERRQ(ierr);
+
+  if (flg || flg2) {
+    PetscInt Nl, l;
+
+    ierr = DMClone(dm1, &dm2);CHKERRQ(ierr);
+    ierr = DMGetNumLabels(dm2, &Nl);CHKERRQ(ierr);
+    for (l = Nl-1; l >= 0; --l) {
+      PetscBool   isdepth, iscelltype;
+      const char *name;
+
+      ierr = DMGetLabelName(dm2, l, &name);CHKERRQ(ierr);
+      ierr = PetscStrncmp(name, "depth", 6, &isdepth);CHKERRQ(ierr);
+      ierr = PetscStrncmp(name, "celltype", 9, &iscelltype);CHKERRQ(ierr);
+      if (!isdepth && !iscelltype) {ierr = DMRemoveLabel(dm2, name, NULL);CHKERRQ(ierr);}
+    }
+  } else {
+    ierr = DMPlexCreateBoxMesh(comm, 2, PETSC_TRUE, NULL, NULL, NULL, NULL, PETSC_TRUE, &dm2);CHKERRQ(ierr);
+  }
+  ierr = PetscObjectSetName((PetscObject) dm2, "Second Mesh");CHKERRQ(ierr);
+  ierr = DMUniversalLabelCreateLabels(universal, dm2);CHKERRQ(ierr);
+  ierr = DMPlexGetChart(dm2, &pStart, &pEnd);CHKERRQ(ierr);
+  for (p = pStart; p < pEnd; ++p) {
+    PetscInt val;
+
+    ierr = DMLabelGetValue(ulabel, p, &val);CHKERRQ(ierr);
+    if (val < 0) continue;
+    ierr = DMUniversalLabelSetLabelValue(universal, dm2, PETSC_TRUE, p, val);CHKERRQ(ierr);
+  }
+  ierr = DMViewFromOptions(dm2, NULL, "-dm_view");CHKERRQ(ierr);
+
+  ierr = DMUniveralLabelDestroy(&universal);CHKERRQ(ierr);
+  ierr = DMDestroy(&dm1);CHKERRQ(ierr);
+  ierr = DMDestroy(&dm2);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 int main(int argc, char **argv)
 {
   PetscErrorCode ierr;
@@ -231,6 +307,7 @@ int main(int argc, char **argv)
   ierr = TestInsertion();CHKERRQ(ierr);
   ierr = TestEmptyStrata(PETSC_COMM_WORLD);CHKERRQ(ierr);
   ierr = TestDistribution(PETSC_COMM_WORLD);CHKERRQ(ierr);
+  ierr = TestUniversalLabel(PETSC_COMM_WORLD);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
@@ -264,5 +341,21 @@ int main(int argc, char **argv)
     test:
       suffix: 2
       nsize: 2
+
+  test:
+    suffix: univ
+    args: -universal -dm_view -universal_view
+
+  test:
+    # Note that the labels differ because we have multiply-marked some points during EGADS creation
+    suffix: univ_egads_sphere
+    requires: egads
+    args: -universal -filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/unit_sphere.egadslite -dm_view -universal_view
+
+  test:
+    # Note that the labels differ because we have multiply-marked some points during EGADS creation
+    suffix: univ_egads_ball
+    requires: egads ctetgen
+    args: -universal -bd_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/unit_sphere.egadslite -dm_view -universal_view
 
 TEST*/
