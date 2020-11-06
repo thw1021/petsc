@@ -10,6 +10,16 @@ The PETSc test system consists of
 Details on using the harness may be found in the :doc:`user's manual </manual/tests>`.
 
 
+In the examples below, we often make use of this command:  ``make -f gmakefile ...`` or 
+when testing, we have the equivalent of ``make -f gmakefile.test ...``.  Here is a useful alias:
+
+.. code-block:: bash
+
+      alias ptmake='make -f gmakefile.test'
+
+where ``ptmake`` stands for "petsc test make".  We will use this syntax below to make 
+the commands nicer.
+
 Determining the failed jobs of a given run
 ------------------------------------------
 
@@ -29,13 +39,17 @@ log files downloaded from the artifacts download tab on the right side:
 
    Test artifacts can be downloaded from gitlab.
 
-To see the list of all tests that failed from the last run, you can also run this command::
+To see the list of all tests that failed from the last run, you can also run this command:
 
-    make -f gmakefile.test print-test test-fail=1
+.. code-block:: bash
 
-To print it out in a column format::
+    ptmake print-test test-fail=1
 
-    make -f gmakefile.test print-test test-fail=1 | tr ' ' '\n' | sort
+To print it out in a column format:
+
+.. code-block:: bash
+
+    ptmake print-test test-fail=1 | tr ' ' '\n' | sort
 
 Once you know which tests failed, the question is how to debug them.
 
@@ -128,14 +142,14 @@ First recall how to find help for the options:
 
 .. code-block:: bash
 
-   make -f gmakefile help-test
+   ptmake help-test
 
 
 To compile the test and run it:
 
 .. code-block:: bash
 
-   make -f gmakefile test search=vec_is_sf_tests-ex1_basic_1
+   ptmake test search=vec_is_sf_tests-ex1_basic_1
 
 This can consist of your basic workflow.  However,
 for the normal compile and edit, running the entire harness with search can be
@@ -143,10 +157,10 @@ cumbersome.  So first get the command:
 
 .. code-block:: bash
 
-     make -f gmakefile vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
+     ptmake vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
      <copy command>
      <edit>
-     make -f gmakefile $PETSC_ARCH/tests/vec/is/sf/tests/ex1
+     ptmake $PETSC_ARCH/tests/vec/is/sf/tests/ex1
      /scratch/kruger/contrib/petsc-mpich-cxx/bin/mpiexec -n 1 arch-mpich-cxx-py3/tests/vec/is/sf/tests/ex1
      ...
      cd $PETSC_DIR
@@ -159,32 +173,174 @@ Advanced searching
 For forming a search, it is recommended to always use `print-test` instead of
 test to make sure it is returning the values that you want.
 
-There are multiple methods for searching names:
+The three basic and recommended arguments are:
 
-  + `search`
-       - Use gmake's own filter capability.  Fast, but requires knowing gmake regex syntax
-       - Example: `make -f gmakefile test search='vec_is%ex1_basic_1'`
-  + `searchin`
+  + ``search`` (or ``s``)
+       - Searches based on name of test target (see above)
+       - Use the familiar glob syntax (like the Unix `ls` command)
+       - Example: ``ptmake print-test search='vec_is*ex1*basic*1'``
+       - Equivalently: ``ptmake print-test s='vec_is*ex1*basic*1'``
+       - It also takes full paths
+       - Example: ``ptmake print-test s='src/vec/is/tests/ex1.c'``
+       - Example: ``ptmake print-test s='src/dm/impls/plex/tests/'``
+       - Example: ``ptmake print-test s='src/dm/impls/plex/tests/ex1.c'``
+
+  + ``query`` and ``queryval`` (or ``q`` and ``qv``)
+       - ``query`` corresponds to test harness keyword, ``queryval`` to the value.  
+       - Example: ``ptmake print-test query='suffix' queryval='basic_1'``
+       - Invokes ``config/query_tests.py`` to query the tests (see
+         ``config/query_tests.py --help`` for more information).
+       - See below for how to use as it has many features
+
+  + ``searchin`` (or ``i``)
+       - Filters results of above searches
+       - Example: ``ptmake print-test s='src/dm/impls/plex/tests/ex1.c' i='*refine_overlap_2d*'``
+
+
+Searching using gmake's native regexp functionality is kept for people who like it, but most developers will likely prefer the above methods:
+
+  + ``gmakesearch``
+       - Use gmake's own filter capability.  
+       - Fast, but requires knowing gmake regex syntax which uses `%` instead of `*`
+       - Also very limited (cannot use two `%`'s for example)
+       - Example: ``ptmake test gmakesearch='vec_is%ex1_basic_1'``
+  + ``gmakesearchin``
        - Use gmake's own filter capability to search in previous results
-       - Example: `make -f gmakefile test search='vec_is%1' searchin='basic'`
-  + `globsearch`
-       - Use a python script to generate more familiar glob syntax (like ls)
-       - Example: `make -f gmakefile test globsearch='vec_is*ex1*basic*1'`
+       - Example: ``ptmake test search='vec_is%1' searchin='basic'``
 
-There are two methods for generating tests based on other criterion.  One is args:
-
-  + `argsearch`
-       - search on argsearch
-       - Example: `make -f gmakefile test argsearch='sf_type'`
+  + ``argsearch``
+       - search on arguments using gmake.  This is deprecated in favor of the query/queryval method as described below.
+       - Example: ``ptmake test argsearch='sf_type'``
        - Not very powerful
 
-  + `query` and `queryval`
-       - Invokes `config/query_tests.py`
-       - `query` corresponds to test harness keyword, `queryval` to the value
-       - Example: `make -f gmakefile.test print-test query='suffix' queryval='basic_1'`
-       - Example: `make -f gmakefile.test print-test query='requires' queryval='cuda'`
-       - Example: `make -f gmakefile.test print-test query='requires' queryval='define(PETSC_HAVE_MPI_ONE_SIDED)'`
-       - Planned: Enable comma-delimited list, and more flexibility in arguments searching
+
+Query-based searching
+~~~~~~~~~~~~~~~~~~~~~
+
+Basic examples.  Note the the use of glob style matching is also accepted in the value field:
+
+       - Example: ``ptmake print-test query='suffix' queryval='basic_1'``
+       - Example: ``ptmake print-test query='requires' queryval='cuda'``
+       - Example: ``ptmake print-test query='requires' queryval='define(PETSC_HAVE_MPI_GPU_AWARE)'``
+       - Example: ``ptmake print-test query='requires' queryval='*GPU_AWARE*'``
+
+Using the ``name`` field is equivalent to the search above:
+
+       - Example: ``ptmake print-test query='name' queryval='vec_is*ex1*basic*1'``
+       - Useful because this can be combined with union/intersect queries as discussed below
+
+Arguments are tricky to search for.  Consider::
+
+      args:  -ksp_monitor_short -pc_type ml -ksp_max_it 3
+
+Search terms are::
+
+    ksp_monitor, 'pc_type ml', ksp_max_it
+
+Certain items are ignored:
+
+  + Numbers (see ``ksp_max_it`` above), but floats are ignored as well.
+  + Loops:
+      ``args: -pc_fieldsplit_diag_use_amat {{0 1}}`` gives ``pc_fieldsplit_diag_use_amat`` as the search term
+  + Input files: ``-f *``
+ 
+Examples of argument searching:
+
+  + ``ptmake print-test query='args' queryval='ksp_monitor'``
+  + ``ptmake print-test query='args' queryval='*monitor*'``
+  + ``ptmake print-test query='args' queryval='pc_type ml'``
+
+
+Multiple simultaneous queries can be performed with union (``,``), and intesection (``|``)  operators in the ``query`` field.  Examples:
+
+   + ``ptmake print-test query='requires,requires' queryval='cuda,hip'``
+       - All examples using cuda + all examples using hip
+   + ``ptmake print-test query='requires|requires' queryval='ctetgen,triangle'``
+       - Examples that require both triangle and ctetgen (intersection of tests)
+   + ``ptmake print-test query='requires,requires' queryval='ctetgen,triangle'``
+       - Tests that require either ctetgen or triangle
+
+   + ``ptmake print-test query='requires|name' queryval='cuda,dm*'``
+       - Find cuda examples in the `dm` package.
+
+
+Here is a way of getting a feel for how the union and intersect operators work:
+
+.. code-block:: bash
+
+      > ptmake print-test query='requires' queryval='ctetgen' | tr ' ' '\n' | wc -l     
+      170
+      > ptmake print-test query='requires' queryval='triangle' | tr ' ' '\n' | wc -l     
+      330
+      > ptmake print-test query='requires,requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l     
+      478
+      > ptmake print-test query='requires|requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l      
+      22
+
+The total number of tests for running only ctetgen or triangle is 500.  They have 22 tests in common, and 478 that
+run independently of each other.
+
+   + The union and intersection have fixed grouping.  So this string argument::
+
+       query='requires,requires|args' queryval='cuda,hip,*log*'
+
+     will can be read as::
+
+       requires:cuda && (requires:hip || args:*log*)
+     
+     which is probably not what is intended.
+
+
+
+``query/queryval`` also support negation (``!``), but is limited.  The negation only applies to tests that have a related field in it.  So for
+     example, the arguments of::
+
+           query=requires queryval='!cuda'
+
+     will only match if they explicitly have::
+
+           requires: !cuda
+
+     It does not match all cases that do not require cuda.
+      
+         
+Debugging for loops
+--------------------
+
+One of the more difficult issues is how to debug for loops when a subset of the
+arguments are the ones that cause a code crash.  The default naming scheme is
+not always helpful for figuring out the argument combination.  
+
+For example:
+    
+.. code-block:: bash
+
+      > ptmake test s='src/ksp/ksp/tests/ex9.c' i='*1'
+      Using MAKEFLAGS: i=*1 s=src/ksp/ksp/tests/ex9.c
+              TEST arch-osx-pkgs-opt-new/tests/counts/ksp_ksp_tests-ex9_1.counts
+       ok ksp_ksp_tests-ex9_1+pc_fieldsplit_diag_use_amat-0_pc_fieldsplit_diag_use_amat-0_pc_fieldsplit_type-additive
+       not ok diff-ksp_ksp_tests-ex9_1+pc_fieldsplit_diag_use_amat-0_pc_fieldsplit_diag_use_amat-0_pc_fieldsplit_type-additive
+       ok ksp_ksp_tests-ex9_1+pc_fieldsplit_diag_use_amat-0_pc_fieldsplit_diag_use_amat-0_pc_fieldsplit_type-multiplicative
+       ...
+
+
+In this case, the trick is to use the verbose option, `V=1` (or for the shell script workflows, `-v`) to have it show the commands:
+
+.. code-block:: bash
+
+      > ptmake test s='src/ksp/ksp/tests/ex9.c' i='*1' V=1
+      Using MAKEFLAGS: V=1 i=*1 s=src/ksp/ksp/tests/ex9.c
+      arch-osx-pkgs-opt-new/tests/ksp/ksp/tests/runex9_1.sh  -v
+       ok ksp_ksp_tests-ex9_1+pc_fieldsplit_diag_use_amat-0_pc_fieldsplit_diag_use_amat-0_pc_fieldsplit_type-additive # mpiexec  -n 1 ../ex9 -ksp_converged_reason -ksp_error_if_not_converged  -pc_fieldsplit_diag_use_amat 0 -pc_fieldsplit_diag_use_amat 0 -pc_fieldsplit_type additive > ex9_1.tmp 2> runex9_1.err
+      ...
+
+This can still be hard to read and pick out what you want.  So use the fact that you want`not ok`
+combined with the fact that `#` is the delimiter:
+
+.. code-block:: bash
+
+      > ptmake test s='src/ksp/ksp/tests/ex9.c' i='*1' v=1 | grep 'not ok' | cut -d# -f2
+      mpiexec  -n 1 ../ex9 -ksp_converged_reason -ksp_error_if_not_converged  -pc_fieldsplit_diag_use_amat 0 -pc_fieldsplit_diag_use_amat 0 -pc_fieldsplit_type multiplicative > ex9_1.tmp 2> runex9_1.err
 
 
 
@@ -373,7 +529,7 @@ With this background, these keywords are as follows.
    -  Tests are limited to a set time that is found at the top of
       ``"config/petsc_harness.sh"`` and can be overwritten by passing in
       the ``TIMEOUT`` argument to ``gmakefile`` (see
-      ``make -f gmakefile help``.
+      ``ptmake help``.
 
 Additional Specifications
 ~~~~~~~~~~~~~~~~~~~~~~~~~
