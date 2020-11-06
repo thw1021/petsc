@@ -141,10 +141,10 @@ def get_test_data(directory):
         testname_short = testname_list[:-1]
         prob_subdir = os.path.join('', *testname_short)
         probfolder = 'run%s'%probname
-        probdir = os.path.join('..', prob_subdir, 'examples', testtype, probfolder)
+        probdir = os.path.join('..', prob_subdir, testtype, probfolder)
         if not os.path.exists(probdir):
             probfolder = probfolder.split('_')[0]
-            probdir = os.path.join('..', prob_subdir, 'examples', testtype, probfolder)
+            probdir = os.path.join('..', prob_subdir, testtype, probfolder)
         probfullpath=os.path.normpath(os.path.join(directory,probdir))
         # assemble the final full folder path for problem outputs and read the files
         try:
