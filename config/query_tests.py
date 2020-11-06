@@ -39,6 +39,29 @@ from gmakegentest import nameSpace
 
 """
 
+def isFile(maybeFile):
+  ext=os.path.splitext(maybeFile)[1]
+  if not ext: return False
+  if ext not in ['.c','.cxx','.cpp','F90','F','cu']: return False
+  return True
+
+def pathToLabel(path):
+  """
+  Because the scripts have a non-unique naming, the pretty-printing
+  needs to convey the srcdir and srcfile.  There are two ways of doing this.
+  """
+  # Strip off any top-leveld directories
+  path=path.replace(pdir,'')
+  path=path.replace('src/','')
+  if isFile(path):
+    prefix=os.path.dirname(path).replace("/","_")
+    suffix=os.path.splitext(os.path.basename(path))[0]
+    label=prefix+"-"+suffix+'_*'
+  else:
+    path=path.rstrip('/')
+    label=path.replace("/","_")+"-*"
+  return label
+
 def query(invDict,fields,labels):
     """
     Search the keys using fnmatch to find matching names and return list with
@@ -51,6 +74,8 @@ def query(invDict,fields,labels):
         i+=1
         label=llist[i]
         if field == 'name':
+            if '/' in label: 
+              label=pathToLabel(label)
             setlist.append(fnmatch.filter(invDict['name'],label))
             continue
 
