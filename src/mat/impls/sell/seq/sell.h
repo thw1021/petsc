@@ -43,12 +43,13 @@ Mat         parent;            /* set if this matrix was formed with MatDuplicat
 means that this shares some data structures with the parent including diag, ilen, imax, i, j */ \
 PetscInt    *sliidx;           /* slice index */ \
 PetscInt    totalslices;       /* total number of slices */ \
-PetscInt    totalblocks;       /* total number of blocks */ \
-PetscInt    *blockidx;         /* block index */ \
-PetscInt    *block_row_map;    /* starting row of the current block */ \
-PetscReal   irregratio   ;     /* ratio of number of padded zeros over total number of elements  */ \
+PetscReal   irregratio;        /* ratio of number of padded zeros over total number of elements  */ \
 PetscReal   avgslicewidth;     /* average slice width */ \
 PetscInt    maxslicewidth;     /* maximum slice width */ \
+PetscInt    *sliperm;          /* slice permutation array, CUDA only */ \
+PetscInt    totalblocks;       /* total number of blocks, CUDA only */ \
+PetscInt    *blockidx;         /* block index, CUDA only */ \
+PetscInt    *block_row_map;    /* starting row of the current block, CUDA only */ \
 PetscInt    *getrowcols;       /* workarray for MatGetRow_SeqSELL */ \
 PetscScalar *getrowvals        /* workarray for MatGetRow_SeqSELL */ \
 
