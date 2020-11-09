@@ -846,8 +846,10 @@ PetscErrorCode MatDestroy_SeqSELL(Mat A)
   ierr = ISDestroy(&a->icol);CHKERRQ(ierr);
   ierr = PetscFree(a->saved_values);CHKERRQ(ierr);
   ierr = PetscFree2(a->getrowcols,a->getrowvals);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA)
   ierr = PetscFree2(a->blockidx,a->block_row_map);CHKERRQ(ierr);
-
+  ierr = PetscFree(a->sliperm);CHKERRQ(ierr);
+#endif
   ierr = PetscFree(A->data);CHKERRQ(ierr);
 
   ierr = PetscObjectChangeTypeName((PetscObject)A,NULL);CHKERRQ(ierr);
@@ -1434,23 +1436,6 @@ PetscErrorCode MatAssemblyEnd_SeqSELL(Mat A,MatAssemblyType mode)
   A->info.mallocs += a->reallocs;
   a->reallocs      = 0;
 
-  ierr = MatSeqSELLGetAvgSliceWidth(A,&a->avgslicewidth);CHKERRQ(ierr);
-  ierr = MatSeqSELLGetMaxSliceWidth(A,&a->maxslicewidth);CHKERRQ(ierr);
-  ierr = MatSeqSELLGetFillRatio(A,&a->fillratio);CHKERRQ(ierr);
-  if (a->fillratio < 0.25 && a->maxslicewidth > 4096) { /* Set up column blocking for fast SpMV */
-    PetscInt bidx = 0;
-
-    a->totalblocks = 0;
-    for (i=0; i<a->totalslices; ++i) a->totalblocks += (a->sliidx[i+1]-a->sliidx[i]+SLICE_HEIGHT*32-1)/(SLICE_HEIGHT*32);
-    ierr = PetscMalloc2(a->totalblocks+1,&a->blockidx,a->totalblocks,&a->block_row_map);CHKERRQ(ierr);
-    for (i=0; i<a->totalslices; ++i)
-      for (j=0; j<(a->sliidx[i+1]-a->sliidx[i]+SLICE_HEIGHT*32-1)/(SLICE_HEIGHT*32); ++j) {
-        a->blockidx[bidx]      = a->sliidx[i]+j*SLICE_HEIGHT*32;
-        a->block_row_map[bidx] = i*SLICE_HEIGHT;
-        bidx++;
-      }
-    a->blockidx[bidx] = a->sliidx[a->totalslices];
-  }
   ierr = MatSeqSELLInvalidateDiagonal(A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
