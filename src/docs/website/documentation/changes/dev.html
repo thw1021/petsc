@@ -130,6 +130,7 @@
       <h4>Mat:</h4>
       <ul>
         <li>Add MatSetPreallocationCOO and MatSetValuesCOO to preallocate and set values in a matrix using COO format. Currently efficiently implemented only for MATCUSPARSE</li>
+        <li>Change option -mat_cusparse_transgen to -matmult_explicit_transpose for doing explicit transpose in MatMultTranspose and varients. Currently implemented only for AIJCUSPARSE and AIJKOKKOS</li>
       </ul>
       <h4>PC:</h4>
       <ul>

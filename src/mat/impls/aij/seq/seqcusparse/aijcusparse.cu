@@ -238,9 +238,10 @@ PetscErrorCode MatSeqAIJCUSPARSESetGenerateTranspose(Mat A,PetscBool transgen)
   ierr = PetscObjectTypeCompare(((PetscObject)A),MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
   if (flg) {
     Mat_SeqAIJCUSPARSE *cusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
+    Mat_SeqAIJ         *aijseq = (Mat_SeqAIJ*)A->data;
 
     if (A->factortype) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-    cusp->transgen = transgen;
+    aijseq->matmult_explicit_transpose = transgen;
     if (!transgen) { /* need to destroy the transpose matrix if present to prevent from logic errors if transgen is set to true later */
       ierr = MatSeqAIJCUSPARSEMultStruct_Destroy(&cusp->matTranspose,cusp->format);CHKERRQ(ierr);
     }
@@ -254,13 +255,14 @@ static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(PetscOptionItems *PetscOp
   MatCUSPARSEStorageFormat format;
   PetscBool                flg;
   Mat_SeqAIJCUSPARSE       *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
+  Mat_SeqAIJ               *aijseq = (Mat_SeqAIJ*)A->data;
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"SeqAIJCUSPARSE options");CHKERRQ(ierr);
   if (A->factortype == MAT_FACTOR_NONE) {
-    PetscBool transgen = cusparsestruct->transgen;
+    PetscBool transgen = aijseq->matmult_explicit_transpose;
 
-    ierr = PetscOptionsBool("-mat_cusparse_transgen","Generate explicit transpose for MatMultTranspose","MatSeqAIJCUSPARSESetGenerateTranspose",transgen,&transgen,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-matmult_explicit_transpose","Generate explicit transpose for MatMultTranspose","MatSeqAIJCUSPARSESetGenerateTranspose",transgen,&transgen,&flg);CHKERRQ(ierr);
     if (flg) {ierr = MatSeqAIJCUSPARSESetGenerateTranspose(A,transgen);CHKERRQ(ierr);}
 
     ierr = PetscOptionsEnum("-mat_cusparse_mult_storage_format","sets storage format of (seq)aijcusparse gpu matrices for SpMV",
@@ -1193,7 +1195,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEGenerateTransposeForMult(Mat A)
   PetscErrorCode               ierr;
 
   PetscFunctionBegin;
-  if (!cusparsestruct->transgen || cusparsestruct->matTranspose) PetscFunctionReturn(0);
+  if (!a->matmult_explicit_transpose || cusparsestruct->matTranspose) PetscFunctionReturn(0);
   ierr = PetscLogEventBegin(MAT_CUSPARSEGenerateTranspose,A,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   /* create cusparse matrix */
@@ -1907,6 +1909,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   PetscInt                     m,n,blda,clda;
   PetscBool                    flg,biscuda;
   Mat_SeqAIJCUSPARSE           *cusp;
+  Mat_SeqAIJ                   *aijseq;
   cusparseStatus_t             stat;
   cusparseOperation_t          opA;
   const PetscScalar            *barray;
@@ -1928,8 +1931,9 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   /* currently CopyToGpu does not copy if the matrix is bound to CPU
      Instead of silently accepting the wrong answer, I prefer to raise the error */
   if (A->boundtocpu) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Cannot bind to CPU a CUSPARSE matrix between MatProductSymbolic and MatProductNumeric phases");
-  ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
-  cusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
+  ierr   = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
+  cusp   = (Mat_SeqAIJCUSPARSE*)A->spptr;
+  aijseq = (Mat_SeqAIJ*)A->data;
   switch (product->type) {
   case MATPRODUCT_AB:
   case MATPRODUCT_PtAP:
@@ -1939,7 +1943,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
     n   = B->cmap->n;
     break;
   case MATPRODUCT_AtB:
-    if (!cusp->transgen) {
+    if (!aijseq->matmult_explicit_transpose) {
       mat = cusp->mat;
       opA = CUSPARSE_OPERATION_TRANSPOSE;
     } else {
@@ -2246,7 +2250,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
     matstruct = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestruct->mat;
     if (!matstruct) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"SeqAIJCUSPARSE does not have a 'mat' (need to fix)");
   } else {
-    if (herm || !cusparsestruct->transgen) {
+    if (herm || !a->matmult_explicit_transpose) {
       opA = herm ? CUSPARSE_OPERATION_CONJUGATE_TRANSPOSE : CUSPARSE_OPERATION_TRANSPOSE;
       matstruct = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestruct->mat;
     } else {
