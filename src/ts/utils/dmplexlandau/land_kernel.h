@@ -30,13 +30,25 @@ landau_inner_integral (const PetscInt myQi, const PetscInt qi_inc, const PetscIn
     for (fieldA = 0; fieldA < Nf; ++fieldA) {
       for (fieldB = 0; fieldB < Nf; ++fieldB) {
         for (d2 = 0; d2 < 2; ++d2) {
+          /* for (d3 = 0; d3 < 2; ++d3) { */
+          /*   /\* D = -U * (I \kron (fx)): g3=f: i,j,A *\/ */
+          /*   gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * IPData->f[ipidx*Nf + fieldB] * wi; */
+          /* } */
+          /* /\* K = U * grad(f): g2=e: i,A *\/ */
+          /* gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][0] * IPData->dfx[ipidx*Nf + fieldB] * wi; */
+          /* gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][1] * IPData->dfy[ipidx*Nf + fieldB] * wi; */
+
           for (d3 = 0; d3 < 2; ++d3) {
             /* D = -U * (I \kron (fx)): g3=f: i,j,A */
-            gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * IPData->f[ipidx*Nf + fieldB] * wi;
+            gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * IPData->f[ipidx + fieldB*ip_end] * wi;
           }
           /* K = U * grad(f): g2=e: i,A */
-          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][0] * IPData->dfx[ipidx*Nf + fieldB] * wi;
-          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][1] * IPData->dfy[ipidx*Nf + fieldB] * wi;
+          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][0] * IPData->dfx[ipidx + fieldB*ip_end] * wi;
+          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][1] * IPData->dfy[ipidx + fieldB*ip_end] * wi;
+
+
+
+          
         }
       }
     }

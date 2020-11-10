@@ -36,11 +36,12 @@ static PetscErrorCode LandauPointDataCreate(LandauIPData *IPData, PetscInt dim, 
   if (dim==2) IPData->z = IPData->dfz = NULL;
   /* pad with zeros in case we vectorize into this */
   for (jj=nip ; jj < nip_pad; jj++){
+    exit(333);
     IPData->w[jj] = 0;
     IPData->x[jj] = -1;
     IPData->y[jj] = -1;
     if (IPData->z) IPData->z[jj] = -1;
-    for (s=0;s<Ns;s++) {
+    for (s=0;s<Ns;s++) { // need to transpose
       IPData->f  [jj*Ns+s] = 0;
       IPData->dfx[jj*Ns+s] = 0;
       IPData->dfy[jj*Ns+s] = 0;
@@ -179,11 +180,17 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         }
         /* copy to IPDataLocal */
         for (f=0;f<Nf;f++) {
-          IPData.f[gidx*Nf + f] = PetscRealPart(uu[f]);
-          //for (d = 0; d < dim; ++d) pnt_data->fdf[f].df[d] = PetscRealPart(u_x[f*dim+d]);
-          IPData.dfx[gidx*Nf + f] = PetscRealPart(u_x[f*dim+0]);
-          IPData.dfy[gidx*Nf + f] = PetscRealPart(u_x[f*dim+1]);
-          if (dim==3) IPData.dfz[gidx*Nf + f] = PetscRealPart(u_x[f*dim+2]);
+          if (0) {
+            IPData.f[gidx*Nf + f] = PetscRealPart(uu[f]);
+            IPData.dfx[gidx*Nf + f] = PetscRealPart(u_x[f*dim+0]);
+            IPData.dfy[gidx*Nf + f] = PetscRealPart(u_x[f*dim+1]);
+            if (dim==3) IPData.dfz[gidx*Nf + f] = PetscRealPart(u_x[f*dim+2]);
+          } else {
+            IPData.f[gidx + f*IPData.nip_] = PetscRealPart(uu[f]);
+            IPData.dfx[gidx + f*IPData.nip_] = PetscRealPart(u_x[f*dim+0]);
+            IPData.dfy[gidx + f*IPData.nip_] = PetscRealPart(u_x[f*dim+1]);
+            if (dim==3) IPData.dfz[gidx + f*IPData.nip_] = PetscRealPart(u_x[f*dim+2]);
+          }
         }
       } /* q */
       ierr = DMPlexVecRestoreClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
@@ -1597,7 +1604,6 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
-printf("unorm=%g\n",unorm);
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   if (ctx->normJ != unorm) {
