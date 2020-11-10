@@ -8,7 +8,7 @@ sliceid - set the location where the slice will be extraced from the parent vect
    This test checks the functionality of DMDACreatePatchIS when
    extracting a 2D vector from a 3D vector and 1D vector from a
    2D vector.
-   */
+*/
 
 #include <petscdmda.h>
 
