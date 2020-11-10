@@ -3566,6 +3566,28 @@ PetscErrorCode  MatSetRandomSkipColumnRange_SeqAIJ_Private(Mat x,PetscInt low,Pe
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode MatSetGenerateTranspose_SeqAIJ(Mat A,PetscBool flg)
+{
+  Mat_SeqAIJ     *aij = (Mat_SeqAIJ*)A->data;
+
+  PetscFunctionBegin;
+  aij->mat_explicit_transpose = flg;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode MatSetFromOptions_SeqAIJ(PetscOptionItems* PetscOptionsObject,Mat A)
+{
+  PetscErrorCode ierr;
+  Mat_SeqAIJ     *aij = (Mat_SeqAIJ*)A->data;
+  PetscBool      set,oldflg = aij->mat_explicit_transpose,newflg = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  ierr = PetscOptionsHead(PetscOptionsObject,"SEQAIJ options");CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-mat_explicit_transpose","Hint to generate explicit transpose for operations like MatMultTranspose","MatSetGenerateTranspose",oldflg,&newflg,&set);CHKERRQ(ierr);
+  if (set && oldflg != newflg) {ierr = MatSetGenerateTranspose(A,newflg);CHKERRQ(ierr);}
+  ierr = PetscOptionsTail();CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
 /* -------------------------------------------------------------------*/
 static struct _MatOps MatOps_Values = { MatSetValues_SeqAIJ,
@@ -3644,7 +3666,7 @@ static struct _MatOps MatOps_Values = { MatSetValues_SeqAIJ,
                                         NULL,
                                 /* 74*/ NULL,
                                         MatFDColoringApply_AIJ,
-                                        NULL,
+                                        MatSetFromOptions_SeqAIJ,
                                         NULL,
                                         NULL,
                                 /* 79*/ MatFindZeroDiagonals_SeqAIJ,
@@ -3715,7 +3737,8 @@ static struct _MatOps MatOps_Values = { MatSetValues_SeqAIJ,
                                         MatCreateMPIMatConcatenateSeqMat_SeqAIJ,
                                  /*145*/MatDestroySubMatrices_SeqAIJ,
                                         NULL,
-                                        NULL
+                                        NULL,
+                                        MatSetGenerateTranspose_SeqAIJ
 };
 
 PetscErrorCode  MatSeqAIJSetColumnIndices_SeqAIJ(Mat mat,PetscInt *indices)
@@ -4668,6 +4691,9 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat B)
   ierr = MatCreate_SeqAIJ_Inode(B);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)B,MATSEQAIJ);CHKERRQ(ierr);
   ierr = MatSeqAIJSetTypeFromOptions(B);CHKERRQ(ierr);  /* this allows changing the matrix subtype to say MATSEQAIJPERM */
+  ierr = PetscObjectOptionsBegin((PetscObject)B);CHKERRQ(ierr);
+  ierr = MatSetFromOptions_SeqAIJ(PetscOptionsObject,B);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

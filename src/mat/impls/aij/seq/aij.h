@@ -122,6 +122,8 @@ typedef struct {
   PetscBool   ibdiagvalid;                    /* inverses of block diagonals are valid. */
   PetscBool   diagonaldense;                  /* all entries along the diagonal have been set; i.e. no missing diagonal terms */
   PetscScalar fshift,omega;                   /* last used omega and fshift */
+  PetscBool   mat_explicit_transpose;         /* hint to generate an explicit mat tranpsose for operations like MatMultTranspose() */
+  PetscBool   transupdated;                   /* whether or not the explicitly generated transpose is up-to-date */
 } Mat_SeqAIJ;
 
 /*

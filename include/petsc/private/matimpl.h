@@ -208,6 +208,7 @@ struct _MatOps {
   PetscErrorCode (*destroysubmatrices)(PetscInt,Mat*[]);
   PetscErrorCode (*mattransposesolve)(Mat,Mat,Mat);
   PetscErrorCode (*getvalueslocal)(Mat,PetscInt,const PetscInt[],PetscInt,const PetscInt[],PetscScalar[]);
+  PetscErrorCode (*setgeneratetranspose)(Mat,PetscBool);
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum
