@@ -219,13 +219,10 @@ static PetscErrorCode MatPartitioningApplyND_Parmetis(MatPartitioning part, IS *
 /*
    Uses the ParMETIS to improve the quality  of a partition
 */
-static PetscErrorCode MatPartitioningImprove_Parmetis(MatPartitioning part, IS *partitioning)
+static PetscErrorCode MatPartitioningImprove_Parmetis(MatPartitioning part, PetscInt locals[])
 {
   MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
-  PetscErrorCode           ierr;
-  PetscInt                 *locals = NULL;
   Mat                      pmat    = part->adj_work;
-  PetscInt                 bs      = part->bs;
 
   PetscFunctionBegin;
   //TODO handle this on interface level?
@@ -235,33 +232,8 @@ static PetscErrorCode MatPartitioningImprove_Parmetis(MatPartitioning part, IS *
     idx_t      *xadj    = (idx_t*) adj->i;
     idx_t      *adjncy  = (idx_t*) adj->j;
     idx_t      numflag=0, nparts=part->n;
-    PetscInt   i;
-    const PetscInt *part_indices;
-
-    ierr = PetscMalloc1(pmat->rmap->n,&locals);CHKERRQ(ierr);
-
-    ierr = ISGetIndices(*partitioning,&part_indices);CHKERRQ(ierr);
-    for (i=0; i<pmat->rmap->n; i++) locals[i] = part_indices[i*bs];
-    ierr = ISRestoreIndices(*partitioning,&part_indices);CHKERRQ(ierr);
-    ierr = ISDestroy(partitioning);CHKERRQ(ierr);
 
     PetscStackCallParmetis(ParMETIS_V3_RefineKway,(vtxdist,xadj,adjncy,pmetis->vwgt,pmetis->adjwgt,&pmetis->wgtflag,&numflag,&pmetis->ncon,&nparts,pmetis->tpwgts,pmetis->ubvec,pmetis->options,(idx_t*)&pmetis->cuts,(idx_t*)locals,&pmetis->comm));
-
-    if (bs > 1) {
-      PetscInt i,j,*newlocals;
-      ierr = PetscMalloc1(bs*pmat->rmap->n,&newlocals);CHKERRQ(ierr);
-      for (i=0; i<pmat->rmap->n; i++) {
-        for (j=0; j<bs; j++) {
-          newlocals[bs*i + j] = locals[i];
-        }
-      }
-      ierr = PetscFree(locals);CHKERRQ(ierr);
-      ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),bs*pmat->rmap->n,newlocals,PETSC_OWN_POINTER,partitioning);CHKERRQ(ierr);
-    } else {
-      ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),pmat->rmap->n,locals,PETSC_OWN_POINTER,partitioning);CHKERRQ(ierr);
-    }
-  } else {
-    ierr = ISCreateGeneral(PetscObjectComm((PetscObject)part),0,NULL,PETSC_COPY_VALUES,partitioning);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -307,6 +279,32 @@ PetscErrorCode  MatPartitioningApply_New(MatPartitioning part,IS *partitioning)
   }
   //TODO replace with   ierr = (*part->ops->apply)(part,locals);CHKERRQ(ierr);
   ierr = MatPartitioningApply_Parmetis(part, locals);CHKERRQ(ierr);
+
+  ierr = MatPartitioningPostApply_Private(part,locals,partitioning);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+//TODO move to partition.c, immerse into MatPartitioningImprove()
+PetscErrorCode  MatPartitioningImprove_New(MatPartitioning part,IS *partitioning)
+{
+  PetscErrorCode ierr;
+  Mat            pmat    = part->adj_work;
+  PetscInt       bs      = part->bs;
+  PetscInt       *locals = NULL;
+
+  PetscFunctionBegin;
+  if (pmat) {
+    const PetscInt *part_indices;
+    PetscInt       i;
+
+    ierr = PetscMalloc1(pmat->rmap->n,&locals);CHKERRQ(ierr);
+    ierr = ISGetIndices(*partitioning,&part_indices);CHKERRQ(ierr);
+    for (i=0; i<pmat->rmap->n; i++) locals[i] = part_indices[i*bs];
+    ierr = ISRestoreIndices(*partitioning,&part_indices);CHKERRQ(ierr);
+    ierr = ISDestroy(partitioning);CHKERRQ(ierr);
+  }
+  //TODO replace with   ierr = (*part->ops->improve)(part,locals);CHKERRQ(ierr);
+  ierr = MatPartitioningImprove_Parmetis(part, locals);CHKERRQ(ierr);
 
   ierr = MatPartitioningPostApply_Private(part,locals,partitioning);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -453,7 +451,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Parmetis(MatPartitioning part)
   part->parallel            = PETSC_TRUE;
   part->ops->apply          = MatPartitioningApply_New;
   part->ops->applynd        = MatPartitioningApplyND_Parmetis;
-  part->ops->improve        = MatPartitioningImprove_Parmetis;
+  part->ops->improve        = MatPartitioningImprove_New;
   part->ops->view           = MatPartitioningView_Parmetis;
   part->ops->destroy        = MatPartitioningDestroy_Parmetis;
   part->ops->reset          = MatPartitioningReset_Parmetis;
