@@ -871,7 +871,7 @@ PetscErrorCode  SNESMonitorSetFromOptions(SNES snes,const char name[],const char
 .  -snes_converged_reason - print the reason for convergence/divergence after each solve
 .  -npc_snes_type <type> - the SNES type to use as a nonlinear preconditioner
 .   -snes_test_jacobian <optional threshold> - compare the user provided Jacobian with one computed via finite differences to check for errors.  If a threshold is given, display only those entries whose difference is greater than the threshold.
--   -snes_test_jacobian_view - display the user provided Jacobian, the finite difference Jacobian and the difference between them to help users detect the location of errors in the user provided Jacobian
+-   -snes_test_jacobian_view - display the user provided Jacobian, the finite difference Jacobian and the difference between them to help users detect the location of errors in the user provided Jacobian.
 
     Options Database for Eisenstat-Walker method:
 +  -snes_ksp_ew - use Eisenstat-Walker method for determining linear system convergence
