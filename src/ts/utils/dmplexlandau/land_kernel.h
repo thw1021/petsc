@@ -30,14 +30,6 @@ landau_inner_integral (const PetscInt myQi, const PetscInt qi_inc, const PetscIn
     for (fieldA = 0; fieldA < Nf; ++fieldA) {
       for (fieldB = 0; fieldB < Nf; ++fieldB) {
         for (d2 = 0; d2 < 2; ++d2) {
-          /* for (d3 = 0; d3 < 2; ++d3) { */
-          /*   /\* D = -U * (I \kron (fx)): g3=f: i,j,A *\/ */
-          /*   gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * IPData->f[ipidx*Nf + fieldB] * wi; */
-          /* } */
-          /* /\* K = U * grad(f): g2=e: i,A *\/ */
-          /* gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][0] * IPData->dfx[ipidx*Nf + fieldB] * wi; */
-          /* gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][1] * IPData->dfy[ipidx*Nf + fieldB] * wi; */
-
           for (d3 = 0; d3 < 2; ++d3) {
             /* D = -U * (I \kron (fx)): g3=f: i,j,A */
             gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * IPData->f[ipidx + fieldB*ip_end] * wi;
@@ -45,10 +37,6 @@ landau_inner_integral (const PetscInt myQi, const PetscInt qi_inc, const PetscIn
           /* K = U * grad(f): g2=e: i,A */
           gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][0] * IPData->dfx[ipidx + fieldB*ip_end] * wi;
           gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][1] * IPData->dfy[ipidx + fieldB*ip_end] * wi;
-
-
-
-          
         }
       }
     }
@@ -60,12 +48,12 @@ landau_inner_integral (const PetscInt myQi, const PetscInt qi_inc, const PetscIn
         for (d2 = 0; d2 < 3; ++d2) {
           for (d3 = 0; d3 < 3; ++d3) {
             /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
-            gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * IPData->f[ipidx*Nf + fieldB] * wi;
+            gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * IPData->f[ipidx + fieldB*ip_end] * wi;
           }
           /* K = U * grad(f): g2 = e: i,A */
-          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][0] * IPData->dfx[ipidx*Nf + fieldB] * wi;
-          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][1] * IPData->dfy[ipidx*Nf + fieldB] * wi;
-          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][2] * IPData->dfz[ipidx*Nf + fieldB] * wi;
+          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][0] * IPData->dfx[ipidx + fieldB*ip_end] * wi; //IPData->dfx[ipidx*Nf + fieldB] * wi;
+          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][1] * IPData->dfy[ipidx + fieldB*ip_end] * wi; //IPData->dfy[ipidx*Nf + fieldB] * wi;
+          gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][2] * IPData->dfz[ipidx + fieldB*ip_end] * wi; //IPData->dfz[ipidx*Nf + fieldB] * wi;
           //if (myelem==0 && qj_start==0 && ipidx==10) printf("\tcpu:g22: = g2=%e a=%e b=%e mi=%e U=%e df=%e f=%e (%e %e %e)\n",gg2[fieldA][d2],nu_alpha[fieldA],nu_beta[fieldB],invMass[fieldB],U[d2][d3],fplpt->fdf[fieldB].df[d3],fplpt->fdf[fieldB].f,fplpt->crd[0], fplpt->crd[1], fplpt->crd[2]);
         }
       }
