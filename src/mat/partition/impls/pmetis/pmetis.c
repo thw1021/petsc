@@ -95,7 +95,10 @@ static PetscErrorCode MatPartitioningSetUp_Parmetis(MatPartitioning part)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part, IS *partitioning)
+/*
+   Uses the ParMETIS parallel matrix partitioner to partition the matrix in parallel
+*/
+static PetscErrorCode MatPartitioningApply_Parmetis(MatPartitioning part, IS *partitioning)
 {
   MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
   PetscErrorCode           ierr;
@@ -231,18 +234,6 @@ static PetscErrorCode MatPartitioningApplyND_Parmetis(MatPartitioning part, IS *
     ierr = PetscObjectCompose((PetscObject)(*partitioning),"_petsc_matpartitioning_ndorder",(PetscObject)ndis);CHKERRQ(ierr);
     ierr = ISDestroy(&ndis);CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
-}
-
-/*
-   Uses the ParMETIS parallel matrix partitioner to partition the matrix in parallel
-*/
-static PetscErrorCode MatPartitioningApply_Parmetis(MatPartitioning part, IS *partitioning)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = MatPartitioningApply_Parmetis_Private(part, partitioning);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
