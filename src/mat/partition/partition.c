@@ -281,6 +281,7 @@ PetscErrorCode  MatPartitioningApplyND(MatPartitioning matp,IS *partitioning)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(matp,MAT_PARTITIONING_CLASSID,1);
   PetscValidPointer(partitioning,2);
+  if (!matp->ops->applynd) SETERRQ1(PetscObjectComm((PetscObject)matp), PETSC_ERR_SUP, "MatPartitioningApplyND() not implemented for MatPartitioning type %s", ((PetscObject)matp)->type_name);
   ierr = MatPartitioningSetUp(matp);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(MAT_PartitioningND,matp,0,0,0);CHKERRQ(ierr);
   ierr = (*matp->ops->applynd)(matp,partitioning);CHKERRQ(ierr);
@@ -326,6 +327,7 @@ PetscErrorCode  MatPartitioningApply(MatPartitioning matp,IS *partitioning)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(matp,MAT_PARTITIONING_CLASSID,1);
   PetscValidPointer(partitioning,2);
+  if (!matp->ops->apply) SETERRQ1(PetscObjectComm((PetscObject)matp), PETSC_ERR_SUP, "MatPartitioningApply() not implemented for MatPartitioning type %s", ((PetscObject)matp)->type_name);
   ierr = MatPartitioningSetUp(matp);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(MAT_Partitioning,matp,0,0,0);CHKERRQ(ierr);
   ierr = (*matp->ops->apply)(matp,partitioning);CHKERRQ(ierr);
@@ -384,6 +386,9 @@ PetscErrorCode  MatPartitioningImprove(MatPartitioning matp,IS *partitioning)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(matp,MAT_PARTITIONING_CLASSID,1);
   PetscValidPointer(partitioning,2);
+  //TODO partitioning arg should be IS, not IS*
+  PetscValidHeaderSpecific(*partitioning,IS_CLASSID,2);
+  if (!matp->ops->improve) SETERRQ1(PetscObjectComm((PetscObject)matp), PETSC_ERR_SUP, "MatPartitioningImprove() not implemented for MatPartitioning type %s", ((PetscObject)matp)->type_name);
   ierr = MatPartitioningSetUp(matp);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(MAT_Partitioning,matp,0,0,0);CHKERRQ(ierr);
   if (matp->ops->improve) {
