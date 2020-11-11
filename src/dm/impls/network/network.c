@@ -1,5 +1,15 @@
 #include <petsc/private/dmnetworkimpl.h>  /*I  "petscdmnetwork.h"  I*/
 
+struct _p_Comp0{
+  PetscInt id;
+} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
+typedef struct _p_Comp0 *Comp0;
+
+struct _p_Comp1{
+  PetscScalar val;
+} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
+typedef struct _p_Comp1 *Comp1;
+
 /*@
   DMNetworkGetPlex - Gets the Plex DM associated with this network DM
 
@@ -973,7 +983,7 @@ PetscErrorCode DMNetworkGetGlobalVertexIndex(DM dm,PetscInt p,PetscInt *index)
   PetscFunctionReturn(0);
 }
 
-/*
+/*@
   DMNetworkGetComponentKeyOffset - Gets the type along with the offset for indexing the
                                     component value from the component data array
 
@@ -1002,7 +1012,7 @@ PetscErrorCode DMNetworkGetGlobalVertexIndex(DM dm,PetscInt p,PetscInt *index)
   Level: intermediate
 
 .seealso: DMNetworkGetNumComponents, DMNetworkGetComponentDataArray,
-*/
+@*/
 PetscErrorCode DMNetworkGetComponentKeyOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *compkey,PetscInt *offset)
 {
   PetscErrorCode           ierr;
@@ -1083,13 +1093,18 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   PetscFunctionBegin;
   if (header->ndata == MAX_DATA_AT_POINT) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components at a point exceeds the max %D",MAX_DATA_AT_POINT);
 
+  /* (a) stores the size of the component in a section called DataSection (the size is already set when the component is registered) */
   header->size[header->ndata] = component->size;
   ierr = PetscSectionAddDof(network->DataSection,p,component->size);CHKERRQ(ierr);
   header->key[header->ndata] = componentkey;
+
+  /* (b) calculates an offset for where this component data will be located in a contiguous memory chunk having data for all components */
   if (header->ndata != 0) header->offset[header->ndata] = header->offset[header->ndata-1] + header->size[header->ndata-1];
   header->nvar[header->ndata] = 0;
 
+  /* (c) copies pointer for the component data location. */
   cvalue->data[header->ndata] = (void*)compvalue;
+
   header->ndata++;
   PetscFunctionReturn(0);
 }
@@ -1119,13 +1134,6 @@ PetscErrorCode DMNetworkSetComponentNumVariables(DM dm,PetscInt p,PetscInt compn
   ierr = DMNetworkAddNumVariables(dm,p,nvar);CHKERRQ(ierr);
   header->nvar[compnum] = nvar;
   if (compnum != 0) header->offsetvarrel[compnum] = header->offsetvarrel[compnum-1] + header->nvar[compnum-1];
-#if 0
-  PetscInt                 i;
-  for (i=1; i<=compnum; i++) {
-    header->offsetvarrel[i] = header->offsetvarrel[i-1] + header->nvar[i-1];
-    printf(" offsetvarrel[%d] = %d\n",i,header->offsetvarrel[i]);
-  }
-#endif
   PetscFunctionReturn(0);
 }
 
@@ -1469,8 +1477,7 @@ PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt co
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
   ierr = DMNetworkIsCouplingVertex(dm,p,&iscouplev);CHKERRQ(ierr);
   if (iscouplev) {
-    printf("[%d] p %d is a sv, compkey %d, compvalue %p, nvar %d\n\n",rank,p,componentkey,compvalue,nvar);
-    PetscFunctionReturn(0);
+    printf("[%d] AddComponentAndNumVar: p %d is a sv, compkey %d, compvalue %p, nvar %d\n\n",rank,p,componentkey,compvalue,nvar);
   }
 #endif
 
@@ -1482,7 +1489,6 @@ PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt co
   header->key[header->ndata] = componentkey;
   if (header->ndata != 0) header->offset[header->ndata] = header->offset[header->ndata-1] + header->size[header->ndata-1];
   header->nvar[header->ndata] = 0;
-
   cvalue->data[header->ndata] = (void*)compvalue;
 
   ierr = DMNetworkSetComponentNumVariables(dm,p,header->ndata,nvar);CHKERRQ(ierr);
@@ -1490,8 +1496,11 @@ PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt co
   PetscFunctionReturn(0);
 }
 
-/* Sets up the array that holds the data for all components and its associated section. This
-   function is called during DMSetUp() */
+/*
+ Sets up the array that holds the data for all components and its associated section. This
+   function is called during DMSetUp().
+ It copies the data for all components in a contiguous array called componentdataarray. The component data is stored pointwise with an additional ‘header’ (metadata) stored for each point. The header has metadata information such as number of components at each point, number of variables for each component, offsets for the components data, etc.
+*/
 PetscErrorCode DMNetworkComponentSetUp(DM dm)
 {
   PetscErrorCode           ierr;
@@ -1502,6 +1511,136 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   DMNetworkComponentGenericDataType *componentdataarray;
 
   PetscFunctionBegin;
+#if 1
+  PetscMPIInt rank,size;
+  MPI_Comm    comm;
+  PetscInt    nsv;
+  const PetscInt *svtx;
+
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+
+  PetscMPIInt displs[size],recvcounts[size];
+
+  ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
+  for (p=0; p<nsv; p++) {
+    header = &network->header[svtx[p]]; // all processors have this header!
+    PetscInt ncomp_orig = header->ndata;
+    //if (ncomp_orig) {
+    //  printf("[%d] key %d, nvar %d\n",rank,header->key[header->ndata-1],header->nvar[header->ndata-1]);
+    //}
+    ierr = MPI_Barrier(comm);CHKERRQ(ierr);
+
+    /* (0) Allgather ncomponets from each process */
+    /*--------------------------------------------*/
+    //printf("[%d] dataheadersize %d\n",rank,network->dataheadersize);
+    DMNetworkComponentValue  cvalue = &network->cvalue[svtx[p]]; /* pointer */
+    void                     *compvalue = cvalue->data[header->ndata-1];
+    PetscInt sendcounts=1,sendbuf[sendcounts],recvbuf[size],ncomps[size],proc;
+
+    sendcounts = 1;
+    sendbuf[0] = header->ndata; /* num of components */
+    for (i=0; i<size; i++) {
+      displs[i]     = i;
+      recvcounts[i] = 1;
+    }
+    ierr = MPI_Allgatherv(sendbuf,sendcounts,MPIU_INT,recvbuf,recvcounts,(PetscMPIInt *)displs,MPIU_INT,comm);CHKERRQ(ierr);
+    for (i=0; i<size; i++) {
+      ncomps[i] = recvbuf[i];
+      //if (rank == 2) printf("[%d] ncomps[%d] = %d\n",rank,i,ncomps[i]);
+    }
+    ncomp=0;
+    for (i=0; i<size; i++) {
+      if (ncomps[i]) {
+        ierr = MPI_Barrier(comm);CHKERRQ(ierr);
+        /* (1) Allgather key, nvar, size_components from each process */
+        /*-------------------------------------------------------------*/
+        //ierr = PetscPrintf(PETSC_COMM_WORLD,"ncomps[%d]=%d\n",i,ncomps[i]);
+        sendcounts = 3;
+        PetscInt sendbuf1[sendcounts],recvbuf1[size*sendcounts];
+        if (rank == i) {
+          /* pack header data, then bcast to all other processors */
+          sendbuf1[0] = header->key[ncomp_orig-1];  /* key of component[0] */
+          sendbuf1[1] = header->nvar[ncomp_orig-1]; /* nvar at this component */
+          sendbuf1[2] = header->size[0]; /* size of comp[0] */
+          //printf("[%d] key %d, nvar %d; ncomp %d %d\n",rank,header->key[ncomp_orig-1],header->nvar[ncomp_orig-1],ncomp_orig,ncomp_orig);
+        } else {
+          sendcounts = 0;
+        }
+
+        displs[0] = 0;
+        for (proc=0; proc<size-1; proc++) {
+          if (proc == i) {
+            displs[proc+1] = displs[proc] + 3;
+          } else {
+            displs[proc+1] = displs[proc];
+          }
+        }
+
+        for (proc=0; proc<size; proc++) {
+          if (proc == i) {
+            recvcounts[proc] = 3;
+          } else {
+            recvcounts[proc] = 0;
+          }
+        }
+        ierr = MPI_Allgatherv(sendbuf1,sendcounts,MPIU_INT,recvbuf1,recvcounts,(PetscMPIInt*)displs,MPIU_INT,comm);CHKERRQ(ierr);
+
+        //printf("[%d] 1st MPI_Allgatherv is done: recvbuf1: key=%d, nvar=%d, compsize=%d\n",rank,recvbuf1[0],recvbuf1[1],recvbuf1[2]);
+        //ierr = MPI_Barrier(comm);CHKERRQ(ierr);
+
+        /* (2) Allgather component */
+        //----------------------------------------
+        sendcounts = recvbuf1[2];
+        PetscInt sendbuf2[sendcounts],recvbuf2[size*sendcounts];
+        if (rank == i) {
+          ierr = PetscMemcpy(sendbuf2,compvalue,sendcounts*sizeof(DMNetworkComponentGenericDataType));CHKERRQ(ierr);
+        } else {
+          sendcounts = 0;
+        }
+        displs[0] = 0;
+        for (proc=0; proc<size-1; proc++) {
+          if (proc == i) {
+            displs[proc+1] = displs[proc] + recvbuf1[2];
+          } else {
+            displs[proc+1] = displs[proc];
+          }
+        }
+        for (proc=0; proc<size; proc++) {
+          if (proc == i) {
+            recvcounts[proc] = recvbuf1[2];
+          } else {
+            recvcounts[proc] = 0;
+          }
+        }
+        ierr = MPI_Allgatherv(sendbuf2,sendcounts,MPIU_INT,recvbuf2,recvcounts,(PetscMPIInt*)displs,MPIU_INT,comm);CHKERRQ(ierr);
+
+        if (rank != i) {
+          if (i==0) {
+            Comp0   comp0[1];
+            comp0[0] = (Comp0)recvbuf2;
+            PetscInt key = recvbuf1[0],nvar=recvbuf1[1];
+            ierr = DMNetworkAddComponentAndNumVariables(dm,svtx[p],key,&comp0[0],nvar);CHKERRQ(ierr);
+            //printf("[%d] 2nd MPI_Allgatherv is done: comp0[0].id %d; nvar %d, key %d\n",rank,comp0[0]->id,recvbuf1[1],key);
+          }
+          if (i==1) {
+            Comp1   comp1[1];
+            comp1[0] = (Comp1)recvbuf2;
+            PetscInt key = recvbuf1[0],nvar=recvbuf1[1];
+            ierr = DMNetworkAddComponentAndNumVariables(dm,svtx[p],key,&comp1[0],nvar);CHKERRQ(ierr);
+            //printf("[%d] 2nd MPI_Allgatherv is done: comp1[0].val %g; nvar %d, key %d\n",rank,comp1[0]->val,recvbuf1[1],key);
+          }
+        } // endof (rank != i)
+
+        ierr = MPI_Barrier(comm);CHKERRQ(ierr);
+      } // endof if (ncomps[i])
+      ncomp += ncomps[i];
+    } // endof for (i=0; i<size; i++)
+  } // endof for (p=0; p<nsv; p++)
+#endif
+
+
   ierr = PetscSectionSetUp(network->DataSection);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(network->DataSection,&arr_size);CHKERRQ(ierr);
   ierr = PetscMalloc1(arr_size,&network->componentdataarray);CHKERRQ(ierr);
@@ -1514,11 +1653,13 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
     /* Copy data */
     cvalue = &network->cvalue[p];
     ncomp = header->ndata;
+
     for (i = 0; i < ncomp; i++) {
       offset = offsetp + network->dataheadersize + header->offset[i];
       ierr = PetscMemcpy(componentdataarray+offset,cvalue->data[i],header->size[i]*sizeof(DMNetworkComponentGenericDataType));CHKERRQ(ierr);
     }
   }
+  ierr = MPI_Barrier(comm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1688,6 +1829,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   if (size == 1) PetscFunctionReturn(0);
 
+  /* This routine moves the component data to the appropriate processors. It makes use of the DataSection and the componentdataarray to move the component data to appropriate processors and returns a new DataSection and new componentdataarray. */
 #if 0
   PetscMPIInt rank;
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
@@ -2039,22 +2181,6 @@ PetscErrorCode DMSetUp_Network(DM dm)
   DM_Network     *network=(DM_Network*)dm->data;
 
   PetscFunctionBegin;
-  #if 0
-  //------------------------------
-  MPI_Comm       comm;
-  PetscMPIInt    rank;
-  PetscInt       sv,nsv;
-  const PetscInt *svtx;
-  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
-  for (sv=0; sv<nsv; sv++) {
-    DMNetworkComponentHeader header = &network->header[svtx[sv]];
-    printf("[%d] DMSetUp_Network: sv %d, header->ndata %d\n",rank,svtx[sv],header->ndata);
-  }
-  //------------------------------------------
-  #endif
-
   ierr = DMNetworkComponentSetUp(dm);CHKERRQ(ierr);
   ierr = DMNetworkVariablesSetUp(dm);CHKERRQ(ierr);
 
