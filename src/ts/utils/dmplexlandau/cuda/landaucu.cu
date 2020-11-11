@@ -111,12 +111,14 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt qi_inc, const Petsc
 	temp2    += IPData.f  [ipidx*Nf + fieldA]*s_nu_beta[fieldA];
       }
     } else {
-      temp1[0] += IPData.dfx[ipidx + fieldA*nip_pad]*s_nu_beta[fieldA]*s_invMass[fieldA];
-      temp1[1] += IPData.dfy[ipidx + fieldA*nip_pad]*s_nu_beta[fieldA]*s_invMass[fieldA];
+      for (fieldA = 0; fieldA < Nf; fieldA++) {
+	temp1[0] += IPData.dfx[ipidx + fieldA*nip_pad]*s_nu_beta[fieldA]*s_invMass[fieldA];
+	temp1[1] += IPData.dfy[ipidx + fieldA*nip_pad]*s_nu_beta[fieldA]*s_invMass[fieldA];
 #if LANDAU_DIM==3
-      temp1[2] += IPData.dfz[ipidx + fieldA*nip_pad]*s_nu_beta[fieldA]*s_invMass[fieldA];
+	temp1[2] += IPData.dfz[ipidx + fieldA*nip_pad]*s_nu_beta[fieldA]*s_invMass[fieldA];
 #endif
-      temp2    += IPData.f  [ipidx + fieldA*nip_pad]*s_nu_beta[fieldA];
+	temp2    += IPData.f  [ipidx + fieldA*nip_pad]*s_nu_beta[fieldA];
+      }
     }
     temp1[0] *= wi;
     temp1[1] *= wi;
