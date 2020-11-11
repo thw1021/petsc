@@ -31,6 +31,7 @@ PETSC_EXTERN PetscErrorCode DMNetworkGetVariableOffset(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVariableGlobalOffset(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetComponentVariableOffset(DM,PetscInt,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetComponentVariableGlobalOffset(DM,PetscInt,PetscInt,PetscInt*);
+PETSC_EXTERN PetscErrorCode DMNetworkGetComponentKeyOffset(DM,PetscInt,PetscInt,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetEdgeOffset(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVertexOffset(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkAddNumVariables(DM,PetscInt,PetscInt);
