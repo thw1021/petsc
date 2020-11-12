@@ -1757,7 +1757,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_ScaLAPACK(Mat A)
     grid->npcol = size/grid->nprow;
     ierr = PetscBLASIntCast(grid->nprow,&nprow);CHKERRQ(ierr);
     ierr = PetscBLASIntCast(grid->npcol,&npcol);CHKERRQ(ierr);
-    Cblacs_get(-1,0,&grid->ictxt);
+    grid->ictxt = Csys2blacs_handle(icomm);
     Cblacs_gridinit(&grid->ictxt,"R",nprow,npcol);
     Cblacs_gridinfo(grid->ictxt,&nprow,&npcol,&myrow,&mycol);
     grid->grid_refct = 1;
@@ -1766,9 +1766,9 @@ PETSC_EXTERN PetscErrorCode MatCreate_ScaLAPACK(Mat A)
     grid->myrow      = myrow;
     grid->mycol      = mycol;
     /* auxiliary 1d BLACS contexts for 1xsize and sizex1 grids */
-    Cblacs_get(-1,0,&grid->ictxrow);
+    grid->ictxrow = Csys2blacs_handle(icomm);
     Cblacs_gridinit(&grid->ictxrow,"R",1,size);
-    Cblacs_get(-1,0,&grid->ictxcol);
+    grid->ictxcol = Csys2blacs_handle(icomm);
     Cblacs_gridinit(&grid->ictxcol,"R",size,1);
     ierr = MPI_Comm_set_attr(icomm,Petsc_ScaLAPACK_keyval,(void*)grid);CHKERRQ(ierr);
 
