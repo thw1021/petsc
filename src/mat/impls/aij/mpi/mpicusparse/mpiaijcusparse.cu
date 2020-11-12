@@ -310,6 +310,7 @@ static PetscErrorCode MatProductNumeric_MPIAIJCUSPARSE_MPIAIJCUSPARSE(Mat C)
     Mat_SeqAIJ        *mm = (Mat_SeqAIJ*)mmdata->mp[i]->data;
     const PetscScalar *vv;
 
+    /* TODO: update temporary data */
     ierr = MatProductNumeric(mmdata->mp[i]);CHKERRQ(ierr);
     /* TODO: add support for using GPU data directly */
     ierr = MatSeqAIJGetArrayRead(mmdata->mp[i],&vv);CHKERRQ(ierr);
@@ -335,12 +336,15 @@ static PetscErrorCode MatProductSymbolic_MPIAIJCUSPARSE_MPIAIJCUSPARSE(Mat C)
   IS                   glob = NULL;
   const PetscInt       *cmap = NULL,*rmap = NULL;
   PetscInt             cp = 0,m,n,M,N,ncoo,*coo_i,*coo_j,cmapt[3],rmapt[3],i,j;
+  MatProductType       ptype;
   PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   MatCheckProduct(C,1);
   if (product->data) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Product data not empty");
-  switch (product->type) {
+  ptype = product->type;
+  if (product->A->symmetric && ptype == MATPRODUCT_AtB) ptype = MATPRODUCT_AB;
+  switch (ptype) {
   case MATPRODUCT_AB:
     A = product->A;
     P = product->B;
@@ -358,7 +362,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJCUSPARSE_MPIAIJCUSPARSE(Mat C)
     N = A->cmap->N;
     break;
   default:
-    SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Nor for product type %s",MatProductTypes[product->type]);
+    SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for product type %s",MatProductTypes[ptype]);
   }
   a = (Mat_MPIAIJ*)A->data;
   p = (Mat_MPIAIJ*)P->data;
@@ -368,7 +372,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJCUSPARSE_MPIAIJCUSPARSE(Mat C)
   ierr = MatSetType(C,MATMPIAIJCUSPARSE);CHKERRQ(ierr);
   ierr = PetscNew(&mmdata);CHKERRQ(ierr);
 
-  if (product->type == MATPRODUCT_AB) {
+  if (ptype == MATPRODUCT_AB) {
     ierr = MatGetBrowsOfAoCols_MPIAIJ(A,P,MAT_INITIAL_MATRIX,&mmdata->startsj_s,&mmdata->startsj_r,&mmdata->bufa,&P_oth);CHKERRQ(ierr);
 
     if (1) { /* A_diag * P_loc and A_off * P_oth TODO: add customization for this */
@@ -420,7 +424,6 @@ static PetscErrorCode MatProductSymbolic_MPIAIJCUSPARSE_MPIAIJCUSPARSE(Mat C)
     }
   } else { /* MATPRODUCT_AtB: P_diag * A_loc + P_off * A_loc: can be merged in one, at the cost of an extra trasposition of P_loc */
     Mat lA;
-
     ierr = MatMPIAIJGetLocalMatMerge(A,MAT_INITIAL_MATRIX,&glob,&lA);CHKERRQ(ierr);
     ierr = MatProductCreate(p->A,lA,NULL,&mp[cp]);CHKERRQ(ierr);
     ierr = MatProductSetType(mp[cp],MATPRODUCT_AtB);CHKERRQ(ierr);
@@ -506,7 +509,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJCUSPARSE_MPIAIJCUSPARSE(Mat C)
   }
   ierr = ISDestroy(&glob);CHKERRQ(ierr);
 
-  if (product->type == MATPRODUCT_AtB) { /* offproc values insertion */
+  if (ptype == MATPRODUCT_AtB) { /* offproc values insertion */
     const PetscInt *sfdeg;
     const PetscInt n = P->cmap->n;
     PetscInt ncoo2,*coo_i2,*coo_j2;
