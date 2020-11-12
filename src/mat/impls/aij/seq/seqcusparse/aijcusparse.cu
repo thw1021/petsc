@@ -1870,6 +1870,7 @@ struct MatMatCusparse {
   PetscScalar           *Bt;
   Mat                   X;
   PetscBool             reusesym; /* Cusparse does not have split symbolic and numeric phases for sparse matmat operations */
+  PetscObjectState      rAstate,rBstate;
   PetscLogDouble        flops;
   CsrMatrix             *Bcsr;
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
@@ -2184,7 +2185,9 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   ierr = PetscObjectTypeCompare((PetscObject)C,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
   if (!flg) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for C of type %s",((PetscObject)C)->type_name);
   mmdata = (MatMatCusparse*)C->product->data;
-  if (mmdata->reusesym) { /* this happens when api_user is true, meaning that the matrix values have been already computed in the MatProductSymbolic phase */
+  A = product->A;
+  B = product->B;
+  if (mmdata->reusesym && mmdata->rAstate == ((PetscObject)A)->state && mmdata->rBstate == ((PetscObject)B)->state) { /* this happens when api_user is true, meaning that the matrix values have been already computed in the MatProductSymbolic phase */
     mmdata->reusesym = PETSC_FALSE;
     Ccusp = (Mat_SeqAIJCUSPARSE*)C->spptr;
     if (Ccusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Only for MAT_CUSPARSE_CSR format");
@@ -2195,8 +2198,6 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
     goto finalize;
   }
   if (!c->nz) goto finalize;
-  A    = product->A;
-  B    = product->B;
   ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
   if (!flg) SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Not for type %s",((PetscObject)A)->type_name);
   ierr = PetscObjectTypeCompare((PetscObject)B,MATSEQAIJCUSPARSE,&flg);CHKERRQ(ierr);
@@ -2398,7 +2399,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   cerr = cudaMemcpy(Cmat->alpha_one,&PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
   cerr = cudaMemcpy(Cmat->beta_zero,&PETSC_CUSPARSE_ZERO,sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
   cerr = cudaMemcpy(Cmat->beta_one, &PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-  if (!Ccsr->num_rows || !Ccsr->num_cols) { /* cusparse raise errors in different calls when matrices have zero rows/columns! */
+  if (!Ccsr->num_rows || !Ccsr->num_cols || !a->nz || !b->nz) { /* cusparse raise errors in different calls when matrices have zero rows/columns! */
     thrust::fill(thrust::device,Ccsr->row_offsets->begin(),Ccsr->row_offsets->end(),0);
     c->nz = 0;
     Ccsr->column_indices = new THRUSTINTARRAY32(c->nz);
@@ -2592,6 +2593,8 @@ finalizesym:
   C->was_assembled = PETSC_FALSE;
   if (product->api_user) { /* flag the matrix C values as computed, so that the numeric phase will only call MatAssembly */
     mmdata->reusesym = PETSC_TRUE;
+    mmdata->rAstate  = ((PetscObject)A)->state;
+    mmdata->rBstate  = ((PetscObject)B)->state;
     C->offloadmask   = PETSC_OFFLOAD_GPU;
   }
   C->ops->productnumeric = MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE;
