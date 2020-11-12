@@ -32,8 +32,8 @@ Downloads and Development
 
 + Issue Tracker:   https://gitlab.com/petsc/petsc/-/issues
 + Git Repository:  https://gitlab.com/petsc/petsc.git
-+ The source code is in src/binding/petsc4py
-+ Previous source releases: https://gitlab.com/petsc/petsc4py/-/releases
++ The source code is in ``src/binding/petsc4py``
++ Previous source releases: https://pypi.org/project/petsc4py/
 
 Citations
 ---------
