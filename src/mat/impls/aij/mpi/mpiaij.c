@@ -3954,14 +3954,17 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_nonscalable(Mat mat,IS isrow,IS iscol,P
   aij  = (Mat_SeqAIJ*)(Mreuse)->data;
   ii   = aij->i;
   jj   = aij->j;
-  aa   = aij->a;
+
+  /* trigger copy to CPU if needed */
+  ierr = MatSeqAIJGetArrayRead(Mreuse,(const PetscScalar**)&aa);CHKERRQ(ierr);
   for (i=0; i<m; i++) {
     row   = rstart + i;
     nz    = ii[i+1] - ii[i];
-    cwork = jj;     jj += nz;
-    vwork = aa;     aa += nz;
+    cwork = jj; jj += nz;
+    vwork = aa; aa += nz;
     ierr  = MatSetValues_MPIAIJ(M,1,&row,nz,cwork,vwork,INSERT_VALUES);CHKERRQ(ierr);
   }
+  ierr = MatSeqAIJRestoreArrayRead(Mreuse,(const PetscScalar**)&aa);CHKERRQ(ierr);
 
   ierr    = MatAssemblyBegin(M,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr    = MatAssemblyEnd(M,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
