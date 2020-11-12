@@ -6,7 +6,7 @@
 /* Landau collision operator */
 #define PETSC_THREAD_SYNC
 #define PETSC_DEVICE_FUNC_DECL static
-#include "land_kernel.h"
+#include "land_tensors.h"
 
 #define LANDAU_VL  1
 
@@ -79,7 +79,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   PetscDS           prob;
   PetscSection      section,globsection;
   PetscScalar       *elemMat;
-  PetscInt          numCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Ncx,Nf,d,f,fieldA,Nip;
+  PetscInt          numCells,totDim,ej,Nq,*Nbf,*Ncf,Nb,Ncx,Nf,d,f,fieldA;
   PetscQuadrature   quad;
   PetscTabulation   *Tf;
   PetscReal         nu_alpha[LANDAU_MAX_SPECIES], nu_beta[LANDAU_MAX_SPECIES];
@@ -123,7 +123,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   if (Nb!=Nq) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq %D %D over integration or simplices? Tf[0]->Nb=%D dim=%D",Nb,Nq,Tf[0]->Nb,dim);
   if (Nq >LANDAU_MAX_NQ) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %D > LANDAU_MAX_NQ (%D)",Nq,LANDAU_MAX_NQ);
   if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
-  Nip = numCells*Nq;
   flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf + 165);
   ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
   elemMatSize = totDim*totDim;
@@ -152,7 +151,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         PetscInt         gidx = (ej*Nq + qj);
         PetscScalar      refSpaceDer[LANDAU_DIM];
         PetscInt         dOffset = 0, fOffset = 0;
-        //for (d = 0; d < dim; ++d)
         IPData.x[gidx] = vj[qj * dim + 0]; /* coordinate */
         IPData.y[gidx] = vj[qj * dim + 1];
         if (dim==3) IPData.z[gidx] = vj[qj * dim + 2];
@@ -180,21 +178,23 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         }
         /* copy to IPDataLocal */
         for (f=0;f<Nf;f++) {
-          if (0) {
-            IPData.f[gidx*Nf + f] = PetscRealPart(uu[f]);
-            IPData.dfx[gidx*Nf + f] = PetscRealPart(u_x[f*dim+0]);
-            IPData.dfy[gidx*Nf + f] = PetscRealPart(u_x[f*dim+1]);
-            if (dim==3) IPData.dfz[gidx*Nf + f] = PetscRealPart(u_x[f*dim+2]);
-          } else {
-            IPData.f[gidx + f*IPData.nip_] = PetscRealPart(uu[f]);
-            IPData.dfx[gidx + f*IPData.nip_] = PetscRealPart(u_x[f*dim+0]);
-            IPData.dfy[gidx + f*IPData.nip_] = PetscRealPart(u_x[f*dim+1]);
-            if (dim==3) IPData.dfz[gidx + f*IPData.nip_] = PetscRealPart(u_x[f*dim+2]);
-          }
+          IPData.f[gidx + f*IPData.nip_] = PetscRealPart(uu[f]);
+          IPData.dfx[gidx + f*IPData.nip_] = PetscRealPart(u_x[f*dim+0]);
+          IPData.dfy[gidx + f*IPData.nip_] = PetscRealPart(u_x[f*dim+1]);
+          if (dim==3) IPData.dfz[gidx + f*IPData.nip_] = PetscRealPart(u_x[f*dim+2]);
         }
       } /* q */
       ierr = DMPlexVecRestoreClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
     } /* e */
+  }
+  /* pad with zeros */
+  for (fieldA = numCells*Nq; fieldA < IPData.nip_; ++fieldA, invJ += dim*dim) {
+    for (d = 0; d < dim; ++d) {
+      int e;
+      for (e = 0; e < dim; ++e) {
+        invJ[e*dim+d] = 0;
+      }
+    }
   }
   ierr = DMRestoreLocalVector(plex, &locX);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
@@ -220,9 +220,149 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
       ierr = PetscLogFlops((PetscLogDouble)Nq*flops);CHKERRQ(ierr);
       for (qj = 0; qj < Nq; ++qj) {
-        PetscReal       g2[1][LANDAU_MAX_SPECIES][LANDAU_DIM], g3[1][LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM];
-        const PetscInt  nip = numCells*Nq, jpidx = Nq*(ej-cStart) + qj, one = 1, zero = 0; /* length of inner global interation, outer integration point */
-        landau_inner_integral(zero, one, zero, nip, 1, jpidx, Nf, dim, &IPData, &invJ[qj*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, Nq, Nb, qj, qj+1, Tf[0]->T[0], Tf[0]->T[1], elemMat, g2, g3, ej);
+        PetscReal               g2[LANDAU_MAX_SPECIES][LANDAU_DIM], g3[LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM], gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
+        const PetscInt          jpidx = Nq*(ej-cStart) + qj;
+        const PetscReal * const BB = Tf[0]->T[0], * const DD = Tf[0]->T[1], * const invJj = &invJ[qj*dim*dim];
+        PetscReal               gg2[LANDAU_MAX_SPECIES][LANDAU_DIM],gg3[LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM];
+        PetscInt                d,f,d2,dp,d3,ipidx,fieldA;
+        const PetscReal         vj[3] = {IPData.x[jpidx], IPData.y[jpidx], IPData.z ? IPData.z[jpidx] : 0}, wj = IPData.w[jpidx];
+        // create g2 & g3
+        for (d=0;d<dim;d++) { // clear accumulation data D & K
+          gg2_temp[d] = 0;
+          for (d2=0;d2<dim;d2++) gg3_temp[d][d2] = 0;
+          for (f=0;f<Nf;f++) {
+            gg2[f][d] = 0;
+            for (d2=0;d2<dim;d2++) gg3[f][d][d2] = 0;
+          }
+        }
+        for (ipidx = 0; ipidx < IPData.nip_; ipidx++) {
+          const PetscReal wi = IPData.w[ipidx], x = IPData.x[ipidx], y = IPData.y[ipidx];
+          PetscReal       temp1[3] = {0, 0, 0}, temp2 = 0;
+#if LANDAU_DIM==2
+          PetscReal       Ud[2][2], Uk[2][2];
+          LandauTensor2D(vj, x, y, Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
+#else
+          PetscReal U[3][3], z = IPData.z[ipidx];
+          LandauTensor3D(vj, x, y, z, U, (ipidx==jpidx) ? 0. : 1.);
+#endif
+          for (fieldA = 0; fieldA < Nf; ++fieldA) {
+            temp1[0] += IPData.dfx[ipidx + fieldA*IPData.nip_]*nu_beta[fieldA]*invMass[fieldA];
+            temp1[1] += IPData.dfy[ipidx + fieldA*IPData.nip_]*nu_beta[fieldA]*invMass[fieldA];
+#if LANDAU_DIM==3
+            temp1[2] += IPData.dfz[ipidx + fieldA*IPData.nip_]*nu_beta[fieldA]*invMass[fieldA];
+#endif
+            temp2    += IPData.f[ipidx + fieldA*IPData.nip_]*nu_beta[fieldA];
+          }
+          temp1[0] *= wi;
+          temp1[1] *= wi;
+#if LANDAU_DIM==3
+          temp1[2] *= wi;
+#endif
+          temp2    *= wi;
+#if LANDAU_DIM==2
+          for (d2 = 0; d2 < 2; d2++) {
+            for (d3 = 0; d3 < 2; ++d3) {
+              /* K = U * grad(f): g2=e: i,A */
+              gg2_temp[d2] += Uk[d2][d3]*temp1[d3];
+              /* D = -U * (I \kron (fx)): g3=f: i,j,A */
+              gg3_temp[d2][d3] += Ud[d2][d3]*temp2;
+            }
+          }
+#else
+          for (d2 = 0; d2 < 3; ++d2) {
+            for (d3 = 0; d3 < 3; ++d3) {
+              /* K = U * grad(f): g2 = e: i,A */
+              gg2_temp[d2] += U[d2][d3]*temp1[d3];
+              /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
+              gg3_temp[d2][d3] += U[d2][d3]*temp2;
+            }
+          }
+#endif
+        } /* IPs */
+        for (fieldA = 0; fieldA < Nf; ++fieldA) {
+          for (d2 = 0; d2 < dim; d2++) {
+            gg2[fieldA][d2] += gg2_temp[d2]*nu_alpha[fieldA];
+            for (d3 = 0; d3 < dim; d3++) {
+              gg3[fieldA][d2][d3] -= gg3_temp[d2][d3]*nu_alpha[fieldA]*invMass[fieldA];
+            }
+          }
+        }
+        /*       for (fieldB = 0; fieldB < Nf; ++fieldB) { */
+        /*         for (d2 = 0; d2 < 2; ++d2) { */
+        /*           for (d3 = 0; d3 < 2; ++d3) { */
+        /*             /\* D = -U * (I \kron (fx)): g3=f: i,j,A *\/ */
+        /*             gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * Ud[d2][d3] * IPData.f[ipidx + fieldB*IPData.nip_] * wi; */
+        /*           } */
+        /*           /\* K = U * grad(f): g2=e: i,A *\/ */
+        /*           gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][0] * IPData.dfx[ipidx + fieldB*IPData.nip_] * wi; */
+        /*           gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * Uk[d2][1] * IPData.dfy[ipidx + fieldB*IPData.nip_] * wi; */
+        /*         } */
+        /*       } */
+        /*     } */
+        /*   } else { */
+        /*     for (fieldA = 0; fieldA < Nf; ++fieldA) { */
+        /*       for (fieldB = 0; fieldB < Nf; ++fieldB) { */
+        /*         for (d2 = 0; d2 < 3; ++d2) { */
+        /*           for (d3 = 0; d3 < 3; ++d3) { */
+        /*             /\* D = -U * (I \kron (fx)): g3 = f: i,j,A *\/ */
+        /*             gg3[fieldA][d2][d3] -= nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldA] * U[d2][d3] * IPData.f[ipidx + fieldB*IPData.nip_] * wi; */
+        /*           } */
+        /*           /\* K = U * grad(f): g2 = e: i,A *\/ */
+        /*           gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][0] * IPData.dfx[ipidx + fieldB*IPData.nip_] * wi; */
+        /*           gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][1] * IPData.dfy[ipidx + fieldB*IPData.nip_] * wi; */
+        /*           gg2[fieldA][d2] += nu_alpha[fieldA]*nu_beta[fieldB] * invMass[fieldB] * U[d2][2] * IPData.dfz[ipidx + fieldB*IPData.nip_] * wi; */
+        /*           //if (myelem==0 && qj==0 && ipidx==10) printf("\tcpu:g22: = g2=%e a=%e b=%e mi=%e U=%e df=%e f=%e (%e %e %e)\n",gg2[fieldA][d2],nu_alpha[fieldA],nu_beta[fieldB],invMass[fieldB],U[d2][d3],fplpt->fdf[fieldB].df[d3],fplpt->fdf[fieldB].f,fplpt->crd[0], fplpt->crd[1], fplpt->crd[2]); */
+        /*         } */
+        /*       } */
+        /*     } */
+        /*   } */
+        /* } /\* IPs *\/ */
+        /* add electric field term once per IP */
+        for (fieldA = 0; fieldA < Nf; ++fieldA) {
+          gg2[fieldA][dim-1] += Eq_m[fieldA];
+        }
+        //intf("%d %d gg2[1][1]=%g\n",myelem,qj,gg2[1][dim-1]);
+        /* Jacobian transform - g2 */
+        for (fieldA = 0; fieldA < Nf; ++fieldA) {
+          for (d = 0; d < dim; ++d) {
+            g2[fieldA][d] = 0.0;
+            for (d2 = 0; d2 < dim; ++d2) {
+              g2[fieldA][d] += invJj[d*dim+d2]*gg2[fieldA][d2];
+              g3[fieldA][d][d2] = 0.0;
+              for (d3 = 0; d3 < dim; ++d3) {
+                for (dp = 0; dp < dim; ++dp) {
+                  g3[fieldA][d][d2] += invJj[d*dim + d3]*gg3[fieldA][d3][dp]*invJj[d2*dim + dp];
+                  //printf("\t\t\t:%d %d %d %d g3=%g\n",qj,fieldA,d,d2,g3[mySubBlk][fieldA][d][d2]);
+                }
+              }
+              g3[fieldA][d][d2] *= wj;
+            }
+            g2[fieldA][d] *= wj;
+          }
+        }
+        /* FE matrix construction */
+        PETSC_THREAD_SYNC;   // Synchronize (ensure all the data is available) and sum IP matrices
+        {
+          PetscInt  fieldA,d,f,d2,g,totDim=Nb*Nf;
+          /* assemble - on the diagonal (I,I) */
+          for (fieldA = 0; fieldA < Nf ; fieldA++) {
+            for (f = 0; f < Nb ; f++) { /* vectorizing here, maybe */
+              const PetscInt i = fieldA*Nb + f; /* Element matrix row */
+              for (g = 0; g < Nb; ++g) {
+                const PetscInt j    = fieldA*Nb + g; /* Element matrix column */
+                const PetscInt fOff = i*totDim + j;
+                const PetscReal *BJq = &BB[qj*Nb], *DIq = &DD[qj*Nb*dim];
+                for (d = 0; d < dim; ++d) {
+                  elemMat[fOff] += DIq[f*dim+d]*g2[fieldA][d]*BJq[g];
+                  //intf("\tmat[%d %d %d %d %d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n", print, fOff,fieldA,qj,d, elemMat[fOff],f*dim+d,DIq[f*dim+d],fieldA,qj,d,g2[0][fieldA][d],BJq[g]);
+                  for (d2 = 0; d2 < dim; ++d2) {
+                    elemMat[fOff] += DIq[f*dim + d]*g3[fieldA][d][d2]*DIq[g*dim + d2];
+                  }
+                }
+              }
+            }
+          }
+        }
       } /* qj loop */
       ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
 

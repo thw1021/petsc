@@ -123,24 +123,13 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt qi_inc, const Petsc
       PetscReal U[3][3], z = IPData.z[ipidx];
       LandauTensor3D(vj, x, y, z, U, (ipidx==jpidx) ? 0. : 1.);
 #endif
-      if (0) {
-        for (fieldA = 0; fieldA < Nf; fieldA++) {
-          temp1[0] += IPData.dfx[ipidx*Nf + fieldA]*s_nu_beta[fieldA]*s_invMass[fieldA];
-          temp1[1] += IPData.dfy[ipidx*Nf + fieldA]*s_nu_beta[fieldA]*s_invMass[fieldA];
+      for (fieldA = 0; fieldA < Nf; fieldA++) {
+	temp1[0] += s_dfx[fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA]*s_invMass[fieldA];
+	temp1[1] += s_dfy[fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA]*s_invMass[fieldA];
 #if LANDAU_DIM==3
-          temp1[2] += IPData.dfz[ipidx*Nf + fieldA]*s_nu_beta[fieldA]*s_invMass[fieldA];
+	temp1[2] += s_dfz[fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA]*s_invMass[fieldA];
 #endif
-          temp2    += IPData.f  [ipidx*Nf + fieldA]*s_nu_beta[fieldA];
-        }
-      } else {
-        for (fieldA = 0; fieldA < Nf; fieldA++) {
-          temp1[0] += s_dfx[fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA]*s_invMass[fieldA];
-          temp1[1] += s_dfy[fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA]*s_invMass[fieldA];
-#if LANDAU_DIM==3
-          temp1[2] += s_dfz[fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA]*s_invMass[fieldA];
-#endif
-          temp2    += s_f  [fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA];
-        }
+	temp2    += s_f  [fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA];
       }
       temp1[0] *= wi;
       temp1[1] *= wi;
@@ -188,6 +177,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt qi_inc, const Petsc
     }
   }
 
+  // add alpha and put in gg2/3
   for (fieldA = threadIdx.x; fieldA < Nf; fieldA += blockDim.x) {
     for (d2 = 0; d2 < dim; d2++) {
       gg2[d2][myQi][fieldA] += gg2_temp[d2]*s_nu_alpha[fieldA];
@@ -293,7 +283,6 @@ void __launch_bounds__(256,1) landau_kernel_v2(const PetscInt nip, const PetscIn
   size += blockDim.x*LANDAU_MAX_SPECIES;
 #endif
   const PetscInt  myQi = threadIdx.y;
-  // const PetscInt mySubBlk = threadIdx.y, nSubBlks = blockDim.y;
   const PetscInt mySubBlk = 0, nSubBlks = 1;
   const PetscInt  jpidx = myQi + myelem * Nq;
   const PetscInt  subblocksz = nip/nSubBlks + !!(nip%nSubBlks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
