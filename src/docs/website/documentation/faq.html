@@ -2005,9 +2005,19 @@ source /opt/intel/idb/10.1.012/bin/idbvars.sh
         crash to determine exactly what line is causing the problem.
       </p>
 
+      <p>
       If -malloc_debug does not help: on GNU/Linux and Apple Mac OS X machines
-      - you can try using <a href="http://valgrind.org/">http://valgrind.org</a>
-      to look for memory corruption. - Make sure valgrind is installed
+      - you can use <a href="https://valgrind.org/">http://valgrind.org</a>
+      to look for memory corruption. On Apple Mac OS X you need to install
+      <a href="https://github.com/petsc/valgrind-macos">https://github.com/petsc/valgrind-macos</a> and use
+      the configure option --download-fblaslapack or --download-f2cblaslapack.
+      </p>
+
+      <p>
+      Use the
+      valgrind suppression file lib/petsc/bin/maint/petsc-val.supp (this is used automatically by the testing
+      infrastructure and by lib/petsc/bin/petscmpiexec.
+      </p>
 
       You might also consider using <a href="http://drmemory.org">http://drmemory.org</a> which has
       support for GNU/Linux, Apple Mac OS and Microsoft Windows machines. (Note we haven't tried this ourselves).

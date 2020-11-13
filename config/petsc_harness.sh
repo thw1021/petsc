@@ -269,12 +269,15 @@ if $compile; then
     (cd $petsc_dir && make -f gmakefile.test ${abspath_scriptdir}/${curexec})
 fi
 function petsc_mpiexec_valgrind() {
-  _mpiexec=$1;shift
+    shift
+#echo $1 $2 $3
+    _mpiexec=$1;shift
   npopt=$1;shift
   np=$1;shift
 
   valgrind="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --suppressions=$petsc_bindir/maint/petsc-val.supp --error-exitcode=10"
 
+  #echo  $_mpiexec $npopt $np $valgrind $*
   $_mpiexec $npopt $np $valgrind "$@"
 }
 export LC_ALL=C
