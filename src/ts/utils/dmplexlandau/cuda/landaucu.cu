@@ -41,10 +41,11 @@ do {                                                                  \
 } while (0)
 
 __device__ void
-landau_inner_integral_v2(const PetscInt myQi, const PetscInt qi_inc, const PetscInt mySubBlk, const PetscInt nSubBlks, const PetscInt ip_start, const PetscInt ip_end, const PetscInt ip_stride, PetscInt nip, /* decomposition args, not discretization */
-			 const PetscInt jpidx, const PetscInt Nf, const PetscInt dim, LandauIPReal *IPDataRaw, const PetscReal invJj[],
-			 const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
-			 const PetscInt Nq, const PetscInt Nb, const PetscInt qj_start, const PetscInt qj_end, const PetscReal * const BB, const PetscReal * const DD, PetscScalar *elemMat, /* discretization args; local output */
+landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip, const PetscInt Nq, const PetscInt Nf, const PetscInt Nb, 
+			 const PetscInt dim, LandauIPReal *IPDataRaw, const PetscReal invJj[], const PetscReal nu_alpha[], 
+			 const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[], 
+			 const PetscReal * const BB, const PetscReal * const DD, 
+			 PetscScalar *elemMat, // output
 			 PetscReal g2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
                          PetscReal g3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
                          PetscReal gg2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
@@ -217,22 +218,22 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt qi_inc, const Petsc
   /* FE matrix construction */
   __syncthreads();  // Synchronize (ensure all the data is available) and sum IP matrices
   {
-  PetscInt  fieldA,d,f,qj,qj_0,d2,g,totDim=Nb*Nf;
+  PetscInt  fieldA,d,f,qj,d2,g,totDim=Nb*Nf;
   /* assemble - on the diagonal (I,I) */
   for (fieldA = 0; fieldA < Nf; fieldA++) { 
-    for (f = threadIdx.y; f < Nb ; f += blockDim.y) { /* vectorizing here, maybe */
+    for (f = threadIdx.y; f < Nb ; f += blockDim.y) {
       const PetscInt i = fieldA*Nb + f; /* Element matrix row */
       for (g = threadIdx.x; g < Nb; g += blockDim.x) {
         const PetscInt j    = fieldA*Nb + g; /* Element matrix column */
         const PetscInt fOff = i*totDim + j;
         PetscReal t = elemMat[fOff];
-        for (qj = qj_start, qj_0 = 0 ; qj < qj_end ; qj++, qj_0++) {
+        for (qj = 0 ; qj < Nq ; qj++) {
           const PetscReal *BJq = &BB[qj*Nb], *DIq = &DD[qj*Nb*dim];
           for (d = 0; d < dim; ++d) {
-            t += DIq[f*dim+d]*g2[d][qj_0][fieldA]*BJq[g];
-            //intf("\tmat[%d %d %d %d %d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n", print, fOff,fieldA,qj,d, elemMat[fOff],f*dim+d,DIq[f*dim+d],fieldA,qj,d,g2[qj_0][0][fieldA][d],BJq[g]);
+            t += DIq[f*dim+d]*g2[d][qj][fieldA]*BJq[g];
+            //intf("\tmat[%d %d %d %d %d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n", print, fOff,fieldA,qj,d, elemMat[fOff],f*dim+d,DIq[f*dim+d],fieldA,qj,d,g2[qj][0][fieldA][d],BJq[g]);
             for (d2 = 0; d2 < dim; ++d2) {
-              t += DIq[f*dim + d]*g3[d][d2][qj_0][fieldA]*DIq[g*dim + d2];
+              t += DIq[f*dim + d]*g3[d][d2][qj][fieldA]*DIq[g*dim + d2];
             }
           }
         }
@@ -283,15 +284,14 @@ void __launch_bounds__(256,1) landau_kernel_v2(const PetscInt nip, const PetscIn
   size += blockDim.x*LANDAU_MAX_SPECIES;
 #endif
   const PetscInt  myQi = threadIdx.y;
-  const PetscInt mySubBlk = 0, nSubBlks = 1;
   const PetscInt  jpidx = myQi + myelem * Nq;
-  const PetscInt  subblocksz = nip/nSubBlks + !!(nip%nSubBlks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
+  //const PetscInt  subblocksz = nip/nSubBlks + !!(nip%nSubBlks), ip_start = mySubBlk*subblocksz, ip_end = (mySubBlk+1)*subblocksz > nip ? nip : (mySubBlk+1)*subblocksz; /* this could be wrong with very few global IPs */
   PetscScalar     *elemMat  = &elemMats_out[myelem*totDim*totDim]; /* my output */
   int tid = threadIdx.x + threadIdx.y*blockDim.x;
   for (int i = tid; i < totDim*totDim; i += blockDim.x*blockDim.y) elemMat[i] = 0;
   __syncthreads();
 
-  landau_inner_integral_v2(myQi, Nq, mySubBlk, nSubBlks, ip_start, ip_end, 1, nip, jpidx, Nf, dim, IPDataRaw, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, Nq, Nb, 0, Nq, BB, DD, elemMat, *g2, *g3, 
+  landau_inner_integral_v2(myQi, jpidx, nip, Nq, Nf, Nb, dim, IPDataRaw, &invJj[jpidx*dim*dim], nu_alpha, nu_beta, invMass, Eq_m, BB, DD, elemMat, *g2, *g3, 
     *gg2, *gg3, s_nu_alpha, s_nu_beta, s_invMass, s_f, s_dfx, s_dfy, 
 #if LANDAU_DIM==3
     s_dfz,
