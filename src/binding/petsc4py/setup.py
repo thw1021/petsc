@@ -182,7 +182,7 @@ def chk_cython(VERSION):
     #
     return True
 
-def run_cython(source, depends=(), includes=(),
+def run_cython(source, depends=[], includes=(),
                destdir_c=None, destdir_h=None,
                wdir=None, force=False, VERSION=None):
     from glob import glob
@@ -217,14 +217,22 @@ def run_cython(source, depends=(), includes=(),
 
 def build_sources(cmd):
     from os.path import exists, isdir, join
-    if (exists(join('src', 'petsc4py.PETSc.c')) and
-        not (isdir('.hg') or isdir('.git')) and
-        not cmd.force): return
+
+    pdepends = []
+    if 'PETSC_DIR' in os.environ:
+      pd = os.environ['PETSC_DIR']
+      pdepends = [pd+'/include/*.h',pd+'/include/petsc/private/*.h']
+      if 'PETSC_ARCH' in os.environ:
+        pda = os.environ['PETSC_ARCH']
+        pdepends.append(pd+'/'+pda+'/include/petscconf.h')
+
     # petsc4py.PETSc
     source = 'petsc4py.PETSc.pyx'
-    depends = ('include/*/*.pxd',
+    depends = ['include/*/*.pxd',
                'PETSc/*.pyx',
-               'PETSc/*.pxi',)
+               'PETSc/*.pxi']
+    depends.extend(pdepends)
+    print(depends)
     includes = ['include']
     destdir_h = os.path.join('include', 'petsc4py')
     run_cython(source, depends, includes,
@@ -235,6 +243,7 @@ def build_sources(cmd):
     depends = ['include/petsc4py/*.pxd',
                'libpetsc4py/*.pyx',
                'libpetsc4py/*.pxi']
+    depends.extend(pdepends)
     includes = ['include']
     run_cython(source, depends, includes,
                destdir_c=None, destdir_h=None, wdir='src',
