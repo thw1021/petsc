@@ -88,10 +88,7 @@ typedef struct {
 
 typedef PetscReal LandauIPReal;
 typedef struct {
-  union {
-    LandauIPReal  *w;
-    LandauIPReal  *data;
-  };
+  LandauIPReal  *w_data;
   LandauIPReal  *x;
   LandauIPReal  *y;
   LandauIPReal  *z;

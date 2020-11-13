@@ -25,7 +25,7 @@ static PetscErrorCode LandauPointDataCreate(LandauIPData *IPData, PetscInt dim, 
   IPData->ns_  = Ns;
   sz = LandauGetIPDataSize(IPData);
   ierr = PetscMalloc(sizeof(LandauIPReal)*sz,&pdata);CHKERRQ(ierr);
-  IPData->data = pdata + 0; /* w */
+  IPData->w_data = pdata + 0; /* w */
   IPData->x    = pdata + 1*nip_pad;
   IPData->y    = pdata + 2*nip_pad;
   IPData->z    = pdata + 3*nip_pad;
@@ -37,7 +37,7 @@ static PetscErrorCode LandauPointDataCreate(LandauIPData *IPData, PetscInt dim, 
   /* pad with zeros in case we vectorize into this */
   for (jj=nip ; jj < nip_pad; jj++){
     exit(333);
-    IPData->w[jj] = 0;
+    IPData->w_data[jj] = 0;
     IPData->x[jj] = -1;
     IPData->y[jj] = -1;
     if (IPData->z) IPData->z[jj] = -1;
@@ -55,7 +55,7 @@ static PetscErrorCode LandauPointDataDestroy(LandauIPData *IPData)
 {
   PetscErrorCode   ierr;
   PetscFunctionBegin;
-  ierr = PetscFree(IPData->data);CHKERRQ(ierr);
+  ierr = PetscFree(IPData->w_data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 /* ------------------------------------------------------------------- */
@@ -154,8 +154,8 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         IPData.x[gidx] = vj[qj * dim + 0]; /* coordinate */
         IPData.y[gidx] = vj[qj * dim + 1];
         if (dim==3) IPData.z[gidx] = vj[qj * dim + 2];
-        IPData.w[gidx] = detJj[qj] * quadWeights[qj];
-        if (dim==2) IPData.w[gidx] *= IPData.x[gidx];  /* cylindrical coordinate, w/o 2pi */
+        IPData.w_data[gidx] = detJj[qj] * quadWeights[qj];
+        if (dim==2) IPData.w_data[gidx] *= IPData.x[gidx];  /* cylindrical coordinate, w/o 2pi */
         /* get u & du (EvaluateFieldJets) */
         for (f = 0; f < Nf; ++f) {
           const PetscReal *Bq = &Tf[f]->T[0][qj*Nb];
@@ -225,14 +225,14 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         const PetscReal * const BB = Tf[0]->T[0], * const DD = Tf[0]->T[1], * const invJj = &invJ[qj*dim*dim];
         PetscReal               gg2[LANDAU_MAX_SPECIES][LANDAU_DIM],gg3[LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM];
         PetscInt                d,d2,dp,d3,ipidx,fieldA;
-        const PetscReal         vj[3] = {IPData.x[jpidx], IPData.y[jpidx], IPData.z ? IPData.z[jpidx] : 0}, wj = IPData.w[jpidx];
+        const PetscReal         vj[3] = {IPData.x[jpidx], IPData.y[jpidx], IPData.z ? IPData.z[jpidx] : 0}, wj = IPData.w_data[jpidx];
         // create g2 & g3
         for (d=0;d<dim;d++) { // clear accumulation data D & K
           gg2_temp[d] = 0;
           for (d2=0;d2<dim;d2++) gg3_temp[d][d2] = 0;
         }
         for (ipidx = 0; ipidx < IPData.nip_; ipidx++) {
-          const PetscReal wi = IPData.w[ipidx], x = IPData.x[ipidx], y = IPData.y[ipidx];
+          const PetscReal wi = IPData.w_data[ipidx], x = IPData.x[ipidx], y = IPData.y[ipidx];
           PetscReal       temp1[3] = {0, 0, 0}, temp2 = 0;
 #if LANDAU_DIM==2
           PetscReal       Ud[2][2], Uk[2][2];

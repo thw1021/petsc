@@ -121,7 +121,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     Kokkos::View<PetscReal*, Kokkos::LayoutLeft> d_BB ("BB", Nq*Nb);
     const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_DD (DD,Nq*Nb*dim);
     Kokkos::View<PetscReal*, Kokkos::LayoutLeft> d_DD ("DD", Nq*Nb*dim);
-    const Kokkos::View<LandauIPReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_ipdata_raw (IPData->data,ipdatasz);
+    const Kokkos::View<LandauIPReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_ipdata_raw (IPData->w_data,ipdatasz);
     Kokkos::View<LandauIPReal*, Kokkos::LayoutLeft> d_ipdata_raw ("ipdata", ipdatasz);
     const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_invJ (invJ,IPData->nip_*dim*dim);
     Kokkos::View<PetscReal*, Kokkos::LayoutLeft> d_invJ ("invJ", IPData->nip_*dim*dim);
@@ -154,7 +154,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
         g3_scr_t        gg3(team.team_scratch(KOKKOS_SHARED_LEVEL),dim,dim,Nf,Nq);
         LandauIPData    d_IPData;
         // pack IPData
-        d_IPData.w   = &d_ipdata_raw[0];
+        d_IPData.w_data   = &d_ipdata_raw[0];
         d_IPData.x   = &d_ipdata_raw[1*IPData->nip_];
         d_IPData.y   = &d_ipdata_raw[2*IPData->nip_];
         d_IPData.z   = &d_ipdata_raw[3*IPData->nip_];
@@ -169,10 +169,10 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
             using Kokkos::parallel_reduce;
             const PetscInt                    jpidx = myQi + myelem * Nq;
             const PetscReal* const            invJj = &d_invJ(jpidx*dim*dim);
-            const PetscReal                   vj[3] = {d_IPData.x[jpidx], d_IPData.y[jpidx], d_IPData.z ? d_IPData.z[jpidx] : 0}, wj = d_IPData.w[jpidx];
+            const PetscReal                   vj[3] = {d_IPData.x[jpidx], d_IPData.y[jpidx], d_IPData.z ? d_IPData.z[jpidx] : 0}, wj = d_IPData.w_data[jpidx];
             landau_inner_red::TensorValueType gg_temp; // reduce on part of gg2 and g33 for IP jpidx
             Kokkos::parallel_reduce(Kokkos::ThreadVectorRange (team, (int)IPData->nip_), [=] (const int& ipidx, landau_inner_red::TensorValueType & ggg) {
-                const PetscReal wi = d_IPData.w[ipidx], x = d_IPData.x[ipidx], y = d_IPData.y[ipidx];
+                const PetscReal wi = d_IPData.w_data[ipidx], x = d_IPData.x[ipidx], y = d_IPData.y[ipidx];
                 PetscReal       temp1[3] = {0, 0, 0}, temp2 = 0;
                 PetscInt        fieldA,d2,d3;
 #if LANDAU_DIM==2

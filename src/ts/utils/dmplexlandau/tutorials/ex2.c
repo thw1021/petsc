@@ -748,7 +748,7 @@ int main(int argc, char **argv)
   }
   ierr = PetscFree(rectx);CHKERRQ(ierr);
   ierr = PetscFinalize();
-  printf("DONE!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  //printf("DONE!!!!!!!!!!!!!!!!!!!!!!!!\n");
   return ierr;
 }
 
