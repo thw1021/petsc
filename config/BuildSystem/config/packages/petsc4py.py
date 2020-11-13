@@ -1,9 +1,9 @@
 import config.package
+import os
 
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.download               = ['link://src/binding/petsc4py']
     self.functions              = []
     self.includes               = []
     self.skippackagewithoptions = 1
@@ -19,6 +19,9 @@ class Configure(config.package.Package):
     self.sharedLibraries = framework.require('PETSc.options.sharedLibraries', self)
     self.installdir      = framework.require('PETSc.options.installDir',self)
     return
+
+  def getDir(self):
+    return os.path.join('src','binding','petsc4py')
 
   def Install(self):
     import os
@@ -83,7 +86,6 @@ class Configure(config.package.Package):
     else:
       self.addMakeRule('petsc4py-build','petsc4pybuild petsc4pyinstall')
       self.addMakeRule('petsc4py-install','')
-
     return self.installDir
 
   def configureLibrary(self):
@@ -97,7 +99,7 @@ class Configure(config.package.Package):
       raise RuntimeError('PETSc4py requires Python with "%s" module(s) installed!\n'
                          'Please install using package managers - for ex: "apt" or "dnf" (on linux),\n'
                          'or with "pip" using: %s -m pip install %s' % (" ".join(npkgs), self.python.pyexe, " ".join(npkgs)))
-    self.checkDownload()
+    self.getInstallDir()
 
   def alternateConfigureLibrary(self):
     self.addMakeRule('petsc4py-build','')
