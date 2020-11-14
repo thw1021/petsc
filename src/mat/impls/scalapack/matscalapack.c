@@ -13,7 +13,7 @@ static PetscErrorCode Petsc_ScaLAPACK_keyval_free(void)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscInfo(NULL,"Freeing Petsc_ScaLAPACK_keyval\n");
+  ierr = PetscInfo(NULL,"Freeing Petsc_ScaLAPACK_keyval\n");CHKERRQ(ierr);
   ierr = MPI_Comm_free_keyval(&Petsc_ScaLAPACK_keyval);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
