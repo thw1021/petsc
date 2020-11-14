@@ -201,7 +201,6 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
       g2[d][myQi][fieldA] = 0.0;
       for (d2 = 0; d2 < dim; ++d2) {
         g2[d][myQi][fieldA] += invJj[d*dim+d2]*gg2[d2][myQi][fieldA];
-	//if (myelem==0 && myQi==0) printf("\t:g2[%d][%d][%d]=%e. %e %e\n",(int)myQi,(int)fieldA,(int)d,g2[myQi][fieldA][d],invJj[d*dim+d2],gg2[myQi][fieldA][d2]);
         g3[d][d2][myQi][fieldA] = 0.0;
         for (d3 = 0; d3 < dim; ++d3) {
           for (dp = 0; dp < dim; ++dp) {
