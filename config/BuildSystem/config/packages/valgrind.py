@@ -21,9 +21,12 @@ class Configure(config.package.Package):
     return
 
   def getSearchDirectories(self):
-    yield ''
-    yield os.path.join('/usr','local')
-    yield os.path.join('/opt','local')
+    if 'with-'+self.package+'-dir' in self.argDB:
+      yield self.argDB['with-valgrind-dir']
+    else:
+      yield('')
+      yield os.path.join('/usr','local')
+      yield os.path.join('/opt','local')
     return
 
   def configure(self):
