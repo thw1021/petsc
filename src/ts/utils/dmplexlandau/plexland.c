@@ -335,12 +335,12 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       /* assemble matrix */
       ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
       ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);
-      if (ej==-1) {
+      if (ej==-1 || ierr) {
         PetscErrorCode    ierr2;
-        ierr2 = PetscErrorPrintf(PETSC_COMM_SELF, "CPU Element matrix\n");CHKERRQ(ierr2);
+        ierr2 = PetscErrorPrintf("CPU Element matrix\n");CHKERRQ(ierr2);
         for (d = 0; d < totDim; ++d){
-          for (f = 0; f < totDim; ++f) {ierr2 = PetscErrorPrintf(PETSC_COMM_SELF," %12.5e",  PetscRealPart(elemMat[d*totDim + f]));CHKERRQ(ierr2);}
-           ierr2 = PetscErrorPrintf(PETSC_COMM_SELF,"\n");CHKERRQ(ierr2);
+          for (f = 0; f < totDim; ++f) {ierr2 = PetscErrorPrintf(" %12.5e",  PetscRealPart(elemMat[d*totDim + f]));CHKERRQ(ierr2);}
+           ierr2 = PetscErrorPrintf("\n");CHKERRQ(ierr2);
         }
       }
       CHKERRQ(ierr);
