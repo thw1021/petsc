@@ -1,6 +1,7 @@
 #define LANDAU_INVSQRT(q) (1./PetscSqrtReal(q))
 #define LANDAU_SQRT(q) PetscSqrtReal(q)
 
+#if LANDAU_DIM==2
 /* elliptic functions
  */
 PETSC_DEVICE_FUNC_DECL PetscReal polevl_10(PetscReal x, PetscReal coef[])
@@ -147,32 +148,6 @@ PETSC_DEVICE_FUNC_DECL void ellipticK(PetscReal x,PetscReal *ret)
   x = 1 - x; /* where m = 1 - m1 */
   *ret = polevl_10(x,P1) - PetscLogReal(x) * polevl_10(x,Q1);
 }
-
-
-/* integration point functions */
-/* Evaluates the tensor U=(I-(x-y)(x-y)/(x-y)^2)/|x-y| at point x,y */
-/* if x==y we will return zero. This is not the correct result */
-/* since the tensor diverges for x==y but when integrated */
-/* the divergent part is antisymmetric and vanishes. This is not  */
-/* trivial, but can be proven. */
-#if LANDAU_DIM==3
-PETSC_DEVICE_FUNC_DECL void LandauTensor3D(const PetscReal x1[], const PetscReal xp, const PetscReal yp, const PetscReal zp, PetscReal U[][3], PetscReal mask)
-{
-  PetscReal dx[3],inorm3,inorm,inorm2,norm2,x2[] = {xp,yp,zp};
-  PetscInt  d;
-  for (d = 0, norm2 = PETSC_MACHINE_EPSILON; d < 3; ++d) {
-    dx[d] = x2[d] - x1[d];
-    norm2 += dx[d] * dx[d];
-  }
-  inorm2 = mask/norm2;
-  inorm = LANDAU_SQRT(inorm2);
-  inorm3 = inorm2*inorm;
-  for (d = 0; d < 3; ++d) U[d][d] = inorm - inorm3 * dx[d] * dx[d];
-  U[1][0] = U[0][1] = -inorm3 * dx[0] * dx[1];
-  U[1][2] = U[2][1] = -inorm3 * dx[2] * dx[1];
-  U[2][0] = U[0][2] = -inorm3 * dx[0] * dx[2];
-}
-#else
 PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal rp, const PetscReal zp, PetscReal Ud[][2], PetscReal Uk[][2], const PetscReal mask)
 {
   PetscReal l,s,r=x[0],z=x[1],i1func,i2func,i3func,ks,es,pi4pow,sqrt_1s,r2,rp2,r2prp2,zmzp,zmzp2,tt;
@@ -205,5 +180,28 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor2D(const PetscReal x[], const PetscReal 
   Uk[1][1]=Ud[1][1]=           pi4pow*((r2prp2)*i2func-2*r*rp*i3func)*mask;
   Uk[0][0]=                    pi4pow*(zmzp2*i3func+r*rp*i1func);
   Uk[1][0]=                   -pi4pow*(zmzp)*(r*i3func-rp*i2func); /* 48 mults + 21 + 21 = 90 mults and divs */
+}
+#else
+/* integration point functions */
+/* Evaluates the tensor U=(I-(x-y)(x-y)/(x-y)^2)/|x-y| at point x,y */
+/* if x==y we will return zero. This is not the correct result */
+/* since the tensor diverges for x==y but when integrated */
+/* the divergent part is antisymmetric and vanishes. This is not  */
+/* trivial, but can be proven. */
+PETSC_DEVICE_FUNC_DECL void LandauTensor3D(const PetscReal x1[], const PetscReal xp, const PetscReal yp, const PetscReal zp, PetscReal U[][3], PetscReal mask)
+{
+  PetscReal dx[3],inorm3,inorm,inorm2,norm2,x2[] = {xp,yp,zp};
+  PetscInt  d;
+  for (d = 0, norm2 = PETSC_MACHINE_EPSILON; d < 3; ++d) {
+    dx[d] = x2[d] - x1[d];
+    norm2 += dx[d] * dx[d];
+  }
+  inorm2 = mask/norm2;
+  inorm = LANDAU_SQRT(inorm2);
+  inorm3 = inorm2*inorm;
+  for (d = 0; d < 3; ++d) U[d][d] = inorm - inorm3 * dx[d] * dx[d];
+  U[1][0] = U[0][1] = -inorm3 * dx[0] * dx[1];
+  U[1][2] = U[2][1] = -inorm3 * dx[2] * dx[1];
+  U[2][0] = U[0][2] = -inorm3 * dx[0] * dx[2];
 }
 #endif
