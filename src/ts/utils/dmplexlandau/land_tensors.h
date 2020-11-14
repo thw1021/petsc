@@ -4,7 +4,7 @@
 #if LANDAU_DIM==2
 /* elliptic functions
  */
-PETSC_DEVICE_FUNC_DECL PetscReal polevl_10(PetscReal x, PetscReal coef[])
+PETSC_DEVICE_FUNC_DECL PetscReal polevl_10(PetscReal x, const PetscReal coef[])
 {
   PetscReal ans;
   PetscInt  i;
