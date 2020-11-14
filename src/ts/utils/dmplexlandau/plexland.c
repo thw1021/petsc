@@ -321,7 +321,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
                 const PetscInt fOff = i*totDim + j;
                 for (d = 0; d < dim; ++d) {
                   elemMat[fOff] += DIq[f*dim+d]*g2[fieldA][d]*BJq[g];
-//intf("\tmat[%d %d %d %d %d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n", print, fOff,fieldA,qj,d, elemMat[fOff],f*dim+d,DIq[f*dim+d],fieldA,qj,d,g2[0][fieldA][d],BJq[g]);
                   for (d2 = 0; d2 < dim; ++d2) {
                     elemMat[fOff] += DIq[f*dim + d]*g3[fieldA][d][d2]*DIq[g*dim + d2];
                   }
