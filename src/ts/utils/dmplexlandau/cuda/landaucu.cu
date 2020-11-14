@@ -231,7 +231,6 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
           const PetscReal *BJq = &BB[qj*Nb], *DIq = &DD[qj*Nb*dim];
           for (d = 0; d < dim; ++d) {
             t += DIq[f*dim+d]*g2[d][qj][fieldA]*BJq[g];
-            //intf("\tmat[%d %d %d %d %d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n", print, fOff,fieldA,qj,d, elemMat[fOff],f*dim+d,DIq[f*dim+d],fieldA,qj,d,g2[qj][0][fieldA][d],BJq[g]);
             for (d2 = 0; d2 < dim; ++d2) {
               t += DIq[f*dim + d]*g3[d][d2][qj][fieldA]*DIq[g*dim + d2];
             }
