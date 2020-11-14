@@ -342,7 +342,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
           for (f = 0; f < totDim; ++f) {ierr2 = PetscPrintf(PETSC_COMM_SELF," %12.5e",  PetscRealPart(elemMat[d*totDim + f]));CHKERRQ(ierr2);}
            ierr2 = PetscPrintf(PETSC_COMM_SELF,"\n");CHKERRQ(ierr2);
         }
-        exit(13);
       }
       CHKERRQ(ierr);
       ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);

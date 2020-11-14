@@ -401,7 +401,6 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
 	}
       }
     }
-    //exit(12);
   } else {
     PetscContainer container = NULL;
     ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
