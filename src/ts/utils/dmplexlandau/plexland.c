@@ -282,7 +282,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
             gg2[fieldA][d2] = gg2_temp[d2]*nu_alpha[fieldA];
             for (d3 = 0; d3 < dim; d3++) {
               gg3[fieldA][d2][d3] = -gg3_temp[d2][d3]*nu_alpha[fieldA]*invMass[fieldA];
-              //if (ej==0 && fieldA==1) printf("\t\t\t:%d.%d) gg3[%d][%d]=%e\n",ej,qj,d2,d3,gg3[fieldA][d2][d3]);
             }
           }
         }
