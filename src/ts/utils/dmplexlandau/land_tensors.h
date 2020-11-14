@@ -87,7 +87,7 @@ PETSC_DEVICE_FUNC_DECL void ellipticE(PetscReal x,PetscReal *ret)
 PETSC_DEVICE_FUNC_DECL void ellipticK(PetscReal x,PetscReal *ret)
 {
 #if defined(PETSC_USE_REAL_SINGLE)
-  static PetscReal P1[] =
+  static const PetscReal P1[] =
     {
       1.37982864606273237150E-4F,
       2.28025724005875567385E-3F,
