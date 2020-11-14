@@ -26,7 +26,7 @@ PETSC_DEVICE_FUNC_DECL PetscReal polevl_9(PetscReal x, const PetscReal coef[])
 PETSC_DEVICE_FUNC_DECL void ellipticE(PetscReal x,PetscReal *ret)
 {
 #if defined(PETSC_USE_REAL_SINGLE)
-  static PetscReal P2[] = {
+  static const PetscReal P2[] = {
     1.53552577301013293365E-4F,
     2.50888492163602060990E-3F,
     8.68786816565889628429E-3F,
