@@ -396,7 +396,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
 	int d,f;
 	printf("GPU Element matrix\n");
 	for (d = 0; d < totDim; ++d){
-	  for (f = 0; f < totDim; ++f) printf(" %12.5e",  PetscRealPart(elMat[d*totDim + f]));
+	  for (f = 0; f < totDim; ++f) printf(" %12.5e", (double)PetscRealPart(elMat[d*totDim + f]));
 	  printf("\n");
 	}
       }
