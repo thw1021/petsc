@@ -1870,7 +1870,6 @@ struct MatMatCusparse {
   PetscScalar           *Bt;
   Mat                   X;
   PetscBool             reusesym; /* Cusparse does not have split symbolic and numeric phases for sparse matmat operations */
-  PetscObjectState      rAstate,rBstate;
   PetscLogDouble        flops;
   CsrMatrix             *Bcsr;
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
@@ -2187,7 +2186,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   mmdata = (MatMatCusparse*)C->product->data;
   A = product->A;
   B = product->B;
-  if (mmdata->reusesym && mmdata->rAstate == ((PetscObject)A)->state && mmdata->rBstate == ((PetscObject)B)->state) { /* this happens when api_user is true, meaning that the matrix values have been already computed in the MatProductSymbolic phase */
+  if (mmdata->reusesym) { /* this happens when api_user is true, meaning that the matrix values have been already computed in the MatProductSymbolic phase */
     mmdata->reusesym = PETSC_FALSE;
     Ccusp = (Mat_SeqAIJCUSPARSE*)C->spptr;
     if (Ccusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Only for MAT_CUSPARSE_CSR format");
@@ -2593,8 +2592,6 @@ finalizesym:
   C->was_assembled = PETSC_FALSE;
   if (product->api_user) { /* flag the matrix C values as computed, so that the numeric phase will only call MatAssembly */
     mmdata->reusesym = PETSC_TRUE;
-    mmdata->rAstate  = ((PetscObject)A)->state;
-    mmdata->rBstate  = ((PetscObject)B)->state;
     C->offloadmask   = PETSC_OFFLOAD_GPU;
   }
   C->ops->productnumeric = MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE;
