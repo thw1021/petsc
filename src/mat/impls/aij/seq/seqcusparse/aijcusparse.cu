@@ -3662,7 +3662,7 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
   CsrMatrix                    *Acsr,*Bcsr,*Ccsr;
   PetscInt                     Annz,Bnnz;
   cusparseStatus_t             stat;
-  PetscInt                     i,m,n;
+  PetscInt                     i,m,n,zero = 0;
   cudaError_t                  cerr;
 
   PetscFunctionBegin;
@@ -3777,7 +3777,7 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
       auto p1 = Ccusp->cooPerm->begin();
       auto p2 = Ccusp->cooPerm->begin();
       thrust::advance(p2,Annz);
-      thrust::partition_copy(thrust::make_counting_iterator(0),thrust::make_counting_iterator(c->nz),wPerm.begin(),p1,p2,thrust::identity<bool>());
+      thrust::partition_copy(thrust::make_counting_iterator(zero),thrust::make_counting_iterator(c->nz),wPerm.begin(),p1,p2,thrust::identity<bool>());
       stat = cusparseXcoo2csr(Ccusp->handle,
                               Ccoo.data().get(),
                               c->nz,
@@ -3920,7 +3920,7 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
         CsrMatrix *CcsrT = (CsrMatrix*)Ccusp->matTranspose->mat;
         auto vT = CcsrT->values->begin();
         if (AT) vT = thrust::copy(AcsrT->values->begin(),AcsrT->values->end(),vT);
-        if (BT) thrust::copy(BcsrT->values->begin(),Bcsr->values->end(),vT);
+        if (BT) thrust::copy(BcsrT->values->begin(),BcsrT->values->end(),vT);
       }
       cerr = WaitForCUDA();CHKERRCUDA(cerr);
       ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
