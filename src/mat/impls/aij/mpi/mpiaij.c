@@ -5959,6 +5959,9 @@ PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat A,Mat B,MatReuse scall,PetscInt **
     bufa     = *bufa_ptr;
     b_oth    = (Mat_SeqAIJ*)(*B_oth)->data;
     b_otha   = b_oth->a;
+#if defined(PETSC_HAVE_DEVICE)
+    (*B_oth)->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Matrix P does not posses an object container");
 
   /* a-array */
