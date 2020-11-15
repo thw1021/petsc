@@ -38,10 +38,10 @@ PetscErrorCode PetscSFSetGraphLayout(PetscSF sf,PetscLayout layout,PetscInt nlea
   for (i=0; i<nleaves; i++) {
     const PetscInt idx = iremote[i] - ls;
     if (idx < 0 || idx >= ln) { /* short-circuit the search */
-      ierr = PetscLayoutFindOwnerIndex(layout,iremote[i],&remote[i].rank,&remote[i].index);CHKERRQ(ierr);
-      lr   = remote[i].rank;
-      ls   = range[lr];
-      ln   = range[lr+1] - ls;
+      ierr = PetscLayoutFindOwnerIndex(layout,iremote[i],&lr,&remote[i].index);CHKERRQ(ierr);
+      remote[i].rank = lr;
+      ls = range[lr];
+      ln = range[lr+1] - ls;
     } else {
       remote[i].rank  = lr;
       remote[i].index = idx;
