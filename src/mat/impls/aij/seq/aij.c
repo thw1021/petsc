@@ -2280,34 +2280,37 @@ PetscErrorCode MatZeroRowsColumns_SeqAIJ(Mat A,PetscInt N,const PetscInt rows[],
 
 PetscErrorCode MatGetRow_SeqAIJ(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
-  Mat_SeqAIJ *a = (Mat_SeqAIJ*)A->data;
-  PetscInt   *itmp;
+  Mat_SeqAIJ        *a = (Mat_SeqAIJ*)A->data;
+  const PetscScalar *aa;
+  PetscInt          *itmp;
+  PetscErrorCode    ierr;
+  PetscBool         rest = PETSC_FALSE;
 
   PetscFunctionBegin;
-  if (row < 0 || row >= A->rmap->n) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row %D out of range",row);
-#if defined(PETSC_HAVE_DEVICE)
-  if (v && A->offloadmask == PETSC_OFFLOAD_GPU) {
-    const PetscScalar *aa;
-    PetscErrorCode    ierr;
+  if (PetscDefined(HAVE_DEVICE) && v && A->offloadmask == PETSC_OFFLOAD_GPU) {
     /* triggers copy to CPU */
+    rest = PETSC_TRUE;
     ierr = MatSeqAIJGetArrayRead(A,&aa);CHKERRQ(ierr);
-    ierr = MatSeqAIJRestoreArrayRead(A,&aa);CHKERRQ(ierr);
-  }
-#endif
+  } else aa = a->a;
   *nz = a->i[row+1] - a->i[row];
-  if (v) *v = a->a + a->i[row];
+  if (v) *v = (PetscScalar*)(aa + a->i[row]);
   if (idx) {
     itmp = a->j + a->i[row];
     if (*nz) *idx = itmp;
     else *idx = NULL;
   }
+  if (PetscDefined(HAVE_DEVICE) && rest) {
+    ierr = MatSeqAIJRestoreArrayRead(A,&aa);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
-/* remove this function? */
 PetscErrorCode MatRestoreRow_SeqAIJ(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
   PetscFunctionBegin;
+  *nz = 0;
+  if (idx) *idx = NULL;
+  if (v) *v = NULL;
   PetscFunctionReturn(0);
 }
 
