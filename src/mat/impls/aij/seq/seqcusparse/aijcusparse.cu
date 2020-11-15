@@ -2298,6 +2298,8 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   int64_t                      C_num_rows1, C_num_cols1, C_nnz1;
   size_t                       bufSize2;
   cusparseSpMatDescr_t         BmatSpDescr;
+#else
+  int                          cnz;
 #endif
 
   PetscFunctionBegin;
@@ -2516,7 +2518,8 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
                              Acsr->num_rows, Bcsr->num_cols, Acsr->num_cols,
                              Amat->descr, Acsr->num_entries, Acsr->row_offsets->data().get(), Acsr->column_indices->data().get(),
                              Bmat->descr, Bcsr->num_entries, Bcsr->row_offsets->data().get(), Bcsr->column_indices->data().get(),
-                             Cmat->descr, Ccsr->row_offsets->data().get(), &c->nz);CHKERRCUSPARSE(stat);
+                             Cmat->descr, Ccsr->row_offsets->data().get(), &cnz);CHKERRCUSPARSE(stat);
+  c->nz = cnz;
   Ccsr->column_indices = new THRUSTINTARRAY32(c->nz);
   CHKERRCUDA(cudaPeekAtLastError()); /* catch out of memory errors */
   Ccsr->values = new THRUSTARRAY(c->nz);
