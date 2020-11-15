@@ -3657,15 +3657,15 @@ struct Shift
 /* merges to SeqAIJCUSPARSE matrices, [A';B']' operation in matlab notation */
 PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
 {
-  PetscErrorCode     ierr;
-  Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data, *b = (Mat_SeqAIJ*)B->data, *c;
-  Mat_SeqAIJCUSPARSE *Acusp = (Mat_SeqAIJCUSPARSE*)A->spptr, *Bcusp = (Mat_SeqAIJCUSPARSE*)B->spptr, *Ccusp;
+  PetscErrorCode               ierr;
+  Mat_SeqAIJ                   *a = (Mat_SeqAIJ*)A->data, *b = (Mat_SeqAIJ*)B->data, *c;
+  Mat_SeqAIJCUSPARSE           *Acusp = (Mat_SeqAIJCUSPARSE*)A->spptr, *Bcusp = (Mat_SeqAIJCUSPARSE*)B->spptr, *Ccusp;
   Mat_SeqAIJCUSPARSEMultStruct *Cmat;
-  CsrMatrix          *Acsr,*Bcsr,*Ccsr;
-  PetscInt           Annz,Bnnz;
-  cusparseStatus_t   stat;
-  PetscInt           i,m,n;
-  cudaError_t        cerr;
+  CsrMatrix                    *Acsr,*Bcsr,*Ccsr;
+  PetscInt                     Annz,Bnnz;
+  cusparseStatus_t             stat;
+  PetscInt                     i,m,n;
+  cudaError_t                  cerr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -3721,9 +3721,9 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
     Ccsr->column_indices = new THRUSTINTARRAY32(c->nz);
     Ccsr->values = new THRUSTARRAY(c->nz);
     Ccsr->num_entries = c->nz;
+    Ccusp->cooPerm = new THRUSTINTARRAY(c->nz);
 
     if (c->nz) {
-      ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
       THRUSTINTARRAY32 Acoo(Annz);
       THRUSTINTARRAY32 Bcoo(Bnnz);
       THRUSTINTARRAY32 *roff;
@@ -3735,12 +3735,15 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
         }
         roff = Acusp->rowoffsets_gpu;
       } else roff = Acsr->row_offsets;
+      ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
       stat = cusparseXcsr2coo(Acusp->handle,
                               roff->data().get(),
                               Annz,
                               m,
                               Acoo.data().get(),
                               CUSPARSE_INDEX_BASE_ZERO);CHKERRCUSPARSE(stat);
+      cerr = WaitForCUDA();CHKERRCUDA(cerr);
+      ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
       if (b->compressedrow.use) { /* need full row offset */
         if (!Bcusp->rowoffsets_gpu) {
           Bcusp->rowoffsets_gpu  = new THRUSTINTARRAY32(B->rmap->n + 1);
@@ -3749,23 +3752,26 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
         }
         roff = Bcusp->rowoffsets_gpu;
       } else roff = Bcsr->row_offsets;
+      ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
       stat = cusparseXcsr2coo(Bcusp->handle,
                               roff->data().get(),
                               Bnnz,
                               m,
                               Bcoo.data().get(),
                               CUSPARSE_INDEX_BASE_ZERO);CHKERRCUSPARSE(stat);
+      cerr = WaitForCUDA();CHKERRCUDA(cerr);
+      ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
       THRUSTINTARRAY32 Ccoo(c->nz);
       THRUSTINTARRAY32 Aperm(Annz);
       THRUSTINTARRAY32 Bperm(Bnnz);
       thrust::sequence(thrust::device, Aperm.begin(), Aperm.end(), 0);
       thrust::sequence(thrust::device, Bperm.begin(), Bperm.end(), Annz);
-      Ccusp->cooPerm = new THRUSTINTARRAY(c->nz);
       auto Azb = thrust::make_zip_iterator(thrust::make_tuple(Acoo.begin(),Acsr->column_indices->begin(),Acsr->values->begin(),Aperm.begin()));
       auto Aze = thrust::make_zip_iterator(thrust::make_tuple(Acoo.end(),Acsr->column_indices->end(),Acsr->values->end(),Aperm.end()));
       auto Bzb = thrust::make_zip_iterator(thrust::make_tuple(Bcoo.begin(),Bcsr->column_indices->begin(),Bcsr->values->begin(),Bperm.begin()));
       auto Bze = thrust::make_zip_iterator(thrust::make_tuple(Bcoo.end(),Bcsr->column_indices->end(),Bcsr->values->end(),Bperm.end()));
       auto Czb = thrust::make_zip_iterator(thrust::make_tuple(Ccoo.begin(),Ccsr->column_indices->begin(),Ccsr->values->begin(),Ccusp->cooPerm->begin()));
+      ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
       thrust::transform(thrust::device,Bcsr->column_indices->begin(),Bcsr->column_indices->end(),Bcsr->column_indices->begin(),Shift(A->cmap->n));
       thrust::merge(Azb,Aze,Bzb,Bze,Czb,IJCompare4());
       thrust::transform(thrust::device,Bcsr->column_indices->begin(),Bcsr->column_indices->end(),Bcsr->column_indices->begin(),Shift(-A->cmap->n));
@@ -3775,14 +3781,14 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
                               m,
                               Ccsr->row_offsets->data().get(),
                               CUSPARSE_INDEX_BASE_ZERO);CHKERRCUSPARSE(stat);
+      cerr = WaitForCUDA();CHKERRCUDA(cerr);
+      ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
       stat = cusparseCreateCsr(&Cmat->matDescr, Ccsr->num_rows, Ccsr->num_cols, Ccsr->num_entries,
                                Ccsr->row_offsets->data().get(), Ccsr->column_indices->data().get(), Ccsr->values->data().get(),
                                CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
                                CUSPARSE_INDEX_BASE_ZERO, cusparse_scalartype);CHKERRCUSPARSE(stat);
 #endif
-      cerr = WaitForCUDA();CHKERRCUDA(cerr);
-      ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     }
 
     c->singlemalloc = PETSC_FALSE;
