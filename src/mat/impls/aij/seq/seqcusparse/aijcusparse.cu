@@ -3634,7 +3634,7 @@ PetscErrorCode MatSeqAIJCUSPARSERestoreArrayWrite(Mat A, PetscScalar** a)
 struct IJCompare4
 {
   __host__ __device__
-  inline bool operator() (const thrust::tuple<int, int, PetscScalar, int> &t1, const thrust::tuple<int, int, PetscScalar, int> &t2)
+  inline bool operator() (const thrust::tuple<int, int, PetscScalar, bool> &t1, const thrust::tuple<int, int, PetscScalar, bool> &t2)
   {
     if (t1.get<0>() < t2.get<0>()) return true;
     if (t1.get<0>() == t2.get<0>()) return t1.get<1>() < t2.get<1>();
@@ -3653,6 +3653,7 @@ struct Shift
     return c + _shift;
   }
 };
+
 
 /* merges to SeqAIJCUSPARSE matrices, [A';B']' operation in matlab notation */
 PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
@@ -3707,6 +3708,8 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
     cerr = cudaMemcpy(Cmat->alpha_one,&PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
     cerr = cudaMemcpy(Cmat->beta_zero,&PETSC_CUSPARSE_ZERO,sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
     cerr = cudaMemcpy(Cmat->beta_one, &PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+    ierr = MatSeqAIJCUSPARSEGenerateTransposeForMult(A);CHKERRQ(ierr);
+    ierr = MatSeqAIJCUSPARSEGenerateTransposeForMult(B);CHKERRQ(ierr);
     ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
     ierr = MatSeqAIJCUSPARSECopyToGPU(B);CHKERRQ(ierr);
     if (!Acusp->mat) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");
@@ -3762,19 +3765,22 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
       cerr = WaitForCUDA();CHKERRCUDA(cerr);
       ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
       THRUSTINTARRAY32 Ccoo(c->nz);
-      THRUSTINTARRAY32 Aperm(Annz);
-      THRUSTINTARRAY32 Bperm(Bnnz);
-      thrust::sequence(thrust::device, Aperm.begin(), Aperm.end(), 0);
-      thrust::sequence(thrust::device, Bperm.begin(), Bperm.end(), Annz);
-      auto Azb = thrust::make_zip_iterator(thrust::make_tuple(Acoo.begin(),Acsr->column_indices->begin(),Acsr->values->begin(),Aperm.begin()));
-      auto Aze = thrust::make_zip_iterator(thrust::make_tuple(Acoo.end(),Acsr->column_indices->end(),Acsr->values->end(),Aperm.end()));
-      auto Bzb = thrust::make_zip_iterator(thrust::make_tuple(Bcoo.begin(),Bcsr->column_indices->begin(),Bcsr->values->begin(),Bperm.begin()));
-      auto Bze = thrust::make_zip_iterator(thrust::make_tuple(Bcoo.end(),Bcsr->column_indices->end(),Bcsr->values->end(),Bperm.end()));
-      auto Czb = thrust::make_zip_iterator(thrust::make_tuple(Ccoo.begin(),Ccsr->column_indices->begin(),Ccsr->values->begin(),Ccusp->cooPerm->begin()));
+      auto Aperm = thrust::make_constant_iterator(true);
+      auto Bperm = thrust::make_constant_iterator(false);
+      auto Bcib = thrust::make_transform_iterator(Bcsr->column_indices->begin(),Shift(A->cmap->n));
+      auto Bcie = thrust::make_transform_iterator(Bcsr->column_indices->end(),Shift(A->cmap->n));
+      thrust::device_vector<bool> wPerm(Annz+Bnnz);
+      auto Azb = thrust::make_zip_iterator(thrust::make_tuple(Acoo.begin(),Acsr->column_indices->begin(),Acsr->values->begin(),Aperm));
+      auto Aze = thrust::make_zip_iterator(thrust::make_tuple(Acoo.end(),Acsr->column_indices->end(),Acsr->values->end(),Aperm));
+      auto Bzb = thrust::make_zip_iterator(thrust::make_tuple(Bcoo.begin(),Bcib,Bcsr->values->begin(),Bperm));
+      auto Bze = thrust::make_zip_iterator(thrust::make_tuple(Bcoo.end(),Bcie,Bcsr->values->end(),Bperm));
+      auto Czb = thrust::make_zip_iterator(thrust::make_tuple(Ccoo.begin(),Ccsr->column_indices->begin(),Ccsr->values->begin(),wPerm.begin()));
       ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-      thrust::transform(thrust::device,Bcsr->column_indices->begin(),Bcsr->column_indices->end(),Bcsr->column_indices->begin(),Shift(A->cmap->n));
       thrust::merge(Azb,Aze,Bzb,Bze,Czb,IJCompare4());
-      thrust::transform(thrust::device,Bcsr->column_indices->begin(),Bcsr->column_indices->end(),Bcsr->column_indices->begin(),Shift(-A->cmap->n));
+      auto p1 = Ccusp->cooPerm->begin();
+      auto p2 = Ccusp->cooPerm->begin();
+      thrust::advance(p2,Annz);
+      thrust::partition_copy(thrust::make_counting_iterator(0),thrust::make_counting_iterator(c->nz),wPerm.begin(),p1,p2,thrust::identity<bool>());
       stat = cusparseXcoo2csr(Ccusp->handle,
                               Ccoo.data().get(),
                               c->nz,
@@ -3789,6 +3795,56 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
                                CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
                                CUSPARSE_INDEX_BASE_ZERO, cusparse_scalartype);CHKERRCUSPARSE(stat);
 #endif
+      if (Acusp->transgen && Bcusp->transgen) { /* if A and B have the transpose, generate C transpose too */
+        PetscBool AT = Acusp->matTranspose ? PETSC_TRUE : PETSC_FALSE, BT = Bcusp->matTranspose ? PETSC_TRUE : PETSC_FALSE;
+        Mat_SeqAIJCUSPARSEMultStruct *CmatT = new Mat_SeqAIJCUSPARSEMultStruct;
+        CsrMatrix *CcsrT = new CsrMatrix;
+        CsrMatrix *AcsrT = AT ? (CsrMatrix*)Acusp->matTranspose->mat : NULL;
+        CsrMatrix *BcsrT = BT ? (CsrMatrix*)Bcusp->matTranspose->mat : NULL;
+
+        Ccusp->transgen = PETSC_TRUE;
+        CmatT->cprowIndices  = NULL;
+        CmatT->mat = CcsrT;
+        CcsrT->num_rows = n;
+        CcsrT->num_cols = m;
+        CcsrT->num_entries = c->nz;
+
+        CcsrT->column_indices = new THRUSTINTARRAY32(c->nz);
+        auto cT = CcsrT->column_indices->begin();
+        if (AT) cT = thrust::copy(AcsrT->column_indices->begin(),AcsrT->column_indices->end(),cT);
+        if (BT) thrust::copy(BcsrT->column_indices->begin(),BcsrT->column_indices->end(),cT);
+
+        CcsrT->row_offsets = new THRUSTINTARRAY32(n+1);
+        auto rT = CcsrT->row_offsets->begin();
+        if (AT) rT = thrust::copy(AcsrT->row_offsets->begin(),AcsrT->row_offsets->end()-1,rT);
+        if (BT) {
+          auto titb = thrust::make_transform_iterator(BcsrT->row_offsets->begin(),Shift(a->nz));
+          auto tite = thrust::make_transform_iterator(BcsrT->row_offsets->end(),Shift(a->nz));
+          thrust::copy(titb,tite,rT);
+        }
+
+        CcsrT->values = new THRUSTARRAY(c->nz);
+        auto vT = CcsrT->values->begin();
+        if (AT) vT = thrust::copy(AcsrT->values->begin(),AcsrT->values->end(),vT);
+        if (BT) thrust::copy(BcsrT->values->begin(),BcsrT->values->end(),vT);
+
+        stat = cusparseCreateMatDescr(&CmatT->descr);CHKERRCUSPARSE(stat);
+        stat = cusparseSetMatIndexBase(CmatT->descr, CUSPARSE_INDEX_BASE_ZERO);CHKERRCUSPARSE(stat);
+        stat = cusparseSetMatType(CmatT->descr, CUSPARSE_MATRIX_TYPE_GENERAL);CHKERRCUSPARSE(stat);
+        cerr = cudaMalloc((void **)&(CmatT->alpha_one),sizeof(PetscScalar));CHKERRCUDA(cerr);
+        cerr = cudaMalloc((void **)&(CmatT->beta_zero),sizeof(PetscScalar));CHKERRCUDA(cerr);
+        cerr = cudaMalloc((void **)&(CmatT->beta_one), sizeof(PetscScalar));CHKERRCUDA(cerr);
+        cerr = cudaMemcpy(CmatT->alpha_one,&PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+        cerr = cudaMemcpy(CmatT->beta_zero,&PETSC_CUSPARSE_ZERO,sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+        cerr = cudaMemcpy(CmatT->beta_one, &PETSC_CUSPARSE_ONE, sizeof(PetscScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+        stat = cusparseCreateCsr(&CmatT->matDescr, CcsrT->num_rows, CcsrT->num_cols, CcsrT->num_entries,
+                                 CcsrT->row_offsets->data().get(), CcsrT->column_indices->data().get(), CcsrT->values->data().get(),
+                                 CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
+                                 CUSPARSE_INDEX_BASE_ZERO, cusparse_scalartype);CHKERRCUSPARSE(stat);
+#endif
+        Ccusp->matTranspose = CmatT;
+      }
     }
 
     c->singlemalloc = PETSC_FALSE;
@@ -3828,36 +3884,52 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
     (*C)->preallocated  = PETSC_TRUE;
   } else {
     if ((*C)->rmap->n != B->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Invalid number or rows %D != %D",(*C)->rmap->n,B->rmap->n);
-    Ccusp = (Mat_SeqAIJCUSPARSE*)(*C)->spptr;
-    if (!Ccusp->cooPerm) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cooPerm");
-    if (Ccusp->format == MAT_CUSPARSE_ELL || Ccusp->format == MAT_CUSPARSE_HYB) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
-    if (Ccusp->nonzerostate != (*C)->nonzerostate) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong nonzerostate");
-    ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
-    ierr = MatSeqAIJCUSPARSECopyToGPU(B);CHKERRQ(ierr);
-    if (!Acusp->mat) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");
-    if (!Bcusp->mat) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");
-    Acsr = (CsrMatrix*)Acusp->mat->mat;
-    Bcsr = (CsrMatrix*)Bcusp->mat->mat;
-    Ccsr = (CsrMatrix*)Ccusp->mat->mat;
-    if (Acsr->num_entries != (PetscInt)Acsr->values->size()) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"A nnz %D != %D",Acsr->num_entries,(PetscInt)Acsr->values->size());
-    if (Bcsr->num_entries != (PetscInt)Bcsr->values->size()) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"B nnz %D != %D",Bcsr->num_entries,(PetscInt)Bcsr->values->size());
-    if (Ccsr->num_entries != (PetscInt)Ccsr->values->size()) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"C nnz %D != %D",Ccsr->num_entries,(PetscInt)Ccsr->values->size());
-    if (Ccsr->num_entries != Acsr->num_entries + Bcsr->num_entries) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_COR,"C nnz %D != %D + %D",Ccsr->num_entries,Acsr->num_entries,Bcsr->num_entries);
-    if (Ccusp->cooPerm->size() != Ccsr->values->size()) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"permSize %D != %D",(PetscInt)Ccusp->cooPerm->size(),(PetscInt)Ccsr->values->size());
-    ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    THRUSTARRAY w(Ccsr->num_entries);
-    auto w2 = w.begin();
-    thrust::advance(w2,Acsr->num_entries);
-    thrust::copy(Acsr->values->begin(),Acsr->values->end(),w.begin());
-    thrust::copy(Bcsr->values->begin(),Bcsr->values->end(),w2);
-    auto zibit = thrust::make_zip_iterator(thrust::make_tuple(thrust::make_permutation_iterator(w.begin(),Ccusp->cooPerm->begin()),
-                                                              Ccsr->values->begin()));
-    auto zieit = thrust::make_zip_iterator(thrust::make_tuple(thrust::make_permutation_iterator(w.begin(),Ccusp->cooPerm->end()),
-                                                              Ccsr->values->end()));
-    thrust::for_each(zibit,zieit,VecCUDAEquals());
-    cerr = WaitForCUDA();CHKERRCUDA(cerr);
-    ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+    c = (Mat_SeqAIJ*)(*C)->data;
+    if (c->nz) {
+      Ccusp = (Mat_SeqAIJCUSPARSE*)(*C)->spptr;
+      if (!Ccusp->cooPerm) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cooPerm");
+      if (Ccusp->format == MAT_CUSPARSE_ELL || Ccusp->format == MAT_CUSPARSE_HYB) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
+      if (Ccusp->nonzerostate != (*C)->nonzerostate) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong nonzerostate");
+      ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
+      ierr = MatSeqAIJCUSPARSECopyToGPU(B);CHKERRQ(ierr);
+      if (!Acusp->mat) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");
+      if (!Bcusp->mat) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");
+      Acsr = (CsrMatrix*)Acusp->mat->mat;
+      Bcsr = (CsrMatrix*)Bcusp->mat->mat;
+      Ccsr = (CsrMatrix*)Ccusp->mat->mat;
+      if (Acsr->num_entries != (PetscInt)Acsr->values->size()) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"A nnz %D != %D",Acsr->num_entries,(PetscInt)Acsr->values->size());
+      if (Bcsr->num_entries != (PetscInt)Bcsr->values->size()) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"B nnz %D != %D",Bcsr->num_entries,(PetscInt)Bcsr->values->size());
+      if (Ccsr->num_entries != (PetscInt)Ccsr->values->size()) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"C nnz %D != %D",Ccsr->num_entries,(PetscInt)Ccsr->values->size());
+      if (Ccsr->num_entries != Acsr->num_entries + Bcsr->num_entries) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_COR,"C nnz %D != %D + %D",Ccsr->num_entries,Acsr->num_entries,Bcsr->num_entries);
+      if (Ccusp->cooPerm->size() != Ccsr->values->size()) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_COR,"permSize %D != %D",(PetscInt)Ccusp->cooPerm->size(),(PetscInt)Ccsr->values->size());
+      ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
+      auto pmid = Ccusp->cooPerm->begin();
+      thrust::advance(pmid,Acsr->num_entries);
+      auto zibait = thrust::make_zip_iterator(thrust::make_tuple(Acsr->values->begin(),
+                                                                 thrust::make_permutation_iterator(Ccsr->values->begin(),Ccusp->cooPerm->begin())));
+      auto zieait = thrust::make_zip_iterator(thrust::make_tuple(Acsr->values->end(),
+                                                                 thrust::make_permutation_iterator(Ccsr->values->begin(),pmid)));
+      thrust::for_each(zibait,zieait,VecCUDAEquals());
+      auto zibbit = thrust::make_zip_iterator(thrust::make_tuple(Bcsr->values->begin(),
+                                                                 thrust::make_permutation_iterator(Ccsr->values->begin(),pmid)));
+      auto ziebit = thrust::make_zip_iterator(thrust::make_tuple(Bcsr->values->end(),
+                                                                 thrust::make_permutation_iterator(Ccsr->values->begin(),Ccusp->cooPerm->end())));
+      thrust::for_each(zibbit,ziebit,VecCUDAEquals());
+      if (Acusp->transgen && Bcusp->transgen && Ccusp->transgen) {
+        if (!Ccusp->matTranspose) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing transpose Mat_SeqAIJCUSPARSEMultStruct");
+        PetscBool AT = Acusp->matTranspose ? PETSC_TRUE : PETSC_FALSE, BT = Bcusp->matTranspose ? PETSC_TRUE : PETSC_FALSE;
+        CsrMatrix *AcsrT = AT ? (CsrMatrix*)Acusp->matTranspose->mat : NULL;
+        CsrMatrix *BcsrT = BT ? (CsrMatrix*)Bcusp->matTranspose->mat : NULL;
+        CsrMatrix *CcsrT = (CsrMatrix*)Ccusp->matTranspose->mat;
+        auto vT = CcsrT->values->begin();
+        if (AT) vT = thrust::copy(AcsrT->values->begin(),AcsrT->values->end(),vT);
+        if (BT) thrust::copy(BcsrT->values->begin(),Bcsr->values->end(),vT);
+      }
+      cerr = WaitForCUDA();CHKERRCUDA(cerr);
+      ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+    }
   }
+  ierr = PetscObjectStateIncrease((PetscObject)*C);CHKERRQ(ierr);
   (*C)->assembled     = PETSC_TRUE;
   (*C)->was_assembled = PETSC_FALSE;
   (*C)->offloadmask   = PETSC_OFFLOAD_GPU;
