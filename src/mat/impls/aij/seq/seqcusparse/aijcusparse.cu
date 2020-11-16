@@ -3815,16 +3815,19 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
         CcsrT->values = new THRUSTARRAY(c->nz);
 
         ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-        auto cT = CcsrT->column_indices->begin();
-        if (AT) cT = thrust::copy(AcsrT->column_indices->begin(),AcsrT->column_indices->end(),cT);
-        if (BT) thrust::copy(BcsrT->column_indices->begin(),BcsrT->column_indices->end(),cT);
         auto rT = CcsrT->row_offsets->begin();
-        if (AT) rT = thrust::copy(AcsrT->row_offsets->begin(),AcsrT->row_offsets->end()-1,rT);
+        if (AT) {
+          rT = thrust::copy(AcsrT->row_offsets->begin(),AcsrT->row_offsets->end(),rT);
+          thrust::advance(rT,-1);
+        }
         if (BT) {
           auto titb = thrust::make_transform_iterator(BcsrT->row_offsets->begin(),Shift(a->nz));
           auto tite = thrust::make_transform_iterator(BcsrT->row_offsets->end(),Shift(a->nz));
           thrust::copy(titb,tite,rT);
         }
+        auto cT = CcsrT->column_indices->begin();
+        if (AT) cT = thrust::copy(AcsrT->column_indices->begin(),AcsrT->column_indices->end(),cT);
+        if (BT) thrust::copy(BcsrT->column_indices->begin(),BcsrT->column_indices->end(),cT);
         auto vT = CcsrT->values->begin();
         if (AT) vT = thrust::copy(AcsrT->values->begin(),AcsrT->values->end(),vT);
         if (BT) thrust::copy(BcsrT->values->begin(),BcsrT->values->end(),vT);
