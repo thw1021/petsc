@@ -219,7 +219,7 @@ PetscErrorCode MatCUSPARSESetFormat(Mat A,MatCUSPARSEFormatOperation op,MatCUSPA
 }
 
 /*@
-   MatSeqAIJCUSPARSESetGenerateTranspose - Sets the flag to explicitly generate the tranpose matrix before calling MatMultTranspose
+   MatSeqAIJCUSPARSESetGenerateTranspose - Sets the flag to explicitly generate the transpose matrix before calling MatMultTranspose
 
    Collective on mat
 
@@ -229,7 +229,7 @@ PetscErrorCode MatCUSPARSESetFormat(Mat A,MatCUSPARSEFormatOperation op,MatCUSPA
 
    Level: intermediate
 
-.seealso: MATSEQAIJCUSPARSE
+.seealso: MATSEQAIJCUSPARSE, MatAIJCUSPARSESetGenerateTranspose()
 @*/
 PetscErrorCode MatSeqAIJCUSPARSESetGenerateTranspose(Mat A,PetscBool transgen)
 {
