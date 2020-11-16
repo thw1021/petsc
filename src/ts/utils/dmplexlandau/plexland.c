@@ -36,7 +36,6 @@ static PetscErrorCode LandauPointDataCreate(LandauIPData *IPData, PetscInt dim, 
   if (dim==2) IPData->z = IPData->dfz = NULL;
   /* pad with zeros in case we vectorize into this */
   for (jj=nip ; jj < nip_pad; jj++){
-    exit(333);
     IPData->w_data[jj] = 0;
     IPData->x[jj] = -1;
     IPData->y[jj] = -1;
@@ -347,7 +346,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
     } /* ej cells loop, not cuda */
   }
-  // PetscSleep(2); exit(13);
 
   /* assemble matrix or vector */
   ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
@@ -939,7 +937,7 @@ static PetscErrorCode adapt(DM *dm, LandauCtx *ctx, Vec *uu)
       DM  dmNew = NULL;
       ierr = adaptToleranceFEM(ctx->fe[0], *uu, ctx->refineTol, ctx->coarsenTol, type, ctx, &dmNew);CHKERRQ(ierr);
       if (!dmNew) {
-        exit(113);
+        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"should not happen");
         break;
       } else {
         ierr = DMDestroy(dm);CHKERRQ(ierr);

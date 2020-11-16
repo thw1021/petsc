@@ -296,8 +296,6 @@ void __launch_bounds__(256,1) landau_kernel_v2(const PetscInt nip, const PetscIn
     myelem); /* compact */
 }
 
-static PetscErrorCode LandauAssembleCuda(PetscInt cStart, PetscInt cEnd, PetscInt totDim, DM plex, PetscSection section, PetscSection globalSection, Mat JacP, PetscScalar elemMats[], PetscContainer container, const PetscLogEvent events[]);
-__global__ void assemble_kernel(const PetscInt nidx_arr[], PetscInt *idx_arr[], PetscScalar *el_mats[], const ISColoringValue colors[], Mat_SeqAIJ mats[]);
 PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu_alpha[],const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
 				  const LandauIPData *const IPData, const PetscReal invJj[], const PetscInt num_sub_blocks, const PetscLogEvent events[], Mat JacP)
 {
@@ -310,7 +308,6 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   PetscDS           prob;
   PetscSection      section, globalSection;
   LandauIPReal      *d_IPDataRaw;
-  PetscBool         cuda_assemble = PETSC_FALSE;
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
@@ -388,173 +385,22 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
 
   ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
-  if (!cuda_assemble) {
+  {
     PetscScalar *elMat;
     for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
       ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
       if (ej==-1) {
 	int d,f;
-	printf("GPU Element matrix\n");
+	PetscPrintf(PETSC_COMM_SELF,"GPU Element matrix\n");
 	for (d = 0; d < totDim; ++d){
-	  for (f = 0; f < totDim; ++f) printf(" %12.5e", (double)PetscRealPart(elMat[d*totDim + f]));
-	  printf("\n");
+	  for (f = 0; f < totDim; ++f) PetscPrintf(PETSC_COMM_SELF," %12.5e", (double)PetscRealPart(elMat[d*totDim + f]));
+	  PetscPrintf(PETSC_COMM_SELF,"\n");
 	}
       }
     }
-  } else {
-    PetscContainer container = NULL;
-    ierr = PetscObjectQuery((PetscObject)JacP,"coloring",(PetscObject*)&container);CHKERRQ(ierr);
-    if (!container) {
-      ierr = PetscLogEventBegin(events[8],0,0,0,0);CHKERRQ(ierr);
-      ierr = LandauCreateColoring(JacP, plex, &container);CHKERRQ(ierr);
-      ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
-    }
-    ierr = LandauAssembleCuda(cStart, cEnd, totDim, plex, section, globalSection, JacP, elemMats, container, events);CHKERRQ(ierr);
   }
   ierr = PetscFree(elemMats);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
 
-  PetscFunctionReturn(0);
-}
-
-__global__
-void assemble_kernel(const PetscInt nidx_arr[], PetscInt *idx_arr[], PetscScalar *el_mats[], const ISColoringValue colors[], Mat_SeqAIJ mats[])
-{
-  const PetscInt     myelem = (gridDim.x==1) ? threadIdx.x : blockIdx.x;
-  Mat_SeqAIJ         a = mats[colors[myelem]]; /* copy to GPU */
-  const PetscScalar *v = el_mats[myelem];
-  const PetscInt    *in = idx_arr[myelem], *im = idx_arr[myelem], n = nidx_arr[myelem], m = nidx_arr[myelem];
-  /* mat set values */
-  PetscInt          *rp,k,low,high,t,row,nrow,i,col,l;
-  PetscInt          *ai = a.i,*ailen = a.ilen;
-  PetscInt          *aj = a.j,lastcol = -1;
-  MatScalar         *ap=NULL,value=0.0,*aa = a.a;
-  for (k=0; k<m; k++) { /* loop over added rows */
-    row = im[k];
-    if (row < 0) continue;
-    rp   = aj + ai[row];
-    ap = aa + ai[row];
-    nrow = ailen[row];
-    low  = 0;
-    high = nrow;
-    for (l=0; l<n; l++) { /* loop over added columns */
-      /* if (in[l] < 0) { */
-      /* 	printf("\t\tin[l] < 0 ?????\n"); */
-      /* 	continue; */
-      /* } */
-      while (l<n && (value = v[l + k*n], PetscAbsScalar(value)==0.0)) l++;
-      if (l==n) break;
-      col = in[l];
-      if (col <= lastcol) low = 0;
-      else high = nrow;
-      lastcol = col;
-      while (high-low > 5) {
-        t = (low+high)/2;
-        if (rp[t] > col) high = t;
-        else low = t;
-      }
-      for (i=low; i<high; i++) {
-        // if (rp[i] > col) break;
-        if (rp[i] == col) {
-	  ap[i] += value;
-	  low = i + 1;
-          goto noinsert;
-        }
-      }
-      printf("\t\t\t ERROR in assemble_kernel\n");
-    noinsert:;
-    }
-  }
-}
-
-static PetscErrorCode LandauAssembleCuda(PetscInt cStart, PetscInt cEnd, PetscInt totDim, DM plex, PetscSection section, PetscSection globalSection, Mat JacP, PetscScalar elemMats[], PetscContainer container, const PetscLogEvent events[])
-{
-  PetscErrorCode    ierr;
-#define LANDAU_MAX_COLORS 16
-#define LANDAU_MAX_ELEMS 512
-  Mat_SeqAIJ             h_mats[LANDAU_MAX_COLORS], *jaca = (Mat_SeqAIJ *)JacP->data, *d_mats;
-  const PetscInt         nelems = cEnd - cStart, nnz = jaca->i[JacP->rmap->n], N = JacP->rmap->n;  /* serial */
-  const ISColoringValue *colors;
-  ISColoringValue       *d_colors,colour;
-  PetscInt              *h_idx_arr[LANDAU_MAX_ELEMS], h_nidx_arr[LANDAU_MAX_ELEMS], *d_nidx_arr, **d_idx_arr,nc,ej,j,cell;
-  PetscScalar           *h_new_el_mats[LANDAU_MAX_ELEMS], *val_buf, **d_new_el_mats;
-  ISColoring             iscoloring;
-  ierr = PetscContainerGetPointer(container,(void**)&iscoloring);CHKERRQ(ierr);
-  /* get colors */
-  ierr = ISColoringGetColors(iscoloring, &j, &nc, &colors);CHKERRQ(ierr);
-  if (nelems>LANDAU_MAX_ELEMS) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "too many elements. %D > %D",nelems,LANDAU_MAX_ELEMS);
-  if (nc>LANDAU_MAX_COLORS) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "too many colors. %D > %D",nc,LANDAU_MAX_COLORS);
-  /* colors for kernel */
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_colors,         nelems*sizeof(ISColoringValue))); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(          d_colors, colors, nelems*sizeof(ISColoringValue), cudaMemcpyHostToDevice));
-  /* get indices and element matrices */
-  for (cell = cStart, ej = 0 ; cell < cEnd; ++cell, ++ej) {
-    PetscInt numindices,*indices;
-    PetscScalar *elMat = &elemMats[ej*totDim*totDim];
-    PetscScalar *valuesOrig = elMat;
-    ierr = DMPlexGetClosureIndices(plex, section, globalSection, cell, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);
-    h_nidx_arr[ej] = numindices;
-    CUDA_SAFE_CALL(cudaMalloc((void **)&h_idx_arr[ej],            numindices*sizeof(PetscInt))); // kernel input
-    CUDA_SAFE_CALL(cudaMemcpy(          h_idx_arr[ej],   indices, numindices*sizeof(PetscInt), cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMalloc((void **)&h_new_el_mats[ej],        numindices*numindices*sizeof(PetscScalar))); // kernel input
-    CUDA_SAFE_CALL(cudaMemcpy(          h_new_el_mats[ej], elMat, numindices*numindices*sizeof(PetscScalar), cudaMemcpyHostToDevice));
-    ierr = DMPlexRestoreClosureIndices(plex, section, globalSection, cell, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);
-    if (elMat != valuesOrig) {ierr = DMRestoreWorkArray(plex, numindices*numindices, MPIU_SCALAR, &elMat);CHKERRQ(ierr);}
-  }
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_nidx_arr,                  nelems*sizeof(PetscInt))); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(          d_nidx_arr,    h_nidx_arr,   nelems*sizeof(PetscInt), cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_idx_arr,                   nelems*sizeof(PetscInt*))); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(          d_idx_arr,     h_idx_arr,    nelems*sizeof(PetscInt*), cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMalloc((void **)&d_new_el_mats,               nelems*sizeof(PetscScalar*))); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy(          d_new_el_mats, h_new_el_mats,nelems*sizeof(PetscScalar*), cudaMemcpyHostToDevice));
-  /* make matrix buffers */
-  for (colour=0; colour<nc; colour++) {
-    Mat_SeqAIJ *a = &h_mats[colour];
-    /* create on GPU and copy to GPU */
-    CUDA_SAFE_CALL(cudaMalloc((void **)&a->i,               (N+1)*sizeof(PetscInt))); // kernel input
-    CUDA_SAFE_CALL(cudaMemcpy(          a->i,    jaca->i,   (N+1)*sizeof(PetscInt), cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMalloc((void **)&a->ilen,            (N)*sizeof(PetscInt))); // kernel input
-    CUDA_SAFE_CALL(cudaMemcpy(          a->ilen, jaca->ilen,(N)*sizeof(PetscInt), cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMalloc((void **)&a->j,               (nnz)*sizeof(PetscInt))); // kernel input
-    CUDA_SAFE_CALL(cudaMemcpy(          a->j,    jaca->j,   (nnz)*sizeof(PetscInt), cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMalloc((void **)&a->a,               (nnz)*sizeof(PetscScalar))); // kernel output
-    CUDA_SAFE_CALL(cudaMemset(          a->a, 0,            (nnz)*sizeof(PetscScalar)));
-  }
-  CUDA_SAFE_CALL(cudaMalloc(&d_mats,         nc*sizeof(Mat_SeqAIJ))); // kernel input
-  CUDA_SAFE_CALL(cudaMemcpy( d_mats, h_mats, nc*sizeof(Mat_SeqAIJ), cudaMemcpyHostToDevice));
-  /* do it */
-  assemble_kernel<<<nelems,1>>>(d_nidx_arr, d_idx_arr, d_new_el_mats, d_colors, d_mats);
-  CHECK_LAUNCH_ERROR();
-  /* cleanup */
-  CUDA_SAFE_CALL(cudaFree(d_colors));
-  CUDA_SAFE_CALL(cudaFree(d_nidx_arr));
-  for (ej = cStart ; ej < nelems; ++ej) {
-    CUDA_SAFE_CALL(cudaFree(h_idx_arr[ej]));
-    CUDA_SAFE_CALL(cudaFree(h_new_el_mats[ej]));
-  }
-  CUDA_SAFE_CALL(cudaFree(d_idx_arr));
-  CUDA_SAFE_CALL(cudaFree(d_new_el_mats));
-  /* copy & add Mat data back to CPU to JacP */
-
-  ierr = PetscLogEventBegin(events[2],0,0,0,0);CHKERRQ(ierr);
-  ierr = PetscMalloc1(nnz,&val_buf);CHKERRQ(ierr);
-  ierr = PetscMemzero(jaca->a,nnz*sizeof(PetscScalar));CHKERRQ(ierr);
-  for (colour=0; colour<nc; colour++) {
-    Mat_SeqAIJ *a = &h_mats[colour];
-    CUDA_SAFE_CALL(cudaMemcpy(val_buf, a->a, (nnz)*sizeof(PetscScalar), cudaMemcpyDeviceToHost));
-    PetscKernelAXPY(jaca->a,1.0,val_buf,nnz);
-  }
-  ierr = PetscFree(val_buf);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(events[2],0,0,0,0);CHKERRQ(ierr);
-
-  for (colour=0; colour<nc; colour++) {
-    Mat_SeqAIJ *a = &h_mats[colour];
-    /* destroy mat */
-    CUDA_SAFE_CALL(cudaFree(a->i));
-    CUDA_SAFE_CALL(cudaFree(a->ilen));
-    CUDA_SAFE_CALL(cudaFree(a->j));
-    CUDA_SAFE_CALL(cudaFree(a->a));
-  }
-  CUDA_SAFE_CALL(cudaFree(d_mats));
   PetscFunctionReturn(0);
 }
