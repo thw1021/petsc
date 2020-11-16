@@ -3475,7 +3475,6 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat A, PetscInt n, const Pe
 {
   PetscErrorCode     ierr;
   Mat_SeqAIJCUSPARSE *cusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
-  CsrMatrix          *matrix;
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data;
   PetscInt           cooPerm_n, nzr = 0;
   cudaError_t        cerr;
@@ -3561,19 +3560,14 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat A, PetscInt n, const Pe
   ierr = MatSetOption(A,MAT_NEW_NONZERO_ALLOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
 
   /* We want to allocate the CUSPARSE struct for matvec now.
-     The code is so convoluted now that I prefer to copy garbage to the GPU */
+     The code is so convoluted now that I prefer to copy zeros */
+  ierr = PetscArrayzero(a->a,a->nz);CHKERRQ(ierr);
   ierr = MatCheckCompressedRow(A,nzr,&a->compressedrow,a->i,A->rmap->n,0.6);CHKERRQ(ierr);
   A->offloadmask = PETSC_OFFLOAD_CPU;
   A->nonzerostate++;
   ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
-  {
-    matrix = (CsrMatrix*)cusp->mat->mat;
-    if (!matrix->values) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing CUDA memory");
-    thrust::fill(thrust::device,matrix->values->begin(),matrix->values->end(),0.);
-    ierr = MatSeqAIJCUSPARSEMultStruct_Destroy(&cusp->matTranspose,cusp->format);CHKERRQ(ierr);
-  }
+  ierr = MatSeqAIJCUSPARSEMultStruct_Destroy(&cusp->matTranspose,cusp->format);CHKERRQ(ierr);
 
-  A->offloadmask = PETSC_OFFLOAD_CPU;
   A->assembled = PETSC_FALSE;
   A->was_assembled = PETSC_FALSE;
   PetscFunctionReturn(0);
