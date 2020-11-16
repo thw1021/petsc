@@ -600,5 +600,6 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
   } else { /* allow fallback */
     ierr = MatSetValuesCOO_Basic(A,coo_v,imode);CHKERRQ(ierr);
   }
+  ierr = PetscObjectStateIncrease((PetscObject)A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
