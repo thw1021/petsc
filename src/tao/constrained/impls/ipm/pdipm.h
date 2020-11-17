@@ -21,6 +21,8 @@ typedef struct {
   PetscInt nce,Nce;         /* total equality constraints. nce = ng + nxfixed */
   PetscInt nci,Nci;         /* total inequality constraints nci = nh + nxlb + nxub + 2*nxbox */
   PetscInt n,N;             /* Big KKT system size n = nx + nce + 2*nci */
+  PetscInt prime,Prime;     /* local/Global number of Prime Variables */
+  PetscInt dual,Dual;       /* local/Global number of Dual Variables */
 
   /* Vectors */
   Vec      X;               /* R^n   - Big KKT system vector [x; lambdae; lambdai; z] */
