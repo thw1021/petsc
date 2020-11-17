@@ -60,10 +60,10 @@ static __device__
 PetscErrorCode MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is)
 {
   MatScalar       value;
-  const PetscInt  *ai = d_mat->diag.i, *aj = d_mat->diag.j;
+  const PetscInt  *rp1,*rp2 = NULL,*ai = d_mat->diag.i, *aj = d_mat->diag.j;
   const PetscInt  *bi = d_mat->offdiag.i, *bj = d_mat->offdiag.j;
   MatScalar       *ba = d_mat->offdiag.a, *aa = d_mat->diag.a;
-  PetscInt        *rp1,*rp2 = NULL,nrow1,nrow2,_i,low1,high1,low2,high2,t,lastcol1,lastcol2,inserted;
+  PetscInt        nrow1,nrow2,_i,low1,high1,low2,high2,t,lastcol1,lastcol2,inserted;
   MatScalar       *ap1,*ap2 = NULL;
   PetscBool       roworiented = PETSC_TRUE;
   PetscInt        i,j,row,col;
@@ -94,7 +94,9 @@ PetscErrorCode MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,
           if (!inserted) SETERR;
         } else if (in[j] < 0) {
           continue; // need to check for > N also
-        } else if (in[j] >= N) {printf("[%d]ERROR, MatSetValuesDevice A: Column location %d out of range\n",(int)d_mat->rank, (int)in[i]);return PETSC_ERR_ARG_OUTOFRANGE;}
+        } else if (in[j] >= N) {
+          printf("[%d]ERROR, MatSetValuesDevice A: Column location %d out of range\n",(int)d_mat->rank, (int)in[i]);
+          return PETSC_ERR_ARG_OUTOFRANGE;
         } else {
           col = d_mat->colmap[in[j]] - 1;
           if (col < 0) SETERR;

@@ -375,20 +375,13 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   Mat_MPIAIJ                 *mpiaij = (Mat_MPIAIJ*)A->data;
   Mat_MPIAIJCUSPARSE         *cusparseStruct = (Mat_MPIAIJCUSPARSE*)mpiaij->spptr;
   PetscSplitCSRDataStructure *d_mat = cusparseStruct->deviceMat;
-  PetscInt                   nnz_state = A->nonzerostate;
+
   PetscFunctionBegin;
-  if (d_mat) {
-    cudaError_t                err;
-    err = cudaMemcpy( &nnz_state, &d_mat->nonzerostate, sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-  }
   ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
   if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) {
     ierr = VecSetType(mpiaij->lvec,VECSEQCUDA);CHKERRQ(ierr);
   }
-  if (nnz_state > A->nonzerostate) {
-    A->offloadmask = PETSC_OFFLOAD_GPU; // if we assembled on the device
-  }
-
+  A->offloadmask = PETSC_OFFLOAD_GPU; // if we assembled on the device
   PetscFunctionReturn(0);
 }
 
@@ -673,7 +666,6 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
     *B = *p_d_mat = d_mat; // return it, set it in Mat, and set it up
     if (size == 1) {
       jaca = (Mat_SeqAIJ*)A->data;
-      h_mat.nonzerostate = A->nonzerostate;
       h_mat.rstart = 0; h_mat.rend = A->rmap->n;
       h_mat.cstart = 0; h_mat.cend = A->cmap->n;
       h_mat.offdiag.i = h_mat.offdiag.j = NULL;
