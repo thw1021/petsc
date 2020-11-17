@@ -729,7 +729,7 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
 {
   PetscErrorCode     ierr;
   TAO_PDIPM          *pdipm = (TAO_PDIPM*)tao->data;
-  SNESLineSearch     linesearch;  /* SNESLineSearch context */
+  SNESLineSearch     linesearch; /* SNESLineSearch context */
   Vec                dummy;
 
   PetscFunctionBegin;
@@ -775,26 +775,26 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
 }
 
 /*
-   TaoView_PDIPM - View PDIPM
+  TaoView_PDIPM - View PDIPM
 
    Input Parameter:
-   tao - TAO object
-   viewer - PetscViewer
+    tao - TAO object
+    viewer - PetscViewer
 
-   Output:   Viewed in terminal
+   Output:
 */
 PetscErrorCode TaoView_PDIPM(Tao tao,PetscViewer viewer)
 {
-  TAO_PDIPM             *pdipm = (TAO_PDIPM *)tao->data;
-  PetscErrorCode        ierr;
+  TAO_PDIPM       *pdipm = (TAO_PDIPM *)tao->data;
+  PetscErrorCode  ierr;
 
   tao->constrained = PETSC_TRUE;
   PetscViewerASCIIPushTab(viewer);
-  /* list below to TaoView_PDIPM()? */  
+  /* list below to TaoView_PDIPM()? */
   /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] nce %d = ng %d + nxfixed %d\n",rank,pdipm->nce,pdipm->ng,pdipm->nxfixed); */
   /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] nci %d = nh %d + nxlb %d + nxub %d + 2*nxbox %d\n",rank,pdipm->nci,pdipm->nh,pdipm->nxlb,pdipm->nxub,pdipm->nxbox); */
   /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] n %d = nx %d + nce %d + 2*nci %d\n",rank,pdipm->n,pdipm->nx,pdipm->nce,pdipm->nci); */
-  ierr = PetscViewerASCIIPrintf(viewer,"Prime = %d, Dual = %d.\n",pdipm->Prime,pdipm->Dual);
+  ierr = PetscViewerASCIIPrintf(viewer,"Prime = %d, Dual = %d.\n",pdipm->Prime,pdipm->Dual);CHKERRQ(ierr);
   PetscViewerASCIIPopTab(viewer);
 
   PetscFunctionReturn(0);
