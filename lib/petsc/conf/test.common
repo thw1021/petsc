@@ -24,10 +24,10 @@ allgtests-tap: allgtest-tap
 	+@${OMAKE} -f gmakefile.test PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} check-test-errors
 
 allgtest-tap: ${PETSC_DIR}/${PETSC_ARCH}/tests/testfiles
-	+@MAKEFLAGS="-j$(MAKE_TEST_NP) -l$(MAKE_LOAD) $(MAKEFLAGS)" ${OMAKE} -f gmakefile.test PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} test OUTPUT=1
+	+@MAKEFLAGS="-j$(MAKE_TEST_NP) -l$(MAKE_LOAD) $(MAKEFLAGS)" ${OMAKE} -f gmakefile.test PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} OUTPUT=1 GPUSERIALIZED=1 test
 
 allgtest: ${PETSC_DIR}/${PETSC_ARCH}/tests/testfiles
-	+@MAKEFLAGS="-j$(MAKE_TEST_NP) -l$(MAKE_LOAD) $(MAKEFLAGS)" ${OMAKE} -k -f ${ALLTESTS_MAKEFILE} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} test V=0 2>&1 | egrep -v '^(ok [^#]*(# SKIP|# TODO|$$)|[A-Za-z][A-Za-z0-9_]*\.(c|F|cxx|F90).$$)'
+	+@MAKEFLAGS="-j$(MAKE_TEST_NP) -l$(MAKE_LOAD) $(MAKEFLAGS)" ${OMAKE} -k -f ${ALLTESTS_MAKEFILE} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} GPUSERIALIZED=1 V=0 test 2>&1 | egrep -v '^(ok [^#]*(# SKIP|# TODO|$$)|[A-Za-z][A-Za-z0-9_]*\.(c|F|cxx|F90).$$)'
 
 test:
 	+${OMAKE} -f ${ALLTESTS_MAKEFILE} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} test
