@@ -182,7 +182,7 @@ def chk_cython(VERSION):
     #
     return True
 
-def run_cython(source, depends=[], includes=(),
+def run_cython(source, depends=(), includes=(),
                destdir_c=None, destdir_h=None,
                wdir=None, force=False, VERSION=None):
     from glob import glob
@@ -232,7 +232,6 @@ def build_sources(cmd):
                'PETSc/*.pyx',
                'PETSc/*.pxi']
     depends.extend(pdepends)
-    print(depends)
     includes = ['include']
     destdir_h = os.path.join('include', 'petsc4py')
     run_cython(source, depends, includes,
