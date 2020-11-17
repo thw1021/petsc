@@ -2977,17 +2977,25 @@ static PetscErrorCode MatMultTransposeAdd_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec
 static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A,MatAssemblyType mode)
 {
   PetscErrorCode              ierr;
-  PetscSplitCSRDataStructure  *d_mat = NULL;
+  PetscSplitCSRDataStructure  *d_mat = NULL, h_mat;
+  PetscBool                   is_seq = PETSC_TRUE;
+  PetscInt                    nnz_state = A->nonzerostate;
+
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) {
     d_mat = ((Mat_SeqAIJCUSPARSE*)A->spptr)->deviceMat;
+  }
+  if (d_mat) {
+    cudaError_t err;
+    ierr = PetscInfo(A,"Assemble device matrix\n");CHKERRQ(ierr);
+    err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    is_seq = h_mat.seq;
   }
   ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr); // this does very little if assembled on GPU - call it?
   if (mode == MAT_FLUSH_ASSEMBLY || A->boundtocpu) PetscFunctionReturn(0);
   if (d_mat) {
     A->offloadmask = PETSC_OFFLOAD_GPU;
   }
-
   PetscFunctionReturn(0);
 }
 
