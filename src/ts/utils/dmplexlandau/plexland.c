@@ -55,11 +55,18 @@ static PetscErrorCode LandauGPUDataDestroy(void *ptr)
    P4estVertexMaps *maps = (P4estVertexMaps *)ptr;
    PetscErrorCode  ierr;
    PetscFunctionBegin;
-   #if defined(PETSC_HAVE_CUDA)
-   ierr = LandauCUDADestroyDataMaps(maps);CHKERRQ(ierr);
-   #endif
-   #if defined(PETSC_HAVE_KOKKOS)
-   #endif
+   if (maps->deviceType != LANDAU_CPU) {
+     #if defined(PETSC_HAVE_KOKKOS)
+     if (maps->deviceType == LANDAU_KOKKOS) {
+       ierr = LandauKokkosDestroyMatMaps(maps);CHKERRQ(ierr); // imples Kokkos does
+     } // else could be CUDA
+     #endif
+     #if defined(PETSC_HAVE_CUDA)
+     if (maps->deviceType == LANDAU_CUDA){
+       ierr = LandauCUDADestroyMatMaps(maps);CHKERRQ(ierr);
+     } else SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->deviceType %D ?????",maps->deviceType);
+     #endif
+   }
    ierr = PetscFree(maps->c_maps);CHKERRQ(ierr);
    ierr = PetscFree(maps->gIdx);CHKERRQ(ierr);
    ierr = PetscFree(maps);CHKERRQ(ierr);
@@ -367,9 +374,9 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
               //PetscPrintf(PETSC_COMM_SELF,"Normal I %D\n",idx);
             } else {
               idx = -idx - 1;
-              nr = maps->Q;
+              nr = maps->num_face;
               //PetscPrintf(PETSC_COMM_SELF,"\t C(%D): rows: ",idx);
-              for (q = 0; q < maps->Q; q++) {
+              for (q = 0; q < maps->num_face; q++) {
                 rows0[q]     = maps->c_maps[idx][q].gid;
                 row_scale[q] = maps->c_maps[idx][q].scale;
                 //PetscPrintf(PETSC_COMM_SELF," %D ",rows0[q]);
@@ -385,9 +392,9 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
                 //PetscPrintf(PETSC_COMM_SELF,"\tNormal J %D\n",idx);
               } else {
                 idx = -idx - 1;
-                nc = maps->Q;
+                nc = maps->num_face;
                 //PetscPrintf(PETSC_COMM_SELF,"\t C(%D): cols: ",idx);
-                for (q = 0; q < maps->Q; q++) {
+                for (q = 0; q < maps->num_face; q++) {
                   cols0[q]     = maps->c_maps[idx][q].gid;
                   col_scale[q] = maps->c_maps[idx][q].scale;
                   //PetscPrintf(PETSC_COMM_SELF," %D ",cols0[q]);
@@ -408,7 +415,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
               // if (nr==2 && nc==1) PetscPrintf(PETSC_COMM_SELF,"\t%D) f=%D: (%D,%D) MatSetValues: row[%D]=%D,%D, col[%D]=%D, val=%g\n",ej,fieldA,f,g,nr,rows[0],rows[1],nc,cols[0],-vals[0]);
               // if (nr==2 && nc==2) PetscPrintf(PETSC_COMM_SELF,"\t%D) f=%D: (%D,%D) MatSetValues: row[%D]=%D,%D, col[%D]=%D,%D, val=%g\n",ej,fieldA,f,g,nr,rows[0],rows[1],nc,cols[0],cols[1],-vals[0]);
               // if (nr==1 && nc==2) PetscPrintf(PETSC_COMM_SELF,"\t%D) f=%D: (%D,%D) MatSetValues: row[%D]=%D, col[%D]=%D,%D, val=%g\n",ej,fieldA,f,g,nr,rows[0],nc,cols[0],cols[1],-vals[0]);
-
               ierr = MatSetValues(JacP,nr,rows,nc,cols,vals,ADD_VALUES);CHKERRQ(ierr);
             }
           }
@@ -434,11 +440,12 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   ierr = MatScale(JacP, -1.0);CHKERRQ(ierr); /* The code reflect the papers: du/dt = C, whereas PETSc use the form G(u) = du/dt - C(u) = 0 */
   ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
   ierr = MatViewFromOptions(JacP,NULL,"-landau_mat_view");CHKERRQ(ierr);
-#define MAP_BF_SIZE (LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*1024)
+#define MAP_BF_SIZE (128*LANDAU_DIM*LANDAU_MAX_Q_FACE*LANDAU_MAX_SPECIES)
   if (ctx->gpu_assembly && !container) {
     PetscScalar             elemMatrix[LANDAU_MAX_NQ*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_MAX_SPECIES], *elMat;
-    pointInterpolationP4est pointMaps[MAP_BF_SIZE][LANDAU_MAX_Q];
+    pointInterpolationP4est pointMaps[MAP_BF_SIZE][LANDAU_MAX_Q_FACE];
     PetscInt                q,eidx,fieldA;
+    ierr = PetscLogEventBegin(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscMalloc(sizeof(P4estVertexMaps), &maps);CHKERRQ(ierr);
     ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
     ierr = PetscContainerSetPointer(container, (void *)maps);CHKERRQ(ierr);
@@ -446,10 +453,12 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     ierr = PetscObjectCompose((PetscObject) JacP, "assembly_maps", (PetscObject) container);CHKERRQ(ierr);
     ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
     // make maps
-    maps->d_self = NULL;
+    maps->data = NULL;
     maps->num_elements = numCells;
-    maps->Q = (PetscInt)pow(Nq,1./((double)dim));
+    maps->num_face = (PetscInt)pow(Nq,1./((double)dim)); // Q
+    maps->num_face = (PetscInt)pow(maps->num_face,(double)(dim-1)); // Q^2
     maps->num_reduced = 0;
+    maps->deviceType = ctx->deviceType;
     // count reduced and get
     ierr = PetscMalloc(maps->num_elements * sizeof *maps->gIdx, &maps->gIdx);CHKERRQ(ierr);
     for (fieldA=0;fieldA<Nf;fieldA++) {
@@ -466,31 +475,38 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
               if ( PetscAbsReal(elMat[f*numindices + f] - 1.) < 1.e-12) {
                 maps->gIdx[eidx][fieldA][q] = (int)indices[f]; // normal vertex 1.0
                 //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t f=%D e=%D q=%D Found normal gid=%D %d\n",fieldA,eidx,q,indices[f],maps->gIdx[fieldA][eidx][q]);CHKERRQ(ierr);
-              } else {
-                //found a constraint
-                int jj = 0; const int ff = f;
+              } else { //found a constraint
+                int jj = 0;
+                const PetscInt ff = f;
                 maps->gIdx[eidx][fieldA][q] = -maps->num_reduced - 1; // gid = -(idx+1): idx = -gid - 1
                 tmp = 0;
-                do {
+                do {  // constraints are continous in Plex - exploit that here
                   int ii;
-                  pointMaps[maps->num_reduced][jj].gid = indices[f];
                   //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t\t %D.%D) C:%D) id=%D\n",eidx,q,jj,indices[f]);CHKERRQ(ierr);
-                  for (ii = 0, pointMaps[maps->num_reduced][jj].scale = 0; ii < maps->Q; ii++) { // DMPlex puts them all together
-                    pointMaps[maps->num_reduced][jj].scale += elMat[f*numindices + ff + ii];
-                    //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t\t I[%d,%d] += %g\n",f,ff + ii,elMat[f*numindices + ff + ii]);CHKERRQ(ierr);
+                  for (ii = 0, pointMaps[maps->num_reduced][jj].scale = 0; ii < maps->num_face; ii++) { // DMPlex puts them all together
+                    if (ff + ii < numindices) {
+                      pointMaps[maps->num_reduced][jj].scale += elMat[f*numindices + ff + ii];
+                      //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t\t I[%d,%d] += %g\n",f,ff + ii,elMat[f*numindices + ff + ii]);CHKERRQ(ierr);
+                    }
                   }
                   tmp += pointMaps[maps->num_reduced][jj].scale;
+                  if (pointMaps[maps->num_reduced][jj].scale == 0) pointMaps[maps->num_reduced][jj].gid = -1; // 3D has Q and Q^2 interps -- all contiguous???
+                  else                                             pointMaps[maps->num_reduced][jj].gid = indices[f];
                   //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t I[%d] = %g\n",jj,pointMaps[maps->num_reduced][jj].scale);CHKERRQ(ierr);
-                } while (++f && ++jj < maps->Q);
+                } while (++jj < maps->num_face && ++f < numindices); // jj is incremented if we hit the end
+                while (jj++ < maps->num_face) {
+                  pointMaps[maps->num_reduced][jj].scale = 0;
+                  pointMaps[maps->num_reduced][jj].gid = -1;
+                }
                 maps->num_reduced++;
                 if (maps->num_reduced>MAP_BF_SIZE) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->num_reduced %d > %d",maps->num_reduced,MAP_BF_SIZE);
                 if (fabs(tmp-1.0)>1.e-5) { // debug
                   int d,f;
-                  PetscPrintf(PETSC_COMM_SELF,"\t\t%D.%D) ERROR total I = %17.14e\n",tmp);
+                  PetscPrintf(PETSC_COMM_SELF,"\t\t%D.%D.%D) ERROR total I = %7.2e (LANDAU_MAX_Q_FACE=%d, #face=%D)\n",eidx,q,fieldA,tmp,LANDAU_MAX_Q_FACE,maps->num_face);
                   for (d = 0, tmp = 0; d < numindices; ++d){
                     ierr = PetscPrintf(PETSC_COMM_SELF,"%3D) %3D: ",d,indices[d]);CHKERRQ(ierr);
                     for (f = 0; f < numindices; ++f) {
-                      ierr = PetscPrintf(PETSC_COMM_SELF," %12.5e",  PetscRealPart(elMat[d*numindices + f]));CHKERRQ(ierr);
+                      ierr = PetscPrintf(PETSC_COMM_SELF," %8.2e",  PetscRealPart(elMat[d*numindices + f]));CHKERRQ(ierr);
                       tmp += PetscRealPart(elMat[d*numindices + f]);
                     }
                     ierr = PetscPrintf(PETSC_COMM_SELF," | %g\n",tmp);CHKERRQ(ierr);
@@ -502,7 +518,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
             }
           }
           // debug
-          //ierr = PetscPrintf(PETSC_COMM_SELF,"basis matrix %D.%D) numindices=%D Nq=%D totDim=%D Nf=%D. Q=%D max num index = %D, Num reduced=%D\n",eidx,q,numindices,Nq,totDim,Nf,maps->Q,maxni,maps->num_reduced);CHKERRQ(ierr);
+          //ierr = PetscPrintf(PETSC_COMM_SELF,"basis matrix %D.%D) numindices=%D Nq=%D totDim=%D Nf=%D. Q=%D max num index = %D, Num reduced=%D\n",eidx,q,numindices,Nq,totDim,Nf,maps->num_face,maxni,maps->num_reduced);CHKERRQ(ierr);
           for (d = 0; d < -numindices; ++d){
             ierr = PetscPrintf(PETSC_COMM_SELF,"\t%3D) %3D: ",d,indices[d]);CHKERRQ(ierr);
             for (f = 0, tmp = 0; f < numindices; ++f) {
@@ -517,11 +533,24 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         }
       }
     }
-    // allocate and copy point datamaps->gIdx[eidx][q]
-    ierr = PetscMalloc1(maps->num_reduced*LANDAU_MAX_Q, (pointInterpolationP4est**)&maps->c_maps);CHKERRQ(ierr);
+    #if defined(PETSC_HAVE_KOKKOS)
+    if (ctx->deviceType == LANDAU_KOKKOS) {
+      ierr = LandauKokkosCreateMatMaps(maps, pointMaps);CHKERRQ(ierr); // imples Kokkos does
+      goto maps_done;
+    } // else could be CUDA
+    #endif
+    #if defined(PETSC_HAVE_CUDA)
+    if (ctx->deviceType == LANDAU_CUDA){
+      ierr = LandauCUDACreateMatMaps(maps, pointMaps);CHKERRQ(ierr);
+      goto maps_done;
+    } else SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->deviceType %D ?????",ctx->deviceType);
+    #endif
+    // allocate and copy point datamaps->gIdx[eidx][field][q]
+    ierr = PetscMalloc(maps->num_reduced * sizeof *maps->c_maps, &maps->c_maps);CHKERRQ(ierr);
+    // ierr = PetscPrintf(PETSC_COMM_SELF,"================= c_maps size %D --> %D (%g)\n",MAP_BF_SIZE,maps->num_reduced,(float)MAP_BF_SIZE/(float)(maps->num_reduced+1));CHKERRQ(ierr);
     for (ej = 0; ej < maps->num_reduced; ++ej) {
       //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\tconstrant %3D) ",ej);
-      for (q = 0; q < maps->Q; ++q) {
+      for (q = 0; q < maps->num_face; ++q) {
         maps->c_maps[ej][q].scale = pointMaps[ej][q].scale;
         maps->c_maps[ej][q].gid = pointMaps[ej][q].gid;
         //ierr = PetscPrintf(PETSC_COMM_SELF,"\t %3D - %13.5e ; ",maps->maps[ej][q].gid,maps->maps[ej][q].scale = pointMaps[ej][q].scale);CHKERRQ(ierr);
@@ -542,11 +571,14 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     // }
     // for ( eidx = 0 ; eidx < maps->num_reduced; ++eidx ) {
     //   ierr = PetscPrintf(PETSC_COMM_SELF,"%D: ",eidx+1);
-    //   for (q = 0; q < maps->Q; ++q) {
+    //   for (q = 0; q < maps->num_face; ++q) {
     //     ierr = PetscPrintf(PETSC_COMM_SELF," %3D , %g ",maps->c_maps[eidx][q].gid,maps->c_maps[eidx][q].scale);CHKERRQ(ierr);
     //   }
     //   ierr = PetscPrintf(PETSC_COMM_SELF,"\n");
     // }
+    maps_done:
+
+    ierr = PetscLogEventEnd(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
   }
   /* clean up */
   ierr = PetscFree2(elemMat,invJ_a);CHKERRQ(ierr);
@@ -1159,7 +1191,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->normJ = 0;
   ctx->verbose = 1;
   ctx->interpolate = PETSC_TRUE;
-  ctx->gpu_assembly = PETSC_TRUE;
+  ctx->gpu_assembly = PETSC_FALSE;
   ctx->sphere = PETSC_FALSE;
   ctx->inflate = PETSC_FALSE;
   ctx->electronShift = 0;
@@ -1203,7 +1235,6 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ctx->deviceType = LANDAU_CPU;
     ierr = PetscStrcpy(opstring,"cpu");CHKERRQ(ierr);
     ctx->subThreadBlockSize = 0;
-    ctx->gpu_assembly = PETSC_FALSE; // need to put in !Cuda
 #endif
     ierr = PetscOptionsString("-dm_landau_device_type","Use kernels on 'cpu', 'cuda', or 'kokkos'","plexland.c",opstring,opstring,256,NULL);CHKERRQ(ierr);
     ierr = PetscStrcmp("cpu",opstring,&flg);CHKERRQ(ierr);
@@ -1327,7 +1358,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ierr = PetscLogEventRegister(" Jac-assemble", DM_CLASSID, &ctx->events[6]);CHKERRQ(ierr); /* 6 */
     ierr = PetscLogEventRegister(" Jac-end", DM_CLASSID, &ctx->events[7]);CHKERRQ(ierr); /* 7 */
     ierr = PetscLogEventRegister("  Jac-geo-color", DM_CLASSID, &ctx->events[8]);CHKERRQ(ierr); /* 8 */
-    ierr = PetscLogEventRegister("  Jac-cuda-sum", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
+    ierr = PetscLogEventRegister(" Jac-gpu-setup", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
     ierr = PetscLogEventRegister("Landau Jacobian", DM_CLASSID, &ctx->events[9]);CHKERRQ(ierr); /* 9 */
     if (rank) { /* turn off output stuff for duplicate runs - do we need to add the prefix to all this? */
       ierr = PetscOptionsClearValue(NULL,"-snes_converged_reason");CHKERRQ(ierr);
