@@ -364,7 +364,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         // assemble like on a GPUs
         /* assemble - from the diagonal (I,I) in this format for DMPlexMatSetClosure */
         for (fieldA = 0; fieldA < Nf ; fieldA++) {
-          const PetscInt *Idxs = &maps->gIdx[ej-cStart][fieldA][0];
+          const PetscInt *const Idxs = maps->gIdx[ej-cStart][fieldA];
           for (f = 0; f < Nb ; f++) {
             idx = Idxs[f];
             if (idx >= 0) {
@@ -576,8 +576,9 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     //   }
     //   ierr = PetscPrintf(PETSC_COMM_SELF,"\n");
     // }
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_KOKKOS)
     maps_done:
-
+#endif
     ierr = PetscLogEventEnd(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
   }
   /* clean up */
