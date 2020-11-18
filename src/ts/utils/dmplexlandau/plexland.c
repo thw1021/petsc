@@ -462,7 +462,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     // count reduced and get
     ierr = PetscMalloc(maps->num_elements * sizeof *maps->gIdx, &maps->gIdx);CHKERRQ(ierr);
     for (fieldA=0;fieldA<Nf;fieldA++) {
-      for (ej = cStart, eidx = 0 ; ej < cEnd; ++ej, ++eidx ) {
+      for (ej = cStart, eidx = 0 ; ej < cEnd; ++ej, ++eidx) {
         for (q = 0; q < Nb; ++q) {
           PetscInt    numindices,*indices;
           PetscScalar *valuesOrig = elMat = elemMatrix, tmp;
@@ -470,9 +470,9 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
           elMat[ (fieldA*Nb + q)*totDim + fieldA*Nb + q] = 1;
           ierr = DMPlexGetClosureIndices(plex, section, globsection, ej, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);
           for (f = 0 ; f < numindices ; ++f) { // look for a non-zero on the diagonal
-            if ( PetscAbsReal(elMat[f*numindices + f]) > 1.e-12) {
+            if (PetscAbsReal(elMat[f*numindices + f]) > 1.e-12) {
               // found it
-              if ( PetscAbsReal(elMat[f*numindices + f] - 1.) < 1.e-12) {
+              if (PetscAbsReal(elMat[f*numindices + f] - 1.) < 1.e-12) {
                 maps->gIdx[eidx][fieldA][q] = (int)indices[f]; // normal vertex 1.0
                 //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t f=%D e=%D q=%D Found normal gid=%D %d\n",fieldA,eidx,q,indices[f],maps->gIdx[fieldA][eidx][q]);CHKERRQ(ierr);
               } else { //found a constraint
@@ -560,7 +560,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     // debug
     // for (fieldA=0;fieldA<Nf;fieldA++) {
     //   PetscPrintf(PETSC_COMM_SELF,"field %D:\n",fieldA);
-    //   for (eidx = 0 ; eidx < cEnd-cStart; ++eidx ) {
+    //   for (eidx = 0 ; eidx < cEnd-cStart; ++eidx) {
     //     PetscPrintf(PETSC_COMM_SELF,"\t elem %D: ",eidx);
     //     for (q = 0; q < Nq; ++q) {
     //       ierr = PetscPrintf(PETSC_COMM_SELF," %3d ",maps->gIdx[eidx][fieldA][q]);CHKERRQ(ierr);
@@ -569,7 +569,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     //   }
     //   ierr = PetscPrintf(PETSC_COMM_SELF,"\n");
     // }
-    // for ( eidx = 0 ; eidx < maps->num_reduced; ++eidx ) {
+    // for (eidx = 0 ; eidx < maps->num_reduced; ++eidx) {
     //   ierr = PetscPrintf(PETSC_COMM_SELF,"%D: ",eidx+1);
     //   for (q = 0; q < maps->num_face; ++q) {
     //     ierr = PetscPrintf(PETSC_COMM_SELF," %3D , %g ",maps->c_maps[eidx][q].gid,maps->c_maps[eidx][q].scale);CHKERRQ(ierr);
