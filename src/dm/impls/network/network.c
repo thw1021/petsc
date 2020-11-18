@@ -1511,7 +1511,7 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   DMNetworkComponentGenericDataType *componentdataarray;
 
   PetscFunctionBegin;
-#if 1
+#if 0
   PetscMPIInt rank,size;
   MPI_Comm    comm;
   PetscInt    nsv;
@@ -1659,7 +1659,6 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
       ierr = PetscMemcpy(componentdataarray+offset,cvalue->data[i],header->size[i]*sizeof(DMNetworkComponentGenericDataType));CHKERRQ(ierr);
     }
   }
-  ierr = MPI_Barrier(comm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
