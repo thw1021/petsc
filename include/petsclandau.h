@@ -109,15 +109,16 @@ typedef struct {
   PetscInt       subThreadBlockSize;
 } LandauCtx;
 
+typedef int LandauIdx;
 typedef struct {
   PetscReal scale;
-  int       gid;   // Lanadu matrix index (<10,000)
+  LandauIdx gid;   // Lanadu matrix index (<10,000)
 } pointInterpolationP4est;
 typedef struct _lP4estVertexMaps {
-  int                     (*gIdx)[LANDAU_MAX_SPECIES][LANDAU_MAX_NQ]; // #elems *  LANDAU_MAX_NQ (spoof for max , Nb) on device,
-  int                      num_elements;
-  int                      num_reduced;
-  int                      num_face;  // (Q or Q^2 for 3D)
+  LandauIdx                (*gIdx)[LANDAU_MAX_SPECIES][LANDAU_MAX_NQ]; // #elems *  LANDAU_MAX_NQ (spoof for max , Nb) on device,
+  LandauIdx                num_elements;
+  LandauIdx                num_reduced;
+  LandauIdx                num_face;  // (Q or Q^2 for 3D)
   LandauDeviceType         deviceType;
   void                    *data;
   pointInterpolationP4est (*c_maps)[LANDAU_MAX_Q_FACE];
@@ -141,8 +142,7 @@ PETSC_EXTERN PetscErrorCode LandauFormJacobian_Internal(Vec, Mat, const PetscInt
 PETSC_EXTERN int LandauGetIPDataSize(const LandauIPData *const);
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode LandauCUDAJacobian(DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
-  const LandauIPData *const, const PetscReal [],const PetscInt, const PetscLogEvent[], Mat,
-  P4estVertexMaps *, PetscSplitCSRDataStructure *);
+  const LandauIPData *const, const PetscReal [],const PetscInt, const PetscLogEvent[], Mat);
 PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE]);
 PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *);
 
