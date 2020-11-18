@@ -111,16 +111,20 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   Vec               locX;
   LandauIPData      IPData;
   PetscContainer    container;
-  P4estVertexMaps   *maps;
+  P4estVertexMaps   *maps=NULL;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(a_X,VEC_CLASSID,1);
   PetscValidHeaderSpecific(JacP,MAT_CLASSID,2);
   PetscValidPointer(ctx,4);
   ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
+
+  /* check for matrix container for GPU assembly */
   ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
-  if (container) {
+  if (container /* && ctx->deviceType != LANDAU_CPU */) {
+    if (!ctx->gpu_assembly) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"GPU matrix container but no GPU assembly");
     ierr = PetscContainerGetPointer(container, (void **) &maps);CHKERRQ(ierr);
+    if (!maps) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"empty GPU matrix container");
   }
   ierr = DMConvert(ctx->dmv, DMPLEX, &plex);CHKERRQ(ierr);
   ierr = DMCreateLocalVector(plex, &locX);CHKERRQ(ierr);
@@ -358,13 +362,14 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
       /* assemble matrix */
       ierr = PetscLogEventBegin(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
-      if (ctx->gpu_assembly && container) {
+      if (!maps) {
+        ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
+      } else {  // GPU like assembly for debugging
         PetscInt      fieldA,idx,q,f,g,d,nr,nc,rows0[LANDAU_MAX_Q],cols0[LANDAU_MAX_Q],rows[LANDAU_MAX_Q],cols[LANDAU_MAX_Q];
         PetscScalar   vals[LANDAU_MAX_Q*LANDAU_MAX_Q],row_scale[LANDAU_MAX_Q],col_scale[LANDAU_MAX_Q];
-        // assemble like on a GPUs
         /* assemble - from the diagonal (I,I) in this format for DMPlexMatSetClosure */
         for (fieldA = 0; fieldA < Nf ; fieldA++) {
-          const PetscInt *const Idxs = maps->gIdx[ej-cStart][fieldA];
+          LandauIdx *const Idxs = &maps->gIdx[ej-cStart][fieldA][0];
           for (f = 0; f < Nb ; f++) {
             idx = Idxs[f];
             if (idx >= 0) {
@@ -411,16 +416,10 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
                   vals[q*nc + d] = row_scale[q]*col_scale[d]*Aij;
                 }
               }
-              // if (nr==1 && nc==1) PetscPrintf(PETSC_COMM_SELF,"\t%D) f=%D: (%D,%D) MatSetValues: row[%D]=%D, col[%D]=%D, val=%g\n",ej,fieldA,f,g,nr,rows[0],nc,cols[0],-vals[0]);
-              // if (nr==2 && nc==1) PetscPrintf(PETSC_COMM_SELF,"\t%D) f=%D: (%D,%D) MatSetValues: row[%D]=%D,%D, col[%D]=%D, val=%g\n",ej,fieldA,f,g,nr,rows[0],rows[1],nc,cols[0],-vals[0]);
-              // if (nr==2 && nc==2) PetscPrintf(PETSC_COMM_SELF,"\t%D) f=%D: (%D,%D) MatSetValues: row[%D]=%D,%D, col[%D]=%D,%D, val=%g\n",ej,fieldA,f,g,nr,rows[0],rows[1],nc,cols[0],cols[1],-vals[0]);
-              // if (nr==1 && nc==2) PetscPrintf(PETSC_COMM_SELF,"\t%D) f=%D: (%D,%D) MatSetValues: row[%D]=%D, col[%D]=%D,%D, val=%g\n",ej,fieldA,f,g,nr,rows[0],nc,cols[0],cols[1],-vals[0]);
               ierr = MatSetValues(JacP,nr,rows,nc,cols,vals,ADD_VALUES);CHKERRQ(ierr);
             }
           }
         }
-      } else {
-        ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
       }
       if (ej==-1) {
         PetscErrorCode    ierr2;
@@ -445,6 +444,8 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     PetscScalar             elemMatrix[LANDAU_MAX_NQ*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_MAX_SPECIES], *elMat;
     pointInterpolationP4est pointMaps[MAP_BF_SIZE][LANDAU_MAX_Q_FACE];
     PetscInt                q,eidx,fieldA;
+    MatType                 type;
+    ierr = MatGetType(JacP,&type);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscMalloc(sizeof(P4estVertexMaps), &maps);CHKERRQ(ierr);
     ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
@@ -473,7 +474,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
             if (PetscAbsReal(elMat[f*numindices + f]) > 1.e-12) {
               // found it
               if (PetscAbsReal(elMat[f*numindices + f] - 1.) < 1.e-12) {
-                maps->gIdx[eidx][fieldA][q] = (int)indices[f]; // normal vertex 1.0
+                maps->gIdx[eidx][fieldA][q] = (LandauIdx)indices[f]; // normal vertex 1.0
                 //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t f=%D e=%D q=%D Found normal gid=%D %d\n",fieldA,eidx,q,indices[f],maps->gIdx[fieldA][eidx][q]);CHKERRQ(ierr);
               } else { //found a constraint
                 int jj = 0;
@@ -533,19 +534,25 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         }
       }
     }
-    #if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS)
     if (ctx->deviceType == LANDAU_KOKKOS) {
+      PetscBool flg;
+      ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr);
+      if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Kokkos but no Kokkos matrix (%s) use -mat_type aijkokkos -vec_type kokkos",type);
       ierr = LandauKokkosCreateMatMaps(maps, pointMaps);CHKERRQ(ierr); // imples Kokkos does
       goto maps_done;
     } // else could be CUDA
-    #endif
-    #if defined(PETSC_HAVE_CUDA)
+#endif
+#if defined(PETSC_HAVE_CUDA)
     if (ctx->deviceType == LANDAU_CUDA){
+      PetscBool flg;
+      ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr);
+      if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Cuda but no Cuda matrix (%s) use -mat_type aijcusparse -vec_type cuda",type);
       ierr = LandauCUDACreateMatMaps(maps, pointMaps);CHKERRQ(ierr);
       goto maps_done;
-    } else SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->deviceType %D ?????",ctx->deviceType);
-    #endif
-    // allocate and copy point datamaps->gIdx[eidx][field][q]
+    }
+#endif
+    // allocate and copy point datamaps->gIdx[eidx][field][q] -- for CPU version of this code, for debugging
     ierr = PetscMalloc(maps->num_reduced * sizeof *maps->c_maps, &maps->c_maps);CHKERRQ(ierr);
     // ierr = PetscPrintf(PETSC_COMM_SELF,"================= c_maps size %D --> %D (%g)\n",MAP_BF_SIZE,maps->num_reduced,(float)MAP_BF_SIZE/(float)(maps->num_reduced+1));CHKERRQ(ierr);
     for (ej = 0; ej < maps->num_reduced; ++ej) {
@@ -1356,8 +1363,8 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ierr = PetscLogEventRegister(" Jac-kernel-post", DM_CLASSID, &ctx->events[5]);CHKERRQ(ierr); /* 5 */
     ierr = PetscLogEventRegister(" Jac-assemble", DM_CLASSID, &ctx->events[6]);CHKERRQ(ierr); /* 6 */
     ierr = PetscLogEventRegister(" Jac-end", DM_CLASSID, &ctx->events[7]);CHKERRQ(ierr); /* 7 */
-    ierr = PetscLogEventRegister("  Jac-geo-color", DM_CLASSID, &ctx->events[8]);CHKERRQ(ierr); /* 8 */
-    ierr = PetscLogEventRegister(" Jac-gpu-setup", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
+    ierr = PetscLogEventRegister(" Jac-geo-color", DM_CLASSID, &ctx->events[8]);CHKERRQ(ierr); /* 8 */
+    ierr = PetscLogEventRegister(" Jac asmbl setup", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
     ierr = PetscLogEventRegister("Landau Jacobian", DM_CLASSID, &ctx->events[9]);CHKERRQ(ierr); /* 9 */
     if (rank) { /* turn off output stuff for duplicate runs - do we need to add the prefix to all this? */
       ierr = PetscOptionsClearValue(NULL,"-snes_converged_reason");CHKERRQ(ierr);
