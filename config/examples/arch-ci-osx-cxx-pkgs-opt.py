@@ -33,7 +33,6 @@ configure_options = [
   '--download-parms=1',
   '--download-hdf5=1',
   '--download-med=1',
-  '--download-sundials=1',
   '--download-hypre=1',
   '--download-amrex=1',
   '--download-cmake=1',

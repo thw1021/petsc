@@ -93,9 +93,6 @@ Earlier contributors to PETSc include:
    and
    ``SNESPATCH``;
 
--  Liyang Xu - the interface to PVODE, now SUNDIALS/CVODE
-   (``TSSUNDIALS``).
-
 PETSc source code contains modified routines from the following public
 domain software packages:
 
@@ -160,9 +157,6 @@ PETSc interfaces to the following external software:
 -  | SuiteSparse - sequential sparse solvers, see page , developed by
      Timothy A. Davis;
    | http://faculty.cse.tamu.edu/davis/suitesparse.html
-
--  | SUNDIALS/CVODE - see page , parallel ODE integrator;
-   | https://computation.llnl.gov/projects/sundials
 
 -  | SuperLU and SuperLU_Dist - see page , the efficient sparse LU codes
      developed by Jim Demmel, Xiaoye S. Li, and John Gilbert;

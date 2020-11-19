@@ -23,7 +23,6 @@ configure_options = [
   '--download-elemental=1',
   '--download-hdf5',
   '--with-zlib=1',
-  '--download-sundials=1',
   '--download-hypre=1',
   '--download-suitesparse=1',
   '--download-make=1', # required by suitesparse

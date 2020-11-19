@@ -18,7 +18,6 @@ PetscBool         TSRegisterAllCalled = PETSC_FALSE;
    Notes:
    See "petsc/include/petscts.h" for available methods (for instance)
 +  TSEULER - Euler
-.  TSSUNDIALS - SUNDIALS interface
 .  TSBEULER - Backward Euler
 -  TSPSEUDO - Pseudo-timestepping
 

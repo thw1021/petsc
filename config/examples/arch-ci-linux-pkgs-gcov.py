@@ -35,7 +35,6 @@ configure_options = [
   '--download-party',
   '--download-yaml',
   '--download-ml',
-  '--download-sundials',
   '--download-p4est=1',
   '--download-eigen',
   '--download-pragmatic',

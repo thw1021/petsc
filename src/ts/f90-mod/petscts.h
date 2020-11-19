@@ -54,17 +54,6 @@
       PetscEnum, parameter :: TS_LINEAR    = 0
       PetscEnum, parameter :: TS_NONLINEAR = 1
 !
-!  TSSundialsType
-!
-      PetscEnum, parameter :: SUNDIALS_ADAMS = 1
-      PetscEnum, parameter :: SUNDIALS_BDF   = 2
-!
-!  TSSundialsGramSchmidtType
-!
-      PetscEnum, parameter :: SUNDIALS_MODIFIED_GS  = 1
-      PetscEnum, parameter :: SUNDIALS_CLASSICAL_GS = 2
-#define SUNDIALS_UNMODIFIED_GS SUNDIALS_CLASSICAL_GS
-!
 !  Some PETSc fortran functions that the user might pass as arguments
 !
       external TSCOMPUTERHSFUNCTIONLINEAR

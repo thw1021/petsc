@@ -16,16 +16,12 @@
 #define TSEquationType PetscEnum
 #define TSConvergedReason PetscEnum
 #define TSExactFinalTimeOption PetscEnum
-#define TSSundialsType PetscEnum
 #define TSProblemType PetscEnum
-#define TSSundialsGramSchmidtType PetscEnum
-#define TSSundialsLmmType PetscEnum
 
 #define TSEULER           'euler'
 #define TSBEULER          'beuler'
 #define TSPSEUDO          'pseudo'
 #define TSCN              'cn'
-#define TSSUNDIALS        'sundials'
 #define TSRK              'rk'
 #define TSPYTHON          'python'
 #define TSTHETA           'theta'

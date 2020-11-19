@@ -582,12 +582,6 @@ PetscErrorCode RHSFunctionHeat(TS ts,PetscReal t,Vec globalin,Vec globalout,void
       nsize: 3
       timeoutfactor: 3
 
-    test:
-      suffix: sundials
-      requires: sundials
-      args: -nox -ts_type sundials -ts_max_steps 5 -nonlinear
-      nsize: 4
-
 TEST*/
 
 
