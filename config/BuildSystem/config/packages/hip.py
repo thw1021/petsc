@@ -4,11 +4,23 @@ import os
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.minversion       = '2.0'
+
+    # Handle the platform issues
+    if 'HIP_PLATFORM' in os.environ:
+      self.platform = os.environ['HIP_PLATFORM']
+    elif hasattr(self,'systemNvcc'):
+    #elif hasattr(self.config.compile, 'CUDA'):
+      self.platform = 'nvcc'
+    else:
+      self.platform = 'hcc'
+
+    self.minversion       = '3.8'
     self.versionname      = 'HIP_VERSION'
     # Does not seem to include version
     #self.versioninclude  = 'hip/hip_runtime.h'
     #self.requiresversion = 2
+    plat_define='#define __HIP_PLATFORM_' + self.platform.upper() + '__'
+    #self.functionsCxx     = [1,plat_define, 'hipblasCreate']
     self.functionsCxx     = [1,'', 'hipblasCreate']
     # hipfft and hipsolver aren't available really (hipfft is close).
     #self.includes        = ['hipblas.h','hipfft.h','hipsparse.h','hipsolver.h']
@@ -24,15 +36,6 @@ class Configure(config.package.Package):
     self.complex          = 1
     self.hastests         = 0
     self.hastestsdatafiles= 0
-    # Handle the platform issues
-    if 'HIP_PLATFORM' in os.environ:
-      self.platform = os.environ['HIP_PLATFORM']
-    elif hasattr(self,'systemNvcc'):
-    #elif hasattr(self.config.compile, 'CUDA'):
-      self.platform = 'nvcc'
-    else:
-      self.platform = 'hcc'
-
     return
 
   def setupHelp(self, help):
@@ -88,7 +91,6 @@ class Configure(config.package.Package):
   def configureLibrary(self):
     self.libraries.pushLanguage('HIP')
     self.addDefine('HAVE_HIP','1')
-    # May need more checks/defines/work here
     if self.platform == 'nvcc':
         self.pushLanguage('CUDA')
         petscNvcc = self.getCompiler()
@@ -111,4 +113,9 @@ class Configure(config.package.Package):
     #self.checkHIPDoubleAlign()
     self.configureTypes()
     self.libraries.popLanguage()
+    # Cleanup -- if we don't do this then we get doubly defined errors
+    if self.platform == 'nvcc':
+        self.framework.delDefine('__HIP_PLATFORM_NVCC__')
+    else:
+        self.framework.delDefine('__HIP_PLATFORM_HCC__')
     return
