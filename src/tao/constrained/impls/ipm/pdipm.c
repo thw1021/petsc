@@ -785,18 +785,14 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
 */
 PetscErrorCode TaoView_PDIPM(Tao tao,PetscViewer viewer)
 {
-  TAO_PDIPM       *pdipm = (TAO_PDIPM *)tao->data;
-  PetscErrorCode  ierr;
+  TAO_PDIPM      *pdipm = (TAO_PDIPM *)tao->data;
+  PetscErrorCode ierr;
 
+  PetscFunctionBegin;
   tao->constrained = PETSC_TRUE;
   PetscViewerASCIIPushTab(viewer);
-  /* list below to TaoView_PDIPM()? */
-  /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] nce %d = ng %d + nxfixed %d\n",rank,pdipm->nce,pdipm->ng,pdipm->nxfixed); */
-  /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] nci %d = nh %d + nxlb %d + nxub %d + 2*nxbox %d\n",rank,pdipm->nci,pdipm->nh,pdipm->nxlb,pdipm->nxub,pdipm->nxbox); */
-  /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] n %d = nx %d + nce %d + 2*nci %d\n",rank,pdipm->n,pdipm->nx,pdipm->nce,pdipm->nci); */
-  ierr = PetscViewerASCIIPrintf(viewer,"Prime = %d, Dual = %d.\n",pdipm->Prime,pdipm->Dual);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"Number of prime = %d, Number of dual = %d.\n",pdipm->Nx+pdipm->Nci,pdipm->Nce + pdipm->Nci);CHKERRQ(ierr);
   PetscViewerASCIIPopTab(viewer);
-
   PetscFunctionReturn(0);
 }
 
@@ -866,12 +862,6 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
   /* Full size of the KKT system to be solved */
   pdipm->n = pdipm->nx + pdipm->nce + 2*pdipm->nci;
   pdipm->N = pdipm->Nx + pdipm->Nce + 2*pdipm->Nci;
-
-  /* Prime and Dual variables */
-  pdipm->prime = pdipm->nx  + pdipm->nci;
-  pdipm->dual  = pdipm->nce + pdipm->nci;
-  pdipm->Prime = pdipm->Nx  + pdipm->Nci;
-  pdipm->Dual  = pdipm->Nce + pdipm->Nci;
 
   /* (3) Offsets for subvectors */
   pdipm->off_lambdae = pdipm->nx;
