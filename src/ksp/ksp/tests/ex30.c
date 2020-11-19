@@ -253,8 +253,7 @@ int main(int argc,char **args)
     ierr   = KSPSetUpOnBlocks(ksp);CHKERRQ(ierr);
 
     /*
-     Tests "diagonal-scaling of preconditioned residual norm" as used
-     by many ODE integrator codes including SUNDIALS. Note this is different
+     Tests "diagonal-scaling of preconditioned residual norm" not this is different
      than diagonally scaling the matrix before computing the preconditioner
     */
     diagonalscale = PETSC_FALSE;

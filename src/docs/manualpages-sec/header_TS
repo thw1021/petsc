@@ -9,8 +9,7 @@
 The time-stepping (TS) component provides ODE and DAE integrators as well as
 pseudo-timestepping.  TS internally
 employs <A HREF="PETSC_DIRdocs/manualpages/SNES/index.html">SNES</A> to solve the nonlinear
-problems at each time step (except for the Sundials functions, which
-use nonlinear solvers within Sundials).
+problems at each time step.
 
 TS users can also set SNES options directly in application codes by first extracting the SNES context from the TS context via
 <A HREF="PETSC_DIRdocs/manualpages/TS/TSGetSNES.html">TSGetSNES()</A>

@@ -7,7 +7,6 @@ class TSType(object):
     BASICSYMPLECTIC = S_(TSBASICSYMPLECTIC)
     PSEUDO          = S_(TSPSEUDO)
     CN              = S_(TSCN)
-    SUNDIALS        = S_(TSSUNDIALS)
     RK              = S_(TSRK)
     PYTHON          = S_(TSPYTHON)
     THETA           = S_(TSTHETA)

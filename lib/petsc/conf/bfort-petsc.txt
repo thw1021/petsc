@@ -43,8 +43,6 @@ native SNESCompositeType
 native SNESFASType
 native TaoSubsetType
 native TSProblemType
-native TSSundialsLmmType
-native TSSundialsGramSchmidtType
 native NormType
 native PetscViewerVTKFieldType
 native PetscScalar

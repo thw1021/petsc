@@ -92,10 +92,6 @@ PETSC_EXTERN PetscErrorCode PCGetOptionsPrefix(PC,const char*[]);
 PETSC_EXTERN PetscErrorCode PCComputeOperator(PC,MatType,Mat*);
 PETSC_DEPRECATED_FUNCTION("Use PCComputeOperator() (since version 3.12)") PETSC_STATIC_INLINE PetscErrorCode PCComputeExplicitOperator(PC A,Mat* B) { return PCComputeOperator(A,NULL,B); }
 
-/*
-      These are used to provide extra scaling of preconditioned
-   operator for time-stepping schemes like in SUNDIALS
-*/
 PETSC_EXTERN PetscErrorCode PCGetDiagonalScale(PC,PetscBool *);
 PETSC_EXTERN PetscErrorCode PCDiagonalScaleLeft(PC,Vec,Vec);
 PETSC_EXTERN PetscErrorCode PCDiagonalScaleRight(PC,Vec,Vec);

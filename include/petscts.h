@@ -29,7 +29,6 @@ typedef const char* TSType;
 #define TSBASICSYMPLECTIC "basicsymplectic"
 #define TSPSEUDO          "pseudo"
 #define TSCN              "cn"
-#define TSSUNDIALS        "sundials"
 #define TSRK              "rk"
 #define TSPYTHON          "python"
 #define TSTHETA           "theta"
@@ -982,29 +981,6 @@ PETSC_EXTERN PetscErrorCode TSBasicSymplecticFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticRegisterDestroy(void);
 
 PETSC_EXTERN PetscErrorCode TSDiscGradSetFormulation(TS, PetscErrorCode(*)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode(*)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode(*)(TS, PetscReal, Vec, Vec, void *), void *);
-
-/*
-       PETSc interface to Sundials
-*/
-#ifdef PETSC_HAVE_SUNDIALS
-typedef enum { SUNDIALS_ADAMS=1,SUNDIALS_BDF=2} TSSundialsLmmType;
-PETSC_EXTERN const char *const TSSundialsLmmTypes[];
-typedef enum { SUNDIALS_MODIFIED_GS = 1,SUNDIALS_CLASSICAL_GS = 2 } TSSundialsGramSchmidtType;
-PETSC_EXTERN const char *const TSSundialsGramSchmidtTypes[];
-PETSC_EXTERN PetscErrorCode TSSundialsSetType(TS,TSSundialsLmmType);
-PETSC_EXTERN PetscErrorCode TSSundialsGetPC(TS,PC*);
-PETSC_EXTERN PetscErrorCode TSSundialsSetTolerance(TS,PetscReal,PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMinTimeStep(TS,PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMaxTimeStep(TS,PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsGetIterations(TS,PetscInt *,PetscInt *);
-PETSC_EXTERN PetscErrorCode TSSundialsSetGramSchmidtType(TS,TSSundialsGramSchmidtType);
-PETSC_EXTERN PetscErrorCode TSSundialsSetGMRESRestart(TS,PetscInt);
-PETSC_EXTERN PetscErrorCode TSSundialsSetLinearTolerance(TS,PetscReal);
-PETSC_EXTERN PetscErrorCode TSSundialsMonitorInternalSteps(TS,PetscBool);
-PETSC_EXTERN PetscErrorCode TSSundialsGetParameters(TS,PetscInt *,long*[],double*[]);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMaxl(TS,PetscInt);
-PETSC_EXTERN PetscErrorCode TSSundialsSetMaxord(TS,PetscInt);
-#endif
 
 PETSC_EXTERN PetscErrorCode TSThetaSetTheta(TS,PetscReal);
 PETSC_EXTERN PetscErrorCode TSThetaGetTheta(TS,PetscReal*);

@@ -150,7 +150,10 @@
       </ul>
       <h4>SNESLineSearch:</h4>
       <h4>TS:</h4>
-      <h4>TAO:</h4>
+     <ul>
+        <li>Remove the interface to the very old SUNDIALS from PETSc, if such functionality is needed we recommend using the PETSc support provided in the new releases of SUNDIALS.</li>
+     </ul>
+     <h4>TAO:</h4>
       <h4>DM/DA:</h4>
       <ul>
         <li>Change DMDACreatePatchIS() to collective operation and add an extra rgument to indicate whether off processor values will be returned.

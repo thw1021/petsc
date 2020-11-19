@@ -3,7 +3,6 @@
 PETSC_EXTERN PetscErrorCode TSCreate_Euler(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_BEuler(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_Pseudo(TS);
-PETSC_EXTERN PetscErrorCode TSCreate_Sundials(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_Radau5(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_CN(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS);
@@ -51,9 +50,6 @@ PetscErrorCode  TSRegisterAll(void)
   ierr = TSRegister(TSTHETA,          TSCreate_Theta);CHKERRQ(ierr);
   ierr = TSRegister(TSALPHA,          TSCreate_Alpha);CHKERRQ(ierr);
   ierr = TSRegister(TSALPHA2,         TSCreate_Alpha2);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_SUNDIALS)
-  ierr = TSRegister(TSSUNDIALS,       TSCreate_Sundials);CHKERRQ(ierr);
-#endif
 #if defined(PETSC_HAVE_RADAU5)
   ierr = TSRegister(TSRADAU5,         TSCreate_Radau5);CHKERRQ(ierr);
 #endif

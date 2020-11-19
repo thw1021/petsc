@@ -80,7 +80,7 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt,TSAdaptType default_ty
 .  ts - the TS context obtained from TSCreate()
 
    Options Database Keys:
-+  -ts_type <type> - TSEULER, TSBEULER, TSSUNDIALS, TSPSEUDO, TSCN, TSRK, TSTHETA, TSALPHA, TSGLLE, TSSSP, TSGLEE, TSBSYMP
++  -ts_type <type> - TSEULER, TSBEULER, TSPSEUDO, TSCN, TSRK, TSTHETA, TSALPHA, TSGLLE, TSSSP, TSGLEE, TSBSYMP
 .  -ts_save_trajectory - checkpoint the solution at each time-step
 .  -ts_max_time <time> - maximum time to compute to
 .  -ts_max_steps <steps> - maximum number of time-steps to take
@@ -2064,7 +2064,7 @@ PetscErrorCode  TSView(TS ts,PetscViewer viewer)
 {
   PetscErrorCode ierr;
   TSType         type;
-  PetscBool      iascii,isstring,isundials,isbinary,isdraw;
+  PetscBool      iascii,isstring,isbinary,isdraw;
   DMTS           sdm;
 #if defined(PETSC_HAVE_SAWS)
   PetscBool      issaws;
@@ -2194,7 +2194,6 @@ PetscErrorCode  TSView(TS ts,PetscViewer viewer)
   ierr = DMTSView(sdm,viewer);CHKERRQ(ierr);
 
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)ts,TSSUNDIALS,&isundials);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

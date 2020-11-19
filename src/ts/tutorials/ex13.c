@@ -9,7 +9,6 @@ static char help[] = "Time-dependent PDE in 2d. Simplified from ex7.c for illust
 
     mpiexec -n 2 ./ex13 -da_grid_x 40 -da_grid_y 40 -ts_max_steps 2 -snes_monitor -ksp_monitor
     mpiexec -n 1 ./ex13 -snes_fd_color -ts_monitor_draw_solution
-    mpiexec -n 2 ./ex13 -ts_type sundials -ts_monitor
 */
 
 #include <petscdm.h>

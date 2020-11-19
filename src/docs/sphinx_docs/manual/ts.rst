@@ -182,9 +182,8 @@ One can set the solution method with the routine
 
 | Currently supported types are ``TSEULER``, ``TSRK`` (Runge-Kutta),
   ``TSBEULER``, ``TSCN`` (Crank-Nicolson), ``TSTHETA``, ``TSGLLE``
-  (generalized linear), ``TSPSEUDO``, and ``TSSUNDIALS`` (only if the
-  Sundials package is installed), or the command line option
-| ``-ts_type euler,rk,beuler,cn,theta,gl,pseudo,sundials,eimex,arkimex,rosw``.
+  (generalized linear), and ``TSPSEUDO``, or the command line option
+| ``-ts_type euler,rk,beuler,cn,theta,gl,pseudo,eimex,arkimex,rosw``.
 
 A list of available methods is given in the following table.
 
@@ -1137,73 +1136,6 @@ are the
 and
 `The TS tutorial extchemfield <https://www.mcs.anl.gov/petsc/petsc-current/src/ts/tutorials/extchemfield.c.html>`__.
 
-.. _sec_sundials:
-
-Using Sundials from PETSc
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Sundials is a parallel ODE solver developed by Hindmarsh et al. at LLNL.
-The ``TS`` library provides an interface to use the CVODE component of
-Sundials directly from PETSc. (To configure PETSc to use Sundials, see
-the installation guide, ``docs/installation/index.htm``.)
-
-To use the Sundials integrators, call
-
-::
-
-   TSSetType(TS ts,TSType TSSUNDIALS);
-
-or use the command line option ``-ts_type`` ``sundials``.
-
-Sundials’ CVODE solver comes with two main integrator families, Adams
-and BDF (backward differentiation formula). One can select these with
-
-::
-
-   TSSundialsSetType(TS ts,TSSundialsLmmType [SUNDIALS_ADAMS,SUNDIALS_BDF]);
-
-or the command line option ``-ts_sundials_type <adams,bdf>``. BDF is the
-default.
-
-Sundials does not use the ``SNES`` library within PETSc for its
-nonlinear solvers, so one cannot change the nonlinear solver options via
-``SNES``. Rather, Sundials uses the preconditioners within the ``PC``
-package of PETSc, which can be accessed via
-
-::
-
-   TSSundialsGetPC(TS ts,PC *pc);
-
-The user can then directly set preconditioner options; alternatively,
-the usual runtime options can be employed via ``-pc_xxx``.
-
-Finally, one can set the Sundials tolerances via
-
-::
-
-   TSSundialsSetTolerance(TS ts,double abs,double rel);
-
-where ``abs`` denotes the absolute tolerance and ``rel`` the relative
-tolerance.
-
-Other PETSc-Sundials options include
-
-::
-
-   TSSundialsSetGramSchmidtType(TS ts,TSSundialsGramSchmidtType type);
-
-where ``type`` is either ``SUNDIALS_MODIFIED_GS`` or
-``SUNDIALS_UNMODIFIED_GS``. This may be set via the options data base
-with ``-ts_sundials_gramschmidt_type <modifed,unmodified>``.
-
-The routine
-
-::
-
-   TSSundialsSetMaxl(TS ts,PetscInt restart);
-
-sets the number of vectors in the Krylov subpspace used by GMRES. This
-may be set in the options database with ``-ts_sundials_maxl`` ``maxl``.
 
 .. [4]
    If the matrix :math:`F_{\dot{u}}(t) = \partial F
