@@ -271,6 +271,7 @@ PetscErrorCode  MatInitializePackage(void)
   ierr = PetscLogEventRegister("MatCUSPARSSolAnl",MAT_CLASSID,&MAT_CUSPARSESolveAnalysis);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatCUSPARSGenT",MAT_CLASSID,&MAT_CUSPARSEGenerateTranspose);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatVCLCopyTo",  MAT_CLASSID,&MAT_ViennaCLCopyToGPU);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("MatCUDACopyTo",MAT_CLASSID,&MAT_CUDACopyToGPU);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatDenseCopyTo",MAT_CLASSID,&MAT_DenseCopyToGPU);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatDenseCopyFrom",MAT_CLASSID,&MAT_DenseCopyFromGPU);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatSetValBatch",MAT_CLASSID,&MAT_SetValuesBatch);CHKERRQ(ierr);

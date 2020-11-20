@@ -5,6 +5,7 @@
 #include <../src/mat/impls/sell/seq/sell.h>  /*I   "petscmat.h"  I*/
 #include <petscblaslapack.h>
 #include <petsc/private/kernels/blocktranspose.h>
+
 #if defined(PETSC_HAVE_IMMINTRIN_H) && (defined(__AVX512F__) || (defined(__AVX2__) && defined(__FMA__)) || defined(__AVX__)) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES)
 
   #include <immintrin.h>
@@ -114,10 +115,10 @@ PetscErrorCode MatSeqSELLSetPreallocation_SeqSELL(Mat B,PetscInt maxallocrow,con
 
   b = (Mat_SeqSELL*)B->data;
 
-  totalslices = B->rmap->n/8+((B->rmap->n & 0x07)?1:0); /* ceil(n/8) */
+  totalslices = 1+(B->rmap->n-1)/SLICE_HEIGHT; /* ceil(n/slice_height) */
   b->totalslices = totalslices;
   if (!skipallocation) {
-    if (B->rmap->n & 0x07) {ierr = PetscInfo1(B,"Padding rows to the SEQSELL matrix because the number of rows is not the multiple of 8 (value %D)\n",B->rmap->n);CHKERRQ(ierr);}
+    if (B->rmap->n % SLICE_HEIGHT) {ierr = PetscInfo1(B,"Padding rows to the SEQSELL matrix because the number of rows is not the multiple of the slice height (value %D)\n",B->rmap->n);CHKERRQ(ierr);}
 
     if (!b->sliidx) { /* sliidx gives the starting index of each slice, the last element is the total space allocated */
       ierr = PetscMalloc1(totalslices+1,&b->sliidx);CHKERRQ(ierr);
@@ -126,23 +127,23 @@ PetscErrorCode MatSeqSELLSetPreallocation_SeqSELL(Mat B,PetscInt maxallocrow,con
     if (!rlen) { /* if rlen is not provided, allocate same space for all the slices */
       if (maxallocrow == PETSC_DEFAULT || maxallocrow == PETSC_DECIDE) maxallocrow = 10;
       else if (maxallocrow < 0) maxallocrow = 1;
-      for (i=0; i<=totalslices; i++) b->sliidx[i] = i*8*maxallocrow;
+      for (i=0; i<=totalslices; i++) b->sliidx[i] = SLICE_HEIGHT*i*maxallocrow;
     } else {
       maxallocrow = 0;
       b->sliidx[0] = 0;
       for (i=1; i<totalslices; i++) {
         b->sliidx[i] = 0;
-        for (j=0;j<8;j++) {
-          b->sliidx[i] = PetscMax(b->sliidx[i],rlen[8*(i-1)+j]);
+        for (j=0; j<SLICE_HEIGHT; j++) {
+          b->sliidx[i] = PetscMax(b->sliidx[i],rlen[SLICE_HEIGHT*(i-1)+j]);
         }
         maxallocrow = PetscMax(b->sliidx[i],maxallocrow);
-        ierr = PetscIntSumError(b->sliidx[i-1],8*b->sliidx[i],&b->sliidx[i]);CHKERRQ(ierr);
+        ierr = PetscIntSumError(b->sliidx[i-1],SLICE_HEIGHT*b->sliidx[i],&b->sliidx[i]);CHKERRQ(ierr);
       }
       /* last slice */
       b->sliidx[totalslices] = 0;
-      for (j=(totalslices-1)*8;j<B->rmap->n;j++) b->sliidx[totalslices] = PetscMax(b->sliidx[totalslices],rlen[j]);
+      for (j=SLICE_HEIGHT*(totalslices-1); j<B->rmap->n; j++) b->sliidx[totalslices] = PetscMax(b->sliidx[totalslices],rlen[j]);
       maxallocrow = PetscMax(b->sliidx[totalslices],maxallocrow);
-      b->sliidx[totalslices] = b->sliidx[totalslices-1] + 8*b->sliidx[totalslices];
+      b->sliidx[totalslices] = b->sliidx[totalslices-1] + SLICE_HEIGHT*b->sliidx[totalslices];
     }
 
     /* allocate space for val, colidx, rlen */
@@ -152,8 +153,8 @@ PetscErrorCode MatSeqSELLSetPreallocation_SeqSELL(Mat B,PetscInt maxallocrow,con
     ierr = PetscMalloc2(b->sliidx[totalslices],&b->val,b->sliidx[totalslices],&b->colidx);CHKERRQ(ierr);
     ierr = PetscLogObjectMemory((PetscObject)B,b->sliidx[totalslices]*(sizeof(PetscScalar)+sizeof(PetscInt)));CHKERRQ(ierr);
     /* b->rlen will count nonzeros in each row so far. We dont copy rlen to b->rlen because the matrix has not been set. */
-    ierr = PetscCalloc1(8*totalslices,&b->rlen);CHKERRQ(ierr);
-    ierr = PetscLogObjectMemory((PetscObject)B,8*totalslices*sizeof(PetscInt));CHKERRQ(ierr);
+    ierr = PetscCalloc1(SLICE_HEIGHT*totalslices,&b->rlen);CHKERRQ(ierr);
+    ierr = PetscLogObjectMemory((PetscObject)B,SLICE_HEIGHT*totalslices*sizeof(PetscInt));CHKERRQ(ierr);
 
     b->singlemalloc = PETSC_TRUE;
     b->free_val     = PETSC_TRUE;
@@ -182,7 +183,7 @@ PetscErrorCode MatGetRow_SeqSELL(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,
   PetscFunctionBegin;
   if (row < 0 || row >= A->rmap->n) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row %D out of range",row);
   if (nz) *nz = a->rlen[row];
-  shift = a->sliidx[row>>3]+(row&0x07);
+  shift = a->sliidx[row/SLICE_HEIGHT]+(row%SLICE_HEIGHT);
   if (!a->getrowcols) {
     PetscErrorCode ierr;
 
@@ -190,12 +191,12 @@ PetscErrorCode MatGetRow_SeqSELL(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,
   }
   if (idx) {
     PetscInt j;
-    for (j=0; j<a->rlen[row]; j++) a->getrowcols[j] = a->colidx[shift+8*j];
+    for (j=0; j<a->rlen[row]; j++) a->getrowcols[j] = a->colidx[shift+SLICE_HEIGHT*j];
     *idx = a->getrowcols;
   }
   if (v) {
     PetscInt j;
-    for (j=0; j<a->rlen[row]; j++) a->getrowvals[j] = a->val[shift+8*j];
+    for (j=0; j<a->rlen[row]; j++) a->getrowvals[j] = a->val[shift+SLICE_HEIGHT*j];
     *v = a->getrowvals;
   }
   PetscFunctionReturn(0);
@@ -319,7 +320,8 @@ PetscErrorCode MatMult_SeqSELL(Mat A,Vec xx,Vec yy)
   MatScalar         yval;
   PetscInt          r,rows_left,row,nnz_in_row;
 #else
-  PetscScalar       sum[8];
+  PetscInt          k;
+  PetscScalar       sum[SLICE_HEIGHT];
 #endif
 
 #if defined(PETSC_HAVE_PRAGMA_DISJOINT)
@@ -470,21 +472,14 @@ PetscErrorCode MatMult_SeqSELL(Mat A,Vec xx,Vec yy)
   }
 #else
   for (i=0; i<totalslices; i++) { /* loop over slices */
-    for (j=0; j<8; j++) sum[j] = 0.0;
-    for (j=a->sliidx[i]; j<a->sliidx[i+1]; j+=8) {
-      sum[0] += aval[j] * x[acolidx[j]];
-      sum[1] += aval[j+1] * x[acolidx[j+1]];
-      sum[2] += aval[j+2] * x[acolidx[j+2]];
-      sum[3] += aval[j+3] * x[acolidx[j+3]];
-      sum[4] += aval[j+4] * x[acolidx[j+4]];
-      sum[5] += aval[j+5] * x[acolidx[j+5]];
-      sum[6] += aval[j+6] * x[acolidx[j+6]];
-      sum[7] += aval[j+7] * x[acolidx[j+7]];
+    for (j=0; j<SLICE_HEIGHT; j++) {
+      sum[j] = 0.0;
+      for (k=a->sliidx[i]+j; k<a->sliidx[i+1]; k+=SLICE_HEIGHT) sum[j] += aval[k] * x[acolidx[k]];
     }
-    if (i == totalslices-1 && (A->rmap->n & 0x07)) { /* if last slice has padding rows */
-      for (j=0; j<(A->rmap->n & 0x07); j++) y[8*i+j] = sum[j];
+    if (i == totalslices-1 && (A->rmap->n % SLICE_HEIGHT)) { /* if last slice has padding rows */
+      for(j=0; j<(A->rmap->n % SLICE_HEIGHT); j++) y[SLICE_HEIGHT*i+j] = sum[j];
     } else {
-      for (j=0; j<8; j++) y[8*i+j] = sum[j];
+      for(j=0; j<SLICE_HEIGHT; j++) y[SLICE_HEIGHT*i+j] = sum[j];
     }
   }
 #endif
@@ -518,7 +513,8 @@ PetscErrorCode MatMultAdd_SeqSELL(Mat A,Vec xx,Vec yy,Vec zz)
   MatScalar         yval;
   PetscInt          r,row,nnz_in_row;
 #else
-  PetscScalar       sum[8];
+  PetscInt          k;
+  PetscScalar       sum[SLICE_HEIGHT];
 #endif
 
 #if defined(PETSC_HAVE_PRAGMA_DISJOINT)
@@ -526,6 +522,10 @@ PetscErrorCode MatMultAdd_SeqSELL(Mat A,Vec xx,Vec yy,Vec zz)
 #endif
 
   PetscFunctionBegin;
+  if (!a->nz) {
+    ierr = VecCopy(yy,zz);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   ierr = VecGetArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecGetArrayPair(yy,zz,&y,&z);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_IMMINTRIN_H) && defined(__AVX512F__) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES)
@@ -636,21 +636,15 @@ PetscErrorCode MatMultAdd_SeqSELL(Mat A,Vec xx,Vec yy,Vec zz)
   }
 #else
   for (i=0; i<totalslices; i++) { /* loop over slices */
-    for (j=0; j<8; j++) sum[j] = 0.0;
-    for (j=a->sliidx[i]; j<a->sliidx[i+1]; j+=8) {
-      sum[0] += aval[j] * x[acolidx[j]];
-      sum[1] += aval[j+1] * x[acolidx[j+1]];
-      sum[2] += aval[j+2] * x[acolidx[j+2]];
-      sum[3] += aval[j+3] * x[acolidx[j+3]];
-      sum[4] += aval[j+4] * x[acolidx[j+4]];
-      sum[5] += aval[j+5] * x[acolidx[j+5]];
-      sum[6] += aval[j+6] * x[acolidx[j+6]];
-      sum[7] += aval[j+7] * x[acolidx[j+7]];
+    for (j=0; j<SLICE_HEIGHT; j++) {
+      sum[j] = 0.0;
+      for (k=a->sliidx[i]+j; k<a->sliidx[i+1]; k+=SLICE_HEIGHT)
+        sum[j] += aval[k] * x[acolidx[k]];
     }
-    if (i == totalslices-1 && (A->rmap->n & 0x07)) {
-      for (j=0; j<(A->rmap->n & 0x07); j++) z[8*i+j] = y[8*i+j] + sum[j];
+    if (i == totalslices-1 && (A->rmap->n % SLICE_HEIGHT)) {
+      for (j=0; j<(A->rmap->n % SLICE_HEIGHT); j++) z[SLICE_HEIGHT*i+j] = y[SLICE_HEIGHT*i+j] + sum[j];
     } else {
-      for (j=0; j<8; j++) z[8*i+j] = y[8*i+j] + sum[j];
+      for (j=0; j<SLICE_HEIGHT; j++) z[SLICE_HEIGHT*i+j] = y[SLICE_HEIGHT*i+j] + sum[j];
     }
   }
 #endif
@@ -680,32 +674,28 @@ PetscErrorCode MatMultTransposeAdd_SeqSELL(Mat A,Vec xx,Vec zz,Vec yy)
     ierr = MatMultAdd_SeqSELL(A,xx,zz,yy);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
-  if (zz != yy) { ierr = VecCopy(zz,yy);CHKERRQ(ierr); }
-  ierr = VecGetArrayRead(xx,&x);CHKERRQ(ierr);
-  ierr = VecGetArray(yy,&y);CHKERRQ(ierr);
-  for (i=0; i<a->totalslices; i++) { /* loop over slices */
-    if (i == totalslices-1 && (A->rmap->n & 0x07)) {
-      for (r=0; r<(A->rmap->n & 0x07); ++r) {
-        row        = 8*i + r;
-        nnz_in_row = a->rlen[row];
-        for (j=0; j<nnz_in_row; ++j) y[acolidx[8*j+r]] += aval[8*j+r] * x[row];
+  ierr = VecCopy(zz,yy);CHKERRQ(ierr);
+
+  if (a->nz) {
+    ierr = VecGetArrayRead(xx,&x);CHKERRQ(ierr);
+    ierr = VecGetArray(yy,&y);CHKERRQ(ierr);
+    for (i=0; i<a->totalslices; i++) { /* loop over slices */
+      if (i == totalslices-1 && (A->rmap->n % SLICE_HEIGHT)) {
+        for (r=0; r<(A->rmap->n % SLICE_HEIGHT); ++r) {
+          row        = SLICE_HEIGHT*i + r;
+          nnz_in_row = a->rlen[row];
+          for (j=0; j<nnz_in_row; ++j) y[acolidx[SLICE_HEIGHT*j+r]] += aval[SLICE_HEIGHT*j+r] * x[row];
+        }
+        break;
       }
-      break;
+      for (r=0; r<SLICE_HEIGHT; ++r)
+        for (j=a->sliidx[i]+r; j<a->sliidx[i+1]; j+=SLICE_HEIGHT)
+          y[acolidx[j]] += aval[j] * x[SLICE_HEIGHT*i+r];
     }
-    for (j=a->sliidx[i]; j<a->sliidx[i+1]; j+=8) {
-      y[acolidx[j]]   += aval[j] * x[8*i];
-      y[acolidx[j+1]] += aval[j+1] * x[8*i+1];
-      y[acolidx[j+2]] += aval[j+2] * x[8*i+2];
-      y[acolidx[j+3]] += aval[j+3] * x[8*i+3];
-      y[acolidx[j+4]] += aval[j+4] * x[8*i+4];
-      y[acolidx[j+5]] += aval[j+5] * x[8*i+5];
-      y[acolidx[j+6]] += aval[j+6] * x[8*i+6];
-      y[acolidx[j+7]] += aval[j+7] * x[8*i+7];
-    }
+    ierr = PetscLogFlops(2.0*a->nz);CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(xx,&x);CHKERRQ(ierr);
+    ierr = VecRestoreArray(yy,&y);CHKERRQ(ierr);
   }
-  ierr = PetscLogFlops(2.0*a->sliidx[a->totalslices]);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(xx,&x);CHKERRQ(ierr);
-  ierr = VecRestoreArray(yy,&y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -765,11 +755,11 @@ PetscErrorCode MatMarkDiagonal_SeqSELL(Mat A)
     a->free_diag = PETSC_TRUE;
   }
   for (i=0; i<m; i++) { /* loop over rows */
-    shift = a->sliidx[i>>3]+(i&0x07); /* starting index of the row i */
+    shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT; /* starting index of the row i */
     a->diag[i] = -1;
     for (j=0; j<a->rlen[i]; j++) {
-      if (a->colidx[shift+j*8] == i) {
-        a->diag[i] = shift+j*8;
+      if (a->colidx[shift+SLICE_HEIGHT*j] == i) {
+        a->diag[i] = shift+SLICE_HEIGHT*j;
         break;
       }
     }
@@ -856,6 +846,7 @@ PetscErrorCode MatDestroy_SeqSELL(Mat A)
   ierr = ISDestroy(&a->icol);CHKERRQ(ierr);
   ierr = PetscFree(a->saved_values);CHKERRQ(ierr);
   ierr = PetscFree2(a->getrowcols,a->getrowvals);CHKERRQ(ierr);
+  ierr = PetscFree2(a->blockidx,a->block_row_map);CHKERRQ(ierr);
 
   ierr = PetscFree(A->data);CHKERRQ(ierr);
 
@@ -863,6 +854,9 @@ PetscErrorCode MatDestroy_SeqSELL(Mat A)
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatStoreValues_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatRetrieveValues_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqSELLSetPreallocation_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqSELLIrregularity_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqSELLMaxSliceWidth_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqSELLAvgSliceWidth_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -932,11 +926,11 @@ PetscErrorCode MatGetDiagonal_SeqSELL(Mat A,Vec v)
   ierr = VecSet(v,zero);CHKERRQ(ierr);
   ierr = VecGetArray(v,&x);CHKERRQ(ierr);
   for (i=0; i<n; i++) { /* loop over rows */
-    shift = a->sliidx[i>>3]+(i&0x07); /* starting index of the row i */
+    shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT; /* starting index of the row i */
     x[i] = 0;
     for (j=0; j<a->rlen[i]; j++) {
-      if (a->colidx[shift+j*8] == i) {
-        x[i] = a->val[shift+j*8];
+      if (a->colidx[shift+SLICE_HEIGHT*j] == i) {
+        x[i] = a->val[shift+SLICE_HEIGHT*j];
         break;
       }
     }
@@ -960,13 +954,13 @@ PetscErrorCode MatDiagonalScale_SeqSELL(Mat A,Vec ll,Vec rr)
     if (m != A->rmap->n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Left scaling vector wrong length");
     ierr = VecGetArrayRead(ll,&l);CHKERRQ(ierr);
     for (i=0; i<a->totalslices; i++) { /* loop over slices */
-      if (i == a->totalslices-1 && (A->rmap->n & 0x07)) { /* if last slice has padding rows */
-        for (j=a->sliidx[i],row=0; j<a->sliidx[i+1]; j++,row=((row+1)&0x07)) {
-          if (row < (A->rmap->n & 0x07)) a->val[j] *= l[8*i+row];
+      if (i == a->totalslices-1 && (A->rmap->n % SLICE_HEIGHT)) { /* if last slice has padding rows */
+        for (j=a->sliidx[i],row=0; j<a->sliidx[i+1]; j++,row=(row+1)%SLICE_HEIGHT) {
+          if (row < (A->rmap->n % SLICE_HEIGHT)) a->val[j] *= l[SLICE_HEIGHT*i+row];
         }
       } else {
-        for (j=a->sliidx[i],row=0; j<a->sliidx[i+1]; j++,row=((row+1)&0x07)) {
-          a->val[j] *= l[8*i+row];
+        for (j=a->sliidx[i],row=0; j<a->sliidx[i+1]; j++,row=(row+1)%SLICE_HEIGHT) {
+          a->val[j] *= l[SLICE_HEIGHT*i+row];
         }
       }
     }
@@ -978,9 +972,9 @@ PetscErrorCode MatDiagonalScale_SeqSELL(Mat A,Vec ll,Vec rr)
     if (n != A->cmap->n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Right scaling vector wrong length");
     ierr = VecGetArrayRead(rr,&r);CHKERRQ(ierr);
     for (i=0; i<a->totalslices; i++) { /* loop over slices */
-      if (i == a->totalslices-1 && (A->rmap->n & 0x07)) { /* if last slice has padding rows */
-        for (j=a->sliidx[i],row=0; j<a->sliidx[i+1]; j++,row=((row+1)&0x07)) {
-          if (row < (A->rmap->n & 0x07)) a->val[j] *= r[a->colidx[j]];
+      if (i == a->totalslices-1 && (A->rmap->n % SLICE_HEIGHT)) { /* if last slice has padding rows */
+        for (j=a->sliidx[i],row=0; j<a->sliidx[i+1]; j++,row=((row+1)%SLICE_HEIGHT)) {
+          if (row < (A->rmap->n % SLICE_HEIGHT)) a->val[j] *= r[a->colidx[j]];
         }
       } else {
         for (j=a->sliidx[i]; j<a->sliidx[i+1]; j++) {
@@ -992,6 +986,9 @@ PetscErrorCode MatDiagonalScale_SeqSELL(Mat A,Vec ll,Vec rr)
     ierr = PetscLogFlops(a->nz);CHKERRQ(ierr);
   }
   ierr = MatSeqSELLInvalidateDiagonal(A);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA)
+  if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED) A->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -1009,7 +1006,7 @@ PetscErrorCode MatGetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
     row = im[k];
     if (row<0) continue;
     if (PetscUnlikelyDebug(row >= A->rmap->n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %D max %D",row,A->rmap->n-1);
-    shift = a->sliidx[row>>3]+(row&0x07); /* starting index of the row */
+    shift = a->sliidx[row/SLICE_HEIGHT]+(row%SLICE_HEIGHT); /* starting index of the row */
     cp = a->colidx+shift; /* pointer to the row */
     vp = a->val+shift; /* pointer to the row */
     for (l=0; l<n; l++) { /* loop over requested columns */
@@ -1019,13 +1016,13 @@ PetscErrorCode MatGetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
       high = a->rlen[row]; low = 0; /* assume unsorted */
       while (high-low > 5) {
         t = (low+high)/2;
-        if (*(cp+t*8) > col) high = t;
+        if (*(cp+SLICE_HEIGHT*t) > col) high = t;
         else low = t;
       }
       for (i=low; i<high; i++) {
-        if (*(cp+8*i) > col) break;
-        if (*(cp+8*i) == col) {
-          *v++ = *(vp+8*i);
+        if (*(cp+SLICE_HEIGHT*i) > col) break;
+        if (*(cp+SLICE_HEIGHT*i) == col) {
+          *v++ = *(vp+SLICE_HEIGHT*i);
           goto finished;
         }
       }
@@ -1064,12 +1061,12 @@ PetscErrorCode MatView_SeqSELL_ASCII(Mat A,PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"zzz = [\n");CHKERRQ(ierr);
 
     for (i=0; i<m; i++) {
-      shift = a->sliidx[i>>3]+(i&0x07);
+      shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT;
       for (j=0; j<a->rlen[i]; j++) {
 #if defined(PETSC_USE_COMPLEX)
-        ierr = PetscViewerASCIIPrintf(viewer,"%D %D  %18.16e %18.16e\n",i+1,a->colidx[shift+8*j]+1,(double)PetscRealPart(a->val[shift+8*j]),(double)PetscImaginaryPart(a->val[shift+8*j]));CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"%D %D  %18.16e %18.16e\n",i+1,a->colidx[shift+SLICE_HEIGHT*j]+1,(double)PetscRealPart(a->val[shift+SLICE_HEIGHT*j]),(double)PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]));CHKERRQ(ierr);
 #else
-        ierr = PetscViewerASCIIPrintf(viewer,"%D %D  %18.16e\n",i+1,a->colidx[shift+8*j]+1,(double)a->val[shift+8*j]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"%D %D  %18.16e\n",i+1,a->colidx[shift+SLICE_HEIGHT*j]+1,(double)a->val[shift+SLICE_HEIGHT*j]);CHKERRQ(ierr);
 #endif
       }
     }
@@ -1091,18 +1088,18 @@ PetscErrorCode MatView_SeqSELL_ASCII(Mat A,PetscViewer viewer)
     ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
     for (i=0; i<m; i++) {
       ierr = PetscViewerASCIIPrintf(viewer,"row %D:",i);CHKERRQ(ierr);
-      shift = a->sliidx[i>>3]+(i&0x07);
+      shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT;
       for (j=0; j<a->rlen[i]; j++) {
 #if defined(PETSC_USE_COMPLEX)
-        if (PetscImaginaryPart(a->val[shift+8*j]) > 0.0 && PetscRealPart(a->val[shift+8*j]) != 0.0) {
-          ierr = PetscViewerASCIIPrintf(viewer," (%D, %g + %g i)",a->colidx[shift+8*j],(double)PetscRealPart(a->val[shift+8*j]),(double)PetscImaginaryPart(a->val[shift+8*j]));CHKERRQ(ierr);
-        } else if (PetscImaginaryPart(a->val[shift+8*j]) < 0.0 && PetscRealPart(a->val[shift+8*j]) != 0.0) {
-          ierr = PetscViewerASCIIPrintf(viewer," (%D, %g - %g i)",a->colidx[shift+8*j],(double)PetscRealPart(a->val[shift+8*j]),(double)-PetscImaginaryPart(a->val[shift+8*j]));CHKERRQ(ierr);
-        } else if (PetscRealPart(a->val[shift+8*j]) != 0.0) {
-          ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->colidx[shift+8*j],(double)PetscRealPart(a->val[shift+8*j]));CHKERRQ(ierr);
+        if (PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]) > 0.0 && PetscRealPart(a->val[shift+SLICE_HEIGHT*j]) != 0.0) {
+          ierr = PetscViewerASCIIPrintf(viewer," (%D, %g + %g i)",a->colidx[shift+SLICE_HEIGHT*j],(double)PetscRealPart(a->val[shift+SLICE_HEIGHT*j]),(double)PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]));CHKERRQ(ierr);
+        } else if (PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]) < 0.0 && PetscRealPart(a->val[shift+SLICE_HEIGHT*j]) != 0.0) {
+          ierr = PetscViewerASCIIPrintf(viewer," (%D, %g - %g i)",a->colidx[shift+SLICE_HEIGHT*j],(double)PetscRealPart(a->val[shift+SLICE_HEIGHT*j]),(double)-PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]));CHKERRQ(ierr);
+        } else if (PetscRealPart(a->val[shift+SLICE_HEIGHT*j]) != 0.0) {
+          ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->colidx[shift+SLICE_HEIGHT*j],(double)PetscRealPart(a->val[shift+SLICE_HEIGHT*j]));CHKERRQ(ierr);
         }
 #else
-        if (a->val[shift+8*j] != 0.0) {ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->colidx[shift+8*j],(double)a->val[shift+8*j]);CHKERRQ(ierr);}
+        if (a->val[shift+SLICE_HEIGHT*j] != 0.0) {ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->colidx[shift+SLICE_HEIGHT*j],(double)a->val[shift+SLICE_HEIGHT*j]);CHKERRQ(ierr);}
 #endif
       }
       ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
@@ -1124,9 +1121,9 @@ PetscErrorCode MatView_SeqSELL_ASCII(Mat A,PetscViewer viewer)
     ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
     for (i=0; i<m; i++) {
       jcnt = 0;
-      shift = a->sliidx[i>>3]+(i&0x07);
+      shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT;
       for (j=0; j<A->cmap->n; j++) {
-        if (jcnt < a->rlen[i] && j == a->colidx[shift+8*j]) {
+        if (jcnt < a->rlen[i] && j == a->colidx[shift+SLICE_HEIGHT*j]) {
           value = a->val[cnt++];
           jcnt++;
         } else {
@@ -1155,12 +1152,12 @@ PetscErrorCode MatView_SeqSELL_ASCII(Mat A,PetscViewer viewer)
 #endif
     ierr = PetscViewerASCIIPrintf(viewer,"%D %D %D\n", m, A->cmap->n, a->nz);CHKERRQ(ierr);
     for (i=0; i<m; i++) {
-      shift = a->sliidx[i>>3]+(i&0x07);
+      shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT;
       for (j=0; j<a->rlen[i]; j++) {
 #if defined(PETSC_USE_COMPLEX)
-        ierr = PetscViewerASCIIPrintf(viewer,"%D %D %g %g\n",i+fshift,a->colidx[shift+8*j]+fshift,(double)PetscRealPart(a->val[shift+8*j]),(double)PetscImaginaryPart(a->val[shift+8*j]));CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"%D %D %g %g\n",i+fshift,a->colidx[shift+SLICE_HEIGHT*j]+fshift,(double)PetscRealPart(a->val[shift+SLICE_HEIGHT*j]),(double)PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]));CHKERRQ(ierr);
 #else
-        ierr = PetscViewerASCIIPrintf(viewer,"%D %D %g\n",i+fshift,a->colidx[shift+8*j]+fshift,(double)a->val[shift+8*j]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"%D %D %g\n",i+fshift,a->colidx[shift+SLICE_HEIGHT*j]+fshift,(double)a->val[shift+SLICE_HEIGHT*j]);CHKERRQ(ierr);
 #endif
       }
     }
@@ -1169,17 +1166,17 @@ PetscErrorCode MatView_SeqSELL_ASCII(Mat A,PetscViewer viewer)
     for (i=0; i<a->totalslices; i++) { /* loop over slices */
       PetscInt row;
       ierr = PetscViewerASCIIPrintf(viewer,"slice %D: %D %D\n",i,a->sliidx[i],a->sliidx[i+1]);CHKERRQ(ierr);
-      for (j=a->sliidx[i],row=0; j<a->sliidx[i+1]; j++,row=((row+1)&0x07)) {
+      for (j=a->sliidx[i],row=0; j<a->sliidx[i+1]; j++,row=(row+1)%SLICE_HEIGHT) {
 #if defined(PETSC_USE_COMPLEX)
         if (PetscImaginaryPart(a->val[j]) > 0.0) {
-          ierr = PetscViewerASCIIPrintf(viewer,"  %D %D %g + %g i\n",8*i+row,a->colidx[j],(double)PetscRealPart(a->val[j]),(double)PetscImaginaryPart(a->val[j]));CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer,"  %D %D %g + %g i\n",SLICE_HEIGHT*i+row,a->colidx[j],(double)PetscRealPart(a->val[j]),(double)PetscImaginaryPart(a->val[j]));CHKERRQ(ierr);
         } else if (PetscImaginaryPart(a->val[j]) < 0.0) {
-          ierr = PetscViewerASCIIPrintf(viewer,"  %D %D %g - %g i\n",8*i+row,a->colidx[j],(double)PetscRealPart(a->val[j]),-(double)PetscImaginaryPart(a->val[j]));CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer,"  %D %D %g - %g i\n",SLICE_HEIGHT*i+row,a->colidx[j],(double)PetscRealPart(a->val[j]),-(double)PetscImaginaryPart(a->val[j]));CHKERRQ(ierr);
         } else {
-          ierr = PetscViewerASCIIPrintf(viewer,"  %D %D %g\n",8*i+row,a->colidx[j],(double)PetscRealPart(a->val[j]));CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer,"  %D %D %g\n",SLICE_HEIGHT*i+row,a->colidx[j],(double)PetscRealPart(a->val[j]));CHKERRQ(ierr);
         }
 #else
-        ierr = PetscViewerASCIIPrintf(viewer,"  %D %D %g\n",8*i+row,a->colidx[j],(double)a->val[j]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"  %D %D %g\n",SLICE_HEIGHT*i+row,a->colidx[j],(double)a->val[j]);CHKERRQ(ierr);
 #endif
       }
     }
@@ -1187,14 +1184,14 @@ PetscErrorCode MatView_SeqSELL_ASCII(Mat A,PetscViewer viewer)
     ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
     if (A->factortype) {
       for (i=0; i<m; i++) {
-        shift = a->sliidx[i>>3]+(i&0x07);
+        shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT;
         ierr = PetscViewerASCIIPrintf(viewer,"row %D:",i);CHKERRQ(ierr);
         /* L part */
-        for (j=shift; j<a->diag[i]; j+=8) {
+        for (j=shift; j<a->diag[i]; j+=SLICE_HEIGHT) {
 #if defined(PETSC_USE_COMPLEX)
-          if (PetscImaginaryPart(a->val[shift+8*j]) > 0.0) {
+          if (PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]) > 0.0) {
             ierr = PetscViewerASCIIPrintf(viewer," (%D, %g + %g i)",a->colidx[j],(double)PetscRealPart(a->val[j]),(double)PetscImaginaryPart(a->val[j]));CHKERRQ(ierr);
-          } else if (PetscImaginaryPart(a->val[shift+8*j]) < 0.0) {
+          } else if (PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]) < 0.0) {
             ierr = PetscViewerASCIIPrintf(viewer," (%D, %g - %g i)",a->colidx[j],(double)PetscRealPart(a->val[j]),(double)(-PetscImaginaryPart(a->val[j])));CHKERRQ(ierr);
           } else {
             ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->colidx[j],(double)PetscRealPart(a->val[j]));CHKERRQ(ierr);
@@ -1218,7 +1215,7 @@ PetscErrorCode MatView_SeqSELL_ASCII(Mat A,PetscViewer viewer)
 #endif
 
         /* U part */
-        for (j=a->diag[i]+1; j<shift+8*a->rlen[i]; j+=8) {
+        for (j=a->diag[i]+1; j<shift+SLICE_HEIGHT*a->rlen[i]; j+=SLICE_HEIGHT) {
 #if defined(PETSC_USE_COMPLEX)
           if (PetscImaginaryPart(a->val[j]) > 0.0) {
             ierr = PetscViewerASCIIPrintf(viewer," (%D, %g + %g i)",a->colidx[j],(double)PetscRealPart(a->val[j]),(double)PetscImaginaryPart(a->val[j]));CHKERRQ(ierr);
@@ -1235,19 +1232,19 @@ PetscErrorCode MatView_SeqSELL_ASCII(Mat A,PetscViewer viewer)
       }
     } else {
       for (i=0; i<m; i++) {
-        shift = a->sliidx[i>>3]+(i&0x07);
+        shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT;
         ierr = PetscViewerASCIIPrintf(viewer,"row %D:",i);CHKERRQ(ierr);
         for (j=0; j<a->rlen[i]; j++) {
 #if defined(PETSC_USE_COMPLEX)
           if (PetscImaginaryPart(a->val[j]) > 0.0) {
-            ierr = PetscViewerASCIIPrintf(viewer," (%D, %g + %g i)",a->colidx[shift+8*j],(double)PetscRealPart(a->val[shift+8*j]),(double)PetscImaginaryPart(a->val[shift+8*j]));CHKERRQ(ierr);
+            ierr = PetscViewerASCIIPrintf(viewer," (%D, %g + %g i)",a->colidx[shift+SLICE_HEIGHT*j],(double)PetscRealPart(a->val[shift+SLICE_HEIGHT*j]),(double)PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]));CHKERRQ(ierr);
           } else if (PetscImaginaryPart(a->val[j]) < 0.0) {
-            ierr = PetscViewerASCIIPrintf(viewer," (%D, %g - %g i)",a->colidx[shift+8*j],(double)PetscRealPart(a->val[shift+8*j]),(double)-PetscImaginaryPart(a->val[shift+8*j]));CHKERRQ(ierr);
+            ierr = PetscViewerASCIIPrintf(viewer," (%D, %g - %g i)",a->colidx[shift+SLICE_HEIGHT*j],(double)PetscRealPart(a->val[shift+SLICE_HEIGHT*j]),(double)-PetscImaginaryPart(a->val[shift+SLICE_HEIGHT*j]));CHKERRQ(ierr);
           } else {
-            ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->colidx[shift+8*j],(double)PetscRealPart(a->val[shift+8*j]));CHKERRQ(ierr);
+            ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->colidx[shift+SLICE_HEIGHT*j],(double)PetscRealPart(a->val[shift+SLICE_HEIGHT*j]));CHKERRQ(ierr);
           }
 #else
-          ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->colidx[shift+8*j],(double)a->val[shift+8*j]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer," (%D, %g) ",a->colidx[shift+SLICE_HEIGHT*j],(double)a->val[shift+SLICE_HEIGHT*j]);CHKERRQ(ierr);
 #endif
         }
         ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
@@ -1283,31 +1280,31 @@ PetscErrorCode MatView_SeqSELL_Draw_Zoom(PetscDraw draw,void *Aa)
     /* Blue for negative, Cyan for zero and  Red for positive */
     color = PETSC_DRAW_BLUE;
     for (i=0; i<m; i++) {
-      shift = a->sliidx[i>>3]+(i&0x07); /* starting index of the row i */
+      shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT; /* starting index of the row i */
       y_l = m - i - 1.0; y_r = y_l + 1.0;
       for (j=0; j<a->rlen[i]; j++) {
-        x_l = a->colidx[shift+j*8]; x_r = x_l + 1.0;
-        if (PetscRealPart(a->val[shift+8*j]) >=  0.) continue;
+        x_l = a->colidx[shift+SLICE_HEIGHT*j]; x_r = x_l + 1.0;
+        if (PetscRealPart(a->val[shift+SLICE_HEIGHT*j]) >=  0.) continue;
         ierr = PetscDrawRectangle(draw,x_l,y_l,x_r,y_r,color,color,color,color);CHKERRQ(ierr);
       }
     }
     color = PETSC_DRAW_CYAN;
     for (i=0; i<m; i++) {
-      shift = a->sliidx[i>>3]+(i&0x07);
+      shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT;
       y_l = m - i - 1.0; y_r = y_l + 1.0;
       for (j=0; j<a->rlen[i]; j++) {
-        x_l = a->colidx[shift+j*8]; x_r = x_l + 1.0;
-        if (a->val[shift+8*j] !=  0.) continue;
+        x_l = a->colidx[shift+SLICE_HEIGHT*j]; x_r = x_l + 1.0;
+        if (a->val[shift+SLICE_HEIGHT*j] !=  0.) continue;
         ierr = PetscDrawRectangle(draw,x_l,y_l,x_r,y_r,color,color,color,color);CHKERRQ(ierr);
       }
     }
     color = PETSC_DRAW_RED;
     for (i=0; i<m; i++) {
-      shift = a->sliidx[i>>3]+(i&0x07);
+      shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT;
       y_l = m - i - 1.0; y_r = y_l + 1.0;
       for (j=0; j<a->rlen[i]; j++) {
-        x_l = a->colidx[shift+j*8]; x_r = x_l + 1.0;
-        if (PetscRealPart(a->val[shift+8*j]) <=  0.) continue;
+        x_l = a->colidx[shift+SLICE_HEIGHT*j]; x_r = x_l + 1.0;
+        if (PetscRealPart(a->val[shift+SLICE_HEIGHT*j]) <=  0.) continue;
         ierr = PetscDrawRectangle(draw,x_l,y_l,x_r,y_r,color,color,color,color);CHKERRQ(ierr);
       }
     }
@@ -1327,11 +1324,11 @@ PetscErrorCode MatView_SeqSELL_Draw_Zoom(PetscDraw draw,void *Aa)
 
     ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     for (i=0; i<m; i++) {
-      shift = a->sliidx[i>>3]+(i&0x07);
+      shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT;
       y_l = m - i - 1.0;
       y_r = y_l + 1.0;
       for (j=0; j<a->rlen[i]; j++) {
-        x_l = a->colidx[shift+j*8];
+        x_l = a->colidx[shift+SLICE_HEIGHT*j];
         x_r = x_l + 1.0;
         color = PetscDrawRealToColor(PetscAbsScalar(a->val[count]),minv,maxv);
         ierr = PetscDrawRectangle(draw,x_l,y_l,x_r,y_r,color,color,color,color);CHKERRQ(ierr);
@@ -1399,13 +1396,14 @@ PetscErrorCode MatAssemblyEnd_SeqSELL(Mat A,MatAssemblyType mode)
   ierr = PetscInfo6(A,"Matrix size: %D X %D; storage space: %D allocated %D used (%D nonzeros+%D paddedzeros)\n",A->rmap->n,A->cmap->n,a->maxallocmat,a->sliidx[a->totalslices],a->nz,a->sliidx[a->totalslices]-a->nz);CHKERRQ(ierr);
   ierr = PetscInfo1(A,"Number of mallocs during MatSetValues() is %D\n",a->reallocs);CHKERRQ(ierr);
   ierr = PetscInfo1(A,"Maximum nonzeros in any row is %D\n",a->rlenmax);CHKERRQ(ierr);
+  a->nonzerorowcnt = 0;
   /* Set unused slots for column indices to last valid column index. Set unused slots for values to zero. This allows for a use of unmasked intrinsics -> higher performance */
   for (i=0; i<a->totalslices; ++i) {
     shift = a->sliidx[i];    /* starting index of the slice */
     cp    = a->colidx+shift; /* pointer to the column indices of the slice */
     vp    = a->val+shift;    /* pointer to the nonzero values of the slice */
-    for (row_in_slice=0; row_in_slice<8; ++row_in_slice) { /* loop over rows in the slice */
-      row  = 8*i + row_in_slice;
+    for (row_in_slice=0; row_in_slice<SLICE_HEIGHT; ++row_in_slice) { /* loop over rows in the slice */
+      row  = SLICE_HEIGHT*i + row_in_slice;
       nrow = a->rlen[row]; /* number of nonzeros in row */
       /*
         Search for the nearest nonzero. Normally setting the index to zero may cause extra communication.
@@ -1413,10 +1411,11 @@ PetscErrorCode MatAssemblyEnd_SeqSELL(Mat A,MatAssemblyType mode)
       */
       lastcol = 0;
       if (nrow>0) { /* nonempty row */
-        lastcol = cp[8*(nrow-1)+row_in_slice]; /* use the index from the last nonzero at current row */
+        a->nonzerorowcnt++;
+        lastcol = cp[SLICE_HEIGHT*(nrow-1)+row_in_slice]; /* use the index from the last nonzero at current row */
       } else if (!row_in_slice) { /* first row of the currect slice is empty */
-        for (j=1;j<8;j++) {
-          if (a->rlen[8*i+j]) {
+        for (j=1;j<SLICE_HEIGHT;j++) {
+          if (a->rlen[SLICE_HEIGHT*i+j]) {
             lastcol = cp[j];
             break;
           }
@@ -1425,9 +1424,9 @@ PetscErrorCode MatAssemblyEnd_SeqSELL(Mat A,MatAssemblyType mode)
         if (a->sliidx[i+1] != shift) lastcol = cp[row_in_slice-1]; /* use the index from the previous row */
       }
 
-      for (k=nrow; k<(a->sliidx[i+1]-shift)/8; ++k) {
-        cp[8*k+row_in_slice] = lastcol;
-        vp[8*k+row_in_slice] = (MatScalar)0;
+      for (k=nrow; k<(a->sliidx[i+1]-shift)/SLICE_HEIGHT; ++k) {
+        cp[SLICE_HEIGHT*k+row_in_slice] = lastcol;
+        vp[SLICE_HEIGHT*k+row_in_slice] = (MatScalar)0;
       }
     }
   }
@@ -1435,6 +1434,23 @@ PetscErrorCode MatAssemblyEnd_SeqSELL(Mat A,MatAssemblyType mode)
   A->info.mallocs += a->reallocs;
   a->reallocs      = 0;
 
+  ierr = MatSeqSELLAvgSliceWidth(A,&a->avgslicewidth);CHKERRQ(ierr);
+  ierr = MatSeqSELLMaxSliceWidth(A,&a->maxslicewidth);CHKERRQ(ierr);
+  ierr = MatSeqSELLIrregularity(A,&a->irregratio);CHKERRQ(ierr);
+  if (a->irregratio < 0.25 && a->maxslicewidth > 4096) { /* Set up column blocking for fast SpMV */
+    PetscInt bidx = 0;
+
+    a->totalblocks = 0;
+    for (i=0; i<a->totalslices; ++i) a->totalblocks += (a->sliidx[i+1]-a->sliidx[i]+SLICE_HEIGHT*32-1)/(SLICE_HEIGHT*32);
+    ierr = PetscMalloc2(a->totalblocks+1,&a->blockidx,a->totalblocks,&a->block_row_map);CHKERRQ(ierr);
+    for (i=0; i<a->totalslices; ++i)
+      for (j=0; j<(a->sliidx[i+1]-a->sliidx[i]+SLICE_HEIGHT*32-1)/(SLICE_HEIGHT*32); ++j) {
+        a->blockidx[bidx]      = a->sliidx[i]+j*SLICE_HEIGHT*32;
+        a->block_row_map[bidx] = i*SLICE_HEIGHT;
+        bidx++;
+      }
+    a->blockidx[bidx] = a->sliidx[a->totalslices];
+  }
   ierr = MatSeqSELLInvalidateDiagonal(A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1470,13 +1486,16 @@ PetscErrorCode MatSetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
   PetscInt       *cp,nonew=a->nonew,lastcol=-1;
   MatScalar      *vp,value;
   PetscErrorCode ierr;
+#if defined(PETSC_HAVE_CUDA)
+  PetscBool      inserted = PETSC_FALSE;
+#endif
 
   PetscFunctionBegin;
   for (k=0; k<m; k++) { /* loop over added rows */
     row = im[k];
     if (row < 0) continue;
     if (PetscUnlikelyDebug(row >= A->rmap->n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %D max %D",row,A->rmap->n-1);
-    shift = a->sliidx[row>>3]+(row&0x07); /* starting index of the row */
+    shift = a->sliidx[row/SLICE_HEIGHT]+row%SLICE_HEIGHT; /* starting index of the row */
     cp    = a->colidx+shift; /* pointer to the row */
     vp    = a->val+shift; /* pointer to the row */
     nrow  = a->rlen[row];
@@ -1500,14 +1519,17 @@ PetscErrorCode MatSetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
       lastcol = col;
       while (high-low > 5) {
         t = (low+high)/2;
-        if (*(cp+t*8) > col) high = t;
+        if (*(cp+SLICE_HEIGHT*t) > col) high = t;
         else low = t;
       }
       for (i=low; i<high; i++) {
-        if (*(cp+i*8) > col) break;
-        if (*(cp+i*8) == col) {
-          if (is == ADD_VALUES) *(vp+i*8) += value;
-          else *(vp+i*8) = value;
+        if (*(cp+SLICE_HEIGHT*i) > col) break;
+        if (*(cp+SLICE_HEIGHT*i) == col) {
+          if (is == ADD_VALUES) *(vp+SLICE_HEIGHT*i) += value;
+          else *(vp+SLICE_HEIGHT*i) = value;
+#if defined(PETSC_HAVE_CUDA)
+          inserted = PETSC_TRUE;
+#endif
           low = i + 1;
           goto noinsert;
         }
@@ -1516,22 +1538,28 @@ PetscErrorCode MatSetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
       if (nonew == 1) goto noinsert;
       if (nonew == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero (%D, %D) in the matrix", row, col);
       /* If the current row length exceeds the slice width (e.g. nrow==slice_width), allocate a new space, otherwise do nothing */
-      MatSeqXSELLReallocateSELL(A,A->rmap->n,1,nrow,a->sliidx,row/8,row,col,a->colidx,a->val,cp,vp,nonew,MatScalar);
+      MatSeqXSELLReallocateSELL(A,A->rmap->n,1,nrow,a->sliidx,row/SLICE_HEIGHT,row,col,a->colidx,a->val,cp,vp,nonew,MatScalar);
       /* add the new nonzero to the high position, shift the remaining elements in current row to the right by one slot */
       for (ii=nrow-1; ii>=i; ii--) {
-        *(cp+(ii+1)*8) = *(cp+ii*8);
-        *(vp+(ii+1)*8) = *(vp+ii*8);
+        *(cp+SLICE_HEIGHT*(ii+1)) = *(cp+SLICE_HEIGHT*ii);
+        *(vp+SLICE_HEIGHT*(ii+1)) = *(vp+SLICE_HEIGHT*ii);
       }
       a->rlen[row]++;
-      *(cp+i*8) = col;
-      *(vp+i*8) = value;
+      *(cp+SLICE_HEIGHT*i) = col;
+      *(vp+SLICE_HEIGHT*i) = value;
       a->nz++;
       A->nonzerostate++;
+#if defined(PETSC_HAVE_CUDA)
+      inserted = PETSC_TRUE;
+#endif
       low = i+1; high++; nrow++;
 noinsert:;
     }
     a->rlen[row] = nrow;
   }
+#if defined(PETSC_HAVE_CUDA)
+  if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED && inserted) A->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -1585,6 +1613,9 @@ PetscErrorCode MatRealPart_SeqSELL(Mat A)
 
   PetscFunctionBegin;
   for (i=0; i<a->sliidx[a->totalslices]; i++) aval[i]=PetscRealPart(aval[i]);
+#if defined(PETSC_HAVE_CUDA)
+  if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED) A->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -1598,6 +1629,9 @@ PetscErrorCode MatImaginaryPart_SeqSELL(Mat A)
   PetscFunctionBegin;
   for (i=0; i<a->sliidx[a->totalslices]; i++) aval[i] = PetscImaginaryPart(aval[i]);
   ierr = MatSeqSELLInvalidateDiagonal(A);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA)
+  if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED) A->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -1614,6 +1648,9 @@ PetscErrorCode MatScale_SeqSELL(Mat inA,PetscScalar alpha)
   PetscStackCallBLAS("BLASscal",BLASscal_(&size,&oalpha,aval,&one));
   ierr = PetscLogFlops(a->nz);CHKERRQ(ierr);
   ierr = MatSeqSELLInvalidateDiagonal(inA);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA)
+  if (inA->offloadmask != PETSC_OFFLOAD_UNALLOCATED) inA->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -1663,10 +1700,10 @@ PetscErrorCode MatSOR_SeqSELL(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
   if (flag & SOR_ZERO_INITIAL_GUESS) {
     if ((flag & SOR_FORWARD_SWEEP) || (flag & SOR_LOCAL_FORWARD_SWEEP)) {
       for (i=0; i<m; i++) {
-        shift = a->sliidx[i>>3]+(i&0x07); /* starting index of the row i */
+        shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT; /* starting index of the row i */
         sum   = b[i];
-        n     = (diag[i]-shift)/8;
-        for (j=0; j<n; j++) sum -= a->val[shift+j*8]*x[a->colidx[shift+j*8]];
+        n     = (diag[i]-shift)/SLICE_HEIGHT;
+        for (j=0; j<n; j++) sum -= a->val[shift+SLICE_HEIGHT*j]*x[a->colidx[shift+SLICE_HEIGHT*j]];
         t[i]  = sum;
         x[i]  = sum*idiag[i];
       }
@@ -1675,10 +1712,10 @@ PetscErrorCode MatSOR_SeqSELL(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
     } else xb = b;
     if ((flag & SOR_BACKWARD_SWEEP) || (flag & SOR_LOCAL_BACKWARD_SWEEP)) {
       for (i=m-1; i>=0; i--) {
-        shift = a->sliidx[i>>3]+(i&0x07); /* starting index of the row i */
+        shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT; /* starting index of the row i */
         sum   = xb[i];
-        n     = a->rlen[i]-(diag[i]-shift)/8-1;
-        for (j=1; j<=n; j++) sum -= a->val[diag[i]+j*8]*x[a->colidx[diag[i]+j*8]];
+        n     = a->rlen[i]-(diag[i]-shift)/SLICE_HEIGHT-1;
+        for (j=1; j<=n; j++) sum -= a->val[diag[i]+SLICE_HEIGHT*j]*x[a->colidx[diag[i]+SLICE_HEIGHT*j]];
         if (xb == b) {
           x[i] = sum*idiag[i];
         } else {
@@ -1693,14 +1730,14 @@ PetscErrorCode MatSOR_SeqSELL(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
     if ((flag & SOR_FORWARD_SWEEP) || (flag & SOR_LOCAL_FORWARD_SWEEP)) {
       for (i=0; i<m; i++) {
         /* lower */
-        shift = a->sliidx[i>>3]+(i&0x07); /* starting index of the row i */
+        shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT; /* starting index of the row i */
         sum   = b[i];
-        n     = (diag[i]-shift)/8;
-        for (j=0; j<n; j++) sum -= a->val[shift+j*8]*x[a->colidx[shift+j*8]];
+        n     = (diag[i]-shift)/SLICE_HEIGHT;
+        for (j=0; j<n; j++) sum -= a->val[shift+SLICE_HEIGHT*j]*x[a->colidx[shift+SLICE_HEIGHT*j]];
         t[i]  = sum;             /* save application of the lower-triangular part */
         /* upper */
-        n     = a->rlen[i]-(diag[i]-shift)/8-1;
-        for (j=1; j<=n; j++) sum -= a->val[diag[i]+j*8]*x[a->colidx[diag[i]+j*8]];
+        n     = a->rlen[i]-(diag[i]-shift)/SLICE_HEIGHT-1;
+        for (j=1; j<=n; j++) sum -= a->val[diag[i]+SLICE_HEIGHT*j]*x[a->colidx[diag[i]+SLICE_HEIGHT*j]];
         x[i]  = (1.-omega)*x[i]+sum*idiag[i];  /* omega in idiag */
       }
       xb   = t;
@@ -1708,16 +1745,16 @@ PetscErrorCode MatSOR_SeqSELL(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
     } else xb = b;
     if ((flag & SOR_BACKWARD_SWEEP) || (flag & SOR_LOCAL_BACKWARD_SWEEP)) {
       for (i=m-1; i>=0; i--) {
-        shift = a->sliidx[i>>3]+(i&0x07); /* starting index of the row i */
+        shift = a->sliidx[i/SLICE_HEIGHT]+i%SLICE_HEIGHT; /* starting index of the row i */
         sum = xb[i];
         if (xb == b) {
           /* whole matrix (no checkpointing available) */
           n     = a->rlen[i];
-          for (j=0; j<n; j++) sum -= a->val[shift+j*8]*x[a->colidx[shift+j*8]];
+          for (j=0; j<n; j++) sum -= a->val[shift+SLICE_HEIGHT*j]*x[a->colidx[shift+SLICE_HEIGHT*j]];
           x[i] = (1.-omega)*x[i]+(sum+mdiag[i]*x[i])*idiag[i];
         } else { /* lower-triangular part has been saved, so only apply upper-triangular */
-          n     = a->rlen[i]-(diag[i]-shift)/8-1;
-          for (j=1; j<=n; j++) sum -= a->val[diag[i]+j*8]*x[a->colidx[diag[i]+j*8]];
+          n     = a->rlen[i]-(diag[i]-shift)/SLICE_HEIGHT-1;
+          for (j=1; j<=n; j++) sum -= a->val[diag[i]+SLICE_HEIGHT*j]*x[a->colidx[diag[i]+SLICE_HEIGHT*j]];
           x[i]  = (1.-omega)*x[i]+sum*idiag[i];  /* omega in idiag */
         }
       }
@@ -1912,6 +1949,45 @@ PetscErrorCode MatRetrieveValues_SeqSELL(Mat mat)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode MatSeqSELLIrregularity_SeqSELL(Mat mat,PetscReal *ratio)
+{
+  Mat_SeqSELL *a=(Mat_SeqSELL*)mat->data;
+
+  PetscFunctionBegin;
+  if (a->sliidx[a->totalslices]) {
+    *ratio = (PetscReal)(a->sliidx[a->totalslices]-a->nz)/a->sliidx[a->totalslices];
+  } else {
+    *ratio = 0.0;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatSeqSELLMaxSliceWidth_SeqSELL(Mat mat,PetscInt *slicewidth)
+{
+  Mat_SeqSELL *a=(Mat_SeqSELL*)mat->data;
+  PetscInt    i,current_slicewidth;
+
+  PetscFunctionBegin;
+  *slicewidth = 0;
+  for (i=0; i<a->totalslices; i++) {
+    current_slicewidth = (a->sliidx[i+1]-a->sliidx[i])/SLICE_HEIGHT;
+    if (current_slicewidth > *slicewidth) *slicewidth = current_slicewidth;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatSeqSELLAvgSliceWidth_SeqSELL(Mat mat,PetscReal *slicewidth)
+{
+  Mat_SeqSELL *a=(Mat_SeqSELL*)mat->data;
+
+  PetscFunctionBegin;
+  *slicewidth = 0;
+  if (a->totalslices) {
+    *slicewidth = (PetscReal)a->sliidx[a->totalslices]/SLICE_HEIGHT/a->totalslices;
+  }
+  PetscFunctionReturn(0);
+}
+
 /*@C
  MatSeqSELLRestoreArray - returns access to the array where the data for a MATSEQSELL matrix is stored obtained by MatSeqSELLGetArray()
 
@@ -1933,6 +2009,70 @@ PetscErrorCode MatSeqSELLRestoreArray(Mat A,PetscScalar **array)
   ierr = PetscUseMethod(A,"MatSeqSELLRestoreArray_C",(Mat,PetscScalar**),(A,array));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+/*@C
+ MatSeqSELLIrregularity - returns a ratio that indicates the irregularity of the matrix.
+
+ Not Collective
+
+ Input Parameters:
+ .  mat - a MATSEQSELL matrix
+ .  ratio - ratio of number of padded zeros to number of allocated elements
+
+ Level: intermediate
+ @*/
+PetscErrorCode MatSeqSELLIrregularity(Mat A,PetscReal *ratio)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscUseMethod(A,"MatSeqSELLIrregularity_C",(Mat,PetscScalar*),(A,ratio));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+ MatSeqSELLMaxSliceWidth - returns the maximum slice width.
+
+ Not Collective
+
+ Input Parameter
+ .  mat - a MATSEQSELL matrix
+ .  slicewidth - maximum slice width
+
+ Level: intermediate
+ @*/
+PetscErrorCode MatSeqSELLMaxSliceWidth(Mat A,PetscInt *slicewidth)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscUseMethod(A,"MatSeqSELLMaxSliceWidth_C",(Mat,PetscInt*),(A,slicewidth));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*#C
+ MatSeqSELLAvgSliceWidth - returns the average slice width.
+
+ Not Collective
+
+ Input Parameter
+ .  mat - a MATSEQSELL matrix
+ .  slicewidth - average slice width
+
+ Level: intermediate
+ @*/
+PetscErrorCode MatSeqSELLAvgSliceWidth(Mat A,PetscReal *slicewidth)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscUseMethod(A,"MatSeqSELLAvgSliceWidth_C",(Mat,PetscReal*),(A,slicewidth));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+#if defined(PETSC_HAVE_CUDA)
+PETSC_EXTERN PetscErrorCode MatConvert_SeqSELL_SeqSELLCUDA(Mat);
+#endif
 
 PETSC_EXTERN PetscErrorCode MatCreate_SeqSELL(Mat B)
 {
@@ -1976,6 +2116,12 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSELL(Mat B)
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatRetrieveValues_C",MatRetrieveValues_SeqSELL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLSetPreallocation_C",MatSeqSELLSetPreallocation_SeqSELL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatConvert_seqsell_seqaij_C",MatConvert_SeqSELL_SeqAIJ);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA)
+  ierr = PetscObjectComposeFunction((PetscObject)B,"MatConvert_seqsell_seqsellcuda_C",MatConvert_SeqSELL_SeqSELLCUDA);CHKERRQ(ierr);
+#endif
+  ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLIrregularity_C",MatSeqSELLIrregularity_SeqSELL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLMaxSliceWidth_C",MatSeqSELLMaxSliceWidth_SeqSELL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLAvgSliceWidth_C",MatSeqSELLAvgSliceWidth_SeqSELL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2003,7 +2149,7 @@ PetscErrorCode MatDuplicateNoCreate_SeqSELL(Mat C,Mat A,MatDuplicateOption cpval
   ierr = PetscLayoutReference(A->rmap,&C->rmap);CHKERRQ(ierr);
   ierr = PetscLayoutReference(A->cmap,&C->cmap);CHKERRQ(ierr);
 
-  ierr = PetscMalloc1(8*totalslices,&c->rlen);CHKERRQ(ierr);
+  ierr = PetscMalloc1(SLICE_HEIGHT*totalslices,&c->rlen);CHKERRQ(ierr);
   ierr = PetscLogObjectMemory((PetscObject)C,m*sizeof(PetscInt));CHKERRQ(ierr);
   ierr = PetscMalloc1(totalslices+1,&c->sliidx);CHKERRQ(ierr);
   ierr = PetscLogObjectMemory((PetscObject)C, (totalslices+1)*sizeof(PetscInt));CHKERRQ(ierr);
@@ -2160,6 +2306,9 @@ PetscErrorCode MatConjugate_SeqSELL(Mat A)
   for (i=0; i<a->sliidx[a->totalslices]; i++) {
     val[i] = PetscConj(val[i]);
   }
+#if defined(PETSC_HAVE_CUDA)
+  if (A->offloadmask != PETSC_OFFLOAD_UNALLOCATED) A->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
 #else
   PetscFunctionBegin;
 #endif
