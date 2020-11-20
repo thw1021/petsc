@@ -534,24 +534,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         }
       }
     }
-#if defined(PETSC_HAVE_KOKKOS)
-    if (ctx->deviceType == LANDAU_KOKKOS) {
-      PetscBool flg;
-      ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr);
-      if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Kokkos but no Kokkos matrix (%s) use -mat_type aijkokkos -vec_type kokkos",type);
-      ierr = LandauKokkosCreateMatMaps(maps, pointMaps);CHKERRQ(ierr); // imples Kokkos does
-      goto maps_done;
-    } // else could be CUDA
-#endif
-#if defined(PETSC_HAVE_CUDA)
-    if (ctx->deviceType == LANDAU_CUDA){
-      PetscBool flg;
-      ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr);
-      if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Cuda but no Cuda matrix (%s) use -mat_type aijcusparse -vec_type cuda",type);
-      ierr = LandauCUDACreateMatMaps(maps, pointMaps);CHKERRQ(ierr);
-      goto maps_done;
-    }
-#endif
     // allocate and copy point datamaps->gIdx[eidx][field][q] -- for CPU version of this code, for debugging
     ierr = PetscMalloc(maps->num_reduced * sizeof *maps->c_maps, &maps->c_maps);CHKERRQ(ierr);
     // ierr = PetscPrintf(PETSC_COMM_SELF,"================= c_maps size %D --> %D (%g)\n",MAP_BF_SIZE,maps->num_reduced,(float)MAP_BF_SIZE/(float)(maps->num_reduced+1));CHKERRQ(ierr);
@@ -564,6 +546,24 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       }
       //ierr = PetscPrintf(PETSC_COMM_SELF,"\n");
     }
+#if defined(PETSC_HAVE_KOKKOS)
+    if (ctx->deviceType == LANDAU_KOKKOS) {
+      /* PetscBool flg; */
+      /* ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr); */
+      /* if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Kokkos but no Kokkos matrix (%s) use -mat_type aijkokkos -vec_type kokkos",type); */
+      ierr = LandauKokkosCreateMatMaps(maps, pointMaps);CHKERRQ(ierr); // imples Kokkos does
+      goto maps_done;
+    } // else could be CUDA
+#endif
+#if defined(PETSC_HAVE_CUDA)
+    if (ctx->deviceType == LANDAU_CUDA){
+      /* PetscBool flg; */
+      /* ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr); */
+      /* if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Cuda but no Cuda matrix (%s) use -mat_type aijcusparse -vec_type cuda",type); */
+      ierr = LandauCUDACreateMatMaps(maps, pointMaps);CHKERRQ(ierr);
+      goto maps_done;
+    }
+#endif
     // debug
     // for (fieldA=0;fieldA<Nf;fieldA++) {
     //   PetscPrintf(PETSC_COMM_SELF,"field %D:\n",fieldA);
