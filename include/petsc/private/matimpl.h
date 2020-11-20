@@ -435,7 +435,7 @@ struct _p_SplitCSRMat {
   PetscInt              *colmap;
   PetscBool             seq;
   PetscMPIInt           rank;
-  PetscInt              nonzerostate;
+  int                   nonzerostate; /*Cuda does not seem to have a 64 bit atomicadd for this */
 };
 
 struct _p_Mat {
