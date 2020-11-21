@@ -564,25 +564,25 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       goto maps_done;
     }
 #endif
-    // debug
-    // for (fieldA=0;fieldA<Nf;fieldA++) {
-    //   PetscPrintf(PETSC_COMM_SELF,"field %D:\n",fieldA);
-    //   for (eidx = 0 ; eidx < cEnd-cStart; ++eidx) {
-    //     PetscPrintf(PETSC_COMM_SELF,"\t elem %D: ",eidx);
-    //     for (q = 0; q < Nq; ++q) {
-    //       ierr = PetscPrintf(PETSC_COMM_SELF," %3d ",maps->gIdx[eidx][fieldA][q]);CHKERRQ(ierr);
-    //     }
-    //     PetscPrintf(PETSC_COMM_SELF,"\n");
-    //   }
-    //   ierr = PetscPrintf(PETSC_COMM_SELF,"\n");
-    // }
-    // for (eidx = 0 ; eidx < maps->num_reduced; ++eidx) {
-    //   ierr = PetscPrintf(PETSC_COMM_SELF,"%D: ",eidx+1);
-    //   for (q = 0; q < maps->num_face; ++q) {
-    //     ierr = PetscPrintf(PETSC_COMM_SELF," %3D , %g ",maps->c_maps[eidx][q].gid,maps->c_maps[eidx][q].scale);CHKERRQ(ierr);
-    //   }
-    //   ierr = PetscPrintf(PETSC_COMM_SELF,"\n");
-    // }
+    /*  debug */
+    /* for (fieldA=0;fieldA<Nf;fieldA++) { */
+    /*   PetscPrintf(PETSC_COMM_SELF,"field %D:\n",fieldA); */
+    /*   for (eidx = 0 ; eidx < cEnd-cStart; ++eidx) { */
+    /*     PetscPrintf(PETSC_COMM_SELF,"\t elem %D: ",eidx); */
+    /*     for (q = 0; q < Nq; ++q) { */
+    /*       ierr = PetscPrintf(PETSC_COMM_SELF," %3d ",maps->gIdx[eidx][fieldA][q]);CHKERRQ(ierr); */
+    /*     } */
+    /*     PetscPrintf(PETSC_COMM_SELF,"\n"); */
+    /*   } */
+    /*   ierr = PetscPrintf(PETSC_COMM_SELF,"\n"); */
+    /* } */
+    /* for (eidx = 0 ; eidx < maps->num_reduced; ++eidx) { */
+    /*   ierr = PetscPrintf(PETSC_COMM_SELF,"%D: ",eidx+1); */
+    /*   for (q = 0; q < maps->num_face; ++q) { */
+    /*     ierr = PetscPrintf(PETSC_COMM_SELF," %3D , %g ",maps->c_maps[eidx][q].gid,maps->c_maps[eidx][q].scale);CHKERRQ(ierr); */
+    /*   } */
+    /*   ierr = PetscPrintf(PETSC_COMM_SELF,"\n"); */
+    /* } */
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_KOKKOS)
     maps_done:
 #endif
