@@ -7130,7 +7130,7 @@ PetscErrorCode DMCreateLabel(DM dm, const char name[])
 }
 
 /*@C
-  DMCreateLabel - Create a label of the given name at the iven index. If it already exists, move it to this index.
+  DMCreateLabelAtIndex - Create a label of the given name at the iven index. If it already exists, move it to this index.
 
   Not Collective
 
@@ -7141,7 +7141,7 @@ PetscErrorCode DMCreateLabel(DM dm, const char name[])
 
   Level: intermediate
 
-.seealso: DMLabelCreate(), DMHasLabel(), DMGetLabelValue(), DMSetLabelValue(), DMGetStratumIS()
+.seealso: DMCreateLabel(), DMLabelCreate(), DMHasLabel(), DMGetLabelValue(), DMSetLabelValue(), DMGetStratumIS()
 @*/
 PetscErrorCode DMCreateLabelAtIndex(DM dm, PetscInt l, const char name[])
 {
