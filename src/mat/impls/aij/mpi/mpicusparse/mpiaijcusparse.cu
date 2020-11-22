@@ -379,7 +379,7 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   PetscFunctionBegin;
   if (d_mat) {
     cudaError_t                err;
-    err = cudaMemcpy( &nnz_state, &d_mat->nonzerostate, sizeof(d_mat->nonzerostate), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+    err = cudaMemcpy( &nnz_state, &d_mat->nonzerostate, sizeof(PetscInt), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
   }
   ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
   if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) {
@@ -607,11 +607,8 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **
   PetscErrorCode             ierr;
   int                        *ai,*bi,*aj,*bj;
   PetscScalar                *aa,*ba;
-  PetscBool                  flg;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompareAny((PetscObject)A,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Cuda but no Cuda matrix use -mat_type aijcusparse -vec_type cuda");
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
