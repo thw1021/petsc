@@ -50,8 +50,12 @@
   }                                                                    \
 }
 
+// use PETSC_DEVICE_FUNC_DECL
 #if defined(PETSC_HAVE_CUDA)
 static __device__
+#endif
+#if defined(PETSC_HAVE_KOKKOS)
+KOKKOS_INLINE_FUNCTION
 #endif
 void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
 {
