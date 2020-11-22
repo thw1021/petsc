@@ -463,8 +463,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   {
     int n = 256/Nq;
     while (n & n - 1) n = n & n - 1;
-    // dim3 dimBlock(n,Nq);
-    dim3 dimBlock(1,Nq);
+    dim3 dimBlock(n,Nq);
     ii = 2*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_DIM*(1+LANDAU_DIM) + 3*LANDAU_MAX_SPECIES + (1+LANDAU_DIM)*dimBlock.x*LANDAU_MAX_SPECIES;
     ii += (LANDAU_MAX_NQ*LANDAU_MAX_NQ)*LANDAU_MAX_SPECIES;
     if (ii*szf >= 49152) {
