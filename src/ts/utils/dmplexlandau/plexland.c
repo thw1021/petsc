@@ -141,7 +141,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   ierr = PetscDSGetComponents(prob, &Ncf);CHKERRQ(ierr); Ncx = Ncf[0]; if (Ncx!=1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nc %D != 1",Ncx);
   for (fieldA=0;fieldA<Nf;fieldA++) {
     invMass[fieldA] = m_0/ctx->masses[fieldA];
-    Eq_m[fieldA] = -ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
+    Eq_m[fieldA] = ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
     if (dim==2) Eq_m[fieldA] *=  2 * PETSC_PI; /* add the 2pi term that is not in Landau */
     nu_alpha[fieldA] = PetscSqr(ctx->charges[fieldA]/m_0)*m_0/ctx->masses[fieldA];
     nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0,3);
@@ -436,7 +436,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatScale(JacP, -1.0);CHKERRQ(ierr); /* The code reflect the papers: du/dt = C, whereas PETSc use the form G(u) = du/dt - C(u) = 0 */
   ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
   ierr = MatViewFromOptions(JacP,NULL,"-landau_mat_view");CHKERRQ(ierr);
 #define MAP_BF_SIZE (128*LANDAU_DIM*LANDAU_MAX_Q_FACE*LANDAU_MAX_SPECIES)
