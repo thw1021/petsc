@@ -9,28 +9,16 @@ class Configure(config.package.Package):
     if 'HIP_PLATFORM' in os.environ:
       self.platform = os.environ['HIP_PLATFORM']
     elif hasattr(self,'systemNvcc'):
-    #elif hasattr(self.config.compile, 'CUDA'):
       self.platform = 'nvcc'
     else:
       self.platform = 'hcc'
 
     self.minversion       = '3.8'
     self.versionname      = 'HIP_VERSION'
-    # Does not seem to include version
-    #self.versioninclude  = 'hip/hip_runtime.h'
-    #self.requiresversion = 2
-    plat_define='#define __HIP_PLATFORM_' + self.platform.upper() + '__'
-    #self.functionsCxx     = [1,plat_define, 'hipblasCreate']
     self.functionsCxx     = [1,'', 'hipblasCreate']
-    # hipfft and hipsolver aren't available really (hipfft is close).
-    #self.includes        = ['hipblas.h','hipfft.h','hipsparse.h','hipsolver.h']
-    #self.liblist         = [['libhipblas.a','libhiprtc.a','libhipsparse.a','libhipsolver.a'],
-    #                         ['hipfft.lib','hipblas.lib','hiprtc.lib','hipsparse.lib','hipsolver.lib']]
     self.includes         = ['hipblas.h','hipsparse.h']
     self.liblist          = [['libhipsparse.a','libhipblas.a','librocsparse.a','librocsolver.a','librocblas.a','libamdhip64.a'],
                              ['hipsparse.lib','hipblas.lib','rocsparse.lib','rocsolver.lib','rocblas.lib','amdhip64.lib'],]
-    #self.liblist          = [['libhipsparse.a','libhipblas.a','libhiprtc.a'],
-    #                         ['hipsparse.lib','hipblas.lib','hiprtc.lib']]
     self.precisions       = ['single','double']
     self.cxx              = 1
     self.complex          = 1

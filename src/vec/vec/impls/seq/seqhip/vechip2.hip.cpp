@@ -24,8 +24,7 @@
     Does NOT zero the HIP array
 
  */
-extern "C"
-PetscErrorCode VecHIPAllocateCheck(Vec v)
+PETSC_INTERN PetscErrorCode VecHIPAllocateCheck(Vec v)
 {
   PetscErrorCode ierr;
   hipError_t    err;
@@ -60,8 +59,7 @@ PetscErrorCode VecHIPAllocateCheck(Vec v)
 }
 
 /* Copies a vector from the CPU to the GPU unless we already have an up-to-date copy on the GPU */
-extern "C"
-PetscErrorCode VecHIPCopyToGPU(Vec v)
+PETSC_INTERN PetscErrorCode VecHIPCopyToGPU(Vec v)
 {
   PetscErrorCode ierr;
   hipError_t    err;
@@ -86,8 +84,7 @@ PetscErrorCode VecHIPCopyToGPU(Vec v)
 /*
      VecHIPCopyFromGPU - Copies a vector from the GPU to the CPU unless we already have an up-to-date copy on the CPU
 */
-extern "C"
-PetscErrorCode VecHIPCopyFromGPU(Vec v)
+PETSC_EXTERN PetscErrorCode VecHIPCopyFromGPU(Vec v)
 {
   PetscErrorCode ierr;
   hipError_t    err;
@@ -120,8 +117,7 @@ PetscErrorCode VecHIPCopyFromGPU(Vec v)
 .seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateSeqWithArray(), VECMPI, VecType, VecCreateMPI(), VecCreateSeq()
 M*/
 
-extern "C"
-PetscErrorCode VecAYPX_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
+PETSC_INTERN PetscErrorCode VecAYPX_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
 {
   const PetscScalar *xarray;
   PetscScalar       *yarray;
@@ -155,8 +151,7 @@ PetscErrorCode VecAYPX_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecAXPY_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
+PETSC_EXTERN PetscErrorCode VecAXPY_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
 {
   const PetscScalar *xarray;
   PetscScalar       *yarray;
@@ -189,8 +184,7 @@ PetscErrorCode VecAXPY_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecPointwiseDivide_SeqHIP(Vec win, Vec xin, Vec yin)
+PETSC_INTERN PetscErrorCode VecPointwiseDivide_SeqHIP(Vec win, Vec xin, Vec yin)
 {
   PetscInt                              n = xin->map->n;
   const PetscScalar                     *xarray=NULL,*yarray=NULL;
@@ -222,8 +216,7 @@ PetscErrorCode VecPointwiseDivide_SeqHIP(Vec win, Vec xin, Vec yin)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecWAXPY_SeqHIP(Vec win,PetscScalar alpha,Vec xin, Vec yin)
+PETSC_INTERN PetscErrorCode VecWAXPY_SeqHIP(Vec win,PetscScalar alpha,Vec xin, Vec yin)
 {
   const PetscScalar *xarray=NULL,*yarray=NULL;
   PetscScalar       *warray=NULL;
@@ -255,8 +248,7 @@ PetscErrorCode VecWAXPY_SeqHIP(Vec win,PetscScalar alpha,Vec xin, Vec yin)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecMAXPY_SeqHIP(Vec xin, PetscInt nv,const PetscScalar *alpha,Vec *y)
+PETSC_INTERN PetscErrorCode VecMAXPY_SeqHIP(Vec xin, PetscInt nv,const PetscScalar *alpha,Vec *y)
 {
   PetscErrorCode ierr;
   hipError_t    err;
@@ -306,8 +298,7 @@ PetscErrorCode VecMAXPY_SeqHIP(Vec xin, PetscInt nv,const PetscScalar *alpha,Vec
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecDot_SeqHIP(Vec xin,Vec yin,PetscScalar *z)
+PETSC_INTERN PetscErrorCode VecDot_SeqHIP(Vec xin,Vec yin,PetscScalar *z)
 {
   const PetscScalar *xarray,*yarray;
   PetscErrorCode    ierr;
@@ -536,8 +527,7 @@ __global__ void VecMDot_SeqHIP_kernel8(const PetscScalar *x,const PetscScalar *y
 }
 #endif /* !defined(PETSC_USE_COMPLEX) */
 
-extern "C"
-PetscErrorCode VecMDot_SeqHIP(Vec xin,PetscInt nv,const Vec yin[],PetscScalar *z)
+PETSC_INTERN PetscErrorCode VecMDot_SeqHIP(Vec xin,PetscInt nv,const Vec yin[],PetscScalar *z)
 {
   PetscErrorCode    ierr;
   PetscInt          i,n = xin->map->n,current_y_index = 0;
@@ -729,8 +719,7 @@ PetscErrorCode VecMDot_SeqHIP(Vec xin,PetscInt nv,const Vec yin[],PetscScalar *z
 #undef MDOT_WORKGROUP_SIZE
 #undef MDOT_WORKGROUP_NUM
 
-extern "C"
-PetscErrorCode VecSet_SeqHIP(Vec xin,PetscScalar alpha)
+PETSC_EXTERN PetscErrorCode VecSet_SeqHIP(Vec xin,PetscScalar alpha)
 {
   PetscInt                        n = xin->map->n;
   PetscScalar                     *xarray=NULL;
@@ -757,8 +746,7 @@ PetscErrorCode VecSet_SeqHIP(Vec xin,PetscScalar alpha)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecScale_SeqHIP(Vec xin,PetscScalar alpha)
+PETSC_INTERN PetscErrorCode VecScale_SeqHIP(Vec xin,PetscScalar alpha)
 {
   PetscScalar    *xarray;
   PetscErrorCode ierr;
@@ -785,8 +773,7 @@ PetscErrorCode VecScale_SeqHIP(Vec xin,PetscScalar alpha)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecTDot_SeqHIP(Vec xin,Vec yin,PetscScalar *z)
+PETSC_INTERN PetscErrorCode VecTDot_SeqHIP(Vec xin,Vec yin,PetscScalar *z)
 {
   const PetscScalar *xarray,*yarray;
   PetscErrorCode    ierr;
@@ -810,8 +797,7 @@ PetscErrorCode VecTDot_SeqHIP(Vec xin,Vec yin,PetscScalar *z)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecCopy_SeqHIP(Vec xin,Vec yin)
+PETSC_EXTERN PetscErrorCode VecCopy_SeqHIP(Vec xin,Vec yin)
 {
   const PetscScalar *xarray;
   PetscScalar       *yarray;
@@ -879,8 +865,7 @@ PetscErrorCode VecCopy_SeqHIP(Vec xin,Vec yin)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecSwap_SeqHIP(Vec xin,Vec yin)
+PETSC_INTERN PetscErrorCode VecSwap_SeqHIP(Vec xin,Vec yin)
 {
   PetscErrorCode ierr;
   PetscBLASInt   one = 1,bn;
@@ -905,8 +890,7 @@ PetscErrorCode VecSwap_SeqHIP(Vec xin,Vec yin)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecAXPBY_SeqHIP(Vec yin,PetscScalar alpha,PetscScalar beta,Vec xin)
+PETSC_INTERN PetscErrorCode VecAXPBY_SeqHIP(Vec yin,PetscScalar alpha,PetscScalar beta,Vec xin)
 {
   PetscErrorCode    ierr;
   PetscScalar       a = alpha,b = beta;
@@ -952,8 +936,7 @@ PetscErrorCode VecAXPBY_SeqHIP(Vec yin,PetscScalar alpha,PetscScalar beta,Vec xi
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecAXPBYPCZ_SeqHIP(Vec zin,PetscScalar alpha,PetscScalar beta,PetscScalar gamma,Vec xin,Vec yin)
+PETSC_INTERN PetscErrorCode VecAXPBYPCZ_SeqHIP(Vec zin,PetscScalar alpha,PetscScalar beta,PetscScalar gamma,Vec xin,Vec yin)
 {
   PetscErrorCode ierr;
   hipError_t    err;
@@ -976,8 +959,7 @@ PetscErrorCode VecAXPBYPCZ_SeqHIP(Vec zin,PetscScalar alpha,PetscScalar beta,Pet
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecPointwiseMult_SeqHIP(Vec win,Vec xin,Vec yin)
+PETSC_INTERN PetscErrorCode VecPointwiseMult_SeqHIP(Vec win,Vec xin,Vec yin)
 {
   PetscInt                              n = win->map->n;
   const PetscScalar                     *xarray,*yarray;
@@ -1011,8 +993,7 @@ PetscErrorCode VecPointwiseMult_SeqHIP(Vec win,Vec xin,Vec yin)
 
 /* should do infinity norm in hip */
 
-extern "C"
-PetscErrorCode VecNorm_SeqHIP(Vec xin,NormType type,PetscReal *z)
+PETSC_INTERN PetscErrorCode VecNorm_SeqHIP(Vec xin,NormType type,PetscReal *z)
 {
   PetscErrorCode    ierr;
   PetscInt          n = xin->map->n;
@@ -1058,8 +1039,7 @@ PetscErrorCode VecNorm_SeqHIP(Vec xin,NormType type,PetscReal *z)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecDotNorm2_SeqHIP(Vec s, Vec t, PetscScalar *dp, PetscScalar *nm)
+PETSC_INTERN PetscErrorCode VecDotNorm2_SeqHIP(Vec s, Vec t, PetscScalar *dp, PetscScalar *nm)
 {
   PetscErrorCode ierr;
   hipError_t    err;
@@ -1073,8 +1053,7 @@ PetscErrorCode VecDotNorm2_SeqHIP(Vec s, Vec t, PetscScalar *dp, PetscScalar *nm
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecDestroy_SeqHIP(Vec v)
+PETSC_INTERN PetscErrorCode VecDestroy_SeqHIP(Vec v)
 {
   PetscErrorCode ierr;
   hipError_t    err;
@@ -1105,8 +1084,7 @@ struct conjugate
 };
 #endif
 
-extern "C"
-PetscErrorCode VecConjugate_SeqHIP(Vec xin)
+PETSC_INTERN PetscErrorCode VecConjugate_SeqHIP(Vec xin)
 {
 #if defined(PETSC_USE_COMPLEX)
   PetscScalar                     *xarray;
@@ -1133,8 +1111,7 @@ PetscErrorCode VecConjugate_SeqHIP(Vec xin)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecGetLocalVector_SeqHIP(Vec v,Vec w)
+PETSC_INTERN PetscErrorCode VecGetLocalVector_SeqHIP(Vec v,Vec w)
 {
   PetscErrorCode ierr;
   hipError_t    err;
@@ -1185,8 +1162,7 @@ PetscErrorCode VecGetLocalVector_SeqHIP(Vec v,Vec w)
   PetscFunctionReturn(0);
 }
 
-extern "C"
-PetscErrorCode VecRestoreLocalVector_SeqHIP(Vec v,Vec w)
+PETSC_INTERN PetscErrorCode VecRestoreLocalVector_SeqHIP(Vec v,Vec w)
 {
   PetscErrorCode ierr;
   hipError_t    err;
