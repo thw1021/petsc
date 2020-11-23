@@ -1,33 +1,17 @@
-static char help[] = "This example tests subnetwork coupling. \n\
-              \n\n";
+static char help[] = "This example tests subnetwork coupling. \n\n";
 
-/* T
-  Concepts: DMNetwork
-*/
 #include <petscdmnetwork.h>
-
-struct _p_Comp0{
-  PetscInt id;
-} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
-typedef struct _p_Comp0 *Comp0;
-
-struct _p_Comp1{
-  PetscScalar val;
-} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
-typedef struct _p_Comp1 *Comp1;
 
 int main(int argc,char ** argv)
 {
   PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   DM             dmnetwork;
-  PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,compkey,goffset,row;
+  PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,goffset,row;
   PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
   const PetscInt *vtx,*edges;
   PetscBool      iscouplev,ghost,distribute=PETSC_FALSE;
   Vec            X;
-  Comp0          comp0;
-  Comp1          comp1;
   PetscScalar    val;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
@@ -67,15 +51,8 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Create componnets */
-  ierr = PetscMalloc2(1,&comp0,1,&comp1);CHKERRQ(ierr);
-  comp0[0].id  = rank + 1;       /* intentionally take rank-dependent value for test */
-  comp1[0].val = 10.0*rank + 1.0;
-
   /* Create a dmnetwork and register components */
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&dmnetwork);CHKERRQ(ierr);
-  //ierr = DMNetworkRegisterComponent(dmnetwork,"comp0",sizeof(struct _p_Comp0),&compkey0);CHKERRQ(ierr);
-  //ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(struct _p_Comp1),&compkey1);CHKERRQ(ierr);
 
   /* Set number of subnetworks, numbers of vertices and edges over each subnetwork */
   ierr = DMNetworkSetSizes(dmnetwork,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
@@ -184,7 +161,6 @@ int main(int argc,char ** argv)
   for (i=0; i<Nsubnet; i++) {
     if (size == 1 || rank == i) {ierr = PetscFree(edgelist[i]);CHKERRQ(ierr);}
   }
-  ierr = PetscFree2(comp0,comp1);CHKERRQ(ierr);
 
   ierr = DMDestroy(&dmnetwork);CHKERRQ(ierr);
   ierr = PetscFinalize();
