@@ -1196,7 +1196,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->normJ = 0;
   ctx->verbose = 1;
   ctx->interpolate = PETSC_TRUE;
-  ctx->gpu_assembly = PETSC_FALSE;
+  ctx->gpu_assembly = PETSC_TRUE;
   ctx->sphere = PETSC_FALSE;
   ctx->inflate = PETSC_FALSE;
   ctx->electronShift = 0;
@@ -1256,10 +1256,18 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       }
     }
   }
+  ierr = PetscOptionsBool("-dm_landau_gpu_assembly", "Assemble Jacobian on GPU", "plexland.c", ctx->gpu_assembly, &ctx->gpu_assembly, NULL);CHKERRQ(ierr);
+  if (ctx->gpu_assembly) {
+    if (ctx->deviceType == LANDAU_CUDA) {
+      ierr = PetscOptionsInsertString(NULL,"-dm_mat_type aijcusparse -dm_vec_type cuda");CHKERRQ(ierr);
+    }
+    if (ctx->deviceType == LANDAU_KOKKOS) {
+      ctx->gpu_assembly = PETSC_FALSE;
+    }
+  }
   ierr = PetscOptionsReal("-dm_landau_electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_landau_inflate", "With sphere, inflate for curved edges (no AMR)", "plexland.c", ctx->inflate, &ctx->inflate, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_landau_gpu_assembly", "Assemble Jacobian on GPU", "plexland.c", ctx->gpu_assembly, &ctx->gpu_assembly, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_landau_amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &ctx->numRERefine, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_landau_amr_z_refine1",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_landau_amr_z_refine2",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
@@ -2007,7 +2015,6 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
     ctx->aux_bool = PETSC_FALSE;
     ierr = PetscInfo3(ts, "Skip Landau Jacobian t=%g, shift=%g shift*|u|=%20.12e\n",(double)time_dummy,(double)shift,(double)shift*unorm);CHKERRQ(ierr);
   }
-  ierr = MatCopy(ctx->J,Pmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr); // these are the same
   {
     MatInfo info1, info2;
     double  nz_1, nz_2;
