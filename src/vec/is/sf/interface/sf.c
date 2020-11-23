@@ -105,7 +105,7 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
   b->use_gpu_aware_mpi    = use_gpu_aware_mpi;
   b->use_stream_aware_mpi = PETSC_FALSE;
   b->use_default_stream   = PETSC_TRUE; /* The assumption is true for PETSc internal use of SF */
-  /* TODO:  Need to make runtime? */
+  /* Set the default */
   #if defined(PETSC_HAVE_KOKKOS) /* Prefer kokkos over cuda*/
     b->backend = PETSCSF_BACKEND_KOKKOS;
   #elif defined(PETSC_HAVE_CUDA)
@@ -349,8 +349,8 @@ PetscErrorCode PetscSFSetUp(PetscSF sf)
 .  -sf_use_stream_aware_mpi  - Assume the underlying MPI is cuda-stream aware and SF won't sync streams for send/recv buffers passed to MPI (default: false).
                                If true, this option only works with -use_gpu_aware_mpi 1.
 
--  -sf_backend cuda | kokkos -Select the device backend SF uses. Currently SF has two backends: cuda and Kokkos.
-                              On CUDA devices, one can choose cuda or kokkos with the default being cuda. On other devices,
+-  -sf_backend cuda | hip | kokkos -Select the device backend SF uses. Currently SF has these backends: cuda, hip and Kokkos.
+                              On CUDA (HIP) devices, one can choose cuda (hip) or kokkos with the default being kokkos. On other devices,
                               the only available is kokkos.
 
    Level: intermediate
@@ -380,17 +380,13 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
     ierr = PetscStrcasecmp("cuda",backendstr,&isCuda);CHKERRQ(ierr);
     ierr = PetscStrcasecmp("kokkos",backendstr,&isKokkos);CHKERRQ(ierr);
     ierr = PetscStrcasecmp("hip",backendstr,&isHip);CHKERRQ(ierr);
-  #if defined(PETSC_HAVE_CUDA)
+  #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
     if (isCuda) sf->backend = PETSCSF_BACKEND_CUDA;
     else if (isKokkos) sf->backend = PETSCSF_BACKEND_KOKKOS;
     else if (isHip) sf->backend = PETSCSF_BACKEND_HIP;
-    else if (set) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported on cuda devices. You may choose cuda or kokkos (if installed)", backendstr);
+    else if (set) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported. You may choose cuda, hip or kokkos (if installed)", backendstr);
   #elif defined(PETSC_HAVE_KOKKOS)
     if (set && !isKokkos) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported. You can only choose kokkos", backendstr);
-  #endif
-  #if defined(PETSC_HAVE_HIP)
-    if (isHip) sf->backend = PETSCSF_BACKEND_HIP;
-    else if (set) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported on hip devices. You may choose cuda or kokkos (if installed)", backendstr);
   #endif
   }
 #endif
