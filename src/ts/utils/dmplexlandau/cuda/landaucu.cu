@@ -5,7 +5,6 @@
 #include <petsc/private/dmpleximpl.h>   /*I  "dmpleximpl.h"   I*/
 #include <petsclandau.h>
 #include <../src/mat/impls/aij/seq/aij.h>
-#include <petsc/private/kernels/petscaxpy.h>
 #include <petscmat.h>
 #include <petscaijdevice.h>
 #include <petsccublas.h>
@@ -463,6 +462,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   {
     int n = 256/Nq;
     while (n & n - 1) n = n & n - 1;
+    if (n>16) n = 16;
     dim3 dimBlock(n,Nq);
     ii = 2*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_DIM*(1+LANDAU_DIM) + 3*LANDAU_MAX_SPECIES + (1+LANDAU_DIM)*dimBlock.x*LANDAU_MAX_SPECIES;
     ii += (LANDAU_MAX_NQ*LANDAU_MAX_NQ)*LANDAU_MAX_SPECIES;
