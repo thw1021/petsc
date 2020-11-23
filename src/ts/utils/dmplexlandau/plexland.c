@@ -1840,7 +1840,7 @@ static void g0_r(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                   PetscReal t, PetscReal u_tShift, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
 {
-  g0[0] = 2.*PETSC_PI*x[0];
+  g0[0] = 2.*PETSC_PI*x[0] + 1.e-14; // seems to fix funny Q2 bug
 }
 
 /*@
@@ -2017,13 +2017,10 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
     nz_1 = info1.nz_allocated;
     ierr = MatGetInfo(ctx->J,MAT_LOCAL,&info2);CHKERRQ(ierr);
     nz_2 = info2.nz_allocated;
-    if (0){
-      ierr = PetscInfo2(ts, "\t\tnnz A = %g, nnz M = %g\n",nz_1,nz_2);CHKERRQ(ierr);
-    }
     /* add mass */
-    if (nz_1 != nz_2||1) { /* there is a bug wit Q2 elements and this generates an error message instead of diverged solution, need to fix */
+    if (nz_1 != nz_2) { /* there is a bug wit Q2 elements and this generates an error message instead of diverged solution, need to fix */
       ierr = MatAXPY(Pmat,shift,ctx->M,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
-      //SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "nz_1 != nz_2 %g %g",(double)nz_1,(double)nz_2);
+      SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "nz_1 != nz_2 %g %g",(double)nz_1,(double)nz_2);
     } else {
       ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
     }
