@@ -10,14 +10,14 @@
 #include <petsc/private/hipvecimpl.h>
 
 /*MC
-   VECCUDA - VECCUDA = "cuda" - A VECSEQCUDA on a single-process communicator, and VECMPICUDA otherwise.
+   VECHIP - VECHIP = "hip" - A VECSEQHIP on a single-process communicator, and VECMPIHIP otherwise.
 
    Options Database Keys:
-. -vec_type cuda - sets the vector type to VECCUDA during a call to VecSetFromOptions()
+. -vec_type hip - sets the vector type to VECHIP during a call to VecSetFromOptions()
 
   Level: beginner
 
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECSEQCUDA, VECMPICUDA, VECSTANDARD, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
+.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECSEQHIP, VECMPIHIP, VECSTANDARD, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
 M*/
 
 extern "C"
@@ -449,8 +449,8 @@ PetscErrorCode VecCreate_MPIHIP_Private(Vec vv,PetscBool alloc,PetscInt nghost,c
       vv->minimum_bytes_pinned_memory = 0;
 
       /* Need to parse command line for minimum size to use for pinned memory allocations on host here.
-         Note: This same code duplicated in VecCreate_SeqHIP_Private() and VecCUDAAllocateCheck(). Is there a good way to avoid this? */
-      ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)vv),((PetscObject)vv)->prefix,"VECCUDA Options","Vec");CHKERRQ(ierr);
+         Note: This same code duplicated in VecCreate_SeqHIP_Private() and VecHIPAllocateCheck(). Is there a good way to avoid this? */
+      ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)vv),((PetscObject)vv)->prefix,"VECHIP Options","Vec");CHKERRQ(ierr);
       pinned_memory_min = vv->minimum_bytes_pinned_memory;
       ierr = PetscOptionsReal("-vec_pinned_memory_min","Minimum size (in bytes) for an allocation to use pinned memory on host","VecSetPinnedMemoryMin",pinned_memory_min,&pinned_memory_min,&flag);CHKERRQ(ierr);
       if (flag) vv->minimum_bytes_pinned_memory = pinned_memory_min;

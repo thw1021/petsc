@@ -20,7 +20,6 @@ __device__ static inline PetscInt MapTidToIndex(const PetscInt *opt,PetscInt tid
   k = m/(dx[r]*dy[r]);
   j = (m - k*dx[r]*dy[r])/dx[r];
   i = m - k*dx[r]*dy[r] - j*dx[r];
-
   return (start[r] + k*X[r]*Y[r] + j*X[r] + i);
 }
 
@@ -173,17 +172,14 @@ template<typename Type> struct Maxloc {
 
   See Cuda version
 */
-__device__ static double atomicExch(double* address,double val) {return __longlong_as_double(atomicExch((unsigned long long int*)address,__double_as_longlong(val)));}
+__device__ static double atomicExch(double* address,double val) {return __longlong_as_double(atomicExch((ullint*)address,__double_as_longlong(val)));}
 
-#if defined(PETSC_USE_64BIT_INDICES)
-__device__ static PetscInt atomicExch(PetscInt* address,PetscInt val) {return (PetscInt)(atomicExch((unsigned long long int*)address,(unsigned long long int)val));}
-#endif
+__device__ static llint atomicExch(llint* address,llint val) {return (llint)(atomicExch((ullint*)address,(ullint)val));}
 
 template<typename Type> struct AtomicInsert {__device__ Type operator() (Type& x,Type y) const {return atomicExch(&x,y);}};
 
 #if defined(PETSC_HAVE_COMPLEX)
 #if defined(PETSC_USE_REAL_DOUBLE)
-/* TODO: CUDA does not support 128-bit atomics. Users should not insert different 128-bit PetscComplex values to the same location */
 template<> struct AtomicInsert<PetscComplex> {
   __device__ PetscComplex operator() (PetscComplex& x,PetscComplex y) const {
     PetscComplex         old, *z = &old;
@@ -209,10 +205,7 @@ template<> struct AtomicInsert<PetscComplex> {
   Atomic add operations
 
 */
-
-#if defined(PETSC_USE_64BIT_INDICES)
-__device__ static PetscInt atomicAdd(PetscInt* address,PetscInt val) {return (PetscInt)atomicAdd((unsigned long long int*)address,(unsigned long long int)val);}
-#endif
+__device__ static llint atomicAdd(llint* address,llint val) {return (llint)atomicAdd((ullint*)address,(ullint)val);}
 
 template<typename Type> struct AtomicAdd {__device__ Type operator() (Type& x,Type y) const {return atomicAdd(&x,y);}};
 
@@ -251,8 +244,8 @@ template<> struct AtomicAdd<PetscComplex> {
 #if defined(PETSC_USE_REAL_DOUBLE)
 __device__ static double atomicMult(double* address, double val)
 {
-  unsigned long long int *address_as_ull = (unsigned long long int*)(address);
-  unsigned long long int old = *address_as_ull, assumed;
+  ullint *address_as_ull = (ullint*)(address);
+  ullint old = *address_as_ull, assumed;
   do {
     assumed = old;
     /* Other threads can access and modify value of *address_as_ull after the read above and before the write below */
@@ -284,18 +277,16 @@ __device__ static int atomicMult(int* address,int val)
   return (int)old;
 }
 
-#if defined(PETSC_USE_64BIT_INDICES)
-__device__ static int atomicMult(PetscInt* address,PetscInt val)
+__device__ static llint atomicMult(llint* address,llint val)
 {
-  unsigned long long int *address_as_ull = (unsigned long long int*)(address);
-  unsigned long long int old = *address_as_ull, assumed;
+  ullint *address_as_ull = (ullint*)(address);
+  ullint old = *address_as_ull, assumed;
   do {
     assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val*(PetscInt)assumed));
+    old     = atomicCAS(address_as_ull, assumed, (ullint)(val*(PetscInt)assumed));
   } while (assumed != old);
   return (PetscInt)old;
 }
-#endif
 
 template<typename Type> struct AtomicMult {__device__ Type operator() (Type& x,Type y) const {return atomicMult(&x,y);}};
 
@@ -308,8 +299,8 @@ template<typename Type> struct AtomicMult {__device__ Type operator() (Type& x,T
 #if defined(PETSC_USE_REAL_DOUBLE)
 __device__ static double atomicMin(double* address, double val)
 {
-  unsigned long long int *address_as_ull = (unsigned long long int*)(address);
-  unsigned long long int old = *address_as_ull, assumed;
+  ullint *address_as_ull = (ullint*)(address);
+  ullint old = *address_as_ull, assumed;
   do {
     assumed = old;
     old     = atomicCAS(address_as_ull, assumed, __double_as_longlong(PetscMin(val,__longlong_as_double(assumed))));
@@ -319,8 +310,8 @@ __device__ static double atomicMin(double* address, double val)
 
 __device__ static double atomicMax(double* address, double val)
 {
-  unsigned long long int *address_as_ull = (unsigned long long int*)(address);
-  unsigned long long int old = *address_as_ull, assumed;
+  ullint *address_as_ull = (ullint*)(address);
+  ullint old = *address_as_ull, assumed;
   do {
     assumed  = old;
     old = atomicCAS(address_as_ull, assumed, __double_as_longlong(PetscMax(val,__longlong_as_double(assumed))));
@@ -351,33 +342,6 @@ __device__ static float atomicMax(float* address,float val)
 }
 #endif
 
-/*
-  atomicMin/Max(long long *, long long) are not in Nvidia's documentation. But on OLCF Summit we found
-*/
-#if defined(PETSC_USE_64BIT_INDICES)
-__device__ static PetscInt atomicMin(PetscInt* address,PetscInt val)
-{
-  unsigned long long int *address_as_ull = (unsigned long long int*)(address);
-  unsigned long long int old = *address_as_ull, assumed;
-  do {
-    assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(PetscMin(val,(PetscInt)assumed)));
-  } while (assumed != old);
-  return (PetscInt)old;
-}
-
-__device__ static PetscInt atomicMax(PetscInt* address,PetscInt val)
-{
-  unsigned long long int *address_as_ull = (unsigned long long int*)(address);
-  unsigned long long int old = *address_as_ull, assumed;
-  do {
-    assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(PetscMax(val,(PetscInt)assumed)));
-  } while (assumed != old);
-  return (PetscInt)old;
-}
-#endif
-
 template<typename Type> struct AtomicMin {__device__ Type operator() (Type& x,Type y) const {return atomicMin(&x,y);}};
 template<typename Type> struct AtomicMax {__device__ Type operator() (Type& x,Type y) const {return atomicMax(&x,y);}};
 
@@ -385,41 +349,6 @@ template<typename Type> struct AtomicMax {__device__ Type operator() (Type& x,Ty
   Atomic bitwise operations
 
 */
-
-#if defined(PETSC_USE_64BIT_INDICES)
-/* See cuda version */
-__device__ static PetscInt atomicAnd(PetscInt* address,PetscInt val)
-{
-  unsigned long long int *address_as_ull = (unsigned long long int*)(address);
-  unsigned long long int old = *address_as_ull, assumed;
-  do {
-    assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val & (PetscInt)assumed));
-  } while (assumed != old);
-  return (PetscInt)old;
-}
-__device__ static PetscInt atomicOr(PetscInt* address,PetscInt val)
-{
-  unsigned long long int *address_as_ull = (unsigned long long int*)(address);
-  unsigned long long int old = *address_as_ull, assumed;
-  do {
-    assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val | (PetscInt)assumed));
-  } while (assumed != old);
-  return (PetscInt)old;
-}
-
-__device__ static PetscInt atomicXor(PetscInt* address,PetscInt val)
-{
-  unsigned long long int *address_as_ull = (unsigned long long int*)(address);
-  unsigned long long int old = *address_as_ull, assumed;
-  do {
-    assumed = old;
-    old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(val ^ (PetscInt)assumed));
-  } while (assumed != old);
-  return (PetscInt)old;
-}
-#endif
 
 template<typename Type> struct AtomicBAND {__device__ Type operator() (Type& x,Type y) const {return atomicAnd(&x,y);}};
 template<typename Type> struct AtomicBOR  {__device__ Type operator() (Type& x,Type y) const {return atomicOr (&x,y);}};
@@ -453,12 +382,12 @@ struct AtomicLogical<Type,Op,4> {
 template<typename Type,class Op>
 struct AtomicLogical<Type,Op,8> {
   __device__ Type operator()(Type& x,Type y) const {
-    unsigned long long int *address_as_ull = (unsigned long long int*)(&x);
-    unsigned long long int old = *address_as_ull, assumed;
+    ullint *address_as_ull = (ullint*)(&x);
+    ullint old = *address_as_ull, assumed;
     Op op;
     do {
       assumed = old;
-      old     = atomicCAS(address_as_ull, assumed, (unsigned long long int)(op((Type)assumed,y)));
+      old     = atomicCAS(address_as_ull, assumed, (ullint)(op((Type)assumed,y)));
     } while (assumed != old);
     return (Type)old;
   }
@@ -833,18 +762,16 @@ PETSC_INTERN PetscErrorCode PetscSFLinkSetUp_Hip(PetscSF sf,PetscSFLink link,MPI
     else if (nPetscReal == 4) PackInit_RealType<PetscReal,4,1>(link); else if (nPetscReal%4 == 0) PackInit_RealType<PetscReal,4,0>(link);
     else if (nPetscReal == 2) PackInit_RealType<PetscReal,2,1>(link); else if (nPetscReal%2 == 0) PackInit_RealType<PetscReal,2,0>(link);
     else if (nPetscReal == 1) PackInit_RealType<PetscReal,1,1>(link); else if (nPetscReal%1 == 0) PackInit_RealType<PetscReal,1,0>(link);
-  } else if (nPetscInt) {
-    if      (nPetscInt == 8) PackInit_IntegerType<PetscInt,8,1>(link); else if (nPetscInt%8 == 0) PackInit_IntegerType<PetscInt,8,0>(link);
-    else if (nPetscInt == 4) PackInit_IntegerType<PetscInt,4,1>(link); else if (nPetscInt%4 == 0) PackInit_IntegerType<PetscInt,4,0>(link);
-    else if (nPetscInt == 2) PackInit_IntegerType<PetscInt,2,1>(link); else if (nPetscInt%2 == 0) PackInit_IntegerType<PetscInt,2,0>(link);
-    else if (nPetscInt == 1) PackInit_IntegerType<PetscInt,1,1>(link); else if (nPetscInt%1 == 0) PackInit_IntegerType<PetscInt,1,0>(link);
-#if defined(PETSC_USE_64BIT_INDICES)
+  } else if (nPetscInt && sizeof(PetscInt) == sizeof(llint)) {
+    if      (nPetscInt == 8) PackInit_IntegerType<llint,8,1>(link); else if (nPetscInt%8 == 0) PackInit_IntegerType<llint,8,0>(link);
+    else if (nPetscInt == 4) PackInit_IntegerType<llint,4,1>(link); else if (nPetscInt%4 == 0) PackInit_IntegerType<llint,4,0>(link);
+    else if (nPetscInt == 2) PackInit_IntegerType<llint,2,1>(link); else if (nPetscInt%2 == 0) PackInit_IntegerType<llint,2,0>(link);
+    else if (nPetscInt == 1) PackInit_IntegerType<llint,1,1>(link); else if (nPetscInt%1 == 0) PackInit_IntegerType<llint,1,0>(link);
   } else if (nInt) {
     if      (nInt == 8) PackInit_IntegerType<int,8,1>(link); else if (nInt%8 == 0) PackInit_IntegerType<int,8,0>(link);
     else if (nInt == 4) PackInit_IntegerType<int,4,1>(link); else if (nInt%4 == 0) PackInit_IntegerType<int,4,0>(link);
     else if (nInt == 2) PackInit_IntegerType<int,2,1>(link); else if (nInt%2 == 0) PackInit_IntegerType<int,2,0>(link);
     else if (nInt == 1) PackInit_IntegerType<int,1,1>(link); else if (nInt%1 == 0) PackInit_IntegerType<int,1,0>(link);
-#endif
   } else if (nSignedChar) {
     if      (nSignedChar == 8) PackInit_IntegerType<SignedChar,8,1>(link); else if (nSignedChar%8 == 0) PackInit_IntegerType<SignedChar,8,0>(link);
     else if (nSignedChar == 4) PackInit_IntegerType<SignedChar,4,1>(link); else if (nSignedChar%4 == 0) PackInit_IntegerType<SignedChar,4,0>(link);
