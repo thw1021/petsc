@@ -2,7 +2,25 @@
 #define PETSCAIJDEVICE_H
 
 #include <petscmat.h>
-#include <petsc/private/matimpl.h>
+
+#define PetscCSRDataStructure_(datatype) \
+  int              *i;                   \
+  int              *j;                   \
+  datatype         *a;                   \
+  PetscInt         n;                    \
+
+typedef struct {
+  PetscCSRDataStructure_(PetscScalar)
+} PetscCSRDataStructure;
+
+struct _n_SplitCSRMat {
+  PetscInt              cstart,cend,rstart,rend;
+  PetscCSRDataStructure diag,offdiag;
+  int                   *colmap;
+  /* global number of columns in matrix and PETSc global rank; used for error checking */
+  PetscMPIInt rank;
+  PetscInt    N;
+};
 
 /* no atomicAdd for complex numbers */
 #if defined(PETSC_USE_COMPLEX)
@@ -135,4 +153,4 @@ PetscErrorCode MatSetValuesDevice(PetscSplitCSRDataStructure d_mat, PetscInt m,c
 #undef PetscAtomicAdd
 #undef PetscCSRDataStructure_
 
-#endif // PETSCAIJDEVICE_H
+#endif
