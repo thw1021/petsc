@@ -2008,26 +2008,26 @@ source /opt/intel/idb/10.1.012/bin/idbvars.sh
       <p>
       If -malloc_debug does not help: on GNU/Linux and Apple Mac OS X machines
       - you can use <a href="https://valgrind.org/">http://valgrind.org</a>.
+      </p>
 
-     <p style="color:rgb(255,0,0);">You must follow all the instructions below.</p>
+     <p style="color:rgb(255,0,0);">Follow the instructions below.</p>
 
       <ul>
-        <li>Build PETSc with <code>--download-mpich --with-debugging</code> . </li>
-        <li>On Apple you need 
-            <ul>
-               <li> to use valgrind from <a href="https://github.com/petsc/valgrind-macos">https://github.com/petsc/valgrind-macos</a> 
-               <li>   you must run ./configure with  --download-fblaslapack or --download-f2cblaslapack</li>
-               <li> use the additional valgrind option <code>--dsymutil=yes</code> </li>
-            </ul>
+        <li>Build PETSc with <code>--download-mpich --with-debugging</code>.</li>
+        <li>On macOS you need to
+          <ul>
+            <li>use valgrind from <a href="https://github.com/petsc/valgrind-macos">https://github.com/petsc/valgrind-macos</a></li>
+            <li>run <code>./configure</code> with  <code>--download-fblaslapack</code> or <code>--download-f2cblaslapack</code></li>
+            <li>use the additional valgrind option <code>--dsymutil=yes</code></li>
+          </ul>
         </li>
-        <li>Compile your application code with this build of PETSc</li>
+        <li>Compile your application code with this build of PETSc.</li>
         <li>Run with valgrind 
-        <ul> 
-          <li> using: <code>${PETSC_DIR}/lib/petsc/bin/petscmpiexec -valgrind -n NPROC PETSCPROGRAMNAME  PROGRAMOPTIONS</code></li>
-        <li>or with: <code>mpiexec -n NPROC valgrind --tool=memcheck -q --num-callers=20 --suppressions=${PETSC_DIR}/lib/petsc/bin/maint/petsc-val.supp --log-file=valgrind.log.%p PETSCPROGRAMNAME -malloc off PROGRAMOPTIONS</code></li>
+          <ul> 
+            <li>using: <code>${PETSC_DIR}/lib/petsc/bin/petscmpiexec -valgrind -n NPROC PETSCPROGRAMNAME  PROGRAMOPTIONS</code></li>
+            <li>or with: <code>mpiexec -n NPROC valgrind --tool=memcheck -q --num-callers=20 --suppressions=${PETSC_DIR}/lib/petsc/bin/maint/petsc-val.supp --log-file=valgrind.log.%p PETSCPROGRAMNAME -malloc off PROGRAMOPTIONS</code></li>
+          </ul> 
         </li>
-       </ul>
-
       </ul>
 
       Notes:
