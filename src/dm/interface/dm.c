@@ -8730,11 +8730,13 @@ PetscErrorCode DMAdaptLabel(DM dm, DMLabel label, DM *dmAdapt)
   *dmAdapt = NULL;
   if (!dm->ops->adaptlabel) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMAdaptLabel",((PetscObject)dm)->type_name);
   ierr = (dm->ops->adaptlabel)(dm, label, dmAdapt);CHKERRQ(ierr);
-  if (*dmAdapt) (*dmAdapt)->prealloc_only = dm->prealloc_only;  /* maybe this should go .... */
-  ierr = PetscFree((*dmAdapt)->vectype);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(dm->vectype,(char**)&(*dmAdapt)->vectype);CHKERRQ(ierr);
-  ierr = PetscFree((*dmAdapt)->mattype);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(dm->mattype,(char**)&(*dmAdapt)->mattype);CHKERRQ(ierr);
+  if (*dmAdapt) {
+    (*dmAdapt)->prealloc_only = dm->prealloc_only;  /* maybe this should go .... */
+    ierr = PetscFree((*dmAdapt)->vectype);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(dm->vectype,(char**)&(*dmAdapt)->vectype);CHKERRQ(ierr);
+    ierr = PetscFree((*dmAdapt)->mattype);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(dm->mattype,(char**)&(*dmAdapt)->mattype);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
