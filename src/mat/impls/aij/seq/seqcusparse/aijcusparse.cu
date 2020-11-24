@@ -1741,7 +1741,7 @@ static PetscErrorCode MatSeqAIJGetArray_SeqAIJCUSPARSE(Mat A,PetscScalar *array[
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatSeqAIJCUSPARSECopyToGPU(Mat A)
+PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSECopyToGPU(Mat A)
 {
   Mat_SeqAIJCUSPARSE           *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
   Mat_SeqAIJCUSPARSEMultStruct *matstruct = cusparsestruct->mat;
@@ -2976,25 +2976,18 @@ static PetscErrorCode MatMultTransposeAdd_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec
 
 static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A,MatAssemblyType mode)
 {
-  PetscErrorCode              ierr;
-  PetscSplitCSRDataStructure  *d_mat = NULL, h_mat;
-  PetscBool                   is_seq = PETSC_TRUE;
-  PetscInt                    nnz_state = A->nonzerostate;
+  PetscErrorCode     ierr;
+  PetscObjectState   onnz = A->nonzerostate;
+  Mat_SeqAIJCUSPARSE *cusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
 
   PetscFunctionBegin;
-  if (A->factortype == MAT_FACTOR_NONE) {
-    d_mat = ((Mat_SeqAIJCUSPARSE*)A->spptr)->deviceMat;
-  }
-  if (d_mat) {
-    cudaError_t err;
-    ierr = PetscInfo(A,"Assemble device matrix\n");CHKERRQ(ierr);
-    err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    is_seq = h_mat.seq;
-  }
-  ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr); // this does very little if assembled on GPU - call it?
-  if (mode == MAT_FLUSH_ASSEMBLY || A->boundtocpu) PetscFunctionReturn(0);
-  if (d_mat) {
-    A->offloadmask = PETSC_OFFLOAD_GPU;
+  ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr);
+  if (onnz != A->nonzerostate && cusp->deviceMat) {
+    cudaError_t cerr;
+
+    ierr = PetscInfo(A,"Destroy device mat since nonzerostate changed\n");CHKERRQ(ierr);
+    cerr = cudaFree(cusp->deviceMat);CHKERRCUDA(cerr);
+    cusp->deviceMat = NULL;
   }
   PetscFunctionReturn(0);
 }
@@ -3061,29 +3054,14 @@ PetscErrorCode  MatCreateSeqAIJCUSPARSE(MPI_Comm comm,PetscInt m,PetscInt n,Pets
 
 static PetscErrorCode MatDestroy_SeqAIJCUSPARSE(Mat A)
 {
-  PetscErrorCode              ierr;
-  PetscSplitCSRDataStructure  *d_mat = NULL;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) {
-    d_mat = ((Mat_SeqAIJCUSPARSE*)A->spptr)->deviceMat;
-    ((Mat_SeqAIJCUSPARSE*)A->spptr)->deviceMat = NULL;
     ierr = MatSeqAIJCUSPARSE_Destroy((Mat_SeqAIJCUSPARSE**)&A->spptr);CHKERRQ(ierr);
   } else {
     ierr = MatSeqAIJCUSPARSETriFactors_Destroy((Mat_SeqAIJCUSPARSETriFactors**)&A->spptr);CHKERRQ(ierr);
   }
-  if (d_mat) {
-    Mat_SeqAIJ                 *a = (Mat_SeqAIJ*)A->data;
-    cudaError_t                err;
-    PetscSplitCSRDataStructure h_mat;
-    ierr = PetscInfo(A,"Have device matrix\n");CHKERRQ(ierr);
-    err = cudaMemcpy( &h_mat, d_mat, sizeof(PetscSplitCSRDataStructure), cudaMemcpyDeviceToHost);CHKERRCUDA(err);
-    if (a->compressedrow.use) {
-      err = cudaFree(h_mat.diag.i);CHKERRCUDA(err);
-    }
-    err = cudaFree(d_mat);CHKERRCUDA(err);
-  }
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqAIJCopySubArray_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatCUSPARSESetFormat_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",NULL);CHKERRQ(ierr);
@@ -3307,6 +3285,33 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
   }
   A->boundtocpu = flg;
   a->inode.use = flg;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
+{
+  PetscErrorCode ierr;
+  PetscBool      both = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  if (A->factortype == MAT_FACTOR_NONE) {
+    Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
+    if (spptr->mat) {
+      CsrMatrix* matrix = (CsrMatrix*)spptr->mat->mat;
+      if (matrix->values) {
+        both = PETSC_TRUE;
+        thrust::fill(thrust::device,matrix->values->begin(),matrix->values->end(),0.);
+      }
+    }
+    if (spptr->matTranspose) {
+      CsrMatrix* matrix = (CsrMatrix*)spptr->matTranspose->mat;
+      if (matrix->values) {
+        thrust::fill(thrust::device,matrix->values->begin(),matrix->values->end(),0.);
+      }
+    }
+  }
+  ierr = MatZeroEntries_SeqAIJ(A);CHKERRQ(ierr);
+  if (both) A->offloadmask = PETSC_OFFLOAD_BOTH;
   PetscFunctionReturn(0);
 }
 
