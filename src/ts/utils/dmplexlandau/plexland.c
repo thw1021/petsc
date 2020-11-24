@@ -231,7 +231,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   if (ctx->deviceType == LANDAU_CUDA || ctx->deviceType == LANDAU_KOKKOS) {
     if (ctx->deviceType == LANDAU_CUDA) {
 #if defined(PETSC_HAVE_CUDA)
-      ierr = LandauCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,&IPData,invJ_a,ctx->subThreadBlockSize,ctx->events,JacP);CHKERRQ(ierr);
+      ierr = LandauCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,&IPData,invJ_a,ctx->events,JacP);CHKERRQ(ierr);
 #else
       SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
@@ -1232,7 +1232,11 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
 #if defined(PETSC_HAVE_KOKKOS)
     ctx->deviceType = LANDAU_KOKKOS;
     ierr = PetscStrcpy(opstring,"kokkos");CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA)
+    ctx->subThreadBlockSize = 8;
+#else
     ctx->subThreadBlockSize = 0;
+#endif
 #elif defined(PETSC_HAVE_CUDA)
     ctx->deviceType = LANDAU_CUDA;
     ierr = PetscStrcpy(opstring,"cuda");CHKERRQ(ierr);
@@ -1248,8 +1252,10 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       ctx->subThreadBlockSize = 0;
     } else {
       ierr = PetscStrcmp("cuda",opstring,&flg);CHKERRQ(ierr);
-      if (flg) ctx->deviceType = LANDAU_CUDA;
-      else {
+      if (flg) {
+        ctx->deviceType = LANDAU_CUDA;
+        ctx->subThreadBlockSize = 0;
+      } else {
         ierr = PetscStrcmp("kokkos",opstring,&flg);CHKERRQ(ierr);
         if (flg) ctx->deviceType = LANDAU_KOKKOS;
         else SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-dm_landau_device_type %s",opstring);
