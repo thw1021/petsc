@@ -470,9 +470,9 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
           elMat[ (fieldA*Nb + q)*totDim + fieldA*Nb + q] = 1;
           ierr = DMPlexGetClosureIndices(plex, section, globsection, ej, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);
           for (f = 0 ; f < numindices ; ++f) { // look for a non-zero on the diagonal
-            if (PetscAbsReal(elMat[f*numindices + f]) > 1.e-12) {
+            if (PetscAbsReal(PetscRealPart(elMat[f*numindices + f])) > 1.e-12) {
               // found it
-              if (PetscAbsReal(elMat[f*numindices + f] - 1.) < 1.e-12) {
+                if (PetscAbsReal(PetscRealPart(elMat[f*numindices + f] - 1.)) < 1.e-12) {
                 maps->gIdx[eidx][fieldA][q] = (LandauIdx)indices[f]; // normal vertex 1.0
                 //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t f=%D e=%D q=%D Found normal gid=%D %d\n",fieldA,eidx,q,indices[f],maps->gIdx[fieldA][eidx][q]);CHKERRQ(ierr);
               } else { //found a constraint
