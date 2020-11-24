@@ -142,7 +142,7 @@ PETSC_EXTERN PetscErrorCode LandauFormJacobian_Internal(Vec, Mat, const PetscInt
 PETSC_EXTERN int LandauGetIPDataSize(const LandauIPData *const);
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode LandauCUDAJacobian(DM, const PetscInt, const PetscReal [], const PetscReal [], const PetscReal[], const PetscReal[],
-  const LandauIPData *const, const PetscReal [],const PetscInt, const PetscLogEvent[], Mat);
+  const LandauIPData *const, const PetscReal [], const PetscLogEvent[], Mat);
 PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE]);
 PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *);
 
