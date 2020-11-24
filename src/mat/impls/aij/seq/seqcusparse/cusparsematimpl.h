@@ -259,8 +259,7 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseSpMVAlg_t            spmvAlg;
   cusparseSpMMAlg_t            spmmAlg;
  #endif
-  THRUSTINTARRAY               *csr2csc_i;
-  PetscSplitCSRDataStructure   *deviceMat;       /* Matrix on device for, eg, assembly */
+  PetscSplitCSRDataStructure   deviceMat;       /* Matrix on device for, eg, assembly */
   THRUSTINTARRAY               *cooPerm;
   THRUSTINTARRAY               *cooPerm_a;
 };
