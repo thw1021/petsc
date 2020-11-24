@@ -383,7 +383,7 @@ void __launch_bounds__(256,1) landau_kernel_v2(const PetscInt nip, const PetscIn
 }
 
 PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu_alpha[],const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
-				  const LandauIPData *const IPData, const PetscReal invJj[], const PetscInt num_sub_blocks, const PetscLogEvent events[], Mat JacP)
+				  const LandauIPData *const IPData, const PetscReal invJj[], const PetscLogEvent events[], Mat JacP)
 {
   PetscErrorCode    ierr,*d_ierr;
   PetscInt          ii,ej,*Nbf,Nb,nip_dim2,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(LandauIPReal),ipdatasz;
