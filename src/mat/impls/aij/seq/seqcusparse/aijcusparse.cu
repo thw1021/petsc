@@ -2576,8 +2576,10 @@ static PetscErrorCode MatAXPY_SeqAIJCUSPARSE(Mat Y,PetscScalar a,Mat X,MatStruct
       }
     }
   }
-  if (str != SAME_NONZERO_PATTERN) SETERRQ(PetscObjectComm((PetscObject)X),PETSC_ERR_PLIB,"only SAME_NONZERO_PATTERN supported");
-  if (1) {
+  if (str != SAME_NONZERO_PATTERN) {
+    ierr = MatAXPY_SeqAIJ( Y, a, X, str);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  } else if (1) {
     if (Y->offloadmask == PETSC_OFFLOAD_UNALLOCATED || Y->offloadmask == PETSC_OFFLOAD_GPU) {
       ierr = MatSeqAIJCUSPARSECopyFromGPU(Y);CHKERRQ(ierr);
     }

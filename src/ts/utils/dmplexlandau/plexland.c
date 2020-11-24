@@ -485,7 +485,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
                   //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t\t %D.%D) C:%D) id=%D\n",eidx,q,jj,indices[f]);CHKERRQ(ierr);
                   for (ii = 0, pointMaps[maps->num_reduced][jj].scale = 0; ii < maps->num_face; ii++) { // DMPlex puts them all together
                     if (ff + ii < numindices) {
-                      pointMaps[maps->num_reduced][jj].scale += elMat[f*numindices + ff + ii];
+                      pointMaps[maps->num_reduced][jj].scale += PetscRealPart(elMat[f*numindices + ff + ii]);
                       //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t\t I[%d,%d] += %g\n",f,ff + ii,elMat[f*numindices + ff + ii]);CHKERRQ(ierr);
                     }
                   }
