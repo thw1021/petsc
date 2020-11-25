@@ -10,8 +10,8 @@ class Configure(config.package.Package):
     self.requiresversion   = 1
     self.functions         = ['cublasInit', 'cufftDestroy']
     self.includes          = ['cublas.h','cufft.h','cusparse.h','cusolverDn.h','curand.h','thrust/version.h']
-    self.liblist           = [['libcufft.a', 'libcublas.a','libcudart.a','libcusparse.a','libcusolver.a','libcurand.a'],
-                              ['cufft.lib','cublas.lib','cudart.lib','cusparse.lib','cusolver.lib','curand.lib']]
+    self.liblist           = [['libcufft.a', 'libcublas.a','libcudart.a','libcusparse.a','libcusolver.a','libcurand.a','libcuda.a'],
+                              ['cufft.lib','cublas.lib','cudart.lib','cusparse.lib','cusolver.lib','curand.lib','cuda.lib']]
     self.precisions        = ['single','double']
     self.cxx               = 0
     self.complex           = 1
@@ -184,5 +184,5 @@ class Configure(config.package.Package):
         self.delMakeMacro('CUDAC')
         self.addMakeMacro('CUDAC','CPLUS_INCLUDE_PATH="" '+petscNvcc)
     else:
-      self.logPrint('nvcc --dryrun failed, unable to determine CUDA_CXX and CUDA_CXXFLAGS') 
+      self.logPrint('nvcc --dryrun failed, unable to determine CUDA_CXX and CUDA_CXXFLAGS')
     return
