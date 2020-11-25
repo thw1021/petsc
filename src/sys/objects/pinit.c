@@ -1557,6 +1557,13 @@ PetscErrorCode  PetscFinalize(void)
   }
 #endif
 
+#if defined(PETSC_HAVE_NVSHMEM)
+  if (PetscBeganNvshmem) {
+    ierr = PetscNvshmemFinalize();CHKERRQ(ierr);
+    PetscBeganNvshmem = PETSC_FALSE;
+  }
+#endif
+
   ierr = PetscFreeMPIResources();CHKERRQ(ierr);
 
   /*

@@ -25,6 +25,17 @@ typedef struct _n_PetscSFLink* PetscSFLink;
 
 typedef struct {
   SFBASICHEADER;
+ #if defined(PETSC_HAVE_NVSHMEM)
+  PetscInt         niranks_rmax;    /* max niranks-ndiranks over comm */
+  PetscInt         rootbuflen_rmax; /* max rootbuflen[REMOTE] over comm */
+  PetscInt         *leafsigdisp;    /* [niranks-ndiranks]. For my i-th remote leaf rank, I am its leafsigdisp[i]-th root rank */
+  PetscInt         *leafbufdisp;    /* [niranks-ndiranks]. For my i-th remote leaf rank, I will put to its leafbuf_shmem[] at offset leafbufdisp[i], in <unit> to be set */
+
+  PetscInt         *leafsigdisp_d;  /* Copy of leafsigdisp[] on device */
+  PetscInt         *leafbufdisp_d;  /* Copy of leafbufdisp[] on device */
+  PetscMPIInt      *iranks_d;       /* Copy of the remote part of iranks[] on device */
+  PetscInt         *ioffset_d;      /* Copy of the remote part of ioffset[] on device */
+ #endif
 } PetscSF_Basic;
 
 PETSC_STATIC_INLINE PetscErrorCode PetscSFGetRootInfo_Basic(PetscSF sf,PetscInt *nrootranks,PetscInt *ndrootranks,const PetscMPIInt **rootranks,const PetscInt **rootoffset,const PetscInt **rootloc)

@@ -110,6 +110,11 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
   #elif defined(PETSC_HAVE_CUDA)
     b->backend = PETSCSF_BACKEND_CUDA;
   #endif
+
+  #if defined(PETSC_HAVE_NVSHMEM)
+    b->use_nvshmem = PETSC_TRUE; /* Try to use NVSHMEM for communication on this SF when possible */
+    ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem",&b->use_nvshmem,NULL);CHKERRQ(ierr);
+  #endif
 #endif
   *sf = b;
   PetscFunctionReturn(0);
@@ -359,7 +364,7 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
   ierr = PetscOptionsFList("-sf_type","PetscSF implementation type","PetscSFSetType",PetscSFList,deft,type,sizeof(type),&flg);CHKERRQ(ierr);
   ierr = PetscSFSetType(sf,flg ? type : deft);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-sf_rank_order","sort composite points for gathers and scatters in rank order, gathers are non-deterministic otherwise","PetscSFSetRankOrder",sf->rankorder,&sf->rankorder,NULL);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_DEVICE)
+ #if defined(PETSC_HAVE_DEVICE)
   {
     char        backendstr[32] = {0};
     PetscBool   isCuda = PETSC_FALSE,isKokkos = PETSC_FALSE,set;
@@ -369,15 +374,15 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
     ierr = PetscOptionsString("-sf_backend","Select the device backend SF uses","PetscSFSetFromOptions",NULL,backendstr,sizeof(backendstr),&set);CHKERRQ(ierr);
     ierr = PetscStrcasecmp("cuda",backendstr,&isCuda);CHKERRQ(ierr);
     ierr = PetscStrcasecmp("kokkos",backendstr,&isKokkos);CHKERRQ(ierr);
-  #if defined(PETSC_HAVE_CUDA)
+   #if defined(PETSC_HAVE_CUDA)
     if (isCuda) sf->backend = PETSCSF_BACKEND_CUDA;
     else if (isKokkos) sf->backend = PETSCSF_BACKEND_KOKKOS;
     else if (set) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported on cuda devices. You may choose cuda or kokkos (if installed)", backendstr);
-  #elif defined(PETSC_HAVE_KOKKOS)
+   #elif defined(PETSC_HAVE_KOKKOS)
     if (set && !isKokkos) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported. You can only choose kokkos", backendstr);
-  #endif
+   #endif
   }
-#endif
+ #endif
   if (sf->ops->SetFromOptions) {ierr = (*sf->ops->SetFromOptions)(PetscOptionsObject,sf);CHKERRQ(ierr);}
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
