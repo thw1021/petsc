@@ -134,25 +134,25 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
 
-  if (ctx->gpu_assembly) {
-    // PetscContainer container;
-    // ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
-    // if (container) { // not here first call
-    //   ierr = PetscContainerGetPointer(container, (void **) &h_maps);CHKERRQ(ierr);
-    //   if (h_maps->data) {
-    //     d_maps = (P4estVertexMaps*)h_maps->data;
-    //   } else {
-    //     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
-    //   }
-    //   // this does the setup the first time called
-    //   // ierr = MatKokkosGetDeviceMatWrite(JacP,&d_mat);CHKERRQ(ierr);
-    //   global_elem_mat_sz = 0;
-    // } else { // kernel output - first call assembled on device
-    //   global_elem_mat_sz = numCells;
-    // }
-  } else {
-    global_elem_mat_sz = numCells; // no device assembly
-  }
+  // if (ctx->gpu_assembly) {
+  // PetscContainer container;
+  // ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
+  // if (container) { // not here first call
+  //   ierr = PetscContainerGetPointer(container, (void **) &h_maps);CHKERRQ(ierr);
+  //   if (h_maps->data) {
+  //     d_maps = (P4estVertexMaps*)h_maps->data;
+  //   } else {
+  //     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
+  //   }
+  //   // this does the setup the first time called
+  //   // ierr = MatKokkosGetDeviceMatWrite(JacP,&d_mat);CHKERRQ(ierr);
+  //   global_elem_mat_sz = 0;
+  // } else { // kernel output - first call assembled on device
+  //   global_elem_mat_sz = numCells;
+  // }
+  // } else {
+  global_elem_mat_sz = numCells; // no device assembly
+  // }
 
   BB   = Tf[0]->T[0]; DD = Tf[0]->T[1];
   ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
