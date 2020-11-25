@@ -75,7 +75,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
   const PetscInt dim, LandauIPReal *IPDataRaw, const PetscReal invJj[], const PetscReal nu_alpha[],
   const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
   const PetscReal * const BB, const PetscReal * const DD,
-  PetscScalar *elemMat, P4estVertexMaps *d_maps, PetscSplitCSRDataStructure *d_mat, PetscReal fieldMats[][LANDAU_MAX_NQ],  // output
+  PetscScalar *elemMat, P4estVertexMaps *d_maps, PetscSplitCSRDataStructure *d_mat, PetscScalar fieldMats[][LANDAU_MAX_NQ],  // output
   PetscReal g2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
   PetscReal g3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
   PetscReal gg2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
@@ -361,8 +361,8 @@ void __launch_bounds__(256,1) landau_kernel_v2(const PetscInt nip, const PetscIn
   PetscReal *s_dfz      = &smem[size];
   size += blockDim.x*LANDAU_MAX_SPECIES;
 #endif
-  PetscReal (*fieldMats)[LANDAU_MAX_NQ][LANDAU_MAX_NQ] = d_maps ?
-    (PetscReal (*)[LANDAU_MAX_NQ][LANDAU_MAX_NQ]) &smem[size] : NULL;
+  PetscScalar (*fieldMats)[LANDAU_MAX_NQ][LANDAU_MAX_NQ] = d_maps ?
+    (PetscScalar (*)[LANDAU_MAX_NQ][LANDAU_MAX_NQ]) &smem[size] : NULL;
   if (d_maps) size += LANDAU_MAX_NQ*LANDAU_MAX_NQ;
   const PetscInt  myQi = threadIdx.y;
   const PetscInt  jpidx = myQi + myelem * Nq;
