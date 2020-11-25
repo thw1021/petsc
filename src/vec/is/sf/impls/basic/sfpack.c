@@ -473,6 +473,36 @@ PETSC_STATIC_INLINE int MPI_Type_dup(MPI_Datatype datatype,MPI_Datatype *newtype
 }
 #endif
 
+static PetscErrorCode PetscSFLinkDestroy_MPI(PetscSF sf,PetscSFLink link)
+{
+  PetscErrorCode    ierr;
+  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
+  PetscInt          i,nreqs = (bas->nrootreqs+sf->nleafreqs)*8;
+
+  PetscFunctionBegin;
+  if (!link->isbuiltin) {ierr = MPI_Type_free(&link->unit);CHKERRQ(ierr);}
+  for (i=0; i<nreqs; i++) { /* Persistent reqs must be freed. */
+    if (link->reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&link->reqs[i]);CHKERRQ(ierr);}
+  }
+  ierr = PetscFree(link->reqs);CHKERRQ(ierr);
+  for (i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
+    ierr = PetscFree(link->rootbuf_alloc[i][PETSC_MEMTYPE_HOST]);CHKERRQ(ierr);
+    ierr = PetscFree(link->leafbuf_alloc[i][PETSC_MEMTYPE_HOST]);CHKERRQ(ierr);
+    #if defined(PETSC_HAVE_DEVICE)
+    ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,link->rootbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
+    ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,link->leafbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
+    #endif
+  }
+
+ #if defined(PETSC_HAVE_CUDA)
+  if (link->stream) {cudaError_t cerr = cudaStreamDestroy(link->stream);CHKERRCUDA(cerr); link->stream = NULL;}
+ #elif defined(PETSC_HAVE_HIP)
+  if (link->stream) {hipError_t  cerr = hipStreamDestroy(link->stream);CHKERRQ(cerr); link->stream = NULL;} /* TODO: CHKERRHIP? */
+ #endif
+  ierr = PetscFree(link);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*
    The routine Creates a communication link for the given operation. It first looks up its link cache. If
    there is a free & suitable one, it uses it. Otherwise it creates a new one.
@@ -489,7 +519,7 @@ PETSC_STATIC_INLINE int MPI_Type_dup(MPI_Datatype datatype,MPI_Datatype *newtype
    The routine is shared by SFBasic and SFNeighbor based on the fact they all deal with sparse graphs and
    need pack/unpack data.
 */
-PetscErrorCode PetscSFLinkCreate(PetscSF sf,MPI_Datatype unit,PetscMemType xrootmtype,const void *rootdata,PetscMemType xleafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
+PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf,MPI_Datatype unit,PetscMemType xrootmtype,const void *rootdata,PetscMemType xleafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
 {
   PetscErrorCode    ierr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
@@ -504,7 +534,6 @@ PetscErrorCode PetscSFLinkCreate(PetscSF sf,MPI_Datatype unit,PetscMemType xroot
   PetscInt          rootdirect_mpi,leafdirect_mpi; /* root/leafdirect seen by MPI*/
 
   PetscFunctionBegin;
-  ierr = PetscSFSetErrorOnUnsupportedOverlap(sf,unit,rootdata,leafdata);CHKERRQ(ierr);
 
   /* Can we directly use root/leafdirect with the given sf, sfop and op? */
   for (i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
@@ -538,7 +567,7 @@ PetscErrorCode PetscSFLinkCreate(PetscSF sf,MPI_Datatype unit,PetscMemType xroot
   for (p=&bas->avail; (link=*p); p=&link->next) {
     ierr = MPIPetsc_Type_compare(unit,link->unit,&match);CHKERRQ(ierr);
     if (match) {
-      /* If root/leafdata will be directly passed to MPI, test if the data used to initialized the MPI requests matches with current.
+      /* If root/leafdata will be directly passed to MPI, test if the data used to initialized the MPI requests matches with the current.
          If not, free old requests. New requests will be lazily init'ed until one calls PetscSFLinkGetMPIBuffersAndRequests().
       */
       if (rootdirect_mpi && sf->persistent && link->rootreqsinited[direction][rootmtype][1] && link->rootdatadirect[direction][rootmtype] != rootdata) {
@@ -572,6 +601,7 @@ PetscErrorCode PetscSFLinkCreate(PetscSF sf,MPI_Datatype unit,PetscMemType xroot
       }
     }
   }
+  link->Destroy = PetscSFLinkDestroy_MPI;
 
 found:
 
@@ -651,6 +681,26 @@ found:
   link->next            = bas->inuse;
   bas->inuse            = link;
   *mylink               = link;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscSFLinkCreate(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
+{
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscSFSetErrorOnUnsupportedOverlap(sf,unit,rootdata,leafdata);CHKERRQ(ierr);
+ #if defined(PETSC_HAVE_NVSHMEM)
+  {
+    PetscBool use_nvshmem;
+    ierr = PetscSFLinkNvshmemCheck(sf,rootmtype,rootdata,leafmtype,leafdata,&use_nvshmem);CHKERRQ(ierr);
+    if (use_nvshmem) {
+      ierr = PetscSFLinkCreate_NVSHMEM(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,sfop,mylink);CHKERRQ(ierr);
+      PetscFunctionReturn(0);
+    }
+  }
+ #endif
+  ierr = PetscSFLinkCreate_MPI(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,sfop,mylink);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -752,44 +802,6 @@ PetscErrorCode PetscSFLinkReclaim(PetscSF sf,PetscSFLink *link)
   (*link)->next     = bas->avail;
   bas->avail        = *link;
   *link             = NULL;
-  PetscFunctionReturn(0);
-}
-
-/* Destroy all links chained in 'avail' */
-PetscErrorCode PetscSFLinkDestroy(PetscSF sf,PetscSFLink *avail)
-{
-  PetscErrorCode    ierr;
-  PetscSFLink       link = *avail,next;
-  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
-  PetscInt          i,nreqs = (bas->nrootreqs+sf->nleafreqs)*8;
-
-  PetscFunctionBegin;
-  for (; link; link=next) {
-    next = link->next;
-    if (!link->isbuiltin) {ierr = MPI_Type_free(&link->unit);CHKERRQ(ierr);}
-    for (i=0; i<nreqs; i++) { /* Persistent reqs must be freed. */
-      if (link->reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&link->reqs[i]);CHKERRQ(ierr);}
-    }
-    ierr = PetscFree(link->reqs);CHKERRQ(ierr);
-    for (i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
-      ierr = PetscFree(link->rootbuf_alloc[i][PETSC_MEMTYPE_HOST]);CHKERRQ(ierr);
-      ierr = PetscFree(link->leafbuf_alloc[i][PETSC_MEMTYPE_HOST]);CHKERRQ(ierr);
-      #if defined(PETSC_HAVE_DEVICE)
-      ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,link->rootbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
-      ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,link->leafbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
-      #endif
-    }
-  #if defined(PETSC_HAVE_DEVICE)
-    if (link->Destroy) {ierr = (*link->Destroy)(link);CHKERRQ(ierr);}
-   #if defined(PETSC_HAVE_CUDA)
-    if (link->stream) {cudaError_t cerr = cudaStreamDestroy(link->stream);CHKERRCUDA(cerr); link->stream = NULL;}
-   #elif defined(PETSC_HAVE_HIP)
-    if (link->stream) {hipError_t  cerr = hipStreamDestroy(link->stream);CHKERRQ(cerr); link->stream = NULL;} /* TODO: CHKERRHIP? */
-   #endif
-  #endif
-    ierr = PetscFree(link);CHKERRQ(ierr);
-  }
-  *avail = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -1090,7 +1102,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkLogFlopsAfterUnpackRootData(PetscS
   PetscLogDouble flops;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
 
-
   PetscFunctionBegin;
   if (op != MPIU_REPLACE && link->basicunit == MPIU_SCALAR) { /* op is a reduction on PetscScalars */
     flops = bas->rootbuflen[scope]*link->bs; /* # of roots in buffer x # of scalars in unit */
@@ -1190,7 +1201,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkScatterDataWithMPIReduceLocal(Pets
 
   Notes:
   When rootdata can be directly used as root buffer, the routine is almost a no-op. After the call, root data is
-  in a place where the underlying MPI is ready can access (use_gpu_aware_mpi or not)
+  in a place where the underlying MPI is ready to access (use_gpu_aware_mpi or not)
  */
 PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope scope,const void *rootdata)
 {
@@ -1210,7 +1221,7 @@ PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope 
     ierr = PetscSFLinkGetPack(link,rootmtype,&Pack);CHKERRQ(ierr);
     ierr = (*Pack)(link,count,start,opt,rootindices,rootdata,link->rootbuf[scope][rootmtype]);CHKERRQ(ierr);
   }
-  if (scope == PETSCSF_REMOTE) {
+  if (!link->use_nvshmem && scope == PETSCSF_REMOTE) {
     ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/*device2host*/);CHKERRQ(ierr);
     ierr = PetscSFLinkSyncStreamAfterPackRootData(sf,link);CHKERRQ(ierr);
   }
@@ -1423,6 +1434,22 @@ PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *root
   PetscFunctionReturn(0);
 }
 
+/* Destroy all links chained in 'avail' */
+PetscErrorCode PetscSFDestroyLinks(PetscSF sf)
+{
+  PetscErrorCode    ierr;
+  PetscSF_Basic     *dat = (PetscSF_Basic*)sf->data;
+  PetscSFLink       link = dat->avail,next;
+
+  PetscFunctionBegin;
+  for (; link; link=next) {
+    next = link->next;
+    ierr = (*link->Destroy)(sf,link);CHKERRQ(ierr);
+  }
+  dat->avail = NULL;
+  PetscFunctionReturn(0);
+}
+
 /*
   Create per-rank pack/unpack optimizations based on indice patterns
 
@@ -1577,14 +1604,13 @@ PetscErrorCode PetscSFSetUpPackFields(PetscSF sf)
   if (!bas->rootcontig[0]) {ierr = PetscSFCreatePackOpt(bas->ndiranks,              bas->ioffset,               bas->irootloc, &bas->rootpackopt[0]);CHKERRQ(ierr);}
   if (!bas->rootcontig[1]) {ierr = PetscSFCreatePackOpt(bas->niranks-bas->ndiranks, bas->ioffset+bas->ndiranks, bas->irootloc, &bas->rootpackopt[1]);CHKERRQ(ierr);}
 
-#if defined(PETSC_HAVE_DEVICE)
+ #if defined(PETSC_HAVE_DEVICE)
     /* Check dups in indices so that CUDA unpacking kernels can use cheaper regular instructions instead of atomics when they know there are no data race chances */
   if (!sf->leafcontig[0])  {ierr = PetscCheckDupsInt(sf->leafbuflen[0],  sf->rmine,                                 &sf->leafdups[0]);CHKERRQ(ierr);}
   if (!sf->leafcontig[1])  {ierr = PetscCheckDupsInt(sf->leafbuflen[1],  sf->rmine+sf->roffset[sf->ndranks],        &sf->leafdups[1]);CHKERRQ(ierr);}
   if (!bas->rootcontig[0]) {ierr = PetscCheckDupsInt(bas->rootbuflen[0], bas->irootloc,                             &bas->rootdups[0]);CHKERRQ(ierr);}
   if (!bas->rootcontig[1]) {ierr = PetscCheckDupsInt(bas->rootbuflen[1], bas->irootloc+bas->ioffset[bas->ndiranks], &bas->rootdups[1]);CHKERRQ(ierr);}
-#endif
-
+ #endif
   PetscFunctionReturn(0);
 }
 
