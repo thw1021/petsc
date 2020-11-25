@@ -465,7 +465,8 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       for (ej = cStart, eidx = 0 ; ej < cEnd; ++ej, ++eidx) {
         for (q = 0; q < Nb; ++q) {
           PetscInt    numindices,*indices;
-          PetscScalar *valuesOrig = elMat = elemMatrix, tmp;
+          PetscScalar *valuesOrig = elMat = elemMatrix;
+          PetscReal   tmp;
           ierr = PetscMemzero(elMat, totDim*totDim*sizeof(PetscScalar));CHKERRQ(ierr);
           elMat[ (fieldA*Nb + q)*totDim + fieldA*Nb + q] = 1;
           ierr = DMPlexGetClosureIndices(plex, section, globsection, ej, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);
@@ -500,7 +501,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
                 }
                 maps->num_reduced++;
                 if (maps->num_reduced>MAP_BF_SIZE) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->num_reduced %d > %d",maps->num_reduced,MAP_BF_SIZE);
-                if (fabs(tmp-1.0)>1.e-5) { // debug
+                if (PetscAbsReal(tmp-1.0)>PETSC_SQRT_MACHINE_EPSILON) { // debug
                   int d,f;
                   PetscPrintf(PETSC_COMM_SELF,"\t\t%D.%D.%D) ERROR total I = %7.2e (LANDAU_MAX_Q_FACE=%d, #face=%D)\n",eidx,q,fieldA,tmp,LANDAU_MAX_Q_FACE,maps->num_face);
                   for (d = 0, tmp = 0; d < numindices; ++d){
