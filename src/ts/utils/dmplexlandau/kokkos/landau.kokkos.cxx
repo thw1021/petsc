@@ -134,7 +134,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
 
-  if (ctx->gpu_assembly && 0) {
+  if (ctx->gpu_assembly) {
     // PetscContainer container;
     // ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
     // if (container) { // not here first call
