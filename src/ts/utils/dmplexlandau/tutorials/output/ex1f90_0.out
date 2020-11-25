@@ -13,17 +13,17 @@ thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 5.802e+06. v_0= 2.965e+07 n_0= 1.0
 [0] DMGetDMKSP(): Creating new DMKSP
 [0]FormLandau: 1400 IPs, 56 cells, totDim=75, Nb=25, Nq=25, elemMatSize=5625, dim=2, Tab: Nb=25 Nf=3 Np=25 cdim=2 N=2667 N+hang=3339
     0 SNES Function norm 1.071936445737e-03 
-    1 SNES Function norm 6.444302114835e-10 
-  Nonlinear ex1_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    1 SNES Function norm 6.444303244292e-10 
+  Nonlinear ex1f90_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
     0 SNES Function norm 1.071864893575e-03 
-    1 SNES Function norm 3.260096147245e-10 
-  Nonlinear ex1_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    1 SNES Function norm 3.260098334452e-10 
+  Nonlinear ex1f90_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
     0 SNES Function norm 1.071900414527e-03 
-    1 SNES Function norm 3.238237573222e-10 
-  Nonlinear ex1_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    1 SNES Function norm 3.238238302226e-10 
+  Nonlinear ex1f90_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
 [0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 8.49532e-06, accepting step of size 1e-06
 1 TS dt 1.25e-06 time 1e-06
   1) species-0: charge density= -1.6024250714143e+01 z-momentum=  2.8121884413584e-20 energy=  1.2018267949393e+05
-  1) species-1: charge density=  1.6021676664193e+01 z-momentum= -5.2729727700317e-18 energy=  1.2017223194562e+05
-  1) species-2: charge density=  2.8822941386019e-03 z-momentum=  3.0222026981481e-22 energy=  1.2031186918869e-01
-	  1) Total: charge density=  3.0824418842540e-04, momentum= -5.2445486653483e-18, energy=  2.4035503175141e+05 (m_i[0]/m_e = 3670.94, 56 cells)
+  1) species-1: charge density=  1.6021676664193e+01 z-momentum= -5.2729727889947e-18 energy=  1.2017223194562e+05
+  1) species-2: charge density=  2.8822941386019e-03 z-momentum=  3.6785605203335e-22 energy=  1.2031186918869e-01
+	  1) Total: charge density=  3.0824418842540e-04, momentum= -5.2444830485290e-18, energy=  2.4035503175141e+05 (m_i[0]/m_e = 3670.94, 56 cells)
