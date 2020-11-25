@@ -710,7 +710,6 @@ PetscErrorCode  VecGetLocalSize(Vec x,PetscInt *size)
 
    Level: beginner
 
-
 .seealso:   MatGetOwnershipRange(), MatGetOwnershipRanges(), VecGetOwnershipRanges()
 @*/
 PetscErrorCode  VecGetOwnershipRange(Vec x,PetscInt *low,PetscInt *high)
@@ -745,8 +744,9 @@ PetscErrorCode  VecGetOwnershipRange(Vec x,PetscInt *low,PetscInt *high)
 
    Fortran: You must PASS in an array of length size+1
 
-   Level: beginner
+   If the ranges are used after all vectors that share the ranges has been destroyed then the program will crash accessing ranges[].
 
+   Level: beginner
 
 .seealso:   MatGetOwnershipRange(), MatGetOwnershipRanges(), VecGetOwnershipRange()
 @*/
