@@ -1269,7 +1269,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       ierr = PetscOptionsInsertString(NULL,"-dm_mat_type aijcusparse -dm_vec_type cuda");CHKERRQ(ierr);
     }
     if (ctx->deviceType == LANDAU_KOKKOS) {
-      ctx->gpu_assembly = PETSC_FALSE;
+      ctx->gpu_assembly = PETSC_FALSE; // not supported
     }
   }
   ierr = PetscOptionsReal("-dm_landau_electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
