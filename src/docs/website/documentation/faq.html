@@ -2018,7 +2018,9 @@ source /opt/intel/idb/10.1.012/bin/idbvars.sh
         <li>Build PETSc with <code>--download-mpich --with-debugging</code>.</li>
         <li>On macOS you need to
           <ul>
-            <li>use valgrind from <a href="https://github.com/petsc/valgrind-macos">https://github.com/petsc/valgrind-macos</a></li>
+            <li>use valgrind from <a href="https://github.com/LouisBrunner/valgrind-macos">https://github.com/LouisBrunner/valgrind-macos</a>. 
+            With Homebrew you must first remove any old valgrind you have installed with <code>brew remove valgrind</code> and then use <code>brew tap LouisBrunner/valgrind</code> then
+            <code>brew install --HEAD LouisBrunner/valgrind/valgrind</code>.</li>
             <li>run <code>./configure</code> with  <code>--download-fblaslapack</code> or <code>--download-f2cblaslapack</code></li>
             <li>use the additional valgrind option <code>--dsymutil=yes</code></li>
           </ul>
