@@ -10,7 +10,7 @@ int main(int argc,char ** argv)
   PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,goffset,row;
   PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
   const PetscInt *vtx,*edges;
-  PetscBool      iscouplev,ghost,distribute=PETSC_FALSE;
+  PetscBool      iscouplev,ghost,distribute=PETSC_TRUE;
   Vec            X;
   PetscScalar    val;
 
@@ -80,9 +80,7 @@ int main(int argc,char ** argv)
     ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[v],&iscouplev);CHKERRQ(ierr);
-      if (iscouplev) {
-        if (size > 1) continue; //do not set variables at shared vertex; remove this line  --> crash when np>1!!!
-      }
+      if (iscouplev) continue; /* shared vertex will be handled by the owner process below */
 
       if (!net) {
         /* Set nvar = 1 for subnet0 */
@@ -93,7 +91,15 @@ int main(int argc,char ** argv)
       }
     }
   }
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+
+  /* Add nvar to shared vertex -- only owner of the vertex adds nvar! */
+  ierr = DMNetworkGetSubnetworkSharedVertices(dmnetwork,&nv,&vtx);CHKERRQ(ierr);
+  for (v=0; v<nv; v++) {
+    ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[v],&ghost);CHKERRQ(ierr);
+    if (ghost) continue;
+    ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],1);CHKERRQ(ierr);
+    ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],2);CHKERRQ(ierr);
+  }
 
   /* Enable runtime option of graph partition type -- must be called before DMSetUp() */
   if (size > 1) {
@@ -107,7 +113,6 @@ int main(int argc,char ** argv)
 
   /* Setup dmnetwork */
   ierr = DMSetUp(dmnetwork);CHKERRQ(ierr);
-  ierr = DMView(dmnetwork,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   /* Redistribute the network layout; use '-distribute false' to skip */
   ierr = PetscOptionsGetBool(NULL,NULL,"-distribute",&distribute,NULL);CHKERRQ(ierr);
@@ -131,25 +136,9 @@ int main(int argc,char ** argv)
     ierr = DMNetworkGetVariableGlobalOffset(dmnetwork,vtx[v],&goffset);CHKERRQ(ierr);
     for (i=0; i<nvar; i++) {
       row = goffset + i;
-      val = 1.0;
+      val = (PetscScalar)rank + 1.0;
       ierr = VecSetValues(X,1,&row,&val,INSERT_VALUES);CHKERRQ(ierr);
     }
-
-    #if 0
-    ierr = DMNetworkGetNumComponents(dmnetwork,vtx[v],&ncomp);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] coupling nv %D, v %D; ncomp %D\n",rank,nv,vtx[v],ncomp);CHKERRQ(ierr);
-    for (j=0; j<ncomp; j++) {
-      ierr = DMNetworkGetComponentNumVariables(dmnetwork,vtx[v],j,&nvar);CHKERRQ(ierr);
-      ierr = DMNetworkGetComponentVariableGlobalOffset(dmnetwork,vtx[v],j,&goffset);CHKERRQ(ierr);
-      ierr = DMNetworkGetComponentKeyOffset(dmnetwork,vtx[v],j,&compkey,NULL);CHKERRQ(ierr);
-
-      for (i=0; i<nvar; i++) {
-        row = goffset + i;
-        val = compkey + 1.0;
-        ierr = VecSetValues(X,1,&row,&val,INSERT_VALUES);CHKERRQ(ierr);
-      }
-    }
-    #endif
   }
   ierr = VecAssemblyBegin(X);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(X);CHKERRQ(ierr);
