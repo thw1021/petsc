@@ -484,19 +484,27 @@ int main(int argc,char **argv)
 
   /* ADD VARIABLES AND COMPONENTS AT THE COUPLING VERTEX: net[0].4 coupls with net[1].0 */
   /*------------------------------------------------------------------------------------*/
+  PetscBool ghost;
   ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
-  /* printf("\n[%d] coupling info: cnv %d\n",rank,nv);CHKERRQ(ierr); */
+  if (nv) {
+    printf("[%d] coupling info: cnv %d; sv[0] %d\n",rank,nv,vtx[0]);CHKERRQ(ierr);
+  }
   for (i = 0; i < nv; i++) { /* proc[0] and proc[1] hold the same coupling info, thus have nv=1; nv=0 in other processes */
+    if (size < 3) {
+    ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghost);CHKERRQ(ierr);
+    printf("[%d] coupling info: cnv %d; sv[0] %d; ghost %d\n",rank,nv,vtx[0],ghost);CHKERRQ(ierr);
+    if (ghost) continue;
+    }
+    printf("[%d] add components and nvar to shared v %d\n",rank,vtx[i]);
+    if ((size == 3 && rank == 1) || size < 3) { //root!
     /* power */
-    ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_power->compkey_bus,&pfdata->bus[4]);CHKERRQ(ierr);
-    ierr = DMNetworkSetComponentNumVariables(networkdm,vtx[i],0,2);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_power->compkey_bus,&pfdata->bus[4],2);CHKERRQ(ierr);
     /* bus[4] is a load, add its component */
-    ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_power->compkey_load,&pfdata->load[0]);CHKERRQ(ierr);
-    ierr = DMNetworkSetComponentNumVariables(networkdm,vtx[i],1,0);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_power->compkey_load,&pfdata->load[0],0);CHKERRQ(ierr);
 
     /* water */
-    ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_water->compkey_vtx,&waterdata->vertex[0]);CHKERRQ(ierr);
-    ierr = DMNetworkSetComponentNumVariables(networkdm,vtx[i],2,1);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_water->compkey_vtx,&waterdata->vertex[0],1);CHKERRQ(ierr);
+    }
   }
 
   /* Set up DM for use */
