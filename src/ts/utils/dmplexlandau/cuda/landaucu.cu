@@ -386,6 +386,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
 				  const LandauIPData *const IPData, const PetscReal invJj[], const PetscLogEvent events[], Mat JacP)
 {
   PetscErrorCode    ierr,*d_ierr;
+  cudaError_t       cerr;
   PetscInt          ii,ej,*Nbf,Nb,nip_dim2,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(LandauIPReal),ipdatasz;
   PetscReal         *d_BB,*d_DD,*d_invJj,*d_nu_alpha,*d_nu_beta,*d_invMass,*d_Eq_m;
   PetscScalar       *d_elemMats=NULL;
@@ -434,6 +435,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   nip_dim2 = Nq*numGCells*dim*dim;
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_invJj, nip_dim2*szf)); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice));
+  cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
 
   ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
@@ -480,6 +482,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
     CHKERRQ(ierr);
     CUDA_SAFE_CALL(cudaFree(d_ierr));
   }
+  cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
   // delete device data
   ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
@@ -491,6 +494,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   CUDA_SAFE_CALL(cudaFree(d_Eq_m));
   CUDA_SAFE_CALL(cudaFree(d_BB));
   CUDA_SAFE_CALL(cudaFree(d_DD));
+  cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
   // First time assembly even with GPU assembly
   if (d_elemMats) {
