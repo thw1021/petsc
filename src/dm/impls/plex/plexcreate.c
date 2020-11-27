@@ -510,6 +510,7 @@ static PetscErrorCode DMPlexCreateLineMesh_Internal(MPI_Comm comm,PetscInt segme
     maxCell = (PetscReal)1.1*(L/(PetscReal)PetscMax(1,segments));
     ierr = DMSetPeriodicity(*dm,PETSC_TRUE,&maxCell,&L,&bd);CHKERRQ(ierr);
   }
+  ierr = DMPlexSetRefinementUniform(*dm, PETSC_TRUE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -980,6 +981,7 @@ static PetscErrorCode DMPlexCreateBoxMesh_Tensor_Internal(MPI_Comm comm, PetscIn
     ierr = DMDestroy(dm);CHKERRQ(ierr);
     *dm  = udm;
   }
+  ierr = DMPlexSetRefinementUniform(*dm, PETSC_TRUE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1063,7 +1065,7 @@ PetscErrorCode DMPlexCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool simple
   ierr = PetscOptionsGetInt(NULL, NULL, "-dm_plex_box_dim", &dim, &flg);CHKERRQ(ierr);
   if ((dim < 0) || (dim > 3)) SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Dimension %D should be in [1, 3]", dim);
   ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_box_simplex", &simplex, &flg);CHKERRQ(ierr);
-  n    = 3;
+  n    = dim;
   ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces", fac, &n, &flg);CHKERRQ(ierr);
   for (i = 0; i < dim; ++i) fac[i] = faces ? faces[i] : (flg && i < n ? fac[i] : (dim == 1 ? 1 : 4-dim));
   if (lower) for (i = 0; i < dim; ++i) low[i] = lower[i];
@@ -3733,6 +3735,9 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], PetscB
   Output Parameter:
 . refdm - The reference cell
 
+  Options Database Keys:
+. -dm_plex_ref_type <ct> - Specify the celltyoe for the reference cell
+
   Level: intermediate
 
 .seealso: DMPlexCreateReferenceCell(), DMPlexCreateBoxMesh()
@@ -3744,6 +3749,7 @@ PetscErrorCode DMPlexCreateReferenceCellByType(MPI_Comm comm, DMPolytopeType ct,
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = PetscOptionsGetEnum(NULL, NULL, "-dm_plex_ref_type", DMPolytopeTypes, (PetscEnum *) &ct, NULL);CHKERRQ(ierr);
   ierr = DMCreate(comm, &rdm);CHKERRQ(ierr);
   ierr = DMSetType(rdm, DMPLEX);CHKERRQ(ierr);
   switch (ct) {
@@ -3866,6 +3872,19 @@ PetscErrorCode DMPlexCreateReferenceCellByType(MPI_Comm comm, DMPolytopeType ct,
       PetscInt    coneOrientations[8] = {0, 0, 0, 0, 0, 0, 0, 0};
       PetscScalar vertexCoords[24]    = {-1.0, -1.0, -1.0,  1.0, -1.0, -1.0,  1.0, 1.0, -1.0,  -1.0, 1.0, -1.0,
                                          -1.0, -1.0,  1.0,  1.0, -1.0,  1.0,  1.0, 1.0,  1.0,  -1.0, 1.0,  1.0};
+
+      ierr = DMSetDimension(rdm, 3);CHKERRQ(ierr);
+      ierr = DMPlexCreateFromDAG(rdm, 1, numPoints, coneSize, cones, coneOrientations, vertexCoords);CHKERRQ(ierr);
+    }
+    break;
+    case DM_POLYTOPE_PYRAMID:
+    {
+      PetscInt    numPoints[2]        = {5, 1};
+      PetscInt    coneSize[6]         = {5, 0, 0, 0, 0, 0};
+      PetscInt    cones[5]            = {1, 4, 3, 2, 5};
+      PetscInt    coneOrientations[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+      PetscScalar vertexCoords[24]    = {-1.0, -1.0, -1.0,  1.0, -1.0, -1.0,  1.0, 1.0, -1.0,  -1.0, 1.0, -1.0,
+                                          0.0,  0.0,  1.0};
 
       ierr = DMSetDimension(rdm, 3);CHKERRQ(ierr);
       ierr = DMPlexCreateFromDAG(rdm, 1, numPoints, coneSize, cones, coneOrientations, vertexCoords);CHKERRQ(ierr);

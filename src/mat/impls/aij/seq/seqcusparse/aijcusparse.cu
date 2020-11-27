@@ -85,6 +85,7 @@ PetscErrorCode MatCUSPARSESetStream(Mat A,const cudaStream_t stream)
   Mat_SeqAIJCUSPARSE *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
 
   PetscFunctionBegin;
+  if (!cusparsestruct) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing spptr");
   cusparsestruct->stream = stream;
   stat = cusparseSetStream(cusparsestruct->handle,cusparsestruct->stream);CHKERRCUSPARSE(stat);
   PetscFunctionReturn(0);
@@ -96,6 +97,7 @@ PetscErrorCode MatCUSPARSESetHandle(Mat A,const cusparseHandle_t handle)
   Mat_SeqAIJCUSPARSE *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
 
   PetscFunctionBegin;
+  if (!cusparsestruct) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing spptr");
   if (cusparsestruct->handle != handle) {
     if (cusparsestruct->handle) {
       stat = cusparseDestroy(cusparsestruct->handle);CHKERRCUSPARSE(stat);
@@ -111,6 +113,7 @@ PetscErrorCode MatCUSPARSEClearHandle(Mat A)
   Mat_SeqAIJCUSPARSE *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
 
   PetscFunctionBegin;
+  if (!cusparsestruct) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing spptr");
   if (cusparsestruct->handle) cusparsestruct->handle = 0;
   PetscFunctionReturn(0);
 }
@@ -2095,6 +2098,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
   ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
   if (!trans) {
     matstruct = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestruct->mat;
+    if (!matstruct) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"SeqAIJCUSPARSE does not have a 'mat' (need to fix)");
   } else {
     if (herm || !cusparsestruct->transgen) {
       opA = herm ? CUSPARSE_OPERATION_CONJUGATE_TRANSPOSE : CUSPARSE_OPERATION_TRANSPOSE;
@@ -2397,6 +2401,7 @@ static PetscErrorCode MatDuplicate_SeqAIJCUSPARSE(Mat A,MatDuplicateOption cpval
 
 static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
 {
+  Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -2428,6 +2433,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
     ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
   }
   A->boundtocpu = flg;
+  a->inode.use = flg;
   PetscFunctionReturn(0);
 }
 

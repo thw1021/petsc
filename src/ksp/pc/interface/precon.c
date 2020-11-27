@@ -1009,7 +1009,7 @@ PetscErrorCode  PCSetUp(PC pc)
   ierr = MatSetErrorIfFailure(pc->mat,pc->erroriffailure);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(PC_SetUp,pc,0,0,0);CHKERRQ(ierr);
   if (pc->ops->setup) {
-    /* do not log solves and applications of preconditioners while constructing preconditioners; perhaps they should be logged seperately from the regular solves */
+    /* do not log solves and applications of preconditioners while constructing preconditioners; perhaps they should be logged separately from the regular solves */
     ierr = PetscLogEventDeactivatePush(KSP_Solve);CHKERRQ(ierr);
     ierr = PetscLogEventDeactivatePush(PC_Apply);CHKERRQ(ierr);
     ierr = (*pc->ops->setup)(pc);CHKERRQ(ierr);

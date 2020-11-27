@@ -1,3 +1,4 @@
+#include <petscvec.h>
 #include <petsc/private/dmimpl.h>           /*I      "petscdm.h"          I*/
 #include <petsc/private/dmlabelimpl.h>      /*I      "petscdmlabel.h"     I*/
 #include <petsc/private/petscdsimpl.h>      /*I      "petscds.h"     I*/
@@ -16,7 +17,7 @@ PetscLogEvent DM_Convert, DM_GlobalToLocal, DM_LocalToGlobal, DM_LocalToLocal, D
 
 const char *const DMBoundaryTypes[] = {"NONE","GHOSTED","MIRROR","PERIODIC","TWIST","DMBoundaryType","DM_BOUNDARY_", NULL};
 const char *const DMBoundaryConditionTypes[] = {"INVALID","ESSENTIAL","NATURAL","INVALID","INVALID","ESSENTIAL_FIELD","NATURAL_FIELD","INVALID","INVALID","INVALID","NATURAL_RIEMANN","DMBoundaryConditionType","DM_BC_", NULL};
-const char *const DMPolytopeTypes[] = {"vertex", "segment", "tensor_segment", "triangle", "quadrilateral", "tensor_quad", "tetrahedron", "hexahedron", "triangular_prism", "tensor_triangular_prism", "tensor_quadrilateral_prism", "FV_ghost_cell", "interior_ghost_cell", "unknown", "invalid", "DMPolytopeType", "DM_POLYTOPE_", NULL};
+const char *const DMPolytopeTypes[] = {"vertex", "segment", "tensor_segment", "triangle", "quadrilateral", "tensor_quad", "tetrahedron", "hexahedron", "triangular_prism", "tensor_triangular_prism", "tensor_quadrilateral_prism", "pyramid", "FV_ghost_cell", "interior_ghost_cell", "unknown", "invalid", "DMPolytopeType", "DM_POLYTOPE_", NULL};
 /*@
   DMCreate - Creates an empty DM object. The type can then be set with DMSetType().
 
@@ -128,6 +129,7 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   ierr = DMCopyLabels(dm, *newdm, PETSC_COPY_VALUES, PETSC_TRUE);CHKERRQ(ierr);
   (*newdm)->leveldown  = dm->leveldown;
   (*newdm)->levelup    = dm->levelup;
+  (*newdm)->prealloc_only = dm->prealloc_only;
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMSetDimension(*newdm, dim);CHKERRQ(ierr);
   if (dm->ops->clone) {
@@ -941,7 +943,7 @@ PetscErrorCode  DMView(DM dm,PetscViewer v)
 
     Level: beginner
 
-.seealso DMDestroy(), DMView(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
+.seealso DMCreateLocalVector(), DMGetGlobalVector(), DMDestroy(), DMView(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
 
 @*/
 PetscErrorCode  DMCreateGlobalVector(DM dm,Vec *vec)
@@ -975,7 +977,7 @@ PetscErrorCode  DMCreateGlobalVector(DM dm,Vec *vec)
 
     Level: beginner
 
-.seealso DMDestroy(), DMView(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
+.seealso DMCreateGlobalVector(), DMGetLocalVector(), DMDestroy(), DMView(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
 
 @*/
 PetscErrorCode  DMCreateLocalVector(DM dm,Vec *vec)
@@ -1362,17 +1364,20 @@ PetscErrorCode  DMCreateMatrix(DM dm,Mat *mat)
   /* Handle nullspace and near nullspace */
   if (dm->Nf) {
     MatNullSpace nullSpace;
-    PetscInt     Nf;
+    PetscInt     Nf, f;
 
     ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
-    if (Nf == 1) {
-      if (dm->nullspaceConstructors[0]) {
-        ierr = (*dm->nullspaceConstructors[0])(dm, 0, 0, &nullSpace);CHKERRQ(ierr);
+    for (f = 0; f < Nf; ++f) {
+      if (dm->nullspaceConstructors[f]) {
+        ierr = (*dm->nullspaceConstructors[f])(dm, f, f, &nullSpace);CHKERRQ(ierr);
         ierr = MatSetNullSpace(*mat, nullSpace);CHKERRQ(ierr);
         ierr = MatNullSpaceDestroy(&nullSpace);CHKERRQ(ierr);
+        break;
       }
-      if (dm->nearnullspaceConstructors[0]) {
-        ierr = (*dm->nearnullspaceConstructors[0])(dm, 0, 0, &nullSpace);CHKERRQ(ierr);
+    }
+    for (f = 0; f < Nf; ++f) {
+      if (dm->nearnullspaceConstructors[f]) {
+        ierr = (*dm->nearnullspaceConstructors[f])(dm, f, f, &nullSpace);CHKERRQ(ierr);
         ierr = MatSetNearNullSpace(*mat, nullSpace);CHKERRQ(ierr);
         ierr = MatNullSpaceDestroy(&nullSpace);CHKERRQ(ierr);
       }
@@ -2489,6 +2494,7 @@ PetscErrorCode  DMGlobalToLocalBegin(DM dm,Vec g,InsertMode mode,Vec l)
   PetscErrorCode          ierr;
   DMGlobalToLocalHookLink link;
 
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   for (link=dm->gtolhook; link; link=link->next) {
@@ -2500,11 +2506,12 @@ PetscErrorCode  DMGlobalToLocalBegin(DM dm,Vec g,InsertMode mode,Vec l)
   if (sf) {
     const PetscScalar *gArray;
     PetscScalar       *lArray;
+    PetscMemType      lmtype,gmtype;
 
     if (mode == ADD_VALUES) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %D", mode);
-    ierr = VecGetArrayInPlace(l, &lArray);CHKERRQ(ierr);
-    ierr = VecGetArrayReadInPlace(g, &gArray);CHKERRQ(ierr);
-    ierr = PetscSFBcastBegin(sf, MPIU_SCALAR, gArray, lArray);CHKERRQ(ierr);
+    ierr = VecGetArrayInPlace_Internal(l, &lArray, &lmtype);CHKERRQ(ierr);
+    ierr = VecGetArrayReadInPlace_Internal(g, &gArray, &gmtype);CHKERRQ(ierr);
+    ierr = PetscSFBcastWithMemTypeBegin(sf, MPIU_SCALAR, gmtype, gArray, lmtype, lArray);CHKERRQ(ierr);
     ierr = VecRestoreArrayInPlace(l, &lArray);CHKERRQ(ierr);
     ierr = VecRestoreArrayReadInPlace(g, &gArray);CHKERRQ(ierr);
   } else {
@@ -2538,6 +2545,7 @@ PetscErrorCode  DMGlobalToLocalEnd(DM dm,Vec g,InsertMode mode,Vec l)
   PetscScalar            *lArray;
   PetscBool               transform;
   DMGlobalToLocalHookLink link;
+  PetscMemType            lmtype,gmtype;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -2546,8 +2554,8 @@ PetscErrorCode  DMGlobalToLocalEnd(DM dm,Vec g,InsertMode mode,Vec l)
   if (sf) {
     if (mode == ADD_VALUES) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %D", mode);
 
-    ierr = VecGetArrayInPlace(l, &lArray);CHKERRQ(ierr);
-    ierr = VecGetArrayReadInPlace(g, &gArray);CHKERRQ(ierr);
+    ierr = VecGetArrayInPlace_Internal(l, &lArray, &lmtype);CHKERRQ(ierr);
+    ierr = VecGetArrayReadInPlace_Internal(g, &gArray, &gmtype);CHKERRQ(ierr);
     ierr = PetscSFBcastEnd(sf, MPIU_SCALAR, gArray, lArray);CHKERRQ(ierr);
     ierr = VecRestoreArrayInPlace(l, &lArray);CHKERRQ(ierr);
     ierr = VecRestoreArrayReadInPlace(g, &gArray);CHKERRQ(ierr);
@@ -2715,6 +2723,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
   PetscScalar            *gArray;
   PetscBool               isInsert, transform, l_inplace = PETSC_FALSE, g_inplace = PETSC_FALSE;
   PetscErrorCode          ierr;
+  PetscMemType            lmtype=PETSC_MEMTYPE_HOST,gmtype=PETSC_MEMTYPE_HOST;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -2748,17 +2757,17 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
     } else if (isInsert) {
       ierr = VecGetArrayRead(l, &lArray);CHKERRQ(ierr);
     } else {
-      ierr = VecGetArrayReadInPlace(l, &lArray);CHKERRQ(ierr);
+      ierr = VecGetArrayReadInPlace_Internal(l, &lArray, &lmtype);CHKERRQ(ierr);
       l_inplace = PETSC_TRUE;
     }
     if (s && isInsert) {
       ierr = VecGetArray(g, &gArray);CHKERRQ(ierr);
     } else {
-      ierr = VecGetArrayInPlace(g, &gArray);CHKERRQ(ierr);
+      ierr = VecGetArrayInPlace_Internal(g, &gArray, &gmtype);CHKERRQ(ierr);
       g_inplace = PETSC_TRUE;
     }
     if (sf && !isInsert) {
-      ierr = PetscSFReduceBegin(sf, MPIU_SCALAR, lArray, gArray, MPIU_SUM);CHKERRQ(ierr);
+      ierr = PetscSFReduceWithMemTypeBegin(sf, MPIU_SCALAR, lmtype, lArray, gmtype, gArray, MPIU_SUM);CHKERRQ(ierr);
     } else if (s && isInsert) {
       PetscInt gStart, pStart, pEnd, p;
 
@@ -2861,9 +2870,9 @@ PetscErrorCode  DMLocalToGlobalEnd(DM dm,Vec l,InsertMode mode,Vec g)
       ierr = DMGetNamedLocalVector(dm, "__petsc_dm_transform_local_copy", &tmpl);CHKERRQ(ierr);
       ierr = VecGetArrayRead(tmpl, &lArray);CHKERRQ(ierr);
     } else {
-      ierr = VecGetArrayReadInPlace(l, &lArray);CHKERRQ(ierr);
+      ierr = VecGetArrayReadInPlace_Internal(l, &lArray, NULL);CHKERRQ(ierr);
     }
-    ierr = VecGetArrayInPlace(g, &gArray);CHKERRQ(ierr);
+    ierr = VecGetArrayInPlace_Internal(g, &gArray, NULL);CHKERRQ(ierr);
     ierr = PetscSFReduceEnd(sf, MPIU_SCALAR, lArray, gArray, MPIU_SUM);CHKERRQ(ierr);
     if (transform) {
       ierr = VecRestoreArrayRead(tmpl, &lArray);CHKERRQ(ierr);
@@ -3788,6 +3797,7 @@ foundconv:
       const DMBoundaryType *bd;
       ierr = DMGetPeriodicity(dm, &isper, &maxCell, &L, &bd);CHKERRQ(ierr);
       ierr = DMSetPeriodicity(*M, isper, maxCell,  L,  bd);CHKERRQ(ierr);
+      (*M)->prealloc_only = dm->prealloc_only;
     }
     ierr = PetscLogEventEnd(DM_Convert,dm,0,0,0);CHKERRQ(ierr);
   }
@@ -6418,7 +6428,36 @@ PetscErrorCode DMProjectCoordinates(DM dm, PetscFE disc)
   /* Check current discretization is compatible */
   ierr = DMGetField(cdmOld, 0, NULL, &discOld);CHKERRQ(ierr);
   ierr = PetscObjectGetClassId(discOld, &classid);CHKERRQ(ierr);
-  if (classid != PETSCFE_CLASSID) SETERRQ(PetscObjectComm(discOld), PETSC_ERR_SUP, "Discretization type not supported");
+  if (classid != PETSCFE_CLASSID) {
+    if (classid == PETSC_CONTAINER_CLASSID) {
+      PetscFE        feLinear;
+      DMPolytopeType ct;
+      PetscInt       dim, dE, cStart;
+      PetscBool      simplex;
+
+      /* Assume linear vertex coordinates */
+      ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+      ierr = DMGetCoordinateDim(dm, &dE);CHKERRQ(ierr);
+      ierr = DMPlexGetHeightStratum(cdmOld, 0, &cStart, NULL);CHKERRQ(ierr);
+      ierr = DMPlexGetCellType(dm, cStart, &ct);CHKERRQ(ierr);
+      switch (ct) {
+        case DM_POLYTOPE_TRI_PRISM:
+        case DM_POLYTOPE_TRI_PRISM_TENSOR:
+          SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot autoamtically create coordinate space for prisms");
+        default: break;
+      }
+      simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct)+1 ? PETSC_TRUE : PETSC_FALSE;
+      ierr = PetscFECreateLagrange(PETSC_COMM_SELF, dim, dE, simplex, 1, -1, &feLinear);CHKERRQ(ierr);
+      ierr = DMSetField(cdmOld, 0, NULL, (PetscObject) feLinear);CHKERRQ(ierr);
+      ierr = PetscFEDestroy(&feLinear);CHKERRQ(ierr);
+      ierr = DMCreateDS(cdmOld);CHKERRQ(ierr);
+    } else {
+      const char *discname;
+
+      ierr = PetscObjectGetType(discOld, &discname);CHKERRQ(ierr);
+      SETERRQ1(PetscObjectComm(discOld), PETSC_ERR_SUP, "Discretization type %s not supported", discname);
+    }
+  }
   /* Make a fresh clone of the coordinate DM */
   ierr = DMClone(cdmOld, &cdmNew);CHKERRQ(ierr);
   ierr = DMSetField(cdmNew, 0, NULL, (PetscObject) disc);CHKERRQ(ierr);
@@ -8704,6 +8743,7 @@ PetscErrorCode DMAdaptLabel(DM dm, DMLabel label, DM *dmAdapt)
   *dmAdapt = NULL;
   if (!dm->ops->adaptlabel) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMAdaptLabel",((PetscObject)dm)->type_name);
   ierr = (dm->ops->adaptlabel)(dm, label, dmAdapt);CHKERRQ(ierr);
+  if (*dmAdapt) (*dmAdapt)->prealloc_only = dm->prealloc_only;  /* maybe this should go .... */
   PetscFunctionReturn(0);
 }
 

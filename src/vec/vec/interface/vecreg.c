@@ -63,12 +63,20 @@ PetscErrorCode VecSetType(Vec vec, VecType method)
     if (match) PetscFunctionReturn(0);
   }
 #endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  ierr = PetscStrcmp(method,VECKOKKOS,&match);CHKERRQ(ierr);
+  if (match) {
+    ierr = PetscObjectTypeCompare((PetscObject) vec, size > 1 ? VECMPIKOKKOS : VECSEQKOKKOS, &match);CHKERRQ(ierr);
+    if (match) PetscFunctionReturn(0);
+  }
+#endif
   ierr = PetscFunctionListFind(VecList,method,&r);CHKERRQ(ierr);
   if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown vector type: %s", method);
   if (vec->ops->destroy) {
     ierr = (*vec->ops->destroy)(vec);CHKERRQ(ierr);
     vec->ops->destroy = NULL;
   }
+  ierr = PetscMemzero(vec->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
   if (vec->map->n < 0 && vec->map->N < 0) {
     vec->ops->create = r;
     vec->ops->load   = VecLoad_Default;
