@@ -204,6 +204,19 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
+  def isGfortran(compiler, log):
+    '''returns true if the compiler is gfortran'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
+      output = output +  error
+      import re
+      if output.find('GNU Fortran') > -1:
+        return 1
+    except RuntimeError:
+      pass
+    return 0
+
+  @staticmethod
   def isGfortran45x(compiler, log):
     '''returns true if the compiler is gfortran-4.5.x'''
     try:
@@ -214,6 +227,7 @@ class Configure(config.base.Configure):
         return 1
     except RuntimeError:
       pass
+    return 0
 
   @staticmethod
   def isGfortran46plus(compiler, log):
@@ -229,6 +243,7 @@ class Configure(config.base.Configure):
           return 1
     except RuntimeError:
       pass
+    return 0
 
   @staticmethod
   def isGfortran47plus(compiler, log):
@@ -244,6 +259,7 @@ class Configure(config.base.Configure):
           return 1
     except RuntimeError:
       pass
+    return 0
 
   @staticmethod
   def isGfortran100plus(compiler, log):
@@ -259,6 +275,7 @@ class Configure(config.base.Configure):
           return 1
     except RuntimeError:
       pass
+    return 0
 
   @staticmethod
   def isGfortran8plus(compiler, log):
@@ -274,6 +291,7 @@ class Configure(config.base.Configure):
           return 1
     except RuntimeError:
       pass
+    return 0
 
   @staticmethod
   def isG95(compiler, log):
@@ -281,12 +299,12 @@ class Configure(config.base.Configure):
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 20', log = log)
       output = output + error
-      if output.find('Unrecognised option --help passed to ld') >=0:    # NAG f95 compiler
-        return 0
+      # if output.find('Unrecognised option --help passed to ld') >=0:    # NAG f95 compiler
       if output.find('http://www.g95.org') >= 0:
         return 1
     except RuntimeError:
       pass
+    return 0
 
   @staticmethod
   def isCompaqF90(compiler, log):

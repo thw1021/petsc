@@ -1112,11 +1112,17 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
         self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.package+' PETSc is tested with '+dropPatch(self.version)+suggest)
     return
 
+  def selectDownload(self):
+    '''Allows package to provide different download based on its own criteria'''
+    pass
+
   def configure(self):
-    if hasattr(self, 'download_solaris') and config.setCompilers.Configure.isSolaris(self.log):
-      self.download = self.download_solaris
-    if hasattr(self, 'download_darwin') and config.setCompilers.Configure.isDarwin(self.log):
-      self.download = self.download_darwin
+    self.selectDownload()
+    for ost in ['Darwin','Solaris']:
+      if hasattr(self, 'download_'+ost.lower()) and eval('config.setCompilers.Configure.is'+ost+'(self.log)'):
+        self.log.write('Using self.download_'+ost.lower()+'\n')
+        self.download = eval('self.download_'+ost.lower())
+
     if self.download and self.argDB['download-'+self.downloadname.lower()] and (not self.framework.batchBodies or self.installwithbatch):
       self.argDB['with-'+self.package] = 1
       downloadPackageVal = self.argDB['download-'+self.downloadname.lower()]
@@ -1398,11 +1404,11 @@ Brief overview of how BuildSystem\'s configuration of packages works.
         ...
         checkDownload:
           ...
-          check val = argDB[\'download-\'self.downloadname.tolower()\']
+          check val = argDB[\'download-\'self.downloadname.lower()\']
           /*
            note the inconsistency with setupHelp: it declares \'download-\'self.package
            Thus, in order for the correct variable to be queried here, we have to have
-           self.downloadname.tolower() == self.package
+           self.downloadname.lower() == self.package
           */
           if val is a string, set self.download = [val]
           check the package license
