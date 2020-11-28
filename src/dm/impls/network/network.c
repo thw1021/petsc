@@ -324,6 +324,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   PetscInt       net,idx,gidx,offset,e,v,vfrom,vto;
   CVertexType    cvtype;
   CEdge          *cvs=NULL;
+  PetscSection   sectiong;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
@@ -527,6 +528,9 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   network->cvtx  = cvs;
   network->ncvtx = ncv;
   ierr = PetscFree(sedgelist);CHKERRQ(ierr);
+
+  /* Create a global section to be used by DMNetworkIsGhostVertex() which is a non-collective routine */
+  ierr = DMGetGlobalSection(network->plex,&sectiong);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1521,6 +1525,7 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Barrier(comm);CHKERRQ(ierr);
 
   if (size > 1) {
     PetscSF        sf = network->plex->sf;
@@ -1537,7 +1542,6 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
     MPI_Request s_waits[size],r_req;
     MPI_Status  s_status[size],r_status;
 
-    ierr = MPI_Barrier(comm);CHKERRQ(ierr);
     ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
     for (p=0; p<nsv; p++) {
       header = &network->header[svtx[p]];
@@ -1580,8 +1584,6 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
           }
         }
       }
-      ierr = MPI_Barrier(comm);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");
 
       /* (2) leaves recv nvar from the root */
       /* -----------------------------------*/
@@ -1597,14 +1599,11 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
         for (i=0; i<degree[svtx[p]]; i++) {
           proc = leaf[i];
           tag  = leaf_idx[i];
-          //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] send nvar %d to [%d], tag %d\n",rank,sbuf[0],proc,tag);CHKERRQ(ierr);
           ierr = MPI_Isend(sbuf,1,MPIU_INT,proc,tag,comm,&s_waits[i]);CHKERRQ(ierr);
           ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] send nvar %d to [%d], tag %d\n",rank,sbuf[0],proc,tag);CHKERRQ(ierr);
-          //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] send nvar %d to [%d]\n",rank,sbuf[0],proc);CHKERRQ(ierr);
         }
         ierr = MPI_Waitall(degree[svtx[p]],s_waits,s_status);CHKERRQ(ierr);
       }
-      ierr = MPI_Barrier(comm);CHKERRQ(ierr);
 
 #if 0 //OLD
     /* (0) Allgather ncomponets and nvar from each process */
@@ -2250,9 +2249,8 @@ PetscErrorCode DMNetworkIsGhostVertex(DM dm,PetscInt p,PetscBool *isghost)
   PetscSection   sectiong;
 
   PetscFunctionBegin;
-  //if (!dm->setupcalled) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE,"Must call DMSetUp() first");
   *isghost = PETSC_FALSE;
-  ierr = DMGetGlobalSection(network->plex,&sectiong);CHKERRQ(ierr); // Collective call!!!
+  ierr = DMGetGlobalSection(network->plex,&sectiong);CHKERRQ(ierr);
   ierr = PetscSectionGetOffset(sectiong,p,&offsetg);CHKERRQ(ierr);
   if (offsetg < 0) *isghost = PETSC_TRUE;
   PetscFunctionReturn(0);
