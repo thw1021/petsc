@@ -1,5 +1,5 @@
 #if !defined(__MPICUDAMATIMPL)
-#define __MPICUDAEMATIMPL
+#define __MPICUDAMATIMPL
 
 #include <../src/vec/vec/impls/seq/seqcuda/cudavecimpl.h>
 
