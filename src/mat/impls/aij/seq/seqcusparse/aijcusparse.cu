@@ -2029,7 +2029,6 @@ static PetscErrorCode MatProductSetFromOptions_SeqAIJCUSPARSE(Mat C)
 
 static PetscErrorCode MatMult_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy)
 {
-  Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
