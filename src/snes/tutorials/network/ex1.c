@@ -319,7 +319,7 @@ int main(int argc,char **argv)
   Vec              X,F;
   SNES             snes,snes_power,snes_water;
   Mat              Jac;
-  PetscBool        viewJ=PETSC_FALSE,viewX=PETSC_FALSE,viewDM=PETSC_FALSE,test=PETSC_FALSE,distribute=PETSC_TRUE,flg;
+  PetscBool        ghost,viewJ=PETSC_FALSE,viewX=PETSC_FALSE,viewDM=PETSC_FALSE,test=PETSC_FALSE,distribute=PETSC_TRUE,flg;
   UserCtx          user;
   PetscInt         it_max=10;
   SNESConvergedReason reason;
@@ -484,19 +484,12 @@ int main(int argc,char **argv)
 
   /* ADD VARIABLES AND COMPONENTS AT THE COUPLING VERTEX: net[0].4 coupls with net[1].0 */
   /*------------------------------------------------------------------------------------*/
-  PetscBool ghost;
   ierr = DMNetworkGetSubnetworkSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
-  if (nv) {
-    printf("[%d] coupling info: cnv %d; sv[0] %d\n",rank,nv,vtx[0]);CHKERRQ(ierr);
-  }
   for (i = 0; i < nv; i++) { /* proc[0] and proc[1] hold the same coupling info, thus have nv=1; nv=0 in other processes */
-    if (size < 3) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghost);CHKERRQ(ierr);
     printf("[%d] coupling info: cnv %d; sv[0] %d; ghost %d\n",rank,nv,vtx[0],ghost);CHKERRQ(ierr);
     if (ghost) continue;
-    }
-    printf("[%d] add components and nvar to shared v %d\n",rank,vtx[i]);
-    if ((size == 3 && rank == 1) || size < 3) { //root!
+
     /* power */
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_power->compkey_bus,&pfdata->bus[4],2);CHKERRQ(ierr);
     /* bus[4] is a load, add its component */
@@ -504,7 +497,6 @@ int main(int argc,char **argv)
 
     /* water */
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_water->compkey_vtx,&waterdata->vertex[0],1);CHKERRQ(ierr);
-    }
   }
 
   /* Set up DM for use */
