@@ -283,7 +283,9 @@ function petsc_mpiexec_cudamemcheck() {
 }
 
 function petsc_mpiexec_valgrind() {
-  _mpiexec=$1;shift
+    shift
+#echo $1 $2 $3
+    _mpiexec=$1;shift
   npopt=$1;shift
   np=$1;shift
  
