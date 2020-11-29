@@ -283,10 +283,11 @@ function petsc_mpiexec_cudamemcheck() {
 }
 
 function petsc_mpiexec_valgrind() {
+  shift
   _mpiexec=$1;shift
   npopt=$1;shift
   np=$1;shift
- 
+
   valgrind="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --suppressions=$petsc_bindir/maint/petsc-val.supp --error-exitcode=10"
 
   if $printcmd; then
