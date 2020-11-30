@@ -1,7 +1,5 @@
 #include <petscconf.h>
 #include <../src/mat/impls/sell/mpi/mpisell.h>   /*I "petscmat.h" I*/
-//#include <../src/mat/impls/sell/seq/seqcuda/cudamatimpl.h>
-//#include <../src/mat/impls/sell/mpi/mpicuda/mpicudamatimpl.h>
 
 PetscErrorCode MatMPISELLSetPreallocation_MPISELLCUDA(Mat B,PetscInt d_rlenmax,const PetscInt d_rlen[],PetscInt o_rlenmax,const PetscInt o_rlen[])
 {
@@ -35,17 +33,6 @@ PetscErrorCode MatMPISELLSetPreallocation_MPISELLCUDA(Mat B,PetscInt d_rlenmax,c
 
 PetscErrorCode MatMult_MPISELLCUDA(Mat A,Vec xx,Vec yy)
 {
-  /*
-     This multiplication sequence is different sequence
-     than the CPU version. In particular, the diagonal block
-     multiplication kernel is launched in one stream. Then,
-     in a separate stream, the data transfers from DeviceToHost
-     (with MPI messaging in between), then HostToDevice are
-     launched. Once the data transfer stream is synchronized,
-     to ensure messaging is complete, the MatMultAdd kernel
-     is launched in the original (MatMult) stream to protect
-     against race conditions.
-  */
   Mat_MPISELL    *a = (Mat_MPISELL*)A->data;
   PetscErrorCode ierr;
   PetscInt       nt;
@@ -62,17 +49,6 @@ PetscErrorCode MatMult_MPISELLCUDA(Mat A,Vec xx,Vec yy)
 
 PetscErrorCode MatMultAdd_MPISELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
 {
-  /*
-     This multiplication sequence is different sequence
-     than the CPU version. In particular, the diagonal block
-     multiplication kernel is launched in one stream. Then,
-     in a separate stream, the data transfers from DeviceToHost
-     (with MPI messaging in between), then HostToDevice are
-     launched. Once the data transfer stream is synchronized,
-     to ensure messaging is complete, the MatMultAdd kernel
-     is launched in the original (MatMult) stream to protect
-     against race conditions.
-  */
   Mat_MPISELL    *a = (Mat_MPISELL*)A->data;
   PetscErrorCode ierr;
   PetscInt       nt;
@@ -89,17 +65,6 @@ PetscErrorCode MatMultAdd_MPISELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
 
 PetscErrorCode MatMultTranspose_MPISELLCUDA(Mat A,Vec xx,Vec yy)
 {
-  /* This multiplication sequence is different sequence
-     than the CPU version. In particular, the diagonal block
-     multiplication kernel is launched in one stream. Then,
-     in a separate stream, the data transfers from DeviceToHost
-     (with MPI messaging in between), then HostToDevice are
-     launched. Once the data transfer stream is synchronized,
-     to ensure messaging is complete, the MatMultAdd kernel
-     is launched in the original (MatMult) stream to protect
-     against race conditions.
-
-     This sequence should only be called for GPU computation. */
   Mat_MPISELL    *a = (Mat_MPISELL*)A->data;
   PetscErrorCode ierr;
   PetscInt       nt;
