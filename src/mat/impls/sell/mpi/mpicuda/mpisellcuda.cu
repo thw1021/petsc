@@ -139,7 +139,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISELLCUDA(Mat A)
 
 /*@
    MatCreateSELLCUDA - Creates a sparse matrix in SELL (compressed row) format.
-   This matrix will ultimately pushed down to NVidia GPUs. For good matrix
+   This matrix will ultimately pushed down to NVIDIA GPUs. For good matrix
    assembly performance the user should preallocate the matrix storage by setting
    the parameter nz (or the array nnz).  By setting these parameters accurately,
    performance during matrix assembly can be increased by more than a factor of 50.
@@ -195,7 +195,7 @@ PetscErrorCode  MatCreateSELLCUDA(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M
 /*MC
    MATSELLCUDA - MATMPISELLCUDA = "sellcuda" = "mpisellcuda" - A matrix type to be used for sparse matrices.
 
-   Sliced ELLPACK matrix type whose data resides on Nvidia GPUs.
+   Sliced ELLPACK matrix type whose data resides on NVIDIA GPUs.
 
    This matrix type is identical to MATSEQSELLCUDA when constructed with a single process communicator,
    and MATMPISELLCUDA otherwise.  As a result, for single process communicators,
