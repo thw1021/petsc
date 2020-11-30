@@ -112,6 +112,7 @@ PetscErrorCode MatDestroy_MPISELLCUDA(Mat A)
   PetscFunctionBegin;
   ierr = MatDestroy_MPISELL(A);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatConvert_mpisellcuda_mpiaij_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMPISELLSetPreallocation_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
