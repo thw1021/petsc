@@ -1,7 +1,5 @@
 #include <petscconf.h>
 #include <../src/mat/impls/sell/mpi/mpisell.h>   /*I "petscmat.h" I*/
-//#include <../src/mat/impls/sell/seq/seqcuda/cudamatimpl.h>
-//#include <../src/mat/impls/sell/mpi/mpicuda/mpicudamatimpl.h>
 
 PetscErrorCode MatMPISELLSetPreallocation_MPISELLCUDA(Mat B,PetscInt d_rlenmax,const PetscInt d_rlen[],PetscInt o_rlenmax,const PetscInt o_rlen[])
 {
@@ -35,17 +33,6 @@ PetscErrorCode MatMPISELLSetPreallocation_MPISELLCUDA(Mat B,PetscInt d_rlenmax,c
 
 PetscErrorCode MatMult_MPISELLCUDA(Mat A,Vec xx,Vec yy)
 {
-  /*
-     This multiplication sequence is different sequence
-     than the CPU version. In particular, the diagonal block
-     multiplication kernel is launched in one stream. Then,
-     in a separate stream, the data transfers from DeviceToHost
-     (with MPI messaging in between), then HostToDevice are
-     launched. Once the data transfer stream is synchronized,
-     to ensure messaging is complete, the MatMultAdd kernel
-     is launched in the original (MatMult) stream to protect
-     against race conditions.
-  */
   Mat_MPISELL    *a = (Mat_MPISELL*)A->data;
   PetscErrorCode ierr;
   PetscInt       nt;
@@ -62,17 +49,6 @@ PetscErrorCode MatMult_MPISELLCUDA(Mat A,Vec xx,Vec yy)
 
 PetscErrorCode MatMultAdd_MPISELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
 {
-  /*
-     This multiplication sequence is different sequence
-     than the CPU version. In particular, the diagonal block
-     multiplication kernel is launched in one stream. Then,
-     in a separate stream, the data transfers from DeviceToHost
-     (with MPI messaging in between), then HostToDevice are
-     launched. Once the data transfer stream is synchronized,
-     to ensure messaging is complete, the MatMultAdd kernel
-     is launched in the original (MatMult) stream to protect
-     against race conditions.
-  */
   Mat_MPISELL    *a = (Mat_MPISELL*)A->data;
   PetscErrorCode ierr;
   PetscInt       nt;
@@ -89,17 +65,6 @@ PetscErrorCode MatMultAdd_MPISELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
 
 PetscErrorCode MatMultTranspose_MPISELLCUDA(Mat A,Vec xx,Vec yy)
 {
-  /* This multiplication sequence is different sequence
-     than the CPU version. In particular, the diagonal block
-     multiplication kernel is launched in one stream. Then,
-     in a separate stream, the data transfers from DeviceToHost
-     (with MPI messaging in between), then HostToDevice are
-     launched. Once the data transfer stream is synchronized,
-     to ensure messaging is complete, the MatMultAdd kernel
-     is launched in the original (MatMult) stream to protect
-     against race conditions.
-
-     This sequence should only be called for GPU computation. */
   Mat_MPISELL    *a = (Mat_MPISELL*)A->data;
   PetscErrorCode ierr;
   PetscInt       nt;
@@ -111,18 +76,6 @@ PetscErrorCode MatMultTranspose_MPISELLCUDA(Mat A,Vec xx,Vec yy)
   ierr = (*a->A->ops->multtranspose)(a->A,xx,yy);CHKERRQ(ierr);
   ierr = VecScatterBegin(a->Mvctx,a->lvec,yy,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
   ierr = VecScatterEnd(a->Mvctx,a->lvec,yy,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatSetFromOptions_MPISELLCUDA(PetscOptionItems *PetscOptionsObject,Mat A)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = PetscOptionsHead(PetscOptionsObject,"MPISELLCUDA options");CHKERRQ(ierr);
-  if (A->factortype==MAT_FACTOR_NONE) {
-  }
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -147,6 +100,7 @@ PetscErrorCode MatDestroy_MPISELLCUDA(Mat A)
   PetscFunctionBegin;
   ierr = MatDestroy_MPISELL(A);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatConvert_mpisellcuda_mpiaij_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMPISELLSetPreallocation_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -164,7 +118,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISELLCUDA(Mat A)
   A->ops->mult           = MatMult_MPISELLCUDA;
   A->ops->multadd        = MatMultAdd_MPISELLCUDA;
   A->ops->multtranspose  = MatMultTranspose_MPISELLCUDA;
-  A->ops->setfromoptions = MatSetFromOptions_MPISELLCUDA;
   A->ops->destroy        = MatDestroy_MPISELLCUDA;
 
   ierr = PetscObjectChangeTypeName((PetscObject)A,MATMPISELLCUDA);CHKERRQ(ierr);
@@ -174,7 +127,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISELLCUDA(Mat A)
 
 /*@
    MatCreateSELLCUDA - Creates a sparse matrix in SELL (compressed row) format.
-   This matrix will ultimately pushed down to NVidia GPUs. For good matrix
+   This matrix will ultimately pushed down to NVIDIA GPUs. For good matrix
    assembly performance the user should preallocate the matrix storage by setting
    the parameter nz (or the array nnz).  By setting these parameters accurately,
    performance during matrix assembly can be increased by more than a factor of 50.
@@ -230,7 +183,7 @@ PetscErrorCode  MatCreateSELLCUDA(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M
 /*MC
    MATSELLCUDA - MATMPISELLCUDA = "sellcuda" = "mpisellcuda" - A matrix type to be used for sparse matrices.
 
-   Sliced ELLPACK matrix type whose data resides on Nvidia GPUs.
+   Sliced ELLPACK matrix type whose data resides on NVIDIA GPUs.
 
    This matrix type is identical to MATSEQSELLCUDA when constructed with a single process communicator,
    and MATMPISELLCUDA otherwise.  As a result, for single process communicators,
