@@ -1,4 +1,3 @@
-
 #include <petsc/private/dmdaimpl.h> /*I      "petscdmda.h"     I*/
 #include <petscmat.h>
 
@@ -591,13 +590,13 @@ PetscErrorCode  MatView_MPI_DA(Mat A,PetscViewer viewer)
   DM                da;
   PetscErrorCode    ierr;
   const char        *prefix;
-  Mat               Anatural;
+  Mat               AA,Anatural;
   AO                ao;
   PetscInt          rstart,rend,*petsc,i;
   IS                is;
   MPI_Comm          comm;
   PetscViewerFormat format;
-  PetscBool         flag1,flag2;
+  PetscBool         flag;
 
   PetscFunctionBegin;
   /* Check whether we are just printing info, in which case MatView() already viewed everything we wanted to view */
@@ -616,13 +615,12 @@ PetscErrorCode  MatView_MPI_DA(Mat A,PetscViewer viewer)
   ierr = ISCreateGeneral(comm,rend-rstart,petsc,PETSC_OWN_POINTER,&is);CHKERRQ(ierr);
 
   /* call viewer on natural ordering */
-  ierr = PetscObjectTypeCompare((PetscObject)A,MATMPISELL,&flag1);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)A,MATMPISELLCUDA,&flag2);CHKERRQ(ierr);
-  if (flag1 || flag2) {
-    ierr = MatConvert(A,MATAIJ,MAT_INITIAL_MATRIX,&Anatural);CHKERRQ(ierr);
-  } else {
-    ierr = MatCreateSubMatrix(A,is,is,MAT_INITIAL_MATRIX,&Anatural);CHKERRQ(ierr);
+  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATMPISELL,&flag);CHKERRQ(ierr);
+  if (flag) {
+    ierr = MatConvert(A,MATAIJ,MAT_INITIAL_MATRIX,&AA);CHKERRQ(ierr);
+    A = AA;
   }
+  ierr = MatCreateSubMatrix(A,is,is,MAT_INITIAL_MATRIX,&Anatural);CHKERRQ(ierr);
   ierr = ISDestroy(&is);CHKERRQ(ierr);
   ierr = PetscObjectGetOptionsPrefix((PetscObject)A,&prefix);CHKERRQ(ierr);
   ierr = PetscObjectSetOptionsPrefix((PetscObject)Anatural,prefix);CHKERRQ(ierr);
@@ -631,6 +629,9 @@ PetscErrorCode  MatView_MPI_DA(Mat A,PetscViewer viewer)
   ierr = MatView(Anatural,viewer);CHKERRQ(ierr);
   ((PetscObject)Anatural)->donotPetscObjectPrintClassNamePrefixType = PETSC_FALSE;
   ierr = MatDestroy(&Anatural);CHKERRQ(ierr);
+  if (flag) {
+    ierr = MatDestroy(&AA);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
