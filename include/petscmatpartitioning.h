@@ -58,6 +58,8 @@ PETSC_EXTERN PetscErrorCode MatPartitioningView(MatPartitioning,PetscViewer);
 PETSC_EXTERN PetscErrorCode MatPartitioningViewFromOptions(MatPartitioning,PetscObject,const char[]);
 PETSC_EXTERN PetscErrorCode MatPartitioningSetFromOptions(MatPartitioning);
 PETSC_EXTERN PetscErrorCode MatPartitioningGetType(MatPartitioning,MatPartitioningType*);
+PETSC_EXTERN PetscErrorCode MatPartitioningSetUp(MatPartitioning);
+PETSC_EXTERN PetscErrorCode MatPartitioningReset(MatPartitioning);
 
 PETSC_EXTERN PetscErrorCode MatPartitioningParmetisSetRepartition(MatPartitioning part);
 PETSC_EXTERN PetscErrorCode MatPartitioningParmetisGetEdgeCut(MatPartitioning, PetscInt *);

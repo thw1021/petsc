@@ -16,19 +16,24 @@ struct _MatPartitioningOps {
   PetscErrorCode (*destroy)(MatPartitioning);
   PetscErrorCode (*view)(MatPartitioning,PetscViewer);
   PetscErrorCode (*improve)(MatPartitioning,IS*);
+  PetscErrorCode (*setup)(MatPartitioning);
+  PetscErrorCode (*reset)(MatPartitioning);
 };
 
 struct _p_MatPartitioning {
   PETSCHEADER(struct _MatPartitioningOps);
-  Mat         adj;
+  Mat         adj,adj_work;
   PetscInt    *vertex_weights;
   PetscBool   use_vertex_weights;
   PetscReal   *part_weights;
   PetscBool   use_part_weights;
   PetscInt    n;                                 /* number of partitions */
   void        *data;
-  PetscInt    setupcalled;
+  PetscBool   setupcalled;
   PetscBool   use_edge_weights;  /* A flag indicates whether or not to use edge weights */
+  /* bs indicates if the converted matrix is "reduced" from the original and hence the
+     resulting partition results need to be stretched to match the original matrix */
+  PetscInt    bs;
   PetscBool   parallel;
 };
 

@@ -248,6 +248,8 @@ PetscErrorCode  MatPartitioningGetType(MatPartitioning partitioning,MatPartition
 PetscErrorCode  MatPartitioningSetNParts(MatPartitioning part,PetscInt n)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
+  if (part->setupcalled) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Cannot modify partitioner settings after setup");
   part->n = n;
   PetscFunctionReturn(0);
 }
@@ -279,9 +281,8 @@ PetscErrorCode  MatPartitioningApplyND(MatPartitioning matp,IS *partitioning)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(matp,MAT_PARTITIONING_CLASSID,1);
   PetscValidPointer(partitioning,2);
-  if (!matp->adj->assembled) SETERRQ(PetscObjectComm((PetscObject)matp),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
-  if (matp->adj->factortype) SETERRQ(PetscObjectComm((PetscObject)matp),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  if (!matp->ops->applynd) SETERRQ1(PetscObjectComm((PetscObject)matp),PETSC_ERR_SUP,"Nested dissection not provided by MatPartitioningType %s",((PetscObject)matp)->type_name);
+  if (!matp->ops->applynd) SETERRQ1(PetscObjectComm((PetscObject)matp), PETSC_ERR_SUP, "MatPartitioningApplyND() not implemented for MatPartitioning type %s", ((PetscObject)matp)->type_name);
+  ierr = MatPartitioningSetUp(matp);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(MAT_PartitioningND,matp,0,0,0);CHKERRQ(ierr);
   ierr = (*matp->ops->applynd)(matp,partitioning);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(MAT_PartitioningND,matp,0,0,0);CHKERRQ(ierr);
@@ -326,9 +327,8 @@ PetscErrorCode  MatPartitioningApply(MatPartitioning matp,IS *partitioning)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(matp,MAT_PARTITIONING_CLASSID,1);
   PetscValidPointer(partitioning,2);
-  if (!matp->adj->assembled) SETERRQ(PetscObjectComm((PetscObject)matp),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
-  if (matp->adj->factortype) SETERRQ(PetscObjectComm((PetscObject)matp),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  if (!matp->ops->apply) SETERRQ(PetscObjectComm((PetscObject)matp),PETSC_ERR_ARG_WRONGSTATE,"Must set type with MatPartitioningSetFromOptions() or MatPartitioningSetType()");
+  if (!matp->ops->apply) SETERRQ1(PetscObjectComm((PetscObject)matp), PETSC_ERR_SUP, "MatPartitioningApply() not implemented for MatPartitioning type %s", ((PetscObject)matp)->type_name);
+  ierr = MatPartitioningSetUp(matp);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(MAT_Partitioning,matp,0,0,0);CHKERRQ(ierr);
   ierr = (*matp->ops->apply)(matp,partitioning);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(MAT_Partitioning,matp,0,0,0);CHKERRQ(ierr);
@@ -386,8 +386,10 @@ PetscErrorCode  MatPartitioningImprove(MatPartitioning matp,IS *partitioning)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(matp,MAT_PARTITIONING_CLASSID,1);
   PetscValidPointer(partitioning,2);
-  if (!matp->adj->assembled) SETERRQ(PetscObjectComm((PetscObject)matp),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
-  if (matp->adj->factortype) SETERRQ(PetscObjectComm((PetscObject)matp),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
+  //TODO partitioning arg should be IS, not IS*
+  PetscValidHeaderSpecific(*partitioning,IS_CLASSID,2);
+  if (!matp->ops->improve) SETERRQ1(PetscObjectComm((PetscObject)matp), PETSC_ERR_SUP, "MatPartitioningImprove() not implemented for MatPartitioning type %s", ((PetscObject)matp)->type_name);
+  ierr = MatPartitioningSetUp(matp);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(MAT_Partitioning,matp,0,0,0);CHKERRQ(ierr);
   if (matp->ops->improve) {
     ierr = (*matp->ops->improve)(matp,partitioning);CHKERRQ(ierr);
@@ -468,6 +470,7 @@ PetscErrorCode  MatPartitioningSetAdjacency(MatPartitioning part,Mat adj)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidHeaderSpecific(adj,MAT_CLASSID,2);
+  if (part->setupcalled) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Cannot modify graph after setup");
   ierr = MatDestroy(&part->adj);CHKERRQ(ierr);
   part->adj = adj;
   ierr = PetscObjectReference((PetscObject)adj);CHKERRQ(ierr);
@@ -495,6 +498,7 @@ PetscErrorCode  MatPartitioningDestroy(MatPartitioning *part)
   PetscValidHeaderSpecific((*part),MAT_PARTITIONING_CLASSID,1);
   if (--((PetscObject)(*part))->refct > 0) {*part = NULL; PetscFunctionReturn(0);}
 
+  ierr = MatPartitioningReset(*part);CHKERRQ(ierr);
   if ((*part)->ops->destroy) {
     ierr = (*(*part)->ops->destroy)((*part));CHKERRQ(ierr);
   }
@@ -528,6 +532,7 @@ PetscErrorCode  MatPartitioningSetVertexWeights(MatPartitioning part,const Petsc
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
+  if (part->setupcalled) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Cannot modify partitioner settings after setup");
   ierr = PetscFree(part->vertex_weights);CHKERRQ(ierr);
   part->vertex_weights = (PetscInt*)weights;
   if (weights) part->use_vertex_weights = PETSC_TRUE;
@@ -562,6 +567,7 @@ PetscErrorCode  MatPartitioningSetPartitionWeights(MatPartitioning part,const Pe
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
+  if (part->setupcalled) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Cannot modify partitioner settings after setup");
   ierr = PetscFree(part->part_weights);CHKERRQ(ierr);
   part->part_weights = (PetscReal*)weights;
   if (weights) part->use_part_weights = PETSC_TRUE;
@@ -589,6 +595,7 @@ PetscErrorCode  MatPartitioningSetUseEdgeWeights(MatPartitioning part,PetscBool 
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
+  if (part->setupcalled) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Cannot modify partitioner settings after setup");
   part->use_edge_weights = use_edge_weights;
   PetscFunctionReturn(0);
 }
@@ -649,9 +656,11 @@ PetscErrorCode  MatPartitioningCreate(MPI_Comm comm,MatPartitioning *newp)
   part->vertex_weights = NULL;
   part->part_weights   = NULL;
   part->use_edge_weights = PETSC_FALSE; /* By default we don't use edge weights */
+  part->setupcalled    = PETSC_FALSE;
 
   ierr    = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
   part->n = (PetscInt)size;
+  part->bs = 1;
 
   *newp = part;
   PetscFunctionReturn(0);
@@ -759,6 +768,7 @@ PetscErrorCode  MatPartitioningSetType(MatPartitioning part,MatPartitioningType 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidCharPointer(type,2);
+  if (part->setupcalled) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Cannot modify partitioner settings after setup");
 
   ierr = PetscObjectTypeCompare((PetscObject)part,type,&match);CHKERRQ(ierr);
   if (match) PetscFunctionReturn(0);
@@ -767,7 +777,7 @@ PetscErrorCode  MatPartitioningSetType(MatPartitioning part,MatPartitioningType 
     ierr = (*part->ops->destroy)(part);CHKERRQ(ierr);
     part->ops->destroy = NULL;
   }
-  part->setupcalled = 0;
+  part->setupcalled = PETSC_FALSE;
   part->data        = NULL;
   ierr = PetscMemzero(part->ops,sizeof(struct _MatPartitioningOps));CHKERRQ(ierr);
 
@@ -812,7 +822,9 @@ PetscErrorCode  MatPartitioningSetFromOptions(MatPartitioning part)
   const char     *def;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   ierr = PetscObjectOptionsBegin((PetscObject)part);CHKERRQ(ierr);
+  if (part->setupcalled) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Cannot modify partitioner settings after setup");
   if (!((PetscObject)part)->type_name) {
 #if defined(PETSC_HAVE_PARMETIS)
     def = MATPARTITIONINGPARMETIS;
@@ -849,5 +861,65 @@ PetscErrorCode  MatPartitioningSetFromOptions(MatPartitioning part)
     ierr = (*part->ops->setfromoptions)(PetscOptionsObject,part);CHKERRQ(ierr);
   }
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+//TODO manpage
+//TODO event
+/* guarantee that part->adj is MATMPIADJ on a subcommunicator containing only processes with nonzero number of rows */
+PetscErrorCode MatPartitioningSetUp(MatPartitioning part)
+{
+  PetscErrorCode           ierr;
+  PetscBool                flg;
+  Mat                      amat,pmat;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
+  if (part->setupcalled) PetscFunctionReturn(0);
+  if (!part->adj->assembled) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
+  if (part->adj->factortype) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
+  if (!part->ops->apply)     SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_WRONGSTATE,"Must set type with MatPartitioningSetFromOptions() or MatPartitioningSetType()");
+
+  ierr = PetscObjectTypeCompare((PetscObject)part->adj,MATMPIADJ,&flg);CHKERRQ(ierr);
+  if (flg) {
+    amat = part->adj;
+    ierr = PetscObjectReference((PetscObject)amat);CHKERRQ(ierr);
+  } else {
+    /* bs indicates if the converted matrix is "reduced" from the original and hence the
+       resulting partition results need to be stretched to match the original matrix */
+    ierr = MatConvert(part->adj,MATMPIADJ,MAT_INITIAL_MATRIX,&amat);CHKERRQ(ierr);
+    if (amat->rmap->n > 0) part->bs = part->adj->rmap->n/amat->rmap->n;
+  }
+  if (part->parallel) {
+   ierr = MatMPIAdjCreateNonemptySubcommMat(amat,&pmat);CHKERRQ(ierr);
+  } else {
+   ierr = MatMPIAdjToSeq(amat,&pmat);CHKERRQ(ierr);
+  }
+  ierr = MatDestroy(&amat);CHKERRQ(ierr);
+  ierr = MatDestroy(&part->adj_work);CHKERRQ(ierr);
+  part->adj_work = pmat;
+
+  /* Run setup only on ranks which have non-null adj_work */
+  if (pmat && part->ops->setup) {
+    ierr = (*part->ops->setup)(part);CHKERRQ(ierr);
+  }
+  ierr = MPI_Barrier(PetscObjectComm((PetscObject)part));CHKERRQ(ierr);
+  part->setupcalled = PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+//TODO manpage
+/* free all data produced by SetUp(), NOT user data */
+PetscErrorCode  MatPartitioningReset(MatPartitioning part)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
+  if (part->ops->reset) {
+    ierr = (part->ops->reset)(part);CHKERRQ(ierr);
+  }
+  ierr = MatDestroy(&part->adj_work);CHKERRQ(ierr);
+  part->setupcalled = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
