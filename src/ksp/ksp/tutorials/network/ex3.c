@@ -24,7 +24,7 @@ int main(int argc,char ** argv)
   PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,compkey,goffset,row;
   PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
   const PetscInt *vtx,*edges;
-  PetscBool      iscouplev,ghost,distribute=PETSC_TRUE;
+  PetscBool      iscouplev,ghost,distribute=PETSC_TRUE,test=PETSC_FALSE;
   Vec            X;
   Comp0          comp0;
   Comp1          comp1;
@@ -186,33 +186,38 @@ int main(int argc,char ** argv)
   ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   /* Test DMNetworkGetSubnetworkInfo() */
-  net = 0;
-  ierr = PetscOptionsGetInt(NULL,NULL,"-subnet",&net,NULL);CHKERRQ(ierr);
-  ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-  ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] subnet %D: nv %D, ne %D\n",rank,net,nv,ne);CHKERRQ(ierr);
-  ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+  ierr = PetscOptionsGetBool(NULL,NULL,"-test",&test,NULL);CHKERRQ(ierr);
+  if (test) {
+    net = 0;
+    ierr = PetscOptionsGetInt(NULL,NULL,"-subnet",&net,NULL);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+    ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] subnet %D: nv %D, ne %D\n",rank,net,nv,ne);CHKERRQ(ierr);
+    ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
+    ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
-  for (i=0; i<nv; i++) {
-    ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[i],&ghost);CHKERRQ(ierr);
-    if (ghost) continue;
+    for (i=0; i<nv; i++) {
+      ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[i],&ghost);CHKERRQ(ierr);
+      if (ghost) continue;
 
-    ierr = DMNetworkGetNumComponents(dmnetwork,vtx[i],&ncomp);CHKERRQ(ierr);
-    ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[i],&iscouplev);CHKERRQ(ierr);
-    if (iscouplev) {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D is shared, ncomp %D\n",rank,vtx[i],ncomp);CHKERRQ(ierr);
-    }
+      ierr = DMNetworkGetNumComponents(dmnetwork,vtx[i],&ncomp);CHKERRQ(ierr);
+      ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[i],&iscouplev);CHKERRQ(ierr);
+      /*
+      if (iscouplev) {
+        ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D is shared, ncomp %D\n",rank,vtx[i],ncomp);CHKERRQ(ierr);
+      }
+       */
 
-    for (j=0; j<ncomp; j++) {
-      ierr = DMNetworkGetComponentKeyOffset(dmnetwork,vtx[i],j,&compkey,NULL);CHKERRQ(ierr);
-      if (compkey == 0) {
-        Comp0  mycomp0;
-        ierr = DMNetworkGetComponent(dmnetwork,vtx[i],j,&compkey,(void**)&mycomp0);CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp0->id %D\n",rank,vtx[i],compkey,mycomp0->id);CHKERRQ(ierr);
-      } else if (compkey == 1) {
-        Comp1  mycomp1;
-        ierr = DMNetworkGetComponent(dmnetwork,vtx[i],j,&compkey,(void**)&mycomp1);CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp1->val %g\n",rank,vtx[i],compkey,mycomp1->val);CHKERRQ(ierr);
+      for (j=0; j<ncomp; j++) {
+        ierr = DMNetworkGetComponentKeyOffset(dmnetwork,vtx[i],j,&compkey,NULL);CHKERRQ(ierr);
+        if (compkey == 0) {
+          Comp0  mycomp0;
+          ierr = DMNetworkGetComponent(dmnetwork,vtx[i],j,&compkey,(void**)&mycomp0);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp0->id %D\n",rank,vtx[i],compkey,mycomp0->id);CHKERRQ(ierr);
+        } else if (compkey == 1) {
+          Comp1  mycomp1;
+          ierr = DMNetworkGetComponent(dmnetwork,vtx[i],j,&compkey,(void**)&mycomp1);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp1->val %g\n",rank,vtx[i],compkey,mycomp1->val);CHKERRQ(ierr);
+        }
       }
     }
   }
