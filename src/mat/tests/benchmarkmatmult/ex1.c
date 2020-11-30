@@ -83,7 +83,7 @@ int main(int argc,char **args)
   if (verify_sell) {
     ierr = VecAXPY(u2,-1,u);CHKERRQ(ierr);
     ierr = VecNorm(u2,NORM_2,&norm2);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Relative error: %.4e\n", norm2/norm);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "Relative error: %.4e\n", (double)norm2/norm);CHKERRQ(ierr);
   }
   ierr = VecDestroy(&b);CHKERRQ(ierr);
   ierr = VecDestroy(&u);CHKERRQ(ierr);
@@ -122,15 +122,15 @@ int main(int argc,char **args)
 
 #if defined(PETSC_HAVE_CUDA)
     if (test_sell && size == 1) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e %.6lf %d %.2lf\n", gtotf/gmaxt/1.e6,gmaxt,maxt,ratio,maxslicewidth,avgslicewidth);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e %.6lf %d %.2lf\n", (double)gtotf/gmaxt/1.e6,gmaxt,maxt,ratio,maxslicewidth,avgslicewidth);CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e\n", gtotf/gmaxt/1.e6,gmaxt,maxt);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e\n", (double)gtotf/gmaxt/1.e6,gmaxt,maxt);CHKERRQ(ierr);
     }
 #else
     if (test_sell) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e\n", totf/maxt/1.e6,maxt);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e\n", (double)totf/maxt/1.e6,maxt);CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e\n", totf/maxt/1.e6,maxt);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e\n", (double)totf/maxt/1.e6,maxt);CHKERRQ(ierr);
     }
 #endif
   }
