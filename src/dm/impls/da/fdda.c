@@ -1,4 +1,3 @@
-
 #include <petsc/private/dmdaimpl.h> /*I      "petscdmda.h"     I*/
 #include <petscmat.h>
 
@@ -616,9 +615,8 @@ PetscErrorCode  MatView_MPI_DA(Mat A,PetscViewer viewer)
   ierr = ISCreateGeneral(comm,rend-rstart,petsc,PETSC_OWN_POINTER,&is);CHKERRQ(ierr);
 
   /* call viewer on natural ordering */
-  ierr = PetscObjectTypeCompare((PetscObject)A,MATMPISELL,&flag1);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)A,MATMPISELLCUDA,&flag2);CHKERRQ(ierr);
-  if (flag1 || flag2) {
+  ierr = PetscObjectBaseTypeCompare(PetscObject)A,MATMPISELL,&flag1);CHKERRQ(ierr)；
+  if (flag1) {
     ierr = MatConvert(A,MATAIJ,MAT_INITIAL_MATRIX,&Anatural);CHKERRQ(ierr);
   } else {
     ierr = MatCreateSubMatrix(A,is,is,MAT_INITIAL_MATRIX,&Anatural);CHKERRQ(ierr);
