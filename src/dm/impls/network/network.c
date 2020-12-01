@@ -1504,10 +1504,6 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   PetscInt                 arr_size,p,offset,offsetp,ncomp,i;
   DMNetworkComponentHeader header;
   DMNetworkComponentValue  cvalue;
-  //PetscMPIInt              size;
-  //MPI_Comm                 comm;
-  //PetscInt                 nsv;
-  //const PetscInt           *svtx;
   DMNetworkComponentGenericDataType *componentdataarray;
 
   PetscFunctionBegin;
@@ -1538,13 +1534,14 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
   MPI_Comm       comm;
-  PetscMPIInt    size;
+  PetscMPIInt    size,rank;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
 
-  if (size > 1) {
+  if (size > 1) { /* Sync nvar at shared vertices for all processes */
     PetscSF           sf = network->plex->sf;
     PetscInt          *local_nvar, *remote_nvar,nroots,nleaves,p,i,nsv;
     const PetscInt    *ilocal,*svtx;
@@ -1554,24 +1551,41 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
     ierr = PetscSFGetGraph(sf,&nroots,&nleaves,&ilocal,&iremote);CHKERRQ(ierr);
     ierr = PetscCalloc2(nroots,&local_nvar,nroots,&remote_nvar);CHKERRQ(ierr);
 
-    /* Owner process copies user's nvar to local_nvar */
+    /* Leaves copy user's nvar to local_nvar */
     ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
     for (i=0; i<nsv; i++) {
       p = svtx[i];
       ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
-      if (ghost) continue;
+      if (!ghost) continue;
       ierr = PetscSectionGetDof(network->DofSection,p,&local_nvar[p]);CHKERRQ(ierr);
+      //printf("[%d] Before SFReduce: leaf local_nvar[%d] = %d\n",rank,p,local_nvar[p]);
     }
 
-    /* Owner process Bcast user's nvar to its leaves' nvar */
+    /* Leaves add local_nvar to root remote_nvar */
+    ierr = PetscSFReduceBegin(sf, MPIU_INT, local_nvar, remote_nvar, MPI_SUM);CHKERRQ(ierr);
+    ierr = PetscSFReduceEnd(sf, MPIU_INT, local_nvar, remote_nvar, MPI_SUM);CHKERRQ(ierr);
+
+    /* Update roots' local_nvar */
+    for (i=0; i<nsv; i++) {
+      p = svtx[i];
+      ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
+      if (ghost) continue;
+      ierr = DMNetworkAddNumVariables(dm,p,remote_nvar[p]);CHKERRQ(ierr);
+      ierr = PetscSectionGetDof(network->DofSection,p,&local_nvar[p]);CHKERRQ(ierr);
+      //printf("[%d]  After SFReduce: root local_nvar[%d] = %d\n",rank,p,local_nvar[p]);
+    }
+
+    /* Roots Bcast nvar to leaves */
     ierr = PetscSFBcastBegin(sf, MPIU_INT, local_nvar, remote_nvar);CHKERRQ(ierr);
     ierr = PetscSFBcastEnd(sf, MPIU_INT, local_nvar, remote_nvar);CHKERRQ(ierr);
 
-    /* Leaf process adds receved/remote nvar to dm */
-    for (i=0; i<nleaves; i++) {
-      p = ilocal[i];
-      //printf("[%d] %d: ilocal %d, iremote [%d] %d; nvar %d\n",rank,p,ilocal[p],iremote[p].rank,iremote[p].index,nvar);
-      ierr = DMNetworkAddNumVariables(dm,p,remote_nvar[p]);CHKERRQ(ierr);
+    /* Leaves reset receved/remote nvar to dm */
+    for (i=0; i<nsv; i++) {
+      ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
+      if (!ghost) continue;
+      p = svtx[i];
+      //printf("[%d] leaf reset nvar %d at p= %d \n",rank,remote_nvar[p],p);
+      ierr = DMNetworkSetNumVariables(dm,p,remote_nvar[p]);CHKERRQ(ierr);
     }
 
     ierr = PetscFree2(local_nvar,remote_nvar);CHKERRQ(ierr);
