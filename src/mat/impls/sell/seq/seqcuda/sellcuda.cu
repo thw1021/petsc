@@ -3,6 +3,8 @@
 #include <petsc/private/cudavecimpl.h>
 #include <../src/mat/impls/sell/seq/sell.h>  /*I   "petscmat.h"  I*/
 
+#define SLICE_HEIGHT 16
+
 typedef struct {
   PetscInt  *colidx;           /* column index */
   MatScalar *val;
@@ -453,6 +455,7 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
   dim3              block_k8(32,SLICE_HEIGHT);
 
   PetscFunctionBegin;
+  if (a->sliceheight !=16) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"The kernel requires a slice height of 16, but the input matrix has a slice height of %D\n",a->sliceheight);
   ierr = MatSeqSELLCUDACopyToGPU(A);CHKERRQ(ierr);
   /* cudastruct may not be available until MatSeqSELLCUDACopyToGPU() is called */ 
   aval    = cudastruct->val;
@@ -559,6 +562,7 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
+  if (a->sliceheight !=16) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"The kernel requires a slice height of 16, but the input matrix has a slice height of %D\n",a->sliceheight);
   ierr = MatSeqSELLCUDACopyToGPU(A);CHKERRQ(ierr);
   if (a->nz) {
     PetscInt nblocks,blocksize = 512;
