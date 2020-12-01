@@ -521,7 +521,6 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 
   /* Create a global section to be used by DMNetworkIsGhostVertex() which is a non-collective routine */
   ierr = DMGetGlobalSection(network->plex,&sectiong);CHKERRQ(ierr);
-  //ierr = PetscSectionView(sectiong,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1505,102 +1504,13 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   PetscInt                 arr_size,p,offset,offsetp,ncomp,i;
   DMNetworkComponentHeader header;
   DMNetworkComponentValue  cvalue;
+  //PetscMPIInt              size;
+  //MPI_Comm                 comm;
+  //PetscInt                 nsv;
+  //const PetscInt           *svtx;
   DMNetworkComponentGenericDataType *componentdataarray;
 
   PetscFunctionBegin;
-  PetscMPIInt rank,size;
-  MPI_Comm    comm;
-  PetscInt    nsv;
-  const PetscInt *svtx;
-
-  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Barrier(comm);CHKERRQ(ierr);
-
-  if (size > 1) {
-    PetscSF        sf = network->plex->sf;
-    const PetscInt *degree;
-    PetscMPIInt    tag,proc,flg,leaf[size],leaf_idx[size];
-    PetscInt       sbuf[1],rbuf[1],ncomp_orig,nvar[size];;
-    MPI_Request    s_waits[size],r_req;
-    MPI_Status     s_status[size],r_status;
-
-    ierr = PetscSFComputeDegreeBegin(sf,&degree);CHKERRQ(ierr);
-    ierr = PetscSFComputeDegreeEnd(sf,&degree);CHKERRQ(ierr);
-
-    //ierr = PetscSFView(sf,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    //ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"## Root degrees\n");CHKERRQ(ierr);
-    //ierr = PetscIntView(sf->nroots,degree,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-
-#if 1 //NEW -- ghost shared vertices needs nvar to be matched with the owener's , not for component!!!
-
-    ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
-    for (p=0; p<nsv; p++) {
-      header = &network->header[svtx[p]];
-      ncomp_orig = header->ndata;
-
-      ierr = PetscSectionGetDof(network->DofSection,svtx[p],&nvar[rank]);CHKERRQ(ierr);
-      //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] nvar %d\n",rank,nvar[rank]);
-
-      /* (1) root recv from leaves about their ranks and index of shared vertex */
-      /* -----------------------------------------------------------------------*/
-      if (degree[svtx[p]]) {
-        //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] root: ncomp %d; v %d, nvar %d; sfdegree %d\n",rank,ncomp_orig,svtx[p],nvar[rank],degree[svtx[p]]);CHKERRQ(ierr);
-
-        tag = svtx[p];
-        i = 0;
-        while (i < degree[svtx[p]]) { /* num of leaves */
-          ierr = MPI_Iprobe(MPI_ANY_SOURCE,tag,comm,&flg,&r_status);CHKERRQ(ierr);
-          if (flg) {
-            proc = r_status.MPI_SOURCE;
-            ierr = MPI_Irecv(rbuf,1,MPIU_INT,proc,r_status.MPI_TAG,comm,&r_req);CHKERRQ(ierr);
-            ierr = MPI_Wait(&r_req,&r_status);CHKERRQ(ierr);
-            leaf[i]     = proc;
-            leaf_idx[i] = rbuf[0];
-            //printf("[%d] root recv from [%d] with leaf sv %d\n",rank,proc,rbuf[0]);
-            i++;
-          }
-        }
-      } else {
-        /* svtx[p] is a leaf, find its owner's rank and index */
-        for (i=0; i<sf->nleaves; i++) {
-          if (sf->mine[i] == svtx[p]) {
-            //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] leaf: ncomp %d; v %d, nvar %d; remote([%d], %d)\n",rank,ncomp_orig,svtx[p],nvar[rank],sf->remote[i].rank,sf->remote[i].index);CHKERRQ(ierr);
-            sbuf[0] = svtx[p];
-            proc    = sf->remote[i].rank;
-            tag     = sf->remote[i].index;
-            ierr = MPI_Isend(sbuf,1,MPIU_INT,proc,tag,comm,&s_waits[0]);CHKERRQ(ierr);
-            ierr = MPI_Wait(&s_waits[0],&s_status[0]);CHKERRQ(ierr);
-            //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] leaf send to [%d]\n",rank,proc);CHKERRQ(ierr);
-            break;
-          }
-        }
-      }
-
-      /* (2) leaves recv nvar from the root */
-      /* -----------------------------------*/
-      if (degree[svtx[p]] == 0) { /* leaf processor recv nvar from the root */
-        proc = sf->remote[i].rank;
-        tag  = svtx[p];
-        ierr = MPI_Irecv(rbuf,1,MPIU_INT,proc,tag,comm,&r_req);CHKERRQ(ierr);
-        ierr = MPI_Wait(&r_req,&r_status);CHKERRQ(ierr); //??? ex1 hangs here
-        //printf("[%d] leaf recv from root [%d] with nvar %d; tag %d\n",rank,proc,rbuf[0],tag);
-        ierr = DMNetworkAddNumVariables(dm,svtx[p],rbuf[0]);CHKERRQ(ierr);
-      } else { /* root processor sends nvar to its leaves */
-        sbuf[0] = nvar[rank];
-        for (i=0; i<degree[svtx[p]]; i++) {
-          proc = leaf[i];
-          tag  = leaf_idx[i];
-          ierr = MPI_Isend(sbuf,1,MPIU_INT,proc,tag,comm,&s_waits[i]);CHKERRQ(ierr);
-          //ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] send nvar %d to [%d], tag %d\n",rank,sbuf[0],proc,tag);CHKERRQ(ierr);
-        }
-        ierr = MPI_Waitall(degree[svtx[p]],s_waits,s_status);CHKERRQ(ierr);
-      }
-    } /* endof for (p=0; p<nsv; p++) */
-#endif //NEW
-  } /* endof if (size > 1) */
-
   ierr = PetscSectionSetUp(network->DataSection);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(network->DataSection,&arr_size);CHKERRQ(ierr);
   ierr = PetscMalloc1(arr_size,&network->componentdataarray);CHKERRQ(ierr);
@@ -1627,8 +1537,46 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
+  MPI_Comm       comm;
+  PetscMPIInt    size;
 
   PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+
+  if (size > 1) {
+    PetscSF           sf = network->plex->sf;
+    PetscInt          *local_nvar, *remote_nvar,nroots,nleaves,p,i,nsv;
+    const PetscInt    *ilocal,*svtx;
+    const PetscSFNode *iremote;
+    PetscBool         ghost;
+
+    ierr = PetscSFGetGraph(sf,&nroots,&nleaves,&ilocal,&iremote);CHKERRQ(ierr);
+    ierr = PetscCalloc2(nroots,&local_nvar,nroots,&remote_nvar);CHKERRQ(ierr);
+
+    /* Owner process copies user's nvar to local_nvar */
+    ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
+    for (i=0; i<nsv; i++) {
+      p = svtx[i];
+      ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
+      if (ghost) continue;
+      ierr = PetscSectionGetDof(network->DofSection,p,&local_nvar[p]);CHKERRQ(ierr);
+    }
+
+    /* Owner process Bcast user's nvar to its leaves' nvar */
+    ierr = PetscSFBcastBegin(sf, MPIU_INT, local_nvar, remote_nvar);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(sf, MPIU_INT, local_nvar, remote_nvar);CHKERRQ(ierr);
+
+    /* Leaf process adds receved/remote nvar to dm */
+    for (i=0; i<nleaves; i++) {
+      p = ilocal[i];
+      //printf("[%d] %d: ilocal %d, iremote [%d] %d; nvar %d\n",rank,p,ilocal[p],iremote[p].rank,iremote[p].index,nvar);
+      ierr = DMNetworkAddNumVariables(dm,p,remote_nvar[p]);CHKERRQ(ierr);
+    }
+
+    ierr = PetscFree2(local_nvar,remote_nvar);CHKERRQ(ierr);
+  }
+
   ierr = PetscSectionSetUp(network->DofSection);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
