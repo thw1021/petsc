@@ -75,14 +75,14 @@ PetscErrorCode MatCreateColmap_MPISELL_Private(Mat mat)
     lastcol1 = col; \
     while (high1-low1 > 5) { \
       t = (low1+high1)/2; \
-      if (*(cp1+SLICE_HEIGHT*t) > col) high1 = t; \
+      if (*(cp1+sliceheight*t) > col) high1 = t; \
       else                   low1 = t; \
     } \
     for (_i=low1; _i<high1; _i++) { \
-      if (*(cp1+SLICE_HEIGHT*_i) > col) break; \
-      if (*(cp1+SLICE_HEIGHT*_i) == col) { \
-        if (addv == ADD_VALUES) *(vp1+SLICE_HEIGHT*_i) += value;   \
-        else                     *(vp1+SLICE_HEIGHT*_i) = value; \
+      if (*(cp1+sliceheight*_i) > col) break; \
+      if (*(cp1+sliceheight*_i) == col) { \
+        if (addv == ADD_VALUES) *(vp1+sliceheight*_i) += value;   \
+        else                     *(vp1+sliceheight*_i) = value; \
         inserted = PETSC_TRUE; \
         goto a_noinsert; \
       } \
@@ -90,14 +90,14 @@ PetscErrorCode MatCreateColmap_MPISELL_Private(Mat mat)
     if (value == 0.0 && ignorezeroentries) {low1 = 0; high1 = nrow1;goto a_noinsert;} \
     if (nonew == 1) {low1 = 0; high1 = nrow1; goto a_noinsert;} \
     if (nonew == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%D, %D) into matrix", orow, ocol); \
-    MatSeqXSELLReallocateSELL(A,am,1,nrow1,a->sliidx,row/SLICE_HEIGHT,row,col,a->colidx,a->val,cp1,vp1,nonew,MatScalar); \
+    MatSeqXSELLReallocateSELL(A,am,1,nrow1,a->sliidx,a->sliceheight,row/sliceheight,row,col,a->colidx,a->val,cp1,vp1,nonew,MatScalar); \
     /* shift up all the later entries in this row */ \
     for (ii=nrow1-1; ii>=_i; ii--) { \
-      *(cp1+SLICE_HEIGHT*(ii+1)) = *(cp1+SLICE_HEIGHT*ii); \
-      *(vp1+SLICE_HEIGHT*(ii+1)) = *(vp1+SLICE_HEIGHT*ii); \
+      *(cp1+sliceheight*(ii+1)) = *(cp1+sliceheight*ii); \
+      *(vp1+sliceheight*(ii+1)) = *(vp1+sliceheight*ii); \
     } \
-    *(cp1+SLICE_HEIGHT*_i) = col; \
-    *(vp1+SLICE_HEIGHT*_i) = value; \
+    *(cp1+sliceheight*_i) = col; \
+    *(vp1+sliceheight*_i) = value; \
     a->nz++; nrow1++; A->nonzerostate++; \
     a_noinsert: ; \
     a->rlen[row] = nrow1; \
@@ -110,14 +110,14 @@ PetscErrorCode MatCreateColmap_MPISELL_Private(Mat mat)
     lastcol2 = col; \
     while (high2-low2 > 5) { \
       t = (low2+high2)/2; \
-      if (*(cp2+SLICE_HEIGHT*t) > col) high2 = t; \
+      if (*(cp2+sliceheight*t) > col) high2 = t; \
       else low2  = t; \
     } \
     for (_i=low2; _i<high2; _i++) { \
-      if (*(cp2+SLICE_HEIGHT*_i) > col) break; \
-      if (*(cp2+SLICE_HEIGHT*_i) == col) { \
-        if (addv == ADD_VALUES) *(vp2+SLICE_HEIGHT*_i) += value; \
-        else                     *(vp2+SLICE_HEIGHT*_i) = value; \
+      if (*(cp2+sliceheight*_i) > col) break; \
+      if (*(cp2+sliceheight*_i) == col) { \
+        if (addv == ADD_VALUES) *(vp2+sliceheight*_i) += value; \
+        else                     *(vp2+sliceheight*_i) = value; \
         inserted = PETSC_TRUE; \
         goto b_noinsert; \
       } \
@@ -125,14 +125,14 @@ PetscErrorCode MatCreateColmap_MPISELL_Private(Mat mat)
     if (value == 0.0 && ignorezeroentries) {low2 = 0; high2 = nrow2; goto b_noinsert;} \
     if (nonew == 1) {low2 = 0; high2 = nrow2; goto b_noinsert;} \
     if (nonew == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%D, %D) into matrix", orow, ocol); \
-    MatSeqXSELLReallocateSELL(B,bm,1,nrow2,b->sliidx,row/SLICE_HEIGHT,row,col,b->colidx,b->val,cp2,vp2,nonew,MatScalar); \
+    MatSeqXSELLReallocateSELL(B,bm,1,nrow2,b->sliidx,b->sliceheight,row/sliceheight,row,col,b->colidx,b->val,cp2,vp2,nonew,MatScalar); \
     /* shift up all the later entries in this row */ \
     for (ii=nrow2-1; ii>=_i; ii--) { \
-      *(cp2+SLICE_HEIGHT*(ii+1)) = *(cp2+SLICE_HEIGHT*ii); \
-      *(vp2+SLICE_HEIGHT*(ii+1)) = *(vp2+SLICE_HEIGHT*ii); \
+      *(cp2+sliceheight*(ii+1)) = *(cp2+sliceheight*ii); \
+      *(vp2+sliceheight*(ii+1)) = *(vp2+sliceheight*ii); \
     } \
-    *(cp2+SLICE_HEIGHT*_i) = col; \
-    *(vp2+SLICE_HEIGHT*_i) = value; \
+    *(cp2+sliceheight*_i) = col; \
+    *(vp2+sliceheight*_i) = value; \
     b->nz++; nrow2++; B->nonzerostate++; \
     b_noinsert: ; \
     b->rlen[row] = nrow2; \
@@ -153,7 +153,7 @@ PetscErrorCode MatSetValues_MPISELL(Mat mat,PetscInt m,const PetscInt im[],Petsc
   PetscBool      ignorezeroentries=a->ignorezeroentries,found;
   Mat            B=sell->B;
   Mat_SeqSELL    *b=(Mat_SeqSELL*)B->data;
-  PetscInt       *cp1,*cp2,ii,_i,nrow1,nrow2,low1,high1,low2,high2,t,lastcol1,lastcol2;
+  PetscInt       *cp1,*cp2,ii,_i,nrow1,nrow2,low1,high1,low2,high2,t,lastcol1,lastcol2,sliceheight=a->sliceheight;
   MatScalar      *vp1,*vp2;
 
   PetscFunctionBegin;
@@ -163,14 +163,14 @@ PetscErrorCode MatSetValues_MPISELL(Mat mat,PetscInt m,const PetscInt im[],Petsc
     if (im[i] >= rstart && im[i] < rend) {
       row      = im[i] - rstart;
       lastcol1 = -1;
-      shift1   = a->sliidx[row/SLICE_HEIGHT]+(row%SLICE_HEIGHT); /* starting index of the row */
+      shift1   = a->sliidx[row/sliceheight]+(row%sliceheight); /* starting index of the row */
       cp1      = a->colidx+shift1;
       vp1      = a->val+shift1;
       nrow1    = a->rlen[row];
       low1     = 0;
       high1    = nrow1;
       lastcol2 = -1;
-      shift2   = b->sliidx[row/SLICE_HEIGHT]+(row%SLICE_HEIGHT); /* starting index of the row */
+      shift2   = b->sliidx[row/sliceheight]+(row%sliceheight); /* starting index of the row */
       cp2      = b->colidx+shift2;
       vp2      = b->val+shift2;
       nrow2    = b->rlen[row];
@@ -206,7 +206,7 @@ PetscErrorCode MatSetValues_MPISELL(Mat mat,PetscInt m,const PetscInt im[],Petsc
               /* Reinitialize the variables required by MatSetValues_SeqSELL_B_Private() */
               B      = sell->B;
               b      = (Mat_SeqSELL*)B->data;
-              shift2 = b->sliidx[row/SLICE_HEIGHT]+(row%SLICE_HEIGHT); /* starting index of the row */
+              shift2 = b->sliidx[row/sliceheight]+(row%sliceheight); /* starting index of the row */
               cp2    = b->colidx+shift2;
               vp2    = b->val+shift2;
               nrow2  = b->rlen[row];
@@ -642,9 +642,9 @@ PetscErrorCode MatView_MPISELL_ASCIIorDraworSocket(Mat mat,PetscViewer viewer)
     acolidx = Aloc->colidx; aval = Aloc->val;
     for (i=0; i<Aloc->totalslices; i++) { /* loop over slices */
       for (j=Aloc->sliidx[i]; j<Aloc->sliidx[i+1]; j++) {
-        isnonzero = (PetscBool)((j-Aloc->sliidx[i])/SLICE_HEIGHT < Aloc->rlen[i*SLICE_HEIGHT+j%SLICE_HEIGHT]);
+        isnonzero = (PetscBool)((j-Aloc->sliidx[i])/Aloc->sliceheight < Aloc->rlen[i*Aloc->sliceheight+j%Aloc->sliceheight]);
         if (isnonzero) { /* check the mask bit */
-          row  = i*SLICE_HEIGHT + j%SLICE_HEIGHT + mat->rmap->rstart;
+          row  = i*Aloc->sliceheight + j%Aloc->sliceheight + mat->rmap->rstart;
           col  = *acolidx + mat->rmap->rstart;
           ierr = MatSetValues(A,1,&row,1,&col,aval,INSERT_VALUES);CHKERRQ(ierr);
         }
@@ -657,9 +657,9 @@ PetscErrorCode MatView_MPISELL_ASCIIorDraworSocket(Mat mat,PetscViewer viewer)
     acolidx = Aloc->colidx; aval = Aloc->val;
     for (i=0; i<Aloc->totalslices; i++) {
       for (j=Aloc->sliidx[i]; j<Aloc->sliidx[i+1]; j++) {
-        isnonzero = (PetscBool)((j-Aloc->sliidx[i])/SLICE_HEIGHT < Aloc->rlen[i*SLICE_HEIGHT+j%SLICE_HEIGHT]);
+        isnonzero = (PetscBool)((j-Aloc->sliidx[i])/Aloc->sliceheight < Aloc->rlen[i*Aloc->sliceheight+j%Aloc->sliceheight]);
         if (isnonzero) {
-          row  = i*SLICE_HEIGHT + j%SLICE_HEIGHT + mat->rmap->rstart;
+          row  = i*Aloc->sliceheight + j%Aloc->sliceheight + mat->rmap->rstart;
           col  = sell->garray[*acolidx];
           ierr = MatSetValues(A,1,&row,1,&col,aval,INSERT_VALUES);CHKERRQ(ierr);
         }

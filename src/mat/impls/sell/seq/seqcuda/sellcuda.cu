@@ -3,6 +3,8 @@
 #include <petsc/private/cudavecimpl.h>
 #include <../src/mat/impls/sell/seq/sell.h>  /*I   "petscmat.h"  I*/
 
+#define SLICE_HEIGHT 16
+
 typedef struct {
   PetscInt  *colidx;           /* column index */
   MatScalar *val;
@@ -552,6 +554,7 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
   dim3              block2(256,2),block4(128,4),block8(64,8),block16(32,16),block32(16,32);
 
   PetscFunctionBegin;
+  if (a->sliceheight !=16) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"The kernel requires a slice height of 16, but the input matrix has a slice height of %D\n",a->sliceheight);
   ierr = MatSeqSELLCUDACopyToGPU(A);CHKERRQ(ierr);
   /* cudastruct may not be available until MatSeqSELLCUDACopyToGPU() is called */ 
   aval    = cudastruct->val;
@@ -624,6 +627,7 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
   cudaError_t       cerr;
 
   PetscFunctionBegin;
+  if (a->sliceheight !=16) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"The kernel requires a slice height of 16, but the input matrix has a slice height of %D\n",a->sliceheight);
   ierr = MatSeqSELLCUDACopyToGPU(A);CHKERRQ(ierr);
   if (a->nz) {
     PetscInt nblocks,blocksize = 512;
@@ -718,12 +722,12 @@ PETSC_INTERN PetscErrorCode MatAssemblyEnd_SpMV_Preprocessing_Private(Mat A)
     PetscInt i,j,bidx = 0;
 
     a->totalblocks = 0;
-    for (i=0; i<a->totalslices; ++i) a->totalblocks += (a->sliidx[i+1]-a->sliidx[i]+SLICE_HEIGHT*32-1)/(SLICE_HEIGHT*32);
+    for (i=0; i<a->totalslices; ++i) a->totalblocks += (a->sliidx[i+1]-a->sliidx[i]+a->sliceheight*32-1)/(a->sliceheight*32);
     ierr = PetscMalloc2(a->totalblocks+1,&a->blockidx,a->totalblocks,&a->block_row_map);CHKERRQ(ierr);
     for (i=0; i<a->totalslices; ++i)
-      for (j=0; j<(a->sliidx[i+1]-a->sliidx[i]+SLICE_HEIGHT*32-1)/(SLICE_HEIGHT*32); ++j) {
-        a->blockidx[bidx]      = a->sliidx[i]+j*SLICE_HEIGHT*32;
-        a->block_row_map[bidx] = i*SLICE_HEIGHT;
+      for (j=0; j<(a->sliidx[i+1]-a->sliidx[i]+a->sliceheight*32-1)/(a->sliceheight*32); ++j) {
+        a->blockidx[bidx]      = a->sliidx[i]+j*a->sliceheight*32;
+        a->block_row_map[bidx] = i*a->sliceheight;
         bidx++;
       }
     a->blockidx[bidx] = a->sliidx[a->totalslices];
@@ -737,7 +741,7 @@ PETSC_INTERN PetscErrorCode MatAssemblyEnd_SpMV_Preprocessing_Private(Mat A)
         ierr = PetscMalloc1(a->totalslices,&sliwidth);CHKERRQ(ierr);
         ierr = PetscMalloc1(a->totalslices,&a->sliperm);CHKERRQ(ierr);
         for (i=0; i<a->totalslices; ++i) {
-          sliwidth[i] = (a->sliidx[i+1]-a->sliidx[i])/SLICE_HEIGHT;
+          sliwidth[i] = (a->sliidx[i+1]-a->sliidx[i])/a->sliceheight;
           a->sliperm[i] = i;
         }
         ierr = PetscSortIntWithPermutation(a->totalslices,sliwidth,a->sliperm);CHKERRQ(ierr);
