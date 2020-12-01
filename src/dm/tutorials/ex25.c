@@ -63,7 +63,7 @@ int main(int argc,char **argv)
         sum += vars[j][i].x;
       }
     }
-    ierr = PetscPrintf(PETSC_COMM_SELF,"The sum of the x coordinates is %g\n",(double)sum);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"The sum of the x coordinates is %g\n",(double)PetscRealPart(sum));CHKERRQ(ierr);
     ierr = DMDAVecRestoreArray(sda,sxy,&vars);CHKERRQ(ierr);
   }
 
