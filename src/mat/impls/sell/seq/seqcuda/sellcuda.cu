@@ -593,7 +593,7 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
       break;
     case 0:
       if (a->avgslicewidth > 64 && a->maxslicewidth > 4000) {
-        matmult_seqsell_tiled_kernelx<<<a->totalblocks,block32>>>(nrows,a->totalblocks,acolidx,aval,a->blockidx,a->block_row_map,x,y); 
+        matmult_seqsell_tiled_kernelx<<<a->totalblocks,block32>>>(nrows,a->totalblocks,acolidx,aval,cudastruct->blockidx,cudastruct->block_row_map,x,y);
       } else {
         if (a->maxslicewidth <= 33 || (a->maxslicewidth <= 200 && a->avgslicewidth<=15.0)) {
           nblocks = 1+(nrows-1)/(blocksize/4);
