@@ -43,6 +43,7 @@ int main(int argc,char **argv)
   } else {
     ierr = VecCreateSeq(PETSC_COMM_SELF,0,&sxy);
   }
+  /*  A PetscSF can also be used as a VecScatter context */
   ierr = VecScatterBegin(sf,xy,sxy,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterEnd(sf,xy,sxy,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   /* Only rank == 0 has the entries of the patch, so run code only at that rank */
@@ -63,7 +64,7 @@ int main(int argc,char **argv)
         sum += vars[j][i].x;
       }
     }
-    ierr = PetscPrintf(PETSC_COMM_SELF,"The sum of the x coordinates is %g\n",(double)sum);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"The sum of the x coordinates is %g\n",(double)PetscRealPart(sum));CHKERRQ(ierr);
     ierr = DMDAVecRestoreArray(sda,sxy,&vars);CHKERRQ(ierr);
   }
 
