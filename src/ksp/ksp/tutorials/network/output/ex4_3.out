@@ -1,0 +1,70 @@
+DM Object: 4 MPI processes
+  type: network
+  NSubnets: 4; NEdges: 12; NVertices: 13; NCoupleVertices: 1.
+  [0] nEdges: 3; nVertices: 4; nCoupleVertices: 1
+     Subnet 0: nEdges 3, nVertices(include coupling vertices) 4
+       edge 0: 0 ----> 1
+       edge 1: 1 ----> 2
+       edge 2: 2 ----> 3
+     CoupleVertices:
+  [1] nEdges: 3; nVertices: 4; nCoupleVertices: 1
+     Subnet 1: nEdges 3, nVertices(include coupling vertices) 4
+       edge 3: 0 ----> 4
+       edge 4: 4 ----> 5
+       edge 5: 5 ----> 6
+     CoupleVertices:
+  [2] nEdges: 3; nVertices: 4; nCoupleVertices: 1
+     Subnet 2: nEdges 3, nVertices(include coupling vertices) 4
+       edge 6: 0 ----> 7
+       edge 7: 7 ----> 8
+       edge 8: 8 ----> 9
+     CoupleVertices:
+  [3] nEdges: 3; nVertices: 4; nCoupleVertices: 1
+     Subnet 3: nEdges 3, nVertices(include coupling vertices) 4
+       edge 9: 0 ----> 10
+       edge 10: 10 ----> 11
+       edge 11: 11 ----> 12
+     CoupleVertices:
+       cvtx 0: global index 0, subnet[0].0 ----> 
+                                           ----> subnet[1].0
+                                           ----> subnet[2].0
+                                           ----> subnet[3].0
+Vec Object: 4 MPI processes
+  type: mpi
+Process [0]
+  Vertex 1:
+    0.
+    0.
+  Vertex 2:
+    0.
+    0.
+  Vertex 3:
+    0.
+    0.
+Process [1]
+  Vertex 4:
+    0.
+  Vertex 5:
+    0.
+  Vertex 6:
+    0.
+Process [2]
+  Vertex 7:
+    0.
+  Vertex 8:
+    0.
+  Vertex 9:
+    0.
+Process [3]
+  Vertex 0:
+    4.
+    4.
+    4.
+    4.
+    4.
+  Vertex 10:
+    0.
+  Vertex 11:
+    0.
+  Vertex 12:
+    0.

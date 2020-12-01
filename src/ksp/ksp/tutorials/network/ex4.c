@@ -80,25 +80,15 @@ int main(int argc,char ** argv)
     ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[v],&iscouplev);CHKERRQ(ierr);
-      if (iscouplev) continue; /* shared vertex will be handled by the owner process below */
 
       if (!net) {
-        /* Set nvar = 1 for subnet0 */
-        ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],1);CHKERRQ(ierr);
-      } else {
-        /* Set nvar = 2 for other subnets */
+        /* Set nvar = 2 for subnet0 */
         ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],2);CHKERRQ(ierr);
+      } else {
+        /* Set nvar = 1 for other subnets */
+        ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],1);CHKERRQ(ierr);
       }
     }
-  }
-
-  /* Add nvar to shared vertex -- only owner of the vertex adds nvar! */
-  ierr = DMNetworkGetSubnetworkSharedVertices(dmnetwork,&nv,&vtx);CHKERRQ(ierr);
-  for (v=0; v<nv; v++) {
-    ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[v],&ghost);CHKERRQ(ierr);
-    if (ghost) continue;
-    ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],1);CHKERRQ(ierr);
-    ierr = DMNetworkAddNumVariables(dmnetwork,vtx[v],2);CHKERRQ(ierr);
   }
 
   /* Enable runtime option of graph partition type -- must be called before DMSetUp() */
