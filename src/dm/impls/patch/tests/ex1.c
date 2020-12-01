@@ -28,7 +28,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->dim   = 2;
   patchSize      = 0;
   commSize       = 0;
-  gridSize       = 0;
+  gridSize       = 1;
 
   ierr = PetscOptionsBegin(comm, "", "Patch Test Options", "DMPATCH");CHKERRQ(ierr);
   ierr = PetscOptionsBoundedInt("-debug", "The debugging level", "ex1.c", options->debug, &options->debug, NULL,0);CHKERRQ(ierr);
