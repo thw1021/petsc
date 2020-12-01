@@ -1,0 +1,40 @@
+DM Object: 2 MPI processes
+  type: network
+  NSubnets: 2; NEdges: 6; NVertices: 7; NCoupleVertices: 1.
+  [0] nEdges: 3; nVertices: 4; nCoupleVertices: 1
+     Subnet 0: nEdges 3, nVertices(include coupling vertices) 4
+       edge 0: 0 ----> 1
+       edge 1: 1 ----> 2
+       edge 2: 2 ----> 3
+     CoupleVertices:
+  [1] nEdges: 3; nVertices: 4; nCoupleVertices: 1
+     Subnet 1: nEdges 3, nVertices(include coupling vertices) 4
+       edge 3: 0 ----> 4
+       edge 4: 4 ----> 5
+       edge 5: 5 ----> 6
+     CoupleVertices:
+       cvtx 0: global index 0, subnet[0].0 ----> 
+                                           ----> subnet[1].0
+Vec Object: 2 MPI processes
+  type: mpi
+Process [0]
+  Vertex 1:
+    0.
+    0.
+  Vertex 2:
+    0.
+    0.
+  Vertex 3:
+    0.
+    0.
+Process [1]
+  Vertex 0:
+    2.
+    2.
+    2.
+  Vertex 4:
+    0.
+  Vertex 5:
+    0.
+  Vertex 6:
+    0.
