@@ -361,10 +361,17 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
       }
       ierr = MatRestoreRow(tao->jacobian_equality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
     }
+    /* (3) insert 2nd row block of Jpre: [ grad g, \delta_c*I, 0, 0] */
+    if(pdipm->inertia_correct){
+      for (i=0; i<pdipm->ng; i++){
+        row = Jrstart + pdipm->off_lambdae + i;
+        ierr = MatSetValue(J,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
+      }
+    }
   }
 
   if (pdipm->Nh) {
-    /* (4) insert 3nd row block of Jpre: [ grad h, 0, 0, 0] */
+    /* (4) insert 3nd row block of Jpre: [ -grad h, 0, deltac, I] */
     ierr = MatGetOwnershipRange(tao->jacobian_inequality,&rjstart,NULL);CHKERRQ(ierr);
     for (i=0; i < pdipm->nh; i++){
       row = Jrstart + pdipm->off_lambdai + i;
@@ -376,6 +383,12 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
         ierr = MatSetValue(Jpre,row,cols[0],-aa[j],INSERT_VALUES);CHKERRQ(ierr);
       }
       ierr = MatRestoreRow(tao->jacobian_inequality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
+    }
+    if(pdipm->inertia_correct){
+      for (i=0; i<pdipm->nh; i++){
+        row = Jrstart + pdipm->off_lambdai + i;
+        ierr = MatSetValue(J,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
+      }
     }
   }
 
@@ -402,6 +415,12 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
       while (aj[j] >= cranges[proc+1]) proc++;
       cols[0] = aj[j] - cranges[proc] + Jranges[proc];
       ierr = MatSetValue(Jpre,row,cols[0],aa[j],INSERT_VALUES);CHKERRQ(ierr);
+      /* add diagonal shift to Wxx component */
+      if (pdipm->inertia_correct){
+        if (row == cols[0]){
+          ierr = MatSetValue(Jpre,row,cols[0],aa[j]+pdipm->deltaw,INSERT_VALUES);CHKERRQ(ierr);
+        }
+      }
     }
     ierr = MatRestoreRow(tao->hessian,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
 
@@ -1120,7 +1139,7 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
     ierr = MatRestoreRow(Jci_xb_trans,i+rjstart,&nc,&aj,NULL);CHKERRQ(ierr);
   }
 
-  /* 2nd Row block of KKT matrix: [grad Ce, 0, 0, 0] */
+  /* 2nd Row block of KKT matrix: [grad Ce, deltac*I, 0, 0] */
   if (pdipm->Ng) {
     ierr = MatGetOwnershipRange(tao->jacobian_equality,&rjstart,NULL);CHKERRQ(ierr);
     for (i=0; i < pdipm->ng; i++){
@@ -1154,7 +1173,7 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
     }
   }
 
-  /* 3rd Row block of KKT matrix: [ gradCi, 0, 0, -I] */
+  /* 3rd Row block of KKT matrix: [ gradCi, 0, deltac*I, -I] */
   if (pdipm->Nh) {
     ierr = MatGetOwnershipRange(tao->jacobian_inequality,&rjstart,NULL);CHKERRQ(ierr);
     for (i=0; i < pdipm->nh; i++){
@@ -1236,6 +1255,13 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
   ierr = MatGetOwnershipRange(J,&rstart,&rend);CHKERRQ(ierr);
   for (i=rstart; i<rend; i++){
     ierr = MatSetValue(J,i,i,0.0,INSERT_VALUES);CHKERRQ(ierr);
+  }
+  /* In case Wxx has no diagonal entries preset set diagonal to deltaw given */
+  if(pdipm->inertia_correct){
+      for (i=0; i<pdipm->nh; i++){
+        row  = rstart + i;
+        ierr = MatSetValue(J,row,row,pdipm->deltaw,INSERT_VALUES);CHKERRQ(ierr);
+      }
   }
 
   /* Row block of K: [ grad Ce, 0, 0, 0] */
@@ -1426,11 +1452,14 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->n  = pdipm->N  = 0;
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
+  pdipm->deltaw = PetscPowReal(10,-4);
+  pdipm->deltac = PetscPowReal(10,-8);
 
   pdipm->push_init_slack     = 1.0;
   pdipm->push_init_lambdai   = 1.0;
   pdipm->solve_reduced_kkt   = PETSC_FALSE;
   pdipm->solve_symmetric_kkt = PETSC_TRUE;
+  pdipm->inertia_correct     = PETSC_TRUE;
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
