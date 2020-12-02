@@ -372,6 +372,13 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
         ierr = MatSetValue(J,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
+    /* (3) insert 2nd row block of Jpre: [ grad g, \delta_c*I, 0, 0] */
+    if(pdipm->inertia_correct){
+      for (i=0; i<pdipm->ng; i++){
+        row = Jrstart + pdipm->off_lambdae + i;
+        ierr = MatSetValue(J,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
+      }
+    }
   }
 
   if (pdipm->Nh) {
@@ -389,6 +396,12 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
       ierr = MatRestoreRow(tao->jacobian_inequality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
       if (pdipm->inertia_correct) {
         ierr = MatSetValue(Jpre,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
+      }
+    }
+    if(pdipm->inertia_correct){
+      for (i=0; i<pdipm->nh; i++){
+        row = Jrstart + pdipm->off_lambdai + i;
+        ierr = MatSetValue(J,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
     if(pdipm->inertia_correct){
@@ -1544,6 +1557,8 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->n  = pdipm->N  = 0;
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
+  pdipm->deltaw = PetscPowReal(10,-4);
+  pdipm->deltac = PetscPowReal(10,-8);
 
   pdipm->deltaw = 0;
   pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
@@ -1554,7 +1569,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->push_init_lambdai   = 1.0;
   pdipm->solve_reduced_kkt   = PETSC_FALSE;
   pdipm->solve_symmetric_kkt = PETSC_TRUE;
-  pdipm->inertia_correct     = PETSC_FALSE;
+  pdipm->inertia_correct     = PETSC_TRUE;
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
