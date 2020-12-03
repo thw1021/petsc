@@ -653,4 +653,13 @@ typedef enum {PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=1, PETSC_MEMTYPE_CUDA=1
 #define PetscMemTypeHost(m)   (((m) & 0x1) == PETSC_MEMTYPE_HOST)
 #define PetscMemTypeDevice(m) (((m) & 0x1) == PETSC_MEMTYPE_DEVICE)
 
+/*E
+  PetscExternalPackage - Enum representing an external package such as HDF5
+
+  Level: beginner
+
+.seealso: PetscHaveExternalPackage(), PetscHaveExternalPackageName()
+E*/
+typedef enum {PETSC_EXT_PKG_INVALID=-1, PETSC_EXT_PKG_HDF5=0, PETSC_EXT_PKG_PARMETIS, PETSC_EXT_PKG_NUM} PetscExternalPackage;
+
 #endif
