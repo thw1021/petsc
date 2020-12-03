@@ -23,7 +23,7 @@ For a full list of options, use
 
 .. code-block:: bash
 
-   make -f gmakefile help-test
+   make -f gmakefile help
 
 Understanding test output and more information
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
