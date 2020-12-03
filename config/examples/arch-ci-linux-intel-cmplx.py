@@ -32,6 +32,7 @@ if __name__ == '__main__':
     '--download-parmetis',
     '--download-petsc4py',
     '--download-slepc',
+    '--download-slepc-commit=origin/jose/release/slepc4py-prefix',
     '--download-slepc-configure-arguments="--download-slepc4py"',
     '--download-scalapack',
     '--download-strumpack',
