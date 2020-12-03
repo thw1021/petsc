@@ -225,10 +225,7 @@ PetscErrorCode VecReplaceArray_SeqCUDA(Vec vin,const PetscScalar *a)
   Vec_Seq        *vs = (Vec_Seq*)vin->data;
 
   PetscFunctionBegin;
-  if (vs->array != vs->array_allocated) {
-    /* make sure the users array has the latest values */
-    ierr = VecCUDACopyFromGPU(vin);CHKERRQ(ierr);
-  }
+  /* Note: Because VecReplaceArray() hands control of the user array to the Vec, we do not need to update it from the GPU copy. */
   if (vs->array_allocated) {
     if (vin->pinned_memory) {
       ierr = PetscMallocSetCUDAHost();CHKERRQ(ierr);
@@ -449,7 +446,7 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->waxpy                  = VecWAXPY_Seq;
     V->ops->dotnorm2               = NULL;
     V->ops->placearray             = VecPlaceArray_Seq;
-    V->ops->replacearray           = VecReplaceArray_SeqCUDA;
+    V->ops->replacearray           = VecReplaceArray_SeqCUDA; /* We cannot use VecReplaceArray_Seq() here; it will not correctly handle pinned memory. */
     V->ops->resetarray             = VecResetArray_Seq;
     V->ops->duplicate              = VecDuplicate_Seq;
     V->ops->conjugate              = VecConjugate_Seq;
