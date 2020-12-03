@@ -386,7 +386,7 @@ For our language, a *test* is associated with the following
 
 * A single shell script
 * A single makefile
-* A single output file that represents the *expected esults*
+* A single output file that represents the *expected results*
 
 Two or more command tests, usually, one or more mpiexec tests that run
 the executable, and one or more diff tests to compare output with the
