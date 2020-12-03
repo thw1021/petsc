@@ -170,6 +170,7 @@ check-py-vermin:
     when: always
     paths:
     - ${TEST_ARCH}/lib/petsc/conf/*.log
+    - ${TEST_ARCH}/lib/slepc/conf/*.log
     - ${TEST_ARCH}/lib/pkgconfig/PETSc.pc
     - ${TEST_ARCH}/tests/testresults.xml
     - ${TEST_ARCH}/tests/test_${TEST_ARCH}_tap.log
