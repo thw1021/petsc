@@ -1445,8 +1445,8 @@ PetscErrorCode DMNetworkSetNumVariables(DM dm,PetscInt p,PetscInt nvar)
 + dm           - The DMNetworkObject
 . netnum       - subnetwork number
 . p            - the vertex/edge point
-. componentkey - component key returned while registering the component
-. compvalue    - pointer to the data structure for the component
+. componentkey - component key returned while registering the component; ignored if compvalue=NULL
+. compvalue    - pointer to the data structure for the component, or NULL
 - nvar         - number of variables for the component at the vertex/edge point
 
   Level: beginner
@@ -1460,20 +1460,27 @@ PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt co
   DMNetworkComponent       *component = &network->component[componentkey];
   DMNetworkComponentHeader header = &network->header[p];
   DMNetworkComponentValue  cvalue = &network->cvalue[p];
+  PetscBool                sharedv=PETSC_FALSE;
 
   PetscFunctionBegin;
 #if 0
-  PetscBool   iscouplev=PETSC_FALSE;
   PetscMPIInt rank;
   MPI_Comm    comm;
-
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = DMNetworkIsCouplingVertex(dm,p,&iscouplev);CHKERRQ(ierr);
-  if (iscouplev) {
-    printf("[%d] AddComponentAndNumVar: p %d is a sv, compkey %d, compvalue %p, nvar %d\n\n",rank,p,componentkey,compvalue,nvar);
-  }
 #endif
+
+  if (!compvalue) {
+    ierr = DMNetworkAddNumVariables(dm,p,nvar);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+
+  ierr = DMNetworkIsCouplingVertex(dm,p,&sharedv);CHKERRQ(ierr);
+  if (sharedv) {
+    PetscBool ghost;
+    ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
+    if (ghost) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Adding a component at a leaf(ghost) shared vertex is not supported");
+  }
 
   /* Modified from DMNetworkAddComponent() and DMNetworkSetComponentNumVariables() */
   if (header->ndata == MAX_DATA_AT_POINT) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components at a point exceeds the max %D",MAX_DATA_AT_POINT);
@@ -1502,11 +1509,59 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   PetscErrorCode           ierr;
   DM_Network               *network = (DM_Network*)dm->data;
   PetscInt                 arr_size,p,offset,offsetp,ncomp,i;
+   MPI_Comm                comm;
+  PetscMPIInt              size,rank;
   DMNetworkComponentHeader header;
   DMNetworkComponentValue  cvalue;
   DMNetworkComponentGenericDataType *componentdataarray;
 
   PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+#if 0
+  //------------- new
+  if (size > 1) { /* Sync nvar at shared vertices for all processes */
+    PetscSF        sf = network->plex->sf;
+    const PetscInt *degree;
+    PetscInt       i,nleaves_total,*indata,*outdata,nroots,nleaves,nsv,p,ncomp;
+    const PetscInt *svtx;
+    PetscBool      ghost;
+
+    ierr = PetscSFGetGraph(sf,&nroots,&nleaves,NULL,NULL);CHKERRQ(ierr);
+    ierr = PetscSFComputeDegreeBegin(sf,&degree);CHKERRQ(ierr);
+    ierr = PetscSFComputeDegreeEnd(sf,&degree);CHKERRQ(ierr);
+    nleaves_total=0;
+    for (i=0; i<nroots; i++) nleaves_total += degree[i];
+    printf("[%d] nleaves_total %d\n",rank,nleaves_total);
+    MPI_Barrier(comm);
+
+    ierr = PetscCalloc2(nleaves_total,&indata,nleaves,&outdata);CHKERRQ(ierr);
+
+    /* Leaves copy user's ncomp to outdata */
+    ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
+    for (i=0; i<nsv; i++) {
+      p = svtx[i];
+      ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
+      if (!ghost) continue;
+
+      header = &network->header[p];
+      ncomp = header->ndata;
+      printf("[%d] leaf has ncomp %d\n",rank,ncomp);
+      outdata[p] = ncomp;
+    }
+
+    /* Roots gather ncomp from leaves */
+    ierr = PetscSFGatherBegin(sf,MPIU_INT,outdata,indata);CHKERRQ(ierr);
+    ierr = PetscSFGatherEnd(sf,MPIU_INT,outdata,indata);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"## Gathered data at multi-roots from leaves\n");CHKERRQ(ierr);
+    ierr = PetscIntView(nleaves_total,indata,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+
+    ierr = PetscFree2(indata,outdata);CHKERRQ(ierr);
+  }
+  //----------------------
+#endif
+
   ierr = PetscSectionSetUp(network->DataSection);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(network->DataSection,&arr_size);CHKERRQ(ierr);
   ierr = PetscMalloc1(arr_size,&network->componentdataarray);CHKERRQ(ierr);

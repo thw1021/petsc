@@ -6,15 +6,13 @@ static char help[] = "This example tests subnetwork coupling. \n\
 */
 #include <petscdmnetwork.h>
 
-struct _p_Comp0{
+typedef struct{
   PetscInt id;
-} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
-typedef struct _p_Comp0 *Comp0;
+} Comp0;
 
-struct _p_Comp1{
+typedef struct{
   PetscScalar val;
-} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
-typedef struct _p_Comp1 *Comp1;
+} Comp1;
 
 int main(int argc,char ** argv)
 {
@@ -68,14 +66,13 @@ int main(int argc,char ** argv)
   }
 
   /* Create componnets */
-  ierr = PetscMalloc2(1,&comp0,1,&comp1);CHKERRQ(ierr);
-  comp0[0].id  = rank;       /* intentionally take rank-dependent value for test */
-  comp1[0].val = 10.0*rank;
+  comp0.id  = rank;       /* intentionally take rank-dependent value for test */
+  comp1.val = 10.0*rank;
 
   /* Create a dmnetwork and register components */
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&dmnetwork);CHKERRQ(ierr);
-  ierr = DMNetworkRegisterComponent(dmnetwork,"comp0",sizeof(struct _p_Comp0),&compkey0);CHKERRQ(ierr);
-  ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(struct _p_Comp1),&compkey1);CHKERRQ(ierr);
+  ierr = DMNetworkRegisterComponent(dmnetwork,"comp0",sizeof(Comp0),&compkey0);CHKERRQ(ierr);
+  ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(Comp1),&compkey1);CHKERRQ(ierr);
 
   /* Set number of subnetworks, numbers of vertices and edges over each subnetwork */
   ierr = DMNetworkSetSizes(dmnetwork,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
@@ -108,33 +105,33 @@ int main(int argc,char ** argv)
         /* current version requirs all processess add componenets and nvar at the shared vertices! */
         if (net == 0) {
           //printf("[%d] net %d, v[%d]=%d is a shared vertex, add comp0[0]\n",rank,net,v,vtx[v]);
-          ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0[0],1);CHKERRQ(ierr);
+          ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
         } else if (net == 1) {
           //printf("[%d] net %d, v[%d]=%d is a shared vertex, add comp1\n",rank,net,v,vtx[v]);
-          ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1[0],2);CHKERRQ(ierr);
+          ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
         }
         #endif
         continue;
       }
 
       if (!net) {
-        ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0[0],1);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
       } else {
-        ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1[0],2);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
       }
     }
   }
   ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
-
+#if 1
   /* Add components and nvar to shared vertex -- only owner of the vertex does this! */
   ierr = DMNetworkGetSubnetworkSharedVertices(dmnetwork,&nv,&vtx);CHKERRQ(ierr);
   for (v=0; v<nv; v++) {
     ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[v],&ghost);CHKERRQ(ierr);
     if (ghost) continue;
-    ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0[0],1);CHKERRQ(ierr);
-    ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1[0],2);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
   }
-
+#endif
   /* Enable runtime option of graph partition type -- must be called before DMSetUp() */
   if (size > 1) {
     DM               plexdm;
@@ -186,7 +183,7 @@ int main(int argc,char ** argv)
   ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   /* Test DMNetworkGetSubnetworkInfo() */
-  ierr = PetscOptionsGetBool(NULL,NULL,"-test",&test,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetBool(NULL,NULL,"-test_getsubnet",&test,NULL);CHKERRQ(ierr);
   if (test) {
     net = 0;
     ierr = PetscOptionsGetInt(NULL,NULL,"-subnet",&net,NULL);CHKERRQ(ierr);
@@ -197,24 +194,21 @@ int main(int argc,char ** argv)
 
     for (i=0; i<nv; i++) {
       ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[i],&ghost);CHKERRQ(ierr);
-      if (ghost) continue;
+      ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[i],&iscouplev);CHKERRQ(ierr);
 
       ierr = DMNetworkGetNumComponents(dmnetwork,vtx[i],&ncomp);CHKERRQ(ierr);
-      ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[i],&iscouplev);CHKERRQ(ierr);
-      /*
-      if (iscouplev) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D is shared, ncomp %D\n",rank,vtx[i],ncomp);CHKERRQ(ierr);
+      if (iscouplev || ghost) {
+        ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D is shared %d, is ghost %d, ncomp %D\n",rank,vtx[i],iscouplev,ghost,ncomp);CHKERRQ(ierr);
       }
-       */
 
       for (j=0; j<ncomp; j++) {
         ierr = DMNetworkGetComponentKeyOffset(dmnetwork,vtx[i],j,&compkey,NULL);CHKERRQ(ierr);
         if (compkey == 0) {
-          Comp0  mycomp0;
+          Comp0  *mycomp0;
           ierr = DMNetworkGetComponent(dmnetwork,vtx[i],j,&compkey,(void**)&mycomp0);CHKERRQ(ierr);
           ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp0->id %D\n",rank,vtx[i],compkey,mycomp0->id);CHKERRQ(ierr);
         } else if (compkey == 1) {
-          Comp1  mycomp1;
+          Comp1  *mycomp1;
           ierr = DMNetworkGetComponent(dmnetwork,vtx[i],j,&compkey,(void**)&mycomp1);CHKERRQ(ierr);
           ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp1->val %g\n",rank,vtx[i],compkey,mycomp1->val);CHKERRQ(ierr);
         }
@@ -227,7 +221,6 @@ int main(int argc,char ** argv)
   for (i=0; i<Nsubnet; i++) {
     if (size == 1 || rank == i) {ierr = PetscFree(edgelist[i]);CHKERRQ(ierr);}
   }
-  ierr = PetscFree2(comp0,comp1);CHKERRQ(ierr);
 
   ierr = DMDestroy(&dmnetwork);CHKERRQ(ierr);
   ierr = PetscFinalize();
