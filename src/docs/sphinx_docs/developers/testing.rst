@@ -20,6 +20,15 @@ when testing, we have the equivalent of ``make -f gmakefile.test ...``.  Here is
 where ``ptmake`` stands for "petsc test make".  We will use this syntax below to make 
 the commands nicer.
 
+Getting help
+------------
+
+First of all, to find help for the test harness options and available targets, do
+
+.. code-block:: bash
+
+   ptmake help
+
 Determining the failed jobs of a given run
 ------------------------------------------
 
