@@ -1155,7 +1155,7 @@ PetscErrorCode  VecPointwiseMult(Vec w, Vec x,Vec y)
 .vb
      PetscRandomCreate(PETSC_COMM_WORLD,&rctx);
      VecSetRandom(x,rctx);
-     PetscRandomDestroy(rctx);
+     PetscRandomDestroy(&rctx);
 .ve
 
    Level: intermediate
@@ -1849,9 +1849,9 @@ PetscErrorCode VecSetInf(Vec xin)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecGetArray(xin,&xx);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(xin,&xx);CHKERRQ(ierr);
   for (i=0; i<n; i++) xx[i] = inf;
-  ierr = VecRestoreArray(xin,&xx);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(xin,&xx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

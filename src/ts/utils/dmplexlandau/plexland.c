@@ -444,6 +444,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     pointInterpolationP4est pointMaps[MAP_BF_SIZE][LANDAU_MAX_Q_FACE];
     PetscInt                q,eidx,fieldA;
     MatType                 type;
+    ierr = PetscInfo1(JacP, "Make GPU maps %D\n",1);CHKERRQ(ierr);
     ierr = MatGetType(JacP,&type);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscMalloc(sizeof(P4estVertexMaps), &maps);CHKERRQ(ierr);
@@ -551,7 +552,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       /* PetscBool flg; */
       /* ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr); */
       /* if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Kokkos but no Kokkos matrix (%s) use -mat_type aijkokkos -vec_type kokkos",type); */
-      ierr = LandauKokkosCreateMatMaps(maps, pointMaps);CHKERRQ(ierr); // imples Kokkos does
+      ierr = LandauKokkosCreateMatMaps(maps, pointMaps,Nf,Nq);CHKERRQ(ierr); // imples Kokkos does
       goto maps_done;
     } // else could be CUDA
 #endif
@@ -560,7 +561,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       /* PetscBool flg; */
       /* ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr); */
       /* if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Cuda but no Cuda matrix (%s) use -mat_type aijcusparse -vec_type cuda",type); */
-      ierr = LandauCUDACreateMatMaps(maps, pointMaps);CHKERRQ(ierr);
+      ierr = LandauCUDACreateMatMaps(maps, pointMaps,Nf,Nq);CHKERRQ(ierr);
       goto maps_done;
     }
 #endif
@@ -1170,10 +1171,8 @@ static PetscErrorCode adapt(DM *dm, LandauCtx *ctx, Vec *uu)
     for (adaptIter = 0; adaptIter<limits[type];adaptIter++) {
       DM  dmNew = NULL;
       ierr = adaptToleranceFEM(ctx->fe[0], *uu, ctx->refineTol, ctx->coarsenTol, type, ctx, &dmNew);CHKERRQ(ierr);
-      if (!dmNew) {
-        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"should not happen");
-        break;
-      } else {
+      if (!dmNew) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"should not happen");
+      else {
         ierr = DMDestroy(dm);CHKERRQ(ierr);
         ierr = VecDestroy(uu);CHKERRQ(ierr);
         ierr = DMCreateGlobalVector(dmNew,uu);CHKERRQ(ierr);
@@ -1271,7 +1270,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       ierr = PetscOptionsInsertString(NULL,"-dm_mat_type aijcusparse -dm_vec_type cuda");CHKERRQ(ierr);
     }
     if (ctx->deviceType == LANDAU_KOKKOS) {
-      ctx->gpu_assembly = PETSC_FALSE; // not supported
+      ierr = PetscOptionsInsertString(NULL,"-dm_mat_type aijkokkos -dm_vec_type kokkos");CHKERRQ(ierr);
     }
   }
   ierr = PetscOptionsReal("-dm_landau_electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);

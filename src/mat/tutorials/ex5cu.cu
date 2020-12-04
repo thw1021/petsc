@@ -13,9 +13,9 @@ static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n
 
 #include <petscconf.h>
 #include <petscmat.h>
-#include <petscaijdevice.h>
 #include <petsccublas.h>
-
+#define PETSC_DEVICE_FUNC_DECL __device__
+#include <petscaijdevice.h>
 
 __global__
 void assemble_device(PetscSplitCSRDataStructure *d_mat, PetscInt start, PetscInt end, PetscInt Ne, PetscMPIInt rank, PetscErrorCode *ierr)

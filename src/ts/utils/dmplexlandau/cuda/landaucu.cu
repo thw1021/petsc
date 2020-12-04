@@ -6,12 +6,12 @@
 #include <petsclandau.h>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <petscmat.h>
-#include <petscaijdevice.h>
 #include <petsccublas.h>
 
 #define PETSC_THREAD_SYNC __syncthreads()
 #define PETSC_DEVICE_FUNC_DECL __device__
 #include "../land_tensors.h"
+#include <petscaijdevice.h>
 
 // Macro to catch CUDA errors in CUDA runtime calls
 #define CUDA_SAFE_CALL(call)                                          \
@@ -42,7 +42,7 @@ do {                                                                  \
     }                                                                 \
 } while (0)
 
-PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *maps, pointInterpolationP4est (*points)[LANDAU_MAX_Q_FACE])
+PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *maps, pointInterpolationP4est (*points)[LANDAU_MAX_Q_FACE], PetscInt Nf, PetscInt Nq)
 {
   P4estVertexMaps h_maps;
   PetscFunctionBegin;
@@ -50,6 +50,8 @@ PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *maps, point
   h_maps.num_face = maps->num_face;
   h_maps.num_reduced = maps->num_reduced;
   h_maps.deviceType = maps->deviceType;
+  h_maps.Nf = Nf;
+  h_maps.Nq = Nq;
   CUDA_SAFE_CALL(cudaMalloc((void **)&h_maps.c_maps,               maps->num_reduced  * sizeof *points));
   CUDA_SAFE_CALL(cudaMemcpy(          h_maps.c_maps, maps->c_maps, maps->num_reduced  * sizeof *points, cudaMemcpyHostToDevice));
   CUDA_SAFE_CALL(cudaMalloc((void **)&h_maps.gIdx,                 maps->num_elements * sizeof *maps->gIdx));
@@ -61,7 +63,7 @@ PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *maps, point
 
 PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *pMaps)
 {
-  P4estVertexMaps *d_maps = (P4estVertexMaps*)pMaps->data, h_maps;
+  P4estVertexMaps *d_maps = pMaps->data, h_maps;
   PetscFunctionBegin;
   CUDA_SAFE_CALL(cudaMemcpy(&h_maps, d_maps, sizeof(P4estVertexMaps), cudaMemcpyDeviceToHost));
   CUDA_SAFE_CALL(cudaFree(h_maps.c_maps));
@@ -72,24 +74,25 @@ PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *pMaps)
 
 __device__ void
 landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip, const PetscInt Nq, const PetscInt Nf, const PetscInt Nb,
-  const PetscInt dim, LandauIPReal *IPDataRaw, const PetscReal invJj[], const PetscReal nu_alpha[],
-  const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
-  const PetscReal * const BB, const PetscReal * const DD,
-  PetscScalar *elemMat, P4estVertexMaps *d_maps, PetscSplitCSRDataStructure *d_mat, PetscScalar fieldMats[][LANDAU_MAX_NQ],  // output
-  PetscReal g2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
-  PetscReal g3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
-  PetscReal gg2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
-  PetscReal gg3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
-  PetscReal s_nu_alpha[],
-  PetscReal s_nu_beta[],
-  PetscReal s_invMass[],
-  PetscReal s_f[],
-  PetscReal s_dfx[],
-  PetscReal s_dfy[],
-  #if LANDAU_DIM==3
-  PetscReal s_dfz[],
-  #endif
-  PetscInt myelem, PetscErrorCode *ierr)
+			 const PetscInt dim, LandauIPReal *IPDataRaw, const PetscReal invJj[], const PetscReal nu_alpha[],
+			 const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
+			 const PetscReal * const BB, const PetscReal * const DD,
+			 PetscScalar *elemMat, P4estVertexMaps *d_maps, PetscSplitCSRDataStructure *d_mat, // output
+			 PetscScalar fieldMats[][LANDAU_MAX_NQ],
+			 PetscReal g2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
+			 PetscReal g3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
+			 PetscReal gg2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
+			 PetscReal gg3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
+			 PetscReal s_nu_alpha[],
+			 PetscReal s_nu_beta[],
+			 PetscReal s_invMass[],
+			 PetscReal s_f[],
+			 PetscReal s_dfx[],
+			 PetscReal s_dfy[],
+#if LANDAU_DIM==3
+			 PetscReal s_dfz[],
+#endif
+			 PetscInt myelem, PetscErrorCode *ierr)
 {
   int           d,f,g,d2,dp,d3,fieldA,nip_pad = nip; // vectorization padding not supported;
   PetscReal     gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
@@ -448,7 +451,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
     if (container) { // not here first call
       ierr = PetscContainerGetPointer(container, (void **) &h_maps);CHKERRQ(ierr);
       if (h_maps->data) {
-        d_maps = (P4estVertexMaps*)h_maps->data;
+        d_maps = h_maps->data;
 	if (!d_maps) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata");
       } else {
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
@@ -499,10 +502,12 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   // First time assembly even with GPU assembly
   if (d_elemMats) {
     PetscScalar *elemMats=NULL,*elMat;
-    ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
+    ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscMalloc1(totDim*totDim*numGCells,&elemMats);CHKERRQ(ierr);
     CUDA_SAFE_CALL(cudaMemcpy(elemMats, d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar), cudaMemcpyDeviceToHost));
     CUDA_SAFE_CALL(cudaFree(d_elemMats));
+    ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
+    ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
     for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
       ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
       if (ej==-1) {
