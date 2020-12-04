@@ -10,16 +10,40 @@
 #include <../src/mat/impls/aij/seq/aij.h>
 
 #include <../src/mat/impls/aij/seq/kokkos/aijkokkosimpl.hpp>
+#include <petscmat.h>
 
 static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat); /* Forward declaration */
 
 static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A,MatAssemblyType mode)
 {
-  PetscErrorCode ierr;
+  PetscErrorCode    ierr;
+  PetscBool         is_seq = PETSC_TRUE;
+  PetscInt          nnz_state = A->nonzerostate;
+  Mat_SeqAIJKokkos  *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
+  if (aijkok) {
+    Kokkos::View<PetscSplitCSRDataStructure, Kokkos::HostSpace> h_mat_k = create_mirror_view(Kokkos::HostSpace(), aijkok->device_mat_d);
+    //Kokkos::deep_copy (h_mat_k, aijkok->device_mat_d);
+    nnz_state = h_mat_k.data()->nonzerostate;
+    is_seq = h_mat_k.data()->seq;
+  }
   ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr);
   A->offloadmask = PETSC_OFFLOAD_CPU;
+  if (A->nonzerostate > nnz_state) { // assembled on CPU even-though equipped for GPU
+    // ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
+    // SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB," assembled on CPU even-though equipped for GPU  - not supported ???");
+    ierr = PetscInfo2(A,"1) GPU with device nnz state %D < CPU %D\n",nnz_state,A->nonzerostate);CHKERRQ(ierr);
+  } else if (nnz_state > A->nonzerostate) {
+    //SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB," assembled on CPU even-though equipped for GPU  - not supported ???");
+    ierr = PetscInfo2(A,"2) GPU with device nnz state increase %D > %D\n",nnz_state,A->nonzerostate);CHKERRQ(ierr);
+    A->offloadmask = PETSC_OFFLOAD_GPU;
+  } else if (aijkok && aijkok->device_mat_d.data()) {
+    A->offloadmask = PETSC_OFFLOAD_GPU;
+    ierr = PetscInfo1(A,"3) GPU assembly A->assembled=%D\n",A->assembled);CHKERRQ(ierr);
+  } else {
+    ierr = PetscInfo1(A,"4) Non-GPU assembly done A->assembled=%D\n",A->assembled);CHKERRQ(ierr);
+  }
   /* Don't build (or update) the Mat_SeqAIJKokkos struct. We delay it to the very last moment until we need it. */
   PetscFunctionReturn(0);
 }
@@ -41,6 +65,38 @@ static PetscErrorCode MatSeqAIJKokkosSyncDevice(Mat A)
     Kokkos::deep_copy(aijkok->a_d,aijkok->a_h);
   }
   A->offloadmask = PETSC_OFFLOAD_BOTH;
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode SeqAIJKokkosSetDeviceMat(Mat A, PetscSplitCSRDataStructure *h_mat)
+{
+  Mat_SeqAIJKokkos *aijkok;
+  Kokkos::View<PetscSplitCSRDataStructure, Kokkos::HostSpace> h_mat_k(h_mat);
+
+  PetscFunctionBegin;
+  // ierr    = MatSeqAIJKokkosSyncDevice(A);CHKERRQ(ierr);
+  aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
+  if (!aijkok) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"no Mat_SeqAIJKokkos");
+  aijkok->device_mat_d = create_mirror(DeviceMemorySpace(),h_mat_k);
+  Kokkos::deep_copy (aijkok->device_mat_d, h_mat_k);
+  // printf("xxxxxxxxxxxxxx h_mat=%p d_mat=%p h_mat_k=%p cEnd=%D/%D\n", h_mat, aijkok->device_mat_d.data(), h_mat_k.data(), h_mat->cend, aijkok->device_mat_d().cend);
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode SeqAIJKokkosGetDeviceMat(Mat A, PetscSplitCSRDataStructure **d_mat)
+{
+  Mat_SeqAIJKokkos *aijkok;
+
+  PetscFunctionBegin;
+  aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
+  if (aijkok && aijkok->device_mat_d.data()) {
+    *d_mat = aijkok->device_mat_d.data();
+  } else {
+    PetscErrorCode   ierr;
+    ierr    = MatSeqAIJKokkosSyncDevice(A);CHKERRQ(ierr); // create this (we are making d_mat now so make a place for it)
+    *d_mat  = NULL;
+    ierr = PetscInfo(A,"No device\n");CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -222,6 +278,10 @@ static PetscErrorCode MatDestroy_SeqAIJKokkos(Mat A)
   Mat_SeqAIJKokkos      *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
+  if (aijkok && aijkok->device_mat_d.data()) {
+    delete aijkok->colmap_d;
+    delete aijkok->i_uncompressed_d;
+  }
   delete aijkok;
   ierr = MatDestroy_SeqAIJ(A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
