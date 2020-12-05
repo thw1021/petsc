@@ -4,6 +4,7 @@
 #include "Kokkos_Core.hpp"
 #include <Kokkos_DualView.hpp>
 #include "KokkosSparse_CrsMatrix.hpp"
+#include "KokkosSparse_spgemm.hpp"
 #include <petscveckokkos.hpp>
 
 using MatRowMap_t                = PetscInt; /* RowMap, not RowOffset, to distinguish from Kokkos OffsetView */
@@ -23,7 +24,7 @@ using MatRowMapViewHost_t        = MatRowMapViewDevice_t::HostMirror;
 using MatValueViewHost_t         = MatValueViewDevice_t::HostMirror;
 
 using MatValueDualView_t         = Kokkos::DualView<MatValue_t*>;
-
+using MatMatKernelHandle_t       = KokkosKernels::Experimental::KokkosKernelsHandle<MatRowMap_t, MatColumnIndex_t, MatValue_t, MatDevice_t, DeviceMemorySpace, DeviceMemorySpace>;
 
 struct Mat_SeqAIJKokkos {
   MatRowMapViewHost_t        i_h;

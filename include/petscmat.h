@@ -659,6 +659,7 @@ PETSC_EXTERN PetscErrorCode MatCreateMPIAIJSumSeqAIJSymbolic(MPI_Comm,Mat,PetscI
 PETSC_EXTERN PetscErrorCode MatCreateMPIAIJSumSeqAIJNumeric(Mat,Mat);
 PETSC_EXTERN PetscErrorCode MatMPIAIJGetLocalMat(Mat,MatReuse,Mat*);
 PETSC_EXTERN PetscErrorCode MatMPIAIJGetLocalMatCondensed(Mat,MatReuse,IS*,IS*,Mat*);
+PETSC_EXTERN PetscErrorCode MatMPIAIJGetLocalMatMerge(Mat,MatReuse,IS*,Mat*);
 PETSC_EXTERN PetscErrorCode MatGetBrowsOfAcols(Mat,Mat,MatReuse,IS*,IS*,Mat*);
 PETSC_EXTERN PetscErrorCode MatGetGhosts(Mat, PetscInt *,const PetscInt *[]);
 
@@ -1924,6 +1925,7 @@ PETSC_EXTERN PetscErrorCode MatCreateSeqAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,P
 PETSC_EXTERN PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetFormat(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat);
 PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSESetGenerateTranspose(Mat,PetscBool);
+PETSC_EXTERN PetscErrorCode MatAIJCUSPARSESetGenerateTranspose(Mat,PetscBool);
 
 typedef struct _p_SplitCSRMat PetscSplitCSRDataStructure;
 PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure**);
