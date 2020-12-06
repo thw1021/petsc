@@ -602,7 +602,7 @@ PetscErrorCode  PetscInfo_Private(const char func[],PetscObject obj, const char 
   va_start(Argp, message);
   sprintf(string, "[%d] %s(): ",urank,func);
   ierr = PetscStrlen(string, &len);CHKERRQ(ierr);
-  ierr = PetscVSNPrintf(string+len, 8*1024-len,message,&fullLength, Argp);CHKERRQ(ierr);
+  ierr = PetscVSNPrintf(string+len, sizeof(string)-len,message,&fullLength, Argp);CHKERRQ(ierr);
   ierr = PetscFPrintf(PETSC_COMM_SELF,PetscInfoFile, "%s", string);CHKERRQ(ierr);
   err  = fflush(PetscInfoFile);
   if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
