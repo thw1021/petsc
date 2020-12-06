@@ -44,7 +44,18 @@
    This facilitates using the C version of PETSc from C++ and the C++ version from C.
 */
 #if defined(__cplusplus)
+#if defined(__GNUG__)
+static std::string PETSC_PRETTY_FUNCTION(const std::string &prettyFunction,const std::string &Function)
+{
+  size_t locFunName = prettyFunction.find(Function);
+  size_t begin = prettyFunction.rfind(" ",locFunName) + 1;
+  size_t end = prettyFunction.find("(",locFunName + Function.length());
+  return prettyFunction.substr(begin,end - begin);
+}
+#  define PETSC_FUNCTION_NAME PETSC_PRETTY_FUNCTION(__PRETTY_FUNCTION__,__FUNCTION__).c_str()
+#else
 #  define PETSC_FUNCTION_NAME PETSC_FUNCTION_NAME_CXX
+#endif
 #else
 #  define PETSC_FUNCTION_NAME PETSC_FUNCTION_NAME_C
 #endif
