@@ -27,7 +27,7 @@ Tarball contains only the source, identical to ``git`` download. Documentation a
 
 - `petsc-lite-3.14.2.tar.gz <https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-lite-3.14.2.tar.gz>`__
 
-Tarball Includes all documentation, recommended for offline use.
+Tarball includes all documentation, recommended for offline use.
 
 - `petsc-3.14.2.tar.gz <https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.14.2.tar.gz>`__
 
