@@ -52,6 +52,7 @@ configure_options = [
   '--download-adolc=1',
   '--download-colpack=1',
   '--download-mmg=1',
+  '--download-parmmg-commit=origin/jolivet/fix-compilation',
   '--download-parmmg=1'
   ]
 
