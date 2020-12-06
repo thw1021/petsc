@@ -45,6 +45,7 @@ configure_options = [
   '--download-hpddm=1',
   '--download-bamg=1',
   '--download-mmg=1',
+  '--download-parmmg-commit=origin/jolivet/fix-compilation',
   '--download-parmmg=1'
   ]
 
