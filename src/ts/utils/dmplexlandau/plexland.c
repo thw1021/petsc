@@ -56,7 +56,7 @@ static PetscErrorCode LandauGPUDataDestroy(void *ptr)
    PetscErrorCode  ierr;
    PetscFunctionBegin;
    if (maps->deviceType != LANDAU_CPU) {
-#if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
      if (maps->deviceType == LANDAU_KOKKOS) {
        ierr = LandauKokkosDestroyMatMaps(maps);CHKERRQ(ierr); // imples Kokkos does
      } // else could be CUDA
@@ -512,14 +512,12 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
                     }
                     ierr = PetscPrintf(PETSC_COMM_SELF," | %g\n",tmp);CHKERRQ(ierr);
                   }
-                  //SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "sum of inters != 1");
                 }
               }
               break;
             }
           }
           // debug
-          //ierr = PetscPrintf(PETSC_COMM_SELF,"basis matrix %D.%D) numindices=%D Nq=%D totDim=%D Nf=%D. Q=%D max num index = %D, Num reduced=%D\n",eidx,q,numindices,Nq,totDim,Nf,maps->num_face,maxni,maps->num_reduced);CHKERRQ(ierr);
           for (d = 0; d < -numindices; ++d){
             ierr = PetscPrintf(PETSC_COMM_SELF,"\t%3D) %3D: ",d,indices[d]);CHKERRQ(ierr);
             for (f = 0, tmp = 0; f < numindices; ++f) {
@@ -536,32 +534,20 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     }
     // allocate and copy point datamaps->gIdx[eidx][field][q] -- for CPU version of this code, for debugging
     ierr = PetscMalloc(maps->num_reduced * sizeof *maps->c_maps, &maps->c_maps);CHKERRQ(ierr);
-    // ierr = PetscPrintf(PETSC_COMM_SELF,"================= c_maps size %D --> %D (%g)\n",MAP_BF_SIZE,maps->num_reduced,(float)MAP_BF_SIZE/(float)(maps->num_reduced+1));CHKERRQ(ierr);
     for (ej = 0; ej < maps->num_reduced; ++ej) {
-      //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\tconstrant %3D) ",ej);
       for (q = 0; q < maps->num_face; ++q) {
         maps->c_maps[ej][q].scale = pointMaps[ej][q].scale;
         maps->c_maps[ej][q].gid = pointMaps[ej][q].gid;
-        //ierr = PetscPrintf(PETSC_COMM_SELF,"\t %3D - %13.5e ; ",maps->maps[ej][q].gid,maps->maps[ej][q].scale = pointMaps[ej][q].scale);CHKERRQ(ierr);
       }
-      //ierr = PetscPrintf(PETSC_COMM_SELF,"\n");
     }
-#if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
     if (ctx->deviceType == LANDAU_KOKKOS) {
-      /* PetscBool flg; */
-      /* ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr); */
-      /* if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Kokkos but no Kokkos matrix (%s) use -mat_type aijkokkos -vec_type kokkos",type); */
       ierr = LandauKokkosCreateMatMaps(maps, pointMaps,Nf,Nq);CHKERRQ(ierr); // imples Kokkos does
-      goto maps_done;
     } // else could be CUDA
 #endif
 #if defined(PETSC_HAVE_CUDA)
     if (ctx->deviceType == LANDAU_CUDA){
-      /* PetscBool flg; */
-      /* ierr = PetscObjectTypeCompareAny((PetscObject)JacP,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr); */
-      /* if (!flg) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Running Cuda but no Cuda matrix (%s) use -mat_type aijcusparse -vec_type cuda",type); */
       ierr = LandauCUDACreateMatMaps(maps, pointMaps,Nf,Nq);CHKERRQ(ierr);
-      goto maps_done;
     }
 #endif
     /*  debug */
@@ -583,9 +569,6 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     /*   } */
     /*   ierr = PetscPrintf(PETSC_COMM_SELF,"\n"); */
     /* } */
-#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_KOKKOS)
-    maps_done:
-#endif
     ierr = PetscLogEventEnd(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
   }
   /* clean up */
@@ -1462,13 +1445,17 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
     if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijcusparse -dm_vec_type cuda' for GPU assembly and Kokkos ???");
   }
 #endif
-  if (ctx->gpu_assembly) { /* we need to for GPU object with GPU assembly */
+  if (ctx->gpu_assembly) { /* we need GPU object with GPU assembly */
     if (ctx->deviceType == LANDAU_CUDA) {
       ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr);
       if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"must use '-dm_mat_type aijcusparse -dm_vec_type cuda' for GPU assembly and Cuda");
     } else if (ctx->deviceType == LANDAU_KOKKOS) {
       ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr);
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
       if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"must use '-dm_mat_type aijkokkos -dm_vec_type kokkos' for GPU assembly and Kokkos");
+#else
+      if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"must configure with '--download-kokkos-kernels=1' for GPU assembly and Kokkos");
+#endif
     }
   }
   PetscFunctionReturn(0);

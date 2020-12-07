@@ -145,7 +145,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
   PetscLogDouble    flops;
   PetscReal         *BB,*DD;
   LandauCtx         *ctx;
-  P4estVertexMaps   *h_maps, *d_maps=NULL;
+  P4estVertexMaps   *d_maps=NULL;
   PetscSplitCSRDataStructure *d_mat=NULL;
 
   PetscFunctionBegin;
@@ -166,6 +166,8 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     PetscContainer container;
     ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
     if (container) { // not here first call
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+      P4estVertexMaps   *h_maps=NULL;
       ierr = PetscContainerGetPointer(container, (void **) &h_maps);CHKERRQ(ierr);
       ierr = PetscInfo2(JacP, "Have container maps=%p maps->data=%p\n", h_maps, h_maps ? h_maps->data : NULL);CHKERRQ(ierr);
       if (h_maps->data) {
@@ -176,6 +178,9 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
       // this does the setup the first time called
       ierr = MatKokkosGetDeviceMatWrite(JacP,&d_mat);CHKERRQ(ierr);
       global_elem_mat_sz = 0;
+#else
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly w/o kokkos kernels -- should not be here");
+#endif
     } else { // kernel output - first call assembled on device
       global_elem_mat_sz = numCells;
     }

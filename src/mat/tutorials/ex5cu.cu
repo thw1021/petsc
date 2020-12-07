@@ -66,7 +66,7 @@ int main(int argc,char **args)
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
 
   ierr = PetscLogEventRegister("GPU operator", MAT_CLASSID, &event);CHKERRQ(ierr);
-  ierr = MatCreate(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,N,N,nz,NULL,nz-1,NULL,&A);CHKERRQ(ierr);
+  ierr = MatCreateAIJCUSPARSE(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,N,N,nz,NULL,nz-1,NULL,&A);CHKERRQ(ierr);
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
   ierr = MatCreateVecs(A,&x,&y);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
@@ -111,13 +111,7 @@ int main(int argc,char **args)
 
    test:
       suffix: 0
-      args: -n 11 -vec_view -dm_mat_type aijkokkos -dm_vec_type kokkos -info :mat
-      nsize:  2
-
-   test:
-      suffix: gpu_assemble
-      requires: cuda
-      args: -n 11 -vec_view -dm_landau_device_type kokkos -dm_landau_gpu_assembly true -dm_mat_type aijcusparse -dm_vec_type cuda -info :mat
+      args: -n 11 -vec_view
       nsize:  2
 
 TEST*/

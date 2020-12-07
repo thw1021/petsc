@@ -1882,7 +1882,7 @@ PETSC_DEPRECATED_FUNCTION("Use MatBindToCPU (since v3.13)") PETSC_STATIC_INLINE 
 
 typedef struct _p_SplitCSRMat PetscSplitCSRDataStructure;
 
-#ifdef PETSC_HAVE_KOKKOS
+#ifdef PETSC_HAVE_KOKKOS_KERNELS
 PETSC_EXTERN PetscErrorCode MatKokkosGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure**);
 PETSC_EXTERN PetscErrorCode SeqAIJKokkosSetDeviceMat(Mat, PetscSplitCSRDataStructure *);
 PETSC_EXTERN PetscErrorCode SeqAIJKokkosGetDeviceMat(Mat, PetscSplitCSRDataStructure **);
