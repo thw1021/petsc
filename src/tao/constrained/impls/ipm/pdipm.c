@@ -763,24 +763,15 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         }
       }
       ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"    PDIPMLineSearch: MatInertia ...nneg %d, nzero %d, npos %d;\n",nneg,nzero,npos);
       if (npos < pdipm->Nx+pdipm->Nci)
       {
-        if (pdipm->deltaw ==0)
-        {
-          pdipm->deltaw = PetscPowReal(10,-4);
-        } else {
-          pdipm->deltaw = 8*pdipm->deltaw;
-        }
+          pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,40));
       }
+      /* I dont know if this is the proper check for reducing deltaw,
+        it may be defult reduce deltaw check with factor, increase if needed then search.*/
       if (nneg < pdipm->Nce + pdipm->Nci)
       {
-        if (pdipm->deltaw ==0)
-        {
-          pdipm->deltaw = PetscPowReal(10,-4);
-        } else {
-          pdipm->deltaw = pdipm->deltaw/3;
-        }
+          pdipm->deltaw = PetscMax(pdipm->deltaw/3,PetscPowReal(10,-20));
       }
       if (nzero>0)
       {
@@ -791,6 +782,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
           pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
         }
       }
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"    PDIPMLineSearch: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %.2f,deltac %.2f;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
     }
   }
   PetscFunctionReturn(0);
@@ -1513,7 +1505,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->n  = pdipm->N  = 0;
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
-  pdipm->deltaw = 0;
+  pdipm->deltaw = PetscPowReal(10,-20);
   pdipm->deltac = 0;
 
   pdipm->push_init_slack     = 1.0;
