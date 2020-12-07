@@ -752,16 +752,13 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
     ierr = SNESSetConvergedReason(snes,SNES_CONVERGED_FNORM_ABS);CHKERRQ(ierr);
   }
 
-  if (!pdipm->inertia_correct) PetscFunctionReturn(0);
+/* Get the inertia of Cholesky factor to set shifts for next SNES interation */
+  if (pdipm->inertia_correct)  
 
-  /* Get the inertia of Cholesky factor to set shifts for next SNES interation */
   ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
   ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
   ierr = PCGetType(pc,&ptype);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
-
-
-  
 
   if (isCHOL) {
     ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
@@ -777,6 +774,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         }
       }
       ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -846,20 +844,45 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
 >>>>>>> push update for master rebase
       }
 <<<<<<< HEAD
+=======
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"    PDIPMLineSearch: MatInertia ...nneg %d, nzero %d, npos %d;\n",nneg,nzero,npos);
+      if (npos < pdipm->Nx+pdipm->Nci)
+      {
+        if (pdipm->deltaw ==0)
+        {
+          pdipm->deltaw = PetscPowReal(10,-4);
+        } else {
+          pdipm->deltaw = 8*pdipm->deltaw;
+        }
+      }
+      if (nneg < pdipm->Nce + pdipm->Nci)
+      {
+        if (pdipm->deltaw ==0)
+        {
+          pdipm->deltaw = PetscPowReal(10,-4);
+        } else {
+          pdipm->deltaw = pdipm->deltaw/3;
+        }
+      }
+>>>>>>> added inertia update baised on get inertia
       if (nzero>0)
       {
         if (pdipm->deltac = 0)
         {
+<<<<<<< HEAD
 >>>>>>> added inertia update baised on get inertia
 =======
 
       if (nzero) { /* Jacobian is singular */
         if (pdipm->deltac == 0.0) {
 >>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
+=======
+>>>>>>> added inertia update baised on get inertia
           pdipm->deltac = PetscPowReal(10,-8);
         } else {
           pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
         }
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
         ierr = PetscPrintf(PETSC_COMM_WORLD,"    modify pdipm->deltac: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
@@ -868,6 +891,8 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
 =======
         ierr = PetscPrintf(PETSC_COMM_WORLD,"    modify pdipm->deltac: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
 >>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
+=======
+>>>>>>> added inertia update baised on get inertia
       }
     }
   }
@@ -1594,6 +1619,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
 <<<<<<< HEAD
+<<<<<<< HEAD
   pdipm->deltaw = 0;
   pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
   pdipm->deltac = 0;
@@ -1606,6 +1632,10 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->deltaw = PetscPowReal(10,-4);
   pdipm->deltac = PetscPowReal(10,-8);
 >>>>>>> added deltaw and deltac terms to begin correcting inertia
+=======
+  pdipm->deltaw = 0;
+  pdipm->deltac = 0;
+>>>>>>> added inertia update baised on get inertia
 
   pdipm->push_init_slack     = 1.0;
   pdipm->push_init_lambdai   = 1.0;
