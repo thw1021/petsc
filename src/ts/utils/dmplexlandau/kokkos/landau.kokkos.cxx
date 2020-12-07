@@ -91,9 +91,9 @@ PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *maps, pointInterpolati
   h_maps.deviceType = maps->deviceType;
   h_maps.Nf = Nf;
   h_maps.Nq = Nq;
-  h_maps.c_maps = (pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE]) &(*d_points)(0,0);
+  h_maps.c_maps = (pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE]) d_points->data();
   maps->vp1 = (void*)d_points;
-  h_maps.gIdx = (LandauIdx (*)[LANDAU_MAX_SPECIES][LANDAU_MAX_NQ]) &(*d_gidx)(0,0,0);
+  h_maps.gIdx = (LandauIdx (*)[LANDAU_MAX_SPECIES][LANDAU_MAX_NQ]) d_gidx->data();
   maps->vp2 = (void*)d_gidx;
   {
     Kokkos::View<P4estVertexMaps, Kokkos::HostSpace> h_maps_k(&h_maps);
@@ -193,6 +193,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
     using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
     const int scr_bytes = 2*(g2_scr_t::shmem_size(dim,Nf,Nq) + g3_scr_t::shmem_size(dim,dim,Nf,Nq));
+    int   conc, team_size;
     ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
     const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_alpha (nu_alpha, Nf);
     Kokkos::View<PetscReal*, Kokkos::LayoutLeft> d_alpha ("nu_alpha", Nf);
@@ -230,8 +231,8 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     ierr = PetscLogFlops(flops*IPData->nip_);CHKERRQ(ierr);
 #endif
 #define KOKKOS_SHARED_LEVEL 1
-    // PetscInfo2(plex, "shared memory size: %d bytes in level %d\n",scr_bytes,KOKKOS_SHARED_LEVEL);
-    int conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
+    //PetscInfo2(plex, "shared memory size: %d bytes in level %d\n",scr_bytes,KOKKOS_SHARED_LEVEL);
+    conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
     Kokkos::parallel_for("Landau_elements", Kokkos::TeamPolicy<>(numCells, team_size, num_sub_blocks).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
         const PetscInt  myelem = team.league_rank();
         g2_scr_t        g2(team.team_scratch(KOKKOS_SHARED_LEVEL),dim,Nf,Nq);
@@ -243,13 +244,13 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
         d_IPData.w_data   = &d_ipdata_raw[0];
         d_IPData.x   = &d_ipdata_raw[1*IPData->nip_];
         d_IPData.y   = &d_ipdata_raw[2*IPData->nip_];
-        d_IPData.z   = &d_ipdata_raw[3*IPData->nip_];
+        if (dim==2) d_IPData.z = NULL;
+        else        d_IPData.z = &d_ipdata_raw[3*IPData->nip_];
         d_IPData.f   = &d_ipdata_raw[IPData->nip_*((dim+1) + 0)];
         d_IPData.dfx = &d_ipdata_raw[IPData->nip_*((dim+1) + 1*Nf)];
         d_IPData.dfy = &d_ipdata_raw[IPData->nip_*((dim+1) + 2*Nf)];
-        if (dim==2) d_IPData.z = d_IPData.dfz = NULL;
-        else d_IPData.dfz = &d_ipdata_raw[IPData->nip_*((dim+1) + 3*Nf)];
-
+        if (dim==2) d_IPData.dfz = NULL;
+        else        d_IPData.dfz = &d_ipdata_raw[IPData->nip_*((dim+1) + 3*Nf)];
         // get g2[] & g3[]
         Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nq), [=] (int myQi) {
             using Kokkos::parallel_reduce;

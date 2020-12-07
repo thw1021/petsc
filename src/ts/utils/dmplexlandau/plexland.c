@@ -56,16 +56,15 @@ static PetscErrorCode LandauGPUDataDestroy(void *ptr)
    PetscErrorCode  ierr;
    PetscFunctionBegin;
    if (maps->deviceType != LANDAU_CPU) {
-     #if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS)
      if (maps->deviceType == LANDAU_KOKKOS) {
        ierr = LandauKokkosDestroyMatMaps(maps);CHKERRQ(ierr); // imples Kokkos does
      } // else could be CUDA
-     #endif
-     #if defined(PETSC_HAVE_CUDA)
+#elif defined(PETSC_HAVE_CUDA)
      if (maps->deviceType == LANDAU_CUDA){
        ierr = LandauCUDADestroyMatMaps(maps);CHKERRQ(ierr);
      } else SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->deviceType %D ?????",maps->deviceType);
-     #endif
+#endif
    }
    ierr = PetscFree(maps->c_maps);CHKERRQ(ierr);
    ierr = PetscFree(maps->gIdx);CHKERRQ(ierr);
@@ -1265,14 +1264,6 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     }
   }
   ierr = PetscOptionsBool("-dm_landau_gpu_assembly", "Assemble Jacobian on GPU", "plexland.c", ctx->gpu_assembly, &ctx->gpu_assembly, NULL);CHKERRQ(ierr);
-  if (ctx->gpu_assembly) {
-    if (ctx->deviceType == LANDAU_CUDA) {
-      ierr = PetscOptionsInsertString(NULL,"-dm_mat_type aijcusparse -dm_vec_type cuda");CHKERRQ(ierr);
-    }
-    if (ctx->deviceType == LANDAU_KOKKOS) {
-      ierr = PetscOptionsInsertString(NULL,"-dm_mat_type aijkokkos -dm_vec_type kokkos");CHKERRQ(ierr);
-    }
-  }
   ierr = PetscOptionsReal("-dm_landau_electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_landau_inflate", "With sphere, inflate for curved edges (no AMR)", "plexland.c", ctx->inflate, &ctx->inflate, NULL);CHKERRQ(ierr);
@@ -1423,7 +1414,7 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   PetscMPIInt    size;
   PetscErrorCode ierr;
   LandauCtx      *ctx;
-  PetscBool      prealloc_only;
+  PetscBool      prealloc_only,flg;
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
@@ -1459,6 +1450,27 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   ierr = DMCreateMatrix(ctx->dmv, &ctx->J);CHKERRQ(ierr);
   ierr = MatSetOption(ctx->J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
   if (J) *J = ctx->J;
+  /* check for types that we need */
+#if defined(PETSC_HAVE_KOKKOS)
+  if (ctx->deviceType == LANDAU_CPU) {
+    ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr);
+    if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijkokkos -dm_vec_type kokkos' for GPU assembly and Kokkos ???");
+  }
+#elif defined(PETSC_HAVE_CUDA)
+  if (ctx->deviceType == LANDAU_CPU) {
+    ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr);
+    if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijcusparse -dm_vec_type cuda' for GPU assembly and Kokkos ???");
+  }
+#endif
+  if (ctx->gpu_assembly) { /* we need to for GPU object with GPU assembly */
+    if (ctx->deviceType == LANDAU_CUDA) {
+      ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr);
+      if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"must use '-dm_mat_type aijcusparse -dm_vec_type cuda' for GPU assembly and Cuda");
+    } else if (ctx->deviceType == LANDAU_KOKKOS) {
+      ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr);
+      if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"must use '-dm_mat_type aijkokkos -dm_vec_type kokkos' for GPU assembly and Kokkos");
+    }
+  }
   PetscFunctionReturn(0);
 }
 
