@@ -26,6 +26,13 @@ project = 'PETSc'
 copyright = '1991-%d, UChicago Argonne, LLC and the PETSc Development Team' % datetime.date.today().year
 author = 'The PETSc Development Team'
 
+# Allow todo's to be emitted, turn off for build!
+todo_include_todos=True
+todo_emit_warnings=True
+
+# Little copy-and-paste button by code blocks, from sphinx_copybutton package
+# https://sphinx-copybutton.readthedocs.io/en/latest/
+
 with open(os.path.join('..', '..', '..', 'include', 'petscversion.h'),'r') as version_file:
     buf = version_file.read()
     petsc_release_flag = re.search(' PETSC_VERSION_RELEASE[ ]*([0-9]*)',buf).group(1)
@@ -41,13 +48,14 @@ with open(os.path.join('..', '..', '..', 'include', 'petscversion.h'),'r') as ve
         version = '.'.join([major_version, minor_version])
         release = '.'.join([major_version,minor_version,subminor_version])
 
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx_copybutton',
+    'sphinx.ext.todo',
     'sphinx.ext.graphviz',
     'sphinxcontrib.bibtex',
     'sphinxcontrib.katex',
