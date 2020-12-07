@@ -13,9 +13,10 @@ static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n
 
 #include <petscconf.h>
 #include <petscmat.h>
-#include <petscaijdevice.h>
 #include <petsccublas.h>
 
+#define PETSC_DEVICE_FUNC_DECL __device__
+#include <petscaijdevice.h>
 
 __global__
 void assemble_device(PetscSplitCSRDataStructure *d_mat, PetscInt start, PetscInt end, PetscInt Ne, PetscMPIInt rank, PetscErrorCode *ierr)
@@ -110,6 +111,12 @@ int main(int argc,char **args)
    test:
       suffix: 0
       args: -n 11 -vec_view
+      nsize:  2
+
+   test:
+      suffix: gpu_assemble
+      requires: cuda
+      args: -n 11 -vec_view -dm_landau_device_type kokkos -dm_landau_gpu_assembly true -dm_mat_type aijcusparse -dm_vec_type cuda
       nsize:  2
 
 TEST*/

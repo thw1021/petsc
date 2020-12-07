@@ -2586,9 +2586,7 @@ static PetscErrorCode MatAXPY_SeqAIJCUSPARSE(Mat Y,PetscScalar a,Mat X,MatStruct
     if (X->offloadmask == PETSC_OFFLOAD_UNALLOCATED || X->offloadmask == PETSC_OFFLOAD_GPU) {
       ierr = MatSeqAIJCUSPARSECopyFromGPU(X);CHKERRQ(ierr);
     }
-    //ierr = MatView(Y,NULL);CHKERRQ(ierr);
     ierr = MatAXPY_SeqAIJ(Y,a,X,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
-    //ierr = MatView(Y,NULL);CHKERRQ(ierr);
     ierr = MatSeqAIJCUSPARSECopyToGPU(Y);CHKERRQ(ierr);
     ierr = MatSeqAIJCUSPARSECopyToGPU(X);CHKERRQ(ierr);
   } else {
@@ -2621,51 +2619,11 @@ static PetscErrorCode MatAXPY_SeqAIJCUSPARSE(Mat Y,PetscScalar a,Mat X,MatStruct
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
-{
-  Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (A->factortype != MAT_FACTOR_NONE) PetscFunctionReturn(0);
-  if (flg) {
-    ierr = MatSeqAIJCUSPARSECopyFromGPU(A);CHKERRQ(ierr);
-
-    A->ops->axpy                      = MatAXPY_SeqAIJ;
-    A->ops->mult                      = MatMult_SeqAIJ;
-    A->ops->multadd                   = MatMultAdd_SeqAIJ;
-    A->ops->multtranspose             = MatMultTranspose_SeqAIJ;
-    A->ops->multtransposeadd          = MatMultTransposeAdd_SeqAIJ;
-    A->ops->multhermitiantranspose    = NULL;
-    A->ops->multhermitiantransposeadd = NULL;
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",NULL);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",NULL);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",NULL);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",NULL);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqAIJGetArray_C",MatSeqAIJGetArray_SeqAIJ);CHKERRQ(ierr);
-  } else {
-    A->ops->axpy                      = MatAXPY_SeqAIJCUSPARSE;
-    A->ops->mult                      = MatMult_SeqAIJCUSPARSE;
-    A->ops->multadd                   = MatMultAdd_SeqAIJCUSPARSE;
-    A->ops->multtranspose             = MatMultTranspose_SeqAIJCUSPARSE;
-    A->ops->multtransposeadd          = MatMultTransposeAdd_SeqAIJCUSPARSE;
-    A->ops->multhermitiantranspose    = MatMultHermitianTranspose_SeqAIJCUSPARSE;
-    A->ops->multhermitiantransposeadd = MatMultHermitianTransposeAdd_SeqAIJCUSPARSE;
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",MatSetPreallocationCOO_SeqAIJCUSPARSE);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",MatSetValuesCOO_SeqAIJCUSPARSE);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqAIJGetArray_C",MatSeqAIJGetArray_SeqAIJCUSPARSE);CHKERRQ(ierr);
-  }
-  A->boundtocpu = flg;
-  a->inode.use = flg;
-  PetscFunctionReturn(0);
-}
-
 static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
 {
   PetscErrorCode             ierr;
   PetscBool                  both = PETSC_FALSE;
+  Mat_SeqAIJ                 *a = (Mat_SeqAIJ*)A->data;
 
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) {
@@ -2684,9 +2642,55 @@ static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
       }
     }
   }
-  ierr = MatZeroEntries_SeqAIJ(A);CHKERRQ(ierr);
+  //ierr = MatZeroEntries_SeqAIJ(A);CHKERRQ(ierr);
+  ierr = PetscArrayzero(a->a,a->i[A->rmap->n]);CHKERRQ(ierr);
+  ierr = MatSeqAIJInvalidateDiagonal(A);CHKERRQ(ierr);
   if (both) A->offloadmask = PETSC_OFFLOAD_BOTH;
+  else A->offloadmask = PETSC_OFFLOAD_CPU;
 
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
+{
+  Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (A->factortype != MAT_FACTOR_NONE) PetscFunctionReturn(0);
+  if (flg) {
+    ierr = MatSeqAIJCUSPARSECopyFromGPU(A);CHKERRQ(ierr);
+
+    A->ops->axpy                      = MatAXPY_SeqAIJ;
+    A->ops->zeroentries               = MatZeroEntries_SeqAIJ;
+    A->ops->mult                      = MatMult_SeqAIJ;
+    A->ops->multadd                   = MatMultAdd_SeqAIJ;
+    A->ops->multtranspose             = MatMultTranspose_SeqAIJ;
+    A->ops->multtransposeadd          = MatMultTransposeAdd_SeqAIJ;
+    A->ops->multhermitiantranspose    = NULL;
+    A->ops->multhermitiantransposeadd = NULL;
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",NULL);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",NULL);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",NULL);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",NULL);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqAIJGetArray_C",MatSeqAIJGetArray_SeqAIJ);CHKERRQ(ierr);
+  } else {
+    A->ops->axpy                      = MatAXPY_SeqAIJCUSPARSE;
+    A->ops->zeroentries               = MatZeroEntries_SeqAIJCUSPARSE;
+    A->ops->mult                      = MatMult_SeqAIJCUSPARSE;
+    A->ops->multadd                   = MatMultAdd_SeqAIJCUSPARSE;
+    A->ops->multtranspose             = MatMultTranspose_SeqAIJCUSPARSE;
+    A->ops->multtransposeadd          = MatMultTransposeAdd_SeqAIJCUSPARSE;
+    A->ops->multhermitiantranspose    = MatMultHermitianTranspose_SeqAIJCUSPARSE;
+    A->ops->multhermitiantransposeadd = MatMultHermitianTransposeAdd_SeqAIJCUSPARSE;
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",MatProductSetFromOptions_SeqAIJCUSPARSE);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",MatSetPreallocationCOO_SeqAIJCUSPARSE);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",MatSetValuesCOO_SeqAIJCUSPARSE);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqAIJGetArray_C",MatSeqAIJGetArray_SeqAIJCUSPARSE);CHKERRQ(ierr);
+  }
+  A->boundtocpu = flg;
+  a->inode.use = flg;
   PetscFunctionReturn(0);
 }
 
@@ -2730,7 +2734,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUSPARSE(Mat A, MatType mtyp
   B->ops->setfromoptions = MatSetFromOptions_SeqAIJCUSPARSE;
   B->ops->bindtocpu      = MatBindToCPU_SeqAIJCUSPARSE;
   B->ops->duplicate      = MatDuplicate_SeqAIJCUSPARSE;
-  B->ops->zeroentries    = MatZeroEntries_SeqAIJCUSPARSE;
 
   ierr = MatBindToCPU_SeqAIJCUSPARSE(B,PETSC_FALSE);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)B,MATSEQAIJCUSPARSE);CHKERRQ(ierr);
