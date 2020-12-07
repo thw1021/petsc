@@ -258,7 +258,7 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
       aijkokA->colmap_d = NULL;
     } else {
       Mat_MPIAIJ       *aij = (Mat_MPIAIJ*)A->data;
-      Mat_SeqAIJ       *jacb = (Mat_SeqAIJ*)aij->B->data;;
+      Mat_SeqAIJ       *jacb = (Mat_SeqAIJ*)aij->B->data;
       PetscInt         ii;
       Mat_SeqAIJKokkos *aijkokB;
       Amat = aij->A;
@@ -279,7 +279,7 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
       aij->colmap[A->cmap->N] = -9;
       ierr = PetscLogObjectMemory((PetscObject)A,(A->cmap->N+1)*sizeof(PetscInt));CHKERRQ(ierr);
       for (ii=0; ii<aij->B->cmap->n; ii++) aij->colmap[aij->garray[ii]] = ii+1;
-      if(aij->colmap[A->cmap->N] != -9) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"aij->colmap[A->cmap->N] != -9");
+      if (aij->colmap[A->cmap->N] != -9) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"aij->colmap[A->cmap->N] != -9");
       // allocate B copy data
       h_mat.rstart = A->rmap->rstart; h_mat.rend = A->rmap->rend;
       h_mat.cstart = A->cmap->rstart; h_mat.cend = A->cmap->rend;
