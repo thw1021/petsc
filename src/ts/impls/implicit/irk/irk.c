@@ -31,6 +31,7 @@ typedef struct {
   PetscBool    stiffly_accurate;
   PetscInt     pinterp;          /* Interpolation order */
   IRKTableau   tableau;
+  Vec          U0;               /* Backup vector */
   Vec          Z;                /* Combined stage vector */
   Vec          *Y;               /* States computed during the step */
   Vec          Ydot;             /* Work vector holding time derivatives during residual evaluation */
@@ -83,7 +84,7 @@ static PetscErrorCode TSIRKCreate_Gauss(TS ts)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = TSIRKGetNstages(ts,&nstages);CHKERRQ(ierr);
+  ierr = TSIRKGetNumStages(ts,&nstages);CHKERRQ(ierr);
   ierr = PetscMalloc3(PetscSqr(nstages),&gauss_A,nstages,&gauss_b,nstages,&gauss_c);CHKERRQ(ierr);
   ierr = PetscMalloc3(PetscSqr(nstages),&gauss_A_inv,nstages,&gauss_A_inv_rowsum,PetscSqr(nstages),&I_s);CHKERRQ(ierr);
   ierr = PetscMalloc3(nstages,&b,PetscSqr(nstages),&G0,PetscSqr(nstages),&G1);CHKERRQ(ierr);
@@ -258,6 +259,11 @@ static PetscErrorCode TSEvaluateStep_IRK(TS ts,PetscInt order,Vec U,PetscBool *d
 
 static PetscErrorCode TSRollBack_IRK(TS ts)
 {
+  TS_IRK         *irk = (TS_IRK*)ts->data;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecCopy(irk->U0,ts->vec_sol);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -269,15 +275,16 @@ static PetscErrorCode TSStep_IRK(TS ts)
   const PetscInt  nstages = irk->nstages;
   SNES            snes;
   PetscInt        i,j,its,lits,bs;
-  /*
   TSAdapt         adapt;
   PetscInt        rejections = 0;
   PetscBool       accept = PETSC_TRUE;
-  */
   PetscReal       next_time_step = ts->time_step;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
+  if (!ts->steprollback) {
+    ierr = VecCopy(ts->vec_sol,irk->U0);CHKERRQ(ierr);
+  }
   ierr = VecGetBlockSize(ts->vec_sol,&bs);CHKERRQ(ierr);
   for (i=0; i<nstages; i++) {
     ierr = VecStrideScatter(ts->vec_sol,i*bs,irk->Z,INSERT_VALUES);CHKERRQ(ierr);
@@ -302,7 +309,6 @@ static PetscErrorCode TSStep_IRK(TS ts)
     irk->status = TS_STEP_INCOMPLETE;
     ierr = TSEvaluateStep_IRK(ts,irk->order,ts->vec_sol,NULL);CHKERRQ(ierr);
     irk->status = TS_STEP_PENDING;
-    /*
     ierr = TSGetAdapt(ts,&adapt);CHKERRQ(ierr);
     ierr = TSAdaptChoose(adapt,ts,ts->time_step,NULL,&next_time_step,&accept);CHKERRQ(ierr);
     irk->status = accept ? TS_STEP_COMPLETE : TS_STEP_INCOMPLETE;
@@ -311,19 +317,16 @@ static PetscErrorCode TSStep_IRK(TS ts)
       ts->time_step = next_time_step;
       goto reject_step;
     }
-    */
 
     ts->ptime += ts->time_step;
     ts->time_step = next_time_step;
     break;
-  /*
   reject_step:
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ++rejections > ts->max_reject && ts->max_reject >= 0) {
       ts->reason = TS_DIVERGED_STEP_REJECTED;
       ierr = PetscInfo2(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections);CHKERRQ(ierr);
     }
-   */
   }
   PetscFunctionReturn(0);
 }
@@ -397,6 +400,7 @@ static PetscErrorCode TSReset_IRK(TS ts)
   ierr = VecDestroy(&irk->Ydot);CHKERRQ(ierr);
   ierr = VecDestroy(&irk->Z);CHKERRQ(ierr);
   ierr = VecDestroy(&irk->U);CHKERRQ(ierr);
+  ierr = VecDestroy(&irk->U0);CHKERRQ(ierr);
   ierr = MatDestroy(&irk->TJ);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -491,7 +495,7 @@ static PetscErrorCode SNESTSFormJacobian_IRK(SNES snes,Vec ZC,Mat JC,Mat JCpre,T
   dmsave = ts->dm;
   ts->dm = dm;
   ierr = VecGetBlockSize(Y[nstages-1],&bs);CHKERRQ(ierr);
-  if (ts->equation_type < TS_EQ_IMPLICIT) { /* explict ODE */
+  if (ts->equation_type <= TS_EQ_ODE_EXPLICIT) { /* Support explict formulas only */
     ierr = MatKAIJGetAIJ(JC,&J);CHKERRQ(ierr);
     ierr = VecStrideGather(ZC,(nstages-1)*bs,Y[nstages-1],INSERT_VALUES);CHKERRQ(ierr);
     ierr = MatKAIJGetS(JC,NULL,NULL,&S);CHKERRQ(ierr);
@@ -558,38 +562,51 @@ static PetscErrorCode TSSetUp_IRK(TS ts)
   IRKTableau     tab = irk->tableau;
   DM             dm;
   Mat            J;
-  SNES           snes;
   Vec            R;
   const PetscInt nstages = irk->nstages;
   PetscInt       vsize,bs;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMalloc1(irk->nstages,&irk->work);CHKERRQ(ierr);
-  ierr = VecDuplicateVecs(ts->vec_sol,irk->nstages,&irk->Y);CHKERRQ(ierr);
-  ierr = VecDuplicateVecs(ts->vec_sol,irk->nstages,&irk->YdotI);CHKERRQ(ierr);
-  ierr = VecDuplicate(ts->vec_sol,&irk->Ydot);CHKERRQ(ierr);
-  ierr = VecDuplicate(ts->vec_sol,&irk->U);CHKERRQ(ierr);
-
-  ierr = VecCreate(PetscObjectComm((PetscObject)ts->vec_sol),&irk->Z);CHKERRQ(ierr);
-  ierr = VecGetSize(ts->vec_sol,&vsize);CHKERRQ(ierr);
-  ierr = VecSetSizes(irk->Z,PETSC_DECIDE,vsize*irk->nstages);CHKERRQ(ierr);
-  ierr = VecGetBlockSize(ts->vec_sol,&bs);CHKERRQ(ierr);
-  ierr = VecSetBlockSize(irk->Z,irk->nstages*bs);CHKERRQ(ierr);
-  ierr = VecSetFromOptions(irk->Z);CHKERRQ(ierr);
-
+  if (!irk->work) {
+    ierr = PetscMalloc1(irk->nstages,&irk->work);CHKERRQ(ierr);
+  }
+  if (!irk->Y) {
+    ierr = VecDuplicateVecs(ts->vec_sol,irk->nstages,&irk->Y);CHKERRQ(ierr);
+  }
+  if (!irk->YdotI) {
+    ierr = VecDuplicateVecs(ts->vec_sol,irk->nstages,&irk->YdotI);CHKERRQ(ierr);
+  }
+  if (!irk->Ydot) {
+    ierr = VecDuplicate(ts->vec_sol,&irk->Ydot);CHKERRQ(ierr);
+  }
+  if (!irk->U) {
+    ierr = VecDuplicate(ts->vec_sol,&irk->U);CHKERRQ(ierr);
+  }
+  if (!irk->U0) {
+    ierr = VecDuplicate(ts->vec_sol,&irk->U0);CHKERRQ(ierr);
+  }
+  if (!irk->Z) {
+    ierr = VecCreate(PetscObjectComm((PetscObject)ts->vec_sol),&irk->Z);CHKERRQ(ierr);
+    ierr = VecGetSize(ts->vec_sol,&vsize);CHKERRQ(ierr);
+    ierr = VecSetSizes(irk->Z,PETSC_DECIDE,vsize*irk->nstages);CHKERRQ(ierr);
+    ierr = VecGetBlockSize(ts->vec_sol,&bs);CHKERRQ(ierr);
+    ierr = VecSetBlockSize(irk->Z,irk->nstages*bs);CHKERRQ(ierr);
+    ierr = VecSetFromOptions(irk->Z);CHKERRQ(ierr);
+  }
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
   ierr = DMCoarsenHookAdd(dm,DMCoarsenHook_TSIRK,DMRestrictHook_TSIRK,ts);CHKERRQ(ierr);
   ierr = DMSubDomainHookAdd(dm,DMSubDomainHook_TSIRK,DMSubDomainRestrictHook_TSIRK,ts);CHKERRQ(ierr);
 
-  ierr = TSGetSNES(ts,&snes);CHKERRQ(ierr);
+  ierr = TSGetSNES(ts,&ts->snes);CHKERRQ(ierr);
   ierr = VecDuplicate(irk->Z,&R);CHKERRQ(ierr);
-  ierr = SNESSetFunction(snes,R,SNESTSFormFunction,ts);CHKERRQ(ierr);
-  ierr = SNESGetJacobian(snes,&J,NULL,NULL,NULL);CHKERRQ(ierr);
-  /* Create the KAIJ matrix for solving the stages */
-  ierr = MatCreateKAIJ(J,nstages,nstages,tab->A_inv,tab->I_s,&irk->TJ);CHKERRQ(ierr);
-
-  ierr = SNESSetJacobian(snes,irk->TJ,irk->TJ,SNESTSFormJacobian,ts);CHKERRQ(ierr);
+  ierr = SNESSetFunction(ts->snes,R,SNESTSFormFunction,ts);CHKERRQ(ierr);
+  ierr = SNESGetJacobian(ts->snes,&J,NULL,NULL,NULL);CHKERRQ(ierr);
+  if (!irk->TJ) {
+    /* Create the KAIJ matrix for solving the stages */
+    ierr = MatCreateKAIJ(J,nstages,nstages,tab->A_inv,tab->I_s,&irk->TJ);CHKERRQ(ierr);
+  }
+  ierr = SNESSetJacobian(ts->snes,irk->TJ,irk->TJ,SNESTSFormJacobian,ts);CHKERRQ(ierr);
   ierr = VecDestroy(&R);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -605,7 +622,7 @@ static PetscErrorCode TSSetFromOptions_IRK(PetscOptionItems *PetscOptionsObject,
   {
     PetscBool flg;
     ierr = PetscOptionsInt("-ts_irk_order","Order of the IRK method","TSIRKSetOrder",irk->order,&irk->order,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-ts_irk_nstages","Stages of the IRK method","TSIRKSetNStages",irk->nstages,&irk->nstages,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-ts_irk_nstages","Stages of the IRK method","TSIRKSetNumStages",irk->nstages,&irk->nstages,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsFList("-ts_irk_type","Type of IRK method","TSIRKSetType",TSIRKList,irk->method_name[0] ? irk->method_name : tname,tname,sizeof(tname),&flg);CHKERRQ(ierr);
     if (flg || !irk->method_name[0]) { /* Create the method tableau after nstages and order are set */
       ierr = TSIRKSetType(ts,tname);CHKERRQ(ierr);
@@ -709,7 +726,7 @@ PetscErrorCode TSIRKGetType(TS ts,TSIRKType *irktype)
 }
 
 /*@C
-  TSIRKSetNstages - Set the number of stages of IRK scheme
+  TSIRKSetNumStages - Set the number of stages of IRK scheme
 
   Logically collective
 
@@ -722,20 +739,20 @@ PetscErrorCode TSIRKGetType(TS ts,TSIRKType *irktype)
 
   Level: intermediate
 
-.seealso: TSIRKGetNstages(), TSIRK
+.seealso: TSIRKGetNumStages(), TSIRK
 @*/
-PetscErrorCode TSIRKSetNstages(TS ts,PetscInt nstages)
+PetscErrorCode TSIRKSetNumStages(TS ts,PetscInt nstages)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  ierr = PetscTryMethod(ts,"TSIRKSetNstages_C",(TS,PetscInt),(ts,nstages));CHKERRQ(ierr);
+  ierr = PetscTryMethod(ts,"TSIRKSetNumStages_C",(TS,PetscInt),(ts,nstages));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@C
-  TSIRKGetNstages - Get the number of stages of IRK scheme
+  TSIRKGetNumStages - Get the number of stages of IRK scheme
 
   Logically collective
 
@@ -745,16 +762,16 @@ PetscErrorCode TSIRKSetNstages(TS ts,PetscInt nstages)
 
   Level: intermediate
 
-.seealso: TSIRKSetNstages(), TSIRK
+.seealso: TSIRKSetNumStages(), TSIRK
 @*/
-PetscErrorCode TSIRKGetNstages(TS ts,PetscInt *nstages)
+PetscErrorCode TSIRKGetNumStages(TS ts,PetscInt *nstages)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidIntPointer(nstages,2);
-  ierr = PetscTryMethod(ts,"TSIRKGetNstages_C",(TS,PetscInt*),(ts,nstages));CHKERRQ(ierr);
+  ierr = PetscTryMethod(ts,"TSIRKGetNumStages_C",(TS,PetscInt*),(ts,nstages));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -786,16 +803,17 @@ static PetscErrorCode TSIRKSetType_IRK(TS ts,TSIRKType irktype)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode TSIRKSetNstages_IRK(TS ts,PetscInt nstages)
+static PetscErrorCode TSIRKSetNumStages_IRK(TS ts,PetscInt nstages)
 {
   TS_IRK *irk = (TS_IRK*)ts->data;
 
   PetscFunctionBegin;
+  if (nstages<=0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"input argument, %d, out of range",nstages);
   irk->nstages = nstages;
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode TSIRKGetNstages_IRK(TS ts,PetscInt *nstages)
+static PetscErrorCode TSIRKGetNumStages_IRK(TS ts,PetscInt *nstages)
 {
   TS_IRK *irk = (TS_IRK*)ts->data;
 
@@ -818,8 +836,8 @@ static PetscErrorCode TSDestroy_IRK(TS ts)
   ierr = PetscFree(ts->data);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKSetType_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKGetType_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKSetNstages_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKGetNstages_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKSetNumStages_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKGetNumStages_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -868,8 +886,8 @@ PETSC_EXTERN PetscErrorCode TSCreate_IRK(TS ts)
 
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKSetType_C",TSIRKSetType_IRK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKGetType_C",TSIRKGetType_IRK);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKSetNstages_C",TSIRKSetNstages_IRK);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKGetNstages_C",TSIRKGetNstages_IRK);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKSetNumStages_C",TSIRKSetNumStages_IRK);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSIRKGetNumStages_C",TSIRKGetNumStages_IRK);CHKERRQ(ierr);
   /* 3-stage IRK_Gauss is the default */
   ierr = PetscNew(&irk->tableau);CHKERRQ(ierr);
   irk->nstages = 3;
