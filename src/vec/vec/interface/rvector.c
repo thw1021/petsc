@@ -2,8 +2,6 @@
      Provides the interface functions for vector operations that have PetscScalar/PetscReal in the signature
    These are the vector functions the user calls.
 */
-#include "petsc/private/sfimpl.h"
-#include "petscsystypes.h"
 #include <petsc/private/vecimpl.h>       /*I  "petscvec.h"   I*/
 #if defined(PETSC_HAVE_CUDA)
 #include <../src/vec/vec/impls/dvecimpl.h>
@@ -229,6 +227,76 @@ PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
   if (type!=NORM_1_AND_2) {
     ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],*val);CHKERRQ(ierr);
   }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecGetNormArray(Vec x,NormType type,PetscReal **a)
+{
+  PetscErrorCode ierr;
+  PetscInt       offset = 0;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (!a) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # 3");
+  if (x->ops->getnormarray) {
+    ierr = (*x->ops->getnormarray)(x,type,a);CHKERRQ(ierr);
+  } else {
+    /* Compute offset of this norm in normArray_h[] */
+    if (type == NORM_1 || type == NORM_1_AND_2)        offset = 0;
+    else if (type == NORM_2 || type == NORM_FROBENIUS) offset = 1;
+    else if (type == NORM_INFINITY)                    offset = 2;
+    *a = &x->normArray_h[offset];
+  }
+  PetscFunctionReturn(0);
+}
+
+/* Copy norm copy from a to b, here b is on host, but a, depending on vector type and cpu/gpu binding, might be on device */
+PetscErrorCode  VecNormCopy(Vec x,NormType type,const PetscReal *a,PetscReal *b)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (!a) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # 3");
+  PetscValidRealPointer(b,4);
+  if (x->ops->normcopy) {
+    ierr = (*x->ops->normcopy)(x,type,a,b);CHKERRQ(ierr);
+  } else { /* a is on host */
+    b[0] = a[0];
+    if (type == NORM_1_AND_2) b[1] = a[1];
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscReal *val)
+{
+  /* PetscBool      flg; */
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  if (!val) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # 3");
+  PetscValidType(x,1);
+
+  /*
+   * Cached data?
+   */
+  /*
+  if (type!=NORM_1_AND_2) {
+    ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[type],*val,flg);CHKERRQ(ierr);
+    if (flg) PetscFunctionReturn(0);
+  }
+  */
+  ierr = PetscLogEventBegin(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
+  ierr = (*x->ops->norm_async)(x,type,val);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
+  /*
+  if (type!=NORM_1_AND_2) {
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],*val);CHKERRQ(ierr);
+  }
+  */
   PetscFunctionReturn(0);
 }
 
@@ -599,6 +667,31 @@ PetscErrorCode  VecAXPY(Vec y,PetscScalar alpha,Vec x)
   ierr = VecLockReadPush(x);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
   ierr = (*y->ops->axpy)(y,alpha,x);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  ierr = VecLockReadPop(x);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecAXPYAsync(Vec y,PetscScalar *alpha,Vec x)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,3);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
+  PetscValidType(x,3);
+  PetscValidType(y,1);
+  if (!alpha) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # 2");
+  PetscCheckSameTypeAndComm(x,3,y,1);
+  VecCheckSameSize(x,1,y,3);
+  if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
+  /* PetscValidLogicalCollectiveScalar(y,alpha,2); Not feasible if on device */
+  ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
+
+  ierr = VecLockReadPush(x);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  ierr = (*y->ops->axpy_async)(y,alpha,x);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
   ierr = VecLockReadPop(x);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);

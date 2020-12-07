@@ -45,6 +45,12 @@ PetscErrorCode VecDestroy_MPICUDA(Vec v)
     }
     ierr = PetscFree(v->spptr);CHKERRQ(ierr);
   }
+  if (v->normArray_d) {
+   #if defined(PETSC_HAVE_NVSHMEM)
+    if (vecmpi->use_nvshmem) {ierr = VecFreeNormArray_MPICUDA_NVSHMEM(v);CHKERRQ(ierr);} else
+   #endif
+    {err = cudaFree(v->normArray_d);CHKERRCUDA(err);}
+  }
   ierr = VecDestroy_MPI(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -77,6 +83,36 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
     temp[1] = temp[1]*temp[1];
     ierr = MPIU_Allreduce(temp,z,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
     z[1] = PetscSqrtReal(z[1]);
+  }
+  PetscFunctionReturn(0);
+}
+
+__global__ static void PetscCudaSqr(PetscReal *alpha)  {PetscReal val = *alpha;  *alpha = val*val;}
+__global__ static void PetscCudaSqrt(PetscReal *alpha) {PetscReal val = *alpha;  *alpha = sqrt(val);}
+
+PetscErrorCode VecNormAsync_MPICUDA(Vec xin,NormType type,PetscReal *z)
+{
+  PetscErrorCode ierr;
+  MPI_Comm       comm;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)xin,&comm);CHKERRQ(ierr);
+  /* Find the local part */
+  ierr = VecNormAsync_SeqCUDA(xin,type,z);CHKERRQ(ierr);
+  if (type == NORM_2 || type == NORM_FROBENIUS) {
+    PetscCudaSqr<<<1,1>>>(z);
+    ierr = MPIU_Allreduce(MPI_IN_PLACE,z,1,MPIU_REAL,MPIU_SUM,comm);CHKERRQ(ierr);
+    PetscCudaSqrt<<<1,1>>>(z);
+  } else if (type == NORM_1) {
+    /* Find the global sum */
+    ierr = MPIU_Allreduce(MPI_IN_PLACE,z,1,MPIU_REAL,MPIU_SUM,comm);CHKERRQ(ierr);
+  } else if (type == NORM_INFINITY) {
+    /* Find the global max */
+    ierr = MPIU_Allreduce(MPI_IN_PLACE,z,1,MPIU_REAL,MPIU_MAX,comm);CHKERRQ(ierr);
+  } else if (type == NORM_1_AND_2) {
+    PetscCudaSqr<<<1,1>>>(z+1);
+    ierr = MPIU_Allreduce(MPI_IN_PLACE,z,2,MPIU_REAL,MPIU_SUM,comm);CHKERRQ(ierr);
+    PetscCudaSqrt<<<1,1>>>(z+1);
   }
   PetscFunctionReturn(0);
 }
@@ -365,6 +401,7 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->getlocalvectorread     = NULL;
     V->ops->restorelocalvectorread = NULL;
     V->ops->getarraywrite          = NULL;
+    V->ops->normcopy               = NULL;
   } else {
     V->ops->dotnorm2               = VecDotNorm2_MPICUDA;
     V->ops->waxpy                  = VecWAXPY_SeqCUDA;
@@ -402,6 +439,19 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->restorearray           = VecRestoreArray_SeqCUDA;
     V->ops->getarrayandmemtype        = VecGetArrayAndMemType_SeqCUDA;
     V->ops->restorearrayandmemtype    = VecRestoreArrayAndMemType_SeqCUDA;
+   #if defined(PETSC_HAVE_NVSHMEM)
+    Vec_MPI *vecmpi = (Vec_MPI*)V->data;
+    if (vecmpi->use_nvshmem) {
+      V->ops->getnormarray         = VecGetNormArray_MPICUDA_NVSHMEM;
+      V->ops->norm_async           = VecNormAsync_MPICUDA_NVSHMEM;
+    } else
+   #endif
+    {
+      V->ops->getnormarray         = VecGetNormArray_SeqCUDA;
+      V->ops->norm_async           = VecNormAsync_MPICUDA;
+    }
+    V->ops->normcopy               = VecNormCopy_SeqCUDA;
+    V->ops->axpy_async             = VecAXPYAsync_SeqCUDA;
   }
   PetscFunctionReturn(0);
 }
@@ -414,6 +464,18 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
   PetscFunctionBegin;
   ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)vv,VECMPICUDA);CHKERRQ(ierr);
+
+#if defined(PETSC_HAVE_NVSHMEM)
+  PetscMPIInt    result;
+  Vec_MPI        *vecmpi = (Vec_MPI*)vv->data;
+
+  vecmpi->use_nvshmem = PETSC_TRUE;
+  ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem",&vecmpi->use_nvshmem,NULL);CHKERRQ(ierr);
+  if (vecmpi->use_nvshmem) {
+    ierr = MPI_Comm_compare(PETSC_COMM_WORLD,PetscObjectComm((PetscObject)vv),&result);CHKERRMPI(ierr);
+    if (result != MPI_IDENT && result != MPI_CONGRUENT) vecmpi->use_nvshmem = PETSC_FALSE;
+  }
+ #endif
 
   ierr = VecBindToCPU_MPICUDA(vv,PETSC_FALSE);CHKERRQ(ierr);
   vv->ops->bindtocpu = VecBindToCPU_MPICUDA;

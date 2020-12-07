@@ -498,11 +498,13 @@ PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,PetscInt nghost,const
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr           = PetscNewLog(v,&s);CHKERRQ(ierr);
-  v->data        = (void*)s;
-  ierr           = PetscMemcpy(v->ops,&DvOps,sizeof(DvOps));CHKERRQ(ierr);
-  s->nghost      = nghost;
-  v->petscnative = PETSC_TRUE;
+  ierr                 = PetscNewLog(v,&s);CHKERRQ(ierr);
+  v->data              = (void*)s;
+  ierr                 = PetscMemcpy(v->ops,&DvOps,sizeof(DvOps));CHKERRQ(ierr);
+  v->ops->norm_async   = VecNorm_MPI;
+  v->ops->axpy_async   = VecAXPYAsync_Seq;
+  s->nghost            = nghost;
+  v->petscnative       = PETSC_TRUE;
   if (array) v->offloadmask = PETSC_OFFLOAD_CPU;
 
   ierr = PetscLayoutSetUp(v->map);CHKERRQ(ierr);

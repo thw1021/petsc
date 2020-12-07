@@ -50,7 +50,7 @@ PETSC_INTERN PetscErrorCode VecPointwiseMax_Seq(Vec,Vec,Vec);
 PETSC_INTERN PetscErrorCode VecPointwiseMaxAbs_Seq(Vec,Vec,Vec);
 PETSC_INTERN PetscErrorCode VecPointwiseMin_Seq(Vec,Vec,Vec);
 PETSC_INTERN PetscErrorCode VecPointwiseDivide_Seq(Vec,Vec,Vec);
-
+PETSC_INTERN PetscErrorCode VecAXPYAsync_Seq(Vec,PetscScalar*,Vec);
 PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec);
 PETSC_INTERN PetscErrorCode VecCreate_Seq_Private(Vec,const PetscScalar[]);
 

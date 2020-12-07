@@ -100,6 +100,10 @@ struct _VecOps {
   PetscErrorCode (*getarrayreadandmemtype)(Vec,const PetscScalar**,PetscMemType*);
   PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**);
   PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**);
+  PetscErrorCode (*getnormarray)(Vec,NormType,PetscReal**);
+  PetscErrorCode (*norm_async)(Vec,NormType,PetscReal*);
+  PetscErrorCode (*axpy_async)(Vec,PetscScalar*,Vec);
+  PetscErrorCode (*normcopy)(Vec,NormType,const PetscReal*,PetscReal*);
 };
 
 /*
@@ -145,11 +149,13 @@ struct _p_Vec {
   PetscBool              petscnative;  /* means the ->data starts with VECHEADER and can use VecGetArrayFast()*/
   PetscInt               lock;         /* lock state. vector can be free (=0), locked for read (>0) or locked for write(<0) */
   PetscOffloadMask       offloadmask;  /* a mask which indicates where the valid vector data is (GPU, CPU or both) */
+  PetscReal              normArray_h[3]; /* norm storage on host, automatically zero'ed at initialization */
 #if defined(PETSC_HAVE_DEVICE)
   void                   *spptr; /* this is the special pointer to the array on the GPU */
   PetscBool              boundtocpu;
   size_t                 minimum_bytes_pinned_memory; /* minimum data size in bytes for which pinned memory will be allocated */
   PetscBool              pinned_memory; /* PETSC_TRUE if the current host allocation has been made from pinned memory. */
+  PetscReal              *normArray_d;   /* pointer to norm array on device. If used, must be calloc()'ed */
 #endif
 };
 
