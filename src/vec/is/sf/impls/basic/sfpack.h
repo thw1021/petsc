@@ -286,8 +286,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamAfterPackRootData(PetscS
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
 
   PetscFunctionBegin;
-  /* Do nothing if we use stream aware mpi || has nothing for remote */
-  if (sf->use_stream_aware_mpi || link->rootmtype != PETSC_MEMTYPE_DEVICE || !bas->rootbuflen[PETSCSF_REMOTE]) PetscFunctionReturn(0);
+  /* Do nothing if we use stream aware communication || has nothing for remote */
+  if (link->use_nvshmem || sf->use_stream_aware_mpi || link->rootmtype != PETSC_MEMTYPE_DEVICE || !bas->rootbuflen[PETSCSF_REMOTE]) PetscFunctionReturn(0);
   /* If we called a packing kernel || we async-copied rootdata from device to host || No cudaDeviceSynchronize was called (since default stream is assumed) */
   if (!link->rootdirect[PETSCSF_REMOTE] || !sf->use_gpu_aware_mpi || sf->use_default_stream) {ierr = (*link->d_SyncStream)(link);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
@@ -298,7 +298,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamAfterPackLeafData(PetscS
   PetscErrorCode ierr;
   PetscFunctionBegin;
   /* See comments above */
-  if (sf->use_stream_aware_mpi || link->leafmtype != PETSC_MEMTYPE_DEVICE || !sf->leafbuflen[PETSCSF_REMOTE]) PetscFunctionReturn(0);
+  if (link->use_nvshmem || sf->use_stream_aware_mpi || link->leafmtype != PETSC_MEMTYPE_DEVICE || !sf->leafbuflen[PETSCSF_REMOTE]) PetscFunctionReturn(0);
   if (!link->leafdirect[PETSCSF_REMOTE] || !sf->use_gpu_aware_mpi || sf->use_default_stream) {ierr = (*link->d_SyncStream)(link);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
@@ -349,7 +349,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAware
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
 
   PetscFunctionBegin;
-  if (link->rootmtype == PETSC_MEMTYPE_DEVICE && (link->rootmtype_mpi != link->rootmtype) && bas->rootbuflen[PETSCSF_REMOTE]) {
+  if (!link->use_nvshmem && link->rootmtype == PETSC_MEMTYPE_DEVICE && (link->rootmtype_mpi != link->rootmtype) && bas->rootbuflen[PETSCSF_REMOTE]) {
     void  *h_buf = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST];
     void  *d_buf = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
     size_t count = bas->rootbuflen[PETSCSF_REMOTE]*link->unitbytes;
@@ -369,7 +369,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAware
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (link->leafmtype == PETSC_MEMTYPE_DEVICE && (link->leafmtype_mpi != link->leafmtype) && sf->leafbuflen[PETSCSF_REMOTE]) {
+  if (!link->use_nvshmem && link->leafmtype == PETSC_MEMTYPE_DEVICE && (link->leafmtype_mpi != link->leafmtype) && sf->leafbuflen[PETSCSF_REMOTE]) {
     void  *h_buf = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST];
     void  *d_buf = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
     size_t count = sf->leafbuflen[PETSCSF_REMOTE]*link->unitbytes;
@@ -399,13 +399,14 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAware
 Input arguments:
   +sf    - StarForest
   .link  - The link, which provides the stream for the async memcpy (In SF, we make all GPU operations asynchronous to avoid unexpected pipeline stalls)
-  .scope - Which part of the indices? (PETSCSF_LOCAL or PETSCSF_REMOTE)
   .mtype - In what type of memory? (PETSC_MEMTYPE_DEVICE or PETSC_MEMTYPE_HOST)
+  -scope - Which part of the indices? (PETSCSF_LOCAL or PETSCSF_REMOTE)
 
  Output arguments:
   +count   - Count of indices
   .start   - The first index (only useful when indices is NULL)
-  -indices - indices of roots for pack/unpack. NULL means indices are contiguous
+  .opt     - Packing optimizations
+  -indices - Indices of roots for pack/unpack. NULL means indices are contiguous
  */
 PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkGetRootPackOptAndIndices(PetscSF sf,PetscSFLink link,PetscMemType mtype,PetscSFScope scope,PetscInt *count,PetscInt *start,PetscSFPackOpt *opt,const PetscInt **indices)
 {

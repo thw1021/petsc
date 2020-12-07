@@ -201,7 +201,7 @@ static PetscErrorCode PetscSFBcastAndOpBegin_Basic(PetscSF sf,MPI_Datatype unit,
   PetscSFLink       link = NULL;
 
   PetscFunctionBegin;
-  /* Create a communication link, which provides buffers & MPI requests etc */
+  /* Create a communication link, which provides buffers & MPI requests (when use MPI) etc */
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_BCAST,&link);CHKERRQ(ierr);
   ierr = PetscSFLinkPostIrecvIfUseMPI(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
