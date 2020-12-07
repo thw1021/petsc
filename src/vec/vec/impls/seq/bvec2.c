@@ -836,11 +836,11 @@ PetscErrorCode VecCreate_Seq_Private(Vec v,const PetscScalar array[])
   PetscFunctionBegin;
   ierr = PetscNewLog(v,&s);CHKERRQ(ierr);
   ierr = PetscMemcpy(v->ops,&DvOps,sizeof(DvOps));CHKERRQ(ierr);
-
-  v->data            = (void*)s;
-  v->petscnative     = PETSC_TRUE;
-  s->array           = (PetscScalar*)array;
-  s->array_allocated = NULL;
+  v->ops->norm_async        = VecNorm_Seq;
+  v->data                   = (void*)s;
+  v->petscnative            = PETSC_TRUE;
+  s->array                  = (PetscScalar*)array;
+  s->array_allocated        = NULL;
   if (array) v->offloadmask = PETSC_OFFLOAD_CPU;
 
   ierr = PetscLayoutSetUp(v->map);CHKERRQ(ierr);

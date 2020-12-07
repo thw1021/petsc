@@ -411,6 +411,25 @@ PetscErrorCode VecRestoreArrayAndMemType_SeqCUDA(Vec v,PetscScalar** a)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecGetNormArray_SeqCUDA(Vec xin,NormType type,PetscReal **alpha)
+{
+  cudaError_t cerr;
+  PetscInt    offset = 0;
+
+  PetscFunctionBegin;
+  if (!xin->normArray_d) {
+    cerr = cudaMalloc((void**)&xin->normArray_d,sizeof(PetscReal)*3);CHKERRCUDA(cerr);
+    cerr = cudaMemsetAsync(xin->normArray_d,0,sizeof(PetscReal)*3,NULL);CHKERRCUDA(cerr);
+  }
+  /* Compute offset of this norm in normArray[] */
+  if (type == NORM_1 || type == NORM_1_AND_2)        offset = 0;
+  else if (type == NORM_2 || type == NORM_FROBENIUS) offset = 1;
+  else if (type == NORM_INFINITY)                    offset = 2;
+
+  *alpha = &xin->normArray_d[offset];
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
 {
   PetscErrorCode ierr;
@@ -454,6 +473,9 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->getlocalvectorread     = NULL;
     V->ops->restorelocalvectorread = NULL;
     V->ops->getarraywrite          = NULL;
+    V->ops->getnormarray           = NULL;
+    V->ops->norm_async             = VecNorm_Seq;
+    V->ops->axpy_async             = VecAXPYAsync_Seq;
   } else {
     V->ops->dot                    = VecDot_SeqCUDA;
     V->ops->norm                   = VecNorm_SeqCUDA;
@@ -492,6 +514,10 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->restorearray           = VecRestoreArray_SeqCUDA;
     V->ops->getarrayandmemtype     = VecGetArrayAndMemType_SeqCUDA;
     V->ops->restorearrayandmemtype = VecRestoreArrayAndMemType_SeqCUDA;
+    V->ops->getnormarray           = VecGetNormArray_SeqCUDA;
+    V->ops->norm_async             = VecNormAsync_SeqCUDA;
+    V->ops->normcopy               = VecNormCopy_SeqCUDA;
+    V->ops->axpy_async             = VecAXPYAsync_SeqCUDA;
   }
   PetscFunctionReturn(0);
 }

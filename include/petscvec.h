@@ -244,6 +244,12 @@ PETSC_EXTERN PetscErrorCode VecAbs(Vec);
 PETSC_EXTERN PetscErrorCode VecDuplicate(Vec,Vec*);
 PETSC_EXTERN PetscErrorCode VecDuplicateVecs(Vec,PetscInt,Vec*[]);
 PETSC_EXTERN PetscErrorCode VecDestroyVecs(PetscInt, Vec*[]);
+
+PETSC_EXTERN PetscErrorCode VecGetNormArray(Vec,NormType,PetscReal**);
+PETSC_EXTERN PetscErrorCode VecNormAsync(Vec,NormType,PetscReal*);
+PETSC_EXTERN PetscErrorCode VecAXPYAsync(Vec,PetscScalar*,Vec);
+PETSC_EXTERN PetscErrorCode VecNormCopy(Vec,NormType,const PetscReal*,PetscReal*);
+
 PETSC_EXTERN PetscErrorCode VecStrideNormAll(Vec,NormType,PetscReal[]);
 PETSC_EXTERN PetscErrorCode VecStrideMaxAll(Vec,PetscInt [],PetscReal []);
 PETSC_EXTERN PetscErrorCode VecStrideMinAll(Vec,PetscInt [],PetscReal []);
@@ -660,6 +666,8 @@ PETSC_EXTERN PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm,PetscInt,PetscIn
 PETSC_EXTERN PetscErrorCode VecCreateMPICUDA(MPI_Comm,PetscInt,PetscInt,Vec*);
 PETSC_EXTERN PetscErrorCode VecCreateMPICUDAWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,Vec*);
 PETSC_EXTERN PetscErrorCode VecCreateMPICUDAWithArrays(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,const PetscScalar*,Vec*);
+PETSC_EXTERN PetscErrorCode VecDeviceGetNormArray(Vec,NormType,PetscReal**);
+PETSC_EXTERN PetscErrorCode VecDeviceNorm(Vec,NormType,PetscReal**);
 #endif
 
 PETSC_EXTERN PetscErrorCode VecNestGetSubVecs(Vec,PetscInt*,Vec**);

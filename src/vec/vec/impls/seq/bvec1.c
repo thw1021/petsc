@@ -86,6 +86,15 @@ PetscErrorCode VecAXPY_Seq(Vec yin,PetscScalar alpha,Vec xin)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecAXPYAsync_Seq(Vec yin,PetscScalar *alpha,Vec xin)
+{
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  ierr = VecAXPY_Seq(yin,*alpha,xin);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode VecAXPBY_Seq(Vec yin,PetscScalar a,PetscScalar b,Vec xin)
 {
   PetscErrorCode    ierr;

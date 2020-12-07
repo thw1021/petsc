@@ -56,6 +56,16 @@ PETSC_INTERN PetscErrorCode VecSetRandom_SeqCUDA_Private(Vec xin,PetscRandom r);
 PETSC_INTERN PetscErrorCode VecDestroy_SeqCUDA_Private(Vec v);
 PETSC_INTERN PetscErrorCode VecResetArray_SeqCUDA_Private(Vec vin);
 
+PETSC_INTERN PetscErrorCode VecGetNormArray_SeqCUDA(Vec,NormType,PetscReal**);
+PETSC_INTERN PetscErrorCode VecNormAsync_SeqCUDA(Vec,NormType,PetscReal*);
+PETSC_INTERN PetscErrorCode VecNormCopy_SeqCUDA(Vec,NormType,const PetscReal*,PetscReal*);
+PETSC_INTERN PetscErrorCode VecAXPYAsync_SeqCUDA(Vec,PetscScalar*,Vec);
+#if defined(PETSC_HAVE_NVSHMEM)
+PETSC_INTERN PetscErrorCode VecGetNormArray_MPICUDA_NVSHMEM(Vec,NormType,PetscReal**);
+PETSC_INTERN PetscErrorCode VecNormAsync_MPICUDA_NVSHMEM(Vec,NormType,PetscReal*);
+PETSC_INTERN PetscErrorCode VecFreeNormArray_MPICUDA_NVSHMEM(Vec);
+#endif
+
 /* complex single */
 #if defined(PETSC_USE_COMPLEX)
 #if defined(PETSC_USE_REAL_SINGLE)
