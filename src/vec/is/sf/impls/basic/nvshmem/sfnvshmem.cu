@@ -1,7 +1,4 @@
-#include "petsc/private/sfimpl.h"
-#include "petscerror.h"
-#include "petscsys.h"
-#include "petscsystypes.h"
+#include <petsc/private/cudavecimpl.h>
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 #include <mpi.h>
 #include <nvshmem.h>
@@ -79,8 +76,6 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
     link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
   }
 
-  link->rootdata                   = rootdata; /* root/leafdata are keys to look up links in PetscSFXxxEnd */
-  link->leafdata                   = leafdata;
   link->rootmtype                  = PETSC_MEMTYPE_DEVICE; /* Only need 0/1-based mtype from now on */
   link->leafmtype                  = PETSC_MEMTYPE_DEVICE;
   link->rootdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* For the remote part, we always need root/leaf buffers allocated by nvshmem_malloc*/
@@ -91,6 +86,8 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
   link->Destroy                    = PetscSFLinkDestroy_NVSHMEM;
 
 found:
+  link->rootdata  = rootdata; /* root/leafdata are keys to look up links in PetscSFXxxEnd */
+  link->leafdata  = leafdata;
   link->next      = bas->inuse;
   bas->inuse      = link;
   *mylink         = link;
@@ -179,36 +176,61 @@ static PetscErrorCode PetscSFSetUp_Basic_NVSHMEM(PetscSF sf)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscNvshmemInitializeCheck(void)
+{
+  PetscErrorCode   ierr;
+
+  PetscFunctionBegin;
+  if (!PetscNvshmemInitialized) { /* Note NVSHMEM does not provide a routine to check whether it is initialized */
+    nvshmemx_init_attr_t attr;
+    attr.mpi_comm = &PETSC_COMM_WORLD;
+    ierr = nvshmemx_init_attr(NVSHMEMX_INIT_WITH_MPI_COMM,&attr);CHKERRQ(ierr);
+    PetscNvshmemInitialized = PETSC_TRUE;
+    PetscBeganNvshmem       = PETSC_TRUE;
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF sf,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,const void *leafdata,PetscBool *use_nvshmem)
 {
   PetscErrorCode   ierr;
   MPI_Comm         comm;
   PetscBool        isBasic;
-  PetscInt         allCuda;
   PetscMPIInt      result = MPI_UNEQUAL;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
-  /* Check if the sf is feasible for NVSHMEM, if we have not checked yet */
-  if (sf->try_nvshmem && !sf->checked_nvshmem_feasibility) {
+  /* Check if the sf is eligible for NVSHMEM, if we have not checked yet.
+     Note the check result <use_nvshmem> must be the same over comm, since an SFLink must be collectively either NVSHMEM or MPI.
+  */
+  if (sf->use_nvshmem && !sf->checked_nvshmem_eligibility) {
     /* Only use NVSHMEM for SFBASIC on PETSC_COMM_WORLD  */
     ierr = PetscObjectTypeCompare((PetscObject)sf,PETSCSFBASIC,&isBasic);CHKERRQ(ierr);
     if (isBasic) {ierr = MPI_Comm_compare(PETSC_COMM_WORLD,comm,&result);CHKERRMPI(ierr);}
-    if (!isBasic || (result != MPI_IDENT && result != MPI_CONGRUENT)) sf->try_nvshmem = PETSC_FALSE; /* If not feasible, clear the flag so that we don't try again */
-    sf->checked_nvshmem_feasibility = PETSC_TRUE; /* If feasible, don't do above check again */
+    if (!isBasic || (result != MPI_IDENT && result != MPI_CONGRUENT)) sf->use_nvshmem = PETSC_FALSE; /* If not eligible, clear the flag so that we don't try again */
+
+    /* Do further check: If on a rank, both rootdata and leafdata are NULL, we would think they are PETSC_MEMTYPE_CUDA (or HOST)
+       and then use NVSHMEM. But if root/leafmtypes on other ranks are PETSC_MEMTYPE_HOST (or DEVICE), this would lead to
+       inconsistency on the return value <use_nvshmem>. To be safe, we simply disable nvshmem on these rare SFs.
+    */
+    if (sf->use_nvshmem) {
+      PetscInt hasNullRank = (!rootdata && !leafdata) ? 1 : 0;
+      ierr = MPI_Allreduce(MPI_IN_PLACE,&hasNullRank,1,MPIU_INT,MPI_LOR,comm);CHKERRMPI(ierr);
+      if (hasNullRank) sf->use_nvshmem = PETSC_FALSE;
+    }
+    sf->checked_nvshmem_eligibility = PETSC_TRUE; /* If eligible, don't do above check again */
   }
 
-  if (sf->try_nvshmem) {
-    allCuda = (!rootdata || rootmtype == PETSC_MEMTYPE_CUDA) && (!leafdata || leafmtype == PETSC_MEMTYPE_CUDA) ? 1 : 0;
-    ierr = MPI_Allreduce(MPI_IN_PLACE,&allCuda,1,MPIU_INT,MPI_LAND,comm);CHKERRMPI(ierr);
+  /* Check if rootmtype and leafmtype collectively are PETSC_MEMTYPE_CUDA */
+  if (sf->use_nvshmem) {
+    PetscInt oneCuda = (!rootdata || rootmtype == PETSC_MEMTYPE_CUDA) && (!leafdata || leafmtype == PETSC_MEMTYPE_CUDA) ? 1 : 0; /* Do I use cuda for both root&leafmtype? */
+    PetscInt allCuda = oneCuda; /* Assume the same for all ranks. But if not, in opt mode, return value <use_nvshmem> won't be collective! */
+   #if defined(PETSC_USE_DEBUG)  /* Check in dbg mode. Note MPI_Allreduce is expensive and GPU-blocking */
+    ierr = MPI_Allreduce(&oneCuda,&allCuda,1,MPIU_INT,MPI_LAND,comm);CHKERRMPI(ierr);
+    if (allCuda != oneCuda) SETERRQ(comm,PETSC_ERR_SUP,"root/leaf mtypes are inconsistent among ranks, which may lead to SF nvshmem failure in opt mode. Add -use_nvshmem 0 to disable it.");
+   #endif
     if (allCuda) {
-      if (!PetscNvshmemInitialized) { /* Note NVSHMEM does not a routine to check whether it is initialized */
-        nvshmemx_init_attr_t attr;
-        attr.mpi_comm = &PETSC_COMM_WORLD;
-        ierr = nvshmemx_init_attr(NVSHMEMX_INIT_WITH_MPI_COMM,&attr);CHKERRQ(ierr);
-        PetscNvshmemInitialized = PETSC_TRUE;
-        PetscBeganNvshmem       = PETSC_TRUE;
-      }
+      ierr = PetscNvshmemInitializeCheck();CHKERRQ(ierr);
       if (!sf->setup_nvshmem) { /* Set up nvshmem related fields on this SF on-demand */
         ierr = PetscSFSetUp_Basic_NVSHMEM(sf);CHKERRQ(ierr);
         sf->setup_nvshmem = PETSC_TRUE;
@@ -338,5 +360,87 @@ PetscErrorCode PetscNvshmemFinalize(void)
 {
   PetscFunctionBegin;
   nvshmem_finalize();
+  PetscFunctionReturn(0);
+}
+
+__global__ void PetscNvshmemNorm2(nvshmem_team_t team,float *alpha)
+{
+  alpha[0] = alpha[0]*alpha[0];
+  nvshmem_float_sum_reduce(team,alpha,alpha,1);
+  alpha[0] = sqrt(alpha[0]);
+}
+
+__global__ void PetscNvshmemNorm2(nvshmem_team_t team,double *alpha)
+{
+  alpha[0] = alpha[0]*alpha[0];
+  nvshmem_double_sum_reduce(team,alpha,alpha,1);
+  alpha[0] = sqrt(alpha[0]);
+}
+
+__global__ void PetscNvshmemSum(nvshmem_team_t team,float  *alpha) {nvshmem_float_sum_reduce(team,alpha,alpha,1);}
+__global__ void PetscNvshmemSum(nvshmem_team_t team,double *alpha) {nvshmem_double_sum_reduce(team,alpha,alpha,1);}
+
+__global__ void PetscNvshmemMax(nvshmem_team_t team,float  *alpha) {nvshmem_float_max_reduce(team,alpha,alpha,1);}
+__global__ void PetscNvshmemMax(nvshmem_team_t team,double *alpha) {nvshmem_double_max_reduce(team,alpha,alpha,1);}
+
+__global__ void PetscNvshmemNorm1And2(nvshmem_team_t team,float *alpha)
+{
+  alpha[1] = alpha[1]*alpha[1];
+  nvshmem_float_sum_reduce(team,alpha,alpha,2);
+  alpha[1] = sqrt(alpha[1]);
+}
+
+__global__ void PetscNvshmemNorm1And2(nvshmem_team_t team,double *alpha)
+{
+  alpha[1] = alpha[1]*alpha[1];
+  nvshmem_double_sum_reduce(team,alpha,alpha,2);
+  alpha[1] = sqrt(alpha[1]);
+}
+
+PetscErrorCode VecGetNormArray_MPICUDA_NVSHMEM(Vec xin,NormType type,PetscReal **alpha)
+{
+  PetscErrorCode          ierr;
+  PetscInt                offset;
+
+  PetscFunctionBegin;
+  ierr = PetscNvshmemInitializeCheck();CHKERRQ(ierr);
+  /* Must use zero the norms since some processes might have no vector entries */
+  if (!xin->normArray_d) {ierr = PetscNvshmemCalloc(3,sizeof(PetscReal),(void**)&xin->normArray_d);CHKERRQ(ierr);}
+  /* Compute offset of this norm in normArray[] */
+  if (type == NORM_1 || type == NORM_1_AND_2)        offset = 0;
+  else if (type == NORM_2 || type == NORM_FROBENIUS) offset = 1;
+  else if (type == NORM_INFINITY)                    offset = 2;
+
+  *alpha = &xin->normArray_d[offset];
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecFreeNormArray_MPICUDA_NVSHMEM(Vec xin)
+{
+  PetscErrorCode          ierr;
+  PetscFunctionBegin;
+  ierr = PetscNvshmemFree(xin->normArray_d);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/* The 'MPI' in 'MPICUDA' only means the vector is parallel. It does not mean we must use MPI for e.g., VecNorm */
+PetscErrorCode VecNormAsync_MPICUDA_NVSHMEM(Vec xin,NormType type,PetscReal *z)
+{
+  PetscErrorCode          ierr;
+  cudaError_t             cerr;
+  PetscInt                m = (type == NORM_1_AND_2) ? 2 : 1; /* count of norms */
+  PetscReal               *alpha;
+
+  PetscFunctionBegin;
+  /* Compute the local norm and then the global norm */
+  ierr = VecGetNormArray_MPICUDA_NVSHMEM(xin,type,&alpha);CHKERRQ(ierr);
+  ierr = VecNormAsync_SeqCUDA(xin,type,alpha);CHKERRQ(ierr);
+  if (type == NORM_2 || type == NORM_FROBENIUS) {PetscNvshmemNorm2<<<1,1>>>(NVSHMEM_TEAM_WORLD,alpha);}
+  else if (type == NORM_1)                      {PetscNvshmemSum<<<1,1>>>(NVSHMEM_TEAM_WORLD,alpha);}
+  else if (type == NORM_INFINITY)               {PetscNvshmemMax<<<1,1>>>(NVSHMEM_TEAM_WORLD,alpha);}
+  else if (type == NORM_1_AND_2)                {PetscNvshmemNorm1And2<<<1,1>>>(NVSHMEM_TEAM_WORLD,alpha);}
+
+  /* If user did not use the norm array provided by the vector, we need to do the extra copy */
+  if (z != alpha) {cerr = cudaMemcpyAsync(z,alpha,sizeof(PetscReal)*m,cudaMemcpyDeviceToDevice);CHKERRCUDA(cerr);}
   PetscFunctionReturn(0);
 }

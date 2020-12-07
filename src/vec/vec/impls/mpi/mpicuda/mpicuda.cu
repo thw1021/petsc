@@ -87,8 +87,8 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
   PetscFunctionReturn(0);
 }
 
-__global__ static void PetscCudaSqr(PetscReal *alpha)  {PetscReal val = *alpha;  *alpha = val*val;}
-__global__ static void PetscCudaSqrt(PetscReal *alpha) {PetscReal val = *alpha;  *alpha = sqrt(val);}
+__global__ static void PetscCudaSqr (PetscReal *a) {a[0] = a[0]*a[0];}
+__global__ static void PetscCudaSqrt(PetscReal *a) {a[0] = sqrt(a[0]);}
 
 PetscErrorCode VecNormAsync_MPICUDA(Vec xin,NormType type,PetscReal *z)
 {

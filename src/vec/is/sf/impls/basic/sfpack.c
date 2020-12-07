@@ -565,23 +565,25 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf,MPI_Datatype unit,PetscMemType x
 
   /* Look for free links in cache */
   for (p=&bas->avail; (link=*p); p=&link->next) {
-    ierr = MPIPetsc_Type_compare(unit,link->unit,&match);CHKERRQ(ierr);
-    if (match) {
-      /* If root/leafdata will be directly passed to MPI, test if the data used to initialized the MPI requests matches with the current.
-         If not, free old requests. New requests will be lazily init'ed until one calls PetscSFLinkGetMPIBuffersAndRequests().
-      */
-      if (rootdirect_mpi && sf->persistent && link->rootreqsinited[direction][rootmtype][1] && link->rootdatadirect[direction][rootmtype] != rootdata) {
-        reqs = link->rootreqs[direction][rootmtype][1]; /* Here, rootmtype = rootmtype_mpi */
-        for (i=0; i<nrootreqs; i++) {if (reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&reqs[i]);CHKERRQ(ierr);}}
-        link->rootreqsinited[direction][rootmtype][1] = PETSC_FALSE;
+    if (!link->use_nvshmem) { /* Only check with MPI links */
+      ierr = MPIPetsc_Type_compare(unit,link->unit,&match);CHKERRQ(ierr);
+      if (match) {
+        /* If root/leafdata will be directly passed to MPI, test if the data used to initialized the MPI requests matches with the current.
+           If not, free old requests. New requests will be lazily init'ed until one calls PetscSFLinkGetMPIBuffersAndRequests().
+        */
+        if (rootdirect_mpi && sf->persistent && link->rootreqsinited[direction][rootmtype][1] && link->rootdatadirect[direction][rootmtype] != rootdata) {
+          reqs = link->rootreqs[direction][rootmtype][1]; /* Here, rootmtype = rootmtype_mpi */
+          for (i=0; i<nrootreqs; i++) {if (reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&reqs[i]);CHKERRQ(ierr);}}
+          link->rootreqsinited[direction][rootmtype][1] = PETSC_FALSE;
+        }
+        if (leafdirect_mpi && sf->persistent && link->leafreqsinited[direction][leafmtype][1] && link->leafdatadirect[direction][leafmtype] != leafdata) {
+          reqs = link->leafreqs[direction][leafmtype][1];
+          for (i=0; i<nleafreqs; i++) {if (reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&reqs[i]);CHKERRQ(ierr);}}
+          link->leafreqsinited[direction][leafmtype][1] = PETSC_FALSE;
+        }
+        *p = link->next; /* Remove from available list */
+        goto found;
       }
-      if (leafdirect_mpi && sf->persistent && link->leafreqsinited[direction][leafmtype][1] && link->leafdatadirect[direction][leafmtype] != leafdata) {
-        reqs = link->leafreqs[direction][leafmtype][1];
-        for (i=0; i<nleafreqs; i++) {if (reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&reqs[i]);CHKERRQ(ierr);}}
-        link->leafreqsinited[direction][leafmtype][1] = PETSC_FALSE;
-      }
-      *p = link->next; /* Remove from available list */
-      goto found;
     }
   }
 
