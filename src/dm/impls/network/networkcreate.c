@@ -305,11 +305,14 @@ PetscErrorCode DMClone_Network(DM dm, DM *newdm)
 }
 
 /*MC
-  DMNETWORK = "network" - A DM object that encapsulates an unstructured network. The implementation is based on the DM object
-                          DMPlex that manages unstructured grids. Distributed networks use a non-overlapping partitioning of
-                          the edges. In the local representation, Vecs contain all unknowns in the interior and shared boundary.
-                          This is specified by a PetscSection object. Ownership in the global representation is determined by
-                          ownership of the underlying DMPlex points. This is specified by another PetscSection object.
+  DMNETWORK = "network" - A DM object that encapsulates an unstructured network.
+
+  Developer Notes:
+    The implementation is based on the DM object
+    DMPlex that manages unstructured grids. Distributed networks use a non-overlapping partitioning of
+    the edges. In the local representation, Vecs contain all unknowns in the interior and shared boundary.
+    This is specified by a PetscSection object. Ownership in the global representation is determined by
+    ownership of the underlying DMPlex points. This is specified by another PetscSection object.
 
   Level: intermediate
 
@@ -333,7 +336,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_Network(DM dm)
   network->nEdges    = 0;
   network->nsubnet   = 0;
 
-
   ierr = DMInitialize_Network(dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -351,6 +353,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Network(DM dm)
 
   Level: beginner
 
+.seealso: DMNETWORK, DM
 @*/
 PetscErrorCode DMNetworkCreate(MPI_Comm comm, DM *network)
 {
