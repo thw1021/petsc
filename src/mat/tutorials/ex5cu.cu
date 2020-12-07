@@ -1,15 +1,16 @@
-static char help[] = "Serial test of Cuda matrix assemble with 1D Laplacian.\n\n";
+static char help[] = "Test of Cuda matrix assemble with 1D Laplacian.\n\n";
 
-// This a minimal example of the use of the Cuda MatAIJ metadata for assembly.
+// This a minimal example of the use of the Cuda and Kokkos MatAIJ metadata for assembly.
 //
-// The matrix must be a type 'cusparse' and must first be assembled to get the correct
-// nonzero patern, which is created in MatAssemblyEnd on the host. Next, get a
+// The matrix must be a type 'aijcusparse' or 'aijkokkos' and must first be assembled
+// to get the AIJ metadata, which is created in MatAssemblyEnd on the host. Next, get a
 // pointer to simple CSR mirror (PetscSplitCSRDataStructure) of the matrix data on
-// the device with MatCUSPARSEGetDeviceMatWrite. Then use this object to populate
+// the device with Mat[CUSPARSE/Kokkos]GetDeviceMatWrite. Then use this object to populate
 // the matrix on the device with the standard MatSetValues for the device
 // (MatSetValuesDevice). Finaly one calls MatAssemblyBegin/End on the host and the
 // matrix is ready to use on the device without matrix data movement between the
-// host and device.
+// host and device. N.B., after MatXGetDeviceMatWrite has been called you can not call
+// MatSetValues (Host) again.
 
 #include <petscconf.h>
 #include <petscmat.h>
@@ -65,7 +66,7 @@ int main(int argc,char **args)
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
 
   ierr = PetscLogEventRegister("GPU operator", MAT_CLASSID, &event);CHKERRQ(ierr);
-  ierr = MatCreateAIJCUSPARSE(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,N,N,nz,NULL,nz-1,NULL,&A);CHKERRQ(ierr);
+  ierr = MatCreate(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,N,N,nz,NULL,nz-1,NULL,&A);CHKERRQ(ierr);
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
   ierr = MatCreateVecs(A,&x,&y);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
@@ -110,13 +111,13 @@ int main(int argc,char **args)
 
    test:
       suffix: 0
-      args: -n 11 -vec_view
+      args: -n 11 -vec_view -dm_mat_type aijkokkos -dm_vec_type kokkos -info :mat
       nsize:  2
 
    test:
       suffix: gpu_assemble
       requires: cuda
-      args: -n 11 -vec_view -dm_landau_device_type kokkos -dm_landau_gpu_assembly true -dm_mat_type aijcusparse -dm_vec_type cuda
+      args: -n 11 -vec_view -dm_landau_device_type kokkos -dm_landau_gpu_assembly true -dm_mat_type aijcusparse -dm_vec_type cuda -info :mat
       nsize:  2
 
 TEST*/
