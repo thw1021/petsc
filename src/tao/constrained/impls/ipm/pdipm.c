@@ -768,7 +768,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
           pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,40));
       }
       /* I dont know if this is the proper check for reducing deltaw,
-        it may be defult reduce deltaw check with factor, increase if needed then search.*/
+        original alg. tried reduce deltaw checked by refactor, then increase if fail until match.*/
       if (nneg < pdipm->Nce + pdipm->Nci)
       {
           pdipm->deltaw = PetscMax(pdipm->deltaw/3,PetscPowReal(10,-20));
