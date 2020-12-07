@@ -35,7 +35,7 @@ At each time step, we solve                                         \n\
  [ -- I \\otimes A^{-1} - J \\otimes I ] U = -- u^n \\otimes A^{-1} \n\
  [ dt                                  ]     dt                     \n\
                                                                     \n\
-  where A is the Butcher tableaux of the implicit                   \n\
+  where A is the Butcher tableau of the implicit                    \n\
   Runge-Kutta method,                                               \n\
                                                                     \n\
 with MATKAIJ and KSP.                                               \n\
@@ -227,6 +227,9 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat J,Mat Jpre,void *c
 
   test:
     suffix: 2
-    args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts__type irk -ts_irk_nstages 4 -ksp_gmres_restart 100
+    args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 3
 
+  test:
+    suffix: 3
+    args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 3 -ksp_view_final_residual -ksp_hpddm_type bgcrodr
 TEST*/
