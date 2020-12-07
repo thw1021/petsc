@@ -36,7 +36,7 @@ static PetscErrorCode  PetscLoadDynamicLibrary(const char *name,PetscBool  *foun
 }
 #endif
 
-#if !defined(PETSC_USE_SHARED_LIBRARIES) && defined(PETSC_USE_SINGLE_LIBRARY)
+#if defined(PETSC_USE_SINGLE_LIBRARY) && !(defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES))
 PETSC_EXTERN PetscErrorCode AOInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscSFInitializePackage(void);
 #if !defined(PETSC_USE_COMPLEX)
@@ -169,7 +169,7 @@ PETSC_INTERN PetscErrorCode PetscFinalize_DynamicLibraries(void)
   if (flg) { ierr = PetscDLLibraryPrintPath(PetscDLLibrariesLoaded);CHKERRQ(ierr); }
   ierr = PetscDLLibraryClose(PetscDLLibrariesLoaded);CHKERRQ(ierr);
 
-#if defined(PETSC_HAVE_THREADSAFETY)
+#if defined(PETSC_USE_SINGLE_LIBRARY) && !(defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES))
   ierr = PetscCommDestroy(&PETSC_COMM_SELF_INNER);CHKERRQ(ierr);
   ierr = PetscCommDestroy(&PETSC_COMM_WORLD_INNER);CHKERRQ(ierr);
 #endif
