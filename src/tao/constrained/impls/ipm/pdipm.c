@@ -817,6 +817,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         }
         ierr = PetscPrintf(PETSC_COMM_WORLD,"    modify pdipm->deltac: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
       }
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"    PDIPMLineSearch: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %.2f,deltac %.2f;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
     }
   }
   PetscFunctionReturn(0);
@@ -1543,6 +1544,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->mu_update_factor = 0.1;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   pdipm->deltaw = 0;
   pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
   pdipm->deltac = 0;
@@ -1552,6 +1554,9 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
 >>>>>>> added deltaw and deltac terms to begin correcting inertia
 =======
   pdipm->deltaw = 0;
+=======
+  pdipm->deltaw = PetscPowReal(10,-20);
+>>>>>>> added max and min for deltaw
   pdipm->deltac = 0;
 >>>>>>> added inertia update baised on get inertia
 
