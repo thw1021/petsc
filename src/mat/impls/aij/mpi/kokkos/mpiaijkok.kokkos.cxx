@@ -291,10 +291,10 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
         //err = cudaMalloc((void **)&h_mat.offdiag.i,               (n+1)*sizeof(int));CHKERRCUDA(err); // kernel input
         //err = cudaMemcpy(          h_mat.offdiag.i,    jacb->i,   (n+1)*sizeof(int), cudaMemcpyHostToDevice);CHKERRCUDA(err);
       } else {
-        h_mat.offdiag.i = (int*)&aijkokB->i_d(0);
+         h_mat.offdiag.i = (PetscInt*)aijkokB->i_d.data();
       }
-      h_mat.offdiag.j = &aijkokB->j_d(0);
-      h_mat.offdiag.a = &aijkokB->a_d(0);
+      h_mat.offdiag.j = (PetscInt*)aijkokB->j_d.data();
+      h_mat.offdiag.a = aijkokB->a_d.data();
       {
         const Kokkos::View<PetscInt*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_colmap_k (aij->colmap,A->cmap->N);
         aijkokB->colmap_d = new Kokkos::View<PetscInt*>(Kokkos::create_mirror_view_and_copy(DeviceMemorySpace(),h_colmap_k));
@@ -312,12 +312,12 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
     if (jaca->compressedrow.use) {
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"A does not suppport compressed row (todo)");
     } else {
-      h_mat.diag.i = (int*)&aijkokA->i_d(0);
+      h_mat.diag.i = (PetscInt*)aijkokA->i_d.data();
     }
     //h_mat.diag.j = aj;
     //h_mat.diag.a = aa;
-    h_mat.diag.j = &aijkokA->j_d(0);
-    h_mat.diag.a = &aijkokA->a_d(0);
+    h_mat.diag.j = (PetscInt*)aijkokA->j_d.data();
+    h_mat.diag.a = aijkokA->a_d.data();
     // copy pointers and metdata to device
     ierr = SeqAIJKokkosSetDeviceMat(Amat,&h_mat);CHKERRQ(ierr);
     ierr = SeqAIJKokkosGetDeviceMat(Amat,&d_mat);CHKERRQ(ierr);

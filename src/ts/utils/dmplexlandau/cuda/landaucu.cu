@@ -6,12 +6,12 @@
 #include <petsclandau.h>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <petscmat.h>
-#include <petscaijdevice.h>
 #include <petsccublas.h>
 
 #define PETSC_THREAD_SYNC __syncthreads()
 #define PETSC_DEVICE_FUNC_DECL __device__
 #include "../land_tensors.h"
+#include <petscaijdevice.h>
 
 // Macro to catch CUDA errors in CUDA runtime calls
 #define CUDA_SAFE_CALL(call)                                          \
@@ -94,7 +94,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
 #endif
 			 PetscInt myelem, PetscErrorCode *ierr)
 {
-  int           d,f,g,d2,dp,d3,fieldA,nip_pad = nip; // vectorization padding not supported;
+  int           delta,d,f,g,d2,dp,d3,fieldA,ipidx_b,nip_pad = nip; // vectorization padding not supported;
   PetscReal     gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
   LandauIPData  IPData;
 
@@ -131,7 +131,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
   else IPData.dfz = IPDataRaw + nip_pad*((dim+1) + 3*Nf);
 
   const PetscReal vj[3] = {IPData.x[jpidx], IPData.y[jpidx], IPData.z ? IPData.z[jpidx] : 0}, wj = IPData.w_data[jpidx];
-  for (int ipidx_b = 0; ipidx_b < nip; ipidx_b += blockDim.x) {
+  for (ipidx_b = 0; ipidx_b < nip; ipidx_b += blockDim.x) {
     int ipidx = ipidx_b + threadIdx.x;
 
     __syncthreads();
@@ -191,22 +191,15 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
       #endif
     }
   } /* IPs */
+ 
 
   /* reduce gg temp sums across threads */
-  for (int delta = blockDim.x/2; delta > 0; delta /= 2) {
+  for (delta = blockDim.x/2; delta > 0; delta /= 2) {
     for (d2 = 0; d2 < dim; d2++) {
-      gg2_temp[d2] += __shfl_down_sync(0xffffffff, gg2_temp[d2], delta, blockDim.x);
+      gg2_temp[d2] += __shfl_xor_sync(0xffffffff, gg2_temp[d2], delta, blockDim.x);
       for (d3 = 0; d3 < dim; d3++) {
-        gg3_temp[d2][d3] += __shfl_down_sync(0xffffffff, gg3_temp[d2][d3], delta, blockDim.x);
+        gg3_temp[d2][d3] += __shfl_xor_sync(0xffffffff, gg3_temp[d2][d3], delta, blockDim.x);
       }
-    }
-  }
-
-  /* broadcast the reduction results to all threads */
-  for (d2 = 0; d2 < dim; d2++) {
-    gg2_temp[d2] = __shfl_sync(0xffffffff, gg2_temp[d2], 0, blockDim.x);
-    for (d3 = 0; d3 < dim; d3++) {
-      gg3_temp[d2][d3] = __shfl_sync(0xffffffff, gg3_temp[d2][d3], 0, blockDim.x);
     }
   }
 
