@@ -5,4 +5,5 @@ Downloading, Installing, and Building PETSc
    :maxdepth: 1
 
    install_tutorial
-   download_guide
+   download_documentation
+   install_documentation

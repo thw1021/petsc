@@ -1,8 +1,8 @@
 .. _tut_install:
 
-==============
-Building PETSc
-==============
+====================
+Quick Start Tutorial
+====================
 
 .. _tut_install_prereq:
 
@@ -36,7 +36,7 @@ following *necessary* pre-requisites installed and up to date:
 
 - [OPTIONAL] Fortran Compiler (e.g. `gfortran <https://gcc.gnu.org/wiki/GFortran>`__)
 
-It is important to make sure that your compilers are correctly installed (i.e. functional
+It is important to make sure that your compilers are correctly installed [#]_ (i.e. functional
 and in your ``$PATH``). To test the compilers, run the following commands:
 
 .. code:: shell-session
@@ -57,30 +57,17 @@ and in your ``$PATH``). To test the compilers, run the following commands:
 
 If compilers are working, each command should print out ``<compiler_name> OK!`` on the command
 line.
-
-Should you be missing any of these dependencies or would like to update them, either
-download and install the latest versions from their respective websites, or use your
-preferred package manager to update them. For example on macOS using the package manager
-`homebrew <https://brew.sh/>`__ to install `python3 <https://www.python.org/>`__
-
-.. code:: shell-session
-
-   > brew update
-   > brew list    # Show all packages installed through brew
-   > brew upgrade # If they are already installed through brew!
-   > brew install python3
-
 .. _tut_install_download:
 
 Downloading Source
 ==================
 
-See the :ref:`download guide <gu_download>` for aditional details.
+See the :ref:`download documentation <doc_download>` for additional details.
 
 With all dependencies installed, navigate to a suitable directory on your machine and pull
 the latest version of the PETSc library to your machine with `git
-<https://git-scm.com/>`__. This will create a directory "petsc" inside the current
-directory and retrieve the latest release branch of the repository.
+<https://git-scm.com/>`__. The following commands will create a directory "petsc" inside
+the current directory and retrieve the latest release branch of the repository.
 
 .. code:: shell-session
 
@@ -114,7 +101,7 @@ should yield a similar output:
    Resolving deltas: 100% (660708/660708), done.
    Updating files: 100% (7748/7748), done.
    > cd petsc
-   > git pull
+   > git pull # Not strictly necessary, but nice to check
    Already up to date.
 
 .. _tut_install_config:
@@ -125,7 +112,6 @@ Configuration
 See `install documentation
 <https://www.mcs.anl.gov/petsc/documentation/installation.html>`__ for more details.
 
-`
 Next, PETSc needs to be configured using ``./configure`` for your system with your
 specific options. This is the stage where users can specify the exact parameters to
 customize their PETSc installation. Common configuration options are:
@@ -138,7 +124,7 @@ customize their PETSc installation. Common configuration options are:
 
 - Specifying options for `BLAS/LAPACK <https://www.netlib.org/lapack/lug/node11.html>`__.
 
-- Specifying external packages to use or download automatically. PETSc can automatically download and install a wide range of other software, such as direct solvers.
+- Specifying external packages to use or download automatically. PETSc can automatically download and install a wide range of other supporting software.
 
 - Setting various known machine quantities for PETSc to use such as known integral sizes, memory alignment, or additional compiler flags.
 
@@ -332,6 +318,19 @@ You now have a working PETSc installation and are ready to start using the libra
 .. [#] It is possible to configure PETSc using python2, however support for python2 will be
    discontinued in the future and so we recommend that users do not configure their PETSc
    installations using it.
+
+.. [#] Should you be missing any of these dependencies or would like to update them, either
+   download and install the latest versions from their respective websites, or use your
+   preferred package manager to update them. For example on macOS using the package manager
+   `homebrew <https://brew.sh/>`__ to install `python3 <https://www.python.org/>`__
+
+.. code:: shell-session
+
+   > brew update
+   > brew list            # Show all packages installed through brew
+   > brew upgrade         # Update packagesalready installed through brew
+   > brew install python3
+
 .. [#blas] The `BLAS/LAPACK <https://www.netlib.org/lapack/lug/node11.html>`__ package
    installed as part of this tutorial is a `reference implementation
    <https://bitbucket.org/petsc/pkg-fblaslapack/src/master/>`__ and a suitable starting
