@@ -360,12 +360,9 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
         ierr = MatSetValue(Jpre,row,cols[0],aa[j],INSERT_VALUES);CHKERRQ(ierr);
       }
       ierr = MatRestoreRow(tao->jacobian_equality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
-    }
-    /* (3) insert 2nd row block of Jpre: [ grad g, \delta_c*I, 0, 0] */
-    if(pdipm->inertia_correct){
-      for (i=0; i<pdipm->ng; i++){
-        row = Jrstart + pdipm->off_lambdae + i;
-        ierr = MatSetValue(J,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
+      if (pdipm->inertia_correct) {
+        /* (3) insert 2nd row block of Jpre: [ grad g, \delta_c*I, 0, 0] */
+        ierr = MatSetValue(Jpre,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
   }
@@ -383,11 +380,8 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
         ierr = MatSetValue(Jpre,row,cols[0],-aa[j],INSERT_VALUES);CHKERRQ(ierr);
       }
       ierr = MatRestoreRow(tao->jacobian_inequality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
-    }
-    if(pdipm->inertia_correct){
-      for (i=0; i<pdipm->nh; i++){
-        row = Jrstart + pdipm->off_lambdai + i;
-        ierr = MatSetValue(J,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
+      if (pdipm->inertia_correct) {
+        ierr = MatSetValue(Jpre,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
   }
@@ -414,12 +408,11 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
     for (j=0; j < nc; j++) {
       while (aj[j] >= cranges[proc+1]) proc++;
       cols[0] = aj[j] - cranges[proc] + Jranges[proc];
-      ierr = MatSetValue(Jpre,row,cols[0],aa[j],INSERT_VALUES);CHKERRQ(ierr);
-      /* add diagonal shift to Wxx component */
-      if (pdipm->inertia_correct){
-        if (row == cols[0]){
-          ierr = MatSetValue(Jpre,row,cols[0],aa[j]+pdipm->deltaw,INSERT_VALUES);CHKERRQ(ierr);
-        }
+      if (row == cols[0] && pdipm->inertia_correct) {
+        /* add diagonal shift to Wxx component */
+        ierr = MatSetValue(Jpre,row,cols[0],aa[j]+pdipm->deltaw,INSERT_VALUES);CHKERRQ(ierr);
+      } else {
+        ierr = MatSetValue(Jpre,row,cols[0],aa[j],INSERT_VALUES);CHKERRQ(ierr);
       }
     }
     ierr = MatRestoreRow(tao->hessian,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
@@ -741,9 +734,9 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
     ierr = SNESSetConvergedReason(snes,SNES_CONVERGED_FNORM_ABS);CHKERRQ(ierr);
   }
 
-/* Get the inertia of Cholesky factor to set shifts for next SNES interation */
-  if (pdipm->inertia_correct)  
+  if (!pdipm->inertia_correct) PetscFunctionReturn(0);
 
+  /* Get the inertia of Cholesky factor to set shifts for next SNES interation */
   ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
   ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
   ierr = PCGetType(pc,&ptype);CHKERRQ(ierr);
@@ -763,26 +756,25 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         }
       }
       ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
-      if (npos < pdipm->Nx+pdipm->Nci)
-      {
-          pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,40));
-      }
-      /* I dont know if this is the proper check for reducing deltaw,
+
+      if (npos < pdipm->Nx+pdipm->Nci) { /* increase deltaw */
+        pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,40));
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"    increase deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+      } else if (npos > pdipm->Nx+pdipm->Nci && pdipm->deltaw > PETSC_MACHINE_EPSILON) { /* reduce deltaw */
+        /* I dont know if this is the proper check for reducing deltaw,
         original alg. tried reduce deltaw checked by refactor, then increase if fail until match.*/
-      if (nneg < pdipm->Nce + pdipm->Nci)
-      {
-          pdipm->deltaw = PetscMax(pdipm->deltaw/3,PetscPowReal(10,-20));
+        pdipm->deltaw = PetscMax(pdipm->deltaw/3.0,PETSC_MACHINE_EPSILON);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"    reduce deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
       }
-      if (nzero>0)
-      {
-        if (pdipm->deltac = 0)
-        {
+
+      if (nzero) { /* Jacobian is singular */
+        if (pdipm->deltac == 0.0) {
           pdipm->deltac = PetscPowReal(10,-8);
         } else {
           pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
         }
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"    modify pdipm->deltac: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
       }
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"    PDIPMLineSearch: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %.2f,deltac %.2f;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
     }
   }
   PetscFunctionReturn(0);
@@ -1463,6 +1455,7 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
   ierr = PetscOptionsBool("-tao_pdipm_solve_reduced_kkt","Solve reduced KKT system using Schur-complement",NULL,pdipm->solve_reduced_kkt,&pdipm->solve_reduced_kkt,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-tao_pdipm_mu_update_factor","Update scalar for barrier parameter (mu) update",NULL,pdipm->mu_update_factor,&pdipm->mu_update_factor,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-tao_pdipm_symmetric_kkt","Solve non reduced symmetric KKT system",NULL,pdipm->solve_symmetric_kkt,&pdipm->solve_symmetric_kkt,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-tao_pdipm_add_shifts","Add shifts to the KKT matrix",NULL,pdipm->inertia_correct,&pdipm->inertia_correct,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1474,7 +1467,8 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
 +   -tao_pdipm_push_init_lambdai - parameter to push initial dual variables away from bounds (> 0)
 .   -tao_pdipm_push_init_slack - parameter to push initial slack variables away from bounds (> 0)
 .   -tao_pdipm_mu_update_factor - update scalar for barrier parameter (mu) update (> 0)
--   -tao_pdipm_symmetric_kkt - Solve non-reduced symmetric KKT system
+.   -tao_pdipm_symmetric_kkt - Solve non-reduced symmetric KKT system
+-   -tao_pdipm_add_shifts - Add shifts to the KKT matrix
 
   Level: beginner
 M*/
@@ -1505,7 +1499,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->n  = pdipm->N  = 0;
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
-  pdipm->deltaw = PetscPowReal(10,-20);
+  pdipm->deltaw = PETSC_MACHINE_EPSILON;
   pdipm->deltac = 0;
 
   pdipm->push_init_slack     = 1.0;
