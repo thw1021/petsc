@@ -7,7 +7,7 @@ Downloading PETSc
 Recommended Download
 ====================
 
-.. code:: shell-session
+.. code-block:: console
 
    > git clone -b release https://gitlab.com/petsc/petsc.git petsc
 
@@ -15,8 +15,9 @@ Use ``git pull`` to download any new patches or changes that have been added sin
 ``git clone`` or last ``git pull``. Use ``git checkout vMAJOR.MINOR.PATCH`` to download a
 particular version.
 
-We recommend users join the ``petsc-announce`` to be notified when major revisions are
-released. Users may also find the ``petsc-users`` `mailing lists
+We recommend users join the ``petsc-announce`` `mailing lists
+<https://www.mcs.anl.gov/petsc/miscellaneous/mailing-lists.html>`__ to be notified when
+major revisions are released. Users may also find the ``petsc-users`` `mailing lists
 <https://www.mcs.anl.gov/petsc/miscellaneous/mailing-lists.html>`__ useful in order to
 submit any questions they may have directly to the development team.
 
@@ -33,11 +34,11 @@ Tarball includes all documentation, recommended for offline use.
 
 To extract the sources use:
 
-.. code::
+.. code-block:: console
 
    > gunzip -c petsc-<version number>.tar.gz | tar -xof -
 
-Use mirror if GitLab and our primary download server are unavailable
+Use mirror if GitLab and our primary download server are unavailable:
 
 - `Primary server <https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/>`__
 
@@ -56,12 +57,3 @@ You can work with the `development version of PETSc
 <https://docs.petsc.org/en/latest/developers/index.html>`__, and decide when to update to
 the latest code in the repository. This also facilitates easy submission of fixes and new
 features to the development team.
-
-Change Logs
-===========
-
-- `List of patches in 3.14.2 <https://gitlab.com/petsc/petsc/commits/release>`__
-
-- `List of changes from 3.13 to 3.14 <https://www.mcs.anl.gov/petsc/documentation/changes/314.html>`__
-
-

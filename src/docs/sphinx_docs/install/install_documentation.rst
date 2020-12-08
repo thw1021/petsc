@@ -1,8 +1,8 @@
 .. _doc_config:
 
-###################
-PETSc Configuration
-###################
+#################
+Configuring PETSc
+#################
 
 .. admonition:: Important
    :class: yellow
@@ -18,7 +18,7 @@ Minimal Install
 
 On systems where MPI and `BLAS/LAPACK`_ are installed:
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure
    > make all check
@@ -27,24 +27,23 @@ On systems where MPI and `BLAS/LAPACK`_ are installed:
 Or to specify compilers and have PETSc download and install `MPICH`_ and `BLAS/LAPACK`_
 [#blas]_ (when they are not already on your machine):
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich --download-fblaslapack
    > make all check
 
 Don't need Fortran? Use ``--with-fortran-bindings=0`` to reduce the build times. If you
 are not using external packages that use Fortran (for example, `MUMPS`_ requires Fortran)
-you can use ``--with-fc=0`` for even
-faster build times.
-
+you can use ``--with-fc=0`` for even faster build times.
 
 .. admonition:: Encounter problems?
 
-   #. Read the error message from ``./configure``!
+   #. Read the error message from ``configure``!
    #. Read help ``./configure --help``.
-   #. Refer to example usages (e.g. build PETSc without a Fortran compiler).
-   #. make problems? Just copy/paste make command printed by ``configure`` including any
-      ``$PETSC_DIR`` and ``PETSC_ARCH`` options. It may look similar to:
+   #. Refer to :ref:`configuration faq <doc_config_faq>` (e.g. build PETSc without a
+      Fortran compiler).
+   #. ``make`` problems? Just copy/paste ``make`` command printed by ``configure``
+      including any ``$PETSC_DIR`` and ``$PETSC_ARCH`` options. It may look similar to:
 
       ::
 
@@ -65,7 +64,7 @@ Updating or Reinstalling PETSc
 
 If you follow the master or release branches of PETSc you can update your libraries with:
 
-.. code:: shell-session
+.. code-block:: console
 
    > git pull
    > make libs
@@ -73,15 +72,15 @@ If you follow the master or release branches of PETSc you can update your librar
 Most of the time this will work, if there are errors regarding compiling Fortran stubs you
 need to also do:
 
-.. code:: shell-session
+.. code-block:: console
 
    > make allfortranstubs
 
 If there are large changes in PETSc's ``configure`` code, or if your system configuration
 has drastically changed (for example installing different compiler versions) you may need
-to rerun the ``configure`` which you can do with:
+to rerun ``configure`` which you can do with:
 
-.. code:: shell-session
+.. code-block:: console
 
    > $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py
 
@@ -91,7 +90,7 @@ intermediate or final configuration values, which greatly speeds up the process.
 is needed. However, you may disable using these cached values for a particular
 ``configure`` run by using the ``--force`` option:
 
-.. code:: shell-session
+.. code-block:: console
 
       > $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py --force
 
@@ -99,7 +98,7 @@ While it happens automatically for the first installation, it is also recommende
 users symlink the reconfiguration script for any additional PETSc builds (i.e. builds with
 separate ``$PETSC_ARCH``) into their ``$PETSC_DIR`` for easy access. Simply use:
 
-.. code:: shell-session
+.. code-block:: console
 
    > ln -s $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py $PETSC_DIR/
 
@@ -108,6 +107,12 @@ separate ``$PETSC_ARCH``) into their ``$PETSC_DIR`` for easy access. Simply use:
    make tips page
 
 --------------
+
+.. _doc_config_faq:
+
+*****************
+Configuration FAQ
+*****************
 
 .. todo:: do windows guide separately
 
@@ -125,7 +130,7 @@ Common Example Usages
    wide variety of systems, and we use some of these scripts locally for testing. One can
    modify these files and run them in lieu of writing one yourself. For example:
 
-   .. code:: shell-session
+   .. code-block:: console
 
       > ./config/examples/arch-ci-osx-dbg.py
 
@@ -137,13 +142,13 @@ Common Example Usages
 * If you do not have a Fortran compiler or `MPICH <https://www.mpich.org/>`__ installed
   locally (and want to use PETSc from C only).
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-cc=gcc --with-cxx=0 --with-fc=0 --download-f2cblaslapack --download-mpich
 
 * Same as above - but install in a user specified (prefix) location.
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --prefix=/home/user/soft/petsc-install --with-cc=gcc --with-cxx=0 --with-fc=0 --download-f2cblaslapack --download-mpich
 
@@ -151,19 +156,19 @@ Common Example Usages
   installed in default system/compiler locations and ``mpicc``, ``mpif90``, mpiexec are available
   via ``$PATH`` - configure does not require any additional options.
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure
 
 * If `BLAS/LAPACK`_, MPI are already installed in known user location use:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-blaslapack-dir=/usr/local/blaslapack --with-mpi-dir=/usr/local/mpich
 
   or
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-blaslapack-dir=/usr/local/blaslapack --with-cc=/usr/local/mpich/bin/mpicc --with-mpi-f90=/usr/local/mpich/bin/mpif90 --with-mpiexec=/usr/local/mpich/bin/mpiexec
 
@@ -175,7 +180,7 @@ Common Example Usages
 
 * Build Complex version of PETSc (using c++ compiler):
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-cc=gcc --with-fc=gfortran --with-cxx=g++ --with-clanguage=cxx --download-fblaslapack --download-mpich --with-scalar-type=complex
 
@@ -183,7 +188,7 @@ Common Example Usages
   different ``$PETSC_ARCH`` for each build. See multiple PETSc install documentation for
   further recomendations:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure PETSC_ARCH=linux-gnu --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich
      > make PETSC_ARCH=linux-gnu all test
@@ -209,7 +214,7 @@ Compilers
 * Specify compilers using the options ``--with-cc``/``--with-cxx``/``--with-fc`` for c,
   c++, and fortran compilers respectively:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran
 
@@ -221,25 +226,25 @@ Compilers
    compilers to PETSc (perhaps ``icc``/``ifort``). This can be done by either specifying
    ``--with-cc=mpicc`` or ``--with-mpi-dir`` (and not ``--with-cc=gcc``)
 
-   .. code:: shell-session
+   .. code-block:: console
 
       > ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
 
    or the following (but **without** ``--with-cc=gcc``)
 
-   .. code:: shell-session
+   .. code-block:: console
 
       > ./configure --with-mpi-dir=/opt/mpich2-1.1
 
 * If a fortran compiler is not available or not needed - disable using:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-fc=0
 
 * If a c++ compiler is not available or not needed - disable using:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-cxx=0
 
@@ -251,7 +256,7 @@ simply changing the value of ``$PETSC_ARCH``. Additionally one can specify more 
 optimization flags with the options ``COPTFLAGS``, ``FOPTFLAGS``, ``CXXOPTFLAGS``. For
 example when using gnu compilers with corresponding optimization flags:
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --with-debugging=0 COPTFLAGS='-O3 -march=native -mtune=native' CXXOPTFLAGS='-O3 -march=native -mtune=native' FOPTFLAGS='-O3 -march=native -mtune=native' --download-mpich
 
@@ -260,9 +265,11 @@ example when using gnu compilers with corresponding optimization flags:
    Configure cannot detect compiler libraries for certain set of compilers. In this case
    one can specify additional system/compiler libraries using the ``LIBS`` option:
 
-   .. code:: shell-session
+   .. code-block:: console
 
       > ./configure --LIBS='-ldl /usr/lib/libm.a'
+
+.. _doc_config_externalpack:
 
 External Packages
 =================
@@ -311,7 +318,7 @@ The following modes can be used to download/install external packages with ``con
 - ``--download-PACKAGENAME``: Download specified package and install it, enabling PETSc to
   use this package. **This is the recomended method to couple any external packages with PETSc**:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --download-fblaslapack --download-mpich
 
@@ -322,7 +329,7 @@ The following modes can be used to download/install external packages with ``con
   configure with this option. ``configure`` will proceed to install this package and then
   configure PETSc with it:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --download-mpich=/home/petsc/mpich2-1.0.4p1.tar.gz
 
@@ -331,7 +338,7 @@ The following modes can be used to download/install external packages with ``con
   library files from this location). Normally this corresponds to the top-level
   installation directory for the package:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-mpi-dir=/home/petsc/software/mpich2-1.0.4p1
 
@@ -341,19 +348,19 @@ The following modes can be used to download/install external packages with ``con
   include file location and library list. If the package is already installed one can use
   these two options to specify the package to ``configure``. For example:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-superlu-include=/home/petsc/software/superlu/include --with-superlu-lib=/home/petsc/software/superlu/lib/libsuperlu.a
 
   or
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-parmetis-include=/sandbox/balay/parmetis/include --with-parmetis-lib="-L/sandbox/balay/parmetis/lib -lparmetis -lmetis"
 
   or
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-parmetis-include=/sandbox/balay/parmetis/include --with-parmetis-lib=[/sandbox/balay/parmetis/lib/libparmetis.a,libmetis.a]
 
@@ -378,8 +385,10 @@ The following modes can be used to download/install external packages with ``con
   can choose a different location where these packages are unpacked and the build process
   is run.
 
-BLAS/LAPACK Problems
-====================
+.. _doc_config_blaslapack:
+
+BLAS/LAPACK
+===========
 
 These packages provide some basic numeric kernels used by PETSc. ``configure`` will
 automatically look for `BLAS/LAPACK`_ in certain standard locations, on most systems you
@@ -391,19 +400,19 @@ automatically:
 
 - When fortran compiler is present:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --download-fblaslapack
 
 - Or when configuring without a fortran compiler - i.e ``--with-fc=0``:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --download-f2cblaslapack
 
 Alternatively one can use other options like one of the following:
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure --with-blaslapack-lib=libsunperf.a
    > ./configure --with-blas-lib=libblas.a --with-lapack-lib=liblapack.a
@@ -441,13 +450,13 @@ MPI automatically:
 
 - For `MPICH`_:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --download-mpich
 
 - For `OpenMPI`_:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --download-openmpi
 
@@ -461,7 +470,7 @@ details.
 
 - Vendor provided MPI might already be installed. IBM, SGI, Cray etc provide their own:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > ./configure --with-cc=vendor_mpicc --with-fc=vendor_mpif90
 
@@ -469,7 +478,7 @@ details.
   (without specifying ``--with-cc=gcc`` etc. so that ``configure`` picks up ``mpicc``
   from mpi-dir):
 
-  .. code:: shell-session
+  .. code-block:: console
 
      >  ./configure --with-mpi-dir=/absolute/path/to/mpich/install
 
@@ -478,7 +487,7 @@ Installing Without MPI
 
 You can build (sequential) PETSc without MPI. This is useful for quickly installing PETSc:
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure --with-mpi=0
 
@@ -527,7 +536,7 @@ Out-of-place Installation With ``--prefix``
 
 To install the libraries and include files in another location use the ``--prefix`` option
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure --prefix=/home/userid/my-petsc-install --some-other-options
 
@@ -546,7 +555,7 @@ If one wants to install PETSc in a common system location like ``/usr/local`` or
 that requires root access we suggest creating a directory for PETSc with user privileges,
 and then do the PETSc install as a **regular/non-root** user:
 
-.. code-block:: shell-session
+.. code-block:: console
 
    > sudo mkdir /opt/petsc
    > sudo chown user:group /opt/petsc
@@ -558,7 +567,7 @@ and then do the PETSc install as a **regular/non-root** user:
 Installs For Package Managers: Using ``DESTDIR`` (Very Uncommon)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure --prefix=/opt/petsc/my-root-petsc-install
    > make
@@ -573,7 +582,7 @@ Multiple Installs Using ``--prefix`` (Snd ``DESTDIR``)
 Specify a different ``--prefix`` location for each configure of different options - at
 configure time. For example:
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure --prefix=/opt/petsc/petsc-3.14.0-mpich --with-mpi-dir=/opt/mpich
    > make
@@ -588,7 +597,7 @@ In-place Installation
 The PETSc libraries and generated included files are placed in the sub-directory off the
 current directory ``$PETSC_ARCH`` which is either provided by the user with, for example:
 
-.. code:: shell-session
+.. code-block:: console
 
    > export PETSC_ARCH=arch-debug
    > ./configure
@@ -599,7 +608,7 @@ current directory ``$PETSC_ARCH`` which is either provided by the user with, for
 
 or
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure PETSC_ARCH=arch-debug
    > make
@@ -609,7 +618,7 @@ or
 If not provided ``configure`` will generate a unique value automatically (for in-place non
 ``--prefix`` configurations only).
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure
    > make
@@ -637,7 +646,7 @@ specified on the command line:
 - Specify environment variable for bash (can be specified in ``~/.bashrc`` or
   ``~/.bash_profile``):
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > export PETSC_DIR=/absolute/path/to/petsc
      > export PETSC_ARCH=linux-gnu-c-debug
@@ -645,7 +654,7 @@ specified on the command line:
 
 - Specify environment variable for csh/tcsh (can be specified in ``~/.cshrc``):
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > setenv PETSC_DIR /absolute/path/to/petsc
      > setenv PETSC_ARCH linux-gnu-c-debug
@@ -653,7 +662,7 @@ specified on the command line:
 - Specify variable on commandline (bash) to build an example in
   ``$PETSC_DIR/src/ts/tutorials``:
 
-  .. code:: shell-session
+  .. code-block:: console
 
      > PETSC_ARCH=linux-gnu-c-debug make PETSC_DIR=/absolute/path/to/petsc ex1
 
@@ -690,7 +699,7 @@ Installing With TAU Instrumentation Package
 
 `TAU`_ package and the prerequisite `PDT`_ packages need to be installed separately (perhaps with MPI). Now use tau_cc.sh as compiler to PETSc configure:
 
-.. code:: shell-session
+.. code-block:: console
 
    > export TAU_MAKEFILE=/home/balay/soft/linux64/tau-2.20.3/x86_64/lib/Makefile.tau-mpi-pdt
    > ./configure CC=/home/balay/soft/linux64/tau-2.20.3/x86_64/bin/tau_cc.sh --with-fc=0 PETSC_ARCH=arch-tau
@@ -698,6 +707,8 @@ Installing With TAU Instrumentation Package
 .. todo::
 
    Is this still correct/relevant?
+
+.. _doc_config_accel:
 
 Installing PETSc To Use GPUs And Accelerators
 =============================================
@@ -812,7 +823,7 @@ OLCF - Oak Ridge National Laboratory - Summit machine - NVIDIA GPUs and IBM Powe
   - `Getting Started <https://www.olcf.ornl.gov/for-users/documents-forms/olcf-account-application/>`__
   - Log into summit.olcf.ornl.gov
 
-    .. code:: shell-session
+    .. code-block:: console
 
        > module load cmake hdf5 cuda
        > module load pgi

@@ -14,7 +14,7 @@ Prerequisites
    navigate your system using the Command-Line Interface (CLI), a.k.a. "from the
    terminal". Being a programmable solver suite, PETSc does not have a
    front-end Graphical User Interface, so any and all tutorial examples here will
-   heavily use the terminal.
+   almost exclusively use the terminal.
 
    While this tutorial will provide all commands necessary, it will not explain the usage
    or syntax of commands not directly implemented by PETSc. If you are unfamiliar with the
@@ -23,8 +23,8 @@ Prerequisites
    <https://www.tutorialspoint.com/unix/shell_scripting.htm>`__ usage.
 
 
-Before beginning, make sure you have the
-following *necessary* pre-requisites installed and up to date:
+Before beginning, make sure you have the following pre-requisites installed and up to
+date:
 
 - `git <https://git-scm.com/>`__
 
@@ -39,7 +39,7 @@ following *necessary* pre-requisites installed and up to date:
 It is important to make sure that your compilers are correctly installed [#]_ (i.e. functional
 and in your ``$PATH``). To test the compilers, run the following commands:
 
-.. code:: shell-session
+.. code-block:: console
 
    > printf '#include<stdio.h>\nint main(){printf("cc OK!\\n");}' > t.c && cc t.c && ./a.out && rm -f t.c a.out
 
@@ -50,13 +50,14 @@ and in your ``$PATH``). To test the compilers, run the following commands:
    functioning, PETSc will automatically find them during the configure stage, however it
    is always useful to test them on your own.
 
-   .. code:: shell-session
+   .. code-block:: console
 
       > printf '#include<iostream>\nint main(){std::cout<<"c++ OK!"<<std::endl;}' > t.cpp && cc++ t.cpp && ./a.out && rm -f t.cpp a.out
       > printf 'program t\nprint"(a)","gfortran OK!"\nend program' > t.f90 && gfortran t.f90 && ./a.out && rm -f t.f90 a.out
 
 If compilers are working, each command should print out ``<compiler_name> OK!`` on the command
 line.
+
 .. _tut_install_download:
 
 Downloading Source
@@ -65,11 +66,11 @@ Downloading Source
 See the :ref:`download documentation <doc_download>` for additional details.
 
 With all dependencies installed, navigate to a suitable directory on your machine and pull
-the latest version of the PETSc library to your machine with `git
-<https://git-scm.com/>`__. The following commands will create a directory "petsc" inside
-the current directory and retrieve the latest release branch of the repository.
+the latest version of the PETSc library to your machine with git. The following commands
+will create a directory "petsc" inside the current directory and retrieve the latest
+release branch of the repository.
 
-.. code:: shell-session
+.. code-block:: console
 
    > mkdir -p ~/my/petsc/dir/
    > cd ~/my/petsc/dir/
@@ -89,7 +90,7 @@ the current directory and retrieve the latest release branch of the repository.
 The download process may take a few minutes to complete. Successfully running this command
 should yield a similar output:
 
-.. code:: shell-session
+.. code-block:: console
 
    > git clone -b release https://gitlab.com/petsc/petsc.git petsc
    Cloning into 'petsc'...
@@ -109,57 +110,59 @@ should yield a similar output:
 Configuration
 =============
 
-See `install documentation
-<https://www.mcs.anl.gov/petsc/documentation/installation.html>`__ for more details.
+See :ref:`install documentation <doc_config>` for more details.
 
-Next, PETSc needs to be configured using ``./configure`` for your system with your
+Next, PETSc needs to be configured using ``configure`` for your system with your
 specific options. This is the stage where users can specify the exact parameters to
 customize their PETSc installation. Common configuration options are:
 
-- Specifying different compilers.
+- :ref:`Specifying different compilers. <doc_config_compilers>`
 
-- Specifying different MPI implementations.
+- :ref:`Specifying different MPI implementations. <doc_config_mpi>`
 
-- Enabling `CUDA <https://developer.nvidia.com/cuda-toolkit>`__/`OpenCL <https://www.khronos.org/opencl/>`__/`ViennaCL <http://viennacl.sourceforge.net/>`__ support.
+- Enabling `CUDA <https://developer.nvidia.com/cuda-toolkit>`__/`OpenCL
+  <https://www.khronos.org/opencl/>`__/`ViennaCL <http://viennacl.sourceforge.net/>`__
+  :ref:`support. <doc_config_accel>`
 
-- Specifying options for `BLAS/LAPACK <https://www.netlib.org/lapack/lug/node11.html>`__.
+- :ref:`Specifying options <doc_config_blaslapack>` for `BLAS/LAPACK
+  <https://www.netlib.org/lapack/lug/node11.html>`__.
 
-- Specifying external packages to use or download automatically. PETSc can automatically download and install a wide range of other supporting software.
+- :ref:`Specifying external packages <doc_config_externalpack>` to use or download
+  automatically. PETSc can automatically download and install a wide range of other
+  supporting software.
 
-- Setting various known machine quantities for PETSc to use such as known integral sizes, memory alignment, or additional compiler flags.
+- Setting various known machine quantities for PETSc to use such as known integral sizes,
+  memory alignment, or additional compiler flags.
 
-.. Important::
+.. admonition:: Important
+   :class: yellow
+
    You MUST specify all of your configuration options at this stage. In order to enable
    additional options or packages in the future, you will have to reconfigure your PETSc
    installation in a similar manner with these options enabled.
 
    For a full list of available options call
 
-   .. code:: shell-session
+   .. code-block:: console
 
       > ./configure --help
 
-   from ``$PETSC_DIR``
+All PETSc options and flags follow the standard CLI formats ``--option-string=<value>`` or
+``--option-string``, where ``<value>`` is typically either ``1`` (for true) or ``0`` (for
+false) or a directory path. Directory paths must be absolute (i.e. full path from the root
+directory of your machine), but do accept environment variables as input.
 
-All PETSc options and flags follow the standard CLI formats
-``--option-string=<value>``
-or
-``--option-string``,
-where ``<value>`` is typically either ``1`` (for true) or ``0`` (for false) or a directory
-path. Directory paths must be absolute (i.e. full path from the root directory of your
-machine), but do accept environment variables as input.
-
-From ``$PETSC_DIR`` call the following ``./configure`` command to configure PETSc as well
+From ``$PETSC_DIR`` call the following ``configure`` command to configure PETSc as well
 as download and install `MPICH <https://www.mpich.org/>`__ and a `BLAS/LAPACK
 <https://www.netlib.org/lapack/lug/node11.html>`__ [#blas]_ `reference implementation
 <https://bitbucket.org/petsc/pkg-fblaslapack/src/master/>`__ on your system.
 
-.. code:: shell-session
+.. code-block:: console
 
    > ./configure --download-mpich --download-fblaslapack
 
-PETSc will begin configuring and printing its progress. A successful configure will have
-the following general structure as its output:
+PETSc will begin configuring and printing its progress. A successful ``configure`` will
+have the following general structure as its output:
 
 .. code-block:: text
 
@@ -219,26 +222,8 @@ the following general structure as its output:
 
    xxx=========================================================================xxx
    Configure stage complete. Now build PETSc libraries with (gnumake build):
-   make PETSC_DIR=/your/petsc/dir PETSC_ARCH=your-petsc-arch  all
+   make PETSC_DIR=/your/petsc/dir PETSC_ARCH=your-petsc-arch all
    xxx=========================================================================xxx
-
-.. Warning::
-   At this stage it is useful to make a note of the ``$PETSC_DIR`` and ``$PETSC_ARCH``
-   variables, and set them as environment variables. Copy the values directly from your
-   configure output:
-
-   .. code:: shell-session
-
-      > export PETSC_DIR=/your/petsc/dir
-      > export PETSC_ARCH=your-petsc-arch
-
-   You should set them in a login file (e.g. ``~/.bash_profile``) to avoid having to reset
-   them every time you open a fresh terminal.
-
-   .. code:: shell-session
-
-      > echo "export PETSC_DIR=/your/petsc/dir" >> ~/.bash_profile
-      > echo "export PETSC_ARCH=your-petsc-arch" >> ~/.bash_profile
 
 .. _tut_install_compile:
 
@@ -249,18 +234,9 @@ After successfully configuring, build the binaries from source using the ``make`
 command. This stage may take a few minutes, and will consume a great deal of system
 resources as the PETSc is compiled in parallel.
 
-If ``$PETSC_DIR`` and ``$PETSC_ARCH`` are defined as environment variables:
-
-.. code:: shell-session
+.. code-block:: console
 
    > make all check
-
-If ``$PETSC_DIR`` and ``$PETSC_ARCH`` are not defined as environment variables, or you have
-another installation of PETSc on the machine:
-
-.. code:: shell-session
-
-   > make PETSC_DIR=/your/petsc/dir PETSC_ARCH=your-petsc-arch all check
 
 A successful ``make`` will provide an output of the following structure:
 
@@ -324,7 +300,7 @@ You now have a working PETSc installation and are ready to start using the libra
    preferred package manager to update them. For example on macOS using the package manager
    `homebrew <https://brew.sh/>`__ to install `python3 <https://www.python.org/>`__
 
-.. code:: shell-session
+.. code-block:: console
 
    > brew update
    > brew list            # Show all packages installed through brew
