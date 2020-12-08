@@ -32,6 +32,8 @@ todo_emit_warnings=True
 
 # Little copy-and-paste button by code blocks, from sphinx_copybutton package
 # https://sphinx-copybutton.readthedocs.io/en/latest/
+copybutton_prompt_text = r"[>]{1,3}"
+copybutton_prompt_is_regexp = True
 
 with open(os.path.join('..', '..', '..', 'include', 'petscversion.h'),'r') as version_file:
     buf = version_file.read()
@@ -87,8 +89,6 @@ html_static_path = ['_static']
 
 html_logo = os.path.join('..','website','images','PETSc-TAO_RGB.svg')
 html_favicon = os.path.join('..','website','images','PETSc_RGB-logo.png')
-
-html_css_files = ['css/pop-up.css']
 
 # -- Options for LaTeX output --------------------------------------------
 
@@ -149,3 +149,9 @@ highlight_language = 'c'
 autosummary_generate = True
 numfig = True
 
+# Supposedly the safer way to add additional css files. Setting html_css_files will
+# overwrite previous versions of the variable that some extension may have set. This will
+# add our css files in addition to it.
+def setup(app):
+    app.add_css_file('css/pop-up.css')
+    app.add_css_file('css/colorbox.css')

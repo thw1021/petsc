@@ -1,20 +1,22 @@
 .. _doc_config:
 
-===================
+###################
 PETSc Configuration
-===================
+###################
 
-.. important::
+.. admonition:: Important
+   :class: yellow
 
    Please obtain PETSc via the repository or download the latest patched tarball. See
    :ref:`download documentation <doc_download>` for more information.
 
    See :ref:`quickstart tutorial <tut_install>` for a step-by-step walkthrough of the installation process.
 
+***************
 Minimal Install
-===============
+***************
 
-On systems where MPI and BLAS/LAPACK are installed:
+On systems where MPI and `BLAS/LAPACK`_ are installed:
 
 .. code:: shell-session
 
@@ -22,10 +24,8 @@ On systems where MPI and BLAS/LAPACK are installed:
    > make all check
 
 
-Or to specify compilers and have PETSc download and install `MPICH
-<https://www.mpich.org/>`__ and `BLAS/LAPACK
-<https://www.netlib.org/lapack/lug/node11.html>`__ [#blas]_ (when they are not already on
-your machine):
+Or to specify compilers and have PETSc download and install `MPICH`_ and `BLAS/LAPACK`_
+[#blas]_ (when they are not already on your machine):
 
 .. code:: shell-session
 
@@ -33,8 +33,8 @@ your machine):
    > make all check
 
 Don't need Fortran? Use ``--with-fortran-bindings=0`` to reduce the build times. If you
-are not using external packages that use Fortran (for example, `MUMPS
-<http://mumps.enseeiht.fr/>`__ requires Fortran) you can use ``--with-fc=0`` for even
+are not using external packages that use Fortran (for example, `MUMPS`_ requires Fortran)
+you can use ``--with-fc=0`` for even
 faster build times.
 
 
@@ -43,7 +43,8 @@ faster build times.
    #. Read the error message from ``./configure``!
    #. Read help ``./configure --help``.
    #. Refer to example usages (e.g. build PETSc without a Fortran compiler).
-   #. make problems? Just copy/paste make command printed by configure including any PETSC_DIR and PETSC_ARCH options. It may look similar to:
+   #. make problems? Just copy/paste make command printed by configure including any
+      ``$PETSC_DIR`` and ``PETSC_ARCH`` options. It may look similar to:
 
       .. code::
 
@@ -58,7 +59,55 @@ faster build times.
 
    Bug report port
 
+******************************
+Updating or Reinstalling PETSc
+******************************
+
+If you follow the master or release branches off PETSc you can update your libraries with:
+
+.. code:: shell-session
+
+   > git pull
+   > make libs
+
+Most of the time this will work, if there are errors regarding compiling Fortran stubs you
+need to also do:
+
+.. code:: shell-session
+
+   > make allfortranstubs
+
+If there are large changes in PETSc's ``configure`` code, or if your system configuration
+has drastically changed (for example installing different compiler versions) you may need
+to rerun the ``configure`` which you can do with:
+
+.. code:: shell-session
+
+   > $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py
+
+Using this reconfiguration script allows ``configure`` to use cached values for certain
+intermediate or final configuration values, which greatly speeds up the process. In fact,
+``configure`` is even able to use this cache to detect whether or not any reconfiguration
+is needed. However, you may disable using these cached values by using the ``--force``
+option:
+
+.. code:: shell-session
+
+      > $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py --force
+
+While this happens automatically for the first installation, it is also recommended that users symlink this reconfiguration script into their ``$PETSC_DIR`` for easy access. Simply use:
+
+.. code:: shell-session
+
+   > ln -s $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py $PETSC_DIR/
+
+.. todo::
+
+   make tips page
+
 --------------
+
+.. todo:: do windows guide separately
 
 .. contents:: Table of Contents
    :local:
@@ -66,7 +115,7 @@ faster build times.
    :depth: 1
 
 Common Example Usages
----------------------
+=====================
 
 .. attention::
 
@@ -86,31 +135,30 @@ Common Example Usages
 * If you do not have a Fortran compiler or `MPICH <https://www.mpich.org/>`__ installed
   locally (and want to use PETSc from C only).
 
-.. code:: shell-session
+  .. code:: shell-session
 
-  > ./configure --with-cc=gcc --with-cxx=0 --with-fc=0 --download-f2cblaslapack --download-mpich
+     > ./configure --with-cc=gcc --with-cxx=0 --with-fc=0 --download-f2cblaslapack --download-mpich
 
 * Same as above - but install in a user specified (prefix) location.
 
-.. code:: shell-session
+  .. code:: shell-session
 
-   > ./configure --prefix=/home/user/soft/petsc-install --with-cc=gcc --with-cxx=0 --with-fc=0 --download-f2cblaslapack --download-mpich
+     > ./configure --prefix=/home/user/soft/petsc-install --with-cc=gcc --with-cxx=0 --with-fc=0 --download-f2cblaslapack --download-mpich
 
-* If `BLAS/LAPACK <https://www.netlib.org/lapack/lug/node11.html>`__, MPI sources (in
-  "-devel" packages in most distros) are already installed in default system/compiler
-  locations and mpicc, mpif90, mpiexec are available via ``$PATH`` - configure does not
-  require any additional options.
+* If `BLAS/LAPACK`_, MPI sources (in "-devel" packages in most distros) are already
+  installed in default system/compiler locations and ``mpicc``, ``mpif90``, mpiexec are available
+  via ``$PATH`` - configure does not require any additional options.
 
 .. code:: shell-session
 
    > ./configure
 
-* If `BLAS/LAPACK <https://www.netlib.org/lapack/lug/node11.html>`__, MPI are already
-  installed in known user location use:
+* If `BLAS/LAPACK`_, MPI are already installed in known user location use:
 
 .. note::
 
-   Do not specify --with-cc --with-fc etc when using --with-mpi-dir - so that mpicc/mpif90 can be picked up from mpi-dir!
+   Do not specify ``--with-cc``, ``--with-fc`` etc when using ``--with-mpi-dir`` - so that
+   ``mpicc``/ ``mpif90`` can be picked up from mpi-dir!
 
    .. code:: shell-session
 
@@ -120,47 +168,50 @@ Common Example Usages
 
    .. code:: shell-session
 
-      > /configure --with-blaslapack-dir=/usr/local/blaslapack --with-cc=/usr/local/mpich/bin/mpicc --with-mpi-f90=/usr/local/mpich/bin/mpif90 --with-mpiexec=/usr/local/mpich/bin/mpiexec
+      > ./configure --with-blaslapack-dir=/usr/local/blaslapack --with-cc=/usr/local/mpich/bin/mpicc --with-mpi-f90=/usr/local/mpich/bin/mpif90 --with-mpiexec=/usr/local/mpich/bin/mpiexec
 
 * Build Complex version of PETSc (using c++ compiler):
 
-.. code:: shell-session
+  .. code:: shell-session
 
-   > ./configure --with-cc=gcc --with-fc=gfortran --with-cxx=g++ --with-clanguage=cxx --download-fblaslapack --download-mpich --with-scalar-type=complex
+     > ./configure --with-cc=gcc --with-fc=gfortran --with-cxx=g++ --with-clanguage=cxx --download-fblaslapack --download-mpich --with-scalar-type=complex
 
 * Install 2 variants of PETSc, one with gnu, the other with Intel compilers. Specify
-  different PETSC_ARCH for each build. See multiple PETSc install documentation for
+  different ``$PETSC_ARCH`` for each build. See multiple PETSc install documentation for
   further recomendations:
+
+  .. code:: shell-session
+
+     > ./configure PETSC_ARCH=linux-gnu --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich
+     > make PETSC_ARCH=linux-gnu all test
+     > ./configure PETSC_ARCH=linux-gnu-intel --with-cc=icc --with-cxx=icpc --with-fc=ifort --download-mpich --with-blaslapack-dir=/usr/local/mkl
+     > make PETSC_ARCH=linux-gnu-intel all test
 
 .. todo:: make multi-install docs
 
-.. code:: shell-session
-
-   > ./configure PETSC_ARCH=linux-gnu --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich
-   > make PETSC_ARCH=linux-gnu all test
-   > ./configure PETSC_ARCH=linux-gnu-intel --with-cc=icc --with-cxx=icpc --with-fc=ifort --download-mpich --with-blaslapack-dir=/usr/local/mkl
-   > make PETSC_ARCH=linux-gnu-intel all test
+.. _doc_config_compilers:
 
 Compilers
----------
+=========
 
 .. important::
 
    If no compilers are specified - configure will automatically look for available MPI or
    regular compilers in the user's PATH in the following order:
 
-   #. mpicc/mpiCC/mpif90
+   #. ``mpicc``/ ``mpicxx``/ ``mpif90``
    #. gcc/g++/gfortran
    #. cc/CC etc..
 
 * Specify compilers using the options ``--with-cc``/``--with-cxx``/``--with-fc`` for c,
   c++, and fortran compilers respectively:
 
-.. code:: shell-session
+  .. code:: shell-session
 
-   > --with-cc=gcc --with-cxx=g++ --with-fc=gfortran
+     > ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran
 
-.. warning::
+.. admonition:: Important
+   :class: yellow
 
    It's best to use MPI compilers as this will avoid the situation where MPI is compiled
    with one set of compilers (like gcc/gfortran) and user specified incompatible compilers
@@ -169,27 +220,27 @@ Compilers
 
    .. code:: shell-session
 
-      > --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
+      > ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
 
    or the following (but **without** ``--with-cc=gcc``)
 
    .. code:: shell-session
 
-      > --with-mpi-dir=/opt/mpich2-1.1
+      > ./configure --with-mpi-dir=/opt/mpich2-1.1
 
 * If Fortran compiler is not available or not needed - then disable using:
 
-.. code:: shell-session
+  .. code:: shell-session
 
-   > --with-fc=0
+     > ./configure --with-fc=0
 
 * If a C++ compiler is not available or not needed - disable using:
 
-.. code:: shell-session
+  .. code:: shell-session
 
-   > --with-cxx=0
+     > ./configure --with-cxx=0
 
-Configure defaults to building PETSc in debug mode. One can switch to using optimzed
+``configure`` defaults to building PETSc in debug mode. One can switch to using optimzed
 mode with the configure option ``--with-debugging=0`` (We suggest using a different
 ``$PETSC_ARCH`` for debug and optimized builds, for example arch-debug and arch-opt,
 this way you can switch between debugging your code and running for performance by
@@ -211,28 +262,615 @@ example when using gnu compilers with corresponding optimization flags:
       > ./configure --LIBS='-ldl /usr/lib/libm.a'
 
 External packages
------------------
+=================
 
+.. todo::
+
+   port external packages
+
+.. admonition:: Note
+   :class: yellow
+
+   `BLAS/LAPACK`_ is the only **required** external package (other than of course build
+   tools such as compilers and make). PETSc may be built and run without MPI support if
+   processing only in serial.
+
+   For any external packages used with PETSC we highly recommend you have PETSc download
+   and install the packages, rather than you installing them separately first. This insures
+   that:
+
+   - The packages are installed with the same compilers and compiler options as PETSc
+     so that they can work together.
+   - A **compatible** version of the package is installed. A generic install of this
+     package might not be compatible with PETSc (perhaps due to version differences - or
+     perhaps due to the requirement of additional patches for it to work with PETSc).
+   - Some packages have bug fixes, portability patches, and upgrades for dependent
+     packages that have not yet been included in an upstream release, and hence may not
+     play nice with PETSc.
+
+PETSc provides interfaces to various `external packages
+<https://www.mcs.anl.gov/petsc/miscellaneous/external.html>`__.  One can optionally use
+external solvers like `HYPRE`_, `MUMPS`_, and others from within PETSc applications.
+
+PETSc configure has the ability to download and install these external
+packages. Alternatively if these packages are already installed, then ``configure`` can
+detect and use them.
+
+If you are behind a firewall and cannot use a proxy for the downloads or have a very slow
+network use the additional option ``--with-packages-download-dir=/path/to/dir``. This will
+trigger ``configure`` to print the URLs of all the packages you must download this directory
+(do not uncompress or untar the files) and then use these copies of the packages instead
+of trying to download them directly from the internet.
+
+The following modes can be used to install/use external packages with ``configure``.
+
+- ``--download-PACKAGENAME``: Download specified package and install it, enabling PETSc to
+  use this package. **This is the recomended method to couple any external packages with PETSc**:
+
+  .. code:: shell-session
+
+     > ./configure --download-fblaslapack --download-mpich
+
+- ``--download-PACKAGENAME=/path/to/PACKAGENAME.tar.gz``: If ``configure`` cannot
+  automatically download the package (due to network/firewall issues), one can download
+  the package by alternative means (perhaps wget, curl, or scp via some other
+  machine). Once the tarfile is downloaded, the path to this file can be specified to
+  configure with this option. ``configure`` will proceed to install this package and then
+  configure PETSc with it:
+
+  .. code:: shell-session
+
+     > ./configure --download-mpich=/home/petsc/mpich2-1.0.4p1.tar.gz
+
+- ``--with-PACKAGENAME-dir=/path/to/dir``: If the external package is already installed -
+  specify its location to ``configure`` (it will attempt to detect, and include relevant
+  library files from this location). Normally this corresponds to the top-level
+  installation dir for the package:
+
+  .. code:: shell-session
+
+     > ./configure --with-mpi-dir=/home/petsc/software/mpich2-1.0.4p1
+
+
+- ``--with-PACKAGENAME-include=/path/to/include/dir`` and
+  ``--with-PACKAGENAME-lib=LIBRARYLIST``: Usually a package is defined completely by its
+  include file location - and library list. (If the package is already installed) - then
+  one can use these two options to specify the package to configure. For example:
+
+  .. code:: shell-session
+
+     > ./configure --with-superlu-include=/home/petsc/software/superlu/include --with-superlu-lib=/home/petsc/software/superlu/lib/libsuperlu.a
+
+or
+
+   .. code:: shell-session
+
+      > ./configure --with-parmetis-include=/sandbox/balay/parmetis/include --with-parmetis-lib="-L/sandbox/balay/parmetis/lib -lparmetis -lmetis"
+
+or
+
+   .. code:: shell-session
+
+      > ./configure --with-parmetis-include=/sandbox/balay/parmetis/include --with-parmetis-lib=[/sandbox/balay/parmetis/lib/libparmetis.a,libmetis.a]
+
+.. note::
+
+   - Run ``./configure --help`` to get the list of external packages and corresponding
+     additional options (for example ``--with-mpiexec`` for `MPICH`_).
+   - Generally one would use either one of the above installation modes for any given
+     package - and not mix these. (i.e combining ``--with-mpi-dir`` and
+     ``--with-mpi-include`` etc. should be avoided).
+   - Some packages might not support certain options like ``--download-PACKAGENAME`` or
+     ``--with-PACKAGENAME-dir``. Architectures like Microsoft Windows might have issues
+     with these options. In these cases, ``--with-PACKAGENAME-include`` and
+     ``--with-PACKAGENAME-lib`` options should be preferred.
+   - If you want to download a compatible external package manually, then the URL for this
+     package is listed in configure source for this package. For example, check
+     ``config/BuildSystem/config/packages/SuperLU.py`` for the url for download this
+     package.
+
+- ``--with-packages-build-dir=PATH``: By default, external packages will be unpacked and
+  the build process is run in ``${PETSC_DIR}/${PETSC_ARCH}/externalpackages``. However one
+  can choose a different location where these packages are unpacked and the build process
+  is run.
 
 BLAS and LAPACK problems
-MPI problems / I don't want MPI
-Installation location: in-place or out-of-place.
-Environmental variables PETSC_DIR and PETSC_ARCH
+========================
+
+These packages provide some basic numeric kernels used by PETSc. ``configure`` will
+automatically look for `BLAS/LAPACK`_ in certain standard locations, on most systems you
+should not need to provide any information about `BLAS/LAPACK`_ in the ``configure``
+command.
+
+One can use the following options to let configure download/install `BLAS/LAPACK`_
+automatically:
+
+- When fortran compiler is present:
+
+  .. code:: shell-session
+
+     > ./configure --download-fblaslapack
+
+- Or when configuring without a fortran compiler - i.e --with-fc=0
+
+  .. code:: shell-session
+
+     > ./configure --download-f2cblaslapack
+
+Alternatively one can use other options like one of the following:
+
+.. code:: shell-session
+
+   > ./configure --with-blaslapack-lib=libsunperf.a
+   > ./configure --with-blas-lib=libblas.a --with-lapack-lib=liblapack.a
+   > ./configure --with-blaslapack-dir=/soft/com/packages/intel/13/079/mkl
+
+Intel MKL
+^^^^^^^^^
+
+Intel provides `BLAS/LAPACK`_ via the `MKL`_ library. It usually works from GNU/Intel
+compilers on Linux and Microsoft/Intel compilers on Microsoft Windows. One can specify it
+to PETSc ``configure`` with ``--with-blaslapack-dir=$MKLROOT`` or
+``--with-blaslapack-dir=/soft/com/packages/intel/13/079/mkl``.  If the above option does
+not work - one could determine the correct library list for your compilers using Intel
+`MKL Link Line Advisor`_ and specify with the ``configure`` option
+``--with-blaslapack-lib``
+
+IBM ESSL
+^^^^^^^^
+
+Sadly, IBM's `ESSL`_ does not have all the routines of `BLAS/LAPACK`_ that some
+packages, such as `SuperLU`_ expect; in particular slamch, dlamch and xerbla. In this
+case instead of using `ESSL`_ we suggest ``--download-fblaslapack``. If you really want
+to use `ESSL`_, see https://www.pdc.kth.se/hpc-services.
+
+.. _doc_config_mpi:
+
+MPI problems/I don't want MPI
+=============================
+
+The Message Passing Interface (MPI) provides the parallel functionality for PETSc.
+
+``configure`` will automatically look for MPI compilers ``mpicc``/ ``mpif90`` etc and use them if
+found in your PATH. One can use the following options to let configure download/install
+MPI automatically:
+
+- For `MPICH`_:
+
+  .. code:: shell-session
+
+     > ./configure --download-mpich
+
+- For `OpenMPI`_:
+
+  .. code:: shell-session
+
+     > ./configure --download-openmpi
+
+Using MPI Compilers
+^^^^^^^^^^^^^^^^^^^
+
+It's best to install PETSc with MPI compiler wrappers (often called ``mpicc``,
+``mpicxx``, ``mpif90``) - this way, the SAME compilers used to build MPI are used to
+build PETSc. See the section on :ref:`compilers <doc_config_compilers>` above for more
+details.
+
+- Vendor provided MPI might already be installed. IBM, SGI, Cray etc provide their own:
+
+  .. code:: shell-session
+
+     > ./configure --with-cc=vendor_mpicc --with-fc=vendor_mpif90
+
+- If using `MPICH`_ which is already installed (perhaps using myrinet/gm) then use
+  (without specifying ``--with-cc=gcc`` etc. so that ``configure`` picks up ``mpicc``
+  from mpi-dir):
+
+  .. code:: shell-session
+
+     >  ./configure --with-mpi-dir=/path-to-mpich-install
+
+Installing without MPI
+^^^^^^^^^^^^^^^^^^^^^^
+
+You can build (sequential) PETSc without MPI. This is useful for quickly installing PETSc
+(if MPI is not available - for whatever reason):
+
+.. code:: shell-session
+
+   > ./configure --with-mpi=0
+
+However - if there is any MPI code in user application, then its best to install a full
+MPI implementation - even if the usage is currently limited to uniprocessor mode:
+
+
+Installing with Open MPI with shared MPI libraries
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+`OpenMPI`_ defaults to building shared libraries for MPI. However, the binaries generated
+by MPI wrappers ``mpicc``/ ``mpif90`` etc require ``$LD_LIBRARY_PATH`` to be set to the
+location of these libraries.
+
+Due to this `OpenMPI`_ restriction one has to set ``$LD_LIBRARY_PATH`` correctly (per `OpenMPI`_ `installation instructions`_), before running PETSc ``configure``. If you do not set this environmental variables you will get messages when running ``configure`` such as:
+
+::
+
+   UNABLE to EXECUTE BINARIES for config/configure.py
+   -------------------------------------------------------------------------------
+   Cannot run executables created with C. If this machine uses a batch system
+   to submit jobs you will need to configure using/configure.py with the additional option --with-batch.
+   Otherwise there is problem with the compilers. Can you compile and run code with your C/C++ (and maybe Fortran) compilers?
+
+or when running a code compiled with `OpenMPI`_:
+
+::
+
+   error while loading shared libraries: libmpi.so.0: cannot open shared object file: No such file or directory
+
+Installation location: in-place or out-of-place
+===============================================
+
+By default, PETSc does an in-place installation, meaning the libraries are kept in the
+same directories used to compile PETSc. This is particularly useful for those application
+developers who follow the PETSc git repository master or release branches since rebuilds
+for updates are very quick and painless.
+
+.. important::
+
+   The libraries and include files needed by the users are located in
+   ``$PETSC_DIR/$PETSC_ARCH/lib`` and ``$PETSC_DIR/$PETSC_ARCH/include``
+
+Out-of-place installation with ``--prefix``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To install the libraries and include files in another location use the ``--prefix`` option
+
+.. code:: shell-session
+
+   > ./configure --prefix=/home/userid/my-petsc-install --some-other-options
+
+The libraries and include files needed by the users will be located in
+``/home/userid/my-petsc-install/lib`` and ``/home/userid/my-petsc-install/include``.
+
+Installs in root location (uncommon)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. warning::
+
+   One should never run configure or make on any package using root access. Do so at your
+   own risk.
+
+If one wants to install PETSc in a common system location like ``/usr/local`` or ``/opt``
+that requires root access we suggest creating a directory for PETSc with user privileges,
+and then do the PETSc install (as a **regular/non-root** user):
+
+.. code-block:: shell-session
+
+   > sudo mkdir /opt/petsc
+   > sudo chown user:group /opt/petsc
+   > cd /home/userid/petsc
+   > ./configure --prefix=/opt/petsc/my-root-petsc-install --some-other-options
+   > make
+   > make install
+
+Installs for package managers: using ``DESTDIR`` (very uncommon)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: shell-session
+
+   > ./configure --prefix=/opt/petsc/my-root-petsc-install
+   > make
+   > make install DESTDIR=/tmp/petsc-pkg
+
+Package up ``/tmp/petsc-pkg``. The package should then be installed at
+``/opt/petsc/my-root-petsc-install``
+
+Multiple installs using ``--prefix`` (and ``DESTDIR``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Specify a different ``--prefix`` location for each configure of different options - at
+configure time. For example:
+
+.. code:: shell-session
+
+   > ./configure --prefix=/opt/petsc/petsc-3.14.0-mpich --with-mpi-dir=/opt/mpich
+   > make
+   > make install [DESTDIR=/tmp/petsc-pkg]
+   > ./configure --prefix=/opt/petsc/petsc-3.14.0-openmpi --with-mpi-dir=/opt/openmpi
+   > make
+   > make install [DESTDIR=/tmp/petsc-pkg]
+
+In-place installation
+^^^^^^^^^^^^^^^^^^^^^
+
+The PETSc libraries and generated included files are placed in the sub-directory off the
+current directory ``$PETSC_ARCH`` which is either provided by the user with, for example:
+
+.. code:: shell-session
+
+   > export PETSC_ARCH=arch-debug
+   > ./configure
+   > make
+   > export PETSC_ARCH=arch-opt
+   > ./configure --some-optimization-options
+   > make
+
+or
+
+.. code:: shell-session
+
+   > ./configure PETSC_ARCH=arch-debug
+   > make
+   > ./configure --some-optimization-options PETSC_ARCH=arch-opt
+   > make
+
+If not provided ``configure`` will generate a unique value automatically (for in-place non
+``--prefix`` configurations only).
+
+.. code:: shell-session
+
+   > ./configure
+   > make
+   > ./configure --with-debugging=0
+   > make
+
+Produces the directories (on an Apple MacOS machine) ``$PETSC_DIR/arch-darwin-c-debug`` and
+``$PETSC_DIR/arch-darwin-c-opt``.
+
+Environmental variables ``$PETSC_DIR`` and ``$PETSC_ARCH``
+==========================================================
+
+Applications completely providing their own makefiles do not need to use ``$PETSC_DIR`` or
+``$PETSC_ARCH``
+
+``$PETSC_DIR`` and ``$PETSC_ARCH`` (in-place installs only) are used by the PETSc
+makefiles to indicate which directory and configuration of PETSc to use when compiling
+examples or application code. These variables can be set as environment variables or
+specified on the command line:
+
+- Specify environment variable for bash (can be specified in ``~/.bashrc`` or
+  ``~/.bash_profile``):
+
+  .. code:: shell-session
+
+     > export PETSC_DIR=/absolute/path/to/petsc
+     > export PETSC_ARCH=linux-gnu-c-debug
+
+
+- Specify environment variable for csh/tcsh (can be specified in ``~/.cshrc``):
+
+  .. code:: shell-session
+
+     > setenv PETSC_DIR /absolute/path/to/petsc
+     > setenv PETSC_ARCH linux-gnu-c-debug
+
+- Specify variable on commandline (bash) to build an example in
+  ``$PETSC_DIR/src/ts/tutorials``:
+
+  .. code:: shell-session
+
+     > PETSC_ARCH=linux-gnu-c-debug make PETSC_DIR=/absolute/path/to/petsc ex1
+
+``$PETSC_DIR`` should point to the location of the PETSc installation. For out-of-place
+installations this is the ``--prefix`` location. For in-place installations it is the
+directory where you ran configure PETSc.
+
+``$PETSC_ARCH`` is only needed for in-place installations.
+
 Installing on machine requiring cross compiler or a job scheduler
-Microsoft Windows installation
+=================================================================
+
+On systems where you need to use a job scheduler or batch submission to run jobs use the
+``configure`` option ``--with-batch``. **On such systems the make check option will not
+work**.
+
+- You must first insure you have loaded appropriate modules for the compilers etc that you
+  wish to use. Often the compilers are provided automatically for you and you do not need
+  to provide ``--with-cc=XXX`` etc. Consult with the documentation and local support for
+  such systems for information on these topics.
+
+- On such systems you generally should not provide ``--with-blaslapack-dir`` or
+  ``--download-fblaslapack`` since the systems provide those automatically (sometimes
+  appropriate modules must be loaded first).
+
+- Some package's ``--download-package options`` do not work on these systems, for example
+  `HDF5`_. Thus you must use modules to load those packages and ``--with-package`` to
+  configure with the package.
+
+- Since building external packages on these systems is often troublesome and slow we
+  recommend only installing PETSc with those configuration packages that you need for your
+  work, not extras.
+
 Installing with TAU instrumentation package
-Installing PETSc to use NVIDIA GPUs (aka CUDA)
-Installing PETSc with Kokkos
-Installing PETSc to use GPUs and accelerators via OpenCL (NVIDIA, AMD, and Intel)
-PETSc ./configure automatically generates Pkgconfig and module files for each install
+===========================================
+
+`TAU`_ package and the prerequisite `PDT`_ packages need to be installed separately (perhaps with MPI). Now use tau_cc.sh as compiler to PETSc configure:
+
+.. code:: shell-session
+
+   > export TAU_MAKEFILE=/home/balay/soft/linux64/tau-2.20.3/x86_64/lib/Makefile.tau-mpi-pdt
+   > ./configure CC=/home/balay/soft/linux64/tau-2.20.3/x86_64/bin/tau_cc.sh --with-fc=0 PETSC_ARCH=arch-tau
+
+.. todo::
+
+   Is this still correct/relevant?
+
+Installing PETSc to use GPUs and accelerators
+=============================================
+
+PETSc is able to take adavantage of GPU's and certain accelerator libraries, however some require additional ``configure`` options.
+
+.. _doc_config_accel_cuda:
+
+`CUDA`_
+^^^^^^^
+
+.. admonition:: Important
+   :class: yellow
+
+   An NVIDIA GPU is **required** to use `CUDA`_-accelerated code. Check that your machine
+   has a `CUDA`_ enabled GPU by consulting https://developer.nvidia.com/cuda-gpus.
+
+- On Linux - make sure you have compatible `NVIDIA driver
+  <https://developer.nvidia.com/cuda-downloads>`__ installed.
+
+- On Windows - Use either `Cygwin`_ or `WSL`_ the latter of which is entirely untested
+  right now. If you have experience with `WSL`_ and/or have successfully built PETSc on
+  windows for use with `CUDA`_ we welcome your input at `petsc-maint@mcs.anl.gov
+  <https://www.mcs.anl.gov/petsc/documentation/bugreporting.html>`__.
+
+In most cases you need only pass the configure option ``--with-cuda``; check
+``config/examples/arch-ci-linux-cuda-double.py`` for example usage.
+
+CUDA build of PETSc currently works on Mac OS X, Linux, Microsoft Windows with `Cygwin`_.
+
+Examples that use CUDA have the suffix .cu; see ``$PETSC_DIR/src/snes/tutorials/ex47.cu``
+
+`KOKKOS`_
+^^^^^^^^^
+
+In most cases you need only pass the configure option ``--download-kokkos`` and one of
+``--with-cuda``, ``--with-openmp``, or ``--with-pthread`` (or nothing to use sequential
+Kokkos). See the :ref:`CUDA installation documenation <doc_config_accel_cuda>`,
+:ref:`OpenMPI installation documentation <doc_config_mpi>` for further reference on their
+respective requirements.
+
+Examples that use Kokkos have the suffix .kokkos.cxx; see
+``src/snes/tutorials/ex3k.kokkos.cxx``
+
+`OpenCL`_/`ViennaCL`_
+^^^^^^^^^^^^^^^^^^^^^
+
+Requires the `OpenCL`_ shared library, which is shipped in the vendor graphics driver and
+the `OpenCL`_ headers; if needed you can download them from the Khronos Group
+directly. Package managers on Linux provide these headers through a package named
+'opencl-headers' or similar. On Apple systems the `OpenCL`_ drivers and headers are always
+available and do not need to be downloaded.
+
+Always make sure you have the latest GPU driver installed. There are several known issues
+with older driver versions.
+
+Run ``configure`` with ``--download-viennacl``; check
+``config/examples/arch-ci-linux-viennacl.py`` for example usage.
+
+`OpenCL`_/`ViennaCL`_ builds of PETSc currently work on Mac OS X, Linux, and Microsoft Windows.
+
+
 Installing on large scale DOE systems
+=====================================
+
+.. todo::
+
+   Is this section really necessary? Seems mostly for internal use for develops with
+   access to theses machines rather than public use.
+
+NERSC - CORI machine
+^^^^^^^^^^^^^^^^^^^^
+
+- Project ID: m3353
+- PI: Richard Mills
+- Notes on usage:
+
+ALCF - Argonne National Laboratory - theta machine - Intel KNL based system
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Project ID:
+- PI:
+- Notes on usage:
+  - Log into theta.alcf.anl.gov
+  - There are three compiler suites `Modules`_
+
+    - module load PrgEnv-intel intel
+    - module load PrgEnv-gnu gcc/7.1.0/
+    - module load PrgEnv-cray
+
+  - List currently loaded modules: module list
+  - List all available modules: module avail
+  - Blas/lapack will automatically be found so you do not need to provide it
+
+    - It is best not to use built-in modules for external packages (except blas/lapack)
+      because they are often buggy. Most external packages can be built using
+      the --download option with the intel or Gnu environment but not cray
+    - You can use config/examples/arch-cray-xc40-knl-opt.py as a template for running
+      configure but it is outdated
+    - When using the Intel module you may need to
+      use --download-sowing-cc=icc --download-sowing-cxx=icpc -download-sowing-cpp="icc
+      -E" --download-sowing-cxxpp="icpc -E" since the GNU compilers may not work as they
+      access Intel files
+    - To get an interactive node use qsub -A CSC250STMS07 -n 1 -t 60 -q debug-flat-quad -I
+    - To run on interactive node using two MPI ranks use aprun -n 2 ./program options
+
+OLCF - Oak Ridge National Laboratory - Summit machine - NVIDIA GPUs and IBM Power PC processors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Project ID: CSC314
+- PI: Barry Smith
+- Apply at: https://docs.olcf.ornl.gov/accounts/accounts_and_projects.html#applying-for-a-user-account
+- Notes on usage:
+  - `Getting Started <https://www.olcf.ornl.gov/for-users/documents-forms/olcf-account-application/>`__
+  - Log into summit.olcf.ornl.gov
+
+    - module load cmake hdf5 cuda
+    - module load pgi (for PGI compilers)
+    - module load essl netlib-lapack xl (for IBM compilers)
+    - module load gcc (for GNU compilers)
+
+  - Use config/examples/arch-olcf-opt.py as a template for running configure
+  - You configure PETSc and build examples in your home directory, but launch them from
+    your "work" directory.
+  - Use the bsub command to submit jobs to the queue. See the "Batch Scripts" section here
+    `running jobs
+    <https://www.olcf.ornl.gov/for-users/system-user-guides/summit/summit-user-guide/#running-jobs.>`__
+  - Tools for profiling
+    - -log_view that adds GPU communication and computation to the summary table
+    - nvprof and nvvp from the CUDA toolkit
+
 Installing PETSc on an iOS or Android platform
+==============================================
+
+.. todo::
+
+   similarly to above, has anyone every used this? I had no idea it existed
+
+For iOS see ``$PETSC_DIR/systems/Apple/iOS/bin/makeall``. A thorough discussion of the
+installation procedure is given `here
+<https://www.researchgate.net/publication/308973080_Comparison_of_Migration_Techniques_for_High-Performance_Code_to_Android_and_iOS>`__.
+
+For Android, you must have your standalone bin folder in the path, so that the compilers
+are visible.
+
+Check ``config/examples/arch-arm64-opt.py`` for iOS and
+``config/examples/arch-armv7-opt.py`` for example usage.
 
 .. rubric:: Footnotes
 
-.. [#blas] The `BLAS/LAPACK <https://www.netlib.org/lapack/lug/node11.html>`__ package
+.. [#blas] The `BLAS/LAPACK`_ package
    installed as part of this command is a `reference implementation
    <https://bitbucket.org/petsc/pkg-fblaslapack/src/master/>`__ and a suitable starting
    point to get PETSc running, but is generally not as performant as more optimized
    libraries. See the :ref:`libaray guide <ch_blas-lapack_avail-libs>` for further
    details.
+
+
+.. _MPICH: https://www.mpich.org/
+.. _BLAS/LAPACK: https://www.netlib.org/lapack/lug/node11.html
+.. _MUMPS: http://mumps.enseeiht.fr/
+.. _HYPRE: https://computing.llnl.gov/projects/hypre-scalable-linear-solvers-multigrid-methods
+.. _SuperLU_DIST: https://github.com/xiaoyeli/superlu_dist
+.. _SuperLU: https://portal.nersc.gov/project/sparse/superlu/
+.. _METIS: http://glaros.dtc.umn.edu/gkhome/metis/metis/overview
+.. _ParMETIS: http://glaros.dtc.umn.edu/gkhome/metis/parmetis/overview
+.. _MKL: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/onemkl.html
+.. _MKL Link Line Advisor: https://software.intel.com/content/www/us/en/develop/articles/intel-mkl-link-line-advisor.html
+.. _ESSL: https://www.ibm.com/support/knowledgecenter/en/SSFHY8/essl_welcome.html
+.. _OpenMPI: https://www.open-mpi.org/
+.. _installation instructions: https://www.open-mpi.org/faq/?category=building
+.. _HDF5: https://www.hdfgroup.org/solutions/hdf5/
+.. _TAU: https://www.cs.uoregon.edu/research/tau/home.php
+.. _PDT: https://www.cs.uoregon.edu/research/pdt/home.php
+.. _CUDA: https://developer.nvidia.com/cuda-toolkit
+.. _Cygwin: https://www.cygwin.com/
+.. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
+.. _KOKKOS: https://github.com/kokkos/kokkos
+.. _OpenCL: https://www.khronos.org/opencl/
+.. _ViennaCL: http://viennacl.sourceforge.net/
+.. _Modules: https://www.alcf.anl.gov/support-center/theta/compiling-and-linking-overview-theta-thetagpu
