@@ -394,7 +394,7 @@ freebsd-pkgs-opt:
 linux-hip-double:
   extends:
     - .stage-3
-    - .linux_test
+    - .linux_test_nofflags
   tags:
     - gpu:amd, os:linux, name:hip-txcorp
   variables:
@@ -404,7 +404,7 @@ linux-hip-double:
 linux-hip-double-64idx:
   extends:
     - .stage-3
-    - .linux_test
+    - .linux_test_nofflags
   tags:
     - gpu:amd, os:linux, name:hip-txcorp
   variables:
