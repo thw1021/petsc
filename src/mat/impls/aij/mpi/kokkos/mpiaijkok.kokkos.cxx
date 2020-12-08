@@ -16,7 +16,6 @@ PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A,MatAssemblyType mode)
   }
   if (aijkok && aijkok->device_mat_d.data()) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
-    mpiaij->B->offloadmask = PETSC_OFFLOAD_GPU;
   }
 
   PetscFunctionReturn(0);
@@ -257,7 +256,6 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
       h_mat.cstart = 0; h_mat.cend = A->cmap->n;
       h_mat.offdiag.i = h_mat.offdiag.j = NULL;
       h_mat.offdiag.a = NULL;
-      h_mat.seq = PETSC_TRUE;
       aijkokA = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
       aijkokA->i_uncompressed_d = NULL;
       aijkokA->colmap_d = NULL;
@@ -271,7 +269,6 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
       aijkokB = static_cast<Mat_SeqAIJKokkos*>(aij->B->spptr);
       aijkokA->i_uncompressed_d = NULL;
       aijkokA->colmap_d = NULL;
-      h_mat.seq = PETSC_FALSE; // for MatAssemblyEnd_SeqAIJCUSPARSE
       jaca = (Mat_SeqAIJ*)aij->A->data;
       h_mat.nonzerostate = aij->A->nonzerostate; // just keep one nonzero state?
       if (!aij->garray) SETERRQ(comm,PETSC_ERR_PLIB,"MPIAIJ Matrix was assembled but is missing garray");

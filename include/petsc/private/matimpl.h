@@ -433,7 +433,6 @@ struct _p_SplitCSRMat {
   PetscInt              cstart,cend,rstart,rend;
   PetscCSRDataStructure diag,offdiag;
   PetscInt              *colmap;
-  PetscBool             seq;
   PetscMPIInt           rank;
   int                   nonzerostate; /*Cuda does not seem to have a 64 bit atomicadd for this */
 };
