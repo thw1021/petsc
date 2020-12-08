@@ -28,7 +28,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A,MatAssemblyType mode)
     if (A->assembled) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"should we leave now????");
   }
   ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr);
-  if (!is_seq) { // do we need this
+  if (!is_seq) { // do we need this??? THIS DOES NOT CATCH
     A->offloadmask = PETSC_OFFLOAD_GPU; // we are in parallel with GPU assembly, no going back
   } else if (aijkok && aijkok->device_mat_d.data()) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
