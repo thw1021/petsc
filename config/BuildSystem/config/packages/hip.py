@@ -101,9 +101,4 @@ class Configure(config.package.Package):
     #self.checkHIPDoubleAlign()
     self.configureTypes()
     self.libraries.popLanguage()
-    # Cleanup -- if we don't do this then we get doubly defined errors
-    if self.platform == 'nvcc':
-        self.framework.delDefine('__HIP_PLATFORM_NVCC__')
-    else:
-        self.framework.delDefine('__HIP_PLATFORM_HCC__')
     return

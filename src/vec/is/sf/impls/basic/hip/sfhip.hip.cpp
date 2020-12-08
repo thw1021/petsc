@@ -2,6 +2,9 @@
 #include <hip/hip_runtime.h>
 #include <petschipblas.h> /* For CHKERRHIP */
 
+/* TODO - there are warnings with hipcc unused-function with device code that
+ * are not well documented.  Need to work with AMD on this  */
+
 /* Map a thread id to an index in root/leaf space through a series of 3D subdomains. See PetscSFPackOpt. */
 __device__ static inline PetscInt MapTidToIndex(const PetscInt *opt,PetscInt tid)
 {
