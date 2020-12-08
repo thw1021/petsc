@@ -5,14 +5,20 @@
 
 PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A,MatAssemblyType mode)
 {
-  PetscErrorCode ierr;
-  Mat_MPIAIJ     *mpiaij = (Mat_MPIAIJ*)A->data;
+  PetscErrorCode   ierr;
+  Mat_MPIAIJ       *mpiaij = (Mat_MPIAIJ*)A->data;
+  Mat_SeqAIJKokkos *aijkok = mpiaij->A->spptr ? static_cast<Mat_SeqAIJKokkos*>(mpiaij->A->spptr) : NULL;
 
   PetscFunctionBegin;
   ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
   if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) {
     ierr = VecSetType(mpiaij->lvec,VECSEQKOKKOS);CHKERRQ(ierr);
   }
+  if (aijkok && aijkok->device_mat_d.data()) {
+    A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
+    mpiaij->B->offloadmask = PETSC_OFFLOAD_GPU;
+  }
+
   PetscFunctionReturn(0);
 }
 
@@ -21,7 +27,6 @@ PetscErrorCode  MatMPIAIJSetPreallocation_MPIAIJKokkos(Mat mat,PetscInt d_nz,con
   PetscErrorCode     ierr;
   PetscInt           i;
   Mat_MPIAIJ         *mpiaij = (Mat_MPIAIJ*)mat->data;
-
 
   PetscFunctionBegin;
   ierr = PetscLayoutSetUp(mat->rmap);CHKERRQ(ierr);
@@ -286,8 +291,9 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
       nnz = jacb->i[n];
       if (jacb->compressedrow.use) {
         const Kokkos::View<PetscInt*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_i_k (jacb->i,n+1);
-        aijkokB->i_uncompressed_d = new Kokkos::View<PetscInt*>(Kokkos::create_mirror_view_and_copy(DeviceMemorySpace(),h_i_k));
-        h_mat.offdiag.i = &(*aijkokB->i_uncompressed_d)(0);
+        aijkokB->i_uncompressed_d = new Kokkos::View<PetscInt*>(Kokkos::create_mirror(DeviceMemorySpace(),h_i_k));
+        Kokkos::deep_copy (*aijkokB->i_uncompressed_d, h_i_k);
+        h_mat.offdiag.i = aijkokB->i_uncompressed_d->data();
         //err = cudaMalloc((void **)&h_mat.offdiag.i,               (n+1)*sizeof(int));CHKERRCUDA(err); // kernel input
         //err = cudaMemcpy(          h_mat.offdiag.i,    jacb->i,   (n+1)*sizeof(int), cudaMemcpyHostToDevice);CHKERRCUDA(err);
       } else {
@@ -296,8 +302,10 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
       h_mat.offdiag.j = (PetscInt*)aijkokB->j_d.data();
       h_mat.offdiag.a = aijkokB->a_d.data();
       {
-        const Kokkos::View<PetscInt*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_colmap_k (aij->colmap,A->cmap->N);
-        aijkokB->colmap_d = new Kokkos::View<PetscInt*>(Kokkos::create_mirror_view_and_copy(DeviceMemorySpace(),h_colmap_k));
+        Kokkos::View<PetscInt*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_colmap_k (aij->colmap,A->cmap->N);
+        aijkokB->colmap_d = new Kokkos::View<PetscInt*>(Kokkos::create_mirror(DeviceMemorySpace(),h_colmap_k));
+        Kokkos::deep_copy (*aijkokB->colmap_d, h_colmap_k);
+        h_mat.colmap = aijkokB->colmap_d->data();
       }
       //err = cudaMalloc((void **)&h_mat.colmap,                  (A->cmap->N+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel output
       //err = cudaMemcpy(          h_mat.colmap,    aij->colmap,  (A->cmap->N+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
