@@ -17,25 +17,12 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat); /* Forward declaration */
 static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A,MatAssemblyType mode)
 {
   PetscErrorCode    ierr;
-  PetscBool         is_seq = PETSC_TRUE;
   Mat_SeqAIJKokkos  *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
-  if (aijkok && aijkok->device_mat_d.data()) {
-    Kokkos::View<PetscSplitCSRDataStructure, Kokkos::HostSpace> h_mat_k = create_mirror_view(Kokkos::HostSpace(), aijkok->device_mat_d);
-    Kokkos::deep_copy (h_mat_k, aijkok->device_mat_d);
-    is_seq = h_mat_k.data()->seq;
-    if (A->assembled) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"should we leave now????");
-  }
   ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr);
-  if (!is_seq) { // do we need this??? THIS DOES NOT CATCH
-    A->offloadmask = PETSC_OFFLOAD_GPU; // we are in parallel with GPU assembly, no going back
-  } else if (aijkok && aijkok->device_mat_d.data()) {
+  if (aijkok && aijkok->device_mat_d.data()) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
-    ierr = PetscInfo1(A,"3) GPU assembly A->assembled=%D\n",A->assembled);CHKERRQ(ierr);
-  } else {
-    A->offloadmask = PETSC_OFFLOAD_CPU;
-    ierr = PetscInfo1(A,"Non-GPU assembly done A->assembled=%D\n",A->assembled);CHKERRQ(ierr);
   }
   /* Don't build (or update) the Mat_SeqAIJKokkos struct. We delay it to the very last moment until we need it. */
   PetscFunctionReturn(0);
