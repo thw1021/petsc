@@ -731,7 +731,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     for pair in child.defines.items():
       if not pair[1]: continue
       item = (self.getFullDefineName(child, pair[0], prefix), pair[1])
-      self.defineDict.update({item[0] : item})
+      self.defineDict[item[0]] = item
     return
 
   def outputDefines(self, f):
