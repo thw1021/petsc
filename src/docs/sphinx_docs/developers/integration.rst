@@ -490,7 +490,7 @@ PETSC_ARCH in our prompt, e.g.
 .. code-block:: console
 
    ~/Src/petsc (master=) arch-complex
-   $ git checkout release
+   > git checkout release
     ~/Src/petsc (release<) arch-complex
 
 The ``<`` indicates that our copy of release is behind the repository we are
@@ -499,10 +499,10 @@ bash)
 
 .. code-block:: console
 
-   source ~/bin/git-prompt.sh  (point this to the location of your git-prompt.sh)
-   export GIT_PS1_SHOWDIRTYSTATE=1
-   export GIT_PS1_SHOWUPSTREAM="auto"
-   export PS1='\w\[\e[1m\]\[\e[35m\]$(__git_ps1 " (%s)")\[\e[0m\] ${PETSC_ARCH}\n\$ '
+   > source ~/bin/git-prompt.sh  (point this to the location of your git-prompt.sh)
+   > export GIT_PS1_SHOWDIRTYSTATE=1
+   > export GIT_PS1_SHOWUPSTREAM="auto"
+   > export PS1='\w\[\e[1m\]\[\e[35m\]$(__git_ps1 " (%s)")\[\e[0m\] ${PETSC_ARCH}\n\$ '
 
 Git tab completion
 ^^^^^^^^^^^^^^^^^^
@@ -571,7 +571,7 @@ of the latest ``master`` using
 
 .. code-block:: console
 
-    $ git rebase master (while in your branch)
+    > git rebase master (while in your branch)
 
 Quick summary of Git commands
 -----------------------------

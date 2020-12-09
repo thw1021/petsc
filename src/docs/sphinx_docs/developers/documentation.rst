@@ -32,7 +32,7 @@ Once pdflatex is in your ``$PATH``, you can build the documentation with:
 
 .. code-block:: console
 
-    make alldoc LOC=${PETSC_DIR}
+    > make alldoc LOC=${PETSC_DIR}
 
 (Note that this does not include :ref:`sphinx_documentation`).
 
@@ -40,9 +40,9 @@ To get a quick preview of manual pages from a single source directory (mainly to
 
 .. code-block:: console
 
-    cd $PETSC_DIR/src/snes/interface
-    make LOC=$PETSC_DIR manualpages_buildcite
-    browse $PETSC_DIR/docs/manualpages/SNES/SNESCreate.html  # or suitable command to open the HTML page in a browser
+    > cd $PETSC_DIR/src/snes/interface
+    > make LOC=$PETSC_DIR manualpages_buildcite
+     browse $PETSC_DIR/docs/manualpages/SNES/SNESCreate.html  # or suitable command to open the HTML page in a browser
 
 .. _sphinx_documentation:
 
