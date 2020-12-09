@@ -61,8 +61,6 @@ you can use ``--with-fc=0`` for even faster build times.
 Configuration FAQ
 *****************
 
-.. todo:: do windows guide separately
-
 .. contents:: Table of Contents
    :local:
    :backlinks: entry
@@ -612,10 +610,6 @@ Installing With TAU Instrumentation Package
    > export TAU_MAKEFILE=/home/balay/soft/linux64/tau-2.20.3/x86_64/lib/Makefile.tau-mpi-pdt
    > ./configure CC=/home/balay/soft/linux64/tau-2.20.3/x86_64/bin/tau_cc.sh --with-fc=0 PETSC_ARCH=arch-tau
 
-.. todo::
-
-   Is this still correct/relevant?
-
 .. _doc_config_accel:
 
 Installing PETSc To Use GPUs And Accelerators
@@ -750,10 +744,6 @@ OLCF - Oak Ridge National Laboratory - Summit machine - NVIDIA GPUs and IBM Powe
 
 Installing PETSc on an iOS or Android platform
 ==============================================
-
-.. todo::
-
-   similarly to above, has anyone every used this? I had no idea it existed
 
 For iOS see ``$PETSC_DIR/systems/Apple/iOS/bin/makeall``. A thorough discussion of the
 installation procedure is given `here

@@ -19,3 +19,14 @@ div.yellow > p.admonition-title {
     background-color: #e1c13f;
     border: 1px solid #e1c13f;
 }
+
+div.examplebox {
+    border-style: dashed groove none dotted;
+    border-width: 5px;
+    border-color: #e195a2;
+}
+
+div.examplebox > p.admonition-title {
+    background-color: #e195a2;
+    border: 5px ridge #e195a2;
+}
