@@ -10,6 +10,7 @@ Information and tutorials on setting up a PETSc installation.
    install_tutorial
    download_documentation
    install_documentation
+   multibuild_documentation
 
 Change Logs
 ===========
