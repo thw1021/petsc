@@ -30,7 +30,7 @@ cygwin packages]
 
 Once pdflatex is in your ``PATH``, you can build the documentation with:
 
-.. code-block:: bash
+.. code-block:: console
 
     make alldoc LOC=${PETSC_DIR}
 
@@ -38,7 +38,7 @@ Once pdflatex is in your ``PATH``, you can build the documentation with:
 
 To get a quick preview of manual pages from a single source directory (mainly to debug the manual page syntax):
 
-.. code-block:: bash
+.. code-block:: console
 
     cd $PETSC_DIR/src/snes/interface
     make LOC=$PETSC_DIR manualpages_buildcite
@@ -292,7 +292,7 @@ be converted to RST by `Pandoc <pandoc.org>`__.
 * Save a copy of this file, say ``manual_to_process.tex``.
 * Perform some global cleanup operations, as with this script
 
-  .. code-block:: bash
+  .. code-block:: console
 
       #!/usr/bin/env bash
 
@@ -330,7 +330,7 @@ be converted to RST by `Pandoc <pandoc.org>`__.
 Next, one must examine the output, ideally comparing to the original rendered LaTeX, and make fixes on the ``.rst`` file, including but not limited to:
 
 * Check links
-* Add correct code block languages when not C, e.g. replace ``::`` with ``.. code-block:: bash``
+* Add correct code block languages when not C, e.g. replace ``::`` with ``.. code-block:: console``
 * Re-add citations with ``:cite:`` and add per-chapter bibliography sections (see existing examples)
 * Fix footnotes
 * Fix section labels and links

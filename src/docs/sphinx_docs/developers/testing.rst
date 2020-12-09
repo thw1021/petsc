@@ -13,7 +13,7 @@ Details on using the harness may be found in the :doc:`user's manual </manual/te
 In the examples below, we often make use of this command:  ``make -f gmakefile ...`` or 
 when testing, we have the equivalent of ``make -f gmakefile.test ...``.  Here is a useful alias:
 
-.. code-block:: bash
+.. code-block:: console
 
       alias ptmake='make -f gmakefile.test'
 
@@ -27,7 +27,7 @@ The running of the test harness will show which tests fail, but you may not have
 logged the output or run without showing the full error.  The best way of 
 examining the errors is with this command:
 
-.. code-block:: bash
+.. code-block:: console
 
     $EDITOR $PETSC_ARCH/tests/test*err.log
 
@@ -41,13 +41,13 @@ log files downloaded from the artifacts download tab on the right side:
 
 To see the list of all tests that failed from the last run, you can also run this command:
 
-.. code-block:: bash
+.. code-block:: console
 
     ptmake print-test test-fail=1
 
 To print it out in a column format:
 
-.. code-block:: bash
+.. code-block:: console
 
     ptmake print-test test-fail=1 | tr ' ' '\n' | sort
 
@@ -84,7 +84,7 @@ Debugging a PETSc test using shell scripts
 First, suggest looking at the working directory and look at the options to the
 scripts:
 
-.. code-block:: bash
+.. code-block:: console
 
       > cd $PETSC_ARCH/tests/vec/is/sf/tests
       > ./runex1_basic_1.sh -h
@@ -115,7 +115,7 @@ We will be using the `-C`, `-V`, and `-p` flags.
 
 A basic workflow is something similar to:
 
-.. code-block:: bash
+.. code-block:: console
 
      <edit>
      runex1_basic_1.sh -C
@@ -140,14 +140,14 @@ Debugging a single PETSc test using makefile
 
 First recall how to find help for the options:
 
-.. code-block:: bash
+.. code-block:: console
 
    ptmake help-test
 
 
 To compile the test and run it:
 
-.. code-block:: bash
+.. code-block:: console
 
    ptmake test search=vec_is_sf_tests-ex1_basic_1
 
@@ -155,7 +155,7 @@ This can consist of your basic workflow.  However,
 for the normal compile and edit, running the entire harness with search can be
 cumbersome.  So first get the command:
 
-.. code-block:: bash
+.. code-block:: console
 
      ptmake vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
      <copy command>
@@ -266,7 +266,7 @@ Multiple simultaneous queries can be performed with union (``,``), and intesecti
 
 Here is a way of getting a feel for how the union and intersect operators work:
 
-.. code-block:: bash
+.. code-block:: console
 
       > ptmake print-test query='requires' queryval='ctetgen' | tr ' ' '\n' | wc -l     
       170
@@ -313,7 +313,7 @@ not always helpful for figuring out the argument combination.
 
 For example:
     
-.. code-block:: bash
+.. code-block:: console
 
       > ptmake test s='src/ksp/ksp/tests/ex9.c' i='*1'
       Using MAKEFLAGS: i=*1 s=src/ksp/ksp/tests/ex9.c
@@ -326,7 +326,7 @@ For example:
 
 In this case, the trick is to use the verbose option, `V=1` (or for the shell script workflows, `-v`) to have it show the commands:
 
-.. code-block:: bash
+.. code-block:: console
 
       > ptmake test s='src/ksp/ksp/tests/ex9.c' i='*1' V=1
       Using MAKEFLAGS: V=1 i=*1 s=src/ksp/ksp/tests/ex9.c
@@ -337,7 +337,7 @@ In this case, the trick is to use the verbose option, `V=1` (or for the shell sc
 This can still be hard to read and pick out what you want.  So use the fact that you want`not ok`
 combined with the fact that `#` is the delimiter:
 
-.. code-block:: bash
+.. code-block:: console
 
       > ptmake test s='src/ksp/ksp/tests/ex9.c' i='*1' v=1 | grep 'not ok' | cut -d# -f2
       mpiexec  -n 1 ../ex9 -ksp_converged_reason -ksp_error_if_not_converged  -pc_fieldsplit_diag_use_amat 0 -pc_fieldsplit_diag_use_amat 0 -pc_fieldsplit_type multiplicative > ex9_1.tmp 2> runex9_1.err
@@ -795,7 +795,7 @@ scripts, so we focus on that description.
 
 A sample shell script is given the following.
 
-.. code-block:: bash
+.. code-block:: console
 
     #!/bin/sh
     . petsc_harness.sh

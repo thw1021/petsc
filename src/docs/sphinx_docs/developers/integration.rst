@@ -487,7 +487,7 @@ To stay oriented when working with branches, we encourage configuring
 In the following, we will include the directory, branch name, and
 PETSC_ARCH in our prompt, e.g.
 
-.. code-block:: bash
+.. code-block:: console
 
    ~/Src/petsc (master=) arch-complex
    $ git checkout release
@@ -497,7 +497,7 @@ The ``<`` indicates that our copy of release is behind the repository we are
 pulling from. To achieve this we have the following in our ``.profile`` (for
 bash)
 
-.. code-block:: bash
+.. code-block:: console
 
    source ~/bin/git-prompt.sh  (point this to the location of your git-prompt.sh)
    export GIT_PS1_SHOWDIRTYSTATE=1
@@ -569,7 +569,7 @@ fall behind the ``master`` branch.
 You can move your changes to the top
 of the latest ``master`` using
 
-.. code-block:: bash
+.. code-block:: console
 
     $ git rebase master (while in your branch)
 
