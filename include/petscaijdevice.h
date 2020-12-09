@@ -92,7 +92,7 @@ PETSC_DEVICE_FUNC_DECL void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat
         }
         for (j=0; j<n; j++) {
           if (v)  value = roworiented ? v[i*n+j] : v[i+j*m];
-          if (ignorezeroentries && value == 0.0 && is == ADD_VALUES && im[i] != in[j]) continue;
+          if (ignorezeroentries && PetscRealPart(value) == 0.0 && is == ADD_VALUES && im[i] != in[j]) continue;
           if (in[j] >= cstart && in[j] < cend) {
             col   = in[j] - cstart;
             inserted = 0;
