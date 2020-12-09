@@ -2704,6 +2704,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUSPARSE(Mat A, MatType mtyp
 
       ierr = PetscNew(&spptr);CHKERRQ(ierr);
       spptr->format = MAT_CUSPARSE_CSR;
+      ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
       stat = cusparseCreate(&spptr->handle);CHKERRCUSPARSE(stat);
       B->spptr = spptr;
       spptr->deviceMat = NULL;
