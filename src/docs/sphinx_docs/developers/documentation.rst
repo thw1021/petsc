@@ -28,7 +28,7 @@ Note: Sowing and c2html have additional dependencies like gcc, g++, and flex and
 use compilers specified to PETSc configure. [Windows users please install the corresponding
 cygwin packages]
 
-Once pdflatex is in your ``PATH``, you can build the documentation with:
+Once pdflatex is in your ``$PATH``, you can build the documentation with:
 
 .. code-block:: console
 
