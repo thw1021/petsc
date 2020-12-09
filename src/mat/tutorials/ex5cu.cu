@@ -16,6 +16,9 @@ static char help[] = "Test of Cuda matrix assemble with 1D Laplacian.\n\n";
 #include <petscmat.h>
 #include <petsccublas.h>
 
+// hack to avoid configure problems in CI. Delete when resolved
+#define atomicAdd(e, f) (*e) += f
+
 #define PETSC_DEVICE_FUNC_DECL __device__
 #include <petscaijdevice.h>
 
@@ -107,7 +110,7 @@ int main(int argc,char **args)
 /*TEST
 
    build:
-      requires: cuda !define(PETSC_USE_CTABLE) !cuda
+      requires: cuda !define(PETSC_USE_CTABLE)
 
    test:
       suffix: 0

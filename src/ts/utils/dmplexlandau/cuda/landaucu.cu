@@ -8,7 +8,9 @@
 #include <petscmat.h>
 #include <petsccublas.h>
 
-#define PETSC_THREAD_SYNC __syncthreads()
+// hack to avoid configure problems in CI. Delete when resolved
+#define atomicAdd(e, f) (*e) += f
+
 #define PETSC_DEVICE_FUNC_DECL __device__
 #include "../land_tensors.h"
 #include <petscaijdevice.h>
