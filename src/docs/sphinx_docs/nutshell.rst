@@ -39,7 +39,7 @@ Connectors of continuum models, meshes, and discretizations to solvers and algeb
 
 - ``DMNETWORK`` - for simulations on networks or graphs, for example the power grid, river networks, the nervous system
 
-- ``DMP4EST`` - for simulations on collections of quad or octree meshes
+- ``DM4EST`` - for simulations on collections of quad or octree meshes
 
 
 Utilities
