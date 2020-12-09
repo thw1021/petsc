@@ -1,3 +1,4 @@
+
 .. include:: <isonum.txt>
 
 .. _doc_windows:
@@ -16,10 +17,10 @@ Recommended Installation Methods
 ================================
 
 The following configurations are much like regular Unix-like systems. Our regular
-(Unix-like) instructions should work with them. Most external packages will also work. The
-``configure`` option ``--download-mpich`` should work for these systems. Note however that
-these **do not** support Microsoft/Intel Windows compilers; nor can you use MS-MPI,
-Intel-MPI or MPICH2).
+(Unix-like) instructions should work with them. Most :ref:`external packages
+<doc_externalsoftware>` will also work. The ``configure`` option ``--download-mpich``
+should work for these systems. Note however that these **do not** support Microsoft/Intel
+Windows compilers; nor can you use MS-MPI, Intel-MPI or MPICH2).
 
 - `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows. See the
   instructions below for installing Cygwin for PETSc.
@@ -73,8 +74,8 @@ interface to Microsoft/Intel compilers).
       - make
       - (default selection should already have diff and other tools)
 
-      Additional cygwin components like git cmake can be useful for installing external
-      packages.
+      Additional cygwin components like git cmake can be useful for installing
+      :ref:`external packages <doc_externalsoftware>`.
 
 #. Remove Cygwin link.exe:
 
@@ -158,16 +159,17 @@ do not use it). For example usages, check ``$PETSC_DIR/config/examples/arch-mswi
 External Packages
 ^^^^^^^^^^^^^^^^^
 
-The ``--download-package`` option does not work with many external packages on Microsoft
-Windows.
+The ``--download-package`` option does not work with many :ref:`external packages
+<doc_externalsoftware>` on Microsoft Windows.
 
 Project Files
 ^^^^^^^^^^^^^
 
 We cannot provide Microsoft Visual Studio project files for users as they are specific to
-the ``configure`` options, location of external packages, compiler versions etc. used for
-any given build of PETSc, so they are potentially different for each build of PETSc. So if
-you need a project file for use with PETSc - please do the following.
+the ``configure`` options, location of :ref:`external packages <doc_externalsoftware>`,
+compiler versions etc. used for any given build of PETSc, so they are potentially
+different for each build of PETSc. So if you need a project file for use with PETSc -
+please do the following.
 
 #. Create an empty project file with one of the examples say
    ``$PETSC_DIR/src/ksp/ksp/tutorials/ex2.c``

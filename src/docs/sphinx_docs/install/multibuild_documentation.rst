@@ -150,7 +150,8 @@ In order to rerun this ``configure`` with the same arguments simply do:
    The ``reconfigure`` script also comes with one additional powerful tool, namely the
    ability to additively set new ``configure`` options, and also to change the values of
    previous ``configure`` options! This is particularly useful if one has a lot of
-   external packages installed through PETSc and would like to install another.
+   :ref:`external packages <doc_externalsoftware>` installed through PETSc and would like
+   to install another.
 
    One need only call ``reconfigure``, supplying any additional command-line arguments as
    if it were the regular ``configure``. Suppose one had an installation of PETSc with the following arguments (represented in the ``reconfigure`` script):
