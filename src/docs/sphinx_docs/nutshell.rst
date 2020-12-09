@@ -51,5 +51,5 @@ Utilities
 
 - Monitor - monitoring of solution progress
 
-- Logging - profiling of the performance of the simulation solution process
+- ``Profiling`` - profiling of the performance of the simulation solution process
 
