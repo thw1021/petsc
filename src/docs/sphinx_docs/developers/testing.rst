@@ -487,7 +487,7 @@ With this background, these keywords are as follows.
 
 -  **localrunfiles**: (*Optional*; *Default:* ``""``)
 
-   -  The tests are run under ``PETSC_ARCH/tests``, but some tests
+   -  The tests are run under ``$PETSC_ARCH/tests``, but some tests
       require runtime files that are maintained in the source tree.
       Files in this (space-delimited) list will be copied over. If you
       list a directory instead of files, it will copy the entire
