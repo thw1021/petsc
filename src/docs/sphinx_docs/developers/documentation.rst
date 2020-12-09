@@ -82,7 +82,7 @@ Building the Sphinx docs locally
 
   .. code-block:: console
 
-     > pip install -r $PETSC_DIR/src/docs/sphinx_docs/requirements.txt
+     > python -m pip install -r $PETSC_DIR/src/docs/sphinx_docs/requirements.txt
 
 * Navigate to the location of ``conf.py`` for the Sphinx docs (currently ``$PETSC_DIR/src/docs/sphinx_docs``).
 
