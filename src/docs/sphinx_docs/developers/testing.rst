@@ -833,9 +833,9 @@ A small sample of the output from the test harness is as follows.
     # failed 2/16 tests; 87.500% ok
 
 For developers, modifying the lines that get written to the file can be
-done by modifying ``${PETSC_DIR}/config/example_template.py``.
+done by modifying ``$PETSC_DIR/config/example_template.py``.
 
-To modify the test harness, you can modify ``${PETSC_DIR}/config/petsc_harness.sh``.
+To modify the test harness, you can modify ``$PETSC_DIR/config/petsc_harness.sh``.
 
 Additional Tips
 ~~~~~~~~~~~~~~~

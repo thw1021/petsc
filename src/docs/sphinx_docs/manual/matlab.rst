@@ -107,8 +107,8 @@ where ``machine`` and ``script`` may be ``NULL``. It is also possible to
 start your PETSc program from MATLAB via ``launch()``.
 
 To receive the objects in MATLAB, make sure that
-``${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/matlab`` and
-``${PETSC_DIR}/share/petsc/matlab`` are in the MATLAB path. Use
+``$PETSC_DIR/$PETSC_ARCH/lib/petsc/matlab`` and
+``$PETSC_DIR/share/petsc/matlab`` are in the MATLAB path. Use
 ``p = PetscOpenSocket();`` (or ``p = PetscOpenSocket(portnum)`` if you
 provided a port number in your call to ``PetscViewerSocketOpen()``), and
 then ``a = PetscBinaryRead(p);`` returns the object passed from PETSc.
