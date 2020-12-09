@@ -15,7 +15,7 @@ when testing, we have the equivalent of ``make -f gmakefile.test ...``.  Here is
 
 .. code-block:: console
 
-      alias ptmake='make -f gmakefile.test'
+   > alias ptmake='make -f gmakefile.test'
 
 where ``ptmake`` stands for "petsc test make".  We will use this syntax below to make 
 the commands nicer.
@@ -29,7 +29,7 @@ examining the errors is with this command:
 
 .. code-block:: console
 
-    $EDITOR $PETSC_ARCH/tests/test*err.log
+   > $EDITOR $PETSC_DIR/$PETSC_ARCH/tests/test*err.log
 
 This method can also be used for pipeline jobs. Failed jobs can have all of the
 log files downloaded from the artifacts download tab on the right side:
@@ -43,13 +43,13 @@ To see the list of all tests that failed from the last run, you can also run thi
 
 .. code-block:: console
 
-    ptmake print-test test-fail=1
+    > ptmake print-test test-fail=1
 
 To print it out in a column format:
 
 .. code-block:: console
 
-    ptmake print-test test-fail=1 | tr ' ' '\n' | sort
+    > ptmake print-test test-fail=1 | tr ' ' '\n' | sort
 
 Once you know which tests failed, the question is how to debug them.
 
@@ -142,14 +142,14 @@ First recall how to find help for the options:
 
 .. code-block:: console
 
-   ptmake help-test
+   > ptmake help-test
 
 
 To compile the test and run it:
 
 .. code-block:: console
 
-   ptmake test search=vec_is_sf_tests-ex1_basic_1
+   > ptmake test search=vec_is_sf_tests-ex1_basic_1
 
 This can consist of your basic workflow.  However,
 for the normal compile and edit, running the entire harness with search can be
@@ -157,14 +157,14 @@ cumbersome.  So first get the command:
 
 .. code-block:: console
 
-     ptmake vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
+     > ptmake vec_is_sf_tests-ex1_basic_1 PRINTONLY=1
      <copy command>
      <edit>
-     ptmake $PETSC_ARCH/tests/vec/is/sf/tests/ex1
-     /scratch/kruger/contrib/petsc-mpich-cxx/bin/mpiexec -n 1 arch-mpich-cxx-py3/tests/vec/is/sf/tests/ex1
+     > ptmake $PETSC_ARCH/tests/vec/is/sf/tests/ex1
+     > /scratch/kruger/contrib/petsc-mpich-cxx/bin/mpiexec -n 1 arch-mpich-cxx-py3/tests/vec/is/sf/tests/ex1
      ...
-     cd $PETSC_DIR
-     git commit -a
+     > cd $PETSC_DIR
+     > git commit -a
 
 
 Advanced searching
@@ -268,13 +268,13 @@ Here is a way of getting a feel for how the union and intersect operators work:
 
 .. code-block:: console
 
-      > ptmake print-test query='requires' queryval='ctetgen' | tr ' ' '\n' | wc -l     
+      > ptmake print-test query='requires' queryval='ctetgen' | tr ' ' '\n' | wc -l
       170
-      > ptmake print-test query='requires' queryval='triangle' | tr ' ' '\n' | wc -l     
+      > ptmake print-test query='requires' queryval='triangle' | tr ' ' '\n' | wc -l
       330
-      > ptmake print-test query='requires,requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l     
+      > ptmake print-test query='requires,requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l
       478
-      > ptmake print-test query='requires|requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l      
+      > ptmake print-test query='requires|requires' queryval='ctetgen,triangle' | tr ' ' '\n' | wc -l
       22
 
 The total number of tests for running only ctetgen or triangle is 500.  They have 22 tests in common, and 478 that
@@ -302,17 +302,17 @@ run independently of each other.
            requires: !cuda
 
      It does not match all cases that do not require cuda.
-      
-         
+
+
 Debugging for loops
 --------------------
 
 One of the more difficult issues is how to debug for loops when a subset of the
 arguments are the ones that cause a code crash.  The default naming scheme is
-not always helpful for figuring out the argument combination.  
+not always helpful for figuring out the argument combination.
 
 For example:
-    
+
 .. code-block:: console
 
       > ptmake test s='src/ksp/ksp/tests/ex9.c' i='*1'
@@ -795,7 +795,7 @@ scripts, so we focus on that description.
 
 A sample shell script is given the following.
 
-.. code-block:: console
+.. code-block:: sh
 
     #!/bin/sh
     . petsc_harness.sh

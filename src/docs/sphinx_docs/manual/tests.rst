@@ -108,12 +108,12 @@ Some examples are:
 
 .. code-block:: console
 
-   make -f gmakefile test search='ts%'                      # Run all TS examples
-   make -f gmakefile test searchin='tutorials'              # Run all tutorials
-   make -f gmakefile test search='ts%' searchin='tutorials' # Run all TS tutorials
-   make -f gmakefile test argsearch='cuda'                  # Run examples with cuda in arguments
-   make -f gmakefile test test-fail='1'
-   make -f gmakefile test query='requires' queryval='*MPI_PROCESS_SHARED_MEMORY*'
+   > make -f gmakefile test search='ts%'                      # Run all TS examples
+   > make -f gmakefile test searchin='tutorials'              # Run all tutorials
+   > make -f gmakefile test search='ts%' searchin='tutorials' # Run all TS tutorials
+   > make -f gmakefile test argsearch='cuda'                  # Run examples with cuda in arguments
+   > make -f gmakefile test test-fail='1'
+   > make -f gmakefile test query='requires' queryval='*MPI_PROCESS_SHARED_MEMORY*'
 
 It is useful before invoking the tests to see what targets will be run.
 The ``print-test`` target helps with this:

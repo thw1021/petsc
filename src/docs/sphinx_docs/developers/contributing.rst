@@ -39,29 +39,30 @@ Obtaining the development version of PETSc
 
 .. code-block:: console
 
-  git clone https://gitlab.com/petsc/petsc.git
-  cd petsc
+  > git clone https://gitlab.com/petsc/petsc.git
+  > cd petsc
 
 PETSc can now be configured in the usual way, specified on the
 `Installation page <https://www.mcs.anl.gov/petsc/documentation/installation.html>`__
 
 To update your copy of PETSc
 
+
 .. code-block:: console
 
-  git pull
+  > git pull
 
 Once updated, you will usually want to rebuild completely
 
 .. code-block:: console
 
-  make reconfigure all
+  > make reconfigure all
 
 This is a shorthand version of
 
 .. code-block:: console
 
-  ./$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py && make all
+  > $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py && make all
 
 For additional help use
 
@@ -86,8 +87,8 @@ After the tarballs is obtained - do the following:
 
 .. code-block:: console
 
-        tar zxf petsc-petsc-CHANGESET.tar.gz
-        mv petsc-petsc-CHANGESET petsc
+   > tar zxf petsc-petsc-CHANGESET.tar.gz
+   > mv petsc-petsc-CHANGESET petsc
 
 To update this copy of petsc, re-download the above tarball.
 The URL above gets the latest changes immediately when they are pushed to the repository.
