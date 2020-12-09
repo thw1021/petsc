@@ -127,7 +127,7 @@ Before using PETSc, the user must first set the environmental variable
 ``PETSC_DIR``, indicating the full path of the PETSc home directory. For
 example, under the UNIX bash shell a command of the form
 
-.. code-block:: bash
+.. code-block:: console
 
    export PETSC_DIR=$HOME/petsc
 
@@ -151,14 +151,14 @@ jobs on their selected computer system(s). For instance, when using the
 others, the following command initiates a program that uses eight
 processors:
 
-.. code-block:: bash
+.. code-block:: console
 
    mpiexec -n 8 ./petsc_program_name petsc_options
 
 PETSc also comes with a script that automatically uses the correct
 ``mpiexec`` for your configuration.
 
-.. code-block:: bash
+.. code-block:: console
 
    ${PETSC_DIR}/lib/petsc/bin/petscmpiexec -n 8 ./petsc_program_name petsc_options
 
@@ -697,7 +697,7 @@ not wish to include any PETSc utilities in your makefile, you can use
 the following commands in the PETSc root directory to get the
 information needed by your makefile:
 
-.. code-block:: bash
+.. code-block:: console
 
    make getlinklibs getincludedirs getcflags getcxxflags getfortranflags getccompiler getfortrancompiler getcxxcompiler
 
