@@ -45,7 +45,7 @@ Connectors of continuum models, meshes, and discretizations to solvers and algeb
 Utilities
 =========
 
-- PetscOptions - control of discretization and solution process
+- ``PetscOptions`` - control of discretization and solution process
 
 - PetscViewer - visualizing algebraic objects, solvers, connectors
 
