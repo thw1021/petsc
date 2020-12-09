@@ -58,54 +58,6 @@ you can use ``--with-fc=0`` for even faster build times.
 
    Bug report port
 
-******************************
-Updating or Reinstalling PETSc
-******************************
-
-If you follow the master or release branches of PETSc you can update your libraries with:
-
-.. code-block:: console
-
-   > git pull
-   > make libs
-
-Most of the time this will work, if there are errors regarding compiling Fortran stubs you
-need to also do:
-
-.. code-block:: console
-
-   > make allfortranstubs
-
-If there are large changes in PETSc's ``configure`` code, or if your system configuration
-has drastically changed (for example installing different compiler versions) you may need
-to rerun ``configure`` which you can do with:
-
-.. code-block:: console
-
-   > $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py
-
-Using this reconfiguration script allows ``configure`` to use cached values for certain
-intermediate or final configuration values, which greatly speeds up the process. In fact,
-``configure`` is even able to use this cache to detect whether or not any reconfiguration
-is needed. However, you may disable using these cached values for a particular
-``configure`` run by using the ``--force`` option:
-
-.. code-block:: console
-
-      > $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py --force
-
-While it happens automatically for the first installation, it is also recommended that
-users symlink the reconfiguration script for any additional PETSc builds (i.e. builds with
-separate ``$PETSC_ARCH``) into their ``$PETSC_DIR`` for easy access. Simply use:
-
-.. code-block:: console
-
-   > ln -s $PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/reconfigure-$PETSC_ARCH.py $PETSC_DIR/
-
-.. todo::
-
-   make tips page
-
 --------------
 
 .. _doc_config_faq:
@@ -185,8 +137,8 @@ Common Example Usages
      > ./configure --with-cc=gcc --with-fc=gfortran --with-cxx=g++ --with-clanguage=cxx --download-fblaslapack --download-mpich --with-scalar-type=complex
 
 * Install 2 variants of PETSc, one with gnu, the other with Intel compilers. Specify
-  different ``$PETSC_ARCH`` for each build. See multiple PETSc install documentation for
-  further recomendations:
+  different ``$PETSC_ARCH`` for each build. See multiple PETSc install :ref:`documentation
+  <doc_multi>` for further recommendations:
 
   .. code-block:: console
 
@@ -194,8 +146,6 @@ Common Example Usages
      > make PETSC_ARCH=linux-gnu all test
      > ./configure PETSC_ARCH=linux-gnu-intel --with-cc=icc --with-cxx=icpc --with-fc=ifort --download-mpich --with-blaslapack-dir=/usr/local/mkl
      > make PETSC_ARCH=linux-gnu-intel all test
-
-.. todo:: make multi-install docs
 
 .. _doc_config_compilers:
 
@@ -205,7 +155,7 @@ Compilers
 .. important::
 
    If no compilers are specified - configure will automatically look for available MPI or
-   regular compilers in the user's PATH in the following order:
+   regular compilers in the user's ``$PATH`` in the following order:
 
    #. ``mpicc``/``mpicxx``/``mpif90``
    #. ``gcc``/``g++``/``gfortran``
@@ -249,12 +199,15 @@ Compilers
      > ./configure --with-cxx=0
 
 ``configure`` defaults to building PETSc in debug mode. One can switch to using optimzed
-mode with the configure option ``--with-debugging=0`` (We suggest using a different
-``$PETSC_ARCH`` for debug and optimized builds, for example arch-debug and arch-opt,
-this way you can switch between debugging your code and running for performance by
-simply changing the value of ``$PETSC_ARCH``. Additionally one can specify more suitable
-optimization flags with the options ``COPTFLAGS``, ``FOPTFLAGS``, ``CXXOPTFLAGS``. For
-example when using gnu compilers with corresponding optimization flags:
+mode with the ``configure`` option ``--with-debugging=0`` (we suggest using a different
+``$PETSC_ARCH`` for debug and optimized builds, for example arch-debug and arch-opt, this
+way you can switch between debugging your code and running for performance by simply
+changing the value of ``$PETSC_ARCH``. See multiple install :ref:`documentation
+<doc_multi>` for further details.
+
+Additionally one can specify more suitable optimization flags with the options
+``COPTFLAGS``, ``FOPTFLAGS``, ``CXXOPTFLAGS``. For example when using gnu compilers with
+corresponding optimization flags:
 
 .. code-block:: console
 
@@ -262,8 +215,8 @@ example when using gnu compilers with corresponding optimization flags:
 
 .. warning::
 
-   Configure cannot detect compiler libraries for certain set of compilers. In this case
-   one can specify additional system/compiler libraries using the ``LIBS`` option:
+   ``configure`` cannot detect compiler libraries for certain set of compilers. In this
+   case one can specify additional system/compiler libraries using the ``LIBS`` option:
 
    .. code-block:: console
 
@@ -282,8 +235,8 @@ External Packages
    :class: yellow
 
    `BLAS/LAPACK`_ is the only **required** external package (other than of course build
-   tools such as compilers and make). PETSc may be built and run without MPI support if
-   processing only in serial.
+   tools such as compilers and ``make``). PETSc may be built and run without MPI support
+   if processing only in serial.
 
    For any external packages used with PETSc we highly recommend you have PETSc download
    and install the packages, rather than you installing them separately first. This insures
@@ -395,7 +348,7 @@ automatically look for `BLAS/LAPACK`_ in certain standard locations, on most sys
 should not need to provide any information about `BLAS/LAPACK`_ in the ``configure``
 command.
 
-One can use the following options to let configure download/install `BLAS/LAPACK`_
+One can use the following options to let ``configure`` download/install `BLAS/LAPACK`_
 automatically:
 
 - When fortran compiler is present:
@@ -444,9 +397,9 @@ MPI Problems/I Don't Want MPI
 
 The Message Passing Interface (MPI) provides the parallel functionality for PETSc.
 
-``configure`` will automatically look for MPI compilers ``mpicc``/``mpif90`` etc and use them if
-found in your PATH. One can use the following options to let configure download/install
-MPI automatically:
+``configure`` will automatically look for MPI compilers ``mpicc``/``mpif90`` etc and use
+them if found in your PATH. One can use the following options to let ``configure``
+download/install MPI automatically:
 
 - For `MPICH`_:
 
@@ -504,7 +457,7 @@ location of these libraries.
 
 Due to this `OpenMPI`_ restriction one has to set ``$LD_LIBRARY_PATH`` correctly (per `OpenMPI`_ `installation instructions`_), before running PETSc ``configure``. If you do not set this environmental variables you will get messages when running ``configure`` such as:
 
-::
+.. code-block:: text
 
    UNABLE to EXECUTE BINARIES for config/configure.py
    -------------------------------------------------------------------------------
@@ -514,9 +467,11 @@ Due to this `OpenMPI`_ restriction one has to set ``$LD_LIBRARY_PATH`` correctly
 
 or when running a code compiled with `OpenMPI`_:
 
-::
+.. code-block:: text
 
    error while loading shared libraries: libmpi.so.0: cannot open shared object file: No such file or directory
+
+.. _doc_config_install:
 
 Installation Location: In-place or Out-of-place
 ===============================================
@@ -628,49 +583,7 @@ If not provided ``configure`` will generate a unique value automatically (for in
 Produces the directories (on an Apple MacOS machine) ``$PETSC_DIR/arch-darwin-c-debug`` and
 ``$PETSC_DIR/arch-darwin-c-opt``.
 
-Environmental Variables ``$PETSC_DIR`` And ``$PETSC_ARCH``
-==========================================================
-
-.. note::
-
-   Applications completely providing their own makefiles do not need to use ``$PETSC_DIR``
-   or ``$PETSC_ARCH``
-
-   ``$PETSC_ARCH`` is only needed for in-place installations.
-
-``$PETSC_DIR`` and ``$PETSC_ARCH`` (in-place installs only) are used by the PETSc
-makefiles to indicate which directory and configuration of PETSc to use when compiling
-examples or application code. These variables can be set as environment variables or
-specified on the command line:
-
-- Specify environment variable for bash (can be specified in ``~/.bashrc`` or
-  ``~/.bash_profile``):
-
-  .. code-block:: console
-
-     > export PETSC_DIR=/absolute/path/to/petsc
-     > export PETSC_ARCH=linux-gnu-c-debug
-
-
-- Specify environment variable for csh/tcsh (can be specified in ``~/.cshrc``):
-
-  .. code-block:: console
-
-     > setenv PETSC_DIR /absolute/path/to/petsc
-     > setenv PETSC_ARCH linux-gnu-c-debug
-
-- Specify variable on commandline (bash) to build an example in
-  ``$PETSC_DIR/src/ts/tutorials``:
-
-  .. code-block:: console
-
-     > PETSC_ARCH=linux-gnu-c-debug make PETSC_DIR=/absolute/path/to/petsc ex1
-
-``$PETSC_DIR`` should point to the location of the PETSc installation. For out-of-place
-installations this is the ``--prefix`` location. For in-place installations it is the
-directory where you ran ``configure``.
-
-Installing On Machine Requiring Cross Compiler Ar A Job Scheduler
+Installing On Machine Requiring Cross Compiler Or A Job Scheduler
 =================================================================
 
 On systems where you need to use a job scheduler or batch submission to run jobs use the
