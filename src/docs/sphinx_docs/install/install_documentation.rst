@@ -32,8 +32,9 @@ Or to specify compilers and have PETSc download and install `MPICH`_ and `BLAS/L
    > make all check
 
 Don't need Fortran? Use ``--with-fortran-bindings=0`` to reduce the build times. If you
-are not using external packages that use Fortran (for example, `MUMPS`_ requires Fortran)
-you can use ``--with-fc=0`` for even faster build times.
+are not using :ref:`external packages <doc_externalsoftware>` that use Fortran (for
+example, `MUMPS`_ requires Fortran) you can use ``--with-fc=0`` for even faster build
+times.
 
 .. admonition:: Encounter problems?
 
@@ -220,20 +221,16 @@ corresponding optimization flags:
 External Packages
 =================
 
-.. todo::
-
-   port external packages
-
 .. admonition:: Note
    :class: yellow
 
-   `BLAS/LAPACK`_ is the only **required** external package (other than of course build
-   tools such as compilers and ``make``). PETSc may be built and run without MPI support
-   if processing only in serial.
+   `BLAS/LAPACK`_ is the only **required** :ref:`external package <doc_externalsoftware>`
+   (other than of course build tools such as compilers and ``make``). PETSc may be built
+   and run without MPI support if processing only in serial.
 
-   For any external packages used with PETSc we highly recommend you have PETSc download
-   and install the packages, rather than you installing them separately first. This insures
-   that:
+   For any :ref:`external packages <doc_externalsoftware>` used with PETSc we highly
+   recommend you have PETSc download and install the packages, rather than you installing
+   them separately first. This insures that:
 
    - The packages are installed with the same compilers and compiler options as PETSc
      so that they can work together.
@@ -244,13 +241,13 @@ External Packages
      packages that have not yet been included in an upstream release, and hence may not
      play nice with PETSc.
 
-PETSc provides interfaces to various `external packages
-<https://www.mcs.anl.gov/petsc/miscellaneous/external.html>`__.  One can optionally use
-external solvers like `HYPRE`_, `MUMPS`_, and others from within PETSc applications.
+PETSc provides interfaces to various :ref:`external packages <doc_externalsoftware>`.  One
+can optionally use external solvers like `HYPRE`_, `MUMPS`_, and others from within PETSc
+applications.
 
-PETSc ``configure`` has the ability to download and install these external
-packages. Alternatively if these packages are already installed, then ``configure`` can
-detect and use them.
+PETSc ``configure`` has the ability to download and install these :ref:`external packages
+<doc_externalsoftware>`. Alternatively if these packages are already installed, then
+``configure`` can detect and use them.
 
 If you are behind a firewall and cannot use a proxy for the downloads or have a very slow
 network, use the additional option ``--with-packages-download-dir=/path/to/dir``. This
@@ -259,7 +256,8 @@ may then download the packages to some directory (do not uncompress or untar the
 and then point ``configure`` to these copies of the packages instead of trying to download
 them directly from the internet.
 
-The following modes can be used to download/install external packages with ``configure``.
+The following modes can be used to download/install :ref:`external packages
+<doc_externalsoftware>` with ``configure``.
 
 - ``--download-PACKAGENAME``: Download specified package and install it, enabling PETSc to
   use this package. **This is the recomended method to couple any external packages with PETSc**:
@@ -312,8 +310,9 @@ The following modes can be used to download/install external packages with ``con
 
 .. note::
 
-   - Run ``./configure --help`` to get the list of external packages and corresponding
-     additional options (for example ``--with-mpiexec`` for `MPICH`_).
+   - Run ``./configure --help`` to get the list of :ref:`external packages
+     <doc_externalsoftware>` and corresponding additional options (for example
+     ``--with-mpiexec`` for `MPICH`_).
    - Generally one would use either one of the above installation modes for any given
      package - and not mix these. (i.e combining ``--with-mpi-dir`` and
      ``--with-mpi-include`` etc. should be avoided).
@@ -596,9 +595,11 @@ work**.
   `HDF5`_. Thus you must use modules to load those packages and ``--with-package`` to
   configure with the package.
 
-- Since building external packages on these systems is often troublesome and slow we
-  recommend only installing PETSc with those configuration packages that you need for your
-  work, not extras.
+- Since building :ref:`external packages <doc_externalsoftware>` on these systems is often
+  troublesome and slow we recommend only installing PETSc with those configuration
+  packages that you need for your work, not extras.
+
+.. _doc_config_tau:
 
 Installing With TAU Instrumentation Package
 ===========================================
@@ -737,7 +738,7 @@ OLCF - Oak Ridge National Laboratory - Summit machine - NVIDIA GPUs and IBM Powe
     your "work" directory.
   - Use the ``bsub`` command to submit jobs to the queue. See the "Batch Scripts" section
     here `running jobs
-    <https://www.olcf.ornl.gov/for-users/system-user-guides/summit/summit-user-guide/#running-jobs.>`__
+    <https://docs.olcf.ornl.gov/systems/summit_user_guide.html#running-jobs>`__
   - Tools for profiling
     - ``-log_view`` that adds GPU communication and computation to the summary table
     - ``nvprof`` and ``nvvp`` from the CUDA toolkit
