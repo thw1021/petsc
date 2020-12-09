@@ -124,24 +124,24 @@ Running PETSc Programs
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Before using PETSc, the user must first set the environmental variable
-``PETSC_DIR``, indicating the full path of the PETSc home directory. For
+``$PETSC_DIR``, indicating the full path of the PETSc home directory. For
 example, under the UNIX bash shell a command of the form
 
 .. code-block:: console
 
-   export PETSC_DIR=$HOME/petsc
+   > export PETSC_DIR=$HOME/petsc
 
 can be placed in the user’s ``.bashrc`` or other startup file. In
 addition, the user may need to set the environment variable
-``PETSC_ARCH`` to specify a particular configuration of the PETSc
-libraries. Note that ``PETSC_ARCH`` is just a name selected by the
+``$PETSC_ARCH`` to specify a particular configuration of the PETSc
+libraries. Note that ``$PETSC_ARCH`` is just a name selected by the
 installer to refer to the libraries compiled for a particular set of
 compiler options and machine type. Using different values of
-``PETSC_ARCH`` allows one to switch between several different sets (say
+``$PETSC_ARCH`` allows one to switch between several different sets (say
 debug and optimized) of libraries easily. To determine if you need to
-set ``PETSC_ARCH``, look in the directory indicated by ``PETSC_DIR``, if
+set ``$PETSC_ARCH``, look in the directory indicated by ``$PETSC_DIR``, if
 there are subdirectories beginning with ``arch`` then those
-subdirectories give the possible values for ``PETSC_ARCH``.
+subdirectories give the possible values for ``$PETSC_ARCH``.
 
 All PETSc programs use the MPI (Message Passing Interface) standard for
 message-passing communication :cite:`MPI-final`. Thus, to

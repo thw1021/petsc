@@ -905,7 +905,7 @@ exists, from Vi/Vim the user should issue the command
 
    :set tags=CTAGS
 
-from the ``PETSC_DIR`` directory and enter the name of the ``CTAGS``
+from the ``$PETSC_DIR`` directory and enter the name of the ``CTAGS``
 file. Then the command “tag functionname” will cause Vi/Vim to find the
 file and line number where a desired PETSc function is defined. See, `online tutorials <http://www.yolinux.com/TUTORIALS/LinuxTutorialAdvanced_vi.html>`_
 for additional Vi/Vim options that allow searches, etc. It is also
@@ -937,7 +937,7 @@ One way to index and build PETSc in Eclipse is as follows.
 
 #. Right-click on the C project and open the “Properties” panel. Under
    “C/C++ Build :math:`\rightarrow` Builder Settings”, set the Build
-   directory to ``PETSC_DIR`` and make sure “Generate Makefiles
+   directory to ``$PETSC_DIR`` and make sure “Generate Makefiles
    automatically” is unselected. Under the section “C/C++
    General\ :math:`\rightarrow`\ Paths and Symbols”, add the PETSc paths
    to “Includes”.
@@ -956,11 +956,11 @@ One way to index and build PETSc in Eclipse is as follows.
 
 If you launch Eclipse from the Dock on Mac OS X, ``.bashrc`` will not be
 loaded (a known OS X behavior, for security reasons). This will be a
-problem if you set the environment variables ``PETSC_DIR`` and
-``PETSC_ARCH`` in ``.bashrc``. A solution which involves replacing the
+problem if you set the environment variables ``$PETSC_DIR`` and
+``$PETSC_ARCH`` in ``.bashrc``. A solution which involves replacing the
 executable can be found at
 ```/questions/829749/launch-mac-eclipse-with-environment-variables-set`` </questions/829749/launch-mac-eclipse-with-environment-variables-set>`__.
-Alternatively, you can add ``PETSC_DIR`` and ``PETSC_ARCH`` manually
+Alternatively, you can add ``$PETSC_DIR`` and ``$PETSC_ARCH`` manually
 under “Properties :math:`\rightarrow` C/C++ Build :math:`\rightarrow`
 Environment”.
 

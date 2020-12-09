@@ -6,49 +6,49 @@ Running PETSc Tests
 Quick start with the tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For testing builds, the general invocation from the ``PETSC_DIR`` is:
+For testing builds, the general invocation from the ``$PETSC_DIR`` is:
 
 .. code-block:: console
 
-   make [-j <n>] -f gmakefile test PETSC_ARCH=<PETSC_ARCH>
+   > make [-j <n>] -f gmakefile test PETSC_ARCH=<PETSC_ARCH>
 
 For testing ``./configure`` that used the ``--prefix`` option, the
 general invocation from the installation (prefix) directory is:
 
 .. code-block:: console
 
-   make [-j <n>] -f share/petsc/examples/gmakefile test
+   > make [-j <n>] -f share/petsc/examples/gmakefile test
 
 For a full list of options, use
 
 .. code-block:: console
 
-   make -f gmakefile help-test
+   > make -f gmakefile help-test
 
 Understanding test output and more information
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As discussed in :any:`sec_runningtests`, users should set
-``PETSC_DIR`` and ``PETSC_ARCH`` before running the tests, or can
+``$PETSC_DIR`` and ``$PETSC_ARCH`` before running the tests, or can
 provide them on the command line as below.
 
 To check if the libraries are working do:
 
 .. code-block:: console
 
-   make PETSC_DIR=<PETSC_DIR> PETSC_ARCH=<PETSC_ARCH> test
+   > make PETSC_DIR=<PETSC_DIR> PETSC_ARCH=<PETSC_ARCH> test
 
 A comprehensive set of tests can be run with
 
 .. code-block:: console
 
-   make PETSC_DIR=<PETSC_DIR> PETSC_ARCH=<PETSC_ARCH> alltests
+   > make PETSC_DIR=<PETSC_DIR> $PETSC_ARCH=<PETSC_ARCH> alltests
 
 or
 
 .. code-block:: console
 
-   make [-j <n>] -f gmakefile test PETSC_ARCH=<PETSC_ARCH>
+   > make [-j <n>] -f gmakefile test PETSC_ARCH=<PETSC_ARCH>
 
 Depending on your machine’s configuration running the full test suite
 (above) can take from a few minutes to a couple hours. Note that
@@ -82,13 +82,13 @@ For example, test ``vec_vec_tutorials-ex6``, which can be run e.g. with
 
 .. code-block:: console
 
-   make -f gmakefile test search='vec_vec_tutorials-ex6'
+   > make -f gmakefile test search='vec_vec_tutorials-ex6'
 
 (see the discussion of ``search`` below), denotes the shell script:
 
 .. code-block:: console
 
-   $PETSC_DIR/$PETSC_ARCH/tests/vec/vec/tutorials/runex6.sh
+   > $PETSC_DIR/$PETSC_ARCH/tests/vec/vec/tutorials/runex6.sh
 
 These shell scripts can be run independently in those directories, and
 take arguments to show the commands run, change arguments, etc. Use the
@@ -120,26 +120,28 @@ The ``print-test`` target helps with this:
 
 .. code-block:: console
 
-   make -f gmakefile print-test argsearch='cuda'
+   > make -f gmakefile print-test argsearch='cuda'
 
 To see all of the test targets which would be run, this command can be
 used:
 
 .. code-block:: console
 
-   make -f gmakefile print-test
+   > make -f gmakefile print-test
 
 For testing in install directories, some examples are:
 
 .. code-block:: console
 
-   cd ${PREFIX_DIR}; make -f share/petsc/examples/gmakefile.test test TESTDIR=mytests
+   > cd ${PREFIX_DIR}
+   > make -f share/petsc/examples/gmakefile.test test TESTDIR=mytests
 
 or
 
 .. code-block:: console
 
-   cd ${PREFIX_DIR}/share/petsc/examples; make -f gmakefile test TESTDIR=$PWD/mytests
+   > cd ${PREFIX_DIR}/share/petsc/examples
+   > make -f gmakefile test TESTDIR=$PWD/mytests
 
 where the latter is needed to make have it run in the local directory
 instead of ``$PREFIX_DIR``.
