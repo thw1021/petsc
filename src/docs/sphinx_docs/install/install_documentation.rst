@@ -23,7 +23,6 @@ On systems where MPI and `BLAS/LAPACK`_ are installed:
    > ./configure
    > make all check
 
-
 Or to specify compilers and have PETSc download and install `MPICH`_ and `BLAS/LAPACK`_
 [#blas]_ (when they are not already on your machine):
 
@@ -52,11 +51,7 @@ you can use ``--with-fc=0`` for even faster build times.
          make PETSC_DIR=/Users/jacobfaibussowitsch/NoSync/petsc PETSC_ARCH=arch-darwin-c-debug all
          xxx=========================================================================xxx
 
-   #. Check the bug-reporting section.
-
-.. todo::
-
-   Bug report port
+   #. Check the :ref:`bug-reporting <doc_creepycrawly>` section.
 
 --------------
 
@@ -88,8 +83,8 @@ Common Example Usages
 
    If there is a system for which we do not yet have such a ``configure`` script and/or
    the script in the examples directory is outdated we welcome your feedback by submitting
-   your recommendations to `petsc-maint@mcs.anl.gov
-   <https://www.mcs.anl.gov/petsc/documentation/bugreporting.html>`__
+   your recommendations to petsc-maint@mcs.anl.gov. See bug report :ref:`documentation
+   <doc_creepycrawly>` for more information.
 
 * If you do not have a Fortran compiler or `MPICH <https://www.mpich.org/>`__ installed
   locally (and want to use PETSc from C only).
@@ -644,8 +639,8 @@ On Linux - make sure you have compatible `NVIDIA driver
 
 On Windows - Use either `Cygwin`_ or `WSL`_ the latter of which is entirely untested right
 now. If you have experience with `WSL`_ and/or have successfully built PETSc on windows
-for use with `CUDA`_ we welcome your input at `petsc-maint@mcs.anl.gov
-<https://www.mcs.anl.gov/petsc/documentation/bugreporting.html>`__.
+for use with `CUDA`_ we welcome your input at petsc-maint@mcs.anl.gov. See the
+bug-reporting :ref:`documentation <doc_creepycrawly>` for more details.
 
 In most cases you need only pass the configure option ``--with-cuda``; check
 ``config/examples/arch-ci-linux-cuda-double.py`` for example usage.

@@ -17,6 +17,7 @@ Highly recommended resource: Ed Bueler, `PETSc for Partial Differential Equation
    manual/index
    guides/guide_to_examples
    developers/index
+   contact/index
 
 
 .. raw:: html

@@ -15,11 +15,10 @@ Use ``git pull`` to download any new patches or changes that have been added sin
 ``git clone`` or last ``git pull``. Use ``git checkout vMAJOR.MINOR.PATCH`` to download a
 particular version.
 
-We recommend users join the ``petsc-announce`` `mailing lists
-<https://www.mcs.anl.gov/petsc/miscellaneous/mailing-lists.html>`__ to be notified when
-major revisions are released. Users may also find the ``petsc-users`` `mailing lists
-<https://www.mcs.anl.gov/petsc/miscellaneous/mailing-lists.html>`__ useful in order to
-submit any questions they may have directly to the development team.
+We recommend users join the official PETSc :ref:`mailing lists <doc_mail>` to be submit
+any questions they may have directly to the development team, be notified of new major
+releases and bug-fixes, or to simply keep up to date with the current state of the
+library.
 
 Alternative Download
 ====================
