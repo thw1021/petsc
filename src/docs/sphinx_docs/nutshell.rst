@@ -47,7 +47,7 @@ Utilities
 
 - ``PetscOptions`` - control of discretization and solution process
 
-- PetscViewer - visualizing algebraic objects, solvers, connectors
+- ``PetscViewer`` - visualizing algebraic objects, solvers, connectors
 
 - Monitor - monitoring of solution progress
 
