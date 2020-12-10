@@ -592,7 +592,7 @@ PetscErrorCode KSPSetFromOptions_GMRES(PetscOptionItems *PetscOptionsObject,KSP 
   if (flg) { ierr = KSPGMRESSetRestart(ksp,restart);CHKERRQ(ierr); }
   ierr = PetscOptionsReal("-ksp_gmres_haptol","Tolerance for exact convergence (happy ending)","KSPGMRESSetHapTol",gmres->haptol,&haptol,&flg);CHKERRQ(ierr);
   if (flg) { ierr = KSPGMRESSetHapTol(ksp,haptol);CHKERRQ(ierr); }
-  ierr = PetscOptionsReal("-ksp_gmres_break_down_tolerance","Divergence breakdown tolerance during GMRES restart","KSPGMRESSetBreakdownTolerance",gmres->breakdowntol,&breakdowntol,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ksp_gmres_breakdown_tolerance","Divergence breakdown tolerance during GMRES restart","KSPGMRESSetBreakdownTolerance",gmres->breakdowntol,&breakdowntol,&flg);CHKERRQ(ierr);
   if (flg) { ierr = KSPGMRESSetBreakdownTol(ksp,breakdowntol);CHKERRQ(ierr); }
   flg  = PETSC_FALSE;
   ierr = PetscOptionsBool("-ksp_gmres_preallocate","Preallocate Krylov vectors","KSPGMRESSetPreAllocateVectors",flg,&flg,NULL);CHKERRQ(ierr);
@@ -858,7 +858,7 @@ PetscErrorCode  KSPGMRESSetHapTol(KSP ksp,PetscReal tol)
 -  tol - the tolerance
 
   Options Database:
-.  -ksp_gmres_break_down_tolerance <positive real value>
+.  -ksp_gmres_breakdown_tolerance <positive real value>
 
    Note: divergence breakdown occurs when GMRES residual increases significantly
          during restart
