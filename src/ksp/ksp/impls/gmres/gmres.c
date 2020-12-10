@@ -320,7 +320,7 @@ PetscErrorCode KSPDestroy_GMRES(KSP ksp)
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetRestart_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESGetRestart_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetHapTol_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetBreakdownTol_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetBreakdownTolerance_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetCGSRefinementType_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESGetCGSRefinementType_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
