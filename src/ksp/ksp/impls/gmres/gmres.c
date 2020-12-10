@@ -320,7 +320,7 @@ PetscErrorCode KSPDestroy_GMRES(KSP ksp)
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetRestart_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESGetRestart_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetHapTol_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetBreakDownTol_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetBreakdownTol_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetCGSRefinementType_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESGetCGSRefinementType_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -592,8 +592,8 @@ PetscErrorCode KSPSetFromOptions_GMRES(PetscOptionItems *PetscOptionsObject,KSP 
   if (flg) { ierr = KSPGMRESSetRestart(ksp,restart);CHKERRQ(ierr); }
   ierr = PetscOptionsReal("-ksp_gmres_haptol","Tolerance for exact convergence (happy ending)","KSPGMRESSetHapTol",gmres->haptol,&haptol,&flg);CHKERRQ(ierr);
   if (flg) { ierr = KSPGMRESSetHapTol(ksp,haptol);CHKERRQ(ierr); }
-  ierr = PetscOptionsReal("-ksp_gmres_breakdowntol","Divergence breakdown tolerance during GMRES restart","KSPGMRESSetBreakDownTol",gmres->breakdowntol,&breakdowntol,&flg);CHKERRQ(ierr);
-  if (flg) { ierr = KSPGMRESSetBreakDownTol(ksp,breakdowntol);CHKERRQ(ierr); }
+  ierr = PetscOptionsReal("-ksp_gmres_breakdowntol","Divergence breakdown tolerance during GMRES restart","KSPGMRESSetBreakdownTol",gmres->breakdowntol,&breakdowntol,&flg);CHKERRQ(ierr);
+  if (flg) { ierr = KSPGMRESSetBreakdownTol(ksp,breakdowntol);CHKERRQ(ierr); }
   flg  = PETSC_FALSE;
   ierr = PetscOptionsBool("-ksp_gmres_preallocate","Preallocate Krylov vectors","KSPGMRESSetPreAllocateVectors",flg,&flg,NULL);CHKERRQ(ierr);
   if (flg) {ierr = KSPGMRESSetPreAllocateVectors(ksp);CHKERRQ(ierr);}
@@ -624,7 +624,7 @@ PetscErrorCode  KSPGMRESSetHapTol_GMRES(KSP ksp,PetscReal tol)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode  KSPGMRESSetBreakDownTol_GMRES(KSP ksp,PetscReal tol)
+PetscErrorCode  KSPGMRESSetBreakdownTol_GMRES(KSP ksp,PetscReal tol)
 {
   KSP_GMRES *gmres = (KSP_GMRES*)ksp->data;
 
@@ -849,7 +849,7 @@ PetscErrorCode  KSPGMRESSetHapTol(KSP ksp,PetscReal tol)
 }
 
 /*@
-   KSPGMRESSetBreakDownTol - Sets tolerance for determining divergence breakdown in GMRES.
+   KSPGMRESSetBreakdownTol - Sets tolerance for determining divergence breakdown in GMRES.
 
    Logically Collective on ksp
 
@@ -867,13 +867,13 @@ PetscErrorCode  KSPGMRESSetHapTol(KSP ksp,PetscReal tol)
 
 .seealso: KSPSetTolerances(), KSPGMRESSetHapTol()
 @*/
-PetscErrorCode  KSPGMRESSetBreakDownTol(KSP ksp,PetscReal tol)
+PetscErrorCode  KSPGMRESSetBreakdownTol(KSP ksp,PetscReal tol)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveReal(ksp,tol,2);
-  ierr = PetscTryMethod((ksp),"KSPGMRESSetBreakDownTol_C",(KSP,PetscReal),(ksp,tol));CHKERRQ(ierr);
+  ierr = PetscTryMethod((ksp),"KSPGMRESSetBreakdownTol_C",(KSP,PetscReal),(ksp,tol));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -942,7 +942,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_GMRES(KSP ksp)
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetRestart_C",KSPGMRESSetRestart_GMRES);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESGetRestart_C",KSPGMRESGetRestart_GMRES);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetHapTol_C",KSPGMRESSetHapTol_GMRES);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetBreakDownTol_C",KSPGMRESSetBreakDownTol_GMRES);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetBreakdownTol_C",KSPGMRESSetBreakdownTol_GMRES);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetCGSRefinementType_C",KSPGMRESSetCGSRefinementType_GMRES);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESGetCGSRefinementType_C",KSPGMRESGetCGSRefinementType_GMRES);CHKERRQ(ierr);
 
