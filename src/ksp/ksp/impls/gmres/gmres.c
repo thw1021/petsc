@@ -873,7 +873,7 @@ PetscErrorCode  KSPGMRESSetBreakdownTolerance(KSP ksp,PetscReal tol)
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveReal(ksp,tol,2);
-  ierr = PetscTryMethod((ksp),"KSPGMRESSetBreakdownTol_C",(KSP,PetscReal),(ksp,tol));CHKERRQ(ierr);
+  ierr = PetscTryMethod((ksp),"KSPGMRESSetBreakdownTolerance_C",(KSP,PetscReal),(ksp,tol));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
