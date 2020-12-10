@@ -4,7 +4,7 @@
 #include <petscmat.h>
 #include <petsc/private/matimpl.h>
 
-#define MatSetValues_SeqAIJ_A_Private(row,col,value,addv)    \
+#define MatSetValues_SeqAIJ_A_Private(row,col,value,addv)              \
   {                                                                    \
   if (col <= lastcol1)  low1 = 0;                                      \
   else                 high1 = nrow1;                                  \
@@ -21,13 +21,13 @@
         atomicAdd(&ap1[_i],value);                                     \
       }                                                                \
       else ap1[_i] = value;                                            \
-      inserted = 1; atomicAdd(&d_mat->nonzerostate,1);  \
+      inserted = 1; atomicAdd(&d_mat->nonzerostate,1);                 \
       break;                                                           \
     }                                                                  \
   }                                                                    \
 }
 
-#define MatSetValues_SeqAIJ_B_Private(row,col,value,addv)    \
+#define MatSetValues_SeqAIJ_B_Private(row,col,value,addv)              \
   {                                                                    \
   if (col <= lastcol2) low2 = 0;                                       \
   else high2 = nrow2;                                                  \
@@ -44,16 +44,13 @@
         atomicAdd(&ap2[_i],value);                                     \
       }                                                                \
       else ap2[_i] = value;                                            \
-      inserted = 1; atomicAdd(&d_mat->nonzerostate,1);  \
+      inserted = 1; atomicAdd(&d_mat->nonzerostate,1);                 \
       break;                                                           \
     }                                                                  \
   }                                                                    \
 }
 
-#if defined(PETSC_HAVE_CUDA)
-static __device__
-#endif
-void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
+PETSC_DEVICE_FUNC_DECL void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
 {
   if (m > 0 && !d_mat) {
     printf("Trying to add to null pointer\n");
@@ -63,12 +60,13 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
   else if (m==0) return;
   else {
     MatScalar value=0.0;
-    PetscInt  *ai = d_mat->diag.i;
-    PetscInt  *aj = d_mat->diag.j;
+    int       *ai = d_mat->diag.i;
+    int       *aj = d_mat->diag.j;
     PetscBool ignorezeroentries = (d_mat->diag.ignorezeroentries==0) ? PETSC_FALSE : PETSC_TRUE;
-    PetscInt  *bi = d_mat->offdiag.i, *bj = d_mat->offdiag.j;
+    int       *bi = d_mat->offdiag.i, *bj = d_mat->offdiag.j;
     MatScalar *ba = d_mat->offdiag.a, *aa = d_mat->diag.a;
-    PetscInt  *rp1,*rp2=NULL,nrow1,nrow2,_i,low1,high1,low2,high2,t,lastcol1,lastcol2,inserted;
+    int       *rp1,*rp2=NULL,nrow1,nrow2,_i,low1,high1,low2,high2,t;
+    PetscInt  lastcol1,lastcol2,inserted;
     MatScalar *ap1,*ap2=NULL;
     PetscBool roworiented = PETSC_TRUE;
     PetscInt  i,j,rstart  = d_mat->rstart,rend = d_mat->rend;
@@ -94,7 +92,7 @@ void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const Pets
         }
         for (j=0; j<n; j++) {
           if (v)  value = roworiented ? v[i*n+j] : v[i+j*m];
-          if (ignorezeroentries && value == 0.0 && (is == ADD_VALUES) && im[i] != in[j]) continue;
+          if (ignorezeroentries && PetscRealPart(value) == 0.0 && is == ADD_VALUES && im[i] != in[j]) continue;
           if (in[j] >= cstart && in[j] < cend) {
             col   = in[j] - cstart;
             inserted = 0;
