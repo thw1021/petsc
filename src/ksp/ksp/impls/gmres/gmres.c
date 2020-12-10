@@ -624,7 +624,7 @@ PetscErrorCode  KSPGMRESSetHapTol_GMRES(KSP ksp,PetscReal tol)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode  KSPGMRESSetBreakdownTol_GMRES(KSP ksp,PetscReal tol)
+PetscErrorCode  KSPGMRESSetBreakdownTolerance_GMRES(KSP ksp,PetscReal tol)
 {
   KSP_GMRES *gmres = (KSP_GMRES*)ksp->data;
 
