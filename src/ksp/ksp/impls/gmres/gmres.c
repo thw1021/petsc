@@ -849,7 +849,7 @@ PetscErrorCode  KSPGMRESSetHapTol(KSP ksp,PetscReal tol)
 }
 
 /*@
-   KSPGMRESSetBreakdownTol - Sets tolerance for determining divergence breakdown in GMRES.
+   KSPGMRESSetBreakdownTolerance - Sets tolerance for determining divergence breakdown in GMRES.
 
    Logically Collective on ksp
 
