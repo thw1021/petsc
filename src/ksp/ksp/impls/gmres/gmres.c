@@ -867,7 +867,7 @@ PetscErrorCode  KSPGMRESSetHapTol(KSP ksp,PetscReal tol)
 
 .seealso: KSPSetTolerances(), KSPGMRESSetHapTol()
 @*/
-PetscErrorCode  KSPGMRESSetBreakdownTol(KSP ksp,PetscReal tol)
+PetscErrorCode  KSPGMRESSetBreakdownTolerance(KSP ksp,PetscReal tol)
 {
   PetscErrorCode ierr;
 
