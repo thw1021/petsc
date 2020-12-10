@@ -86,4 +86,22 @@ int main(int argc,char **args)
      args: -AtA_matproduct_atb_via outerproduct
      output_file: output/ex81_1.out
 
+   test:
+     suffix: 4
+     nsize: 3
+     args: -AtA_matproduct_atb_via nonscalable
+     output_file: output/ex81_3.out
+
+   test:
+     suffix: 5
+     nsize: 3
+     args: -AtA_matproduct_atb_via scalable
+     output_file: output/ex81_3.out
+
+   test:
+     suffix: 6
+     nsize: 3
+     args: -AtA_matproduct_atb_via at*b
+     output_file: output/ex81_3.out
+
 TEST*/
