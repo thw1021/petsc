@@ -1,5 +1,5 @@
 
-static char help[] = "Tests MatOption().\n\n";
+static char help[] = "Tests MatOption MAT_FORCE_DIAGONAL_ENTRIES.\n\n";
 
 #include <petscmat.h>
 
@@ -74,5 +74,16 @@ int main(int argc,char **args)
 /*TEST
 
    test:
+     output_file: output/ex81_1.out
+
+   test:
+     suffix: 2
+     args: -AtA_matproduct_atb_via at*b
+     output_file: output/ex81_1.out
+
+   test:
+     suffix: 3
+     args: -AtA_matproduct_atb_via outerproduct
+     output_file: output/ex81_1.out
 
 TEST*/

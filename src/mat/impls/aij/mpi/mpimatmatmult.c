@@ -747,7 +747,7 @@ PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIAIJ(Mat A,Mat P,PetscReal fill,Mat C
   Mat_SeqAIJ         *ad = (Mat_SeqAIJ*)(a->A)->data,*ao=(Mat_SeqAIJ*)(a->B)->data,*p_loc,*p_oth;
   PetscInt           *pi_loc,*pj_loc,*pi_oth,*pj_oth,*dnz,*onz;
   PetscInt           *adi=ad->i,*adj=ad->j,*aoi=ao->i,*aoj=ao->j,rstart=A->rmap->rstart;
-  PetscInt           i,pnz,row,*api,*apj,*Jptr,apnz,nspacedouble=0,j,nzi,*lnk,apnz_max=0;
+  PetscInt           i,pnz,row,*api,*apj,*Jptr,apnz,nspacedouble=0,j,nzi,*lnk,apnz_max=1;
   PetscInt           am=A->rmap->n,pn=P->cmap->n,pm=P->rmap->n,lsize=pn+20;
   PetscReal          afill;
   MatType            mtype;
@@ -805,7 +805,7 @@ PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIAIJ(Mat A,Mat P,PetscReal fill,Mat C
       ierr = PetscLLCondensedAddSorted_Scalable(pnz,Jptr,lnk);CHKERRQ(ierr);
       apnz     = *lnk; /* The first element in the list is the number of items in the list */
       api[i+1] = api[i] + apnz;
-      if (apnz > apnz_max) apnz_max = apnz;
+      if (apnz > apnz_max) apnz_max = apnz + 1; /* '1' for diagonal entry */
     }
     /* off-diagonal portion of A */
     nzi = aoi[i+1] - aoi[i];
@@ -822,8 +822,15 @@ PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIAIJ(Mat A,Mat P,PetscReal fill,Mat C
       ierr = PetscLLCondensedAddSorted_Scalable(pnz,Jptr,lnk);CHKERRQ(ierr);
       apnz     = *lnk;  /* The first element in the list is the number of items in the list */
       api[i+1] = api[i] + apnz;
-      if (apnz > apnz_max) apnz_max = apnz;
+      if (apnz > apnz_max) apnz_max = apnz + 1; /* '1' for diagonal entry */
     }
+
+    /* add missing diagonal entry */
+    if (C->force_diagonals) {
+      j = i + rstart; /* column index */
+      ierr = PetscLLCondensedAddSorted_Scalable(1,&j,lnk);CHKERRQ(ierr);
+    }
+
     apnz     = *lnk;
     api[i+1] = api[i] + apnz;
     if (apnz > apnz_max) apnz_max = apnz;
@@ -1987,6 +1994,13 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ(Mat P,Mat A,PetscReal f
         nextrow[k]++; nextci[k]++;
       }
     }
+
+    /* add missing diagonal entry */
+    if (C->force_diagonals) {
+      k = i + owners[rank]; /* column index */
+      ierr = PetscLLCondensedAddSorted_Scalable(1,&k,lnk);CHKERRQ(ierr);
+    }
+
     nnz = lnk[0];
 
     /* if free space is not available, make more free space */
