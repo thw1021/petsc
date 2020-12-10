@@ -873,7 +873,7 @@ PetscErrorCode  KSPGMRESSetBreakDownTol(KSP ksp,PetscReal tol)
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveReal(ksp,tol,2);
-  ierr = PetscTryMethod((ksp),"KSPGMRESSetBreakDownTol_C",(KSP,PetscReal),((ksp),(tol)));CHKERRQ(ierr);
+  ierr = PetscTryMethod((ksp),"KSPGMRESSetBreakDownTol_C",(KSP,PetscReal),(ksp,tol));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
