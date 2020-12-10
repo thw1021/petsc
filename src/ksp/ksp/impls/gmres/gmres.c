@@ -858,7 +858,7 @@ PetscErrorCode  KSPGMRESSetHapTol(KSP ksp,PetscReal tol)
 -  tol - the tolerance
 
   Options Database:
-.  -ksp_gmres_breakdowntol <positive real value>
+.  -ksp_gmres_break_down_tolerance <positive real value>
 
    Note: divergence breakdown happens when GMRES residual jumps up significantly
          during restart
