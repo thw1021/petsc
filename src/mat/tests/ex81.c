@@ -24,7 +24,7 @@ int main(int argc,char **args)
   v[0] = -1.; v[1] = 2.; v[2] = -1.;
   for (i=2; i<n-1; i++) {
     col[0] = i-1; col[1] = i; col[2] = i+1;
-    ierr    = MatSetValues(A,1,&i,3,col,v,INSERT_VALUES);CHKERRQ(ierr);
+    ierr = MatSetValues(A,1,&i,3,col,v,INSERT_VALUES);CHKERRQ(ierr);
   }
   i    = 0; col[0] = 1; v[0] = -1;
   ierr = MatSetValues(A,1,&i,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
@@ -34,36 +34,33 @@ int main(int argc,char **args)
   ierr = MatSetValues(A,1,&i,2,col,v,INSERT_VALUES);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  //ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
-  /* Compute B = A^t*A, B misses 0-th diagonal */
-  //ierr = MatTransposeMatMult(A,A,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&B);CHKERRQ(ierr);
+  /* Compute B = A^t*A; B misses 0-th diagonal */
   ierr = MatProductCreate(A,A,NULL,&B);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(B,"AtA_");CHKERRQ(ierr);
   ierr = MatProductSetType(B,MATPRODUCT_AtB);CHKERRQ(ierr);
   ierr = MatProductSetAlgorithm(B,MATPRODUCTALGORITHM_DEFAULT);CHKERRQ(ierr);
   ierr = MatProductSetFill(B,PETSC_DEFAULT);CHKERRQ(ierr);
+
+  /* Force allocate missing diagonal entries of B */
+  ierr = MatSetOption(B,MAT_FORCE_DIAGONAL_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatProductSetFromOptions(B);CHKERRQ(ierr);
 
   ierr = MatProductSymbolic(B);CHKERRQ(ierr);
+  ierr = MatSetOption(B,MAT_FORCE_DIAGONAL_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatProductNumeric(B);CHKERRQ(ierr);
+
+  ierr = MatSetOption(B,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatView(B,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
-  //ierr = MatSetOption(B,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_FALSE);CHKERRQ(ierr);
-  //ierr = MatSetOption(B,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
-
-  //ierr = MatSetOption(B,MAT_NEW_NONZERO_LOCATIONS,PETSC_FALSE);CHKERRQ(ierr);
-  ierr = MatSetOption(B,MAT_NEW_NONZERO_LOCATIONS,PETSC_TRUE);CHKERRQ(ierr);
-
+  /* Insert entries to diagonal of B */
   ierr = MatCreateVecs(B,NULL,&diag);CHKERRQ(ierr);
   ierr = MatGetDiagonal(B,diag);CHKERRQ(ierr);
-  //ierr = VecView(diag,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = VecSetValue(diag,0,100.0,INSERT_VALUES);CHKERRQ(ierr);
   ierr = VecAssemblyBegin(diag);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(diag);CHKERRQ(ierr);
-  //ierr = VecView(diag,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD," call MatDiagonalSet...\n");CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"\nMatDiagonalSet()...\n");CHKERRQ(ierr);
   ierr = MatDiagonalSet(B,diag,INSERT_VALUES);CHKERRQ(ierr);
   ierr = MatView(B,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 

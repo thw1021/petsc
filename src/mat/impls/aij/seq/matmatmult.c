@@ -1068,7 +1068,7 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Sorted(Mat A,Mat B,PetscReal fil
   PetscErrorCode ierr;
   Mat_SeqAIJ     *a  = (Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c;
   const PetscInt *ai = a->i,*bi=b->i,*aj=a->j,*bj=b->j;
-  PetscInt       *ci,*cj;
+  PetscInt       *ci,*cj,bcol;
   PetscInt       am=A->rmap->N,bn=B->cmap->N,bm=B->rmap->N;
   PetscReal      afill;
   PetscInt       i,j,ndouble = 0;
@@ -1089,11 +1089,12 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Sorted(Mat A,Mat B,PetscReal fil
     const PetscInt anzi  = ai[i+1] - ai[i]; /* number of nonzeros in this row of A, this is the number of rows of B that we merge */
     const PetscInt *acol = aj + ai[i]; /* column indices of nonzero entries in this row */
     PetscInt packlen = 0,*PETSC_RESTRICT crow;
+
     /* Pack segrow */
     for (j=0; j<anzi; j++) {
       PetscInt brow = acol[j],bjstart = bi[brow],bjend = bi[brow+1],k;
       for (k=bjstart; k<bjend; k++) {
-        PetscInt bcol = bj[k];
+        bcol = bj[k];
         if (!seen[bcol]) { /* new entry */
           PetscInt *PETSC_RESTRICT slot;
           ierr = PetscSegBufferGetInts(segrow,1,&slot);CHKERRQ(ierr);
@@ -1103,6 +1104,16 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Sorted(Mat A,Mat B,PetscReal fil
         }
       }
     }
+
+    /* Check i-th diagonal entry */
+    if (C->force_diagonals && !seen[i]) {
+      PetscInt *PETSC_RESTRICT slot;
+      ierr = PetscSegBufferGetInts(segrow,1,&slot);CHKERRQ(ierr);
+      *slot   = i;
+      seen[i] = 1;
+      packlen++;
+    }
+
     ierr = PetscSegBufferGetInts(seg,packlen,&crow);CHKERRQ(ierr);
     ierr = PetscSegBufferExtractTo(segrow,crow);CHKERRQ(ierr);
     ierr = PetscSortInt(packlen,crow);CHKERRQ(ierr);

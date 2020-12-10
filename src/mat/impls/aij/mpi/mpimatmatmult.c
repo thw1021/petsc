@@ -1224,7 +1224,7 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ_nonscalable(Mat P,Mat A
   PetscBT             lnkbt;
   PetscMPIInt         tagi,tagj,*len_si,*len_s,*len_ri,nrecv;
   PETSC_UNUSED PetscMPIInt icompleted=0;
-  PetscInt            **buf_rj,**buf_ri,**buf_ri_k;
+  PetscInt            **buf_rj,**buf_ri,**buf_ri_k,row,ncols,*cols;
   PetscInt            len,proc,*dnz,*onz,*owners,nzi;
   PetscInt            nrows,*buf_s,*buf_si,*buf_si_i,**nextrow,**nextci;
   MPI_Request         *swaits,*rwaits;
@@ -1408,7 +1408,7 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ_nonscalable(Mat P,Mat A
 
   ierr = MatPreallocateInitialize(comm,pn,an,dnz,onz);CHKERRQ(ierr);
   ierr = PetscLLCondensedCreate(Crmax,aN,&lnk,&lnkbt);CHKERRQ(ierr);
-  for (i=0; i<pn; i++) {
+  for (i=0; i<pn; i++) { /* for each local row of C */
     /* add C_loc into C */
     nzi  = c_loc->i[i+1] - c_loc->i[i];
     Jptr = c_loc->j + c_loc->i[i];
@@ -1423,6 +1423,13 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ_nonscalable(Mat P,Mat A
         nextrow[k]++; nextci[k]++;
       }
     }
+
+    /* add missing diagonal entry */
+    if (C->force_diagonals) {
+      k = i + owners[rank]; /* column index */
+      ierr = PetscLLCondensedAddSorted(1,&k,lnk,lnkbt);CHKERRQ(ierr);
+    }
+
     nzi = lnk[0];
 
     /* copy data into free space, then initialize lnk */
@@ -1443,16 +1450,20 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ_nonscalable(Mat P,Mat A
   /* add C_loc and C_oth to C */
   ierr = MatGetOwnershipRange(C,&rstart,NULL);CHKERRQ(ierr);
   for (i=0; i<pn; i++) {
-    const PetscInt ncols = c_loc->i[i+1] - c_loc->i[i];
-    const PetscInt *cols = c_loc->j + c_loc->i[i];
-    const PetscInt row = rstart + i;
-    ierr = MatSetValues(C,1,&row,ncols,cols,NULL,INSERT_VALUES);CHKERRQ(ierr);
+    ncols = c_loc->i[i+1] - c_loc->i[i];
+    cols  = c_loc->j + c_loc->i[i];
+    row   = rstart + i;
+    ierr = MatSetValues(C,1,(const PetscInt*)&row,(const PetscInt)ncols,(const PetscInt*)cols,NULL,INSERT_VALUES);CHKERRQ(ierr);
+
+    if (C->force_diagonals) {
+      ierr = MatSetValues(C,1,(const PetscInt*)&row,1,(const PetscInt*)&row,NULL,INSERT_VALUES);CHKERRQ(ierr);
+    }
   }
   for (i=0; i<con; i++) {
-    const PetscInt ncols = c_oth->i[i+1] - c_oth->i[i];
-    const PetscInt *cols = c_oth->j + c_oth->i[i];
-    const PetscInt row = prmap[i];
-    ierr = MatSetValues(C,1,&row,ncols,cols,NULL,INSERT_VALUES);CHKERRQ(ierr);
+    ncols = c_oth->i[i+1] - c_oth->i[i];
+    cols  = c_oth->j + c_oth->i[i];
+    row   = prmap[i];
+    ierr = MatSetValues(C,1,(const PetscInt*)&row,(const PetscInt)ncols,(const PetscInt*)cols,NULL,INSERT_VALUES);CHKERRQ(ierr);
   }
   ierr = MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
