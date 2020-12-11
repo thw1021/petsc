@@ -13,6 +13,7 @@
 #include <petsc/private/vecimpl.h>
 #undef VecType
 #include <../src/mat/impls/aij/seq/seqcusparse/cusparsematimpl.h>
+#include <thrust/async/for_each.h>
 
 const char *const MatCUSPARSEStorageFormats[]    = {"CSR","ELL","HYB","MatCUSPARSEStorageFormat","MAT_CUSPARSE_",0};
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
@@ -2217,6 +2218,12 @@ static PetscErrorCode MatMultTranspose_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy)
   PetscFunctionReturn(0);
 }
 
+__global__ static void ScatterAdd(PetscInt n, PetscInt *idx,const PetscScalar *x,PetscScalar *y)
+{
+  int i = blockIdx.x*blockDim.x + threadIdx.x;
+  if (i < n) y[idx[i]] += x[i];
+}
+
 /* z = op(A) x + y. If trans & !herm, op = ^T; if trans & herm, op = ^H; if !trans, op = no-op */
 static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz,PetscBool trans,PetscBool herm)
 {
@@ -2374,11 +2381,20 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
 
       /* ScatterAdd the result from work vector into the full vector when A is compressed */
       if (compressed) {
+        /* I wanted to make this for_each asynchronous but failed. thrust::async::for_each() returns an event (internally registerred)
+           and in the destructor of the scope, it will call cudaStreamSynchronize() on this stream. One has to store all events to
+           prevent that. So I just add a ScatterAdd kernel.
+         */
+        /*
         thrust::device_ptr<PetscScalar> zptr = thrust::device_pointer_cast(zarray);
         ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-        thrust::for_each(thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(zptr, matstruct->cprowIndices->begin()))),
+        thrust::async::for_each(thrust::cuda::par.on(cusparsestruct->stream),
+                         thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(zptr, matstruct->cprowIndices->begin()))),
                          thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(zptr, matstruct->cprowIndices->begin()))) + matstruct->cprowIndices->size(),
                          VecCUDAPlusEquals());
+        */
+        PetscInt n = matstruct->cprowIndices->size();
+        ScatterAdd<<<(n+255)/256,256,0,cusparsestruct->stream>>>(n,matstruct->cprowIndices->data().get(),cusparsestruct->workVector->data().get(),zarray);
         cerr = WaitForCUDA();CHKERRCUDA(cerr);
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
       }
