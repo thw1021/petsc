@@ -629,6 +629,10 @@ PetscErrorCode  KSPGMRESSetBreakdownTolerance_GMRES(KSP ksp,PetscReal tol)
   KSP_GMRES *gmres = (KSP_GMRES*)ksp->data;
 
   PetscFunctionBegin;
+  if (tol == PETSC_DEFAULT) {
+    gmres->breakdowntol = 0.1;
+    PetscFunctionReturn(0);
+  }
   if (tol < 0.0) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Breakdown tolerance must be non-negative");
   gmres->breakdowntol = tol;
   PetscFunctionReturn(0);
