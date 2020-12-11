@@ -153,6 +153,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSendRootData(PetscSF sf,PetscSFLin
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
+  link->stream = link->pack_stream;
  #if defined(PETSC_HAVE_NVSHMEM)
   if (link->use_nvshmem) {ierr = PetscSFLinkPutRootData_NVSHMEM(sf,link);CHKERRQ(ierr);} else
  #endif

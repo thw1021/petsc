@@ -703,6 +703,14 @@ PetscErrorCode PetscSFLinkCreate(PetscSF sf,MPI_Datatype unit,PetscMemType rootm
   }
  #endif
   ierr = PetscSFLinkCreate_MPI(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,sfop,mylink);CHKERRQ(ierr);
+
+  /* Put an even on the input stream to mark the start of communication */
+ #if defined(PETSC_HAVE_CUDA)
+  {
+    cudaError_t cerr;
+    cerr = cudaEventRecord((*mylink)->comm_start,NULL);CHKERRCUDA(cerr); /* TODO: NULL should be input leaf/rootdata's stream */
+  }
+ #endif
   PetscFunctionReturn(0);
 }
 
@@ -794,16 +802,19 @@ PetscErrorCode PetscSFLinkGetInUse(PetscSF sf,MPI_Datatype unit,const void *root
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscSFLinkReclaim(PetscSF sf,PetscSFLink *link)
+PetscErrorCode PetscSFLinkReclaim(PetscSF sf,PetscSFLink *mylink)
 {
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
+  PetscSFLink       link = *mylink;
 
   PetscFunctionBegin;
-  (*link)->rootdata = NULL;
-  (*link)->leafdata = NULL;
-  (*link)->next     = bas->avail;
-  bas->avail        = *link;
-  *link             = NULL;
+  cudaEventSynchronize(link->scatter_end);
+  cudaEventSynchronize(link->unpack_end);
+  link->rootdata = NULL;
+  link->leafdata = NULL;
+  link->next     = bas->avail;
+  bas->avail     = link;
+  *mylink        = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -1217,6 +1228,8 @@ PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope 
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PETSCSF_Pack,sf,0,0,0);CHKERRQ(ierr);
+  cudaEventSynchronize(link->comm_start);
+  link->stream = link->pack_stream; // TODO
   if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkSyncDeviceBeforePackData(sf,link);CHKERRQ(ierr);}
   if (!link->rootdirect[scope] && bas->rootbuflen[scope]) { /* If rootdata works directly as rootbuf, skip packing */
     ierr = PetscSFLinkGetRootPackOptAndIndices(sf,link,rootmtype,scope,&count,&start,&opt,&rootindices);CHKERRQ(ierr);
@@ -1299,6 +1312,7 @@ PetscErrorCode PetscSFLinkUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScop
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
+  link->stream = link->unpack_stream;
   if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_FALSE);CHKERRQ(ierr);}
   if (!link->leafdirect[scope] && sf->leafbuflen[scope]) { /* If leafdata works directly as rootbuf, skip unpacking */
     ierr = PetscSFLinkGetUnpackAndOp(link,leafmtype,op,sf->leafdups[scope],&UnpackAndOp);CHKERRQ(ierr);
@@ -1311,6 +1325,7 @@ PetscErrorCode PetscSFLinkUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScop
     }
   }
   if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkSyncStreamAfterUnpackLeafData(sf,link);CHKERRQ(ierr);}
+  cudaEventRecord(link->unpack_end,link->unpack_stream);
   ierr = PetscSFLinkLogFlopsAfterUnpackLeafData(sf,link,scope,op);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1349,6 +1364,7 @@ PetscErrorCode PetscSFLinkFetchRootData(PetscSF sf,PetscSFLink link,PetscSFScope
 PetscErrorCode PetscSFLinkBcastAndOpLocal(PetscSF sf,PetscSFLink link,const void *rootdata,void *leafdata,MPI_Op op)
 {
   PetscErrorCode       ierr;
+  cudaError_t          cerr;
   const PetscInt       *rootindices = NULL,*leafindices = NULL;
   PetscInt             count,rootstart,leafstart;
   PetscSF_Basic        *bas = (PetscSF_Basic*)sf->data;
@@ -1358,6 +1374,8 @@ PetscErrorCode PetscSFLinkBcastAndOpLocal(PetscSF sf,PetscSFLink link,const void
 
   PetscFunctionBegin;
   if (!bas->rootbuflen[PETSCSF_LOCAL]) PetscFunctionReturn(0);
+  cerr         = cudaEventSynchronize(link->comm_start);CHKERRCUDA(cerr);
+  link->stream = link->scatter_stream;
   if (rootmtype != leafmtype) { /* Uncommon case */
      /* The local communication has to go through pack and unpack */
     ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_LOCAL,rootdata);CHKERRQ(ierr);
@@ -1375,6 +1393,7 @@ PetscErrorCode PetscSFLinkBcastAndOpLocal(PetscSF sf,PetscSFLink link,const void
       ierr = PetscSFLinkScatterDataWithMPIReduceLocal(sf,link,count,rootstart,rootindices,rootdata,leafstart,leafindices,leafdata,op);CHKERRQ(ierr);
     }
   }
+  cerr = cudaEventRecord(link->scatter_end,link->scatter_stream);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
