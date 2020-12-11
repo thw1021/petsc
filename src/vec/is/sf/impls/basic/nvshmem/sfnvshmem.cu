@@ -268,7 +268,7 @@ __global__ static void PetscNvshmemPut(char *sbuf,PetscInt* sbufdisp,char *rbuf,
 
   /* Or nvshmem_char_put_signal_nbi(dest,src,nelems,signal,1,NVSHMEM_SIGNAL_ADD,pe) once it has a _block version */
   nvshmemx_putmem_nbi_block(dest,src,nelems,pe);
-  nvshmem_quiet(); /* not nvshmem_fence() since we have to make sure the put is complete at the remote side */
+  nvshmem_fence();
   nvshmemx_signal_op(sigaddr,1,NVSHMEM_SIGNAL_ADD,pe);
 }
 
@@ -291,8 +291,8 @@ PetscErrorCode PetscSFLinkPutRootData_NVSHMEM(PetscSF sf,PetscSFLink link)
   sigdisp   = bas->leafsigdisp_d; /* offsets of sig array at remote */
   ranks     = bas->iranks_d;      /* remote leaf ranks */
   nto       = bas->niranks-bas->ndiranks;
-  /* Launch nto blocks of 256 threads. Each block puts data for a destination rank  */
-  PetscNvshmemPut<<<nto,256,0,link->stream>>>(sbuf,sbufdisp,rbuf,rbufdisp,sig,sigdisp,ranks,link->unitbytes);
+  /* Launch nto blocks. Each block puts data for a destination rank  */
+  PetscNvshmemPut<<<nto,1024,0,link->stream>>>(sbuf,sbufdisp,rbuf,rbufdisp,sig,sigdisp,ranks,link->unitbytes);
   PetscFunctionReturn(0);
 }
 
@@ -314,23 +314,22 @@ PetscErrorCode PetscSFLinkPutLeafData_NVSHMEM(PetscSF sf,PetscSFLink link)
   sigdisp   = sf->rootsigdisp_d;
   ranks     = sf->ranks_d;
   nto       = sf->nranks-sf->ndranks;
-  /* Launch nto blocks of 256 threads. Each block puts data for a destination rank  */
-  PetscNvshmemPut<<<nto,256,0,link->stream>>>(sbuf,sbufdisp,rbuf,rbufdisp,sig,sigdisp,ranks,link->unitbytes);
+  /* Launch nto blocks. Each block puts data for a destination rank  */
+  PetscNvshmemPut<<<nto,1024,0,link->stream>>>(sbuf,sbufdisp,rbuf,rbufdisp,sig,sigdisp,ranks,link->unitbytes);
   PetscFunctionReturn(0);
 }
 
-/*  Wait for completion of a send/put.
+/*  Wait for completion of all sends to me.
 
  Input parameters:
-  + sig      - An array of signals at the receiver side. The signals will be updated (increased) by sender.
+  + nfrom    - Number of senders
+  . sig      - An array of signals at the receiver side. The signals will be updated (increased) by sender.
   - sig_old  - An array storing old values of signals before update
  */
-__global__ static void PetscNvshmemWait(uint64_t *sig,uint64_t *sig_old)
+__global__ static void PetscNvshmemWait(PetscInt nfrom,uint64_t *sig,uint64_t *sig_old)
 {
-  int          i = blockIdx.x;
-
-  /* Wait until sig[i] > oldval, then store the return value (the new sig[i]) to sig_old[i] */
-  sig_old[i] = nvshmem_signal_wait_until(sig+i,NVSHMEM_CMP_GT,sig_old[i]);
+  nvshmem_uint64_wait_until_all(sig,nfrom,NULL,NVSHMEM_CMP_GT,sig_old[0]);
+  sig_old[0]++;
 }
 
 /* In a receiver's view, wait for all communications in the given direction to be completed */
@@ -338,7 +337,7 @@ PetscErrorCode PetscSFLinkWaitall_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
 {
   PetscSF_Basic     *bas  = (PetscSF_Basic*)sf->data;
   uint64_t          *sig,*sig_old;
-  PetscInt          nfrom;
+  PetscInt          nfrom,nto;
 
   PetscFunctionBegin;
   if (direction == PETSCSF_LEAF2ROOT) { /* leaf to root reduce */
@@ -351,8 +350,8 @@ PetscErrorCode PetscSFLinkWaitall_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
     nfrom     = bas->niranks-bas->ndiranks;
   }
 
-  /* Launch nfrom blocks of 1 thread.  Each block waits for a signal from a source rank */
-  PetscNvshmemWait<<<nfrom,1,0,link->stream>>>(sig,sig_old);
+  /* Launch 1 thread,waiting for completion signals from source ranks */
+  PetscNvshmemWait<<<1,1,0,link->stream>>>(nfrom,sig,sig_old);
   PetscFunctionReturn(0);
 }
 
@@ -400,7 +399,7 @@ __global__ void PetscNvshmemNorm1And2(nvshmem_team_t team,double *alpha)
 PetscErrorCode VecGetNormArray_MPICUDA_NVSHMEM(Vec xin,NormType type,PetscReal **alpha)
 {
   PetscErrorCode          ierr;
-  PetscInt                offset;
+  PetscInt                offset = 0;
 
   PetscFunctionBegin;
   ierr = PetscNvshmemInitializeCheck();CHKERRQ(ierr);
