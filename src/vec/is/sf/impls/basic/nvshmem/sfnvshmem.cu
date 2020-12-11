@@ -1,3 +1,4 @@
+#include "petsccublas.h"
 #include <petsc/private/cudavecimpl.h>
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 #include <mpi.h>
@@ -26,6 +27,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscNvshmemCalloc(size_t count,size_t size, 
 static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
 {
   PetscErrorCode    ierr;
+  cudaError_t       cerr;
 
   PetscFunctionBegin;
   if (!link->isbuiltin) {ierr = MPI_Type_free(&link->unit);CHKERRQ(ierr);}
@@ -33,7 +35,15 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
   ierr = PetscNvshmemFree(link->leafsig);CHKERRQ(ierr);
   ierr = PetscNvshmemFree(link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
   ierr = PetscNvshmemFree(link->rootsig);CHKERRQ(ierr);
-  if (link->stream) {cudaError_t cerr = cudaStreamDestroy(link->stream);CHKERRCUDA(cerr); link->stream = NULL;}
+
+  cerr = cudaEventDestroy(link->comm_start);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->scatter_end);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->unpack_end);CHKERRCUDA(cerr);
+  cerr = cudaStreamDestroy(link->pack_stream);CHKERRCUDA(cerr);
+  cerr = cudaStreamDestroy(link->unpack_stream);CHKERRCUDA(cerr);
+  cerr = cudaStreamDestroy(link->scatter_stream);CHKERRCUDA(cerr);
+
+  // if (link->stream) {cudaError_t cerr = cudaStreamDestroy(link->stream);CHKERRCUDA(cerr); link->stream = NULL;}
   ierr = PetscFree(link);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -41,6 +51,7 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
 PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemType xrootmtype,const void *rootdata,PetscMemType xleafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
 {
   PetscErrorCode    ierr;
+  cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscSFLink       *p,link;
   PetscBool         match;
@@ -75,6 +86,12 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
     link->rootsig_old = link->rootsig + bas->niranks_rmax;
     link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
   }
+  cerr = cudaEventCreate(&link->comm_start);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->scatter_end);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->unpack_end);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreate(&link->pack_stream);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreate(&link->unpack_stream);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreate(&link->scatter_stream);CHKERRCUDA(cerr);
 
   link->rootmtype                  = PETSC_MEMTYPE_DEVICE; /* Only need 0/1-based mtype from now on */
   link->leafmtype                  = PETSC_MEMTYPE_DEVICE;

@@ -193,6 +193,8 @@ struct _n_PetscSFLink {
   /* The buffers are allocated in device symmetric heap. Their length is the maximal length over all ranks in the comm, and therefore is the same. */
   uint64_t     *rootsig,*rootsig_old;        /* [max{niranks-ndiranks}], signals used when rootbuf works as receive buf. xxx_old stores old values */
   uint64_t     *leafsig,*leafsig_old;        /* [max{nranks-ndranks}], signals used when leafbuf works as receive buf */
+  cudaEvent_t  comm_start,scatter_end,unpack_end;         /* Markers of start of local&remote communication, end of scatter, end of unpack */
+  cudaStream_t pack_stream,unpack_stream,scatter_stream;  /* Streams to run pack+nvshme_put, unpack and scatter */
 #endif
 };
 
