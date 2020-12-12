@@ -5046,6 +5046,8 @@ PetscErrorCode MatCreateMPIAIJSumSeqAIJ(MPI_Comm comm,Mat seqmat,PetscInt m,Pets
     Level: developer
 
    Notes:
+     In other words combines the two parts of a parallel MPIAIJ matrix on each process to a single matrix.
+
      When the communicator associated with A has size 1 and MAT_INITIAL_MATRIX is requested, the matrix returned is the diagonal part of A.
      If MAT_REUSE_MATRIX is requested with comm size 1, MatCopy(Adiag,*A_loc,SAME_NONZERO_PATTERN) is called.
      This means that one can preallocate the proper sequential matrix first and then call this routine with MAT_REUSE_MATRIX to safely

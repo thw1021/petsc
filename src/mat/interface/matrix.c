@@ -7468,7 +7468,7 @@ PetscErrorCode MatSetBlockSize(Mat mat,PetscInt bs)
   PetscFunctionReturn(0);
 }
 
-type struct {
+typedef struct {
   PetscInt rank;
   PetscInt parallel;
   PetscInt cstart;
@@ -7495,7 +7495,7 @@ type struct {
 PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
 {
   PetscErrorCode  ierr;
-  PetscInt        n,nblocks = 0, *bsizes,i = 0,env = 0, senv = 0,  cstart;
+  PetscInt        n,nblocks = 0, *bsizes,i = 0,env = 0, senv = 0,  cstart, m;
   const PetscInt *ia,*ja;
   PetscBool       set,flag,done;
   Mat             A = mat;
@@ -7513,8 +7513,8 @@ PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
     ierr = MatGetRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
   } else {
     ierr = MatMPIAIJGetLocalMat(mat,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
-    ierr = PetscObjectCompose((PtscObject)A,"MatGetRowIJ_MPIAIJ",(PetscObject)B);CHKERRQ(ierr);
-    ierr = MatGetRowIJ(A,oshift,symmetric,inodecompressed,m,ia,ja,done);CHKERRQ(ierr);
+    ierr = PetscObjectCompose((PetscObject)A,"MatGetRowIJ_MPIAIJ",(PetscObject)mat);CHKERRQ(ierr);
+    ierr = MatGetRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&m,&ia,&ja,&done);CHKERRQ(ierr);
   }
   if (!done) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Unable to get IJ structure from matrix");
 
@@ -7536,7 +7536,7 @@ PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
   ierr = PetscMalloc1(n,&bsizes);CHKERRQ(ierr);
   if (!rank) cstart = 0;
   if (rank > 0) {
-    ierr = MPI_Recv(&rbuff,,sizeof(sbuff)/sizeof(PetscInt),MPIU_INT,rank-1,tag,comm,&status);CHKERRQ(ierr);
+    ierr = MPI_Recv(&rbuff,sizeof(sbuff)/sizeof(PetscInt),MPIU_INT,rank-1,tag,comm,&status);CHKERRQ(ierr);
   } else {
     rbuff.rank    = -1;
     rbuff.cstart  = 0;
