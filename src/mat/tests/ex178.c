@@ -29,9 +29,7 @@ int main(int argc,char **argv)
   ierr = MatMatTransposeMult(C,C,MAT_INITIAL_MATRIX,PETSC_DETERMINE,&A);CHKERRQ(ierr);
   ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
-  ierr = MatCreate(PETSC_COMM_WORLD,&D);CHKERRQ(ierr);
-  ierr = MatSetType(D,MATAIJ);CHKERRQ(ierr);
-  ierr = MatInvertVariableBlockEnvelope(A,D);CHKERRQ(ierr);
+  ierr = MatInvertVariableBlockEnvelope(A,MAT_INITIAL_MATRIX,&D);CHKERRQ(ierr);
   ierr = MatView(D,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   ierr = MatDestroy(&A);CHKERRQ(ierr);

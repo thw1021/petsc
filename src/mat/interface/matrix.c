@@ -7536,12 +7536,21 @@ PetscErrorCode MatSetBlockSize(Mat mat,PetscInt bs)
 }
 
 typedef struct {
-  PetscInt n;
-  IS       *is;
-  Mat      *mat;
-} _n_MatVariableBlockEnvelope;
+  PetscInt         n;
+  IS               *is;
+  Mat              *mat;
+  PetscObjectState nonzerostate;
+  Mat              C;
+} EnvelopeData;
 
-/*@
+static PetscErrorCode EnvelopeDataDestroy(EnvelopeData *edata)
+{
+  PetscErrorCode ierr;
+  ierr = PetscFree(edata);
+  return 0;
+}
+
+/*
    MatComputeVariableBlockEnvelope - Given a matrix whose nonzeros are in blocks along the diagonal this computes and stores
          the sizes of these blocks in the matrix. An individual block may lie over several processes.
 
@@ -7555,17 +7564,15 @@ typedef struct {
 
      The blocks can overlap between processes, including laying on more than two processes
 
-   Developer Notes:
-     On which process to collect and store the block sizes. The first process that contains the block or the last
-
-   Level: intermediate
-
-.seealso: MatCreateSeqBAIJ(), MatCreateBAIJ(), MatGetBlockSize(), MatSetBlockSizes(), MatGetBlockSizes(), MatGetVariableBlockSizes(), MatSetVariableBlockSizes()
-@*/
-PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
+*/
+static PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
 {
   PetscErrorCode              ierr;
-  PetscInt                    n,*sizes,*starts,i = 0,env = 0, tbs = 0, lblocks = 0,rstart,II;
+  PetscInt                    n,*sizes,*starts,i = 0,env = 0, tbs = 0, lblocks = 0,rstart,II,ln = 0,cnt = 0,cstart,cend;
+  PetscInt                    *diag,*odiag,sc;
+  VecScatter                  scatter;
+  PetscScalar                 *seqv;
+  const PetscScalar           *parv;
   const PetscInt              *ia,*ja;
   PetscBool                   set,flag,done;
   Mat                         AA = mat,A;
@@ -7573,7 +7580,9 @@ PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
   PetscMPIInt                 rank,size,tag;
   MPI_Status                  status;
   PetscContainer              container;
-  _n_MatVariableBlockEnvelope *edata;
+  EnvelopeData                *edata;
+  Vec                         seq,par;
+  IS                          isglobal;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -7621,15 +7630,76 @@ PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
   ierr = MatDestroy(&A);CHKERRQ(ierr);
 
   ierr = PetscNew(&edata);CHKERRQ(ierr);
+  ierr = MatGetNonzeroState(mat,&edata->nonzerostate);CHKERRQ(ierr);
   edata->n = lblocks;
+  /* create IS needed for extracting blocks from the original matrix */
   ierr = PetscMalloc1(lblocks,&edata->is);CHKERRQ(ierr);
   for (PetscInt i=0; i<lblocks; i++) {
     ierr = ISCreateStride(PETSC_COMM_SELF,sizes[i],starts[i],1,&edata->is[i]);CHKERRQ(ierr);
   }
+
+  /* Create the resulting inverse matrix structure with preallocation information */
+  ierr = MatCreate(PetscObjectComm((PetscObject)mat),&edata->C);CHKERRQ(ierr);
+  ierr = MatSetSizes(edata->C,mat->rmap->n,mat->cmap->n,mat->rmap->N,mat->cmap->N);CHKERRQ(ierr);
+  ierr = MatSetBlockSizesFromMats(edata->C,mat,mat);CHKERRQ(ierr);
+  ierr = MatSetType(edata->C,MATAIJ);CHKERRQ(ierr);
+
+  /* Communicate the start and end of each row, from each block to the correct rank */
+  /* TODO: Use PetscSF instead of VecScatter */
+  for (PetscInt i=0; i<lblocks; i++) ln += sizes[i];
+  ierr = VecCreateSeq(PETSC_COMM_SELF,2*ln,&seq);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(seq,&seqv);CHKERRQ(ierr);
+  for (PetscInt i=0; i<lblocks; i++) {
+    for (PetscInt j=0; j<sizes[j]; j++) {
+      seqv[2*cnt]   = starts[i];
+      seqv[2*cnt+1] = starts[i] + sizes[i];
+      cnt  += 2;
+    }
+  }
+  ierr = MPI_Scan(&cnt,&sc,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)mat));CHKERRQ(ierr);
+  sc -= cnt;
+  ierr = VecRestoreArrayWrite(seq,&seqv);CHKERRQ(ierr);
+  ierr = VecCreateMPI(PetscObjectComm((PetscObject)mat),2*mat->rmap->n,2*mat->rmap->N,&par);CHKERRQ(ierr);
+  ierr = ISCreateStride(PETSC_COMM_SELF,cnt,sc,1,&isglobal);CHKERRQ(ierr);
+  ierr = VecScatterCreate(seq, NULL  ,par, isglobal,&scatter);CHKERRQ(ierr);
+  ierr = ISDestroy(&isglobal);CHKERRQ(ierr);
+  ierr = VecScatterBegin(scatter,seq,par,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  ierr = VecScatterEnd(scatter,seq,par,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  ierr = VecScatterDestroy(&scatter);CHKERRQ(ierr);
+  ierr = VecDestroy(&seq);CHKERRQ(ierr);
+  ierr = MatGetOwnershipRangeColumn(mat,&cstart,&cend);CHKERRQ(ierr);
+  ierr = PetscMalloc2(mat->rmap->n,&diag,mat->rmap->n,&odiag);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(par,&parv);CHKERRQ(ierr);
+  cnt = 0;
+  ierr = MatGetSize(mat,NULL,&n);CHKERRQ(ierr);
+  for (PetscInt i=0; i<mat->rmap->n; i++) {
+    PetscInt start,end,d = 0,od = 0;
+
+    start = (PetscInt)parv[2*cnt];
+    end   = (PetscInt)parv[2*cnt+1];
+    cnt  += 2;
+
+    if (start < cstart) {od += cstart - start + n - cend; d += cend - cstart;}
+    else if (start < cend) {od += n - cend; d += cend - start;}
+    else od += n - start;
+    if (end <= cstart) {od -= cstart - end + n - cend; d -= cend - cstart;}
+    else if (end < cend) {od -= n - cend; d -= cend - end;}
+    else od -= n - end;
+
+    odiag[i] = od;
+    diag[i]  = d;
+  }
+  ierr = VecRestoreArrayRead(par,&parv);CHKERRQ(ierr);
+  ierr = VecDestroy(&par);CHKERRQ(ierr);
+  ierr = MatXAIJSetPreallocation(edata->C,mat->rmap->bs,diag,odiag,NULL,NULL);
+  ierr = PetscFree2(diag,odiag);CHKERRQ(ierr);
   ierr = PetscFree2(sizes,starts);CHKERRQ(ierr);
+
   ierr = PetscContainerCreate(PETSC_COMM_SELF,&container);CHKERRQ(ierr);
   ierr = PetscContainerSetPointer(container,edata);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject)mat,"_n_MatVariableBlockEnvelope",(PetscObject)container);CHKERRQ(ierr);
+  ierr = PetscContainerSetUserDestroy(container,(PetscErrorCode (*)(void*))EnvelopeDataDestroy);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject)mat,"EnvelopeData",(PetscObject)container);CHKERRQ(ierr);
+  ierr = PetscObjectDereference((PetscObject)container);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -7651,19 +7721,24 @@ PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
 
 .seealso: MatInvertBlockDiagonal(), MatComputeBlockDiagonal()
 @*/
-PetscErrorCode MatInvertVariableBlockEnvelope(Mat A,Mat C)
+PetscErrorCode MatInvertVariableBlockEnvelope(Mat A,MatReuse reuse, Mat *C)
 {
   PetscErrorCode              ierr;
   PetscContainer              container;
-  _n_MatVariableBlockEnvelope *edata;
+  EnvelopeData *edata;
+  PetscObjectState            nonzerostate;
 
   PetscFunctionBegin;
-  ierr = PetscObjectQuery((PetscObject)A,"_n_MatVariableBlockEnvelope",(PetscObject*)&container);CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)A,"EnvelopeData",(PetscObject*)&container);CHKERRQ(ierr);
   if (!container) {
     ierr = MatComputeVariableBlockEnvelope(A);CHKERRQ(ierr);
-    ierr = PetscObjectQuery((PetscObject)A,"_n_MatVariableBlockEnvelope",(PetscObject*)&container);CHKERRQ(ierr);
+    ierr = PetscObjectQuery((PetscObject)A,"EnvelopeData",(PetscObject*)&container);CHKERRQ(ierr);
   }
   ierr = PetscContainerGetPointer(container,(void**)&edata);CHKERRQ(ierr);
+  ierr = MatGetNonzeroState(A,&nonzerostate);CHKERRQ(ierr);
+  if (nonzerostate > edata->nonzerostate) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Cannot handle changes to matrix nonzero structure");
+  if (reuse == MAT_REUSE_MATRIX && *C != edata->C) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"C matrix must be the same as previously output");
+
   ierr = MatCreateSubMatrices(A,edata->n,edata->is,edata->is,MAT_INITIAL_MATRIX,&edata->mat);CHKERRQ(ierr);
 
   for (PetscInt i=0; i<edata->n; i++) {
@@ -7671,15 +7746,16 @@ PetscErrorCode MatInvertVariableBlockEnvelope(Mat A,Mat C)
     PetscScalar *dvalues;
 
     ierr = MatConvert(edata->mat[i], MATSEQDENSE,MAT_INITIAL_MATRIX,&D);CHKERRQ(ierr);
-    ierr = MatSetOption(C,MAT_ROW_ORIENTED,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = MatSetOption(*C,MAT_ROW_ORIENTED,PETSC_FALSE);CHKERRQ(ierr);
     ierr = MatSeqDenseInvert(D);CHKERRQ(ierr);
     ierr = MatDenseGetArray(D,&dvalues);CHKERRQ(ierr);
-    ierr = MatSetValuesIS(C,edata->is[i],edata->is[i],dvalues,INSERT_VALUES);CHKERRQ(ierr);
+    ierr = MatSetValuesIS(*C,edata->is[i],edata->is[i],dvalues,INSERT_VALUES);CHKERRQ(ierr);
     ierr = MatDestroy(&D);CHKERRQ(ierr);
   }
-
-  ierr = MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatDestroySubMatrices(edata->n,&edata->mat);CHKERRQ(ierr);
+  ierr = MatAssemblyBegin(edata->C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(edata->C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  *C   = edata->C;
   PetscFunctionReturn(0);
 }
 
