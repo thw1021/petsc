@@ -1399,6 +1399,73 @@ PetscErrorCode MatSetValues(Mat mat,PetscInt m,const PetscInt idxm[],PetscInt n,
   PetscFunctionReturn(0);
 }
 
+/*@C
+   MatSetValuesIS - Inserts or adds a block of values into a matrix using IS to indicate the rows and columns
+   These values may be cached, so MatAssemblyBegin() and MatAssemblyEnd()
+   MUST be called after all calls to MatSetValues() have been completed.
+
+   Not Collective
+
+   Input Parameters:
++  mat - the matrix
+.  v - a logically two-dimensional array of values
+.  ism - the rows to provide
+.  isn - the columns to provide
+-  addv - either ADD_VALUES or INSERT_VALUES, where
+   ADD_VALUES adds values to any existing entries, and
+   INSERT_VALUES replaces existing entries with new values
+
+   Notes:
+   If you create the matrix yourself (that is not with a call to DMCreateMatrix()) then you MUST call MatXXXXSetPreallocation() or
+      MatSetUp() before using this routine
+
+   By default the values, v, are row-oriented. See MatSetOption() for other options.
+
+   Calls to MatSetValues() with the INSERT_VALUES and ADD_VALUES
+   options cannot be mixed without intervening calls to the assembly
+   routines.
+
+   MatSetValues() uses 0-based row and column numbers in Fortran
+   as well as in C.
+
+   Negative indices may be passed in idxm and idxn, these rows and columns are
+   simply ignored. This allows easily inserting element stiffness matrices
+   with homogeneous Dirchlet boundary conditions that you don't want represented
+   in the matrix.
+
+   Efficiency Alert:
+   The routine MatSetValuesBlocked() may offer much better efficiency
+   for users of block sparse formats (MATSEQBAIJ and MATMPIBAIJ).
+
+   Level: beginner
+
+   Developer Notes:
+    This is labeled with C so does not automatically generate Fortran stubs and interfaces
+                    because it requires multiple Fortran interfaces depending on which arguments are scalar or arrays.
+
+    This is currently not optimized for any particular IS type
+
+.seealso: MatSetOption(), MatAssemblyBegin(), MatAssemblyEnd(), MatSetValuesBlocked(), MatSetValuesLocal(),
+          InsertMode, INSERT_VALUES, ADD_VALUES, MatSetValues()
+@*/
+PetscErrorCode MatSetValuesIS(Mat mat,IS ism,IS isn,const PetscScalar v[],InsertMode addv)
+{
+  PetscErrorCode ierr;
+  PetscInt       m,n;
+  const PetscInt *rows,*cols;
+
+  PetscFunctionBeginHot;
+  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
+  ierr = ISGetIndices(ism,&rows);CHKERRQ(ierr);
+  ierr = ISGetIndices(isn,&cols);CHKERRQ(ierr);
+  ierr = ISGetLocalSize(ism,&m);CHKERRQ(ierr);
+  ierr = ISGetLocalSize(isn,&n);CHKERRQ(ierr);
+  ierr = MatSetValues(mat,m,rows,n,cols,v,addv);CHKERRQ(ierr);
+  ierr = ISRestoreIndices(ism,&rows);CHKERRQ(ierr);
+  ierr = ISRestoreIndices(isn,&cols);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    MatSetValuesRowLocal - Inserts a row (block row for BAIJ matrices) of nonzero
         values into a matrix
@@ -7469,14 +7536,14 @@ PetscErrorCode MatSetBlockSize(Mat mat,PetscInt bs)
 }
 
 typedef struct {
-  PetscInt rank;
-  PetscInt parallel;
-  PetscInt cstart;
-} MatComputeVariableBlockSizeData;
+  PetscInt n;
+  IS       *is;
+  Mat      *mat;
+} _n_MatVariableBlockEnvelope;
 
 /*@
-   MatComputeVariableBlockSizes - Given a matrix whose only nonzeros are in blocks along the diagonal this computes and stores
-         the sizes of these blocks.
+   MatComputeVariableBlockEnvelope - Given a matrix whose nonzeros are in blocks along the diagonal this computes and stores
+         the sizes of these blocks in the matrix. An individual block may lie over several processes.
 
    Collective on mat
 
@@ -7486,36 +7553,38 @@ typedef struct {
    Notes:
      There can be zeros within the blocks
 
-     The blocks can overlap between processes
+     The blocks can overlap between processes, including laying on more than two processes
+
+   Developer Notes:
+     On which process to collect and store the block sizes. The first process that contains the block or the last
 
    Level: intermediate
 
 .seealso: MatCreateSeqBAIJ(), MatCreateBAIJ(), MatGetBlockSize(), MatSetBlockSizes(), MatGetBlockSizes(), MatGetVariableBlockSizes(), MatSetVariableBlockSizes()
 @*/
-PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
+PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
 {
-  PetscErrorCode  ierr;
-  PetscInt        n,nblocks = 0, *bsizes,i = 0,env = 0, senv = 0,  cstart, m;
-  const PetscInt *ia,*ja;
-  PetscBool       set,flag,done;
-  Mat             A = mat;
-  MPI_Comm        comm;
-  PetscMPIInt     rank,size,tag;
-  MPI_Status      status;
+  PetscErrorCode              ierr;
+  PetscInt                    n,*sizes,*starts,i = 0,env = 0, tbs = 0, lblocks = 0,rstart,II;
+  const PetscInt              *ia,*ja;
+  PetscBool                   set,flag,done;
+  Mat                         AA = mat,A;
+  MPI_Comm                    comm;
+  PetscMPIInt                 rank,size,tag;
+  MPI_Status                  status;
+  PetscContainer              container;
+  _n_MatVariableBlockEnvelope *edata;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   ierr = MatIsSymmetricKnown(mat,&set,&flag);CHKERRQ(ierr);
   if (!set || !flag) {
     /* TOO: only needs nonzero structure of transpose */
-    ierr = MatTranspose(mat,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
-    ierr = MatAXPY(A,1.0,mat,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
-    ierr = MatGetRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
-  } else {
-    ierr = MatMPIAIJGetLocalMat(mat,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
-    ierr = PetscObjectCompose((PetscObject)A,"MatGetRowIJ_MPIAIJ",(PetscObject)mat);CHKERRQ(ierr);
-    ierr = MatGetRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&m,&ia,&ja,&done);CHKERRQ(ierr);
+    ierr = MatTranspose(mat,MAT_INITIAL_MATRIX,&AA);CHKERRQ(ierr);
+    ierr = MatAXPY(AA,1.0,mat,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
   }
+  ierr = MatAIJGetLocalMat(AA,&A);CHKERRQ(ierr);
+  ierr = MatGetRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
   if (!done) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Unable to get IJ structure from matrix");
 
   ierr = MatGetLocalSize(mat,&n,NULL);CHKERRQ(ierr);
@@ -7523,52 +7592,96 @@ PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
   ierr = PetscObjectGetComm((PetscObject)mat,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+
+  ierr = PetscMalloc2(n,&sizes,n,&starts);CHKERRQ(ierr);
+
   if (rank > 0) {
-    ierr = MPI_Recv(&senv,1,MPIU_INT,rank-1,tag,comm,&status);CHKERRQ(ierr);
-    env  = senv;
+    ierr = MPI_Recv(&env,1,MPIU_INT,rank-1,tag,comm,&status);CHKERRQ(ierr);
+    ierr = MPI_Recv(&tbs,1,MPIU_INT,rank-1,tag,comm,&status);CHKERRQ(ierr);
   }
-  if (rank < size-1) {
-    for (i=0; i<n; i++) {
-      senv = PetscMax(senv,ja[ia[i+1]-1]);
-    }
-    ierr = MPI_Send(&senv,1,MPIU_INT,rank+1,tag,comm);CHKERRQ(ierr);
-  }
-  ierr = PetscMalloc1(n,&bsizes);CHKERRQ(ierr);
-  if (!rank) cstart = 0;
-  if (rank > 0) {
-    ierr = MPI_Recv(&rbuff,sizeof(sbuff)/sizeof(PetscInt),MPIU_INT,rank-1,tag,comm,&status);CHKERRQ(ierr);
-  } else {
-    rbuff.rank    = -1;
-    rbuff.cstart  = 0;
-    ruff.parallel = 0;
-  }
-  ierr = MatGetOwnershipRangeColumn(mat,&cstart,NULL);CHKERRQ(ierr);
+  ierr = MatGetOwnershipRange(mat,&rstart,NULL);CHKERRQ(ierr);
   for (i=0; i<n; i++) {
     env = PetscMax(env,ja[ia[i+1]-1]);
-    if (env == i+cstart) {
-      bsizes[nblocks++] = 1 + i - tbs;
-      rbuff.cstart = cstart + i + 1;
+    II = rstart + i;
+    if (env == I) {
+      starts[lblocks]  = tbs;
+      sizes[lblocks++] = 1 + II - tbs;
+      tbs = 1 + II;
     }
   }
   if (rank < size-1) {
-    sbuff.rank  = rbuff.rank > 0 ? rbuff.rank + 1 : -1;
-    sbuff.parallel += rbuff.cstart < (cstart + n);
-    ierr = MPI_Send(&sbuff,sizeof(sbuff)/sizeof(PetscInt),MPIU_INT,rank+1,tag,comm);CHKERRQ(ierr);
+    ierr = MPI_Send(&env,1,MPIU_INT,rank+1,tag,comm);CHKERRQ(ierr);
+    ierr = MPI_Send(&tbs,1,MPIU_INT,rank+1,tag,comm);CHKERRQ(ierr);
   }
-  ierr = MatRestoreRowIJ(mat,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
-  if (!set || !flag) {
-    ierr = MatDestroy(&A);CHKERRQ(ierr);
-  } else {
-    ierr = PetscObjectCompose((PetscObject)mat,"localmat",(PetscObject)A);CHKERRQ(ierr);
-  }
-  ierr = MatSetVariableBlockSizes(mat,nblocks,bsizes);CHKERRQ(ierr);
-  ierr = PetscFree(bsizes);CHKERRQ(ierr);
 
+  ierr = MatRestoreRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&n,&ia,&ja,&done);CHKERRQ(ierr);
+  if (!set || !flag) {
+    ierr = MatDestroy(&AA);CHKERRQ(ierr);
+  }
+  ierr = MatDestroy(&A);CHKERRQ(ierr);
+
+  ierr = PetscNew(&edata);CHKERRQ(ierr);
+  edata->n = lblocks;
+  ierr = PetscMalloc1(lblocks,&edata->is);CHKERRQ(ierr);
+  for (PetscInt i=0; i<lblocks; i++) {
+    ierr = ISCreateStride(PETSC_COMM_SELF,sizes[i],starts[i],1,&edata->is[i]);CHKERRQ(ierr);
+  }
+  ierr = PetscFree2(sizes,starts);CHKERRQ(ierr);
+  ierr = PetscContainerCreate(PETSC_COMM_SELF,&container);CHKERRQ(ierr);
+  ierr = PetscContainerSetPointer(container,edata);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject)mat,"_n_MatVariableBlockEnvelope",(PetscObject)container);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-p_cstart,p_rank,p_cend,n_rank;
+/*@
+  MatInvertVariableBlockEnvelope - set matrix C to be the inverted block diagonal of matrix A
 
+  Collective on Mat
+
+  Input Parameters:
+. A - the matrix
+
+  Output Parameters:
+. C - matrix with inverted block diagonal of A.  This matrix should be created and may have its type set.
+
+  Notes:
+     For efficiency the matrix A should have all the nonzero entries clustered in smallish blocks along the diagonal.
+
+  Level: advanced
+
+.seealso: MatInvertBlockDiagonal(), MatComputeBlockDiagonal()
+@*/
+PetscErrorCode MatInvertVariableBlockEnvelope(Mat A,Mat C)
+{
+  PetscErrorCode              ierr;
+  PetscContainer              container;
+  _n_MatVariableBlockEnvelope *edata;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectQuery((PetscObject)A,"_n_MatVariableBlockEnvelope",(PetscObject*)&container);CHKERRQ(ierr);
+  if (!container) {
+    ierr = MatComputeVariableBlockEnvelope(A);CHKERRQ(ierr);
+    ierr = PetscObjectQuery((PetscObject)A,"_n_MatVariableBlockEnvelope",(PetscObject*)&container);CHKERRQ(ierr);
+  }
+  ierr = PetscContainerGetPointer(container,(void**)&edata);CHKERRQ(ierr);
+  ierr = MatCreateSubMatrices(A,edata->n,edata->is,edata->is,MAT_INITIAL_MATRIX,&edata->mat);CHKERRQ(ierr);
+
+  for (PetscInt i=0; i<edata->n; i++) {
+    Mat         D;
+    PetscScalar *dvalues;
+
+    ierr = MatConvert(edata->mat[i], MATSEQDENSE,MAT_INITIAL_MATRIX,&D);CHKERRQ(ierr);
+    ierr = MatSetOption(C,MAT_ROW_ORIENTED,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = MatSeqDenseInvert(D);CHKERRQ(ierr);
+    ierr = MatDenseGetArray(D,&dvalues);CHKERRQ(ierr);
+    ierr = MatSetValuesIS(C,edata->is[i],edata->is[i],dvalues,INSERT_VALUES);CHKERRQ(ierr);
+    ierr = MatDestroy(&D);CHKERRQ(ierr);
+  }
+
+  ierr = MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
 #if defined(roo)
 PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
@@ -7615,7 +7728,7 @@ PetscErrorCode MatComputeVariableBlockSizes(Mat mat)
 
    Input Parameters:
 +  mat - the matrix
-.  nblocks - the number of blocks on this process
+.  nblocks - the number of blocks on this process, each block can only exist on a single process
 -  bsizes - the block sizes
 
    Notes:
@@ -10416,7 +10529,7 @@ PetscErrorCode MatFindOffBlockDiagonalEntries(Mat mat,IS *is)
 
   Level: advanced
 
-.seealso: MatInvertVariableBlockDiagonalMat(), MatInvertBlockDiagonalMat()
+.seealso: MatInvertVariableBlockEnvelope(), MatInvertBlockDiagonalMat()
 @*/
 PetscErrorCode MatInvertBlockDiagonal(Mat mat,const PetscScalar **values)
 {
@@ -10438,8 +10551,8 @@ PetscErrorCode MatInvertBlockDiagonal(Mat mat,const PetscScalar **values)
 
   Input Parameters:
 + mat - the matrix
-. nblocks - the number of blocks
-- bsizes - the size of each block
+. nblocks - the number of blocks on the process, set with MatSetVariableBlockSizes()
+- bsizes - the size of each block on the process, set with MatSetVariableBlockSizes()
 
   Output Parameters:
 . values - the block inverses in column major order (FORTRAN-like)
@@ -10449,7 +10562,7 @@ PetscErrorCode MatInvertBlockDiagonal(Mat mat,const PetscScalar **values)
 
   Level: advanced
 
-.seealso: MatInvertBlockDiagonal(), MatSetVariableBlockSizes(), MatInvertVariableBlockDiagonalMat()
+.seealso: MatInvertBlockDiagonal(), MatSetVariableBlockSizes(), MatInvertVariableBlockEnvelope()
 @*/
 PetscErrorCode MatInvertVariableBlockDiagonal(Mat mat,PetscInt nblocks,const PetscInt *bsizes,PetscScalar *values)
 {
@@ -10461,71 +10574,6 @@ PetscErrorCode MatInvertVariableBlockDiagonal(Mat mat,PetscInt nblocks,const Pet
   if (mat->factortype) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   if (!mat->ops->invertvariableblockdiagonal) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not supported for type",((PetscObject)mat)->type_name);
   ierr = (*mat->ops->invertvariableblockdiagonal)(mat,nblocks,bsizes,values);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@
-  MatInvertVariableBlockDiagonalMat - set matrix C to be the inverted block diagonal of matrix A
-
-  Collective on Mat
-
-  Input Parameters:
-. A - the matrix
-
-  Output Parameters:
-. C - matrix with inverted block diagonal of A.  This matrix should be created and may have its type set.
-
-  Notes: the blocksize of the matrix is used to determine the blocks on the diagonal of C
-
-  Level: advanced
-
-.seealso: MatInvertBlockDiagonal(), MatComputeBlockDiagonal()
-@*/
-PetscErrorCode MatInvertVariableBlockDiagonalMat(Mat A,Mat C)
-{
-  PetscErrorCode     ierr;
-  PetscScalar        *vals;
-  PetscInt          *dnnz;
-  PetscInt           m,rstart,*rows,bs,i,j,cnt = 0,maxbs = 0,row = 0,nvals = 0;
-  PetscInt           nblocks;
-  const PetscInt     *bsizes;
-
-  PetscFunctionBegin;
-  if (!A->bsizes) {
-    ierr = MatComputeVariableBlockSizes(A);CHKERRQ(ierr);
-  }
-  ierr = MatGetVariableBlockSizes(A,&nblocks,&bsizes);CHKERRQ(ierr);
-  for (i=0; i<nblocks;i++) nvals += bsizes[i]*bsizes[i];
-  ierr = PetscMalloc1(nvals,&vals);CHKERRQ(ierr);
-  ierr = MatInvertVariableBlockDiagonal(A,nblocks,bsizes,vals);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(A,&m,NULL);CHKERRQ(ierr);
-  ierr = MatSetLayouts(C,A->rmap,A->cmap);CHKERRQ(ierr);
-  ierr = PetscMalloc1(m,&dnnz);CHKERRQ(ierr);
-  for (i=0; i<nblocks; i++) {
-    for (j=0; j<bsizes[i]; j++) {
-      dnnz[cnt] = bsizes[i];
-      cnt++;
-    }
-    maxbs = PetscMax(maxbs,bsizes[i]);
-  }
-  cnt = 0;
-  ierr = MatXAIJSetPreallocation(C,1,dnnz,NULL,NULL,NULL);CHKERRQ(ierr);
-  ierr = PetscFree(dnnz);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(C,&rstart,NULL);CHKERRQ(ierr);
-  ierr = PetscMalloc1(maxbs,&rows);CHKERRQ(ierr);
-  for (i=0; i<nblocks; i++) {
-    bs = bsizes[i];
-    for (j=0; j<bs; j++) {
-      rows[j] = rstart + row + j;
-    }
-    ierr = MatSetValues(C,bs,rows,bs,rows,&vals[cnt],INSERT_VALUES);CHKERRQ(ierr);
-    row += bs;
-    cnt += bs*bs;
-  }
-  ierr = PetscFree(vals);CHKERRQ(ierr);
-  ierr = PetscFree(rows);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

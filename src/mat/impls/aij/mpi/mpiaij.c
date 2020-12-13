@@ -5030,6 +5030,45 @@ PetscErrorCode MatCreateMPIAIJSumSeqAIJ(MPI_Comm comm,Mat seqmat,PetscInt m,Pets
 }
 
 /*@
+     MatAIJGetLocalMat - Creates a SeqAIJ from a MATAIJ matrix by taking all its local rows and putting them into a sequential matrix with
+          mlocal rows and n columns. Where mlocal is the row count obtained with MatGetLocalSize() and n is the global column count obtained
+          with MatGetSize()
+
+    Not Collective
+
+   Input Parameters:
++    A - the matrix
+-    scall - either MAT_INITIAL_MATRIX or MAT_REUSE_MATRIX
+
+   Output Parameter:
+.    A_loc - the local sequential matrix generated
+
+    Level: developer
+
+   Notes:
+     In other words combines the two parts of a parallel MPIAIJ matrix on each process to a single matrix.
+
+     Destroy the matrix with MatDestroy()
+
+.seealso: MatMPIAIJGetLocalMat()
+
+@*/
+PetscErrorCode MatAIJGetLocalMat(Mat A,Mat *A_loc)
+{
+  PetscErrorCode ierr;
+  PetscBool      mpi;
+
+  ierr = PetscObjectTypeCompare((PetscObject)A,MATMPIAIJ,&mpi);CHKERRQ(ierr);
+  if (mpi) {
+    ierr = MatMPIAIJGetLocalMat(A,MAT_INITIAL_MATRIX,A_loc);CHKERRQ(ierr);
+  } else {
+    *A_loc = A;
+    ierr = PetscObjectReference((PetscObject)*A_loc);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
      MatMPIAIJGetLocalMat - Creates a SeqAIJ from a MATMPIAIJ matrix by taking all its local rows and putting them into a sequential matrix with
           mlocal rows and n columns. Where mlocal is the row count obtained with MatGetLocalSize() and n is the global column count obtained
           with MatGetSize()

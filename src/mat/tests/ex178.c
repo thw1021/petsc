@@ -1,5 +1,5 @@
 
-static char help[] = "Tests MatInvertVariableBlockDiagonalMat()\n\n";
+static char help[] = "Tests MatInvertVariableBlockEnvelope()\n\n";
 
 #include <petscmat.h>
 
@@ -31,7 +31,7 @@ int main(int argc,char **argv)
 
   ierr = MatCreate(PETSC_COMM_WORLD,&D);CHKERRQ(ierr);
   ierr = MatSetType(D,MATAIJ);CHKERRQ(ierr);
-  ierr = MatInvertVariableBlockDiagonalMat(A,D);CHKERRQ(ierr);
+  ierr = MatInvertVariableBlockEnvelope(A,D);CHKERRQ(ierr);
   ierr = MatView(D,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   ierr = MatDestroy(&A);CHKERRQ(ierr);
