@@ -69,11 +69,11 @@ Making changes to the Sphinx Docs from the web
 You can make small changes this documentation entirely through web interfaces,
 using the usual guidelines in :doc:`integration` (note the options for speedy review of docs-only changes).
 
-1. Find the page of interest, confirming the version is what you expect (usually "latest").
-2. In the small ReadTheDocs menu in the bottom right, click the link to edit on GitLab.
-3. Make your changes.
-4. Compose a commit message and name your branch.
-5. Click the button to commit changes and create a Merge Request.
+#. Find the page of interest, confirming the version is what you expect (usually "latest").
+#. In the small ReadTheDocs menu in the bottom right, click the link to edit on GitLab.
+#. Make your changes.
+#. Compose a commit message and name your branch.
+#. Click the button to commit changes and create a Merge Request.
 
 Building the Sphinx docs locally
 --------------------------------
@@ -301,6 +301,32 @@ Sphinx Documentation Guidelines
 
      Something very important
 
+* It is possible to highlight text a certain color by using custom css alongside the
+  ``.. role::`` directive and explicit markup ``:foo:``. For example
+
+  .. code-block:: rst
+
+     .. role:: redhl
+     .. role:: yellowhl
+     .. role:: greenhl
+
+     :redhl:`red`, :yellowhl:`yellow`, :greenhl:`green`
+
+
+  Renders as :redhl:`red`, :yellowhl:`yellow`, :greenhl:`green`. The css for this is
+  defined in ``$PETSC_DIR/src/docs/sphinx_docs/_static_css/colortext.css``. For example
+  ``redhl`` is defined as follows:
+
+  .. literalinclude:: /_static/css/colortext.css
+     :language: css
+     :start-at: .redhl {
+     :end-at: color: red;
+     :append: }
+
+  For simplicity and ease-of-use, it is recommended that one add the ``.. role::``
+  definitions to the ``rst_prolog`` variable defined in ``conf.py``. That way the text
+  highlighting roles will automatically be defined in all rst documents.
+
 * Prefer formatting styles that are easy to modify and maintain.  In particular, use of `list-table <https://docutils.sourceforge.io/docs/ref/rst/directives.html#list-table>`_ is recommended.
 
   .. code-block:: rst
@@ -364,7 +390,7 @@ be converted to RST by `Pandoc <pandoc.org>`__.
 * Save a copy of this file, say ``manual_to_process.tex``.
 * Perform some global cleanup operations, as with this script
 
-  .. code-block:: console
+  .. code-block:: bash
 
       #!/usr/bin/env bash
 
