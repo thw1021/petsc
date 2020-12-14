@@ -12,3 +12,4 @@ to all of the PETSc development team, where our response time will be fastest.
 
    bugreport_documentation
    mailing_documentation
+   meeting_documentation
