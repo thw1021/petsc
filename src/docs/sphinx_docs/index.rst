@@ -14,6 +14,14 @@ PETSc |version| Documentation
 
    as a <a href="https://play.google.com/store/books/details/Ed_Bueler_PETSc_for_Partial_Differential_Equations?id=tgMHEAAAQBAJ">Google Play E-book</a>
 
+PETSc (`/pɛt-siː/ <https://en.wikipedia.org/wiki/Help:IPA/English#Key>`__) is a suite of
+data structures and routines for the scalable (parallel) solution of scientific
+applications modeled by partial differential equations. It supports MPI, and GPUs through
+CUDA or OpenCL, as well as hybrid MPI-GPU parallelism. PETSc (sometimes called PETSc/Tao)
+also contains the Tao optimization software library.
+
+PETSc is developed as :ref:`open-source <doc_license>`, requests and contributions are welcome.
+
 .. toctree::
    :maxdepth: 1
 
@@ -21,9 +29,12 @@ PETSc |version| Documentation
    install/index
    manual/index
    guides/guide_to_examples
-   developers/index
    contact/index
 
+.. toctree::
+   :maxdepth: 1
+
+   developers/index
 
 .. raw:: html
 
