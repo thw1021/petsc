@@ -21,7 +21,6 @@
         atomicAdd(&ap1[_i],value);                                     \
       }                                                                \
       else ap1[_i] = value;                                            \
-      inserted = 1; atomicAdd(&d_mat->nonzerostate,1);                 \
       break;                                                           \
     }                                                                  \
   }                                                                    \
@@ -44,7 +43,6 @@
         atomicAdd(&ap2[_i],value);                                     \
       }                                                                \
       else ap2[_i] = value;                                            \
-      inserted = 1; atomicAdd(&d_mat->nonzerostate,1);                 \
       break;                                                           \
     }                                                                  \
   }                                                                    \
@@ -66,7 +64,7 @@ PETSC_DEVICE_FUNC_DECL void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat
     int       *bi = d_mat->offdiag.i, *bj = d_mat->offdiag.j;
     MatScalar *ba = d_mat->offdiag.a, *aa = d_mat->diag.a;
     int       *rp1,*rp2=NULL,nrow1,nrow2,_i,low1,high1,low2,high2,t;
-    PetscInt  lastcol1,lastcol2,inserted;
+    PetscInt  lastcol1,lastcol2;
     MatScalar *ap1,*ap2=NULL;
     PetscBool roworiented = PETSC_TRUE;
     PetscInt  i,j,rstart  = d_mat->rstart,rend = d_mat->rend;
@@ -95,12 +93,7 @@ PETSC_DEVICE_FUNC_DECL void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat
           if (ignorezeroentries && PetscRealPart(value) == 0.0 && is == ADD_VALUES && im[i] != in[j]) continue;
           if (in[j] >= cstart && in[j] < cend) {
             col   = in[j] - cstart;
-            inserted = 0;
             MatSetValues_SeqAIJ_A_Private(row,col,value,is);
-            if (!inserted) {
-              printf("[%d]ERROR, MatSetValuesDevice A: %d,%d not found\n",(int)d_mat->rank, (int)row,(int)col);
-              *ierr = 1;
-            }
           } else if (in[j] < 0) {
             continue; // need to checm for > N also
           } else {
@@ -124,15 +117,7 @@ PETSC_DEVICE_FUNC_DECL void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat
               *ierr = 1;
               return;
             }
-            inserted = 0;
             MatSetValues_SeqAIJ_B_Private(row,col,value,is);
-            if (!inserted) {
-              printf("[%d]ERROR, MatSetValuesDevice B: row %d, loc col %d, global col %d not found. nrow2=%d\n", (int)d_mat->rank, (int)row, (int)col, (int)in[j], nrow2);
-              int ii;
-              for (ii=0;d_mat->colmap[ii]>=0;ii++) printf(" %d ",(int)d_mat->colmap[ii]);
-              printf("\n");
-              *ierr = 1;
-            }
           }
           if (*ierr) return;
         }
