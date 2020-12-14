@@ -657,7 +657,7 @@ int main(int argc,char ** argv)
 
   /* Set up the network layout */
   ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,"",nvertices,nedges,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,NULL,nvertices,nedges,NULL);CHKERRQ(ierr);
 
   /* Add local edge connectivity */
   edgelists[0] = edgelist;
