@@ -225,10 +225,10 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
   if (size == 1) {
-    ierr   = SeqAIJKokkosGetDeviceMat(A,&d_mat);CHKERRQ(ierr);
+    ierr   = MatSeqAIJKokkosGetDeviceMat(A,&d_mat);CHKERRQ(ierr);
   } else {
     Mat_MPIAIJ  *aij = (Mat_MPIAIJ*)A->data;
-    ierr   = SeqAIJKokkosGetDeviceMat(aij->A,&d_mat);CHKERRQ(ierr);
+    ierr   = MatSeqAIJKokkosGetDeviceMat(aij->A,&d_mat);CHKERRQ(ierr);
   }
   // act like MatSetValues because not called on host
   if (A->assembled) {
@@ -324,8 +324,8 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
     h_mat.diag.j = (PetscInt*)aijkokA->j_d.data();
     h_mat.diag.a = aijkokA->a_d.data();
     // copy pointers and metdata to device
-    ierr = SeqAIJKokkosSetDeviceMat(Amat,&h_mat);CHKERRQ(ierr);
-    ierr = SeqAIJKokkosGetDeviceMat(Amat,&d_mat);CHKERRQ(ierr);
+    ierr = MatSeqAIJKokkosSetDeviceMat(Amat,&h_mat);CHKERRQ(ierr);
+    ierr = MatSeqAIJKokkosGetDeviceMat(Amat,&d_mat);CHKERRQ(ierr);
     ierr = PetscInfo2(A,"Create device Mat n=%D nnz=%D\n",h_mat.diag.n, nnz);CHKERRQ(ierr);
   }
   *B = d_mat; // return it, set it in Mat, and set it up

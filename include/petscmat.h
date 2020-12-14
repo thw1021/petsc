@@ -1884,8 +1884,8 @@ typedef struct _p_SplitCSRMat PetscSplitCSRDataStructure;
 
 #ifdef PETSC_HAVE_KOKKOS_KERNELS
 PETSC_EXTERN PetscErrorCode MatKokkosGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure**);
-PETSC_EXTERN PetscErrorCode SeqAIJKokkosSetDeviceMat(Mat, PetscSplitCSRDataStructure *);
-PETSC_EXTERN PetscErrorCode SeqAIJKokkosGetDeviceMat(Mat, PetscSplitCSRDataStructure **);
+PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosSetDeviceMat(Mat, PetscSplitCSRDataStructure *);
+PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat, PetscSplitCSRDataStructure **);
 #endif
 
 #ifdef PETSC_HAVE_CUDA

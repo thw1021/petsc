@@ -43,12 +43,13 @@ static PetscErrorCode MatSeqAIJKokkosSyncDevice(Mat A)
     A->spptr             = aijkok;
   } else if (A->offloadmask == PETSC_OFFLOAD_CPU) { /* Copy values only */
     Kokkos::deep_copy(aijkok->a_d,aijkok->a_h);
-    A->offloadmask = PETSC_OFFLOAD_BOTH;
   }
+  A->offloadmask = PETSC_OFFLOAD_BOTH;
   PetscFunctionReturn(0);
 }
 
-PETSC_EXTERN PetscErrorCode SeqAIJKokkosSetDeviceMat(Mat A, PetscSplitCSRDataStructure *h_mat)
+// MatSeqAIJKokkosSetDeviceMat takes a PetscSplitCSRDataStructure with device data and copies it to the device. Note, "deep_copy" here is really a shallow copy
+PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosSetDeviceMat(Mat A, PetscSplitCSRDataStructure *h_mat)
 {
   Mat_SeqAIJKokkos *aijkok;
   Kokkos::View<PetscSplitCSRDataStructure, Kokkos::HostSpace> h_mat_k(h_mat);
@@ -62,7 +63,8 @@ PETSC_EXTERN PetscErrorCode SeqAIJKokkosSetDeviceMat(Mat A, PetscSplitCSRDataStr
   PetscFunctionReturn(0);
 }
 
-PETSC_EXTERN PetscErrorCode SeqAIJKokkosGetDeviceMat(Mat A, PetscSplitCSRDataStructure **d_mat)
+// MatSeqAIJKokkosGetDeviceMat gets the device if it is here, otherwise it creates a place for it and returns NULL
+PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat A, PetscSplitCSRDataStructure **d_mat)
 {
   Mat_SeqAIJKokkos *aijkok;
 
@@ -72,9 +74,8 @@ PETSC_EXTERN PetscErrorCode SeqAIJKokkosGetDeviceMat(Mat A, PetscSplitCSRDataStr
     *d_mat = aijkok->device_mat_d.data();
   } else {
     PetscErrorCode   ierr;
-    ierr    = MatSeqAIJKokkosSyncDevice(A);CHKERRQ(ierr); // create this (we are making d_mat now so make a place for it)
+    ierr    = MatSeqAIJKokkosSyncDevice(A);CHKERRQ(ierr); // create aijkok (we are making d_mat now so make a place for it)
     *d_mat  = NULL;
-    ierr = PetscInfo(A,"No device\n");CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
