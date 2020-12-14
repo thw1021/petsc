@@ -1006,7 +1006,7 @@ int main(int argc,char ** argv)
     numVertices = NBUS*nc; numEdges = NBRANCH*nc+(nc-1);
   }
   ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices,numEdges,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,NULL,numVertices,numEdges,NULL);CHKERRQ(ierr);
 
   /* Add edge connectivity */
   ierr = DMNetworkSetEdgeList(networkdm,&edgelist);CHKERRQ(ierr);
