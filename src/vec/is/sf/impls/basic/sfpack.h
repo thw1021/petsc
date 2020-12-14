@@ -3,12 +3,24 @@
 
 #include <../src/vec/is/sf/impls/basic/sfbasic.h>
 #if defined(PETSC_HAVE_CUDA)
-  #include <cuda_runtime.h> /* For cudaStream_t */
+  #include <cuda_runtime.h>
   #include <petsccublas.h>  /* For CHKERRCUDA */
+  typedef cudaStream_t  cupmStream_t;
+  typedef cudaEvent_t   cupmEvent_t;
+  typedef cudaError_t   cupmError_t;
+  #define cupmEventRecord(event,stream)             cudaEventRecord(event,stream)
+  #define cupmStreamWaitEvent(stream,event,flags)   cudaStreamWaitEvent(stream,event,flags)
+  #define CHKERRCUPM(cerr)                          CHKERRCUDA(cerr)
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-  #include <hip/hip_runtime.h>  /* For hipStream_t */
+  #include <hip/hip_runtime.h>
+  typedef hipStream_t   cupmStream_t;
+  typedef hipEvent_t    cupmEvent_t;
+  typedef hipError_t    cupmError_t;
+  #define cupmEventRecord(event,stream)             hipEventRecord(event,stream)
+  #define cupmStreamWaitEvent(stream,event,flags)   hipStreamWaitEvent(stream,event,flags)
+  #define CHKERRCUPM(cerr)                          do {if (cerr != hipSuccess) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"HIP runtime error");}  while(0)
 #endif
 
 /* In terms of function overloading, long long int is a different type than int64_t, which PetscInt might be defined to.
@@ -150,11 +162,12 @@ struct _n_PetscSFLink {
   PetscErrorCode (*da_ScatterAndLXOR)  (PetscSFLink,PetscInt,PetscInt,PetscSFPackOpt,const PetscInt*,const void*,PetscInt,PetscSFPackOpt,const PetscInt*,void*);
   PetscErrorCode (*da_ScatterAndBXOR)  (PetscSFLink,PetscInt,PetscInt,PetscSFPackOpt,const PetscInt*,const void*,PetscInt,PetscSFPackOpt,const PetscInt*,void*);
   PetscErrorCode (*da_FetchAndAddLocal)(PetscSFLink,PetscInt,PetscInt,PetscSFPackOpt,const PetscInt*,void*,PetscInt,PetscSFPackOpt,const PetscInt*,const void*,void*);
- #if defined (PETSC_HAVE_CUDA)
-  PetscInt       maxResidentThreadsPerGPU;   /* It is a copy from SF for convenience */
-  cudaStream_t   stream;                     /* Stream to launch pack/unapck kernels if not using the default stream */
- #elif defined (PETSC_HAVE_HIP)
-  hipStream_t    stream;
+ #if defined (PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+  PetscInt       maxResidentThreadsPerGPU;                  /* It is a copy from SF for convenience */
+  cupmStream_t   input_stream,output_stream;                /* Streams on which input/output root/leafdata is computed on (the default is NULL) */
+  cupmStream_t   stream;                                    /* A temp var for the current stream that an SF routine uses */
+  cupmStream_t   send_stream,recv_stream,scatter_stream;    /* Streams to send data to remote, recv data from remote and scatter data locally */
+  cupmEvent_t    input_ready,scatter_end,recv_end;          /* Markers of readiness of the input data, end of scatter, end of unpack */
  #endif
 
   PetscErrorCode (*Destroy)(PetscSF,PetscSFLink); /* These two fields are meant to be used by SF_Kokkos, with spptr pointing to an execution space object */
@@ -193,8 +206,6 @@ struct _n_PetscSFLink {
   /* The buffers are allocated in device symmetric heap. Their length is the maximal length over all ranks in the comm, and therefore is the same. */
   uint64_t     *rootsig,*rootsig_old;        /* [max{niranks-ndiranks}], signals used when rootbuf works as receive buf. xxx_old stores old values */
   uint64_t     *leafsig,*leafsig_old;        /* [max{nranks-ndranks}], signals used when leafbuf works as receive buf */
-  cudaEvent_t  comm_start,scatter_end,unpack_end;         /* Markers of start of local&remote communication, end of scatter, end of unpack */
-  cudaStream_t pack_stream,unpack_stream,scatter_stream;  /* Streams to run pack+nvshme_put, unpack and scatter */
 #endif
 };
 
@@ -276,8 +287,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncDeviceBeforePackData(PetscSF s
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  if (sf->use_default_stream) PetscFunctionReturn(0);
-  if (link->rootmtype == PETSC_MEMTYPE_DEVICE || link->leafmtype == PETSC_MEMTYPE_DEVICE) {ierr = (*link->d_SyncDevice)(link);CHKERRQ(ierr);}
+  if (sf->unknown_inout_streams && (link->rootmtype & PETSC_MEMTYPE_DEVICE || link->leafmtype & PETSC_MEMTYPE_DEVICE)) {ierr = (*link->d_SyncDevice)(link);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -288,10 +298,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamAfterPackRootData(PetscS
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
 
   PetscFunctionBegin;
-  /* Do nothing if we use stream aware communication || has nothing for remote */
-  if (link->use_nvshmem || sf->use_stream_aware_mpi || link->rootmtype != PETSC_MEMTYPE_DEVICE || !bas->rootbuflen[PETSCSF_REMOTE]) PetscFunctionReturn(0);
-  /* If we called a packing kernel || we async-copied rootdata from device to host || No cudaDeviceSynchronize was called (since default stream is assumed) */
-  if (!link->rootdirect[PETSCSF_REMOTE] || !sf->use_gpu_aware_mpi || sf->use_default_stream) {ierr = (*link->d_SyncStream)(link);CHKERRQ(ierr);}
+  /* Do nothing if we use stream aware communication */
+  if (sf->use_stream_aware_mpi || link->rootmtype == PETSC_MEMTYPE_HOST || !bas->rootbuflen[PETSCSF_REMOTE]) PetscFunctionReturn(0);
+  ierr = (*link->d_SyncStream)(link);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -300,8 +309,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamAfterPackLeafData(PetscS
   PetscErrorCode ierr;
   PetscFunctionBegin;
   /* See comments above */
-  if (link->use_nvshmem || sf->use_stream_aware_mpi || link->leafmtype != PETSC_MEMTYPE_DEVICE || !sf->leafbuflen[PETSCSF_REMOTE]) PetscFunctionReturn(0);
-  if (!link->leafdirect[PETSCSF_REMOTE] || !sf->use_gpu_aware_mpi || sf->use_default_stream) {ierr = (*link->d_SyncStream)(link);CHKERRQ(ierr);}
+  if (sf->use_stream_aware_mpi || link->leafmtype == PETSC_MEMTYPE_DEVICE || !sf->leafbuflen[PETSCSF_REMOTE]) PetscFunctionReturn(0);
+  ierr = (*link->d_SyncStream)(link);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -316,7 +325,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamAfterUnpackRootData(Pets
 
   PetscFunctionBegin;
   /* Do nothing if host2host OR we are allowed to asynchronously put rootdata on device through the default stream */
-  if (host2host || (link->rootmtype == PETSC_MEMTYPE_DEVICE && sf->use_default_stream)) PetscFunctionReturn(0);
+  // if (host2host || (link->rootmtype == PETSC_MEMTYPE_DEVICE && sf->use_default_stream)) PetscFunctionReturn(0);
 
   /* If rootmtype is HOST or DEVICE:
      If we have data from local, then we called a scatter kernel (on link->stream), then we must sync it;
@@ -337,7 +346,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamAfterUnpackLeafData(Pets
 
   PetscFunctionBegin;
   /* See comments in PetscSFLinkSyncStreamAfterUnpackRootData*/
-  if (host2host || (link->leafmtype == PETSC_MEMTYPE_DEVICE && sf->use_default_stream)) PetscFunctionReturn(0);
+  // if (host2host || (link->leafmtype == PETSC_MEMTYPE_DEVICE && sf->use_default_stream)) PetscFunctionReturn(0);
   if (sf->leafbuflen[PETSCSF_LOCAL] || (sf->leafbuflen[PETSCSF_REMOTE] && !link->leafdirect[PETSCSF_REMOTE])) {ierr = (*link->d_SyncStream)(link);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
@@ -351,7 +360,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAware
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
 
   PetscFunctionBegin;
-  if (!link->use_nvshmem && link->rootmtype == PETSC_MEMTYPE_DEVICE && (link->rootmtype_mpi != link->rootmtype) && bas->rootbuflen[PETSCSF_REMOTE]) {
+  if (link->rootmtype & PETSC_MEMTYPE_DEVICE && (link->rootmtype_mpi != link->rootmtype)) {
     void  *h_buf = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST];
     void  *d_buf = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
     size_t count = bas->rootbuflen[PETSCSF_REMOTE]*link->unitbytes;
@@ -371,7 +380,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAware
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!link->use_nvshmem && link->leafmtype == PETSC_MEMTYPE_DEVICE && (link->leafmtype_mpi != link->leafmtype) && sf->leafbuflen[PETSCSF_REMOTE]) {
+  if (!link->use_nvshmem && link->leafmtype & PETSC_MEMTYPE_DEVICE && (link->leafmtype_mpi != link->leafmtype) && sf->leafbuflen[PETSCSF_REMOTE]) {
     void  *h_buf = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST];
     void  *d_buf = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
     size_t count = sf->leafbuflen[PETSCSF_REMOTE]*link->unitbytes;

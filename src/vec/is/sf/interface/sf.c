@@ -104,7 +104,7 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
 #if defined(PETSC_HAVE_DEVICE)
   b->use_gpu_aware_mpi    = use_gpu_aware_mpi;
   b->use_stream_aware_mpi = PETSC_FALSE;
-  b->use_default_stream   = PETSC_TRUE; /* The assumption is true for PETSc internal use of SF */
+  b->unknown_inout_streams= PETSC_FALSE;
   #if defined(PETSC_HAVE_KOKKOS) /* Prefer kokkos over cuda*/
     b->backend = PETSCSF_BACKEND_KOKKOS;
   #elif defined(PETSC_HAVE_CUDA)
@@ -369,7 +369,7 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
     char        backendstr[32] = {0};
     PetscBool   isCuda = PETSC_FALSE,isKokkos = PETSC_FALSE,set;
     /* Change the defaults set in PetscSFCreate() with command line options */
-    ierr = PetscOptionsBool("-sf_use_default_stream","Assume SF's input and output root/leafdata is computed on the default stream","PetscSFSetFromOptions",sf->use_default_stream,&sf->use_default_stream,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-sf_unknown_inout_streams","SF root/leafdata is computed on arbitary streams unknown to SF","PetscSFSetFromOptions",sf->unknown_inout_streams,&sf->unknown_inout_streams,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-sf_use_stream_aware_mpi","Assume the underlying MPI is cuda-stream aware","PetscSFSetFromOptions",sf->use_stream_aware_mpi,&sf->use_stream_aware_mpi,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsString("-sf_backend","Select the device backend SF uses","PetscSFSetFromOptions",NULL,backendstr,sizeof(backendstr),&set);CHKERRQ(ierr);
     ierr = PetscStrcasecmp("cuda",backendstr,&isCuda);CHKERRQ(ierr);
@@ -744,7 +744,7 @@ PetscErrorCode PetscSFDuplicate(PetscSF sf,PetscSFDuplicateOption opt,PetscSF *n
 
 #if defined(PETSC_HAVE_DEVICE)
   (*newsf)->backend              = sf->backend;
-  (*newsf)->use_default_stream   = sf->use_default_stream;
+  (*newsf)->unknown_inout_streams= sf->unknown_inout_streams;
   (*newsf)->use_gpu_aware_mpi    = sf->use_gpu_aware_mpi;
   (*newsf)->use_stream_aware_mpi = sf->use_stream_aware_mpi;
 #endif
