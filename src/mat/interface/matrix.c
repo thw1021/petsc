@@ -7546,6 +7546,10 @@ typedef struct {
 static PetscErrorCode EnvelopeDataDestroy(EnvelopeData *edata)
 {
   PetscErrorCode ierr;
+  for (PetscInt i=0; i<edata->n; i++) {
+    ierr = ISDestroy(&edata->is[i]);CHKERRQ(ierr);
+  }
+  ierr = PetscFree(edata->is);CHKERRQ(ierr);
   ierr = PetscFree(edata);
   return 0;
 }
@@ -7612,7 +7616,7 @@ static PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
   for (i=0; i<n; i++) {
     env = PetscMax(env,ja[ia[i+1]-1]);
     II = rstart + i;
-    if (env == I) {
+    if (env == II) {
       starts[lblocks]  = tbs;
       sizes[lblocks++] = 1 + II - tbs;
       tbs = 1 + II;
@@ -7649,22 +7653,29 @@ static PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
   for (PetscInt i=0; i<lblocks; i++) ln += sizes[i];
   ierr = VecCreateSeq(PETSC_COMM_SELF,2*ln,&seq);CHKERRQ(ierr);
   ierr = VecGetArrayWrite(seq,&seqv);CHKERRQ(ierr);
+  CHKMEMQ;
   for (PetscInt i=0; i<lblocks; i++) {
-    for (PetscInt j=0; j<sizes[j]; j++) {
-      seqv[2*cnt]   = starts[i];
-      seqv[2*cnt+1] = starts[i] + sizes[i];
-      cnt  += 2;
+    for (PetscInt j=0; j<sizes[i]; j++) {
+      seqv[cnt]   = starts[i];
+  CHKMEMQ;
+      seqv[cnt+1] = starts[i] + sizes[i];
+  CHKMEMQ;
+      cnt += 2;
     }
   }
+  CHKMEMQ;
+  ierr = VecRestoreArrayWrite(seq,&seqv);CHKERRQ(ierr);
   ierr = MPI_Scan(&cnt,&sc,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)mat));CHKERRQ(ierr);
   sc -= cnt;
-  ierr = VecRestoreArrayWrite(seq,&seqv);CHKERRQ(ierr);
   ierr = VecCreateMPI(PetscObjectComm((PetscObject)mat),2*mat->rmap->n,2*mat->rmap->N,&par);CHKERRQ(ierr);
   ierr = ISCreateStride(PETSC_COMM_SELF,cnt,sc,1,&isglobal);CHKERRQ(ierr);
   ierr = VecScatterCreate(seq, NULL  ,par, isglobal,&scatter);CHKERRQ(ierr);
   ierr = ISDestroy(&isglobal);CHKERRQ(ierr);
+  CHKMEMQ;
   ierr = VecScatterBegin(scatter,seq,par,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  CHKMEMQ;
   ierr = VecScatterEnd(scatter,seq,par,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  CHKMEMQ;
   ierr = VecScatterDestroy(&scatter);CHKERRQ(ierr);
   ierr = VecDestroy(&seq);CHKERRQ(ierr);
   ierr = MatGetOwnershipRangeColumn(mat,&cstart,&cend);CHKERRQ(ierr);
@@ -7675,8 +7686,8 @@ static PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
   for (PetscInt i=0; i<mat->rmap->n; i++) {
     PetscInt start,end,d = 0,od = 0;
 
-    start = (PetscInt)parv[2*cnt];
-    end   = (PetscInt)parv[2*cnt+1];
+    start = (PetscInt)parv[cnt];
+    end   = (PetscInt)parv[cnt+1];
     cnt  += 2;
 
     if (start < cstart) {od += cstart - start + n - cend; d += cend - cstart;}
@@ -7740,6 +7751,7 @@ PetscErrorCode MatInvertVariableBlockEnvelope(Mat A,MatReuse reuse, Mat *C)
   if (reuse == MAT_REUSE_MATRIX && *C != edata->C) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"C matrix must be the same as previously output");
 
   ierr = MatCreateSubMatrices(A,edata->n,edata->is,edata->is,MAT_INITIAL_MATRIX,&edata->mat);CHKERRQ(ierr);
+  *C   = edata->C;
 
   for (PetscInt i=0; i<edata->n; i++) {
     Mat         D;
@@ -7753,9 +7765,8 @@ PetscErrorCode MatInvertVariableBlockEnvelope(Mat A,MatReuse reuse, Mat *C)
     ierr = MatDestroy(&D);CHKERRQ(ierr);
   }
   ierr = MatDestroySubMatrices(edata->n,&edata->mat);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(edata->C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(edata->C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  *C   = edata->C;
+  ierr = MatAssemblyBegin(*C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(*C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
