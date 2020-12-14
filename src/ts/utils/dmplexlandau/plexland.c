@@ -1437,12 +1437,12 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
 #if defined(PETSC_HAVE_KOKKOS)
   if (ctx->deviceType == LANDAU_CPU) {
     ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr);
-    if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijkokkos -dm_vec_type kokkos' for GPU assembly and Kokkos ???");
+    if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijkokkos -dm_vec_type kokkos' for GPU assembly and Kokkos");
   }
 #elif defined(PETSC_HAVE_CUDA)
   if (ctx->deviceType == LANDAU_CPU) {
     ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr);
-    if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijcusparse -dm_vec_type cuda' for GPU assembly and Kokkos ???");
+    if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijcusparse -dm_vec_type cuda' for GPU assembly and Cuda");
   }
 #endif
   if (ctx->gpu_assembly) { /* we need GPU object with GPU assembly */
