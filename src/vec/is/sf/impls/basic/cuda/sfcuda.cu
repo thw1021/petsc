@@ -962,7 +962,6 @@ PetscErrorCode PetscSFLinkSetUp_Cuda(PetscSF sf,PetscSFLink link,MPI_Datatype un
     }
   }
 
-  if (!sf->use_default_stream) {err = cudaStreamCreate(&link->stream);CHKERRCUDA(err);}
   if (!sf->maxResidentThreadsPerGPU) { /* Not initialized */
     int                   device;
     struct cudaDeviceProp props;

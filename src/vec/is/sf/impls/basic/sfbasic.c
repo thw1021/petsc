@@ -1,5 +1,6 @@
 
 #include "petscsf.h"
+#include "petscsystypes.h"
 #include <../src/vec/is/sf/impls/basic/sfbasic.h>
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 
@@ -148,18 +149,53 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkPostIrecvIfUseMPI(PetscSF sf,Petsc
   PetscFunctionReturn(0);
 }
 
+/* Build dependence between input data (on input_stream) and Pack (on send_stream) and Scatter (on scatter_stream) */
+PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkBuildDependenceOnInputData(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+{
+  PetscErrorCode    ierr;
+  cupmError_t       cerr;
+  PetscMemType      inputmtype = (direction == PETSCSF_ROOT2LEAF) ? link->rootmtype : link->leafmtype;
+
+  PetscFunctionBegin;
+  if (inputmtype & PETSC_MEMTYPE_DEVICE) {
+    /* Currently SF APIs only support NULL input/output streams. If not true, we have to sync the whole device */
+    if (sf->unknown_inout_streams) {ierr = (*link->d_SyncDevice)(link);CHKERRQ(ierr);}
+    cerr = cupmEventRecord(link->input_ready,link->input_stream);CHKERRCUPM(cerr);
+    cerr = cupmStreamWaitEvent(link->send_stream,link->input_ready,0);CHKERRCUPM(cerr);
+    cerr = cupmStreamWaitEvent(link->scatter_stream,link->input_ready,0);CHKERRCUPM(cerr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/* Build dependence between Unpack and Scatter kernels and output data */
+PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkBuildDependenceOnOutputData(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+{
+  cupmError_t    cerr;
+  PetscMemType   outputmtype = (direction == PETSCSF_ROOT2LEAF) ? link->leafmtype : link->rootmtype;
+
+  PetscFunctionBegin;
+  if (outputmtype & PETSC_MEMTYPE_DEVICE) {
+    cerr = cupmStreamWaitEvent(link->output_stream,link->recv_end,0);CHKERRCUPM(cerr);
+    cerr = cupmStreamWaitEvent(link->output_stream,link->scatter_end,0);CHKERRCUPM(cerr);
+    if (sf->unknown_inout_streams) {cerr = cudaStreamSynchronize(link->output_stream);CHKERRCUPM(cerr);} //TODO
+  }
+  PetscFunctionReturn(0);
+}
+
 PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSendRootData(PetscSF sf,PetscSFLink link)
 {
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  link->stream = link->pack_stream;
+  link->stream = link->send_stream;
  #if defined(PETSC_HAVE_NVSHMEM)
   if (link->use_nvshmem) {ierr = PetscSFLinkPutRootData_NVSHMEM(sf,link);CHKERRQ(ierr);} else
  #endif
-  {
+  { /* use MPI */
     MPI_Request    *rootreqs = NULL;
     PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
+    ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/*device2host*/);CHKERRQ(ierr);
+    ierr = PetscSFLinkSyncStreamAfterPackRootData(sf,link);CHKERRQ(ierr); /* Since MPI is not stream aware, we have to sync the send_stream */
     ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,NULL,NULL,&rootreqs,NULL);CHKERRQ(ierr);
     ierr = MPI_Startall_isend(bas->rootbuflen[PETSCSF_REMOTE],link->unit,bas->nrootreqs,rootreqs);CHKERRQ(ierr);
   }
@@ -187,6 +223,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkWaitall(PetscSF sf,PetscSFLink lin
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
+  link->stream = link->recv_stream;
  #if defined(PETSC_HAVE_NVSHMEM)
   if (link->use_nvshmem) {ierr = PetscSFLinkWaitall_NVSHMEM(sf,link,direction);CHKERRQ(ierr);} else
  #endif
@@ -202,9 +239,11 @@ static PetscErrorCode PetscSFBcastAndOpBegin_Basic(PetscSF sf,MPI_Datatype unit,
   PetscSFLink       link = NULL;
 
   PetscFunctionBegin;
-  /* Create a communication link, which provides buffers & MPI requests (when use MPI) etc */
+  /* Create a communication link, which provides buffers, MPI requests (when use MPI) etc */
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_BCAST,&link);CHKERRQ(ierr);
   ierr = PetscSFLinkPostIrecvIfUseMPI(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
+  /* With device, input data may be computed on a stream asychronously. We need to build a dependence on it */
+  ierr = PetscSFLinkBuildDependenceOnInputData(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
   ierr = PetscSFLinkSendRootData(sf,link);CHKERRQ(ierr);
   /* Do local BcastAndOp, which overlaps with the send communication above */
@@ -224,6 +263,7 @@ PETSC_INTERN PetscErrorCode PetscSFBcastAndOpEnd_Basic(PetscSF sf,MPI_Datatype u
   ierr = PetscSFLinkWaitall(sf,link,PETSCSF_ROOT2LEAF);
   /* Unpack leafdata and reclaim the link */
   ierr = PetscSFLinkUnpackLeafData(sf,link,PETSCSF_REMOTE,leafdata,op);CHKERRQ(ierr);
+  ierr = PetscSFLinkBuildDependenceOnOutputData(sf,link,PETSCSF_ROOT2LEAF);
   ierr = PetscSFLinkReclaim(sf,&link);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

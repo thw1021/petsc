@@ -36,11 +36,11 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
   ierr = PetscNvshmemFree(link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
   ierr = PetscNvshmemFree(link->rootsig);CHKERRQ(ierr);
 
-  cerr = cudaEventDestroy(link->comm_start);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->input_ready);CHKERRCUDA(cerr);
   cerr = cudaEventDestroy(link->scatter_end);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->unpack_end);CHKERRCUDA(cerr);
-  cerr = cudaStreamDestroy(link->pack_stream);CHKERRCUDA(cerr);
-  cerr = cudaStreamDestroy(link->unpack_stream);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->recv_end);CHKERRCUDA(cerr);
+  cerr = cudaStreamDestroy(link->send_stream);CHKERRCUDA(cerr);
+  cerr = cudaStreamDestroy(link->recv_stream);CHKERRCUDA(cerr);
   cerr = cudaStreamDestroy(link->scatter_stream);CHKERRCUDA(cerr);
 
   // if (link->stream) {cudaError_t cerr = cudaStreamDestroy(link->stream);CHKERRCUDA(cerr); link->stream = NULL;}
@@ -86,12 +86,12 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
     link->rootsig_old = link->rootsig + bas->niranks_rmax;
     link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
   }
-  cerr = cudaEventCreate(&link->comm_start);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->input_ready);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&link->scatter_end);CHKERRCUDA(cerr);
-  cerr = cudaEventCreate(&link->unpack_end);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreate(&link->pack_stream);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreate(&link->unpack_stream);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreate(&link->scatter_stream);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->recv_end);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithFlags(&link->send_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithFlags(&link->recv_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithFlags(&link->scatter_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
 
   link->rootmtype                  = PETSC_MEMTYPE_DEVICE; /* Only need 0/1-based mtype from now on */
   link->leafmtype                  = PETSC_MEMTYPE_DEVICE;
@@ -279,12 +279,14 @@ __global__ static void PetscNvshmemPut(char *sbuf,PetscInt* sbufdisp,char *rbuf,
   int               i        = blockIdx.x;
   char              *dest    = rbuf + rbufdisp[i]*unitbytes;
   char              *src     = sbuf + (sbufdisp[i]-sbufdisp[0])*unitbytes;
-  size_t            nelems   = (sbufdisp[i+1]-sbufdisp[i])*unitbytes;
+  //size_t            nelems   = (sbufdisp[i+1]-sbufdisp[i])*unitbytes;
+  size_t            nelems   = (sbufdisp[i+1]-sbufdisp[i]);
   uint64_t          *sigaddr = sig + sigdisp[i];
   int               pe       = ranks[i]; /* remote PE this thread block will put data to */
 
   /* Or nvshmem_char_put_signal_nbi(dest,src,nelems,signal,1,NVSHMEM_SIGNAL_ADD,pe) once it has a _block version */
-  nvshmemx_putmem_nbi_block(dest,src,nelems,pe);
+  //nvshmemx_putmem_nbi_block(dest,src,nelems,pe);
+  nvshmemx_double_put_nbi_block((double*)dest,(double*)src,nelems,pe);
   nvshmem_fence();
   nvshmemx_signal_op(sigaddr,1,NVSHMEM_SIGNAL_ADD,pe);
 }
