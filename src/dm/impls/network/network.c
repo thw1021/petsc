@@ -75,17 +75,14 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt nsubnet,PetscInt Nsubnet)
   PetscValidLogicalCollectiveInt(dm,Nsubnet,3);
 
   if (Nsubnet == PETSC_DECIDE) {
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Global number of subnetworks must be set in the current implementation");
-#if 0
     if (nsubnet < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Number of local subnetworks %D cannot be less than 0",nsubnet);
     ierr = MPIU_Allreduce(&nsubnet,&Nsubnet,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
-#endif
   }
   if (Nsubnet < 1) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Number of global subnetworks %D cannot be less than 1",Nsubnet);
 
   network->Nsubnet  = Nsubnet;
-  network->nsubnet  = 0;
-  network->ncsubnet = 0;
+  network->nsubnet  = 0;       /* initia value; will be determind by DMNetworkAddSubnetwork() */
+  network->ncsubnet = 0;       /* remove! */
   ierr = PetscCalloc1(Nsubnet+1,&network->subnet);CHKERRQ(ierr); /* network->subnet[Nsubnet] is used for shared vertices */
 
   /* coupling subnetwork -- global info */
@@ -118,6 +115,10 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscIn
   PetscInt       i = network->nsubnet,a[2],b[2];
 
   PetscFunctionBegin;
+  if (name) {
+    ierr = PetscStrcpy(network->subnet[i].name,name);CHKERRQ(ierr);
+  }
+
   network->subnet[i].nvtx  = nv;
   network->subnet[i].nedge = ne;
 
@@ -136,7 +137,7 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscIn
   network->subnet[i].vStart = network->NVertices;
   network->subnet[i].vEnd   = network->subnet[i].vStart + network->subnet[i].Nvtx; /* global vEnd of subnet[i] */
 
-  network->nVertices += nv; //network->subnet[i].nvtx;
+  network->nVertices += nv;
   network->NVertices += network->subnet[i].Nvtx;
 
   /* LOCAL subnet[].eStart and eEnd, used by DMNetworkLayoutSetUp() */
@@ -749,8 +750,8 @@ PetscErrorCode DMNetworkGetSubnetworkInfo(DM dm,PetscInt id,PetscInt *nv, PetscI
 
   Input Parameters:
 + dm - the dm object
-. anetid - first subnetwork number
-. bnetid - second subnetwork number
+. aname, anetid - first subnetwork name and number
+. bname, bnetid - second subnetwork name and number
 . nsvtx - global number of vertices that are shared by the two subnetworks
 . asvtx - vertex index in the first subnetwork
 - bsvtx - vertex index in the second subnetwork
