@@ -19,7 +19,7 @@ int main(int argc,char ** argv)
   PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   DM             dmnetwork;
-  PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,compkey,goffset,row;
+  PetscInt       i,j,net,Nsubnet,nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,compkey,goffset,row;
   PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
   const PetscInt *vtx,*edges;
   PetscBool      iscouplev,ghost,distribute=PETSC_TRUE,test=PETSC_FALSE;
@@ -33,14 +33,24 @@ int main(int argc,char ** argv)
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
 
   /* Create a network of subnetworks */
-  if (size == 1) Nsubnet = 2;
-  else Nsubnet = (PetscInt)size;
-  ierr = PetscOptionsGetInt(NULL,NULL,"-Nsubnet",&Nsubnet,NULL);CHKERRQ(ierr);
-  if (Nsubnet > 10) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Nsubnet cannot >10 for this example");
+  nsubnet = 1;
+  if (size == 1) nsubnet = 2;
 
+  /* Create a dmnetwork and register components */
+  ierr = DMNetworkCreate(PETSC_COMM_WORLD,&dmnetwork);CHKERRQ(ierr);
+  ierr = DMNetworkRegisterComponent(dmnetwork,"comp0",sizeof(Comp0),&compkey0);CHKERRQ(ierr);
+  ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(Comp1),&compkey1);CHKERRQ(ierr);
+
+  /* Set componnet values - intentionally take rank-dependent value for test*/
+  comp0.id  = rank;
+  comp1.val = 10.0*rank;
+
+  /* Set number of subnetworks, numbers of vertices and edges over each subnetwork */
+  ierr = DMNetworkSetSizes(dmnetwork,nsubnet,PETSC_DECIDE);CHKERRQ(ierr);
+  ierr = DMNetworkGetSizes(dmnetwork,NULL,&Nsubnet);CHKERRQ(ierr);
+
+  /* Input subnetworks; when size>1, process[i] creates subnetwork[i] */
   for (i=0; i<Nsubnet; i++) {numVertices[i] = 0; numEdges[i] = 0;}
-
-  /* when size>1, process[i] creates subnetwork[i] */
   for (i=0; i<Nsubnet; i++) {
     if (i == 0 && (size == 1 || (rank == i && size >1))) {
       numVertices[i] = 4; numEdges[i] = 3;
@@ -65,18 +75,7 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Create componnets */
-  comp0.id  = rank;       /* intentionally take rank-dependent value for test */
-  comp1.val = 10.0*rank;
-
-  /* Create a dmnetwork and register components */
-  ierr = DMNetworkCreate(PETSC_COMM_WORLD,&dmnetwork);CHKERRQ(ierr);
-  ierr = DMNetworkRegisterComponent(dmnetwork,"comp0",sizeof(Comp0),&compkey0);CHKERRQ(ierr);
-  ierr = DMNetworkRegisterComponent(dmnetwork,"comp1",sizeof(Comp1),&compkey1);CHKERRQ(ierr);
-
-  /* Set number of subnetworks, numbers of vertices and edges over each subnetwork */
-  ierr = DMNetworkSetSizes(dmnetwork,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
-
+  /* Add subnetworks */
   for (i=0; i<Nsubnet; i++) {
     PetscInt netNum = -1;
     ierr = DMNetworkAddSubnetwork(dmnetwork,NULL,numVertices[i],numEdges[i],&netNum);CHKERRQ(ierr);
