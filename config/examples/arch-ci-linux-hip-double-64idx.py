@@ -23,6 +23,7 @@ if __name__ == '__main__':
     '--with-hipcc=hipcc',
     '--with-hip-dir=/opt/rocm',
     '--with-precision=double',
+    '--with-64-bit-indices=1',
     '--with-clanguage=c',
     '--download-fblaslapack=1',
   ]
