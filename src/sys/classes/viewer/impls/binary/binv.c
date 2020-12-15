@@ -1099,7 +1099,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
   {
     int         fdes;
     char        *workbuf = NULL;
-    PetscInt    tcount = !rank ? 0 : count,maxcount=0,message_count,flowcontrolcount;
+    PetscInt    tcount = rank ? count : 0,maxcount=0,message_count,flowcontrolcount;
     PetscMPIInt tag,cnt,maxcnt,scnt=0,rcnt=0,j;
     MPI_Status  status;
 
