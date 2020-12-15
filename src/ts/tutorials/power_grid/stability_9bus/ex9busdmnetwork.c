@@ -1018,33 +1018,29 @@ int main(int argc,char ** argv)
     ierr = PetscFree(edgelist);CHKERRQ(ierr);
   }
 
-   /* Add network components: physical parameters of nodes and branches */
+   /* Add network components (physical parameters of nodes and branches) and number of variables */
   if (!rank) {
      ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
      genj=0; loadj=0; excj=0;
      for (i = eStart; i < eEnd; i++) {
-       ierr = DMNetworkAddComponent(networkdm,i,componentkey[0],&branch[i-eStart]);CHKERRQ(ierr);
+       ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[0],&branch[i-eStart],0);CHKERRQ(ierr);
      }
 
      ierr = DMNetworkGetVertexRange(networkdm,&vStart,&vEnd);CHKERRQ(ierr);
 
      for (i = vStart; i < vEnd; i++) {
-       ierr = DMNetworkAddComponent(networkdm,i,componentkey[1],&bus[i-vStart]);CHKERRQ(ierr);
-       /* Add number of variables */
-       ierr = DMNetworkSetComponentNumVariables(networkdm,i,0,2);CHKERRQ(ierr);
+       ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[1],&bus[i-vStart],2);CHKERRQ(ierr);
        if (bus[i-vStart].nofgen) {
          for (j = 0; j < bus[i-vStart].nofgen; j++) {
            /* Add generator */
-           ierr = DMNetworkAddComponent(networkdm,i,componentkey[2],&gen[genj++]);CHKERRQ(ierr);
-           ierr = DMNetworkSetComponentNumVariables(networkdm,i,1,6);CHKERRQ(ierr);
+           ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[2],&gen[genj++],6);CHKERRQ(ierr);
            /* Add exciter */
-           ierr = DMNetworkAddComponent(networkdm,i,componentkey[3],&exc[excj++]);CHKERRQ(ierr);
-           ierr = DMNetworkSetComponentNumVariables(networkdm,i,2,3);CHKERRQ(ierr);
+           ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[3],&exc[excj++],3);CHKERRQ(ierr);
          }
        }
        if (bus[i-vStart].nofload) {
          for (j=0; j < bus[i-vStart].nofload; j++) {
-           ierr = DMNetworkAddComponent(networkdm,i,componentkey[4],&load[loadj++]);CHKERRQ(ierr);
+           ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[4],&load[loadj++],0);CHKERRQ(ierr);
          }
        }
      }

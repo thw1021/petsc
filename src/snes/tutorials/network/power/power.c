@@ -142,28 +142,26 @@ int main(int argc,char ** argv)
       ierr = PetscFree(edges);CHKERRQ(ierr);
     }
 
-    /* Add network components only process 0 has any data to add*/
+    /* Add network components only process 0 has any data to add */
     if (!crank) {
       genj=0; loadj=0;
       ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
       for (i = eStart; i < eEnd; i++) {
-        ierr = DMNetworkAddComponent(networkdm,i,User.compkey_branch,&pfdata->branch[i-eStart]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,User.compkey_branch,&pfdata->branch[i-eStart],0);CHKERRQ(ierr);
       }
       ierr = DMNetworkGetVertexRange(networkdm,&vStart,&vEnd);CHKERRQ(ierr);
       for (i = vStart; i < vEnd; i++) {
-        ierr = DMNetworkAddComponent(networkdm,i,User.compkey_bus,&pfdata->bus[i-vStart]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,User.compkey_bus,&pfdata->bus[i-vStart],2);CHKERRQ(ierr);
         if (pfdata->bus[i-vStart].ngen) {
           for (j = 0; j < pfdata->bus[i-vStart].ngen; j++) {
-            ierr = DMNetworkAddComponent(networkdm,i,User.compkey_gen,&pfdata->gen[genj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,User.compkey_gen,&pfdata->gen[genj++],0);CHKERRQ(ierr);
           }
         }
         if (pfdata->bus[i-vStart].nload) {
           for (j=0; j < pfdata->bus[i-vStart].nload; j++) {
-            ierr = DMNetworkAddComponent(networkdm,i,User.compkey_load,&pfdata->load[loadj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,User.compkey_load,&pfdata->load[loadj++],0);CHKERRQ(ierr);
           }
         }
-        /* Add number of variables */
-        ierr = DMNetworkAddNumVariables(networkdm,i,2);CHKERRQ(ierr);
       }
     }
 
