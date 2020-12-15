@@ -40,7 +40,7 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
   cerr = cudaEventDestroy(link->scatter_end);CHKERRCUDA(cerr);
   cerr = cudaEventDestroy(link->recv_end);CHKERRCUDA(cerr);
   cerr = cudaStreamDestroy(link->send_stream);CHKERRCUDA(cerr);
-  cerr = cudaStreamDestroy(link->recv_stream);CHKERRCUDA(cerr);
+  //cerr = cudaStreamDestroy(link->recv_stream);CHKERRCUDA(cerr);
   cerr = cudaStreamDestroy(link->scatter_stream);CHKERRCUDA(cerr);
 
   // if (link->stream) {cudaError_t cerr = cudaStreamDestroy(link->stream);CHKERRCUDA(cerr); link->stream = NULL;}
@@ -55,6 +55,7 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscSFLink       *p,link;
   PetscBool         match;
+  int               leastPriority,greatestPriority;
 
   PetscFunctionBegin;
   /* Look for free nvshmem links in cache */
@@ -89,9 +90,14 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
   cerr = cudaEventCreate(&link->input_ready);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&link->scatter_end);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&link->recv_end);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreateWithFlags(&link->send_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreateWithFlags(&link->recv_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreateWithFlags(&link->scatter_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+  cerr = cudaDeviceGetStreamPriorityRange(&leastPriority,&greatestPriority);CHKERRCUDA(cerr);
+
+  //cerr = cudaStreamCreateWithFlags(&link->send_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithPriority(&link->send_stream,cudaStreamNonBlocking,greatestPriority);
+  //cerr = cudaStreamCreateWithFlags(&link->recv_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+  link->recv_stream = link->send_stream;
+  //cerr = cudaStreamCreateWithFlags(&link->scatter_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithPriority(&link->scatter_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
 
   link->rootmtype                  = PETSC_MEMTYPE_DEVICE; /* Only need 0/1-based mtype from now on */
   link->leafmtype                  = PETSC_MEMTYPE_DEVICE;
@@ -288,7 +294,7 @@ __global__ static void PetscNvshmemPut(char *sbuf,PetscInt* sbufdisp,char *rbuf,
   //nvshmemx_putmem_nbi_block(dest,src,nelems,pe);
   nvshmemx_double_put_nbi_block((double*)dest,(double*)src,nelems,pe);
   nvshmem_fence();
-  nvshmemx_signal_op(sigaddr,1,NVSHMEM_SIGNAL_ADD,pe);
+  if (threadIdx.x == 0) nvshmemx_signal_op(sigaddr,1,NVSHMEM_SIGNAL_ADD,pe);
 }
 
 /* Send out data in rootbuf */
@@ -311,7 +317,7 @@ PetscErrorCode PetscSFLinkPutRootData_NVSHMEM(PetscSF sf,PetscSFLink link)
   ranks     = bas->iranks_d;      /* remote leaf ranks */
   nto       = bas->niranks-bas->ndiranks;
   /* Launch nto blocks. Each block puts data for a destination rank  */
-  PetscNvshmemPut<<<nto,1024,0,link->stream>>>(sbuf,sbufdisp,rbuf,rbufdisp,sig,sigdisp,ranks,link->unitbytes);
+  PetscNvshmemPut<<<nto,1024,0,link->send_stream>>>(sbuf,sbufdisp,rbuf,rbufdisp,sig,sigdisp,ranks,link->unitbytes);
   PetscFunctionReturn(0);
 }
 
@@ -334,7 +340,7 @@ PetscErrorCode PetscSFLinkPutLeafData_NVSHMEM(PetscSF sf,PetscSFLink link)
   ranks     = sf->ranks_d;
   nto       = sf->nranks-sf->ndranks;
   /* Launch nto blocks. Each block puts data for a destination rank  */
-  PetscNvshmemPut<<<nto,1024,0,link->stream>>>(sbuf,sbufdisp,rbuf,rbufdisp,sig,sigdisp,ranks,link->unitbytes);
+  PetscNvshmemPut<<<nto,1024,0,link->send_stream>>>(sbuf,sbufdisp,rbuf,rbufdisp,sig,sigdisp,ranks,link->unitbytes);
   PetscFunctionReturn(0);
 }
 
@@ -370,7 +376,7 @@ PetscErrorCode PetscSFLinkWaitall_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
   }
 
   /* Launch 1 thread,waiting for completion signals from source ranks */
-  PetscNvshmemWait<<<1,1,0,link->stream>>>(nfrom,sig,sig_old);
+  PetscNvshmemWait<<<1,1,0,link->recv_stream>>>(nfrom,sig,sig_old);
   PetscFunctionReturn(0);
 }
 
