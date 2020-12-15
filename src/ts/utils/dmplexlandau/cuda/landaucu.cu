@@ -9,8 +9,9 @@
 #include <petsccublas.h>
 
 // hack to avoid configure problems in CI. Delete when resolved
+#if !defined (PETSC_HAVE_CUDA_ATOMIC)
 #define atomicAdd(e, f) (*e) += f
-
+#endif
 #define PETSC_DEVICE_FUNC_DECL __device__
 #include "../land_tensors.h"
 #include <petscaijdevice.h>
@@ -151,28 +152,28 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
     if (ipidx < nip) {
       const PetscReal wi = IPData.w_data[ipidx], x = IPData.x[ipidx], y = IPData.y[ipidx];
       PetscReal       temp1[3] = {0, 0, 0}, temp2 = 0;
-      #if LANDAU_DIM==2
+#if LANDAU_DIM==2
       PetscReal Ud[2][2], Uk[2][2];
       LandauTensor2D(vj, x, y, Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
-      #else
+#else
       PetscReal U[3][3], z = IPData.z[ipidx];
       LandauTensor3D(vj, x, y, z, U, (ipidx==jpidx) ? 0. : 1.);
-      #endif
+#endif
       for (fieldA = 0; fieldA < Nf; fieldA++) {
         temp1[0] += s_dfx[fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA]*s_invMass[fieldA];
         temp1[1] += s_dfy[fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA]*s_invMass[fieldA];
-        #if LANDAU_DIM==3
+#if LANDAU_DIM==3
         temp1[2] += s_dfz[fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA]*s_invMass[fieldA];
-        #endif
+#endif
         temp2    += s_f  [fieldA*blockDim.x+threadIdx.x]*s_nu_beta[fieldA];
       }
       temp1[0] *= wi;
       temp1[1] *= wi;
-      #if LANDAU_DIM==3
+#if LANDAU_DIM==3
       temp1[2] *= wi;
-      #endif
+#endif
       temp2    *= wi;
-      #if LANDAU_DIM==2
+#if LANDAU_DIM==2
       for (d2 = 0; d2 < 2; d2++) {
         for (d3 = 0; d3 < 2; ++d3) {
           /* K = U * grad(f): g2=e: i,A */
