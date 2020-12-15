@@ -1220,7 +1220,7 @@ PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PETSCSF_Pack,sf,0,0,0);CHKERRQ(ierr);
   if (!bas->rootbuflen[scope]) PetscFunctionReturn(0); /* Rude but fast */
- #if defined(PETS_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+ #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
   /* Note we already built the dependence between (input_stream-->send_stream) and (input_stream-->scatter_stream),
      so that we can correctly launch the Pack kernel.
    */
@@ -1366,7 +1366,7 @@ PetscErrorCode PetscSFLinkBcastAndOpLocal(PetscSF sf,PetscSFLink link,const void
 
   PetscFunctionBegin;
   if (!bas->rootbuflen[PETSCSF_LOCAL]) PetscFunctionReturn(0); /* Rude but fast */
- #if defined(PETS_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+ #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
    /* Set current stream on the link if doing DEVICE business */
   if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) link->stream = link->scatter_stream;
  #endif
@@ -1389,7 +1389,7 @@ PetscErrorCode PetscSFLinkBcastAndOpLocal(PetscSF sf,PetscSFLink link,const void
       ierr = PetscSFLinkScatterDataWithMPIReduceLocal(sf,link,count,rootstart,rootindices,rootdata,leafstart,leafindices,leafdata,op);CHKERRQ(ierr);
     }
   }
- #if defined(PETS_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+ #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
    /* Record an event marking the end of local communication (aka Scatter) */
   if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) {cupmError_t cerr = cupmEventRecord(link->scatter_end,link->scatter_stream);CHKERRCUPM(cerr);}
  #endif
@@ -1409,7 +1409,7 @@ PetscErrorCode PetscSFLinkReduceLocal(PetscSF sf,PetscSFLink link,const void *le
 
   PetscFunctionBegin;
   if (!sf->leafbuflen[PETSCSF_LOCAL]) PetscFunctionReturn(0);
- #if defined(PETS_HAVE_CUDA) || defined(PETSC_HAVE_HIP) /* Set active stream on the link if doing DEVICE business */
+ #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP) /* Set active stream on the link if doing DEVICE business */
   if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) link->stream = link->scatter_stream;
  #endif
   if (rootmtype != leafmtype) {
@@ -1429,7 +1429,7 @@ PetscErrorCode PetscSFLinkReduceLocal(PetscSF sf,PetscSFLink link,const void *le
       ierr = PetscSFLinkScatterDataWithMPIReduceLocal(sf,link,count,leafstart,leafindices,leafdata,rootstart,rootindices,rootdata,op);CHKERRQ(ierr);
     }
   }
- #if defined(PETS_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+ #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
   if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) {cupmError_t cerr = cupmEventRecord(link->scatter_end,link->scatter_stream);CHKERRCUPM(cerr);}
  #endif
   PetscFunctionReturn(0);
@@ -1448,7 +1448,7 @@ PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *root
 
   PetscFunctionBegin;
   if (!bas->rootbuflen[PETSCSF_LOCAL]) PetscFunctionReturn(0);
- #if defined(PETS_HAVE_CUDA) || defined(PETSC_HAVE_HIP) /* Set active stream on the link if doing DEVICE business */
+ #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP) /* Set active stream on the link if doing DEVICE business */
   if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) link->stream = link->scatter_stream;
  #endif
   if (rootmtype != leafmtype) {
@@ -1460,7 +1460,7 @@ PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *root
     ierr = PetscSFLinkGetFetchAndOpLocal(link,rootmtype,op,bas->rootdups[PETSCSF_LOCAL],&FetchAndOpLocal);CHKERRQ(ierr);
     ierr = (*FetchAndOpLocal)(link,count,rootstart,rootopt,rootindices,rootdata,leafstart,leafopt,leafindices,leafdata,leafupdate);CHKERRQ(ierr);
   }
- #if defined(PETS_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+ #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
   if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) {cupmError_t cerr = cupmEventRecord(link->scatter_end,link->scatter_stream);CHKERRCUPM(cerr);}
  #endif
   PetscFunctionReturn(0);
