@@ -521,23 +521,21 @@ int main(int argc,char ** argv)
       ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
       for (i = 0; i < ne; i++) {
-        ierr = DMNetworkAddComponent(networkdm,edges[i],componentkey[0],&pfdata1->branch[i]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],componentkey[0],&pfdata1->branch[i],0);CHKERRQ(ierr);
       }
 
       for (i = 0; i < nv; i++) {
-        ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[1],&pfdata1->bus[i]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[1],&pfdata1->bus[i],2);CHKERRQ(ierr);
         if (pfdata1->bus[i].ngen) {
           for (j = 0; j < pfdata1->bus[i].ngen; j++) {
-            ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[2],&pfdata1->gen[genj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[2],&pfdata1->gen[genj++],0);CHKERRQ(ierr);
           }
         }
         if (pfdata1->bus[i].nload) {
           for (j=0; j < pfdata1->bus[i].nload; j++) {
-            ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[3],&pfdata1->load[loadj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[3],&pfdata1->load[loadj++],0);CHKERRQ(ierr);
           }
         }
-        /* Add number of variables */
-        ierr = DMNetworkAddNumVariables(networkdm,vtx[i],2);CHKERRQ(ierr);
       }
 
       genj=0; loadj=0;
@@ -546,23 +544,21 @@ int main(int argc,char ** argv)
       ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
       for (i = 0; i < ne; i++) {
-        ierr = DMNetworkAddComponent(networkdm,edges[i],componentkey[0],&pfdata2->branch[i]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],componentkey[0],&pfdata2->branch[i],0);CHKERRQ(ierr);
       }
 
       for (i = 0; i < nv; i++) {
-        ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[1],&pfdata2->bus[i]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[1],&pfdata2->bus[i],2);CHKERRQ(ierr);
         if (pfdata2->bus[i].ngen) {
           for (j = 0; j < pfdata2->bus[i].ngen; j++) {
-            ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[2],&pfdata2->gen[genj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[2],&pfdata2->gen[genj++],0);CHKERRQ(ierr);
           }
         }
         if (pfdata2->bus[i].nload) {
           for (j=0; j < pfdata2->bus[i].nload; j++) {
-            ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[3],&pfdata2->load[loadj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[3],&pfdata2->load[loadj++],0);CHKERRQ(ierr);
           }
         }
-        /* Add number of variables */
-        ierr = DMNetworkAddNumVariables(networkdm,vtx[i],2);CHKERRQ(ierr);
       }
     }
 

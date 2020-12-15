@@ -679,17 +679,13 @@ int main(int argc,char ** argv)
     ierr = PetscCalloc2(vEnd - vStart,&junctions,nedges,&pipes);CHKERRQ(ierr);
   }
 
-  /* Add Pipe component to all local edges */
+  /* Add Pipe component and num of variables to all local edges */
   for (e = eStart; e < eEnd; e++) {
     if (test) {
       if (e != edge[e]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"e %D != edge %D from DMNetworkGetSubnetworkInfo()",e,edge[e]);
     }
-
     pipes[e-eStart].nnodes = nnodes;
-    ierr = DMNetworkAddComponent(networkdm,e,KeyPipe,&pipes[e-eStart]);CHKERRQ(ierr);
-
-    /* Add number of variables to each edge */
-    ierr = DMNetworkAddNumVariables(networkdm,e,2*pipes[e-eStart].nnodes);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponentAndNumVariables(networkdm,e,KeyPipe,&pipes[e-eStart],2*pipes[e-eStart].nnodes);CHKERRQ(ierr);
 
     if (size == 1 && monipipes) { /* Add monitor -- show Q_{pipes[e-eStart].id}? */
       pipes[e-eStart].length = 600.0;
@@ -698,16 +694,12 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Add Junction component to all local vertices, including ghost vertices! */
+  /* Add Junction component and num of variables to all local vertices, including ghost vertices! (current implemetation requires setting same num of variables at ghost points */
   for (v = vStart; v < vEnd; v++) {
     if (test) {
       if (v != vtx[v-vStart]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"v %D != vtx %D from DMNetworkGetSubnetworkInfo()",v,vtx[v-vStart]);
     }
-
-    ierr = DMNetworkAddComponent(networkdm,v,KeyJunction,&junctions[v-vStart]);CHKERRQ(ierr);
-
-    /* Add number of variables to vertex */
-    ierr = DMNetworkAddNumVariables(networkdm,v,2);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponentAndNumVariables(networkdm,v,KeyJunction,&junctions[v-vStart],2);CHKERRQ(ierr);
   }
 
   if (size > 1) {  /* must be called before DMSetUp()???. Other partitioners do not work yet??? -- cause crash in proc[0]! */
