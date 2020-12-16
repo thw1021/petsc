@@ -428,21 +428,15 @@ int main(int argc,char ** argv)
   char             pfdata_file[PETSC_MAX_PATH_LEN]="case9.m";
   PFDATA           *pfdata1,*pfdata2;
   PetscInt         numEdges1=0,numVertices1=0,numEdges2=0,numVertices2=0;
-  PetscInt         *edgelist1 = NULL,*edgelist2 = NULL;
+  PetscInt         *edgelist1 = NULL,*edgelist2 = NULL,componentkey[4];
   DM               networkdm;
-  PetscInt         componentkey[4];
   UserCtx_Power    User;
 #if defined(PETSC_USE_LOG)
   PetscLogStage    stage1,stage2;
 #endif
   PetscMPIInt      rank;
-  PetscInt         nsubnet = 2;
-  PetscInt         *edgelist[2];
-  PetscInt         nv,ne;
-  const PetscInt   *vtx;
-  const PetscInt   *edges;
-  PetscInt         i,j;
-  PetscInt         genj,loadj;
+  PetscInt         nsubnet = 2,nv,ne,i,j,genj,loadj;
+  const PetscInt   *vtx,*edges;
   Vec              X,F;
   Mat              J;
   SNES             snes;
@@ -500,15 +494,10 @@ int main(int argc,char ** argv)
     ierr = PetscLogStageRegister("Create network",&stage2);CHKERRQ(ierr);
     PetscLogStagePush(stage2);
 
-    /* Set number of nodes/edges */
+    /* Set number of nodes/edges and edge connectivity */
     ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,nsubnet);CHKERRQ(ierr);
-    ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices1,numEdges1,NULL);CHKERRQ(ierr);
-    ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices2,numEdges2,NULL);CHKERRQ(ierr);
-
-    edgelist[0] = edgelist1; edgelist[1] = edgelist2;
-
-    /* Add edge connectivity */
-    ierr = DMNetworkSetEdgeList(networkdm,edgelist);CHKERRQ(ierr);
+    ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices1,numEdges1,edgelist1,NULL);CHKERRQ(ierr);
+    ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices2,numEdges2,edgelist2,NULL);CHKERRQ(ierr);
 
     /* Set up the network layout */
     ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
