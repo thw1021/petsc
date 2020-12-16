@@ -527,8 +527,10 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       /* both delta, ynorm, and xnorm are either scaled or unscaled */
       ierr        = SNESTR_Converged_Private(snes,snes->iter,xnorm,ynorm,fnorm,&reason,snes->cnvP);CHKERRQ(ierr);
       if (!reason) {
-         /* temp_xnorm, temp_ynorm is always scaled */
-         ierr = (*snes->ops->converged)(snes,snes->iter,temp_xnorm,temp_ynorm,fnorm,&reason,snes->cnvP);CHKERRQ(ierr);
+         /* temp_xnorm, temp_ynorm is always unscaled */
+         /* also the inner iteration already calculated the Jacobian and solved the matrix */
+         /* therefore, it should be passing iteration number of 1 instead of 0 in the first iteration */
+         ierr = (*snes->ops->converged)(snes,snes->iter+1,temp_xnorm,temp_ynorm,fnorm,&reason,snes->cnvP);CHKERRQ(ierr);
       }
       /* if multiphase state changes, break out inner iteration */
       if (reason == SNES_BREAKOUT_INNER_ITER) {
