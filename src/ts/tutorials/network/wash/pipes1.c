@@ -599,7 +599,7 @@ int main(int argc,char ** argv)
   Junction          junctions,junction;
   Pipe              pipe,pipes;
   PetscInt          KeyPipe,KeyJunction;
-  PetscInt          *edgelist = NULL,*edgelists[1],*vtype = NULL;
+  PetscInt          *edgelist = NULL,*vtype = NULL;
   PetscInt          i,e,v,eStart,eEnd,vStart,vEnd,key;
   PetscInt          vkey,type;
   const PetscInt    *cone;
@@ -657,11 +657,8 @@ int main(int argc,char ** argv)
 
   /* Set up the network layout */
   ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,NULL,nvertices,nedges,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,NULL,nvertices,nedges,edgelist,NULL);CHKERRQ(ierr);
 
-  /* Add local edge connectivity */
-  edgelists[0] = edgelist;
-  ierr = DMNetworkSetEdgeList(networkdm,edgelists);CHKERRQ(ierr);
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
 
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);

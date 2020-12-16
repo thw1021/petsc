@@ -304,11 +304,10 @@ int main(int argc,char ** argv)
   ierr = DMNetworkRegisterComponent(networkdm,"nstr",sizeof(Node),&componentkey[0]);CHKERRQ(ierr);
   ierr = DMNetworkRegisterComponent(networkdm,"bsrt",sizeof(Branch),&componentkey[1]);CHKERRQ(ierr);
 
-  /* Set number of nodes/edges */
+  /* Set number of nodes/edges and edge connectivity */
   ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,"",nnode,nbranch,NULL);CHKERRQ(ierr);
-  /* Add edge connectivity */
-  ierr = DMNetworkSetEdgeList(networkdm,&edgelist);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"",nnode,nbranch,edgelist,NULL);CHKERRQ(ierr);
+
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
 

@@ -307,23 +307,20 @@ int main(int argc,char **argv)
   DM               networkdm;
   PetscLogStage    stage[4];
   PetscMPIInt      rank,size;
-  PetscInt         Nsubnet=2,numVertices[2],numEdges[2];
-  PetscInt         i,j,nv,ne,*edgelist[2];
+  PetscInt         Nsubnet=2,numVertices[2],numEdges[2],i,j,nv,ne,it_max=10;
   const PetscInt   *vtx,*edges;
   Vec              X,F;
   SNES             snes,snes_power,snes_water;
   Mat              Jac;
   PetscBool        ghost,viewJ=PETSC_FALSE,viewX=PETSC_FALSE,viewDM=PETSC_FALSE,test=PETSC_FALSE,distribute=PETSC_TRUE,flg;
   UserCtx          user;
-  PetscInt         it_max=10;
   SNESConvergedReason reason;
 
   /* Power subnetwork */
   UserCtx_Power       *appctx_power  = &user.appctx_power;
   char                pfdata_file[PETSC_MAX_PATH_LEN] = "power/case9.m";
   PFDATA              *pfdata = NULL;
-  PetscInt            genj,loadj;
-  PetscInt            *edgelist_power = NULL;
+  PetscInt            genj,loadj,*edgelist_power = NULL;
   PetscScalar         Sbase = 0.0;
 
   /* Water subnetwork */
@@ -332,7 +329,7 @@ int main(int argc,char **argv)
   char                waterdata_file[PETSC_MAX_PATH_LEN] = "water/sample1.inp";
   PetscInt            *edgelist_water = NULL;
 
-  /* Coupling subnetwork */
+  /* Shared vertices between subnetworks */
   PetscInt           asvtx,bsvtx;
 
   ierr = PetscInitialize(&argc,&argv,"ex1options",help);if (ierr) return ierr;
@@ -417,17 +414,12 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
   ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,"power",numVertices[0],numEdges[0],NULL);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,"water",numVertices[1],numEdges[1],NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"power",numVertices[0],numEdges[0],edgelist_power,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"water",numVertices[1],numEdges[1],edgelist_water,NULL);CHKERRQ(ierr);
 
   /* vertex subnet[0].4 shares with vertex subnet[1].0 */
   asvtx = 4; bsvtx = 0;
   ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,0,1,1,&asvtx,&bsvtx);CHKERRQ(ierr);
-
-  /* Add edge connectivity */
-  edgelist[0] = edgelist_power;
-  edgelist[1] = edgelist_water;
-  ierr = DMNetworkSetEdgeList(networkdm,edgelist);CHKERRQ(ierr);
 
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
