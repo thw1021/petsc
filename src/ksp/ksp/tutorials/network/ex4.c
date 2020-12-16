@@ -59,7 +59,7 @@ int main(int argc,char ** argv)
 
   for (i=0; i<Nsubnet; i++) {
     PetscInt netNum = -1;
-    ierr = DMNetworkAddSubnetwork(dmnetwork,NULL,numVertices[i],numEdges[i],&netNum);CHKERRQ(ierr);
+    ierr = DMNetworkAddSubnetwork(dmnetwork,NULL,numVertices[i],numEdges[i],edgelist[i],&netNum);CHKERRQ(ierr);
   }
 
   /* Add shared vertices -- all processes hold this info at current implementation */
@@ -68,9 +68,6 @@ int main(int argc,char ** argv)
     /* vertex subnet[0].0 shares with vertex subnet[j].0 */
     ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,1,&asvtx,&bsvtx);CHKERRQ(ierr);
   }
-
-  /* Add edge connectivity */
-  ierr = DMNetworkSetEdgeList(dmnetwork,edgelist);CHKERRQ(ierr);
 
   /* Setup the network layout */
   ierr = DMNetworkLayoutSetUp(dmnetwork);CHKERRQ(ierr);

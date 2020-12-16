@@ -99,16 +99,30 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt nsubnet,PetscInt Nsubnet)
 + dm - the dm object
 . name - name of this subnetwork
 . nv - number of local vertices of this subnetwork
-- ne - number of local edges of this subnetwork
+. ne - number of local edges of this subnetwork
+- edgelist - list of edges for this subnetwork
 
   Output Parameters:
 . netnum - global number of this subnetwork
 
+  Notes:
+  There is no copy involved in this operation, only the pointer is referenced. The edgelist should
+  not be destroyed before the call to DMNetworkLayoutSetUp()
+
   Level: beginner
+
+  Example usage:
+  Consider the following network:
+.vb
+ network 1: v1 -> v2 -> v0
+.ve
+
+ The resulting input
+   edgelist = [1 2 | 2 0]
 
 .seealso: DMNetworkCreate, DMNetworkSetSizes
 @*/
-PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscInt ne,PetscInt *netnum)
+PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscInt ne,PetscInt edgelist[],PetscInt *netnum)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
@@ -119,8 +133,9 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscIn
     ierr = PetscStrcpy(network->subnet[i].name,name);CHKERRQ(ierr);
   }
 
-  network->subnet[i].nvtx  = nv;
-  network->subnet[i].nedge = ne;
+  network->subnet[i].nvtx     = nv;
+  network->subnet[i].nedge    = ne;
+  network->subnet[i].edgelist = edgelist;
 
   /* Get global number of vertices and edges for subnet[i] */
   a[0] = nv; a[1] = ne;
@@ -149,44 +164,6 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscIn
   ierr = PetscStrcpy(network->subnet[i].name,name);CHKERRQ(ierr);
   if (netnum) *netnum = network->nsubnet;
   network->nsubnet++;
-  PetscFunctionReturn(0);
-}
-
-/*@
-  DMNetworkSetEdgeList - Sets the list of local edges (vertex connectivity) for the network
-
-  Logically collective on dm
-
-  Input Parameters:
-+ dm - the dm object
-- edgelist - list of edges for each subnetwork
-
-  Notes:
-  There is no copy involved in this operation, only the pointer is referenced. The edgelist should
-  not be destroyed before the call to DMNetworkLayoutSetUp
-
-  Level: beginner
-
-  Example usage:
-  Consider the following 2 separate networks:
-.vb
- network 0: v0 -> v1 -> v2 -> v3
- network 1: v1 -> v2 -> v0
-.ve
-
- The resulting input
-   edgelist[0] = [0 1 | 1 2 | 2 3];
-   edgelist[1] = [1 2 | 2 0]
-
-.seealso: DMNetworkCreate, DMNetworkSetSizes
-@*/
-PetscErrorCode DMNetworkSetEdgeList(DM dm,PetscInt *edgelist[])
-{
-  DM_Network *network = (DM_Network*) dm->data;
-  PetscInt   i;
-
-  PetscFunctionBegin;
-  for (i=0; i<network->Nsubnet; i++) network->subnet[i].edgelist = edgelist[i];
   PetscFunctionReturn(0);
 }
 
