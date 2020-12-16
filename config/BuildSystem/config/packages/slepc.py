@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = '82a73cc2944f37cad2a0e0b64aa7660b84c486ab' # master Dec-04-2020
+    self.gitcommit              = '97fe46a5fcbd79573f97570026890052a982b62d' # barry/add-unknown-nonzero-pattern rebased on master Dec-16-2020
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
     self.includes               = []
