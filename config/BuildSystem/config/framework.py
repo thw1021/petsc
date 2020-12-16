@@ -248,7 +248,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self.outputMakeRuleHeader(self.log)
       self.actions.addArgument('Framework', 'File creation', 'Created makefile configure header '+self.makeRuleHeader)
     if self.header:
-      self.outputHeader(self.header)
+      self.outputHeader(self.header, petscconf=True)
       self.log.write('**** ' + self.header + ' ****\n')
       self.outputHeader(self.log)
       self.actions.addArgument('Framework', 'File creation', 'Created configure header '+self.header)
@@ -840,7 +840,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     str = '":' + ':'.join(pkglist) + ':"'
     self.defineDict[key] = (key, str)
 
-  def outputHeader(self, name, prefix = None):
+  def outputHeader(self, name, prefix = None, petscconf = False):
     '''Write the configuration header'''
     if hasattr(name, 'close'):
       f = name
@@ -860,8 +860,6 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.processDefines(self, prefix)
     for child in self.childGraph.vertices:
       self.processDefines(child, prefix)
-    petscconf=(True if 'petscconf.h' in filename or filename == 'Unknown' else
-              False)
     if (petscconf):
       self.processPackageListDefine()
     self.outputDefines(f,petscconf)
