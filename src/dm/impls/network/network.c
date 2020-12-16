@@ -1498,6 +1498,48 @@ PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt co
   PetscFunctionReturn(0);
 }
 
+/*@
+  DMNetworkGetComponentAndNumVariables - Gets the network component, its key and number of variables
+
+  Not Collective
+
+  Input Parameters:
++ dm      - The DMNetwork object
+. p       - vertex/edge point
+. compnum - component number; use PETSC_DECIDE if compkey and component are not requested
+
+  Output Parameters:
++ compkey - the key obtained when registering the component
+. component - the component data
+- nvar  - number of variables
+
+  Level: beginner
+
+.seealso: DMNetworkGetNumComponents, DMNetworkGetComponentDataArray
+@*/
+PetscErrorCode DMNetworkGetComponentAndNumVariables(DM dm,PetscInt p,PetscInt compnum,PetscInt* compkey,void** component,PetscInt* nvar)
+{
+  PetscErrorCode ierr;
+  DM_Network     *network = (DM_Network*)dm->data;
+  PetscInt       offset = 0;
+  DMNetworkComponentHeader header;
+
+  PetscFunctionBegin;
+  ierr = PetscSectionGetOffset(network->DataSection,p,&offset);CHKERRQ(ierr);
+  header = (DMNetworkComponentHeader)(network->componentdataarray+offset);CHKERRQ(ierr);
+
+  if (compnum >= 0) {
+    if (compkey) *compkey = header->key[compnum];
+    if (component) {
+      offset += network->dataheadersize+header->offset[compnum];
+      *component = network->componentdataarray+offset;
+    }
+  }
+
+  if (nvar) *nvar = header->nvar[compnum];
+  PetscFunctionReturn(0);
+}
+
 #include <petsc/private/sfimpl.h> /*I "petscsf.h" I*/
 
 /*
