@@ -185,14 +185,13 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
     /* printf("  [%d] coupling vertex[%D]: v %D, ncomp %D; nvar %D\n",rank,v,vtx[v], ncomp,nvar); */
 
     for (k=0; k<ncomp; k++) {
-      ierr = DMNetworkGetComponent(networkdm,vtx[v],k,&key,&component);CHKERRQ(ierr);
-      ierr = DMNetworkGetComponentNumVariables(networkdm,vtx[v],k,&nvar);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentAndNumVariables(networkdm,vtx[v],k,&key,&component,&nvar);CHKERRQ(ierr);
       ierr = DMNetworkGetComponentVariableGlobalOffset(networkdm,vtx[v],k,&goffset[k]);CHKERRQ(ierr);
 
       /* Verify the coupling vertex is a powernet load vertex or a water vertex */
       switch (k) {
       case 0:
-        if (key != appctx_power.compkey_bus || nvar != 2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not a power bus vertex");
+        if (key != appctx_power.compkey_bus || nvar != 2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"key %D not a power bus vertex or nvar %D != 2",key,nvar);
         break;
       case 1:
         if (key != appctx_power.compkey_load || nvar != 0 || goffset[1] != goffset[0]+2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not a power load vertex");
@@ -212,7 +211,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
       e = connedges[k];
       ierr = DMNetworkGetNumComponents(networkdm,e,&ncomp);CHKERRQ(ierr);
       /* printf("\n  [%d] connected edge[%D]=%D has ncomp %D\n",rank,k,e,ncomp); */
-      ierr = DMNetworkGetComponent(networkdm,e,0,&keye,&component);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentAndNumVariables(networkdm,e,0,&keye,&component,NULL);CHKERRQ(ierr);
       if (keye == appctx_water.compkey_edge) { /* water_compkey_edge */
         EDGE_Water        edge=(EDGE_Water)component;
         if (edge->type == EDGE_TYPE_PUMP) {
@@ -274,7 +273,7 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
     ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&ncomp);CHKERRQ(ierr);
     for (j=0; j<ncomp; j++) {
       ierr = DMNetworkGetComponentVariableOffset(networkdm,vtx[i],j,&offset);CHKERRQ(ierr);
-      ierr = DMNetworkGetComponent(networkdm,vtx[i],j,&key,(void**)&component);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentAndNumVariables(networkdm,vtx[i],j,&key,(void**)&component,NULL);CHKERRQ(ierr);
       if (key == appctx_power.compkey_bus) {
         bus = (VERTEX_Power)(component);
         xarr[offset]   = bus->va*PETSC_PI/180.0;

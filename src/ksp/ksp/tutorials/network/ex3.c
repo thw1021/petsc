@@ -166,10 +166,8 @@ int main(int argc,char ** argv)
     ierr = DMNetworkGetNumComponents(dmnetwork,vtx[v],&ncomp);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] shared v %D: nvar %D, ncomp %D\n",rank,vtx[v],nvar,ncomp);CHKERRQ(ierr);
     for (j=0; j<ncomp; j++) {
-      ierr = DMNetworkGetComponentNumVariables(dmnetwork,vtx[v],j,&nvar);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentAndNumVariables(dmnetwork,vtx[v],j,&compkey,NULL,&nvar);CHKERRQ(ierr);
       ierr = DMNetworkGetComponentVariableGlobalOffset(dmnetwork,vtx[v],j,&goffset);CHKERRQ(ierr);
-      ierr = DMNetworkGetComponentKeyOffset(dmnetwork,vtx[v],j,&compkey,NULL);CHKERRQ(ierr);
-
       for (i=0; i<nvar; i++) {
         row = goffset + i;
         val = compkey + 1.0;
@@ -201,14 +199,15 @@ int main(int argc,char ** argv)
       }
 
       for (j=0; j<ncomp; j++) {
-        ierr = DMNetworkGetComponentKeyOffset(dmnetwork,vtx[i],j,&compkey,NULL);CHKERRQ(ierr);
+        void* component;
+        ierr = DMNetworkGetComponentAndNumVariables(dmnetwork,vtx[i],j,&compkey,(void**)&component,NULL);CHKERRQ(ierr);
         if (compkey == 0) {
           Comp0  *mycomp0;
-          ierr = DMNetworkGetComponent(dmnetwork,vtx[i],j,&compkey,(void**)&mycomp0);CHKERRQ(ierr);
+          mycomp0 = (Comp0*)component;
           ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp0->id %D\n",rank,vtx[i],compkey,mycomp0->id);CHKERRQ(ierr);
         } else if (compkey == 1) {
           Comp1  *mycomp1;
-          ierr = DMNetworkGetComponent(dmnetwork,vtx[i],j,&compkey,(void**)&mycomp1);CHKERRQ(ierr);
+          mycomp1 = (Comp1*)component;
           ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp1->val %g\n",rank,vtx[i],compkey,mycomp1->val);CHKERRQ(ierr);
         }
       }
