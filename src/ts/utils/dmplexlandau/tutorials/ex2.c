@@ -188,7 +188,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   PetscErrorCode    ierr;
   PetscInt          ii;
   PetscDS           prob;
-  static PetscReal  old_ratio = 0;
+  static PetscReal  old_ratio = 1e10;
   PetscBool         done=PETSC_FALSE;
   PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e;
   PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LANDAU_MAX_SPECIES],tt[LANDAU_MAX_SPECIES];
@@ -228,12 +228,15 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   E = ctx->Ez; /* keep real E */
   ratio = E/J/spit_eta;
   done = PETSC_FALSE;
+  if (stepi>10 && old_ratio-ratio < 1.e-3 && ratio > 0.97 && ratio < 1.03 && !rectx->use_spitzer_eta) {
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"switch to E spitzer spitzer-eta:E/J= %20.13e %20.13e\n",spit_eta,ctx->Ez/J);CHKERRQ(ierr);
+    rectx->pulse_start = time + rectx->plotDt - 1.e-5; /* start (pulse) quench, at next test */
+    rectx->use_spitzer_eta = PETSC_TRUE;
+  } else if (rectx->use_spitzer_eta) {
+    ctx->Ez = spit_eta*J;
+  }
   ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e Z_eff=%g E/J to eta ratio=%g (diff=%g)\n",
-                     done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,E,J,J_re,100*J_re/J,Te_kev,Z,ratio,old_ratio-ratio);CHKERRQ(ierr);
-  /* if ((stepi>10 && old_ratio-ratio < 1.e-5 && ratio > 0.9 && ratio < 1.5) || stepi > 30000) { */
-  /*   ierr = PetscPrintf(PETSC_COMM_WORLD,"DONE-spit-eta:E/J= %20.13e %20.13e\n",spit_eta,ctx->Ez/J);CHKERRQ(ierr); */
-  /*   exit(111); */
-  /* } */
+                     done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,ctx->Ez,J,J_re,100*J_re/J,Te_kev,Z,ratio,old_ratio-ratio);CHKERRQ(ierr);
   if (done) {
     ierr = TSSetConvergedReason(ts,TS_CONVERGED_USER);CHKERRQ(ierr);
     old_ratio = 0;
@@ -340,6 +343,7 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
   REctx             *rectx = (REctx*)ctx->data;
 
   PetscFunctionBeginUser;
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ESpitzer is obsolete");
   for (ii=0;ii<ctx->num_species;ii++) constants[ii] = ctx->charges[ii];
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
@@ -581,15 +585,17 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandauCtx *ctx)
   REctx *rectx = (REctx*)ctx->data;
 
   PetscFunctionBeginUser;
+  if (rectx->pulse_start == PETSC_MAX_REAL) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"'-ex2_pulse_start_time X' must be used with '-ex2_impurity_source_type pulse'");
   if (time < rectx->pulse_start || time > rectx->pulse_start + 3*rectx->pulse_width) *rho = 0;
-  else if (0) {
-    double t = time - rectx->pulse_start, start = rectx->pulse_width, stop = 2*rectx->pulse_width, cycle = 3*rectx->pulse_width, steep = 5, xi = 0.75 - (stop - start)/(2* cycle);
-    *rho = rectx->pulse_rate * (cycle / (stop - start)) / (1 + PetscExpReal(steep*(PetscSinReal(2*PETSC_PI*((t - start)/cycle + xi)) - PetscSinReal(2*PETSC_PI*xi))));
-  } else if (0) {
-    double x = 2*(time - rectx->pulse_start)/(3*rectx->pulse_width) - 1;
-    if (x==1 || x==-1) *rho = 0;
-    else *rho = rectx->pulse_rate * PetscExpReal(-1/(1-x*x));
-  } else {
+  /* else if (0) { */
+  /*   double t = time - rectx->pulse_start, start = rectx->pulse_width, stop = 2*rectx->pulse_width, cycle = 3*rectx->pulse_width, steep = 5, xi = 0.75 - (stop - start)/(2* cycle); */
+  /*   *rho = rectx->pulse_rate * (cycle / (stop - start)) / (1 + PetscExpReal(steep*(PetscSinReal(2*PETSC_PI*((t - start)/cycle + xi)) - PetscSinReal(2*PETSC_PI*xi)))); */
+  /* } else if (0) { */
+  /*   double x = 2*(time - rectx->pulse_start)/(3*rectx->pulse_width) - 1; */
+  /*   if (x==1 || x==-1) *rho = 0; */
+  /*   else *rho = rectx->pulse_rate * PetscExpReal(-1/(1-x*x)); */
+  /* } */
+  else {
     double x = PetscSinReal((time-rectx->pulse_start)/(3*rectx->pulse_width)*2*PETSC_PI - PETSC_PI/2) + 1; /* 0:2, integrates to 1.0 */
     *rho = rectx->pulse_rate * x / (3*rectx->pulse_width);
     if (!rectx->use_spitzer_eta) rectx->use_spitzer_eta = PETSC_TRUE; /* use it next time */
@@ -615,7 +621,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
   rectx->L = 2;
   rectx->X_0 = NULL;
   rectx->imp_idx = ctx->num_species - 1; /* default ionized impurity as last one */
-  rectx->pulse_start = 1;
+  rectx->pulse_start = PETSC_MAX_REAL;
   rectx->pulse_width = 1;
   rectx->plotStep = PETSC_MAX_INT;
   rectx->pulse_rate = 1.e-1;
