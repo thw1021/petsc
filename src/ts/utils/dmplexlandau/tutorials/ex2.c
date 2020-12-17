@@ -202,6 +202,19 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   ierr = PetscDSSetObjective(prob, 0, &f0_n);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
   n_e = PetscRealPart(tt[0])*ctx->n_0;
+  if (rectx->imp_idx!=1) {
+    PetscScalar n_i1,n_ix,Znew;
+    user[0] = 1.0;
+    ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
+    ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
+    n_i1 = PetscRealPart(tt[0])*ctx->n_0;
+    user[0] = (PetscScalar)rectx->imp_idx;
+    ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
+    ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
+    n_ix = PetscRealPart(tt[0])*ctx->n_0;
+    Znew = -(ctx->charges[1]*n_i1 + ctx->charges[rectx->imp_idx]*n_ix)/(ctx->charges[0]*(n_i1 + n_ix));
+    Z = Znew;
+  }
   ierr = PetscDSSetConstants(prob, ctx->num_species, constants);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
@@ -215,8 +228,8 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   E = ctx->Ez; /* keep real E */
   ratio = E/J/spit_eta;
   done = PETSC_FALSE;
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e E/J to eta ratio=%g (diff=%g)\n",
-                     done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,E,J,J_re,100*J_re/J,Te_kev,ratio,old_ratio-ratio);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e Z_eff=%g E/J to eta ratio=%g (diff=%g)\n",
+                     done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,E,J,J_re,100*J_re/J,Te_kev,Z,ratio,old_ratio-ratio);CHKERRQ(ierr);
   /* if ((stepi>10 && old_ratio-ratio < 1.e-5 && ratio > 0.9 && ratio < 1.5) || stepi > 30000) { */
   /*   ierr = PetscPrintf(PETSC_COMM_WORLD,"DONE-spit-eta:E/J= %20.13e %20.13e\n",spit_eta,ctx->Ez/J);CHKERRQ(ierr); */
   /*   exit(111); */
@@ -340,11 +353,11 @@ static PetscErrorCode ESpitzer(Vec X,  Vec X_t,  PetscInt stepi, PetscReal time,
   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
   *a_E = ctx->Ez; /* no change */
   if (!rectx->use_spitzer_eta && stepi > 10) {
-    static PetscReal  old_ratio = 1e10;
+    static PetscReal old_ratio = 1e10;
     ratio = *a_E/J/spit_eta;
-    if ((ratio < 1.01 && ratio > 0.99) || (old_ratio <= ratio && ratio < 1.03 && ratio > 0.97)) {
+    if ((ratio < 1.01 && ratio > 0.99) || (old_ratio <= ratio && ratio < 1.03 && ratio > 0.97) || (old_ratio-ratio) < 1.e-4) {
       rectx->j = J;
-      rectx->pulse_start = time + 1.; /* start quench now */
+      rectx->pulse_start = time + 1.; /* start quench, next time step, should use dt */
     }
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\t\t%D) t=%10.3e ESpitzer E/J vs spitzer ratio=%20.13e J=%10.3e E=%10.3e spit_eta=%10.3e Te_kev=%10.3e %s\n",stepi,time,ratio, J, *a_E, spit_eta, Te_kev, rectx->use_spitzer_eta ? " switch to Spitzer E" : " keep testing");CHKERRQ(ierr);
     old_ratio = ratio;
