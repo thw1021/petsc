@@ -75,11 +75,11 @@ PetscErrorCode FormJacobian_subPower(SNES snes,Vec X, Mat J,Mat Jpre,void *appct
   ierr = MatZeroEntries(J);CHKERRQ(ierr);
 
   /* Power subnetwork: copied from power/FormJacobian_Power() */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormJacobian_Power_private(networkdm,localX,J,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   /* Water subnetwork: Identity */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   for (i=0; i<nv; i++) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
     if (ghostvtex) continue;
@@ -158,7 +158,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
   ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
 
   /* Form Function for power subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   if (user->subsnes_id == 1) { /* snes_water only */
     ierr = FormFunction_Dummy(networkdm,localX,localF,nv,ne,vtx,edges,user);CHKERRQ(ierr);
   } else {
@@ -166,7 +166,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
   }
 
   /* Form Function for water subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   if (user->subsnes_id == 0) { /* snes_power only */
     ierr = FormFunction_Dummy(networkdm,localX,localF,nv,ne,vtx,edges,user);CHKERRQ(ierr);
   } else {
@@ -256,11 +256,11 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
   ierr = VecSet(localX,0.0);CHKERRQ(ierr);
 
   /* Set initial guess for power subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = SetInitialGuess_Power(networkdm,localX,nv,ne,vtx,edges,&appctx_power);CHKERRQ(ierr);
 
   /* Set initial guess for water subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = SetInitialGuess_Water(networkdm,localX,nv,ne,vtx,edges,NULL);CHKERRQ(ierr);
 
   /* Set initial guess at the coupling vertex */
@@ -427,7 +427,7 @@ int main(int argc,char **argv)
   /* ADD VARIABLES AND COMPONENTS FOR THE POWER SUBNETWORK */
   /*-------------------------------------------------------*/
   genj = 0; loadj = 0;
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
   for (i = 0; i < ne; i++) {
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],appctx_power->compkey_branch,&pfdata->branch[i],0);CHKERRQ(ierr);
@@ -452,7 +452,7 @@ int main(int argc,char **argv)
 
   /* ADD VARIABLES AND COMPONENTS FOR THE WATER SUBNETWORK */
   /*-------------------------------------------------------*/
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   for (i = 0; i < ne; i++) {
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],appctx_water->compkey_edge,&waterdata->edge[i],0);CHKERRQ(ierr);
   }
@@ -510,12 +510,12 @@ int main(int argc,char **argv)
     }
   }
 
-  /* Test DMNetworkGetSubnetworkInfo() and DMNetworkGetSubnetworkSharedVertices() */
+  /* Test DMNetworkGetSubnetwork() and DMNetworkGetSubnetworkSharedVertices() */
   if (test) {
     PetscInt  v,gidx;
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
     for (i=0; i<Nsubnet; i++) {
-      ierr = DMNetworkGetSubnetworkInfo(networkdm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+      ierr = DMNetworkGetSubnetwork(networkdm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, subnet[%d] ne %d, nv %d\n",rank,i,ne,nv);
       ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
