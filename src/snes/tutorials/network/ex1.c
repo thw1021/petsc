@@ -320,17 +320,17 @@ int main(int argc,char **argv)
   UserCtx_Power       *appctx_power  = &user.appctx_power;
   char                pfdata_file[PETSC_MAX_PATH_LEN] = "power/case9.m";
   PFDATA              *pfdata = NULL;
-  PetscInt            genj,loadj,*edgelist_power = NULL;
+  PetscInt            genj,loadj,*edgelist_power = NULL,power_netnum;
   PetscScalar         Sbase = 0.0;
 
   /* Water subnetwork */
   AppCtx_Water        *appctx_water = &user.appctx_water;
   WATERDATA           *waterdata = NULL;
   char                waterdata_file[PETSC_MAX_PATH_LEN] = "water/sample1.inp";
-  PetscInt            *edgelist_water = NULL;
+  PetscInt            *edgelist_water = NULL,water_netnum;
 
   /* Shared vertices between subnetworks */
-  PetscInt           asvtx,bsvtx;
+  PetscInt           power_svtx,water_svtx;
 
   ierr = PetscInitialize(&argc,&argv,"ex1options",help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
@@ -414,12 +414,12 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
   ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,"power",numVertices[0],numEdges[0],edgelist_power,NULL);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,"water",numVertices[1],numEdges[1],edgelist_water,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"power",numVertices[0],numEdges[0],edgelist_power,&power_netnum);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"water",numVertices[1],numEdges[1],edgelist_water,&water_netnum);CHKERRQ(ierr);
 
   /* vertex subnet[0].4 shares with vertex subnet[1].0 */
-  asvtx = 4; bsvtx = 0;
-  ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,0,1,1,&asvtx,&bsvtx);CHKERRQ(ierr);
+  power_svtx = 4; water_svtx = 0;
+  ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,power_netnum,water_netnum,1,&power_svtx,&water_svtx);CHKERRQ(ierr);
 
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
@@ -427,14 +427,14 @@ int main(int argc,char **argv)
   /* ADD VARIABLES AND COMPONENTS FOR THE POWER SUBNETWORK */
   /*-------------------------------------------------------*/
   genj = 0; loadj = 0;
-  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,power_netnum,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
   for (i = 0; i < ne; i++) {
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],appctx_power->compkey_branch,&pfdata->branch[i],0);CHKERRQ(ierr);
   }
 
   for (i = 0; i < nv; i++) {
-    ierr = DMNetworkIsCouplingVertex(networkdm,vtx[i],&flg);CHKERRQ(ierr);
+    ierr = DMNetworkIsSharedVertex(networkdm,vtx[i],&flg);CHKERRQ(ierr);
     if (flg) continue;
 
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_power->compkey_bus,&pfdata->bus[i],2);CHKERRQ(ierr);
@@ -452,13 +452,13 @@ int main(int argc,char **argv)
 
   /* ADD VARIABLES AND COMPONENTS FOR THE WATER SUBNETWORK */
   /*-------------------------------------------------------*/
-  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,water_netnum,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   for (i = 0; i < ne; i++) {
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],appctx_water->compkey_edge,&waterdata->edge[i],0);CHKERRQ(ierr);
   }
 
   for (i = 0; i < nv; i++) {
-    ierr = DMNetworkIsCouplingVertex(networkdm,vtx[i],&flg);CHKERRQ(ierr);
+    ierr = DMNetworkIsSharedVertex(networkdm,vtx[i],&flg);CHKERRQ(ierr);
     if (flg) continue;
 
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_water->compkey_vtx,&waterdata->vertex[i],1);CHKERRQ(ierr);
