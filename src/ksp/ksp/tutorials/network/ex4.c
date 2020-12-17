@@ -10,7 +10,7 @@ int main(int argc,char ** argv)
   PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,goffset,row;
   PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
   const PetscInt *vtx,*edges;
-  PetscBool      iscouplev,ghost,distribute=PETSC_TRUE;
+  PetscBool      ghost,distribute=PETSC_TRUE;
   Vec            X;
   PetscScalar    val;
 
@@ -76,8 +76,6 @@ int main(int argc,char ** argv)
   for (net=0; net<Nsubnet; net++) {
     ierr = DMNetworkGetSubnetwork(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     for (v=0; v<nv; v++) {
-      ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[v],&iscouplev);CHKERRQ(ierr);
-
       if (!net) {
         /* Set nvar = 2 for subnet0 */
         ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],-1,NULL,2);CHKERRQ(ierr);
