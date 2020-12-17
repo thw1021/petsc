@@ -91,11 +91,11 @@ typedef struct {
   DMNetworkComponentGenericDataType *componentdataarray; /* Array to hold the data */
 
   PetscInt                          nsubnet,Nsubnet; /* Local and global number of subnetworks */
-  PetscInt                          ncsubnet;        /* Global number of coupling subnetworks */
+  PetscInt                          ncsubnet;        /* Global number of coupling subnetworks --rm!!! */
   DMSubnetwork                      *subnet;         /* Subnetworks */
   PetscInt                          *subnetvtx;      /* Maps local vertex to local subnetwork's vertex */
-  CEdge                             *cvtx;           /* Array of coupling vertices */
-  PetscInt                          ncvtx;           /* Num of entries in cvtx */
+  CEdge                             *svtx;           /* Array of vertices shared by subnetworks */
+  PetscInt                          nsvtx;           /* Num of entries in svtx */
   PetscInt                          *sedgelist;      /* edge list of shared vertices */
 
   PetscBool                         userEdgeJacobian,userVertexJacobian;  /* Global flag for using user's sub Jacobians */
