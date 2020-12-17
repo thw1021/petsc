@@ -248,7 +248,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self.outputMakeRuleHeader(self.log)
       self.actions.addArgument('Framework', 'File creation', 'Created makefile configure header '+self.makeRuleHeader)
     if self.header:
-      self.outputHeader(self.header)
+      self.outputHeader(self.header, petscconf=True)
       self.log.write('**** ' + self.header + ' ****\n')
       self.outputHeader(self.log)
       self.actions.addArgument('Framework', 'File creation', 'Created configure header '+self.header)
@@ -666,17 +666,21 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.actions.addArgument('Framework', 'RDict update', 'Substitutions were stored in RDict with parent '+str(argDB.parentDirectory))
     return
 
-  def outputDefine(self, f, name, value = None, petscconf = None):
+  def outputDefine(self, f, name, value = None, condition = None):
     '''Define "name" to "value" in the configuration header'''
     # we need to keep the libraries in this list and simply not print them at the end
     # because libraries.havelib() is used to find library in this list we had to list the libraries in the
     # list even though we don't need them in petscconf.h
     # two packages have LIB in there name so we have to include them here
     if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
+    if (condition):
+      f.write('#if (%s)\n' % condition)
     if value:
       f.write('#define '+name+' '+str(value)+'\n')
     else:
       f.write('/* #undef '+name+' */\n')
+    if (condition):
+      f.write('#endif\n')
     return
 
   def outputMakeMacro(self, f, name, value):
@@ -737,10 +741,10 @@ class Framework(config.base.Configure, script.LanguageProcessor):
 
   def outputDefines(self, f, petscconf=False):
     for item in sorted(self.defineDict):
+      cond = None
       if petscconf and 'HIP_PLATFORM' in item:
-        f.write('#if (defined(__clang__) && !defined(__HIP__))\n')
-      self.outputDefine(f, *self.defineDict[item])
-      if petscconf and 'HIP_PLATFORM' in item: f.write('#endif\n')
+        cond = 'defined(__clang__) && !defined(__HIP__)'
+      self.outputDefine(f, *self.defineDict[item], cond)
 
   def outputPkgVersion(self, f, child):
     '''If the child contains a tuple named "version_tuple", the entries are output in the config package header.'''
@@ -840,7 +844,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     str = '":' + ':'.join(pkglist) + ':"'
     self.defineDict[key] = (key, str)
 
-  def outputHeader(self, name, prefix = None):
+  def outputHeader(self, name, prefix = None, petscconf = False):
     '''Write the configuration header'''
     if hasattr(name, 'close'):
       f = name
@@ -860,8 +864,6 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.processDefines(self, prefix)
     for child in self.childGraph.vertices:
       self.processDefines(child, prefix)
-    petscconf=(True if 'petscconf.h' in filename or filename == 'Unknown' else
-              False)
     if (petscconf):
       self.processPackageListDefine()
     self.outputDefines(f,petscconf)
