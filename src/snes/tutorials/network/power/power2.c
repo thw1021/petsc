@@ -150,11 +150,11 @@ PetscErrorCode FormFunction(SNES snes,Vec X, Vec F,void *appctx)
   ierr = DMGlobalToLocalEnd(networkdm,F,INSERT_VALUES,localF);CHKERRQ(ierr);
 
   /* Form Function for first subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormFunction_Subnet(networkdm,localX,localF,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   /* Form Function for second subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormFunction_Subnet(networkdm,localX,localF,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   ierr = DMRestoreLocalVector(networkdm,&localX);CHKERRQ(ierr);
@@ -343,11 +343,11 @@ PetscErrorCode FormJacobian(SNES snes,Vec X, Mat J,Mat Jpre,void *appctx)
   ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
 
   /* Form Jacobian for first subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormJacobian_Subnet(networkdm,localX,J,Jpre,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   /* Form Jacobian for second subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormJacobian_Subnet(networkdm,localX,J,Jpre,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   ierr = DMRestoreLocalVector(networkdm,&localX);CHKERRQ(ierr);
@@ -409,11 +409,11 @@ PetscErrorCode SetInitialValues(DM networkdm, Vec X,void* appctx)
   ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
 
   /* Set initial guess for first subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = SetInitialValues_Subnet(networkdm,localX,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   /* Set initial guess for second subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = SetInitialValues_Subnet(networkdm,localX,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   ierr = DMLocalToGlobalBegin(networkdm,localX,ADD_VALUES,X);CHKERRQ(ierr);
@@ -507,7 +507,7 @@ int main(int argc,char ** argv)
       genj=0; loadj=0;
 
       /* ADD VARIABLES AND COMPONENTS FOR THE FIRST SUBNETWORK */
-      ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+      ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
       for (i = 0; i < ne; i++) {
         ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],componentkey[0],&pfdata1->branch[i],0);CHKERRQ(ierr);
@@ -530,7 +530,7 @@ int main(int argc,char ** argv)
       genj=0; loadj=0;
 
       /* ADD VARIABLES AND COMPONENTS FOR THE SECOND SUBNETWORK */
-      ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+      ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
       for (i = 0; i < ne; i++) {
         ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],componentkey[0],&pfdata2->branch[i],0);CHKERRQ(ierr);

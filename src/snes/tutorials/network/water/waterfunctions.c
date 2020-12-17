@@ -111,7 +111,7 @@ PetscErrorCode WaterFormFunction(SNES snes,Vec X, Vec F, void *user)
   ierr = SNESGetDM(snes,&networkdm);CHKERRQ(ierr);
 
   /* Get local vertices and edges */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&v,&e);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&v,&e);CHKERRQ(ierr);
 
   /* Get local vectors */
   ierr = DMGetLocalVector(networkdm,&localX);CHKERRQ(ierr);
@@ -149,8 +149,8 @@ PetscErrorCode WaterSetInitialGuess(DM networkdm,Vec X)
   ierr = DMGlobalToLocalBegin(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
   ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
 
-  /* Get subnetwork info */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  /* Get subnetwork */
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = SetInitialGuess_Water(networkdm,localX,nv,ne,vtx,edges,NULL);CHKERRQ(ierr);
 
   ierr = DMLocalToGlobalBegin(networkdm,localX,ADD_VALUES,X);CHKERRQ(ierr);

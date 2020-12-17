@@ -91,9 +91,9 @@ int main(int argc,char ** argv)
   /* Setup the network layout */
   ierr = DMNetworkLayoutSetUp(dmnetwork);CHKERRQ(ierr);
 
-  /* Get SubnetworkInfo(); Add nvar=1 to subnet[0] and nvar=2 to other subnets */
+  /* Get Subnetwork(); Add nvar=1 to subnet[0] and nvar=2 to other subnets */
   for (net=0; net<Nsubnet; net++) {
-    ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetwork(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[v],&iscouplev);CHKERRQ(ierr);
       if (iscouplev) {
@@ -176,12 +176,12 @@ int main(int argc,char ** argv)
   ierr = VecAssemblyEnd(X);CHKERRQ(ierr);
   ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
-  /* Test DMNetworkGetSubnetworkInfo() */
+  /* Test DMNetworkGetSubnetwork() */
   ierr = PetscOptionsGetBool(NULL,NULL,"-test_getsubnet",&test,NULL);CHKERRQ(ierr);
   if (test) {
     net = 0;
     ierr = PetscOptionsGetInt(NULL,NULL,"-subnet",&net,NULL);CHKERRQ(ierr);
-    ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetwork(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] subnet %D: nv %D, ne %D\n",rank,net,nv,ne);CHKERRQ(ierr);
     ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);

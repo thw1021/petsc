@@ -72,9 +72,9 @@ int main(int argc,char ** argv)
   /* Setup the network layout */
   ierr = DMNetworkLayoutSetUp(dmnetwork);CHKERRQ(ierr);
 
-  /* Get SubnetworkInfo(); Add nvar=1 to subnet[0] and nvar=2 to other subnets */
+  /* Get Subnetwork(); Add nvar=1 to subnet[0] and nvar=2 to other subnets */
   for (net=0; net<Nsubnet; net++) {
-    ierr = DMNetworkGetSubnetworkInfo(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetwork(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[v],&iscouplev);CHKERRQ(ierr);
 
