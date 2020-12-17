@@ -207,7 +207,7 @@ PetscErrorCode SetInitialGuess_Water(DM networkdm,Vec localX,PetscInt nv,PetscIn
 {
   PetscErrorCode ierr;
   PetscInt       i,offset,key;
-  PetscBool      ghostvtex,iscouplev;
+  PetscBool      ghostvtex,sharedv;
   VERTEX_Water   vertex;
   PetscScalar    *xarr;
 
@@ -215,8 +215,8 @@ PetscErrorCode SetInitialGuess_Water(DM networkdm,Vec localX,PetscInt nv,PetscIn
   ierr = VecGetArray(localX,&xarr);CHKERRQ(ierr);
   for (i=0; i < nv; i++) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
-    ierr = DMNetworkIsCouplingVertex(networkdm,vtx[i],&iscouplev);CHKERRQ(ierr);
-    if (ghostvtex || iscouplev) continue;
+    ierr = DMNetworkIsSharedVertex(networkdm,vtx[i],&sharedv);CHKERRQ(ierr);
+    if (ghostvtex || sharedv) continue;
 
     ierr = DMNetworkGetComponent(networkdm,vtx[i],0,&key,(void**)&vertex);CHKERRQ(ierr);
     ierr = DMNetworkGetComponentVariableOffset(networkdm,vtx[i],0,&offset);CHKERRQ(ierr);
