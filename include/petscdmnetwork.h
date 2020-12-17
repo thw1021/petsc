@@ -45,7 +45,7 @@ PETSC_EXTERN PetscErrorCode DMNetworkDistribute(DM*,PetscInt);
 PETSC_EXTERN PetscErrorCode DMNetworkGetSupportingEdges(DM,PetscInt,PetscInt*,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode DMNetworkGetConnectedVertices(DM,PetscInt,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode DMNetworkIsGhostVertex(DM,PetscInt,PetscBool*);
-PETSC_EXTERN PetscErrorCode DMNetworkIsCouplingVertex(DM,PetscInt,PetscBool*);
+PETSC_EXTERN PetscErrorCode DMNetworkIsSharedVertex(DM,PetscInt,PetscBool*);
 PETSC_EXTERN PetscErrorCode DMNetworkEdgeSetMatrix(DM,PetscInt,Mat[]);
 PETSC_EXTERN PetscErrorCode DMNetworkVertexSetMatrix(DM,PetscInt,Mat[]);
 PETSC_EXTERN PetscErrorCode DMNetworkHasJacobian(DM,PetscBool,PetscBool);

@@ -338,7 +338,7 @@ PetscErrorCode SetInitialGuess_Power(DM networkdm,Vec localX,PetscInt nv,PetscIn
   VERTEX_Power   bus;
   PetscInt       i;
   GEN            gen;
-  PetscBool      ghostvtex,iscouplev;
+  PetscBool      ghostvtex,sharedv;
   PetscScalar    *xarr;
   PetscInt       key,numComps,j,offset;
   void*          component;
@@ -352,8 +352,8 @@ PetscErrorCode SetInitialGuess_Power(DM networkdm,Vec localX,PetscInt nv,PetscIn
   ierr = VecGetArray(localX,&xarr);CHKERRQ(ierr);
   for (i = 0; i < nv; i++) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
-    ierr = DMNetworkIsCouplingVertex(networkdm,vtx[i],&iscouplev);CHKERRQ(ierr);
-    if (ghostvtex ||iscouplev) continue;
+    ierr = DMNetworkIsSharedVertex(networkdm,vtx[i],&sharedv);CHKERRQ(ierr);
+    if (ghostvtex ||sharedv) continue;
 
     ierr = DMNetworkGetVariableOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&numComps);CHKERRQ(ierr);
