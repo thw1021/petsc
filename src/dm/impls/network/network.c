@@ -727,17 +727,17 @@ PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt id,PetscInt *nv, PetscInt *
 
   Input Parameters:
 + dm - the dm object
-. aname, anetid - first subnetwork name and number
-. bname, bnetid - second subnetwork name and number
+. anetnum - first subnetwork number
+. bnetnum - second subnetwork number
 . nsvtx - global number of vertices that are shared by the two subnetworks
 . asvtx - vertex index in the first subnetwork
 - bsvtx - vertex index in the second subnetwork
 
   Level: beginner
 
-.seealso: DMNetworkCreate()
+.seealso: DMNetworkCreate
 @*/
-PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetid,PetscInt bnetid,PetscInt nsvtx,PetscInt asvtx[],PetscInt bsvtx[])
+PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetnum,PetscInt bnetnum,PetscInt nsvtx,PetscInt asvtx[],PetscInt bsvtx[])
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
@@ -752,8 +752,8 @@ PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetid,PetscI
 
   sedgelist = network->sedgelist;
   for (i=0; i<nsvtx; i++) {
-    sedgelist[4*ncvtx]   = anetid; sedgelist[4*ncvtx+1] = asvtx[0];
-    sedgelist[4*ncvtx+2] = bnetid; sedgelist[4*ncvtx+3] = bsvtx[0];
+    sedgelist[4*ncvtx]   = anetnum; sedgelist[4*ncvtx+1] = asvtx[0];
+    sedgelist[4*ncvtx+2] = bnetnum; sedgelist[4*ncvtx+3] = bsvtx[0];
     ncvtx++;
   }
   if (ncvtx > 2*nsubnet) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"allocate more space for coupling edgelist");
@@ -1453,7 +1453,7 @@ PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt co
     PetscFunctionReturn(0);
   }
 
-  ierr = DMNetworkIsCouplingVertex(dm,p,&sharedv);CHKERRQ(ierr);
+  ierr = DMNetworkIsSharedVertex(dm,p,&sharedv);CHKERRQ(ierr);
   if (sharedv) {
     PetscBool ghost;
     ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
@@ -2106,7 +2106,7 @@ PetscErrorCode DMNetworkGetConnectedVertices(DM dm,PetscInt edge,const PetscInt 
 }
 
 /*@
-  DMNetworkIsCouplingVertex - Returns TRUE if the vertex connests subnetworks
+  DMNetworkIsSharedVertex - Returns TRUE if the vertex is shared by subnetworks
 
   Not Collective
 
@@ -2115,24 +2115,24 @@ PetscErrorCode DMNetworkGetConnectedVertices(DM dm,PetscInt edge,const PetscInt 
 - p  - the vertex point
 
   Output Parameter:
-. iscouplev - TRUE if the vertex is a coupling vertex
+. flag - TRUE if the vertex is shared by subnetworks
 
   Level: beginner
 
-.seealso: DMNetworkCreate, DMNetworkGetConnectedVertices, DMNetworkIsGhostVertex
+.seealso: DMNetworkAddSubnetworkSharedVertices, DMNetworkGetConnectedVertices, DMNetworkIsGhostVertex
 @*/
-PetscErrorCode DMNetworkIsCouplingVertex(DM dm,PetscInt p,PetscBool *iscouplev)
+PetscErrorCode DMNetworkIsSharedVertex(DM dm,PetscInt p,PetscBool *flag)
 {
   PetscErrorCode ierr;
   PetscInt       i,nv;
   const PetscInt *vtx;
 
   PetscFunctionBegin;
-  *iscouplev = PETSC_FALSE;
+  *flag = PETSC_FALSE;
   ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nv,&vtx);CHKERRQ(ierr);
   for (i=0; i<nv; i++) {
     if (p == vtx[i]) {
-      *iscouplev = PETSC_TRUE;
+      *flag = PETSC_TRUE;
       break;
     }
   }
