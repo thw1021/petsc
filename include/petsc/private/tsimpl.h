@@ -282,6 +282,7 @@ struct _p_TS {
   PetscReal ptime_prev;             /* time at the start of the previous step */
   PetscReal ptime_prev_rollback;    /* time at the start of the 2nd previous step to recover from rollback */
   PetscReal solvetime;              /* time at the conclusion of TSSolve() */
+  PetscBool stifflyaccurate;        /* flag to indicate that the method is stiffly accurate */
 
   TSConvergedReason reason;
   PetscBool errorifstepfailed;
