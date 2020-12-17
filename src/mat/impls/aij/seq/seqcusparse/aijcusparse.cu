@@ -2586,7 +2586,7 @@ static PetscErrorCode MatAXPY_SeqAIJCUSPARSE(Mat Y,PetscScalar a,Mat X,MatStruct
       cublasStatus_t cberr;
       cudaError_t    err;
       PetscScalar    alpha = a;
-      PetscBLASInt   one = 1,bnz;
+      PetscBLASInt   one = 1, bnz = 1;
       CsrMatrix      *matrix_y = (CsrMatrix*)cusparsestruct_y->mat->mat;
       CsrMatrix      *matrix_x = (CsrMatrix*)cusparsestruct_x->mat->mat;
       PetscScalar    *aa_y, *aa_x;
