@@ -33,7 +33,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X, Vec F,void *appctx)
   ierr = DMGlobalToLocalBegin(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
   ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
 
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormFunction_Power(networkdm,localX,localF,nv,ne,vtx,edges,User);CHKERRQ(ierr);
 
   ierr = DMRestoreLocalVector(networkdm,&localX);CHKERRQ(ierr);
@@ -61,7 +61,7 @@ PetscErrorCode SetInitialValues(DM networkdm,Vec X,void* appctx)
   ierr = DMGlobalToLocalBegin(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
   ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
 
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = SetInitialGuess_Power(networkdm,localX,nv,ne,vtx,edges,user_power);CHKERRQ(ierr);
 
   ierr = DMLocalToGlobalBegin(networkdm,localX,ADD_VALUES,X);CHKERRQ(ierr);

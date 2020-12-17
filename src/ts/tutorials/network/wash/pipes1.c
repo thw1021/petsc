@@ -665,9 +665,9 @@ int main(int argc,char ** argv)
   ierr = DMNetworkGetVertexRange(networkdm,&vStart,&vEnd);CHKERRQ(ierr);
   /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] eStart/End: %d - %d; vStart/End: %d - %d\n",rank,eStart,eEnd,vStart,vEnd);CHKERRQ(ierr); */
 
-  /* Test DMNetworkGetSubnetworkInfo() */
+  /* Test DMNetworkGetSubnetwork() */
   if (test) {
-    ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edge);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edge);CHKERRQ(ierr);
     if (ne != eEnd - eStart || nv != vEnd - vStart) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"ne %D or nv %D is incorrect",ne,nv);
   }
 
@@ -679,7 +679,7 @@ int main(int argc,char ** argv)
   /* Add Pipe component and num of variables to all local edges */
   for (e = eStart; e < eEnd; e++) {
     if (test) {
-      if (e != edge[e]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"e %D != edge %D from DMNetworkGetSubnetworkInfo()",e,edge[e]);
+      if (e != edge[e]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"e %D != edge %D from DMNetworkGetSubnetwork()",e,edge[e]);
     }
     pipes[e-eStart].nnodes = nnodes;
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,e,KeyPipe,&pipes[e-eStart],2*pipes[e-eStart].nnodes);CHKERRQ(ierr);
@@ -694,7 +694,7 @@ int main(int argc,char ** argv)
   /* Add Junction component and num of variables to all local vertices, including ghost vertices! (current implemetation requires setting same num of variables at ghost points */
   for (v = vStart; v < vEnd; v++) {
     if (test) {
-      if (v != vtx[v-vStart]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"v %D != vtx %D from DMNetworkGetSubnetworkInfo()",v,vtx[v-vStart]);
+      if (v != vtx[v-vStart]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"v %D != vtx %D from DMNetworkGetSubnetwork()",v,vtx[v-vStart]);
     }
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,v,KeyJunction,&junctions[v-vStart],2);CHKERRQ(ierr);
   }
@@ -779,17 +779,17 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Test DMNetworkGetSubnetworkInfo() */
+  /* Test DMNetworkGetSubnetwork() */
   if (test) {
     ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
-    ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edge);CHKERRQ(ierr);
+    ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edge);CHKERRQ(ierr);
     if (ne != eEnd - eStart || nv != vEnd - vStart) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"ne %D or nv %D is incorrect",ne,nv);
 
     for (e = eStart; e < eEnd; e++) {
-      if (e != edge[e]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"e %D != edge %D from DMNetworkGetSubnetworkInfo()",e,edge[e]);
+      if (e != edge[e]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"e %D != edge %D from DMNetworkGetSubnetwork()",e,edge[e]);
     }
     for (v = vStart; v < vEnd; v++) {
-      if (v != vtx[v-vStart]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"v %D != vtx %D from DMNetworkGetSubnetworkInfo()",v,vtx[v-vStart]);
+      if (v != vtx[v-vStart]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"v %D != vtx %D from DMNetworkGetSubnetwork()",v,vtx[v-vStart]);
     }
   }
 

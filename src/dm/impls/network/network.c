@@ -688,7 +688,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 }
 
 /*@C
-  DMNetworkGetSubnetworkInfo - Returns the info for the subnetwork
+  DMNetworkGetSubnetwork - Returns the info for the subnetwork
 
   Input Parameters:
 + dm - the DM object
@@ -707,7 +707,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 
 .seealso: DMNetworkLayoutSetUp, DMNetworkCreate
 @*/
-PetscErrorCode DMNetworkGetSubnetworkInfo(DM dm,PetscInt id,PetscInt *nv, PetscInt *ne,const PetscInt **vtx, const PetscInt **edge)
+PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt id,PetscInt *nv, PetscInt *ne,const PetscInt **vtx, const PetscInt **edge)
 {
   DM_Network *network = (DM_Network*)dm->data;
 
@@ -776,7 +776,7 @@ PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetid,PetscI
 
   Level: intermediate
 
-.seealso: DMNetworkGetSubnetworkInfo, DMNetworkLayoutSetUp, DMNetworkCreate
+.seealso: DMNetworkGetSubnetwork, DMNetworkLayoutSetUp, DMNetworkCreate
 @*/
 PetscErrorCode DMNetworkGetSubnetworkSharedVertices(DM dm,PetscInt *nsv,const PetscInt **svtx)
 {
@@ -2855,7 +2855,7 @@ PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
     ierr = PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] nEdges: %D; nVertices: %D; nCoupleVertices: %D\n",rank,network->nEdges,network->nVertices,ncv);CHKERRQ(ierr);
 
     for (i=0; i<nsubnet; i++) {
-      ierr = DMNetworkGetSubnetworkInfo(dm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+      ierr = DMNetworkGetSubnetwork(dm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
       if (ne) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer, "     Subnet %D: nEdges %D, nVertices(include coupling vertices) %D\n",i,ne,nv);CHKERRQ(ierr);
         for (j=0; j<ne; j++) {

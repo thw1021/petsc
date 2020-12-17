@@ -72,7 +72,7 @@ int main(int argc,char ** argv)
   }
 
   /* ADD VARIABLES AND COMPONENTS FOR THE NETWORK */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
   for (i = 0; i < ne; i++) {
     ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],appctx.compkey_edge,&waterdata->edge[i],0);CHKERRQ(ierr);
