@@ -22,7 +22,7 @@ int main(int argc,char ** argv)
   PetscInt       i,j,net,Nsubnet,nsubnet,ne,nv,nvar,v,ncomp,compkey0,compkey1,compkey,goffset,row;
   PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
   const PetscInt *vtx,*edges;
-  PetscBool      iscouplev,ghost,distribute=PETSC_TRUE,test=PETSC_FALSE;
+  PetscBool      sharedv,ghost,distribute=PETSC_TRUE,test=PETSC_FALSE;
   Vec            X;
   Comp0          comp0;
   Comp1          comp1;
@@ -95,8 +95,8 @@ int main(int argc,char ** argv)
   for (net=0; net<Nsubnet; net++) {
     ierr = DMNetworkGetSubnetwork(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     for (v=0; v<nv; v++) {
-      ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[v],&iscouplev);CHKERRQ(ierr);
-      if (iscouplev) {
+      ierr = DMNetworkIsSharedVertex(dmnetwork,vtx[v],&sharedv);CHKERRQ(ierr);
+      if (sharedv) {
         #if 0
         /* current version requirs all processess add componenets and nvar at the shared vertices! */
         if (net == 0) {
@@ -188,11 +188,11 @@ int main(int argc,char ** argv)
 
     for (i=0; i<nv; i++) {
       ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[i],&ghost);CHKERRQ(ierr);
-      ierr = DMNetworkIsCouplingVertex(dmnetwork,vtx[i],&iscouplev);CHKERRQ(ierr);
+      ierr = DMNetworkIsSharedVertex(dmnetwork,vtx[i],&sharedv);CHKERRQ(ierr);
 
       ierr = DMNetworkGetNumComponents(dmnetwork,vtx[i],&ncomp);CHKERRQ(ierr);
-      if (iscouplev || ghost) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D is shared %d, is ghost %d, ncomp %D\n",rank,vtx[i],iscouplev,ghost,ncomp);CHKERRQ(ierr);
+      if (sharedv || ghost) {
+        ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D is shared %d, is ghost %d, ncomp %D\n",rank,vtx[i],sharedv,ghost,ncomp);CHKERRQ(ierr);
       }
 
       for (j=0; j<ncomp; j++) {

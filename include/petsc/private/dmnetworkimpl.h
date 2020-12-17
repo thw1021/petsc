@@ -31,7 +31,6 @@ typedef struct {
   PetscInt size;
 } DMNetworkComponent PETSC_ATTRIBUTEALIGNED(PetscMax(sizeof(double),sizeof(PetscScalar)));
 
-
 /* Indexing data structures for vertex and edges */
 typedef struct {
   PetscSection                      DofSection;
@@ -47,13 +46,14 @@ typedef struct {
   PetscSF                           sf;
 } DMNetworkEdgeInfo;
 
+/* Shared vertex - collection of vertices in subnetworks that share a single vertex, e.g., vfrom=(vfrom_net,vfrom_idx) */
 typedef struct {
-  PetscInt gidx_from; /* global idx of the coupling vertex, shared by from/to vertices in the integrated network */
-  PetscInt vfrom_net,vfrom_idx; /* subnet number and local idx for from_vertex */
-  PetscInt nvto; /* num of to_vertices, i.e., vertex [to_net,to_idx] couples vertex [vfrom_net, vfrom_dix] */
-  PetscInt *vto; /* array: vto[2*j]=vto_net[j], vto[2*j+1]=vto_idx[j], j=0,...,nvto-1 */
-} CEdge;
-typedef enum {CVNONE=-1, CVFROM=0, CVTO=1} CVertexType;
+  PetscInt gidx_from;           /* global index of the shared vertices in dmplex */
+  PetscInt vfrom_net,vfrom_idx; /* subnet number and index of vfrom */
+  PetscInt nvto;                /* num of to_vertices, i.e., vto=(to_net,to_idx) shares with vfrom=(vfrom_net,vfrom_dix) */
+  PetscInt *vto;                /* array of size nvto: vto[2*j]=vto_net[j], vto[2*j+1]=vto_idx[j], j=0,...,nvto-1 */
+} SVtx;
+typedef enum {SVNONE=-1, SVFROM=0, SVTO=1} SVtxType;
 
 typedef struct {
   PetscInt  Nvtx, nvtx;     /* Number of global/local vertices */
@@ -67,18 +67,18 @@ typedef struct {
 } DMSubnetwork;
 
 typedef struct {
-  PetscInt                          refct;       /* reference count */
-  PetscInt                          NEdges,nEdges;        /* Number of global/local edges */
+  PetscInt                          refct;               /* reference count */
+  PetscInt                          NEdges,nEdges;       /* Number of global/local edges */
   PetscInt                          NVertices,nVertices; /* Number of global/local vertices */
-  PetscInt                          pStart,pEnd; /* Start and end indices for topological points */
-  PetscInt                          vStart,vEnd; /* Start and end indices for vertices */
-  PetscInt                          eStart,eEnd; /* Start and end indices for edges */
-  DM                                plex;        /* DM created from Plex */
-  PetscSection                      DataSection; /* Section for managing parameter distribution */
-  PetscSection                      DofSection;  /* Section for managing data distribution */
-  PetscSection                      GlobalDofSection; /* Global Dof section */
-  PetscBool                         distributecalled; /* Flag if DMNetworkDistribute() is called */
-  PetscInt                          *vltog;           /* Maps vertex local ordering to global ordering, include ghost vertices */
+  PetscInt                          pStart,pEnd;         /* Start and end indices for topological points */
+  PetscInt                          vStart,vEnd;         /* Start and end indices for vertices */
+  PetscInt                          eStart,eEnd;         /* Start and end indices for edges */
+  DM                                plex;                /* DM created from Plex */
+  PetscSection                      DataSection;         /* Section for managing parameter distribution */
+  PetscSection                      DofSection;          /* Section for managing data distribution */
+  PetscSection                      GlobalDofSection;    /* Global Dof section */
+  PetscBool                         distributecalled;    /* Flag if DMNetworkDistribute() is called */
+  PetscInt                          *vltog;              /* Maps vertex local ordering to global ordering, include ghost vertices */
 
   DMNetworkVertexInfo               vertex;
   DMNetworkEdgeInfo                 edge;
@@ -91,11 +91,11 @@ typedef struct {
   DMNetworkComponentGenericDataType *componentdataarray; /* Array to hold the data */
 
   PetscInt                          nsubnet,Nsubnet; /* Local and global number of subnetworks */
-  PetscInt                          ncsubnet;        /* Global number of coupling subnetworks */
   DMSubnetwork                      *subnet;         /* Subnetworks */
   PetscInt                          *subnetvtx;      /* Maps local vertex to local subnetwork's vertex */
-  CEdge                             *cvtx;           /* Array of coupling vertices */
-  PetscInt                          ncvtx;           /* Num of entries in cvtx */
+  SVtx                              *svtx;           /* Array of vertices shared by subnetworks */
+  PetscInt                          nsvtx,Nsvtx;     /* local and global num of entries in svtx */
+  PetscInt                          *svertices;      /* Array of local subnetwork vertices that are merged/shared */
   PetscInt                          *sedgelist;      /* edge list of shared vertices */
 
   PetscBool                         userEdgeJacobian,userVertexJacobian;  /* Global flag for using user's sub Jacobians */
