@@ -1,6 +1,8 @@
 #include <petscsys.h>
 #include <petscfix.h>
+#include <petscfv.h>
 #include <petscds.h>
+#include <petscts.h>
 #include <petsc/private/fortranimpl.h>
 /* wrapper_petsc.c */
 /* Fortran interface file */
@@ -26,7 +28,6 @@ extern void PetscRmPointer(void*);
 #endif
 
 /* Extra wrappers for PetscFV */
-#include <petscfv.h>
 /* Routine PetscFVSetComponentName */
 #ifdef PETSC_HAVE_FORTRAN_CAPS
 #define petscfvsetcomponentname_ PETSCFVSETCOMPONENTNAME
@@ -51,6 +52,7 @@ extern void PetscRmPointer(void*);
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
 #define petscdsview_ petscdsview
 #endif
+/* Extra wrappers for PetscDS */
 /* Routine PetscDSSetRiemannSolver */
 #ifdef PETSC_HAVE_FORTRAN_CAPS
 #define petscdssetriemannsolver_ PETSCDSSETRIEMANNSOLVER
@@ -62,6 +64,19 @@ extern void PetscRmPointer(void*);
 #define petscdsaddboundary_ PETSCDSADDBOUNDARY
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
 #define petscdsaddboundary_ petscdsaddboundary
+#endif
+/* Extra wrappers for TS */
+/* Routine DMTSSetBoundaryLocal */
+#ifdef PETSC_HAVE_FORTRAN_CAPS
+#define dmtssetboundarylocal_ DMTSSETBOUNDARYLOCAL
+#elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
+#define dmtssetboundarylocal_ dmtssetboundarylocal
+#endif
+/* Routine DMTSSetBoundaryLocal */
+#ifdef PETSC_HAVE_FORTRAN_CAPS
+#define dmtssetrhsfunctionlocal_ DMTSSETRHSFUNCTIONLOCAL
+#elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
+#define dmtssetrhsfunctionlocal_ dmtssetrhsfunctionlocal
 #endif
 
 /* Definitions of extra wrapper routines */
@@ -139,6 +154,36 @@ PETSC_EXTERN void petscdsaddboundary_(PetscDS *prob, DMBoundaryConditionType *ty
     *ierr = PetscDSAddBoundary(*prob, *type, newname, newlabelname, *field, *numcomps, comps, (void (*)(void))ourbocofunc, (void (*)(void))ourbocofunc_time, *numids, ids, ctx);
     FREECHAR(name, newname);
     FREECHAR(labelname, newlabelname);
+}
+/* Routine DMTSSetBoundaryLocal */
+PetscFortranCallbackId dmtsbocofunc;
+static PetscErrorCode ourdmtsbocofunc(DM dm, PetscReal time, Vec locX, Vec locX_t, void *ctx)
+{
+    PetscObjectUseFortranCallback((DM)ctx, dmtsbocofunc,
+                                  (DM*, PetscReal*, Vec*, Vec*, void*, PetscErrorCode*),
+                                  (&dm, &time, &locX, &locX_t, ctx, &ierr));
+}
+PETSC_EXTERN void dmtssetboundarylocal_(DM *dm,
+                                        void (*func)(DM *dm, PetscReal *time, Vec *locX, Vec *locX_t, void *context, PetscErrorCode *error),
+                                        void *ctx, PetscErrorCode *ierr)
+{
+    *ierr = PetscObjectSetFortranCallback((PetscObject)*dm, PETSC_FORTRAN_CALLBACK_CLASS, &dmtsbocofunc, (PetscVoidFunction)func, dm);
+    *ierr = DMTSSetBoundaryLocal(*dm, ourdmtsbocofunc, ctx);
+}
+/* Routine DMTSSetRHSFunctionLocal */
+PetscFortranCallbackId dmtsrhsfunc;
+static PetscErrorCode ourdmtsrhsfunc(DM dm, PetscReal time, Vec locX, Vec F, void *ctx)
+{
+    PetscObjectUseFortranCallback((DM)ctx, dmtsrhsfunc,
+                                  (DM*, PetscReal*, Vec*, Vec*, void*, PetscErrorCode*),
+                                  (&dm, &time, &locX, &F, ctx, &ierr));
+}
+PETSC_EXTERN void dmtssetrhsfunctionlocal_(DM *dm,
+                                           void (*func)(DM *dm, PetscReal *time, Vec *locX, Vec *F, void *context, PetscErrorCode *error),
+                                           void *ctx, PetscErrorCode *ierr)
+{
+    *ierr = PetscObjectSetFortranCallback((PetscObject)*dm, PETSC_FORTRAN_CALLBACK_CLASS, &dmtsrhsfunc, (PetscVoidFunction)func, dm);
+    *ierr = DMTSSetRHSFunctionLocal(*dm, ourdmtsrhsfunc, ctx);
 }
 #if defined(__cplusplus)
 }

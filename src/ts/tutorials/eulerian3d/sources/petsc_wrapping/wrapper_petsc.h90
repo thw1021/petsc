@@ -27,4 +27,22 @@ interface
         PetscViewer :: vin
         PetscErrorCode, intent(out) :: ierr
     end subroutine PetscDSView
+
+    subroutine DMPlexTSComputeBoundary(dm, time, locX, locX_t, user, ierr)
+        use petsctsdef
+        DM :: dm
+        PetscReal :: time
+        Vec :: locX, locX_t
+        PetscScalar, dimension(:) :: user
+        PetscErrorCode, intent(out) :: ierr
+    end subroutine DMPlexTSComputeBoundary
+
+    subroutine DMPlexTSComputeRHSFunctionFVM(dm, time, locX, F, user, ierr)
+        use petsctsdef
+        DM :: dm
+        PetscReal :: time
+        Vec :: locX, F
+        PetscScalar, dimension(:) :: user
+        PetscErrorCode, intent(out) :: ierr
+    end subroutine DMPlexTSComputeRHSFunctionFVM
 end interface

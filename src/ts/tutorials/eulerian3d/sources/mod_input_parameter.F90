@@ -23,6 +23,10 @@ module input_parameter
     double precision, parameter       :: CFL        = 0.7d0
     !> @var Final time to be reached by temporal integration
     double precision, parameter       :: tfinal     = 1.0d0
+    !> @var Maximum number of iterations of the time loop
+    !> The computation stops either at tfinal or at maxiter,
+    !> whichever is the first condition met
+    integer, parameter                :: maxiter    = 1000000
     !> @var Order of the Runge-Kutta integration
     !> RKorder = 1 : Explicit Euler
     !> RKorder = 2 : RK 2 SSP
