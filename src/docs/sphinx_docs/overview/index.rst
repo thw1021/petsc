@@ -17,3 +17,4 @@ parallel distributed arrays useful for finite difference methods.
 
    nutshell
    features_documentation
+   gpu_roadmap_documentation
