@@ -166,8 +166,8 @@ struct _n_PetscSFLink {
   PetscInt       maxResidentThreadsPerGPU;                  /* It is a copy from SF for convenience */
   cupmStream_t   input_stream,output_stream;                /* Streams on which input/output root/leafdata is computed on (the default is NULL) */
   cupmStream_t   stream;                                    /* A temp var for the current stream that an SF routine uses */
-  cupmStream_t   send_stream,recv_stream,scatter_stream;    /* Streams to send data to remote, recv data from remote and scatter data locally */
-  cupmEvent_t    input_ready,scatter_end,recv_end;          /* Markers of readiness of the input data, end of scatter, end of unpack */
+  cupmStream_t   send_stream,recv_stream,lscatter_stream;   /* Streams to send data to remote, recv data from remote, locally scatter data */
+  cupmEvent_t    input_ready,lscatter_end,recv_end;          /* Markers of readiness of the input data, end of lscatter, end of unpack */
  #endif
 
   PetscErrorCode (*Destroy)(PetscSF,PetscSFLink); /* These two fields are meant to be used by SF_Kokkos, with spptr pointing to an execution space object */
@@ -201,11 +201,11 @@ struct _n_PetscSFLink {
   MPI_Request  *reqs;                        /* An array of length (nrootreqs+nleafreqs)*8. Pointers in rootreqs[][][] and leafreqs[][][] point here */
   PetscSFLink  next;
 
-  PetscBool    use_nvshmem;                  /* Does this link use nvshem for communication? */
+  PetscBool    use_nvshmem;                  /* Does this link use nvshem (or MPI) for communication? */
 #if defined(PETSC_HAVE_NVSHMEM)
   /* The buffers are allocated in device symmetric heap. Their length is the maximal length over all ranks in the comm, and therefore is the same. */
-  uint64_t     *rootsig,*rootsig_old;        /* [max{niranks-ndiranks}], signals used when rootbuf works as receive buf. xxx_old stores old values */
-  uint64_t     *leafsig,*leafsig_old;        /* [max{nranks-ndranks}], signals used when leafbuf works as receive buf */
+  uint64_t     *rootsig;                     /* [max{niranks-ndiranks}], signals used when rootbuf works as receive buf */
+  uint64_t     *leafsig;                     /* [max{nranks-ndranks}], signals used when leafbuf works as receive buf */
 #endif
 };
 
@@ -272,10 +272,16 @@ PETSC_INTERN PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF,PetscSFLink,MPI_Data
 
 #if defined(PETSC_HAVE_NVSHMEM)
 PETSC_INTERN PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF,MPI_Datatype,PetscMemType,const void*,PetscMemType,const void*,MPI_Op,PetscSFOperation,PetscSFLink*);
-PETSC_INTERN PetscErrorCode PetscSFLinkPutRootData_NVSHMEM(PetscSF,PetscSFLink);
-PETSC_INTERN PetscErrorCode PetscSFLinkPutLeafData_NVSHMEM(PetscSF,PetscSFLink);
-PETSC_INTERN PetscErrorCode PetscSFLinkWaitall_NVSHMEM(PetscSF,PetscSFLink,PetscSFDirection);
+// PETSC_INTERN PetscErrorCode PetscSFLinkPutRootData_NVSHMEM(PetscSF,PetscSFLink);
+// PETSC_INTERN PetscErrorCode PetscSFLinkPutLeafData_NVSHMEM(PetscSF,PetscSFLink);
+// PETSC_INTERN PetscErrorCode PetscSFLinkWaitall_NVSHMEM(PetscSF,PetscSFLink,PetscSFDirection);
 PETSC_INTERN PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF,PetscMemType,const void*,PetscMemType,const void*,PetscBool*);
+
+PETSC_INTERN PetscErrorCode PetscSFLinkSendSignalsToAllowGettingData_NVSHMEM(PetscSF,PetscSFLink,PetscSFDirection);
+PETSC_INTERN PetscErrorCode PetscSFLinkWaitSignalsToStartGettingData_NVSHMEM(PetscSF,PetscSFLink,PetscSFDirection);
+PETSC_INTERN PetscErrorCode PetscSFLinkGetData_NVSHMEM(PetscSF,PetscSFLink,PetscSFDirection);
+PETSC_INTERN PetscErrorCode PetscSFLinkSendSignalsToAllowReusingSbuf_NVSHMEM(PetscSF,PetscSFLink,PetscSFDirection);
+PETSC_INTERN PetscErrorCode PetscSFLinkWaitSignalsToStartReusingSbuf_NVSHMEM(PetscSF,PetscSFLink,PetscSFDirection);
 #endif
 
 /* A set of helper routines for Pack/Unpack/Scatter on GPUs */
@@ -321,7 +327,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamAfterUnpackRootData(Pets
 {
   PetscErrorCode ierr;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
-  PetscBool      host2host = (link->rootmtype == PETSC_MEMTYPE_HOST) && (link->leafmtype == PETSC_MEMTYPE_HOST) ? PETSC_TRUE : PETSC_FALSE;
+  // PetscBool      host2host = (link->rootmtype == PETSC_MEMTYPE_HOST) && (link->leafmtype == PETSC_MEMTYPE_HOST) ? PETSC_TRUE : PETSC_FALSE;
 
   PetscFunctionBegin;
   /* Do nothing if host2host OR we are allowed to asynchronously put rootdata on device through the default stream */
@@ -342,7 +348,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamAfterUnpackRootData(Pets
 PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamAfterUnpackLeafData(PetscSF sf,PetscSFLink link)
 {
   PetscErrorCode ierr;
-  PetscBool      host2host = (link->rootmtype == PETSC_MEMTYPE_HOST) && (link->leafmtype == PETSC_MEMTYPE_HOST) ? PETSC_TRUE : PETSC_FALSE;
+  // PetscBool      host2host = (link->rootmtype == PETSC_MEMTYPE_HOST) && (link->leafmtype == PETSC_MEMTYPE_HOST) ? PETSC_TRUE : PETSC_FALSE;
 
   PetscFunctionBegin;
   /* See comments in PetscSFLinkSyncStreamAfterUnpackRootData*/

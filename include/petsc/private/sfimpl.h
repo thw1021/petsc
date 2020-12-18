@@ -130,8 +130,8 @@ struct _p_PetscSF {
   PetscInt        nranks_rmax;     /* max nranks-ndranks over comm */
   PetscInt        leafbuflen_rmax; /* max leafbuflen[REMOTE] over comm */
   /* The following two fields look confusing but actually make sense: They are offsets of buffers at the remote side. We're doing one-sided communication! */
-  PetscInt        *rootsigdisp;    /* [nranks-ndranks]. For my i-th remote root rank, I will use its rootsigdisp[i]-th root signals */
-  PetscInt        *rootbufdisp;    /* [nranks-ndranks]. For my i-th remote root rank, I will put to its root buf at offset rootbufdisp[i], in <unit> to be set */
+  PetscInt        *rootsigdisp;    /* [nranks-ndranks]. For my i-th remote root rank, I will access its rootsigdisp[i]-th root signal */
+  PetscInt        *rootbufdisp;    /* [nranks-ndranks]. For my i-th remote root rank, I will access its root buf at offset rootbufdisp[i], in <unit> to be set */
 
   PetscInt        *rootsigdisp_d;  /* Copy of rootsigdisp[] on device */
   PetscInt        *rootbufdisp_d;  /* Copy of rootbufdisp[] on device */
