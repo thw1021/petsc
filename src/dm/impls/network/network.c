@@ -373,6 +373,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 
   ctr = 0;
   for (net=0; net<nsubnet; net++) {
+    //printf("[%d] subnet[%d].vStart = %d; nedges %d\n",rank,net,network->subnet[net].vStart,network->subnet[net].nedge);
     for (j = 0; j < network->subnet[net].nedge; j++) {
       /* vfrom: */
       idx = network->subnet[net].vStart + network->subnet[net].edgelist[2*j] - vrange[rank];
@@ -524,9 +525,8 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       numCorners=2,dim=1; /* One dimensional network */
-  PetscInt       i,j,ctr,nsubnet,*eowners,np,*edges,*subnetvtx,vStart;
-  PetscInt       k,netid,vid, *vidxlTog,*edgelist_couple=NULL;
+  PetscInt       i,j,ctr,Nsubnet=network->Nsubnet,*eowners,np,*edges,*subnetvtx,vStart;
+  PetscInt       k,*vidxlTog;
   const PetscInt *cone;
   MPI_Comm       comm;
   PetscMPIInt    size,rank;
@@ -543,11 +543,10 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
 
-  /* Create the local edgelist for the network by concatenating local input edgelists of the subnetworks */
+  /* Create LOCAL edgelist for the network by concatenating local input edgelists of the subnetworks */
   ierr = PetscCalloc1(2*network->nEdges,&edges);CHKERRQ(ierr);
-  nsubnet = network->Nsubnet - network->ncsubnet;
   ctr = 0;
-  for (i=0; i < nsubnet; i++) {
+  for (i=0; i < Nsubnet; i++) {
     for (j = 0; j < network->subnet[i].nedge; j++) {
       edges[2*ctr]   = network->subnet[i].vStart + network->subnet[i].edgelist[2*j];
       edges[2*ctr+1] = network->subnet[i].vStart + network->subnet[i].edgelist[2*j+1];
@@ -555,32 +554,14 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
     }
   }
 
-  /* Append local coupling edgelists of the subnetworks */
-  i       = nsubnet; /* netid of coupling subnet */
-  nsubnet = network->Nsubnet;
-  while (i < nsubnet) {
-    edgelist_couple = network->subnet[i].edgelist;
-
-    k = 0;
-    for (j = 0; j < network->subnet[i].nedge; j++) {
-      netid = edgelist_couple[k]; vid = edgelist_couple[k+1];
-      edges[2*ctr] = network->subnet[netid].vStart + vid; k += 2;
-
-      netid = edgelist_couple[k]; vid = edgelist_couple[k+1];
-      edges[2*ctr+1] = network->subnet[netid].vStart + vid; k+=2;
-      ctr++;
-    }
-    i++;
-  }
-
-  /* Create network->plex */
+  /* Create network->plex; One dimensional network, numCorners=2 */
   ierr = DMCreate(comm,&network->plex);CHKERRQ(ierr);
   ierr = DMSetType(network->plex,DMPLEX);CHKERRQ(ierr);
-  ierr = DMSetDimension(network->plex,dim);CHKERRQ(ierr);
+  ierr = DMSetDimension(network->plex,1);CHKERRQ(ierr);
   if (size == 1) {
-    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices,numCorners,edges);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices,2,edges);CHKERRQ(ierr);
   } else {
-    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices,network->NVertices,numCorners,edges,NULL);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices,PETSC_DECIDE,2,edges,NULL);CHKERRQ(ierr);
   }
 
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
