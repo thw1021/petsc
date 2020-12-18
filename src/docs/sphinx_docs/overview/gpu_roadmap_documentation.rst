@@ -1,3 +1,5 @@
+.. _doc_gpu_roadmap:
+
 *******************
 GPU Support Roadmap
 *******************
