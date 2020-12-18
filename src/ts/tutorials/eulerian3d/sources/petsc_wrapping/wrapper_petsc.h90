@@ -1,0 +1,30 @@
+interface
+    subroutine PetscFVSetComponentName(fvm, comp, name, ierr)
+        use petscdmdef
+        PetscFV :: fvm
+        PetscInt, intent(in) :: comp
+        character(len=*) :: name
+        PetscErrorCode, intent(out) :: ierr
+    end subroutine PetscFVSetComponentName
+
+    subroutine PetscFVView(fvm, vin, ierr)
+        use petscdmdef
+        PetscFV :: fvm
+        PetscViewer :: vin
+        PetscErrorCode, intent(out) :: ierr
+    end subroutine PetscFVView
+
+    subroutine PetscFVSetType(fvm, typename, ierr)
+        use petscdmdef
+        PetscFV :: fvm
+        character(len=*) :: typename
+        PetscErrorCode, intent(out) :: ierr
+    end subroutine PetscFVSetType
+
+    subroutine PetscDSView(prob, vin, ierr)
+        use petscdmdef
+        PetscDS :: prob
+        PetscViewer :: vin
+        PetscErrorCode, intent(out) :: ierr
+    end subroutine PetscDSView
+end interface

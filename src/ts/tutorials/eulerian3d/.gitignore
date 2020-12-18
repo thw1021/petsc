@@ -1,0 +1,6 @@
+bin/
+*.mod
+*.o
+*.vtk
+*.msh
+.DS_Store
