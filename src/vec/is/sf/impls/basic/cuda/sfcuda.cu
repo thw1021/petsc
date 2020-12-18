@@ -884,16 +884,32 @@ PetscErrorCode PetscSFFree_Cuda(PetscMemType mtype,void* ptr)
 /*                Main driver to init MPI datatype on device                          */
 /*====================================================================================*/
 
+
+static PetscErrorCode PetscSFLinkDestroy_Cuda(PetscSF sf,PetscSFLink link)
+{
+  cudaError_t cerr;
+
+  PetscFunctionBegin;
+  cerr = cudaEventDestroy(link->input_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->lscatter_end);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->recv_end);CHKERRCUDA(cerr);
+
+  cerr = cudaStreamDestroy(link->send_stream);CHKERRCUDA(cerr);
+  cerr = cudaStreamDestroy(link->lscatter_stream);CHKERRCUDA(cerr);
+  PetscFunctionReturn(0);
+}
+
 /* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
 PetscErrorCode PetscSFLinkSetUp_Cuda(PetscSF sf,PetscSFLink link,MPI_Datatype unit)
 {
   PetscErrorCode ierr;
-  cudaError_t    err;
+  cudaError_t    cerr;
   PetscInt       nSignedChar=0,nUnsignedChar=0,nInt=0,nPetscInt=0,nPetscReal=0;
   PetscBool      is2Int,is2PetscInt;
 #if defined(PETSC_HAVE_COMPLEX)
   PetscInt       nPetscComplex=0;
 #endif
+  int            greatestPriority;
 
   PetscFunctionBegin;
   if (link->deviceinited) PetscFunctionReturn(0);
@@ -965,12 +981,25 @@ PetscErrorCode PetscSFLinkSetUp_Cuda(PetscSF sf,PetscSFLink link,MPI_Datatype un
   if (!sf->maxResidentThreadsPerGPU) { /* Not initialized */
     int                   device;
     struct cudaDeviceProp props;
-    err = cudaGetDevice(&device);CHKERRCUDA(err);
-    err = cudaGetDeviceProperties(&props,device);CHKERRCUDA(err);
+    cerr = cudaGetDevice(&device);CHKERRCUDA(cerr);
+    cerr = cudaGetDeviceProperties(&props,device);CHKERRCUDA(cerr);
     sf->maxResidentThreadsPerGPU = props.maxThreadsPerMultiProcessor*props.multiProcessorCount;
   }
   link->maxResidentThreadsPerGPU = sf->maxResidentThreadsPerGPU;
 
+  cerr = cudaEventCreate(&link->input_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->lscatter_end);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->recv_end);CHKERRCUDA(cerr);
+  cerr = cudaDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRCUDA(cerr);
+
+  //cerr = cudaStreamCreateWithFlags(&link->send_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithPriority(&link->send_stream,cudaStreamNonBlocking,greatestPriority);
+  //cerr = cudaStreamCreateWithFlags(&link->recv_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+  link->recv_stream = link->send_stream;
+  //cerr = cudaStreamCreateWithFlags(&link->scatter_stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithPriority(&link->lscatter_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
+
+  link->Destroy      = PetscSFLinkDestroy_Cuda;
   link->d_SyncDevice = PetscSFLinkSyncDevice_Cuda;
   link->d_SyncStream = PetscSFLinkSyncStream_Cuda;
   link->Memcpy       = PetscSFLinkMemcpy_Cuda;

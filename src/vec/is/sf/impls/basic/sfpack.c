@@ -481,6 +481,8 @@ static PetscErrorCode PetscSFLinkDestroy_MPI(PetscSF sf,PetscSFLink link)
   PetscInt          i,nreqs = (bas->nrootreqs+sf->nleafreqs)*8;
 
   PetscFunctionBegin;
+  if (link->Destroy) {ierr = (*link->Destroy)(sf,link);CHKERRQ(ierr);};
+
   if (!link->isbuiltin) {ierr = MPI_Type_free(&link->unit);CHKERRQ(ierr);}
   for (i=0; i<nreqs; i++) { /* Persistent reqs must be freed. */
     if (link->reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&link->reqs[i]);CHKERRQ(ierr);}
@@ -494,12 +496,6 @@ static PetscErrorCode PetscSFLinkDestroy_MPI(PetscSF sf,PetscSFLink link)
     ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,link->leafbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
     #endif
   }
-
- #if defined(PETSC_HAVE_CUDA)
-  if (link->stream) {cudaError_t cerr = cudaStreamDestroy(link->stream);CHKERRCUDA(cerr); link->stream = NULL;}
- #elif defined(PETSC_HAVE_HIP)
-  if (link->stream) {hipError_t  cerr = hipStreamDestroy(link->stream);CHKERRQ(cerr); link->stream = NULL;} /* TODO: CHKERRHIP? */
- #endif
   ierr = PetscFree(link);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1220,11 +1216,17 @@ PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PETSCSF_Pack,sf,0,0,0);CHKERRQ(ierr);
   if (!bas->rootbuflen[scope]) PetscFunctionReturn(0); /* Rude but fast */
+
  #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-  /* Note we already built the dependence between (input_stream-->send_stream) and (input_stream-->scatter_stream),
+  /* Note we already built the dependence between (input_stream-->send_stream) and (input_stream-->lscatter_stream),
      so that we can correctly launch the Pack kernel.
    */
-  if (rootmtype & PETSC_MEMTYPE_DEVICE) {link->stream = (scope == PETSCSF_REMOTE) ? link->send_stream : link->scatter_stream;}
+  if (rootmtype & PETSC_MEMTYPE_DEVICE) {
+    link->stream = (scope == PETSCSF_REMOTE) ? link->send_stream : link->lscatter_stream;
+   #if defined(PETSC_HAVE_NVSHMEM)
+    if (link->use_nvshmem && scope == PETSCSF_REMOTE) {ierr = PetscSFLinkWaitSignalsToStartReusingSbuf_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
+   #endif
+  }
  #endif
   if (!link->rootdirect[scope]) { /* If rootdata works directly as rootbuf, skip packing */
     ierr = PetscSFLinkGetRootPackOptAndIndices(sf,link,rootmtype,scope,&count,&start,&opt,&rootindices);CHKERRQ(ierr);
@@ -1247,15 +1249,20 @@ PetscErrorCode PetscSFLinkPackLeafData(PetscSF sf,PetscSFLink link,PetscSFScope 
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PETSCSF_Pack,sf,0,0,0);CHKERRQ(ierr);
-  if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkSyncDeviceBeforePackData(sf,link);CHKERRQ(ierr);}
+  if (!sf->leafbuflen[scope]) PetscFunctionReturn(0); /* Rude but fast */
+
+ #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+  if (leafmtype & PETSC_MEMTYPE_DEVICE) {
+    link->stream = (scope == PETSCSF_REMOTE) ? link->send_stream : link->lscatter_stream;
+   #if defined(PETSC_HAVE_NVSHMEM)
+     if (link->use_nvshmem) {ierr = PetscSFLinkWaitSignalsToStartReusingSbuf_NVSHMEM(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);}
+   #endif
+  }
+ #endif
   if (!link->leafdirect[scope] && sf->leafbuflen[scope]) { /* If leafdata works directly as rootbuf, skip packing */
     ierr = PetscSFLinkGetLeafPackOptAndIndices(sf,link,leafmtype,scope,&count,&start,&opt,&leafindices);CHKERRQ(ierr);
     ierr = PetscSFLinkGetPack(link,leafmtype,&Pack);CHKERRQ(ierr);
     ierr = (*Pack)(link,count,start,opt,leafindices,leafdata,link->leafbuf[scope][leafmtype]);CHKERRQ(ierr);
-  }
-  if (scope == PETSCSF_REMOTE) {
-    ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/*device2host*/);CHKERRQ(ierr);
-    ierr = PetscSFLinkSyncStreamAfterPackLeafData(sf,link);CHKERRQ(ierr);
   }
   ierr = PetscLogEventEnd(PETSCSF_Pack,sf,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1368,7 +1375,7 @@ PetscErrorCode PetscSFLinkBcastAndOpLocal(PetscSF sf,PetscSFLink link,const void
   if (!bas->rootbuflen[PETSCSF_LOCAL]) PetscFunctionReturn(0); /* Rude but fast */
  #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
    /* Set current stream on the link if doing DEVICE business */
-  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) link->stream = link->scatter_stream;
+  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) link->stream = link->lscatter_stream;
  #endif
   if (rootmtype != leafmtype) { /* Uncommon case */
     /* The local communication has to go through pack and unpack */
@@ -1391,7 +1398,7 @@ PetscErrorCode PetscSFLinkBcastAndOpLocal(PetscSF sf,PetscSFLink link,const void
   }
  #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
    /* Record an event marking the end of local communication (aka Scatter) */
-  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) {cupmError_t cerr = cupmEventRecord(link->scatter_end,link->scatter_stream);CHKERRCUPM(cerr);}
+  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) {cupmError_t cerr = cupmEventRecord(link->lscatter_end,link->lscatter_stream);CHKERRCUPM(cerr);}
  #endif
   PetscFunctionReturn(0);
 }
@@ -1410,7 +1417,7 @@ PetscErrorCode PetscSFLinkReduceLocal(PetscSF sf,PetscSFLink link,const void *le
   PetscFunctionBegin;
   if (!sf->leafbuflen[PETSCSF_LOCAL]) PetscFunctionReturn(0);
  #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP) /* Set active stream on the link if doing DEVICE business */
-  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) link->stream = link->scatter_stream;
+  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) link->stream = link->lscatter_stream;
  #endif
   if (rootmtype != leafmtype) {
     /* The local communication has to go through pack and unpack */
@@ -1430,7 +1437,7 @@ PetscErrorCode PetscSFLinkReduceLocal(PetscSF sf,PetscSFLink link,const void *le
     }
   }
  #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) {cupmError_t cerr = cupmEventRecord(link->scatter_end,link->scatter_stream);CHKERRCUPM(cerr);}
+  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) {cupmError_t cerr = cupmEventRecord(link->lscatter_end,link->lscatter_stream);CHKERRCUPM(cerr);}
  #endif
   PetscFunctionReturn(0);
 }
@@ -1449,7 +1456,7 @@ PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *root
   PetscFunctionBegin;
   if (!bas->rootbuflen[PETSCSF_LOCAL]) PetscFunctionReturn(0);
  #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP) /* Set active stream on the link if doing DEVICE business */
-  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) link->stream = link->scatter_stream;
+  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) link->stream = link->lscatter_stream;
  #endif
   if (rootmtype != leafmtype) {
    /* The local communication has to go through pack and unpack */
@@ -1461,7 +1468,7 @@ PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *root
     ierr = (*FetchAndOpLocal)(link,count,rootstart,rootopt,rootindices,rootdata,leafstart,leafopt,leafindices,leafdata,leafupdate);CHKERRQ(ierr);
   }
  #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) {cupmError_t cerr = cupmEventRecord(link->scatter_end,link->scatter_stream);CHKERRCUPM(cerr);}
+  if (rootmtype & PETSC_MEMTYPE_DEVICE || leafmtype & PETSC_MEMTYPE_DEVICE) {cupmError_t cerr = cupmEventRecord(link->lscatter_end,link->lscatter_stream);CHKERRCUPM(cerr);}
  #endif
   PetscFunctionReturn(0);
 }
