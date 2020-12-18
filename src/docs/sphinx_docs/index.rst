@@ -25,7 +25,7 @@ PETSc is developed as :ref:`open-source <doc_license>`, requests and contributio
 .. toctree::
    :maxdepth: 1
 
-   nutshell
+   overview/index
    install/index
    manual/index
    guides/guide_to_examples

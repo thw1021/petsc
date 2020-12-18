@@ -644,6 +644,8 @@ CUDA build of PETSc currently works on Mac OS X, Linux, Microsoft Windows with `
 
 Examples that use CUDA have the suffix .cu; see ``$PETSC_DIR/src/snes/tutorials/ex47.cu``
 
+.. _doc_config_accel_kokkos:
+
 `Kokkos`_
 ^^^^^^^^^
 
@@ -655,6 +657,8 @@ respective requirements.
 
 Examples that use `Kokkos`_ have the suffix .kokkos.cxx; see
 ``src/snes/tutorials/ex3k.kokkos.cxx``
+
+.. _doc_config_accel_opencl:
 
 `OpenCL`_/`ViennaCL`_
 ^^^^^^^^^^^^^^^^^^^^^
@@ -673,6 +677,7 @@ Run ``configure`` with ``--download-viennacl``; check
 
 `OpenCL`_/`ViennaCL`_ builds of PETSc currently work on Mac OS X, Linux, and Microsoft Windows.
 
+.. _doc_config_hpc:
 
 Installing On Large Scale DOE Systems
 =====================================
