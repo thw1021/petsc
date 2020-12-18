@@ -22,14 +22,33 @@ also contains the Tao optimization software library.
 
 PETSc is developed as :ref:`open-source <doc_license>`, requests and contributions are welcome.
 
+===========
+Get Started
+===========
+
 .. toctree::
    :maxdepth: 1
 
    overview/index
    install/index
+
+===========
+Get Working
+===========
+
+.. toctree::
+   :maxdepth: 1
+
    manual/index
    guides/guide_to_examples
+   Function Index <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/singleindex.html>
+   Examples Index <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/help.html>
+   faq/index
    contact/index
+
+============
+Get Involved
+============
 
 .. toctree::
    :maxdepth: 1
