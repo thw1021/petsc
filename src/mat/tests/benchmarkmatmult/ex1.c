@@ -8,14 +8,14 @@ Input arguments are:\n\
 int main(int argc,char **args)
 {
   PetscErrorCode ierr;
-  PetscInt       m,n;
+  PetscInt       m,n,i;
   PetscReal      norm,norm2;
   Vec            b,u,u2;
   Mat            A;
   char           file[PETSC_MAX_PATH_LEN];
   PetscViewer    fd;
   PetscBool      flg,test_sell = PETSC_FALSE, verify_sell = PETSC_FALSE;
-  PetscInt       size,maxslicewidth;
+  PetscInt       size,maxslicewidth,niter = 3;
   PetscReal      ratio,avgslicewidth;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
@@ -26,6 +26,7 @@ int main(int argc,char **args)
   ierr = PetscOptionsGetBool(NULL,NULL,"-test_sell",&test_sell,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-verify_sell",&verify_sell,NULL);CHKERRQ(ierr);
   if (verify_sell) test_sell = PETSC_TRUE; /* overwrite test_sell */
+  ierr = PetscOptionsGetInt(NULL,NULL,"-niter",&niter,NULL);CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file,FILE_MODE_READ,&fd);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
   ierr = MatSetType(A,MATAIJ);CHKERRQ(ierr);
@@ -76,7 +77,9 @@ int main(int argc,char **args)
   }
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
   /* Timing MatMult */
-  ierr = MatMult(A,b,u);CHKERRQ(ierr);
+  for (i=0; i<niter; i++) {
+    ierr = MatMult(A,b,u);CHKERRQ(ierr);
+  }
 
   /* Show result */
   ierr = VecNorm(u,NORM_2,&norm);CHKERRQ(ierr);
@@ -106,7 +109,7 @@ int main(int argc,char **args)
       ierr = PetscLogEventGetId("MatCUSPARSCopyTo",&event);CHKERRQ(ierr);
     }
     ierr = PetscLogEventGetPerfInfo(PETSC_DETERMINE, event, &eventInfo);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "%.4e ", eventInfo.time);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "%.4e ", (double)eventInfo.time/eventInfo.count);CHKERRQ(ierr);
 #endif
 
     ierr = PetscLogEventGetId("MatMult",&event);CHKERRQ(ierr);
@@ -121,8 +124,14 @@ int main(int argc,char **args)
     ierr = MPI_Allreduce(&eventInfo.time, &maxt, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, PETSC_COMM_WORLD);CHKERRQ(ierr);
 
 #if defined(PETSC_HAVE_CUDA)
+    gtotf /= (double)eventInfo.count;
+    gmaxt /= (double)eventInfo.count;
+    maxt  /= (double)eventInfo.count;
+    /* The first three numbers correspond to GPU GFLOPs/sec, GPU time, total time*/
     if (test_sell && size == 1) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e %.6lf %d %.2lf\n", (double)gtotf/gmaxt/1.e6,gmaxt,maxt,ratio,maxslicewidth,avgslicewidth);CHKERRQ(ierr);
+      PetscReal bw;
+      bw = 1e-9*(avgslicewidth*m*(sizeof(PetscReal)+sizeof(PetscInt))+n*(sizeof(PetscReal)+sizeof(PetscInt)))/gmaxt;
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e %.6lf %d %.2lf %.2lf\n", (double)gtotf/gmaxt/1.e6,gmaxt,maxt,ratio,maxslicewidth,avgslicewidth,bw);CHKERRQ(ierr);
     } else {
       ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e\n", (double)gtotf/gmaxt/1.e6,gmaxt,maxt);CHKERRQ(ierr);
     }
