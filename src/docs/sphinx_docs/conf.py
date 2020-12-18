@@ -157,10 +157,15 @@ graphviz_dot = str(result)
 highlight_language = 'c'
 autosummary_generate = True
 numfig = True
-
+rst_prolog = """
+.. role:: redhl
+.. role:: yellowhl
+.. role:: greenhl
+"""
 # Supposedly the safer way to add additional css files. Setting html_css_files will
 # overwrite previous versions of the variable that some extension may have set. This will
 # add our css files in addition to it.
 def setup(app):
     app.add_css_file('css/pop-up.css')
     app.add_css_file('css/colorbox.css')
+    app.add_css_file('css/colortext.css')
