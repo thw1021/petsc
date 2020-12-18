@@ -55,8 +55,8 @@ Solver Features
 - Local and global error estimators
 - :ref:`Forward and adjoint sensitivity capabilities <chapter_sa>`
 
-Accelerator Features
-====================
+Accelerator/GPU Features
+========================
 
 - :ref:`Matrix/Vector CUDA support <doc_config_accel_cuda>`
 - :ref:`Matrix/Vector OpenCL/ViennaCL support <doc_config_accel_opencl>`
