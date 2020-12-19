@@ -2923,6 +2923,7 @@ PetscErrorCode MatGetInfo(Mat mat,MatInfoType flag,MatInfo *info)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
+  if (!mat->assembled && !mat->factortype) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled or unfactored matrix");
   PetscValidPointer(info,3);
   if (!mat->ops->getinfo) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Mat type %s",((PetscObject)mat)->type_name);
   MatCheckPreallocated(mat,1);
