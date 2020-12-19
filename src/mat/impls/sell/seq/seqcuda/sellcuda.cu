@@ -541,7 +541,6 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
       }
       break;
   }
-  cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayWrite(yy,&y);CHKERRQ(ierr);
@@ -600,7 +599,6 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
       case 0: /* TODO */
         break;
     }
-    cerr = WaitForCUDA();CHKERRCUDA(cerr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(xx,&x);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(yy,&y);CHKERRQ(ierr);
