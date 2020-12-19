@@ -455,8 +455,8 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     // make maps
     maps->data = NULL;
     maps->num_elements = numCells;
-    maps->num_face = (PetscInt)pow(Nq,1./((double)dim)); // Q
-    maps->num_face = (PetscInt)pow(maps->num_face,(double)(dim-1)); // Q^2
+    maps->num_face = (PetscInt)(pow(Nq,1./((double)dim))+.001); // Q
+    maps->num_face = (PetscInt)(pow(maps->num_face,(double)(dim-1))+.001); // Q^2
     maps->num_reduced = 0;
     maps->deviceType = ctx->deviceType;
     // count reduced and get
@@ -466,31 +466,30 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         for (q = 0; q < Nb; ++q) {
           PetscInt    numindices,*indices;
           PetscScalar *valuesOrig = elMat = elemMatrix;
-          PetscReal   tmp;
           ierr = PetscMemzero(elMat, totDim*totDim*sizeof(PetscScalar));CHKERRQ(ierr);
           elMat[ (fieldA*Nb + q)*totDim + fieldA*Nb + q] = 1;
           ierr = DMPlexGetClosureIndices(plex, section, globsection, ej, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **) &elMat);CHKERRQ(ierr);
           for (f = 0 ; f < numindices ; ++f) { // look for a non-zero on the diagonal
-            if (PetscAbsReal(PetscRealPart(elMat[f*numindices + f])) > 1.e-12) {
+            if (PetscAbsReal(PetscRealPart(elMat[f*numindices + f])) > PETSC_MACHINE_EPSILON) {
               // found it
-                if (PetscAbsReal(PetscRealPart(elMat[f*numindices + f] - 1.)) < 1.e-12) {
+              if (PetscAbsReal(PetscRealPart(elMat[f*numindices + f] - 1.)) < PETSC_MACHINE_EPSILON) {
                 maps->gIdx[eidx][fieldA][q] = (LandauIdx)indices[f]; // normal vertex 1.0
                 //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t f=%D e=%D q=%D Found normal gid=%D %d\n",fieldA,eidx,q,indices[f],maps->gIdx[fieldA][eidx][q]);CHKERRQ(ierr);
               } else { //found a constraint
-                int jj = 0;
+                int       jj = 0;
+                PetscReal sum = 0;
                 const PetscInt ff = f;
                 maps->gIdx[eidx][fieldA][q] = -maps->num_reduced - 1; // gid = -(idx+1): idx = -gid - 1
-                tmp = 0;
                 do {  // constraints are continous in Plex - exploit that here
                   int ii;
                   //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t\t %D.%D) C:%D) id=%D\n",eidx,q,jj,indices[f]);CHKERRQ(ierr);
                   for (ii = 0, pointMaps[maps->num_reduced][jj].scale = 0; ii < maps->num_face; ii++) { // DMPlex puts them all together
                     if (ff + ii < numindices) {
                       pointMaps[maps->num_reduced][jj].scale += PetscRealPart(elMat[f*numindices + ff + ii]);
-                      //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t\t I[%d,%d] += %g\n",f,ff + ii,elMat[f*numindices + ff + ii]);CHKERRQ(ierr);
+                      //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t\t maps[%d,%d].scale = %g %g\n",maps->num_reduced,jj,pointMaps[maps->num_reduced][jj].scale, elMat[f*numindices + ff + ii]);CHKERRQ(ierr);
                     }
                   }
-                  tmp += pointMaps[maps->num_reduced][jj].scale;
+                  sum += pointMaps[maps->num_reduced][jj].scale;
                   if (pointMaps[maps->num_reduced][jj].scale == 0) pointMaps[maps->num_reduced][jj].gid = -1; // 3D has Q and Q^2 interps -- all contiguous???
                   else                                             pointMaps[maps->num_reduced][jj].gid = indices[f];
                   //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t I[%d] = %g\n",jj,pointMaps[maps->num_reduced][jj].scale);CHKERRQ(ierr);
@@ -498,29 +497,33 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
                 while (jj++ < maps->num_face) {
                   pointMaps[maps->num_reduced][jj].scale = 0;
                   pointMaps[maps->num_reduced][jj].gid = -1;
+                  //ierr = PetscPrintf(PETSC_COMM_SELF,"\t\t\t\t\t maps[%d,%d].scale = %g\n",maps->num_reduced,jj,pointMaps[maps->num_reduced][jj].scale);CHKERRQ(ierr);
                 }
-                maps->num_reduced++;
-                if (maps->num_reduced>MAP_BF_SIZE) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->num_reduced %d > %d",maps->num_reduced,MAP_BF_SIZE);
-                if (PetscAbsReal(tmp-1.0)>PETSC_SQRT_MACHINE_EPSILON) { // debug
-                  int d,f;
-                  PetscPrintf(PETSC_COMM_SELF,"\t\t%D.%D.%D) ERROR total I = %7.2e (LANDAU_MAX_Q_FACE=%d, #face=%D)\n",eidx,q,fieldA,tmp,LANDAU_MAX_Q_FACE,maps->num_face);
+                if (PetscAbsReal(sum-1.0)>PETSC_MACHINE_EPSILON*2.0) { // debug
+                  int       d,f;
+                  PetscReal tmp = 0;
+                  PetscPrintf(PETSC_COMM_SELF,"\t\t%D.%D.%D) ERROR total I = %22.16e (LANDAU_MAX_Q_FACE=%d, #face=%D)\n",eidx,q,fieldA,tmp,LANDAU_MAX_Q_FACE,maps->num_face);
                   for (d = 0, tmp = 0; d < numindices; ++d){
-                    ierr = PetscPrintf(PETSC_COMM_SELF,"%3D) %3D: ",d,indices[d]);CHKERRQ(ierr);
+                    if (tmp!=0 && PetscAbsReal(tmp-1.0)>2*PETSC_MACHINE_EPSILON) ierr = PetscPrintf(PETSC_COMM_WORLD,"%3D) %3D: ",d,indices[d]);CHKERRQ(ierr);
                     for (f = 0; f < numindices; ++f) {
-                      ierr = PetscPrintf(PETSC_COMM_SELF," %8.2e",  PetscRealPart(elMat[d*numindices + f]));CHKERRQ(ierr);
+                      // ierr = PetscPrintf(PETSC_COMM_SELF," %8.2e",  PetscRealPart(elMat[d*numindices + f]));CHKERRQ(ierr);
                       tmp += PetscRealPart(elMat[d*numindices + f]);
                     }
-                    ierr = PetscPrintf(PETSC_COMM_SELF," | %g\n",tmp);CHKERRQ(ierr);
+                    if (tmp!=0) ierr = PetscPrintf(PETSC_COMM_WORLD," | %22.16e\n",tmp);CHKERRQ(ierr);
                   }
                 }
+                pointMaps[maps->num_reduced][0].scale += 1.0 - sum; /* hack to fix a numerical problem with this probing of Forest interpolants. does not seem to help */
+                maps->num_reduced++;
+                if (maps->num_reduced>MAP_BF_SIZE) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->num_reduced %d > %d",maps->num_reduced,MAP_BF_SIZE);
               }
               break;
             }
           }
           // debug
           for (d = 0; d < -numindices; ++d){
+            PetscReal tmp = 0;
             ierr = PetscPrintf(PETSC_COMM_SELF,"\t%3D) %3D: ",d,indices[d]);CHKERRQ(ierr);
-            for (f = 0, tmp = 0; f < numindices; ++f) {
+            for (f = 0 ; f < numindices; ++f) {
               ierr = PetscPrintf(PETSC_COMM_SELF," %12.5e",  PetscRealPart(elMat[d*numindices + f]));CHKERRQ(ierr);
               tmp += PetscRealPart(elMat[d*numindices + f]);
             }
@@ -836,7 +839,7 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
     char      convType[256];
     PetscBool flg;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, prefix, "Mesh conversion options", "DMPLEX");CHKERRQ(ierr);
-    ierr = PetscOptionsFList("-dm_landau_type","Convert DMPlex to another format (should not be Plex!)","ex6f.c",DMList,DMPLEX,convType,256,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsFList("-dm_landau_type","Convert DMPlex to another format (should not be Plex!)","plexland.c",DMList,DMPLEX,convType,256,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();
     if (flg) {
       DM dmforest;
