@@ -526,7 +526,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
   PetscInt       i,j,ctr,Nsubnet=network->Nsubnet,*eowners,np,*edges,*subnetvtx,vStart;
-  PetscInt       k,*vidxlTog;
+  PetscInt       e,v,vfrom,vto;
   const PetscInt *cone;
   MPI_Comm       comm;
   PetscMPIInt    size,rank;
@@ -563,6 +563,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   } else {
     ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices,PETSC_DECIDE,2,edges,NULL);CHKERRQ(ierr);
   }
+  ierr = PetscFree(edges);CHKERRQ(ierr); /* local edge list with global idx used by DMPlexBuildFromCellList() */
 
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(network->plex,0,&network->eStart,&network->eEnd);CHKERRQ(ierr);
@@ -578,93 +579,63 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   np = network->pEnd - network->pStart;
   ierr = PetscCalloc2(np,&network->header,np,&network->cvalue);CHKERRQ(ierr);
 
-  /* Create vidxlTog: maps local vertex index to global index */
-  np = network->vEnd - vStart;
-
-  ierr = PetscMalloc2(np,&vidxlTog,size+1,&eowners);CHKERRQ(ierr);
-  ctr = 0;
-  for (i=network->eStart; i<network->eEnd; i++) {
-    ierr = DMNetworkGetConnectedVertices(dm,i,&cone);CHKERRQ(ierr);
-    vidxlTog[cone[0] - vStart] = edges[2*ctr];
-    vidxlTog[cone[1] - vStart] = edges[2*ctr+1];
-    ctr++;
-  }
-  ierr = PetscFree(edges);CHKERRQ(ierr);
-
-  /* Create vertices and edges array for the subnetworks */
+  /* Create edge and vertex arrays for the subnetworks */
   for (j=0; j < network->Nsubnet; j++) {
     ierr = PetscCalloc1(network->subnet[j].nedge,&network->subnet[j].edges);CHKERRQ(ierr);
-
-    /* Temporarily setting nvtx and nedge to 0 so we can use them as counters in the below for loop.
-       These get updated when the vertices and edges are added. */
-    network->subnet[j].nvtx  = 0;
-    network->subnet[j].nedge = 0;
   }
-  ierr = PetscCalloc1(np,&network->subnetvtx);CHKERRQ(ierr);
-
 
   /* Get edge ownership */
+  ierr = PetscMalloc1(size+1,&eowners);CHKERRQ(ierr);
   np = network->eEnd - network->eStart;
   ierr = MPI_Allgather(&np,1,MPIU_INT,eowners+1,1,MPIU_INT,comm);CHKERRQ(ierr);
   eowners[0] = 0;
   for (i=2; i<=size; i++) eowners[i] += eowners[i-1];
 
-  i = 0; j = 0;
-  while (i < np) { /* local edges, including coupling edges */
-    network->header[i].index = i + eowners[rank];   /* Global edge index */
-
-    if (j < network->Nsubnet && i < network->subnet[j].eEnd) {
-      network->header[i].subnetid = j; /* Subnetwork id */
-      network->subnet[j].edges[network->subnet[j].nedge++] = i;
-
-      network->header[i].ndata = 0;
-      ierr = PetscSectionAddDof(network->DataSection,i,network->dataheadersize);CHKERRQ(ierr);
-      network->header[i].offset[0] = 0;
-      network->header[i].offsetvarrel[0] = 0;
-      i++;
-    }
-    if (i >= network->subnet[j].eEnd) j++;
-  }
-
-  /* Count network->subnet[*].nvtx */
-  for (i=vStart; i<network->vEnd; i++) { /* local vertices, including ghosts */
-    k = vidxlTog[i-vStart];
-    for (j=0; j < network->Nsubnet; j++) {
-      if (network->subnet[j].vStart <= k && k < network->subnet[j].vEnd) {
-        network->subnet[j].nvtx++;
-        break;
-      }
-    }
-  }
-
   /* Set network->subnet[*].vertices on array network->subnetvtx */
+  np = network->vEnd - vStart;
+  ierr = PetscCalloc1(np,&network->subnetvtx);CHKERRQ(ierr); /* Maps local vertex to local subnetwork's vertex */
   subnetvtx = network->subnetvtx;
   for (j=0; j<network->Nsubnet; j++) {
     network->subnet[j].vertices = subnetvtx;
     subnetvtx                  += network->subnet[j].nvtx;
-    network->subnet[j].nvtx = 0;
   }
 
-  /* Set vertex array for the subnetworks */
-  for (i=vStart; i<network->vEnd; i++) { /* local vertices, including ghosts */
-    network->header[i].index = vidxlTog[i-vStart]; /*  Global vertex index */
+  /* Setup edge and vertex arrays for subnetworks */
+  e = 0;
+  for (i=0; i < Nsubnet; i++) {
+    v = 0;
+    for (j = 0; j < network->subnet[i].nedge; j++) {
+      /* edge e */
+      network->header[e].index    = e + eowners[rank];   /* Global edge index */
+      network->header[e].subnetid = i;
+      network->subnet[i].edges[j] = e;
 
-    k = vidxlTog[i-vStart];
-    for (j=0; j < network->Nsubnet; j++) {
-      if (network->subnet[j].vStart <= k && k < network->subnet[j].vEnd) {
-        network->header[i].subnetid = j;
-        network->subnet[j].vertices[network->subnet[j].nvtx++] = i;
-        break;
-      }
+      /* connected vertices */
+      ierr = DMPlexGetCone(network->plex,e,&cone);CHKERRQ(ierr);
+
+      /* vertex cone[0] */
+      vfrom = network->subnet[i].edgelist[2*v];     /* =subnet[i].idx */
+      network->header[cone[0]].index     = vfrom + network->subnet[i].vStart; /* Global vertex index */
+      network->header[cone[0]].subnetid  = i;       /* Subnetwork id */
+      network->subnet[i].vertices[vfrom] = cone[0]; /* user's subnet[].dix = petsc's v */
+
+      /* vertex cone[1] */
+      vto   = network->subnet[i].edgelist[2*v+1];   /* =subnet[i].idx */
+      network->header[cone[1]].index    = vto + network->subnet[i].vStart;  /* Global vertex index */
+      network->header[cone[1]].subnetid = i;
+      network->subnet[i].vertices[vto]  = cone[1];  /* user's subnet[].dix = petsc's v */
+
+      e++; v++;
     }
-
-    network->header[i].ndata = 0;
-    ierr = PetscSectionAddDof(network->DataSection,i,network->dataheadersize);CHKERRQ(ierr);
-    network->header[i].offset[0] = 0;
-    network->header[i].offsetvarrel[0] = 0;
   }
+  ierr = PetscFree(eowners);CHKERRQ(ierr);
 
-  ierr = PetscFree2(vidxlTog,eowners);CHKERRQ(ierr);
+  for (i = network->pStart; i< network->pEnd; i++) {
+    network->header[i].ndata           = 0;
+    network->header[i].offset[0]       = 0;
+    network->header[i].offsetvarrel[0] = 0;
+    ierr = PetscSectionAddDof(network->DataSection,i,network->dataheadersize);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
