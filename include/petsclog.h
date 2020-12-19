@@ -7,6 +7,11 @@
 #include <petscsys.h>
 #include <petsctime.h>
 
+#if defined(PETSC_HAVE_CUDA)
+#include <cuda_runtime.h>
+#include <petsccublas.h>
+#endif
+
 /* General logging of information; different from event logging */
 PETSC_EXTERN PetscErrorCode PetscInfo_Private(const char[],PetscObject,const char[],...);
 #if defined(PETSC_USE_INFO)
@@ -281,6 +286,10 @@ PETSC_EXTERN PetscLogDouble petsc_ctog_sz;
 PETSC_EXTERN PetscLogDouble petsc_gtoc_sz;
 PETSC_EXTERN PetscLogDouble petsc_gflops;
 PETSC_EXTERN PetscLogDouble petsc_gtime;
+#if defined(PETSC_HAVE_CUDA)
+PETSC_EXTERN cudaEvent_t petsc_gt_begin;
+PETSC_EXTERN cudaEvent_t petsc_gt_end;
+#endif
 #if defined(PETSC_USE_DEBUG)
 PETSC_EXTERN PetscBool      petsc_gtime_inuse;
 #endif
@@ -337,13 +346,21 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuFlops(PetscLogDouble n)
 @*/
 PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuTimeBegin()
 {
+#if defined(PETSC_HAVE_CUDA)
+  cudaError_t    cerr;
+#else
   PetscErrorCode ierr;
+#endif
   PetscFunctionBegin;
 #if defined(PETSC_USE_DEBUG)
   if (petsc_gtime_inuse) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
   petsc_gtime_inuse = PETSC_TRUE;
 #endif
+#if defined(PETSC_HAVE_CUDA)
+  cerr = cudaEventRecord(petsc_gt_begin,0);CHKERRCUDA(cerr);
+#else
   ierr = PetscTimeSubtract(&petsc_gtime);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 /*@
@@ -355,13 +372,25 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuTimeBegin()
 @*/
 PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuTimeEnd()
 {
+#if defined(PETSC_HAVE_CUDA)
+  float          gtime;
+  cudaError_t    cerr;
+#else
   PetscErrorCode ierr;
+#endif
   PetscFunctionBegin;
 #if defined(PETSC_USE_DEBUG)
   if (!petsc_gtime_inuse) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeBegin()?");
   petsc_gtime_inuse = PETSC_FALSE;
 #endif
+#if defined(PETSC_HAVE_CUDA)
+  cerr = cudaEventRecord(petsc_gt_end,0);CHKERRCUDA(cerr);
+  cerr = cudaEventSynchronize(petsc_gt_end);CHKERRCUDA(cerr);
+  cerr = cudaEventElapsedTime(&gtime,petsc_gt_begin,petsc_gt_end);CHKERRCUDA(cerr);
+  petsc_gtime += (PetscLogDouble)gtime/1000.0; /* convert milliseconds to seconds */
+#else
   ierr = PetscTimeAdd(&petsc_gtime);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
