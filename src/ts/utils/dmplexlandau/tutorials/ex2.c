@@ -104,7 +104,7 @@ static void f0_ve_shift(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                          PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   PetscReal vz = numConstants==1 ? PetscRealPart(constants[0]) : 0;
-  if (dim==2) *f0 = u[0] * 2.*PETSC_PI*x[0] * PetscSqrtReal(x[0]*x[0] + (x[1]-vz)*(x[1]-vz));             /* n r v */
+  if (dim==2) *f0 = u[0] * 2.*PETSC_PI*x[0] * PetscSqrtReal(x[0]*x[0] + (x[1]-vz)*(x[1]-vz));         /* n r v */
   else {
     *f0 =           u[0] *                PetscSqrtReal(x[0]*x[0] + x[1]*x[1] + (x[2]-vz)*(x[2]-vz)); /* n v */
   }
@@ -189,21 +189,29 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   PetscInt          ii;
   PetscDS           prob;
   static PetscReal  old_ratio = 1e10;
-  PetscBool         done=PETSC_FALSE;
-  PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e;
+  TSConvergedReason reason;
+  PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e,v,vz,v2;
   PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LANDAU_MAX_SPECIES],tt[LANDAU_MAX_SPECIES];
 
   PetscFunctionBeginUser;
   if (ctx->num_species<2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D < 2",ctx->num_species);
-  for (ii=0;ii<ctx->num_species;ii++) constants[ii] = ctx->charges[ii];
-  Z = -ctx->charges[1]/ctx->charges[0];
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
+  /* get current */
+  for (ii=0;ii<ctx->num_species;ii++) constants[ii] = ctx->charges[ii];
+  ierr = PetscDSSetConstants(prob, ctx->num_species, constants);CHKERRQ(ierr);
+  ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
+  ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
+  J = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
+  /* get N_e */
   ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_n);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
   n_e = PetscRealPart(tt[0])*ctx->n_0;
-  if (rectx->imp_idx!=1) {
-    PetscReal n_i1,n_ix,Znew;
+  /* Z */
+  Z = -ctx->charges[1]/ctx->charges[0];
+  if (rectx->imp_idx!=1 && ctx->charges[rectx->imp_idx]!=ctx->charges[1]) {
+    PetscScalar n_i1,n_ix;
+    PetscReal   Znew;
     user[0] = 1.0;
     ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
@@ -215,37 +223,43 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
     Znew = -(ctx->charges[1]*n_i1 + ctx->charges[rectx->imp_idx]*n_ix)/(ctx->charges[0]*(n_i1 + n_ix));
     Z = Znew;
   }
-  ierr = PetscDSSetConstants(prob, ctx->num_species, constants);CHKERRQ(ierr);
-  ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
+  /* remove drift */
+  if (0) {
+    ierr = PetscDSSetObjective(prob, 0, &f0_vz);CHKERRQ(ierr);
+    ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
+    vz = ctx->n_0*PetscRealPart(tt[0])/n_e; /* non-dimensional */
+  } else vz = 0;
+  /* thermal velocity */
+  ierr = PetscDSSetConstants(prob, 1, &vz);CHKERRQ(ierr);
+  ierr = PetscDSSetObjective(prob, 0, &f0_ve_shift);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
-  J = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
-  ierr = PetscDSSetConstants(prob, 1, &constants[0]);CHKERRQ(ierr);
-  ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
-  ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
-  J_re = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
-  ierr = getTe_kev(plex, X, NULL, &Te_kev);CHKERRQ(ierr);
+  v = ctx->n_0*ctx->v_0*PetscRealPart(tt[0])/n_e;   /* remove number density to get velocity */
+  v2 = PetscSqr(v);                                 /* use real space: m^2 / s^2 */
+  Te_kev = (v2*ctx->masses[0]*PETSC_PI/8)*kev_joul; /* temperature in kev */
+  //ierr = getTe_kev(plex, X, NULL, &Te_kev);CHKERRQ(ierr);
   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],Z,ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
-  E = ctx->Ez; /* keep real E */
+  if (rectx->use_spitzer_eta) {
+    E = ctx->Ez = spit_eta*J;
+  } else {
+    if (0) {
+      ierr = PetscDSSetConstants(prob, 1, &constants[0]);CHKERRQ(ierr);
+      ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
+      ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
+    } else tt[0] = 0;
+    J_re = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
+    E = ctx->Ez; /* keep real E */
+  }
   ratio = E/J/spit_eta;
-  done = PETSC_FALSE;
-  if (stepi>10 && old_ratio-ratio < 1.e-3 && ratio > 0.97 && ratio < 1.03 && !rectx->use_spitzer_eta) {
+  if (stepi>10 && !rectx->use_spitzer_eta && old_ratio-ratio < 1.e-4 && ratio > 0.97 && ratio < 1.03) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,"switch to E spitzer spitzer-eta:E/J= %20.13e %20.13e\n",spit_eta,ctx->Ez/J);CHKERRQ(ierr);
     rectx->pulse_start = time + rectx->plotDt - 1.e-5; /* start (pulse) quench, at next test */
     rectx->use_spitzer_eta = PETSC_TRUE;
-  } else if (rectx->use_spitzer_eta) {
-    ctx->Ez = spit_eta*J;
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e Z_eff=%g E/J to eta ratio=%g (diff=%g)\n",
-                     done ? "DONE" : "testSpitzer",stepi,time,n_e/ctx->n_0,ctx->Ez,J,J_re,100*J_re/J,Te_kev,Z,ratio,old_ratio-ratio);CHKERRQ(ierr);
-  if (done) {
-    ierr = TSSetConvergedReason(ts,TS_CONVERGED_USER);CHKERRQ(ierr);
-    old_ratio = 0;
-  } else {
-    TSConvergedReason reason;
-    ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
-    old_ratio = ratio;
-    if (reason) done = PETSC_TRUE;
-  }
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e Z_eff=%g E/J to eta ratio=%g (diff=%g) %s\n",
+                     "testSpitzer",stepi,time,n_e/ctx->n_0,ctx->Ez,J,J_re,100*J_re/J,Te_kev,Z,ratio,old_ratio-ratio,
+                     rectx->use_spitzer_eta ? "using Spitzer eta*J E" : "constant E");CHKERRQ(ierr);
+  ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
+  old_ratio = ratio;
   PetscFunctionReturn(0);
 }
 
@@ -455,7 +469,7 @@ static PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void 
       ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
       dni_dt = new_imp_rate              /* *ctx->t_0 */; /* fully ionized immediately, no normalize, stay in non-dim */
       dne_dt = new_imp_rate*rectx->Ne_ion/* *ctx->t_0 */;
-      ierr = PetscPrintf(PETSC_COMM_SELF, "\tFormSource: have new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "\tFormSource: have new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt);CHKERRQ(ierr);
       for (ii=1;ii<LANDAU_MAX_SPECIES;ii++) tilda_ns[ii] = 0;
       for (ii=1;ii<LANDAU_MAX_SPECIES;ii++)    temps[ii] = 1;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
@@ -510,8 +524,10 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   /* view */
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   if (time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
-    /* print norms */
-    ierr = LandauPrintNorms(X, stepi);CHKERRQ(ierr);
+    if (reason || stepi==0) {
+      /* print norms */
+      ierr = LandauPrintNorms(X, stepi);CHKERRQ(ierr);
+    }
     ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
     ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
     /* diagnostics */
@@ -526,7 +542,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   /* parallel check */
   if (reason) {
     PetscReal    val,rval;
-    PetscMPIInt    rank;
+    PetscMPIInt  rank;
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
     ierr = TSGetSolution(ts, &X);CHKERRQ(ierr);
     ierr = VecNorm(X,NORM_2,&val);CHKERRQ(ierr);
