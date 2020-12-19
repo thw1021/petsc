@@ -5,13 +5,18 @@ def cythonize(source,
               includes=(),
               destdir_c=None,
               destdir_h=None,
-              wdir=None):
+              wdir=None,language_level=None):
     from Cython.Compiler.Main import \
          CompilationOptions, default_options, \
          compile, \
          PyrexError
     from Cython.Compiler import Options
     cwd = os.getcwd()
+    pyver = sys.version_info[:2]
+    if not language_level:
+        if pyver >= (3,2): language_level = '3'
+        else: language_level = '2'
+
     try:
         name, ext = os.path.splitext(source)
         outputs_c = [name+'.c']
@@ -24,6 +29,7 @@ def cythonize(source,
         options.output_file = outputs_c[0]
         options.include_path = list(includes)
         Options.generate_cleanup_code = 3
+        options.language_level = language_level
         any_failures = 0
         try:
             result = compile(source, options)
@@ -65,9 +71,9 @@ if __name__ == "__main__":
         cythonize('petsc4py.PETSc.pyx',
                   includes=['include'],
                   destdir_h=os.path.join('include', 'petsc4py'),
-                  wdir='src')
+                  wdir='src', language_level = language_level)
         or
         cythonize(os.path.join('libpetsc4py', 'libpetsc4py.pyx'),
                   includes=['include'],
-                  wdir='src')
+                  wdir='src', language_level = language_level)
         )

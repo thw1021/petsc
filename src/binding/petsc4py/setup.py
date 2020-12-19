@@ -22,6 +22,9 @@ if pyver == (2, 6) or pyver == (3, 2):
     sys.stderr.write(
         "WARNING: Python %d.%d is not supported.\n" % pyver)
 
+if pyver >= (3,2): language_level = '3'
+else: language_level = '2'
+
 # --------------------------------------------------------------------
 # Metadata
 # --------------------------------------------------------------------
@@ -117,6 +120,12 @@ def run_setup():
         if not has_src or has_git or has_hg:
             setup_args['setup_requires'] = ['Cython>='+CYTHON]
     #
+    ext_modules = get_ext_modules(Extension)
+
+    # suggested by https://stackoverflow.com/questions/34603628/how-to-specify-python-3-source-in-cythons-setup-py
+    for e in ext_modules:
+          e.cython_directives = {'language_level': language_level}
+
     setup(packages     = ['petsc4py',
                           'petsc4py.lib',],
           package_dir  = {'petsc4py'     : 'src',
@@ -128,7 +137,7 @@ def run_setup():
                                             'include/petsc4py/*.pyx',
                                             'PETSc.pxd',],
                           'petsc4py.lib' : ['petsc.cfg'],},
-          ext_modules  = get_ext_modules(Extension),
+          ext_modules  = ext_modules,
           cmdclass     = {'config'     : config,
                           'build'      : build,
                           'build_src'  : build_src,
@@ -210,7 +219,7 @@ def run_cython(source, depends=(), includes=(),
                     includes=includes,
                     destdir_c=destdir_c,
                     destdir_h=destdir_h,
-                    wdir=wdir)
+                    wdir=wdir,language_level=language_level)
     if err:
         raise DistutilsError(
             "Cython failure: '%s' -> '%s'" % (source, target))
