@@ -374,8 +374,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuTimeEnd()
 {
 #if defined(PETSC_HAVE_CUDA)
   float          gtime;
-  cudaError_t    cerr;
 #else
+  cudaError_t    cerr;
   PetscErrorCode ierr;
 #endif
   PetscFunctionBegin;
@@ -389,6 +389,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuTimeEnd()
   cerr = cudaEventElapsedTime(&gtime,petsc_gt_begin,petsc_gt_end);CHKERRCUDA(cerr);
   petsc_gtime += (PetscLogDouble)gtime/1000.0; /* convert milliseconds to seconds */
 #else
+  cerr = WaitForCUDA();CHKERRCUDA(cerr); 
   ierr = PetscTimeAdd(&petsc_gtime);CHKERRQ(ierr);
 #endif
   PetscFunctionReturn(0);
