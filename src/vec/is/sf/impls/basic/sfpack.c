@@ -1224,7 +1224,7 @@ PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope 
   if (rootmtype & PETSC_MEMTYPE_DEVICE) {
     link->stream = (scope == PETSCSF_REMOTE) ? link->send_stream : link->lscatter_stream;
    #if defined(PETSC_HAVE_NVSHMEM)
-    if (link->use_nvshmem && scope == PETSCSF_REMOTE) {ierr = PetscSFLinkWaitSignalsToStartReusingSbuf_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
+    //if (link->use_nvshmem && scope == PETSCSF_REMOTE) {ierr = PetscSFLinkWaitSignalsToStartReusingSbuf_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
    #endif
   }
  #endif

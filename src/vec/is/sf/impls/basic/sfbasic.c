@@ -191,9 +191,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSendRootData(PetscSF sf,PetscSFLin
  #if defined(PETSC_HAVE_NVSHMEM)
   if (link->use_nvshmem) {
     ierr = PetscSFLinkSendSignalsToAllowGettingData_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
-    ierr = PetscSFLinkWaitSignalsToStartGettingData_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
     ierr = PetscSFLinkGetData_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
-    ierr = PetscSFLinkSendSignalsToAllowReusingSbuf_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   } else
  #endif
   { /* use MPI */
@@ -215,9 +213,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSendLeafData(PetscSF sf,PetscSFLin
  #if defined(PETSC_HAVE_NVSHMEM)
   if (link->use_nvshmem) {
     ierr = PetscSFLinkSendSignalsToAllowGettingData_NVSHMEM(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
-    ierr = PetscSFLinkWaitSignalsToStartGettingData_NVSHMEM(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
     ierr = PetscSFLinkGetData_NVSHMEM(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
-    ierr = PetscSFLinkSendSignalsToAllowReusingSbuf_NVSHMEM(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   } else
  #endif
   {
