@@ -38,7 +38,7 @@ class Configure(config.package.Package):
        prefix = os.path.abspath(os.path.expanduser(self.argDB['prefix']))
     else:
        carg = ' BAMG_DIR='+self.packageDir+' '
-       barg = ' BAMG_DIR='+self.packageDir+' SLEPC_DIR='+self.slepc.installDir+' '
+       barg = ' BAMG_DIR='+self.packageDir+' '
        prefix = os.path.join(self.petscdir.dir,self.arch)
     if self.installSudo:
        newuser = self.installSudo+' -u $${SUDO_USER} '
@@ -55,22 +55,22 @@ class Configure(config.package.Package):
     self.addMakeRule('bamgbuild',slepcbuilddep, \
                        ['@echo "*** Building PETSc BAMG ***"',\
                           '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/bamg.errorflg',\
-                          '@(cd '+self.packageDir+' && \\\n\
+                          '@cd '+self.packageDir+' && \\\n\
            '+carg+'./configure --prefix='+prefix+' --with-clean && \\\n\
              mkdir -p ${PETSC_ARCH}/tests && \\\n\
              touch ${PETSC_ARCH}/tests/testfiles && \\\n\
-           '+barg+'${OMAKE} '+barg+') > ${PETSC_ARCH}/lib/petsc/conf/bamg.log 2>&1 || \\\n\
+           '+barg+'${OMAKE} '+barg+' 2>&1 || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building bamg. Check ${PETSC_ARCH}/lib/petsc/conf/bamg.log" && \\\n\
+             echo "Error building bamg. " && \\\n\
              echo "********************************************************************" && \\\n\
              touch ${PETSC_ARCH}/lib/petsc/conf/bamg.errorflg && \\\n\
              exit 1)'])
     self.addMakeRule('bamginstall','', \
                        ['@echo "*** Installing PETSc BAMG ***"',\
-                          '@(cd '+self.packageDir+' && \\\n\
-           '+newuser+barg+'${OMAKE} install '+barg+') >> ${PETSC_ARCH}/lib/petsc/conf/bamg.log 2>&1 || \\\n\
+                          '@cd '+self.packageDir+' && \\\n\
+           '+newuser+barg+'${OMAKE} install '+barg+' 2>&1  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error installing bamg. Check ${PETSC_ARCH}/lib/petsc/conf/bamg.log" && \\\n\
+             echo "Error installing bamg. " && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)'])
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:

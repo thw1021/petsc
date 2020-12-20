@@ -6,6 +6,9 @@ ALLTESTS_CHECK_FAILURES = no
 ALLTESTS_MAKEFILE = gmakefile.test
 VALGRIND=0
 alltests: ${PETSC_DIR}/${PETSC_ARCH}/tests/testfiles
+	+@if [ "${SLEPC}" == "yes" ] && [ "${PETSC_WITH_BATCH}" = "" ]; then \
+          cd ${PETSC_ARCH_BUILD}/externalpackages/git.slepc >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} SLEPC_DIR=${SLEPC_DIR} alltests; \
+         fi;
 	-@${RM} -rf ${PETSC_ARCH}/lib/petsc/conf/alltests.log alltests.log
 	+@if [ -f ${PETSC_DIR}/share/petsc/examples/gmakefile.test ] ; then \
             ALLTESTS_MAKEFILE=${PETSC_DIR}/share/petsc/examples/gmakefile.test ; \
@@ -25,6 +28,9 @@ allgtests-tap: allgtest-tap
 
 allgtest-tap: ${PETSC_DIR}/${PETSC_ARCH}/tests/testfiles
 	+@MAKEFLAGS="-j$(MAKE_TEST_NP) -l$(MAKE_LOAD) $(MAKEFLAGS)" ${OMAKE} -f gmakefile.test PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} test OUTPUT=1
+	+@if [ "${SLEPC}" == "yes" ] && [ "${PETSC_WITH_BATCH}" = "" ]; then \
+          cd ${PETSC_ARCH_BUILD}/externalpackages/git.slepc >/dev/null; MAKEFLAGS="-j$(MAKE_TEST_NP) -l$(MAKE_LOAD) $(MAKEFLAGS)" ${OMAKE} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} SLEPC_DIR=${SLEPC_DIR} test OUTPUT=1; \
+         fi;
 
 allgtest: ${PETSC_DIR}/${PETSC_ARCH}/tests/testfiles
 	+@MAKEFLAGS="-j$(MAKE_TEST_NP) -l$(MAKE_LOAD) $(MAKEFLAGS)" ${OMAKE} -k -f ${ALLTESTS_MAKEFILE} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} test V=0 2>&1 | egrep -v '^(ok [^#]*(# SKIP|# TODO|$$)|[A-Za-z][A-Za-z0-9_]*\.(c|F|cxx|F90).$$)'
