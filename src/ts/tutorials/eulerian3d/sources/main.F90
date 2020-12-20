@@ -14,9 +14,6 @@ program eulerian3D
 
     call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
 
-    ! Say hello like a pro
-    call hello
-
     ! Prepare mesh
     call initmesh
 
