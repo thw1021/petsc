@@ -509,7 +509,7 @@ PetscErrorCode KSPConvergedReasonViewFromOptions(KSP ksp)
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
   KSPConvergedRateView - Displays the reason a KSP solve converged or diverged to a viewer
 
   Collective on ksp
@@ -523,6 +523,10 @@ PetscErrorCode KSPConvergedReasonViewFromOptions(KSP ksp)
 
   Notes:
   To change the format of the output, call PetscViewerPushFormat(viewer,format) before this call.
+
+  Suppose that the residual is reduced linearly, $r_k = c^k r_0$, which means $log r_k = log r_0 + k log c$. After linear regression,
+  the slope is $\log c$. The coefficient of determination is given by $1 - \frac{\sum_i (y_i - f(x_i))^2}{\sum_i (y_i - \bar y)}$,
+  see also https://en.wikipedia.org/wiki/Coefficient_of_determination
 
   Level: intermediate
 
@@ -2149,6 +2153,7 @@ PetscErrorCode KSPSetResidualHistory(KSP ksp,PetscReal a[],PetscInt na,PetscBool
    Level: advanced
 
    Notes:
+     This array is borrowed and should not be freed by the caller.
      Can only be called after a KSPSetResidualHistory() otherwise a and na are set to zero
 
      The Fortran version of this routine has a calling sequence
@@ -2160,7 +2165,7 @@ $   call KSPGetResidualHistory(KSP ksp, integer na, integer ierr)
 .seealso: KSPSetResidualHistory(), KSP
 
 @*/
-PetscErrorCode KSPGetResidualHistory(KSP ksp,PetscReal *a[],PetscInt *na)
+PetscErrorCode KSPGetResidualHistory(KSP ksp, const PetscReal *a[],PetscInt *na)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -2226,6 +2231,7 @@ PetscErrorCode KSPSetErrorHistory(KSP ksp, PetscReal a[], PetscInt na, PetscBool
   Level: advanced
 
   Notes:
+  This array is borrowed and should not be freed by the caller.
   Can only be called after a KSPSetErrorHistory() otherwise a and na are set to zero
   The Fortran version of this routine has a calling sequence
 $   call KSPGetErrorHistory(KSP ksp, integer na, integer ierr)
@@ -2235,7 +2241,7 @@ $   call KSPGetErrorHistory(KSP ksp, integer na, integer ierr)
 
 .seealso: KSPSetErrorHistory(), KSPGetResidualHistory(), KSP
 @*/
-PetscErrorCode KSPGetErrorHistory(KSP ksp, PetscReal *a[], PetscInt *na)
+PetscErrorCode KSPGetErrorHistory(KSP ksp, const PetscReal *a[], PetscInt *na)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
