@@ -101,7 +101,7 @@ class Configure(config.package.Package):
                             '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/hpddm.errorflg',\
                             '@'+newuser+cxx+' '+cxxflags+' '+self.packageDir+'/interface/hpddm_petsc.cpp '+ldflags+' -o '+libDir+os.path.join('/libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
                  (echo "**************************ERROR*************************************" && \\\n\
-                 echo "Error building HPDDM. Check ${PETSC_ARCH}/lib/petsc/conf/hpddm.log" && \\\n\
+                 echo "Error installing HPDDM. Check ${PETSC_ARCH}/lib/petsc/conf/hpddm.log" && \\\n\
                  echo "********************************************************************" && \\\n\
                  touch '+os.path.join('${PETSC_ARCH}','lib','petsc','conf','hpddm.errorflg')+' && \\\n\
                  exit 1)'])
