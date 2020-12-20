@@ -69,7 +69,7 @@ class Configure(config.package.Package):
                           '@(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && \\\n\
            '+newdir+archflags+self.python.pyexe+' setup.py install --install-lib='+os.path.join(self.installDir,'lib')+')  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building petsc4py." && \\\n\
+             echo "Error installing petsc4py." && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)',\
                           '@echo "====================================="',\
