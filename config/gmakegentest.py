@@ -1038,7 +1038,10 @@ def main(petsc_dir=None, petsc_arch=None, pkg_dir=None, pkg_arch=None,
         petsc_arch=petsc_arch.rstrip(os.path.sep)
         if len(petsc_arch.split(os.path.sep))>1:
             petsc_dir,petsc_arch=os.path.split(petsc_arch)
-    output = os.path.join(testdir, 'testfiles')
+    if pkg_name == 'slepc':
+        output = os.path.join(testdir, 'slepctestfiles')
+    else:
+        output = os.path.join(testdir, 'testfiles')
 
     pEx=generateExamples(petsc_dir=petsc_dir, petsc_arch=petsc_arch,
                          pkg_dir=pkg_dir, pkg_arch=pkg_arch, pkg_name=pkg_name, pkg_pkgs=pkg_pkgs,
