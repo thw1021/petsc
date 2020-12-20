@@ -210,7 +210,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   /* Z */
   Z = -ctx->charges[1]/ctx->charges[0];
   if (rectx->imp_idx!=1 && ctx->charges[rectx->imp_idx]!=ctx->charges[1]) {
-    PetscReal   Znew, n_i1,n_ix;;
+    PetscReal   Znew, n_i1,n_ix;
     user[0] = 1.0;
     ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
