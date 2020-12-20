@@ -49,7 +49,7 @@ class Configure(config.package.Package):
     else:
        carg = ' SLEPC_DIR='+self.packageDir+' '
        barg = ' SLEPC_DIR='+self.packageDir+' '
-       prefix = os.path.join(self.petscdir.dir,self.arch)
+       prefix = None
 
     if 'download-slepc-configure-arguments' in self.argDB and self.argDB['download-slepc-configure-arguments']:
       configargs = self.argDB['download-slepc-configure-arguments']
@@ -61,13 +61,15 @@ class Configure(config.package.Package):
       configargs = ''
       ppath = ''
 
+    if prefix: pprefix = '--prefix='+prefix
+    else: pprefix = ''
     self.addDefine('HAVE_SLEPC',1)
     self.addMakeMacro('SLEPC','yes')
     self.addMakeRule('slepcbuild','', \
                        ['@echo "*** Building SLEPc ***"',\
                           '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/slepc.errorflg',\
                           '@(cd '+self.packageDir+' && \\\n\
-           '+carg+self.python.pyexe+' ./configure --with-clean --prefix='+prefix+' '+configargs+' && \\\n\
+           '+carg+self.python.pyexe+' ./configure --with-clean '+pprefix+' '+configargs+' && \\\n\
            '+barg+'${OMAKE} '+barg+') || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
              echo "Error building SLEPc." && \\\n\
@@ -87,15 +89,20 @@ class Configure(config.package.Package):
       # the build must be done at install time because PETSc shared libraries must be in final location before building slepc
       self.addMakeRule('slepc-install','slepcbuild slepcinstall')
     else:
-      self.addMakeRule('slepc-build','slepcbuild slepcinstall')
+      self.addMakeRule('slepc-build','slepcbuild')
       self.addMakeRule('slepc-install','')
 
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
       self.logPrintBox('SLEPc examples are available at '+os.path.join('${PETSC_DIR}',self.arch,'externalpackages','git.slepc')+'\nexport SLEPC_DIR='+prefix)
     else:
-      self.logPrintBox('SLEPc examples are available at '+os.path.join('${PETSC_DIR}',self.arch,'externalpackages','git.slepc')+'\nexport SLEPC_DIR='+os.path.join('${PETSC_DIR}',self.arch))
+      self.logPrintBox('SLEPc examples are available at '+os.path.join('${PETSC_DIR}',self.arch,'externalpackages','git.slepc')+'\nexport SLEPC_DIR='+os.path.join('${PETSC_DIR}',self.arch,'externalpackages','git.slepc'))
 
-    return self.installDir
+    if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
+      self.addMakeMacro('SLEPC_DIR',self.installDir)
+      return self.installDir
+    else:
+      self.addMakeMacro('SLEPC_DIR',os.path.join(self.petscdir.dir,self.arch,'externalpackages','git.slepc'))
+      return os.path.join(self.petscdir.dir,self.arch,'externalpackages','git.slepc')
 
   def alternateConfigureLibrary(self):
     self.addMakeRule('slepc-build','')
