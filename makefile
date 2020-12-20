@@ -187,7 +187,7 @@ check_build:
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex19_suitesparse; \
          fi;
 	+@if [ "${SLEPC}" == "yes" ] && [ "${PETSC_WITH_BATCH}" = "" ]; then \
-          cd ${PETSC_ARCH_BUILD}/externalpackages/git.slepc >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} SLEPC_DIR=${PETSC_DIR}/${PETSC_ARCH} check; \
+          cd ${PETSC_ARCH_BUILD}/externalpackages/git.slepc >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} SLEPC_DIR=${SLEPC_DIR} check; \
          fi;
 	+@cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} ex19.rm
 	+@if [ "${PETSC4PY}" = "yes" ]; then \

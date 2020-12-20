@@ -221,7 +221,7 @@ class Configure(config.package.Package):
         yield ('Default compiler locations', 'libblas.a', 'liblapack.a','unknown','unknown')
         yield ('Default compiler locations /usr/local/lib', os.path.join('/usr','local','lib','libblas.a'), os.path.join('/usr','local','lib','liblapack.a'),'unknown','unknown')
         yield ('Default compiler locations with gfortran', None, ['liblapack.a', 'libblas.a','libgfortran.a'],'unknown','unknown')
-        self.logWrite('Did not detect default BLAS and LAPACK locations so using the value of MKLgROOT to search as --with-blas-lapack-dir='+mkl)
+        self.logWrite('Did not detect default BLAS and LAPACK locations so using the value of MKLROOT to search as --with-blas-lapack-dir='+mkl)
         self.argDB['with-blaslapack-dir'] = mkl
 
     if self.argDB['with-64-bit-blas-indices']:
