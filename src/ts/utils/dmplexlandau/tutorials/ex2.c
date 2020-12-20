@@ -761,8 +761,6 @@ int main(int argc, char **argv)
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
   if (1) { /* warm up an test just LandauIJacobian */
     Vec           vec;
-    KSP           ksp;
-    SNES          snes;
     PetscInt      nsteps;
     PetscReal     dt;
     ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
