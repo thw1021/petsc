@@ -253,7 +253,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
     ierr = PetscPrintf(PETSC_COMM_WORLD,"switch to E spitzer spitzer-eta:E/J= %20.13e %20.13e\n",spit_eta,ctx->Ez/J);CHKERRQ(ierr);
     rectx->pulse_start = time + rectx->plotDt - 1.e-5; /* start (pulse) quench, at next test */
     rectx->use_spitzer_eta = PETSC_TRUE;
-    ierr = TSSetConvergedReason(ts, TS_CONVERGED_USER);CHKERRQ(ierr);
+    /* ierr = TSSetConvergedReason(ts, TS_CONVERGED_USER);CHKERRQ(ierr); */
   }
   ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e Z_eff=%g E/J to eta ratio=%g (diff=%g) %s\n",
                      "testSpitzer",stepi,time,n_e/ctx->n_0,ctx->Ez,J,J_re,100*J_re/J,Te_kev,Z,ratio,old_ratio-ratio,
@@ -525,7 +525,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   /* view */
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   if (time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
-    if (reason || stepi==0 ||1) {
+    if (reason || stepi==0) {
       /* print norms */
       ierr = LandauPrintNorms(X, stepi);CHKERRQ(ierr);
     }
