@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = '82eaaac017d082986e9eb180901a778619f6298b' # master Dec-20-2020
+    self.gitcommit              = 'origin/barry/2020-12-19/slepctestfiles' # '82a73cc2944f37cad2a0e0b64aa7660b84c486ab' # master Dec-04-2020
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
     self.includes               = []
@@ -79,7 +79,7 @@ class Configure(config.package.Package):
                           '@(cd '+self.packageDir+' && \\\n\
            '+newuser+barg+'${OMAKE} install '+ppath+' '+barg+')  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building SLEPc." && \\\n\
+             echo "Error installing SLEPc." && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)'])
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
