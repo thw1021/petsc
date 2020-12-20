@@ -762,7 +762,25 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
       nblocks = 1+(nrows-1)/blocksize;
       matmult_seqsell_basic_kernel<<<nblocks,blocksize>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
       break;
-    case 0: /* TODO */
+    case 0:
+      if (a->maxslicewidth > 64) {
+        nblocks = 1+(nrows-1)/(SLICE_HEIGHT);
+        matmult_seqsell_tiled_kernel9<32><<<nblocks,dim3(SLICE_HEIGHT,32)>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+      } else {
+        if (a->avgslicewidth < 8) {
+          nblocks = 1+(nrows-1)/(4*SLICE_HEIGHT);
+          matmult_seqsell_tiled_kernel7<<<nblocks,dim3(32,4)>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+        } else if (a->avgslicewidth < 16) {
+          nblocks = 1+(nrows-1)/(SLICE_HEIGHT);
+          matmult_seqsell_tiled_kernel9<4><<<nblocks,dim3(SLICE_HEIGHT,4)>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+        } else if (a->avgslicewidth < 32) {
+          nblocks = 1+(nrows-1)/(SLICE_HEIGHT);
+          matmult_seqsell_tiled_kernel9<8><<<nblocks,dim3(SLICE_HEIGHT,8)>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+        } else {
+          nblocks = 1+(nrows-1)/(SLICE_HEIGHT);
+          matmult_seqsell_tiled_kernel9<16><<<nblocks,dim3(SLICE_HEIGHT,16)>>>(nrows,totalslices,acolidx,aval,sliidx,x,y);
+        }
+      }
       break;
   }
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
