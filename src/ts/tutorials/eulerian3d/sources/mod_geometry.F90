@@ -11,6 +11,8 @@ module geometry
 
     ! Discretization manager to store unstructured mesh
     DM :: dm
+    ! Solution vector
+    Vec :: sol
 
     contains
 
@@ -24,7 +26,7 @@ module geometry
             ! Number of neighbours taken into account in MP communications(1 - Order 1; 2 - Order 2)
             overlap = 1
 
-            call PetscPrintf(PETSC_COMM_WORLD, "Initializing mesh:\n", ierr)              ; CHKERRA(ierr)
+            call PetscPrintf(PETSC_COMM_WORLD, "Initializing mesh...\n", ierr)          ; CHKERRA(ierr)
 
             ! Force DMPlex to use gmsh marker
             ! call PetscOptionsSetValue(PETSC_NULL_OPTIONS, "-dm_plex_gmsh_use_marker", "true", ierr); CHKERRA(ierr)
@@ -73,6 +75,7 @@ module geometry
                 call PetscViewerDestroy(vtkViewer, ierr)                                ; CHKERRA(ierr)
             end if
 
+            call PetscPrintf(PETSC_COMM_WORLD, "Done !\n", ierr)                        ; CHKERRA(ierr)
 
         end subroutine initmesh
 

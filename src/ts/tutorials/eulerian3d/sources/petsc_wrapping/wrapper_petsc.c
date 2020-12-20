@@ -79,6 +79,12 @@ extern void PetscRmPointer(void*);
 #define dmtssetrhsfunctionlocal_ dmtssetrhsfunctionlocal
 #endif
 
+/* Fortran callback identifiers */
+static PetscFortranCallbackId riemannsolver;
+static PetscFortranCallbackId bocofunc, bocofunc_time;
+static PetscFortranCallbackId dmtsbocofunc;
+static PetscFortranCallbackId dmtsrhsfunc;
+
 /* Definitions of extra wrapper routines */
 #if defined(__cplusplus)
 extern "C" {
@@ -114,75 +120,76 @@ PETSC_EXTERN void petscdsview_(PetscDS *prob, PetscViewer *vin, PetscErrorCode *
     *ierr = PetscDSView(*prob, v);
 }
 /* Routine PetscDSSetRiemannSolver */
-PetscFortranCallbackId riemannsolver;
 static PetscErrorCode ourriemannsolver(PetscInt dim, PetscInt Nf, PetscReal x[], PetscReal n[], PetscScalar uL[], PetscScalar uR[], PetscInt numConstants, PetscScalar constants[], PetscScalar flux[], void *ctx)
 {
-    PetscObjectUseFortranCallback((PetscDS)ctx, riemannsolver, (PetscInt*, PetscInt*, PetscReal*, PetscReal*, PetscScalar*, PetscScalar*, PetscInt*, PetscScalar*, PetscScalar*, void*, PetscErrorCode*),
-                                  (&dim, &Nf, x, n, uL, uR, &numConstants, constants, flux, ctx, &ierr));
+    PetscObjectUseFortranCallback((PetscDS)ctx, riemannsolver,
+                                  (PetscInt*,PetscInt*,PetscReal*,PetscReal*,PetscScalar*,PetscScalar*,PetscInt*,PetscScalar*,PetscScalar*,void*,PetscErrorCode*),
+                                  (&dim,&Nf,x,n,uL,uR,&numConstants,constants,flux,ctx,&ierr));
 }
 PETSC_EXTERN void petscdssetriemannsolver_(PetscDS *prob, PetscInt *f,
-                                           void (*rs)(PetscInt *dim, PetscInt *Nf, PetscReal x[], PetscReal n[], PetscScalar uL[], PetscScalar uR[], PetscInt *numConstants, PetscScalar constants[], PetscScalar flux[], void *ctx, PetscErrorCode *jerr),
+                                           void (*rs)(PetscInt*,PetscInt*,PetscReal*,PetscReal*,PetscScalar*,PetscScalar*,PetscInt*,PetscScalar*,PetscScalar*,void*,PetscErrorCode*),
                                            PetscErrorCode *ierr)
 {
     *ierr = PetscObjectSetFortranCallback((PetscObject)*prob, PETSC_FORTRAN_CALLBACK_CLASS, &riemannsolver, (PetscVoidFunction)rs, prob);
     *ierr = PetscDSSetRiemannSolver(*prob, *f, (void*)ourriemannsolver);
 }
 /* Routine PetscDSAddBoundary */
-PetscFortranCallbackId bocofunc, bocofunc_time;
 static PetscErrorCode ourbocofunc(PetscReal time, const PetscReal *c, const PetscReal *n, const PetscScalar *a_xI, const PetscScalar *a_xG, void *ctx)
 {
     PetscObjectUseFortranCallback((PetscDS)ctx, bocofunc,
-                                 (PetscReal*, const PetscReal*, const PetscReal*, const PetscScalar*, const PetscScalar*, void*, PetscErrorCode*),
-                                 (&time, c, n, a_xI, a_xG, ctx, &ierr));
+                                  (PetscReal*,const PetscReal*,const PetscReal*,const PetscScalar*,const PetscScalar*,void*,PetscErrorCode*),
+                                  (&time,c,n,a_xI,a_xG,_ctx,&ierr));
 }
 static PetscErrorCode ourbocofunc_time(PetscReal time, const PetscReal *c, const PetscReal *n, const PetscScalar *a_xI, const PetscScalar *a_xG, void *ctx)
 {
     PetscObjectUseFortranCallback((PetscDS)ctx, bocofunc_time,
-                                 (PetscReal*, const PetscReal*, const PetscReal*, const PetscScalar*, const PetscScalar*, void*, PetscErrorCode*),
-                                 (&time, c, n, a_xI, a_xG, ctx, &ierr));
+                                  (PetscReal*,const PetscReal*,const PetscReal*,const PetscScalar*,const PetscScalar*,void*,PetscErrorCode*),
+                                  (&time,c,n,a_xI,a_xG,_ctx,&ierr));
 }
 PETSC_EXTERN void petscdsaddboundary_(PetscDS *prob, DMBoundaryConditionType *type, char *name, char *labelname, PetscInt *field, PetscInt *numcomps, PetscInt *comps,
                                       void (*bcFunc)(void),
                                       void (*bcFunc_t)(void),
-                                      PetscInt *numids, const PetscInt *ids, void *ctx, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T namelen, PETSC_FORTRAN_CHARLEN_T labelnamelen)
+                                      PetscInt *numids, const PetscInt *ids, void *ctx, PetscErrorCode *ierr,
+                                      PETSC_FORTRAN_CHARLEN_T namelen, PETSC_FORTRAN_CHARLEN_T labelnamelen)
 {
     char *newname, *newlabelname;
     FIXCHAR(name, namelen, newname);
     FIXCHAR(labelname, labelnamelen, newlabelname);
-    *ierr = PetscObjectSetFortranCallback((PetscObject)*prob, PETSC_FORTRAN_CALLBACK_CLASS, &bocofunc, (PetscVoidFunction)bcFunc, prob);
-    *ierr = PetscObjectSetFortranCallback((PetscObject)*prob, PETSC_FORTRAN_CALLBACK_CLASS, &bocofunc_time, (PetscVoidFunction)bcFunc_t, prob);
-    *ierr = PetscDSAddBoundary(*prob, *type, newname, newlabelname, *field, *numcomps, comps, (void (*)(void))ourbocofunc, (void (*)(void))ourbocofunc_time, *numids, ids, ctx);
+    *ierr = PetscObjectSetFortranCallback((PetscObject)*prob, PETSC_FORTRAN_CALLBACK_CLASS, &bocofunc,      (PetscVoidFunction)bcFunc,   ctx);
+    *ierr = PetscObjectSetFortranCallback((PetscObject)*prob, PETSC_FORTRAN_CALLBACK_CLASS, &bocofunc_time, (PetscVoidFunction)bcFunc_t, ctx);
+    *ierr = PetscDSAddBoundary(*prob, *type, newname, newlabelname, *field, *numcomps, comps,
+                               (void (*)(void))ourbocofunc,
+                               (void (*)(void))ourbocofunc_time,
+                               *numids, ids, ctx);
     FREECHAR(name, newname);
     FREECHAR(labelname, newlabelname);
 }
 /* Routine DMTSSetBoundaryLocal */
-PetscFortranCallbackId dmtsbocofunc;
 static PetscErrorCode ourdmtsbocofunc(DM dm, PetscReal time, Vec locX, Vec locX_t, void *ctx)
 {
-    PetscObjectUseFortranCallback((DM)ctx, dmtsbocofunc,
-                                  (DM*, PetscReal*, Vec*, Vec*, void*, PetscErrorCode*),
-                                  (&dm, &time, &locX, &locX_t, ctx, &ierr));
+    PetscObjectUseFortranCallback(dm, dmtsbocofunc,
+                                  (DM*,PetscReal*,Vec*,Vec*,void*,PetscErrorCode*),
+                                  (&dm,&time,&locX,&locX_t,_ctx,&ierr));
 }
 PETSC_EXTERN void dmtssetboundarylocal_(DM *dm,
-                                        void (*func)(DM *dm, PetscReal *time, Vec *locX, Vec *locX_t, void *context, PetscErrorCode *error),
+                                        void (*func)(DM*,PetscReal*,Vec*,Vec*,void*,PetscErrorCode*),
                                         void *ctx, PetscErrorCode *ierr)
 {
-    *ierr = PetscObjectSetFortranCallback((PetscObject)*dm, PETSC_FORTRAN_CALLBACK_CLASS, &dmtsbocofunc, (PetscVoidFunction)func, dm);
+    *ierr = PetscObjectSetFortranCallback((PetscObject)*dm, PETSC_FORTRAN_CALLBACK_CLASS, &dmtsbocofunc, (PetscVoidFunction)func, ctx);
     *ierr = DMTSSetBoundaryLocal(*dm, ourdmtsbocofunc, ctx);
 }
 /* Routine DMTSSetRHSFunctionLocal */
-PetscFortranCallbackId dmtsrhsfunc;
 static PetscErrorCode ourdmtsrhsfunc(DM dm, PetscReal time, Vec locX, Vec F, void *ctx)
 {
-    PetscObjectUseFortranCallback((DM)ctx, dmtsrhsfunc,
-                                  (DM*, PetscReal*, Vec*, Vec*, void*, PetscErrorCode*),
-                                  (&dm, &time, &locX, &F, ctx, &ierr));
+    PetscObjectUseFortranCallback(dm, dmtsrhsfunc,
+                                  (DM*,PetscReal*,Vec*,Vec*,void*,PetscErrorCode*),
+                                  (&dm,&time,&locX,&F,_ctx,&ierr));
 }
 PETSC_EXTERN void dmtssetrhsfunctionlocal_(DM *dm,
-                                           void (*func)(DM *dm, PetscReal *time, Vec *locX, Vec *F, void *context, PetscErrorCode *error),
+                                           void (*func)(DM*,PetscReal*,Vec*,Vec*,void*,PetscErrorCode*),
                                            void *ctx, PetscErrorCode *ierr)
 {
-    *ierr = PetscObjectSetFortranCallback((PetscObject)*dm, PETSC_FORTRAN_CALLBACK_CLASS, &dmtsrhsfunc, (PetscVoidFunction)func, dm);
+    *ierr = PetscObjectSetFortranCallback((PetscObject)*dm, PETSC_FORTRAN_CALLBACK_CLASS, &dmtsrhsfunc, (PetscVoidFunction)func, ctx);
     *ierr = DMTSSetRHSFunctionLocal(*dm, ourdmtsrhsfunc, ctx);
 }
 #if defined(__cplusplus)

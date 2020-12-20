@@ -29,7 +29,7 @@ module finitevolume
 
             PetscErrorCode :: ierr
 
-            call PetscPrintf(PETSC_COMM_WORLD, "Initializing spatial discretization:\n", ierr); CHKERRA(ierr)
+            call PetscPrintf(PETSC_COMM_WORLD, "Initializing spatial discretization...\n", ierr); CHKERRA(ierr)
 
             ! Generate the FV object
             call PetscFVCreate(PETSC_COMM_WORLD, fvM, ierr)          ; CHKERRA(ierr)
@@ -78,6 +78,8 @@ module finitevolume
                 call PetscPrintf(PETSC_COMM_WORLD, ":: [DEBUG] Visualizing DS in console ::\n", ierr); CHKERRA(ierr)
                 call PetscDSView(prob, PETSC_VIEWER_STDOUT_WORLD, ierr)  ; CHKERRA(ierr)
             end if
+
+            call PetscPrintf(PETSC_COMM_WORLD, "Done! \n", ierr)         ; CHKERRA(ierr)
 
         end subroutine initFV
 

@@ -13,7 +13,9 @@ OBJECTS = petsc_wrapping/wrapper_petsc.o \
 		  mod_riemannsolver.o \
 		  mod_boundary.o \
 		  mod_finitevolume.o \
+		  mod_output.o \
 		  mod_timestepper.o \
+		  mod_solution.o \
 		  main.o
 
 .PHONY: build_tree

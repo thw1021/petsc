@@ -136,13 +136,14 @@ module boundary
 
     end subroutine setupBC
 
-    subroutine boundary_SlipWall(time, c, n, int_cVar, ghost_cVar, ierr)
+    subroutine boundary_SlipWall(time, c, n, int_cVar, ghost_cVar, ctx, ierr)
 
-        PetscErrorCode, intent(out)                 :: ierr
-        PetscReal, dimension(0:nvar-1), intent(out) :: ghost_cVar
-        PetscInt, dimension(0:ndim-1)               :: c, n ! coordinate and normal
-        PetscReal                                   :: time
-        PetscScalar, dimension(0:nvar-1)            :: int_cVar
+        PetscErrorCode, intent(out)                   :: ierr
+        PetscScalar, dimension(0:nvar-1), intent(out) :: ghost_cVar
+        PetscReal, dimension(0:ndim-1)                :: c, n ! coordinate and normal
+        PetscReal                                     :: time
+        PetscScalar, dimension(0:nvar-1)              :: int_cVar
+        PetscDS                                       :: ctx
 
         PetscReal, dimension(0:ndim-1)  :: nn
         PetscReal                       :: norm, ghost_pressure, vn, vx_ghost, vy_ghost, vz_ghost
@@ -180,26 +181,28 @@ module boundary
 
     end subroutine boundary_SlipWall
 
-    subroutine boundary_Outflow(time, c, n, int_cVar, ghost_cVar, ierr)
+    subroutine boundary_Outflow(time, c, n, int_cVar, ghost_cVar, ctx, ierr)
 
-        PetscErrorCode, intent(out)                 :: ierr
-        PetscReal, dimension(0:nvar-1), intent(out) :: ghost_cVar
-        PetscInt, dimension(0:ndim-1)               :: c, n ! coordinate and normal
-        PetscReal                                   :: time
-        PetscScalar, dimension(0:nvar-1)            :: int_cVar
+        PetscErrorCode, intent(out)                   :: ierr
+        PetscScalar, dimension(0:nvar-1), intent(out) :: ghost_cVar
+        PetscReal, dimension(0:ndim-1)                :: c, n ! coordinate and normal
+        PetscReal                                     :: time
+        PetscScalar, dimension(0:nvar-1)              :: int_cVar
+        PetscDS                                       :: ctx
 
         ! Copy all variables
         ghost_cVar = int_cVar
 
     end subroutine boundary_Outflow
 
-    subroutine boundary_Freestream(time, c, n, int_cVar, ghost_cVar, ierr)
+    subroutine boundary_Freestream(time, c, n, int_cVar, ghost_cVar, ctx, ierr)
 
-        PetscErrorCode, intent(out)                 :: ierr
-        PetscReal, dimension(0:nvar-1), intent(out) :: ghost_cVar
-        PetscInt, dimension(0:ndim-1)               :: c, n ! coordinate and normal
-        PetscReal                                   :: time
-        PetscScalar, dimension(0:nvar-1)            :: int_cVar
+        PetscErrorCode, intent(out)                   :: ierr
+        PetscScalar, dimension(0:nvar-1), intent(out) :: ghost_cVar
+        PetscReal, dimension(0:ndim-1)                :: c, n ! coordinate and normal
+        PetscReal                                     :: time
+        PetscScalar, dimension(0:nvar-1)              :: int_cVar
+        PetscDS                                       :: ctx
 
         ghost_cVar(0) = freestream_params(0,0)
         ghost_cVar(1) = freestream_params(0,0) * freestream_params(0,1)
