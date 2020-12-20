@@ -25,7 +25,7 @@ class Configure(config.base.Configure):
       - If the path ends in ".lib" return it unchanged
       - If the path is absolute and the filename is "lib"<name>, return -L<dir> -l<name> (optionally including rpath flag)
       - If the filename is "lib"<name>, return -l<name>
-      - If the path ends in ".so" return it unchanged
+      - If the path ends in ".so" or ".dylib" return it unchanged
       - If the path ends in ".o" return it unchanged
       - If the path is absolute, return it unchanged
       - Otherwise return -l<library>'''
@@ -53,9 +53,12 @@ class Configure(config.base.Configure):
           if flagSubst in self.argDB:
             return [self.argDB[flagSubst]+dirname,'-L'+dirname,'-l'+name]
         return ['-L'+dirname,'-l'+name]
+      # TODO: handle $( properly
+      elif library.find('$(') > -1:
+        return [library]
       else:
         return ['-l'+name]
-    if os.path.splitext(library)[1] == '.so' or os.path.splitext(library)[1] == '.o':
+    if os.path.splitext(library)[1] == '.so' or os.path.splitext(library)[1] == '.dylib' or os.path.splitext(library)[1] == '.o':
       return [library]
     if os.path.isabs(library):
       return [library]
