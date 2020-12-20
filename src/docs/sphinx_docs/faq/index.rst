@@ -1,8 +1,12 @@
+.. include:: <isonum.txt>
+
 .. _doc_faq:
 
 ==================================
  Frequently Asked Questions (FAQ)
 ==================================
+
+.. todo:: MOST if not all instructions can and should be converted to short code examples
 
 This page provides help with the most common questions about PETSc, it's design,
 execution, and general organization.
@@ -29,6 +33,8 @@ Any Useful Books On Numerical Computing?
 
 `Writing Scientific Software: A Guide to Good Style
 <https://www.mcs.anl.gov/core/books/writing-scientific-software/23206704175AF868E43FE3FB399C2F53>`__
+
+.. _doc_faq_general_parallel:
 
 What Kind Of Parallel Computers Or Clusters Are Needed To Use PETSc? Or Why Do I Get Little Speedup?
 ----------------------------------------------------------------------------------------------------
@@ -783,7 +789,7 @@ those values take effect you should do one of the following:
    /* Can always change to different type */
    XXXSetFromOptions(obj);
 
-How Do I Compile And Link May Own PETSc Application Codes And Can I Use My Own ``makefile``s Or Rules For Compiling Code, Rather Than PETSc's?
+How Do I Compile And Link May Own PETSc Application Codes And Can I Use My Own ``makefile`` Or Rules For Compiling Code, Rather Than PETSc's?
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
 See the :ref:`section <sec_writing_application_codes>` of the users manual on writing
@@ -809,3 +815,1417 @@ format instruction is supported.
 
 Or you can use the Fortran concatination ``//`` and ``char(10)``; for example ``'some
 string'//char(10)//'another string`` on the next line.
+
+How Can I Implement Callbacks Using C++ Class Methods?
+------------------------------------------------------
+
+Declare the class method static. Static methods do not have a this pointer, but the
+``void*`` context parameter will usually be cast to a pointer to the class where it can
+serve the same function. Note that all PETSc callbacks return ``PetscErrorCode``.
+
+Everyone Knows That When You Code Newton's Method You Should Compute The Function And Its Jacobian At The Same Time. How Can One Do This In PETSc?
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+The update in Newton's method is computed as
+
+.. math::
+
+   u^{n+1} = u^n - \lambda * \left[J(u^n)] * F(u^n) \right]^{\dagger}
+
+
+The reason PETSc doesn't default to computing both the function and Jacobian at the same
+time is:
+
+- In order to do the line search :math:`F \left(u^n - \lambda * \text{step} \right)` may
+  need to be computed for several :math:`\lambda`. The Jacobian is not needed for each of
+  those and one does not know in advance which will be the final :math:`\lambda` until
+  after the function value is computed, so many extra Jacobians may be computed.
+
+- In the final step if :math:`|| F(u^p)||` satisfies the convergence criteria then a
+  Jacobian need not be computed.
+
+You are free to have your ``FormFunction()`` compute as much of the Jacobian at that point
+as you like, keep the information in the user context (the final argument to
+``FormFunction()`` and ``FormJacobian()``) and then retreive the information in your
+``FormJacobian()`` function.
+
+Computing The Jacobian Or Preconditioner Is Time Consuming, Is There Any Way To Compute It Less Often?
+------------------------------------------------------------------------------------------------------
+
+PETSc has a variety of ways of lagging the computation of the Jacobian or the
+preconditioner. They are documented in the `manual page
+<https://www.mcs.anl.gov/petsc/petsc-dev/docs/manualpages/SNES/SNESComputeJacobian.html>`__
+and :ref:`users manual <chapter_snes>`:
+
+-snes_lag_jacobian  (``SNESSetLagJacobian()``) How often Jacobian is rebuilt (use -1 to
+                    never rebuild, use -2 to rebuild the next time requested and then
+                    never again).
+
+-snes_lag_jacobian_persists  (``SNESSetLagJacobianPersists()``) Forces lagging of Jacobian
+                             through multiple ``SNES`` solves , same as passing -2 to
+                             ``-snes_lag_jacobian``. By default, each new ``SNES`` solve
+                             normally triggers a recomputation of the Jacobian.
+
+
+-snes_lag_preconditioner  (``SNESSetLagPreconditioner()``) how often the preconditioner is
+                          rebuilt. Note: if you are lagging the Jacobian the system will
+                          know the the matrix has not changed and will not recompute the
+                          (same) preconditioner.
+
+-snes_lag_preconditioner_persists  (``SNESSetLagPreconditionerPersists()``) Preconditioner
+                                   lags through multiple ``SNES`` solves
+
+
+.. note::
+
+   These are often (but does not need to be) used in combination with
+   ``-snes_mf_operator`` which applies the fresh Jacobian matrix free for every
+   matrix-vector product. Otherwise the out-of-date matrix vector product, computed with
+   the lagged Jacobian will be used.
+
+By using ``KSPMonitorSet()`` and/or ``SNESMonitorSet()`` one can provide code that monitors the
+convergence rate and automatically triggers an update of the Jacobian or preconditioner
+based on decreasing convergence of the iterative method. For example if the number of ``SNES``
+iterations doubles one might trigger a new computation of the Jacobian. Experimentation is
+the only general purpose way to determine which approach is best for your problem.
+
+.. important::
+
+   It is also vital to experiment on your true problem at the scale you will be solving
+   the problem since the performance benifits depend on the exact problem and and problem
+   size!
+
+How Can I Use Newton'S Method Jacobian Free? Can I Difference A Different Function Than Provided With ``SNESSetFunction()``?
+----------------------------------------------------------------------------------------------------------------------------
+
+The simplest way is with the option ``-snes_mf``, this will use finite differencing of the
+function provided to ``SNESComputeFunction()`` to approximate the action of Jacobian.
+
+.. admonition:: Important
+   :class: yellow
+
+   Since no matrix-representation of the Jacobian is provided the ``-pc_type`` used with
+   this option must be ``-pc_type none``. You may provide a custom preconditioner with
+   ``SNESGetKSP()`` |rarr| ``KSPGetPC()`` |rarr| ``PCSetType()`` and use ``PCSHELL``.
+
+The option ``-snes_mf_operator`` will use Jacobian free to apply the Jacobian (in the
+Krylov solvers) but will use whatever matrix you provided with ``SNESSetJacobian()``
+(assuming you set one) to compute the preconditioner.
+
+To write the code (rather than use the options above) use ``MatCreateSNESMF()`` and pass
+the resulting matrix object to ``SNESSetJacobian()``.
+
+For purely matrix-free (like ``-snes_mf``) pass the matrix object for both matrix
+arguments and pass the function ``MatMFFDComputeJacobian()``.
+
+To provide your own approximate Jacobian matrix to compute the preconditioner (like
+``-snes_mf_operator``), pass this other matrix as the second matrix argument to
+``SNESSetJacobian()``. Make sure your provided ``computejacobian()`` function calls
+``MatAssemblyBegin()`` |rarr| ``MatAssemblyEnd()`` separately on **BOTH** matrix arguments
+to this function. See ``src/snes/tests/ex7.c``.
+
+To difference a different function than that passed to ``SNESSetJacobian()`` to compute the
+matrix-free Jacobian multiply call ``MatMFFDSetFunction()`` to set that other function. See
+``src/snes/tests/ex7.c.h``.
+
+.. _doc_faq_usage_condnum:
+
+How Can I Determine The Condition Number Of A Matrix?
+-----------------------------------------------------
+
+For small matrices, the condition number can be reliably computed using
+
+.. code-block:: text
+
+   -pc_type svd -pc_svd_monitor
+
+For larger matrices, you can run with
+
+.. code-block:: text
+
+   -pc_type none -ksp_type gmres -ksp_monitor_singular_value -ksp_gmres_restart 1000
+
+to get approximations to the condition number of the operator. This will generally be
+accurate for the largest singular values, but may overestimate the smallest singular value
+unless the method has converged. Make sure to avoid restarts. To estimate the condition
+number of the preconditioned operator, use ``-pc_type somepc`` in the last command.
+
+How Can I Compute The Inverse Of A Matrix In PETSc?
+---------------------------------------------------
+
+.. admonition:: Are you sure?
+   :class: yellow
+
+   It is very expensive to compute the inverse of a matrix and very rarely needed in
+   practice. We highly recommend avoiding algorithms that need it.
+
+The inverse of a matrix (dense or sparse) is essentially always dense, so begin by
+creating a dense matrix B and fill it with the identity matrix (ones along the diagonal),
+also create a dense matrix X of the same size that will hold the solution. Then factor the
+matrix you wish to invert with ``MatLUFactor()`` or ``MatCholeskyFactor()``, call the
+result A. Then call ``MatMatSolve(A,B,X)`` to compute the inverse into X. See also section
+on `Schur's complement
+<https://www.mcs.anl.gov/petsc/documentation/faq.html#schurcomplement>`__.
+
+How Can I Compute The Schur Complement In PETSc?
+------------------------------------------------
+
+.. admonition:: Are you sure?
+   :class: yellow
+
+   It is very expensive to compute the Schur complement of a matrix and very rarely needed
+   in practice. We highly recommend avoiding algorithms that need it.
+
+.. todo:: The notation makes no sense, needs some clarification
+
+The Schur complement of the matrix
+
+.. math::
+
+   M = \begin{bmatrix}
+   A & B \\
+   C & D
+   \end{bmatrix}
+
+is given by
+
+.. math::
+
+   M/D := A - BD^{-1}C \\
+   M/A := D - CA^{-1}B
+
+Or more generally
+
+.. math::
+
+   S_{da} = M_{bb} - M_{ab}M_{bb}^{-1}M_{ba}
+
+.. todo:: This could do with being converted to a code sample instead of instructions
+
+Like the inverse, the Schur complement of a matrix (dense or sparse) is essentially always
+dense, so begin by:
+
+#. Forming a dense matrix :math:`K_{cb}`
+
+#. Also create another dense matrix T of the same size.
+
+#. Then either factor the matrix :math:`K_{aa}` directly with ``MatLUFactor()`` or
+   ``MatCholeskyFactor()``, or use ``MatGetFactor()`` followed by
+   ``MatLUFactorSymbolic()`` followed by ``MatLUFactorNumeric()`` if you wish to use and
+   external solver package like SuperLU_Dist. Call the result A.
+
+#. Then call ``MatMatSolve(A,Kba,T)``.
+
+#. Then call ``MatMatMult(Kab,T,MAT_INITIAL_MATRIX,1.0,&S)``.
+
+#. Now call ``MatAXPY(S,-1.0,Kbb,MAT_SUBSET_NONZERO)``.
+
+#. Followed by ``MatScale(S,-1.0)``.
+
+For computing Schur complements like this it does not make sense to use the ``KSP``
+iterative solvers since for solving many moderate size problems using a direct
+factorization is much faster than iterative solvers. As you can see, this requires a great
+deal of work space and computation so is best avoided.
+
+However, it is not necessary to assemble the Schur complement :math:`S` in order to solve
+systems with it. Use ``MatCreateSchurComplement(Kaa,Kaa_pre,Kab,Kba,Kbb,&S)`` to create a
+matrix that applies the action of :math:`S` (using ``Kaa_pre`` to solve with ``Kaa``), but
+does not assemble.
+
+Alternatively, if you already have a block matrix ``K = [Kaa, Kab; Kba, Kbb]`` (in some
+ordering), then you can create index sets (``IS``) ``isa`` and ``isb`` to address each
+block, then use ``MatGetSchurComplement()`` to create the Schur complement and/or an
+approximation suitable for preconditioning.
+
+Since :math:`S` is generally dense, standard preconditioning methods cannot typically be
+applied directly to Schur complements. There are many approaches to preconditioning Schur
+complements including using the ``SIMPLE`` approximation
+
+.. math::
+
+   K_bb - K_{ba} diag(K_{aa})^{-1} K_{ab}
+
+to create a sparse matrix that approximates the Schur complement (this is returned by default for the optional "preconditioning" matrix in ``MatGetSchurComplement()``).
+
+An alternative is to interpret the matrices as differential operators and apply approximate commutator arguments to find a spectrally equivalent operation that can be applied efficiently (see the "PCD" preconditioners from Elman, Silvester, and Wathen). A variant of this is the least squares commutator, which is closely related to the Moore-Penrose pseudoinverse, and is available in ``PCLSC`` which operates on matrices of type ``MATSCHURCOMPLEMENT``.
+
+.. todo:: citations needed
+
+Do You Have Examples Of Doing Unstructured Grid Finite Element Computations (FEM) With PETSc?
+---------------------------------------------------------------------------------------------
+
+There are at least two ways to write a finite element code using PETSc:
+
+#. Use ``DMPLEX``, which is a high level approach to manage your mesh and
+   discretization. See the tutorials :ref:`sections <tut_stokes>` for further information,
+   or see ``src/snes/tutorial/ex62.c``.
+
+#. Manage the grid data structure yourself and use PETSc ``IS`` and ``VecScatter`` to
+   communicate the required ghost point communication. See
+   ``src/snes/tutorials/ex10d/ex10.c``.
+
+.. todo:: this feels outdated
+
+``DMDA`` Decomposes The Domain Differently Than The ``Mpi_Cart_create()`` Command. How Can One Use Them Together?
+-----------------------------------------------------------------------------------------------------------------
+
+The ``MPI_Cart_create()`` first divides the mesh along the z direction, then the y, then
+the x. ``DMDA`` divides along the x, then y, then z. Thus, for example, rank 1 of the
+processes will be in a different part of the mesh for the two schemes. To resolve this you
+can create a new MPI communicator that you pass to ``DMDACreate()`` that renumbers the
+process ranks so that each physical process shares the same part of the mesh with both the
+``DMDA`` and the ``MPI_Cart_create()``. The code to determine the new numbering was
+provided by Rolf Kuiper:
+
+::
+
+   // the numbers of processors per direction are (int) x_procs, y_procs, z_procs respectively
+   // (no parallelization in direction 'dir' means dir_procs = 1)
+
+   MPI_Comm       NewComm;
+   int            x, y, z;
+   PetscMPIInt    MPI_Rank, NewRank;
+   PetscErrorCode ierr;
+
+   // get rank from MPI ordering:
+   ierr = MPI_Comm_rank(MPI_COMM_WORLD, &MPI_Rank);CHKERRQ(ierr);
+
+   // calculate coordinates of cpus in MPI ordering:
+   x = MPI_rank / (z_procs*y_procs);
+   y = (MPI_rank % (z_procs*y_procs)) / z_procs;
+   z = (MPI_rank % (z_procs*y_procs)) % z_procs;
+
+   // set new rank according to PETSc ordering:
+   NewRank = z*y_procs*x_procs + y*x_procs + x;
+
+   // create communicator with new ranks according to PETSc ordering
+   ierr = MPI_Comm_split(PETSC_COMM_WORLD, 1, NewRank, &NewComm);CHKERRQ(ierr);
+
+   // override the default communicator (was MPI_COMM_WORLD as default)
+   PETSC_COMM_WORLD = NewComm;
+
+When Solving A System With Dirichlet Boundary Conditions I Can Use ``MatZeroRows()`` To Eliminate The Dirichlet Rows But This Results In A Non-Symmetric System. How Can I Apply Dirichlet Boundary Conditions But Keep The Matrix Symmetric?
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+- For nonsymmetric systems put the appropriate boundary solutions in the x vector and use
+  ``MatZeroRows()`` followed by ``KSPSetOperators()``.
+
+- For symmetric problems use ``MatZeroRowsColumns()``.
+
+- If you have many Dirichlet locations you can use ``MatZeroRows()`` (**not**
+  ``MatZeroRowsColumns()``) and ``-ksp_type preonly -pc_type redistribute`` (see
+  ``PCREDISTRIBUTE``) and PETSc will repartition the parallel matrix for load
+  balancing. In this case the new matrix solved remains symmetric even though
+  ``MatZeroRows()`` is used.
+
+An alternative approach is, when assemblying the matrix (generating values and passing
+them to the matrix), never to include locations for the Dirichlet grid points in the
+vector and matrix, instead taking them into account as you put the other values into the
+load.
+
+How Can I Get PETSc ``Vec`` And ``Mat`` To MATLAB Or Vice Versa?
+----------------------------------------------------------------
+
+There are numerous  ways to work with PETSc and MATLAB:
+
+#. Using the `MATLAB Engine
+   <https://www.mathworks.com/help/matlab/calling-matlab-engine-from-c-programs-1.html>`__,
+   allowing PETSc to automatically call MATLAB to perform some specific computations. This
+   does not allow MATLAB to be used interactively by the user. See the
+   ``PetscMatlabEngine``.
+
+#. To save PETSc ``Mat`` and ``Vec`` to files that can be read from MATLAB use
+   ``PetscViewerBinaryOpen()`` viewer and ``VecView()`` or ``MatView()`` to save objects
+   for MATLAB and ``VecLoad()`` and ``MatLoad()`` to get the objects that MATLAB has
+   saved. See ``share/petsc/matlab/PetscBinaryRead.m`` and
+   ``share/petsc/matlab/PetscBinaryWrite.m`` for loading and saving the objects in MATLAB.
+
+#. You can open a socket connection between MATLAB and PETSc to allow sending objects back
+   and forth between an interactive MATLAB session and a running PETSc program. See
+   ``PetscViewerSocketOpen()`` for access from the PETSc side and
+   ``share/petsc/matlab/PetscReadBinary.m`` for access from the MATLAB side.
+
+#. You can save PETSc ``Vec`` (**not** ``Mat``) with the ``PetscViewerMatlabOpen()``
+   viewer that saves ``.mat`` files can then be loaded into MATLAB.
+
+How Do I Get Started With Cython So That I Can Extend petsc4py?
+---------------------------------------------------------------
+
+#. Learn how to `build a Cython module
+   <http://docs.cython.org/src/quickstart/build.html>`__.
+
+#. Go through the simple `example
+   <https://stackoverflow.com/questions/3046305/simple-wrapping-of-c-code-with-cython>`__. Note
+   also the next comment that shows how to create numpy arrays in the Cython and pass them
+   back.
+
+#. Check out `this page <http://docs.cython.org/src/tutorial/numpy.html>`__ which tells
+   you how to get fast indexing.
+
+#. Have a look at the petsc4py `array source
+   <http://code.google.com/p/petsc4py/source/browse/src/PETSc/arraynpy.pxi>`__.
+
+I Would Like To Compute A Custom Norm For ``KSP`` To Use As A Convergence Test Or For Monitoring?
+-------------------------------------------------------------------------------------------------
+
+You need to call ``KSPBuildResidual()`` on your ``KSP`` object and then compute the
+appropriate norm on the resulting residual. Note that depending on the
+``KSPSetNormType()`` of the method you may not return the same norm as provided by the
+method. See also ``KSPSetPCSide()``.
+
+If I Have A Sequential Program Can I Use A Parallel Direct Solver?
+------------------------------------------------------------------
+
+
+.. admonition:: Important
+   :class: yellow
+
+   Do not expect to get great speedups! Much of the speedup gained by using parallel
+   solvers comes from building the underlying matrices and vectors in parallel to begin
+   with. You should see some reduction in the time for the linear solvers.
+
+Yes, you must set up PETSc with MPI (even though you will not use MPI) with at least the
+following options:
+
+.. code-block:: console
+
+   > ./configure --download-superlu_dist --download-parmetis --download-metis --with-openmp
+
+Your compiler must support OpenMP. To have the linear solver run in parallel run your
+program with
+
+.. code-block:: console
+
+   > OMP_NUM_THREADS=n ./myprog -pc_type lu -pc_factor_mat_solver superlu_dist
+
+where ``n`` is the number of threads and should be less than or equal to the number of cores
+available.
+
+.. note::
+
+   If your code is MPI parallel you can also use these same options to have SuperLU_dist
+   utilize multiple threads per MPI process for the direct solver. Make sure that the
+   ``$OMP_NUM_THREADS`` you use per MPI process is less than or equal to the number of
+   cores available for each MPI process. For example if your compute nodes have 6 cores
+   and you use 2 MPI processes per node then set ``$OMP_NUM_THREADS`` to 2 or 3.
+
+
+``TS`` Or ``SNES`` Produces Infeasible (Out Of Domain) Solutions Or States, How Can I Prevent This?
+---------------------------------------------------------------------------------------------------
+
+For ``TS`` call ``TSSetFunctionDomainError()``. For both ``TS`` and ``SNES`` call
+``SNESSetFunctionDomainError()`` when the solver passes an infeasible (out of domain)
+solution or state to your routines.
+
+If it occurs for DAEs, it is important to insure the algebraic constraints are well
+satisfied, which can prevent "breakdown" later. Thus, one can try using a tight tolerance
+for ``SNES``, using a dicrect solver when possible, and reducing the timestep (or
+tightening ``TS`` tolerances for adaptive time stepping).
+
+Can PETSc Work With Hermitian Matrices?
+---------------------------------------
+
+PETSc's support of Hermitian matrices is very limited. Many operations and solvers work
+for symmetric (``MATSBAIJ``) matrices and operations on transpose matrices but there is
+little direct support for Hermitian matrices and Hermitian transpose (complex conjugate
+transpose) operations. There is ``KSPSolveTranspose()`` for solving the transpose of a
+linear system but no ``KSPSolveHermitian()``.
+
+For creating known Hermition matrices:
+
+- ``MatCreateNormalHermitian()``
+
+- ``MatCreateHermitianTranspose()``
+
+For determining or setting Hermitian status on existing matrices:
+
+- ``MatIsHermitian()``
+
+- ``MatIsHermitianKnown()``
+
+- ``MatIsStructurallySymmetric()``
+
+- ``MatIsSymmetricKnown()``
+
+- ``MatIsSymmetric()``
+
+- ``MatSetOption()`` (use with ``MAT_SYMMETRIC`` or ``MAT_HERMITIAN`` to assert to PETSc
+  that either is the case).
+
+For performing matrix operations on known Hermitian matrices (note that regular ``MAT``
+functions such as ``MatMult()`` will of course also work on Hermitian matrices):
+
+- ``MatMultHermitianTranspose()``
+
+- ``MatMultHermitianTransposeAdd()`` (:yellowhl:`very limited support`)
+
+How Can I Assemble A Bunch Of Similar Matrices?
+-----------------------------------------------
+
+You can first add the values common to all the matrices, then use ``MatStoreValues()`` to
+stash the common values. Each iteration you call ``MatRetrieveValues()``, then set the
+unique values in a matrix and assemble.
+
+Can One Resize Or Change The Size Of Petsc Matrices Or Vectors?
+---------------------------------------------------------------
+
+No, once the vector or matrices sizes have been set and the matrices or vectors are fully
+usuable one cannot change the size of the matrices or vectors or number of processors they
+live on. One may create new vectors and copy, for example using ``VecScatterCreate()``,
+the old values from the previous vector.
+
+How Can One Compute The Nullspace Of A Sparse Matrix With MUMPS?
+----------------------------------------------------------------
+
+Assuming you have an existing matrix A whose nullspace V you want to find:
+
+::
+
+   Mat            F, work, V;
+   PetscInt       N, rows;
+   PetscErrorCode ierr;
+
+   /* Determine factorability */
+   ierr = MatGetFactor(A, MATSOLVERMUMPS, MAT_FACTOR_LU, &F);CHKERRQ(ierr);
+   ierr = MatGetLocalSize(A, &rows, NULL);CHKERRQ(ierr);
+
+   /* Set MUMPS options, see MUMPS documentation for more information */
+   ierr = MatMumpsSetIcntl(F, 24, 1);CHKERRQ(ierr);
+   ierr = MatMumpsSetIcntl(F, 25, 1);CHKERRQ(ierr);
+
+   /* Perform factorization */
+   ierr = MatLUFactorSymbolic(F, A, NULL, NULL, NULL);CHKERRQ(ierr);
+   ierr = MatLUFactorNumeric(F, A, NULL);CHKERRQ(ierr);
+
+   /* This is the dimension of the null space */
+   ierr = MatMumpsGetInfog(F, 28, &N);CHKERRQ(ierr);
+
+   /* This will contain the null space in the columns */
+   ierr = MatCreateDense(comm, rows, N, PETSC_DETERMINE, PETSC_DETERMINE, NULL, &V);CHKERRQ(ierr);
+
+   ierr = MatDuplicate(V, MAT_DO_NOT_COPY_VALUES, &work);CHKERRQ(ierr);
+   ierr = MatMatSolve(F, work, V);CHKERRQ(ierr);
+
+--------------------------------------------------
+
+Execution
+=========
+
+PETSc Executables Are SO Big And Take SO Long To Link
+-----------------------------------------------------
+
+.. note::
+
+   See :ref:`shared libraries section <doc_faq_sharedlibs>` for more information.
+
+We find this annoying as well. On most machines PETSc can use shared libraries, so
+executables should be much smaller, run ``configure`` with the additional option
+``--with-shared-libraries`` (this is the default). Also, if you have room, compiling and
+linking PETSc on your machine's ``/tmp`` disk or similar local disk, rather than over the
+network will be much faster.
+
+How does PETSc's ``-help`` Option Work? Why Is It Different For Different Programs?
+-----------------------------------------------------------------------------------
+
+There are 2 ways in which one interacts with the ``PetscOptions`` database:
+
+- ``PetscOptionsGetXXX()`` where ``XXX`` is some type or data structure (for example
+  ``PetscOptionsGetBool()`` or ``PetscOptionsGetScalarArray()``). This is a classic
+  "getter" function, which queries the command line options for a matching option name,
+  and returns the specificied value.
+
+- ``PetscOptionsXXX()`` where ``XXX`` is some type or data structure (for example
+  ``PetscOptionsBool()`` or ``PetscOptionsScalarArray()``). This is a so-called "provider"
+  function. It first tabulates the option name to an internal list of previously encountered
+  options, before calling ``PetscOptionsGetXXX()`` to query the status of said option.
+
+To provide an option to the user via the command line, developers use the "provider"
+variant of functions. As the program runs, it will build up a list of encountered option
+names which are then printed **in the order of their appearance** by the **root**
+rank. Hence as different programs take different paths through PETSc source code, they
+will encounter different providers, and therefore have different ``-help`` output.
+
+PETSc Has So Many Options For My Program That It Is Hard To Keep Them Straight
+------------------------------------------------------------------------------
+
+Running the PETSc program with the option ``-help`` will print out many of the options. To
+print the options that have been specified within a program, employ ``-options_left`` to
+print any options that the user specified but were not actually used by the program and
+all options used; this is helpful for detecting typo errors.
+
+PETSc Automatically Handles Many Of The Details In Parallel PDE Solvers. How Can I Understand What Is Really Happening Within My Program?
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+You can use the option ``-info`` to get more details about the solution process. The
+option ``-log_view`` provides details about the distribution of time spent in the various
+phases of the solution process. You can run with ``-ts_view`` or ``-snes_view`` or
+``-ksp_view`` to see what solver options are being used. Run with ``-ts_monitor``,
+``-snes_monitor``, or ``-ksp_monitor`` to watch convergence of the
+methods. ``-snes_converged_reason`` and ``-ksp_converged_reason`` will indicate why and if
+the solvers have converged.
+
+Assembling Large Sparse Matrices Takes A Long Time. What Can I Do Make This Process Faster? Or ``MatSetValues()`` Is So Slow, What Can I Do To Speed It Up?
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+See the :ref:`performance chapter <ch_performance>` of the users manual.
+
+How Can I Generate Performance Summaries With PETSc?
+----------------------------------------------------
+
+Use these options at runtime:
+
+-log_view  Outputs a comprehensive timing, memory consumption, and comunications digest
+           for your program. See the :ref:`profiling chapter <ch_profiling>` of the users
+           manual for information on interpreting the summary data.
+
+-snes_view  Generates performance and operational summaries for nonlinear solvers.
+
+-ksp_view   Generates performance and operational summaries for nonlinear solvers.
+
+.. note::
+
+   Only the highest level PETSc object used needs to specify the view option.
+
+How Do I Know The Amount Of Time Spent On Each Level Of The Multigrid Solver/Preconditioner?
+--------------------------------------------------------------------------------------------
+
+Run with ``-log_view`` and ``-pc_mg_log``
+
+Where Do I Get The Input Matrices For The Examples?
+---------------------------------------------------
+
+Some examples use ``$DATAFILESPATH/matrices/medium`` and other files. These test matrices
+in PETSc binary format can be found in the `datafiles repository
+<https://gitlab.com/petsc/datafiles>`__.
+
+When I Dump Some Matrices And Vectors To Binary, I Seem To Be Generating Some Empty Files With ``.info`` Extensions. What's The Deal With These?
+------------------------------------------------------------------------------------------------------------------------------------------------
+
+PETSc binary viewers put some additional information into ``.info`` files like matrix
+block size. It is harmless but if you *really* don't like it you can use
+``-viewer_binary_skip_info`` or ``PetscViewerBinarySkipInfo()``.
+
+.. note::
+
+   You need to call ``PetscViewerBinarySkipInfo()`` before
+   ``PetscViewerFileSetName()``. In other words you **cannot** use
+   ``PetscViewerBinaryOpen()`` directly.
+
+Why Is My Parallel Solver Slower Than My Sequential Solver, Or I Have Poor Speed-Up?
+------------------------------------------------------------------------------------
+
+This can happen for many reasons:
+
+#. Make sure it is truly the time in ``KSPSolve()`` that is slower (by running the code
+   with ``-log_view``). Often the slower time is in generating the matrix or some other
+   operation.
+
+#. There must be enough work for each process to overweigh the communication time. We
+   recommend an absolute minimum of about 10,000 unknowns per process, better is 20,000 or
+   more.
+
+#. Make sure the :ref:`communication speed of the parallel computer
+   <doc_faq_general_parallel>` is good enough for parallel solvers.
+
+#. Check the number of solver iterates with the parallel solver against the sequential
+   solver. Most preconditioners require more iterations when used on more processes, this
+   is particularly true for block Jacobi (the default parallel preconditioner). You can
+   try ``-pc_type asm`` (``PCASM``) its iterations scale a bit better for more
+   processes. You may also consider multigrid preconditioners like ``PCMG`` or BoomerAMG
+   in ``PCHYPRE``.
+
+What Steps Are Necessary To Make The Pipelined Solvers Execute Efficiently?
+---------------------------------------------------------------------------
+
+Pipelined solvers like ``KSPPGMRES``, ``KSPPIPECG``, ``KSPPIPECR``, and ``KSPGROPPCG`` may
+require special MPI configuration to effectively overlap reductions with computation. In
+general, this requires an MPI-3 implementation, an implementation that supports multiple
+threads, and use of a "progress thread". Consult the documentation from your vendor or
+computing facility for more.
+
+.. glossary::
+   :sorted:
+
+   Cray MPI
+      Cray MPT-5.6 supports MPI-3, but setting ``$MPICH_MAX_THREAD_SAFETY`` to "multiple"
+      for threads, plus either ``$MPICH_ASYNC_PROGRESS`` or
+      ``$MPICH_NEMESIS_ASYNC_PROGRESS``. E.g.
+
+      .. code-block:: console
+
+         > export MPICH_MAX_THREAD_SAFETY=multiple
+         > export MPICH_ASYNC_PROGRESS=1
+         > export MPICH_NEMESIS_ASYNC_PROGRESS=1
+
+   MPICH
+    MPICH version 3.0 and later implements the MPI-3 standard and the default
+    configuration supports use of threads. Use of a progress thread is configured by
+    setting the environment variable ``$MPICH_ASYNC_PROGRESS``. E.g.
+
+    .. code-block:: console
+
+       > export MPICH_ASYNC_PROGRESS=1
+
+When Using PETSc In Single Precision Mode (``--with-precision=single`` When Running ``configure``) Are The Operations Done In Single Or Double Precision?
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+PETSc does **NOT** do any explicit conversion of single precision to double before
+performing computations; it depends on the hardware and compiler for what happens. For
+example, the compiler could choose to put the single precision numbers into the usual
+double precision registers and then use the usual double precision floating point unit. Or
+it could use SSE2 instructions that work directly on the single precision numbers. It is a
+bit of a mystery what decisions get made sometimes. There may be compiler flags in some
+circumstances that can affect this.
+
+Why Is Newton'S Method (``SNES``) Not Converging, Or Converges Slowly?
+----------------------------------------------------------------------
+
+Newton's method may not converge for many reasons, here are some of the most common:
+
+- The Jacobian is wrong (or correct in sequential but not in parallel).
+
+- The linear system is :ref:`not solved <doc_faq_execution_kspconv>` or is not solved
+  accurately enough.
+
+- The Jacobian system has a singularity that the linear solver is not handling.
+
+- There is a bug in the function evaluation routine.
+
+- The function is not continuous or does not have continuous first derivatives (e.g. phase
+  change or TVD limiters).
+
+- The equations may not have a solution (e.g. limit cycle instead of a steady state) or
+  there may be a "hill" between the initial guess and the steady state (e.g. reactants
+  must ignite and burn before reaching a steady state, but the steady-state residual will
+  be larger during combustion).
+
+Here are some of the ways to help debug lack of convergence of Newton:
+
+- Run on one processor to see if the problem is only in parallel.
+
+- Run with ``-info`` to get more detailed information on the solution process.
+
+- Run with the options
+
+  .. code-block:: text
+
+     -snes_monitor -ksp_monitor_true_residual -snes_converged_reason -ksp_converged_reason
+
+  - If the linear solve does not converge, check if the Jacobian is correct, then see
+    :ref:`this question <doc_faq_execution_kspconv>`.
+
+  - If the preconditioned residual converges, but the true residual does not, the
+    preconditioner may be singular.
+
+  - If the linear solve converges well, but the line search fails, the Jacobian may be
+    incorrect.
+
+- Run with ``-pc_type lu`` or ``-pc_type svd`` to see if the problem is a poor linear
+  solver.
+
+- Run with ``-mat_view`` or ``-mat_view draw`` to see if the Jacobian looks reasonable.
+
+- Run with ``-snes_test_jacobian -snes_test_jacobian_view`` to see if the Jacobian you are
+  using is wrong. Compare the output when you add ``-mat_fd_type ds`` to see if the result
+  is sensitive to the choice of differencing parameter.
+
+- Run with ``-snes_mf_operator -pc_type lu`` to see if the Jacobian you are using is
+  wrong. If the problem is too large for a direct solve, try
+
+  .. code-block:: text
+
+     -snes_mf_operator -pc_type ksp -ksp_ksp_rtol 1e-12.
+
+  Compare the output when you add ``-mat_mffd_type ds`` to see if the result is sensitive
+  to choice of differencing parameter.
+
+- Run with ``-snes_linesearch_monitor`` to see if the line search is failing (this is
+  usually a sign of a bad Jacobian). Use ``-info`` in PETSc 3.1 and older versions,
+  ``-snes_ls_monitor`` in PETSc 3.2 and ``-snes_linesearch_monitor`` in PETSc 3.3 and
+  later.
+
+Here are some ways to help the Newton process if everything above checks out:
+
+- Run with grid sequencing (``-snes_grid_sequence`` if working with a ``DM`` is all you
+  need) to generate better initial guess on your finer mesh.
+
+- Run with quad precision, i.e.
+
+  .. code-block:: console
+
+  > ./configure --with-precision=__float128 --download-f2cblaslapack
+
+  **requires** PETSc 3.2 and later and recent versions of the GNU compilers.
+
+- Change the units (nondimensionalization), boundary condition scaling, or formulation so
+  that the Jacobian is better conditioned. See `Buckingham pi theorem
+  <https://en.wikipedia.org/wiki/Buckingham_%CF%80_theorem>`__ and `Dimensional and
+  Scaling Analysis <https://epubs.siam.org/doi/pdf/10.1137/16M1107127>`__.
+
+- Mollify features in the function that do not have continuous first derivatives (often
+  occurs when there are "if" statements in the residual evaluation, e.g. phase change or
+  TVD limiters). Use a variational inequality solver (``SNESVINEWTONRSLS``) if the
+  discontinuities are of fundamental importance.
+
+- Try a trust region method (``-ts_type tr``, may have to adjust parameters).
+
+- Run with some continuation parameter from a point where you know the solution, see
+  ``TSPSEUDO`` for steady-states.
+
+- There are homotopy solver packages like PHCpack that can get you all possible solutions
+  (and tell you that it has found them all) but those are not scalable and cannot solve
+  anything but small problems.
+
+.. _doc_faq_execution_kspconv:
+
+Why Is The Linear Solver (``KSP``) Not Converging, Or Converges Slowly?
+-----------------------------------------------------------------------
+
+.. tip::
+
+   Always run with ``-ksp_converged_reason -ksp_monitor_true_residual`` when trying to
+   learn why a method is not converging!
+
+Common reasons for KSP not converging are:
+
+- A symmetric method is being used for a non-symmetric problem.
+
+- The equations are singular by accident (e.g. forgot to impose boundary
+  conditions). Check this for a small problem using ``-pc_type svd -pc_svd_monitor``.
+
+- The equations are intentionally singular (e.g. constant null space), but the Krylov
+  method was not informed, see ``MatSetNullSpace()``. Always inform your local Krylov
+  subspace solver of any change of singularity. Failure to do so will result in the
+  immediate revocation of your computing and keyboard operator licenses, as well as
+  a stern talking-to by the nearest Krylov Subspace Method representative.
+
+- The equations are intentionally singular and ``MatSetNullSpace()`` was used, but the
+  right hand side is not consistent. You may have to call ``MatNullSpaceRemove()`` on the
+  right hand side before calling ``KSPSolve()``. See ``MatSetTransposeNullSpace()``.
+
+- The equations are indefinite so that standard preconditioners don't work. Usually you
+  will know this from the physics, but you can check with
+
+  .. code-block:: text
+
+     -ksp_compute_eigenvalues -ksp_gmres_restart 1000 -pc_type none
+
+  For simple saddle point problems, try
+
+  .. code-block:: text
+
+     -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_detect_saddle_point
+
+  For more difficult problems, read the literature to find robust methods and ask
+  petsc-users@mcs.anl.gov or petsc-maint@mcs.anl.gov if you want advice about how to
+  implement them.
+
+- If the method converges in preconditioned residual, but not in true residual, the
+  preconditioner is likely singular or nearly so. This is common for saddle point problems
+  (e.g. incompressible flow) or strongly nonsymmetric operators (e.g. low-Mach hyperbolic
+  problems with large time steps).
+
+- The preconditioner is too weak or is unstable. See if ``-pc_type asm -sub_pc_type lu``
+  improves the convergence rate. If GMRES is losing too much progress in the restart, see
+  if longer restarts help ``-ksp_gmres_restart 300``. If a transpose is available, try
+  ``-ksp_type bcgs`` or other methods that do not require a restart.
+
+  .. note::
+
+     Unfortunately convergence with these methods is frequently erratic.
+
+- The preconditioner is nonlinear (e.g. a nested iterative solve), try ``-ksp_type
+  fgmres`` or ``-ksp_type gcr``.
+
+- You are using geometric multigrid, but some equations (often boundary conditions) are
+  not scaled compatibly between levels. Try ``-pc_mg_galerkin`` both to algebraically
+  construct a correctly scaled coarse operator or make sure that all the equations are
+  scaled in the same way if you want to use rediscretized coarse levels.
+
+- The matrix is very ill-conditioned. Check the :ref:`condition number <doc_faq_usage_condnum>`.
+
+  - Try to improve it by choosing the relative scaling of components/boundary conditions.
+
+  - Try ``-ksp_diagonal_scale -ksp_diagonal_scale_fix``.
+
+  - Perhaps change the formulation of the problem to produce more friendly algebraic
+    equations.
+
+- Change the units (nondimensionalization), boundary condition scaling, or formulation so
+  that the Jacobian is better conditioned. See `Buckingham pi theorem
+  <https://en.wikipedia.org/wiki/Buckingham_%CF%80_theorem>`__ and `Dimensional and
+  Scaling Analysis <https://epubs.siam.org/doi/pdf/10.1137/16M1107127>`__.
+
+- Classical Gram-Schmidt is becoming unstable, try ``-ksp_gmres_modifiedgramschmidt`` or
+  use a method that orthogonalizes differently, e.g. ``-ksp_type gcr``.
+
+I Get The Error Message: Actual argument at (1) to assumed-type dummy is of derived type with type-bound or FINAL procedures
+----------------------------------------------------------------------------------------------------------------------------
+
+Use the following code-snippet:
+
+.. code-block:: fortran
+
+   module context_module
+   #include petsc/finclude/petsc.h
+   use petsc
+   implicit none
+   private
+   type, public ::  context_type
+     private
+     PetscInt :: foo
+   contains
+     procedure, public :: init => context_init
+   end type context_type
+   contains
+   subroutine context_init(self, foo)
+     class(context_type), intent(in out) :: self
+     PetscInt, intent(in) :: foo
+     self%foo = foo
+   end subroutine context_init
+   end module context_module
+
+   !------------------------------------------------------------------------
+
+   program test_snes
+   use iso_c_binding
+   use petsc
+   use context_module
+   implicit none
+
+   SNES :: snes
+   type(context_type),target :: context
+   type(c_ptr) :: contextOut
+   PetscErrorCode :: ierr
+
+   call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
+   call SNESCreate(PETSC_COMM_WORLD, snes, ierr)
+   call context%init(1)
+
+   contextOut = c_loc(context) ! contextOut is a C pointer on context
+
+   call SNESSetConvergenceTest(snes, convergence, contextOut, PETSC_NULL_FUNCTION, ierr)
+
+   call SNESDestroy(snes, ierr)
+   call PetscFinalize(ierr)
+
+   contains
+
+   subroutine convergence(snes, num_iterations, xnorm, pnorm,fnorm, reason, contextIn, ierr)
+   SNES, intent(in) :: snes
+
+   PetscInt, intent(in) :: num_iterations
+   PetscReal, intent(in) :: xnorm, pnorm, fnorm
+   SNESConvergedReason, intent(out) :: reason
+   type(c_ptr), intent(in out) :: contextIn
+   type(context_type), pointer :: context
+   PetscErrorCode, intent(out) :: ierr
+
+   call c_f_pointer(contextIn,context)  ! convert the C pointer to a Fortran pointer to use context as in the main program
+   reason = 0
+   ierr = 0
+   end subroutine convergence
+   end program test_snes
+
+In C++ I Get A Crash On ``VecDestroy()`` (Or Some Other PETSc Object) At The End Of The Program
+-----------------------------------------------------------------------------------------------
+
+This can happen when the destructor for a C++ class is automatically called at the end of
+the program after ``PetscFinalize()``. Use the following code-snippet:
+
+::
+
+   main()
+   {
+     PetscErrorCode ierr;
+
+     ierr = PetscInitialize();if (ierr) {return ierr;}
+     {
+       your variables
+       your code
+
+       ...   /* all your destructors are called here automatically by C++ so they work correctly */
+     }
+     ierr = PetscFinalize();if (ierr) {return ierr;}
+     return 0
+   }
+
+--------------------------------------------------
+
+Debugging
+=========
+
+How Do I Turn Off PETSc Signal Handling So I Can Use The ``-C`` Option On ``xlf``?
+----------------------------------------------------------------------------------
+
+Immediately after calling ``PetscInitialize()`` call ``PetscPopSignalHandler()``.
+
+Some Fortran compilers including the IBM xlf, xlF etc compilers have a compile option
+(``-C`` for IBM's) that causes all array access in Fortran to be checked that they are
+in-bounds. This is a great feature but does require that the array dimensions be set
+explicitly, not with a \*.
+
+How Do I Debug If ``-start_in_debugger`` Does Not Work On My Machine?
+---------------------------------------------------------------------
+
+The script https://github.com/Azrael3000/tmpi can be used with OpenMPI to run multiple MPI
+ranks in the debugger using tmux.
+
+On newer macOS machines - one has to be in admin group to be able to use debugger.
+
+On newer UBUNTU linux machines - one has to disable ptrace_scop with
+
+.. code-block:: console
+
+   > sudo echo 0 > /proc/sys/kernel/yama/ptrace_scope
+
+to get start in debugger working.
+
+If ``-start_in_debugger`` does not really work on your OS, for a uniprocessor job, just
+try the debugger directly, for example: ``gdb ex1``. You can also use Totalview which is a
+good graphical parallel debugger.
+
+How Do I See Where My Code Is Hanging?
+--------------------------------------
+
+You can use the ``-start_in_debugger`` option to start all processes in the debugger (each
+will come up in its own xterm) or run in Totalview. Then use ``cont`` (for continue) in
+each xterm. Once you are sure that the program is hanging, hit control-c in each xterm and
+then use 'where' to print a stack trace for each process.
+
+How Can I Inspect ``Vec`` And ``Mat`` Values When In The Debugger?
+------------------------------------------------------------------
+
+I will illustrate this with ``gdb``, but it should be similar on other debuggers. You can
+look at local ``Vec`` values directly by obtaining the array. For a ``Vec`` v, we can
+print all local values using:
+
+.. code-block:: console
+
+   (gdb) p ((Vec_Seq*) v->data)->array[0]@v->map.n
+
+However, this becomes much more complicated for a matrix. Therefore, it is advisable to use the default viewer to look at the object. For a ``Vec`` v and a ``Mat`` m, this would be:
+
+.. code-block:: console
+
+   (gdb) call VecView(v, 0)
+   (gdb) call MatView(m, 0)
+
+or with a communicator other than ``MPI_COMM_WORLD``:
+
+.. code-block:: console
+
+   (gdb) call MatView(m, PETSC_VIEWER_STDOUT_(m->comm))
+
+Totalview 8.8.0+ has a new feature that allows libraries to provide their own code to
+display objects in the debugger. Thus in theory each PETSc object, ``Vec``, ``Mat`` etc
+could have custom code to print values in the object. We have only done this for the most
+elementary display of ``Vec`` and ``Mat``. See the routine ``TV_display_type()`` in
+``src/vec/vec/interface/vector.c`` for an example of how these may be written. Contact us
+if you would like to add more.
+
+How Can I Find The Cause Of Floating Point Exceptions Like Not-A-Number (NaN) Or Infinity?
+------------------------------------------------------------------------------------------
+
+The best way to locate floating point exceptions is to use a debugger. On supported
+architectures (including Linux and glibc-based systems), just run in a debugger and pass
+``-fp_trap`` to the PETSc application. This will activate signaling exceptions and the
+debugger will break on the line that first divides by zero or otherwise generates an
+exceptions.
+
+Without a debugger, running with ``-fp_trap`` in debug mode will only identify the
+function in which the error occurred, but not the line or the type of exception. If
+``-fp_trap`` is not supported on your architecture, consult the documentation for your
+debugger since there is likely a way to have it catch exceptions.
+
+Error while loading shared libraries: libimf.so: cannot open shared object file: No such file or directory
+----------------------------------------------------------------------------------------------------------
+
+The Intel compilers use shared libraries (like libimf) that cannot by default at run
+time. When using the Intel compilers (and running the resulting code) you must make sure
+that the proper Intel initialization scripts are run. This is usually done by putting some
+code into your ``.cshrc``, ``.bashrc``, ``.profile`` etc file. Sometimes on batch file
+systems that do now access your initialization files (like .cshrc) you must include the
+initialization calls in your batch file submission.
+
+For example, on my Mac using ``csh`` I have the following in my ``.cshrc`` file:
+
+.. code-block:: csh
+
+   source /opt/intel/cc/10.1.012/bin/iccvars.csh
+   source /opt/intel/fc/10.1.012/bin/ifortvars.csh
+   source /opt/intel/idb/10.1.012/bin/idbvars.csh
+
+And in my ``.profile`` I have
+
+.. code-block:: csh
+
+   source /opt/intel/cc/10.1.012/bin/iccvars.sh
+   source /opt/intel/fc/10.1.012/bin/ifortvars.sh
+   source /opt/intel/idb/10.1.012/bin/idbvars.sh
+
+What Does Object Type Not Set: Argument # N Mean?
+-------------------------------------------------
+
+Many operations on PETSc objects require that the specific type of the object be set before the operations is performed. You must call ``XXXSetType()`` or ``XXXSetFromOptions()`` before you make the offending call. For example
+
+::
+
+   Mat            A;
+   PetscErrorCode ierr;
+
+   ierr = MatCreate(PETSC_COMM_WORLD, &A);CHKERRQ(ierr);
+   ierr = MatSetValues(A,....);CHKERRQ(ierr);
+
+will not work. You must add ``MatSetType()`` or ``MatSetFromOptions()`` before the call to ``MatSetValues()``. I.e.
+
+::
+
+   Mat            A;
+   PetscErrorCode ierr;
+
+   ierr = MatCreate(PETSC_COMM_WORLD, &A);CHKERRQ(ierr);
+
+   ierr = MatSetType(A, MATAIJ);CHKERRQ(ierr);
+   /* Will override MatSetType() */
+   ierr = MatSetFromOptions();CHKERRQ(ierr);
+
+   ierr = MatSetValues(A,....);CHKERRQ(ierr);
+
+What Does Error Detected In ``PetscSplitOwnership()`` About "Sum Of Local Lengths ...": Mean?
+---------------------------------------------------------------------------------------------
+
+In a previous call to ``VecSetSizes()``, ``MatSetSizes()``, ``VecCreateXXX()`` or
+``MatCreateXXX()`` you passed in local and global sizes that do not make sense for the
+correct number of processors. For example if you pass in a local size of 2 and a global
+size of 100 and run on two processors, this cannot work since the sum of the local sizes
+is 4, not 100.
+
+What Does Corrupt Argument Or Caught Signal Or SEGV Or Segmentation Violation Or Bus Error Mean? Can I Use Valgrind To Debug Memory Corruption Issues?
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Sometimes it can mean an argument to a function is invalid. In Fortran this may be caused
+by forgetting to list an argument in the call, especially the final ``PetscErrorCode``.
+
+Otherwise it is usually caused by memory corruption; that is somewhere the code is writing
+out of array bounds. To track this down rerun the debug version of the code with the
+option ``-malloc_debug``. Occasionally the code may crash only with the optimized version,
+in that case run the optimized version with ``-malloc_debug``. If you determine the
+problem is from memory corruption you can put the macro CHKMEMQ in the code near the crash
+to determine exactly what line is causing the problem.
+
+If ``-malloc_debug`` does not help: on GNU/Linux and (supported) macOS machines - you can
+use `valgrind <http://valgrind.org>`__. Follow the below instructions:
+
+#. ``configure`` PETSc with ``--download-mpich --with-debugging``.
+
+#. On macOS you need to:
+
+   #. use valgrind from https://github.com/LouisBrunner/valgrind-macos. Follow the Usage
+      instructions in the README.md on that page (no need to clone the repository).
+
+   #. use the additional ``configure`` options ``--download-fblaslapack`` or
+      ``--download-f2cblaslapack``
+
+   #. use the additional valgrind option ``--dsymutil=yes``
+
+#. Compile your application code with this build of PETSc.
+
+#. Run with valgrind.
+
+   .. code-block:: console
+
+      > $PETSC_DIR/lib/petsc/bin/petscmpiexec -valgrind -n NPROC PETSCPROGRAMNAME PROGRAMOPTIONS
+
+   or
+
+   .. code-block:: console
+
+      > mpiexec -n NPROC valgrind --tool=memcheck -q --num-callers=20 \
+      --suppressions=$PETSC_DIR/lib/petsc/bin/maint/petsc-val.supp \
+      --log-file=valgrind.log.%p PETSCPROGRAMNAME -malloc off PROGRAMOPTIONS
+
+.. note::
+
+
+   - option ``--with-debugging`` enables valgrind to give stack trace with additional
+     source-file\:line-number info.
+
+   - option ``--download-mpich`` is valgrind clean, other MPI builds are not valgrind clean.
+
+   - when ``--download-mpich`` is used - mpiexec will be in ``$PETSC_ARCH/bin``
+
+   - ``--log-file=valgrind.log.%p`` option tells valgrind to store the output from each
+     process in a different file [as %p i.e PID, is different for each MPI process.
+
+   - ``memcheck`` will not find certain array access that violate static array
+     declarations so if memcheck runs clean you can try the ``--tool=exp-ptrcheck``
+     instead.
+
+You might also consider using http://drmemory.org which has support for GNU/Linux, Apple
+Mac OS and Microsoft Windows machines. (Note we haven't tried this ourselves).
+
+What Does Detected Zero Pivot In LU Factorization Mean?
+-------------------------------------------------------
+
+A zero pivot in LU, ILU, Cholesky, or ICC sparse factorization does not always mean that
+the matrix is singular. You can use
+
+.. code-block:: text
+
+   -pc_factor_shift_type nonzero -pc_factor_shift_amount [amount]
+
+or
+
+.. code-block:: text
+
+   -pc_factor_shift_type positive_definite -[level]_pc_factor_shift_type nonzero
+    -pc_factor_shift_amount [amount]
+
+or
+
+.. code-block:: text
+
+   -[level]_pc_factor_shift_type positive_definite
+
+to prevent the zero pivot. [level] is "sub" when lu, ilu, cholesky, or icc are employed in
+each individual block of the bjacobi or ASM preconditioner. [level] is "mg_levels" or
+"mg_coarse" when lu, ilu, cholesky, or icc are used inside multigrid smoothers or to the
+coarse grid solver. See ``PCFactorSetShiftType()``, ``PCFactorSetAmount()``.
+
+This error can also happen if your matrix is singular, see ``MatSetNullSpace()`` for how
+to handle this. If this error occurs in the zeroth row of the matrix, it is likely you
+have an error in the code that generates the matrix.
+
+You Create Draw Windows Or ``ViewerDraw`` Windows Or Use Options ``-ksp_monitor_lg_residualnorm`` Or ``-snes_monitor_lg_residualnorm`` And The Program Seems To Run Ok But Windows Never Open
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+The libraries were compiled without support for X windows. Make sure that ``configure``
+was run with the option ``--with-x``.
+
+The Program Seems To Use More And More Memory As It Runs, Even Though You Don'T Think You Are Allocating More Memory
+--------------------------------------------------------------------------------------------------------------------
+
+Some of the following may be occuring:
+
+- You are creating new PETSc objects but never freeing them.
+
+- There is a memory leak in PETSc or your code.
+
+- Something much more subtle: (if you are using Fortran). When you declare a large array
+  in Fortran, the operating system does not allocate all the memory pages for that array
+  until you start using the different locations in the array. Thus, in a code, if at each
+  step you start using later values in the array your virtual memory usage will "continue"
+  to increase as measured by ``ps`` or ``top``.
+
+- You are running with the ``-log``, ``-log_mpe``, or ``-log_all`` option. With these
+  options, a great deal of logging information is stored in memory until the conclusion of
+  the run.
+
+- You are linking with the MPI profiling libraries; these cause logging of all MPI
+  activities. Another symptom is at the conclusion of the run it may print some message
+  about writing log files.
+
+The following may help:
+
+- Run with the ``-malloc_debug`` option and ``-malloc_dump``. Or use the commands
+  ``PetscMallocDump()`` and ``PetscMallocLogDump()`` sprinkled in your code to track
+  memory that is allocated and not later freed. Use the commands
+  ``PetscMallocGetCurrentUsage()`` and ``PetscMemoryGetCurrentUsage()`` to monitor memory
+  allocated and ``PetscMallocGetMaximumUsage()`` and ``PetscMemoryGetMaximumUsage()`` for
+  total memory used as the code progresses.
+
+- This is just the way Unix works and is harmless.
+
+- Do not use the ``-log``, ``-log_mpe``, or ``-log_all`` option, or use
+  ``PLogEventDeactivate()`` or ``PLogEventDeactivateClass()`` to turn off logging of
+  specific events.
+
+- Make sure you do not link with the MPI profiling libraries.
+
+When Calling ``MatPartitioningApply()`` You Get A Message Error! Key 16615 Not Found
+------------------------------------------------------------------------------------
+
+The graph of the matrix you are using is not symmetric. You must use symmetric matrices
+for partitioning.
+
+With GMRES At Restart The Second Residual Norm Printed Does Not Match The First
+-------------------------------------------------------------------------------
+
+I.e.
+
+.. code-block:: text
+
+   26 KSP Residual norm 3.421544615851e-04
+   27 KSP Residual norm 2.973675659493e-04
+   28 KSP Residual norm 2.588642948270e-04
+   29 KSP Residual norm 2.268190747349e-04
+   30 KSP Residual norm 1.977245964368e-04
+   30 KSP Residual norm 1.994426291979e-04 <----- At restart the residual norm is printed a second time
+
+Thiscis actually not surprising! GMRES computes the norm of the residual at each iteration
+via a recurrence relation between the norms of the residuals at the previous iterations
+and quantities computed at the current iteration. It does not compute it via directly
+:math:`|| b - A x^{n} ||`.
+
+Sometimes, especially with an ill-conditioned matrix, or computation of the matrix-vector
+product via differencing, the residual norms computed by GMRES start to "drift" from the
+correct values. At the restart, we compute the residual norm directly, hence the "strange
+stuff," the difference printed. The drifting, if it remains small, is harmless (doesn't
+affect the accuracy of the solution that GMRES computes).
+
+If you use a more powerful preconditioner the drift will often be smaller and less
+noticeable. Of if you are running matrix-free you may need to tune the matrix-free
+parameters.
+
+Why Do Some Krylov Methods Seem To Print Two Residual Norms Per Iteration?
+--------------------------------------------------------------------------
+
+I.e.
+
+.. code-block:: text
+
+   1198 KSP Residual norm 1.366052062216e-04
+   1198 KSP Residual norm 1.931875025549e-04
+   1199 KSP Residual norm 1.366026406067e-04
+   1199 KSP Residual norm 1.931819426344e-04
+
+Some Krylov methods, for example tfqmr, actually have a "sub-iteration" of size 2 inside
+the loop. Each of the two substeps has its own matrix vector product and application of
+the preconditioner and updates the residual approximations. This is why you get this
+"funny" output where it looks like there are two residual norms per iteration. You can
+also think of it as twice as many iterations.
+
+Unable To Locate PETSc Dynamic Library libpetsc
+-----------------------------------------------
+
+When using DYNAMIC libraries - the libraries cannot be moved after they are
+installed. This could also happen on clusters - where the paths are different on the (run)
+nodes - than on the (compile) front-end. **Do not use dynamic libraries & shared
+libraries**. Run ``configure`` with
+``--with-shared-libraries=0 --with-dynamic-loading=0``.
+
+.. admonition:: Important
+   :class: yellow
+
+   This option has been removed in petsc v3.5
+
+How Do I Determine What Update To PETSc Broke My Code?
+------------------------------------------------------
+
+if at some point (in PETSc code history) you had a working code - but the latest PETSc
+code broke it, its possible to determine the PETSc code change that might have caused this
+behavior. This is achieved by:
+
+- Using Git to access PETSc sources
+
+- Knowing the Git commit for the known working version of PETSc
+
+- Knowing the Git commit for the known broken version of PETSc
+
+- Using the `bisect
+  <https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-bisect.html>`__
+  functionality of Git
+
+This process can be done as follows:
+
+#. Get PETSc development (master branch in git) sources
+
+   .. code-block:: console
+
+      > git clone https://gitlab.com/petsc/petsc.git
+
+#. Find the :greenhl:`good` and :redhl:`bad` markers to start the bisection process. This
+   can be done either by checking git log or gitk or https://gitlab.com/petsc/petsc or the
+   web history of petsc-release clones. Lets say the known :redhl:`bad` commit is
+   21af4baa815c and known :greenhl:`good` commit is 5ae5ab319844
+
+#. Start the bisection process with these known revisions. Build PETSc, and test your code
+   to confirm known good/bad behavior.
+
+   .. code-block:: console
+
+      > git bisect start 21af4baa815c 5ae5ab319844
+
+   build/test and confirm that this new state is :redhl:`bad`
+
+   .. code-block:: console
+
+      > git disect bad
+
+   build/test perhaps discover that this state is :greenhl:`good`
+
+   .. code-block:: console
+
+      > git bisect good
+
+   Now until done - keep bisecting, building PETSc, and testing your code with it and
+   determine if the code is working or not. After something like 5-15 iterations, ``git
+   bisect`` will pin-point the exact code change that resulted in the difference in
+   application behavior.
+
+.. tip::
+
+   See `git-bisect(1)
+   <https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-bisect.html>`__ and the
+   `debugging section of the Git Book
+   <https://git-scm.com/book/en/Git-Tools-Debugging-with-Git>`__ for more debugging tips.
+
+How To Fix The Error PMIX Error: error in file gds_ds12_lock_pthread.c?
+-----------------------------------------------------------------------
+
+This seems to be an error when using OpenMPI and OpenBLAS with threads (or perhaps other
+packages that use threads).
+
+.. code-block:: console
+
+   > export PMIX_MCA_gds=hash
+
+Should resolve the problem.
+
+--------------------------------------------------
+
+.. _doc_faq_sharedlibs:
+
+Shared Libraries
+================
+
+Can I Install PETSc Libraries As Shared Libraries?
+--------------------------------------------------
+
+Yes. Use
+
+.. code-block:: console
+
+   > ./configure --with-shared-libraries
+
+Why Should I Use Shared Libraries?
+----------------------------------
+
+When you link to shared libraries, the function symbols from the shared libraries are not
+copied in the executable. This way the size of the executable is considerably smaller than
+when using regular libraries. This helps in a couple of ways:
+
+- Saves disk space when more than one executable is created
+
+- Improves the compile time immensly, because the compiler has to write a much smaller
+  file (executable) to the disk.
+
+How Do I Link To The PETSc Shared Libraries?
+--------------------------------------------
+
+By default, the compiler should pick up the shared libraries instead of the regular
+ones. Nothing special should be done for this.
+
+What If I Want To Link To The Regular .a Library Files?
+-------------------------------------------------------
+
+You must run ``configure`` with the option ``--with-shared-libraries=0`` (you can use a
+different ``$PETSC_ARCH`` for this build so you can easily switch between the two).
+
+What Do I Do If I Want To Move My Executable To A Different Machine?
+--------------------------------------------------------------------
+
+You would also need to have access to the shared libraries on this new machine. The other
+alternative is to build the exeutable without shared libraries by first deleting the
+shared libraries, and then creating the executable.
