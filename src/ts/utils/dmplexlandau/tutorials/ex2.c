@@ -190,8 +190,8 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   PetscDS           prob;
   static PetscReal  old_ratio = 1e10;
   TSConvergedReason reason;
-  PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e,v,vz,v2;
-  PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LANDAU_MAX_SPECIES],tt[LANDAU_MAX_SPECIES];
+  PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e,v,v2;
+  PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LANDAU_MAX_SPECIES],tt[LANDAU_MAX_SPECIES],vz;
 
   PetscFunctionBeginUser;
   if (ctx->num_species<2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D < 2",ctx->num_species);
@@ -210,8 +210,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   /* Z */
   Z = -ctx->charges[1]/ctx->charges[0];
   if (rectx->imp_idx!=1 && ctx->charges[rectx->imp_idx]!=ctx->charges[1]) {
-    PetscScalar n_i1,n_ix;
-    PetscReal   Znew;
+    PetscReal   Znew, n_i1,n_ix;;
     user[0] = 1.0;
     ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
@@ -224,7 +223,9 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
     Z = Znew;
   }
   /* remove drift */
-  if (0) {
+  if (1) {
+    user[0] = .0;
+    ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
     ierr = PetscDSSetObjective(prob, 0, &f0_vz);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
     vz = ctx->n_0*PetscRealPart(tt[0])/n_e; /* non-dimensional */
@@ -238,22 +239,21 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   Te_kev = (v2*ctx->masses[0]*PETSC_PI/8)*kev_joul; /* temperature in kev */
   //ierr = getTe_kev(plex, X, NULL, &Te_kev);CHKERRQ(ierr);
   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],Z,ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
-  if (rectx->use_spitzer_eta) {
-    E = ctx->Ez = spit_eta*J;
-  } else {
-    if (0) {
-      ierr = PetscDSSetConstants(prob, 1, &constants[0]);CHKERRQ(ierr);
-      ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
-      ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
-    } else tt[0] = 0;
-    J_re = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
-    E = ctx->Ez; /* keep real E */
-  }
+  if (rectx->use_spitzer_eta) E = ctx->Ez = spit_eta*J;
+  else E = ctx->Ez; /* keep real E */
+  if (0) {
+    ierr = PetscDSSetConstants(prob, 1, &constants[0]);CHKERRQ(ierr);
+    ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
+    ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
+  } else tt[0] = 0;
+  J_re = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
+
   ratio = E/J/spit_eta;
   if (stepi>10 && !rectx->use_spitzer_eta && old_ratio-ratio < 1.e-4 && ratio > 0.97 && ratio < 1.03) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,"switch to E spitzer spitzer-eta:E/J= %20.13e %20.13e\n",spit_eta,ctx->Ez/J);CHKERRQ(ierr);
     rectx->pulse_start = time + rectx->plotDt - 1.e-5; /* start (pulse) quench, at next test */
     rectx->use_spitzer_eta = PETSC_TRUE;
+    ierr = TSSetConvergedReason(ts, TS_CONVERGED_USER);CHKERRQ(ierr);
   }
   ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %4D) time=%10.3e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g %% Te_kev= %10.3e Z_eff=%g E/J to eta ratio=%g (diff=%g) %s\n",
                      "testSpitzer",stepi,time,n_e/ctx->n_0,ctx->Ez,J,J_re,100*J_re/J,Te_kev,Z,ratio,old_ratio-ratio,
@@ -502,6 +502,7 @@ static PetscErrorCode FormSource(TS ts,PetscReal ftime,Vec X_dummmy, Vec F,void 
     if (rectx->current_rate != 0 && rectx->imp_src) {
       ierr = VecZeroEntries(rectx->imp_src);CHKERRQ(ierr);
     }
+    ierr = VecZeroEntries(F);CHKERRQ(ierr);
     rectx->current_rate = 0;
   }
   PetscFunctionReturn(0);
@@ -524,14 +525,14 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   /* view */
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   if (time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
-    if (reason || stepi==0) {
+    if (reason || stepi==0 ||1) {
       /* print norms */
       ierr = LandauPrintNorms(X, stepi);CHKERRQ(ierr);
     }
     ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
     ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
-    /* diagnostics */
-    ierr = rectx->test(ts,X,plex,stepi,time,reason ? PETSC_TRUE : PETSC_FALSE, ctx,rectx);CHKERRQ(ierr);
+    /* diagnostics + change E field with Sptizer (not just a momitor now!) */
+    ierr = rectx->test(ts,X,plex,stepi,time,reason ? PETSC_TRUE : PETSC_FALSE, ctx, rectx);CHKERRQ(ierr);
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
     /* view */
     ierr = DMSetOutputSequenceNumber(dm, rectx->plotIdx, time*ctx->t_0);CHKERRQ(ierr);
@@ -727,7 +728,9 @@ int main(int argc, char **argv)
   PetscDS        prob;
   LandauCtx      *ctx;
   REctx          *rectx;
-
+#if defined PETSC_USE_LOG
+  PetscLogStage stage;
+#endif
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
   /* Create a mesh */
@@ -757,34 +760,36 @@ int main(int argc, char **argv)
   ierr = TSSetPreStep(ts,PreStep);CHKERRQ(ierr);
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
   if (1) { /* warm up an test just LandauIJacobian */
-    #if defined PETSC_USE_LOG
-    PetscLogStage stage;
-    #endif
     Vec           vec;
     KSP           ksp;
     SNES          snes;
-    ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
-    ierr = VecSet(vec,1.);CHKERRQ(ierr);
-    /* warm up */
+    PetscInt      nsteps;
+    PetscReal     dt;
     ierr = PetscLogStageRegister("Warmup", &stage);CHKERRQ(ierr);
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
-    ierr = LandauIJacobian(ts, 0.0, vec, vec, 0.0, J, J, ctx);CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)J, "Jacobian");CHKERRQ(ierr);
-    ierr = MatViewFromOptions(J,NULL,"-initial_mat_view");CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)J, "Mass + Jacobian");CHKERRQ(ierr);
-    //ierr = VecScale(vec,10.*PETSC_MACHINE_EPSILON);CHKERRQ(ierr);
-    ierr = LandauIJacobian(ts, 0.0, vec, vec, 1.0, J, J, ctx);CHKERRQ(ierr);
-    ierr = MatViewFromOptions(J,NULL,"-initial_mat_view");CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)J, "Jacobian");CHKERRQ(ierr);
-    ierr = TSGetSNES(ts,&snes);CHKERRQ(ierr);
-    ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
-    ierr = KSPSolve(ksp,X,vec);CHKERRQ(ierr);
+    ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
+    ierr = VecCopy(X,vec);CHKERRQ(ierr);
+    ierr = TSGetMaxSteps(ts,&nsteps);
+    ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
+    ierr = TSSetMaxSteps(ts,1);
+    ierr = TSSetSolution(ts,vec);CHKERRQ(ierr);
+    ierr = TSSolve(ts,vec);CHKERRQ(ierr);
+    ierr = TSSetMaxSteps(ts,nsteps);
+    ierr = TSSetStepNumber(ts,0);CHKERRQ(ierr);
+    ierr = TSSetTime(ts,0);CHKERRQ(ierr);
+    ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
+    ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
+    rectx->plotIdx = 0;
+    rectx->plotting = PETSC_TRUE;
     ierr = PetscLogStagePop();CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
   }
   ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr); // inital condition (monitor plots after step)
   /* go */
+  ierr = PetscLogStageRegister("Solve", &stage);CHKERRQ(ierr);
+  ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr);
   /* clean up */
   ierr = LandauDestroyVelocitySpace(&dm);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
