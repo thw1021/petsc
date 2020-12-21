@@ -135,7 +135,7 @@ PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *maps)
 }
 
 PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alpha[], PetscReal nu_beta[], PetscReal invMass[], PetscReal Eq_m[],
-                                    const LandauIPData *const IPData, PetscReal invJ[], const PetscInt num_sub_blocks, const PetscLogEvent events[], Mat JacP)
+                                    const LandauIPData *const IPData, PetscReal a_invJ[], const PetscInt num_sub_blocks, const PetscLogEvent events[], Mat JacP)
 {
   PetscErrorCode    ierr;
   PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,ipdatasz,global_elem_mat_sz;
@@ -197,6 +197,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     using scr_mem_t = Kokkos::DefaultExecutionSpace::scratch_memory_space;
     using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
     using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
+
     const int scr_bytes = 2*(g2_scr_t::shmem_size(dim,Nf,Nq) + g3_scr_t::shmem_size(dim,dim,Nf,Nq));
     int   conc, team_size;
     ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
@@ -214,9 +215,11 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     Kokkos::View<PetscReal*, Kokkos::LayoutLeft> d_DD ("DD", Nq*Nb*dim);
     const Kokkos::View<LandauIPReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_ipdata_raw (IPData->w_data,ipdatasz);
     Kokkos::View<LandauIPReal*, Kokkos::LayoutLeft> d_ipdata_raw ("ipdata", ipdatasz);
-    const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_invJ (invJ,IPData->nip_*dim*dim);
+    const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_invJ (a_invJ,IPData->nip_*dim*dim);
     Kokkos::View<PetscReal*, Kokkos::LayoutLeft> d_invJ ("invJ", IPData->nip_*dim*dim);
     Kokkos::View<PetscScalar**, Kokkos::LayoutRight> d_elem_mats("element matrices", global_elem_mat_sz, totDim*totDim);
+    Kokkos::View<PetscScalar**, Kokkos::LayoutRight> d_f("element matrices", Nf, IPData->nip_);
+    Kokkos::View<PetscScalar***, Kokkos::LayoutRight> d_df("element matrices", dim, Nf, IPData->nip_);
 
     Kokkos::deep_copy (d_ipdata_raw, h_ipdata_raw);
     Kokkos::deep_copy (d_alpha, h_alpha);
@@ -238,6 +241,35 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
 #define KOKKOS_SHARED_LEVEL 1
     //PetscInfo2(plex, "shared memory size: %d bytes in level %d\n",scr_bytes,KOKKOS_SHARED_LEVEL);
     conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
+    // get f and df
+    Kokkos::parallel_for("Landau_elements", Kokkos::TeamPolicy<>(numCells, team_size, num_sub_blocks).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
+        const PetscInt  myelem = team.league_rank();
+        // un pack IPData
+        PetscScalar *IPData_coefs = &d_ipdata_raw[IPData->nip_*((dim+1) + (dim+1)*Nf)];
+        PetscScalar *coef = &IPData_coefs[myelem*Nb*Nf];
+        Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nq), [=] (int myQi) {
+            const PetscInt          ipidx = myQi + myelem * Nq;
+            const PetscReal *const  invJj = &d_invJ(ipidx*dim*dim);
+            const PetscReal         *Bq = &d_BB[myQi*Nb], *Dq = &d_DD[myQi*Nb*dim];
+            Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,(int)Nf), [=] (int f) {
+                PetscInt     b, e, d;
+                PetscScalar  refSpaceDer[LANDAU_DIM];
+                d_f(f,ipidx) = 0.0;
+                for (d = 0; d < LANDAU_DIM; ++d) refSpaceDer[d] = 0.0;
+                for (b = 0; b < Nb; ++b) {
+                  const PetscInt    cidx = b;
+                  d_f(f,ipidx) += Bq[cidx]*coef[f*Nb+cidx];
+                  for (d = 0; d < dim; ++d) refSpaceDer[d] += Dq[cidx*dim+d]*coef[f*Nb+cidx];
+                }
+                for (d = 0; d < dim; ++d) {
+                  for (e = 0, d_df(d,f,ipidx) = 0.0; e < dim; ++e) {
+                    d_df(d,f,ipidx) += invJj[e*dim+d]*refSpaceDer[e];
+                  }
+                }
+              }); // Nf
+          }); // Nq
+        team.team_barrier(); // need this?
+      }); // elems
     Kokkos::parallel_for("Landau_elements", Kokkos::TeamPolicy<>(numCells, team_size, num_sub_blocks).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
         const PetscInt  myelem = team.league_rank();
         g2_scr_t        g2(team.team_scratch(KOKKOS_SHARED_LEVEL),dim,Nf,Nq);
@@ -245,7 +277,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
         g2_scr_t        gg2(team.team_scratch(KOKKOS_SHARED_LEVEL),dim,Nf,Nq);
         g3_scr_t        gg3(team.team_scratch(KOKKOS_SHARED_LEVEL),dim,dim,Nf,Nq);
         LandauIPData    d_IPData;
-        // pack IPData
+        // un pack IPData
         d_IPData.w_data   = &d_ipdata_raw[0];
         d_IPData.x   = &d_ipdata_raw[1*IPData->nip_];
         d_IPData.y   = &d_ipdata_raw[2*IPData->nip_];
@@ -275,12 +307,12 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
                 LandauTensor3D(vj, x, y, z, U, (ipidx==jpidx) ? 0. : 1.);
 #endif
                 for (fieldA = 0; fieldA < Nf; ++fieldA) {
-                  temp1[0] += d_IPData.dfx[ipidx + fieldA*IPData->nip_]*d_beta[fieldA]*d_invMass[fieldA];
-                  temp1[1] += d_IPData.dfy[ipidx + fieldA*IPData->nip_]*d_beta[fieldA]*d_invMass[fieldA];
+                  temp1[0] += d_df(0,fieldA,ipidx)*d_beta[fieldA]*d_invMass[fieldA];
+                  temp1[1] += d_df(1,fieldA,ipidx)*d_beta[fieldA]*d_invMass[fieldA];
 #if LANDAU_DIM==3
-                  temp1[2] += d_IPData.dfz[ipidx + fieldA*IPData->nip_]*d_beta[fieldA]*d_invMass[fieldA];
+                  temp1[2] += d_df(2,fieldA,ipidx)*d_beta[fieldA]*d_invMass[fieldA];
 #endif
-                  temp2    += d_IPData.f[ipidx + fieldA*IPData->nip_]*d_beta[fieldA];
+                  temp2    += d_f(fieldA,ipidx)*d_beta[fieldA];
                 }
                 temp1[0] *= wi;
                 temp1[1] *= wi;

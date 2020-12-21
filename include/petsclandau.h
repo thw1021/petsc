@@ -137,6 +137,7 @@ typedef struct {
   LandauIPReal  *dfx;
   LandauIPReal  *dfy;
   LandauIPReal  *dfz;
+  PetscScalar   *coefs; // global
   int            dim_,ns_,nip_;
 } LandauIPData;
 
