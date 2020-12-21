@@ -11,7 +11,7 @@
 This page provides help with the most common questions about PETSc, it's design,
 execution, and general organization.
 
-.. contents::
+.. contents:: Table Of Contents
    :local:
    :backlinks: top
 
@@ -690,8 +690,8 @@ followed by ``DMDAGlobalToNaturalEnd()`` to scatter the original ``Vec`` into th
 ordering in a new global ``Vec`` before calling ``VecScatterBegin()``/``VecScatterEnd()``
 to scatter the natural ``Vec`` onto all processes.
 
-How Do I Collect To The Zero'th Processor All The Values From A Parallel PETSc ``Vec``
---------------------------------------------------------------------------------------
+How Do I Collect To The Zero'th Processor All The Values From A Parallel PETSc ``Vec``?
+---------------------------------------------------------------------------------------
 
 See FAQ entry on collecting to :ref:`an arbitrary processor <doc_faq_usage_alltoone>`, but
 replace
@@ -789,8 +789,8 @@ those values take effect you should do one of the following:
    /* Can always change to different type */
    XXXSetFromOptions(obj);
 
-How Do I Compile And Link May Own PETSc Application Codes And Can I Use My Own ``makefile`` Or Rules For Compiling Code, Rather Than PETSc's?
-----------------------------------------------------------------------------------------------------------------------------------------------
+How Do I Compile And Link My Own PETSc Application Codes And Can I Use My Own ``makefile`` Or Rules For Compiling Code, Rather Than PETSc's?
+--------------------------------------------------------------------------------------------------------------------------------------------
 
 See the :ref:`section <sec_writing_application_codes>` of the users manual on writing
 application codes with PETSc. This provides a simple makefile that can be used to compiler
@@ -819,9 +819,13 @@ string'//char(10)//'another string`` on the next line.
 How Can I Implement Callbacks Using C++ Class Methods?
 ------------------------------------------------------
 
-Declare the class method static. Static methods do not have a this pointer, but the
+Declare the class method static. Static methods do not have a ``this`` pointer, but the
 ``void*`` context parameter will usually be cast to a pointer to the class where it can
-serve the same function. Note that all PETSc callbacks return ``PetscErrorCode``.
+serve the same function.
+
+.. admonition:: Remember
+
+   All PETSc callbacks return ``PetscErrorCode``.
 
 Everyone Knows That When You Code Newton's Method You Should Compute The Function And Its Jacobian At The Same Time. How Can One Do This In PETSc?
 --------------------------------------------------------------------------------------------------------------------------------------------------
