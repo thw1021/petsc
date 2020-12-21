@@ -281,10 +281,8 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       numCorners=2,dim=1; /* One dimensional network */
-  PetscReal      *vertexcoords=NULL;
   PetscInt       i,j,ctr,*eowners,np,*edges,*subnetvtx,vStart,*vrange,*recvcounts,*displs;
-  PetscInt       k,*vidxlTog,ncv,nsubnet=network->Nsubnet;
+  PetscInt       k,*vidxlTog,ncv,Nsubnet=network->Nsubnet;
   PetscInt       *sedgelist=network->sedgelist;
   const PetscInt *cone;
   MPI_Comm       comm;
@@ -299,7 +297,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
 
-  //printf("[%d] nEdges %d, NEdges %d\n",rank,network->nEdges,network->NEdges);
+  //printf("[%d] Nsubnet %d\n",rank,Nsubnet);
 
   /* (1) Create cvs[]: coupling vertices via copying edgelist_couple */
   /* --------------------------------------------------------------- */
@@ -309,7 +307,6 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   /* (2) Create the local integrated 'edges' by concatenating input local edgelists of the subnetworks */
   /*     Coupling to_vertices are merged to its from_vertices                                          */
   /* ------------------------------------------------------------------------------------------------- */
-  //network->subnet[nsubnet].Nedge = 0; /* no longer being used */
 
   ierr = PetscMalloc3(size+1,&vrange,size+1,&displs,size,&recvcounts);CHKERRQ(ierr);
   for (i=0; i<size; i++) { displs[i] = i; recvcounts[i] = 1;}
@@ -325,8 +322,8 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   ierr = PetscMalloc1(network->nVertices,&vidxlTog);CHKERRQ(ierr);
   i = 0; offset = 0; /* local offset */
   gidx = 0;
-  network->subnet[nsubnet].nvtx = 0;
-  for (net=0; net<nsubnet; net++) {
+  network->subnet[Nsubnet].nvtx = 0;
+  for (net=0; net<Nsubnet; net++) {
     for (idx=0; idx<network->subnet[net].Nvtx; idx++) {
       PetscInt gidx_from = gidx,net_from,cvs_idx;
 
@@ -344,7 +341,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
           net_from = cvs[cvs_idx].vfrom_net; /* netid of its coupling vertex */
           if (network->subnet[net_from].nvtx == 0) {
             /* this proc does not own v_from, thus a new local coupling vertex */
-            network->subnet[nsubnet].nvtx++;
+            network->subnet[Nsubnet].nvtx++;
           }
           vidxlTog[i++] = gidx_from;
           offset--; /* a coupling vertex -- merged */
@@ -353,9 +350,9 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
         if (cvtype == CVFROM) {
           if (network->subnet[net].nvtx) {
             /* this proc owns this v_from, a new local coupling vertex */
-            network->subnet[nsubnet].nvtx++;
+            network->subnet[Nsubnet].nvtx++;
           }
-          network->subnet[nsubnet].Nvtx++;
+          network->subnet[Nsubnet].Nvtx++;
         }
         if (network->subnet[net].nvtx) vidxlTog[i++] = gidx;
         gidx++;
@@ -368,11 +365,11 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   ierr = MPI_Allreduce(&offset,&np,1,MPIU_INT,MPI_SUM,comm);CHKERRQ(ierr);
   network->NVertices += np;
 
-  ierr = PetscCalloc2(2*network->nVertices,&vertexcoords,2*network->nEdges,&edges);CHKERRQ(ierr);
-  ierr = PetscCalloc1(network->nVertices+network->subnet[nsubnet].nvtx,&network->subnetvtx);CHKERRQ(ierr);
+  ierr = PetscCalloc1(2*network->nEdges,&edges);CHKERRQ(ierr);
+  ierr = PetscCalloc1(network->nVertices+network->subnet[Nsubnet].nvtx,&network->subnetvtx);CHKERRQ(ierr);
 
   ctr = 0;
-  for (net=0; net<nsubnet; net++) {
+  for (net=0; net<Nsubnet; net++) {
     //printf("[%d] subnet[%d].vStart = %d; nedges %d\n",rank,net,network->subnet[net].vStart,network->subnet[net].nedge);
     for (j = 0; j < network->subnet[net].nedge; j++) {
       /* vfrom: */
@@ -387,6 +384,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
     }
   }
   ierr = PetscFree3(vrange,displs,recvcounts);CHKERRQ(ierr);
+  ierr = PetscFree(vidxlTog);CHKERRQ(ierr);
   /*
   ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] network->nEdges %d,%d; network->nVertices %d, NVertices %d, offset %d\n",rank,network->nEdges,network->NEdges,network->nVertices,network->NVertices,offset);CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);CHKERRQ(ierr);
@@ -395,11 +393,11 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   /* (3) Create network->plex */
   ierr = DMCreate(comm,&network->plex);CHKERRQ(ierr);
   ierr = DMSetType(network->plex,DMPLEX);CHKERRQ(ierr);
-  ierr = DMSetDimension(network->plex,dim);CHKERRQ(ierr);
+  ierr = DMSetDimension(network->plex,1);CHKERRQ(ierr);
   if (size == 1) {
-    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices,numCorners,edges);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices,2,edges);CHKERRQ(ierr);
   } else {
-    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices+offset,network->NVertices,numCorners,edges,NULL);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices+offset,PETSC_DECIDE,2,edges,NULL);CHKERRQ(ierr);
   }
 
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
@@ -416,27 +414,23 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   np = network->pEnd - network->pStart;
   ierr = PetscCalloc2(np,&network->header,np,&network->cvalue);CHKERRQ(ierr);
 
-  /* (4) Create vidxlTog: maps plex local vertex index to global vertex index */
-  ierr = PetscFree(vidxlTog);CHKERRQ(ierr);
+  /* (4) Create vidxlTog: maps plex local vertex index to User's global vertex index (without merging shared vertices) */
   np = network->vEnd - vStart; /* include ghost vertices */
   ierr = PetscMalloc2(np,&vidxlTog,size+1,&eowners);CHKERRQ(ierr);
 
   ctr = 0;
-  for (i=network->eStart; i<network->eEnd; i++) {
-    ierr = DMNetworkGetConnectedVertices(dm,i,&cone);CHKERRQ(ierr);
+  for (e=network->eStart; e<network->eEnd; e++) {
+    ierr = DMNetworkGetConnectedVertices(dm,e,&cone);CHKERRQ(ierr);
     vidxlTog[cone[0] - vStart] = edges[2*ctr];
     vidxlTog[cone[1] - vStart] = edges[2*ctr+1];
     ctr++;
   }
-  ierr = PetscFree2(vertexcoords,edges);CHKERRQ(ierr);
+  ierr = PetscFree(edges);CHKERRQ(ierr);
 
   /* (5) Create vertices and edges array for the subnetworks */
   subnetvtx = network->subnetvtx;
-  for (j=0; j < nsubnet + network->ncsubnet; j++) {
+  for (j=0; j < Nsubnet + network->ncsubnet; j++) {
     ierr = PetscCalloc1(network->subnet[j].nedge,&network->subnet[j].edges);CHKERRQ(ierr);
-    /* Temporarily setting nvtx and nedge to 0 so we can use them as counters in the below for loop.
-       These get updated when the vertices and edges are added. */
-    if (j < nsubnet) network->subnet[j].nedge = 0;
     network->subnet[j].vertices = subnetvtx;
     subnetvtx                  += network->subnet[j].nvtx;
   }
@@ -447,50 +441,56 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   eowners[0] = 0;
   for (i=2; i<=size; i++) eowners[i] += eowners[i-1];
 
-  e = 0; j = 0; v = 0;
-  while (e < np) { /* local edges, coupling edges take place of corresponding local edges */
-    network->header[e].index = e + eowners[rank];   /* Global edge index */
+  e = 0;
+  for (i=0; i < Nsubnet; i++) {
+    v = 0;
+    for (j = 0; j < network->subnet[i].nedge; j++) {
 
-    if (j < nsubnet && e < network->subnet[j].eEnd) {
-      ierr = DMPlexGetCone(network->plex,e,&cone);CHKERRQ(ierr);
-      /* vfrom */
-      vfrom = network->subnet[j].edgelist[2*v];
-      network->header[cone[0]].subnetid = j; /* Subnetwork id */
-      network->subnet[j].vertices[vfrom] = cone[0]; /* user's subnet[].dix = petsc's v */
-      /* vto */
-      vto   = network->subnet[j].edgelist[2*v+1];
-      network->header[cone[1]].subnetid   = j;
-      network->subnet[j].vertices[vto]= cone[1];
+      /* edge e */
+      network->header[e].index    = e + eowners[rank]; /* Global edge index */
+      network->header[e].subnetid = i;                 /* Subnetwork id */
+      network->subnet[i].edges[j] = e;
 
-      network->header[e].subnetid = j; /* Subnetwork id */
-      network->subnet[j].edges[network->subnet[j].nedge++] = e;
-
-      network->header[e].ndata = 0;
-      ierr = PetscSectionAddDof(network->DataSection,e,network->dataheadersize);CHKERRQ(ierr);
-      network->header[e].offset[0] = 0;
+      network->header[e].ndata           = 0;
+      network->header[e].offset[0]       = 0;
       network->header[e].offsetvarrel[0] = 0;
+      ierr = PetscSectionAddDof(network->DataSection,e,network->dataheadersize);CHKERRQ(ierr);
+
+      /* connected vertices */
+      ierr = DMPlexGetCone(network->plex,e,&cone);CHKERRQ(ierr);
+
+      /* vertex cone[0] */
+      vfrom = network->subnet[i].edgelist[2*v];
+      network->header[cone[0]].index = vidxlTog[cone[0]-vStart]; /*  Global vertex index */
+      network->header[cone[0]].subnetid = i;                     /* Subnetwork id */
+      network->subnet[i].vertices[vfrom] = cone[0];              /* user's subnet[].dix = petsc's v */
+
+      /* vertex cone[1] */
+      vto = network->subnet[i].edgelist[2*v+1];
+
+      network->header[cone[1]].index = vidxlTog[cone[1]-vStart]; /*  Global vertex index */
+      network->header[cone[1]].subnetid   = i;
+      network->subnet[i].vertices[vto]= cone[1];
+
       e++; v++;
     }
-    if (e >= network->subnet[j].eEnd) {j++; v = 0;}
   }
 
   /* Set vertex array for the subnetworks */
   k = 0;
   for (v=vStart; v<network->vEnd; v++) { /* local vertices, including ghosts */
-    network->header[v].index = vidxlTog[v-vStart]; /*  Global vertex index */
-
-    network->header[v].ndata = 0;
-    ierr = PetscSectionAddDof(network->DataSection,v,network->dataheadersize);CHKERRQ(ierr);
-    network->header[v].offset[0] = 0;
+    network->header[v].ndata           = 0;
+    network->header[v].offset[0]       = 0;
     network->header[v].offsetvarrel[0] = 0;
+    ierr = PetscSectionAddDof(network->DataSection,v,network->dataheadersize);CHKERRQ(ierr);
 
     /* coupling vertices */
     ierr = CouplingVtxGetInfo(ncv,cvs,vidxlTog[v-vStart],&cvtype,NULL);CHKERRQ(ierr);
     if (cvtype == CVFROM) {
-      network->subnet[nsubnet].vertices[k++] = v;
+      network->subnet[Nsubnet].vertices[k++] = v;
     }
   }
-  if (k != network->subnet[nsubnet].nvtx) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"k %D != %D csubnet.nvtx",k,network->subnet[nsubnet].nvtx);
+  if (k != network->subnet[Nsubnet].nvtx) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"k %D != %D csubnet.nvtx",k,network->subnet[Nsubnet].nvtx);
 
   ierr = PetscFree2(vidxlTog,eowners);CHKERRQ(ierr);
 
@@ -610,6 +610,11 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
       network->header[e].subnetid = i;
       network->subnet[i].edges[j] = e;
 
+      network->header[e].ndata           = 0;
+      network->header[e].offset[0]       = 0;
+      network->header[e].offsetvarrel[0] = 0;
+      ierr = PetscSectionAddDof(network->DataSection,e,network->dataheadersize);CHKERRQ(ierr);
+
       /* connected vertices */
       ierr = DMPlexGetCone(network->plex,e,&cone);CHKERRQ(ierr);
 
@@ -630,11 +635,11 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   }
   ierr = PetscFree(eowners);CHKERRQ(ierr);
 
-  for (i = network->pStart; i< network->pEnd; i++) {
-    network->header[i].ndata           = 0;
-    network->header[i].offset[0]       = 0;
-    network->header[i].offsetvarrel[0] = 0;
-    ierr = PetscSectionAddDof(network->DataSection,i,network->dataheadersize);CHKERRQ(ierr);
+  for (v = network->vStart; v < network->vEnd; v++) {
+    network->header[v].ndata           = 0;
+    network->header[v].offset[0]       = 0;
+    network->header[v].offsetvarrel[0] = 0;
+    ierr = PetscSectionAddDof(network->DataSection,v,network->dataheadersize);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
