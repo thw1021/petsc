@@ -25,6 +25,8 @@ class Configure(config.package.GNUPackage):
     args = self.formGNUConfigureArgs()
     args = self.rmArgsStartsWith(args,'--libdir')
     args = self.rmArgsStartsWith(args,'--enable-shared')
+    if self.mpi.mpi_pkg:
+      args.append('--mpi='+self.mpi.mpi_pkg)
     args = ' '.join(args)
     conffile = os.path.join(self.packageDir,self.package+'.petscconf')
     fd = open(conffile, 'w')
