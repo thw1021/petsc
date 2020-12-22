@@ -31,7 +31,6 @@ typedef struct {
   PetscInt size;
 } DMNetworkComponent PETSC_ATTRIBUTEALIGNED(PetscMax(sizeof(double),sizeof(PetscScalar)));
 
-
 /* Indexing data structures for vertex and edges */
 typedef struct {
   PetscSection                      DofSection;
@@ -47,13 +46,14 @@ typedef struct {
   PetscSF                           sf;
 } DMNetworkEdgeInfo;
 
+/* Shared vertex - collection of vertices in subnetworks that share a single vertex, e.g., vfrom=(vfrom_net,vfrom_idx) */
 typedef struct {
-  PetscInt gidx_from; /* global idx of the coupling vertex, shared by from/to vertices in the integrated network */
-  PetscInt vfrom_net,vfrom_idx; /* subnet number and local idx for from_vertex */
-  PetscInt nvto; /* num of to_vertices, i.e., vertex [to_net,to_idx] couples vertex [vfrom_net, vfrom_dix] */
-  PetscInt *vto; /* array: vto[2*j]=vto_net[j], vto[2*j+1]=vto_idx[j], j=0,...,nvto-1 */
-} CEdge;
-typedef enum {CVNONE=-1, CVFROM=0, CVTO=1} CVertexType;
+  PetscInt gidx_from;           /* global index of the shared vertices in dmplex */
+  PetscInt vfrom_net,vfrom_idx; /* subnet number and index of vfrom */
+  PetscInt nvto;                /* num of to_vertices, i.e., vto=(to_net,to_idx) shares with vfrom=(vfrom_net,vfrom_dix) */
+  PetscInt *vto;                /* array of size nvto: vto[2*j]=vto_net[j], vto[2*j+1]=vto_idx[j], j=0,...,nvto-1 */
+} SVtx;
+typedef enum {SVNONE=-1, SVFROM=0, SVTO=1} SVtxType;
 
 typedef struct {
   PetscInt  Nvtx, nvtx;     /* Number of global/local vertices */
@@ -94,7 +94,7 @@ typedef struct {
   PetscInt                          ncsubnet;        /* Global number of coupling subnetworks --rm!!! */
   DMSubnetwork                      *subnet;         /* Subnetworks */
   PetscInt                          *subnetvtx;      /* Maps local vertex to local subnetwork's vertex */
-  CEdge                             *svtx;           /* Array of vertices shared by subnetworks */
+  SVtx                              *svtx;           /* Array of vertices shared by subnetworks */
   PetscInt                          nsvtx;           /* Num of entries in svtx */
   PetscInt                          *sedgelist;      /* edge list of shared vertices */
 
