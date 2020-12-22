@@ -46,13 +46,19 @@ extern void PetscRmPointer(void*);
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
 #define petscfvsettype_ petscfvsettype
 #endif
+/* Extra wrappers for PetscDS */
 /* Routine PetscDSView */
 #ifdef PETSC_HAVE_FORTRAN_CAPS
 #define petscdsview_ PETSCDSVIEW
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
 #define petscdsview_ petscdsview
 #endif
-/* Extra wrappers for PetscDS */
+/* Routine PetscDSSetContext */
+#ifdef PETSC_HAVE_FORTRAN_CAPS
+#define petscdssetcontext_ PETSCDSSETCONTEXT
+#elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
+#define petscdssetcontext_ petscdssetcontext
+#endif
 /* Routine PetscDSSetRiemannSolver */
 #ifdef PETSC_HAVE_FORTRAN_CAPS
 #define petscdssetriemannsolver_ PETSCDSSETRIEMANNSOLVER
@@ -78,23 +84,30 @@ extern void PetscRmPointer(void*);
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
 #define dmtssetrhsfunctionlocal_ dmtssetrhsfunctionlocal
 #endif
+/* Routine DMProjectFunction */
+#ifdef PETSC_HAVE_FORTRAN_CAPS
+#define dmprojectfunction_ DMPROJECTFUNCTION
+#elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
+#define dmprojectfunction_ dmprojectfunction
+#endif
 
 /* Fortran callback identifiers */
 static PetscFortranCallbackId riemannsolver;
 static PetscFortranCallbackId bocofunc, bocofunc_time;
 static PetscFortranCallbackId dmtsbocofunc;
 static PetscFortranCallbackId dmtsrhsfunc;
+static PetscFortranCallbackId dmprojfunc;
 
 /* Definitions of extra wrapper routines */
 #if defined(__cplusplus)
 extern "C" {
 #endif
 /* Routine PetscFVSetComponentName */
-PETSC_EXTERN void petscfvsetcomponentname_(PetscFV fvm, PetscInt *comp, char* name, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len)
+PETSC_EXTERN void petscfvsetcomponentname_(PetscFV *fvm, PetscInt *comp, char* name, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len)
 {
     char *compname;
     FIXCHAR(name, len, compname);
-    *ierr = PetscFVSetComponentName((PetscFV)PetscToPointer((fvm)), *comp, compname); if (*ierr) return;
+    *ierr = PetscFVSetComponentName(*fvm, *comp, compname); if (*ierr) return;
     FREECHAR(name, compname);
 }
 /* Routine PetscFVView */
@@ -119,18 +132,23 @@ PETSC_EXTERN void petscdsview_(PetscDS *prob, PetscViewer *vin, PetscErrorCode *
     PetscPatchDefaultViewers_Fortran(vin, v);
     *ierr = PetscDSView(*prob, v);
 }
+/* Routine PetscDSSetContext */
+PETSC_EXTERN void petscdssetcontext_(PetscDS *prob, PetscInt *f, void *ctx, PetscErrorCode *ierr)
+{
+    *ierr = PetscDSSetContext(*prob, *f, *prob);
+}
 /* Routine PetscDSSetRiemannSolver */
 static PetscErrorCode ourriemannsolver(PetscInt dim, PetscInt Nf, PetscReal x[], PetscReal n[], PetscScalar uL[], PetscScalar uR[], PetscInt numConstants, PetscScalar constants[], PetscScalar flux[], void *ctx)
 {
     PetscObjectUseFortranCallback((PetscDS)ctx, riemannsolver,
                                   (PetscInt*,PetscInt*,PetscReal*,PetscReal*,PetscScalar*,PetscScalar*,PetscInt*,PetscScalar*,PetscScalar*,void*,PetscErrorCode*),
-                                  (&dim,&Nf,x,n,uL,uR,&numConstants,constants,flux,ctx,&ierr));
+                                  (&dim,&Nf,x,n,uL,uR,&numConstants,constants,flux,_ctx,&ierr));
 }
 PETSC_EXTERN void petscdssetriemannsolver_(PetscDS *prob, PetscInt *f,
                                            void (*rs)(PetscInt*,PetscInt*,PetscReal*,PetscReal*,PetscScalar*,PetscScalar*,PetscInt*,PetscScalar*,PetscScalar*,void*,PetscErrorCode*),
                                            PetscErrorCode *ierr)
 {
-    *ierr = PetscObjectSetFortranCallback((PetscObject)*prob, PETSC_FORTRAN_CALLBACK_CLASS, &riemannsolver, (PetscVoidFunction)rs, prob);
+    *ierr = PetscObjectSetFortranCallback((PetscObject)*prob, PETSC_FORTRAN_CALLBACK_CLASS, &riemannsolver, (PetscVoidFunction)rs, NULL);
     *ierr = PetscDSSetRiemannSolver(*prob, *f, (void*)ourriemannsolver);
 }
 /* Routine PetscDSAddBoundary */
@@ -160,7 +178,7 @@ PETSC_EXTERN void petscdsaddboundary_(PetscDS *prob, DMBoundaryConditionType *ty
     *ierr = PetscDSAddBoundary(*prob, *type, newname, newlabelname, *field, *numcomps, comps,
                                (void (*)(void))ourbocofunc,
                                (void (*)(void))ourbocofunc_time,
-                               *numids, ids, ctx);
+                               *numids, ids, *prob);
     FREECHAR(name, newname);
     FREECHAR(labelname, newlabelname);
 }
@@ -191,6 +209,24 @@ PETSC_EXTERN void dmtssetrhsfunctionlocal_(DM *dm,
 {
     *ierr = PetscObjectSetFortranCallback((PetscObject)*dm, PETSC_FORTRAN_CALLBACK_CLASS, &dmtsrhsfunc, (PetscVoidFunction)func, ctx);
     *ierr = DMTSSetRHSFunctionLocal(*dm, ourdmtsrhsfunc, ctx);
+}
+/* Routine DMProjectFunction */
+static PetscErrorCode ourdmprojfunc(PetscInt dim, PetscReal time, PetscReal* x, PetscInt Nf, PetscScalar* u, void *ctx)
+{
+    PetscObjectUseFortranCallback((DM)ctx, dmprojfunc,
+                                  (PetscInt*,PetscReal*,PetscReal*,PetscInt*,PetscScalar*,void*,PetscErrorCode*),
+                                  (&dim,&time,x,&Nf,u,_ctx,&ierr))
+}
+PETSC_EXTERN void dmprojectfunction_(DM *dm, PetscReal *time,
+                                     void (*func)(PetscInt*,PetscReal*,PetscReal*,PetscInt*,PetscScalar*,void*,PetscErrorCode*),
+                                     void *ctx, InsertMode *mode, Vec *X, PetscErrorCode *ierr)
+{
+    PetscErrorCode (*funcarr[1]) (PetscInt dim, PetscReal time, PetscReal* x, PetscInt Nf, PetscScalar *u, void *ctx);
+    void *ctxs[1];
+    *ierr = PetscObjectSetFortranCallback((PetscObject)*dm, PETSC_FORTRAN_CALLBACK_CLASS, &dmprojfunc, (PetscVoidFunction)func, ctx);
+    funcarr[0] = ourdmprojfunc;
+    ctxs[0]    = (void*) *dm;
+    *ierr = DMProjectFunction(*dm, *time, funcarr, ctxs, *mode, *X);
 }
 #if defined(__cplusplus)
 }

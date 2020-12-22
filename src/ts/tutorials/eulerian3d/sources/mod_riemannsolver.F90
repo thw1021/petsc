@@ -15,7 +15,7 @@ module riemannsolver
         PetscInt                        :: dim, Nf, numConstants
         PetscReal, dimension(0:ndim-1)  :: qp, n
         PetscScalar, dimension(0:nvar-1):: uL, uR, constants, flux
-        PetscReal, dimension(:)         :: ctx
+        PetscScalar, dimension(:)       :: ctx
 
         PetscReal, dimension(0:ndim-1)  :: nn
         PetscReal                       :: norm
@@ -30,9 +30,13 @@ module riemannsolver
         norm = sqrt(norm)
         nn   = nn/norm
 
+        ! Call user-chosen Riemann solver
         if (RSname == "HLL") then
             call HLL(uL, uR, nn, flux)
         end if
+
+        ! Weight the flux by the area of the face
+        flux = flux * norm
 
     end subroutine RSChoice
 
@@ -78,7 +82,7 @@ module riemannsolver
         fR(4) = unR*(consR(4)+pR)
 
         ! HLL flux
-        flux = 1.d0/(SR-SL)*(SR*fL-SL*fR + SL*SR*(consR-consL))
+        flux = 1.d0/(SR-SL)*(SR*fL - SL*fR + SL*SR*(consR-consL))
 
     end subroutine HLL
 

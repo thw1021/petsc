@@ -66,6 +66,7 @@ module finitevolume
             call DMGetDS(dm, prob, ierr)                             ; CHKERRA(ierr)
             ! Get Riemann solver
             call PetscDSSetRiemannSolver(prob, 0, RSChoice, ierr)    ; CHKERRA(ierr)
+            call PetscDSSetContext(prob, 0, context, ierr)           ; CHKERRA(ierr)
             ! Setup Boundary Conditions
             call setupBC(prob, context);
             ! Finish setting up DS

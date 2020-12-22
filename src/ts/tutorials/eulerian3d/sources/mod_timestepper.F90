@@ -71,13 +71,18 @@ module timestepper
 
         subroutine marchTime
 
-            PetscErrorCode :: ierr
+            PetscErrorCode         :: ierr
+            PetscReal              :: ftime
+            PetscInt               :: nsteps
+            character(len=MSTRLEN) :: filename
+            PetscViewer            :: vtkViewer
 
             call PetscPrintf(PETSC_COMM_WORLD, "Starting computation...\n", ierr); CHKERRA(ierr)
 
             ! Set time step
-            call TSSetTimeStep(timeS, 1.d-4, ierr); CHKERRA(ierr)
-            ! FInalize setting up time stepper
+            call TSSetTimeStep(timeS, 1.d-3, ierr); CHKERRA(ierr)
+
+            ! Finalize setting up time stepper
             call TSSetFromOptions(timeS, ierr);     CHKERRA(ierr)
             if (debug) then
                 ! Show in terminal
@@ -86,8 +91,21 @@ module timestepper
                 call PetscPrintf(PETSC_COMM_WORLD, ":: [DEBUG] Visualizing DM in console ::\n", ierr); CHKERRA(ierr)
                 call DMView(dm, PETSC_VIEWER_STDOUT_WORLD, ierr);                                      CHKERRA(ierr)
             end if
+
             ! Solve the problem
-            call TSSolve(timeS, sol, ierr); CHKERRA(ierr)
+            call TSSolve(timeS, sol, ierr);                                                            CHKERRA(ierr)
+
+            ! Get back the solver final time and final iteration number
+            call TSGetSolveTime(timeS, ftime, ierr);                                                   CHKERRA(ierr)
+            call TSGetStepNumber(timeS, nsteps, ierr);                                                 CHKERRA(ierr)
+
+            ! VTK viewer for the final solution
+            call PetscViewerCreate(PETSC_COMM_WORLD, vtkViewer, ierr);                                 CHKERRA(ierr)
+            call PetscViewerSetType(vtkViewer, PETSCVIEWERVTK, ierr);                                  CHKERRA(ierr)
+            write(filename,'(A,I5.5,A)') "solution_", nsteps, ".vtu"
+            call PetscViewerFileSetName(vtkViewer, trim(filename), ierr);                              CHKERRA(ierr)
+            call VecView(sol, vtkViewer, ierr);                                                        CHKERRA(ierr)
+            call PetscViewerDestroy(vtkViewer, ierr);                                                  CHKERRA(ierr)
 
             call PetscPrintf(PETSC_COMM_WORLD, "Done !\n", ierr); CHKERRA(ierr)
         end subroutine marchTime

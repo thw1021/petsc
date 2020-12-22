@@ -22,11 +22,11 @@ module input_parameter
     !> @var Courant number for the explicit temporal integration
     double precision, parameter       :: CFL                = 0.7d0
     !> @var Final time to be reached by temporal integration
-    double precision, parameter       :: tfinal             = 1.0d0
+    double precision, parameter       :: tfinal             = 0.2d0
     !> @var Maximum number of iterations of the time loop
     !> The computation stops either at tfinal or at maxiter,
     !> whichever is the first condition met
-    integer, parameter                :: maxiter            = 1000000
+    integer, parameter                :: maxiter            = 10000
     !> @var Order of the Runge-Kutta integration
     !> RKorder = 1 : Explicit Euler
     !> RKorder = 2 : RK 2 SSP
@@ -47,7 +47,7 @@ module input_parameter
     integer, parameter                :: screen_output_freq = 1
     !> @var Frequency, in iterations, to dump a solution file
     integer, parameter                :: file_output_freq   = 10
-    !> @var Name of the case to initialize 
+    !> @var Name of the case to initialize
     character(len=MSTRLEN), parameter :: case               = "sodx"
 
 end module input_parameter
