@@ -98,8 +98,8 @@ uses a different memory bus:
 
 - ``taskset``, part of the `util-linux <https://github.com/karelzak/util-linux>`__ package
 
-  - Check ``man taskset`` for details. Make sure to set affinity for **your** program,
-    **not** for the ``mpiexec`` program.
+  Check ``man taskset`` for details. Make sure to set affinity for **your** program,
+  **not** for the ``mpiexec`` program.
 
 - ``numactl``
 
@@ -462,8 +462,8 @@ This happens for generally one of two reasons:
      > rm -rf $PETSC_DIR/$PETSC_ARCH
      > ./configure --your-args
 
-What Does It Mean When ``make check`` Errors On ``PetscOptionsInsertFile()``?
------------------------------------------------------------------------------
+What Does It Mean When ``make check`` Errors On PetscOptionsInsertFile()?
+-------------------------------------------------------------------------
 
 For example:
 
@@ -649,8 +649,8 @@ takes advantage of the natural blocks in your matrix to obtain good performance.
 
    If you use ``MATIJ`` you cannot use the ``MatSetValuesBlocked()``.
 
-How Do I Access The Values Of A Remote Parallel PETSc ``Vec``?
---------------------------------------------------------------
+How Do I Access The Values Of A Remote Parallel PETSc Vec?
+----------------------------------------------------------
 
 #. On each process create a local ``Vec`` large enough to hold all the values it wishes to
    access.
@@ -661,8 +661,8 @@ How Do I Access The Values Of A Remote Parallel PETSc ``Vec``?
 
 .. _doc_faq_usage_alltoone:
 
-How Do I Collect To A Single Processor All The Values From A Parallel PETSc ``Vec``?
-------------------------------------------------------------------------------------
+How Do I Collect To A Single Processor All The Values From A Parallel PETSc Vec?
+--------------------------------------------------------------------------------
 
 #. Create the ``VecScatter`` context that will do the communication:
 
@@ -742,8 +742,8 @@ For other formats, either adapt one of the above libraries or see the examples i
 
 .. todo:: why? Original entry referenced non-existent (possibly deprecated) functions. Is this still correct?
 
-Does ``TSSetFromOptions()``, ``SNESSetFromOptions()`` or ``KSPSetFromOptions()`` reset all the parameters I previously set or how come my ``TS/SNES/KSPSetXXX()`` does not seem to work?
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Does TSSetFromOptions(), SNESSetFromOptions() or KSPSetFromOptions() reset all the parameters I previously set or how come do they not seem to work?
+----------------------------------------------------------------------------------------------------------------------------------------------------
 
 .. todo:: figure out how to insert links but not break the title link
 
@@ -807,8 +807,8 @@ which can be be read by ``FindPkgConfig.cmake``. If you must use a very old vers
 CMake and/or PETSc, you can use the ``FindPETSc.cmake`` module from `this repository
 <https://github.com/jedbrown/cmake-modules/>`__.
 
-How Can I Put Carriage Returns In ``PetscPrintf()`` Statements From Fortran?
-----------------------------------------------------------------------------
+How Can I Put Carriage Returns In PetscPrintf() Statements From Fortran?
+------------------------------------------------------------------------
 
 You can use the same notation as in C, just put a ``\n`` in the string. Note that no other C
 format instruction is supported.
@@ -899,8 +899,8 @@ the only general purpose way to determine which approach is best for your proble
    the problem since the performance benifits depend on the exact problem and and problem
    size!
 
-How Can I Use Newton'S Method Jacobian Free? Can I Difference A Different Function Than Provided With ``SNESSetFunction()``?
-----------------------------------------------------------------------------------------------------------------------------
+How Can I Use Newton's Method Jacobian Free? Can I Difference A Different Function Than Provided With SNESSetFunction()?
+------------------------------------------------------------------------------------------------------------------------
 
 The simplest way is with the option ``-snes_mf``, this will use finite differencing of the
 function provided to ``SNESComputeFunction()`` to approximate the action of Jacobian.
@@ -982,7 +982,8 @@ How Can I Compute The Schur Complement In PETSc?
 
 .. todo:: The notation makes no sense, needs some clarification
 
-The Schur complement of the matrix
+The Schur complement of the matrix :math:`M \in \mathbb{R}^{\left(p+q \right) \times
+\left(p + q \right)}`
 
 .. math::
 
@@ -990,6 +991,12 @@ The Schur complement of the matrix
    A & B \\
    C & D
    \end{bmatrix}
+
+where
+
+.. math::
+
+   A \in \mathbb{R}^{p \times p}, \quad B \in \mathbb{R}^{p \times q}, \quad C \in \mathbb{R}^{q \times p}, \quad D \in \mathbb{R}^{q \times q}
 
 is given by
 
@@ -1002,27 +1009,27 @@ Or more generally
 
 .. math::
 
-   S_{da} = M_{bb} - M_{ab}M_{bb}^{-1}M_{ba}
+   S_{da} = M_{ad} - M_{bc}M_{da}^{-1}M_{cb}
 
 .. todo:: This could do with being converted to a code sample instead of instructions
 
 Like the inverse, the Schur complement of a matrix (dense or sparse) is essentially always
-dense, so begin by:
+dense, so assuming you wish to calculate :math:`M/D`:
 
-#. Forming a dense matrix :math:`K_{cb}`
+#. Forming a dense matrix :math:`M_c`
 
 #. Also create another dense matrix T of the same size.
 
-#. Then either factor the matrix :math:`K_{aa}` directly with ``MatLUFactor()`` or
+#. Then either factor the matrix :math:`M_d` directly with ``MatLUFactor()`` or
    ``MatCholeskyFactor()``, or use ``MatGetFactor()`` followed by
    ``MatLUFactorSymbolic()`` followed by ``MatLUFactorNumeric()`` if you wish to use and
    external solver package like SuperLU_Dist. Call the result A.
 
-#. Then call ``MatMatSolve(A,Kba,T)``.
+#. Then call ``MatMatSolve(A,M_c,T)``.
 
-#. Then call ``MatMatMult(Kab,T,MAT_INITIAL_MATRIX,1.0,&S)``.
+#. Then call ``MatMatMult(M_b,T,MAT_INITIAL_MATRIX,1.0,&S)``.
 
-#. Now call ``MatAXPY(S,-1.0,Kbb,MAT_SUBSET_NONZERO)``.
+#. Now call ``MatAXPY(S,-1.0,M_a,MAT_SUBSET_NONZERO)``.
 
 #. Followed by ``MatScale(S,-1.0)``.
 
@@ -1032,11 +1039,11 @@ factorization is much faster than iterative solvers. As you can see, this requir
 deal of work space and computation so is best avoided.
 
 However, it is not necessary to assemble the Schur complement :math:`S` in order to solve
-systems with it. Use ``MatCreateSchurComplement(Kaa,Kaa_pre,Kab,Kba,Kbb,&S)`` to create a
-matrix that applies the action of :math:`S` (using ``Kaa_pre`` to solve with ``Kaa``), but
+systems with it. Use ``MatCreateSchurComplement(M_a,M_a_pre,M_b,M_c,M_d,&S)`` to create a
+matrix that applies the action of :math:`S` (using ``M_a_pre`` to solve with ``M_a``), but
 does not assemble.
 
-Alternatively, if you already have a block matrix ``K = [Kaa, Kab; Kba, Kbb]`` (in some
+Alternatively, if you already have a block matrix ``M = [M_a, M_b; M_c, M_d]`` (in some
 ordering), then you can create index sets (``IS``) ``isa`` and ``isb`` to address each
 block, then use ``MatGetSchurComplement()`` to create the Schur complement and/or an
 approximation suitable for preconditioning.
@@ -1047,11 +1054,17 @@ complements including using the ``SIMPLE`` approximation
 
 .. math::
 
-   K_bb - K_{ba} diag(K_{aa})^{-1} K_{ab}
+   M_a - M_b \text{diag}(M_d)^{-1} M_c
 
-to create a sparse matrix that approximates the Schur complement (this is returned by default for the optional "preconditioning" matrix in ``MatGetSchurComplement()``).
+to create a sparse matrix that approximates the Schur complement (this is returned by
+default for the optional "preconditioning" matrix in ``MatGetSchurComplement()``).
 
-An alternative is to interpret the matrices as differential operators and apply approximate commutator arguments to find a spectrally equivalent operation that can be applied efficiently (see the "PCD" preconditioners from Elman, Silvester, and Wathen). A variant of this is the least squares commutator, which is closely related to the Moore-Penrose pseudoinverse, and is available in ``PCLSC`` which operates on matrices of type ``MATSCHURCOMPLEMENT``.
+An alternative is to interpret the matrices as differential operators and apply
+approximate commutator arguments to find a spectrally equivalent operation that can be
+applied efficiently (see the "PCD" preconditioners from Elman, Silvester, and Wathen). A
+variant of this is the least squares commutator, which is closely related to the
+Moore-Penrose pseudoinverse, and is available in ``PCLSC`` which operates on matrices of
+type ``MATSCHURCOMPLEMENT``.
 
 .. todo:: citations needed
 
@@ -1070,8 +1083,8 @@ There are at least two ways to write a finite element code using PETSc:
 
 .. todo:: this feels outdated
 
-``DMDA`` Decomposes The Domain Differently Than The ``Mpi_Cart_create()`` Command. How Can One Use Them Together?
------------------------------------------------------------------------------------------------------------------
+DMDA Decomposes The Domain Differently Than The Mpi_Cart_create() Command. How Can One Use Them Together?
+---------------------------------------------------------------------------------------------------------
 
 The ``MPI_Cart_create()`` first divides the mesh along the z direction, then the y, then
 the x. ``DMDA`` divides along the x, then y, then z. Thus, for example, rank 1 of the
@@ -1108,8 +1121,8 @@ provided by Rolf Kuiper:
    // override the default communicator (was MPI_COMM_WORLD as default)
    PETSC_COMM_WORLD = NewComm;
 
-When Solving A System With Dirichlet Boundary Conditions I Can Use ``MatZeroRows()`` To Eliminate The Dirichlet Rows But This Results In A Non-Symmetric System. How Can I Apply Dirichlet Boundary Conditions But Keep The Matrix Symmetric?
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+When Solving A System With Dirichlet Boundary Conditions I Can Use MatZeroRows() To Eliminate The Dirichlet Rows But This Results In A Non-Symmetric System. How Can I Apply Dirichlet Boundary Conditions But Keep The Matrix Symmetric?
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 - For nonsymmetric systems put the appropriate boundary solutions in the x vector and use
   ``MatZeroRows()`` followed by ``KSPSetOperators()``.
@@ -1127,8 +1140,8 @@ them to the matrix), never to include locations for the Dirichlet grid points in
 vector and matrix, instead taking them into account as you put the other values into the
 load.
 
-How Can I Get PETSc ``Vec`` And ``Mat`` To MATLAB Or Vice Versa?
-----------------------------------------------------------------
+How Can I Get PETSc Vectors And Matrices To MATLAB Or Vice Versa?
+-----------------------------------------------------------------
 
 There are numerous  ways to work with PETSc and MATLAB:
 
@@ -1169,8 +1182,8 @@ How Do I Get Started With Cython So That I Can Extend petsc4py?
 #. Have a look at the petsc4py `array source
    <http://code.google.com/p/petsc4py/source/browse/src/PETSc/arraynpy.pxi>`__.
 
-I Would Like To Compute A Custom Norm For ``KSP`` To Use As A Convergence Test Or For Monitoring?
--------------------------------------------------------------------------------------------------
+I Would Like To Compute A Custom Norm For KSP To Use As A Convergence Test Or For Monitoring?
+---------------------------------------------------------------------------------------------
 
 You need to call ``KSPBuildResidual()`` on your ``KSP`` object and then compute the
 appropriate norm on the resulting residual. Note that depending on the
@@ -1214,8 +1227,8 @@ available.
    and you use 2 MPI processes per node then set ``$OMP_NUM_THREADS`` to 2 or 3.
 
 
-``TS`` Or ``SNES`` Produces Infeasible (Out Of Domain) Solutions Or States, How Can I Prevent This?
----------------------------------------------------------------------------------------------------
+TS Or SNES Produces Infeasible (Out Of Domain) Solutions Or States, How Can I Prevent This?
+-------------------------------------------------------------------------------------------
 
 For ``TS`` call ``TSSetFunctionDomainError()``. For both ``TS`` and ``SNES`` call
 ``SNESSetFunctionDomainError()`` when the solver passes an infeasible (out of domain)
@@ -1368,8 +1381,8 @@ phases of the solution process. You can run with ``-ts_view`` or ``-snes_view`` 
 methods. ``-snes_converged_reason`` and ``-ksp_converged_reason`` will indicate why and if
 the solvers have converged.
 
-Assembling Large Sparse Matrices Takes A Long Time. What Can I Do Make This Process Faster? Or ``MatSetValues()`` Is So Slow, What Can I Do To Speed It Up?
------------------------------------------------------------------------------------------------------------------------------------------------------------
+Assembling Large Sparse Matrices Takes A Long Time. What Can I Do Make This Process Faster? Or MatSetValues() Is So Slow, What Can I Do To Speed It Up?
+-------------------------------------------------------------------------------------------------------------------------------------------------------
 
 See the :ref:`performance chapter <ch_performance>` of the users manual.
 
@@ -1481,8 +1494,8 @@ it could use SSE2 instructions that work directly on the single precision number
 bit of a mystery what decisions get made sometimes. There may be compiler flags in some
 circumstances that can affect this.
 
-Why Is Newton'S Method (``SNES``) Not Converging, Or Converges Slowly?
-----------------------------------------------------------------------
+Why Is Newton'S Method (SNES) Not Converging, Or Converges Slowly?
+------------------------------------------------------------------
 
 Newton's method may not converge for many reasons, here are some of the most common:
 
@@ -1582,8 +1595,8 @@ Here are some ways to help the Newton process if everything above checks out:
 
 .. _doc_faq_execution_kspconv:
 
-Why Is The Linear Solver (``KSP``) Not Converging, Or Converges Slowly?
------------------------------------------------------------------------
+Why Is The Linear Solver (KSP) Not Converging, Or Converges Slowly?
+-------------------------------------------------------------------
 
 .. tip::
 
@@ -1731,8 +1744,8 @@ Use the following code-snippet:
    end subroutine convergence
    end program test_snes
 
-In C++ I Get A Crash On ``VecDestroy()`` (Or Some Other PETSc Object) At The End Of The Program
------------------------------------------------------------------------------------------------
+In C++ I Get A Crash On VecDestroy() (Or Some Other PETSc Object) At The End Of The Program
+-------------------------------------------------------------------------------------------
 
 This can happen when the destructor for a C++ class is automatically called at the end of
 the program after ``PetscFinalize()``. Use the following code-snippet:
@@ -1797,8 +1810,8 @@ will come up in its own xterm) or run in Totalview. Then use ``cont`` (for conti
 each xterm. Once you are sure that the program is hanging, hit control-c in each xterm and
 then use 'where' to print a stack trace for each process.
 
-How Can I Inspect ``Vec`` And ``Mat`` Values When In The Debugger?
-------------------------------------------------------------------
+How Can I Inspect PETSc Vector and Matrix Values When In The Debugger?
+----------------------------------------------------------------------
 
 I will illustrate this with ``gdb``, but it should be similar on other debuggers. You can
 look at local ``Vec`` values directly by obtaining the array. For a ``Vec`` v, we can
@@ -1896,8 +1909,8 @@ will not work. You must add ``MatSetType()`` or ``MatSetFromOptions()`` before t
 
    ierr = MatSetValues(A,....);CHKERRQ(ierr);
 
-What Does Error Detected In ``PetscSplitOwnership()`` About "Sum Of Local Lengths ...": Mean?
----------------------------------------------------------------------------------------------
+What Does Error Detected In PetscSplitOwnership() About "Sum Of Local Lengths ...": Mean?
+-----------------------------------------------------------------------------------------
 
 In a previous call to ``VecSetSizes()``, ``MatSetSizes()``, ``VecCreateXXX()`` or
 ``MatCreateXXX()`` you passed in local and global sizes that do not make sense for the
@@ -2047,8 +2060,8 @@ The following may help:
 
 - Make sure you do not link with the MPI profiling libraries.
 
-When Calling ``MatPartitioningApply()`` You Get A Message Error! Key 16615 Not Found
-------------------------------------------------------------------------------------
+When Calling MatPartitioningApply() You Get A Message Error! Key 16615 Not Found
+--------------------------------------------------------------------------------
 
 The graph of the matrix you are using is not symmetric. You must use symmetric matrices
 for partitioning.
