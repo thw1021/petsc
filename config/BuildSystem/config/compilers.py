@@ -1441,6 +1441,18 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
     if self.c99flag is None: raise RuntimeError('PETSc requires c99 compiler! Configure could not determine compatible compiler flag. Perhaps you can specify via CFLAGS')
     return
 
+  def checkHipCxxCompat(self):
+    """
+    HIP is essentially clang++ with extensions to produce device code for AMD
+    GPUs; hence, we need the Cxx compiler to be clang if compiling with HIP.
+    This enables for example: C=gcc/CXX=clang++/HIPCC=hipcc
+    """
+    if config.setCompilers.Configure.isClang(self.getCompiler('Cxx'), self.log):
+      return
+    else:
+      raise RuntimeError('CXX Compiler must be clang-based when using HIP')
+    return
+
   def configure(self):
     import config.setCompilers
     if hasattr(self.setCompilers, 'CC'):
@@ -1476,8 +1488,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       if hasattr(self.setCompilers, 'CXX'):
         self.executeTest(self.checkFortranLinkingCxx)
     if hasattr(self.setCompilers, 'HIP'):
-        #Placeholder in case further checks are needed
-        pass
+        self.executeTest(self.checkHipCxxCompat)
     if hasattr(self.setCompilers, 'SYCL'):
         #Placeholder in case further checks are needed
         pass
