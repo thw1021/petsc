@@ -31,6 +31,7 @@ Get Started
 
    overview/index
    install/index
+   faq/index
 
 ===========
 Get Working
@@ -43,8 +44,6 @@ Get Working
    guides/guide_to_examples
    Function Index <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/singleindex.html>
    Examples Index <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/help.html>
-   faq/index
-   contact/index
 
 ============
 Get Involved
@@ -53,6 +52,7 @@ Get Involved
 .. toctree::
    :maxdepth: 1
 
+   contact/index
    developers/index
 
 .. raw:: html
