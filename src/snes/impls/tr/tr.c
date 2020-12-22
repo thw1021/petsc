@@ -545,10 +545,17 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       }
       if (reason == SNES_CONVERGED_SNORM_RELATIVE) reason = SNES_DIVERGED_INNER;
       if (reason) {
-        /* We're not progressing, so return with the current iterate */
-        ierr     = SNESMonitor(snes,i+1,fnorm);CHKERRQ(ierr);
-        breakout = PETSC_TRUE;
-        break;
+        if (reason < 0) {
+            /* We're not progressing, so return with the current iterate */
+            ierr     = SNESMonitor(snes,i+1,fnorm);CHKERRQ(ierr);
+            breakout = PETSC_TRUE;
+            break;
+        } else if (reason > 0) {
+            /* We're converged, so return with the current iterate and update solution */
+            ierr     = SNESMonitor(snes,i+1,fnorm);CHKERRQ(ierr);
+            breakout = PETSC_FALSE;
+            break;
+        }
       }
       snes->numFailures++;
     }
