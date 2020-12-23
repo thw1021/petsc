@@ -7,6 +7,7 @@ SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
 LINKCHECKDIR  = _build/linkcheck
+GENDIR        = $(SOURCEDIR)/generated
 
 # First so that "make" without arguments is like "make help".
 help:
@@ -22,6 +23,19 @@ checklinks:
 rebuild:
 	@$(SPHINXBUILD) -E "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
 
+petsc-team-table.inc:
+	@echo "============================================"
+	@echo "          GENERATING TEAM TABLE"
+	@echo "============================================"
+	@$(SOURCEDIR)/genteamtable.py --gitlab-token ${PETSC_GITLAB_PRIVATE_TOKEN} --output-dir $(GENDIR)
+
+html: petsc-team-table.inc
+
+clear-generated:
+	@echo "Clearing generated files"
+	@$(RM) -rf $(GENDIR)
+
+clean: clear-generated
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile

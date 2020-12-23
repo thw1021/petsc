@@ -169,3 +169,4 @@ def setup(app):
     app.add_css_file('css/pop-up.css')
     app.add_css_file('css/colorbox.css')
     app.add_css_file('css/colortext.css')
+    app.add_css_file('css/petsc-team-container.css')
