@@ -67,18 +67,18 @@ typedef struct {
 } DMSubnetwork;
 
 typedef struct {
-  PetscInt                          refct;       /* reference count */
-  PetscInt                          NEdges,nEdges;        /* Number of global/local edges */
+  PetscInt                          refct;               /* reference count */
+  PetscInt                          NEdges,nEdges;       /* Number of global/local edges */
   PetscInt                          NVertices,nVertices; /* Number of global/local vertices */
-  PetscInt                          pStart,pEnd; /* Start and end indices for topological points */
-  PetscInt                          vStart,vEnd; /* Start and end indices for vertices */
-  PetscInt                          eStart,eEnd; /* Start and end indices for edges */
-  DM                                plex;        /* DM created from Plex */
-  PetscSection                      DataSection; /* Section for managing parameter distribution */
-  PetscSection                      DofSection;  /* Section for managing data distribution */
-  PetscSection                      GlobalDofSection; /* Global Dof section */
-  PetscBool                         distributecalled; /* Flag if DMNetworkDistribute() is called */
-  PetscInt                          *vltog;           /* Maps vertex local ordering to global ordering, include ghost vertices */
+  PetscInt                          pStart,pEnd;         /* Start and end indices for topological points */
+  PetscInt                          vStart,vEnd;         /* Start and end indices for vertices */
+  PetscInt                          eStart,eEnd;         /* Start and end indices for edges */
+  DM                                plex;                /* DM created from Plex */
+  PetscSection                      DataSection;         /* Section for managing parameter distribution */
+  PetscSection                      DofSection;          /* Section for managing data distribution */
+  PetscSection                      GlobalDofSection;    /* Global Dof section */
+  PetscBool                         distributecalled;    /* Flag if DMNetworkDistribute() is called */
+  PetscInt                          *vltog;              /* Maps vertex local ordering to global ordering, include ghost vertices */
 
   DMNetworkVertexInfo               vertex;
   DMNetworkEdgeInfo                 edge;
@@ -91,11 +91,11 @@ typedef struct {
   DMNetworkComponentGenericDataType *componentdataarray; /* Array to hold the data */
 
   PetscInt                          nsubnet,Nsubnet; /* Local and global number of subnetworks */
-  PetscInt                          ncsubnet;        /* Global number of coupling subnetworks --rm!!! */
   DMSubnetwork                      *subnet;         /* Subnetworks */
   PetscInt                          *subnetvtx;      /* Maps local vertex to local subnetwork's vertex */
   SVtx                              *svtx;           /* Array of vertices shared by subnetworks */
-  PetscInt                          nsvtx;           /* Num of entries in svtx */
+  PetscInt                          nsvtx,Nsvtx;     /* local and global num of entries in svtx */
+  PetscInt                          *svertices;      /* Array of local subnetwork vertices that are merged/shared */
   PetscInt                          *sedgelist;      /* edge list of shared vertices */
 
   PetscBool                         userEdgeJacobian,userVertexJacobian;  /* Global flag for using user's sub Jacobians */
