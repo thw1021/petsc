@@ -149,7 +149,7 @@ int main(int argc,char **argv)
   ierr = TSGetSolveTime(ts,&user.ftime);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&user.steps);CHKERRQ(ierr);
   ierr = VecGetArray(user.x,&x_ptr);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n ode solution %g\n",x_ptr[0]);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n ode solution %g\n",(double)PetscRealPart(x_ptr[0]));CHKERRQ(ierr);
   ierr = VecRestoreArray(user.x,&x_ptr);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical solution %g\n",(double)user.a*PetscExpReal(user.b/user.c*user.ftime));CHKERRQ(ierr);
 
