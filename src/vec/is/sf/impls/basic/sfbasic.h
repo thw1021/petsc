@@ -32,8 +32,7 @@ typedef struct {
   PetscInt         *leafbufdisp;    /* [niranks-ndiranks]. For my i-th remote leaf rank, I will put to its leafbuf_shmem[] at offset leafbufdisp[i], in <unit> to be set */
 
   PetscInt         *leafsigdisp_d;  /* Copy of leafsigdisp[] on device */
-  PetscInt         *leafbufdisp_d;  /* Copy of leafbufdisp[] on device */
-  PetscMPIInt      *iranks_d;       /* Copy of the remote part of iranks[] on device */
+  PetscMPIInt      *iranks_d;       /* Copy of the remote part of (leaf) iranks[] on device */
   PetscInt         *ioffset_d;      /* Copy of the remote part of ioffset[] on device */
  #endif
 } PetscSF_Basic;

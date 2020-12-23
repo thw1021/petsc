@@ -461,9 +461,27 @@ PetscErrorCode PetscSFFree_Kokkos(PetscMemType mtype,void* ptr)
   PetscFunctionReturn(0);
 }
 
-/*====================================================================================*/
-/*                Main driver to init MPI datatype on device                          */
-/*====================================================================================*/
+/* Destructor when the link uses MPI for communication */
+static PetscErrorCode PetscSFLinkDestroy_Kokkos(PetscSF sf,PetscSFLink link)
+{
+  PetscErrorCode     ierr;
+
+  PetscFunctionBegin;
+ #if defined(PETSC_HAVE_CUDA)
+  cudaError_t    cerr;
+  cerr = cudaEventDestroy(link->input_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->lscatter_end);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->recv_end);CHKERRCUDA(cerr);
+  if (link->send_stream) {cerr = cudaStreamDestroy(link->send_stream);CHKERRCUDA(cerr);}
+  if (link->lscatter_stream) {cerr = cudaStreamDestroy(link->lscatter_stream);CHKERRCUDA(cerr);}
+ #endif
+
+  for (int i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
+    ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,link->rootbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
+    ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,link->leafbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
 
 /* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
 PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype unit)
@@ -543,17 +561,27 @@ PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype 
     }
   }
 
-  if (!sf->use_default_stream) {
-   #if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Non-default cuda/hip streams are not supported by the SF Kokkos backend. If it is cuda, use -sf_backend cuda instead");
-   #endif
-  }
+ #if defined(PETSC_HAVE_CUDA)
+  cudaError_t cerr;
+  cerr = cudaEventCreate(&link->input_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->lscatter_end);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->recv_end);CHKERRCUDA(cerr);
+  /* Currently we only use the NULL stream. May change that once we know how to create/free execution space objects
+  cerr = cudaDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithPriority(&link->send_stream,cudaStreamNonBlocking,greatestPriority);
+  cerr = cudaStreamCreateWithPriority(&link->lscatter_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
+  link->recv_stream = link->send_stream;
+  */
+  link->BuildDependenceOnInputData  = PetscSFLinkBuildDependenceOnInputData_CUDA;
+  link->BuildDependenceOnOutputData = PetscSFLinkBuildDependenceOnOutputData_CUDA;
+  link->EndLocalScatter             = PetscSFLinkRecordEndOfLocalScatter_CUDA;
+  link->EndUnpackRemote             = PetscSFLinkRecordEndOfUnpackRemote_CUDA;
+ #endif
 
-  link->d_SyncDevice = PetscSFLinkSyncDevice_Kokkos;
-  link->d_SyncStream = PetscSFLinkSyncStream_Kokkos;
+  link->SyncDevice   = PetscSFLinkSyncDevice_Kokkos;
+  link->SyncStream   = PetscSFLinkSyncStream_Kokkos;
   link->Memcpy       = PetscSFLinkMemcpy_Kokkos;
-  link->spptr        = NULL; /* Unused now */
-  link->Destroy      = NULL; /* PetscSFLinkDestroy_Kokkos; */
+  link->Destroy      = PetscSFLinkDestroy_Kokkos;
   link->deviceinited = PETSC_TRUE;
   PetscFunctionReturn(0);
 }

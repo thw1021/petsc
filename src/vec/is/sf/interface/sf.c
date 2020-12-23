@@ -150,15 +150,23 @@ PetscErrorCode PetscSFReset(PetscSF sf)
   ierr = PetscFree(sf->remote_alloc);CHKERRQ(ierr);
   sf->nranks = -1;
   ierr = PetscFree4(sf->ranks,sf->roffset,sf->rmine,sf->rremote);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_DEVICE)
-  for (PetscInt i=0; i<2; i++) {ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,sf->rmine_d[i]);CHKERRQ(ierr);}
-#endif
   sf->degreeknown = PETSC_FALSE;
   ierr = PetscFree(sf->degree);CHKERRQ(ierr);
   if (sf->ingroup  != MPI_GROUP_NULL) {ierr = MPI_Group_free(&sf->ingroup);CHKERRQ(ierr);}
   if (sf->outgroup != MPI_GROUP_NULL) {ierr = MPI_Group_free(&sf->outgroup);CHKERRQ(ierr);}
   ierr = PetscSFDestroy(&sf->multi);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&sf->map);CHKERRQ(ierr);
+
+ #if defined(PETSC_HAVE_DEVICE)
+  for (PetscInt i=0; i<2; i++) {ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,sf->rmine_d[i]);CHKERRQ(ierr);}
+ #endif
+
+ #if defined(PETSC_HAVE_NVSHMEM)
+  ierr = PetscFree2(sf->rootsigdisp,sf->rootbufdisp);CHKERRQ(ierr);
+  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,sf->rootsigdisp_d);CHKERRQ(ierr);
+  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,sf->ranks_d);CHKERRQ(ierr);
+  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,sf->roffset_d);CHKERRQ(ierr);
+ #endif
   sf->setupcalled = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -311,8 +319,8 @@ PetscErrorCode PetscSFSetUp(PetscSF sf)
   if (sf->ops->SetUp) {ierr = (*sf->ops->SetUp)(sf);CHKERRQ(ierr);}
 #if defined(PETSC_HAVE_CUDA)
   if (sf->backend == PETSCSF_BACKEND_CUDA) {
-    sf->ops->Malloc = PetscSFMalloc_Cuda;
-    sf->ops->Free   = PetscSFFree_Cuda;
+    sf->ops->Malloc = PetscSFMalloc_CUDA;
+    sf->ops->Free   = PetscSFFree_CUDA;
   }
 #endif
 

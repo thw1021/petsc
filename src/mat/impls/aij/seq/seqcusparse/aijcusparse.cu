@@ -2381,20 +2381,21 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
 
       /* ScatterAdd the result from work vector into the full vector when A is compressed */
       if (compressed) {
+        ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
         /* I wanted to make this for_each asynchronous but failed. thrust::async::for_each() returns an event (internally registerred)
            and in the destructor of the scope, it will call cudaStreamSynchronize() on this stream. One has to store all events to
            prevent that. So I just add a ScatterAdd kernel.
          */
-        /*
+       #if 0
         thrust::device_ptr<PetscScalar> zptr = thrust::device_pointer_cast(zarray);
-        ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
         thrust::async::for_each(thrust::cuda::par.on(cusparsestruct->stream),
                          thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(zptr, matstruct->cprowIndices->begin()))),
                          thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(zptr, matstruct->cprowIndices->begin()))) + matstruct->cprowIndices->size(),
                          VecCUDAPlusEquals());
-        */
+       #else
         PetscInt n = matstruct->cprowIndices->size();
         ScatterAdd<<<(n+255)/256,256,0,cusparsestruct->stream>>>(n,matstruct->cprowIndices->data().get(),cusparsestruct->workVector->data().get(),zarray);
+       #endif
         cerr = WaitForCUDA();CHKERRCUDA(cerr);
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
       }
