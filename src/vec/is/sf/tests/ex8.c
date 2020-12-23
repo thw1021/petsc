@@ -107,12 +107,19 @@ int main(int argc,char **argv)
 
       test:
         suffix: 1_cuda
-        args: -vec_type cuda -vecscatter_packongpu true
+        # sf_backend cuda is not needed if compiling only with cuda
+        args: -vec_type cuda -sf_backend cuda -vecscatter_packongpu true
         requires: cuda
 
       test:
+        suffix: 1_hip
+        args: -vec_type hip -sf_backend hip -vecscatter_packongpu true
+        requires: hip
+
+      test:
         suffix: 1_cuda_aware_mpi
-        args: -vec_type cuda -vecscatter_packongpu false
+        # sf_backend cuda is not needed if compiling only with cuda
+        args: -vec_type cuda -sf_backend cuda -vecscatter_packongpu false
         requires: cuda define(PETSC_HAVE_MPI_GPU_AWARE)
 
    testset:
@@ -127,8 +134,15 @@ int main(int argc,char **argv)
 
       test:
         suffix: 2_cuda
-        args: -vec_type cuda -vecscatter_packongpu true
+        # sf_backend cuda is not needed if compiling only with cuda
+        args: -vec_type cuda -sf_backend cuda -vecscatter_packongpu true
         requires: cuda
+
+      test:
+        suffix: 2_hip
+        # sf_backend hip is not needed if compiling only with hip
+        args: -vec_type hip -sf_backend hip -vecscatter_packongpu true
+        requires: hip
 
       test:
         suffix: 2_cuda_aware_mpi
