@@ -106,9 +106,9 @@ int main(int argc,char **argv)
         suffix: 1_standard
 
       test:
-        suffix: 1_cuda
-        args: -vec_type cuda -vecscatter_packongpu true
-        requires: cuda
+        suffix: 1_hip
+        args: -vec_type hip -vecscatter_packongpu true
+        requires: hip
 
       test:
         suffix: 1_cuda_aware_mpi
@@ -129,6 +129,11 @@ int main(int argc,char **argv)
         suffix: 2_cuda
         args: -vec_type cuda -vecscatter_packongpu true
         requires: cuda
+
+      test:
+        suffix: 2_hip
+        args: -vec_type hip -vecscatter_packongpu true
+        requires: hip
 
       test:
         suffix: 2_cuda_aware_mpi
