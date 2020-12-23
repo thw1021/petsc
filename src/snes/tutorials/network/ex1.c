@@ -280,8 +280,8 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
         xarr[offset+1] = bus->vm;
       } else if (key == appctx_power.compkey_gen) {
         gen = (GEN)(component);
-	if (!gen->status) continue;
-	xarr[offset+1] = gen->vs;
+        if (!gen->status) continue;
+        xarr[offset+1] = gen->vs;
       } else if (key == appctx_water.compkey_vtx) {
         vertex = (VERTEX_Water)(component);
         if (vertex->type == VERTEX_TYPE_JUNCTION) {
