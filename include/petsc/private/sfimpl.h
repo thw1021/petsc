@@ -134,8 +134,7 @@ struct _p_PetscSF {
   PetscInt        *rootbufdisp;    /* [nranks-ndranks]. For my i-th remote root rank, I will access its root buf at offset rootbufdisp[i], in <unit> to be set */
 
   PetscInt        *rootsigdisp_d;  /* Copy of rootsigdisp[] on device */
-  PetscInt        *rootbufdisp_d;  /* Copy of rootbufdisp[] on device */
-  PetscMPIInt     *ranks_d;        /* Copy of the remote part of ranks[] on device */
+  PetscMPIInt     *ranks_d;        /* Copy of the remote part of (root) ranks[] on device */
   PetscInt        *roffset_d;      /* Copy of the remote part of roffset[] on device */
  #endif
 };
@@ -178,8 +177,8 @@ PETSC_EXTERN PetscErrorCode VecScatterRestoreRemote_Private(VecScatter,PetscBool
 PETSC_EXTERN PetscErrorCode VecScatterRestoreRemoteOrdered_Private(VecScatter,PetscBool,PetscInt*,const PetscInt**,const PetscInt**,const PetscMPIInt**,PetscInt*);
 
 #if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode PetscSFMalloc_Cuda(PetscMemType,size_t,void**);
-PETSC_EXTERN PetscErrorCode PetscSFFree_Cuda(PetscMemType,void*);
+PETSC_EXTERN PetscErrorCode PetscSFMalloc_CUDA(PetscMemType,size_t,void**);
+PETSC_EXTERN PetscErrorCode PetscSFFree_CUDA(PetscMemType,void*);
 #endif
 
 #if defined(PETSC_HAVE_KOKKOS)
