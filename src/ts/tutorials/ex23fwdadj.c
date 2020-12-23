@@ -36,11 +36,11 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx
   PetscFunctionBeginUser;
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
   ierr = VecGetArrayRead(Xdot,&xdot);CHKERRQ(ierr);
-  ierr = VecGetArray(F,&f);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(F,&f);CHKERRQ(ierr);
   f[0] = user->c*xdot[0] - user->b*x[0];
   ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(Xdot,&xdot);CHKERRQ(ierr);
-  ierr = VecRestoreArray(F,&f);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(F,&f);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -127,9 +127,9 @@ int main(int argc,char **argv)
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,user.ftime);CHKERRQ(ierr);
 
-  ierr = VecGetArray(user.x,&x_ptr);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(user.x,&x_ptr);CHKERRQ(ierr);
   x_ptr[0] = user.a;
-  ierr = VecRestoreArray(user.x,&x_ptr);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(user.x,&x_ptr);CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,0.001);CHKERRQ(ierr);
 
   /* Set up forward sensitivity */
@@ -151,10 +151,10 @@ int main(int argc,char **argv)
   ierr = VecGetArray(user.x,&x_ptr);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"\n ode solution %g\n",x_ptr[0]);CHKERRQ(ierr);
   ierr = VecRestoreArray(user.x,&x_ptr);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical solution %g\n",user.a*PetscExpReal(user.b/user.c*user.ftime));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical solution %g\n",(double)user.a*PetscExpReal(user.b/user.c*user.ftime));CHKERRQ(ierr);
 
   if (user.der == 1) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical derivative w.r.t. c %g\n",-user.a*user.ftime*user.b/(user.c*user.c)*PetscExpReal(user.b/user.c*user.ftime));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical derivative w.r.t. c %g\n",(double)-user.a*user.ftime*user.b/(user.c*user.c)*PetscExpReal(user.b/user.c*user.ftime));CHKERRQ(ierr);
   }
   if (user.der == 2) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical derivative w.r.t. b %g\n",user.a*user.ftime/user.c*PetscExpReal(user.b/user.c*user.ftime));CHKERRQ(ierr);
@@ -164,13 +164,13 @@ int main(int argc,char **argv)
 
   ierr = MatCreateVecs(user.Jac,&user.lambda[0],NULL);CHKERRQ(ierr);
   /* Set initial conditions for the adjoint integration */
-  ierr = VecGetArray(user.lambda[0],&x_ptr);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(user.lambda[0],&x_ptr);CHKERRQ(ierr);
   x_ptr[0] = 1.0;
-  ierr = VecRestoreArray(user.lambda[0],&x_ptr);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(user.lambda[0],&x_ptr);CHKERRQ(ierr);
   ierr = MatCreateVecs(user.Jacp,&user.mup[0],NULL);CHKERRQ(ierr);
-  ierr = VecGetArray(user.mup[0],&x_ptr);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(user.mup[0],&x_ptr);CHKERRQ(ierr);
   x_ptr[0] = 0.0;
-  ierr = VecRestoreArray(user.mup[0],&x_ptr);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(user.mup[0],&x_ptr);CHKERRQ(ierr);
 
   ierr = TSSetCostGradients(ts,1,user.lambda,user.mup);CHKERRQ(ierr);
   ierr = TSAdjointSolve(ts);CHKERRQ(ierr);
