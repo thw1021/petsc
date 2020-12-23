@@ -20,3 +20,4 @@ parallel distributed arrays useful for finite difference methods.
    gpu_roadmap_documentation
    linear_solve_table_documentation
    nonlinear_solve_table_documentation
+   tao_solve_table_documentation
