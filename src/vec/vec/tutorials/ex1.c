@@ -168,6 +168,8 @@ int main(int argc,char **argv)
 
   testset:
     output_file: output/ex1_1.out
+    # This is a test where the exact numbers are critical
+    diff_args: -j
 
     test:
 

@@ -99,6 +99,8 @@ int main(int argc,char **argv)
    testset:
       # N=10 is divisible by nsize, to trigger Allgather/Gather in SF
       nsize: 2
+      # Exact numbers really matter here
+      diff_args: -j
       filter: grep -v "type"
       output_file: output/ex8_1.out
 
@@ -126,6 +128,8 @@ int main(int argc,char **argv)
       # N=10 is not divisible by nsize, to trigger Allgatherv/Gatherv in SF
       suffix: 2
       nsize: 3
+      # Exact numbers really matter here
+      diff_args: -j
       filter: grep -v "type"
       output_file: output/ex8_2.out
 
