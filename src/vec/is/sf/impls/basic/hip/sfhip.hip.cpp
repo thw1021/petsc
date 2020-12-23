@@ -173,7 +173,7 @@ template<typename Type> struct Maxloc {
 
   See Cuda version
 */
-__device__ PETSC_UNUSED static double atomicExch(double* address,double val) {return __longlong_as_double(atomicExch((ullint*)address,__double_as_longlong(val)));}
+__device__ static double atomicExch(double* address,double val) {return __longlong_as_double(atomicExch((ullint*)address,__double_as_longlong(val)));}
 
 __device__ static llint atomicExch(llint* address,llint val) {return (llint)(atomicExch((ullint*)address,(ullint)val));}
 
