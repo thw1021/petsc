@@ -108,10 +108,16 @@ int main(int argc,char **argv)
         suffix: 1_standard
 
       test:
+<<<<<<< HEAD
         suffix: 1_cuda
         # sf_backend cuda is not needed if compiling only with cuda
         args: -vec_type cuda -sf_backend cuda -vecscatter_packongpu true
         requires: cuda
+=======
+        suffix: 1_hip
+        args: -vec_type hip -vecscatter_packongpu true
+        requires: hip
+>>>>>>> c6f29dfecb... Adding petscSF tests for hip backend
 
       test:
         suffix: 1_hip
