@@ -360,14 +360,14 @@ PetscErrorCode SetInitialGuess_Power(DM networkdm,Vec localX,PetscInt nv,PetscIn
     for (j=0; j < numComps; j++) {
       ierr = DMNetworkGetComponent(networkdm,vtx[i],j,&key,&component);CHKERRQ(ierr);
       if (key == User->compkey_bus) {
-	bus = (VERTEX_Power)(component);
-	xarr[offset] = bus->va*PETSC_PI/180.0;
-	xarr[offset+1] = bus->vm;
+        bus = (VERTEX_Power)(component);
+        xarr[offset] = bus->va*PETSC_PI/180.0;
+        xarr[offset+1] = bus->vm;
       } else if (key == User->compkey_gen) {
-	gen = (GEN)(component);
-	if (!gen->status) continue;
-	xarr[offset+1] = gen->vs;
-	break;
+        gen = (GEN)(component);
+        if (!gen->status) continue;
+        xarr[offset+1] = gen->vs;
+        break;
       }
     }
   }

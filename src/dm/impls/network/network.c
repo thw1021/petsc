@@ -1596,7 +1596,7 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
       ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
       if (!ghost) continue;
       ierr = PetscSectionGetDof(network->DofSection,p,&local_nvar[p]);CHKERRQ(ierr);
-      //printf("[%d] Before SFReduce: leaf local_nvar[%d] = %d\n",rank,p,local_nvar[p]);
+      /* printf("[%d] Before SFReduce: leaf local_nvar[%d] = %d\n",rank,p,local_nvar[p]); */
     }
 
     /* Leaves add local_nvar to root remote_nvar */
@@ -1610,7 +1610,7 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
       if (ghost) continue;
       ierr = DMNetworkAddNumVariables(dm,p,remote_nvar[p]);CHKERRQ(ierr);
       ierr = PetscSectionGetDof(network->DofSection,p,&local_nvar[p]);CHKERRQ(ierr);
-      //printf("[%d]  After SFReduce: root local_nvar[%d] = %d\n",rank,p,local_nvar[p]);
+      /* printf("[%d]  After SFReduce: root local_nvar[%d] = %d\n",rank,p,local_nvar[p]); */
     }
 
     /* Roots Bcast nvar to leaves */
@@ -1622,7 +1622,7 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
       ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
       if (!ghost) continue;
       p = svtx[i];
-      //printf("[%d] leaf reset nvar %d at p= %d \n",rank,remote_nvar[p],p);
+      /* printf("[%d] leaf reset nvar %d at p= %d \n",rank,remote_nvar[p],p); */
       ierr = DMNetworkSetNumVariables(dm,p,remote_nvar[p]);CHKERRQ(ierr);
     }
 
