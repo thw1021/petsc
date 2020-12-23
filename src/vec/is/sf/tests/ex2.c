@@ -72,13 +72,15 @@ int main(int argc,char **argv)
    test:
     requires: cuda
     #make sure the host memory is pinned
-    args: -vec_type cuda -vec_pinned_memory_min 0
+    # sf_backend cuda is not needed if compiling only with cuda
+    args: -vec_type cuda -sf_backend cuda -vec_pinned_memory_min 0
 
    test:
     suffix: hip
     requires: hip
     output_file: output/ex2_1.out
     #make sure the host memory is pinned
-    args:  -vec_type hip -vec_pinned_memory_min 0
+    # sf_backend hip is not needed if compiling only with hip
+    args:  -vec_type hip -sf_backend hip -vec_pinned_memory_min 0
 
 TEST*/
