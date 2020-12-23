@@ -54,6 +54,7 @@ Get Involved
 
    contact/index
    developers/index
+   miscellaneous/index
 
 .. raw:: html
 
