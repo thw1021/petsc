@@ -13,7 +13,7 @@ DM Object: 2 MPI processes
        edge 4: 6 ----> 5
        edge 5: 5 ----> 4
      SharedVertices:
-       svtx 0: global index 0, subnet[0].0 ----> 
+       svtx 0: global index 0, subnet[0].0 ---->
                                            ----> subnet[1].0
 [1] shared v 3: nvar 3, ncomp 2
 Vec Object: 2 MPI processes
