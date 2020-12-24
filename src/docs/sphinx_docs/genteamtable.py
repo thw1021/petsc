@@ -6,6 +6,7 @@ Created on Wed Dec 23 14:09:21 2020
 @author: jacobfaibussowitsch
 """
 import os
+import requests
 
 petscDir = os.getenv("PETSC_DIR")
 imDir = os.path.join(petscDir, "src", "docs", "website", "images")
@@ -17,6 +18,8 @@ integratorURL = "https://gitlab.com/api/v4/groups/5583565/members/all"
 devURL = "https://gitlab.com/api/v4/groups/5981367/members/all"
 
 emeritus = {
+    # Keys (i.e. usernames) here are just lower full names with underscores. Not really
+    # needed, just so that I don't have to write an extra "writeRst" function :)
     "william_gropp" : {
         "web_url" : "https://cs.illinois.edu/directory/profile/wgropp",
         "avatar_url" : os.path.join(imDir, "bill.gif"),
@@ -64,11 +67,12 @@ emeritus = {
     }
 }
 
+# List of devs who will go into the table. Key MUST all lowercase gitlab username.
 activeCoreDevs = {
     "lois.curfman.mcinnes" : {
         "web_url" : "https://press3.mcs.anl.gov/curfman/",
         "avatar_url" : os.path.join(imDir, "lois.gif"),
-        "name" : "Lois Curfman Mcinnes"
+        "name" : "Lois Curfman McInnes"
     },
     "sbalay" : {
         "web_url" : None,
@@ -92,7 +96,7 @@ activeCoreDevs = {
     },
     "dmay" : {
 	"web_url" : None,
-	"avatar_url" : None,
+	"avatar_url" : os.path.join(imDir, "dave.jpg"),
 	"name" : None
     },
     "fdkong" : {
@@ -172,7 +176,7 @@ activeCoreDevs = {
     },
     "tmunson" : {
 	"web_url" : None,
-	"avatar_url" : None,
+	"avatar_url" : os.path.join(imDir, "todd.jpg"),
 	"name" : None
     },
     "haplav" : {
@@ -223,17 +227,17 @@ activeCoreDevs = {
 }
 
 def getJson(url, token):
-    import requests
-
     headers = {"PRIVATE-TOKEN" : token}
-    rpage = requests.get(url, headers = headers)
+    params = {"per_page" : 100, "page" : 1}
+    rpage = requests.get(url, headers = headers, params = params)
     rpage.raise_for_status()
     numPages = int(rpage.headers["X-Total-Pages"])
     lst = []
     for i in range(numPages):
-        r = requests.get(url, headers = headers, params = {"page" : i+1})
+        r = requests.get(url, headers = headers, params = params)
         r.raise_for_status()
         lst.extend(r.json())
+        params["page"] += 1
     return lst
 
 def makeDevDict(devJson):

@@ -1,3 +1,5 @@
+.. _doc_taosolve:
+
 ======================
 Summary of Tao Solvers
 ======================
