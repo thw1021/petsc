@@ -4,6 +4,7 @@
 #include <petscmat.h>       /*I      "petscmat.h"          I*/
 #include <petscdmnetwork.h> /*I      "petscdmnetwork.h"    I*/
 #include <petsc/private/dmpleximpl.h>  /*I  "petscdmplex.h"  I*/
+#include <petscctable.h>
 
 #define MAX_DATA_AT_POINT 36
 
@@ -94,9 +95,10 @@ typedef struct {
   DMSubnetwork                      *subnet;         /* Subnetworks */
   PetscInt                          *subnetvtx;      /* Maps local vertex to local subnetwork's vertex */
   SVtx                              *svtx;           /* Array of vertices shared by subnetworks */
-  PetscInt                          nsvtx,Nsvtx;     /* local and global num of entries in svtx */
+  PetscInt                          nsvtx,Nsvtx;     /* Local and global num of entries in svtx */
   PetscInt                          *svertices;      /* Array of local subnetwork vertices that are merged/shared */
-  PetscInt                          *sedgelist;      /* edge list of shared vertices */
+  PetscInt                          *sedgelist;      /* Edge list of shared vertices */
+  PetscTable                        svtable;         /* hash table for finding shared vertex info */
 
   PetscBool                         userEdgeJacobian,userVertexJacobian;  /* Global flag for using user's sub Jacobians */
   Mat                               *Je;  /* Pointer array to hold local sub Jacobians for edges, 3 elements for an edge */
