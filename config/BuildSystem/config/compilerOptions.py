@@ -139,6 +139,10 @@ class CompilerOptions(config.base.Configure):
             flags.append('-O3')
           else:
             flags.append('-O')
+      if config.setCompilers.Configure.isHIP(compiler, self.log):
+        dialect = self.argDB.get('with-cxx-dialect')
+        if dialect:
+          flags.append('-std=' + dialect.lower())
     # IBM
     elif compiler.find('mpCC') >= 0 or compiler.find('xlC') >= 0:
       if bopt == '':
