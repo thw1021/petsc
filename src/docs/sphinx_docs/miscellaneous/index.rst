@@ -10,7 +10,7 @@ interesting enough to share.
    :maxdepth: 2
 
    acknowledgements
-   application_publications
+   applications_publications
    prizes
    funding
    threads
