@@ -301,12 +301,12 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       i,j,ctr,*eowners,np,*edges,*subnetvtx,vStart,*vrange,*recvcounts,*displs;
+  PetscInt       i,j,ctr,np,*edges,*subnetvtx,vStart;
   PetscInt       k,*vidxlTog,Nsv=0,Nsubnet=network->Nsubnet;
   PetscInt       *sedgelist=network->sedgelist;
   const PetscInt *cone;
   MPI_Comm       comm;
-  PetscMPIInt    size,rank;
+  PetscMPIInt    size,rank,*recvcounts,*displs,*vrange,*eowners;
   PetscInt       net,idx,gidx,nmerged,e,v,vfrom,vto;
   SVtxType       svtype=SVNONE;
   SVtx           *svtx=NULL;
