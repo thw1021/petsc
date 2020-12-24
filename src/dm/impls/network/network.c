@@ -2085,16 +2085,26 @@ PetscErrorCode DMNetworkGetConnectedVertices(DM dm,PetscInt edge,const PetscInt 
 PetscErrorCode DMNetworkIsSharedVertex(DM dm,PetscInt p,PetscBool *flag)
 {
   PetscErrorCode ierr;
-  PetscInt       i,nv;
-  const PetscInt *vtx;
+  PetscInt       i;
 
   PetscFunctionBegin;
   *flag = PETSC_FALSE;
-  ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nv,&vtx);CHKERRQ(ierr);
-  for (i=0; i<nv; i++) {
-    if (p == vtx[i]) {
-      *flag = PETSC_TRUE;
-      break;
+
+  if (dm->setupcalled) {
+    DM_Network     *network = (DM_Network*)dm->data;
+    PetscInt       gidx;
+    ierr = DMNetworkGetGlobalVertexIndex(dm,p,&gidx);CHKERRQ(ierr);
+    ierr = PetscTableFind(network->svtable,gidx+1,&i);CHKERRQ(ierr);
+    if (i) *flag = PETSC_TRUE;
+  } else { /* should be removed! */
+    PetscInt       nv;
+    const PetscInt *vtx;
+    ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nv,&vtx);CHKERRQ(ierr);
+    for (i=0; i<nv; i++) {
+      if (p == vtx[i]) {
+        *flag = PETSC_TRUE;
+        break;
+      }
     }
   }
   PetscFunctionReturn(0);
