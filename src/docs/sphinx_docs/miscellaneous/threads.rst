@@ -97,15 +97,15 @@ time.
 
 .. note::
 
-
-   PETSc isnot "generically" "thread-safe" because:
+   PETSc is not *generically* thread-safe!
 
    All the PETSc objects created during a simulation do not have locks associated with
-   them. Again, the reason is performance; having to ensure atomic operations would have a
-   large impact on performance. Even with very inexpensive locks, there will still likely
-   be a few "hot-spots" that kill performance. For example, if four threads share a matrix
-   and are each calling ``MatSetValues()``, this will be a bottleneck with those threads
-   constantly fighting over the data structure inside the matrix object.
+   them. Again, the reason is performance; ensuring atomic operations will almost
+   certainly have a large impact on performance. Even with very inexpensive locks, there
+   will still likely be a few "hot-spots". For example, threads may share a commmon vector
+   or matrix, so any "setter" calls such as ``MatSetValues()`` would likely need to be
+   serialized. ``VecGetArrayRead()``/``VecGetArrayWrite()`` would similarly face such
+   bottlenecks.
 
 Some concerns about a thread model for parallelism
 ==================================================
