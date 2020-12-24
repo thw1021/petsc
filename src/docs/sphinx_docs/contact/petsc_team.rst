@@ -5,7 +5,7 @@ PETSc Development Team
 Current Developers
 ==================
 
-The following people are currently active contirbutes to PETSc's development and
+The following people are currently active contributers to PETSc's development and
 maintenance.
 
 .. admonition:: Important
