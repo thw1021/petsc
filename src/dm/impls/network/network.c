@@ -2859,7 +2859,7 @@ PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
 
         vfrom_net = svtx[svtx_idx].vfrom_net;
         vfrom_idx = svtx[svtx_idx].vfrom_idx;
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "       svtx %D: global index %D, subnet[%D].%D ----> \n",i,gidx,vfrom_net,vfrom_idx);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "       svtx %D: global index %D, subnet[%D].%D ---->\n",i,gidx,vfrom_net,vfrom_idx);CHKERRQ(ierr);
         for (j=0; j<nvto; j++) {
           svto = svtx[svtx_idx].vto + 2*j;
           ierr = PetscViewerASCIISynchronizedPrintf(viewer, "                                           ----> subnet[%D].%D\n",svto[0],svto[1]);CHKERRQ(ierr);

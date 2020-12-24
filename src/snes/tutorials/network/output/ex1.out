@@ -25,7 +25,7 @@ DM Object: 1 MPI processes
        edge 14: 12 ----> 14
        edge 15: 13 ----> 4
      SharedVertices:
-       svtx 0: global index 4, subnet[0].4 ----> 
+       svtx 0: global index 4, subnet[0].4 ---->
                                            ----> subnet[1].0
 SNES_coupled setup ......
 SNES_power setup ......
