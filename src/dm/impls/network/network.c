@@ -1480,12 +1480,13 @@ PetscErrorCode DMNetworkGetComponentAndNumVariables(DM dm,PetscInt p,PetscInt co
   PetscFunctionReturn(0);
 }
 
+#if 0
 #include <petsc/private/sfimpl.h> /*I "petscsf.h" I*/
+#endif
 
 /*
- Sets up the array that holds the data for all components and its associated section. This
-   function is called during DMSetUp().
- It copies the data for all components in a contiguous array called componentdataarray. The component data is stored pointwise with an additional ‘header’ (metadata) stored for each point. The header has metadata information such as number of components at each point, number of variables for each component, offsets for the components data, etc.
+ Sets up the array that holds the data for all components and its associated section.
+ It copies the data for all components in a contiguous array called componentdataarray. The component data is stored pointwise with an additional header (metadata) stored for each point. The header has metadata information such as number of components at each point, number of variables for each component, offsets for the components data, etc.
 */
 PetscErrorCode DMNetworkComponentSetUp(DM dm)
 {
