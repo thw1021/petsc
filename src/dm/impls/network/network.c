@@ -711,7 +711,7 @@ PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetnum,Petsc
 
   sedgelist = network->sedgelist;
   for (i=0; i<nsvtx; i++) {
-    if (anetnum < bnetnum ) {
+    if (anetnum < bnetnum) {
       sedgelist[4*Nsvtx]   = anetnum; sedgelist[4*Nsvtx+1] = asvtx[0];
       sedgelist[4*Nsvtx+2] = bnetnum; sedgelist[4*Nsvtx+3] = bsvtx[0];
     } else {
