@@ -1,3 +1,5 @@
+.. _ind_contact:
+
 *************************
 Contact And Mailing Lists
 *************************
