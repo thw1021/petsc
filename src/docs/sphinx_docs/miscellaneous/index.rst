@@ -10,3 +10,10 @@ Water Flow, Linguistics, Mantel Convection, Magnetic Films, Material Science, Me
 Imaging, Ocean Dynamics, Oil Recover, PageRank, Polymer Injection Molding, Polymeric
 Membranes, Quantum computing, Seismology, Semiconductors, Rockets, Relativity, Surface
 Water Flow.
+
+.. toctree::
+   :maxdepth: 1
+
+   acknowledgements
+   funding
+   threads
