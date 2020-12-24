@@ -11,7 +11,11 @@ therefore a high priority for PETSc developers.
 
 .. note::
 
-   Our goal is that user code will be **identical**, independent of the support utilized.
+   PETSc uses a single source programming model where solver back-ends are selected as
+   **runtime** options and configuration options with no changes to the API.
+
+   I.e. users should (ideally) never have to change their source code to take advantage of
+     new backend implementations.
 
 PETSc code will include full implementations of vector and matrix operations (as well as
 other select operations) using each of:
