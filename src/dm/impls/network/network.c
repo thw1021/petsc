@@ -306,8 +306,8 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   PetscInt       *sedgelist=network->sedgelist;
   const PetscInt *cone;
   MPI_Comm       comm;
-  PetscMPIInt    size,rank,*recvcounts,*displs,*vrange,*eowners;
-  PetscInt       net,idx,gidx,nmerged,e,v,vfrom,vto;
+  PetscMPIInt    size,rank,*recvcounts=NULL,*displs=NULL;
+  PetscInt       net,idx,gidx,nmerged,e,v,vfrom,vto,*vrange,*eowners;
   SVtxType       svtype=SVNONE;
   SVtx           *svtx=NULL;
   PetscSection   sectiong;
@@ -325,7 +325,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   /* (2) Setup svtx; Shared vto vertices are merged to their vfrom vertex with same global vetex index (gidx) */
   /* -------------------------------------------------------------------------------------------------------- */
   /* (2.1) compute vrage[rank]: global index of 1st local vertex in proc[rank] */
-  ierr = PetscMalloc3(size+1,&vrange,size+1,&displs,size,&recvcounts);CHKERRQ(ierr);
+  ierr = PetscMalloc3(size+1,&vrange,size,&displs,size,&recvcounts);CHKERRQ(ierr);
   for (i=0; i<size; i++) {displs[i] = i; recvcounts[i] = 1;}
 
   vrange[0] = 0;
@@ -2946,7 +2946,7 @@ PetscErrorCode DMNetworkSetVertexLocalToGlobalOrdering(DM dm)
   PetscErrorCode    ierr;
   DM_Network        *network=(DM_Network*)dm->data;
   MPI_Comm          comm;
-  PetscMPIInt       rank,size,*displs,*recvcounts,remoterank;
+  PetscMPIInt       rank,size,*displs=NULL,*recvcounts=NULL,remoterank;
   PetscBool         ghost;
   PetscInt          *vltog,nroots,nleaves,i,*vrange,k,N,lidx;
   const PetscSFNode *iremote;
@@ -2978,7 +2978,7 @@ PetscErrorCode DMNetworkSetVertexLocalToGlobalOrdering(DM dm)
   ierr = PetscSFGetSubSF(network->plex->sf, network->vertex.mapping, &network->vertex.sf);CHKERRQ(ierr);
   vsf = network->vertex.sf;
 
-  ierr = PetscMalloc3(size+1,&vrange,size+1,&displs,size,&recvcounts);CHKERRQ(ierr);
+  ierr = PetscMalloc3(size+1,&vrange,size,&displs,size,&recvcounts);CHKERRQ(ierr);
   ierr = PetscSFGetGraph(vsf,&nroots,&nleaves,NULL,&iremote);CHKERRQ(ierr);
 
   for (i=0; i<size; i++) { displs[i] = i; recvcounts[i] = 1;}
