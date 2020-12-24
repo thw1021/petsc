@@ -2,18 +2,15 @@
 Miscellaneous
 =============
 
-PETSc has been used for modeling in all of these areas: Acoustics, Aerodynamics, Air
-Pollution, Arterial Flow, Bone Fractures, Brain Surgery, Cancer Surgery, Cancer Treatment,
-Carbon Sequestration, Cardiology, Cells, CFD, Combustion, Concrete, Corrosion, Data
-Mining, Dentistry, Earth Quakes, Economics, Esophagus, Fission, Fusion, Glaciers, Ground
-Water Flow, Linguistics, Mantel Convection, Magnetic Films, Material Science, Medical
-Imaging, Ocean Dynamics, Oil Recover, PageRank, Polymer Injection Molding, Polymeric
-Membranes, Quantum computing, Seismology, Semiconductors, Rockets, Relativity, Surface
-Water Flow.
+For all things nonconforming, not regularly useful, and (of items or people gathered or
+considered together) of various types or from different sources that we consider
+interesting enough to share.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    acknowledgements
+   application_publications
+   prizes
    funding
    threads
