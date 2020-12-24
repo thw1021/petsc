@@ -149,6 +149,8 @@ Does All The PETSc Error Checking And Logging Reduce PETSc's Efficiency?
 
 No
 
+.. _doc_faq_maintenance_strats:
+
 How Do Such A Small Group Of People Manage To Write And Maintain Such A Large And Marvelous Package As PETSc?
 -------------------------------------------------------------------------------------------------------------
 
@@ -191,7 +193,7 @@ How Do Such A Small Group Of People Manage To Write And Maintain Such A Large An
 #. **The PETSc directory tree is carefully designed to make it easy to move throughout the
    entire package**
 
-#. **We have a rich, robust, and fast bug reporting system**,
+#. **We have a rich, robust, and fast bug reporting system**
 
    - petsc-maint@mcs.anl.gov is always checked, and we pride ourselves on responding
      quickly and accurately. Email is very lightweight, and so bug reports system retains
@@ -255,36 +257,11 @@ slower convergence.
 Can PETSc Use GPU's To Speedup Computations?
 --------------------------------------------
 
-.. note::
+See GPU development :ref:`roadmap <doc_gpu_roadmap>` for the latest information regarding
+the state of PETSc GPU integration.
 
-   See GPU development :ref:`roadmap <doc_gpu_roadmap>` for the latest information
-   regarding the state of PETSc GPU integration.
-
-   See GPU install :ref:`documentation <doc_config_accel>` for up-to-date information
-   on installing PETSc to use GPU's.
-
-Recent releases of PETSc have support for running portions of the computation on GPUs. As
-GPU support is rapidly evolving target, however, we suggest using the PETSc developer
-repository for serious work with GPUs.
-
-PETSc has ``Vec`` classes ``VECCUDA`` and ``VECVIENNACL``, which perform almost all the
-vector operations on the GPU. The ``Mat`` classes ``MATAIJCUSPARSE`` and
-``MATAIJVIENNACL`` perform matrix-vector products on the GPU but do not support matrix
-assembly on the GPU yet.
-
-.. todo:: Stefano? Mark?
-
-Both of these classes run in parallel with MPI. All ``KSP`` methods, except ``KSPIBCGS``,
-run all their vector operations on the GPU; thus, for example, Jacobi preconditioned
-Krylov methods run completely on the GPU. Preconditioners are a problem; we could do with
-some help for these. The example ``src/snes/tutorials/ex47cu.cu`` demonstates how the
-nonlinear function evaluation can be done on the GPU.
-
-We plan a significant refactorization of the GPU code in the near future that will make it
-easier to use and easier to extend. There is no need to wait for that refactorization
-however since the user API and interaction with the GPU will be almost identical. Please
-:ref:`contact us <doc_mail>` if you would like examples for a particular programming
-model, such as Kokkos, OpenMP, etc. **We will prioritize based on user input**.
+See GPU install :ref:`documentation <doc_config_accel>` for up-to-date information on
+installing PETSc to use GPU's.
 
 .. _doc_faq_extendedprecision:
 
@@ -714,20 +691,22 @@ with
 How Can I Read In Or Write Out A Sparse Matrix In Matrix Market, Harwell-Boeing, Slapc Or Other ASCII Format?
 -------------------------------------------------------------------------------------------------------------
 
-If you can read or write your matrix using Python or MATLAB/Octave, there are
-``PetscBinaryIO`` modules for each language that can assist with reading and writing. If you
-just want to convert ``MatrixMarket``, you can use:
+If you can read or write your matrix using Python or MATLAB/Octave, ``PetscBinaryIO``
+modules are provided at ``$PETSC_DIR/lib/petsc/bin`` for each language that can assist
+with reading and writing. If you just want to convert ``MatrixMarket``, you can use:
 
 .. code-block:: console
 
-   > python -m PetscBinaryIO convert matrix.mtx
+   > python -m $PETSC_DIR/lib/petsc/bin/PetscBinaryIO convert matrix.mtx
 
-To produce ``matrix.petsc``. The above assumes you have either installed the module or
-added ``$PETSC_DIR/lib/petsc/bin`` to your ``$PYTHONPATH``. You can also call the script
-directly or import it from your Python code. There is also a ``PETScBinaryIO.jl`` Julia
-package.
+To produce ``matrix.petsc``.
 
-For other formats, either adapt one of the above libraries or see the examples in ``$PETSC_DIR/src/mat/tests``, specifically ``ex72.c`` or ``ex78.c``. You will likely need to modify the code slightly to match your required ASCII format.
+You can also call the script directly or import it from your Python code. There is also a
+``PETScBinaryIO.jl`` Julia package.
+
+For other formats, either adapt one of the above libraries or see the examples in
+``$PETSC_DIR/src/mat/tests``, specifically ``ex72.c`` or ``ex78.c``. You will likely need
+to modify the code slightly to match your required ASCII format.
 
 .. note::
 
@@ -740,12 +719,9 @@ For other formats, either adapt one of the above libraries or see the examples i
    For writing save with the binary viewer and then load with the sequential code to store
    it as ASCII.
 
-.. todo:: why? Original entry referenced non-existent (possibly deprecated) functions. Is this still correct?
 
 Does TSSetFromOptions(), SNESSetFromOptions() or KSPSetFromOptions() reset all the parameters I previously set or how come do they not seem to work?
 ----------------------------------------------------------------------------------------------------------------------------------------------------
-
-.. todo:: figure out how to insert links but not break the title link
 
 If ``XXSetFromOptions()`` is used (with ``-xxx_type aaaa``) to change the type of the
 object then all parameters associated with the previous type are removed. Otherwise it
