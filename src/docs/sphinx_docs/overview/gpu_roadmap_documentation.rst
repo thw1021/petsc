@@ -14,35 +14,47 @@ therefore a high priority for PETSc developers.
    PETSc uses a single source programming model where solver back-ends are selected as
    **runtime** options and configuration options with no changes to the API.
 
-   I.e. users should (ideally) never have to change their source code to take advantage of
-     new backend implementations.
+   Users should (ideally) never have to change their source code to take advantage of new
+   backend implementations.
 
 PETSc code will include full implementations of vector and matrix operations (as well as
 other select operations) using each of:
 
 .. list-table::
+   :widths: auto
    :header-rows: 1
 
    * - Language/Programming Model
      - Supporting Package
-     - Status
+     - ``Vec`` Status
+     - ``Mat`` Status
    * - CUDA
      - cuBLAS/cuSparse
      - :greenhl:`SUPPORTED`
+     - :greenhl:`SUPPORTED`
    * - HIP
      - Rocm
+     - :greenhl:`SUPPORTED`
      - :yellowhl:`IN DEVELOPMENT`
    * - SYCL
      - MKL
-     - :yellowhl:`IN DEVELOPMENT`
+     - :redhl:`NOT YET SUPPORTED`
+     - :redhl:`NOT YET SUPPORTED`
    * - OpenCL
      - ViennaCL
      - :greenhl:`SUPPORTED`
+     - :greenhl:`SUPPORTED`
    * - Kokkos
-     -
+     - ---
+     - :greenhl:`SUPPORTED`
      - :yellowhl:`IN DEVELOPMENT`
 
 ---------------------------------
+
+Basic linear algebra GPU implementations enable many solvers, including ``GAMG`` and
+``BDDC``, to run entirely on the GPU. PETSc is currently adding GPU support for residual
+and Jacobian creation and for matrix assembly extensions to ``MATAIJCUSPARSE`` and
+``MATAIJKOKKOS``. **This is work in progress**.
 
 .. admonition:: Important
    :class: yellow

@@ -1,3 +1,5 @@
+.. _doc_linsolve:
+
 ===================================================
 Summary of Sparse Linear Solvers Available In PETSc
 ===================================================

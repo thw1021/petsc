@@ -1,3 +1,5 @@
+.. _doc_nonlinsolve:
+
 ===============================================
 Summary of Nonlinear Solvers Available In PETSc
 ===============================================
