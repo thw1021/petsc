@@ -11,7 +11,7 @@ DM Object: 1 MPI processes
        edge 4: 4 ----> 5
        edge 5: 5 ----> 6
      SharedVertices:
-       svtx 0: global index 0, subnet[0].0 ----> 
+       svtx 0: global index 0, subnet[0].0 ---->
                                            ----> subnet[1].0
 Vec Object: 1 MPI processes
   type: seq
