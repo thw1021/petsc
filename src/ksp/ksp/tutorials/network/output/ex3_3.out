@@ -29,7 +29,6 @@ DM Object: 4 MPI processes
                                            ----> subnet[1].0
                                            ----> subnet[2].0
                                            ----> subnet[3].0
-[3] shared v 3: nvar 3, ncomp 2
 Vec Object: 4 MPI processes
   type: mpi
 Process [0]
