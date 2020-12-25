@@ -34,6 +34,10 @@ PetscErrorCode  VecCreate(MPI_Comm comm, Vec *vec)
   ierr = PetscHeaderCreate(v, VEC_CLASSID, "Vec", "Vector", "Vec", comm, VecDestroy, VecView);CHKERRQ(ierr);
 
   ierr            = PetscLayoutCreate(comm,&v->map);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_DEVICE)
+  ierr            = PetscStreamCreate(&v->stream);CHKERRQ(ierr);
+  ierr            = PetscStreamSetMode(v->stream, PETSC_STREAM_GLOBAL_BLOCKING);CHKERRQ(ierr);
+#endif
   v->array_gotten = PETSC_FALSE;
   v->petscnative  = PETSC_FALSE;
   v->offloadmask  = PETSC_OFFLOAD_UNALLOCATED;

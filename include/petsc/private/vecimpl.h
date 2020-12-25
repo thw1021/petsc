@@ -11,6 +11,7 @@
 #include <petscvec.h>
 #include <petsc/private/petscimpl.h>
 #include <petscviewer.h>
+#include <petscstream.h>
 
 PETSC_EXTERN PetscBool VecRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecRegisterAll(void);

@@ -1,5 +1,5 @@
 /*
-    Defines the vector component of PETSc. Vectors generally represent
+1;95;0c    Defines the vector component of PETSc. Vectors generally represent
   degrees of freedom for finite element/finite difference functions
   on a grid. They have more mathematical structure then simple arrays.
 */
@@ -10,7 +10,6 @@
 #include <petscsftypes.h> /* for VecScatter, VecScatterType */
 #include <petscis.h>
 #include <petscviewer.h>
-#include <petscstream.h>
 
 /*S
      Vec - Abstract PETSc vector object
