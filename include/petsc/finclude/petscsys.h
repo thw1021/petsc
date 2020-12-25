@@ -194,4 +194,7 @@
 #define PetscFunctionList PetscFortranAddr
 
 #define PetscInfoCommFlag PetscEnum
+
+#define PetscStream type(tPetscStream)
+#define PetscStreamScalar type(tPetscStreamScalar)
 #endif
