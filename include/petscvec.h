@@ -1,5 +1,5 @@
 /*
-    Defines the vector component of PETSc. Vectors generally represent
+  Defines the vector component of PETSc. Vectors generally represent
   degrees of freedom for finite element/finite difference functions
   on a grid. They have more mathematical structure then simple arrays.
 */
@@ -10,6 +10,7 @@
 #include <petscsftypes.h> /* for VecScatter, VecScatterType */
 #include <petscis.h>
 #include <petscviewer.h>
+#include <petscdevice.h>
 
 /*S
      Vec - Abstract PETSc vector object
@@ -136,10 +137,14 @@ PETSC_EXTERN PetscErrorCode VecGetOptionsPrefix(Vec,const char*[]);
 PETSC_EXTERN PetscErrorCode VecSetSizes(Vec,PetscInt,PetscInt);
 
 PETSC_EXTERN PetscErrorCode VecDotNorm2(Vec,Vec,PetscScalar*,PetscReal*);
+PETSC_EXTERN PetscErrorCode VecDotNorm2Async(Vec,Vec,PetscStreamScalar,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecDot(Vec,Vec,PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecDotAsync(Vec,Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecDotRealPart(Vec,Vec,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecTDot(Vec,Vec,PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecTDotAsync(Vec,Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecMDot(Vec,PetscInt,const Vec[],PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecMDotAsync(Vec,PetscInt,const Vec[],PetscStreamScalar[],PetscStream);
 PETSC_EXTERN PetscErrorCode VecMTDot(Vec,PetscInt,const Vec[],PetscScalar[]);
 PETSC_EXTERN PetscErrorCode VecGetSubVector(Vec,IS,Vec*);
 PETSC_EXTERN PetscErrorCode VecRestoreSubVector(Vec,IS,Vec*);
@@ -214,28 +219,41 @@ M*/
 M*/
 
 PETSC_EXTERN PetscErrorCode VecNorm(Vec,NormType,PetscReal *);
+PETSC_EXTERN PetscErrorCode VecNormAsync(Vec,NormType,PetscStreamScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode VecNormAvailable(Vec,NormType,PetscBool *,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecNormalize(Vec,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecSum(Vec,PetscScalar*);
 PETSC_EXTERN PetscErrorCode VecMax(Vec,PetscInt*,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecMin(Vec,PetscInt*,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecScale(Vec,PetscScalar);
+PETSC_EXTERN PetscErrorCode VecScaleAsync(Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCopy(Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecCopyAsync(Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecSetRandom(Vec,PetscRandom);
 PETSC_EXTERN PetscErrorCode VecSet(Vec,PetscScalar);
+PETSC_EXTERN PetscErrorCode VecSetAsync(Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecSetInf(Vec);
 PETSC_EXTERN PetscErrorCode VecSwap(Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecSwapAsync(Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecAXPY(Vec,PetscScalar,Vec);
+PETSC_EXTERN PetscErrorCode VecAXPYAsync(Vec,PetscStreamScalar,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecAXPBY(Vec,PetscScalar,PetscScalar,Vec);
+PETSC_EXTERN PetscErrorCode VecAXPBYAsync(Vec,PetscStreamScalar,PetscStreamScalar,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecMAXPY(Vec,PetscInt,const PetscScalar[],Vec[]);
+PETSC_EXTERN PetscErrorCode VecMAXPYAsync(Vec,PetscInt,PetscStreamScalar[],Vec[],PetscStream);
 PETSC_EXTERN PetscErrorCode VecAYPX(Vec,PetscScalar,Vec);
+PETSC_EXTERN PetscErrorCode VecAYPXAsync(Vec,PetscStreamScalar,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecWAXPY(Vec,PetscScalar,Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecWAXPYAsync(Vec,PetscStreamScalar,Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecAXPBYPCZ(Vec,PetscScalar,PetscScalar,PetscScalar,Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecAXPBYPCZAsync(Vec,PetscStreamScalar,PetscStreamScalar,PetscStreamScalar,Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecPointwiseMax(Vec,Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecPointwiseMaxAbs(Vec,Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecPointwiseMin(Vec,Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecPointwiseMult(Vec,Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecPointwiseMultAsync(Vec,Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecPointwiseDivide(Vec,Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecPointwiseDivideAsync(Vec,Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecMaxPointwiseDivide(Vec,Vec,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecShift(Vec,PetscScalar);
 PETSC_EXTERN PetscErrorCode VecReciprocal(Vec);
@@ -375,14 +393,23 @@ PETSC_EXTERN PetscErrorCode VecGetOwnershipRanges(Vec,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode VecSetLocalToGlobalMapping(Vec,ISLocalToGlobalMapping);
 PETSC_EXTERN PetscErrorCode VecSetValuesLocal(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 
+PETSC_EXTERN PetscErrorCode VecGetEvent(Vec,PetscEvent*);
+PETSC_EXTERN PetscErrorCode VecRestoreEvent(Vec,PetscEvent*);
+
 PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayAsync(Vec,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArray(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayAsync(Vec,PetscScalar**,PetscStream);
 
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayRead(Vec,const PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayReadAsync(Vec,const PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayRead(Vec,const PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayReadAsync(Vec,const PetscScalar**,PetscStream);
 
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWriteAsync(Vec,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWriteAsync(Vec,PetscScalar**,PetscStream);
 
 PETSC_EXTERN PetscErrorCode VecCUDAPlaceArray(Vec,const PetscScalar[]);
 PETSC_EXTERN PetscErrorCode VecCUDAReplaceArray(Vec,const PetscScalar[]);
@@ -461,18 +488,6 @@ PETSC_EXTERN PetscErrorCode VecSetPinnedMemoryMin(Vec,size_t);
 PETSC_EXTERN PetscErrorCode VecGetPinnedMemoryMin(Vec,size_t *);
 
 
-/*E
-    PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
-
-   PETSC_OFFLOAD_UNALLOCATED  - no memory contains valid matrix entries; NEVER used for vectors
-   PETSC_OFFLOAD_GPU - GPU has valid vector/matrix entries
-   PETSC_OFFLOAD_CPU - CPU has valid vector/matrix entries
-   PETSC_OFFLOAD_BOTH - Both GPU and CPU have valid vector/matrix entries and they match
-   PETSC_OFFLOAD_VECKOKKOS - Reserved for Vec_Kokkos. The offload is managed by Kokkos, thus this flag is not used in Vec_Kokkos.
-
-   Level: developer
-E*/
-typedef enum {PETSC_OFFLOAD_UNALLOCATED=0x0,PETSC_OFFLOAD_CPU=0x1,PETSC_OFFLOAD_GPU=0x2,PETSC_OFFLOAD_BOTH=0x3,PETSC_OFFLOAD_VECKOKKOS=0x100} PetscOffloadMask;
 PETSC_EXTERN PetscErrorCode VecGetOffloadMask(Vec,PetscOffloadMask *);
 
 typedef enum {VEC_IGNORE_OFF_PROC_ENTRIES,VEC_IGNORE_NEGATIVE_INDICES,VEC_SUBSET_OFF_PROC_ENTRIES} VecOption;
@@ -614,6 +629,7 @@ PETSC_EXTERN PetscErrorCode VecGhostUpdateBegin(Vec,InsertMode,ScatterMode);
 PETSC_EXTERN PetscErrorCode VecGhostUpdateEnd(Vec,InsertMode,ScatterMode);
 
 PETSC_EXTERN PetscErrorCode VecConjugate(Vec);
+PETSC_EXTERN PetscErrorCode VecConjugateAsync(Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecImaginaryPart(Vec);
 PETSC_EXTERN PetscErrorCode VecRealPart(Vec);
 
