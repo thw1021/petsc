@@ -1450,7 +1450,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
     if config.setCompilers.Configure.isClang(self.getCompiler('Cxx'), self.log):
       return
     else:
-      raise RuntimeError('CXX Compiler must be clang-based when using HIP')
+      pass #raise RuntimeError('CXX Compiler must be clang-based when using HIP')
     return
 
   def configure(self):
