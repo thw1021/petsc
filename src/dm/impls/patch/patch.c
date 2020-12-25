@@ -54,7 +54,7 @@ PetscErrorCode DMPatchZoom(DM dm, Vec X, MatStencil lower, MatStencil upper, MPI
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)dm), &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)dm), &size);CHKERRMPI(ierr);
   /* Create patch DM */
   ierr = DMDAGetInfo(dm, &dim, &M, &N, &P, NULL,NULL,NULL, &dof, NULL,NULL,NULL,NULL, &st);CHKERRQ(ierr);
 
@@ -173,8 +173,8 @@ PetscErrorCode DMPatchSolve(DM dm)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   ierr = DMPatchGetCoarse(dm, &dmc);CHKERRQ(ierr);
   ierr = DMPatchGetPatchSize(dm, &patchSize);CHKERRQ(ierr);
   ierr = DMPatchGetCommSize(dm, &commSize);CHKERRQ(ierr);
@@ -198,7 +198,7 @@ PetscErrorCode DMPatchSolve(DM dm)
     const PetscMPIInt newComm = ((gridRank.k/commSize.k)*(m/commSize.j) + gridRank.j/commSize.j)*(l/commSize.i) + (gridRank.i/commSize.i);
     const PetscMPIInt newRank = ((gridRank.k%commSize.k)*commSize.j     + gridRank.j%commSize.j)*commSize.i     + (gridRank.i%commSize.i);
 
-    ierr = MPI_Comm_split(comm, newComm, newRank, &commz);CHKERRQ(ierr);
+    ierr = MPI_Comm_split(comm, newComm, newRank, &commz);CHKERRMPI(ierr);
     if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "Rank %d color %d key %d commz %d\n", rank, newComm, newRank, *((PetscMPIInt*) &commz));CHKERRQ(ierr);}
   }
   /*
