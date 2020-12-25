@@ -6,8 +6,6 @@
  Frequently Asked Questions (FAQ)
 ==================================
 
-.. todo:: MOST if not all instructions can and should be converted to short code examples
-
 This page provides help with the most common questions about PETSc, it's design,
 execution, and general organization.
 
@@ -254,14 +252,57 @@ preconditioner block Jacobi depends on the number of processes. The more process
 parallelism means the more "older" information is used in the solution process hence
 slower convergence.
 
+.. _doc_faq_gpuhowto:
+
 Can PETSc Use GPU's To Speedup Computations?
 --------------------------------------------
 
-See GPU development :ref:`roadmap <doc_gpu_roadmap>` for the latest information regarding
-the state of PETSc GPU integration.
+.. seealso::
 
-See GPU install :ref:`documentation <doc_config_accel>` for up-to-date information on
-installing PETSc to use GPU's.
+   See GPU development :ref:`roadmap <doc_gpu_roadmap>` for the latest information
+   regarding the state of PETSc GPU integration.
+
+   See GPU install :ref:`documentation <doc_config_accel>` for up-to-date information on
+   installing PETSc to use GPU's.
+
+Quick summary of usage with CUDA:
+
+- The ``VecType`` ``VECSEQCUDA``, ``VECMPICUDA``, or ``VECCUDA`` may be used with
+  ``VecSetType()`` or ``-vec_type seqcuda``, ``mpicuda``, or ``cuda`` when
+  ``VecSetFromOptions()`` is used.
+
+- The ``MatType`` ``MATSEQAIJCUSPARSE``, ``MATMPIAIJCUSPARSE``, or ``MATAIJCUSPARSE``
+  maybe used with ``MatSetType()`` or ``-mat_type seqaijcusparse``, ``mpiaijcusparse``, or
+  ``aijcusparse`` when ``MatSetOptions()`` is used.
+
+- If you are creating the vectors and matrices with a ``DM``, you can use ``-dm_vec_type
+  cuda`` and ``-dm_mat_type aijcusparse``.
+
+Quick summary of usage with OpenCL (provided by the ViennaCL library):
+
+- The ``VecType`` ``VECSEQVIENNACL``, ``VECMPIVIENNACL``, or ``VECVIENNACL`` may be used
+  with ``VecSetType()`` or ``-vec_type seqviennacl``, ``mpiviennacl``, or ``viennacl``
+  when ``VecSetFromOptions()`` is used.
+
+- The ``MatType`` ``MATSEQAIJVIENNACL``, ``MATMPIAIJVIENNACL``, or ``MATAIJVIENNACL``
+  maybe used with ``MatSetType()`` or ``-mat_type seqaijviennacl``, ``mpiaijviennacl``, or
+  ``aijviennacl`` when ``MatSetOptions()`` is used.
+
+- If you are creating the vectors and matrices with a ``DM``, you can use ``-dm_vec_type
+  viennacl`` and ``-dm_mat_type aijviennacl``.
+
+General hints:
+
+- It is useful to develop your code with the default vectors and then run production runs
+  with the command line options to use the GPU since debugging on GPUs is difficult.
+
+- All of the Krylov methods except ``KSPIBCGS`` run on the GPU.
+
+- Parts of most preconditioners run directly on the GPU. After setup, ``PCGAMG`` runs
+  fully on GPUs, without any memory copies between the CPU and GPU.
+
+Some GPU systems (for example many laptops) only run with single precision; thus, PETSc
+must be built with the ``configure`` option ``--with-precision=single``.
 
 .. _doc_faq_extendedprecision:
 
@@ -597,7 +638,7 @@ other options may be set, including the degree of overlap ``-pc_asm_overlap <num
 type of restriction/extension ``-pc_asm_type [basic,restrict,interpolate,none]`` sets ASM
 type and several others. You may see the available ASM options by using ``-pc_type asm
 -help``. See the procedural interfaces in the manual pages, for example ``PCASMType()``
-and check the index of the users manual for ``PCASMCreateSubDomains()``.
+and check the index of the users manual for ``PCASMCreateSubdomains()``.
 
 PETSc also contains a domain decomposition inspired wirebasket or face based two level
 method where the coarse mesh to fine mesh interpolation is defined by solving specific
@@ -624,7 +665,7 @@ takes advantage of the natural blocks in your matrix to obtain good performance.
 
 .. note::
 
-   If you use ``MATIJ`` you cannot use the ``MatSetValuesBlocked()``.
+   If you use ``MATAIJ`` you cannot use the ``MatSetValuesBlocked()``.
 
 How Do I Access The Values Of A Remote Parallel PETSc Vec?
 ----------------------------------------------------------
@@ -635,6 +676,58 @@ How Do I Access The Values Of A Remote Parallel PETSc Vec?
 #. Create a ``VecScatter`` that scatters from the parallel ``Vec`` into the local ``Vec``.
 
 #. Use ``VecGetArray()`` to access the values in the local ``Vec``.
+
+
+For example, assuming we have distributed a vector ``vecGlobal`` of size :math:`N` to
+:math:`R` ranks and each remote rank holds :math:`N/R = m` values (similarly assume that
+:math:`N` is cleanly divisible by :math:`R`). We want each rank :math:`r` to gather the
+first :math:`n` (also assume :math:`n \leq m`) values from it's immediately superior neighbor
+:math:`r+1` (final rank will retrieve from rank 0).
+
+::
+
+   Vec            vecLocal;
+   IS             isLocal, isGlobal;
+   VecScatter     ctx;
+   PetscScalar    *arr;
+   PetscInt       N, firstGlobalIndex;
+   MPI_Comm       comm;
+   PetscMPIInt    r, R;
+   PetscErrorCode ierr;
+
+   /* Create sequential local vector, big enough to hold local portion */
+   ierr = VecCreateSeq(PETSC_COMM_SELF, n, &vecLocal);CHKERRQ(ierr);
+
+   /* Create IS to describe where we want to scatter to */
+   ierr = ISCreateStride(PETSC_COMM_SELF, n, 0, 1, &isLocal);CHKERRQ(ierr);
+
+   /* Compute the global indices */
+   ierr = VecGetSize(vecGlobal, &N);CHKERRQ(ierr);
+   ierr = PetscObjectGetComm((PetscObject) vecGlobal, &comm);CHKERRQ(ierr);
+   ierr = MPI_Comm_rank(comm, &r);CHKERRQ(ierr);
+   ierr = MPI_Comm_size(comm, &R);CHKERRQ(ierr);
+   firstGlobalIndex = r == R-1 ? 0 : (N/R)*(r+1);
+
+   /* Create IS that describes where we want to scatter from */
+   ierr = ISCreateStride(comm, n, firstGlobalIndex, 1, &isGlobal);CHKERRQ(ierr);
+
+   /* Create the VecScatter context */
+   ierr = VecScatterCreate(vecGlobal, isGlobal, vecLocal, isLocal, &ctx);CHKERRQ(ierr);
+
+   /* Gather the values */
+   ierr = VecScatterBegin(ctx, vecGlobal, vecLocal, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+   ierr = VecScatterEnd(ctx, vecGlobal, vecLocal, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+
+   /* Retrieve and do work */
+   ierr = VecGetArray(vecLocal, &arr);CHKERRQ(ierr);
+   /* Work */
+   ierr = VecRestoreArray(vecLocal, &arr);CHKERRQ(ierr);
+
+   /* Don't forget to clean up */
+   ierr = ISDestroy(&isLocal);CHKERRQ(ierr);
+   ierr = ISDestroy(&isGlobal);CHKERRQ(ierr);
+   ierr = VecScatterDestroy(&ctx);CHKERRQ(ierr);
+   ierr = VecDestroy(&vecLocal);CHKERRQ(ierr);
 
 .. _doc_faq_usage_alltoone:
 
@@ -667,8 +760,8 @@ followed by ``DMDAGlobalToNaturalEnd()`` to scatter the original ``Vec`` into th
 ordering in a new global ``Vec`` before calling ``VecScatterBegin()``/``VecScatterEnd()``
 to scatter the natural ``Vec`` onto all processes.
 
-How Do I Collect To The Zero'th Processor All The Values From A Parallel PETSc ``Vec``?
----------------------------------------------------------------------------------------
+How Do I Collect To The Zero'th Processor All The Values From A Parallel PETSc Vec?
+-----------------------------------------------------------------------------------
 
 See FAQ entry on collecting to :ref:`an arbitrary processor <doc_faq_usage_alltoone>`, but
 replace
@@ -1037,20 +1130,18 @@ default for the optional "preconditioning" matrix in ``MatGetSchurComplement()``
 
 An alternative is to interpret the matrices as differential operators and apply
 approximate commutator arguments to find a spectrally equivalent operation that can be
-applied efficiently (see the "PCD" preconditioners from Elman, Silvester, and Wathen). A
+applied efficiently (see the "PCD" preconditioners :cite:`elman_silvester_wathen_2014`). A
 variant of this is the least squares commutator, which is closely related to the
 Moore-Penrose pseudoinverse, and is available in ``PCLSC`` which operates on matrices of
 type ``MATSCHURCOMPLEMENT``.
 
-.. todo:: citations needed
-
-Do You Have Examples Of Doing Unstructured Grid Finite Element Computations (FEM) With PETSc?
----------------------------------------------------------------------------------------------
+Do You Have Examples Of Doing Unstructured Grid Finite Element Method (FEM) With PETSc?
+---------------------------------------------------------------------------------------
 
 There are at least two ways to write a finite element code using PETSc:
 
 #. Use ``DMPLEX``, which is a high level approach to manage your mesh and
-   discretization. See the tutorials :ref:`sections <tut_stokes>` for further information,
+   discretization. See the :ref:`tutorials sections <tut_stokes>` for further information,
    or see ``src/snes/tutorial/ex62.c``.
 
 #. Manage the grid data structure yourself and use PETSc ``IS`` and ``VecScatter`` to
@@ -2222,3 +2313,6 @@ What Do I Do If I Want To Move My Executable To A Different Machine?
 You would also need to have access to the shared libraries on this new machine. The other
 alternative is to build the exeutable without shared libraries by first deleting the
 shared libraries, and then creating the executable.
+
+.. bibliography:: ../../tex/petsc.bib
+   :filter: docname in docnames
