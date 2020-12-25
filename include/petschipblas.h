@@ -1,16 +1,13 @@
 #if !defined(PETSCHIPBLAS_H)
 #define PETSCHIPBLAS_H
 
-#include <hip/hip_runtime.h>
+#include <petscdevice.h>
 #include <hipblas.h>
-#include <petscsys.h>
-#ifdef __HIP_PLATFORM_NVCC__
+#if defined(__HIP_PLATFORM_NVCC__)
 #include <cusolverDn.h>
 #else
 #include <rocsolver.h>
 #endif
-
-#define WaitForHIP() PetscHIPSynchronize ? hipDeviceSynchronize() : hipSuccess;
 
 /* hipSolver does not exist yet so we work around it
    rocSOLVER users rocBLAS for the handle
@@ -48,15 +45,6 @@ PETSC_STATIC_INLINE rocblas_status hipsolverCreate(hipsolverHandle_t *hipsolverh
 }
 
 #endif
-
-#define CHKERRHIP(cerr) \
-do { \
-   if (PetscUnlikely(cerr)) { \
-      const char *name  = hipGetErrorName(cerr); \
-      const char *descr = hipGetErrorString(cerr); \
-      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_LIB,"hip error %d (%s) : %s",(int)cerr,name,descr); \
-   } \
-} while (0)
 
 #define CHKERRHIPBLAS(stat) \
 do { \
