@@ -10,6 +10,7 @@
 #include <petscsftypes.h> /* for VecScatter, VecScatterType */
 #include <petscis.h>
 #include <petscviewer.h>
+#include <petscstream.h>
 
 /*S
      Vec - Abstract PETSc vector object
