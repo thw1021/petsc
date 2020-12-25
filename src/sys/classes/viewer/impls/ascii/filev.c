@@ -797,10 +797,7 @@ PetscErrorCode PetscViewerGetSubViewer_ASCII(PetscViewer viewer,MPI_Comm subcomm
   ovascii->closefile = PETSC_FALSE;
 
   vascii->sviewer = *outviewer;
-
   (*outviewer)->format  = viewer->format;
-
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRMPI(ierr);
   ((PetscViewer_ASCII*)((*outviewer)->data))->bviewer = viewer;
   (*outviewer)->ops->destroy = PetscViewerDestroy_ASCII_SubViewer;
   PetscFunctionReturn(0);
