@@ -56,12 +56,21 @@ static PetscErrorCode KSPSetUp_CG(KSP ksp)
   KSP_CG         *cgP = (KSP_CG*)ksp->data;
   PetscErrorCode ierr;
   PetscInt       maxit = ksp->max_it,nwork = 3;
+  static PetscBool setType = PETSC_FALSE;
+  static VecType   type;
 
   PetscFunctionBegin;
   /* get work vectors needed by CG */
   if (cgP->singlereduction) nwork += 2;
   ierr = KSPSetWorkVecs(ksp,nwork);CHKERRQ(ierr);
-
+  if (cgP->async) {
+    setType = PETSC_TRUE;
+    for (PetscInt i = 0; i < nwork; ++i) {ierr = VecSetType(ksp->work[i],VECCUDA);CHKERRQ(ierr);}
+    ierr = PetscObjectGetType((PetscObject)ksp->work[0],&type);CHKERRQ(ierr);
+  } else if (setType) {
+    setType = PETSC_FALSE;
+    for (PetscInt i = 0; i < nwork; ++i) {ierr = VecSetType(ksp->work[i],type);CHKERRQ(ierr);}
+  }
   /*
      If user requested computations of eigenvalues then allocate
      work space needed
@@ -81,6 +90,7 @@ static PetscErrorCode KSPSetUp_CG(KSP ksp)
      A macro used in the following KSPSolve_CG and KSPSolve_CG_SingleReduction routines
 */
 #define VecXDot(x,y,a) (((cg->type) == (KSP_CG_HERMITIAN)) ? VecDot(x,y,a) : VecTDot(x,y,a))
+#define VecXDotAsync(x,y,a,strm) (((cg->type) == (KSP_CG_HERMITIAN)) ? VecDotAsync(x,y,a,strm) : VecTDotAsync(x,y,a,strm))
 
 /*
      KSPSolve_CG - This routine actually applies the conjugate gradient method
@@ -239,6 +249,222 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
     i++;
   } while (i<ksp->max_it);
   if (i >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
+{
+  PetscErrorCode ierr;
+  PetscInt       i,stored_max_it,eigs;
+  PetscScalar    minusa=-1.0,betaold=1.0,*e = NULL,*d = NULL,dpiold,dpi=0.0,a=1.0,beta,b=0.0,dp=0.0;
+  Vec            X,B,Z,R,P,W;
+  KSP_CG         *cg;
+  Mat            Amat,Pmat;
+  PetscBool      diagonalscale;
+  PetscStream    pstream;
+  PetscStreamScalar pscaldp, pscaldpi, pscalbeta, pscalb, pscala, pscalmina;
+
+  PetscFunctionBegin;
+  /* Create a stream here for now */
+  ierr = PetscStreamCreate(&pstream);CHKERRQ(ierr);
+  ierr = PetscStreamSetType(pstream,PETSCSTREAMCUDA);CHKERRQ(ierr);
+  ierr = PetscStreamSetMode(pstream,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
+  ierr = PetscStreamSetUp(pstream);CHKERRQ(ierr);
+
+  /* Create streamscalars */
+  ierr = PetscStreamScalarCreate(&pscaldp);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetType(pscaldp,PETSCSTREAMCUDA);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetUp(pscaldp);CHKERRQ(ierr);
+
+  ierr = PetscStreamScalarDuplicate(pscaldp,&pscaldpi);CHKERRQ(ierr);
+  ierr = PetscStreamScalarDuplicate(pscaldp,&pscalbeta);CHKERRQ(ierr);
+  ierr = PetscStreamScalarDuplicate(pscaldp,&pscalb);CHKERRQ(ierr);
+  ierr = PetscStreamScalarDuplicate(pscaldp,&pscala);CHKERRQ(ierr);
+  ierr = PetscStreamScalarDuplicate(pscaldp,&pscalmina);CHKERRQ(ierr);
+
+  ierr = PetscStreamScalarSetValue(pscaldp,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetValue(pscaldpi,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetValue(pscalbeta,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetValue(pscalb,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetValue(pscala,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetValue(pscalmina,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+
+  ierr = PCGetDiagonalScale(ksp->pc,&diagonalscale);CHKERRQ(ierr);
+  if (diagonalscale) SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
+
+  cg            = (KSP_CG*)ksp->data;
+  eigs          = ksp->calc_sings;
+  stored_max_it = ksp->max_it;
+  X             = ksp->vec_sol;
+  B             = ksp->vec_rhs;
+  R             = ksp->work[0];
+  Z             = ksp->work[1];
+  P             = ksp->work[2];
+  W             = Z;
+
+  if (eigs) {e = cg->e; d = cg->d; e[0] = 0.0; }
+  ierr = PCGetOperators(ksp->pc,&Amat,&Pmat);CHKERRQ(ierr);
+
+  ksp->its = 0;
+  if (!ksp->guess_zero) {
+    ierr = KSP_MatMult(ksp,Amat,X,R);CHKERRQ(ierr);            /*    r <- b - Ax                       */
+    ierr = VecAYPXAsync(R,pscalb,B,pstream);CHKERRQ(ierr);
+  } else {
+    ierr = VecCopyAsync(B,R,pstream);CHKERRQ(ierr);                         /*    r <- b (x is 0)                   */
+  }
+
+  switch (ksp->normtype) {
+    case KSP_NORM_PRECONDITIONED:
+      ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);               /*    z <- Br                           */
+      ierr = VecNormAsync(Z,NORM_2,&pscaldp,pstream);CHKERRQ(ierr);              /*    dp <- z'*z = e'*A'*B'*B*A*e       */
+      ierr = PetscStreamScalarAwait(pscaldp,&dp,pstream);CHKERRQ(ierr);
+      KSPCheckNorm(ksp,PetscRealPart(dp));
+      break;
+    case KSP_NORM_UNPRECONDITIONED:
+      ierr = VecNormAsync(R,NORM_2,&pscaldp,pstream);CHKERRQ(ierr);              /*    dp <- r'*r = e'*A'*A*e            */
+      ierr = PetscStreamScalarAwait(pscaldp,&dp,pstream);CHKERRQ(ierr);
+      KSPCheckNorm(ksp,PetscRealPart(dp));
+      break;
+    case KSP_NORM_NATURAL:
+      ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);               /*    z <- Br                           */
+      ierr = VecXDotAsync(Z,R,pscalbeta,pstream);CHKERRQ(ierr);                 /*    beta <- z'*r                      */
+      ierr = PetscStreamScalarAwait(pscalbeta,&beta,pstream);CHKERRQ(ierr);
+      KSPCheckDot(ksp,beta);
+      {
+        const PetscScalar tmp = PetscSqrtReal(PetscAbsScalar(beta));
+        ierr = PetscStreamScalarSetValue(pscaldp,&tmp,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+      }
+      break;
+    case KSP_NORM_NONE:
+      ierr = PetscStreamScalarSetValue(pscaldp,NULL,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+      break;
+    default: SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"%s",KSPNormTypes[ksp->normtype]);
+  }
+
+  ierr = PetscStreamScalarAwait(pscaldp,&dp,pstream);CHKERRQ(ierr);
+  ierr = KSPLogResidualHistory(ksp,PetscRealPart(dp));CHKERRQ(ierr);
+  ierr = KSPMonitor(ksp,0,PetscRealPart(dp));CHKERRQ(ierr);
+  {
+    PetscScalar temp;
+    ierr = PetscStreamScalarAwait(pscaldp,&temp,pstream);CHKERRQ(ierr);
+    ksp->rnorm = PetscRealPart(temp);
+  }
+
+  ierr = (*ksp->converged)(ksp,0,PetscRealPart(dp),&ksp->reason,ksp->cnvP);CHKERRQ(ierr);     /* test for convergence */
+  if (ksp->reason) PetscFunctionReturn(0);
+
+  if (ksp->normtype != KSP_NORM_PRECONDITIONED && (ksp->normtype != KSP_NORM_NATURAL)) {
+    ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);                /*     z <- Br                           */
+  }
+  if (ksp->normtype != KSP_NORM_NATURAL) {
+    ierr = VecXDotAsync(Z,R,pscalbeta,pstream);CHKERRQ(ierr);                  /*     beta <- z'*r                      */
+    ierr = PetscStreamScalarAwait(pscalbeta,&beta,pstream);CHKERRQ(ierr);
+    KSPCheckDot(ksp,beta);
+  }
+
+  i = 0;
+  do {
+    ksp->its = i+1;
+    ierr = PetscStreamScalarAwait(pscalbeta,&beta,pstream);CHKERRQ(ierr);
+    if (beta == 0.0) {
+      ksp->reason = KSP_CONVERGED_ATOL;
+      ierr        = PetscInfo(ksp,"converged due to beta = 0\n");CHKERRQ(ierr);
+      break;
+#if !defined(PETSC_USE_COMPLEX)
+    } else if ((i > 0) && (beta*betaold < 0.0)) {
+      if (ksp->errorifnotconverged) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite preconditioner, beta %g, betaold %g",(double)beta,(double)betaold);
+      ksp->reason = KSP_DIVERGED_INDEFINITE_PC;
+      ierr        = PetscInfo(ksp,"diverging due to indefinite preconditioner\n");CHKERRQ(ierr);
+      break;
+#endif
+    }
+    if (!i) {
+      ierr = VecCopyAsync(Z,P,pstream);CHKERRQ(ierr);                       /*     p <- z                           */
+      ierr = PetscStreamScalarSetValue(pscalb,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
+    } else {
+      const PetscScalar btemp = beta/betaold;
+      ierr = PetscStreamScalarSetValue(pscalb,&btemp,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+      if (eigs) {
+        if (ksp->max_it != stored_max_it) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
+        ierr = PetscStreamScalarAwait(pscala,&a,pstream);CHKERRQ(ierr);
+        e[i] = PetscSqrtReal(PetscAbsScalar(btemp))/a;
+      }
+      ierr = VecAYPXAsync(P,pscalb,Z,pstream);CHKERRQ(ierr);                     /*     p <- z + b* p                    */
+    }
+
+    ierr = PetscStreamScalarAwait(pscaldpi,&dpi,pstream);CHKERRQ(ierr);
+    dpiold = dpi;
+    ierr = KSP_MatMult(ksp,Amat,P,W);CHKERRQ(ierr);            /*     w <- Ap                          */
+    ierr = VecXDotAsync(P,W,pscaldpi,pstream);CHKERRQ(ierr);                    /*     dpi <- p'w                       */
+    ierr = PetscStreamScalarAwait(pscaldpi,&dpi,pstream);CHKERRQ(ierr);
+    KSPCheckDot(ksp,dpi);
+    betaold = beta;
+
+    if ((dpi == 0.0) || ((i > 0) && ((PetscSign(PetscRealPart(dpi))*PetscSign(PetscRealPart(dpiold))) < 0.0))) {
+      if (ksp->errorifnotconverged) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite matrix, dpi %g, dpiold %g",(double)PetscRealPart(dpi),(double)PetscRealPart(dpiold));
+      ksp->reason = KSP_DIVERGED_INDEFINITE_MAT;
+      ierr        = PetscInfo(ksp,"diverging due to indefinite or negative definite matrix\n");CHKERRQ(ierr);
+      break;
+    }
+    //a = beta/(*dpi);                                              /*     a = beta/p'w                     */
+    const PetscScalar atmp = beta/dpi;
+    const PetscScalar minusa = -atmp;
+    ierr = PetscStreamScalarSetValue(pscala,&atmp,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarSetValue(pscalmina,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+    if (eigs) {
+      ierr = PetscStreamScalarAwait(pscalb,&b,pstream);CHKERRQ(ierr);
+      d[i] = PetscSqrtReal(PetscAbsScalar(b))*e[i] + 1.0/atmp;
+    }
+    ierr = VecAXPYAsync(X,pscala,P,pstream);CHKERRQ(ierr);                       /*     x <- x + ap                      */
+    ierr = VecAXPYAsync(R,pscalmina,W,pstream);CHKERRQ(ierr);                      /*     r <- r - aw                      */
+    if (ksp->normtype == KSP_NORM_PRECONDITIONED && ksp->chknorm < i+2) {
+      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+      ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);               /*     z <- Br                          */
+      ierr = VecNormAsync(Z,NORM_2,&pscaldp,pstream);CHKERRQ(ierr);              /*     dp <- z'*z                       */
+      ierr = PetscStreamScalarAwait(pscaldp,&dp,pstream);CHKERRQ(ierr);
+      KSPCheckNorm(ksp,PetscRealPart(dp));
+    } else if (ksp->normtype == KSP_NORM_UNPRECONDITIONED && ksp->chknorm < i+2) {
+      ierr = VecNormAsync(R,NORM_2,&pscaldp,pstream);CHKERRQ(ierr);              /*     dp <- r'*r                       */
+      ierr = PetscStreamScalarAwait(pscaldp,&dp,pstream);CHKERRQ(ierr);
+      KSPCheckNorm(ksp,PetscRealPart(dp));
+    } else if (ksp->normtype == KSP_NORM_NATURAL) {
+      ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);               /*     z <- Br                          */
+      ierr = VecXDotAsync(Z,R,pscalbeta,pstream);CHKERRQ(ierr);                 /*     beta <- r'*z                     */
+      ierr = PetscStreamScalarAwait(pscalbeta,&beta,pstream);CHKERRQ(ierr);
+      KSPCheckDot(ksp,beta);
+      {
+        const PetscScalar betatmp = PetscSqrtReal(PetscAbsScalar(beta));
+        ierr = PetscStreamScalarSetValue(pscaldp,&betatmp,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+      }
+    } else {
+      ierr = PetscStreamScalarSetValue(pscaldp,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
+    }
+    ierr = PetscStreamScalarAwait(pscaldp,&dp,pstream);CHKERRQ(ierr);
+    ksp->rnorm = PetscRealPart(dp);
+    ierr = KSPLogResidualHistory(ksp,PetscRealPart(dp));CHKERRQ(ierr);
+    if (eigs) cg->ned = ksp->its;
+    ierr = KSPMonitor(ksp,i+1,PetscRealPart(dp));CHKERRQ(ierr);
+    ierr = (*ksp->converged)(ksp,i+1,PetscRealPart(dp),&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
+    if (ksp->reason) break;
+
+    if ((ksp->normtype != KSP_NORM_PRECONDITIONED && (ksp->normtype != KSP_NORM_NATURAL)) || (ksp->chknorm >= i+2)) {
+      ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);               /*     z <- Br                          */
+    }
+    if ((ksp->normtype != KSP_NORM_NATURAL) || (ksp->chknorm >= i+2)) {
+      ierr = VecXDotAsync(Z,R,pscalbeta,pstream);CHKERRQ(ierr);                 /*     beta <- z'*r                     */
+      ierr = PetscStreamScalarAwait(pscalbeta,&beta,pstream);CHKERRQ(ierr);
+      KSPCheckDot(ksp,beta);
+    }
+    i++;
+  } while (i<ksp->max_it);
+  if (i >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
+  ierr = PetscStreamScalarDestroy(&pscaldp);CHKERRQ(ierr);
+  ierr = PetscStreamScalarDestroy(&pscaldpi);CHKERRQ(ierr);
+  ierr = PetscStreamScalarDestroy(&pscalbeta);CHKERRQ(ierr);
+  ierr = PetscStreamScalarDestroy(&pscalb);CHKERRQ(ierr);
+  ierr = PetscStreamScalarDestroy(&pscala);CHKERRQ(ierr);
+  ierr = PetscStreamScalarDestroy(&pscalmina);CHKERRQ(ierr);
+  ierr = PetscStreamDestroy(&pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -455,9 +681,27 @@ PetscErrorCode KSPView_CG(KSP ksp,PetscViewer viewer)
 #if defined(PETSC_USE_COMPLEX)
     ierr = PetscViewerASCIIPrintf(viewer,"  variant %s\n",KSPCGTypes[cg->type]);CHKERRQ(ierr);
 #endif
+    if (cg->async) {ierr = PetscViewerASCIIPrintf(viewer,"  ASYNC");CHKERRQ(ierr);}
     if (cg->singlereduction) {
       ierr = PetscViewerASCIIPrintf(viewer,"  using single-reduction variant\n");CHKERRQ(ierr);
     }
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode KSPUseAsync_CG(KSP ksp, PetscBool flg)
+{
+  KSP_CG *cg = (KSP_CG*)ksp->data;
+
+  PetscFunctionBegin;
+  cg->async = flg;
+  if (cg->async) {
+    PetscErrorCode ierr;
+
+    ierr = PetscInfo(ksp,"Using asynchronous solve\n");CHKERRQ(ierr);
+    ksp->ops->solve = KSPSolve_CGAsync;
+  } else {
+    ksp->ops->solve = KSPSolve_CG;
   }
   PetscFunctionReturn(0);
 }
@@ -481,6 +725,10 @@ PetscErrorCode KSPSetFromOptions_CG(PetscOptionItems *PetscOptionsObject,KSP ksp
   ierr = PetscOptionsBool("-ksp_cg_single_reduction","Merge inner products into single MPIU_Allreduce()","KSPCGUseSingleReduction",cg->singlereduction,&cg->singlereduction,&flg);CHKERRQ(ierr);
   if (flg) {
     ierr = KSPCGUseSingleReduction(ksp,cg->singlereduction);CHKERRQ(ierr);
+  }
+  if (!flg) {
+    ierr = PetscOptionsBool("-ksp_cg_async","Do KSP CG solve asynchronously on device","KSPCGUseAsync",cg->async,&cg->async,&flg);CHKERRQ(ierr);
+    if (cg->async && flg) {ierr = KSPUseAsync_CG(ksp,cg->async);CHKERRQ(ierr);}
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
