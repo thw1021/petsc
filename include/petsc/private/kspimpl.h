@@ -508,7 +508,6 @@ M*/
       PetscFunctionReturn(0);\
     }\
   } } while (0)
-
 #endif
 
 PETSC_INTERN PetscErrorCode KSPMonitorMakeKey_Internal(const char[], PetscViewerType, PetscViewerFormat, char[]);

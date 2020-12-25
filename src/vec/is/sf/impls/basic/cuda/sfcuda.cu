@@ -1,6 +1,5 @@
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
-#include <cuda_runtime.h>
-#include <petsccublas.h> /* For CHKERRCUDA */
+#include <petscdevice.h>
 
 /* Map a thread id to an index in root/leaf space through a series of 3D subdomains. See PetscSFPackOpt. */
 __device__ static inline PetscInt MapTidToIndex(const PetscInt *opt,PetscInt tid)
