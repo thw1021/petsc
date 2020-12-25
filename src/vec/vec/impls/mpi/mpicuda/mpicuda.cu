@@ -34,9 +34,6 @@ PetscErrorCode VecDestroy_MPICUDA(Vec v)
       err = cudaFree(((Vec_CUDA*)v->spptr)->GPUarray_allocated);CHKERRCUDA(err);
       veccuda->GPUarray_allocated = NULL;
     }
-    if (veccuda->stream) {
-      err = cudaStreamDestroy(((Vec_CUDA*)v->spptr)->stream);CHKERRCUDA(err);
-    }
     if (v->pinned_memory) {
       ierr = PetscMallocSetCUDAHost();CHKERRQ(ierr);
       ierr = PetscFree(vecmpi->array_allocated);CHKERRQ(ierr);
@@ -433,7 +430,6 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
       /* Cannot use PetscNew() here because spptr is void* */
       ierr = PetscMalloc(sizeof(Vec_CUDA),&vv->spptr);CHKERRQ(ierr);
       veccuda = (Vec_CUDA*)vv->spptr;
-      veccuda->stream = 0; /* using default stream */
       veccuda->GPUarray_allocated = 0;
       vv->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
       vv->minimum_bytes_pinned_memory = 0;
