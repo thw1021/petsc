@@ -9,6 +9,8 @@ OpenCL/ViennaCL and HIP. Effective GPU implementations of low-level linear algeb
 operations provide a highly performant alternative solution strategy for users, and is
 therefore a high priority for PETSc developers.
 
+See FAQ :ref:`topic <doc_faq_gpuhowto>` which shows how to enable GPU backends.
+
 .. note::
 
    PETSc uses a single source programming model where solver back-ends are selected as
