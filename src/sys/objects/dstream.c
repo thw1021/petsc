@@ -50,7 +50,7 @@ PetscErrorCode PetscStreamDestroy(PetscStream *strm)
     herr = hipStreamDestroy((*strm)->hstream);CHKERRHIP(ierr);
   }
 #endif /* PETSC_HAVE_HIP */
-  ierr = PetscFree(strm);CHKERRQ(ierr);
+  ierr = PetscFree(*strm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
