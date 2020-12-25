@@ -1303,7 +1303,7 @@ solution or state to your routines.
 
 If it occurs for DAEs, it is important to insure the algebraic constraints are well
 satisfied, which can prevent "breakdown" later. Thus, one can try using a tight tolerance
-for ``SNES``, using a dicrect solver when possible, and reducing the timestep (or
+for ``SNES``, using a direct solver when possible, and reducing the timestep (or
 tightening ``TS`` tolerances for adaptive time stepping).
 
 Can PETSc Work With Hermitian Matrices?
@@ -1315,7 +1315,7 @@ little direct support for Hermitian matrices and Hermitian transpose (complex co
 transpose) operations. There is ``KSPSolveTranspose()`` for solving the transpose of a
 linear system but no ``KSPSolveHermitian()``.
 
-For creating known Hermition matrices:
+For creating known Hermitian matrices:
 
 - ``MatCreateNormalHermitian()``
 
@@ -1336,7 +1336,7 @@ For determining or setting Hermitian status on existing matrices:
 - ``MatSetOption()`` (use with ``MAT_SYMMETRIC`` or ``MAT_HERMITIAN`` to assert to PETSc
   that either is the case).
 
-For performing matrix operations on known Hermitian matrices (note that regular ``MAT``
+For performing matrix operations on known Hermitian matrices (note that regular ``Mat``
 functions such as ``MatMult()`` will of course also work on Hermitian matrices):
 
 - ``MatMultHermitianTranspose()``
@@ -1361,7 +1361,7 @@ the old values from the previous vector.
 How Can One Compute The Nullspace Of A Sparse Matrix With MUMPS?
 ----------------------------------------------------------------
 
-Assuming you have an existing matrix A whose nullspace V you want to find:
+Assuming you have an existing matrix :math:`A` whose nullspace :math:`V` you want to find:
 
 ::
 
@@ -1408,10 +1408,10 @@ executables should be much smaller, run ``configure`` with the additional option
 linking PETSc on your machine's ``/tmp`` disk or similar local disk, rather than over the
 network will be much faster.
 
-How does PETSc's ``-help`` Option Work? Why Is It Different For Different Programs?
+How Does PETSc's ``-help`` Option Work? Why Is It Different For Different Programs?
 -----------------------------------------------------------------------------------
 
-There are 2 ways in which one interacts with the ``PetscOptions`` database:
+There are 2 ways in which one interacts with the options database:
 
 - ``PetscOptionsGetXXX()`` where ``XXX`` is some type or data structure (for example
   ``PetscOptionsGetBool()`` or ``PetscOptionsGetScalarArray()``). This is a classic
@@ -1420,14 +1420,14 @@ There are 2 ways in which one interacts with the ``PetscOptions`` database:
 
 - ``PetscOptionsXXX()`` where ``XXX`` is some type or data structure (for example
   ``PetscOptionsBool()`` or ``PetscOptionsScalarArray()``). This is a so-called "provider"
-  function. It first tabulates the option name to an internal list of previously encountered
-  options, before calling ``PetscOptionsGetXXX()`` to query the status of said option.
+  function. It first records the option name in an internal list of previously encountered
+  options before calling ``PetscOptionsGetXXX()`` to query the status of said option.
 
-To provide an option to the user via the command line, developers use the "provider"
-variant of functions. As the program runs, it will build up a list of encountered option
-names which are then printed **in the order of their appearance** by the **root**
-rank. Hence as different programs take different paths through PETSc source code, they
-will encounter different providers, and therefore have different ``-help`` output.
+While users generally use the first option, developers will *always* use the second
+(provider) variant of functions. Thus, as the program runs, it will build up a list of
+encountered option names which are then printed **in the order of their appearance on the
+root rank**. Different programs may take different paths through PETSc source code, so
+they will encounter different providers, and therefore have different ``-help`` output.
 
 PETSc Has So Many Options For My Program That It Is Hard To Keep Them Straight
 ------------------------------------------------------------------------------
@@ -1637,9 +1637,11 @@ Here are some ways to help the Newton process if everything above checks out:
 
   .. code-block:: console
 
-  > ./configure --with-precision=__float128 --download-f2cblaslapack
+     > ./configure --with-precision=__float128 --download-f2cblaslapack
 
-  **requires** PETSc 3.2 and later and recent versions of the GNU compilers.
+  .. note::
+
+     quad precision requires PETSc 3.2 and later and recent versions of the GNU compilers.
 
 - Change the units (nondimensionalization), boundary condition scaling, or formulation so
   that the Jacobian is better conditioned. See `Buckingham pi theorem
@@ -1857,7 +1859,7 @@ ranks in the debugger using tmux.
 
 On newer macOS machines - one has to be in admin group to be able to use debugger.
 
-On newer UBUNTU linux machines - one has to disable ptrace_scop with
+On newer UBUNTU linux machines - one has to disable ``ptrace_scope`` with
 
 .. code-block:: console
 
@@ -1866,16 +1868,17 @@ On newer UBUNTU linux machines - one has to disable ptrace_scop with
 to get start in debugger working.
 
 If ``-start_in_debugger`` does not really work on your OS, for a uniprocessor job, just
-try the debugger directly, for example: ``gdb ex1``. You can also use Totalview which is a
-good graphical parallel debugger.
+try the debugger directly, for example: ``gdb ex1``. You can also use `TotalView
+<https://totalview.io/products/totalview>`__ which is a good graphical parallel debugger.
 
 How Do I See Where My Code Is Hanging?
 --------------------------------------
 
 You can use the ``-start_in_debugger`` option to start all processes in the debugger (each
-will come up in its own xterm) or run in Totalview. Then use ``cont`` (for continue) in
-each xterm. Once you are sure that the program is hanging, hit control-c in each xterm and
-then use 'where' to print a stack trace for each process.
+will come up in its own xterm) or run in `TotalView
+<https://totalview.io/products/totalview>`__. Then use ``cont`` (for continue) in each
+xterm. Once you are sure that the program is hanging, hit control-c in each xterm and then
+use 'where' to print a stack trace for each process.
 
 How Can I Inspect PETSc Vector and Matrix Values When In The Debugger?
 ----------------------------------------------------------------------
@@ -2075,7 +2078,7 @@ or
 to prevent the zero pivot. [level] is "sub" when lu, ilu, cholesky, or icc are employed in
 each individual block of the bjacobi or ASM preconditioner. [level] is "mg_levels" or
 "mg_coarse" when lu, ilu, cholesky, or icc are used inside multigrid smoothers or to the
-coarse grid solver. See ``PCFactorSetShiftType()``, ``PCFactorSetAmount()``.
+coarse grid solver. See ``PCFactorSetShiftType()``, ``PCFactorSetShiftAmount()``.
 
 This error can also happen if your matrix is singular, see ``MatSetNullSpace()`` for how
 to handle this. If this error occurs in the zeroth row of the matrix, it is likely you
@@ -2112,17 +2115,17 @@ Some of the following may be occuring:
 
 The following may help:
 
-- Run with the ``-malloc_debug`` option and ``-malloc_dump``. Or use the commands
-  ``PetscMallocDump()`` and ``PetscMallocLogDump()`` sprinkled in your code to track
-  memory that is allocated and not later freed. Use the commands
-  ``PetscMallocGetCurrentUsage()`` and ``PetscMemoryGetCurrentUsage()`` to monitor memory
-  allocated and ``PetscMallocGetMaximumUsage()`` and ``PetscMemoryGetMaximumUsage()`` for
-  total memory used as the code progresses.
+- Run with the ``-malloc_debug`` option and ``-malloc_view``. Or use ``PetscMallocDump()``
+  and ``PetscMallocView()`` sprinkled about your code to track memory that is allocated
+  and not later freed. Use the commands ``PetscMallocGetCurrentUsage()`` and
+  ``PetscMemoryGetCurrentUsage()`` to monitor memory allocated and
+  ``PetscMallocGetMaximumUsage()`` and ``PetscMemoryGetMaximumUsage()`` for total memory
+  used as the code progresses.
 
 - This is just the way Unix works and is harmless.
 
 - Do not use the ``-log``, ``-log_mpe``, or ``-log_all`` option, or use
-  ``PLogEventDeactivate()`` or ``PLogEventDeactivateClass()`` to turn off logging of
+  ``PetscLogEventDeactivate()`` or ``PetscLogEventDeactivateClass()`` to turn off logging of
   specific events.
 
 - Make sure you do not link with the MPI profiling libraries.
@@ -2147,7 +2150,7 @@ I.e.
    30 KSP Residual norm 1.977245964368e-04
    30 KSP Residual norm 1.994426291979e-04 <----- At restart the residual norm is printed a second time
 
-Thiscis actually not surprising! GMRES computes the norm of the residual at each iteration
+This is actually not surprising! GMRES computes the norm of the residual at each iteration
 via a recurrence relation between the norms of the residuals at the previous iterations
 and quantities computed at the current iteration. It does not compute it via directly
 :math:`|| b - A x^{n} ||`.
@@ -2174,14 +2177,14 @@ I.e.
    1199 KSP Residual norm 1.366026406067e-04
    1199 KSP Residual norm 1.931819426344e-04
 
-Some Krylov methods, for example tfqmr, actually have a "sub-iteration" of size 2 inside
-the loop. Each of the two substeps has its own matrix vector product and application of
-the preconditioner and updates the residual approximations. This is why you get this
-"funny" output where it looks like there are two residual norms per iteration. You can
-also think of it as twice as many iterations.
+Some Krylov methods, for example ``KSPTFQMR``, actually have a "sub-iteration" of size 2
+inside the loop. Each of the two substeps has its own matrix vector product and
+application of the preconditioner and updates the residual approximations. This is why you
+get this "funny" output where it looks like there are two residual norms per
+iteration. You can also think of it as twice as many iterations.
 
-Unable To Locate PETSc Dynamic Library libpetsc
------------------------------------------------
+Unable To Locate PETSc Dynamic Library ``libpetsc``
+---------------------------------------------------
 
 When using DYNAMIC libraries - the libraries cannot be moved after they are
 installed. This could also happen on clusters - where the paths are different on the (run)
@@ -2197,7 +2200,7 @@ libraries**. Run ``configure`` with
 How Do I Determine What Update To PETSc Broke My Code?
 ------------------------------------------------------
 
-if at some point (in PETSc code history) you had a working code - but the latest PETSc
+If at some point (in PETSc code history) you had a working code - but the latest PETSc
 code broke it, its possible to determine the PETSc code change that might have caused this
 behavior. This is achieved by:
 
@@ -2211,7 +2214,7 @@ behavior. This is achieved by:
   <https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-bisect.html>`__
   functionality of Git
 
-This process can be done as follows:
+Git bisect can be done as follows:
 
 #. Get PETSc development (master branch in git) sources
 
@@ -2220,24 +2223,25 @@ This process can be done as follows:
       > git clone https://gitlab.com/petsc/petsc.git
 
 #. Find the :greenhl:`good` and :redhl:`bad` markers to start the bisection process. This
-   can be done either by checking git log or gitk or https://gitlab.com/petsc/petsc or the
-   web history of petsc-release clones. Lets say the known :redhl:`bad` commit is
-   21af4baa815c and known :greenhl:`good` commit is 5ae5ab319844
+   can be done either by checking ``git log`` or ``gitk`` or
+   https://gitlab.com/petsc/petsc or the web history of petsc-release clones. Lets say the
+   known :redhl:`bad` commit is 21af4baa815c and known :greenhl:`good` commit is
+   5ae5ab319844.
 
 #. Start the bisection process with these known revisions. Build PETSc, and test your code
-   to confirm known good/bad behavior.
+   to confirm known good/bad behavior:
 
    .. code-block:: console
 
       > git bisect start 21af4baa815c 5ae5ab319844
 
-   build/test and confirm that this new state is :redhl:`bad`
+   build/test, perhaps discover that this new state is :redhl:`bad`
 
    .. code-block:: console
 
-      > git disect bad
+      > git bisect bad
 
-   build/test perhaps discover that this state is :greenhl:`good`
+   build/test, perhaps discover that this state is :greenhl:`good`
 
    .. code-block:: console
 
