@@ -574,7 +574,7 @@ simplehtml: chk_c2html
               idir=`dirname $$i`;\
               if [ ! -d $${loc}/$${idir} ]; then ${MKDIR} -p $${loc}/$${idir}; fi ; \
               ${RM} $${loc}/$$i.html; \
-              sed -e "s/CHKERRQ(ierr);//g" -e "s/PetscFunctionReturn(0)/return(0)/g"  -e "s/ierr [ ]*= //g"  -e "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | ${C2HTML} -n  | \
+              sed -e "s/CHKERRQ(ierr);//g" -e "s/CHKERRMPI(ierr);//g" -e "s/PetscFunctionReturn(0)/return(0)/g"  -e "s/ierr [ ]*= //g"  -e "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | ${C2HTML} -n  | \
               awk '{ sub(/<pre width="80">/,"<pre width=\"80\">\n"); print }' > $${loc}/$$i.html ; \
 	    fi; \
          done
@@ -598,7 +598,7 @@ html: chk_c2html
               fi;\
               ${RM} $${loc}/$$i.html; \
               echo "<center><a href=\"$${iroot}\">Actual source code: $${iroot}</a></center><br>" > $${loc}/$$i.html; \
-              sed -e "s/CHKERRQ(ierr);//g" -e "s/PetscFunctionReturn(0)/return(0)/g"  -e "s/ierr [ ]*= //g"  -e "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | ${C2HTML} -n  | \
+              sed -e "s/CHKERRQ(ierr);//g" -e "s/CHKERRMPI(ierr);//g" -e "s/PetscFunctionReturn(0)/return(0)/g"  -e "s/ierr [ ]*= //g"  -e "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | ${C2HTML} -n  | \
               awk '{ sub(/<pre width="80">/,"<pre width=\"80\">\n"); print }'  | ${PYTHON} ${PETSC_DIR}/lib/petsc/bin/maint/fixinclude.py $$i $${PETSC_DIR} | \
               egrep -v '(PetscValid|PetscFunctionBegin|PetscCheck|PetscErrorCode ierr;|#if !defined\(__|#define __|#undef __|EXTERN_C )' | \
               ${MAPNAMES} -map /tmp/$$USER.htmlmap -inhtml | sed -e s?ROOT?$${IROOT}?g >> $${loc}/$$i.html ; \
@@ -670,6 +670,8 @@ checkbadSource:
 	-@git --no-pager grep -l -P ' \)' -- '*.[chF]' '*.F90' '*.cxx' | grep -v khash.h >> checkbadSource.out;true
 	-@echo "Space before CHKERRQ ---------------------------------" >> checkbadSource.out
 	-@git --no-pager grep -l -P '; CHKERRQ\(' -- '*.[chF]' '*.F90' '*.cxx' | grep -v khash.h >> checkbadSource.out;true
+	-@echo "Space before CHKERRMPI ---------------------------------" >> checkbadSource.out
+	-@git --no-pager grep -l -P '; CHKERRMPI\(' -- '*.[chF]' '*.F90' '*.cxx' | grep -v khash.h >> checkbadSource.out;true
 	-@echo "No space after if, for or while -----------------------------" >> checkbadSource.out
 	-@git --no-pager grep -l -P -e '[^_]for\(' -e 'if\('  -e 'while\(' -- '*.[chF]' '*.F90' '*.cxx' | grep -v khash.h >> checkbadSource.out;true
 	-@echo "Two ;; -----------------------------" >> checkbadSource.out
@@ -682,7 +684,7 @@ checkbadSource:
 	-@git --no-pager grep  -l -P '{SETERRQ' -- '*.[chF]' '*.F90' '*.cxx' | grep -v khash.h >> checkbadSource.out;true
 #	-@echo "Missing CHKERRQ  --------------------------" >> checkbadSource.out
 #	-@git --no-pager grep -P 'ierr = ' -- '*.[ch]' '*.cxx' | grep ');' | egrep -v '(PetscFinalize|PetscInitialize|sys|benchmark|interfaces|fun3d|ftn-custom|f90-custom|CHK)' >> checkbadSource.out;true
-	@a=`cat checkbadSource.out | wc -l`; let "l=$$a-10" ;\
+	@a=`cat checkbadSource.out | wc -l`; let "l=$$a-11" ;\
          if [ $$l -gt 0 ] ; then \
            echo $$l " files with errors detected in source code formatting" ;\
            cat checkbadSource.out ;\
