@@ -5,14 +5,7 @@
 #include <petsc/private/petscimpl.h>        /*I  "petscsys.h"   I*/
 #include <petscvalgrind.h>
 #include <petscviewer.h>
-
-#if defined(PETSC_HAVE_CUDA)
-  #include <petsccublas.h>
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-  #include <petschipblas.h>
-#endif
+#include <petscdevice.h>
 
 #if defined(PETSC_USE_GCOV)
 EXTERN_C_BEGIN
