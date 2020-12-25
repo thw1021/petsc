@@ -399,6 +399,9 @@ PetscErrorCode  VecDestroy(Vec *v)
   }
   /* destroy the external/common part */
   ierr = PetscLayoutDestroy(&(*v)->map);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_DEVICE)
+  ierr = PetscStreamDestroy(&(*v)->stream);CHKERRQ(ierr);
+#endif
   ierr = PetscHeaderDestroy(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
