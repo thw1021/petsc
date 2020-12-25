@@ -185,8 +185,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLeafToRootBegin_Basic(PetscSF sf,MPI_D
 
   PetscFunctionBegin;
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,sfop,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkPrepareCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   ierr = PetscSFLinkBuildDependenceOnInputData(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
+  ierr = PetscSFLinkPrepareCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   ierr = PetscSFLinkPackLeafData(sf,link,PETSCSF_REMOTE,leafdata);CHKERRQ(ierr);
   ierr = PetscSFLinkStartCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   *out = link;

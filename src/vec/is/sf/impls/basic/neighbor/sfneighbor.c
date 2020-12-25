@@ -121,10 +121,12 @@ static PetscErrorCode PetscSFBcastAndOpBegin_Neighbor(PetscSF sf,MPI_Datatype un
 
   PetscFunctionBegin;
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_BCAST,&link);CHKERRQ(ierr);
+  ierr = PetscSFLinkBuildDependenceOnInputData(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
   /* Do neighborhood alltoallv for remote ranks */
   ierr = PetscSFGetDistComm_Neighbor(sf,PETSCSF_ROOT2LEAF,&distcomm);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
+  ierr = PetscSFLinkSyncStreamBeforeMPISend(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = MPI_Start_ineighbor_alltoallv(dat->rootdegree,dat->leafdegree,rootbuf,dat->rootcounts,dat->rootdispls,unit,leafbuf,dat->leafcounts,dat->leafdispls,unit,distcomm,req);CHKERRQ(ierr);
   ierr = PetscSFLinkScatterLocal(sf,link,PETSCSF_ROOT2LEAF,(void*)rootdata,leafdata,op);
   PetscFunctionReturn(0);
@@ -141,10 +143,12 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLeafToRootBegin_Neighbor(PetscSF sf,MP
 
   PetscFunctionBegin;
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,sfop,&link);CHKERRQ(ierr);
+  ierr = PetscSFLinkBuildDependenceOnInputData(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   ierr = PetscSFLinkPackLeafData(sf,link,PETSCSF_REMOTE,leafdata);CHKERRQ(ierr);
   /* Do neighborhood alltoallv for remote ranks */
   ierr = PetscSFGetDistComm_Neighbor(sf,PETSCSF_LEAF2ROOT,&distcomm);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_LEAF2ROOT,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
+  ierr = PetscSFLinkSyncStreamBeforeMPISend(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   ierr = MPI_Start_ineighbor_alltoallv(dat->leafdegree,dat->rootdegree,leafbuf,dat->leafcounts,dat->leafdispls,unit,rootbuf,dat->rootcounts,dat->rootdispls,unit,distcomm,req);CHKERRQ(ierr);
   *out = link;
   PetscFunctionReturn(0);
