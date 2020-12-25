@@ -150,6 +150,7 @@ struct _p_Vec {
   PetscBool              boundtocpu;
   size_t                 minimum_bytes_pinned_memory; /* minimum data size in bytes for which pinned memory will be allocated */
   PetscBool              pinned_memory; /* PETSC_TRUE if the current host allocation has been made from pinned memory. */
+  PetscStream            stream;        /* simple wrapper conatining device streams */
 #endif
 };
 
