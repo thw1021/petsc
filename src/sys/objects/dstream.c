@@ -7,6 +7,8 @@ PetscErrorCode PetscStreamCreate(PetscStream *strm)
 
   PetscFunctionBegin;
   PetscValidPointer(strm,1);
+  /* Setting to null taken from VecCreate(), why though? */
+  *strm = NULL;
   ierr = PetscNew(&s);CHKERRQ(ierr);
   s->mode = PETSC_STREAM_DEFAULT_BLOCKING;
 #if defined(PETSC_HAVE_CUDA)
@@ -23,6 +25,7 @@ PetscErrorCode PetscStreamCreate(PetscStream *strm)
     herr = hipStreamCreate(&s->hstream);CHKERRHIP(ierr);
   }
 #endif /* PETSC_HAVE_HIP */
+  *strm = s;
   PetscFunctionReturn(0);
 }
 
@@ -70,7 +73,7 @@ PetscErrorCode PetscStreamSetMode(PetscStream strm, PetscStreamMode mode)
       hipError_t herr;
 
       herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
-      herr = hipStreamCreaetWithFlags(&strm->hstream, hipStreamNonBlocking);CHKERRHIP(herr);
+      herr = hipStreamCreateWithFlags(&strm->hstream, hipStreamNonBlocking);CHKERRHIP(herr);
     }
 #endif
   }
