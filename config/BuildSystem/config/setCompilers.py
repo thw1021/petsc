@@ -1254,6 +1254,7 @@ class Configure(config.base.Configure):
       yield '-fPIC'
       yield '-KPIC'
       yield '-qpic'
+      yield ''
     return
 
   def checkPIC(self):
@@ -1308,6 +1309,8 @@ class Configure(config.base.Configure):
           self.logPrint('Accepted '+language+' compiler flag '+testFlag+' for PIC code')
         else:
           self.logPrint('Accepted '+language+' PIC code without compiler flag')
+          if self.argDB['with-pic']:
+            self.logPrintBox('***** WARNING: --with-pic option specified but none of the attempted PIC flags worked for '+language+'!\n If PIC is still required, please set the appropriate PIC flags using CFLAGS/CXXFLAGS/FFLAGS optons ******')
         self.isPIC = 1
         break
       self.popLanguage()
