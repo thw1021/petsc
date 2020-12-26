@@ -6,12 +6,12 @@
 
 struct _p_PetscStream {
 #if defined(PETSC_HAVE_CUDA)
-  cudaStream_t          cstream;
+  cudaStream_t     cstream;
 #endif
 #if defined(PETSC_HAVE_HIP)
-  hipStream_t           hstream;
+  hipStream_t      hstream;
 #endif
-  PetscStreamMode       mode;
+  PetscStreamMode  mode;
 };
 
 #endif
