@@ -1245,7 +1245,6 @@ class Configure(config.base.Configure):
     raise RuntimeError('Bad compiler flag: '+flag)
 
   def generatePICGuesses(self):
-    yield ''
     if self.language[-1] == 'CUDA':
       yield '-Xcompiler -fPIC'
     elif config.setCompilers.Configure.isGNU(self.getCompiler(), self.log):
