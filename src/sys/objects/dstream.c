@@ -15,14 +15,14 @@ PetscErrorCode PetscStreamCreate(PetscStream *strm)
   {
     cudaError_t cerr;
 
-    cerr = cudaStreamCreate(&s->cstream);CHKERRCUDA(cerr);
+    cerr = cudaStreamCreate(&(s->cstream));CHKERRCUDA(cerr);
   }
 #endif /* PETSC_HAVE_CUDA */
 #if defined(PETSC_HAVE_HIP)
   {
     hipError_t herr;
 
-    herr = hipStreamCreate(&s->hstream);CHKERRHIP(ierr);
+    herr = hipStreamCreate(&(s->hstream));CHKERRHIP(ierr);
   }
 #endif /* PETSC_HAVE_HIP */
   *strm = s;
