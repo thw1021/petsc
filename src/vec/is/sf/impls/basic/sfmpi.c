@@ -1,8 +1,10 @@
-/* MPI send/recv related routines */
+/* Mainly for MPI_Isend in SFBASIC. Once SFNEIGHBOR, SFALLGHATERV etc have a persistent version,
+   we can also do abstractions like Prepare/StartCommunication.
+*/
 
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 
-/* Post Irecv */
+/* Post Irecv for SFBASIC.  */
 static PetscErrorCode PetscSFLinkPostIrecv_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
   PetscErrorCode    ierr;
@@ -25,7 +27,7 @@ static PetscErrorCode PetscSFLinkPostIrecv_MPI(PetscSF sf,PetscSFLink link,Petsc
   PetscFunctionReturn(0);
 }
 
-/* Pull data to sendbuf and post Isend */
+/* Post Isend for SFBASIC. If use non-GPU aware MPI, we might need to copy data from device buf to host buf */
 static PetscErrorCode PetscSFLinkPostIsend_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
   PetscErrorCode    ierr;
@@ -42,7 +44,7 @@ static PetscErrorCode PetscSFLinkPostIsend_MPI(PetscSF sf,PetscSFLink link,Petsc
       ierr   = PetscSFLinkGetMPIBuffersAndRequests(sf,link,direction,NULL,NULL,&reqs,NULL);CHKERRQ(ierr);
     } else { /* leaf to root */
       nreqs  = sf->nleafreqs;
-      ierr   = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/*device2host*/);CHKERRQ(ierr);
+      ierr   = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE);CHKERRQ(ierr);
       ierr   = PetscSFLinkGetMPIBuffersAndRequests(sf,link,direction,NULL,NULL,NULL,&reqs);CHKERRQ(ierr);
     }
     ierr = PetscSFLinkSyncStreamBeforeMPISend(sf,link,direction);CHKERRQ(ierr);
@@ -61,6 +63,12 @@ static PetscErrorCode PetscSFLinkWaitRequests_MPI(PetscSF sf,PetscSFLink link,Pe
   PetscFunctionBegin;
   ierr = MPI_Waitall(bas->nrootreqs,link->rootreqs[direction][rootmtype_mpi][rootdirect_mpi],MPI_STATUSES_IGNORE);CHKERRQ(ierr);
   ierr = MPI_Waitall(sf->nleafreqs, link->leafreqs[direction][leafmtype_mpi][leafdirect_mpi],MPI_STATUSES_IGNORE);CHKERRQ(ierr);
+  ierr = PetscSFLinkSetUnpackStream(sf,link,direction,PETSCSF_REMOTE);CHKERRQ(ierr);
+  if (direction == PETSCSF_ROOT2LEAF) {
+    ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_FALSE/* host2device after recving */);CHKERRQ(ierr);
+  } else {
+    ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_FALSE);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -210,13 +218,13 @@ found:
 
 #if defined(PETSC_HAVE_DEVICE)
   /* Allocate buffers on host for buffering data on device in cast not use_gpu_aware_mpi */
-  if (rootmtype == PETSC_MEMTYPE_DEVICE && rootmtype_mpi == PETSC_MEMTYPE_HOST) {
+  if (PetscMemTypeDevice(rootmtype) && PetscMemTypeHost(rootmtype_mpi)) {
     if (!link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST]) {
       ierr = PetscMalloc(bas->rootbuflen[PETSCSF_REMOTE]*link->unitbytes,&link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST]);CHKERRQ(ierr);
     }
     link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST] = link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST];
   }
-  if (leafmtype == PETSC_MEMTYPE_DEVICE && leafmtype_mpi == PETSC_MEMTYPE_HOST) {
+  if (PetscMemTypeDevice(leafmtype) && PetscMemTypeHost(leafmtype_mpi)) {
     if (!link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST]) {
       ierr = PetscMalloc(sf->leafbuflen[PETSCSF_REMOTE]*link->unitbytes,&link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST]);CHKERRQ(ierr);
     }

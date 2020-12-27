@@ -1061,6 +1061,7 @@ PetscErrorCode PetscSFLinkPackLeafData_Private(PetscSF sf,PetscSFLink link,Petsc
   PetscFunctionReturn(0);
 }
 
+/* Pack rootdata to rootbuf, which are in the same memory space */
 PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope scope,const void *rootdata)
 {
   PetscErrorCode   ierr;
@@ -1073,7 +1074,7 @@ PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope 
   }
   PetscFunctionReturn(0);
 }
-
+/* Pack leafdata to leafbuf, which are in the same memory space */
 PetscErrorCode PetscSFLinkPackLeafData(PetscSF sf,PetscSFLink link,PetscSFScope scope,const void *leafdata)
 {
   PetscErrorCode   ierr;
@@ -1086,7 +1087,6 @@ PetscErrorCode PetscSFLinkPackLeafData(PetscSF sf,PetscSFLink link,PetscSFScope 
   PetscFunctionReturn(0);
 }
 
-/* Unpack rootbuf to rootdata */
 PetscErrorCode PetscSFLinkUnpackRootData_Private(PetscSF sf,PetscSFLink link,PetscSFScope scope,void *rootdata,MPI_Op op)
 {
   PetscErrorCode   ierr;
@@ -1111,7 +1111,7 @@ PetscErrorCode PetscSFLinkUnpackRootData_Private(PetscSF sf,PetscSFLink link,Pet
   ierr = PetscSFLinkLogFlopsAfterUnpackRootData(sf,link,scope,op);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-/* Unpack leafbuf to leafdata */
+
 PetscErrorCode PetscSFLinkUnpackLeafData_Private(PetscSF sf,PetscSFLink link,PetscSFScope scope,void *leafdata,MPI_Op op)
 {
   PetscErrorCode   ierr;
@@ -1135,7 +1135,7 @@ PetscErrorCode PetscSFLinkUnpackLeafData_Private(PetscSF sf,PetscSFLink link,Pet
   ierr = PetscSFLinkLogFlopsAfterUnpackLeafData(sf,link,scope,op);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
+/* Unpack rootbuf to rootdata, which are in the same memory space */
 PetscErrorCode PetscSFLinkUnpackRootData(PetscSF sf,PetscSFLink link,PetscSFScope scope,void *rootdata,MPI_Op op)
 {
   PetscErrorCode   ierr;
@@ -1145,10 +1145,9 @@ PetscErrorCode PetscSFLinkUnpackRootData(PetscSF sf,PetscSFLink link,PetscSFScop
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (bas->rootbuflen[scope]) {
     ierr = PetscSFLinkSetUnpackStream(sf,link,PETSCSF_LEAF2ROOT,scope);CHKERRQ(ierr);
-    /* host to device copy if MPI is not GPU aware */
-    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_FALSE);CHKERRQ(ierr);}
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkWaitEndOfLocalCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);}
     ierr = PetscSFLinkUnpackRootData_Private(sf,link,scope,rootdata,op);CHKERRQ(ierr);
-    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfUnpackRemote(sf,link);CHKERRQ(ierr);}
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfRemoteCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);}
   }
   ierr = PetscLogEventEnd(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1163,17 +1162,16 @@ PetscErrorCode PetscSFLinkUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScop
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (sf->leafbuflen[scope]) {
     ierr = PetscSFLinkSetUnpackStream(sf,link,PETSCSF_ROOT2LEAF,scope);CHKERRQ(ierr);
-    /* host to device copy if MPI is not GPU aware */
-    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_FALSE);CHKERRQ(ierr);}
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkWaitEndOfLocalCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
     ierr = PetscSFLinkUnpackLeafData_Private(sf,link,scope,leafdata,op);
-    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfUnpackRemote(sf,link);CHKERRQ(ierr);}
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfRemoteCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
   }
   ierr = PetscLogEventEnd(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-/* FetchAndOp rootdata with rootbuf */
-PetscErrorCode PetscSFLinkFetchRootData(PetscSF sf,PetscSFLink link,PetscSFScope scope,void *rootdata,MPI_Op op)
+/* FetchAndOp rootdata with rootbuf, it is a kind of Unpack on rootdata, except it also updates rootbuf */
+PetscErrorCode PetscSFLinkFetchAndOpRemote(PetscSF sf,PetscSFLink link,void *rootdata,MPI_Op op)
 {
   PetscErrorCode     ierr;
   const PetscInt     *rootindices = NULL;
@@ -1185,17 +1183,14 @@ PetscErrorCode PetscSFLinkFetchRootData(PetscSF sf,PetscSFLink link,PetscSFScope
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
-  if (scope != PETSCSF_REMOTE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for PetscSFLinkFetchRootData with PETSCSF_LOCAL");
-  ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_FALSE/*host2device*/);CHKERRQ(ierr);
-  if (bas->rootbuflen[scope]) {
+  if (bas->rootbuflen[PETSCSF_REMOTE]) {
+    ierr = PetscSFLinkSetUnpackStream(sf,link,PETSCSF_LEAF2ROOT,PETSCSF_REMOTE);CHKERRQ(ierr);
     /* Do FetchAndOp on rootdata with rootbuf */
-    ierr = PetscSFLinkGetFetchAndOp(link,rootmtype,op,bas->rootdups[scope],&FetchAndOp);CHKERRQ(ierr);
-    ierr = PetscSFLinkGetRootPackOptAndIndices(sf,link,rootmtype,scope,&count,&start,&opt,&rootindices);CHKERRQ(ierr);
-    ierr = (*FetchAndOp)(link,count,start,opt,rootindices,rootdata,link->rootbuf[scope][rootmtype]);CHKERRQ(ierr);
+    ierr = PetscSFLinkGetFetchAndOp(link,rootmtype,op,bas->rootdups[PETSCSF_REMOTE],&FetchAndOp);CHKERRQ(ierr);
+    ierr = PetscSFLinkGetRootPackOptAndIndices(sf,link,rootmtype,PETSCSF_REMOTE,&count,&start,&opt,&rootindices);CHKERRQ(ierr);
+    ierr = (*FetchAndOp)(link,count,start,opt,rootindices,rootdata,link->rootbuf[PETSCSF_REMOTE][rootmtype]);CHKERRQ(ierr);
   }
-  ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE);CHKERRQ(ierr);
-  ierr = PetscSFLinkSyncStreamBeforeMPISend(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
-  ierr = PetscSFLinkLogFlopsAfterUnpackRootData(sf,link,scope,op);CHKERRQ(ierr);
+  ierr = PetscSFLinkLogFlopsAfterUnpackRootData(sf,link,PETSCSF_REMOTE,op);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1213,9 +1208,9 @@ PetscErrorCode PetscSFLinkScatterLocal(PetscSF sf,PetscSFLink link,PetscSFDirect
   char                 *srcbuf = NULL,*dstbuf = NULL;
   PetscBool            dstdups;
 
-  ierr = PetscSFLinkSetLocalScatterStream(sf,link);CHKERRQ(ierr);
   if (!buflen) PetscFunctionReturn(0);
-  if (rootmtype != leafmtype) { /* The local communication has to go through pack, copy and unpack */
+  ierr = PetscSFLinkSetLocalScatterStream(sf,link);CHKERRQ(ierr);
+  if (rootmtype != leafmtype) { /* The cross memory space local scatter is done by pack, copy and unpack */
     if (direction == PETSCSF_ROOT2LEAF) {
       ierr     = PetscSFLinkPackRootData(sf,link,PETSCSF_LOCAL,rootdata);CHKERRQ(ierr);
       srcmtype = rootmtype;
@@ -1259,7 +1254,7 @@ PetscErrorCode PetscSFLinkScatterLocal(PetscSF sf,PetscSFLink link,PetscSFDirect
       }
     }
   }
-  ierr = PetscSFLinkRecordEndOfLocalScatter(sf,link);CHKERRQ(ierr);
+  ierr = PetscSFLinkRecordEndOfLocalCommunication(sf,link,direction);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1286,7 +1281,7 @@ PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *root
     ierr = PetscSFLinkGetFetchAndOpLocal(link,rootmtype,op,bas->rootdups[PETSCSF_LOCAL],&FetchAndOpLocal);CHKERRQ(ierr);
     ierr = (*FetchAndOpLocal)(link,count,rootstart,rootopt,rootindices,rootdata,leafstart,leafopt,leafindices,leafdata,leafupdate);CHKERRQ(ierr);
   }
-  ierr = PetscSFLinkRecordEndOfLocalScatter(sf,link);CHKERRQ(ierr);
+  ierr = PetscSFLinkRecordEndOfLocalCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

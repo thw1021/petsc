@@ -250,7 +250,7 @@ PetscErrorCode PetscSFLinkSendSignalsToAllowPackingData_NVSHMEM(PetscSF sf,Petsc
     sigdisp = bas->leafsigdisp_d;
     ranks   = bas->iranks_d;
   }
-  NvshmemSendSignals<<<(nfrom+511)/512,512,0,link->recv_stream>>>(nfrom,sig,sigdisp,ranks,0); /* set signals to 0 afterwards */
+  NvshmemSendSignals<<<(nfrom+511)/512,512,0,link->remote_comm_stream>>>(nfrom,sig,sigdisp,ranks,0); /* set signals to 0 afterwards */
   PetscFunctionReturn(0);
 }
 
@@ -269,7 +269,7 @@ PetscErrorCode PetscSFLinkWaitSignalsToStartPackingData_NVSHMEM(PetscSF sf,Petsc
     sig = link->leafsig;
     nto = sf->nranks-sf->ndranks;
   }
-  NvshmemWaitSignals<<<1,1,0,link->send_stream>>>(nto,sig,0,1); /* wait the signals to be 0, then set them to 1 */
+  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nto,sig,0,1); /* wait the signals to be 0, then set them to 1 */
   PetscFunctionReturn(0);
 }
 
@@ -293,7 +293,7 @@ PetscErrorCode PetscSFLinkSendSignalsToAllowGettingData_NVSHMEM(PetscSF sf,Petsc
     sigdisp = sf->rootsigdisp_d;
     ranks   = sf->ranks_d;
   }
-  NvshmemSendSignals<<<(nto+511)/512,512,0,link->send_stream>>>(nto,sig,sigdisp,ranks,1); /* set signals to 1 */
+  NvshmemSendSignals<<<(nto+511)/512,512,0,link->remote_comm_stream>>>(nto,sig,sigdisp,ranks,1); /* set signals to 1 */
   PetscFunctionReturn(0);
 }
 
@@ -312,7 +312,7 @@ PetscErrorCode PetscSFLinkWaitSignalsToStartGettingData_NVSHMEM(PetscSF sf,Petsc
     sig   = link->rootsig;
     nfrom = bas->niranks-bas->ndiranks;
   }
-  NvshmemWaitSignals<<<1,1,0,link->recv_stream>>>(nfrom,sig,1,0); /* wait the signals to be 1, then set them to 0 */
+  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nfrom,sig,1,0); /* wait the signals to be 1, then set them to 0 */
   PetscFunctionReturn(0);
 }
 
@@ -348,7 +348,7 @@ PetscErrorCode PetscSFLinkGetData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
     char   *dst   = rbuf + (rbufdisp[i]-rbufdisp[0])*link->unitbytes;
     size_t nelems = (rbufdisp[i+1]-rbufdisp[i])*link->unitbytes;
     int    pe     = srcranks[i];
-    nvshmemx_getmem_on_stream(dst,src,nelems,pe,link->send_stream);
+    nvshmemx_getmem_on_stream(dst,src,nelems,pe,link->remote_comm_stream);
   }
   //ierr = PetscSFLinkSendSignalsToAllowPackingData_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -409,11 +409,11 @@ PetscErrorCode PetscSFLinkGetData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
     char   *dst   = rbuf + (rbufdisp[i]-rbufdisp[0])*link->unitbytes;
     size_t nelems = (rbufdisp[i+1]-rbufdisp[i])*link->unitbytes;
     int    pe     = sranks_h[i];
-    nvshmemx_uint64_wait_until_on_stream(rsig+i,NVSHMEM_CMP_EQ,1,link->recv_stream); /* wait until sig is 1 */
-    nvshmemx_getmem_on_stream(dst,src,nelems,pe,link->recv_stream);
+    nvshmemx_uint64_wait_until_on_stream(rsig+i,NVSHMEM_CMP_EQ,1,link->remote_comm_stream); /* wait until sig is 1 */
+    nvshmemx_getmem_on_stream(dst,src,nelems,pe,link->remote_comm_stream);
   }
   /* After getting data, clear flags of recv buf and send buf */
-  PetscClearSendRecvFlags<<<(n+255)/256,256,0,link->recv_stream>>>(n,sranks_d,ssig,ssigdisp,rsig);
+  PetscClearSendRecvFlags<<<(n+255)/256,256,0,link->remote_comm_stream>>>(n,sranks_d,ssig,ssigdisp,rsig);
   PetscFunctionReturn(0);
 }
 #endif
@@ -467,7 +467,7 @@ PetscErrorCode PetscSFLinkSendSignalsOfCompletionOfPuttingData_NVSHMEM(PetscSF s
     sigdisp = sf->rootsigdisp_d;
     ranks   = sf->ranks_d;
   }
-  NvshmemFenceAndSendSignals<<<(nto+511)/512,512,0,link->send_stream>>>(nto,sig,sigdisp,ranks,1); /* fence and set remote signals to 1 */
+  NvshmemFenceAndSendSignals<<<(nto+511)/512,512,0,link->remote_comm_stream>>>(nto,sig,sigdisp,ranks,1); /* fence and set remote signals to 1 */
   PetscFunctionReturn(0);
 }
 
@@ -486,7 +486,7 @@ PetscErrorCode PetscSFLinkWaitSignalsOfCompletionOfPuttingData_NVSHMEM(PetscSF s
     nfrom = bas->niranks-bas->ndiranks;
     sig   = link->rootsig;
   }
-  NvshmemWaitSignals<<<1,1,0,link->recv_stream>>>(nfrom,sig,1,0); /* wait signals to be 1, then clear them */
+  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nfrom,sig,1,0); /* wait signals to be 1, then clear them */
   PetscFunctionReturn(0);
 }
 
@@ -510,7 +510,7 @@ PetscErrorCode PetscSFLinkSendSignalsToAllowPuttingData_NVSHMEM(PetscSF sf,Petsc
     sigdisp = bas->leafsigdisp_d;
     ranks   = bas->iranks_d;
   }
-  NvshmemSendSignals<<<1,1,0,link->recv_stream>>>(nfrom,sig,sigdisp,ranks,0); /* Set remote signals to 0 */
+  NvshmemSendSignals<<<1,1,0,link->remote_comm_stream>>>(nfrom,sig,sigdisp,ranks,0); /* Set remote signals to 0 */
   PetscFunctionReturn(0);
 }
 
@@ -529,7 +529,7 @@ PetscErrorCode PetscSFLinkWaitSignalsToStartPuttingData_NVSHMEM(PetscSF sf,Petsc
     nto     = sf->nranks-sf->ndranks;
     sig     = link->leafsig;
   }
-  NvshmemWaitSignals<<<1,1,0,link->send_stream>>>(nto,sig,0,1); /* Wait signals to be 0, then set them to 1 */
+  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nto,sig,0,1); /* Wait signals to be 0, then set them to 1 */
   PetscFunctionReturn(0);
 }
 
@@ -564,7 +564,7 @@ PetscErrorCode PetscSFLinkPutData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
     char   *dst   = rbuf + rbufdisp[i]*link->unitbytes;
     size_t nelems = (sbufdisp[i+1]-sbufdisp[i])*link->unitbytes;
     int    pe     = dstranks[i];
-    nvshmemx_putmem_on_stream(dst,src,nelems,pe,link->send_stream);
+    nvshmemx_putmem_on_stream(dst,src,nelems,pe,link->remote_comm_stream);
   }
 
   ierr = PetscSFLinkSendSignalsOfCompletionOfPuttingData_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
@@ -579,10 +579,10 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
 
   PetscFunctionBegin;
   cerr = cudaEventDestroy(link->input_ready);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->lscatter_end);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->recv_end);CHKERRCUDA(cerr);
-  cerr = cudaStreamDestroy(link->send_stream);CHKERRCUDA(cerr);
-  cerr = cudaStreamDestroy(link->lscatter_stream);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->local_comm_end);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->remote_comm_end);CHKERRCUDA(cerr);
+  cerr = cudaStreamDestroy(link->remote_comm_stream);CHKERRCUDA(cerr);
+  cerr = cudaStreamDestroy(link->local_comm_stream);CHKERRCUDA(cerr);
 
   /* nvshmem does not need buffers on host, which should be NULL */
   ierr = PetscNvshmemFree(link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);

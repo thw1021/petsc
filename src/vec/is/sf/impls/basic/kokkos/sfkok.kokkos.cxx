@@ -469,11 +469,12 @@ static PetscErrorCode PetscSFLinkDestroy_Kokkos(PetscSF sf,PetscSFLink link)
   PetscFunctionBegin;
  #if defined(PETSC_HAVE_CUDA)
   cudaError_t    cerr;
-  cerr = cudaEventDestroy(link->input_ready);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->lscatter_end);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->recv_end);CHKERRCUDA(cerr);
-  if (link->send_stream) {cerr = cudaStreamDestroy(link->send_stream);CHKERRCUDA(cerr);}
-  if (link->lscatter_stream) {cerr = cudaStreamDestroy(link->lscatter_stream);CHKERRCUDA(cerr);}
+  cerr = cudaEventDestroy(link->root_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->leaf_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->local_comm_end);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->remote_comm_end);CHKERRCUDA(cerr);
+  if (link->remote_comm_stream) {cerr = cudaStreamDestroy(link->remote_comm_stream);CHKERRCUDA(cerr);}
+  if (link->local_comm_stream) {cerr = cudaStreamDestroy(link->local_comm_stream);CHKERRCUDA(cerr);}
  #endif
 
   for (int i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
@@ -563,19 +564,19 @@ PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype 
 
  #if defined(PETSC_HAVE_CUDA)
   cudaError_t cerr;
-  cerr = cudaEventCreate(&link->input_ready);CHKERRCUDA(cerr);
-  cerr = cudaEventCreate(&link->lscatter_end);CHKERRCUDA(cerr);
-  cerr = cudaEventCreate(&link->recv_end);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->root_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->leaf_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->local_comm_end);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->remote_comm_end);CHKERRCUDA(cerr);
   /* Currently we only use the NULL stream. May change that once we know how to create/free execution space objects
   cerr = cudaDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreateWithPriority(&link->send_stream,cudaStreamNonBlocking,greatestPriority);
-  cerr = cudaStreamCreateWithPriority(&link->lscatter_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
-  link->recv_stream = link->send_stream;
+  cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);
+  cerr = cudaStreamCreateWithPriority(&link->local_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
   */
-  link->BuildDependenceOnInputData  = PetscSFLinkBuildDependenceOnInputData_CUDA;
-  link->BuildDependenceOnOutputData = PetscSFLinkBuildDependenceOnOutputData_CUDA;
-  link->EndLocalScatter             = PetscSFLinkRecordEndOfLocalScatter_CUDA;
-  link->EndUnpackRemote             = PetscSFLinkRecordEndOfUnpackRemote_CUDA;
+  link->BuildDependenceOnEntry      = PetscSFLinkBuildDependenceOnEntry_CUDA;
+  link->BuildDependenceOnExit       = PetscSFLinkBuildDependenceOnExit_CUDA;
+  link->EndLocalScatter             = PetscSFLinkRecordEndOfLocalCommunication_CUDA;
+  link->EndUnpackRemote             = PetscSFLinkRecordEndOfRemoteCommunication_CUDA;
  #endif
 
   link->SyncDevice   = PetscSFLinkSyncDevice_Kokkos;
