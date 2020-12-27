@@ -334,7 +334,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
     vrange[i] += vrange[i-1];
   }
 
-  /* (2.2) Create vidxlTog: maps UN-MERGED local vertex index i to global index gidx */
+  /* (2.2) Create vidxlTog: maps UN-MERGED local vertex index i to global index gidx (plex, excluding ghost vertices) */
   ierr = PetscMalloc1(network->nVertices,&vidxlTog);CHKERRQ(ierr);
   i = 0; gidx = 0;
   nmerged = 0; /* local num of merged vertices */
@@ -423,7 +423,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   np = network->pEnd - network->pStart;
   ierr = PetscCalloc2(np,&network->header,np,&network->cvalue);CHKERRQ(ierr);
 
-  /* (4) Create vidxlTog: maps MERGED plex local vertex index to User's global vertex index (without merging shared vertices) */
+  /* (4) Create vidxlTog: maps MERGED plex local vertex index (including ghosts) to User's global vertex index (without merging shared vertices) */
   np = network->vEnd - vStart; /* include ghost vertices */
   ierr = PetscMalloc2(np,&vidxlTog,size+1,&eowners);CHKERRQ(ierr);
 
@@ -603,7 +603,14 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   for (i=2; i<=size; i++) eowners[i] += eowners[i-1];
 
   /* Set network->subnet[*].vertices on array network->subnetvtx */
-  np = network->vEnd - vStart;
+  np = 0;
+  for (j=0; j<network->Nsubnet; j++) {
+    /* sum up subnet[j].Nvtx instead of subnet[j].nvtx, because a subnet might be owned by more than one processor;
+       below, subnet[i].vertices[vfrom/vto] requires vfrom/vto =0, ...,Nvtx-1
+     */
+    if (network->subnet[j].nvtx) np += network->subnet[j].Nvtx;
+  }
+
   ierr = PetscCalloc1(np,&network->subnetvtx);CHKERRQ(ierr); /* Maps local vertex to local subnetwork's vertex */
   subnetvtx = network->subnetvtx;
   for (j=0; j<network->Nsubnet; j++) {
