@@ -444,6 +444,13 @@ Before use - please copy/install over to specified prefix: %s
     self.runcopy()
     self.runfix()
     self.rundone()
+    try:
+      with open(os.path.join('lib','petsc','conf','petscvariables'), 'w') as g:
+        g.write('PETSC_ARCH=""\n')
+        g.write('PETSC_DIR='+self.destDir+'\n')
+        g.write('include $(PETSC_DIR)/lib/petsc/conf/petscvariables\n')
+    except:
+      pass
     return
 
 if __name__ == '__main__':
