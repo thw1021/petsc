@@ -416,6 +416,47 @@ PetscErrorCode PetscCheckDupsInt(PetscInt n,const PetscInt X[],PetscBool *dups)
 }
 
 /*@
+  PetscCheckIntersectionInt - Checks if two integer arrays have intersection (i.e., value(s) in one array appear in the other array)
+
+   Not Collective
+
+   Input Parameters:
++  m  - number of values in the first array
+.  X  - first array of integers
+.  n  - number of values in the second array
+-  X  - second array of integers
+
+   Output Parameter:
+.  inter - True if the two arrays have intersection, otherwise false
+
+   Level: intermediate
+
+.seealso: PetscCheckDupsInt()
+@*/
+PetscErrorCode PetscCheckIntersectionInt(PetscInt m,const PetscInt X[],PetscInt n,const PetscInt Y[],PetscBool *inter)
+{
+  PetscErrorCode ierr;
+  PetscInt       i;
+  PetscHSetI     ht;
+  PetscBool      has;
+
+  PetscFunctionBegin;
+  PetscValidPointer(inter,5);
+  *inter = PETSC_FALSE;
+  if (m && n) {
+    ierr = PetscHSetICreate(&ht);CHKERRQ(ierr);
+    ierr = PetscHSetIResize(ht,m);CHKERRQ(ierr);
+    for (i=0; i<m; i++) {ierr = PetscHSetIAdd(ht,X[i]);CHKERRQ(ierr);}
+    for (i=0; i<n; i++) {
+      ierr = PetscHSetIHas(ht,Y[i],&has);
+      if (has) {*inter = PETSC_TRUE; break;}
+    }
+    ierr = PetscHSetIDestroy(&ht);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
   PetscFindMPIInt - Finds MPI integer in a sorted array of integers
 
    Not Collective
