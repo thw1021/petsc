@@ -2464,6 +2464,7 @@ PETSC_EXTERN PetscErrorCode PetscSortReverseInt(PetscInt,PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortedRemoveDupsInt(PetscInt*,PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortRemoveDupsInt(PetscInt*,PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscCheckDupsInt(PetscInt,const PetscInt[],PetscBool*);
+PETSC_EXTERN PetscErrorCode PetscCheckIntersectionInt(PetscInt,const PetscInt[],PetscInt,const PetscInt[],PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscFindInt(PetscInt, PetscInt, const PetscInt[], PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscFindMPIInt(PetscMPIInt, PetscInt, const PetscMPIInt[], PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscSortIntWithPermutation(PetscInt,const PetscInt[],PetscInt[]);
