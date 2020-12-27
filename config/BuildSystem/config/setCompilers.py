@@ -1245,7 +1245,9 @@ class Configure(config.base.Configure):
     raise RuntimeError('Bad compiler flag: '+flag)
 
   def generatePICGuesses(self):
-    yield ''
+    '''PIC flags for various compilers. If --with-pic is not provided on command line, try empty PIC flag first, otherwise go through list'''
+    if not self.argDB['with-pic']:
+      yield ''
     if self.language[-1] == 'CUDA':
       yield '-Xcompiler -fPIC'
     elif config.setCompilers.Configure.isGNU(self.getCompiler(), self.log):
@@ -1255,11 +1257,13 @@ class Configure(config.base.Configure):
       yield '-fPIC'
       yield '-KPIC'
       yield '-qpic'
+      # No need to check empty again
+      if self.argDB['with-pic']:
+        yield ''
     return
 
   def checkPIC(self):
     '''Determine the PIC option for each compiler'''
-    self.usePIC = 0
     useSharedLibraries = 'with-shared-libraries' in self.argDB and self.argDB['with-shared-libraries']
     myLanguage = self.language[-1]
     if not self.argDB['with-pic'] and not useSharedLibraries:
@@ -1295,21 +1299,32 @@ class Configure(config.base.Configure):
           self.logPrint('Trying '+language+' compiler flag '+testFlag+' for PIC code')
         else:
           self.logPrint('Trying '+language+' for PIC code without any compiler flag')
-        acceptedPIC = 1
+
+        # check if compiler supports the flag
         try:
           self.addCompilerFlag(testFlag, compilerOnly = 1)
-          acceptedPIC = self.checkLink(includes = includeLine, body = None, codeBegin = '', codeEnd = '', cleanup = 1, shared = 1, linkLanguage = myLanguage)
         except RuntimeError:
-          acceptedPIC = 0
-        if not acceptedPIC:
+          # addCompiler throws RTE for fail
+          self.logPrint('Rejected '+language+' compiler flag '+testFlag+' because compiler cannot handle it')
+          setattr(self, compilerFlagsArg, oldCompilerFlags)
+          continue
+
+        # check if linker can link both executables, checklink doesn't throw exception though
+        if not self.checkLink(includes = includeLine, body = None, codeBegin = '', codeEnd = '', cleanup = 1, shared = 1, linkLanguage = myLanguage):
           self.logPrint('Rejected '+language+' compiler flag '+testFlag+' because shared linker cannot handle it')
           setattr(self, compilerFlagsArg, oldCompilerFlags)
           continue
+
+        # If we get to this point, flag is supported by compiler and successful link, so
+        # we accept it
         if testFlag:
           self.logPrint('Accepted '+language+' compiler flag '+testFlag+' for PIC code')
         else:
           self.logPrint('Accepted '+language+' PIC code without compiler flag')
-        self.isPIC = 1
+          # If compiler links PIC code without the flag, but the user specifically asked
+          # for PIC with --with-pic, should inform them that it did not work
+          if self.argDB['with-pic']:
+            self.logPrintBox('Warning: --with-pic option specified but none of the attempted PIC flags worked for '+language.upper()+'!\nWarning: Perhaps your compiler has a non-standard flag, check its manual for more information\nWarning: If PIC is required, reconfigure using CFLAGS/CXXFLAGS/FFLAGS to set PIC flag')
         break
       self.popLanguage()
     return
