@@ -1299,26 +1299,32 @@ class Configure(config.base.Configure):
           self.logPrint('Trying '+language+' compiler flag '+testFlag+' for PIC code')
         else:
           self.logPrint('Trying '+language+' for PIC code without any compiler flag')
-        linkerAcceptedPIC = 1
-        compilerAcceptedPIC = 1
+
+        # check if compiler supports the flag
         try:
           self.addCompilerFlag(testFlag, compilerOnly = 1)
-          linkerAcceptedPIC = self.checkLink(includes = includeLine, body = None, codeBegin = '', codeEnd = '', cleanup = 1, shared = 1, linkLanguage = myLanguage)
-          if not linkerAcceptedPIC:
-            self.logPrint('Rejected '+language+' compiler flag '+testFlag+' because shared linker cannot handle it')
         except RuntimeError:
-          # addCompilerFlag throws RTE, checkLink does not
+          # addCompiler throws RTE for fail
           self.logPrint('Rejected '+language+' compiler flag '+testFlag+' because compiler cannot handle it')
-          compilerAcceptedPIC = 0
-        if not (compilerAcceptedPIC and linkerAcceptedPIC):
           setattr(self, compilerFlagsArg, oldCompilerFlags)
           continue
+
+        # check if linker can link both executables, checklink doesn't throw exception though
+        if not self.checkLink(includes = includeLine, body = None, codeBegin = '', codeEnd = '', cleanup = 1, shared = 1, linkLanguage = myLanguage):
+          self.logPrint('Rejected '+language+' compiler flag '+testFlag+' because shared linker cannot handle it')
+          setattr(self, compilerFlagsArg, oldCompilerFlags)
+          continue
+
+        # If we get to this point, flag is supported by compiler and successful link, so
+        # we accept it
         if testFlag:
           self.logPrint('Accepted '+language+' compiler flag '+testFlag+' for PIC code')
         else:
           self.logPrint('Accepted '+language+' PIC code without compiler flag')
+          # If compiler links PIC code without the flag, but the user specifically asked
+          # for PIC with --with-pic, should inform them that it did not work
           if self.argDB['with-pic']:
-            self.logPrintBox('***** WARNING: --with-pic option specified but none of the attempted PIC flags worked for '+language+'!\n If PIC is still required, please set the appropriate PIC flags using CFLAGS/CXXFLAGS/FFLAGS optons ******')
+            self.logPrintBox('Warning: --with-pic option specified but none of the attempted PIC flags worked for '+language.upper()+'!\nWarning: Perhaps your compiler has a non-standard flag, check its manual for more information\nWarning: If PIC is required, reconfigure using CFLAGS/CXXFLAGS/FFLAGS to set PIC flag')
         break
       self.popLanguage()
     return
