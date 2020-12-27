@@ -313,6 +313,11 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   PetscSection   sectiong;
 
   PetscFunctionBegin;
+  /* This implementation requires user input each subnet by a single processor, thus subnet[net].nvtx=subnet[net].Nvtx */
+  for (net=0; net<Nsubnet; net++) {
+    if (network->subnet[net].nvtx && network->subnet[net].nvtx != network->subnet[net].Nvtx) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"subnetwork %D local num of vertices %D != %D global num",net,network->subnet[net].nvtx,network->subnet[net].Nvtx);
+  }
+
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
@@ -533,7 +538,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       i,j,ctr,Nsubnet=network->Nsubnet,*eowners,np,*edges,*subnetvtx,vStart;
+  PetscInt       i,j,ctr,Nsubnet=network->Nsubnet,*eowners,np,*edges,*subnetvtx;
   PetscInt       e,v,vfrom,vto;
   const PetscInt *cone;
   MPI_Comm       comm;
@@ -579,7 +584,6 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(network->plex,0,&network->eStart,&network->eEnd);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(network->plex,1,&network->vStart,&network->vEnd);CHKERRQ(ierr);
-  vStart = network->vStart;
 
   ierr = PetscSectionCreate(comm,&network->DataSection);CHKERRQ(ierr);
   ierr = PetscSectionCreate(comm,&network->DofSection);CHKERRQ(ierr);
@@ -615,7 +619,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   subnetvtx = network->subnetvtx;
   for (j=0; j<network->Nsubnet; j++) {
     network->subnet[j].vertices = subnetvtx;
-    subnetvtx                  += network->subnet[j].nvtx;
+    if (network->subnet[j].nvtx) subnetvtx += network->subnet[j].Nvtx;
   }
 
   /* Setup edge and vertex arrays for subnetworks */
@@ -637,13 +641,13 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
       ierr = DMPlexGetCone(network->plex,e,&cone);CHKERRQ(ierr);
 
       /* vertex cone[0] */
-      vfrom = network->subnet[i].edgelist[2*v];     /* =subnet[i].idx */
+      vfrom = network->subnet[i].edgelist[2*v];     /* =subnet[i].idx, Global index! */
       network->header[cone[0]].index     = vfrom + network->subnet[i].vStart; /* Global vertex index */
       network->header[cone[0]].subnetid  = i;       /* Subnetwork id */
       network->subnet[i].vertices[vfrom] = cone[0]; /* user's subnet[].dix = petsc's v */
 
       /* vertex cone[1] */
-      vto   = network->subnet[i].edgelist[2*v+1];   /* =subnet[i].idx */
+      vto   = network->subnet[i].edgelist[2*v+1];   /* =subnet[i].idx, Global index! */
       network->header[cone[1]].index    = vto + network->subnet[i].vStart;  /* Global vertex index */
       network->header[cone[1]].subnetid = i;
       network->subnet[i].vertices[vto]  = cone[1];  /* user's subnet[].dix = petsc's v */
