@@ -83,6 +83,6 @@ PetscErrorCode PetscMallocIsCUDAHost(PetscBool *isHost)
 {
   PetscFunctionBegin;
   PetscValidBoolPointer(isHost,1);
-  isHost = isCudaHost;
+  *isHost = isCudaHost;
   PetscFunctionReturn(0);
 }
