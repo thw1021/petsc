@@ -146,7 +146,7 @@ static PetscErrorCode PetscSFBcastAndOpBegin_Basic(PetscSF sf,MPI_Datatype unit,
   PetscFunctionBegin;
   /* Create a communication link, which provides buffers, MPI requests etc (if MPI is used) */
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_BCAST,&link);CHKERRQ(ierr);
-  /* With device, input data may be computed on a stream asychronously. We need to build the dependence with e.g., cuda events */
+  /* Root/leafdata may be computed on streams asychronously. We need to build the dependence with e.g., cuda events */
   ierr = PetscSFLinkBuildDependenceOnEntry(sf,link);CHKERRQ(ierr);
   /* Prepare remote (i.e., inter-rank) communication, such as posting MPI_Irecv if MPI is used */
   ierr = PetscSFLinkPrepareCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
@@ -170,7 +170,7 @@ PETSC_INTERN PetscErrorCode PetscSFBcastAndOpEnd_Basic(PetscSF sf,MPI_Datatype u
   ierr = PetscSFLinkFinishCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   /* Unpack data in leafbuf to leafdata for remote communication */
   ierr = PetscSFLinkUnpackLeafData(sf,link,PETSCSF_REMOTE,leafdata,op);CHKERRQ(ierr);
-  /* With device, output data may be produced asynchronously (e.g., by an async unpack kernel). We need to build the dependence */
+  /* When root/leafdata is computed on streams asychronously (e.g., by an async unpack kernel). We need to build the dependence */
   ierr = PetscSFLinkBuildDependenceOnExit(sf,link);CHKERRQ(ierr);
   /* Recycle the link */
   ierr = PetscSFLinkReclaim(sf,&link);CHKERRQ(ierr);

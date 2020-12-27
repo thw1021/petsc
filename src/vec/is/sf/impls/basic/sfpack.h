@@ -63,6 +63,7 @@ struct _n_PetscSFLink {
   PetscErrorCode (*Memcpy)              (PetscSFLink,PetscMemType,void*,PetscMemType,const void*,size_t); /* Async device memcopy might use stream in the link */
   PetscErrorCode (*BuildDependenceOnEntry)(PetscSF,PetscSFLink);
   PetscErrorCode (*BuildDependenceOnExit)(PetscSF,PetscSFLink);
+  PetscErrorCode (*BuildDependenceBetweenLocalAndRemote)(PetscSF,PetscSFLink);
   PetscErrorCode (*PrepareCommunication)(PetscSF,PetscSFLink,PetscSFDirection);
   PetscErrorCode (*StartCommunication)  (PetscSF,PetscSFLink,PetscSFDirection);
   PetscErrorCode (*FinishCommunication) (PetscSF,PetscSFLink,PetscSFDirection);
@@ -228,7 +229,7 @@ PETSC_INTERN PetscErrorCode PetscSFLinkDestroy(PetscSF,PetscSFLink);
 PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkGetPack(PetscSFLink link,PetscMemType mtype,PetscErrorCode (**Pack)(PetscSFLink,PetscInt,PetscInt,PetscSFPackOpt,const PetscInt*,const void*,void*))
 {
   PetscFunctionBegin;
-  if (mtype == PETSC_MEMTYPE_HOST) *Pack = link->h_Pack;
+  if (PetscMemTypeHost(mtype)) *Pack = link->h_Pack;
 #if defined(PETSC_HAVE_DEVICE)
   else *Pack = link->d_Pack;
 #endif
@@ -260,6 +261,7 @@ PETSC_INTERN PetscErrorCode PetscSFLinkRecordEndOfLocalCommunication_CUDA(PetscS
 PETSC_INTERN PetscErrorCode PetscSFLinkRecordEndOfRemoteCommunication_CUDA(PetscSF,PetscSFLink);
 PETSC_INTERN PetscErrorCode PetscSFLinkBuildDependenceOnEntry_CUDA(PetscSF,PetscSFLink);
 PETSC_INTERN PetscErrorCode PetscSFLinkBuildDependenceOnExit_CUDA(PetscSF,PetscSFLink);
+PETSC_INTERN PetscErrorCode PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA(PetscSF,PetscSFLink);
 PETSC_INTERN PetscErrorCode PetscSFLinkSetUp_CUDA(PetscSF,PetscSFLink,MPI_Datatype);
 #endif
 
@@ -316,14 +318,17 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkBuildDependenceOnExit(PetscSF sf,P
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkWaitEndOfLocalCommunication(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
-  PetscMemType   outputmtype = (direction == PETSCSF_ROOT2LEAF) ? link->leafmtype : link->rootmtype;
+  PetscErrorCode ierr;
+  PetscMemType   mtype  = (direction == PETSCSF_ROOT2LEAF) ? link->leafmtype : link->rootmtype;
   PetscInt       buflen = sf->leafbuflen[PETSCSF_LOCAL];
+  PetscBool      inter;
 
   PetscFunctionBegin;
-  if (PetscMemTypeDevice(outputmtype) && buflen) {
-    cudaError_t cerr = cudaStreamWaitEvent(link->remote_comm_stream,link->local_comm_end,0);CHKERRCUDA(cerr);
+  if (PetscMemTypeDevice(mtype) && buflen && link->BuildDependenceBetweenLocalAndRemote) {
+    inter = (direction == PETSCSF_ROOT2LEAF) ? sf->leafdups_inter : ((PetscSF_Basic*)sf->data)->rootdups_inter;
+    if (inter) {ierr = (link->BuildDependenceBetweenLocalAndRemote)(sf,link);CHKERRQ(ierr);}
   }
   PetscFunctionReturn(0);
 }
@@ -387,12 +392,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAware
     void  *h_buf = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST];
     void  *d_buf = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
     size_t count = bas->rootbuflen[PETSCSF_REMOTE]*link->unitbytes;
+    link->stream = link->remote_comm_stream; /* Copy from device to host for MPI send */
     if (device2host) {
-      link->stream = link->remote_comm_stream; /* Copy from device to host for MPI send */
       ierr = (*link->Memcpy)(link,PETSC_MEMTYPE_HOST,h_buf,PETSC_MEMTYPE_DEVICE,d_buf,count);CHKERRQ(ierr);
       ierr = PetscLogGpuToCpu(count);CHKERRQ(ierr);
     } else {
-      link->stream = link->remote_comm_stream; /* Copy from host to device after MPI recv */
       ierr = (*link->Memcpy)(link,PETSC_MEMTYPE_DEVICE,d_buf,PETSC_MEMTYPE_HOST,h_buf,count);CHKERRQ(ierr);
       ierr = PetscLogCpuToGpu(count);CHKERRQ(ierr);
     }
@@ -409,12 +413,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAware
     void  *h_buf = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST];
     void  *d_buf = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
     size_t count = sf->leafbuflen[PETSCSF_REMOTE]*link->unitbytes;
+    link->stream = link->remote_comm_stream; /* Copy from device to host for MPI send */
     if (device2host) {
-      link->stream = link->remote_comm_stream; /* Copy from device to host for MPI send */
       ierr = (*link->Memcpy)(link,PETSC_MEMTYPE_HOST,h_buf,PETSC_MEMTYPE_DEVICE,d_buf,count);CHKERRQ(ierr);
       ierr = PetscLogGpuToCpu(count);CHKERRQ(ierr);
     } else {
-      link->stream = link->remote_comm_stream; /* Copy from host to device after MPI recv */
       ierr = (*link->Memcpy)(link,PETSC_MEMTYPE_DEVICE,d_buf,PETSC_MEMTYPE_HOST,h_buf,count);CHKERRQ(ierr);
       ierr = PetscLogCpuToGpu(count);CHKERRQ(ierr);
     }
@@ -423,7 +426,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAware
 }
 
 /* Make sure root/leafbuf for the remote is ready for MPI */
-PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamBeforeMPISend(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamBeforeCallMPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
   PetscErrorCode ierr;
   PetscSF_Basic  *bas;
@@ -447,17 +450,18 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamBeforeMPISend(PetscSF sf
   PetscFunctionReturn(0);
 }
 #else /* Host only */
-  #define PetscSFLinkBuildDependenceOnEntry(a,b)                  0
-  #define PetscSFLinkBuildDependenceOnExit(a,b)                   0
-  #define PetscSFLinkSetLocalScatterStream(a,b)                   0
-  #define PetscSFLinkRecordEndOfLocalCommunication(a,b,c)         0
-  #define PetscSFLinkRecordEndOfRemoteCommunication(a,b,c)        0
-  #define PetscSFLinkWaitEndOfLocalCommunication(a,b,c)           0
-  #define PetscSFLinkSetUnpackStream(a,b,c,d)                     0
-  #define PetscSFLinkSetPackStream(a,b,c,d)                       0
-  #define PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(a,b,c) 0
-  #define PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(a,b,c) 0
-  #define PetscSFLinkSyncStreamBeforeMPISend(a,b,c)               0
+  #define PetscSFLinkBuildDependenceOnEntry(a,b)                                   0
+  #define PetscSFLinkBuildDependenceOnExit(a,b)                                    0
+  #define PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication(a,b,c)      0
+  #define PetscSFLinkSetLocalScatterStream(a,b)                                    0
+  #define PetscSFLinkRecordEndOfLocalCommunication(a,b,c)                          0
+  #define PetscSFLinkRecordEndOfRemoteCommunication(a,b,c)                         0
+  #define PetscSFLinkWaitEndOfLocalCommunication(a,b,c)                            0
+  #define PetscSFLinkSetUnpackStream(a,b,c,d)                                      0
+  #define PetscSFLinkSetPackStream(a,b,c,d)                                        0
+  #define PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(a,b,c)                  0
+  #define PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(a,b,c)                  0
+  #define PetscSFLinkSyncStreamBeforeCallMPI(a,b,c)                                0
 #endif
 
 /* Get root indices used for pack/unpack
@@ -492,7 +496,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkGetRootPackOptAndIndices(PetscSF s
   */
   if (!bas->rootcontig[scope]) {
     offset = (scope == PETSCSF_LOCAL)? 0 : bas->ioffset[bas->ndiranks];
-    if (mtype == PETSC_MEMTYPE_HOST) {*opt = bas->rootpackopt[scope]; *indices = bas->irootloc + offset;}
+    if (PetscMemTypeHost(mtype)) {*opt = bas->rootpackopt[scope]; *indices = bas->irootloc + offset;}
     else {
       PetscErrorCode ierr;
       size_t         size;
@@ -533,7 +537,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkGetLeafPackOptAndIndices(PetscSF s
   *indices = NULL;
   if (!sf->leafcontig[scope]) {
     offset = (scope == PETSCSF_LOCAL)? 0 : sf->roffset[sf->ndranks];
-    if (mtype == PETSC_MEMTYPE_HOST) {*opt = sf->leafpackopt[scope]; *indices = sf->rmine + offset;}
+    if (PetscMemTypeHost(mtype)) {*opt = sf->leafpackopt[scope]; *indices = sf->rmine + offset;}
     else {
       PetscErrorCode ierr;
       size_t         size;

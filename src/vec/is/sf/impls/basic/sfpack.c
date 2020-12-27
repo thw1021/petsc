@@ -785,7 +785,7 @@ PetscErrorCode PetscSFLinkGetUnpackAndOp(PetscSFLink link,PetscMemType mtype,MPI
 {
   PetscFunctionBegin;
   *UnpackAndOp = NULL;
-  if (mtype == PETSC_MEMTYPE_HOST) {
+  if (PetscMemTypeHost(mtype)) {
     if      (op == MPIU_REPLACE)              *UnpackAndOp = link->h_UnpackAndInsert;
     else if (op == MPI_SUM || op == MPIU_SUM) *UnpackAndOp = link->h_UnpackAndAdd;
     else if (op == MPI_PROD)                  *UnpackAndOp = link->h_UnpackAndMult;
@@ -801,7 +801,7 @@ PetscErrorCode PetscSFLinkGetUnpackAndOp(PetscSFLink link,PetscMemType mtype,MPI
     else if (op == MPI_MINLOC)                *UnpackAndOp = link->h_UnpackAndMinloc;
   }
 #if defined(PETSC_HAVE_DEVICE)
-  else if (mtype == PETSC_MEMTYPE_DEVICE && !atomic) {
+  else if (PetscMemTypeDevice(mtype) && !atomic) {
     if      (op == MPIU_REPLACE)              *UnpackAndOp = link->d_UnpackAndInsert;
     else if (op == MPI_SUM || op == MPIU_SUM) *UnpackAndOp = link->d_UnpackAndAdd;
     else if (op == MPI_PROD)                  *UnpackAndOp = link->d_UnpackAndMult;
@@ -815,7 +815,7 @@ PetscErrorCode PetscSFLinkGetUnpackAndOp(PetscSFLink link,PetscMemType mtype,MPI
     else if (op == MPI_BXOR)                  *UnpackAndOp = link->d_UnpackAndBXOR;
     else if (op == MPI_MAXLOC)                *UnpackAndOp = link->d_UnpackAndMaxloc;
     else if (op == MPI_MINLOC)                *UnpackAndOp = link->d_UnpackAndMinloc;
-  } else if (mtype == PETSC_MEMTYPE_DEVICE && atomic) {
+  } else if (PetscMemTypeDevice(mtype) && atomic) {
     if      (op == MPIU_REPLACE)              *UnpackAndOp = link->da_UnpackAndInsert;
     else if (op == MPI_SUM || op == MPIU_SUM) *UnpackAndOp = link->da_UnpackAndAdd;
     else if (op == MPI_PROD)                  *UnpackAndOp = link->da_UnpackAndMult;
@@ -838,7 +838,7 @@ PetscErrorCode PetscSFLinkGetScatterAndOp(PetscSFLink link,PetscMemType mtype,MP
 {
   PetscFunctionBegin;
   *ScatterAndOp = NULL;
-  if (mtype == PETSC_MEMTYPE_HOST) {
+  if (PetscMemTypeHost(mtype)) {
     if      (op == MPIU_REPLACE)              *ScatterAndOp = link->h_ScatterAndInsert;
     else if (op == MPI_SUM || op == MPIU_SUM) *ScatterAndOp = link->h_ScatterAndAdd;
     else if (op == MPI_PROD)                  *ScatterAndOp = link->h_ScatterAndMult;
@@ -854,7 +854,7 @@ PetscErrorCode PetscSFLinkGetScatterAndOp(PetscSFLink link,PetscMemType mtype,MP
     else if (op == MPI_MINLOC)                *ScatterAndOp = link->h_ScatterAndMinloc;
   }
 #if defined(PETSC_HAVE_DEVICE)
-  else if (mtype == PETSC_MEMTYPE_DEVICE && !atomic) {
+  else if (PetscMemTypeDevice(mtype) && !atomic) {
     if      (op == MPIU_REPLACE)              *ScatterAndOp = link->d_ScatterAndInsert;
     else if (op == MPI_SUM || op == MPIU_SUM) *ScatterAndOp = link->d_ScatterAndAdd;
     else if (op == MPI_PROD)                  *ScatterAndOp = link->d_ScatterAndMult;
@@ -868,7 +868,7 @@ PetscErrorCode PetscSFLinkGetScatterAndOp(PetscSFLink link,PetscMemType mtype,MP
     else if (op == MPI_BXOR)                  *ScatterAndOp = link->d_ScatterAndBXOR;
     else if (op == MPI_MAXLOC)                *ScatterAndOp = link->d_ScatterAndMaxloc;
     else if (op == MPI_MINLOC)                *ScatterAndOp = link->d_ScatterAndMinloc;
-  } else if (mtype == PETSC_MEMTYPE_DEVICE && atomic) {
+  } else if (PetscMemTypeDevice(mtype) && atomic) {
     if      (op == MPIU_REPLACE)              *ScatterAndOp = link->da_ScatterAndInsert;
     else if (op == MPI_SUM || op == MPIU_SUM) *ScatterAndOp = link->da_ScatterAndAdd;
     else if (op == MPI_PROD)                  *ScatterAndOp = link->da_ScatterAndMult;
@@ -892,10 +892,10 @@ PetscErrorCode PetscSFLinkGetFetchAndOp(PetscSFLink link,PetscMemType mtype,MPI_
   PetscFunctionBegin;
   *FetchAndOp = NULL;
   if (op != MPI_SUM && op != MPIU_SUM) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for MPI_Op in FetchAndOp");
-  if (mtype == PETSC_MEMTYPE_HOST) *FetchAndOp = link->h_FetchAndAdd;
+  if (PetscMemTypeHost(mtype)) *FetchAndOp = link->h_FetchAndAdd;
 #if defined(PETSC_HAVE_DEVICE)
-  else if (mtype == PETSC_MEMTYPE_DEVICE && !atomic) *FetchAndOp = link->d_FetchAndAdd;
-  else if (mtype == PETSC_MEMTYPE_DEVICE && atomic)  *FetchAndOp = link->da_FetchAndAdd;
+  else if (PetscMemTypeDevice(mtype) && !atomic) *FetchAndOp = link->d_FetchAndAdd;
+  else if (PetscMemTypeDevice(mtype) && atomic)  *FetchAndOp = link->da_FetchAndAdd;
 #endif
   PetscFunctionReturn(0);
 }
@@ -905,10 +905,10 @@ PetscErrorCode PetscSFLinkGetFetchAndOpLocal(PetscSFLink link,PetscMemType mtype
   PetscFunctionBegin;
   *FetchAndOpLocal = NULL;
   if (op != MPI_SUM && op != MPIU_SUM) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for MPI_Op in FetchAndOp");
-  if (mtype == PETSC_MEMTYPE_HOST) *FetchAndOpLocal = link->h_FetchAndAddLocal;
+  if (PetscMemTypeHost(mtype)) *FetchAndOpLocal = link->h_FetchAndAddLocal;
 #if defined(PETSC_HAVE_DEVICE)
-  else if (mtype == PETSC_MEMTYPE_DEVICE && !atomic) *FetchAndOpLocal = link->d_FetchAndAddLocal;
-  else if (mtype == PETSC_MEMTYPE_DEVICE && atomic)  *FetchAndOpLocal = link->da_FetchAndAddLocal;
+  else if (PetscMemTypeDevice(mtype) && !atomic) *FetchAndOpLocal = link->d_FetchAndAddLocal;
+  else if (PetscMemTypeDevice(mtype) && atomic)  *FetchAndOpLocal = link->da_FetchAndAddLocal;
 #endif
   PetscFunctionReturn(0);
 }
@@ -923,7 +923,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkLogFlopsAfterUnpackRootData(PetscS
   if (op != MPIU_REPLACE && link->basicunit == MPIU_SCALAR) { /* op is a reduction on PetscScalars */
     flops = bas->rootbuflen[scope]*link->bs; /* # of roots in buffer x # of scalars in unit */
 #if defined(PETSC_HAVE_DEVICE)
-    if (link->rootmtype == PETSC_MEMTYPE_DEVICE) {ierr = PetscLogGpuFlops(flops);CHKERRQ(ierr);} else
+    if (PetscMemTypeDevice(link->rootmtype)) {ierr = PetscLogGpuFlops(flops);CHKERRQ(ierr);} else
 #endif
     {ierr = PetscLogFlops(flops);CHKERRQ(ierr);}
   }
@@ -939,7 +939,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkLogFlopsAfterUnpackLeafData(PetscS
   if (op != MPIU_REPLACE && link->basicunit == MPIU_SCALAR) { /* op is a reduction on PetscScalars */
     flops = sf->leafbuflen[scope]*link->bs; /* # of roots in buffer x # of scalars in unit */
 #if defined(PETSC_HAVE_DEVICE)
-    if (link->leafmtype == PETSC_MEMTYPE_DEVICE) {ierr = PetscLogGpuFlops(flops);CHKERRQ(ierr);} else
+    if (PetscMemTypeDevice(link->leafmtype)) {ierr = PetscLogGpuFlops(flops);CHKERRQ(ierr);} else
 #endif
     {ierr = PetscLogFlops(flops);CHKERRQ(ierr);}
   }
@@ -1145,7 +1145,7 @@ PetscErrorCode PetscSFLinkUnpackRootData(PetscSF sf,PetscSFLink link,PetscSFScop
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (bas->rootbuflen[scope]) {
     ierr = PetscSFLinkSetUnpackStream(sf,link,PETSCSF_LEAF2ROOT,scope);CHKERRQ(ierr);
-    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkWaitEndOfLocalCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);}
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);}
     ierr = PetscSFLinkUnpackRootData_Private(sf,link,scope,rootdata,op);CHKERRQ(ierr);
     if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfRemoteCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);}
   }
@@ -1162,7 +1162,7 @@ PetscErrorCode PetscSFLinkUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScop
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (sf->leafbuflen[scope]) {
     ierr = PetscSFLinkSetUnpackStream(sf,link,PETSCSF_ROOT2LEAF,scope);CHKERRQ(ierr);
-    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkWaitEndOfLocalCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
     ierr = PetscSFLinkUnpackLeafData_Private(sf,link,scope,leafdata,op);
     if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfRemoteCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
   }
@@ -1185,6 +1185,7 @@ PetscErrorCode PetscSFLinkFetchAndOpRemote(PetscSF sf,PetscSFLink link,void *roo
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (bas->rootbuflen[PETSCSF_REMOTE]) {
     ierr = PetscSFLinkSetUnpackStream(sf,link,PETSCSF_LEAF2ROOT,PETSCSF_REMOTE);CHKERRQ(ierr);
+    ierr = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
     /* Do FetchAndOp on rootdata with rootbuf */
     ierr = PetscSFLinkGetFetchAndOp(link,rootmtype,op,bas->rootdups[PETSCSF_REMOTE],&FetchAndOp);CHKERRQ(ierr);
     ierr = PetscSFLinkGetRootPackOptAndIndices(sf,link,rootmtype,PETSCSF_REMOTE,&count,&start,&opt,&rootindices);CHKERRQ(ierr);
@@ -1445,6 +1446,9 @@ PetscErrorCode PetscSFSetUpPackFields(PetscSF sf)
   if (!sf->leafcontig[1])  {ierr = PetscCheckDupsInt(sf->leafbuflen[1],  sf->rmine+sf->roffset[sf->ndranks],        &sf->leafdups[1]);CHKERRQ(ierr);}
   if (!bas->rootcontig[0]) {ierr = PetscCheckDupsInt(bas->rootbuflen[0], bas->irootloc,                             &bas->rootdups[0]);CHKERRQ(ierr);}
   if (!bas->rootcontig[1]) {ierr = PetscCheckDupsInt(bas->rootbuflen[1], bas->irootloc+bas->ioffset[bas->ndiranks], &bas->rootdups[1]);CHKERRQ(ierr);}
+
+  ierr = PetscCheckIntersectionInt(sf->leafbuflen[0],sf->rmine,sf->leafbuflen[1],sf->rmine+sf->roffset[sf->ndranks],&sf->leafdups_inter);CHKERRQ(ierr);
+  ierr = PetscCheckIntersectionInt(bas->rootbuflen[0],bas->irootloc,bas->rootbuflen[1],bas->irootloc+bas->ioffset[bas->ndiranks],&bas->rootdups_inter);CHKERRQ(ierr);
  #endif
   PetscFunctionReturn(0);
 }

@@ -47,7 +47,7 @@ static PetscErrorCode PetscSFLinkPostIsend_MPI(PetscSF sf,PetscSFLink link,Petsc
       ierr   = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE);CHKERRQ(ierr);
       ierr   = PetscSFLinkGetMPIBuffersAndRequests(sf,link,direction,NULL,NULL,NULL,&reqs);CHKERRQ(ierr);
     }
-    ierr = PetscSFLinkSyncStreamBeforeMPISend(sf,link,direction);CHKERRQ(ierr);
+    ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,direction);CHKERRQ(ierr);
     ierr = MPI_Startall_isend(buflen,link->unit,nreqs,reqs);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -97,7 +97,7 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf,MPI_Datatype unit,PetscMemType x
   PetscSFDirection  direction;
   MPI_Request       *reqs = NULL;
   PetscBool         match,rootdirect[2],leafdirect[2];
-  PetscMemType      rootmtype = PetscMemTypeHost(xrootmtype) ? PETSC_MEMTYPE_HOST : PETSC_MEMTYPE_DEVICE; /* Convert to 0/1*/
+  PetscMemType      rootmtype = PetscMemTypeHost(xrootmtype) ? PETSC_MEMTYPE_HOST : PETSC_MEMTYPE_DEVICE; /* Convert to 0/1 as we will use it in subscript */
   PetscMemType      leafmtype = PetscMemTypeHost(xleafmtype) ? PETSC_MEMTYPE_HOST : PETSC_MEMTYPE_DEVICE;
   PetscMemType      rootmtype_mpi,leafmtype_mpi;   /* mtypes seen by MPI */
   PetscInt          rootdirect_mpi,leafdirect_mpi; /* root/leafdirect seen by MPI*/

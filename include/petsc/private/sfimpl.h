@@ -98,7 +98,8 @@ struct _p_PetscSF {
   PetscInt        leafstart[2];    /* ... leafstart[0] and leafstart[1] respectively */
   PetscSFPackOpt  leafpackopt[2];  /* Optimization plans to (un)pack leaves connected to remote roots, based on index patterns in rmine[]. NULL for no optimization */
   PetscSFPackOpt  leafpackopt_d[2];/* Copy of leafpackopt_d[] on device if needed */
-  PetscBool       leafdups[2];     /* Indices in rmine[] for self(0)/remote(1) communication have dups? TRUE implies theads working on them in parallel may have data race. */
+  PetscBool       leafdups[2];     /* Indices in rmine[] for self(0)/remote(1) communication have dups respectively? TRUE implies theads working on them in parallel may have data race. */
+  PetscBool       leafdups_inter;  /* Index sets in rmine[] for self/remote communication have intersection? TRUE implies we need to coordindate local/remote communication */
 
   PetscInt        nleafreqs;       /* Number of MPI reqests for leaves */
   PetscInt        *rremote;        /* Concatenated array holding remote indices referenced for each remote rank */

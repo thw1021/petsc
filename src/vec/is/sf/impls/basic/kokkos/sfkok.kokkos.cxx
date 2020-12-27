@@ -421,20 +421,20 @@ static PetscErrorCode PetscSFLinkMemcpy_Kokkos(PetscSFLink link,PetscMemType dst
 
   PetscFunctionBegin;
   if (!n) PetscFunctionReturn(0);
-  if (dstmtype == PETSC_MEMTYPE_HOST && srcmtype == PETSC_MEMTYPE_HOST) {
+  if (PetscMemTypeHost(dstmtype) && PetscMemTypeHost(srcmtype)) {
     PetscErrorCode ierr = PetscMemcpy(dst,src,n);CHKERRQ(ierr);
   } else {
-    if (dstmtype == PETSC_MEMTYPE_DEVICE && srcmtype == PETSC_MEMTYPE_HOST) {
+    if (PetscMemTypeDevice(dstmtype) && PetscMemTypeHost(srcmtype)) {
       deviceBuffer_t       dbuf(static_cast<char*>(dst),n);
       HostConstBuffer_t    sbuf(static_cast<const char*>(src),n);
       Kokkos::deep_copy(exec,dbuf,sbuf);
       PetscErrorCode ierr = PetscLogCpuToGpu(n);CHKERRQ(ierr);
-    } else if (dstmtype == PETSC_MEMTYPE_HOST && srcmtype == PETSC_MEMTYPE_DEVICE) {
+    } else if (PetscMemTypeHost(dstmtype) && PetscMemTypeDevice(srcmtype)) {
       HostBuffer_t         dbuf(static_cast<char*>(dst),n);
       deviceConstBuffer_t  sbuf(static_cast<const char*>(src),n);
       Kokkos::deep_copy(exec,dbuf,sbuf);
       PetscErrorCode ierr = PetscLogGpuToCpu(n);CHKERRQ(ierr);
-    } else if (dstmtype == PETSC_MEMTYPE_DEVICE && srcmtype == PETSC_MEMTYPE_DEVICE) {
+    } else if (PetscMemTypeDevice(dstmtype) && PetscMemTypeDevice(srcmtype)) {
       deviceBuffer_t       dbuf(static_cast<char*>(dst),n);
       deviceConstBuffer_t  sbuf(static_cast<const char*>(src),n);
       Kokkos::deep_copy(exec,dbuf,sbuf);
@@ -446,8 +446,8 @@ static PetscErrorCode PetscSFLinkMemcpy_Kokkos(PetscSFLink link,PetscMemType dst
 PetscErrorCode PetscSFMalloc_Kokkos(PetscMemType mtype,size_t size,void** ptr)
 {
   PetscFunctionBegin;
-  if (mtype == PETSC_MEMTYPE_HOST) {PetscErrorCode ierr = PetscMalloc(size,ptr);CHKERRQ(ierr);}
-  else if (mtype == PETSC_MEMTYPE_DEVICE) {*ptr = Kokkos::kokkos_malloc<DeviceMemorySpace>(size);}
+  if (PetscMemTypeHost(mtype)) {PetscErrorCode ierr = PetscMalloc(size,ptr);CHKERRQ(ierr);}
+  else if (PetscMemTypeDevice(mtype)) {*ptr = Kokkos::kokkos_malloc<DeviceMemorySpace>(size);}
   else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d", (int)mtype);
   PetscFunctionReturn(0);
 }
@@ -455,8 +455,8 @@ PetscErrorCode PetscSFMalloc_Kokkos(PetscMemType mtype,size_t size,void** ptr)
 PetscErrorCode PetscSFFree_Kokkos(PetscMemType mtype,void* ptr)
 {
   PetscFunctionBegin;
-  if (mtype == PETSC_MEMTYPE_HOST) {PetscErrorCode ierr = PetscFree(ptr);CHKERRQ(ierr);}
-  else if (mtype == PETSC_MEMTYPE_DEVICE) {Kokkos::kokkos_free<DeviceMemorySpace>(ptr);}
+  if (PetscMemTypeHost(mtype)) {PetscErrorCode ierr = PetscFree(ptr);CHKERRQ(ierr);}
+  else if (PetscMemTypeDevice(mtype)) {Kokkos::kokkos_free<DeviceMemorySpace>(ptr);}
   else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d",(int)mtype);
   PetscFunctionReturn(0);
 }
@@ -573,10 +573,11 @@ PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype 
   cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);
   cerr = cudaStreamCreateWithPriority(&link->local_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
   */
-  link->BuildDependenceOnEntry      = PetscSFLinkBuildDependenceOnEntry_CUDA;
-  link->BuildDependenceOnExit       = PetscSFLinkBuildDependenceOnExit_CUDA;
-  link->EndLocalScatter             = PetscSFLinkRecordEndOfLocalCommunication_CUDA;
-  link->EndUnpackRemote             = PetscSFLinkRecordEndOfRemoteCommunication_CUDA;
+  link->BuildDependenceOnEntry                     = PetscSFLinkBuildDependenceOnEntry_CUDA;
+  link->BuildDependenceOnExit                      = PetscSFLinkBuildDependenceOnExit_CUDA;
+  link->BuildDependenceBetweenLocalAndRemote       = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA;
+  link->EndLocalScatter                            = PetscSFLinkRecordEndOfLocalCommunication_CUDA;
+  link->EndUnpackRemote                            = PetscSFLinkRecordEndOfRemoteCommunication_CUDA;
  #endif
 
   link->SyncDevice   = PetscSFLinkSyncDevice_Kokkos;

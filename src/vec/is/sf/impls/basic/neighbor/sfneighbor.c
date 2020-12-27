@@ -126,8 +126,8 @@ static PetscErrorCode PetscSFBcastAndOpBegin_Neighbor(PetscSF sf,MPI_Datatype un
   /* Do neighborhood alltoallv for remote ranks */
   ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
   ierr = PetscSFGetDistComm_Neighbor(sf,PETSCSF_ROOT2LEAF,&distcomm);CHKERRQ(ierr);
-  ierr = PetscSFLinkSyncStreamBeforeMPISend(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
+  ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = MPI_Start_ineighbor_alltoallv(dat->rootdegree,dat->leafdegree,rootbuf,dat->rootcounts,dat->rootdispls,unit,leafbuf,dat->leafcounts,dat->leafdispls,unit,distcomm,req);CHKERRQ(ierr);
   ierr = PetscSFLinkScatterLocal(sf,link,PETSCSF_ROOT2LEAF,(void*)rootdata,leafdata,op);
   PetscFunctionReturn(0);
@@ -150,7 +150,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLeafToRootBegin_Neighbor(PetscSF sf,MP
   ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
   ierr = PetscSFGetDistComm_Neighbor(sf,PETSCSF_LEAF2ROOT,&distcomm);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_LEAF2ROOT,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
-  ierr = PetscSFLinkSyncStreamBeforeMPISend(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
+  ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   ierr = MPI_Start_ineighbor_alltoallv(dat->leafdegree,dat->rootdegree,leafbuf,dat->leafcounts,dat->leafdispls,unit,rootbuf,dat->rootcounts,dat->rootdispls,unit,distcomm,req);CHKERRQ(ierr);
   *out = link;
   PetscFunctionReturn(0);
@@ -194,8 +194,8 @@ static PetscErrorCode PetscSFFetchAndOpEnd_Neighbor(PetscSF sf,MPI_Datatype unit
   /* Bcast the updated rootbuf back to leaves */
   ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
   ierr = PetscSFGetDistComm_Neighbor(sf,PETSCSF_ROOT2LEAF,&comm);CHKERRQ(ierr);
-  ierr = PetscSFLinkSyncStreamBeforeMPISend(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,&rootbuf,&leafbuf,NULL,NULL);CHKERRQ(ierr);
+  ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = MPI_Start_neighbor_alltoallv(dat->rootdegree,dat->leafdegree,rootbuf,dat->rootcounts,dat->rootdispls,unit,leafbuf,dat->leafcounts,dat->leafdispls,unit,comm);CHKERRQ(ierr);
   ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_FALSE/* host2device after recving */);CHKERRQ(ierr);
   ierr = PetscSFLinkUnpackLeafData(sf,link,PETSCSF_REMOTE,leafupdate,MPIU_REPLACE);CHKERRQ(ierr);

@@ -856,8 +856,10 @@ static PetscErrorCode PetscSFLinkMemcpy_CUDA(PetscSFLink link,PetscMemType dstmt
   if (n) {
     if (PetscMemTypeHost(dstmtype) && PetscMemTypeHost(srcmtype)) { /* Separate HostToHost so that pure-cpu code won't call cuda runtime */
       PetscErrorCode ierr = PetscMemcpy(dst,src,n);CHKERRQ(ierr);
-    } else { /* Assume PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=1 */
-      cudaError_t cerr = cudaMemcpyAsync(dst,src,n,kinds[srcmtype][dstmtype],link->stream);CHKERRCUDA(cerr);
+    } else {
+      int stype = PetscMemTypeDevice(srcmtype) ? 1 : 0;
+      int dtype = PetscMemTypeDevice(dstmtype) ? 1 : 0;
+      cudaError_t cerr = cudaMemcpyAsync(dst,src,n,kinds[stype][dtype],link->stream);CHKERRCUDA(cerr);
     }
   }
   PetscFunctionReturn(0);
@@ -893,7 +895,7 @@ PetscErrorCode PetscSFLinkRecordEndOfRemoteCommunication_CUDA(PetscSF sf,PetscSF
 {
   cudaError_t cerr;
   PetscFunctionBegin;
-  cerr = cupmEventRecord(link->remote_comm_end,link->remote_comm_stream);CHKERRCUPM(cerr);
+  cerr = cudaEventRecord(link->remote_comm_end,link->remote_comm_stream);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -940,6 +942,13 @@ PetscErrorCode PetscSFLinkBuildDependenceOnExit_CUDA(PetscSF sf,PetscSFLink link
     }
     if (sf->unknown_inout_streams) {ierr = (*link->SyncDevice)(link);CHKERRQ(ierr);}
   }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA(PetscSF sf,PetscSFLink link)
+{
+  PetscFunctionBegin;
+  cudaError_t cerr = cudaStreamWaitEvent(link->remote_comm_stream,link->local_comm_end,0);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -1058,14 +1067,15 @@ PetscErrorCode PetscSFLinkSetUp_CUDA(PetscSF sf,PetscSFLink link,MPI_Datatype un
   cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);
   cerr = cudaStreamCreateWithPriority(&link->local_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
 
-  link->Destroy                     = PetscSFLinkDestroy_MPI_CUDA;
-  link->SyncDevice                  = PetscSFLinkSyncDevice_CUDA;
-  link->SyncStream                  = PetscSFLinkSyncStream_CUDA;
-  link->Memcpy                      = PetscSFLinkMemcpy_CUDA;
-  link->BuildDependenceOnEntry      = PetscSFLinkBuildDependenceOnEntry_CUDA;
-  link->BuildDependenceOnExit       = PetscSFLinkBuildDependenceOnExit_CUDA;
-  link->EndLocalScatter             = PetscSFLinkRecordEndOfLocalCommunication_CUDA;
-  link->EndUnpackRemote             = PetscSFLinkRecordEndOfRemoteCommunication_CUDA;
+  link->Destroy                              = PetscSFLinkDestroy_MPI_CUDA;
+  link->SyncDevice                           = PetscSFLinkSyncDevice_CUDA;
+  link->SyncStream                           = PetscSFLinkSyncStream_CUDA;
+  link->Memcpy                               = PetscSFLinkMemcpy_CUDA;
+  link->BuildDependenceOnEntry               = PetscSFLinkBuildDependenceOnEntry_CUDA;
+  link->BuildDependenceOnExit                = PetscSFLinkBuildDependenceOnExit_CUDA;
+  link->BuildDependenceBetweenLocalAndRemote = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA;
+  link->EndLocalScatter                      = PetscSFLinkRecordEndOfLocalCommunication_CUDA;
+  link->EndUnpackRemote                      = PetscSFLinkRecordEndOfRemoteCommunication_CUDA;
 
   link->deviceinited = PETSC_TRUE;
   PetscFunctionReturn(0);
