@@ -3,6 +3,13 @@
 #cython: auto_pickle=False
 #cython: autotestdict=False
 #cython: warn.multiple_declarators=False
+
+import sys
+pyver = sys.version_info[:2]
+if pyver >= (3,2): language_level = 3
+else: language_level = 2
+
+#cython: language_level=language_level
 cimport cython
 
 # ----------
