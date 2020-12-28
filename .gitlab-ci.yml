@@ -60,6 +60,7 @@ check-ci-settings:
     - ccache --zero-stats
     - echo ${CONFIG_OPTS}
   script:
+    - printenv
     - printf "PATH:$PATH\n"
     - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
     - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
