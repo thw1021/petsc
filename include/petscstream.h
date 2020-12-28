@@ -9,7 +9,7 @@ typedef enum {
   PETSC_STREAM_GLOBAL_NONBLOCKING = 1
 } PetscStreamMode;
 
-typedef struct _p_PetscStream* PetscStream;
+typedef struct _n_PetscStream* PetscStream;
 
 PETSC_EXTERN PetscErrorCode PetscStreamCreate(PetscStream*);
 PETSC_EXTERN PetscErrorCode PetscStreamDestroy(PetscStream*);
