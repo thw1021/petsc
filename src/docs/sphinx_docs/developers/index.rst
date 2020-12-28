@@ -1,3 +1,5 @@
+.. _ind_developers:
+
 ===============================
 PETSc Developer's Documentation
 ===============================
