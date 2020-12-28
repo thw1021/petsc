@@ -4,7 +4,7 @@
 #include <petsc/private/petscimpl.h>
 #include <petscstream.h>
 
-struct _p_PetscStream {
+struct _n_PetscStream {
 #if defined(PETSC_HAVE_CUDA)
   cudaStream_t     cstream;
 #endif
