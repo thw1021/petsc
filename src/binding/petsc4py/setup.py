@@ -96,7 +96,8 @@ from conf.petscconf import setup, Extension
 from conf.petscconf import config, build, build_src, build_ext, install
 from conf.petscconf import clean, test, sdist
 
-CYTHON = '0.22'
+# minimum cython version required
+CYTHON = '0.29'
 
 def run_setup():
     setup_args = metadata.copy()
