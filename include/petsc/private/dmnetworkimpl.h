@@ -47,12 +47,11 @@ typedef struct {
   PetscSF                           sf;
 } DMNetworkEdgeInfo;
 
-/* Shared vertex - collection of vertices in subnetworks that share a single vertex, e.g., vfrom=(vfrom_net,vfrom_idx) */
+/* Shared vertex - a vertex in DMNetwork that is shared by 2 or more subnetworks. sv provides the mapping from the subnetwork vertices to the global DMNetwork vertex. */
 typedef struct {
-  PetscInt gidx_from;           /* global index of the shared vertices in dmplex */
-  PetscInt vfrom_net,vfrom_idx; /* subnet number and index of vfrom */
-  PetscInt nvto;                /* num of to_vertices, i.e., vto=(to_net,to_idx) shares with vfrom=(vfrom_net,vfrom_dix) */
-  PetscInt *vto;                /* array of size nvto: vto[2*j]=vto_net[j], vto[2*j+1]=vto_idx[j], j=0,...,nvto-1 */
+  PetscInt gidx;                /* global index of the shared vertices in dmplex */
+  PetscInt n;                   /* number of subnetworks that share the common DMNetwork vertex */
+  PetscInt *sv;                 /* array of size n: sv[2*i,2*i+1]=(net[i], idx[i]), i=0,...,n-1 */
 } SVtx;
 typedef enum {SVNONE=-1, SVFROM=0, SVTO=1} SVtxType;
 
@@ -61,7 +60,7 @@ typedef struct {
   PetscInt  Nedge,nedge;    /* Number of global/local edges */
   PetscInt  eStart, eEnd;   /* Range of edge numbers (start, end+1) */
   PetscInt  vStart, vEnd;   /* Range of vertex numbers (start, end+1) */
-  PetscInt  *edgelist;      /* User provided list of edges. Each edge has the format [from to] where from and to are the vertices covering the edge */
+  PetscInt  *edgelist;      /* User provided list of edges. Each edge has the format [from to] where from and to are the vertices covering the edge in the subnet numbering */
   PetscInt  *vertices;      /* Vertices for this subnetwork. These are mapped to the vertex numbers for the whole network */
   PetscInt  *edges;         /* Edges for this subnetwork. These are mapped to the edge numbers for the whole network */
   char      name[32-sizeof(PetscInt)];

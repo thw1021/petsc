@@ -1,4 +1,4 @@
-static char help[] = "This example tests subnetwork coupling. \n\n";
+static char help[] = "This example tests subnetwork coupling without component. \n\n";
 
 #include <petscdmnetwork.h>
 
@@ -8,15 +8,15 @@ int main(int argc,char ** argv)
   PetscMPIInt    size,rank;
   DM             dmnetwork;
   PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,goffset,row;
-  PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
+  PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx[2],bsvtx[2];
   const PetscInt *vtx,*edges;
   PetscBool      ghost,distribute=PETSC_TRUE;
   Vec            X;
   PetscScalar    val;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   /* Create a network of subnetworks */
   if (size == 1) Nsubnet = 2;
@@ -51,7 +51,7 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Create a dmnetwork and register components */
+  /* Create a dmnetwork */
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&dmnetwork);CHKERRQ(ierr);
 
   /* Set number of subnetworks, numbers of vertices and edges over each subnetwork */
@@ -62,11 +62,13 @@ int main(int argc,char ** argv)
     ierr = DMNetworkAddSubnetwork(dmnetwork,NULL,numVertices[i],numEdges[i],edgelist[i],&netNum);CHKERRQ(ierr);
   }
 
-  /* Add shared vertices -- all processes hold this info at current implementation */
-  asvtx = bsvtx = 0;
-  for (j=1; j<Nsubnet; j++) {
-    /* vertex subnet[0].0 shares with vertex subnet[j].0 */
-    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,1,&asvtx,&bsvtx);CHKERRQ(ierr);
+  /* Add shared vertices -- all processes hold this info at current implementation
+       net[0].0 -> net[j].0, j=0,...,Nsubnet-1
+       net[0].1 -> net[j].1, j=0,...,Nsubnet-1 */
+  asvtx[0] = bsvtx[0] = 0;
+  asvtx[1] = bsvtx[1] = 1;
+  for (j=Nsubnet-1; j>=1; j--) {
+    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,2,asvtx,bsvtx);CHKERRQ(ierr);
   }
 
   /* Setup the network layout */
@@ -128,7 +130,6 @@ int main(int argc,char ** argv)
   ierr = VecAssemblyBegin(X);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(X);CHKERRQ(ierr);
   ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
   /* Free work space */
   ierr = VecDestroy(&X);CHKERRQ(ierr);
