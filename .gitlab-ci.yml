@@ -885,6 +885,33 @@ analyze-pipeline:
     paths:
     - arch-ci-analyze-pipeline/*
     expire_in: 4 days
+
+pages:review:
+  extends: .test
+  stage: .pre
+  image: python:3.9
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends librsvg2-bin
+    - apt-get install -y flex
+    - pip install -r src/docs/sphinx_docs/requirements.txt
+  script:
+    - if python -c "import os,sys;
+                    labels = os.getenv('CI_MERGE_REQUEST_LABELS');
+                    found = labels and any([x.startswith('doc') for x in labels.lower().split(',')]);
+                    sys.exit(not found)";
+      then
+         cd src/docs/sphinx_docs && sphinx-build -T -E -b html -D language=en -j auto . ../../../public;
+      else
+         mkdir -p public && printf "To build docs, add a label starting with \"doc\" to your MR.\n" > public/index.html;
+      fi
+  artifacts:
+    paths:
+      - public
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/public/index.html
+
 #
 #
 # The following tests are experimental; more tests by users at other sites may be added below this.  Experimental test
