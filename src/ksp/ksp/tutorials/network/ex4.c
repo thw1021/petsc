@@ -1,4 +1,4 @@
-static char help[] = "This example tests subnetwork coupling. \n\n";
+static char help[] = "This example tests subnetwork coupling without component. \n\n";
 
 #include <petscdmnetwork.h>
 
@@ -51,7 +51,7 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Create a dmnetwork and register components */
+  /* Create a dmnetwork */
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&dmnetwork);CHKERRQ(ierr);
 
   /* Set number of subnetworks, numbers of vertices and edges over each subnetwork */
@@ -64,9 +64,9 @@ int main(int argc,char ** argv)
 
   /* Add shared vertices -- all processes hold this info at current implementation */
   asvtx = bsvtx = 0;
-  for (j=1; j<Nsubnet; j++) {
-    /* vertex subnet[0].0 shares with vertex subnet[j].0 */
-    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,1,&asvtx,&bsvtx);CHKERRQ(ierr);
+  for (j=Nsubnet-1; j>=1; j--) {
+    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,j,0,1,&asvtx,&bsvtx);CHKERRQ(ierr);
+    /* if (!rank) printf(" net[%d].%d --> net[0].%d\n",j,bsvtx,asvtx); */
   }
 
   /* Setup the network layout */
