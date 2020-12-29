@@ -303,7 +303,7 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
 
       if (idx_from || idx_to) { /* vfrom or vto is on table svtas[ita] */
         idx_from--; idx_to--;
-        if (idx_from < 0 ) { /* vto is on svtas[ita] */
+        if (idx_from < 0) { /* vto is on svtas[ita] */
           net = sv[2*i]   = sedgelist[k];
           idx = sv[2*i+1] = sedgelist[k+1];
           gidx = network->subnet[net].vStart + idx;
@@ -816,15 +816,6 @@ PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetnum,Petsc
   for (i=0; i<nsvtx; i++) {
     sedgelist[4*Nsvtx]   = anetnum; sedgelist[4*Nsvtx+1] = asvtx[0];
     sedgelist[4*Nsvtx+2] = bnetnum; sedgelist[4*Nsvtx+3] = bsvtx[0];
-    #if 0
-    if (anetnum < bnetnum) {
-      sedgelist[4*Nsvtx]   = anetnum; sedgelist[4*Nsvtx+1] = asvtx[0];
-      sedgelist[4*Nsvtx+2] = bnetnum; sedgelist[4*Nsvtx+3] = bsvtx[0];
-    } else {
-      sedgelist[4*Nsvtx]   = bnetnum; sedgelist[4*Nsvtx+1] = bsvtx[0];
-      sedgelist[4*Nsvtx+2] = anetnum; sedgelist[4*Nsvtx+3] = asvtx[0];
-    }
-    #endif
     Nsvtx++;
   }
   if (Nsvtx > 2*nsubnet) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"allocate more space for coupling edgelist");
