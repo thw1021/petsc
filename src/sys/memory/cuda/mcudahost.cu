@@ -1,8 +1,6 @@
 #include <petscsys.h>             /*I   "petscsys.h"   I*/
 #include <petscdevice.h>          /* Needed to provide CHKERRCUDA() */
 
-static PetscBool isCudaHost = PETSC_FALSE;
-
 static PetscErrorCode PetscCUDAHostMalloc(size_t a,PetscBool clear,int lineno,const char function[],const char filename[],void **result)
 {
   cudaError_t ierr;
@@ -54,7 +52,6 @@ PetscErrorCode PetscMallocSetCUDAHost(void)
   PetscTrMalloc   = PetscCUDAHostMalloc;
   PetscTrRealloc  = PetscCUDAHostRealloc;
   PetscTrFree     = PetscCUDAHostFree;
-  isCudaHost      = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -70,18 +67,8 @@ PetscErrorCode PetscMallocSetCUDAHost(void)
 PetscErrorCode PetscMallocResetCUDAHost(void)
 {
   PetscFunctionBegin;
-  if ((PetscMallocOld != PetscTrMalloc) && (PetscFreeOld != PetscTrFree)) {
-    isCudaHost = PETSC_FALSE;
-  }
   PetscTrMalloc  = PetscMallocOld;
   PetscTrRealloc = PetscReallocOld;
   PetscTrFree    = PetscFreeOld;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscMallocIsCUDAHost(PetscBool *isHost)
-{
-  PetscFunctionBegin;
-  *isHost = isCudaHost;
   PetscFunctionReturn(0);
 }

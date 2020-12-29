@@ -1268,7 +1268,6 @@ PETSC_EXTERN PetscErrorCode PetscMallocResetDRAM(void);
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode PetscMallocSetCUDAHost(void);
 PETSC_EXTERN PetscErrorCode PetscMallocResetCUDAHost(void);
-PETSC_EXTERN PetscErrorCode PetscMallocIsCUDAHost(PetscBool*);
 #endif
 #if defined(PETSC_HAVE_HIP)
 PETSC_EXTERN PetscErrorCode PetscMallocSetHIPHost(void);
