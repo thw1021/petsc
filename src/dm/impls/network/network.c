@@ -267,7 +267,7 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
 
-  ierr = PetscMalloc2(Nsedgelist,&svtas,2*Nsedgelist,&sv);CHKERRQ(ierr);
+  ierr = PetscMalloc2(Nsedgelist,&svtas,4*Nsedgelist,&sv);CHKERRQ(ierr);
 
   k   = 0;   /* sedgelist vertex counter j = 4*k */
   i   = 0;   /* sv (vertices added to the ctables) counter */
