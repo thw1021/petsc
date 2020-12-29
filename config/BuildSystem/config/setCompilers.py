@@ -14,15 +14,31 @@ except NameError:
   def any(lst):
     return reduce(lambda x,y:x or y,lst,False)
 
-def _picTestIncludes(export=''):
-  return '\n'.join(['#include <stdio.h>',
-                    'int (*fprintf_ptr)(FILE*,const char*,...) = fprintf;',
-                    'void '+export+' foo(void){',
-                    '  fprintf_ptr(stdout,"hello");',
-                    '  return;',
-                    '}',
-                    'void bar(void){foo();}\n'])
-
+def _generatePICTestIncludes(language, export=''):
+  if language in ['C','HIP','SYCL']:
+    return '\n'.join(['#include <stdio.h>',
+                      'int (*fprintf_ptr)(FILE*,const char*,...) = fprintf;',
+                      'void '+export+' foo(void){',
+                      '  fprintf_ptr(stdout,"hello");',
+                      '  return;',
+                      '}',
+                      'void bar(void){foo();}\n'])
+  elif language in ['Cxx', 'CUDA']:
+    return '\n'.join(['#include <string>',
+                      'std::string '+export+' foo(void){',
+                      '  char const* bar="bar";',
+                      '  return "bruh"+std::string(bar);',
+                      '}',
+                      'std::string baz(void){return foo();}'])
+  elif language == 'FC':
+    return '\n'.join(['      function foo(a)',
+                      '      real:: a,x,bar',
+                      '      common /xx/ x',
+                      '      x=a',
+                      '      foo = bar(x)',
+                      '      end\n'])
+  else:
+    raise RuntimeError("Internal error! Unknown Language: "+language)
 
 class Configure(config.base.Configure):
   def __init__(self, framework):
@@ -1245,9 +1261,8 @@ class Configure(config.base.Configure):
     raise RuntimeError('Bad compiler flag: '+flag)
 
   def generatePICGuesses(self):
-    '''PIC flags for various compilers. If --with-pic is not provided on command line, try empty PIC flag first, otherwise go through list'''
-    if not self.argDB['with-pic']:
-      yield ''
+    '''PIC flags for various compilers.'''
+    yield ''
     if self.language[-1] == 'CUDA':
       yield '-Xcompiler -fPIC'
     elif config.setCompilers.Configure.isGNU(self.getCompiler(), self.log):
@@ -1257,23 +1272,15 @@ class Configure(config.base.Configure):
       yield '-fPIC'
       yield '-KPIC'
       yield '-qpic'
-      # No need to check empty again
-      if self.argDB['with-pic']:
-        yield ''
     return
 
-  def checkPIC(self):
-    '''Determine the PIC option for each compiler'''
+  def checkBuildSharedLibraries(self):
+    '''Determine whether compiler and linker can build a shared library, and determine the appropriate PIC flag for each compiler if necessary. Returns RuntimeError if it __attempts__ and fails'''
     useSharedLibraries = 'with-shared-libraries' in self.argDB and self.argDB['with-shared-libraries']
     myLanguage = self.language[-1]
-    if not self.argDB['with-pic'] and not useSharedLibraries:
+    if not useSharedLibraries:
       self.logPrint("Skip checking PIC options on user request")
       return
-    if self.argDB['with-pic'] and not useSharedLibraries:
-      # this is a flaw in configure; it is a legitimate use case where PETSc is built with PIC flags but not shared libraries
-      # to fix it the capability to build shared libraries must be enabled in configure if --with-pic=true even if shared libraries are off and this
-      # test must use that capability instead of using the default shared library build in that case which is static libraries
-      raise RuntimeError("Cannot determine compiler PIC flags if shared libraries is turned off\nEither run using --with-shared-libraries or --with-pic=0 and supply the compiler PIC flag via CFLAGS, CXXXFLAGS, and FCFLAGS\n")
     if self.sharedLibraries and self.mainLanguage == 'C': languages = []
     else: languages = ['C']
     if hasattr(self, 'CXX'):
@@ -1288,12 +1295,10 @@ class Configure(config.base.Configure):
       languages.append('SYCL')
     for language in languages:
       self.pushLanguage(language)
-      if language in ['C','Cxx','CUDA','HIP','SYCL']:
-        includeLine = _picTestIncludes()
-      else:
-        includeLine = '      function foo(a)\n      real:: a,x,bar\n      common /xx/ x\n      x=a\n      foo = bar(x)\n      end\n'
+      includeLine = _generatePICTestIncludes(language)
       compilerFlagsArg = self.getCompilerFlagsArg(1) # compiler only
       oldCompilerFlags = getattr(self, compilerFlagsArg)
+      canBuildSharedLibs = False
       for testFlag in self.generatePICGuesses():
         if testFlag:
           self.logPrint('Trying '+language+' compiler flag '+testFlag+' for PIC code')
@@ -1309,7 +1314,7 @@ class Configure(config.base.Configure):
           setattr(self, compilerFlagsArg, oldCompilerFlags)
           continue
 
-        # check if linker can link both executables, checklink doesn't throw exception though
+        # check if linker can build a shared lib, checklink doesn't throw exception though
         if not self.checkLink(includes = includeLine, body = None, codeBegin = '', codeEnd = '', cleanup = 1, shared = 1, linkLanguage = myLanguage):
           self.logPrint('Rejected '+language+' compiler flag '+testFlag+' because shared linker cannot handle it')
           setattr(self, compilerFlagsArg, oldCompilerFlags)
@@ -1321,11 +1326,10 @@ class Configure(config.base.Configure):
           self.logPrint('Accepted '+language+' compiler flag '+testFlag+' for PIC code')
         else:
           self.logPrint('Accepted '+language+' PIC code without compiler flag')
-          # If compiler links PIC code without the flag, but the user specifically asked
-          # for PIC with --with-pic, should inform them that it did not work
-          if self.argDB['with-pic']:
-            self.logPrintBox('Warning: --with-pic option specified but none of the attempted PIC flags worked for '+language.upper()+'!\nWarning: Perhaps your compiler has a non-standard flag, check its manual for more information\nWarning: If PIC is required, reconfigure using CFLAGS/CXXFLAGS/FFLAGS to set PIC flag')
+        canBuildSharedLibs = True
         break
+      if not canBuildSharedLibs:
+        raise RuntimeError('Cannot determine appropriate PIC flag for '+language.upper()+' to build shared library!\nPlease set appropriate compiler PIC flag using the --CFLAGS/--CXX_CXXFLAGS/--FFLAGS options\nor configure with --with-shared-libraries=0')
       self.popLanguage()
     return
 
@@ -1571,7 +1575,7 @@ class Configure(config.base.Configure):
               dllexport = ''
               dllimport = ''
             # using printf appears to correctly identify non-pic code on X86_64
-            if self.checkLink(includes = _picTestIncludes(dllexport), codeBegin = '', codeEnd = '', cleanup = 0, shared = 1):
+            if self.checkLink(includes = _generatePICTestIncludes(self.language[-1], export = dllexport), codeBegin = '', codeEnd = '', cleanup = 0, shared = 1):
               oldLib  = self.linkerObj
               oldLibs = self.LIBS
               self.LIBS += ' -L'+self.tmpDir+' -lconftest'
@@ -1981,7 +1985,7 @@ if (dlclose(handle)) {
       self.executeTest(self.checkLinkerMac)
     if Configure.isCygwin(self.log):
       self.executeTest(self.checkLinkerWindows)
-    self.executeTest(self.checkPIC)
+    self.executeTest(self.checkBuildSharedLibraries)
     self.executeTest(self.checkSharedLinkerPaths)
     self.executeTest(self.checkLibC)
     self.executeTest(self.checkDynamicLinker)
