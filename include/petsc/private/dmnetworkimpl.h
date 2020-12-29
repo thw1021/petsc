@@ -49,10 +49,10 @@ typedef struct {
 
 /* Shared vertex - collection of vertices in subnetworks that share a single vertex, e.g., vfrom=(vfrom_net,vfrom_idx) */
 typedef struct {
-  PetscInt gidx_from;           /* global index of the shared vertices in dmplex */
+  PetscInt gidx;                /* global index of the shared vertices in dmplex */
   PetscInt vfrom_net,vfrom_idx; /* subnet number and index of vfrom */
-  PetscInt nvto;                /* num of to_vertices, i.e., vto=(to_net,to_idx) shares with vfrom=(vfrom_net,vfrom_dix) */
-  PetscInt *vto;                /* array of size nvto: vto[2*j]=vto_net[j], vto[2*j+1]=vto_idx[j], j=0,...,nvto-1 */
+  PetscInt n;                   /* num of vertices in this collection, i.e., sv=(net,idx) shares a single vertex in dmplex */
+  PetscInt *sv;                 /* array of size n: sv[2*j,2*j+1]=(net[j], idx[j]), j=0,...,n-1 */
 } SVtx;
 typedef enum {SVNONE=-1, SVFROM=0, SVTO=1} SVtxType;
 
