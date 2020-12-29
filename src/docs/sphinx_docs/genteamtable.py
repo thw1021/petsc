@@ -187,7 +187,7 @@ activeCoreDevs = {
     "prj-" : {
 	"web_url" : None,
 	"avatar_url" : None,
-	"name" : "P RJ"
+	"name" : None
     },
     "wence" : {
 	"web_url" : None,

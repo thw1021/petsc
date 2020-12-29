@@ -1,8 +1,8 @@
-.. _doc_config:
+.. _doc_config_faq:
 
-#################
-Configuring PETSc
-#################
+#####################
+Configuring PETSc FAQ
+#####################
 
 .. admonition:: Important
    :class: yellow
@@ -11,56 +11,6 @@ Configuring PETSc
    :ref:`download documentation <doc_download>` for more information.
 
    See :ref:`quickstart tutorial <tut_install>` for a step-by-step walkthrough of the installation process.
-
-***************
-Minimal Install
-***************
-
-On systems where MPI and `BLAS/LAPACK`_ are installed:
-
-.. code-block:: console
-
-   > ./configure
-   > make all check
-
-Or to specify compilers and have PETSc download and install `MPICH`_ and `BLAS/LAPACK`_
-[#blas]_ (when they are not already on your machine):
-
-.. code-block:: console
-
-   > ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich --download-fblaslapack
-   > make all check
-
-Don't need Fortran? Use ``--with-fortran-bindings=0`` to reduce the build times. If you
-are not using :ref:`external packages <doc_externalsoftware>` that use Fortran (for
-example, `MUMPS`_ requires Fortran) you can use ``--with-fc=0`` for even faster build
-times.
-
-.. admonition:: Encounter problems?
-
-   #. Read the error message from ``configure``!
-   #. Read help ``./configure --help``.
-   #. Refer to :ref:`configuration faq <doc_config_faq>` (e.g. build PETSc without a
-      Fortran compiler).
-   #. ``make`` problems? Just copy/paste ``make`` command printed by ``configure``
-      including any ``$PETSC_DIR`` and ``$PETSC_ARCH`` options. It may look similar to:
-
-      ::
-
-         xxx=========================================================================xxx
-         Configure stage complete. Now build PETSc libraries with:
-         make PETSC_DIR=/Users/jacobfaibussowitsch/NoSync/petsc PETSC_ARCH=arch-darwin-c-debug all
-         xxx=========================================================================xxx
-
-   #. Check the :ref:`bug-reporting <doc_creepycrawly>` section.
-
---------------
-
-.. _doc_config_faq:
-
-*****************
-Configuration FAQ
-*****************
 
 .. contents:: Table of Contents
    :local:
@@ -760,16 +710,6 @@ are visible.
 
 Check ``config/examples/arch-arm64-opt.py`` for iOS and
 ``config/examples/arch-armv7-opt.py`` for example usage.
-
-.. rubric:: Footnotes
-
-.. [#blas] The `BLAS/LAPACK`_ package
-   installed as part of this command is a `reference implementation
-   <https://bitbucket.org/petsc/pkg-fblaslapack/src/master/>`__ and a suitable starting
-   point to get PETSc running, but is generally not as performant as more optimized
-   libraries. See the :ref:`libaray guide <ch_blas-lapack_avail-libs>` for further
-   details.
-
 
 .. _MPICH: https://www.mpich.org/
 .. _BLAS/LAPACK: https://www.netlib.org/lapack/lug/node11.html

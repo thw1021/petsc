@@ -1049,8 +1049,6 @@ How Can I Compute The Schur Complement In PETSc?
    It is very expensive to compute the Schur complement of a matrix and very rarely needed
    in practice. We highly recommend avoiding algorithms that need it.
 
-.. todo:: The notation makes no sense, needs some clarification
-
 The Schur complement of the matrix :math:`M \in \mathbb{R}^{\left(p+q \right) \times
 \left(p + q \right)}`
 
@@ -1071,34 +1069,27 @@ is given by
 
 .. math::
 
-   M/D := A - BD^{-1}C \\
-   M/A := D - CA^{-1}B
-
-Or more generally
-
-.. math::
-
-   S_{da} = M_{ad} - M_{bc}M_{da}^{-1}M_{cb}
-
-.. todo:: This could do with being converted to a code sample instead of instructions
+   S_D := A - BD^{-1}C \\
+   S_A := D - CA^{-1}B
 
 Like the inverse, the Schur complement of a matrix (dense or sparse) is essentially always
-dense, so assuming you wish to calculate :math:`M/D`:
+dense, so assuming you wish to calculate :math:`S_A = D - C \underbrace{
+\overbrace{(A^{-1})}^{U} B}_{V}` begin by:
 
-#. Forming a dense matrix :math:`M_c`
+#. Forming a dense matrix :math:`B`
 
-#. Also create another dense matrix T of the same size.
+#. Also create another dense matrix :math:`V` of the same size.
 
-#. Then either factor the matrix :math:`M_d` directly with ``MatLUFactor()`` or
+#. Then either factor the matrix :math:`A` directly with ``MatLUFactor()`` or
    ``MatCholeskyFactor()``, or use ``MatGetFactor()`` followed by
    ``MatLUFactorSymbolic()`` followed by ``MatLUFactorNumeric()`` if you wish to use and
-   external solver package like SuperLU_Dist. Call the result A.
+   external solver package like SuperLU_Dist. Call the result :math:`U`.
 
-#. Then call ``MatMatSolve(A,M_c,T)``.
+#. Then call ``MatMatSolve(U,B,V)``.
 
-#. Then call ``MatMatMult(M_b,T,MAT_INITIAL_MATRIX,1.0,&S)``.
+#. Then call ``MatMatMult(C,V,MAT_INITIAL_MATRIX,1.0,&S)``.
 
-#. Now call ``MatAXPY(S,-1.0,M_a,MAT_SUBSET_NONZERO)``.
+#. Now call ``MatAXPY(S,-1.0,D,MAT_SUBSET_NONZERO)``.
 
 #. Followed by ``MatScale(S,-1.0)``.
 
@@ -1108,11 +1099,11 @@ factorization is much faster than iterative solvers. As you can see, this requir
 deal of work space and computation so is best avoided.
 
 However, it is not necessary to assemble the Schur complement :math:`S` in order to solve
-systems with it. Use ``MatCreateSchurComplement(M_a,M_a_pre,M_b,M_c,M_d,&S)`` to create a
-matrix that applies the action of :math:`S` (using ``M_a_pre`` to solve with ``M_a``), but
+systems with it. Use ``MatCreateSchurComplement(A,A_pre,B,C,D,&S)`` to create a
+matrix that applies the action of :math:`S` (using ``A_pre`` to solve with ``A``), but
 does not assemble.
 
-Alternatively, if you already have a block matrix ``M = [M_a, M_b; M_c, M_d]`` (in some
+Alternatively, if you already have a block matrix ``M = [A, B; C, D]`` (in some
 ordering), then you can create index sets (``IS``) ``isa`` and ``isb`` to address each
 block, then use ``MatGetSchurComplement()`` to create the Schur complement and/or an
 approximation suitable for preconditioning.
@@ -1123,7 +1114,7 @@ complements including using the ``SIMPLE`` approximation
 
 .. math::
 
-   M_a - M_b \text{diag}(M_d)^{-1} M_c
+   D - C \text{diag}(A)^{-1} B
 
 to create a sparse matrix that approximates the Schur complement (this is returned by
 default for the optional "preconditioning" matrix in ``MatGetSchurComplement()``).
@@ -1147,8 +1138,6 @@ There are at least two ways to write a finite element code using PETSc:
 #. Manage the grid data structure yourself and use PETSc ``IS`` and ``VecScatter`` to
    communicate the required ghost point communication. See
    ``src/snes/tutorials/ex10d/ex10.c``.
-
-.. todo:: this feels outdated
 
 DMDA Decomposes The Domain Differently Than The Mpi_Cart_create() Command. How Can One Use Them Together?
 ---------------------------------------------------------------------------------------------------------
