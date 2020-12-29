@@ -17,13 +17,17 @@
 #include <thrust/sequence.h>
 
 #if (CUSPARSE_VER_MAJOR > 10 || CUSPARSE_VER_MAJOR == 10 && CUSPARSE_VER_MINOR >= 2) /* According to cuda/10.1.168 on OLCF Summit */
-#define CHKERRCUSPARSE(stat) \
-do { \
-   if (PetscUnlikely(stat)) { \
-      const char *name  = cusparseGetErrorName(stat); \
-      const char *descr = cusparseGetErrorString(stat); \
-      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE error %d (%s) : %s",(int)stat,name,descr); \
-   } \
+#define CHKERRCUSPARSE(stat)\
+do {\
+  if (PetscUnlikely(stat)) {\
+    if (((stat == CUSPARSE_STATUS_NOT_INITIALIZED) || (stat == CUSPARSE_STATUS_ALLOC_FAILED)) && PetscCUDAInitialized) { \
+      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSPARSE reports not initialized or alloc failed; this indicates the GPU has run out resources");\
+    } else {\
+      const char *name  = cusparseGetErrorName(stat);\
+      const char *descr = cusparseGetErrorString(stat);\
+      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE error %d (%s) : %s",(int)stat,name,descr);\
+    }\
+  }\
 } while (0)
 #else
 #define CHKERRCUSPARSE(stat) do {if (PetscUnlikely(stat)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU,"cusparse error %d",(int)stat);} while (0)
