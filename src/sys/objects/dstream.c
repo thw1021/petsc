@@ -1,52 +1,31 @@
 #include <petsc/private/streamimpl.h>
 
-static PetscInt createCount = 0, destroyCount = 0;
-
 PetscErrorCode PetscStreamCreate(PetscStream *strm)
 {
+  PetscStream    s;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ++createCount;
   PetscValidPointer(strm,1);
-  {
-    size_t      freemem, totalmem;
-    PetscBool   isCudaHost;
-    cudaError_t cerr;
-
-    cerr = cudaDeviceSynchronize();CHKERRCUDA(cerr);
-    ierr = PetscMallocIsCUDAHost(&isCudaHost);CHKERRQ(ierr);
-    cerr = cudaMemGetInfo(&freemem, &totalmem);CHKERRCUDA(cerr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "===============================\nBefore creating %D: %4.2fMB/ %4.2fMB (Free/Total) on %s\n===============================\n", createCount, freemem/(1024*1024.0), totalmem/(1024*1024.0), isCudaHost ? "DEVICE" : "HOST");CHKERRQ(ierr);
-    ierr = PetscStackView(PETSC_STDOUT);CHKERRQ(ierr);
-  }
   /* Setting to null taken from VecCreate(), why though? */
-  ierr = PetscNew(strm);CHKERRQ(ierr);
-  (*strm)->mode = PETSC_STREAM_DEFAULT_BLOCKING;
+  *strm = NULL;
+  ierr = PetscNew(&s);CHKERRQ(ierr);
+  s->mode = PETSC_STREAM_DEFAULT_BLOCKING;
 #if defined(PETSC_HAVE_CUDA)
   {
     cudaError_t cerr;
 
-    cerr = cudaStreamCreateWithFlags(&((*strm)->cstream), cudaStreamDefault);CHKERRCUDA(cerr);
+    cerr = cudaStreamCreateWithFlags(&(s->cstream), cudaStreamDefault);CHKERRCUDA(cerr);
   }
 #endif /* PETSC_HAVE_CUDA */
 #if defined(PETSC_HAVE_HIP)
   {
     hipError_t herr;
 
-    herr = hipStreamCreate(&((*strm)->hstream));CHKERRHIP(herr);
+    herr = hipStreamCreateWithFlags(&(s->hstream), hipStreamDefault);CHKERRHIP(herr);
   }
 #endif /* PETSC_HAVE_HIP */
-  {
-    size_t      freemem, totalmem;
-    PetscBool   isCudaHost;
-    cudaError_t cerr;
-
-    cerr = cudaDeviceSynchronize();CHKERRCUDA(cerr);
-    ierr = PetscMallocIsCUDAHost(&isCudaHost);CHKERRQ(ierr);
-    cerr = cudaMemGetInfo(&freemem, &totalmem);CHKERRCUDA(cerr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "===============================\nAfter creating %D: %4.2fMB/ %4.2fMB (Free/Total) on %s\n===============================\n", createCount, freemem/(1024*1024.0), totalmem/(1024*1024.0), isCudaHost ? "DEVICE" : "HOST");CHKERRQ(ierr);
-  }
+  *strm = s;
   PetscFunctionReturn(0);
 }
 
@@ -55,19 +34,8 @@ PetscErrorCode PetscStreamDestroy(PetscStream *strm)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ++destroyCount;
-  //if (!*strm) PetscFunctionReturn(0);
+  if (!*strm) PetscFunctionReturn(0);
   PetscValidPointer(strm,1);
-  {
-    size_t      freemem, totalmem;
-    PetscBool   isCudaHost;
-    cudaError_t cerr;
-
-    cerr = cudaDeviceSynchronize();CHKERRCUDA(cerr);
-    ierr = PetscMallocIsCUDAHost(&isCudaHost);CHKERRQ(ierr);
-    cerr = cudaMemGetInfo(&freemem, &totalmem);CHKERRCUDA(cerr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "===============================\nBefore Free %D: %4.2fMB/ %4.2fMB (Free/Total) on %s\n===============================\n", destroyCount, freemem/(1024*1024.0), totalmem/(1024*1024.0), isCudaHost ? "DEVICE" : "HOST");CHKERRQ(ierr);
-  }
 #if defined(PETSC_HAVE_CUDA)
   {
     cudaError_t cerr;
@@ -83,49 +51,49 @@ PetscErrorCode PetscStreamDestroy(PetscStream *strm)
   }
 #endif /* PETSC_HAVE_HIP */
   ierr = PetscFree(*strm);CHKERRQ(ierr);
-  {
-    size_t      freemem, totalmem;
-    PetscBool   isCudaHost;
-    cudaError_t cerr;
-
-    cerr = cudaDeviceSynchronize();CHKERRCUDA(cerr);
-    ierr = PetscMallocIsCUDAHost(&isCudaHost);CHKERRQ(ierr);
-    cerr = cudaMemGetInfo(&freemem, &totalmem);CHKERRCUDA(cerr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "===============================\nAfter Free %D: %4.2fMB/ %4.2fMB (Free/Total) on %s\n===============================\n", destroyCount, freemem/(1024*1024.0), totalmem/(1024*1024.0), isCudaHost ? "DEVICE" : "HOST");CHKERRQ(ierr);
-  }
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscStreamSetMode(PetscStream strm, PetscStreamMode mode)
 {
-  PetscFunctionBegin;
-  {
-    PetscErrorCode ierr;
-
-    ierr = PetscStreamSynchronize(strm);CHKERRQ(ierr);
-  }
-  /* For whatever reason PETSC_HAVE_DEVICE doesn't work? */
-#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-  if ((mode == PETSC_STREAM_GLOBAL_NONBLOCKING) && (strm->mode != mode)) {
 #if defined(PETSC_HAVE_CUDA)
-    {
-      cudaError_t cerr;
-
-      /* I don't think there is a way to change flags on existing streams */
-      cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
-      cerr = cudaStreamCreateWithFlags(&strm->cstream, cudaStreamNonBlocking);CHKERRCUDA(cerr);
-    }
+  cudaError_t cerr;
 #endif
 #if defined(PETSC_HAVE_HIP)
-    {
-      hipError_t herr;
+  hipError_t  herr;
+#endif
 
+  PetscFunctionBegin;
+  if (strm->mode == mode) PetscFunctionReturn(0);
+#if defined(PETSC_HAVE_DEVICE)
+  switch (mode) {
+  case PETSC_STREAM_GLOBAL_BLOCKING:
+  case PETSC_STREAM_DEFAULT_BLOCKING:
+    if (strm->mode == PETSC_STREAM_GLOBAL_NONBLOCKING) {
+#if defined(PETSC_HAVE_CUDA)
+    /* I don't think there is a way to change flags on existing streams */
+      cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
+      cerr = cudaStreamCreateWithFlags(&strm->cstream, cudaStreamDefault);CHKERRCUDA(cerr);
+#endif
+#if defined(PETSC_HAVE_HIP)
+      herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
+      herr = hipStreamCreateWithFlags(&strm->hstream, hipStreamDefault);CHKERRHIP(herr);
+#endif
+    }
+    break;
+  case PETSC_STREAM_GLOBAL_NONBLOCKING:
+#if defined(PETSC_HAVE_CUDA)
+    /* I don't think there is a way to change flags on existing streams */
+      cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
+      cerr = cudaStreamCreateWithFlags(&strm->cstream, cudaStreamNonBlocking);CHKERRCUDA(cerr);
+#endif
+#if defined(PETSC_HAVE_HIP)
       herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
       herr = hipStreamCreateWithFlags(&strm->hstream, hipStreamNonBlocking);CHKERRHIP(herr);
-    }
 #endif
+      break;
   }
-#endif
+#endif /* PETSC_HAVE_DEVICE */
   strm->mode = mode;
   PetscFunctionReturn(0);
 }

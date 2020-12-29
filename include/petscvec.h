@@ -1,5 +1,5 @@
 /*
-1;95;0c    Defines the vector component of PETSc. Vectors generally represent
+  Defines the vector component of PETSc. Vectors generally represent
   degrees of freedom for finite element/finite difference functions
   on a grid. They have more mathematical structure then simple arrays.
 */
