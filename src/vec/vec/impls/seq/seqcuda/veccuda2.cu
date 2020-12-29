@@ -31,11 +31,10 @@ PetscErrorCode VecCUDAAllocateCheck(Vec v)
   PetscFunctionBegin;
   if (!v->spptr) {
     PetscReal pinned_memory_min;
-    ierr = PetscMalloc(sizeof(Vec_CUDA),&v->spptr);CHKERRQ(ierr);
+    ierr = PetscCalloc(sizeof(Vec_CUDA),&v->spptr);CHKERRQ(ierr);
     veccuda = (Vec_CUDA*)v->spptr;
     err = cudaMalloc((void**)&veccuda->GPUarray_allocated,sizeof(PetscScalar)*((PetscBLASInt)v->map->n));CHKERRCUDA(err);
     veccuda->GPUarray = veccuda->GPUarray_allocated;
-    veccuda->stream = 0;  /* using default stream */
     if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) {
       if (v->data && ((Vec_Seq*)v->data)->array) {
         v->offloadmask = PETSC_OFFLOAD_CPU;
@@ -1151,22 +1150,102 @@ PetscErrorCode VecDotNorm2_SeqCUDA(Vec s, Vec t, PetscScalar *dp, PetscScalar *n
   PetscFunctionReturn(0);
 }
 
+#if defined(PETSC_HAVE_NVSHMEM)
+/* Free old CUDA array and re-allocate a new one from nvshmem symmetric heap.
+   New array does not retain values in the old array. The offload mask is not changed.
+
+   Note: the function is only meant to be used in MatAssemblyEnd_MPIAIJCUSPARSE.
+ */
+PetscErrorCode  VecAllocateNVSHMEM_SeqCUDA(Vec v)
+{
+  PetscErrorCode ierr;
+  cudaError_t    cerr;
+  Vec_CUDA       *veccuda = (Vec_CUDA*)v->spptr;
+  PetscInt       n;
+
+  PetscFunctionBegin;
+  cerr = cudaFree(veccuda->GPUarray_allocated);CHKERRCUDA(cerr);
+  ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(MPI_IN_PLACE,&n,1,MPIU_INT,MPI_MAX,PETSC_COMM_WORLD);CHKERRMPI(ierr);
+  ierr = PetscNvshmemMalloc(n*sizeof(PetscScalar),(void**)&veccuda->GPUarray_allocated);CHKERRQ(ierr);
+  veccuda->GPUarray = veccuda->GPUarray_allocated;
+  veccuda->nvshmem  = PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecGetNormArray_MPICUDA_NVSHMEM(Vec xin,NormType type,PetscReal **alpha)
+{
+  PetscErrorCode          ierr;
+  PetscInt                offset = 0;
+
+  PetscFunctionBegin;
+  ierr = PetscNvshmemInitializeCheck();CHKERRQ(ierr);
+  /* Must zero the norms since some processes might have no vector entries */
+  if (!xin->normArray_d) {ierr = PetscNvshmemCalloc(3*sizeof(PetscReal),(void**)&xin->normArray_d);CHKERRQ(ierr);}
+  /* Compute offset of this norm in normArray[] */
+  if (type == NORM_1 || type == NORM_1_AND_2)        offset = 0;
+  else if (type == NORM_2 || type == NORM_FROBENIUS) offset = 1;
+  else if (type == NORM_INFINITY)                    offset = 2;
+
+  *alpha = &xin->normArray_d[offset];
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecFreeNormArray_MPICUDA_NVSHMEM(Vec xin)
+{
+  PetscErrorCode          ierr;
+  PetscFunctionBegin;
+  ierr = PetscNvshmemFree(xin->normArray_d);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/* The 'MPI' in 'MPICUDA' only means the vector is parallel. It does not mean we must use MPI for e.g., VecNorm */
+PetscErrorCode VecNormAsync_MPICUDA_NVSHMEM(Vec xin,NormType type,PetscReal *z)
+{
+  PetscErrorCode          ierr;
+  cudaError_t             cerr;
+  PetscInt                m = (type == NORM_1_AND_2) ? 2 : 1; /* count of norms */
+  PetscReal               *alpha;
+
+  PetscFunctionBegin;
+  /* Compute the local norm and then the global norm */
+  ierr = VecGetNormArray_MPICUDA_NVSHMEM(xin,type,&alpha);CHKERRQ(ierr);
+  ierr = VecNormAsync_SeqCUDA(xin,type,alpha);CHKERRQ(ierr);
+  if (type == NORM_2 || type == NORM_FROBENIUS) {PetscNvshmemNorm2(alpha);}
+  else if (type == NORM_1)                      {PetscNvshmemSum(alpha);}
+  else if (type == NORM_INFINITY)               {PetscNvshmemMax(alpha);}
+  else if (type == NORM_1_AND_2)                {PetscNvshmemNorm1And2(alpha);}
+
+  /* If user did not use the norm array provided by the vector, we need to do the extra copy */
+  if (z != alpha) {cerr = cudaMemcpyAsync(z,alpha,sizeof(PetscReal)*m,cudaMemcpyDeviceToDevice);CHKERRCUDA(cerr);}
+  PetscFunctionReturn(0);
+}
+#endif
+
 PetscErrorCode VecDestroy_SeqCUDA(Vec v)
 {
   PetscErrorCode ierr;
-  cudaError_t    err;
+  cudaError_t    cerr;
+  Vec_CUDA       *veccuda = (Vec_CUDA*)v->spptr;
 
   PetscFunctionBegin;
   if (v->spptr) {
-    if (((Vec_CUDA*)v->spptr)->GPUarray_allocated) {
-      err = cudaFree(((Vec_CUDA*)v->spptr)->GPUarray_allocated);CHKERRCUDA(err);
-      ((Vec_CUDA*)v->spptr)->GPUarray_allocated = NULL;
+    if (veccuda->GPUarray_allocated) {
+     #if defined(PETSC_HAVE_NVSHMEM)
+      if (veccuda->nvshmem) {
+        ierr = PetscNvshmemFree(veccuda->GPUarray_allocated);CHKERRQ(ierr);
+        veccuda->nvshmem = PETSC_FALSE;
+      }
+      else
+     #endif
+      {cerr = cudaFree(veccuda->GPUarray_allocated);CHKERRCUDA(cerr);}
+      veccuda->GPUarray_allocated = NULL;
     }
-    if (((Vec_CUDA*)v->spptr)->stream) {
-      err = cudaStreamDestroy(((Vec_CUDA*)v->spptr)->stream);CHKERRCUDA(err);
+    if (veccuda->stream) {
+      cerr = cudaStreamDestroy(veccuda->stream);CHKERRCUDA(cerr);
     }
   }
-  if (v->normArray_d) {err = cudaFree(v->normArray_d);CHKERRCUDA(err); v->normArray_d=NULL;}
+  if (v->normArray_d) {cerr = cudaFree(v->normArray_d);CHKERRCUDA(cerr); v->normArray_d=NULL;}
   ierr = VecDestroy_SeqCUDA_Private(v);CHKERRQ(ierr);
   ierr = PetscFree(v->spptr);CHKERRQ(ierr);
   PetscFunctionReturn(0);

@@ -384,11 +384,17 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
   if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) {
     ierr = VecSetType(mpiaij->lvec,VECSEQCUDA);CHKERRQ(ierr);
+   #if defined(PETSC_HAVE_NVSHMEM)
+    {
+      PetscMPIInt result;
+      ierr = MPI_Comm_compare(PETSC_COMM_WORLD,PetscObjectComm((PetscObject)A),&result);CHKERRMPI(ierr);
+      if (result == MPI_IDENT || result == MPI_CONGRUENT) {ierr = VecAllocateNVSHMEM_SeqCUDA(mpiaij->lvec);CHKERRQ(ierr);}
+    }
+   #endif
   }
   if (nnz_state > A->nonzerostate) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // if we assembled on the device
   }
-
   PetscFunctionReturn(0);
 }
 

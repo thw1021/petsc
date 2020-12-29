@@ -1,12 +1,13 @@
 #include "petsc/private/sfimpl.h"
 #include "petsccublas.h"
+#include "petscsystypes.h"
 #include <petsc/private/cudavecimpl.h>
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 #include <mpi.h>
 #include <nvshmem.h>
 #include <nvshmemx.h>
 
-PETSC_STATIC_INLINE PetscErrorCode PetscNvshmemMalloc(size_t size, void**ptr)
+PetscErrorCode PetscNvshmemMalloc(size_t size, void** ptr)
 {
   PetscFunctionBegin;
   *ptr = nvshmem_malloc(size);
@@ -14,16 +15,20 @@ PETSC_STATIC_INLINE PetscErrorCode PetscNvshmemMalloc(size_t size, void**ptr)
   PetscFunctionReturn(0);
 }
 
-/* Calloc <count> elements with each of <size> bytes */
-PETSC_STATIC_INLINE PetscErrorCode PetscNvshmemCalloc(size_t count,size_t size, void**ptr)
+PetscErrorCode PetscNvshmemCalloc(size_t size, void**ptr)
 {
   PetscFunctionBegin;
-  *ptr = nvshmem_calloc(count,size);
-  if (!*ptr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"nvshmem_calloc() failed to allocate %zu bytes",count*size);
+  *ptr = nvshmem_calloc(size,1);
+  if (!*ptr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"nvshmem_calloc() failed to allocate %zu bytes",size);
   PetscFunctionReturn(0);
 }
 
-#define PetscNvshmemFree(ptr)      ((ptr) && (nvshmem_free(ptr),(ptr)=NULL,0))
+PetscErrorCode PetscNvshmemFree_Private(void* ptr)
+{
+  PetscFunctionBegin;
+  nvshmem_free(ptr);
+  PetscFunctionReturn(0);
+}
 
 PetscErrorCode PetscNvshmemFinalize(void)
 {
@@ -578,7 +583,8 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
   cudaError_t       cerr;
 
   PetscFunctionBegin;
-  cerr = cudaEventDestroy(link->input_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->root_ready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->leaf_ready);CHKERRCUDA(cerr);
   cerr = cudaEventDestroy(link->local_comm_end);CHKERRCUDA(cerr);
   cerr = cudaEventDestroy(link->remote_comm_end);CHKERRCUDA(cerr);
   cerr = cudaStreamDestroy(link->remote_comm_stream);CHKERRCUDA(cerr);
@@ -592,14 +598,29 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemType xrootmtype,const void *rootdata,PetscMemType xleafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
+PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
 {
   PetscErrorCode    ierr;
+  PetscInt          i;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscSFLink       *p,link;
-  PetscBool         match;
+  PetscBool         match,rootdirect[2],leafdirect[2];;
 
   PetscFunctionBegin;
+  /* Can we directly use root/leafdirect with the given sf, sfop and op? */
+  for (i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
+    if (sfop == PETSCSF_BCAST) {
+      rootdirect[i] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[i]) ? PETSC_TRUE : PETSC_FALSE; /* Pack roots */
+      leafdirect[i] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[i] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE;  /* Unpack leaves */
+    } else if (sfop == PETSCSF_REDUCE) {
+      leafdirect[i] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[i]) ? PETSC_TRUE : PETSC_FALSE;  /* Pack leaves */
+      rootdirect[i] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[i] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE; /* Unpack roots */
+    } else { /* PETSCSF_FETCH */
+      rootdirect[i] = PETSC_FALSE; /* FETCH always need a separate rootbuf */
+      leafdirect[i] = PETSC_FALSE; /* We also force allocating a separate leafbuf so that leafdata and leafupdate can share mpi requests */
+    }
+  }
+
   /* Look for free nvshmem links in cache */
   for (p=&bas->avail; (link=*p); p=&link->next) {
     if (link->use_nvshmem) {
@@ -619,23 +640,22 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
 
   if (!link->leafsig) {
     ierr = PetscNvshmemMalloc(sf->leafbuflen_rmax*link->unitbytes,(void**)&link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
-    ierr = PetscNvshmemCalloc(sf->nranks_rmax,sizeof(uint64_t),(void**)&link->leafsig);CHKERRQ(ierr); /* Init signals to zero */
+    ierr = PetscNvshmemCalloc(sf->nranks_rmax*sizeof(uint64_t),(void**)&link->leafsig);CHKERRQ(ierr); /* Init signals to zero */
     link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
   }
   if (!link->rootsig) {
     ierr = PetscNvshmemMalloc(bas->rootbuflen_rmax*link->unitbytes,(void**)&link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
-    ierr = PetscNvshmemCalloc(bas->niranks_rmax,sizeof(uint64_t),(void**)&link->rootsig);CHKERRQ(ierr);
+    ierr = PetscNvshmemCalloc(bas->niranks_rmax*sizeof(uint64_t),(void**)&link->rootsig);CHKERRQ(ierr);
     link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
   }
 
   link->rootmtype                  = PETSC_MEMTYPE_DEVICE; /* Only need 0/1-based mtype from now on */
   link->leafmtype                  = PETSC_MEMTYPE_DEVICE;
-  link->rootdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* For the remote part, we always need root/leaf buffers allocated by nvshmem_malloc*/
-  link->leafdirect[PETSCSF_REMOTE] = PETSC_FALSE;
-  link->rootdirect[PETSCSF_LOCAL]  = PETSC_FALSE; /* For the local part, we directly use Scatter (since rootmtype=leafmtype)... */
-  link->leafdirect[PETSCSF_LOCAL]  = PETSC_FALSE; /* .., making root/leafdirect[PETSCSF_LOCAL] actually useless */
+  for (i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
+    link->rootdirect[i] = rootdirect[i];
+    link->leafdirect[i] = leafdirect[i];
+  }
   link->use_nvshmem                = PETSC_TRUE;
-
   /* Overwrite some function pointers set by PetscSFLinkSetUp_CUDA */
   link->Destroy                    = PetscSFLinkDestroy_NVSHMEM;
   link->StartCommunication         = PetscSFLinkPutData_NVSHMEM;
@@ -654,81 +674,67 @@ template<typename RealType> __global__ static void CudaSqr (RealType *a) {a[0] =
 template<typename RealType> __global__ static void CudaSqrt(RealType *a) {a[0] = sqrt(a[0]);}
 
 #if defined(PETSC_USE_REAL_SINGLE)
-static void PetscNvshmemNorm2(nvshmem_team_t team,float *alpha)
+PetscErrorCode PetscNvshmemNorm2(float *alpha)
 {
+  PetscFunctionBegin;
   CudaSqr<<<1,1>>>(alpha);
-  nvshmemx_float_sum_reduce_on_stream(team,alpha,alpha,1,NULL/*stream*/);
+  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL/*stream*/);
   CudaSqrt<<<1,1>>>(alpha);
+  PetscFunctionReturn(0);
 }
-static void PetscNvshmemSum(nvshmem_team_t team,float  *alpha) {nvshmemx_float_sum_reduce_on_stream(team,alpha,alpha,1,NULL);}
-static void PetscNvshmemMax(nvshmem_team_t team,float  *alpha) {nvshmemx_float_max_reduce_on_stream(team,alpha,alpha,1,NULL);}
-static void PetscNvshmemNorm1And2(nvshmem_team_t team,float *alpha)
+
+PetscErrorCode PetscNvshmemSum(float *alpha)
 {
+  PetscFunctionBegin;
+  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscNvshmemMax(float *alpha)
+{
+  PetscFunctionBegin;
+  nvshmemx_float_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscNvshmemNorm1And2(float *alpha)
+{
+  PetscFunctionBegin;
   CudaSqr<<<1,1>>>(&alpha[1]);
-  nvshmemx_float_sum_reduce_on_stream(team,alpha,alpha,2,NULL);
+  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,2,NULL);
   CudaSqrt<<<1,1>>>(&alpha[1]);
+  PetscFunctionReturn(0);
 }
 #elif defined(PETSC_USE_REAL_DOUBLE)
-static void PetscNvshmemNorm2(nvshmem_team_t team,double *alpha)
+PetscErrorCode PetscNvshmemNorm2(double *alpha)
 {
+  PetscFunctionBegin;
   CudaSqr<<<1,1>>>(alpha);
-  nvshmemx_double_sum_reduce_on_stream(team,alpha,alpha,1,NULL);
+  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
   CudaSqrt<<<1,1>>>(alpha);
+  PetscFunctionReturn(0);
 }
-static void PetscNvshmemSum(nvshmem_team_t team,double *alpha) {nvshmemx_double_sum_reduce_on_stream(team,alpha,alpha,1,NULL);}
-static void PetscNvshmemMax(nvshmem_team_t team,double *alpha) {nvshmemx_double_max_reduce_on_stream(team,alpha,alpha,1,NULL);}
-static void PetscNvshmemNorm1And2(nvshmem_team_t team,double *alpha)
+
+PetscErrorCode PetscNvshmemSum(double *alpha)
 {
+  PetscFunctionBegin;
+  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscNvshmemMax(double *alpha)
+{
+  PetscFunctionBegin;
+  nvshmemx_double_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscNvshmemNorm1And2(double *alpha)
+{
+  PetscFunctionBegin;
   CudaSqr<<<1,1>>>(&alpha[1]);
-  nvshmemx_double_sum_reduce_on_stream(team,alpha,alpha,2,NULL);
+  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,2,NULL);
   CudaSqrt<<<1,1>>>(&alpha[1]);
+  PetscFunctionReturn(0);
 }
 #endif
-
-PetscErrorCode VecGetNormArray_MPICUDA_NVSHMEM(Vec xin,NormType type,PetscReal **alpha)
-{
-  PetscErrorCode          ierr;
-  PetscInt                offset = 0;
-
-  PetscFunctionBegin;
-  ierr = PetscNvshmemInitializeCheck();CHKERRQ(ierr);
-  /* Must use zero the norms since some processes might have no vector entries */
-  if (!xin->normArray_d) {ierr = PetscNvshmemCalloc(3,sizeof(PetscReal),(void**)&xin->normArray_d);CHKERRQ(ierr);}
-  /* Compute offset of this norm in normArray[] */
-  if (type == NORM_1 || type == NORM_1_AND_2)        offset = 0;
-  else if (type == NORM_2 || type == NORM_FROBENIUS) offset = 1;
-  else if (type == NORM_INFINITY)                    offset = 2;
-
-  *alpha = &xin->normArray_d[offset];
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecFreeNormArray_MPICUDA_NVSHMEM(Vec xin)
-{
-  PetscErrorCode          ierr;
-  PetscFunctionBegin;
-  ierr = PetscNvshmemFree(xin->normArray_d);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/* The 'MPI' in 'MPICUDA' only means the vector is parallel. It does not mean we must use MPI for e.g., VecNorm */
-PetscErrorCode VecNormAsync_MPICUDA_NVSHMEM(Vec xin,NormType type,PetscReal *z)
-{
-  PetscErrorCode          ierr;
-  cudaError_t             cerr;
-  PetscInt                m = (type == NORM_1_AND_2) ? 2 : 1; /* count of norms */
-  PetscReal               *alpha;
-
-  PetscFunctionBegin;
-  /* Compute the local norm and then the global norm */
-  ierr = VecGetNormArray_MPICUDA_NVSHMEM(xin,type,&alpha);CHKERRQ(ierr);
-  ierr = VecNormAsync_SeqCUDA(xin,type,alpha);CHKERRQ(ierr);
-  if (type == NORM_2 || type == NORM_FROBENIUS) {PetscNvshmemNorm2(NVSHMEM_TEAM_WORLD,alpha);}
-  else if (type == NORM_1)                      {PetscNvshmemSum(NVSHMEM_TEAM_WORLD,alpha);}
-  else if (type == NORM_INFINITY)               {PetscNvshmemMax(NVSHMEM_TEAM_WORLD,alpha);}
-  else if (type == NORM_1_AND_2)                {PetscNvshmemNorm1And2(NVSHMEM_TEAM_WORLD,alpha);}
-
-  /* If user did not use the norm array provided by the vector, we need to do the extra copy */
-  if (z != alpha) {cerr = cudaMemcpyAsync(z,alpha,sizeof(PetscReal)*m,cudaMemcpyDeviceToDevice);CHKERRCUDA(cerr);}
-  PetscFunctionReturn(0);
-}
