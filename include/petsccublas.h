@@ -32,7 +32,7 @@ do { \
 #define CHKERRCUBLAS(stat) \
 do { \
    if (PetscUnlikely(stat)) { \
-     if (((stat == CUBLAS_STATUS_NOT_INITIALIZED || (stat == CUBLAS_STATUS_ALLOC_FAILED)) && PetscCUDAInitialized) { \
+     if (((stat == CUBLAS_STATUS_NOT_INITIALIZED) || (stat == CUBLAS_STATUS_ALLOC_FAILED)) && PetscCUDAInitialized) { \
        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuBLAS reports not initialized or alloc failed; this indicates the GPU has run out resources");\
      } else {\
        const char *name = PetscCUBLASGetErrorName(stat);                     \
