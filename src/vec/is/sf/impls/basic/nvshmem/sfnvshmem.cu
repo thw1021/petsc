@@ -9,7 +9,10 @@
 
 PetscErrorCode PetscNvshmemMalloc(size_t size, void** ptr)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
+  ierr = PetscNvshmemInitializeCheck();CHKERRQ(ierr);
   *ptr = nvshmem_malloc(size);
   if (!*ptr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"nvshmem_malloc() failed to allocate %zu bytes",size);
   PetscFunctionReturn(0);
@@ -17,7 +20,10 @@ PetscErrorCode PetscNvshmemMalloc(size_t size, void** ptr)
 
 PetscErrorCode PetscNvshmemCalloc(size_t size, void**ptr)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
+  ierr = PetscNvshmemInitializeCheck();CHKERRQ(ierr);
   *ptr = nvshmem_calloc(size,1);
   if (!*ptr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"nvshmem_calloc() failed to allocate %zu bytes",size);
   PetscFunctionReturn(0);
@@ -162,7 +168,7 @@ PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF sf,PetscMemType rootmtype,const v
 
   /* Check if rootmtype and leafmtype collectively are PETSC_MEMTYPE_CUDA */
   if (sf->use_nvshmem) {
-    PetscInt oneCuda = (!rootdata || rootmtype == PETSC_MEMTYPE_CUDA) && (!leafdata || leafmtype == PETSC_MEMTYPE_CUDA) ? 1 : 0; /* Do I use cuda for both root&leafmtype? */
+    PetscInt oneCuda = (!rootdata || PetscMemTypeCUDA(rootmtype)) && (!leafdata || PetscMemTypeCUDA(leafmtype)) ? 1 : 0; /* Do I use cuda for both root&leafmtype? */
     PetscInt allCuda = oneCuda; /* Assume the same for all ranks. But if not, in opt mode, return value <use_nvshmem> won't be collective! */
    #if defined(PETSC_USE_DEBUG)  /* Check in debug mode. Note MPI_Allreduce is expensive, so only in debug mode */
     ierr = MPI_Allreduce(&oneCuda,&allCuda,1,MPIU_INT,MPI_LAND,comm);CHKERRMPI(ierr);
@@ -445,11 +451,10 @@ PetscErrorCode PetscSFLinkGetData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
    ===========================================================================================================*/
  __global__ static void NvshmemFenceAndSendSignals(PetscInt n,uint64_t *sig,PetscInt *sigdisp,PetscMPIInt *ranks,uint64_t newval)
  {
-   int i = blockIdx.x*blockDim.x + threadIdx.x;
-
    /* Each thread puts one remote signal */
    nvshmem_fence();
-   if (i < n) nvshmemx_uint64_signal(sig+sigdisp[i],newval,ranks[i]);
+
+   for (int i=0; i<n; i++) nvshmemx_uint64_signal(sig+sigdisp[i],newval,ranks[i]);
  }
 
 /* A sender tells its receivers that sent data is deliveried in their corresponding receive buffer */
@@ -472,7 +477,7 @@ PetscErrorCode PetscSFLinkSendSignalsOfCompletionOfPuttingData_NVSHMEM(PetscSF s
     sigdisp = sf->rootsigdisp_d;
     ranks   = sf->ranks_d;
   }
-  NvshmemFenceAndSendSignals<<<(nto+511)/512,512,0,link->remote_comm_stream>>>(nto,sig,sigdisp,ranks,1); /* fence and set remote signals to 1 */
+  NvshmemFenceAndSendSignals<<<1,1,0,link->remote_comm_stream>>>(nto,sig,sigdisp,ranks,1); /* fence and set remote signals to 1 */
   PetscFunctionReturn(0);
 }
 
@@ -545,8 +550,8 @@ PetscErrorCode PetscSFLinkPutData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   char              *sbuf,*rbuf;
   PetscInt          *sbufdisp,*rbufdisp;
-  PetscMPIInt       *dstranks;
-  PetscInt          n;
+  PetscMPIInt       i,j,rank,*dstranks;
+  PetscInt          n; /* Number of remote destinaton ranks to put data */
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) { /* In the view of leaf, who is the receiver */
@@ -564,7 +569,14 @@ PetscErrorCode PetscSFLinkPutData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
     rbufdisp = sf->rootbufdisp;                                     /* for my i-th remote root rank, I will access its root buf at offset rootbufdisp[i] */
     dstranks = sf->ranks+sf->ndranks;                               /* remote root ranks */
   }
-  for (int i=0; i<n; i++) {
+
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)sf),&rank);CHKERRMPI(ierr);
+
+  /* Find i such that rstranks[i] is my closest right neighbor. If not exist, set i to 0 */
+  for (i=0; i<n; i++) if (dstranks[i]>rank) break;
+  if (i == n) i = 0;
+
+  for (j=0; j<n; j++,i=(i+1)%n) { /* Shift to avoid communication hot spot */
     char   *src   = sbuf + (sbufdisp[i]-sbufdisp[0])*link->unitbytes;
     char   *dst   = rbuf + rbufdisp[i]*link->unitbytes;
     size_t nelems = (sbufdisp[i+1]-sbufdisp[i])*link->unitbytes;
@@ -601,24 +613,23 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
 PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
 {
   PetscErrorCode    ierr;
-  PetscInt          i;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscSFLink       *p,link;
   PetscBool         match,rootdirect[2],leafdirect[2];;
 
   PetscFunctionBegin;
-  /* Can we directly use root/leafdirect with the given sf, sfop and op? */
-  for (i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
-    if (sfop == PETSCSF_BCAST) {
-      rootdirect[i] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[i]) ? PETSC_TRUE : PETSC_FALSE; /* Pack roots */
-      leafdirect[i] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[i] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE;  /* Unpack leaves */
-    } else if (sfop == PETSCSF_REDUCE) {
-      leafdirect[i] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[i]) ? PETSC_TRUE : PETSC_FALSE;  /* Pack leaves */
-      rootdirect[i] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[i] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE; /* Unpack roots */
-    } else { /* PETSCSF_FETCH */
-      rootdirect[i] = PETSC_FALSE; /* FETCH always need a separate rootbuf */
-      leafdirect[i] = PETSC_FALSE; /* We also force allocating a separate leafbuf so that leafdata and leafupdate can share mpi requests */
-    }
+  /* Can we directly send/recv root/leafdata with the given sf, sfop and op?
+     We only care root/leafdirect[PETSCSF_REMOTE], since we never need intermeidate buffers in local communication with NVSHMEM.
+  */
+  if (sfop == PETSCSF_BCAST) {
+    rootdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[PETSCSF_REMOTE]) ? PETSC_TRUE : PETSC_FALSE; /* Pack roots */
+    leafdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[PETSCSF_REMOTE] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE;  /* Unpack leaves */
+  } else if (sfop == PETSCSF_REDUCE) {
+    leafdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[PETSCSF_REMOTE]) ? PETSC_TRUE : PETSC_FALSE;  /* Pack leaves */
+    rootdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[PETSCSF_REMOTE] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE; /* Unpack roots */
+  } else { /* PETSCSF_FETCH */
+    rootdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* FETCH always need a separate rootbuf */
+    leafdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* We also force allocating a separate leafbuf so that leafdata and leafupdate can share mpi requests */
   }
 
   /* Look for free nvshmem links in cache */
@@ -638,35 +649,46 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
   else if (sf->backend == PETSCSF_BACKEND_KOKKOS) {ierr = PetscSFLinkSetUp_Kokkos(sf,link,unit);CHKERRQ(ierr);}
  #endif
 
-  if (!link->leafsig) {
-    ierr = PetscNvshmemMalloc(sf->leafbuflen_rmax*link->unitbytes,(void**)&link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
-    ierr = PetscNvshmemCalloc(sf->nranks_rmax*sizeof(uint64_t),(void**)&link->leafsig);CHKERRQ(ierr); /* Init signals to zero */
-    link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
-  }
-  if (!link->rootsig) {
-    ierr = PetscNvshmemMalloc(bas->rootbuflen_rmax*link->unitbytes,(void**)&link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
-    ierr = PetscNvshmemCalloc(bas->niranks_rmax*sizeof(uint64_t),(void**)&link->rootsig);CHKERRQ(ierr);
-    link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
-  }
+  link->rootdirect[PETSCSF_LOCAL]  = PETSC_TRUE; /* For the local part we directly use root/leafdata */
+  link->leafdirect[PETSCSF_LOCAL]  = PETSC_TRUE;
 
+  if (!link->rootsig) {ierr = PetscNvshmemCalloc(bas->niranks_rmax*sizeof(uint64_t),(void**)&link->rootsig);CHKERRQ(ierr);}
+  if (!link->leafsig) {ierr = PetscNvshmemCalloc(sf->nranks_rmax*sizeof(uint64_t),(void**)&link->leafsig);CHKERRQ(ierr);} /* Init signals to zero */
+
+  link->use_nvshmem                = PETSC_TRUE;
   link->rootmtype                  = PETSC_MEMTYPE_DEVICE; /* Only need 0/1-based mtype from now on */
   link->leafmtype                  = PETSC_MEMTYPE_DEVICE;
-  for (i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
-    link->rootdirect[i] = rootdirect[i];
-    link->leafdirect[i] = leafdirect[i];
-  }
-  link->use_nvshmem                = PETSC_TRUE;
   /* Overwrite some function pointers set by PetscSFLinkSetUp_CUDA */
   link->Destroy                    = PetscSFLinkDestroy_NVSHMEM;
   link->StartCommunication         = PetscSFLinkPutData_NVSHMEM;
   link->FinishCommunication        = PetscSFLinkWaitSignalsOfCompletionOfPuttingData_NVSHMEM;
 
-  found:
-  link->rootdata  = rootdata; /* root/leafdata are keys to look up links in PetscSFXxxEnd */
-  link->leafdata  = leafdata;
-  link->next      = bas->inuse;
-  bas->inuse      = link;
-  *mylink         = link;
+found:
+  if (rootdirect[PETSCSF_REMOTE]) {
+    link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = (char*)rootdata + bas->rootstart[PETSCSF_REMOTE]*link->unitbytes;
+  } else {
+    if (!link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]) {
+      ierr = PetscNvshmemMalloc(bas->rootbuflen_rmax*link->unitbytes,(void**)&link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
+    }
+    link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = link->rootbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
+  }
+
+  if (leafdirect[PETSCSF_REMOTE]) {
+    link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = (char*)leafdata + sf->leafstart[PETSCSF_REMOTE]*link->unitbytes;
+  } else {
+    if (!link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]) {
+      ierr = PetscNvshmemMalloc(sf->leafbuflen_rmax*link->unitbytes,(void**)&link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
+    }
+    link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
+  }
+
+  link->rootdirect[PETSCSF_REMOTE] = rootdirect[PETSCSF_REMOTE];
+  link->leafdirect[PETSCSF_REMOTE] = leafdirect[PETSCSF_REMOTE];
+  link->rootdata                   = rootdata; /* root/leafdata are keys to look up links in PetscSFXxxEnd */
+  link->leafdata                   = leafdata;
+  link->next                       = bas->inuse;
+  bas->inuse                       = link;
+  *mylink                          = link;
   PetscFunctionReturn(0);
 }
 

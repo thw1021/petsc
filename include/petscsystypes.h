@@ -661,6 +661,8 @@ typedef enum {PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=0x01, PETSC_MEMTYPE_CUD
 
 #define PetscMemTypeHost(m)    (((m) & 0x1) == PETSC_MEMTYPE_HOST)
 #define PetscMemTypeDevice(m)  (((m) & 0x1) == PETSC_MEMTYPE_DEVICE)
-#define PetscMemTypeNVSHMEM(m) (m == PETSC_MEMTYPE_NVSHMEM)
+#define PetscMemTypeCUDA(m)    (((m) & 0xF) == PETSC_MEMTYPE_CUDA)
+#define PetscMemTypeHIP(m)     (((m) & 0xF) == PETSC_MEMTYPE_HIP)
+#define PetscMemTypeNVSHMEM(m) ((m) == PETSC_MEMTYPE_NVSHMEM)
 
 #endif

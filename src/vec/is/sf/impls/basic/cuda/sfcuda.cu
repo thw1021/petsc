@@ -1064,7 +1064,7 @@ PetscErrorCode PetscSFLinkSetUp_CUDA(PetscSF sf,PetscSFLink link,MPI_Datatype un
   cerr = cudaEventCreate(&link->local_comm_end);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&link->remote_comm_end);CHKERRCUDA(cerr);
   cerr = cudaDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);
+  cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
   cerr = cudaStreamCreateWithPriority(&link->local_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
 
   link->Destroy                              = PetscSFLinkDestroy_MPI_CUDA;
