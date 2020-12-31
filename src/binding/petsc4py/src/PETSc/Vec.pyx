@@ -407,6 +407,17 @@ cdef class Vec(Object):
         ptr.deleter(ptr) # must call deleter to avoid memory leak
         return self
 
+    def buildTensorInfo(self, asvec):
+        """ Build the tensor information from the input vector if it is not available."""
+        cdef object ctx0, ctx
+        ctx0 = self.get_attr('__tensor_ctx__')
+        if ctx0 is None:
+            ctx = (<Object>asvec).get_attr('__tensor_ctx__')
+            if ctx is None:
+                raise ValueError('Input vector has no tensor information')
+            self.set_attr('__tensor_ctx__', ctx)
+        return self
+
     def toDlpack(self):
         """ Return a DLPack tensor. Error out if the tensor information is missing. buildTensorInfo() can be used to get tensor information from an input vector that already has tensor information."""
         cdef DLManagedTensor* dlm_tensor = <DLManagedTensor*>stdlib.malloc(sizeof(DLManagedTensor))
@@ -433,13 +444,8 @@ cdef class Vec(Object):
                 shape_strides[i] = shape[i]
             for i in range(ndim):
                 shape_strides[i+ndim] = strides[i]
-        else: # should it be flattened or left unset?
-            ctx.device_type = 1
-            ctx.device_id = 0
-            ndim = 1
-            shape_strides = <int64_t*>stdlib.malloc(sizeof(int64_t)*2*ndim)
-            shape_strides[0] = self.local_size
-            shape_strides[1] = 1
+        else:
+            raise ValueError('Missing tensor information')
         dl_tensor.ndim = ndim
         dl_tensor.shape = shape_strides
         dl_tensor.strides = shape_strides + ndim
