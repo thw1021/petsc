@@ -469,17 +469,14 @@ class build_ext(_build_ext):
                 for arch in self.petsc_arch:
                     src_filename  = os.path.join(self.build_lib, head, arch, tail)
                     dest_filename = os.path.join(package_dir, os.path.basename(filename))
+                    copy_file(src_filename, dest_filename, verbose=self.verbose, dry_run=self.dry_run)
             else:
                 src_filename = os.path.join(self.build_lib, filename)
                 dest_filename = os.path.join(package_dir, os.path.basename(filename))
-
-            # Always copy, even if source is older than destination, to ensure
-            # that the right extensions for the current Python/platform are
-            # used.
-            copy_file(
-                src_filename, dest_filename, verbose=self.verbose,
-                dry_run=self.dry_run
-            )
+                # Always copy, even if source is older than destination, to ensure
+                # that the right extensions for the current Python/platform are
+                # used.
+                copy_file(src_filename, dest_filename, verbose=self.verbose, dry_run=self.dry_run)
             if ext._needs_stub:
                 self.write_stub(package_dir or os.curdir, ext, True)
 
