@@ -455,6 +455,34 @@ class build_ext(_build_ext):
                 self.library_dirs.remove(pylib_dir)
                 self.rpath.remove(pylib_dir)
 
+    def copy_extensions_to_source(self):
+        from distutils.file_util import copy_file
+        build_py = self.get_finalized_command('build_py')
+        for ext in self.extensions:
+            fullname = self.get_ext_fullname(ext.name)
+            filename = self.get_ext_filename(fullname)
+            modpath = fullname.split('.')
+            package = '.'.join(modpath[:-1])
+            package_dir = build_py.get_package_dir(package)
+            if isinstance(ext, Extension) and self.petsc_arch:
+                head, tail = os.path.split(filename)
+                for arch in self.petsc_arch:
+                    src_filename  = os.path.join(self.build_lib, head, arch, tail)
+                    dest_filename = os.path.join(package_dir, os.path.basename(filename))
+            else:
+                src_filename = os.path.join(self.build_lib, filename)
+                dest_filename = os.path.join(package_dir, os.path.basename(filename))
+
+            # Always copy, even if source is older than destination, to ensure
+            # that the right extensions for the current Python/platform are
+            # used.
+            copy_file(
+                src_filename, dest_filename, verbose=self.verbose,
+                dry_run=self.dry_run
+            )
+            if ext._needs_stub:
+                self.write_stub(package_dir or os.curdir, ext, True)
+
     def _copy_ext(self, ext):
         from copy import deepcopy
         extclass = ext.__class__
