@@ -162,7 +162,8 @@ cdef extern from * nogil:
     int VecCUDARestoreArrayRead(PetscVec,const PetscScalar*[])
     int VecCUDARestoreArrayWrite(PetscVec,PetscScalar*[])
     int VecCUDARestoreArray(PetscVec,PetscScalar*[])
-
+    int VecCreateSeqCUDAWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
+    int VecCreateMPICUDAWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
 # --------------------------------------------------------------------
 
 cdef inline Vec ref_Vec(PetscVec vec):
