@@ -177,6 +177,8 @@ cdef extern from * nogil:
     int VecViennaCLGetCLMem(PetscVec,Py_uintptr_t*)
     int VecViennaCLRestoreCLMem(PetscVec)
 
+    int VecCreateSeqCUDAWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
+    int VecCreateMPICUDAWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
 # --------------------------------------------------------------------
 
 cdef inline Vec ref_Vec(PetscVec vec):
