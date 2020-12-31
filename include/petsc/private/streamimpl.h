@@ -5,13 +5,20 @@
 #include <petscstream.h>
 
 struct _n_PetscStream {
+  PetscBool    setup;
 #if defined(PETSC_HAVE_CUDA)
-  cudaStream_t     cstream;
+  cudaStream_t cstream;
+#if defined(PETSC_USE_DEBUG)
+  PetscBool    gotCUDA;
+#endif
 #endif
 #if defined(PETSC_HAVE_HIP)
-  hipStream_t      hstream;
+  hipStream_t  hstream;
+#if defined(PETSC_USE_DEBUG)
+  PetscBool    gotHIP;
 #endif
-  PetscStreamMode  mode;
+#endif
+  PetscStreamMode mode;
 };
 
 #endif
