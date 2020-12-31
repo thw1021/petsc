@@ -63,10 +63,18 @@ int main(int argc,char ** argv)
   }
 
   /* Add shared vertices -- all processes hold this info at current implementation */
+  /* net[0].0 -> net[j].0, j=0,...,Nsubnet-1 */
   asvtx = bsvtx = 0;
   for (j=Nsubnet-1; j>=1; j--) {
     ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,j,0,1,&asvtx,&bsvtx);CHKERRQ(ierr);
-    /* if (!rank) printf(" net[%d].%d --> net[0].%d\n",j,bsvtx,asvtx); */
+    /* if (!rank) printf(" net[%d].%d --> net[0].%d\n",j,asvtx,bsvtx); */
+  }
+
+  /* net[0].1 -> net[j].1, j=0,...,Nsubnet-1 */
+  asvtx = bsvtx = 1;
+  for (j=1; j<Nsubnet; j++) {
+    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,1,&asvtx,&bsvtx);CHKERRQ(ierr);
+    /* if (!rank) printf(" net[0].%d --> net[%d].%d\n",asvtx,j,bsvtx); */
   }
 
   /* Setup the network layout */
