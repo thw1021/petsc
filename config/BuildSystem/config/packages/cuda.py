@@ -145,4 +145,21 @@ class Configure(config.package.Package):
       self.checkVersion(); # set version_tuple
     if self.version_tuple[0] >= 11:
       self.addDefine('HAVE_CUDA_VERSION_11PLUS','1')
+
+    # determine the compiler used by nvcc
+    (out, err, ret) = Configure.executeShellCommand(petscNvcc + ' ' + self.setCompilers.CUDAFLAGS + ' --dryrun dummy.cu 2>&1 | grep D__CUDACC__ | head -1 | cut -f2 -d" "')
+    if out:
+      self.logPrint('Determined the compiler nvcc uses is ' + out);
+      if out == self.compilers.CXX:
+        self.setCompilers.CUDA_CXXFLAGS = self.setCompilers.CXXFLAGS
+      else:
+        self.setCompilers.CUDA_CXXFLAGS = ''
+        flags = self.setCompilers.CPPFLAGS.split(' ')+self.setCompilers.CFLAGS.split(' ')+self.setCompilers.CXXFLAGS.split(' ')
+        print(flags)
+        for i in flags:
+          if i.startswith('-I'):
+            self.setCompilers.CUDA_CXXFLAGS += ' '+i
+          if i == '-g' or i.startswith('-O'):
+            self.setCompilers.CUDA_CXXFLAGS += ' '+i
+      self.addMakeMacro('CUDA_CXXFLAGS',self.setCompilers.CUDA_CXXFLAGS)
     return
