@@ -370,7 +370,6 @@ cdef class Vec(Object):
             for s in shape[:ndim]:
                 nz = nz*s
             strides = ptr.dl_tensor.strides
-            pycapsule.PyCapsule_SetDestructor(dltensor, NULL)
             pycapsule.PyCapsule_SetName(dltensor, 'used_dltensor')
         else:
             raise ValueError("Expect a dltensor field, pycapsule.PyCapsule can only be consumed once")
@@ -409,23 +408,22 @@ cdef class Vec(Object):
         return self
 
     def toDlpack(self):
-        """ Return a DLPack tensor. asVec is an optional vector that prodices tensor context. If the tensor context is missing, the returned tensor will be a one-dimensional tensor."""
+        """ Return a DLPack tensor. Error out if the tensor information is missing. buildTensorInfo() can be used to get tensor information from an input vector that already has tensor information."""
         cdef DLManagedTensor* dlm_tensor = <DLManagedTensor*>stdlib.malloc(sizeof(DLManagedTensor))
         cdef DLTensor* dl_tensor = &dlm_tensor.dl_tensor
         cdef PetscScalar *a = NULL
         cdef int64_t ndim
+        cdef int64_t* shape_strides
         dl_tensor.byte_offset = 0
         cval = self.getType()
         if cval == self.Type.CUDA or cval == self.Type.SEQCUDA or cval == self.Type.MPICUDA:
-            CHKERR( VecCUDAGetArrayRead(self.vec, <const PetscScalar**>&a) )
+            CHKERR( VecCUDAGetArrayWrite(self.vec, <PetscScalar**>&a) )
         else:
-            CHKERR( VecGetArrayRead(self.vec, <const PetscScalar**>&a) )
+            CHKERR( VecGetArray(self.vec, <PetscScalar**>&a) )
         dl_tensor.data = <Py_uintptr_t>a
 
         cdef DLContext* ctx = &dl_tensor.ctx
         cdef object ctx0 = self.get_attr('__tensor_ctx__')
-
-        cdef int64_t* shape_strides
         if ctx0 is not None:
             (device_type, device_id, ndim, shape, strides) = ctx0
             ctx.device_type = device_type
@@ -448,7 +446,12 @@ cdef class Vec(Object):
 
         cdef DLDataType* dtype = &dl_tensor.dtype
         dtype.code = <uint8_t>DLDataTypeCode.kDLFloat
-        dtype.bits = <uint8_t>64
+        if sizeof(PetscScalar) == 8:
+            dtype.bits = <uint8_t>64
+        elif sizeof(PetscScalar) == 4:
+            dtype.bits = <uint8_t>32
+        else:
+            raise ValueError('Unsupported PetscScalar type')
         dtype.lanes = <uint16_t>1
         dlm_tensor.manager_ctx = <void *>self.vec
         CHKERR( PetscObjectReference(<PetscObject>self.vec) )
