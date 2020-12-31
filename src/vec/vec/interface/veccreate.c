@@ -35,8 +35,7 @@ PetscErrorCode  VecCreate(MPI_Comm comm, Vec *vec)
 
   ierr            = PetscLayoutCreate(comm,&v->map);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_DEVICE)
-  ierr            = PetscStreamCreate(&v->stream);CHKERRQ(ierr);
-  ierr            = PetscStreamSetMode(v->stream, PETSC_STREAM_GLOBAL_BLOCKING);CHKERRQ(ierr);
+  v->stream       = NULL;
 #endif
   v->array_gotten = PETSC_FALSE;
   v->petscnative  = PETSC_FALSE;
