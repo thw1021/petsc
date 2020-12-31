@@ -328,6 +328,7 @@ cdef class Vec(Object):
             strides_arr[i] = strides[i]
         self.set_attr('__tensor_ctx__', (ptr.dl_tensor.ctx.device_type, ptr.dl_tensor.ctx.device_id, ndim, s1, s2))
         # self.__tensor_context__ = (ptr.dl_tensor.ctx.device_type, ptr.dl_tensor.ctx.device_id, ptr.dl_tensor.ndim, ptr.dl_tensor.shape, ptr.dl_tensor.strides)
+        ptr.deleter(ptr) # must call deleter to avoid memory leak
         return self
 
     def toDlpack(self):
