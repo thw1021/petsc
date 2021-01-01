@@ -315,7 +315,6 @@ cdef class Vec(Object):
                 CHKERR( VecCreateSeqCUDAWithArray(ccomm,bs,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
             else:
                 CHKERR( VecCreateMPICUDAWithArray(ccomm,bs,n,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
-            CHKERR( VecSetType(newvec, VECCUDA) )
         else:
             if comm_size(ccomm) == 1:
                 CHKERR( VecCreateSeqWithArray(ccomm,bs,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
