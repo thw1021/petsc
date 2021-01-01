@@ -541,6 +541,10 @@ PETSC_EXTERN PetscErrorCode PetscHIPInitialize(MPI_Comm,PetscInt);
 PETSC_EXTERN PetscErrorCode PetscHIPInitializeCheck(void);
 #endif
 
+#if defined(PETSC_HAVE_KOKKOS)
+PETSC_EXTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
+#endif
+
 #if defined(PETSC_HAVE_ELEMENTAL)
 PETSC_EXTERN PetscErrorCode PetscElementalInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscElementalInitialized(PetscBool*);
@@ -1265,6 +1269,11 @@ PETSC_EXTERN PetscErrorCode PetscMallocResetDRAM(void);
 PETSC_EXTERN PetscErrorCode PetscMallocSetCUDAHost(void);
 PETSC_EXTERN PetscErrorCode PetscMallocResetCUDAHost(void);
 #endif
+#if defined(PETSC_HAVE_HIP)
+PETSC_EXTERN PetscErrorCode PetscMallocSetHIPHost(void);
+PETSC_EXTERN PetscErrorCode PetscMallocResetHIPHost(void);
+#endif
+
 
 #define MPIU_PETSCLOGDOUBLE  MPI_DOUBLE
 #define MPIU_2PETSCLOGDOUBLE MPI_2DOUBLE_PRECISION
@@ -2755,9 +2764,8 @@ PETSC_EXTERN PetscErrorCode MPIU_Win_shared_query(MPI_Win,PetscMPIInt,MPI_Aint*,
 #endif
 
 /*
-    Returned from PETSc functions that are called from MPI, such as related to attributes
+    List of external packages and queries on it
 */
-PETSC_EXTERN PetscMPIInt PETSC_MPI_ERROR_CLASS;
-PETSC_EXTERN PetscMPIInt PETSC_MPI_ERROR_CODE;
+PETSC_EXTERN PetscErrorCode  PetscHasExternalPackage(const char[],PetscBool*);
 
 #endif

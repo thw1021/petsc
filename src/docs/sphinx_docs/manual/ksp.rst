@@ -1424,8 +1424,8 @@ preconditioners of type ``type1`` and ``type2``. The preconditioner
 ::
 
    PCSetType(pc,PCCOMPOSITE);
-   PCCompositeAddPC(pc,type1);
-   PCCompositeAddPC(pc,type2);
+   PCCompositeAddPCType(pc,type1);
+   PCCompositeAddPCType(pc,type2);
 
 Any number of preconditioners may added in this way.
 
@@ -2110,7 +2110,7 @@ Using External Linear Solvers
 PETSc interfaces to several external linear solvers (also see :any:`chapter_acknowledgements`)
 at the beginning of this manual). To use these solvers, one may:
 
-#. Run ``./configure`` with the additional options
+#. Run ``configure`` with the additional options
    ``--download-packagename`` e.g. ``--download-superlu_dist``
    ``--download-parmetis`` (SuperLU_DIST needs ParMetis) or
    ``--download-mumps`` ``--download-scalapack`` (MUMPS requires

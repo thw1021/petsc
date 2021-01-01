@@ -468,7 +468,7 @@ PetscErrorCode  SNESView(SNES snes,PetscViewer viewer)
     char        type[256];
 
     ierr = PetscObjectGetComm((PetscObject)snes,&comm);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
     if (!rank) {
       ierr = PetscViewerBinaryWrite(viewer,&classid,1,PETSC_INT);CHKERRQ(ierr);
       ierr = PetscStrncpy(type,((PetscObject)snes)->type_name,sizeof(type));CHKERRQ(ierr);
@@ -498,7 +498,7 @@ PetscErrorCode  SNESView(SNES snes,PetscViewer viewer)
     const char *name;
 
     ierr = PetscObjectGetName((PetscObject)snes,&name);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
     if (!((PetscObject)snes)->amsmem && !rank) {
       char       dir[1024];
 
@@ -765,12 +765,9 @@ PetscErrorCode SNESSetUpMatrices(SNES snes)
     ierr = MatDestroy(&J);CHKERRQ(ierr);
     ierr = MatDestroy(&B);CHKERRQ(ierr);
   } else if (!snes->jacobian_pre) {
-    PetscErrorCode (*nspconstr)(DM, PetscInt, PetscInt, MatNullSpace *);
-    PetscDS          prob;
-    Mat              J, B;
-    MatNullSpace     nullspace = NULL;
-    PetscBool        hasPrec   = PETSC_FALSE;
-    PetscInt         Nf;
+    PetscDS   prob;
+    Mat       J, B;
+    PetscBool hasPrec   = PETSC_FALSE;
 
     J    = snes->jacobian;
     ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
@@ -778,11 +775,6 @@ PetscErrorCode SNESSetUpMatrices(SNES snes)
     if (J)            {ierr = PetscObjectReference((PetscObject) J);CHKERRQ(ierr);}
     else if (hasPrec) {ierr = DMCreateMatrix(snes->dm, &J);CHKERRQ(ierr);}
     ierr = DMCreateMatrix(snes->dm, &B);CHKERRQ(ierr);
-    ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
-    ierr = DMGetNullSpaceConstructor(snes->dm, Nf, &nspconstr);CHKERRQ(ierr);
-    if (nspconstr) (*nspconstr)(snes->dm, Nf, Nf, &nullspace);
-    ierr = MatSetNullSpace(B, nullspace);CHKERRQ(ierr);
-    ierr = MatNullSpaceDestroy(&nullspace);CHKERRQ(ierr);
     ierr = SNESSetJacobian(snes, J ? J : B, B, NULL, NULL);CHKERRQ(ierr);
     ierr = MatDestroy(&J);CHKERRQ(ierr);
     ierr = MatDestroy(&B);CHKERRQ(ierr);
@@ -909,7 +901,7 @@ PetscErrorCode  SNESSetFromOptions(SNES snes)
   PetscBool      flg,pcset,persist,set;
   PetscInt       i,indx,lag,grids;
   const char     *deft        = SNESNEWTONLS;
-  const char     *convtests[] = {"default","skip"};
+  const char     *convtests[] = {"default","skip","correct_pressure"};
   SNESKSPEW      *kctx        = NULL;
   char           type[256], monfilename[PETSC_MAX_PATH_LEN];
   PetscErrorCode ierr;
@@ -964,11 +956,12 @@ PetscErrorCode  SNESSetFromOptions(SNES snes)
     ierr = SNESSetGridSequence(snes,grids);CHKERRQ(ierr);
   }
 
-  ierr = PetscOptionsEList("-snes_convergence_test","Convergence test","SNESSetConvergenceTest",convtests,2,"default",&indx,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsEList("-snes_convergence_test","Convergence test","SNESSetConvergenceTest",convtests,sizeof(convtests)/sizeof(char*),"default",&indx,&flg);CHKERRQ(ierr);
   if (flg) {
     switch (indx) {
     case 0: ierr = SNESSetConvergenceTest(snes,SNESConvergedDefault,NULL,NULL);CHKERRQ(ierr); break;
-    case 1: ierr = SNESSetConvergenceTest(snes,SNESConvergedSkip,NULL,NULL);CHKERRQ(ierr);    break;
+    case 1: ierr = SNESSetConvergenceTest(snes,SNESConvergedSkip,NULL,NULL);CHKERRQ(ierr); break;
+    case 2: ierr = SNESSetConvergenceTest(snes,SNESConvergedCorrectPressure,NULL,NULL);CHKERRQ(ierr); break;
     }
   }
 
@@ -3300,7 +3293,7 @@ PetscErrorCode  SNESDestroy(SNES *snes)
 
    Input Parameters:
 +  snes - the SNES context
--  lag - -1 indicates NEVER rebuild, 1 means rebuild every time the Jacobian is computed within a single nonlinear solve, 2 means every second time
+-  lag - 1 means rebuild every time the Jacobian is computed within a single nonlinear solve, 2 means every second time
          the Jacobian is built etc. -2 indicates rebuild preconditioner at next chance but then never rebuild after that
 
    Options Database Keys:
@@ -3312,7 +3305,8 @@ PetscErrorCode  SNESDestroy(SNES *snes)
    Notes:
    The default is 1
    The preconditioner is ALWAYS built in the first iteration of a nonlinear solve unless lag is -1 or SNESSetLagPreconditionerPersists() was called
-   If  -1 is used before the very first nonlinear solve the preconditioner is still built because there is no previous preconditioner to use
+
+   SNESSetLagPreconditionerPersists() allows using the same uniform lagging (for example every second solve) across multiple solves.
 
    Level: intermediate
 
@@ -3529,7 +3523,7 @@ PetscErrorCode  SNESSetLagJacobianPersists(SNES snes,PetscBool flg)
 }
 
 /*@
-   SNESSetLagPreconditionerPersists - Set whether or not the preconditioner lagging persists through multiple solves
+   SNESSetLagPreconditionerPersists - Set whether or not the preconditioner lagging persists through multiple nonlinear solves
 
    Logically Collective on SNES
 

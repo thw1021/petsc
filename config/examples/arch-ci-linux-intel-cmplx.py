@@ -30,7 +30,7 @@ if __name__ == '__main__':
     # '--download-mumps',
     '--download-p4est',
     '--download-parmetis',
-    '--download-petsc4py',
+    '--with-petsc4py',
     '--download-slepc',
     '--download-slepc-configure-arguments="--download-slepc4py"',
     '--download-scalapack',

@@ -189,9 +189,9 @@ function petsc_testrun() {
 
   eval "{ time -p $cmd ; } 2>> timing.out"
   cmd_res=$?
-  #  If it is a lack of GPU resources, then try once more 
+  #  If it is a lack of GPU resources or MPI failure (Intel) then try once more
   #  See: src/sys/error/err.c
-  if [ $cmd_res -eq 96 ]; then
+  if [ $cmd_res -eq 96 -o $cmd_res -eq 97 ]; then
     eval "{ time -p $cmd ; } 2>> timing.out"
     cmd_res=$?
   fi
@@ -283,10 +283,14 @@ function petsc_mpiexec_cudamemcheck() {
 }
 
 function petsc_mpiexec_valgrind() {
+  # some systems set $1 to be the function name
+  if [[ $1 == 'petsc_mpiexec_valgrind' ]]; then
+    shift
+  fi
   _mpiexec=$1;shift
   npopt=$1;shift
   np=$1;shift
- 
+
   valgrind="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --suppressions=$petsc_bindir/maint/petsc-val.supp --error-exitcode=10"
 
   if $printcmd; then

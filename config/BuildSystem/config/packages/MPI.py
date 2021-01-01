@@ -189,23 +189,26 @@ shared libraries and run with --known-mpi-shared-libraries=1')
     elif self.isPOE:
       self.mpiexec = os.path.abspath(os.path.join('bin', 'mpiexec.poe'))
     else:
-      mpiexecs = ['mpiexec', 'mpirun', 'mprun']
+      mpiexecs = ['mpiexec', 'mpirun', 'mprun', 'srun']
       path    = []
       if 'with-mpi-dir' in self.argDB:
         path.append(os.path.join(os.path.abspath(self.argDB['with-mpi-dir']), 'bin'))
         # MPICH-NT-1.2.5 installs MPIRun.exe in mpich/mpd/bin
         path.append(os.path.join(os.path.abspath(self.argDB['with-mpi-dir']), 'mpd','bin'))
-      for inc in self.include:
-        path.append(os.path.join(os.path.dirname(inc), 'bin'))
-        # MPICH-NT-1.2.5 installs MPIRun.exe in mpich/SDK/include/../../mpd/bin
-        path.append(os.path.join(os.path.dirname(os.path.dirname(inc)),'mpd','bin'))
-      for lib in self.lib:
-        path.append(os.path.join(os.path.dirname(os.path.dirname(lib)), 'bin'))
-      self.pushLanguage('C')
-      if os.path.basename(self.getCompiler()) == 'mpicc' and os.path.dirname(self.getCompiler()):
-        path.append(os.path.dirname(self.getCompiler()))
-      self.popLanguage()
-      if not self.getExecutable(mpiexecs, path = path, useDefaultPath = 1, resultName = 'mpiexec',setMakeMacro=0):
+        useDefaultPath = 0
+      else:
+        for inc in self.include:
+          path.append(os.path.join(os.path.dirname(inc), 'bin'))
+          # MPICH-NT-1.2.5 installs MPIRun.exe in mpich/SDK/include/../../mpd/bin
+          path.append(os.path.join(os.path.dirname(os.path.dirname(inc)),'mpd','bin'))
+        for lib in self.lib:
+          path.append(os.path.join(os.path.dirname(os.path.dirname(lib)), 'bin'))
+        self.pushLanguage('C')
+        if (os.path.basename(self.getCompiler()) == 'mpicc' or os.path.basename(self.getCompiler()) == 'mpiicc') and os.path.dirname(self.getCompiler()):
+          path.append(os.path.dirname(self.getCompiler()))
+        self.popLanguage()
+        useDefaultPath = 1
+      if not self.getExecutable(mpiexecs, path = path, useDefaultPath = useDefaultPath, resultName = 'mpiexec',setMakeMacro=0):
         if not self.getExecutable('/bin/false', path = [], useDefaultPath = 0, resultName = 'mpiexec',setMakeMacro=0):
           raise RuntimeError('Could not locate MPIEXEC - please specify --with-mpiexec option')
       # Support for spaces and () in executable names; also needs to handle optional arguments at the end
@@ -305,7 +308,7 @@ shared libraries and run with --known-mpi-shared-libraries=1')
                 self.logPrintBox('***** WARNING: mpiexec may not work on your system due to network issues.\n\
 Perhaps you have VPN running whose network settings may not work with mpiexec or your network is misconfigured')
           else:
-            elf.logPrintBox('***** WARNING: mpiexec may not work on your system due to network issues.\n\
+            self.logPrintBox('***** WARNING: mpiexec may not work on your system due to network issues.\n\
 Unable to run hostname to check the network')
           self.logPrintDivider()
 
@@ -632,7 +635,10 @@ to remove this warning message *****')
 
   def findMPIInc(self):
     '''Find MPI include paths from "mpicc -show" and use with CUDAC_FLAGS'''
-    if not hasattr(self.compilers, 'CUDAC'): return
+    needInclude=False
+    if hasattr(self.compilers, 'CUDAC'): needInclude=True
+    if hasattr(self.compilers, 'HIPCC'): needInclude=True
+    if not needInclude: return
     import re
     output = ''
     try:
@@ -648,9 +654,14 @@ to remove this warning message *****')
         m = re.match(r'^-I.*$', arg)
         if m:
           self.logPrint('Found include option: '+arg, 4, 'compilers')
-          self.setCompilers.pushLanguage('CUDA')
-          self.setCompilers.addCompilerFlag(arg)
-          self.setCompilers.popLanguage()
+          if hasattr(self.compilers, 'CUDAC'):
+            self.setCompilers.pushLanguage('CUDA')
+            self.setCompilers.addCompilerFlag(arg)
+            self.setCompilers.popLanguage()
+          if hasattr(self.compilers, 'HIPCC'):
+            self.setCompilers.pushLanguage('HIP')
+            self.setCompilers.addCompilerFlag(arg)
+            self.setCompilers.popLanguage()
           continue
     except StopIteration:
       pass

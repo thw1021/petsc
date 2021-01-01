@@ -158,7 +158,7 @@ PetscErrorCode  KSPView(KSP ksp,PetscViewer viewer)
     char        type[256];
 
     ierr = PetscObjectGetComm((PetscObject)ksp,&comm);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
     if (!rank) {
       ierr = PetscViewerBinaryWrite(viewer,&classid,1,PETSC_INT);CHKERRQ(ierr);
       ierr = PetscStrncpy(type,((PetscObject)ksp)->type_name,256);CHKERRQ(ierr);
@@ -196,7 +196,7 @@ PetscErrorCode  KSPView(KSP ksp,PetscViewer viewer)
     const char  *name;
 
     ierr = PetscObjectGetName((PetscObject)ksp,&name);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
     if (!((PetscObject)ksp)->amsmem && !rank) {
       char       dir[1024];
 
@@ -707,6 +707,11 @@ PetscErrorCode  KSPCreate(MPI_Comm comm,KSP *inksp)
   ksp->res_hist_len   = 0;
   ksp->res_hist_max   = 0;
   ksp->res_hist_reset = PETSC_TRUE;
+  ksp->err_hist       = NULL;
+  ksp->err_hist_alloc = NULL;
+  ksp->err_hist_len   = 0;
+  ksp->err_hist_max   = 0;
+  ksp->err_hist_reset = PETSC_TRUE;
   ksp->numbermonitors = 0;
   ksp->setfromoptionscalled = 0;
 

@@ -211,7 +211,7 @@ PetscErrorCode VecCreate_CUDA(Vec v)
   PetscMPIInt    size;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)v),&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)v),&size);CHKERRMPI(ierr);
   if (size == 1) {
     ierr = VecSetType(v,VECSEQCUDA);CHKERRQ(ierr);
   } else {
@@ -398,6 +398,10 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->getlocalvectorread     = VecGetLocalVector_SeqCUDA;
     V->ops->restorelocalvectorread = VecRestoreLocalVector_SeqCUDA;
     V->ops->getarraywrite          = VecGetArrayWrite_SeqCUDA;
+    V->ops->getarray               = VecGetArray_SeqCUDA;
+    V->ops->restorearray           = VecRestoreArray_SeqCUDA;
+    V->ops->getarrayandmemtype        = VecGetArrayAndMemType_SeqCUDA;
+    V->ops->restorearrayandmemtype    = VecRestoreArrayAndMemType_SeqCUDA;
   }
   PetscFunctionReturn(0);
 }

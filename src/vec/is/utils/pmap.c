@@ -173,8 +173,8 @@ PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm comm,const PetscInt range[],
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = PetscLayoutCreate(comm, &map);CHKERRQ(ierr);
   ierr = PetscLayoutSetBlockSize(map, bs);CHKERRQ(ierr);
   switch (mode) {
@@ -255,8 +255,8 @@ PetscErrorCode PetscLayoutSetUp(PetscLayout map)
     if (map->N % map->bs) SETERRQ2(map->comm,PETSC_ERR_PLIB,"Global size %D must be divisible by blocksize %D",map->N,map->bs);
   }
 
-  ierr = MPI_Comm_size(map->comm, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(map->comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(map->comm, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(map->comm, &rank);CHKERRMPI(ierr);
   if (map->n > 0) map->n = map->n/PetscAbs(map->bs);
   if (map->N > 0) map->N = map->N/PetscAbs(map->bs);
   ierr = PetscSplitOwnership(map->comm,&map->n,&map->N);CHKERRQ(ierr);
@@ -265,7 +265,7 @@ PetscErrorCode PetscLayoutSetUp(PetscLayout map)
   if (!map->range) {
     ierr = PetscMalloc1(size+1, &map->range);CHKERRQ(ierr);
   }
-  ierr = MPI_Allgather(&map->n, 1, MPIU_INT, map->range+1, 1, MPIU_INT, map->comm);CHKERRQ(ierr);
+  ierr = MPI_Allgather(&map->n, 1, MPIU_INT, map->range+1, 1, MPIU_INT, map->comm);CHKERRMPI(ierr);
 
   map->range[0] = 0;
   for (p = 2; p <= size; p++) map->range[p] += map->range[p-1];
@@ -308,7 +308,7 @@ PetscErrorCode PetscLayoutDuplicate(PetscLayout in,PetscLayout *out)
   PetscFunctionBegin;
   ierr = PetscLayoutDestroy(out);CHKERRQ(ierr);
   ierr = PetscLayoutCreate(comm,out);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = PetscMemcpy(*out,in,sizeof(struct _n_PetscLayout));CHKERRQ(ierr);
   if (in->range) {
     ierr = PetscMalloc1(size+1,&(*out)->range);CHKERRQ(ierr);
@@ -639,7 +639,7 @@ PetscErrorCode PetscLayoutsCreateSF(PetscLayout rmap, PetscLayout lmap, PetscSF*
   PetscValidPointer(sf,3);
   if (!rmap->setupcalled) SETERRQ(rcomm,PETSC_ERR_ARG_WRONGSTATE,"Root layout not setup");
   if (!lmap->setupcalled) SETERRQ(lcomm,PETSC_ERR_ARG_WRONGSTATE,"Leaf layout not setup");
-  ierr = MPI_Comm_compare(rcomm,lcomm,&flg);CHKERRQ(ierr);
+  ierr = MPI_Comm_compare(rcomm,lcomm,&flg);CHKERRMPI(ierr);
   if (flg != MPI_CONGRUENT && flg != MPI_IDENT) SETERRQ(rcomm,PETSC_ERR_SUP,"cannot map two layouts with non-matching communicators");
   ierr = PetscSFCreate(rcomm,sf);CHKERRQ(ierr);
   ierr = PetscLayoutGetLocalSize(rmap,&nroots);CHKERRQ(ierr);
@@ -656,46 +656,6 @@ PetscErrorCode PetscLayoutsCreateSF(PetscLayout rmap, PetscLayout lmap, PetscSF*
   }
   ierr = PetscSFSetGraph(*sf,nroots,nleaves,NULL,PETSC_OWN_POINTER,remote,PETSC_COPY_VALUES);CHKERRQ(ierr);
   ierr = PetscFree(remote);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-   PetscSFSetGraphLayout - Set a parallel star forest via global indices and a PetscLayout
-
-   Collective
-
-   Input Arguments:
-+  sf - star forest
-.  layout - PetscLayout defining the global space
-.  nleaves - number of leaf vertices on the current process, each of these references a root on any process
-.  ilocal - locations of leaves in leafdata buffers, pass NULL for contiguous storage
-.  localmode - copy mode for ilocal
--  iremote - remote locations of root vertices for each leaf on the current process
-
-   Level: intermediate
-
-   Developers Note: Local indices which are the identity permutation in the range [0,nleaves) are discarded as they
-   encode contiguous storage. In such case, if localmode is PETSC_OWN_POINTER, the memory is deallocated as it is not
-   needed
-
-.seealso: PetscSFCreate(), PetscSFView(), PetscSFSetGraph(), PetscSFGetGraph()
-@*/
-PetscErrorCode PetscSFSetGraphLayout(PetscSF sf,PetscLayout layout,PetscInt nleaves,const PetscInt *ilocal,PetscCopyMode localmode,const PetscInt *iremote)
-{
-  PetscErrorCode ierr;
-  PetscInt       i,nroots;
-  PetscSFNode    *remote;
-
-  PetscFunctionBegin;
-  ierr = PetscLayoutGetLocalSize(layout,&nroots);CHKERRQ(ierr);
-  ierr = PetscMalloc1(nleaves,&remote);CHKERRQ(ierr);
-  for (i=0; i<nleaves; i++) {
-    PetscMPIInt owner = -1;
-    ierr = PetscLayoutFindOwner(layout,iremote[i],&owner);CHKERRQ(ierr);
-    remote[i].rank  = owner;
-    remote[i].index = iremote[i] - layout->range[owner];
-  }
-  ierr = PetscSFSetGraph(sf,nroots,nleaves,ilocal,localmode,remote,PETSC_OWN_POINTER);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -725,8 +685,8 @@ PetscErrorCode PetscLayoutCompare(PetscLayout mapa,PetscLayout mapb,PetscBool *c
 
   PetscFunctionBegin;
   *congruent = PETSC_FALSE;
-  ierr = MPI_Comm_size(mapa->comm,&sizea);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(mapb->comm,&sizeb);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(mapa->comm,&sizea);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(mapb->comm,&sizeb);CHKERRMPI(ierr);
   if (mapa->N == mapb->N && mapa->range && mapb->range && sizea == sizeb) {
     ierr = PetscArraycmp(mapa->range,mapb->range,sizea+1,congruent);CHKERRQ(ierr);
   }
@@ -748,7 +708,7 @@ PetscErrorCode PetscLayoutMapLocal(PetscLayout map,PetscInt N,const PetscInt idx
   PetscFunctionBegin;
   if (on) *on = 0;              /* squelch -Wmaybe-uninitialized */
   /* Create SF where leaves are input idxs and roots are owned idxs */
-  ierr = MPI_Comm_rank(map->comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(map->comm,&rank);CHKERRMPI(ierr);
   ierr = PetscMalloc1(n,&lidxs);CHKERRQ(ierr);
   for (r = 0; r < n; ++r) lidxs[r] = -1;
   ierr = PetscMalloc1(N,&ridxs);CHKERRQ(ierr);
@@ -771,7 +731,7 @@ PetscErrorCode PetscLayoutMapLocal(PetscLayout map,PetscInt N,const PetscInt idx
     ierr = PetscMalloc1(n,&work);CHKERRQ(ierr);
     ierr = PetscCalloc1(N,&work2);CHKERRQ(ierr);
     for (r = 0; r < N; ++r) if (idxs[r] >=0) cum++;
-    ierr = MPI_Scan(&cum,&start,1,MPIU_INT,MPI_SUM,map->comm);CHKERRQ(ierr);
+    ierr = MPI_Scan(&cum,&start,1,MPIU_INT,MPI_SUM,map->comm);CHKERRMPI(ierr);
     start -= cum;
     cum = 0;
     for (r = 0; r < N; ++r) if (idxs[r] >=0) work2[r] = start+cum++;

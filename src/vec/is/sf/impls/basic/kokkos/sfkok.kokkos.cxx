@@ -468,15 +468,16 @@ PetscErrorCode PetscSFFree_Kokkos(PetscMemType mtype,void* ptr)
 /* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
 PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype unit)
 {
-  PetscErrorCode ierr;
-  PetscInt       nSignedChar=0,nUnsignedChar=0,nInt=0,nPetscInt=0,nPetscReal=0;
-  PetscBool      is2Int,is2PetscInt;
+  PetscErrorCode     ierr;
+  PetscInt           nSignedChar=0,nUnsignedChar=0,nInt=0,nPetscInt=0,nPetscReal=0;
+  PetscBool          is2Int,is2PetscInt;
 #if defined(PETSC_HAVE_COMPLEX)
-  PetscInt       nPetscComplex=0;
+  PetscInt           nPetscComplex=0;
 #endif
 
   PetscFunctionBegin;
   if (link->deviceinited) PetscFunctionReturn(0);
+  ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
   ierr = MPIPetsc_Type_compare_contig(unit,MPI_SIGNED_CHAR,  &nSignedChar);CHKERRQ(ierr);
   ierr = MPIPetsc_Type_compare_contig(unit,MPI_UNSIGNED_CHAR,&nUnsignedChar);CHKERRQ(ierr);
   /* MPI_CHAR is treated below as a dumb type that does not support reduction according to MPI standard */
@@ -527,7 +528,7 @@ PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype 
 #endif
   } else {
     MPI_Aint lb,nbyte;
-    ierr = MPI_Type_get_extent(unit,&lb,&nbyte);CHKERRQ(ierr);
+    ierr = MPI_Type_get_extent(unit,&lb,&nbyte);CHKERRMPI(ierr);
     if (lb != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Datatype with nonzero lower bound %ld\n",(long)lb);
     if (nbyte % sizeof(int)) { /* If the type size is not multiple of int */
       if      (nbyte == 4) PackInit_DumbType<char,4,1>(link); else if (nbyte%4 == 0) PackInit_DumbType<char,4,0>(link);

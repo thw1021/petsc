@@ -223,9 +223,9 @@ PetscErrorCode VecNorm_Seq(Vec xin,NormType type,PetscReal *z)
   if (type == NORM_2 || type == NORM_FROBENIUS) {
     ierr = VecGetArrayRead(xin,&xx);CHKERRQ(ierr);
 #if defined(PETSC_USE_REAL___FP16)
-    *z   = BLASnrm2_(&bn,xx,&one);
+    PetscStackCallBLAS("BLASnrm2",*z = BLASnrm2_(&bn,xx,&one));
 #else
-    *z   = PetscRealPart(BLASdot_(&bn,xx,&one,xx,&one));
+    PetscStackCallBLAS("BLASdot",*z   = PetscRealPart(BLASdot_(&bn,xx,&one,xx,&one)));
     *z   = PetscSqrtReal(*z);
 #endif
     ierr = VecRestoreArrayRead(xin,&xx);CHKERRQ(ierr);
@@ -891,7 +891,7 @@ PetscErrorCode  VecCreateSeqWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,const
   ierr = VecCreate(comm,V);CHKERRQ(ierr);
   ierr = VecSetSizes(*V,n,n);CHKERRQ(ierr);
   ierr = VecSetBlockSize(*V,bs);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create VECSEQ on more than one process");
   ierr = VecCreate_Seq_Private(*V,array);CHKERRQ(ierr);
   PetscFunctionReturn(0);

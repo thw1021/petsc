@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = 'aef19c0' # release dec-04-2020
+    self.gitcommit              = '82eaaac017d082986e9eb180901a778619f6298b' # master Dec-20-2020
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
     self.includes               = []
@@ -68,18 +68,18 @@ class Configure(config.package.Package):
                           '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/slepc.errorflg',\
                           '@(cd '+self.packageDir+' && \\\n\
            '+carg+self.python.pyexe+' ./configure --with-clean --prefix='+prefix+' '+configargs+' && \\\n\
-           '+barg+'${OMAKE} '+barg+') > ${PETSC_ARCH}/lib/petsc/conf/slepc.log 2>&1 || \\\n\
+           '+barg+'${OMAKE} '+barg+') || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building SLEPc. Check ${PETSC_ARCH}/lib/petsc/conf/slepc.log" && \\\n\
+             echo "Error building SLEPc." && \\\n\
              echo "********************************************************************" && \\\n\
              touch ${PETSC_ARCH}/lib/petsc/conf/slepc.errorflg && \\\n\
              exit 1)'])
     self.addMakeRule('slepcinstall','', \
                        ['@echo "*** Installing SLEPc ***"',\
                           '@(cd '+self.packageDir+' && \\\n\
-           '+newuser+barg+'${OMAKE} install '+ppath+' '+barg+') >> ${PETSC_ARCH}/lib/petsc/conf/slepc.log 2>&1 || \\\n\
+           '+newuser+barg+'${OMAKE} install '+ppath+' '+barg+')  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building SLEPc. Check ${PETSC_ARCH}/lib/petsc/conf/slepc.log" && \\\n\
+             echo "Error building SLEPc." && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)'])
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:

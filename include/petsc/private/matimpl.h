@@ -238,6 +238,8 @@ PETSC_INTERN PetscErrorCode MatDiagonalSet_Default(Mat,Vec,InsertMode);
 #if defined(PETSC_HAVE_SCALAPACK)
 PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat,MatType,MatReuse,Mat*);
 #endif
+PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat,PetscInt,const PetscInt[],const PetscInt[]);
+PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat,const PetscScalar[],InsertMode);
 
 PETSC_INTERN PetscErrorCode MatProductSymbolic_AB(Mat);
 PETSC_INTERN PetscErrorCode MatProductNumeric_AB(Mat);
@@ -431,9 +433,7 @@ struct _p_SplitCSRMat {
   PetscInt              cstart,cend,rstart,rend;
   PetscCSRDataStructure diag,offdiag;
   PetscInt              *colmap;
-  PetscBool             seq;
   PetscMPIInt           rank;
-  PetscInt              nonzerostate;
 };
 
 struct _p_Mat {
@@ -464,6 +464,7 @@ struct _p_Mat {
   PetscBool              submat_singleis;  /* for efficient PCSetUp_ASM() */
   PetscBool              structure_only;
   PetscBool              sortedfull;       /* full, sorted rows are inserted */
+  PetscBool              force_diagonals;  /* set by MAT_FORCE_DIAGONAL_ENTRIES */
 #if defined(PETSC_HAVE_DEVICE)
   PetscOffloadMask       offloadmask;      /* a mask which indicates where the valid matrix data is (GPU, CPU or both) */
   PetscBool              boundtocpu;
@@ -1780,7 +1781,11 @@ PETSC_EXTERN PetscLogEvent MAT_GetSequentialNonzeroStructure;
 PETSC_EXTERN PetscLogEvent MATMFFD_Mult;
 PETSC_EXTERN PetscLogEvent MAT_GetMultiProcBlock;
 PETSC_EXTERN PetscLogEvent MAT_CUSPARSECopyToGPU;
+PETSC_EXTERN PetscLogEvent MAT_CUSPARSECopyFromGPU;
 PETSC_EXTERN PetscLogEvent MAT_CUSPARSEGenerateTranspose;
+PETSC_EXTERN PetscLogEvent MAT_CUSPARSEPreallCOO;
+PETSC_EXTERN PetscLogEvent MAT_CUSPARSESetVCOO;
+PETSC_EXTERN PetscLogEvent MAT_CUSPARSESolveAnalysis;
 PETSC_EXTERN PetscLogEvent MAT_SetValuesBatch;
 PETSC_EXTERN PetscLogEvent MAT_ViennaCLCopyToGPU;
 PETSC_EXTERN PetscLogEvent MAT_DenseCopyToGPU;

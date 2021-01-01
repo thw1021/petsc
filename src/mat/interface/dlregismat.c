@@ -6,7 +6,7 @@ const char       *MatOptions_Shifted[] = {"UNUSED_NONZERO_LOCATION_ERR",
                                   "NOT_A_VALID_OPTION",
                                   "SYMMETRIC",
                                   "STRUCTURALLY_SYMMETRIC",
-                                  "NEW_DIAGONALS",
+                                  "FORCE_DIAGONAL_ENTRIES",
                                   "IGNORE_OFF_PROC_ENTRIES",
                                   "USE_HASH_TABLE",
                                   "KEEP_NONZERO_PATTERN",
@@ -30,6 +30,7 @@ const char       *MatOptions_Shifted[] = {"UNUSED_NONZERO_LOCATION_ERR",
                                   "MatOption","MAT_",NULL};
 const char *const* MatOptions = MatOptions_Shifted+2;
 const char *const MatFactorShiftTypes[] = {"NONE","NONZERO","POSITIVE_DEFINITE","INBLOCKS","MatFactorShiftType","PC_FACTOR_",NULL};
+const char *const MatStructures[] = {"different nonzero pattern","subset nonzero pattern","same nonzero pattern","unknown nonzero pattern","MatStructure","MAT_STRUCTURE_",NULL};
 const char *const MatFactorShiftTypesDetail[] = {NULL,"diagonal shift to prevent zero pivot","Manteuffel shift","diagonal shift on blocks to prevent zero pivot"};
 const char *const MPPTScotchStrategyTypes[] = {"DEFAULT","QUALITY","SPEED","BALANCE","SAFETY","SCALABILITY","MPPTScotchStrategyType","MP_PTSCOTCH_",NULL};
 const char *const MPChacoGlobalTypes[] = {"","MULTILEVEL","SPECTRAL","","LINEAR","RANDOM","SCATTERED","MPChacoGlobalType","MP_CHACO_",NULL};
@@ -265,6 +266,10 @@ PetscErrorCode  MatInitializePackage(void)
   ierr = PetscLogEventRegister("MatGetSymTrans",MAT_CLASSID,&MAT_Getsymtranspose);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatGetSymTransR",MAT_CLASSID,&MAT_Getsymtransreduced);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatCUSPARSCopyTo",MAT_CLASSID,&MAT_CUSPARSECopyToGPU);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("MatCUSPARSCopyFr",MAT_CLASSID,&MAT_CUSPARSECopyFromGPU);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("MatCUSPARSPreCOO",MAT_CLASSID,&MAT_CUSPARSEPreallCOO);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("MatCUSPARSValCOO",MAT_CLASSID,&MAT_CUSPARSESetVCOO);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("MatCUSPARSSolAnl",MAT_CLASSID,&MAT_CUSPARSESolveAnalysis);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatCUSPARSGenT",MAT_CLASSID,&MAT_CUSPARSEGenerateTranspose);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatVCLCopyTo",  MAT_CLASSID,&MAT_ViennaCLCopyToGPU);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatDenseCopyTo",MAT_CLASSID,&MAT_DenseCopyToGPU);CHKERRQ(ierr);

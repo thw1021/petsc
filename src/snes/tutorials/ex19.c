@@ -1131,6 +1131,10 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
      filter: grep MatFDColorSetUp | wc -w | xargs  -I % sh -c "expr % \> 21"
 
    test:
+     suffix: fs
+     args: -pc_type fieldsplit -da_refine 3  -all_ksp_monitor -fieldsplit_y_velocity_pc_type lu  -fieldsplit_temperature_pc_type lu -fieldsplit_x_velocity_pc_type lu  -snes_view
+
+   test:
      suffix: asm_matconvert
      args: -mat_type aij -pc_type asm -pc_asm_sub_mat_type dense -snes_view
 

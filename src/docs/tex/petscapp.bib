@@ -3,7 +3,19 @@
 % LiteralHTML:
 % LiteralHTML:  <a name="nano"><H3><center>Nano-simulations</center></H3>
 % LiteralHTML:
-
+@misc{bueler2020petsc,
+  title={PETSc for Partial Differential Equations: Numerical Solutions in C and Python},
+  author={Bueler, Ed},
+  year={2020},
+  publisher={SIAM}
+}
+@techreport{petscforgpuexascale,
+  title={Toward Performance-Portable PETSc for GPU-based Exascale Systems},
+  author={Mark F. Adams and Satish Balay and Jed Brown and Alp Dener and Matthew Knepley and Scott E. Kruger and Hannah~Morgan and Todd Munson and Karl Rupp and Barry F. Smith and Stefano Zampini and Hong Zhang and Junchao Zhang}},
+  year={2020},
+  url={https://arxiv.org/abs/2011.00715},
+  institution={Argonne National Laboratory}
+}
 @article{Rupp:2016:PIS:2988256.2907944,
  author = {Rupp, Karl and Weinbub, Josef and J\"{u}ngel, Ansgar and Grasser, Tibor},
  title = {Pipelined Iterative Solvers with Kernel Fusion for Graphics Processing Units},
@@ -1320,11 +1332,23 @@ year    = 2014
   year    = {2019}
 }
 @article{HaplaKnepleyAfanasievBoehmDrielKrischerFichtner2020,
-  title  = {Fully Parallel Mesh {I/O} using {PETSc} {DMPlex} with an Application to Waveform Modeling},
-  author = {Vaclav Hapla and Matthew G. Knepley and Michael Afanasiev and Christian Boehm and Martin van Driel and Lion Krischer and Andreas Fichtner},
-  eprint = {http://arxiv.org/abs/2004.08729},
-  note   = {review},
-  year   = {2020}
+  title   = {Fully Parallel Mesh {I/O} using {PETSc} {DMPlex} with an Application to Waveform Modeling},
+  author  = {Vaclav Hapla and Matthew G. Knepley and Michael Afanasiev and Christian Boehm and Martin van Driel and Lion Krischer and Andreas Fichtner},
+  journal = {SIAM Journal on Scientific Computing},
+  eprint  = {http://arxiv.org/abs/2004.08729},
+  note    = {accepted},
+  year    = {2020}
+}
+@article{Parsani2021,
+  title   = {High-order accurate entropy-stable discontinuous collocated Galerkin methods with the summation-by-parts property for compressible CFD frameworks: Scalable SSDC algorithms and flow solver},
+  author  = {Matteo Parsani and Radouan Boukharfane and Irving Reyna Nolasco and David C. {Del Rey Fernández} and Stefano Zampini and Bilel Hadri and Lisandro Dalcin},
+  journal = {Journal of Computational Physics},
+  volume  = {424},
+  pages   = {109844},
+  issn    = {0021-9991},
+  doi     = {https://doi.org/10.1016/j.jcp.2020.109844},
+  url     = {http://www.sciencedirect.com/science/article/pii/S0021999120306185},
+  year    = {2021}
 }
 @article {YoungOppenheimDimant2017,
   author  = {Matthew A. Young and Meers M. Oppenheim and Yakov S. Dimant},
@@ -6086,6 +6110,15 @@ url    = "http://lyre.mit.edu/\~{ }powell/rheoplast.html"
   year    = {2016},
   url     = {http://arxiv.org/abs/1602.04873},
   doi     = {10.1002/cpe.3820}
+}
+@article{MorganSananKnepleyMills2020,
+  title   = {Understanding performance variability in standard and pipelined parallel {Krylov} solvers},
+  author  = {Hannah Morgan and Patrick Sanan and Matthew G. Knepley and Richard Tran Mills},
+  journal = {The International Journal of High Performance Computing Applications},
+  doi     = {10.1177/1094342020966835},
+  url     = {https://doi.org/10.1177/1094342020966835},
+  eprint  = {https://doi.org/10.1177/1094342020966835},
+  year    = {2020}
 }
 
 @article{msz2013,

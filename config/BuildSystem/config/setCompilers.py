@@ -145,7 +145,7 @@ class Configure(config.base.Configure):
     config.base.Configure.setupDependencies(self, framework)
     self.languages = framework.require('PETSc.options.languages', self)
     self.libraries = self.framework.getChild('config.libraries')
-    self.headers   = self.framework.getChild('config.headers')    
+    self.headers   = self.framework.getChild('config.headers')
     return
 
   @staticmethod
@@ -155,6 +155,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -V',checkCommand = noCheck, log = log)
       output = output + error
       if output.find('NAGWare Fortran') >= 0 or output.find('The Numerical Algorithms Group Ltd') >= 0:
+        if log: log.write('Detected NAG Fortran compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -166,6 +167,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -v',checkCommand = noCheck, log = log)
       output = output + error
       if output.find('w64-mingw32') >= 0:
+        if log: log.write('Detected MINGW GCC compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -176,7 +178,7 @@ class Configure(config.base.Configure):
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 20 ', log = log)
       output = output + error
-      return (any([s in output for s in ['www.gnu.org',
+      found = (any([s in output for s in ['www.gnu.org',
                                          'bugzilla.redhat.com',
                                          'gcc.gnu.org',
                                          'gcc version',
@@ -190,6 +192,9 @@ class Configure(config.base.Configure):
               and not any([s in output for s in ['Intel(R)',
                                                  'Unrecognised option --help passed to ld', # NAG f95 compiler
                                                  ]]))
+      if found:
+        if log: log.write('Detected GNU compiler\n')
+        return 1
     except RuntimeError:
       pass
 
@@ -199,7 +204,10 @@ class Configure(config.base.Configure):
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 500', log = log, logOutputflg = False)
       output = output + error
-      return any([s in output for s in ['Emit Clang AST']])
+      found = any([s in output for s in ['Emit Clang AST']])
+      if found:
+        if log: log.write('Detected CLANG compiler\n')
+        return 1
     except RuntimeError:
       pass
 
@@ -211,6 +219,7 @@ class Configure(config.base.Configure):
       output = output +  error
       import re
       if re.match(r'GNU Fortran \(.*\) (4.5.\d+|4.6.0 20100703)', output):
+        if log: log.write('Detected GFortran45x compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -226,6 +235,7 @@ class Configure(config.base.Configure):
       if strmatch:
         VMAJOR,VMINOR = strmatch.groups()
         if (int(VMAJOR),int(VMINOR)) >= (4,6):
+          if log: log.write('Detected GFortran46plus compiler\n')
           return 1
     except RuntimeError:
       pass
@@ -241,6 +251,7 @@ class Configure(config.base.Configure):
       if strmatch:
         VMAJOR,VMINOR = strmatch.groups()
         if (int(VMAJOR),int(VMINOR)) >= (4,7):
+          if log: log.write('Detected GFortran47plus compiler\n')
           return 1
     except RuntimeError:
       pass
@@ -256,6 +267,7 @@ class Configure(config.base.Configure):
       if strmatch:
         VMAJOR,VMINOR = strmatch.groups()
         if (int(VMAJOR),int(VMINOR)) >= (10,0):
+          if log: log.write('Detected GFortran100plus compiler\n')
           return 1
     except RuntimeError:
       pass
@@ -271,6 +283,7 @@ class Configure(config.base.Configure):
       if strmatch:
         VMAJOR,VMINOR = strmatch.groups()
         if (int(VMAJOR),int(VMINOR)) >= (8,0):
+          if log: log.write('Detected GFortran8plus compiler\n')
           return 1
     except RuntimeError:
       pass
@@ -284,6 +297,7 @@ class Configure(config.base.Configure):
       if output.find('Unrecognised option --help passed to ld') >=0:    # NAG f95 compiler
         return 0
       if output.find('http://www.g95.org') >= 0:
+        if log: log.write('Detected g95 compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -297,6 +311,7 @@ class Configure(config.base.Configure):
       if output.find('Unrecognised option --help passed to ld') >=0:    # NAG f95 compiler
         return 0
       if output.find('Compaq Visual Fortran') >= 0 or output.find('Digital Visual Fortran') >=0 :
+        if log: log.write('Detected Compaq Visual Fortran compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -308,6 +323,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -V',checkCommand = noCheck, log = log)
       output = output + error
       if output.find(' Sun ') >= 0:
+        if log: log.write('Detected Sun/Oracle compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -319,6 +335,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -qversion', log = log)
       output = output + error
       if 'IBM XL' in output:
+        if log: log.write('Detected IBM compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -329,7 +346,8 @@ class Configure(config.base.Configure):
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 20', log = log)
       output = output + error
-      if output.find('Intel Corporation') >= 0 :
+      if output.find('Intel') >= 0:
+        if log: log.write('Detected Intel compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -339,6 +357,7 @@ class Configure(config.base.Configure):
     '''Returns true if the compiler is a compiler for KNL running on a Cray'''
     x = os.getenv('PE_PRODUCT_LIST')
     if x and x.find('CRAYPE_MIC-KNL') > -1:
+      if log: log.write('Detected Cray KNL compiler\n')
       return 1
 
   @staticmethod
@@ -348,6 +367,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -V', log = log)
       output = output + error
       if output.find('Cray Standard C') >= 0 or output.find('Cray C++') >= 0 or output.find('Cray Fortran') >= 0:
+        if log: log.write('Detected Cray compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -361,6 +381,7 @@ class Configure(config.base.Configure):
       if not status and output.find('x86') >= 0:
         return 0
       elif not status:
+        if log: log.write('Detected Cray vector compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -372,6 +393,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -V',checkCommand = noCheck, log = log)
       output = output + error
       if output.find('The Portland Group') >= 0 or output.find('PGI Compilers and Tools') >= 0:
+        if log: log.write('Detected PGI compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -403,6 +425,7 @@ class Configure(config.base.Configure):
     '''Returns true if system is linux'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status and output.lower().strip().find('linux') >= 0:
+      if log: log.write('Detected Linux OS')
       return 1
 
   @staticmethod
@@ -410,6 +433,7 @@ class Configure(config.base.Configure):
     '''Returns true if system is cygwin'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status and output.lower().strip().find('cygwin') >= 0:
+      if log: log.write('Detected Cygwin\n')
       return 1
 
   @staticmethod
@@ -417,6 +441,7 @@ class Configure(config.base.Configure):
     '''Returns true if system is solaris'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status and output.lower().strip().find('sunos') >= 0:
+      if log: log.write('Detected Solaris OS\n')
       return 1
 
   @staticmethod
@@ -424,7 +449,10 @@ class Configure(config.base.Configure):
     '''Returns true if system is Darwin/MacOSX'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status:
-      return output.lower().strip() == 'darwin'
+      found = (output.lower().strip() == 'darwin')
+      if found:
+        if log: log.write('Detected Darwin/MacOSX OS\n\n')
+      return found
 
   @staticmethod
   def isDarwinCatalina(log):
@@ -433,6 +461,7 @@ class Configure(config.base.Configure):
     if platform.system() != 'Darwin': return 0
     v = tuple([int(a) for a in platform.mac_ver()[0].split('.')])
     if v < (10,15,0): return 0
+    if log: log.write('Detected Darwin/MacOSX Catalina OS\n')
     return 1
 
   @staticmethod
@@ -440,16 +469,22 @@ class Configure(config.base.Configure):
     '''Returns true if system is FreeBSD'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status:
-      return output.lower().strip() == 'freebsd'
+      found = output.lower().strip() == 'freebsd'
+      if found:
+        if log: log.write('Detected FreeBSD OS\n')
+      return found
 
   @staticmethod
   def isWindows(compiler, log):
     '''Returns true if the compiler is a Windows compiler'''
     if compiler in ['icl', 'cl', 'bcc32', 'ifl', 'df']:
+      if log: log.write('Detected Windows OS\n')
       return 1
     if compiler in ['ifort','f90'] and Configure.isCygwin(log):
+      if log: log.write('Detected Windows OS\n')
       return 1
     if compiler in ['lib', 'tlib']:
+      if log: log.write('Detected Windows OS\n')
       return 1
 
   @staticmethod
@@ -507,13 +542,7 @@ class Configure(config.base.Configure):
       msg = 'Cannot compile '+language+' with '+self.getCompiler()+'.'
       self.popLanguage()
       raise RuntimeError(msg)
-    if language == 'CUDA': # do not check CUDA linker since it is never used (and is broken on Mac with -m64)
-      self.popLanguage()
-      return
-    if language == 'HIP': # do not check HIP linker since it is never used (assumed for now)
-      self.popLanguage()
-      return
-    if language == 'SYCL': # do not check SYCL linker since it is never used (assumed for now)
+    if language == 'CUDA' or language == 'HIP' or language == 'SYCL': # do not check CUDA/HIP/SYCL linker since it is never used (assumed for now)
       self.popLanguage()
       return
     if not self.checkLink(linkLanguage=linkLanguage,includes=includes,body=body):
@@ -920,19 +949,17 @@ class Configure(config.base.Configure):
       else:
         yield self.argDB['CXX']
       raise RuntimeError('C++ compiler you provided with -CXX='+self.argDB['CXX']+' cannot be found or does not work.'+'\n'+self.mesg)
-    elif self.useMPICompilers() and 'with-mpi-dir' in self.argDB and os.path.isdir(os.path.join(self.argDB['with-mpi-dir'], 'bin')):
-      self.usedMPICompilers = 1
+    elif self.usedMPICompilers and 'with-mpi-dir' in self.argDB and os.path.isdir(os.path.join(self.argDB['with-mpi-dir'], 'bin')):
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpiicpc')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpicxx')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'hcp')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpic++')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpiCC')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpCC_r')
-      self.usedMPICompilers = 0
       raise RuntimeError('bin/<mpiCC,mpicxx,hcp,mpCC_r> you provided with -with-mpi-dir='+self.argDB['with-mpi-dir']+' cannot be found or does not work. See https://www.mcs.anl.gov/petsc/documentation/faq.html#mpi-compilers')
     else:
-      if self.useMPICompilers():
-        self.usedMPICompilers = 1
+      if self.usedMPICompilers:
+        # TODO: Should only look for the MPI CXX compiler related to the found MPI C compiler
         cray = os.getenv('CRAYPE_DIR')
         if cray:
           cross_CC = self.crayCrossCompiler('CC')
@@ -948,34 +975,34 @@ class Configure(config.base.Configure):
         yield 'mpic++'
         yield 'mpCC'
         yield 'mpxlC'
-        self.usedMPICompilers = 0
-      #attempt to match c++ compiler with c compiler
-      if self.CC.find('win32fe cl') >= 0:
-        yield 'win32fe cl'
-      elif self.CC.find('win32fe icl') >= 0:
-        yield 'win32fe icl'
-      elif self.CC == 'gcc':
+      else:
+        #attempt to match c++ compiler with c compiler
+        if self.CC.find('win32fe cl') >= 0:
+          yield 'win32fe cl'
+        elif self.CC.find('win32fe icl') >= 0:
+          yield 'win32fe icl'
+        elif self.CC == 'gcc':
+          yield 'g++'
+        elif self.CC == 'clang':
+          yield 'clang++'
+        elif self.CC == 'icc':
+          yield 'icpc'
+        elif self.CC == 'xlc':
+          yield 'xlC'
         yield 'g++'
-      elif self.CC == 'clang':
         yield 'clang++'
-      elif self.CC == 'icc':
+        yield 'c++'
         yield 'icpc'
-      elif self.CC == 'xlc':
+        yield 'CC'
+        yield 'cxx'
+        yield 'cc++'
         yield 'xlC'
-      yield 'g++'
-      yield 'clang++'
-      yield 'c++'
-      yield 'icpc'
-      yield 'CC'
-      yield 'cxx'
-      yield 'cc++'
-      yield 'xlC'
-      yield 'ccpc'
-      yield 'win32fe icl'
-      yield 'win32fe cl'
-      yield 'pgCC'
-      yield 'CC'
-      yield 'win32fe bcc32'
+        yield 'ccpc'
+        yield 'win32fe icl'
+        yield 'win32fe cl'
+        yield 'pgCC'
+        yield 'CC'
+        yield 'win32fe bcc32'
     return
 
   def checkCxxCompiler(self):
@@ -1062,20 +1089,18 @@ class Configure(config.base.Configure):
         yield self.argDB['FC']
       yield self.argDB['FC']
       raise RuntimeError('Fortran compiler you provided with -FC='+self.argDB['FC']+' cannot be found or does not work.'+'\n'+self.mesg)
-    elif self.useMPICompilers() and 'with-mpi-dir' in self.argDB and os.path.isdir(os.path.join(self.argDB['with-mpi-dir'], 'bin')):
-      self.usedMPICompilers = 1
+    elif self.usedMPICompilers and 'with-mpi-dir' in self.argDB and os.path.isdir(os.path.join(self.argDB['with-mpi-dir'], 'bin')):
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpiifort')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpif90')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpf90')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpxlf95_r')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpxlf90_r')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpxlf_r')
-      self.usedMPICompilers = 0
       if os.path.isfile(os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpif90')):
         raise RuntimeError('bin/mpif90 you provided with --with-mpi-dir='+self.argDB['with-mpi-dir']+' cannot be found or does not work.\nRun with --with-fc=0 if you wish to use this MPI and disable Fortran. See https://www.mcs.anl.gov/petsc/documentation/faq.html#mpi-compilers')
     else:
-      if self.useMPICompilers():
-        self.usedMPICompilers = 1
+      if self.usedMPICompilers:
+        # TODO: Should only look for the MPI Fortran compiler related to the found MPI C compiler
         cray = os.getenv('CRAYPE_DIR')
         if cray:
           cross_fc = self.crayCrossCompiler('ftn')
@@ -1089,35 +1114,35 @@ class Configure(config.base.Configure):
         yield 'mpxlf_r'
         yield 'mpxlf'
         yield 'mpf90'
-        self.usedMPICompilers = 0
-      #attempt to match fortran compiler with c compiler
-      if self.CC == 'gcc':
+      else:
+        #attempt to match fortran compiler with c compiler
+        if self.CC == 'gcc':
+          yield 'gfortran'
+        elif self.CC == 'clang':
+          yield 'gfortran'
+        elif self.CC == 'icc':
+          yield 'ifort'
+        elif self.CC == 'xlc':
+          yield 'xlf90'
+          yield 'xlf'
+        elif self.CC.find('win32fe cl') >= 0:
+          yield 'win32fe f90'
+          yield 'win32fe ifc'
+        elif self.CC.find('win32fe icl') >= 0:
+          yield 'win32fe ifc'
         yield 'gfortran'
-      elif self.CC == 'clang':
-        yield 'gfortran'
-      elif self.CC == 'icc':
-        yield 'ifort'
-      elif self.CC == 'xlc':
+        yield 'g95'
         yield 'xlf90'
         yield 'xlf'
-      elif self.CC.find('win32fe cl') >= 0:
-        yield 'win32fe f90'
-        yield 'win32fe ifc'
-      elif self.CC.find('win32fe icl') >= 0:
-        yield 'win32fe ifc'
-      yield 'gfortran'
-      yield 'g95'
-      yield 'xlf90'
-      yield 'xlf'
-      yield 'f90'
-      yield 'lf95'
-      yield 'win32fe ifort'
-      yield 'win32fe ifl'
-      yield 'ifort'
-      yield 'ifc'
-      yield 'pgf90'
-      yield 'f95'
-      yield 'f90'
+        yield 'f90'
+        yield 'lf95'
+        yield 'win32fe ifort'
+        yield 'win32fe ifl'
+        yield 'ifort'
+        yield 'ifc'
+        yield 'pgf90'
+        yield 'f95'
+        yield 'f90'
     return
 
   def checkFortranCompiler(self):
@@ -1612,7 +1637,7 @@ class Configure(config.base.Configure):
       languages.append('FC')
     for language in languages:
       self.pushLanguage(language)
-      for testFlag in ['-Wl,-multiply_defined,suppress', '-Wl,-multiply_defined -Wl,suppress', '-Wl,-commons,use_dylibs', '-Wl,-search_paths_first', '-Wl,-no_compact_unwind']:
+      for testFlag in ['-Wl,-bind_at_load','-Wl,-multiply_defined,suppress', '-Wl,-multiply_defined -Wl,suppress', '-Wl,-commons,use_dylibs', '-Wl,-search_paths_first', '-Wl,-no_compact_unwind']:
         if self.checkLinkerFlag(testFlag):
           # expand to CC_LINKER_FLAGS or CXX_LINKER_FLAGS or FC_LINKER_FLAGS
           linker_flag_var = langMap[language]+'_LINKER_FLAGS'
@@ -1875,13 +1900,6 @@ if (dlclose(handle)) {
         self.logPrint('Adding to LD_LIBRARY_PATH '+libdir)
     return
 
-  def printEnvVariables(self):
-    buf = '**** printenv ****'
-    for key,val in os.environ.items():
-      buf += '\n'+str(key)+'='+str(val)
-    self.logPrint(buf)
-    return
-
   def resetEnvCompilers(self):
     ignoreEnvCompilers = ['CC','CXX','FC','F77','F90']
     for envVal in ignoreEnvCompilers:
@@ -1938,7 +1956,6 @@ if (dlclose(handle)) {
 
   def configure(self):
     self.mainLanguage = self.languages.clanguage
-    self.executeTest(self.printEnvVariables)
     self.executeTest(self.resetEnvCompilers)
     self.executeTest(self.checkEnvCompilers)
     self.executeTest(self.checkMPICompilerOverride)

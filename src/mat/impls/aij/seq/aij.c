@@ -694,10 +694,11 @@ finished:;
 
 PetscErrorCode MatView_SeqAIJ_Binary(Mat mat,PetscViewer viewer)
 {
-  Mat_SeqAIJ     *A = (Mat_SeqAIJ*)mat->data;
-  PetscInt       header[4],M,N,m,nz,i;
-  PetscInt       *rowlens;
-  PetscErrorCode ierr;
+  Mat_SeqAIJ        *A = (Mat_SeqAIJ*)mat->data;
+  const PetscScalar *av;
+  PetscInt          header[4],M,N,m,nz,i;
+  PetscInt          *rowlens;
+  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   ierr = PetscViewerSetUp(viewer);CHKERRQ(ierr);
@@ -720,7 +721,9 @@ PetscErrorCode MatView_SeqAIJ_Binary(Mat mat,PetscViewer viewer)
   /* store column indices */
   ierr = PetscViewerBinaryWrite(viewer,A->j,nz,PETSC_INT);CHKERRQ(ierr);
   /* store nonzero values */
-  ierr = PetscViewerBinaryWrite(viewer,A->a,nz,PETSC_SCALAR);CHKERRQ(ierr);
+  ierr = MatSeqAIJGetArrayRead(mat,&av);CHKERRQ(ierr);
+  ierr = PetscViewerBinaryWrite(viewer,av,nz,PETSC_SCALAR);CHKERRQ(ierr);
+  ierr = MatSeqAIJRestoreArrayRead(mat,&av);CHKERRQ(ierr);
 
   /* write block size option to the viewer's .info file */
   ierr = MatView_Binary_BlockSizes(mat,viewer);CHKERRQ(ierr);
@@ -751,6 +754,7 @@ extern PetscErrorCode MatSeqAIJFactorInfo_Matlab(Mat,PetscViewer);
 PetscErrorCode MatView_SeqAIJ_ASCII(Mat A,PetscViewer viewer)
 {
   Mat_SeqAIJ        *a = (Mat_SeqAIJ*)A->data;
+  const PetscScalar *av;
   PetscErrorCode    ierr;
   PetscInt          i,j,m = A->rmap->n;
   const char        *name;
@@ -763,6 +767,9 @@ PetscErrorCode MatView_SeqAIJ_ASCII(Mat A,PetscViewer viewer)
   }
 
   ierr = PetscViewerGetFormat(viewer,&format);CHKERRQ(ierr);
+  /* trigger copy to CPU if needed */
+  ierr = MatSeqAIJGetArrayRead(A,&av);CHKERRQ(ierr);
+  ierr = MatSeqAIJRestoreArrayRead(A,&av);CHKERRQ(ierr);
   if (format == PETSC_VIEWER_ASCII_MATLAB) {
     PetscInt nofinalvalue = 0;
     if (m && ((a->i[m] == a->i[m-1]) || (a->j[a->nz-1] != A->cmap->n-1))) {
@@ -1355,7 +1362,7 @@ PetscErrorCode MatSetOption_SeqAIJ(Mat A,MatOption op,PetscBool flg)
   case MAT_STRUCTURE_ONLY:
     /* These options are handled directly by MatSetOption() */
     break;
-  case MAT_NEW_DIAGONALS:
+  case MAT_FORCE_DIAGONAL_ENTRIES:
   case MAT_IGNORE_OFF_PROC_ENTRIES:
   case MAT_USE_HASH_TABLE:
     ierr = PetscInfo1(A,"Option %s ignored\n",MatOptions[op]);CHKERRQ(ierr);
@@ -1378,20 +1385,22 @@ PetscErrorCode MatSetOption_SeqAIJ(Mat A,MatOption op,PetscBool flg)
 
 PetscErrorCode MatGetDiagonal_SeqAIJ(Mat A,Vec v)
 {
-  Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
-  PetscErrorCode ierr;
-  PetscInt       i,j,n,*ai=a->i,*aj=a->j;
-  PetscScalar    *aa=a->a,*x;
+  Mat_SeqAIJ        *a = (Mat_SeqAIJ*)A->data;
+  PetscErrorCode    ierr;
+  PetscInt          i,j,n,*ai=a->i,*aj=a->j;
+  PetscScalar       *x;
+  const PetscScalar *aa;
 
   PetscFunctionBegin;
   ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
   if (n != A->rmap->n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Nonconforming matrix and vector");
-
+  ierr = MatSeqAIJGetArrayRead(A,&aa);CHKERRQ(ierr);
   if (A->factortype == MAT_FACTOR_ILU || A->factortype == MAT_FACTOR_LU) {
     PetscInt *diag=a->diag;
     ierr = VecGetArrayWrite(v,&x);CHKERRQ(ierr);
     for (i=0; i<n; i++) x[i] = 1.0/aa[diag[i]];
     ierr = VecRestoreArrayWrite(v,&x);CHKERRQ(ierr);
+    ierr = MatSeqAIJRestoreArrayRead(A,&aa);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
 
@@ -1406,6 +1415,7 @@ PetscErrorCode MatGetDiagonal_SeqAIJ(Mat A,Vec v)
     }
   }
   ierr = VecRestoreArrayWrite(v,&x);CHKERRQ(ierr);
+  ierr = MatSeqAIJRestoreArrayRead(A,&aa);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2302,7 +2312,7 @@ PetscErrorCode MatNorm_SeqAIJ(Mat A,NormType type,PetscReal *nrm)
   if (type == NORM_FROBENIUS) {
 #if defined(PETSC_USE_REAL___FP16)
     PetscBLASInt one = 1,nz = a->nz;
-    *nrm = BLASnrm2_(&nz,v,&one);
+    PetscStackCallBLAS("BLASnrm2",*nrm = BLASnrm2_(&nz,v,&one));
 #else
     for (i=0; i<a->nz; i++) {
       sum += PetscRealPart(PetscConj(*v)*(*v)); v++;
@@ -3102,7 +3112,7 @@ PetscErrorCode MatAXPY_SeqAIJ(Mat Y,PetscScalar a,Mat X,MatStructure str)
   Mat_SeqAIJ     *x = (Mat_SeqAIJ*)X->data,*y = (Mat_SeqAIJ*)Y->data;
 
   PetscFunctionBegin;
-  if (str == DIFFERENT_NONZERO_PATTERN) {
+  if (str == UNKNOWN_NONZERO_PATTERN) {
     if (x->nz == y->nz) {
       PetscBool e;
       ierr = PetscArraycmp(x->i,y->i,Y->rmap->n+1,&e);CHKERRQ(ierr);
@@ -4518,7 +4528,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat B)
   PetscMPIInt    size;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)B),&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)B),&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Comm must be of size 1");
 
   ierr = PetscNewLog(B,&b);CHKERRQ(ierr);
@@ -5007,7 +5017,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_SeqAIJ(MPI_Comm comm,Mat inmat,P
   PetscMPIInt    size;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   if (size == 1) {
     if (scall == MAT_INITIAL_MATRIX) {
       ierr = MatDuplicate(inmat,MAT_COPY_VALUES,outmat);CHKERRQ(ierr);
