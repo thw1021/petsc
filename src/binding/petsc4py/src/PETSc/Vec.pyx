@@ -270,7 +270,12 @@ cdef class Vec(Object):
         return self
 
     def createWithDlpack(self, object dltensor, size=None, bsize=None, comm=None):
-        """Create a PETSc vector from a DLPack sharing the same memory"""
+        """Create a PETSc vector from a DLPack object sharing the same memory.
+           This operation does not modify the storage of the original tensor
+           and should be used with contiguous tensors only. If the tensor is
+           stored in row-major order (e.g. PyTorch tensors), the resulting
+           vector will look like an unrolled tensor using row-major order.
+        """
         cdef DLManagedTensor* ptr
         cdef DLDataType dtype
         cdef int bits
@@ -342,7 +347,10 @@ cdef class Vec(Object):
         return self
 
     def toDlpack(self):
-        """ Return a DLPack tensor. Error out if the tensor information is missing. buildTensorInfo() can be used to get tensor information from an input vector that already has tensor information."""
+        """ Return a DLPack tensor. Error out if the tensor information is
+            missing. buildTensorInfo() can be used to get tensor information
+            from an input vector that already has tensor information.
+        """
         cdef DLManagedTensor* dlm_tensor = <DLManagedTensor*>stdlib.malloc(sizeof(DLManagedTensor))
         cdef DLTensor* dl_tensor = &dlm_tensor.dl_tensor
         cdef PetscScalar *a = NULL
