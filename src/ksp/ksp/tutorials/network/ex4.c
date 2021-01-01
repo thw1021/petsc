@@ -8,7 +8,7 @@ int main(int argc,char ** argv)
   PetscMPIInt    size,rank;
   DM             dmnetwork;
   PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,goffset,row;
-  PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx,bsvtx;
+  PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx[2],bsvtx[2];
   const PetscInt *vtx,*edges;
   PetscBool      ghost,distribute=PETSC_TRUE;
   Vec            X;
@@ -62,19 +62,13 @@ int main(int argc,char ** argv)
     ierr = DMNetworkAddSubnetwork(dmnetwork,NULL,numVertices[i],numEdges[i],edgelist[i],&netNum);CHKERRQ(ierr);
   }
 
-  /* Add shared vertices -- all processes hold this info at current implementation */
-  /* net[0].0 -> net[j].0, j=0,...,Nsubnet-1 */
-  asvtx = bsvtx = 0;
+  /* Add shared vertices -- all processes hold this info at current implementation
+       net[0].0 -> net[j].0, j=0,...,Nsubnet-1
+       net[0].1 -> net[j].1, j=0,...,Nsubnet-1 */
+  asvtx[0] = bsvtx[0] = 0;
+  asvtx[1] = bsvtx[1] = 1;
   for (j=Nsubnet-1; j>=1; j--) {
-    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,j,0,1,&asvtx,&bsvtx);CHKERRQ(ierr);
-    /* if (!rank) printf(" net[%d].%d --> net[0].%d\n",j,asvtx,bsvtx); */
-  }
-
-  /* net[0].1 -> net[j].1, j=0,...,Nsubnet-1 */
-  asvtx = bsvtx = 1;
-  for (j=1; j<Nsubnet; j++) {
-    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,1,&asvtx,&bsvtx);CHKERRQ(ierr);
-    /* if (!rank) printf(" net[0].%d --> net[%d].%d\n",asvtx,j,bsvtx); */
+    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,2,asvtx,bsvtx);CHKERRQ(ierr);
   }
 
   /* Setup the network layout */

@@ -223,7 +223,7 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
 {
   PetscErrorCode ierr;
   SVtx           *sedges = NULL;
-  PetscInt       *sv,k,j,nsv,*tdata;
+  PetscInt       *sv,k,j,nsv,*tdata,**ta2sv;
   PetscTable     *svtas;
   PetscInt       gidx,net,idx,i,nta,ita,idx_from,idx_to,n,*sv_wk;
   DM_Network     *network = (DM_Network*)dm->data;
@@ -236,7 +236,7 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
 
-  ierr = PetscCalloc3(Nsedgelist,&svtas,Nsedgelist,&tdata,4*Nsedgelist,&sv_wk);CHKERRQ(ierr);
+  ierr = PetscCalloc4(Nsedgelist,&svtas,Nsedgelist,&tdata,4*Nsedgelist,&sv_wk,2*Nsedgelist,&ta2sv);CHKERRQ(ierr);
 
   k   = 0;   /* sedgelist vertex counter j = 4*k */
   i   = 0;   /* sv_wk (vertices added to the ctables) counter */
@@ -245,21 +245,24 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
 
   /* for j=0 */
   ierr = PetscTableCreate(2*Nsedgelist,network->NVertices+1,&svtas[nta]);CHKERRQ(ierr);
+  ierr = PetscMalloc1(2*Nsedgelist,&ta2sv[nta]);CHKERRQ(ierr);
+
   net = sv_wk[2*i]   = sedgelist[k];
   idx = sv_wk[2*i+1] = sedgelist[k+1];
   gidx = network->subnet[net].vStart + idx;
   ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
+  *(ta2sv[nta] + tdata[nta]) = i; /* maps tdata to index of sv_wk; sv_wk keeps (net,idx) info */
   tdata[nta]++; i++;
 
   net = sv_wk[2*i]   = sedgelist[k+2];
   idx = sv_wk[2*i+1] = sedgelist[k+3];
   gidx = network->subnet[net].vStart + idx;
   ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
+  *(ta2sv[nta] + tdata[nta]) = i;
   tdata[nta]++; i++;
   nta++; j++; k += 4;
 
   for (j = 1; j < Nsedgelist; j++) {
-    /* if (!rank) printf("j %d, Nsedgelist %d; nta %d\n",j,Nsedgelist,nta); */
     for (ita = 0; ita < nta; ita++) {
       /* vfrom */
       net = sedgelist[k]; idx = sedgelist[k+1];
@@ -278,6 +281,7 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
           idx = sv_wk[2*i+1] = sedgelist[k+1];
           gidx = network->subnet[net].vStart + idx;
           ierr = PetscTableAdd(svtas[ita],gidx+1,tdata[ita]+1,INSERT_VALUES);CHKERRQ(ierr);
+          *(ta2sv[ita] + tdata[ita]) = i;
           /* if (!rank) printf("  add gidx %d tdata[%d]=%d to svtas[%d]\n",gidx,ita,tdata[ita],ita); */
           tdata[ita]++; i++;
           break;
@@ -286,6 +290,7 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
           idx = sv_wk[2*i+1] = sedgelist[k+3];
           gidx = network->subnet[net].vStart + idx;
           ierr = PetscTableAdd(svtas[ita],gidx+1,tdata[ita]+1,INSERT_VALUES);CHKERRQ(ierr);
+          *(ta2sv[ita] + tdata[ita]) = i; /* maps tdata to index of sv_wk */
           /* if (!rank) printf("  add gidx %d tdata[%d]=%d to svtas[%d]\n",gidx,ita,tdata[ita],ita); */
           tdata[ita]++; i++;
           break;
@@ -296,23 +301,26 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
     if (ita == nta) {
       /* if (!rank) printf("nta %d, both vfrom and vto are not on the sv-tables, create a new table\n",nta); */
       ierr = PetscTableCreate(2*Nsedgelist,network->NVertices+1,&svtas[nta]);CHKERRQ(ierr);
+      ierr = PetscMalloc1(2*Nsedgelist, &ta2sv[nta]);CHKERRQ(ierr);
+
       net = sv_wk[2*i]   = sedgelist[k];
       idx = sv_wk[2*i+1] = sedgelist[k+1];
       gidx = network->subnet[net].vStart + idx;
       ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
       /* if (!rank) printf("add gidx %d to %d-th data of svtas[%d]; net[%d].%d\n",gidx,tdata[nta],nta,net,idx); */
+      *(ta2sv[nta] + tdata[nta]) = i;
       tdata[nta]++; i++;
 
       net = sv_wk[2*i]   = sedgelist[k+2];
       idx = sv_wk[2*i+1] = sedgelist[k+3];
       gidx = network->subnet[net].vStart + idx;
       ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
+      *(ta2sv[nta] + tdata[nta]) = i; /* maps tdata to index of sv_wk */
       /* if (!rank) printf("add gidx %d to %d-th data of svtas[%d]; net[%d].%d\n",gidx,tdata[nta],nta,net,idx); */
       tdata[nta]++; i++;
 
       nta++;
     }
-
     k += 4;
   }
 
@@ -320,7 +328,6 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
      sedges: edges connect vertex sv[0]=(net[0],idx[0]) to vertices sv[k], k=1,...,n-1;
      net[k], k=0, ...,n-1, are in assending order */
   ierr = PetscMalloc1(nta,&sedges);CHKERRQ(ierr);
-  j = 0;
   for (nsv = 0; nsv < nta; nsv++) {
     /* for a single svtx, put shared vertices in assending order of gidx */
     ierr = PetscTableGetCount((const PetscTable)svtas[nsv],&n);CHKERRQ(ierr);
@@ -328,23 +335,24 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
     sedges[nsv].sv   = sv;
     sedges[nsv].n    = n;
     sedges[nsv].gidx = -1; /* initialization */
-    /* if (!rank) printf("%d -th table, n %d, j %d:\n",nsv,n,j); */
 
     ierr = PetscTableGetHeadPosition(svtas[nsv],&ppos);CHKERRQ(ierr);
     for (k=0; k<n; k++) { /* gidx is sorted in assending order */
       ierr = PetscTableGetNext(svtas[nsv],&ppos,&gidx,&i);CHKERRQ(ierr);
       gidx--; i--;
-      sv[2*k]   = sv_wk[2*i + 2*j];
-      sv[2*k+1] = sv_wk[2*i+1 + 2*j];
+
+      j = ta2sv[nsv][i]; /* maps i to index of sv_wk */
+      sv[2*k]   = sv_wk[2*j];
+      sv[2*k+1] = sv_wk[2*j + 1];
       /* if (!rank) printf("  %d -- key %d, data %d; net[%d].%d\n",k,gidx,i,sv[2*k],sv[2*k+1]); */
     }
-    j += n;
   }
 
   for (j=0; j<nta; j++) {
     ierr = PetscTableDestroy(&svtas[j]);CHKERRQ(ierr);
+    ierr = PetscFree(ta2sv[j]);CHKERRQ(ierr);
   }
-  ierr = PetscFree3(svtas,tdata,sv_wk);CHKERRQ(ierr);
+  ierr = PetscFree4(svtas,tdata,sv_wk,ta2sv);CHKERRQ(ierr);
 
   *Nsvtx = nta;
   *svtx  = sedges;
@@ -786,8 +794,8 @@ PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetnum,Petsc
 
   sedgelist = network->sedgelist;
   for (i=0; i<nsvtx; i++) {
-    sedgelist[4*Nsvtx]   = anetnum; sedgelist[4*Nsvtx+1] = asvtx[0];
-    sedgelist[4*Nsvtx+2] = bnetnum; sedgelist[4*Nsvtx+3] = bsvtx[0];
+    sedgelist[4*Nsvtx]   = anetnum; sedgelist[4*Nsvtx+1] = asvtx[i];
+    sedgelist[4*Nsvtx+2] = bnetnum; sedgelist[4*Nsvtx+3] = bsvtx[i];
     Nsvtx++;
   }
   if (Nsvtx > 2*nsubnet) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"allocate more space for coupling edgelist");
