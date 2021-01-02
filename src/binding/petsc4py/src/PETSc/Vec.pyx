@@ -437,7 +437,7 @@ cdef class Vec(Object):
         if cval == self.Type.CUDA or cval == self.Type.SEQCUDA or cval == self.Type.MPICUDA:
             CHKERR( VecCUDAGetArrayWrite(self.vec, <PetscScalar**>&a) )
         else:
-            CHKERR( VecGetArray(self.vec, <PetscScalar**>&a) )
+            CHKERR( VecGetArrayWrite(self.vec, <PetscScalar**>&a) )
         dl_tensor.data = <Py_uintptr_t>a
 
         cdef DLContext* ctx = &dl_tensor.ctx
