@@ -10,14 +10,14 @@ struct _n_PetscStream {
   cudaStream_t cstream;
 #if defined(PETSC_USE_DEBUG)
   PetscBool    gotCUDA;
-#endif
-#endif
+#endif /* PETSC_USE_DEBUG */
+#endif /* PETSC_HAVE_CUDA */
 #if defined(PETSC_HAVE_HIP)
   hipStream_t  hstream;
 #if defined(PETSC_USE_DEBUG)
   PetscBool    gotHIP;
-#endif
-#endif
+#endif /* PETSC_USE_DEBUG */
+#endif /* PETSC_HAVE_HIP */
   PetscStreamMode mode;
 };
 
