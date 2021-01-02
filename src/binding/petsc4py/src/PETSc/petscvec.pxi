@@ -56,6 +56,8 @@ cdef extern from * nogil:
     int VecGetOwnershipRange(PetscVec,PetscInt*,PetscInt*)
     int VecGetOwnershipRanges(PetscVec,const PetscInt*[])
 
+    int VecGetArrayWrite(PetscVec,PetscScalar*[])
+    int VecRestoreArrayWrite(PetscVec,PetscScalar*[])
     int VecGetArrayRead(PetscVec,const PetscScalar*[])
     int VecRestoreArrayRead(PetscVec,const PetscScalar*[])
     int VecGetArray(PetscVec,PetscScalar*[])
