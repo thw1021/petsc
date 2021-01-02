@@ -29,8 +29,8 @@ int main(int argc,char ** argv)
   PetscScalar    val;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   /* Create a network of subnetworks */
   nsubnet = 1;
@@ -117,8 +117,7 @@ int main(int argc,char ** argv)
       }
     }
   }
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
-#if 1
+
   /* Add components and nvar to shared vertex -- only owner of the vertex does this! */
   ierr = DMNetworkGetSubnetworkSharedVertices(dmnetwork,&nv,&vtx);CHKERRQ(ierr);
   for (v=0; v<nv; v++) {
@@ -127,7 +126,7 @@ int main(int argc,char ** argv)
     ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
     ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
   }
-#endif
+
   /* Enable runtime option of graph partition type -- must be called before DMSetUp() */
   if (size > 1) {
     DM               plexdm;
@@ -184,7 +183,7 @@ int main(int argc,char ** argv)
     ierr = DMNetworkGetSubnetwork(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
     ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] subnet %D: nv %D, ne %D\n",rank,net,nv,ne);CHKERRQ(ierr);
     ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
-    ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+    ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
 
     for (i=0; i<nv; i++) {
       ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[i],&ghost);CHKERRQ(ierr);
