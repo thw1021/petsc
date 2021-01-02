@@ -5,6 +5,7 @@
 */
 #include <../src/sys/classes/viewer/impls/vtk/vtkvimpl.h>
 
+#if !defined(PETSC_USE_COMPLEX)
 /* Helper function which determines if any DMDA fields are named.  This is used
    as a proxy for the user's intention to use DMDA fields as distinct
    scalar-valued fields as opposed to a single vector-valued field */
@@ -26,9 +27,14 @@ static PetscErrorCode DMDAGetFieldsNamed(DM da,PetscBool *fieldsnamed)
   }
   PetscFunctionReturn(0);
 }
+#endif
 
 static PetscErrorCode DMDAVTKWriteAll_VTS(DM da,PetscViewer viewer)
 {
+#if defined(PETSC_USE_COMPLEX)
+  PetscFunctionBegin;
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Complex values not supported");
+#else
   const char *byte_order = PetscBinaryBigEndian() ? "BigEndian" : "LittleEndian";
 #if defined(PETSC_USE_REAL_SINGLE)
   const char precision[] = "Float32";
@@ -51,9 +57,6 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da,PetscViewer viewer)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)da,&comm);CHKERRQ(ierr);
-#if defined(PETSC_USE_COMPLEX)
-  SETERRQ(comm,PETSC_ERR_SUP,"Complex values not supported");
-#endif
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = DMDAGetInfo(da,&dim,&mx,&my,&mz,NULL,NULL,NULL,&bs,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
@@ -258,11 +261,15 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da,PetscViewer viewer)
   ierr = PetscFPrintf(comm,fp,"</VTKFile>\n");CHKERRQ(ierr);
   ierr = PetscFClose(comm,fp);CHKERRQ(ierr);
   PetscFunctionReturn(0);
+#endif
 }
 
 
 static PetscErrorCode DMDAVTKWriteAll_VTR(DM da,PetscViewer viewer)
 {
+#if defined(PETSC_USE_COMPLEX)
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Complex values not supported");
+#else
   const char *byte_order = PetscBinaryBigEndian() ? "BigEndian" : "LittleEndian";
 #if defined(PETSC_USE_REAL_SINGLE)
   const char precision[] = "Float32";
@@ -284,9 +291,6 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da,PetscViewer viewer)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)da,&comm);CHKERRQ(ierr);
-#if defined(PETSC_USE_COMPLEX)
-  SETERRQ(comm,PETSC_ERR_SUP,"Complex values not supported");
-#endif
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = DMDAGetInfo(da,&dim,&mx,&my,&mz,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
@@ -506,6 +510,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da,PetscViewer viewer)
   ierr = PetscFPrintf(comm,fp,"</VTKFile>\n");CHKERRQ(ierr);
   ierr = PetscFClose(comm,fp);CHKERRQ(ierr);
   PetscFunctionReturn(0);
+#endif
 }
 
 /*@C

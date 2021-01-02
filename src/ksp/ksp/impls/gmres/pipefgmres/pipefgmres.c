@@ -22,8 +22,10 @@ static const char citation[] =
 #define PIPEFGMRES_DELTA_DIRECTIONS 10
 #define PIPEFGMRES_DEFAULT_MAXK     30
 
+#if (!defined(PETSC_USE_COMPLEX) || defined(PETSC_SKIP_COMPLEX))
 static PetscErrorCode KSPPIPEFGMRESGetNewVectors(KSP,PetscInt);
 static PetscErrorCode KSPPIPEFGMRESUpdateHessenberg(KSP,PetscInt,PetscBool*,PetscReal*);
+#endif
 static PetscErrorCode KSPPIPEFGMRESBuildSoln(PetscScalar*,Vec,Vec,KSP,PetscInt);
 extern PetscErrorCode KSPReset_PIPEFGMRES(KSP);
 
@@ -71,6 +73,7 @@ static PetscErrorCode KSPSetUp_PIPEFGMRES(KSP ksp)
   PetscFunctionReturn(0);
 }
 
+#if (!defined(PETSC_USE_COMPLEX) || defined(PETSC_SKIP_COMPLEX))
 /*
 
     KSPPIPEFGMRESCycle - Run pipefgmres, possibly with restart.  Return residual
@@ -88,8 +91,7 @@ static PetscErrorCode KSPSetUp_PIPEFGMRES(KSP ksp)
     the initial residual.
 
 
- */
-
+*/
 static PetscErrorCode KSPPIPEFGMRESCycle(PetscInt *itcount,KSP ksp)
 {
   KSP_PIPEFGMRES *pipefgmres = (KSP_PIPEFGMRES*)(ksp->data);
@@ -351,6 +353,7 @@ static PetscErrorCode KSPPIPEFGMRESCycle(PetscInt *itcount,KSP ksp)
 
   PetscFunctionReturn(0);
 }
+#endif
 
 /*
     KSPSolve_PIPEFGMRES - This routine applies the PIPEFGMRES method.
@@ -366,20 +369,20 @@ static PetscErrorCode KSPPIPEFGMRESCycle(PetscInt *itcount,KSP ksp)
 static PetscErrorCode KSPSolve_PIPEFGMRES(KSP ksp)
 {
   PetscErrorCode ierr;
+#if (!defined(PETSC_USE_COMPLEX) || defined(PETSC_SKIP_COMPLEX))
   PetscInt       its,itcount;
   KSP_PIPEFGMRES *pipefgmres    = (KSP_PIPEFGMRES*)ksp->data;
   PetscBool      guess_zero = ksp->guess_zero;
+#endif
 
   PetscFunctionBegin;
+  ierr = PetscCitationsRegister(citation,&cited);CHKERRQ(ierr);
 
   /* We have not checked these routines for use with complex numbers. The inner products
      are likely not defined correctly for that case */
 #if (defined(PETSC_USE_COMPLEX) && !defined(PETSC_SKIP_COMPLEX))
   SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"PIPEFGMRES has not been implemented for use with complex scalars");
-#endif
-
-  ierr = PetscCitationsRegister(citation,&cited);CHKERRQ(ierr);
-
+#else
   if (ksp->calc_sings && !pipefgmres->Rsvd) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ORDER,"Must call KSPSetComputeSingularValues() before KSPSetUp() is called");
   ierr     = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
   ksp->its = 0;
@@ -399,6 +402,7 @@ static PetscErrorCode KSPSolve_PIPEFGMRES(KSP ksp)
   }
   ksp->guess_zero = guess_zero; /* restore if user provided nonzero initial guess */
   PetscFunctionReturn(0);
+#endif
 }
 
 static PetscErrorCode KSPDestroy_PIPEFGMRES(KSP ksp)
@@ -462,7 +466,8 @@ static PetscErrorCode KSPPIPEFGMRESBuildSoln(PetscScalar *nrs,Vec vguess,Vec vde
   }
   PetscFunctionReturn(0);
 }
-
+ 
+#if (!defined(PETSC_USE_COMPLEX) || defined(PETSC_SKIP_COMPLEX))
 /*
 
     KSPPIPEFGMRESUpdateHessenberg - Do the scalar work for the orthogonalization.
@@ -554,6 +559,7 @@ static PetscErrorCode KSPPIPEFGMRESUpdateHessenberg(KSP ksp,PetscInt it,PetscBoo
   }
   PetscFunctionReturn(0);
 }
+#endif
 
 /*
    KSPBuildSolution_PIPEFGMRES
@@ -738,6 +744,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_PIPEFGMRES(KSP ksp)
   PetscFunctionReturn(0);
 }
 
+#if (!defined(PETSC_USE_COMPLEX) || defined(PETSC_SKIP_COMPLEX))
 static PetscErrorCode KSPPIPEFGMRESGetNewVectors(KSP ksp,PetscInt it)
 {
   KSP_PIPEFGMRES *pipefgmres = (KSP_PIPEFGMRES*)ksp->data;
@@ -785,6 +792,8 @@ static PetscErrorCode KSPPIPEFGMRESGetNewVectors(KSP ksp,PetscInt it)
   pipefgmres->nwork_alloc++;
   PetscFunctionReturn(0);
 }
+#endif
+
 /*@
   KSPPIPEFGMRESSetShift - Set the shift parameter for the flexible, pipelined GMRES solver.
 
