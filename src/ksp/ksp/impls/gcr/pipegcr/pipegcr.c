@@ -69,6 +69,11 @@ static PetscErrorCode KSPAllocateVectors_PIPEGCR(KSP ksp, PetscInt nvecsneeded, 
 
 static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
 {
+#if (defined(PETSC_USE_COMPLEX) && !defined(PETSC_SKIP_COMPLEX))
+  /* !!PS We have not checked these routines for use with complex numbers. The inner products
+     are likely not defined correctly for that case */
+  SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"PIPEGCR has not been implemented for use with complex scalars");
+#else
   KSP_PIPEGCR    *pipegcr = (KSP_PIPEGCR*)ksp->data;
   PetscErrorCode ierr;
   Mat            A, B;
@@ -78,13 +83,6 @@ static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
   PetscReal      rnorm=0.0, delta,*eta,*etas;
 
   PetscFunctionBegin;
-
-  /* !!PS We have not checked these routines for use with complex numbers. The inner products
-     are likely not defined correctly for that case */
-#if (defined(PETSC_USE_COMPLEX) && !defined(PETSC_SKIP_COMPLEX))
-  SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"PIPEGCR has not been implemented for use with complex scalars");
-#endif
-
   ierr = KSPGetOperators(ksp, &A, &B);CHKERRQ(ierr);
   x = ksp->vec_sol;
   b = ksp->vec_rhs;
@@ -271,6 +269,7 @@ static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
   } while (ksp->its < ksp->max_it);
   if (ksp->its >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
   PetscFunctionReturn(0);
+#endif
 }
 
 static PetscErrorCode KSPSolve_PIPEGCR(KSP ksp)
