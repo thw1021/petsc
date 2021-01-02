@@ -1059,6 +1059,9 @@ PetscErrorCode PetscSFLinkSetUp_CUDA(PetscSF sf,PetscSFLink link,MPI_Datatype un
   }
   link->maxResidentThreadsPerGPU = sf->maxResidentThreadsPerGPU;
 
+  link->root_stream = PetscDefaultCudaStream;
+  link->leaf_stream = PetscDefaultCudaStream;
+
   cerr = cudaEventCreate(&link->leaf_ready);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&link->root_ready);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&link->local_comm_end);CHKERRCUDA(cerr);

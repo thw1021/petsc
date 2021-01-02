@@ -5,6 +5,11 @@
 #include <petsc/private/petscimpl.h>        /*I  "petscsys.h"   I*/
 #include <petscvalgrind.h>
 #include <petscviewer.h>
+
+#if defined(PETSC_HAVE_CUDA)
+  #include <petsccublas.h>
+#endif
+
 #if defined(PETSC_USE_GCOV)
 EXTERN_C_BEGIN
 void  __gcov_flush(void);
@@ -1562,6 +1567,14 @@ PetscErrorCode  PetscFinalize(void)
     ierr = PetscNvshmemFinalize();CHKERRQ(ierr);
     PetscBeganNvshmem = PETSC_FALSE;
   }
+#endif
+
+#if defined(PETSC_HAVE_CUDA)
+  if (PetscDefaultCudaStream) {cudaError_t cerr = cudaStreamDestroy(PetscDefaultCudaStream);CHKERRCUDA(cerr);}
+#endif
+
+#if defined(PETSC_HAVE_HIP)
+  if (PetscDefaultHipStream)  {hipError_t cerr  = hipStreamDestroy(PetscDefaultHipStream);CHKERRHIP(cerr);}
 #endif
 
   ierr = PetscFreeMPIResources();CHKERRQ(ierr);

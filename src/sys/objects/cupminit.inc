@@ -3,6 +3,8 @@
 PetscBool PetscCUPMSynchronize     = PETSC_FALSE;
 PetscBool PetscCUPMInitialized     = PETSC_FALSE;
 
+cupmStream_t  PetscDefaultCupmStream = NULL;
+
 static PetscBool PetscNotUseCUPM   = PETSC_FALSE; /* Assert the code will not use this type of devices */
 
 /* Device validation after it is lazily initialized */
@@ -71,6 +73,7 @@ PetscErrorCode PetscCUPMInitializeCheck(void)
   int                   devId,devCount;
   PetscMPIInt           rank;
   static PetscBool      cupmValdidateChecked = PETSC_FALSE;
+  PetscBool             useNull = PETSC_FALSE; /* use the default (NULL) stream as petsc's default stream? */
 
   PetscFunctionBegin;
   if (PetscNotUseCUPM) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"You asserted the code wouldn't use devices with -device_set none, but now trying to create a device object. Remove this option or see manpage of PetscCUPMInitialize().");
@@ -93,6 +96,8 @@ PetscErrorCode PetscCUPMInitializeCheck(void)
         /* It implies user has initialized device runtime outside of petsc. We do nothing to respect the device choice. */
       }
     }
+    ierr = PetscOptionsGetBool(NULL,NULL,"-petsc_default_use_null_stream",&useNull,NULL);
+    if (!useNull) cerr = cupmStreamCreate(&PetscDefaultCupmStream);CHKERRCUPM(cerr);
     ierr = PetscCUPMBLASInitializeHandle();CHKERRQ(ierr);
     ierr = PetscCUPMSOLVERDnInitializeHandle();CHKERRQ(ierr);
     PetscCUPMInitialized = PETSC_TRUE;
@@ -195,6 +200,9 @@ PetscErrorCode PetscCUPMInitialize(MPI_Comm comm,PetscInt device)
 
     if (devCount > 0 && device != PETSC_NONE) {
       /* Do costly device handles initialization here to not to distort petsc logging later */
+      PetscBool useNull = PETSC_FALSE; /* use the default (NULL) stream as petsc's default stream? */
+      ierr = PetscOptionsGetBool(NULL,NULL,"-petsc_default_use_null_stream",&useNull,NULL);
+      if (!useNull) cerr = cupmStreamCreate(&PetscDefaultCupmStream);CHKERRCUPM(cerr);
       ierr = PetscCUPMBLASInitializeHandle();CHKERRQ(ierr);
       ierr = PetscCUPMSOLVERDnInitializeHandle();CHKERRQ(ierr);
       PetscCUPMInitialized = PETSC_TRUE;

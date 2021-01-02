@@ -93,9 +93,9 @@ static PetscErrorCode PetscSFSetUp_Basic_NVSHMEM(PetscSF sf)
   cerr = cudaMalloc((void**)&sf->rootsigdisp_d,nRemoteRootRanks*sizeof(PetscInt));CHKERRCUDA(cerr);
   cerr = cudaMalloc((void**)&sf->ranks_d,nRemoteRootRanks*sizeof(PetscMPIInt));CHKERRCUDA(cerr);
   cerr = cudaMalloc((void**)&sf->roffset_d,(nRemoteRootRanks+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
-  cerr = cudaMemcpyAsync(sf->rootsigdisp_d,sf->rootsigdisp,nRemoteRootRanks*sizeof(PetscInt),cudaMemcpyHostToDevice,NULL);CHKERRCUDA(cerr);
-  cerr = cudaMemcpyAsync(sf->ranks_d,sf->ranks+sf->ndranks,nRemoteRootRanks*sizeof(PetscMPIInt),cudaMemcpyHostToDevice,NULL);CHKERRCUDA(cerr);
-  cerr = cudaMemcpyAsync(sf->roffset_d,sf->roffset+sf->ndranks,(nRemoteRootRanks+1)*sizeof(PetscInt),cudaMemcpyHostToDevice,NULL);CHKERRCUDA(cerr);
+  cerr = cudaMemcpyAsync(sf->rootsigdisp_d,sf->rootsigdisp,nRemoteRootRanks*sizeof(PetscInt),cudaMemcpyHostToDevice,PetscDefaultCudaStream);CHKERRCUDA(cerr);
+  cerr = cudaMemcpyAsync(sf->ranks_d,sf->ranks+sf->ndranks,nRemoteRootRanks*sizeof(PetscMPIInt),cudaMemcpyHostToDevice,PetscDefaultCudaStream);CHKERRCUDA(cerr);
+  cerr = cudaMemcpyAsync(sf->roffset_d,sf->roffset+sf->ndranks,(nRemoteRootRanks+1)*sizeof(PetscInt),cudaMemcpyHostToDevice,PetscDefaultCudaStream);CHKERRCUDA(cerr);
 
   /* Leaf ranks to root ranks: send info about leafsigdisp[] and leafbufdisp[] */
   ierr = PetscMalloc2(nRemoteLeafRanks,&bas->leafsigdisp,nRemoteLeafRanks,&bas->leafbufdisp);CHKERRQ(ierr);
@@ -113,9 +113,9 @@ static PetscErrorCode PetscSFSetUp_Basic_NVSHMEM(PetscSF sf)
   cerr = cudaMalloc((void**)&bas->leafsigdisp_d,nRemoteLeafRanks*sizeof(PetscInt));CHKERRCUDA(cerr);
   cerr = cudaMalloc((void**)&bas->iranks_d,nRemoteLeafRanks*sizeof(PetscMPIInt));CHKERRCUDA(cerr);
   cerr = cudaMalloc((void**)&bas->ioffset_d,(nRemoteLeafRanks+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
-  cerr = cudaMemcpyAsync(bas->leafsigdisp_d,bas->leafsigdisp,nRemoteLeafRanks*sizeof(PetscInt),cudaMemcpyHostToDevice,NULL);CHKERRCUDA(cerr);
-  cerr = cudaMemcpyAsync(bas->iranks_d,bas->iranks+bas->ndiranks,nRemoteLeafRanks*sizeof(PetscMPIInt),cudaMemcpyHostToDevice,NULL);CHKERRCUDA(cerr);
-  cerr = cudaMemcpyAsync(bas->ioffset_d,bas->ioffset+bas->ndiranks,(nRemoteLeafRanks+1)*sizeof(PetscInt),cudaMemcpyHostToDevice,NULL);CHKERRCUDA(cerr);
+  cerr = cudaMemcpyAsync(bas->leafsigdisp_d,bas->leafsigdisp,nRemoteLeafRanks*sizeof(PetscInt),cudaMemcpyHostToDevice,PetscDefaultCudaStream);CHKERRCUDA(cerr);
+  cerr = cudaMemcpyAsync(bas->iranks_d,bas->iranks+bas->ndiranks,nRemoteLeafRanks*sizeof(PetscMPIInt),cudaMemcpyHostToDevice,PetscDefaultCudaStream);CHKERRCUDA(cerr);
+  cerr = cudaMemcpyAsync(bas->ioffset_d,bas->ioffset+bas->ndiranks,(nRemoteLeafRanks+1)*sizeof(PetscInt),cudaMemcpyHostToDevice,PetscDefaultCudaStream);CHKERRCUDA(cerr);
 
   ierr = PetscFree2(rootreqs,leafreqs);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -699,64 +699,64 @@ template<typename RealType> __global__ static void CudaSqrt(RealType *a) {a[0] =
 PetscErrorCode PetscNvshmemNorm2(float *alpha)
 {
   PetscFunctionBegin;
-  CudaSqr<<<1,1>>>(alpha);
-  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL/*stream*/);
-  CudaSqrt<<<1,1>>>(alpha);
+  CudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(alpha);
+  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
+  CudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(alpha);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscNvshmemSum(float *alpha)
 {
   PetscFunctionBegin;
-  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
+  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscNvshmemMax(float *alpha)
 {
   PetscFunctionBegin;
-  nvshmemx_float_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
+  nvshmemx_float_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscNvshmemNorm1And2(float *alpha)
 {
   PetscFunctionBegin;
-  CudaSqr<<<1,1>>>(&alpha[1]);
-  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,2,NULL);
-  CudaSqrt<<<1,1>>>(&alpha[1]);
+  CudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(&alpha[1]);
+  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,2,PetscDefaultCudaStream);
+  CudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(&alpha[1]);
   PetscFunctionReturn(0);
 }
 #elif defined(PETSC_USE_REAL_DOUBLE)
 PetscErrorCode PetscNvshmemNorm2(double *alpha)
 {
   PetscFunctionBegin;
-  CudaSqr<<<1,1>>>(alpha);
-  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
-  CudaSqrt<<<1,1>>>(alpha);
+  CudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(alpha);
+  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
+  CudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(alpha);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscNvshmemSum(double *alpha)
 {
   PetscFunctionBegin;
-  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
+  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscNvshmemMax(double *alpha)
 {
   PetscFunctionBegin;
-  nvshmemx_double_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,NULL);
+  nvshmemx_double_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscNvshmemNorm1And2(double *alpha)
 {
   PetscFunctionBegin;
-  CudaSqr<<<1,1>>>(&alpha[1]);
-  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,2,NULL);
-  CudaSqrt<<<1,1>>>(&alpha[1]);
+  CudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(&alpha[1]);
+  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,2,PetscDefaultCudaStream);
+  CudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(&alpha[1]);
   PetscFunctionReturn(0);
 }
 #endif

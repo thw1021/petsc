@@ -2394,7 +2394,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
                          VecCUDAPlusEquals());
        #else
         PetscInt n = matstruct->cprowIndices->size();
-        ScatterAdd<<<(n+255)/256,256,0,cusparsestruct->stream>>>(n,matstruct->cprowIndices->data().get(),cusparsestruct->workVector->data().get(),zarray);
+        ScatterAdd<<<(n+255)/256,256,0,PetscDefaultCudaStream>>>(n,matstruct->cprowIndices->data().get(),cusparsestruct->workVector->data().get(),zarray);
        #endif
         cerr = WaitForCUDA();CHKERRCUDA(cerr);
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
@@ -2665,6 +2665,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUSPARSE(Mat A, MatType mtyp
       ierr = PetscNew(&spptr);CHKERRQ(ierr);
       spptr->format = MAT_CUSPARSE_CSR;
       stat = cusparseCreate(&spptr->handle);CHKERRCUSPARSE(stat);
+      stat = cusparseSetStream(spptr->handle,PetscDefaultCudaStream);CHKERRCUSPARSE(stat);
       B->spptr = spptr;
       spptr->deviceMat = NULL;
     } else {
@@ -2672,6 +2673,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUSPARSE(Mat A, MatType mtyp
 
       ierr = PetscNew(&spptr);CHKERRQ(ierr);
       stat = cusparseCreate(&spptr->handle);CHKERRCUSPARSE(stat);
+      stat = cusparseSetStream(spptr->handle,PetscDefaultCudaStream);CHKERRCUSPARSE(stat);
       B->spptr = spptr;
     }
     B->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
