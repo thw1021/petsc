@@ -29,6 +29,7 @@ PetscErrorCode VecCUDAAllocateCheck(Vec v)
   PetscBool      option_set;
 
   PetscFunctionBegin;
+  if (!v->stream) {ierr = PetscStreamCreate(&v->stream);CHKERRQ(ierr);}
   if (!v->spptr) {
     PetscReal pinned_memory_min;
     ierr = PetscMalloc(sizeof(Vec_CUDA),&v->spptr);CHKERRQ(ierr);

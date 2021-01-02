@@ -10,17 +10,18 @@ PetscErrorCode PetscStreamCreate(PetscStream *strm)
   /* Setting to null taken from VecCreate(), why though? */
   *strm = NULL;
   ierr = PetscNew(&s);CHKERRQ(ierr);
-  s->setup = PETSC_FALSE;
 #if PetscDefined(HAVE_CUDA)
-    s->cstream = NULL;
+  s->cstream = NULL;
+  s->cevent = NULL;
 #if PetscDefined(USE_DEBUG)
-    s->gotCUDA = PETSC_FALSE;
+  s->gotCUDA = PETSC_FALSE;
 #endif
 #endif
 #if PetscDefined(HAVE_HIP)
-    s->hstream = NULL;
+  s->hstream = NULL;
+  s->hevent = NULL;
 #if PetscDefined(USE_DEBUG)
-    s->gotHIP  = PETSC_FALSE;
+  s->gotHIP  = PETSC_FALSE;
 #endif
 #endif
   s->mode = PETSC_STREAM_DEFAULT_BLOCKING;
@@ -37,72 +38,37 @@ PetscErrorCode PetscStreamDestroy(PetscStream *strm)
   PetscValidPointer(strm,1);
 #if PetscDefined(HAVE_CUDA)
 #if PetscDefined(USE_DEBUG)
-  if (PetscUnlikelyDebug((*strm)->gotCUDA)) {
+  if (PetscUnlikely((*strm)->gotCUDA)) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"CUDA stream object is checked out. Restore it via PetscSctreamRestoreStream() before destroying\n");
   }
 #endif
-  if ((*strm)->cstream) {
+  {
     cudaError_t cerr;
-    cerr = cudaStreamDestroy((*strm)->cstream);CHKERRCUDA(cerr);
+
+    if ((*strm)->cstream) {cerr = cudaStreamDestroy((*strm)->cstream);CHKERRCUDA(cerr);}
+    if ((*strm)->cevent)  {cerr = cudaEventDestroy((*strm)->cevent);CHKERRCUDA(cerr);}
   }
 #endif
 #if PetscDefined(HAVE_HIP)
 #if PetscDefined(USE_DEBUG)
-  if (PetscUnlikelyDebug((*strm)->gotHIP)) {
+  if (PetscUnlikely((*strm)->gotHIP)) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"HIP stream object is checked out. Restore it via PetscSctreamRestoreStream() before destroying\n");
   }
 #endif
-  if ((*strm)->hstream) {
+  {
     hipError_t herr;
-    herr = hipStreamDestroy((*strm)->hstream);CHKERRHIP(herr);
+
+    if ((*strm)->hstream) {herr = hipStreamDestroy((*strm)->hstream);CHKERRHIP(herr);}
+    if ((*strm)->hevent)  {herr = hipEventDestroy((*strm)->hevent);CHKERRHIP(herr);}
   }
 #endif
   ierr = PetscFree(*strm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamSetup(PetscStream strm)
-{
-#if defined(PETSC_HAVE_CUDA)
-  //cudaError_t cerr;
-#endif
-#if defined(PETSC_HAVE_HIP)
-  //hipError_t  herr;
-#endif
-
-  PetscFunctionBegin;
-  #if 0
-  if (PetscDefined(HAVE_DEVICE)) {
-    switch (strm->mode) {
-    case PETSC_STREAM_GLOBAL_BLOCKING:
-      /* NULL stream always blocks */
-      break;
-    case PETSC_STREAM_DEFAULT_BLOCKING:
-      if (PetscDefined(HAVE_CUDA)) {cerr = cudaStreamCreate(&strm->cstream);CHKERRCUDA(cerr);}
-      if (PetscDefined(HAVE_HIP)) {herr = hipStreamCreate(&strm->hstream);CHKERRHIP(herr);}
-      break;
-    case PETSC_STREAM_GLOBAL_NONBLOCKING:
-      if (PetscDefined(HAVE_CUDA)) {
-        cerr = cudaStreamCreateWithFlags(&strm->cstream, cudaStreamNonBlocking);CHKERRCUDA(cerr);
-      }
-      if (PetscDefined(HAVE_HIP)) {
-        herr = hipStreamCreateWithFlags(&strm->hstream, hipStreamNonBlocking);CHKERRHIP(herr);
-      }
-      break;
-    default:
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
-      break;
-    }
-  }
-#endif
-  strm->setup = PETSC_TRUE;
-  PetscFunctionReturn(0);
-}
-
 PetscErrorCode PetscStreamSetMode(PetscStream strm, PetscStreamMode mode)
 {
   PetscFunctionBegin;
-  if (PetscUnlikely(strm->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscStreamSetup() has already been called\n");
   strm->mode = mode;
   PetscFunctionReturn(0);
 }
@@ -115,15 +81,86 @@ PetscErrorCode PetscStreamGetMode(PetscStream strm, PetscStreamMode *mode)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamGetStream(PetscStream strm, PetscStreamType type, void *dstrm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamSetupHIP_Private(PetscStream strm)
 {
-  PetscErrorCode  ierr;
+  PetscFunctionBegin;
+  switch (strm->mode) {
+#if PetscDefined(HAVE_HIP)
+    hipError_t herr;
+#endif
+  case PETSC_STREAM_GLOBAL_BLOCKING:
+    /* NULL stream always blocks */
+    break;
+  case PETSC_STREAM_DEFAULT_BLOCKING:
+#if PetscDefined(HAVE_HIP)
+    if (!(strm->hstream)) {herr = hipStreamCreate(&strm->hstream);CHKERRHIP(herr);}
+    if (!(strm->hevent))  {herr = hipEventCreate(&strm->hevent);CHKERRHIP(herr);}
+#endif
+    break;
+  case PETSC_STREAM_GLOBAL_NONBLOCKING:
+#if PetscDefined(HAVE_HIP)
+    if (!(strm->hstream)) {
+      herr = hipStreamCreateWithFlags(&strm->hstream, hipStreamNonBlocking);CHKERRHIP(herr);
+    }
+    if (!(strm->hevent))  {herr = hipEventCreate(&strm->hevent);CHKERRHIP(herr);}
+#endif
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamSetupCUDA_Private(PetscStream strm)
+{
+  PetscFunctionBegin;
+  switch (strm->mode) {
+#if PetscDefined(HAVE_CUDA)
+    cudaError_t cerr;
+#endif
+  case PETSC_STREAM_GLOBAL_BLOCKING:
+    /* NULL stream always blocks */
+    break;
+  case PETSC_STREAM_DEFAULT_BLOCKING:
+#if PetscDefined(HAVE_CUDA)
+    if (!(strm->cstream)) {cerr = cudaStreamCreate(&strm->cstream);CHKERRCUDA(cerr);}
+    if (!(strm->cevent))  {cerr = cudaEventCreate(&strm->cevent);CHKERRCUDA(cerr);}
+#endif
+    break;
+  case PETSC_STREAM_GLOBAL_NONBLOCKING:
+#if PetscDefined(HAVE_CUDA)
+    if (!(strm->cstream)) {
+      cerr = cudaStreamCreateWithFlags(&strm->cstream, cudaStreamNonBlocking);CHKERRCUDA(cerr);
+    }
+    if (!(strm->cevent))  {cerr = cudaEventCreate(&strm->cevent);CHKERRCUDA(cerr);}
+#endif
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamSetup_Private(PetscStream strm)
+{
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = PetscStreamSetupCUDA_Private(strm);CHKERRQ(ierr);
+  ierr = PetscStreamSetupHIP_Private(strm);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamGetStream(PetscStream strm, PetscStreamType type, void *dstrm)
+{
+  PetscFunctionBegin;
   PetscValidPointer(dstrm,3);
-  ierr = PetscStreamSetup(strm);CHKERRQ(ierr);
   switch (type) {
+    PetscErrorCode ierr;
   case PETSC_STREAM_CUDA:
+    ierr = PetscStreamSetupCUDA_Private(strm);CHKERRQ(ierr);
 #if PetscDefined(HAVE_CUDA)
 #if PetscDefined(USE_DEBUG)
     if (PetscUnlikely(strm->gotCUDA)) {
@@ -135,6 +172,7 @@ PetscErrorCode PetscStreamGetStream(PetscStream strm, PetscStreamType type, void
 #endif
     break;
   case PETSC_STREAM_HIP:
+    ierr = PetscStreamSetupHIP_Private(strm);CHKERRQ(ierr);
 #if PetscDefined(HAVE_HIP)
 #if PetscDefined(USE_CUDA)
     if (PetscUnlikely(strm->gotHIP)) {
@@ -143,7 +181,6 @@ PetscErrorCode PetscStreamGetStream(PetscStream strm, PetscStreamType type, void
     strm->gotHIP = PETSC_TRUE;
 #endif
     *((hipStream_t*) dstrm) = strm->hstream;
-
 #endif
     break;
   default:
@@ -203,19 +240,25 @@ PetscErrorCode PetscStreamRestoreStream(PetscStream strm, PetscStreamType type, 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamSynchronize(PetscStream strm)
+PetscErrorCode PetscStreamSynchronizeBegin(PetscStream strm, PetscStreamType type, void *dstrm)
 {
-#if defined(PETSC_HAVE_CUDA)
-  cudaError_t     cerr;
-#endif
-#if defined(PETSC_HAVE_HIP)
-  hipError_t      herr;
-#endif
-  PetscErrorCode  ierr;
-
   PetscFunctionBegin;
-  ierr = PetscStreamSetup(strm);CHKERRQ(ierr);
+#error TODO, make begin record event, and end wait on event
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamSynchronizeHost(PetscStream strm)
+{
+  PetscFunctionBegin;
   switch (strm->mode) {
+#if PetscDefined(HAVE_CUDA)
+    cudaError_t     cerr;
+#endif
+#if PetscDefined(HAVE_HIP)
+    hipError_t      herr;
+#endif
+    PetscErrorCode  ierr;
+
   case PETSC_STREAM_GLOBAL_BLOCKING:
 #if PetscDefined(HAVE_CUDA)
     cerr = cudaDeviceSynchronize();CHKERRCUDA(cerr);
@@ -227,15 +270,57 @@ PetscErrorCode PetscStreamSynchronize(PetscStream strm)
     break;
   case PETSC_STREAM_DEFAULT_BLOCKING:
   case PETSC_STREAM_GLOBAL_NONBLOCKING:
+    ierr = PetscStreamSetup_Private(strm);CHKERRQ(ierr);
 #if PetscDefined(HAVE_CUDA)
     cerr = cudaStreamSynchronize(strm->cstream);CHKERRCUDA(cerr);
+    cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
+    strm->cstream = NULL;
 #endif
 #if PetscDefined(HAVE_HIP) && !PetscDefined(HAVE_CUDA)
     herr = hipStreamSynchronize(strm->hstream);CHKERRHIP(herr);
+    herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
+    strm->hstream = NULL;
 #endif
     break;
   default:
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamSynchronizeDevice(PetscStream strm, PetscStreamType type, void *event)
+{
+  PetscFunctionBegin;
+  if (event) {PetscValidPointer(event,3);}
+  switch (type) {
+#if PetscDefined(HAVE_CUDA)
+    cudaError_t     cerr;
+#endif
+#if PetscDefined(HAVE_HIP)
+    hipError_t      herr;
+#endif
+    PetscErrorCode  ierr;
+
+  case PETSC_STREAM_CUDA:
+#if PetscDefined(HAVE_CUDA)
+    ierr = PetscStreamSetupCUDA_Private(strm);CHKERRQ(ierr);
+    cerr = cudaEventRecord(event ? *((cudaEvent_t*) event) : strm->cevent, )
+    cerr = cudaStreamWaitEvent(strm->cstream, event ? *((cudaEvent_t*) event) : strm->cevent, 0);CHKERRCUDA(cerr);
+    cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
+    strm->cstream = NULL;
+#endif
+    break;
+  case PETSC_STREAM_HIP:
+#if PetscDefined(HAVE_HIP)
+    ierr = PetscStreamSetupHIP_Private(strm);CHKERRQ(ierr);
+    herr = hipStreamWaitEvent(strm->hstream, event ? *((hipEvent_t*) event) : strm->hevent, 0);CHKERRHIP(herr);
+    herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
+    strm->hstream = NULL;
+#endif
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscStreamType in argument 2\n");
     break;
   }
   PetscFunctionReturn(0);
