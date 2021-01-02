@@ -15,8 +15,8 @@ int main(int argc,char ** argv)
   PetscScalar    val;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   /* Create a network of subnetworks */
   if (size == 1) Nsubnet = 2;
@@ -130,7 +130,6 @@ int main(int argc,char ** argv)
   ierr = VecAssemblyBegin(X);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(X);CHKERRQ(ierr);
   ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
 
   /* Free work space */
   ierr = VecDestroy(&X);CHKERRQ(ierr);
