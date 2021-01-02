@@ -176,4 +176,10 @@ class Configure(config.package.Package):
         self.addMakeMacro('CUDA_CXXFLAGS',self.setCompilers.CUDA_CXXFLAGS)
       else:
         self.logPrint('No CUDA_CXXFLAGS available')
+
+      # Intel compiler environment breaks GNU compilers, fix it just enough to allow g++ to run
+      if self.underlying_compiler == 'gcc' and config.setCompilers.Configure.isIntel(self.compilers.CXX,self.log):
+        self.logPrint('''Removing Intel's CPLUS_INCLUDE_PATH when using nvcc since it breaks g++''')
+        self.delMakeMacro('CUDAC')
+        self.addMakeMacro('CUDAC','CPLUS_INCLUDE_PATH="" '+petscNvcc)
     return
