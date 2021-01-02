@@ -76,7 +76,7 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt nsubnet,PetscInt Nsubnet)
 
   if (Nsubnet == PETSC_DECIDE) {
     if (nsubnet < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Number of local subnetworks %D cannot be less than 0",nsubnet);
-    ierr = MPIU_Allreduce(&nsubnet,&Nsubnet,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&nsubnet,&Nsubnet,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
   }
   if (Nsubnet < 1) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Number of global subnetworks %D cannot be less than 1",Nsubnet);
 
@@ -139,7 +139,7 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscIn
 
   /* Get global number of vertices and edges for subnet[i] */
   a[0] = nv; a[1] = ne;
-  ierr = MPIU_Allreduce(a,b,2,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(a,b,2,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
   network->subnet[i].Nvtx  = b[0];
   network->subnet[i].Nedge = b[1];
 
@@ -227,15 +227,10 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
   PetscTable     *svtas;
   PetscInt       gidx,net,idx,i,nta,ita,idx_from,idx_to,n,*sv_wk;
   DM_Network     *network = (DM_Network*)dm->data;
-  MPI_Comm       comm;
-  PetscMPIInt    rank;
   PetscTablePosition ppos;
 
   PetscFunctionBegin;
   /* (1) Crete ctables svtas */
-  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-
   ierr = PetscCalloc4(Nsedgelist,&svtas,Nsedgelist,&tdata,4*Nsedgelist,&sv_wk,2*Nsedgelist,&ta2sv);CHKERRQ(ierr);
 
   k   = 0;   /* sedgelist vertex counter j = 4*k */
@@ -282,7 +277,6 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
           gidx = network->subnet[net].vStart + idx;
           ierr = PetscTableAdd(svtas[ita],gidx+1,tdata[ita]+1,INSERT_VALUES);CHKERRQ(ierr);
           *(ta2sv[ita] + tdata[ita]) = i;
-          /* if (!rank) printf("  add gidx %d tdata[%d]=%d to svtas[%d]\n",gidx,ita,tdata[ita],ita); */
           tdata[ita]++; i++;
           break;
         } else if (idx_to < 0) {
@@ -291,7 +285,6 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
           gidx = network->subnet[net].vStart + idx;
           ierr = PetscTableAdd(svtas[ita],gidx+1,tdata[ita]+1,INSERT_VALUES);CHKERRQ(ierr);
           *(ta2sv[ita] + tdata[ita]) = i; /* maps tdata to index of sv_wk */
-          /* if (!rank) printf("  add gidx %d tdata[%d]=%d to svtas[%d]\n",gidx,ita,tdata[ita],ita); */
           tdata[ita]++; i++;
           break;
         }
@@ -299,7 +292,6 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
     }
 
     if (ita == nta) {
-      /* if (!rank) printf("nta %d, both vfrom and vto are not on the sv-tables, create a new table\n",nta); */
       ierr = PetscTableCreate(2*Nsedgelist,network->NVertices+1,&svtas[nta]);CHKERRQ(ierr);
       ierr = PetscMalloc1(2*Nsedgelist, &ta2sv[nta]);CHKERRQ(ierr);
 
@@ -307,7 +299,7 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
       idx = sv_wk[2*i+1] = sedgelist[k+1];
       gidx = network->subnet[net].vStart + idx;
       ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
-      /* if (!rank) printf("add gidx %d to %d-th data of svtas[%d]; net[%d].%d\n",gidx,tdata[nta],nta,net,idx); */
+
       *(ta2sv[nta] + tdata[nta]) = i;
       tdata[nta]++; i++;
 
@@ -316,7 +308,6 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
       gidx = network->subnet[net].vStart + idx;
       ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
       *(ta2sv[nta] + tdata[nta]) = i; /* maps tdata to index of sv_wk */
-      /* if (!rank) printf("add gidx %d to %d-th data of svtas[%d]; net[%d].%d\n",gidx,tdata[nta],nta,net,idx); */
       tdata[nta]++; i++;
 
       nta++;
@@ -344,7 +335,6 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
       j = ta2sv[nsv][i]; /* maps i to index of sv_wk */
       sv[2*k]   = sv_wk[2*j];
       sv[2*k+1] = sv_wk[2*j + 1];
-      /* if (!rank) printf("  %d -- key %d, data %d; net[%d].%d\n",k,gidx,i,sv[2*k],sv[2*k+1]); */
     }
   }
 
@@ -396,7 +386,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   for (i=0; i<size; i++) {displs[i] = i; recvcounts[i] = 1;}
 
   vrange[0] = 0;
-  ierr = MPI_Allgatherv(&network->nVertices,1,MPIU_INT,vrange+1,recvcounts,displs,MPIU_INT,comm);CHKERRQ(ierr);
+  ierr = MPI_Allgatherv(&network->nVertices,1,MPIU_INT,vrange+1,recvcounts,displs,MPIU_INT,comm);CHKERRMPI(ierr);
   for (i=2; i<size+1; i++) {
     vrange[i] += vrange[i-1];
   }
@@ -444,7 +434,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   }
 
   /* (2.4) Shared vertices in the subnetworks are merged, update global NVertices: np = sum(local nmerged) */
-  ierr = MPI_Allreduce(&nmerged,&np,1,MPIU_INT,MPI_SUM,comm);CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&nmerged,&np,1,MPIU_INT,MPI_SUM,comm);CHKERRMPI(ierr);
   network->NVertices -= np;
 
   ierr = PetscCalloc1(2*network->nEdges,&edges);CHKERRQ(ierr);
@@ -514,7 +504,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 
   /* Get edge ownership */
   np = network->eEnd - network->eStart; /* num of local edges */
-  ierr = MPI_Allgather(&np,1,MPIU_INT,eowners+1,1,MPIU_INT,comm);CHKERRQ(ierr);
+  ierr = MPI_Allgather(&np,1,MPIU_INT,eowners+1,1,MPIU_INT,comm);CHKERRMPI(ierr);
   eowners[0] = 0;
   for (i=2; i<=size; i++) eowners[i] += eowners[i-1];
 
@@ -1482,13 +1472,6 @@ PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt co
   PetscBool                sharedv=PETSC_FALSE;
 
   PetscFunctionBegin;
-#if 0
-  PetscMPIInt rank;
-  MPI_Comm    comm;
-  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-#endif
-
   if (!compvalue) {
     ierr = DMNetworkAddNumVariables(dm,p,nvar);CHKERRQ(ierr);
     PetscFunctionReturn(0);
@@ -1572,7 +1555,7 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   PetscErrorCode           ierr;
   DM_Network               *network = (DM_Network*)dm->data;
   PetscInt                 arr_size,p,offset,offsetp,ncomp,i;
-   MPI_Comm                comm;
+  MPI_Comm                 comm;
   PetscMPIInt              size,rank;
   DMNetworkComponentHeader header;
   DMNetworkComponentValue  cvalue;
@@ -1580,8 +1563,8 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 #if 0
   //------------- new
   if (size > 1) { /* Sync nvar at shared vertices for all processes */
@@ -1652,12 +1635,11 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
   MPI_Comm       comm;
-  PetscMPIInt    size,rank;
+  PetscMPIInt    size;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
 
   if (size > 1) { /* Sync nvar at shared vertices for all processes */
     PetscSF           sf = network->plex->sf;
@@ -1868,10 +1850,6 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   if (size == 1) PetscFunctionReturn(0);
 
   /* This routine moves the component data to the appropriate processors. It makes use of the DataSection and the componentdataarray to move the component data to appropriate processors and returns a new DataSection and new componentdataarray. */
-#if 0
-  PetscMPIInt rank;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-#endif
   ierr = DMNetworkCreate(PetscObjectComm((PetscObject)*dm),&newDM);CHKERRQ(ierr);
   newDMnetwork = (DM_Network*)newDM->data;
   newDMnetwork->dataheadersize = sizeof(struct _p_DMNetworkComponentHeader)/sizeof(DMNetworkComponentGenericDataType);
