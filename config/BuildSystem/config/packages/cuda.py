@@ -31,9 +31,9 @@ class Configure(config.package.Package):
     if hasattr(self,'gencodearch'):
       output += '  CUDA SM '+self.gencodearch+'\n'
     if hasattr(self.setCompilers,'CUDA_CXX'):
-      output += '  CUDA underlying compiler ' + self.setCompilers.CUDA_CXX'\n'
+      output += '  CUDA underlying compiler: CUDA_CXX ' + self.setCompilers.CUDA_CXX + '\n'
     if hasattr(self.setCompilers,'CUDA_CXXFLAGS'):
-      output += '  CUDA underlying compiler flags ' + self.setCompilers.CUDA_CXXFLAGS'\n'
+      output += '  CUDA underlying compiler flags: CUDA_CXXFLAGS ' + self.setCompilers.CUDA_CXXFLAGS + '\n'
     return output
 
   def setupDependencies(self, framework):
@@ -179,8 +179,10 @@ class Configure(config.package.Package):
         self.logPrint('No CUDA_CXXFLAGS available')
 
       # Intel compiler environment breaks GNU compilers, fix it just enough to allow g++ to run
-      if self.cuda_cxx == 'gcc' and config.setCompilers.Configure.isIntel(self.compilers.CXX,self.log):
+      if self.setCompilers.CUDA_CXX == 'gcc' and config.setCompilers.Configure.isIntel(self.compilers.CXX,self.log):
         self.logPrint('''Removing Intel's CPLUS_INCLUDE_PATH when using nvcc since it breaks g++''')
         self.delMakeMacro('CUDAC')
         self.addMakeMacro('CUDAC','CPLUS_INCLUDE_PATH="" '+petscNvcc)
+    else:
+      self.logPrint('nvcc --dryrun failed, unable to determine CUDA_CXX and CUDA_CXXFLAGS') 
     return
