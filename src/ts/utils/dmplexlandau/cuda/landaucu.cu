@@ -12,6 +12,7 @@
 // hack to avoid configure problems in CI. Delete when resolved
 #if !defined (PETSC_HAVE_CUDA_ATOMIC)
 #define atomicAdd(e, f) (*e) += f
+#error
 #endif
 #define PETSC_DEVICE_FUNC_DECL __device__
 #include "../land_tensors.h"
@@ -432,7 +433,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
                                   const LandauIPData *const IPData, const PetscReal invJj[], const PetscLogEvent events[], Mat JacP)
 {
   PetscErrorCode    ierr,*d_ierr;
-  //cudaError_t       cerr;
+  cudaError_t       cerr;
   PetscInt          ii,ej,*Nbf,Nb,nip_dim2,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(LandauIPReal),ipdatasz;
   PetscReal         *d_BB,*d_DD,*d_invJj,*d_nu_alpha,*d_nu_beta,*d_invMass,*d_Eq_m;
   PetscScalar       *d_elemMats=NULL;
@@ -495,10 +496,11 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   nip_dim2 = Nq*numGCells*dim*dim;
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_invJj, nip_dim2*szf)); // kernel input
   CUDA_SAFE_CALL(cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice));
-  //cerr = WaitForCUDA();CHKERRCUDA(cerr);
+  cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
 
   ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
+  ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(flops*nip);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
@@ -558,7 +560,8 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
     CHKERRQ(ierr);
   }
   CUDA_SAFE_CALL(cudaFree(d_ierr));
-  //cerr = WaitForCUDA();CHKERRCUDA(cerr);
+  cerr = WaitForCUDA();CHKERRCUDA(cerr);
+  ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
   // delete device data
   ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
@@ -576,7 +579,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
 #if LANDAU_DIM==3
   CUDA_SAFE_CALL(cudaFree(d_dfdz));
 #endif
-  //cerr = WaitForCUDA();CHKERRCUDA(cerr);
+  cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
   // First time assembly even with GPU assembly
   if (d_elemMats) {
