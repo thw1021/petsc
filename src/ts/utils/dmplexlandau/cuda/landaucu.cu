@@ -587,7 +587,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   if (mass_w) {
     CUDA_SAFE_CALL(cudaFree(d_mass_w));
   } else {
-    CUDA_SAFE_CALL(cudaFree(d_IPDataRaw));  
+    CUDA_SAFE_CALL(cudaFree(d_IPDataRaw));
     CUDA_SAFE_CALL(cudaFree(d_f));
     CUDA_SAFE_CALL(cudaFree(d_dfdx));
     CUDA_SAFE_CALL(cudaFree(d_dfdy));
