@@ -578,7 +578,7 @@ PetscErrorCode TSAdjointEventHandler(TS ts)
   Input Argument:
 + ts- the time-step integrator object
 
-  Output parameters:
+  Output parameter:
 . nevents - Number of events
 
   Level: Intermediate
