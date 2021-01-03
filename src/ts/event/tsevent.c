@@ -582,6 +582,8 @@ PetscErrorCode TSAdjointEventHandler(TS ts)
 . nevents - Number of events
 
   Level: Intermediate
+.seealso:   TSSetEventHandler(), 
+
 @*/
 PetscErrorCode TSGetNumEvents(TS ts,PetscInt * nevents)
 {
