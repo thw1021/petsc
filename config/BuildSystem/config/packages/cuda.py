@@ -30,8 +30,10 @@ class Configure(config.package.Package):
     output  = config.package.Package.__str__(self)
     if hasattr(self,'gencodearch'):
       output += '  CUDA SM '+self.gencodearch+'\n'
-    if hasattr(self,'underlying_compiler'):
-      output += '  CUDA underlying compiler ' + self.underlying_compiler+'\n'
+    if hasattr(self.setCompilers.,'CUDA_CXX'):
+      output += '  CUDA underlying compiler ' + self.setCompilers.CUDA_CXX'\n'
+    if hasattr(self.setCompilers.,'CUDA_CXXFLAGS'):
+      output += '  CUDA underlying compiler flags ' + self.setCompilers.CUDA_CXXFLAGS'\n'
     return output
 
   def setupDependencies(self, framework):
@@ -153,7 +155,7 @@ class Configure(config.package.Package):
     # determine the compiler used by nvcc
     (out, err, ret) = Configure.executeShellCommand(petscNvcc + ' ' + self.setCompilers.CUDAFLAGS + ' --dryrun dummy.cu 2>&1 | grep D__CUDACC__ | head -1 | cut -f2 -d" "')
     if out:
-      self.underlying_compiler = out
+      self.setCompilers.CUDA_CXX = out
       self.setCompilers.CUDA_CXXFLAGS = ''
       self.logPrint('Determined the compiler nvcc uses is ' + out);
       self.logPrint('PETSc C compiler '+self.compilers.CC)
@@ -161,8 +163,7 @@ class Configure(config.package.Package):
 
       # TODO: How to handle MPI compiler wrapper as opposed to its underlying compiler
       if out == self.compilers.CC or out == self.compilers.CXX:
-        # nvcc will say it is using gcc as its compiler, which seems odd since I thought
-        # it needs a C++ compiler as the backend. Does it mean it uses gcc as a C++ compiler?
+        # nvcc will say it is using gcc as its compiler, it pass a flag when using to treat it as a C++ compiler
         self.setCompilers.CUDA_CXXFLAGS = self.setCompilers.CPPFLAGS+' '+self.setCompilers.CFLAGS
         self.setCompilers.CUDA_CXXFLAGS += self.setCompilers.CXXPPFLAGS+' '+self.setCompilers.CXXFLAGS
       else:
@@ -178,7 +179,7 @@ class Configure(config.package.Package):
         self.logPrint('No CUDA_CXXFLAGS available')
 
       # Intel compiler environment breaks GNU compilers, fix it just enough to allow g++ to run
-      if self.underlying_compiler == 'gcc' and config.setCompilers.Configure.isIntel(self.compilers.CXX,self.log):
+      if self.cuda_cxx == 'gcc' and config.setCompilers.Configure.isIntel(self.compilers.CXX,self.log):
         self.logPrint('''Removing Intel's CPLUS_INCLUDE_PATH when using nvcc since it breaks g++''')
         self.delMakeMacro('CUDAC')
         self.addMakeMacro('CUDAC','CPLUS_INCLUDE_PATH="" '+petscNvcc)
