@@ -290,11 +290,17 @@ cdef class Vec(Object):
         return self
 
     def createWithDLPack(self, object dltensor, size=None, bsize=None, comm=None):
-        """Create a PETSc vector from a DLPack object sharing the same memory.
-           This operation does not modify the storage of the original tensor
-           and should be used with contiguous tensors only. If the tensor is
-           stored in row-major order (e.g. PyTorch tensors), the resulting
-           vector will look like an unrolled tensor using row-major order.
+        """
+        Returns an instance :class:`Vec`, a PETSc vector from a DLPack object
+        sharing the same memory.
+        This operation does not modify the storage of the original tensor and
+        should be used with contiguous tensors only. If the tensor is stored in
+        row-major order (e.g. PyTorch tensors), the resulting vector will look
+        like an unrolled tensor using row-major order.
+
+        :arg dltensor: A DLPack tensor object
+        :arg size: A :class:`int` denoting the size of the Vec.
+        :arg bsize: A :class:`int` denoting the block size.
         """
         cdef DLManagedTensor* ptr
         cdef DLDataType dtype
@@ -355,7 +361,16 @@ cdef class Vec(Object):
         return self
 
     def buildTensorInfo(self, asvec):
-        """ Build the tensor information from the input vector if it is not available."""
+        """
+        Build the tensor information from the input vector (asvec) if it is
+        not available in current vector. This input vector is typically
+        created with createWithDlpack().
+
+        Note that the auxiliary tensor information is required when converting
+        a PETSc vector to a DLPack object.
+
+        :arg asvec: A :class:'Vec' containing auxiliary tensor information
+        """
         cdef object ctx0, ctx
         ctx0 = self.get_attr('__tensor_ctx__')
         if ctx0 is None:
@@ -366,9 +381,16 @@ cdef class Vec(Object):
         return self
 
     def toDLPack(self):
-        """ Return a DLPack tensor. Error out if the tensor information is
-            missing. buildTensorInfo() can be used to get tensor information
-            from an input vector that already has tensor information.
+        """
+        Return a DLPack tensor. Error out if the tensor information is missing.
+        buildTensorInfo() can be used to get tensor information from an input
+        vector that already has tensor information. This input vector is
+        typically created with createWithDlpack().
+
+        One can do the following to convert vector X to a DLPack tensor whose
+        anxiliary information inherits from Y.
+          X.buildTensorInfo(Y)
+          X.toDLPack()
         """
         cdef DLManagedTensor* dlm_tensor = <DLManagedTensor*>stdlib.malloc(sizeof(DLManagedTensor))
         cdef DLTensor* dl_tensor = &dlm_tensor.dl_tensor
