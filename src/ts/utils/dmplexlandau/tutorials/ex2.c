@@ -159,7 +159,6 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   PetscInt          ii;
   PetscDS           prob;
   static PetscReal  old_ratio = 1e10;
-  static PetscInt   count=0;
   TSConvergedReason reason;
   PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e,v,v2;
   PetscScalar       user[2] = {0.,ctx->charges[0]}, constants[LANDAU_MAX_SPECIES],tt[LANDAU_MAX_SPECIES],vz;
