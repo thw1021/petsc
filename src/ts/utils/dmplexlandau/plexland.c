@@ -74,7 +74,7 @@ static PetscErrorCode LandauPointDataDestroy(LandauIPData *IPData)
   Output Parameters:
   .  J0acP - Jacobian matrix filled, not created
 */
-PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim, void *a_ctx)
+static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim, PetscReal shift, void *a_ctx)
 {
   LandauCtx         *ctx = (LandauCtx*)a_ctx;
   PetscErrorCode    ierr;
@@ -87,7 +87,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   PetscTabulation   *Tf;
   PetscReal         nu_alpha[LANDAU_MAX_SPECIES], nu_beta[LANDAU_MAX_SPECIES];
   const PetscReal   *quadWeights;
-  PetscReal         *invJ,*invJ_a;
+  PetscReal         *invJ,*invJ_a=NULL,*mass_w=NULL;
   PetscReal         invMass[LANDAU_MAX_SPECIES],Eq_m[LANDAU_MAX_SPECIES],m_0=ctx->m_0; /* normalize mass -- not needed! */
   PetscLogDouble    flops;
   Vec               locX;
@@ -121,12 +121,14 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0]; /* number of vertices*S */
   ierr = PetscSectionGetNumFields(section, &Nf);CHKERRQ(ierr);         if (Nf!=ctx->num_species) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nf %D != S",Nf);
   ierr = PetscDSGetComponents(prob, &Ncf);CHKERRQ(ierr); Ncx = Ncf[0]; if (Ncx!=1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nc %D != 1",Ncx);
+  if (shift==0.0) {
   for (fieldA=0;fieldA<Nf;fieldA++) {
     invMass[fieldA] = m_0/ctx->masses[fieldA];
     Eq_m[fieldA] = ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
     if (dim==2) Eq_m[fieldA] *=  2 * PETSC_PI; /* add the 2pi term that is not in Landau */
     nu_alpha[fieldA] = PetscSqr(ctx->charges[fieldA]/m_0)*m_0/ctx->masses[fieldA];
     nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0,3);
+  }
   }
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   numCells = cEnd - cStart;
@@ -135,28 +137,44 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   if (Nb!=Nq) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nb!=Nq %D %D over integration or simplices? Tf[0]->Nb=%D dim=%D",Nb,Nq,Tf[0]->Nb,dim);
   if (Nq >LANDAU_MAX_NQ) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %D > LANDAU_MAX_NQ (%D)",Nq,LANDAU_MAX_NQ);
   if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
-  flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf + 165);
+  if (shift==0.0) {
   ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
+  flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf + 165);
+  } else {
+  flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf);
+  }
   elemMatSize = totDim*totDim;
-
   {
     static int         cc = 0;
     PetscScalar        uu[LANDAU_MAX_SPECIES],u_x[LANDAU_MAX_SPECIES*LANDAU_DIM];
     /* collect f data */
-    if (ctx->verbose > 2 || (ctx->verbose > 0 && cc++ == 0)) {
+    if (ctx->verbose > 1 || (ctx->verbose > 0 && cc++ == 0)) {
       PetscInt N,Nloc;
       ierr = MatGetSize(JacP,&N,NULL);CHKERRQ(ierr);
       ierr = VecGetSize(locX,&Nloc);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, totDim=%D, Nb=%D, Nq=%D, elemMatSize=%D, dim=%D, Tab: Nb=%D Nf=%D Np=%D cdim=%D N=%D N+hang=%D\n",
-                         0,"FormLandau",Nq*numCells,numCells, totDim, Nb, Nq, elemMatSize, dim, Tf[0]->Nb, Nf, Tf[0]->Np, Tf[0]->cdim, N, Nloc);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"[%D]%s: %D IPs, %D cells, totDim=%D, Nb=%D, Nq=%D, elemMatSize=%D, dim=%D, Tab: Nb=%D Nf=%D Np=%D cdim=%D N=%D N+hang=%D, shift=%g\n",
+                         0,"FormLandau",Nq*numCells,numCells, totDim, Nb, Nq, elemMatSize, dim, Tf[0]->Nb, Nf, Tf[0]->Np, Tf[0]->cdim, N, Nloc, shift);CHKERRQ(ierr);
     }
-    ierr = LandauPointDataCreate(&IPData, dim, Nq*numCells, Nf);CHKERRQ(ierr);
-    ierr = PetscMalloc1(IPData.nip_*dim*dim,&invJ_a);CHKERRQ(ierr);
+    if (shift==0.0) {
+      ierr = LandauPointDataCreate(&IPData, dim, Nq*numCells, Nf);CHKERRQ(ierr);
+      ierr = PetscMalloc1(numCells*Nq*dim*dim,&invJ_a);CHKERRQ(ierr);
+    } else { // mass
+      ierr = PetscMalloc1(numCells*Nq,&mass_w);CHKERRQ(ierr);
+      IPData.w = NULL;
+    }
     /* cache geometry and x, f and df/dx at IPs */
-    for (ej = 0, invJ = invJ_a ; ej < numCells; ++ej, invJ += Nq*dim*dim) {
+    for (ej = 0 ; ej < numCells; ++ej) {
       PetscReal    vj[LANDAU_MAX_NQ*LANDAU_DIM],detJj[LANDAU_MAX_NQ], Jdummy[LANDAU_MAX_NQ*LANDAU_DIM*LANDAU_DIM];
       PetscScalar *coef = NULL;
+      invJ = invJ_a ? invJ_a + ej * Nq*dim*dim : NULL;
       ierr = DMPlexComputeCellGeometryFEM(plex, cStart+ej, quad, vj, Jdummy, invJ, detJj);CHKERRQ(ierr);
+      if (shift!=0.0) { // mass
+        for (qj = 0; qj < Nq; ++qj) {
+          PetscInt         gidx = (ej*Nq + qj);
+          mass_w[gidx] = detJj[qj] * quadWeights[qj];
+          if (dim==2) mass_w[gidx] *=  2.*PETSC_PI*vj[qj * dim + 0]; /* cylindrical coordinate, w/o 2pi */
+        }
+      } else {
       ierr = DMPlexVecGetClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
       ierr = PetscMemcpy(&IPData.coefs[ej*Nb*Nf],coef,Nb*Nf*sizeof(PetscScalar));CHKERRQ(ierr); /* change if LandauIPReal != PetscScalar */
       /* create point data for cell i for Landau tensor: x, f(x), grad f(x) */
@@ -191,16 +209,8 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         }
       } /* q */
       ierr = DMPlexVecRestoreClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
-    } /* e */
-  }
-  /* pad with zeros */
-  for (fieldA = numCells*Nq; fieldA < IPData.nip_; ++fieldA, invJ += dim*dim) {
-    for (d = 0; d < dim; ++d) {
-      int e;
-      for (e = 0; e < dim; ++e) {
-        invJ[e*dim+d] = 0;
       }
-    }
+    } /* e */
   }
 
   ierr = DMRestoreLocalVector(plex, &locX);CHKERRQ(ierr);
@@ -209,13 +219,13 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
   if (ctx->deviceType == LANDAU_CUDA || ctx->deviceType == LANDAU_KOKKOS) {
     if (ctx->deviceType == LANDAU_CUDA) {
 #if defined(PETSC_HAVE_CUDA)
-      ierr = LandauCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,&IPData,invJ_a,ctx->events,JacP);CHKERRQ(ierr);
+      ierr = LandauCUDAJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,&IPData,invJ_a,mass_w,shift,ctx->events,JacP);CHKERRQ(ierr);
 #else
       SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
     } else if (ctx->deviceType == LANDAU_KOKKOS) {
-#if defined(PETSC_HAVE_KOKKOS) && !defined(__cplusplus)
-      ierr = LandauKokkosJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,&IPData,invJ_a,ctx->subThreadBlockSize,ctx->events,JacP);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_KOKKOS)
+      ierr = LandauKokkosJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,&IPData,invJ_a,ctx->subThreadBlockSize,mass_w,shift,ctx->events,JacP);CHKERRQ(ierr);
 #else
       SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
@@ -226,6 +236,9 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     PetscReal               *ff, *dudx, *dudy, *dudz;
     const PetscReal * const BB = Tf[0]->T[0], * const DD = Tf[0]->T[1];
     ierr = PetscLogEventBegin(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
+    if (shift!=0.0) { // mass
+    ierr = PetscMalloc1(elemMatSize, &elemMat);CHKERRQ(ierr);
+    } else {
     ierr = PetscMalloc5(elemMatSize, &elemMat, IPData.nip_*Nf, &ff,IPData.nip_*Nf, &dudx, IPData.nip_*Nf, &dudy, dim==3 ? IPData.nip_*Nf : 0, &dudz);CHKERRQ(ierr);
     /* compute f and df */
     for (ei = cStart, invJ = invJ_a; ei < cEnd; ++ei, invJ += Nq*dim*dim) {
@@ -262,20 +275,25 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         }
       }
     }
+    }
     ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
-    for (ej = cStart, invJ = invJ_a; ej < cEnd; ++ej, invJ += Nq*dim*dim) {
+    for (ej = cStart; ej < cEnd; ++ej) {
       ierr = PetscLogEventBegin(ctx->events[3],0,0,0,0);CHKERRQ(ierr);
       ierr = PetscMemzero(elemMat, totDim *totDim * sizeof(PetscScalar));CHKERRQ(ierr);
       ierr = PetscLogEventEnd(ctx->events[3],0,0,0,0);CHKERRQ(ierr);
       ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
       ierr = PetscLogFlops((PetscLogDouble)Nq*flops);CHKERRQ(ierr);
+      invJ = invJ_a ? invJ_a + ej * Nq*dim*dim : NULL;
       for (qj = 0; qj < Nq; ++qj) {
-        PetscReal               g2[LANDAU_MAX_SPECIES][LANDAU_DIM], g3[LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM], gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
-        const PetscInt          jpidx = Nq*(ej-cStart) + qj;
-        const PetscReal * const BB = Tf[0]->T[0], * const DD = Tf[0]->T[1], * const invJj = &invJ[qj*dim*dim];
-        PetscReal               gg2[LANDAU_MAX_SPECIES][LANDAU_DIM],gg3[LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM];
+        const PetscReal * const BB = Tf[0]->T[0], * const DD = Tf[0]->T[1];
+        PetscReal               g0[LANDAU_MAX_SPECIES], g2[LANDAU_MAX_SPECIES][LANDAU_DIM], g3[LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM];
         PetscInt                d,d2,dp,d3,ipidx,fieldA;
+        const PetscInt          jpidx = Nq*(ej-cStart) + qj;
+        if (shift==0.0) {
+        const PetscReal * const invJj = &invJ[qj*dim*dim];
+        PetscReal               gg2[LANDAU_MAX_SPECIES][LANDAU_DIM],gg3[LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM], gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
         const PetscReal         vj[3] = {IPData.x[jpidx], IPData.y[jpidx], IPData.z ? IPData.z[jpidx] : 0}, wj = IPData.w[jpidx];
+
         // create g2 & g3
         for (d=0;d<dim;d++) { // clear accumulation data D & K
           gg2_temp[d] = 0;
@@ -339,8 +357,7 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
         for (fieldA = 0; fieldA < Nf; ++fieldA) {
           gg2[fieldA][dim-1] += Eq_m[fieldA];
         }
-        //intf("%d %d gg2[1][1]=%g\n",myelem,qj,gg2[1][dim-1]);
-        /* Jacobian transform - g2 */
+        /* Jacobian transform - g2, g3 */
         for (fieldA = 0; fieldA < Nf; ++fieldA) {
           for (d = 0; d < dim; ++d) {
             g2[fieldA][d] = 0.0;
@@ -357,6 +374,12 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
             g2[fieldA][d] *= wj;
           }
         }
+        } else { // mass
+          /* Jacobian transform - g0 */
+          for (fieldA = 0; fieldA < Nf; ++fieldA) {
+            g0[fieldA] = mass_w[jpidx] * shift; // move this to below and remove g0
+          }
+        }
         /* FE matrix construction */
         {
           PetscInt  fieldA,d,f,d2,g;
@@ -368,11 +391,15 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
               for (g = 0; g < Nb; ++g) {
                 const PetscInt j    = fieldA*Nb + g; /* Element matrix column */
                 const PetscInt fOff = i*totDim + j;
+                if (shift==0.0) {
                 for (d = 0; d < dim; ++d) {
                   elemMat[fOff] += DIq[f*dim+d]*g2[fieldA][d]*BJq[g];
                   for (d2 = 0; d2 < dim; ++d2) {
                     elemMat[fOff] += DIq[f*dim + d]*g3[fieldA][d][d2]*DIq[g*dim + d2];
                   }
+                }
+                } else { // mass
+                  elemMat[fOff] += BJq[f]*g0[fieldA]*BJq[g];
                 }
               }
             }
@@ -444,14 +471,17 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
       }
       ierr = PetscLogEventEnd(ctx->events[6],0,0,0,0);CHKERRQ(ierr);
     } /* ej cells loop, not cuda */
+    if (shift!=0.0) { // mass
+    ierr = PetscFree(elemMat);CHKERRQ(ierr);
+    } else {
     ierr = PetscFree5(elemMat, ff, dudx, dudy, dudz);CHKERRQ(ierr);
+    }
   } /* CPU version */
   /* assemble matrix or vector */
   ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(JacP, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
-  ierr = MatViewFromOptions(JacP,NULL,"-landau_mat_view");CHKERRQ(ierr);
 #define MAP_BF_SIZE (128*LANDAU_DIM*LANDAU_MAX_Q_FACE*LANDAU_MAX_SPECIES)
   if (ctx->gpu_assembly && !container) {
     PetscScalar             elemMatrix[LANDAU_MAX_NQ*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_MAX_SPECIES], *elMat;
@@ -554,9 +584,13 @@ PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim
     ierr = PetscLogEventEnd(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
   }
   /* clean up */
-  ierr = PetscFree(invJ_a);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
+  if (shift==0.0) {
   ierr = LandauPointDataDestroy(&IPData);CHKERRQ(ierr);
+    ierr = PetscFree(invJ_a);CHKERRQ(ierr);
+  } else {
+    ierr = PetscFree(mass_w);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1200,8 +1234,6 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ierr = PetscStrcpy(opstring,"kokkos");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
     ctx->subThreadBlockSize = 8;
-#else
-    ctx->subThreadBlockSize = 0;
 #endif
 #elif defined(PETSC_HAVE_CUDA)
     ctx->deviceType = LANDAU_CUDA;
@@ -1926,7 +1958,6 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
 {
   PetscErrorCode ierr;
   LandauCtx      *ctx=(LandauCtx*)actx;
-  PetscReal      unorm;
   PetscInt       dim;
   DM dm;
 
@@ -1934,17 +1965,11 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
-  ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
-  if (ctx->normJ != unorm) {
-    ierr = PetscInfo2(ts, "Create Landau Jacobian t=%g (diff=%g)\n",time_dummy,ctx->normJ-unorm);CHKERRQ(ierr);
-    ierr = LandauFormJacobian_Internal(X,ctx->J,dim,(void*)ctx);CHKERRQ(ierr);
-    ctx->aux_bool = PETSC_TRUE; /* debug: set flag that we made a clean Jacobian */
-    ctx->normJ = unorm;
-  } else {
-    ierr = PetscInfo1(ts, "Skip Landau Jacobian t=%g ????????????\n",(double)time_dummy);CHKERRQ(ierr);
-  }
+  ierr = PetscInfo1(ts, "Create Landau Jacobian t=%g\n",time_dummy);CHKERRQ(ierr);
+  ierr = LandauFormJacobian_Internal(X,ctx->J,dim,0.0,(void*)ctx);CHKERRQ(ierr);
+  ierr = MatViewFromOptions(ctx->J,NULL,"-landau_mat_view");CHKERRQ(ierr);
   /* mat vec for op */
   ierr = MatMult(ctx->J,X,F);CHKERRQ(ierr);CHKERRQ(ierr); /* C*f */
   /* add time term */
@@ -1981,7 +2006,6 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
 {
   PetscErrorCode ierr;
   LandauCtx      *ctx=(LandauCtx*)actx;
-  PetscReal      unorm;
   PetscInt       dim;
   DM dm;
 
@@ -1993,30 +2017,24 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   /* get collision Jacobian into A */
   ierr = PetscLogEventBegin(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
-  ierr = VecNorm(X,NORM_2,&unorm);CHKERRQ(ierr);
-  if (ctx->normJ!=unorm) {
-    ierr = PetscInfo3(ts, "Create Landau Jacobian t=%g, shift=%g (diff=%g) ??????????????????????\n",(double)time_dummy,(double)shift,ctx->normJ-unorm);CHKERRQ(ierr);
-    ierr = LandauFormJacobian_Internal(X,ctx->J,dim,(void*)ctx);CHKERRQ(ierr);
-    ctx->normJ = unorm;
-  } else {
-    ierr = PetscInfo6(ts, "Skip Landau Jacobian t=%g, shift=%g shift*|u|=%20.12e (%p %p) clean=%D ?= TRUE\n",(double)time_dummy,(double)shift,(double)shift*unorm,Pmat,ctx->J,ctx->aux_bool);CHKERRQ(ierr);
-  }
-  ctx->aux_bool = PETSC_FALSE; /* debug: set flag that we made a dirty Jacobian */
-  {
-    MatInfo info1, info2;
-    double  nz_1, nz_2;
-    ierr = MatGetInfo(Pmat,MAT_LOCAL,&info1);CHKERRQ(ierr);
-    nz_1 = info1.nz_allocated;
-    ierr = MatGetInfo(ctx->J,MAT_LOCAL,&info2);CHKERRQ(ierr);
-    nz_2 = info2.nz_allocated;
-    /* add mass */
-    if (nz_1 != nz_2) { /* there is a bug wit Q2 elements and this generates an error message instead of diverged solution, need to fix */
-      ierr = MatAXPY(Pmat,shift,ctx->M,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
-      SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "nz_1 != nz_2 %g %g",(double)nz_1,(double)nz_2);
-    } else {
-      ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
-    }
-  }
+  ierr = PetscInfo2(ts, "Create Landau Jacobian t=%g, shift=%g\n",(double)time_dummy,(double)shift);CHKERRQ(ierr);
+  if (shift==0.0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "zero shift");
+  ierr = LandauFormJacobian_Internal(X,ctx->J,dim,shift,(void*)ctx);CHKERRQ(ierr);
+  /* { /\* add mass *\/ */
+  /*   MatInfo info1, info2; */
+  /*   double  nz_1, nz_2; */
+  /*   ierr = MatGetInfo(Pmat,MAT_LOCAL,&info1);CHKERRQ(ierr); */
+  /*   nz_1 = info1.nz_allocated; */
+  /*   ierr = MatGetInfo(ctx->J,MAT_LOCAL,&info2);CHKERRQ(ierr); */
+  /*   nz_2 = info2.nz_allocated; */
+  /*   if (nz_1 != nz_2) { /\* there is a bug wit Q2 elements and this generates an error message instead of diverged solution, need to fix *\/ */
+  /*     ierr = MatAXPY(Pmat,shift,ctx->M,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr); */
+  /*     SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "nz_1 != nz_2 %g %g",(double)nz_1,(double)nz_2); */
+  /*   } else { */
+  /*     ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr); */
+  /*   } */
+  /* } */
+  ierr = MatViewFromOptions(Pmat,NULL,"-landau_mat_view");CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
