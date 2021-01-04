@@ -582,11 +582,19 @@ cdef extern from "Python.h":
     void Py_INCREF(PyObject*)
     void Py_DECREF(PyObject*)
 
-cimport cpython
-from libc cimport stdlib
-from libc.stdint cimport int64_t, uint64_t, uint8_t, uint16_t
-from cpython cimport pycapsule
-from cpython cimport array
+    ctypedef void (*PyCapsule_Destructor)(object)
+    bint PyCapsule_IsValid(object, const char*)
+    void* PyCapsule_GetPointer(object, const char*)
+    int PyCapsule_SetName(object, const char*)
+    object PyCapsule_New(void*, const char*, PyCapsule_Destructor)
+
+cdef extern from "stdlib.h" nogil:
+   ctypedef signed long int64_t
+   ctypedef unsigned long long uint64_t
+   ctypedef unsigned char uint8_t
+   ctypedef unsigned short uint16_t
+   void free(void* ptr)
+   void* malloc(size_t size)
 
 cdef struct DLDataType:
     uint8_t code
@@ -619,19 +627,19 @@ cdef struct DLManagedTensor:
 cdef void pycapsule_deleter(object dltensor):
     cdef DLManagedTensor* dlm_tensor
     try:
-        dlm_tensor = <DLManagedTensor *>pycapsule.PyCapsule_GetPointer(dltensor, 'used_dltensor')
+        dlm_tensor = <DLManagedTensor *>PyCapsule_GetPointer(dltensor, 'used_dltensor')
         return             # we do not call a used capsule's deleter
     except Exception:
-        dlm_tensor = <DLManagedTensor *>pycapsule.PyCapsule_GetPointer(dltensor, 'dltensor')
+        dlm_tensor = <DLManagedTensor *>PyCapsule_GetPointer(dltensor, 'dltensor')
     deleter(dlm_tensor)
 
 
 cdef void deleter(DLManagedTensor* tensor) with gil:
     if tensor.manager_ctx is NULL:
         return
-    stdlib.free(tensor.dl_tensor.shape)
+    free(tensor.dl_tensor.shape)
     CHKERR( PetscObjectDereference(<PetscObject>tensor.manager_ctx) )
-    stdlib.free(tensor)
+    free(tensor)
     tensor.manager_ctx = NULL
 
 # --------------------------------------------------------------------

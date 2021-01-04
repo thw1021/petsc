@@ -312,8 +312,8 @@ cdef class Vec(Object):
         cdef PetscInt bs = 0,n = 0,N = 0
         cdef DLContext* ctx = NULL
 
-        if pycapsule.PyCapsule_IsValid(dltensor, 'dltensor'):
-            ptr = <DLManagedTensor*>pycapsule.PyCapsule_GetPointer(dltensor, 'dltensor')
+        if PyCapsule_IsValid(dltensor, 'dltensor'):
+            ptr = <DLManagedTensor*>PyCapsule_GetPointer(dltensor, 'dltensor')
             bits = ptr.dl_tensor.dtype.bits
             if bits != 8*sizeof(PetscScalar):
                 raise TypeError("Tensor dtype = {} does not match PETSc precision".format(ptr.dl_tensor.dtype))
@@ -322,7 +322,7 @@ cdef class Vec(Object):
             for s in shape[:ndim]:
                 nz = nz*s
             strides = ptr.dl_tensor.strides
-            pycapsule.PyCapsule_SetName(dltensor, 'used_dltensor')
+            PyCapsule_SetName(dltensor, 'used_dltensor')
         else:
             raise ValueError("Expect a dltensor field, pycapsule.PyCapsule can only be consumed once")
         if size is None: size = (toInt(nz), toInt(PETSC_DECIDE))
@@ -388,7 +388,7 @@ cdef class Vec(Object):
           X.buildTensorInfo(Y)
           X.toDLPack()
         """
-        cdef DLManagedTensor* dlm_tensor = <DLManagedTensor*>stdlib.malloc(sizeof(DLManagedTensor))
+        cdef DLManagedTensor* dlm_tensor = <DLManagedTensor*>malloc(sizeof(DLManagedTensor))
         cdef DLTensor* dl_tensor = &dlm_tensor.dl_tensor
         cdef PetscScalar *a = NULL
         cdef int64_t ndim = 0
@@ -407,7 +407,7 @@ cdef class Vec(Object):
             (device_type, device_id, ndim, shape, strides) = ctx0
             ctx.device_type = device_type
             ctx.device_id = device_id
-            shape_strides = <int64_t*>stdlib.malloc(sizeof(int64_t)*2*ndim)
+            shape_strides = <int64_t*>malloc(sizeof(int64_t)*2*ndim)
             for i in range(ndim):
                 shape_strides[i] = shape[i]
             for i in range(ndim):
@@ -430,7 +430,7 @@ cdef class Vec(Object):
         dlm_tensor.manager_ctx = <void *>self.vec
         CHKERR( PetscObjectReference(<PetscObject>self.vec) )
         dlm_tensor.deleter = deleter
-        return pycapsule.PyCapsule_New(dlm_tensor, 'dltensor', pycapsule_deleter)
+        return PyCapsule_New(dlm_tensor, 'dltensor', pycapsule_deleter)
 
     def createGhost(self, ghosts, size, bsize=None, comm=None):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
