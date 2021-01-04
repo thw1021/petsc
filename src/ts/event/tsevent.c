@@ -579,7 +579,7 @@ PetscErrorCode TSAdjointEventHandler(TS ts)
 + ts - the TS context
 
   Output parameter:
-. nevents - Number of events
+. nevents - number of events
 
   Level: Intermediate
 .seealso:   TSSetEventHandler(), 
