@@ -302,23 +302,21 @@ cdef class Vec(Object):
         :arg size: A :class:`int` denoting the size of the Vec.
         :arg bsize: A :class:`int` denoting the block size.
         """
-        cdef DLManagedTensor* ptr
-        cdef DLDataType dtype
-        cdef int bits
+        cdef DLManagedTensor* ptr = NULL
+        cdef int bits = 0
         cdef PetscInt nz = 1
-        cdef int64_t ndim
-        cdef int64_t* shape
-        cdef int64_t* strides
+        cdef int64_t ndim = 0
+        cdef int64_t* shape = NULL
+        cdef int64_t* strides = NULL
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
-        cdef PetscInt bs=0, n=0, N=0
-        cdef DLContext* ctx
+        cdef PetscInt bs = 0,n = 0,N = 0
+        cdef DLContext* ctx = NULL
 
         if pycapsule.PyCapsule_IsValid(dltensor, 'dltensor'):
             ptr = <DLManagedTensor*>pycapsule.PyCapsule_GetPointer(dltensor, 'dltensor')
-            dtype = ptr.dl_tensor.dtype
             bits = ptr.dl_tensor.dtype.bits
             if bits != 8*sizeof(PetscScalar):
-                raise TypeError("Tensor dtype = {} does not match PETSc precision".format(dtype))
+                raise TypeError("Tensor dtype = {} does not match PETSc precision".format(ptr.dl_tensor.dtype))
             ndim = ptr.dl_tensor.ndim
             shape = ptr.dl_tensor.shape
             for s in shape[:ndim]:
@@ -348,15 +346,14 @@ cdef class Vec(Object):
                 CHKERR( VecCreateMPIWithArray(ccomm,bs,n,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
         PetscCLEAR(self.obj); self.vec = newvec
         self.set_attr('__array__', ptr.dl_tensor.data)
-        cdef int64_t* shape_arr
-        cdef int64_t* strides_arr
+        cdef int64_t* shape_arr = NULL
+        cdef int64_t* strides_arr = NULL
         cdef object s1 = oarray_p(empty_p(ndim), NULL, <void**>&shape_arr)
         cdef object s2 = oarray_p(empty_p(ndim), NULL, <void**>&strides_arr)
         for i in range(ndim):
             shape_arr[i] = shape[i]
             strides_arr[i] = strides[i]
         self.set_attr('__tensor_ctx__', (ptr.dl_tensor.ctx.device_type, ptr.dl_tensor.ctx.device_id, ndim, s1, s2))
-        # self.__tensor_context__ = (ptr.dl_tensor.ctx.device_type, ptr.dl_tensor.ctx.device_id, ptr.dl_tensor.ndim, ptr.dl_tensor.shape, ptr.dl_tensor.strides)
         ptr.deleter(ptr) # must call deleter to avoid memory leak
         return self
 
@@ -371,8 +368,7 @@ cdef class Vec(Object):
 
         :arg asvec: A :class:'Vec' containing auxiliary tensor information
         """
-        cdef object ctx0, ctx
-        ctx0 = self.get_attr('__tensor_ctx__')
+        cdef object ctx0 = self.get_attr('__tensor_ctx__'), ctx = None
         if ctx0 is None:
             ctx = (<Object>asvec).get_attr('__tensor_ctx__')
             if ctx is None:
@@ -395,8 +391,8 @@ cdef class Vec(Object):
         cdef DLManagedTensor* dlm_tensor = <DLManagedTensor*>stdlib.malloc(sizeof(DLManagedTensor))
         cdef DLTensor* dl_tensor = &dlm_tensor.dl_tensor
         cdef PetscScalar *a = NULL
-        cdef int64_t ndim
-        cdef int64_t* shape_strides
+        cdef int64_t ndim = 0
+        cdef int64_t* shape_strides = NULL
         dl_tensor.byte_offset = 0
         cval = self.getType()
         if cval == self.Type.CUDA or cval == self.Type.SEQCUDA or cval == self.Type.MPICUDA:
