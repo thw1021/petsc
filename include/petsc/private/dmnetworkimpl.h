@@ -50,7 +50,7 @@ typedef struct {
 /* Shared vertex - a vertex in DMNetwork that is shared by 2 or more subnetworks. sv provides the mapping from the subnetwork vertices to the global DMNetwork vertex. */
 typedef struct {
   PetscInt gidx;                /* global index of the shared vertices in dmplex */
-  PetscInt n;                   /* num of vertices in this collection */
+  PetscInt n;                   /* number of subnetworks that share the common DMNetwork vertex */
   PetscInt *sv;                 /* array of size n: sv[2*i,2*i+1]=(net[i], idx[i]), i=0,...,n-1 */
 } SVtx;
 typedef enum {SVNONE=-1, SVFROM=0, SVTO=1} SVtxType;
