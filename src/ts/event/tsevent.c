@@ -569,3 +569,25 @@ PetscErrorCode TSAdjointEventHandler(TS ts)
   PetscBarrier((PetscObject)ts);
   PetscFunctionReturn(0);
 }
+
+/*@
+  TSGetNumEvents - Get the numbers of events set
+
+  Logically Collective
+
+  Input Argument:
++ ts - the TS context
+
+  Output parameter:
+. nevents - number of events
+
+  Level: Intermediate
+.seealso:   TSSetEventHandler(), 
+
+@*/
+PetscErrorCode TSGetNumEvents(TS ts,PetscInt * nevents)
+{
+  PetscFunctionBegin;
+  *nevents = ts->event->nevents;
+  PetscFunctionReturn(0);
+}
