@@ -1,4 +1,4 @@
-static char help[] = "Calculates moments for Gaussien functions.\n\n";
+static char help[] = "Calculates moments for Gaussian functions.\n\n";
 
 #include <petscviewer.h>
 #include <petscdt.h>
