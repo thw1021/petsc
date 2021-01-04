@@ -47,7 +47,7 @@ typedef struct {
   PetscSF                           sf;
 } DMNetworkEdgeInfo;
 
-/* Shared vertex - a collection of vertices in subnetworks that share a single vertex with same global index on dmplex */
+/* Shared vertex - a vertex in DMNetwork that is shared by 2 or more subnetworks. sv provides the mapping from the subnetwork vertices to the global DMNetwork vertex. */
 typedef struct {
   PetscInt gidx;                /* global index of the shared vertices in dmplex */
   PetscInt n;                   /* num of vertices in this collection */
