@@ -752,7 +752,7 @@ PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt id,PetscInt *nv, PetscInt *
 }
 
 /*@
-  DMNetworkAddSubnetworkSharedVertices - Add shared vertices that connect the given two subnetworks
+  DMNetworkAddSubnetworkSharedVertices - Add shared vertices that connect two given subnetworks
 
   Collective on dm
 
