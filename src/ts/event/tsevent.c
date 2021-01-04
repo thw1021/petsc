@@ -576,7 +576,7 @@ PetscErrorCode TSAdjointEventHandler(TS ts)
   Logically Collective
 
   Input Argument:
-+ ts- the time-step integrator object
++ ts - the TS context
 
   Output parameter:
 . nevents - Number of events
