@@ -182,7 +182,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
   IPData.z   = IPDataRaw + 3*nip_pad;
 
   for (ipidx_b = 0; ipidx_b < nip; ipidx_b += blockDim.x) {
-    const PetscReal vj[3] = {IPData.x[jpidx], IPData.y[jpidx], IPData.z ? IPData.z[jpidx] : 0}, wj = IPData.w[jpidx];
+    const PetscReal vj[3] = {IPData.x[jpidx], IPData.y[jpidx], IPData.z ? IPData.z[jpidx] : 0};
     int ipidx = ipidx_b + threadIdx.x;
 
     __syncthreads();
@@ -272,6 +272,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
   //intf("%d %d gg2[1][1]=%g\n",myelem,qj_start,gg2[1][dim-1]);
   /* Jacobian transform - g2 */
   for (fieldA = threadIdx.x; fieldA < Nf; fieldA += blockDim.x) {
+    PetscReal wj = IPData.w[jpidx];
     for (d = 0; d < dim; ++d) {
       g2[d][myQi][fieldA] = 0.0;
       for (d2 = 0; d2 < dim; ++d2) {
