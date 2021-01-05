@@ -9,13 +9,9 @@ typedef struct {
   PetscInt  *colidx;           /* column index */
   MatScalar *val;
   PetscInt  *sliidx;
-  PetscInt  *sliperm;          /* permutation for slices */
-  PetscInt  *blockidx;
-  PetscInt  *block_row_map;
   PetscInt  nonzerostate;
   PetscInt  kernelchoice;
   PetscInt  blocky;
-  PetscBool perm;
 } Mat_SeqSELLCUDA;
 
 static PetscErrorCode MatSeqSELLCUDA_Destroy(Mat_SeqSELLCUDA **cudastruct)
@@ -33,15 +29,6 @@ static PetscErrorCode MatSeqSELLCUDA_Destroy(Mat_SeqSELLCUDA **cudastruct)
     }
     if ((*cudastruct)->sliidx) {
       cerr = cudaFree((*cudastruct)->sliidx);CHKERRCUDA(cerr);
-    }
-    if ((*cudastruct)->sliperm) {
-      cerr = cudaFree((*cudastruct)->sliperm);CHKERRCUDA(cerr);
-    }
-    if ((*cudastruct)->blockidx) {
-      cerr = cudaFree((*cudastruct)->blockidx);CHKERRCUDA(cerr);
-    }
-    if ((*cudastruct)->block_row_map) {
-      cerr = cudaFree((*cudastruct)->block_row_map);CHKERRCUDA(cerr);
     }
     ierr = PetscFree(*cudastruct);CHKERRQ(ierr);
   }
@@ -72,38 +59,15 @@ static PetscErrorCode MatSeqSELLCUDACopyToGPU(Mat A)
       if (cudastruct->sliidx) {
         cerr = cudaFree(cudastruct->sliidx);CHKERRCUDA(cerr);
       }
-      if (cudastruct->sliperm) {
-        cerr = cudaFree(cudastruct->sliperm);CHKERRCUDA(cerr);
-      }
-      if (cudastruct->blockidx) {
-        cerr = cudaFree(cudastruct->blockidx);CHKERRCUDA(cerr);
-      }
-      if (cudastruct->block_row_map) {
-        cerr = cudaFree(cudastruct->block_row_map);CHKERRCUDA(cerr);
-      }
       cerr = cudaMalloc((void **)&(cudastruct->colidx),a->maxallocmat*sizeof(PetscInt));CHKERRCUDA(cerr);
       cerr = cudaMalloc((void **)&(cudastruct->val),a->maxallocmat*sizeof(MatScalar));CHKERRCUDA(cerr);
       /* copy values, nz or maxallocmat? */
       cerr = cudaMemcpy(cudastruct->colidx,a->colidx,a->sliidx[a->totalslices]*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
       cerr = cudaMemcpy(cudastruct->val,a->val,a->sliidx[a->totalslices]*sizeof(MatScalar),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
 
-      if (a->totalblocks && !cudastruct->kernelchoice) { /* For cases with wide slices, we will use column blocking, so blockidx is used instead of sliceidx. */
-        cerr = cudaMalloc((void **)&(cudastruct->blockidx),(a->totalblocks+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
-        cerr = cudaMalloc((void **)&(cudastruct->block_row_map),a->totalblocks*sizeof(PetscInt));CHKERRCUDA(cerr);
-        cerr = cudaMemcpy(cudastruct->blockidx,a->blockidx,(a->totalblocks+1)*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-        cerr = cudaMemcpy(cudastruct->block_row_map,a->block_row_map,a->totalblocks*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-        ierr = PetscLogCpuToGpu(a->sliidx[a->totalslices]*(sizeof(MatScalar)+sizeof(PetscInt))+(2*a->totalblocks+1)*sizeof(PetscInt));CHKERRQ(ierr);
-      } else {
-        cerr = cudaMalloc((void **)&(cudastruct->sliidx),(a->totalslices+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
-        cerr = cudaMemcpy(cudastruct->sliidx,a->sliidx,(a->totalslices+1)*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-        if (a->sliperm) {
-          cerr = cudaMalloc((void **)&(cudastruct->sliperm),(a->totalslices+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
-          cerr = cudaMemcpy(cudastruct->sliperm,a->sliperm,a->totalslices*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-          ierr = PetscLogCpuToGpu(a->sliidx[a->totalslices]*(sizeof(MatScalar)+sizeof(PetscInt))+(2*a->totalslices+1)*sizeof(PetscInt));CHKERRQ(ierr);
-        } else {
-          ierr = PetscLogCpuToGpu(a->sliidx[a->totalslices]*(sizeof(MatScalar)+sizeof(PetscInt))+(a->totalslices+1)*sizeof(PetscInt));CHKERRQ(ierr);
-        }
-      }
+      cerr = cudaMalloc((void **)&(cudastruct->sliidx),(a->totalslices+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
+      cerr = cudaMemcpy(cudastruct->sliidx,a->sliidx,(a->totalslices+1)*sizeof(PetscInt),cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+      ierr = PetscLogCpuToGpu(a->sliidx[a->totalslices]*(sizeof(MatScalar)+sizeof(PetscInt))+(a->totalslices+1)*sizeof(PetscInt));CHKERRQ(ierr);
       cudastruct->nonzerostate = A->nonzerostate;
     }
     cerr = WaitForCUDA();CHKERRCUDA(cerr);
@@ -140,41 +104,6 @@ __global__ void matmultadd_seqsell_basic_kernel(PetscInt nrows,PetscInt slicehei
     sum = 0.0;
     for (i=sliidx[slice_id]+row_in_slice; i<sliidx[slice_id+1]; i+=sliceheight) sum += aval[i] * x[acolidx[i]];
     z[row] = y[row] + sum;
-  }
-}
-
-__global__ void matmult_seqsell_tiled_kernelx(PetscInt nrows,PetscInt totalblocks,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *blockidx,const PetscInt *block_row_map,const PetscScalar *x,PetscScalar *y)
-{
-  __shared__ MatScalar shared[512];
-  PetscInt   i,row,row_in_slice;
-  /* multiple blocks per slice. */
-  row = block_row_map[blockIdx.x] + threadIdx.x;
-  if (row < nrows) {
-    row_in_slice = row%SLICE_HEIGHT;
-
-    shared[threadIdx.y*blockDim.x+threadIdx.x] = 0.0;
-    for (i=blockidx[blockIdx.x]+row_in_slice+SLICE_HEIGHT*threadIdx.y; i<blockidx[blockIdx.x+1]; i+=SLICE_HEIGHT*blockDim.y) shared[threadIdx.y*blockDim.x+threadIdx.x] += aval[i] * x[acolidx[i]];
-    __syncthreads();
-    if (threadIdx.y < 16) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+16)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 8) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+8)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 4) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+4)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 2) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+2)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 1) {
-      shared[threadIdx.x] += shared[blockDim.x+threadIdx.x];
-      atomicAdd(&y[row],shared[threadIdx.x]);
-    }
   }
 }
 
@@ -333,36 +262,6 @@ __global__ void matmult_seqsell_tiled_kernel5(PetscInt nrows,PetscInt totalslice
   }
 }
 
-__global__ void matmult_seqsell_tiled_perm_kernel5(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscInt *sliperm,const PetscScalar *x,PetscScalar *y)
-{
-  __shared__ MatScalar shared[512];
-  PetscInt   i,row,slice_id,row_in_slice;
-  /* multiple threads per row. */
-  slice_id     = sliperm[(blockIdx.x*blockDim.x+threadIdx.x)/SLICE_HEIGHT];
-  row_in_slice = (blockIdx.x*blockDim.x+threadIdx.x)%SLICE_HEIGHT;
-  row          = slice_id*SLICE_HEIGHT+row_in_slice;
-  if (row < nrows) {
-    shared[threadIdx.y*blockDim.x+threadIdx.x] = 0.0;
-    for (i=sliidx[slice_id]+row_in_slice+SLICE_HEIGHT*threadIdx.y; i<sliidx[slice_id+1]; i+=SLICE_HEIGHT*blockDim.y) shared[threadIdx.y*blockDim.x+threadIdx.x] += aval[i] * x[acolidx[i]];
-    __syncthreads();
-    if (threadIdx.y < 8) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+8)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 4) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+4)*blockDim.x+threadIdx.x];
-    }
-    if (threadIdx.y < 2) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+2)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 1) {
-      shared[threadIdx.x] += shared[blockDim.x+threadIdx.x];
-      y[row] = shared[threadIdx.x];
-    }
-  }
-}
-
 __global__ void matmult_seqsell_tiled_kernel4(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscScalar *x,PetscScalar *y)
 {
   __shared__ MatScalar shared[512];
@@ -415,29 +314,6 @@ __global__ void matmult_seqsell_tiled_kernel3(PetscInt nrows,PetscInt totalslice
   }
 }
 
-__global__ void matmult_seqsell_tiled_perm_kernel3(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscInt *sliperm,const PetscScalar *x,PetscScalar *y)
-{
-  __shared__ MatScalar shared[512];
-  PetscInt   i,row,slice_id,row_in_slice;
-  /* multiple threads per row. */
-  slice_id     = sliperm[(blockIdx.x*blockDim.x+threadIdx.x)/SLICE_HEIGHT];
-  row_in_slice = (blockIdx.x*blockDim.x+threadIdx.x)%SLICE_HEIGHT;
-  row          = slice_id*SLICE_HEIGHT+row_in_slice;
-  if (row < nrows) {
-    shared[threadIdx.y*blockDim.x+threadIdx.x] = 0.0;
-    for (i=sliidx[slice_id]+row_in_slice+SLICE_HEIGHT*threadIdx.y; i<sliidx[slice_id+1]; i+=SLICE_HEIGHT*blockDim.y) shared[threadIdx.y*blockDim.x+threadIdx.x] += aval[i] * x[acolidx[i]];
-    __syncthreads();
-    if (threadIdx.y < 2) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+2)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 1) {
-      shared[threadIdx.x] += shared[blockDim.x+threadIdx.x];
-      y[row] = shared[threadIdx.x];
-    }
-  }
-}
-
 __global__ void matmult_seqsell_tiled_kernel2(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscScalar *x,PetscScalar *y)
 {
   __shared__ MatScalar shared[512];
@@ -454,41 +330,6 @@ __global__ void matmult_seqsell_tiled_kernel2(PetscInt nrows,PetscInt totalslice
     if (threadIdx.y < 1) {
       shared[threadIdx.x] += shared[blockDim.x+threadIdx.x];
       y[row] = shared[threadIdx.x];
-    }
-  }
-}
-
-__global__ void matmultadd_seqsell_tiled_kernelx(PetscInt nrows,PetscInt totalblocks,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *blockidx,const PetscInt *block_row_map,const PetscScalar *x,const PetscScalar *y,PetscScalar *z)
-{
-  __shared__ MatScalar shared[512];
-  PetscInt   i,row,row_in_slice;
-  /* multiple blocks per slice. */
-  row = block_row_map[blockIdx.x]+threadIdx.x;
-  if (row < nrows) {
-    row_in_slice = row%SLICE_HEIGHT;
-
-    shared[threadIdx.y*blockDim.x+threadIdx.x] = 0.0;
-    for (i=blockidx[blockIdx.x]+row_in_slice+SLICE_HEIGHT*threadIdx.y; i<blockidx[blockIdx.x+1]; i+=SLICE_HEIGHT*blockDim.y) shared[threadIdx.y*blockDim.x+threadIdx.x] += aval[i] * x[acolidx[i]];
-    __syncthreads();
-    if (threadIdx.y < 16) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+16)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 8) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+8)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 4) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+4)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 2) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+2)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 1) {
-      shared[threadIdx.x] += shared[blockDim.x+threadIdx.x];
-      z[row] = y[row] + shared[threadIdx.x];
     }
   }
 }
@@ -561,37 +402,6 @@ __global__ void matmultadd_seqsell_tiled_kernel5(PetscInt nrows,PetscInt totalsl
   }
 }
 
-__global__ void matmultadd_seqsell_tiled_perm_kernel5(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscInt *sliperm,const PetscScalar *x,const PetscScalar *y,PetscScalar *z)
-{
-  __shared__ MatScalar shared[512];
-  PetscInt   i,row,slice_id,row_in_slice;
-  /* multiple threads per row. */
-  slice_id     = sliperm[(blockIdx.x*blockDim.x+threadIdx.x)/SLICE_HEIGHT];
-  row_in_slice = (blockIdx.x*blockDim.x+threadIdx.x)%SLICE_HEIGHT;
-  row          = slice_id*SLICE_HEIGHT+row_in_slice;
-  if (row < nrows) {
-    shared[threadIdx.y*blockDim.x+threadIdx.x] = 0.0;
-    for (i=sliidx[slice_id]+row_in_slice+SLICE_HEIGHT*threadIdx.y; i<sliidx[slice_id+1]; i+=SLICE_HEIGHT*blockDim.y) shared[threadIdx.y*blockDim.x+threadIdx.x] += aval[i] * x[acolidx[i]];
-    __syncthreads();
-    if (threadIdx.y < 8) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+8)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 4) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+4)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 2) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+2)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 1) {
-      shared[threadIdx.x] += shared[blockDim.x+threadIdx.x];
-      z[row] = y[row] + shared[threadIdx.x];
-    }
-  }
-}
-
 __global__ void matmultadd_seqsell_tiled_kernel4(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscScalar *x,const PetscScalar *y,PetscScalar *z)
 {
   __shared__ MatScalar shared[512];
@@ -630,29 +440,6 @@ __global__ void matmultadd_seqsell_tiled_kernel3(PetscInt nrows,PetscInt totalsl
     slice_id     = row/SLICE_HEIGHT;
     row_in_slice = row%SLICE_HEIGHT;
 
-    shared[threadIdx.y*blockDim.x+threadIdx.x] = 0.0;
-    for (i=sliidx[slice_id]+row_in_slice+SLICE_HEIGHT*threadIdx.y; i<sliidx[slice_id+1]; i+=SLICE_HEIGHT*blockDim.y) shared[threadIdx.y*blockDim.x+threadIdx.x] += aval[i] * x[acolidx[i]];
-    __syncthreads();
-    if (threadIdx.y < 2) {
-      shared[threadIdx.y*blockDim.x+threadIdx.x] += shared[(threadIdx.y+2)*blockDim.x+threadIdx.x];
-    }
-    __syncthreads();
-    if (threadIdx.y < 1) {
-      shared[threadIdx.x] += shared[blockDim.x+threadIdx.x];
-      z[row] = y[row] + shared[threadIdx.x];
-    }
-  }
-}
-
-__global__ void matmultadd_seqsell_tiled_perm_kernel3(PetscInt nrows,PetscInt totalslices,const PetscInt *acolidx,const MatScalar *aval,const PetscInt *sliidx,const PetscInt *sliperm,const PetscScalar *x,const PetscScalar *y,PetscScalar *z)
-{
-  __shared__ MatScalar shared[512];
-  PetscInt   i,row,slice_id,row_in_slice;
-  /* multiple threads per row. */
-  slice_id     = sliperm[(blockIdx.x*blockDim.x+threadIdx.x)/SLICE_HEIGHT];
-  row_in_slice = (blockIdx.x*blockDim.x+threadIdx.x)%SLICE_HEIGHT;
-  row          = slice_id*SLICE_HEIGHT+row_in_slice;
-  if (row < nrows) {
     shared[threadIdx.y*blockDim.x+threadIdx.x] = 0.0;
     for (i=sliidx[slice_id]+row_in_slice+SLICE_HEIGHT*threadIdx.y; i<sliidx[slice_id+1]; i+=SLICE_HEIGHT*blockDim.y) shared[threadIdx.y*blockDim.x+threadIdx.x] += aval[i] * x[acolidx[i]];
     __syncthreads();
@@ -806,9 +593,8 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
   PetscInt          totalslices=a->totalslices,nrows = A->rmap->n,sliceheight=a->sliceheight;
   MatScalar         *aval=cudastruct->val;
   PetscInt          *acolidx = cudastruct->colidx;
-  PetscInt          *sliidx = cudastruct->sliidx,*sliperm = cudastruct->sliperm;
+  PetscInt          *sliidx = cudastruct->sliidx;
   PetscErrorCode    ierr;
-  cudaError_t       cerr;
 
   PetscFunctionBegin;
   if (sliceheight !=16) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"The kernel requires a slice height of 16, but the input matrix has a slice height of %D\n",sliceheight);
@@ -879,7 +665,6 @@ static PetscErrorCode MatSetFromOptions_SeqSELLCUDA(PetscOptionItems *PetscOptio
     if (blocky!=2 && blocky!=4 && blocky!=8 && blocky!=16 && blocky!=32) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Unsupported blocky: %D it should be in {2,4,8,16,32}",kernel); 
     cudastruct->blocky = blocky;
   }
-  ierr = PetscOptionsGetBool(NULL,NULL,"-mat_sell_spmv_cuda_kernel_perm",&cudastruct->perm,&flg);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -887,31 +672,11 @@ static PetscErrorCode MatSetFromOptions_SeqSELLCUDA(PetscOptionItems *PetscOptio
 PETSC_INTERN PetscErrorCode MatAssemblyEnd_SpMV_Preprocessing_Private(Mat A)
 {
   Mat_SeqSELL     *a = (Mat_SeqSELL*)A->data;
-  Mat_SeqSELLCUDA *cudastruct = (Mat_SeqSELLCUDA*)A->spptr;
   PetscErrorCode  ierr;
 
   ierr = MatSeqSELLGetAvgSliceWidth(A,&a->avgslicewidth);CHKERRQ(ierr);
   ierr = MatSeqSELLGetMaxSliceWidth(A,&a->maxslicewidth);CHKERRQ(ierr);
   ierr = MatSeqSELLGetFillRatio(A,&a->fillratio);CHKERRQ(ierr);
-
-  if (cudastruct->perm) {
-    if (!a->totalblocks) {
-      ierr = PetscFree2(a->blockidx,a->block_row_map);CHKERRQ(ierr);
-    }
-    if (a->maxslicewidth <= 64) {
-      PetscInt i,*sliwidth;
-      ierr = PetscMalloc1(a->totalslices,&sliwidth);CHKERRQ(ierr);
-      ierr = PetscMalloc1(a->totalslices,&a->sliperm);CHKERRQ(ierr);
-      for (i=0; i<a->totalslices; ++i) {
-        sliwidth[i] = (a->sliidx[i+1]-a->sliidx[i])/a->sliceheight;
-        a->sliperm[i] = i;
-      }
-      ierr = PetscSortIntWithPermutation(a->totalslices,sliwidth,a->sliperm);CHKERRQ(ierr);
-      ierr = PetscFree(sliwidth);CHKERRQ(ierr);
-    } else {
-      ierr = PetscFree(a->sliperm);CHKERRQ(ierr);
-    }
-  }
   PetscFunctionReturn(0);
 }
 

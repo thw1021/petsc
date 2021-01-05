@@ -887,10 +887,6 @@ PetscErrorCode MatDestroy_SeqSELL(Mat A)
   ierr = ISDestroy(&a->icol);CHKERRQ(ierr);
   ierr = PetscFree(a->saved_values);CHKERRQ(ierr);
   ierr = PetscFree2(a->getrowcols,a->getrowvals);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_CUDA)
-  ierr = PetscFree2(a->blockidx,a->block_row_map);CHKERRQ(ierr);
-  ierr = PetscFree(a->sliperm);CHKERRQ(ierr);
-#endif
   ierr = PetscFree(A->data);CHKERRQ(ierr);
 
   ierr = PetscObjectChangeTypeName((PetscObject)A,NULL);CHKERRQ(ierr);
