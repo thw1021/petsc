@@ -357,23 +357,57 @@ cdef class Vec(Object):
         ptr.deleter(ptr) # must call deleter to avoid memory leak
         return self
 
-    def buildTensorInfo(self, asvec):
+    def attachTensorInfo(self, Vec asvec=None, object dltensor=None):
         """
-        Build the tensor information from the input vector (asvec) if it is
-        not available in current vector. This input vector is typically
-        created with createWithDlpack().
+        Attach the tensor information from an input vector (asvec) or a
+        DLPack tensor if it is not available in current vector. The input
+        vector is typically created with createWithDlpack(). This operation
+        does not copy the data from the input parameters, it simply uses
+        their meta information.
 
         Note that the auxiliary tensor information is required when converting
         a PETSc vector to a DLPack object.
 
         :arg asvec: A :class:'Vec' containing auxiliary tensor information
+        :arg dltensor: A DLPack tensor object
         """
         cdef object ctx0 = self.get_attr('__tensor_ctx__'), ctx = None
-        if ctx0 is None:
+        cdef DLManagedTensor* ptr = NULL
+        cdef int64_t* shape_arr = NULL
+        cdef int64_t* strides_arr = NULL
+        cdef object s1 = None, s2 = None
+
+        if asvec is None and dltensor is None:
+            raise ValueError('Missing input parameters')
+        if asvec is not None:
+          t0 = self.getType()
+          t1 = asvec.getType()
+          if t0 != t1:
+            raise TypeError('Input vector type {} does not match current vector type {}'.format(t1,t0))
+          if ctx0 is None:
             ctx = (<Object>asvec).get_attr('__tensor_ctx__')
             if ctx is None:
                 raise ValueError('Input vector has no tensor information')
             self.set_attr('__tensor_ctx__', ctx)
+        else:
+          if PyCapsule_IsValid(dltensor, 'dltensor'):
+            ptr = <DLManagedTensor*>PyCapsule_GetPointer(dltensor, 'dltensor')
+          elif PyCapsule_IsValid(dltensor, 'used_dltensor'):
+            ptr = <DLManagedTensor*>PyCapsule_GetPointer(dltensor, 'used_dltensor')
+          else:
+            raise ValueError("Expect a dltensor or used_dltensor field")
+          bits = ptr.dl_tensor.dtype.bits
+          if bits != 8*sizeof(PetscScalar):
+            raise TypeError("Tensor dtype = {} does not match PETSc precision".format(ptr.dl_tensor.dtype))
+          ndim = ptr.dl_tensor.ndim
+          shape = ptr.dl_tensor.shape
+          strides = ptr.dl_tensor.strides
+          s1 = oarray_p(empty_p(ndim), NULL, <void**>&shape_arr)
+          s2 = oarray_p(empty_p(ndim), NULL, <void**>&strides_arr)
+          for i in range(ndim):
+            shape_arr[i] = shape[i]
+            strides_arr[i] = strides[i]
+          self.set_attr('__tensor_ctx__', (ptr.dl_tensor.ctx.device_type, ptr.dl_tensor.ctx.device_id, ndim, s1, s2))
         return self
 
     def toDLPack(self):
