@@ -114,7 +114,7 @@ PetscErrorCode  PetscErrorPrintfDefault(const char format[],...)
    On some systems when the stderr is nested through several levels of shell script
    before being passed to a file the isatty() falsely returns true resulting in
    the screen highlight variables being passed through the test harness. Therefore
-   simply do not hightlight when the PETSC_STDERR is PETSC_STDOUT.
+   simply do not highlight when the PETSC_STDERR is PETSC_STDOUT.
 */
 static void PetscErrorPrintfHilight(void)
 {
