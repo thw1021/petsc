@@ -168,19 +168,21 @@ PetscErrorCode PetscStreamWaitEvent(PetscStream strm, PetscEvent event, PetscStr
   ierr = PetscEventSetup(event);CHKERRQ(ierr);
   switch (type) {
 #if PetscDefined(HAVE_CUDA)
-    cudaError_t     cerr;
+    cudaError_t cerr;
 #endif
 #if PetscDefined(HAVE_HIP)
-    hipError_t      herr;
+    hipError_t  herr;
 #endif
 
   case PETSC_STREAM_CUDA:
 #if PetscDefined(HAVE_CUDA)
+    ierr = PetscStreamAssembleCUDA_Internal(strm);CHKERRQ(ierr);
     cerr = cudaStreamWaitEvent(strm->cstream, event->cevent, event->waitFlags);CHKERRCUDA(cerr);
 #endif
     break;
   case PETSC_STREAM_HIP:
 #if PetscDefined(HAVE_HIP)
+    ierr = PetscStreamAssembleHIP_Internal(strm);CHKERRQ(ierr);
     herr = hipStreamWaitEvent(strm->hstream, event->hevent, event->waitFlags);CHKERRHIP(herr);
 #endif
     break;

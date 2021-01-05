@@ -71,19 +71,20 @@ PetscErrorCode VecCUDACopyToGPU(Vec v)
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
   ierr = VecCUDAAllocateCheck(v);CHKERRQ(ierr);
   if (v->offloadmask == PETSC_OFFLOAD_CPU) {
-    PetscStream  strm;
+    PetscStream  pstream;
     cudaStream_t cstream;
 
-    ierr               = VecGetStream_Internal(v,&strm);CHKERRQ(ierr);
-    ierr               = PetscStreamGetStream(strm,PETSC_STREAM_CUDA,&cstream);CHKERRQ(ierr);
+    ierr               = VecGetStream_Internal(v,&pstream);CHKERRQ(ierr);
+    ierr               = PetscStreamWaitEvent(pstream,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    ierr               = PetscStreamGetStream(pstream,PETSC_STREAM_CUDA,&cstream);CHKERRQ(ierr);
     ierr               = PetscLogEventBegin(VEC_CUDACopyToGPU,v,0,0,0);CHKERRQ(ierr);
     veccuda            = (Vec_CUDA*)v->spptr;
     varray             = veccuda->GPUarray;
     err                = cudaMemcpyAsync(varray,((Vec_Seq*)v->data)->array,v->map->n*sizeof(PetscScalar),cudaMemcpyHostToDevice,cstream);CHKERRCUDA(err);
-    ierr               = PetscStreamRecordEvent(strm,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    ierr               = PetscStreamRecordEvent(pstream,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
     ierr               = PetscLogCpuToGpu((v->map->n)*sizeof(PetscScalar));CHKERRQ(ierr);
     ierr               = PetscLogEventEnd(VEC_CUDACopyToGPU,v,0,0,0);CHKERRQ(ierr);
-    ierr               = PetscStreamRestoreStream(strm,PETSC_STREAM_CUDA,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr               = PetscStreamRestoreStream(pstream,PETSC_STREAM_CUDA,&cstream,PETSC_TRUE);CHKERRQ(ierr);
     v->offloadmask = PETSC_OFFLOAD_BOTH;
   }
   PetscFunctionReturn(0);
@@ -103,19 +104,20 @@ PetscErrorCode VecCUDACopyFromGPU(Vec v)
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
   ierr = VecCUDAAllocateCheckHost(v);CHKERRQ(ierr);
   if (v->offloadmask == PETSC_OFFLOAD_GPU) {
-    PetscStream  strm;
+    PetscStream  pstream;
     cudaStream_t cstream;
 
-    ierr               = VecGetStream_Internal(v,&strm);CHKERRQ(ierr);
-    ierr               = PetscStreamGetStream(strm,PETSC_STREAM_CUDA,&cstream);CHKERRQ(ierr);
+    ierr               = VecGetStream_Internal(v,&pstream);CHKERRQ(ierr);
+    ierr               = PetscStreamWaitEvent(pstream,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    ierr               = PetscStreamGetStream(pstream,PETSC_STREAM_CUDA,&cstream);CHKERRQ(ierr);
     ierr               = PetscLogEventBegin(VEC_CUDACopyFromGPU,v,0,0,0);CHKERRQ(ierr);
     veccuda            = (Vec_CUDA*)v->spptr;
     varray             = veccuda->GPUarray;
     err                = cudaMemcpyAsync(((Vec_Seq*)v->data)->array,varray,v->map->n*sizeof(PetscScalar),cudaMemcpyDeviceToHost,cstream);CHKERRCUDA(err);
-    ierr               = PetscStreamRecordEvent(strm,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    ierr               = PetscStreamRecordEvent(pstream,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
     ierr               = PetscLogGpuToCpu((v->map->n)*sizeof(PetscScalar));CHKERRQ(ierr);
     ierr               = PetscLogEventEnd(VEC_CUDACopyFromGPU,v,0,0,0);CHKERRQ(ierr);
-    ierr               = PetscStreamRestoreStream(strm,PETSC_STREAM_CUDA,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr               = PetscStreamRestoreStream(pstream,PETSC_STREAM_CUDA,&cstream,PETSC_TRUE);CHKERRQ(ierr);
     v->offloadmask     = PETSC_OFFLOAD_BOTH;
   }
   PetscFunctionReturn(0);
