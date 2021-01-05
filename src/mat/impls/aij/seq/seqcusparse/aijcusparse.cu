@@ -1373,7 +1373,7 @@ static PetscErrorCode MatSolveTranspose_SeqAIJCUSPARSE(Mat A,Vec bb,Vec xx)
 
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   /* First, reorder with the row permutation */
-  thrust::copy(thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->begin()),
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->begin()),
                thrust::make_permutation_iterator(bGPU+n, cusparseTriFactors->rpermIndices->end()),
                xGPU);
 
@@ -1412,12 +1412,12 @@ static PetscErrorCode MatSolveTranspose_SeqAIJCUSPARSE(Mat A,Vec bb,Vec xx)
                         );CHKERRCUSPARSE(stat);
 
   /* Last, copy the solution, xGPU, into a temporary with the column permutation ... can't be done in place. */
-  thrust::copy(thrust::make_permutation_iterator(xGPU, cusparseTriFactors->cpermIndices->begin()),
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_permutation_iterator(xGPU, cusparseTriFactors->cpermIndices->begin()),
                thrust::make_permutation_iterator(xGPU+n, cusparseTriFactors->cpermIndices->end()),
                tempGPU->begin());
 
   /* Copy the temporary to the full solution. */
-  thrust::copy(tempGPU->begin(), tempGPU->end(), xGPU);
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),tempGPU->begin(), tempGPU->end(), xGPU);
 
   /* restore */
   ierr = VecCUDARestoreArrayRead(bb,&barray);CHKERRQ(ierr);
@@ -1520,7 +1520,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSE(Mat A,Vec bb,Vec xx)
 
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   /* First, reorder with the row permutation */
-  thrust::copy(thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->begin()),
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->begin()),
                thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->end()),
                tempGPU->begin());
 
@@ -1559,7 +1559,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSE(Mat A,Vec bb,Vec xx)
                         );CHKERRCUSPARSE(stat);
 
   /* Last, reorder with the column permutation */
-  thrust::copy(thrust::make_permutation_iterator(tempGPU->begin(), cusparseTriFactors->cpermIndices->begin()),
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_permutation_iterator(tempGPU->begin(), cusparseTriFactors->cpermIndices->begin()),
                thrust::make_permutation_iterator(tempGPU->begin(), cusparseTriFactors->cpermIndices->end()),
                xGPU);
 
@@ -2298,7 +2298,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
       beta = yy ? matstruct->beta_one : matstruct->beta_zero;
       if (compressed) { /* Scatter x to work vector */
         thrust::device_ptr<PetscScalar> xarr = thrust::device_pointer_cast(xarray);
-        thrust::for_each(thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(xarr, matstruct->cprowIndices->begin()))),
+        thrust::for_each(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(xarr, matstruct->cprowIndices->begin()))),
                          thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(xarr, matstruct->cprowIndices->begin()))) + matstruct->cprowIndices->size(),
                          VecCUDAEqualsReverse());
       }

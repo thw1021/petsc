@@ -692,71 +692,48 @@ found:
   PetscFunctionReturn(0);
 }
 
-template<typename RealType> __global__ static void CudaSqr (RealType *a) {a[0] = a[0]*a[0];}
-template<typename RealType> __global__ static void CudaSqrt(RealType *a) {a[0] = sqrt(a[0]);}
-
 #if defined(PETSC_USE_REAL_SINGLE)
-PetscErrorCode PetscNvshmemNorm2(float *alpha)
+PetscErrorCode PetscNvshmemSum(PetscInt count,float *src,float *dst)
 {
+  PetscErrorCode    ierr;
+  PetscMPIInt       num; /* Assume nvshmem's int is MPI's int */
+
   PetscFunctionBegin;
-  CudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(alpha);
-  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
-  CudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(alpha);
+  ierr = PetscMPIIntCast(count,&num);CHKERRQ(ierr);
+  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,src,dst,num,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscNvshmemSum(float *alpha)
+PetscErrorCode PetscNvshmemMax(PetscInt count,float *src,float *dst)
 {
-  PetscFunctionBegin;
-  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
-  PetscFunctionReturn(0);
-}
+  PetscErrorCode    ierr;
+  PetscMPIInt       num; /* Assume nvshmem's int is MPI's int */
 
-PetscErrorCode PetscNvshmemMax(float *alpha)
-{
   PetscFunctionBegin;
-  nvshmemx_float_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscNvshmemNorm1And2(float *alpha)
-{
-  PetscFunctionBegin;
-  CudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(&alpha[1]);
-  nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,2,PetscDefaultCudaStream);
-  CudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(&alpha[1]);
+  ierr = PetscMPIIntCast(count,&num);CHKERRQ(ierr);
+  nvshmemx_float_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,src,dst,num,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
 #elif defined(PETSC_USE_REAL_DOUBLE)
-PetscErrorCode PetscNvshmemNorm2(double *alpha)
+PetscErrorCode PetscNvshmemSum(PetscInt count,double *src,double *dst)
 {
+  PetscErrorCode    ierr;
+  PetscMPIInt       num; /* Assume nvshmem's int is MPI's int */
+
   PetscFunctionBegin;
-  CudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(alpha);
-  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
-  CudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(alpha);
+  ierr = PetscMPIIntCast(count,&num);CHKERRQ(ierr);
+  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,src,dst,num,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscNvshmemSum(double *alpha)
+PetscErrorCode PetscNvshmemMax(PetscInt count,double *src,double *dst)
 {
-  PetscFunctionBegin;
-  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
-  PetscFunctionReturn(0);
-}
+  PetscErrorCode    ierr;
+  PetscMPIInt       num; /* Assume nvshmem's int is MPI's int */
 
-PetscErrorCode PetscNvshmemMax(double *alpha)
-{
   PetscFunctionBegin;
-  nvshmemx_double_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,1,PetscDefaultCudaStream);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscNvshmemNorm1And2(double *alpha)
-{
-  PetscFunctionBegin;
-  CudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(&alpha[1]);
-  nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,alpha,alpha,2,PetscDefaultCudaStream);
-  CudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(&alpha[1]);
+  ierr = PetscMPIIntCast(count,&num);CHKERRQ(ierr);
+  nvshmemx_double_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,src,dst,num,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
 #endif

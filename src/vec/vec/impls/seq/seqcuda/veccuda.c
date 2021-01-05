@@ -6,6 +6,7 @@
  must be compiled with nvcc or a C++ compiler.
  */
 
+#include "petsccublas.h"
 #define PETSC_SKIP_SPINLOCK
 
 #include <petscconf.h>
@@ -411,22 +412,30 @@ PetscErrorCode VecRestoreArrayAndMemType_SeqCUDA(Vec v,PetscScalar** a)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecGetNormArray_SeqCUDA(Vec xin,NormType type,PetscReal **alpha)
+PetscErrorCode VecAllocateWorkScalars_SeqCUDA(Vec x)
 {
-  cudaError_t cerr;
-  PetscInt    offset = 0;
+  cudaError_t     cerr;
+  PetscInt        i;
 
   PetscFunctionBegin;
-  if (!xin->normArray_d) {
-    cerr = cudaMalloc((void**)&xin->normArray_d,sizeof(PetscReal)*3);CHKERRCUDA(cerr);
-    cerr = cudaMemsetAsync(xin->normArray_d,0,sizeof(PetscReal)*3,NULL);CHKERRCUDA(cerr);
+  cerr = cudaMalloc((void**)&x->workscalars_d,sizeof(PetscScalar)*NUM_WORK_SCALARS);CHKERRCUDA(cerr);
+  cerr = cudaMemsetAsync(x->workscalars_d,0,sizeof(PetscScalar)*NUM_WORK_SCALARS,PetscDefaultCudaStream);CHKERRCUDA(cerr);
+  for (i=0; i<NUM_WORK_SCALARS; i++) {
+    if (x->workscalars_inuse[i]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Work scalars are not restored on host before getting new ones on device");
   }
-  /* Compute offset of this norm in normArray[] */
-  if (type == NORM_1 || type == NORM_1_AND_2)        offset = 0;
-  else if (type == NORM_2 || type == NORM_FROBENIUS) offset = 1;
-  else if (type == NORM_INFINITY)                    offset = 2;
+  PetscFunctionReturn(0);
+}
 
-  *alpha = &xin->normArray_d[offset];
+PetscErrorCode VecFreeWorkScalars_SeqCUDA(Vec x)
+{
+  cudaError_t     cerr;
+  PetscInt        i;
+
+  PetscFunctionBegin;
+  for (i=0; i<NUM_WORK_SCALARS; i++) {
+    if (x->workscalars_inuse[i]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Some work scalars are still in use before free");
+  }
+  cerr = cudaFree(x->workscalars_d);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -473,9 +482,33 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->getlocalvectorread     = NULL;
     V->ops->restorelocalvectorread = NULL;
     V->ops->getarraywrite          = NULL;
-    V->ops->getnormarray           = NULL;
-    V->ops->norm_async             = VecNorm_Seq;
-    V->ops->axpy_async             = VecAXPYAsync_Seq;
+
+    V->ops->allocateworkscalars    = NULL;
+    V->ops->freeworkscalars        = NULL;
+
+    V->ops->getworkscalar          = NULL;
+    V->ops->restoreworkscalar      = NULL;
+    V->ops->getworknorm            = NULL;
+    V->ops->restoreworknorm        = NULL;
+
+    V->ops->assignworkscalar       = NULL;
+    V->ops->assignworkreal         = NULL;
+    V->ops->setworkscalar          = NULL;
+    V->ops->setworkreal            = NULL;
+    V->ops->copyworkscalartohost   = NULL;
+    V->ops->copyworkrealtohost     = NULL;
+    V->ops->addworkscalar          = NULL;
+    V->ops->subworkscalar          = NULL;
+    V->ops->multworkscalar         = NULL;
+    V->ops->divideworkscalar       = NULL;
+    V->ops->sqrworkreal            = NULL;
+    V->ops->sqrtworkreal           = NULL;
+
+    V->ops->dot_async              = NULL;
+    V->ops->norm_async             = NULL;
+    V->ops->axpy_async             = NULL;
+    V->ops->aypx_async             = NULL;
+
   } else {
     V->ops->dot                    = VecDot_SeqCUDA;
     V->ops->norm                   = VecNorm_SeqCUDA;
@@ -514,10 +547,33 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->restorearray           = VecRestoreArray_SeqCUDA;
     V->ops->getarrayandmemtype     = VecGetArrayAndMemType_SeqCUDA;
     V->ops->restorearrayandmemtype = VecRestoreArrayAndMemType_SeqCUDA;
-    V->ops->getnormarray           = VecGetNormArray_SeqCUDA;
+
+    V->ops->allocateworkscalars    = VecAllocateWorkScalars_SeqCUDA;
+    V->ops->freeworkscalars        = VecFreeWorkScalars_SeqCUDA;
+
+    V->ops->getworkscalar          = VecGetWorkScalar_SeqCUDA;
+    V->ops->restoreworkscalar      = VecRestoreWorkScalar_SeqCUDA;
+    V->ops->getworknorm            = VecGetWorkNorm_SeqCUDA;
+    V->ops->restoreworknorm        = VecRestoreWorkNorm_SeqCUDA;
+
+    V->ops->assignworkscalar       = VecAssignWorkScalar_SeqCUDA;
+    V->ops->assignworkreal         = VecAssignWorkReal_SeqCUDA;
+    V->ops->setworkscalar          = VecSetWorkScalar_SeqCUDA;
+    V->ops->setworkreal            = VecSetWorkReal_SeqCUDA;
+    V->ops->copyworkscalartohost   = VecCopyWorkScalarToHost_SeqCUDA;
+    V->ops->copyworkrealtohost     = VecCopyWorkRealToHost_SeqCUDA;
+    V->ops->addworkscalar          = VecAddWorkScalar_SeqCUDA;
+    V->ops->subworkscalar          = VecSubWorkScalar_SeqCUDA;
+    V->ops->multworkscalar         = VecMultWorkScalar_SeqCUDA;
+    V->ops->divideworkscalar       = VecDivideWorkScalar_SeqCUDA;
+    V->ops->sqrworkreal            = VecSqrWorkReal_SeqCUDA;
+    V->ops->sqrtworkreal           = VecSqrtWorkReal_SeqCUDA;
+
+    V->ops->dot_async              = VecDotAsync_SeqCUDA;
+    V->ops->tdot_async             = VecTDotAsync_SeqCUDA;
     V->ops->norm_async             = VecNormAsync_SeqCUDA;
-    V->ops->normcopy               = VecNormCopy_SeqCUDA;
     V->ops->axpy_async             = VecAXPYAsync_SeqCUDA;
+    V->ops->aypx_async             = VecAYPXAsync_SeqCUDA;
   }
   PetscFunctionReturn(0);
 }

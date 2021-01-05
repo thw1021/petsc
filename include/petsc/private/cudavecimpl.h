@@ -56,24 +56,42 @@ PETSC_INTERN PetscErrorCode VecCopy_SeqCUDA_Private(Vec xin,Vec yin);
 PETSC_INTERN PetscErrorCode VecDestroy_SeqCUDA_Private(Vec v);
 PETSC_INTERN PetscErrorCode VecResetArray_SeqCUDA_Private(Vec vin);
 
-PETSC_INTERN PetscErrorCode VecGetNormArray_SeqCUDA(Vec,NormType,PetscReal**);
+PETSC_INTERN PetscErrorCode VecAllocateWorkScalars_SeqCUDA(Vec);
+PETSC_INTERN PetscErrorCode VecFreeWorkScalars_SeqCUDA(Vec);
+
+PETSC_INTERN PetscErrorCode VecGetWorkNorm_SeqCUDA(Vec,NormType,PetscReal**);
+PETSC_INTERN PetscErrorCode VecRestoreWorkNorm_SeqCUDA(Vec,NormType,PetscReal**);
+PETSC_INTERN PetscErrorCode VecGetWorkScalar_SeqCUDA(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecRestoreWorkScalar_SeqCUDA(Vec,PetscScalar**);
+
+PETSC_INTERN PetscErrorCode VecAssignWorkScalar_SeqCUDA(Vec,PetscScalar*,const PetscScalar*);
+PETSC_INTERN PetscErrorCode VecAssignWorkReal_SeqCUDA(Vec,PetscReal*,const PetscReal*);
+PETSC_INTERN PetscErrorCode VecSetWorkScalar_SeqCUDA(Vec,PetscScalar*,PetscScalar);
+PETSC_INTERN PetscErrorCode VecSetWorkReal_SeqCUDA(Vec,PetscReal*,PetscReal);
+PETSC_INTERN PetscErrorCode VecCopyWorkScalarToHost_SeqCUDA(Vec,PetscScalar*,const PetscScalar*);
+PETSC_INTERN PetscErrorCode VecCopyWorkRealToHost_SeqCUDA(Vec,PetscReal*,const PetscReal*);
+PETSC_INTERN PetscErrorCode VecAddWorkScalar_SeqCUDA(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+PETSC_INTERN PetscErrorCode VecSubWorkScalar_SeqCUDA(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+PETSC_INTERN PetscErrorCode VecMultWorkScalar_SeqCUDA(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+PETSC_INTERN PetscErrorCode VecDivideWorkScalar_SeqCUDA(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+PETSC_INTERN PetscErrorCode VecSqrWorkReal_SeqCUDA(Vec,PetscReal*,const PetscReal*);
+PETSC_INTERN PetscErrorCode VecSqrtWorkReal_SeqCUDA(Vec,PetscReal*,const PetscReal*);
+
+PETSC_INTERN PetscErrorCode VecDotAsync_SeqCUDA(Vec,Vec,PetscScalar*);
+PETSC_INTERN PetscErrorCode VecTDotAsync_SeqCUDA(Vec,Vec,PetscScalar*);
 PETSC_INTERN PetscErrorCode VecNormAsync_SeqCUDA(Vec,NormType,PetscReal*);
-PETSC_INTERN PetscErrorCode VecNormCopy_SeqCUDA(Vec,NormType,const PetscReal*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecAXPYAsync_SeqCUDA(Vec,PetscScalar*,Vec);
+PETSC_INTERN PetscErrorCode VecAYPXAsync_SeqCUDA(Vec,PetscScalar*,Vec);
+
 #if defined(PETSC_HAVE_NVSHMEM)
 PETSC_INTERN PetscErrorCode PetscNvshmemInitializeCheck(void);
 PETSC_INTERN PetscErrorCode PetscNvshmemMalloc(size_t,void**);
 PETSC_INTERN PetscErrorCode PetscNvshmemCalloc(size_t,void**);
 PETSC_INTERN PetscErrorCode PetscNvshmemFree_Private(void*);
 #define      PetscNvshmemFree(ptr)      ((ptr) && (PetscNvshmemFree_Private(ptr),(ptr)=NULL,0))
-PETSC_INTERN PetscErrorCode PetscNvshmemNorm2(PetscReal*);
-PETSC_INTERN PetscErrorCode PetscNvshmemSum(PetscReal*);
-PETSC_INTERN PetscErrorCode PetscNvshmemMax(PetscReal*);
-PETSC_INTERN PetscErrorCode PetscNvshmemNorm1And2(PetscReal*);
-
-PETSC_INTERN PetscErrorCode VecGetNormArray_MPICUDA_NVSHMEM(Vec,NormType,PetscReal**);
-PETSC_INTERN PetscErrorCode VecNormAsync_MPICUDA_NVSHMEM(Vec,NormType,PetscReal*);
-PETSC_INTERN PetscErrorCode VecFreeNormArray_MPICUDA_NVSHMEM(Vec);
+PETSC_INTERN PetscErrorCode PetscNvshmemSum(PetscInt,const PetscReal*,PetscReal*);
+PETSC_INTERN PetscErrorCode PetscNvshmemMax(PetscInt,const PetscReal*,PetscReal*);
+PETSC_INTERN PetscErrorCode VecNormAsync_NVSHMEM(Vec,NormType,PetscReal*);
 PETSC_INTERN PetscErrorCode VecAllocateNVSHMEM_SeqCUDA(Vec);
 #endif
 
