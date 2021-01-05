@@ -578,14 +578,10 @@ cdef class _Vec_LocalForm:
 # --------------------------------------------------------------------
 
 cdef extern from "Python.h":
-    ctypedef struct PyObject
-    void Py_INCREF(PyObject*)
-    void Py_DECREF(PyObject*)
-
     ctypedef void (*PyCapsule_Destructor)(object)
     bint PyCapsule_IsValid(object, const char*)
-    void* PyCapsule_GetPointer(object, const char*)
-    int PyCapsule_SetName(object, const char*)
+    void* PyCapsule_GetPointer(object, const char*) except? NULL
+    int PyCapsule_SetName(object, const char*) except -1
     object PyCapsule_New(void*, const char*, PyCapsule_Destructor)
 
 cdef extern from "stdlib.h" nogil:
@@ -622,10 +618,10 @@ cdef struct DLTensor:
 cdef struct DLManagedTensor:
     DLTensor dl_tensor
     void* manager_ctx
-    void(*deleter)(DLManagedTensor*)
+    void (*deleter)(DLManagedTensor*) nogil
 
 cdef void pycapsule_deleter(object dltensor):
-    cdef DLManagedTensor* dlm_tensor
+    cdef DLManagedTensor* dlm_tensor = NULL
     try:
         dlm_tensor = <DLManagedTensor *>PyCapsule_GetPointer(dltensor, 'used_dltensor')
         return             # we do not call a used capsule's deleter
@@ -634,7 +630,7 @@ cdef void pycapsule_deleter(object dltensor):
     deleter(dlm_tensor)
 
 
-cdef void deleter(DLManagedTensor* tensor) with gil:
+cdef void deleter(DLManagedTensor* tensor) nogil:
     if tensor.manager_ctx is NULL:
         return
     free(tensor.dl_tensor.shape)
