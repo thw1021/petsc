@@ -1969,8 +1969,8 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
-  ierr = PetscInfo1(ts, "Create Landau Jacobian t=%g\n",time_dummy);CHKERRQ(ierr);
-  if (ctx->aux_bool) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "wrong state");
+  ierr = PetscInfo2(ts, "Create Landau Jacobian t=%g %s\n",time_dummy,ctx->aux_bool ? " -- seems to be in line search" : "");CHKERRQ(ierr);
+  //if (ctx->aux_bool) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "wrong state");
   ierr = LandauFormJacobian_Internal(X,ctx->J,dim,0.0,(void*)ctx);CHKERRQ(ierr);
   ctx->aux_bool = PETSC_TRUE;
   //ierr = MatViewFromOptions(ctx->J,NULL,"-landau_mat_view");CHKERRQ(ierr);

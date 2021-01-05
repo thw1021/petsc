@@ -461,9 +461,8 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     ierr = rectx->test(ts,X,plex,stepi,time,reason ? PETSC_TRUE : PETSC_FALSE, ctx, rectx);CHKERRQ(ierr);
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
   }
-PetscPrintf(PETSC_COMM_WORLD, "[%D] stepi %D, PetscReal time %g\n",-1,stepi,time);
   /* parallel check */
-  if (reason) {
+  if (reason && ctx->verbose > 0) {
     PetscReal    val,rval;
     PetscMPIInt  rank;
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
