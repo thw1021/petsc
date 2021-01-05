@@ -137,15 +137,19 @@ PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscEvent event, PetscS
 #if PetscDefined(HAVE_HIP)
     hipError_t      herr;
 #endif
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
-    PetscErrorCode  ierr;
-#endif
 
   case PETSC_STREAM_CUDA:
 #if PetscDefined(HAVE_CUDA)
     ierr = PetscStreamAssembleCUDA_Internal(strm);CHKERRQ(ierr);
+    /* It is honestly baffling that nvidia do not have a "since version X" note on their functions to make this
+     easier. Instead you must find and *manually* search each version of the documentation until you find the version in
+     which they introduced some change. $330 BILLION market cap and they can't hire some intern to do this???? */
+#if defined(CUDART_VERSION)&& (CUDART_VERSION >= 11010) /* 11.1.0 */
     cerr = cudaEventRecordWithFlags(event->cevent, strm->cstream, event->waitFlags);CHKERRCUDA(cerr);
-#endif
+#else
+    cerr = cudaEventRecord(event->cevent, strm->cstream);CHKERRCUDA(cerr);
+#endif /* CUDART_VERSION >= 11010 */
+#endif /* HAVE_CUDA */
     break;
   case PETSC_STREAM_HIP:
 #if PetscDefined(HAVE_HIP)
