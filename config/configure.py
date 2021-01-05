@@ -147,17 +147,8 @@ def chksynonyms():
   for l in range(0,len(sys.argv)):
     name = sys.argv[l]
 
-    if name.find('with-openmpi') >= 0:
-      sys.argv[l] = name.replace('with-openmpi','with-mpi')
-
-    if name.find('with-openmpi-dir') >= 0:
-      sys.argv[l] = name.replace('with-openmpi-dir','with-mpi-dir')
-
-    if name.find('with-mpich') >= 0:
-      sys.argv[l] = name.replace('with-mpich','with-mpi')
-
-    if name.find('with-mpich-dir') >= 0:
-      sys.argv[l] = name.replace('with-mpich-dir','with-mpi-dir')
+    sys.argv[l] = name.replace('with-openmpi','with-mpi')
+    sys.argv[l] = name.replace('with-mpich','with-mpi')
 
     if name.find('with-blas-lapack') >= 0:
       sys.argv[l] = name.replace('with-blas-lapack','with-blaslapack')
