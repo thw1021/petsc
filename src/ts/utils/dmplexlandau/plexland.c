@@ -1453,12 +1453,12 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
 #if defined(PETSC_HAVE_KOKKOS)
   if (ctx->deviceType == LANDAU_CPU) {
     ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr);
-    if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijkokkos -dm_vec_type kokkos' for GPU assembly and Kokkos");
+    //if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijkokkos -dm_vec_type kokkos' for GPU assembly and Kokkos");
   }
 #elif defined(PETSC_HAVE_CUDA)
   if (ctx->deviceType == LANDAU_CPU) {
     ierr = PetscObjectTypeCompareAny((PetscObject)ctx->J,&flg,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,MATAIJCUSPARSE,"");CHKERRQ(ierr);
-    if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijcusparse -dm_vec_type cuda' for GPU assembly and Cuda");
+    //if (flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"with device=cpu must not use '-dm_mat_type aijcusparse -dm_vec_type cuda' for GPU assembly and Cuda");
   }
 #endif
   if (ctx->gpu_assembly) { /* we need GPU object with GPU assembly */
@@ -1973,7 +1973,7 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   //if (ctx->aux_bool) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "wrong state");
   ierr = LandauFormJacobian_Internal(X,ctx->J,dim,0.0,(void*)ctx);CHKERRQ(ierr);
   ctx->aux_bool = PETSC_TRUE;
-  //ierr = MatViewFromOptions(ctx->J,NULL,"-landau_mat_view");CHKERRQ(ierr);
+  ierr = MatViewFromOptions(ctx->J,NULL,"-landau_mat_view");CHKERRQ(ierr);
   /* mat vec for op */
   ierr = MatMult(ctx->J,X,F);CHKERRQ(ierr);CHKERRQ(ierr); /* C*f */
   /* add time term */
@@ -2026,20 +2026,20 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   if (!ctx->aux_bool) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "wrong state");
   ierr = LandauFormJacobian_Internal(X,ctx->J,dim,shift,(void*)ctx);CHKERRQ(ierr);
   ctx->aux_bool = PETSC_FALSE;
-  /* { /\* add mass *\/ */
-  /*   MatInfo info1, info2; */
-  /*   double  nz_1, nz_2; */
-  /*   ierr = MatGetInfo(Pmat,MAT_LOCAL,&info1);CHKERRQ(ierr); */
-  /*   nz_1 = info1.nz_allocated; */
-  /*   ierr = MatGetInfo(ctx->J,MAT_LOCAL,&info2);CHKERRQ(ierr); */
-  /*   nz_2 = info2.nz_allocated; */
-  /*   if (nz_1 != nz_2) { /\* there is a bug wit Q2 elements and this generates an error message instead of diverged solution, need to fix *\/ */
-  /*     ierr = MatAXPY(Pmat,shift,ctx->M,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr); */
-  /*     SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "nz_1 != nz_2 %g %g",(double)nz_1,(double)nz_2); */
-  /*   } else { */
-  /*     ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr); */
-  /*   } */
-  /* } */
+  { /* add mass */
+    /* MatInfo info1, info2; */
+    /* double  nz_1, nz_2; */
+    /* ierr = MatGetInfo(Pmat,MAT_LOCAL,&info1);CHKERRQ(ierr); */
+    /* nz_1 = info1.nz_allocated; */
+    /* ierr = MatGetInfo(ctx->J,MAT_LOCAL,&info2);CHKERRQ(ierr); */
+    /* nz_2 = info2.nz_allocated; */
+    /* if (nz_1 != nz_2) { /\* there is a bug wit Q2 elements and this generates an error message instead of diverged solution, need to fix *\/ */
+    /*   ierr = MatAXPY(Pmat,shift,ctx->M,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr); */
+    /*   SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "nz_1 != nz_2 %g %g",(double)nz_1,(double)nz_2); */
+    /* } else { */
+    /*   ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr); */
+    /* } */
+  }
   ierr = MatViewFromOptions(Pmat,NULL,"-landau_mat_view");CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
