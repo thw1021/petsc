@@ -1,4 +1,4 @@
-#include <petsc/private/streamimpl.h>
+#include <petsc/private/deviceimpl.h>
 
 PetscErrorCode PetscStreamCreate(PetscStream *strm)
 {
@@ -96,7 +96,7 @@ PetscErrorCode PetscStreamRestoreStream(PetscStream strm, PetscStreamType type, 
     if (PetscUnlikelyDebug(*((cudaStream_t*) dstrm) != strm->cstream)) {
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"CUDA stream is not the same as the one that was checked out\n");
     }
-    if (destroy) {
+    if (destroy && strm->cstream) {
       cudaError_t cerr;
 
       cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
@@ -109,7 +109,7 @@ PetscErrorCode PetscStreamRestoreStream(PetscStream strm, PetscStreamType type, 
     if (PetscUnlikelyDebug(*((hipStream_t*) dstrm) != strm->hstream)) {
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"HIP stream is not the same as the one that was checked out\n");
     }
-    if (destroy) {
+    if (destroy && strm->hstream) {
       hipError_t herr;
 
       herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
