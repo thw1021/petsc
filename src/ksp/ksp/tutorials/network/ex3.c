@@ -158,7 +158,7 @@ int main(int argc,char ** argv)
     if (ghost) continue;
 
     /* only one process holds a non-ghost vertex */
-    ierr = DMNetworkGetNumVariables(dmnetwork,vtx[v],&nvar);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentAndNumVariables(dmnetwork,vtx[v],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(dmnetwork,vtx[v],&ncomp);CHKERRQ(ierr);
     /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] shared v %D: nvar %D, ncomp %D\n",rank,vtx[v],nvar,ncomp);CHKERRQ(ierr); */
     for (j=0; j<ncomp; j++) {

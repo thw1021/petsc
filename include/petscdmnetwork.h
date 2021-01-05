@@ -23,8 +23,7 @@ PETSC_EXTERN PetscErrorCode DMNetworkGetVertexRange(DM,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetEdgeRange(DM,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkAddComponent(DM,PetscInt,PetscInt,void*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetComponent(DM,PetscInt,PetscInt,PetscInt*,void**);
-PETSC_EXTERN PetscErrorCode DMNetworkSetComponentNumVariables(DM,PetscInt,PetscInt,PetscInt);
-PETSC_EXTERN PetscErrorCode DMNetworkGetComponentNumVariables(DM,PetscInt,PetscInt,PetscInt*);
+
 PETSC_EXTERN PetscErrorCode DMNetworkGetNumComponents(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVariableOffset(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVariableGlobalOffset(DM,PetscInt,PetscInt*);
@@ -33,9 +32,7 @@ PETSC_EXTERN PetscErrorCode DMNetworkGetComponentVariableGlobalOffset(DM,PetscIn
 PETSC_EXTERN PetscErrorCode DMNetworkGetComponentKeyOffset(DM,PetscInt,PetscInt,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetEdgeOffset(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVertexOffset(DM,PetscInt,PetscInt*);
-PETSC_EXTERN PetscErrorCode DMNetworkAddNumVariables(DM,PetscInt,PetscInt);
-PETSC_EXTERN PetscErrorCode DMNetworkGetNumVariables(DM,PetscInt,PetscInt*);
-PETSC_EXTERN PetscErrorCode DMNetworkSetNumVariables(DM,PetscInt,PetscInt);
+
 PETSC_EXTERN PetscErrorCode DMNetworkAddComponentAndNumVariables(DM,PetscInt,PetscInt,void*,PetscInt);
 PETSC_EXTERN PetscErrorCode DMNetworkAssembleGraphStructures(DM);
 PETSC_EXTERN PetscErrorCode DMNetworkSetVertexLocalToGlobalOrdering(DM);
