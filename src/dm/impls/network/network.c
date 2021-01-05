@@ -168,15 +168,16 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscIn
 }
 
 /*
+  SetUp a single svtx struct. See SVtx defined in dmnetworkimpl.h
   Set gidx and type if input v=(net,idx) is a from_vertex;
   Get gid, type and index in the svtx array if input v=(net,idx) is a to_vertex.
 
-  Input: Nsvtx, svtx, net, idx, gidx
+  Input:  Nsvtx, svtx, net, idx, gidx
   Output: gidx, svtype, svtx_idx
  */
 static PetscErrorCode SVtxSetUp(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt idx,PetscInt *gidx,SVtxType *svtype,PetscInt *svtx_idx)
 {
-  PetscInt i,j,*cvto;
+  PetscInt i,j,*svto;
   SVtxType vtype;
 
   PetscFunctionBegin;
@@ -185,23 +186,39 @@ static PetscErrorCode SVtxSetUp(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt 
   vtype = SVNONE;
   for (i=0; i<Nsvtx; i++) {
     if (net == svtx[i].sv[0] && idx == svtx[i].sv[1]) {
-      /* (1) input vertex net.idx is a coupling from_vertex, set its global index and output its svtype */
+      /* (1) input vertex net.idx is a shared from_vertex, set its global index and output its svtype */
       svtx[i].gidx = *gidx; /* set gidx */
-      vtype = SVFROM;
+      vtype        = SVFROM;
     } else { /* loop over svtx[i].n */
       for (j=1; j<svtx[i].n; j++) {
-        cvto = svtx[i].sv + 2*j;
-        if (net == cvto[0] && idx == cvto[1]) {
-          /* input vertex net.idx is a coupling to_vertex, output its global index and its svtype */
-          *gidx  = svtx[i].gidx; /* output gidx for to_vertex */
+        svto = svtx[i].sv + 2*j;
+        if (net == svto[0] && idx == svto[1]) {
+          /* input vertex net.idx is a shared to_vertex, output its global index and its svtype */
+          *gidx = svtx[i].gidx; /* output gidx for to_vertex */
           vtype = SVTO;
         }
       }
     }
     if (vtype != SVNONE) break;
   }
-  if (svtype) *svtype = vtype;
+  if (svtype)   *svtype   = vtype;
   if (svtx_idx) *svtx_idx = i;
+  PetscFunctionReturn(0);
+}
+
+/* Add a new shared vertex sv=(net,idx) to table svtas[ita] */
+static PetscErrorCode TableAddSVtx(PetscTable *svtas,PetscInt ita,PetscInt* tdata,PetscInt *sv_wk,PetscInt *ii,PetscInt *sedgelist,PetscInt k,DM_Network *network,PetscInt **ta2sv)
+{
+  PetscInt       net,idx,gidx,i=*ii;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  net = sv_wk[2*i]   = sedgelist[k];
+  idx = sv_wk[2*i+1] = sedgelist[k+1];
+  gidx = network->subnet[net].vStart + idx;
+  ierr = PetscTableAdd(svtas[ita],gidx+1,tdata[ita]+1,INSERT_VALUES);CHKERRQ(ierr);
+  *(ta2sv[ita] + tdata[ita]) = i; /* maps tdata to index of sv_wk; sv_wk keeps (net,idx) info */
+  tdata[ita]++; (*ii)++;
   PetscFunctionReturn(0);
 }
 
@@ -233,29 +250,18 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
   /* (1) Crete ctables svtas */
   ierr = PetscCalloc4(Nsedgelist,&svtas,Nsedgelist,&tdata,4*Nsedgelist,&sv_wk,2*Nsedgelist,&ta2sv);CHKERRQ(ierr);
 
+  j   = 0;   /* sedgelist counter */
   k   = 0;   /* sedgelist vertex counter j = 4*k */
   i   = 0;   /* sv_wk (vertices added to the ctables) counter */
-  j   = 0;   /* sedgelist counter */
   nta = 0;   /* num of sv tables created */
 
   /* for j=0 */
   ierr = PetscTableCreate(2*Nsedgelist,network->NVertices+1,&svtas[nta]);CHKERRQ(ierr);
   ierr = PetscMalloc1(2*Nsedgelist,&ta2sv[nta]);CHKERRQ(ierr);
 
-  net = sv_wk[2*i]   = sedgelist[k];
-  idx = sv_wk[2*i+1] = sedgelist[k+1];
-  gidx = network->subnet[net].vStart + idx;
-  ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
-  *(ta2sv[nta] + tdata[nta]) = i; /* maps tdata to index of sv_wk; sv_wk keeps (net,idx) info */
-  tdata[nta]++; i++;
-
-  net = sv_wk[2*i]   = sedgelist[k+2];
-  idx = sv_wk[2*i+1] = sedgelist[k+3];
-  gidx = network->subnet[net].vStart + idx;
-  ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
-  *(ta2sv[nta] + tdata[nta]) = i;
-  tdata[nta]++; i++;
-  nta++; j++; k += 4;
+  ierr = TableAddSVtx(svtas,nta,tdata,sv_wk,&i,sedgelist,k,network,ta2sv);CHKERRQ(ierr);
+  ierr = TableAddSVtx(svtas,nta,tdata,sv_wk,&i,sedgelist,k+2,network,ta2sv);CHKERRQ(ierr);
+  nta++; k += 4;
 
   for (j = 1; j < Nsedgelist; j++) {
     for (ita = 0; ita < nta; ita++) {
@@ -272,20 +278,10 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
       if (idx_from || idx_to) { /* vfrom or vto is on table svtas[ita] */
         idx_from--; idx_to--;
         if (idx_from < 0) { /* vto is on svtas[ita] */
-          net = sv_wk[2*i]   = sedgelist[k];
-          idx = sv_wk[2*i+1] = sedgelist[k+1];
-          gidx = network->subnet[net].vStart + idx;
-          ierr = PetscTableAdd(svtas[ita],gidx+1,tdata[ita]+1,INSERT_VALUES);CHKERRQ(ierr);
-          *(ta2sv[ita] + tdata[ita]) = i;
-          tdata[ita]++; i++;
+          ierr = TableAddSVtx(svtas,ita,tdata,sv_wk,&i,sedgelist,k,network,ta2sv);CHKERRQ(ierr);
           break;
         } else if (idx_to < 0) {
-          net = sv_wk[2*i]   = sedgelist[k+2];
-          idx = sv_wk[2*i+1] = sedgelist[k+3];
-          gidx = network->subnet[net].vStart + idx;
-          ierr = PetscTableAdd(svtas[ita],gidx+1,tdata[ita]+1,INSERT_VALUES);CHKERRQ(ierr);
-          *(ta2sv[ita] + tdata[ita]) = i; /* maps tdata to index of sv_wk */
-          tdata[ita]++; i++;
+          ierr = TableAddSVtx(svtas,ita,tdata,sv_wk,&i,sedgelist,k+2,network,ta2sv);CHKERRQ(ierr);
           break;
         }
       }
@@ -295,21 +291,8 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
       ierr = PetscTableCreate(2*Nsedgelist,network->NVertices+1,&svtas[nta]);CHKERRQ(ierr);
       ierr = PetscMalloc1(2*Nsedgelist, &ta2sv[nta]);CHKERRQ(ierr);
 
-      net = sv_wk[2*i]   = sedgelist[k];
-      idx = sv_wk[2*i+1] = sedgelist[k+1];
-      gidx = network->subnet[net].vStart + idx;
-      ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
-
-      *(ta2sv[nta] + tdata[nta]) = i;
-      tdata[nta]++; i++;
-
-      net = sv_wk[2*i]   = sedgelist[k+2];
-      idx = sv_wk[2*i+1] = sedgelist[k+3];
-      gidx = network->subnet[net].vStart + idx;
-      ierr = PetscTableAdd(svtas[nta],gidx+1,tdata[nta]+1,INSERT_VALUES);CHKERRQ(ierr);
-      *(ta2sv[nta] + tdata[nta]) = i; /* maps tdata to index of sv_wk */
-      tdata[nta]++; i++;
-
+      ierr = TableAddSVtx(svtas,nta,tdata,sv_wk,&i,sedgelist,k,network,ta2sv);CHKERRQ(ierr);
+      ierr = TableAddSVtx(svtas,nta,tdata,sv_wk,&i,sedgelist,k+2,network,ta2sv);CHKERRQ(ierr);
       nta++;
     }
     k += 4;
@@ -1644,11 +1627,16 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
   if (size > 1) { /* Sync nvar at shared vertices for all processes */
     PetscSF           sf = network->plex->sf;
     PetscInt          *local_nvar, *remote_nvar,nroots,nleaves,p=-1,i,nsv;
-    const PetscInt    *ilocal,*svtx;
-    const PetscSFNode *iremote;
+    const PetscInt    *svtx;
     PetscBool         ghost;
-
-    ierr = PetscSFGetGraph(sf,&nroots,&nleaves,&ilocal,&iremote);CHKERRQ(ierr);
+    /*
+     PetscMPIInt       rank;
+     const PetscInt    *ilocal;
+     const PetscSFNode *iremote;
+     ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+     ierr = PetscSFGetGraph(sf,&nroots,&nleaves,&ilocal,&iremote);CHKERRQ(ierr);
+    */
+    ierr = PetscSFGetGraph(sf,&nroots,&nleaves,NULL,NULL);CHKERRQ(ierr);
     ierr = PetscCalloc2(nroots,&local_nvar,nroots,&remote_nvar);CHKERRQ(ierr);
 
     /* Leaves copy user's nvar to local_nvar */
@@ -1664,6 +1652,7 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
     /* Leaves add local_nvar to root remote_nvar */
     ierr = PetscSFReduceBegin(sf, MPIU_INT, local_nvar, remote_nvar, MPI_SUM);CHKERRQ(ierr);
     ierr = PetscSFReduceEnd(sf, MPIU_INT, local_nvar, remote_nvar, MPI_SUM);CHKERRQ(ierr);
+    /* printf("[%d] remote_nvar[%d] = %d\n",rank,p,remote_nvar[p]); */
 
     /* Update roots' local_nvar */
     for (i=0; i<nsv; i++) {
