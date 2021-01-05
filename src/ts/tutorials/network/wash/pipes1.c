@@ -599,7 +599,7 @@ int main(int argc,char ** argv)
   Junction          junctions,junction;
   Pipe              pipe,pipes;
   PetscInt          KeyPipe,KeyJunction;
-  PetscInt          *edgelist = NULL,*edgelists[1],*vtype = NULL;
+  PetscInt          *edgelist = NULL,*vtype = NULL;
   PetscInt          i,e,v,eStart,eEnd,vStart,vEnd,key;
   PetscInt          vkey,type;
   const PetscInt    *cone;
@@ -611,14 +611,12 @@ int main(int argc,char ** argv)
   PetscInt          steps=1;
   TSConvergedReason reason;
   PetscBool         viewpipes,monipipes=PETSC_FALSE,userJac=PETSC_TRUE,viewdm=PETSC_FALSE,viewX=PETSC_FALSE;
-  PetscBool         test=PETSC_FALSE;
   PetscInt          pipesCase=0;
   DMNetworkMonitor  monitor;
   MPI_Comm          comm;
 
   PetscInt          nedges,nvertices; /* local num of edges and vertices */
-  PetscInt          nnodes = 6,nv,ne;
-  const PetscInt    *vtx,*edge;
+  PetscInt          nnodes = 6;
 
   ierr = PetscInitialize(&argc,&argv,"pOption",help);if (ierr) return ierr;
 
@@ -629,7 +627,6 @@ int main(int argc,char ** argv)
   ierr = PetscOptionsGetBool(NULL,NULL,"-viewdm",&viewdm,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-viewX",&viewX,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL, "-npipenodes", &nnodes, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-test",&test,NULL);CHKERRQ(ierr);
 
   /* Create networkdm */
   /*------------------*/
@@ -656,39 +653,24 @@ int main(int argc,char ** argv)
   pipes       = wash->pipe;
 
   /* Set up the network layout */
-  ierr = DMNetworkSetSizes(networkdm,1,&nvertices,&nedges,0,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,NULL,nvertices,nedges,edgelist,NULL);CHKERRQ(ierr);
 
-  /* Add local edge connectivity */
-  edgelists[0] = edgelist;
-  ierr = DMNetworkSetEdgeList(networkdm,edgelists,NULL);CHKERRQ(ierr);
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
 
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
   ierr = DMNetworkGetVertexRange(networkdm,&vStart,&vEnd);CHKERRQ(ierr);
   /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] eStart/End: %d - %d; vStart/End: %d - %d\n",rank,eStart,eEnd,vStart,vEnd);CHKERRQ(ierr); */
 
-  /* Test DMNetworkGetSubnetworkInfo() */
-  if (test) {
-    ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edge);CHKERRQ(ierr);
-    if (ne != eEnd - eStart || nv != vEnd - vStart) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"ne %D or nv %D is incorrect",ne,nv);
-  }
-
   if (rank) { /* junctions[] and pipes[] for proc[0] are allocated in WashNetworkCreate() */
     /* vEnd - vStart = nvertices + num of ghost vertices! */
     ierr = PetscCalloc2(vEnd - vStart,&junctions,nedges,&pipes);CHKERRQ(ierr);
   }
 
-  /* Add Pipe component to all local edges */
+  /* Add Pipe component and num of variables to all local edges */
   for (e = eStart; e < eEnd; e++) {
-    if (test) {
-      if (e != edge[e]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"e %D != edge %D from DMNetworkGetSubnetworkInfo()",e,edge[e]);
-    }
-
     pipes[e-eStart].nnodes = nnodes;
-    ierr = DMNetworkAddComponent(networkdm,e,KeyPipe,&pipes[e-eStart]);CHKERRQ(ierr);
-
-    /* Add number of variables to each edge */
-    ierr = DMNetworkAddNumVariables(networkdm,e,2*pipes[e-eStart].nnodes);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponentAndNumVariables(networkdm,e,KeyPipe,&pipes[e-eStart],2*pipes[e-eStart].nnodes);CHKERRQ(ierr);
 
     if (size == 1 && monipipes) { /* Add monitor -- show Q_{pipes[e-eStart].id}? */
       pipes[e-eStart].length = 600.0;
@@ -697,16 +679,9 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Add Junction component to all local vertices, including ghost vertices! */
+  /* Add Junction component and num of variables to all local vertices, including ghost vertices! (current implemetation requires setting same num of variables at ghost points */
   for (v = vStart; v < vEnd; v++) {
-    if (test) {
-      if (v != vtx[v-vStart]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"v %D != vtx %D from DMNetworkGetSubnetworkInfo()",v,vtx[v-vStart]);
-    }
-
-    ierr = DMNetworkAddComponent(networkdm,v,KeyJunction,&junctions[v-vStart]);CHKERRQ(ierr);
-
-    /* Add number of variables to vertex */
-    ierr = DMNetworkAddNumVariables(networkdm,v,2);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponentAndNumVariables(networkdm,v,KeyJunction,&junctions[v-vStart],2);CHKERRQ(ierr);
   }
 
   if (size > 1) {  /* must be called before DMSetUp()???. Other partitioners do not work yet??? -- cause crash in proc[0]! */
@@ -786,20 +761,6 @@ int main(int argc,char ** argv)
 
       ierr = DMNetworkGetComponent(networkdm,v,0,&vkey,(void**)&junction);CHKERRQ(ierr);
       junction->jacobian = J;
-    }
-  }
-
-  /* Test DMNetworkGetSubnetworkInfo() */
-  if (test) {
-    ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
-    ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edge);CHKERRQ(ierr);
-    if (ne != eEnd - eStart || nv != vEnd - vStart) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"ne %D or nv %D is incorrect",ne,nv);
-
-    for (e = eStart; e < eEnd; e++) {
-      if (e != edge[e]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"e %D != edge %D from DMNetworkGetSubnetworkInfo()",e,edge[e]);
-    }
-    for (v = vStart; v < vEnd; v++) {
-      if (v != vtx[v-vStart]) SETERRQ2(PetscObjectComm((PetscObject)networkdm),PETSC_ERR_ARG_WRONG,"v %D != vtx %D from DMNetworkGetSubnetworkInfo()",v,vtx[v-vStart]);
     }
   }
 
@@ -888,7 +849,7 @@ int main(int argc,char ** argv)
      depends: pipeInterface.c pipeImpls.c
 
    test:
-      args: -ts_monitor -case 1 -ts_max_steps 1 -options_left no -viewX -test
+      args: -ts_monitor -case 1 -ts_max_steps 1 -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_1.out
 
@@ -896,7 +857,7 @@ int main(int argc,char ** argv)
       suffix: 2
       nsize: 2
       requires: mumps
-      args: -ts_monitor -case 1 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -viewX -test
+      args: -ts_monitor -case 1 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_2.out
 
@@ -904,13 +865,13 @@ int main(int argc,char ** argv)
       suffix: 3
       nsize: 2
       requires: mumps
-      args: -ts_monitor -case 0 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -viewX -test
+      args: -ts_monitor -case 0 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_3.out
 
    test:
       suffix: 4
-      args: -ts_monitor -case 2 -ts_max_steps 1 -options_left no -viewX -test
+      args: -ts_monitor -case 2 -ts_max_steps 1 -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_4.out
 
@@ -918,7 +879,7 @@ int main(int argc,char ** argv)
       suffix: 5
       nsize: 3
       requires: mumps
-      args: -ts_monitor -case 2 -ts_max_steps 10 -petscpartitioner_type simple -options_left no -viewX -test
+      args: -ts_monitor -case 2 -ts_max_steps 10 -petscpartitioner_type simple -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_5.out
 
@@ -926,7 +887,7 @@ int main(int argc,char ** argv)
       suffix: 6
       nsize: 2
       requires: mumps
-      args: -ts_monitor -case 1 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX -test
+      args: -ts_monitor -case 1 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX
       localrunfiles: pOption
       output_file: output/pipes1_6.out
 
@@ -934,7 +895,7 @@ int main(int argc,char ** argv)
       suffix: 7
       nsize: 2
       requires: mumps
-      args: -ts_monitor -case 2 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX -test
+      args: -ts_monitor -case 2 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX
       localrunfiles: pOption
       output_file: output/pipes1_7.out
 
