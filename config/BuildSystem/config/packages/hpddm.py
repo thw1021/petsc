@@ -70,11 +70,14 @@ class Configure(config.package.Package):
       if self.slepc.found:
         slepcbuilddep = ''
         ldflags = ' '.join(self.setCompilers.sharedLibraryFlags)
-        # how can we get the slepc lib? Eventually, we may want to use the variables from the framework
-        #cxxflags += self.headers.toStringNoDupes(self.slepc.dinclude)
-        #ldflags += self.libraries.toString(self.slepc.dlib)
-        dinclude = [incDir,self.headers.toString(self.dinclude),os.path.join(PETSC_DIR,'include'),os.path.join(PETSC_DIR,PETSC_ARCH,'include'),os.path.join(self.petscdir.dir,'include'),os.path.join(self.packageDir,'include')]
-        dlib = [os.path.join(libDir,'libslepc.'+self.setCompilers.sharedLibraryExt)]
+
+        if self.framework.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
+          dinclude = [incDir,self.headers.toString(self.dinclude),os.path.join('$(PETSC_DIR)','include'),os.path.join('$(SLEPC_DIR)','include'),os.path.join(self.packageDir,'include')]
+          dlib = [os.path.join('$(SLEPC_DIR)','lib','libslepc.'+self.setCompilers.sharedLibraryExt)]
+        else:
+          dinclude = [incDir,self.headers.toString(self.dinclude),os.path.join('$(PETSC_DIR)','include'),os.path.join('$(PETSC_DIR)','$(PETSC_ARCH)','include'),os.path.join('$(SLEPC_DIR)','include'),os.path.join('$(SLEPC_DIR)','$(PETSC_ARCH)','include'),os.path.join(self.packageDir,'include')]
+          dlib = [os.path.join('$(SLEPC_DIR)','$(PETSC_ARCH)','lib','libslepc.'+self.setCompilers.sharedLibraryExt)]
+
         cxxflags += ' '+self.headers.toStringNoDupes(dinclude)
         ldflags += ' '+self.libraries.toStringNoDupes(dlib)
         slepcbuilddep = 'slepc-install slepc-build'
@@ -90,18 +93,18 @@ class Configure(config.package.Package):
         self.addMakeRule('hpddmcopy','',\
                            ['@echo "*** Copying HPDDM ***"',\
                             '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/hpddm.errorflg',\
-                            '@'+cpstr+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
+                            '@'+cpstr+' || \\\n\
                  (echo "**************************ERROR*************************************" && \\\n\
-                 echo "Error copying HPDDM. Check ${PETSC_ARCH}/lib/petsc/conf/hpddm.log" && \\\n\
+                 echo "Error copying HPDDM." && \\\n\
                  echo "********************************************************************" && \\\n\
                  touch '+os.path.join('${PETSC_ARCH}','lib','petsc','conf','hpddm.errorflg')+' && \\\n\
                  exit 1)'])
         self.addMakeRule('hpddmbuild',slepcbuilddep,\
                            ['@echo "*** Building and installing HPDDM ***"',\
                             '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/hpddm.errorflg',\
-                            '@'+newuser+cxx+' '+cxxflags+' '+self.packageDir+'/interface/hpddm_petsc.cpp '+ldflags+' -o '+libDir+os.path.join('/libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
+                            '@'+newuser+cxx+' '+cxxflags+' '+self.packageDir+'/interface/hpddm_petsc.cpp '+ldflags+' -o '+libDir+os.path.join('/libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' || \\\n\
                  (echo "**************************ERROR*************************************" && \\\n\
-                 echo "Error building HPDDM. Check ${PETSC_ARCH}/lib/petsc/conf/hpddm.log" && \\\n\
+                 echo "Error installing HPDDM. " && \\\n\
                  echo "********************************************************************" && \\\n\
                  touch '+os.path.join('${PETSC_ARCH}','lib','petsc','conf','hpddm.errorflg')+' && \\\n\
                  exit 1)'])
