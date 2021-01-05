@@ -150,11 +150,11 @@ PetscErrorCode FormFunction(SNES snes,Vec X, Vec F,void *appctx)
   ierr = DMGlobalToLocalEnd(networkdm,F,INSERT_VALUES,localF);CHKERRQ(ierr);
 
   /* Form Function for first subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormFunction_Subnet(networkdm,localX,localF,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   /* Form Function for second subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormFunction_Subnet(networkdm,localX,localF,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   ierr = DMRestoreLocalVector(networkdm,&localX);CHKERRQ(ierr);
@@ -343,11 +343,11 @@ PetscErrorCode FormJacobian(SNES snes,Vec X, Mat J,Mat Jpre,void *appctx)
   ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
 
   /* Form Jacobian for first subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormJacobian_Subnet(networkdm,localX,J,Jpre,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   /* Form Jacobian for second subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = FormJacobian_Subnet(networkdm,localX,J,Jpre,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   ierr = DMRestoreLocalVector(networkdm,&localX);CHKERRQ(ierr);
@@ -409,11 +409,11 @@ PetscErrorCode SetInitialValues(DM networkdm, Vec X,void* appctx)
   ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
 
   /* Set initial guess for first subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = SetInitialValues_Subnet(networkdm,localX,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   /* Set initial guess for second subnetwork */
-  ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+  ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   ierr = SetInitialValues_Subnet(networkdm,localX,nv,ne,vtx,edges,appctx);CHKERRQ(ierr);
 
   ierr = DMLocalToGlobalBegin(networkdm,localX,ADD_VALUES,X);CHKERRQ(ierr);
@@ -428,22 +428,15 @@ int main(int argc,char ** argv)
   char             pfdata_file[PETSC_MAX_PATH_LEN]="case9.m";
   PFDATA           *pfdata1,*pfdata2;
   PetscInt         numEdges1=0,numVertices1=0,numEdges2=0,numVertices2=0;
-  PetscInt         *edgelist1 = NULL,*edgelist2 = NULL;
+  PetscInt         *edgelist1 = NULL,*edgelist2 = NULL,componentkey[4];
   DM               networkdm;
-  PetscInt         componentkey[4];
   UserCtx_Power    User;
 #if defined(PETSC_USE_LOG)
   PetscLogStage    stage1,stage2;
 #endif
   PetscMPIInt      rank;
-  PetscInt         nsubnet = 2;
-  PetscInt         numVertices[2],numEdges[2];
-  PetscInt         *edgelist[2];
-  PetscInt         nv,ne;
-  const PetscInt   *vtx;
-  const PetscInt   *edges;
-  PetscInt         i,j;
-  PetscInt         genj,loadj;
+  PetscInt         nsubnet = 2,nv,ne,i,j,genj,loadj;
+  const PetscInt   *vtx,*edges;
   Vec              X,F;
   Mat              J;
   SNES             snes;
@@ -501,15 +494,10 @@ int main(int argc,char ** argv)
     ierr = PetscLogStageRegister("Create network",&stage2);CHKERRQ(ierr);
     PetscLogStagePush(stage2);
 
-    /* Set number of nodes/edges */
-    numVertices[0] = numVertices1; numVertices[1] = numVertices2;
-    numEdges[0] = numEdges1; numEdges[1] = numEdges2;
-    ierr = DMNetworkSetSizes(networkdm,nsubnet,numVertices,numEdges,0,NULL);CHKERRQ(ierr);
-
-    edgelist[0] = edgelist1; edgelist[1] = edgelist2;
-
-    /* Add edge connectivity */
-    ierr = DMNetworkSetEdgeList(networkdm,edgelist,NULL);CHKERRQ(ierr);
+    /* Set number of nodes/edges and edge connectivity */
+    ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,nsubnet);CHKERRQ(ierr);
+    ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices1,numEdges1,edgelist1,NULL);CHKERRQ(ierr);
+    ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices2,numEdges2,edgelist2,NULL);CHKERRQ(ierr);
 
     /* Set up the network layout */
     ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
@@ -519,51 +507,47 @@ int main(int argc,char ** argv)
       genj=0; loadj=0;
 
       /* ADD VARIABLES AND COMPONENTS FOR THE FIRST SUBNETWORK */
-      ierr = DMNetworkGetSubnetworkInfo(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+      ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
       for (i = 0; i < ne; i++) {
-        ierr = DMNetworkAddComponent(networkdm,edges[i],componentkey[0],&pfdata1->branch[i]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],componentkey[0],&pfdata1->branch[i],0);CHKERRQ(ierr);
       }
 
       for (i = 0; i < nv; i++) {
-        ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[1],&pfdata1->bus[i]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[1],&pfdata1->bus[i],2);CHKERRQ(ierr);
         if (pfdata1->bus[i].ngen) {
           for (j = 0; j < pfdata1->bus[i].ngen; j++) {
-            ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[2],&pfdata1->gen[genj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[2],&pfdata1->gen[genj++],0);CHKERRQ(ierr);
           }
         }
         if (pfdata1->bus[i].nload) {
           for (j=0; j < pfdata1->bus[i].nload; j++) {
-            ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[3],&pfdata1->load[loadj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[3],&pfdata1->load[loadj++],0);CHKERRQ(ierr);
           }
         }
-        /* Add number of variables */
-        ierr = DMNetworkAddNumVariables(networkdm,vtx[i],2);CHKERRQ(ierr);
       }
 
       genj=0; loadj=0;
 
       /* ADD VARIABLES AND COMPONENTS FOR THE SECOND SUBNETWORK */
-      ierr = DMNetworkGetSubnetworkInfo(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
+      ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
       for (i = 0; i < ne; i++) {
-        ierr = DMNetworkAddComponent(networkdm,edges[i],componentkey[0],&pfdata2->branch[i]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],componentkey[0],&pfdata2->branch[i],0);CHKERRQ(ierr);
       }
 
       for (i = 0; i < nv; i++) {
-        ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[1],&pfdata2->bus[i]);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[1],&pfdata2->bus[i],2);CHKERRQ(ierr);
         if (pfdata2->bus[i].ngen) {
           for (j = 0; j < pfdata2->bus[i].ngen; j++) {
-            ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[2],&pfdata2->gen[genj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[2],&pfdata2->gen[genj++],0);CHKERRQ(ierr);
           }
         }
         if (pfdata2->bus[i].nload) {
           for (j=0; j < pfdata2->bus[i].nload; j++) {
-            ierr = DMNetworkAddComponent(networkdm,vtx[i],componentkey[3],&pfdata2->load[loadj++]);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],componentkey[3],&pfdata2->load[loadj++],0);CHKERRQ(ierr);
           }
         }
-        /* Add number of variables */
-        ierr = DMNetworkAddNumVariables(networkdm,vtx[i],2);CHKERRQ(ierr);
       }
     }
 
@@ -632,19 +616,16 @@ int main(int argc,char ** argv)
      depends: PFReadData.c pffunctions.c
      requires: !complex double define(PETSC_HAVE_ATTRIBUTEALIGNED)
 
-
    test:
      args: -snes_rtol 1.e-3
      localrunfiles: poweroptions case9.m
-     output_file: output/power2_1.out
-     requires: double !complex
+     output_file: output/power_1.out
 
    test:
      suffix: 2
      args: -snes_rtol 1.e-3 -petscpartitioner_type simple
      nsize: 4
      localrunfiles: poweroptions case9.m
-     output_file: output/power2_1.out
-     requires: double !complex
+     output_file: output/power_1.out
 
 TEST*/
