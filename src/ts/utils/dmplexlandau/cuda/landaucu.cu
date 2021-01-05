@@ -148,12 +148,10 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
                          PetscInt myelem, PetscErrorCode *ierr)
 {
   int           delta,d,f,g,d2,dp,d3,fieldA,ipidx_b,nip_pad = nip; // vectorization padding not supported;
-
   *ierr = 0;
-  if (!d_mass_w) {
+  if (!d_mass_w) { // get g2 & g3
   PetscReal     gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
   LandauIPData  IPData;
-
   // create g2 & g3
   for (f=threadIdx.x; f<Nf; f+=blockDim.x) {
     for (d=0;d<dim;d++) { // clear accumulation data D & K
@@ -288,9 +286,9 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
       g2[d][myQi][fieldA] *= wj;
     }
   }
-  } // mass_w
-  /* FE matrix construction */
   __syncthreads();  // Synchronize (ensure all the data is available) and sum IP matrices
+  } // !mass_w
+  /* FE matrix construction */
   {
     int fieldA,d,qj,d2,q,idx,totDim=Nb*Nf;
     /* assemble */
@@ -318,6 +316,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
               }
             }
 	    } else {
+	      const PetscInt jpidx = qj + myelem * Nq;
 	      t += BJq[f] * d_mass_w[jpidx]*shift * BJq[g];
 	    }
           }
