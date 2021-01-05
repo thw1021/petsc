@@ -250,7 +250,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
     // get f and df
     if (!mass_w) {
-    Kokkos::parallel_for("Landau_elements", Kokkos::TeamPolicy<>(numCells, team_size, num_sub_blocks).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
+    Kokkos::parallel_for("df_d_elements", Kokkos::TeamPolicy<>(numCells, team_size, num_sub_blocks).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
         const PetscInt  myelem = team.league_rank();
         // un pack IPData
         LandauIPReal *IPData_coefs = &d_ipdata_raw[IPData->nip_*(dim+1)];
@@ -393,7 +393,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
           }); // Nq
         team.team_barrier();
         } // Jacobian
-        /* assemble - on the diagonal (I,I) */
+        /* assemble */
         //Kokkos::single(Kokkos::PerTeam(team), [&]() {
         Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nb), [=] (int blk_i) {
             Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,(int)Nf), [=] (int fieldA) {
@@ -416,6 +416,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
                     } else {
                       const PetscInt jpidx = qj + myelem * Nq;
                       t += BJq[blk_i] * d_mass_w(jpidx)*shift * BJq[blk_j];
+                      //printf("\tmat[%d %d %d %d %d]: B=%g w=%g shift=%g B=%g\n",myelem,fOff,fieldA,qj,d,BJq[blk_i],d_mass_w(jpidx),shift,BJq[blk_j]);
                     }
                   }
                   if (global_elem_mat_sz) d_elem_mats(myelem,fOff) = t; // can set this because local element matrix[fOff]
