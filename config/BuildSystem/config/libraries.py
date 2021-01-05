@@ -40,8 +40,6 @@ class Configure(config.base.Configure):
     if len(library) > 3 and library[-4:] == '.lib':
       return [library.replace('\\ ',' ').replace(' ', '\\ ').replace('\\(','(').replace('(', '\\(').replace('\\)',')').replace(')', '\\)')]
     if os.path.basename(library).startswith('lib'):
-      print(1)
-      print(library)
       name = self.getLibName(library)
       if ((len(library) > 2 and library[1] == ':') or os.path.isabs(library)):
         flagName  = self.language[-1]+'SharedLinkerFlag'
@@ -57,8 +55,6 @@ class Configure(config.base.Configure):
         return ['-L'+dirname,'-l'+name]
       # TODO: handle $( properly
       elif library.find('$(') > -1:
-        print(2)
-        print(library)
         return [library]
       else:
         return ['-l'+name]
@@ -128,8 +124,6 @@ class Configure(config.base.Configure):
         frame = 1
       else:
         newlibs += self.getLibArgumentList(lib, with_rpath)
-        print(3)
-        print(newlibs)
     libs = newlibs
     newldflags = []
     newlibs = []
@@ -139,8 +133,6 @@ class Configure(config.base.Configure):
     if hasattr(self.setCompilers, flagName) and not getattr(self.setCompilers, flagName) is None:
       dupflags.append(getattr(self.setCompilers, flagName))
     for j in libs:
-      print(4)
-      print(j)
       # remove duplicate -L, -Wl,-rpath options - and only consecutive -l options
       if j in newldflags and any([j.startswith(flg) for flg in dupflags]): continue
       if newlibs and j == newlibs[-1]: continue
