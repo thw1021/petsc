@@ -53,6 +53,12 @@ class Configure(config.package.Package):
 
     self.addDefine('HAVE_PETSC4PY',1)
     self.addDefine('PETSC4PY_INSTALL_PATH','"'+os.path.join(self.installdir.dir,'lib')+'"')
+
+    # Cannot use ${PYTHONPATH} in variables makefile so determine the current path here
+    if 'PYTHONPATH' in os.environ: pp = ':'+os.environ['PYTHONPATH']
+    else: pp = ''
+    self.addMakeMacro('PYTHONPATH',os.path.join(self.installDir,'lib')+pp)
+
     self.addMakeMacro('PETSC4PY','yes')
     self.addMakeRule('petsc4pybuild','', \
                        ['@echo "*** Building petsc4py ***"',\
@@ -69,7 +75,7 @@ class Configure(config.package.Package):
                           '@(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && \\\n\
            '+newdir+archflags+self.python.pyexe+' setup.py install --install-lib='+os.path.join(self.installDir,'lib')+')  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building petsc4py." && \\\n\
+             echo "Error installing petsc4py." && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)',\
                           '@echo "====================================="',\
