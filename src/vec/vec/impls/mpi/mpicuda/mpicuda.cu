@@ -28,6 +28,7 @@ PetscErrorCode VecDestroy_MPICUDA(Vec v)
   cudaError_t    err;
 
   PetscFunctionBegin;
+  ierr = PetscEventSynchronize(v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   if (v->spptr) {
     veccuda = (Vec_CUDA*)v->spptr;
     if (veccuda->GPUarray_allocated) {
@@ -52,6 +53,7 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = PetscEventSynchronize(xin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   if (type == NORM_2 || type == NORM_FROBENIUS) {
     ierr  = VecNorm_SeqCUDA(xin,NORM_2,&work);
     work *= work;
@@ -78,6 +80,44 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecNorm_MPICUDAAsync(Vec xin,NormType type,PetscReal *z,PetscStream pstream)
+{
+  PetscReal      sum,work = 0.0;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (type == NORM_2 || type == NORM_FROBENIUS) {
+    ierr  = VecNorm_SeqCUDAAsync(xin,NORM_2,&work,pstream);
+    /* Must block host for stream since no guarantee stream is finished before all ranks
+       arrive */
+    ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    work *= work;
+    ierr  = MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+    *z    = PetscSqrtReal(sum);
+  } else if (type == NORM_1) {
+    /* Find the local part */
+    ierr = VecNorm_SeqCUDAAsync(xin,NORM_1,&work,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    /* Find the global max */
+    ierr = MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+  } else if (type == NORM_INFINITY) {
+    /* Find the local max */
+    ierr = VecNorm_SeqCUDAAsync(xin,NORM_INFINITY,&work,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    /* Find the global max */
+    ierr = MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+  } else if (type == NORM_1_AND_2) {
+    PetscReal temp[2];
+    ierr = VecNorm_SeqCUDAAsync(xin,NORM_1,temp,pstream);CHKERRQ(ierr);
+    ierr = VecNorm_SeqCUDAAsync(xin,NORM_2,temp+1,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    temp[1] = temp[1]*temp[1];
+    ierr = MPIU_Allreduce(temp,z,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+    z[1] = PetscSqrtReal(z[1]);
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode VecDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 {
   PetscScalar    sum,work;
@@ -85,6 +125,19 @@ PetscErrorCode VecDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 
   PetscFunctionBegin;
   ierr = VecDot_SeqCUDA(xin,yin,&work);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+  *z   = sum;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDot_MPICUDAAsync(Vec xin,Vec yin,PetscScalar *z,PetscStream pstream)
+{
+  PetscScalar    sum,work;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecDot_SeqCUDAAsync(xin,yin,&work,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
   *z   = sum;
   PetscFunctionReturn(0);
@@ -102,6 +155,19 @@ PetscErrorCode VecTDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecTDot_MPICUDAAsync(Vec xin,Vec yin,PetscScalar *z,PetscStream pstream)
+{
+  PetscScalar    sum,work;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecTDot_SeqCUDAAsync(xin,yin,&work,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+  *z   = sum;
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode VecMDot_MPICUDA(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
 {
   PetscScalar    awork[128],*work = awork;
@@ -112,6 +178,24 @@ PetscErrorCode VecMDot_MPICUDA(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
     ierr = PetscMalloc1(nv,&work);CHKERRQ(ierr);
   }
   ierr = VecMDot_SeqCUDA(xin,nv,y,work);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(work,z,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+  if (nv > 128) {
+    ierr = PetscFree(work);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecMDot_MPICUDAAsync(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z,PetscStream pstream)
+{
+  PetscScalar    awork[128],*work = awork;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (nv > 128) {
+    ierr = PetscMalloc1(nv,&work);CHKERRQ(ierr);
+  }
+  ierr = VecMDot_SeqCUDAAsync(xin,nv,y,work,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(work,z,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
   if (nv > 128) {
     ierr = PetscFree(work);CHKERRQ(ierr);
@@ -138,6 +222,7 @@ PetscErrorCode VecDuplicate_MPICUDA(Vec win,Vec *v)
   PetscScalar    *array;
 
   PetscFunctionBegin;
+  ierr = PetscEventSynchronize(win->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = VecCreate(PetscObjectComm((PetscObject)win),v);CHKERRQ(ierr);
   ierr = PetscLayoutReference(win->map,&(*v)->map);CHKERRQ(ierr);
 
@@ -180,6 +265,20 @@ PetscErrorCode VecDotNorm2_MPICUDA(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm)
 
   PetscFunctionBegin;
   ierr = VecDotNorm2_SeqCUDA(s,t,work,work+1);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&work,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s));CHKERRQ(ierr);
+  *dp  = sum[0];
+  *nm  = sum[1];
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDotNorm2_MPICUDAAsync(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+  PetscScalar    work[2],sum[2];
+
+  PetscFunctionBegin;
+  ierr = VecDotNorm2_SeqCUDAAsync(s,t,work,work+1,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&work,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s));CHKERRQ(ierr);
   *dp  = sum[0];
   *nm  = sum[1];
@@ -328,6 +427,7 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = PetscEventSynchronize(V->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   V->boundtocpu = pin;
   if (pin) {
     ierr = VecCUDACopyFromGPU(V);CHKERRQ(ierr);
@@ -335,8 +435,11 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->dotnorm2               = NULL;
     V->ops->waxpy                  = VecWAXPY_Seq;
     V->ops->dot                    = VecDot_MPI;
+    V->ops->dotasync               = NULL;
     V->ops->mdot                   = VecMDot_MPI;
+    V->ops->mdotasync              = NULL;
     V->ops->tdot                   = VecTDot_MPI;
+    V->ops->tdotasync              = NULL;
     V->ops->norm                   = VecNorm_MPI;
     V->ops->scale                  = VecScale_Seq;
     V->ops->copy                   = VecCopy_Seq;
@@ -353,9 +456,12 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->replacearray           = VecReplaceArray_SeqCUDA;
     V->ops->resetarray             = VecResetArray_Seq;
     V->ops->dot_local              = VecDot_Seq;
+    V->ops->dot_localasync         = NULL;
     V->ops->tdot_local             = VecTDot_Seq;
+    V->ops->tdot_localasync        = NULL;
     V->ops->norm_local             = VecNorm_Seq;
     V->ops->mdot_local             = VecMDot_Seq;
+    V->ops->mdot_localasync        = NULL;
     V->ops->pointwisedivide        = VecPointwiseDivide_Seq;
     V->ops->getlocalvector         = NULL;
     V->ops->restorelocalvector     = NULL;
@@ -367,8 +473,11 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->waxpy                  = VecWAXPY_SeqCUDA;
     V->ops->duplicate              = VecDuplicate_MPICUDA;
     V->ops->dot                    = VecDot_MPICUDA;
+    V->ops->dotasync               = VecDot_MPICUDAAsync;
     V->ops->mdot                   = VecMDot_MPICUDA;
+    V->ops->mdotasync              = VecMDot_MPICUDAAsync;
     V->ops->tdot                   = VecTDot_MPICUDA;
+    V->ops->tdotasync              = VecTDot_MPICUDAAsync;
     V->ops->norm                   = VecNorm_MPICUDA;
     V->ops->scale                  = VecScale_SeqCUDA;
     V->ops->copy                   = VecCopy_SeqCUDA;
@@ -385,9 +494,12 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->replacearray           = VecReplaceArray_SeqCUDA;
     V->ops->resetarray             = VecResetArray_SeqCUDA;
     V->ops->dot_local              = VecDot_SeqCUDA;
+    V->ops->dot_localasync         = VecDot_SeqCUDAAsync;
     V->ops->tdot_local             = VecTDot_SeqCUDA;
+    V->ops->tdot_localasync        = VecTDot_SeqCUDAAsync;
     V->ops->norm_local             = VecNorm_SeqCUDA;
     V->ops->mdot_local             = VecMDot_SeqCUDA;
+    V->ops->mdot_localasync        = VecMDot_SeqCUDAAsync;
     V->ops->destroy                = VecDestroy_MPICUDA;
     V->ops->pointwisedivide        = VecPointwiseDivide_SeqCUDA;
     V->ops->getlocalvector         = VecGetLocalVector_SeqCUDA;

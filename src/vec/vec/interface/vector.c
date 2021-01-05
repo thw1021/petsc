@@ -109,27 +109,6 @@ PetscErrorCode VecGetLocalToGlobalMapping(Vec X,ISLocalToGlobalMapping *mapping)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecSetStream(Vec x, PetscStream strm)
-{
-  PetscErrorCode  ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  ierr = VecSetStream_Internal(x, strm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecGetStream(Vec x, PetscStream *strm)
-{
-  PetscErrorCode  ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidPointer(strm,2);
-  ierr = VecGetStream_Internal(x, strm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 /*@
    VecAssemblyBegin - Begins assembling the vector.  This routine should
    be called after completing all calls to VecSetValues().
@@ -421,7 +400,6 @@ PetscErrorCode  VecDestroy(Vec *v)
   /* destroy the external/common part */
   ierr = PetscLayoutDestroy(&(*v)->map);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_DEVICE)
-  if ((*v)->ownStream) {ierr = PetscStreamDestroy(&(*v)->stream);CHKERRQ(ierr);}
   ierr = PetscEventDestroy(&(*v)->event);CHKERRQ(ierr);
 #endif
   ierr = PetscHeaderDestroy(v);CHKERRQ(ierr);

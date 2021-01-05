@@ -11,7 +11,7 @@
 #include <petscvec.h>
 #include <petsc/private/petscimpl.h>
 #include <petscviewer.h>
-#include <petscstream.h>
+#include <petscdevice.h>
 
 PETSC_EXTERN PetscBool VecRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecRegisterAll(void);
@@ -101,6 +101,12 @@ struct _VecOps {
   PetscErrorCode (*getarrayreadandmemtype)(Vec,const PetscScalar**,PetscMemType*);
   PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**);
   PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**);
+  PetscErrorCode (*dotasync)(Vec,Vec,PetscScalar*,PetscStream);
+  PetscErrorCode (*dot_localasync)(Vec,Vec,PetscScalar*,PetscStream);
+  PetscErrorCode (*tdotasync)(Vec,Vec,PetscScalar*,PetscStream);
+  PetscErrorCode (*tdot_localasync)(Vec,Vec,PetscScalar*,PetscStream);
+  PetscErrorCode (*mdotasync)(Vec,PetscInt,const Vec[],PetscScalar*,PetscStream);
+  PetscErrorCode (*mdot_localasync)(Vec,PetscInt,const Vec[],PetscScalar*,PetscStream);
 };
 
 /*
@@ -151,8 +157,6 @@ struct _p_Vec {
   PetscBool              boundtocpu;
   size_t                 minimum_bytes_pinned_memory; /* minimum data size in bytes for which pinned memory will be allocated */
   PetscBool              pinned_memory; /* PETSC_TRUE if the current host allocation has been made from pinned memory. */
-  PetscStream            stream;        /* simple wrapper containing device streams */
-  PetscBool              ownStream;     /* Does the vec own the stream, and can it free the stream object when setting a new stream */
   PetscEvent             event;         /* simple wrapper containing device events */
 #endif
 };
@@ -208,6 +212,7 @@ PETSC_EXTERN PetscErrorCode VecViennaCLCopyFromGPU(Vec v);
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode VecCUDAAllocateCheckHost(Vec v);
 PETSC_EXTERN PetscErrorCode VecCUDACopyFromGPU(Vec v);
+PETSC_EXTERN PetscErrorCode VecCUDACopyFromGPUAsync(Vec,PetscStream);
 #endif
 #if defined(PETSC_HAVE_HIP)
 PETSC_EXTERN PetscErrorCode VecHIPAllocateCheckHost(Vec v);
@@ -349,29 +354,4 @@ PETSC_EXTERN PetscBool      VecTaggerRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecTaggerRegisterAll(void);
 PETSC_EXTERN PetscErrorCode VecTaggerComputeIS_FromBoxes(VecTagger,Vec,IS*);
 PETSC_EXTERN PetscMPIInt Petsc_Reduction_keyval;
-
-/* Put these in here so that they are for sure inlined */
-PETSC_STATIC_INLINE PetscErrorCode VecSetStream_Internal(Vec v, PetscStream strm)
-{
-  PetscFunctionBegin;
-#if PetscDefined(HAVE_DEVICE)
-  if (v->ownStream) {
-    PetscErrorCode ierr;
-
-    ierr = PetscStreamDestroy(&v->stream);CHKERRQ(ierr);
-  }
-  v->stream = strm;
-  v->ownStream = PETSC_FALSE;
-#endif
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode VecGetStream_Internal(Vec v, PetscStream *strm)
-{
-  PetscFunctionBeginHot;
-#if PetscDefined(HAVE_DEVICE)
-  *strm = v->stream;
-#endif
-  PetscFunctionReturn(0);
-}
 #endif
