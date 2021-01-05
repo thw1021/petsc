@@ -10,6 +10,7 @@
 #include <petscsftypes.h> /* for VecScatter, VecScatterType */
 #include <petscis.h>
 #include <petscviewer.h>
+#include <petscdevice.h>
 
 /*S
      Vec - Abstract PETSc vector object
@@ -137,9 +138,12 @@ PETSC_EXTERN PetscErrorCode VecSetSizes(Vec,PetscInt,PetscInt);
 
 PETSC_EXTERN PetscErrorCode VecDotNorm2(Vec,Vec,PetscScalar*,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecDot(Vec,Vec,PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecDotAsync(Vec,Vec,PetscScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode VecDotRealPart(Vec,Vec,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecTDot(Vec,Vec,PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecTDotAsync(Vec,Vec,PetscScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode VecMDot(Vec,PetscInt,const Vec[],PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecMDotAsync(Vec,PetscInt,const Vec[],PetscScalar[],PetscStream);
 PETSC_EXTERN PetscErrorCode VecMTDot(Vec,PetscInt,const Vec[],PetscScalar[]);
 PETSC_EXTERN PetscErrorCode VecGetSubVector(Vec,IS,Vec*);
 PETSC_EXTERN PetscErrorCode VecRestoreSubVector(Vec,IS,Vec*);
@@ -376,12 +380,15 @@ PETSC_EXTERN PetscErrorCode VecSetLocalToGlobalMapping(Vec,ISLocalToGlobalMappin
 PETSC_EXTERN PetscErrorCode VecSetValuesLocal(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 
 PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayAsync(Vec,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArray(Vec,PetscScalar**);
 
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayRead(Vec,const PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayReadAsync(Vec,const PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayRead(Vec,const PetscScalar**);
 
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWriteAsync(Vec,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec,PetscScalar**);
 
 PETSC_EXTERN PetscErrorCode VecCUDAPlaceArray(Vec,const PetscScalar[]);
@@ -660,6 +667,9 @@ PETSC_EXTERN PetscErrorCode VecsCreateSeq(MPI_Comm,PetscInt,PetscInt,Vecs*);
 PETSC_EXTERN PetscErrorCode VecsCreateSeqWithArray(MPI_Comm,PetscInt,PetscInt,PetscScalar*,Vecs*);
 PETSC_EXTERN PetscErrorCode VecsDuplicate(Vecs,Vecs*);
 
+#include <petscdevice.h>
+PETSC_EXTERN PetscErrorCode VecSetStream(Vec,PetscStream);
+PETSC_EXTERN PetscErrorCode VecGetStream(Vec,PetscStream*);
 #if defined(PETSC_HAVE_VIENNACL)
 typedef struct _p_PetscViennaCLIndices* PetscViennaCLIndices;
 PETSC_EXTERN PetscErrorCode PetscViennaCLIndicesCreate(PetscInt, PetscInt*,PetscInt, PetscInt*,PetscViennaCLIndices*);
