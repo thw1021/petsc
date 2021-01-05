@@ -141,7 +141,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
   flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf + 165);
   } else {
-    //MatZeroEntries(JacP);CHKERRQ(ierr); // DEBUG
+    // MatZeroEntries(JacP);CHKERRQ(ierr); // DEBUG
   flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf);
   }
   elemMatSize = totDim*totDim;

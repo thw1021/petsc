@@ -161,7 +161,6 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
   if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
-
   if (ctx->gpu_assembly) {
     PetscContainer container;
     ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
@@ -246,14 +245,14 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
     ierr = PetscLogFlops(flops*nip);CHKERRQ(ierr);
 #endif
 #define KOKKOS_SHARED_LEVEL 1
-    // PetscInfo3(plex, "shared memory size: %d bytes in level %d. mass_w.size=%d\n",scr_bytes,KOKKOS_SHARED_LEVEL,d_mass_w.size());
     conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
+    // PetscInfo5(plex, "shared memory size: %d bytes in level %d. mass_w.size=%d. #threads=%D team size=%D\n",scr_bytes,KOKKOS_SHARED_LEVEL,d_mass_w.size(),num_sub_blocks,team_size);
     // get f and df
     if (!mass_w) {
-    Kokkos::parallel_for("df_d_elements", Kokkos::TeamPolicy<>(numCells, team_size, num_sub_blocks).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
+    Kokkos::parallel_for("df_d_elements", Kokkos::TeamPolicy<>(numCells, team_size, num_sub_blocks), KOKKOS_LAMBDA (const team_member team) {
         const PetscInt  myelem = team.league_rank();
         // un pack IPData
-        LandauIPReal *IPData_coefs = &d_ipdata_raw[IPData->nip_*(dim+1)];
+        LandauIPReal *IPData_coefs = &d_ipdata_raw[nip*(dim+1)];
         LandauIPReal *coef = &IPData_coefs[myelem*Nb*Nf];
         Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nq), [=] (int myQi) {
             const PetscInt          ipidx = myQi + myelem * Nq;
@@ -292,10 +291,10 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
         LandauIPData    d_IPData;
         // un pack IPData
         d_IPData.w   = &d_ipdata_raw[0];
-        d_IPData.x   = &d_ipdata_raw[1*IPData->nip_];
-        d_IPData.y   = &d_ipdata_raw[2*IPData->nip_];
+        d_IPData.x   = &d_ipdata_raw[1*nip];
+        d_IPData.y   = &d_ipdata_raw[2*nip];
         if (dim==2) d_IPData.z = NULL;
-        else        d_IPData.z = &d_ipdata_raw[3*IPData->nip_];
+        else        d_IPData.z = &d_ipdata_raw[3*nip];
         // get g2[] & g3[]
         Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nq), [=] (int myQi) {
             using Kokkos::parallel_reduce;
@@ -303,7 +302,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
             const PetscReal* const            invJj = &d_invJ(jpidx*dim*dim);
             const PetscReal                   vj[3] = {d_IPData.x[jpidx], d_IPData.y[jpidx], d_IPData.z ? d_IPData.z[jpidx] : 0}, wj = d_IPData.w[jpidx];
             landau_inner_red::TensorValueType gg_temp; // reduce on part of gg2 and g33 for IP jpidx
-            Kokkos::parallel_reduce(Kokkos::ThreadVectorRange (team, (int)IPData->nip_), [=] (const int& ipidx, landau_inner_red::TensorValueType & ggg) {
+            Kokkos::parallel_reduce(Kokkos::ThreadVectorRange (team, (int)nip), [=] (const int& ipidx, landau_inner_red::TensorValueType & ggg) {
                 const PetscReal wi = d_IPData.w[ipidx], x = d_IPData.x[ipidx], y = d_IPData.y[ipidx];
                 PetscReal       temp1[3] = {0, 0, 0}, temp2 = 0;
                 PetscInt        fieldA,d2,d3;
@@ -408,7 +407,6 @@ PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal nu_alp
                     if (!d_mass_w.size()) {
                     for (d = 0; d < dim; ++d) {
                       t += DIq[blk_i*dim+d]*g2(d,fieldA,qj)*BJq[blk_j];
-                      //printf("\tmat[%d %d %d %d %d]=%g D[%d]=%g g2[%d][%d][%d]=%g B=%g\n",myelem,fOff,fieldA,qj,d,d_elem_mats(myelem,fOff),blk_i*dim+d,DIq[blk_i*dim+d],fieldA,qj,d,g2(fieldA,qj,d),BJq[blk_j]);
                       for (d2 = 0; d2 < dim; ++d2) {
                         t += DIq[blk_i*dim + d]*g3(d,d2,fieldA,qj)*DIq[blk_j*dim + d2];
                       }
