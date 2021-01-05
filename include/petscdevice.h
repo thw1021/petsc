@@ -51,4 +51,39 @@ do { \
 
 #endif /* PETSC_HAVE_HIP */
 
+typedef struct _n_PetscEvent* PetscEvent;
+
+typedef enum {
+  PETSC_STREAM_CUDA,
+  PETSC_STREAM_HIP
+} PetscStreamType;
+
+
+PETSC_EXTERN PetscErrorCode PetscEventCreate(PetscEvent*);
+PETSC_EXTERN PetscErrorCode PetscEventDestroy(PetscEvent*);
+PETSC_EXTERN PetscErrorCode PetscEventSetFlags(PetscEvent,unsigned int,unsigned int);
+PETSC_EXTERN PetscErrorCode PetscEventGetFlags(PetscEvent,unsigned int*,unsigned int*);
+PETSC_EXTERN PetscErrorCode PetscEventSetup(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscEventSynchronize(PetscEvent,PetscStreamType);
+
+typedef enum {
+  PETSC_STREAM_GLOBAL_BLOCKING = 0,
+  PETSC_STREAM_DEFAULT_BLOCKING = 1,
+  PETSC_STREAM_GLOBAL_NONBLOCKING = 2
+} PetscStreamMode;
+
+typedef struct _n_PetscStream* PetscStream;
+
+PETSC_EXTERN PetscErrorCode PetscStreamCreate(PetscStream*);
+PETSC_EXTERN PetscErrorCode PetscStreamDestroy(PetscStream*);
+PETSC_EXTERN PetscErrorCode PetscStreamSetMode(PetscStream,PetscStreamMode);
+PETSC_EXTERN PetscErrorCode PetscStreamGetMode(PetscStream,PetscStreamMode*);
+PETSC_EXTERN PetscErrorCode PetscStreamGetStream(PetscStream,PetscStreamType,void*);
+PETSC_EXTERN PetscErrorCode PetscStreamRestoreStream(PetscStream,PetscStreamType,void*,PetscBool);
+PETSC_EXTERN PetscErrorCode PetscStreamSplitBegin(PetscStream,PetscStreamType,void*);
+PETSC_EXTERN PetscErrorCode PetscStreamSplitEnd(PetscStream,PetscStreamType,void*,PetscBool);
+PETSC_EXTERN PetscErrorCode PetscStreamRecordEvent(PetscStream,PetscStreamType,PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream,PetscStreamType);
+
 #endif /* PETSCDEVICE_H */
