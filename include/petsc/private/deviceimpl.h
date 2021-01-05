@@ -1,8 +1,8 @@
-#if !defined(STREAMIMPL_H)
-#define STREAMIMPL_H
+#if !defined(DEVICEIMPL_H)
+#define DEVICEIMPL_H
 
 #include <petsc/private/petscimpl.h>
-#include <petscstream.h>
+#include <petscdevice.h>
 
 struct _n_PetscStream {
   PetscStreamMode mode;
@@ -83,4 +83,4 @@ struct _n_PetscEvent {
   unsigned int eventFlags, waitFlags;
 };
 
-#endif /* STREAMIMPL_H */
+#endif /* DEVICEIMPL_H */
