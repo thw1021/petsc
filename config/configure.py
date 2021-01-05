@@ -147,8 +147,10 @@ def chksynonyms():
   for l in range(0,len(sys.argv)):
     name = sys.argv[l]
 
-    if name.find('with-blas-lapack') >= 0:
-      sys.argv[l] = name.replace('with-blas-lapack','with-blaslapack')
+    sys.argv[l] = name.replace('with-openmpi','with-mpi')
+    sys.argv[l] = name.replace('with-mpich','with-mpi')
+
+    sys.argv[l] = name.replace('with-blas-lapack','with-blaslapack')
 
     if name.find('with-debug=') >= 0 or name.endswith('with-debug'):
       if name.find('=') == -1:
