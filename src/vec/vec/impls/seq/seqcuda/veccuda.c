@@ -421,8 +421,10 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     ierr = VecCUDACopyFromGPU(V);CHKERRQ(ierr);
     V->offloadmask                 = PETSC_OFFLOAD_CPU; /* since the CPU code will likely change values in the vector */
     V->ops->dot                    = VecDot_Seq;
+    V->ops->dotasync               = NULL;
     V->ops->norm                   = VecNorm_Seq;
     V->ops->tdot                   = VecTDot_Seq;
+    V->ops->tdotasync              = NULL;
     V->ops->scale                  = VecScale_Seq;
     V->ops->copy                   = VecCopy_Seq;
     V->ops->set                    = VecSet_Seq;
@@ -434,12 +436,16 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->pointwisedivide        = VecPointwiseDivide_Seq;
     V->ops->setrandom              = VecSetRandom_Seq;
     V->ops->dot_local              = VecDot_Seq;
+    V->ops->dot_localasync         = NULL;
     V->ops->tdot_local             = VecTDot_Seq;
+    V->ops->tdot_localasync        = NULL;
     V->ops->norm_local             = VecNorm_Seq;
     V->ops->mdot_local             = VecMDot_Seq;
+    V->ops->mdot_localasync        = NULL;
     V->ops->mtdot_local            = VecMTDot_Seq;
     V->ops->maxpy                  = VecMAXPY_Seq;
     V->ops->mdot                   = VecMDot_Seq;
+    V->ops->mdotasync              = NULL;
     V->ops->mtdot                  = VecMTDot_Seq;
     V->ops->aypx                   = VecAYPX_Seq;
     V->ops->waxpy                  = VecWAXPY_Seq;
@@ -462,8 +468,10 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     ierr = PetscStrallocpy(PETSCRANDER48,&V->defaultrandtype);CHKERRQ(ierr);
   } else {
     V->ops->dot                    = VecDot_SeqCUDA;
+    V->ops->dotasync               = VecDot_SeqCUDAAsync;
     V->ops->norm                   = VecNorm_SeqCUDA;
     V->ops->tdot                   = VecTDot_SeqCUDA;
+    V->ops->tdotasync              = VecTDot_SeqCUDAAsync;
     V->ops->scale                  = VecScale_SeqCUDA;
     V->ops->copy                   = VecCopy_SeqCUDA;
     V->ops->set                    = VecSet_SeqCUDA;
@@ -475,11 +483,15 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->pointwisedivide        = VecPointwiseDivide_SeqCUDA;
     V->ops->setrandom              = VecSetRandom_SeqCUDA;
     V->ops->dot_local              = VecDot_SeqCUDA;
+    V->ops->dot_localasync         = VecDot_SeqCUDAAsync;
     V->ops->tdot_local             = VecTDot_SeqCUDA;
+    V->ops->tdot_localasync        = VecTDot_SeqCUDAAsync;
     V->ops->norm_local             = VecNorm_SeqCUDA;
     V->ops->mdot_local             = VecMDot_SeqCUDA;
+    V->ops->mdot_localasync        = VecMDot_SeqCUDAAsync;
     V->ops->maxpy                  = VecMAXPY_SeqCUDA;
     V->ops->mdot                   = VecMDot_SeqCUDA;
+    V->ops->mdotasync              = VecMDot_SeqCUDAAsync;
     V->ops->aypx                   = VecAYPX_SeqCUDA;
     V->ops->waxpy                  = VecWAXPY_SeqCUDA;
     V->ops->dotnorm2               = VecDotNorm2_SeqCUDA;
