@@ -1020,24 +1020,24 @@ int main(int argc,char ** argv)
      ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
      genj=0; loadj=0; excj=0;
      for (i = eStart; i < eEnd; i++) {
-       ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[0],&branch[i-eStart],0);CHKERRQ(ierr);
+       ierr = DMNetworkAddComponent(networkdm,i,componentkey[0],&branch[i-eStart],0);CHKERRQ(ierr);
      }
 
      ierr = DMNetworkGetVertexRange(networkdm,&vStart,&vEnd);CHKERRQ(ierr);
 
      for (i = vStart; i < vEnd; i++) {
-       ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[1],&bus[i-vStart],2);CHKERRQ(ierr);
+       ierr = DMNetworkAddComponent(networkdm,i,componentkey[1],&bus[i-vStart],2);CHKERRQ(ierr);
        if (bus[i-vStart].nofgen) {
          for (j = 0; j < bus[i-vStart].nofgen; j++) {
            /* Add generator */
-           ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[2],&gen[genj++],6);CHKERRQ(ierr);
+           ierr = DMNetworkAddComponent(networkdm,i,componentkey[2],&gen[genj++],6);CHKERRQ(ierr);
            /* Add exciter */
-           ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[3],&exc[excj++],3);CHKERRQ(ierr);
+           ierr = DMNetworkAddComponent(networkdm,i,componentkey[3],&exc[excj++],3);CHKERRQ(ierr);
          }
        }
        if (bus[i-vStart].nofload) {
          for (j=0; j < bus[i-vStart].nofload; j++) {
-           ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,componentkey[4],&load[loadj++],0);CHKERRQ(ierr);
+           ierr = DMNetworkAddComponent(networkdm,i,componentkey[4],&load[loadj++],0);CHKERRQ(ierr);
          }
        }
      }

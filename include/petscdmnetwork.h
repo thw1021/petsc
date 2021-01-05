@@ -21,7 +21,8 @@ PETSC_EXTERN PetscErrorCode DMNetworkLayoutSetUp(DM);
 PETSC_EXTERN PetscErrorCode DMNetworkRegisterComponent(DM,const char*,size_t,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVertexRange(DM,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetEdgeRange(DM,PetscInt*,PetscInt*);
-PETSC_EXTERN PetscErrorCode DMNetworkAddComponent(DM,PetscInt,PetscInt,void*);
+
+PETSC_EXTERN PetscErrorCode DMNetworkAddComponent(DM,PetscInt,PetscInt,void*,PetscInt);
 PETSC_EXTERN PetscErrorCode DMNetworkGetComponent(DM,PetscInt,PetscInt,PetscInt*,void**);
 
 PETSC_EXTERN PetscErrorCode DMNetworkGetNumComponents(DM,PetscInt,PetscInt*);
@@ -33,7 +34,6 @@ PETSC_EXTERN PetscErrorCode DMNetworkGetComponentKeyOffset(DM,PetscInt,PetscInt,
 PETSC_EXTERN PetscErrorCode DMNetworkGetEdgeOffset(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVertexOffset(DM,PetscInt,PetscInt*);
 
-PETSC_EXTERN PetscErrorCode DMNetworkAddComponentAndNumVariables(DM,PetscInt,PetscInt,void*,PetscInt);
 PETSC_EXTERN PetscErrorCode DMNetworkAssembleGraphStructures(DM);
 PETSC_EXTERN PetscErrorCode DMNetworkSetVertexLocalToGlobalOrdering(DM);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVertexLocalToGlobalOrdering(DM,PetscInt,PetscInt*);

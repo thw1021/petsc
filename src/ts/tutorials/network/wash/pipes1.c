@@ -670,7 +670,7 @@ int main(int argc,char ** argv)
   /* Add Pipe component and num of variables to all local edges */
   for (e = eStart; e < eEnd; e++) {
     pipes[e-eStart].nnodes = nnodes;
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,e,KeyPipe,&pipes[e-eStart],2*pipes[e-eStart].nnodes);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,e,KeyPipe,&pipes[e-eStart],2*pipes[e-eStart].nnodes);CHKERRQ(ierr);
 
     if (size == 1 && monipipes) { /* Add monitor -- show Q_{pipes[e-eStart].id}? */
       pipes[e-eStart].length = 600.0;
@@ -681,7 +681,7 @@ int main(int argc,char ** argv)
 
   /* Add Junction component and num of variables to all local vertices, including ghost vertices! (current implemetation requires setting same num of variables at ghost points */
   for (v = vStart; v < vEnd; v++) {
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,v,KeyJunction,&junctions[v-vStart],2);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,v,KeyJunction,&junctions[v-vStart],2);CHKERRQ(ierr);
   }
 
   if (size > 1) {  /* must be called before DMSetUp()???. Other partitioners do not work yet??? -- cause crash in proc[0]! */

@@ -75,11 +75,11 @@ int main(int argc,char ** argv)
   ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
   for (i = 0; i < ne; i++) {
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],appctx.compkey_edge,&waterdata->edge[i],0);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,edges[i],appctx.compkey_edge,&waterdata->edge[i],0);CHKERRQ(ierr);
   }
 
   for (i = 0; i < nv; i++) {
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx.compkey_vtx,&waterdata->vertex[i],1);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx.compkey_vtx,&waterdata->vertex[i],1);CHKERRQ(ierr);
   }
 
   /* Set up DM for use */

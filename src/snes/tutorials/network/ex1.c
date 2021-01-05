@@ -430,22 +430,22 @@ int main(int argc,char **argv)
   ierr = DMNetworkGetSubnetwork(networkdm,power_netnum,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
 
   for (i = 0; i < ne; i++) {
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],appctx_power->compkey_branch,&pfdata->branch[i],0);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,edges[i],appctx_power->compkey_branch,&pfdata->branch[i],0);CHKERRQ(ierr);
   }
 
   for (i = 0; i < nv; i++) {
     ierr = DMNetworkIsSharedVertex(networkdm,vtx[i],&flg);CHKERRQ(ierr);
     if (flg) continue;
 
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_power->compkey_bus,&pfdata->bus[i],2);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_power->compkey_bus,&pfdata->bus[i],2);CHKERRQ(ierr);
     if (pfdata->bus[i].ngen) {
       for (j = 0; j < pfdata->bus[i].ngen; j++) {
-        ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_power->compkey_gen,&pfdata->gen[genj++],0);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_power->compkey_gen,&pfdata->gen[genj++],0);CHKERRQ(ierr);
       }
     }
     if (pfdata->bus[i].nload) {
       for (j=0; j < pfdata->bus[i].nload; j++) {
-        ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_power->compkey_load,&pfdata->load[loadj++],0);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_power->compkey_load,&pfdata->load[loadj++],0);CHKERRQ(ierr);
       }
     }
   }
@@ -454,14 +454,14 @@ int main(int argc,char **argv)
   /*-------------------------------------------------------*/
   ierr = DMNetworkGetSubnetwork(networkdm,water_netnum,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
   for (i = 0; i < ne; i++) {
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,edges[i],appctx_water->compkey_edge,&waterdata->edge[i],0);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,edges[i],appctx_water->compkey_edge,&waterdata->edge[i],0);CHKERRQ(ierr);
   }
 
   for (i = 0; i < nv; i++) {
     ierr = DMNetworkIsSharedVertex(networkdm,vtx[i],&flg);CHKERRQ(ierr);
     if (flg) continue;
 
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_water->compkey_vtx,&waterdata->vertex[i],1);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_water->compkey_vtx,&waterdata->vertex[i],1);CHKERRQ(ierr);
   }
 
   /* ADD VARIABLES AND COMPONENTS AT THE SHARED VERTEX: net[0].4 coupls with net[1].0 -- only the owner of the vertex does this */
@@ -473,12 +473,12 @@ int main(int argc,char **argv)
     if (ghost) continue;
 
     /* power */
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_power->compkey_bus,&pfdata->bus[4],2);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_power->compkey_bus,&pfdata->bus[4],2);CHKERRQ(ierr);
     /* bus[4] is a load, add its component */
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_power->compkey_load,&pfdata->load[0],0);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_power->compkey_load,&pfdata->load[0],0);CHKERRQ(ierr);
 
     /* water */
-    ierr = DMNetworkAddComponentAndNumVariables(networkdm,vtx[i],appctx_water->compkey_vtx,&waterdata->vertex[0],1);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_water->compkey_vtx,&waterdata->vertex[0],1);CHKERRQ(ierr);
   }
 
   /* Set up DM for use */

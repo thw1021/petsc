@@ -101,19 +101,19 @@ int main(int argc,char ** argv)
         /* current version requirs all processess add componenets and nvar at the shared vertices! */
         if (net == 0) {
           //printf("[%d] net %d, v[%d]=%d is a shared vertex, add comp0[0]\n",rank,net,v,vtx[v]);
-          ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
+          ierr = DMNetworkAddComponent(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
         } else if (net == 1) {
           //printf("[%d] net %d, v[%d]=%d is a shared vertex, add comp1\n",rank,net,v,vtx[v]);
-          ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
+          ierr = DMNetworkAddComponent(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
         }
         #endif
         continue;
       }
 
       if (!net) {
-        ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponent(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
       } else {
-        ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponent(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
       }
     }
   }
@@ -123,8 +123,8 @@ int main(int argc,char ** argv)
   for (v=0; v<nv; v++) {
     ierr = DMNetworkIsGhostVertex(dmnetwork,vtx[v],&ghost);CHKERRQ(ierr);
     if (ghost) continue;
-    ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
-    ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(dmnetwork,vtx[v],compkey0,&comp0,1);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(dmnetwork,vtx[v],compkey1,&comp1,2);CHKERRQ(ierr);
   }
 
   /* Enable runtime option of graph partition type -- must be called before DMSetUp() */

@@ -1054,48 +1054,6 @@ PetscErrorCode DMNetworkGetComponent(DM dm, PetscInt p, PetscInt compnum, PetscI
 }
 
 /*@
-  DMNetworkAddComponent - Adds a network component at the given point (vertex/edge)
-
-  Not Collective
-
-  Input Parameters:
-+ dm           - The DMNetwork object
-. p            - vertex/edge point
-. componentkey - component key returned while registering the component
-- compvalue    - pointer to the data structure for the component
-
-  Level: beginner
-
-.seealso: DMNetworkGetVertexRange, DMNetworkGetEdgeRange, DMNetworkRegisterComponent
-@*/
-PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void* compvalue)
-{
-  DM_Network               *network = (DM_Network*)dm->data;
-  DMNetworkComponent       *component = &network->component[componentkey];
-  DMNetworkComponentHeader header = &network->header[p];
-  DMNetworkComponentValue  cvalue = &network->cvalue[p];
-  PetscErrorCode           ierr;
-
-  PetscFunctionBegin;
-  if (header->ndata == MAX_DATA_AT_POINT) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components at a point exceeds the max %D",MAX_DATA_AT_POINT);
-
-  /* (a) stores the size of the component in a section called DataSection (the size is already set when the component is registered) */
-  header->size[header->ndata] = component->size;
-  ierr = PetscSectionAddDof(network->DataSection,p,component->size);CHKERRQ(ierr);
-  header->key[header->ndata] = componentkey;
-
-  /* (b) calculates an offset for where this component data will be located in a contiguous memory chunk having data for all components */
-  if (header->ndata != 0) header->offset[header->ndata] = header->offset[header->ndata-1] + header->size[header->ndata-1];
-  header->nvar[header->ndata] = 0;
-
-  /* (c) copies pointer for the component data location. */
-  cvalue->data[header->ndata] = (void*)compvalue;
-
-  header->ndata++;
-  PetscFunctionReturn(0);
-}
-
-/*@
   DMNetworkGetNumComponents - Get the number of components at a vertex/edge
 
   Not Collective
@@ -1327,7 +1285,7 @@ static PetscErrorCode DMNetworkSetNumVariables(DM dm,PetscInt p,PetscInt nvar)
 }
 
 /*@
-  DMNetworkAddComponentAndNumVariables - Adds a network component and number of variables at the given point (vertex/edge)
+  DMNetworkAddComponent - Adds a network component and number of variables at the given point (vertex/edge)
 
   Not Collective
 
@@ -1343,7 +1301,7 @@ static PetscErrorCode DMNetworkSetNumVariables(DM dm,PetscInt p,PetscInt nvar)
 
 .seealso: DMNetworkGetComponent
 @*/
-PetscErrorCode DMNetworkAddComponentAndNumVariables(DM dm,PetscInt p,PetscInt componentkey,void* compvalue,PetscInt nvar)
+PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void* compvalue,PetscInt nvar)
 {
   PetscErrorCode           ierr;
   DM_Network               *network = (DM_Network*)dm->data;

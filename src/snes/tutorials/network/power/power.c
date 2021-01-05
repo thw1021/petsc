@@ -146,19 +146,19 @@ int main(int argc,char ** argv)
       genj=0; loadj=0;
       ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
       for (i = eStart; i < eEnd; i++) {
-        ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,User.compkey_branch,&pfdata->branch[i-eStart],0);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponent(networkdm,i,User.compkey_branch,&pfdata->branch[i-eStart],0);CHKERRQ(ierr);
       }
       ierr = DMNetworkGetVertexRange(networkdm,&vStart,&vEnd);CHKERRQ(ierr);
       for (i = vStart; i < vEnd; i++) {
-        ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,User.compkey_bus,&pfdata->bus[i-vStart],2);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponent(networkdm,i,User.compkey_bus,&pfdata->bus[i-vStart],2);CHKERRQ(ierr);
         if (pfdata->bus[i-vStart].ngen) {
           for (j = 0; j < pfdata->bus[i-vStart].ngen; j++) {
-            ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,User.compkey_gen,&pfdata->gen[genj++],0);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponent(networkdm,i,User.compkey_gen,&pfdata->gen[genj++],0);CHKERRQ(ierr);
           }
         }
         if (pfdata->bus[i-vStart].nload) {
           for (j=0; j < pfdata->bus[i-vStart].nload; j++) {
-            ierr = DMNetworkAddComponentAndNumVariables(networkdm,i,User.compkey_load,&pfdata->load[loadj++],0);CHKERRQ(ierr);
+            ierr = DMNetworkAddComponent(networkdm,i,User.compkey_load,&pfdata->load[loadj++],0);CHKERRQ(ierr);
           }
         }
       }

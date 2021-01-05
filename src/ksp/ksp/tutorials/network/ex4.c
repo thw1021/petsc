@@ -80,10 +80,10 @@ int main(int argc,char ** argv)
     for (v=0; v<nv; v++) {
       if (!net) {
         /* Set nvar = 2 for subnet0 */
-        ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],-1,NULL,2);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponent(dmnetwork,vtx[v],-1,NULL,2);CHKERRQ(ierr);
       } else {
         /* Set nvar = 1 for other subnets */
-        ierr = DMNetworkAddComponentAndNumVariables(dmnetwork,vtx[v],-1,NULL,1);CHKERRQ(ierr);
+        ierr = DMNetworkAddComponent(dmnetwork,vtx[v],-1,NULL,1);CHKERRQ(ierr);
       }
     }
   }
