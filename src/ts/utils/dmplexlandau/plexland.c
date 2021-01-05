@@ -141,6 +141,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
   flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf + 165);
   } else {
+    //MatZeroEntries(JacP);CHKERRQ(ierr); // DEBUG
   flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf);
   }
   elemMatSize = totDim*totDim;
@@ -1212,6 +1213,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->nZRefine1 = 0;
   ctx->nZRefine2 = 0;
   ctx->numRERefine = 0;
+  ctx->aux_bool = PETSC_FALSE;
   ctx->num_sections = 3; /* 2, 3 or 4 */
   /* species - [0] electrons, [1] one ion species eg, duetarium, [2] heavy impurity ion, ... */
   ctx->charges[0] = -1;  /* electron charge (MKS) */
@@ -1968,8 +1970,10 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   ierr = PetscInfo1(ts, "Create Landau Jacobian t=%g\n",time_dummy);CHKERRQ(ierr);
+  if (ctx->aux_bool) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "wrong state");
   ierr = LandauFormJacobian_Internal(X,ctx->J,dim,0.0,(void*)ctx);CHKERRQ(ierr);
-  ierr = MatViewFromOptions(ctx->J,NULL,"-landau_mat_view");CHKERRQ(ierr);
+  ctx->aux_bool = PETSC_TRUE;
+  //ierr = MatViewFromOptions(ctx->J,NULL,"-landau_mat_view");CHKERRQ(ierr);
   /* mat vec for op */
   ierr = MatMult(ctx->J,X,F);CHKERRQ(ierr);CHKERRQ(ierr); /* C*f */
   /* add time term */
@@ -2017,9 +2021,11 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   /* get collision Jacobian into A */
   ierr = PetscLogEventBegin(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
-  ierr = PetscInfo2(ts, "Create Landau Jacobian t=%g, shift=%g\n",(double)time_dummy,(double)shift);CHKERRQ(ierr);
+  ierr = PetscInfo2(ts, "Adding mass to Jacobian t=%g, shift=%g\n",(double)time_dummy,(double)shift);CHKERRQ(ierr);
   if (shift==0.0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "zero shift");
+  if (!ctx->aux_bool) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "wrong state");
   ierr = LandauFormJacobian_Internal(X,ctx->J,dim,shift,(void*)ctx);CHKERRQ(ierr);
+  ctx->aux_bool = PETSC_FALSE;
   /* { /\* add mass *\/ */
   /*   MatInfo info1, info2; */
   /*   double  nz_1, nz_2; */
