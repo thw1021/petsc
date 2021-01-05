@@ -53,6 +53,7 @@ class Configure(config.package.Package):
 
     self.addDefine('HAVE_PETSC4PY',1)
     self.addDefine('PETSC4PY_INSTALL_PATH','"'+os.path.join(self.installdir.dir,'lib')+'"')
+    self.addMakeMacro('PYTHONPATH',os.path.join(self.installDir,'lib')+':${PYTHONPATH}')
     self.addMakeMacro('PETSC4PY','yes')
     self.addMakeRule('petsc4pybuild','', \
                        ['@echo "*** Building petsc4py ***"',\
