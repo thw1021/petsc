@@ -1,8 +1,8 @@
-#if !defined(STREAMIMPL_H)
-#define STREAMIMPL_H
+#if !defined(DEVICEIMPL_H)
+#define DEVICEIMPL_H
 
 #include <petsc/private/petscimpl.h>
-#include <petscstream.h>
+#include <petscdevice.h>
 
 struct _n_PetscStream {
   PetscStreamMode mode;
@@ -16,7 +16,7 @@ struct _n_PetscStream {
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleHIP_Internal(PetscStream strm)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginHot;
   switch (strm->mode) {
 #if PetscDefined(HAVE_HIP)
     hipError_t herr;
@@ -45,7 +45,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleHIP_Internal(PetscStream s
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleCUDA_Internal(PetscStream strm)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginHot;
   switch (strm->mode) {
 #if PetscDefined(HAVE_CUDA)
     cudaError_t cerr;
@@ -72,6 +72,56 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleCUDA_Internal(PetscStream 
   PetscFunctionReturn(0);
 }
 
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamDisassembleHIP_Internal(PetscStream strm)
+{
+  PetscFunctionBeginHot;
+  switch (strm->mode) {
+  case PETSC_STREAM_GLOBAL_BLOCKING:
+    /* NULL stream always blocks */
+    break;
+  case PETSC_STREAM_DEFAULT_BLOCKING:
+  case PETSC_STREAM_GLOBAL_NONBLOCKING:
+#if PetscDefined(HAVE_HIP)
+    if (strm->hstream) {
+      hipError_t herr;
+
+      herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
+      strm->hstream = NULL;
+    }
+#endif
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamDisassembleCUDA_Internal(PetscStream strm)
+{
+  PetscFunctionBeginHot;
+  switch (strm->mode) {
+  case PETSC_STREAM_GLOBAL_BLOCKING:
+    /* NULL stream always blocks */
+    break;
+  case PETSC_STREAM_DEFAULT_BLOCKING:
+  case PETSC_STREAM_GLOBAL_NONBLOCKING:
+#if PetscDefined(HAVE_CUDA)
+    if (strm->cstream) {
+      cudaError_t cerr;
+
+      cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
+      strm->cstream = NULL;
+    }
+#endif
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
 struct _n_PetscEvent {
   PetscBool    setup;
 #if PetscDefined(HAVE_CUDA)
@@ -83,4 +133,4 @@ struct _n_PetscEvent {
   unsigned int eventFlags, waitFlags;
 };
 
-#endif /* STREAMIMPL_H */
+#endif /* DEVICEIMPL_H */
