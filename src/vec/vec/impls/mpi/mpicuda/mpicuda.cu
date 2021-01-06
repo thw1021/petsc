@@ -189,6 +189,85 @@ PetscErrorCode VecDotNorm2_MPICUDA(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm)
   PetscFunctionReturn(0);
 }
 
+
+#if defined(PETSC_HAVE_NVSHMEM)
+PetscErrorCode VecAllocateWorkScalars_NVSHMEM(Vec x)
+{
+  PetscErrorCode  ierr;
+  PetscInt        i;
+
+  PetscFunctionBegin;
+  ierr = PetscNvshmemInitializeCheck();CHKERRQ(ierr);
+  /* Must zero the norms since some processes might have no vector entries */
+  ierr = PetscNvshmemCalloc(VEC_MAX_WORK_SCALARS*sizeof(PetscScalar),(void**)&x->workscalars_d);CHKERRQ(ierr);
+  for (i=0; i<VEC_MAX_WORK_SCALARS; i++) {
+    if (x->workscalars_inuse[i]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Work scalars are not restored on host before getting new ones on device");
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecFreeWorkScalars_NVSHMEM(Vec x)
+{
+  PetscErrorCode  ierr;
+  PetscInt        i;
+
+  PetscFunctionBegin;
+  for (i=0; i<VEC_MAX_WORK_SCALARS; i++) {
+    if (x->workscalars_inuse[i]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Some work scalars are still in use before free");
+  }
+  ierr = PetscNvshmemFree(x->workscalars_d);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDotAsync_NVSHMEM(Vec xin,Vec yin,PetscScalar *z)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecDotAsync_SeqCUDA(xin,yin,z);CHKERRQ(ierr);
+  ierr = PetscNvshmemSum(1,z,z);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecTDotAsync_NVSHMEM(Vec xin,Vec yin,PetscScalar *z)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecTDotAsync_SeqCUDA(xin,yin,z);CHKERRQ(ierr);
+  ierr = PetscNvshmemSum(1,z,z);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecNormAsync_NVSHMEM(Vec xin,NormType type,PetscReal *z)
+{
+  PetscErrorCode ierr;
+  MPI_Comm       comm;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)xin,&comm);CHKERRQ(ierr);
+  /* Find the local part */
+  ierr = VecNormAsync_SeqCUDA(xin,type,z);CHKERRQ(ierr);
+  if (type == NORM_2 || type == NORM_FROBENIUS) {
+    PetscCudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(z,z);
+    ierr = PetscNvshmemSum(1,z,z);CHKERRQ(ierr); /* Compute sum on PETSC_COMM_WORLD in PetscDefaultCudaStream */
+    PetscCudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(z,z);
+  } else if (type == NORM_1) {
+    /* Find the global sum */
+    ierr = PetscNvshmemSum(1,z,z);CHKERRQ(ierr);
+  } else if (type == NORM_INFINITY) {
+    /* Find the global max */
+    ierr = PetscNvshmemMax(1,z,z);CHKERRQ(ierr);
+  } else if (type == NORM_1_AND_2) {
+    PetscCudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(z+1,z+1);
+    ierr = PetscNvshmemSum(2,z,z);CHKERRQ(ierr);
+    PetscCudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(z+1,z+1);
+  }
+  PetscFunctionReturn(0);
+}
+
+#endif
+
 PetscErrorCode VecCreate_MPICUDA(Vec vv)
 {
   PetscErrorCode ierr;
@@ -402,6 +481,16 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->restorearray           = VecRestoreArray_SeqCUDA;
     V->ops->getarrayandmemtype        = VecGetArrayAndMemType_SeqCUDA;
     V->ops->restorearrayandmemtype    = VecRestoreArrayAndMemType_SeqCUDA;
+   #if defined(PETSC_HAVE_NVSHMEM)
+    Vec_MPI *vecmpi = (Vec_MPI*)V->data;
+    if (vecmpi->use_nvshmem) {
+      V->ops->allocateworkscalars  = VecAllocateWorkScalars_NVSHMEM;
+      V->ops->freeworkscalars      = VecFreeWorkScalars_NVSHMEM;
+      V->ops->dot_async            = VecDotAsync_NVSHMEM; /* Involves communication */
+      V->ops->tdot_async           = VecTDotAsync_NVSHMEM;
+      V->ops->norm_async           = VecNormAsync_NVSHMEM;
+    } else
+   #endif
   }
   PetscFunctionReturn(0);
 }
@@ -414,6 +503,18 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
   PetscFunctionBegin;
   ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)vv,VECMPICUDA);CHKERRQ(ierr);
+
+#if defined(PETSC_HAVE_NVSHMEM)
+  PetscMPIInt    result;
+  Vec_MPI        *vecmpi = (Vec_MPI*)vv->data;
+
+  vecmpi->use_nvshmem = PETSC_TRUE;
+  ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem",&vecmpi->use_nvshmem,NULL);CHKERRQ(ierr);
+  if (vecmpi->use_nvshmem) {
+    ierr = MPI_Comm_compare(PETSC_COMM_WORLD,PetscObjectComm((PetscObject)vv),&result);CHKERRMPI(ierr);
+    if (result != MPI_IDENT && result != MPI_CONGRUENT) vecmpi->use_nvshmem = PETSC_FALSE;
+  }
+ #endif
 
   ierr = VecBindToCPU_MPICUDA(vv,PETSC_FALSE);CHKERRQ(ierr);
   vv->ops->bindtocpu = VecBindToCPU_MPICUDA;
