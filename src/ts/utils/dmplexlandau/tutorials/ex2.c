@@ -221,7 +221,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   J_re = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
 
   ratio = E/J/spit_eta;
-  if (stepi>10 && !rectx->use_spitzer_eta && ( (old_ratio-ratio < 1.e-3 && ratio > 0.99 && ratio < 1.01) || (old_ratio-ratio < 1.e-4 && ratio > 0.98 && ratio < 1.02)) ) {
+  if (stepi>10 && !rectx->use_spitzer_eta && ((old_ratio-ratio < 1.e-3 && ratio > 0.99 && ratio < 1.01) || (old_ratio-ratio < 1.e-4 && ratio > 0.98 && ratio < 1.02))) {
     rectx->pulse_start = time + dt/2;
     rectx->use_spitzer_eta = PETSC_TRUE;
   }
