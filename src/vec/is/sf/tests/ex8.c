@@ -119,11 +119,6 @@ int main(int argc,char **argv)
         requires: hip
 
       test:
-        suffix: 1_hip
-        args: -vec_type hip -sf_backend hip -vecscatter_packongpu true
-        requires: hip
-
-      test:
         suffix: 1_cuda_aware_mpi
         # sf_backend cuda is not needed if compiling only with cuda
         args: -vec_type cuda -sf_backend cuda -vecscatter_packongpu false
@@ -131,7 +126,6 @@ int main(int argc,char **argv)
 
    testset:
       # N=10 is not divisible by nsize, to trigger Allgatherv/Gatherv in SF
-      suffix: 2
       nsize: 3
       # Exact numbers really matter here
       diff_args: -j
