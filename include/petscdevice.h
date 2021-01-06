@@ -78,6 +78,8 @@ PETSC_EXTERN PetscErrorCode PetscStreamSetMode(PetscStream,PetscStreamMode);
 PETSC_EXTERN PetscErrorCode PetscStreamGetMode(PetscStream,PetscStreamMode*);
 PETSC_EXTERN PetscErrorCode PetscStreamGetStream(PetscStream,PetscStreamType,void*);
 PETSC_EXTERN PetscErrorCode PetscStreamRestoreStream(PetscStream,PetscStreamType,void*,PetscBool);
+PETSC_EXTERN PetscErrorCode PetscStreamSplitBegin(PetscStream,PetscStreamType,void*);
+PETSC_EXTERN PetscErrorCode PetscStreamSplitEnd(PetscStream,PetscStreamType,void*,PetscBool);
 PETSC_EXTERN PetscErrorCode PetscStreamRecordEvent(PetscStream,PetscEvent,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream,PetscStreamType);
