@@ -998,32 +998,6 @@ PetscErrorCode DMNetworkGetNumComponents(DM dm,PetscInt p,PetscInt *numcomponent
 }
 
 /*@
-  DMNetworkGetVariableOffset - Get the offset for accessing the variable associated with the given vertex/edge from the local vector.
-
-  Not Collective
-
-  Input Parameters:
-+ dm     - The DMNetwork object
-- p      - the edge/vertex point
-
-  Output Parameters:
-. offset - the offset
-
-  Level: beginner
-
-.seealso: DMNetworkGetVariableGlobalOffset, DMGetLocalVector
-@*/
-PetscErrorCode DMNetworkGetVariableOffset(DM dm,PetscInt p,PetscInt *offset)
-{
-  PetscErrorCode ierr;
-  DM_Network     *network = (DM_Network*)dm->data;
-
-  PetscFunctionBegin;
-  ierr = PetscSectionGetOffset(network->plex->localSection,p,offset);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@
   DMNetworkGetVariableGlobalOffset - Get the global offset for the variable associated with the given vertex/edge from the global vector.
 
   Not Collective
@@ -1037,7 +1011,7 @@ PetscErrorCode DMNetworkGetVariableOffset(DM dm,PetscInt p,PetscInt *offset)
 
   Level: beginner
 
-.seealso: DMNetworkGetVariableOffset, DMGetLocalVector
+.seealso: DMGetLocalVector
 @*/
 PetscErrorCode DMNetworkGetVariableGlobalOffset(DM dm,PetscInt p,PetscInt *offsetg)
 {
@@ -1058,14 +1032,14 @@ PetscErrorCode DMNetworkGetVariableGlobalOffset(DM dm,PetscInt p,PetscInt *offse
   Input Parameters:
 + dm     - The DMNetwork object
 . p      - the edge/vertex point
-- compnum - component number
+- compnum - component number; use -1 if component does not exist
 
   Output Parameters:
 . offset - the offset
 
   Level: intermediate
 
-.seealso: DMNetworkGetVariableGlobalOffset(), DMGetLocalVector(), DMNetworkAddComponent()
+.seealso: DMGetLocalVector(), DMNetworkAddComponent()
 @*/
 PetscErrorCode DMNetworkGetComponentOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *offset)
 {
@@ -1075,7 +1049,12 @@ PetscErrorCode DMNetworkGetComponentOffset(DM dm,PetscInt p,PetscInt compnum,Pet
   DMNetworkComponentHeader header;
 
   PetscFunctionBegin;
-  ierr = DMNetworkGetVariableOffset(dm,p,&offsetp);CHKERRQ(ierr);
+  ierr = PetscSectionGetOffset(network->plex->localSection,p,&offsetp);CHKERRQ(ierr);
+  if (compnum < 0) {
+    *offset = offsetp;
+    PetscFunctionReturn(0);
+  }
+
   ierr = PetscSectionGetOffset(network->DataSection,p,&offsetd);CHKERRQ(ierr);
   header = (DMNetworkComponentHeader)(network->componentdataarray+offsetd);
   *offset = offsetp + header->offsetvarrel[compnum];

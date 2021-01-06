@@ -39,7 +39,7 @@ PetscErrorCode FormFunction_Subnet(DM networkdm,Vec localX, Vec localF,PetscInt 
 
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[v],&ghostvtex);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[v],&numComps);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableOffset(networkdm,vtx[v],&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vtx[v],-1,&offset);CHKERRQ(ierr);
     for (j = 0; j < numComps; j++) {
       ierr = DMNetworkGetComponent(networkdm,vtx[v],j,&key,&component,NULL);CHKERRQ(ierr);
       if (key == 1) {
@@ -86,8 +86,8 @@ PetscErrorCode FormFunction_Subnet(DM networkdm,Vec localX, Vec localF,PetscInt 
           vfrom = cone[0];
           vto   = cone[1];
 
-          ierr = DMNetworkGetVariableOffset(networkdm,vfrom,&offsetfrom);CHKERRQ(ierr);
-          ierr = DMNetworkGetVariableOffset(networkdm,vto,&offsetto);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentOffset(networkdm,vfrom,-1,&offsetfrom);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentOffset(networkdm,vto,-1,&offsetto);CHKERRQ(ierr);
 
           thetaf = xarr[offsetfrom];
           Vmf     = xarr[offsetfrom+1];
@@ -191,7 +191,7 @@ PetscErrorCode FormJacobian_Subnet(DM networkdm,Vec localX, Mat J, Mat Jpre, Pet
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[v],&ghostvtex);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[v],&numComps);CHKERRQ(ierr);
     for (j = 0; j < numComps; j++) {
-      ierr = DMNetworkGetVariableOffset(networkdm,vtx[v],&offset);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentOffset(networkdm,vtx[v],-1,&offset);CHKERRQ(ierr);
       ierr = DMNetworkGetVariableGlobalOffset(networkdm,vtx[v],&goffset);CHKERRQ(ierr);
       ierr = DMNetworkGetComponent(networkdm,vtx[v],j,&key,&component,NULL);CHKERRQ(ierr);
       if (key == 1) {
@@ -248,8 +248,8 @@ PetscErrorCode FormJacobian_Subnet(DM networkdm,Vec localX, Mat J, Mat Jpre, Pet
           vfrom = cone[0];
           vto   = cone[1];
 
-          ierr = DMNetworkGetVariableOffset(networkdm,vfrom,&offsetfrom);CHKERRQ(ierr);
-          ierr = DMNetworkGetVariableOffset(networkdm,vto,&offsetto);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentOffset(networkdm,vfrom,-1,&offsetfrom);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentOffset(networkdm,vto,-1,&offsetto);CHKERRQ(ierr);
           ierr = DMNetworkGetVariableGlobalOffset(networkdm,vfrom,&goffsetfrom);CHKERRQ(ierr);
           ierr = DMNetworkGetVariableGlobalOffset(networkdm,vto,&goffsetto);CHKERRQ(ierr);
 
@@ -374,7 +374,7 @@ PetscErrorCode SetInitialValues_Subnet(DM networkdm,Vec localX,PetscInt nv,Petsc
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
     if (ghostvtex) continue;
 
-    ierr = DMNetworkGetVariableOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vtx[i],-1,&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&numComps);CHKERRQ(ierr);
     for (j=0; j < numComps; j++) {
       ierr = DMNetworkGetComponent(networkdm,vtx[i],j,&key,&component,NULL);CHKERRQ(ierr);

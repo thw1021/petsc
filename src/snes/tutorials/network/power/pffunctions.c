@@ -55,7 +55,7 @@ PetscErrorCode FormJacobian_Power_private(DM networkdm,Vec localX,Mat J,PetscInt
 
     ierr = DMNetworkGetNumComponents(networkdm,vtx[v],&numComps);CHKERRQ(ierr);
     for (j = 0; j < numComps; j++) {
-      ierr = DMNetworkGetVariableOffset(networkdm,vtx[v],&offset);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentOffset(networkdm,vtx[v],-1,&offset);CHKERRQ(ierr);
       ierr = DMNetworkGetVariableGlobalOffset(networkdm,vtx[v],&goffset);CHKERRQ(ierr);
       ierr = DMNetworkGetComponent(networkdm,vtx[v],j,&key,&component,NULL);CHKERRQ(ierr);
 
@@ -114,8 +114,8 @@ PetscErrorCode FormJacobian_Power_private(DM networkdm,Vec localX,Mat J,PetscInt
           vfrom = cone[0];
           vto   = cone[1];
 
-          ierr = DMNetworkGetVariableOffset(networkdm,vfrom,&offsetfrom);CHKERRQ(ierr);
-          ierr = DMNetworkGetVariableOffset(networkdm,vto,&offsetto);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentOffset(networkdm,vfrom,-1,&offsetfrom);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentOffset(networkdm,vto,-1,&offsetto);CHKERRQ(ierr);
           ierr = DMNetworkGetVariableGlobalOffset(networkdm,vfrom,&goffsetfrom);CHKERRQ(ierr);
           ierr = DMNetworkGetVariableGlobalOffset(networkdm,vto,&goffsetto);CHKERRQ(ierr);
 
@@ -242,7 +242,7 @@ PetscErrorCode FormFunction_Power(DM networkdm,Vec localX, Vec localF,PetscInt n
   for (v=0; v<nv; v++) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[v],&ghostvtex);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[v],&numComps);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableOffset(networkdm,vtx[v],&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vtx[v],-1,&offset);CHKERRQ(ierr);
 
     for (j = 0; j < numComps; j++) {
       ierr = DMNetworkGetComponent(networkdm,vtx[v],j,&key,&component,NULL);CHKERRQ(ierr);
@@ -290,8 +290,8 @@ PetscErrorCode FormFunction_Power(DM networkdm,Vec localX, Vec localF,PetscInt n
           vfrom = cone[0];
           vto   = cone[1];
 
-          ierr = DMNetworkGetVariableOffset(networkdm,vfrom,&offsetfrom);CHKERRQ(ierr);
-          ierr = DMNetworkGetVariableOffset(networkdm,vto,&offsetto);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentOffset(networkdm,vfrom,-1,&offsetfrom);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentOffset(networkdm,vto,-1,&offsetto);CHKERRQ(ierr);
 
           thetaf = xarr[offsetfrom];
           Vmf     = xarr[offsetfrom+1];
@@ -355,7 +355,7 @@ PetscErrorCode SetInitialGuess_Power(DM networkdm,Vec localX,PetscInt nv,PetscIn
     ierr = DMNetworkIsSharedVertex(networkdm,vtx[i],&sharedv);CHKERRQ(ierr);
     if (ghostvtex ||sharedv) continue;
 
-    ierr = DMNetworkGetVariableOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vtx[i],-1,&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&numComps);CHKERRQ(ierr);
     for (j=0; j < numComps; j++) {
       ierr = DMNetworkGetComponent(networkdm,vtx[i],j,&key,&component,NULL);CHKERRQ(ierr);

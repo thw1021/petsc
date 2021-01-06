@@ -216,7 +216,7 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
     }
 
     /* TODO: this is not a nested vector. Need to implement nested vector */
-    ierr = DMNetworkGetVariableOffset(networkdm,e,&lofst);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,e,-1,&lofst);CHKERRQ(ierr);
     barr[lofst] = branch->bat;
   }
 
@@ -232,7 +232,7 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
         ierr = MatSetValuesLocal(v22,1,row,1,col,val,INSERT_VALUES);CHKERRQ(ierr);
       } else {
         /* TODO: this is not a nested vector. Need to implement nested vector */
-        ierr = DMNetworkGetVariableOffset(networkdm,v,&lofst);CHKERRQ(ierr);
+        ierr = DMNetworkGetComponentOffset(networkdm,v,-1,&lofst);CHKERRQ(ierr);
         barr[lofst] -= node->inj;
       }
     }
@@ -302,24 +302,6 @@ int main(int argc,char ** argv)
   ierr = DMNetworkDistribute(&networkdm,0);CHKERRQ(ierr);
 
   ierr = DMNetworkAssembleGraphStructures(networkdm);CHKERRQ(ierr);
-
-  /* Print some info */
-#if 0
-  PetscInt offset, goffset;
-  ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
-  ierr = DMNetworkGetVertexRange(networkdm,&vStart,&vEnd);CHKERRQ(ierr);
-
-  for (i = eStart; i < eEnd; i++) {
-    ierr = DMNetworkGetVariableOffset(networkdm,i,&offset);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableGlobalOffset(networkdm,i,&goffset);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF,"rank[%d] edge %d - loff: %d, goff: %d .\n",rank,i,offset,goffset);CHKERRQ(ierr);
-  }
-  for (i = vStart; i < vEnd; i++) {
-    ierr = DMNetworkGetVariableOffset(networkdm,i,&offset);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableGlobalOffset(networkdm,i,&goffset);CHKERRQ(ierr);
-    ierr = PetscPrintf("rank[%d] vertex %d - loff: %d, goff: %d .\n",rank,i,offset,goffset);CHKERRQ(ierr);
-  }
-#endif
 
   /* We don't use these data structures anymore since they have been copied to networkdm */
   if (!rank) {

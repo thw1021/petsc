@@ -118,7 +118,7 @@ PetscErrorCode FormFunction_Dummy(DM networkdm,Vec localX, Vec localF,PetscInt n
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
     if (ghostvtex) continue;
 
-    ierr = DMNetworkGetVariableOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vtx[i],-1,&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetComponent(networkdm,vtx[i],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     for (j=0; j<nvar; j++) {
       farr[offset+j] = xarr[offset+j] - xoldarr[offset+j];

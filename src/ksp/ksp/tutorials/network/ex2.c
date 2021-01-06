@@ -201,11 +201,11 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
   for (e = 0; e < eEnd; e++) {
     ierr = DMNetworkGetComponent(networkdm,e,0,NULL,(void**)&branch,NULL);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableOffset(networkdm,e,&lofst);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,e,-1,&lofst);CHKERRQ(ierr);
 
     ierr = DMNetworkGetConnectedVertices(networkdm,e,&cone);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableOffset(networkdm,cone[0],&lofst_fr);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableOffset(networkdm,cone[1],&lofst_to);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,cone[0],-1,&lofst_fr);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,cone[1],-1,&lofst_to);CHKERRQ(ierr);
 
     barr[lofst] = branch->bat;
 
@@ -239,7 +239,7 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
     ierr = DMNetworkIsGhostVertex(networkdm,v,&ghost);CHKERRQ(ierr);
     if (!ghost) {
       ierr = DMNetworkGetComponent(networkdm,v,0,NULL,(void**)&node,NULL);CHKERRQ(ierr);
-      ierr = DMNetworkGetVariableOffset(networkdm,v,&lofst);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentOffset(networkdm,v,-1,&lofst);CHKERRQ(ierr);
 
       if (node->gr) {
         row[0] = lofst;

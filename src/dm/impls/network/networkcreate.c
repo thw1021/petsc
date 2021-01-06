@@ -61,7 +61,7 @@ static PetscErrorCode VecView_Network_Seq(DM networkdm,Vec X,PetscViewer viewer)
     ierr = DMNetworkGetComponent(networkdm,e,-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     if (!nvar) continue;
 
-    ierr = DMNetworkGetVariableOffset(networkdm,e,&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,e,-1,&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetGlobalEdgeIndex(networkdm,e,&id);CHKERRQ(ierr);
 
     ierr = PetscViewerASCIIPrintf(viewer,"  Edge %D:\n",id);CHKERRQ(ierr);
@@ -74,7 +74,7 @@ static PetscErrorCode VecView_Network_Seq(DM networkdm,Vec X,PetscViewer viewer)
     ierr = DMNetworkGetComponent(networkdm,v,-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     if (!nvar) continue;
 
-    ierr = DMNetworkGetVariableOffset(networkdm,v,&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,v,-1,&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetGlobalVertexIndex(networkdm,v,&id);CHKERRQ(ierr);
 
     ierr = PetscViewerASCIIPrintf(viewer,"  Vertex %D:\n",id);CHKERRQ(ierr);
@@ -128,7 +128,7 @@ static PetscErrorCode VecView_Network_MPI(DM networkdm,Vec X,PetscViewer viewer)
     ierr = DMNetworkGetComponent(networkdm,e,-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     if (!nvar) continue;
 
-    ierr = DMNetworkGetVariableOffset(networkdm,e,&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,e,-1,&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetGlobalEdgeIndex(networkdm,e,&id);CHKERRQ(ierr);
 
     if (!rank) { /* print its own entries */
@@ -149,7 +149,7 @@ static PetscErrorCode VecView_Network_MPI(DM networkdm,Vec X,PetscViewer viewer)
     ierr = DMNetworkGetComponent(networkdm,v,-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     if (!nvar) continue;
 
-    ierr = DMNetworkGetVariableOffset(networkdm,v,&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,v,-1,&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetGlobalVertexIndex(networkdm,v,&id);CHKERRQ(ierr);
 
     if (!rank) {
