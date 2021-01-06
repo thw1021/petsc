@@ -721,6 +721,7 @@ PETSC_EXTERN const char *const KSPCGTypes[];
 
 PETSC_EXTERN PetscErrorCode KSPCGSetType(KSP,KSPCGType);
 PETSC_EXTERN PetscErrorCode KSPCGUseSingleReduction(KSP,PetscBool);
+PETSC_EXTERN PetscErrorCode KSPCGUseAsync(KSP,PetscBool);
 
 PETSC_EXTERN PetscErrorCode KSPCGSetRadius(KSP,PetscReal);
 PETSC_EXTERN PetscErrorCode KSPCGGetNormD(KSP,PetscReal*);
