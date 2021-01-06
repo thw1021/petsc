@@ -72,6 +72,17 @@ PetscErrorCode  KSPCGUseSingleReduction(KSP ksp,PetscBool flg)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode  KSPCGUseAsync(KSP ksp,PetscBool flg)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
+  PetscValidLogicalCollectiveBool(ksp,flg,2);
+  ierr = PetscTryMethod(ksp,"KSPCGUseAsync_C",(KSP,PetscBool),(ksp,flg));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
     KSPCGSetRadius - Sets the radius of the trust region.
 
