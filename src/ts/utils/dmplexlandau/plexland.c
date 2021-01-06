@@ -1869,7 +1869,7 @@ static void g0_r(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                  PetscReal t, PetscReal u_tShift, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
 {
-  g0[0] = 2.*PETSC_PI*x[0] + 1.e-12; // seems to fix funny Q2 (and Q4) bug
+  g0[0] = 2.*PETSC_PI*x[0];
 }
 
 /*@
@@ -1969,7 +1969,7 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
-  ierr = PetscInfo2(ts, "Create Landau Jacobian t=%g %s\n",time_dummy,ctx->aux_bool ? " -- seems to be in line search" : "");CHKERRQ(ierr);
+  ierr = PetscInfo3(ts, "Create Landau Jacobian t=%g X'=%p %s\n",time_dummy,X_t,ctx->aux_bool ? " -- seems to be in line search" : "");CHKERRQ(ierr);
   //if (ctx->aux_bool) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "wrong state");
   ierr = LandauFormJacobian_Internal(X,ctx->J,dim,0.0,(void*)ctx);CHKERRQ(ierr);
   ctx->aux_bool = PETSC_TRUE;
