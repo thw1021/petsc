@@ -659,6 +659,9 @@ PETSC_EXTERN PetscErrorCode VecsCreateSeq(MPI_Comm,PetscInt,PetscInt,Vecs*);
 PETSC_EXTERN PetscErrorCode VecsCreateSeqWithArray(MPI_Comm,PetscInt,PetscInt,PetscScalar*,Vecs*);
 PETSC_EXTERN PetscErrorCode VecsDuplicate(Vecs,Vecs*);
 
+#include <petscdevice.h>
+PETSC_EXTERN PetscErrorCode VecSetStream(Vec,PetscStream);
+PETSC_EXTERN PetscErrorCode VecGetStream(Vec,PetscStream*);
 #if defined(PETSC_HAVE_VIENNACL)
 typedef struct _p_PetscViennaCLIndices* PetscViennaCLIndices;
 PETSC_EXTERN PetscErrorCode PetscViennaCLIndicesCreate(PetscInt, PetscInt*,PetscInt, PetscInt*,PetscViennaCLIndices*);

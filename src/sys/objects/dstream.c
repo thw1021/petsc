@@ -80,7 +80,7 @@ PetscErrorCode PetscStreamGetStream(PetscStream strm, PetscStreamType type, void
 #endif
     break;
   default:
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscStreamType in argument 2\n");
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscStreamType\n");
     break;
   }
   PetscFunctionReturn(0);
@@ -91,17 +91,15 @@ PetscErrorCode PetscStreamRestoreStream(PetscStream strm, PetscStreamType type, 
   PetscFunctionBegin;
   PetscValidPointer(dstrm,3);
   switch (type) {
+#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
+    PetscErrorCode ierr;
+#endif
   case PETSC_STREAM_CUDA:
 #if PetscDefined(HAVE_CUDA)
     if (PetscUnlikelyDebug(*((cudaStream_t*) dstrm) != strm->cstream)) {
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"CUDA stream is not the same as the one that was checked out\n");
     }
-    if (destroy && strm->cstream) {
-      cudaError_t cerr;
-
-      cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
-      strm->cstream = NULL;
-    }
+    if (destroy) {ierr = PetscStreamDisassembleCUDA_Internal(strm);CHKERRQ(ierr);}
 #endif
     break;
   case PETSC_STREAM_HIP:
@@ -109,16 +107,94 @@ PetscErrorCode PetscStreamRestoreStream(PetscStream strm, PetscStreamType type, 
     if (PetscUnlikelyDebug(*((hipStream_t*) dstrm) != strm->hstream)) {
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"HIP stream is not the same as the one that was checked out\n");
     }
-    if (destroy && strm->hstream) {
-      hipError_t herr;
-
-      herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
-      strm->hstream = NULL;
-    }
+    if (destroy) {ierr = PetscStreamDisassembleHIP_Internal(strm);CHKERRQ(ierr);}
 #endif
     break;
   default:
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscStreamType in argument 2\n");
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamSplitBegin(PetscStream strm, PetscStreamType type, void *dstrm)
+{
+  PetscFunctionBegin;
+  switch (type) {
+  case PETSC_STREAM_CUDA:
+#if PetscDefined(HAVE_CUDA)
+    if (strm->mode != PETSC_STREAM_GLOBAL_BLOCKING) {
+      cudaError_t cerr;
+
+      cerr = cudaStreamCreate((cudaStream_t*) dstrm);CHKERRCUDA(cerr);
+    } else {
+      *((cudaStream_t*) dstrm) = NULL;
+    }
+#endif
+    break;
+  case PETSC_STREAM_HIP:
+#if PetscDefined(HAVE_HIP)
+    if (strm->mode != PETSC_STREAM_GLOBAL_BLOCKING) {
+      hipError_t herr;
+
+      herr = hipStreamCreate((hipStream_t*) dstrm);CHKERRHIP(herr);
+    } else {
+      *((hipStream_t*) dstrm) = NULL;
+    }
+#endif
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscStreamType\n");
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamSplitEnd(PetscStream strm, PetscStreamType type, void *dstrm, PetscBool destroy)
+{
+  PetscFunctionBegin;
+  switch (type) {
+#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
+    PetscErrorCode ierr;
+#endif
+  case PETSC_STREAM_CUDA:
+#if PetscDefined(HAVE_CUDA)
+    if (strm->mode != PETSC_STREAM_GLOBAL_BLOCKING) {
+      cudaError_t cerr;
+      cudaEvent_t cevent;
+
+      ierr = PetscStreamAssembleCUDA_Internal(strm);CHKERRQ(ierr);
+      /* Turn off timing, as it is purely about sync */
+      cerr = cudaEventCreateWithFlags(&cevent, cudaEventDisableTiming);CHKERRCUDA(cerr);
+      cerr = cudaEventRecord(cevent, *((cudaStream_t*) dstrm));CHKERRCUDA(cerr);
+      ierr = cudaStreamWaitEvent(strm->cstream, cevent, 0);CHKERRCUDA(cerr);
+      /* Safe to destroy, event won't actually be destroyed on device before it occurs */
+      cerr = cudaEventDestroy(cevent);CHKERRCUDA(cerr);
+      cerr = cudaStreamDestroy(*((cudaStream_t*) dstrm));CHKERRCUDA(cerr);
+      if (destroy) {ierr = PetscStreamDisassembleCUDA_Internal(strm);CHKERRQ(ierr);}
+    }
+#endif
+    break;
+  case PETSC_STREAM_HIP:
+#if PetscDefined(HAVE_HIP)
+    if (strm->mode != PETSC_STREAM_GLOBAL_BLOCKING) {
+      hipError_t herr;
+      hipEvent_t hevent;
+
+      ierr = PetscStreamAssembleHIP_Internal(strm);CHKERRQ(ierr);
+      /* Turn off timing, as it is purely about sync */
+      herr = hipEventCreateWithFlags(&hevent, hipEventDisableTiming);CHKERRHIP(herr);
+      herr = hipEventRecord(hevent, *((hipStream_t*) dstrm));CHKERRHIP(herr);
+      ierr = hipStreamWaitEvent(strm->hstream, hevent, 0);CHKERRHIP(herr);
+      /* Safe to destroy, event won't actually be destroyed on device before it occurs */
+      herr = hipEventDestroy(hevent);CHKERRHIP(herr);
+      herr = hipStreamDestroy(*((hipStream_t*) dstrm));CHKERRHIP(herr);
+      if (destroy) {ierr = PetscStreamDisassembleHIP_Internal(strm);CHKERRQ(ierr);}
+    }
+#endif
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscStreamType\n");
     break;
   }
   PetscFunctionReturn(0);
@@ -199,23 +275,27 @@ PetscErrorCode PetscStreamWaitEvent(PetscStream strm, PetscEvent event, PetscStr
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronizeStream_Private(PetscStream strm, PetscStreamType type)
 {
-#if PetscDefined(HAVE_CUDA)
-  cudaError_t cerr;
-#endif
-#if PetscDefined(HAVE_HIP)
-  hipError_t herr;
-#endif
-
   PetscFunctionBegin;
   switch (type) {
+#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
+    PetscErrorCode ierr;
+#endif
+#if PetscDefined(HAVE_CUDA)
+    cudaError_t    cerr;
+#endif
+#if PetscDefined(HAVE_HIP)
+    hipError_t     herr;
+#endif
   case PETSC_STREAM_CUDA:
 #if PetscDefined(HAVE_CUDA)
     cerr = cudaStreamSynchronize(strm->cstream);CHKERRCUDA(cerr);
+    ierr = PetscStreamDisassembleCUDA_Internal(strm);CHKERRQ(ierr);
 #endif
     break;
   case PETSC_STREAM_HIP:
 #if PetscDefined(HAVE_HIP)
     herr = hipStreamSynchronize(strm->hstream);CHKERRHIP(herr);
+    ierr = PetscStreamDisassembleHIP_Internal(strm);CHKERRQ(ierr);
 #endif
     break;
   default:
