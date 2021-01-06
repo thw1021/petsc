@@ -395,7 +395,7 @@ PetscErrorCode SetInitialGuess(DM networkdm, Vec X)
 
     ierr = DMNetworkGetNumComponents(networkdm,v,&numComps);CHKERRQ(ierr);
     for (j=0; j < numComps; j++) {
-      ierr = DMNetworkGetComponent(networkdm,v,j,&key,&component);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,v,j,&key,&component,NULL);CHKERRQ(ierr);
       if (key == 1) {
         bus = (Bus*)(component);
 
@@ -539,7 +539,7 @@ PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,Userctx *use
     ierr = DMNetworkGetNumComponents(networkdm,v,&numComps);CHKERRQ(ierr);
 
     for (j = 0; j < numComps; j++) {
-      ierr = DMNetworkGetComponent(networkdm,v,j,&key,&component);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,v,j,&key,&component,NULL);CHKERRQ(ierr);
       if (key == 1) {
         PetscInt       nconnedges;
         const PetscInt *connedges;
@@ -576,7 +576,7 @@ PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,Userctx *use
           const PetscInt *cone;
 
           e = connedges[i];
-          ierr = DMNetworkGetComponent(networkdm,e,0,&keye,(void**)&branch);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponent(networkdm,e,0,&keye,(void**)&branch,NULL);CHKERRQ(ierr);
 
           Yfti = branch->yft[0];
           Yftr = branch->yft[1];
@@ -793,7 +793,7 @@ PetscErrorCode AlgFunction (SNES snes, Vec X, Vec F, void *ctx)
     ierr = DMNetworkGetNumComponents(networkdm,v,&numComps);CHKERRQ(ierr);
 
     for (j = 0; j < numComps; j++) {
-      ierr = DMNetworkGetComponent(networkdm,v,j,&key,&component);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,v,j,&key,&component,NULL);CHKERRQ(ierr);
       if (key == 1) {
         PetscInt       nconnedges;
         const PetscInt *connedges;
@@ -825,7 +825,7 @@ PetscErrorCode AlgFunction (SNES snes, Vec X, Vec F, void *ctx)
           const PetscInt *cone;
 
           e = connedges[i];
-          ierr   = DMNetworkGetComponent(networkdm,e,0,&keye,(void**)&branch);CHKERRQ(ierr);
+          ierr   = DMNetworkGetComponent(networkdm,e,0,&keye,(void**)&branch,NULL);CHKERRQ(ierr);
 
           Yfti = branch->yft[0];
           Yftr = branch->yft[1];

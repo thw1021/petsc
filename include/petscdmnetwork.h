@@ -23,7 +23,7 @@ PETSC_EXTERN PetscErrorCode DMNetworkGetVertexRange(DM,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetEdgeRange(DM,PetscInt*,PetscInt*);
 
 PETSC_EXTERN PetscErrorCode DMNetworkAddComponent(DM,PetscInt,PetscInt,void*,PetscInt);
-PETSC_EXTERN PetscErrorCode DMNetworkGetComponent(DM,PetscInt,PetscInt,PetscInt*,void**);
+PETSC_EXTERN PetscErrorCode DMNetworkGetComponent(DM,PetscInt,PetscInt,PetscInt*,void**,PetscInt*);
 
 PETSC_EXTERN PetscErrorCode DMNetworkGetNumComponents(DM,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetVariableOffset(DM,PetscInt,PetscInt*);
@@ -54,7 +54,6 @@ PETSC_EXTERN PetscErrorCode DMNetworkAddSubnetwork(DM,const char*,PetscInt,Petsc
 PETSC_EXTERN PetscErrorCode DMNetworkGetSubnetwork(DM,PetscInt,PetscInt*,PetscInt*,const PetscInt**,const PetscInt**);
 PETSC_EXTERN PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM,PetscInt,PetscInt,PetscInt,PetscInt[],PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMNetworkGetSubnetworkSharedVertices(DM,PetscInt*,const PetscInt**);
-PETSC_EXTERN PetscErrorCode DMNetworkGetComponentAndNumVariables(DM,PetscInt,PetscInt,PetscInt*,void**,PetscInt*);
 
 typedef struct _p_DMNetworkMonitorList *DMNetworkMonitorList;
 struct _p_DMNetworkMonitorList

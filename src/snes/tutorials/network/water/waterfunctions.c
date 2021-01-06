@@ -40,7 +40,7 @@ PetscErrorCode FormFunction_Water(DM networkdm,Vec localX,Vec localF,PetscInt nv
 
   for (i=0; i<ne; i++) { /* for each edge */
     /* Get the offset and the key for the component for edge number e[i] */
-    ierr = DMNetworkGetComponent(networkdm,edges[i],0,&key,(void**)&edge);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,edges[i],0,&key,(void**)&edge,NULL);CHKERRQ(ierr);
 
     /* Get the numbers for the vertices covering this edge */
     ierr = DMNetworkGetConnectedVertices(networkdm,edges[i],&cone);CHKERRQ(ierr);
@@ -49,11 +49,11 @@ PetscErrorCode FormFunction_Water(DM networkdm,Vec localX,Vec localF,PetscInt nv
 
     /* Get the components at the two vertices, their variable offsets */
     ierr = DMNetworkGetNumComponents(networkdm,vnode1,&ncomp);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponent(networkdm,vnode1,ncomp-1,&key,(void**)&vertexnode1);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vnode1,ncomp-1,&key,(void**)&vertexnode1,NULL);CHKERRQ(ierr);
     ierr = DMNetworkGetComponentVariableOffset(networkdm,vnode1,ncomp-1,&offsetnode1);CHKERRQ(ierr);
 
     ierr = DMNetworkGetNumComponents(networkdm,vnode2,&ncomp);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponent(networkdm,vnode2,ncomp-1,&key,(void**)&vertexnode2);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vnode2,ncomp-1,&key,(void**)&vertexnode2,NULL);CHKERRQ(ierr);
     ierr = DMNetworkGetComponentVariableOffset(networkdm,vnode2,ncomp-1,&offsetnode2);CHKERRQ(ierr);
 
     /* Variables at node1 and node 2 */
@@ -80,7 +80,7 @@ PetscErrorCode FormFunction_Water(DM networkdm,Vec localX,Vec localF,PetscInt nv
 
     ierr = DMNetworkGetVariableOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&ncomp);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponent(networkdm,vtx[i],ncomp-1,&key,(void**)&vertex);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vtx[i],ncomp-1,&key,(void**)&vertex,NULL);CHKERRQ(ierr);
 
     if (vertex->type == VERTEX_TYPE_JUNCTION) {
       farr[offset] -= vertex->junc.demand;
@@ -218,7 +218,7 @@ PetscErrorCode SetInitialGuess_Water(DM networkdm,Vec localX,PetscInt nv,PetscIn
     ierr = DMNetworkIsSharedVertex(networkdm,vtx[i],&sharedv);CHKERRQ(ierr);
     if (ghostvtex || sharedv) continue;
 
-    ierr = DMNetworkGetComponent(networkdm,vtx[i],0,&key,(void**)&vertex);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vtx[i],0,&key,(void**)&vertex,NULL);CHKERRQ(ierr);
     ierr = DMNetworkGetComponentVariableOffset(networkdm,vtx[i],0,&offset);CHKERRQ(ierr);
     if (vertex->type == VERTEX_TYPE_JUNCTION) {
       xarr[offset] = 100;

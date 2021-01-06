@@ -85,7 +85,7 @@ PetscErrorCode FormJacobian_subPower(SNES snes,Vec X, Mat J,Mat Jpre,void *appct
     if (ghostvtex) continue;
 
     ierr = DMNetworkGetVariableGlobalOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponentAndNumVariables(networkdm,vtx[i],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vtx[i],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     for (j=0; j<nvar; j++) {
       row = offset + j;
       ierr = MatSetValues(J,1,&row,1,&row,&one,ADD_VALUES);CHKERRQ(ierr);
@@ -119,7 +119,7 @@ PetscErrorCode FormFunction_Dummy(DM networkdm,Vec localX, Vec localF,PetscInt n
     if (ghostvtex) continue;
 
     ierr = DMNetworkGetVariableOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponentAndNumVariables(networkdm,vtx[i],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vtx[i],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     for (j=0; j<nvar; j++) {
       farr[offset+j] = xarr[offset+j] - xoldarr[offset+j];
     }
@@ -180,12 +180,12 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
     void*          component;
     const PetscInt *connedges;
 
-    ierr = DMNetworkGetComponentAndNumVariables(networkdm,vtx[v],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vtx[v],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[v],&ncomp);CHKERRQ(ierr);
     /* printf("  [%d] coupling vertex[%D]: v %D, ncomp %D; nvar %D\n",rank,v,vtx[v], ncomp,nvar); */
 
     for (k=0; k<ncomp; k++) {
-      ierr = DMNetworkGetComponentAndNumVariables(networkdm,vtx[v],k,&key,&component,&nvar);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,vtx[v],k,&key,&component,&nvar);CHKERRQ(ierr);
       ierr = DMNetworkGetComponentVariableGlobalOffset(networkdm,vtx[v],k,&goffset[k]);CHKERRQ(ierr);
 
       /* Verify the coupling vertex is a powernet load vertex or a water vertex */
@@ -211,7 +211,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
       e = connedges[k];
       ierr = DMNetworkGetNumComponents(networkdm,e,&ncomp);CHKERRQ(ierr);
       /* printf("\n  [%d] connected edge[%D]=%D has ncomp %D\n",rank,k,e,ncomp); */
-      ierr = DMNetworkGetComponentAndNumVariables(networkdm,e,0,&keye,&component,NULL);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,e,0,&keye,&component,NULL);CHKERRQ(ierr);
       if (keye == appctx_water.compkey_edge) { /* water_compkey_edge */
         EDGE_Water        edge=(EDGE_Water)component;
         if (edge->type == EDGE_TYPE_PUMP) {
@@ -273,7 +273,7 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
     ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&ncomp);CHKERRQ(ierr);
     for (j=0; j<ncomp; j++) {
       ierr = DMNetworkGetComponentVariableOffset(networkdm,vtx[i],j,&offset);CHKERRQ(ierr);
-      ierr = DMNetworkGetComponentAndNumVariables(networkdm,vtx[i],j,&key,(void**)&component,NULL);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,vtx[i],j,&key,(void**)&component,NULL);CHKERRQ(ierr);
       if (key == appctx_power.compkey_bus) {
         bus = (VERTEX_Power)(component);
         xarr[offset]   = bus->va*PETSC_PI/180.0;

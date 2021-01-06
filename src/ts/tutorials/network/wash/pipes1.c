@@ -156,7 +156,7 @@ PetscErrorCode WASHIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void* ctx)
     ierr = DMNetworkIsGhostVertex(networkdm,v,&ghost);CHKERRQ(ierr);
     if (ghost) continue;
 
-    ierr = DMNetworkGetComponent(networkdm,v,0,&type,(void**)&junction);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,v,0,&type,(void**)&junction,NULL);CHKERRQ(ierr);
     ierr = DMNetworkGetVariableOffset(networkdm,v,&varoffset);CHKERRQ(ierr);
     juncx      = (PipeField*)(xarr + varoffset);
     juncf      = (PetscScalar*)(farr + varoffset);
@@ -172,7 +172,7 @@ PetscErrorCode WASHIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void* ctx)
   /* Edge/pipe */
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
   for (e=eStart; e<eEnd; e++) {
-    ierr = DMNetworkGetComponent(networkdm,e,0,&type,(void**)&pipe);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,e,0,&type,(void**)&pipe,NULL);CHKERRQ(ierr);
     ierr = DMNetworkGetVariableOffset(networkdm,e,&varoffset);CHKERRQ(ierr);
     pipex    = (PipeField*)(xarr + varoffset);
     pipexdot = (PipeField*)(xdotarr + varoffset);
@@ -195,7 +195,7 @@ PetscErrorCode WASHIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void* ctx)
     ierr = DMNetworkGetVariableOffset(networkdm,vto,&offsetto);CHKERRQ(ierr);
 
     /* Evaluate upstream boundary */
-    ierr = DMNetworkGetComponent(networkdm,vfrom,0,&type,(void**)&junction);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vfrom,0,&type,(void**)&junction,NULL);CHKERRQ(ierr);
     if (junction->type != JUNCTION && junction->type != RESERVOIR) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"junction type is not supported");
     juncx = (PipeField*)(xarr + offsetfrom);
     juncf = (PetscScalar*)(farr + offsetfrom);
@@ -204,7 +204,7 @@ PetscErrorCode WASHIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void* ctx)
     juncf[1] -= pipex[0].q;
 
     /* Evaluate downstream boundary */
-    ierr = DMNetworkGetComponent(networkdm,vto,0,&type,(void**)&junction);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vto,0,&type,(void**)&junction,NULL);CHKERRQ(ierr);
     if (junction->type != JUNCTION && junction->type != VALVE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"junction type is not supported");
     juncx = (PipeField*)(xarr + offsetto);
     juncf = (PetscScalar*)(farr + offsetto);
@@ -250,7 +250,7 @@ PetscErrorCode WASHSetInitialSolution(DM networkdm,Vec X,Wash wash)
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
   for (e=eStart; e<eEnd; e++) {
     ierr = DMNetworkGetVariableOffset(networkdm,e,&varoffset);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponent(networkdm,e,0,&type,(void**)&pipe);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,e,0,&type,(void**)&pipe,NULL);CHKERRQ(ierr);
 
     /* set initial values for this pipe */
     ierr = PipeComputeSteadyState(pipe,wash->Q0,wash->H0);CHKERRQ(ierr);
@@ -270,13 +270,13 @@ PetscErrorCode WASHSetInitialSolution(DM networkdm,Vec X,Wash wash)
     ierr = DMNetworkGetVariableOffset(networkdm,vto,&offsetto);CHKERRQ(ierr);
 
     /* if vform is a head vertex: */
-    ierr = DMNetworkGetComponent(networkdm,vfrom,0,&vkey,(void**)&junction);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vfrom,0,&vkey,(void**)&junction,NULL);CHKERRQ(ierr);
     if (junction->type == RESERVOIR) {
       (xarr+offsetfrom)[1] = wash->H0; /* 1st H */
     }
 
     /* if vto is an end vertex: */
-    ierr = DMNetworkGetComponent(networkdm,vto,0,&vkey,(void**)&junction);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vto,0,&vkey,(void**)&junction,NULL);CHKERRQ(ierr);
     if (junction->type == VALVE) {
       (xarr+offsetto)[0] = wash->QL; /* last Q */
     }
@@ -347,7 +347,7 @@ PetscErrorCode PipesView(Vec X,DM networkdm,Wash wash)
   k1 = 0;
   j1 = 0;
   for (i = Start; i < End; i++) {
-    ierr = DMNetworkGetComponent(networkdm,i,0,&key,(void**)&pipe);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,i,0,&key,(void**)&pipe,NULL);CHKERRQ(ierr);
     nnodes = pipe->nnodes;
     idx_start = pipe->id*nnodes;
     for (k=0; k<nnodes; k++) {
@@ -704,11 +704,11 @@ int main(int argc,char ** argv)
   for (e = eStart; e < eEnd; e++) {
     ierr = DMNetworkGetConnectedVertices(networkdm,e,&cone);CHKERRQ(ierr);
     /* vfrom */
-    ierr = DMNetworkGetComponent(networkdm,cone[0],0,&vkey,(void**)&junction);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,cone[0],0,&vkey,(void**)&junction,NULL);CHKERRQ(ierr);
     junction->type = (VertexType)vtype[2*e];
 
     /* vto */
-    ierr = DMNetworkGetComponent(networkdm,cone[1],0,&vkey,(void**)&junction);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,cone[1],0,&vkey,(void**)&junction,NULL);CHKERRQ(ierr);
     junction->type = (VertexType)vtype[2*e+1];
   }
 
@@ -734,7 +734,7 @@ int main(int argc,char ** argv)
   ierr = DMNetworkHasJacobian(networkdm,userJac,userJac);CHKERRQ(ierr);
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
   for (e=eStart; e<eEnd; e++) { /* each edge has only one component, pipe */
-    ierr = DMNetworkGetComponent(networkdm,e,0,&type,(void**)&pipe);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,e,0,&type,(void**)&pipe,NULL);CHKERRQ(ierr);
 
     wash->nnodes_loc += pipe->nnodes; /* local total num of nodes, will be used by PipesView() */
     ierr = PipeSetParameters(pipe,
@@ -759,7 +759,7 @@ int main(int argc,char ** argv)
       ierr = JunctionCreateJacobian(networkdm,v,NULL,&J);CHKERRQ(ierr);
       ierr = DMNetworkVertexSetMatrix(networkdm,v,J);CHKERRQ(ierr);
 
-      ierr = DMNetworkGetComponent(networkdm,v,0,&vkey,(void**)&junction);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,v,0,&vkey,(void**)&junction,NULL);CHKERRQ(ierr);
       junction->jacobian = J;
     }
   }
@@ -820,12 +820,12 @@ int main(int argc,char ** argv)
   /* Destroy objects from each pipe that are created in PipeSetUp() */
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart, &eEnd);CHKERRQ(ierr);
   for (i = eStart; i < eEnd; i++) {
-    ierr = DMNetworkGetComponent(networkdm,i,0,&key,(void**)&pipe);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,i,0,&key,(void**)&pipe,NULL);CHKERRQ(ierr);
     ierr = PipeDestroy(&pipe);CHKERRQ(ierr);
   }
   if (userJac) {
     for (v=vStart; v<vEnd; v++) {
-      ierr = DMNetworkGetComponent(networkdm,v,0,&vkey,(void**)&junction);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,v,0,&vkey,(void**)&junction,NULL);CHKERRQ(ierr);
       ierr = JunctionDestroyJacobian(networkdm,v,junction);CHKERRQ(ierr);
     }
   }

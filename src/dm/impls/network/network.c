@@ -1015,45 +1015,6 @@ PetscErrorCode DMNetworkGetComponentKeyOffset(DM dm,PetscInt p,PetscInt compnum,
 }
 
 /*@
-  DMNetworkGetComponent - Returns the network component and its key
-
-  Not Collective
-
-  Input Parameters:
-+ dm - DMNetwork object
-. p  - edge or vertex point
-- compnum - component number
-
-  Output Parameters:
-+ compkey - the key set for this computing during registration
-- component - the component data
-
-  Notes:
-  Typical usage:
-
-  DMNetworkGetVertex/EdgeRange(dm,&Start,&End);
-  Loop over vertices or edges
-    DMNetworkGetNumComponents(dm,v,&numcomps);
-    Loop over numcomps
-      DMNetworkGetComponent(dm,v,compnum,&key,&component);
-
-  Level: beginner
-
-.seealso: DMNetworkGetNumComponents, DMNetworkGetVariableOffset
-@*/
-PetscErrorCode DMNetworkGetComponent(DM dm, PetscInt p, PetscInt compnum, PetscInt *key, void **component)
-{
-  PetscErrorCode ierr;
-  DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       offsetd = 0;
-
-  PetscFunctionBegin;
-  ierr = DMNetworkGetComponentKeyOffset(dm,p,compnum,key,&offsetd);CHKERRQ(ierr);
-  *component = network->componentdataarray+offsetd;
-  PetscFunctionReturn(0);
-}
-
-/*@
   DMNetworkGetNumComponents - Get the number of components at a vertex/edge
 
   Not Collective
@@ -1343,7 +1304,7 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
 }
 
 /*@
-  DMNetworkGetComponentAndNumVariables - Gets the network component, its key and number of variables
+  DMNetworkGetComponent - Gets the network component, its key and number of variables
 
   Not Collective
 
@@ -1359,9 +1320,9 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
 
   Level: beginner
 
-.seealso: DMNetworkGetNumComponents, DMNetworkGetComponentDataArray
+.seealso: DMNetworkAddComponent, DMNetworkGetNumComponents, DMNetworkGetComponentDataArray
 @*/
-PetscErrorCode DMNetworkGetComponentAndNumVariables(DM dm,PetscInt p,PetscInt compnum,PetscInt* compkey,void** component,PetscInt* nvar)
+PetscErrorCode DMNetworkGetComponent(DM dm,PetscInt p,PetscInt compnum,PetscInt *compkey,void **component,PetscInt *nvar)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;

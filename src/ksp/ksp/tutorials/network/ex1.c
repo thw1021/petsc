@@ -167,7 +167,7 @@ PetscErrorCode FormOperator(DM dmnetwork,Mat A,Vec b)
    */
   ierr = DMNetworkGetEdgeRange(dmnetwork,&eStart,&eEnd);CHKERRQ(ierr);
   for (e = 0; e < eEnd; e++) {
-    ierr = DMNetworkGetComponent(dmnetwork,e,0,NULL,(void**)&branch);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(dmnetwork,e,0,NULL,(void**)&branch,NULL);CHKERRQ(ierr);
     ierr = DMNetworkGetVariableOffset(dmnetwork,e,&lofst);CHKERRQ(ierr);
 
     ierr = DMNetworkGetConnectedVertices(dmnetwork,e,&cone);CHKERRQ(ierr);
@@ -185,7 +185,7 @@ PetscErrorCode FormOperator(DM dmnetwork,Mat A,Vec b)
     ierr = MatSetValuesLocal(A,1,row,3,col,val,ADD_VALUES);CHKERRQ(ierr);
 
     /* set Node equation */
-    ierr = DMNetworkGetComponent(dmnetwork,cone[0],0,NULL,(void**)&node);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(dmnetwork,cone[0],0,NULL,(void**)&node,NULL);CHKERRQ(ierr);
 
     /* from node */
     if (!node->gr) { /* not a boundary node */
@@ -195,7 +195,7 @@ PetscErrorCode FormOperator(DM dmnetwork,Mat A,Vec b)
     }
 
     /* to node */
-    ierr = DMNetworkGetComponent(dmnetwork,cone[1],0,NULL,(void**)&node);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(dmnetwork,cone[1],0,NULL,(void**)&node,NULL);CHKERRQ(ierr);
 
     if (!node->gr) { /* not a boundary node */
       row[0] = lofst_to;
@@ -209,7 +209,7 @@ PetscErrorCode FormOperator(DM dmnetwork,Mat A,Vec b)
   for (v = vStart; v < vEnd; v++) {
     ierr = DMNetworkIsGhostVertex(dmnetwork,v,&ghost);CHKERRQ(ierr);
     if (!ghost) {
-      ierr = DMNetworkGetComponent(dmnetwork,v,0,NULL,(void**)&node);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(dmnetwork,v,0,NULL,(void**)&node,NULL);CHKERRQ(ierr);
       ierr = DMNetworkGetVariableOffset(dmnetwork,v,&lofst);CHKERRQ(ierr);
 
       if (node->gr) { /* a boundary node */
