@@ -186,7 +186,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
 
     for (k=0; k<ncomp; k++) {
       ierr = DMNetworkGetComponent(networkdm,vtx[v],k,&key,&component,&nvar);CHKERRQ(ierr);
-      ierr = DMNetworkGetComponentVariableGlobalOffset(networkdm,vtx[v],k,&goffset[k]);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentGlobalOffset(networkdm,vtx[v],k,&goffset[k]);CHKERRQ(ierr);
 
       /* Verify the coupling vertex is a powernet load vertex or a water vertex */
       switch (k) {
@@ -272,7 +272,7 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
 
     ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&ncomp);CHKERRQ(ierr);
     for (j=0; j<ncomp; j++) {
-      ierr = DMNetworkGetComponentVariableOffset(networkdm,vtx[i],j,&offset);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentOffset(networkdm,vtx[i],j,&offset);CHKERRQ(ierr);
       ierr = DMNetworkGetComponent(networkdm,vtx[i],j,&key,(void**)&component,NULL);CHKERRQ(ierr);
       if (key == appctx_power.compkey_bus) {
         bus = (VERTEX_Power)(component);

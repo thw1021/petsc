@@ -163,7 +163,7 @@ int main(int argc,char ** argv)
     /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] shared v %D: nvar %D, ncomp %D\n",rank,vtx[v],nvar,ncomp);CHKERRQ(ierr); */
     for (j=0; j<ncomp; j++) {
       ierr = DMNetworkGetComponent(dmnetwork,vtx[v],j,&compkey,NULL,&nvar);CHKERRQ(ierr);
-      ierr = DMNetworkGetComponentVariableGlobalOffset(dmnetwork,vtx[v],j,&goffset);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentGlobalOffset(dmnetwork,vtx[v],j,&goffset);CHKERRQ(ierr);
       for (i=0; i<nvar; i++) {
         row = goffset + i;
         val = compkey + 1.0;

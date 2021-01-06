@@ -970,51 +970,6 @@ PetscErrorCode DMNetworkGetGlobalVertexIndex(DM dm,PetscInt p,PetscInt *index)
 }
 
 /*@
-  DMNetworkGetComponentKeyOffset - Gets the type along with the offset for indexing the
-                                    component value from the component data array
-
-  Not Collective
-
-  Input Parameters:
-+ dm      - The DMNetwork object
-. p       - vertex/edge point
-- compnum - component number
-
-  Output Parameters:
-+ compkey - the key obtained when registering the component
-- offset  - offset into the component data array associated with the vertex/edge point
-
-  Notes:
-  Typical usage:
-
-  DMNetworkGetComponentDataArray(dm, &arr);
-  DMNetworkGetVertex/EdgeRange(dm,&Start,&End);
-  Loop over vertices or edges
-    DMNetworkGetNumComponents(dm,v,&numcomps);
-    Loop over numcomps
-      DMNetworkGetComponentKeyOffset(dm,v,compnum,&key,&offset);
-      compdata = (UserCompDataType)(arr+offset);
-
-  Level: intermediate
-
-.seealso: DMNetworkGetNumComponents, DMNetworkGetComponentDataArray,
-@*/
-PetscErrorCode DMNetworkGetComponentKeyOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *compkey,PetscInt *offset)
-{
-  PetscErrorCode           ierr;
-  PetscInt                 offsetp;
-  DMNetworkComponentHeader header;
-  DM_Network               *network = (DM_Network*)dm->data;
-
-  PetscFunctionBegin;
-  ierr = PetscSectionGetOffset(network->DataSection,p,&offsetp);CHKERRQ(ierr);
-  header = (DMNetworkComponentHeader)(network->componentdataarray+offsetp);
-  if (compkey) *compkey = header->key[compnum];
-  if (offset) *offset  = offsetp+network->dataheadersize+header->offset[compnum];
-  PetscFunctionReturn(0);
-}
-
-/*@
   DMNetworkGetNumComponents - Get the number of components at a vertex/edge
 
   Not Collective
@@ -1096,7 +1051,7 @@ PetscErrorCode DMNetworkGetVariableGlobalOffset(DM dm,PetscInt p,PetscInt *offse
 }
 
 /*@
-  DMNetworkGetComponentVariableOffset - Get the offset for accessing the variable associated with a component for the given vertex/edge from the local vector.
+  DMNetworkGetComponentOffset - Get the offset for accessing the variable associated with a component for the given vertex/edge from the local vector.
 
   Not Collective
 
@@ -1112,7 +1067,7 @@ PetscErrorCode DMNetworkGetVariableGlobalOffset(DM dm,PetscInt p,PetscInt *offse
 
 .seealso: DMNetworkGetVariableGlobalOffset(), DMGetLocalVector(), DMNetworkAddComponent()
 @*/
-PetscErrorCode DMNetworkGetComponentVariableOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *offset)
+PetscErrorCode DMNetworkGetComponentOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *offset)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
@@ -1128,7 +1083,7 @@ PetscErrorCode DMNetworkGetComponentVariableOffset(DM dm,PetscInt p,PetscInt com
 }
 
 /*@
-  DMNetworkGetComponentVariableGlobalOffset - Get the global offset for accessing the variable associated with a component for the given vertex/edge from the local vector.
+  DMNetworkGetComponentGlobalOffset - Get the global offset for accessing the variable associated with a component for the given vertex/edge from the local vector.
 
   Not Collective
 
@@ -1142,9 +1097,9 @@ PetscErrorCode DMNetworkGetComponentVariableOffset(DM dm,PetscInt p,PetscInt com
 
   Level: intermediate
 
-.seealso: DMNetworkGetVariableGlobalOffset(), DMNetworkGetComponentVariableOffset(), DMGetLocalVector(), DMNetworkAddComponent()
+.seealso: DMNetworkGetVariableGlobalOffset(), DMNetworkGetComponentOffset(), DMGetLocalVector(), DMNetworkAddComponent()
 @*/
-PetscErrorCode DMNetworkGetComponentVariableGlobalOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *offsetg)
+PetscErrorCode DMNetworkGetComponentGlobalOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *offsetg)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
@@ -1518,7 +1473,7 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
 
   Level: intermediate
 
-.seealso: DMNetworkGetComponentKeyOffset, DMNetworkGetNumComponents
+.seealso: DMNetworkGetComponent, DMNetworkGetNumComponents
 */
 PetscErrorCode DMNetworkGetComponentDataArray(DM dm,DMNetworkComponentGenericDataType **componentdataarray)
 {
