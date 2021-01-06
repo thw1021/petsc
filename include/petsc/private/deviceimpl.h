@@ -16,7 +16,7 @@ struct _n_PetscStream {
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleHIP_Internal(PetscStream strm)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginHot;
   switch (strm->mode) {
 #if PetscDefined(HAVE_HIP)
     hipError_t herr;
@@ -45,7 +45,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleHIP_Internal(PetscStream s
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleCUDA_Internal(PetscStream strm)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginHot;
   switch (strm->mode) {
 #if PetscDefined(HAVE_CUDA)
     cudaError_t cerr;
@@ -62,6 +62,56 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleCUDA_Internal(PetscStream 
 #if PetscDefined(HAVE_CUDA)
     if (!(strm->cstream)) {
       cerr = cudaStreamCreateWithFlags(&strm->cstream, cudaStreamNonBlocking);CHKERRCUDA(cerr);
+    }
+#endif
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamDisassembleHIP_Internal(PetscStream strm)
+{
+  PetscFunctionBeginHot;
+  switch (strm->mode) {
+  case PETSC_STREAM_GLOBAL_BLOCKING:
+    /* NULL stream always blocks */
+    break;
+  case PETSC_STREAM_DEFAULT_BLOCKING:
+  case PETSC_STREAM_GLOBAL_NONBLOCKING:
+#if PetscDefined(HAVE_HIP)
+    if (strm->hstream) {
+      hipError_t herr;
+
+      herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
+      strm->hstream = NULL;
+    }
+#endif
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamDisassembleCUDA_Internal(PetscStream strm)
+{
+  PetscFunctionBeginHot;
+  switch (strm->mode) {
+  case PETSC_STREAM_GLOBAL_BLOCKING:
+    /* NULL stream always blocks */
+    break;
+  case PETSC_STREAM_DEFAULT_BLOCKING:
+  case PETSC_STREAM_GLOBAL_NONBLOCKING:
+#if PetscDefined(HAVE_CUDA)
+    if (strm->cstream) {
+      cudaError_t cerr;
+
+      cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
+      strm->cstream = NULL;
     }
 #endif
     break;
