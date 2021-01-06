@@ -780,8 +780,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijkokkos_kokkos(Mat A,MatFactorType
   (*B)->useordering = PETSC_TRUE;
   ierr = MatSetType(*B,MATSEQAIJKOKKOS);CHKERRQ(ierr);
 
-  if (ftype == MAT_FACTOR_LU // || ftype == MAT_FACTOR_ILU || ftype == MAT_FACTOR_ILUDT
-      ) {
+  if (ftype == MAT_FACTOR_LU /* || ftype == MAT_FACTOR_ILU || ftype == MAT_FACTOR_ILUDT*/) {
     ierr = MatSetBlockSizesFromMats(*B,A,A);CHKERRQ(ierr);
     // (*B)->ops->ilufactorsymbolic = MatILUFactorSymbolic_SeqAIJKOKKOS;
     (*B)->ops->lufactorsymbolic  = MatLUFactorSymbolic_SeqAIJKOKKOS;
