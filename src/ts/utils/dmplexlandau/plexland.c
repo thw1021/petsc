@@ -99,9 +99,9 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   PetscValidHeaderSpecific(a_X,VEC_CLASSID,1);
   PetscValidHeaderSpecific(JacP,MAT_CLASSID,2);
   PetscValidPointer(ctx,4);
-  ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
 
   /* check for matrix container for GPU assembly */
+  ierr = PetscLogEventBegin(ctx->events[10],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
   if (container /* && ctx->deviceType != LANDAU_CPU */) {
     if (!ctx->gpu_assembly) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"GPU matrix container but no GPU assembly");
@@ -145,6 +145,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf);
   }
   elemMatSize = totDim*totDim;
+  ierr = PetscLogEventEnd(ctx->events[10],0,0,0,0);CHKERRQ(ierr);
   {
     static int         cc = 0;
     PetscScalar        uu[LANDAU_MAX_SPECIES],u_x[LANDAU_MAX_SPECIES*LANDAU_DIM];
@@ -159,9 +160,11 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     if (shift==0.0) {
       ierr = LandauPointDataCreate(&IPData, dim, Nq*numCells, Nf);CHKERRQ(ierr);
       ierr = PetscMalloc1(numCells*Nq*dim*dim,&invJ_a);CHKERRQ(ierr);
+      ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
     } else { // mass
       ierr = PetscMalloc1(numCells*Nq,&mass_w);CHKERRQ(ierr);
       IPData.w = NULL;
+      ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
     }
     /* cache geometry and x, f and df/dx at IPs */
     for (ej = 0 ; ej < numCells; ++ej) {
@@ -211,11 +214,15 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
         } /* q */
         ierr = DMPlexVecRestoreClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
       }
-    } /* e */
+    } /* ej */
+    if (shift==0.0) {
+      ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
+    } else { // mass
+      ierr = PetscLogEventEnd(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
+    }
   }
-
   ierr = DMRestoreLocalVector(plex, &locX);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
+
   /* do it */
   if (ctx->deviceType == LANDAU_CUDA || ctx->deviceType == LANDAU_KOKKOS) {
     if (ctx->deviceType == LANDAU_CUDA) {
@@ -1361,16 +1368,18 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     PetscMPIInt    rank;
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
     /* PetscLogStage  setup_stage; */
-    ierr = PetscLogEventRegister("Landau Operator", DM_CLASSID, &ctx->events[0]);CHKERRQ(ierr); /* 0 */
-    ierr = PetscLogEventRegister(" Jac-vector", DM_CLASSID, &ctx->events[1]);CHKERRQ(ierr); /* 1 */
+    ierr = PetscLogEventRegister("Landau Jacobian", DM_CLASSID, &ctx->events[0]);CHKERRQ(ierr); /* 0 */
+    ierr = PetscLogEventRegister(" Initialize", DM_CLASSID, &ctx->events[10]);CHKERRQ(ierr); /* 10 */
+    ierr = PetscLogEventRegister("  IP Data-jac", DM_CLASSID, &ctx->events[7]);CHKERRQ(ierr); /* 7 */
     ierr = PetscLogEventRegister(" Jac-kern-init", DM_CLASSID, &ctx->events[3]);CHKERRQ(ierr); /* 3 */
     ierr = PetscLogEventRegister(" Jac-kernel", DM_CLASSID, &ctx->events[4]);CHKERRQ(ierr); /* 4 */
     ierr = PetscLogEventRegister(" Jac-kernel-post", DM_CLASSID, &ctx->events[5]);CHKERRQ(ierr); /* 5 */
     ierr = PetscLogEventRegister(" Jac-assemble", DM_CLASSID, &ctx->events[6]);CHKERRQ(ierr); /* 6 */
-    ierr = PetscLogEventRegister(" Jac-end", DM_CLASSID, &ctx->events[7]);CHKERRQ(ierr); /* 7 */
     ierr = PetscLogEventRegister(" Jac-f-df", DM_CLASSID, &ctx->events[8]);CHKERRQ(ierr); /* 8 */
     ierr = PetscLogEventRegister(" Jac asmbl setup", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
-    ierr = PetscLogEventRegister("Landau Jacobian", DM_CLASSID, &ctx->events[9]);CHKERRQ(ierr); /* 9 */
+    ierr = PetscLogEventRegister("Mass Operator", DM_CLASSID, &ctx->events[9]);CHKERRQ(ierr); /* 9 */
+    ierr = PetscLogEventRegister("  IP Data-mass", DM_CLASSID, &ctx->events[1]);CHKERRQ(ierr); /* 1 */
+
     if (rank) { /* turn off output stuff for duplicate runs - do we need to add the prefix to all this? */
       ierr = PetscOptionsClearValue(NULL,"-snes_converged_reason");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-ksp_converged_reason");CHKERRQ(ierr);
