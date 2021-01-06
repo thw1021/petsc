@@ -831,7 +831,7 @@ static void PackInit_DumbType(PetscSFLink link)
 }
 
 /* Some device-specific utilities */
-static PetscErrorCode PetscSFLinkSyncDevice_Cuda(PetscSFLink link)
+static PetscErrorCode PetscSFLinkSyncDevice_CUDA(PetscSFLink link)
 {
   cudaError_t cerr;
   PetscFunctionBegin;
@@ -839,7 +839,7 @@ static PetscErrorCode PetscSFLinkSyncDevice_Cuda(PetscSFLink link)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscSFLinkSyncStream_Cuda(PetscSFLink link)
+static PetscErrorCode PetscSFLinkSyncStream_CUDA(PetscSFLink link)
 {
   cudaError_t cerr;
   PetscFunctionBegin;
@@ -847,56 +847,142 @@ static PetscErrorCode PetscSFLinkSyncStream_Cuda(PetscSFLink link)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscSFLinkMemcpy_Cuda(PetscSFLink link,PetscMemType dstmtype,void* dst,PetscMemType srcmtype,const void*src,size_t n)
+static PetscErrorCode PetscSFLinkMemcpy_CUDA(PetscSFLink link,PetscMemType dstmtype,void* dst,PetscMemType srcmtype,const void*src,size_t n)
 {
   PetscFunctionBegin;
   enum cudaMemcpyKind kinds[2][2] = {{cudaMemcpyHostToHost,cudaMemcpyHostToDevice},{cudaMemcpyDeviceToHost,cudaMemcpyDeviceToDevice}};
 
   if (n) {
-    if (dstmtype == PETSC_MEMTYPE_HOST && srcmtype == PETSC_MEMTYPE_HOST) { /* Separate HostToHost so that pure-cpu code won't call cuda runtime */
+    if (PetscMemTypeHost(dstmtype) && PetscMemTypeHost(srcmtype)) { /* Separate HostToHost so that pure-cpu code won't call cuda runtime */
       PetscErrorCode ierr = PetscMemcpy(dst,src,n);CHKERRQ(ierr);
-    } else { /* Assume PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=1 */
-      cudaError_t err = cudaMemcpyAsync(dst,src,n,kinds[srcmtype][dstmtype],link->stream);CHKERRCUDA(err);
+    } else {
+      int stype = PetscMemTypeDevice(srcmtype) ? 1 : 0;
+      int dtype = PetscMemTypeDevice(dstmtype) ? 1 : 0;
+      cudaError_t cerr = cudaMemcpyAsync(dst,src,n,kinds[stype][dtype],link->stream);CHKERRCUDA(cerr);
     }
   }
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscSFMalloc_Cuda(PetscMemType mtype,size_t size,void** ptr)
+PetscErrorCode PetscSFMalloc_CUDA(PetscMemType mtype,size_t size,void** ptr)
 {
   PetscFunctionBegin;
-  if (mtype == PETSC_MEMTYPE_HOST) {PetscErrorCode ierr = PetscMalloc(size,ptr);CHKERRQ(ierr);}
-  else if (mtype == PETSC_MEMTYPE_DEVICE) {
-    if (!PetscCUDAInitialized) { PetscErrorCode ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr); }
+  if (PetscMemTypeHost(mtype)) {PetscErrorCode ierr = PetscMalloc(size,ptr);CHKERRQ(ierr);}
+  else if (PetscMemTypeDevice(mtype)) {
+    if (!PetscCUDAInitialized) {PetscErrorCode ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);}
     cudaError_t err = cudaMalloc(ptr,size);CHKERRCUDA(err);
-  }
-  else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d", (int)mtype);
+  } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d", (int)mtype);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscSFFree_Cuda(PetscMemType mtype,void* ptr)
+PetscErrorCode PetscSFFree_CUDA(PetscMemType mtype,void* ptr)
 {
   PetscFunctionBegin;
-  if (mtype == PETSC_MEMTYPE_HOST) {PetscErrorCode ierr = PetscFree(ptr);CHKERRQ(ierr);}
-  else if (mtype == PETSC_MEMTYPE_DEVICE) {cudaError_t err = cudaFree(ptr);CHKERRCUDA(err);}
+  if (PetscMemTypeHost(mtype)) {PetscErrorCode ierr = PetscFree(ptr);CHKERRQ(ierr);}
+  else if (PetscMemTypeDevice(mtype)) {cudaError_t err = cudaFree(ptr);CHKERRCUDA(err);}
   else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d",(int)mtype);
   PetscFunctionReturn(0);
 }
 
-/*====================================================================================*/
-/*                Main driver to init MPI datatype on device                          */
-/*====================================================================================*/
+PetscErrorCode PetscSFLinkRecordEndOfLocalCommunication_CUDA(PetscSF sf,PetscSFLink link)
+{
+  cudaError_t cerr;
+  PetscFunctionBegin;
+  cerr = cudaEventRecord(link->local_comm_end,link->local_comm_stream);CHKERRCUDA(cerr);
+  PetscFunctionReturn(0);
+}
 
-/* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
-PetscErrorCode PetscSFLinkSetUp_Cuda(PetscSF sf,PetscSFLink link,MPI_Datatype unit)
+PetscErrorCode PetscSFLinkRecordEndOfRemoteCommunication_CUDA(PetscSF sf,PetscSFLink link)
+{
+  cudaError_t cerr;
+  PetscFunctionBegin;
+  cerr = cudaEventRecord(link->remote_comm_end,link->remote_comm_stream);CHKERRCUDA(cerr);
+  PetscFunctionReturn(0);
+}
+
+/* Build dependence between input data (on input_stream) and Pack (on remote_comm_stream) and Scatter (on scatter_stream) */
+PetscErrorCode PetscSFLinkBuildDependenceBegin_CUDA(PetscSF sf,PetscSFLink link)
 {
   PetscErrorCode ierr;
-  cudaError_t    err;
+  cudaError_t    cerr;
+  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
+
+  PetscFunctionBegin;
+  if (PetscMemTypeDevice(link->rootmtype) || PetscMemTypeDevice(link->leafmtype)) {
+    if (sf->unknown_inout_streams) {ierr = (*link->SyncDevice)(link);CHKERRQ(ierr);}
+    if (PetscMemTypeDevice(link->rootmtype)) {
+      cerr = cudaEventRecord(link->rootready,link->rootstream);CHKERRCUDA(cerr);
+      if (bas->rootbuflen[PETSCSF_LOCAL])  {cerr = cudaStreamWaitEvent(link->local_comm_stream,link->rootready,0);CHKERRCUDA(cerr);}
+      if (bas->rootbuflen[PETSCSF_REMOTE]) {cerr = cudaStreamWaitEvent(link->remote_comm_stream,link->rootready,0);CHKERRCUDA(cerr);}
+    }
+    if (PetscMemTypeDevice(link->leafmtype)) {
+      cerr = cudaEventRecord(link->leafready,link->leafstream);CHKERRCUDA(cerr);
+      if (sf->leafbuflen[PETSCSF_LOCAL])  {cerr = cudaStreamWaitEvent(link->local_comm_stream,link->leafready,0);CHKERRCUDA(cerr);}
+      if (sf->leafbuflen[PETSCSF_REMOTE]) {cerr = cudaStreamWaitEvent(link->remote_comm_stream,link->leafready,0);CHKERRCUDA(cerr);}
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
+/* Build dependence between local scatter stream, ecv stream and output stream */
+PetscErrorCode PetscSFLinkBuildDependenceEnd_CUDA(PetscSF sf,PetscSFLink link)
+{
+  PetscErrorCode ierr;
+  cudaError_t    cerr;
+  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
+
+  PetscFunctionBegin;
+  if (PetscMemTypeDevice(link->rootmtype) || PetscMemTypeDevice(link->leafmtype)) {
+    if (PetscMemTypeDevice(link->rootmtype)) {
+      if (bas->rootbuflen[PETSCSF_LOCAL])  {cerr = cudaStreamWaitEvent(link->rootstream,link->local_comm_end,0);CHKERRCUDA(cerr);}
+      if (bas->rootbuflen[PETSCSF_REMOTE]) {cerr = cudaStreamWaitEvent(link->rootstream,link->remote_comm_end,0);CHKERRCUDA(cerr);}
+    }
+    if (PetscMemTypeDevice(link->leafmtype)) {
+      if (sf->leafbuflen[PETSCSF_LOCAL])  {cerr = cudaStreamWaitEvent(link->leafstream,link->local_comm_end,0);CHKERRCUDA(cerr);}
+      if (sf->leafbuflen[PETSCSF_REMOTE]) {cerr = cudaStreamWaitEvent(link->leafstream,link->remote_comm_end,0);CHKERRCUDA(cerr);}
+    }
+    if (sf->unknown_inout_streams) {ierr = (*link->SyncDevice)(link);CHKERRQ(ierr);}
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA(PetscSF sf,PetscSFLink link)
+{
+  PetscFunctionBegin;
+  cudaError_t cerr = cudaStreamWaitEvent(link->remote_comm_stream,link->local_comm_end,0);CHKERRCUDA(cerr);
+  PetscFunctionReturn(0);
+}
+
+/* Destructor when the link uses MPI for communication on CUDA device */
+static PetscErrorCode PetscSFLinkDestroy_MPI_CUDA(PetscSF sf,PetscSFLink link)
+{
+  cudaError_t    cerr;
+
+  PetscFunctionBegin;
+  cerr = cudaEventDestroy(link->leafready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->rootready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->local_comm_end);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->remote_comm_end);CHKERRCUDA(cerr);
+  if (link->remote_comm_stream) {cerr = cudaStreamDestroy(link->remote_comm_stream);CHKERRCUDA(cerr);}
+  if (link->local_comm_stream) {cerr = cudaStreamDestroy(link->local_comm_stream);CHKERRCUDA(cerr);}
+  for (int i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
+    cerr = cudaFree(link->rootbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRCUDA(cerr);
+    cerr = cudaFree(link->leafbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRCUDA(cerr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
+PetscErrorCode PetscSFLinkSetUp_CUDA(PetscSF sf,PetscSFLink link,MPI_Datatype unit)
+{
+  PetscErrorCode ierr;
+  cudaError_t    cerr;
   PetscInt       nSignedChar=0,nUnsignedChar=0,nInt=0,nPetscInt=0,nPetscReal=0;
   PetscBool      is2Int,is2PetscInt;
 #if defined(PETSC_HAVE_COMPLEX)
   PetscInt       nPetscComplex=0;
 #endif
+  int            greatestPriority;
 
   PetscFunctionBegin;
   if (link->deviceinited) PetscFunctionReturn(0);
@@ -965,19 +1051,36 @@ PetscErrorCode PetscSFLinkSetUp_Cuda(PetscSF sf,PetscSFLink link,MPI_Datatype un
     }
   }
 
-  if (!sf->use_default_stream) {err = cudaStreamCreate(&link->stream);CHKERRCUDA(err);}
   if (!sf->maxResidentThreadsPerGPU) { /* Not initialized */
     int                   device;
     struct cudaDeviceProp props;
-    err = cudaGetDevice(&device);CHKERRCUDA(err);
-    err = cudaGetDeviceProperties(&props,device);CHKERRCUDA(err);
+    cerr = cudaGetDevice(&device);CHKERRCUDA(cerr);
+    cerr = cudaGetDeviceProperties(&props,device);CHKERRCUDA(cerr);
     sf->maxResidentThreadsPerGPU = props.maxThreadsPerMultiProcessor*props.multiProcessorCount;
   }
   link->maxResidentThreadsPerGPU = sf->maxResidentThreadsPerGPU;
 
-  link->d_SyncDevice = PetscSFLinkSyncDevice_Cuda;
-  link->d_SyncStream = PetscSFLinkSyncStream_Cuda;
-  link->Memcpy       = PetscSFLinkMemcpy_Cuda;
+  link->rootstream = PetscDefaultCudaStream;
+  link->leafstream = PetscDefaultCudaStream;
+
+  cerr = cudaEventCreate(&link->leafready);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->rootready);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->local_comm_end);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->remote_comm_end);CHKERRCUDA(cerr);
+  cerr = cudaDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithPriority(&link->local_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
+
+  link->Destroy                              = PetscSFLinkDestroy_MPI_CUDA;
+  link->SyncDevice                           = PetscSFLinkSyncDevice_CUDA;
+  link->SyncStream                           = PetscSFLinkSyncStream_CUDA;
+  link->Memcpy                               = PetscSFLinkMemcpy_CUDA;
+  link->BuildDependenceBegin               = PetscSFLinkBuildDependenceBegin_CUDA;
+  link->BuildDependenceEnd                = PetscSFLinkBuildDependenceEnd_CUDA;
+  link->BuildDependenceBetweenLocalAndRemote = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA;
+  link->EndLocalScatter                      = PetscSFLinkRecordEndOfLocalCommunication_CUDA;
+  link->EndUnpackRemote                      = PetscSFLinkRecordEndOfRemoteCommunication_CUDA;
+
   link->deviceinited = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
