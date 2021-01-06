@@ -32,7 +32,7 @@ PetscErrorCode VecCUDAAllocateCheck(Vec v)
   if (!v->event) {ierr = PetscEventCreate(&v->event);CHKERRQ(ierr);}
   if (!v->stream) {
     ierr = PetscStreamCreate(&v->stream);CHKERRQ(ierr);
-    ierr = PetscStreamSetMode(v->stream,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
+    ierr = PetscStreamSetMode(v->stream,PETSC_STREAM_GLOBAL_BLOCKING);CHKERRQ(ierr);
   }
   if (!v->spptr) {
     PetscReal pinned_memory_min;
@@ -85,7 +85,7 @@ PetscErrorCode VecCUDACopyToGPU(Vec v)
     ierr               = PetscStreamRecordEvent(pstream,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
     ierr               = PetscLogCpuToGpu((v->map->n)*sizeof(PetscScalar));CHKERRQ(ierr);
     ierr               = PetscLogEventEnd(VEC_CUDACopyToGPU,v,0,0,0);CHKERRQ(ierr);
-    ierr               = PetscStreamRestoreStream(pstream,PETSC_STREAM_CUDA,&cstream,PETSC_TRUE);CHKERRQ(ierr);
+    ierr               = PetscStreamRestoreStream(pstream,PETSC_STREAM_CUDA,&cstream,PETSC_FALSE);CHKERRQ(ierr);
     v->offloadmask = PETSC_OFFLOAD_BOTH;
   }
   PetscFunctionReturn(0);
@@ -118,7 +118,7 @@ PetscErrorCode VecCUDACopyFromGPU(Vec v)
     ierr               = PetscStreamRecordEvent(pstream,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
     ierr               = PetscLogGpuToCpu((v->map->n)*sizeof(PetscScalar));CHKERRQ(ierr);
     ierr               = PetscLogEventEnd(VEC_CUDACopyFromGPU,v,0,0,0);CHKERRQ(ierr);
-    ierr               = PetscStreamRestoreStream(pstream,PETSC_STREAM_CUDA,&cstream,PETSC_TRUE);CHKERRQ(ierr);
+    ierr               = PetscStreamRestoreStream(pstream,PETSC_STREAM_CUDA,&cstream,PETSC_FALSE);CHKERRQ(ierr);
     v->offloadmask     = PETSC_OFFLOAD_BOTH;
   }
   PetscFunctionReturn(0);
@@ -1166,9 +1166,9 @@ PetscErrorCode VecNorm_SeqCUDA(Vec xin,NormType type,PetscReal *z)
   PetscFunctionBegin;
   ierr = PetscCUBLASGetHandle(&cublasv2handle);CHKERRQ(ierr);
   ierr = PetscBLASIntCast(n,&bn);CHKERRQ(ierr);
-  ierr = VecGetStream_Internal(xin,&pstream);CHKERRQ(ierr);
   if (type == NORM_2 || type == NORM_FROBENIUS) {
     ierr = VecCUDAGetArrayRead(xin,&xarray);CHKERRQ(ierr);
+    ierr = VecGetStream_Internal(xin,&pstream);CHKERRQ(ierr);
     ierr = PetscStreamWaitEvent(pstream,xin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
     ierr = PetscStreamGetStream(pstream,PETSC_STREAM_CUDA,&cstream);CHKERRQ(ierr);
     cberr = cublasSetStream(cublasv2handle,cstream);CHKERRCUBLAS(cberr);
@@ -1183,6 +1183,7 @@ PetscErrorCode VecNorm_SeqCUDA(Vec xin,NormType type,PetscReal *z)
   } else if (type == NORM_INFINITY) {
     int  i;
     ierr = VecCUDAGetArrayRead(xin,&xarray);CHKERRQ(ierr);
+    ierr = VecGetStream_Internal(xin,&pstream);CHKERRQ(ierr);
     ierr = PetscStreamWaitEvent(pstream,xin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
     ierr = PetscStreamGetStream(pstream,PETSC_STREAM_CUDA,&cstream);CHKERRQ(ierr);
     cberr = cublasSetStream(cublasv2handle,cstream);CHKERRCUBLAS(cberr);
@@ -1201,6 +1202,7 @@ PetscErrorCode VecNorm_SeqCUDA(Vec xin,NormType type,PetscReal *z)
     ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
   } else if (type == NORM_1) {
     ierr = VecCUDAGetArrayRead(xin,&xarray);CHKERRQ(ierr);
+    ierr = VecGetStream_Internal(xin,&pstream);CHKERRQ(ierr);
     ierr = PetscStreamWaitEvent(pstream,xin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
     ierr = PetscStreamGetStream(pstream,PETSC_STREAM_CUDA,&cstream);CHKERRQ(ierr);
     cberr = cublasSetStream(cublasv2handle,cstream);CHKERRCUBLAS(cberr);
