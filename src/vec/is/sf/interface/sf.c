@@ -104,8 +104,7 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
 #if defined(PETSC_HAVE_DEVICE)
   b->use_gpu_aware_mpi    = use_gpu_aware_mpi;
   b->use_stream_aware_mpi = PETSC_FALSE;
-  b->use_default_stream   = PETSC_TRUE; /* The assumption is true for PETSc internal use of SF */
-  /* Set the default */
+  b->unknown_inout_streams= PETSC_FALSE;
   #if defined(PETSC_HAVE_KOKKOS) /* Prefer kokkos over cuda*/
     b->backend = PETSCSF_BACKEND_KOKKOS;
   #elif defined(PETSC_HAVE_CUDA)
@@ -151,9 +150,6 @@ PetscErrorCode PetscSFReset(PetscSF sf)
   ierr = PetscFree(sf->remote_alloc);CHKERRQ(ierr);
   sf->nranks = -1;
   ierr = PetscFree4(sf->ranks,sf->roffset,sf->rmine,sf->rremote);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_DEVICE)
-  for (PetscInt i=0; i<2; i++) {ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,sf->rmine_d[i]);CHKERRQ(ierr);}
-#endif
   sf->degreeknown = PETSC_FALSE;
   ierr = PetscFree(sf->degree);CHKERRQ(ierr);
   if (sf->ingroup  != MPI_GROUP_NULL) {ierr = MPI_Group_free(&sf->ingroup);CHKERRMPI(ierr);}
@@ -161,6 +157,11 @@ PetscErrorCode PetscSFReset(PetscSF sf)
   if (sf->multi) sf->multi->multi = NULL;
   ierr = PetscSFDestroy(&sf->multi);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&sf->map);CHKERRQ(ierr);
+
+ #if defined(PETSC_HAVE_DEVICE)
+  for (PetscInt i=0; i<2; i++) {ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,sf->rmine_d[i]);CHKERRQ(ierr);}
+ #endif
+
   sf->setupcalled = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -310,8 +311,8 @@ PetscErrorCode PetscSFSetUp(PetscSF sf)
   if (sf->ops->SetUp) {ierr = (*sf->ops->SetUp)(sf);CHKERRQ(ierr);}
 #if defined(PETSC_HAVE_CUDA)
   if (sf->backend == PETSCSF_BACKEND_CUDA) {
-    sf->ops->Malloc = PetscSFMalloc_Cuda;
-    sf->ops->Free   = PetscSFFree_Cuda;
+    sf->ops->Malloc = PetscSFMalloc_CUDA;
+    sf->ops->Free   = PetscSFFree_CUDA;
   }
 #endif
 #if defined(PETSC_HAVE_HIP)
@@ -370,12 +371,12 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
   ierr = PetscOptionsFList("-sf_type","PetscSF implementation type","PetscSFSetType",PetscSFList,deft,type,sizeof(type),&flg);CHKERRQ(ierr);
   ierr = PetscSFSetType(sf,flg ? type : deft);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-sf_rank_order","sort composite points for gathers and scatters in rank order, gathers are non-deterministic otherwise","PetscSFSetRankOrder",sf->rankorder,&sf->rankorder,NULL);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_DEVICE)
+ #if defined(PETSC_HAVE_DEVICE)
   {
     char        backendstr[32] = {0};
     PetscBool   isCuda = PETSC_FALSE,isHip = PETSC_FALSE,isKokkos = PETSC_FALSE,set;
     /* Change the defaults set in PetscSFCreate() with command line options */
-    ierr = PetscOptionsBool("-sf_use_default_stream","Assume SF's input and output root/leafdata is computed on the default stream","PetscSFSetFromOptions",sf->use_default_stream,&sf->use_default_stream,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-sf_unknown_inout_streams","SF root/leafdata is computed on arbitary streams unknown to SF","PetscSFSetFromOptions",sf->unknown_inout_streams,&sf->unknown_inout_streams,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-sf_use_stream_aware_mpi","Assume the underlying MPI is cuda-stream aware","PetscSFSetFromOptions",sf->use_stream_aware_mpi,&sf->use_stream_aware_mpi,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsString("-sf_backend","Select the device backend SF uses","PetscSFSetFromOptions",NULL,backendstr,sizeof(backendstr),&set);CHKERRQ(ierr);
     ierr = PetscStrcasecmp("cuda",backendstr,&isCuda);CHKERRQ(ierr);
@@ -388,9 +389,9 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
     else if (set) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported. You may choose cuda, hip or kokkos (if installed)", backendstr);
   #elif defined(PETSC_HAVE_KOKKOS)
     if (set && !isKokkos) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"-sf_backend %s is not supported. You can only choose kokkos", backendstr);
-  #endif
+   #endif
   }
-#endif
+ #endif
   if (sf->ops->SetFromOptions) {ierr = (*sf->ops->SetFromOptions)(PetscOptionsObject,sf);CHKERRQ(ierr);}
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -752,7 +753,7 @@ PetscErrorCode PetscSFDuplicate(PetscSF sf,PetscSFDuplicateOption opt,PetscSF *n
 
 #if defined(PETSC_HAVE_DEVICE)
   (*newsf)->backend              = sf->backend;
-  (*newsf)->use_default_stream   = sf->use_default_stream;
+  (*newsf)->unknown_inout_streams= sf->unknown_inout_streams;
   (*newsf)->use_gpu_aware_mpi    = sf->use_gpu_aware_mpi;
   (*newsf)->use_stream_aware_mpi = sf->use_stream_aware_mpi;
 #endif
