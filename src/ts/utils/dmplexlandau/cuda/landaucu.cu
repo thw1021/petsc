@@ -12,7 +12,6 @@
 // hack to avoid configure problems in CI. Delete when resolved
 #if !defined (PETSC_HAVE_CUDA_ATOMIC)
 #define atomicAdd(e, f) (*e) += f
-#error
 #endif
 #define PETSC_DEVICE_FUNC_DECL __device__
 #include "../land_tensors.h"
