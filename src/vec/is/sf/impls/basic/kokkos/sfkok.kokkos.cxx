@@ -421,20 +421,20 @@ static PetscErrorCode PetscSFLinkMemcpy_Kokkos(PetscSFLink link,PetscMemType dst
 
   PetscFunctionBegin;
   if (!n) PetscFunctionReturn(0);
-  if (dstmtype == PETSC_MEMTYPE_HOST && srcmtype == PETSC_MEMTYPE_HOST) {
+  if (PetscMemTypeHost(dstmtype) && PetscMemTypeHost(srcmtype)) {
     PetscErrorCode ierr = PetscMemcpy(dst,src,n);CHKERRQ(ierr);
   } else {
-    if (dstmtype == PETSC_MEMTYPE_DEVICE && srcmtype == PETSC_MEMTYPE_HOST) {
+    if (PetscMemTypeDevice(dstmtype) && PetscMemTypeHost(srcmtype)) {
       deviceBuffer_t       dbuf(static_cast<char*>(dst),n);
       HostConstBuffer_t    sbuf(static_cast<const char*>(src),n);
       Kokkos::deep_copy(exec,dbuf,sbuf);
       PetscErrorCode ierr = PetscLogCpuToGpu(n);CHKERRQ(ierr);
-    } else if (dstmtype == PETSC_MEMTYPE_HOST && srcmtype == PETSC_MEMTYPE_DEVICE) {
+    } else if (PetscMemTypeHost(dstmtype) && PetscMemTypeDevice(srcmtype)) {
       HostBuffer_t         dbuf(static_cast<char*>(dst),n);
       deviceConstBuffer_t  sbuf(static_cast<const char*>(src),n);
       Kokkos::deep_copy(exec,dbuf,sbuf);
       PetscErrorCode ierr = PetscLogGpuToCpu(n);CHKERRQ(ierr);
-    } else if (dstmtype == PETSC_MEMTYPE_DEVICE && srcmtype == PETSC_MEMTYPE_DEVICE) {
+    } else if (PetscMemTypeDevice(dstmtype) && PetscMemTypeDevice(srcmtype)) {
       deviceBuffer_t       dbuf(static_cast<char*>(dst),n);
       deviceConstBuffer_t  sbuf(static_cast<const char*>(src),n);
       Kokkos::deep_copy(exec,dbuf,sbuf);
@@ -446,27 +446,53 @@ static PetscErrorCode PetscSFLinkMemcpy_Kokkos(PetscSFLink link,PetscMemType dst
 PetscErrorCode PetscSFMalloc_Kokkos(PetscMemType mtype,size_t size,void** ptr)
 {
   PetscFunctionBegin;
-  if (mtype == PETSC_MEMTYPE_HOST) {PetscErrorCode ierr = PetscMalloc(size,ptr);CHKERRQ(ierr);}
-  else if (mtype == PETSC_MEMTYPE_DEVICE) {
+  if (PetscMemTypeHost(mtype)) {PetscErrorCode ierr = PetscMalloc(size,ptr);CHKERRQ(ierr);}
+  else if (PetscMemTypeDevice(mtype)) {
     if (!PetscKokkosInitialized) { PetscErrorCode ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr); }
     *ptr = Kokkos::kokkos_malloc<DeviceMemorySpace>(size);
-  }
-  else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d", (int)mtype);
+  } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d", (int)mtype);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscSFFree_Kokkos(PetscMemType mtype,void* ptr)
 {
   PetscFunctionBegin;
-  if (mtype == PETSC_MEMTYPE_HOST) {PetscErrorCode ierr = PetscFree(ptr);CHKERRQ(ierr);}
-  else if (mtype == PETSC_MEMTYPE_DEVICE) {Kokkos::kokkos_free<DeviceMemorySpace>(ptr);}
+  if (PetscMemTypeHost(mtype)) {PetscErrorCode ierr = PetscFree(ptr);CHKERRQ(ierr);}
+  else if (PetscMemTypeDevice(mtype)) {Kokkos::kokkos_free<DeviceMemorySpace>(ptr);}
   else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d",(int)mtype);
   PetscFunctionReturn(0);
 }
 
-/*====================================================================================*/
-/*                Main driver to init MPI datatype on device                          */
-/*====================================================================================*/
+/* Destructor when the link uses MPI for communication */
+static PetscErrorCode PetscSFLinkDestroy_Kokkos(PetscSF sf,PetscSFLink link)
+{
+  PetscErrorCode     ierr;
+
+  PetscFunctionBegin;
+ #if defined(PETSC_HAVE_CUDA)
+  cudaError_t    cerr;
+  cerr = cudaEventDestroy(link->rootready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->leafready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->local_comm_end);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->remote_comm_end);CHKERRCUDA(cerr);
+  if (link->remote_comm_stream) {cerr = cudaStreamDestroy(link->remote_comm_stream);CHKERRCUDA(cerr);}
+  if (link->local_comm_stream) {cerr = cudaStreamDestroy(link->local_comm_stream);CHKERRCUDA(cerr);}
+ #elif defined(PETSC_HAVE_HIP)
+  hipError_t    cerr;
+  cerr = hipEventDestroy(link->rootready);CHKERRHIP(cerr);
+  cerr = hipEventDestroy(link->leafready);CHKERRHIP(cerr);
+  cerr = hipEventDestroy(link->local_comm_end);CHKERRHIP(cerr);
+  cerr = hipEventDestroy(link->remote_comm_end);CHKERRHIP(cerr);
+  if (link->remote_comm_stream) {cerr = hipStreamDestroy(link->remote_comm_stream);CHKERRHIP(cerr);}
+  if (link->local_comm_stream) {cerr = hipStreamDestroy(link->local_comm_stream);CHKERRHIP(cerr);}
+ #endif
+
+  for (int i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
+    ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,link->rootbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
+    ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,link->leafbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
 
 /* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
 PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype unit)
@@ -546,17 +572,39 @@ PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype 
     }
   }
 
-  if (!sf->use_default_stream) {
-   #if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Non-default cuda/hip streams are not supported by the SF Kokkos backend. If it is cuda, use -sf_backend cuda instead");
-   #endif
-  }
+ #if defined(PETSC_HAVE_CUDA)
+  cudaError_t cerr;
+  cerr = cudaEventCreate(&link->rootready);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->leafready);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->local_comm_end);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->remote_comm_end);CHKERRCUDA(cerr);
+  /* Currently we only use the NULL stream. May change that once we know how to create/free execution space objects
+  cerr = cudaDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);
+  cerr = cudaStreamCreateWithPriority(&link->local_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
+  */
+  link->BuildDependenceBegin                     = PetscSFLinkBuildDependenceBegin_CUDA;
+  link->BuildDependenceEnd                      = PetscSFLinkBuildDependenceEnd_CUDA;
+  link->BuildDependenceBetweenLocalAndRemote       = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA;
+  link->EndLocalScatter                            = PetscSFLinkRecordEndOfLocalCommunication_CUDA;
+  link->EndUnpackRemote                            = PetscSFLinkRecordEndOfRemoteCommunication_CUDA;
+ #elif defined(PETSC_HAVE_HIP)
+  hipError_t cerr;
+  cerr = hipEventCreate(&link->rootready);CHKERRHIP(cerr);
+  cerr = hipEventCreate(&link->leafready);CHKERRHIP(cerr);
+  cerr = hipEventCreate(&link->local_comm_end);CHKERRHIP(cerr);
+  cerr = hipEventCreate(&link->remote_comm_end);CHKERRHIP(cerr);
+  link->BuildDependenceBegin                     = PetscSFLinkBuildDependenceBegin_HIP;
+  link->BuildDependenceEnd                      = PetscSFLinkBuildDependenceEnd_HIP;
+  link->BuildDependenceBetweenLocalAndRemote       = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_HIP;
+  link->EndLocalScatter                            = PetscSFLinkRecordEndOfLocalCommunication_HIP;
+  link->EndUnpackRemote                            = PetscSFLinkRecordEndOfRemoteCommunication_HIP;
+ #endif
 
-  link->d_SyncDevice = PetscSFLinkSyncDevice_Kokkos;
-  link->d_SyncStream = PetscSFLinkSyncStream_Kokkos;
+  link->SyncDevice   = PetscSFLinkSyncDevice_Kokkos;
+  link->SyncStream   = PetscSFLinkSyncStream_Kokkos;
   link->Memcpy       = PetscSFLinkMemcpy_Kokkos;
-  link->spptr        = NULL; /* Unused now */
-  link->Destroy      = NULL; /* PetscSFLinkDestroy_Kokkos; */
+  link->Destroy      = PetscSFLinkDestroy_Kokkos;
   link->deviceinited = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
