@@ -923,11 +923,11 @@ PetscErrorCode VecCopy_SeqCUDA(Vec xin,Vec yin)
       ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
       if (yiscuda) {
         err = cudaMemcpyAsync(yarray,xarray,yin->map->n*sizeof(PetscScalar),cudaMemcpyDeviceToDevice,cstream);CHKERRCUDA(err);
+        ierr = PetscStreamRecordEvent(pstream,yin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
       } else {
         err = cudaMemcpyAsync(yarray,xarray,yin->map->n*sizeof(PetscScalar),cudaMemcpyDeviceToHost,cstream);CHKERRCUDA(err);
       }
       ierr = PetscStreamRecordEvent(pstream,xin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
-      ierr = PetscStreamRecordEvent(pstream,yin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
       ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
       ierr = PetscStreamRestoreStream(pstream,PETSC_STREAM_CUDA,&cstream,PETSC_TRUE);CHKERRQ(ierr);
       ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
