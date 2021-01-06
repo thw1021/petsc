@@ -56,7 +56,7 @@ PetscErrorCode FormJacobian_Power_private(DM networkdm,Vec localX,Mat J,PetscInt
     ierr = DMNetworkGetNumComponents(networkdm,vtx[v],&numComps);CHKERRQ(ierr);
     for (j = 0; j < numComps; j++) {
       ierr = DMNetworkGetComponentOffset(networkdm,vtx[v],-1,&offset);CHKERRQ(ierr);
-      ierr = DMNetworkGetVariableGlobalOffset(networkdm,vtx[v],&goffset);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentGlobalOffset(networkdm,vtx[v],-1,&goffset);CHKERRQ(ierr);
       ierr = DMNetworkGetComponent(networkdm,vtx[v],j,&key,&component,NULL);CHKERRQ(ierr);
 
       if (key == user_power->compkey_bus) {
@@ -116,8 +116,8 @@ PetscErrorCode FormJacobian_Power_private(DM networkdm,Vec localX,Mat J,PetscInt
 
           ierr = DMNetworkGetComponentOffset(networkdm,vfrom,-1,&offsetfrom);CHKERRQ(ierr);
           ierr = DMNetworkGetComponentOffset(networkdm,vto,-1,&offsetto);CHKERRQ(ierr);
-          ierr = DMNetworkGetVariableGlobalOffset(networkdm,vfrom,&goffsetfrom);CHKERRQ(ierr);
-          ierr = DMNetworkGetVariableGlobalOffset(networkdm,vto,&goffsetto);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentGlobalOffset(networkdm,vfrom,-1,&goffsetfrom);CHKERRQ(ierr);
+          ierr = DMNetworkGetComponentGlobalOffset(networkdm,vto,-1,&goffsetto);CHKERRQ(ierr);
 
           if (goffsetto < 0) goffsetto = -goffsetto - 1;
 

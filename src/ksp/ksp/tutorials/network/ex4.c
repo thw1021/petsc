@@ -120,7 +120,7 @@ int main(int argc,char ** argv)
 
     /* only one process holds a non-ghost vertex */
     ierr = DMNetworkGetComponent(dmnetwork,vtx[v],PETSC_DECIDE,NULL,NULL,&nvar);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableGlobalOffset(dmnetwork,vtx[v],&goffset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentGlobalOffset(dmnetwork,vtx[v],-1,&goffset);CHKERRQ(ierr);
     for (i=0; i<nvar; i++) {
       row = goffset + i;
       val = (PetscScalar)rank + 1.0;

@@ -84,7 +84,7 @@ PetscErrorCode FormJacobian_subPower(SNES snes,Vec X, Mat J,Mat Jpre,void *appct
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
     if (ghostvtex) continue;
 
-    ierr = DMNetworkGetVariableGlobalOffset(networkdm,vtx[i],&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentGlobalOffset(networkdm,vtx[i],-1,&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetComponent(networkdm,vtx[i],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
     for (j=0; j<nvar; j++) {
       row = offset + j;

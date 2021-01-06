@@ -975,7 +975,7 @@ PetscErrorCode DMNetworkGetGlobalVertexIndex(DM dm,PetscInt p,PetscInt *index)
   Not Collective
 
   Input Parameters:
-+ dm - The DMNetwork object
++ dm - the DMNetwork object
 - p  - vertex/edge point
 
   Output Parameters:
@@ -998,39 +998,12 @@ PetscErrorCode DMNetworkGetNumComponents(DM dm,PetscInt p,PetscInt *numcomponent
 }
 
 /*@
-  DMNetworkGetVariableGlobalOffset - Get the global offset for the variable associated with the given vertex/edge from the global vector.
-
-  Not Collective
-
-  Input Parameters:
-+ dm      - The DMNetwork object
-- p       - the edge/vertex point
-
-  Output Parameters:
-. offsetg - the offset
-
-  Level: beginner
-
-.seealso: DMGetLocalVector
-@*/
-PetscErrorCode DMNetworkGetVariableGlobalOffset(DM dm,PetscInt p,PetscInt *offsetg)
-{
-  PetscErrorCode ierr;
-  DM_Network     *network = (DM_Network*)dm->data;
-
-  PetscFunctionBegin;
-  ierr = PetscSectionGetOffset(network->plex->globalSection,p,offsetg);CHKERRQ(ierr);
-  if (*offsetg < 0) *offsetg = -(*offsetg + 1); /* Convert to actual global offset for ghost vertex */
-  PetscFunctionReturn(0);
-}
-
-/*@
   DMNetworkGetComponentOffset - Get the offset for accessing the variable associated with a component for the given vertex/edge from the local vector.
 
   Not Collective
 
   Input Parameters:
-+ dm     - The DMNetwork object
++ dm     - the DMNetwork object
 . p      - the edge/vertex point
 - compnum - component number; use -1 if component does not exist
 
@@ -1067,16 +1040,16 @@ PetscErrorCode DMNetworkGetComponentOffset(DM dm,PetscInt p,PetscInt compnum,Pet
   Not Collective
 
   Input Parameters:
-+ dm     - The DMNetwork object
++ dm     - the DMNetwork object
 . p      - the edge/vertex point
-- compnum - component number
+- compnum - component number; use -1 if component does not exist
 
   Output Parameters:
 . offsetg - the global offset
 
   Level: intermediate
 
-.seealso: DMNetworkGetVariableGlobalOffset(), DMNetworkGetComponentOffset(), DMGetLocalVector(), DMNetworkAddComponent()
+.seealso: DMNetworkGetComponentGlobalOffset(), DMNetworkGetComponentOffset(), DMGetLocalVector(), DMNetworkAddComponent()
 @*/
 PetscErrorCode DMNetworkGetComponentGlobalOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *offsetg)
 {
@@ -1086,7 +1059,13 @@ PetscErrorCode DMNetworkGetComponentGlobalOffset(DM dm,PetscInt p,PetscInt compn
   DMNetworkComponentHeader header;
 
   PetscFunctionBegin;
-  ierr = DMNetworkGetVariableGlobalOffset(dm,p,&offsetp);CHKERRQ(ierr);
+  ierr = PetscSectionGetOffset(network->plex->globalSection,p,&offsetp);CHKERRQ(ierr);
+  if (offsetp < 0) offsetp = -(offsetp + 1); /* Convert to actual global offset for ghost vertex */
+
+  if (compnum < 0) {
+    *offsetg = offsetp;
+    PetscFunctionReturn(0);
+  }
   ierr = PetscSectionGetOffset(network->DataSection,p,&offsetd);CHKERRQ(ierr);
   header = (DMNetworkComponentHeader)(network->componentdataarray+offsetd);
   *offsetg = offsetp + header->offsetvarrel[compnum];
@@ -1107,7 +1086,7 @@ PetscErrorCode DMNetworkGetComponentGlobalOffset(DM dm,PetscInt p,PetscInt compn
 
   Level: intermediate
 
-.seealso: DMNetworkGetVariableGlobalOffset, DMGetLocalVector
+.seealso: DMNetworkGetComponentGlobalOffset, DMGetLocalVector
 @*/
 PetscErrorCode DMNetworkGetEdgeOffset(DM dm,PetscInt p,PetscInt *offset)
 {
@@ -1134,7 +1113,7 @@ PetscErrorCode DMNetworkGetEdgeOffset(DM dm,PetscInt p,PetscInt *offset)
 
   Level: intermediate
 
-.seealso: DMNetworkGetVariableGlobalOffset, DMGetLocalVector
+.seealso: DMNetworkGetComponentGlobalOffset, DMGetLocalVector
 @*/
 PetscErrorCode DMNetworkGetVertexOffset(DM dm,PetscInt p,PetscInt *offset)
 {
@@ -2329,7 +2308,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
   ierr = PetscMalloc1(localSize,&rows);CHKERRQ(ierr);
   for (e=eStart; e<eEnd; e++) {
     /* Get row indices */
-    ierr = DMNetworkGetVariableGlobalOffset(dm,e,&rstart);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentGlobalOffset(dm,e,-1,&rstart);CHKERRQ(ierr);
     ierr = DMNetworkGetNumVariables(dm,e,&nrows);CHKERRQ(ierr);
     if (nrows) {
       for (j=0; j<nrows; j++) rows[j] = j + rstart;
@@ -2362,7 +2341,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
 
   for (v=vStart; v<vEnd; v++) {
     /* Get row indices */
-    ierr = DMNetworkGetVariableGlobalOffset(dm,v,&rstart);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentGlobalOffset(dm,v,-1,&rstart);CHKERRQ(ierr);
     ierr = DMNetworkGetNumVariables(dm,v,&nrows);CHKERRQ(ierr);
     if (!nrows) continue;
 
@@ -2380,7 +2359,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
 
     for (e=0; e<nedges; e++) {
       /* Supporting edges */
-      ierr = DMNetworkGetVariableGlobalOffset(dm,edges[e],&cstart);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentGlobalOffset(dm,edges[e],-1,&cstart);CHKERRQ(ierr);
       ierr = DMNetworkGetNumVariables(dm,edges[e],&ncols);CHKERRQ(ierr);
 
       if (network->Jv) {
@@ -2409,7 +2388,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
     /* Set preallocation for vertex self */
     ierr = DMNetworkIsGhostVertex(dm,v,&ghost);CHKERRQ(ierr);
     if (!ghost) {
-      ierr = DMNetworkGetVariableGlobalOffset(dm,v,&cstart);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentGlobalOffset(dm,v,-1,&cstart);CHKERRQ(ierr);
       if (network->Jv) {
         Juser = network->Jv[vptr[v-vStart]]; /* Jacobian(v,v) */
       } else Juser = NULL;
@@ -2449,7 +2428,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
   /*----------------------------------*/
   for (e=eStart; e<eEnd; e++) {
     /* Get row indices */
-    ierr = DMNetworkGetVariableGlobalOffset(dm,e,&rstart);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentGlobalOffset(dm,e,-1,&rstart);CHKERRQ(ierr);
     ierr = DMNetworkGetNumVariables(dm,e,&nrows);CHKERRQ(ierr);
     if (nrows) {
       for (j=0; j<nrows; j++) rows[j] = j + rstart;
@@ -2457,7 +2436,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
       /* Set matrix entries for conntected vertices */
       ierr = DMNetworkGetConnectedVertices(dm,e,&cone);CHKERRQ(ierr);
       for (v=0; v<2; v++) {
-        ierr = DMNetworkGetVariableGlobalOffset(dm,cone[v],&cstart);CHKERRQ(ierr);
+        ierr = DMNetworkGetComponentGlobalOffset(dm,cone[v],-1,&cstart);CHKERRQ(ierr);
         ierr = DMNetworkGetNumVariables(dm,cone[v],&ncols);CHKERRQ(ierr);
 
         if (network->Je) {
@@ -2479,7 +2458,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
   /*---------------------------------*/
   for (v=vStart; v<vEnd; v++) {
     /* Get row indices */
-    ierr = DMNetworkGetVariableGlobalOffset(dm,v,&rstart);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentGlobalOffset(dm,v,-1,&rstart);CHKERRQ(ierr);
     ierr = DMNetworkGetNumVariables(dm,v,&nrows);CHKERRQ(ierr);
     if (!nrows) continue;
 
@@ -2496,7 +2475,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
 
     for (e=0; e<nedges; e++) {
       /* Supporting edges */
-      ierr = DMNetworkGetVariableGlobalOffset(dm,edges[e],&cstart);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentGlobalOffset(dm,edges[e],-1,&cstart);CHKERRQ(ierr);
       ierr = DMNetworkGetNumVariables(dm,edges[e],&ncols);CHKERRQ(ierr);
 
       if (network->Jv) {
@@ -2508,7 +2487,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
       ierr = DMNetworkGetConnectedVertices(dm,edges[e],&cone);CHKERRQ(ierr);
       vc = (v == cone[0]) ? cone[1]:cone[0];
 
-      ierr = DMNetworkGetVariableGlobalOffset(dm,vc,&cstart);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentGlobalOffset(dm,vc,-1,&cstart);CHKERRQ(ierr);
       ierr = DMNetworkGetNumVariables(dm,vc,&ncols);CHKERRQ(ierr);
 
       if (network->Jv) {
@@ -2519,7 +2498,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
 
     /* Set matrix entries for vertex self */
     if (!ghost) {
-      ierr = DMNetworkGetVariableGlobalOffset(dm,v,&cstart);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponentGlobalOffset(dm,v,-1,&cstart);CHKERRQ(ierr);
       if (network->Jv) {
         Juser = network->Jv[vptr[v-vStart]]; /* Jacobian(v,v) */
       } else Juser = NULL;

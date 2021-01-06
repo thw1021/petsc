@@ -25,9 +25,6 @@ PETSC_EXTERN PetscErrorCode DMNetworkGetEdgeRange(DM,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkAddComponent(DM,PetscInt,PetscInt,void*,PetscInt);
 PETSC_EXTERN PetscErrorCode DMNetworkGetComponent(DM,PetscInt,PetscInt,PetscInt*,void**,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetNumComponents(DM,PetscInt,PetscInt*);
-
-PETSC_EXTERN PetscErrorCode DMNetworkGetVariableGlobalOffset(DM,PetscInt,PetscInt*);
-
 PETSC_EXTERN PetscErrorCode DMNetworkGetComponentOffset(DM,PetscInt,PetscInt,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMNetworkGetComponentGlobalOffset(DM,PetscInt,PetscInt,PetscInt*);
 
