@@ -38,6 +38,8 @@ typedef struct {
   /* context for error estimation */
   Vec          vec_sol_prev;
   Vec          vec_lte_work;
+  Mat          JT;                       /* Matrix storing the Jacobian transpose */
+  Mat          JpreT;                    /* Matrix storing the transpose of the preconditioner */
 } TS_Theta;
 
 static PetscErrorCode TSThetaGetX0AndXdot(TS ts,DM dm,Vec *X0,Vec *Xdot)
@@ -265,7 +267,7 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
   Vec            *VecsDeltaLam = th->VecsDeltaLam,*VecsDeltaMu = th->VecsDeltaMu,*VecsSensiTemp = th->VecsSensiTemp;
   Vec            *VecsDeltaLam2 = th->VecsDeltaLam2,*VecsDeltaMu2 = th->VecsDeltaMu2,*VecsSensi2Temp = th->VecsSensi2Temp;
   PetscInt       nadj;
-  Mat            J,Jpre,quadJ = NULL,quadJp = NULL;
+  Mat            J = NULL,Jpre = NULL,JT = th->JT,JpreT = th->JpreT,quadJ = NULL,quadJp = NULL;
   KSP            ksp;
   PetscScalar    *xarr;
   TSEquationType eqtype;
@@ -311,12 +313,24 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
   /* Build LHS for first-order adjoint */
   th->shift = 1./adjoint_time_step;
   ierr = TSComputeSNESJacobian(ts,th->X,J,Jpre);CHKERRQ(ierr);
-  ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
+  if (ts->usejacobiantrans) {
+    ierr = MatTranspose(J,MAT_REUSE_MATRIX,&JT);CHKERRQ(ierr);
+    if (Jpre && J != Jpre) {
+      ierr = MatTranspose(Jpre,MAT_REUSE_MATRIX,&JpreT);CHKERRQ(ierr);
+    }
+    ierr = KSPSetOperators(ksp,JT,JpreT);CHKERRQ(ierr);
+  } else {
+    ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
+  }
 
   /* Solve stage equation LHS*lambda_s = RHS for first-order adjoint */
   for (nadj=0; nadj<ts->numcost; nadj++) {
     KSPConvergedReason kspreason;
-    ierr = KSPSolveTranspose(ksp,VecsSensiTemp[nadj],VecsDeltaLam[nadj]);CHKERRQ(ierr);
+    if (ts->usejacobiantrans) {
+      ierr = KSPSolve(ksp,VecsSensiTemp[nadj],VecsDeltaLam[nadj]);CHKERRQ(ierr);
+    } else {
+      ierr = KSPSolveTranspose(ksp,VecsSensiTemp[nadj],VecsDeltaLam[nadj]);CHKERRQ(ierr);
+    }
     ierr = KSPGetConvergedReason(ksp,&kspreason);CHKERRQ(ierr);
     if (kspreason < 0) {
       ts->reason = TSADJOINT_DIVERGED_LINEAR_SOLVE;
@@ -343,7 +357,11 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
     /* Solve stage equation LHS X = RHS for second-order adjoint */
     for (nadj=0; nadj<ts->numcost; nadj++) {
       KSPConvergedReason kspreason;
-      ierr = KSPSolveTranspose(ksp,VecsSensi2Temp[nadj],VecsDeltaLam2[nadj]);CHKERRQ(ierr);
+      if (ts->usejacobiantrans) {
+        ierr = KSPSolve(ksp,VecsSensi2Temp[nadj],VecsDeltaLam2[nadj]);CHKERRQ(ierr);
+      } else {
+        ierr = KSPSolveTranspose(ksp,VecsSensi2Temp[nadj],VecsDeltaLam2[nadj]);CHKERRQ(ierr);
+      }
       ierr = KSPGetConvergedReason(ksp,&kspreason);CHKERRQ(ierr);
       if (kspreason < 0) {
         ts->reason = TSADJOINT_DIVERGED_LINEAR_SOLVE;
@@ -356,15 +374,32 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
   if (!isexplicitode) {
     th->shift = 0.0;
     ierr = TSComputeSNESJacobian(ts,th->X,J,Jpre);CHKERRQ(ierr);
-    ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
-    ierr = MatScale(J,-1.);CHKERRQ(ierr);
+    if (ts->usejacobiantrans) {
+      ierr = MatTranspose(J,MAT_REUSE_MATRIX,&JT);CHKERRQ(ierr);
+      if (Jpre && J != Jpre) {
+        ierr = MatTranspose(Jpre,MAT_REUSE_MATRIX,&JpreT);CHKERRQ(ierr);
+      }
+      ierr = KSPSetOperators(ksp,JT,JpreT);CHKERRQ(ierr);
+      ierr = MatScale(JT,-1.);CHKERRQ(ierr);
+    } else {
+      ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
+      ierr = MatScale(J,-1.);CHKERRQ(ierr);
+    }
     for (nadj=0; nadj<ts->numcost; nadj++) {
       /* Add f_U \lambda_s to the original RHS */
-      ierr = MatMultTransposeAdd(J,VecsDeltaLam[nadj],VecsSensiTemp[nadj],VecsSensiTemp[nadj]);CHKERRQ(ierr);
+      if (ts->usejacobiantrans) {
+        ierr = MatMultAdd(JT,VecsDeltaLam[nadj],VecsSensiTemp[nadj],VecsSensiTemp[nadj]);CHKERRQ(ierr);
+      } else {
+        ierr = MatMultTransposeAdd(J,VecsDeltaLam[nadj],VecsSensiTemp[nadj],VecsSensiTemp[nadj]);CHKERRQ(ierr);
+      }
       ierr = VecScale(VecsSensiTemp[nadj],adjoint_time_step);CHKERRQ(ierr);
       ierr = VecCopy(VecsSensiTemp[nadj],ts->vecs_sensi[nadj]);CHKERRQ(ierr);
       if (ts->vecs_sensi2) {
-        ierr = MatMultTransposeAdd(J,VecsDeltaLam2[nadj],VecsSensi2Temp[nadj],VecsSensi2Temp[nadj]);CHKERRQ(ierr);
+        if (ts->usejacobiantrans) {
+          ierr = MatMultAdd(JT,VecsDeltaLam2[nadj],VecsSensi2Temp[nadj],VecsSensi2Temp[nadj]);CHKERRQ(ierr);
+        } else {
+          ierr = MatMultTransposeAdd(J,VecsDeltaLam2[nadj],VecsSensi2Temp[nadj],VecsSensi2Temp[nadj]);CHKERRQ(ierr);
+        }
         ierr = VecScale(VecsSensi2Temp[nadj],adjoint_time_step);CHKERRQ(ierr);
         ierr = VecCopy(VecsSensi2Temp[nadj],ts->vecs_sensi2[nadj]);CHKERRQ(ierr);
       }
@@ -420,7 +455,7 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
   Vec            *VecsDeltaLam = th->VecsDeltaLam,*VecsDeltaMu = th->VecsDeltaMu,*VecsSensiTemp = th->VecsSensiTemp;
   Vec            *VecsDeltaLam2 = th->VecsDeltaLam2,*VecsDeltaMu2 = th->VecsDeltaMu2,*VecsSensi2Temp = th->VecsSensi2Temp;
   PetscInt       nadj;
-  Mat            J,Jpre,quadJ = NULL,quadJp = NULL;
+  Mat            J = NULL,Jpre = NULL,JT = th->JT,JpreT = th->JpreT,quadJ = NULL,quadJp = NULL;
   KSP            ksp;
   PetscScalar    *xarr;
   PetscReal      adjoint_time_step;
@@ -473,12 +508,23 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
   } else {
     ierr = TSComputeSNESJacobian(ts,th->X,J,Jpre);CHKERRQ(ierr);
   }
-  ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
-
+  if (ts->usejacobiantrans) {
+    ierr = MatTranspose(J,MAT_REUSE_MATRIX,&JT);CHKERRQ(ierr);
+    if (Jpre && J != Jpre) {
+      ierr = MatTranspose(Jpre,MAT_REUSE_MATRIX,&JpreT);CHKERRQ(ierr);
+    }
+    ierr = KSPSetOperators(ksp,JT,JpreT);CHKERRQ(ierr);
+  } else {
+    ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
+  }
   /* Solve stage equation LHS*lambda_s = RHS for first-order adjoint */
   for (nadj=0; nadj<ts->numcost; nadj++) {
     KSPConvergedReason kspreason;
-    ierr = KSPSolveTranspose(ksp,VecsSensiTemp[nadj],VecsDeltaLam[nadj]);CHKERRQ(ierr);
+    if (ts->usejacobiantrans) {
+      ierr = KSPSolve(ksp,VecsSensiTemp[nadj],VecsDeltaLam[nadj]);CHKERRQ(ierr);
+    } else {
+      ierr = KSPSolveTranspose(ksp,VecsSensiTemp[nadj],VecsDeltaLam[nadj]);CHKERRQ(ierr);
+    }
     ierr = KSPGetConvergedReason(ksp,&kspreason);CHKERRQ(ierr);
     if (kspreason < 0) {
       ts->reason = TSADJOINT_DIVERGED_LINEAR_SOLVE;
@@ -509,7 +555,11 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
     /* Solve stage equation LHS X = RHS for second-order adjoint */
     for (nadj=0; nadj<ts->numcost; nadj++) {
       KSPConvergedReason kspreason;
-      ierr = KSPSolveTranspose(ksp,VecsSensi2Temp[nadj],VecsDeltaLam2[nadj]);CHKERRQ(ierr);
+      if (ts->usejacobiantrans) {
+        ierr = KSPSolve(ksp,VecsSensi2Temp[nadj],VecsDeltaLam2[nadj]);CHKERRQ(ierr);
+      } else {
+        ierr = KSPSolveTranspose(ksp,VecsSensi2Temp[nadj],VecsDeltaLam2[nadj]);CHKERRQ(ierr);
+      }
       ierr = KSPGetConvergedReason(ksp,&kspreason);CHKERRQ(ierr);
       if (kspreason < 0) {
         ts->reason = TSADJOINT_DIVERGED_LINEAR_SOLVE;
@@ -523,13 +573,25 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
     th->shift      = 1./((th->Theta-1.)*adjoint_time_step);
     th->stage_time = adjoint_ptime;
     ierr           = TSComputeSNESJacobian(ts,th->X0,J,Jpre);CHKERRQ(ierr);
-    ierr           = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
+    if (ts->usejacobiantrans) {
+      ierr = MatTranspose(J,MAT_REUSE_MATRIX,&JT);CHKERRQ(ierr);
+      if (Jpre && J != Jpre) {
+        ierr = MatTranspose(Jpre,MAT_REUSE_MATRIX,&JpreT);CHKERRQ(ierr);
+      }
+      ierr = KSPSetOperators(ksp,JT,JpreT);CHKERRQ(ierr);
+    } else {
+      ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
+    }
     /* R_U at t_n */
     if (quadts) {
       ierr = TSComputeRHSJacobian(quadts,adjoint_ptime,th->X0,quadJ,NULL);CHKERRQ(ierr);
     }
     for (nadj=0; nadj<ts->numcost; nadj++) {
-      ierr = MatMultTranspose(J,VecsDeltaLam[nadj],ts->vecs_sensi[nadj]);CHKERRQ(ierr);
+      if (ts->usejacobiantrans) {
+        ierr = MatMult(JT,VecsDeltaLam[nadj],ts->vecs_sensi[nadj]);CHKERRQ(ierr);
+      } else {
+        ierr = MatMultTranspose(J,VecsDeltaLam[nadj],ts->vecs_sensi[nadj]);CHKERRQ(ierr);
+      }
       if (quadJ) {
         ierr = MatDenseGetColumn(quadJ,nadj,&xarr);CHKERRQ(ierr);
         ierr = VecPlaceArray(ts->vec_drdu_col,xarr);CHKERRQ(ierr);
@@ -553,7 +615,11 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
       ierr = TSComputeIHessianProductFunctionUP(ts,adjoint_ptime,th->X0,VecsDeltaLam,ts->vec_dir,ts->vecs_fup);CHKERRQ(ierr);
       for (nadj=0; nadj<ts->numcost; nadj++) {
         /* M^T Lambda_s + h(1-theta) F_U^T Lambda_s + h(1-theta) lambda_s^T F_UU w_1 + lambda_s^T F_UP w_2  */
-        ierr = MatMultTranspose(J,VecsDeltaLam2[nadj],ts->vecs_sensi2[nadj]);CHKERRQ(ierr);
+        if (ts->usejacobiantrans) {
+          ierr = MatMult(JT,VecsDeltaLam2[nadj],ts->vecs_sensi2[nadj]);CHKERRQ(ierr);
+        } else {
+          ierr = MatMultTranspose(J,VecsDeltaLam2[nadj],ts->vecs_sensi2[nadj]);CHKERRQ(ierr);
+        }
         ierr = VecAXPY(ts->vecs_sensi2[nadj],1.,ts->vecs_fuu[nadj]);CHKERRQ(ierr);
         if (ts->vecs_fup) {
           ierr = VecAXPY(ts->vecs_sensi2[nadj],1.,ts->vecs_fup[nadj]);CHKERRQ(ierr);
@@ -647,13 +713,25 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
   } else { /* one-stage case */
     th->shift = 0.0;
     ierr      = TSComputeSNESJacobian(ts,th->X,J,Jpre);CHKERRQ(ierr); /* get -f_y */
-    ierr      = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
+    if (ts->usejacobiantrans) {
+      ierr = MatTranspose(J,MAT_REUSE_MATRIX,&JT);CHKERRQ(ierr);
+      if (Jpre && J != Jpre) {
+        ierr = MatTranspose(Jpre,MAT_REUSE_MATRIX,&JpreT);CHKERRQ(ierr);
+      }
+      ierr = KSPSetOperators(ksp,JT,JpreT);CHKERRQ(ierr);
+    } else {
+      ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
+    }
     if (quadts) {
       ierr  = TSComputeRHSJacobian(quadts,th->stage_time,th->X,quadJ,NULL);CHKERRQ(ierr);
     }
     for (nadj=0; nadj<ts->numcost; nadj++) {
-      ierr = MatMultTranspose(J,VecsDeltaLam[nadj],VecsSensiTemp[nadj]);CHKERRQ(ierr);
-      ierr = VecAXPY(ts->vecs_sensi[nadj],-adjoint_time_step,VecsSensiTemp[nadj]);CHKERRQ(ierr);
+      if (ts->usejacobiantrans) {
+        ierr = MatMult(JT,VecsDeltaLam[nadj],VecsSensiTemp[nadj]);CHKERRQ(ierr);
+      } else {
+        ierr = MatMultTranspose(J,VecsDeltaLam[nadj],VecsSensiTemp[nadj]);CHKERRQ(ierr);
+      }
+        ierr = VecAXPY(ts->vecs_sensi[nadj],-adjoint_time_step,VecsSensiTemp[nadj]);CHKERRQ(ierr);
       if (quadJ) {
         ierr = MatDenseGetColumn(quadJ,nadj,&xarr);CHKERRQ(ierr);
         ierr = VecPlaceArray(ts->vec_drdu_col,xarr);CHKERRQ(ierr);
@@ -916,6 +994,8 @@ static PetscErrorCode TSAdjointReset_Theta(TS ts)
   ierr = VecDestroyVecs(ts->numcost,&th->VecsDeltaMu2);CHKERRQ(ierr);
   ierr = VecDestroyVecs(ts->numcost,&th->VecsSensiTemp);CHKERRQ(ierr);
   ierr = VecDestroyVecs(ts->numcost,&th->VecsSensi2Temp);CHKERRQ(ierr);
+  ierr = MatDestroy(&th->JT);CHKERRQ(ierr);
+  ierr = MatDestroy(&th->JpreT);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1097,6 +1177,19 @@ static PetscErrorCode TSAdjointSetUp_Theta(TS ts)
     /* hack ts to make implicit TS solver work when users provide only explicit versions of callbacks (RHSFunction,RHSJacobian,RHSHessian etc.) */
     if (!ts->ihessianproduct_fpu) ts->vecs_fpu = ts->vecs_gpu;
     if (!ts->ihessianproduct_fpp) ts->vecs_fpp = ts->vecs_gpp;
+  }
+  if (ts->usejacobiantrans) {
+    Mat J,Jpre;
+    ierr = TSGetIJacobian(ts,&J,&Jpre,NULL,NULL);CHKERRQ(ierr);
+    ierr = MatTranspose(J,MAT_INITIAL_MATRIX,&th->JT);CHKERRQ(ierr);
+    if (Jpre) {
+      if (J != Jpre) {
+        ierr = MatTranspose(Jpre,MAT_INITIAL_MATRIX,&th->JpreT);CHKERRQ(ierr);
+      } else {
+        ierr = PetscObjectReference((PetscObject)th->JT);CHKERRQ(ierr);
+        th->JpreT = th->JT;
+      }
+    }
   }
   PetscFunctionReturn(0);
 }

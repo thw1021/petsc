@@ -1439,7 +1439,8 @@ PetscErrorCode TSAdjointMonitorDrawSensi(TS ts,PetscInt step,PetscReal ptime,Vec
    Options Database Keys:
 +  -ts_adjoint_solve <yes,no> After solving the ODE/DAE solve the adjoint problem (requires -ts_save_trajectory)
 .  -ts_adjoint_monitor - print information at each adjoint time step
--  -ts_adjoint_monitor_draw_sensi - monitor the sensitivity of the first cost function wrt initial conditions (lambda[0]) graphically
+.  -ts_adjoint_monitor_draw_sensi - monitor the sensitivity of the first cost function wrt initial conditions (lambda[0]) graphically
+-  -ts_adjoint_use_jacobiantrans - transpose the Jacobian so that more preconditioners can be used by the adjoint solvers.
 
    Level: developer
 
@@ -1456,6 +1457,7 @@ PetscErrorCode TSAdjointSetFromOptions(PetscOptionItems *PetscOptionsObject,TS t
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,2);
   ierr = PetscOptionsHead(PetscOptionsObject,"TS Adjoint options");CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-ts_adjoint_usejacobiantrans","Transpose the Jacobian explicitly","",ts->usejacobiantrans,&ts->usejacobiantrans,NULL);CHKERRQ(ierr);
   tflg = ts->adjoint_solve ? PETSC_TRUE : PETSC_FALSE;
   ierr = PetscOptionsBool("-ts_adjoint_solve","Solve the adjoint problem immediately after solving the forward problem","",tflg,&tflg,&opt);CHKERRQ(ierr);
   if (opt) {
@@ -2005,8 +2007,9 @@ PetscErrorCode TSGetQuadratureTS(TS ts,PetscBool *fwd,TS *quadts)
 @*/
 PetscErrorCode TSComputeSNESJacobian(TS ts,Vec x,Mat J,Mat Jpre)
 {
+  Mat            jac,jacp;
   SNES           snes = ts->snes;
-  PetscErrorCode (*jac)(SNES,Vec,Mat,Mat,void*) = NULL;
+  PetscErrorCode (*computejac)(SNES,Vec,Mat,Mat,void*) = NULL;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -2016,14 +2019,14 @@ PetscErrorCode TSComputeSNESJacobian(TS ts,Vec x,Mat J,Mat Jpre)
     explicit methods. Instead, we check the Jacobian compute function directly to determin if FD
     coloring is used.
   */
-  ierr = SNESGetJacobian(snes,NULL,NULL,&jac,NULL);CHKERRQ(ierr);
-  if (jac == SNESComputeJacobianDefaultColor) {
+  ierr = SNESGetJacobian(snes,&jac,&jacp,&computejac,NULL);CHKERRQ(ierr);
+  if (computejac == SNESComputeJacobianDefaultColor) {
     Vec f;
     ierr = SNESSetSolution(snes,x);CHKERRQ(ierr);
     ierr = SNESGetFunction(snes,&f,NULL,NULL);CHKERRQ(ierr);
     /* Force MatFDColoringApply to evaluate the SNES residual function for the base vector */
     ierr = SNESComputeFunction(snes,x,f);CHKERRQ(ierr);
   }
-  ierr = SNESComputeJacobian(snes,x,J,Jpre);CHKERRQ(ierr);
+  ierr = SNESComputeJacobian(snes,x,jac,jacp);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
