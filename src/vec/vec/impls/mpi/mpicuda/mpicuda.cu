@@ -53,8 +53,7 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
   PetscStream    pstream;
 
   PetscFunctionBegin;
-  ierr = VecGetStream_Internal(xin,&pstream);CHKERRQ(ierr);
-  ierr = PetscStreamWaitEvent(pstream,xin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+  ierr = VecGetStreamAsync_Internal(xin,&pstream);CHKERRQ(ierr);
   if (type == NORM_2 || type == NORM_FROBENIUS) {
     ierr  = VecNorm_SeqCUDA(xin,NORM_2,&work);
     /* Must block host for stream since no guarantee all streams finished before all ranks
@@ -95,8 +94,7 @@ PetscErrorCode VecDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 
   PetscFunctionBegin;
   ierr = VecDot_SeqCUDA(xin,yin,&work);CHKERRQ(ierr);
-  ierr = VecGetStream_Internal(xin,&pstream);CHKERRQ(ierr);
-  ierr = PetscStreamWaitEvent(pstream,xin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+  ierr = VecGetStreamAsync_Internal(xin,&pstream);CHKERRQ(ierr);
   ierr = PetscStreamWaitEvent(pstream,yin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
@@ -112,8 +110,7 @@ PetscErrorCode VecTDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 
   PetscFunctionBegin;
   ierr = VecTDot_SeqCUDA(xin,yin,&work);CHKERRQ(ierr);
-  ierr = VecGetStream_Internal(xin,&pstream);CHKERRQ(ierr);
-  ierr = PetscStreamWaitEvent(pstream,xin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+  ierr = VecGetStreamAsync_Internal(xin,&pstream);CHKERRQ(ierr);
   ierr = PetscStreamWaitEvent(pstream,yin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
@@ -132,8 +129,7 @@ PetscErrorCode VecMDot_MPICUDA(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
     ierr = PetscMalloc1(nv,&work);CHKERRQ(ierr);
   }
   ierr = VecMDot_SeqCUDA(xin,nv,y,work);CHKERRQ(ierr);
-  ierr = VecGetStream_Internal(xin,&pstream);CHKERRQ(ierr);
-  ierr = PetscStreamWaitEvent(pstream,xin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+  ierr = VecGetStreamAsync_Internal(xin,&pstream);CHKERRQ(ierr);
   /* Probably no need to wait on these vecs events since they are synced against xin's
      events */
   for (PetscInt i = 0; i < nv; ++i) {
@@ -209,8 +205,7 @@ PetscErrorCode VecDotNorm2_MPICUDA(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm)
 
   PetscFunctionBegin;
   ierr = VecDotNorm2_SeqCUDA(s,t,work,work+1);CHKERRQ(ierr);
-  ierr = VecGetStream_Internal(s,&pstream);CHKERRQ(ierr);
-  ierr = PetscStreamWaitEvent(pstream,s->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+  ierr = VecGetStreamAsync_Internal(s,&pstream);CHKERRQ(ierr);
   ierr = PetscStreamWaitEvent(pstream,t->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&work,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s));CHKERRQ(ierr);
