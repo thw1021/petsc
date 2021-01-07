@@ -97,13 +97,13 @@ PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt nsubnet,PetscInt Nsubnet)
 
   Input Parameters:
 + dm - the dm object
-. name - name of this subnetwork
+. name - name of the subnetwork
 . nv - number of local vertices of this subnetwork
 . ne - number of local edges of this subnetwork
 - edgelist - list of edges for this subnetwork
 
   Output Parameters:
-. netnum - global number of this subnetwork
+. netnum - global index of the subnetwork
 
   Notes:
   There is no copy involved in this operation, only the pointer is referenced. The edgelist should
@@ -206,7 +206,9 @@ static PetscErrorCode SVtxSetUp(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt 
   PetscFunctionReturn(0);
 }
 
-/* Add a new shared vertex sv=(net,idx) to table svtas[ita] */
+/*
+ Add a new shared vertex sv=(net,idx) to table svtas[ita]
+*/
 static PetscErrorCode TableAddSVtx(PetscTable *svtas,PetscInt ita,PetscInt* tdata,PetscInt *sv_wk,PetscInt *ii,PetscInt *sedgelist,PetscInt k,DM_Network *network,PetscInt **ta2sv)
 {
   PetscInt       net,idx,gidx,i=*ii;
@@ -223,9 +225,9 @@ static PetscErrorCode TableAddSVtx(PetscTable *svtas,PetscInt ita,PetscInt* tdat
 }
 
 /*
-  Create an array of shared vertices. See SVtx and SVtxType in dmnetworkimp.h
+  Create an array of shared vertices. See SVtx and SVtxType in dmnetworkimpl.h
 
-  Input:  dm, Nsedgelist,sedgelist
+  Input:  dm, Nsedgelist, sedgelist
   Output: Nsvtx,svtx
 
   Note: Output svtx is organized as
@@ -342,7 +344,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   const PetscInt *cone;
   MPI_Comm       comm;
   PetscMPIInt    size,rank,*recvcounts=NULL,*displs=NULL;
-  PetscInt       net,idx,gidx,nmerged,e,v,vfrom,vto,*vrange,*eowners;
+  PetscInt       net,idx,gidx,nmerged,e,v,vfrom,vto,*vrange,*eowners,gidx_from,net_from,sv_idx;
   SVtxType       svtype = SVNONE;
   SVtx           *svtx=NULL;
   PetscSection   sectiong;
@@ -381,7 +383,8 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   network->nsvtx = 0;
   for (net=0; net<Nsubnet; net++) {
     for (idx=0; idx<network->subnet[net].Nvtx; idx++) {
-      PetscInt gidx_from = gidx,net_from,sv_idx=-1;
+      gidx_from = gidx;
+      sv_idx    = -1;
 
       ierr = SVtxSetUp(Nsv,svtx,net,idx,&gidx_from,&svtype,&sv_idx);CHKERRQ(ierr);
       if (svtype == SVTO) {
@@ -704,33 +707,35 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 /*@C
   DMNetworkGetSubnetwork - Returns the info for the subnetwork
 
+  Not collective
+
   Input Parameters:
 + dm - the DM object
-- id   - the ID (integer) of the subnetwork
+- netnum - the global index of the subnetwork
 
   Output Parameters:
-+ nv    - number of vertices (local)
-. ne    - number of edges (local)
-. vtx   - local vertices for this subnetwork
-- edge  - local edges for this subnetwork
++ nv - number of vertices (local)
+. ne - number of edges (local)
+. vtx - local vertices of the subnetwork
+- edge - local edges of the subnetwork
 
   Notes:
   Cannot call this routine before DMNetworkLayoutSetup()
 
   Level: intermediate
 
-.seealso: DMNetworkLayoutSetUp, DMNetworkCreate
+.seealso: DMNetworkCreate, DMNetworkAddSubnetwork, DMNetworkLayoutSetUp
 @*/
-PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt id,PetscInt *nv, PetscInt *ne,const PetscInt **vtx, const PetscInt **edge)
+PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt netnum,PetscInt *nv,PetscInt *ne,const PetscInt **vtx,const PetscInt **edge)
 {
   DM_Network *network = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
-  if (id >= network->Nsubnet) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Subnet ID %D exceeds the num of subnets %D",id,network->Nsubnet);
-  if (nv) *nv   = network->subnet[id].nvtx;
-  if (ne) *ne   = network->subnet[id].nedge;
-  if (vtx) *vtx  = network->subnet[id].vertices;
-  if (edge) *edge = network->subnet[id].edges;
+  if (netnum >= network->Nsubnet) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Subnet index %D exceeds the num of subnets %D",netnum,network->Nsubnet);
+  if (nv) *nv     = network->subnet[netnum].nvtx;
+  if (ne) *ne     = network->subnet[netnum].nedge;
+  if (vtx) *vtx   = network->subnet[netnum].vertices;
+  if (edge) *edge = network->subnet[netnum].edges;
   PetscFunctionReturn(0);
 }
 
@@ -743,13 +748,13 @@ PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt id,PetscInt *nv, PetscInt *
 + dm - the dm object
 . anetnum - first subnetwork number
 . bnetnum - second subnetwork number
-. nsvtx - global number of vertices that are shared by the two subnetworks
+. nsvtx - number of vertices that are shared by the two subnetworks
 . asvtx - vertex index in the first subnetwork
 - bsvtx - vertex index in the second subnetwork
 
   Level: beginner
 
-.seealso: DMNetworkCreate
+.seealso: DMNetworkCreate, DMNetworkGetSubnetworkSharedVertices
 @*/
 PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetnum,PetscInt bnetnum,PetscInt nsvtx,PetscInt asvtx[],PetscInt bsvtx[])
 {
@@ -779,19 +784,21 @@ PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetnum,Petsc
 /*@C
   DMNetworkGetSubnetworkSharedVertices - Returns the info for the shared vertices
 
+  Not collective
+
   Input Parameters:
 . dm - the DM object
 
   Output Parameters:
-+ nsv - number of shared vertices (local)
-- svtx  - local shared vertices
++ nsv - number of local shared vertices
+- svtx - local shared vertices
 
   Notes:
   Cannot call this routine before DMNetworkLayoutSetup()
 
   Level: intermediate
 
-.seealso: DMNetworkGetSubnetwork, DMNetworkLayoutSetUp, DMNetworkCreate
+.seealso: DMNetworkGetSubnetwork, DMNetworkLayoutSetUp, DMNetworkAddSubnetworkSharedVertices
 @*/
 PetscErrorCode DMNetworkGetSubnetworkSharedVertices(DM dm,PetscInt *nsv,const PetscInt **svtx)
 {
@@ -814,19 +821,19 @@ PetscErrorCode DMNetworkGetSubnetworkSharedVertices(DM dm,PetscInt *nsv,const Pe
   Logically collective on dm
 
   Input Parameters:
-+ dm   - the network object
++ dm - the network object
 . name - the component name
 - size - the storage size in bytes for this component data
 
    Output Parameters:
-.   key - an integer key that defines the component
+.  key - an integer key that defines the component
 
    Notes
    This routine should be called by all processors before calling DMNetworkLayoutSetup().
 
    Level: beginner
 
-.seealso: DMNetworkLayoutSetUp, DMNetworkCreate
+.seealso: DMNetworkCreate, DMNetworkLayoutSetUp
 @*/
 PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,PetscInt *key)
 {
@@ -861,11 +868,11 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
   Not Collective
 
   Input Parameters:
-. dm - The DMNetwork object
+. dm - the DMNetwork object
 
   Output Parameters:
-+ vStart - The first vertex point
-- vEnd   - One beyond the last vertex point
++ vStart - the first vertex point
+- vEnd - one beyond the last vertex point
 
   Level: beginner
 
@@ -873,7 +880,7 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
 @*/
 PetscErrorCode DMNetworkGetVertexRange(DM dm,PetscInt *vStart,PetscInt *vEnd)
 {
-  DM_Network     *network = (DM_Network*)dm->data;
+  DM_Network *network = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
   if (vStart) *vStart = network->vStart;
@@ -887,11 +894,11 @@ PetscErrorCode DMNetworkGetVertexRange(DM dm,PetscInt *vStart,PetscInt *vEnd)
   Not Collective
 
   Input Parameters:
-. dm - The DMNetwork object
+. dm - the DMNetwork object
 
   Output Parameters:
 + eStart - The first edge point
-- eEnd   - One beyond the last edge point
+- eEnd - One beyond the last edge point
 
   Level: beginner
 
@@ -899,7 +906,7 @@ PetscErrorCode DMNetworkGetVertexRange(DM dm,PetscInt *vStart,PetscInt *vEnd)
 @*/
 PetscErrorCode DMNetworkGetEdgeRange(DM dm,PetscInt *eStart,PetscInt *eEnd)
 {
-  DM_Network     *network = (DM_Network*)dm->data;
+  DM_Network *network = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
   if (eStart) *eStart = network->eStart;
@@ -907,23 +914,7 @@ PetscErrorCode DMNetworkGetEdgeRange(DM dm,PetscInt *eStart,PetscInt *eEnd)
   PetscFunctionReturn(0);
 }
 
-/*@
-  DMNetworkGetGlobalEdgeIndex - Get the user global numbering for the edge.
-
-  Not Collective
-
-  Input Parameters:
-+ dm - DMNetwork object
-- p  - edge point
-
-  Output Parameters:
-. index - user global numbering for the edge
-
-  Level: intermediate
-
-.seealso: DMNetworkGetGlobalVertexIndex
-@*/
-PetscErrorCode DMNetworkGetGlobalEdgeIndex(DM dm,PetscInt p,PetscInt *index)
+static PetscErrorCode DMNetworkGetIndex(DM dm,PetscInt p,PetscInt *index)
 {
   PetscErrorCode    ierr;
   DM_Network        *network = (DM_Network*)dm->data;
@@ -939,7 +930,32 @@ PetscErrorCode DMNetworkGetGlobalEdgeIndex(DM dm,PetscInt p,PetscInt *index)
 }
 
 /*@
-  DMNetworkGetGlobalVertexIndex - Get the user global numbering for the vertex.
+  DMNetworkGetGlobalEdgeIndex - Get the global numbering for the edge.
+
+  Not Collective
+
+  Input Parameters:
++ dm - DMNetwork object
+- p - edge point
+
+  Output Parameters:
+. index - the global numbering for the edge
+
+  Level: intermediate
+
+.seealso: DMNetworkGetGlobalVertexIndex
+@*/
+PetscErrorCode DMNetworkGetGlobalEdgeIndex(DM dm,PetscInt p,PetscInt *index)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMNetworkGetIndex(dm,p,index);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMNetworkGetGlobalVertexIndex - Get the global numbering for the vertex.
 
   Not Collective
 
@@ -948,7 +964,7 @@ PetscErrorCode DMNetworkGetGlobalEdgeIndex(DM dm,PetscInt p,PetscInt *index)
 - p  - vertex point
 
   Output Parameters:
-. index - user global numbering for the vertex
+. index - the global numbering for the vertex
 
   Level: intermediate
 
@@ -956,16 +972,10 @@ PetscErrorCode DMNetworkGetGlobalEdgeIndex(DM dm,PetscInt p,PetscInt *index)
 @*/
 PetscErrorCode DMNetworkGetGlobalVertexIndex(DM dm,PetscInt p,PetscInt *index)
 {
-  PetscErrorCode    ierr;
-  DM_Network        *network = (DM_Network*)dm->data;
-  PetscInt          offsetp;
-  DMNetworkComponentHeader header;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!dm->setupcalled) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE,"Must call DMSetUp() first");
-  ierr = PetscSectionGetOffset(network->DataSection,p,&offsetp);CHKERRQ(ierr);
-  header = (DMNetworkComponentHeader)(network->componentdataarray+offsetp);
-  *index = header->index;
+  ierr = DMNetworkGetIndex(dm,p,index);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -976,7 +986,7 @@ PetscErrorCode DMNetworkGetGlobalVertexIndex(DM dm,PetscInt p,PetscInt *index)
 
   Input Parameters:
 + dm - the DMNetwork object
-- p  - vertex/edge point
+- p - vertex/edge point
 
   Output Parameters:
 . numcomponents - Number of components at the vertex/edge
@@ -998,21 +1008,21 @@ PetscErrorCode DMNetworkGetNumComponents(DM dm,PetscInt p,PetscInt *numcomponent
 }
 
 /*@
-  DMNetworkGetComponentOffset - Get the offset for accessing the variable associated with a component for the given vertex/edge from the local vector.
+  DMNetworkGetComponentOffset - Get the offset for accessing the variable associated with a component at the given vertex/edge from the local vector.
 
   Not Collective
 
   Input Parameters:
-+ dm     - the DMNetwork object
-. p      - the edge/vertex point
-- compnum - component number; use -1 if component does not exist
++ dm - the DMNetwork object
+. p - the edge/vertex point
+- compnum - component number; use -1 if component is not considered
 
   Output Parameters:
 . offset - the offset
 
   Level: intermediate
 
-.seealso: DMGetLocalVector(), DMNetworkAddComponent()
+.seealso: DMGetLocalVector(), DMNetworkGetComponent(), DMNetworkGetComponentGlobalOffset()
 @*/
 PetscErrorCode DMNetworkGetComponentOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *offset)
 {
@@ -1040,16 +1050,16 @@ PetscErrorCode DMNetworkGetComponentOffset(DM dm,PetscInt p,PetscInt compnum,Pet
   Not Collective
 
   Input Parameters:
-+ dm     - the DMNetwork object
-. p      - the edge/vertex point
-- compnum - component number; use -1 if component does not exist
++ dm - the DMNetwork object
+. p - the edge/vertex point
+- compnum - component number; use -1 if component is not considered
 
   Output Parameters:
 . offsetg - the global offset
 
   Level: intermediate
 
-.seealso: DMNetworkGetComponentGlobalOffset(), DMNetworkGetComponentOffset(), DMGetLocalVector(), DMNetworkAddComponent()
+.seealso: DMNetworkGetComponentOffset(), DMGetGlobalVector(), DMNetworkGetComponent()
 @*/
 PetscErrorCode DMNetworkGetComponentGlobalOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *offsetg)
 {
@@ -1078,15 +1088,15 @@ PetscErrorCode DMNetworkGetComponentGlobalOffset(DM dm,PetscInt p,PetscInt compn
   Not Collective
 
   Input Parameters:
-+ dm     - The DMNetwork object
-- p      - the edge point
++ dm - the DMNetwork object
+- p - the edge point
 
   Output Parameters:
 . offset - the offset
 
   Level: intermediate
 
-.seealso: DMNetworkGetComponentGlobalOffset, DMGetLocalVector
+.seealso: DMNetworkGetComponentOffset, DMGetLocalVector
 @*/
 PetscErrorCode DMNetworkGetEdgeOffset(DM dm,PetscInt p,PetscInt *offset)
 {
@@ -1094,7 +1104,6 @@ PetscErrorCode DMNetworkGetEdgeOffset(DM dm,PetscInt p,PetscInt *offset)
   DM_Network     *network = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
-
   ierr = PetscSectionGetOffset(network->edge.DofSection,p,offset);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1105,15 +1114,15 @@ PetscErrorCode DMNetworkGetEdgeOffset(DM dm,PetscInt p,PetscInt *offset)
   Not Collective
 
   Input Parameters:
-+ dm     - The DMNetwork object
-- p      - the vertex point
++ dm - the DMNetwork object
+- p - the vertex point
 
   Output Parameters:
 . offset - the offset
 
   Level: intermediate
 
-.seealso: DMNetworkGetComponentGlobalOffset, DMGetLocalVector
+.seealso: DMNetworkGetComponentOffset, DMGetLocalVector
 @*/
 PetscErrorCode DMNetworkGetVertexOffset(DM dm,PetscInt p,PetscInt *offset)
 {
@@ -1121,40 +1130,8 @@ PetscErrorCode DMNetworkGetVertexOffset(DM dm,PetscInt p,PetscInt *offset)
   DM_Network     *network = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
-
   p -= network->vStart;
-
   ierr = PetscSectionGetOffset(network->vertex.DofSection,p,offset);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode DMNetworkAddNumVariables(DM dm,PetscInt p,PetscInt nvar)
-{
-  PetscErrorCode ierr;
-  DM_Network     *network = (DM_Network*)dm->data;
-
-  PetscFunctionBegin;
-  ierr = PetscSectionAddDof(network->DofSection,p,nvar);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode DMNetworkGetNumVariables(DM dm,PetscInt p,PetscInt *nvar)
-{
-  PetscErrorCode ierr;
-  DM_Network     *network = (DM_Network*)dm->data;
-
-  PetscFunctionBegin;
-  ierr = PetscSectionGetDof(network->DofSection,p,nvar);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode DMNetworkSetNumVariables(DM dm,PetscInt p,PetscInt nvar)
-{
-  PetscErrorCode ierr;
-  DM_Network     *network = (DM_Network*)dm->data;
-
-  PetscFunctionBegin;
-  ierr = PetscSectionSetDof(network->DofSection,p,nvar);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1164,12 +1141,12 @@ static PetscErrorCode DMNetworkSetNumVariables(DM dm,PetscInt p,PetscInt nvar)
   Not Collective
 
   Input Parameters:
-+ dm           - The DMNetworkObject
-. netnum       - subnetwork number
-. p            - the vertex/edge point
++ dm - the DMNetworkObject
+. netnum - subnetwork number
+. p - the vertex/edge point
 . componentkey - component key returned while registering the component; ignored if compvalue=NULL
-. compvalue    - pointer to the data structure for the component, or NULL
-- nvar         - number of variables for the component at the vertex/edge point
+. compvalue - pointer to the data structure for the component, or NULL
+- nvar - number of variables for the component at the vertex/edge point
 
   Level: beginner
 
@@ -1186,10 +1163,8 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   PetscInt                 compnum=header->ndata;
 
   PetscFunctionBegin;
-  if (!compvalue) {
-    ierr = DMNetworkAddNumVariables(dm,p,nvar);CHKERRQ(ierr);
-    PetscFunctionReturn(0);
-  }
+  ierr = PetscSectionAddDof(network->DofSection,p,nvar);CHKERRQ(ierr);
+  if (!compvalue) PetscFunctionReturn(0);
 
   ierr = DMNetworkIsSharedVertex(dm,p,&sharedv);CHKERRQ(ierr);
   if (sharedv) {
@@ -1204,11 +1179,9 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   ierr = PetscSectionAddDof(network->DataSection,p,component->size);CHKERRQ(ierr);
   header->key[compnum] = componentkey;
   if (compnum != 0) header->offset[compnum] = header->offset[compnum-1] + header->size[compnum-1];
-  /* header->nvar[compnum] = 0; */
   cvalue->data[compnum] = (void*)compvalue;
 
-  /* DMNetworkSetComponentNumVariables(dm,p,compnum,nvar); */
-  ierr = DMNetworkAddNumVariables(dm,p,nvar);CHKERRQ(ierr);
+  /* variables */
   header->nvar[compnum] += nvar;
   if (compnum != 0) header->offsetvarrel[compnum] = header->offsetvarrel[compnum-1] + header->nvar[compnum-1];
 
@@ -1222,8 +1195,8 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   Not Collective
 
   Input Parameters:
-+ dm      - The DMNetwork object
-. p       - vertex/edge point
++ dm - the DMNetwork object
+. p - vertex/edge point
 . compnum - component number; use PETSC_DECIDE if compkey and component are not requested
 
   Output Parameters:
@@ -1347,7 +1320,7 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
 }
 
 /* Sets up the section for dofs. This routine is called during DMSetUp() */
-PetscErrorCode DMNetworkVariablesSetUp(DM dm)
+static PetscErrorCode DMNetworkVariablesSetUp(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
@@ -1393,7 +1366,8 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
       p = svtx[i];
       ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
       if (ghost) continue;
-      ierr = DMNetworkAddNumVariables(dm,p,remote_nvar[p]);CHKERRQ(ierr);
+
+      ierr = PetscSectionAddDof(network->DofSection,p,remote_nvar[p]);CHKERRQ(ierr);
       ierr = PetscSectionGetDof(network->DofSection,p,&local_nvar[p]);CHKERRQ(ierr);
       /* printf("[%d]  After SFReduce: root local_nvar[%d] = %d\n",rank,p,local_nvar[p]); */
     }
@@ -1408,7 +1382,8 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
       if (!ghost) continue;
       p = svtx[i];
       /* printf("[%d] leaf reset nvar %d at p= %d \n",rank,remote_nvar[p],p); */
-      ierr = DMNetworkSetNumVariables(dm,p,remote_nvar[p]);CHKERRQ(ierr);
+      /* DMNetworkSetNumVariables(dm,p,remote_nvar[p]) */
+      ierr = PetscSectionSetDof(network->DofSection,p,remote_nvar[p]);CHKERRQ(ierr);
     }
 
     ierr = PetscFree2(local_nvar,remote_nvar);CHKERRQ(ierr);
@@ -1418,32 +1393,8 @@ PetscErrorCode DMNetworkVariablesSetUp(DM dm)
   PetscFunctionReturn(0);
 }
 
-/*
-  DMNetworkGetComponentDataArray - Returns the component data array
-
-  Not Collective
-
-  Input Parameters:
-. dm - The DMNetwork Object
-
-  Output Parameters:
-. componentdataarray - array that holds data for all components
-
-  Level: intermediate
-
-.seealso: DMNetworkGetComponent, DMNetworkGetNumComponents
-*/
-PetscErrorCode DMNetworkGetComponentDataArray(DM dm,DMNetworkComponentGenericDataType **componentdataarray)
-{
-  DM_Network     *network = (DM_Network*)dm->data;
-
-  PetscFunctionBegin;
-  *componentdataarray = network->componentdataarray;
-  PetscFunctionReturn(0);
-}
-
 /* Get a subsection from a range of points */
-PetscErrorCode DMNetworkGetSubSection_private(PetscSection master, PetscInt pstart, PetscInt pend,PetscSection *subsection)
+static PetscErrorCode DMNetworkGetSubSection_private(PetscSection master,PetscInt pstart,PetscInt pend,PetscSection *subsection)
 {
   PetscErrorCode ierr;
   PetscInt       i, nvar;
@@ -1461,7 +1412,7 @@ PetscErrorCode DMNetworkGetSubSection_private(PetscSection master, PetscInt psta
 }
 
 /* Create a submap of points with a GlobalToLocal structure */
-PetscErrorCode DMNetworkSetSubMap_private(PetscInt pstart, PetscInt pend, ISLocalToGlobalMapping *map)
+static PetscErrorCode DMNetworkSetSubMap_private(PetscInt pstart, PetscInt pend, ISLocalToGlobalMapping *map)
 {
   PetscErrorCode ierr;
   PetscInt       i, *subpoints;
@@ -1480,10 +1431,10 @@ PetscErrorCode DMNetworkSetSubMap_private(PetscInt pstart, PetscInt pend, ISLoca
 /*@
   DMNetworkAssembleGraphStructures - Assembles vertex and edge data structures. Must be called after DMNetworkDistribute.
 
-  Collective
+  Collective on dm
 
   Input Parameters:
-. dm   - The DMNetworkObject
+. dm - the DMNetworkObject
 
   Note: the routine will create alternative orderings for the vertices and edges. Assume global network points are:
 
@@ -1544,7 +1495,7 @@ PetscErrorCode DMNetworkAssembleGraphStructures(DM dm)
 
   Input Parameter:
 + DM - the DMNetwork object
-- overlap - The overlap of partitions, 0 is the default
+- overlap - the overlap of partitions, 0 is the default
 
   Notes:
   Distributes the network with <overlap>-overlapping partitioning of the edges.
@@ -1717,17 +1668,19 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
 /*@C
   PetscSFGetSubSF - Returns an SF for a specific subset of points. Leaves are re-numbered to reflect the new ordering.
 
+ Collective
+
   Input Parameters:
 + masterSF - the original SF structure
-- map      - a ISLocalToGlobal mapping that contains the subset of points
+- map - a ISLocalToGlobal mapping that contains the subset of points
 
   Output Parameters:
-. subSF    - a subset of the masterSF for the desired subset.
+. subSF - a subset of the masterSF for the desired subset.
 
   Level: intermediate
 @*/
-PetscErrorCode PetscSFGetSubSF(PetscSF mastersf, ISLocalToGlobalMapping map, PetscSF *subSF) {
-
+PetscErrorCode PetscSFGetSubSF(PetscSF mastersf,ISLocalToGlobalMapping map,PetscSF *subSF)
+{
   PetscErrorCode        ierr;
   PetscInt              nroots, nleaves, *ilocal_sub;
   PetscInt              i, *ilocal_map, nroots_sub, nleaves_sub = 0;
@@ -1781,12 +1734,12 @@ PetscErrorCode PetscSFGetSubSF(PetscSF mastersf, ISLocalToGlobalMapping map, Pet
   Not Collective
 
   Input Parameters:
-+ dm - The DMNetwork object
++ dm - the DMNetwork object
 - p  - the vertex point
 
   Output Parameters:
 + nedges - number of edges connected to this vertex point
-- edges  - List of edge points
+- edges  - list of edge points
 
   Level: beginner
 
@@ -1813,11 +1766,11 @@ PetscErrorCode DMNetworkGetSupportingEdges(DM dm,PetscInt vertex,PetscInt *nedge
   Not Collective
 
   Input Parameters:
-+ dm - The DMNetwork object
-- p  - the edge point
++ dm - the DMNetwork object
+- p - the edge point
 
   Output Parameters:
-. vertices  - vertices connected to this edge
+. vertices - vertices connected to this edge
 
   Level: beginner
 
@@ -1843,15 +1796,15 @@ PetscErrorCode DMNetworkGetConnectedVertices(DM dm,PetscInt edge,const PetscInt 
   Not Collective
 
   Input Parameters:
-+ dm - The DMNetwork object
-- p  - the vertex point
++ dm - the DMNetwork object
+- p - the vertex point
 
   Output Parameter:
 . flag - TRUE if the vertex is shared by subnetworks
 
   Level: beginner
 
-.seealso: DMNetworkAddSubnetworkSharedVertices, DMNetworkGetConnectedVertices, DMNetworkIsGhostVertex
+.seealso: DMNetworkAddSubnetworkSharedVertices, DMNetworkIsGhostVertex
 @*/
 PetscErrorCode DMNetworkIsSharedVertex(DM dm,PetscInt p,PetscBool *flag)
 {
@@ -1861,13 +1814,13 @@ PetscErrorCode DMNetworkIsSharedVertex(DM dm,PetscInt p,PetscBool *flag)
   PetscFunctionBegin;
   *flag = PETSC_FALSE;
 
-  if (dm->setupcalled) {
+  if (dm->setupcalled) { /* DMNetworkGetGlobalVertexIndex() requires DMSetUp() be called */
     DM_Network     *network = (DM_Network*)dm->data;
     PetscInt       gidx;
     ierr = DMNetworkGetGlobalVertexIndex(dm,p,&gidx);CHKERRQ(ierr);
     ierr = PetscTableFind(network->svtable,gidx+1,&i);CHKERRQ(ierr);
     if (i) *flag = PETSC_TRUE;
-  } else { /* should be removed! */
+  } else { /* would be removed? */
     PetscInt       nv;
     const PetscInt *vtx;
     ierr = DMNetworkGetSubnetworkSharedVertices(dm,&nv,&vtx);CHKERRQ(ierr);
@@ -1887,15 +1840,15 @@ PetscErrorCode DMNetworkIsSharedVertex(DM dm,PetscInt p,PetscBool *flag)
   Not Collective
 
   Input Parameters:
-+ dm - The DMNetwork object
-- p  - the vertex point
++ dm - the DMNetwork object
+- p - the vertex point
 
   Output Parameter:
 . isghost - TRUE if the vertex is a ghost point
 
   Level: beginner
 
-.seealso: DMNetworkCreate, DMNetworkGetConnectedVertices, DMNetworkGetVertexRange
+.seealso: DMNetworkGetConnectedVertices, DMNetworkGetVertexRange, DMNetworkIsSharedVertex
 @*/
 PetscErrorCode DMNetworkIsGhostVertex(DM dm,PetscInt p,PetscBool *isghost)
 {
@@ -1930,17 +1883,17 @@ PetscErrorCode DMSetUp_Network(DM dm)
 }
 
 /*@
-    DMNetworkHasJacobian - Sets global flag for using user's sub Jacobian matrices
-                            -- replaced by DMNetworkSetOption(network,userjacobian,PETSC_TURE)?
+  DMNetworkHasJacobian - Sets global flag for using user's sub Jacobian matrices
+      -- replaced by DMNetworkSetOption(network,userjacobian,PETSC_TURE)?
 
-    Collective
+  Collective
 
-    Input Parameters:
-+   dm - The DMNetwork object
-.   eflg - turn the option on (PETSC_TRUE) or off (PETSC_FALSE) if user provides Jacobian for edges
--   vflg - turn the option on (PETSC_TRUE) or off (PETSC_FALSE) if user provides Jacobian for vertices
+  Input Parameters:
++ dm - the DMNetwork object
+. eflg - turn the option on (PETSC_TRUE) or off (PETSC_FALSE) if user provides Jacobian for edges
+- vflg - turn the option on (PETSC_TRUE) or off (PETSC_FALSE) if user provides Jacobian for vertices
 
-    Level: intermediate
+ Level: intermediate
 
 @*/
 PetscErrorCode DMNetworkHasJacobian(DM dm,PetscBool eflg,PetscBool vflg)
@@ -1980,24 +1933,24 @@ PetscErrorCode DMNetworkHasJacobian(DM dm,PetscBool eflg,PetscBool vflg)
 }
 
 /*@
-    DMNetworkEdgeSetMatrix - Sets user-provided Jacobian matrices for this edge to the network
+  DMNetworkEdgeSetMatrix - Sets user-provided Jacobian matrices for this edge to the network
 
-    Not Collective
+  Not Collective
 
-    Input Parameters:
-+   dm - The DMNetwork object
-.   p  - the edge point
--   J - array (size = 3) of Jacobian submatrices for this edge point:
+  Input Parameters:
++ dm - the DMNetwork object
+. p - the edge point
+- J - array (size = 3) of Jacobian submatrices for this edge point:
         J[0]: this edge
         J[1] and J[2]: connected vertices, obtained by calling DMNetworkGetConnectedVertices()
 
-    Level: advanced
+  Level: advanced
 
 .seealso: DMNetworkVertexSetMatrix
 @*/
 PetscErrorCode DMNetworkEdgeSetMatrix(DM dm,PetscInt p,Mat J[])
 {
-  DM_Network     *network=(DM_Network*)dm->data;
+  DM_Network *network=(DM_Network*)dm->data;
 
   PetscFunctionBegin;
   if (!network->Je) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ORDER,"Must call DMNetworkHasJacobian() collectively before calling DMNetworkEdgeSetMatrix");
@@ -2011,19 +1964,19 @@ PetscErrorCode DMNetworkEdgeSetMatrix(DM dm,PetscInt p,Mat J[])
 }
 
 /*@
-    DMNetworkVertexSetMatrix - Sets user-provided Jacobian matrix for this vertex to the network
+  DMNetworkVertexSetMatrix - Sets user-provided Jacobian matrix for this vertex to the network
 
-    Not Collective
+  Not Collective
 
-    Input Parameters:
-+   dm - The DMNetwork object
-.   p  - the vertex point
--   J - array of Jacobian (size = 2*(num of supporting edges) + 1) submatrices for this vertex point:
+  Input Parameters:
++ dm - The DMNetwork object
+. p - the vertex point
+- J - array of Jacobian (size = 2*(num of supporting edges) + 1) submatrices for this vertex point:
         J[0]:       this vertex
         J[1+2*i]:   i-th supporting edge
         J[1+2*i+1]: i-th connected vertex
 
-    Level: advanced
+  Level: advanced
 
 .seealso: DMNetworkEdgeSetMatrix
 @*/
@@ -2309,14 +2262,14 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
   for (e=eStart; e<eEnd; e++) {
     /* Get row indices */
     ierr = DMNetworkGetComponentGlobalOffset(dm,e,-1,&rstart);CHKERRQ(ierr);
-    ierr = DMNetworkGetNumVariables(dm,e,&nrows);CHKERRQ(ierr);
+    ierr = PetscSectionGetDof(network->DofSection,e,&nrows);CHKERRQ(ierr);
     if (nrows) {
       for (j=0; j<nrows; j++) rows[j] = j + rstart;
 
       /* Set preallocation for conntected vertices */
       ierr = DMNetworkGetConnectedVertices(dm,e,&cone);CHKERRQ(ierr);
       for (v=0; v<2; v++) {
-        ierr = DMNetworkGetNumVariables(dm,cone[v],&ncols);CHKERRQ(ierr);
+        ierr = PetscSectionGetDof(network->DofSection,cone[v],&ncols);CHKERRQ(ierr);
 
         if (network->Je) {
           Juser = network->Je[3*e+1+v]; /* Jacobian(e,v) */
@@ -2342,7 +2295,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
   for (v=vStart; v<vEnd; v++) {
     /* Get row indices */
     ierr = DMNetworkGetComponentGlobalOffset(dm,v,-1,&rstart);CHKERRQ(ierr);
-    ierr = DMNetworkGetNumVariables(dm,v,&nrows);CHKERRQ(ierr);
+    ierr = PetscSectionGetDof(network->DofSection,v,&nrows);CHKERRQ(ierr);
     if (!nrows) continue;
 
     ierr = DMNetworkIsGhostVertex(dm,v,&ghost);CHKERRQ(ierr);
@@ -2360,7 +2313,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
     for (e=0; e<nedges; e++) {
       /* Supporting edges */
       ierr = DMNetworkGetComponentGlobalOffset(dm,edges[e],-1,&cstart);CHKERRQ(ierr);
-      ierr = DMNetworkGetNumVariables(dm,edges[e],&ncols);CHKERRQ(ierr);
+      ierr = PetscSectionGetDof(network->DofSection,edges[e],&ncols);CHKERRQ(ierr);
 
       if (network->Jv) {
         Juser = network->Jv[vptr[v-vStart]+2*e+1]; /* Jacobian(v,e) */
@@ -2372,7 +2325,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
       vc = (v == cone[0]) ? cone[1]:cone[0];
       ierr = DMNetworkIsGhostVertex(dm,vc,&ghost_vc);CHKERRQ(ierr);
 
-      ierr = DMNetworkGetNumVariables(dm,vc,&ncols);CHKERRQ(ierr);
+      ierr = PetscSectionGetDof(network->DofSection,vc,&ncols);CHKERRQ(ierr);
 
       if (network->Jv) {
         Juser = network->Jv[vptr[v-vStart]+2*e+2]; /* Jacobian(v,vc) */
@@ -2429,7 +2382,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
   for (e=eStart; e<eEnd; e++) {
     /* Get row indices */
     ierr = DMNetworkGetComponentGlobalOffset(dm,e,-1,&rstart);CHKERRQ(ierr);
-    ierr = DMNetworkGetNumVariables(dm,e,&nrows);CHKERRQ(ierr);
+    ierr = PetscSectionGetDof(network->DofSection,e,&nrows);CHKERRQ(ierr);
     if (nrows) {
       for (j=0; j<nrows; j++) rows[j] = j + rstart;
 
@@ -2437,7 +2390,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
       ierr = DMNetworkGetConnectedVertices(dm,e,&cone);CHKERRQ(ierr);
       for (v=0; v<2; v++) {
         ierr = DMNetworkGetComponentGlobalOffset(dm,cone[v],-1,&cstart);CHKERRQ(ierr);
-        ierr = DMNetworkGetNumVariables(dm,cone[v],&ncols);CHKERRQ(ierr);
+        ierr = PetscSectionGetDof(network->DofSection,cone[v],&ncols);CHKERRQ(ierr);
 
         if (network->Je) {
           Juser = network->Je[3*e+1+v]; /* Jacobian(e,v) */
@@ -2459,7 +2412,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
   for (v=vStart; v<vEnd; v++) {
     /* Get row indices */
     ierr = DMNetworkGetComponentGlobalOffset(dm,v,-1,&rstart);CHKERRQ(ierr);
-    ierr = DMNetworkGetNumVariables(dm,v,&nrows);CHKERRQ(ierr);
+    ierr = PetscSectionGetDof(network->DofSection,v,&nrows);CHKERRQ(ierr);
     if (!nrows) continue;
 
     ierr = DMNetworkIsGhostVertex(dm,v,&ghost);CHKERRQ(ierr);
@@ -2476,7 +2429,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
     for (e=0; e<nedges; e++) {
       /* Supporting edges */
       ierr = DMNetworkGetComponentGlobalOffset(dm,edges[e],-1,&cstart);CHKERRQ(ierr);
-      ierr = DMNetworkGetNumVariables(dm,edges[e],&ncols);CHKERRQ(ierr);
+      ierr = PetscSectionGetDof(network->DofSection,edges[e],&ncols);CHKERRQ(ierr);
 
       if (network->Jv) {
         Juser = network->Jv[vptr[v-vStart]+2*e+1]; /* Jacobian(v,e) */
@@ -2488,7 +2441,7 @@ PetscErrorCode DMCreateMatrix_Network(DM dm,Mat *J)
       vc = (v == cone[0]) ? cone[1]:cone[0];
 
       ierr = DMNetworkGetComponentGlobalOffset(dm,vc,-1,&cstart);CHKERRQ(ierr);
-      ierr = DMNetworkGetNumVariables(dm,vc,&ncols);CHKERRQ(ierr);
+      ierr = PetscSectionGetDof(network->DofSection,vc,&ncols);CHKERRQ(ierr);
 
       if (network->Jv) {
         Juser = network->Jv[vptr[v-vStart]+2*e+2]; /* Jacobian(v,vc) */
