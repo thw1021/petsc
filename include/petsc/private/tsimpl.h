@@ -188,6 +188,7 @@ struct _p_TS {
   Vec       *vecs_drdu;
   Vec       *vecs_drdp;
   Vec       vec_drdu_col,vec_drdp_col;
+  PetscBool usejacobiantrans;       /* whether TSComputeXXJacobian() retruns transposed Jacobians */
 
   /* first-order adjoint */
   PetscErrorCode (*rhsjacobianp)(TS,PetscReal,Vec,Mat,void*);
