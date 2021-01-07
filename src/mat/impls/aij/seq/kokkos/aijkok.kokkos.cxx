@@ -760,7 +760,7 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_kokkos(Mat A,MatSolverType *
 }
 
 /*MC
-  MATSOLVERKOKKOS = "kokkos" - A matrix type providing triangular solvers for seq matrices
+  MATSOLVERKOKKOS = "kokkos" - A matrix solver type providing triangular solvers for sequential matrices
   on a single GPU of type, seqaijkokkos, aijkokkos.
 
   Level: beginner
