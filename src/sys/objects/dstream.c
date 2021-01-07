@@ -200,7 +200,7 @@ PetscErrorCode PetscStreamSplitEnd(PetscStream strm, PetscStreamType type, void 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscEvent event, PetscStreamType type)
+PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscStreamType type, PetscEvent event)
 {
   PetscErrorCode ierr;
 
