@@ -351,13 +351,16 @@ PETSC_EXTERN PetscErrorCode VecTaggerComputeIS_FromBoxes(VecTagger,Vec,IS*);
 PETSC_EXTERN PetscMPIInt Petsc_Reduction_keyval;
 
 /* Put these in here so that they are for sure inlined */
-PETSC_STATIC_INLINE PetscErrorCode VecSetStream_Internal(Vec v, PetscStream strm)
+PETSC_STATIC_INLINE PetscErrorCode VecSetStreamSync_Internal(Vec v, PetscStream strm)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginHot;
 #if PetscDefined(HAVE_DEVICE)
   if (v->ownStream) {
     PetscErrorCode ierr;
+    PetscBool      iscuda;
 
+    ierr = PetscObjectTypeCompareAny((PetscObject)v,&iscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
+    ierr = PetscStreamSynchronize(v->stream, iscuda ? PETSC_STREAM_CUDA : PETSC_STREAM_HIP);CHKERRQ(ierr);
     ierr = PetscStreamDestroy(&v->stream);CHKERRQ(ierr);
   }
   v->stream = strm;
@@ -366,12 +369,54 @@ PETSC_STATIC_INLINE PetscErrorCode VecSetStream_Internal(Vec v, PetscStream strm
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode VecGetStream_Internal(Vec v, PetscStream *strm)
+PETSC_STATIC_INLINE PetscErrorCode VecGetStreamAsync_Internal(Vec v, PetscStream *strm)
 {
   PetscFunctionBeginHot;
 #if PetscDefined(HAVE_DEVICE)
-  *strm = v->stream;
+  {
+    PetscErrorCode  ierr;
+    PetscBool       iscuda;
+
+    ierr = PetscObjectTypeCompareAny((PetscObject)v,&iscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
+    ierr = PetscStreamWaitEvent(*strm, v->event, iscuda ? PETSC_STREAM_CUDA : PETSC_STREAM_HIP);CHKERRQ(ierr);
+    *strm = v->stream;
+  }
 #endif
   PetscFunctionReturn(0);
 }
+
+PETSC_STATIC_INLINE PetscErrorCode VecGetStreamSync_Internal(Vec v, PetscStream *strm)
+{
+  PetscFunctionBeginHot;
+#if PetscDefined(HAVE_DEVICE)
+  {
+    PetscErrorCode  ierr;
+    PetscBool       iscuda;
+
+    ierr = PetscObjectTypeCompareAny((PetscObject)v,&iscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
+    ierr = PetscStreamWaitEvent(*strm, v->event, iscuda ? PETSC_STREAM_CUDA : PETSC_STREAM_HIP);CHKERRQ(ierr);
+    ierr = PetscStreamSynchronize(*strm, iscuda ? PETSC_STREAM_CUDA : PETSC_STREAM_HIP);CHKERRQ(ierr);
+    *strm = v->stream;
+  }
+#endif
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode VecClearStreamSync_Internal(Vec v)
+{
+  PetscFunctionBeginHot;
+#if PetscDefined(HAVE_DEVICE)
+  {
+    PetscErrorCode  ierr;
+    PetscBool       iscuda;
+
+    ierr = PetscObjectTypeCompareAny((PetscObject)v,&iscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
+    ierr = PetscStreamSynchronize(v->stream, iscuda ? PETSC_STREAM_CUDA : PETSC_STREAM_HIP);CHKERRQ(ierr);
+    if (v->ownStream) {ierr = PetscStreamDestroy(&v->stream);CHKERRQ(ierr);}
+    v->stream = NULL;
+  }
+#endif
+  PetscFunctionReturn(0);
+}
+
 #endif

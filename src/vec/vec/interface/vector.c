@@ -115,18 +115,31 @@ PetscErrorCode VecSetStream(Vec x, PetscStream strm)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  ierr = VecSetStream_Internal(x, strm);CHKERRQ(ierr);
+  PetscValidType(x,1);
+  ierr = VecSetStreamSync_Internal(x, strm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecGetStream(Vec x, PetscStream *strm)
 {
-  PetscErrorCode  ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
   PetscValidPointer(strm,2);
-  ierr = VecGetStream_Internal(x, strm);CHKERRQ(ierr);
+  ierr = VecGetStreamAsync_Internal(x, strm);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecClearStream(Vec x)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  ierr = VecClearStreamSync_Internal(x);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
