@@ -6,6 +6,8 @@ Context for bounded quasi-Newton-Krylov type optimization algorithms
 #define __TAO_BQNK_H
 
 #include <../src/tao/bound/impls/bnk/bnk.h>
+#include <../src/ksp/ksp/utils/lmvm/lmvm.h>
+#include <../src/ksp/ksp/utils/lmvm/symbrdn/symbrdn.h>
 
 typedef struct {
   PetscErrorCode (*solve)(Tao);
