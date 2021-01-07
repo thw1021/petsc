@@ -67,7 +67,7 @@ emeritus = {
     }
 }
 
-# List of devs who will go into the table. Key MUST all lowercase gitlab username.
+# List of devs who will go into the table. Key must be all-lowercase Gitlab username.
 activeCoreDevs = {
     "lois.curfman.mcinnes" : {
         "web_url" : "https://press3.mcs.anl.gov/curfman/",
