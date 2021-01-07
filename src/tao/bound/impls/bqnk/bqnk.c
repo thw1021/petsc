@@ -73,11 +73,33 @@ PetscErrorCode TaoSolve_BQNK(Tao tao)
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
+  Mat_LMVM       *lmvm = (Mat_LMVM*)bqnk->B->data;
+  Mat_LMVM       *J0;
+  Mat_SymBrdn    *diag_ctx;
+  PetscBool      same = PETSC_FALSE;
+  PetscBool      is_symbrdn, is_symbadbrdn, is_bfgs, is_dfp;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!bqnk->recycle) {
     ierr = MatLMVMReset(bqnk->B, PETSC_FALSE);CHKERRQ(ierr);
+    lmvm->nresets = 0;
+    if (lmvm->J0) {
+      ierr = PetscObjectBaseTypeCompare((PetscObject)lmvm->J0, MATLMVM, &same);CHKERRQ(ierr);
+      if (same) {
+        J0 = (Mat_LMVM*)lmvm->J0->data;
+        J0->nresets = 0;
+      }
+    }
+    ierr = PetscObjectTypeCompare((PetscObject)bqnk->B, MATLMVMSYMBROYDEN, &is_symbrdn);CHKERRQ(ierr);
+    ierr = PetscObjectTypeCompare((PetscObject)bqnk->B, MATLMVMSYMBADBROYDEN, &is_symbadbrdn);CHKERRQ(ierr);
+    ierr = PetscObjectTypeCompare((PetscObject)bqnk->B, MATLMVMBFGS, &is_bfgs);CHKERRQ(ierr);
+    ierr = PetscObjectTypeCompare((PetscObject)bqnk->B, MATLMVMDFP, &is_dfp);CHKERRQ(ierr);
+    if (is_symbrdn || is_symbadbrdn || is_bfgs || is_dfp) {
+      diag_ctx = (Mat_SymBrdn*)lmvm->ctx;
+      J0 = (Mat_LMVM*)diag_ctx->D->data;
+      J0->nresets = 0;
+    }
   }
   ierr = (*bqnk->solve)(tao);CHKERRQ(ierr);
   PetscFunctionReturn(0);
