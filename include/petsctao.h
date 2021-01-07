@@ -214,6 +214,8 @@ PETSC_EXTERN PetscErrorCode TaoGetGradientVector(Tao, Vec*);
 PETSC_EXTERN PetscErrorCode TaoSetGradientNorm(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoGetGradientNorm(Tao, Mat*);
 PETSC_EXTERN PetscErrorCode TaoGetLMVMMatrix(Tao, Mat*);
+PETSC_EXTERN PetscErrorCode TaoRecycleQNHistory(Tao, PetscBool);
+PETSC_EXTERN PetscErrorCode TaoRecycleNCGUpdate(Tao, PetscBool);
 PETSC_EXTERN PetscErrorCode TaoLMVMSetH0(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoLMVMGetH0(Tao, Mat*);
 PETSC_EXTERN PetscErrorCode TaoLMVMGetH0KSP(Tao, KSP*);

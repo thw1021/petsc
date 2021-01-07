@@ -1,5 +1,5 @@
 #include <petsctaolinesearch.h>
-#include <../src/tao/bound/impls/bncg/bncg.h>
+#include <../src/tao/bound/impls/bncg/bncg.h> /*I "petsctao.h" I*/
 #include <petscksp.h>
 
 #define CG_GradientDescent      0
@@ -25,7 +25,19 @@ static const char *CG_Table[64] = {"gd", "hs", "fr", "pr", "prp", "dy", "hz", "d
 
 static const char *CG_AS_TYPE[64] = {"none", "bertsekas"};
 
-PetscErrorCode TaoBNCGSetRecycleFlag(Tao tao, PetscBool recycle)
+/*@
+   TaoRecycleNCGUpdate - Enables/disables re-using the latest search direction from a 
+   previous TaoSolve() call when computing the CG update.
+
+   Input Parameters:
++  tao - Tao solver context
+-  recycle - boolean flag
+
+   Level: intermediate
+
+.seealso: TAOBNCG
+@*/
+PetscErrorCode TaoRecycleNCGUpdate(Tao tao, PetscBool recycle)
 {
   TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
 
