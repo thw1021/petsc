@@ -129,9 +129,9 @@ __global__ void matmult_seqsell_tiled_kernel9(PetscInt nrows,PetscInt sliceheigh
     t += __shfl_down_sync(0xffffffff, t, offset);
   }
   /* transpose layout to reduce each row using warp shfl */
-  shared[threadIdx.x][threadIdx.y] = t;
+  if (threadIdx.x < sliceheight) shared[threadIdx.x][threadIdx.y] = t;
   __syncthreads();
-  t = shared[tidy][tidx];
+  if (tidy < sliceheight) t = shared[tidy][tidx];
   #pragma unroll
   for (int offset = BLOCKY/2; offset > 0; offset /= 2) {
     t += __shfl_down_sync(0xffffffff, t, offset, BLOCKY);
@@ -167,9 +167,9 @@ __global__ void matmultadd_seqsell_tiled_kernel9(PetscInt nrows,PetscInt slicehe
     t += __shfl_down_sync(0xffffffff, t, offset);
   }
   /* transpose layout to reduce each row using warp shfl */
-  shared[threadIdx.x][threadIdx.y] = t;
+  if (threadIdx.x < sliceheight) shared[threadIdx.x][threadIdx.y] = t;
   __syncthreads();
-  t = shared[tidy][tidx];
+  if (tidy < sliceheight) t = shared[tidy][tidx];
   #pragma unroll
   for (int offset = BLOCKY/2; offset > 0; offset /= 2) {
     t += __shfl_down_sync(0xffffffff, t, offset, BLOCKY);
