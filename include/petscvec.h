@@ -690,6 +690,50 @@ PETSC_EXTERN PetscErrorCode VecCreateMPIHIPWithArray(MPI_Comm,PetscInt,PetscInt,
 PETSC_EXTERN PetscErrorCode VecCreateMPIHIPWithArrays(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,const PetscScalar*,Vec*);
 #endif
 
+PETSC_EXTERN PetscErrorCode VecAllocateWorkMemory(Vec,size_t,void**);
+PETSC_EXTERN PetscErrorCode VecFreeWorkMemory(Vec,void*);
+
+PETSC_EXTERN PetscErrorCode VecGetWorkScalar(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecRestoreWorkScalar(Vec x,PetscScalar **a);
+PETSC_EXTERN PetscErrorCode VecGetWorkNorm(Vec,NormType,PetscReal**);
+PETSC_EXTERN PetscErrorCode VecRestoreWorkNorm(Vec,NormType,PetscReal**);
+
+/* Helper functions */
+PETSC_STATIC_INLINE PetscErrorCode VecGetWorkReal(Vec x,PetscReal **a)
+{
+  PetscErrorCode          ierr;
+  PetscFunctionBegin;
+  ierr = VecGetWorkScalar(x,(PetscScalar**)a);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+PETSC_STATIC_INLINE PetscErrorCode VecRestoreWorkReal(Vec x,PetscReal **a)
+{
+  PetscErrorCode          ierr;
+  PetscFunctionBegin;
+  ierr = VecRestoreWorkScalar(x,(PetscScalar**)a);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode VecSetWorkScalar(Vec,PetscScalar*,PetscScalar);
+PETSC_EXTERN PetscErrorCode VecSetWorkReal(Vec,PetscReal*,PetscReal);
+PETSC_EXTERN PetscErrorCode VecAssignWorkScalar(Vec,PetscScalar*,const PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecAssignWorkReal(Vec,PetscReal*,const PetscReal*);
+PETSC_EXTERN PetscErrorCode VecCopyWorkScalarToHost(Vec,PetscScalar*,const PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecCopyWorkRealToHost(Vec,PetscReal*,const PetscReal*);
+
+PETSC_EXTERN PetscErrorCode VecAbsWorkScalar(Vec,PetscReal*,const PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecDivideWorkScalar(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecSubWorkScalar(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecAddWorkScalar(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecMultWorkScalar(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecSqrtWorkReal(Vec,PetscReal*,const PetscReal*);
+
+PETSC_EXTERN PetscErrorCode VecDotAsync(Vec,Vec,PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecTDotAsync(Vec,Vec,PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecNormAsync(Vec,NormType,PetscReal*);
+PETSC_EXTERN PetscErrorCode VecAXPYAsync(Vec,PetscScalar*,Vec);
+PETSC_EXTERN PetscErrorCode VecAYPXAsync(Vec,PetscScalar*,Vec);
+
 PETSC_EXTERN PetscErrorCode VecNestGetSubVecs(Vec,PetscInt*,Vec**);
 PETSC_EXTERN PetscErrorCode VecNestGetSubVec(Vec,PetscInt,Vec*);
 PETSC_EXTERN PetscErrorCode VecNestSetSubVecs(Vec,PetscInt,PetscInt*,Vec*);
