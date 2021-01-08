@@ -101,12 +101,17 @@ struct _VecOps {
   PetscErrorCode (*getarrayreadandmemtype)(Vec,const PetscScalar**,PetscMemType*);
   PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**);
   PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**);
-  PetscErrorCode (*dotasync)(Vec,Vec,PetscScalar*,PetscStream);
-  PetscErrorCode (*dot_localasync)(Vec,Vec,PetscScalar*,PetscStream);
-  PetscErrorCode (*tdotasync)(Vec,Vec,PetscScalar*,PetscStream);
-  PetscErrorCode (*tdot_localasync)(Vec,Vec,PetscScalar*,PetscStream);
-  PetscErrorCode (*mdotasync)(Vec,PetscInt,const Vec[],PetscScalar*,PetscStream);
-  PetscErrorCode (*mdot_localasync)(Vec,PetscInt,const Vec[],PetscScalar*,PetscStream);
+  PetscErrorCode (*dotasync)(Vec,Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*dot_localasync)(Vec,Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*tdotasync)(Vec,Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*tdot_localasync)(Vec,Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*mdotasync)(Vec,PetscInt,const Vec[],PetscStreamScalar*,PetscStream);
+  PetscErrorCode (*mdot_localasync)(Vec,PetscInt,const Vec[],PetscStreamScalar*,PetscStream);
+  PetscErrorCode (*aypxasync)(Vec,PetscStreamScalar,Vec,PetscStream);
+  PetscErrorCode (*axpyasync)(Vec,PetscStreamScalar,Vec,PetscStream);
+  PetscErrorCode (*copyasync)(Vec,Vec,PetscStream);
+  PetscErrorCode (*normasync)(Vec,NormType,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*norm_localasync)(Vec,NormType,PetscStreamScalar,PetscStream);
 };
 
 /*

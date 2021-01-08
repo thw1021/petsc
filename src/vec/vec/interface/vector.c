@@ -1620,6 +1620,82 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode  VecCopyAsync(Vec x,Vec y,PetscStream pstream)
+{
+  PetscBool      flgs[4];
+  PetscReal      norms[4] = {0.0,0.0,0.0,0.0};
+  PetscErrorCode ierr;
+  PetscInt       i;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  if (x == y) PetscFunctionReturn(0);
+  VecCheckSameLocalSize(x,1,y,2);
+  if (x->stash.insertmode != NOT_SET_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  ierr = VecSetErrorIfLocked(y,2);CHKERRQ(ierr);
+
+#if !defined(PETSC_USE_MIXED_PRECISION)
+  for (i=0; i<4; i++) {
+    ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],norms[i],flgs[i]);CHKERRQ(ierr);
+  }
+#endif
+
+  ierr = PetscLogEventBegin(VEC_Copy,x,y,0,0);CHKERRQ(ierr);
+#if defined(PETSC_USE_MIXED_PRECISION)
+  extern PetscErrorCode VecGetArray(Vec,double**);
+  extern PetscErrorCode VecRestoreArray(Vec,double**);
+  extern PetscErrorCode VecGetArray(Vec,float**);
+  extern PetscErrorCode VecRestoreArray(Vec,float**);
+  extern PetscErrorCode VecGetArrayRead(Vec,const double**);
+  extern PetscErrorCode VecRestoreArrayRead(Vec,const double**);
+  extern PetscErrorCode VecGetArrayRead(Vec,const float**);
+  extern PetscErrorCode VecRestoreArrayRead(Vec,const float**);
+  if ((((PetscObject)x)->precision == PETSC_PRECISION_SINGLE) && (((PetscObject)y)->precision == PETSC_PRECISION_DOUBLE)) {
+    PetscInt    i,n;
+    const float *xx;
+    double      *yy;
+    ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
+    ierr = VecGetArray(y,&yy,pstream);CHKERRQ(ierr);
+    ierr = VecGetLocalSize(x,&n);CHKERRQ(ierr);
+    for (i=0; i<n; i++) yy[i] = xx[i];
+    ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
+    ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
+  } else if ((((PetscObject)x)->precision == PETSC_PRECISION_DOUBLE) && (((PetscObject)y)->precision == PETSC_PRECISION_SINGLE)) {
+    PetscInt     i,n;
+    float        *yy;
+    const double *xx;
+    ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
+    ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+    ierr = VecGetLocalSize(x,&n);CHKERRQ(ierr);
+    for (i=0; i<n; i++) yy[i] = (float) xx[i];
+    ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
+    ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
+  } else {
+    ierr = (*x->ops->copy)(x,y);CHKERRQ(ierr);
+  }
+#else
+  if (*x->ops->copyasync) {
+    ierr = (*x->ops->copyasync)(x,y,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vec has no VecCopyAsync method\n");
+  }
+#endif
+
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+#if !defined(PETSC_USE_MIXED_PRECISION)
+  for (i=0; i<4; i++) {
+    if (flgs[i]) {
+      ierr = PetscObjectComposedDataSetReal((PetscObject)y,NormIds[i],norms[i]);CHKERRQ(ierr);
+    }
+  }
+#endif
+  ierr = PetscLogEventEnd(VEC_Copy,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecSwap - Swaps the vectors x and y.
 

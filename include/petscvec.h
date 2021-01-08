@@ -138,12 +138,12 @@ PETSC_EXTERN PetscErrorCode VecSetSizes(Vec,PetscInt,PetscInt);
 
 PETSC_EXTERN PetscErrorCode VecDotNorm2(Vec,Vec,PetscScalar*,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecDot(Vec,Vec,PetscScalar*);
-PETSC_EXTERN PetscErrorCode VecDotAsync(Vec,Vec,PetscScalar*,PetscStream);
+PETSC_EXTERN PetscErrorCode VecDotAsync(Vec,Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecDotRealPart(Vec,Vec,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecTDot(Vec,Vec,PetscScalar*);
-PETSC_EXTERN PetscErrorCode VecTDotAsync(Vec,Vec,PetscScalar*,PetscStream);
+PETSC_EXTERN PetscErrorCode VecTDotAsync(Vec,Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecMDot(Vec,PetscInt,const Vec[],PetscScalar[]);
-PETSC_EXTERN PetscErrorCode VecMDotAsync(Vec,PetscInt,const Vec[],PetscScalar[],PetscStream);
+PETSC_EXTERN PetscErrorCode VecMDotAsync(Vec,PetscInt,const Vec[],PetscStreamScalar[],PetscStream);
 PETSC_EXTERN PetscErrorCode VecMTDot(Vec,PetscInt,const Vec[],PetscScalar[]);
 PETSC_EXTERN PetscErrorCode VecGetSubVector(Vec,IS,Vec*);
 PETSC_EXTERN PetscErrorCode VecRestoreSubVector(Vec,IS,Vec*);
@@ -217,6 +217,7 @@ M*/
 M*/
 
 PETSC_EXTERN PetscErrorCode VecNorm(Vec,NormType,PetscReal *);
+PETSC_EXTERN PetscErrorCode VecNormAsync(Vec,NormType,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecNormAvailable(Vec,NormType,PetscBool *,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecNormalize(Vec,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecSum(Vec,PetscScalar*);
@@ -224,14 +225,17 @@ PETSC_EXTERN PetscErrorCode VecMax(Vec,PetscInt*,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecMin(Vec,PetscInt*,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecScale(Vec,PetscScalar);
 PETSC_EXTERN PetscErrorCode VecCopy(Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecCopyAsync(Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecSetRandom(Vec,PetscRandom);
 PETSC_EXTERN PetscErrorCode VecSet(Vec,PetscScalar);
 PETSC_EXTERN PetscErrorCode VecSetInf(Vec);
 PETSC_EXTERN PetscErrorCode VecSwap(Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecAXPY(Vec,PetscScalar,Vec);
+PETSC_EXTERN PetscErrorCode VecAXPYAsync(Vec,PetscStreamScalar,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecAXPBY(Vec,PetscScalar,PetscScalar,Vec);
 PETSC_EXTERN PetscErrorCode VecMAXPY(Vec,PetscInt,const PetscScalar[],Vec[]);
 PETSC_EXTERN PetscErrorCode VecAYPX(Vec,PetscScalar,Vec);
+PETSC_EXTERN PetscErrorCode VecAYPXAsync(Vec,PetscStreamScalar,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecWAXPY(Vec,PetscScalar,Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecAXPBYPCZ(Vec,PetscScalar,PetscScalar,PetscScalar,Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecPointwiseMax(Vec,Vec,Vec);
@@ -467,18 +471,6 @@ PETSC_EXTERN PetscErrorCode VecSetPinnedMemoryMin(Vec,size_t);
 PETSC_EXTERN PetscErrorCode VecGetPinnedMemoryMin(Vec,size_t *);
 
 
-/*E
-    PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
-
-   PETSC_OFFLOAD_UNALLOCATED  - no memory contains valid matrix entries; NEVER used for vectors
-   PETSC_OFFLOAD_GPU - GPU has valid vector/matrix entries
-   PETSC_OFFLOAD_CPU - CPU has valid vector/matrix entries
-   PETSC_OFFLOAD_BOTH - Both GPU and CPU have valid vector/matrix entries and they match
-   PETSC_OFFLOAD_VECKOKKOS - Reserved for Vec_Kokkos. The offload is managed by Kokkos, thus this flag is not used in Vec_Kokkos.
-
-   Level: developer
-E*/
-typedef enum {PETSC_OFFLOAD_UNALLOCATED=0x0,PETSC_OFFLOAD_CPU=0x1,PETSC_OFFLOAD_GPU=0x2,PETSC_OFFLOAD_BOTH=0x3,PETSC_OFFLOAD_VECKOKKOS=0x100} PetscOffloadMask;
 PETSC_EXTERN PetscErrorCode VecGetOffloadMask(Vec,PetscOffloadMask *);
 
 typedef enum {VEC_IGNORE_OFF_PROC_ENTRIES,VEC_IGNORE_NEGATIVE_INDICES,VEC_SUBSET_OFF_PROC_ENTRIES} VecOption;
