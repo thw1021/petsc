@@ -421,6 +421,7 @@ PetscErrorCode PetscEventSetup(PetscEvent event)
 #endif
 
   PetscFunctionBegin;
+  if (PetscUnlikelyDebug(!event)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Input event is NULL!\n");
   if (event->setup) PetscFunctionReturn(0);
 #if PetscDefined(HAVE_CUDA)
   if (event->cevent) {cerr = cudaEventDestroy(event->cevent);CHKERRCUDA(cerr);}
@@ -439,6 +440,7 @@ PetscErrorCode PetscEventSynchronize(PetscEvent event, PetscStreamType type)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  if (!event) PetscFunctionReturn(0);
   ierr = PetscEventSetup(event);CHKERRQ(ierr);
   switch (type) {
   case PETSC_STREAM_CUDA:
