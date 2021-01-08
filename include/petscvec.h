@@ -10,6 +10,7 @@
 #include <petscsftypes.h> /* for VecScatter, VecScatterType */
 #include <petscis.h>
 #include <petscviewer.h>
+#include <petscdevice.h>
 
 /*S
      Vec - Abstract PETSc vector object
@@ -137,6 +138,7 @@ PETSC_EXTERN PetscErrorCode VecSetSizes(Vec,PetscInt,PetscInt);
 
 PETSC_EXTERN PetscErrorCode VecDotNorm2(Vec,Vec,PetscScalar*,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecDot(Vec,Vec,PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecDotAsync(Vec,Vec,PetscScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode VecDotRealPart(Vec,Vec,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecTDot(Vec,Vec,PetscScalar*);
 PETSC_EXTERN PetscErrorCode VecMDot(Vec,PetscInt,const Vec[],PetscScalar[]);
@@ -374,7 +376,6 @@ PETSC_EXTERN PetscErrorCode VecGetOwnershipRanges(Vec,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode VecSetLocalToGlobalMapping(Vec,ISLocalToGlobalMapping);
 PETSC_EXTERN PetscErrorCode VecSetValuesLocal(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 
-#include <petscdevice.h>
 PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec,PetscScalar**);
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayAsync(Vec,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArray(Vec,PetscScalar**);
