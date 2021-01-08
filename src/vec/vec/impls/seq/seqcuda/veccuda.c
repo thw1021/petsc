@@ -77,16 +77,8 @@ PetscErrorCode VecCopy_SeqCUDA_Private(Vec xin,Vec yin)
   ierr = VecCUDAAllocateCheckHost(xin);CHKERRQ(ierr);
   ierr = VecCUDAAllocateCheckHost(yin);CHKERRQ(ierr);
   if (xin != yin) {
-    PetscStream pstream;
-
     ierr = VecGetArrayRead(xin,&xa);CHKERRQ(ierr);
     ierr = VecGetArray(yin,&ya);CHKERRQ(ierr);
-    ierr = VecGetStreamAsync_Internal(xin,&pstream);CHKERRQ(ierr);
-    if (yin->event) {
-      ierr = PetscStreamWaitEvent(pstream,yin->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
-    }
-    /* Need to block host here, since host will be the one copying */
-    ierr = PetscStreamSynchronize(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
     ierr = PetscArraycpy(ya,xa,xin->map->n);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(xin,&xa);CHKERRQ(ierr);
     ierr = VecRestoreArray(yin,&ya);CHKERRQ(ierr);
