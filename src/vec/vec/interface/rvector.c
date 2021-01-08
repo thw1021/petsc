@@ -2181,6 +2181,22 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
   PetscFunctionReturn(0);
 }
 
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayAsync(Vec v, PetscScalar **a, PetscStream pstream)
+{
+  PetscFunctionBegin;
+  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
+ #if defined(PETSC_HAVE_CUDA)
+  {
+    PetscErrorCode ierr;
+
+    ierr = PetscStreamWaitEvent(pstream,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    ierr = VecCUDACopyToGPUAsync(v,pstream);CHKERRQ(ierr);
+    *a   = ((Vec_CUDA*)v->spptr)->GPUarray;
+  }
+ #endif
+  PetscFunctionReturn(0);
+}
+
 /*@C
    VecCUDARestoreArray - Restore a CUDA device pointer previously acquired with VecCUDAGetArray().
 
@@ -2249,6 +2265,14 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayRead(Vec v,const PetscScalar** a)
    PetscErrorCode ierr;
    PetscFunctionBegin;
    ierr = VecCUDAGetArray(v,(PetscScalar**)a);CHKERRQ(ierr);
+   PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayReadAsync(Vec v,const PetscScalar** a,PetscStream pstream)
+{
+   PetscErrorCode ierr;
+   PetscFunctionBegin;
+   ierr = VecCUDAGetArrayAsync(v,(PetscScalar**)a,pstream);CHKERRQ(ierr);
    PetscFunctionReturn(0);
 }
 

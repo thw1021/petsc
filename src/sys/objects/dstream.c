@@ -277,9 +277,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronizeStream_Private(PetscStr
 {
   PetscFunctionBegin;
   switch (type) {
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
-    PetscErrorCode ierr;
-#endif
 #if PetscDefined(HAVE_CUDA)
     cudaError_t    cerr;
 #endif
@@ -289,13 +286,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronizeStream_Private(PetscStr
   case PETSC_STREAM_CUDA:
 #if PetscDefined(HAVE_CUDA)
     cerr = cudaStreamSynchronize(strm->cstream);CHKERRCUDA(cerr);
-    ierr = PetscStreamDisassembleCUDA_Internal(strm);CHKERRQ(ierr);
 #endif
     break;
   case PETSC_STREAM_HIP:
 #if PetscDefined(HAVE_HIP)
     herr = hipStreamSynchronize(strm->hstream);CHKERRHIP(herr);
-    ierr = PetscStreamDisassembleHIP_Internal(strm);CHKERRQ(ierr);
 #endif
     break;
   default:
@@ -436,5 +431,37 @@ PetscErrorCode PetscEventSetup(PetscEvent event)
   herr = hipEventCreateWithFlags(&event->hevent, event->eventFlags);CHKERRHIP(herr);
 #endif
   event->setup = PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscEventSynchronize(PetscEvent event, PetscStreamType type)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscEventSetup(event);CHKERRQ(ierr);
+  switch (type) {
+  case PETSC_STREAM_CUDA:
+#if PetscDefined(HAVE_CUDA)
+  {
+    cudaError_t cerr;
+
+    cerr = cudaEventSynchronize(event->cevent);CHKERRCUDA(cerr);
+  }
+#endif
+  break;
+  case PETSC_STREAM_HIP:
+#if PetscDefined(HAVE_HIP)
+  {
+    hipError_t herr;
+
+    herr = hipEventSynchronize(event->hevent);CHKERRHIP(herr);
+  }
+#endif
+  break;
+  default:
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unhandled PetscStreamType %D\n",(PetscInt)type);
+    break;
+  }
   PetscFunctionReturn(0);
 }

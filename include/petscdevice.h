@@ -53,16 +53,18 @@ do { \
 
 typedef struct _n_PetscEvent* PetscEvent;
 
+typedef enum {
+  PETSC_STREAM_CUDA,
+  PETSC_STREAM_HIP
+} PetscStreamType;
+
+
 PETSC_EXTERN PetscErrorCode PetscEventCreate(PetscEvent*);
 PETSC_EXTERN PetscErrorCode PetscEventDestroy(PetscEvent*);
 PETSC_EXTERN PetscErrorCode PetscEventSetFlags(PetscEvent,unsigned int,unsigned int);
 PETSC_EXTERN PetscErrorCode PetscEventGetFlags(PetscEvent,unsigned int*,unsigned int*);
 PETSC_EXTERN PetscErrorCode PetscEventSetup(PetscEvent);
-
-typedef enum {
-  PETSC_STREAM_CUDA,
-  PETSC_STREAM_HIP
-} PetscStreamType;
+PETSC_EXTERN PetscErrorCode PetscEventSynchronize(PetscEvent,PetscStreamType);
 
 typedef enum {
   PETSC_STREAM_GLOBAL_BLOCKING = 0,

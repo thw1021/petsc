@@ -208,6 +208,7 @@ PETSC_EXTERN PetscErrorCode VecViennaCLCopyFromGPU(Vec v);
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode VecCUDAAllocateCheckHost(Vec v);
 PETSC_EXTERN PetscErrorCode VecCUDACopyFromGPU(Vec v);
+PETSC_EXTERN PetscErrorCode VecCUDACopyFromGPUAsync(Vec,PetscStream);
 #endif
 #if defined(PETSC_HAVE_HIP)
 PETSC_EXTERN PetscErrorCode VecHIPAllocateCheckHost(Vec v);
