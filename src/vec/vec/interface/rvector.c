@@ -131,6 +131,24 @@ PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecDotAsync(Vec x,Vec y,PetscScalar *val, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidScalarPointer(val,3);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+
+  ierr = PetscLogEventBegin(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+  ierr = VecDot_SeqCUDAAsync(x,y,val,pstream);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 /*@
    VecDotRealPart - Computes the real part of the vector dot product.
 
@@ -2379,6 +2397,20 @@ PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayRead(Vec v, const PetscScalar **a
 .seealso: VecCUDARestoreArrayWrite(), VecCUDAGetArray(), VecCUDAGetArrayRead(), VecCUDAGetArrayWrite(), VecGetArray(), VecGetArrayRead()
 @*/
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
+{
+  PetscFunctionBegin;
+  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
+ #if defined(PETSC_HAVE_CUDA)
+  {
+    PetscErrorCode ierr;
+    ierr = VecCUDAAllocateCheck(v);CHKERRQ(ierr);
+    *a   = ((Vec_CUDA*)v->spptr)->GPUarray;
+  }
+ #endif
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWriteAsync(Vec v, PetscScalar **a, PetscStream pstream)
 {
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
