@@ -618,7 +618,7 @@ cdef struct DLTensor:
 cdef struct DLManagedTensor:
     DLTensor dl_tensor
     void* manager_ctx
-    void (*deleter)(DLManagedTensor*) nogil
+    void (*manager_deleter)(DLManagedTensor*) nogil
 
 cdef void pycapsule_deleter(object dltensor):
     cdef DLManagedTensor* dlm_tensor = NULL
@@ -627,14 +627,13 @@ cdef void pycapsule_deleter(object dltensor):
         return             # we do not call a used capsule's deleter
     except Exception:
         dlm_tensor = <DLManagedTensor *>PyCapsule_GetPointer(dltensor, 'dltensor')
-    deleter(dlm_tensor)
+    manager_deleter(dlm_tensor)
 
-
-cdef void deleter(DLManagedTensor* tensor) nogil:
+cdef void manager_deleter(DLManagedTensor* tensor) nogil:
     if tensor.manager_ctx is NULL:
         return
     free(tensor.dl_tensor.shape)
-    CHKERR( PetscObjectDereference(<PetscObject>tensor.manager_ctx) )
+    CHKERR( PetscDEALLOC(<PetscObject*>&tensor.manager_ctx) )
     free(tensor)
     tensor.manager_ctx = NULL
 

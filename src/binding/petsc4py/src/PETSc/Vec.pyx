@@ -345,7 +345,7 @@ cdef class Vec(Object):
             else:
                 CHKERR( VecCreateMPIWithArray(ccomm,bs,n,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
         PetscCLEAR(self.obj); self.vec = newvec
-        self.set_attr('__array__', ptr.dl_tensor.data)
+        self.set_attr('__array__', dltensor)
         cdef int64_t* shape_arr = NULL
         cdef int64_t* strides_arr = NULL
         cdef object s1 = oarray_p(empty_p(ndim), NULL, <void**>&shape_arr)
@@ -354,12 +354,11 @@ cdef class Vec(Object):
             shape_arr[i] = shape[i]
             strides_arr[i] = strides[i]
         self.set_attr('__dltensor_ctx__', (ptr.dl_tensor.ctx.device_type, ptr.dl_tensor.ctx.device_id, ndim, s1, s2))
-        ptr.deleter(ptr) # must call deleter to avoid memory leak
         return self
 
-    def attachDLPackInfo(self, Vec asvec=None, object dltensor=None):
+    def attachDLPackInfo(self, Vec vec=None, object dltensor=None):
         """
-        Attach the tensor information from an input vector (asvec) or a
+        Attach the tensor information from an input vector (vec) or a
         DLPack tensor if it is not available in current vector. The input
         vector is typically created with createWithDlpack(). This operation
         does not copy the data from the input parameters, it simply uses
@@ -368,7 +367,9 @@ cdef class Vec(Object):
         Note that the auxiliary tensor information is required when converting
         a PETSc vector to a DLPack object.
 
-        :arg asvec: A :class:'Vec' containing auxiliary tensor information
+        See also :meth:`Vec.clearDLPackInfo`.
+
+        :arg vec: A :class:'Vec' containing auxiliary tensor information
         :arg dltensor: A DLPack tensor object
         """
         cdef object ctx0 = self.get_attr('__dltensor_ctx__'), ctx = None
@@ -377,18 +378,17 @@ cdef class Vec(Object):
         cdef int64_t* strides_arr = NULL
         cdef object s1 = None, s2 = None
 
-        if asvec is None and dltensor is None:
+        if vec is None and dltensor is None:
             raise ValueError('Missing input parameters')
-        if asvec is not None:
+        if vec is not None:
           t0 = self.getType()
-          t1 = asvec.getType()
+          t1 = vec.getType()
           if t0 != t1:
             raise TypeError('Input vector type {} does not match current vector type {}'.format(t1,t0))
-          if ctx0 is None:
-            ctx = (<Object>asvec).get_attr('__dltensor_ctx__')
-            if ctx is None:
-                raise ValueError('Input vector has no tensor information')
-            self.set_attr('__dltensor_ctx__', ctx)
+          ctx = (<Object>vec).get_attr('__dltensor_ctx__')
+          if ctx is None:
+            raise ValueError('Input vector has no tensor information')
+          self.set_attr('__dltensor_ctx__', ctx)
         else:
           if PyCapsule_IsValid(dltensor, 'dltensor'):
             ptr = <DLManagedTensor*>PyCapsule_GetPointer(dltensor, 'dltensor')
@@ -408,6 +408,14 @@ cdef class Vec(Object):
             shape_arr[i] = shape[i]
             strides_arr[i] = strides[i]
           self.set_attr('__dltensor_ctx__', (ptr.dl_tensor.ctx.device_type, ptr.dl_tensor.ctx.device_id, ndim, s1, s2))
+        return self
+
+    def clearDLPackInfo(self):
+        """
+        Clear the tensor information
+        See also :meth:`Vec.attachDLPackInfo`.
+        """
+        self.set_attr('__dltensor_ctx__', None)
         return self
 
     def toDLPack(self):
@@ -463,7 +471,7 @@ cdef class Vec(Object):
         dtype.lanes = <uint16_t>1
         dlm_tensor.manager_ctx = <void *>self.vec
         CHKERR( PetscObjectReference(<PetscObject>self.vec) )
-        dlm_tensor.deleter = deleter
+        dlm_tensor.manager_deleter = manager_deleter
         return PyCapsule_New(dlm_tensor, 'dltensor', pycapsule_deleter)
 
     def createGhost(self, ghosts, size, bsize=None, comm=None):
