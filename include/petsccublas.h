@@ -5,15 +5,6 @@
 #include <cublas_v2.h>
 #include <cusolverDn.h>
 
-#define CHKERRCUBLAS(stat) \
-do { \
-   if (PetscUnlikely(stat)) { \
-     const char *name = PetscCUBLASGetErrorName(stat);                     \
-     if (((stat == CUBLAS_STATUS_NOT_INITIALIZED) || (stat == CUBLAS_STATUS_ALLOC_FAILED)) && PetscCUDAInitialized) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuBLAS error %d (%s). Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)stat,name); \
-     else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuBLAS error %d (%s)",(int)stat,name); \
-   } \
-} while (0)
-
 PETSC_INTERN PetscErrorCode PetscCUBLASInitializeHandle(void);
 PETSC_INTERN PetscErrorCode PetscCUSOLVERDnInitializeHandle(void);
 
@@ -21,4 +12,5 @@ PETSC_INTERN PetscErrorCode PetscCUSOLVERDnInitializeHandle(void);
 PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRCUBLAS macro */
 PETSC_EXTERN PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
+
 #endif
