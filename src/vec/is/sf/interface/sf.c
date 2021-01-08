@@ -112,6 +112,11 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
   #elif defined(PETSC_HAVE_HIP)
     b->backend = PETSCSF_BACKEND_HIP;
   #endif
+
+  #if defined(PETSC_HAVE_NVSHMEM)
+    b->use_nvshmem = PETSC_TRUE; /* Try to use NVSHMEM for communication on this SF when possible */
+    ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem",&b->use_nvshmem,NULL);CHKERRQ(ierr);
+  #endif
 #endif
   b->vscat.from_n = -1;
   b->vscat.to_n   = -1;
@@ -162,6 +167,12 @@ PetscErrorCode PetscSFReset(PetscSF sf)
   for (PetscInt i=0; i<2; i++) {ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,sf->rmine_d[i]);CHKERRQ(ierr);}
  #endif
 
+ #if defined(PETSC_HAVE_NVSHMEM)
+  ierr = PetscFree2(sf->rootsigdisp,sf->rootbufdisp);CHKERRQ(ierr);
+  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,sf->rootsigdisp_d);CHKERRQ(ierr);
+  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,sf->ranks_d);CHKERRQ(ierr);
+  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,sf->roffset_d);CHKERRQ(ierr);
+ #endif
   sf->setupcalled = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
