@@ -15,7 +15,7 @@ int main(int argc,char **args)
   char           file[PETSC_MAX_PATH_LEN];
   PetscViewer    fd;
   PetscBool      flg,test_sell = PETSC_FALSE, verify_sell = PETSC_FALSE;
-  PetscInt       size,maxslicewidth,niter = 3;
+  PetscInt       size,maxslicewidth,niter = 10;
   PetscReal      ratio,avgslicewidth;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
