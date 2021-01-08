@@ -171,7 +171,7 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf,MPI_Datatype unit,PetscMemType x
       }
     }
   }
-  link->PrepareCommunication  = PetscSFLinkPostIrecv_MPI;
+  link->PrePack               = PetscSFLinkPostIrecv_MPI;
   link->StartCommunication    = PetscSFLinkPostIsend_MPI;
   link->FinishCommunication   = PetscSFLinkWaitRequests_MPI;
 

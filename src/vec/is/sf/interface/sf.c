@@ -112,6 +112,13 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
   #elif defined(PETSC_HAVE_HIP)
     b->backend = PETSCSF_BACKEND_HIP;
   #endif
+
+  #if defined(PETSC_HAVE_NVSHMEM)
+    b->use_nvshmem     = PETSC_FALSE; /* Default is not to try NVSHMEM */
+    b->use_nvshmem_get = PETSC_FALSE; /* Default is to use nvshmem_put based protocol */
+    ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem",&b->use_nvshmem,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem_get",&b->use_nvshmem_get,NULL);CHKERRQ(ierr);
+  #endif
 #endif
   b->vscat.from_n = -1;
   b->vscat.to_n   = -1;
