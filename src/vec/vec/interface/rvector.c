@@ -2,8 +2,6 @@
      Provides the interface functions for vector operations that have PetscScalar/PetscReal in the signature
    These are the vector functions the user calls.
 */
-#include "petsc/private/sfimpl.h"
-#include "petscsystypes.h"
 #include <petsc/private/vecimpl.h>       /*I  "petscvec.h"   I*/
 #if defined(PETSC_HAVE_CUDA)
 #include <../src/vec/vec/impls/dvecimpl.h>
@@ -4470,3 +4468,355 @@ PetscErrorCode VecLockPop(Vec x)
 }
 
 #endif
+
+PetscErrorCode VecGetWorkScalar(Vec x,PetscScalar **a)
+{
+  PetscErrorCode ierr;
+  PetscInt       i;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (!a) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # 3");
+  if (x->ops->getworkscalar) {ierr = (*x->ops->getworkscalar)(x,a);CHKERRQ(ierr);}
+  else {
+    /* The first three slots are reserved for VecGetWorkNorm() */
+    for (i=3; i<VEC_MAX_WORK_SCALARS; i++) {if (!x->workscalars_inuse[i]) break;}
+    if (i<VEC_MAX_WORK_SCALARS) {
+      *a = &x->workscalars_h[i];
+      x->workscalars_inuse[i] = 1;
+    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Ran out of work scalars on this vec. Use VecRestoreWorkScalar() to free some before getting new ones");
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecRestoreWorkScalar(Vec x,PetscScalar **a)
+{
+  PetscErrorCode ierr;
+  PetscInt       offset;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (a) {
+    if (x->ops->restoreworkscalar) {ierr = (*x->ops->restoreworkscalar)(x,a);CHKERRQ(ierr);}
+    else {
+      offset = *a - x->workscalars_h;
+      if (2 < offset && offset < VEC_MAX_WORK_SCALARS) x->workscalars_inuse[offset] = 0;
+      else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Work scalar was not gotten from this vector\n");
+    }
+    *a = NULL;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecGetWorkNorm(Vec x,NormType type,PetscReal **a)
+{
+  PetscErrorCode ierr;
+  PetscInt       offset = 0;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (!a) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # 3");
+  if (x->ops->getworknorm) {ierr = (*x->ops->getworknorm)(x,type,a);CHKERRQ(ierr);}
+  else {
+    /* Compute offset of this norm in workscalars_h[] */
+    if (type == NORM_1 || type == NORM_1_AND_2)        offset = 0;
+    else if (type == NORM_2 || type == NORM_FROBENIUS) offset = 1;
+    else if (type == NORM_INFINITY)                    offset = 2;
+    if (!x->workscalars_inuse[offset]) {
+      *a = (PetscReal*)(&x->workscalars_h[offset]);
+      x->workscalars_inuse[offset] = 1;
+     #if !defined(PETSC_USE_COMPLEX)
+      if (type == NORM_1_AND_2) x->workscalars_inuse[offset+1] = 1;
+     #endif
+    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Work norm of type %d is already in use\n",(int)type);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecRestoreWorkNorm(Vec x,NormType type,PetscReal **a)
+{
+  PetscErrorCode ierr;
+  PetscInt       pdiff,offset = 0;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  if (a) {
+    if (x->ops->restoreworknorm) {ierr = (*x->ops->restoreworknorm)(x,type,a);CHKERRQ(ierr);}
+    else {
+      pdiff = ((PetscScalar*)*a) - x->workscalars_h;
+      if (0 <= offset && offset < 3) {
+        /* Compute offset of this norm in workscalars_h[] */
+        if (type == NORM_1 || type == NORM_1_AND_2)        offset = 0;
+        else if (type == NORM_2 || type == NORM_FROBENIUS) offset = 1;
+        else if (type == NORM_INFINITY)                    offset = 2;
+        if (pdiff == offset) {
+          x->workscalars_inuse[offset] = 0;
+         #if !defined(PETSC_USE_COMPLEX)
+          if (type == NORM_1_AND_2 && !offset) x->workscalars_inuse[1] = 0;
+         #endif
+        } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Work norm pointer and type mismatch");
+      } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Work norm was not gotten from this vector");
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
+/*  r[0] = a  */
+PetscErrorCode VecSetWorkScalar(Vec x,PetscScalar *r,PetscScalar a)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->setworkscalar) {ierr = (*x->ops->setworkscalar)(x,r,a);CHKERRQ(ierr);}
+  else {r[0] = a;}
+  PetscFunctionReturn(0);
+}
+
+/*  r[0] = a  */
+PetscErrorCode VecSetWorkReal(Vec x,PetscReal *r,PetscReal a)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->setworkreal) {ierr = (*x->ops->setworkreal)(x,r,a);CHKERRQ(ierr);}
+  else {r[0] = a;}
+  PetscFunctionReturn(0);
+}
+
+/*  r[0] = a[0]  */
+PetscErrorCode VecAssignWorkScalar(Vec x,PetscScalar *r,const PetscScalar *a)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->assignworkscalar) {ierr = (*x->ops->assignworkscalar)(x,r,a);CHKERRQ(ierr);}
+  else {r[0] = a[0];}
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecAssignWorkReal(Vec x,PetscReal *r,const PetscReal *a)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->assignworkreal) {ierr = (*x->ops->assignworkreal)(x,r,a);CHKERRQ(ierr);}
+  else {r[0] = a[0];}
+  PetscFunctionReturn(0);
+}
+
+/*  r[0] = a[0], where r[0] is on host */
+PetscErrorCode VecCopyWorkScalarToHost(Vec x,PetscScalar *r,const PetscScalar *a)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscValidScalarPointer(r,2);
+  if (x->ops->copyworkscalartohost) {ierr = (*x->ops->copyworkscalartohost)(x,r,a);CHKERRQ(ierr);}
+  else {r[0] = a[0];}
+  PetscFunctionReturn(0);
+}
+
+/*  r[0] = a[0], where r[0] is on host */
+PetscErrorCode VecCopyWorkRealToHost(Vec x,PetscReal *r,const PetscReal *a)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscValidRealPointer(r,2);
+  if (x->ops->copyworkrealtohost) {ierr = (*x->ops->copyworkrealtohost)(x,r,a);CHKERRQ(ierr);}
+  else {r[0] = a[0];}
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecAddWorkScalar(Vec x,PetscScalar *r,const PetscScalar *a,const PetscScalar *b)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->addworkscalar) {ierr = (*x->ops->addworkscalar)(x,r,a,b);CHKERRQ(ierr);}
+  else {r[0] = a[0]+b[0];}
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecSubWorkScalar(Vec x,PetscScalar *r,const PetscScalar *a,const PetscScalar *b)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->subworkscalar) {ierr = (*x->ops->subworkscalar)(x,r,a,b);CHKERRQ(ierr);}
+  else {r[0] = a[0]-b[0];}
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecMultWorkScalar(Vec x,PetscScalar *r,const PetscScalar *a,const PetscScalar *b)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->multworkscalar) {ierr = (*x->ops->multworkscalar)(x,r,a,b);CHKERRQ(ierr);}
+  else {r[0] = a[0]*b[0];}
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDivideWorkScalar(Vec x,PetscScalar *r,const PetscScalar *a,const PetscScalar *b)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->divideworkscalar) {ierr = (*x->ops->divideworkscalar)(x,r,a,b);CHKERRQ(ierr);}
+  else {r[0] = a[0]/b[0];}
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecAbsWorkScalar(Vec x,PetscReal *r,const PetscScalar *a)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->absworkscalar) {ierr = (*x->ops->absworkscalar)(x,r,a);CHKERRQ(ierr);}
+  else {r[0] = PetscAbsScalar(a[0]);}
+  PetscFunctionReturn(0);
+}
+
+/*  r[0] = sqrt(a[0])  */
+PetscErrorCode VecSqrtWorkReal(Vec x,PetscReal *r,const PetscReal *a)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->assignworkscalar) {ierr = (*x->ops->sqrtworkreal)(x,r,a);CHKERRQ(ierr);}
+  else {r[0] = PetscSqrtReal(a[0]);}
+  PetscFunctionReturn(0);
+}
+
+/*  a[0] = (x,y) = y^H x  */
+PetscErrorCode VecDotAsync(Vec x,Vec y,PetscScalar *a)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+
+  ierr = PetscLogEventBegin(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+  if (x->ops->dot_async) {ierr = (*x->ops->dot_async)(x,y,a);CHKERRQ(ierr);}
+  else {
+    PetscValidScalarPointer(a,3);
+    ierr = (*x->ops->dot)(x,y,a);CHKERRQ(ierr);
+  }
+  ierr = PetscLogEventEnd(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*  a[0] = (x,y) = y^T x  */
+PetscErrorCode VecTDotAsync(Vec x,Vec y,PetscScalar *a)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+
+  ierr = PetscLogEventBegin(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+  if (x->ops->tdot_async) {ierr = (*x->ops->tdot_async)(x,y,a);CHKERRQ(ierr);}
+  else {
+    PetscValidScalarPointer(a,3);
+    ierr = (*x->ops->tdot)(x,y,a);CHKERRQ(ierr);
+  }
+  ierr = PetscLogEventEnd(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecNormAsync(Vec x,NormType type,PetscReal *val)
+{
+  /* PetscBool      flg; */
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  if (!val) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # 3");
+  PetscValidType(x,1);
+
+  ierr = PetscLogEventBegin(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
+  if (x->ops->norm_async) {ierr = (*x->ops->norm_async)(x,type,val);CHKERRQ(ierr);}
+  else {ierr = VecNorm(x,type,val);CHKERRQ(ierr);}
+  ierr = PetscLogEventEnd(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecAXPYAsync(Vec y,PetscScalar *alpha,Vec x)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,3);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
+  PetscValidType(x,3);
+  PetscValidType(y,1);
+  if (!alpha) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # 2");
+  PetscCheckSameTypeAndComm(x,3,y,1);
+  VecCheckSameSize(x,1,y,3);
+  if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
+  ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
+
+  ierr = VecLockReadPush(x);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  if (y->ops->axpy_async) {ierr = (*y->ops->axpy_async)(y,alpha,x);CHKERRQ(ierr);}
+  else {
+    PetscValidLogicalCollectiveScalar(y,*alpha,2); /* Not feasible if on device */
+    ierr = (*y->ops->axpy)(y,*alpha,x);CHKERRQ(ierr);
+  }
+  ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  ierr = VecLockReadPop(x);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecAYPXAsync(Vec y,PetscScalar *beta,Vec x)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,3);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
+  PetscValidType(x,3);
+  PetscValidType(y,1);
+  PetscCheckSameTypeAndComm(x,3,y,1);
+  VecCheckSameSize(x,1,y,3);
+  if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
+  ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
+
+  ierr = PetscLogEventBegin(VEC_AYPX,x,y,0,0);CHKERRQ(ierr);
+  if (y->ops->aypx_async) {ierr = (*y->ops->aypx_async)(y,beta,x);CHKERRQ(ierr);}
+  else {
+    PetscValidLogicalCollectiveScalar(y,*beta,2);
+    ierr = (*y->ops->aypx)(y,*beta,x);CHKERRQ(ierr);
+  }
+  ierr = PetscLogEventEnd(VEC_AYPX,x,y,0,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
