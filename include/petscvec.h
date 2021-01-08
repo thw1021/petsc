@@ -217,6 +217,7 @@ M*/
 M*/
 
 PETSC_EXTERN PetscErrorCode VecNorm(Vec,NormType,PetscReal *);
+PETSC_EXTERN PetscErrorCode VecNormAsync(Vec,NormType,PetscReal *,PetscStream);
 PETSC_EXTERN PetscErrorCode VecNormAvailable(Vec,NormType,PetscBool *,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecNormalize(Vec,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecSum(Vec,PetscScalar*);
@@ -224,14 +225,17 @@ PETSC_EXTERN PetscErrorCode VecMax(Vec,PetscInt*,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecMin(Vec,PetscInt*,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecScale(Vec,PetscScalar);
 PETSC_EXTERN PetscErrorCode VecCopy(Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecCopyAsync(Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecSetRandom(Vec,PetscRandom);
 PETSC_EXTERN PetscErrorCode VecSet(Vec,PetscScalar);
 PETSC_EXTERN PetscErrorCode VecSetInf(Vec);
 PETSC_EXTERN PetscErrorCode VecSwap(Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecAXPY(Vec,PetscScalar,Vec);
+PETSC_EXTERN PetscErrorCode VecAXPYAsync(Vec,PetscScalar*,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecAXPBY(Vec,PetscScalar,PetscScalar,Vec);
 PETSC_EXTERN PetscErrorCode VecMAXPY(Vec,PetscInt,const PetscScalar[],Vec[]);
 PETSC_EXTERN PetscErrorCode VecAYPX(Vec,PetscScalar,Vec);
+PETSC_EXTERN PetscErrorCode VecAYPXAsync(Vec,PetscScalar*,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecWAXPY(Vec,PetscScalar,Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecAXPBYPCZ(Vec,PetscScalar,PetscScalar,PetscScalar,Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecPointwiseMax(Vec,Vec,Vec);
