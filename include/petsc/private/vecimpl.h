@@ -101,6 +101,38 @@ struct _VecOps {
   PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**);
   PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**);
   PetscErrorCode (*concatenate)(PetscInt,const Vec[],Vec*,IS*[]);
+
+  /* The two conceal where the work scalars are allocated (cuda, nvshmem etc) */
+  PetscErrorCode (*allocateworkscalars)(Vec);
+  PetscErrorCode (*freeworkscalars)(Vec);
+
+  /* Allocate work scalar/norm/real */
+  PetscErrorCode (*getworkscalar)(Vec,PetscScalar**);
+  PetscErrorCode (*restoreworkscalar)(Vec,PetscScalar**);
+  PetscErrorCode (*getworknorm)(Vec,NormType,PetscReal**);
+  PetscErrorCode (*restoreworknorm)(Vec,NormType,PetscReal**);
+
+  /* Ops on work scalar/real */
+  PetscErrorCode (*assignworkscalar)(Vec,PetscScalar*,const PetscScalar*);
+  PetscErrorCode (*assignworkreal)(Vec,PetscReal*,const PetscReal*);
+  PetscErrorCode (*setworkscalar)(Vec,PetscScalar*,PetscScalar);
+  PetscErrorCode (*setworkreal)(Vec,PetscReal*,PetscReal);
+  PetscErrorCode (*copyworkscalartohost)(Vec,PetscScalar*,const PetscScalar*);
+  PetscErrorCode (*copyworkrealtohost)(Vec,PetscReal*,const PetscReal*);
+  PetscErrorCode (*addworkscalar)(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+  PetscErrorCode (*subworkscalar)(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+  PetscErrorCode (*multworkscalar)(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+  PetscErrorCode (*divideworkscalar)(Vec,PetscScalar*,const PetscScalar*,const PetscScalar*);
+  PetscErrorCode (*absworkscalar)(Vec,PetscReal*,const PetscScalar*);
+  PetscErrorCode (*sqrworkreal)(Vec,PetscReal*,const PetscReal*);
+  PetscErrorCode (*sqrtworkreal)(Vec,PetscReal*,const PetscReal*);
+
+  /* Async ops, which take scalar input/output arguments */
+  PetscErrorCode (*dot_async)(Vec,Vec,PetscScalar*);
+  PetscErrorCode (*tdot_async)(Vec,Vec,PetscScalar*);
+  PetscErrorCode (*norm_async)(Vec,NormType,PetscReal*);
+  PetscErrorCode (*axpy_async)(Vec,PetscScalar*,Vec);
+  PetscErrorCode (*aypx_async)(Vec,PetscScalar*,Vec);
 };
 
 /*
@@ -137,6 +169,8 @@ typedef struct {
   PetscInt      *bowners;
 } VecStash;
 
+#define VEC_MAX_WORK_SCALARS   16
+
 struct _p_Vec {
   PETSCHEADER(struct _VecOps);
   PetscLayout            map;
@@ -146,11 +180,14 @@ struct _p_Vec {
   PetscBool              petscnative;  /* means the ->data starts with VECHEADER and can use VecGetArrayFast()*/
   PetscInt               lock;         /* lock state. vector can be free (=0), locked for read (>0) or locked for write(<0) */
   PetscOffloadMask       offloadmask;  /* a mask which indicates where the valid vector data is (GPU, CPU or both) */
+  PetscScalar            workscalars_h[VEC_MAX_WORK_SCALARS]; /* a host array storing work scalars */
+  char                   workscalars_inuse[VEC_MAX_WORK_SCALARS]; /* a mask showing which work (host or device) scalars are in use */
 #if defined(PETSC_HAVE_DEVICE)
   void                   *spptr; /* this is the special pointer to the array on the GPU */
   PetscBool              boundtocpu;
   size_t                 minimum_bytes_pinned_memory; /* minimum data size in bytes for which pinned memory will be allocated */
   PetscBool              pinned_memory; /* PETSC_TRUE if the current host allocation has been made from pinned memory. */
+  PetscScalar            *workscalars_d;   /* a device array storing work scalars */
 #endif
   char                   *defaultrandtype;
 };
