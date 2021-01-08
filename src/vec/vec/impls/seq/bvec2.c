@@ -837,6 +837,12 @@ static struct _VecOps DvOps = {VecDuplicate_Seq, /* 1 */
                                NULL,
                                NULL,
                                NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,  /* 90 */
                                NULL
 };
 

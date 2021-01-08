@@ -498,6 +498,11 @@ static struct _VecOps DvOps = { VecDuplicate_MPI, /* 1 */
                                 NULL,
                                 NULL,
                                 NULL,
+                                NULL,
+                                NULL,
+                                NULL,
+                                NULL,
+                                NULL, /* 90 */
                                 NULL
 };
 

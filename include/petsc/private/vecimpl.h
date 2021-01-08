@@ -107,6 +107,11 @@ struct _VecOps {
   PetscErrorCode (*tdot_localasync)(Vec,Vec,PetscScalar*,PetscStream);
   PetscErrorCode (*mdotasync)(Vec,PetscInt,const Vec[],PetscScalar*,PetscStream);
   PetscErrorCode (*mdot_localasync)(Vec,PetscInt,const Vec[],PetscScalar*,PetscStream);
+  PetscErrorCode (*aypxasync)(Vec,PetscScalar*,Vec,PetscStream);
+  PetscErrorCode (*axpyasync)(Vec,PetscScalar*,Vec,PetscStream);
+  PetscErrorCode (*copyasync)(Vec,Vec,PetscStream);
+  PetscErrorCode (*normasync)(Vec,NormType,PetscReal*,PetscStream);
+  PetscErrorCode (*norm_localasync)(Vec,NormType,PetscReal*,PetscStream);
 };
 
 /*
