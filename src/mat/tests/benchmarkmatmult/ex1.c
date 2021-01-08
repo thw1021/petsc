@@ -15,7 +15,7 @@ int main(int argc,char **args)
   char           file[PETSC_MAX_PATH_LEN];
   PetscViewer    fd;
   PetscBool      flg,test_sell = PETSC_FALSE, verify_sell = PETSC_FALSE;
-  PetscInt       size,maxslicewidth,niter = 3;
+  PetscInt       size,maxslicewidth,niter = 10;
   PetscReal      ratio,avgslicewidth;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
@@ -33,6 +33,7 @@ int main(int argc,char **args)
   ierr = MatLoad(A,fd);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
   ierr = MatGetSize(A,&m,&n);CHKERRQ(ierr);
+  if (m>100000 && niter>3) niter = 3; /* repeat less times for large matrices */
 
   /* Let the vec object trigger the first CUDA call, which takes a relatively long time to init CUDA */
   ierr = PetscOptionsGetString(NULL,NULL,"-b",file,PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
