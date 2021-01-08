@@ -374,13 +374,17 @@ PETSC_EXTERN PetscErrorCode VecGetOwnershipRanges(Vec,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode VecSetLocalToGlobalMapping(Vec,ISLocalToGlobalMapping);
 PETSC_EXTERN PetscErrorCode VecSetValuesLocal(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 
+#include <petscdevice.h>
 PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayAsync(Vec,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArray(Vec,PetscScalar**);
 
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayRead(Vec,const PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayReadAsync(Vec,const PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayRead(Vec,const PetscScalar**);
 
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWriteAsync(Vec,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec,PetscScalar**);
 
 PETSC_EXTERN PetscErrorCode VecCUDAPlaceArray(Vec,const PetscScalar[]);
