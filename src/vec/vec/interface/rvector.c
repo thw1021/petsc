@@ -145,7 +145,11 @@ PetscErrorCode VecDotAsync(Vec x,Vec y,PetscScalar *val, PetscStream pstream)
   VecCheckSameSize(x,1,y,2);
 
   ierr = PetscLogEventBegin(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
-  ierr = VecDot_SeqCUDAAsync(x,y,val,pstream);CHKERRQ(ierr);
+  if (*x->ops->dotasync) {
+    ierr = (*x->ops->dotasync)(x,y,val,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vector has no VecDotAsync method\n");
+  }
   ierr = PetscLogEventEnd(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -455,6 +459,29 @@ PetscErrorCode  VecTDot(Vec x,Vec y,PetscScalar *val)
 
   ierr = PetscLogEventBegin(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
   ierr = (*x->ops->tdot)(x,y,val);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecTDotAsync(Vec x,Vec y,PetscScalar *val,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidScalarPointer(val,3);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+
+  ierr = PetscLogEventBegin(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
+  if (*x->ops->tdotasync) {
+    ierr = (*x->ops->tdotasync)(x,y,val,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vector has no VecTDotAsync method\n");
+  }
   ierr = PetscLogEventEnd(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1190,6 +1217,33 @@ PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
 
   ierr = PetscLogEventBegin(VEC_MDot,x,*y,0,0);CHKERRQ(ierr);
   ierr = (*x->ops->mdot)(x,nv,y,val);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_MDot,x,*y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecMDotAsync(Vec x,PetscInt nv,const Vec y[],PetscScalar val[],PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidLogicalCollectiveInt(x,nv,2);
+  if (!nv) PetscFunctionReturn(0);
+  if (nv < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %D) cannot be negative",nv);
+  PetscValidPointer(y,3);
+  PetscValidHeaderSpecific(*y,VEC_CLASSID,3);
+  PetscValidScalarPointer(val,4);
+  PetscValidType(x,2);
+  PetscValidType(*y,3);
+  PetscCheckSameTypeAndComm(x,2,*y,3);
+  VecCheckSameSize(x,1,*y,3);
+
+  ierr = PetscLogEventBegin(VEC_MDot,x,*y,0,0);CHKERRQ(ierr);
+  if (*x->ops->mdotasync) {
+    ierr = (*x->ops->mdotasync)(x,nv,y,val,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vector has no VecMDotAsync method\n");
+  }
   ierr = PetscLogEventEnd(VEC_MDot,x,*y,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
