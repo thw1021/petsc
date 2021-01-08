@@ -104,6 +104,9 @@ PETSC_INTERN PetscErrorCode PetscSFReset_Basic(PetscSF sf)
   for (PetscInt i=0; i<2; i++) {ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,bas->irootloc_d[i]);CHKERRQ(ierr);}
  #endif
 
+ #if defined(PETSC_HAVE_NVSHMEM)
+  ierr = PetscSFReset_Basic_NVSHMEM(sf);CHKERRQ(ierr);
+ #endif
 
   for (; link; link=next) {next = link->next; ierr = PetscSFLinkDestroy(sf,link);CHKERRQ(ierr);}
   bas->avail = NULL;
@@ -142,8 +145,8 @@ static PetscErrorCode PetscSFBcastAndOpBegin_Basic(PetscSF sf,MPI_Datatype unit,
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_BCAST,&link);CHKERRQ(ierr);
   /* Root/leafdata may be computed on streams asychronously. We need to build the dependence with e.g., cuda events */
   ierr = PetscSFLinkBuildDependenceBegin(sf,link);CHKERRQ(ierr);
-  /* Prepare remote (i.e., inter-rank) communication, such as posting MPI_Irecv if MPI is used */
-  ierr = PetscSFLinkPrepareCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
+  /* Works that can be done before packing, such as posting MPI_Irecv if MPI is used */
+  ierr = PetscSFLinkPrePack(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   /* Pack rootdata to rootbuf for remote communication */
   ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
   ierr = PetscSFLinkStartCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
@@ -164,6 +167,7 @@ PETSC_INTERN PetscErrorCode PetscSFBcastAndOpEnd_Basic(PetscSF sf,MPI_Datatype u
   ierr = PetscSFLinkFinishCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   /* Unpack data in leafbuf to leafdata for remote communication */
   ierr = PetscSFLinkUnpackLeafData(sf,link,PETSCSF_REMOTE,leafdata,op);CHKERRQ(ierr);
+  ierr = PetscSFLinkPostUnpack(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   /* When root/leafdata is computed on streams asychronously (e.g., by an async unpack kernel). We need to build the dependence */
   ierr = PetscSFLinkBuildDependenceEnd(sf,link);CHKERRQ(ierr);
   /* Recycle the link */
@@ -180,7 +184,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLeafToRootBegin_Basic(PetscSF sf,MPI_D
   PetscFunctionBegin;
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,sfop,&link);CHKERRQ(ierr);
   ierr = PetscSFLinkBuildDependenceBegin(sf,link);CHKERRQ(ierr);
-  ierr = PetscSFLinkPrepareCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
+  ierr = PetscSFLinkPrePack(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   ierr = PetscSFLinkPackLeafData(sf,link,PETSCSF_REMOTE,leafdata);CHKERRQ(ierr);
   ierr = PetscSFLinkStartCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   *out = link;
@@ -208,6 +212,7 @@ PETSC_INTERN PetscErrorCode PetscSFReduceEnd_Basic(PetscSF sf,MPI_Datatype unit,
   ierr = PetscSFLinkGetInUse(sf,unit,rootdata,leafdata,PETSC_OWN_POINTER,&link);CHKERRQ(ierr);
   ierr = PetscSFLinkFinishCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   ierr = PetscSFLinkUnpackRootData(sf,link,PETSCSF_REMOTE,rootdata,op);CHKERRQ(ierr);
+  ierr = PetscSFLinkPostUnpack(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   ierr = PetscSFLinkBuildDependenceEnd(sf,link);CHKERRQ(ierr);
   ierr = PetscSFLinkReclaim(sf,&link);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -236,11 +241,12 @@ static PetscErrorCode PetscSFFetchAndOpEnd_Basic(PetscSF sf,MPI_Datatype unit,vo
   /* Do fetch-and-op, the (remote) update results are in rootbuf */
   ierr = PetscSFLinkFetchAndOpRemote(sf,link,rootdata,op);CHKERRQ(ierr);
   /* Bcast rootbuf to leafupdate */
-  ierr = PetscSFLinkPrepareCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
+  ierr = PetscSFLinkPrePack(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = PetscSFLinkStartCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = PetscSFLinkFinishCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   /* Unpack and insert fetched data into leaves */
   ierr = PetscSFLinkUnpackLeafData(sf,link,PETSCSF_REMOTE,leafupdate,MPIU_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFLinkPostUnpack(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = PetscSFLinkBuildDependenceEnd(sf,link);CHKERRQ(ierr);
   ierr = PetscSFLinkReclaim(sf,&link);CHKERRQ(ierr);
   PetscFunctionReturn(0);

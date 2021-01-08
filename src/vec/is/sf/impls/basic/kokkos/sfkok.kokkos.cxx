@@ -471,16 +471,14 @@ static PetscErrorCode PetscSFLinkDestroy_Kokkos(PetscSF sf,PetscSFLink link)
   PetscFunctionBegin;
  #if defined(PETSC_HAVE_CUDA)
   cudaError_t    cerr;
-  cerr = cudaEventDestroy(link->rootready);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->leafready);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->dataReady);CHKERRCUDA(cerr);
   cerr = cudaEventDestroy(link->local_comm_end);CHKERRCUDA(cerr);
   cerr = cudaEventDestroy(link->remote_comm_end);CHKERRCUDA(cerr);
   if (link->remote_comm_stream) {cerr = cudaStreamDestroy(link->remote_comm_stream);CHKERRCUDA(cerr);}
   if (link->local_comm_stream) {cerr = cudaStreamDestroy(link->local_comm_stream);CHKERRCUDA(cerr);}
  #elif defined(PETSC_HAVE_HIP)
   hipError_t    cerr;
-  cerr = hipEventDestroy(link->rootready);CHKERRHIP(cerr);
-  cerr = hipEventDestroy(link->leafready);CHKERRHIP(cerr);
+  cerr = hipEventDestroy(link->dataReady);CHKERRHIP(cerr);
   cerr = hipEventDestroy(link->local_comm_end);CHKERRHIP(cerr);
   cerr = hipEventDestroy(link->remote_comm_end);CHKERRHIP(cerr);
   if (link->remote_comm_stream) {cerr = hipStreamDestroy(link->remote_comm_stream);CHKERRHIP(cerr);}
@@ -574,8 +572,7 @@ PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype 
 
  #if defined(PETSC_HAVE_CUDA)
   cudaError_t cerr;
-  cerr = cudaEventCreate(&link->rootready);CHKERRCUDA(cerr);
-  cerr = cudaEventCreate(&link->leafready);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&link->dataReady);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&link->local_comm_end);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&link->remote_comm_end);CHKERRCUDA(cerr);
   /* Currently we only use the NULL stream. May change that once we know how to create/free execution space objects
@@ -583,19 +580,18 @@ PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF sf,PetscSFLink link,MPI_Datatype 
   cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);
   cerr = cudaStreamCreateWithPriority(&link->local_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
   */
-  link->BuildDependenceBegin                     = PetscSFLinkBuildDependenceBegin_CUDA;
-  link->BuildDependenceEnd                      = PetscSFLinkBuildDependenceEnd_CUDA;
+  link->BuildDependenceBegin                       = PetscSFLinkBuildDependenceBegin_CUDA;
+  link->BuildDependenceEnd                         = PetscSFLinkBuildDependenceEnd_CUDA;
   link->BuildDependenceBetweenLocalAndRemote       = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA;
   link->EndLocalScatter                            = PetscSFLinkRecordEndOfLocalCommunication_CUDA;
   link->EndUnpackRemote                            = PetscSFLinkRecordEndOfRemoteCommunication_CUDA;
  #elif defined(PETSC_HAVE_HIP)
   hipError_t cerr;
-  cerr = hipEventCreate(&link->rootready);CHKERRHIP(cerr);
-  cerr = hipEventCreate(&link->leafready);CHKERRHIP(cerr);
+  cerr = hipEventCreate(&link->dataReady);CHKERRHIP(cerr);
   cerr = hipEventCreate(&link->local_comm_end);CHKERRHIP(cerr);
   cerr = hipEventCreate(&link->remote_comm_end);CHKERRHIP(cerr);
-  link->BuildDependenceBegin                     = PetscSFLinkBuildDependenceBegin_HIP;
-  link->BuildDependenceEnd                      = PetscSFLinkBuildDependenceEnd_HIP;
+  link->BuildDependenceBegin                       = PetscSFLinkBuildDependenceBegin_HIP;
+  link->BuildDependenceEnd                         = PetscSFLinkBuildDependenceEnd_HIP;
   link->BuildDependenceBetweenLocalAndRemote       = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_HIP;
   link->EndLocalScatter                            = PetscSFLinkRecordEndOfLocalCommunication_HIP;
   link->EndUnpackRemote                            = PetscSFLinkRecordEndOfRemoteCommunication_HIP;
