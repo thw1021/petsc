@@ -45,6 +45,10 @@ PetscErrorCode VecDestroy_MPICUDA(Vec v)
     }
     ierr = PetscFree(v->spptr);CHKERRQ(ierr);
   }
+  if (v->workscalars_d) {
+    ierr = v->ops->freeworkscalars(v);CHKERRQ(ierr);
+    v->workscalars_d=NULL;
+  }
   ierr = VecDestroy_MPI(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -188,6 +192,178 @@ PetscErrorCode VecDotNorm2_MPICUDA(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm)
   *nm  = sum[1];
   PetscFunctionReturn(0);
 }
+
+/* ======================================================
+                  Async versions
+  =======================================================
+*/
+__global__ static void PetscCudaSqr (PetscReal *r,const PetscReal *a) {r[0] = a[0]*a[0];}
+__global__ static void PetscCudaSqrt(PetscReal *r,const PetscReal *a) {r[0] = sqrt(a[0]);}
+
+PetscErrorCode VecDotAsync_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
+{
+  cudaError_t    cerr;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecDotAsync_SeqCUDA(xin,yin,z);CHKERRQ(ierr);
+  cerr = cudaStreamSynchronize(PetscDefaultCudaStream);CHKERRCUDA(cerr); /* Make sure z is ready for MPI */
+  ierr = MPIU_Allreduce(MPI_IN_PLACE,z,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecTDotAsync_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
+{
+  cudaError_t    cerr;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecTDotAsync_SeqCUDA(xin,yin,z);CHKERRQ(ierr);
+  cerr = cudaStreamSynchronize(PetscDefaultCudaStream);CHKERRCUDA(cerr); /* Make sure z is ready for MPI */
+  ierr = MPIU_Allreduce(MPI_IN_PLACE,z,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecNormAsync_MPICUDA(Vec xin,NormType type,PetscReal *z)
+{
+  PetscErrorCode ierr;
+  cudaError_t    cerr;
+  MPI_Comm       comm;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)xin,&comm);CHKERRQ(ierr);
+  /* Find the local part */
+  ierr = VecNormAsync_SeqCUDA(xin,type,z);CHKERRQ(ierr);
+  if (type == NORM_2 || type == NORM_FROBENIUS) {
+    PetscCudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(z,z);
+    cerr = cudaStreamSynchronize(PetscDefaultCudaStream);CHKERRCUDA(cerr); /* Make sure z is ready for MPI */
+    ierr = MPIU_Allreduce(MPI_IN_PLACE,z,1,MPIU_REAL,MPIU_SUM,comm);CHKERRQ(ierr);
+    PetscCudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(z,z); /* MPI should make sure z is ready for any stream */
+  } else if (type == NORM_1) {
+    /* Find the global sum */
+    cerr = cudaStreamSynchronize(PetscDefaultCudaStream);CHKERRCUDA(cerr);
+    ierr = MPIU_Allreduce(MPI_IN_PLACE,z,1,MPIU_REAL,MPIU_SUM,comm);CHKERRQ(ierr);
+  } else if (type == NORM_INFINITY) {
+    /* Find the global max */
+    cerr = cudaStreamSynchronize(PetscDefaultCudaStream);CHKERRCUDA(cerr);
+    ierr = MPIU_Allreduce(MPI_IN_PLACE,z,1,MPIU_REAL,MPIU_MAX,comm);CHKERRQ(ierr);
+  } else if (type == NORM_1_AND_2) {
+    PetscCudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(z+1,z+1);
+    cerr = cudaStreamSynchronize(PetscDefaultCudaStream);CHKERRCUDA(cerr);
+    ierr = MPIU_Allreduce(MPI_IN_PLACE,z,2,MPIU_REAL,MPIU_SUM,comm);CHKERRQ(ierr);
+    PetscCudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(z+1,z+1);
+  }
+  PetscFunctionReturn(0);
+}
+
+#if defined(PETSC_HAVE_NVSHMEM)
+PetscErrorCode VecAllocateWorkScalars_NVSHMEM(Vec x)
+{
+  PetscErrorCode  ierr;
+  PetscInt        i;
+
+  PetscFunctionBegin;
+  ierr = PetscNvshmemInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscNvshmemMalloc(VEC_MAX_WORK_SCALARS*sizeof(PetscScalar),(void**)&x->workscalars_d);CHKERRQ(ierr);
+  for (i=0; i<VEC_MAX_WORK_SCALARS; i++) {
+    if (x->workscalars_inuse[i]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Work scalars are not restored on host before getting new ones on device");
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecFreeWorkScalars_NVSHMEM(Vec x)
+{
+  PetscErrorCode  ierr;
+  PetscInt        i;
+
+  PetscFunctionBegin;
+  for (i=0; i<VEC_MAX_WORK_SCALARS; i++) {
+    if (x->workscalars_inuse[i]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Some work scalars are still in use before free");
+  }
+  ierr = PetscNvshmemFree(x->workscalars_d);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/* Check if the scalar was allocated by VecGetWorkScalar/Real/Norm() on this vector */
+PETSC_STATIC_INLINE PetscErrorCode VecAllocatedScalar_NVSHMEM(Vec xin,const PetscScalar *z,PetscBool *allocated)
+{
+  PetscInt64 offset;
+
+  PetscFunctionBegin;
+  offset     = (PetscInt64)(z - xin->workscalars_d);
+  *allocated = (0<= offset && offset < VEC_MAX_WORK_SCALARS)? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDotAsync_NVSHMEM(Vec xin,Vec yin,PetscScalar *z)
+{
+  PetscErrorCode ierr;
+  PetscScalar    *beta = z;
+  PetscBool      allocated = PETSC_TRUE;
+
+  PetscFunctionBegin;
+  ierr = VecAllocatedScalar_NVSHMEM(xin,z,&allocated);CHKERRQ(ierr);
+  if (!allocated) {ierr = VecGetWorkScalar(xin,&beta);CHKERRQ(ierr);} /* So that beta is in nvshmem */
+  ierr = VecDotAsync_SeqCUDA(xin,yin,beta);CHKERRQ(ierr);
+  ierr = PetscNvshmemSum(1,beta,beta);CHKERRQ(ierr);
+  if (!allocated) {
+    ierr = VecAssignWorkScalar(xin,z,beta);CHKERRQ(ierr);
+    ierr = VecRestoreWorkScalar(xin,&beta);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecTDotAsync_NVSHMEM(Vec xin,Vec yin,PetscScalar *z)
+{
+  PetscErrorCode ierr;
+  PetscScalar    *beta = z;
+  PetscBool      allocated = PETSC_TRUE;
+
+  PetscFunctionBegin;
+  ierr = VecAllocatedScalar_NVSHMEM(xin,z,&allocated);CHKERRQ(ierr);
+  if (!allocated) {ierr = VecGetWorkScalar(xin,&beta);CHKERRQ(ierr);} /* So that beta is in nvshmem */
+  ierr = VecTDotAsync_SeqCUDA(xin,yin,beta);CHKERRQ(ierr);
+  ierr = PetscNvshmemSum(1,beta,beta);CHKERRQ(ierr);
+  if (!allocated) {
+    ierr = VecAssignWorkScalar(xin,z,beta);CHKERRQ(ierr);
+    ierr = VecRestoreWorkScalar(xin,&beta);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecNormAsync_NVSHMEM(Vec xin,NormType type,PetscReal *z)
+{
+  PetscErrorCode ierr;
+  PetscReal      *beta = z;
+  PetscBool      allocated = PETSC_TRUE;
+
+  PetscFunctionBegin;
+  /* Find the local part */
+  ierr = VecAllocatedScalar_NVSHMEM(xin,(PetscScalar*)z,&allocated);CHKERRQ(ierr);
+  if (!allocated) {ierr = VecGetWorkNorm(xin,type,&beta);CHKERRQ(ierr);}
+  ierr = VecNormAsync_SeqCUDA(xin,type,beta);CHKERRQ(ierr);
+  if (type == NORM_2 || type == NORM_FROBENIUS) {
+    PetscCudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(beta,beta);
+    ierr = PetscNvshmemSum(1,beta,beta);CHKERRQ(ierr); /* Compute sum on PETSC_COMM_WORLD in PetscDefaultCudaStream */
+    PetscCudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(beta,beta);
+  } else if (type == NORM_1) {
+    /* Find the global sum */
+    ierr = PetscNvshmemSum(1,beta,beta);CHKERRQ(ierr);
+  } else if (type == NORM_INFINITY) {
+    /* Find the global max */
+    ierr = PetscNvshmemMax(1,beta,beta);CHKERRQ(ierr);
+  } else if (type == NORM_1_AND_2) {
+    PetscCudaSqr<<<1,1,0,PetscDefaultCudaStream>>>(beta+1,beta+1);
+    ierr = PetscNvshmemSum(2,beta,beta);CHKERRQ(ierr);
+    PetscCudaSqrt<<<1,1,0,PetscDefaultCudaStream>>>(beta+1,beta+1);
+  }
+  if (!allocated) {
+    ierr = VecAssignWorkReal(xin,z,beta);CHKERRQ(ierr);
+    ierr = VecRestoreWorkNorm(xin,type,&beta);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+#endif
 
 PetscErrorCode VecCreate_MPICUDA(Vec vv)
 {
@@ -365,6 +541,33 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->getlocalvectorread     = NULL;
     V->ops->restorelocalvectorread = NULL;
     V->ops->getarraywrite          = NULL;
+
+    V->ops->allocateworkscalars    = NULL;
+    V->ops->freeworkscalars        = NULL;
+
+    V->ops->getworkscalar          = NULL;
+    V->ops->restoreworkscalar      = NULL;
+    V->ops->getworknorm            = NULL;
+    V->ops->restoreworknorm        = NULL;
+
+    V->ops->assignworkscalar       = NULL;
+    V->ops->assignworkreal         = NULL;
+    V->ops->setworkscalar          = NULL;
+    V->ops->setworkreal            = NULL;
+    V->ops->copyworkscalartohost   = NULL;
+    V->ops->copyworkrealtohost     = NULL;
+    V->ops->addworkscalar          = NULL;
+    V->ops->subworkscalar          = NULL;
+    V->ops->multworkscalar         = NULL;
+    V->ops->divideworkscalar       = NULL;
+    V->ops->sqrworkreal            = NULL;
+    V->ops->sqrtworkreal           = NULL;
+
+    V->ops->dot_async              = NULL;
+    V->ops->tdot_async             = NULL;
+    V->ops->norm_async             = NULL;
+    V->ops->axpy_async             = NULL;
+    V->ops->aypx_async             = NULL;
   } else {
     V->ops->dotnorm2               = VecDotNorm2_MPICUDA;
     V->ops->waxpy                  = VecWAXPY_SeqCUDA;
@@ -402,6 +605,49 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
     V->ops->restorearray           = VecRestoreArray_SeqCUDA;
     V->ops->getarrayandmemtype        = VecGetArrayAndMemType_SeqCUDA;
     V->ops->restorearrayandmemtype    = VecRestoreArrayAndMemType_SeqCUDA;
+   #if defined(PETSC_HAVE_NVSHMEM)
+    Vec_MPI *vecmpi = (Vec_MPI*)V->data;
+    if (vecmpi->use_nvshmem) {
+      V->ops->allocateworkscalars  = VecAllocateWorkScalars_NVSHMEM;
+      V->ops->freeworkscalars      = VecFreeWorkScalars_NVSHMEM;
+      V->ops->dot_async            = VecDotAsync_NVSHMEM; /* Involves communication */
+      V->ops->tdot_async           = VecTDotAsync_NVSHMEM;
+      V->ops->norm_async           = VecNormAsync_NVSHMEM;
+    } else
+   #endif
+    {
+      V->ops->allocateworkscalars  = VecAllocateWorkScalars_SeqCUDA;
+      V->ops->freeworkscalars      = VecFreeWorkScalars_SeqCUDA;
+      V->ops->dot_async            = VecDotAsync_MPICUDA;
+      V->ops->tdot_async           = VecTDotAsync_MPICUDA;
+      V->ops->norm_async           = VecNormAsync_MPICUDA;
+    }
+
+    V->ops->getworknorm            = VecGetWorkNorm_SeqCUDA;
+    V->ops->restoreworknorm        = VecRestoreWorkNorm_SeqCUDA;
+    V->ops->getworkscalar          = VecGetWorkScalar_SeqCUDA;
+    V->ops->restoreworkscalar      = VecRestoreWorkScalar_SeqCUDA;
+
+    V->ops->getworkscalar          = VecGetWorkScalar_SeqCUDA;
+    V->ops->restoreworkscalar      = VecRestoreWorkScalar_SeqCUDA;
+    V->ops->getworknorm            = VecGetWorkNorm_SeqCUDA;
+    V->ops->restoreworknorm        = VecRestoreWorkNorm_SeqCUDA;
+
+    V->ops->assignworkscalar       = VecAssignWorkScalar_SeqCUDA;
+    V->ops->assignworkreal         = VecAssignWorkReal_SeqCUDA;
+    V->ops->setworkscalar          = VecSetWorkScalar_SeqCUDA;
+    V->ops->setworkreal            = VecSetWorkReal_SeqCUDA;
+    V->ops->copyworkscalartohost   = VecCopyWorkScalarToHost_SeqCUDA;
+    V->ops->copyworkrealtohost     = VecCopyWorkRealToHost_SeqCUDA;
+    V->ops->addworkscalar          = VecAddWorkScalar_SeqCUDA;
+    V->ops->subworkscalar          = VecSubWorkScalar_SeqCUDA;
+    V->ops->multworkscalar         = VecMultWorkScalar_SeqCUDA;
+    V->ops->divideworkscalar       = VecDivideWorkScalar_SeqCUDA;
+    V->ops->sqrworkreal            = VecSqrWorkReal_SeqCUDA;
+    V->ops->sqrtworkreal           = VecSqrtWorkReal_SeqCUDA;
+
+    V->ops->axpy_async             = VecAXPYAsync_SeqCUDA;
+    V->ops->aypx_async             = VecAYPXAsync_SeqCUDA;
   }
   PetscFunctionReturn(0);
 }
@@ -414,6 +660,18 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
   PetscFunctionBegin;
   ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)vv,VECMPICUDA);CHKERRQ(ierr);
+
+#if defined(PETSC_HAVE_NVSHMEM)
+  PetscMPIInt    result;
+  Vec_MPI        *vecmpi = (Vec_MPI*)vv->data;
+
+  vecmpi->use_nvshmem = PETSC_TRUE;
+  ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem",&vecmpi->use_nvshmem,NULL);CHKERRQ(ierr);
+  if (vecmpi->use_nvshmem) {
+    ierr = MPI_Comm_compare(PETSC_COMM_WORLD,PetscObjectComm((PetscObject)vv),&result);CHKERRMPI(ierr);
+    if (result != MPI_IDENT && result != MPI_CONGRUENT) vecmpi->use_nvshmem = PETSC_FALSE;
+  }
+ #endif
 
   ierr = VecBindToCPU_MPICUDA(vv,PETSC_FALSE);CHKERRQ(ierr);
   vv->ops->bindtocpu = VecBindToCPU_MPICUDA;
@@ -430,11 +688,8 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
     if (!vv->spptr) {
       PetscReal pinned_memory_min;
       PetscBool flag;
-      /* Cannot use PetscNew() here because spptr is void* */
-      ierr = PetscMalloc(sizeof(Vec_CUDA),&vv->spptr);CHKERRQ(ierr);
+      ierr = PetscCalloc(sizeof(Vec_CUDA),&vv->spptr);CHKERRQ(ierr);
       veccuda = (Vec_CUDA*)vv->spptr;
-      veccuda->stream = 0; /* using default stream */
-      veccuda->GPUarray_allocated = 0;
       vv->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
       vv->minimum_bytes_pinned_memory = 0;
 
