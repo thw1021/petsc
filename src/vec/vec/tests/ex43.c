@@ -32,11 +32,11 @@ int main(int argc, char **argv)
   for (i=0; i<k; i++) { ierr = VecSetRandom(V[i],rctx);CHKERRQ(ierr); }
   for (reps=0; reps<20; reps++) {
     for (i=1; i<k; i++) {
-      ierr = VecMDot(t,i,V,val_mdot);CHKERRQ(ierr);
+      ierr = VecMDotAsync(t,i,V,val_mdot,pstream);CHKERRQ(ierr);
       ierr = VecMTDot(t,i,V,tval_mdot);CHKERRQ(ierr);
       for (j=0;j<i;j++) {
         ierr = VecDotAsync(t,V[j],&val_dot[j],pstream);CHKERRQ(ierr);
-        ierr = VecTDot(t,V[j],&tval_dot[j]);CHKERRQ(ierr);
+        ierr = VecTDotAsync(t,V[j],&tval_dot[j],pstream);CHKERRQ(ierr);
       }
       /* Check result */
       for (j=0;j<i;j++) {
