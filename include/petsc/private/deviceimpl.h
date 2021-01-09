@@ -5,6 +5,7 @@
 #include <petscdevice.h>
 
 struct _n_PetscStream {
+  PetscStreamType type;
   PetscStreamMode mode;
 #if PetscDefined(HAVE_CUDA)
   cudaStream_t    cstream;
@@ -13,6 +14,16 @@ struct _n_PetscStream {
   hipStream_t     hstream;
 #endif /* PETSC_HAVE_HIP */
 };
+
+#define PetscStreamValidType(_p_strm__,_p_arg__)                        \
+  do {                                                                  \
+    if (PetscUnlikelyDebug(_p_strm__->type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_TYPENOTSET,"PetscStreamType is not set: Argument # %d",_p_arg__); \
+  } while (0)
+
+#define PetscStreamValidTypeSpecific(_p_strm__,_p_type__,_v_type__)     \
+  do {                                                                  \
+    if (PetscUnlikelyDebug(_p_strm__->type != _p_type__)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"PetscStreamType %d is incompatible with vectype %s",(int)_p_type__,_v_type__); \
+  } while (0)
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleHIP_Internal(PetscStream strm)
 {
@@ -123,14 +134,21 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamDisassembleCUDA_Internal(PetscStre
 }
 
 struct _n_PetscEvent {
-  PetscBool    setup;
+  PetscBool       setup;
+  PetscStreamType type;
 #if PetscDefined(HAVE_CUDA)
-  cudaEvent_t  cevent;
+  cudaEvent_t     cevent;
 #endif /* PETSC_HAVE_CUDA */
 #if PetscDefined(HAVE_HIP)
-  hipEvent_t   hevent;
+  hipEvent_t      hevent;
 #endif /* PETSC_HAVE_HIP */
-  unsigned int eventFlags, waitFlags;
+  unsigned int    eventFlags, waitFlags;
 };
 
+struct _n_PetscStreamScalar {
+  PetscOffloadMask omask;
+  PetscStream      pstream;
+  PetscScalar      host;
+  PetscScalar      *device;
+};
 #endif /* DEVICEIMPL_H */
