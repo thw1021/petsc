@@ -2346,7 +2346,6 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayAsync(Vec v, PetscScalar **a, PetscSt
   {
     PetscErrorCode ierr;
 
-    ierr = PetscStreamWaitEvent(pstream,v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
     ierr = VecCUDACopyToGPUAsync(v,pstream);CHKERRQ(ierr);
     *a   = ((Vec_CUDA*)v->spptr)->GPUarray;
   }
