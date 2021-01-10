@@ -92,7 +92,7 @@ typedef struct _n_PetscStreamScalar* PetscStreamScalar;
 
 PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate(PetscScalar,PetscStream,PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar*);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostValue(PetscStreamScalar,PetscScalar*);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostValue(PetscStreamScalar,PetscStream,PetscScalar*);
 /*E
     PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
 
