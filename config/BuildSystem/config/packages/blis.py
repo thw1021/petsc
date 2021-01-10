@@ -15,7 +15,7 @@ class Configure(config.package.Package):
     import nargs
     config.package.Package.setupHelp(self, help)
     help.addArgument(self.PACKAGE,'-download-blis-use-pthreads=<bool>',nargs.ArgBool(None,0,'Use pthreads threading support for '+self.name ))
-    help.addArgument(self.PACKAGE,'-download-blis-enablecblas=<bool>',nargs.ArgBool(None,0,'Enable cblas headers for '+self.name ))
+    help.addArgument(self.PACKAGE,'-download-blis-enable-cblas-headers=<bool>',nargs.ArgBool(None,0,'Enable CBLAS headers for '+self.name ))
     return
 
   def configureLibrary(self):
@@ -64,7 +64,7 @@ class Configure(config.package.Package):
       elif self.openmp.found:
         args.append('--enable-threading=openmp')
         self.usesopenmp = 'yes'
-      if self.argDB['download-blis-enablecblas']:
+      if self.argDB['download-blis-enable-cblas-headers']:
         args.append('--enable-cblas')
       args.append('CC=' + cc)
       args.append('auto')
