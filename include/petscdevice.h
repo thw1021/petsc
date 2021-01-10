@@ -63,8 +63,11 @@ PETSC_EXTERN PetscErrorCode PetscEventCreate(PetscEvent*);
 PETSC_EXTERN PetscErrorCode PetscEventDestroy(PetscEvent*);
 PETSC_EXTERN PetscErrorCode PetscEventSetFlags(PetscEvent,unsigned int,unsigned int);
 PETSC_EXTERN PetscErrorCode PetscEventGetFlags(PetscEvent,unsigned int*,unsigned int*);
+PETSC_EXTERN PetscErrorCode PetscEventSetType(PetscEvent,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscEventGetType(PetscEvent,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscEventSetup(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscEventSynchronize(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscEventQuery(PetscEvent,PetscBool*);
 
 typedef enum {
   PETSC_STREAM_GLOBAL_BLOCKING = 0,
@@ -87,12 +90,17 @@ PETSC_EXTERN PetscErrorCode PetscStreamSplitEnd(PetscStream,void*,PetscBool);
 PETSC_EXTERN PetscErrorCode PetscStreamRecordEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamQuery(PetscStream,PetscBool*);
 
 typedef struct _n_PetscStreamScalar* PetscStreamScalar;
 
-PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate(PetscScalar,PetscStream,PetscStreamScalar*);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate(PetscScalar,PetscStreamScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar*);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostValue(PetscStreamScalar,PetscStream,PetscScalar*);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarSetHost(PetscStreamScalar,PetscScalar,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar,PetscScalar*,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar,PetscScalar*,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar,const PetscScalar**,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
 /*E
     PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
 

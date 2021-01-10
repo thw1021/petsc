@@ -235,7 +235,7 @@ PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscEvent event)
     /* It is honestly baffling that nvidia do not have a "since version X" note on their functions to make this
      easier. Instead you must find and *manually* search each version of the documentation until you find the version in
      which they introduced some change. $330 BILLION market cap and they can't hire some intern to do this???? */
-#if defined(CUDART_VERSION)&& (CUDART_VERSION >= 11010) /* 11.1.0 */
+#if defined(CUDART_VERSION) && (CUDART_VERSION >= 11010) /* 11.1.0 */
     cerr = cudaEventRecordWithFlags(event->cevent, strm->cstream, event->waitFlags);CHKERRCUDA(cerr);
 #else
     cerr = cudaEventRecord(event->cevent, strm->cstream);CHKERRCUDA(cerr);
@@ -355,6 +355,34 @@ PetscErrorCode PetscStreamSynchronize(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscStreamQuery(PetscStream pstream, PetscBool *busy)
+{
+  PetscFunctionBegin;
+  PetscValidStreamType(pstream,1);
+  PetscValidBoolPointer(busy,2);
+  *busy = PETSC_FALSE;
+  switch(pstream->type) {
+  case PETSC_STREAM_CUDA:
+#if PetscDefined(HAVE_CUDA)
+    if (cudaStreamQuery(pstream->cstream) == cudaErrorNotReady) {
+      *busy = PETSC_TRUE;
+      cudaGetLastError();
+    }
+#endif
+    break;
+  case PETSC_STREAM_HIP:
+#if PetscDefined(HAVE_HIP)
+    if (hipStreamQuery(pstream->hstream) == hipErrorNotReady) {
+      *busy = PETSC_TRUE;
+      hipGetLastError();
+    }
+#endif
+  default:
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode PetscEventCreate(PetscEvent *event)
 {
   PetscEvent     e;
@@ -405,9 +433,9 @@ PetscErrorCode PetscEventDestroy(PetscEvent *event)
 PetscErrorCode PetscEventSetFlags(PetscEvent event, unsigned int eventFlags, unsigned int waitFlags)
 {
   PetscFunctionBegin;
+  if (PetscUnlikelyDebug(event->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change flags on already setup event\n");
   event->eventFlags = eventFlags;
   event->waitFlags = waitFlags;
-  event->setup = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -416,6 +444,23 @@ PetscErrorCode PetscEventGetFlags(PetscEvent event, unsigned int *eventFlags, un
   PetscFunctionBegin;
   if (eventFlags) *eventFlags = event->eventFlags;
   if (waitFlags)  *waitFlags  = event->waitFlags;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscEventSetType(PetscEvent event, PetscStreamType type)
+{
+  PetscFunctionBegin;
+  if (PetscUnlikelyDebug(event->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change type on already setup event\n");
+  event->type = type;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscEventGetType(PetscEvent event, PetscStreamType *type)
+{
+  PetscFunctionBegin;
+  PetscValidStreamType(event,1);
+  PetscValidPointer(type,2);
+  *type = event->type;
   PetscFunctionReturn(0);
 }
 
@@ -481,21 +526,50 @@ PetscErrorCode PetscEventSynchronize(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarCreate(PetscScalar val, PetscStream pstream, PetscStreamScalar *pscal)
+PetscErrorCode PetscEventQuery(PetscEvent event, PetscBool *busy)
+{
+  PetscFunctionBegin;
+  PetscValidBoolPointer(busy,2);
+  *busy = PETSC_FALSE;
+  /* If the event isn'setup, it doesn't exist, and therefore isn't busy */
+  if (!(event->setup)) PetscFunctionReturn(0);
+  switch(event->type) {
+  case PETSC_STREAM_CUDA:
+#if PetscDefined(HAVE_CUDA)
+    if (cudaEventQuery(event->cevent) == cudaErrorNotReady) {
+      *busy = PETSC_TRUE;
+      cudaGetLastError();
+    }
+#endif
+    break;
+  case PETSC_STREAM_HIP:
+#if PetscDefined(HAVE_HIP)
+    if (hipEventQuery(event->hevent) == hipErrorNotReady) {
+      *busy = PETSC_TRUE;
+      hipGetLastError();
+    }
+#endif
+  default:
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarCreate(PetscScalar val, PetscStreamScalar *pscal, PetscStream pstream)
 {
   PetscStreamScalar s;
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  PetscValidStreamType(pstream,2);
-  PetscValidPointer(pscal,3);
+  PetscValidStreamType(pstream,3);
+  PetscValidPointer(pscal,2);
   /* Setting to null taken from VecCreate(), why though? */
   *pscal = NULL;
   ierr = PetscNew(&s);CHKERRQ(ierr);
   s->omask = PETSC_OFFLOAD_BOTH;
   s->type = pstream->type;
-  s->host = val;
   ierr = PetscEventCreate(&s->event);CHKERRQ(ierr);
+  ierr = PetscEventSetType(s->event, s->type);CHKERRQ(ierr);
   switch (s->type) {
   case PETSC_STREAM_CUDA:
 #if PetscDefined(HAVE_CUDA)
@@ -504,9 +578,10 @@ PetscErrorCode PetscStreamScalarCreate(PetscScalar val, PetscStream pstream, Pet
     cudaStream_t cstream;
 
     ierr = PetscEventSetFlags(s->event,cudaEventDisableTiming,0);CHKERRQ(ierr);
+    cerr = cudaMallocHost((void **) &s->host, sizeof(PetscScalar));CHKERRCUDA(cerr);
     cerr = cudaMalloc((void**) &s->device, sizeof(PetscScalar));CHKERRCUDA(cerr);
     ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
-    cerr = cudaMemcpyAsync(s->device, &s->host, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
+    cerr = cudaMemcpyAsync(s->device, &val, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
     ierr = PetscStreamRestoreStream(pstream, cstream, PETSC_FALSE);CHKERRQ(ierr);
   }
 #endif
@@ -518,9 +593,10 @@ PetscErrorCode PetscStreamScalarCreate(PetscScalar val, PetscStream pstream, Pet
     hipStream_t hstream;
 
     ierr = PetscEventSetFlags(s->event,hipEventDisableTiming,0);CHKERRQ(ierr);
+    herr = hipMallocHost((void**) &s->host, sizeof(PetscScalar));CHKERRHIP(herr);
     herr = hipMalloc((void**) &s->device, sizeof(PetscScalar));CHKERRHIP(herr);
     ierr = PetscStreamGetStream(pstream, &hstream);CHKERRQ(ierr);
-    herr = hipMemcpyAsync(s->device, &s->host, sizeof(PetscScalar), hipMemcpyHostToDevice, hstream);CHKERRHIP(herr);
+    herr = hipMemcpyAsync(s->device, &val, sizeof(PetscScalar), hipMemcpyHostToDevice, hstream);CHKERRHIP(herr);
     ierr = PetscStreamRestoreStream(pstream, hstream, PETSC_FALSE);CHKERRQ(ierr);
   }
 #endif
@@ -528,6 +604,7 @@ PetscErrorCode PetscStreamScalarCreate(PetscScalar val, PetscStream pstream, Pet
     break;
   }
   ierr = PetscStreamRecordEvent(pstream, s->event);CHKERRQ(ierr);
+  *s->host = val;
   s->isZero = val == (PetscScalar)0.0;
   s->isOne = val == (PetscScalar)1.0;
   *pscal = s;
@@ -549,6 +626,7 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
 #if PetscDefined(HAVE_CUDA)
     cudaError_t cerr;
 
+    cerr = cudaFree((*pscal)->host);CHKERRCUDA(cerr);
     cerr = cudaFree((*pscal)->device);CHKERRCUDA(cerr);
 #endif
   }
@@ -558,6 +636,7 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
 #if PetscDefined(HAVE_HIP)
     hipError_t herr;
 
+    herr = hipFree((*pscal)->host);CHKERRHIP(herr);
     herr = hipFree((*pscal)->device);CHKERRHIP(herr);
 #endif
   }
@@ -568,31 +647,76 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarGetHost(PetscStreamScalar pscal, PetscStream pstream, PetscScalar *val)
+PetscErrorCode PetscStreamScalarSetHost(PetscStreamScalar pscal, PetscScalar val, PetscStream pstream)
 {
-  PetscBool      sync = PETSC_FALSE;
+  PetscBool      eventbusy;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscCheckValidSameStreamType(pscal,1,pstream,2);
-  PetscValidScalarPointer(val,3);
-  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSynchronizeHost_Internal(pscal, pstream, &sync);CHKERRQ(ierr);
-  if (sync) {ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);}
-  pscal->isZero = pscal->host == (PetscScalar)0.0;
-  pscal->isOne = pscal->host == (PetscScalar)1.0;
-  *val = pscal->host;
+  /* We assume the stream is chock full of unrelated work, and would rather not enqueue and sync on it */
+  ierr = PetscEventQuery(pscal->event, &eventbusy);CHKERRQ(ierr);
+  if (eventbusy) {
+    PetscBool streambusy;
+    /* Event is doing something, so we must sync on it, now we have a choice of either syncing on strea or syncing on the
+event. We check stream in the hopes it has no work, otherwise sync on event. */
+    ierr = PetscStreamQuery(pstream, &streambusy);CHKERRQ(ierr);
+    if (streambusy) {
+      ierr = PetscEventSynchronize(pscal->event);CHKERRQ(ierr);
+    } else {
+      ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
+      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    }
+  }
+  *pscal->host = val;
+  pscal->omask = PETSC_OFFLOAD_CPU;
+  ierr = PetscStreamScalarSynchronizeDevice_Internal(pscal, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarGetDevice(PetscStreamScalar pscal, PetscStream pstream, PetscScalar **ptr)
+PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar pscal, PetscScalar *val, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscCheckValidSameStreamType(pscal,1,pstream,2);
-  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSynchronizeDevice_Internal(pscal, pstream);CHKERRQ(ierr);
-  *ptr = pscal->device;
+  PetscValidScalarPointer(val,2);
+  PetscCheckValidSameStreamType(pscal,1,pstream,3);
+  ierr = PetscStreamScalarGetHost_Internal(pscal, val, pstream);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar pscal, PetscScalar *val, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidScalarPointer(val,2);
+  PetscCheckValidSameStreamType(pscal,1,pstream,3);
+  ierr = PetscStreamScalarGetHost_Internal(pscal, val, pstream);CHKERRQ(ierr);
+  /* Again blindly assume this will be written to */
+  pscal->omask = PETSC_OFFLOAD_CPU;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar pscal, const PetscScalar **ptr, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidPointer(ptr,2);
+  PetscCheckValidSameStreamType(pscal,1,pstream,3);
+  ierr = PetscStreamScalarGetDevice_Internal(pscal, (PetscScalar**)ptr, pstream);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidPointer(ptr,2);
+  PetscCheckValidSameStreamType(pscal,1,pstream,3);
+  ierr = PetscStreamScalarGetDevice_Internal(pscal, ptr, pstream);CHKERRQ(ierr);
+  /* Blindlly assume this will change the value */
+  pscal->omask = PETSC_OFFLOAD_GPU;
   PetscFunctionReturn(0);
 }

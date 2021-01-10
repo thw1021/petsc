@@ -256,10 +256,12 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
   Mat            Amat,Pmat;
   PetscBool      diagonalscale;
   PetscStream    pstream;
+  PetscStreamScalar pscaldp, pscalbeta;
 
   PetscFunctionBegin;
   /* Create a stream here for now */
   ierr = PetscStreamCreate(&pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarCreate(dp, &pscaldp, pstream);CHKERRQ(ierr);
   ierr = PCGetDiagonalScale(ksp->pc,&diagonalscale);CHKERRQ(ierr);
   if (diagonalscale) SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
 
@@ -288,27 +290,30 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
   switch (ksp->normtype) {
     case KSP_NORM_PRECONDITIONED:
       ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);               /*    z <- Br                           */
-      ierr = VecNormAsync(Z,NORM_2,&dp,pstream);CHKERRQ(ierr);              /*    dp <- z'*z = e'*A'*B'*B*A*e       */
+      ierr = VecNormAsync(Z,NORM_2,pscaldp,pstream);CHKERRQ(ierr);              /*    dp <- z'*z = e'*A'*B'*B*A*e       */
       KSPCheckNorm(ksp,dp);
       break;
     case KSP_NORM_UNPRECONDITIONED:
-      ierr = VecNormAsync(R,NORM_2,&dp,pstream);CHKERRQ(ierr);              /*    dp <- r'*r = e'*A'*A*e            */
+      ierr = VecNormAsync(R,NORM_2,pscaldp,pstream);CHKERRQ(ierr);              /*    dp <- r'*r = e'*A'*A*e            */
       KSPCheckNorm(ksp,dp);
       break;
     case KSP_NORM_NATURAL:
       ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);               /*    z <- Br                           */
-      ierr = VecXDotAsync(Z,R,&beta,pstream);CHKERRQ(ierr);                 /*    beta <- z'*r                      */
+      ierr = VecXDotAsync(Z,R,pscalbeta,pstream);CHKERRQ(ierr);                 /*    beta <- z'*r                      */
+      ierr = PetscStreamScalarGetHostRead(pscalbeta,&beta,pstream);CHKERRQ(ierr);
       KSPCheckDot(ksp,beta);
       dp = PetscSqrtReal(PetscAbsScalar(beta));                /*    dp <- r'*z = r'*B*r = e'*A'*B*A*e */
+      ierr = PetscStreamScalarSetHost(pscaldp,dp,pstream);CHKERRQ(ierr);
       break;
     case KSP_NORM_NONE:
       dp = 0.0;
+      ierr = PetscStreamScalarSetHost(pscaldp,dp,pstream);CHKERRQ(ierr);
       break;
     default: SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"%s",KSPNormTypes[ksp->normtype]);
   }
   ierr       = KSPLogResidualHistory(ksp,dp);CHKERRQ(ierr);
   ierr       = KSPMonitor(ksp,0,dp);CHKERRQ(ierr);
-  ksp->rnorm = dp;
+  ierr = PetscStreamScalarGetHostRead(pscaldp,&ksp->rnorm,pstream);CHKERRQ(ierr);
 
   ierr = (*ksp->converged)(ksp,0,dp,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);     /* test for convergence */
   if (ksp->reason) PetscFunctionReturn(0);
@@ -317,13 +322,15 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
     ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);                /*     z <- Br                           */
   }
   if (ksp->normtype != KSP_NORM_NATURAL) {
-    ierr = VecXDotAsync(Z,R,&beta,pstream);CHKERRQ(ierr);                  /*     beta <- z'*r                      */
+    ierr = VecXDotAsync(Z,R,pscalbeta,pstream);CHKERRQ(ierr);                  /*     beta <- z'*r                      */
+    ierr = PetscStreamScalarGetHostRead(pscalbeta,&beta,pstream);CHKERRQ(ierr);
     KSPCheckDot(ksp,beta);
   }
 
   i = 0;
   do {
     ksp->its = i+1;
+    ierr = PetscStreamScalarGetHostRead(pscalbeta,&beta,pstream);CHKERRQ(ierr);
     if (beta == 0.0) {
       ksp->reason = KSP_CONVERGED_ATOL;
       ierr        = PetscInfo(ksp,"converged due to beta = 0\n");CHKERRQ(ierr);
@@ -396,6 +403,7 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
     i++;
   } while (i<ksp->max_it);
   if (i >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
+  ierr = PetscStreamScalarDesroy(&pscaldp);CHKERRQ(ierr);
   ierr = PetscStreamDestroy(&pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

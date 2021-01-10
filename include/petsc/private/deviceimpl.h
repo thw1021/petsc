@@ -159,7 +159,7 @@ struct _n_PetscStreamScalar {
   PetscOffloadMask omask;
   PetscStreamType  type;
   PetscEvent       event;
-  PetscScalar      host;
+  PetscScalar      *host;
   PetscScalar      *device;
   PetscBool        isZero, isOne;
 };
@@ -178,7 +178,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeDevice_Internal(P
       cudaStream_t   cstream;
 
       ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
-      cerr = cudaMemcpyAsync(pscal->device, &pscal->host, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
+      cerr = cudaMemcpyAsync(pscal->device, pscal->host, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
       ierr = PetscStreamRestoreStream(pstream, cstream, PETSC_FALSE);CHKERRQ(ierr);
     }
 #endif
@@ -190,7 +190,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeDevice_Internal(P
       hipStream_t    hstream;
 
       ierr = PetscStreamGetStream(pstream, &hstream);CHKERRQ(ierr);
-      herr = hipMemcpyAsync(pscal->device, &pscal->host, sizeof(PetscScalar), hipMemcpyHostToDevice, hstream);CHKERRHIP(herr);
+      herr = hipMemcpyAsync(pscal->device, pscal->host, sizeof(PetscScalar), hipMemcpyHostToDevice, hstream);CHKERRHIP(herr);
       ierr = PetscStreamRestoreStream(pstream, hstream, PETSC_FALSE);CHKERRQ(ierr);
     }
 #endif
@@ -199,9 +199,10 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeDevice_Internal(P
     }
     ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
     pscal->omask = PETSC_OFFLOAD_BOTH;
-    pscal->isZero = pscal->host == (PetscScalar)0.0;
-    pscal->isOne = pscal->host == (PetscScalar)1.0;
   }
+  /* Host is up to date, check on the respective values and update cache */
+  pscal->isZero = (PetscBool)(*pscal->host == (PetscScalar)0.0);
+  pscal->isOne = (PetscBool)(*pscal->host == (PetscScalar)1.0);
   PetscFunctionReturn(0);
 }
 
@@ -221,7 +222,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeHost_Internal(Pet
       cudaStream_t   cstream;
 
       ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
-      cerr = cudaMemcpyAsync(&pscal->host, pscal->device, sizeof(PetscScalar), cudaMemcpyDeviceToHost, cstream);CHKERRCUDA(cerr);
+      cerr = cudaMemcpyAsync(pscal->host, pscal->device, sizeof(PetscScalar), cudaMemcpyDeviceToHost, cstream);CHKERRCUDA(cerr);
       ierr = PetscStreamRestoreStream(pstream, cstream, PETSC_FALSE);CHKERRQ(ierr);
     }
 #endif
@@ -233,7 +234,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeHost_Internal(Pet
       hipStream_t    hstream;
 
       ierr = PetscStreamGetStream(pstream, &hstream);CHKERRQ(ierr);
-      herr = hipMemcpyAsync(&pscal->host, pscal->device, sizeof(PetscScalar), hipMemcpyDeviceToHost, hstream);CHKERRHIP(herr);
+      herr = hipMemcpyAsync(pscal->host, pscal->device, sizeof(PetscScalar), hipMemcpyDeviceToHost, hstream);CHKERRHIP(herr);
       ierr = PetscStreamRestoreStream(pstream, hstream, PETSC_FALSE);CHKERRQ(ierr);
     }
 #endif
@@ -244,6 +245,49 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeHost_Internal(Pet
     pscal->omask = PETSC_OFFLOAD_BOTH;
     *sync = PETSC_TRUE;
   }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetDevice_Internal(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSynchronizeDevice_Internal(pscal, pstream);CHKERRQ(ierr);
+  *ptr = pscal->device;
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetHost_Internal(PetscStreamScalar pscal, PetscScalar *val, PetscStream pstream)
+{
+  PetscBool      sync;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSynchronizeHost_Internal(pscal, pstream, &sync);CHKERRQ(ierr);
+  if (sync) {ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);}
+  pscal->isZero = (PetscBool)(*pscal->host == (PetscScalar)0.0);
+  pscal->isOne = (PetscBool)(*pscal->host == (PetscScalar)1.0);
+  *val = *pscal->host;
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarCheckCache_Internal(PetscStreamScalar pscal, PetscScalar assertval, PetscStream pstream)
+{
+  PetscFunctionBegin;
+#if PetscDefined(USE_DEBUG)
+  {
+    PetscScalar    alpha;
+    PetscErrorCode ierr;
+
+    ierr = PetscStreamScalarGetHost_Internal(pscal, &alpha, pstream);CHKERRQ(ierr);
+    if (PetscUnlikely(alpha != assertval)) {
+      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bug in PetscStreamScalar cache, assumed %f but was %f\n",assertval,alpha);
+    }
+  }
+#endif
   PetscFunctionReturn(0);
 }
 #endif /* DEVICEIMPL_H */

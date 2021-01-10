@@ -138,12 +138,12 @@ PETSC_EXTERN PetscErrorCode VecSetSizes(Vec,PetscInt,PetscInt);
 
 PETSC_EXTERN PetscErrorCode VecDotNorm2(Vec,Vec,PetscScalar*,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecDot(Vec,Vec,PetscScalar*);
-PETSC_EXTERN PetscErrorCode VecDotAsync(Vec,Vec,PetscScalar*,PetscStream);
+PETSC_EXTERN PetscErrorCode VecDotAsync(Vec,Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecDotRealPart(Vec,Vec,PetscReal*);
 PETSC_EXTERN PetscErrorCode VecTDot(Vec,Vec,PetscScalar*);
-PETSC_EXTERN PetscErrorCode VecTDotAsync(Vec,Vec,PetscScalar*,PetscStream);
+PETSC_EXTERN PetscErrorCode VecTDotAsync(Vec,Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecMDot(Vec,PetscInt,const Vec[],PetscScalar[]);
-PETSC_EXTERN PetscErrorCode VecMDotAsync(Vec,PetscInt,const Vec[],PetscScalar[],PetscStream);
+PETSC_EXTERN PetscErrorCode VecMDotAsync(Vec,PetscInt,const Vec[],PetscStreamScalar[],PetscStream);
 PETSC_EXTERN PetscErrorCode VecMTDot(Vec,PetscInt,const Vec[],PetscScalar[]);
 PETSC_EXTERN PetscErrorCode VecGetSubVector(Vec,IS,Vec*);
 PETSC_EXTERN PetscErrorCode VecRestoreSubVector(Vec,IS,Vec*);
@@ -217,7 +217,7 @@ M*/
 M*/
 
 PETSC_EXTERN PetscErrorCode VecNorm(Vec,NormType,PetscReal *);
-PETSC_EXTERN PetscErrorCode VecNormAsync(Vec,NormType,PetscReal *,PetscStream);
+PETSC_EXTERN PetscErrorCode VecNormAsync(Vec,NormType,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecNormAvailable(Vec,NormType,PetscBool *,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecNormalize(Vec,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecSum(Vec,PetscScalar*);
@@ -231,11 +231,11 @@ PETSC_EXTERN PetscErrorCode VecSet(Vec,PetscScalar);
 PETSC_EXTERN PetscErrorCode VecSetInf(Vec);
 PETSC_EXTERN PetscErrorCode VecSwap(Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecAXPY(Vec,PetscScalar,Vec);
-PETSC_EXTERN PetscErrorCode VecAXPYAsync(Vec,PetscScalar*,Vec,PetscStream);
+PETSC_EXTERN PetscErrorCode VecAXPYAsync(Vec,PetscStreamScalar,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecAXPBY(Vec,PetscScalar,PetscScalar,Vec);
 PETSC_EXTERN PetscErrorCode VecMAXPY(Vec,PetscInt,const PetscScalar[],Vec[]);
 PETSC_EXTERN PetscErrorCode VecAYPX(Vec,PetscScalar,Vec);
-PETSC_EXTERN PetscErrorCode VecAYPXAsync(Vec,PetscScalar*,Vec,PetscStream);
+PETSC_EXTERN PetscErrorCode VecAYPXAsync(Vec,PetscStreamScalar,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecWAXPY(Vec,PetscScalar,Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecAXPBYPCZ(Vec,PetscScalar,PetscScalar,PetscScalar,Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecPointwiseMax(Vec,Vec,Vec);
