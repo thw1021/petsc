@@ -15,15 +15,25 @@ struct _n_PetscStream {
 #endif /* PETSC_HAVE_HIP */
 };
 
-#define PetscStreamValidType(_p_strm__,_p_arg__)                        \
+#define PetscValidStreamType(_p_strm__,_p_arg__)                        \
   do {                                                                  \
-    if (PetscUnlikelyDebug(_p_strm__->type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_TYPENOTSET,"PetscStreamType is not set: Argument # %d",_p_arg__); \
+    if (PetscUnlikelyDebug((_p_strm__)->type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_TYPENOTSET,"PetscStreamType is not set: Argument # %d",_p_arg__); \
   } while (0)
 
-#define PetscStreamValidTypeSpecific(_p_strm__,_p_type__,_v_type__)     \
+#define PetscValidStreamTypeSpecific(_p_strm__,_p_arg__,_p_type__,_v_type__) \
   do {                                                                  \
-    if (PetscUnlikelyDebug(_p_strm__->type != _p_type__)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"PetscStreamType %d is incompatible with vectype %s",(int)_p_type__,_v_type__); \
+    PetscValidStreamType(_p_strm__,_p_arg__);                           \
+    if (PetscUnlikelyDebug((_p_strm__)->type != (_p_type__))) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"PetscStreamType %d arg #%d is incompatible with vectype %s",(int)(_p_type__),(_p_arg__),(_v_type__)); \
   } while (0)
+
+#define PetscCheckValidSameStreamType(_p_strm1__,_p_arg1__,_p_strm2__,_p_arg2__) \
+  do {                                                                  \
+    PetscValidStreamType(_p_strm1__,_p_arg1__);                         \
+    PetscValidStreamType(_p_strm2__,_p_arg2__);                         \
+    if (PetscUnlikelyDebug((_p_strm1__)->type != (_p_strm2__)->type)) { \
+      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"PetscStreamType %d is incompatible with other PetscStreamType %d in arguments #%d and #%d",(int)((_p_strm1__)->type),(int)((_p_strm2__)->type),(_p_arg1__),(_p_arg2__)); \
+    }                                                                   \
+} while (0)
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleHIP_Internal(PetscStream strm)
 {
@@ -147,8 +157,93 @@ struct _n_PetscEvent {
 
 struct _n_PetscStreamScalar {
   PetscOffloadMask omask;
-  PetscStream      pstream;
+  PetscStreamType  type;
+  PetscEvent       event;
   PetscScalar      host;
   PetscScalar      *device;
+  PetscBool        isZero, isOne;
 };
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeDevice_Internal(PetscStreamScalar pscal, PetscStream pstream)
+{
+  PetscFunctionBegin;
+  if (pscal->omask == PETSC_OFFLOAD_CPU) {
+    PetscErrorCode ierr;
+
+    switch (pscal->type) {
+    case PETSC_STREAM_CUDA:
+#if PetscDefined(HAVE_CUDA)
+    {
+      cudaError_t    cerr;
+      cudaStream_t   cstream;
+
+      ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
+      cerr = cudaMemcpyAsync(pscal->device, &pscal->host, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
+      ierr = PetscStreamRestoreStream(pstream, cstream, PETSC_FALSE);CHKERRQ(ierr);
+    }
+#endif
+    break;
+    case PETSC_STREAM_HIP:
+#if PetscDefined(HAVE_HIP)
+    {
+      hipError_t     herr;
+      hipStream_t    hstream;
+
+      ierr = PetscStreamGetStream(pstream, &hstream);CHKERRQ(ierr);
+      herr = hipMemcpyAsync(pscal->device, &pscal->host, sizeof(PetscScalar), hipMemcpyHostToDevice, hstream);CHKERRHIP(herr);
+      ierr = PetscStreamRestoreStream(pstream, hstream, PETSC_FALSE);CHKERRQ(ierr);
+    }
+#endif
+    default:
+      break;
+    }
+    ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
+    pscal->omask = PETSC_OFFLOAD_BOTH;
+    pscal->isZero = pscal->host == (PetscScalar)0.0;
+    pscal->isOne = pscal->host == (PetscScalar)1.0;
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeHost_Internal(PetscStreamScalar pscal, PetscStream pstream, PetscBool *sync)
+{
+  PetscFunctionBegin;
+  PetscValidBoolPointer(sync,3);
+  *sync = PETSC_FALSE;
+  if (pscal->omask == PETSC_OFFLOAD_GPU) {
+    PetscErrorCode ierr;
+
+    switch (pscal->type) {
+    case PETSC_STREAM_CUDA:
+#if PetscDefined(HAVE_CUDA)
+    {
+      cudaError_t    cerr;
+      cudaStream_t   cstream;
+
+      ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
+      cerr = cudaMemcpyAsync(&pscal->host, pscal->device, sizeof(PetscScalar), cudaMemcpyDeviceToHost, cstream);CHKERRCUDA(cerr);
+      ierr = PetscStreamRestoreStream(pstream, cstream, PETSC_FALSE);CHKERRQ(ierr);
+    }
+#endif
+    break;
+    case PETSC_STREAM_HIP:
+#if PetscDefined(HAVE_HIP)
+    {
+      hipError_t     herr;
+      hipStream_t    hstream;
+
+      ierr = PetscStreamGetStream(pstream, &hstream);CHKERRQ(ierr);
+      herr = hipMemcpyAsync(&pscal->host, pscal->device, sizeof(PetscScalar), hipMemcpyDeviceToHost, hstream);CHKERRHIP(herr);
+      ierr = PetscStreamRestoreStream(pstream, hstream, PETSC_FALSE);CHKERRQ(ierr);
+    }
+#endif
+    default:
+      break;
+    }
+    ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
+    pscal->omask = PETSC_OFFLOAD_BOTH;
+    *sync = PETSC_TRUE;
+  }
+  PetscFunctionReturn(0);
+}
 #endif /* DEVICEIMPL_H */
