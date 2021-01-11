@@ -87,8 +87,11 @@ int main(int argc,char **argv)
   /* Solve the problem */
   ierr = TaoSetTolerances(tao, 1.e-5, 0.0, 0.0);CHKERRQ(ierr);
   ierr = TaoSetMaximumIterations(tao, 5);CHKERRQ(ierr);
-  ierr = TaoRecycleQNHistory(tao, PETSC_TRUE);CHKERRQ(ierr);
+  ierr = TaoSetRecycleHistoryFlag(tao, PETSC_TRUE);CHKERRQ(ierr);
   reason = TAO_CONTINUE_ITERATING;
+  flg = PETSC_FALSE;
+  ierr = TaoGetRecycleHistoryFlag(tao, &flg);CHKERRQ(ierr);
+  if (flg) ierr = PetscPrintf(PETSC_COMM_SELF, "Recycle: enabled\n");CHKERRQ(ierr);
   while (reason != TAO_CONVERGED_GATOL) {
     ierr = TaoSolve(tao);CHKERRQ(ierr);
     ierr = TaoGetConvergedReason(tao, &reason);CHKERRQ(ierr);
@@ -99,15 +102,17 @@ int main(int argc,char **argv)
 
   /* Disable recycling and solve again! */
   ierr = TaoSetMaximumIterations(tao, 100);CHKERRQ(ierr);
-  ierr = TaoRecycleQNHistory(tao, PETSC_FALSE);CHKERRQ(ierr);
+  ierr = TaoSetRecycleHistoryFlag(tao, PETSC_FALSE);CHKERRQ(ierr);
   ierr = VecSet(x, zero);CHKERRQ(ierr);
+  ierr = TaoGetRecycleHistoryFlag(tao, &flg);CHKERRQ(ierr);
+  if (!flg) ierr = PetscPrintf(PETSC_COMM_SELF, "Recycle: disabled\n");CHKERRQ(ierr);
   ierr = TaoSolve(tao);CHKERRQ(ierr);
   ierr = TaoGetConvergedReason(tao, &reason);CHKERRQ(ierr);
   if (reason != TAO_CONVERGED_GATOL) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_NOT_CONVERGED, "Solution failed to converge!");
   ierr = TaoGetIterationNumber(tao, &oneshot_its);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_SELF, "-----------------------\n");CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_SELF, "recycled its: %D | oneshot its: %D\n", recycled_its, oneshot_its);CHKERRQ(ierr);
-  if (recycled_its != oneshot_its) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_NOT_CONVERGED, "BQNLS recycling does not work!");
+  if (recycled_its != oneshot_its) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_NOT_CONVERGED, "Recycled solution does not match oneshot solution!");
 
   ierr = TaoDestroy(&tao);CHKERRQ(ierr);
   ierr = VecDestroy(&x);CHKERRQ(ierr);

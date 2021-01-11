@@ -14,7 +14,6 @@ typedef struct {
   Mat B;
   PC pc;
   PetscBool is_spd;
-  PetscBool recycle;
 } TAO_BQNK;
 
 #define BQNK_INIT_CONSTANT         0
