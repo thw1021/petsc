@@ -152,7 +152,7 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f, Vec G,void *ptr)
   PetscFunctionBeginUser;
   /* Get pointers to vector data */
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
-  ierr = VecGetArray(G,&g);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(G,&g);CHKERRQ(ierr);
 
   /* Compute G(X) */
   if (user->chained) {
