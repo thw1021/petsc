@@ -216,7 +216,7 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
     }
 
     /* TODO: this is not a nested vector. Need to implement nested vector */
-    ierr = DMNetworkGetComponentOffset(networkdm,e,-1,&lofst);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,e,ALL_COMPONENTS,&lofst);CHKERRQ(ierr);
     barr[lofst] = branch->bat;
   }
 
@@ -232,7 +232,7 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
         ierr = MatSetValuesLocal(v22,1,row,1,col,val,INSERT_VALUES);CHKERRQ(ierr);
       } else {
         /* TODO: this is not a nested vector. Need to implement nested vector */
-        ierr = DMNetworkGetComponentOffset(networkdm,v,-1,&lofst);CHKERRQ(ierr);
+        ierr = DMNetworkGetComponentOffset(networkdm,v,ALL_COMPONENTS,&lofst);CHKERRQ(ierr);
         barr[lofst] -= node->inj;
       }
     }

@@ -78,7 +78,7 @@ PetscErrorCode FormFunction_Water(DM networkdm,Vec localX,Vec localF,PetscInt nv
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
     if (ghostvtex) continue;
 
-    ierr = DMNetworkGetComponentOffset(networkdm,vtx[i],-1,&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vtx[i],ALL_COMPONENTS,&offset);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[i],&ncomp);CHKERRQ(ierr);
     ierr = DMNetworkGetComponent(networkdm,vtx[i],ncomp-1,&key,(void**)&vertex,NULL);CHKERRQ(ierr);
 

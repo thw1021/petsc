@@ -157,7 +157,7 @@ PetscErrorCode WASHIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void* ctx)
     if (ghost) continue;
 
     ierr = DMNetworkGetComponent(networkdm,v,0,&type,(void**)&junction,NULL);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponentOffset(networkdm,v,-1,&varoffset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,v,ALL_COMPONENTS,&varoffset);CHKERRQ(ierr);
     juncx      = (PipeField*)(xarr + varoffset);
     juncf      = (PetscScalar*)(farr + varoffset);
 
@@ -173,7 +173,7 @@ PetscErrorCode WASHIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void* ctx)
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
   for (e=eStart; e<eEnd; e++) {
     ierr = DMNetworkGetComponent(networkdm,e,0,&type,(void**)&pipe,NULL);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponentOffset(networkdm,e,-1,&varoffset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,e,ALL_COMPONENTS,&varoffset);CHKERRQ(ierr);
     pipex    = (PipeField*)(xarr + varoffset);
     pipexdot = (PipeField*)(xdotarr + varoffset);
     pipef    = (PetscScalar*)(farr + varoffset);
@@ -191,8 +191,8 @@ PetscErrorCode WASHIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void* ctx)
     ierr = DMNetworkGetConnectedVertices(networkdm,e,&cone);CHKERRQ(ierr);
     vfrom = cone[0]; /* local ordering */
     vto   = cone[1];
-    ierr = DMNetworkGetComponentOffset(networkdm,vfrom,-1,&offsetfrom);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponentOffset(networkdm,vto,-1,&offsetto);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vfrom,ALL_COMPONENTS,&offsetfrom);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vto,ALL_COMPONENTS,&offsetto);CHKERRQ(ierr);
 
     /* Evaluate upstream boundary */
     ierr = DMNetworkGetComponent(networkdm,vfrom,0,&type,(void**)&junction,NULL);CHKERRQ(ierr);
@@ -249,7 +249,7 @@ PetscErrorCode WASHSetInitialSolution(DM networkdm,Vec X,Wash wash)
   /* Edge */
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
   for (e=eStart; e<eEnd; e++) {
-    ierr = DMNetworkGetComponentOffset(networkdm,e,-1,&varoffset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,e,ALL_COMPONENTS,&varoffset);CHKERRQ(ierr);
     ierr = DMNetworkGetComponent(networkdm,e,0,&type,(void**)&pipe,NULL);CHKERRQ(ierr);
 
     /* set initial values for this pipe */
@@ -266,8 +266,8 @@ PetscErrorCode WASHSetInitialSolution(DM networkdm,Vec X,Wash wash)
     ierr = DMNetworkGetConnectedVertices(networkdm,e,&cone);CHKERRQ(ierr);
     vfrom = cone[0]; /* local ordering */
     vto   = cone[1];
-    ierr = DMNetworkGetComponentOffset(networkdm,vfrom,-1,&offsetfrom);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponentOffset(networkdm,vto,-1,&offsetto);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vfrom,ALL_COMPONENTS,&offsetfrom);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vto,ALL_COMPONENTS,&offsetto);CHKERRQ(ierr);
 
     /* if vform is a head vertex: */
     ierr = DMNetworkGetComponent(networkdm,vfrom,0,&vkey,(void**)&junction,NULL);CHKERRQ(ierr);

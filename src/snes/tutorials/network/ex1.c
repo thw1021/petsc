@@ -84,8 +84,8 @@ PetscErrorCode FormJacobian_subPower(SNES snes,Vec X, Mat J,Mat Jpre,void *appct
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
     if (ghostvtex) continue;
 
-    ierr = DMNetworkGetComponentGlobalOffset(networkdm,vtx[i],-1,&offset);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponent(networkdm,vtx[i],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentGlobalOffset(networkdm,vtx[i],ALL_COMPONENTS,&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vtx[i],ALL_COMPONENTS,NULL,NULL,&nvar);CHKERRQ(ierr);
     for (j=0; j<nvar; j++) {
       row = offset + j;
       ierr = MatSetValues(J,1,&row,1,&row,&one,ADD_VALUES);CHKERRQ(ierr);
@@ -118,8 +118,8 @@ PetscErrorCode FormFunction_Dummy(DM networkdm,Vec localX, Vec localF,PetscInt n
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghostvtex);CHKERRQ(ierr);
     if (ghostvtex) continue;
 
-    ierr = DMNetworkGetComponentOffset(networkdm,vtx[i],-1,&offset);CHKERRQ(ierr);
-    ierr = DMNetworkGetComponent(networkdm,vtx[i],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponentOffset(networkdm,vtx[i],ALL_COMPONENTS,&offset);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vtx[i],ALL_COMPONENTS,NULL,NULL,&nvar);CHKERRQ(ierr);
     for (j=0; j<nvar; j++) {
       farr[offset+j] = xarr[offset+j] - xoldarr[offset+j];
     }
@@ -180,7 +180,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
     void*          component;
     const PetscInt *connedges;
 
-    ierr = DMNetworkGetComponent(networkdm,vtx[v],-1,NULL,NULL,&nvar);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,vtx[v],ALL_COMPONENTS,NULL,NULL,&nvar);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(networkdm,vtx[v],&ncomp);CHKERRQ(ierr);
     /* printf("  [%d] coupling vertex[%D]: v %D, ncomp %D; nvar %D\n",rank,v,vtx[v], ncomp,nvar); */
 

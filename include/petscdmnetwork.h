@@ -7,6 +7,8 @@
 #include <petscdmplex.h>
 #include <petscviewer.h>
 
+#define ALL_COMPONENTS -1
+
 /*
   DMNetworkComponentGenericDataType - This is the data type that PETSc uses for storing the component data.
             For compatibility with PetscSF, which is used for data distribution, its declared as PetscInt.
