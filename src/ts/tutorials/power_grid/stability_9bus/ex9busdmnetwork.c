@@ -1005,7 +1005,7 @@ int main(int argc,char ** argv)
   if (!rank){
     numVertices = NBUS*nc; numEdges = NBRANCH*nc+(nc-1);
   }
-  ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
+  ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
   ierr = DMNetworkAddSubnetwork(networkdm,NULL,numVertices,numEdges,edgelist,NULL);CHKERRQ(ierr);
 
   /* Set up the network layout */

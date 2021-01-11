@@ -495,7 +495,7 @@ int main(int argc,char ** argv)
     PetscLogStagePush(stage2);
 
     /* Set number of nodes/edges and edge connectivity */
-    ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,nsubnet);CHKERRQ(ierr);
+    ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,nsubnet);CHKERRQ(ierr);
     ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices1,numEdges1,edgelist1,NULL);CHKERRQ(ierr);
     ierr = DMNetworkAddSubnetwork(networkdm,"",numVertices2,numEdges2,edgelist2,NULL);CHKERRQ(ierr);
 

@@ -46,8 +46,8 @@ int main(int argc,char ** argv)
   comp1.val = 10.0*rank;
 
   /* Set number of subnetworks, numbers of vertices and edges over each subnetwork */
-  ierr = DMNetworkSetSizes(dmnetwork,nsubnet,PETSC_DECIDE);CHKERRQ(ierr);
-  ierr = DMNetworkGetSizes(dmnetwork,NULL,&Nsubnet);CHKERRQ(ierr);
+  ierr = DMNetworkSetNumSubNetworks(dmnetwork,nsubnet,PETSC_DECIDE);CHKERRQ(ierr);
+  ierr = DMNetworkGetNumSubNetworks(dmnetwork,NULL,&Nsubnet);CHKERRQ(ierr);
 
   /* Input subnetworks; when size>1, process[i] creates subnetwork[i] */
   for (i=0; i<Nsubnet; i++) {numVertices[i] = 0; numEdges[i] = 0;}

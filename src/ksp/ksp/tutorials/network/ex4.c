@@ -55,7 +55,7 @@ int main(int argc,char ** argv)
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&dmnetwork);CHKERRQ(ierr);
 
   /* Set number of subnetworks, numbers of vertices and edges over each subnetwork */
-  ierr = DMNetworkSetSizes(dmnetwork,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
+  ierr = DMNetworkSetNumSubNetworks(dmnetwork,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
 
   for (i=0; i<Nsubnet; i++) {
     PetscInt netNum = -1;

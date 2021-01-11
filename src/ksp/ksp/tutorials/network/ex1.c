@@ -259,7 +259,7 @@ int main(int argc,char ** argv)
 
   /* Set local number of nodes/edges, add edge connectivity */
   nV[0] = nnode; nE[0] = nbranch;
-  ierr = DMNetworkSetSizes(dmnetwork,PETSC_DECIDE,1);CHKERRQ(ierr);
+  ierr = DMNetworkSetNumSubNetworks(dmnetwork,PETSC_DECIDE,1);CHKERRQ(ierr);
   ierr = DMNetworkAddSubnetwork(dmnetwork,"",nV[0],nE[0],edgelist,NULL);CHKERRQ(ierr);
 
   /* Set up the network layout */

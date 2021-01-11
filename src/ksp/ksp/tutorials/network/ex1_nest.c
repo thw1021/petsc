@@ -278,7 +278,7 @@ int main(int argc,char ** argv)
   ierr = DMNetworkRegisterComponent(networkdm,"bsrt",sizeof(Branch),&componentkey[1]);CHKERRQ(ierr);
 
   /* Set number of nodes/edges, add edge connectivity */
-  ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
+  ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
   ierr = DMNetworkAddSubnetwork(networkdm,"",nnode,nbranch,edgelist,NULL);CHKERRQ(ierr);
 
   /* Set up the network layout */

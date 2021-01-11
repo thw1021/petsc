@@ -413,7 +413,7 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] Total local nvertices %D + %D = %D, nedges %D + %D = %D\n",rank,numVertices[0],numVertices[1],numVertices[0]+numVertices[1],numEdges[0],numEdges[1],numEdges[0]+numEdges[1]);CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
-  ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
+  ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,Nsubnet);CHKERRQ(ierr);
   ierr = DMNetworkAddSubnetwork(networkdm,"power",numVertices[0],numEdges[0],edgelist_power,&power_netnum);CHKERRQ(ierr);
   ierr = DMNetworkAddSubnetwork(networkdm,"water",numVertices[1],numEdges[1],edgelist_water,&water_netnum);CHKERRQ(ierr);
 

@@ -653,7 +653,7 @@ int main(int argc,char ** argv)
   pipes       = wash->pipe;
 
   /* Set up the network layout */
-  ierr = DMNetworkSetSizes(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
+  ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
   ierr = DMNetworkAddSubnetwork(networkdm,NULL,nvertices,nedges,edgelist,NULL);CHKERRQ(ierr);
 
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);

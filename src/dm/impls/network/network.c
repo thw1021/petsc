@@ -25,7 +25,7 @@ PetscErrorCode DMNetworkGetPlex(DM dm,DM *plexdm)
 }
 
 /*@
-  DMNetworkGetSizes - Gets the the number of subnetworks
+  DMNetworkGetNumSubNetworks - Gets the the number of subnetworks
 
   Not collective
 
@@ -38,9 +38,9 @@ PetscErrorCode DMNetworkGetPlex(DM dm,DM *plexdm)
 
   Level: beginner
 
-.seealso: DMNetworkCreate(), DMNetworkSetSizes()
+.seealso: DMNetworkCreate(), DMNetworkSetNumSubNetworks()
 @*/
-PetscErrorCode DMNetworkGetSizes(DM dm,PetscInt *nsubnet,PetscInt *Nsubnet)
+PetscErrorCode DMNetworkGetNumSubNetworks(DM dm,PetscInt *nsubnet,PetscInt *Nsubnet)
 {
   DM_Network *network = (DM_Network*)dm->data;
 
@@ -51,7 +51,7 @@ PetscErrorCode DMNetworkGetSizes(DM dm,PetscInt *nsubnet,PetscInt *Nsubnet)
 }
 
 /*@
-  DMNetworkSetSizes - Sets the number of subnetworks.
+  DMNetworkSetNumSubNetworks - Sets the number of subnetworks.
 
   Collective on dm
 
@@ -62,9 +62,9 @@ PetscErrorCode DMNetworkGetSizes(DM dm,PetscInt *nsubnet,PetscInt *Nsubnet)
 
    Level: beginner
 
-.seealso: DMNetworkCreate()
+.seealso: DMNetworkCreate(), DMNetworkGetNumSubNetworks()
 @*/
-PetscErrorCode DMNetworkSetSizes(DM dm,PetscInt nsubnet,PetscInt Nsubnet)
+PetscErrorCode DMNetworkSetNumSubNetworks(DM dm,PetscInt nsubnet,PetscInt Nsubnet)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
