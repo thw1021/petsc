@@ -6,8 +6,10 @@
   Not collective
 
   Input Parameters:
-+ dm - the dm object
-- plexmdm - the plex dm object
+. dm - the dm object
+
+  Output Parameters:
+- plexdm - the plex dm object
 
   Level: Advanced
 
@@ -740,7 +742,7 @@ PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt netnum,PetscInt *nv,PetscIn
 }
 
 /*@
-  DMNetworkAddSubnetworkSharedVertices - Add shared vertices that connect two given subnetworks
+  DMNetworkAddSharedVertices - Add shared vertices that connect two given subnetworks
 
   Collective on dm
 
@@ -756,7 +758,7 @@ PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt netnum,PetscInt *nv,PetscIn
 
 .seealso: DMNetworkCreate, DMNetworkGetSubnetworkSharedVertices
 @*/
-PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetnum,PetscInt bnetnum,PetscInt nsvtx,PetscInt asvtx[],PetscInt bsvtx[])
+PetscErrorCode DMNetworkAddSharedVertices(DM dm,PetscInt anetnum,PetscInt bnetnum,PetscInt nsvtx,PetscInt asvtx[],PetscInt bsvtx[])
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
@@ -798,7 +800,7 @@ PetscErrorCode DMNetworkAddSubnetworkSharedVertices(DM dm,PetscInt anetnum,Petsc
 
   Level: intermediate
 
-.seealso: DMNetworkGetSubnetwork, DMNetworkLayoutSetUp, DMNetworkAddSubnetworkSharedVertices
+.seealso: DMNetworkGetSubnetwork, DMNetworkLayoutSetUp, DMNetworkAddSharedVertices
 @*/
 PetscErrorCode DMNetworkGetSubnetworkSharedVertices(DM dm,PetscInt *nsv,const PetscInt **svtx)
 {
@@ -863,7 +865,7 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
 }
 
 /*@
-  DMNetworkGetVertexRange - Get the bounds [start, end) for the vertices.
+  DMNetworkGetVertexRange - Get the bounds [start, end) for the local vertices.
 
   Not Collective
 
@@ -889,7 +891,7 @@ PetscErrorCode DMNetworkGetVertexRange(DM dm,PetscInt *vStart,PetscInt *vEnd)
 }
 
 /*@
-  DMNetworkGetEdgeRange - Get the bounds [start, end) for the edges.
+  DMNetworkGetEdgeRange - Get the bounds [start, end) for the local edges.
 
   Not Collective
 
@@ -930,7 +932,7 @@ static PetscErrorCode DMNetworkGetIndex(DM dm,PetscInt p,PetscInt *index)
 }
 
 /*@
-  DMNetworkGetGlobalEdgeIndex - Get the global numbering for the edge.
+  DMNetworkGetGlobalEdgeIndex - Get the global numbering for the edge on the network.
 
   Not Collective
 
@@ -955,7 +957,7 @@ PetscErrorCode DMNetworkGetGlobalEdgeIndex(DM dm,PetscInt p,PetscInt *index)
 }
 
 /*@
-  DMNetworkGetGlobalVertexIndex - Get the global numbering for the vertex.
+  DMNetworkGetGlobalVertexIndex - Get the global numbering for the vertex on the network.
 
   Not Collective
 
@@ -1804,7 +1806,7 @@ PetscErrorCode DMNetworkGetConnectedVertices(DM dm,PetscInt edge,const PetscInt 
 
   Level: beginner
 
-.seealso: DMNetworkAddSubnetworkSharedVertices, DMNetworkIsGhostVertex
+.seealso: DMNetworkAddSharedVertices, DMNetworkIsGhostVertex
 @*/
 PetscErrorCode DMNetworkIsSharedVertex(DM dm,PetscInt p,PetscBool *flag)
 {

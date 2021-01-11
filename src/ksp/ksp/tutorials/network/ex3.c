@@ -85,7 +85,7 @@ int main(int argc,char ** argv)
   asvtx = bsvtx = 0;
   for (j=1; j<Nsubnet; j++) {
     /* vertex subnet[0].0 shares with vertex subnet[j].0 */
-    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,1,&asvtx,&bsvtx);CHKERRQ(ierr);
+    ierr = DMNetworkAddSharedVertices(dmnetwork,0,j,1,&asvtx,&bsvtx);CHKERRQ(ierr);
   }
 
   /* Setup the network layout */

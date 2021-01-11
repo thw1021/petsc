@@ -419,7 +419,7 @@ int main(int argc,char **argv)
 
   /* vertex subnet[0].4 shares with vertex subnet[1].0 */
   power_svtx = 4; water_svtx = 0;
-  ierr = DMNetworkAddSubnetworkSharedVertices(networkdm,power_netnum,water_netnum,1,&power_svtx,&water_svtx);CHKERRQ(ierr);
+  ierr = DMNetworkAddSharedVertices(networkdm,power_netnum,water_netnum,1,&power_svtx,&water_svtx);CHKERRQ(ierr);
 
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);

@@ -68,7 +68,7 @@ int main(int argc,char ** argv)
   asvtx[0] = bsvtx[0] = 0;
   asvtx[1] = bsvtx[1] = 1;
   for (j=Nsubnet-1; j>=1; j--) {
-    ierr = DMNetworkAddSubnetworkSharedVertices(dmnetwork,0,j,2,asvtx,bsvtx);CHKERRQ(ierr);
+    ierr = DMNetworkAddSharedVertices(dmnetwork,0,j,2,asvtx,bsvtx);CHKERRQ(ierr);
   }
 
   /* Setup the network layout */
