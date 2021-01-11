@@ -651,11 +651,10 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"Active Set subset type: %s\n",TaoSubSetTypes[tao->subset_type]);CHKERRQ(ierr);
     }
     if (tao->recycle) {
-      ierr = PetscViewerASCIIPrintf(viewer,"recycle history: enabled"); CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"recycle history: enabled");CHKERRQ(ierr);
     } else {
-      ierr = PetscViewerASCIIPrintf(viewer,"recycle history: disabled"); CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"recycle history: disabled");CHKERRQ(ierr);
     }
-    
 
     ierr = PetscViewerASCIIPrintf(viewer,"convergence tolerances: gatol=%g,",(double)tao->gatol);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer," steptol=%g,",(double)tao->steptol);CHKERRQ(ierr);
