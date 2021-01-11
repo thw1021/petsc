@@ -174,7 +174,7 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f, Vec G,void *ptr)
 
   /* Restore vectors */
   ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
-  ierr = VecRestoreArray(G,&g);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(G,&g);CHKERRQ(ierr);
   *f   = ff;
 
   ierr = PetscLogFlops(15.0*nn);CHKERRQ(ierr);
