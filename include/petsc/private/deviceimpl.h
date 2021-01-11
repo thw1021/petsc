@@ -166,10 +166,11 @@ struct _n_PetscStreamScalar {
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeDevice_Internal(PetscStreamScalar pscal, PetscStream pstream)
 {
-  PetscFunctionBegin;
-  if (pscal->omask == PETSC_OFFLOAD_CPU) {
-    PetscErrorCode ierr;
+  PetscErrorCode ierr;
 
+  PetscFunctionBegin;
+  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
+  if (pscal->omask == PETSC_OFFLOAD_CPU) {
     switch (pscal->type) {
     case PETSC_STREAM_CUDA:
 #if PetscDefined(HAVE_CUDA)
@@ -208,12 +209,13 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeDevice_Internal(P
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeHost_Internal(PetscStreamScalar pscal, PetscStream pstream, PetscBool *sync)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidBoolPointer(sync,3);
   *sync = PETSC_FALSE;
+  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
   if (pscal->omask == PETSC_OFFLOAD_GPU) {
-    PetscErrorCode ierr;
-
     switch (pscal->type) {
     case PETSC_STREAM_CUDA:
 #if PetscDefined(HAVE_CUDA)
@@ -253,24 +255,56 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetDevice_Internal(PetscStre
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
   ierr = PetscStreamScalarSynchronizeDevice_Internal(pscal, pstream);CHKERRQ(ierr);
   *ptr = pscal->device;
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetHost_Internal(PetscStreamScalar pscal, PetscScalar *val, PetscStream pstream)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetHost_Internal(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
 {
   PetscBool      sync;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
   ierr = PetscStreamScalarSynchronizeHost_Internal(pscal, pstream, &sync);CHKERRQ(ierr);
   if (sync) {ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);}
   pscal->isZero = (PetscBool)(*pscal->host == (PetscScalar)0.0);
   pscal->isOne = (PetscBool)(*pscal->host == (PetscScalar)1.0);
-  *val = *pscal->host;
+  *val = pscal->host;
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarRestoreHost_Internal(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
+{
+  PetscScalar    *valptr = *val;
+  PetscBool      eventbusy;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  /* If they hold the same value, everything stays. Note it is possible that copies from device to host are currently
+   in flight, so this may have to be synced */
+  ierr = PetscEventQuery(pscal->event, &eventbusy);CHKERRQ(ierr);
+  if (eventbusy) {
+    PetscBool streambusy;
+    /* Event is doing something, so we must sync on it, now we have a choice of either syncing on stream or syncing on the
+     event. We check stream in the hopes it has no work, otherwise sync on event. */
+    ierr = PetscStreamQuery(pstream, &streambusy);CHKERRQ(ierr);
+    if (streambusy) {
+      ierr = PetscEventSynchronize(pscal->event);CHKERRQ(ierr);
+    } else {
+      ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
+      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    }
+    /* Now history is clean, we can update our values */
+    *pscal->host = *valptr;
+    pscal->omask = PETSC_OFFLOAD_CPU;
+  } else if (*valptr != *pscal->host) {
+    /* Event is clear, but values don't match, update value and flag */
+    *pscal->host = *valptr;
+    pscal->omask = PETSC_OFFLOAD_CPU;
+  }
+  pscal->isZero = (PetscBool)(*pscal->host == (PetscScalar)0.0);
+  pscal->isOne = (PetscBool)(*pscal->host == (PetscScalar)1.0);
   PetscFunctionReturn(0);
 }
 
@@ -279,12 +313,12 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarCheckCache_Internal(PetscStr
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
   {
-    PetscScalar    alpha;
+    PetscScalar    *alpha;
     PetscErrorCode ierr;
 
     ierr = PetscStreamScalarGetHost_Internal(pscal, &alpha, pstream);CHKERRQ(ierr);
-    if (PetscUnlikely(alpha != assertval)) {
-      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bug in PetscStreamScalar cache, assumed %f but was %f\n",assertval,alpha);
+    if (PetscUnlikely(*alpha != assertval)) {
+      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bug in PetscStreamScalar cache, assumed %f but was %f\n",assertval,*alpha);
     }
   }
 #endif

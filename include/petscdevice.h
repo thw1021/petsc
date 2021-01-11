@@ -96,11 +96,12 @@ typedef struct _n_PetscStreamScalar* PetscStreamScalar;
 
 PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate(PetscScalar,PetscStreamScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar*);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarSetHost(PetscStreamScalar,PetscScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar,PetscScalar*,PetscStream);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar,PetscScalar*,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar,PetscScalar**,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreHostWrite(PetscStreamScalar,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar,const PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
 /*E
     PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
 
