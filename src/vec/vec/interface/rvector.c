@@ -278,7 +278,11 @@ PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar pscal,PetscSt
 
     ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[type],val,flg);CHKERRQ(ierr);
     if (flg) {
-      ierr = PetscStreamScalarSetHost(pscal,val,pstream);CHKERRQ(ierr);
+      PetscScalar *ptr;
+
+      ierr = PetscStreamScalarGetHostWrite(pscal,&ptr,pstream);CHKERRQ(ierr);
+      *ptr = val;
+      ierr = PetscStreamScalarGetHostWrite(pscal,&ptr,pstream);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
   }

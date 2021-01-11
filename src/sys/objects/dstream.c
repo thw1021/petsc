@@ -647,53 +647,47 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarSetHost(PetscStreamScalar pscal, PetscScalar val, PetscStream pstream)
-{
-  PetscBool      eventbusy;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  /* We assume the stream is chock full of unrelated work, and would rather not enqueue and sync on it */
-  ierr = PetscEventQuery(pscal->event, &eventbusy);CHKERRQ(ierr);
-  if (eventbusy) {
-    PetscBool streambusy;
-    /* Event is doing something, so we must sync on it, now we have a choice of either syncing on strea or syncing on the
-event. We check stream in the hopes it has no work, otherwise sync on event. */
-    ierr = PetscStreamQuery(pstream, &streambusy);CHKERRQ(ierr);
-    if (streambusy) {
-      ierr = PetscEventSynchronize(pscal->event);CHKERRQ(ierr);
-    } else {
-      ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
-      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
-    }
-  }
-  *pscal->host = val;
-  pscal->omask = PETSC_OFFLOAD_CPU;
-  ierr = PetscStreamScalarSynchronizeDevice_Internal(pscal, pstream);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar pscal, PetscScalar *val, PetscStream pstream)
 {
+  PetscScalar    *tmp;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidScalarPointer(val,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
-  ierr = PetscStreamScalarGetHost_Internal(pscal, val, pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetHost_Internal(pscal, &tmp, pstream);CHKERRQ(ierr);
+  *val = *tmp;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar pscal, PetscScalar *val, PetscStream pstream)
+PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidScalarPointer(val,2);
+  PetscValidPointer(val,2);
+  PetscValidScalarPointer(*val,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
+  /* We assume that whatever the host is writing (and commits via restore) supersedes anything that could be coming from
+   the device */
   ierr = PetscStreamScalarGetHost_Internal(pscal, val, pstream);CHKERRQ(ierr);
-  /* Again blindly assume this will be written to */
-  pscal->omask = PETSC_OFFLOAD_CPU;
+  /* Note we do not yet update the omask, it is possible that the variable has not yet been written to, can only be sure
+   when we get it back */
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarRestoreHostWrite(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidPointer(val,2);
+  PetscValidScalarPointer(*val,2);
+  PetscCheckValidSameStreamType(pscal,1,pstream,3);
+  if (PetscUnlikelyDebug(*val != pscal->host)) {
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with the same pointer retrieved from PetscStreamScalarGetHostWrite()\n");
+  }
+  ierr = PetscStreamScalarRestoreHost_Internal(pscal, val, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -716,7 +710,17 @@ PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscSca
   PetscValidPointer(ptr,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   ierr = PetscStreamScalarGetDevice_Internal(pscal, ptr, pstream);CHKERRQ(ierr);
-  /* Blindlly assume this will change the value */
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(ptr,2);
+  PetscCheckValidSameStreamType(pscal,1,pstream,3);
+  if (PetscUnlikelyDebug(*ptr != pscal->device)) {
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with the same pointer retrieved from PetscStreamScalarGetDeviceWrite()\n");
+  }
   pscal->omask = PETSC_OFFLOAD_GPU;
   PetscFunctionReturn(0);
 }
