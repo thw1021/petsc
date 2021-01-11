@@ -707,7 +707,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 }
 
 /*@C
-  DMNetworkGetSubnetwork - Returns the info for the subnetwork
+  DMNetworkGetSubnetwork - Returns the information about a requested subnetwork
 
   Not collective
 
@@ -748,15 +748,15 @@ PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt netnum,PetscInt *nv,PetscIn
 
   Input Parameters:
 + dm - the dm object
-. anetnum - first subnetwork number
-. bnetnum - second subnetwork number
+. anetnum - first subnetwork global numbering returned by DMNetworkAddSubnetwork()
+. bnetnum - second subnetwork global numbering returned by DMNetworkAddSubnetwork()
 . nsvtx - number of vertices that are shared by the two subnetworks
 . asvtx - vertex index in the first subnetwork
 - bsvtx - vertex index in the second subnetwork
 
   Level: beginner
 
-.seealso: DMNetworkCreate, DMNetworkGetSubnetworkSharedVertices
+.seealso: DMNetworkCreate, DMNetworkAddSubnetwork, DMNetworkGetSubnetworkSharedVertices
 @*/
 PetscErrorCode DMNetworkAddSharedVertices(DM dm,PetscInt anetnum,PetscInt bnetnum,PetscInt nsvtx,PetscInt asvtx[],PetscInt bsvtx[])
 {
@@ -1010,7 +1010,7 @@ PetscErrorCode DMNetworkGetNumComponents(DM dm,PetscInt p,PetscInt *numcomponent
 }
 
 /*@
-  DMNetworkGetComponentOffset - Get the offset for accessing the variable associated with a component at the given vertex/edge from the local vector.
+  DMNetworkGetComponentOffset - Get the offset for accessing the variables associated with a component at the given vertex/edge from the local vector.
 
   Not Collective
 
@@ -1020,7 +1020,7 @@ PetscErrorCode DMNetworkGetNumComponents(DM dm,PetscInt p,PetscInt *numcomponent
 - compnum - component number; use -1 if component is not considered
 
   Output Parameters:
-. offset - the offset
+. offset - the local offset
 
   Level: intermediate
 
@@ -1047,7 +1047,7 @@ PetscErrorCode DMNetworkGetComponentOffset(DM dm,PetscInt p,PetscInt compnum,Pet
 }
 
 /*@
-  DMNetworkGetComponentGlobalOffset - Get the global offset for accessing the variable associated with a component for the given vertex/edge from the local vector.
+  DMNetworkGetComponentGlobalOffset - Get the global offset for accessing the variables associated with a component for the given vertex/edge from the global vector.
 
   Not Collective
 
@@ -1085,7 +1085,7 @@ PetscErrorCode DMNetworkGetComponentGlobalOffset(DM dm,PetscInt p,PetscInt compn
 }
 
 /*@
-  DMNetworkGetEdgeOffset - Get the offset for accessing the variable associated with the given edge from the local subvector.
+  DMNetworkGetEdgeOffset - Get the offset for accessing the variables associated with the given edge from the local subvector.
 
   Not Collective
 
@@ -1111,7 +1111,7 @@ PetscErrorCode DMNetworkGetEdgeOffset(DM dm,PetscInt p,PetscInt *offset)
 }
 
 /*@
-  DMNetworkGetVertexOffset - Get the offset for accessing the variable associated with the given vertex from the local subvector.
+  DMNetworkGetVertexOffset - Get the offset for accessing the variables associated with the given vertex from the local subvector.
 
   Not Collective
 
@@ -1147,7 +1147,7 @@ PetscErrorCode DMNetworkGetVertexOffset(DM dm,PetscInt p,PetscInt *offset)
 . netnum - subnetwork number
 . p - the vertex/edge point
 . componentkey - component key returned while registering the component; ignored if compvalue=NULL
-. compvalue - pointer to the data structure for the component, or NULL
+. compvalue - pointer to the data structure for the component, or NULL if not required.
 - nvar - number of variables for the component at the vertex/edge point
 
   Level: beginner
@@ -1192,19 +1192,19 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
 }
 
 /*@
-  DMNetworkGetComponent - Gets the network component, its key and number of variables
+  DMNetworkGetComponent - Gets the component key, the component data, and the number of variables at a given network point.
 
   Not Collective
 
   Input Parameters:
 + dm - the DMNetwork object
 . p - vertex/edge point
-. compnum - component number; use PETSC_DECIDE if compkey and component are not requested
+. compnum - component number; ignored if both compkey and component are not required
 
   Output Parameters:
-+ compkey - the key obtained when registering the component
-. component - the component data
-- nvar  - number of variables
++ compkey - the key obtained when registering the component (use NULL if not required)
+. component - the component data (use NULL if not required)
+- nvar  - number of variables (use NULL if not required)
 
   Level: beginner
 
@@ -1218,7 +1218,7 @@ PetscErrorCode DMNetworkGetComponent(DM dm,PetscInt p,PetscInt compnum,PetscInt 
   DMNetworkComponentHeader header;
 
   PetscFunctionBegin;
-  if (compnum < 0) {
+  if (!compkey && !component) {
     ierr = PetscSectionGetDof(network->DofSection,p,nvar);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }

@@ -8,7 +8,7 @@ int main(int argc,char ** argv)
   PetscMPIInt    size,rank;
   DM             dmnetwork;
   PetscInt       i,j,net,Nsubnet,ne,nv,nvar,v,goffset,row;
-  PetscInt       numVertices[10],numEdges[10],*edgelist[10],asvtx[2],bsvtx[2];
+  PetscInt       *numVertices,*numEdges,**edgelist,asvtx[2],bsvtx[2];
   const PetscInt *vtx,*edges;
   PetscBool      ghost,distribute=PETSC_TRUE;
   Vec            X;
@@ -21,10 +21,7 @@ int main(int argc,char ** argv)
   /* Create a network of subnetworks */
   if (size == 1) Nsubnet = 2;
   else Nsubnet = (PetscInt)size;
-  ierr = PetscOptionsGetInt(NULL,NULL,"-Nsubnet",&Nsubnet,NULL);CHKERRQ(ierr);
-  if (Nsubnet > 10) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Nsubnet cannot >10 for this example");
-
-  for (i=0; i<Nsubnet; i++) {numVertices[i] = 0; numEdges[i] = 0;}
+  ierr = PetscCalloc3(Nsubnet,&numVertices,Nsubnet,&numEdges,Nsubnet,&edgelist);CHKERRQ(ierr);
 
   /* when size>1, process[i] creates subnetwork[i] */
   for (i=0; i<Nsubnet; i++) {
@@ -136,7 +133,7 @@ int main(int argc,char ** argv)
   for (i=0; i<Nsubnet; i++) {
     if (size == 1 || rank == i) {ierr = PetscFree(edgelist[i]);CHKERRQ(ierr);}
   }
-
+  ierr = PetscFree3(numVertices,numEdges,edgelist);CHKERRQ(ierr);
   ierr = DMDestroy(&dmnetwork);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
