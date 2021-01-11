@@ -209,7 +209,7 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat H, Mat Hpre, void *ptr)
   PetscFunctionBeginUser;
   /* Zero existing matrix entries */
   ierr = MatAssembled(H,&assembled);CHKERRQ(ierr);
-  if (assembled){ierr = MatZeroEntries(H);CHKERRQ(ierr);}
+  if (assembled || user->chained){ierr = MatZeroEntries(H);CHKERRQ(ierr);}
 
   /* Get a pointer to vector data */
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
