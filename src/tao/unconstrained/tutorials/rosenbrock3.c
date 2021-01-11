@@ -137,7 +137,7 @@ int main(int argc,char **argv)
 
     Note:
     Some optimization methods ask for the function and the gradient evaluation
-    at the same time.  Evaluating both at once may be more efficient that
+    at the same time.  Evaluating both at once may be more efficient than
     evaluating each separately.
 */
 PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f, Vec G,void *ptr)
