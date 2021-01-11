@@ -137,7 +137,7 @@ int main(int argc,char **argv)
 
     Note:
     Some optimization methods ask for the function and the gradient evaluation
-    at the same time.  Evaluating both at once may be more efficient that
+    at the same time.  Evaluating both at once may be more efficient than
     evaluating each separately.
 */
 PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f, Vec G,void *ptr)
@@ -152,7 +152,7 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f, Vec G,void *ptr)
   PetscFunctionBeginUser;
   /* Get pointers to vector data */
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
-  ierr = VecGetArray(G,&g);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(G,&g);CHKERRQ(ierr);
 
   /* Compute G(X) */
   if (user->chained) {
@@ -174,7 +174,7 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f, Vec G,void *ptr)
 
   /* Restore vectors */
   ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
-  ierr = VecRestoreArray(G,&g);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(G,&g);CHKERRQ(ierr);
   *f   = ff;
 
   ierr = PetscLogFlops(15.0*nn);CHKERRQ(ierr);
@@ -209,14 +209,13 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat H, Mat Hpre, void *ptr)
   PetscFunctionBeginUser;
   /* Zero existing matrix entries */
   ierr = MatAssembled(H,&assembled);CHKERRQ(ierr);
-  if (assembled){ierr = MatZeroEntries(H);CHKERRQ(ierr);}
+  if (assembled || user->chained){ierr = MatZeroEntries(H);CHKERRQ(ierr);}
 
   /* Get a pointer to vector data */
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
 
   /* Compute H(X) entries */
   if (user->chained) {
-    ierr = MatZeroEntries(H);CHKERRQ(ierr);
     for (i=0; i<user->n-1; i++) {
       PetscScalar t1 = x[i+1] - x[i]*x[i];
       v[0][0] = 2 + 2*alpha*(t1*(-2) - 2*x[i]);

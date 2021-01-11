@@ -91,7 +91,7 @@ PetscErrorCode TaoSolve_BQNK(Tao tao)
       }
     }
     flg = PETSC_FALSE;
-    ierr = PetscObjectTypeCompareAny((PetscObject)bqnk->B, &flg, MATLMVMSYMBROYDEN, MATLMVMSYMBADBROYDEN, MATLMVMBFGS, MATLMVMDFP);
+    ierr = PetscObjectTypeCompareAny((PetscObject)bqnk->B, &flg, MATLMVMSYMBROYDEN, MATLMVMSYMBADBROYDEN, MATLMVMBFGS, MATLMVMDFP, "");
     if (flg) {
       diag_ctx = (Mat_SymBrdn*)lmvm->ctx;
       J0 = (Mat_LMVM*)diag_ctx->D->data;
@@ -280,7 +280,7 @@ PetscErrorCode TaoGetLMVMMatrix(Tao tao, Mat *B)
   PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompareAny((PetscObject)tao, &flg, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompareAny((PetscObject)tao, &flg, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL, "");CHKERRQ(ierr);
   if (!flg) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM Matrix only exists for quasi-Newton algorithms");
   *B = bqnk->B;
   PetscFunctionReturn(0);
@@ -309,7 +309,7 @@ PetscErrorCode TaoSetLMVMMatrix(Tao tao, Mat B)
   PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompareAny((PetscObject)tao, &flg, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompareAny((PetscObject)tao, &flg, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL, "");CHKERRQ(ierr);
   if (!flg) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM Matrix only exists for quasi-Newton algorithms");
   ierr = PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &flg);CHKERRQ(ierr);
   if (!flg) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "Given matrix is not an LMVM matrix");

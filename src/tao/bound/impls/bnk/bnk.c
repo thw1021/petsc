@@ -407,7 +407,6 @@ PetscErrorCode TaoBNKTakeCGSteps(Tao tao, PetscBool *terminate)
     bnk->bncg_ctx->f = bnk->f;
     /* Take some small finite number of BNCG iterations */
     ierr = TaoSolve(bnk->bncg);CHKERRQ(ierr);
-    ierr = TaoSetRecycleHistoryFlag(bnk->bncg, PETSC_FALSE);CHKERRQ(ierr);
     /* Add the number of gradient and function evaluations to the total */
     tao->nfuncs += bnk->bncg->nfuncs;
     tao->nfuncgrads += bnk->bncg->nfuncgrads;
