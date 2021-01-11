@@ -38,7 +38,6 @@ typedef struct {
   PetscInt iter_quad, min_quad;      /* Dynamic restart variables in Dai-Kou, SIAM J. Optim. Vol 23, pp. 296-320, Algorithm 4.1 */
   PetscInt as_type;
 
-  PetscBool recycle;
   PetscBool inv_sig;
   PetscReal tol_quad;                /* tolerance for Dai-Kou dynamic restart */
   PetscBool dynamic_restart;         /* Keeps track of whether or not to do a dynamic (KD) restart */

@@ -76,26 +76,23 @@ PetscErrorCode TaoSolve_BQNK(Tao tao)
   Mat_LMVM       *lmvm = (Mat_LMVM*)bqnk->B->data;
   Mat_LMVM       *J0;
   Mat_SymBrdn    *diag_ctx;
-  PetscBool      same = PETSC_FALSE;
-  PetscBool      is_symbrdn, is_symbadbrdn, is_bfgs, is_dfp;
+  PetscBool      flg = PETSC_FALSE;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!bqnk->recycle) {
+  if (!tao->recycle) {
     ierr = MatLMVMReset(bqnk->B, PETSC_FALSE);CHKERRQ(ierr);
     lmvm->nresets = 0;
     if (lmvm->J0) {
-      ierr = PetscObjectBaseTypeCompare((PetscObject)lmvm->J0, MATLMVM, &same);CHKERRQ(ierr);
-      if (same) {
+      ierr = PetscObjectBaseTypeCompare((PetscObject)lmvm->J0, MATLMVM, &flg);CHKERRQ(ierr);
+      if (flg) {
         J0 = (Mat_LMVM*)lmvm->J0->data;
         J0->nresets = 0;
       }
     }
-    ierr = PetscObjectTypeCompare((PetscObject)bqnk->B, MATLMVMSYMBROYDEN, &is_symbrdn);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)bqnk->B, MATLMVMSYMBADBROYDEN, &is_symbadbrdn);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)bqnk->B, MATLMVMBFGS, &is_bfgs);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)bqnk->B, MATLMVMDFP, &is_dfp);CHKERRQ(ierr);
-    if (is_symbrdn || is_symbadbrdn || is_bfgs || is_dfp) {
+    flg = PETSC_FALSE;
+    ierr = PetscObjectTypeCompareAny((PetscObject)bqnk->B, &flg, MATLMVMSYMBROYDEN, MATLMVMSYMBADBROYDEN, MATLMVMBFGS, MATLMVMDFP);
+    if (flg) {
       diag_ctx = (Mat_SymBrdn*)lmvm->ctx;
       J0 = (Mat_LMVM*)diag_ctx->D->data;
       J0->nresets = 0;
@@ -139,7 +136,6 @@ static PetscErrorCode TaoSetFromOptions_BQNK(PetscOptionItems *PetscOptionsObjec
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"Quasi-Newton-Krylov method for bound constrained optimization");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-tao_bqnk_recycle","recycle the QN history between subsequent TaoSolve() calls","",bqnk->recycle,&bqnk->recycle,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEList("-tao_bqnk_init_type", "radius initialization type", "", BQNK_INIT, BQNK_INIT_TYPES, BQNK_INIT[bnk->init_type], &bnk->init_type, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEList("-tao_bqnk_update_type", "radius update type", "", BNK_UPDATE, BNK_UPDATE_TYPES, BNK_UPDATE[bnk->update_type], &bnk->update_type, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEList("-tao_bqnk_as_type", "active set estimation method", "", BNK_AS, BNK_AS_TYPES, BNK_AS[bnk->as_type], &bnk->as_type, NULL);CHKERRQ(ierr);
@@ -254,7 +250,6 @@ PETSC_INTERN PetscErrorCode TaoCreate_BQNK(Tao tao)
   ierr = PetscNewLog(tao,&bqnk);CHKERRQ(ierr);
   bnk->ctx = (void*)bqnk;
   bqnk->is_spd = PETSC_TRUE;
-  bqnk->recycle = PETSC_FALSE;
 
   ierr = MatCreate(PetscObjectComm((PetscObject)tao), &bqnk->B);CHKERRQ(ierr);
   ierr = PetscObjectIncrementTabLevel((PetscObject)bqnk->B, (PetscObject)tao, 1);CHKERRQ(ierr);
@@ -268,56 +263,60 @@ PETSC_INTERN PetscErrorCode TaoCreate_BQNK(Tao tao)
    only for quasi-Newton family of methods.
 
    Input Parameters:
-+  tao - Tao solver context
--  B - LMVM matrix
+.  tao - Tao solver context
 
-   Level: intermediate
+   Output Parameters:
+.  B - LMVM matrix
 
-.seealso: TAOBQNLS, TAOBQNKLS, TAOBQNKTL, TAOBQNKTR, MATLMVM, TaoRecycleQNHistory
+   Level: advanced
+
+.seealso: TAOBQNLS, TAOBQNKLS, TAOBQNKTL, TAOBQNKTR, MATLMVM, TaoSetLMVMMatrix()
 @*/
 PetscErrorCode TaoGetLMVMMatrix(Tao tao, Mat *B)
 {
   TAO_BNK        *bnk = (TAO_BNK*)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
   PetscErrorCode ierr;
-  PetscBool      is_bqnls, is_bqnkls, is_bqnktr, is_bqnktl;
+  PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBQNLS, &is_bqnls);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBQNKLS, &is_bqnkls);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBQNKTR, &is_bqnktr);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBQNKTL, &is_bqnktl);CHKERRQ(ierr);
-  if (!is_bqnls && !is_bqnkls && !is_bqnktr && is_bqnktl) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM Matrix only exists for quasi-Newton algorithms");
+  ierr = PetscObjectTypeCompareAny((PetscObject)tao, &flg, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL);CHKERRQ(ierr);
+  if (!flg) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM Matrix only exists for quasi-Newton algorithms");
   *B = bqnk->B;
   PetscFunctionReturn(0);
 }
 
 /*@
-   TaoRecycleQNHistory - Enables/disables re-using accumulated QN history from
-   a previous TaoSolve() call. If disabled, the internal LMVM matrix is reset for
-   each solution.
+   TaoSetLMVMMatrix - Sets an external LMVM matrix into the Tao solver. Valid
+   only for quasi-Newton family of methods.
+
+   QN family of methods create their own LMVM matrices and users who wish to
+   manipulate this matrix should use TaoGetLMVMMatrix() instead.
 
    Input Parameters:
 +  tao - Tao solver context
--  recycle - boolean flag
+-  B - LMVM matrix
 
-   Level: intermediate
+   Level: advanced
 
-.seealso: TAOBQNLS, TAOBQNKLS, TAOBQNKTL, TAOBQNKTR, MATLMVM, TaoGetLMVMMatrix
+.seealso: TAOBQNLS, TAOBQNKLS, TAOBQNKTL, TAOBQNKTR, MATLMVM, TaoGetLMVMMatrix()
 @*/
-PetscErrorCode TaoRecycleQNHistory(Tao tao, PetscBool recycle)
+PetscErrorCode TaoSetLMVMMatrix(Tao tao, Mat B)
 {
   TAO_BNK        *bnk = (TAO_BNK*)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscBool      is_bqnls, is_bqnkls, is_bqnktr, is_bqnktl;
   PetscErrorCode ierr;
+  PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBQNLS, &is_bqnls);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBQNKLS, &is_bqnkls);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBQNKTR, &is_bqnktr);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBQNKTL, &is_bqnktl);CHKERRQ(ierr);
-  if (!is_bqnls && !is_bqnkls && !is_bqnktr && is_bqnktl) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM Matrix only exists for quasi-Newton algorithms");
-  bqnk->recycle = recycle;
+  ierr = PetscObjectTypeCompareAny((PetscObject)tao, &flg, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL);CHKERRQ(ierr);
+  if (!flg) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM Matrix only exists for quasi-Newton algorithms");
+  ierr = PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "Given matrix is not an LMVM matrix");
+  if (bqnk->B) {
+    ierr = MatDestroy(&bqnk->B);CHKERRQ(ierr);
+  }
+  ierr = PetscObjectReference((PetscObject)B);CHKERRQ(ierr);
+  bqnk->B = B;
   PetscFunctionReturn(0);
 }
