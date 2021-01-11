@@ -548,9 +548,9 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
       ierr = MatDestroy(&H);CHKERRQ(ierr);
     }
     flg = PETSC_FALSE;
-    ierr = PetscOptionsBool("-tao_recycle_history","enable recycling/re-using information from the previous TaoSolve() call for some algorithms","TaoSetRecycleHistoryFlag",flg,&flg,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-tao_recycle_history","enable recycling/re-using information from the previous TaoSolve() call for some algorithms","TaoSetRecycleHistory",flg,&flg,NULL);CHKERRQ(ierr);
     if (flg) {
-      ierr = TaoSetRecycleHistoryFlag(tao, PETSC_TRUE);CHKERRQ(ierr);
+      ierr = TaoSetRecycleHistory(tao, PETSC_TRUE);CHKERRQ(ierr);
     }
     ierr = PetscOptionsEnum("-tao_subset_type","subset type","",TaoSubSetTypes,(PetscEnum)tao->subset_type,(PetscEnum*)&tao->subset_type,NULL);CHKERRQ(ierr);
 
@@ -762,7 +762,7 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
 }
 
 /*@
-  TaoSetRecycleHistoryFlag - Sets the boolean flag to enable/disable re-using
+  TaoSetRecycleHistory - Sets the boolean flag to enable/disable re-using
   iterate information from the previous TaoSolve(). This feature is disabled by
   default.
 
@@ -789,10 +789,10 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
 
   Level: intermediate
 
-.seealso: TaoSetRecycleHistoryFlag(), TAOBNCG, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL
+.seealso: TaoSetRecycleHistory(), TAOBNCG, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL
 
 @*/
-PetscErrorCode TaoSetRecycleHistoryFlag(Tao tao, PetscBool recycle)
+PetscErrorCode TaoSetRecycleHistory(Tao tao, PetscBool recycle)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -801,7 +801,7 @@ PetscErrorCode TaoSetRecycleHistoryFlag(Tao tao, PetscBool recycle)
 }
 
 /*@
-  TaoGetRecycleHistoryFlag - Retrieve the boolean flag for re-using iterate information
+  TaoGetRecycleHistory - Retrieve the boolean flag for re-using iterate information
   from the previous TaoSolve(). This feature is disabled by default.
 
   Logically collective on Tao
@@ -817,10 +817,10 @@ PetscErrorCode TaoSetRecycleHistoryFlag(Tao tao, PetscBool recycle)
 
   Level: intermediate
 
-.seealso: TaoGetRecycleHistoryFlag(), TAOBNCG, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL
+.seealso: TaoGetRecycleHistory(), TAOBNCG, TAOBQNLS, TAOBQNKLS, TAOBQNKTR, TAOBQNKTL
 
 @*/
-PetscErrorCode TaoGetRecycleHistoryFlag(Tao tao, PetscBool *recycle)
+PetscErrorCode TaoGetRecycleHistory(Tao tao, PetscBool *recycle)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
