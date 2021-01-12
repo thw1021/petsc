@@ -32,24 +32,24 @@ other select operations) using each of:
      - ``Mat`` Status
    * - CUDA
      - cuBLAS/cuSparse
-     - :greenhl:`SUPPORTED`
-     - :greenhl:`SUPPORTED`
+     - SUPPORTED
+     - SUPPORTED
    * - HIP
      - Rocm
-     - :greenhl:`SUPPORTED`
-     - :yellowhl:`IN DEVELOPMENT`
+     - SUPPORTED
+     - IN DEVELOPMENT
    * - SYCL
      - MKL
-     - :redhl:`NOT YET SUPPORTED`
-     - :redhl:`NOT YET SUPPORTED`
+     - NOT YET SUPPORTED
+     - NOT YET SUPPORTED
    * - OpenCL
      - ViennaCL
-     - :greenhl:`SUPPORTED`
-     - :greenhl:`SUPPORTED`
+     - SUPPORTED
+     - SUPPORTED
    * - Kokkos
      - ---
-     - :greenhl:`SUPPORTED`
-     - :yellowhl:`IN DEVELOPMENT`
+     - SUPPORTED
+     - IN DEVELOPMENT
 
 ---------------------------------
 

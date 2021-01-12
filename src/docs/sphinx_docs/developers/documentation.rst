@@ -301,32 +301,6 @@ Sphinx Documentation Guidelines
 
      Something very important
 
-* It is possible to highlight text a certain color by using custom css alongside the
-  ``.. role::`` directive and explicit markup ``:foo:``. For example
-
-  .. code-block:: rst
-
-     .. role:: redhl
-     .. role:: yellowhl
-     .. role:: greenhl
-
-     :redhl:`red`, :yellowhl:`yellow`, :greenhl:`green`
-
-
-  Renders as :redhl:`red`, :yellowhl:`yellow`, :greenhl:`green`. The css for this is
-  defined in ``$PETSC_DIR/src/docs/sphinx_docs/_static_css/colortext.css``. For example
-  ``redhl`` is defined as follows:
-
-  .. literalinclude:: /_static/css/colortext.css
-     :language: css
-     :start-at: .redhl {
-     :end-at: color: red;
-     :append: }
-
-  For simplicity and ease-of-use, it is recommended that one add the ``.. role::``
-  definitions to the ``rst_prolog`` variable defined in ``conf.py``. That way the text
-  highlighting roles will automatically be defined in all rst documents.
-
 * Prefer formatting styles that are easy to modify and maintain.  In particular, use of `list-table <https://docutils.sourceforge.io/docs/ref/rst/directives.html#list-table>`_ is recommended.
 
   .. code-block:: rst

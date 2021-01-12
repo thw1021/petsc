@@ -1330,7 +1330,7 @@ functions such as ``MatMult()`` will of course also work on Hermitian matrices):
 
 - ``MatMultHermitianTranspose()``
 
-- ``MatMultHermitianTransposeAdd()`` (:yellowhl:`very limited support`)
+- ``MatMultHermitianTransposeAdd()`` (very limited support)
 
 How Can I Assemble A Bunch Of Similar Matrices?
 -----------------------------------------------
@@ -2211,11 +2211,10 @@ Git bisect can be done as follows:
 
       > git clone https://gitlab.com/petsc/petsc.git
 
-#. Find the :greenhl:`good` and :redhl:`bad` markers to start the bisection process. This
-   can be done either by checking ``git log`` or ``gitk`` or
-   https://gitlab.com/petsc/petsc or the web history of petsc-release clones. Lets say the
-   known :redhl:`bad` commit is 21af4baa815c and known :greenhl:`good` commit is
-   5ae5ab319844.
+#. Find the good and bad markers to start the bisection process. This can be done either
+   by checking ``git log`` or ``gitk`` or https://gitlab.com/petsc/petsc or the web
+   history of petsc-release clones. Lets say the known bad commit is 21af4baa815c and
+   known good commit is 5ae5ab319844.
 
 #. Start the bisection process with these known revisions. Build PETSc, and test your code
    to confirm known good/bad behavior:
@@ -2224,13 +2223,13 @@ Git bisect can be done as follows:
 
       > git bisect start 21af4baa815c 5ae5ab319844
 
-   build/test, perhaps discover that this new state is :redhl:`bad`
+   build/test, perhaps discover that this new state is bad
 
    .. code-block:: console
 
       > git bisect bad
 
-   build/test, perhaps discover that this state is :greenhl:`good`
+   build/test, perhaps discover that this state is good
 
    .. code-block:: console
 
