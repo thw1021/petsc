@@ -15,6 +15,7 @@ class Configure(config.package.Package):
   def setupHelp(self,help):
     import nargs
     help.addArgument('PETSc', '-with-petsc4py=<bool>', nargs.Arg(None, 0, 'Build PETSc Python bindings (petsc4py)'))
+    help.addArgument('PETSc', '-with-petsc4py-test-np=<np>',nargs.ArgInt(None, 1, min=1, help='Number of threads to use for petsc4py tests'))
     return
 
   def setupDependencies(self, framework):
@@ -80,16 +81,11 @@ class Configure(config.package.Package):
                           '@echo "====================================="',\
                           '@echo "To use petsc4py, add '+os.path.join(self.installDir,'lib')+' to PYTHONPATH"',\
                           '@echo "====================================="'])
-    if self.mpi.usingMPIUni:
-      self.addMakeRule('petsc4pytest','', \
-                       ['@echo "*** Testing petsc4py sequentially ***"',\
-                        '@PYTHONPATH='+os.path.join(self.installDir,'lib')+':${PYTHONPATH} '+self.python.pyexe+' '+os.path.join(self.packageDir,'test','runtests.py'+' --verbose'),\
-                        '@echo "====================================="'])
-    else:
-      self.addMakeRule('petsc4pytest','', \
-                       ['@echo "*** Testing petsc4py parallelly ***"',\
-                        '@PYTHONPATH='+os.path.join(self.installDir,'lib')+':${PYTHONPATH} ${MPIEXEC} -n 4 '+self.python.pyexe+' '+os.path.join(self.packageDir,'test','runtests.py'+' --verbose'),\
-                        '@echo "====================================="'])
+    self.addMakeMacro('PETSC4PY_NP',self.argDB['with-petsc4py-test-np'])
+    self.addMakeRule('petsc4pytest', '',
+        ['@echo "*** Testing petsc4py on ${PETSC4PY_NP} processes ***"',
+         '@PYTHONPATH=%s:${PYTHONPATH} ${MPIEXEC} -n ${PETSC4PY_NP} %s %s --verbose' % (os.path.join(self.installDir, 'lib'), self.python.pyexe, os.path.join(self.packageDir, 'test', 'runtests.py')),
+         '@echo "====================================="'])
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
       self.addMakeRule('petsc4py-build','')
       # the build must be done at install time because PETSc shared libraries must be in final location before building petsc4py
