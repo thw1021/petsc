@@ -593,8 +593,13 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
       } else {
         PetscInt avgslicesize = sliceheight*a->avgslicewidth;
         if (avgslicesize <= 96) {
-          nblocks = 1+(nrows-1)/(2*sliceheight); /* two slices per block */
-          matmult_seqsell_tiled_kernel7<<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
+          if (sliceheight*a->maxslicewidth < 2048 && nrows > 100000) {
+            nblocks = 1+(nrows-1)/(2*sliceheight); /* two slices per block */
+            matmult_seqsell_tiled_kernel7<<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
+          } else {
+            nblocks = 1+(nrows-1)/sliceheight;
+            matmult_seqsell_tiled_kernel9<32><<<nblocks,dim3(32,32)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
+          }
         } else if (avgslicesize <= 432) {
           nblocks = 1+(nrows-1)/sliceheight;
           matmult_seqsell_tiled_kernel9<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
@@ -702,8 +707,13 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
         } else {
           PetscInt avgslicesize = sliceheight*a->avgslicewidth;
           if (avgslicesize <= 96) {
-            nblocks = 1+(nrows-1)/(2*sliceheight); /* two slices per block */
-            matmultadd_seqsell_tiled_kernel7<<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
+            if (sliceheight*a->maxslicewidth < 2048 && nrows > 100000) {
+              nblocks = 1+(nrows-1)/(2*sliceheight); /* two slices per block */
+              matmultadd_seqsell_tiled_kernel7<<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
+            } else {
+              nblocks = 1+(nrows-1)/sliceheight;
+              matmultadd_seqsell_tiled_kernel9<32><<<nblocks,dim3(32,32)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
+            }
           } else if (avgslicesize <= 432) {
             nblocks = 1+(nrows-1)/sliceheight;
             matmultadd_seqsell_tiled_kernel9<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
