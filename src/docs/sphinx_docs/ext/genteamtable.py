@@ -241,21 +241,6 @@ def getJson(url, token):
     return lst
 
 def makeDevDict(devJson):
-    # for dev in devJson:
-    #     doubleTrouble = False
-    #     alevel = dev["access_level"]
-    #     if alevel not in tierDict:
-    #         tierDict[alevel] = {}
-    #     # Need to re-traverse entire dict to check if people are double counted, since
-    #     # some people have themselves under multiple roles...
-    #     for level in tierDict:
-    #         if dev["name"] in tierDict[level]:
-    #             # boil and bubble...
-    #             doubleTrouble = True
-    #             break
-    #     if not doubleTrouble:
-    #         tierDict[alevel][dev["name"]] = [dev["web_url"], dev["avatar_url"]]
-    # Add list of extra devs to dict
     for dev in devJson:
         ldev = dev["username"].lower()
         if ldev in activeCoreDevs:
@@ -285,6 +270,40 @@ def writeRst(fname, devs):
         f.writelines(lines)
     print("Wrote table to "+fname)
 
+def runFromMain(writeDirPath, token):
+    print("============================================")
+    print("  GENERATING TEAM TABLE FROM COMMAND LINE   ")
+    print("============================================")
+    run(writeDirPath, token)
+
+def runFromPython(writeDirPath, token):
+    print("============================================")
+    print("     GENERATING TEAM TABLE FROM PYTHON      ")
+    print("============================================")
+    run(writeDirPath, token)
+
+
+def run(writeDirPath, token):
+    try:
+        os.mkdir(writeDirPath)
+        print("Generate directory created at %s" % (writeDirPath))
+    except OSError as e:
+        import errno
+        if e.errno != errno.EEXIST:
+            raise
+        else:
+            print("Generate directory already exists at %s" % (writeDirPath))
+    devJson = getJson(devURL, token)
+    ownerJson = getJson(ownerURL, token)
+    integratorJson = getJson(integratorURL, token)
+    megaJson = devJson+ownerJson+integratorJson
+    tierlist = makeDevDict(megaJson)
+    currentFile = os.path.join(writeDirPath, "petsc-team-table.inc")
+    writeRst(currentFile, tierlist)
+    emeritusFile = os.path.join(writeDirPath, "petsc-emeritus-table.inc")
+    writeRst(emeritusFile, emeritus)
+
+
 if __name__ == "__main__":
     import argparse
     import pathlib
@@ -295,15 +314,5 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--gitlab-token", required = True, metavar = string, help = "Specify your private Gitlab Authentican Token", dest = "token")
     parser.add_argument("-o", "--output-dir", required = True, metavar = path, type = pathlib.Path, help = "Specify the output directory", dest = "writeDir")
     args = parser.parse_args()
-    devJson = getJson(devURL, args.token)
-    ownerJson = getJson(ownerURL, args.token)
-    integratorJson = getJson(integratorURL, args.token)
-    megaJson = devJson+ownerJson+integratorJson
-    tierlist = makeDevDict(megaJson)
-    writeDir = args.writeDir
-    if not os.path.exists(writeDir):
-        os.makedirs(writeDir)
-    currentFile = os.path.join(writeDir, "petsc-team-table.inc")
-    writeRst(currentFile, tierlist)
-    emeritusFile = os.path.join(writeDir, "petsc-emeritus-table.inc")
-    writeRst(emeritusFile, emeritus)
+    writeDirPath = os.path.realpath(args.writeDir)
+    runFromMain(writeDirPath, args.token)
