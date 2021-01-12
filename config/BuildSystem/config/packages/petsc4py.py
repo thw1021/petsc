@@ -87,8 +87,8 @@ class Configure(config.package.Package):
                         '@echo "====================================="'])
     else:
       self.addMakeRule('petsc4pytest','', \
-                       ['@echo "*** Testing petsc4py parallelly ***"',\
-                        '@PYTHONPATH='+os.path.join(self.installDir,'lib')+':${PYTHONPATH} ${MPIEXEC} -n 4 '+self.python.pyexe+' '+os.path.join(self.packageDir,'test','runtests.py'+' --verbose'),\
+                       ['@echo "*** Testing petsc4py in parallel on ${MAKE_TEST_NP} processes ***"',\
+                        '@PYTHONPATH='+os.path.join(self.installDir,'lib')+':${PYTHONPATH} ${MPIEXEC} -n ${MAKE_TEST_NP} '+self.python.pyexe+' '+os.path.join(self.packageDir,'test','runtests.py'+' --verbose'),\
                         '@echo "====================================="'])
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
       self.addMakeRule('petsc4py-build','')
