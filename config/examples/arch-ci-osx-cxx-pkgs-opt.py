@@ -52,7 +52,7 @@ configure_options = [
   '--download-adolc=1',
   '--download-colpack=1',
   '--download-mmg=1',
-  '--download-parmmg=1'
+  '--download-parmmg=1',
   ]
 
 if __name__ == '__main__':

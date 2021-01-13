@@ -45,7 +45,7 @@ configure_options = [
   '--download-hpddm=1',
   '--download-bamg=1',
   '--download-mmg=1',
-  '--download-parmmg=1'
+  '--download-parmmg=1',
   ]
 
 if __name__ == '__main__':
