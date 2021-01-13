@@ -48,6 +48,7 @@ class Configure(config.package.GNUPackage):
     '''MPICH has many specific extra configure arguments'''
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
     args.append('--with-pm='+self.argDB['download-mpich-pm'])
+    args.append('--disable-java')
     # make sure MPICH does not build with optimization for debug version of PETSc, so we can debug through MPICH
     if self.compilerFlags.debugging:
       args.append("--enable-fast=no")
