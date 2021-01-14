@@ -1697,6 +1697,9 @@ class CMakePackage(Package):
     import os
     import shlex
 
+    if not self.cmake.found:
+      raise RuntimeError('CMake not found, needed to build '+self.PACKAGE+'. Rerun configure with --download-cmake.')
+
     args = ['-DCMAKE_INSTALL_PREFIX='+self.installDir]
     args.append('-DCMAKE_INSTALL_NAME_DIR:STRING="'+os.path.join(self.installDir,self.libdir)+'"')
     args.append('-DCMAKE_INSTALL_LIBDIR:STRING="lib"')
@@ -1755,10 +1758,6 @@ class CMakePackage(Package):
     fd.close()
 
     if self.installNeeded(conffile):
-
-      if not self.cmake.found:
-        raise RuntimeError('CMake not found, needed to build '+self.PACKAGE+'. Rerun configure with --download-cmake.')
-
       # effectively, this is 'make clean'
       folder = os.path.join(self.packageDir, self.cmakelistsdir, 'petsc-build')
       if os.path.isdir(folder):
