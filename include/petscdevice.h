@@ -55,12 +55,39 @@ do { \
 
 #endif /* PETSC_HAVE_HIP */
 
+/*E
+  PetscMemType - Memory type of a pointer
+
+  Level: beginner
+
+  Developer Note:
+   Encoding of the bitmask in binary: xxxxyyyz
+   z = 0:                Host memory
+   z = 1:                Device memory
+   yyy = 000:            CUDA-related memory
+   yyy = 001:            HIP-related memory
+   xxxxyyy1 = 0000,0001: CUDA memory
+   xxxxyyy1 = 0001,0001: CUDA NVSHMEM memory
+   xxxxyyy1 = 0000,0011: HIP memory
+
+  Other types of memory, e.g., CUDA managed memory, can be added when needed.
+
+.seealso: VecGetArrayAndMemType(), PetscSFBcastWithMemTypeBegin(), PetscSFReduceWithMemTypeBegin()
+E*/
+typedef enum {PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=0x01, PETSC_MEMTYPE_CUDA=0x01, PETSC_MEMTYPE_NVSHMEM=0x11,PETSC_MEMTYPE_HIP=0x03} PetscMemType;
+
+#define PetscMemTypeHost(m)    (((m) & 0x1) == PETSC_MEMTYPE_HOST)
+#define PetscMemTypeDevice(m)  (((m) & 0x1) == PETSC_MEMTYPE_DEVICE)
+#define PetscMemTypeCUDA(m)    (((m) & 0xF) == PETSC_MEMTYPE_CUDA)
+#define PetscMemTypeHIP(m)     (((m) & 0xF) == PETSC_MEMTYPE_HIP)
+#define PetscMemTypeNVSHMEM(m) ((m) == PETSC_MEMTYPE_NVSHMEM)
+
 typedef struct _n_PetscEvent* PetscEvent;
 
 typedef enum {
   PETSC_STREAM_INVALID = 0,
-  PETSC_STREAM_CUDA,
-  PETSC_STREAM_HIP
+  PETSC_STREAM_CUDA = 1,
+  PETSC_STREAM_HIP = 2
 } PetscStreamType;
 
 PETSC_EXTERN PetscErrorCode PetscEventCreate(PetscEvent*);
@@ -69,7 +96,7 @@ PETSC_EXTERN PetscErrorCode PetscEventSetFlags(PetscEvent,unsigned int,unsigned 
 PETSC_EXTERN PetscErrorCode PetscEventGetFlags(PetscEvent,unsigned int*,unsigned int*);
 PETSC_EXTERN PetscErrorCode PetscEventSetType(PetscEvent,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscEventGetType(PetscEvent,PetscStreamType*);
-PETSC_EXTERN PetscErrorCode PetscEventSetup(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscEventSetUp(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscEventSynchronize(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscEventQuery(PetscEvent,PetscBool*);
 
@@ -88,9 +115,9 @@ PETSC_EXTERN PetscErrorCode PetscStreamGetMode(PetscStream,PetscStreamMode*);
 PETSC_EXTERN PetscErrorCode PetscStreamSetType(PetscStream,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscStreamGetType(PetscStream,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscStreamGetStream(PetscStream,void*);
-PETSC_EXTERN PetscErrorCode PetscStreamRestoreStream(PetscStream,void*,PetscBool);
+PETSC_EXTERN PetscErrorCode PetscStreamRestoreStream(PetscStream,void*);
 PETSC_EXTERN PetscErrorCode PetscStreamSplitBegin(PetscStream,void*);
-PETSC_EXTERN PetscErrorCode PetscStreamSplitEnd(PetscStream,void*,PetscBool);
+PETSC_EXTERN PetscErrorCode PetscStreamSplitEnd(PetscStream,void*);
 PETSC_EXTERN PetscErrorCode PetscStreamRecordEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream);
@@ -98,14 +125,18 @@ PETSC_EXTERN PetscErrorCode PetscStreamQuery(PetscStream,PetscBool*);
 
 typedef struct _n_PetscStreamScalar* PetscStreamScalar;
 
-PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate(PetscScalar,PetscStreamScalar*,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar*);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar,PetscScalar*,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar,PetscStreamType*);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar,PetscScalar*,PetscMemType,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar,const PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreHostWrite(PetscStreamScalar,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar,const PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
+
 /*E
     PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
 
