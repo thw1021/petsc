@@ -281,8 +281,9 @@ PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar pscal,PetscSt
       PetscScalar *ptr;
 
       ierr = PetscStreamScalarGetHostWrite(pscal,&ptr,pstream);CHKERRQ(ierr);
+      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
       *ptr = val;
-      ierr = PetscStreamScalarGetHostWrite(pscal,&ptr,pstream);CHKERRQ(ierr);
+      ierr = PetscStreamScalarRestoreHostWrite(pscal,&ptr,pstream);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
   }
@@ -295,10 +296,11 @@ PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar pscal,PetscSt
   ierr = PetscLogEventEnd(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
   /* TODO this should really be asynchronous */
   if (type!=NORM_1_AND_2) {
-    PetscScalar val;
+    const PetscScalar *val;
 
     ierr = PetscStreamScalarGetHostRead(pscal,&val,pstream);CHKERRQ(ierr);
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],val);CHKERRQ(ierr);
+    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],*val);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -715,10 +717,11 @@ PetscErrorCode  VecAXPYAsync(Vec y,PetscStreamScalar pscal,Vec x,PetscStream pst
   if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
 #if PetscDefined(USE_DEBUG)
   {
-    PetscScalar val;
+    const PetscScalar *val;
 
     ierr = PetscStreamScalarGetHostRead(pscal,&val,pstream);CHKERRQ(ierr);
-    PetscValidLogicalCollectiveScalar(y,val,2);
+    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    PetscValidLogicalCollectiveScalar(y,*val,2);
   }
 #endif
   if (pscal->isZero) {
@@ -894,10 +897,11 @@ PetscErrorCode  VecAYPXAsync(Vec y,PetscStreamScalar pscal,Vec x,PetscStream pst
   if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
   #if PetscDefined(USE_DEBUG)
   {
-    PetscScalar val;
+    const PetscScalar *val;
 
     ierr = PetscStreamScalarGetHostRead(pscal,&val,pstream);CHKERRQ(ierr);
-    PetscValidLogicalCollectiveScalar(y,val,2);
+    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    PetscValidLogicalCollectiveScalar(y,*val,2);
   }
 #endif
   ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
