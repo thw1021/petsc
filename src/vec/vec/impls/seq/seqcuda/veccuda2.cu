@@ -108,7 +108,7 @@ PetscErrorCode VecCUDACopyToGPUAsync(Vec v,PetscStream pstream)
     ierr = PetscStreamRecordEvent(pstream,v->event);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpu((v->map->n)*sizeof(PetscScalar));CHKERRQ(ierr);
     ierr = PetscLogEventEnd(VEC_CUDACopyToGPU,v,0,0,0);CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     v->offloadmask = PETSC_OFFLOAD_BOTH;
   }
   PetscFunctionReturn(0);
@@ -163,7 +163,7 @@ PetscErrorCode VecCUDACopyFromGPUAsync(Vec v,PetscStream pstream)
     ierr = PetscStreamRecordEvent(pstream,v->event);CHKERRQ(ierr);
     ierr = PetscLogGpuToCpu((v->map->n)*sizeof(PetscScalar));CHKERRQ(ierr);
     ierr = PetscLogEventEnd(VEC_CUDACopyFromGPU,v,0,0,0);CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     v->offloadmask     = PETSC_OFFLOAD_BOTH;
   }
   PetscFunctionReturn(0);
@@ -241,10 +241,10 @@ PetscErrorCode VecAYPX_SeqCUDAAsync(Vec yin,PetscStreamScalar pscal,Vec xin,Pets
   cberr = cublasSetStream(cublasv2handle,cstream);CHKERRCUBLAS(cberr);
   cberr = cublasSetPointerMode(cublasv2handle,CUBLAS_POINTER_MODE_DEVICE);CHKERRCUBLAS(cberr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-  if (pscal->isZero) {
+  if (pscal->cacheValid && pscal->isZero) {
     ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
     err = cudaMemcpyAsync(yarray,xarray,bn*sizeof(PetscScalar),cudaMemcpyDeviceToDevice,cstream);CHKERRCUDA(err);
-  } else if (pscal->isOne) {
+  } else if (pscal->cacheValid && pscal->isOne) {
     const PetscScalar *dptr;
 
     ierr = PetscStreamScalarCheckCache_Internal(pscal,1.0,pstream);CHKERRQ(ierr);
@@ -262,7 +262,7 @@ PetscErrorCode VecAYPX_SeqCUDAAsync(Vec yin,PetscStreamScalar pscal,Vec xin,Pets
   ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
   ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-  ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
   ierr = VecCUDARestoreArray(yin,&yarray);CHKERRQ(ierr);
   ierr = PetscLogCpuToGpu(sizeof(PetscScalar));CHKERRQ(ierr);
@@ -317,7 +317,7 @@ PetscErrorCode VecAXPY_SeqCUDAAsync(Vec yin,PetscStreamScalar pscal,Vec xin,Pets
   PetscValidStreamTypeSpecific(pstream,4,PETSC_STREAM_CUDA,VECCUDA);
   /* We bank on the fact that alpha is not zero, as this allows this function to be 100%
      pipelineable */
-  if (pscal->isZero) {
+  if (pscal->cacheValid && pscal->isZero) {
     ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
@@ -340,17 +340,17 @@ PetscErrorCode VecAXPY_SeqCUDAAsync(Vec yin,PetscStreamScalar pscal,Vec xin,Pets
     ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
     ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
     ierr = VecCUDARestoreArray(yin,&yarray);CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(2.0*yin->map->n);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpu(sizeof(PetscScalar));CHKERRQ(ierr);
   } else {
-    PetscScalar alpha;
+    const PetscScalar *alpha;
 
     /* Do on host */
     ierr = PetscStreamScalarGetHostRead(pscal,&alpha,pstream);CHKERRQ(ierr);
-    ierr = VecAXPY_Seq(yin,alpha,xin);CHKERRQ(ierr);
+    ierr = VecAXPY_Seq(yin,*alpha,xin);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -479,7 +479,7 @@ PetscErrorCode VecWAXPY_SeqCUDAAsync(Vec win,PetscStreamScalar pscal,Vec xin, Ve
   PetscValidStreamTypeSpecific(pstream,5,PETSC_STREAM_CUDA,VECCUDA);
   ierr = PetscCUBLASGetHandle(&cublasv2handle);CHKERRQ(ierr);
   ierr = PetscBLASIntCast(win->map->n,&bn);CHKERRQ(ierr);
-  if (pscal->isZero) {
+  if (pscal->cacheValid && pscal->isZero) {
     ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
     ierr = VecCopy_SeqCUDAAsync(yin,win,pstream);CHKERRQ(ierr);
   } else {
@@ -501,7 +501,7 @@ PetscErrorCode VecWAXPY_SeqCUDAAsync(Vec win,PetscStreamScalar pscal,Vec xin, Ve
     ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(2*win->map->n);CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(yin,&yarray);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayWrite(win,&warray);CHKERRQ(ierr);
@@ -573,7 +573,7 @@ PetscErrorCode VecMAXPY_SeqCUDAAsync(Vec xin, PetscInt nv,const PetscStreamScala
   }
   ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-  ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
   ierr = VecCUDARestoreArray(xin,&xarray);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -634,7 +634,7 @@ PetscErrorCode VecDot_SeqCUDAAsync(Vec xin,Vec yin,PetscStreamScalar pscal,Petsc
   ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = PetscStreamScalarRestoreDeviceWrite(pscal,&dptr,pstream);CHKERRQ(ierr);
-  ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
   if (xin->map->n >0) {
     ierr = PetscLogGpuFlops(2.0*xin->map->n-1);CHKERRQ(ierr);
   }
@@ -1029,7 +1029,21 @@ PetscErrorCode VecMDot_SeqCUDAAsync(Vec xin,PetscInt nv,const Vec yin[],PetscStr
   if (nv <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to VecMDot_SeqCUDA not positive.");
   /* Handle the case of local size zero first */
   if (!xin->map->n) {
-    for (i = 0; i < nv; ++i) {ierr = PetscStreamScalarSetHost(pscal[i],0.0,pstream);CHKERRQ(ierr);}
+    PetscScalar **hptrarr;
+
+    ierr = PetscMalloc1(nv, &hptrarr);CHKERRQ(ierr);
+    for (i = 0; i < nv; ++i) {
+      /* Post requests for all of the host arrays */
+      ierr = PetscStreamScalarGetHostWrite(pscal[i],hptrarr+i,pstream);CHKERRQ(ierr);
+    }
+    /* Fence for all requests */
+    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    for (i = 0; i < nv; ++i) {
+      /* Zero them all out and commit */
+      *(hptrarr[i]) = (PetscScalar)0.0;
+      ierr = PetscStreamScalarRestoreHostWrite(pscal[i],hptrarr+i,pstream);CHKERRQ(ierr);
+    }
+    ierr = PetscFree(hptrarr);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
 
@@ -1178,7 +1192,7 @@ PetscErrorCode VecMDot_SeqCUDAAsync(Vec xin,PetscInt nv,const Vec yin[],PetscStr
 
 #if defined(PETSC_USE_COMPLEX)
   ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
-  ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
   for (i = 0; i < nv; ++i) {
     ierr = PetscStreamScalarRestoreDeviceWrite(pscal[i],&dptr[i],pstream);CHKERRQ(ierr);
   }
@@ -1189,7 +1203,7 @@ PetscErrorCode VecMDot_SeqCUDAAsync(Vec xin,PetscInt nv,const Vec yin[],PetscStr
   cerr = cudaMemcpyAsync(group_results_cpu,group_results_gpu,nv1*sizeof(PetscScalar)*MDOT_WORKGROUP_NUM,cudaMemcpyDeviceToHost,cstream);CHKERRCUDA(cerr);
   ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
   /* Don't destroy the streams, as they are destroyed on synchronize */
-  ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
   /* Append the pscal events to the streams */
   for (i = 0; i < nv; ++i) {ierr = PetscStreamWaitEvent(pstream, pscal[i]->event);CHKERRQ(ierr);}
   ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
@@ -1252,22 +1266,22 @@ PetscErrorCode VecSet_SeqCUDAAsync(Vec xin,PetscStreamScalar pscal,PetscStream p
   PetscValidStreamTypeSpecific(pstream,3,PETSC_STREAM_CUDA,VECCUDA);
   ierr = VecCUDAGetArrayWriteAsync(xin,&xarray,pstream);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-  if (pscal->isZero) {
+  if (pscal->cacheValid && pscal->isZero) {
     cudaStream_t cstream;
 
     ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
     ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
     err = cudaMemsetAsync(xarray,0,n*sizeof(PetscScalar),cstream);CHKERRCUDA(err);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
   } else {
-    PetscScalar alpha;
+    const PetscScalar *alpha;
 
     ierr = PetscStreamScalarGetHostRead(pscal,&alpha,pstream);CHKERRQ(ierr);
     ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
     try {
       xptr = thrust::device_pointer_cast(xarray);
-      thrust::fill(xptr,xptr+n,alpha);
+      thrust::fill(xptr,xptr+n,*alpha);
     } catch (char *ex) {
       SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
     }
@@ -1315,10 +1329,10 @@ PetscErrorCode VecScale_SeqCUDAAsync(Vec xin,PetscStreamScalar pscal,PetscStream
 
   PetscFunctionBegin;
   PetscValidStreamTypeSpecific(pstream,3,PETSC_STREAM_CUDA,VECCUDA);
-  if (pscal->isZero) {
+  if (pscal->cacheValid && pscal->isZero) {
     ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
     ierr = VecSet_SeqCUDAAsync(xin,pscal,pstream);CHKERRQ(ierr);
-  } else if (!pscal->isOne) {
+  } else if (pscal->cacheValid && !pscal->isOne) {
     const PetscScalar *dptr;
     cudaStream_t      cstream;
 
@@ -1334,10 +1348,10 @@ PetscErrorCode VecScale_SeqCUDAAsync(Vec xin,PetscStreamScalar pscal,PetscStream
     ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = VecCUDARestoreArray(xin,&xarray);CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpu(sizeof(PetscScalar));CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(xin->map->n);CHKERRQ(ierr);
-  }
+  } else {ierr = PetscStreamScalarCheckCache_Internal(pscal,1.0,pstream);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -1395,7 +1409,7 @@ PetscErrorCode VecTDot_SeqCUDAAsync(Vec xin,Vec yin,PetscStreamScalar pscal,Pets
   ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = PetscStreamScalarRestoreDeviceWrite(pscal,&dptr,pstream);CHKERRQ(ierr);
-  ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
   if (xin->map->n > 0) {
     ierr = PetscLogGpuFlops(2.0*xin->map->n-1);CHKERRQ(ierr);
   }
@@ -1506,7 +1520,7 @@ PetscErrorCode VecCopy_SeqCUDAAsync(Vec xin,Vec yin,PetscStream pstream)
       }
       ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
       ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-      ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+      ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
       ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
       if (yiscuda) {
         ierr = VecCUDARestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
@@ -1534,7 +1548,7 @@ PetscErrorCode VecCopy_SeqCUDAAsync(Vec xin,Vec yin,PetscStream pstream)
         ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
         ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-        ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+        ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
       } else if (yin->offloadmask == PETSC_OFFLOAD_BOTH) {
@@ -1548,7 +1562,7 @@ PetscErrorCode VecCopy_SeqCUDAAsync(Vec xin,Vec yin,PetscStream pstream)
         ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
         ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-        ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+        ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
         ierr = VecCUDARestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
       } else {
@@ -1611,7 +1625,7 @@ PetscErrorCode VecSwap_SeqCUDAAsync(Vec xin,Vec yin,PetscStream pstream)
     ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
     ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     ierr = VecCUDARestoreArray(xin,&xarray);CHKERRQ(ierr);
     ierr = VecCUDARestoreArray(yin,&yarray);CHKERRQ(ierr);
   }
@@ -1684,16 +1698,16 @@ PetscErrorCode VecAXPBY_SeqCUDAAsync(Vec yin,PetscStreamScalar pscala,PetscStrea
   PetscValidStreamTypeSpecific(pstream,5,PETSC_STREAM_CUDA,VECCUDA);
   ierr = PetscCUBLASGetHandle(&cublasv2handle);CHKERRQ(ierr);
   ierr = PetscBLASIntCast(yin->map->n,&bn);CHKERRQ(ierr);
-  if (pscala->isZero) {
+  if (pscala->cacheValid && pscala->isZero) {
     ierr = PetscStreamScalarCheckCache_Internal(pscala,0.0,pstream);CHKERRQ(ierr);
     ierr = VecScale_SeqCUDAAsync(yin,pscalb,pstream);CHKERRQ(ierr);
-  } else if (pscalb->isOne) {
+  } else if (pscalb->cacheValid && pscalb->isOne) {
     ierr = PetscStreamScalarCheckCache_Internal(pscalb,1.0,pstream);CHKERRQ(ierr);
     ierr = VecAXPY_SeqCUDAAsync(yin,pscala,xin,pstream);CHKERRQ(ierr);
-  } else if (pscala->isOne) {
+  } else if (pscala->cacheValid && pscala->isOne) {
     ierr = PetscStreamScalarCheckCache_Internal(pscala,1.0,pstream);CHKERRQ(ierr);
     ierr = VecAYPX_SeqCUDAAsync(yin,pscalb,xin,pstream);CHKERRQ(ierr);
-  } else if (pscalb->isZero) {
+  } else if (pscalb->cacheValid && pscalb->isZero) {
     const PetscScalar *dptr;
     cudaStream_t      cstream;
 
@@ -1710,7 +1724,7 @@ PetscErrorCode VecAXPBY_SeqCUDAAsync(Vec yin,PetscStreamScalar pscala,PetscStrea
     ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
     ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(xin->map->n);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpu(sizeof(PetscScalar));CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
@@ -1732,7 +1746,7 @@ PetscErrorCode VecAXPBY_SeqCUDAAsync(Vec yin,PetscStreamScalar pscala,PetscStrea
     ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
     ierr = PetscStreamRecordEvent(pstream,yin->event);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
     ierr = VecCUDARestoreArray(yin,&yarray);CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(3.0*xin->map->n);CHKERRQ(ierr);
@@ -1769,7 +1783,7 @@ PetscErrorCode VecAXPBYPCZ_SeqCUDAAsync(Vec zin,PetscStreamScalar pscala,PetscSt
 
   PetscFunctionBegin;
   PetscValidStreamTypeSpecific(pstream,7,PETSC_STREAM_CUDA,VECCUDA);
-  if (pscalg->isOne) {
+  if (pscalg->cacheValid && pscalg->isOne) {
     ierr = PetscStreamScalarCheckCache_Internal(pscalg,1.0,pstream);CHKERRQ(ierr);
     /* z = ax + b*y + z */
     ierr = VecAXPY_SeqCUDAAsync(zin,pscala,xin,pstream);CHKERRQ(ierr);
@@ -1935,7 +1949,7 @@ PetscErrorCode VecNorm_SeqCUDAAsync(Vec xin,NormType type,PetscStreamScalar *psc
     ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscStreamScalarRestoreDeviceWrite(*pscal,&dptr,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(PetscMax(2.0*n-1,0.0));CHKERRQ(ierr);
   } else if (type == NORM_INFINITY) {
@@ -1950,17 +1964,19 @@ PetscErrorCode VecNorm_SeqCUDAAsync(Vec xin,NormType type,PetscStreamScalar *psc
     if (bn) {
       PetscScalar zs;
       PetscScalar *hptr;
+      /* This is stupid, it should go in a mini kernel */
+#error TODO make this a mini kernel
       err = cudaMemcpyAsync(&zs,xarray+i-1,sizeof(PetscScalar),cudaMemcpyDeviceToHost,cstream);CHKERRCUDA(err);
       ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
-      ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
-      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+      ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
       ierr = PetscStreamScalarGetHostWrite(pscal,&hptr,pstream);CHKERRQ(ierr);
+      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
       zs = PetscAbsScalar(zs);
-      ierr = PetscStreamScalarRestoreHostWrite(pscal)
+      ierr = PetscStreamScalarRestoreHostWrite(pscal,&hptr,pstream);CHKERRQ(ierr);
     } else {
       ierr = PetscStreamScalarGetDeviceWrite(*pscal,&dptr,pstream);CHKERRQ(ierr);
       err = cudaMemsetAsync(dptr,0,sizeof(PetscScalar),cstream);CHKERRCUDA(err);
-      ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+      ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     }
     ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
   } else if (type == NORM_1) {
@@ -1972,7 +1988,7 @@ PetscErrorCode VecNorm_SeqCUDAAsync(Vec xin,NormType type,PetscStreamScalar *psc
     cberr = cublasXasum(cublasv2handle,bn,xarray,one,dptr);CHKERRCUBLAS(cberr);
     ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-    ierr = PetscStreamRestoreStream(pstream,&cstream,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(PetscMax(n-1.0,0.0));CHKERRQ(ierr);
   } else if (type == NORM_1_AND_2) {
