@@ -4,15 +4,28 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
+PETSC_EXTERN PetscBool PetscStreamRegisterAllCalled;
+PETSC_EXTERN PetscErrorCode PetscStreamRegisterAll(void);
+
+typedef struct _StreamOps *StreamOps;
+struct _StreamOps {
+  PetscErrorCode (*create)(PetscStream);
+  PetscErrorCode (*destroy)(PetscStream);
+  PetscErrorCode (*setup)(PetscStream);
+  PetscErrorCode (*getstream)(PetscStream,void*);
+  PetscErrorCode (*restorestream)(PetscStream,void*);
+  PetscErrorCode (*recordevent)(PetscStream,PetscEvent);
+  PetscErrorCode (*waitevent)(PetscStream,PetscEvent);
+  PetscErrorCode (*synchronize)(PetscStream);
+  PetscErrorCode (*query)(PetscStream,PetscBool*);
+};
+
 struct _n_PetscStream {
-  PetscStreamType type;
-  PetscStreamMode mode;
-#if PetscDefined(HAVE_CUDA)
-  cudaStream_t    cstream;
-#endif /* PETSC_HAVE_CUDA */
-#if PetscDefined(HAVE_HIP)
-  hipStream_t     hstream;
-#endif /* PETSC_HAVE_HIP */
+  struct _StreamOps ops[1];
+  PetscBool         setup;
+  PetscStreamType   type;
+  PetscStreamMode   mode;
+  void              *data;
 };
 
 #define PetscValidStreamType(_p_strm__,_p_arg__)                        \
@@ -35,135 +48,53 @@ struct _n_PetscStream {
     }                                                                   \
 } while (0)
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleHIP_Internal(PetscStream strm)
-{
-  PetscFunctionBeginHot;
-  switch (strm->mode) {
-#if PetscDefined(HAVE_HIP)
-    hipError_t herr;
-#endif
-  case PETSC_STREAM_GLOBAL_BLOCKING:
-    /* NULL stream always blocks */
-    break;
-  case PETSC_STREAM_DEFAULT_BLOCKING:
-#if PetscDefined(HAVE_HIP)
-    if (!(strm->hstream)) {herr = hipStreamCreate(&strm->hstream);CHKERRHIP(herr);}
-#endif
-    break;
-  case PETSC_STREAM_GLOBAL_NONBLOCKING:
-#if PetscDefined(HAVE_HIP)
-    if (!(strm->hstream)) {
-      herr = hipStreamCreateWithFlags(&strm->hstream, hipStreamNonBlocking);CHKERRHIP(herr);
-    }
-#endif
-    break;
-  default:
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
-    break;
-  }
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamAssembleCUDA_Internal(PetscStream strm)
-{
-  PetscFunctionBeginHot;
-  switch (strm->mode) {
-#if PetscDefined(HAVE_CUDA)
-    cudaError_t cerr;
-#endif
-  case PETSC_STREAM_GLOBAL_BLOCKING:
-    /* NULL stream always blocks */
-    break;
-  case PETSC_STREAM_DEFAULT_BLOCKING:
-#if PetscDefined(HAVE_CUDA)
-    if (!(strm->cstream)) {cerr = cudaStreamCreate(&strm->cstream);CHKERRCUDA(cerr);}
-#endif
-    break;
-  case PETSC_STREAM_GLOBAL_NONBLOCKING:
-#if PetscDefined(HAVE_CUDA)
-    if (!(strm->cstream)) {
-      cerr = cudaStreamCreateWithFlags(&strm->cstream, cudaStreamNonBlocking);CHKERRCUDA(cerr);
-    }
-#endif
-    break;
-  default:
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
-    break;
-  }
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamDisassembleHIP_Internal(PetscStream strm)
-{
-  PetscFunctionBeginHot;
-  switch (strm->mode) {
-  case PETSC_STREAM_GLOBAL_BLOCKING:
-    /* NULL stream always blocks */
-    break;
-  case PETSC_STREAM_DEFAULT_BLOCKING:
-  case PETSC_STREAM_GLOBAL_NONBLOCKING:
-#if PetscDefined(HAVE_HIP)
-    if (strm->hstream) {
-      hipError_t herr;
-
-      herr = hipStreamDestroy(strm->hstream);CHKERRHIP(herr);
-      strm->hstream = NULL;
-    }
-#endif
-    break;
-  default:
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
-    break;
-  }
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamDisassembleCUDA_Internal(PetscStream strm)
-{
-  PetscFunctionBeginHot;
-  switch (strm->mode) {
-  case PETSC_STREAM_GLOBAL_BLOCKING:
-    /* NULL stream always blocks */
-    break;
-  case PETSC_STREAM_DEFAULT_BLOCKING:
-  case PETSC_STREAM_GLOBAL_NONBLOCKING:
-#if PetscDefined(HAVE_CUDA)
-    if (strm->cstream) {
-      cudaError_t cerr;
-
-      cerr = cudaStreamDestroy(strm->cstream);CHKERRCUDA(cerr);
-      strm->cstream = NULL;
-    }
-#endif
-    break;
-  default:
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Unknown/invalid PetscStreamMode\n");
-    break;
-  }
-  PetscFunctionReturn(0);
-}
+typedef struct _EventOps *EventOps;
+struct _EventOps {
+  PetscErrorCode (*create)(PetscEvent);
+  PetscErrorCode (*destroy)(PetscEvent);
+  PetscErrorCode (*setup)(PetscEvent);
+  PetscErrorCode (*synchronize)(PetscEvent);
+  PetscErrorCode (*query)(PetscEvent,PetscBool*);
+};
 
 struct _n_PetscEvent {
-  PetscBool       setup;
-  PetscStreamType type;
-#if PetscDefined(HAVE_CUDA)
-  cudaEvent_t     cevent;
-#endif /* PETSC_HAVE_CUDA */
-#if PetscDefined(HAVE_HIP)
-  hipEvent_t      hevent;
-#endif /* PETSC_HAVE_HIP */
-  unsigned int    eventFlags, waitFlags;
+  struct _EventOps ops[1];
+  PetscBool        setup;
+  PetscStreamType  type;
+  unsigned int     eventFlags, waitFlags;
+  void             *data;
+};
+
+typedef struct _ScalOps *ScalOps;
+struct _ScalOps {
+  PetscErrorCode (*create)(PetscStreamScalar);
+  PetscErrorCode (*destroy)(PetscStreamScalar);
+  PetscErrorCode (*setup)(PetscStreamScalar,PetscScalar*,PetscMemType,PetscStream);
+  PetscErrorCode (*gethost)(PetscStreamScalar,PetscScalar**,PetscStream);
+  PetscErrorCode (*restorehost)(PetscStreamScalar,PetscScalar**,PetscStream);
+  PetscErrorCode (*getdevice)(PetscStreamScalar,PetscScalar**,PetscStream);
+  PetscErrorCode (*restoredevice)(PetscStreamScalar,PetscScalar**,PetscStream);
 };
 
 struct _n_PetscStreamScalar {
+  struct _ScalOps  ops[1];
+  PetscBool        setup;
   PetscOffloadMask omask;
   PetscStreamType  type;
   PetscEvent       event;
   PetscScalar      *host;
   PetscScalar      *device;
+  PetscBool        cacheValid;
   PetscBool        isZero, isOne;
 };
 
+PETSC_INTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
+PETSC_INTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
+PETSC_INTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
+PETSC_INTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
+PETSC_INTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
+
+#if 0
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeDevice_Internal(PetscStreamScalar pscal, PetscStream pstream)
 {
   PetscErrorCode ierr;
@@ -307,16 +238,16 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarRestoreHost_Internal(PetscSt
   pscal->isOne = (PetscBool)(*pscal->host == (PetscScalar)1.0);
   PetscFunctionReturn(0);
 }
-
+#endif
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarCheckCache_Internal(PetscStreamScalar pscal, PetscScalar assertval, PetscStream pstream)
 {
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
   {
-    PetscScalar    *alpha;
-    PetscErrorCode ierr;
+    const PetscScalar *alpha;
+    PetscErrorCode    ierr;
 
-    ierr = PetscStreamScalarGetHost_Internal(pscal, &alpha, pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarGetHostRead(pscal, &alpha, pstream);CHKERRQ(ierr);
     if (PetscUnlikely(*alpha != assertval)) {
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bug in PetscStreamScalar cache, assumed %f but was %f\n",assertval,*alpha);
     }
@@ -324,4 +255,23 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarCheckCache_Internal(PetscStr
 #endif
   PetscFunctionReturn(0);
 }
+#if 0
+PETSCC_STATIC_INLINE PetscErrorCode PetscStreamScalarSetType_Internal(PetscStreamScalar pscal, PetscStreamType type)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (pscal->type == type) PetscFunctionReturn(0);
+  switch (type) {
+  case PETSC_STREAM_CUDA:
+    ierr = PetscStreamScalarCreateCUDA_Internal(pscal);CHKERRQ(ierr);
+    break;
+  case PETSC_STREAM_HIP:
+    ierr = PetscStreamScalarCreateHIP_Internal(pscal);CHKERRQ(ierr);
+  default:
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+#endif
 #endif /* DEVICEIMPL_H */
