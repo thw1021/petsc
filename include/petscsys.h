@@ -1588,7 +1588,7 @@ M*/
    Note:
      You can change how help messages are printed by replacing the function pointer with a function that does not simply write to stdout.
 
-      To use, write your own function for example,
+      To use, write your own function, for example,
 $PetscErrorCode mypetschelpprintf(MPI_Comm comm,const char format[],....)
 ${
 $ PetscFunctionReturn(0);
