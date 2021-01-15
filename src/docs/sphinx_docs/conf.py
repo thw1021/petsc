@@ -18,6 +18,7 @@ import subprocess
 import re
 import datetime
 
+sys.path.append(os.getcwd())
 sys.path.append(os.path.abspath('./ext'))
 
 
@@ -166,7 +167,12 @@ def setup(app):
     genDirPath = os.path.join(cwdPath, genDirName)
     if not os.path.exists(genDirPath):
         import genteamtable
-        genteamtable.runFromPython(genDirPath, os.environ["PETSC_GITLAB_PRIVATE_TOKEN"])
+
+        if "PETSC_GITLAB_PRIVATE_TOKEN" in os.environ:
+            token = os.environ["PETSC_GITLAB_PRIVATE_TOKEN"]
+        else:
+            token = None
+        genteamtable.runFromPython(genDirPath, token)
     app.add_css_file('css/pop-up.css')
     app.add_css_file('css/colorbox.css')
     app.add_css_file('css/petsc-team-container.css')
