@@ -144,13 +144,16 @@ PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, Pets
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarMult(PetscStreamScalar pscal, PetscScalar val)
+PetscErrorCode PetscStreamScalarAccumulateOp(PetscStreamScalar pscalacc, PetscInt n, PetscStreamScal pscal[], PetscStreamOp epiop, PetscStreamOp accop, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidStreamType(pscal,1);
-  if (val == (PetscScalar)1.0) PetscFunctionReturn(0);
-  //ierr = (*pscal->ops->mult)(pscal, val);CHKERRQ(ierr);
+  PetscCheckValidSameStreamType(pscal,1,pstream,4);
+  if (PetscUnlikelyDebug(n > 7)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Can only accumuate up to 8 scalars at a time\n");
+  if (PetscUnlikelyDebug(n < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid number of scalars %D\n",n);
+  for (PetscInt i = 0; i < n; ++i) PetscCheckValidSameStreamType(pscal[i],3,pstream,4);
+  if (!n) PetscFunctionReturn(0);
+  ierr = (*pscal->ops->accumop)(pscalacc, n, pscal, epiop, accop, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
