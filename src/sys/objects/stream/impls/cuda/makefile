@@ -1,10 +1,11 @@
-
+#requirespackage 'PETSC_HAVE_CUDA'
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  = streamcuda.c eventcuda.c scalcuda.c
+SOURCECU  = scalkernels.cu
 SOURCEF	  =
 SOURCEH	  = streamcuda.h
 MANSEC	  = Sys
