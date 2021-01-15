@@ -8,8 +8,9 @@ Created on Wed Dec 23 14:09:21 2020
 import os
 import requests
 
-petscDir = os.getenv("PETSC_DIR")
-imDir = os.path.join(petscDir, "src", "docs", "website", "images")
+# Should be "sphinx_docs"
+curPath = os.path.dirname(os.path.realpath(__file__))
+imDir = os.path.join(curPath, "..", "website", "images")
 if not os.path.exists(imDir):
     raise RuntimeError("Image directory "+imDir+" has moved or been deleted!")
 
@@ -270,19 +271,26 @@ def writeRst(fname, devs):
         f.writelines(lines)
     print("Wrote table to "+fname)
 
+def writeWarnRst(fname):
+    import warnings
+    with open(fname, "w+") as f:
+        f.writelines([".. warning::\n\n",
+                      "   ``$PETSC_GITLAB_PRIVATE_TOKEN`` was not defined in your environment. Please generate a gitlab private token and export it to your environment. See https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html for more information."])
+    warnings.warn("$PETSC_GITLAB_PRIVATE_TOKEN was not defined in your environment. Please generate a gitlab private token and export it to your environment. See https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html for more information.", RuntimeWarning)
+
 def runFromMain(writeDirPath, token):
     print("============================================")
     print("  GENERATING TEAM TABLE FROM COMMAND LINE   ")
     print("============================================")
-    run(writeDirPath, token)
+    run(writeDirPath, token=token)
 
 def runFromPython(writeDirPath, token):
     print("============================================")
     print("     GENERATING TEAM TABLE FROM PYTHON      ")
     print("============================================")
-    run(writeDirPath, token)
+    run(writeDirPath, token=token)
 
-def run(writeDirPath, token):
+def run(writeDirPath, token=None):
     try:
         os.mkdir(writeDirPath)
         print("Generate directory created at %s" % (writeDirPath))
@@ -292,15 +300,19 @@ def run(writeDirPath, token):
             raise
         else:
             print("Generate directory already exists at %s" % (writeDirPath))
-    devJson = getJson(devURL, token)
-    ownerJson = getJson(ownerURL, token)
-    integratorJson = getJson(integratorURL, token)
-    megaJson = devJson+ownerJson+integratorJson
-    tierlist = makeDevDict(megaJson)
     currentFile = os.path.join(writeDirPath, "petsc-team-table.inc")
-    writeRst(currentFile, tierlist)
     emeritusFile = os.path.join(writeDirPath, "petsc-emeritus-table.inc")
-    writeRst(emeritusFile, emeritus)
+    if token is None:
+        writeWarnRst(currentFile)
+        writeWarnRst(emeritusFile)
+    else:
+        devJson = getJson(devURL, token)
+        ownerJson = getJson(ownerURL, token)
+        integratorJson = getJson(integratorURL, token)
+        megaJson = devJson+ownerJson+integratorJson
+        tierlist = makeDevDict(megaJson)
+        writeRst(currentFile, tierlist)
+        writeRst(emeritusFile, emeritus)
 
 if __name__ == "__main__":
     import argparse
@@ -313,4 +325,4 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output-dir", required = True, metavar = path, type = pathlib.Path, help = "Specify the output directory", dest = "writeDir")
     args = parser.parse_args()
     writeDirPath = os.path.realpath(args.writeDir)
-    runFromMain(writeDirPath, args.token)
+    runFromMain(writeDirPath, token=args.token)

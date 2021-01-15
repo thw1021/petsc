@@ -24,7 +24,7 @@ rebuild:
 	@$(SPHINXBUILD) -E "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
 
 petsc-team-table.inc:
-	@$(SOURCEDIR)/ext/genteamtable.py --gitlab-token ${PETSC_GITLAB_PRIVATE_TOKEN} --output-dir $(GENDIR)
+	@$(SOURCEDIR)/genteamtable.py --gitlab-token ${PETSC_GITLAB_PRIVATE_TOKEN} --output-dir $(GENDIR)
 
 html: petsc-team-table.inc
 
