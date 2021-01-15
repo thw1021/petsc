@@ -3,13 +3,17 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.download               = ['link://src/binding/petsc4py']
     self.functions              = []
     self.includes               = []
     self.skippackagewithoptions = 1
     self.useddirectly           = 0
     self.linkedbypetsc          = 0
     self.builtafterpetsc        = 1
+    return
+
+  def setupHelp(self,help):
+    import nargs
+    help.addArgument('PETSc', '-with-petsc4py=<bool>', nargs.Arg(None, 0, 'Build PETSc Python bindings (petsc4py)'))
     return
 
   def setupDependencies(self, framework):
@@ -98,7 +102,6 @@ class Configure(config.package.Package):
       raise RuntimeError('PETSc4py requires Python with "%s" module(s) installed!\n'
                          'Please install using package managers - for ex: "apt" or "dnf" (on linux),\n'
                          'or with "pip" using: %s -m pip install %s' % (" ".join(npkgs), self.python.pyexe, " ".join(npkgs)))
-    self.checkDownload()
 
   def alternateConfigureLibrary(self):
     self.addMakeRule('petsc4py-build','')
