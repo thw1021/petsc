@@ -107,6 +107,13 @@ PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamQuery(PetscStream,PetscBool*);
 
+typedef enum {
+  STREAM_OP_SUM,
+  STREAM_OP_SUB,
+  STREAM_OP_DIV,
+  STREAM_OP_MULT
+} PetscStreamOp;
+
 typedef struct _n_PetscStreamScalar* PetscStreamScalar;
 
 PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar*);

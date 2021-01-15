@@ -46,60 +46,49 @@ struct multFunctor {
 
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11) /* C++11 */
 /* We use the final iteration of recursion to enforce the type */
-template <typename FuncType> __device__ __forceinline__
-PetscScalar kernelFunctorDevice(FuncType functor, PetscScalar *top)
+template <typename AccumType> __device__ __forceinline__
+PetscScalar kernelFunctorDevice(AccumType accFunctor, PetscScalar *top)
 {
-  return functor(*top, static_cast<PetscScalar>(0));
+  return accFunctor(*top, static_cast<PetscScalar>(0));
 }
 
-template <typename FuncType, typename Type, typename... Args> __device__ __forceinline__
-Type kernelFunctorDevice(FuncType functor, Type *top, Args... argList)
+template <typename AccumType, typename Type, typename... Args> __device__ __forceinline__
+Type kernelFunctorDevice(AccumType accFunctor, Type *top, Args... argList)
 {
-  return functor(*top, kernelFunctorDevice(functor, argList...));
+  return accFunctor(*top, kernelFunctorDevice(accFunctor, argList...));
 }
 
-template <typename FuncType, typename Type, typename... Args> __global__ __launch_bounds__(1)
-void kernelFunctor(FuncType functor, Type *ret, Args... argList)
+template <typename EpilogueType, typename AccumType, typename Type, typename... Args> __global__ __launch_bounds__(1)
+void kernelFunctor(EpilogueType epiFunctor, AccumType accFunctor, Type *ret, Args... argList)
 {
-  Type rettemp = kernelFunctorDevice(functor, argList...);
-  *ret = functor(ret, rettemp);
+  Type accum = kernelFunctorDevice(accFunctor, argList...);
+  *ret = epiFunctor(accum, *ret);
   return;
 }
 #else
-template <typename FuncType, typename Type> __global__ __launch_bounds__(1)
-void kernelFunctor(FuncType functor, Type *ret, Type *in1, Type *in2=nullptr, Type *in3=nullptr, Type *in4=nullptr, Type *in5=nullptr, Type *in6=nullptr, Type *in7=nullptr)
+template <typename EpilogueType, typename AccumType, typename Type> __global__ __launch_bounds__(1)
+void kernelFunctor(EpilogueType epiFunctor, AccumType accFunctor, Type *ret, Type *in1, Type *in2=nullptr, Type *in3=nullptr, Type *in4=nullptr, Type *in5=nullptr, Type *in6=nullptr, Type *in7=nullptr)
 {
-  Type acc = *in1;
-
-  if (in2) acc = functor(acc, *in2);
-  if (in3) acc = functor(acc, *in3);
-  if (in4) acc = functor(acc, *in4);
-  if (in5) acc = functor(acc, *in5);
-  if (in6) acc = functor(acc, *in6);
-  if (in7) acc = functor(acc, *in7);
-  *ret = functor(acc, *ret);
-}
-#endif
-template <typename FuncType, typename Type> __global__ __launch_bounds__(1)
-void kernelFunctor(FuncType functor, Type *ret)
-{
-  Type rettemp = *ret;
-  *ret = functor(rettemp, rettemp);
+  if (in2) acc = accFunctor(acc, *in2);
+  if (in3) acc = accFunctor(acc, *in3);
+  if (in4) acc = accFunctor(acc, *in4);
+  if (in5) acc = accFunctor(acc, *in5);
+  if (in6) acc = accFunctor(acc, *in6);
+  if (in7) acc = accFunctor(acc, *in7);
+  *ret = epiFunctor(acc, *ret);
   return;
 }
+#endif
 
-PetscErrorCode PetscStreamScalarOperator_CUDA(PetscStreamScalar pscalret, PetscInt n, PetscStreamScalar pscal[], PetscStream pstream)
+template <typename EpilogueType, typename AccumType>
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarOp_Internal(EpilogueType epiFunctor, AccumType accFunctor, PetscStreamScalar pscalret, PetscInt n, PetscStreamScalar pscal[], PetscStream pstream)
 {
   PetscErrorCode ierr;
   PetscScalar    *dev[8];
   cudaStream_t   cstream;
 
   PetscFunctionBegin;
-  PetscCheckValidSameStreamType(pscalret,1,pstream,4);
-  /* n may only be 1 <= n <= 7, for a total of 8 sums */
-  if (PetscUnlikelyDebug(n > 7)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Can only sum up to 8 scalars at a time\n");
   for (PetscInt i = 0; i < n; ++i) {
-    PetscCheckValidSameStreamType(pscal[i],3,pstream,4);
     ierr = PetscStreamScalarGetDeviceRead(pscal[i], (const PetscScalar**)dev+1+i, pstream);CHKERRQ(ierr);
   }
   ierr = PetscStreamScalarGetDeviceWrite(pscalret, dev, pstream);CHKERRQ(ierr);
@@ -107,33 +96,79 @@ PetscErrorCode PetscStreamScalarOperator_CUDA(PetscStreamScalar pscalret, PetscI
   /* We must do it this way since we cannot pass just dev, it is allocated on host, but
      contents of dev are allocated on device */
   switch (n) {
-  case 0:
-    kernelFunctor<<<1,1,0,cstream>>>(addFunctor(),dev[0]);
-    break;
   case 1:
-    kernelFunctor<<<1,1,0,cstream>>>(addFunctor(),dev[0],dev[1]);
+    kernelFunctor<<<1,1,0,cstream>>>(epiFunctor,accFunctor,dev[0],dev[1]);
     break;
   case 2:
-    kernelFunctor<<<1,1,0,cstream>>>(addFunctor(),dev[0],dev[1],dev[2]);
+    kernelFunctor<<<1,1,0,cstream>>>(epiFunctor,accFunctor,dev[0],dev[1],dev[2]);
     break;
   case 3:
-    kernelFunctor<<<1,1,0,cstream>>>(addFunctor(),dev[0],dev[1],dev[2],dev[3]);
+    kernelFunctor<<<1,1,0,cstream>>>(epiFunctor,accFunctor,dev[0],dev[1],dev[2],dev[3]);
     break;
   case 4:
-    kernelFunctor<<<1,1,0,cstream>>>(addFunctor(),dev[0],dev[1],dev[2],dev[3],dev[4]);
+    kernelFunctor<<<1,1,0,cstream>>>(epiFunctor,accFunctor,dev[0],dev[1],dev[2],dev[3],dev[4]);
     break;
   case 5:
-    kernelFunctor<<<1,1,0,cstream>>>(addFunctor(),dev[0],dev[1],dev[2],dev[3],dev[4],dev[5]);
+    kernelFunctor<<<1,1,0,cstream>>>(epiFunctor,accFunctor,dev[0],dev[1],dev[2],dev[3],dev[4],dev[5]);
     break;
   case 6:
-    kernelFunctor<<<1,1,0,cstream>>>(addFunctor(),dev[0],dev[1],dev[2],dev[3],dev[4],dev[5],dev[6]);
+    kernelFunctor<<<1,1,0,cstream>>>(epiFunctor,accFunctor,dev[0],dev[1],dev[2],dev[3],dev[4],dev[5],dev[6]);
     break;
   case 7:
-    kernelFunctor<<<1,1,0,cstream>>>(addFunctor(),dev[0],dev[1],dev[2],dev[3],dev[4],dev[5],dev[6],dev[7]);
+    kernelFunctor<<<1,1,0,cstream>>>(epiFunctor,accFunctor,dev[0],dev[1],dev[2],dev[3],dev[4],dev[5],dev[6],dev[7]);
   default:
     break;
   }
   ierr = PetscStreamRestoreStream(pstream, &cstream);CHKERRQ(ierr);
   ierr = PetscStreamScalarRestoreDeviceWrite(pscalret, dev, pstream);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/* Have this odd 2-step process of switch-casing the ops from the enum, because templates
+   are fun :) */
+template <typename AccumType>
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarOpDispatch_Internal(AccumType accFunctor, PetscStreamOp epiop, PetscStreamScalar pscalret, PetscInt n, PetscStreamScalar pscal[], PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  switch (epiop) {
+  case STREAM_OP_SUM:
+    ierr = PetscStreamScalarOp_Internal(addFunctor(),accFunctor,pscalret,n,pscal,pstream);CHKERRQ(ierr);
+    break;
+  case STREAM_OP_SUB:
+    ierr = PetscStreamScalarOp_Internal(subFunctor(),accFunctor,pscalret,n,pscal,pstream);CHKERRQ(ierr);
+    break;
+  case STREAM_OP_DIV:
+    ierr = PetscStreamScalarOp_Internal(divFunctor(),accFunctor,pscalret,n,pscal,pstream);CHKERRQ(ierr);
+    break;
+  case STREAM_OP_MULT:
+    ierr = PetscStreamScalarOp_Internal(multFunctor(),accFunctor,pscalret,n,pscal,pstream);CHKERRQ(ierr);
+  default:
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarOpDispatch_CUDA(PetscStreamScalar pscalret, PetscInt n, PetscStreamScalar pscal[], PetscStreamOp epiop, PetscStreamOp accop, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  switch (accop) {
+  case STREAM_OP_SUM:
+    ierr = PetscStreamScalarOpDispatch_Internal(addFunctor(),epiop,pscalret,n,pscal,pstream);CHKERRQ(ierr);
+    break;
+  case STREAM_OP_SUB:
+    ierr = PetscStreamScalarOpDispatch_Internal(subFunctor(),epiop,pscalret,n,pscal,pstream);CHKERRQ(ierr);
+    break;
+  case STREAM_OP_DIV:
+    ierr = PetscStreamScalarOpDispatch_Internal(divFunctor(),epiop,pscalret,n,pscal,pstream);CHKERRQ(ierr);
+    break;
+  case STREAM_OP_MULT:
+    ierr = PetscStreamScalarOpDispatch_Internal(multFunctor(),epiop,pscalret,n,pscal,pstream);CHKERRQ(ierr);
+  default:
+    break;
+  }
   PetscFunctionReturn(0);
 }
