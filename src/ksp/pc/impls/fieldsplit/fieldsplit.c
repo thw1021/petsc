@@ -1,6 +1,7 @@
 #include <petsc/private/pcimpl.h>     /*I "petscpc.h" I*/
 #include <petsc/private/kspimpl.h>    /*  This is needed to provide the appropriate PETSC_EXTERN for KSP_Solve_FS ....*/
 #include <petscdm.h>
+#include <omp.h>
 
 const char *const PCFieldSplitSchurPreTypes[] = {"SELF","SELFP","A11","USER","FULL","PCFieldSplitSchurPreType","PC_FIELDSPLIT_SCHUR_PRE_",NULL};
 const char *const PCFieldSplitSchurFactTypes[] = {"DIAG","LOWER","UPPER","FULL","PCFieldSplitSchurFactType","PC_FIELDSPLIT_SCHUR_FACT_",NULL};
@@ -1248,10 +1249,39 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
       ierr = VecStrideScatterAll(jac->y,y,INSERT_VALUES);CHKERRQ(ierr);
     } else {
       ierr = VecSet(y,0.0);CHKERRQ(ierr);
+      /* while (ilink) { */
+      /*   ierr = FieldSplitSplitSolveAdd(ilink,x,y);CHKERRQ(ierr); */
+      /*   ilink = ilink->next; */
+      /* } */
+#define PETSC_MAX_ASM_BLOCKS 10
+      PC_FieldSplitLink links[PETSC_MAX_ASM_BLOCKS];
+      ierr = PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
+      cnt = 0;
       while (ilink) {
-        ierr = FieldSplitSplitSolveAdd(ilink,x,y);CHKERRQ(ierr);
+        if (cnt==PETSC_MAX_ASM_BLOCKS) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of local fieldspilt blocks >= %D",PETSC_MAX_ASM_BLOCKS);
+        ierr = VecScatterBegin(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+        ierr = VecScatterEnd(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+        ierr = KSPSetUp(ilink->ksp);CHKERRQ(ierr);
+        links[cnt++] = ilink;
         ilink = ilink->next;
       }
+      ierr = VecSet(y,0.0);CHKERRQ(ierr);
+#pragma omp parallel for private(bs) shared(links)
+      for (bs=0;bs<cnt;bs++) {
+        PC_FieldSplitLink  ilink = links[bs];
+        int                idx = omp_get_thread_num();
+        PetscErrorCode     ierr2;
+        ierr2 = KSPSolve(ilink->ksp,ilink->x,ilink->y);
+        if (ierr2) {PetscPrintf(PETSC_COMM_WORLD, "Solver error in thread %d\n",idx); ierr = ierr2;}
+      }
+      CHKERRQ(ierr);
+      for (bs=0;bs<cnt;bs++) {
+        PC_FieldSplitLink  ilink = links[bs];
+        ierr = KSPCheckSolve(ilink->ksp,pc,ilink->y);CHKERRQ(ierr);
+        ierr = VecScatterBegin(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+        ierr = VecScatterEnd(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+      }
+      ierr = PetscLogEventEnd(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
     }
   } else if (jac->type == PC_COMPOSITE_MULTIPLICATIVE && jac->nsplits == 2) {
     ierr = VecSet(y,0.0);CHKERRQ(ierr);
