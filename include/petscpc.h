@@ -274,6 +274,7 @@ PETSC_EXTERN PetscErrorCode PCFieldSplitSetGKBTol(PC,PetscReal);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetGKBNu(PC,PetscReal);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetGKBMaxit(PC,PetscInt);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetGKBDelay(PC,PetscInt);
+PETSC_EXTERN PetscErrorCode PCFieldSplitSetUseOpenMP(PC,PetscBool);
 
 PETSC_EXTERN PetscErrorCode PCGalerkinSetRestriction(PC,Mat);
 PETSC_EXTERN PetscErrorCode PCGalerkinSetInterpolation(PC,Mat);
