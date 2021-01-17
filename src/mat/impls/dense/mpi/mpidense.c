@@ -1860,6 +1860,17 @@ PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat A,Mat *v)
   PetscFunctionReturn(0);
 }
 
+/*MC
+   MATMPIDENSE - MATMPIDENSE = "mpidense" - A matrix type to be used for distributed dense matrices.
+
+   Options Database Keys:
+. -mat_type mpidense - sets the matrix type to "mpidense" during a call to MatSetFromOptions()
+
+  Level: beginner
+
+.seealso: MatCreateDense()
+
+M*/
 PETSC_EXTERN PetscErrorCode MatCreate_MPIDense(Mat mat)
 {
   Mat_MPIDense   *a;
