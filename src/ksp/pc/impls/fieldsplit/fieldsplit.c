@@ -1,6 +1,9 @@
 #include <petsc/private/pcimpl.h>     /*I "petscpc.h" I*/
 #include <petsc/private/kspimpl.h>    /*  This is needed to provide the appropriate PETSC_EXTERN for KSP_Solve_FS ....*/
 #include <petscdm.h>
+#if defined(PETSC_HAVE_OPENMP)
+#include <omp.h>
+#endif
 
 const char *const PCFieldSplitSchurPreTypes[] = {"SELF","SELFP","A11","USER","FULL","PCFieldSplitSchurPreType","PC_FIELDSPLIT_SCHUR_PRE_",NULL};
 const char *const PCFieldSplitSchurFactTypes[] = {"DIAG","LOWER","UPPER","FULL","PCFieldSplitSchurFactType","PC_FIELDSPLIT_SCHUR_FACT_",NULL};
@@ -62,6 +65,9 @@ typedef struct {
   PetscBool                 diag_use_amat;          /* Whether to extract diagonal matrix blocks from Amat, rather than Pmat (weaker than -pc_use_amat) */
   PetscBool                 offdiag_use_amat;       /* Whether to extract off-diagonal matrix blocks from Amat, rather than Pmat (weaker than -pc_use_amat) */
   PetscBool                 detect;                 /* Whether to form 2-way split by finding zero diagonal entries */
+
+  /* Only used when OpenMP is used */
+  PetscBool                 useopenmp;              /* Whether to use OpenMP (for additive solves) */
 } PC_FieldSplit;
 
 /*
@@ -1247,10 +1253,45 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
       }
       ierr = VecStrideScatterAll(jac->y,y,INSERT_VALUES);CHKERRQ(ierr);
     } else {
+      PetscBool done = PETSC_FALSE;
       ierr = VecSet(y,0.0);CHKERRQ(ierr);
-      while (ilink) {
-        ierr = FieldSplitSplitSolveAdd(ilink,x,y);CHKERRQ(ierr);
-        ilink = ilink->next;
+#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
+      if (jac->useopenmp) {
+#define MAXNBLOCKS 10
+        PC_FieldSplitLink links[MAXNBLOCKS];
+        ierr = PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
+        cnt = 0;
+        while (ilink) {
+          if (cnt==MAXNBLOCKS) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of local fieldspilt blocks >= %D",MAXNBLOCKS);
+          links[cnt++] = ilink;
+          ilink = ilink->next;
+        }
+        ierr = 0;
+#pragma omp parallel for private(bs) shared(links,x,y,ierr)
+        for (bs=0;bs<cnt;bs++) {
+          PC_FieldSplitLink  ilink = links[bs];
+          int                idx = omp_get_thread_num(), ierr2;
+          ierr2 = PetscInfo2(pc, "thread %d in block %D\n",idx,bs);
+          if (ierr2) ierr = ierr2;
+          else ierr2 = VecScatterBegin(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);
+          if (ierr2) ierr = ierr2;
+          else ierr2 = VecScatterEnd(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);
+          if (ierr2) ierr = ierr2;
+          else ierr2 = KSPSolve(ilink->ksp,ilink->x,ilink->y);
+          if (ierr2) ierr = ierr2;
+          else ierr2 = VecScatterBegin(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);
+          if (ierr2) ierr = ierr2;
+          else ierr2 = VecScatterEnd(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);
+        }
+        CHKERRQ(ierr);
+        done = PETSC_TRUE;
+      }
+#endif
+      if (!done) {
+        while (ilink) {
+          ierr = FieldSplitSplitSolveAdd(ilink,x,y);CHKERRQ(ierr);
+          ilink = ilink->next;
+        }
       }
     }
   } else if (jac->type == PC_COMPOSITE_MULTIPLICATIVE && jac->nsplits == 2) {
@@ -1649,6 +1690,12 @@ static PetscErrorCode PCSetFromOptions_FieldSplit(PetscOptionItems *PetscOptions
     if (jac->gkbnu < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nu cannot be less than 0: value %f",jac->gkbnu);
     ierr = PetscOptionsInt("-pc_fieldsplit_gkb_maxit","Maximum allowed number of iterations","PCFieldSplitGKBMaxit",jac->gkbmaxit,&jac->gkbmaxit,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-pc_fieldsplit_gkb_monitor","Prints number of GKB iterations and error","PCFieldSplitGKB",jac->gkbmonitor,&jac->gkbmonitor,NULL);CHKERRQ(ierr);
+  }
+  ierr = PetscOptionsBool("-pc_fieldsplit_use_openmp","Use OepnMP, if available, for additive local subdomain solves","PCFieldSplitSetUseOpenMP",jac->useopenmp,&jac->useopenmp,NULL);CHKERRQ(ierr);
+  if (jac->useopenmp) {
+    PetscMPIInt size;
+    ierr  = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRQ(ierr);
+    if (size>1)  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"OpenMP only tested for MPI serial (fix me)");
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -3016,6 +3063,31 @@ PetscErrorCode PCFieldSplitSetDetectSaddlePoint(PC pc,PetscBool flg)
   PetscFunctionReturn(0);
 }
 
+/*@
+    PCFieldSplitSetUseOpenMP - Set flag to use OpenMP if available for additive subdomain solves that are local
+
+    Not collective on PC
+
+    Input Parameters:
++   pc     - the preconditioner context
+-   useomp - use OpenMP
+
+    Options Database:
+.     -pc_fieldsplit_use_openmp - default is false
+
+    Level: intermediate
+
+.seealso: PCFIELDSPLIT
+@*/
+PetscErrorCode PCFieldSplitSetUseOpenMP(PC pc,PetscBool useomp)
+{
+  PC_FieldSplit *jac = (PC_FieldSplit*)pc->data;
+
+  PetscFunctionBegin;
+  jac->useopenmp = useomp;
+  PetscFunctionReturn(0);
+}
+
 /* -------------------------------------------------------------------------------------*/
 /*MC
    PCFIELDSPLIT - Preconditioner created by combining separate preconditioners for individual
@@ -3141,7 +3213,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_FieldSplit(PC pc)
   pc->ops->setfromoptions  = PCSetFromOptions_FieldSplit;
   pc->ops->view            = PCView_FieldSplit;
   pc->ops->applyrichardson = NULL;
-
+  jac->useopenmp           = PETSC_FALSE;
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitSchurGetSubKSP_C",PCFieldSplitSchurGetSubKSP_FieldSplit);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitGetSubKSP_C",PCFieldSplitGetSubKSP_FieldSplit);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitSetFields_C",PCFieldSplitSetFields_FieldSplit);CHKERRQ(ierr);
