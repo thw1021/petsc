@@ -1950,7 +1950,7 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
-  ierr = PetscInfo3(ts, "Create Landau Jacobian t=%g X'=%p %s\n",time_dummy,X_t,ctx->aux_bool ? " -- seems to be in line search" : "");CHKERRQ(ierr);
+  ierr = PetscInfo3(ts, "Create Landau Jacobian t=%g X'=%p %s\n",(double)time_dummy,X_t,ctx->aux_bool ? " -- seems to be in line search" : "");CHKERRQ(ierr);
   ierr = LandauFormJacobian_Internal(X,ctx->J,dim,0.0,(void*)ctx);CHKERRQ(ierr);
   ctx->aux_bool = PETSC_TRUE;
   ierr = MatViewFromOptions(ctx->J,NULL,"-landau_jacobian_mat_view");CHKERRQ(ierr);
