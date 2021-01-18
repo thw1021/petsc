@@ -18,6 +18,7 @@ import subprocess
 import re
 import datetime
 
+sys.path.append(os.getcwd())
 sys.path.append(os.path.abspath('./ext'))
 
 
@@ -157,10 +158,21 @@ graphviz_dot = str(result)
 highlight_language = 'c'
 autosummary_generate = True
 numfig = True
-
 # Supposedly the safer way to add additional css files. Setting html_css_files will
 # overwrite previous versions of the variable that some extension may have set. This will
 # add our css files in addition to it.
 def setup(app):
+    genDirName = "generated"
+    cwdPath = os.path.dirname(os.path.realpath(__file__))
+    genDirPath = os.path.join(cwdPath, genDirName)
+    if not os.path.exists(genDirPath):
+        import genteamtable
+
+        if "PETSC_GITLAB_PRIVATE_TOKEN" in os.environ:
+            token = os.environ["PETSC_GITLAB_PRIVATE_TOKEN"]
+        else:
+            token = None
+        genteamtable.runFromPython(genDirPath, token)
     app.add_css_file('css/pop-up.css')
     app.add_css_file('css/colorbox.css')
+    app.add_css_file('css/petsc-team-container.css')
