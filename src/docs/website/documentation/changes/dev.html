@@ -151,10 +151,11 @@
       </ul>
       <h4>PC:</h4>
       <ul>
-        <li>Add PCGAMGSetRankReductionFactors(), provide an array, <tt>-pc_gamg_rank_reduction_factors factors</tt>, tp specify factor by which to reduce active processors on coarse grids in PCGAMG that overrides default heuristics</li>
+        <li>Add PCGAMGSetRankReductionFactors(), provide an array, <tt>-pc_gamg_rank_reduction_factors factors</tt>, to specify factor by which to reduce active processors on coarse grids in PCGAMG that overrides default heuristics</li>
         <li>Change PCCompositeAddPC() to PCCompositeAddPCType(), now PCCompositeAddPC() adds a specific PC object</li>
         <li>Add a Compatible Relaxation (CR) viewer PCMG with -pc_mg_adapt_cr</li>
         <li>Experimental: Add support for assembling AIJ (CUSPARSE and KOKKOS) matrix on the Cuda device with MatSetValuesDevice(), MatCUSPARSEGetDeviceMatWrite(), and Kokkos with MatKokkosGetDeviceMatWrite</li>
+        <li>Experimental: Add PCFieldSplitSetUseOpenMP() to use OpenMP in the outer loop of the additive method to run the solvers in parallel and provide for an asynchronous launch mechanism for GPU solver (GPU solvers not working and only for MPI serial now) </li>
       </ul>
       <h4>KSP:</h4>
        <ul>
