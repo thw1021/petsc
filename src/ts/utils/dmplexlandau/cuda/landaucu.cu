@@ -437,7 +437,9 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
 #if LANDAU_DIM==3
   PetscScalar       *d_dfdz=NULL;
 #endif
+#if defined PETSC_USE_LOG
   PetscLogDouble    flops;
+#endif
   PetscTabulation   *Tf;
   PetscDS           prob;
   PetscSection      section, globalSection;
@@ -473,7 +475,9 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   if (mass_w) {
     cerr = cudaMalloc((void **)&d_mass_w,        nip*szf);CHKERRCUDA(cerr); // kernel input
     cerr = cudaMemcpy(          d_mass_w, mass_w,nip*szf,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+#if defined PETSC_USE_LOG
     flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nf*Nf);
+#endif
   } else {
     ipdatasz = LandauGetIPDataSize(IPData);
     cerr = cudaMalloc((void **)&d_IPDataRaw,ipdatasz*szf);CHKERRCUDA(cerr); // kernel input
@@ -496,7 +500,9 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
     // collect geometry
     cerr = cudaMalloc((void **)&d_invJj, nip_dim2*szf);CHKERRCUDA(cerr); // kernel input
     cerr = cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+#if defined PETSC_USE_LOG
     flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nf*Nf + 165.);
+#endif
   }
 
   ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
