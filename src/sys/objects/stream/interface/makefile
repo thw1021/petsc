@@ -5,6 +5,7 @@ CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  = dstream.c dstreamreg.c devent.c dstreamscal.c
+SOURCECXX =
 SOURCEF	  =
 SOURCEH	  =
 MANSEC	  = Sys

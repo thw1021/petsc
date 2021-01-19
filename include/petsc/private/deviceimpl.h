@@ -70,10 +70,12 @@ struct _ScalOps {
   PetscErrorCode (*create)(PetscStreamScalar);
   PetscErrorCode (*destroy)(PetscStreamScalar);
   PetscErrorCode (*setup)(PetscStreamScalar,PetscScalar*,PetscMemType,PetscStream);
-  PetscErrorCode (*gethost)(PetscStreamScalar,PetscScalar**,PetscStream);
+  PetscErrorCode (*setval)(PetscStreamScalar,PetscScalar,PetscStream);
+  PetscErrorCode (*gethost)(PetscStreamScalar,PetscScalar**,PetscBool,PetscStream);
   PetscErrorCode (*restorehost)(PetscStreamScalar,PetscScalar**,PetscStream);
   PetscErrorCode (*getdevice)(PetscStreamScalar,PetscScalar**,PetscStream);
   PetscErrorCode (*restoredevice)(PetscStreamScalar,PetscScalar**,PetscStream);
+  PetscErrorCode (*accumop)(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
 };
 
 struct _n_PetscStreamScalar {
