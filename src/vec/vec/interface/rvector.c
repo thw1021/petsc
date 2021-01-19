@@ -1224,6 +1224,92 @@ PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
 }
 
 /*@
+   VecConcatenate - Creates a new vector that is a vertical concatenation of two given vectors. The created
+                    vector resides on the same communicator and is the same type as the component vectors.
+
+   Collective on U and V
+
+   Input Arguments:
++  U    - vector for the "top" component of the concatenation
+-  V    - vector for the "bottom" component of the concatenation
+
+   Output Arguments:
++  W    - concatenated vector
+.  u_is - index set corresponding to U inside W (NULL if not needed)
+-  v_is - index set corresponding to V inside W (NULL if not needed)
+
+   Notes:
+   Concatenation is similar to the functionality of a VecNest object; they both represent combination of
+   different vector spaces. However, concatenated vectors do not store any information about their
+   sub-vectors and own their own data. Consequently, this function provides index sets to enable the
+   manipulation of data in the concatenated vector that corresponds to the original components at creation.
+
+   This is a useful tool for outer loop algorithms, particularly constrained optimizers, where the solver
+   has to operate on combined vector spaces and cannot utilize VecNest objects due to incompatibility with
+   bound projections.
+
+   Level: advanced
+
+.seealso: VECNEST, VECSCATTER, VecScatterCreate()
+@*/
+PetscErrorCode VecConcatenate(Vec U, Vec V, Vec *W, IS *u_is, IS *v_is)
+{
+  VecType        vec_type;
+  Vec            Wtmp, Utmp, Vtmp;
+  IS             u_is_tmp, v_is_tmp;
+  PetscInt       Unl, Ung, Vnl, Vng, Ubegin, Uend, Vbegin, Vend;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(U, VEC_CLASSID, 1);
+  PetscValidHeaderSpecific(V, VEC_CLASSID, 2);
+  PetscCheckSameTypeAndComm(U, 1, V, 2);
+  PetscValidPointer(W, 3);
+  PetscValidPointer(u_is, 4);
+  PetscValidPointer(v_is, 5);
+
+  if (U->ops->concatenate) {
+    /* use the dedicated concatenation function if available */
+    ierr = (*U->ops->concatenate)(U, V, W, u_is, v_is);
+  } else {
+    /* create the concatenated vector W */
+    ierr = VecGetSize(U, &Ung);CHKERRQ(ierr);
+    ierr = VecGetSize(V, &Vng);CHKERRQ(ierr);
+    ierr = VecGetType(U, &vec_type);CHKERRQ(ierr);
+    ierr = VecCreate(PetscObjectComm((PetscObject)U), &Wtmp);CHKERRQ(ierr);
+    ierr = VecSetType(Wtmp, vec_type);CHKERRQ(ierr);
+    ierr = VecSetSizes(Wtmp, PETSC_DECIDE, Ung+Vng);CHKERRQ(ierr);
+    ierr = VecSetUp(Wtmp);CHKERRQ(ierr);
+    /* create the corresponding IS to the index arrays */
+    ierr = VecGetLocalSize(U, &Unl);CHKERRQ(ierr);
+    ierr = VecGetOwnershipRange(U, &Ubegin, &Uend);CHKERRQ(ierr);
+    ierr = ISCreateStride(PetscObjectComm((PetscObject)U), Unl, Ubegin, 1, &u_is_tmp);CHKERRQ(ierr);
+    ierr = VecGetLocalSize(V, &Vnl);CHKERRQ(ierr);
+    ierr = VecGetOwnershipRange(V, &Vbegin, &Vend);CHKERRQ(ierr);
+    ierr = ISCreateStride(PetscObjectComm((PetscObject)U), Vnl, Ung + Vbegin, 1, &v_is_tmp);CHKERRQ(ierr);
+    /* copy data from U and V into W */
+    ierr = VecGetSubVector(Wtmp, u_is_tmp, &Utmp);CHKERRQ(ierr);
+    ierr = VecCopy(U, Utmp);CHKERRQ(ierr);
+    ierr = VecRestoreSubVector(Wtmp, u_is_tmp, &Utmp);CHKERRQ(ierr);
+    ierr = VecGetSubVector(Wtmp, v_is_tmp, &Vtmp);CHKERRQ(ierr);
+    ierr = VecCopy(V, Vtmp);CHKERRQ(ierr);
+    ierr = VecRestoreSubVector(Wtmp, v_is_tmp, &Vtmp);CHKERRQ(ierr);
+    *W = Wtmp;
+    if (u_is) {
+      *u_is = u_is_tmp;
+    } else {
+      ierr = ISDestroy(&u_is_tmp);CHKERRQ(ierr);
+    }
+    if (v_is) {
+      *v_is = v_is_tmp;
+    } else {
+      ierr = ISDestroy(&v_is_tmp);CHKERRQ(ierr);
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
    VecGetSubVector - Gets a vector representing part of another vector
 
    Collective on X and IS
