@@ -39,7 +39,9 @@ PetscErrorCode PetscStreamScalarSetup(PetscStreamScalar pscal, PetscScalar *val,
 
   PetscFunctionBegin;
   PetscCheckValidSameStreamType(pscal,1,pstream,4);
-  if (PetscMemTypeHost(mtype)) PetscValidScalarPointer(val,2);
+  if (PetscMemTypeHost(mtype)) {
+    if (val) PetscValidScalarPointer(val,2);
+  }
   if (pscal->setup) PetscFunctionReturn(0);
   ierr = PetscEventCreate(&pscal->event);CHKERRQ(ierr);
   ierr = PetscEventSetType(pscal->event, pscal->type);CHKERRQ(ierr);
@@ -57,7 +59,7 @@ PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar pscal, const Petsc
   PetscValidScalarPointer(val,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
-  ierr = (*pscal->ops->gethost)(pscal, (PetscScalar**) val, pstream);CHKERRQ(ierr);
+  ierr = (*pscal->ops->gethost)(pscal, (PetscScalar**) val, PETSC_TRUE, pstream);CHKERRQ(ierr);
   /* Can update these since host can't overwrite */
   pscal->isZero = (PetscBool)(*(*val) == (PetscScalar)0.0);
   pscal->isOne  = (PetscBool)(*(*val) == (PetscScalar)1.0);
@@ -74,7 +76,7 @@ PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar pscal, PetscScala
   PetscValidScalarPointer(*val,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
-  ierr = (*pscal->ops->gethost)(pscal, val, pstream);CHKERRQ(ierr);
+  ierr = (*pscal->ops->gethost)(pscal, val, PETSC_FALSE, pstream);CHKERRQ(ierr);
   /* Note we can no longer make assumptions about value of val until it is restored */
   pscal->cacheValid = PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -144,16 +146,26 @@ PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, Pets
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarAccumulateOp(PetscStreamScalar pscalacc, PetscInt n, PetscStreamScal pscal[], PetscStreamOp epiop, PetscStreamOp accop, PetscStream pstream)
+PetscErrorCode PetscStreamScalarAccumulateOp(PetscStreamScalar pscalacc, PetscInt n, PetscStreamScalar pscal[], PetscStreamComputeOp epiop, PetscStreamComputeOp accop, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckValidSameStreamType(pscalacc,1,pstream,4);
+  if (PetscUnlikelyDebug(n > 7)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Can only accumuate up to 8 scalars at a time\n");
+  if (PetscUnlikelyDebug(n < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid number of scalars %D\n",n);
+  for (PetscInt i = 0; i < n; ++i) PetscCheckValidSameStreamType(pscal[i],3,pstream,4);
+  if (!n) PetscFunctionReturn(0);
+  ierr = (*pscalacc->ops->accumop)(pscalacc, n, pscal, epiop, accop, pstream);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarHostOp(PetscStreamScalar pscal, void (*hostfunc)(void*), void *ctx, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckValidSameStreamType(pscal,1,pstream,4);
-  if (PetscUnlikelyDebug(n > 7)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Can only accumuate up to 8 scalars at a time\n");
-  if (PetscUnlikelyDebug(n < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid number of scalars %D\n",n);
-  for (PetscInt i = 0; i < n; ++i) PetscCheckValidSameStreamType(pscal[i],3,pstream,4);
-  if (!n) PetscFunctionReturn(0);
-  ierr = (*pscal->ops->accumop)(pscalacc, n, pscal, epiop, accop, pstream);CHKERRQ(ierr);
+  ierr = (*pscal->op->hostop)(pscal, hostfunc, ctx, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
