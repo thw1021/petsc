@@ -1271,17 +1271,17 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
           PC_FieldSplitLink  ilink = links[bs];
           int                idx = omp_get_thread_num(), ierr2;
           ierr2 = PetscInfo2(pc, "thread %d in field %D\n",idx,bs);
-          if (ierr2) {ierr = ierr2; break;}
-          ierr2 = VecScatterBegin(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);
-          if (ierr2) {ierr = ierr2; break;}
-          ierr2 = VecScatterEnd(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);
-          if (ierr2) {ierr = ierr2; break;}
-          ierr2 = KSPSolve(ilink->ksp,ilink->x,ilink->y);
-          if (ierr2) {ierr = ierr2; break;}
-          ierr2 = VecScatterBegin(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);
-          if (ierr2) {ierr = ierr2; break;}
-          ierr2 = VecScatterEnd(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);
-          if (ierr2) {ierr = ierr2; break;}
+          if (ierr2) ierr = ierr2;
+          if (!ierr2) ierr2 = VecScatterBegin(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);
+          if (ierr2) ierr = ierr2;
+          if (!ierr2) ierr2 = VecScatterEnd(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);
+          if (ierr2) ierr = ierr2;
+          if (!ierr2) ierr2 = KSPSolve(ilink->ksp,ilink->x,ilink->y);
+          if (ierr2) ierr = ierr2;
+          if (!ierr2) ierr2 = VecScatterBegin(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);
+          if (ierr2) ierr = ierr2;
+          if (!ierr2) ierr2 = VecScatterEnd(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);
+          if (ierr2) ierr = ierr2;
         }
         CHKERRQ(ierr);
       } else {
