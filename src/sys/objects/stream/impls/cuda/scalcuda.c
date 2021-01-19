@@ -20,12 +20,17 @@ static PetscErrorCode PetscStreamScalarSetup_CUDA(PetscStreamScalar pscal, Petsc
   PetscFunctionBegin;
   ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
   if (PetscMemTypeHost(mtype)) {
-    *pscal->host = *val;
+    *pscal->host = val ? *val : (PetscScalar)0.0;
     cerr = cudaMemcpyAsync(pscal->device, pscal->host, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
   } else {
-    cerr = cudaMemcpyAsync(pscal->device, val, sizeof(PetscScalar), cudaMemcpyDeviceToDevice, cstream);CHKERRCUDA(cerr);
-    cerr = cudaMemcpyAsync(pscal->host, val, sizeof(PetscScalar), cudaMemcpyDeviceToHost, cstream);CHKERRCUDA(cerr);
-    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    if (val) {
+      cerr = cudaMemcpyAsync(pscal->device, val, sizeof(PetscScalar), cudaMemcpyDeviceToDevice, cstream);CHKERRCUDA(cerr);
+      cerr = cudaMemcpyAsync(pscal->host, val, sizeof(PetscScalar), cudaMemcpyDeviceToHost, cstream);CHKERRCUDA(cerr);
+      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    } else {
+      cerr = cudaMemsetAsync(pscal->device, 0, sizeof(PetscScalar), cstream);CHKERRCUDA(cerr);
+      *pscal->host = (PetscScalar)0.0;
+    }
   }
   ierr = PetscStreamRestoreStream(pstream, &cstream);CHKERRQ(ierr);
   ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
@@ -35,10 +40,11 @@ static PetscErrorCode PetscStreamScalarSetup_CUDA(PetscStreamScalar pscal, Petsc
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamScalarGetHost_CUDA(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
+static PetscErrorCode PetscStreamScalarGetHost_CUDA(PetscStreamScalar pscal, PetscScalar **val, PetscBool update, PetscStream pstream)
 {
   PetscFunctionBegin;
-  if (pscal->omask == PETSC_OFFLOAD_GPU) {
+  /* Sometimes we just want the host pointer, such as during writes */
+  if (update && pscal->omask == PETSC_OFFLOAD_GPU) {
     PetscErrorCode ierr;
     cudaStream_t   cstream;
     cudaError_t    cerr;
@@ -48,6 +54,7 @@ static PetscErrorCode PetscStreamScalarGetHost_CUDA(PetscStreamScalar pscal, Pet
     cerr = cudaMemcpyAsync(pscal->host, pscal->device, sizeof(PetscScalar), cudaMemcpyDeviceToHost, cstream);CHKERRCUDA(cerr);
     ierr = PetscStreamRestoreStream(pstream, &cstream);CHKERRQ(ierr);
     pscal->omask = PETSC_OFFLOAD_BOTH;
+    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
   }
   *val = pscal->host;
   PetscFunctionReturn(0);
@@ -90,6 +97,15 @@ static PetscErrorCode PetscStreamScalarGetDevice_CUDA(PetscStreamScalar pscal, P
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscStreamScalarAccumOpDispatch_CUDA(PetscStreamScalar pscalret, PetscInt n, PetscStreamScalar pscal[], PetscStreamComputeOp epiop, PetscStreamComputeOp accop, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscStreamScalarAccumOpDispatch_Internal(pscalret, n, pscal, epiop, accop, pstream);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static struct _ScalOps scalcuops = {
   PetscStreamScalarCreate_CUDA,
   PetscStreamScalarDestroy_CUDA,
@@ -97,7 +113,8 @@ static struct _ScalOps scalcuops = {
   PetscStreamScalarGetHost_CUDA,
   PetscStreamScalarRestoreHost_CUDA,
   PetscStreamScalarGetDevice_CUDA,
-  NULL
+  NULL,
+  PetscStreamScalarAccumOpDispatch_CUDA
 };
 #endif /* HAVE_CUDA */
 
