@@ -137,7 +137,9 @@ PetscErrorCode InitializeProblem(AppCtx *user)
   /* create vector x and set initial values */
   user->n = 2; /* global length */
   nloc = (rank==0)?user->n:0;
-  ierr = VecCreateMPI(PETSC_COMM_WORLD,nloc,user->n,&user->x);CHKERRQ(ierr);
+  ierr = VecCreate(PETSC_COMM_WORLD,&user->x);CHKERRQ(ierr);
+  ierr = VecSetSizes(user->x,nloc,user->n);CHKERRQ(ierr);
+  ierr = VecSetFromOptions(user->x);CHKERRQ(ierr);
   ierr = VecSet(user->x,0);CHKERRQ(ierr);
 
   /* create and set lower and upper bound vectors */
@@ -153,18 +155,24 @@ PetscErrorCode InitializeProblem(AppCtx *user)
     neloc = (rank==0)?user->ne:0;
 
   if (!user->noeqflag){
-    ierr = VecCreateMPI(PETSC_COMM_WORLD,neloc,user->ne,&user->ce);CHKERRQ(ierr); /* a 1x1 vec for equality constraints */
+    ierr = VecCreate(PETSC_COMM_WORLD,&user->ce);CHKERRQ(ierr); /* a 1x1 vec for equality constraints */
+    ierr = VecSetSizes(user->ce,neloc,user->ne);CHKERRQ(ierr);
+    ierr = VecSetFromOptions(user->ce);CHKERRQ(ierr);
+    ierr = VecSetUp(user->ce);CHKERRQ(ierr);
   }
   user->ni = 2;
   niloc = (rank==0)?user->ni:0;
-  ierr = VecCreateMPI(PETSC_COMM_WORLD,niloc,user->ni,&user->ci);CHKERRQ(ierr); /* a 2x1 vec for inequality constraints */
+  ierr = VecCreate(PETSC_COMM_WORLD,&user->ci);CHKERRQ(ierr); /* a 2x1 vec for inequality constraints */
+  ierr = VecSetSizes(user->ci,niloc,user->ni);CHKERRQ(ierr);
+  ierr = VecSetFromOptions(user->ci);CHKERRQ(ierr);
+  ierr = VecSetUp(user->ci);CHKERRQ(ierr);
 
   /* nexn & nixn matricies for equaly and inequalty constriants */
   if (!user->noeqflag){
     ierr = MatCreate(PETSC_COMM_WORLD,&user->Ae);CHKERRQ(ierr);
     ierr = MatSetSizes(user->Ae,neloc,nloc,user->ne,user->n);CHKERRQ(ierr);
-    ierr = MatSetUp(user->Ae);CHKERRQ(ierr);
     ierr = MatSetFromOptions(user->Ae);CHKERRQ(ierr);
+    ierr = MatSetUp(user->Ae);CHKERRQ(ierr);
   }
 
   ierr = MatCreate(PETSC_COMM_WORLD,&user->Ai);CHKERRQ(ierr);
@@ -173,11 +181,11 @@ PetscErrorCode InitializeProblem(AppCtx *user)
   ierr = MatSetSizes(user->Ai,niloc,nloc,user->ni,user->n);CHKERRQ(ierr);
   ierr = MatSetSizes(user->H,nloc,nloc,user->n,user->n);CHKERRQ(ierr);
 
-  ierr = MatSetUp(user->Ai);CHKERRQ(ierr);
-  ierr = MatSetUp(user->H);CHKERRQ(ierr);
-
   ierr = MatSetFromOptions(user->Ai);CHKERRQ(ierr);
   ierr = MatSetFromOptions(user->H);CHKERRQ(ierr);
+
+  ierr = MatSetUp(user->Ai);CHKERRQ(ierr);
+  ierr = MatSetUp(user->H);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -444,5 +452,30 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
       suffix: 4
       nsize: 2
       args: -tao_converged_reason -no_eq
+
+   test:
+      suffix: 5
+      args: -tao_cmonitor -tao_type auglag
+
+   test:
+      suffix: 6
+      args: -tao_cmonitor -tao_type auglag -tao_auglag_type phr
+
+   test:
+      suffix: 7
+      nsize: 2
+      args: -tao_cmonitor -tao_type auglag
+
+   test:
+      suffix: 8
+      nsize: 2
+      requires: cuda
+      args: -tao_cmonitor -tao_type auglag -vec_type cuda -mat_type aijcusparse
+
+   test:
+      suffix: 9
+      nsize: 2
+      requires: superlu
+      args: -tao_cmonitor -tao_type ipm -pc_type lu -pc_factor_mat_solver_type superlu_dist
 
 TEST*/
