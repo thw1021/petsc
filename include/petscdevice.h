@@ -127,8 +127,9 @@ typedef enum {
   STREAM_OP_SUM,
   STREAM_OP_SUB,
   STREAM_OP_DIV,
-  STREAM_OP_MULT
-} PetscStreamOp;
+  STREAM_OP_MULT,
+  STREAM_OP_EQUAL
+} PetscStreamComputeOp;
 
 typedef struct _n_PetscStreamScalar* PetscStreamScalar;
 
@@ -143,6 +144,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreHostWrite(PetscStreamScalar,
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar,const PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarAccumulateOp(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
 
 /*E
     PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
