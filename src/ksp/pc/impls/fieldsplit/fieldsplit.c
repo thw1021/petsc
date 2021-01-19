@@ -1691,7 +1691,7 @@ static PetscErrorCode PCSetFromOptions_FieldSplit(PetscOptionItems *PetscOptions
     ierr = PetscOptionsInt("-pc_fieldsplit_gkb_maxit","Maximum allowed number of iterations","PCFieldSplitGKBMaxit",jac->gkbmaxit,&jac->gkbmaxit,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-pc_fieldsplit_gkb_monitor","Prints number of GKB iterations and error","PCFieldSplitGKB",jac->gkbmonitor,&jac->gkbmonitor,NULL);CHKERRQ(ierr);
   }
-  ierr = PetscOptionsBool("-pc_fieldsplit_use_openmp","Use OepnMP, if available, for additive local subdomain solves","PCFieldSplitSetUseOpenMP",jac->useopenmp,&jac->useopenmp,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-pc_fieldsplit_use_openmp","Use OpenMP, if available, for additive local subdomain solves","PCFieldSplitSetUseOpenMP",jac->useopenmp,&jac->useopenmp,NULL);CHKERRQ(ierr);
   if (jac->useopenmp) {
     PetscMPIInt size;
     ierr  = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRQ(ierr);
