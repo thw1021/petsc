@@ -1694,8 +1694,11 @@ static PetscErrorCode PCSetFromOptions_FieldSplit(PetscOptionItems *PetscOptions
   ierr = PetscOptionsBool("-pc_fieldsplit_use_openmp","Use OpenMP, if available, for additive local subdomain solves","PCFieldSplitSetUseOpenMP",jac->use_openmp,&jac->use_openmp,NULL);CHKERRQ(ierr);
   if (jac->use_openmp) {
     PetscMPIInt size;
-    ierr  = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRQ(ierr);
+    ierr  = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRMPI(ierr);
     if (size>1)  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"OpenMP only tested for MPI serial (fix me)");
+#if !defined(PETSC_HAVE_OPENMP) || !defined(PETSC_HAVE_THREADSAFETY)
+    ierr = PetscInfo(pc, "Warning: -pc_fieldsplit_use_openmp without OpenMP and thread safety\n");CHKERRQ(ierr);
+#endif
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -3082,12 +3085,17 @@ PetscErrorCode PCFieldSplitSetDetectSaddlePoint(PC pc,PetscBool flg)
 PetscErrorCode PCFieldSplitSetUseOpenMP(PC pc,PetscBool useomp)
 {
   PC_FieldSplit *jac = (PC_FieldSplit*)pc->data;
-  PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr  = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRQ(ierr);
-  if (size>1)  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"OpenMP only tested for MPI serial (fix me)");
+  if (useomp) {
+    PetscMPIInt    size;
+    PetscErrorCode ierr;
+    ierr  = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRMPI(ierr);
+    if (size>1)  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"OpenMP only tested for MPI serial (fix me)");
+#if !defined(PETSC_HAVE_OPENMP) || !defined(PETSC_HAVE_THREADSAFETY)
+    ierr = PetscInfo(pc, "Warning: setting use_openmp without OpenMP and thread safety\n");CHKERRQ(ierr);
+#endif
+  }
   jac->use_openmp = useomp;
   PetscFunctionReturn(0);
 }
