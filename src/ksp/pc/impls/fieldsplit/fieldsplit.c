@@ -3064,7 +3064,7 @@ PetscErrorCode PCFieldSplitSetDetectSaddlePoint(PC pc,PetscBool flg)
 }
 
 /*@
-    PCFieldSplitSetUseOpenMP - Set flag to use OpenMP if available for additive subdomain solves that are local
+    PCFieldSplitSetUseOpenMP - Set flag to use OpenMP if available for additive fieldsplit solves
 
     Not collective on PC
 
