@@ -704,10 +704,10 @@ static PetscErrorCode VecRestoreArrayRead_Nest(Vec X,const PetscScalar **x)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecConcatenate_Nest(Vec U, Vec V, Vec *W, IS *u_is, IS *v_is)
+static PetscErrorCode VecConcatenate_Nest(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[])
 {
   PetscFunctionBegin;
-  SETERRQ(PetscObjectComm((PetscObject)U), PETSC_ERR_SUP, "VecConcatenate() is not supported for VecNest");
+  SETERRQ(PetscObjectComm((PetscObject)(*X)), PETSC_ERR_SUP, "VecConcatenate() is not supported for VecNest");
   PetscFunctionReturn(0);
 }
 
