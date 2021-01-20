@@ -1229,6 +1229,18 @@ static PetscErrorCode PCApply_FieldSplit_Schur(PC pc,Vec x,Vec y)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PetscFSOMPSolve(PC_FieldSplitLink ilink, Vec x, Vec y)
+{
+  PetscErrorCode     ierr;
+  PetscFunctionBegin;
+  ierr = VecScatterBegin(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  ierr = VecScatterEnd(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  ierr = KSPSolve(ilink->ksp,ilink->x,ilink->y);CHKERRQ(ierr);
+  ierr = VecScatterBegin(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+  ierr = VecScatterEnd(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
 {
   PC_FieldSplit      *jac = (PC_FieldSplit*)pc->data;
@@ -1268,22 +1280,14 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
         ierr = 0;
 #pragma omp parallel for private(bs) shared(links,x,y,ierr)
         for (bs=0;bs<cnt;bs++) {
-          PC_FieldSplitLink  ilink = links[bs];
-          int                idx = omp_get_thread_num(), ierr2;
-          ierr2 = PetscInfo2(pc, "thread %d in field %D\n",idx,bs);
-          if (ierr2) ierr = ierr2;
-          if (!ierr2) ierr2 = VecScatterBegin(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);
-          if (ierr2) ierr = ierr2;
-          if (!ierr2) ierr2 = VecScatterEnd(ilink->sctx,x,ilink->x,INSERT_VALUES,SCATTER_FORWARD);
-          if (ierr2) ierr = ierr2;
-          if (!ierr2) ierr2 = KSPSolve(ilink->ksp,ilink->x,ilink->y);
-          if (ierr2) ierr = ierr2;
-          if (!ierr2) ierr2 = VecScatterBegin(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);
-          if (ierr2) ierr = ierr2;
-          if (!ierr2) ierr2 = VecScatterEnd(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);
+          int            idx = omp_get_thread_num();
+          PetscErrorCode ierr2;
+          ierr2 = PetscInfo2(pc, "thread %d in field %D\n",idx,bs);CHKERRQ(ierr);
+          if (!ierr2) ierr2 = PetscFSOMPSolve(pc, links[bs], bs, x, y);
           if (ierr2) ierr = ierr2;
         }
         CHKERRQ(ierr);
+        ierr = PetscLogEventEnd(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
       } else {
 #endif
         while (ilink) {
