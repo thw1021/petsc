@@ -100,7 +100,7 @@ struct _VecOps {
   PetscErrorCode (*getarrayreadandmemtype)(Vec,const PetscScalar**,PetscMemType*);
   PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**);
   PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**);
-  PetscErrorCode (*concatenate)(Vec,Vec,Vec*,IS*,IS*);
+  PetscErrorCode (*concatenate)(PetscInt,const Vec[],Vec*,IS*[]);
 };
 
 /*
