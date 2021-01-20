@@ -10,9 +10,7 @@ import requests
 
 # Should be "sphinx_docs"
 curPath = os.path.dirname(os.path.realpath(__file__))
-imDir = os.path.join(curPath, "..", "website", "images")
-if not os.path.exists(imDir):
-    raise RuntimeError("Image directory "+imDir+" has moved or been deleted!")
+imDir = os.path.join(curPath, "_static", "images")
 
 ownerURL = "https://gitlab.com/api/v4/groups/petsc/members/all"
 integratorURL = "https://gitlab.com/api/v4/groups/5583565/members/all"
@@ -290,6 +288,8 @@ def runFromPython(writeDirPath, token):
     run(writeDirPath, token=token)
 
 def run(writeDirPath, token=None):
+    if not os.path.exists(imDir):
+        raise RuntimeError("Image directory "+imDir+" has moved or been deleted!")
     try:
         os.mkdir(writeDirPath)
         print("Generate directory created at %s" % (writeDirPath))
