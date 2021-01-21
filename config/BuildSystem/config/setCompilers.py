@@ -399,6 +399,17 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
+  def isGNUAR(ar, log):
+    '''Returns true AR is GNU'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(ar + ' -V',checkCommand = noCheck, log = log)
+      output = output + error
+      if output.find('GNU') >= 0:
+        return 1
+    except RuntimeError:
+      pass
+
+  @staticmethod
   def isSolarisAR(ar, log):
     '''Returns true AR is solaris'''
     try:
@@ -1376,6 +1387,8 @@ class Configure(config.base.Configure):
     else:
       self.FAST_AR_FLAGS = flag
     self.framework.addMakeMacro('FAST_AR_FLAGS',self.FAST_AR_FLAGS )
+    if self.isGNUAR(prog, self.log):
+      self.framework.addMakeMacro('AR_GNU','yes')
     return flag
 
   def generateArchiverGuesses(self):
