@@ -8,9 +8,7 @@ Created on Wed Dec 23 14:09:21 2020
 import os
 import requests
 
-# Should be "sphinx_docs"
-curPath = os.path.dirname(os.path.realpath(__file__))
-imDir = os.path.join("..", "..", "_static", "images")
+imDir = os.path.join("..", "_static", "images")
 
 ownerURL = "https://gitlab.com/api/v4/groups/petsc/members/all"
 integratorURL = "https://gitlab.com/api/v4/groups/5583565/members/all"
@@ -21,7 +19,7 @@ emeritus = {
     # needed, just so that I don't have to write an extra "writeRst" function :)
     "william_gropp" : {
         "web_url" : "https://cs.illinois.edu/directory/profile/wgropp",
-        "avatar_url" : imDir+"/bill.gif",
+        "avatar_url" : os.path.join(imDir, "bill.gif"),
         "name" : "William Gropp"
     },
     "victor_eijkhout" : {
@@ -272,21 +270,8 @@ def writeWarnRst(fname):
         f.writelines([".. warning::\n\n",
                       "   ``$PETSC_GITLAB_PRIVATE_TOKEN`` was not defined in your environment. Please generate a gitlab private token and export it to your environment. See https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html for more information."])
 
-def runFromMain(writeDirPath, token):
-    print("============================================")
-    print("  GENERATING TEAM TABLE FROM COMMAND LINE   ")
-    print("============================================")
-    run(writeDirPath, token=token)
-
-def runFromPython(writeDirPath, token):
-    print("============================================")
-    print("     GENERATING TEAM TABLE FROM PYTHON      ")
-    print("============================================")
-    run(writeDirPath, token=token)
-
-def run(writeDirPath, token=None):
-    print("Running from directory %s" % (curPath))
-    print("Image directory (relative to contact/petsc_team.rst) at %s" % (imDir))
+def main(writeDirPath, token, builderName=None):
+    print("Running from %s" % (os.path.realpath(__file__)))
     try:
         os.mkdir(writeDirPath)
         print("Generate directory created at %s" % (writeDirPath))
@@ -296,6 +281,18 @@ def run(writeDirPath, token=None):
             raise
         else:
             print("Generate directory already exists at %s" % (writeDirPath))
+            print("Assuming table is up to date, skipping! Use 'make clean' to clear existing table")
+            return
+
+    if builderName is not None:
+        # dirhtml makes it so every rst file is built as __file__/index.html, so we must
+        # prepend ".." so image paths are correct
+        if builderName == "dirhtml":
+            global imDir
+            imDir = os.path.join("..", imDir)
+            print("Using dirhtml, prepending imDir path with '..'")
+
+    print("Image directory (relative to contact/petsc_team.rst) at %s" % (imDir))
     currentFile = os.path.join(writeDirPath, "petsc-team-table.inc")
     emeritusFile = os.path.join(writeDirPath, "petsc-emeritus-table.inc")
     if "CI_JOB_TOKEN" in os.environ:
@@ -324,4 +321,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output-dir", required = True, metavar = path, type = pathlib.Path, help = "Specify the output directory", dest = "writeDir")
     args = parser.parse_args()
     writeDirPath = os.path.realpath(args.writeDir)
-    runFromMain(writeDirPath, token=args.token)
+    print("============================================")
+    print("  GENERATING TEAM TABLE FROM COMMAND LINE   ")
+    print("============================================")
+    main(writeDirPath, args.token)
