@@ -125,7 +125,9 @@ endef
 
 define ARCHIVE_RECIPE_DEFAULT
   @$(RM) $@
-  $(call quiet,AR) $(AR_FLAGS) $@ $^
+  $(file > $@.args,$^)
+  $(call quiet,AR) $(AR_FLAGS) $@ @$@.args
+  @$(RM) $@.args
   $(call quiet,RANLIB) $@
 endef
 
