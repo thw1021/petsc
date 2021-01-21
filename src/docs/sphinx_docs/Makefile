@@ -23,13 +23,6 @@ checklinks:
 rebuild:
 	@$(SPHINXBUILD) -E "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
 
-#petsc-team-table.inc:
-#	@$(SOURCEDIR)/genteamtable.py --gitlab-token ${PETSC_GITLAB_PRIVATE_TOKEN} --output-dir $(GENDIR)
-
-# The builder used on RTD is dirhtml, this simply redirects "make html" to "make dirhtml"
-#html: petsc-team-table.inc
-#	@$(SPHINXBUILD) -b dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) -j auto
-
 clear-generated:
 	@echo "Clearing generated files"
 	@$(RM) -rf $(GENDIR)

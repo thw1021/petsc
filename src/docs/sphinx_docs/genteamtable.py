@@ -14,214 +14,215 @@ ownerURL = "https://gitlab.com/api/v4/groups/petsc/members/all"
 integratorURL = "https://gitlab.com/api/v4/groups/5583565/members/all"
 devURL = "https://gitlab.com/api/v4/groups/5981367/members/all"
 
-emeritus = {
-    # Keys (i.e. usernames) here are just lower full names with underscores. Not really
-    # needed, just so that I don't have to write an extra "writeRst" function :)
-    "william_gropp" : {
-        "web_url" : "https://cs.illinois.edu/directory/profile/wgropp",
-        "avatar_url" : os.path.join(imDir, "bill.gif"),
-        "name" : "William Gropp"
-    },
-    "victor_eijkhout" : {
-        "web_url" : "https://www.tacc.utexas.edu/staff/victor-eijkhout",
-        "avatar_url" : os.path.join(imDir, "victor.jpg"),
-        "name" : "Victor Eijkhout"
-    },
-    "peter_brune" : {
-        "web_url" : "",
-        "avatar_url" : os.path.join(imDir, "peter.jpg"),
-        "name" : "Peter Brune"
-    },
-    "kris_buschelman" : {
-        "web_url" : "",
-        "avatar_url" : os.path.join(imDir, "buschelman.jpg"),
-        "name" : "Kris Buschelman"
-    },
-    "sean_farley" : {
-        "web_url" : "https://farley.io/",
-        "avatar_url" : os.path.join(imDir, "sean.jpg"),
-        "name" : "Sean Farley"
-    },
-    "dmitry_karpeev" : {
-        "web_url" : "https://www.ci.uchicago.edu/profile/224",
-        "avatar_url" : os.path.join(imDir, "dmitry.jpg"),
-        "name" : "Dmitry Karpeev"
-    },
-    "dinesh_kaushik" : {
-        "web_url" : "",
-        "avatar_url" : os.path.join(imDir, "dinesh.jpg"),
-        "name" : "Dinesh Kaushik"
-    },
-    "jason_sarich" : {
-        "web_url" : "https://www.anl.gov/mcs/person/jason-sarich",
-        "avatar_url" : os.path.join(imDir, "sarich.jpg"),
-        "name" : "Jason Sarich"
-    },
-    "victor_minden" : {
-        "web_url" : "",
-        "avatar_url" : os.path.join(imDir, "victorminden.jpg"),
-        "name" : "Victor Minden"
+def createDevDicts(imDirPath):
+    emeritus = {
+        # Keys (i.e. usernames) here are just lower full names with underscores. Not really
+        # needed, just so that I don't have to write an extra "writeRst" function :)
+        "william_gropp" : {
+            "web_url" : "https://cs.illinois.edu/directory/profile/wgropp",
+            "avatar_url" : os.path.join(imDirPath, "bill.gif"),
+            "name" : "William Gropp"
+        },
+        "victor_eijkhout" : {
+            "web_url" : "https://www.tacc.utexas.edu/staff/victor-eijkhout",
+            "avatar_url" : os.path.join(imDirPath, "victor.jpg"),
+            "name" : "Victor Eijkhout"
+        },
+        "peter_brune" : {
+            "web_url" : "",
+            "avatar_url" : os.path.join(imDirPath, "peter.jpg"),
+            "name" : "Peter Brune"
+        },
+        "kris_buschelman" : {
+            "web_url" : "",
+            "avatar_url" : os.path.join(imDirPath, "buschelman.jpg"),
+            "name" : "Kris Buschelman"
+        },
+        "sean_farley" : {
+            "web_url" : "https://farley.io/",
+            "avatar_url" : os.path.join(imDirPath, "sean.jpg"),
+            "name" : "Sean Farley"
+        },
+        "dmitry_karpeev" : {
+            "web_url" : "https://www.ci.uchicago.edu/profile/224",
+            "avatar_url" : os.path.join(imDirPath, "dmitry.jpg"),
+            "name" : "Dmitry Karpeev"
+        },
+        "dinesh_kaushik" : {
+            "web_url" : "",
+            "avatar_url" : os.path.join(imDirPath, "dinesh.jpg"),
+            "name" : "Dinesh Kaushik"
+        },
+        "jason_sarich" : {
+            "web_url" : "https://www.anl.gov/mcs/person/jason-sarich",
+            "avatar_url" : os.path.join(imDirPath, "sarich.jpg"),
+            "name" : "Jason Sarich"
+        },
+        "victor_minden" : {
+            "web_url" : "",
+            "avatar_url" : os.path.join(imDirPath, "victorminden.jpg"),
+            "name" : "Victor Minden"
+        }
     }
-}
-
-# List of devs who will go into the table. Key must be all-lowercase Gitlab username.
-activeCoreDevs = {
-    "lois.curfman.mcinnes" : {
-        "web_url" : "https://press3.mcs.anl.gov/curfman/",
-        "avatar_url" : os.path.join(imDir, "lois.gif"),
-        "name" : "Lois Curfman McInnes"
-    },
-    "sbalay" : {
-        "web_url" : None,
-        "avatar_url" : None,
-        "name" : None
-    },
-    "jedbrown" : {
-        "web_url" : None,
-        "avatar_url" : None,
-        "name" : None
-    },
-    "adener" : {
-        "web_url" : None,
-        "avatar_url" : None,
-        "name" : None
-    },
-    "blaisebourdin" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "dmay" : {
-	"web_url" : None,
-	"avatar_url" : os.path.join(imDir, "dave.jpg"),
-	"name" : None
-    },
-    "fdkong" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "ghammond" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "hannah_mairs" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "hongzhangsun" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "jfaibussowitsch" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "caidao22" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "jczhang07" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "karlrupp" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "markadams4" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : "Mark Adams"
-    },
-    "knepley" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "oanam198" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "psanan" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "rtmills" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "abhyshr" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "stefanozampini" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "tmunson" : {
-	"web_url" : None,
-	"avatar_url" : os.path.join(imDir, "todd.jpg"),
-	"name" : None
-    },
-    "haplav" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "prj-" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "wence" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "tisaac" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "krugers" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "dalcinl" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "joseroman" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "bwhitchurch" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
-    },
-    "barrysmith" : {
-	"web_url" : None,
-	"avatar_url" : None,
-	"name" : None
+    # List of devs who will go into the table. Key must be all-lowercase Gitlab username.
+    activeCoreDevs = {
+        "lois.curfman.mcinnes" : {
+            "web_url" : "https://press3.mcs.anl.gov/curfman/",
+            "avatar_url" : os.path.join(imDirPath, "lois.gif"),
+            "name" : "Lois Curfman McInnes"
+        },
+        "sbalay" : {
+            "web_url" : None,
+            "avatar_url" : None,
+            "name" : None
+        },
+        "jedbrown" : {
+            "web_url" : None,
+            "avatar_url" : None,
+            "name" : None
+        },
+        "adener" : {
+            "web_url" : None,
+            "avatar_url" : None,
+            "name" : None
+        },
+        "blaisebourdin" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "dmay" : {
+	    "web_url" : None,
+	    "avatar_url" : os.path.join(imDirPath, "dave.jpg"),
+	    "name" : None
+        },
+        "fdkong" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "ghammond" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "hannah_mairs" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "hongzhangsun" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "jfaibussowitsch" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "caidao22" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "jczhang07" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "karlrupp" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "markadams4" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : "Mark Adams"
+        },
+        "knepley" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "oanam198" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "psanan" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "rtmills" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "abhyshr" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "stefanozampini" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "tmunson" : {
+	    "web_url" : None,
+	    "avatar_url" : os.path.join(imDirPath, "todd.jpg"),
+	    "name" : None
+        },
+        "haplav" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "prj-" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "wence" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "tisaac" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "krugers" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "dalcinl" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "joseroman" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "bwhitchurch" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        },
+        "barrysmith" : {
+	    "web_url" : None,
+	    "avatar_url" : None,
+	    "name" : None
+        }
     }
-}
+    return emeritus, activeCoreDevs
 
 def getJson(url, token):
     headers = {"PRIVATE-TOKEN" : token}
@@ -237,7 +238,7 @@ def getJson(url, token):
         params["page"] += 1
     return lst
 
-def makeDevDict(devJson):
+def makeActiveDevDict(devJson, activeCoreDevs):
     for dev in devJson:
         ldev = dev["username"].lower()
         if ldev in activeCoreDevs:
@@ -284,15 +285,6 @@ def main(writeDirPath, token, builderName=None):
             print("Assuming table is up to date, skipping! Use 'make clean' to clear existing table")
             return
 
-    if builderName is not None:
-        # dirhtml makes it so every rst file is built as __file__/index.html, so we must
-        # prepend ".." so image paths are correct
-        if builderName == "dirhtml":
-            global imDir
-            imDir = os.path.join("..", imDir)
-            print("Using dirhtml, prepending imDir path with '..'")
-
-    print("Image directory (relative to contact/petsc_team.rst) at %s" % (imDir))
     currentFile = os.path.join(writeDirPath, "petsc-team-table.inc")
     emeritusFile = os.path.join(writeDirPath, "petsc-emeritus-table.inc")
     if "CI_JOB_TOKEN" in os.environ:
@@ -306,7 +298,16 @@ def main(writeDirPath, token, builderName=None):
         ownerJson = getJson(ownerURL, token)
         integratorJson = getJson(integratorURL, token)
         megaJson = devJson+ownerJson+integratorJson
-        tierlist = makeDevDict(megaJson)
+        if builderName is not None:
+            # dirhtml makes it so every rst file is built as __file__/index.html, so we must
+            # prepend ".." so image paths are correct
+            print("Using builder %s" % (builderName))
+            if builderName == "dirhtml":
+                global imDir
+                imDir = os.path.join("..", imDir)
+        print("Image directory (relative to contact/petsc_team.rst) at %s" % (imDir))
+        emeritus, activeCoreDevs = createDevDicts(imDir)
+        tierlist = makeActiveDevDict(megaJson, activeCoreDevs)
         writeRst(currentFile, tierlist)
         writeRst(emeritusFile, emeritus)
 
