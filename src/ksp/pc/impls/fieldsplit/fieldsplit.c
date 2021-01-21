@@ -67,7 +67,7 @@ typedef struct {
   PetscBool                 detect;                 /* Whether to form 2-way split by finding zero diagonal entries */
 
   /* Only used when OpenMP is used */
-  PetscBool                 use_openmp;              /* Whether to use OpenMP (for additive solves) */
+  PetscInt                  use_openmp;              /* Whether to use OpenMP (for additive solves) */
 } PC_FieldSplit;
 
 /*
@@ -1266,8 +1266,7 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
       ierr = VecStrideScatterAll(jac->y,y,INSERT_VALUES);CHKERRQ(ierr);
     } else {
       ierr = VecSet(y,0.0);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
-      if (jac->use_openmp) {
+      if (jac->use_openmp && jac->use_openmp++ > 1) {
 #define MAXNBLOCKS 10
         PC_FieldSplitLink links[MAXNBLOCKS];
         ierr = PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
@@ -1278,25 +1277,25 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
           ilink = ilink->next;
         }
         ierr = 0;
+#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
 #pragma omp parallel for private(bs) shared(links,x,y,ierr)
         for (bs=0;bs<cnt;bs++) {
-          int            idx = omp_get_thread_num();
-          PetscErrorCode ierr2;
-          ierr2 = PetscInfo2(pc, "thread %d in field %D\n",idx,bs);CHKERRQ(ierr);
-          if (!ierr2) ierr2 = PetscFSOMPSolve(pc, links[bs], bs, x, y);
+          PetscInt       idx = omp_get_thread_num(), nt = omp_get_num_threads();
+          PetscErrorCode ierr2 = PetscInfo4(pc, "thread %D/%D in field %D/%D\n",idx+1,nt,bs+1,cnt);
+          if (!ierr2) ierr2 = PetscFSOMPSolve(links[bs], x, y);
           if (ierr2) ierr = ierr2;
         }
         CHKERRQ(ierr);
+#else
+        SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Should not be here");
+#endif
         ierr = PetscLogEventEnd(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
       } else {
-#endif
         while (ilink) {
           ierr = FieldSplitSplitSolveAdd(ilink,x,y);CHKERRQ(ierr);
           ilink = ilink->next;
         }
-#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
       }
-#endif
     }
   } else if (jac->type == PC_COMPOSITE_MULTIPLICATIVE && jac->nsplits == 2) {
     ierr = VecSet(y,0.0);CHKERRQ(ierr);
@@ -1626,6 +1625,7 @@ static PetscErrorCode PCReset_FieldSplit(PC pc)
   ierr = PetscFree(jac->vecz);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&jac->gkbviewer);CHKERRQ(ierr);
   jac->isrestrict = PETSC_FALSE;
+  if (jac->use_openmp) jac->use_openmp = 1;
   PetscFunctionReturn(0);
 }
 
@@ -1695,13 +1695,16 @@ static PetscErrorCode PCSetFromOptions_FieldSplit(PetscOptionItems *PetscOptions
     ierr = PetscOptionsInt("-pc_fieldsplit_gkb_maxit","Maximum allowed number of iterations","PCFieldSplitGKBMaxit",jac->gkbmaxit,&jac->gkbmaxit,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-pc_fieldsplit_gkb_monitor","Prints number of GKB iterations and error","PCFieldSplitGKB",jac->gkbmonitor,&jac->gkbmonitor,NULL);CHKERRQ(ierr);
   }
-  ierr = PetscOptionsBool("-pc_fieldsplit_use_openmp","Use OpenMP, if available, for additive local subdomain solves","PCFieldSplitSetUseOpenMP",jac->use_openmp,&jac->use_openmp,NULL);CHKERRQ(ierr);
-  if (jac->use_openmp) {
+  flg = PETSC_FALSE;
+  ierr = PetscOptionsBool("-pc_fieldsplit_use_openmp","Use OpenMP, if available, for additive local subdomain solves","PCFieldSplitSetUseOpenMP",flg,&flg,NULL);CHKERRQ(ierr);
+  if (flg) {
     PetscMPIInt size;
     ierr  = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRMPI(ierr);
     if (size>1)  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"OpenMP only tested for MPI serial (fix me)");
+    jac->use_openmp = 1;
 #if !defined(PETSC_HAVE_OPENMP) || !defined(PETSC_HAVE_THREADSAFETY)
-    ierr = PetscInfo(pc, "Warning: -pc_fieldsplit_use_openmp without OpenMP and thread safety\n");CHKERRQ(ierr);
+    ierr = PetscInfo(pc, "Warning: -pc_fieldsplit_use_openmp without OpenMP and thread safety - turn off\n");CHKERRQ(ierr);
+    jac->use_openmp = 0;
 #endif
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
@@ -3097,10 +3100,11 @@ PetscErrorCode PCFieldSplitSetUseOpenMP(PC pc,PetscBool useomp)
     ierr  = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRMPI(ierr);
     if (size>1)  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"OpenMP only tested for MPI serial (fix me)");
 #if !defined(PETSC_HAVE_OPENMP) || !defined(PETSC_HAVE_THREADSAFETY)
-    ierr = PetscInfo(pc, "Warning: setting use_openmp without OpenMP and thread safety\n");CHKERRQ(ierr);
+    ierr = PetscInfo(pc, "Warning: setting use_openmp without OpenMP and thread safety - turn off\n");CHKERRQ(ierr);
+    useomp = PETSC_FALSE;
 #endif
   }
-  jac->use_openmp = useomp;
+  jac->use_openmp = useomp ? 1 : 0;
   PetscFunctionReturn(0);
 }
 
@@ -3229,7 +3233,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_FieldSplit(PC pc)
   pc->ops->setfromoptions  = PCSetFromOptions_FieldSplit;
   pc->ops->view            = PCView_FieldSplit;
   pc->ops->applyrichardson = NULL;
-  jac->use_openmp          = PETSC_FALSE;
+  jac->use_openmp          = 0;
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitSchurGetSubKSP_C",PCFieldSplitSchurGetSubKSP_FieldSplit);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitGetSubKSP_C",PCFieldSplitGetSubKSP_FieldSplit);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitSetFields_C",PCFieldSplitSetFields_FieldSplit);CHKERRQ(ierr);
