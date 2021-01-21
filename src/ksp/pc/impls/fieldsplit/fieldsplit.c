@@ -1228,7 +1228,7 @@ static PetscErrorCode PCApply_FieldSplit_Schur(PC pc,Vec x,Vec y)
   }
   PetscFunctionReturn(0);
 }
-
+#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
 static PetscErrorCode PetscFSOMPSolve(PC_FieldSplitLink ilink, Vec x, Vec y)
 {
   PetscErrorCode     ierr;
@@ -1240,6 +1240,7 @@ static PetscErrorCode PetscFSOMPSolve(PC_FieldSplitLink ilink, Vec x, Vec y)
   ierr = VecScatterEnd(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+#endif
 
 static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
 {
@@ -1266,10 +1267,11 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
       ierr = VecStrideScatterAll(jac->y,y,INSERT_VALUES);CHKERRQ(ierr);
     } else {
       ierr = VecSet(y,0.0);CHKERRQ(ierr);
+      ierr = PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
       if (jac->use_openmp && jac->use_openmp++ > 1) {
+#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
 #define MAXNBLOCKS 10
         PC_FieldSplitLink links[MAXNBLOCKS];
-        ierr = PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
         cnt = 0;
         while (ilink) {
           if (cnt==MAXNBLOCKS) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of local fieldspilt blocks >= %D",MAXNBLOCKS);
@@ -1277,7 +1279,6 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
           ilink = ilink->next;
         }
         ierr = 0;
-#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
 #pragma omp parallel for private(bs) shared(links,x,y,ierr)
         for (bs=0;bs<cnt;bs++) {
           PetscInt       idx = omp_get_thread_num(), nt = omp_get_num_threads();
@@ -1289,13 +1290,13 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
 #else
         SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Should not be here");
 #endif
-        ierr = PetscLogEventEnd(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
       } else {
         while (ilink) {
           ierr = FieldSplitSplitSolveAdd(ilink,x,y);CHKERRQ(ierr);
           ilink = ilink->next;
         }
       }
+      ierr = PetscLogEventEnd(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
     }
   } else if (jac->type == PC_COMPOSITE_MULTIPLICATIVE && jac->nsplits == 2) {
     ierr = VecSet(y,0.0);CHKERRQ(ierr);
