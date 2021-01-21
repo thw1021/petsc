@@ -46,7 +46,7 @@ struct _TSOps {
   PetscErrorCode (*linearstability)(TS,PetscReal,PetscReal,PetscReal*,PetscReal*);
   PetscErrorCode (*load)(TS,PetscViewer);
   PetscErrorCode (*rollback)(TS);
-  PetscErrorCode (*getstages)(TS,PetscInt*,Vec**);
+  PetscErrorCode (*getstages)(TS,PetscInt*,Vec*[]);
   PetscErrorCode (*adjointstep)(TS);
   PetscErrorCode (*adjointsetup)(TS);
   PetscErrorCode (*adjointreset)(TS);
@@ -55,7 +55,7 @@ struct _TSOps {
   PetscErrorCode (*forwardreset)(TS);
   PetscErrorCode (*forwardstep)(TS);
   PetscErrorCode (*forwardintegral)(TS);
-  PetscErrorCode (*forwardgetstages)(TS,PetscInt*,Mat**);
+  PetscErrorCode (*forwardgetstages)(TS,PetscInt*,Mat*[]);
   PetscErrorCode (*getsolutioncomponents)(TS,PetscInt*,Vec*);
   PetscErrorCode (*getauxsolution)(TS,Vec*);
   PetscErrorCode (*gettimeerror)(TS,PetscInt,Vec*);

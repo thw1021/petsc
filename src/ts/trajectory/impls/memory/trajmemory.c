@@ -545,10 +545,14 @@ static PetscErrorCode UpdateTS(TS ts,Stack *stack,StackElement e,PetscInt stepnu
   if (HaveSolution(e->cptype) && e->stepnum!=stepnum) {
     ierr = VecCopy(e->X,ts->vec_sol);CHKERRQ(ierr);
   }
-  if (HaveStages(e->cptype) && e->stepnum && e->stepnum==stepnum) {
+  if (HaveStages(e->cptype)) {
     ierr = TSGetStages(ts,&stack->numY,&Y);CHKERRQ(ierr);
-    for (i=0;i<stack->numY;i++) {
-      ierr = VecCopy(e->Y[i],Y[i]);CHKERRQ(ierr);
+    if (e->stepnum && e->stepnum==stepnum) {
+      for (i=0;i<stack->numY;i++) {
+        ierr = VecCopy(e->Y[i],Y[i]);CHKERRQ(ierr);
+      }
+    } else if (ts->stifflyaccurate) {
+      ierr = VecCopy(e->Y[stack->numY-1],ts->vec_sol);CHKERRQ(ierr);
     }
   }
   if (adjoint_mode) {
