@@ -676,16 +676,10 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
 
 #if defined(PETSC_HAVE_CUDA)
   ierr = PetscOptionsCheckCUDA(logView);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_THREADSAFETY)
-  ierr = PetscCUPMInitializeCheck();CHKERRQ(ierr);
-#endif
 #endif
 
 #if defined(PETSC_HAVE_HIP)
   ierr = PetscOptionsCheckHIP(logView);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_THREADSAFETY)
-  ierr = PetscCUPMInitializeCheck();CHKERRQ(ierr);
-#endif
 #endif
 
   /*
