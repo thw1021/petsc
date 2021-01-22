@@ -399,12 +399,21 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
-  def isGNUAR(ar, log):
-    '''Returns true AR is GNU'''
+  def checkRecipeArgfile(ar, flag, suffix, log):
+    '''Returns true AR handles @ notation'''
     try:
-      (output, error, status) = config.base.Configure.executeShellCommand(ar + ' -V',checkCommand = noCheck, log = log)
-      output = output + error
-      if output.find('GNU') >= 0:
+      objName = 'checkRecipeArgfile.o'
+      obj = open(objName, 'a').close()
+      argsName = 'checkRecipeArgfile.args'
+      args = open(argsName, 'a')
+      args.write(objName)
+      args.close()
+      archiveName = 'checkRecipeArgfile.'+suffix
+      (output, error, status) = config.base.Configure.executeShellCommand(ar+' '+flag+' '+archiveName+' @'+argsName,checkCommand = noCheck, log = log)
+      os.remove(objName)
+      os.remove(argsName)
+      os.remove(archiveName)
+      if not status:
         return 1
     except RuntimeError:
       pass
@@ -1387,8 +1396,8 @@ class Configure(config.base.Configure):
     else:
       self.FAST_AR_FLAGS = flag
     self.framework.addMakeMacro('FAST_AR_FLAGS',self.FAST_AR_FLAGS )
-    if self.isGNUAR(prog, self.log):
-      self.framework.addMakeMacro('AR_GNU','yes')
+    if self.checkRecipeArgfile(prog, flag, 'a', self.log): # TODO: handle other suffixes?
+      self.framework.addMakeMacro('AR_ARGFILE','yes')
     return flag
 
   def generateArchiverGuesses(self):
