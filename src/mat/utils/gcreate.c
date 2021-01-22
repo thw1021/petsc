@@ -631,20 +631,24 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
    MatIsBoundToCPU - Indicates whether a matrix has been bound to the CPU (marked as temporarily staying on the CPU and performing all computations on the CPU)
 
    Input Parameters:
-+   A - the matrix
--   isbound - flag indicated whether the matrix is bound to the CPU
+.  A - the matrix
+
+   Output Parameter:
+.  isbound - flag indicating whether the matrix is bound to the CPU
 
    Level: intermediate
 
-.seealso: MatBindToCPU()
+.seealso: MatBindToCPU(), VecIsBoundToCPU(), VecBindToCPU()
 @*/
 PetscErrorCode MatIsBoundToCPU(Mat A,PetscBool *isbound)
 {
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
+  PetscValidBoolPointer(isbound,2);
 #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
   *isbound = A->boundtocpu;
-  PetscFunctionReturn(0);
 #else
   *isbound = PETSC_TRUE;
-  return 0;
 #endif
+  PetscFunctionReturn(0);
 }
