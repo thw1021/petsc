@@ -1912,22 +1912,26 @@ PetscErrorCode VecBindToCPU(Vec v,PetscBool flg)
    VecIsBoundToCPU - Indicates whether a vector has been bound to the CPU (marked as temporarily staying on the CPU and performing all computations on the CPU)
 
    Input Parameters:
-+   v - the vector
--   isbound - flag indicated whether the vector is bound to the CPU
+.  v - the vector
+
+   Output Parameters:
+.  isbound - flag indicating whether the vector is bound to the CPU
 
    Level: intermediate
 
-.seealso: VecBindToCPU()
+.seealso: VecBindToCPU(), MatIsBoundToCPU(), MatBindToCPU()
 @*/
 PetscErrorCode VecIsBoundToCPU(Vec v,PetscBool *isbound)
 {
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidBoolPointer(isbound,2);
 #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
   *isbound = v->boundtocpu;
-  PetscFunctionReturn(0);
 #else
   *isbound = PETSC_TRUE;
-  return 0;
 #endif
+  PetscFunctionReturn(0);
 }
 
 /*@C
