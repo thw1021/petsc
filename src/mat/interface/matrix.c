@@ -6896,6 +6896,9 @@ PetscErrorCode MatCreateSubMatrices(Mat mat,PetscInt n,const IS irow[],const IS 
     if (eq) {
       ierr = MatPropagateSymmetryOptions(mat,(*submat)[i]);CHKERRQ(ierr);
     }
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+    if (mat->boundtocpu) {ierr = MatBindToCPU((*submat)[i],PETSC_TRUE);CHKERRQ(ierr);}
+#endif
   }
   PetscFunctionReturn(0);
 }
@@ -8904,6 +8907,9 @@ PetscErrorCode MatCreateVecs(Mat mat,Vec *right,Vec *left)
       ierr = VecSetSizes(*right,mat->cmap->n,PETSC_DETERMINE);CHKERRQ(ierr);
       ierr = VecSetBlockSize(*right,cbs);CHKERRQ(ierr);
       ierr = VecSetType(*right,mat->defaultvectype);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+      if (mat->boundtocpu) {ierr = VecBindToCPU(*right,PETSC_TRUE);CHKERRQ(ierr);}
+#endif
       ierr = PetscLayoutReference(mat->cmap,&(*right)->map);CHKERRQ(ierr);
     }
     if (left) {
@@ -8912,6 +8918,9 @@ PetscErrorCode MatCreateVecs(Mat mat,Vec *right,Vec *left)
       ierr = VecSetSizes(*left,mat->rmap->n,PETSC_DETERMINE);CHKERRQ(ierr);
       ierr = VecSetBlockSize(*left,rbs);CHKERRQ(ierr);
       ierr = VecSetType(*left,mat->defaultvectype);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+      if (mat->boundtocpu) {ierr = VecBindToCPU(*left,PETSC_TRUE);CHKERRQ(ierr);}
+#endif
       ierr = PetscLayoutReference(mat->rmap,&(*left)->map);CHKERRQ(ierr);
     }
   }
@@ -9729,6 +9738,9 @@ PetscErrorCode MatCreateRedundantMatrix(Mat mat,PetscInt nsubcomm,MPI_Comm subco
   } else {
     ierr = MatCreateMPIMatConcatenateSeqMat(subcomm,matseq[0],PETSC_DECIDE,reuse,matredundant);CHKERRQ(ierr);
   }
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  if (matseq[0]->boundtocpu) {ierr = MatBindToCPU(*matredundant,PETSC_TRUE);CHKERRQ(ierr);}
+#endif
   ierr = PetscLogEventEnd(MAT_RedundantMat,mat,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
