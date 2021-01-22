@@ -399,26 +399,6 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
-  def checkRecipeArgfile(ar, flag, suffix, log):
-    '''Returns true AR handles @ notation'''
-    try:
-      objName = 'checkRecipeArgfile.o'
-      obj = open(objName, 'a').close()
-      argsName = 'checkRecipeArgfile.args'
-      args = open(argsName, 'a')
-      args.write(objName)
-      args.close()
-      archiveName = 'checkRecipeArgfile.'+suffix
-      (output, error, status) = config.base.Configure.executeShellCommand(ar+' '+flag+' '+archiveName+' @'+argsName,checkCommand = noCheck, log = log)
-      os.remove(objName)
-      os.remove(argsName)
-      os.remove(archiveName)
-      if not status:
-        return 1
-    except RuntimeError:
-      pass
-
-  @staticmethod
   def isSolarisAR(ar, log):
     '''Returns true AR is solaris'''
     try:
@@ -1396,8 +1376,6 @@ class Configure(config.base.Configure):
     else:
       self.FAST_AR_FLAGS = flag
     self.framework.addMakeMacro('FAST_AR_FLAGS',self.FAST_AR_FLAGS )
-    if self.checkRecipeArgfile(prog, flag, 'a', self.log): # TODO: handle other suffixes?
-      self.framework.addMakeMacro('AR_ARGFILE','yes')
     return flag
 
   def generateArchiverGuesses(self):
@@ -1523,6 +1501,28 @@ class Configure(config.base.Configure):
     self.LIBS = oldLibs
     self.popLanguage()
     return
+
+  def checkArchiverRecipeArgfile(self):
+    '''Checks if AR handles @ notation'''
+    oldDir = os.getcwd()
+    os.chdir(self.tmpDir)
+    try:
+      objName = 'checkRecipeArgfile.o'
+      obj = open(objName, 'a').close()
+      argsName = 'checkRecipeArgfile.args'
+      args = open(argsName, 'a')
+      args.write(objName)
+      args.close()
+      archiveName = 'checkRecipeArgfile.'+self.AR_LIB_SUFFIX
+      (output, error, status) = config.base.Configure.executeShellCommand(self.AR+' '+self.AR_FLAGS+' '+archiveName+' @'+argsName,checkCommand = noCheck)
+      os.remove(objName)
+      os.remove(argsName)
+      os.remove(archiveName)
+      if not status:
+        self.framework.addMakeMacro('AR_ARGFILE','yes')
+    except RuntimeError:
+      pass
+    os.chdir(oldDir)
 
   def setStaticLinker(self):
     language = self.language[-1]
@@ -2000,6 +2000,7 @@ if (dlclose(handle)) {
       self.executeTest(self.checkFortranComments)
     self.executeTest(self.checkLargeFileIO)
     self.executeTest(self.checkArchiver)
+    self.executeTest(self.checkArchiverRecipeArgfile)
     self.executeTest(self.checkSharedLinker)
     if Configure.isDarwin(self.log):
       self.executeTest(self.checkLinkerMac)
