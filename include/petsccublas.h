@@ -35,8 +35,8 @@ do { \
    } \
 } while (0)
 
-PETSC_INTERN PetscErrorCode PetscCUBLASInitializeHandle(void);
-PETSC_INTERN PetscErrorCode PetscCUSOLVERDnInitializeHandle(void);
+PETSC_INTERN PetscErrorCode PetscCUBLASInitializeHandle(PetscInt);
+PETSC_INTERN PetscErrorCode PetscCUSOLVERDnInitializeHandle(PetscInt);
 
 /* cuBLAS does not have cublasGetErrorName(). We create one on our own. */
 PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRCUBLAS macro */

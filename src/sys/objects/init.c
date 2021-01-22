@@ -284,8 +284,8 @@ PETSC_INTERN PetscBool   PetscObjectsLog;
   #define cupmErrorLaunchOutOfResources           cudaErrorLaunchOutOfResources
   #define cupmErrorSetOnActiveProcess             cudaErrorSetOnActiveProcess
   #define CHKERRCUPM(x)                           CHKERRCUDA(x)
-  #define PetscCUPMBLASInitializeHandle()         PetscCUBLASInitializeHandle()
-  #define PetscCUPMSOLVERDnInitializeHandle()     PetscCUSOLVERDnInitializeHandle()
+  #define PetscCUPMBLASInitializeHandle(t)        PetscCUBLASInitializeHandle(t)
+  #define PetscCUPMSOLVERDnInitializeHandle(t)    PetscCUSOLVERDnInitializeHandle(t)
   #define PetscCUPMInitialize                     PetscCUDAInitialize
   #define PetscCUPMInitialized                    PetscCUDAInitialized
   #define PetscCUPMInitializeCheck                PetscCUDAInitializeCheck
@@ -317,8 +317,8 @@ PETSC_INTERN PetscBool   PetscObjectsLog;
   #define cupmErrorLaunchOutOfResources           hipErrorLaunchOutOfResources
   #define cupmErrorSetOnActiveProcess             hipErrorSetOnActiveProcess
   #define CHKERRCUPM(x)                           CHKERRQ((x)==hipSuccess? 0:PETSC_ERR_LIB)
-  #define PetscCUPMBLASInitializeHandle()         0
-  #define PetscCUPMSOLVERDnInitializeHandle()     0
+  #define PetscCUPMBLASInitializeHandle(t)        0
+  #define PetscCUPMSOLVERDnInitializeHandle(t)    0
   #define PetscCUPMInitialize                     PetscHIPInitialize
   #define PetscCUPMInitialized                    PetscHIPInitialized
   #define PetscCUPMInitializeCheck                PetscHIPInitializeCheck
