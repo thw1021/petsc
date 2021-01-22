@@ -1270,11 +1270,10 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
       ierr = PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
       if (jac->use_openmp && jac->use_openmp++ > 1) {
 #if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
-#define MAXNBLOCKS 10
-        PC_FieldSplitLink links[MAXNBLOCKS];
+        PC_FieldSplitLink links[PETSC_MAX_THREADS]; /* you can have more blocks than threads but this is convenient define */
         cnt = 0;
         while (ilink) {
-          if (cnt==MAXNBLOCKS) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of local fieldspilt blocks >= %D",MAXNBLOCKS);
+          if (cnt==PETSC_MAX_THREADS) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of local fieldspilt blocks >= %D",PETSC_MAX_THREADS);
           links[cnt++] = ilink;
           ilink = ilink->next;
         }

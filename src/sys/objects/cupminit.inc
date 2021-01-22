@@ -95,8 +95,8 @@ PetscErrorCode PetscCUPMInitializeCheck(void)
         /* It implies user has initialized device runtime outside of petsc. We do nothing to respect the device choice. */
       }
     }
-    ierr = PetscCUPMBLASInitializeHandle();CHKERRQ(ierr);
-    ierr = PetscCUPMSOLVERDnInitializeHandle();CHKERRQ(ierr);
+    ierr = PetscCUPMBLASInitializeHandle(0);CHKERRQ(ierr);
+    ierr = PetscCUPMSOLVERDnInitializeHandle(0);CHKERRQ(ierr);
     PetscCUPMInitialized = PETSC_TRUE;
   }
 
@@ -196,8 +196,8 @@ PetscErrorCode PetscCUPMInitialize(MPI_Comm comm,PetscInt device)
 
     if (devCount > 0 && device != PETSC_NONE) {
       /* Do costly device handles initialization here to not to distort petsc logging later */
-      ierr = PetscCUPMBLASInitializeHandle();CHKERRQ(ierr);
-      ierr = PetscCUPMSOLVERDnInitializeHandle();CHKERRQ(ierr);
+      ierr = PetscCUPMBLASInitializeHandle(0);CHKERRQ(ierr);
+      ierr = PetscCUPMSOLVERDnInitializeHandle(0);CHKERRQ(ierr);
       PetscCUPMInitialized = PETSC_TRUE;
     }
   }
