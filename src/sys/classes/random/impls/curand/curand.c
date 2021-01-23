@@ -102,6 +102,6 @@ PETSC_EXTERN PetscErrorCode PetscRandomCreate_CURAND(PetscRandom r)
   ierr = PetscMemcpy(r->ops,&PetscRandomOps_Values,sizeof(PetscRandomOps_Values));CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)r,PETSCCURAND);CHKERRQ(ierr);
   r->seed = 1234ULL; /* taken from example */
-  ierr = PetscRandomSeed_CURAND(r);CHKERRCURAND(cerr);
+  ierr = PetscRandomSeed_CURAND(r);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
