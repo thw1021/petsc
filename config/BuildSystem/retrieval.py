@@ -96,7 +96,8 @@ Unable to download package %s from: %s
       import shutil
       d = url[6:]
       if os.path.isdir(d):
-        if not os.path.isdir(os.path.join(d,'.git')): raise RuntimeError('URL begins with git:// and is a directory but but does not have a .git subdirectory')
+        from nargs import isDirectoryGitRepo
+        if not isDirectoryGitRepo(d): raise RuntimeError('URL begins with git:// and is a directory but is not a git repository')
 
       newgitrepo = os.path.join(root,'git.'+package)
       if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)

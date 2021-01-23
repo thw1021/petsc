@@ -3,6 +3,17 @@ try:
   import readline
 except ImportError: pass
 
+def isDirectoryGitRepo(directory=None):
+  import errno
+  import os.path
+  import subprocess as sp
+  directory = str(directory) if directory else '.'
+  if not os.path.isdir(directory):
+    raise NotADirectoryError(errno.ENOTDIR, os.strerror(errno.ENOTDIR), directory)
+  result = not bool(sp.call(['git', '-C', directory, 'rev-parse', '--git-dir'], stdout=sp.DEVNULL, stderr=sp.DEVNULL))
+  return result
+
+
 class Arg(object):
   '''This is the base class for all objects contained in RDict. Access to the raw argument values is
 provided by getValue() and setValue(). These objects can be thought of as type objects for the
@@ -500,7 +511,7 @@ class ArgDownload(Arg):
         if os.path.isfile(value):
           value = 'file://'+os.path.abspath(value)
         elif os.path.isdir(value):
-          if os.path.isdir(os.path.join(value,'.git')):
+          if isDirectoryGitRepo(value):
             value = 'git://'+os.path.abspath(value)
           else:
             value = 'dir://'+os.path.abspath(value)
