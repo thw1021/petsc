@@ -46,9 +46,23 @@ class Retriever(logger.Logger):
   def testAuthorizedUrl(self, authUrl):
     '''Raise an exception if the URL cannot receive an SSH login without a password'''
     if not authUrl:
-      raise RuntimeError('Url is empty')
+      raise RuntimeError('URL is empty')
     (scheme, location, path, parameters, query, fragment) = urlparse_local.urlparse(authUrl)
     return self.executeShellCommand('echo "quit" | ssh -oBatchMode=yes '+location, log = self.log)
+
+  @staticmethod
+  def getDownloadFailureMessage(package, url, filename=None):
+    slashFilename = '/'+filename if filename else ''
+    return '''\
+Unable to download package %s from: %s
+* If URL specified manually - perhaps there is a typo?
+* If your network is disconnected - please reconnect and rerun ./configure
+* Or perhaps you have a firewall blocking the download
+* You can run with --with-packages-download-dir=/adirectory and ./configure will instruct you what packages to download manually
+* or you can download the above URL manually, to /yourselectedlocation%s
+  and use the configure option:
+  --download-%s=/yourselectedlocation%s
+    ''' % (package.upper(), url, slashFilename, package, slashFilename)
 
   def genericRetrieve(self, url, root, package):
     '''Fetch the gzipped tarfile indicated by url and expand it into root
@@ -57,52 +71,44 @@ class Retriever(logger.Logger):
     # copy a directory
     if url.startswith('dir://'):
       import shutil
-      dir = url[6:]
-      if not os.path.isdir(dir): raise RuntimeError('Url begins with dir:// but is not a directory')
+      d = url[6:]
+      if not os.path.isdir(d): raise RuntimeError('URL begins with dir:// but is not a directory')
 
-      if os.path.isdir(os.path.join(root,os.path.basename(dir))): shutil.rmtree(os.path.join(root,os.path.basename(dir)))
-      if os.path.isfile(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
+      if os.path.isdir(os.path.join(root,os.path.basename(d))): shutil.rmtree(os.path.join(root,os.path.basename(d)))
+      if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
 
-      shutil.copytree(dir,os.path.join(root,os.path.basename(dir)))
+      shutil.copytree(d,os.path.join(root,os.path.basename(d)))
       return
 
     if url.startswith('link://'):
       import shutil
-      dir = url[7:]
-      if not os.path.isdir(dir): raise RuntimeError('Url begins with link:// but it is not pointing to a directory')
+      d = url[7:]
+      if not os.path.isdir(d): raise RuntimeError('URL begins with link:// but it is not pointing to a directory')
 
-      if os.path.islink(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
-      if os.path.isfile(os.path.join(root,os.path.basename(dir))): os.unlink(os.path.join(root,os.path.basename(dir)))
-      if os.path.isdir(os.path.join(root,os.path.basename(dir))): shutil.rmtree(os.path.join(root,os.path.basename(dir)))
-      os.symlink(os.path.abspath(dir),os.path.join(root,os.path.basename(dir)))
+      if os.path.islink(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
+      if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
+      if os.path.isdir(os.path.join(root,os.path.basename(d))): shutil.rmtree(os.path.join(root,os.path.basename(d)))
+      os.symlink(os.path.abspath(d),os.path.join(root,os.path.basename(d)))
       return
 
     if url.startswith('git://'):
       if not hasattr(self.sourceControl, 'git'): return
       import shutil
-      dir = url[6:]
-      if os.path.isdir(dir):
-        if not os.path.isdir(os.path.join(dir,'.git')): raise RuntimeError('Url begins with git:// and is a directory but but does not have a .git subdirectory')
+      d = url[6:]
+      if os.path.isdir(d):
+        from nargs import isDirectoryGitRepo
+        if not isDirectoryGitRepo(d): raise RuntimeError('URL begins with git:// and is a directory but is not a git repository')
 
       newgitrepo = os.path.join(root,'git.'+package)
       if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
       if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
 
       try:
-        config.base.Configure.executeShellCommand(self.sourceControl.git+' clone '+dir+' '+newgitrepo, log = self.log)
+        config.base.Configure.executeShellCommand(self.sourceControl.git+' clone '+d+' '+newgitrepo, log = self.log)
       except  RuntimeError as e:
         self.logPrint('ERROR: '+str(e))
         err = str(e)
-        failureMessage = '''\
-Unable to download package %s from: %s
-* If URL specified manually - perhaps there is a typo?
-* If your network is disconnected - please reconnect and rerun ./configure
-* Or perhaps you have a firewall blocking the download
-* You can run with --with-packages-download-dir=/adirectory and ./configure will instruct you what packages to download manually
-* or you can download the above URL manually, to /yourselectedlocation
-  and use the configure option:
-  --download-%s=/yourselectedlocation
-''' % (package.upper(), url, package)
+        failureMessage = self.getDownloadFailureMessage(package, url)
         raise RuntimeError('Unable to download '+package+'\n'+err+failureMessage)
       return
 
@@ -117,16 +123,7 @@ Unable to download package %s from: %s
       except  RuntimeError as e:
         self.logPrint('ERROR: '+str(e))
         err = str(e)
-        failureMessage = '''\
-Unable to download package %s from: %s
-* If URL specified manually - perhaps there is a typo?
-* If your network is disconnected - please reconnect and rerun ./configure
-* Or perhaps you have a firewall blocking the download
-* You can run with --with-packages-download-dir=/adirectory and ./configure will instruct you what packages to download manually
-* or you can download the above URL manually, to /yourselectedlocation
-  and use the configure option:
-  --download-%s=/yourselectedlocation
-''' % (package.upper(), url, package)
+        failureMessage = self.getDownloadFailureMessage(package, url)
         raise RuntimeError('Unable to download '+package+'\n'+err+failureMessage)
       return
 
@@ -141,16 +138,7 @@ Unable to download package %s from: %s
       except  RuntimeError as e:
         self.logPrint('ERROR: '+str(e))
         err = str(e)
-        failureMessage = '''\
-Unable to download package %s from: %s
-* If URL specified manually - perhaps there is a typo?
-* If your network is disconnected - please reconnect and rerun ./configure
-* Or perhaps you have a firewall blocking the download
-* You can run with --with-packages-download-dir=/adirectory and ./configure will instruct you what packages to download manually
-* or you can download the above URL manually, to /yourselectedlocation
-  and use the configure option:
-  --download-%s=/yourselectedlocation
-''' % (package.upper(), url, package)
+        failureMessage = self.getDownloadFailureMessage(package, url)
         raise RuntimeError('Unable to download '+package+'\n'+err+failureMessage)
       return
 
@@ -171,16 +159,7 @@ Unable to download package %s from: %s
       socket.setdefaulttimeout(sav_timeout)
     except Exception as e:
       socket.setdefaulttimeout(sav_timeout)
-      failureMessage = '''\
-Unable to download package %s from: %s
-* If URL specified manually - perhaps there is a typo?
-* If your network is disconnected - please reconnect and rerun ./configure
-* Or perhaps you have a firewall blocking the download
-* You can run with --with-packages-download-dir=/adirectory and ./configure will instruct you what packages to download manually
-* or you can download the above URL manually, to /yourselectedlocation/%s
-  and use the configure option:
-  --download-%s=/yourselectedlocation/%s
-''' % (package.upper(), url, filename, package, filename)
+      failureMessage = self.getDownloadFailureMessage(package, url, filename)
       raise RuntimeError(failureMessage)
 
     self.logPrint('Extracting '+localFile)
