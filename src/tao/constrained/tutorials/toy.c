@@ -4,6 +4,7 @@
 min f=(x1-x2)^2 + (x2-2)^2 -2*x1-2*x2
 s.t.     x1^2 + x2 = 2
       0 <= x1^2 - x2 <= 1
+      (x2^2 - 2 >= 0, 1 - x1^2 + x2 >= 0)
       -1 <= x1,x2 <= 2
 ---------------------------------------------------------------------- */
 
@@ -199,7 +200,7 @@ PetscErrorCode FormInequalityConstraints(Tao tao, Vec X, Vec CI, void *ctx)
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
   ierr = VecGetArray(CI,&c);CHKERRQ(ierr);
   c[0] = x[0]*x[0] - x[1];
-  c[1] = -x[0]*x[0] + x[1] + 1.0;
+  c[1] = 1.0 - x[0]*x[0] + x[1];
   ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
   ierr = VecRestoreArray(CI,&c);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -268,5 +269,15 @@ PetscErrorCode FormEqualityJacobian(Tao tao, Vec X, Mat JE, Mat JEpre, void *ctx
    test:
       requires: superlu
       args: -tao_smonitor -tao_view -tao_gatol 1.e-5
+
+   test:
+      suffix: 2
+      requires: superlu
+      args: -tao_smonitor -tao_type auglag
+
+   test:
+      suffix: 3
+      requires: superlu
+      args: -tao_cmonitor -tao_type auglag -tao_auglag_type phr
 
 TEST*/
