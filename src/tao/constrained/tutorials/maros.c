@@ -95,7 +95,7 @@ PetscErrorCode main(int argc,char **argv)
   ierr = TaoSetObjectiveAndGradientRoutine(tao,FormFunctionGradient,(void*)&user);CHKERRQ(ierr);
   ierr = TaoSetEqualityConstraintsRoutine(tao,ceq,FormEqualityConstraints,(void*)&user);CHKERRQ(ierr);
   ierr = TaoSetInequalityConstraintsRoutine(tao,cin,FormInequalityConstraints,(void*)&user);CHKERRQ(ierr);
-  ierr = TaoSetInequalityBounds(tao,user.bin,NULL);CHKERRQ(ierr);
+  /* ierr = TaoSetInequalityBounds(tao,user.bin,NULL);CHKERRQ(ierr); */
   ierr = TaoSetJacobianEqualityRoutine(tao,user.Aeq,user.Aeq,FormEqualityJacobian,(void*)&user);CHKERRQ(ierr);
   ierr = TaoSetJacobianInequalityRoutine(tao,user.Ain,user.Ain,FormInequalityJacobian,(void*)&user);CHKERRQ(ierr);
   ierr = TaoSetHessianRoutine(tao,user.H,user.H,FormHessian,(void*)&user);CHKERRQ(ierr);
@@ -299,5 +299,12 @@ PetscErrorCode FormEqualityJacobian(Tao tao, Vec x, Mat JE, Mat JEpre, void *ctx
    test:
       requires: superlu
       localrunfiles: HS21
+
+   test:
+      suffix: 2
+      nsize: 2
+      requires: superlu
+      localrunfiles: HS21
+      args: -tao_type auglag -tao_max_funcs 9999999 -tao_cmonitor
 
 TEST*/
