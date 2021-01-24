@@ -54,7 +54,7 @@ PetscErrorCode TaoAugLagSetType(Tao tao, TaoAugLagType type)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   ierr = PetscObjectTypeCompare((PetscObject)tao, TAOAUGLAG, &same);CHKERRQ(ierr);
-  if (!same) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "TAO solver must be TAOAUGLAG to retrieve the subsolver");
+  if (!same) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "TAO solver must be TAOAUGLAG to set the subsolver");
   if (tao->setupcalled) SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ORDER, "TaoAugLagSetType() must be called before TaoSetUp()");
   auglag->type = type;
   PetscFunctionReturn(0);
