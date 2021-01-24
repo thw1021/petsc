@@ -57,7 +57,7 @@ int main(int argc,char **argv)
       output_file: output/ex21_1.out
 
    test:
-      requires: kokkos
+      requires: kokkos_kernels
       diff_args: -j
       filter: grep -v type
       suffix: 1_kokkos
@@ -80,7 +80,7 @@ int main(int argc,char **argv)
       output_file: output/ex21_2.out
 
    test:
-      requires: kokkos
+      requires: kokkos_kernels
       diff_args: -j
       filter: grep -v type
       suffix: 2_kokkos
