@@ -18,6 +18,7 @@ if __name__ == '__main__':
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',
     'HIPOPTFLAGS=',
+    '--with-64-bit-indices=1',
     '--with-cuda=0',
     '--with-hip=1',
     '--with-hipcc=hipcc',

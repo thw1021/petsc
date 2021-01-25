@@ -401,6 +401,16 @@ linux-hip-double:
     PATH: /opt/rh/devtoolset-7/root/usr/bin:/opt/rocm/bin:/opt/rocm/llvm/bin:/usr/sbin:/usr/bin:/sbin:/bin
     TEST_ARCH: arch-ci-linux-hip-double
 
+linux-hip-double-64idx:
+  extends:
+    - .stage-3
+    - .linux_test
+  tags:
+    - gpu:amd, os:linux, name:hip-txcorp
+  variables:
+    PATH: /opt/rh/devtoolset-7/root/usr/bin:/opt/rocm/bin:/opt/rocm/llvm/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    TEST_ARCH: arch-ci-linux-hip-double-64idx
+
 linux-sycl-double:
   extends:
     - .stage-3
