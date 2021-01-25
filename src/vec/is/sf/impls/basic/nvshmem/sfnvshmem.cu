@@ -214,8 +214,16 @@ __global__ static void NvshmemSendSignals(PetscInt n,uint64_t *sig,PetscInt *sig
 */
 __global__ static void NvshmemWaitSignals(PetscInt n,uint64_t *sig,uint64_t expval,uint64_t newval)
 {
+#if 0
+  int i = blockIdx.x*blockDim.x + threadIdx.x;
+  if (i < n) {
+    nvshmem_signal_wait_until(sig+i,NVSHMEM_CMP_EQ,expval);
+    sig[i] = newval;
+  }
+#else
   nvshmem_uint64_wait_until_all(sig,n,NULL,NVSHMEM_CMP_EQ,expval);
   for (int i=0; i<n; i++) sig[i] = newval;
+#endif
 }
 
 /* ===========================================================================================================
@@ -239,69 +247,74 @@ __global__ static void NvshmemWaitSignals(PetscInt n,uint64_t *sig,uint64_t expv
    ===========================================================================================================*/
 
 /* Receiver tells its senders that they are allowed to reuse their send buffer (since receiver has got data from their send buffer) */
-PetscErrorCode PetscSFLinkSendSignalsToAllowPackingData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+PetscErrorCode PetscSFLinkSendSignalsOfCompletionOfGettingData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   uint64_t          *sig;
-  PetscInt          nfrom,*sigdisp;
+  PetscInt          n,*sigdisp;
   PetscMPIInt       *ranks;
 
   PetscFunctionBegin;
-  if (direction == PETSCSF_ROOT2LEAF) { /* rootbuf is sbuf; leaf allows root to reuse rootbuf (e.g., in next iteration) */
-    nfrom   = sf->nranks-sf->ndranks;
-    sig     = link->rootsig;
-    sigdisp = sf->rootsigdisp_d;
-    ranks   = sf->ranks_d;
-  } else { /* LEAF2ROOT, leafbuf is sbuf; root allows leaf to reuse leafbuf */
-    nfrom   = bas->niranks-bas->ndiranks;
+  if (direction == PETSCSF_ROOT2LEAF) { /* leaf ranks are getting data */
+    n       = sf->nranks-sf->ndranks;   /* I have n root ranks */
+    sig     = link->rootsig;            /* I want to set their root signal */
+    sigdisp = sf->rootsigdisp_d;        /* offset of each (remote) root signal */
+    ranks   = sf->ranks_d;              /* ranks of these n root ranks */
+  } else { /* LEAF2ROOT, root ranks are getting data */
+    n       = bas->niranks-bas->ndiranks;
     sig     = link->leafsig;
     sigdisp = bas->leafsigdisp_d;
     ranks   = bas->iranks_d;
   }
-  NvshmemSendSignals<<<(nfrom+511)/512,512,0,link->remote_comm_stream>>>(nfrom,sig,sigdisp,ranks,0); /* set signals to 0 afterwards */
+  NvshmemSendSignals<<<(n+511)/512,512,0,link->remote_comm_stream>>>(n,sig,sigdisp,ranks,1); /* set signals to 1 */
   PetscFunctionReturn(0);
 }
 
-/* Sender waits until it can resue its send buffer */
-PetscErrorCode PetscSFLinkWaitSignalsToStartPackingData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
-{
-  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
-  uint64_t          *sig;
-  PetscInt          nto;
-
-  PetscFunctionBegin;
-  if (direction == PETSCSF_ROOT2LEAF) {
-    sig = link->rootsig;              /* send from root */
-    nto = bas->niranks-bas->ndiranks; /* I will send to nto remote ranks */
-  } else { /* LEAF2ROOT */
-    sig = link->leafsig;
-    nto = sf->nranks-sf->ndranks;
-  }
-  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nto,sig,0,1); /* wait the signals to be 0, then set them to 1 */
-  PetscFunctionReturn(0);
-}
-
-/* Sender tells its receivers that they are allowed to get data from his send buffer */
+/* Sender tells its receivers that they are allowed to get data from its local send buffer */
 PetscErrorCode PetscSFLinkSendSignalsToAllowGettingData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   uint64_t          *sig;
-  PetscInt          nto,*sigdisp;
+  PetscInt          n,*sigdisp;
   PetscMPIInt       *ranks;
 
   PetscFunctionBegin;
-  if (direction == PETSCSF_ROOT2LEAF) { /* root allows leaf to get data */
-    nto     = bas->niranks-bas->ndiranks; /* number of remote leaf ranks */
-    sig     = link->leafsig;              /* signals along leaves */
+  if (direction == PETSCSF_ROOT2LEAF) {   /* I allow leaf ranks to get data */
+    n       = bas->niranks-bas->ndiranks; /* I have n leaf ranks */
+    sig     = link->leafsig;              /* I want to set their leaf signal */
     sigdisp = bas->leafsigdisp_d;
     ranks   = bas->iranks_d;
   } else { /* LEAF2ROOT */
-    nto     = sf->nranks-sf->ndranks;
+    n       = sf->nranks-sf->ndranks;
     sig     = link->rootsig;
     sigdisp = sf->rootsigdisp_d;
     ranks   = sf->ranks_d;
   }
-  NvshmemSendSignals<<<(nto+511)/512,512,0,link->remote_comm_stream>>>(nto,sig,sigdisp,ranks,1); /* set signals to 1 */
+  NvshmemSendSignals<<<(n+511)/512,512,0,link->remote_comm_stream>>>(n,sig,sigdisp,ranks,1); /* set signals to 1 */
+  PetscFunctionReturn(0);
+}
+
+/* Sender waits for signals (from receivers) indicating receivers have finished getting data */
+PetscErrorCode PetscSFLinkWaitSignalsOfCompletionOfGettingData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+{
+  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
+  uint64_t          *sig;
+  PetscInt          n;
+
+  PetscFunctionBegin;
+  if (direction == PETSCSF_ROOT2LEAF) { /* leaf ranks are getting data */
+    sig = link->rootsig;              /* leaf ranks set my rootsig */
+    n   = bas->niranks-bas->ndiranks; /* I have n leaf ranks */
+  } else { /* LEAF2ROOT */
+    sig = link->leafsig;
+    n   = sf->nranks-sf->ndranks;
+  }
+
+  dim3     dimGrid(1),dimBlock(1);
+  PetscInt one = 1, zero = 0;
+  void     *args[] = {&n,&sig,&one,&zero};
+  nvshmemx_collective_launch((const void *)NvshmemWaitSignals,dimGrid,dimBlock,args,0,link->remote_comm_stream);
+  //NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,1,0); /* wait the signals to be 1, then set them to 0 */
   PetscFunctionReturn(0);
 }
 
@@ -310,17 +323,24 @@ PetscErrorCode PetscSFLinkWaitSignalsToStartGettingData_NVSHMEM(PetscSF sf,Petsc
 {
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   uint64_t          *sig;
-  PetscInt          nfrom;
+  PetscInt          n;
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) {
-    sig   = link->leafsig;          /* gettting to leaf buf */
-    nfrom = sf->nranks-sf->ndranks; /* I will get data from nfrom remote root ranks */
+    sig = link->leafsig;          /* gettting to leaf buf */
+    n   = sf->nranks-sf->ndranks; /* I will get data from n remote root ranks */
   } else { /* LEAF2ROOT */
-    sig   = link->rootsig;
-    nfrom = bas->niranks-bas->ndiranks;
+    sig = link->rootsig;
+    n   = bas->niranks-bas->ndiranks;
   }
-  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nfrom,sig,1,0); /* wait the signals to be 1, then set them to 0 */
+  //NvshmemWaitSignals<<<(n+511)/512,512,0,link->remote_comm_stream>>>(n,sig,1,0); /* wait the signals to be 1, then set them to 0 */
+
+
+  dim3     dimGrid(1),dimBlock(1);
+  PetscInt one = 1, zero = 0;
+  void     *args[] = {&n,&sig,&one,&zero};
+  nvshmemx_collective_launch((const void *)NvshmemWaitSignals,dimGrid,dimBlock,args,0,link->remote_comm_stream);
+  //NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,1,0); /* wait the signals to be 1, then set them to 0 */
   PetscFunctionReturn(0);
 }
 
@@ -335,7 +355,8 @@ PetscErrorCode PetscSFLinkGetData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
   PetscInt          n;
 
   PetscFunctionBegin;
-  ierr = PetscSFLinkWaitSignalsToStartGettingData_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
+  ierr = PetscSFLinkSendSignalsToAllowGettingData_NVSHMEM(sf,link,direction);CHKERRQ(ierr);
+  ierr = PetscSFLinkWaitSignalsToStartGettingData_NVSHMEM(sf,link,direction);CHKERRQ(ierr);
   if (direction == PETSCSF_ROOT2LEAF) { /* In the view of leaf, who is the receiver */
     n        = sf->nranks-sf->ndranks;                              /* number of remote root ranks */
     sbuf     = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]; /* root buf is the send buf; it is in symmetric heap */
@@ -356,9 +377,10 @@ PetscErrorCode PetscSFLinkGetData_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDir
     char   *dst   = rbuf + (rbufdisp[i]-rbufdisp[0])*link->unitbytes;
     size_t nelems = (rbufdisp[i+1]-rbufdisp[i])*link->unitbytes;
     int    pe     = srcranks[i];
-    nvshmemx_getmem_on_stream(dst,src,nelems,pe,link->remote_comm_stream);
+    nvshmemx_getmem_nbi_on_stream(dst,src,nelems,pe,link->remote_comm_stream);
   }
-  //ierr = PetscSFLinkSendSignalsToAllowPackingData_NVSHMEM(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
+  nvshmemx_quiet_on_stream(link->remote_comm_stream);
+  ierr = PetscSFLinkSendSignalsOfCompletionOfGettingData_NVSHMEM(sf,link,direction);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -493,7 +515,12 @@ PetscErrorCode PetscSFLinkWaitSignalsOfCompletionOfPuttingData_NVSHMEM(PetscSF s
     nfrom = bas->niranks-bas->ndiranks;
     sig   = link->rootsig;
   }
-  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nfrom,sig,1,0); /* wait signals to be 1, then clear them */
+
+  // NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nfrom,sig,1,0); /* wait signals to be 1, then clear them */
+  dim3     dimGrid(1),dimBlock(1);
+  PetscInt one = 1, zero = 0;
+  void     *args[] = {&nfrom,&sig,&one,&zero};
+  nvshmemx_collective_launch((const void *)NvshmemWaitSignals,dimGrid,dimBlock,args,0,link->remote_comm_stream);
   PetscFunctionReturn(0);
 }
 
@@ -536,7 +563,12 @@ PetscErrorCode PetscSFLinkWaitSignalsToStartPuttingData_NVSHMEM(PetscSF sf,Petsc
     nto     = sf->nranks-sf->ndranks;
     sig     = link->leafsig;
   }
-  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nto,sig,0,1); /* Wait signals to be 0, then set them to 1 */
+
+  //NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nto,sig,0,1); /* Wait signals to be 0, then set them to 1 */
+  dim3     dimGrid(1),dimBlock(1);
+  PetscInt one = 1, zero = 0;
+  void     *args[] = {&nto,&sig,&zero,&one};
+  nvshmemx_collective_launch((const void *)NvshmemWaitSignals,dimGrid,dimBlock,args,0,link->remote_comm_stream);
   PetscFunctionReturn(0);
 }
 
@@ -657,8 +689,11 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
   link->leafmtype                  = PETSC_MEMTYPE_DEVICE;
   /* Overwrite some function pointers set by PetscSFLinkSetUp_CUDA */
   link->Destroy                    = PetscSFLinkDestroy_NVSHMEM;
-  link->StartCommunication         = PetscSFLinkPutData_NVSHMEM;
-  link->FinishCommunication        = PetscSFLinkWaitSignalsOfCompletionOfPuttingData_NVSHMEM;
+  // link->StartCommunication         = PetscSFLinkPutData_NVSHMEM;
+  // link->FinishCommunication        = PetscSFLinkWaitSignalsOfCompletionOfPuttingData_NVSHMEM;
+
+  link->StartCommunication         = PetscSFLinkGetData_NVSHMEM;
+  link->FinishCommunication        = PetscSFLinkWaitSignalsOfCompletionOfGettingData_NVSHMEM;
 
 found:
   if (rootdirect[PETSCSF_REMOTE]) {
@@ -734,3 +769,4 @@ PetscErrorCode PetscNvshmemMax(PetscInt count,double *dst,const double *src)
   PetscFunctionReturn(0);
 }
 #endif
+
