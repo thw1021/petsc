@@ -114,8 +114,10 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
   #endif
 
   #if defined(PETSC_HAVE_NVSHMEM)
-    b->use_nvshmem = PETSC_TRUE; /* Try to use NVSHMEM for communication on this SF when possible */
+    b->use_nvshmem     = PETSC_TRUE; /* Try to use NVSHMEM for communication on this SF when possible */
+    b->use_nvshmem_get = PETSC_FALSE; /* Use nvshmem_get based protocal */
     ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem",&b->use_nvshmem,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem_get",&b->use_nvshmem_get,NULL);CHKERRQ(ierr);
   #endif
 #endif
   b->vscat.from_n = -1;
