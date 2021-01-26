@@ -12,6 +12,7 @@ except ImportError:
   from urllib import parse as urlparse_local
 import config.base
 import socket
+import shutil
 
 # Fix parsing for nonstandard schemes
 urlparse_local.uses_netloc.extend(['bk', 'ssh', 'svn'])
@@ -112,13 +113,20 @@ Unable to download package %s from: %s
   def getRetrieverByURL(url, sourceControl, argDB = None):
     '''Fetch package from version control repository or tarfile indicated by URL and expand it into root'''
 
-    if url.startswith('dir://'):
+    parsed = urlparse_local.urlparse(url)
+    if parsed[0] == 'dir':
       return DirRetriever(sourceControl, argDB)
-    elif url.startswith('link://'):
+    elif parsed[0] == 'link':
       return LinkRetriever(sourceControl, argDB)
-    elif url.startswith('git://'):
+    elif parsed[0] == 'git':
       return GitRetriever(sourceControl, argDB)
-    elif url.startswith('hg://') or url.startswith('ssh://hg@'):
+    elif parsed[0] == 'ssh'   and parsed[2].endswith('.git'):
+      return GitRetriever(sourceControl, argDB)
+    elif parsed[0] == 'https' and parsed[2].endswith('.git'):
+      return GitRetriever(sourceControl, argDB)
+    elif parsed[0] == 'hg':
+      return HgRetriever(sourceControl, argDB)
+    elif parsed[0] == 'ssh' and parsed[1].startswith('hg@'):
       return HgRetriever(sourceControl, argDB)
     elif os.path.isdir(url):
       if Retriever.isDirectoryGitRepo(url):
@@ -131,7 +139,6 @@ Unable to download package %s from: %s
 
 class DirRetriever(Retriever):
   def retrieve(self, url, root, package):
-    import shutil
     self.logPrint('Retrieving %s as directory' % url, 3, 'install')
     d = url[6:] if url.startswith('dir://') else url
     if not os.path.isdir(d): raise RuntimeError('URL %s is not a directory' % url)
@@ -144,7 +151,6 @@ class DirRetriever(Retriever):
 
 class LinkRetriever(Retriever):
   def retrieve(self, url, root, package):
-    import shutil
     self.logPrint('Retrieving %s as link' % url, 3, 'install')
     d = url[7:] if url.startswith('link://') else url
     if not os.path.isdir(d): raise RuntimeError('URL %s is not pointing to a directory' % url)
@@ -161,7 +167,6 @@ class GitRetriever(Retriever):
     self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
     #TODO error should be raised rather than silent return?
     if not hasattr(self.sourceControl, 'git'): return
-    import shutil
     d = url[6:] if url.startswith('git://') else url
     if os.path.isdir(d) and not self.isDirectoryGitRepo(d):
       raise RuntimeError('URL %s is a directory but not a git repository' % url)
@@ -200,8 +205,8 @@ class HgRetriever(Retriever):
 
 class TarballRetriever(Retriever):
   def retrieve(self, url, root, package):
-    import shutil
-    filename = os.path.basename(urlparse_local.urlparse(url)[2])
+    parsed = urlparse_local.urlparse(url)
+    filename = os.path.basename(parsed[2])
     localFile = os.path.join(root,'_d_'+filename)
     self.logPrint('Retrieving %s as tarball to %s' % (url,localFile) , 3, 'install')
     ext =  os.path.splitext(localFile)[1]
@@ -211,6 +216,8 @@ class TarballRetriever(Retriever):
     if os.path.exists(localFile):
       os.unlink(localFile)
 
+    if parsed[0] == 'file' and not parsed[1]:
+      url = parse[2]
     if os.path.exists(url):
       if not os.path.isfile(url):
         raise RuntimeError('Local path exists but is not a regular file: '+ url)
