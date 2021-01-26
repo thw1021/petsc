@@ -17,10 +17,12 @@ import socket
 urlparse_local.uses_netloc.extend(['bk', 'ssh', 'svn'])
 
 class Retriever(logger.Logger):
-  def __init__(self, sourceControl, clArgs = None, argDB = None):
-    logger.Logger.__init__(self, clArgs, argDB)
+  def __init__(self, sourceControl, argDB = None):
+    logger.Logger.__init__(self, argDB)
     self.sourceControl = sourceControl
     self.stamp = None
+    self.setup()
+    self.saveLog()
     return
 
   def getAuthorizedUrl(self, url):
@@ -52,7 +54,6 @@ class Retriever(logger.Logger):
 
   @staticmethod
   def isDirectoryGitRepo(directory):
-    import errno
     import os.path as op
     import subprocess as sp
 
@@ -104,7 +105,32 @@ Unable to download package %s from: %s
   --download-%s=/yourselectedlocation%s
     ''' % (package.upper(), url, slashFilename, package, slashFilename)
 
-  def retrieveDir(self, url, root, package):
+  def retrieve(self, url, root, package):
+    raise NotImplementedError('subclasses must override this method')
+
+  @staticmethod
+  def getRetrieverByURL(url, sourceControl, argDB = None):
+    '''Fetch package from version control repository or tarfile indicated by URL and expand it into root'''
+
+    if url.startswith('dir://'):
+      return DirRetriever(sourceControl, argDB)
+    elif url.startswith('link://'):
+      return LinkRetriever(sourceControl, argDB)
+    elif url.startswith('git://'):
+      return GitRetriever(sourceControl, argDB)
+    elif url.startswith('hg://') or url.startswith('ssh://hg@'):
+      return HgRetriever(sourceControl, argDB)
+    elif os.path.isdir(url):
+      if Retriever.isDirectoryGitRepo(url):
+        return GitRetriever(sourceControl, argDB)
+      else:
+        return DirRetriever(sourceControl, argDB)
+    else:
+      return TarballRetriever(sourceControl, argDB)
+    return
+
+class DirRetriever(Retriever):
+  def retrieve(self, url, root, package):
     import shutil
     self.logPrint('Retrieving %s as directory' % url, 3, 'install')
     d = url[6:] if url.startswith('dir://') else url
@@ -116,7 +142,8 @@ Unable to download package %s from: %s
     shutil.copytree(d,os.path.join(root,os.path.basename(d)))
     return
 
-  def retrieveLink(self, url, root, package):
+class LinkRetriever(Retriever):
+  def retrieve(self, url, root, package):
     import shutil
     self.logPrint('Retrieving %s as link' % url, 3, 'install')
     d = url[7:] if url.startswith('link://') else url
@@ -129,7 +156,8 @@ Unable to download package %s from: %s
     os.symlink(os.path.abspath(d),os.path.join(root,os.path.basename(d)))
     return
 
-  def retrieveGit(self, url, root, package):
+class GitRetriever(Retriever):
+  def retrieve(self, url, root, package):
     self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
     #TODO error should be raised rather than silent return?
     if not hasattr(self.sourceControl, 'git'): return
@@ -151,7 +179,8 @@ Unable to download package %s from: %s
       raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
     return
 
-  def retrieveHg(self, url, root, package):
+class HgRetriever(Retriever):
+  def retrieve(self, url, root, package):
     self.logPrint('Retrieving %s as hg repo' % url, 3, 'install')
     #TODO error should be raised rather than silent return?
     if not hasattr(self.sourceControl, 'hg'): return
@@ -169,7 +198,9 @@ Unable to download package %s from: %s
       raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
     return
 
-  def retrieveTarball(self, url, root, package):
+class TarballRetriever(Retriever):
+  def retrieve(self, url, root, package):
+    import shutil
     filename = os.path.basename(urlparse_local.urlparse(url)[2])
     localFile = os.path.join(root,'_d_'+filename)
     self.logPrint('Retrieving %s as tarball to %s' % (url,localFile) , 3, 'install')
@@ -180,15 +211,22 @@ Unable to download package %s from: %s
     if os.path.exists(localFile):
       os.unlink(localFile)
 
-    try:
-      sav_timeout = socket.getdefaulttimeout()
-      socket.setdefaulttimeout(30)
-      urlretrieve(url, localFile)
-      socket.setdefaulttimeout(sav_timeout)
-    except Exception as e:
-      socket.setdefaulttimeout(sav_timeout)
-      failureMessage = self.getDownloadFailureMessage(package, url, filename)
-      raise RuntimeError(failureMessage)
+    if os.path.exists(url):
+      if not os.path.isfile(url):
+        raise RuntimeError('Local path exists but is not a regular file: '+ url)
+      # copy local file
+      shutil.copyfile(url, localFile)
+    else:
+      # fetch remote file
+      try:
+        sav_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(30)
+        urlretrieve(url, localFile)
+        socket.setdefaulttimeout(sav_timeout)
+      except Exception as e:
+        socket.setdefaulttimeout(sav_timeout)
+        failureMessage = self.getDownloadFailureMessage(package, url, filename)
+        raise RuntimeError(failureMessage)
 
     self.logPrint('Extracting '+localFile)
     if ext in ['.zip','.ZIP']:
@@ -236,24 +274,4 @@ Downloaded package %s from: %s is not a tarball.
     except RuntimeError as e:
       raise RuntimeError('Error changing permissions for '+dirname+' obtained from '+localFile+ ' : '+str(e))
     os.unlink(localFile)
-    return
-
-  def genericRetrieve(self, url, root, package):
-    '''Fetch package from version control repository or tarfile indicated by URL and expand it into root'''
-
-    if url.startswith('dir://'):
-      self.retrieveDir(url, root, package)
-    elif url.startswith('link://'):
-      self.retrieveLink(url, root, package)
-    elif url.startswith('git://'):
-      self.retrieveGit(url, root, package)
-    elif url.startswith('hg://') or url.startswith('ssh://hg@'):
-      self.retrieveHg(url, root, package)
-    elif os.path.isdir(url):
-      if self.isDirectoryGitRepo(url):
-        self.retrieveGit(url, root, package)
-      else:
-        self.retrieveDir(url, root, package)
-    else:
-      self.retrieveTarball(url, root, package)
     return
