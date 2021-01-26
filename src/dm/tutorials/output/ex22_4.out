@@ -1,5 +1,8 @@
 
  IS to select slice from 3D DMDA vector : 
+subset MPI subcomm size is : 4, includes global rank : 1 
+subset MPI subcomm size is : 4, includes global rank : 2 
+subset MPI subcomm size is : 4, includes global rank : 3 
 IS Object: 4 MPI processes
   type: general
 [0] Number of indices in set 4
@@ -22,8 +25,6 @@ IS Object: 4 MPI processes
 [3] 1 54
 [3] 2 58
 [3] 3 62
-subset MPI subcomm size is : 4, includes global rank : 2 
-subset MPI subcomm size is : 4, includes global rank : 3 
 
  Extracted slice vector, in DMDA ordering : 
 Vec Object: 4 MPI processes
@@ -73,4 +74,3 @@ Process [3]
 300.
 300.
 300.
-subset MPI subcomm size is : 4, includes global rank : 1 
