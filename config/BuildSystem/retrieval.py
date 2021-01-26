@@ -248,26 +248,3 @@ Downloaded package %s from: %s is not a tarball.
       raise RuntimeError('Error changing permissions for '+dirname+' obtained from '+localFile+ ' : '+str(e))
     os.unlink(localFile)
     return
-
-  def ftpRetrieve(self, url, root, name,force):
-    self.logPrint('Retrieving '+url+' --> '+os.path.join(root, name)+' via ftp', 3, 'install')
-    return self.genericRetrieve(url, root, name)
-
-  def httpRetrieve(self, url, root, name,force):
-    self.logPrint('Retrieving '+url+' --> '+os.path.join(root, name)+' via http', 3, 'install')
-    return self.genericRetrieve(url, root, name)
-
-  def fileRetrieve(self, url, root, name,force):
-    self.logPrint('Retrieving '+url+' --> '+os.path.join(root, name)+' via cp', 3, 'install')
-    return self.genericRetrieve(url, root, name)
-
-  def svnRetrieve(self, url, root, name,force):
-    if not hasattr(self.sourceControl, 'svn'):
-      raise RuntimeError('Cannot retrieve a SVN repository since svn was not found')
-    self.logPrint('Retrieving '+url+' --> '+os.path.join(root, name)+' via svn', 3, 'install')
-    try:
-      config.base.Configure.executeShellCommand(self.sourceControl.svn+' checkout http'+url[3:]+' '+os.path.join(root, name), log = self.log)
-    except RuntimeError:
-      pass
-
-
