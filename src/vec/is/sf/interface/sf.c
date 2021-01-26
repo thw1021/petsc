@@ -1416,6 +1416,222 @@ PetscErrorCode PetscSFCreateEmbeddedLeafSF(PetscSF sf,PetscInt nselected,const P
   PetscFunctionReturn(0);
 }
 
+/*@
+  DMPlexBuildWithGlobalIndices - Create SF with global indices
+
+  Collective
+
+  Input Parameters:
++ sf - input star forest
+. numGlobalIndices - total size of the contiguous global indices (can be PETSC_DECIDE if bufferSize is given)
+. bufferSize - size of the partition of [0, numGlobalIndices) that this process owns (can be PETSC_DECIDE if numGlobalIndices is given)
+. numRootIndieces - size of rootIndices
+. rootIndices - PetscInt array of global indices of which this process claims ownership; NULL if each rank owns the rank-th chunk of a partition of [0, numGlobalIndices) of size numRootIndieces
+. rootLocalIndices - root local index permutation (NULL if no permutation)
+. rootOffset - index to count the contiguous root local indices from
+. numLeafIndices - size of leafIndices
+. leafIndices - PetscInt array of global indices with which this process requires data associated; NULL if each rank owns the rank-th chunk of a partition of [0, numGlobalIndices) of size numLeafIndieces (ignored if flag == PETSC_TRUE)
+. leafLocalIndices - leaf local index permutation (NULL if no permutation)
+. leafOffset - index to count the contiguous leaf local indices from
+- flag - flag indicating that leafIndices is identical to rootIndices
+
+  Output Parameter:
+. sfA - star forest representing the communication pattern from an array indexed with the global indices to leaf (NULL if not needed)
+
+  Notes:
+  Example 1:
+$
+$  rank             : 0            1            2
+$  numGlobalIndices : 4            4            4
+$  bufferSize       : PETSC_DECIDE PETSC_DECIDE PETSC_DECIDE 
+$  numRootIndices   : 3            1            1
+$  rootIndices      : [1 0 2]      [3]          [3]
+$  rootOffset       : 100          200          300
+$  numLeafIndices   : 1            1            2
+$  leafIndices      : [0]          [2]          [0 3]
+$  leafOffset       : 400          500          600
+$  flag             : PETSC_FALSE  PETSC_FALSE  PETSC_FALSE
+$
+would build the following SF:
+$
+$  [0] 400 <- (0,101)
+$  [1] 500 <- (0,102)
+$  [2] 600 <- (0,101)
+$  [2] 601 <- (2,300)
+$
+  Example 2:
+$
+$  rank             : 0            1            2
+$  numGlobalIndices : 4            4            4
+$  bufferSize       : PETSC_DECIDE PETSC_DECIDE PETSC_DECIDE 
+$  numRootIndices   : 3            1            1
+$  rootIndices      : [1 0 2]      [3]          [3]
+$  rootOffset       : 100          200          300
+$  numLeafIndices   : PETSC_DECIDE PETSC_DECIDE PETSC_DECIDE
+$  leafIndices      : NULL         NULL         NULL
+$  leafOffset       : PETSC_DECIDE PETSC_DECIDE PETSC_DECIDE
+$  flag             : PETSC_TRUE   PETSC_TRUE  PETSC_TRUE
+$
+would build the following SF:
+$
+$  [1] 200 <- (2,300)
+$
+  Example 3:
+$
+$  rank             : 0            1            2
+$  numGlobalIndices : PETSC_DECIDE PETSC_DECIDE PETSC_DECIDE
+$  bufferSize       : PETSC_DECIDE PETSC_DECIDE PETSC_DECIDE 
+$  numRootIndices   : 1            2            1
+$  rootIndices      : NULL         NULL         NULL
+$  rootOffset       : 100          200          300
+$  numLeafIndices   : 1            1            2
+$  leafIndices      : [0]          [2]          [0 3]
+$  leafOffset       : 400          500          600
+$  flag             : PETSC_FALSE  PETSC_FALSE  PETSC_FALSE
+$
+would build the following SF:
+$
+$  [0] 400 <- (0,100)
+$  [1] 500 <- (1,201)
+$  [2] 600 <- (0,100)
+$  [2] 601 <- (2,300)
+$
+
+  Level: advanced
+
+.seealso: PetscSFCreate()
+@*/
+PetscErrorCode PetscSFBuildWithGlobalIndices(PetscSF sf, PetscInt numGlobalIndices, PetscInt bufferSize, PetscInt numRootIndices, const PetscInt *rootIndices, const PetscInt *rootLocalIndices, PetscInt rootOffset, PetscInt numLeafIndices, const PetscInt *leafIndices, const PetscInt *leafLocalIndices, PetscInt leafOffset, PetscBool flag, PetscSF *sfA)
+{
+  PetscSF         sf1;
+  PetscLayout     layout;
+  PetscSFNode    *owners, *buffer, *iremote;
+  PetscInt       *ilocal, nleaves, i;
+  PetscMPIInt     size, rank;
+  PetscBool       simple[2];
+#if defined(PETSC_USE_DEBUG)
+  PetscInt        numGlobalIndices1;
+#endif
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
+  PetscValidLogicalCollectiveBool(sf,flag,12);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject) sf), &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) sf), &rank);CHKERRMPI(ierr);
+  if (flag && !rootLocalIndices && !leafLocalIndices) {
+    if (numRootIndices == PETSC_DECIDE) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "numRootIndices must be given if flag == PETSC_TRUE");
+    if (numLeafIndices == PETSC_DECIDE) numLeafIndices = numRootIndices;
+    else if (numLeafIndices != numRootIndices) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "flag is set PETSC_TRUE, but numLeafIndices (%D) != numRootIndices (%D)", numLeafIndices, numRootIndices);
+    if (leafOffset == PETSC_DECIDE) leafOffset = rootOffset;
+  }
+  simple[0] = (PetscBool)(!rootIndices);
+  simple[1] = (PetscBool)(!leafIndices) && !(flag);
+  ierr = MPIU_Allreduce(MPI_IN_PLACE, simple, 2, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject) sf));CHKERRQ(ierr);
+  if (simple[0] && simple[1]) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Currently rootIndices and leafIndices can not be both NULL");
+  if (flag && simple[0]) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "If flag == PETSC_TRUE, rootIndices must be provided");
+  /* Get bufferSize */
+  if (simple[0]) {
+    if (bufferSize == PETSC_DECIDE) bufferSize = numRootIndices;
+    else if (bufferSize != numRootIndices) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "rootIndices is NULL, but bufferSize (%D) != numRootIndices (%D) on rank %D", bufferSize, numRootIndices, rank);
+  } else if (simple[1]) {
+    if (bufferSize == PETSC_DECIDE) bufferSize = numLeafIndices;
+    else if (bufferSize != numLeafIndices) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "leafIndices is NULL, but bufferSize (%D) != numLeafIndices (%D) on rank %D", bufferSize, numLeafIndices, rank);
+  } else if (bufferSize == PETSC_DECIDE) {
+    if (numGlobalIndices == PETSC_DECIDE) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Either numGlobalIndices or bufferSize must be provided");
+    bufferSize = numGlobalIndices / size + (PetscInt)(rank < numGlobalIndices % size);
+  }
+#if defined(PETSC_USE_DEBUG)
+  ierr = MPIU_Allreduce(&bufferSize, &numGlobalIndices1, 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject) sf));CHKERRQ(ierr);
+  if (numGlobalIndices != PETSC_DECIDE) {
+    if (numGlobalIndices1 != numGlobalIndices) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Sum of bufferSizes (%D) != numGlobalIndices (%D): bufferSize is %D on rank %D", numGlobalIndices1, numGlobalIndices, bufferSize, rank);
+  } else numGlobalIndices = numGlobalIndices1;
+  if (!simple[0]) {
+    numGlobalIndices1 = PETSC_MIN_INT;
+    for (i = 0; i < numRootIndices; i++) if (rootIndices[i] > numGlobalIndices1) numGlobalIndices1 = rootIndices[i];
+    ++numGlobalIndices1;
+    ierr = MPI_Allreduce(MPI_IN_PLACE, &numGlobalIndices1, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject) sf));CHKERRMPI(ierr);
+    if (numGlobalIndices1 != numGlobalIndices) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Max. value found in rootIndices' (over all processes) (%D) != numGlobalIndices provided/computed (%D)", numGlobalIndices1, numGlobalIndices);
+  }
+#endif
+  /* Create Layout */
+  ierr = PetscLayoutCreate(PetscObjectComm((PetscObject) sf), &layout);CHKERRQ(ierr);
+  ierr = PetscLayoutSetSize(layout, PETSC_DECIDE);CHKERRQ(ierr);
+  ierr = PetscLayoutSetLocalSize(layout, bufferSize);CHKERRQ(ierr);
+  ierr = PetscLayoutSetBlockSize(layout, 1);CHKERRQ(ierr);
+  ierr = PetscLayoutSetUp(layout);CHKERRQ(ierr);
+  /* Set buffer */
+  ierr = PetscMalloc1(bufferSize, &buffer);CHKERRQ(ierr);
+  if (simple[0]) {
+    for (i = 0; i < bufferSize; ++i) {
+      buffer[i].rank = rank;
+      buffer[i].index = rootOffset + (rootLocalIndices ? rootLocalIndices[i] : i);
+    }
+  } else {
+    ierr = PetscSFCreate(PetscObjectComm((PetscObject) sf), &sf1);CHKERRQ(ierr);
+    ierr = PetscSFSetFromOptions(sf1);CHKERRQ(ierr);
+    ierr = PetscSFSetGraphLayout(sf1, layout, numRootIndices, NULL, PETSC_OWN_POINTER, rootIndices);CHKERRQ(ierr);
+    ierr = PetscMalloc1(numRootIndices, &owners);CHKERRQ(ierr);
+    for (i = 0; i < numRootIndices; ++i) {
+      owners[i].rank = rank;
+      owners[i].index = rootOffset + (rootLocalIndices ? rootLocalIndices[i] : i);
+    }
+    for (i = 0; i < bufferSize; ++i) {
+      buffer[i].index = -1;
+      buffer[i].rank = -1;
+    }
+    ierr = PetscSFReduceBegin(sf1, MPIU_2INT, owners, buffer, MPI_MAXLOC);CHKERRQ(ierr);
+    ierr = PetscSFReduceEnd(sf1, MPIU_2INT, owners, buffer, MPI_MAXLOC);CHKERRQ(ierr);
+    for (i = 0; i < bufferSize; ++i) if (buffer[i].rank < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Global point %D was unclaimed", i + layout->rstart);
+  }
+  /* Set owners */
+  if (simple[1]) {
+    ierr = PetscFree(owners);CHKERRQ(ierr);
+    ierr = PetscSFDestroy(&sf1);CHKERRQ(ierr);
+    owners = buffer;
+  } else {
+    if (!flag) {
+      /* leafIndices is different from rootIndices */
+      if (!simple[0]) {
+        ierr = PetscFree(owners);CHKERRQ(ierr);
+        ierr = PetscSFDestroy(&sf1);CHKERRQ(ierr);
+      }
+      ierr = PetscSFCreate(PetscObjectComm((PetscObject) sf), &sf1);CHKERRQ(ierr);
+      ierr = PetscSFSetFromOptions(sf1);CHKERRQ(ierr);
+      ierr = PetscSFSetGraphLayout(sf1, layout, numLeafIndices, NULL, PETSC_OWN_POINTER, leafIndices);CHKERRQ(ierr);
+      ierr = PetscMalloc1(numLeafIndices, &owners);CHKERRQ(ierr);
+    }
+    ierr = PetscSFBcastBegin(sf1, MPIU_2INT, buffer, owners);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(sf1, MPIU_2INT, buffer, owners);CHKERRQ(ierr);
+    ierr = PetscFree(buffer);CHKERRQ(ierr);
+    if (sfA) *sfA = sf1;
+    else {ierr = PetscSFDestroy(&sf1);CHKERRQ(ierr);}
+  }
+  ierr = PetscLayoutDestroy(&layout);CHKERRQ(ierr);
+  /* Create sf */
+  if (flag && leafOffset == rootOffset && !rootLocalIndices && !leafLocalIndices) {
+    for (i = 0, nleaves = 0; i < numLeafIndices; ++i) if (owners[i].rank != rank) ++nleaves;
+    ierr = PetscMalloc1(nleaves, &ilocal);CHKERRQ(ierr);
+    ierr = PetscMalloc1(nleaves, &iremote);CHKERRQ(ierr);
+    for (i = 0, nleaves = 0; i < numLeafIndices; ++i) {
+      if (owners[i].rank != rank) {
+        ilocal[nleaves]        = leafOffset + i;
+        iremote[nleaves].rank  = owners[i].rank;
+        iremote[nleaves].index = owners[i].index;
+        ++nleaves;
+      }
+    }
+    ierr = PetscFree(owners);CHKERRQ(ierr);
+  } else {
+    nleaves = numLeafIndices;
+    ierr = PetscMalloc1(nleaves, &ilocal);CHKERRQ(ierr);
+    for (i = 0; i < nleaves; ++i) {ilocal[i] = leafOffset + (leafLocalIndices ? leafLocalIndices[i] : i);}
+    iremote = owners;
+  }
+  ierr = PetscSFSetGraph(sf, rootOffset + numRootIndices, nleaves, ilocal, PETSC_OWN_POINTER, iremote, PETSC_OWN_POINTER);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@C
    PetscSFBcastAndOpBegin - begin pointwise broadcast with root value being reduced to leaf value, to be concluded with call to PetscSFBcastAndOpEnd()
 
