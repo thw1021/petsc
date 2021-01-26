@@ -51,6 +51,46 @@ class Retriever(logger.Logger):
     return self.executeShellCommand('echo "quit" | ssh -oBatchMode=yes '+location, log = self.log)
 
   @staticmethod
+  def isDirectoryGitRepo(directory):
+    import errno
+    import os.path as op
+    import subprocess as sp
+
+    def process(output): return str(output.decode(encoding='UTF-8',errors='replace')).strip()
+
+    def gitRevParse(opt, directory, fail=True):
+      # we don't use Script.runShellCommand() not to introduce circular dependency
+      p = sp.Popen(['git', 'rev-parse'] + [opt], cwd=directory, stdout=sp.PIPE, stderr=sp.PIPE)
+      (out, err) = p.communicate()
+      if p.returncode and fail:
+        raise RuntimeError('git rev-parse %s in %s exited with unexpected error %d: %s' % (opt, ret, err))
+      out = process(out)
+      err = process(err)
+      return (out, err, p.returncode)
+
+    if not op.isdir(directory):
+      raise RuntimeError(directory + ' is not a directory')
+    directory = op.abspath(directory)
+
+    (out, err, ret) = gitRevParse('--is-inside-git-dir', directory, fail=False)
+    if ret:
+      if 'not a git repository' in err.lower():
+        result = False
+      else:
+        raise RuntimeError('git rev-parse --is-inside-git-dir exited with unexpected error %d: %s' % (ret, err))
+    else:
+      isInside = (out.lower() == 'true')
+      if isInside:
+        (out, err, ret) = gitRevParse('--git-dir', directory)
+        if out != '.':
+          raise RuntimeError('Directory %s is under git directory %s\nSpecify the latter instead.' % (directory, out))
+        result = True
+      else:
+        (out, err, ret) = gitRevParse('--show-prefix', directory)
+        result = not out  # out is '' for toplevel directory
+    return result
+
+  @staticmethod
   def getDownloadFailureMessage(package, url, filename=None):
     slashFilename = '/'+filename if filename else ''
     return '''\
