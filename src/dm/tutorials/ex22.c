@@ -51,14 +51,25 @@ int main(int argc,char **argv)
      Initialize program and set problem parameters
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = PetscInitialize(&argc, &argv, (char*)0, help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
-  ierr = PetscOptionsGetInt(NULL, NULL, "-Mx", &Mx, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL, NULL, "-My", &My, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL, NULL, "-Mz", &Mz, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL, NULL, "-sliceid", &sliceid, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL, NULL, "-sliceaxis", &sliceaxis, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "", "ex22 DMDA tutorial example options", "DMDA");CHKERRQ(ierr);
+  ierr = PetscOptionsRangeInt("-Mx", "dimension along x-axis", "ex22.c", Mx, &Mx, NULL, 0, PETSC_MAX_INT);CHKERRQ(ierr);
+  ierr = PetscOptionsRangeInt("-My", "dimension along y-axis", "ex22.c", My, &My, NULL, 0, PETSC_MAX_INT);CHKERRQ(ierr);
+  ierr = PetscOptionsRangeInt("-Mz", "dimension along z-axis", "ex22.c", Mz, &Mz, NULL, 0, PETSC_MAX_INT);CHKERRQ(ierr);
+  ierr = PetscOptionsRangeInt("-sliceaxis", "axis along which 2D slice is extracted from", "ex22.c", sliceaxis, &sliceaxis, NULL, 0, 2);CHKERRQ(ierr);
+  ierr = PetscOptionsRangeInt("-sliceid", "index along sliceaxis at which 2D slice is extracted", "ex22.c", sliceid, &sliceid, NULL, 0, PETSC_MAX_INT);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+
+  /* Ensure that the requested slice is not out of bounds for the selected axis */
+  if (sliceaxis==0) {
+    if (sliceid>Mx) SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "sliceid along sliceaxis is larger than largest index!");
+  } else if (sliceaxis==1) {
+    if (sliceid>My) SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "sliceid along sliceaxis is larger than largest index!");
+  } else if (sliceaxis==2) {
+    if (sliceid>Mz) SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "sliceid along sliceaxis is larger than largest index!");
+  }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create 3D DMDA object.
@@ -125,23 +136,23 @@ int main(int argc,char **argv)
   ierr = PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-     Query 3D DMDA layout
+     Query 3D DMDA layout, get the subset MPI communicator
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
   if (sliceaxis==0) {
     ierr = DMDAGetInfo(da3D, NULL, NULL, NULL, NULL, NULL, &m1, &m2, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
-    ierr = DMDAGetProcessorSubset(da3D, DM_X, sliceid, &subset_mpi_comm);CHKERRQ(ierr);
     ierr = DMDAGetOwnershipRanges(da3D, NULL, &l1, &l2);CHKERRQ(ierr);
     M1 = My; M2 = Mz;
+    ierr = DMDAGetProcessorSubset(da3D, DM_X, sliceid, &subset_mpi_comm);CHKERRQ(ierr);
   } else if (sliceaxis==1) {
     ierr = DMDAGetInfo(da3D, NULL, NULL, NULL, NULL, &m1, NULL, &m2, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
-    ierr = DMDAGetProcessorSubset(da3D, DM_Y, sliceid, &subset_mpi_comm);CHKERRQ(ierr);
     ierr = DMDAGetOwnershipRanges(da3D, &l1, NULL, &l2);CHKERRQ(ierr);
     M1 = Mx; M2 = Mz;
+    ierr = DMDAGetProcessorSubset(da3D, DM_Y, sliceid, &subset_mpi_comm);CHKERRQ(ierr);
   } else if (sliceaxis==2) {
     ierr = DMDAGetInfo(da3D, NULL, NULL, NULL, NULL, &m1, &m2, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
-    ierr = DMDAGetProcessorSubset(da3D, DM_Z, sliceid, &subset_mpi_comm);CHKERRQ(ierr);
     ierr = DMDAGetOwnershipRanges(da3D, &l1, &l2, NULL);CHKERRQ(ierr);
     M1 = Mx; M2 = My;
+    ierr = DMDAGetProcessorSubset(da3D, DM_Z, sliceid, &subset_mpi_comm);CHKERRQ(ierr);
   }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -191,7 +202,8 @@ int main(int argc,char **argv)
     ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, vn, M1*M2, array, &vec_slice_g);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(vec_slice, &array);CHKERRQ(ierr);
   } else {
-    /* Ranks not part of the subset MPI communicator provide no entries, yet need to be called */
+    /* Ranks not part of the subset MPI communicator provide no entries, but the routines for creating
+       the IS and Vec on the 3D DMDA's communicator still need to called, since they are collective routines */
     ierr = ISCreateGeneral(PETSC_COMM_WORLD, 0, NULL, PETSC_USE_POINTER, &scatis_natural_slice_g);CHKERRQ(ierr);
     ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, 0, M1*M2, NULL, &vec_slice_g);CHKERRQ(ierr);
   }
