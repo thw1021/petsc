@@ -104,90 +104,79 @@ Unable to download package %s from: %s
   --download-%s=/yourselectedlocation%s
     ''' % (package.upper(), url, slashFilename, package, slashFilename)
 
-  def genericRetrieve(self, url, root, package):
-    '''Fetch the gzipped tarfile indicated by url and expand it into root
-       - All the logic for removing old versions, updating etc. must move'''
+  def retrieveDir(self, url, root, package):
+    import shutil
+    self.logPrint('Retrieving %s as directory' % url, 3, 'install')
+    d = url[6:] if url.startswith('dir://') else url
+    if not os.path.isdir(d): raise RuntimeError('URL %s is not a directory' % url)
 
-    # copy a directory
-    if url.startswith('dir://'):
-      import shutil
-      d = url[6:]
-      if not os.path.isdir(d): raise RuntimeError('URL begins with dir:// but is not a directory')
+    if os.path.isdir(os.path.join(root,os.path.basename(d))): shutil.rmtree(os.path.join(root,os.path.basename(d)))
+    if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
 
-      if os.path.isdir(os.path.join(root,os.path.basename(d))): shutil.rmtree(os.path.join(root,os.path.basename(d)))
-      if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
+    shutil.copytree(d,os.path.join(root,os.path.basename(d)))
+    return
 
-      shutil.copytree(d,os.path.join(root,os.path.basename(d)))
-      return
+  def retrieveLink(self, url, root, package):
+    import shutil
+    self.logPrint('Retrieving %s as link' % url, 3, 'install')
+    d = url[7:] if url.startswith('link://') else url
+    if not os.path.isdir(d): raise RuntimeError('URL %s is not pointing to a directory' % url)
 
-    if url.startswith('link://'):
-      import shutil
-      d = url[7:]
-      if not os.path.isdir(d): raise RuntimeError('URL begins with link:// but it is not pointing to a directory')
+    if os.path.islink(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
+    #TODO this impossible - error would be raised above
+    if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
+    if os.path.isdir(os.path.join(root,os.path.basename(d))): shutil.rmtree(os.path.join(root,os.path.basename(d)))
+    os.symlink(os.path.abspath(d),os.path.join(root,os.path.basename(d)))
+    return
 
-      if os.path.islink(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
-      if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
-      if os.path.isdir(os.path.join(root,os.path.basename(d))): shutil.rmtree(os.path.join(root,os.path.basename(d)))
-      os.symlink(os.path.abspath(d),os.path.join(root,os.path.basename(d)))
-      return
+  def retrieveGit(self, url, root, package):
+    self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
+    #TODO error should be raised rather than silent return?
+    if not hasattr(self.sourceControl, 'git'): return
+    import shutil
+    d = url[6:] if url.startswith('git://') else url
+    if os.path.isdir(d) and not self.isDirectoryGitRepo(d):
+      raise RuntimeError('URL %s is a directory but not a git repository' % url)
 
-    if url.startswith('git://'):
-      if not hasattr(self.sourceControl, 'git'): return
-      import shutil
-      d = url[6:]
-      if os.path.isdir(d) and not self.isDirectoryGitRepo(d):
-        raise RuntimeError('URL begins with git:// and is a directory but is not a git repository')
+    newgitrepo = os.path.join(root,'git.'+package)
+    if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
+    if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
 
-      newgitrepo = os.path.join(root,'git.'+package)
-      if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
-      if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
+    try:
+      config.base.Configure.executeShellCommand('%s clone %s %s' % (self.sourceControl.git, d, newgitrepo), log = self.log)
+    except  RuntimeError as e:
+      self.logPrint('ERROR: '+str(e))
+      err = str(e)
+      failureMessage = self.getDownloadFailureMessage(package, url)
+      raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
+    return
 
-      try:
-        config.base.Configure.executeShellCommand(self.sourceControl.git+' clone '+d+' '+newgitrepo, log = self.log)
-      except  RuntimeError as e:
-        self.logPrint('ERROR: '+str(e))
-        err = str(e)
-        failureMessage = self.getDownloadFailureMessage(package, url)
-        raise RuntimeError('Unable to download '+package+'\n'+err+failureMessage)
-      return
+  def retrieveHg(self, url, root, package):
+    self.logPrint('Retrieving %s as hg repo' % url, 3, 'install')
+    #TODO error should be raised rather than silent return?
+    if not hasattr(self.sourceControl, 'hg'): return
+    d = url[5:] if url.startswith('hg://') else url
 
-    if url.startswith('hg://'):
-      if not hasattr(self.sourceControl, 'hg'): return
+    newgitrepo = os.path.join(root,'hg.'+package)
+    if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
+    if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
+    try:
+      config.base.Configure.executeShellCommand('%s clone %s %s' % (self.sourceControl.hg, d, newgitrepo), log = self.log)
+    except  RuntimeError as e:
+      self.logPrint('ERROR: '+str(e))
+      err = str(e)
+      failureMessage = self.getDownloadFailureMessage(package, url)
+      raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
+    return
 
-      newgitrepo = os.path.join(root,'hg.'+package)
-      if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
-      if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
-      try:
-        config.base.Configure.executeShellCommand(self.sourceControl.hg+' clone '+url[5:]+' '+newgitrepo)
-      except  RuntimeError as e:
-        self.logPrint('ERROR: '+str(e))
-        err = str(e)
-        failureMessage = self.getDownloadFailureMessage(package, url)
-        raise RuntimeError('Unable to download '+package+'\n'+err+failureMessage)
-      return
-
-    if url.startswith('ssh://hg@'):
-      if not hasattr(self.sourceControl, 'hg'): return
-
-      newgitrepo = os.path.join(root,'hg.'+package)
-      if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
-      if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
-      try:
-        config.base.Configure.executeShellCommand(self.sourceControl.hg+' clone '+url+' '+newgitrepo)
-      except  RuntimeError as e:
-        self.logPrint('ERROR: '+str(e))
-        err = str(e)
-        failureMessage = self.getDownloadFailureMessage(package, url)
-        raise RuntimeError('Unable to download '+package+'\n'+err+failureMessage)
-      return
-
-    # get the tarball file name from the URL
+  def retrieveTarball(self, url, root, package):
     filename = os.path.basename(urlparse_local.urlparse(url)[2])
     localFile = os.path.join(root,'_d_'+filename)
+    self.logPrint('Retrieving %s as tarball to %s' % (url,localFile) , 3, 'install')
     ext =  os.path.splitext(localFile)[1]
     if ext not in ['.bz2','.tbz','.gz','.tgz','.zip','.ZIP']:
       raise RuntimeError('Unknown compression type in URL: '+ url)
-    self.logPrint('Downloading '+url+' to '+localFile)
+
     if os.path.exists(localFile):
       os.unlink(localFile)
 
@@ -247,4 +236,24 @@ Downloaded package %s from: %s is not a tarball.
     except RuntimeError as e:
       raise RuntimeError('Error changing permissions for '+dirname+' obtained from '+localFile+ ' : '+str(e))
     os.unlink(localFile)
+    return
+
+  def genericRetrieve(self, url, root, package):
+    '''Fetch package from version control repository or tarfile indicated by URL and expand it into root'''
+
+    if url.startswith('dir://'):
+      self.retrieveDir(url, root, package)
+    elif url.startswith('link://'):
+      self.retrieveLink(url, root, package)
+    elif url.startswith('git://'):
+      self.retrieveGit(url, root, package)
+    elif url.startswith('hg://') or url.startswith('ssh://hg@'):
+      self.retrieveHg(url, root, package)
+    elif os.path.isdir(url):
+      if self.isDirectoryGitRepo(url):
+        self.retrieveGit(url, root, package)
+      else:
+        self.retrieveDir(url, root, package)
+    else:
+      self.retrieveTarball(url, root, package)
     return
