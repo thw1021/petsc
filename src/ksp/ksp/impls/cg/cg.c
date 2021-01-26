@@ -245,6 +245,7 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
 
 static PetscErrorCode KSPSolve_CG_Async(KSP ksp)
 {
+#if 0
   PetscErrorCode ierr;
   PetscInt       i,stored_max_it,eigs;
   PetscScalar    *dpi,*dpiold,*beta,*betaold,*a,*b,*zero;
@@ -305,8 +306,8 @@ static PetscErrorCode KSPSolve_CG_Async(KSP ksp)
     case KSP_NORM_PRECONDITIONED:
       ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);               /*    z <- Br                           */
       ierr = VecNormAsync(Z,NORM_2,dp);CHKERRQ(ierr);          /*    dp <- z'*z = e'*A'*B'*B*A*e       */
-      ierr = VecCopyWorkRealToHost(X,&dp_h,dp);CHKERRQ(ierr);
-      KSPCheckNorm(ksp,dp_h);
+      // ierr = VecCopyWorkRealToHost(X,&dp_h,dp);CHKERRQ(ierr);
+      // KSPCheckNorm(ksp,dp_h);
       break;
     case KSP_NORM_UNPRECONDITIONED:
       ierr = VecNormAsync(R,NORM_2,dp);CHKERRQ(ierr);           /*    dp <- r'*r = e'*A'*A*e            */
@@ -328,84 +329,84 @@ static PetscErrorCode KSPSolve_CG_Async(KSP ksp)
     default: SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"%s",KSPNormTypes[ksp->normtype]);
   }
 
-  ierr       = VecCopyWorkRealToHost(X,&dp_h,dp);CHKERRQ(ierr);
-  ierr       = KSPLogResidualHistory(ksp,dp_h);CHKERRQ(ierr);
-  ierr       = KSPMonitor(ksp,0,dp_h);CHKERRQ(ierr);
-  ksp->rnorm = dp_h;
+  // ierr       = VecCopyWorkRealToHost(X,&dp_h,dp);CHKERRQ(ierr);
+  // ierr       = KSPLogResidualHistory(ksp,dp_h);CHKERRQ(ierr);
+  // ierr       = KSPMonitor(ksp,0,dp_h);CHKERRQ(ierr);
+  // ksp->rnorm = dp_h;
 
-  ierr = (*ksp->converged)(ksp,0,dp_h,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);     /* test for convergence */
-  if (ksp->reason) PetscFunctionReturn(0);
+  // ierr = (*ksp->converged)(ksp,0,dp_h,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);     /* test for convergence */
+  // if (ksp->reason) PetscFunctionReturn(0);
 
   if (ksp->normtype != KSP_NORM_PRECONDITIONED && (ksp->normtype != KSP_NORM_NATURAL)) {
     ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);                  /*     z <- Br                           */
   }
   if (ksp->normtype != KSP_NORM_NATURAL) {
     ierr = VecXDotAsync(Z,R,beta);CHKERRQ(ierr);                /*     beta <- z'*r                      */
-    ierr = VecCopyWorkScalarToHost(X,&beta_h,beta);CHKERRQ(ierr);
-    KSPCheckDot(ksp,beta_h);
+    // ierr = VecCopyWorkScalarToHost(X,&beta_h,beta);CHKERRQ(ierr);
+    // KSPCheckDot(ksp,beta_h);
   }
 
   i = 0;
   do {
     ksp->its = i+1;
 
-    ierr = VecCopyWorkScalarToHost(X,&beta_h,beta);CHKERRQ(ierr);
-    ierr = VecCopyWorkScalarToHost(X,&betaold_h,betaold);CHKERRQ(ierr);
-    if (beta_h == 0.0) {
-      ksp->reason = KSP_CONVERGED_ATOL;
-      ierr        = PetscInfo(ksp,"converged due to beta = 0\n");CHKERRQ(ierr);
-      break;
-#if !defined(PETSC_USE_COMPLEX)
-    } else if ((i > 0) && (beta_h*betaold_h < 0.0)) {
-      if (ksp->errorifnotconverged) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite preconditioner, beta %g, betaold %g",(double)beta_h,(double)betaold_h);
-      ksp->reason = KSP_DIVERGED_INDEFINITE_PC;
-      ierr        = PetscInfo(ksp,"diverging due to indefinite preconditioner\n");CHKERRQ(ierr);
-      break;
-#endif
-    }
+//     ierr = VecCopyWorkScalarToHost(X,&beta_h,beta);CHKERRQ(ierr);
+//     ierr = VecCopyWorkScalarToHost(X,&betaold_h,betaold);CHKERRQ(ierr);
+//     if (beta_h == 0.0) {
+//       ksp->reason = KSP_CONVERGED_ATOL;
+//       ierr        = PetscInfo(ksp,"converged due to beta = 0\n");CHKERRQ(ierr);
+//       break;
+// #if !defined(PETSC_USE_COMPLEX)
+//     } else if ((i > 0) && (beta_h*betaold_h < 0.0)) {
+//       if (ksp->errorifnotconverged) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite preconditioner, beta %g, betaold %g",(double)beta_h,(double)betaold_h);
+//       ksp->reason = KSP_DIVERGED_INDEFINITE_PC;
+//       ierr        = PetscInfo(ksp,"diverging due to indefinite preconditioner\n");CHKERRQ(ierr);
+//       break;
+// #endif
+//     }
 
     if (!i) {
       ierr = VecCopy(Z,P);CHKERRQ(ierr);                       /*     p <- z                           */
       ierr = VecSetWorkScalar(X,b,0.0);CHKERRQ(ierr);
     } else {
       ierr = VecDivideWorkScalar(X,b,beta,betaold);
-      if (eigs) {
-        if (ksp->max_it != stored_max_it) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
-        ierr = VecCopyWorkScalarToHost(X,&a_h,a);CHKERRQ(ierr);
-        ierr = VecCopyWorkScalarToHost(X,&b_h,b);CHKERRQ(ierr);
-        e[i] = PetscSqrtReal(PetscAbsScalar(b_h))/a_h;
-      }
+      // if (eigs) {
+      //   if (ksp->max_it != stored_max_it) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
+      //   ierr = VecCopyWorkScalarToHost(X,&a_h,a);CHKERRQ(ierr);
+      //   ierr = VecCopyWorkScalarToHost(X,&b_h,b);CHKERRQ(ierr);
+      //   e[i] = PetscSqrtReal(PetscAbsScalar(b_h))/a_h;
+      // }
       ierr = VecAYPXAsync(P,b,Z);CHKERRQ(ierr);                /*     p <- z + b* p                    */
     }
     ierr = VecAssignWorkScalar(X,dpiold,dpi);                  /*     dpiold = dpi */
     ierr = KSP_MatMult(ksp,Amat,P,W);CHKERRQ(ierr);            /*     w <- Ap                          */
     ierr = VecXDotAsync(P,W,dpi);CHKERRQ(ierr);                /*     dpi <- p'w                       */
-    ierr = VecCopyWorkScalarToHost(X,&dpi_h,dpi);CHKERRQ(ierr);
-    KSPCheckDot(ksp,dpi_h);
+    // ierr = VecCopyWorkScalarToHost(X,&dpi_h,dpi);CHKERRQ(ierr);
+    // KSPCheckDot(ksp,dpi_h);
     VecAssignWorkScalar(X,betaold,beta);                       /*     betaold = beta                   */
 
-    ierr = VecCopyWorkScalarToHost(X,&dpi_h,dpi);CHKERRQ(ierr);
-    ierr = VecCopyWorkScalarToHost(X,&dpiold_h,dpiold);CHKERRQ(ierr);
-    if ((dpi_h == 0.0) || ((i > 0) && ((PetscSign(PetscRealPart(dpi_h))*PetscSign(PetscRealPart(dpiold_h))) < 0.0))) {
-      if (ksp->errorifnotconverged) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite matrix, dpi %g, dpiold %g",(double)PetscRealPart(dpi_h),(double)PetscRealPart(dpiold_h));
-      ksp->reason = KSP_DIVERGED_INDEFINITE_MAT;
-      ierr        = PetscInfo(ksp,"diverging due to indefinite or negative definite matrix\n");CHKERRQ(ierr);
-      break;
-    }
+    // ierr = VecCopyWorkScalarToHost(X,&dpi_h,dpi);CHKERRQ(ierr);
+    // ierr = VecCopyWorkScalarToHost(X,&dpiold_h,dpiold);CHKERRQ(ierr);
+    // if ((dpi_h == 0.0) || ((i > 0) && ((PetscSign(PetscRealPart(dpi_h))*PetscSign(PetscRealPart(dpiold_h))) < 0.0))) {
+    //   if (ksp->errorifnotconverged) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite matrix, dpi %g, dpiold %g",(double)PetscRealPart(dpi_h),(double)PetscRealPart(dpiold_h));
+    //   ksp->reason = KSP_DIVERGED_INDEFINITE_MAT;
+    //   ierr        = PetscInfo(ksp,"diverging due to indefinite or negative definite matrix\n");CHKERRQ(ierr);
+    //   break;
+    // }
 
     ierr = VecDivideWorkScalar(X,a,beta,dpi);CHKERRQ(ierr);         /*     a = beta/p'w                     */
-    if (eigs) {
-      ierr = VecCopyWorkScalarToHost(X,&a_h,a);CHKERRQ(ierr);
-      ierr = VecCopyWorkScalarToHost(X,&b_h,b);CHKERRQ(ierr);
-      d[i] = PetscSqrtReal(PetscAbsScalar(b_h))*e[i] + 1.0/a_h;
-    }
+    // if (eigs) {
+    //   ierr = VecCopyWorkScalarToHost(X,&a_h,a);CHKERRQ(ierr);
+    //   ierr = VecCopyWorkScalarToHost(X,&b_h,b);CHKERRQ(ierr);
+    //   d[i] = PetscSqrtReal(PetscAbsScalar(b_h))*e[i] + 1.0/a_h;
+    // }
     ierr = VecAXPYAsync(X,a,P);CHKERRQ(ierr);                       /*     x <- x + ap                      */
     ierr = VecSubWorkScalar(X,a,zero,a);CHKERRQ(ierr);
     ierr = VecAXPYAsync(R,a,W);CHKERRQ(ierr);                       /*     r <- r - aw                      */
     if (ksp->normtype == KSP_NORM_PRECONDITIONED && ksp->chknorm < i+2) {
       ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);                    /*     z <- Br                          */
       ierr = VecNormAsync(Z,NORM_2,dp);CHKERRQ(ierr);               /*     dp <- z'*z                       */
-      ierr = VecCopyWorkRealToHost(X,&dp_h,dp);CHKERRQ(ierr);
+      // ierr = VecCopyWorkRealToHost(X,&dp_h,dp);CHKERRQ(ierr);
       KSPCheckNorm(ksp,dp_h);
     } else if (ksp->normtype == KSP_NORM_UNPRECONDITIONED && ksp->chknorm < i+2) {
       ierr = VecNormAsync(R,NORM_2,dp);CHKERRQ(ierr);               /*     dp <- r'*r                       */
@@ -422,26 +423,32 @@ static PetscErrorCode KSPSolve_CG_Async(KSP ksp)
       ierr = VecSetWorkReal(X,dp,0.0);
     }
 
-    ierr       = VecCopyWorkRealToHost(X,&dp_h,dp);CHKERRQ(ierr);
-    ksp->rnorm = dp_h;
-    ierr = KSPLogResidualHistory(ksp,dp_h);CHKERRQ(ierr);
-    if (eigs) cg->ned = ksp->its;
+    // ierr       = VecCopyWorkRealToHost(X,&dp_h,dp);CHKERRQ(ierr);
+    // ksp->rnorm = dp_h;
+    // ierr = KSPLogResidualHistory(ksp,dp_h);CHKERRQ(ierr);
+    // if (eigs) cg->ned = ksp->its;
 
-    ierr = KSPMonitor(ksp,i+1,dp_h);CHKERRQ(ierr);
-    ierr = (*ksp->converged)(ksp,i+1,dp_h,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
-    if (ksp->reason) break;
+    // ierr = KSPMonitor(ksp,i+1,dp_h);CHKERRQ(ierr);
+    // ierr = (*ksp->converged)(ksp,i+1,dp_h,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
+    // if (ksp->reason) break;
 
     if ((ksp->normtype != KSP_NORM_PRECONDITIONED && (ksp->normtype != KSP_NORM_NATURAL)) || (ksp->chknorm >= i+2)) {
       ierr = KSP_PCApply(ksp,R,Z);CHKERRQ(ierr);                    /*     z <- Br                          */
     }
     if ((ksp->normtype != KSP_NORM_NATURAL) || (ksp->chknorm >= i+2)) {
       ierr = VecXDotAsync(Z,R,beta);CHKERRQ(ierr);                  /*     beta <- z'*r                     */
-      ierr = VecCopyWorkScalarToHost(X,&beta_h,beta);CHKERRQ(ierr);
-      KSPCheckDot(ksp,beta_h);
+      // ierr = VecCopyWorkScalarToHost(X,&beta_h,beta);CHKERRQ(ierr);
+      // KSPCheckDot(ksp,beta_h);
     }
 
     i++;
   } while (i<ksp->max_it);
+
+  ierr       = VecCopyWorkRealToHost(X,&dp_h,dp);CHKERRQ(ierr);
+  ksp->rnorm = dp_h;
+  ierr = KSPLogResidualHistory(ksp,dp_h);CHKERRQ(ierr);
+  ierr = KSPMonitor(ksp,i,dp_h);CHKERRQ(ierr);
+
   if (i >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
 
   ierr = VecRestoreWorkScalar(X,&dpi);CHKERRQ(ierr);
@@ -453,6 +460,7 @@ static PetscErrorCode KSPSolve_CG_Async(KSP ksp)
   ierr = VecRestoreWorkScalar(X,&zero);CHKERRQ(ierr);
   ierr = VecRestoreWorkReal(X,&tmp);CHKERRQ(ierr);
   ierr = VecRestoreWorkReal(X,&dp);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
