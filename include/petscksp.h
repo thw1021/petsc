@@ -664,6 +664,7 @@ PETSC_EXTERN PetscErrorCode KSPConvergedDefaultSetUMIRNorm(KSP);
 PETSC_EXTERN PetscErrorCode KSPConvergedDefaultSetConvergedMaxits(KSP,PetscBool);
 PETSC_EXTERN PetscErrorCode KSPConvergedSkip(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*);
 PETSC_EXTERN PetscErrorCode KSPGetConvergedReason(KSP,KSPConvergedReason*);
+PETSC_EXTERN PetscErrorCode KSPGetConvergedReasonString(KSP,const char**);
 PETSC_EXTERN PetscErrorCode KSPComputeConvergenceRate(KSP,PetscReal*,PetscReal*,PetscReal*,PetscReal*);
 
 PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefault() (since version 3.5)") PETSC_STATIC_INLINE void KSPDefaultConverged(void) { /* never called */ }
