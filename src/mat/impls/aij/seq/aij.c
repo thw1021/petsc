@@ -2614,7 +2614,7 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A,IS isrow,IS iscol,PetscInt csize,
   PetscInt          *starts,*j_new,*i_new,*aj = a->j,*ai = a->i,ii,*ailen = a->ilen;
   MatScalar         *a_new,*mat_a;
   Mat               C;
-  PetscBool         stride;
+  PetscBool         stride, iskok = PETSC_FALSE, iscu = PETSC_FALSE;
 
   PetscFunctionBegin;
   ierr = ISGetIndices(isrow,&irow);CHKERRQ(ierr);
@@ -2726,43 +2726,68 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A,IS isrow,IS iscol,PetscInt csize,
       ierr = MatSetType(C,((PetscObject)A)->type_name);CHKERRQ(ierr);
       ierr = MatSeqAIJSetPreallocation_SeqAIJ(C,0,lens);CHKERRQ(ierr);
     }
-    ierr = MatSeqAIJGetArrayRead(A,&aa);CHKERRQ(ierr);
-    c = (Mat_SeqAIJ*)(C->data);
-    for (i=0; i<nrows; i++) {
-      row      = irow[i];
-      kstart   = ai[row];
-      kend     = kstart + a->ilen[row];
-      mat_i    = c->i[i];
-      mat_j    = c->j + mat_i;
-      mat_a    = c->a + mat_i;
-      mat_ilen = c->ilen + i;
-      for (k=kstart; k<kend; k++) {
-        if ((tcol=smap[a->j[k]])) {
-          *mat_j++ = tcol - 1;
-          *mat_a++ = aa[k];
-          (*mat_ilen)++;
-
+    if (A->offloadmask == PETSC_OFFLOAD_GPU || A->offloadmask == PETSC_OFFLOAD_BOTH) {
+      ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJKOKKOS,&iskok);CHKERRQ(ierr);
+      ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJCUSPARSE,&iscu);CHKERRQ(ierr);
+      if (iskok) {
+#if defined(PETSC_HAVE_KOKKOS)
+        ierr = PetscInfo(A, "Warning: have GPU offload but Kokkos unsupported\n");CHKERRQ(ierr);
+        goto cpu_copy;
+#else
+        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Should not be here ???????????????");
+#endif
+      } else if (iscu) {
+#if defined(PETSC_HAVE_CUDA)
+        ierr = PetscInfo(A, "Warning: have GPU offload but CUDA unsupported\n");CHKERRQ(ierr);
+        goto cpu_copy;
+#else
+        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Should not be here ???????????????");
+#endif
+      } else {
+        ierr = PetscInfo(A, "Warning: have GPU offload but unsupported device\n");CHKERRQ(ierr);
+        goto cpu_copy;
+      }
+    } else { /* normal CPU version */
+cpu_copy:
+      ierr = MatSeqAIJGetArrayRead(A,&aa);CHKERRQ(ierr);
+      c = (Mat_SeqAIJ*)(C->data);
+      for (i=0; i<nrows; i++) {
+        row      = irow[i];
+        kstart   = ai[row];
+        kend     = kstart + a->ilen[row];
+        mat_i    = c->i[i];
+        mat_j    = c->j + mat_i;
+        mat_a    = c->a + mat_i;
+        mat_ilen = c->ilen + i;
+        for (k=kstart; k<kend; k++) {
+          if ((tcol=smap[a->j[k]])) {
+            *mat_j++ = tcol - 1;
+            *mat_a++ = aa[k];
+            (*mat_ilen)++;
+          }
         }
       }
+      ierr = MatSeqAIJRestoreArrayRead(A,&aa);CHKERRQ(ierr);
+      /* sort */
+      for (i = 0; i < nrows; i++) {
+        PetscInt ilen;
+
+        mat_i = c->i[i];
+        mat_j = c->j + mat_i;
+        mat_a = c->a + mat_i;
+        ilen  = c->ilen[i];
+        ierr  = PetscSortIntWithScalarArray(ilen,mat_j,mat_a);CHKERRQ(ierr);
+      }
     }
-    ierr = MatSeqAIJRestoreArrayRead(A,&aa);CHKERRQ(ierr);
     /* Free work space */
     ierr = ISRestoreIndices(iscol,&icol);CHKERRQ(ierr);
     ierr = PetscFree(smap);CHKERRQ(ierr);
     ierr = PetscFree(lens);CHKERRQ(ierr);
-    /* sort */
-    for (i = 0; i < nrows; i++) {
-      PetscInt ilen;
-
-      mat_i = c->i[i];
-      mat_j = c->j + mat_i;
-      mat_a = c->a + mat_i;
-      ilen  = c->ilen[i];
-      ierr  = PetscSortIntWithScalarArray(ilen,mat_j,mat_a);CHKERRQ(ierr);
-    }
   }
 #if defined(PETSC_HAVE_DEVICE)
-  ierr = MatBindToCPU(C,A->boundtocpu);CHKERRQ(ierr);
+  if (A->offloadmask != PETSC_OFFLOAD_GPU && A->offloadmask != PETSC_OFFLOAD_BOTH ) {
+    ierr = MatBindToCPU(C,A->boundtocpu);CHKERRQ(ierr);
+  }
 #endif
   ierr = MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);

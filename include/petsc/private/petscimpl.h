@@ -915,6 +915,12 @@ PETSC_INTERN PetscSpinlock PetscCommSpinLock;
 #endif
 #endif
 
+#if defined(PETSC_HAVE_THREADSAFETY) && defined(PETSC_HAVE_OPENMP)
+#define PETSC_MAX_THREADS 64
+#else
+#define PETSC_MAX_THREADS 1
+#endif
+
 PETSC_EXTERN PetscLogEvent PETSC_Barrier;
 PETSC_EXTERN PetscLogEvent PETSC_BuildTwoSided;
 PETSC_EXTERN PetscLogEvent PETSC_BuildTwoSidedF;
