@@ -104,6 +104,19 @@ M*/
           TaoADMMSetRegularizerHessianRoutine(), TaoADMMSetRegularizerType(), TAO_ADMM_REGULARIZER_USER
 M*/
 
+/*E
+     TaoAugLagType - Determine the augmented Lagrangian formulation used in the TAOAUGLAG subproblem.
+
+$  TAO_AUGLAG_CLASSIC - classic augmented Lagrangian definition including slack variables for inequality constraints
+$  TAO_AUGLAG_PHR     - Powell-Hestenes-Rockafellar formulation without slack variables, uses pointwise min() for inequalities
+
+  Level: advanced
+
+.seealso TAOAUGLAG, TaoAugLagSetType(), TaoAugLagGetType()
+E*/
+typedef enum {TAO_AUGLAG_CLASSIC,TAO_AUGLAG_PHR} TaoAugLagType;
+PETSC_EXTERN const char *const TaoAugLagTypes[];
+
 typedef struct _p_Tao*   Tao;
 
 /*J
@@ -144,6 +157,7 @@ typedef const char *TaoType;
 #define TAOPDIPM    "pdipm"
 #define TAOSHELL    "shell"
 #define TAOADMM     "admm"
+#define TAOAUGLAG   "auglag"
 
 PETSC_EXTERN PetscClassId TAO_CLASSID;
 PETSC_EXTERN PetscFunctionList TaoList;
@@ -371,4 +385,15 @@ PETSC_EXTERN PetscErrorCode TaoADMMSetRegularizerType(Tao, TaoADMMRegularizerTyp
 PETSC_EXTERN PetscErrorCode TaoADMMGetRegularizerType(Tao, TaoADMMRegularizerType*);
 PETSC_EXTERN PetscErrorCode TaoADMMSetUpdateType(Tao, TaoADMMUpdateType);
 PETSC_EXTERN PetscErrorCode TaoADMMGetUpdateType(Tao, TaoADMMUpdateType*);
+
+PETSC_EXTERN PetscErrorCode TaoAugLagGetType(Tao, TaoAugLagType*);
+PETSC_EXTERN PetscErrorCode TaoAugLagSetType(Tao, TaoAugLagType);
+PETSC_EXTERN PetscErrorCode TaoAugLagGetSubsolver(Tao, Tao*);
+PETSC_EXTERN PetscErrorCode TaoAugLagSetSubsolver(Tao, Tao);
+PETSC_EXTERN PetscErrorCode TaoAugLagGetPrimal(Tao, Vec*);
+PETSC_EXTERN PetscErrorCode TaoAugLagSetSlacks(Tao, Vec);
+PETSC_EXTERN PetscErrorCode TaoAugLagGetMultipliers(Tao, Vec*);
+PETSC_EXTERN PetscErrorCode TaoAugLagSetMultipliers(Tao, Vec);
+PETSC_EXTERN PetscErrorCode TaoAugLagGetPrimalIS(Tao, IS*, IS*);
+PETSC_EXTERN PetscErrorCode TaoAugLagGetDualIS(Tao, IS*, IS*);
 #endif
