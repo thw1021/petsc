@@ -4463,12 +4463,43 @@ PetscErrorCode  SNESConvergedReasonView(SNES snes,PetscViewer viewer)
    ierr = PetscViewerGetFormat(viewer,&format);CHKERRQ(ierr);
   }
   ierr = PetscViewerAndFormatCreate(viewer,format,&vf);CHKERRQ(ierr);
-  ierr = SNESConvergedReasonView_Private(snes,vf);;CHKERRQ(ierr);
+  ierr = SNESConvergedReasonView_Private(snes,vf);CHKERRQ(ierr);
   ierr = PetscViewerAndFormatDestroy(&vf);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode  SNESReasonViewSet(SNES snes,PetscErrorCode (*f)(SNES,void*),void *vctx,PetscErrorCode (*reasonviewdestroy)(void**))
+/*@C
+   SNESConvergedReasonViewSet - Sets an ADDITIONAL function that is to be used at the
+    end of the nonlinear solver to display the conver reason of the nonlinear solver.
+
+   Logically Collective on SNES
+
+   Input Parameters:
++  snes - the SNES context
+.  f - the snes converged reason view function
+.  vctx - [optional] user-defined context for private data for the
+          snes converged reason view routine (use NULL if no context is desired)
+-  reasonviewdestroy - [optional] routine that frees reasonview context
+          (may be NULL)
+
+   Options Database Keys:
++    -snes_converged_reason        - sets a default SNESConvergedReasonView()
+-    -snes_converged_reason_view_cancel - cancels all converged reason viewers that have
+                            been hardwired into a code by
+                            calls to SNESConvergedReasonViewSet(), but
+                            does not cancel those set via
+                            the options database.
+
+   Notes:
+   Several different converged reason view routines may be set by calling
+   SNESConvergedReasonViewSet() multiple times; all will be called in the
+   order in which they were set.
+
+   Level: intermediate
+
+.seealso: SNESConvergedReasonView(), SNESConvergedReasonViewAll(), SNESConvergedReasonViewCancel()
+@*/
+PetscErrorCode  SNESConvergedReasonViewSet(SNES snes,PetscErrorCode (*f)(SNES,void*),void *vctx,PetscErrorCode (*reasonviewdestroy)(void**))
 {
   PetscInt       i;
   PetscErrorCode ierr;
@@ -4516,7 +4547,7 @@ PetscErrorCode SNESConvergedReasonViewFromOptions(SNES snes)
     PetscViewerAndFormat *vf;
     ierr = PetscViewerAndFormatCreate(viewer,format,&vf);CHKERRQ(ierr);
     ierr = PetscObjectDereference((PetscObject)viewer);CHKERRQ(ierr);
-    ierr = SNESReasonViewSet(snes,(PetscErrorCode (*)(SNES,void*))SNESConvergedReasonView_Private,vf,(PetscErrorCode (*)(void**))PetscViewerAndFormatDestroy);CHKERRQ(ierr);
+    ierr = SNESConvergedReasonViewSet(snes,(PetscErrorCode (*)(SNES,void*))SNESConvergedReasonView_Private,vf,(PetscErrorCode (*)(void**))PetscViewerAndFormatDestroy);CHKERRQ(ierr);
   }
   incall = PETSC_FALSE;
   PetscFunctionReturn(0);

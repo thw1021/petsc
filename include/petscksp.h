@@ -387,7 +387,10 @@ PETSC_EXTERN PetscErrorCode KSPView(KSP,PetscViewer);
 PETSC_EXTERN PetscErrorCode KSPLoad(KSP,PetscViewer);
 PETSC_EXTERN PetscErrorCode KSPViewFromOptions(KSP,PetscObject,const char[]);
 PETSC_EXTERN PetscErrorCode KSPConvergedReasonView(KSP,PetscViewer);
+PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewAll(KSP);
+PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewSet(KSP,PetscErrorCode (*)(KSP,void*),void *vctx,PetscErrorCode (*)(void**));
 PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewFromOptions(KSP);
+PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewCancel(KSP);
 PETSC_EXTERN PetscErrorCode KSPConvergedRateView(KSP,PetscViewer);
 
 PETSC_DEPRECATED_FUNCTION("Use KSPConvergedReasonView() (since version 3.14)") PETSC_STATIC_INLINE PetscErrorCode KSPReasonView(KSP ksp,PetscViewer v) {return KSPConvergedReasonView(ksp,v);}

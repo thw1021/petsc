@@ -13,10 +13,11 @@ T*/
 /*
    User-defined routines
 */
-extern PetscErrorCode FormJacobian(SNES,Vec,Mat,Mat,void*);
-extern PetscErrorCode FormFunction(SNES,Vec,Vec,void*);
-extern PetscErrorCode FormInitialGuess(Vec);
-extern PetscErrorCode ReasonView(SNES,void*);
+PETSC_EXTERN PetscErrorCode FormJacobian(SNES,Vec,Mat,Mat,void*);
+PETSC_EXTERN PetscErrorCode FormFunction(SNES,Vec,Vec,void*);
+PETSC_EXTERN PetscErrorCode FormInitialGuess(Vec);
+PETSC_EXTERN PetscErrorCode MySNESConvergedReasonView(SNES,void*);
+PETSC_EXTERN PetscErrorCode MyKSPConvergedReasonView(KSP,void*);
 
 /*
    User-defined context for monitoring
@@ -27,10 +28,11 @@ typedef struct {
 
 int main(int argc,char **argv)
 {
-  SNES           snes;                   /* SNES context */
+  SNES           snes;                /* SNES context */
+  KSP            ksp;                 /* KSP context */
   Vec            x,r,F,U;             /* vectors */
-  Mat            J;                      /* Jacobian matrix */
-  ReasonViewCtx     monP;                   /* monitoring context */
+  Mat            J;                   /* Jacobian matrix */
+  ReasonViewCtx     monP;             /* monitoring context */
   PetscErrorCode ierr;
   PetscInt       its,n = 5,i,maxit,maxf;
   PetscMPIInt    size;
@@ -99,8 +101,9 @@ int main(int argc,char **argv)
      Set an optional user-defined reasonview routine
   */
   ierr = PetscViewerASCIIGetStdout(comm,&monP.viewer);CHKERRQ(ierr);
-  ierr = SNESReasonViewSet(snes,ReasonView,&monP,0);CHKERRQ(ierr);
-
+  ierr = SNESConvergedReasonViewSet(snes,MySNESConvergedReasonView,&monP,0);CHKERRQ(ierr);
+  ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
+  ierr = KSPConvergedReasonViewSet(ksp,MyKSPConvergedReasonView,&monP,0);CHKERRQ(ierr);
   /*
      Set SNES/KSP/KSP/PC runtime options, e.g.,
          -snes_view -snes_monitor -ksp_type <ksp> -pc_type <pc>
@@ -308,7 +311,7 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 }
 /* ------------------------------------------------------------------- */
 /*
-   Monitor - User-defined monitoring routine that views the
+   MySNESConvergedReasonView - User-defined monitoring routine that views the
    current iterate with an x-window plot.
 
    Input Parameters:
@@ -322,13 +325,21 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
    See the manpage for PetscViewerDrawOpen() for useful runtime options,
    such as -nox to deactivate all x-window output.
  */
-PetscErrorCode ReasonView(SNES snes,void *ctx)
+PetscErrorCode MySNESConvergedReasonView(SNES snes,void *ctx)
 {
   PetscErrorCode ierr;
   ReasonViewCtx     *monP = (ReasonViewCtx*) ctx;
-  Vec            x;
 
-  ierr = PetscPrintf(PetscObjectComm((PetscObject)snes)," My customized reasonview \n");CHKERRQ(ierr);
+  ierr = PetscPrintf(PetscObjectComm((PetscObject)snes)," My customized SNES Converged Reasonview \n");CHKERRQ(ierr);
+  return 0;
+}
+
+PetscErrorCode MyKSPConvergedReasonView(KSP ksp,void *ctx)
+{
+  PetscErrorCode    ierr;
+  ReasonViewCtx     *monP = (ReasonViewCtx*) ctx;
+
+  ierr = PetscPrintf(PetscObjectComm((PetscObject)ksp)," My customized KSP Converged Reasonview \n");CHKERRQ(ierr);
   return 0;
 }
 
