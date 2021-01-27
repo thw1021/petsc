@@ -475,6 +475,8 @@ PetscErrorCode KSPConvergedReasonView_Private(KSP ksp, PetscViewerAndFormat *vf)
   PetscViewer       viewer = vf->viewer;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
+  PetscValidPointer(vf,2);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isAscii);CHKERRQ(ierr);
   if (isAscii) {
     ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);

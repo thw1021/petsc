@@ -34,10 +34,9 @@ int main(int argc,char **argv)
   Mat            J;                   /* Jacobian matrix */
   ReasonViewCtx     monP;             /* monitoring context */
   PetscErrorCode ierr;
-  PetscInt       its,n = 5,i,maxit,maxf;
+  PetscInt       its,n = 5,i;
   PetscMPIInt    size;
-  PetscScalar    h,xp,v,none = -1.0;
-  PetscReal      abstol,rtol,stol,norm;
+  PetscScalar    h,xp,v;
   MPI_Comm       comm;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
@@ -101,22 +100,24 @@ int main(int argc,char **argv)
      Set an optional user-defined reasonview routine
   */
   ierr = PetscViewerASCIIGetStdout(comm,&monP.viewer);CHKERRQ(ierr);
-  ierr = SNESConvergedReasonViewSet(snes,MySNESConvergedReasonView,&monP,0);CHKERRQ(ierr);
+  /* Just make sure we can not repeat addding the same function
+   * PETSc will be able to igore the repeated function
+   */
+  for (i=0; i<4; i++){
+    ierr = SNESConvergedReasonViewSet(snes,MySNESConvergedReasonView,&monP,0);CHKERRQ(ierr);
+  }
   ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
-  ierr = KSPConvergedReasonViewSet(ksp,MyKSPConvergedReasonView,&monP,0);CHKERRQ(ierr);
+  /* Just make sure we can not repeat addding the same function
+   * PETSc will be able to igore the repeated function
+   */
+  for (i=0; i<4; i++){
+    ierr = KSPConvergedReasonViewSet(ksp,MyKSPConvergedReasonView,&monP,0);CHKERRQ(ierr);
+  }
   /*
      Set SNES/KSP/KSP/PC runtime options, e.g.,
          -snes_view -snes_monitor -ksp_type <ksp> -pc_type <pc>
   */
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
-
-  /*
-     Print parameters used for convergence testing (optional) ... just
-     to demonstrate this routine; this information is also printed with
-     the option -snes_view
-  */
-  ierr = SNESGetTolerances(snes,&abstol,&rtol,&stol,&maxit,&maxf);CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"atol=%g, rtol=%g, stol=%g, maxit=%D, maxf=%D\n",(double)abstol,(double)rtol,(double)stol,maxit,maxf);CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize application:
@@ -144,19 +145,6 @@ int main(int argc,char **argv)
   ierr = FormInitialGuess(x);CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,x);CHKERRQ(ierr);
   ierr = SNESGetIterationNumber(snes,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"number of SNES iterations = %D\n\n",its);CHKERRQ(ierr);
-
-  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-     Check solution and clean up
-   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-  /*
-     Check the error
-  */
-  ierr = VecAXPY(x,none,U);CHKERRQ(ierr);
-  ierr = VecNorm(x,NORM_2,&norm);CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"Norm of error %g, Iterations %D\n",(double)norm,its);CHKERRQ(ierr);
-
 
   /*
      Free work space.  All PETSc objects should be destroyed when they
@@ -309,37 +297,47 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
   }
   return 0;
 }
-/* ------------------------------------------------------------------- */
-/*
-   MySNESConvergedReasonView - User-defined monitoring routine that views the
-   current iterate with an x-window plot.
 
-   Input Parameters:
-   snes - the SNES context
-   its - iteration number
-   norm - 2-norm function value (may be estimated)
-   ctx - optional user-defined context for private data for the
-         monitor routine, as set by SNESMonitorSet()
-
-   Note:
-   See the manpage for PetscViewerDrawOpen() for useful runtime options,
-   such as -nox to deactivate all x-window output.
- */
 PetscErrorCode MySNESConvergedReasonView(SNES snes,void *ctx)
 {
-  PetscErrorCode ierr;
-  ReasonViewCtx     *monP = (ReasonViewCtx*) ctx;
+  PetscErrorCode        ierr;
+  ReasonViewCtx         *monP = (ReasonViewCtx*) ctx;
+  PetscViewer           viewer = monP->viewer;
+  SNESConvergedReason   reason;
+  const char *         strreason;
 
-  ierr = PetscPrintf(PetscObjectComm((PetscObject)snes)," My customized SNES Converged Reasonview \n");CHKERRQ(ierr);
+  ierr = SNESGetConvergedReason(snes,&reason);CHKERRQ(ierr);
+  ierr = SNESGetConvergedReasonString(snes,&strreason);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"Customized SNES converged reason view\n");CHKERRQ(ierr);
+  ierr = PetscViewerASCIIAddTab(viewer,1);CHKERRQ(ierr);
+  if (reason > 0) {
+    ierr = PetscViewerASCIIPrintf(viewer,"Converged due to %s\n",strreason);CHKERRQ(ierr);
+  } else if (reason <= 0) {
+    ierr = PetscViewerASCIIPrintf(viewer,"Did not converge due to %s\n",strreason);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerASCIISubtractTab(viewer,1);CHKERRQ(ierr);
   return 0;
 }
 
 PetscErrorCode MyKSPConvergedReasonView(KSP ksp,void *ctx)
 {
-  PetscErrorCode    ierr;
-  ReasonViewCtx     *monP = (ReasonViewCtx*) ctx;
+  PetscErrorCode        ierr;
+  ReasonViewCtx         *monP = (ReasonViewCtx*) ctx;
+  PetscViewer           viewer = monP->viewer;
+  KSPConvergedReason   reason;
+  const char *reasonstr;
 
-  ierr = PetscPrintf(PetscObjectComm((PetscObject)ksp)," My customized KSP Converged Reasonview \n");CHKERRQ(ierr);
+  ierr = KSPGetConvergedReason(ksp,&reason);CHKERRQ(ierr);
+  ierr = KSPGetConvergedReasonString(ksp,&reasonstr);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIAddTab(viewer,2);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"Customized KSP converged reason view\n");CHKERRQ(ierr);
+  ierr = PetscViewerASCIIAddTab(viewer,1);CHKERRQ(ierr);
+  if (reason > 0) {
+    ierr = PetscViewerASCIIPrintf(viewer,"Converged due to %s\n",reasonstr);CHKERRQ(ierr);
+  } else if (reason <= 0) {
+    ierr = PetscViewerASCIIPrintf(viewer,"Did not converge due to %s\n",reasonstr);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerASCIISubtractTab(viewer,3);CHKERRQ(ierr);
   return 0;
 }
 
@@ -347,15 +345,27 @@ PetscErrorCode MyKSPConvergedReasonView(KSP ksp,void *ctx)
 /*TEST
 
    test:
-      args: -nox -snes_monitor_cancel -snes_monitor_short -snes_view -pc_type jacobi -ksp_gmres_cgs_refinement_type refine_always
+      suffix: 1
+      nsize: 1
 
    test:
       suffix: 2
-      args: -nox -snes_monitor_cancel -snes_monitor_short -snes_type newtontr -snes_view
-      requires: !single
+      nsize: 1
+      args: -ksp_converged_reason_view_cancel
 
    test:
       suffix: 3
-      args: -nox -malloc no -options_left no -snes_monitor_cancel -snes_monitor_short -snes_view -pc_type jacobi -ksp_gmres_cgs_refinement_type refine_always
+      nsize: 1
+      args: -ksp_converged_reason_view_cancel -ksp_converged_reason
+
+   test:
+      suffix: 4
+      nsize: 1
+      args: -snes_converged_reason_view_cancel
+
+   test:
+      suffix: 5
+      nsize: 1
+      args: -snes_converged_reason_view_cancel -snes_converged_reason
 
 TEST*/

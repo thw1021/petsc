@@ -4142,6 +4142,30 @@ PetscErrorCode SNESGetConvergedReason(SNES snes,SNESConvergedReason *reason)
 }
 
 /*@
+   SNESGetConvergedReasonString - Return a human readable string for snes converged reason
+
+   Not Collective
+
+   Input Parameter:
+.  snes - the SNES context
+
+   Output Parameters:
+.  strreason - a human readable string that describes SNES converged reason
+
+   Level: basic
+
+.seealso: SNESGetConvergedReason()
+@*/
+PetscErrorCode SNESGetConvergedReasonString(SNES snes, const char** strreason)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
+  PetscValidCharPointer(strreason,2);
+  *strreason = SNESConvergedReasons[snes->reason];
+  PetscFunctionReturn(0);
+}
+
+/*@
    SNESSetConvergedReason - Sets the reason the SNES iteration was stopped.
 
    Not Collective
@@ -4397,7 +4421,8 @@ PetscErrorCode  SNESConvergedReasonView_Private(SNES snes,PetscViewerAndFormat *
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-
+  PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
+  PetscValidPointer(vf,2);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isAscii);CHKERRQ(ierr);
   if (isAscii) {
     ierr = PetscViewerPushFormat(viewer,format);CHKERRQ(ierr);
