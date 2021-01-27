@@ -441,10 +441,11 @@ PetscErrorCode KSPSetUp(KSP ksp)
 PetscErrorCode  KSPConvergedReasonViewAll(KSP ksp)
 {
   PetscErrorCode ierr;
-  PetscInt       i,n = ksp->numberreasonviews;
+  PetscInt       i;
 
   PetscFunctionBegin;
-  for (i=0; i<n; i++) {
+  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
+  for (i=0; i<ksp->numberreasonviews; i++) {
     ierr = (*ksp->reasonview[i])(ksp,ksp->reasonviewcontext[i]);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -458,6 +459,8 @@ PetscErrorCode KSPConvergedReasonView_Private(KSP ksp, PetscViewerAndFormat *vf)
   PetscViewer       viewer = vf->viewer;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
+  PetscValidPointer(vf,2);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isAscii);CHKERRQ(ierr);
   if (isAscii) {
     ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
