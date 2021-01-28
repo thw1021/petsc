@@ -1271,12 +1271,15 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
 #if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
       if (jac->use_openmp == 1) {
         /* initialize handles for timing */
-        PetscInt  nt = omp_get_num_threads();
+#if defined(PETSC_HAVE_CUDA)
+        PetscInt  nt = omp_get_num_threads(); /* we really only need to init 'cnt' but we don't have that here */
         if (nt>PETSC_MAX_THREADS) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of local fieldspilt blocks >= %D",PETSC_MAX_THREADS);
         for (bs=0;bs<nt;bs++) {
           ierr = PetscCUBLASInitializeHandle(bs);CHKERRQ(ierr);
           ierr = PetscCUSOLVERDnInitializeHandle(bs);CHKERRQ(ierr);
         }
+#endif
+        jac->use_openmp++;
         goto no_omp_doit;
       }
       if (jac->use_openmp && jac->use_openmp++ > 1) {
@@ -1288,8 +1291,8 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
           ilink = ilink->next;
         }
         ierr = 0;
-#pragma omp parallel for private(bs) shared(links,x,y,ierr)
-        for (bs=0;bs<cnt;bs++) {
+#pragma omp parallel for shared(links,x,y,ierr,cnt)
+        for (PetscInt bs=0;bs<cnt;bs++) {
           PetscInt       idx = omp_get_thread_num(), nt = omp_get_num_threads();
           PetscErrorCode ierr2 = PetscInfo4(pc, "thread %D/%D in field %D/%D\n",idx+1,nt,bs+1,cnt);
           if (!ierr2) ierr2 = PCFieldSplitApply_SingleField(pc, links[bs], x, y);

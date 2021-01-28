@@ -30,7 +30,6 @@ static PetscErrorCode PetscCUBLASDestroyHandle()
         cublasv2handle[i] = NULL;  /* Ensures proper reinitialization */
       }
     } while (++i < PETSC_MAX_THREADS);
-    thread_2h_initialized = PETSC_FALSE;
   }
   PetscFunctionReturn(0);
 }
@@ -94,7 +93,6 @@ static PetscErrorCode PetscCUSOLVERDnDestroyHandle()
         cusolverdnhandle[i] = NULL;  /* Ensures proper reinitialization */
       }
     } while (++i < PETSC_MAX_THREADS);
-    thread_solverh_initialized = PETSC_FALSE;
   }
   PetscFunctionReturn(0);
 }
