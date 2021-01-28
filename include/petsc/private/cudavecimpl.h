@@ -84,10 +84,10 @@ PETSC_INTERN PetscErrorCode VecAXPYAsync_SeqCUDA(Vec,PetscScalar*,Vec);
 PETSC_INTERN PetscErrorCode VecAYPXAsync_SeqCUDA(Vec,PetscScalar*,Vec);
 
 #if defined(PETSC_HAVE_NVSHMEM)
-PETSC_INTERN PetscErrorCode PetscNvshmemInitializeCheck(void);
-PETSC_INTERN PetscErrorCode PetscNvshmemMalloc(size_t,void**);
-PETSC_INTERN PetscErrorCode PetscNvshmemCalloc(size_t,void**);
-PETSC_INTERN PetscErrorCode PetscNvshmemFree_Private(void*);
+PETSC_EXTERN PetscErrorCode PetscNvshmemInitializeCheck(void);
+PETSC_EXTERN PetscErrorCode PetscNvshmemMalloc(size_t,void**);
+PETSC_EXTERN PetscErrorCode PetscNvshmemCalloc(size_t,void**);
+PETSC_EXTERN PetscErrorCode PetscNvshmemFree_Private(void*);
 #define      PetscNvshmemFree(ptr)      ((ptr) && (PetscNvshmemFree_Private(ptr),(ptr)=NULL,0))
 PETSC_INTERN PetscErrorCode PetscNvshmemSum(PetscInt,PetscScalar*,const PetscScalar*);
 PETSC_INTERN PetscErrorCode PetscNvshmemMax(PetscInt,PetscReal*,const PetscReal*);
