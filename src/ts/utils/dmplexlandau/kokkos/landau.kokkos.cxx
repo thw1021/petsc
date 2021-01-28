@@ -143,7 +143,6 @@ extern "C"  {
     PetscTabulation   *Tf;
     PetscDS           prob;
     PetscSection      section, globalSection;
-    PetscLogDouble    flops;
     PetscReal         *BB,*DD;
     LandauCtx         *ctx;
     P4estVertexMaps   *d_maps=NULL;
@@ -191,10 +190,8 @@ extern "C"  {
     ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
     ierr = DMGetGlobalSection(plex, &globalSection);CHKERRQ(ierr);
     if (mass_w) {
-      flops = (PetscLogDouble)numCells*Nq*(5*dim*dim*Nf*Nf);
       ipdatasz = 0; NfJac = 0; nip = numCells*Nq;
     } else {
-      flops = (PetscLogDouble)numCells*Nq*(5*dim*dim*Nf*Nf + 165);
       ipdatasz = LandauGetIPDataSize(IPData); NfJac = Nf; nip = IPData->nip_;
     }
     ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
@@ -239,10 +236,10 @@ extern "C"  {
 
       ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_VIENNACL)
-      ierr = PetscLogGpuFlops(flops*nip);CHKERRQ(ierr);
+      ierr = PetscLogGpuFlops(nip*(PetscLogDouble)(mass_w ? (nip*(11*Nf+ 4*dim*dim) + 6*Nf*dim*dim*dim + 10*Nf*dim*dim + 4*Nf*dim + Nb*Nf*Nb*Nq*dim*dim*5) : Nb*Nf*Nb*Nq*4));CHKERRQ(ierr);
       if (ctx->deviceType == LANDAU_CPU) PetscInfo(plex, "Warning: Landau selected CPU but no support for Kokkos using GPU\n");
 #else
-      ierr = PetscLogFlops(flops*nip);CHKERRQ(ierr);
+      ierr = PetscLogFlops(nip*(PetscLogDouble)(mass_w ? (nip*(11*Nf+ 4*dim*dim) + 6*Nf*dim*dim*dim + 10*Nf*dim*dim + 4*Nf*dim + Nb*Nf*Nb*Nq*dim*dim*5) : Nb*Nf*Nb*Nq*4));CHKERRQ(ierr);
 #endif
 #define KOKKOS_SHARED_LEVEL 1
       conc = Kokkos::DefaultExecutionSpace().concurrency(), team_size = conc > Nq ? Nq : 1;
@@ -281,7 +278,9 @@ extern "C"  {
         ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
       }
       ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
       ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
+#endif
       Kokkos::parallel_for("Landau_elements", Kokkos::TeamPolicy<>(numCells, team_size, num_sub_blocks).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
           const PetscInt  myelem = team.league_rank();
           g2_scr_t        g2(team.team_scratch(KOKKOS_SHARED_LEVEL),dim,Nf,Nq); // we don't use these for mass matrix
@@ -465,7 +464,9 @@ extern "C"  {
             });
         });
       Kokkos::fence();
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
       ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+#endif
       ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
       if (global_elem_mat_sz) {
         Kokkos::View<PetscScalar**, Kokkos::LayoutRight>::HostMirror h_elem_mats = Kokkos::create_mirror_view(d_elem_mats);

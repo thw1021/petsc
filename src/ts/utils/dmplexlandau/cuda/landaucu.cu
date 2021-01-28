@@ -437,9 +437,6 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
 #if LANDAU_DIM==3
   PetscScalar       *d_dfdz=NULL;
 #endif
-#if defined PETSC_USE_LOG
-  PetscLogDouble    flops;
-#endif
   PetscTabulation   *Tf;
   PetscDS           prob;
   PetscSection      section, globalSection;
@@ -475,9 +472,6 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   if (mass_w) {
     cerr = cudaMalloc((void **)&d_mass_w,        nip*szf);CHKERRCUDA(cerr); // kernel input
     cerr = cudaMemcpy(          d_mass_w, mass_w,nip*szf,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-#if defined PETSC_USE_LOG
-    flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nf*Nf);
-#endif
   } else {
     ipdatasz = LandauGetIPDataSize(IPData);
     cerr = cudaMalloc((void **)&d_IPDataRaw,ipdatasz*szf);CHKERRCUDA(cerr); // kernel input
@@ -500,9 +494,6 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
     // collect geometry
     cerr = cudaMalloc((void **)&d_invJj, nip_dim2*szf);CHKERRCUDA(cerr); // kernel input
     cerr = cudaMemcpy(d_invJj, invJj, nip_dim2*szf,       cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-#if defined PETSC_USE_LOG
-    flops = (PetscLogDouble)numGCells*(PetscLogDouble)Nq*(PetscLogDouble)(5.*dim*dim*Nf*Nf + 165.);
-#endif
   }
 
   ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
@@ -547,7 +538,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, const PetscReal nu
   }
   ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-  ierr = PetscLogGpuFlops(flops*nip);CHKERRQ(ierr);
+  ierr = PetscLogGpuFlops(nip*(PetscLogDouble)(mass_w ? (nip*(11*Nf+ 4*dim*dim) + 6*Nf*dim*dim*dim + 10*Nf*dim*dim + 4*Nf*dim + Nb*Nf*Nb*Nq*dim*dim*5) : Nb*Nf*Nb*Nq*4));CHKERRQ(ierr);
   {
     dim3 dimBlock(nnn,Nq);
     ii = 2*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_DIM*(1+LANDAU_DIM) + 3*LANDAU_MAX_SPECIES + (1+LANDAU_DIM)*dimBlock.x*LANDAU_MAX_SPECIES;
