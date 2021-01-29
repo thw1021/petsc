@@ -201,8 +201,8 @@ struct _n_PetscSFLink {
   PetscBool    use_nvshmem;                  /* Does this link use nvshem (vs. MPI) for communication? */
 #if defined(PETSC_HAVE_NVSHMEM)
   /* The buffers are allocated in device symmetric heap. Their length is the maximal length over all ranks in the comm, and therefore is the same. */
-  uint64_t     *rootsig;                     /* [max{niranks-ndiranks}], signals used when rootbuf works as receive buf */
-  uint64_t     *leafsig;                     /* [max{nranks-ndranks}], signals used when leafbuf works as receive buf */
+  uint64_t     *rootSendSig,*rootRecvSig;    /* [max{niranks-ndiranks}], signals used when rootbuf works as send/recv buf */
+  uint64_t     *leafSendSig,*leafRecvSig;    /* [max{nranks-ndranks}], signals used when leafbuf works as send/recv buf */
 #endif
 };
 

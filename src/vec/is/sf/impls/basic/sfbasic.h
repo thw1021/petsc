@@ -29,8 +29,10 @@ typedef struct {
  #if defined(PETSC_HAVE_NVSHMEM)
   PetscInt         niranks_rmax;    /* max niranks-ndiranks over comm */
   PetscInt         rootbuflen_rmax; /* max rootbuflen[REMOTE] over comm */
-  PetscInt         *leafsigdisp;    /* [niranks-ndiranks]. For my i-th remote leaf rank, I am its leafsigdisp[i]-th root rank */
-  PetscInt         *leafbufdisp;    /* [niranks-ndiranks]. For my i-th remote leaf rank, I will put to its leafbuf_shmem[] at offset leafbufdisp[i], in <unit> to be set */
+  PetscInt         nRemoteLeafRanks;/* niranks - ndiranks */                                                                       \
+
+  PetscInt         *leafsigdisp;    /* [nRemoteLeafRanks]. For my i-th remote leaf rank, I am its leafsigdisp[i]-th root rank */
+  PetscInt         *leafbufdisp;    /* [nRemoteLeafRanks]. For my i-th remote leaf rank, I will put to its leafbuf_shmem[] at offset leafbufdisp[i], in <unit> to be set */
 
   PetscInt         *leafsigdisp_d;  /* Copy of leafsigdisp[] on device */
   PetscMPIInt      *iranks_d;       /* Copy of the remote part of (leaf) iranks[] on device */

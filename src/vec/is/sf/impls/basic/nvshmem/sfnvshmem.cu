@@ -59,6 +59,9 @@ static PetscErrorCode PetscSFSetUp_Basic_NVSHMEM(PetscSF sf)
 
   nRemoteRootRanks = sf->nranks-sf->ndranks;
   nRemoteLeafRanks = bas->niranks-bas->ndiranks;
+  sf->nRemoteRootRanks  = nRemoteRootRanks;
+  bas->nRemoteLeafRanks = nRemoteLeafRanks;
+
   ierr = PetscMalloc2(nRemoteLeafRanks,&rootreqs,nRemoteRootRanks,&leafreqs);CHKERRQ(ierr);
 
   stmp[0] = nRemoteRootRanks;
@@ -223,7 +226,7 @@ __global__ static void NvshmemWaitSignals(PetscInt n,uint64_t *sig,uint64_t expv
     sig[i] = newval;
   }
 #else
-  nvshmem_uint64_wait_until_all(sig,n,NULL,NVSHMEM_CMP_EQ,expval);
+  nvshmem_uint64_wait_until_all(sig,n,NULL/*no mask*/,NVSHMEM_CMP_EQ,expval);
   for (int i=0; i<n; i++) sig[i] = newval;
 #endif
 }
@@ -258,13 +261,13 @@ PetscErrorCode PetscSFLinkSendSignalsOfCompletionOfGettingData_NVSHMEM(PetscSF s
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) { /* leaf ranks are getting data */
-    n       = sf->nranks-sf->ndranks;   /* I have n root ranks */
-    sig     = link->rootsig;            /* I want to set their root signal */
+    n       = sf->nRemoteRootRanks;
+    sig     = link->rootSendSig;            /* I want to set their root signal */
     sigdisp = sf->rootsigdisp_d;        /* offset of each root signal */
     ranks   = sf->ranks_d;              /* ranks of the n root ranks */
   } else { /* LEAF2ROOT, root ranks are getting data */
-    n       = bas->niranks-bas->ndiranks;
-    sig     = link->leafsig;
+    n       = bas->nRemoteLeafRanks;
+    sig     = link->leafSendSig;
     sigdisp = bas->leafsigdisp_d;
     ranks   = bas->iranks_d;
   }
@@ -286,13 +289,13 @@ PetscErrorCode PetscSFLinkSendSignalsToAllowGettingData_NVSHMEM(PetscSF sf,Petsc
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) {   /* I allow leaf ranks to get data */
-    n       = bas->niranks-bas->ndiranks; /* I have n leaf ranks */
-    sig     = link->leafsig;              /* I want to set their leaf signal */
+    n       = bas->nRemoteLeafRanks;
+    sig     = link->leafRecvSig;          /* I want to set their leaf recv signal */
     sigdisp = bas->leafsigdisp_d;
     ranks   = bas->iranks_d;
   } else { /* LEAF2ROOT */
-    n       = sf->nranks-sf->ndranks;
-    sig     = link->rootsig;
+    n       = sf->nRemoteRootRanks;
+    sig     = link->rootRecvSig;
     sigdisp = sf->rootsigdisp_d;
     ranks   = sf->ranks_d;
   }
@@ -313,20 +316,23 @@ PetscErrorCode PetscSFLinkWaitSignalsOfCompletionOfGettingData_NVSHMEM(PetscSF s
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) { /* leaf ranks are getting data */
-    sig = link->rootsig;              /* leaf ranks set my rootsig */
-    n   = bas->niranks-bas->ndiranks; /* I have n leaf ranks */
+    sig = link->rootSendSig;              /* leaf ranks set my rootsig */
+    n   = bas->nRemoteLeafRanks;
   } else { /* LEAF2ROOT */
-    sig = link->leafsig;
-    n   = sf->nranks-sf->ndranks;
+    sig = link->leafSendSig;
+    n   = sf->nRemoteRootRanks;
   }
 
-  // NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,1,0); /* wait the signals to be 1, then set them to 0 */
+#if 1
+  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,1,0); /* wait the signals to be 1, then set them to 0 */
+#else
   if (1) {
     dim3     dimGrid(1),dimBlock(1);
     PetscInt one = 1, zero = 0;
     void     *args[] = {&n,&sig,&one,&zero};
     ierr = nvshmemx_collective_launch((const void *)NvshmemWaitSignals,dimGrid,dimBlock,args,0,link->remote_comm_stream);CHKERRQ(ierr);
   }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -340,20 +346,23 @@ PetscErrorCode PetscSFLinkWaitSignalsToStartGettingData_NVSHMEM(PetscSF sf,Petsc
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) {
-    sig = link->leafsig;          /* gettting to leaf buf */
-    n   = sf->nranks-sf->ndranks; /* I will get data from n remote root ranks */
+    n   = sf->nRemoteRootRanks;
+    sig = link->leafRecvSig;          /* gettting to leaf buf */
   } else { /* LEAF2ROOT */
-    sig = link->rootsig;
-    n   = bas->niranks-bas->ndiranks;
+    n   = bas->nRemoteLeafRanks;
+    sig = link->rootRecvSig;
   }
 
-  // NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,1,0); /* wait the signals to be 1, then set them to 0 */
+#if 0
+  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,1,0); /* wait the signals to be 1, then set them to 0 */
+#else
   if (1) {
     dim3     dimGrid(1),dimBlock(1);
     PetscInt one = 1, zero = 0;
     void     *args[] = {&n,&sig,&one,&zero};
     ierr = nvshmemx_collective_launch((const void *)NvshmemWaitSignals,dimGrid,dimBlock,args,0,link->remote_comm_stream);CHKERRQ(ierr);
   }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -495,13 +504,13 @@ PetscErrorCode PetscSFLinkSendSignalsToAllowPuttingData_NVSHMEM(PetscSF sf,Petsc
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) { /* I allow my root ranks to put data to me */
-    n       = sf->nranks-sf->ndranks; /* number of root ranks */
-    sig     = link->rootsig;          /* I want to set their root signal */
+    n       = sf->nRemoteRootRanks;
+    sig     = link->rootSendSig;      /* I want to set their root signal */
     sigdisp = sf->rootsigdisp_d;      /* offset of each root signal */
     ranks   = sf->ranks_d;            /* ranks of the n root ranks */
   } else { /* LEAF2ROOT */
-    n       = bas->niranks-bas->ndiranks;
-    sig     = link->leafsig;
+    n       = bas->nRemoteLeafRanks;
+    sig     = link->leafSendSig;
     sigdisp = bas->leafsigdisp_d;
     ranks   = bas->iranks_d;
   }
@@ -531,13 +540,13 @@ PetscErrorCode PetscSFLinkSendSignalsOfCompletionOfPuttingData_NVSHMEM(PetscSF s
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) {   /* I send singals to my leaf ranks */
-    n       = bas->niranks-bas->ndiranks; /* number of leaf ranks */
-    sig     = link->leafsig;
+    n       = bas->nRemoteLeafRanks; /* number of leaf ranks */
+    sig     = link->leafRecvSig;
     sigdisp = bas->leafsigdisp_d;
     ranks   = bas->iranks_d;
   } else { /* LEAF2ROOT, leaf sends to root */
-    n       = sf->nranks-sf->ndranks;
-    sig     = link->rootsig;
+    n       = sf->nRemoteRootRanks;
+    sig     = link->rootRecvSig;
     sigdisp = sf->rootsigdisp_d;
     ranks   = sf->ranks_d;
   }
@@ -559,20 +568,23 @@ PetscErrorCode PetscSFLinkWaitSignalsOfCompletionOfPuttingData_NVSHMEM(PetscSF s
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) { /* I wait for signals from my root ranks saying putting is completed */
-    n   = sf->nranks-sf->ndranks;     /* number of root ranks */
-    sig = link->leafsig;              /* signals along recv buffer (leafbuf) */
+    n   = sf->nRemoteRootRanks;     /* number of root ranks */
+    sig = link->leafRecvSig;        /* signals along recv buffer (leafbuf) */
   } else { /* LEAF2ROOT */
-    n   = bas->niranks-bas->ndiranks;
-    sig = link->rootsig;
+    n   = bas->nRemoteLeafRanks;
+    sig = link->rootRecvSig;
   }
 
-  // NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,1,0); /* wait signals to be 1, then clear them */
+#if 1
+  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,1,0); /* wait signals to be 1, then clear them */
+#else
   if (n) {
     dim3     dimGrid(1),dimBlock(1);
     PetscInt one = 1, zero = 0;
     void     *args[] = {&n,&sig,&one,&zero};
     ierr = nvshmemx_collective_launch((const void *)NvshmemWaitSignals,dimGrid,dimBlock,args,0,link->remote_comm_stream);CHKERRQ(ierr);
   }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -586,20 +598,23 @@ PetscErrorCode PetscSFLinkWaitSignalsToStartPuttingData_NVSHMEM(PetscSF sf,Petsc
 
   PetscFunctionBegin;
   if (direction == PETSCSF_ROOT2LEAF) {   /* I wait for signals from my leaf ranks that allow me to put data */
-    n   = bas->niranks-bas->ndiranks; /* number of leaf ranks */
-    sig = link->rootsig;              /* signals along send buffer (rootbuf) */
+    n   = bas->nRemoteLeafRanks;
+    sig = link->rootSendSig;     /* signals along send buffer (rootbuf) */
   } else { /* LEAF2ROOT, leaf sends to root */
-    n   = sf->nranks-sf->ndranks;
-    sig = link->leafsig;
+    n   = sf->nRemoteRootRanks;
+    sig = link->leafsendsig;
   }
 
-  //NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,1,0); /* Wait signals to be 1, then set them to 0 */
+#if 1
+  NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,0,1); /* Wait signals to be 0, then set them to 1 */
+#else
   if (n) {
     dim3     dimGrid(1),dimBlock(1);
     PetscInt one = 1, zero = 0;
     void     *args[] = {&n,&sig,&one,&zero};
     ierr = nvshmemx_collective_launch((const void *)NvshmemWaitSignals,dimGrid,dimBlock,args,0,link->remote_comm_stream);CHKERRQ(ierr);
   }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -682,12 +697,22 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
   /* Check to see if we can directly send/recv root/leafdata with the given sf, sfop and op.
      We only care root/leafdirect[PETSCSF_REMOTE], since we never need intermeidate buffers in local communication with NVSHMEM.
   */
-  if (sfop == PETSCSF_BCAST) {
-    rootdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[PETSCSF_REMOTE]) ? PETSC_TRUE : PETSC_FALSE; /* Pack roots */
-    leafdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[PETSCSF_REMOTE] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE;  /* Unpack leaves */
-  } else if (sfop == PETSCSF_REDUCE) {
-    leafdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(leafmtype) && sf->leafcontig[PETSCSF_REMOTE]) ? PETSC_TRUE : PETSC_FALSE;  /* Pack leaves */
-    rootdirect[PETSCSF_REMOTE] = (PetscMemTypeNVSHMEM(rootmtype) && bas->rootcontig[PETSCSF_REMOTE] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE; /* Unpack roots */
+  if (sfop == PETSCSF_BCAST) { /* Move data from rootbuf to leafbuf */
+    if (sf->use_nvshmem_get) { /* Get requires the rootbuf be symmetric */
+      rootdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* Pack roots */
+      leafdirect[PETSCSF_REMOTE] = (PetscMemTypeDevice(leafmtype) && sf->leafcontig[PETSCSF_REMOTE] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE;  /* Unpack leaves */
+    } else { /* Put requires the leafbuf be symmetric */
+      rootdirect[PETSCSF_REMOTE] = (PetscMemTypeDevice(rootmtype) && bas->rootcontig[PETSCSF_REMOTE]) ? PETSC_TRUE : PETSC_FALSE; /* Pack roots */
+      leafdirect[PETSCSF_REMOTE] = PETSC_FALSE;  /* Unpack leaves */
+    }
+  } else if (sfop == PETSCSF_REDUCE) { /* Move data from leafbuf to rootbuf */
+    if (sf->use_nvshmem_get) { /* Get requires the leafbuf be symmetric */
+      rootdirect[PETSCSF_REMOTE] = (PetscMemTypeDevice(rootmtype) && bas->rootcontig[PETSCSF_REMOTE] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE;
+      leafdirect[PETSCSF_REMOTE] = PETSC_FALSE;
+    } else { /* Put requires the rootbuf be symmetric */
+      rootdirect[PETSCSF_REMOTE] = PETSC_FALSE
+      leafdirect[PETSCSF_REMOTE] = (PetscMemTypeDevice(leafmtype) && sf->leafcontig[PETSCSF_REMOTE]) ? PETSC_TRUE : PETSC_FALSE;
+    }
   } else { /* PETSCSF_FETCH */
     rootdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* FETCH always need a separate rootbuf */
     leafdirect[PETSCSF_REMOTE] = PETSC_FALSE; /* We also force allocating a separate leafbuf so that leafdata and leafupdate can share mpi requests */
@@ -713,8 +738,11 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
   link->rootdirect[PETSCSF_LOCAL]  = PETSC_TRUE; /* For the local part we directly use root/leafdata */
   link->leafdirect[PETSCSF_LOCAL]  = PETSC_TRUE;
 
-  if (!link->rootsig) {ierr = PetscNvshmemCalloc(bas->niranks_rmax*sizeof(uint64_t),(void**)&link->rootsig);CHKERRQ(ierr);}
-  if (!link->leafsig) {ierr = PetscNvshmemCalloc(sf->nranks_rmax*sizeof(uint64_t),(void**)&link->leafsig);CHKERRQ(ierr);} /* Init signals to zero */
+  /* Init signals to zero */
+  if (!link->rootsendsig) {ierr = PetscNvshmemCalloc(bas->niranks_rmax*sizeof(uint64_t),(void**)&link->rootsendsig);CHKERRQ(ierr);}
+  if (!link->rootrecvsig) {ierr = PetscNvshmemCalloc(bas->niranks_rmax*sizeof(uint64_t),(void**)&link->rootrecvsig);CHKERRQ(ierr);}
+  if (!link->leafsendsig) {ierr = PetscNvshmemCalloc(sf->nranks_rmax*sizeof(uint64_t),(void**)&link->leafsendsig);CHKERRQ(ierr);}
+  if (!link->leafrecvsig) {ierr = PetscNvshmemCalloc(sf->nranks_rmax*sizeof(uint64_t),(void**)&link->leafrecvsig);CHKERRQ(ierr);}
 
   link->use_nvshmem                = PETSC_TRUE;
   link->rootmtype                  = PETSC_MEMTYPE_DEVICE; /* Only need 0/1-based mtype from now on */
@@ -725,10 +753,10 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
     link->StartCommunication       = PetscSFLinkGetData_NVSHMEM; /* call it after packing */
     link->FinishCommunication      = PetscSFLinkSendSignalsOfCompletionOfGettingData_NVSHMEM; /* call it before unpacking */
     link->PostUnpack               = PetscSFLinkWaitSignalsOfCompletionOfGettingData_NVSHMEM; /* call it after unpacking */
-  } else {
-    link->PrePack                  = PetscSFLinkSendSignalsToAllowPuttingData_NVSHMEM;
+  } else { /* Put-base protocol */
     link->StartCommunication       = PetscSFLinkPutData_NVSHMEM; /* call it after packing */
     link->FinishCommunication      = PetscSFLinkWaitSignalsOfCompletionOfPuttingData_NVSHMEM; /* call it before unpacking */
+    link->PostUnpack               = PetscSFLinkSendSignalsToAllowPuttingData_NVSHMEM;
   }
 found:
   if (rootdirect[PETSCSF_REMOTE]) {
