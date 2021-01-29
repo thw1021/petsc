@@ -127,12 +127,15 @@ struct _p_PetscSF {
   PetscBool       use_nvshmem_get; /* If true, use nvshmem_get based protocal, otherwise, use nvshmem_put based protocol */
   PetscBool       checked_nvshmem_eligibility; /* Have we checked eligibility of using NVSHMEM on this sf? */
   PetscBool       setup_nvshmem;   /* Have we already set up NVSHMEM related fields below? These fields are built on-demand */
-  PetscInt        nranks_rmax;     /* max nranks-ndranks over comm */
   PetscInt        leafbuflen_rmax; /* max leafbuflen[REMOTE] over comm */
-  /* The following two fields look confusing but actually make sense: They are offsets of buffers at the remote side. We're doing one-sided communication! */
-  PetscInt        *rootsigdisp;    /* [nranks-ndranks]. For my i-th remote root rank, I will access its rootsigdisp[i]-th root signal */
-  PetscInt        *rootbufdisp;    /* [nranks-ndranks]. For my i-th remote root rank, I will access its root buf at offset rootbufdisp[i], in <unit> to be set */
+  PetscInt        nRemoteRootRanks;/* nranks - ndranks */
+  PetscInt        nRemoteRootRanksMax; /* max nranks-ndranks over comm */
 
+  /* The following two fields look confusing but actually make sense: They are offsets of buffers at the remote side. We're doing one-sided communication! */
+  PetscInt        *rootsigdisp;    /* [nRemoteRootRanks]. For my i-th remote root rank, I will access its rootsigdisp[i]-th root signal */
+  PetscInt        *rootbufdisp;    /* [nRemoteRootRanks]. For my i-th remote root rank, I will access its root buf at offset rootbufdisp[i], in <unit> to be set */
+
+  PetscInt        *rootbufdisp_d;
   PetscInt        *rootsigdisp_d;  /* Copy of rootsigdisp[] on device */
   PetscMPIInt     *ranks_d;        /* Copy of the remote part of (root) ranks[] on device */
   PetscInt        *roffset_d;      /* Copy of the remote part of roffset[] on device */

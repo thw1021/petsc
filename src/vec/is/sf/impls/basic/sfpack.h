@@ -164,10 +164,10 @@ struct _n_PetscSFLink {
   PetscErrorCode (*da_FetchAndAddLocal)(PetscSFLink,PetscInt,PetscInt,PetscSFPackOpt,const PetscInt*,void*,PetscInt,PetscSFPackOpt,const PetscInt*,const void*,void*);
  #if defined (PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
   PetscInt       maxResidentThreadsPerGPU;            /* It is a copy from SF for convenience */
-  cupmStream_t   rootstream,leafstream;               /* Streams on which input/output root/leafdata is computed on (the default is NULL) */
+  cupmStream_t   dataStream;                          /* Streams on which input/output root/leafdata is computed on (the default is NULL) */
   cupmStream_t   remote_comm_stream,local_comm_stream;/* Streams for remote (i.e., inter-rank) and local (i.e., self to self) communication */
   cupmStream_t   stream;                              /* Temp var for the current stream in use (either local or remote comm. stream) */
-  cupmEvent_t    rootready,leafready;                 /* Events to mark readiness of root/leafdata */
+  cupmEvent_t    dataReady;                           /* Events to mark readiness of root/leafdata */
   cupmEvent_t    remote_comm_end,local_comm_end;      /* Events to mark end of local/remote communication */
  #endif
 #endif
@@ -201,8 +201,8 @@ struct _n_PetscSFLink {
   PetscBool    use_nvshmem;                  /* Does this link use nvshem (vs. MPI) for communication? */
 #if defined(PETSC_HAVE_NVSHMEM)
   /* The buffers are allocated in device symmetric heap. Their length is the maximal length over all ranks in the comm, and therefore is the same. */
-  uint64_t     *rootsig;                     /* [max{niranks-ndiranks}], signals used when rootbuf works as receive buf */
-  uint64_t     *leafsig;                     /* [max{nranks-ndranks}], signals used when leafbuf works as receive buf */
+  uint64_t     *rootSendSig,*rootRecvSig;    /* [max{niranks-ndiranks}], signals used when rootbuf works as send/recv buf */
+  uint64_t     *leafSendSig,*leafRecvSig;    /* [max{nranks-ndranks}], signals used when leafbuf works as send/recv buf */
 #endif
 };
 
@@ -347,23 +347,17 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSetLocalScatterStream(PetscSF sf,P
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkRecordEndOfLocalCommunication(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkRecordEndOfLocalCommunication(PetscSF sf,PetscSFLink link)
 {
-  PetscMemType mtype = (direction == PETSCSF_ROOT2LEAF)? link->leafmtype : link->rootmtype;
   PetscFunctionBegin;
-  if (link->EndLocalScatter && (PetscMemTypeDevice(mtype))) {
-    PetscErrorCode ierr = (*link->EndLocalScatter)(sf,link);CHKERRQ(ierr);
-  }
+  if (link->EndLocalScatter) {PetscErrorCode ierr = (*link->EndLocalScatter)(sf,link);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkRecordEndOfRemoteCommunication(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkRecordEndOfRemoteCommunication(PetscSF sf,PetscSFLink link)
 {
-  PetscMemType mtype = (direction == PETSCSF_ROOT2LEAF)? link->leafmtype : link->rootmtype;
   PetscFunctionBegin;
-  if (link->EndUnpackRemote && (PetscMemTypeDevice(mtype))) {
-    PetscErrorCode ierr = (*link->EndUnpackRemote)(sf,link);CHKERRQ(ierr);
-  }
+  if (link->EndUnpackRemote) {PetscErrorCode ierr = (*link->EndUnpackRemote)(sf,link);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -462,7 +456,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSyncStreamBeforeCallMPI(PetscSF sf
   #define PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication(a,b,c)      0
   #define PetscSFLinkSetLocalScatterStream(a,b)                                    0
   #define PetscSFLinkRecordEndOfLocalCommunication(a,b,c)                          0
-  #define PetscSFLinkRecordEndOfRemoteCommunication(a,b,c)                         0
+  #define PetscSFLinkRecordEndOfRemoteCommunication(a,b)                           0
   #define PetscSFLinkWaitEndOfLocalCommunication(a,b,c)                            0
   #define PetscSFLinkSetUnpackStream(a,b,c,d)                                      0
   #define PetscSFLinkSetPackStream(a,b,c,d)                                        0

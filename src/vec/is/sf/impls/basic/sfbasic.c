@@ -105,10 +105,7 @@ PETSC_INTERN PetscErrorCode PetscSFReset_Basic(PetscSF sf)
  #endif
 
  #if defined(PETSC_HAVE_NVSHMEM)
-  ierr = PetscFree2(bas->leafsigdisp,bas->leafbufdisp);CHKERRQ(ierr);
-  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,bas->leafsigdisp_d);CHKERRQ(ierr);
-  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,bas->iranks_d);CHKERRQ(ierr);
-  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,bas->ioffset_d);CHKERRQ(ierr);
+  ierr = PetscSFReset_Basic_NVSHMEM(sf);CHKERRQ(ierr);
  #endif
 
   for (; link; link=next) {next = link->next; ierr = PetscSFLinkDestroy(sf,link);CHKERRQ(ierr);}

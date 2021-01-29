@@ -114,7 +114,7 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
   #endif
 
   #if defined(PETSC_HAVE_NVSHMEM)
-    b->use_nvshmem     = PETSC_TRUE;  /* Default is to try to use NVSHMEM when possible */
+    b->use_nvshmem     = PETSC_FALSE; /* Default is not to try NVSHMEM */
     b->use_nvshmem_get = PETSC_FALSE; /* Default is to use nvshmem_put based protocol */
     ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem",&b->use_nvshmem,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem_get",&b->use_nvshmem_get,NULL);CHKERRQ(ierr);
@@ -169,12 +169,6 @@ PetscErrorCode PetscSFReset(PetscSF sf)
   for (PetscInt i=0; i<2; i++) {ierr = PetscSFFree(sf,PETSC_MEMTYPE_DEVICE,sf->rmine_d[i]);CHKERRQ(ierr);}
  #endif
 
- #if defined(PETSC_HAVE_NVSHMEM)
-  ierr = PetscFree2(sf->rootsigdisp,sf->rootbufdisp);CHKERRQ(ierr);
-  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,sf->rootsigdisp_d);CHKERRQ(ierr);
-  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,sf->ranks_d);CHKERRQ(ierr);
-  ierr = PetscSFFree(sf,PETSC_MEMTYPE_CUDA,sf->roffset_d);CHKERRQ(ierr);
- #endif
   sf->setupcalled = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
