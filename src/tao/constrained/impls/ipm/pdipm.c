@@ -746,6 +746,9 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   ierr = PCGetType(pc,&ptype);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
 
+
+  
+
   if (isCHOL) {
     ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
     if (Factor->ops->getinertia) {
@@ -767,6 +770,9 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> push update for master rebase
 =======
 >>>>>>> push update for master rebase
       
@@ -803,6 +809,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
           pdipm->lastdeltaw = pdipm->deltaw;
           pdipm->deltaw = 0;
         }
+<<<<<<< HEAD
 <<<<<<< HEAD
       }
 
@@ -849,6 +856,8 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         original alg. tried reduce deltaw checked by refactor, then increase if fail until match.*/
         pdipm->deltaw = PetscMax(pdipm->deltaw/3.0,PETSC_MACHINE_EPSILON);
         ierr = PetscPrintf(PETSC_COMM_WORLD,"    reduce deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+=======
+>>>>>>> push update for master rebase
       }
 <<<<<<< HEAD
 >>>>>>> added inertia update baised on get inertia
@@ -1618,6 +1627,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   pdipm->deltaw = 0;
   pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
   pdipm->deltac = 0;
@@ -1638,6 +1648,10 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
 =======
   pdipm->deltaw = PETSC_MACHINE_EPSILON;
 >>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
+=======
+  pdipm->deltaw = 0;
+  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
+>>>>>>> push update for master rebase
   pdipm->deltac = 0;
 >>>>>>> added inertia update baised on get inertia
 
@@ -1646,10 +1660,14 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->solve_reduced_kkt   = PETSC_FALSE;
   pdipm->solve_symmetric_kkt = PETSC_TRUE;
 <<<<<<< HEAD
+<<<<<<< HEAD
   pdipm->inertia_correct     = PETSC_FALSE;
 =======
   pdipm->inertia_correct     = PETSC_TRUE;
 >>>>>>> added deltaw and deltac terms to begin correcting inertia
+=======
+  pdipm->inertia_correct     = PETSC_FALSE;
+>>>>>>> push update for master rebase
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
