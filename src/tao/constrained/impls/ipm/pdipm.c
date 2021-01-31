@@ -458,9 +458,9 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
     ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   }
    // Matrix cannot be checked for symmetric due to MUMPS
-    //  PetscBool symmetricflag;
-    //  ierr = MatIsSymmetric(Jpre,0.0,&symmetricflag);
-    //  printf("symetric flag = %d\n",symmetricflag);
+      PetscBool symmetricflag;
+      ierr = MatIsSymmetric(Jpre,0.0,&symmetricflag);
+      printf("symetric flag = %d\n",symmetricflag);
   PetscFunctionReturn(0);
 }
 
@@ -746,6 +746,9 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   ierr = PCGetType(pc,&ptype);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
 
+
+  
+
   if (isCHOL) {
     ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
     if (Factor->ops->getinertia) {
@@ -763,6 +766,9 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> push update for master rebase
       
       // Matrix cannot be checked for symmetric due to MUMPS
       //PetscBool symmetricflag;
@@ -797,6 +803,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
           pdipm->lastdeltaw = pdipm->deltaw;
           pdipm->deltaw = 0;
         }
+<<<<<<< HEAD
       }
 
       if (nzero) { /* Jacobian is singular */
@@ -821,6 +828,8 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         original alg. tried reduce deltaw checked by refactor, then increase if fail until match.*/
         pdipm->deltaw = PetscMax(pdipm->deltaw/3.0,PETSC_MACHINE_EPSILON);
         ierr = PetscPrintf(PETSC_COMM_WORLD,"    reduce deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+=======
+>>>>>>> push update for master rebase
       }
 <<<<<<< HEAD
       if (nzero>0)
@@ -1570,7 +1579,8 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->n  = pdipm->N  = 0;
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
-  pdipm->deltaw = PETSC_MACHINE_EPSILON;
+  pdipm->deltaw = 0;
+  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
   pdipm->deltac = 0;
 
   pdipm->deltaw = 0;
@@ -1582,7 +1592,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->push_init_lambdai   = 1.0;
   pdipm->solve_reduced_kkt   = PETSC_FALSE;
   pdipm->solve_symmetric_kkt = PETSC_TRUE;
-  pdipm->inertia_correct     = PETSC_TRUE;
+  pdipm->inertia_correct     = PETSC_FALSE;
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
