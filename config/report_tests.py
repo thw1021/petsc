@@ -112,7 +112,7 @@ def summarize_results(directory,make,ntime,etime,show_results):
             print("#   %s: %.2f sec / %.2f sec" % (re.sub('.counts','',cf), timesummary[cf], cputimesummary[cf]))
   os.chdir(startdir)
   return
-  
+
 def get_test_data(directory):
     """
     Create dictionary structure with test data
@@ -132,12 +132,12 @@ def get_test_data(directory):
         probname = ''
         for i in range(1,len(testname)):
             probname += testname[i]
-        # we split the package into its subcomponents of PETSc module (e.g.: snes) 
+        # we split the package into its subcomponents of PETSc module (e.g.: snes)
         # and test type (e.g.: tutorial)
         testname_list = testname[0].split('_')
         pkgname = testname_list[0]
         testtype = testname_list[-1]
-        # in order to correct assemble the folder path for problem outputs, we 
+        # in order to correct assemble the folder path for problem outputs, we
         # iterate over any possible subpackage names and test suffixes
         testname_short = testname_list[:-1]
         prob_subdir = os.path.join('', *testname_short)
@@ -310,8 +310,11 @@ def main():
                       help='Directory containing results of petsc test system',
                       default=os.path.join(os.environ.get('PETSC_ARCH',''),
                                            'tests','counts'))
-    parser.add_option('-e', '--elapsed_time', dest='elapsed_time',
-                      help='Report elapsed time in output',
+    parser.add_option('--start-time',
+                      help='Wall-clock time when tests started running',
+                      default=None)
+    parser.add_option('--end-time',
+                      help='Wall-clock time when tests completed',
                       default=None)
     parser.add_option('-m', '--make', dest='make',
                       help='make executable to report in summary',
@@ -319,24 +322,35 @@ def main():
     parser.add_option('-t', '--time', dest='time',
                       help='-t n: Report on the n number expensive jobs',
                       default=0)
-    parser.add_option('-f', '--fail', dest='show_fail', action="store_true", 
+    parser.add_option('-f', '--show-fail', dest='show_fail', action="store_true",
                       help='Show the failed tests and how to run them')
     parser.add_option('-s', '--show', dest='show_results', action="store_true",
                       help='Summarize the test results')
+    parser.add_option('--exit-code', dest="exit_code", action="store_true", default=True,
+                      help='Exit nonzero in case of test erros or failures')
+    parser.add_option('--no-exit-code', dest="exit_code", action="store_false", default=True,
+                      help='Exit zero even in case of test errors or failures')
     options, args = parser.parse_args()
 
     # Process arguments
     if len(args) > 0:
       parser.print_usage()
-      return
-    
+      return 1
+
     # gmakefile.test is invoked frequently for searches and in those
     # cases we want to perform actions, but we don't want to
     # generate_xml or show the summarized results.
-
     if not options.show_fail:
-      summarize_results(options.directory,options.make,int(options.time),
-                        options.elapsed_time,options.show_results)
+      import time
+      end_time = float(options.end_time) if options.end_time is not None else time.time()
+      elapsed_time = end_time - float(options.start_time)
+      summarize_results(
+        options.directory,
+        options.make,
+        int(options.time),
+        elapsed_time,
+        options.show_results,
+      )
     testresults=get_test_data(options.directory)
 
     if options.show_fail:
@@ -345,5 +359,12 @@ def main():
     elif options.show_results:
       generate_xml(testresults, options.directory)
 
+    if options.exit_code and testresults is not None:
+      failures = sum(res["failed"] for res in testresults.values())
+      errors = sum(res["errors"] for res in testresults.values())
+      return (failures > 0) + (errors > 0) * 2
+    return 0
+
 if __name__ == "__main__":
-        main()
+  exitcode = main()
+  exit(exitcode)
