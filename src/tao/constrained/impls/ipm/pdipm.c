@@ -759,6 +759,9 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   ierr = PCGetType(pc,&ptype);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
 
+
+  
+
   if (isCHOL) {
     ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
     if (Factor->ops->getinertia) {
@@ -1545,6 +1548,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   pdipm->deltaw = 0;
   pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
   pdipm->deltac = 0;
@@ -1560,6 +1564,10 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
 =======
   pdipm->deltaw = PETSC_MACHINE_EPSILON;
 >>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
+=======
+  pdipm->deltaw = 0;
+  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
+>>>>>>> push update for master rebase
   pdipm->deltac = 0;
 >>>>>>> added inertia update baised on get inertia
 
