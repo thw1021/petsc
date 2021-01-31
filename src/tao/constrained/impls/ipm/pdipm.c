@@ -457,6 +457,10 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
     ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   }
+   // Matrix cannot be checked for symmetric due to MUMPS
+      PetscBool symmetricflag;
+      ierr = MatIsSymmetric(Jpre,0.0,&symmetricflag);
+      printf("symetric flag = %d\n",symmetricflag);
   PetscFunctionReturn(0);
 }
 
@@ -742,6 +746,9 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   ierr = PCGetType(pc,&ptype);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
 
+
+  
+
   if (isCHOL) {
     ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
     if (Factor->ops->getinertia) {
@@ -756,15 +763,40 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         }
       }
       ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
+      
+      // Matrix cannot be checked for symmetric due to MUMPS
+      //PetscBool symmetricflag;
+      //ierr = MatIsSymmetric(Factor,0.0,&symmetricflag);
+      //printf("symetric flag = %d",symmetricflag);
 
-      if (npos < pdipm->Nx+pdipm->Nci) { /* increase deltaw */
-        pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,40));
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    increase deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
-      } else if (npos > pdipm->Nx+pdipm->Nci && pdipm->deltaw > PETSC_MACHINE_EPSILON) { /* reduce deltaw */
-        /* I dont know if this is the proper check for reducing deltaw,
-        original alg. tried reduce deltaw checked by refactor, then increase if fail until match.*/
-        pdipm->deltaw = PetscMax(pdipm->deltaw/3.0,PETSC_MACHINE_EPSILON);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    reduce deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+      if (npos < pdipm->Nx+pdipm->Nci) {
+        
+        pdipm->deltaw = PetscMax(pdipm->lastdeltaw/3,PetscPowReal(10,-20));
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"    Test reduced deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+        ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);
+        ierr = PCSetUp(pc);
+        ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
+
+        if (npos < pdipm->Nx+pdipm->Nci) {
+          pdipm->deltaw = pdipm->lastdeltaw; // in case reduction update does not help, this prevents that step from impacting increasing update
+          ierr = PetscPrintf(PETSC_COMM_WORLD,"    deltaw Failed increasing deltaw;\n");
+          while (npos < pdipm->Nx+pdipm->Nci && pdipm->deltaw <= PetscPowReal(10,10)) { /* increase deltaw */
+            pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,20));
+            ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);
+            ierr = PCSetUp(pc);
+            ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
+            //ierr = PetscPrintf(PETSC_COMM_WORLD,"    increased pdipm->deltaw: New MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+          }
+          if (pdipm->deltaw >= PetscPowReal(10,10)) {
+            printf("Reached maximum deltaw Reset deltas\n");
+            pdipm->deltaw = 0.1;
+            pdipm->lastdeltaw = 0.1;
+          }
+          
+          ierr = PetscPrintf(PETSC_COMM_WORLD,"    increased pdipm->deltaw: New MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+          pdipm->lastdeltaw = pdipm->deltaw;
+          pdipm->deltaw = 0;
+        }
       }
 
       if (nzero) { /* Jacobian is singular */
@@ -1499,14 +1531,15 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->n  = pdipm->N  = 0;
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
-  pdipm->deltaw = PETSC_MACHINE_EPSILON;
+  pdipm->deltaw = 0;
+  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
   pdipm->deltac = 0;
 
   pdipm->push_init_slack     = 1.0;
   pdipm->push_init_lambdai   = 1.0;
   pdipm->solve_reduced_kkt   = PETSC_FALSE;
   pdipm->solve_symmetric_kkt = PETSC_TRUE;
-  pdipm->inertia_correct     = PETSC_TRUE;
+  pdipm->inertia_correct     = PETSC_FALSE;
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
