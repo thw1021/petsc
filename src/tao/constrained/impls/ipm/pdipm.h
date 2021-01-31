@@ -52,7 +52,8 @@ typedef struct {
   PetscReal mu;               /* Barrier parameter */
   PetscReal mu_update_factor; /* Multiplier for mu update */
   PetscReal deltaw;
-  PetscReal deltac; 
+  PetscReal lastdeltaw;
+  PetscReal deltac;
 
   /* Tolerances */
 
