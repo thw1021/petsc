@@ -1942,7 +1942,7 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   PetscErrorCode ierr;
   LandauCtx      *ctx=(LandauCtx*)actx;
   PetscInt       dim;
-  DM dm;
+  DM             dm;
 
   PetscFunctionBegin;
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
@@ -1963,7 +1963,14 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   ierr = PetscLogEventEnd(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
+static PetscErrorCode MatrixNfDestroy(void *ptr)
+{
+  PetscInt *nf = (PetscInt *)ptr;
+  PetscErrorCode  ierr;
+  PetscFunctionBegin;
+  ierr = PetscFree(nf);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 /*@
  LandauIJacobian - TS Jacobian construction
 
@@ -1991,8 +1998,8 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   PetscErrorCode ierr;
   LandauCtx      *ctx=(LandauCtx*)actx;
   PetscInt       dim;
-  DM dm;
-
+  DM             dm;
+  PetscContainer container;
   PetscFunctionBegin;
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
@@ -2008,5 +2015,18 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   ctx->aux_bool = PETSC_FALSE;
   ierr = MatViewFromOptions(Pmat,NULL,"-landau_mat_view");CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
+  /* set number species in Jacobian */
+  ierr = PetscObjectQuery((PetscObject) ctx->J, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
+  if (!container) {
+    PetscInt *pNf;
+    ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
+    ierr = PetscMalloc(sizeof(PetscInt), &pNf);CHKERRQ(ierr);
+    *pNf = ctx->num_species; // + 1000*ctx->subThreadBlockSize;
+    ierr = PetscContainerSetPointer(container, (void *)pNf);CHKERRQ(ierr);
+    ierr = PetscContainerSetUserDestroy(container, MatrixNfDestroy);CHKERRQ(ierr);
+    ierr = PetscObjectCompose((PetscObject)ctx->J, "Nf", (PetscObject) container);CHKERRQ(ierr);
+    ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
+  }
+
   PetscFunctionReturn(0);
 }
