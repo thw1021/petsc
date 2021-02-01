@@ -18,79 +18,24 @@ import shutil
 urlparse_local.uses_netloc.extend(['bk', 'ssh', 'svn'])
 
 class Retriever(logger.Logger):
-  def __init__(self, sourceControl, argDB = None):
+  def __init__(self, url, sourceControl, argDB = None):
     logger.Logger.__init__(self, argDB)
     self.sourceControl = sourceControl
+    self.url = url
     self.stamp = None
     self.setup()
+    self.setupRetrieverDispatch()
     self.saveLog()
     return
 
-  def getAuthorizedUrl(self, url):
-    '''This returns a tuple of the unauthorized and authorized URLs for the given URL, and a flag indicating which was input'''
-    (scheme, location, path, parameters, query, fragment) = urlparse_local.urlparse(url)
-    if not location:
-      url     = urlparse_local.urlunparse(('', '', path, parameters, query, fragment))
-      authUrl = None
-      wasAuth = 0
-    else:
-      index = location.find('@')
-      if index >= 0:
-        login   = location[0:index]
-        authUrl = url
-        url     = urlparse_local.urlunparse((scheme, location[index+1:], path, parameters, query, fragment))
-        wasAuth = 1
-      else:
-        login   = location.split('.')[0]
-        authUrl = urlparse_local.urlunparse((scheme, login+'@'+location, path, parameters, query, fragment))
-        wasAuth = 0
-    return (url, authUrl, wasAuth)
-
-  def testAuthorizedUrl(self, authUrl):
-    '''Raise an exception if the URL cannot receive an SSH login without a password'''
-    if not authUrl:
-      raise RuntimeError('URL is empty')
-    (scheme, location, path, parameters, query, fragment) = urlparse_local.urlparse(authUrl)
-    return self.executeShellCommand('echo "quit" | ssh -oBatchMode=yes '+location, log = self.log)
-
-  @staticmethod
-  def isDirectoryGitRepo(directory):
-    import os.path as op
-    import subprocess as sp
-
-    def process(output): return str(output.decode(encoding='UTF-8',errors='replace')).strip()
-
-    def gitRevParse(opt, directory, fail=True):
-      # we don't use Script.runShellCommand() not to introduce circular dependency
-      p = sp.Popen(['git', 'rev-parse'] + [opt], cwd=directory, stdout=sp.PIPE, stderr=sp.PIPE)
-      (out, err) = p.communicate()
-      if p.returncode and fail:
-        raise RuntimeError('git rev-parse %s in %s exited with unexpected error %d: %s' % (opt, ret, err))
-      out = process(out)
-      err = process(err)
-      return (out, err, p.returncode)
-
-    if not op.isdir(directory):
-      raise RuntimeError(directory + ' is not a directory')
-    directory = op.abspath(directory)
-
-    (out, err, ret) = gitRevParse('--is-inside-git-dir', directory, fail=False)
-    if ret:
-      if 'not a git repository' in err.lower():
-        result = False
-      else:
-        raise RuntimeError('git rev-parse --is-inside-git-dir exited with unexpected error %d: %s' % (ret, err))
-    else:
-      isInside = (out.lower() == 'true')
-      if isInside:
-        (out, err, ret) = gitRevParse('--git-dir', directory)
-        if out != '.':
-          raise RuntimeError('Directory %s is under git directory %s\nSpecify the latter instead.' % (directory, out))
-        result = True
-      else:
-        (out, err, ret) = gitRevParse('--show-prefix', directory)
-        result = not out  # out is '' for toplevel directory
-    return result
+  def isDirectoryGitRepo(self, directory):
+    for loc in ['.git','']:
+      try:
+        config.base.Configure.executeShellCommand('%s rev-parse --is-inside-git-dir %s'  % (self.sourceControl.git, os.path.join(directory,loc)), log = self.log)
+        return True
+      except:
+        pass
+    return False
 
   @staticmethod
   def getDownloadFailureMessage(package, url, filename=None):
@@ -106,39 +51,38 @@ Unable to download package %s from: %s
   --download-%s=/yourselectedlocation%s
     ''' % (package.upper(), url, slashFilename, package, slashFilename)
 
-  def retrieve(self, url, root, package):
+  def retrieve(self, root, package):
     raise NotImplementedError('subclasses must override this method')
 
-  @staticmethod
-  def getRetrieverByURL(url, sourceControl, argDB = None):
-    '''Fetch package from version control repository or tarfile indicated by URL and expand it into root'''
-
+  def setupRetrieverDispatch(self):
+    '''Checks URL - and sets self.retrieve() to the appropriate git, hg, dir etc. dispatch function'''
+    url = self.url
     parsed = urlparse_local.urlparse(url)
     if parsed[0] == 'dir':
-      return DirRetriever(sourceControl, argDB)
+      self.retrieve = self.dirRetrieve
     elif parsed[0] == 'link':
-      return LinkRetriever(sourceControl, argDB)
+      self.retrieve = self.linkRetrieve
     elif parsed[0] == 'git':
-      return GitRetriever(sourceControl, argDB)
+      self.retrieve = self.gitRetrieve
     elif parsed[0] == 'ssh'   and parsed[2].endswith('.git'):
-      return GitRetriever(sourceControl, argDB)
+      self.retrieve = self.gitRetrieve
     elif parsed[0] == 'https' and parsed[2].endswith('.git'):
-      return GitRetriever(sourceControl, argDB)
+      self.retrieve = self.gitRetrieve
     elif parsed[0] == 'hg':
-      return HgRetriever(sourceControl, argDB)
+      self.retrieve = self.hgRetrieve
     elif parsed[0] == 'ssh' and parsed[1].startswith('hg@'):
-      return HgRetriever(sourceControl, argDB)
+      self.retrieve = self.hgRetrieve
     elif os.path.isdir(url):
-      if Retriever.isDirectoryGitRepo(url):
-        return GitRetriever(sourceControl, argDB)
+      if self.isDirectoryGitRepo(url):
+        self.retrieve = self.gitRetrieve
       else:
-        return DirRetriever(sourceControl, argDB)
+        self.retrieve = self.dirRetrieve
     else:
-      return TarballRetriever(sourceControl, argDB)
+      self.retrieve = self.tarballRetrieve
     return
 
-class DirRetriever(Retriever):
-  def retrieve(self, url, root, package):
+  def dirRetrieve(self, root, package):
+    url = self.url
     self.logPrint('Retrieving %s as directory' % url, 3, 'install')
     d = url[6:] if url.startswith('dir://') else url
     if not os.path.isdir(d): raise RuntimeError('URL %s is not a directory' % url)
@@ -149,8 +93,8 @@ class DirRetriever(Retriever):
     shutil.copytree(d,os.path.join(root,os.path.basename(d)))
     return
 
-class LinkRetriever(Retriever):
-  def retrieve(self, url, root, package):
+  def linkRetrieve(self, root, package):
+    url = self.url
     self.logPrint('Retrieving %s as link' % url, 3, 'install')
     d = url[7:] if url.startswith('link://') else url
     if not os.path.isdir(d): raise RuntimeError('URL %s is not pointing to a directory' % url)
@@ -162,8 +106,8 @@ class LinkRetriever(Retriever):
     os.symlink(os.path.abspath(d),os.path.join(root,os.path.basename(d)))
     return
 
-class GitRetriever(Retriever):
-  def retrieve(self, url, root, package):
+  def gitRetrieve(self, root, package):
+    url = self.url
     self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
     #TODO error should be raised rather than silent return?
     if not hasattr(self.sourceControl, 'git'): return
@@ -184,8 +128,8 @@ class GitRetriever(Retriever):
       raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
     return
 
-class HgRetriever(Retriever):
-  def retrieve(self, url, root, package):
+  def hgRetrieve(self, root, package):
+    url = self.url
     self.logPrint('Retrieving %s as hg repo' % url, 3, 'install')
     #TODO error should be raised rather than silent return?
     if not hasattr(self.sourceControl, 'hg'): return
@@ -203,8 +147,8 @@ class HgRetriever(Retriever):
       raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
     return
 
-class TarballRetriever(Retriever):
-  def retrieve(self, url, root, package):
+  def tarballRetrieve(self, root, package):
+    url = self.url
     parsed = urlparse_local.urlparse(url)
     filename = os.path.basename(parsed[2])
     localFile = os.path.join(root,'_d_'+filename)
