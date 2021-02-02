@@ -29,6 +29,7 @@ PetscSF Object: 3 MPI processes
   [2]    4 <- 4
   [2] 1: 1 edges
   [2]    0 <- 2
+  sort=rank-order
 ## Bcast Rootdata 
 [0] 0: 100 -1 101 -1 102 -1
 [1] 0: 200 -1 201 -1

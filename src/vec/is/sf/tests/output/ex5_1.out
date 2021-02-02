@@ -6,12 +6,14 @@ PetscSF Object: sfA 1 MPI processes
   [0] 3 <- (0,1)
   [0] 4 <- (0,2)
   [0] 5 <- (0,3)
+  sort=rank-order
 PetscSF Object: sfB 1 MPI processes
   type: basic
     sort=rank-order
   [0] Number of roots=8, leaves=2, remote ranks=1
   [0] 3 <- (0,2)
   [0] 2 <- (0,3)
+  sort=rank-order
 BcastB(BcastA)
 A: root data
 0: 0 1 2 3
@@ -25,6 +27,7 @@ PetscSF Object: sfBA 1 MPI processes
   [0] Number of roots=4, leaves=2, remote ranks=1
   [0] 3 <- (0,0)
   [0] 2 <- (0,1)
+  sort=rank-order
 BcastBA
 BA: root data
 0: 0 1 2 3
@@ -38,6 +41,7 @@ PetscSF Object: sfAm 1 MPI processes
   [0] 1 <- (0,3)
   [0] 2 <- (0,4)
   [0] 3 <- (0,5)
+  sort=rank-order
 PetscSF Object: sfAAm 1 MPI processes
   type: basic
     sort=rank-order
@@ -46,15 +50,18 @@ PetscSF Object: sfAAm 1 MPI processes
   [0] 1 <- (0,1)
   [0] 2 <- (0,2)
   [0] 3 <- (0,3)
+  sort=rank-order
 PetscSF Object: sfBm 1 MPI processes
   type: basic
     sort=rank-order
   [0] Number of roots=4, leaves=2, remote ranks=1
   [0] 2 <- (0,3)
   [0] 3 <- (0,2)
+  sort=rank-order
 PetscSF Object: sfBBm 1 MPI processes
   type: basic
     sort=rank-order
   [0] Number of roots=8, leaves=2, remote ranks=1
   [0] 2 <- (0,2)
   [0] 3 <- (0,3)
+  sort=rank-order

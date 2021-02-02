@@ -3091,6 +3091,7 @@ PetscSF Object: 4 MPI processes
   [2]    92 <- 74
   [2]    93 <- 75
   [3] Roots referenced by my leaves, by rank
+  sort=rank-order
 Symmetric gradient null space: PASS
 Function tests pass for order 0 at tolerance 1e-10
 Function tests pass for order 0 derivatives at tolerance 1e-10

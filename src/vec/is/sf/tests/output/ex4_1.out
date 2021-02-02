@@ -37,6 +37,7 @@ PetscSF Object: sfA 1 MPI processes
   [0] 2 <- (0,1)
   [0] 1 <- (0,2)
   [0] 0 <- (0,3)
+  sort=rank-order
 PetscSF Object: sfB 1 MPI processes
   type: basic
     sort=rank-order
@@ -45,6 +46,7 @@ PetscSF Object: sfB 1 MPI processes
   [0] 1 <- (0,1)
   [0] 2 <- (0,2)
   [0] 3 <- (0,3)
+  sort=rank-order
 PetscSF Object: (sfB o sfA) 1 MPI processes
   type: basic
     sort=rank-order
@@ -53,3 +55,4 @@ PetscSF Object: (sfB o sfA) 1 MPI processes
   [0] 1 <- (0,2)
   [0] 2 <- (0,1)
   [0] 3 <- (0,0)
+  sort=rank-order
