@@ -40,6 +40,7 @@ PetscSF Object: 4 MPI processes
   [3]    2 <- 2
   [3] 2: 1 edges
   [3]    0 <- 1
+  sort=rank-order
 ## Bcast Rootdata
 [0] 0: 100 101 102
 [1] 0: 200 201
@@ -157,6 +158,7 @@ PetscSF Object: 4 MPI processes
   [3]    2 <- 2
   [3] 2: 1 edges
   [3]    0 <- 1
+  sort=rank-order
 ## Multi-SF
 PetscSF Object: 4 MPI processes
   type: basic
@@ -176,6 +178,7 @@ PetscSF Object: 4 MPI processes
   [3] 0 <- (2,1)
   [3] 1 <- (0,0)
   [3] 2 <- (0,4)
+  sort=rank-order
 ## Multi-SF roots indices in original SF roots numbering
 [0] 0: 0 1 2 2 2
 [1] 0: 0 1
@@ -200,6 +203,7 @@ PetscSF Object: 4 MPI processes
   [3] Number of roots=3, leaves=2, remote ranks=2
   [3] 0 <- (2,1)
   [3] 1 <- (0,0)
+  sort=rank-order
 ## Inverse of Multi-SF, original numbering
   [0] Number of roots=2, leaves=5, remote ranks=3
   [0] 0 <- (3,1)
