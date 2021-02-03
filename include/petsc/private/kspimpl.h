@@ -64,6 +64,7 @@ PETSC_EXTERN PetscErrorCode KSPGuessCreate_POD(KSPGuess);
      Maximum number of monitors you can run with a single KSP
 */
 #define MAXKSPMONITORS 5
+#define MAXKSPREASONVIEWS 5
 typedef enum {KSP_SETUP_NEW, KSP_SETUP_NEWMATRIX, KSP_SETUP_NEWRHS} KSPSetUpStage;
 
 /*
@@ -116,6 +117,11 @@ struct _p_KSP {
   void *monitorcontext[MAXKSPMONITORS];                  /* residual calculation, allows user */
   PetscInt  numbermonitors;                                   /* to, for instance, print residual norm, etc. */
 
+  PetscErrorCode (*reasonview[MAXKSPREASONVIEWS])(KSP,void*);       /* KSP converged reason view */
+  PetscErrorCode (*reasonviewdestroy[MAXKSPREASONVIEWS])(void**);   /* Optional destroy routine */
+  void *reasonviewcontext[MAXKSPREASONVIEWS];                       /* User context */
+  PetscInt  numberreasonviews;                                      /* Number if reason viewers */
+
   PetscErrorCode (*converged)(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*);
   PetscErrorCode (*convergeddestroy)(void*);
   void       *cnvP;
@@ -127,9 +133,9 @@ struct _p_KSP {
   void       *data;                      /* holder for misc stuff associated
                                    with a particular iterative solver */
 
-  PetscBool         view,   viewPre,   viewReason,   viewRate,   viewMat,   viewPMat,   viewRhs,   viewSol,   viewMatExp,   viewEV,   viewSV,   viewEVExp,   viewFinalRes,   viewPOpExp,   viewDScale;
-  PetscViewer       viewer, viewerPre, viewerReason, viewerRate, viewerMat, viewerPMat, viewerRhs, viewerSol, viewerMatExp, viewerEV, viewerSV, viewerEVExp, viewerFinalRes, viewerPOpExp, viewerDScale;
-  PetscViewerFormat format, formatPre, formatReason, formatRate, formatMat, formatPMat, formatRhs, formatSol, formatMatExp, formatEV, formatSV, formatEVExp, formatFinalRes, formatPOpExp, formatDScale;
+  PetscBool         view,   viewPre,   viewRate,   viewMat,   viewPMat,   viewRhs,   viewSol,   viewMatExp,   viewEV,   viewSV,   viewEVExp,   viewFinalRes,   viewPOpExp,   viewDScale;
+  PetscViewer       viewer, viewerPre, viewerRate, viewerMat, viewerPMat, viewerRhs, viewerSol, viewerMatExp, viewerEV, viewerSV, viewerEVExp, viewerFinalRes, viewerPOpExp, viewerDScale;
+  PetscViewerFormat format, formatPre, formatRate, formatMat, formatPMat, formatRhs, formatSol, formatMatExp, formatEV, formatSV, formatEVExp, formatFinalRes, formatPOpExp, formatDScale;
 
   /* ----------------Default work-area management -------------------- */
   PetscInt       nwork;
