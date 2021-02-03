@@ -4,21 +4,26 @@ static char help[] = "Solves a linear system using PCHPDDM.\n\n";
 
 int main(int argc,char **args)
 {
-  Vec            x,b;        /* computed solution and RHS */
-  Mat            A,aux,X,B;  /* linear system matrix */
-  KSP            ksp;        /* linear solver context */
-  PC             pc;
-  IS             is,sizes;
-  const PetscInt *idx;
-  PetscMPIInt    rank,size;
-  PetscInt       m,N = 1;
-  const char     *deft = MATAIJ;
-  PetscViewer    viewer;
-  char           dir[PETSC_MAX_PATH_LEN],name[PETSC_MAX_PATH_LEN],type[256];
-  PetscBool      flg;
-  PetscErrorCode ierr;
+  Vec                x,b;        /* computed solution and RHS */
+  Mat                A,aux,X,B;  /* linear system matrix */
+  KSP                ksp;        /* linear solver context */
+  PC                 pc;
+  IS                 is,sizes;
+  const PetscInt     *idx;
+  PetscMPIInt        rank,size;
+  PetscInt           m,N = 1;
+  const char         *deft = MATAIJ;
+  PetscViewer        viewer;
+  char               dir[PETSC_MAX_PATH_LEN],name[PETSC_MAX_PATH_LEN],type[256];
+  PetscBool          flg;
+#if defined(PETSC_USE_LOG)
+  PetscLogEvent      event;
+#endif
+  PetscEventPerfInfo info1,info2;
+  PetscErrorCode     ierr;
 
   ierr = PetscInitialize(&argc,&args,NULL,help);if (ierr) return ierr;
+  ierr = PetscLogDefaultBegin();CHKERRQ(ierr);
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 4) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"This example requires 4 processes");
   ierr = PetscOptionsGetInt(NULL,NULL,"-rhs",&N,NULL);CHKERRQ(ierr);
@@ -111,6 +116,19 @@ int main(int argc,char **args)
     ierr = MatDestroy(&X);CHKERRQ(ierr);
     ierr = MatDestroy(&B);CHKERRQ(ierr);
   }
+  ierr = PetscObjectTypeCompare((PetscObject)pc,PCHPDDM,&flg);
+#if defined(PETSC_HAVE_HPDDM)
+  if (flg) {
+    ierr = PCHPDDMGetSTShareSubPC(pc,&flg);
+  }
+#endif
+  if (flg) {
+    ierr = PetscLogEventRegister("MatCholFctrSym",PC_CLASSID,&event);CHKERRQ(ierr);
+    ierr = PetscLogEventGetPerfInfo(PETSC_DETERMINE,event,&info1);
+    ierr = PetscLogEventRegister("MatCholFctrNum",PC_CLASSID,&event);CHKERRQ(ierr);
+    ierr = PetscLogEventGetPerfInfo(PETSC_DETERMINE,event,&info2);
+    if (PetscDefined(USE_LOG) && info2.count <= info1.count) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"Numerical factorization (%d) not called more times than symbolic factorization (%d), broken -pc_hpddm_levels_1_st_share_sub_pc",info2.count,info1.count);
+  }
   ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
   ierr = MatDestroy(&A);CHKERRQ(ierr);
   ierr = PetscFinalize();
@@ -129,6 +147,12 @@ int main(int argc,char **args)
       suffix: geneo
       nsize: 4
       args: -ksp_converged_reason -pc_type hpddm -pc_hpddm_levels_1_sub_pc_type cholesky -pc_hpddm_levels_1_eps_nev {{5 15}separate output} -pc_hpddm_levels_1_st_pc_type cholesky -pc_hpddm_coarse_p {{1 2}shared output} -pc_hpddm_coarse_pc_type redundant -mat_type {{aij baij sbaij}shared output} -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO
+
+   test:
+      requires: hpddm slepc datafilespath double !complex !define(PETSC_USE_64BIT_INDICES)
+      suffix: geneo_share
+      nsize: 4
+      args: -ksp_converged_reason -pc_type hpddm -pc_hpddm_levels_1_sub_pc_type cholesky -pc_hpddm_levels_1_eps_nev 5 -pc_hpddm_levels_1_st_pc_type cholesky -pc_hpddm_coarse_p 1 -pc_hpddm_coarse_pc_type redundant -mat_type aij -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO -pc_hpddm_define_subdomains -pc_hpddm_has_neumann -pc_hpddm_levels_1_st_share_sub_pc {{false true}shared output}
 
    test:
       requires: hpddm slepc datafilespath double !complex !define(PETSC_USE_64BIT_INDICES)

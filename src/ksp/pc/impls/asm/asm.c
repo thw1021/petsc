@@ -416,8 +416,10 @@ static PetscErrorCode PCSetUp_ASM(PC pc)
   /*
      Loop over subdomains putting them into local ksp
   */
+  ierr = KSPGetOptionsPrefix(osm->ksp[0],&prefix);CHKERRQ(ierr);
   for (i=0; i<osm->n_local_true; i++) {
     ierr = KSPSetOperators(osm->ksp[i],osm->pmat[i],osm->pmat[i]);CHKERRQ(ierr);
+    ierr = MatSetOptionsPrefix(osm->pmat[i],prefix);CHKERRQ(ierr);
     if (!pc->setupcalled) {
       ierr = KSPSetFromOptions(osm->ksp[i]);CHKERRQ(ierr);
     }
@@ -715,6 +717,19 @@ static PetscErrorCode PCDestroy_ASM(PC pc)
     ierr = PetscFree(osm->ksp);CHKERRQ(ierr);
   }
   ierr = PetscFree(pc->data);CHKERRQ(ierr);
+
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetLocalSubdomains_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetTotalSubdomains_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetOverlap_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetType_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMGetType_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetLocalType_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMGetLocalType_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetSortIndices_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMGetSubKSP_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMGetSubMatType_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetSubMatType_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetSameSubKSP_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -939,6 +954,40 @@ static PetscErrorCode PCASMSetSubMatType_ASM(PC pc,MatType sub_mat_type)
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   ierr = PetscFree(osm->sub_mat_type);CHKERRQ(ierr);
   ierr = PetscStrallocpy(sub_mat_type,(char**)&osm->sub_mat_type);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+     PCASMSetSameSubKSP - Determines whether subdomain solvers are the same.
+
+   Collective on PC
+
+   Input Parameters:
++  pc             - the PC object
+-  same           - whether all subdomain solvers are the same
+
+  Level: advanced
+
+.seealso: PCASMGetSubKSP(), PCASM
+@*/
+PetscErrorCode PCASMSetSameSubKSP(PC pc,PetscBool same)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
+  ierr = PetscTryMethod(pc,"PCASMSetSameSubKSP_C",(PC,PetscBool),(pc,same));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PCASMSetSameSubKSP_ASM(PC pc,PetscBool same)
+{
+  PC_ASM *osm = (PC_ASM*)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
+  PetscValidLogicalCollectiveBool(pc,same,2);
+  osm->same_local_solves = same;
   PetscFunctionReturn(0);
 }
 
@@ -1277,7 +1326,7 @@ PetscErrorCode  PCASMSetSortIndices(PC pc,PetscBool doSort)
    Level: advanced
 
 .seealso: PCASMSetTotalSubdomains(), PCASMSetTotalSubdomains(), PCASMSetOverlap(),
-          PCASMCreateSubdomains2D(),
+          PCASMCreateSubdomains2D(), PCASMSetSameSubKSP()
 @*/
 PetscErrorCode  PCASMGetSubKSP(PC pc,PetscInt *n_local,PetscInt *first_local,KSP *ksp[])
 {
@@ -1381,6 +1430,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMGetSubKSP_C",PCASMGetSubKSP_ASM);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMGetSubMatType_C",PCASMGetSubMatType_ASM);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetSubMatType_C",PCASMSetSubMatType_ASM);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetSameSubKSP_C",PCASMSetSameSubKSP_ASM);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
