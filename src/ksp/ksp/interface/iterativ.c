@@ -1112,7 +1112,7 @@ PetscErrorCode  KSPGetConvergedReason(KSP ksp,KSPConvergedReason *reason)
    Input Parameter:
 .  ksp - the KSP context
 
-   Output Parameters:
+   Output Parameter:
 .  strreason - a human readable string that describes ksp converged reason
 
    Level: basic
