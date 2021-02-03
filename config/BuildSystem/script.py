@@ -161,6 +161,7 @@ class Script(logger.Logger):
     PIPE  = subprocess.PIPE
     output = ''
     error = ''
+    ret = 0
     for command in commandseq:
       useShell = isinstance(command, str) or isinstance(command, bytes)
       if log: log.write('Executing: %s\n' % (command,))
