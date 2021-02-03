@@ -4151,7 +4151,7 @@ PetscErrorCode SNESGetConvergedReason(SNES snes,SNESConvergedReason *reason)
    Input Parameter:
 .  snes - the SNES context
 
-   Output Parameters:
+   Output Parameter:
 .  strreason - a human readable string that describes SNES converged reason
 
    Level: basic
