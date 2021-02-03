@@ -532,7 +532,7 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
 
 /*@C
    KSPConvergedReasonViewSet - Sets an ADDITIONAL function that is to be used at the
-    end of the linear solver to display the conver reason of the linear solver.
+    end of the linear solver to display the convergence reason of the linear solver.
 
    Logically Collective on KSP
 
