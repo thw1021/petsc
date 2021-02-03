@@ -34,6 +34,13 @@ class Retriever(logger.Logger):
     return False
 
   @staticmethod
+  def removeTarget(t):
+    if os.path.islink(t) or os.path.isfile(t):
+      os.unlink(t) # same as os.remove(t)
+    elif os.path.isdir(t):
+      shutil.rmtree(t)
+
+  @staticmethod
   def getDownloadFailureMessage(package, url, filename=None):
     slashFilename = '/'+filename if filename else ''
     return '''\
@@ -79,21 +86,18 @@ Unable to download package %s from: %s
     d = url[6:] if url.startswith('dir://') else url
     if not os.path.isdir(d): raise RuntimeError('URL %s is not a directory' % url)
 
-    if os.path.isdir(os.path.join(root,os.path.basename(d))): shutil.rmtree(os.path.join(root,os.path.basename(d)))
-    if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
-
-    shutil.copytree(d,os.path.join(root,os.path.basename(d)))
+    t = os.path.join(root,os.path.basename(d))
+    self.removeTarget(t)
+    shutil.copytree(d,t)
 
   def linkRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as link' % url, 3, 'install')
     d = url[7:] if url.startswith('link://') else url
     if not os.path.isdir(d): raise RuntimeError('URL %s is not pointing to a directory' % url)
 
-    if os.path.islink(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
-    #TODO this impossible - error would be raised above
-    if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
-    if os.path.isdir(os.path.join(root,os.path.basename(d))): shutil.rmtree(os.path.join(root,os.path.basename(d)))
-    os.symlink(os.path.abspath(d),os.path.join(root,os.path.basename(d)))
+    t = os.path.join(root,os.path.basename(d))
+    self.removeTarget(t)
+    os.symlink(os.path.abspath(d),t)
 
   def gitRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
@@ -104,8 +108,7 @@ Unable to download package %s from: %s
       raise RuntimeError('URL %s is a directory but not a git repository' % url)
 
     newgitrepo = os.path.join(root,'git.'+package)
-    if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
-    if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
+    self.removeTarget(newgitrepo)
 
     try:
       config.base.Configure.executeShellCommand('%s clone %s %s' % (self.sourceControl.git, d, newgitrepo), log = self.log)
@@ -122,8 +125,7 @@ Unable to download package %s from: %s
     d = url[5:] if url.startswith('hg://') else url
 
     newgitrepo = os.path.join(root,'hg.'+package)
-    if os.path.isdir(newgitrepo): shutil.rmtree(newgitrepo)
-    if os.path.isfile(newgitrepo): os.unlink(newgitrepo)
+    self.removeTarget(newgitrepo)
     try:
       config.base.Configure.executeShellCommand('%s clone %s %s' % (self.sourceControl.hg, d, newgitrepo), log = self.log)
     except  RuntimeError as e:
@@ -141,8 +143,7 @@ Unable to download package %s from: %s
     if ext not in ['.bz2','.tbz','.gz','.tgz','.zip','.ZIP']:
       raise RuntimeError('Unknown compression type in URL: '+ url)
 
-    if os.path.exists(localFile):
-      os.unlink(localFile)
+    self.removeTarget(localFile)
 
     if parsed[0] == 'file' and not parsed[1]:
       url = parse[2]
