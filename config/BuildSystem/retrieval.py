@@ -29,12 +29,12 @@ class Retriever(logger.Logger):
     return
 
   def isDirectoryGitRepo(self, directory):
+    from config.base import Configure
     for loc in ['.git','']:
-      try:
-        config.base.Configure.executeShellCommand('%s rev-parse --resolve-git-dir  %s'  % (self.sourceControl.git, os.path.join(directory,loc)), log = self.log)
+      cmd = '%s rev-parse --resolve-git-dir  %s'  % (self.sourceControl.git, os.path.join(directory,loc))
+      (output, error, ret) = Configure.executeShellCommand(cmd, checkCommand = Configure.passCheckCommand, log = self.log)
+      if not ret:
         return True
-      except:
-        pass
     return False
 
   @staticmethod
