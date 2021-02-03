@@ -200,6 +200,7 @@ PETSC_EXTERN PetscErrorCode PCASMGetLocalSubdomains(PC,PetscInt*,IS*[],IS*[]);
 PETSC_EXTERN PetscErrorCode PCASMGetLocalSubmatrices(PC,PetscInt*,Mat*[]);
 PETSC_EXTERN PetscErrorCode PCASMGetSubMatType(PC,MatType*);
 PETSC_EXTERN PetscErrorCode PCASMSetSubMatType(PC,MatType);
+PETSC_EXTERN PetscErrorCode PCASMSetSameSubKSP(PC,PetscBool);
 
 PETSC_EXTERN PetscErrorCode PCGASMSetTotalSubdomains(PC,PetscInt);
 PETSC_EXTERN PetscErrorCode PCGASMSetSubdomains(PC,PetscInt,IS[],IS[]);
