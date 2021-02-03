@@ -104,3 +104,4 @@ PetscSF Object: 2 MPI processes
   [0]    7 <- 3
   [0]    8 <- 4
   [1] Roots referenced by my leaves, by rank
+  sort=rank-order

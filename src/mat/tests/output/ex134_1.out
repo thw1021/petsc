@@ -28,6 +28,7 @@ Mat Object: 2 MPI processes
       [1] 0: 2 edges
       [1]    0 <- 0
       [1]    1 <- 1
+      sort=rank-order
 Mat Object: 2 MPI processes
   type: mpibaij
 row 0: (0, 200.)  (1, 4.)  (2, 6.)  (3, 8.)  (4, 10.)  (5, 1200.)  (6, 14.)  (7, 16.) 
@@ -63,6 +64,7 @@ Mat Object: 2 MPI processes
       [0]    0 <- 0
       [0]    1 <- 1
       [1] Roots referenced by my leaves, by rank
+      sort=rank-order
 Mat Object: 2 MPI processes
   type: mpisbaij
 row 0: (0, 200.)  (1, 4.)  (2, 6.)  (3, 8.)  (4, 10.)  (5, 1200.)  (6, 14.)  (7, 16.) 
@@ -103,6 +105,7 @@ Mat Object: 2 MPI processes
       [1] 0: 2 edges
       [1]    0 <- 0
       [1]    1 <- 1
+      sort=rank-order
 Mat Object: 2 MPI processes
   type: mpibaij
 row 0: (0, 200.)  (1, 4.)  (2, 6.)  (3, 8.) 
@@ -134,6 +137,7 @@ Mat Object: 2 MPI processes
       [0]    0 <- 0
       [0]    1 <- 1
       [1] Roots referenced by my leaves, by rank
+      sort=rank-order
 Mat Object: 2 MPI processes
   type: mpisbaij
 row 0: (0, 200.)  (1, 4.)  (2, 6.)  (3, 8.) 

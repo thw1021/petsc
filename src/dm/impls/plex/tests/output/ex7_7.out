@@ -337,6 +337,7 @@ PetscSF Object: 2 MPI processes
   [0]    23 <- 17
   [0]    26 <- 18
   [1] Roots referenced by my leaves, by rank
+  sort=rank-order
 DM Object: Interpolated Mesh 2 MPI processes
   type: plex
 Interpolated Mesh in 3 dimensions:
@@ -676,3 +677,4 @@ PetscSF Object: 2 MPI processes
   [0]    23 <- 17
   [0]    26 <- 18
   [1] Roots referenced by my leaves, by rank
+  sort=rank-order

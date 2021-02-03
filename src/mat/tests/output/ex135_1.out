@@ -3,16 +3,16 @@ Mat Object: 4 MPI processes
   rows=1000, cols=1000
   total: nonzeros=1999, allocated nonzeros=2000
   total number of mallocs used during MatSetValues calls=0
-    [0] Local rows 250 nz 500 nz alloced 500 bs 1 mem 18900.
+    [0] Local rows 250 nz 500 nz alloced 500 bs 1 mem 18916.
     [0] on-diagonal part: nz 250 
     [0] off-diagonal part: nz 250 
-    [1] Local rows 250 nz 500 nz alloced 500 bs 1 mem 18900.
+    [1] Local rows 250 nz 500 nz alloced 500 bs 1 mem 18916.
     [1] on-diagonal part: nz 250 
     [1] off-diagonal part: nz 250 
-    [2] Local rows 250 nz 500 nz alloced 500 bs 1 mem 18900.
+    [2] Local rows 250 nz 500 nz alloced 500 bs 1 mem 18916.
     [2] on-diagonal part: nz 250 
     [2] off-diagonal part: nz 250 
-    [3] Local rows 250 nz 499 nz alloced 500 bs 1 mem 19398.
+    [3] Local rows 250 nz 499 nz alloced 500 bs 1 mem 19414.
     [3] on-diagonal part: nz 499 
     [3] off-diagonal part: nz 0 
     Information on VecScatter used in matrix-vector product: 
@@ -36,3 +36,4 @@ Mat Object: 4 MPI processes
       [2] 3: 1 edges
       [2]    0 <- 249
       [3] Roots referenced by my leaves, by rank
+      sort=rank-order

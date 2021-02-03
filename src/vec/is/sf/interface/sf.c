@@ -919,6 +919,9 @@ PetscErrorCode PetscSFView(PetscSF sf,PetscViewer viewer)
     }
     ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
   }
+  if (sf->ops->View) {
+    ierr = (*sf->ops->View)(sf,viewer);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
