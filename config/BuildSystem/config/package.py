@@ -763,12 +763,16 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
 
   def downLoad(self):
     '''Downloads a package; using hg or ftp; opens it in the with-packages-build-dir directory'''
+    import retrieval
 
     if self.havePETSc:
       isClone = self.petscclone.isClone
     else:
       isClone = True
 
+    retriever = retrieval.Retriever(self.sourceControl, argDB = self.argDB)
+    retriever.setup()
+    retriever.saveLog()
     self.logPrint('Downloading '+self.name)
     # check if its http://ftp.mcs - and add ftp://ftp.mcs as fallback
     download_urls = []
@@ -791,7 +795,6 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
           download_urls = download_urls+git_urls
     # now attempt to download each url until any one succeeds.
     err =''
-    retriever = None
     for url in download_urls:
       if url.startswith('git://'):
         if not self.gitcommit: raise RuntimeError(self.PACKAGE+': giturl specified but commit not set')
@@ -801,9 +804,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
           continue
       self.logPrintBox('Trying to download '+url+' for '+self.PACKAGE)
       try:
-        import retrieval
-        retriever = retrieval.Retriever(url, self.sourceControl, self.argDB)
-        retriever.retrieve(self.externalPackagesDir, self.package)
+        retriever.genericRetrieve(url, self.externalPackagesDir, self.package)
         self.logWrite(retriever.restoreLog())
         retriever.saveLog()
         pkgdir = self.getDir()
@@ -816,7 +817,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
       except RuntimeError as e:
         self.logPrint('ERROR: '+str(e))
         err += str(e)
-    if retriever: self.logWrite(retriever.restoreLog())
+    self.logWrite(retriever.restoreLog())
     raise RuntimeError('Error during download/extract/detection of '+self.PACKAGE+':\n'+err)
 
   def Install(self):

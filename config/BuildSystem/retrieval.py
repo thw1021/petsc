@@ -18,14 +18,10 @@ import shutil
 urlparse_local.uses_netloc.extend(['bk', 'ssh', 'svn'])
 
 class Retriever(logger.Logger):
-  def __init__(self, url, sourceControl, argDB = None):
-    logger.Logger.__init__(self, argDB)
+  def __init__(self, sourceControl, clArgs = None, argDB = None):
+    logger.Logger.__init__(self, clArgs, argDB)
     self.sourceControl = sourceControl
-    self.url = url
     self.stamp = None
-    self.setup()
-    self.setupRetrieverDispatch()
-    self.saveLog()
     return
 
   def isDirectoryGitRepo(self, directory):
@@ -51,35 +47,34 @@ Unable to download package %s from: %s
   --download-%s=/yourselectedlocation%s
     ''' % (package.upper(), url, slashFilename, package, slashFilename)
 
-  def setupRetrieverDispatch(self):
-    '''Checks URL - and sets self.retrieve() to the appropriate git, hg, dir etc. dispatch function'''
-    url = self.url
+  def genericRetrieve(self, url, root, package):
+    '''Fetch package from version control repository or tarfile indicated by URL and extract it into root'''
+
     parsed = urlparse_local.urlparse(url)
     if parsed[0] == 'dir':
-      self.retrieve = self.dirRetrieve
+      f = self.dirRetrieve
     elif parsed[0] == 'link':
-      self.retrieve = self.linkRetrieve
+      f = self.linkRetrieve
     elif parsed[0] == 'git':
-      self.retrieve = self.gitRetrieve
+      f = self.gitRetrieve
     elif parsed[0] == 'ssh'   and parsed[2].endswith('.git'):
-      self.retrieve = self.gitRetrieve
+      f = self.gitRetrieve
     elif parsed[0] == 'https' and parsed[2].endswith('.git'):
-      self.retrieve = self.gitRetrieve
+      f = self.gitRetrieve
     elif parsed[0] == 'hg':
-      self.retrieve = self.hgRetrieve
+      f = self.hgRetrieve
     elif parsed[0] == 'ssh' and parsed[1].startswith('hg@'):
-      self.retrieve = self.hgRetrieve
+      f = self.hgRetrieve
     elif os.path.isdir(url):
       if self.isDirectoryGitRepo(url):
-        self.retrieve = self.gitRetrieve
+        f = self.gitRetrieve
       else:
-        self.retrieve = self.dirRetrieve
+        f = self.dirRetrieve
     else:
-      self.retrieve = self.tarballRetrieve
-    return
+      f = self.tarballRetrieve
+    return f(url, root, package)
 
-  def dirRetrieve(self, root, package):
-    url = self.url
+  def dirRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as directory' % url, 3, 'install')
     d = url[6:] if url.startswith('dir://') else url
     if not os.path.isdir(d): raise RuntimeError('URL %s is not a directory' % url)
@@ -88,10 +83,8 @@ Unable to download package %s from: %s
     if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
 
     shutil.copytree(d,os.path.join(root,os.path.basename(d)))
-    return
 
-  def linkRetrieve(self, root, package):
-    url = self.url
+  def linkRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as link' % url, 3, 'install')
     d = url[7:] if url.startswith('link://') else url
     if not os.path.isdir(d): raise RuntimeError('URL %s is not pointing to a directory' % url)
@@ -101,10 +94,8 @@ Unable to download package %s from: %s
     if os.path.isfile(os.path.join(root,os.path.basename(d))): os.unlink(os.path.join(root,os.path.basename(d)))
     if os.path.isdir(os.path.join(root,os.path.basename(d))): shutil.rmtree(os.path.join(root,os.path.basename(d)))
     os.symlink(os.path.abspath(d),os.path.join(root,os.path.basename(d)))
-    return
 
-  def gitRetrieve(self, root, package):
-    url = self.url
+  def gitRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
     #TODO error should be raised rather than silent return?
     if not hasattr(self.sourceControl, 'git'): return
@@ -123,10 +114,8 @@ Unable to download package %s from: %s
       err = str(e)
       failureMessage = self.getDownloadFailureMessage(package, url)
       raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
-    return
 
-  def hgRetrieve(self, root, package):
-    url = self.url
+  def hgRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as hg repo' % url, 3, 'install')
     #TODO error should be raised rather than silent return?
     if not hasattr(self.sourceControl, 'hg'): return
@@ -142,10 +131,8 @@ Unable to download package %s from: %s
       err = str(e)
       failureMessage = self.getDownloadFailureMessage(package, url)
       raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
-    return
 
-  def tarballRetrieve(self, root, package):
-    url = self.url
+  def tarballRetrieve(self, url, root, package):
     parsed = urlparse_local.urlparse(url)
     filename = os.path.basename(parsed[2])
     localFile = os.path.join(root,'_d_'+filename)
@@ -222,4 +209,3 @@ Downloaded package %s from: %s is not a tarball.
     except RuntimeError as e:
       raise RuntimeError('Error changing permissions for '+dirname+' obtained from '+localFile+ ' : '+str(e))
     os.unlink(localFile)
-    return
