@@ -471,9 +471,9 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
     ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   }
    // Matrix cannot be checked for symmetric due to MUMPS
-      PetscBool symmetricflag;
-      ierr = MatIsSymmetric(Jpre,0.0,&symmetricflag);
-      printf("symetric flag = %d\n",symmetricflag);
+    //  PetscBool symmetricflag;
+    //  ierr = MatIsSymmetric(Jpre,0.0,&symmetricflag);
+    //  printf("symetric flag = %d\n",symmetricflag);
   PetscFunctionReturn(0);
 }
 
@@ -1544,32 +1544,11 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->n  = pdipm->N  = 0;
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
+
   pdipm->deltaw = 0;
   pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
   pdipm->deltac = 0;
-=======
-  pdipm->deltaw = PetscPowReal(10,-4);
-  pdipm->deltac = PetscPowReal(10,-8);
->>>>>>> added deltaw and deltac terms to begin correcting inertia
-=======
-  pdipm->deltaw = 0;
-=======
-  pdipm->deltaw = PetscPowReal(10,-20);
->>>>>>> added max and min for deltaw
-=======
-  pdipm->deltaw = PETSC_MACHINE_EPSILON;
->>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
-=======
-  pdipm->deltaw = 0;
-  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
->>>>>>> push update for master rebase
-  pdipm->deltac = 0;
->>>>>>> added inertia update baised on get inertia
+
 
   pdipm->push_init_slack     = 1.0;
   pdipm->push_init_lambdai   = 1.0;
