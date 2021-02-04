@@ -146,7 +146,7 @@ Unable to download package %s from: %s
     self.removeTarget(localFile)
 
     if parsed[0] == 'file' and not parsed[1]:
-      url = parse[2]
+      url = parsed[2]
     if os.path.exists(url):
       if not os.path.isfile(url):
         raise RuntimeError('Local path exists but is not a regular file: '+ url)
