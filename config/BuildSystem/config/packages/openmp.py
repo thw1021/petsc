@@ -39,28 +39,26 @@ class Configure(config.package.Package):
       if self.setCompilers.checkCompilerFlag(flag):
         ompflag = flag
         self.found = 1
-        # OpenMP compile flag is also needed at link time
-        self.setCompilers.LDFLAGS += ' '+ompflag
-        oldFlags = self.compilers.CPPFLAGS
-        self.compilers.CPPFLAGS += ' '+ompflag
-        try:
-          output,err,status  = self.preprocess('#if defined(_OPENMP)\nopmv=_OPENMP\n#else\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
-        except:
-          raise RuntimeError('Unable to run preprocessor to determine if OpenMP compile flag worked')
-        loutput = output.split('\n')
-        for i in loutput:
-          if i.startswith('opmv='):
-            self.foundversion = i[5:]
-            self.ompflag = ompflag
-            break
-          if i.startswith('opmv ='):
-            self.foundversion = i[6:]
-            self.ompflag = ompflag
-            break
-        self.compilers.CPPFLAGS = oldFlags
         break
     if not self.found:
       raise RuntimeError('C Compiler has no support for OpenMP')
+    # OpenMP compile flag is also needed at link time
+    self.setCompilers.LDFLAGS += ' '+ompflag
+    self.compilers.CPPFLAGS += ' '+ompflag
+    try:
+      output,err,status  = self.preprocess('#if defined(_OPENMP)\nopmv=_OPENMP\n#else\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
+    except:
+      raise RuntimeError('Unable to run preprocessor to determine if OpenMP compile flag worked')
+    loutput = output.split('\n')
+    for i in loutput:
+      if i.startswith('opmv='):
+        self.foundversion = i[5:]
+        self.ompflag = ompflag
+        break
+      if i.startswith('opmv ='):
+        self.foundversion = i[6:]
+        self.ompflag = ompflag
+        break
     self.setCompilers.addCompilerFlag(ompflag)
     self.setCompilers.popLanguage()
 
@@ -71,16 +69,14 @@ class Configure(config.package.Package):
         if self.setCompilers.checkCompilerFlag(flag):
           ompflag = flag
           self.found = 1
-          oldFlags = self.compilers.CPPFLAGS
-          self.compilers.CPPFLAGS += ' '+ompflag
-          try:
-            output,err,status  = self.preprocess('#if !defined(_OPENMP)\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
-          except:
-            raise RuntimeError('Unable to run preprocessor to determine if OpenMP compile flag worked')
-          self.compilers.CPPFLAGS = oldFlags
           break
       if not self.found:
         raise RuntimeError('Fortran Compiler has no support for OpenMP')
+      self.compilers.FPPFLAGS += ' '+ompflag
+      try:
+        output,err,status  = self.preprocess('#if !defined(_OPENMP)\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
+      except:
+        raise RuntimeError('Unable to run preprocessor to determine if OpenMP compile flag worked')
       self.setCompilers.addCompilerFlag(ompflag)
       self.setCompilers.popLanguage()
 
@@ -91,16 +87,13 @@ class Configure(config.package.Package):
         if self.setCompilers.checkCompilerFlag(flag):
           ompflag = flag
           self.found = 1
-          oldFlags = self.compilers.CPPFLAGS
-          self.compilers.CPPFLAGS += ' '+ompflag
-          try:
-            output,err,status  = self.preprocess('#if !defined(_OPENMP)\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
-          except:
-            raise RuntimeError('Unable to run preprocessor to determine if OpenMP compile flag worked')
-          self.compilers.CPPFLAGS = oldFlags
-          break
       if not self.found:
         raise RuntimeError('CXX Compiler has no support for OpenMP')
+      self.compilers.CXXPPFLAGS += ' '+ompflag
+      try:
+        output,err,status  = self.preprocess('#if !defined(_OPENMP)\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
+      except:
+        raise RuntimeError('Unable to run preprocessor to determine if OpenMP compile flag worked')
       self.setCompilers.addCompilerFlag(ompflag)
       self.setCompilers.popLanguage()
 
