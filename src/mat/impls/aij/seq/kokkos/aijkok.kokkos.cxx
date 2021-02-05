@@ -726,7 +726,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFacto
     ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
     Nf = *pNf;
   } else Nf = 1;
-  if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"N % Nf != 0 %D %D",n,Nf);
+  if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
   ierr = ISGetIndices(isrow,&r_h);CHKERRQ(ierr);
   ierr = ISGetIndices(isicol,&ic_h);CHKERRQ(ierr);
   ierr = ISGetSize(isicol,&nc);CHKERRQ(ierr);
@@ -827,7 +827,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFacto
 
           //focr (j=0; j<nz; j++) { pv[j] = rtmp[pj[j]];
           Kokkos::parallel_for(Kokkos::TeamVectorRange(team,nz), [=] (const int &j) { pv[j] = rtmp(pj[j]-start); });
-          /* Invert diagonal for simplier triangular solves */
+          /* Invert diagonal for simpler triangular solves */
           pv = ba_d + bdiag_d[i];
           Kokkos::single(Kokkos::PerTeam(team), [=]() { *pv = 1.0/rtmp(i-start); });
         } /* endof for (i=0; i<n; i++) { */
