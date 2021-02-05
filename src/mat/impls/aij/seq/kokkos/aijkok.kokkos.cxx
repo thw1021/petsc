@@ -702,7 +702,7 @@ PetscErrorCode  MatCreateSeqAIJKokkos(MPI_Comm comm,PetscInt m,PetscInt n,PetscI
 // factorizations
 typedef Kokkos::TeamPolicy<>::member_type team_member;
 //
-// This factorization exploits block diagonal matrices with "Nf" attached to the matrix in a container. 
+// This factorization exploits block diagonal matrices with "Nf" attached to the matrix in a container.
 // Use -pc_factor_mat_ordering_type rcm to pull decouple blocks of size N/Nf
 //
 static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFactorInfo *info)
