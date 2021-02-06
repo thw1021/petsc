@@ -99,7 +99,6 @@ struct _p_PetscSF {
   PetscSFPackOpt  leafpackopt[2];  /* Optimization plans to (un)pack leaves connected to remote roots, based on index patterns in rmine[]. NULL for no optimization */
   PetscSFPackOpt  leafpackopt_d[2];/* Copy of leafpackopt_d[] on device if needed */
   PetscBool       leafdups[2];     /* Indices in rmine[] for self(0)/remote(1) communication have dups respectively? TRUE implies theads working on them in parallel may have data race. */
-  PetscBool       leafdups_inter;  /* Index sets in rmine[] for self/remote communication have intersection? TRUE implies we need to coordindate local/remote communication */
 
   PetscInt        nleafreqs;       /* Number of MPI reqests for leaves */
   PetscInt        *rremote;        /* Concatenated array holding remote indices referenced for each remote rank */
@@ -115,7 +114,7 @@ struct _p_PetscSF {
   PetscSFPattern  pattern;         /* Pattern of the graph */
   PetscBool       persistent;      /* Does this SF use MPI persistent requests for communication */
   PetscLayout     map;             /* Layout of leaves over all processes when building a patterned graph */
-  PetscBool       unknown_inout_streams;  /* If true, SF does not know which streams root/leafdata is on. Default is false, since we only use NULL stream for input/output now */
+  PetscBool       unknown_input_stream;/* If true, SF does not know which streams root/leafdata is on. Default is false, since we only use petsc default stream */
   PetscBool       use_gpu_aware_mpi;   /* If true, SF assumes it can pass GPU pointers to MPI */
   PetscBool       use_stream_aware_mpi;/* If true, SF assumes the underlying MPI is cuda-stream aware and we won't sync streams for send/recv buffers passed to MPI */
   PetscInt        maxResidentThreadsPerGPU;
