@@ -220,6 +220,37 @@ PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF sf,PetscMemType rootmtype,const v
   PetscFunctionReturn(0);
 }
 
+/* Build dependence between dataStream and remoteCommStream at the entry of NVSHMEM communication */
+static PetscErrorCode PetscSFLinkBuildDependenceBegin(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+{
+  cudaError_t    cerr;
+  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
+  PetscInt       buflen = (direction == PETSCSF_ROOT2LEAF)? bas->rootbuflen[PETSCSF_REMOTE] : sf->leafbuflen[PETSCSF_REMOTE];
+
+  PetscFunctionBegin;
+  if (buflen) {
+    cerr = cudaEventRecord(link->dataReady,link->dataStream);CHKERRCUDA(cerr);
+    cerr = cudaStreamWaitEvent(link->remoteCommStream,link->dataReady,0);CHKERRCUDA(cerr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/* Build dependence between dataStream and remoteCommStream at the exit of NVSHMEM communication */
+static PetscErrorCode PetscSFLinkBuildDependenceEnd(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+{
+  cudaError_t    cerr;
+  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
+  PetscInt       buflen = (direction == PETSCSF_ROOT2LEAF)? sf->leafbuflen[PETSCSF_REMOTE] : bas->rootbuflen[PETSCSF_REMOTE];
+
+  PetscFunctionBegin;
+  /* If unpack to non-null device buffer, build the endRemoteComm dependance */
+  if (buflen) {
+    cerr = cudaEventRecord(link->endRemoteComm,link->remoteCommStream);CHKERRCUDA(cerr);
+    cerr = cudaStreamWaitEvent(link->dataStream,link->endRemoteComm,0);CHKERRCUDA(cerr);
+  }
+  PetscFunctionReturn(0);
+}
+
 /* Send/Put signals to remote ranks
 
  Input parameters:
@@ -296,7 +327,7 @@ PetscErrorCode PetscSFLinkWaitSignalsOfCompletionOfGettingData_NVSHMEM(PetscSF s
   }
 
   if (n) {
-    NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(n,sig,0,1); /* wait the signals to be 0, then set them to 1 */
+    NvshmemWaitSignals<<<1,1,0,link->remoteCommStream>>>(n,sig,0,1); /* wait the signals to be 0, then set them to 1 */
     cudaError_t cerr = cudaGetLastError();CHKERRCUDA(cerr);
   }
   PetscFunctionReturn(0);
@@ -317,6 +348,7 @@ __global__ static void GetDataFromRemotelyAccessible(PetscInt nsrcranks,PetscMPI
 /* Start communication -- Get data in the given direction */
 PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
+  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
 
@@ -331,6 +363,7 @@ PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,Petsc
   PetscInt          *dstsigdisp_d;
 
   PetscFunctionBegin;
+  ierr = PetscSFLinkBuildDependenceBegin(sf,link,direction);CHKERRQ(ierr);
   if (direction == PETSCSF_ROOT2LEAF) { /* src is root, dst is leaf; we will move data from src to dst */
     nsrcranks    = sf->nRemoteRootRanks;
     src          = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]; /* root buf is the send buf; it is in symmetric heap */
@@ -371,13 +404,13 @@ PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,Petsc
 
   /* After Pack operation -- src tells dst ranks that they are allowed to get data */
   if (ndstranks) {
-    NvshmemSendSignals<<<(ndstranks+255)/256,256,0,link->remote_comm_stream>>>(ndstranks,dstsig,dstsigdisp_d,dstranks_d,1); /* set signals to 1 */
+    NvshmemSendSignals<<<(ndstranks+255)/256,256,0,link->remoteCommStream>>>(ndstranks,dstsig,dstsigdisp_d,dstranks_d,1); /* set signals to 1 */
     cerr = cudaGetLastError();CHKERRCUDA(cerr);
   }
 
   /* dst waits for signals (permissions) from src ranks to start getting data */
   if (nsrcranks) {
-    NvshmemWaitSignals<<<1,1,0,link->remote_comm_stream>>>(nsrcranks,dstsig,1,0); /* wait the signals to be 1, then set them to 0 */
+    NvshmemWaitSignals<<<1,1,0,link->remoteCommStream>>>(nsrcranks,dstsig,1,0); /* wait the signals to be 1, then set them to 0 */
     cerr = cudaGetLastError();CHKERRCUDA(cerr);
   }
 
@@ -388,7 +421,7 @@ PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,Petsc
 
   /* Get data from remotely accessible PEs */
   if (nLocallyAccessible < nsrcranks) {
-    GetDataFromRemotelyAccessible<<<nsrcranks,1,0,link->remote_comm_stream>>>(nsrcranks,srcranks_d,src,srcdisp_d,dst,dstdisp_d,link->unitbytes);
+    GetDataFromRemotelyAccessible<<<nsrcranks,1,0,link->remoteCommStream>>>(nsrcranks,srcranks_d,src,srcdisp_d,dst,dstdisp_d,link->unitbytes);
     cerr = cudaGetLastError();CHKERRCUDA(cerr);
   }
 
@@ -398,7 +431,7 @@ PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,Petsc
       int pe = srcranks_h[i];
       if (nvshmem_ptr(src,pe)) {
         size_t nelems = (dstdisp_h[i+1]-dstdisp_h[i])*link->unitbytes;
-        nvshmemx_getmem_nbi_on_stream(dst+(dstdisp_h[i]-dstdisp_h[0])*link->unitbytes,src+srcdisp_h[i]*link->unitbytes,nelems,pe,link->remote_comm_stream);
+        nvshmemx_getmem_nbi_on_stream(dst+(dstdisp_h[i]-dstdisp_h[0])*link->unitbytes,src+srcdisp_h[i]*link->unitbytes,nelems,pe,link->remoteCommStream);
       }
     }
   }
@@ -410,6 +443,7 @@ PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,Petsc
 */
 PetscErrorCode PetscSFLinkGetDataEnd_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
+  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   uint64_t          *srcsig;
@@ -430,12 +464,12 @@ PetscErrorCode PetscSFLinkGetDataEnd_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSF
   }
 
   if (nsrcranks) {
-    nvshmemx_quiet_on_stream(link->remote_comm_stream); /* Finish the nonblocking get, so that we can unpack afterwards */
+    nvshmemx_quiet_on_stream(link->remoteCommStream); /* Finish the nonblocking get, so that we can unpack afterwards */
     cerr = cudaGetLastError();CHKERRCUDA(cerr);
-
-    NvshmemSendSignals<<<(nsrcranks+511)/512,512,0,link->remote_comm_stream>>>(nsrcranks,srcsig,srcsigdisp,srcranks,0); /* set signals to 0 */
+    NvshmemSendSignals<<<(nsrcranks+511)/512,512,0,link->remoteCommStream>>>(nsrcranks,srcsig,srcsigdisp,srcranks,0); /* set signals to 0 */
     cerr = cudaGetLastError();CHKERRCUDA(cerr);
   }
+  ierr = PetscSFLinkBuildDependenceEnd(sf,link,direction);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -489,6 +523,7 @@ __global__ static void WaitSignalsFromLocallyAccessible(PetscInt ndstranks,Petsc
 /* Put data in the given direction  */
 PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
+  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscInt          ndstranks,nLocallyAccessible = 0;
@@ -500,6 +535,7 @@ PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,Petsc
   uint64_t          *srcsig;
 
   PetscFunctionBegin;
+  ierr = PetscSFLinkBuildDependenceBegin(sf,link,direction);CHKERRQ(ierr);
   if (direction == PETSCSF_ROOT2LEAF) { /* put data in rootbuf to leafbuf  */
     ndstranks    = bas->nRemoteLeafRanks; /* number of (remote) leaf ranks */
     src          = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]; /* Both src & dst must be symmetric */
@@ -535,22 +571,25 @@ PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,Petsc
 
   /* For remotely accessible PEs, send data to them in one kernel call */
   if (nLocallyAccessible < ndstranks) {
-    WaitAndPutDataToRemotelyAccessible<<<ndstranks,1,0,link->remote_comm_stream>>>(ndstranks,dstranks_d,dst,dstdisp_d,src,srcdisp_d,srcsig,link->unitbytes);
+    WaitAndPutDataToRemotelyAccessible<<<ndstranks,1,0,link->remoteCommStream>>>(ndstranks,dstranks_d,dst,dstdisp_d,src,srcdisp_d,srcsig,link->unitbytes);
     cerr = cudaGetLastError();CHKERRCUDA(cerr);
   }
 
   /* For locally accessible PEs, use host API, which uses CUDA copy-engines and is much faster than device API */
   if (nLocallyAccessible) {
-    WaitSignalsFromLocallyAccessible<<<1,1,0,link->remote_comm_stream>>>(ndstranks,dstranks_d,srcsig,dst);
+    WaitSignalsFromLocallyAccessible<<<1,1,0,link->remoteCommStream>>>(ndstranks,dstranks_d,srcsig,dst);
     for (int i=0; i<ndstranks; i++) {
       int pe = dstranks_h[i];
       if (nvshmem_ptr(dst,pe)) { /* If return a non-null pointer, then <pe> is locally accessible */
         size_t nelems = (srcdisp_h[i+1]-srcdisp_h[i])*link->unitbytes;
-         /* Initiate the communication */
-        nvshmemx_putmem_nbi_on_stream(dst+dstdisp_h[i]*link->unitbytes,src+(srcdisp_h[i]-srcdisp_h[0])*link->unitbytes,nelems,pe,link->remote_comm_stream);
+         /* Initiate the nonblocking communication */
+        nvshmemx_putmem_nbi_on_stream(dst+dstdisp_h[i]*link->unitbytes,src+(srcdisp_h[i]-srcdisp_h[0])*link->unitbytes,nelems,pe,link->remoteCommStream);
       }
     }
-    nvshmemx_quiet_on_stream(link->remote_comm_stream); /* Calling nvshmem_fence/quiet() does not fence the above putmem_nbi call on host! */
+  }
+
+  if (nLocallyAccessible) {
+    nvshmemx_quiet_on_stream(link->remoteCommStream); /* Calling nvshmem_fence/quiet() does not fence the above nvshmemx_putmem_nbi_on_stream! */
   }
   PetscFunctionReturn(0);
 }
@@ -558,6 +597,8 @@ PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,Petsc
 /* A one-thread kernel. The thread takes in charge all remote PEs */
 __global__ static void PutDataEnd(PetscInt nsrcranks,PetscInt ndstranks,PetscMPIInt *dstranks,uint64_t *dstsig,PetscInt *dstsigdisp)
 {
+  /* TODO: Shall we finished the non-blocking remote puts? */
+
   /* 1. Send a signal to each dst rank */
 
   /* According to Akhil@NVIDIA, IB is orderred, so no fence is needed for remote PEs.
@@ -575,6 +616,7 @@ __global__ static void PutDataEnd(PetscInt nsrcranks,PetscInt ndstranks,PetscMPI
 /* Finish the communication -- A receiver waits until it can access its receive buffer */
 PetscErrorCode PetscSFLinkPutDataEnd_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
+  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscMPIInt       *dstranks;
@@ -599,9 +641,10 @@ PetscErrorCode PetscSFLinkPutDataEnd_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSF
   }
 
   if (nsrcranks || ndstranks) {
-    PutDataEnd<<<1,1,0,link->remote_comm_stream>>>(nsrcranks,ndstranks,dstranks,dstsig,dstsigdisp);
+    PutDataEnd<<<1,1,0,link->remoteCommStream>>>(nsrcranks,ndstranks,dstranks,dstsig,dstsigdisp);
     cerr = cudaGetLastError();CHKERRCUDA(cerr);
   }
+  ierr = PetscSFLinkBuildDependenceEnd(sf,link,direction);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -627,7 +670,7 @@ PetscErrorCode PetscSFLinkSendSignalsToAllowPuttingData_NVSHMEM(PetscSF sf,Petsc
   }
 
   if (nsrcranks) {
-    NvshmemSendSignals<<<(nsrcranks+255)/256,256,0,link->remote_comm_stream>>>(nsrcranks,srcsig,srcsigdisp_d,srcranks_d,0); /* Set remote signals to 0 */
+    NvshmemSendSignals<<<(nsrcranks+255)/256,256,0,link->remoteCommStream>>>(nsrcranks,srcsig,srcsigdisp_d,srcranks_d,0); /* Set remote signals to 0 */
     cudaError_t cerr = cudaGetLastError();CHKERRCUDA(cerr);
   }
   PetscFunctionReturn(0);
@@ -641,10 +684,8 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
 
   PetscFunctionBegin;
   cerr = cudaEventDestroy(link->dataReady);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->local_comm_end);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->remote_comm_end);CHKERRCUDA(cerr);
-  cerr = cudaStreamDestroy(link->remote_comm_stream);CHKERRCUDA(cerr);
-  cerr = cudaStreamDestroy(link->local_comm_stream);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(link->endRemoteComm);CHKERRCUDA(cerr);
+  cerr = cudaStreamDestroy(link->remoteCommStream);CHKERRCUDA(cerr);
 
   /* nvshmem does not need buffers on host, which should be NULL */
   ierr = PetscNvshmemFree(link->leafbuf_alloc[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE]);CHKERRQ(ierr);
@@ -659,9 +700,11 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
 PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
 {
   PetscErrorCode    ierr;
+  cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscSFLink       *p,link;
   PetscBool         match,rootdirect[2],leafdirect[2];
+  int               greatestPriority;
 
   PetscFunctionBegin;
   /* Check to see if we can directly send/recv root/leafdata with the given sf, sfop and op.
@@ -721,13 +764,20 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
   link->Destroy                    = PetscSFLinkDestroy_NVSHMEM;
   if (sf->use_nvshmem_get) { /* get-based protocol */
     link->PrePack                  = PetscSFLinkWaitSignalsOfCompletionOfGettingData_NVSHMEM;
-    link->StartCommunication       = PetscSFLinkGetDataBegin_NVSHMEM; /* call it after packing */
-    link->FinishCommunication      = PetscSFLinkGetDataEnd_NVSHMEM; /* call it before unpacking */
+    link->StartCommunication       = PetscSFLinkGetDataBegin_NVSHMEM;
+    link->FinishCommunication      = PetscSFLinkGetDataEnd_NVSHMEM;
   } else { /* put-based protocol */
-    link->StartCommunication       = PetscSFLinkPutDataBegin_NVSHMEM; /* call it after packing */
-    link->FinishCommunication      = PetscSFLinkPutDataEnd_NVSHMEM;   /* call it before unpacking */
+    link->StartCommunication       = PetscSFLinkPutDataBegin_NVSHMEM;
+    link->FinishCommunication      = PetscSFLinkPutDataEnd_NVSHMEM;
     link->PostUnpack               = PetscSFLinkSendSignalsToAllowPuttingData_NVSHMEM;
   }
+
+  cerr = cudaDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRCUDA(cerr);
+  cerr = cudaStreamCreateWithPriority(&link->remoteCommStream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
+
+  cerr = cudaEventCreateWithFlags(&link->dataReady,cudaEventDisableTiming);CHKERRCUDA(cerr);
+  cerr = cudaEventCreateWithFlags(&link->endRemoteComm,cudaEventDisableTiming);CHKERRCUDA(cerr);
+
 found:
   if (rootdirect[PETSCSF_REMOTE]) {
     link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE] = (char*)rootdata + bas->rootstart[PETSCSF_REMOTE]*link->unitbytes;

@@ -302,7 +302,7 @@ PetscErrorCode VecDotAsync_NVSHMEM(Vec xin,Vec yin,PetscScalar *z)
   PetscBool      allocated = PETSC_TRUE;
 
   PetscFunctionBegin;
-  ierr = VecAllocatedScalar_NVSHMEM(xin,z,&allocated);CHKERRQ(ierr);
+  //ierr = VecAllocatedScalar_NVSHMEM(xin,z,&allocated);CHKERRQ(ierr);
   if (!allocated) {ierr = VecGetWorkScalar(xin,&beta);CHKERRQ(ierr);} /* So that beta is in nvshmem */
   ierr = VecDotAsync_SeqCUDA(xin,yin,beta);CHKERRQ(ierr);
   ierr = PetscNvshmemSum(1,beta,beta);CHKERRQ(ierr);
@@ -320,7 +320,7 @@ PetscErrorCode VecTDotAsync_NVSHMEM(Vec xin,Vec yin,PetscScalar *z)
   PetscBool      allocated = PETSC_TRUE;
 
   PetscFunctionBegin;
-  ierr = VecAllocatedScalar_NVSHMEM(xin,z,&allocated);CHKERRQ(ierr);
+  //ierr = VecAllocatedScalar_NVSHMEM(xin,z,&allocated);CHKERRQ(ierr);
   if (!allocated) {ierr = VecGetWorkScalar(xin,&beta);CHKERRQ(ierr);} /* So that beta is in nvshmem */
   ierr = VecTDotAsync_SeqCUDA(xin,yin,beta);CHKERRQ(ierr);
   ierr = PetscNvshmemSum(1,beta,beta);CHKERRQ(ierr);
@@ -339,7 +339,7 @@ PetscErrorCode VecNormAsync_NVSHMEM(Vec xin,NormType type,PetscReal *z)
 
   PetscFunctionBegin;
   /* Find the local part */
-  ierr = VecAllocatedScalar_NVSHMEM(xin,(PetscScalar*)z,&allocated);CHKERRQ(ierr);
+  //ierr = VecAllocatedScalar_NVSHMEM(xin,(PetscScalar*)z,&allocated);CHKERRQ(ierr);
   if (!allocated) {ierr = VecGetWorkNorm(xin,type,&beta);CHKERRQ(ierr);}
   ierr = VecNormAsync_SeqCUDA(xin,type,beta);CHKERRQ(ierr);
   if (type == NORM_2 || type == NORM_FROBENIUS) {

@@ -4,16 +4,17 @@
 
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 
-/* Post Irecv for SFBASIC.  */
-static PetscErrorCode PetscSFLinkPostIrecv_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+/* Start MPI requests. If use non-GPU aware MPI, we might need to copy data from device buf to host buf */
+static PetscErrorCode PetscSFLinkStartRequests_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
   PetscErrorCode    ierr;
   PetscMPIInt       nreqs;
   MPI_Request       *reqs = NULL;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
-  PetscInt          buflen = (direction == PETSCSF_ROOT2LEAF) ? sf->leafbuflen[PETSCSF_REMOTE] : bas->rootbuflen[PETSCSF_REMOTE];
+  PetscInt          buflen;
 
   PetscFunctionBegin;
+  buflen = (direction == PETSCSF_ROOT2LEAF) ? sf->leafbuflen[PETSCSF_REMOTE] : bas->rootbuflen[PETSCSF_REMOTE];
   if (buflen) {
     if (direction == PETSCSF_ROOT2LEAF) {
       nreqs = sf->nleafreqs;
@@ -24,19 +25,8 @@ static PetscErrorCode PetscSFLinkPostIrecv_MPI(PetscSF sf,PetscSFLink link,Petsc
     }
     ierr = MPI_Startall_irecv(buflen,link->unit,nreqs,reqs);CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
-}
 
-/* Post Isend for SFBASIC. If use non-GPU aware MPI, we might need to copy data from device buf to host buf */
-static PetscErrorCode PetscSFLinkPostIsend_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
-{
-  PetscErrorCode    ierr;
-  PetscMPIInt       nreqs;
-  MPI_Request       *reqs = NULL;
-  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
-  PetscInt          buflen = (direction == PETSCSF_ROOT2LEAF) ? bas->rootbuflen[PETSCSF_REMOTE] : sf->leafbuflen[PETSCSF_REMOTE];
-
-  PetscFunctionBegin;
+  buflen = (direction == PETSCSF_ROOT2LEAF) ? bas->rootbuflen[PETSCSF_REMOTE] : sf->leafbuflen[PETSCSF_REMOTE];
   if (buflen) {
     if (direction == PETSCSF_ROOT2LEAF) {
       nreqs  = bas->nrootreqs;
@@ -171,8 +161,7 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf,MPI_Datatype unit,PetscMemType x
       }
     }
   }
-  link->PrePack               = PetscSFLinkPostIrecv_MPI;
-  link->StartCommunication    = PetscSFLinkPostIsend_MPI;
+  link->StartCommunication    = PetscSFLinkStartRequests_MPI;
   link->FinishCommunication   = PetscSFLinkWaitRequests_MPI;
 
 found:
