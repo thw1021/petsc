@@ -41,7 +41,6 @@ static PetscErrorCode PetscSFBcastBegin_Allgather(PetscSF sf,MPI_Datatype unit,P
 
   PetscFunctionBegin;
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_BCAST,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkBuildDependenceBegin(sf,link);CHKERRQ(ierr);
   ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
   ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
@@ -65,11 +64,9 @@ static PetscErrorCode PetscSFReduceBegin_Allgather(PetscSF sf,MPI_Datatype unit,
 
   PetscFunctionBegin;
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_REDUCE,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkBuildDependenceBegin(sf,link);CHKERRQ(ierr);
-  if (op == MPIU_REPLACE) {
+  if (op == MPI_REPLACE) {
     /* REPLACE is only meaningful when all processes have the same leafdata to reduce. Therefore copy from local leafdata is fine */
     ierr = PetscLayoutGetRange(sf->map,&rstart,NULL);CHKERRQ(ierr);
-    ierr = PetscSFLinkSetPackStream(sf,link,PETSCSF_LEAF2ROOT,PETSCSF_REMOTE);CHKERRQ(ierr); /* Basically do link->stream = link->remote_comm_stream */
     ierr = (*link->Memcpy)(link,rootmtype,rootdata,leafmtype,(const char*)leafdata+(size_t)rstart*link->unitbytes,(size_t)sf->nroots*link->unitbytes);CHKERRQ(ierr);
     if (PetscMemTypeDevice(leafmtype) && PetscMemTypeHost(rootmtype)) {ierr = (*link->SyncStream)(link);CHKERRQ(ierr);} /* Sync the device to host memcpy */
   } else {

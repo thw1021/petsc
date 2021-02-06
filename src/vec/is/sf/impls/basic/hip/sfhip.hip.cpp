@@ -790,99 +790,12 @@ PETSC_EXTERN PetscErrorCode PetscSFFree_HIP(PetscMemType mtype,void* ptr)
   PetscFunctionReturn(0);
 }
 
-/* Build dependence between input data (on input_stream) and Pack (on remote_comm_stream) and Scatter (on scatter_stream) */
-PetscErrorCode PetscSFLinkBuildDependenceBegin_HIP(PetscSF sf,PetscSFLink link)
-{
-  PetscErrorCode ierr;
-  hipError_t     cerr;
-  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
-
-  PetscFunctionBegin;
-  if (PetscMemTypeDevice(link->rootmtype) || PetscMemTypeDevice(link->leafmtype)) {
-    if (sf->unknown_inout_streams) {ierr = (*link->SyncDevice)(link);CHKERRQ(ierr);}
-    cerr = hipEventRecord(link->dataReady,link->dataStream);CHKERRHIP(cerr);
-    if (sf->leafbuflen[PETSCSF_LOCAL] || bas->rootbuflen[PETSCSF_LOCAL]) {
-      cerr = hipStreamWaitEvent(link->local_comm_stream,link->dataReady,0);CHKERRHIP(cerr);
-    }
-    if (sf->leafbuflen[PETSCSF_REMOTE] || bas->rootbuflen[PETSCSF_REMOTE]) {
-      cerr = hipStreamWaitEvent(link->remote_comm_stream,link->dataReady,0);CHKERRHIP(cerr);
-    }
-  }
-  PetscFunctionReturn(0);
-}
-
-/* The event recording conditions must match with wait conditions in PetscSFLinkBuildDependenceEnd_HIP */
-PetscErrorCode PetscSFLinkRecordEndOfLocalCommunication_HIP(PetscSF sf,PetscSFLink link)
-{
-  hipError_t     cerr;
-  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
-
-  PetscFunctionBegin;
-  if ((PetscMemTypeDevice(link->leafmtype) && sf->leafbuflen[PETSCSF_LOCAL]) || (PetscMemTypeDevice(link->rootmtype) && bas->rootbuflen[PETSCSF_LOCAL])) {
-    cerr = hipEventRecord(link->local_comm_end,link->local_comm_stream);CHKERRHIP(cerr);
-  }
-  PetscFunctionReturn(0);
-}
-
-/* The event recording conditions must match with wait conditions in PetscSFLinkBuildDependenceEnd_HIP */
-PetscErrorCode PetscSFLinkRecordEndOfRemoteCommunication_HIP(PetscSF sf,PetscSFLink link)
-{
-  hipError_t     cerr;
-  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
-
-  PetscFunctionBegin;
-  if ((PetscMemTypeDevice(link->leafmtype) && sf->leafbuflen[PETSCSF_REMOTE]) || (PetscMemTypeDevice(link->rootmtype) && bas->rootbuflen[PETSCSF_REMOTE])) {
-    cerr = hipEventRecord(link->remote_comm_end,link->remote_comm_stream);CHKERRHIP(cerr);
-  }
-  PetscFunctionReturn(0);
-}
-
-/* Build dependence between local/remote_comm_stream and dataStream
-   The conditions must match with PetscSFLinkRecordEndOfLocal/RemoteCommunication_HIP(), otherwise dataStream will wait on non-existing events!
-*/
-PetscErrorCode PetscSFLinkBuildDependenceEnd_HIP(PetscSF sf,PetscSFLink link)
-{
-  PetscErrorCode ierr;
-  hipError_t    cerr;
-  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
-  PetscBool      hasDeviceData = PETSC_FALSE;
-
-  PetscFunctionBegin;
-  /* If there is non-null device local buffer, build the local_comm_end dependance */
-  if ((PetscMemTypeDevice(link->leafmtype) && sf->leafbuflen[PETSCSF_LOCAL]) || (PetscMemTypeDevice(link->rootmtype) && bas->rootbuflen[PETSCSF_LOCAL])) {
-    cerr = hipStreamWaitEvent(link->dataStream,link->local_comm_end,0);CHKERRHIP(cerr);
-    hasDeviceData = PETSC_TRUE;
-  }
-
-  /* If there is non-null device remote buffer, build the remote_comm_end dependance */
-  if ((PetscMemTypeDevice(link->leafmtype) && sf->leafbuflen[PETSCSF_REMOTE]) || (PetscMemTypeDevice(link->rootmtype) && bas->rootbuflen[PETSCSF_REMOTE])) {
-    cerr = hipStreamWaitEvent(link->dataStream,link->remote_comm_end,0);CHKERRHIP(cerr);
-    hasDeviceData = PETSC_TRUE;
-  }
-
-  if (hasDeviceData && sf->unknown_inout_streams) {ierr = (*link->SyncDevice)(link);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
-}
-
-
-PetscErrorCode PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_HIP(PetscSF sf,PetscSFLink link)
-{
-  PetscFunctionBegin;
-  hipError_t cerr = hipStreamWaitEvent(link->remote_comm_stream,link->local_comm_end,0);CHKERRHIP(cerr);
-  PetscFunctionReturn(0);
-}
-
 /* Destructor when the link uses MPI for communication on HIP device */
 static PetscErrorCode PetscSFLinkDestroy_MPI_HIP(PetscSF sf,PetscSFLink link)
 {
   hipError_t    cerr;
 
   PetscFunctionBegin;
-  cerr = hipEventDestroy(link->dataReady);CHKERRHIP(cerr);
-  cerr = hipEventDestroy(link->local_comm_end);CHKERRHIP(cerr);
-  cerr = hipEventDestroy(link->remote_comm_end);CHKERRHIP(cerr);
-  if (link->remote_comm_stream) {cerr = hipStreamDestroy(link->remote_comm_stream);CHKERRHIP(cerr);}
-  if (link->local_comm_stream) {cerr = hipStreamDestroy(link->local_comm_stream);CHKERRHIP(cerr);}
   for (int i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
     cerr = hipFree(link->rootbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRHIP(cerr);
     cerr = hipFree(link->leafbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRHIP(cerr);
@@ -904,7 +817,6 @@ PETSC_INTERN PetscErrorCode PetscSFLinkSetUp_HIP(PetscSF sf,PetscSFLink link,MPI
 #if defined(PETSC_HAVE_COMPLEX)
   PetscInt       nPetscComplex=0;
 #endif
-  int            greatestPriority;
 
   PetscFunctionBegin;
   if (link->deviceinited) PetscFunctionReturn(0);
@@ -983,23 +895,12 @@ PETSC_INTERN PetscErrorCode PetscSFLinkSetUp_HIP(PetscSF sf,PetscSFLink link,MPI
   link->maxResidentThreadsPerGPU = sf->maxResidentThreadsPerGPU;
 
   link->dataStream = PetscDefaultHipStream;
+  link->stream     = PetscDefaultHipStream;
 
-  cerr = hipEventCreate(&link->dataReady);CHKERRHIP(cerr);
-  cerr = hipEventCreate(&link->local_comm_end);CHKERRHIP(cerr);
-  cerr = hipEventCreate(&link->remote_comm_end);CHKERRHIP(cerr);
-  cerr = hipDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRHIP(cerr);
-  cerr = hipStreamCreateWithPriority(&link->remote_comm_stream,hipStreamNonBlocking,greatestPriority);CHKERRHIP(cerr);
-  cerr = hipStreamCreateWithPriority(&link->local_comm_stream,hipStreamNonBlocking,greatestPriority);CHKERRHIP(cerr);
-
-  link->Destroy                              = PetscSFLinkDestroy_MPI_HIP;
-  link->SyncDevice                           = PetscSFLinkSyncDevice_HIP;
-  link->SyncStream                           = PetscSFLinkSyncStream_HIP;
-  link->Memcpy                               = PetscSFLinkMemcpy_HIP;
-  link->BuildDependenceBegin                 = PetscSFLinkBuildDependenceBegin_HIP;
-  link->BuildDependenceEnd                   = PetscSFLinkBuildDependenceEnd_HIP;
-  link->BuildDependenceBetweenLocalAndRemote = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_HIP;
-  link->EndLocalScatter                      = PetscSFLinkRecordEndOfLocalCommunication_HIP;
-  link->EndUnpackRemote                      = PetscSFLinkRecordEndOfRemoteCommunication_HIP;
+  link->Destroy    = PetscSFLinkDestroy_MPI_HIP;
+  link->SyncDevice = PetscSFLinkSyncDevice_HIP;
+  link->SyncStream = PetscSFLinkSyncStream_HIP;
+  link->Memcpy     = PetscSFLinkMemcpy_HIP;
 
   link->deviceinited = PETSC_TRUE;
   PetscFunctionReturn(0);

@@ -911,98 +911,12 @@ PetscErrorCode PetscSFFree_CUDA(PetscMemType mtype,void* ptr)
   PetscFunctionReturn(0);
 }
 
-/* Build dependence between input data (on input_stream) and Pack (on remote_comm_stream) and Scatter (on scatter_stream) */
-PetscErrorCode PetscSFLinkBuildDependenceBegin_CUDA(PetscSF sf,PetscSFLink link)
-{
-  PetscErrorCode ierr;
-  cudaError_t    cerr;
-  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
-
-  PetscFunctionBegin;
-  if (PetscMemTypeDevice(link->rootmtype) || PetscMemTypeDevice(link->leafmtype)) {
-    if (sf->unknown_inout_streams) {ierr = (*link->SyncDevice)(link);CHKERRQ(ierr);}
-    cerr = cudaEventRecord(link->dataReady,link->dataStream);CHKERRCUDA(cerr);
-    if (sf->leafbuflen[PETSCSF_LOCAL] || bas->rootbuflen[PETSCSF_LOCAL]) {
-      cerr = cudaStreamWaitEvent(link->local_comm_stream,link->dataReady,0);CHKERRCUDA(cerr);
-    }
-    if (sf->leafbuflen[PETSCSF_REMOTE] || bas->rootbuflen[PETSCSF_REMOTE]) {
-      cerr = cudaStreamWaitEvent(link->remote_comm_stream,link->dataReady,0);CHKERRCUDA(cerr);
-    }
-  }
-  PetscFunctionReturn(0);
-}
-
-/* The event recording conditions must match with wait conditions in PetscSFLinkBuildDependenceEnd_CUDA */
-PetscErrorCode PetscSFLinkRecordEndOfLocalCommunication_CUDA(PetscSF sf,PetscSFLink link)
-{
-  cudaError_t    cerr;
-  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
-
-  PetscFunctionBegin;
-  if ((PetscMemTypeDevice(link->leafmtype) && sf->leafbuflen[PETSCSF_LOCAL]) || (PetscMemTypeDevice(link->rootmtype) && bas->rootbuflen[PETSCSF_LOCAL])) {
-    cerr = cudaEventRecord(link->local_comm_end,link->local_comm_stream);CHKERRCUDA(cerr);
-  }
-  PetscFunctionReturn(0);
-}
-
-/* The event recording conditions must match with wait conditions in PetscSFLinkBuildDependenceEnd_CUDA */
-PetscErrorCode PetscSFLinkRecordEndOfRemoteCommunication_CUDA(PetscSF sf,PetscSFLink link)
-{
-  cudaError_t    cerr;
-  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
-
-  PetscFunctionBegin;
-  if ((PetscMemTypeDevice(link->leafmtype) && sf->leafbuflen[PETSCSF_REMOTE]) || (PetscMemTypeDevice(link->rootmtype) && bas->rootbuflen[PETSCSF_REMOTE])) {
-    cerr = cudaEventRecord(link->remote_comm_end,link->remote_comm_stream);CHKERRCUDA(cerr);
-  }
-  PetscFunctionReturn(0);
-}
-
-/* Build dependence between local/remote_comm_stream and dataStream
-   The conditions must match with PetscSFLinkRecordEndOfLocal/RemoteCommunication_CUDA(), otherwise dataStream will wait on non-existing events!
-*/
-PetscErrorCode PetscSFLinkBuildDependenceEnd_CUDA(PetscSF sf,PetscSFLink link)
-{
-  PetscErrorCode ierr;
-  cudaError_t    cerr;
-  PetscSF_Basic  *bas = (PetscSF_Basic *)sf->data;
-  PetscBool      hasDeviceData = PETSC_FALSE;
-
-  PetscFunctionBegin;
-  /* If there is non-null device local buffer, build the local_comm_end dependance */
-  if ((PetscMemTypeDevice(link->leafmtype) && sf->leafbuflen[PETSCSF_LOCAL]) || (PetscMemTypeDevice(link->rootmtype) && bas->rootbuflen[PETSCSF_LOCAL])) {
-    cerr = cudaStreamWaitEvent(link->dataStream,link->local_comm_end,0);CHKERRCUDA(cerr);
-    hasDeviceData = PETSC_TRUE;
-  }
-
-  /* If there is non-null device remote buffer, build the remote_comm_end dependance */
-  if ((PetscMemTypeDevice(link->leafmtype) && sf->leafbuflen[PETSCSF_REMOTE]) || (PetscMemTypeDevice(link->rootmtype) && bas->rootbuflen[PETSCSF_REMOTE])) {
-    cerr = cudaStreamWaitEvent(link->dataStream,link->remote_comm_end,0);CHKERRCUDA(cerr);
-    hasDeviceData = PETSC_TRUE;
-  }
-
-  if (hasDeviceData && sf->unknown_inout_streams) {ierr = (*link->SyncDevice)(link);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA(PetscSF sf,PetscSFLink link)
-{
-  PetscFunctionBegin;
-  cudaError_t cerr = cudaStreamWaitEvent(link->remote_comm_stream,link->local_comm_end,0);CHKERRCUDA(cerr);
-  PetscFunctionReturn(0);
-}
-
 /* Destructor when the link uses MPI for communication on CUDA device */
 static PetscErrorCode PetscSFLinkDestroy_MPI_CUDA(PetscSF sf,PetscSFLink link)
 {
   cudaError_t    cerr;
 
   PetscFunctionBegin;
-  cerr = cudaEventDestroy(link->dataReady);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->local_comm_end);CHKERRCUDA(cerr);
-  cerr = cudaEventDestroy(link->remote_comm_end);CHKERRCUDA(cerr);
-  if (link->remote_comm_stream) {cerr = cudaStreamDestroy(link->remote_comm_stream);CHKERRCUDA(cerr);}
-  if (link->local_comm_stream) {cerr = cudaStreamDestroy(link->local_comm_stream);CHKERRCUDA(cerr);}
   for (int i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
     cerr = cudaFree(link->rootbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRCUDA(cerr);
     cerr = cudaFree(link->leafbuf_alloc[i][PETSC_MEMTYPE_DEVICE]);CHKERRCUDA(cerr);
@@ -1020,7 +934,6 @@ PetscErrorCode PetscSFLinkSetUp_CUDA(PetscSF sf,PetscSFLink link,MPI_Datatype un
 #if defined(PETSC_HAVE_COMPLEX)
   PetscInt       nPetscComplex=0;
 #endif
-  int            greatestPriority;
 
   PetscFunctionBegin;
   if (link->deviceinited) PetscFunctionReturn(0);
@@ -1098,25 +1011,13 @@ PetscErrorCode PetscSFLinkSetUp_CUDA(PetscSF sf,PetscSFLink link,MPI_Datatype un
   }
   link->maxResidentThreadsPerGPU = sf->maxResidentThreadsPerGPU;
 
-  link->dataStream = PetscDefaultCudaStream;
+  link->dataStream         = PetscDefaultCudaStream;
+  link->stream             = PetscDefaultCudaStream;
+  link->Destroy            = PetscSFLinkDestroy_MPI_CUDA;
+  link->SyncDevice         = PetscSFLinkSyncDevice_CUDA;
+  link->SyncStream         = PetscSFLinkSyncStream_CUDA;
+  link->Memcpy             = PetscSFLinkMemcpy_CUDA;
 
-  cerr = cudaEventCreate(&link->dataReady);CHKERRCUDA(cerr);
-  cerr = cudaEventCreate(&link->local_comm_end);CHKERRCUDA(cerr);
-  cerr = cudaEventCreate(&link->remote_comm_end);CHKERRCUDA(cerr);
-  cerr = cudaDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
-  cerr = cudaStreamCreateWithPriority(&link->local_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
-
-  link->Destroy                              = PetscSFLinkDestroy_MPI_CUDA;
-  link->SyncDevice                           = PetscSFLinkSyncDevice_CUDA;
-  link->SyncStream                           = PetscSFLinkSyncStream_CUDA;
-  link->Memcpy                               = PetscSFLinkMemcpy_CUDA;
-  link->BuildDependenceBegin                 = PetscSFLinkBuildDependenceBegin_CUDA;
-  link->BuildDependenceEnd                   = PetscSFLinkBuildDependenceEnd_CUDA;
-  link->BuildDependenceBetweenLocalAndRemote = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication_CUDA;
-  link->EndLocalScatter                      = PetscSFLinkRecordEndOfLocalCommunication_CUDA;
-  link->EndUnpackRemote                      = PetscSFLinkRecordEndOfRemoteCommunication_CUDA;
-
-  link->deviceinited = PETSC_TRUE;
+  link->deviceinited       = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
