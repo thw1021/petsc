@@ -96,7 +96,7 @@ static PetscErrorCode PetscSFBcastAndOpBegin_Allgatherv(PetscSF sf,MPI_Datatype 
 
   PetscFunctionBegin;
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_BCAST,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkBuildDependenceBegin(sf,link);CHKERRQ(ierr);
+  ierr = PetscSFLinkBuildDependenceBegin(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
   ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
@@ -120,7 +120,7 @@ static PetscErrorCode PetscSFReduceBegin_Allgatherv(PetscSF sf,MPI_Datatype unit
 
   PetscFunctionBegin;
   ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_REDUCE,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkBuildDependenceBegin(sf,link);CHKERRQ(ierr);
+  ierr = PetscSFLinkBuildDependenceBegin(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   if (op == MPIU_REPLACE) {
     /* REPLACE is only meaningful when all processes have the same leafdata to reduce. Therefore copying from local leafdata is fine */
     ierr = PetscLayoutGetRange(sf->map,&rstart,NULL);CHKERRQ(ierr);
