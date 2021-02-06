@@ -4,16 +4,17 @@
 
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 
-/* Post Irecv for SFBASIC.  */
-static PetscErrorCode PetscSFLinkPostIrecv_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
+/* Start MPI requests. If use non-GPU aware MPI, we might need to copy data from device buf to host buf */
+static PetscErrorCode PetscSFLinkStartRequests_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
   PetscErrorCode    ierr;
   PetscMPIInt       nreqs;
   MPI_Request       *reqs = NULL;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
-  PetscInt          buflen = (direction == PETSCSF_ROOT2LEAF) ? sf->leafbuflen[PETSCSF_REMOTE] : bas->rootbuflen[PETSCSF_REMOTE];
+  PetscInt          buflen;
 
   PetscFunctionBegin;
+  buflen = (direction == PETSCSF_ROOT2LEAF) ? sf->leafbuflen[PETSCSF_REMOTE] : bas->rootbuflen[PETSCSF_REMOTE];
   if (buflen) {
     if (direction == PETSCSF_ROOT2LEAF) {
       nreqs = sf->nleafreqs;
@@ -22,21 +23,10 @@ static PetscErrorCode PetscSFLinkPostIrecv_MPI(PetscSF sf,PetscSFLink link,Petsc
       nreqs = bas->nrootreqs;
       ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,direction,NULL,NULL,&reqs,NULL);CHKERRQ(ierr);
     }
-    ierr = MPI_Startall_irecv(buflen,link->unit,nreqs,reqs);CHKERRQ(ierr);
+    ierr = MPI_Startall_irecv(buflen,link->unit,nreqs,reqs);CHKERRMPI(ierr);
   }
-  PetscFunctionReturn(0);
-}
 
-/* Post Isend for SFBASIC. If use non-GPU aware MPI, we might need to copy data from device buf to host buf */
-static PetscErrorCode PetscSFLinkPostIsend_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
-{
-  PetscErrorCode    ierr;
-  PetscMPIInt       nreqs;
-  MPI_Request       *reqs = NULL;
-  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
-  PetscInt          buflen = (direction == PETSCSF_ROOT2LEAF) ? bas->rootbuflen[PETSCSF_REMOTE] : sf->leafbuflen[PETSCSF_REMOTE];
-
-  PetscFunctionBegin;
+  buflen = (direction == PETSCSF_ROOT2LEAF) ? bas->rootbuflen[PETSCSF_REMOTE] : sf->leafbuflen[PETSCSF_REMOTE];
   if (buflen) {
     if (direction == PETSCSF_ROOT2LEAF) {
       nreqs  = bas->nrootreqs;
@@ -48,7 +38,7 @@ static PetscErrorCode PetscSFLinkPostIsend_MPI(PetscSF sf,PetscSFLink link,Petsc
       ierr   = PetscSFLinkGetMPIBuffersAndRequests(sf,link,direction,NULL,NULL,NULL,&reqs);CHKERRQ(ierr);
     }
     ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,direction);CHKERRQ(ierr);
-    ierr = MPI_Startall_isend(buflen,link->unit,nreqs,reqs);CHKERRQ(ierr);
+    ierr = MPI_Startall_isend(buflen,link->unit,nreqs,reqs);CHKERRMPI(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -61,8 +51,8 @@ static PetscErrorCode PetscSFLinkWaitRequests_MPI(PetscSF sf,PetscSFLink link,Pe
   const PetscInt       rootdirect_mpi = link->rootdirect_mpi,leafdirect_mpi = link->leafdirect_mpi;
 
   PetscFunctionBegin;
-  ierr = MPI_Waitall(bas->nrootreqs,link->rootreqs[direction][rootmtype_mpi][rootdirect_mpi],MPI_STATUSES_IGNORE);CHKERRQ(ierr);
-  ierr = MPI_Waitall(sf->nleafreqs, link->leafreqs[direction][leafmtype_mpi][leafdirect_mpi],MPI_STATUSES_IGNORE);CHKERRQ(ierr);
+  ierr = MPI_Waitall(bas->nrootreqs,link->rootreqs[direction][rootmtype_mpi][rootdirect_mpi],MPI_STATUSES_IGNORE);CHKERRMPI(ierr);
+  ierr = MPI_Waitall(sf->nleafreqs, link->leafreqs[direction][leafmtype_mpi][leafdirect_mpi],MPI_STATUSES_IGNORE);CHKERRMPI(ierr);
   if (direction == PETSCSF_ROOT2LEAF) {
     ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_FALSE/* host2device after recving */);CHKERRQ(ierr);
   } else {
@@ -107,10 +97,10 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf,MPI_Datatype unit,PetscMemType x
   for (i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
     if (sfop == PETSCSF_BCAST) {
       rootdirect[i] = bas->rootcontig[i]; /* Pack roots */
-      leafdirect[i] = (sf->leafcontig[i] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE;  /* Unpack leaves */
+      leafdirect[i] = (sf->leafcontig[i] && op == MPI_REPLACE) ? PETSC_TRUE : PETSC_FALSE;  /* Unpack leaves */
     } else if (sfop == PETSCSF_REDUCE) {
       leafdirect[i] = sf->leafcontig[i];  /* Pack leaves */
-      rootdirect[i] = (bas->rootcontig[i] && op == MPIU_REPLACE) ? PETSC_TRUE : PETSC_FALSE; /* Unpack roots */
+      rootdirect[i] = (bas->rootcontig[i] && op == MPI_REPLACE) ? PETSC_TRUE : PETSC_FALSE; /* Unpack roots */
     } else { /* PETSCSF_FETCH */
       rootdirect[i] = PETSC_FALSE; /* FETCH always need a separate rootbuf */
       leafdirect[i] = PETSC_FALSE; /* We also force allocating a separate leafbuf so that leafdata and leafupdate can share mpi requests */
@@ -141,12 +131,12 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf,MPI_Datatype unit,PetscMemType x
         */
         if (rootdirect_mpi && sf->persistent && link->rootreqsinited[direction][rootmtype][1] && link->rootdatadirect[direction][rootmtype] != rootdata) {
           reqs = link->rootreqs[direction][rootmtype][1]; /* Here, rootmtype = rootmtype_mpi */
-          for (i=0; i<nrootreqs; i++) {if (reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&reqs[i]);CHKERRQ(ierr);}}
+          for (i=0; i<nrootreqs; i++) {if (reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&reqs[i]);CHKERRMPI(ierr);}}
           link->rootreqsinited[direction][rootmtype][1] = PETSC_FALSE;
         }
         if (leafdirect_mpi && sf->persistent && link->leafreqsinited[direction][leafmtype][1] && link->leafdatadirect[direction][leafmtype] != leafdata) {
           reqs = link->leafreqs[direction][leafmtype][1];
-          for (i=0; i<nleafreqs; i++) {if (reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&reqs[i]);CHKERRQ(ierr);}}
+          for (i=0; i<nleafreqs; i++) {if (reqs[i] != MPI_REQUEST_NULL) {ierr = MPI_Request_free(&reqs[i]);CHKERRMPI(ierr);}}
           link->leafreqsinited[direction][leafmtype][1] = PETSC_FALSE;
         }
         *p = link->next; /* Remove from available list */
@@ -171,8 +161,7 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf,MPI_Datatype unit,PetscMemType x
       }
     }
   }
-  link->PrePack               = PetscSFLinkPostIrecv_MPI;
-  link->StartCommunication    = PetscSFLinkPostIsend_MPI;
+  link->StartCommunication    = PetscSFLinkStartRequests_MPI;
   link->FinishCommunication   = PetscSFLinkWaitRequests_MPI;
 
 found:
