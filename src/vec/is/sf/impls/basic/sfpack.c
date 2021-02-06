@@ -1147,10 +1147,10 @@ PetscErrorCode PetscSFLinkUnpackRootData(PetscSF sf,PetscSFLink link,PetscSFScop
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (bas->rootbuflen[scope]) {
     ierr = PetscSFLinkSetUnpackStream(sf,link,PETSCSF_LEAF2ROOT,scope);CHKERRQ(ierr);
-    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);}
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkBuildDependenceBetweenLocalAndRemote(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);}
     ierr = PetscSFLinkUnpackRootData_Private(sf,link,scope,rootdata,op);CHKERRQ(ierr);
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfUnpackRemote(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);}
   }
-  if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfRemoteCommunication(sf,link);CHKERRQ(ierr);}
   ierr = PetscLogEventEnd(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1164,10 +1164,10 @@ PetscErrorCode PetscSFLinkUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScop
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (sf->leafbuflen[scope]) {
     ierr = PetscSFLinkSetUnpackStream(sf,link,PETSCSF_ROOT2LEAF,scope);CHKERRQ(ierr);
-    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkBuildDependenceBetweenLocalAndRemote(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
     ierr = PetscSFLinkUnpackLeafData_Private(sf,link,scope,leafdata,op);
+    if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfUnpackRemote(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}
   }
-  if (scope == PETSCSF_REMOTE) {ierr = PetscSFLinkRecordEndOfRemoteCommunication(sf,link);CHKERRQ(ierr);}
   ierr = PetscLogEventEnd(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1187,7 +1187,7 @@ PetscErrorCode PetscSFLinkFetchAndOpRemote(PetscSF sf,PetscSFLink link,void *roo
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (bas->rootbuflen[PETSCSF_REMOTE]) {
     ierr = PetscSFLinkSetUnpackStream(sf,link,PETSCSF_LEAF2ROOT,PETSCSF_REMOTE);CHKERRQ(ierr);
-    ierr = PetscSFLinkBuildDependenceBetweenLocalAndRemoteCommunication(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
+    ierr = PetscSFLinkBuildDependenceBetweenLocalAndRemote(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
     /* Do FetchAndOp on rootdata with rootbuf */
     ierr = PetscSFLinkGetFetchAndOp(link,rootmtype,op,bas->rootdups[PETSCSF_REMOTE],&FetchAndOp);CHKERRQ(ierr);
     ierr = PetscSFLinkGetRootPackOptAndIndices(sf,link,rootmtype,PETSCSF_REMOTE,&count,&start,&opt,&rootindices);CHKERRQ(ierr);
@@ -1212,7 +1212,7 @@ PetscErrorCode PetscSFLinkScatterLocal(PetscSF sf,PetscSFLink link,PetscSFDirect
   PetscBool            dstdups;
 
   if (!buflen) PetscFunctionReturn(0);
-  ierr = PetscSFLinkSetLocalScatterStream(sf,link);CHKERRQ(ierr);
+  ierr = PetscSFLinkSetScatterStream(sf,link,direction);CHKERRQ(ierr);
   if (rootmtype != leafmtype) { /* The cross memory space local scatter is done by pack, copy and unpack */
     if (direction == PETSCSF_ROOT2LEAF) {
       ierr     = PetscSFLinkPackRootData(sf,link,PETSCSF_LOCAL,rootdata);CHKERRQ(ierr);
@@ -1257,7 +1257,7 @@ PetscErrorCode PetscSFLinkScatterLocal(PetscSF sf,PetscSFLink link,PetscSFDirect
       }
     }
   }
-  ierr = PetscSFLinkRecordEndOfLocalCommunication(sf,link);CHKERRQ(ierr);
+  ierr = PetscSFLinkRecordEndOfScatterLocal(sf,link,direction);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1274,7 +1274,7 @@ PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *root
 
   PetscFunctionBegin;
   if (!bas->rootbuflen[PETSCSF_LOCAL]) PetscFunctionReturn(0);
-  ierr = PetscSFLinkSetLocalScatterStream(sf,link);CHKERRQ(ierr);
+  ierr = PetscSFLinkSetScatterStream(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   if (rootmtype != leafmtype) {
     /* The local communication has to go through pack and unpack */
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Doing PetscSFFetchAndOp with rootdata and leafdata on opposite side of CPU and GPU");
@@ -1284,7 +1284,7 @@ PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *root
     ierr = PetscSFLinkGetFetchAndOpLocal(link,rootmtype,op,bas->rootdups[PETSCSF_LOCAL],&FetchAndOpLocal);CHKERRQ(ierr);
     ierr = (*FetchAndOpLocal)(link,count,rootstart,rootopt,rootindices,rootdata,leafstart,leafopt,leafindices,leafdata,leafupdate);CHKERRQ(ierr);
   }
-  ierr = PetscSFLinkRecordEndOfLocalCommunication(sf,link);CHKERRQ(ierr);
+  ierr = PetscSFLinkRecordEndOfScatterLocal(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1450,8 +1450,10 @@ PetscErrorCode PetscSFSetUpPackFields(PetscSF sf)
     if (!sf->leafcontig[1]  && !ismulti) {ierr = PetscCheckDupsInt(sf->leafbuflen[1],  sf->rmine+sf->roffset[sf->ndranks],        &sf->leafdups[1]);CHKERRQ(ierr);}
     if (!bas->rootcontig[0] && !ismulti) {ierr = PetscCheckDupsInt(bas->rootbuflen[0], bas->irootloc,                             &bas->rootdups[0]);CHKERRQ(ierr);}
     if (!bas->rootcontig[1] && !ismulti) {ierr = PetscCheckDupsInt(bas->rootbuflen[1], bas->irootloc+bas->ioffset[bas->ndiranks], &bas->rootdups[1]);CHKERRQ(ierr);}
+   #if defined(PETSC_HAVE_NVSHMEM)
     ierr = PetscCheckIntersectionInt(sf->leafbuflen[0],sf->rmine,sf->leafbuflen[1],sf->rmine+sf->roffset[sf->ndranks],&sf->leafdups_inter);CHKERRQ(ierr);
     ierr = PetscCheckIntersectionInt(bas->rootbuflen[0],bas->irootloc,bas->rootbuflen[1],bas->irootloc+bas->ioffset[bas->ndiranks],&bas->rootdups_inter);CHKERRQ(ierr);
+   #endif
   }
 #endif
   PetscFunctionReturn(0);
