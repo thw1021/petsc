@@ -2869,10 +2869,8 @@ $        3
 @*/
 PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, const PetscInt cells[], PetscSF *vertexSF)
 {
-  PetscSF         sfPoint, sfVert;
-  PetscLayout     vLayout;
-  PetscSFNode    *vertexLocal, *vertexOwner, *remoteVertex;
-  PetscInt        numVerticesAdj, *verticesAdj, numVerticesGhost = 0, *localVertex, *cones, c, p, v, g, dim;
+  PetscSF         sfPoint;
+  PetscInt        numVerticesAdj, *verticesAdj, *cones, c, p, dim;
   PetscMPIInt     rank, size;
   PetscErrorCode  ierr;
 
@@ -2896,12 +2894,6 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
     if (numVertices == PETSC_DECIDE && NVertices == PETSC_DECIDE) NVertices = NVerticesInCells;
     else if (NVertices != PETSC_DECIDE && NVertices < NVerticesInCells) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Specified global number of vertices %D must be greater than or equal to the number of vertices in cells %D",NVertices,NVerticesInCells);
   }
-  /* Partition vertices */
-  ierr = PetscLayoutCreate(PetscObjectComm((PetscObject) dm), &vLayout);CHKERRQ(ierr);
-  ierr = PetscLayoutSetLocalSize(vLayout, numVertices);CHKERRQ(ierr);
-  ierr = PetscLayoutSetSize(vLayout, NVertices);CHKERRQ(ierr);
-  ierr = PetscLayoutSetBlockSize(vLayout, 1);CHKERRQ(ierr);
-  ierr = PetscLayoutSetUp(vLayout);CHKERRQ(ierr);
   /* Count locally unique vertices */
   {
     PetscHSetI vhash;
@@ -2937,44 +2929,16 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
       cones[c*numCorners+p] = lv+numCells;
     }
   }
-  /* Create SF for vertices */
-  ierr = PetscSFCreate(PetscObjectComm((PetscObject)dm), &sfVert);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) sfVert, "Vertex Ownership SF");CHKERRQ(ierr);
-  ierr = PetscSFSetFromOptions(sfVert);CHKERRQ(ierr);
-  ierr = PetscSFSetGraphLayout(sfVert, vLayout, numVerticesAdj, NULL, PETSC_OWN_POINTER, verticesAdj);CHKERRQ(ierr);
-  ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
-  /* Build pointSF */
-  ierr = PetscMalloc2(numVerticesAdj, &vertexLocal, numVertices, &vertexOwner);CHKERRQ(ierr);
-  for (v = 0; v < numVerticesAdj; ++v) {vertexLocal[v].index = v+numCells; vertexLocal[v].rank = rank;}
-  for (v = 0; v < numVertices;    ++v) {vertexOwner[v].index = -1;         vertexOwner[v].rank = -1;}
-  ierr = PetscSFReduceBegin(sfVert, MPIU_2INT, vertexLocal, vertexOwner, MPI_MAXLOC);CHKERRQ(ierr);
-  ierr = PetscSFReduceEnd(sfVert, MPIU_2INT, vertexLocal, vertexOwner, MPI_MAXLOC);CHKERRQ(ierr);
-  for (v = 0; v < numVertices;    ++v) if (vertexOwner[v].rank < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Global vertex %D was unclaimed", v + vLayout->rstart);
-  ierr = PetscSFBcastBegin(sfVert, MPIU_2INT, vertexOwner, vertexLocal);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sfVert, MPIU_2INT, vertexOwner, vertexLocal);CHKERRQ(ierr);
-  for (v = 0; v < numVerticesAdj; ++v) if (vertexLocal[v].rank != rank) ++numVerticesGhost;
-  ierr = PetscMalloc1(numVerticesGhost, &localVertex);CHKERRQ(ierr);
-  ierr = PetscMalloc1(numVerticesGhost, &remoteVertex);CHKERRQ(ierr);
-  for (v = 0, g = 0; v < numVerticesAdj; ++v) {
-    if (vertexLocal[v].rank != rank) {
-      localVertex[g]        = v+numCells;
-      remoteVertex[g].index = vertexLocal[v].index;
-      remoteVertex[g].rank  = vertexLocal[v].rank;
-      ++g;
-    }
-  }
-  ierr = PetscFree2(vertexLocal, vertexOwner);CHKERRQ(ierr);
-  if (g != numVerticesGhost) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of vertex ghosts %D should be %D", g, numVerticesGhost);
+  /* Build point sf */
   ierr = DMGetPointSF(dm, &sfPoint);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) sfPoint, "point SF");CHKERRQ(ierr);
-  ierr = PetscSFSetGraph(sfPoint, numCells+numVerticesAdj, numVerticesGhost, localVertex, PETSC_OWN_POINTER, remoteVertex, PETSC_OWN_POINTER);CHKERRQ(ierr);
-  ierr = PetscLayoutDestroy(&vLayout);CHKERRQ(ierr);
+  ierr = PetscSFBuildWithGlobalIndices(sfPoint, NVertices, numVertices, numVerticesAdj, verticesAdj, NULL, numCells, numVerticesAdj, NULL, NULL, numCells, PETSC_TRUE, vertexSF);CHKERRQ(ierr);
+  ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
+  if (vertexSF) {ierr = PetscObjectSetName((PetscObject)(*vertexSF), "Vertex Ownership SF");CHKERRQ(ierr);}
   /* Fill in the rest of the topology structure */
   ierr = DMPlexSymmetrize(dm);CHKERRQ(ierr);
   ierr = DMPlexStratify(dm);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(DMPLEX_BuildFromCellList,dm,0,0,0);CHKERRQ(ierr);
-  if (vertexSF) *vertexSF = sfVert;
-  else {ierr = PetscSFDestroy(&sfVert);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
