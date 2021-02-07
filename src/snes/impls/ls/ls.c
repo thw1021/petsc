@@ -252,6 +252,12 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
         snes->reason = SNES_DIVERGED_LINE_SEARCH;
         ierr         = SNESNEWTONLSCheckLocalMin_Private(snes,snes->jacobian,F,fnorm,&ismin);CHKERRQ(ierr);
         if (ismin) snes->reason = SNES_DIVERGED_LOCAL_MIN;
+        if (snes->errorifnotconverged && snes->reason) {
+          PetscViewer monitor;
+          ierr = SNESLineSearchGetDefaultMonitor(linesearch,&monitor);CHKERRQ(ierr);
+          if (!monitor) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_NOT_CONVERGED,"SNESSolve has not converged due to line search failure. Suggest running with -snes_linesearch_monitor");
+          else SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_NOT_CONVERGED,"SNESSolve has not converged due to line search failure.");
+        }
         break;
       }
     }
