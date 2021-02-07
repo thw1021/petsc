@@ -18,7 +18,7 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
   PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscInt       i,bsz;
-  PetscBool      iascii,isstring;
+  PetscBool      iascii,isstring,same_local_solves;
   PetscViewer    sviewer;
 
   PetscFunctionBegin;
@@ -33,7 +33,8 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
     if (osm->dm_subdomains) {ierr = PetscViewerASCIIPrintf(viewer,"  Additive Schwarz: using DM to define subdomains\n");CHKERRQ(ierr);}
     if (osm->loctype != PC_COMPOSITE_ADDITIVE) {ierr = PetscViewerASCIIPrintf(viewer,"  Additive Schwarz: local solve composition type - %s\n",PCCompositeTypes[osm->loctype]);CHKERRQ(ierr);}
     ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank);CHKERRMPI(ierr);
-    if (osm->same_local_solves) {
+    ierr = PCCheckLogicalCollective(PetscObjectComm((PetscObject)pc),pc,&same_local_solves);CHKERRMPI(ierr);
+    if (same_local_solves) {
       if (osm->ksp) {
         ierr = PetscViewerASCIIPrintf(viewer,"  Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:\n");CHKERRQ(ierr);
         ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
@@ -68,6 +69,31 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
     ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
     if (osm->ksp) {ierr = KSPView(osm->ksp[0],sviewer);CHKERRQ(ierr);}
     ierr = PetscViewerRestoreSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PCCheckLogicalCollective_ASM(MPI_Comm comm,PC pc,PetscBool *same)
+{
+  PC_ASM               *osm = (PC_ASM*)pc->data;
+  PetscInt             i,check[2];
+  PC                   subpc;
+  PetscErrorCode       ierr;
+
+  PetscFunctionBegin;
+  *same = PETSC_TRUE;
+  check[0] = osm->n_local;
+  check[1] = -osm->n_local;
+  ierr = MPIU_Allreduce(MPI_IN_PLACE,check,2,MPIU_INT,MPI_MAX,comm);CHKERRMPI(ierr);
+  if (-check[0] != check[1]) *same = PETSC_FALSE;
+  else {
+    for (i = 0; i < osm->n_local && *same; ++i) {
+      ierr = KSPCheckLogicalCollective(comm,osm->ksp[i],same);CHKERRQ(ierr);
+      if (*same) {
+        ierr = KSPGetPC(osm->ksp[i],&subpc);CHKERRQ(ierr);
+        ierr = PCCheckLogicalCollective(comm,subpc,same);CHKERRQ(ierr);
+      }
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -924,12 +950,7 @@ static PetscErrorCode  PCASMGetSubKSP_ASM(PC pc,PetscInt *n_local,PetscInt *firs
     ierr          = MPI_Scan(&osm->n_local_true,first_local,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)pc));CHKERRQ(ierr);
     *first_local -= osm->n_local_true;
   }
-  if (ksp) {
-    /* Assume that local solves are now different; not necessarily
-       true though!  This flag is used only for PCView_ASM() */
-    *ksp                   = osm->ksp;
-    osm->same_local_solves = PETSC_FALSE;
-  }
+  if (ksp) *ksp   = osm->ksp;
   PetscFunctionReturn(0);
 }
 
@@ -1367,7 +1388,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC pc)
   osm->pmat              = NULL;
   osm->type              = PC_ASM_RESTRICT;
   osm->loctype           = PC_COMPOSITE_ADDITIVE;
-  osm->same_local_solves = PETSC_TRUE;
   osm->sort_indices      = PETSC_TRUE;
   osm->dm_subdomains     = PETSC_FALSE;
   osm->sub_mat_type      = NULL;
@@ -1383,6 +1403,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC pc)
   pc->ops->setuponblocks   = PCSetUpOnBlocks_ASM;
   pc->ops->view            = PCView_ASM;
   pc->ops->applyrichardson = NULL;
+  pc->ops->checklogicalcollective = PCCheckLogicalCollective_ASM;
 
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetLocalSubdomains_C",PCASMSetLocalSubdomains_ASM);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCASMSetTotalSubdomains_C",PCASMSetTotalSubdomains_ASM);CHKERRQ(ierr);
