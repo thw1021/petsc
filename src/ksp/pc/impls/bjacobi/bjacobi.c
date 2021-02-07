@@ -186,7 +186,7 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
   PetscErrorCode       ierr;
   PetscMPIInt          rank;
   PetscInt             i;
-  PetscBool            iascii,isstring,isdraw;
+  PetscBool            iascii,isstring,isdraw,same_local_solves;
   PetscViewer          sviewer;
 
   PetscFunctionBegin;
@@ -199,7 +199,8 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
     }
     ierr = PetscViewerASCIIPrintf(viewer,"  number of blocks = %D\n",jac->n);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank);CHKERRMPI(ierr);
-    if (jac->same_local_solves) {
+    ierr = PCCheckLogicalCollective(PetscObjectComm((PetscObject)pc),pc,&same_local_solves);CHKERRMPI(ierr);
+    if (same_local_solves) {
       ierr = PetscViewerASCIIPrintf(viewer,"  Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:\n");CHKERRQ(ierr);
       if (jac->ksp && !jac->psubcomm) {
         ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
@@ -270,6 +271,31 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PCCheckLogicalCollective_BJacobi(MPI_Comm comm,PC pc,PetscBool *same)
+{
+  PC_BJacobi           *jac = (PC_BJacobi*)pc->data;
+  PetscInt             i,check[2];
+  PC                   subpc;
+  PetscErrorCode       ierr;
+
+  PetscFunctionBegin;
+  *same = PETSC_TRUE;
+  check[0] = jac->n_local;
+  check[1] = -jac->n_local;
+  ierr = MPIU_Allreduce(MPI_IN_PLACE,check,2,MPIU_INT,MPI_MAX,comm);CHKERRMPI(ierr);
+  if (-check[0] != check[1]) *same = PETSC_FALSE;
+  else {
+    for (i = 0; i < jac->n_local && *same; ++i) {
+      ierr = KSPCheckLogicalCollective(comm,jac->ksp[i],same);CHKERRQ(ierr);
+      if (*same) {
+        ierr = KSPGetPC(jac->ksp[i],&subpc);CHKERRQ(ierr);
+        ierr = PCCheckLogicalCollective(comm,subpc,same);CHKERRQ(ierr);
+      }
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
 /* -------------------------------------------------------------------------------------*/
 
 static PetscErrorCode  PCBJacobiGetSubKSP_BJacobi(PC pc,PetscInt *n_local,PetscInt *first_local,KSP **ksp)
@@ -281,10 +307,7 @@ static PetscErrorCode  PCBJacobiGetSubKSP_BJacobi(PC pc,PetscInt *n_local,PetscI
 
   if (n_local) *n_local = jac->n_local;
   if (first_local) *first_local = jac->first_local;
-  *ksp                   = jac->ksp;
-  jac->same_local_solves = PETSC_FALSE;        /* Assume that local solves are now different;
-                                                  not necessarily true though!  This flag is
-                                                  used only for PCView_BJacobi() */
+  if (ksp) *ksp                 = jac->ksp;
   PetscFunctionReturn(0);
 }
 
@@ -560,13 +583,13 @@ PETSC_EXTERN PetscErrorCode PCCreate_BJacobi(PC pc)
   pc->ops->setfromoptions  = PCSetFromOptions_BJacobi;
   pc->ops->view            = PCView_BJacobi;
   pc->ops->applyrichardson = NULL;
+  pc->ops->checklogicalcollective = PCCheckLogicalCollective_BJacobi;
 
   pc->data               = (void*)jac;
   jac->n                 = -1;
   jac->n_local           = -1;
   jac->first_local       = rank;
   jac->ksp               = NULL;
-  jac->same_local_solves = PETSC_TRUE;
   jac->g_lens            = NULL;
   jac->l_lens            = NULL;
   jac->psubcomm          = NULL;
