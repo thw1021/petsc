@@ -990,8 +990,8 @@ PetscErrorCode  PCSetUp(PC pc)
     PetscFunctionReturn(0);
   } else {
     if (matnonzerostate > pc->matnonzerostate) {
-       ierr = PetscInfo(pc,"Setting up PC with different nonzero pattern\n");CHKERRQ(ierr);
-       pc->flag = DIFFERENT_NONZERO_PATTERN;
+      ierr = PetscInfo(pc,"Setting up PC with different nonzero pattern\n");CHKERRQ(ierr);
+      pc->flag = DIFFERENT_NONZERO_PATTERN;
     } else {
       ierr = PetscInfo(pc,"Setting up PC with same nonzero pattern\n");CHKERRQ(ierr);
       pc->flag = SAME_NONZERO_PATTERN;
@@ -1648,6 +1648,30 @@ PetscErrorCode  PCLoad(PC newdm, PetscViewer viewer)
     ierr = (*newdm->ops->load)(newdm,viewer);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
+}
+
+/*@
+   PCCheckLogicalCollective - Compares a PC context within a communicator
+
+   Collective on PC
+
+   Input Parameters:
++  obj  - the context
+-  comm - the communicator
+
+    Output Parameter:
+.  same - whether the context is the same accross the communicator
+
+   Level: developer
+
+   Note:
+    The comparison mechanism is very basic and not thorough even for simple PC such as PCBJACOBI
+
+.seealso: KSPCheckLogicalCollective()
+@*/
+PetscErrorCode PCCheckLogicalCollective(MPI_Comm comm,PC obj,PetscBool *same)
+{
+KSPAndPCCheckLogicalCollective(PC)
 }
 
 #include <petscdraw.h>

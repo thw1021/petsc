@@ -79,10 +79,11 @@ PETSC_EXTERN PetscErrorCode PCModifySubMatrices(PC,PetscInt,const IS[],const IS[
 
 PETSC_EXTERN PetscErrorCode PCSetOperators(PC,Mat,Mat);
 PETSC_EXTERN PetscErrorCode PCGetOperators(PC,Mat*,Mat*);
-PETSC_EXTERN PetscErrorCode PCGetOperatorsSet(PC,PetscBool *,PetscBool *);
+PETSC_EXTERN PetscErrorCode PCGetOperatorsSet(PC,PetscBool*,PetscBool*);
 
 PETSC_EXTERN PetscErrorCode PCView(PC,PetscViewer);
 PETSC_EXTERN PetscErrorCode PCLoad(PC,PetscViewer);
+PETSC_EXTERN PetscErrorCode PCCheckLogicalCollective(MPI_Comm,PC,PetscBool*);
 PETSC_EXTERN PetscErrorCode PCViewFromOptions(PC,PetscObject,const char[]);
 
 PETSC_EXTERN PetscErrorCode PCSetOptionsPrefix(PC,const char[]);
@@ -441,6 +442,7 @@ PETSC_EXTERN PetscErrorCode PCHPDDMSetRHSMat(PC,Mat);
 PETSC_EXTERN PetscErrorCode PCHPDDMHasNeumannMat(PC,PetscBool);
 PETSC_EXTERN PetscErrorCode PCHPDDMSetCoarseCorrectionType(PC,PCHPDDMCoarseCorrectionType);
 PETSC_EXTERN PetscErrorCode PCHPDDMGetCoarseCorrectionType(PC,PCHPDDMCoarseCorrectionType*);
+PETSC_EXTERN PetscErrorCode PCHPDDMGetSTShareSubPC(PC,PetscBool*);
 PETSC_EXTERN PetscErrorCode PCHPDDMFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PCHPDDMInitializePackage(void);
 
