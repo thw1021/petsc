@@ -1652,95 +1652,6 @@ PetscErrorCode MatMumpsGatherNonzerosOnMaster(MatReuse reuse,Mat_MUMPS *mumps)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode MatFactorNumeric_MUMPS(Mat F,Mat A,const MatFactorInfo *info)
-{
-  Mat_MUMPS      *mumps =(Mat_MUMPS*)(F)->data;
-  PetscErrorCode ierr;
-  PetscBool      isMPIAIJ;
-
-  PetscFunctionBegin;
-  if (mumps->id.INFOG(1) < 0 && !(mumps->id.INFOG(1) == -16 && mumps->id.INFOG(1) == 0)) {
-    if (mumps->id.INFOG(1) == -6) {
-      ierr = PetscInfo2(A,"MatFactorNumeric is called with singular matrix structure, INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
-    }
-    ierr = PetscInfo2(A,"MatFactorNumeric is called after analysis phase fails, INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
-    PetscFunctionReturn(0);
-  }
-
-  ierr = (*mumps->ConvertToTriples)(A, 1, MAT_REUSE_MATRIX, mumps);CHKERRQ(ierr);
-  ierr = MatMumpsGatherNonzerosOnMaster(MAT_REUSE_MATRIX,mumps);CHKERRQ(ierr);
-
-  /* numerical factorization phase */
-  /*-------------------------------*/
-  mumps->id.job = JOB_FACTNUMERIC;
-  if (!mumps->id.ICNTL(18)) { /* A is centralized */
-    if (!mumps->myid) {
-      mumps->id.a = (MumpsScalar*)mumps->val;
-    }
-  } else {
-    mumps->id.a_loc = (MumpsScalar*)mumps->val;
-  }
-  PetscMUMPS_c(mumps);
-  if (mumps->id.INFOG(1) < 0) {
-    if (A->erroriffailure) {
-      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MUMPS in numerical factorization phase: INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));
-    } else {
-      if (mumps->id.INFOG(1) == -10) { /* numerically singular matrix */
-        ierr = PetscInfo2(F,"matrix is numerically singular, INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
-        F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
-      } else if (mumps->id.INFOG(1) == -13) {
-        ierr = PetscInfo2(F,"MUMPS in numerical factorization phase: INFOG(1)=%d, cannot allocate required memory %d megabytes\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
-        F->factorerrortype = MAT_FACTOR_OUTMEMORY;
-      } else if (mumps->id.INFOG(1) == -8 || mumps->id.INFOG(1) == -9 || (-16 < mumps->id.INFOG(1) && mumps->id.INFOG(1) < -10)) {
-        ierr = PetscInfo2(F,"MUMPS in numerical factorization phase: INFOG(1)=%d, INFO(2)=%d, problem with workarray \n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
-        F->factorerrortype = MAT_FACTOR_OUTMEMORY;
-      } else {
-        ierr = PetscInfo2(F,"MUMPS in numerical factorization phase: INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
-        F->factorerrortype = MAT_FACTOR_OTHER;
-      }
-    }
-  }
-  if (!mumps->myid && mumps->id.ICNTL(16) > 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"  mumps->id.ICNTL(16):=%d\n",mumps->id.INFOG(16));
-
-  F->assembled    = PETSC_TRUE;
-  mumps->matstruc = SAME_NONZERO_PATTERN;
-  if (F->schur) { /* reset Schur status to unfactored */
-#if defined(PETSC_HAVE_CUDA)
-    F->schur->offloadmask = PETSC_OFFLOAD_CPU;
-#endif
-    if (mumps->id.ICNTL(19) == 1) { /* stored by rows */
-      mumps->id.ICNTL(19) = 2;
-      ierr = MatTranspose(F->schur,MAT_INPLACE_MATRIX,&F->schur);CHKERRQ(ierr);
-    }
-    ierr = MatFactorRestoreSchurComplement(F,NULL,MAT_FACTOR_SCHUR_UNFACTORED);CHKERRQ(ierr);
-  }
-
-  /* just to be sure that ICNTL(19) value returned by a call from MatMumpsGetIcntl is always consistent */
-  if (!mumps->sym && mumps->id.ICNTL(19) && mumps->id.ICNTL(19) != 1) mumps->id.ICNTL(19) = 3;
-
-  if (!mumps->is_omp_master) mumps->id.INFO(23) = 0;
-  if (mumps->petsc_size > 1) {
-    PetscInt    lsol_loc;
-    PetscScalar *sol_loc;
-
-    ierr = PetscObjectTypeCompare((PetscObject)A,MATMPIAIJ,&isMPIAIJ);CHKERRQ(ierr);
-
-    /* distributed solution; Create x_seq=sol_loc for repeated use */
-    if (mumps->x_seq) {
-      ierr = VecScatterDestroy(&mumps->scat_sol);CHKERRQ(ierr);
-      ierr = PetscFree2(mumps->id.sol_loc,mumps->id.isol_loc);CHKERRQ(ierr);
-      ierr = VecDestroy(&mumps->x_seq);CHKERRQ(ierr);
-    }
-    lsol_loc = mumps->id.INFO(23); /* length of sol_loc */
-    ierr = PetscMalloc2(lsol_loc,&sol_loc,lsol_loc,&mumps->id.isol_loc);CHKERRQ(ierr);
-    mumps->id.lsol_loc = lsol_loc;
-    mumps->id.sol_loc = (MumpsScalar*)sol_loc;
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,lsol_loc,sol_loc,&mumps->x_seq);CHKERRQ(ierr);
-  }
-  ierr = PetscLogFlops(mumps->id.RINFO(2));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 /* Sets MUMPS options from the options database */
 PetscErrorCode PetscSetMUMPSFromOptions(Mat F, Mat A)
 {
@@ -1842,6 +1753,96 @@ PetscErrorCode PetscSetMUMPSFromOptions(Mat F, Mat A)
   }
 
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatFactorNumeric_MUMPS(Mat F,Mat A,const MatFactorInfo *info)
+{
+  Mat_MUMPS      *mumps =(Mat_MUMPS*)(F)->data;
+  PetscErrorCode ierr;
+  PetscBool      isMPIAIJ;
+
+  PetscFunctionBegin;
+  if (mumps->id.INFOG(1) < 0 && !(mumps->id.INFOG(1) == -16 && mumps->id.INFOG(1) == 0)) {
+    if (mumps->id.INFOG(1) == -6) {
+      ierr = PetscInfo2(A,"MatFactorNumeric is called with singular matrix structure, INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
+    }
+    ierr = PetscInfo2(A,"MatFactorNumeric is called after analysis phase fails, INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+  ierr = PetscSetMUMPSFromOptions(F,A);CHKERRQ(ierr);
+
+  ierr = (*mumps->ConvertToTriples)(A, 1, MAT_REUSE_MATRIX, mumps);CHKERRQ(ierr);
+  ierr = MatMumpsGatherNonzerosOnMaster(MAT_REUSE_MATRIX,mumps);CHKERRQ(ierr);
+
+  /* numerical factorization phase */
+  /*-------------------------------*/
+  mumps->id.job = JOB_FACTNUMERIC;
+  if (!mumps->id.ICNTL(18)) { /* A is centralized */
+    if (!mumps->myid) {
+      mumps->id.a = (MumpsScalar*)mumps->val;
+    }
+  } else {
+    mumps->id.a_loc = (MumpsScalar*)mumps->val;
+  }
+  PetscMUMPS_c(mumps);
+  if (mumps->id.INFOG(1) < 0) {
+    if (A->erroriffailure) {
+      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MUMPS in numerical factorization phase: INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));
+    } else {
+      if (mumps->id.INFOG(1) == -10) { /* numerically singular matrix */
+        ierr = PetscInfo2(F,"matrix is numerically singular, INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
+        F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+      } else if (mumps->id.INFOG(1) == -13) {
+        ierr = PetscInfo2(F,"MUMPS in numerical factorization phase: INFOG(1)=%d, cannot allocate required memory %d megabytes\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
+        F->factorerrortype = MAT_FACTOR_OUTMEMORY;
+      } else if (mumps->id.INFOG(1) == -8 || mumps->id.INFOG(1) == -9 || (-16 < mumps->id.INFOG(1) && mumps->id.INFOG(1) < -10)) {
+        ierr = PetscInfo2(F,"MUMPS in numerical factorization phase: INFOG(1)=%d, INFO(2)=%d, problem with workarray \n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
+        F->factorerrortype = MAT_FACTOR_OUTMEMORY;
+      } else {
+        ierr = PetscInfo2(F,"MUMPS in numerical factorization phase: INFOG(1)=%d, INFO(2)=%d\n",mumps->id.INFOG(1),mumps->id.INFO(2));CHKERRQ(ierr);
+        F->factorerrortype = MAT_FACTOR_OTHER;
+      }
+    }
+  }
+  if (!mumps->myid && mumps->id.ICNTL(16) > 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"  mumps->id.ICNTL(16):=%d\n",mumps->id.INFOG(16));
+
+  F->assembled    = PETSC_TRUE;
+  mumps->matstruc = SAME_NONZERO_PATTERN;
+  if (F->schur) { /* reset Schur status to unfactored */
+#if defined(PETSC_HAVE_CUDA)
+    F->schur->offloadmask = PETSC_OFFLOAD_CPU;
+#endif
+    if (mumps->id.ICNTL(19) == 1) { /* stored by rows */
+      mumps->id.ICNTL(19) = 2;
+      ierr = MatTranspose(F->schur,MAT_INPLACE_MATRIX,&F->schur);CHKERRQ(ierr);
+    }
+    ierr = MatFactorRestoreSchurComplement(F,NULL,MAT_FACTOR_SCHUR_UNFACTORED);CHKERRQ(ierr);
+  }
+
+  /* just to be sure that ICNTL(19) value returned by a call from MatMumpsGetIcntl is always consistent */
+  if (!mumps->sym && mumps->id.ICNTL(19) && mumps->id.ICNTL(19) != 1) mumps->id.ICNTL(19) = 3;
+
+  if (!mumps->is_omp_master) mumps->id.INFO(23) = 0;
+  if (mumps->petsc_size > 1) {
+    PetscInt    lsol_loc;
+    PetscScalar *sol_loc;
+
+    ierr = PetscObjectTypeCompare((PetscObject)A,MATMPIAIJ,&isMPIAIJ);CHKERRQ(ierr);
+
+    /* distributed solution; Create x_seq=sol_loc for repeated use */
+    if (mumps->x_seq) {
+      ierr = VecScatterDestroy(&mumps->scat_sol);CHKERRQ(ierr);
+      ierr = PetscFree2(mumps->id.sol_loc,mumps->id.isol_loc);CHKERRQ(ierr);
+      ierr = VecDestroy(&mumps->x_seq);CHKERRQ(ierr);
+    }
+    lsol_loc = mumps->id.INFO(23); /* length of sol_loc */
+    ierr = PetscMalloc2(lsol_loc,&sol_loc,lsol_loc,&mumps->id.isol_loc);CHKERRQ(ierr);
+    mumps->id.lsol_loc = lsol_loc;
+    mumps->id.sol_loc = (MumpsScalar*)sol_loc;
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,lsol_loc,sol_loc,&mumps->x_seq);CHKERRQ(ierr);
+  }
+  ierr = PetscLogFlops(mumps->id.RINFO(2));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
