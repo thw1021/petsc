@@ -67,6 +67,30 @@ PetscErrorCode  KSPLoad(KSP newdm, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
+/*@
+   KSPCheckLogicalCollective - Compares a KSP context within a communicator
+
+   Collective on KSP
+
+   Input Parameters:
++  obj  - the context
+-  comm - the communicator
+
+    Output Parameter:
+.  same - whether the context is the same accross the communicator
+
+   Level: developer
+
+   Note:
+    The comparison mechanism is very basic and not thorough even for simple KSP such as KSPGMRES
+
+.seealso: PCCheckLogicalCollective()
+@*/
+PetscErrorCode KSPCheckLogicalCollective(MPI_Comm comm,KSP obj,PetscBool *same)
+{
+KSPAndPCCheckLogicalCollective(KSP)
+}
+
 #include <petscdraw.h>
 #if defined(PETSC_HAVE_SAWS)
 #include <petscviewersaws.h>

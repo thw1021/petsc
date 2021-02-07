@@ -83,6 +83,7 @@ PETSC_EXTERN PetscErrorCode PCGetOperatorsSet(PC,PetscBool*,PetscBool*);
 
 PETSC_EXTERN PetscErrorCode PCView(PC,PetscViewer);
 PETSC_EXTERN PetscErrorCode PCLoad(PC,PetscViewer);
+PETSC_EXTERN PetscErrorCode PCCheckLogicalCollective(MPI_Comm,PC,PetscBool*);
 PETSC_EXTERN PetscErrorCode PCViewFromOptions(PC,PetscObject,const char[]);
 
 PETSC_EXTERN PetscErrorCode PCSetOptionsPrefix(PC,const char[]);

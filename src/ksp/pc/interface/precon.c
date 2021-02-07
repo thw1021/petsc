@@ -1650,6 +1650,30 @@ PetscErrorCode  PCLoad(PC newdm, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
+/*@
+   PCCheckLogicalCollective - Compares a PC context within a communicator
+
+   Collective on PC
+
+   Input Parameters:
++  obj  - the context
+-  comm - the communicator
+
+    Output Parameter:
+.  same - whether the context is the same accross the communicator
+
+   Level: developer
+
+   Note:
+    The comparison mechanism is very basic and not thorough even for simple PC such as PCBJACOBI
+
+.seealso: KSPCheckLogicalCollective()
+@*/
+PetscErrorCode PCCheckLogicalCollective(MPI_Comm comm,PC obj,PetscBool *same)
+{
+KSPAndPCCheckLogicalCollective(PC)
+}
+
 #include <petscdraw.h>
 #if defined(PETSC_HAVE_SAWS)
 #include <petscviewersaws.h>

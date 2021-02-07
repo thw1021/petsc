@@ -32,6 +32,7 @@ struct _KSPOps {
   PetscErrorCode (*view)(KSP,PetscViewer);
   PetscErrorCode (*reset)(KSP);
   PetscErrorCode (*load)(KSP,PetscViewer);
+  PetscErrorCode (*checklogicalcollective)(MPI_Comm,KSP,PetscBool*);
 };
 
 typedef struct _KSPGuessOps *KSPGuessOps;
@@ -492,4 +493,43 @@ M*/
     }\
   } } while (0)
 
+#define KSPAndPCCheckLogicalCollective(type)                            \
+  size_t         len;                                                   \
+  char           *type;                                                 \
+  PetscMPIInt    check[2];                                              \
+  PetscInt       n;                                                     \
+  PetscErrorCode ierr;                                                  \
+                                                                        \
+  PetscFunctionBegin;                                                   \
+  PetscValidHeaderSpecific(obj,type ## _CLASSID,2);                     \
+  PetscValidPointer(same,3);                                            \
+  if (obj->ops->checklogicalcollective) {                               \
+    ierr = (*obj->ops->checklogicalcollective)(comm,obj,same);CHKERRQ(ierr); \
+  } else { /* simple comparison based on object type */                 \
+    *same = PETSC_TRUE;                                                 \
+    ierr = PetscStrlen(((PetscObject)obj)->type_name,&len);             \
+    check[0] = len;                                                     \
+    check[1] = -len;                                                    \
+    ierr = MPIU_Allreduce(MPI_IN_PLACE,check,2,MPI_INT,MPI_MAX,comm);CHKERRMPI(ierr); \
+    if (-check[0] != check[1]) *same = PETSC_FALSE;                     \
+    else {                                                              \
+      ierr = PetscCalloc1(2*len,&type);                                 \
+      ierr = PetscStrncpy(type,((PetscObject)obj)->type_name,len);      \
+      for (n = 0; n < len; ++n) {                                       \
+        type[len + n] = -type[n];                                       \
+      }                                                                 \
+      ierr = MPIU_Allreduce(MPI_IN_PLACE,type,2,MPI_CHAR,MPI_MAX,comm);CHKERRMPI(ierr); \
+      for (n = 0; n < len && *same; ++n) {                              \
+        if (-type[n] != type[len + n]) *same = PETSC_FALSE;             \
+      }                                                                 \
+      ierr = PetscFree(type);                                           \
+      if (*same) { /* simple comparison based on communicator size */   \
+        ierr = MPI_Comm_size(PetscObjectComm((PetscObject)(obj)),check);CHKERRMPI(ierr); \
+        check[1] = -check[0];                                           \
+        ierr = MPIU_Allreduce(MPI_IN_PLACE,check,2,MPI_INT,MPI_MAX,comm);CHKERRMPI(ierr); \
+        if (-check[0] != check[1]) *same = PETSC_FALSE;                 \
+      }                                                                 \
+    }                                                                   \
+  }                                                                     \
+  PetscFunctionReturn(0);
 #endif
