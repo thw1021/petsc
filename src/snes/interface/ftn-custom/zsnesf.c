@@ -37,6 +37,7 @@
 #define snesnewtontrsetprecheck_         SNESNEWTONTRSETPRECHECK
 #define snesnewtontrsetpostcheck_        SNESNEWTONTRSETPOSTCHECK
 #define snesviewfromoptions_             SNESVIEWFROMOPTIONS
+#define snesgetconvergedreasonstring_    SNESGETCONVERGEDREASONSTRING
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
 #define snesconvergedreasonview_         snesconvergedreasonview
 #define snessetpicard_                   snessetpicard
@@ -71,6 +72,7 @@
 #define snesnewtontrsetprecheck_         snesnewtontrsetprecheck
 #define snesnewtontrsetpostcheck_        snesnewtontrsetpostcheck
 #define snesviewfromoptions_             snesviewfromoptions
+#define snesgetconvergedreasonstring_    snesgetconvergedreasonstring
 #endif
 
 static struct {
@@ -442,4 +444,9 @@ PETSC_EXTERN void snesconvergedreasonview_(SNES *snes,PetscViewer *viewer, Petsc
   PetscViewer v;
   PetscPatchDefaultViewers_Fortran(viewer,v);
   *ierr = SNESConvergedReasonView(*snes,v);
+}
+
+PETSC_EXTERN void snesgetconvergedreasonstring_(SNES *snes, const char** strreason, PetscErrorCode *ierr)
+{
+  *ierr = SNESGetConvergedReasonString(*snes,strreason);
 }

@@ -4141,7 +4141,7 @@ PetscErrorCode SNESGetConvergedReason(SNES snes,SNESConvergedReason *reason)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
    SNESGetConvergedReasonString - Return a human readable string for snes converged reason
 
    Not Collective

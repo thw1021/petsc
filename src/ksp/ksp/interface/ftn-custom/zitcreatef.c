@@ -48,3 +48,8 @@ PETSC_EXTERN void kspviewfromoptions_(KSP *ao,PetscObject obj,char* type,PetscEr
   *ierr = KSPViewFromOptions(*ao,obj,t);if (*ierr) return;
   FREECHAR(type,t);
 }
+
+PETSC_EXTERN void  kspgetconvergedreasonstring_(KSP *ksp, const char** strreason, PetscErrorCode *ierr)
+{
+  *ierr = KSPGetConvergedReasonString(*ksp,strreason);
+}

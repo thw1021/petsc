@@ -1104,7 +1104,7 @@ PetscErrorCode  KSPGetConvergedReason(KSP ksp,KSPConvergedReason *reason)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
    KSPGetConvergedReasonString - Return a human readable string for ksp converged reason
 
    Not Collective
