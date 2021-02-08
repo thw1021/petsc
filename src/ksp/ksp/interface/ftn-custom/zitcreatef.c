@@ -49,7 +49,10 @@ PETSC_EXTERN void kspviewfromoptions_(KSP *ao,PetscObject obj,char* type,PetscEr
   FREECHAR(type,t);
 }
 
-PETSC_EXTERN void  kspgetconvergedreasonstring_(KSP *ksp, const char** strreason, PetscErrorCode *ierr)
+PETSC_EXTERN void kspgetconvergedreasonstring_(KSP *ksp, char* strreason, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len)
 {
-  *ierr = KSPGetConvergedReasonString(*ksp,strreason);
+  const char *tstrreason;
+  *ierr = KSPGetConvergedReasonString(*ksp,&tstrreason);
+  *ierr = PetscStrncpy(strreason,tstrreason,len);if (*ierr) return;
+  FIXRETURNCHAR(PETSC_TRUE,strreason,len);
 }

@@ -446,7 +446,10 @@ PETSC_EXTERN void snesconvergedreasonview_(SNES *snes,PetscViewer *viewer, Petsc
   *ierr = SNESConvergedReasonView(*snes,v);
 }
 
-PETSC_EXTERN void snesgetconvergedreasonstring_(SNES *snes, const char** strreason, PetscErrorCode *ierr)
+PETSC_EXTERN void snesgetconvergedreasonstring_(SNES *snes, char* strreason, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len)
 {
-  *ierr = SNESGetConvergedReasonString(*snes,strreason);
+  const char *tstrreason;
+  *ierr = SNESGetConvergedReasonString(*snes,&tstrreason);
+  *ierr = PetscStrncpy(strreason,tstrreason,len);if (*ierr) return;
+  FIXRETURNCHAR(PETSC_TRUE,strreason,len);
 }
