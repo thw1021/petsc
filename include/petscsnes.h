@@ -87,7 +87,7 @@ PETSC_EXTERN PetscErrorCode SNESGetSolutionUpdate(SNES,Vec*);
 PETSC_EXTERN PetscErrorCode SNESGetRhs(SNES,Vec*);
 PETSC_EXTERN PetscErrorCode SNESView(SNES,PetscViewer);
 PETSC_EXTERN PetscErrorCode SNESLoad(SNES,PetscViewer);
-PETSC_EXTERN PetscErrorCode SNESReasonViewSet(SNES,PetscErrorCode(*)(SNES,void*),void *,PetscErrorCode (*)(void**));
+PETSC_EXTERN PetscErrorCode SNESConvergedReasonViewSet(SNES,PetscErrorCode(*)(SNES,void*),void *,PetscErrorCode (*)(void**));
 PETSC_EXTERN PetscErrorCode SNESViewFromOptions(SNES,PetscObject,const char[]);
 PETSC_EXTERN PetscErrorCode SNESConvergedReasonView(SNES,PetscViewer);
 PETSC_EXTERN PetscErrorCode SNESConvergedReasonViewFromOptions(SNES);
