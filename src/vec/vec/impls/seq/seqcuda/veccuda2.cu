@@ -1922,6 +1922,20 @@ PetscErrorCode VecNorm_SeqCUDA(Vec xin,NormType type,PetscReal *z)
   PetscFunctionReturn(0);
 }
 
+namespace VecInfNorm {
+struct abs {
+  __device__ __forceinline__
+  PetscScalar operator()(PetscScalar x)
+  {
+#if defined(PETSC_USE_COMPLEX)
+    return thrust::abs(x);
+#else
+    return fabsf(x);
+#endif
+  }
+};
+}
+
 PetscErrorCode VecNorm_SeqCUDAAsync(Vec xin,NormType type,PetscStreamScalar *pscal,PetscStream pstream)
 {
   PetscErrorCode    ierr;
@@ -1959,25 +1973,22 @@ PetscErrorCode VecNorm_SeqCUDAAsync(Vec xin,NormType type,PetscStreamScalar *psc
     cberr = cublasSetStream(cublasv2handle,cstream);CHKERRCUBLAS(cberr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     cberr = cublasIXamax(cublasv2handle,bn,xarray,one,&i);CHKERRCUBLAS(cberr);
-    ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+    ierr = PetscStreamScalarGetDeviceWrite(*pscal,&dptr,pstream);CHKERRQ(ierr);
     if (bn) {
-      PetscScalar zs;
-      PetscScalar *hptr;
-      /* This is stupid, it should go in a mini kernel */
-#error TODO make this a mini kernel
-      err = cudaMemcpyAsync(&zs,xarray+i-1,sizeof(PetscScalar),cudaMemcpyDeviceToHost,cstream);CHKERRCUDA(err);
-      ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
-      ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
-      ierr = PetscStreamScalarGetHostWrite(pscal,&hptr,pstream);CHKERRQ(ierr);
-      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
-      zs = PetscAbsScalar(zs);
-      ierr = PetscStreamScalarRestoreHostWrite(pscal,&hptr,pstream);CHKERRQ(ierr);
+      try {
+        auto zptr = thrust::device_pointer_cast(xarray+i-1);
+
+        thrust::transform(thrust::cuda::par.on(cstream),zptr,zptr+1,dptr,VecInfNorm::abs());
+      } catch (char *ex) {
+        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
+      }
     } else {
-      ierr = PetscStreamScalarGetDeviceWrite(*pscal,&dptr,pstream);CHKERRQ(ierr);
       err = cudaMemsetAsync(dptr,0,sizeof(PetscScalar),cstream);CHKERRCUDA(err);
-      ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     }
+    ierr = PetscStreamScalarRestoreDeviceWrite(*pscal,&dptr,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
+    ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
   } else if (type == NORM_1) {
     ierr = VecCUDAGetArrayReadAsync(xin,&xarray,pstream);CHKERRQ(ierr);
@@ -2084,20 +2095,22 @@ PetscErrorCode VecConjugate_SeqCUDAAsync(Vec xin,PetscStream pstream)
   PetscInt                        n = xin->map->n;
   thrust::device_ptr<PetscScalar> xptr;
   cudaError_t                     err;
+  cudaStream_t                    cstream;
 
   PetscFunctionBegin;
   PetscValidStreamTypeSpecific(pstream,2,PETSC_STREAM_CUDA,VECCUDA);
   ierr = VecCUDAGetArrayAsync(xin,&xarray,pstream);CHKERRQ(ierr);
-  ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+  ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   try {
     xptr = thrust::device_pointer_cast(xarray);
-    thrust::transform(xptr,xptr+n,xptr,conjugate());
-    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    thrust::transform(thrust::cuda::par.on(cstream),xptr,xptr+n,xptr,conjugate());
   } catch (char *ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
   }
+  ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
   ierr = VecCUDARestoreArray(xin,&xarray);CHKERRQ(ierr);
 #else
   PetscFunctionBegin;
