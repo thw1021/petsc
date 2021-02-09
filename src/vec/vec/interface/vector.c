@@ -928,7 +928,7 @@ PetscErrorCode  VecResetArray(Vec vec)
 PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
 {
   PetscErrorCode    ierr;
-  PetscBool         isbinary,ishdf5,isadios,isadios2;
+  PetscBool         isbinary,ishdf5,isadios,isadios2,isexodusii;
   PetscViewerFormat format;
 
   PetscFunctionBegin;
@@ -939,7 +939,8 @@ PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&ishdf5);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERADIOS,&isadios);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERADIOS,&isadios2);CHKERRQ(ierr);
-  if (!isbinary && !ishdf5 && !isadios && !isadios2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
+  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWEREXODUSII,&isexodusii);CHKERRQ(ierr);
+  if (!isbinary && !ishdf5 && !isadios && !isadios2 & !isexodusii) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
 
   ierr = VecSetErrorIfLocked(vec,1);CHKERRQ(ierr);
   if (!((PetscObject)vec)->type_name && !vec->ops->create) {
