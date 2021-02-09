@@ -54,6 +54,13 @@ Unable to download package %s from: %s
   --download-%s=/yourselectedlocation%s
     ''' % (package.upper(), url, slashFilename, package, slashFilename)
 
+  @staticmethod
+  def removePrefix(url,prefix):
+    '''Replacement for str.removeprefix() supported only since Python 3.9'''
+    if url.startswith(prefix):
+      return url[len(prefix):]
+    return url
+
   def genericRetrieve(self, url, root, package):
     '''Fetch package from version control repository or tarfile indicated by URL and extract it into root'''
 
@@ -83,7 +90,7 @@ Unable to download package %s from: %s
 
   def dirRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as directory' % url, 3, 'install')
-    d = url[6:] if url.startswith('dir://') else url
+    d = self.removePrefix(url, 'dir://')
     if not os.path.isdir(d): raise RuntimeError('URL %s is not a directory' % url)
 
     t = os.path.join(root,os.path.basename(d))
@@ -92,7 +99,7 @@ Unable to download package %s from: %s
 
   def linkRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as link' % url, 3, 'install')
-    d = url[7:] if url.startswith('link://') else url
+    d = self.removePrefix(url, 'link://')
     if not os.path.isdir(d): raise RuntimeError('URL %s is not pointing to a directory' % url)
 
     t = os.path.join(root,os.path.basename(d))
@@ -101,9 +108,9 @@ Unable to download package %s from: %s
 
   def gitRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
-    #TODO error should be raised rather than silent return?
-    if not hasattr(self.sourceControl, 'git'): return
-    d = url[6:] if url.startswith('git://') else url
+    if not hasattr(self.sourceControl, 'git'):
+      raise RuntimeError('self.sourceControl.git not set')
+    d = self.removePrefix(url, 'git://')
     if os.path.isdir(d) and not self.isDirectoryGitRepo(d):
       raise RuntimeError('URL %s is a directory but not a git repository' % url)
 
@@ -120,9 +127,9 @@ Unable to download package %s from: %s
 
   def hgRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as hg repo' % url, 3, 'install')
-    #TODO error should be raised rather than silent return?
-    if not hasattr(self.sourceControl, 'hg'): return
-    d = url[5:] if url.startswith('hg://') else url
+    if not hasattr(self.sourceControl, 'hg'):
+      raise RuntimeError('self.sourceControl.hg not set')
+    d = self.removePrefix(url, 'hg://')
 
     newgitrepo = os.path.join(root,'hg.'+package)
     self.removeTarget(newgitrepo)
