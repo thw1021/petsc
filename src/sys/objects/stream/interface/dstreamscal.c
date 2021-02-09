@@ -159,13 +159,3 @@ PetscErrorCode PetscStreamScalarAccumulateOp(PetscStreamScalar pscalacc, PetscIn
   ierr = (*pscalacc->ops->accumop)(pscalacc, n, pscal, epiop, accop, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-PetscErrorCode PetscStreamScalarHostOp(PetscStreamScalar pscal, void (*hostfunc)(void*), void *ctx, PetscStream pstream)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscCheckValidSameStreamType(pscal,1,pstream,4);
-  ierr = (*pscal->op->hostop)(pscal, hostfunc, ctx, pstream);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
