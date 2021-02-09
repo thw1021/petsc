@@ -2,18 +2,14 @@
 
 PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
 {
-  PetscDeviceScalar<PetscScalar> s;
-  PetscErrorCode                 ierr;
+  PetscStreamScalar s;
+  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(pscal,1);
   ierr = PetscStreamRegisterAll();CHKERRQ(ierr);
   *pscal = NULL;
   ierr = PetscNew(&s);CHKERRQ(ierr);
-  s->setup = PETSC_FALSE;
-  s->omask = PETSC_OFFLOAD_UNALLOCATED;
-  s->type = PETSC_STREAM_INVALID;
-  s->cacheValid = PETSC_FALSE;
   *pscal = s;
   PetscFunctionReturn(0);
 }
@@ -27,7 +23,6 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
   PetscValidPointer(pscal,1);
   PetscValidStreamType(*pscal,1);
   ierr = (*(*pscal)->ops->destroy)(*pscal);CHKERRQ(ierr);
-  ierr = PetscEventDestroy(&(*pscal)->event);CHKERRQ(ierr);
   ierr = PetscFree(*pscal);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -42,9 +37,6 @@ PetscErrorCode PetscStreamScalarSetup(PetscStreamScalar pscal, PetscScalar *val,
     if (val) PetscValidScalarPointer(val,2);
   }
   if (pscal->setup) PetscFunctionReturn(0);
-  ierr = PetscEventCreate(&pscal->event);CHKERRQ(ierr);
-  ierr = PetscEventSetType(pscal->event, pscal->type);CHKERRQ(ierr);
-  ierr = PetscEventSetUp(pscal->event);CHKERRQ(ierr);
   ierr = (*pscal->ops->setup)(pscal, val, mtype, pstream);CHKERRQ(ierr);
   pscal->setup = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -135,13 +127,26 @@ PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, Pets
   if (PetscUnlikelyDebug(*ptr != pscal->device)) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with the same pointer retrieved from PetscStreamScalarGetDeviceWrite()\n");
   }
-  if (pscal->ops->restoredevice) {
-    PetscErrorCode ierr;
-
-    ierr = (*pscal->ops->restoredevice)(pscal, ptr, pstream);CHKERRQ(ierr);
-  }
-  pscal->omask = PETSC_OFFLOAD_GPU;
+  ierr = ((PetscDeviceScalar<PetscScalar> *)(pscal->dscal)).restoreDevice(ptr, pstream);CHKERRQ(ierr);
   pscal->cacheValid = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarAdd(PetscStreamScalar res, PetscStreamScalar left, PetscStreamScalar right, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckValidSameStreamType(res,1,pstream,4);
+  PetscCheckValidSameStreamType(left,2,pstream,4);
+  PetscCheckValidSameStreamType(right,3,pstream,4);
+  if (res == left) {
+    *(static_cast<PetscDeviceContainer<PetscScalar>*>(res->dscal)) += *(static_cast<PetscDeviceContainer<PetscScalar>*>(right->dscal));
+  } else if (res == right) {
+    *(static_cast<PetscDeviceContainer<PetscScalar>*>(res->dscal)) += *(static_cast<PetscDeviceContainer<PetscScalar>*>(left->dscal));
+  } else {
+    *(static_cast<PetscDeviceContainer<PetscScalar>*>(res->dscal)) = *(static_cast<PetscDeviceContainer<PetscScalar>*>(left->dscal))+*(static_cast<PetscDeviceContainer<PetscScalar>*>(right->dscal));
+  }
   PetscFunctionReturn(0);
 }
 
