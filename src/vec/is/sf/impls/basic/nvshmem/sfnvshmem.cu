@@ -814,9 +814,9 @@ PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemTy
   cerr = cudaDeviceGetStreamPriorityRange(NULL,&greatestPriority);CHKERRCUDA(cerr);
   cerr = cudaStreamCreateWithPriority(&link->remote_comm_stream,cudaStreamNonBlocking,greatestPriority);CHKERRCUDA(cerr);
 
-  cerr = cudaEventCreate(&link->dataReady);CHKERRCUDA(cerr);
-  cerr = cudaEventCreate(&link->end_scatter_local);CHKERRCUDA(cerr);
-  cerr = cudaEventCreate(&link->end_unpack_remote);CHKERRCUDA(cerr);
+  cerr = cudaEventCreateWithFlags(&link->dataReady,cudaEventDisableTiming);CHKERRCUDA(cerr);
+  cerr = cudaEventCreateWithFlags(&link->end_scatter_local,cudaEventDisableTiming);CHKERRCUDA(cerr);
+  cerr = cudaEventCreateWithFlags(&link->end_unpack_remote,cudaEventDisableTiming);CHKERRCUDA(cerr);
 
 found:
   if (rootdirect[PETSCSF_REMOTE]) {
