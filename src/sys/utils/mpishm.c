@@ -197,13 +197,13 @@ PetscErrorCode PetscShmCommGetMpiShmComm(PetscShmComm pshmcomm,MPI_Comm *comm)
 
 struct _n_PetscOmpCtrl {
   MPI_Comm          omp_comm;        /* a shared memory communicator to spawn omp threads */
-  MPI_Comm          omp_main_comm;   /* a communicator to give to third party libraries */
+  MPI_Comm          omp_master_comm; /* a communicator to give to third party libraries */
   PetscMPIInt       omp_comm_size;   /* size of omp_comm, a kind of OMP_NUM_THREADS */
-  PetscBool         is_omp_main;     /* rank 0's in omp_comm */
+  PetscBool         is_omp_master;   /* rank 0's in omp_comm */
   MPI_Win           omp_win;         /* a shared memory window containing a barrier */
   pthread_barrier_t *barrier;        /* pointer to the barrier */
   hwloc_topology_t  topology;
-  hwloc_cpuset_t    cpuset;          /* cpu bindings of omp main */
+  hwloc_cpuset_t    cpuset;          /* cpu bindings of omp master */
   hwloc_cpuset_t    omp_cpuset;      /* union of cpu bindings of ranks in omp_comm */
 };
 
@@ -231,8 +231,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscOmpCtrlCreateBarrier(PetscOmpCtrl ctrl)
   PetscFunctionBegin;
 #if defined(USE_MMAP_ALLOCATE_SHARED_MEMORY) && defined(PETSC_HAVE_MMAP)
   size = sizeof(pthread_barrier_t);
-  if (ctrl->is_omp_main) {
-    /* use PETSC_COMM_SELF in PetscGetTmp, since it is a collective call. Using omp_comm would otherwise bcast the partially populated pathname to workers */
+  if (ctrl->is_omp_master) {
+    /* use PETSC_COMM_SELF in PetscGetTmp, since it is a collective call. Using omp_comm would otherwise bcast the partially populated pathname to slaves */
     ierr    = PetscGetTmp(PETSC_COMM_SELF,pathname,PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
     ierr    = PetscStrlcat(pathname,"/petsc-shm-XXXXXX",PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
     /* mkstemp replaces XXXXXX with a unique file name and opens the file for us */
@@ -241,7 +241,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscOmpCtrlCreateBarrier(PetscOmpCtrl ctrl)
     baseptr = mmap(NULL,size,PROT_READ | PROT_WRITE, MAP_SHARED,fd,0); if (baseptr == MAP_FAILED) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"mmap() failed\n");
     ierr    = close(fd);CHKERRQ(ierr);
     ierr    = MPI_Bcast(pathname,PETSC_MAX_PATH_LEN,MPI_CHAR,0,ctrl->omp_comm);CHKERRQ(ierr);
-    /* this MPI_Barrier is to wait workers to open the file before main unlinks it */
+    /* this MPI_Barrier is to wait slaves to open the file before master unlinks it */
     ierr    = MPI_Barrier(ctrl->omp_comm);CHKERRQ(ierr);
     ierr    = unlink(pathname);CHKERRQ(ierr);
   } else {
@@ -252,14 +252,14 @@ PETSC_STATIC_INLINE PetscErrorCode PetscOmpCtrlCreateBarrier(PetscOmpCtrl ctrl)
     ierr    = MPI_Barrier(ctrl->omp_comm);CHKERRQ(ierr);
   }
 #else
-  size = ctrl->is_omp_main ? sizeof(pthread_barrier_t) : 0;
+  size = ctrl->is_omp_master ? sizeof(pthread_barrier_t) : 0;
   ierr = MPI_Win_allocate_shared(size,1,MPI_INFO_NULL,ctrl->omp_comm,&baseptr,&ctrl->omp_win);CHKERRMPI(ierr);
   ierr = MPI_Win_shared_query(ctrl->omp_win,0,&size,&disp_unit,&baseptr);CHKERRMPI(ierr);
 #endif
   ctrl->barrier = (pthread_barrier_t*)baseptr;
 
-  /* omp main initializes the barrier */
-  if (ctrl->is_omp_main) {
+  /* omp master initializes the barrier */
+  if (ctrl->is_omp_master) {
     ierr = MPI_Comm_size(ctrl->omp_comm,&ctrl->omp_comm_size);CHKERRMPI(ierr);
     ierr = pthread_barrierattr_init(&attr);CHKERRQ(ierr);
     ierr = pthread_barrierattr_setpshared(&attr,PTHREAD_PROCESS_SHARED);CHKERRQ(ierr); /* make the barrier also work for processes */
@@ -267,7 +267,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscOmpCtrlCreateBarrier(PetscOmpCtrl ctrl)
     ierr = pthread_barrierattr_destroy(&attr);CHKERRQ(ierr);
   }
 
-  /* this MPI_Barrier is to make sure the omp barrier is initialized before workers use it */
+  /* this MPI_Barrier is to make sure the omp barrier is initialized before slaves use it */
   ierr = MPI_Barrier(ctrl->omp_comm);CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
@@ -278,9 +278,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscOmpCtrlDestroyBarrier(PetscOmpCtrl ctrl)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  /* this MPI_Barrier is to make sure workers have finished using the omp barrier before main destroys it */
+  /* this MPI_Barrier is to make sure slaves have finished using the omp barrier before master destroys it */
   ierr = MPI_Barrier(ctrl->omp_comm);CHKERRMPI(ierr);
-  if (ctrl->is_omp_main) { ierr = pthread_barrier_destroy(ctrl->barrier);CHKERRQ(ierr); }
+  if (ctrl->is_omp_master) { ierr = pthread_barrier_destroy(ctrl->barrier);CHKERRQ(ierr); }
 
 #if defined(USE_MMAP_ALLOCATE_SHARED_MEMORY) && defined(PETSC_HAVE_MMAP)
   ierr = munmap(ctrl->barrier,sizeof(pthread_barrier_t));CHKERRQ(ierr);
@@ -333,8 +333,8 @@ PetscErrorCode PetscOmpCtrlCreate(MPI_Comm petsc_comm,PetscInt nthreads,PetscOmp
 
   /*=================================================================================
     Split petsc_comm into multiple omp_comms. Ranks in an omp_comm have access to
-    physically shared memory. Rank 0 of each omp_comm is called an OMP main, and
-    others are called workers. OMP Mains make up a new comm called omp_main_comm,
+    physically shared memory. Rank 0 of each omp_comm is called an OMP master, and
+    others are called slaves. OMP Masters make up a new comm called omp_master_comm,
     which is usually passed to third party libraries.
    ==================================================================================*/
 
@@ -365,26 +365,26 @@ PetscErrorCode PetscOmpCtrlCreate(MPI_Comm petsc_comm,PetscInt nthreads,PetscOmp
   color = shm_rank / nthreads;
   ierr  = MPI_Comm_split(shm_comm,color,0/*key*/,&ctrl->omp_comm);CHKERRQ(ierr);
 
-  /* put rank 0's in omp_comms (i.e., main ranks) into a new comm - omp_main_comm */
+  /* put rank 0's in omp_comms (i.e., master ranks) into a new comm - omp_master_comm */
   ierr = MPI_Comm_rank(ctrl->omp_comm,&omp_rank);CHKERRMPI(ierr);
   if (!omp_rank) {
-    ctrl->is_omp_main = PETSC_TRUE;  /* main */
+    ctrl->is_omp_master = PETSC_TRUE;  /* master */
     color = 0;
   } else {
-    ctrl->is_omp_main = PETSC_FALSE; /* worker */
-    color = MPI_UNDEFINED; /* to make workers get omp_main_comm = MPI_COMM_NULL in MPI_Comm_split */
+    ctrl->is_omp_master = PETSC_FALSE; /* slave */
+    color = MPI_UNDEFINED; /* to make slaves get omp_master_comm = MPI_COMM_NULL in MPI_Comm_split */
   }
-  ierr = MPI_Comm_split(petsc_comm,color,0/*key*/,&ctrl->omp_main_comm);CHKERRMPI(ierr);
+  ierr = MPI_Comm_split(petsc_comm,color,0/*key*/,&ctrl->omp_master_comm);CHKERRMPI(ierr);
 
   /*=================================================================================
     Each omp_comm has a pthread_barrier_t in its shared memory, which is used to put
-    worker ranks in sleep and idle their CPU, so that the main can fork OMP threads
+    slave ranks in sleep and idle their CPU, so that the master can fork OMP threads
     and run them on the idle CPUs.
    ==================================================================================*/
   ierr = PetscOmpCtrlCreateBarrier(ctrl);CHKERRQ(ierr);
 
   /*=================================================================================
-    omp main logs its cpu binding (i.e., cpu set) and computes a new binding that
+    omp master logs its cpu binding (i.e., cpu set) and computes a new binding that
     is the union of the bindings of all ranks in the omp_comm
     =================================================================================*/
 
@@ -400,9 +400,9 @@ PetscErrorCode PetscOmpCtrlCreate(MPI_Comm petsc_comm,PetscInt nthreads,PetscOmp
     for (i=0; i<nr_cpu_ulongs; i++) cpu_ulongs[i] = hwloc_bitmap_to_ith_ulong(ctrl->cpuset,(unsigned)i);
   }
 
-  ierr = MPI_Reduce(ctrl->is_omp_main ? MPI_IN_PLACE : cpu_ulongs, cpu_ulongs,nr_cpu_ulongs, MPI_UNSIGNED_LONG,MPI_BOR,0,ctrl->omp_comm);CHKERRMPI(ierr);
+  ierr = MPI_Reduce(ctrl->is_omp_master ? MPI_IN_PLACE : cpu_ulongs, cpu_ulongs,nr_cpu_ulongs, MPI_UNSIGNED_LONG,MPI_BOR,0,ctrl->omp_comm);CHKERRMPI(ierr);
 
-  if (ctrl->is_omp_main) {
+  if (ctrl->is_omp_master) {
     ctrl->omp_cpuset = hwloc_bitmap_alloc(); if (!ctrl->omp_cpuset) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"hwloc_bitmap_alloc() failed\n");
     if (nr_cpu_ulongs == 1) {
 #if HWLOC_API_VERSION >= 0x00020000
@@ -446,9 +446,9 @@ PetscErrorCode PetscOmpCtrlDestroy(PetscOmpCtrl *pctrl)
   hwloc_topology_destroy(ctrl->topology);
   PetscOmpCtrlDestroyBarrier(ctrl);
   ierr = MPI_Comm_free(&ctrl->omp_comm);CHKERRMPI(ierr);
-  if (ctrl->is_omp_main) {
+  if (ctrl->is_omp_master) {
     hwloc_bitmap_free(ctrl->omp_cpuset);
-    ierr = MPI_Comm_free(&ctrl->omp_main_comm);CHKERRMPI(ierr);
+    ierr = MPI_Comm_free(&ctrl->omp_master_comm);CHKERRMPI(ierr);
   }
   ierr = PetscFree(ctrl);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -461,26 +461,26 @@ PetscErrorCode PetscOmpCtrlDestroy(PetscOmpCtrl *pctrl)
 .   ctrl - a PETSc OMP controller
 
     Output Parameter:
-+   omp_comm       - a communicator that includes a main rank and worker ranks where main spawns threads
-.   omp_main_comm  - on main ranks, return a communicator that include main ranks of each omp_comm;
-                       on worker ranks, MPI_COMM_NULL will be return in reality.
--   is_omp_main    - true if the calling process is an OMP main rank.
++   omp_comm         - a communicator that includes a master rank and slave ranks where master spawns threads
+.   omp_master_comm  - on master ranks, return a communicator that include master ranks of each omp_comm;
+                       on slave ranks, MPI_COMM_NULL will be return in reality.
+-   is_omp_master    - true if the calling process is an OMP master rank.
 
     Notes: any output parameter can be NULL. The parameter is just ignored.
 
     Level: developer
 @*/
-PetscErrorCode PetscOmpCtrlGetOmpComms(PetscOmpCtrl ctrl,MPI_Comm *omp_comm,MPI_Comm *omp_main_comm,PetscBool *is_omp_main)
+PetscErrorCode PetscOmpCtrlGetOmpComms(PetscOmpCtrl ctrl,MPI_Comm *omp_comm,MPI_Comm *omp_master_comm,PetscBool *is_omp_master)
 {
   PetscFunctionBegin;
-  if (omp_comm)      *omp_comm      = ctrl->omp_comm;
-  if (omp_main_comm) *omp_main_comm = ctrl->omp_main_comm;
-  if (is_omp_main)   *is_omp_main   = ctrl->is_omp_main;
+  if (omp_comm)        *omp_comm        = ctrl->omp_comm;
+  if (omp_master_comm) *omp_master_comm = ctrl->omp_master_comm;
+  if (is_omp_master)   *is_omp_master   = ctrl->is_omp_master;
   PetscFunctionReturn(0);
 }
 
 /*@C
-    PetscOmpCtrlBarrier - Do barrier on MPI ranks in omp_comm contained by the PETSc OMP controller (to let worker ranks free their CPU)
+    PetscOmpCtrlBarrier - Do barrier on MPI ranks in omp_comm contained by the PETSc OMP controller (to let slave ranks free their CPU)
 
     Input Parameter:
 .   ctrl - a PETSc OMP controller
@@ -492,16 +492,16 @@ PetscErrorCode PetscOmpCtrlGetOmpComms(PetscOmpCtrl ctrl,MPI_Comm *omp_comm,MPI_
 
     A code using PetscOmpCtrlBarrier() would be like this,
 
-    if (is_omp_main) {
-      PetscOmpCtrlOmpRegionOnMainBegin(ctrl);
+    if (is_omp_master) {
+      PetscOmpCtrlOmpRegionOnMasterBegin(ctrl);
       Call the library using OpenMP
-      PetscOmpCtrlOmpRegionOnMainEnd(ctrl);
+      PetscOmpCtrlOmpRegionOnMasterEnd(ctrl);
     }
     PetscOmpCtrlBarrier(ctrl);
 
     Level: developer
 
-.seealso PetscOmpCtrlOmpRegionOnMainBegin(), PetscOmpCtrlOmpRegionOnMainEnd()
+.seealso PetscOmpCtrlOmpRegionOnMasterBegin(), PetscOmpCtrlOmpRegionOnMasterEnd()
 @*/
 PetscErrorCode PetscOmpCtrlBarrier(PetscOmpCtrl ctrl)
 {
@@ -514,20 +514,20 @@ PetscErrorCode PetscOmpCtrlBarrier(PetscOmpCtrl ctrl)
 }
 
 /*@C
-    PetscOmpCtrlOmpRegionOnMainBegin - Mark the beginning of an OpenMP library call on main ranks
+    PetscOmpCtrlOmpRegionOnMasterBegin - Mark the beginning of an OpenMP library call on master ranks
 
     Input Parameter:
 .   ctrl - a PETSc OMP controller
 
     Notes:
-    Only main ranks can call this function. Call PetscOmpCtrlGetOmpComms() to know if this is a main rank.
-    This function changes CPU binding of main ranks and nthreads-var of OpenMP runtime
+    Only master ranks can call this function. Call PetscOmpCtrlGetOmpComms() to know if this is a master rank.
+    This function changes CPU binding of master ranks and nthreads-var of OpenMP runtime
 
     Level: developer
 
-.seealso: PetscOmpCtrlOmpRegionOnMainEnd()
+.seealso: PetscOmpCtrlOmpRegionOnMasterEnd()
 @*/
-PetscErrorCode PetscOmpCtrlOmpRegionOnMainBegin(PetscOmpCtrl ctrl)
+PetscErrorCode PetscOmpCtrlOmpRegionOnMasterBegin(PetscOmpCtrl ctrl)
 {
   PetscErrorCode ierr;
 
@@ -538,20 +538,20 @@ PetscErrorCode PetscOmpCtrlOmpRegionOnMainBegin(PetscOmpCtrl ctrl)
 }
 
 /*@C
-   PetscOmpCtrlOmpRegionOnMainEnd - Mark the end of an OpenMP library call on main ranks
+   PetscOmpCtrlOmpRegionOnMasterEnd - Mark the end of an OpenMP library call on master ranks
 
    Input Parameter:
 .  ctrl - a PETSc OMP controller
 
    Notes:
-   Only main ranks can call this function. Call PetscOmpCtrlGetOmpComms() to know if this is a main rank.
-   This function restores the CPU binding of main ranks and set and nthreads-var of OpenMP runtime to 1.
+   Only master ranks can call this function. Call PetscOmpCtrlGetOmpComms() to know if this is a master rank.
+   This function restores the CPU binding of master ranks and set and nthreads-var of OpenMP runtime to 1.
 
    Level: developer
 
-.seealso: PetscOmpCtrlOmpRegionOnMainBegin()
+.seealso: PetscOmpCtrlOmpRegionOnMasterBegin()
 @*/
-PetscErrorCode PetscOmpCtrlOmpRegionOnMainEnd(PetscOmpCtrl ctrl)
+PetscErrorCode PetscOmpCtrlOmpRegionOnMasterEnd(PetscOmpCtrl ctrl)
 {
   PetscErrorCode ierr;
 

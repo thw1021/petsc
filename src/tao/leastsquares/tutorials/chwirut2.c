@@ -411,7 +411,7 @@ PetscErrorCode TaskWorker(AppCtx *user)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  /* Send check-in message to main */
+  /* Send check-in message to rank-0 */
 
   ierr = MPI_Send(&f,1,MPIU_REAL,0,IDLE_TAG,PETSC_COMM_WORLD);CHKERRMPI(ierr);
   while (tag != DIE_TAG) {
