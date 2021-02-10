@@ -111,8 +111,8 @@ struct _VecOps {
   PetscErrorCode (*aypxasync)(Vec,PetscStreamScalar,Vec,PetscStream);
   PetscErrorCode (*axpyasync)(Vec,PetscStreamScalar,Vec,PetscStream);
   PetscErrorCode (*copyasync)(Vec,Vec,PetscStream);
-  PetscErrorCode (*normasync)(Vec,NormType,PetscStreamScalar,PetscStream);
-  PetscErrorCode (*norm_localasync)(Vec,NormType,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*normasync)(Vec,NormType,PetscStreamScalar*,PetscStream);
+  PetscErrorCode (*norm_localasync)(Vec,NormType,PetscStreamScalar*,PetscStream);
 };
 
 /*
