@@ -48,7 +48,7 @@ PETSC_INTERN PetscErrorCode VecDuplicate_SeqCUDA(Vec,Vec*);
 PETSC_INTERN PetscErrorCode VecConjugate_SeqCUDA(Vec);
 PETSC_INTERN PetscErrorCode VecConjugate_SeqCUDAAsync(Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecNorm_SeqCUDA(Vec,NormType,PetscReal*);
-PETSC_INTERN PetscErrorCode VecNorm_SeqCUDAAsync(Vec,NormType,PetscStreamScalar,PetscStream);
+PETSC_INTERN PetscErrorCode VecNorm_SeqCUDAAsync(Vec,NormType,PetscStreamScalar*,PetscStream);
 PETSC_INTERN PetscErrorCode VecCUDACopyToGPU(Vec);
 PETSC_INTERN PetscErrorCode VecCUDACopyToGPUAsync(Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecCUDAAllocateCheck(Vec);

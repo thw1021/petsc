@@ -218,7 +218,7 @@ M*/
 M*/
 
 PETSC_EXTERN PetscErrorCode VecNorm(Vec,NormType,PetscReal *);
-PETSC_EXTERN PetscErrorCode VecNormAsync(Vec,NormType,PetscStreamScalar,PetscStream);
+PETSC_EXTERN PetscErrorCode VecNormAsync(Vec,NormType,PetscStreamScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode VecNormAvailable(Vec,NormType,PetscBool *,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecNormalize(Vec,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecSum(Vec,PetscScalar*);

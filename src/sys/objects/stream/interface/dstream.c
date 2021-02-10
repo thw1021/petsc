@@ -1,5 +1,7 @@
 #include <petsc/private/deviceimpl.h>
 
+static PetscInt streamID = 0;
+
 PetscErrorCode PetscStreamCreate(PetscStream *strm)
 {
   PetscStream    s;
@@ -13,6 +15,7 @@ PetscErrorCode PetscStreamCreate(PetscStream *strm)
   ierr = PetscNew(&s);CHKERRQ(ierr);
   s->type = PETSC_STREAM_INVALID;
   s->mode = PETSC_STREAM_DEFAULT_BLOCKING;
+  s->id = streamID++;
   *strm = s;
   PetscFunctionReturn(0);
 }
@@ -170,6 +173,8 @@ PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscEvent event)
   PetscFunctionBegin;
   PetscCheckValidSameStreamType(strm,1,event,2);
   ierr = (*strm->ops->recordevent)(strm, event);CHKERRQ(ierr);
+  /* Imprint on the event the id of the stream, so subsequent waits need not check */
+  event->id = strm->id;
   PetscFunctionReturn(0);
 }
 
@@ -179,6 +184,8 @@ PetscErrorCode PetscStreamWaitEvent(PetscStream strm, PetscEvent event)
 
   PetscFunctionBegin;
   PetscCheckValidSameStreamType(strm,1,event,2);
+  /* Last stream to interact with this event was this stream, no need to wait */
+  if (strm->id == event->id) PetscFunctionReturn(0);
   ierr = (*strm->ops->waitevent)(strm, event);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
