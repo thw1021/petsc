@@ -22,6 +22,7 @@ struct _StreamOps {
 
 struct _n_PetscStream {
   struct _StreamOps ops[1];
+  PetscInt          id;
   PetscBool         setup;
   PetscStreamType   type;
   PetscStreamMode   mode;
@@ -59,6 +60,7 @@ struct _EventOps {
 
 struct _n_PetscEvent {
   struct _EventOps ops[1];
+  PetscInt         id;
   PetscBool        setup;
   PetscStreamType  type;
   unsigned int     eventFlags, waitFlags;
@@ -69,14 +71,28 @@ typedef struct _ScalOps *ScalOps;
 struct _ScalOps {
   PetscErrorCode (*create)(PetscStreamScalar);
   PetscErrorCode (*destroy)(PetscStreamScalar);
-  PetscErrorCode (*setup)(PetscStreamScalar,PetscScalar*,PetscMemType,PetscStream);
-  PetscErrorCode (*setval)(PetscStreamScalar,PetscScalar,PetscStream);
+  PetscErrorCode (*setup)(PetscStreamScalar,PetscStream);
+  PetscErrorCode (*setvalue)(PetscStreamScalar,const PetscScalar*,PetscMemType,PetscStream);
   PetscErrorCode (*gethost)(PetscStreamScalar,PetscScalar**,PetscBool,PetscStream);
   PetscErrorCode (*restorehost)(PetscStreamScalar,PetscScalar**,PetscStream);
   PetscErrorCode (*getdevice)(PetscStreamScalar,PetscScalar**,PetscStream);
   PetscErrorCode (*restoredevice)(PetscStreamScalar,PetscScalar**,PetscStream);
   PetscErrorCode (*accumop)(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
 };
+
+typedef enum {
+  PSS_UNKNOWN = 0,
+  PSS_FALSE,
+  PSS_TRUE
+} PSSCache;
+
+typedef enum {
+  PSS_ZERO = 0,
+  PSS_ONE,
+  PSS_INF,
+  PSS_NAN,
+  PSSCACHE_MAX
+} PSSCacheType;
 
 struct _n_PetscStreamScalar {
   struct _ScalOps  ops[1];
@@ -86,8 +102,7 @@ struct _n_PetscStreamScalar {
   PetscEvent       event;
   PetscScalar      *host;
   PetscScalar      *device;
-  PetscBool        cacheValid;
-  PetscBool        isZero, isOne;
+  PSSCache         cache[PSSCACHE_MAX];
 };
 
 PETSC_INTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
@@ -96,6 +111,33 @@ PETSC_INTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
 PETSC_INTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
 PETSC_INTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
 
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateCache_Internal(PetscStreamScalar pscal)
+{
+  PetscFunctionBegin;
+  if (pscal->omask == PETSC_OFFLOAD_GPU) {
+    for (int i = 0; i < PSSCACHE_MAX; ++i) pscal->cache[i] = PSS_UNKNOWN;
+  } else {
+    const PetscScalar val = *pscal->host;
+
+    if (val == (PetscScalar)0.0) {
+      pscal->cache[PSS_ZERO] = PSS_TRUE;
+      pscal->cache[PSS_ONE] = PSS_FALSE;
+      pscal->cache[PSS_INF] = PSS_FALSE;
+      pscal->cache[PSS_NAN] = PSS_FALSE;
+    } else if (val == (PetscScalar)1.0) {
+      pscal->cache[PSS_ZERO] = PSS_FALSE;
+      pscal->cache[PSS_ONE] = PSS_TRUE;
+      pscal->cache[PSS_INF] = PSS_FALSE;
+      pscal->cache[PSS_NAN] = PSS_FALSE;
+    } else {
+      pscal->cache[PSS_ZERO] = PSS_FALSE;
+      pscal->cache[PSS_ONE] = PSS_FALSE;
+      pscal->cache[PSS_INF] = PetscIsInfScalar(val) ? PSS_TRUE : PSS_FALSE;
+      pscal->cache[PSS_NAN] = PetscIsNanScalar(val) ? PSS_TRUE : PSS_FALSE;
+    }
+  }
+  PetscFunctionReturn(0);
+}
 #if 0
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSynchronizeDevice_Internal(PetscStreamScalar pscal, PetscStream pstream)
 {
