@@ -11,5 +11,7 @@ typedef struct {
 typedef struct {
   cudaEvent_t  cevent;
 } PetscEvent_CUDA;
+
+PETSC_INTERN PetscErrorCode PetscStreamScalarAccumOpDispatch_Internal(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
 #endif
 #endif
