@@ -259,14 +259,15 @@ PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar pscal,PetscStream pstream)
+PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar *pscal,PetscStream pstream)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
-  PetscCheckValidSameStreamType(pscal,3,pstream,4);
+  PetscValidPointer(pscal,3);
+  PetscCheckValidSameStreamType(*pscal,3,pstream,4);
 
   /*
    * Cached data?
@@ -278,12 +279,7 @@ PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar pscal,PetscSt
 
     ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[type],val,flg);CHKERRQ(ierr);
     if (flg) {
-      PetscScalar *ptr;
-
-      ierr = PetscStreamScalarGetHostWrite(pscal,&ptr,pstream);CHKERRQ(ierr);
-      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
-      *ptr = val;
-      ierr = PetscStreamScalarRestoreHostWrite(pscal,&ptr,pstream);CHKERRQ(ierr);
+      ierr = PetscStreamScalarSetValue(*pscal,&val,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
   }
@@ -298,8 +294,7 @@ PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar pscal,PetscSt
   if (type!=NORM_1_AND_2) {
     const PetscScalar *val;
 
-    ierr = PetscStreamScalarGetHostRead(pscal,&val,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarGetHostRead(*pscal,&val,pstream);CHKERRQ(ierr);
     ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],*val);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -724,7 +719,7 @@ PetscErrorCode  VecAXPYAsync(Vec y,PetscStreamScalar pscal,Vec x,PetscStream pst
     PetscValidLogicalCollectiveScalar(y,*val,2);
   }
 #endif
-  if (pscal->isZero) {
+  if (pscal->cache[PSS_ZERO] == PSS_TRUE) {
     ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
