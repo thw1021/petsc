@@ -1,0 +1,38 @@
+$$: ignored
+$$tail: ignored
+
+str: petsc
+bool: true
+int: 42
+real: 3.14
+imag: 2.72i
+cmplx: -3.14+2.72i
+
+seq1_str: [abc, ijk, fgh]
+seq2_str:
+  - rst
+  - uvw
+  - xyz
+
+seq1_bool: [true, false]
+seq2_bool:
+  - false
+  - true
+
+seq1_int: [0, 1, 2]
+seq2_int:
+  - 3
+  - 4
+  - 5
+
+seq1_real: [3.14, 2.72]
+seq2_real:
+  - 3.14
+  - 2.72
+
+map:
+  - key_0: 0
+  - key_1: 1
+  - key_2: 2
+  - $$: ignored
+  - $$tail: ignored
