@@ -1084,9 +1084,7 @@ printf("%d) diag=%d, bi[n] = %d\n",n,(*baijkok->diag_d)(n),bi_d[n]);
                           end   = ba_d + bdiag_d[myk];
                         }
                         // search for 'col', use bisection search - TODO
-                        printf("\t\t\t row %d search for col %d\n",myk,col);
                         for (pAkjv=start; pAkjv<end; pAkjv++) {
-                          printf("\t\t\t\t check col %d for col %d\n",startj[pAkjv-start],col);
                           if (startj[pAkjv-start] == col) break;
                         }
                         if (pAkjv==end) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: failed to find Akj(%d,%d)\n",myk,col);
