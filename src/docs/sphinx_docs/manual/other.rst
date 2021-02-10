@@ -5,7 +5,7 @@ PETSc on a process subset
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Users who wish to employ PETSc routines on only a subset of processes
-within a larger parallel job, or who wish to use a “main” process to
+within a larger parallel job, or who wish to use a “manager” process to
 coordinate the work of “worker” PETSc processes, should specify an
 alternative communicator for ``PETSC_COMM_WORLD`` by directly setting
 its value, for example to an existing ``MPI_COMM_WORLD``,
