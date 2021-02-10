@@ -137,6 +137,7 @@
           <li>Add PETSCRANDOMCURAND to support CURAND random number generator</li>
           <li>Add PetscRandomGetValues and PetscRandomGetValuesReal to retrieve an array of random numbers</li>
           <li>Add PetscOptions argument to PetscOptionsInsertFileYAML()</li>
+          <li>Change PetscOmpCtrlOmpRegionOnMasterBegin(), PetscOmpCtrlOmpRegionOnMasterEnd() to PetscOmpCtrlOmpRegionOnMainBegin(), PetscOmpCtrlOmpRegionOnMainEnd()</li>
         </ul>
       <h4>IS:</h4>
       <h4>PetscDraw:</h4>
@@ -256,6 +257,7 @@
       <h4>PetscViewer:</h4>
       <ul>
         <li>PetscViewerAndFormat now allows a payload</li>
+        <li>Change PetscViewerFlowControlStepMaster(), PetscViewerFlowControlEndMaster() to PetscViewerFlowControlStepMain(), PetscViewerFlowControlEndMain()</li>
       </ul>
       <h4>SYS:</h4>
       <ul>

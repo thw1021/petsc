@@ -87,15 +87,15 @@ PETSC_STATIC_INLINE PetscErrorCode PetscOptionsMUMPSInt_Private(PetscOptionItems
 }
 #define PetscOptionsMUMPSInt(a,b,c,d,e,f) PetscOptionsMUMPSInt_Private(PetscOptionsObject,a,b,c,d,e,f,PETSC_MUMPS_INT_MIN,PETSC_MUMPS_INT_MAX)
 
-/* if using PETSc OpenMP support, we only call MUMPS on master ranks. Before/after the call, we change/restore CPUs the master ranks can run on */
+/* if using PETSc OpenMP support, we only call MUMPS on main ranks. Before/after the call, we change/restore CPUs the main ranks can run on */
 #if defined(PETSC_HAVE_OPENMP_SUPPORT)
 #define PetscMUMPS_c(mumps) \
   do { \
     if (mumps->use_petsc_omp_support) { \
-      if (mumps->is_omp_master) { \
-        ierr = PetscOmpCtrlOmpRegionOnMasterBegin(mumps->omp_ctrl);CHKERRQ(ierr); \
+      if (mumps->is_omp_main) { \
+        ierr = PetscOmpCtrlOmpRegionOnMainBegin(mumps->omp_ctrl);CHKERRQ(ierr); \
         MUMPS_c(&mumps->id); \
-        ierr = PetscOmpCtrlOmpRegionOnMasterEnd(mumps->omp_ctrl);CHKERRQ(ierr); \
+        ierr = PetscOmpCtrlOmpRegionOnMainEnd(mumps->omp_ctrl);CHKERRQ(ierr); \
       } \
       ierr = PetscOmpCtrlBarrier(mumps->omp_ctrl);CHKERRQ(ierr); \
       /* Global info is same on all processes so we Bcast it within omp_comm. Local info is specific      \
@@ -179,9 +179,9 @@ struct Mat_MUMPS {
   PetscBool      use_petsc_omp_support;
   PetscOmpCtrl   omp_ctrl;              /* an OpenMP controler that blocked processes will release their CPU (MPI_Barrier does not have this guarantee) */
   MPI_Comm       petsc_comm,omp_comm;   /* petsc_comm is petsc matrix's comm */
-  PetscInt64     *recvcount;            /* a collection of nnz on omp_master */
+  PetscInt64     *recvcount;            /* a collection of nnz on omp_main */
   PetscMPIInt    tag,omp_comm_size;
-  PetscBool      is_omp_master;         /* is this rank the master of omp_comm */
+  PetscBool      is_omp_main;           /* is this rank the main of omp_comm */
   MPI_Request    *reqs;
 };
 
@@ -1054,7 +1054,7 @@ static PetscErrorCode MatMumpsSetUpDistRHSInfo(Mat A,PetscInt nrhs,const PetscSc
     MPI_Group       petsc_group,omp_group;
     PetscScalar     *recvbuf=NULL;
 
-    if (mumps->is_omp_master) {
+    if (mumps->is_omp_main) {
       /* Lazily initialize the omp stuff for distributed rhs */
       if (!mumps->irhs_loc) {
         ierr = PetscMalloc2(ompsize,&omp_ranks,ompsize,&petsc_ranks);CHKERRQ(ierr);
@@ -1101,7 +1101,7 @@ static PetscErrorCode MatMumpsSetUpDistRHSInfo(Mat A,PetscInt nrhs,const PetscSc
     ierr = PetscMPIIntCast(m*nrhs,&sendcount);CHKERRQ(ierr);
     ierr = MPI_Gatherv(array,sendcount,MPIU_SCALAR,recvbuf,mumps->rhs_recvcounts,mumps->rhs_disps,MPIU_SCALAR,0,mumps->omp_comm);CHKERRMPI(ierr);
 
-    if (mumps->is_omp_master) {
+    if (mumps->is_omp_main) {
       if (nrhs > 1) { /* Copy & re-arrange data from rhs_recvbuf[] to mumps->rhs_loc[] only when there are multiple rhs */
         PetscScalar *dst,*dstbase = mumps->rhs_loc;
         for (j=0; j<ompsize; j++) {
@@ -1533,7 +1533,7 @@ PetscErrorCode MatGetInertia_SBAIJMUMPS(Mat F,PetscInt *nneg,PetscInt *nzero,Pet
 }
 #endif
 
-PetscErrorCode MatMumpsGatherNonzerosOnMaster(MatReuse reuse,Mat_MUMPS *mumps)
+PetscErrorCode MatMumpsGatherNonzerosOnMain(MatReuse reuse,Mat_MUMPS *mumps)
 {
   PetscErrorCode ierr;
   PetscInt       i,nreqs;
@@ -1546,12 +1546,12 @@ PetscErrorCode MatMumpsGatherNonzerosOnMaster(MatReuse reuse,Mat_MUMPS *mumps)
   PetscFunctionBegin;
   if (osize > 1) {
     if (reuse == MAT_INITIAL_MATRIX) {
-      /* master first gathers counts of nonzeros to receive */
-      if (mumps->is_omp_master) {ierr = PetscMalloc1(osize,&mumps->recvcount);CHKERRQ(ierr);}
-      ierr = MPI_Gather(&mumps->nnz,1,MPIU_INT64,mumps->recvcount,1,MPIU_INT64,0/*master*/,mumps->omp_comm);CHKERRMPI(ierr);
+      /* main first gathers counts of nonzeros to receive */
+      if (mumps->is_omp_main) {ierr = PetscMalloc1(osize,&mumps->recvcount);CHKERRQ(ierr);}
+      ierr = MPI_Gather(&mumps->nnz,1,MPIU_INT64,mumps->recvcount,1,MPIU_INT64,0/*main*/,mumps->omp_comm);CHKERRMPI(ierr);
 
       /* Then each computes number of send/recvs */
-      if (mumps->is_omp_master) {
+      if (mumps->is_omp_main) {
         /* Start from 1 since self communication is not done in MPI */
         nreqs = 0;
         for (i=1; i<osize; i++) nreqs += (mumps->recvcount[i]+PETSC_MPI_INT_MAX-1)/PETSC_MPI_INT_MAX;
@@ -1560,13 +1560,13 @@ PetscErrorCode MatMumpsGatherNonzerosOnMaster(MatReuse reuse,Mat_MUMPS *mumps)
       }
       ierr = PetscMalloc1(nreqs*3,&mumps->reqs);CHKERRQ(ierr); /* Triple the requests since we send irn, jcn and val seperately */
 
-      /* The following code is doing a very simple thing: omp_master rank gathers irn/jcn/val from others.
+      /* The following code is doing a very simple thing: omp_main rank gathers irn/jcn/val from others.
          MPI_Gatherv would be enough if it supports big counts > 2^31-1. Since it does not, and mumps->nnz
          might be a prime number > 2^31-1, we have to slice the message. Note omp_comm_size
          is very small, the current approach should have no extra overhead compared to MPI_Gatherv.
        */
       nreqs = 0; /* counter for actual send/recvs */
-      if (mumps->is_omp_master) {
+      if (mumps->is_omp_main) {
         for (i=0,totnnz=0; i<osize; i++) totnnz += mumps->recvcount[i]; /* totnnz = sum of nnz over omp_comm */
         ierr = PetscMalloc2(totnnz,&irn,totnnz,&jcn);CHKERRQ(ierr);
         ierr = PetscMalloc1(totnnz,&val);CHKERRQ(ierr);
@@ -1576,7 +1576,7 @@ PetscErrorCode MatMumpsGatherNonzerosOnMaster(MatReuse reuse,Mat_MUMPS *mumps)
         ierr = PetscArraycpy(jcn,mumps->jcn,mumps->nnz);CHKERRQ(ierr);
         ierr = PetscArraycpy(val,mumps->val,mumps->nnz);CHKERRQ(ierr);
 
-        /* Replace mumps->irn/jcn etc on master with the newly allocated bigger arrays */
+        /* Replace mumps->irn/jcn etc on main with the newly allocated bigger arrays */
         ierr = PetscFree2(mumps->irn,mumps->jcn);CHKERRQ(ierr);
         ierr = PetscFree(mumps->val_alloc);CHKERRQ(ierr);
         mumps->nnz = totnnz;
@@ -1622,7 +1622,7 @@ PetscErrorCode MatMumpsGatherNonzerosOnMaster(MatReuse reuse,Mat_MUMPS *mumps)
       }
     } else {
       nreqs = 0;
-      if (mumps->is_omp_master) {
+      if (mumps->is_omp_main) {
         val = mumps->val + mumps->recvcount[0];
         for (i=1; i<osize; i++) { /* Remote communication only since self data is already in place */
           count  = PetscMin(mumps->recvcount[i],PETSC_MPI_INT_MAX);
@@ -1668,7 +1668,7 @@ PetscErrorCode MatFactorNumeric_MUMPS(Mat F,Mat A,const MatFactorInfo *info)
   }
 
   ierr = (*mumps->ConvertToTriples)(A, 1, MAT_REUSE_MATRIX, mumps);CHKERRQ(ierr);
-  ierr = MatMumpsGatherNonzerosOnMaster(MAT_REUSE_MATRIX,mumps);CHKERRQ(ierr);
+  ierr = MatMumpsGatherNonzerosOnMain(MAT_REUSE_MATRIX,mumps);CHKERRQ(ierr);
 
   /* numerical factorization phase */
   /*-------------------------------*/
@@ -1718,7 +1718,7 @@ PetscErrorCode MatFactorNumeric_MUMPS(Mat F,Mat A,const MatFactorInfo *info)
   /* just to be sure that ICNTL(19) value returned by a call from MatMumpsGetIcntl is always consistent */
   if (!mumps->sym && mumps->id.ICNTL(19) && mumps->id.ICNTL(19) != 1) mumps->id.ICNTL(19) = 3;
 
-  if (!mumps->is_omp_master) mumps->id.INFO(23) = 0;
+  if (!mumps->is_omp_main) mumps->id.INFO(23) = 0;
   if (mumps->petsc_size > 1) {
     PetscInt    lsol_loc;
     PetscScalar *sol_loc;
@@ -1862,14 +1862,14 @@ PetscErrorCode PetscInitializeMUMPS(Mat A,Mat_MUMPS *mumps)
   if (mumps->use_petsc_omp_support) {
 #if defined(PETSC_HAVE_OPENMP_SUPPORT)
     ierr = PetscOmpCtrlCreate(mumps->petsc_comm,nthreads,&mumps->omp_ctrl);CHKERRQ(ierr);
-    ierr = PetscOmpCtrlGetOmpComms(mumps->omp_ctrl,&mumps->omp_comm,&mumps->mumps_comm,&mumps->is_omp_master);CHKERRQ(ierr);
+    ierr = PetscOmpCtrlGetOmpComms(mumps->omp_ctrl,&mumps->omp_comm,&mumps->mumps_comm,&mumps->is_omp_main);CHKERRQ(ierr);
 #else
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"the system does not have PETSc OpenMP support but you added the -mat_mumps_use_omp_threads option. Configure PETSc with --with-openmp --download-hwloc (or --with-hwloc) to enable it, see more in MATSOLVERMUMPS manual\n");
 #endif
   } else {
     mumps->omp_comm      = PETSC_COMM_SELF;
     mumps->mumps_comm    = mumps->petsc_comm;
-    mumps->is_omp_master = PETSC_TRUE;
+    mumps->is_omp_main   = PETSC_TRUE;
   }
   ierr = MPI_Comm_size(mumps->omp_comm,&mumps->omp_comm_size);CHKERRMPI(ierr);
   mumps->reqs = NULL;
@@ -1889,8 +1889,8 @@ PetscErrorCode PetscInitializeMUMPS(Mat A,Mat_MUMPS *mumps)
   PetscMUMPS_c(mumps);
   if (mumps->id.INFOG(1) < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MUMPS in PetscInitializeMUMPS: INFOG(1)=%d\n",mumps->id.INFOG(1));
 
-  /* copy MUMPS default control values from master to slaves. Although slaves do not call MUMPS, they may access these values in code.
-     For example, ICNTL(9) is initialized to 1 by MUMPS and slaves check ICNTL(9) in MatSolve_MUMPS.
+  /* copy MUMPS default control values from main to workers. Although workers do not call MUMPS, they may access these values in code.
+     For example, ICNTL(9) is initialized to 1 by MUMPS and workers check ICNTL(9) in MatSolve_MUMPS.
    */
   ierr = MPI_Bcast(mumps->id.icntl,40,MPI_INT,  0,mumps->omp_comm);CHKERRMPI(ierr);
   ierr = MPI_Bcast(mumps->id.cntl, 15,MPIU_REAL,0,mumps->omp_comm);CHKERRMPI(ierr);
@@ -1960,7 +1960,7 @@ PetscErrorCode MatLUFactorSymbolic_AIJMUMPS(Mat F,Mat A,IS r,IS c,const MatFacto
   ierr = PetscSetMUMPSFromOptions(F,A);CHKERRQ(ierr);
 
   ierr = (*mumps->ConvertToTriples)(A, 1, MAT_INITIAL_MATRIX, mumps);CHKERRQ(ierr);
-  ierr = MatMumpsGatherNonzerosOnMaster(MAT_INITIAL_MATRIX,mumps);CHKERRQ(ierr);
+  ierr = MatMumpsGatherNonzerosOnMain(MAT_INITIAL_MATRIX,mumps);CHKERRQ(ierr);
 
   /* analysis phase */
   /*----------------*/
@@ -2024,7 +2024,7 @@ PetscErrorCode MatLUFactorSymbolic_BAIJMUMPS(Mat F,Mat A,IS r,IS c,const MatFact
   ierr = PetscSetMUMPSFromOptions(F,A);CHKERRQ(ierr);
 
   ierr = (*mumps->ConvertToTriples)(A, 1, MAT_INITIAL_MATRIX, mumps);CHKERRQ(ierr);
-  ierr = MatMumpsGatherNonzerosOnMaster(MAT_INITIAL_MATRIX,mumps);CHKERRQ(ierr);
+  ierr = MatMumpsGatherNonzerosOnMain(MAT_INITIAL_MATRIX,mumps);CHKERRQ(ierr);
 
   /* analysis phase */
   /*----------------*/
@@ -2079,7 +2079,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_MUMPS(Mat F,Mat A,IS r,const MatFactorI
   ierr = PetscSetMUMPSFromOptions(F,A);CHKERRQ(ierr);
 
   ierr = (*mumps->ConvertToTriples)(A, 1, MAT_INITIAL_MATRIX, mumps);CHKERRQ(ierr);
-  ierr = MatMumpsGatherNonzerosOnMaster(MAT_INITIAL_MATRIX,mumps);CHKERRQ(ierr);
+  ierr = MatMumpsGatherNonzerosOnMain(MAT_INITIAL_MATRIX,mumps);CHKERRQ(ierr);
 
   /* analysis phase */
   /*----------------*/
@@ -2957,12 +2957,12 @@ $     if a compute node has 32 cores and you run on two nodes, you may use "mpir
 
    If you run your code through a job submission system, there are caveats in MPI rank mapping. We use MPI_Comm_split_type() to obtain MPI
    processes on each compute node. Listing the processes in rank ascending order, we split processes on a node into consecutive groups of
-   size m and create a communicator called omp_comm for each group. Rank 0 in an omp_comm is called the master rank, and others in the omp_comm
-   are called slave ranks (or slaves). Only master ranks are seen to MUMPS and slaves are not. We will free CPUs assigned to slaves (might be set
-   by CPU binding policies in job scripts) and make the CPUs available to the master so that OMP threads spawned by MUMPS can run on the CPUs.
+   size m and create a communicator called omp_comm for each group. Rank 0 in an omp_comm is called the main rank, and others in the omp_comm
+   are called worker ranks (or workers). Only main ranks are seen to MUMPS and workers are not. We will free CPUs assigned to workers (might be set
+   by CPU binding policies in job scripts) and make the CPUs available to the main so that OMP threads spawned by MUMPS can run on the CPUs.
    In a multi-socket compute node, MPI rank mapping is an issue. Still use the above example and suppose your compute node has two sockets,
    if you interleave MPI ranks on the two sockets, in other words, even ranks are placed on socket 0, and odd ranks are on socket 1, and bind
-   MPI ranks to cores, then with -mat_mumps_use_omp_threads 16, a master rank (and threads it spawns) will use half cores in socket 0, and half
+   MPI ranks to cores, then with -mat_mumps_use_omp_threads 16, a main rank (and threads it spawns) will use half cores in socket 0, and half
    cores in socket 1, that definitely hurts locality. On the other hand, if you map MPI ranks consecutively on the two sockets, then the
    problem will not happen. Therefore, when you use -mat_mumps_use_omp_threads, you need to keep an eye on your MPI rank mapping and CPU binding.
    For example, with the Slurm job scheduler, one can use srun --cpu-bind=verbose -m block:block to map consecutive MPI ranks to sockets and
