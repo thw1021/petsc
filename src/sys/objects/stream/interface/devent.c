@@ -11,6 +11,7 @@ PetscErrorCode PetscEventCreate(PetscEvent *event)
   /* Setting to null taken from VecCreate(), why though? */
   *event = NULL;
   ierr = PetscNew(&e);CHKERRQ(ierr);
+  e->id = -1;
   e->setup = PETSC_FALSE;
   e->type = PETSC_STREAM_INVALID;
   e->eventFlags = 0;
@@ -48,7 +49,7 @@ PetscErrorCode PetscEventGetFlags(PetscEvent event, unsigned int *eventFlags, un
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscEventSetup(PetscEvent event)
+PetscErrorCode PetscEventSetUp(PetscEvent event)
 {
   PetscErrorCode ierr;
 
