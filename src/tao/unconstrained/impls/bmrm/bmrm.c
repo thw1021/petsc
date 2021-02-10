@@ -111,7 +111,7 @@ static PetscErrorCode TaoSolve_BMRM(Tao tao)
     ierr = VecDot(W, G, &bt);CHKERRQ(ierr);
     bt = f - bt;
 
-    /* First gather the gradient to the master node */
+    /* First gather the gradient to the main node */
     ierr = VecScatterBegin(bmrm->scatter, G, bmrm->local_w, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecScatterEnd(bmrm->scatter, G, bmrm->local_w, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
 

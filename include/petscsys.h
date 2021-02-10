@@ -2660,8 +2660,10 @@ PETSC_EXTERN PetscErrorCode PetscOmpCtrlCreate(MPI_Comm,PetscInt,PetscOmpCtrl*);
 PETSC_EXTERN PetscErrorCode PetscOmpCtrlGetOmpComms(PetscOmpCtrl,MPI_Comm*,MPI_Comm*,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscOmpCtrlDestroy(PetscOmpCtrl*);
 PETSC_EXTERN PetscErrorCode PetscOmpCtrlBarrier(PetscOmpCtrl);
-PETSC_EXTERN PetscErrorCode PetscOmpCtrlOmpRegionOnMasterBegin(PetscOmpCtrl);
-PETSC_EXTERN PetscErrorCode PetscOmpCtrlOmpRegionOnMasterEnd(PetscOmpCtrl);
+PETSC_EXTERN PetscErrorCode PetscOmpCtrlOmpRegionOnMainBegin(PetscOmpCtrl);
+PETSC_EXTERN PetscErrorCode PetscOmpCtrlOmpRegionOnMainEnd(PetscOmpCtrl);
+PETSC_DEPRECATED_FUNCTION("Use PetscOmpCtrlOmpRegionOnMainBegin (since v3.15)") PETSC_STATIC_INLINE PetscErrorCode PetscOmpCtrlOmpRegionOnMasterBegin(PetscOmpCtrl ctrl) {return PetscOmpCtrlOmpRegionOnMainBegin(ctrl);}
+PETSC_DEPRECATED_FUNCTION("Use PetscOmpCtrlOmpRegionOnMainEnd (since v3.15)") PETSC_STATIC_INLINE PetscErrorCode PetscOmpCtrlOmpRegionOnMasterEnd(PetscOmpCtrl ctrl) {return PetscOmpCtrlOmpRegionOnMainEnd(ctrl);}
 
 PETSC_EXTERN PetscErrorCode PetscSegBufferCreate(size_t,size_t,PetscSegBuffer*);
 PETSC_EXTERN PetscErrorCode PetscSegBufferDestroy(PetscSegBuffer*);

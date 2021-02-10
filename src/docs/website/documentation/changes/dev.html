@@ -136,6 +136,7 @@
         <ul>
           <li>Add PETSCRANDOMCURAND to support CURAND random number generator</li>
           <li>Add PetscRandomGetValues and PetscRandomGetValuesReal to retrieve an array of random numbers</li>
+          <li>Change PetscOmpCtrlOmpRegionOnMasterBegin(), PetscOmpCtrlOmpRegionOnMasterEnd() to PetscOmpCtrlOmpRegionOnMainBegin(), PetscOmpCtrlOmpRegionOnMainEnd()</li>
         </ul>
       <h4>IS:</h4>
       <h4>PetscDraw:</h4>
@@ -246,6 +247,9 @@
         <li>Add PetscDSGet/SetJetDegree(), and -dm_ds_jet_degree is needed to enable it under a DM</li>
       </ul>
       <h4>PetscViewer:</h4>
+      <ul>
+        <li>Change PetscViewerFlowControlStepMaster(), PetscViewerFlowControlEndMaster() to PetscViewerFlowControlStepMain(), PetscViewerFlowControlEndMain()</li>
+      </ul>
       <h4>SYS:</h4>
       <ul>
         <li>Add PetscBagViewFromOptions()</li>
