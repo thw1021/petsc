@@ -491,5 +491,4 @@ M*/
       PetscFunctionReturn(0);\
     }\
   } } while (0)
-
 #endif

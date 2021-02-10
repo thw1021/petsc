@@ -14,7 +14,6 @@ PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
   s->setup = PETSC_FALSE;
   s->omask = PETSC_OFFLOAD_UNALLOCATED;
   s->type = PETSC_STREAM_INVALID;
-  s->cacheValid = PETSC_FALSE;
   *pscal = s;
   PetscFunctionReturn(0);
 }
@@ -33,7 +32,23 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarSetup(PetscStreamScalar pscal, PetscScalar *val, PetscMemType mtype, PetscStream pstream)
+PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckValidSameStreamType(pscal,1,pstream,4);
+  if (pscal->setup) PetscFunctionReturn(0);
+  ierr = PetscEventCreate(&pscal->event);CHKERRQ(ierr);
+  ierr = PetscEventSetType(pscal->event, pscal->type);CHKERRQ(ierr);
+  ierr = PetscEventSetUp(pscal->event);CHKERRQ(ierr);
+  ierr = (*pscal->ops->setup)(pscal, pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal);CHKERRQ(ierr);
+  pscal->setup = PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar pscal, const PetscScalar *val, PetscMemType mtype, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
@@ -42,12 +57,7 @@ PetscErrorCode PetscStreamScalarSetup(PetscStreamScalar pscal, PetscScalar *val,
   if (PetscMemTypeHost(mtype)) {
     if (val) PetscValidScalarPointer(val,2);
   }
-  if (pscal->setup) PetscFunctionReturn(0);
-  ierr = PetscEventCreate(&pscal->event);CHKERRQ(ierr);
-  ierr = PetscEventSetType(pscal->event, pscal->type);CHKERRQ(ierr);
-  ierr = PetscEventSetUp(pscal->event);CHKERRQ(ierr);
-  ierr = (*pscal->ops->setup)(pscal, val, mtype, pstream);CHKERRQ(ierr);
-  pscal->setup = PETSC_TRUE;
+  ierr = (*pscal->ops->setvalue)(pscal, val, mtype, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -60,10 +70,7 @@ PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar pscal, const Petsc
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
   ierr = (*pscal->ops->gethost)(pscal, (PetscScalar**) val, PETSC_TRUE, pstream);CHKERRQ(ierr);
-  /* Can update these since host can't overwrite */
-  pscal->isZero = (PetscBool)(*(*val) == (PetscScalar)0.0);
-  pscal->isOne  = (PetscBool)(*(*val) == (PetscScalar)1.0);
-  pscal->cacheValid = PETSC_TRUE;
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -77,8 +84,6 @@ PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar pscal, PetscScala
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
   ierr = (*pscal->ops->gethost)(pscal, val, PETSC_FALSE, pstream);CHKERRQ(ierr);
-  /* Note we can no longer make assumptions about value of val until it is restored */
-  pscal->cacheValid = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -95,9 +100,7 @@ PetscErrorCode PetscStreamScalarRestoreHostWrite(PetscStreamScalar pscal, PetscS
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with the same pointer retrieved from PetscStreamScalarGetHostWrite()\n");
   }
   ierr = (*pscal->ops->restorehost)(pscal, val, pstream);CHKERRQ(ierr);
-  pscal->isZero = (PetscBool)(*(*val) == (PetscScalar)0.0);
-  pscal->isOne  = (PetscBool)(*(*val) == (PetscScalar)1.0);
-  pscal->cacheValid = PETSC_TRUE;
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -123,7 +126,6 @@ PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscSca
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
   ierr = (*pscal->ops->getdevice)(pscal, ptr, pstream);CHKERRQ(ierr);
   /* Assume that value will change and that we cannot access the cache anyore */
-  pscal->cacheValid = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -140,9 +142,7 @@ PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, Pets
     PetscErrorCode ierr;
 
     ierr = (*pscal->ops->restoredevice)(pscal, ptr, pstream);CHKERRQ(ierr);
-  }
-  pscal->omask = PETSC_OFFLOAD_GPU;
-  pscal->cacheValid = PETSC_FALSE;
+  } else {pscal->omask = PETSC_OFFLOAD_GPU;}
   PetscFunctionReturn(0);
 }
 
