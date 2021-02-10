@@ -994,30 +994,6 @@ static PetscErrorCode MatLUFactorNumericV2_SeqAIJKOKKOS(Mat B,Mat A,const MatFac
       });
     Kokkos::fence();
 
-
-for (int i=0;i<n;i++) {
-  PetscScalar    *pv;
-  const PetscInt *pj;
-  printf("%d) diag=%d, bi=%d, row perm = %d, inverse col perm = %d\n",i,(*baijkok->diag_d)(i),bi_d[i],r_h[i],ic_h[i]);
-  // L
-  pv = ba_d + bi_d[i];
-  pj = bj_d + bi_d[i];
-  int nz = bi_d[i+1] - bi_d[i];
-  for (int j=0;j<nz;j++) {
-    printf("L(%d,%d)=%f (%ld); ",i,pj[j],pv[j],&pv[j]-ba_d);
-  }
-  printf(";");
-  pv = ba_d + bdiag_d[i+1]+1;
-  pj = bj_d + bdiag_d[i+1]+1;
-  nz = bdiag_d[i] - bdiag_d[i+1]; // -1
-  for (int j=0;j<nz;j++) {
-    printf("U(%d,%d)=%f (%ld); ",i,pj[j],pv[j],&pv[j]-ba_d);
-  }
-  printf("\n");
- }
-printf("%d) diag=%d, bi[n] = %d\n",n,(*baijkok->diag_d)(n),bi_d[n]);
-
-
     Kokkos::parallel_for(Kokkos::TeamPolicy<>(Nf*Ni, team_size, nVec), KOKKOS_LAMBDA (const team_member team) {
         //scr_t  rtmp(team.team_scratch(KOKKOS_SHARED_LEVEL),nloc);
         const PetscInt  lg_rank = team.league_rank(), field = lg_rank/Ni; //, field_offset = lg_rank%Ni;
@@ -1058,8 +1034,7 @@ printf("%d) diag=%d, bi[n] = %d\n",n,(*baijkok->diag_d)(n),bi_d[n]);
                 else { // active row k, do  A_kj -= Lki * U_ij; j \in U(i,:) j != i
                   const PetscScalar L_ki = *pLki;
                   // U(i+1,:end)
-                  int ndiag=0;
-                  Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,nzUi), [&/*=*/] (const int &uiIdx) { // index into i (U)
+                  Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,nzUi), [=] (const int &uiIdx) { // index into i (U)
                       PetscScalar Uij = baUi[uiIdx];
                       PetscInt    col = bjUi[uiIdx];
                       printf("\t\t row %d search for col %d\n",myk,col);
@@ -1068,7 +1043,6 @@ printf("%d) diag=%d, bi[n] = %d\n",n,(*baijkok->diag_d)(n),bi_d[n]);
                         PetscScalar *Akkv = (ba_d + bdiag_d[myk]); // diagonal in its special place
                         *Akkv = *Akkv - L_ki * Uij; // UiK
                         printf("\t\t\tUpdate D A[%d,%d] = %g, with L_ki=%g Uik=%g. 1/D=%g\n", myk, bjUi[uiIdx], *Akkv, L_ki, Uij, 1./(*Akkv));
-                        ndiag++;
                       } else {
                         PetscScalar    *start, *end, *pAkjv=NULL;
                         const PetscInt *startj;
@@ -1092,7 +1066,6 @@ printf("%d) diag=%d, bi[n] = %d\n",n,(*baijkok->diag_d)(n),bi_d[n]);
                         printf("\t\t\tUpdate %c A[%d,%d] = %g with Uij=%g, Lik=%g\n", (col>myk) ? 'U' : 'L', myk, col, *pAkjv, Uij, L_ki);
                       }
                     });
-                  if (ndiag!=1) printf("\t\t\t\t\t\t\tERROR: row %d found %d diagonals\n",myk,ndiag);
                   Kokkos::atomic_add( &flops, 2*nzUi+1);
                 }
               }
