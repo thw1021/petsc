@@ -1117,6 +1117,11 @@ PetscErrorCode PCSetUp_MG(PC pc)
       ierr = KSPGetOperators(mglevels[i]->smoothd,&mat,NULL);CHKERRQ(ierr);
       ierr = PCMGSetResidual(pc,i,PCMGResidualDefault,mat);CHKERRQ(ierr);
     }
+    if (!mglevels[i]->residualtranspose) {
+      Mat mat;
+      ierr = KSPGetOperators(mglevels[i]->smoothd,&mat,NULL);CHKERRQ(ierr);
+      ierr = PCMGSetResidualTranspose(pc,i,PCMGResidualTransposeDefault,mat);CHKERRQ(ierr);
+    }
   }
   for (i=1; i<n; i++) {
     if (mglevels[i]->smoothu && mglevels[i]->smoothu != mglevels[i]->smoothd) {
