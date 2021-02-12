@@ -1425,12 +1425,12 @@ PetscErrorCode PetscSFCreateEmbeddedLeafSF(PetscSF sf,PetscInt nselected,const P
 + sf - input star forest
 . numGlobalIndices - total size of the contiguous global indices (can be PETSC_DECIDE if bufferSize is given)
 . bufferSize - size of the partition of [0, numGlobalIndices) that this process owns (can be PETSC_DECIDE if numGlobalIndices is given)
-. numRootIndieces - size of rootIndices
-. rootIndices - PetscInt array of global indices of which this process claims ownership; NULL if each rank owns the rank-th chunk of a partition of [0, numGlobalIndices) of size numRootIndieces
+. numRootIndices - size of rootIndices
+. rootIndices - PetscInt array of global indices of which this process claims ownership; NULL if each rank owns the rank-th chunk of a partition of [0, numGlobalIndices) of size numRootIndices
 . rootLocalIndices - root local index permutation (NULL if no permutation)
 . rootOffset - index to count the contiguous root local indices from
 . numLeafIndices - size of leafIndices
-. leafIndices - PetscInt array of global indices with which this process requires data associated; NULL if each rank owns the rank-th chunk of a partition of [0, numGlobalIndices) of size numLeafIndieces (ignored if flag == PETSC_TRUE)
+. leafIndices - PetscInt array of global indices with which this process requires data associated; NULL if each rank owns the rank-th chunk of a partition of [0, numGlobalIndices) of size numLeafIndices (ignored if flag == PETSC_TRUE)
 . leafLocalIndices - leaf local index permutation (NULL if no permutation)
 . leafOffset - index to count the contiguous leaf local indices from
 - flag - flag indicating that leafIndices is identical to rootIndices
