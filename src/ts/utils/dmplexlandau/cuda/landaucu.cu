@@ -311,9 +311,9 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
         }
       }
       if (fieldMats) {
-        PetscScalar            vals[LANDAU_MAX_Q*LANDAU_MAX_Q];
-        PetscReal              row_scale[LANDAU_MAX_Q],col_scale[LANDAU_MAX_Q];
-        PetscInt               nr,nc,rows0[LANDAU_MAX_Q],cols0[LANDAU_MAX_Q],rows[LANDAU_MAX_Q],cols[LANDAU_MAX_Q];
+        PetscScalar            vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
+        PetscReal              row_scale[LANDAU_MAX_Q_FACE],col_scale[LANDAU_MAX_Q_FACE];
+        PetscInt               nr,nc,rows0[LANDAU_MAX_Q_FACE],cols0[LANDAU_MAX_Q_FACE],rows[LANDAU_MAX_Q_FACE],cols[LANDAU_MAX_Q_FACE];
         const LandauIdx *const Idxs = &d_maps->gIdx[myelem][fieldA][0];
         for (f = threadIdx.y; f < Nb ; f += blockDim.y) {
           idx = Idxs[f];
@@ -338,6 +338,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
             } else {
               idx = -idx - 1;
               nc = d_maps->num_face;
+	      if (nc>LANDAU_MAX_Q_FACE) printf("ERROR %d > %d\n",nc,LANDAU_MAX_Q_FACE);
               for (q = 0; q < d_maps->num_face; q++) {
                 cols0[q]     = d_maps->c_maps[idx][q].gid;
                 col_scale[q] = d_maps->c_maps[idx][q].scale;

@@ -396,8 +396,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       if (!maps) {
         ierr = DMPlexMatSetClosure(plex, section, globsection, JacP, ej, elemMat, ADD_VALUES);CHKERRQ(ierr);
       } else {  // GPU like assembly for debugging
-        PetscInt      fieldA,idx,q,f,g,d,nr,nc,rows0[LANDAU_MAX_Q],cols0[LANDAU_MAX_Q],rows[LANDAU_MAX_Q],cols[LANDAU_MAX_Q];
-        PetscScalar   vals[LANDAU_MAX_Q*LANDAU_MAX_Q],row_scale[LANDAU_MAX_Q],col_scale[LANDAU_MAX_Q];
+        PetscInt      fieldA,idx,q,f,g,d,nr,nc,rows0[LANDAU_MAX_Q_FACE],cols0[LANDAU_MAX_Q_FACE],rows[LANDAU_MAX_Q_FACE],cols[LANDAU_MAX_Q_FACE];
+        PetscScalar   vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE],row_scale[LANDAU_MAX_Q_FACE],col_scale[LANDAU_MAX_Q_FACE];
         /* assemble - from the diagonal (I,I) in this format for DMPlexMatSetClosure */
         for (fieldA = 0; fieldA < Nf ; fieldA++) {
           LandauIdx *const Idxs = &maps->gIdx[ej-cStart][fieldA][0];
@@ -424,6 +424,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
               } else {
                 idx = -idx - 1;
                 nc = maps->num_face;
+                if (nc>LANDAU_MAX_Q_FACE) printf("ERROR %d > %d\n",nc,LANDAU_MAX_Q_FACE);
                 for (q = 0; q < maps->num_face; q++) {
                   cols0[q]     = maps->c_maps[idx][q].gid;
                   col_scale[q] = maps->c_maps[idx][q].scale;

@@ -419,8 +419,8 @@ extern "C"  {
                     if (global_elem_mat_sz) d_elem_mats(myelem,fOff) = t; // can set this because local element matrix[fOff]
                     else {
                       PetscErrorCode         ierr = 0;
-                      PetscScalar            vals[LANDAU_MAX_Q*LANDAU_MAX_Q],row_scale[LANDAU_MAX_Q],col_scale[LANDAU_MAX_Q];
-                      PetscInt               q,idx,nr,nc,rows0[LANDAU_MAX_Q],cols0[LANDAU_MAX_Q],rows[LANDAU_MAX_Q],cols[LANDAU_MAX_Q];
+                      PetscScalar            vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE],row_scale[LANDAU_MAX_Q_FACE],col_scale[LANDAU_MAX_Q_FACE];
+                      PetscInt               q,idx,nr,nc,rows0[LANDAU_MAX_Q_FACE],cols0[LANDAU_MAX_Q_FACE],rows[LANDAU_MAX_Q_FACE],cols[LANDAU_MAX_Q_FACE];
                       const LandauIdx *const Idxs = &d_maps->gIdx[myelem][fieldA][0];
                       idx = Idxs[blk_i];
                       if (idx >= 0) {
