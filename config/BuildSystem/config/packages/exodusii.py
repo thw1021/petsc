@@ -31,7 +31,6 @@ class Configure(config.package.CMakePackage):
     args.append('-DPYTHON_EXECUTABLE:PATH='+sys.executable)
     args.append('-DPythonInterp_FIND_VERSION:STRING={0}.{1}'.format(sys.version_info.major,sys.version_info.minor))
     args.append('-DACCESSDIR:PATH='+self.installDir)
-    #args.append('-DHDF5_DIR:PATH='+self.installDir)
     args.append('-DCMAKE_INSTALL_PREFIX:PATH='+self.installDir)
     args.append('-DCMAKE_INSTALL_RPATH:PATH='+os.path.join(self.installDir,'lib'))
     self.pushLanguage('C')
@@ -54,6 +53,9 @@ class Configure(config.package.CMakePackage):
       args.append('-DSEACASProj_ENABLE_SEACASExodus_for:BOOL=OFF')
       args.append('-DSEACASProj_ENABLE_SEACASExoIIv2for32:BOOL=OFF')
     args.append('-DSEACASProj_ENABLE_SEACASExodus:BOOL=ON')
+    # exodiff and exotxt are convenient tools to debug exodusII functionalities 
+    args.append('-DSEACASProj_ENABLE_SEACASExodif:BOOL=ON')
+    args.append('-DSEACASProj_ENABLE_SEACASExotxt:BOOL=ON')
     args.append('-DSEACASProj_ENABLE_TESTS:BOOL=OFF')
     args.append('-DSEACASProj_SKIP_FORTRANCINTERFACE_VERIFY_TEST:BOOL=ON')
     args.append('-DTPL_ENABLE_Matio:BOOL=OFF')
