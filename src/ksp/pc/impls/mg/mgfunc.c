@@ -50,7 +50,8 @@ PetscErrorCode PCMGResidualTransposeDefault(Mat mat,Vec b,Vec x,Vec r)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MatResidual(mat,b,x,r);CHKERRQ(ierr);
+  ierr = MatMultTranspose(mat,x,r);CHKERRQ(ierr);
+  ierr = VecAYPX(r,-1.0,b);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
