@@ -29,7 +29,7 @@ PetscErrorCode  PCMGResidualDefault(Mat mat,Vec b,Vec x,Vec r)
 }
 
 /*@C
-   PCMGResidualTransposeDefault - Default routine to calculate the residual transpose
+   PCMGResidualTransposeDefault - Default routine to calculate the residual of the transposed linear system
 
    Collective on Mat
 
@@ -115,7 +115,7 @@ PetscErrorCode  PCMGSetResidual(PC pc,PetscInt l,PetscErrorCode (*residual)(Mat,
 }
 
 /*@C
-   PCMGSetResidualTranspose - Sets the function to be used to calculate the transpose of the residual
+   PCMGSetResidualTranspose - Sets the function to be used to calculate the residual of the transposed linear system
    on the lth level.
 
    Logically Collective on PC
