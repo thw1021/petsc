@@ -173,74 +173,89 @@ int main(int argc, char **argv) {
   ierr = PetscObjectViewFromOptions((PetscObject) section, NULL, "-dm_section_view");CHKERRQ(ierr);
   ierr = PetscSectionDestroy(&section);CHKERRQ(ierr);
 
-  {
-    /* TODO: Replace with ExodusII viewer */
-    /* Create the exodus result file */
-    PetscInt numstep = 3, step;
-    char    *nodalVarName[4];
-    char    *zonalVarName[6];
-    int     *truthtable;
-    PetscInt      numNodalVar, numZonalVar, i;
-    int      CPU_word_size, IO_word_size, EXO_mode;
+  /* Create the exodus result file */
+  PetscInt      numstep = 3, step;
+  char         *nodalVarName[4];
+  char         *zonalVarName[6];
+  int          *truthtable;
+  PetscInt      numNodalVar, numZonalVar, i;
+  PetscViewer   viewer;
 
-    ex_opts(EX_VERBOSE+EX_DEBUG);
-    if (!rank) {
-      CPU_word_size = sizeof(PetscReal);
-      IO_word_size  = sizeof(PetscReal);
-      EXO_mode      = EX_CLOBBER;
-#if defined(PETSC_USE_64BIT_INDICES)
-      EXO_mode += EX_ALL_INT64_API;
-#endif
-      exoid = ex_create(ofilename, EXO_mode, &CPU_word_size, &IO_word_size);
-      if (exoid < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "Unable to open exodus file %\n", ofilename);
-    }
-    ierr = DMPlexView_ExodusII_Internal(dm, exoid, order);CHKERRQ(ierr);
+  /* enable exodus debugging informations */
+  ex_opts(EX_VERBOSE|EX_DEBUG);
+  /* Create the exodus file */
+  ierr = PetscViewerExodusIIOpen(PETSC_COMM_WORLD,ofilename,FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
+  /* The long way would be */
+  /*
+    ierr = PetscViewerCreate(PETSC_COMM_SELF,&viewer);CHKERRQ(ierr);
+    ierr = PetscViewerSetType(viewer,PETSCVIEWEREXODUSII);CHKERRQ(ierr);
+    ierr = PetscViewerFileSetMode(viewer,FILE_MODE_APPEND);CHKERRQ(ierr);
+    ierr = PetscViewerFileSetName(viewer,ofilename);CHKERRQ(ierr);
+  */
+  /* set the mesh order */
+  ierr = PetscViewerExodusIISetOrder(viewer,order);CHKERRQ(ierr);
+  ierr = PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD);
+  /* 
+    Notice how the exodus file is actually NOT open at this point (exoid is -1)
+    Since we are overwritting the file (mode is FILE_MODE_WRITE), we are going to have to 
+    write the geometry (the DM), which can only be done on a brand new file.
+  */
 
-    if (!rank) {
-      /* "Format" the exodus result file, i.e. allocate space for nodal and zonal variables */
-      switch (sdim) {
-      case 2:
-        numNodalVar = 3;
-        nodalVarName[0] = (char *) "U_x";
-        nodalVarName[1] = (char *) "U_y";
-        nodalVarName[2] = (char *) "Alpha";
-        numZonalVar = 3;
-        zonalVarName[0] = (char *) "Sigma_11";
-        zonalVarName[1] = (char *) "Sigma_22";
-        zonalVarName[2] = (char *) "Sigma_12";
-        break;
-      case 3:
-        numNodalVar = 4;
-        nodalVarName[0] = (char *) "U_x";
-        nodalVarName[1] = (char *) "U_y";
-        nodalVarName[2] = (char *) "U_z";
-        nodalVarName[3] = (char *) "Alpha";
-        numZonalVar = 6;
-        zonalVarName[0] = (char *) "Sigma_11";
-        zonalVarName[1] = (char *) "Sigma_22";
-        zonalVarName[2] = (char *) "Sigma_33";
-        zonalVarName[3] = (char *) "Sigma_23";
-        zonalVarName[4] = (char *) "Sigma_13";
-        zonalVarName[5] = (char *) "Sigma_12";
-        break;
-      default: SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %D", sdim);
-      }
-      ierr = ex_put_variable_param(exoid, EX_ELEM_BLOCK, numZonalVar);CHKERRQ(ierr);
-      ierr = ex_put_variable_names(exoid, EX_ELEM_BLOCK, numZonalVar, zonalVarName);CHKERRQ(ierr);
-      ierr = ex_put_variable_param(exoid, EX_NODAL, numNodalVar);CHKERRQ(ierr);
-      ierr = ex_put_variable_names(exoid, EX_NODAL, numNodalVar, nodalVarName);CHKERRQ(ierr);
-      numCS = ex_inquire_int(exoid, EX_INQ_ELEM_BLK);
-      ierr = PetscMalloc1(numZonalVar * numCS, &truthtable);CHKERRQ(ierr);
-      for (i = 0; i < numZonalVar * numCS; ++i) truthtable[i] = 1;
-      ierr = ex_put_truth_table(exoid, EX_ELEM_BLOCK, numCS, numZonalVar, truthtable);CHKERRQ(ierr);
-      ierr = PetscFree(truthtable);CHKERRQ(ierr);
-      /* Writing time step information in the file. Note that this is currently broken in the exodus library for netcdf4 (HDF5-based) files */
-      for (step = 0; step < numstep; ++step) {
-        PetscReal time = step;
-        ierr = ex_put_time(exoid, step+1, &time);CHKERRQ(ierr);
-      }
-      ierr = ex_close(exoid);CHKERRQ(ierr);
-    }
+  /* Save the geometry to the file, erasing all previous content */
+  ierr = DMView(dm,viewer);CHKERRQ(ierr);
+  ierr = PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD);
+  /*
+    Note how the exodus file is now open
+  */
+
+  /* "Format" the exodus result file, i.e. allocate space for nodal and zonal variables */
+  switch (sdim) {
+  case 2:
+    numNodalVar = 3;
+    nodalVarName[0] = (char *) "U_x";
+    nodalVarName[1] = (char *) "U_y";
+    nodalVarName[2] = (char *) "Alpha";
+    numZonalVar = 3;
+    zonalVarName[0] = (char *) "Sigma_11";
+    zonalVarName[1] = (char *) "Sigma_22";
+    zonalVarName[2] = (char *) "Sigma_12";
+    break;
+  case 3:
+    numNodalVar = 4;
+    nodalVarName[0] = (char *) "U_x";
+    nodalVarName[1] = (char *) "U_y";
+    nodalVarName[2] = (char *) "U_z";
+    nodalVarName[3] = (char *) "Alpha";
+    numZonalVar = 6;
+    zonalVarName[0] = (char *) "Sigma_11";
+    zonalVarName[1] = (char *) "Sigma_22";
+    zonalVarName[2] = (char *) "Sigma_33";
+    zonalVarName[3] = (char *) "Sigma_23";
+    zonalVarName[4] = (char *) "Sigma_13";
+    zonalVarName[5] = (char *) "Sigma_12";
+    break;
+  default: SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %D", sdim);
+  }
+  ierr = PetscViewerExodusIIGetId(viewer,&exoid);CHKERRQ(ierr);
+  PetscStackCallStandard(ex_put_variable_param,(exoid, EX_ELEM_BLOCK, numZonalVar));
+  PetscStackCallStandard(ex_put_variable_names,(exoid, EX_ELEM_BLOCK, numZonalVar, zonalVarName));
+  PetscStackCallStandard(ex_put_variable_param,(exoid, EX_NODAL, numNodalVar));
+  PetscStackCallStandard(ex_put_variable_names,(exoid, EX_NODAL, numNodalVar, nodalVarName));
+  numCS = ex_inquire_int(exoid, EX_INQ_ELEM_BLK);
+
+  /*
+    An exodusII truth table specifies which fields are saved at which time step
+    It speeds up I/O but reserving space for fieldsin the file ahead of time.
+  */
+  ierr = PetscMalloc1(numZonalVar * numCS, &truthtable);CHKERRQ(ierr);
+  for (i = 0; i < numZonalVar * numCS; ++i) truthtable[i] = 1;
+  PetscStackCallStandard(ex_put_truth_table,(exoid, EX_ELEM_BLOCK, numCS, numZonalVar, truthtable));
+  ierr = PetscFree(truthtable);CHKERRQ(ierr);
+
+  /* Writing time step information in the file. Note that this is currently broken in the exodus library for netcdf4 (HDF5-based) files */
+  for (step = 0; step < numstep; ++step) {
+    PetscReal time = step;
+    PetscStackCallStandard(ex_put_time,(exoid, step+1, &time));
   }
 
   {
@@ -260,22 +275,6 @@ int main(int argc, char **argv) {
       dm = pdm;
       ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
     }
-  }
-
-  {
-    /* TODO Replace with ExodusII viewer */
-    /* Reopen the exodus result file on all processors */
-    MPI_Info mpi_info = MPI_INFO_NULL;
-    int      CPU_word_size, IO_word_size, EXO_mode;
-    float    EXO_version;
-
-    EXO_mode      = EX_WRITE;
-    CPU_word_size = sizeof(PetscReal);
-    IO_word_size  = sizeof(PetscReal);
-#if defined(PETSC_USE_64BIT_INDICES)
-      EXO_mode += EX_ALL_INT64_API;
-#endif
-    exoid = ex_open_par(ofilename, EXO_mode, &CPU_word_size, &IO_word_size, &EXO_version, PetscObjectComm((PetscObject) dm), mpi_info);
   }
 
   /* Get DM and IS for each field of dm */
@@ -368,20 +367,27 @@ int main(int argc, char **argv) {
     PetscSection coordSection;
     Vec          coord;
     PetscReal    norm;
+    PetscInt     step = 0;
+    PetscReal    time = 1.234;
 
     /* Writing nodal variables to ExodusII file */
-    ierr = VecViewPlex_ExodusII_Nodal_Internal(U, exoid, 1);CHKERRQ(ierr);
-    ierr = VecViewPlex_ExodusII_Nodal_Internal(A, exoid, 1);CHKERRQ(ierr);
+    ierr = DMSetOutputSequenceNumber(dmU,0,time);CHKERRQ(ierr);
+    ierr = DMSetOutputSequenceNumber(dmA,0,time);CHKERRQ(ierr);
+
+    ierr = VecView(U, viewer);CHKERRQ(ierr);
+    ierr = VecView(A, viewer);CHKERRQ(ierr);
     /* Saving U and Alpha in one shot.
        For this, we need to cheat and change the Vec's name
        Note that in the end we write variables one component at a time, so that there is no real values in doing this */
+
+    ierr = DMSetOutputSequenceNumber(dmUA,1,time);CHKERRQ(ierr);
     ierr = DMGetGlobalVector(dmUA, &tmpVec);CHKERRQ(ierr);
     ierr = VecCopy(UA, tmpVec);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) tmpVec, "U");CHKERRQ(ierr);
-    ierr = VecViewPlex_ExodusII_Nodal_Internal(tmpVec, exoid, 2);CHKERRQ(ierr);
+    ierr = VecView(tmpVec, viewer);CHKERRQ(ierr);
     /* Reading nodal variables in Exodus file */
     ierr = VecSet(tmpVec, -1000.0);CHKERRQ(ierr);
-    ierr = VecLoadPlex_ExodusII_Nodal_Internal(tmpVec, exoid, 2);CHKERRQ(ierr);
+    ierr = VecLoad(tmpVec, viewer);CHKERRQ(ierr);
     ierr = VecAXPY(UA, -1.0, tmpVec);CHKERRQ(ierr);
     ierr = VecNorm(UA, NORM_INFINITY, &norm);CHKERRQ(ierr);
     if (norm > PETSC_SQRT_MACHINE_EPSILON) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha ||Vin - Vout|| = %g\n", (double) norm);
@@ -391,10 +397,11 @@ int main(int argc, char **argv) {
     ierr = DMGetGlobalVector(dmUA2, &tmpVec);CHKERRQ(ierr);
     ierr = VecCopy(UA2, tmpVec);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) tmpVec, "U");CHKERRQ(ierr);
-    ierr = VecViewPlex_ExodusII_Nodal_Internal(tmpVec, exoid, 3);CHKERRQ(ierr);
+    ierr = DMSetOutputSequenceNumber(dmUA2,2,time);CHKERRQ(ierr);
+    ierr = VecView(tmpVec, viewer);CHKERRQ(ierr);
     /* Reading nodal variables in Exodus file */
     ierr = VecSet(tmpVec, -1000.0);CHKERRQ(ierr);
-    ierr = VecLoadPlex_ExodusII_Nodal_Internal(tmpVec, exoid, 3);CHKERRQ(ierr);
+    ierr = VecLoad(tmpVec,viewer);CHKERRQ(ierr);
     ierr = VecAXPY(UA2, -1.0, tmpVec);CHKERRQ(ierr);
     ierr = VecNorm(UA2, NORM_INFINITY, &norm);CHKERRQ(ierr);
     if (norm > PETSC_SQRT_MACHINE_EPSILON) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha2 ||Vin - Vout|| = %g\n", (double) norm);
@@ -403,7 +410,8 @@ int main(int argc, char **argv) {
     /* Building and saving Sigma
        We set sigma_0 = rank (to see partitioning)
               sigma_1 = cell set ID
-              sigma_2 = x_coordinate of the cell center of mass */
+              sigma_2 = x_coordinate of the cell center of mass 
+    */
     ierr = DMGetCoordinateSection(dmS, &coordSection);CHKERRQ(ierr);
     ierr = DMGetCoordinatesLocal(dmS, &coord);CHKERRQ(ierr);
     ierr = DMGetLabelIdIS(dmS, "Cell Sets", &csIS);CHKERRQ(ierr);
@@ -439,18 +447,19 @@ int main(int argc, char **argv) {
     ierr = ISDestroy(&csIS);CHKERRQ(ierr);
     ierr = VecViewFromOptions(S, NULL, "-s_vec_view");CHKERRQ(ierr);
     /* Writing zonal variables in Exodus file */
-    ierr = VecViewPlex_ExodusII_Zonal_Internal(S, exoid, 1);CHKERRQ(ierr);
+    ierr = DMSetOutputSequenceNumber(dmS,1,time);CHKERRQ(ierr);
+    ierr = VecView(S,viewer);CHKERRQ(ierr);
     /* Reading zonal variables in Exodus file */
     ierr = DMGetGlobalVector(dmS, &tmpVec);CHKERRQ(ierr);
     ierr = VecSet(tmpVec, -1000.0);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) tmpVec, "Sigma");CHKERRQ(ierr);
-    ierr = VecLoadPlex_ExodusII_Zonal_Internal(tmpVec, exoid, 1);CHKERRQ(ierr);
+    ierr = VecLoad(tmpVec,viewer);CHKERRQ(ierr);
     ierr = VecAXPY(S, -1.0, tmpVec);CHKERRQ(ierr);
     ierr = VecNorm(S, NORM_INFINITY, &norm);
     if (norm > PETSC_SQRT_MACHINE_EPSILON) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Sigma ||Vin - Vout|| = %g\n", (double) norm);
     ierr = DMRestoreGlobalVector(dmS, &tmpVec);CHKERRQ(ierr);
   }
-  ierr = ex_close(exoid);CHKERRQ(ierr);
+  ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
 
   ierr = DMRestoreGlobalVector(dmUA2, &UA2);CHKERRQ(ierr);
   ierr = DMRestoreGlobalVector(dmUA, &UA);CHKERRQ(ierr);
