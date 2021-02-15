@@ -338,7 +338,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
             } else {
               idx = -idx - 1;
               nc = d_maps->num_face;
-	      if (nc>LANDAU_MAX_Q_FACE) printf("ERROR %d > %d\n",nc,LANDAU_MAX_Q_FACE);
+              if (nc>LANDAU_MAX_Q_FACE) printf("ERROR %d > %d\n",nc,LANDAU_MAX_Q_FACE);
               for (q = 0; q < d_maps->num_face; q++) {
                 cols0[q]     = d_maps->c_maps[idx][q].gid;
                 col_scale[q] = d_maps->c_maps[idx][q].scale;
