@@ -1676,7 +1676,7 @@ PetscErrorCode  VecCopyAsync(Vec x,Vec y,PetscStream pstream)
     ierr = (*x->ops->copy)(x,y);CHKERRQ(ierr);
   }
 #else
-  if (*x->ops->copyasync) {
+  if (x->ops->copyasync) {
     ierr = (*x->ops->copyasync)(x,y,pstream);CHKERRQ(ierr);
   } else {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vec has no VecCopyAsync method\n");

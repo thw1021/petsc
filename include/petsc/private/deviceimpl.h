@@ -61,6 +61,7 @@ struct _EventOps {
 struct _n_PetscEvent {
   struct _EventOps ops[1];
   PetscInt         id;
+  PetscBool        idle;
   PetscBool        setup;
   PetscStreamType  type;
   unsigned int     eventFlags, waitFlags;
