@@ -175,6 +175,8 @@ PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscEvent event)
   ierr = (*strm->ops->recordevent)(strm, event);CHKERRQ(ierr);
   /* Imprint on the event the id of the stream, so subsequent waits need not check */
   event->id = strm->id;
+  /* Assume the event has work */
+  event->idle = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -187,6 +189,7 @@ PetscErrorCode PetscStreamWaitEvent(PetscStream strm, PetscEvent event)
   /* Last stream to interact with this event was this stream, no need to wait */
   if (strm->id == event->id) PetscFunctionReturn(0);
   ierr = (*strm->ops->waitevent)(strm, event);CHKERRQ(ierr);
+  event->id = strm->id;
   PetscFunctionReturn(0);
 }
 
@@ -221,6 +224,12 @@ PetscErrorCode PetscStreamSynchronize(PetscStream strm)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  if (!strm) {
+    cudaError_t cerr;
+
+    cerr = cudaDeviceSynchronize();CHKERRCUDA(cerr);
+    PetscFunctionReturn(0);
+  }
   PetscValidStreamType(strm,1);
   switch (strm->mode) {
   case PETSC_STREAM_GLOBAL_BLOCKING:
