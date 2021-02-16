@@ -35,7 +35,6 @@ class Configure(config.package.CMakePackage):
     args.append('-DCMAKE_INSTALL_RPATH:PATH='+os.path.join(self.installDir,'lib'))
     self.pushLanguage('C')
     args.append('-DCMAKE_C_COMPILER:FILEPATH="'+self.getCompiler()+'"')
-    args.append('-DCMAKE_C_FLAGS:STRING="'+self.getCompilerFlags()+'"')
     self.popLanguage()
     # building the fortran library is technically not required to add exodus support
     # we build it anyway so that fortran users can still use exodus functions directly 
