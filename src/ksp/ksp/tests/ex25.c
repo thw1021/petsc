@@ -1,6 +1,7 @@
 static char help[] = "Tests CG, MINRES and SYMMLQ on the symmetric indefinite matrices: afiro \n\n";
 
 #include <petscksp.h>
+#include <petsc/private/deviceimpl.h>
 
 int main(int argc,char **args)
 {
@@ -29,6 +30,8 @@ int main(int argc,char **args)
   ierr = MatLoad(C,view);CHKERRQ(ierr);
   ierr = VecCreate(PETSC_COMM_WORLD,&b);CHKERRQ(ierr);
   ierr = VecCreate(PETSC_COMM_WORLD,&u);CHKERRQ(ierr);
+  ierr = VecSetFromOptions(b);CHKERRQ(ierr);
+  ierr = VecSetFromOptions(u);CHKERRQ(ierr);
   ierr = VecLoad(b,view);CHKERRQ(ierr);
   ierr = VecLoad(u,view);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&view);CHKERRQ(ierr);
