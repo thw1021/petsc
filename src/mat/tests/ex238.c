@@ -8,8 +8,8 @@ int main(int argc,char **args)
   Mat            A;
   Vec            x,y;
   PetscErrorCode ierr;
-  PetscInt       m=50000,bs=12,i,j,row,col,M;
-  PetscScalar    rval;
+  PetscInt       m=50000,bs=12,i,j,k,l,row,col,M;
+  PetscScalar    rval,*vals;
   PetscRandom    rdm;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
@@ -25,24 +25,37 @@ int main(int argc,char **args)
   ierr = VecDuplicate(x,&y);CHKERRQ(ierr);
 
   /* For each block row insert atleast 27 elements */
+  ierr = PetscMalloc1(bs*bs,&vals);CHKERRQ(ierr);
   for (i=0; i<m; i++) {
     row = bs*i;
     for (j=0; j<27; j++) {
       ierr = PetscRandomGetValue(rdm,&rval);CHKERRQ(ierr);
-      col  = (PetscInt)(PetscRealPart(rval)*M);
-      ierr = MatSetValues(A,1,&row,1,&col,&rval,INSERT_VALUES);CHKERRQ(ierr);
+      col  = (PetscInt)(PetscRealPart(rval)*m);
+      for (k=0; k<bs; k++) {
+        for (l=0; l<bs; l++) {
+          ierr = PetscRandomGetValue(rdm,&rval);CHKERRQ(ierr);
+          vals[k*bs + l] = rval;
+        }
+      }
+      ierr = MatSetValuesBlocked(A,1,&row,1,&col,vals,INSERT_VALUES);CHKERRQ(ierr);
     }
   }
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = PetscFree(vals);CHKERRQ(ierr);
 
   /* Time MatMult(), MatMultAdd() */
   for (i=0; i<1; i++) {
     ierr  = VecSetRandom(x,rdm);CHKERRQ(ierr);
+    VecView(x,PETSC_VIEWER_BINARY_WORLD);
     ierr  = MatMult(A,x,y);CHKERRQ(ierr);
+    VecView(y,PETSC_VIEWER_BINARY_WORLD);
     ierr  = VecSetRandom(x,rdm);CHKERRQ(ierr);
     ierr  = VecSetRandom(y,rdm);CHKERRQ(ierr);
+    VecView(x,PETSC_VIEWER_BINARY_WORLD);
+    VecView(y,PETSC_VIEWER_BINARY_WORLD);
     ierr  = MatMultAdd(A,x,y,y);CHKERRQ(ierr);
+    VecView(y,PETSC_VIEWER_BINARY_WORLD);
   }
 
   ierr = MatDestroy(&A);CHKERRQ(ierr);
