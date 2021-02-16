@@ -95,7 +95,7 @@ static PetscErrorCode PetscStreamQuery_CUDA(PetscStream strm, PetscBool *busy)
   PetscFunctionReturn(0);
 }
 
-static struct _StreamOps cuops = {
+static const struct _StreamOps cuops = {
   PetscStreamCreate_CUDA,
   PetscStreamDestroy_CUDA,
   PetscStreamSetUp_CUDA,
