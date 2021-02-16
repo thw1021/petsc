@@ -35,7 +35,6 @@ class Configure(config.package.CMakePackage):
     args.append('-DCMAKE_INSTALL_RPATH:PATH='+os.path.join(self.installDir,'lib'))
     self.pushLanguage('C')
     args.append('-DCMAKE_C_COMPILER:FILEPATH="'+self.getCompiler()+'"')
-    args.append('-DCMAKE_C_FLAGS:STRING="'+self.getCompilerFlags()+'"')
     self.popLanguage()
     # building the fortran library is technically not required to add exodus support
     # we build it anyway so that fortran users can still use exodus functions directly 
@@ -46,13 +45,13 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_Fortran_FLAGS:STRING="'+self.getCompilerFlags()+'"')
       args.append('-DSEACASProj_ENABLE_SEACASExodus_for:BOOL=ON')
       args.append('-DSEACASProj_ENABLE_SEACASExoIIv2for32:BOOL=ON')
-      args.append('-DSEACASExodus_for_ENABLE_EXAMPLES:BOOL=OFF')
       args.append('-DSEACASExodus_for_ENABLE_TESTS:BOOL=OFF')
       self.popLanguage()
     else:
       args.append('-DSEACASProj_ENABLE_SEACASExodus_for:BOOL=OFF')
       args.append('-DSEACASProj_ENABLE_SEACASExoIIv2for32:BOOL=OFF')
     args.append('-DSEACASProj_ENABLE_SEACASExodus:BOOL=ON')
+
     # exodiff and exotxt are convenient tools to debug exodusII functionalities 
     args.append('-DSEACASProj_ENABLE_SEACASExodiff:BOOL=ON')
     args.append('-DSEACASProj_ENABLE_SEACASExotxt:BOOL=ON')
@@ -69,7 +68,7 @@ class Configure(config.package.CMakePackage):
       raise RuntimeError('NetCDF dir is not known! ExodusII requires explicit path to NetCDF. Suggest using --with-netcdf-dir or --download-netcdf')
     else:
       args.append('-DNetCDF_DIR:PATH='+self.netcdf.directory)
-    args.append('-DHDF5_DIR:PATH='+self.hdf5.directory)
+    args.append('-DHDF5_ROOT:PATH='+self.hdf5.directory)
     if not self.pnetcdf.directory:
       raise RuntimeError('PNetCDF dir is not known! ExodusII requires explicit path to PNetCDF. Suggest using --with-pnetcdf-dir or --download-pnetcdf')
     else:
@@ -82,7 +81,4 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_BUILD_TYPE=Debug')
     else:
       args.append('-DCMAKE_BUILD_TYPE=Release')
-    args.append('-DSEACASExodus_ENABLE_TESTS:BOOL=OFF')
-    args.append('-DSEACASProj_ENABLE_EXAMPLES:BOOL=OFF')
-    args.append('-DSEACASProj_ENABLE_TESTS:BOOL=OFF')
     return args
