@@ -6,7 +6,7 @@ static PetscErrorCode PetscStreamScalarDestroy_CUDA(PetscStreamScalar pscal)
   cudaError_t cerr;
 
   PetscFunctionBegin;
-  cerr = cudaFree(pscal->host);CHKERRCUDA(cerr);
+  cerr = cudaFreeHost(pscal->host);CHKERRCUDA(cerr);
   cerr = cudaFree(pscal->device);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
@@ -38,15 +38,15 @@ static PetscErrorCode PetscStreamScalarSetValue_CUDA(PetscStreamScalar pscal, co
   ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
   if (val) {
     if (PetscMemTypeHost(mtype)) {
-      *pscal->host = *val;
+      cerr = cudaMemcpyAsync(pscal->host, val, sizeof(PetscScalar), cudaMemcpyHostToHost, cstream);CHKERRCUDA(cerr);
       cerr = cudaMemcpyAsync(pscal->device, val, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
     } else {
       cerr = cudaMemcpyAsync(pscal->device, val, sizeof(PetscScalar), cudaMemcpyDeviceToDevice, cstream);CHKERRCUDA(cerr);
       cerr = cudaMemcpyAsync(pscal->host, val, sizeof(PetscScalar), cudaMemcpyDeviceToHost, cstream);CHKERRCUDA(cerr);
     }
   } else {
-    *pscal->host = (PetscScalar)0.0;
     cerr = cudaMemsetAsync(pscal->device, 0, sizeof(PetscScalar), cstream);CHKERRQ(ierr);
+    cerr = cudaMemsetAsync(pscal->host, 0, sizeof(PetscScalar), cstream);CHKERRQ(ierr);
   }
   ierr = PetscStreamRestoreStream(pstream, &cstream);CHKERRQ(ierr);
   ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
@@ -111,7 +111,7 @@ static PetscErrorCode PetscStreamScalarGetDevice_CUDA(PetscStreamScalar pscal, P
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarAccumOpDispatch_CUDA(PetscStreamScalar pscalret, PetscInt n, PetscStreamScalar pscal[], PetscStreamComputeOp epiop, PetscStreamComputeOp accop, PetscStream pstream)
+static PetscErrorCode PetscStreamScalarAccumOpDispatch_CUDA(PetscStreamScalar pscalret, PetscInt n, PetscStreamScalar pscal[], PetscStreamComputeOp epiop, PetscStreamComputeOp accop, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
@@ -120,7 +120,7 @@ PetscErrorCode PetscStreamScalarAccumOpDispatch_CUDA(PetscStreamScalar pscalret,
   PetscFunctionReturn(0);
 }
 
-static struct _ScalOps scalcuops = {
+static const struct _ScalOps scalcuops = {
   PetscStreamScalarCreate_CUDA,
   PetscStreamScalarDestroy_CUDA,
   PetscStreamScalarSetup_CUDA,
