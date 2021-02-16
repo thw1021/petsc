@@ -12,6 +12,7 @@ PetscErrorCode PetscEventCreate(PetscEvent *event)
   *event = NULL;
   ierr = PetscNew(&e);CHKERRQ(ierr);
   e->id = -1;
+  e->idle = PETSC_TRUE;
   e->setup = PETSC_FALSE;
   e->type = PETSC_STREAM_INVALID;
   e->eventFlags = 0;
@@ -25,8 +26,8 @@ PetscErrorCode PetscEventDestroy(PetscEvent *event)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!event) PetscFunctionReturn(0);
-  PetscValidPointer(event,1);
+  if (!*event) PetscFunctionReturn(0);
+  PetscValidStreamType(*event,1);
   ierr = (*(*event)->ops->destroy)(*event);CHKERRQ(ierr);
   ierr = PetscFree(*event);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -67,7 +68,9 @@ PetscErrorCode PetscEventSynchronize(PetscEvent event)
 
   PetscFunctionBegin;
   PetscValidStreamType(event,1);
+  if (event->idle) PetscFunctionReturn(0);
   ierr = (*event->ops->synchronize)(event);CHKERRQ(ierr);
+  event->idle = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -79,5 +82,6 @@ PetscErrorCode PetscEventQuery(PetscEvent event, PetscBool *busy)
   PetscValidStreamType(event,1);
   PetscValidBoolPointer(busy,2);
   ierr = (*event->ops->query)(event, busy);CHKERRQ(ierr);
+  event->idle = *busy;
   PetscFunctionReturn(0);
 }
