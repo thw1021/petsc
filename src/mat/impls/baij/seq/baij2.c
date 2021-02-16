@@ -1195,13 +1195,12 @@ PetscErrorCode MatMultAdd_SeqBAIJ_12_ver2(Mat A,Vec xx,Vec yy,Vec zz)
 PetscErrorCode MatMult_SeqBAIJ_12_AVX2(Mat A,Vec xx,Vec zz)
 {
   Mat_SeqBAIJ       *a = (Mat_SeqBAIJ*)A->data;
-  PetscScalar       *z = NULL,*work,*workt,*zarray;
-  const PetscScalar *x,*xb;
-  const MatScalar   *v;
+  PetscScalar       *z = NULL,*zarray;
+  const PetscScalar *x,*work;
+  const MatScalar   *v = a->a;
   PetscErrorCode    ierr;
   PetscInt          mbs,i,j,n;
-  const PetscInt    *idx,*ii,*ridx=NULL;
-  PetscInt          k;
+  const PetscInt    *idx = a->j,*ii,*ridx=NULL;
   PetscBool         usecprow=a->compressedrow.use;
   const PetscInt    bs = 12, bs2 = 144;
 
@@ -1213,8 +1212,6 @@ PetscErrorCode MatMult_SeqBAIJ_12_AVX2(Mat A,Vec xx,Vec zz)
   ierr = VecGetArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecGetArrayWrite(zz,&zarray);CHKERRQ(ierr);
 
-  idx = a->j;
-  v   = a->a;
   if (usecprow) {
     mbs  = a->compressedrow.nrows;
     ii   = a->compressedrow.i;
@@ -1226,25 +1223,13 @@ PetscErrorCode MatMult_SeqBAIJ_12_AVX2(Mat A,Vec xx,Vec zz)
     z   = zarray;
   }
 
-  if (!a->mult_work) {
-    k    = PetscMax(A->rmap->n,A->cmap->n);
-    ierr = PetscMalloc1(k+1,&a->mult_work);CHKERRQ(ierr);
-  }
-
-  work = a->mult_work;
   for (i=0; i<mbs; i++) {
-    n           = ii[1] - ii[0]; ii++;
-    workt       = work;
-    for (j=0; j<n; j++) {
-      xb = x + bs*(*idx++);
-      for (k=0; k<bs; k++) workt[k] = xb[k];
-      workt += bs;
-    }
-    if (usecprow) z = zarray + bs*ridx[i];
-
     z0 = _mm256_setzero_pd(); z1 = _mm256_setzero_pd(); z2 = _mm256_setzero_pd();
 
+    n  = ii[1] - ii[0]; ii++;
     for (j=0; j<n; j++) {
+      work = x + bs*(*idx++);
+
       /* first column of a */
       w0 = _mm256_set1_pd(work[j*12  ]);
       a0 = _mm256_loadu_pd(&v[j*144  ]); z0 = _mm256_fmadd_pd(a0,w0,z0);
@@ -1253,33 +1238,33 @@ PetscErrorCode MatMult_SeqBAIJ_12_AVX2(Mat A,Vec xx,Vec zz)
 
       /* second column of a */
       w1 = _mm256_set1_pd(work[j*12+ 1]);
-      a0 = _mm256_loadu_pd(&v[j*144+ 12]); z0 = _mm256_fmadd_pd(a0,w1,z0);
-      a1 = _mm256_loadu_pd(&v[j*144+16]); z1 = _mm256_fmadd_pd(a1,w1,z1);
-      a2 = _mm256_loadu_pd(&v[j*144+20]); z2 = _mm256_fmadd_pd(a2,w1,z2);
+      a3 = _mm256_loadu_pd(&v[j*144+12]); z0 = _mm256_fmadd_pd(a3,w1,z0);
+      a4 = _mm256_loadu_pd(&v[j*144+16]); z1 = _mm256_fmadd_pd(a4,w1,z1);
+      a5 = _mm256_loadu_pd(&v[j*144+20]); z2 = _mm256_fmadd_pd(a5,w1,z2);
 
       /* third column of a */
       w2 = _mm256_set1_pd(work[j*12 +2]);
-      a3 = _mm256_loadu_pd(&v[j*144+24]); z0 = _mm256_fmadd_pd(a3,w2,z0);
-      a4 = _mm256_loadu_pd(&v[j*144+28]); z1 = _mm256_fmadd_pd(a4,w2,z1);
-      a5 = _mm256_loadu_pd(&v[j*144+32]); z2 = _mm256_fmadd_pd(a5,w2,z2);
+      a0 = _mm256_loadu_pd(&v[j*144+24]); z0 = _mm256_fmadd_pd(a0,w2,z0);
+      a1 = _mm256_loadu_pd(&v[j*144+28]); z1 = _mm256_fmadd_pd(a1,w2,z1);
+      a2 = _mm256_loadu_pd(&v[j*144+32]); z2 = _mm256_fmadd_pd(a2,w2,z2);
 
       /* fourth column of a */
       w3 = _mm256_set1_pd(work[j*12+ 3]);
-      a0 = _mm256_loadu_pd(&v[j*144+36]); z0 = _mm256_fmadd_pd(a0,w3,z0);
-      a1 = _mm256_loadu_pd(&v[j*144+40]); z1 = _mm256_fmadd_pd(a1,w3,z1);
-      a2 = _mm256_loadu_pd(&v[j*144+44]); z2 = _mm256_fmadd_pd(a2,w3,z2);
+      a3 = _mm256_loadu_pd(&v[j*144+36]); z0 = _mm256_fmadd_pd(a3,w3,z0);
+      a4 = _mm256_loadu_pd(&v[j*144+40]); z1 = _mm256_fmadd_pd(a4,w3,z1);
+      a5 = _mm256_loadu_pd(&v[j*144+44]); z2 = _mm256_fmadd_pd(a5,w3,z2);
 
       /* fifth column of a */
       w0 = _mm256_set1_pd(work[j*12+ 4]);
-      a3 = _mm256_loadu_pd(&v[j*144+48]); z0 = _mm256_fmadd_pd(a3,w0,z0);
-      a4 = _mm256_loadu_pd(&v[j*144+52]); z1 = _mm256_fmadd_pd(a4,w0,z1);
-      a5 = _mm256_loadu_pd(&v[j*144+56]); z2 = _mm256_fmadd_pd(a5,w0,z2);
+      a0 = _mm256_loadu_pd(&v[j*144+48]); z0 = _mm256_fmadd_pd(a0,w0,z0);
+      a1 = _mm256_loadu_pd(&v[j*144+52]); z1 = _mm256_fmadd_pd(a1,w0,z1);
+      a2 = _mm256_loadu_pd(&v[j*144+56]); z2 = _mm256_fmadd_pd(a2,w0,z2);
 
       /* sixth column of a */
       w1 = _mm256_set1_pd(work[j*12+ 5]);
-      a0 = _mm256_loadu_pd(&v[j*144+60]); z0 = _mm256_fmadd_pd(a0,w1,z0);
-      a1 = _mm256_loadu_pd(&v[j*144+64]); z1 = _mm256_fmadd_pd(a1,w1,z1);
-      a2 = _mm256_loadu_pd(&v[j*144+68]); z2 = _mm256_fmadd_pd(a2,w1,z2);
+      a3 = _mm256_loadu_pd(&v[j*144+60]); z0 = _mm256_fmadd_pd(a3,w1,z0);
+      a4 = _mm256_loadu_pd(&v[j*144+64]); z1 = _mm256_fmadd_pd(a4,w1,z1);
+      a5 = _mm256_loadu_pd(&v[j*144+68]); z2 = _mm256_fmadd_pd(a5,w1,z2);
 
       /* seventh column of a */
       w2 = _mm256_set1_pd(work[j*12+ 6]);
@@ -1297,13 +1282,13 @@ PetscErrorCode MatMult_SeqBAIJ_12_AVX2(Mat A,Vec xx,Vec zz)
       w0 = _mm256_set1_pd(work[j*12+ 8]);
       a0 = _mm256_loadu_pd(&v[j*144+96]); z0 = _mm256_fmadd_pd(a0,w0,z0);
       a1 = _mm256_loadu_pd(&v[j*144+100]); z1 = _mm256_fmadd_pd(a1,w0,z1);
-      a2 = _mm256_loadu_pd(&v[j*144+104]); z2 = _mm256_fmadd_pd(a2,w3,z2);
+      a2 = _mm256_loadu_pd(&v[j*144+104]); z2 = _mm256_fmadd_pd(a2,w0,z2);
 
       /* tenth column of a */
       w1 = _mm256_set1_pd(work[j*12+ 9]);
-      a0 = _mm256_loadu_pd(&v[j*144+108]); z0 = _mm256_fmadd_pd(a0,w1,z0);
-      a1 = _mm256_loadu_pd(&v[j*144+112]); z1 = _mm256_fmadd_pd(a1,w1,z1);
-      a2 = _mm256_loadu_pd(&v[j*144+116]); z2 = _mm256_fmadd_pd(a2,w1,z2);
+      a3 = _mm256_loadu_pd(&v[j*144+108]); z0 = _mm256_fmadd_pd(a3,w1,z0);
+      a4 = _mm256_loadu_pd(&v[j*144+112]); z1 = _mm256_fmadd_pd(a4,w1,z1);
+      a5 = _mm256_loadu_pd(&v[j*144+116]); z2 = _mm256_fmadd_pd(a5,w1,z2);
 
       /* eleventh column of a */
       w2 = _mm256_set1_pd(work[j*12+ 10]);
@@ -1317,11 +1302,11 @@ PetscErrorCode MatMult_SeqBAIJ_12_AVX2(Mat A,Vec xx,Vec zz)
       a4 = _mm256_loadu_pd(&v[j*144+136]); z1 = _mm256_fmadd_pd(a4,w3,z1);
       a5 = _mm256_loadu_pd(&v[j*144+140]); z2 = _mm256_fmadd_pd(a5,w3,z2);
     }
-
     _mm256_storeu_pd(&z[ 0], z0); _mm256_storeu_pd(&z[ 4], z1); _mm256_storeu_pd(&z[ 8], z2);
 
     v += n*bs2;
     if (!usecprow) z += bs;
+    else z = zarray + bs*ridx[i];
   }
   ierr = VecRestoreArrayRead(xx,&x);CHKERRQ(ierr);
   ierr = VecRestoreArrayWrite(zz,&zarray);CHKERRQ(ierr);
