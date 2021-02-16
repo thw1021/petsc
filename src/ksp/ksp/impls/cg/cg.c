@@ -263,8 +263,10 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
   /* Create a stream here for now */
   ierr = PetscStreamCreate(&pstream);CHKERRQ(ierr);
   ierr = PetscStreamSetType(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+  ierr = PetscStreamSetMode(pstream,PETSC_STREAM_GLOBAL_BLOCKING);CHKERRQ(ierr);
   ierr = PetscStreamSetUp(pstream);CHKERRQ(ierr);
-  /* Creat streamscalars */
+
+  /* Create streamscalars */
   ierr = PetscStreamScalarCreate(&pscaldp);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscaldp,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetUp(pscaldp,pstream);CHKERRQ(ierr);
@@ -283,7 +285,7 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
   ierr = PetscStreamScalarCreate(&pscalb);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscalb,PETSC_STREAM_CUDA);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetUp(pscalb,pstream);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetValue(pscalbeta,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetValue(pscalb,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
 
   ierr = PetscStreamScalarCreate(&pscala);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscala,PETSC_STREAM_CUDA);CHKERRQ(ierr);
@@ -338,18 +340,13 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
       KSPCheckDot(ksp,*beta);
       const PetscScalar tmp = PetscSqrtReal(PetscAbsScalar(*beta));
       ierr = PetscStreamScalarSetValue(pscaldp,&tmp,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
-      //ierr = PetscStreamScalarGetHostWrite(pscaldp,&dp,pstream);CHKERRQ(ierr);
-      //*dp = PetscSqrtReal(PetscAbsScalar(*beta));                /*    dp <- r'*z = r'*B*r = e'*A'*B*A*e */
-      //ierr = PetscStreamScalarRestoreHostWrite(pscaldp,&dp,pstream);CHKERRQ(ierr);
       break;
     case KSP_NORM_NONE:
       ierr = PetscStreamScalarSetValue(pscaldp,NULL,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
-      //ierr = PetscStreamScalarGetHostWrite(pscaldp,&dp,pstream);CHKERRQ(ierr);
-      //*dp = 0.0;
-      //ierr = PetscStreamScalarRestoreHostWrite(pscaldp,&dp,pstream);CHKERRQ(ierr);
       break;
     default: SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"%s",KSPNormTypes[ksp->normtype]);
   }
+
   ierr = PetscStreamScalarGetHostRead(pscaldp,(const PetscScalar**)&dp,pstream);CHKERRQ(ierr);
   ierr       = KSPLogResidualHistory(ksp,*dp);CHKERRQ(ierr);
   ierr       = KSPMonitor(ksp,0,*dp);CHKERRQ(ierr);
@@ -383,16 +380,11 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
       break;
 #endif
     }
-    //ierr = PetscStreamScalarGetHostWrite(pscalb,&b,pstream);CHKERRQ(ierr);
     if (!i) {
       ierr = VecCopyAsync(Z,P,pstream);CHKERRQ(ierr);                       /*     p <- z                           */
       ierr = PetscStreamScalarSetValue(pscalb,NULL,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
-      //*b    = 0.0;
-      //ierr = PetcsStreamScalarRestoreHostWrite(pscalb,&b,pstream);CHKERRQ(ierr);
     } else {
       const PetscScalar btemp = (*beta)/betaold;
-      //*b = (*beta)/betaold;
-      //ierr = PetcsStreamScalarRestoreHostWrite(pscalb,&b,pstream);CHKERRQ(ierr);
       ierr = PetscStreamScalarSetValue(pscalb,&btemp,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
       if (eigs) {
         if (ksp->max_it != stored_max_it) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
@@ -420,9 +412,7 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
     const PetscScalar minusa = -atmp;
     ierr = PetscStreamScalarSetValue(pscala,&atmp,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
     ierr = PetscStreamScalarSetValue(pscalmina,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
-    //minusa = -atmp;
     if (eigs) {
-      //d[i] = PetscSqrtReal(PetscAbsScalar(b))*e[i] + 1.0/a;
       ierr = PetscStreamScalarGetHostRead(pscalb,(const PetscScalar**)&b,pstream);CHKERRQ(ierr);
       d[i] = PetscSqrtReal(PetscAbsScalar(*b))*e[i] + 1.0/atmp;
     }
@@ -442,12 +432,10 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
       ierr = VecXDotAsync(Z,R,pscalbeta,pstream);CHKERRQ(ierr);                 /*     beta <- r'*z                     */
       ierr = PetscStreamScalarGetHostRead(pscalbeta,(const PetscScalar**)&beta,pstream);CHKERRQ(ierr);
       KSPCheckDot(ksp,*beta);
-      //dp = PetscSqrtReal(PetscAbsScalar(*beta));
       const PetscScalar betatmp = PetscSqrtReal(PetscAbsScalar(*beta));
 
       ierr = PetscStreamScalarSetValue(pscaldp,&betatmp,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
     } else {
-      //dp = 0.0;
       ierr = PetscStreamScalarSetValue(pscaldp,NULL,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
     }
     ierr = PetscStreamScalarGetHostRead(pscaldp,(const PetscScalar**)&dp,pstream);CHKERRQ(ierr);
@@ -739,7 +727,7 @@ PetscErrorCode KSPSetFromOptions_CG(PetscOptionItems *PetscOptionsObject,KSP ksp
   }
   if (!flg) {
     ierr = PetscOptionsBool("-ksp_cg_async","Do KSP CG solve asynchronously on device","KSPCGUseAsync",cg->async,&cg->async,&flg);CHKERRQ(ierr);
-    if (flg) {ierr = KSPUseAsync_CG(ksp,cg->async);CHKERRQ(ierr);}
+    if (cg->async && flg) {ierr = KSPUseAsync_CG(ksp,cg->async);CHKERRQ(ierr);}
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
