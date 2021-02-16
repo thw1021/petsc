@@ -46,7 +46,7 @@ static PetscErrorCode PetscEventQuery_CUDA(PetscEvent event, PetscBool *busy)
   PetscFunctionReturn(0);
 }
 
-static struct _EventOps ecuops = {
+static const struct _EventOps ecuops = {
   PetscEventCreate_CUDA,
   PetscEventDestroy_CUDA,
   PetscEventSetup_CUDA,

@@ -48,6 +48,11 @@ PetscErrorCode VecCUDAAllocateCheckHost(Vec v)
     ierr = PetscNewLog((PetscObject)v,&s);CHKERRQ(ierr);
     v->data = s;
   }
+  if (!v->event) {
+    ierr = PetscEventCreate(&v->event);CHKERRQ(ierr);
+    ierr = PetscEventSetType(v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    ierr = PetscEventSetUp(v->event);CHKERRQ(ierr);
+  }
   if (!s->array) {
     if (n*sizeof(PetscScalar) > v->minimum_bytes_pinned_memory) {
       ierr = PetscMallocSetCUDAHost();CHKERRQ(ierr);
@@ -361,6 +366,8 @@ PetscErrorCode VecGetArray_SeqCUDA(Vec v,PetscScalar **a)
     ierr = VecCUDACopyFromGPU(v);CHKERRQ(ierr);
   } else {
     ierr = VecCUDAAllocateCheckHost(v);CHKERRQ(ierr);
+    /* Sync here to let in-flight pipelined op finish */
+    ierr = PetscEventSynchronize(v->event);CHKERRQ(ierr);
   }
   *a = *((PetscScalar**)v->data);
   PetscFunctionReturn(0);
@@ -379,6 +386,8 @@ PetscErrorCode VecGetArrayWrite_SeqCUDA(Vec v,PetscScalar **a)
 
   PetscFunctionBegin;
   ierr = VecCUDAAllocateCheckHost(v);CHKERRQ(ierr);
+  /* Sync here to let in-flight pipelined op finish */
+  ierr = PetscEventSynchronize(v->event);CHKERRQ(ierr);
   *a   = *((PetscScalar**)v->data);
   PetscFunctionReturn(0);
 }
@@ -397,6 +406,8 @@ PetscErrorCode VecGetArrayAndMemType_SeqCUDA(Vec v,PetscScalar** a,PetscMemType 
     *a = *((PetscScalar**)v->data);
     if (mtype) *mtype = PETSC_MEMTYPE_HOST;
   }
+  /* Sync here to let in-flight pipelined op finish */
+  ierr = PetscEventSynchronize(v->event);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
