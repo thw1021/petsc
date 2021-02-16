@@ -367,7 +367,6 @@ int main(int argc, char **argv) {
     PetscSection coordSection;
     Vec          coord;
     PetscReal    norm;
-    PetscInt     step = 0;
     PetscReal    time = 1.234;
 
     /* Writing nodal variables to ExodusII file */
