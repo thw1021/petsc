@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit         = '604c9ff717c866dfe4caccb36bfff00f845e373d'
+    self.gitcommit         = 'v2021-01-20'
     self.download          = ['git://https://github.com/gsjaardema/seacas.git','https://github.com/gsjaardema/seacas/archive/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames  = ['seacas']
     self.functions         = ['ex_close']
@@ -54,7 +54,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DSEACASProj_ENABLE_SEACASExoIIv2for32:BOOL=OFF')
     args.append('-DSEACASProj_ENABLE_SEACASExodus:BOOL=ON')
     # exodiff and exotxt are convenient tools to debug exodusII functionalities 
-    args.append('-DSEACASProj_ENABLE_SEACASExodif:BOOL=ON')
+    args.append('-DSEACASProj_ENABLE_SEACASExodiff:BOOL=ON')
     args.append('-DSEACASProj_ENABLE_SEACASExotxt:BOOL=ON')
     args.append('-DSEACASProj_ENABLE_TESTS:BOOL=OFF')
     args.append('-DSEACASProj_SKIP_FORTRANCINTERFACE_VERIFY_TEST:BOOL=ON')
