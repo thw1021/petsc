@@ -58,6 +58,7 @@ PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar pscal, const PetscSca
     if (val) PetscValidScalarPointer(val,2);
   }
   ierr = (*pscal->ops->setvalue)(pscal, val, mtype, pstream);CHKERRQ(ierr);
+  if (PetscMemTypeHost(mtype)) {ierr = PetscStreamScalarUpdateCache_Internal(pscal);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
