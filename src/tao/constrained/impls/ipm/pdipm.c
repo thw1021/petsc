@@ -637,15 +637,13 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   KSP               ksp;
   PC                pc;
   PCType            ptype;
-  MatSolverType     stype;
   Mat               Factor;
   Vec               X,F,Y,W,G;
   PetscInt          i,iter,nneg,nzero,npos;
   PetscReal         alpha_p=1.0,alpha_d=1.0,alpha[4];
   PetscScalar       *Xarr,*z,*lambdai,dot,*taosolarr;
   const PetscScalar *dXarr,*dz,*dlambdai;
-  PetscBool         isCHOL,isMUMPS;
-  PetscMPIInt       size;
+  PetscBool         isCHOL;
 
   PetscFunctionBegin;
   ierr = SNESLineSearchGetSNES(linesearch,&snes);CHKERRQ(ierr);
@@ -743,14 +741,17 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
 
   if (isCHOL) {
+    PetscMPIInt       size;
     ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
+    ierr = MPI_Comm_size(PetscObjectComm((PetscObject)Factor),&size);CHKERRQ(ierr);
     if (Factor->ops->getinertia) {
 #if defined(PETSC_HAVE_MUMPS)
+      MatSolverType     stype;
+      PetscBool         isMUMPS;
       ierr = PCFactorGetMatSolverType(pc,&stype);CHKERRQ(ierr);
       ierr = PetscStrcmp(stype, MATSOLVERMUMPS, &isMUMPS);CHKERRQ(ierr);
       if (isMUMPS) { /* must set mumps ICNTL(13)=1 and ICNTL(24)=1 to call MatGetInertia() */
         ierr = MatMumpsSetIcntl(Factor,24,1);CHKERRQ(ierr);
-        ierr = MPI_Comm_size(PetscObjectComm((PetscObject)Factor),&size);CHKERRQ(ierr);
         if (size > 1) {
           ierr = MatMumpsSetIcntl(Factor,13,1);CHKERRQ(ierr);
         }
