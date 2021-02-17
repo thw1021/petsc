@@ -637,15 +637,13 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   KSP               ksp;
   PC                pc;
   PCType            ptype;
-  MatSolverType     stype;
   Mat               Factor;
   Vec               X,F,Y,W,G;
   PetscInt          i,iter,nneg,nzero,npos;
   PetscReal         alpha_p=1.0,alpha_d=1.0,alpha[4];
   PetscScalar       *Xarr,*z,*lambdai,dot,*taosolarr;
   const PetscScalar *dXarr,*dz,*dlambdai;
-  PetscBool         isCHOL,isMUMPS;
-  PetscMPIInt       size;
+  PetscBool         isCHOL;
 
   PetscFunctionBegin;
   ierr = SNESLineSearchGetSNES(linesearch,&snes);CHKERRQ(ierr);
@@ -743,18 +741,24 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
 
   if (isCHOL) {
+    PetscMPIInt       size;
     ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
+    ierr = MPI_Comm_size(PetscObjectComm((PetscObject)Factor),&size);CHKERRQ(ierr);
     if (Factor->ops->getinertia) {
+#if defined(PETSC_HAVE_MUMPS)
+      MatSolverType     stype;
+      PetscBool         isMUMPS;
       ierr = PCFactorGetMatSolverType(pc,&stype);CHKERRQ(ierr);
       ierr = PetscStrcmp(stype, MATSOLVERMUMPS, &isMUMPS);CHKERRQ(ierr);
-
       if (isMUMPS) { /* must set mumps ICNTL(13)=1 and ICNTL(24)=1 to call MatGetInertia() */
         ierr = MatMumpsSetIcntl(Factor,24,1);CHKERRQ(ierr);
-        ierr = MPI_Comm_size(PetscObjectComm((PetscObject)Factor),&size);CHKERRQ(ierr);
         if (size > 1) {
           ierr = MatMumpsSetIcntl(Factor,13,1);CHKERRQ(ierr);
         }
       }
+#else
+      if (size > 1) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires external package MUMPS");
+#endif
       ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
 
       if (npos < pdipm->Nx+pdipm->Nci) {
@@ -775,7 +779,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
           }
 
           if (pdipm->deltaw >= 1.e10) {
-            SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_NULL,"Reached maximum delta w will not converge, try different inital x0");
+            SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_CONV_FAILED,"Reached maximum delta w will not converge, try different inital x0");
           }
           ierr = PetscInfo1(tao,"Updated deltaw %g\n",pdipm->deltaw);CHKERRQ(ierr);
           pdipm->lastdeltaw = pdipm->deltaw;
@@ -791,7 +795,8 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         }
         ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",pdipm->deltac,nneg,nzero,npos);
       }
-    }
+    } else
+      SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires an external package that supports MatGetInertia()");
   }
   PetscFunctionReturn(0);
 }
@@ -1487,7 +1492,7 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
 .   -tao_pdipm_push_init_slack - parameter to push initial slack variables away from bounds (> 0)
 .   -tao_pdipm_mu_update_factor - update scalar for barrier parameter (mu) update (> 0)
 .   -tao_pdipm_symmetric_kkt - Solve non-reduced symmetric KKT system
--   -tao_pdipm_add_shifts - Add shifts to the KKT matrix
+-   -tao_pdipm_kkt_shift_pd - Add shifts to make KKT matrix positive definite
 
   Level: beginner
 M*/
