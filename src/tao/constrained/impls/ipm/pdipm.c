@@ -795,7 +795,8 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         }
         ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",pdipm->deltac,nneg,nzero,npos);
       }
-    }
+    } else
+      SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires an external package that supports MatGetInertia()");
   }
   PetscFunctionReturn(0);
 }
@@ -1491,7 +1492,7 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
 .   -tao_pdipm_push_init_slack - parameter to push initial slack variables away from bounds (> 0)
 .   -tao_pdipm_mu_update_factor - update scalar for barrier parameter (mu) update (> 0)
 .   -tao_pdipm_symmetric_kkt - Solve non-reduced symmetric KKT system
--   -tao_pdipm_add_shifts - Add shifts to the KKT matrix
+-   -tao_pdipm_kkt_shift_pd - Add shifts to make KKT matrix positive definite
 
   Level: beginner
 M*/
