@@ -775,9 +775,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
           }
 
           if (pdipm->deltaw >= 1.e10) {
-            pdipm->deltaw     = 0.1;
-            pdipm->lastdeltaw = 0.1;
-            ierr = PetscInfo1(tao,"Reached maximum deltaw; reset deltaw=%g\n",pdipm->deltaw);CHKERRQ(ierr);
+            SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_NULL,"Reached maximum delta w will not converge, try different inital x0");
           }
           ierr = PetscInfo1(tao,"Updated deltaw %g\n",pdipm->deltaw);CHKERRQ(ierr);
           pdipm->lastdeltaw = pdipm->deltaw;
@@ -1323,7 +1321,7 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
     ierr = MatSetValue(J,i,i,0.0,INSERT_VALUES);CHKERRQ(ierr);
   }
   /* In case Wxx has no diagonal entries preset set diagonal to deltaw given */
-  if(pdipm->kkt_pd){
+  if (pdipm->kkt_pd){
       for (i=0; i<pdipm->nh; i++){
         row  = rstart + i;
         ierr = MatSetValue(J,row,row,pdipm->deltaw,INSERT_VALUES);CHKERRQ(ierr);
