@@ -73,7 +73,7 @@ typedef struct {
   PetscReal push_init_lambdai;    /* Push initial inequality variables (lambdai) away from bounds */
   PetscBool solve_reduced_kkt;    /* Solve Reduced KKT with fieldsplit */
   PetscBool solve_symmetric_kkt;  /* Solve non-reduced symmetric KKT system */
-  PetscBool inertia_correct;      /* adds deltaw and deltac shifts to KKT matrix */
+  PetscBool kkt_pd;               /* Add deltaw and deltac shifts to make KKT matrix positive definite */
 
   SNES           snes;                                    /* Nonlinear solver */
   Mat            jac_equality_trans,jac_inequality_trans; /* working matrices */

@@ -360,7 +360,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
         ierr = MatSetValue(Jpre,row,cols[0],aa[j],INSERT_VALUES);CHKERRQ(ierr);
       }
       ierr = MatRestoreRow(tao->jacobian_equality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
-      if (pdipm->inertia_correct) {
+      if (pdipm->kkt_pd) {
         /* (3) insert 2nd row block of Jpre: [ grad g, \delta_c*I, 0, 0] */
         ierr = MatSetValue(Jpre,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
       }
@@ -380,7 +380,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
         ierr = MatSetValue(Jpre,row,cols[0],-aa[j],INSERT_VALUES);CHKERRQ(ierr);
       }
       ierr = MatRestoreRow(tao->jacobian_inequality,i+rjstart,&nc,&aj,&aa);CHKERRQ(ierr);
-      if (pdipm->inertia_correct) {
+      if (pdipm->kkt_pd) {
         ierr = MatSetValue(Jpre,row,row,-pdipm->deltac,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
@@ -408,7 +408,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
     for (j=0; j < nc; j++) {
       while (aj[j] >= cranges[proc+1]) proc++;
       cols[0] = aj[j] - cranges[proc] + Jranges[proc];
-      if (row == cols[0] && pdipm->inertia_correct) {
+      if (row == cols[0] && pdipm->kkt_pd) {
         /* add diagonal shift to Wxx component */
         ierr = MatSetValue(Jpre,row,cols[0],aa[j]+pdipm->deltaw,INSERT_VALUES);CHKERRQ(ierr);
       } else {
@@ -457,10 +457,6 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
     ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   }
-   // Matrix cannot be checked for symmetric due to MUMPS
-    //  PetscBool symmetricflag;
-    //  ierr = MatIsSymmetric(Jpre,0.0,&symmetricflag);
-    //  printf("symetric flag = %d\n",symmetricflag);
   PetscFunctionReturn(0);
 }
 
@@ -649,7 +645,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   PetscScalar       *Xarr,*z,*lambdai,dot,*taosolarr;
   const PetscScalar *dXarr,*dz,*dlambdai;
   PetscBool         isCHOL,isMUMPS;
-  PetscMPIInt       size; 
+  PetscMPIInt       size;
 
   PetscFunctionBegin;
   ierr = SNESLineSearchGetSNES(linesearch,&snes);CHKERRQ(ierr);
@@ -738,16 +734,13 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
     ierr = SNESSetConvergedReason(snes,SNES_CONVERGED_FNORM_ABS);CHKERRQ(ierr);
   }
 
-  if (!pdipm->inertia_correct) PetscFunctionReturn(0);
+  if (!pdipm->kkt_pd) PetscFunctionReturn(0);
 
   /* Get the inertia of Cholesky factor to set shifts for next SNES interation */
   ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
   ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
   ierr = PCGetType(pc,&ptype);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
-
-
-  
 
   if (isCHOL) {
     ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
@@ -763,49 +756,42 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         }
       }
       ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
-      
-      // Matrix cannot be checked for symmetric due to MUMPS
-      //PetscBool symmetricflag;
-      //ierr = MatIsSymmetric(Factor,0.0,&symmetricflag);
-      //printf("symetric flag = %d",symmetricflag);
 
       if (npos < pdipm->Nx+pdipm->Nci) {
-        
-        pdipm->deltaw = PetscMax(pdipm->lastdeltaw/3,PetscPowReal(10,-20));
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    Test reduced deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
-        ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);
-        ierr = PCSetUp(pc);
+        pdipm->deltaw = PetscMax(pdipm->lastdeltaw/3, 1.e-4*PETSC_MACHINE_EPSILON);
+        ierr = PetscInfo5(tao,"Test reduced deltaw=%g; previous MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
+        ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
+        ierr = PCSetUp(pc);CHKERRQ(ierr);
         ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
 
         if (npos < pdipm->Nx+pdipm->Nci) {
-          pdipm->deltaw = pdipm->lastdeltaw; // in case reduction update does not help, this prevents that step from impacting increasing update
-          ierr = PetscPrintf(PETSC_COMM_WORLD,"    deltaw Failed increasing deltaw;\n");
-          while (npos < pdipm->Nx+pdipm->Nci && pdipm->deltaw <= PetscPowReal(10,10)) { /* increase deltaw */
+          pdipm->deltaw = pdipm->lastdeltaw; /* in case reduction update does not help, this prevents that step from impacting increasing update */
+          while (npos < pdipm->Nx+pdipm->Nci && pdipm->deltaw <= 1.e10) { /* increase deltaw */
+            ierr = PetscInfo5(tao,"  deltaw=%g fails, MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
             pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,20));
-            ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);
-            ierr = PCSetUp(pc);
-            ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
-            //ierr = PetscPrintf(PETSC_COMM_WORLD,"    increased pdipm->deltaw: New MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+            ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
+            ierr = PCSetUp(pc);CHKERRQ(ierr);
+            ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);CHKERRQ(ierr);
           }
-          if (pdipm->deltaw >= PetscPowReal(10,10)) {
-            printf("Reached maximum deltaw Reset deltas\n");
-            pdipm->deltaw = 0.1;
+
+          if (pdipm->deltaw >= 1.e10) {
+            pdipm->deltaw     = 0.1;
             pdipm->lastdeltaw = 0.1;
+            ierr = PetscInfo1(tao,"Reached maximum deltaw; reset deltaw=%g\n",pdipm->deltaw);CHKERRQ(ierr);
           }
-          
-          ierr = PetscPrintf(PETSC_COMM_WORLD,"    increased pdipm->deltaw: New MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+          ierr = PetscInfo1(tao,"Updated deltaw %g\n",pdipm->deltaw);CHKERRQ(ierr);
           pdipm->lastdeltaw = pdipm->deltaw;
-          pdipm->deltaw = 0;
+          pdipm->deltaw     = 0.0;
         }
       }
 
       if (nzero) { /* Jacobian is singular */
         if (pdipm->deltac == 0.0) {
-          pdipm->deltac = PetscPowReal(10,-8);
+          pdipm->deltac = 1.e8*PETSC_MACHINE_EPSILON;
         } else {
           pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
         }
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    modify pdipm->deltac: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
+        ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",pdipm->deltac,nneg,nzero,npos);
       }
     }
   }
@@ -887,7 +873,10 @@ PetscErrorCode TaoView_PDIPM(Tao tao,PetscViewer viewer)
   PetscFunctionBegin;
   tao->constrained = PETSC_TRUE;
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"Number of prime = %d, Number of dual = %d.\n",pdipm->Nx+pdipm->Nci,pdipm->Nce + pdipm->Nci);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"Number of prime=%D, Number of dual=%D\n",pdipm->Nx+pdipm->Nci,pdipm->Nce + pdipm->Nci);CHKERRQ(ierr);
+  if (pdipm->kkt_pd) {
+    ierr = PetscViewerASCIIPrintf(viewer,"KKT shifts deltaw=%g, deltac=%g\n",pdipm->deltaw,pdipm->deltac);CHKERRQ(ierr);
+  }
   ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1334,7 +1323,7 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
     ierr = MatSetValue(J,i,i,0.0,INSERT_VALUES);CHKERRQ(ierr);
   }
   /* In case Wxx has no diagonal entries preset set diagonal to deltaw given */
-  if(pdipm->inertia_correct){
+  if(pdipm->kkt_pd){
       for (i=0; i<pdipm->nh; i++){
         row  = rstart + i;
         ierr = MatSetValue(J,row,row,pdipm->deltaw,INSERT_VALUES);CHKERRQ(ierr);
@@ -1487,7 +1476,7 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
   ierr = PetscOptionsBool("-tao_pdipm_solve_reduced_kkt","Solve reduced KKT system using Schur-complement",NULL,pdipm->solve_reduced_kkt,&pdipm->solve_reduced_kkt,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-tao_pdipm_mu_update_factor","Update scalar for barrier parameter (mu) update",NULL,pdipm->mu_update_factor,&pdipm->mu_update_factor,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-tao_pdipm_symmetric_kkt","Solve non reduced symmetric KKT system",NULL,pdipm->solve_symmetric_kkt,&pdipm->solve_symmetric_kkt,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-tao_pdipm_add_shifts","Add shifts to the KKT matrix",NULL,pdipm->inertia_correct,&pdipm->inertia_correct,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-tao_pdipm_kkt_shift_pd","Add shifts to make KKT matrix positive definite",NULL,pdipm->kkt_pd,&pdipm->kkt_pd,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1531,20 +1520,16 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->n  = pdipm->N  = 0;
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
-  pdipm->deltaw = 0;
-  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
-  pdipm->deltac = 0;
 
-  pdipm->deltaw = 0;
-  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
-  pdipm->deltac = 0;
-
+  pdipm->deltaw     = 0.0;
+  pdipm->lastdeltaw = 3*1.e-4;
+  pdipm->deltac     = 0.0;
+  pdipm->kkt_pd     = PETSC_FALSE;
 
   pdipm->push_init_slack     = 1.0;
   pdipm->push_init_lambdai   = 1.0;
   pdipm->solve_reduced_kkt   = PETSC_FALSE;
   pdipm->solve_symmetric_kkt = PETSC_TRUE;
-  pdipm->inertia_correct     = PETSC_FALSE;
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
