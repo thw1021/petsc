@@ -756,26 +756,6 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         }
       }
       ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> push update for master rebase
-=======
->>>>>>> push update for master rebase
-      
-      // Matrix cannot be checked for symmetric due to MUMPS
-      //PetscBool symmetricflag;
-      //ierr = MatIsSymmetric(Factor,0.0,&symmetricflag);
-      //printf("symetric flag = %d",symmetricflag);
-=======
->>>>>>> rename option -tao_pdipm_add_shifts -> -tao_pdipm_kkt_shift_pd; cleanup
 
       if (npos < pdipm->Nx+pdipm->Nci) {
         pdipm->deltaw = PetscMax(pdipm->lastdeltaw/3, 1.e-4*PETSC_MACHINE_EPSILON);
@@ -801,103 +781,15 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
           pdipm->lastdeltaw = pdipm->deltaw;
           pdipm->deltaw     = 0.0;
         }
-<<<<<<< HEAD
-<<<<<<< HEAD
       }
 
       if (nzero) { /* Jacobian is singular */
         if (pdipm->deltac == 0.0) {
-<<<<<<< HEAD
-=======
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"    PDIPMLineSearch: MatInertia ...nneg %d, nzero %d, npos %d;\n",nneg,nzero,npos);
-=======
->>>>>>> added max and min for deltaw
-      if (npos < pdipm->Nx+pdipm->Nci)
-      {
-          pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,40));
-      }
-      /* I dont know if this is the proper check for reducing deltaw,
-=======
-=======
->>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
-
-      if (npos < pdipm->Nx+pdipm->Nci) { /* increase deltaw */
-        pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,40));
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    increase deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
-      } else if (npos > pdipm->Nx+pdipm->Nci && pdipm->deltaw > PETSC_MACHINE_EPSILON) { /* reduce deltaw */
-        /* I dont know if this is the proper check for reducing deltaw,
-<<<<<<< HEAD
->>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
-        original alg. tried reduce deltaw checked by refactor, then increase if fail until match.*/
-        pdipm->deltaw = PetscMax(pdipm->deltaw/3.0,PETSC_MACHINE_EPSILON);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    reduce deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
-=======
->>>>>>> push update for master rebase
-      }
-<<<<<<< HEAD
-=======
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"    PDIPMLineSearch: MatInertia ...nneg %d, nzero %d, npos %d;\n",nneg,nzero,npos);
-=======
->>>>>>> added max and min for deltaw
-      if (npos < pdipm->Nx+pdipm->Nci)
-      {
-          pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,40));
-      }
-      /* I dont know if this is the proper check for reducing deltaw,
-=======
->>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
-        original alg. tried reduce deltaw checked by refactor, then increase if fail until match.*/
-        pdipm->deltaw = PetscMax(pdipm->deltaw/3.0,PETSC_MACHINE_EPSILON);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    reduce deltaw: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
-=======
->>>>>>> push update for master rebase
-      }
-<<<<<<< HEAD
->>>>>>> added inertia update baised on get inertia
-      if (nzero>0)
-      {
-        if (pdipm->deltac = 0)
-        {
-<<<<<<< HEAD
->>>>>>> added inertia update baised on get inertia
-=======
-
-      if (nzero) { /* Jacobian is singular */
-        if (pdipm->deltac == 0.0) {
->>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
-=======
->>>>>>> added inertia update baised on get inertia
-=======
-
-      if (nzero) { /* Jacobian is singular */
-        if (pdipm->deltac == 0.0) {
->>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
-          pdipm->deltac = PetscPowReal(10,-8);
-        } else {
-          pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
-        }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    modify pdipm->deltac: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
-=======
->>>>>>> added inertia update baised on get inertia
-=======
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    modify pdipm->deltac: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
->>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
-=======
->>>>>>> added inertia update baised on get inertia
-=======
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    modify pdipm->deltac: MatInertia ...nneg %d, nzero %d, npos %d,deltaw %g,deltac %g;\n",nneg,nzero,npos,pdipm->deltaw,pdipm->deltac);
->>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
-=======
           pdipm->deltac = 1.e8*PETSC_MACHINE_EPSILON;
         } else {
           pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
         }
         ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",pdipm->deltac,nneg,nzero,npos);
->>>>>>> rename option -tao_pdipm_add_shifts -> -tao_pdipm_kkt_shift_pd; cleanup
       }
     }
   }
@@ -1626,62 +1518,16 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   pdipm->n  = pdipm->N  = 0;
   pdipm->mu = 1.0;
   pdipm->mu_update_factor = 0.1;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-  pdipm->deltaw = 0;
-  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
-  pdipm->deltac = 0;
-
-  pdipm->deltaw = 0;
-  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
-  pdipm->deltac = 0;
-
-=======
-  pdipm->deltaw = PetscPowReal(10,-4);
-  pdipm->deltac = PetscPowReal(10,-8);
->>>>>>> added deltaw and deltac terms to begin correcting inertia
-=======
-  pdipm->deltaw = 0;
-=======
-  pdipm->deltaw = PetscPowReal(10,-20);
->>>>>>> added max and min for deltaw
-=======
-  pdipm->deltaw = PETSC_MACHINE_EPSILON;
->>>>>>> cleanup src/tao/constrained/impls/ipm/pdipm.c
-=======
-  pdipm->deltaw = 0;
-  pdipm->lastdeltaw = 3*PetscPowReal(10,-4);
->>>>>>> push update for master rebase
-  pdipm->deltac = 0;
->>>>>>> added inertia update baised on get inertia
-=======
 
   pdipm->deltaw     = 0.0;
   pdipm->lastdeltaw = 3*1.e-4;
   pdipm->deltac     = 0.0;
   pdipm->kkt_pd     = PETSC_FALSE;
->>>>>>> rename option -tao_pdipm_add_shifts -> -tao_pdipm_kkt_shift_pd; cleanup
 
   pdipm->push_init_slack     = 1.0;
   pdipm->push_init_lambdai   = 1.0;
   pdipm->solve_reduced_kkt   = PETSC_FALSE;
   pdipm->solve_symmetric_kkt = PETSC_TRUE;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-  pdipm->inertia_correct     = PETSC_FALSE;
-=======
-  pdipm->inertia_correct     = PETSC_TRUE;
->>>>>>> added deltaw and deltac terms to begin correcting inertia
-=======
-  pdipm->inertia_correct     = PETSC_FALSE;
->>>>>>> push update for master rebase
-=======
->>>>>>> rename option -tao_pdipm_add_shifts -> -tao_pdipm_kkt_shift_pd; cleanup
 
   /* Override default settings (unless already changed) */
   if (!tao->max_it_changed) tao->max_it = 200;
