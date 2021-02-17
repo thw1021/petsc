@@ -745,9 +745,9 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   if (isCHOL) {
     ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
     if (Factor->ops->getinertia) {
+#if defined(PETSC_HAVE_MUMPS)
       ierr = PCFactorGetMatSolverType(pc,&stype);CHKERRQ(ierr);
       ierr = PetscStrcmp(stype, MATSOLVERMUMPS, &isMUMPS);CHKERRQ(ierr);
-
       if (isMUMPS) { /* must set mumps ICNTL(13)=1 and ICNTL(24)=1 to call MatGetInertia() */
         ierr = MatMumpsSetIcntl(Factor,24,1);CHKERRQ(ierr);
         ierr = MPI_Comm_size(PetscObjectComm((PetscObject)Factor),&size);CHKERRQ(ierr);
@@ -755,6 +755,9 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
           ierr = MatMumpsSetIcntl(Factor,13,1);CHKERRQ(ierr);
         }
       }
+#else
+      if (size > 1) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires external package MUMPS");
+#endif
       ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
 
       if (npos < pdipm->Nx+pdipm->Nci) {
