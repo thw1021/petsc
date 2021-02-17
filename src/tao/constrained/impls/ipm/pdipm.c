@@ -779,7 +779,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
           }
 
           if (pdipm->deltaw >= 1.e10) {
-            SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_NULL,"Reached maximum delta w will not converge, try different inital x0");
+            SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_CONV_FAILED,"Reached maximum delta w will not converge, try different inital x0");
           }
           ierr = PetscInfo1(tao,"Updated deltaw %g\n",pdipm->deltaw);CHKERRQ(ierr);
           pdipm->lastdeltaw = pdipm->deltaw;
