@@ -87,6 +87,10 @@ PetscLogDouble petsc_ctog_sz         = 0.0;  /* The total size of CPU to GPU cop
 PetscLogDouble petsc_gtoc_sz         = 0.0;  /* The total size of GPU to CPU copies */
 PetscLogDouble petsc_gflops          = 0.0;  /* The flops done on a GPU */
 PetscLogDouble petsc_gtime           = 0.0;  /* The time spent on a GPU */
+#if defined(PETSC_HAVE_CUDA)
+cudaEvent_t petsc_gt_begin           = NULL; /* The CUDA event for begin */
+cudaEvent_t petsc_gt_end             = NULL; /* The CUDA event for end */
+#endif
 #if defined(PETSC_USE_DEBUG)
 PetscBool petsc_gtime_inuse = PETSC_FALSE;
 #endif
@@ -110,12 +114,19 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
 {
   int            stage;
   PetscBool      opt;
+#if defined(PETSC_HAVE_CUDA)
+  cudaError_t    cerr;
+#endif
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscLogInitializeCalled) PetscFunctionReturn(0);
   PetscLogInitializeCalled = PETSC_TRUE;
 
+#if defined(PETSC_HAVE_CUDA)
+  cerr = cudaEventCreate(&petsc_gt_begin);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&petsc_gt_end);CHKERRCUDA(cerr);
+#endif
   ierr = PetscOptionsHasName(NULL,NULL, "-log_exclude_actions", &opt);CHKERRQ(ierr);
   if (opt) petsc_logActions = PETSC_FALSE;
   ierr = PetscOptionsHasName(NULL,NULL, "-log_exclude_objects", &opt);CHKERRQ(ierr);
@@ -142,6 +153,9 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
 PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
 {
   PetscStageLog  stageLog;
+#if defined(PETSC_HAVE_CUDA)
+  cudaError_t    cerr;
+#endif
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -189,6 +203,10 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   petsc_gtoc_sz               = 0.0;
   petsc_gflops                = 0.0;
   petsc_gtime                 = 0.0;
+  #if defined(PETSC_HAVE_CUDA)
+  cerr = cudaEventDestroy(petsc_gt_begin);CHKERRCUDA(cerr);
+  cerr = cudaEventDestroy(petsc_gt_end);CHKERRCUDA(cerr);
+  #endif
   #endif
   PETSC_LARGEST_EVENT         = PETSC_EVENT;
   PetscLogPHC                 = NULL;
