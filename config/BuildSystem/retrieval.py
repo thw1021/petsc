@@ -61,7 +61,7 @@ Unable to download package %s from: %s
       return url[len(prefix):]
     return url
 
-  def genericRetrieve(self, url, root, package):
+  def genericRetrieve(self, url, root, package, recursive = ''):
     '''Fetch package from version control repository or tarfile indicated by URL and extract it into root'''
 
     parsed = urlparse_local.urlparse(url)
@@ -86,7 +86,8 @@ Unable to download package %s from: %s
         f = self.dirRetrieve
     else:
       f = self.tarballRetrieve
-    return f(url, root, package)
+    if recursive: return f(url, root, package, recursive)
+    else: f(url, root, package)
 
   def dirRetrieve(self, url, root, package):
     self.logPrint('Retrieving %s as directory' % url, 3, 'install')
@@ -106,7 +107,7 @@ Unable to download package %s from: %s
     self.removeTarget(t)
     os.symlink(os.path.abspath(d),t)
 
-  def gitRetrieve(self, url, root, package):
+  def gitRetrieve(self, url, root, package, recursive = ''):
     self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
     if not hasattr(self.sourceControl, 'git'):
       raise RuntimeError('self.sourceControl.git not set')
@@ -118,7 +119,7 @@ Unable to download package %s from: %s
     self.removeTarget(newgitrepo)
 
     try:
-      config.base.Configure.executeShellCommand('%s clone %s %s' % (self.sourceControl.git, d, newgitrepo), log = self.log)
+      config.base.Configure.executeShellCommand('%s clone %s %s %s' % (self.sourceControl.git, recursive, d, newgitrepo), log = self.log)
     except  RuntimeError as e:
       self.logPrint('ERROR: '+str(e))
       err = str(e)
