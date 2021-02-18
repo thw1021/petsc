@@ -477,6 +477,7 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat M, Mat *S)
 {
   Mat            B, C, D, Bd, AinvBd;
   KSP            ksp;
+  PetscBool      flg;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -490,10 +491,14 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat M, Mat *S)
   ierr = MatChop(AinvBd, PETSC_SMALL);CHKERRQ(ierr);
   ierr = MatMatMult(C, AinvBd, MAT_INITIAL_MATRIX, PETSC_DEFAULT, S);CHKERRQ(ierr);
   ierr = MatDestroy(&AinvBd);CHKERRQ(ierr);
-  ierr = MatConvert(*S, MATAIJ, MAT_INPLACE_MATRIX, S);CHKERRQ(ierr);
   if (D) {
+    ierr = PetscObjectTypeCompare((PetscObject)D, MATNEST, &flg);CHKERRQ(ierr);
+    if (!flg) {
+      ierr = MatConvert(*S, MATAIJ, MAT_INPLACE_MATRIX, S);CHKERRQ(ierr);
+    }
     ierr = MatAXPY(*S, -1.0, D, DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
   }
+  ierr = MatConvert(*S, MATAIJ, MAT_INPLACE_MATRIX, S);CHKERRQ(ierr);
   ierr = MatScale(*S, -1.0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
