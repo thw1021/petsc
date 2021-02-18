@@ -46,6 +46,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DSEACASProj_ENABLE_SEACASExodus_for:BOOL=ON')
       args.append('-DSEACASProj_ENABLE_SEACASExoIIv2for32:BOOL=ON')
       args.append('-DSEACASExodus_for_ENABLE_TESTS:BOOL=OFF')
+      self.liblist = [['libexoIIv2for32.a'] + libs for libs in self.liblist] + self.liblist
       self.popLanguage()
     else:
       args.append('-DSEACASProj_ENABLE_SEACASExodus_for:BOOL=OFF')
