@@ -14,13 +14,31 @@ PetscBool         PetscStreamRegisterAllCalled = PETSC_FALSE;
 
 const char *PetscStreamTypes[] = {"INVALID","CUDA","HIP",NULL};
 
+/*@C
+  PetscStreamSetType - Builds a PetscStream for a particular stream implementation
+
+  Not Collective
+
+  Input Parameters:
++ strm - The PetscStream object
+- type - The PetscStream type
+
+  Notes:
+  See "petsc/include/petscdevice.h" for available stream types
+
+  Level: intermediate
+
+.seealso: PetscStreamCreate(), PetscStreamGetType()
+@*/
 PetscErrorCode PetscStreamSetType(PetscStream strm, PetscStreamType type)
 {
   PetscErrorCode (*create)(PetscStream);
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(strm->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change type on already setup PetscStream\n");
+  if (PetscUnlikelyDebug(type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscStream to type %s",PetscStreamTypes[type]);
+  if (strm->type == type) PetscFunctionReturn(0);
+  if (PetscUnlikelyDebug(strm->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change type on already setup PetscStream");
   ierr = PetscFunctionListFind(PetscStreamList, PetscStreamTypes[type], &create);CHKERRQ(ierr);
   if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStream type: %d", type);
   if (strm->ops->destroy) {ierr = (*strm->ops->destroy)(strm);CHKERRQ(ierr);}
@@ -30,6 +48,21 @@ PetscErrorCode PetscStreamSetType(PetscStream strm, PetscStreamType type)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGetType - Gets the typename of a PetscStream
+
+  Not Collective
+
+  Input Parameter:
+. strm - The PetscStream object
+
+  Output Parameter:
+. type - The PetscStream type
+
+  Level: intermediate
+
+.seealso: PetscStreamCreate(), PetscStreamSetType()
+@*/
 PetscErrorCode PetscStreamGetType(PetscStream strm, PetscStreamType *type)
 {
   PetscFunctionBegin;
@@ -39,13 +72,30 @@ PetscErrorCode PetscStreamGetType(PetscStream strm, PetscStreamType *type)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscEventSetType - Builds a PetscEvent for a particular stream implementation
+
+  Not Collective
+
+  Input Parameters:
++ event - The PetscEvent object
+- type - The PetscStream type
+
+  Notes:
+  See "petsc/include/petscdevice.h" for available stream types
+
+  Level: intermediate
+
+.seealso: PetscEventCreate(), PetscEventGetType()
+@*/
 PetscErrorCode PetscEventSetType(PetscEvent event, PetscStreamType type)
 {
   PetscErrorCode (*create)(PetscEvent);
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(event->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change type on already setup PetscEvent\n");
+  if (PetscUnlikelyDebug(type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscEvent to type %s",PetscStreamTypes[type]);
+  if (event->type == type) PetscFunctionReturn(0);
   ierr = PetscFunctionListFind(PetscEventList, PetscStreamTypes[type], &create);CHKERRQ(ierr);
   if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscEvent type: %d", type);
   if (event->ops->destroy) {ierr = (*event->ops->destroy)(event);CHKERRQ(ierr);}
@@ -55,6 +105,21 @@ PetscErrorCode PetscEventSetType(PetscEvent event, PetscStreamType type)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscEventGetType - Gets the typename of a PetscEvent
+
+  Not Collective
+
+  Input Parameter:
+. event - The PetscEvent object
+
+  Output Parameter:
+. type - The PetscStream type
+
+  Level: intermediate
+
+.seealso: PetscEventCreate(), PetscEventSetType()
+@*/
 PetscErrorCode PetscEventGetType(PetscEvent event, PetscStreamType *type)
 {
   PetscFunctionBegin;
@@ -64,13 +129,30 @@ PetscErrorCode PetscEventGetType(PetscEvent event, PetscStreamType *type)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamScalarSetType - Builds a PetscStreamScalar for a particular stream implementation
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+- type - The PetscStream type
+
+  Notes:
+  See "petsc/include/petscdevice.h" for available stream types
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarGetType()
+@*/
 PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar pscal, PetscStreamType type)
 {
   PetscErrorCode (*create)(PetscStreamScalar);
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change type on already setup PetscEvent\n");
+  if (PetscUnlikelyDebug(type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscEvent to type %s",PetscStreamTypes[type]);
+  if (pscal->type == type) PetscFunctionReturn(0);
   ierr = PetscFunctionListFind(PetscStreamScalarList, PetscStreamTypes[type], &create);CHKERRQ(ierr);
   if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamScalar type: %d", type);
   if (pscal->ops->destroy) {ierr = (*pscal->ops->destroy)(pscal);CHKERRQ(ierr);}
@@ -80,6 +162,21 @@ PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar pscal, PetscStreamType
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamScalarGetType - Gets the typename of a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameter:
+. pscal - The PetscStreamScalar object
+
+  Output Parameter:
+. type - The PetscStream type
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType()
+@*/
 PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar pscal, PetscStreamType *type)
 {
   PetscFunctionBegin;
@@ -89,6 +186,15 @@ PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar pscal, PetscStreamType
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamRegisterAll - Registers all of the stream components in the PetscStream package.
+
+  Not Collective
+
+  Level: advanced
+
+.seealso:  PetscStreamCreate(), PetscEventCreate(), PetscStreamScalarCreate()
+@*/
 PetscErrorCode PetscStreamRegisterAll(void)
 {
   PetscErrorCode ierr;
