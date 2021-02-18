@@ -1,5 +1,20 @@
 #include <petsc/private/deviceimpl.h>
 
+/*@
+  PetscStreamScalarCreate - Creates an empty PetscStreamScalar object. The type can then be set with PetscStreamScalarSetType().
+
+  Not Collective
+
+  Output Parameter:
+. pscal  - The allocated PetscStream object
+
+  Notes:
+  You must set the stream type before using the PetscStreamScalar object, otherwise an error is generated on debug builds.
+
+  Level: beginner
+
+.seealso: PetscStreamScalarDestroy(), PetscStreamScalarSetType(), PetscStreamScalarSetUp()
+@*/
 PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
 {
   PetscStreamScalar s;
@@ -18,6 +33,18 @@ PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscStreamScalarDestroy - Destroys a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameter:
+. pscal - The PetscStreamScalar object
+
+  Level: beginner
+
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamScalarSetUp()
+@*/
 PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
 {
   PetscErrorCode ierr;
@@ -32,6 +59,19 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscStreamScalarSetUp - Sets up internal data structures for use
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+- pstream - The PetscStream object to enqueue the setup operation on
+
+  Level: beginner
+
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamCreate(), PetscStreamScalarSetValue()
+@*/
 PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal, PetscStream pstream)
 {
   PetscErrorCode ierr;
@@ -48,6 +88,25 @@ PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal, PetscStream pstre
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscStreamScalarSetValue - Set the host and device value of a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+. val - A pointer to the value. This may be a host or device pointer
+. mtype - The memory type of val, either host or device pointer
+- pstream - The PetscStream object to enqueue the operation on
+
+  Notes:
+  This routine is asynchronous to the host, so the PetscStreamScalar will only represent the value being set once the
+  host to device memory copies complete on the attached PetscStream. Normal stream memory semantics apply.
+
+  Level: beginner
+
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamCreate(), PetscStreamGetHostWrite()
+@*/
 PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar pscal, const PetscScalar *val, PetscMemType mtype, PetscStream pstream)
 {
   PetscErrorCode ierr;
@@ -62,6 +121,28 @@ PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar pscal, const PetscSca
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscStreamScalarGetHostRead - Get the host pointer containing the up to date value of a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+. val - A pointer to hold the host pointer. This must be host accessible
+- pstream - The PetscStream object to enqueue the operation on
+
+  Output Parameter:
+. val - pointer containing an up to date host pointer
+
+  Notes:
+  If the device pointer is more up to date this routine will cause a blocking stream synchronization, so it is advised
+  to delay calling this routine until it is absolutely necessary.
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamCreate(), PetscStreamGetHostWrite(),
+  PetscStreamScalarGetDeviceRead()
+@*/
 PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar pscal, const PetscScalar **val, PetscStream pstream)
 {
   PetscErrorCode ierr;
@@ -75,6 +156,27 @@ PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar pscal, const Petsc
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscStreamScalarGetHostWrite - Get the host pointer of a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+. val - A pointer to hold the host pointer. This must be host accessible
+- pstream - The PetscStream object to enqueue the operation on
+
+  Output Parameter:
+. val - pointer containing the host pointer
+
+  Notes:
+  As opposed to PetscStreamScalarGetHostRead(), this routine performs no synchronizations.
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamRestoreHostWrite(),
+  PetscStreamScalarGetDeviceWrite(), PetscStreamScalarGetHostRead()
+@*/
 PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
 {
   PetscErrorCode ierr;
@@ -88,6 +190,24 @@ PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar pscal, PetscScala
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscStreamScalarRestoreHostWrite - Restores and commits the changed host pointer for a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+. val - A pointer to holding the host pointer. This must be host accessible
+- pstream - The PetscStream object to enqueue the operation on
+
+  Notes:
+  This routine assumes the user has changed the value of the pointer, and therefore immediately copies the value to the device.
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamGetHostWrite(),
+  PetscStreamScalarGetDeviceWrite(), PetscStreamScalarGetHostRead()
+@*/
 PetscErrorCode PetscStreamScalarRestoreHostWrite(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
 {
   PetscErrorCode ierr;
@@ -105,6 +225,31 @@ PetscErrorCode PetscStreamScalarRestoreHostWrite(PetscStreamScalar pscal, PetscS
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscStreamScalarGetDeviceRead - Get the device pointer of a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+. val - A pointer to hold the device pointer. This must be device accessible
+- pstream - The PetscStream object to enqueue the operation on
+
+  Output Parameter:
+. val - pointer containing the device pointer
+
+  Notes:
+  If the host pointer is more up to date this routine will update the device pointer on the attached stream. However,
+  unlike PetscStreamScalarGetHostRead() this routine will not synchronize on the stream as it is assumed that the
+  returned pointer will be used on the same stream. If the user intends to use the device pointer in subsequent calls on
+  a different stream the user should either synchronize on the stream used for this routine, or have the other stream
+  wait on an event recorded by the attached stream.
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamGetHostRead(), PetscStreamScalarGetDeviceWrite(),
+  PetscStreamWaitEvent(), PetscStreamRecordEvent()
+@*/
 PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar pscal, const PetscScalar **ptr, PetscStream pstream)
 {
   PetscErrorCode ierr;
@@ -113,10 +258,35 @@ PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar pscal, const Pet
   PetscValidPointer(ptr,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
-  ierr = (*pscal->ops->getdevice)(pscal, (PetscScalar **)ptr, pstream);CHKERRQ(ierr);
+  ierr = (*pscal->ops->getdevice)(pscal, (PetscScalar **)ptr, PETSC_TRUE, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscStreamScalarGetDeviceWrite - Get the device pointer of a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+. val - A pointer to hold the device pointer. This must be device accessible
+- pstream - The PetscStream object to enqueue the operation on
+
+  Output Parameter:
+. val - pointer containing the device pointer
+
+  Notes:
+  If the host pointer is more up to date this routine will update the device pointer on the attached stream. However,
+  unlike PetscStreamScalarGetHostRead() this routine will not synchronize on the stream as it is assumed that the
+  returned pointer will be used on the same stream. If the user intends to use the device pointer in subsequent calls on
+  a different stream the user should either synchronize on the stream used for this routine, or have the other stream
+  wait on an event recorded by the attached stream.
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamGetHostRead(), PetscStreamScalarGetDeviceRead(),
+  PetscStreamWaitEvent(), PetscStreamRecordEvent()
+@*/
 PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
 {
   PetscErrorCode ierr;
@@ -125,11 +295,29 @@ PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscSca
   PetscValidPointer(ptr,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
-  ierr = (*pscal->ops->getdevice)(pscal, ptr, pstream);CHKERRQ(ierr);
-  /* Assume that value will change and that we cannot access the cache anyore */
+  ierr = (*pscal->ops->getdevice)(pscal, ptr, PETSC_FALSE, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscStreamScalarRestoreDeviceWrite - Restores and commits changed device pointer for a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+. val - A pointer to holding the device pointer. This must be device accessible
+- pstream - The PetscStream object to enqueue the operation on
+
+  Notes:
+  This routine assumes the user has changed the value of the pointer, but as opposed to
+  PetscStreamScalarRestoreHostWrite() it does not copy the value back to the host preferring instead to keep it on device.
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamGetDeviceWrite(),
+  PetscStreamScalarGetHostWrite(), PetscStreamScalarGetDeviceRead()
+@*/
 PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
 {
   PetscFunctionBegin;

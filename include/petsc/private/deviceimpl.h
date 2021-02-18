@@ -23,6 +23,7 @@ struct _StreamOps {
 struct _n_PetscStream {
   struct _StreamOps ops[1];
   PetscInt          id;
+  PetscBool         idle;
   PetscBool         setup;
   PetscStreamType   type;
   PetscStreamMode   mode;
@@ -76,7 +77,7 @@ struct _ScalOps {
   PetscErrorCode (*setvalue)(PetscStreamScalar,const PetscScalar*,PetscMemType,PetscStream);
   PetscErrorCode (*gethost)(PetscStreamScalar,PetscScalar**,PetscBool,PetscStream);
   PetscErrorCode (*restorehost)(PetscStreamScalar,PetscScalar**,PetscStream);
-  PetscErrorCode (*getdevice)(PetscStreamScalar,PetscScalar**,PetscStream);
+  PetscErrorCode (*getdevice)(PetscStreamScalar,PetscScalar**,PetscBool,PetscStream);
   PetscErrorCode (*restoredevice)(PetscStreamScalar,PetscScalar**,PetscStream);
   PetscErrorCode (*accumop)(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
 };
