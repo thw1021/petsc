@@ -829,6 +829,15 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
         ierr = PetscObjectQuery((PetscObject)pc, "_PCHPDDM_Neumann_Mat", (PetscObject*)&uaux);CHKERRQ(ierr);
         ierr = PetscObjectReference((PetscObject)uaux);CHKERRQ(ierr);
       }
+      /* look inside the Pmat instead of the PC, needed for MatSchurComplementComputeExplicitOperator() */
+      if (!uis) {
+        ierr = PetscObjectQuery((PetscObject)P, "_PCHPDDM_Neumann_IS", (PetscObject*)&uis);CHKERRQ(ierr);
+        ierr = PetscObjectReference((PetscObject)uis);CHKERRQ(ierr);
+      }
+      if (!uaux) {
+        ierr = PetscObjectQuery((PetscObject)P, "_PCHPDDM_Neumann_Mat", (PetscObject*)&uaux);CHKERRQ(ierr);
+        ierr = PetscObjectReference((PetscObject)uaux);CHKERRQ(ierr);
+      }
     }
     ierr = PCHPDDMSetAuxiliaryMat(pc, uis, uaux, usetup, uctx);CHKERRQ(ierr);
     ierr = MatDestroy(&uaux);CHKERRQ(ierr);
@@ -1233,7 +1242,8 @@ static PetscErrorCode PCHPDDMGetSTShareSubPC_HPDDM(PC pc, PetscBool *share)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode HPDDMLoadDL_Private(PetscBool *found) {
+PetscErrorCode HPDDMLoadDL_Private(PetscBool *found)
+{
   char           lib[PETSC_MAX_PATH_LEN], dlib[PETSC_MAX_PATH_LEN], dir[PETSC_MAX_PATH_LEN];
   PetscErrorCode ierr;
 
