@@ -92,21 +92,25 @@ static PetscErrorCode PetscStreamScalarRestoreHost_CUDA(PetscStreamScalar pscal,
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamScalarGetDevice_CUDA(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
+static PetscErrorCode PetscStreamScalarGetDevice_CUDA(PetscStreamScalar pscal, PetscScalar **val, PetscBool update, PetscStream pstream)
 {
-  PetscFunctionBegin;
-  if (pscal->omask == PETSC_OFFLOAD_CPU) {
-    PetscErrorCode ierr;
-    cudaStream_t   cstream;
-    cudaError_t    cerr;
+  PetscErrorCode ierr;
 
-    ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
+  PetscFunctionBegin;
+  /* Wait event here in case this stream scalar had work queued on another stream */
+  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
+  if (update && pscal->omask == PETSC_OFFLOAD_CPU) {
+    cudaStream_t cstream;
+    cudaError_t  cerr;
+
     ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
     cerr = cudaMemcpyAsync(pscal->device, pscal->host, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
     ierr = PetscStreamRestoreStream(pstream, &cstream);CHKERRQ(ierr);
+    /* Record event so other streams can wait on it */
     ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
     pscal->omask = PETSC_OFFLOAD_BOTH;
-  }
+  } else {pscal->omask = PETSC_OFFLOAD_GPU;}
+  /* Note no wait here, as the returned pointer will probably be used by the same stream */
   *val = pscal->device;
   PetscFunctionReturn(0);
 }
