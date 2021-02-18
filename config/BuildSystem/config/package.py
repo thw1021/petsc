@@ -50,6 +50,7 @@ class Package(config.base.Configure):
     self.gitcommit              = None # Git commit to use for downloads
     self.gitcommitmain          = None # Git commit to use for petsc/main or similar non-release branches
     self.download               = []   # list of URLs where repository or tarballs may be found (git is tested before tarballs)
+    self.recursive              = ''   # If requires --recursive option for git
     self.deps                   = []   # other packages whose dlib or include we depend on, usually we also use self.framework.require()
     self.odeps                  = []   # dependent packages that are optional
     self.defaultLanguage        = 'C'  # The language in which to run tests
@@ -805,7 +806,10 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
           continue
       self.logPrintBox('Trying to download '+url+' for '+self.PACKAGE)
       try:
-        retriever.genericRetrieve(url, self.externalPackagesDir, self.package)
+        if self.recursive:
+          retriever.genericRetrieve(url, self.externalPackagesDir, self.package, self.recursive)
+        else:
+          retriever.genericRetrieve(url, self.externalPackagesDir, self.package)
         self.logWrite(retriever.restoreLog())
         retriever.saveLog()
         pkgdir = self.getDir()
