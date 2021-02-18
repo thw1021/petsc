@@ -76,10 +76,10 @@ typedef enum {
 
 PETSC_EXTERN PetscErrorCode PetscEventCreate(PetscEvent*);
 PETSC_EXTERN PetscErrorCode PetscEventDestroy(PetscEvent*);
-PETSC_EXTERN PetscErrorCode PetscEventSetFlags(PetscEvent,unsigned int,unsigned int);
-PETSC_EXTERN PetscErrorCode PetscEventGetFlags(PetscEvent,unsigned int*,unsigned int*);
 PETSC_EXTERN PetscErrorCode PetscEventSetType(PetscEvent,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscEventGetType(PetscEvent,PetscStreamType*);
+PETSC_EXTERN PetscErrorCode PetscEventSetFlags(PetscEvent,unsigned int,unsigned int);
+PETSC_EXTERN PetscErrorCode PetscEventGetFlags(PetscEvent,unsigned int*,unsigned int*);
 PETSC_EXTERN PetscErrorCode PetscEventSetUp(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscEventSynchronize(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscEventQuery(PetscEvent,PetscBool*);
@@ -94,15 +94,13 @@ typedef struct _n_PetscStream* PetscStream;
 
 PETSC_EXTERN PetscErrorCode PetscStreamCreate(PetscStream*);
 PETSC_EXTERN PetscErrorCode PetscStreamDestroy(PetscStream*);
-PETSC_EXTERN PetscErrorCode PetscStreamSetMode(PetscStream,PetscStreamMode);
-PETSC_EXTERN PetscErrorCode PetscStreamGetMode(PetscStream,PetscStreamMode*);
 PETSC_EXTERN PetscErrorCode PetscStreamSetType(PetscStream,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscStreamGetType(PetscStream,PetscStreamType*);
+PETSC_EXTERN PetscErrorCode PetscStreamSetMode(PetscStream,PetscStreamMode);
+PETSC_EXTERN PetscErrorCode PetscStreamGetMode(PetscStream,PetscStreamMode*);
 PETSC_EXTERN PetscErrorCode PetscStreamSetUp(PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamGetStream(PetscStream,void*);
 PETSC_EXTERN PetscErrorCode PetscStreamRestoreStream(PetscStream,void*);
-PETSC_EXTERN PetscErrorCode PetscStreamSplitBegin(PetscStream,void*);
-PETSC_EXTERN PetscErrorCode PetscStreamSplitEnd(PetscStream,void*);
 PETSC_EXTERN PetscErrorCode PetscStreamRecordEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream);

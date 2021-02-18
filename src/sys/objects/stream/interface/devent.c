@@ -1,5 +1,20 @@
 #include <petsc/private/deviceimpl.h>
 
+/*@
+  PetscEventCreate - Creates an empty PetscEvent object. The type can then be set with PetscEventSetType().
+
+  Not Collective
+
+  Output Parameter:
+. event  - The allocated PetscEvent object
+
+  Notes:
+  You must set the stream type before using the PetscEvenr object, otherwise an error is generated on debug builds.
+
+  Level: beginner
+
+.seealso: PetscEventDestroy(), PetscEventSetType(), PetscEventSetFlags(), PetscEventSetUp()
+@*/
 PetscErrorCode PetscEventCreate(PetscEvent *event)
 {
   PetscEvent     e;
@@ -21,6 +36,18 @@ PetscErrorCode PetscEventCreate(PetscEvent *event)
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscEventDestroy - Destroys a PetscEvent
+
+  Not Collective
+
+  Input Parameter:
+. event  - The PetscEvent to destroy
+
+  Level: beginner
+
+.seealso: PetscEventCreate(), PetscEventSetType(), PetscEventSetFlags(), PetscEventSetUp()
+@*/
 PetscErrorCode PetscEventDestroy(PetscEvent *event)
 {
   PetscErrorCode ierr;
@@ -33,6 +60,25 @@ PetscErrorCode PetscEventDestroy(PetscEvent *event)
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscEventSetFlags - Set flags which determine the behavior of PetscEvent and wait calls
+
+  Not Collective
+
+  Input Parameters:
++ event - The PetscEvent object
+. eventFlags - Flags governing event object itself
+- waitFlags - Flags governing how wait operations are performed
+
+  Notes:
+  The particular flag values should be obtained from documentation for the respective underlying stream
+  implementation. For example for a PetscEvent of type PETSC_STREAM_CUDA this routine serves to collect the flags
+  normally passed to cudaEventCreateWithFlags() and cudaEventRecordWithFlags() respectively.
+
+  Level: intermediate
+
+.seealso: PetscEventDestroy(), PetscEventSetType(), PetscEventGetFlags(), PetscEventSetUp()
+@*/
 PetscErrorCode PetscEventSetFlags(PetscEvent event, unsigned int eventFlags, unsigned int waitFlags)
 {
   PetscFunctionBegin;
@@ -42,6 +88,25 @@ PetscErrorCode PetscEventSetFlags(PetscEvent event, unsigned int eventFlags, uns
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscEventGetFlags - Get flags which determine the behavior of event and wait calls
+
+  Not Collective
+
+  Input Parameter:
+. event - The PetscEvent object
+
+  Output Parameters:
++ eventFlags - Flags governing event object itself
+- waitFlags - Flags governing how wait operations are performed
+
+  Notes:
+  Pass NULL for either argument if not needed
+
+  Level: intermediate
+
+.seealso: PetscEventDestroy(), PetscEventSetType(), PetscEventSetFlags(), PetscEventSetUp()
+@*/
 PetscErrorCode PetscEventGetFlags(PetscEvent event, unsigned int *eventFlags, unsigned int *waitFlags)
 {
   PetscFunctionBegin;
@@ -50,6 +115,18 @@ PetscErrorCode PetscEventGetFlags(PetscEvent event, unsigned int *eventFlags, un
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscEventSetUp - Sets up and finalizes internal data structures
+
+  Not Collective
+
+  Input Parameter:
+. event  - The PetscEvent to set up
+
+  Level: beginner
+
+.seealso: PetscEventCreate(), PetscEventSetType(), PetscEventDestroy()
+@*/
 PetscErrorCode PetscEventSetUp(PetscEvent event)
 {
   PetscErrorCode ierr;
@@ -62,18 +139,57 @@ PetscErrorCode PetscEventSetUp(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscEventSynchronize - Blocks the calling host thread until all work captured by the PetscEvent has finished
+
+  Not Collective
+
+  Input Parameter:
+. event  - The PetscEvent to synchronize on
+
+  Notes:
+  All work is guaranteed to have been completed only after the host thread returns from this function. As it hard-stops
+  the host thread, this routine should only be used as a last resort between asynchronous calls, or at the end of a set
+  of asynchronous calls.
+ The user should almost never have reason to call this routine directly, as any asynchronous routines may invoke it if
+  necessary.
+
+  Level: advanced
+
+.seealso: PetscEventCreate(), PetscEventQuery(), PetscStreamWaitEvent(), PetscStreamSynchronize()
+@*/
 PetscErrorCode PetscEventSynchronize(PetscEvent event)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidStreamType(event,1);
+  if (PetscUnlikelyDebug(!event->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscEventSetUp() before using it");
   if (event->idle) PetscFunctionReturn(0);
   ierr = (*event->ops->synchronize)(event);CHKERRQ(ierr);
   event->idle = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscEventQuery - Returns whether a PetscEvent has work
+
+  Not Collective
+
+  Input Parameter:
+. event  - The PetscEvent object
+
+  Output Parameter:
+. busy - PETSC_TRUE if the PetscEvent is busy, PETSC_FALSE otherwise
+
+  Notes:
+  Results of this routine are cached on return, allowing this function to be called repeatedly in an efficient
+  manner.
+
+  Level: advanced
+
+.seealso: PetscEventCreate(), PetscEventSynchronize(), PetscStreamWaitEvent(), PetscStreamSynchronize()
+@*/
 PetscErrorCode PetscEventQuery(PetscEvent event, PetscBool *busy)
 {
   PetscErrorCode ierr;
@@ -81,7 +197,14 @@ PetscErrorCode PetscEventQuery(PetscEvent event, PetscBool *busy)
   PetscFunctionBegin;
   PetscValidStreamType(event,1);
   PetscValidBoolPointer(busy,2);
+  if (PetscUnlikelyDebug(!event->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscEventSetUp() before using it");
+  if (!(PetscDefined(USE_DEBUG))) {
+    if (event->idle) PetscFunctionReturn(0);
+  }
   ierr = (*event->ops->query)(event, busy);CHKERRQ(ierr);
+  if (PetscUnlikelyDebug((event->idle == PETSC_FALSE) && (*busy == PETSC_TRUE))) {
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscEvent cache corrupted, event thought it was idle when it still had work");
+  }
   event->idle = *busy;
   PetscFunctionReturn(0);
 }
