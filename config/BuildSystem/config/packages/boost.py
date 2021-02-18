@@ -8,6 +8,7 @@ class Configure(config.package.Package):
     self.versionname       = 'unknown'
     self.gitcommit         = 'master'
     self.download          = ['git://https://github.com/boostorg/boost']
+    self.recursive         = '--recursive'
     self.includes          = ['boost/multi_index_container.hpp']
     self.liblist           = []
     self.cxx               = 1
