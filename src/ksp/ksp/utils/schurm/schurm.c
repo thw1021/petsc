@@ -475,15 +475,24 @@ PetscErrorCode  MatSchurComplementGetSubMatrices(Mat S,Mat *A00,Mat *Ap00,Mat *A
 @*/
 PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat M, Mat *S)
 {
-  Mat            B, C, D, Bd, AinvBd;
+  Mat            B, C, D, a = NULL, Bd, AinvBd;
   KSP            ksp;
+  PetscBool      flg;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = MatSchurComplementGetSubMatrices(M, NULL, NULL, &B, &C, &D);CHKERRQ(ierr);
   ierr = MatSchurComplementGetKSP(M, &ksp);CHKERRQ(ierr);
   ierr = KSPSetUp(ksp);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)B, MATNEST, &flg);CHKERRQ(ierr);
+  if (flg) {
+    ierr = MatConvert(B, MATAIJ, MAT_INITIAL_MATRIX, &a);CHKERRQ(ierr);
+    B = a;
+  }
   ierr = MatConvert(B, MATDENSE, MAT_INITIAL_MATRIX, &Bd);CHKERRQ(ierr);
+  if (a) {
+    ierr = MatDestroy(&a);CHKERRQ(ierr);
+  }
   ierr = MatDuplicate(Bd, MAT_DO_NOT_COPY_VALUES, &AinvBd);CHKERRQ(ierr);
   ierr = KSPMatSolve(ksp, Bd, AinvBd);CHKERRQ(ierr);
   ierr = MatDestroy(&Bd);CHKERRQ(ierr);
@@ -492,7 +501,15 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat M, Mat *S)
   ierr = MatDestroy(&AinvBd);CHKERRQ(ierr);
   ierr = MatConvert(*S, MATAIJ, MAT_INPLACE_MATRIX, S);CHKERRQ(ierr);
   if (D) {
+    ierr = PetscObjectTypeCompare((PetscObject)D, MATNEST, &flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = MatConvert(D, MATAIJ, MAT_INITIAL_MATRIX, &a);CHKERRQ(ierr);
+      D = a;
+    }
     ierr = MatAXPY(*S, -1.0, D, DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
+    if (a) {
+      ierr = MatDestroy(&a);CHKERRQ(ierr);
+    }
   }
   ierr = MatScale(*S, -1.0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
