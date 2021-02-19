@@ -1,6 +1,6 @@
 #include <petsc/private/deviceimpl.h>
 
-/*@
+/*@C
   PetscStreamScalarCreate - Creates an empty PetscStreamScalar object. The type can then be set with PetscStreamScalarSetType().
 
   Not Collective
@@ -29,11 +29,14 @@ PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
   s->setup = PETSC_FALSE;
   s->omask = PETSC_OFFLOAD_UNALLOCATED;
   s->type = PETSC_STREAM_INVALID;
+  s->host = NULL;
+  s->device = NULL;
+  s->poolID = PETSC_DEFAULT;
   *pscal = s;
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamScalarDestroy - Destroys a PetscStreamScalar
 
   Not Collective
@@ -59,7 +62,7 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamScalarSetUp - Sets up internal data structures for use
 
   Not Collective
@@ -83,25 +86,30 @@ PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal, PetscStream pstre
   ierr = PetscEventSetType(pscal->event, pscal->type);CHKERRQ(ierr);
   ierr = PetscEventSetUp(pscal->event);CHKERRQ(ierr);
   ierr = (*pscal->ops->setup)(pscal, pstream);CHKERRQ(ierr);
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal, NULL, PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
   pscal->setup = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
-/*@
-  PetscStreamScalarSetValue - Set the host and device value of a PetscStreamScalar
+/*@C
+  PetscStreamScalarSetValue - Set the value of a PetscStreamScalar
 
   Not Collective
 
   Input Parameters:
 + pscal - The PetscStreamScalar object
-. val - A pointer to the value. This may be a host or device pointer
+. val - A pointer to the value. This may be a host or device pointer. Use NULL for 0
 . mtype - The memory type of val, either host or device pointer
 - pstream - The PetscStream object to enqueue the operation on
 
   Notes:
+  The user must call PetscStreamScalarSetUp() before using this routine.
+
   This routine is asynchronous to the host, so the PetscStreamScalar will only represent the value being set once the
   host to device memory copies complete on the attached PetscStream. Normal stream memory semantics apply.
+
+  The device value is always updated by this routine regardless of mtype, while the host value is only updated if mtype
+  is PETSC_MEMTYPE_HOST or if val is NULL.
 
   Level: beginner
 
@@ -116,12 +124,13 @@ PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar pscal, const PetscSca
   if (PetscMemTypeHost(mtype)) {
     if (val) PetscValidScalarPointer(val,2);
   }
+  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
   ierr = (*pscal->ops->setvalue)(pscal, val, mtype, pstream);CHKERRQ(ierr);
-  if (PetscMemTypeHost(mtype)) {ierr = PetscStreamScalarUpdateCache_Internal(pscal);CHKERRQ(ierr);}
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal, val, mtype);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamScalarGetHostRead - Get the host pointer containing the up to date value of a PetscStreamScalar
 
   Not Collective
@@ -152,11 +161,11 @@ PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar pscal, const Petsc
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
   ierr = (*pscal->ops->gethost)(pscal, (PetscScalar**) val, PETSC_TRUE, pstream);CHKERRQ(ierr);
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal, *val, PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamScalarGetHostWrite - Get the host pointer of a PetscStreamScalar
 
   Not Collective
@@ -185,12 +194,12 @@ PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar pscal, PetscScala
   PetscValidPointer(val,2);
   PetscValidScalarPointer(*val,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
-  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
+  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
   ierr = (*pscal->ops->gethost)(pscal, val, PETSC_FALSE, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamScalarRestoreHostWrite - Restores and commits the changed host pointer for a PetscStreamScalar
 
   Not Collective
@@ -216,16 +225,16 @@ PetscErrorCode PetscStreamScalarRestoreHostWrite(PetscStreamScalar pscal, PetscS
   PetscValidPointer(val,2);
   PetscValidScalarPointer(*val,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
-  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
+  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
   if (PetscUnlikelyDebug(*val != pscal->host)) {
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with the same pointer retrieved from PetscStreamScalarGetHostWrite()\n");
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with the same pointer retrieved from PetscStreamScalarGetHostWrite()");
   }
   ierr = (*pscal->ops->restorehost)(pscal, val, pstream);CHKERRQ(ierr);
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal, *val, PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamScalarGetDeviceRead - Get the device pointer of a PetscStreamScalar
 
   Not Collective
@@ -257,12 +266,15 @@ PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar pscal, const Pet
   PetscFunctionBegin;
   PetscValidPointer(ptr,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
-  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
+  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
   ierr = (*pscal->ops->getdevice)(pscal, (PetscScalar **)ptr, PETSC_TRUE, pstream);CHKERRQ(ierr);
+  if (pscal->omask != PETSC_OFFLOAD_GPU) {
+    ierr = PetscStreamScalarUpdateCache_Internal(pscal, pscal->host, PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamScalarGetDeviceWrite - Get the device pointer of a PetscStreamScalar
 
   Not Collective
@@ -294,12 +306,13 @@ PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscSca
   PetscFunctionBegin;
   PetscValidPointer(ptr,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
-  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
+  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
   ierr = (*pscal->ops->getdevice)(pscal, ptr, PETSC_FALSE, pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal, *ptr, PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamScalarRestoreDeviceWrite - Restores and commits changed device pointer for a PetscStreamScalar
 
   Not Collective
@@ -320,18 +333,65 @@ PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscSca
 @*/
 PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidPointer(ptr,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
-  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
+  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
   if (PetscUnlikelyDebug(*ptr != pscal->device)) {
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with the same pointer retrieved from PetscStreamScalarGetDeviceWrite()\n");
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with the same pointer retrieved from PetscStreamScalarGetDeviceWrite()");
   }
   if (pscal->ops->restoredevice) {
-    PetscErrorCode ierr;
-
     ierr = (*pscal->ops->restoredevice)(pscal, ptr, pstream);CHKERRQ(ierr);
-  } else {pscal->omask = PETSC_OFFLOAD_GPU;}
+  } else {
+    /*
+     This double whammy protects against the possibility that ptr was checked out and used on streamA, "returned" in
+     this function on streamB, and then used later with streamC
+     */
+    ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
+    ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
+    pscal->omask = PETSC_OFFLOAD_GPU;
+  }
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal, *ptr, PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarAXTY(PetscScalar a, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckValidSameStreamType(pscalx,2,pstream,4);
+  if (PetscUnlikelyDebug(!pscalx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on both argument 2 first");
+  if (pscaly) {
+    PetscCheckValidSameStreamType(pscaly,3,pstream,4);
+    if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
+  }
+  if (a == (PetscScalar)0.0) {
+    ierr = PetscStreamScalarSetValue(pscalx,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
+  } else {
+    ierr = (*pscalx->ops->axty)(a, pscalx, pscaly, pstream);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarAYDX(PetscScalar a, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckValidSameStreamType(pscalx,2,pstream,4);
+  if (PetscUnlikelyDebug(!pscalx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 2 first");
+  if (pscaly) {
+    PetscCheckValidSameStreamType(pscaly,3,pstream,4);
+    if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
+  }
+  if (a == (PetscScalar)0.0) {
+    ierr = PetscStreamScalarSetValue(pscalx,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
+  } else {
+    ierr = (*pscalx->ops->aydx)(a, pscalx, pscaly, pstream);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 

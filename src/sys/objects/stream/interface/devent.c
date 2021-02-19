@@ -1,6 +1,6 @@
 #include <petsc/private/deviceimpl.h>
 
-/*@
+/*@C
   PetscEventCreate - Creates an empty PetscEvent object. The type can then be set with PetscEventSetType().
 
   Not Collective
@@ -36,7 +36,7 @@ PetscErrorCode PetscEventCreate(PetscEvent *event)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscEventDestroy - Destroys a PetscEvent
 
   Not Collective
@@ -60,7 +60,7 @@ PetscErrorCode PetscEventDestroy(PetscEvent *event)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscEventSetFlags - Set flags which determine the behavior of PetscEvent and wait calls
 
   Not Collective
@@ -88,7 +88,7 @@ PetscErrorCode PetscEventSetFlags(PetscEvent event, unsigned int eventFlags, uns
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscEventGetFlags - Get flags which determine the behavior of event and wait calls
 
   Not Collective
@@ -115,7 +115,7 @@ PetscErrorCode PetscEventGetFlags(PetscEvent event, unsigned int *eventFlags, un
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscEventSetUp - Sets up and finalizes internal data structures
 
   Not Collective
@@ -139,7 +139,7 @@ PetscErrorCode PetscEventSetUp(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscEventSynchronize - Blocks the calling host thread until all work captured by the PetscEvent has finished
 
   Not Collective
@@ -171,7 +171,7 @@ PetscErrorCode PetscEventSynchronize(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscEventQuery - Returns whether a PetscEvent has work
 
   Not Collective
