@@ -45,6 +45,7 @@
 */
 #if defined(__cplusplus)
 #if defined(__GNUG__)
+#include <string>
 static std::string PETSC_PRETTY_FUNCTION(const std::string &prettyFunction,const std::string &Function)
 {
   size_t locFunName = prettyFunction.find(Function);
