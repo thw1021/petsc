@@ -9,8 +9,9 @@ configure_options = [
   'COPTFLAGS=-g -O',
   #'FOPTFLAGS=-g -O',
   'CXXOPTFLAGS=-g -O',
-  '--download-boost=1',
-  '--with-shared-libraries=1'
+  '--with-shared-libraries=1',
+  '--download-gsl',
+  '--download-boost',
   ]
 
 if __name__ == '__main__':
