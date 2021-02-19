@@ -2,7 +2,7 @@
 
 static PetscInt streamID = 0;
 
-/*@
+/*@C
   PetscStreamCreate - Creates an empty PetscStream object. The type can then be set with PetscStreamSetType().
 
   Not Collective
@@ -36,7 +36,7 @@ PetscErrorCode PetscStreamCreate(PetscStream *strm)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamDestroy - Destroys a PetscStream
 
   Not Collective
@@ -60,7 +60,7 @@ PetscErrorCode PetscStreamDestroy(PetscStream *strm)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamSetMode - Sets the stream-synchronization mode for a particular PetscStream
 
   Not Collective
@@ -83,7 +83,7 @@ PetscErrorCode PetscStreamSetMode(PetscStream strm, PetscStreamMode mode)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamGetMode - Gets the stream-synchronization mode for a particular PetscStream
 
   Not Collective
@@ -109,7 +109,7 @@ PetscErrorCode PetscStreamGetMode(PetscStream strm, PetscStreamMode *mode)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamSetUp - Sets up and finalizes internal data structures for later use.
 
   Not Collective
@@ -133,7 +133,7 @@ PetscErrorCode PetscStreamSetUp(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamGetStream - Retrieves the implementation specific stream
 
   Not Collective
@@ -165,7 +165,7 @@ PetscErrorCode PetscStreamGetStream(PetscStream strm, void *dstrm)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamRestoreStream - Restores the implementation specific stream
 
   Not Collective
@@ -194,7 +194,7 @@ PetscErrorCode PetscStreamRestoreStream(PetscStream strm, void *dstrm)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamRecordEvent - Records the contents of a PetscStream in a PetscEvent
 
   Not Collective
@@ -227,7 +227,7 @@ PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamWaitEvent - Makes a PetscStream wait for all work captured in a PetscEvent to be completed
 
   Collective on PetscEvent
@@ -299,7 +299,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronizeDevice_Private(PetscStr
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamSynchronize - Block the calling host thread until all work enqueued in the PetscStream has finished
 
   Not Collective
@@ -339,7 +339,7 @@ PetscErrorCode PetscStreamSynchronize(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   PetscStreamQuery - Returns whether or not a PetscStream is busy
 
   Not Collective
