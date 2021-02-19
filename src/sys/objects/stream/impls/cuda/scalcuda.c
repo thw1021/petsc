@@ -1,13 +1,23 @@
 #include "streamcuda.h"
 
 #if PetscDefined(HAVE_CUDA)
+static PetscScalar *devicePool, *hostPool;
+static PetscInt    *poolIDs;
+static PetscInt    poolSize = 100, swimmers = 0;
+static PetscBool   poolSetup = PETSC_FALSE;
+
 static PetscErrorCode PetscStreamScalarDestroy_CUDA(PetscStreamScalar pscal)
 {
-  cudaError_t cerr;
-
   PetscFunctionBegin;
-  cerr = cudaFreeHost(pscal->host);CHKERRCUDA(cerr);
-  cerr = cudaFree(pscal->device);CHKERRCUDA(cerr);
+  if (pscal->setup) {
+    if (PetscUnlikelyDebug(!swimmers)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"More PetscStreamScalars were destroyed than created");
+    --swimmers;
+  }
+  if (PetscUnlikelyDebug(!poolIDs[pscal->poolID])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Pool ID %D has apparently already been released!",pscal->poolID);
+  poolIDs[pscal->poolID] = 0;
+  pscal->poolID = PETSC_DEFAULT;
+  pscal->host = NULL;
+  pscal->device = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -18,9 +28,20 @@ static PetscErrorCode PetscStreamScalarSetup_CUDA(PetscStreamScalar pscal, Petsc
   cudaStream_t   cstream;
 
   PetscFunctionBegin;
+  for (int i = 0; i < poolSize; ++i) {
+    if (!poolIDs[i]) {
+      poolIDs[i] = 1;
+      pscal->poolID = i;
+      ++swimmers;
+      break;
+    }
+  }
+  if (PetscUnlikely(pscal->poolID == PETSC_DEFAULT)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum pool allocation %D reached, no free pool ID remains. Rerun with larger pool size",poolSize);
+  pscal->device = devicePool+pscal->poolID;
+  pscal->host = hostPool+pscal->poolID;
   ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
   cerr = cudaMemsetAsync(pscal->device, 0, sizeof(PetscScalar), cstream);CHKERRCUDA(cerr);
-  *pscal->host = (PetscScalar)0.0;
+  cerr = cudaMemsetAsync(pscal->host, 0, sizeof(PetscScalar), cstream);CHKERRCUDA(cerr);
   ierr = PetscStreamRestoreStream(pstream, &cstream);CHKERRQ(ierr);
   ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
   pscal->omask = PETSC_OFFLOAD_BOTH;
@@ -38,19 +59,20 @@ static PetscErrorCode PetscStreamScalarSetValue_CUDA(PetscStreamScalar pscal, co
   ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
   if (val) {
     if (PetscMemTypeHost(mtype)) {
-      cerr = cudaMemcpyAsync(pscal->host, val, sizeof(PetscScalar), cudaMemcpyHostToHost, cstream);CHKERRCUDA(cerr);
       cerr = cudaMemcpyAsync(pscal->device, val, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
+      cerr = cudaMemcpyAsync(pscal->host, val, sizeof(PetscScalar), cudaMemcpyHostToHost, cstream);CHKERRCUDA(cerr);
+      pscal->omask = PETSC_OFFLOAD_BOTH;
     } else {
       cerr = cudaMemcpyAsync(pscal->device, val, sizeof(PetscScalar), cudaMemcpyDeviceToDevice, cstream);CHKERRCUDA(cerr);
-      cerr = cudaMemcpyAsync(pscal->host, val, sizeof(PetscScalar), cudaMemcpyDeviceToHost, cstream);CHKERRCUDA(cerr);
+      pscal->omask = PETSC_OFFLOAD_GPU;
     }
   } else {
     cerr = cudaMemsetAsync(pscal->device, 0, sizeof(PetscScalar), cstream);CHKERRQ(ierr);
     cerr = cudaMemsetAsync(pscal->host, 0, sizeof(PetscScalar), cstream);CHKERRQ(ierr);
+    pscal->omask = PETSC_OFFLOAD_BOTH;
   }
   ierr = PetscStreamRestoreStream(pstream, &cstream);CHKERRQ(ierr);
   ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
-  pscal->omask = PETSC_OFFLOAD_BOTH;
   PetscFunctionReturn(0);
 }
 
@@ -92,7 +114,7 @@ static PetscErrorCode PetscStreamScalarRestoreHost_CUDA(PetscStreamScalar pscal,
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamScalarGetDevice_CUDA(PetscStreamScalar pscal, PetscScalar **val, PetscBool update, PetscStream pstream)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateDevice_CUDA(PetscStreamScalar pscal, PetscBool update, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
@@ -110,8 +132,45 @@ static PetscErrorCode PetscStreamScalarGetDevice_CUDA(PetscStreamScalar pscal, P
     ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
     pscal->omask = PETSC_OFFLOAD_BOTH;
   } else {pscal->omask = PETSC_OFFLOAD_GPU;}
-  /* Note no wait here, as the returned pointer will probably be used by the same stream */
+  /* Note no wait require if the value was never moved */
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscStreamScalarGetDevice_CUDA(PetscStreamScalar pscal, PetscScalar **val, PetscBool update, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscStreamScalarUpdateDevice_CUDA(pscal, update, pstream);CHKERRQ(ierr);
   *val = pscal->device;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscStreamScalarAXTY_CUDA(PetscScalar a, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscStreamScalarUpdateDevice_CUDA(pscalx, PETSC_TRUE, pstream);CHKERRQ(ierr);
+  if (pscaly) {
+    /* pscaly == NULL means pscaly = 1.0 */
+    ierr = PetscStreamScalarUpdateDevice_CUDA(pscaly, PETSC_TRUE, pstream);CHKERRQ(ierr);
+  }
+  ierr = PetscStreamScalarAXTY_CUDA_Kernel(a, pscalx, pscaly, pstream);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscStreamScalarAYDX_CUDA(PetscScalar a, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscStreamScalarUpdateDevice_CUDA(pscalx, PETSC_TRUE, pstream);CHKERRQ(ierr);
+  if (pscaly) {
+    /* pscaly == NULL means pscaly = 1.0 */
+    ierr = PetscStreamScalarUpdateDevice_CUDA(pscaly, PETSC_TRUE, pstream);CHKERRQ(ierr);
+  }
+  ierr = PetscStreamScalarAYDX_CUDA_Kernel(a, pscalx, pscaly, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -133,23 +192,34 @@ static const struct _ScalOps scalcuops = {
   PetscStreamScalarRestoreHost_CUDA,
   PetscStreamScalarGetDevice_CUDA,
   NULL,
+  PetscStreamScalarAXTY_CUDA,
+  PetscStreamScalarAYDX_CUDA,
   PetscStreamScalarAccumOpDispatch_CUDA
 };
 #endif /* HAVE_CUDA */
 
 PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar pscal)
 {
-  PetscFunctionBegin;
 #if PetscDefined(HAVE_CUDA)
-  {
-    PetscErrorCode ierr;
-    cudaError_t    cerr;
+  PetscErrorCode ierr;
 
-    cerr = cudaMallocHost((void **) &pscal->host, sizeof(PetscScalar));CHKERRCUDA(cerr);
-    cerr = cudaMalloc((void **) &pscal->device, sizeof(PetscScalar));CHKERRCUDA(cerr);
-    ierr = PetscMemcpy(pscal->ops, &scalcuops, sizeof(scalcuops));CHKERRQ(ierr);
+  PetscFunctionBegin;
+  if (!poolSetup) {
+    cudaError_t cerr;
+
+    poolSetup = PETSC_TRUE;
+    /* Use cudaHostAlloc to allow the flag to be changed, could maybe be useful */
+    cerr = cudaHostAlloc((void **) &hostPool, poolSize*sizeof(PetscScalar), cudaHostAllocDefault);CHKERRCUDA(cerr);
+    cerr = cudaMemset(hostPool, 0, poolSize*sizeof(PetscScalar));CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **) &devicePool, poolSize*sizeof(PetscScalar));CHKERRCUDA(cerr);
+    cerr = cudaMemset(devicePool, 0, poolSize*sizeof(PetscScalar));CHKERRCUDA(cerr);
+    ierr = PetscCalloc1(poolSize, &poolIDs);CHKERRQ(ierr);
   }
+  //cerr = cudaMallocHost((void **) &pscal->host, sizeof(PetscScalar));CHKERRCUDA(cerr);
+  //cerr = cudaMalloc((void **) &pscal->device, sizeof(PetscScalar));CHKERRCUDA(cerr);
+  ierr = PetscMemcpy(pscal->ops, &scalcuops, sizeof(scalcuops));CHKERRQ(ierr);
 #else
+  PetscFunctionBegin;
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with CUDA support\n");
 #endif
   PetscFunctionReturn(0);
