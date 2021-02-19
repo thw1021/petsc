@@ -947,11 +947,11 @@ static PetscErrorCode PetscViewerBinaryWriteReadMPIIO(PetscViewer viewer,void *d
   ierr = PetscDataTypeToMPIDataType(dtype,&mdtype);CHKERRQ(ierr);
   if (write) {
     if (!rank) {
-      ierr = MPIU_File_write_at(mfdes,vbinary->moff,data,cnt,mdtype,&status);CHKERRQ(ierr);
+      ierr = MPIU_File_write_at(mfdes,vbinary->moff,data,cnt,mdtype,&status);CHKERRMPI(ierr);
     }
   } else {
     if (!rank) {
-      ierr = MPIU_File_read_at(mfdes,vbinary->moff,data,cnt,mdtype,&status);CHKERRQ(ierr);
+      ierr = MPIU_File_read_at(mfdes,vbinary->moff,data,cnt,mdtype,&status);CHKERRMPI(ierr);
       if (cnt > 0) {ierr = MPI_Get_count(&status,mdtype,&cnt);CHKERRMPI(ierr);}
     }
     ierr = MPI_Bcast(&cnt,1,MPI_INT,0,comm);CHKERRMPI(ierr);
@@ -1087,9 +1087,9 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
     ierr = PetscViewerBinaryGetMPIIOOffset(viewer,&off);CHKERRQ(ierr);
     off += (MPI_Offset)(start*dsize);
     if (write) {
-      ierr = MPIU_File_write_at_all(mfdes,off,data,cnt,mdtype,MPI_STATUS_IGNORE);CHKERRQ(ierr);
+      ierr = MPIU_File_write_at_all(mfdes,off,data,cnt,mdtype,MPI_STATUS_IGNORE);CHKERRMPI(ierr);
     } else {
-      ierr = MPIU_File_read_at_all(mfdes,off,data,cnt,mdtype,MPI_STATUS_IGNORE);CHKERRQ(ierr);
+      ierr = MPIU_File_read_at_all(mfdes,off,data,cnt,mdtype,MPI_STATUS_IGNORE);CHKERRMPI(ierr);
     }
     off  = (MPI_Offset)(total*dsize);
     ierr = PetscViewerBinaryAddMPIIOOffset(viewer,off);CHKERRQ(ierr);
