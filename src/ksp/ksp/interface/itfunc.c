@@ -2011,12 +2011,10 @@ $     monitor (KSP ksp, PetscInt it, PetscReal rnorm, void *mctx)
 
    Options Database Keys:
 +    -ksp_monitor        - sets KSPMonitorDefault()
+.    -ksp_monitor draw::draw_lg - sets KSPMonitorDefault() and plots residual
 .    -ksp_monitor_true_residual    - sets KSPMonitorTrueResidualNorm()
+.    -ksp_monitor_true_residual draw::draw_lg   - sets KSPMonitorTrueResidualNorm() and plots residual
 .    -ksp_monitor_max    - sets KSPMonitorTrueResidualMaxNorm()
-.    -ksp_monitor_lg_residualnorm    - sets line graph monitor,
-                           uses KSPMonitorLGResidualNormCreate()
-.    -ksp_monitor_lg_true_residualnorm   - sets line graph monitor,
-                           uses KSPMonitorLGResidualNormCreate()
 .    -ksp_monitor_singular_value    - sets KSPMonitorSingularValue()
 -    -ksp_monitor_cancel - cancels all monitors that have
                           been hardwired into a code by
@@ -2039,7 +2037,7 @@ $     monitor (KSP ksp, PetscInt it, PetscReal rnorm, void *mctx)
 
    Level: beginner
 
-.seealso: KSPMonitorDefault(), KSPMonitorLGResidualNormCreate(), KSPMonitorCancel(), KSP
+.seealso: KSPMonitorDefault(), KSPMonitorCancel(), KSP
 @*/
 PetscErrorCode  KSPMonitorSet(KSP ksp,PetscErrorCode (*monitor)(KSP,PetscInt,PetscReal,void*),void *mctx,PetscErrorCode (*monitordestroy)(void**))
 {
@@ -2075,7 +2073,7 @@ PetscErrorCode  KSPMonitorSet(KSP ksp,PetscErrorCode (*monitor)(KSP,PetscInt,Pet
 
    Level: intermediate
 
-.seealso: KSPMonitorDefault(), KSPMonitorLGResidualNormCreate(), KSPMonitorSet(), KSP
+.seealso: KSPMonitorDefault(), KSPMonitorSet(), KSP
 @*/
 PetscErrorCode  KSPMonitorCancel(KSP ksp)
 {
@@ -2107,7 +2105,7 @@ PetscErrorCode  KSPMonitorCancel(KSP ksp)
 
    Level: intermediate
 
-.seealso: KSPMonitorDefault(), KSPMonitorLGResidualNormCreate(), KSP
+.seealso: KSPMonitorDefault(), KSP
 @*/
 PetscErrorCode  KSPGetMonitorContext(KSP ksp,void **ctx)
 {

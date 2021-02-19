@@ -353,6 +353,7 @@ PETSC_EXTERN PetscErrorCode KSPSetFromOptions(KSP);
 PETSC_EXTERN PetscErrorCode KSPResetFromOptions(KSP);
 PETSC_EXTERN PetscErrorCode KSPAddOptionsChecker(PetscErrorCode (*)(KSP));
 
+PETSC_INTERN PetscErrorCode KSPMonitorLGCreate(MPI_Comm,const char[],const char[],const char[],PetscInt,const char *[],int,int,int,int,PetscDrawLG *);
 PETSC_EXTERN PetscErrorCode KSPMonitorSingularValue(KSP,PetscInt,PetscReal,PetscViewerAndFormat*);
 PETSC_EXTERN PetscErrorCode KSPMonitorDefault(KSP,PetscInt,PetscReal,PetscViewerAndFormat*);
 PETSC_EXTERN PetscErrorCode KSPLSQRMonitorDefault(KSP,PetscInt,PetscReal,PetscViewerAndFormat*);
@@ -363,11 +364,12 @@ PETSC_EXTERN PetscErrorCode KSPMonitorTrueResidualNorm(KSP,PetscInt,PetscReal,Pe
 PETSC_EXTERN PetscErrorCode KSPMonitorTrueResidualMaxNorm(KSP,PetscInt,PetscReal,PetscViewerAndFormat*);
 PETSC_EXTERN PetscErrorCode KSPMonitorDefaultShort(KSP,PetscInt,PetscReal,PetscViewerAndFormat*);
 PETSC_EXTERN PetscErrorCode KSPMonitorSolution(KSP,PetscInt,PetscReal,PetscViewerAndFormat*);
+PETSC_EXTERN PetscErrorCode KSPMonitorError(KSP,PetscInt,PetscReal,PetscViewerAndFormat*);
 PETSC_EXTERN PetscErrorCode KSPMonitorSAWs(KSP,PetscInt,PetscReal,void*);
 PETSC_EXTERN PetscErrorCode KSPMonitorSAWsCreate(KSP,void**);
 PETSC_EXTERN PetscErrorCode KSPMonitorSAWsDestroy(void**);
 PETSC_EXTERN PetscErrorCode KSPGMRESMonitorKrylov(KSP,PetscInt,PetscReal,void*);
-PETSC_EXTERN PetscErrorCode KSPMonitorSetFromOptions(KSP,const char[],const char[],const char [],PetscErrorCode (*)(KSP,PetscInt,PetscReal,PetscViewerAndFormat*));
+PETSC_EXTERN PetscErrorCode KSPMonitorSetFromOptions(KSP,const char[],const char[],const char [],const char [], PetscInt, const char *[], PetscErrorCode (*)(KSP,PetscInt,PetscReal,PetscViewerAndFormat*),void*);
 
 PETSC_EXTERN PetscErrorCode KSPUnwindPreconditioner(KSP,Vec,Vec);
 PETSC_EXTERN PetscErrorCode KSPInitialResidual(KSP,Vec,Vec,Vec,Vec,Vec);
@@ -709,10 +711,6 @@ PETSC_EXTERN PetscErrorCode PCPreSolve(PC,KSP);
 PETSC_EXTERN PetscErrorCode PCPostSolve(PC,KSP);
 
 #include <petscdrawtypes.h>
-PETSC_EXTERN PetscErrorCode KSPMonitorLGResidualNormCreate(MPI_Comm,const char[],const char[],int,int,int,int,PetscDrawLG*);
-PETSC_EXTERN PetscErrorCode KSPMonitorLGResidualNorm(KSP,PetscInt,PetscReal,void*);
-PETSC_EXTERN PetscErrorCode KSPMonitorLGTrueResidualNormCreate(MPI_Comm,const char[],const char[],int,int,int,int,PetscDrawLG*);
-PETSC_EXTERN PetscErrorCode KSPMonitorLGTrueResidualNorm(KSP,PetscInt,PetscReal,void*);
 PETSC_EXTERN PetscErrorCode KSPMonitorLGRange(KSP,PetscInt,PetscReal,void*);
 
 PETSC_EXTERN PetscErrorCode PCShellSetPreSolve(PC,PetscErrorCode (*)(PC,KSP,Vec,Vec));
