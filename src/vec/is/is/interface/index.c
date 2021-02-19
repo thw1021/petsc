@@ -59,7 +59,7 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
     else if (idxs[i] > lbounds[1]) lbounds[1] = idxs[i];
   }
   lbounds[0] = -lbounds[0];
-  ierr = MPIU_Allreduce(lbounds,gbounds,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)subset));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(lbounds,gbounds,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)subset));CHKERRMPI(ierr);
   gbounds[0] = -gbounds[0];
   N_n  = gbounds[1] - gbounds[0] + 1;
 
@@ -112,9 +112,9 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
   /* cumulative of number of indexes and size of subset without holes */
 #if defined(PETSC_HAVE_MPI_EXSCAN)
   start = 0;
-  ierr  = MPI_Exscan(&nlocals,&start,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)subset));CHKERRQ(ierr);
+  ierr  = MPI_Exscan(&nlocals,&start,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)subset));CHKERRMPI(ierr);
 #else
-  ierr  = MPI_Scan(&nlocals,&start,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)subset));CHKERRQ(ierr);
+  ierr  = MPI_Scan(&nlocals,&start,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)subset));CHKERRMPI(ierr);
   start = start-nlocals;
 #endif
 
