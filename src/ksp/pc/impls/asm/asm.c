@@ -205,7 +205,7 @@ static PetscErrorCode PCSetUp_ASM(PC pc)
 
       inwork.max   = osm->n_local_true;
       inwork.sum   = osm->n_local_true;
-      ierr         = MPIU_Allreduce(&inwork,&outwork,1,MPIU_2INT,MPIU_MAXSUM_OP,PetscObjectComm((PetscObject)pc));CHKERRQ(ierr);
+      ierr         = MPIU_Allreduce(&inwork,&outwork,1,MPIU_2INT,MPIU_MAXSUM_OP,PetscObjectComm((PetscObject)pc));CHKERRMPI(ierr);
       osm->n_local = outwork.max;
       osm->n       = outwork.sum;
 
@@ -907,7 +907,7 @@ static PetscErrorCode  PCASMGetSubKSP_ASM(PC pc,PetscInt *n_local,PetscInt *firs
 
   if (n_local) *n_local = osm->n_local_true;
   if (first_local) {
-    ierr          = MPI_Scan(&osm->n_local_true,first_local,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)pc));CHKERRQ(ierr);
+    ierr          = MPI_Scan(&osm->n_local_true,first_local,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)pc));CHKERRMPI(ierr);
     *first_local -= osm->n_local_true;
   }
   if (ksp) {

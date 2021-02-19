@@ -358,8 +358,8 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   }
 
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
 
   /* (1) Create svtx[] from sedgelist */
   /* -------------------------------- */
