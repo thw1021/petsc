@@ -676,6 +676,8 @@ checkbadSource:
 	-@git --no-pager grep -n -P -e '[^_]for\(' -e '[^_]if\(' -e 'while\(' -- ${GITSRC} | grep -v khash.h >> checkbadSource.out;true
 	-@echo "Two ;; -----------------------------------------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P -e ';;' -- ${GITSRC} | grep -v ' for (' | grep -v khash.h >> checkbadSource.out;true
+	-@echo "CHKERRQ for an MPI error code ------------------------" >> checkbadSource.out
+	-@git --no-pager grep -n -P -E "= MPI[U]?_.*;CHKERRQ" | grep -v khash.h >> checkbadSource.out;true
 	-@echo "Missing if (ierr) return(ierr); ----------------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P -e 'ierr = PetscInitialize\(' -- '*.[ch]' '*.cpp' '*.cxx' '*.cu' | grep -v 'if (ierr) return ierr;' | egrep "(test|tutorial)" | grep -v khash.h >> checkbadSource.out;true
 	-@echo "DOS file (with DOS newlines) -------------------------" | grep -v khash.h >> checkbadSource.out

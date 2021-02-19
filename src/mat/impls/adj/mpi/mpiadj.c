@@ -371,7 +371,7 @@ static PetscErrorCode MatEqual_MPIAdj(Mat A,Mat B,PetscBool * flg)
   /* if a->j are the same */
   ierr = PetscMemcmp(a->j,b->j,(a->nz)*sizeof(PetscInt),&flag);CHKERRQ(ierr);
 
-  ierr = MPIU_Allreduce(&flag,flg,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&flag,flg,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -630,7 +630,7 @@ static PetscErrorCode  MatMPIAdjSetPreallocation_MPIAdj(Mat B,PetscInt *i,PetscI
   ierr = PetscLayoutSetUp(B->cmap);CHKERRQ(ierr);
   if (values) useedgeweights = PETSC_TRUE; else useedgeweights = PETSC_FALSE;
   /* Make everybody knows if they are using edge weights or not */
-  ierr = MPIU_Allreduce((int*)&useedgeweights,(int*)&b->useedgeweights,1,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)B));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce((int*)&useedgeweights,(int*)&b->useedgeweights,1,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)B));CHKERRMPI(ierr);
 
   if (PetscDefined(USE_DEBUG)) {
     PetscInt ii;
@@ -671,8 +671,8 @@ static PetscErrorCode MatMPIAdjCreateNonemptySubcommMat_MPIAdj(Mat A,Mat *B)
   PetscFunctionBegin;
   *B    = NULL;
   ierr  = PetscObjectGetComm((PetscObject)A,&acomm);CHKERRQ(ierr);
-  ierr  = MPI_Comm_size(acomm,&size);CHKERRQ(ierr);
-  ierr  = MPI_Comm_size(acomm,&rank);CHKERRQ(ierr);
+  ierr  = MPI_Comm_size(acomm,&size);CHKERRMPI(ierr);
+  ierr  = MPI_Comm_size(acomm,&rank);CHKERRMPI(ierr);
   ierr  = MatGetOwnershipRanges(A,&ranges);CHKERRQ(ierr);
   for (i=0,nranks=0; i<size; i++) {
     if (ranges[i+1] - ranges[i] > 0) nranks++;
@@ -701,7 +701,7 @@ static PetscErrorCode MatMPIAdjCreateNonemptySubcommMat_MPIAdj(Mat A,Mat *B)
     ierr       = MatCreateMPIAdj(bcomm,m,N,a->i,a->j,a->values,B);CHKERRQ(ierr);
     b          = (Mat_MPIAdj*)(*B)->data;
     b->freeaij = PETSC_FALSE;
-    ierr       = MPI_Comm_free(&bcomm);CHKERRQ(ierr);
+    ierr       = MPI_Comm_free(&bcomm);CHKERRMPI(ierr);
   }
   PetscFunctionReturn(0);
 }
