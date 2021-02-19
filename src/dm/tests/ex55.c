@@ -46,9 +46,9 @@ int main(int argc, char **argv)
   for (moment=0; moment<momentummax; moment++) {
 
     /* http://www.wouterdenhaan.com/numerical/integrationslides.pdf */
-    /* https://en.wikipedia.org/wiki/Gauss–Hermite_quadrature */
+    /* https://en.wikipedia.org/wiki/Gauss-Hermite_quadrature */
     /*
-       int_{-infinity}^{infinity} \frac{1}{sigma sqrt(2pi)} exp(- \frac{(x - mu)^2}{2 sigma^2) h(x) dx 
+       int_{-infinity}^{infinity} \frac{1}{sigma sqrt(2pi)} exp(- \frac{(x - mu)^2}{2 sigma^2) h(x) dx
 
        then approx equals 1/pi sum_i w_i h( sqrt(2) sigma x_i + mu)
     */

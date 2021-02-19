@@ -27,5 +27,7 @@ if __name__ == '__main__':
     '--download-codipack=1',
     '--download-adblaslapack=1',
     '--download-kokkos',
+    '--download-gsl',
+    '--download-boost',
   ]
   configure.petsc_configure(configure_options)

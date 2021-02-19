@@ -29,6 +29,8 @@ configure_options = [
   '--download-spai=1',
   '--download-concurrencykit=1',
   '--download-revolve=1',
+  '--download-gsl',
+  '--download-boost',
   ]
 
 if __name__ == '__main__':
