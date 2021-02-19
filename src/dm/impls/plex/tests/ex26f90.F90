@@ -301,21 +301,21 @@ program ex26f90
     allocate(dmList(2))
     dmList(1) = dmU;
     dmList(2) = dmA;
-    !call DMCreateSuperDM(dmList,2_kPI,PETSC_NULL_IS,dmUA2,ierr);CHKERRA(ierr)
+    call DMCreateSuperDM(dmList,2_kPI,PETSC_NULL_IS,dmUA2,ierr);CHKERRA(ierr)
     deallocate(dmList)
-  
+
     call DMGetGlobalVector(dm,   X,ierr);CHKERRA(ierr)
     call DMGetGlobalVector(dmU,  U,ierr);CHKERRA(ierr)
     call DMGetGlobalVector(dmA,  A,ierr);CHKERRA(ierr)
     call DMGetGlobalVector(dmS,  S,ierr);CHKERRA(ierr)
     call DMGetGlobalVector(dmUA, UA,ierr);CHKERRA(ierr)
-    !call DMGetGlobalVector(dmUA2, UA2,ierr);CHKERRA(ierr)
+    call DMGetGlobalVector(dmUA2, UA2,ierr);CHKERRA(ierr)
   
     call PetscObjectSetName(U,  "U",ierr);CHKERRA(ierr)
     call PetscObjectSetName(A,  "Alpha",ierr);CHKERRA(ierr)
     call PetscObjectSetName(S,  "Sigma",ierr);CHKERRA(ierr)
     call PetscObjectSetName(UA, "UAlpha",ierr);CHKERRA(ierr)
-    !call PetscObjectSetName(UA2, "UAlpha2",ierr);CHKERRA(ierr)
+    call PetscObjectSetName(UA2, "UAlpha2",ierr);CHKERRA(ierr)
     call VecSet(X, -111.0_kPR,ierr);CHKERRA(ierr)
       
     ! Setting u to [x,y,z]  and alpha to x^2+y^2+z^2 by writing in UAlpha then restricting to U and Alpha */
@@ -359,9 +359,9 @@ program ex26f90
     call VecViewFromOptions(U, PETSC_NULL_OPTIONS, "-u_vec_view",ierr);CHKERRA(ierr)
     call VecViewFromOptions(A, PETSC_NULL_OPTIONS, "-a_vec_view",ierr);CHKERRA(ierr)
     ! restrict to UA2
-    !call VecISCopy(X, isUA, SCATTER_REVERSE, UA2,ierr);CHKERRA(ierr)
-    !call VecViewFromOptions(UA2, PETSC_NULL_OPTIONS, "-ua2_vec_view",ierr);CHKERRA(ierr)
-  
+    call VecISCopy(X, isUA, SCATTER_REVERSE, UA2,ierr);CHKERRA(ierr)
+    call VecViewFromOptions(UA2, PETSC_NULL_OPTIONS, "-ua2_vec_view",ierr);CHKERRA(ierr)
+
 
     ! Writing nodal variables to ExodusII file 
     call DMSetOutputSequenceNumber(dmU,0_kPI,time,ierr);CHKERRA(ierr)
@@ -391,19 +391,19 @@ program ex26f90
     call DMRestoreGlobalVector(dmUA, tmpVec,ierr);CHKERRA(ierr)
 
     ! same thing with the UA2 Vec obtained from the superDM
-    ! call DMGetGlobalVector(dmUA2, tmpVec,ierr);CHKERRA(ierr)
-    ! call VecCopy(UA2, tmpVec,ierr);CHKERRA(ierr)
-    ! call PetscObjectSetName(tmpVec, "U",ierr);CHKERRA(ierr)
-    ! call DMSetOutputSequenceNumber(dmUA2,2_kPI,time,ierr);CHKERRA(ierr)
-    ! call VecView(tmpVec, viewer,ierr);CHKERRA(ierr)
-    ! /* Reading nodal variables in Exodus file */
-    ! call VecSet(tmpVec, -1000.0_kPR,ierr);CHKERRA(ierr)
-    ! call VecLoad(tmpVec,viewer,ierr);CHKERRA(ierr)
-    ! call VecAXPY(UA2, -1.0_kPR, tmpVec,ierr);CHKERRA(ierr)
-    ! call VecNorm(UA2, NORM_INFINITY, norm,ierr);CHKERRA(ierr)
-    ! if (norm > PETSC_SQRT_MACHINE_EPSILON) then
-    !     write(IOBuffer,'("UAlpha2 ||Vin - Vout|| = ",ES12.5)') norm
-    ! end if
+    call DMGetGlobalVector(dmUA2, tmpVec,ierr);CHKERRA(ierr)
+    call VecCopy(UA2, tmpVec,ierr);CHKERRA(ierr)
+    call PetscObjectSetName(tmpVec, "U",ierr);CHKERRA(ierr)
+    call DMSetOutputSequenceNumber(dmUA2,2_kPI,time,ierr);CHKERRA(ierr)
+    call VecView(tmpVec, viewer,ierr);CHKERRA(ierr)
+    ! Reading nodal variables in Exodus file
+    call VecSet(tmpVec, -1000.0_kPR,ierr);CHKERRA(ierr)
+    call VecLoad(tmpVec,viewer,ierr);CHKERRA(ierr)
+    call VecAXPY(UA2, -1.0_kPR, tmpVec,ierr);CHKERRA(ierr)
+    call VecNorm(UA2, NORM_INFINITY, norm,ierr);CHKERRA(ierr)
+    if (norm > PETSC_SQRT_MACHINE_EPSILON) then
+        write(IOBuffer,'("UAlpha2 ||Vin - Vout|| = ",ES12.5)') norm
+    end if
  
     ! Building and saving Sigma
     !   We set sigma_0 = rank (to see partitioning)
@@ -458,7 +458,7 @@ program ex26f90
     call DMRestoreGlobalVector(dmS, tmpVec,ierr);CHKERRA(ierr)
 
 
-    !call DMRestoreGlobalVector(dmUA2, UA2,ierr);CHKERRA(ierr)
+    call DMRestoreGlobalVector(dmUA2, UA2,ierr);CHKERRA(ierr)
     call DMRestoreGlobalVector(dmUA, UA,ierr);CHKERRA(ierr)
     call DMRestoreGlobalVector(dmS,  S,ierr);CHKERRA(ierr)
     call DMRestoreGlobalVector(dmA,  A,ierr);CHKERRA(ierr)
@@ -472,7 +472,7 @@ program ex26f90
     call ISDestroy(isS,ierr);CHKERRA(ierr)
     call DMDestroy(dmUA,ierr);CHKERRA(ierr)
     call ISDestroy(isUA,ierr);CHKERRA(ierr)
-    !call DMDestroy(dmUA2,ierr);CHKERRA(ierr)
+    call DMDestroy(dmUA2,ierr);CHKERRA(ierr)
     call DMDestroy(dm,ierr);CHKERRA(ierr)
   
     deallocate(pStartDepth)
