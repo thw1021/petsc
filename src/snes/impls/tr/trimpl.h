@@ -29,6 +29,7 @@ typedef struct {
   PetscBool      itflag;         /* flag for convergence testing */
   PetscBool      use_cauchy;     /* flag to use/not use Cauchy step and direction (S&D) */
   PetscBool      auto_scale_multiphase; /* flag to use/not use autoscaling for Cauchy S&D for multiphase*/
+  PetscReal      auto_scale_max; /* max cap value for auto-scaling muste be > 1 */
   PetscBool      rho_satisfied;  /* flag for whether inner iteration satisfied rho */
   PetscReal      rnorm0,ttol;    /* used for KSP convergence test */
   PetscErrorCode (*precheck)(SNES,Vec,Vec,PetscBool*,void*);
