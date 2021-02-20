@@ -1,0 +1,151 @@
+Linear solve converged due to CONVERGED_RTOL iterations 1
+KSP Object: 3 MPI processes
+  type: gmres
+    restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+    happy breakdown tolerance 1e-30
+  maximum iterations=10000, initial guess is zero
+  tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+  left preconditioning
+  using PRECONDITIONED norm type for convergence test
+PC Object: 3 MPI processes
+  type: fieldsplit
+    FieldSplit with Schur preconditioner, factorization FULL
+    Preconditioner for the Schur complement formed from the exact Schur complement
+    Split info:
+    Split number 0 Defined by IS
+    Split number 1 Defined by IS
+    KSP solver for A00 block
+      KSP Object: (fieldsplit_0_) 3 MPI processes
+        type: gmres
+          restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+          happy breakdown tolerance 1e-30
+        maximum iterations=10000, initial guess is zero
+        tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+        left preconditioning
+        using PRECONDITIONED norm type for convergence test
+      PC Object: (fieldsplit_0_) 3 MPI processes
+        type: jacobi
+          type DIAGONAL
+        linear system matrix = precond matrix:
+        Mat Object: (fieldsplit_0_) 3 MPI processes
+          type: mpiaij
+          rows=3, cols=3
+          total number of mallocs used during MatSetValues calls=0
+            not using I-node routines
+    KSP solver for S = A11 - A10 inv(A00) A01 
+      KSP Object: (fieldsplit_1_) 3 MPI processes
+        type: gmres
+          restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+          happy breakdown tolerance 1e-30
+        maximum iterations=10000, initial guess is zero
+        tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+        left preconditioning
+        using PRECONDITIONED norm type for convergence test
+      PC Object: (fieldsplit_1_) 3 MPI processes
+        type: jacobi
+          type DIAGONAL
+        linear system matrix followed by preconditioner matrix:
+        Mat Object: (fieldsplit_1_) 3 MPI processes
+          type: schurcomplement
+          rows=90, cols=90
+            Schur complement A11 - A10 inv(A00) A01
+            A11
+              Mat Object: (fieldsplit_1_) 3 MPI processes
+                type: nest
+                rows=90, cols=90
+                  Matrix object: 
+                    type=nest, rows=4, cols=4 
+                    MatNest structure: 
+                    (0,0) : type=mpibaij, rows=6, cols=6 
+                    (0,1) : NULL 
+                    (0,2) : NULL 
+                    (0,3) : type=transpose, rows=6, cols=48 
+                    (1,0) : NULL 
+                    (1,1) : type=mpibaij, rows=12, cols=12 
+                    (1,2) : NULL 
+                    (1,3) : NULL 
+                    (2,0) : type=mpiaij, rows=24, cols=6 
+                    (2,1) : type=mpiaij, rows=24, cols=12 
+                    (2,2) : type=transpose, rows=24, cols=24 
+                    (2,3) : NULL 
+                    (3,0) : type=mpiaij, rows=48, cols=6 
+                    (3,1) : NULL 
+                    (3,2) : NULL 
+                    (3,3) : NULL 
+            A10
+              Mat Object: 3 MPI processes
+                type: nest
+                rows=90, cols=3
+                  Matrix object: 
+                    type=nest, rows=4, cols=1 
+                    MatNest structure: 
+                    (0,0) : type=mpiaij, rows=6, cols=3 
+                    (1,0) : type=mpiaij, rows=12, cols=3 
+                    (2,0) : type=mpiaij, rows=24, cols=3 
+                    (3,0) : type=transpose, rows=48, cols=3 
+            KSP of A00
+              KSP Object: (fieldsplit_0_) 3 MPI processes
+                type: gmres
+                  restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+                  happy breakdown tolerance 1e-30
+                maximum iterations=10000, initial guess is zero
+                tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+                left preconditioning
+                using PRECONDITIONED norm type for convergence test
+              PC Object: (fieldsplit_0_) 3 MPI processes
+                type: jacobi
+                  type DIAGONAL
+                linear system matrix = precond matrix:
+                Mat Object: (fieldsplit_0_) 3 MPI processes
+                  type: mpiaij
+                  rows=3, cols=3
+                  total number of mallocs used during MatSetValues calls=0
+                    not using I-node routines
+            A01
+              Mat Object: 3 MPI processes
+                type: nest
+                rows=3, cols=90
+                  Matrix object: 
+                    type=nest, rows=1, cols=4 
+                    MatNest structure: 
+                    (0,0) : type=mpiaij, rows=3, cols=6 
+                    (0,1) : type=mpiaij, rows=3, cols=12 
+                    (0,2) : type=transpose, rows=3, cols=24 
+                    (0,3) : type=mpidense, rows=3, cols=48 
+        Mat Object: 3 MPI processes
+          type: mpiaij
+          rows=90, cols=90
+          total number of mallocs used during MatSetValues calls=0
+            not using I-node routines
+  linear system matrix = precond matrix:
+  Mat Object: 3 MPI processes
+    type: nest
+    rows=93, cols=93
+      Matrix object: 
+        type=nest, rows=5, cols=5 
+        MatNest structure: 
+        (0,0) : prefix="fieldsplit_0_", type=mpiaij, rows=3, cols=3 
+        (0,1) : NULL 
+        (0,2) : type=mpiaij, rows=3, cols=12 
+        (0,3) : type=transpose, rows=3, cols=24 
+        (0,4) : type=mpidense, rows=3, cols=48 
+        (1,0) : NULL 
+        (1,1) : type=mpibaij, rows=6, cols=6 
+        (1,2) : NULL 
+        (1,3) : NULL 
+        (1,4) : type=transpose, rows=6, cols=48 
+        (2,0) : type=mpiaij, rows=12, cols=3 
+        (2,1) : NULL 
+        (2,2) : type=mpibaij, rows=12, cols=12 
+        (2,3) : NULL 
+        (2,4) : NULL 
+        (3,0) : NULL 
+        (3,1) : type=mpiaij, rows=24, cols=6 
+        (3,2) : type=mpiaij, rows=24, cols=12 
+        (3,3) : type=transpose, rows=24, cols=24 
+        (3,4) : NULL 
+        (4,0) : type=transpose, rows=48, cols=3 
+        (4,1) : NULL 
+        (4,2) : NULL 
+        (4,3) : NULL 
+        (4,4) : NULL 
