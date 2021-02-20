@@ -357,9 +357,11 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     if (bs > 1 && neP->auto_scale_multiphase) {
       ierr = VecStrideNormAll(YNtmp,NORM_INFINITY,inorms);CHKERRQ(ierr);
       for (j=0; j<bs; j++) {
-//        if (inorms[j] < 1.0e-5) {
-//          inorms[j] = 1.0e-5;
-//        }
+        if (neP->auto_scale_max > 1.0) {
+          if (inorms[j] < 1.0/neP->auto_scale_max) {
+            inorms[j] = 1.0/neP->auto_scale_max;
+          }
+        }
         ierr = VecStrideSet(W, j, inorms[j]);CHKERRQ(ierr);
         ierr = VecStrideScale(YNtmp, j, 1.0/inorms[j]);
         ierr = VecStrideScale(X, j, 1.0/inorms[j]);
@@ -640,6 +642,7 @@ static PetscErrorCode SNESSetFromOptions_NEWTONTR(PetscOptionItems *PetscOptions
   ierr = PetscOptionsReal("-snes_tr_t2","t2","None",ctx->t2,&ctx->t2,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-snes_tr_deltaM","deltaM","None",ctx->deltaM,&ctx->deltaM,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-snes_tr_delta0","delta0","None",ctx->delta0,&ctx->delta0,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-snes_auto_scale_max","auto_scale_max","None",ctx->auto_scale_max,&ctx->auto_scale_max,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-snes_use_cauchy","use_cauchy","use Cauchy step and direction",ctx->use_cauchy,&ctx->use_cauchy,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-snes_auto_scale_multiphase","auto_scale_multiphase","Auto scaling for proper cauchy direction",ctx->auto_scale_multiphase,&ctx->auto_scale_multiphase,NULL);CHKERRQ(ierr);  
   ierr = PetscOptionsTail();CHKERRQ(ierr);
@@ -718,6 +721,7 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
   neP->ttol   = 0.0;
   neP->use_cauchy = PETSC_TRUE;
   neP->auto_scale_multiphase = PETSC_FALSE;
+  neP->auto_scale_max = -1.0;
   neP->rho_satisfied = PETSC_FALSE;
   snes->deltatol = 1.e-8;
   PetscFunctionReturn(0);
