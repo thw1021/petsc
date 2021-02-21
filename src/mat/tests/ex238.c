@@ -27,7 +27,7 @@ int main(int argc,char **args)
   /* For each block row insert atleast 27 elements */
   ierr = PetscMalloc1(bs*bs,&vals);CHKERRQ(ierr);
   for (i=0; i<m; i++) {
-    row = bs*i;
+    row = i;
     for (j=0; j<27; j++) {
       ierr = PetscRandomGetValue(rdm,&rval);CHKERRQ(ierr);
       col  = (PetscInt)(PetscRealPart(rval)*m);
@@ -46,6 +46,7 @@ int main(int argc,char **args)
 
   /* Time MatMult(), MatMultAdd() */
   for (i=0; i<1; i++) {
+     MatView(A,PETSC_VIEWER_BINARY_WORLD);
     ierr  = VecSetRandom(x,rdm);CHKERRQ(ierr);
     VecView(x,PETSC_VIEWER_BINARY_WORLD);
     ierr  = MatMult(A,x,y);CHKERRQ(ierr);
