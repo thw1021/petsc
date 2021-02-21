@@ -45,18 +45,12 @@ int main(int argc,char **args)
   ierr = PetscFree(vals);CHKERRQ(ierr);
 
   /* Time MatMult(), MatMultAdd() */
-  for (i=0; i<1; i++) {
-     MatView(A,PETSC_VIEWER_BINARY_WORLD);
+  for (i=0; i<25; i++) {
     ierr  = VecSetRandom(x,rdm);CHKERRQ(ierr);
-    VecView(x,PETSC_VIEWER_BINARY_WORLD);
     ierr  = MatMult(A,x,y);CHKERRQ(ierr);
-    VecView(y,PETSC_VIEWER_BINARY_WORLD);
     ierr  = VecSetRandom(x,rdm);CHKERRQ(ierr);
     ierr  = VecSetRandom(y,rdm);CHKERRQ(ierr);
-    VecView(x,PETSC_VIEWER_BINARY_WORLD);
-    VecView(y,PETSC_VIEWER_BINARY_WORLD);
     ierr  = MatMultAdd(A,x,y,y);CHKERRQ(ierr);
-    VecView(y,PETSC_VIEWER_BINARY_WORLD);
   }
 
   ierr = MatDestroy(&A);CHKERRQ(ierr);
