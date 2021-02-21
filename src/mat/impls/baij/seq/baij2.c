@@ -1232,75 +1232,75 @@ PetscErrorCode MatMult_SeqBAIJ_12_AVX2(Mat A,Vec xx,Vec zz)
 
       /* first column of a */
       w0 = _mm256_set1_pd(work[0]);
-      a0 = _mm256_loadu_pd(&v[0]); z0 = _mm256_fmadd_pd(a0,w0,z0);
-      a1 = _mm256_loadu_pd(&v[4]); z1 = _mm256_fmadd_pd(a1,w0,z1);
-      a2 = _mm256_loadu_pd(&v[8]); z2 = _mm256_fmadd_pd(a2,w0,z2);
+      a0 = _mm256_loadu_pd(v+0); z0 = _mm256_fmadd_pd(a0,w0,z0);
+      a1 = _mm256_loadu_pd(v+4); z1 = _mm256_fmadd_pd(a1,w0,z1);
+      a2 = _mm256_loadu_pd(v+8); z2 = _mm256_fmadd_pd(a2,w0,z2);
 
       /* second column of a */
       w1 = _mm256_set1_pd(work[1]);
-      a3 = _mm256_loadu_pd(&v[12]); z0 = _mm256_fmadd_pd(a3,w1,z0);
-      a4 = _mm256_loadu_pd(&v[16]); z1 = _mm256_fmadd_pd(a4,w1,z1);
-      a5 = _mm256_loadu_pd(&v[20]); z2 = _mm256_fmadd_pd(a5,w1,z2);
+      a3 = _mm256_loadu_pd(v+12); z0 = _mm256_fmadd_pd(a3,w1,z0);
+      a4 = _mm256_loadu_pd(v+16); z1 = _mm256_fmadd_pd(a4,w1,z1);
+      a5 = _mm256_loadu_pd(v+20); z2 = _mm256_fmadd_pd(a5,w1,z2);
 
       /* third column of a */
       w2 = _mm256_set1_pd(work[2]);
-      a0 = _mm256_loadu_pd(&v[24]); z0 = _mm256_fmadd_pd(a0,w2,z0);
-      a1 = _mm256_loadu_pd(&v[28]); z1 = _mm256_fmadd_pd(a1,w2,z1);
-      a2 = _mm256_loadu_pd(&v[32]); z2 = _mm256_fmadd_pd(a2,w2,z2);
+      a0 = _mm256_loadu_pd(v+24); z0 = _mm256_fmadd_pd(a0,w2,z0);
+      a1 = _mm256_loadu_pd(v+28); z1 = _mm256_fmadd_pd(a1,w2,z1);
+      a2 = _mm256_loadu_pd(v+32); z2 = _mm256_fmadd_pd(a2,w2,z2);
 
       /* fourth column of a */
       w3 = _mm256_set1_pd(work[3]);
-      a3 = _mm256_loadu_pd(&v[36]); z0 = _mm256_fmadd_pd(a3,w3,z0);
-      a4 = _mm256_loadu_pd(&v[40]); z1 = _mm256_fmadd_pd(a4,w3,z1);
-      a5 = _mm256_loadu_pd(&v[44]); z2 = _mm256_fmadd_pd(a5,w3,z2);
+      a3 = _mm256_loadu_pd(v+36); z0 = _mm256_fmadd_pd(a3,w3,z0);
+      a4 = _mm256_loadu_pd(v+40); z1 = _mm256_fmadd_pd(a4,w3,z1);
+      a5 = _mm256_loadu_pd(v+44); z2 = _mm256_fmadd_pd(a5,w3,z2);
 
       /* fifth column of a */
       w0 = _mm256_set1_pd(work[4]);
-      a0 = _mm256_loadu_pd(&v[48]); z0 = _mm256_fmadd_pd(a0,w0,z0);
-      a1 = _mm256_loadu_pd(&v[52]); z1 = _mm256_fmadd_pd(a1,w0,z1);
-      a2 = _mm256_loadu_pd(&v[56]); z2 = _mm256_fmadd_pd(a2,w0,z2);
+      a0 = _mm256_loadu_pd(v+48); z0 = _mm256_fmadd_pd(a0,w0,z0);
+      a1 = _mm256_loadu_pd(v+52); z1 = _mm256_fmadd_pd(a1,w0,z1);
+      a2 = _mm256_loadu_pd(v+56); z2 = _mm256_fmadd_pd(a2,w0,z2);
 
       /* sixth column of a */
       w1 = _mm256_set1_pd(work[5]);
-      a3 = _mm256_loadu_pd(&v[60]); z0 = _mm256_fmadd_pd(a3,w1,z0);
-      a4 = _mm256_loadu_pd(&v[64]); z1 = _mm256_fmadd_pd(a4,w1,z1);
-      a5 = _mm256_loadu_pd(&v[68]); z2 = _mm256_fmadd_pd(a5,w1,z2);
+      a3 = _mm256_loadu_pd(v+60); z0 = _mm256_fmadd_pd(a3,w1,z0);
+      a4 = _mm256_loadu_pd(v+64); z1 = _mm256_fmadd_pd(a4,w1,z1);
+      a5 = _mm256_loadu_pd(v+68); z2 = _mm256_fmadd_pd(a5,w1,z2);
 
       /* seventh column of a */
       w2 = _mm256_set1_pd(work[6]);
-      a0 = _mm256_loadu_pd(&v[72]); z0 = _mm256_fmadd_pd(a0,w2,z0);
-      a1 = _mm256_loadu_pd(&v[76]); z1 = _mm256_fmadd_pd(a1,w2,z1);
-      a2 = _mm256_loadu_pd(&v[80]); z2 = _mm256_fmadd_pd(a2,w2,z2);
+      a0 = _mm256_loadu_pd(v+72); z0 = _mm256_fmadd_pd(a0,w2,z0);
+      a1 = _mm256_loadu_pd(v+76); z1 = _mm256_fmadd_pd(a1,w2,z1);
+      a2 = _mm256_loadu_pd(v+80); z2 = _mm256_fmadd_pd(a2,w2,z2);
 
       /* eigth column of a */
       w3 = _mm256_set1_pd(work[7]);
-      a3 = _mm256_loadu_pd(&v[84]); z0 = _mm256_fmadd_pd(a3,w3,z0);
-      a4 = _mm256_loadu_pd(&v[88]); z1 = _mm256_fmadd_pd(a4,w3,z1);
-      a5 = _mm256_loadu_pd(&v[92]); z2 = _mm256_fmadd_pd(a5,w3,z2);
+      a3 = _mm256_loadu_pd(v+84); z0 = _mm256_fmadd_pd(a3,w3,z0);
+      a4 = _mm256_loadu_pd(v+88); z1 = _mm256_fmadd_pd(a4,w3,z1);
+      a5 = _mm256_loadu_pd(v+92); z2 = _mm256_fmadd_pd(a5,w3,z2);
 
       /* ninth column of a */
       w0 = _mm256_set1_pd(work[8]);
-      a0 = _mm256_loadu_pd(&v[96]); z0 = _mm256_fmadd_pd(a0,w0,z0);
-      a1 = _mm256_loadu_pd(&v[100]); z1 = _mm256_fmadd_pd(a1,w0,z1);
-      a2 = _mm256_loadu_pd(&v[104]); z2 = _mm256_fmadd_pd(a2,w0,z2);
+      a0 = _mm256_loadu_pd(v+96); z0 = _mm256_fmadd_pd(a0,w0,z0);
+      a1 = _mm256_loadu_pd(v+100); z1 = _mm256_fmadd_pd(a1,w0,z1);
+      a2 = _mm256_loadu_pd(v+104); z2 = _mm256_fmadd_pd(a2,w0,z2);
 
       /* tenth column of a */
       w1 = _mm256_set1_pd(work[9]);
-      a3 = _mm256_loadu_pd(&v[108]); z0 = _mm256_fmadd_pd(a3,w1,z0);
-      a4 = _mm256_loadu_pd(&v[112]); z1 = _mm256_fmadd_pd(a4,w1,z1);
-      a5 = _mm256_loadu_pd(&v[116]); z2 = _mm256_fmadd_pd(a5,w1,z2);
+      a3 = _mm256_loadu_pd(v+108); z0 = _mm256_fmadd_pd(a3,w1,z0);
+      a4 = _mm256_loadu_pd(v+112); z1 = _mm256_fmadd_pd(a4,w1,z1);
+      a5 = _mm256_loadu_pd(v+116); z2 = _mm256_fmadd_pd(a5,w1,z2);
 
       /* eleventh column of a */
       w2 = _mm256_set1_pd(work[10]);
-      a0 = _mm256_loadu_pd(&v[120]); z0 = _mm256_fmadd_pd(a0,w2,z0);
-      a1 = _mm256_loadu_pd(&v[124]); z1 = _mm256_fmadd_pd(a1,w2,z1);
-      a2 = _mm256_loadu_pd(&v[128]); z2 = _mm256_fmadd_pd(a2,w2,z2);
+      a0 = _mm256_loadu_pd(v+120); z0 = _mm256_fmadd_pd(a0,w2,z0);
+      a1 = _mm256_loadu_pd(v+124); z1 = _mm256_fmadd_pd(a1,w2,z1);
+      a2 = _mm256_loadu_pd(v+128); z2 = _mm256_fmadd_pd(a2,w2,z2);
 
       /* twelveth column of a */
       w3 = _mm256_set1_pd(work[11]);
-      a3 = _mm256_loadu_pd(&v[132]); z0 = _mm256_fmadd_pd(a3,w3,z0);
-      a4 = _mm256_loadu_pd(&v[136]); z1 = _mm256_fmadd_pd(a4,w3,z1);
-      a5 = _mm256_loadu_pd(&v[140]); z2 = _mm256_fmadd_pd(a5,w3,z2);
+      a3 = _mm256_loadu_pd(v+132); z0 = _mm256_fmadd_pd(a3,w3,z0);
+      a4 = _mm256_loadu_pd(v+136); z1 = _mm256_fmadd_pd(a4,w3,z1);
+      a5 = _mm256_loadu_pd(v+140); z2 = _mm256_fmadd_pd(a5,w3,z2);
 
       v += bs2;
     }
