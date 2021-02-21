@@ -105,7 +105,7 @@ class Configure(config.package.Package):
     if npkgs:
       raise RuntimeError('PETSc4py requires Python with "%s" module(s) installed!\n'
                          'Please install using package managers - for ex: "apt" or "dnf" (on linux),\n'
-                         'or with "pip" using: %s -m pip install %s' % (" ".join(npkgs), self.python.pyexe, " ".join(npkgs)))
+                         'or with "pip" using: %s -m pip install %s' % (self.python.pyexe, " ".join(npkgs)))
     self.checkDownload()
 
   def alternateConfigureLibrary(self):
