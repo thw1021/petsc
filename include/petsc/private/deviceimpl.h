@@ -85,10 +85,10 @@ struct _ScalOps {
 };
 
 typedef enum {
-  PSS_UNKNOWN = 0,
-  PSS_FALSE,
-  PSS_TRUE
-} PSSCache;
+  PSS_FALSE = 0,
+  PSS_UNKNOWN = 1,
+  PSS_TRUE = 2
+} PSSCacheBool;
 
 typedef enum {
   PSS_ZERO = 0,
@@ -107,7 +107,7 @@ struct _n_PetscStreamScalar {
   PetscScalar      *host;
   PetscScalar      *device;
   PetscInt         poolID;
-  PSSCache         cache[PSSCACHE_MAX];
+  PSSCacheBool     cache[PSSCACHE_MAX];
 };
 
 PETSC_INTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
@@ -146,6 +146,37 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateCache_Internal(PetscSt
     pscal->cache[PSS_ONE] = PSS_FALSE;
     pscal->cache[PSS_INF] = PSS_FALSE;
     pscal->cache[PSS_NAN] = PSS_FALSE;
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSetCache_Internal(PetscStreamScalar pscal, PSSCacheType ctype, PSSCacheBool val)
+{
+  PetscFunctionBegin;
+  pscal->cache[ctype] = val;
+  switch (ctype) {
+  case PSS_ZERO:
+    pscal->cache[PSS_ONE] = val ? PSS_FALSE : PSS_UNKNOWN;
+    pscal->cache[PSS_INF] = val ? PSS_FALSE : PSS_UNKNOWN;
+    pscal->cache[PSS_NAN] = val ? PSS_FALSE : PSS_UNKNOWN;
+    break;
+  case PSS_ONE:
+    pscal->cache[PSS_ZERO] = val ? PSS_FALSE : PSS_UNKNOWN;
+    pscal->cache[PSS_INF] = val ? PSS_FALSE : PSS_UNKNOWN;
+    pscal->cache[PSS_NAN] = val ? PSS_FALSE : PSS_UNKNOWN;
+    break;
+  case PSS_INF:
+    pscal->cache[PSS_ZERO] = val ? PSS_FALSE : PSS_UNKNOWN;
+    pscal->cache[PSS_ONE] = val ? PSS_FALSE : PSS_UNKNOWN;
+    pscal->cache[PSS_NAN] = val ? PSS_FALSE : PSS_UNKNOWN;
+    break;
+  case PSS_NAN:
+    pscal->cache[PSS_ZERO] = val ? PSS_FALSE : PSS_UNKNOWN;
+    pscal->cache[PSS_ONE] = val ? PSS_FALSE : PSS_UNKNOWN;
+    pscal->cache[PSS_INF] = val ? PSS_FALSE : PSS_UNKNOWN;
+    break;
+  default:
+    break;
   }
   PetscFunctionReturn(0);
 }
