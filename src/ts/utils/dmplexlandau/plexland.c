@@ -1209,6 +1209,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->Ez = 0;
   ctx->v_0 = 1; /* in electron thermal velocity */
   ctx->subThreadBlockSize = 1; /* for device and maybe OMP */
+  ctx->numThreadTeams = 1; /* for device */
   ierr = PetscOptionsBegin(ctx->comm, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
   {
     char opstring[256];
@@ -1217,10 +1218,12 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ierr = PetscStrcpy(opstring,"kokkos");CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
     ctx->subThreadBlockSize = 8;
+    ctx->numThreadTeams = 108;
 #endif
 #elif defined(PETSC_HAVE_CUDA)
     ctx->deviceType = LANDAU_CUDA;
     ierr = PetscStrcpy(opstring,"cuda");CHKERRQ(ierr);
+    ctx->numThreadTeams = 108;
 #else
     ctx->deviceType = LANDAU_CPU;
     ierr = PetscStrcpy(opstring,"cpu");CHKERRQ(ierr);
@@ -1260,6 +1263,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ierr = PetscOptionsReal("-dm_landau_n_0","Normalization constant for number density","plexland.c",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-dm_landau_ln_lambda","Cross section parameter","plexland.c",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_landau_num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "plexland.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_landau_num_thread_teams", "Number of SMs in Cuda, team size in Kokkos, to use", "plexland.c", ctx->numThreadTeams, &ctx->numThreadTeams, NULL);CHKERRQ(ierr);
 
   /* get num species with tempurature*/
   {
@@ -2022,7 +2026,7 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
     PetscInt *pNf;
     ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
     ierr = PetscMalloc(sizeof(PetscInt), &pNf);CHKERRQ(ierr);
-    *pNf = ctx->num_species; // + 1000*ctx->subThreadBlockSize;
+    *pNf = ctx->num_species + 1000*ctx->numThreadTeams;
     ierr = PetscContainerSetPointer(container, (void *)pNf);CHKERRQ(ierr);
     ierr = PetscContainerSetUserDestroy(container, MatrixNfDestroy);CHKERRQ(ierr);
     ierr = PetscObjectCompose((PetscObject)ctx->J, "Nf", (PetscObject) container);CHKERRQ(ierr);
