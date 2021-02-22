@@ -367,6 +367,7 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
   i = 0;
   do {
     ksp->its = i+1;
+    if (pscalbeta->cache[PSS_ZERO] == PSS_UNKNOWN)
     ierr = PetscStreamScalarGetHostRead(pscalbeta,(const PetscScalar**)&beta,pstream);CHKERRQ(ierr);
     if (*beta == 0.0) {
       ksp->reason = KSP_CONVERGED_ATOL;

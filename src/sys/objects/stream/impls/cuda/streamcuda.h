@@ -14,5 +14,6 @@ typedef struct {
 
 PETSC_INTERN PetscErrorCode PetscStreamScalarAccumOpDispatch_Internal(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
 PETSC_INTERN PetscErrorCode PetscStreamScalarAXTY_CUDA_Kernel(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
+PETSC_INTERN PetscErrorCode PetscStreamScalarAYDX_CUDA_Kernel(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 #endif
 #endif
