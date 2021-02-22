@@ -899,7 +899,7 @@ PetscErrorCode KSPMonitorMakeKey_Internal(const char name[], PetscViewerType vty
 - destroy - Destruction routine, or NULL
 
   Notes:
-  KSMonitorRegister() may be called multiple times to add several user-defined monitors.
+  KSPMonitorRegister() may be called multiple times to add several user-defined monitors.
 
   Sample usage:
 .vb
