@@ -907,7 +907,7 @@ PetscErrorCode KSPMonitorMakeKey_Internal(const char name[], PetscViewerType vty
 .ve
 
   Then, your monitor can be chosen with the procedural interface via
-$     KSPMonitorSetFormOptions(ksp,"-ksp_monitor_my_monitor","my_monitor",NULL)
+$     KSPMonitorSetFromOptions(ksp,"-ksp_monitor_my_monitor","my_monitor",NULL)
   or at runtime via the option
 $     -ksp_monitor_my_monitor
 
