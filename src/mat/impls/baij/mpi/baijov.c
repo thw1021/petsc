@@ -543,7 +543,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ(Mat C,PetscInt ismax,const IS isrow[
     nstages_local = ismax/nmax + ((ismax % nmax) ? 1 : 0); /* local nstages */
 
     /* Make sure every processor loops through the nstages */
-    ierr = MPIU_Allreduce(&nstages_local,&nstages,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)C));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&nstages_local,&nstages,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)C));CHKERRMPI(ierr);
 
     /* Allocate memory to hold all the submatrices and dummy submatrices */
     ierr = PetscCalloc1(ismax+nstages,submat);CHKERRQ(ierr);
@@ -887,7 +887,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C,PetscInt ismax,const IS 
       req_size[i] = 0;
       rbuf1_i        = rbuf1[i];
       start          = 2*rbuf1_i[0] + 1;
-      ierr           = MPI_Get_count(r_status1+i,MPIU_INT,&end);CHKERRQ(ierr);
+      ierr           = MPI_Get_count(r_status1+i,MPIU_INT,&end);CHKERRMPI(ierr);
       ierr           = PetscMalloc1(end+1,&sbuf2[i]);CHKERRQ(ierr);
       sbuf2_i        = sbuf2[i];
       for (j=start; j<end; j++) {
@@ -1086,7 +1086,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C,PetscInt ismax,const IS 
     {
       PetscInt *rbuf2_i,*rbuf3_i,*sbuf1_i;
 
-      ierr    = MPI_Waitall(nrqs,r_waits3,r_status3);CHKERRQ(ierr);
+      ierr    = MPI_Waitall(nrqs,r_waits3,r_status3);CHKERRMPI(ierr);
       for (tmp2=0; tmp2<nrqs; tmp2++) {
         sbuf1_i = sbuf1[pa[tmp2]];
         jmax    = sbuf1_i[0];

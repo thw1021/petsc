@@ -19,7 +19,7 @@ PETSC_INTERN PetscErrorCode PetscSFBcastAndOpBegin_Gather(PetscSF sf,MPI_Datatyp
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
   ierr = PetscMPIIntCast(sf->nroots,&sendcount);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
-  ierr = MPIU_Igather(rootbuf,sendcount,unit,leafbuf,sendcount,unit,0/*rank 0*/,comm,req);CHKERRQ(ierr);
+  ierr = MPIU_Igather(rootbuf,sendcount,unit,leafbuf,sendcount,unit,0/*rank 0*/,comm,req);CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -38,7 +38,7 @@ static PetscErrorCode PetscSFReduceBegin_Gather(PetscSF sf,MPI_Datatype unit,Pet
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
   ierr = PetscMPIIntCast(sf->nroots,&recvcount);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_LEAF2ROOT,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
-  ierr = MPIU_Iscatter(leafbuf,recvcount,unit,rootbuf,recvcount,unit,0/*rank 0*/,comm,req);CHKERRQ(ierr);
+  ierr = MPIU_Iscatter(leafbuf,recvcount,unit,rootbuf,recvcount,unit,0/*rank 0*/,comm,req);CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
