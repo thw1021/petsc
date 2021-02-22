@@ -1,18 +1,18 @@
 #if defined(PETSC_HAVE_FORTRAN_TYPE_STAR)
       Interface
-       subroutine PetscSFBcastBegin(sf,unit,rarray,larray,ierr)
+       subroutine PetscSFBcastBegin(sf,unit,rarray,larray,op,ierr)
           use petscisdef
           PetscSF :: sf
-          PetscMPIInt :: unit
+          PetscMPIInt :: unit,op
           type(*) :: rarray(:)
           type(*) :: larray(:)
           PetscErrorCode :: ierr
         end Subroutine PetscSFBcastBegin
 
-      subroutine PetscSFBcastEnd(sf,unit,rarray,larray,ierr)
+      subroutine PetscSFBcastEnd(sf,unit,rarray,larray,op,ierr)
           use petscisdef
           PetscSF :: sf
-          PetscMPIInt :: unit
+          PetscMPIInt :: unit,op
           type(*) :: rarray(:)
           type(*) :: larray(:)
           PetscErrorCode :: ierr
