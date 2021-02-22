@@ -801,7 +801,7 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options,int *argc,char ***args,co
     if (!rank) {
       eoptions = (char*)getenv("PETSC_OPTIONS");
       ierr     = PetscStrlen(eoptions,&len);CHKERRQ(ierr);
-      ierr     = MPI_Bcast(&len,1,MPIU_SIZE_T,0,PETSC_COMM_WORLD);CHKERRQ(ierr);
+      ierr     = MPI_Bcast(&len,1,MPIU_SIZE_T,0,PETSC_COMM_WORLD);CHKERRMPI(ierr);
     } else {
       ierr = MPI_Bcast(&len,1,MPIU_SIZE_T,0,PETSC_COMM_WORLD);CHKERRMPI(ierr);
       if (len) {
@@ -822,7 +822,7 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options,int *argc,char ***args,co
     if (!rank) {
       eoptions = (char*)getenv("PETSC_OPTIONS_YAML");
       ierr     = PetscStrlen(eoptions,&len);CHKERRQ(ierr);
-      ierr     = MPI_Bcast(&len,1,MPIU_SIZE_T,0,PETSC_COMM_WORLD);CHKERRQ(ierr);
+      ierr     = MPI_Bcast(&len,1,MPIU_SIZE_T,0,PETSC_COMM_WORLD);CHKERRMPI(ierr);
     } else {
       ierr = MPI_Bcast(&len,1,MPIU_SIZE_T,0,PETSC_COMM_WORLD);CHKERRMPI(ierr);
       if (len) {

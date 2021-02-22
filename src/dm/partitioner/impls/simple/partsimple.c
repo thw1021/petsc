@@ -75,7 +75,7 @@ static PetscErrorCode PetscPartitionerPartition_Simple_Grid(PetscPartitioner par
   if (vertSection)   {ierr = PetscInfo(part, "PETSCPARTITIONERSIMPLE ignores vertex weights when using grid partition\n");CHKERRQ(ierr);}
   if (targetSection) {ierr = PetscInfo(part, "PETSCPARTITIONERSIMPLE ignores partition weights when using grid partition\n");CHKERRQ(ierr);}
   ierr = PetscObjectGetComm((PetscObject) part, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   /* Check grid */
   for (i = 0; i < 3; ++i) Np *= nodes[i]*procs[i];
   if (nparts != Np)   SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Number of partitions %D != %D grid size", nparts, Np);
@@ -151,7 +151,7 @@ static PetscErrorCode PetscPartitionerPartition_Simple(PetscPartitioner part, Pe
   ierr = PetscObjectGetComm((PetscObject) part, &comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   if (targetSection) {
-    ierr = MPIU_Allreduce(&numVertices, &numVerticesGlobal, 1, MPIU_INT, MPI_SUM, comm);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&numVertices, &numVerticesGlobal, 1, MPIU_INT, MPI_SUM, comm);CHKERRMPI(ierr);
     ierr = PetscCalloc1(nparts,&tpwgts);CHKERRQ(ierr);
     for (np = 0; np < nparts; ++np) {
       ierr = PetscSectionGetDof(targetSection,np,&tpwgts[np]);CHKERRQ(ierr);

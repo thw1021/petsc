@@ -468,7 +468,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
     ierr = TSGetSolution(ts, &X);CHKERRQ(ierr);
     ierr = VecNorm(X,NORM_2,&val);CHKERRQ(ierr);
-    ierr = MPIU_Allreduce(&val,&rval,1,MPIU_REAL,MPIU_MAX,PETSC_COMM_WORLD);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&val,&rval,1,MPIU_REAL,MPIU_MAX,PETSC_COMM_WORLD);CHKERRMPI(ierr);
     if (rval != val) {
       ierr = PetscPrintf(PETSC_COMM_SELF, " ***** [%D] ERROR max |x| = %22.15e, my |x| = %22.15e diff=%e\n",rank,rval,val,rval-val);CHKERRQ(ierr);
     } else {
@@ -642,7 +642,7 @@ int main(int argc, char **argv)
 #endif
   PetscMPIInt    rank;
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
   if (rank) { /* turn off output stuff for duplicate runs */
     ierr = PetscOptionsClearValue(NULL,"-dm_view");CHKERRQ(ierr);
     ierr = PetscOptionsClearValue(NULL,"-vec_view");CHKERRQ(ierr);

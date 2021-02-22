@@ -81,8 +81,8 @@ PetscErrorCode PetscSFSetGraphSection(PetscSF sf, PetscSection localSection, Pet
   PetscValidHeaderSpecific(globalSection, PETSC_SECTION_CLASSID, 3);
 
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = PetscSectionGetChart(globalSection, &pStart, &pEnd);CHKERRQ(ierr);
   ierr = PetscSectionGetConstrainedStorageSize(globalSection, &nroots);CHKERRQ(ierr);
   ierr = PetscLayoutCreate(comm, &layout);CHKERRQ(ierr);
@@ -211,7 +211,7 @@ PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, Pe
   rpEnd = PetscMax(rpStart,rpEnd);
   /* see if we can avoid creating the embedded SF, since it can cost more than an allreduce */
   sub[0] = (PetscBool)(nroots != rpEnd - rpStart);
-  ierr = MPIU_Allreduce(MPI_IN_PLACE, sub, 2+numFields, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)sf));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(MPI_IN_PLACE, sub, 2+numFields, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)sf));CHKERRMPI(ierr);
   if (sub[0]) {
     ierr = ISCreateStride(PETSC_COMM_SELF, rpEnd - rpStart, rpStart, 1, &selected);CHKERRQ(ierr);
     ierr = ISGetIndices(selected, &indices);CHKERRQ(ierr);
