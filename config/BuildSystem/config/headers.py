@@ -21,9 +21,11 @@ class Configure(config.base.Configure):
        - Otherwise return -I<include>'''
     if not include:
       return []
-    include = include.replace('\\ ',' ').replace(' ', '\\ ')
-    include = include.replace('\\(','(').replace('(', '\\(')
-    include = include.replace('\\)',')').replace(')', '\\)')
+    # TODO: handle the following construct properly
+    if include.find('$(') == -1:
+      include = include.replace('\\ ',' ').replace(' ', '\\ ')
+      include = include.replace('\\(','(').replace('(', '\\(')
+      include = include.replace('\\)',')').replace(')', '\\)')
     if include[0] == '-':
       return [include]
     return ['-I'+include]
