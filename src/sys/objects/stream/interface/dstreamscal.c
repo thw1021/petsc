@@ -357,26 +357,112 @@ PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, Pets
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarAXTY(PetscScalar a, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
+/*@C
+  PetscStreamScalarGetInfo - Determines whether a PetscStreamScalar satisfies a particular property.
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+. ctype - The type of property
+. compute - Whether the property should be computed if unknown
+- pstream - The PetscStream object to enqueue the operation on if needed
+
+  Output Parameters:
+. val - Whether the property is true.
+
+  Notes:
+  A cache value of "unknown" counts as PETSC_FALSE.
+
+  Should the compute flag be true, and the value be unknown the cache is updated by synchronizing the host value with
+  the device value. If the host is out of date this results in a stream-synchronization, so the user should take care to
+  only require computation if it __cannot__ be avoided in order to preserve the asynchronicity of the stream.
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamScalarSetInfo()
+@*/
+PetscErrorCode PetscStreamScalarGetInfo(PetscStreamScalar pscal, PSSCacheType ctype, PetscBool compute, PetscBool *val, PetscStream pstream)
+{
+  PetscFunctionBegin;
+  PetscValidBoolPointer(val,4);
+  if (PetscUnlikelyDebug(ctype >= PSSCACHE_MAX)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid CacheType %D requested, larger than maximum value %D\n",ctype,PSSCACHE_MAX-1);
+  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
+  if (compute) {
+    if (pscal->cache[ctype] == PSS_UNKNOWN) {
+      const PetscScalar *host;
+      PetscErrorCode    ierr;
+
+      PetscValidSameStreamType(pscal,1,pstream,5);
+      /* Forces cache to be updated */
+      ierr = PetscStreamScalarGetHostRead(pscal,&host,pstream);CHKERRQ(ierr);
+    }
+  }
+  *val = pscal->cache[ctype] == PSS_TRUE ? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscStreamScalarSetInfo - Set a known information about a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameters:
++ pscal - The PetscStreamScalar object
+. ctype - The type of property
+- val - The value of the property
+
+  Possible Cache Values:
++ PSS_ZERO - The value of the PetscStreamScalar is zero
+. PSS_ONE - The value of the PetscStreamScalar is one
+. PSS_INF - The value of the PetscStreamScalar is INF
+- PSS_NAN - The value of the PetscStreamScalar is NaN
+
+  Notes:
+  This routine is a powerful tool to hint at the state of a PetscStreamScalar after a set of operations, but no effort
+  is made to check the validity of value being set. It is entirely possible to set completely bogus values using this
+  routine so care must be taken to ensure it is correct.
+
+  Many inferences are made possible if val is PETSC_TRUE (e.g. if ctype is PSS_ZERO and val is PETSC_TRUE, then all other
+  cache values must be PETSC_FALSE), but the opposite does not apply. Should val be PETSC_FALSE, depending on ctype, this
+  routine sets many other cache values to "unknown".
+
+  Level: advanced
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamScalarSetInfo()
+@*/
+PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar pscal, PSSCacheType ctype, PetscBool val)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscCheckValidSameStreamType(pscalx,2,pstream,4);
-  if (PetscUnlikelyDebug(!pscalx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on both argument 2 first");
-  if (pscaly) {
-    PetscCheckValidSameStreamType(pscaly,3,pstream,4);
-    if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
-  }
-  if (a == (PetscScalar)0.0) {
-    ierr = PetscStreamScalarSetValue(pscalx,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
-  } else {
-    ierr = (*pscalx->ops->axty)(a, pscalx, pscaly, pstream);CHKERRQ(ierr);
-  }
+  if (PetscUnlikelyDebug(ctype >= PSSCACHE_MAX)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid CacheType %D requested, larger than maximum value %D\n",ctype,PSSCACHE_MAX-1);
+  ierr = PetscStreamScalarSetCache_Internal(pscal, ctype, val ? PSS_TRUE : PSS_FALSE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarAYDX(PetscScalar a, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
+/*@C
+  PetscStreamScalarAXTY - Computes x = alpha * x * y
+
+  Not Collective
+
+  Input Parameters:
++ pscalx,pscaly - The PetscStreamScalars
+. alpha - The scalar
+- pstream - The PetscStream on which to enqueue the operation
+
+  Output Parameter:
+. pscalx - The adjusted output PetscStreamScalar
+
+  Notes:
+  If pscaly is NULL, it is treated as 1.0, so this routine will scale pscalx by alpha. pscalx and pscaly may be the same
+  object, making this routine scale the square of a value. This routine is optimized for alpha = 0.0.
+
+  Level: beginner
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamScalarAYDX()
+@*/
+PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
@@ -387,10 +473,52 @@ PetscErrorCode PetscStreamScalarAYDX(PetscScalar a, PetscStreamScalar pscalx, Pe
     PetscCheckValidSameStreamType(pscaly,3,pstream,4);
     if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
   }
-  if (a == (PetscScalar)0.0) {
+  if (alpha == (PetscScalar)0.0) {
     ierr = PetscStreamScalarSetValue(pscalx,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
   } else {
-    ierr = (*pscalx->ops->aydx)(a, pscalx, pscaly, pstream);CHKERRQ(ierr);
+    ierr = (*pscalx->ops->axty)(alpha, pscalx, pscaly, pstream);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscStreamScalarAYDX - Computes x = alpha * y / x
+
+  Not Collective
+
+  Input Parameters:
++ pscalx,pscaly - The PetscStreamScalars
+. alpha - The scalar
+- pstream - The PetscStream on which to enqueue the operation
+
+  Output Parameter:
+. pscalx - The adjusted output PetscStreamScalar
+
+  Notes:
+  If pscaly is NULL, it is treated as 1.0, so this routine will scale the inverse of pscalx by alpha. pscalx and pscaly may be the same
+  object, making this routine set pscalx to alpha. This routine is optimized for alpha = 0.0.
+
+  Level: beginner
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamScalarAXTY()
+@*/
+PetscErrorCode PetscStreamScalarAYDX(PetscScalar alpha, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckValidSameStreamType(pscalx,2,pstream,4);
+  if (PetscUnlikelyDebug(!pscalx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 2 first");
+  if (pscaly) {
+    PetscCheckValidSameStreamType(pscaly,3,pstream,4);
+    if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
+  }
+  if (alpha == (PetscScalar)0.0) {
+    ierr = PetscStreamScalarSetValue(pscalx, NULL, PETSC_MEMTYPE_DEVICE, pstream);CHKERRQ(ierr);
+  } else if (pscalx == pscaly) {
+    ierr = PetscStreaScalarSetValue(pscalx, &alpha, PETSC_MEMTYPE_HOST, pstream);CHKERRQ(ierr);
+  } else {
+    ierr = (*pscalx->ops->aydx)(alpha, pscalx, pscaly, pstream);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
