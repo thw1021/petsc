@@ -57,6 +57,13 @@ int main(int argc,char **argv)
         args: -options_string_yaml "`cat petsc.yml`"
 
      test:
+        suffix: 2_auto
+        args: -options_monitor
+        args: -options_file ex47-yaml_tag
+        args: -options_file ex47-yaml_doc
+        localrunfiles: ex47-yaml_tag ex47-yaml_doc
+
+     test:
         suffix: 2_prefix
         args: -options_monitor
         args: -options_file ex47-opt.txt
