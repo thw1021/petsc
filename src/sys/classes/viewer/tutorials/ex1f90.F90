@@ -1,14 +1,14 @@
 
-      program ex5f90
+      program ex1f90
 
 #include <petsc/finclude/petscsys.h>
       use petscsys
+      use iso_c_binding
       implicit none
 
       PetscViewer viewer
       PetscErrorCode ierr
-
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
+      call PetscInitialize(PETSC_NULL_CHARACTER,"ex1f90 test"//c_new_line,ierr)
       if (ierr .ne. 0) then
          print*,'Unable to initialize PETSc'
          stop

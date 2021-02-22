@@ -14,7 +14,7 @@
 #include <petsc/private/fortranimpl.h>
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
-#define petscinitialize_              PETSCINITIALIZE
+#define petscinitializef_             PETSCINITIALIZEF
 #define petscinitializenoarguments_   PETSCINITIALIZENOARGUMENTS
 #define petscfinalize_                PETSCFINALIZE
 #define petscend_                     PETSCEND
@@ -25,7 +25,7 @@
 #define petsccommandargumentcount_    PETSCCOMMANDARGUMENTCOUNT
 #define petscgetcommandargument_      PETSCGETCOMMANDARGUMENT
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
-#define petscinitialize_              petscinitialize
+#define petscinitializef_             petscinitializefnohelp
 #define petscinitializenoarguments_   petscinitializenoarguments
 #define petscfinalize_                petscfinalize
 #define petscend_                     petscend
@@ -148,7 +148,7 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_Counter_Attr_Delete_Fn(MPI_Comm,PetscMPIIn
 PETSC_EXTERN PetscMPIInt MPIAPI Petsc_InnerComm_Attr_Delete_Fn(MPI_Comm,PetscMPIInt,void*,void*);
 PETSC_EXTERN PetscMPIInt MPIAPI Petsc_OuterComm_Attr_Delete_Fn(MPI_Comm,PetscMPIInt,void*,void*);
 
-PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(void);
+PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char[]);
 PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void);
 #if defined(PETSC_USE_LOG)
 PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
@@ -253,7 +253,7 @@ PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private();
       Since this is called from Fortran it does not return error codes
 
 */
-static void petscinitialize_internal(char* filename, PetscInt len, PetscBool readarguments, PetscErrorCode *ierr)
+static void petscinitialize_internal(char* filename, PetscInt len, char* help, PetscInt helplen, PetscBool readarguments, PetscErrorCode *ierr)
 {
   int            j,i;
 #if defined (PETSC_USE_NARGS)
@@ -453,7 +453,7 @@ static void petscinitialize_internal(char* filename, PetscInt len, PetscBool rea
     FREECHAR(filename,t1);
     if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Freeing string in creating options database\n");return;}
   }
-  *ierr = PetscOptionsCheckInitial_Private();
+  *ierr = PetscOptionsCheckInitial_Private(help);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Checking initial options\n");return;}
   /* call a second time to check options database */
   *ierr = PetscErrorPrintfInitialize();
@@ -504,14 +504,15 @@ static void petscinitialize_internal(char* filename, PetscInt len, PetscBool rea
 #endif
 }
 
-PETSC_EXTERN void petscinitialize_(char* filename,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
+PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len,PETSC_FORTRAN_CHARLEN_T helplen)
 {
-  petscinitialize_internal(filename, len, PETSC_TRUE, ierr);
+  char* helpc;
+  petscinitialize_internal(filename, len, help, helplen, PETSC_TRUE, ierr);
 }
 
 PETSC_EXTERN void petscinitializenoarguments_(PetscErrorCode *ierr)
 {
-  petscinitialize_internal(NULL, (PetscInt) 0, PETSC_FALSE, ierr);
+  petscinitialize_internal(NULL, (PetscInt) 0, NULL, (PetscInt) 0, PETSC_FALSE, ierr);
 }
 
 
