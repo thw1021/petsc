@@ -21,6 +21,7 @@
 !/*TEST
 !
 !   test:
+!      requires: define(PETSC_USING_F2003) define(PETSC_USING_F90FREEFORM)
 !      output_file: output/ex1_1.out
 !
 !TEST*/
