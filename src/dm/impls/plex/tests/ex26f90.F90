@@ -77,7 +77,6 @@ program ex26f90
     PetscReal                           :: norm
     PetscReal                           :: time = 1.234_kPR
 
-    
     call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
     if (ierr /= 0) then
       print*,'Unable to initialize PETSc'
@@ -481,3 +480,18 @@ program ex26f90
     call PetscViewerDestroy(viewer,ierr);CHKERRA(ierr)
     call PetscFinalize(ierr)
 end program ex26f90
+
+! /*TEST
+!
+! build:
+!   requires: exodusii pnetcdf !complex
+!   # 2D seq
+! test:
+!   suffix: 0
+!   args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/FourSquareT-large.exo -o FourSquareT-large_out.exo -dm_view -dm_section_view -petscpartitioner_type simple -order 1
+!   #TODO: bug in call to NetCDF failed to complete invalid type definition in file id 65536 NetCDF: One or more variable sizes violate format constraints
+! test:
+!   suffix: 1
+!   args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/FourSquareQ-large.exo -o FourSquareQ-large_out.exo -dm_view -dm_section_view -petscpartitioner_type simple -order 1
+!
+! TEST*/
