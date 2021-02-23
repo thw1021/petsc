@@ -71,7 +71,7 @@ class Configure(config.package.Package):
     if not self.sharedLibraries.useShared:
         raise RuntimeError('mpi4py requires PETSc be built with shared libraries; rerun with --with-shared-libraries')
     if not self.python.numpy:
-        raise RuntimeError('mpi4py requires Python with numpy module installed.\n'
+        raise RuntimeError('mpi4py, in the context of PETSc,requires Python with numpy module installed.\n'
                            'Please install using package managers - for ex: "apt" or "dnf" (on linux),\n'
                            'or with "pip" using: %s -m pip install %s' % (self.python.pyexe, 'numpy'))
 
