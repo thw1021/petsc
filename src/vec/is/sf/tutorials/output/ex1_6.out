@@ -39,6 +39,7 @@ PetscSF Object: 4 MPI processes
   [3]    2 <- 2
   [3] 2: 1 edges
   [3]    0 <- 1
+    current info=MPI_INFO_NULL
 ## Embedded PetscSF
 PetscSF Object: 4 MPI processes
       current info=MPI_INFO_NULL
@@ -70,3 +71,4 @@ PetscSF Object: 4 MPI processes
   [3]    2 <- 2
   [3] 2: 1 edges
   [3]    0 <- 1
+    current info=MPI_INFO_NULL

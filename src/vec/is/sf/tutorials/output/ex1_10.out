@@ -39,6 +39,7 @@ PetscSF Object: 4 MPI processes
   [3]    2 <- 2
   [3] 2: 1 edges
   [3]    0 <- 1
+    current info=MPI_INFO_NULL
 ## Bcast Rootdata
 [0] 0: 100 101 102
 [1] 0: 200 201
@@ -147,6 +148,7 @@ PetscSF Object: 4 MPI processes
   [3]    2 <- 2
   [3] 2: 1 edges
   [3]    0 <- 1
+    current info=MPI_INFO_NULL
 ## Multi-SF
 PetscSF Object: 4 MPI processes
   [0] Number of roots=5, leaves=2, remote ranks=2

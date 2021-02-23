@@ -15,7 +15,9 @@ PetscSF Object: Buffered Map 1 MPI processes
     sort=rank-order
   [0] Number of roots=1, leaves=1, remote ranks=1
   [0] 0 <- (0,0)
+  sort=rank-order
 PetscSF Object: Restricted Map 1 MPI processes
   type: basic
     sort=rank-order
   [0] Number of roots=1, leaves=0, remote ranks=0
+  sort=rank-order

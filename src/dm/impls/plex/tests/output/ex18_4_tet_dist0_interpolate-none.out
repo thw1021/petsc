@@ -69,3 +69,4 @@ PetscSF Object: point SF 2 MPI processes
   [0]    3 <- 2
   [0]    4 <- 3
   [1] Roots referenced by my leaves, by rank
+  sort=rank-order
