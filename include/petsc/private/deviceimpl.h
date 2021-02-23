@@ -73,7 +73,7 @@ typedef struct _ScalOps *ScalOps;
 struct _ScalOps {
   PetscErrorCode (*create)(PetscStreamScalar);
   PetscErrorCode (*destroy)(PetscStreamScalar);
-  PetscErrorCode (*setup)(PetscStreamScalar,PetscStream);
+  PetscErrorCode (*setup)(PetscStreamScalar);
   PetscErrorCode (*setvalue)(PetscStreamScalar,const PetscScalar*,PetscMemType,PetscStream);
   PetscErrorCode (*gethost)(PetscStreamScalar,PetscScalar**,PetscBool,PetscStream);
   PetscErrorCode (*restorehost)(PetscStreamScalar,PetscScalar**,PetscStream);
@@ -108,6 +108,24 @@ struct _n_PetscStreamScalar {
   PetscScalar      *device;
   PetscInt         poolID;
   PSSCacheBool     cache[PSSCACHE_MAX];
+};
+
+struct _GraphOps {
+  PetscErrorCode (*create)(PetscStreamGraph);
+  PetscErrorCode (*destroy)(PetscStreamGraph);
+  PetscErrorCode (*setup)(PetscStreamGraph);
+  PetscErrorCode (*assemble)(PetscStreamGraph);
+  PetscErrorCode (*exec)(PetscStreamGraph,PetscStream);
+  PetscErrorCode (*getgraph)(PetscStreamGraph,void*);
+  PetscErrorCode (*restoregraph)(PetscStreamGraph,void*);
+};
+
+struct _n_PetscStreamGraph {
+  struct _GraphOps ops[1];
+  PetscBool        setup;
+  PetscBool        assembled;
+  PetscStreamType  type;
+  void             *data;
 };
 
 PETSC_INTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);

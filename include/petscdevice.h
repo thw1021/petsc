@@ -120,7 +120,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar,PetscStreamType*);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar,const PetscScalar*,PetscMemType,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar,const PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar,PetscScalar**,PetscStream);
@@ -131,6 +131,16 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScala
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAXTY(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAYDX(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAccumulateOp(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
+
+typedef struct _n_PetscStreamGraph* PetscStreamGraph;
+
+PETSC_EXTERN PetscErrorCode PetscStreamGraphCreate(PetscStreamGraph*);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphDestroy(PetscStreamGraph*);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphSetUp(PetscStreamGraph);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphAssemble(PetscStreamGraph);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphExecute(PetscStreamGraph,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphGetGraph(PetscStreamGraph,void*);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphRestoreGraph(PetscStreamGraph,void*);
 
 /*E
     PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
