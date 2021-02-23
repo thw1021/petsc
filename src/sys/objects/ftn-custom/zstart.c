@@ -506,7 +506,6 @@ static void petscinitialize_internal(char* filename, PetscInt len, char* help, P
 
 PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len,PETSC_FORTRAN_CHARLEN_T helplen)
 {
-  char* helpc;
   petscinitialize_internal(filename, len, help, helplen, PETSC_TRUE, ierr);
 }
 
