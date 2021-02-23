@@ -67,15 +67,14 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
 
   Not Collective
 
-  Input Parameters:
-+ pscal - The PetscStreamScalar object
-- pstream - The PetscStream object to enqueue the setup operation on
+  Input Parameter:
+. pscal - The PetscStreamScalar object
 
   Level: beginner
 
 .seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamCreate(), PetscStreamScalarSetValue()
 @*/
-PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal, PetscStream pstream)
+PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal)
 {
   PetscErrorCode ierr;
 
@@ -85,8 +84,7 @@ PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal, PetscStream pstre
   ierr = PetscEventCreate(&pscal->event);CHKERRQ(ierr);
   ierr = PetscEventSetType(pscal->event, pscal->type);CHKERRQ(ierr);
   ierr = PetscEventSetUp(pscal->event);CHKERRQ(ierr);
-  ierr = (*pscal->ops->setup)(pscal, pstream);CHKERRQ(ierr);
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal, NULL, PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
+  ierr = (*pscal->ops->setup)(pscal);CHKERRQ(ierr);
   pscal->setup = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
