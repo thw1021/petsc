@@ -77,6 +77,10 @@ program ex26f90
     PetscReal                           :: norm
     PetscReal                           :: time = 1.234_kPR
 
+<<<<<<< HEAD
+=======
+    
+>>>>>>> 66928ca3e9057fb07e1efcad4d3d1f08fb314408
     call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
     if (ierr /= 0) then
       print*,'Unable to initialize PETSc'
@@ -479,6 +483,7 @@ program ex26f90
   
     call PetscViewerDestroy(viewer,ierr);CHKERRA(ierr)
     call PetscFinalize(ierr)
+<<<<<<< HEAD
 end program ex26f90
 
 ! /*TEST
@@ -495,3 +500,6 @@ end program ex26f90
 !   args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/FourSquareQ-large.exo -o FourSquareQ-large_out.exo -dm_view -dm_section_view -petscpartitioner_type simple -order 1
 !
 ! TEST*/
+=======
+end program ex26f90
+>>>>>>> 66928ca3e9057fb07e1efcad4d3d1f08fb314408
