@@ -263,38 +263,38 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
   /* Create a stream here for now */
   ierr = PetscStreamCreate(&pstream);CHKERRQ(ierr);
   ierr = PetscStreamSetType(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
-  ierr = PetscStreamSetMode(pstream,PETSC_STREAM_GLOBAL_BLOCKING);CHKERRQ(ierr);
+  ierr = PetscStreamSetMode(pstream,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
   ierr = PetscStreamSetUp(pstream);CHKERRQ(ierr);
 
   /* Create streamscalars */
   ierr = PetscStreamScalarCreate(&pscaldp);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscaldp,PETSC_STREAM_CUDA);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetUp(pscaldp,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetUp(pscaldp);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetValue(pscaldp,NULL,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
 
   ierr = PetscStreamScalarCreate(&pscaldpi);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscaldpi,PETSC_STREAM_CUDA);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetUp(pscaldpi,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetUp(pscaldpi);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetValue(pscaldpi,NULL,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
 
   ierr = PetscStreamScalarCreate(&pscalbeta);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscalbeta,PETSC_STREAM_CUDA);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetUp(pscalbeta,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetUp(pscalbeta);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetValue(pscalbeta,NULL,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
 
   ierr = PetscStreamScalarCreate(&pscalb);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscalb,PETSC_STREAM_CUDA);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetUp(pscalb,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetUp(pscalb);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetValue(pscalb,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
 
   ierr = PetscStreamScalarCreate(&pscala);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscala,PETSC_STREAM_CUDA);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetUp(pscala,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetUp(pscala);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetValue(pscala,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
 
   ierr = PetscStreamScalarCreate(&pscalmina);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscalmina,PETSC_STREAM_CUDA);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetUp(pscalmina,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetUp(pscalmina);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetValue(pscalmina,&minusa,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
 
   ierr = PCGetDiagonalScale(ksp->pc,&diagonalscale);CHKERRQ(ierr);

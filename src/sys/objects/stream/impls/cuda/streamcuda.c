@@ -1,7 +1,7 @@
 #include "streamcuda.h"
 
 #if PetscDefined(HAVE_CUDA)
-static PetscErrorCode PetscStreamDestroy_CUDA(PetscStream strm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamDestroy_CUDA(PetscStream strm)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
   PetscErrorCode   ierr;
@@ -13,7 +13,7 @@ static PetscErrorCode PetscStreamDestroy_CUDA(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamSetUp_CUDA(PetscStream strm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamSetUp_CUDA(PetscStream strm)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
   cudaError_t      cerr;
@@ -23,7 +23,7 @@ static PetscErrorCode PetscStreamSetUp_CUDA(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamGetStream_CUDA(PetscStream strm, void *dstrm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamGetStream_CUDA(PetscStream strm, void *dstrm)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
 
@@ -32,18 +32,18 @@ static PetscErrorCode PetscStreamGetStream_CUDA(PetscStream strm, void *dstrm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamRestoreStream_CUDA(PetscStream strm, void *dstrm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamRestoreStream_CUDA(PetscStream strm, void *dstrm)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(*((cudaStream_t*) dstrm) != psc->cstream)) {
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"CUDA stream is not the same as the one that was checked out\n");
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"CUDA stream is not the same as the one that was checked out");
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamRecordEvent_CUDA(PetscStream strm, PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamRecordEvent_CUDA(PetscStream strm, PetscEvent event)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
   PetscEvent_CUDA  *pec = (PetscEvent_CUDA *)event->data;
@@ -61,7 +61,7 @@ static PetscErrorCode PetscStreamRecordEvent_CUDA(PetscStream strm, PetscEvent e
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamWaitEvent_CUDA(PetscStream strm, PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamWaitEvent_CUDA(PetscStream strm, PetscEvent event)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
   PetscEvent_CUDA  *pec = (PetscEvent_CUDA *)event->data;
@@ -72,7 +72,7 @@ static PetscErrorCode PetscStreamWaitEvent_CUDA(PetscStream strm, PetscEvent eve
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamSynchronize_CUDA(PetscStream strm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronize_CUDA(PetscStream strm)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
   cudaError_t      cerr;
@@ -82,7 +82,7 @@ static PetscErrorCode PetscStreamSynchronize_CUDA(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamQuery_CUDA(PetscStream strm, PetscBool *busy)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamQuery_CUDA(PetscStream strm, PetscBool *busy)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
 
@@ -121,7 +121,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream strm)
     ierr = PetscMemcpy(strm->ops, &cuops, sizeof(cuops));CHKERRQ(ierr);
   }
 #else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with CUDA support\n");
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with CUDA support");
 #endif
   PetscFunctionReturn(0);
 }
