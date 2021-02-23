@@ -1,4 +1,3 @@
-
 #include "petscsf.h"
 #include <../src/vec/is/sf/impls/basic/sfbasic.h>
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
@@ -142,6 +141,7 @@ PETSC_INTERN PetscErrorCode PetscSFView_Basic_PatternAndSizes(PetscSF sf,PetscVi
     }
     ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatTranspose(A,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
     ierr = MatView(A,viewer);CHKERRQ(ierr);
     ierr = MatDestroy(&A);CHKERRQ(ierr);
   }
