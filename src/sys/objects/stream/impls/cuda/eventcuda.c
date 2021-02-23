@@ -68,7 +68,7 @@ PETSC_EXTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent event)
     ierr = PetscMemcpy(event->ops, &ecuops, sizeof(ecuops));CHKERRQ(ierr);
   }
 #else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with CUDA support\n");
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with CUDA support");
 #endif
   PetscFunctionReturn(0);
 }
