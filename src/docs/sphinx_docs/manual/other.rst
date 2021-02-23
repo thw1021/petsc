@@ -140,7 +140,7 @@ Adding options from a file
 PETSc can load additional options from a file using ``PetscOptionsInsertFile()``,
 which can also be used from the command line, e.g. ``-options_file my_options.opts``.
 
-If PETSc is configured with YAML, one can use YAML files this way (relying on ``PetscOptionsInsertFileYAML()``).
+One can also use YAML files this way (relying on ``PetscOptionsInsertFileYAML()``).
 For example, the following file:
 
 .. literalinclude:: /../../../src/sys/tests/ex47-options.yaml
@@ -152,6 +152,30 @@ corresponds to the following PETSc options:
   :language: none
   :start-after: #
   :end-before: #End
+
+With ``-options_file``, PETSc will parse the file as YAML if it ends in a standard
+YAML extension or if one uses a ``:yaml`` postfix,
+e.g. ``-options_file my_options.yaml`` or ``-options_file my_options.txt:yaml``
+
+PETSc will also check the first line of the options file itself and
+parse the file as YAML if it matches certain criteria, for example.
+
+
+.. literalinclude:: /../../../src/sys/tests/ex47-yaml_tag
+  :language: yaml
+
+and
+
+.. literalinclude:: /../../../src/sys/tests/ex47-yaml_doc
+  :language: yaml
+
+both correspond to options
+
+.. literalinclude:: /../../../src/sys/tests/output/ex47_2_auto.out
+  :language: none
+  :start-after: #
+  :end-before: #End
+
 
 User-Defined PetscOptions
 ^^^^^^^^^^^^^^^^^^^^^^^^^
