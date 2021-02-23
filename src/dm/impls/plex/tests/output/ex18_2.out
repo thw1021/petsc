@@ -156,3 +156,4 @@ PetscSF Object: 3 MPI processes
   [1]    3 <- 4
   [1]    5 <- 8
   [2] Roots referenced by my leaves, by rank
+  sort=rank-order
