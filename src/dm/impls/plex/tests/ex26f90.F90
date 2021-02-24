@@ -106,6 +106,10 @@ program ex26f90
     call DMViewFromOptions(dm, PETSC_NULL_OPTIONS,"-dm_view",ierr);CHKERRA(ierr);
 
     ! Create the exodus result file
+<<<<<<< HEAD
+=======
+
+>>>>>>> f1390e03ba2c31f9440b193a7602621ee43fb2d9
     ! enable exodus debugging informations
     call exopts(EXVRBS+EXDEBG,ierr)
     ! Create the exodus file

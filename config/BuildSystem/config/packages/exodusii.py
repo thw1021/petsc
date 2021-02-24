@@ -29,7 +29,7 @@ class Configure(config.package.CMakePackage):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
 
     args.append('-DPYTHON_EXECUTABLE:PATH='+sys.executable)
-    args.append('-DPythonInterp_FIND_VERSION:STRING={0}.{1}'.format(sys.version_info.major,sys.version_info.minor))
+    args.append('-DPythonInterp_FIND_VERSION:STRING={0}.{1}'.format(sys.version_info[0],sys.version_info[1]))
     args.append('-DACCESSDIR:PATH='+self.installDir)
     args.append('-DCMAKE_INSTALL_PREFIX:PATH='+self.installDir)
     args.append('-DCMAKE_INSTALL_RPATH:PATH='+os.path.join(self.installDir,'lib'))
@@ -37,7 +37,7 @@ class Configure(config.package.CMakePackage):
     args.append('-DCMAKE_C_COMPILER:FILEPATH="'+self.getCompiler()+'"')
     self.popLanguage()
     # building the fortran library is technically not required to add exodus support
-    # we build it anyway so that fortran users can still use exodus functions directly 
+    # we build it anyway so that fortran users can still use exodus functions directly
     # from their code
     if hasattr(self.setCompilers, 'FC'):
       self.pushLanguage('FC')
