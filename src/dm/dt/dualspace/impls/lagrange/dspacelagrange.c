@@ -48,7 +48,8 @@ static PetscErrorCode Petsc1DNodeFamilyReference(Petsc1DNodeFamily nf)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode Petsc1DNodeFamilyDestroy(Petsc1DNodeFamily *nf) {
+static PetscErrorCode Petsc1DNodeFamilyDestroy(Petsc1DNodeFamily *nf)
+{
   PetscInt       i, nc;
   PetscErrorCode ierr;
 
@@ -346,7 +347,8 @@ static PetscErrorCode PetscLagNodeIndicesReference(PetscLagNodeIndices ni)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscLagNodeIndicesDestroy(PetscLagNodeIndices *ni) {
+static PetscErrorCode PetscLagNodeIndicesDestroy(PetscLagNodeIndices *ni)
+{
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
