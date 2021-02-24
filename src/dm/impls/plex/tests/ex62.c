@@ -1,6 +1,8 @@
 static char help[] = "Test FEM layout with DM and ExodusII storage\n\n";
 
 /*
+  This example is similar to ex26.c, but the sections are created _after_ distribution
+
   In order to see the vectors which are being tested, use
 
      -ua_vec_view -s_vec_view
@@ -69,9 +71,9 @@ int main(int argc, char **argv) {
     /* set the mesh order */
     ierr = PetscViewerExodusIISetOrder(viewer,order);CHKERRQ(ierr);
     ierr = PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD);
-    /*
+    /* 
       Notice how the exodus file is actually NOT open at this point (exoid is -1)
-      Since we are overwritting the file (mode is FILE_MODE_WRITE), we are going to have to
+      Since we are overwritting the file (mode is FILE_MODE_WRITE), we are going to have to 
       write the geometry (the DM), which can only be done on a brand new file.
     */
 
@@ -130,6 +132,28 @@ int main(int argc, char **argv) {
     for (step = 0; step < numstep; ++step) {
       PetscReal time = step;
       PetscStackCallStandard(ex_put_time,(exoid, step+1, &time));
+    }
+  }
+
+  /*
+    Distribute the mesh
+  */
+  {
+    DM               pdm;
+    PetscSF          migrationSF;
+    PetscInt         ovlp = 0;
+    PetscPartitioner part;
+
+    ierr = DMSetUseNatural(dm,PETSC_TRUE);CHKERRQ(ierr);
+    ierr = DMPlexGetPartitioner(dm,&part);CHKERRQ(ierr);
+    ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
+    ierr = DMPlexDistribute(dm,ovlp,&migrationSF,&pdm);CHKERRQ(ierr);
+    if (pdm) {
+      ierr = DMPlexSetMigrationSF(pdm,migrationSF);CHKERRQ(ierr);
+      ierr = PetscSFDestroy(&migrationSF);CHKERRQ(ierr);
+      ierr = DMDestroy(&dm);CHKERRQ(ierr);
+      dm = pdm;
+      ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
     }
   }
 
@@ -261,25 +285,6 @@ int main(int argc, char **argv) {
   ierr = PetscObjectViewFromOptions((PetscObject) section, NULL, "-dm_section_view");CHKERRQ(ierr);
   ierr = PetscSectionDestroy(&section);CHKERRQ(ierr);
 
-  {
-    DM               pdm;
-    PetscSF          migrationSF;
-    PetscInt         ovlp = 0;
-    PetscPartitioner part;
-
-    ierr = DMSetUseNatural(dm,PETSC_TRUE);CHKERRQ(ierr);
-    ierr = DMPlexGetPartitioner(dm,&part);CHKERRQ(ierr);
-    ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
-    ierr = DMPlexDistribute(dm,ovlp,&migrationSF,&pdm);CHKERRQ(ierr);
-    if (pdm) {
-      ierr = DMPlexSetMigrationSF(pdm,migrationSF);CHKERRQ(ierr);
-      ierr = PetscSFDestroy(&migrationSF);CHKERRQ(ierr);
-      ierr = DMDestroy(&dm);CHKERRQ(ierr);
-      dm = pdm;
-      ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
-    }
-  }
-
   /* Get DM and IS for each field of dm */
   ierr = DMCreateSubDM(dm, 1, &fieldU, &isU,  &dmU);CHKERRQ(ierr);
   ierr = DMCreateSubDM(dm, 1, &fieldA, &isA,  &dmA);CHKERRQ(ierr);
@@ -382,8 +387,8 @@ int main(int argc, char **argv) {
 
     /* Saving U and Alpha in one shot.
        For this, we need to cheat and change the Vec's name
-       Note that in the end we write variables one component at a time,
-       so that there is no real values in doing this
+       Note that in the end we write variables one component at a time, 
+       so that there is no real values in doing this 
     */
 
     ierr = DMSetOutputSequenceNumber(dmUA,1,time);CHKERRQ(ierr);
@@ -416,7 +421,7 @@ int main(int argc, char **argv) {
     /* Building and saving Sigma
        We set sigma_0 = rank (to see partitioning)
               sigma_1 = cell set ID
-              sigma_2 = x_coordinate of the cell center of mass
+              sigma_2 = x_coordinate of the cell center of mass 
     */
     ierr = DMGetCoordinateSection(dmS, &coordSection);CHKERRQ(ierr);
     ierr = DMGetCoordinatesLocal(dmS, &coord);CHKERRQ(ierr);
