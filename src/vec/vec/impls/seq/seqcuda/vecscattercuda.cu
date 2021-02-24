@@ -12,7 +12,8 @@
 
 #include <cuda_runtime.h>
 
-PetscErrorCode VecScatterCUDAIndicesCreate_StoS(PetscInt n,PetscInt toFirst,PetscInt fromFirst,PetscInt toStep, PetscInt fromStep,PetscInt *tslots, PetscInt *fslots,PetscCUDAIndices *ci) {
+PetscErrorCode VecScatterCUDAIndicesCreate_StoS(PetscInt n,PetscInt toFirst,PetscInt fromFirst,PetscInt toStep, PetscInt fromStep,PetscInt *tslots, PetscInt *fslots,PetscCUDAIndices *ci)
+{
 
   PetscCUDAIndices           cci;
   VecScatterCUDAIndices_StoS stos_scatter;
