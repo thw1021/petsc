@@ -255,3 +255,8 @@ PETSC_EXTERN void dmcreateinterpolation_(DM *dmc,DM *dmf,Mat *mat,Vec *vec, int 
   CHKFORTRANNULLOBJECT(vec);
   *ierr = DMCreateInterpolation(*dmc,*dmf,mat,vec);
 }
+
+PETSC_EXTERN void dmcreatesuperdm_(DM dms[], PetscInt *len, IS ***is, DM *superdm, int *ierr)
+{
+  *ierr = DMCreateSuperDM(dms, *len, *is, superdm);
+}
