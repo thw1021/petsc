@@ -69,9 +69,9 @@ int main(int argc, char **argv) {
     /* set the mesh order */
     ierr = PetscViewerExodusIISetOrder(viewer,order);CHKERRQ(ierr);
     ierr = PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD);
-    /* 
+    /*
       Notice how the exodus file is actually NOT open at this point (exoid is -1)
-      Since we are overwritting the file (mode is FILE_MODE_WRITE), we are going to have to 
+      Since we are overwritting the file (mode is FILE_MODE_WRITE), we are going to have to
       write the geometry (the DM), which can only be done on a brand new file.
     */
 
@@ -382,8 +382,8 @@ int main(int argc, char **argv) {
 
     /* Saving U and Alpha in one shot.
        For this, we need to cheat and change the Vec's name
-       Note that in the end we write variables one component at a time, 
-       so that there is no real values in doing this 
+       Note that in the end we write variables one component at a time,
+       so that there is no real values in doing this
     */
 
     ierr = DMSetOutputSequenceNumber(dmUA,1,time);CHKERRQ(ierr);
@@ -416,7 +416,7 @@ int main(int argc, char **argv) {
     /* Building and saving Sigma
        We set sigma_0 = rank (to see partitioning)
               sigma_1 = cell set ID
-              sigma_2 = x_coordinate of the cell center of mass 
+              sigma_2 = x_coordinate of the cell center of mass
     */
     ierr = DMGetCoordinateSection(dmS, &coordSection);CHKERRQ(ierr);
     ierr = DMGetCoordinatesLocal(dmS, &coord);CHKERRQ(ierr);

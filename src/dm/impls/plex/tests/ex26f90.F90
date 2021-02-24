@@ -2,7 +2,7 @@ program ex26f90
 #include "petsc/finclude/petsc.h"
     use petsc
     implicit none
-#include "exodusII.inc"  
+#include "exodusII.inc"
 
     ! Get the fortran kind associated with PetscInt and PetscReal so that we can use literal constants.
     PetscInt                           :: dummyPetscInt
@@ -104,36 +104,35 @@ program ex26f90
     call DMSetFromOptions(dm,ierr);CHKERRA(ierr);
     call DMGetDimension(dm, sdim,ierr);CHKERRA(ierr)
     call DMViewFromOptions(dm, PETSC_NULL_OPTIONS,"-dm_view",ierr);CHKERRA(ierr);
-  
+
     ! Create the exodus result file
-  
-    ! enable exodus debugging informations 
+    ! enable exodus debugging informations
     call exopts(EXVRBS+EXDEBG,ierr)
-    ! Create the exodus file 
+    ! Create the exodus file
     call PetscViewerExodusIIOpen(PETSC_COMM_WORLD,ofilename,FILE_MODE_WRITE,viewer,ierr);CHKERRA(ierr)
-    ! The long way would be 
+    ! The long way would be
     !
     ! call PetscViewerCreate(PETSC_COMM_WORLD,viewer,ierr);CHKERRA(ierr)
     ! call PetscViewerSetType(viewer,PETSCVIEWEREXODUSII,ierr);CHKERRA(ierr)
     ! call PetscViewerFileSetMode(viewer,FILE_MODE_WRITE,ierr);CHKERRA(ierr)
     ! call PetscViewerFileSetName(viewer,ofilename,ierr);CHKERRA(ierr)
-      
-    ! set the mesh order 
+
+    ! set the mesh order
     call PetscViewerExodusIISetOrder(viewer,order,ierr);CHKERRA(ierr)
     call PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD,ierr);CHKERRA(ierr)
-    ! 
+    !
     !    Notice how the exodus file is actually NOT open at this point (exoid is -1)
-    !    Since we are overwritting the file (mode is FILE_MODE_WRITE), we are going to have to 
+    !    Since we are overwritting the file (mode is FILE_MODE_WRITE), we are going to have to
     !    write the geometry (the DM), which can only be done on a brand new file.
-    !  
-  
-    ! Save the geometry to the file, erasing all previous content 
+    !
+
+    ! Save the geometry to the file, erasing all previous content
     call DMView(dm,viewer,ierr);CHKERRA(ierr)
     call PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD,ierr);CHKERRA(ierr)
     !
     !    Note how the exodus file is now open
-    !  
-    ! "Format" the exodus result file, i.e. allocate space for nodal and zonal variables 
+    !
+    ! "Format" the exodus result file, i.e. allocate space for nodal and zonal variables
     select case(sdim)
     case(2)
         numNodalVar = 3
@@ -145,7 +144,7 @@ program ex26f90
         nodalVarName(1:numNodalVar) = ["U_x  ","U_y  ","U_z  ","Alpha"]
         numZonalVar = 6
         zonalVarName(1:numZonalVar) = ["Sigma_11","Sigma_22","Sigma_33","Sigma_23","Sigma_13","Sigma_12"]
-    case default 
+    case default
         write(IOBuffer,'("No layout for dimension ",I2)') sdim
     end select
     call PetscViewerExodusIIGetId(viewer,exoid,ierr);CHKERRA(ierr)
@@ -161,8 +160,8 @@ program ex26f90
     truthtable = .true.
     call expvtt(exoid, numCS, numZonalVar, truthtable, ierr)
     deallocate(truthtable)
-  
-    !   Writing time step information in the file. Note that this is currently broken in the exodus library for netcdf4 (HDF5-based) files */
+
+    !   Writing time step information in the file. Note that this is currently broken in the exodus library for netcdf4 (HDF5-based) files
     do step = 1,numstep
         call exptim(exoid,step,Real(step,kind=kPR),ierr)
     end do
@@ -182,11 +181,11 @@ program ex26f90
         call DMPlexGetDepthStratum(dm, d-1, pStartDepth(d), pEndDepth(d),ierr);CHKERRA(ierr)
     end do
 
-    ! Vector field U, Scalar field Alpha, Tensor field Sigma 
+    ! Vector field U, Scalar field Alpha, Tensor field Sigma
     call PetscSectionSetFieldComponents(section, fieldU, sdim,ierr);CHKERRA(ierr);
     call PetscSectionSetFieldComponents(section, fieldA, 1_kPI,ierr);CHKERRA(ierr);
     call PetscSectionSetFieldComponents(section, fieldS, sdim*(sdim+1)/2,ierr);CHKERRA(ierr);
-  
+
     ! Going through cell sets then cells, and setting up storage for the sections
     call DMGetLabelSize(dm, "Cell Sets", numCS, ierr);CHKERRA(ierr)
     call DMGetLabelIdIS(dm, "Cell Sets", csIS, ierr);CHKERRA(ierr)
@@ -204,7 +203,7 @@ program ex26f90
                 write(IOBuffer,'("No layout for dimension ",I2)') sdim
                 SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE,IOBuffer)
             end select ! sdim
-  
+
             ! Identify cell type based on closure size only. This works for Tri/Tet/Quad/Hex meshes
             ! It will not be enough to identify more exotic elements like pyramid or prisms...  */
             call ISGetIndicesF90(cellIS, cellID,ierr);CHKERRA(ierr)
@@ -254,7 +253,7 @@ program ex26f90
                 do p = 1,size(closure),2
                     ! find the depth of p
                     do d = 1,sdim+1
-                        if ( (closure(p) >= pStartDepth(d)) .and. (closure(p) < pEndDepth(d)) ) then
+                        if ((closure(p) >= pStartDepth(d)) .and. (closure(p) < pEndDepth(d))) then
                             call PetscSectionSetDof(section, closure(p), dofU(d)+dofA(d)+dofS(d),ierr);CHKERRA(ierr)
                             call PetscSectionSetFieldDof(section, closure(p), fieldU, dofU(d),ierr);CHKERRA(ierr)
                             call PetscSectionSetFieldDof(section, closure(p), fieldA, dofA(d),ierr);CHKERRA(ierr)
@@ -290,7 +289,7 @@ program ex26f90
     end if
     call DMViewFromOptions(dm,PETSC_NULL_OPTIONS,"-dm_view",ierr);CHKERRA(ierr)
 
-    
+
     ! Get DM and IS for each field of dm
     call DMCreateSubDM(dm, 1_kPI, fieldU,  isU,  dmU,ierr);CHKERRA(ierr)
     call DMCreateSubDM(dm, 1_kPI, fieldA,  isA,  dmA,ierr);CHKERRA(ierr)
@@ -310,14 +309,14 @@ program ex26f90
     call DMGetGlobalVector(dmS,  S,ierr);CHKERRA(ierr)
     call DMGetGlobalVector(dmUA, UA,ierr);CHKERRA(ierr)
     call DMGetGlobalVector(dmUA2, UA2,ierr);CHKERRA(ierr)
-  
+
     call PetscObjectSetName(U,  "U",ierr);CHKERRA(ierr)
     call PetscObjectSetName(A,  "Alpha",ierr);CHKERRA(ierr)
     call PetscObjectSetName(S,  "Sigma",ierr);CHKERRA(ierr)
     call PetscObjectSetName(UA, "UAlpha",ierr);CHKERRA(ierr)
     call PetscObjectSetName(UA2, "UAlpha2",ierr);CHKERRA(ierr)
     call VecSet(X, -111.0_kPR,ierr);CHKERRA(ierr)
-      
+
     ! Setting u to [x,y,z]  and alpha to x^2+y^2+z^2 by writing in UAlpha then restricting to U and Alpha */
     call DMGetLocalSection(dmUA, sectionUA,ierr);CHKERRA(ierr)
     call DMGetLocalVector(dmUA, UALoc,ierr);CHKERRA(ierr)
@@ -352,7 +351,7 @@ program ex26f90
 
     !Update X
     call VecISCopy(X, isUA, SCATTER_FORWARD, UA,ierr);CHKERRA(ierr)
-    ! Restrict to U and Alpha 
+    ! Restrict to U and Alpha
     call VecISCopy(X, isU, SCATTER_REVERSE, U,ierr);CHKERRA(ierr)
     call VecISCopy(X, isA, SCATTER_REVERSE, A,ierr);CHKERRA(ierr)
     call VecViewFromOptions(UA, PETSC_NULL_OPTIONS, "-ua_vec_view",ierr);CHKERRA(ierr)
@@ -363,7 +362,7 @@ program ex26f90
     call VecViewFromOptions(UA2, PETSC_NULL_OPTIONS, "-ua2_vec_view",ierr);CHKERRA(ierr)
 
 
-    ! Writing nodal variables to ExodusII file 
+    ! Writing nodal variables to ExodusII file
     call DMSetOutputSequenceNumber(dmU,0_kPI,time,ierr);CHKERRA(ierr)
     call DMSetOutputSequenceNumber(dmA,0_kPI,time,ierr);CHKERRA(ierr)
 
@@ -372,8 +371,8 @@ program ex26f90
 
     ! Saving U and Alpha in one shot.
     ! For this, we need to cheat and change the Vec's name
-    ! Note that in the end we write variables one component at a time, 
-    ! so that there is no real value in doing this 
+    ! Note that in the end we write variables one component at a time,
+    ! so that there is no real value in doing this
 
     call DMSetOutputSequenceNumber(dmUA,1_kPI,time,ierr);CHKERRA(ierr)
     call DMGetGlobalVector(dmUA, tmpVec,ierr);CHKERRA(ierr)
@@ -404,12 +403,12 @@ program ex26f90
     if (norm > PETSC_SQRT_MACHINE_EPSILON) then
         write(IOBuffer,'("UAlpha2 ||Vin - Vout|| = ",ES12.5)') norm
     end if
- 
+
     ! Building and saving Sigma
     !   We set sigma_0 = rank (to see partitioning)
     !          sigma_1 = cell set ID
-    !          sigma_2 = x_coordinate of the cell center of mass 
-    
+    !          sigma_2 = x_coordinate of the cell center of mass
+
     call DMGetCoordinateSection(dmS, coordSection,ierr);CHKERRA(ierr)
     call DMGetCoordinatesLocal(dmS, coord,ierr);CHKERRA(ierr)
     call DMGetLabelIdIS(dmS, "Cell Sets", csIS,ierr);CHKERRA(ierr)
@@ -441,7 +440,7 @@ program ex26f90
     call ISDestroy(csIS,ierr);CHKERRA(ierr)
     call VecViewFromOptions(S, PETSC_NULL_OPTIONS, "-s_vec_view",ierr);CHKERRA(ierr)
 
-    ! Writing zonal variables in Exodus file 
+    ! Writing zonal variables in Exodus file
     call DMSetOutputSequenceNumber(dmS,0_kPI,time,ierr);CHKERRA(ierr)
     call VecView(S,viewer,ierr);CHKERRA(ierr)
 
@@ -474,10 +473,10 @@ program ex26f90
     call ISDestroy(isUA,ierr);CHKERRA(ierr)
     call DMDestroy(dmUA2,ierr);CHKERRA(ierr)
     call DMDestroy(dm,ierr);CHKERRA(ierr)
-  
+
     deallocate(pStartDepth)
     deallocate(pEndDepth)
-  
+
     call PetscViewerDestroy(viewer,ierr);CHKERRA(ierr)
     call PetscFinalize(ierr)
 end program ex26f90

@@ -104,7 +104,7 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
 
   PetscFunctionBegin;
   if (exo->exoid >= 0) {
-    PetscStackCallStandard(ex_close,(exo->exoid)); 
+    PetscStackCallStandard(ex_close,(exo->exoid));
     exo->exoid = -1;
   }
   if (exo->filename) {ierr = PetscFree(exo->filename);CHKERRQ(ierr);}
@@ -120,7 +120,7 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
     EXO_mode = EX_WRITE;
     break;
   case FILE_MODE_WRITE:
-    /* 
+    /*
       exodus only allows writing geometry upon file creation, so we will let DMView create the file.
     */
     PetscFunctionReturn(0);
@@ -336,8 +336,8 @@ PetscErrorCode EXOGetVarIndex_Internal(int exoid, ex_entity_type obj_type, const
   Not all DM can be written to disk this way. For instance, exodus assume that element blocks (mapped to "Cell sets" labels)
   consists of sequentially numbered cells. If this is not the case, the exodus file will be corrupted.
 
-  If the dm has been distributed, only the part of the DM on MPI rank 0 (including "ghost" cells and vertices) 
-  will be written. 
+  If the dm has been distributed, only the part of the DM on MPI rank 0 (including "ghost" cells and vertices)
+  will be written.
 
   DMPlex only represents geometry while most post-processing software expect that a mesh also provides information
   on the discretization space. This function assumes that the file represents Lagrange finite elements of order 1 or 2.
@@ -347,7 +347,7 @@ PetscErrorCode EXOGetVarIndex_Internal(int exoid, ex_entity_type obj_type, const
   This function will only handle TRI, TET, QUAD, and HEX cells.
   Level: beginner
 
-.seealso: 
+.seealso:
 */
 PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
 {
@@ -385,7 +385,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
 
   int             CPU_word_size, IO_word_size, EXO_mode;
   float           EXO_version;
-  
+
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *) viewer->data;
 
   PetscFunctionBegin;
@@ -393,7 +393,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
 
-  /* 
+  /*
     Creating coordSection is a collective operation so we do it somewhat out of sequence
   */
   ierr = PetscSectionCreate(comm, &coordSection);CHKERRQ(ierr);
@@ -776,7 +776,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       ierr = PetscFree3(elem_ind,elem_list,side_list);CHKERRQ(ierr);
     }
     ierr = PetscSectionDestroy(&coordSection);CHKERRQ(ierr);
-    /* 
+    /*
       close the exodus file
     */
     ex_close(exo->exoid);
@@ -811,7 +811,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   names of variables declared in the exodus file. For instance for a Vec named "V"
   the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
   amongst all variables.
-  In the event where a nodal and zonal variable both match, the function will return an error instead of 
+  In the event where a nodal and zonal variable both match, the function will return an error instead of
   possibly corrupting the file
 
   Level: beginner
@@ -840,12 +840,16 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   ierr = DMGetOutputSequenceNumber(dm,&step,NULL);CHKERRQ(ierr);
   ierr = EXOGetVarIndex_Internal(exoid,EX_NODAL,vecname,&offsetN);CHKERRQ(ierr);
   ierr = EXOGetVarIndex_Internal(exoid,EX_ELEM_BLOCK,vecname,&offsetZ);CHKERRQ(ierr);
-  if (offsetN <= 0 && offsetZ <= 0) {SETERRQ1(comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. \n", vecname);}
+  if (offsetN <= 0 && offsetZ <= 0) {
+    SETERRQ1(comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. \n", vecname);
+  }
   if (offsetN > 0) {
     ierr = VecViewPlex_ExodusII_Nodal_Internal(v,exoid,(int) step+1,offsetN);CHKERRQ(ierr);
   } else if (offsetZ > 0) {
     ierr = VecViewPlex_ExodusII_Zonal_Internal(v,exoid,(int) step+1,offsetZ);CHKERRQ(ierr);
-  } else {SETERRQ1(comm, PETSC_ERR_FILE_UNEXPECTED, "Could not find nodal or zonal variable %s in exodus file. \n", vecname);}
+  } else {
+    SETERRQ1(comm, PETSC_ERR_FILE_UNEXPECTED, "Could not find nodal or zonal variable %s in exodus file. \n", vecname);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -863,7 +867,7 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   names of variables declared in the exodus file. For instance for a Vec named "V"
   the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
   amongst all variables.
-  In the event where a nodal and zonal variable both match, the function will return an error instead of 
+  In the event where a nodal and zonal variable both match, the function will return an error instead of
   possibly corrupting the file
 
   Level: beginner
@@ -892,12 +896,16 @@ PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   ierr = DMGetOutputSequenceNumber(dm,&step,NULL);CHKERRQ(ierr);
   ierr = EXOGetVarIndex_Internal(exoid,EX_NODAL,vecname,&offsetN);CHKERRQ(ierr);
   ierr = EXOGetVarIndex_Internal(exoid,EX_ELEM_BLOCK,vecname,&offsetZ);CHKERRQ(ierr);
-  if (offsetN <= 0 && offsetZ <= 0) {SETERRQ1(comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. \n", vecname);}
+  if (offsetN <= 0 && offsetZ <= 0) {
+    SETERRQ1(comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. \n", vecname);
+  }
   if (offsetN > 0) {
     ierr = VecLoadPlex_ExodusII_Nodal_Internal(v,exoid,(int) step+1,offsetN);CHKERRQ(ierr);
   } else if (offsetZ > 0) {
     ierr = VecLoadPlex_ExodusII_Zonal_Internal(v,exoid,(int) step+1,offsetZ);CHKERRQ(ierr);
-  } else {SETERRQ1(comm, PETSC_ERR_FILE_UNEXPECTED, "Could not find nodal or zonal variable %s in exodus file. \n", vecname);}
+  } else {
+    SETERRQ1(comm, PETSC_ERR_FILE_UNEXPECTED, "Could not find nodal or zonal variable %s in exodus file. \n", vecname);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1280,7 +1288,7 @@ PetscErrorCode PetscViewerExodusIIGetId(PetscViewer viewer, int *exoid)
 
    Input Parameters:
 +  viewer - the viewer
-.  order - elements order 
+.  order - elements order
 
    Output Parameter:
 
@@ -1308,7 +1316,7 @@ PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer viewer, PetscInt order)
 
    Input Parameters:
 +  viewer - the viewer
-.  order - elements order 
+.  order - elements order
 
    Output Parameter:
 
