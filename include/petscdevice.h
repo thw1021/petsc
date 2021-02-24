@@ -152,6 +152,8 @@ typedef struct _n_PetscStreamGraph* PetscStreamGraph;
 
 PETSC_EXTERN PetscErrorCode PetscStreamGraphCreate(PetscStreamGraph*);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphDestroy(PetscStreamGraph*);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphSetType(PetscStreamGraph,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphGetType(PetscStreamGraph,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphSetUp(PetscStreamGraph);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphAssemble(PetscStreamGraph);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphExecute(PetscStreamGraph,PetscStream);

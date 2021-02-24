@@ -6,10 +6,12 @@ PETSC_INTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
 PETSC_INTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
 PETSC_INTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
 PETSC_INTERN PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar);
+PETSC_INTERN PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph);
 
 PetscFunctionList PetscStreamList              = NULL;
 PetscFunctionList PetscEventList               = NULL;
 PetscFunctionList PetscStreamScalarList        = NULL;
+PetscFunctionList PetscStreamGraphList         = NULL;
 PetscBool         PetscStreamRegisterAllCalled = PETSC_FALSE;
 
 const char *PetscStreamTypes[] = {"INVALID","CUDA","HIP",NULL};
@@ -187,6 +189,63 @@ PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar pscal, PetscStreamType
 }
 
 /*@C
+  PetscStreamGraphSetType - Builds a PetscStreamGraph for a particular stream implementation
+
+  Not Collective
+
+  Input Parameters:
++ sgraph - The PetscStreamGraph object
+- type - The PetscStream type
+
+  Notes:
+  See "petsc/include/petscdevice.h" for available stream types
+
+  Level: intermediate
+
+.seealso: PetscStreamGraphCreate(), PetscStreamGraphGetType()
+@*/
+PetscErrorCode PetscStreamGraphSetType(PetscStreamGraph sgraph, PetscStreamType type)
+{
+  PetscErrorCode (*create)(PetscStreamGraph);
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscUnlikelyDebug(type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscStreamGraph to type %s",PetscStreamTypes[type]);
+  if (sgraph->type == type) PetscFunctionReturn(0);
+  ierr = PetscFunctionListFind(PetscStreamGraphList, PetscStreamTypes[type], &create);CHKERRQ(ierr);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamGraph type: %d", type);
+  if (sgraph->ops->destroy) {ierr = (*sgraph->ops->destroy)(sgraph);CHKERRQ(ierr);}
+  ierr = PetscMemzero(sgraph->ops, sizeof(struct _GraphOps));CHKERRQ(ierr);
+  ierr = (*create)(sgraph);CHKERRQ(ierr);
+  sgraph->type = type;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscStreamGraphGetType - Gets the typename of a PetscStreamGraph
+
+  Not Collective
+
+  Input Parameter:
+. sgraph - The PetscStreamGraph object
+
+  Output Parameter:
+. type - The PetscStream type
+
+  Level: intermediate
+
+.seealso: PetscStreamGraphCreate(), PetscStreamGraphSetType()
+@*/
+PetscErrorCode PetscStreamGraphGetType(PetscStreamGraph sgraph, PetscStreamType *type)
+{
+  PetscFunctionBegin;
+  PetscValidStreamType(sgrpah,1);
+  PetscValidPointer(type,2);
+  *type = sgraph->type;
+  PetscFunctionReturn(0);
+}
+
+/*@C
   PetscStreamRegisterAll - Registers all of the stream components in the PetscStream package.
 
   Not Collective
@@ -208,5 +267,6 @@ PetscErrorCode PetscStreamRegisterAll(void)
   ierr = PetscFunctionListAdd(&PetscEventList, PetscStreamTypes[PETSC_STREAM_HIP], PetscEventCreate_HIP);CHKERRQ(ierr);
   ierr = PetscFunctionListAdd(&PetscStreamScalarList, PetscStreamTypes[PETSC_STREAM_CUDA], PetscStreamScalarCreate_CUDA);CHKERRQ(ierr);
   ierr = PetscFunctionListAdd(&PetscStreamScalarList, PetscStreamTypes[PETSC_STREAM_HIP], PetscStreamScalarCreate_HIP);CHKERRQ(ierr);
+  ierr = PetscFunctionListAdd(&PetscStreamGraphList, PetscStreamTypes[PETSC_STREAM_CUDA], PetscStreamGraphCreate_CUDA);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
