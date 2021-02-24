@@ -37,7 +37,7 @@ PetscErrorCode PetscStreamGraphSetUp(PetscStreamGraph sgraph)
   PetscFunctionBegin;
   PetscValidStreamType(sgraph,1);
   if (sgraph->setup) PetscFunctionReturn(0);
-  ierr = (*sgraph->ops->setup)(sgraph);CHKERRQ(ierr);
+  if (sgraph->ops->setup) {ierr = (*sgraph->ops->setup)(sgraph);CHKERRQ(ierr);}
   sgraph->setup = PETSC_TRUE;
   PetscFunctionReturn(0);
 }

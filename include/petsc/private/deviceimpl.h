@@ -133,6 +133,7 @@ PETSC_INTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
 PETSC_INTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
 PETSC_INTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
 PETSC_INTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
+PETSC_INTERN PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph);
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateCache_Internal(PetscStreamScalar pscal, const PetscScalar *val, PetscMemType mtype)
 {
