@@ -1320,7 +1320,8 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
 
   Level: intermediate
 @*/
-PetscErrorCode PetscSFGetSubSF(PetscSF mastersf, ISLocalToGlobalMapping map, PetscSF *subSF) {
+PetscErrorCode PetscSFGetSubSF(PetscSF mastersf, ISLocalToGlobalMapping map, PetscSF *subSF)
+{
 
   PetscErrorCode        ierr;
   PetscInt              nroots, nleaves, *ilocal_sub;
