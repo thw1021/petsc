@@ -239,7 +239,7 @@ PetscErrorCode PetscStreamGraphSetType(PetscStreamGraph sgraph, PetscStreamType 
 PetscErrorCode PetscStreamGraphGetType(PetscStreamGraph sgraph, PetscStreamType *type)
 {
   PetscFunctionBegin;
-  PetscValidStreamType(sgrpah,1);
+  PetscValidStreamType(sgraph,1);
   PetscValidPointer(type,2);
   *type = sgraph->type;
   PetscFunctionReturn(0);
