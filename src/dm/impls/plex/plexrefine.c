@@ -907,28 +907,28 @@ static PetscErrorCode DMPlexCellRefinerRefine_Regular(DMPlexCellRefiner cr, DMPo
    | C  \
    |     \
    |      \
-   2---1---1
+   2---2---1
    |\  D  / \
-   1 2   0   0
+   1 0   1   0
    |A \ /  B  \
    0-0-0---1---1
   */
   static DMPolytopeType triT[]    = {DM_POLYTOPE_SEGMENT, DM_POLYTOPE_TRIANGLE};
   static PetscInt       triS[]    = {3, 4};
-  static PetscInt       triC[]    = {DM_POLYTOPE_POINT, 1, 0, 0, DM_POLYTOPE_POINT, 1, 1, 0,
-                                     DM_POLYTOPE_POINT, 1, 1, 0, DM_POLYTOPE_POINT, 1, 2, 0,
-                                     DM_POLYTOPE_POINT, 1, 2, 0, DM_POLYTOPE_POINT, 1, 0, 0,
-                                     DM_POLYTOPE_SEGMENT, 1, 0, 0, DM_POLYTOPE_SEGMENT, 0,    2, DM_POLYTOPE_SEGMENT, 1, 2, 1,
-                                     DM_POLYTOPE_SEGMENT, 1, 0, 1, DM_POLYTOPE_SEGMENT, 1, 1, 0, DM_POLYTOPE_SEGMENT, 0,    0,
-                                     DM_POLYTOPE_SEGMENT, 0,    1, DM_POLYTOPE_SEGMENT, 1, 1, 1, DM_POLYTOPE_SEGMENT, 1, 2, 0,
-                                     DM_POLYTOPE_SEGMENT, 0,    0, DM_POLYTOPE_SEGMENT, 0,    1, DM_POLYTOPE_SEGMENT, 0,    2};
+  static PetscInt       triC[]    = {DM_POLYTOPE_POINT, 1, 0, 0, DM_POLYTOPE_POINT, 1, 2, 0,
+                                     DM_POLYTOPE_POINT, 1, 1, 0, DM_POLYTOPE_POINT, 1, 0, 0,
+                                     DM_POLYTOPE_POINT, 1, 2, 0, DM_POLYTOPE_POINT, 1, 1, 0,
+                                     DM_POLYTOPE_SEGMENT, 1, 0, 0, DM_POLYTOPE_SEGMENT, 0,    0, DM_POLYTOPE_SEGMENT, 1, 2, 1,
+                                     DM_POLYTOPE_SEGMENT, 1, 0, 1, DM_POLYTOPE_SEGMENT, 1, 1, 0, DM_POLYTOPE_SEGMENT, 0,    1,
+                                     DM_POLYTOPE_SEGMENT, 0,    2, DM_POLYTOPE_SEGMENT, 1, 1, 1, DM_POLYTOPE_SEGMENT, 1, 2, 0,
+                                     DM_POLYTOPE_SEGMENT, 0,    1, DM_POLYTOPE_SEGMENT, 0,    2, DM_POLYTOPE_SEGMENT, 0,    0};
   static PetscInt       triO[]    = {0, 0,
                                      0, 0,
                                      0, 0,
-                                     0, -2,  0,
-                                     0,  0, -2,
-                                    -2,  0,  0,
-                                     0,  0,  0};
+                                     0,  0,  0,
+                                     0,  0,  0,
+                                     0,  0,  0,
+                                    -2, -2, -2};
   /* Add a vertex in the center of each quadrilateral, and 4 edges inside, making 4 new quads.
      3----1----2----0----2
      |         |         |
