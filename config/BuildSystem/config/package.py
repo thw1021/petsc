@@ -83,7 +83,8 @@ class Package(config.base.Configure):
     self.requires32bitintblas   = 1  # 1 means that the package will not work with 64 bit integer BLAS/LAPACK
     self.skippackagewithoptions = 0  # packages like fblaslapack and MPICH do not support --with-package* options so do not print them in help
     self.alternativedownload    = [] # Used by, for example mpi.py to print useful error messages, which does not support --download-mpi but one can use --download-mpich
-    self.usesopenmp             = 'no'  # yes, no, unknow package is built to use OpenMP
+    self.usesopenmp             = 'no'  # yes, no, unknowm package is built to use OpenMP
+    self.usespthreads           = 'no'  # yes, no, unknown package is built to use Pthreads
     self.cmakelistsdir          = '' # Location of CMakeLists.txt - if not located at the top level of the package dir
 
     # Outside coupling
@@ -119,6 +120,7 @@ class Package(config.base.Configure):
       if self.executablename: output += '  '+getattr(self,self.executablename)+'\n'
       if self.usesopenmp == 'yes': output += '  uses OpenMP; use export OMP_NUM_THREADS=<p> or -omp_num_threads <p> to control the number of threads\n'
       if self.usesopenmp == 'unknown': output += '  Unknown if this uses OpenMP (try export OMP_NUM_THREADS=<1-4> yourprogram -log_view) \n'
+      if self.usespthreads == 'yes': output += '  uses PTHREADS; please consult the documentation on how to control the number of threads\n'
     return output
 
   def setupDependencies(self, framework):
@@ -143,7 +145,7 @@ class Package(config.base.Configure):
       self.petscdir        = FakePETScDir()
     # All packages depend on make
     self.make          = framework.require('config.packages.make',self)
-    if not self.isMPI and not self.package in ['make','cuda','thrust']:
+    if not self.isMPI and not self.package in ['make','cuda','thrust','valgrind','hwloc','x']:
       # force MPI to be the first package configured since all other packages
       # may depend on its compilers defined here
       self.mpi         = framework.require('config.packages.MPI',self)
@@ -351,7 +353,7 @@ class Package(config.base.Configure):
     '''Special case if --package-prefix-hash then even self.publicInstall == 0 are installed in the prefix location'''
     self.confDir    = self.installDirProvider.confDir  # private install location; $PETSC_DIR/$PETSC_ARCH for PETSc
     self.packageDir = self.getDir()
-    if not self.packageDir or (self.download[0].find('dir://') >= 0) or (self.download[0].find('link://') >= 0): self.packageDir = self.downLoad()
+    if not self.packageDir: self.packageDir = self.downLoad()
     self.updateGitDir()
     self.updatehgDir()
     if (self.publicInstall or 'package-prefix-hash' in self.argDB) and not ('package-prefix-hash' in self.argDB and (hasattr(self,'postProcess') or self.builtafterpetsc)):
@@ -1701,9 +1703,16 @@ class CMakePackage(Package):
     import shlex
 
     args = ['-DCMAKE_INSTALL_PREFIX='+self.installDir]
+    args.append('-DCMAKE_INSTALL_NAME_DIR:STRING="'+os.path.join(self.installDir,self.libdir)+'"')
+    args.append('-DCMAKE_INSTALL_LIBDIR:STRING="lib"')
     args.append('-DCMAKE_VERBOSE_MAKEFILE=1')
+    if self.compilerFlags.debugging:
+      args.append('-DCMAKE_BUILD_TYPE=Debug')
+    else:
+      args.append('-DCMAKE_BUILD_TYPE=Release')
     self.framework.pushLanguage('C')
     args.append('-DCMAKE_C_COMPILER="'+self.framework.getCompiler()+'"')
+    args.append('-DMPI_C_COMPILER="'+self.framework.getCompiler()+'"')
     args.append('-DCMAKE_AR='+self.setCompilers.AR)
     ranlib = shlex.split(self.setCompilers.RANLIB)[0]
     args.append('-DCMAKE_RANLIB='+ranlib)
@@ -1715,6 +1724,7 @@ class CMakePackage(Package):
     if hasattr(self.compilers, 'CXX'):
       self.framework.pushLanguage('Cxx')
       args.append('-DCMAKE_CXX_COMPILER="'+self.framework.getCompiler()+'"')
+      args.append('-DMPI_CXX_COMPILER="'+self.framework.getCompiler()+'"')
       args.append('-DCMAKE_CXX_FLAGS:STRING="'+self.updatePackageCxxFlags(self.framework.getCompilerFlags())+'"')
       args.append('-DCMAKE_CXX_FLAGS_DEBUG:STRING="'+self.updatePackageCxxFlags(self.framework.getCompilerFlags())+'"')
       args.append('-DCMAKE_CXX_FLAGS_RELEASE:STRING="'+self.updatePackageCxxFlags(self.framework.getCompilerFlags())+'"')
@@ -1723,6 +1733,7 @@ class CMakePackage(Package):
     if hasattr(self.compilers, 'FC'):
       self.framework.pushLanguage('FC')
       args.append('-DCMAKE_Fortran_COMPILER="'+self.framework.getCompiler()+'"')
+      args.append('-DMPI_Fortran_COMPILER="'+self.framework.getCompiler()+'"')
       args.append('-DCMAKE_Fortran_FLAGS:STRING="'+self.updatePackageFFlags(self.framework.getCompilerFlags())+'"')
       args.append('-DCMAKE_Fortran_FLAGS_DEBUG:STRING="'+self.updatePackageFFlags(self.framework.getCompilerFlags())+'"')
       args.append('-DCMAKE_Fortran_FLAGS_RELEASE:STRING="'+self.updatePackageFFlags(self.framework.getCompilerFlags())+'"')
@@ -1732,9 +1743,9 @@ class CMakePackage(Package):
       args.append('-DCMAKE_EXE_LINKER_FLAGS:STRING="'+self.setCompilers.LDFLAGS+'"')
 
     if self.checkSharedLibrariesEnabled():
-      args.append('-DBUILD_SHARED_LIBS=on')
+      args.append('-DBUILD_SHARED_LIBS:BOOL=ON')
     else:
-      args.append('-DBUILD_SHARED_LIBS=off')
+      args.append('-DBUILD_SHARED_LIBS:BOOL=OFF')
     return args
 
   def Install(self):

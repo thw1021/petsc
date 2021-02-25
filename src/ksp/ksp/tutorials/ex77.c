@@ -22,8 +22,8 @@ int main(int argc,char **args)
   PetscErrorCode     ierr;
 
   ierr = PetscInitialize(&argc,&args,NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   ierr = PetscOptionsGetString(NULL,NULL,"-f",name,sizeof(name),&flg);CHKERRQ(ierr);
   if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Must provide a binary file for the matrix");
   ierr = PetscOptionsGetInt(NULL,NULL,"-N",&N,NULL);CHKERRQ(ierr);
@@ -100,7 +100,7 @@ int main(int argc,char **args)
       ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
       ierr = PetscObjectTypeCompare((PetscObject)pc,PCLU,&flg);CHKERRQ(ierr);
       if (flg) {
-        ierr = PCFactorGetMatrix(pc,&F);
+        ierr = PCFactorGetMatrix(pc,&F);CHKERRQ(ierr);
         ierr = MatMatSolve(F,B,B);CHKERRQ(ierr);
         ierr = MatAYPX(B,-1.0,X,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
         ierr = MatNorm(B,NORM_INFINITY,&norm);CHKERRQ(ierr);

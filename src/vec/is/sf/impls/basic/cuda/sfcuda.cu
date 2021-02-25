@@ -866,7 +866,10 @@ PetscErrorCode PetscSFMalloc_Cuda(PetscMemType mtype,size_t size,void** ptr)
 {
   PetscFunctionBegin;
   if (mtype == PETSC_MEMTYPE_HOST) {PetscErrorCode ierr = PetscMalloc(size,ptr);CHKERRQ(ierr);}
-  else if (mtype == PETSC_MEMTYPE_DEVICE) {cudaError_t err = cudaMalloc(ptr,size);CHKERRCUDA(err);}
+  else if (mtype == PETSC_MEMTYPE_DEVICE) {
+    if (!PetscCUDAInitialized) { PetscErrorCode ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr); }
+    cudaError_t err = cudaMalloc(ptr,size);CHKERRCUDA(err);
+  }
   else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d", (int)mtype);
   PetscFunctionReturn(0);
 }
@@ -947,7 +950,7 @@ PetscErrorCode PetscSFLinkSetUp_Cuda(PetscSF sf,PetscSFLink link,MPI_Datatype un
 #endif
   } else {
     MPI_Aint lb,nbyte;
-    ierr = MPI_Type_get_extent(unit,&lb,&nbyte);CHKERRQ(ierr);
+    ierr = MPI_Type_get_extent(unit,&lb,&nbyte);CHKERRMPI(ierr);
     if (lb != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Datatype with nonzero lower bound %ld\n",(long)lb);
     if (nbyte % sizeof(int)) { /* If the type size is not multiple of int */
       if      (nbyte == 4) PackInit_DumbType<char,4,1>(link); else if (nbyte%4 == 0) PackInit_DumbType<char,4,0>(link);

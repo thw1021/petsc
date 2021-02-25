@@ -433,12 +433,12 @@ PetscErrorCode PetscViewerGetSubViewer_Draw(PetscViewer viewer,MPI_Comm comm,Pet
   if (vdraw->singleton_made) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Trying to get SubViewer without first restoring previous");
   /* only processor zero can use the PetscViewer draw singleton */
   if (sviewer) *sviewer = NULL;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRMPI(ierr);
   if (!rank) {
     PetscMPIInt flg;
     PetscDraw   draw,sdraw;
 
-    ierr = MPI_Comm_compare(PETSC_COMM_SELF,comm,&flg);CHKERRQ(ierr);
+    ierr = MPI_Comm_compare(PETSC_COMM_SELF,comm,&flg);CHKERRMPI(ierr);
     if (flg != MPI_IDENT && flg != MPI_CONGRUENT) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PetscViewerGetSubViewer() for PETSCVIEWERDRAW requires a singleton MPI_Comm");
     ierr = PetscViewerCreate(comm,sviewer);CHKERRQ(ierr);
     ierr = PetscViewerSetType(*sviewer,PETSCVIEWERDRAW);CHKERRQ(ierr);
@@ -475,7 +475,7 @@ PetscErrorCode PetscViewerRestoreSubViewer_Draw(PetscViewer viewer,MPI_Comm comm
 
   PetscFunctionBegin;
   if (!vdraw->singleton_made) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Trying to restore a singleton that was not gotten");
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRMPI(ierr);
   if (!rank) {
     PetscDraw draw,sdraw;
 
@@ -483,7 +483,7 @@ PetscErrorCode PetscViewerRestoreSubViewer_Draw(PetscViewer viewer,MPI_Comm comm
     ierr = PetscViewerDrawGetDraw(*sviewer,0,&sdraw);CHKERRQ(ierr);
     if (draw->savefilename) {
       draw->savefilecount = sdraw->savefilecount;
-      ierr = MPI_Bcast(&draw->savefilecount,1,MPIU_INT,0,PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+      ierr = MPI_Bcast(&draw->savefilecount,1,MPIU_INT,0,PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
     }
     svdraw = (PetscViewer_Draw*)(*sviewer)->data;
     for (i=0; i<vdraw->draw_max; i++) {
@@ -499,7 +499,7 @@ PetscErrorCode PetscViewerRestoreSubViewer_Draw(PetscViewer viewer,MPI_Comm comm
 
     ierr = PetscViewerDrawGetDraw(viewer,0,&draw);CHKERRQ(ierr);
     if (draw->savefilename) {
-      ierr = MPI_Bcast(&draw->savefilecount,1,MPIU_INT,0,PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+      ierr = MPI_Bcast(&draw->savefilecount,1,MPIU_INT,0,PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
     }
   }
 
@@ -795,14 +795,14 @@ PetscViewer  PETSC_VIEWER_DRAW_(MPI_Comm comm)
   if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_DRAW_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
   if (!flag) { /* PetscViewer not yet created */
     ierr = PetscViewerDrawOpen(ncomm,NULL,NULL,PETSC_DECIDE,PETSC_DECIDE,300,300,&viewer);
-    if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_DRAW_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
+    if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_DRAW_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_REPEAT," ");PetscFunctionReturn(NULL);}
     ierr = PetscObjectRegisterDestroy((PetscObject)viewer);
-    if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_DRAW_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
+    if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_DRAW_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_REPEAT," ");PetscFunctionReturn(NULL);}
     ierr = MPI_Comm_set_attr(ncomm,Petsc_Viewer_Draw_keyval,(void*)viewer);
     if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_DRAW_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
   }
   ierr = PetscCommDestroy(&ncomm);
-  if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_DRAW_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
+  if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_DRAW_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_REPEAT," ");PetscFunctionReturn(NULL);}
   PetscFunctionReturn(viewer);
 }
 

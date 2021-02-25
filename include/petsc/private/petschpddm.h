@@ -3,7 +3,7 @@
 
 #include <petsc/private/kspimpl.h>
 
-PETSC_EXTERN PetscLogEvent PC_HPDDM_Strc;
+#define PETSC_HPDDM_MAXLEVELS 9
 PETSC_EXTERN PetscLogEvent PC_HPDDM_PtAP;
 PETSC_EXTERN PetscLogEvent PC_HPDDM_PtBP;
 PETSC_EXTERN PetscLogEvent PC_HPDDM_Next;
@@ -36,6 +36,8 @@ struct PC_HPDDM {
   PetscInt                    N;          /* number of levels */
   PCHPDDMCoarseCorrectionType correction; /* type of coarse correction */
   PetscBool                   Neumann;    /* aux is the local Neumann matrix? */
+  PetscBool                   log_separate; /* separate events for each level? */
+  PetscBool                   share;      /* shared PC between SLEPc ST and the fine-level subdomain solver? */
   PetscErrorCode              (*setup)(Mat, PetscReal, Vec, Vec, PetscReal, IS, void*); /* setup function for the auxiliary matrix */
   void*                       setup_ctx;  /* context for setup */
 };
@@ -48,7 +50,6 @@ struct KSP_HPDDM {
   char                 cntl [5];
 };
 
-#define PETSC_HPDDM_MAXLEVELS 10
 #include <HPDDM.hpp>
 
 #endif /* PETSCHPDDM_H */

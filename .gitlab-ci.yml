@@ -62,6 +62,7 @@ check-ci-settings:
     - echo ${CONFIG_OPTS}
   script:
     - printf "PATH:$PATH\n"
+    - printf "PYTHONPATH:$PYTHONPATH\n"
     - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
     - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
     - ${PYTHON} ./configure --with-debugging=0 COPTFLAGS='-O -march=native' CXXOPTFLAGS='-O -march=native' FOPTFLAGS='-O -march=native' ${CONFIG_OPTS}
@@ -153,6 +154,7 @@ check-py-vermin:
   extends: .test
   script:
     - printf "PATH:$PATH\n"
+    - printf "PYTHONPATH:$PYTHONPATH\n"
     - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
     - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
     - printf "./config/examples/${TEST_ARCH}.py\n"
@@ -297,7 +299,7 @@ freebsd-c-single-opt:
 
 linux-cuda-double:
   extends:
-    - .stage-2
+    - .stage-3
     - .linux_test
   tags:
     - gpu:nvidia, os:linux, name:p1
@@ -447,7 +449,7 @@ linux-cuda11-complex:
 
 linux-cuda-double-64idx:
   extends:
-    - .stage-3
+    - .stage-2
     - .linux_test
   tags:
     - gpu:nvidia, os:linux, name:p1

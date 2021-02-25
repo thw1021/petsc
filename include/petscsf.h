@@ -4,19 +4,11 @@
 #if !defined(PETSCSF_H)
 #define PETSCSF_H
 #include <petscsys.h>
-#include <petscis.h>
 #include <petscsftypes.h>
+#include <petscvec.h> /* for Vec, VecScatter etc */
 
 PETSC_EXTERN PetscClassId PETSCSF_CLASSID;
 
-/*J
-    PetscSFType - String with the name of a PetscSF type
-
-   Level: beginner
-
-.seealso: PetscSFSetType(), PetscSF
-J*/
-typedef const char *PetscSFType;
 #define PETSCSFBASIC      "basic"
 #define PETSCSFNEIGHBOR   "neighbor"
 #define PETSCSFALLGATHERV "allgatherv"
@@ -120,6 +112,18 @@ PETSC_EXTERN PetscErrorCode PetscSFGetGroups(PetscSF,MPI_Group*,MPI_Group*);
 PETSC_EXTERN PetscErrorCode PetscSFGetMultiSF(PetscSF,PetscSF*);
 PETSC_EXTERN PetscErrorCode PetscSFCreateInverseSF(PetscSF,PetscSF*);
 
+/* Build PetscSF from PetscLayout */
+PETSC_EXTERN PetscErrorCode PetscSFSetGraphLayout(PetscSF,PetscLayout,PetscInt,const PetscInt*,PetscCopyMode,const PetscInt*);
+PETSC_EXTERN PetscErrorCode PetscSFCreateFromLayouts(PetscLayout,PetscLayout,PetscSF*);
+PETSC_DEPRECATED_FUNCTION("Use PetscSFCreateFromLayouts (since v3.15)")
+PETSC_STATIC_INLINE PetscErrorCode PetscLayoutsCreateSF(PetscLayout rmap, PetscLayout lmap, PetscSF* sf) { return PetscSFCreateFromLayouts(rmap, lmap, sf); }
+
+/* PetscSection interoperability */
+PETSC_EXTERN PetscErrorCode PetscSFSetGraphSection(PetscSF,PetscSection,PetscSection);
+PETSC_EXTERN PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF, PetscSection, PetscSection, PetscInt **);
+PETSC_EXTERN PetscErrorCode PetscSFDistributeSection(PetscSF, PetscSection, PetscInt **, PetscSection);
+PETSC_EXTERN PetscErrorCode PetscSFCreateSectionSF(PetscSF, PetscSection, PetscInt [], PetscSection, PetscSF *);
+
 /* Reduce rootdata to leafdata using provided operation */
 PETSC_EXTERN PetscErrorCode PetscSFBcastAndOpBegin(PetscSF,MPI_Datatype,const void*,void*,MPI_Op)
   PetscAttrMPIPointerWithType(3,2) PetscAttrMPIPointerWithType(4,2);
@@ -169,9 +173,8 @@ PETSC_EXTERN PetscErrorCode PetscSFComposeInverse(PetscSF,PetscSF,PetscSF*);
 #endif
 
 PETSC_DEPRECATED_FUNCTION("Use PetscSFGetRootRanks (since v3.12)")
-PETSC_STATIC_INLINE PetscErrorCode PetscSFGetRanks(PetscSF sf,PetscInt *nranks,const PetscMPIInt **ranks,const PetscInt **roffset,const PetscInt **rmine,const PetscInt **rremote) {
-  return PetscSFGetRootRanks(sf,nranks,ranks,roffset,rmine,rremote);
-}
+PETSC_STATIC_INLINE PetscErrorCode PetscSFGetRanks(PetscSF sf,PetscInt *nranks,const PetscMPIInt **ranks,const PetscInt **roffset,const PetscInt **rmine,const PetscInt **rremote)
+{ return PetscSFGetRootRanks(sf,nranks,ranks,roffset,rmine,rremote); }
 
 /*@C
    PetscSFBcastBegin - begin pointwise broadcast to be concluded with call to PetscSFBcastEnd()
@@ -190,13 +193,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFGetRanks(PetscSF sf,PetscInt *nranks,c
 
 .seealso: PetscSFCreate(), PetscSFSetGraph(), PetscSFView(), PetscSFBcastEnd(), PetscSFReduceBegin(), PetscSFBcastAndOpBegin()
 @*/
-PETSC_STATIC_INLINE PetscErrorCode PetscSFBcastBegin(PetscSF sf,MPI_Datatype unit,const void* rootdata,void* leafdata) {
-  return PetscSFBcastAndOpBegin(sf,unit,rootdata,leafdata,MPIU_REPLACE);
-}
+PETSC_STATIC_INLINE PetscErrorCode PetscSFBcastBegin(PetscSF sf,MPI_Datatype unit,const void* rootdata,void* leafdata)
+{ return PetscSFBcastAndOpBegin(sf,unit,rootdata,leafdata,MPIU_REPLACE); }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscSFBcastWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void* rootdata,PetscMemType leafmtype,void* leafdata) {
-  return PetscSFBcastAndOpWithMemTypeBegin(sf,unit,rootmtype,rootdata,leafmtype,leafdata,MPIU_REPLACE);
-}
+PETSC_STATIC_INLINE PetscErrorCode PetscSFBcastWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void* rootdata,PetscMemType leafmtype,void* leafdata)
+{ return PetscSFBcastAndOpWithMemTypeBegin(sf,unit,rootmtype,rootdata,leafmtype,leafdata,MPIU_REPLACE); }
 
 /*@C
    PetscSFBcastEnd - end a broadcast operation started with PetscSFBcastBegin()
@@ -215,8 +216,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFBcastWithMemTypeBegin(PetscSF sf,MPI_D
 
 .seealso: PetscSFSetGraph(), PetscSFReduceEnd()
 @*/
-PETSC_STATIC_INLINE PetscErrorCode PetscSFBcastEnd(PetscSF sf,MPI_Datatype unit,const void* rootdata,void* leafdata) {
-  return PetscSFBcastAndOpEnd(sf,unit,rootdata,leafdata,MPIU_REPLACE);
-}
+PETSC_STATIC_INLINE PetscErrorCode PetscSFBcastEnd(PetscSF sf,MPI_Datatype unit,const void* rootdata,void* leafdata)
+{ return PetscSFBcastAndOpEnd(sf,unit,rootdata,leafdata,MPIU_REPLACE); }
 
 #endif

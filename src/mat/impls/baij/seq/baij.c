@@ -1254,7 +1254,7 @@ PetscErrorCode MatSetOption_SeqBAIJ(Mat A,MatOption op,PetscBool flg)
   case MAT_UNUSED_NONZERO_LOCATION_ERR:
     a->nounused = (flg ? -1 : 0);
     break;
-  case MAT_NEW_DIAGONALS:
+  case MAT_FORCE_DIAGONAL_ENTRIES:
   case MAT_IGNORE_OFF_PROC_ENTRIES:
   case MAT_USE_HASH_TABLE:
   case MAT_SORTED_FULL:
@@ -1761,6 +1761,15 @@ PetscErrorCode MatGetValues_SeqBAIJ(Mat A,PetscInt m,const PetscInt im[],PetscIn
 finished:;
     }
   }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatPermute_SeqBAIJ(Mat A,IS rowp,IS colp,Mat *B)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatCreateSubMatrix(A,rowp,colp,MAT_INITIAL_MATRIX,B);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2641,7 +2650,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqBAIJ,
                                /* 54*/ MatFDColoringCreate_SeqXAIJ,
                                        NULL,
                                        NULL,
-                                       NULL,
+                                       MatPermute_SeqBAIJ,
                                        MatSetValuesBlocked_SeqBAIJ,
                                /* 59*/ MatCreateSubMatrix_SeqBAIJ,
                                        MatDestroy_SeqBAIJ,
@@ -3054,7 +3063,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJ(Mat B)
   Mat_SeqBAIJ    *b;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)B),&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)B),&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Comm must be of size 1");
 
   ierr    = PetscNewLog(B,&b);CHKERRQ(ierr);
@@ -3554,7 +3563,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_SeqBAIJ(MPI_Comm comm,Mat inmat,
   PetscMPIInt    size;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   if (size == 1 && scall == MAT_REUSE_MATRIX) {
     ierr = MatCopy(inmat,*outmat,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
   } else {

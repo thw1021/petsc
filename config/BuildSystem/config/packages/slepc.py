@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = 'v3.14.2'
+    self.gitcommit              = '82d9098f2edef769e151837d037bd2ce6d4f48e6' # master feb-1-2021
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
     self.includes               = []
@@ -53,13 +53,10 @@ class Configure(config.package.Package):
 
     if 'download-slepc-configure-arguments' in self.argDB and self.argDB['download-slepc-configure-arguments']:
       configargs = self.argDB['download-slepc-configure-arguments']
-      if '--download-slepc4py' in self.argDB['download-slepc-configure-arguments']:
-        ppath = 'PYTHONPATH='+os.path.join(self.installDir,'lib')+':${PYTHONPATH}'
-      else:
-        ppath = ''
+      if '--with-slepc4py' in self.argDB['download-slepc-configure-arguments']:
+        carg += ' PYTHONPATH='+os.path.join(self.installDir,'lib')+':${PYTHONPATH}'
     else:
       configargs = ''
-      ppath = ''
 
     self.addDefine('HAVE_SLEPC',1)
     self.addMakeMacro('SLEPC','yes')
@@ -68,18 +65,18 @@ class Configure(config.package.Package):
                           '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/slepc.errorflg',\
                           '@(cd '+self.packageDir+' && \\\n\
            '+carg+self.python.pyexe+' ./configure --with-clean --prefix='+prefix+' '+configargs+' && \\\n\
-           '+barg+'${OMAKE} '+barg+') > ${PETSC_ARCH}/lib/petsc/conf/slepc.log 2>&1 || \\\n\
+           '+barg+'${OMAKE} '+barg+') || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building SLEPc. Check ${PETSC_ARCH}/lib/petsc/conf/slepc.log" && \\\n\
+             echo "Error building SLEPc." && \\\n\
              echo "********************************************************************" && \\\n\
              touch ${PETSC_ARCH}/lib/petsc/conf/slepc.errorflg && \\\n\
              exit 1)'])
     self.addMakeRule('slepcinstall','', \
                        ['@echo "*** Installing SLEPc ***"',\
                           '@(cd '+self.packageDir+' && \\\n\
-           '+newuser+barg+'${OMAKE} install '+ppath+' '+barg+') >> ${PETSC_ARCH}/lib/petsc/conf/slepc.log 2>&1 || \\\n\
+           '+newuser+barg+'${OMAKE} install '+barg+')  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building SLEPc. Check ${PETSC_ARCH}/lib/petsc/conf/slepc.log" && \\\n\
+             echo "Error building SLEPc." && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)'])
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:

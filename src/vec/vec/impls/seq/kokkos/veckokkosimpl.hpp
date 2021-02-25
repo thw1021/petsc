@@ -1,7 +1,7 @@
 #if !defined(VECKOKKOSIMPL_HPP)
 #define VECKOKKOSIMPL_HPP
 
-#include <petscvec.hpp>
+#include <petscveckokkos.hpp>
 #include <Kokkos_Core.hpp>
 
 struct Vec_Kokkos {
@@ -26,14 +26,6 @@ struct Vec_Kokkos {
     }
   }
 };
-
-#if defined(PETSC_HAVE_CUDA)
-  #define WaitForKokkos() PetscCUDASynchronize ? (Kokkos::fence(),0) : 0
-#elif defined(PETSC_HAVE_HIP)
-  #define WaitForKokkos() PetscHIPSynchronize ? (Kokkos::fence(),0) : 0;
-#else
-  #define WaitForKokkos() 0;
-#endif
 
 PETSC_INTERN PetscErrorCode VecAbs_SeqKokkos(Vec);
 PETSC_INTERN PetscErrorCode VecReciprocal_SeqKokkos(Vec);
@@ -77,4 +69,8 @@ PETSC_INTERN PetscErrorCode VecResetArray_SeqKokkos_Private(Vec);
 PETSC_INTERN PetscErrorCode VecMin_SeqKokkos(Vec,PetscInt*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecMax_SeqKokkos(Vec,PetscInt*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecShift_SeqKokkos(Vec,PetscScalar);
+PETSC_INTERN PetscErrorCode VecGetArray_SeqKokkos(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecRestoreArray_SeqKokkos(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecGetArrayAndMemType_SeqKokkos(Vec,PetscScalar**,PetscMemType*);
+PETSC_INTERN PetscErrorCode VecRestoreArrayAndMemType_SeqKokkos(Vec,PetscScalar**);
 #endif

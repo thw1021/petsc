@@ -227,7 +227,7 @@ matrix entries to zero by calling ``MatZeroEntries()``. See
 :any:`sec_othermat` for details on the reuse of the matrix
 context.
 
-The directory ``${PETSC_DIR}/src/snes/tutorials`` provides a variety of
+The directory ``$PETSC_DIR/src/snes/tutorials`` provides a variety of
 examples.
 
 .. _sec_nlsolvers:
@@ -1156,6 +1156,8 @@ is used to indicate that one is solving a variational inequality. The
 option ``-snes_vi_monitor`` turns on extra monitoring of the active set
 associated with the bounds and ``-snes_vi_type`` allows selecting from
 several VI solvers, the default is preferred.
+
+.. _sec_snespc:
 
 Nonlinear Preconditioning
 ~~~~~~~~~~~~~~~~~~~~~~~~~
