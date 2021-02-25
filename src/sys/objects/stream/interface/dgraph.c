@@ -49,7 +49,7 @@ PetscErrorCode PetscStreamGraphCaptureBegin(PetscStreamGraph sgraph, PetscStream
   PetscCheckValidSameStreamType(sgraph,1,pstream,2);
   if (PetscUnlikelyDebug(!sgraph->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamGraphSetUp() first");
   if (PetscUnlikelyDebug(!pstream->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamSetUp() first");
-  if (PetscUnlikely(sgraph->capStrmId != PETSC_DEFAULT)) SETERRQ(PETSC_COM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Graph is already capturing another stream, must call PetscStreamGraphCaptureEnd() first");
+  if (PetscUnlikely(sgraph->capStrmId != PETSC_DEFAULT)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Graph is already capturing another stream, must call PetscStreamGraphCaptureEnd() first");
   ierr = (*pstream->ops->capturebegin)(pstream);CHKERRQ(ierr);
   sgraph->capStrmId = pstream->id;
   PetscFunctionReturn(0);
@@ -61,7 +61,7 @@ PetscErrorCode PetscStreamGraphCaptureEnd(PetscStreamGraph sgraph, PetscStream p
   PetscCheckValidSameStreamType(sgraph,1,pstream,2);
   if (PetscUnlikelyDebug(!sgraph->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamGraphSetUp() first");
   if (PetscUnlikelyDebug(!pstream->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamSetUp() first");
-  if (PetscUnlikely(sgraph->capStrmId != PETSC_DEFAULT)) SETERRQ(PETSC_COM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Graph is already capturing another stream, must call PetscStreamGraphCaptureEnd() first");
+  if (PetscUnlikely(sgraph->capStrmId != PETSC_DEFAULT)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Graph is already capturing another stream, must call PetscStreamGraphCaptureEnd() first");
   ierr = (*pstream->ops->captureend)(pstream, sgraph);CHKERRQ(ierr);
   sgraph->capStrmId = PETSC_DEFAULT;
   PetscFunctionReturn(0);
@@ -74,7 +74,7 @@ PetscErrorCode PetscStreamGraphAssemble(PetscStreamGraph sgraph, PetscGraphAssem
   PetscFunctionBegin;
   PetscValidStreamType(sgraph,1);
   if (PetscUnlikelyDebug(!sgraph->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamGraphSetUp() first");
-  if (PetscUnlikely(sgraph->capStrmId != PETSC_DEFAULT)) SETERRQ(PETSC_COM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Graph is already capturing another stream, must call PetscStreamGraphCaptureEnd() first");
+  if (PetscUnlikely(sgraph->capStrmId != PETSC_DEFAULT)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Graph is already capturing another stream, must call PetscStreamGraphCaptureEnd() first");
   if (sgraph->assembled && type == PETSC_GRAPH_INIT_ASSEMBLY) PetscFunctionReturn(0);
   ierr = (*sgraph->ops->assemble)(sgraph, type);CHKERRQ(ierr);
   sgraph->assembled = PETSC_TRUE;
