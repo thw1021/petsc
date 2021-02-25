@@ -7,29 +7,6 @@
 PETSC_EXTERN PetscBool PetscStreamRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode PetscStreamRegisterAll(void);
 
-typedef struct _StreamOps *StreamOps;
-struct _StreamOps {
-  PetscErrorCode (*create)(PetscStream);
-  PetscErrorCode (*destroy)(PetscStream);
-  PetscErrorCode (*setup)(PetscStream);
-  PetscErrorCode (*getstream)(PetscStream,void*);
-  PetscErrorCode (*restorestream)(PetscStream,void*);
-  PetscErrorCode (*recordevent)(PetscStream,PetscEvent);
-  PetscErrorCode (*waitevent)(PetscStream,PetscEvent);
-  PetscErrorCode (*synchronize)(PetscStream);
-  PetscErrorCode (*query)(PetscStream,PetscBool*);
-};
-
-struct _n_PetscStream {
-  struct _StreamOps ops[1];
-  PetscInt          id;
-  PetscBool         idle;
-  PetscBool         setup;
-  PetscStreamType   type;
-  PetscStreamMode   mode;
-  void              *data;
-};
-
 #define PetscValidStreamType(_p_strm__,_p_arg__)                        \
   do {                                                                  \
     if (PetscUnlikelyDebug((_p_strm__)->type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_TYPENOTSET,"PetscStreamType is not set: Argument # %d",_p_arg__); \
@@ -49,6 +26,31 @@ struct _n_PetscStream {
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"PetscStreamType %d is incompatible with other PetscStreamType %d in arguments #%d and #%d",(int)((_p_strm1__)->type),(int)((_p_strm2__)->type),(_p_arg1__),(_p_arg2__)); \
     }                                                                   \
 } while (0)
+
+typedef struct _StreamOps *StreamOps;
+struct _StreamOps {
+  PetscErrorCode (*create)(PetscStream);
+  PetscErrorCode (*destroy)(PetscStream);
+  PetscErrorCode (*setup)(PetscStream);
+  PetscErrorCode (*getstream)(PetscStream,void*);
+  PetscErrorCode (*restorestream)(PetscStream,void*);
+  PetscErrorCode (*recordevent)(PetscStream,PetscEvent);
+  PetscErrorCode (*waitevent)(PetscStream,PetscEvent);
+  PetscErrorCode (*synchronize)(PetscStream);
+  PetscErrorCode (*query)(PetscStream,PetscBool*);
+  PetscErrorCode (*capturebegin)(PetscStream);
+  PetscErrorCode (*captureend)(PetscStream,PetscStreamGraph);
+};
+
+struct _n_PetscStream {
+  struct _StreamOps ops[1];
+  PetscInt          id;
+  PetscBool         idle;
+  PetscBool         setup;
+  PetscStreamType   type;
+  PetscStreamMode   mode;
+  void              *data;
+};
 
 typedef struct _EventOps *EventOps;
 struct _EventOps {
@@ -125,6 +127,7 @@ struct _n_PetscStreamGraph {
   PetscBool        setup;
   PetscBool        assembled;
   PetscStreamType  type;
+  PetscInt         capStrmId;
   void             *data;
 };
 
