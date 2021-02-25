@@ -425,14 +425,15 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
       for (f = 0; f < ce->Nf; ++f) {
         PetscSection s, fs;
         PetscInt     lsize;
+        PetscInt     idx = selfError ? r - 1 : r;
 
         /* Could use DMGetOutputDM() to add in Dirichlet dofs */
-        ierr = DMGetLocalSection(dm[r], &s);CHKERRQ(ierr);
+        ierr = DMGetLocalSection(dm[idx], &s);CHKERRQ(ierr);
         ierr = PetscSectionGetField(s, f, &fs);CHKERRQ(ierr);
         ierr = PetscSectionGetConstrainedStorageSize(fs, &lsize);CHKERRQ(ierr);
-        ierr = MPI_Allreduce(&lsize, &ce->dofs[r*ce->Nf+f], 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject) snes));CHKERRMPI(ierr);
-        ierr = PetscLogEventSetDof(ce->event, f, ce->dofs[r*ce->Nf+f]);CHKERRQ(ierr);
-        ierr = PetscLogEventSetError(ce->event, f, ce->errors[r*ce->Nf+f]);CHKERRQ(ierr);
+        ierr = MPI_Allreduce(&lsize, &ce->dofs[idx*ce->Nf+f], 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject) snes));CHKERRMPI(ierr);
+        ierr = PetscLogEventSetDof(ce->event, f, ce->dofs[idx*ce->Nf+f]);CHKERRQ(ierr);
+        ierr = PetscLogEventSetError(ce->event, f, ce->errors[idx*ce->Nf+f]);CHKERRQ(ierr);
       }
       /* Monitor */
       ierr = PetscConvEstMonitorDefault(ce, selfError ? r - 1 : r);CHKERRQ(ierr);
