@@ -1153,7 +1153,9 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat B,Mat A,const MatFac
   THRUSTINTARRAY               *icol_d;
 
   PetscFunctionBegin;
-  if (A->rmap->n != n) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"square matrices only supported %D %D",A->rmap->n,n);
+  if (A->rmap->n != n) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"only square matrices supported %D %D",A->rmap->n,n);
+  ierr = MatGetOption(A,MAT_STRUCTURALLY_SYMMETRIC,&row_identity);CHKERRQ(ierr);
+  if (!row_identity) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"only structrally symmetric matrices supported");
   // cusparse setup
   if (!cusparseTriFactors) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cusparseTriFactors");
   if (!cusparsestruct) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cusparsestruct");
