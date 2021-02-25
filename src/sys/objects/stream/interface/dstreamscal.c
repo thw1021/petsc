@@ -79,7 +79,7 @@ PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscCheckValidSameStreamType(pscal,1,pstream,4);
+  PetscValidStreamType(pscal,1);
   if (pscal->setup) PetscFunctionReturn(0);
   ierr = PetscEventCreate(&pscal->event);CHKERRQ(ierr);
   ierr = PetscEventSetType(pscal->event, pscal->type);CHKERRQ(ierr);
@@ -391,7 +391,7 @@ PetscErrorCode PetscStreamScalarGetInfo(PetscStreamScalar pscal, PSSCacheType ct
       const PetscScalar *host;
       PetscErrorCode    ierr;
 
-      PetscValidSameStreamType(pscal,1,pstream,5);
+      PetscCheckValidSameStreamType(pscal,1,pstream,5);
       /* Forces cache to be updated */
       ierr = PetscStreamScalarGetHostRead(pscal,&host,pstream);CHKERRQ(ierr);
     }
@@ -514,7 +514,7 @@ PetscErrorCode PetscStreamScalarAYDX(PetscScalar alpha, PetscStreamScalar pscalx
   if (alpha == (PetscScalar)0.0) {
     ierr = PetscStreamScalarSetValue(pscalx, NULL, PETSC_MEMTYPE_DEVICE, pstream);CHKERRQ(ierr);
   } else if (pscalx == pscaly) {
-    ierr = PetscStreaScalarSetValue(pscalx, &alpha, PETSC_MEMTYPE_HOST, pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarSetValue(pscalx, &alpha, PETSC_MEMTYPE_HOST, pstream);CHKERRQ(ierr);
   } else {
     ierr = (*pscalx->ops->aydx)(alpha, pscalx, pscaly, pstream);CHKERRQ(ierr);
   }
