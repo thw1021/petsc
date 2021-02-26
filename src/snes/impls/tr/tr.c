@@ -723,6 +723,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
   neP->auto_scale_multiphase = PETSC_FALSE;
   neP->auto_scale_max = -1.0;
   neP->rho_satisfied = PETSC_FALSE;
-  snes->deltatol = 1.e-8;
+  snes->deltatol = 1.e-12;
   PetscFunctionReturn(0);
 }
