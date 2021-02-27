@@ -1,7 +1,7 @@
 #include "streamcuda.h"
 
 #if PetscDefined(HAVE_CUDA)
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphDestroy_CUDA(PetscStreamGraph sgraph)
+PetscErrorCode PetscStreamGraphDestroy_CUDA(PetscStreamGraph sgraph)
 {
   PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
   PetscErrorCode        ierr;
@@ -14,7 +14,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphDestroy_CUDA(PetscStreamGraph
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGraph sgraph, PetscGraphAssemblyType type)
+PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGraph sgraph, PetscGraphAssemblyType type)
 {
   PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
   cudaError_t           cerr;
@@ -23,7 +23,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGrap
   switch (type) {
   case PETSC_GRAPH_UPDATE_ASSEMBLY:
     if (psgc->cexec) {
-      cudaGraphUpdateResult update;
+      enum cudaGraphExecUpdateResult update;
 
       cerr = cudaGraphExecUpdate(psgc->cexec, psgc->cgraph, NULL, &update);
       if (PetscUnlikely(cerr != cudaSuccess)) {
@@ -39,11 +39,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGrap
     }
   case PETSC_GRAPH_INIT_ASSEMBLY:
   {
-    char[PETSC_MAX_PATH_LEN] ebuff = {0};
+    char ebuff[PETSC_MAX_PATH_LEN] = {0};
 
     if (psgc->cexec) {cerr = cudaGraphExecDestroy(psgc->cexec);CHKERRCUDA(cerr);}
     cerr = cudaGraphInstantiate(&psgc->cexec, psgc->cgraph, NULL, ebuff, PETSC_MAX_PATH_LEN);
-    if (PetscUnlikely(cerr != cudaSucess)) {
+    if (PetscUnlikely(cerr != cudaSuccess)) {
       const char *name  = cudaGetErrorName(cerr);
       const char *descr = cudaGetErrorString(cerr);
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d (%s) : %s, cudaGaph error: %s",(int)cerr,name,descr,ebuff);
@@ -55,18 +55,35 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGrap
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphExec_CUDA(PetscStreamGraph sgraph, PetscStream pstream)
+PetscErrorCode PetscStreamGraphExecute_CUDA(PetscStreamGraph sgraph, PetscStream pstream)
 {
   PetscStreamGraph_CUDA    *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
   PetscStream_CUDA         *psc = (PetscStream_CUDA *)pstream->data;
   cudaError_t              cerr;
 
   PetscFunctionBegin;
-  cerr = cudaGraphLaunc(psgc->cexec, psc->cstream);CHKERRCUDA(cerr);
+  cerr = cudaGraphLaunch(psgc->cexec, psc->cstream);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamGetGraph_CUDA(PetscStreamGraph sgraph, void *gptr)
+PetscErrorCode PetscStreamGraphDuplicate_CUDA(PetscStreamGraph sgraphref, PetscStreamGraph sgraphdup)
+{
+  PetscStreamGraph_CUDA *psgcref = (PetscStreamGraph_CUDA *)sgraphref->data;
+  PetscStreamGraph_CUDA *psgcdup = (PetscStreamGraph_CUDA *)sgraphdup->data;
+  cudaError_t           cerr;
+  PetscErrorCode        ierr;
+
+  PetscFunctionBegin;
+  if (PetscUnlikely(!psgcref->cgraph)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Reference graph has no graph to duplicate");
+  cerr = cudaGraphClone(&psgcdup->cgraph, psgcref->cgraph);CHKERRCUDA(cerr);
+  if (sgraphref->assembled) {
+    ierr = PetscStreamGraphAssemble_CUDA(sgraphdup, PETSC_GRAPH_INIT_ASSEMBLY);CHKERRQ(ierr);
+    sgraphdup->assembled = PETSC_TRUE;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamGraphGetGraph_CUDA(PetscStreamGraph sgraph, void *gptr)
 {
   PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
 
@@ -75,7 +92,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamGetGraph_CUDA(PetscStreamGraph sgr
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamRestoreGraph_CUDA(PetscStreamGraph sgraph, void *gptr)
+PetscErrorCode PetscStreamGraphRestoreGraph_CUDA(PetscStreamGraph sgraph, void *gptr)
 {
   PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
 
@@ -91,7 +108,8 @@ static const struct _GraphOps gcuops = {
   PetscStreamGraphDestroy_CUDA,
   NULL,
   PetscStreamGraphAssemble_CUDA,
-  PetscStreamGraphExec_CUDA,
+  PetscStreamGraphExecute_CUDA,
+  PetscStreamGraphDuplicate_CUDA,
   PetscStreamGraphGetGraph_CUDA,
   PetscStreamGraphRestoreGraph_CUDA
 };

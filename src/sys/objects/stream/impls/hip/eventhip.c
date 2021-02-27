@@ -1,7 +1,7 @@
 #include "streamhip.h"
 
 #if PetscDefined(HAVE_HIP)
-static PetscErrorCode PetscEventDestroy_HIP(PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscEventDestroy_HIP(PetscEvent event)
 {
   PetscEvent_HIP *peh = (PetscEvent_HIP *)event->data;
   PetscErrorCode ierr;
@@ -13,7 +13,7 @@ static PetscErrorCode PetscEventDestroy_HIP(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscEventSetup_HIP(PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscEventSetup_HIP(PetscEvent event)
 {
   PetscEvent_HIP *peh = (PetscEvent_HIP *)event->data;
   hipError_t     herr;
@@ -23,7 +23,7 @@ static PetscErrorCode PetscEventSetup_HIP(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscEventSynchronize_HIP(PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscEventSynchronize_HIP(PetscEvent event)
 {
   PetscEvent_HIP *peh = (PetscEvent_HIP *)event->data;
   hipError_t     herr;
@@ -33,7 +33,7 @@ static PetscErrorCode PetscEventSynchronize_HIP(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscEventQuery_HIP(PetscEvent event, PetscBool *busy)
+PETSC_STATIC_INLINE PetscErrorCode PetscEventQuery_HIP(PetscEvent event, PetscBool *busy)
 {
   PetscEvent_HIP *peh = (PetscEvent_HIP *)event->data;
 
@@ -46,7 +46,7 @@ static PetscErrorCode PetscEventQuery_HIP(PetscEvent event, PetscBool *busy)
   PetscFunctionReturn(0);
 }
 
-static struct _EventOps ehops = {
+static const struct _EventOps ehops = {
   PetscEventCreate_HIP,
   PetscEventDestroy_HIP,
   PetscEventSetup_HIP,
@@ -55,7 +55,7 @@ static struct _EventOps ehops = {
 };
 #endif /* HAVE_HIP */
 
-PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent event)
+PetscErrorCode PetscEventCreate_HIP(PetscEvent event)
 {
   PetscFunctionBegin;
 #if PetscDefined(HAVE_HIP)
@@ -68,7 +68,7 @@ PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent event)
     ierr = PetscMemcpy(event->ops, &ehops, sizeof(ehops));CHKERRQ(ierr);
   }
 #else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with HIP support\n");
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with HIP support");
 #endif
   PetscFunctionReturn(0);
 }

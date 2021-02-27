@@ -1,5 +1,20 @@
 #include <petsc/private/deviceimpl.h>
 
+/*@C
+  PetscStreamGraphCreate - Creates an empty PetscStreamGraph object. The type can then be set with PetscStreamSetType().
+
+  Not Collective
+
+  Output Parameter:
+. sgraph  - A pointer to the allocated PetscStreamGraph object
+
+  Notes:
+  You must set the stream type before using the returned object, otherwise an error is generatedon debug builds.
+
+  Level: beginner
+
+.seealso: PetscStreamGraphDestroy(), PetscStreamGraphSetType(), PetscStreamGraphSetUp()
+@*/
 PetscErrorCode PetscStreamGraphCreate(PetscStreamGraph *sgraph)
 {
   PetscStreamGraph sg;
@@ -19,6 +34,18 @@ PetscErrorCode PetscStreamGraphCreate(PetscStreamGraph *sgraph)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphDestroy - Destroys a PetscStreamGraph.
+
+  Not Collective
+
+  Input Parameter:
+. sgraph  - A pointer to the PetscStreamGraph to destroy
+
+  Level: beginner
+
+.seealso: PetscStreamGraphCreate(), PetscStreamGraphSetType(), PetscStreamGraphSetUp()
+@*/
 PetscErrorCode PetscStreamGraphDestroy(PetscStreamGraph *sgraph)
 {
   PetscErrorCode ierr;
@@ -31,6 +58,18 @@ PetscErrorCode PetscStreamGraphDestroy(PetscStreamGraph *sgraph)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphSetUp - Sets up internal data structures for use.
+
+  Not Collective
+
+  Input Parameter:
+. sgraph  - The PetscStreamGraph object
+
+  Level: beginner
+
+.seealso: PetscStreamGraphCreate(), PetscStreamGraphSetType(), PetscStreamGraphCaptureBegin(), PetscStreamGraphCaptureEnd()
+@*/
 PetscErrorCode PetscStreamGraphSetUp(PetscStreamGraph sgraph)
 {
   PetscErrorCode ierr;
@@ -43,8 +82,27 @@ PetscErrorCode PetscStreamGraphSetUp(PetscStreamGraph sgraph)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphCaptureBegin - Begins capture of actions on a stream
+
+  Not Collective
+
+  Input Parameters:
++ sgraph - The PetscStreamGraph object
+- pstream - The PetscStream to capture
+
+  developer notes:
+  This routine doesn't actually call anything on the graph object, but since the "End" variant actually creates the
+  graph it lives here.
+
+  Level: beginner
+
+.seealso: PetscStreamGraphCreate(), PetscStreamGraphSetType(), PetscStreamGraphSetUp(), PetscStreamGraphCaptureEnd()
+@*/
 PetscErrorCode PetscStreamGraphCaptureBegin(PetscStreamGraph sgraph, PetscStream pstream)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscCheckValidSameStreamType(sgraph,1,pstream,2);
   if (PetscUnlikelyDebug(!sgraph->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamGraphSetUp() first");
@@ -55,8 +113,27 @@ PetscErrorCode PetscStreamGraphCaptureBegin(PetscStreamGraph sgraph, PetscStream
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphCaptureEnd - Ends capture of a PetscStream and creates a graph blueprint from it
+
+  Not Collective
+
+  Input Parameters:
++ sgraph - The PetscStreamGraph object
+- pstream - The PetscStream being captured
+
+  Notes:
+  The PetscStream passed to this routine must be the same PetscStream passed to a previous PetscStreamGraphCaptureBegin()
+
+  Level: beginner
+
+.seealso: PetscStreamGraphCreate(), PetscStreamGraphSetType(), PetscStreamGraphSetUp(), PetscStreamGraphCaptureBegin(),
+PetscStreamGraphAssemble(), PetscStreamGraphExecute()
+@*/
 PetscErrorCode PetscStreamGraphCaptureEnd(PetscStreamGraph sgraph, PetscStream pstream)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscCheckValidSameStreamType(sgraph,1,pstream,2);
   if (PetscUnlikelyDebug(!sgraph->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamGraphSetUp() first");
@@ -67,6 +144,24 @@ PetscErrorCode PetscStreamGraphCaptureEnd(PetscStreamGraph sgraph, PetscStream p
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphAssemble - Assembles a graph from a graph blueprint
+
+  Not Collective
+
+  Input Parameters:
++ sgraph - The PetscStreamGraph object
+- type - The type of assembly for the graph
+
+  Notes:
+  Must have called PetscStreamGraphCaptureBegin()/PetscStreamGraphCaptureEnd() on the graph first.
+
+  See PetscGraphAssemblyType for further information on the graph assembly types.
+
+  Level: beginner
+
+.seealso: PetscStreamGraphCaptureBegin(), PetscStreamGraphCaptureEnd(), PetscStreamGraphExecute(), PetscGraphAssemblyType
+@*/
 PetscErrorCode PetscStreamGraphAssemble(PetscStreamGraph sgraph, PetscGraphAssemblyType type)
 {
   PetscErrorCode ierr;
@@ -81,6 +176,24 @@ PetscErrorCode PetscStreamGraphAssemble(PetscStreamGraph sgraph, PetscGraphAssem
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphExecute - Launches an assembled graph
+
+  Not Collective
+
+  Input Parameters:
++ sgraph - The PetscStreamGraph object
+- pstream - The PetscStream on which to launch the graph
+
+  Notes:
+  The stream used to capture the graph and the one passed to this routine need not be the same. The graph execution
+  obeys regular stream ordering semantics. Only a single stream may execute a graph at a time, you must duplicate the
+  graph using PetscStreamGraphDuplicate().
+
+  Level: beginner
+
+.seealso: PetscStreamGraphCaptureBegin(), PetscStreamGraphCaptureEnd(), PetscStreamGraphDuplicate()
+@*/
 PetscErrorCode PetscStreamGraphExecute(PetscStreamGraph sgraph, PetscStream pstream)
 {
   PetscErrorCode ierr;
@@ -93,6 +206,59 @@ PetscErrorCode PetscStreamGraphExecute(PetscStreamGraph sgraph, PetscStream pstr
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphDuplicate - Duplicates a PetscStreamGraph
+
+  Not Collective
+
+  Input Parameter:
+. sgraphref - The PetscStreamGraph object to duplicate
+
+  Output Parameter:
+. sgraphdup - The duplicate PetscStreamGraph
+
+  Notes:
+  If the reference graph as assembled the duplicate graph will also be assembled.
+
+  Level: beginner
+
+.seealso: PetscStreamGraphCreate(), PetscStreamGraphCaptureBegin(), PetscStreamGraphCaptureEnd(), PetscStreamGraphExecute()
+@*/
+PetscErrorCode PetscStreamGraphDuplicate(PetscStreamGraph sgraphref, PetscStreamGraph *sgraphdup)
+{
+  PetscStreamType  type;
+  PetscStreamGraph dup;
+  PetscErrorCode   ierr;
+
+  PetscFunctionBegin;
+  PetscValidStreamType(sgraphref,1);
+  ierr = PetscStreamGraphGetType(sgraphref,&type);CHKERRQ(ierr);
+  ierr = PetscStreamGraphCreate(&dup);CHKERRQ(ierr);
+  ierr = PetscStreamGraphSetType(dup,type);CHKERRQ(ierr);
+  ierr = PetscStreamGraphSetUp(dup);CHKERRQ(ierr);
+  ierr = (*sgraphref->ops->duplicate)(sgraphref,dup);CHKERRQ(ierr);
+  *sgraphdup = dup;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscStreamGraphGetGraph - Retrieves the implementation specific graph
+
+  Not Collective
+
+  Input Parameter:
+. sgraph - The PetscStreamGraph object
+
+  Output Parameter:
+. gptr - A pointer to the graph object
+
+  Notes:
+  This is a borrowed reference, the user should not free it
+
+  Level: advanced
+
+.seealso: PetscStreamGraphRestoreGraph(), PetscStreamGraphCreate()
+@*/
 PetscErrorCode PetscStreamGraphGetGraph(PetscStreamGraph sgraph, void *gptr)
 {
   PetscErrorCode ierr;
@@ -105,6 +271,22 @@ PetscErrorCode PetscStreamGraphGetGraph(PetscStreamGraph sgraph, void *gptr)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphRestoreGraph - Restores the implementation specific graph
+
+  Not Collective
+
+  Input Parameters:
++ sgraph - The PetscStreamGraph object
+- gptr - A pointer to the graph object
+
+  Notes:
+  The restored graph must be the same graph that was checked out via PetscStreamGraphGetGraph() (but may be altered)
+
+  Level: advanced
+
+.seealso: PetscStreamGraphGetGraph(), PetscStreamGraphCreate()
+@*/
 PetscErrorCode PetscStreamGraphRestoreGraph(PetscStreamGraph sgraph, void *gptr)
 {
   PetscErrorCode ierr;

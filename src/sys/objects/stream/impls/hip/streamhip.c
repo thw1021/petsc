@@ -1,7 +1,7 @@
 #include "streamhip.h"
 
 #if PetscDefined(HAVE_HIP)
-static PetscErrorCode PetscStreamDestroy_HIP(PetscStream strm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamDestroy_HIP(PetscStream strm)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
   PetscErrorCode   ierr;
@@ -13,7 +13,7 @@ static PetscErrorCode PetscStreamDestroy_HIP(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamSetUp_HIP(PetscStream strm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamSetUp_HIP(PetscStream strm)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
   hipError_t      herr;
@@ -23,7 +23,7 @@ static PetscErrorCode PetscStreamSetUp_HIP(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamGetStream_HIP(PetscStream strm, void *dstrm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamGetStream_HIP(PetscStream strm, void *dstrm)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
 
@@ -32,18 +32,18 @@ static PetscErrorCode PetscStreamGetStream_HIP(PetscStream strm, void *dstrm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamRestoreStream_HIP(PetscStream strm, void *dstrm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamRestoreStream_HIP(PetscStream strm, void *dstrm)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(*((hipStream_t*) dstrm) != psh->hstream)) {
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"HIP stream is not the same as the one that was checked out\n");
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"HIP stream is not the same as the one that was checked out");
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamRecordEvent_HIP(PetscStream strm, PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamRecordEvent_HIP(PetscStream strm, PetscEvent event)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
   hipError_t      herr;
@@ -53,7 +53,7 @@ static PetscErrorCode PetscStreamRecordEvent_HIP(PetscStream strm, PetscEvent ev
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamWaitEvent_HIP(PetscStream strm, PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamWaitEvent_HIP(PetscStream strm, PetscEvent event)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
   hipError_t      herr;
@@ -63,7 +63,7 @@ static PetscErrorCode PetscStreamWaitEvent_HIP(PetscStream strm, PetscEvent even
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamSynchronize_HIP(PetscStream strm)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronize_HIP(PetscStream strm)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
   hipError_t      herr;
@@ -73,7 +73,7 @@ static PetscErrorCode PetscStreamSynchronize_HIP(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscStreamQuery_HIP(PetscStream strm, PetscBool *busy)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamQuery_HIP(PetscStream strm, PetscBool *busy)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
 
@@ -86,7 +86,7 @@ static PetscErrorCode PetscStreamQuery_HIP(PetscStream strm, PetscBool *busy)
   PetscFunctionReturn(0);
 }
 
-static struct _StreamOps hipops = {
+static const struct _StreamOps hipops = {
   PetscStreamCreate_HIP,
   PetscStreamDestroy_HIP,
   PetscStreamSetUp_HIP,
@@ -99,7 +99,7 @@ static struct _StreamOps hipops = {
 };
 #endif /* HAVE_HIP */
 
-PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream strm)
+PetscErrorCode PetscStreamCreate_HIP(PetscStream strm)
 {
   PetscFunctionBegin;
 #if PetscDefined(HAVE_HIP)
@@ -112,7 +112,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream strm)
     ierr = PetscMemcpy(strm->ops, &hipops, sizeof(hipops));CHKERRQ(ierr);
   }
 #else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with HIP support\n");
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with HIP support");
 #endif
   PetscFunctionReturn(0);
 }

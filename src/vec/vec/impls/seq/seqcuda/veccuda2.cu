@@ -348,11 +348,11 @@ PetscErrorCode VecAXPY_SeqCUDAAsync(Vec yin,PetscStreamScalar pscal,Vec xin,Pets
     ierr = PetscLogGpuFlops(2.0*yin->map->n);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpu(sizeof(PetscScalar));CHKERRQ(ierr);
   } else {
-    const PetscScalar *alpha;
+    PetscScalar alpha;
 
     /* Do on host */
-    ierr = PetscStreamScalarGetHostRead(pscal,&alpha,pstream);CHKERRQ(ierr);
-    ierr = VecAXPY_Seq(yin,*alpha,xin);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAwait(pscal,&alpha,pstream);CHKERRQ(ierr);
+    ierr = VecAXPY_Seq(yin,alpha,xin);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1028,21 +1028,9 @@ PetscErrorCode VecMDot_SeqCUDAAsync(Vec xin,PetscInt nv,const Vec yin[],PetscStr
   if (nv <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to VecMDot_SeqCUDA not positive.");
   /* Handle the case of local size zero first */
   if (!xin->map->n) {
-    PetscScalar **hptrarr;
-
-    ierr = PetscMalloc1(nv, &hptrarr);CHKERRQ(ierr);
     for (i = 0; i < nv; ++i) {
-      /* Post requests for all of the host arrays */
-      ierr = PetscStreamScalarGetHostWrite(pscal[i],hptrarr+i,pstream);CHKERRQ(ierr);
+      ierr = PetscStreamScalarSetValue(pscal[i],NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
     }
-    /* Fence for all requests */
-    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
-    for (i = 0; i < nv; ++i) {
-      /* Zero them all out and commit */
-      *(hptrarr[i]) = (PetscScalar)0.0;
-      ierr = PetscStreamScalarRestoreHostWrite(pscal[i],hptrarr+i,pstream);CHKERRQ(ierr);
-    }
-    ierr = PetscFree(hptrarr);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
 
