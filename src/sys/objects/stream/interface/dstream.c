@@ -311,8 +311,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronizeDevice_Private(PetscStr
   All work is guaranteed to have been completed only after the host thread returns from this function. As it hard-stops
   the host thread, this routine should only be used as a last resort between asynchronous calls, or at the end of a set
   of asynchronous calls.
- The user should almost never have reason to call this routine directly, as any asynchronous routines may invoke it if
-  necessary.
 
   Level: advanced
 
@@ -330,7 +328,9 @@ PetscErrorCode PetscStreamSynchronize(PetscStream strm)
     break;
   case PETSC_STREAM_DEFAULT_BLOCKING:
   case PETSC_STREAM_GLOBAL_NONBLOCKING:
-    if (strm->idle) break;
+    if (!PetscDefined(USE_DEBUG)) {
+      if (strm->idle) break;
+    }
     ierr = (*strm->ops->synchronize)(strm);CHKERRQ(ierr);
     strm->idle = PETSC_TRUE;
   default:
