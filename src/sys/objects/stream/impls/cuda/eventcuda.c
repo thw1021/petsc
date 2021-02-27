@@ -1,7 +1,7 @@
 #include "streamcuda.h"
 
 #if PetscDefined(HAVE_CUDA)
-static PetscErrorCode PetscEventDestroy_CUDA(PetscEvent event)
+PetscErrorCode PetscEventDestroy_CUDA(PetscEvent event)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
   PetscErrorCode  ierr;
@@ -13,7 +13,7 @@ static PetscErrorCode PetscEventDestroy_CUDA(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscEventSetup_CUDA(PetscEvent event)
+PetscErrorCode PetscEventSetup_CUDA(PetscEvent event)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
   cudaError_t     cerr;
@@ -23,7 +23,7 @@ static PetscErrorCode PetscEventSetup_CUDA(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscEventSynchronize_CUDA(PetscEvent event)
+PetscErrorCode PetscEventSynchronize_CUDA(PetscEvent event)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
   cudaError_t     cerr;
@@ -33,7 +33,7 @@ static PetscErrorCode PetscEventSynchronize_CUDA(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscEventQuery_CUDA(PetscEvent event, PetscBool *busy)
+PetscErrorCode PetscEventQuery_CUDA(PetscEvent event, PetscBool *busy)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
 
@@ -55,7 +55,7 @@ static const struct _EventOps ecuops = {
 };
 #endif /* HAVE_CUDA */
 
-PETSC_EXTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent event)
+PetscErrorCode PetscEventCreate_CUDA(PetscEvent event)
 {
   PetscFunctionBegin;
 #if PetscDefined(HAVE_CUDA)

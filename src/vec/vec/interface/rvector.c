@@ -292,10 +292,10 @@ PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar *pscal,PetscS
   ierr = PetscLogEventEnd(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
   /* TODO this should really be asynchronous */
   if (type!=NORM_1_AND_2) {
-    const PetscScalar *val;
+    PetscScalar val;
 
-    ierr = PetscStreamScalarGetHostRead(*pscal,&val,pstream);CHKERRQ(ierr);
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],*val);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAwait(*pscal,&val,pstream);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],val);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -698,6 +698,7 @@ PetscErrorCode  VecAXPY(Vec y,PetscScalar alpha,Vec x)
 
 PetscErrorCode  VecAXPYAsync(Vec y,PetscStreamScalar pscal,Vec x,PetscStream pstream)
 {
+  PetscBool      isZero = PETSC_FALSE;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -712,17 +713,14 @@ PetscErrorCode  VecAXPYAsync(Vec y,PetscStreamScalar pscal,Vec x,PetscStream pst
   if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
 #if PetscDefined(USE_DEBUG)
   {
-    const PetscScalar *val;
+    PetscScalar val;
 
-    ierr = PetscStreamScalarGetHostRead(pscal,&val,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
-    PetscValidLogicalCollectiveScalar(y,*val,2);
+    ierr = PetscStreamScalarAwait(pscal,&val,pstream);CHKERRQ(ierr);
+    PetscValidLogicalCollectiveScalar(y,val,2);
   }
 #endif
-  if (pscal->cache[PSS_ZERO] == PSS_TRUE) {
-    ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
-    PetscFunctionReturn(0);
-  }
+  ierr = PetscStreamScalarGetInfo(pscal,PSS_ZERO,PETSC_FALSE,&isZero,pstream);CHKERRQ(ierr);
+  if (isZero) PetscFunctionReturn(0);
   ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
 
   ierr = VecLockReadPush(x);CHKERRQ(ierr);
@@ -730,7 +728,7 @@ PetscErrorCode  VecAXPYAsync(Vec y,PetscStreamScalar pscal,Vec x,PetscStream pst
   if (y->ops->axpyasync) {
     ierr = (*y->ops->axpyasync)(y,pscal,x,pstream);CHKERRQ(ierr);
   } else {
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vector has no VecAXPYAsync method\n");
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vector has no VecAXPYAsync method");
   }
   ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
   ierr = VecLockReadPop(x);CHKERRQ(ierr);
@@ -890,13 +888,12 @@ PetscErrorCode  VecAYPXAsync(Vec y,PetscStreamScalar pscal,Vec x,PetscStream pst
   PetscCheckValidSameStreamType(pscal,2,pstream,4);
 
   if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
-  #if PetscDefined(USE_DEBUG)
+#if PetscDefined(USE_DEBUG)
   {
-    const PetscScalar *val;
+    PetscScalar val;
 
-    ierr = PetscStreamScalarGetHostRead(pscal,&val,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
-    PetscValidLogicalCollectiveScalar(y,*val,2);
+    ierr = PetscStreamScalarAwait(pscal,&val,pstream);CHKERRQ(ierr);
+    PetscValidLogicalCollectiveScalar(y,val,2);
   }
 #endif
   ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);

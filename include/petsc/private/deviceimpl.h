@@ -77,8 +77,7 @@ struct _ScalOps {
   PetscErrorCode (*destroy)(PetscStreamScalar);
   PetscErrorCode (*setup)(PetscStreamScalar);
   PetscErrorCode (*setvalue)(PetscStreamScalar,const PetscScalar*,PetscMemType,PetscStream);
-  PetscErrorCode (*gethost)(PetscStreamScalar,PetscScalar**,PetscBool,PetscStream);
-  PetscErrorCode (*restorehost)(PetscStreamScalar,PetscScalar**,PetscStream);
+  PetscErrorCode (*await)(PetscStreamScalar,PetscScalar*,PetscStream);
   PetscErrorCode (*getdevice)(PetscStreamScalar,PetscScalar**,PetscBool,PetscStream);
   PetscErrorCode (*restoredevice)(PetscStreamScalar,PetscScalar**,PetscStream);
   PetscErrorCode (*axty)(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
@@ -91,14 +90,6 @@ typedef enum {
   PSS_UNKNOWN = 1,
   PSS_TRUE = 2
 } PSSCacheBool;
-
-typedef enum {
-  PSS_ZERO = 0,
-  PSS_ONE,
-  PSS_INF,
-  PSS_NAN,
-  PSSCACHE_MAX
-} PSSCacheType;
 
 struct _n_PetscStreamScalar {
   struct _ScalOps  ops[1];
@@ -116,8 +107,9 @@ struct _GraphOps {
   PetscErrorCode (*create)(PetscStreamGraph);
   PetscErrorCode (*destroy)(PetscStreamGraph);
   PetscErrorCode (*setup)(PetscStreamGraph);
-  PetscErrorCode (*assemble)(PetscStreamGraph);
+  PetscErrorCode (*assemble)(PetscStreamGraph,PetscGraphAssemblyType);
   PetscErrorCode (*exec)(PetscStreamGraph,PetscStream);
+  PetscErrorCode (*duplicate)(PetscStreamGraph,PetscStreamGraph);
   PetscErrorCode (*getgraph)(PetscStreamGraph,void*);
   PetscErrorCode (*restoregraph)(PetscStreamGraph,void*);
 };
@@ -208,13 +200,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarCheckCache_Internal(PetscStr
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
   {
-    const PetscScalar *alpha;
-    PetscErrorCode    ierr;
+    PetscErrorCode ierr;
+    PetscScalar    alpha;
 
-    ierr = PetscStreamScalarGetHostRead(pscal, &alpha, pstream);CHKERRQ(ierr);
-    if (PetscUnlikely(*alpha != assertval)) {
-      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bug in PetscStreamScalar cache, assumed %f but was %f",assertval,*alpha);
-    }
+    ierr = PetscStreamScalarAwait(pscal, &alpha, pstream);CHKERRQ(ierr);
+    if (PetscUnlikely(alpha != assertval)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bug in PetscStreamScalar cache, assumed %g but was %g",(double)assertval,(double)alpha);
   }
 #endif
   PetscFunctionReturn(0);

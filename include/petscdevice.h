@@ -156,6 +156,14 @@ typedef enum {
   STREAM_OP_EQUAL
 } PetscStreamComputeOp;
 
+typedef enum {
+  PSS_ZERO = 0,
+  PSS_ONE,
+  PSS_INF,
+  PSS_NAN,
+  PSSCACHE_MAX
+} PSSCacheType;
+
 /*S
   PetscStreamScalar - A stream-aware container for a PetscScalar.
 
@@ -175,12 +183,12 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar,PetscStre
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar,const PetscScalar*,PetscMemType,PetscStream);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostRead(PetscStreamScalar,const PetscScalar**,PetscStream);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarGetHostWrite(PetscStreamScalar,PetscScalar**,PetscStream);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreHostWrite(PetscStreamScalar,PetscScalar**,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarAwait(PetscStreamScalar,PetscScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar,const PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarGetInfo(PetscStreamScalar,PSSCacheType,PetscBool,PetscBool*,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar,PSSCacheType,PetscBool);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAXTY(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAYDX(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAccumulateOp(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
@@ -219,6 +227,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamGraphGetType(PetscStreamGraph,PetscStream
 PETSC_EXTERN PetscErrorCode PetscStreamGraphSetUp(PetscStreamGraph);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphAssemble(PetscStreamGraph,PetscGraphAssemblyType);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphExecute(PetscStreamGraph,PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphDuplicate(PetscStreamGraph,PetscStreamGraph*);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphGetGraph(PetscStreamGraph,void*);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphRestoreGraph(PetscStreamGraph,void*);
 
