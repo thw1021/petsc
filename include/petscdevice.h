@@ -59,7 +59,7 @@ do { \
   Developer Note:
    Encoding of the bitmask in binary: xx0=HOST, xx1=DEVICE, x01 for CUDA, x11 for HIP.
 
-.seealso: VecGetArrayAndMemType(), PetscSFBcastAndOpWithMemTypeBegin(), PetscSFReduceWithMemTypeBegin()
+.seealso: VecGetArrayAndMemType(), PetscSFBcastWithMemTypeBegin(), PetscSFReduceWithMemTypeBegin()
 E*/
 typedef enum {PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=1, PETSC_MEMTYPE_CUDA=1, PETSC_MEMTYPE_HIP=3} PetscMemType;
 
@@ -166,6 +166,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarDuplicate(PetscStreamScalar,PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar,const PetscScalar*,PetscMemType,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAwait(PetscStreamScalar,PetscScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar,const PetscScalar**,PetscStream);

@@ -1,7 +1,7 @@
 #include "streamcuda.h"
 
 #if PetscDefined(HAVE_CUDA)
-PetscErrorCode PetscEventDestroy_CUDA(PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscEventDestroy_CUDA(PetscEvent event)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
   PetscErrorCode  ierr;
@@ -13,7 +13,7 @@ PetscErrorCode PetscEventDestroy_CUDA(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscEventSetup_CUDA(PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscEventSetup_CUDA(PetscEvent event)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
   cudaError_t     cerr;
@@ -23,7 +23,7 @@ PetscErrorCode PetscEventSetup_CUDA(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscEventSynchronize_CUDA(PetscEvent event)
+PETSC_STATIC_INLINE PetscErrorCode PetscEventSynchronize_CUDA(PetscEvent event)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
   cudaError_t     cerr;
@@ -33,7 +33,7 @@ PetscErrorCode PetscEventSynchronize_CUDA(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscEventQuery_CUDA(PetscEvent event, PetscBool *busy)
+PETSC_STATIC_INLINE PetscErrorCode PetscEventQuery_CUDA(PetscEvent event, PetscBool *busy)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
 
