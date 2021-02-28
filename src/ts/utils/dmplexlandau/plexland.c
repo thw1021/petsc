@@ -1429,6 +1429,7 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   if (ctx->dmv->prealloc_only != prealloc_only) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"ctx->dmv->prealloc_only != prealloc_only");
   ierr = DMCreateMatrix(ctx->dmv, &ctx->J);CHKERRQ(ierr);
   ierr = MatSetOption(ctx->J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);CHKERRQ(ierr);
+  ierr = MatSetOption(ctx->J, MAT_STRUCTURALLY_SYMMETRIC, PETSC_TRUE);CHKERRQ(ierr);
   if (J) *J = ctx->J;
   /* check for types that we need */
 #if defined(PETSC_HAVE_KOKKOS)

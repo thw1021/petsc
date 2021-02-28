@@ -871,6 +871,8 @@ static PetscErrorCode MatLUFactorNumericV2_SeqAIJKOKKOS(Mat B,Mat A,const MatFac
 
   PetscFunctionBegin;
   if (A->rmap->n != n) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"square matrices only supported %D %D",A->rmap->n,n);
+  ierr = MatGetOption(A,MAT_STRUCTURALLY_SYMMETRIC,&row_identity);CHKERRQ(ierr);
+  if (!row_identity) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"structurally symmetric matrices only supported");
   ierr = PetscObjectQuery((PetscObject) A, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
   if (container) {
     PetscInt *pNf=NULL, nv;
