@@ -1,7 +1,7 @@
 #include "streamcuda.h"
 
 #if PetscDefined(HAVE_CUDA)
-PetscErrorCode PetscStreamGraphDestroy_CUDA(PetscStreamGraph sgraph)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphDestroy_CUDA(PetscStreamGraph sgraph)
 {
   PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
   PetscErrorCode        ierr;
@@ -14,7 +14,7 @@ PetscErrorCode PetscStreamGraphDestroy_CUDA(PetscStreamGraph sgraph)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGraph sgraph, PetscGraphAssemblyType type)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGraph sgraph, PetscGraphAssemblyType type)
 {
   PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
   cudaError_t           cerr;
@@ -55,7 +55,7 @@ PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGraph sgraph, PetscGraph
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamGraphExecute_CUDA(PetscStreamGraph sgraph, PetscStream pstream)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphExecute_CUDA(PetscStreamGraph sgraph, PetscStream pstream)
 {
   PetscStreamGraph_CUDA    *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
   PetscStream_CUDA         *psc = (PetscStream_CUDA *)pstream->data;
@@ -66,7 +66,7 @@ PetscErrorCode PetscStreamGraphExecute_CUDA(PetscStreamGraph sgraph, PetscStream
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamGraphDuplicate_CUDA(PetscStreamGraph sgraphref, PetscStreamGraph sgraphdup)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphDuplicate_CUDA(PetscStreamGraph sgraphref, PetscStreamGraph sgraphdup)
 {
   PetscStreamGraph_CUDA *psgcref = (PetscStreamGraph_CUDA *)sgraphref->data;
   PetscStreamGraph_CUDA *psgcdup = (PetscStreamGraph_CUDA *)sgraphdup->data;
@@ -83,7 +83,7 @@ PetscErrorCode PetscStreamGraphDuplicate_CUDA(PetscStreamGraph sgraphref, PetscS
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamGraphGetGraph_CUDA(PetscStreamGraph sgraph, void *gptr)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphGetGraph_CUDA(PetscStreamGraph sgraph, void *gptr)
 {
   PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
 
@@ -92,7 +92,7 @@ PetscErrorCode PetscStreamGraphGetGraph_CUDA(PetscStreamGraph sgraph, void *gptr
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamGraphRestoreGraph_CUDA(PetscStreamGraph sgraph, void *gptr)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphRestoreGraph_CUDA(PetscStreamGraph sgraph, void *gptr)
 {
   PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
 
