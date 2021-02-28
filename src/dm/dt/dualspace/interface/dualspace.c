@@ -1363,7 +1363,7 @@ PetscErrorCode PetscDualSpaceCreateAllDataDefault(PetscDualSpace sp, PetscQuadra
       points[offset* dim + i] = p[i];
     }
     for (i = 0; i < Np * Nc; i++) {
-      ierr = MatSetValue(A, f, offset * Nc, w[i], INSERT_VALUES);CHKERRQ(ierr);
+      ierr = MatSetValue(A, f, offset * Nc + i, w[i], INSERT_VALUES);CHKERRQ(ierr);
     }
     offset += Np;
   }
