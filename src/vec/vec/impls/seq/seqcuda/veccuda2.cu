@@ -220,7 +220,7 @@ PetscErrorCode VecAYPX_SeqCUDA(Vec yin,PetscScalar alpha,Vec xin)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecAYPX_SeqCUDAAsync(Vec yin,PetscStreamScalar pscal,Vec xin,PetscStream pstream)
+PetscErrorCode VecAYPX_SeqCUDAAsync(Vec yin,PetscStreamScalar pscalalpha,Vec xin,PetscStream pstream)
 {
   const PetscScalar *xarray;
   PetscScalar       *yarray;
@@ -238,26 +238,29 @@ PetscErrorCode VecAYPX_SeqCUDAAsync(Vec yin,PetscStreamScalar pscal,Vec xin,Pets
   ierr = VecCUDAGetArrayReadAsync(xin,&xarray,pstream);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayAsync(yin,&yarray,pstream);CHKERRQ(ierr);
   ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
-  cberr = cublasSetStream(cublasv2handle,cstream);CHKERRCUBLAS(cberr);
-  cberr = cublasSetPointerMode(cublasv2handle,CUBLAS_POINTER_MODE_DEVICE);CHKERRCUBLAS(cberr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-  if (pscal->cache[PSS_ZERO] == PSS_TRUE) {
+  if (pscalalpha->cache[PSS_ZERO] == PSS_TRUE) {
     cudaError_t cerr;
 
-    ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarCheckCache_Internal(pscalalpha,0.0,pstream);CHKERRQ(ierr);
     cerr = cudaMemcpyAsync(yarray,xarray,bn*sizeof(PetscScalar),cudaMemcpyDeviceToDevice,cstream);CHKERRCUDA(cerr);
-  } else if (pscal->cache[PSS_ONE] == PSS_TRUE) {
-    const PetscScalar *dptr;
+  } else if (pscalalpha->cache[PSS_ONE] == PSS_TRUE) {
+    const PetscScalar *alpha;
 
-    ierr = PetscStreamScalarCheckCache_Internal(pscal,1.0,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamScalarGetDeviceRead(pscal,&dptr,pstream);CHKERRQ(ierr);
-    cberr = cublasXaxpy(cublasv2handle,bn,pscal->device,xarray,one,yarray,one);CHKERRCUBLAS(cberr);
+    ierr = PetscStreamScalarCheckCache_Internal(pscalalpha,1.0,pstream);CHKERRQ(ierr);
+    cberr = cublasSetStream(cublasv2handle,cstream);CHKERRCUBLAS(cberr);
+    cberr = cublasSetPointerMode(cublasv2handle,CUBLAS_POINTER_MODE_DEVICE);CHKERRCUBLAS(cberr);
+    ierr = PetscStreamScalarGetDeviceRead(pscalalpha,&alpha,pstream);CHKERRQ(ierr);
+    cberr = cublasXaxpy(cublasv2handle,bn,alpha,xarray,one,yarray,one);CHKERRCUBLAS(cberr);
     ierr = PetscLogGpuFlops(1.0*yin->map->n);CHKERRQ(ierr);
   } else {
-    const PetscScalar *dptr;
+    const PetscScalar *alpha;
 
-    ierr = PetscStreamScalarGetDeviceRead(pscal,&dptr,pstream);CHKERRQ(ierr);
-    cberr = cublasXscal(cublasv2handle,bn,dptr,yarray,one);CHKERRCUBLAS(cberr);
+
+    cberr = cublasSetStream(cublasv2handle,cstream);CHKERRCUBLAS(cberr);
+    cberr = cublasSetPointerMode(cublasv2handle,CUBLAS_POINTER_MODE_DEVICE);CHKERRCUBLAS(cberr);
+    ierr = PetscStreamScalarGetDeviceRead(pscalalpha,&alpha,pstream);CHKERRQ(ierr);
+    cberr = cublasXscal(cublasv2handle,bn,alpha,yarray,one);CHKERRCUBLAS(cberr);
     cberr = cublasXaxpy(cublasv2handle,bn,&sone,xarray,one,yarray,one);CHKERRCUBLAS(cberr);
     ierr = PetscLogGpuFlops(2.0*yin->map->n);CHKERRQ(ierr);
   }
@@ -282,8 +285,12 @@ PetscErrorCode VecAXPY_SeqCUDA(Vec yin,PetscScalar alpha,Vec xin)
   PetscBool         xiscuda;
 
   PetscFunctionBegin;
-  if (alpha == (PetscScalar)0.0) PetscFunctionReturn(0);
   ierr = PetscObjectTypeCompareAny((PetscObject)xin,&xiscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
+  if (alpha == (PetscScalar)0.0) {
+    ierr = PetscEventSynchronize(yin->event);CHKERRQ(ierr);
+    if (xiscuda) {ierr = PetscEventSynchronize(xin->event);CHKERRQ(ierr);}
+    PetscFunctionReturn(0);
+  }
   if (xiscuda) {
     ierr = PetscBLASIntCast(yin->map->n,&bn);CHKERRQ(ierr);
     ierr = VecCUDAGetArrayRead(xin,&xarray);CHKERRQ(ierr);
@@ -314,13 +321,10 @@ PetscErrorCode VecAXPY_SeqCUDAAsync(Vec yin,PetscStreamScalar pscal,Vec xin,Pets
 
   PetscFunctionBegin;
   PetscValidStreamTypeSpecific(pstream,4,PETSC_STREAM_CUDA,VECCUDA);
-  /* We bank on the fact that alpha is not zero, as this allows this function to be 100%
-     pipelineable */
   if (pscal->cache[PSS_ZERO] == PSS_TRUE) {
     ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
-
   ierr = PetscObjectTypeCompareAny((PetscObject)xin,&xiscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
   if (xiscuda) {
     cublasHandle_t    cublasv2handle;

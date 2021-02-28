@@ -182,6 +182,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarDuplicate(PetscStreamScalar,PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar,const PetscScalar*,PetscMemType,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAwait(PetscStreamScalar,PetscScalar*,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar,const PetscScalar**,PetscStream);
