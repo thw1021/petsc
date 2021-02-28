@@ -53,6 +53,9 @@ PetscInt    *sliperm;          /* slice permutation array, CUDA only */ \
 PetscInt    totalblocks;       /* total number of blocks, CUDA only */ \
 PetscInt    *blockidx;         /* block index, CUDA only */ \
 PetscInt    *block_row_map;    /* starting row of the current block, CUDA only */ \
+PetscInt    chunksize;         /* chunk size, CUDA only */ \
+PetscInt    totalchunks;       /* total number of chunks, CUDA only */ \
+PetscInt    *chunk_slice_map;  /* starting slice of the currect chunk, CUDA only */ \
 PetscInt    *getrowcols;       /* workarray for MatGetRow_SeqSELL */ \
 PetscScalar *getrowvals        /* workarray for MatGetRow_SeqSELL */ \
 
