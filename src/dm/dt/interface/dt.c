@@ -277,103 +277,6 @@ PetscErrorCode PetscQuadratureGetData(PetscQuadrature q, PetscInt *dim, PetscInt
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscDTJacobianInverse_Internal(PetscInt m, PetscInt n, const PetscReal J[], PetscReal Jinv[])
-{
-  PetscScalar    *Js, *Jinvs;
-  PetscInt       i, j, k;
-  PetscBLASInt   bm, bn, info;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (!m || !n) PetscFunctionReturn(0);
-  ierr = PetscBLASIntCast(m, &bm);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(n, &bn);CHKERRQ(ierr);
-#if defined(PETSC_USE_COMPLEX)
-  ierr = PetscMalloc2(m*n, &Js, m*n, &Jinvs);CHKERRQ(ierr);
-  for (i = 0; i < m*n; i++) Js[i] = J[i];
-#else
-  Js = (PetscReal *) J;
-  Jinvs = Jinv;
-#endif
-  if (m == n) {
-    PetscBLASInt *pivots;
-    PetscScalar *W;
-
-    ierr = PetscMalloc2(m, &pivots, m, &W);CHKERRQ(ierr);
-
-    ierr = PetscArraycpy(Jinvs, Js, m * m);CHKERRQ(ierr);
-    PetscStackCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bm, &bm, Jinvs, &bm, pivots, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetrf %D",(PetscInt)info);
-    PetscStackCallBLAS("LAPACKgetri", LAPACKgetri_(&bm, Jinvs, &bm, pivots, W, &bm, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetri %D",(PetscInt)info);
-    ierr = PetscFree2(pivots, W);CHKERRQ(ierr);
-  } else if (m < n) {
-    PetscScalar *JJT;
-    PetscBLASInt *pivots;
-    PetscScalar *W;
-
-    ierr = PetscMalloc1(m*m, &JJT);CHKERRQ(ierr);
-    ierr = PetscMalloc2(m, &pivots, m, &W);CHKERRQ(ierr);
-    for (i = 0; i < m; i++) {
-      for (j = 0; j < m; j++) {
-        PetscScalar val = 0.;
-
-        for (k = 0; k < n; k++) val += Js[i * n + k] * Js[j * n + k];
-        JJT[i * m + j] = val;
-      }
-    }
-
-    PetscStackCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bm, &bm, JJT, &bm, pivots, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetrf %D",(PetscInt)info);
-    PetscStackCallBLAS("LAPACKgetri", LAPACKgetri_(&bm, JJT, &bm, pivots, W, &bm, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetri %D",(PetscInt)info);
-    for (i = 0; i < n; i++) {
-      for (j = 0; j < m; j++) {
-        PetscScalar val = 0.;
-
-        for (k = 0; k < m; k++) val += Js[k * n + i] * JJT[k * m + j];
-        Jinvs[i * m + j] = val;
-      }
-    }
-    ierr = PetscFree2(pivots, W);CHKERRQ(ierr);
-    ierr = PetscFree(JJT);CHKERRQ(ierr);
-  } else {
-    PetscScalar *JTJ;
-    PetscBLASInt *pivots;
-    PetscScalar *W;
-
-    ierr = PetscMalloc1(n*n, &JTJ);CHKERRQ(ierr);
-    ierr = PetscMalloc2(n, &pivots, n, &W);CHKERRQ(ierr);
-    for (i = 0; i < n; i++) {
-      for (j = 0; j < n; j++) {
-        PetscScalar val = 0.;
-
-        for (k = 0; k < m; k++) val += Js[k * n + i] * Js[k * n + j];
-        JTJ[i * n + j] = val;
-      }
-    }
-
-    PetscStackCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bn, &bn, JTJ, &bn, pivots, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetrf %D",(PetscInt)info);
-    PetscStackCallBLAS("LAPACKgetri", LAPACKgetri_(&bn, JTJ, &bn, pivots, W, &bn, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetri %D",(PetscInt)info);
-    for (i = 0; i < n; i++) {
-      for (j = 0; j < m; j++) {
-        PetscScalar val = 0.;
-
-        for (k = 0; k < n; k++) val += JTJ[i * n + k] * Js[j * n + k];
-        Jinvs[i * m + j] = val;
-      }
-    }
-    ierr = PetscFree2(pivots, W);CHKERRQ(ierr);
-    ierr = PetscFree(JTJ);CHKERRQ(ierr);
-  }
-#if defined(PETSC_USE_COMPLEX)
-  for (i = 0; i < m*n; i++) Jinv[i] = PetscRealPart(Jinvs[i]);
-  ierr = PetscFree2(Js, Jinvs);CHKERRQ(ierr);
-#endif
-  PetscFunctionReturn(0);
-}
 
 /*@
    PetscQuadraturePushForward - Push forward a quadrature functional under an affine transformation.
@@ -403,8 +306,7 @@ PetscErrorCode PetscQuadraturePushForward(PetscQuadrature q, PetscInt imageDim, 
   const PetscReal *points;
   const PetscReal *weights;
   PetscReal       *imagePoints, *imageWeights;
-  PetscReal       *Jinv;
-  PetscReal       *Jinvstar;
+  PetscReal       *Jstar;
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
@@ -418,9 +320,8 @@ PetscErrorCode PetscQuadraturePushForward(PetscQuadrature q, PetscInt imageDim, 
   imageNc = Ncopies * imageFormSize;
   ierr = PetscMalloc1(Npoints * imageDim, &imagePoints);CHKERRQ(ierr);
   ierr = PetscMalloc1(Npoints * imageNc, &imageWeights);CHKERRQ(ierr);
-  ierr = PetscMalloc2(imageDim * dim, &Jinv, formSize * imageFormSize, &Jinvstar);CHKERRQ(ierr);
-  ierr = PetscDTJacobianInverse_Internal(imageDim, dim, J, Jinv);CHKERRQ(ierr);
-  ierr = PetscDTAltVPullbackMatrix(imageDim, dim, Jinv, formDegree, Jinvstar);CHKERRQ(ierr);
+  ierr = PetscMalloc1(formSize * imageFormSize, &Jstar);CHKERRQ(ierr);
+  ierr = PetscDTAltVPullbackMatrix(dim, imageDim, J, formDegree, Jstar);CHKERRQ(ierr);
   for (pt = 0; pt < Npoints; pt++) {
     const PetscReal *point = &points[pt * dim];
     PetscReal       *imagePoint = &imagePoints[pt * imageDim];
@@ -438,14 +339,14 @@ PetscErrorCode PetscQuadraturePushForward(PetscQuadrature q, PetscInt imageDim, 
       for (i = 0; i < imageFormSize; i++) {
         PetscReal val = 0.;
 
-        for (j = 0; j < formSize; j++) val += Jinvstar[i * formSize + j] * form[j];
+        for (j = 0; j < formSize; j++) val += form[j] * Jstar[j * imageFormSize + i];
         imageForm[i] = val;
       }
     }
   }
   ierr = PetscQuadratureCreate(PetscObjectComm((PetscObject)q), Jinvstarq);CHKERRQ(ierr);
   ierr = PetscQuadratureSetData(*Jinvstarq, imageDim, imageNc, Npoints, imagePoints, imageWeights);CHKERRQ(ierr);
-  ierr = PetscFree2(Jinv, Jinvstar);CHKERRQ(ierr);
+  ierr = PetscFree(Jstar);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

@@ -13,6 +13,7 @@ struct _PetscConvEstOps {
   PetscErrorCode (*setsolver)(PetscConvEst, PetscObject);
   PetscErrorCode (*initguess)(PetscConvEst, PetscInt, DM, Vec);
   PetscErrorCode (*computeerror)(PetscConvEst, PetscInt, DM, Vec, PetscReal[]);
+  PetscErrorCode (*computeselferror)(PetscConvEst, PetscInt, DM, Vec, DM, Vec, PetscReal[]);
   PetscErrorCode (*getconvrate)(PetscConvEst, PetscReal[]);
 };
 

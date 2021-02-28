@@ -1471,7 +1471,9 @@ PetscErrorCode DMComputeL2FieldDiff_Plex(DM dm, PetscReal time, PetscErrorCode (
   ierr = VecSet(localX, 0.0);CHKERRQ(ierr);
   ierr = DMGlobalToLocalBegin(dm, X, INSERT_VALUES, localX);CHKERRQ(ierr);
   ierr = DMGlobalToLocalEnd(dm, X, INSERT_VALUES, localX);CHKERRQ(ierr);
-  ierr = DMProjectFunctionLocal(dm, time, funcs, ctxs, INSERT_BC_VALUES, localX);CHKERRQ(ierr);
+  if (funcs) {
+    ierr = DMProjectFunctionLocal(dm, time, funcs, ctxs, INSERT_BC_VALUES, localX);CHKERRQ(ierr);
+  }
   ierr = DMGetNumDS(dm, &Nds);CHKERRQ(ierr);
   ierr = PetscCalloc1(Nf, &localDiff);CHKERRQ(ierr);
   for (s = 0; s < Nds; ++s) {
@@ -1550,13 +1552,17 @@ PetscErrorCode DMComputeL2FieldDiff_Plex(DM dm, PetscReal time, PetscErrorCode (
           } else {
             gcoords = &coords[dE*q];
           }
-          ierr = (*funcs[fields[f]])(dE, time, gcoords, Nc, funcVal, ctx);
-          if (ierr) {
-            PetscErrorCode ierr2;
-            ierr2 = DMPlexVecRestoreClosure(dm, NULL, localX, cell, NULL, &x);CHKERRQ(ierr2);
-            ierr2 = DMRestoreLocalVector(dm, &localX);CHKERRQ(ierr2);
-            ierr2 = PetscFree6(funcVal,interpolant,coords,fegeom.detJ,fegeom.J,fegeom.invJ);CHKERRQ(ierr2);
-            CHKERRQ(ierr);
+          if (funcs) {
+            ierr = (*funcs[fields[f]])(dE, time, gcoords, Nc, funcVal, ctx);
+            if (ierr) {
+              PetscErrorCode ierr2;
+              ierr2 = DMPlexVecRestoreClosure(dm, NULL, localX, cell, NULL, &x);CHKERRQ(ierr2);
+              ierr2 = DMRestoreLocalVector(dm, &localX);CHKERRQ(ierr2);
+              ierr2 = PetscFree6(funcVal,interpolant,coords,fegeom.detJ,fegeom.J,fegeom.invJ);CHKERRQ(ierr2);
+              CHKERRQ(ierr);
+            }
+          } else {
+            ierr = PetscArrayzero(funcVal, totNc);CHKERRQ(ierr);
           }
           if (transform) {ierr = DMPlexBasisTransformApply_Internal(dm, &coords[dE*q], PETSC_FALSE, Nc, funcVal, funcVal, dm->transformCtx);CHKERRQ(ierr);}
           /* Call once for each face, except for lagrange field */
@@ -2376,6 +2382,33 @@ PetscErrorCode DMPlexComputeBdIntegral(DM dm, Vec X, DMLabel label, PetscInt num
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode TabulationBToMat(PetscTabulation T, Mat* B)
+{
+  PetscScalar    *v;
+  PetscInt       nrows, ncols, Nb, Np, Nc;
+  PetscInt       lda;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  Nb = T->Nb;
+  Np = T->Np;
+  Nc = T->Nc;
+  nrows = Np * Nc;
+  ncols = Nb;
+  ierr = MatCreateSeqDense(PETSC_COMM_SELF, nrows, ncols, NULL, B);CHKERRQ(ierr);
+  ierr = MatDenseGetLDA(*B, &lda);CHKERRQ(ierr);
+  ierr = MatDenseGetArray(*B, &v);CHKERRQ(ierr);
+  for (PetscInt b = 0; b < Nb; b++) {
+    for (PetscInt p = 0; p < Np; p++) {
+      for (PetscInt c = 0; c < Nc; c++) {
+        v[b * lda + p*Nc + c] = T->T[0][p*Nb*Nc + b*Nc + c];
+      }
+    }
+  }
+  ierr = MatDenseRestoreArray(*B, &v);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
   DMPlexComputeInterpolatorNested - Form the local portion of the interpolation matrix I from the coarse DM to a uniformly refined DM.
 
@@ -2457,10 +2490,10 @@ PetscErrorCode DMPlexComputeInterpolatorNested(DM dmc, DM dmf, PetscBool isRefin
   ierr = PetscArrayzero(elemMat, rTotDim*cTotDim);CHKERRQ(ierr);
   for (fieldI = 0, offsetI = 0; fieldI < Nf; ++fieldI) {
     PetscDualSpace   Qref;
-    PetscQuadrature  f;
-    const PetscReal *qpoints, *qweights;
-    PetscReal       *points;
-    PetscInt         npoints = 0, Nc, Np, fpdim, i, k, p, d;
+    PetscQuadrature  allQuad;
+    const PetscReal *points;
+    Mat              allMat;
+    PetscInt         npoints = 0, Nc, Np, fpdim, i, k, p;
 
     /* Compose points from all dual basis functionals */
     if (feRef[fieldI]) {
@@ -2471,17 +2504,8 @@ PetscErrorCode DMPlexComputeInterpolatorNested(DM dmc, DM dmf, PetscBool isRefin
       ierr = PetscFVGetNumComponents(fvRef[fieldI], &Nc);CHKERRQ(ierr);
     }
     ierr = PetscDualSpaceGetDimension(Qref, &fpdim);CHKERRQ(ierr);
-    for (i = 0; i < fpdim; ++i) {
-      ierr = PetscDualSpaceGetFunctional(Qref, i, &f);CHKERRQ(ierr);
-      ierr = PetscQuadratureGetData(f, NULL, NULL, &Np, NULL, NULL);CHKERRQ(ierr);
-      npoints += Np;
-    }
-    ierr = PetscMalloc1(npoints*dim,&points);CHKERRQ(ierr);
-    for (i = 0, k = 0; i < fpdim; ++i) {
-      ierr = PetscDualSpaceGetFunctional(Qref, i, &f);CHKERRQ(ierr);
-      ierr = PetscQuadratureGetData(f, NULL, NULL, &Np, &qpoints, NULL);CHKERRQ(ierr);
-      for (p = 0; p < Np; ++p, ++k) for (d = 0; d < dim; ++d) points[k*dim+d] = qpoints[p*dim+d];
-    }
+    ierr = PetscDualSpaceGetAllData(Qref, &allQuad, &allMat);CHKERRQ(ierr);
+    ierr = PetscQuadratureGetData(allQuad, NULL, NULL, &npoints, &points, NULL);CHKERRQ(ierr);
 
     for (fieldJ = 0, offsetJ = 0; fieldJ < Nf; ++fieldJ) {
       PetscObject  obj;
@@ -2499,30 +2523,29 @@ PetscErrorCode DMPlexComputeInterpolatorNested(DM dmc, DM dmf, PetscBool isRefin
         ierr = PetscFEGetDimension(fe, &cpdim);CHKERRQ(ierr);
         /* For now, fields only interpolate themselves */
         if (fieldI == fieldJ) {
+          Mat B, E;
+          const PetscScalar *v;
+          PetscInt lda;
           if (Nc != NcJ) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of components in fine space field %D does not match coarse field %D", Nc, NcJ);
           ierr = PetscFECreateTabulation(fe, 1, npoints, points, 0, &T);CHKERRQ(ierr);
-          for (i = 0, k = 0; i < fpdim; ++i) {
-            ierr = PetscDualSpaceGetFunctional(Qref, i, &f);CHKERRQ(ierr);
-            ierr = PetscQuadratureGetData(f, NULL, &qNc, &Np, NULL, &qweights);CHKERRQ(ierr);
-            if (qNc != NcJ) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of components in quadrature %D does not match coarse field %D", qNc, NcJ);
-            for (p = 0; p < Np; ++p, ++k) {
-              for (j = 0; j < cpdim; ++j) {
-                /*
-                   cTotDim:            Total columns in element interpolation matrix, sum of number of dual basis functionals in each field
-                   offsetI, offsetJ:   Offsets into the larger element interpolation matrix for different fields
-                   fpdim, i, cpdim, j: Dofs for fine and coarse grids, correspond to dual space basis functionals
-                   qNC, Nc, Ncj, c:    Number of components in this field
-                   Np, p:              Number of quad points in the fine grid functional i
-                   k:                  i*Np + p, overall point number for the interpolation
-                */
-                for (c = 0; c < Nc; ++c) elemMat[(offsetI + i)*cTotDim + offsetJ + j] += T->T[0][k*cpdim*NcJ+j*Nc+c]*qweights[p*qNc+c];
-              }
+          ierr = TabulationBToMat(T, &B);CHKERRQ(ierr);
+          ierr = MatMatMult(allMat, B, MAT_INITIAL_MATRIX, PETSC_DECIDE, &E);CHKERRQ(ierr);
+          ierr = MatDenseGetLDA(E, &lda);CHKERRQ(ierr);
+          ierr = MatDenseGetArrayRead(E, &v);CHKERRQ(ierr);
+          for (PetscInt col = 0; col < cpdim; col++) {
+            for (PetscInt row = 0; row < fpdim; row++) {
+              elemMat[(offsetI + row)*cTotDim + offsetJ + col] = v[col * lda + row];
             }
           }
+          ierr = MatDenseRestoreArrayRead(E, &v);CHKERRQ(ierr);
+          ierr = MatDestroy(&E);CHKERRQ(ierr);
+          ierr = MatDestroy(&B);CHKERRQ(ierr);
           ierr = PetscTabulationDestroy(&T);CHKERRQ(ierr);CHKERRQ(ierr);
         }
       } else if (id == PETSCFV_CLASSID) {
-        PetscFV        fv = (PetscFV) obj;
+        PetscFV          fv = (PetscFV) obj;
+        PetscQuadrature  f;
+        const PetscReal *qweights;
 
         /* Evaluate constant function at points */
         ierr = PetscFVGetNumComponents(fv, &NcJ);CHKERRQ(ierr);
@@ -2545,7 +2568,6 @@ PetscErrorCode DMPlexComputeInterpolatorNested(DM dmc, DM dmf, PetscBool isRefin
       offsetJ += cpdim;
     }
     offsetI += fpdim;
-    ierr = PetscFree(points);CHKERRQ(ierr);
   }
   if (mesh->printFEM > 1) {ierr = DMPrintCellMatrix(0, name, rTotDim, cTotDim, elemMat);CHKERRQ(ierr);}
   /* Preallocate matrix */
