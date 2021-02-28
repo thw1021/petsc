@@ -13,7 +13,7 @@
 
   Level: beginner
 
-.seealso: PetscStreamScalarDestroy(), PetscStreamScalarSetType(), PetscStreamScalarSetUp()
+.seealso: PetscStreamScalarDestroy(), PetscStreamScalarSetType(), PetscStreamScalarSetUp(), PetscStreamScalarDuplicate()
 @*/
 PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
 {
@@ -46,7 +46,7 @@ PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
 
   Level: beginner
 
-.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamScalarSetUp()
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamScalarSetUp(), PetscStreamScalarDuplicate()
 @*/
 PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
 {
@@ -72,7 +72,7 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
 
   Level: beginner
 
-.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamCreate(), PetscStreamScalarSetValue()
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamCreate(), PetscStreamScalarSetValue(), PetscStreamScalarDuplicate()
 @*/
 PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal)
 {
@@ -86,6 +86,42 @@ PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal)
   ierr = PetscEventSetUp(pscal->event);CHKERRQ(ierr);
   ierr = (*pscal->ops->setup)(pscal);CHKERRQ(ierr);
   pscal->setup = PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscStreamScalarDuplicate - Duplicates a PetscStreamScalar
+
+  Not Collective
+
+  Input Parameter:
+. pscalref - The PetscStreamScalar object to duplicate
+
+  Output Parameter:
+. pscalout - The duplicated PetscStreamScalar
+
+  Notes:
+  The duplicated PetscStreamScalar will be of the same type as the reference, but will not share any other feature. It
+  is safe to use either independently of the other.
+
+  Level: beginner
+
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamScalarSetValue()
+@*/
+PetscErrorCode PetscStreamScalarDuplicate(PetscStreamScalar pscalref, PetscStreamScalar *pscalout)
+{
+  PetscStreamScalar out;
+  PetscStreamType   type;
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  PetscValidStreamType(pscalref,1);
+  PetscValidPointer(pscalout,2);
+  ierr = PetscStreamScalarGetType(pscalref, &type);CHKERRQ(ierr);
+  ierr = PetscStreamScalarCreate(&out);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetType(out, type);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetUp(out);CHKERRQ(ierr);
+  *pscalout = out;
   PetscFunctionReturn(0);
 }
 
@@ -111,7 +147,7 @@ PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal)
 
   Level: beginner
 
-.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamCreate(), PetscStreamScalarAwait()
+.seealso: PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamCreate(), PetscStreamScalarAwait(), PetscStreamScalarDuplicate()
 @*/
 PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar pscal, const PetscScalar *val, PetscMemType mtype, PetscStream pstream)
 {
@@ -191,9 +227,6 @@ PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar pscal, const Pet
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
   ierr = (*pscal->ops->getdevice)(pscal, (PetscScalar **)ptr, PETSC_TRUE, pstream);CHKERRQ(ierr);
-  if (pscal->omask != PETSC_OFFLOAD_GPU) {
-    ierr = PetscStreamScalarUpdateCache_Internal(pscal, pscal->host, PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
-  }
   PetscFunctionReturn(0);
 }
 
@@ -223,14 +256,16 @@ PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar pscal, const Pet
 @*/
 PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
 {
-  PetscErrorCode ierr;
+  const PetscScalar dummy = 1.0;
+  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(ptr,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
   ierr = (*pscal->ops->getdevice)(pscal, ptr, PETSC_FALSE, pstream);CHKERRQ(ierr);
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal, *ptr, PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
+  /* MEMTYPE_DEVICE == invalidate the cache */
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal, &dummy, PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -254,7 +289,8 @@ PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscSca
 @*/
 PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
 {
-  PetscErrorCode ierr;
+  const PetscScalar dummy = 1.0;
+  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(ptr,2);
@@ -274,7 +310,8 @@ PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, Pets
     ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
     pscal->omask = PETSC_OFFLOAD_GPU;
   }
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal, *ptr, PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
+  /* MEMTYPE_DEVICE == invalidate the cache */
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal, &dummy, PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

@@ -1,12 +1,12 @@
 #include <petsc/private/deviceimpl.h>
 
-PETSC_INTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
-PETSC_INTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
-PETSC_INTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
-PETSC_INTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
-PETSC_INTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
-PETSC_INTERN PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar);
-PETSC_INTERN PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph);
+PETSC_EXTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
+PETSC_EXTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph);
 
 PetscFunctionList PetscStreamList              = NULL;
 PetscFunctionList PetscEventList               = NULL;
