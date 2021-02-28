@@ -4,8 +4,8 @@ ALL: lib
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
-SOURCEC	  = streamcuda.c eventcuda.c scalcuda.c graphcuda.c
-SOURCECU  = scalkernels.cu
+SOURCEC	  =
+SOURCECU  = scalkernels.cu streamcuda.cu eventcuda.cu scalcuda.cu graphcuda.cu
 SOURCEF	  =
 SOURCEH	  = streamcuda.h
 MANSEC	  = Sys
