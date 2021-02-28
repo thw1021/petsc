@@ -69,7 +69,7 @@ static PetscErrorCode PetscSFReduceBegin_Allgather(PetscSF sf,MPI_Datatype unit,
   if (op == MPIU_REPLACE) {
     /* REPLACE is only meaningful when all processes have the same leafdata to reduce. Therefore copy from local leafdata is fine */
     ierr = PetscLayoutGetRange(sf->map,&rstart,NULL);CHKERRQ(ierr);
-    ierr = PetscSFLinkSetPackStream(sf,link,PETSCSF_LEAF2ROOT,PETSCSF_REMOTE);CHKERRQ(ierr); /* Basically do link->stream = link->remote_comm_stream */
+    ierr = PetscSFLinkSetPackStream(sf,link,PETSCSF_LEAF2ROOT,PETSCSF_REMOTE);CHKERRQ(ierr); /* Basically do link->stream = link->remoteCommStream */
     ierr = (*link->Memcpy)(link,rootmtype,rootdata,leafmtype,(const char*)leafdata+(size_t)rstart*link->unitbytes,(size_t)sf->nroots*link->unitbytes);CHKERRQ(ierr);
     if (PetscMemTypeDevice(leafmtype) && PetscMemTypeHost(rootmtype)) {ierr = (*link->SyncStream)(link);CHKERRQ(ierr);} /* Sync the device to host memcpy */
   } else {

@@ -245,7 +245,7 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
 
 static PetscErrorCode KSPSolve_CG_Async(KSP ksp)
 {
-#if 0
+#if 1
   PetscErrorCode ierr;
   PetscInt       i,stored_max_it,eigs;
   PetscScalar    *dpi,*dpiold,*beta,*betaold,*a,*b,*zero;

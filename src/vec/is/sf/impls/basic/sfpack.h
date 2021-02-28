@@ -199,8 +199,8 @@ struct _n_PetscSFLink {
   PetscBool    use_nvshmem;                  /* Does this link use nvshem (vs. MPI) for communication? */
 #if defined(PETSC_HAVE_NVSHMEM)
   cupmEvent_t  dataReady;                    /* Events to mark readiness of root/leafdata */
-  cupmEvent_t  end_scatter_local,end_unpack_remote; /* Events to mark end of local/remote communication */
-  cupmStream_t remote_comm_stream;           /* Streams for remote (i.e., inter-rank) communication */
+  cupmEvent_t  endUnpackRemote;              /* Events to mark end of local/remote communication */
+  cupmStream_t remoteCommStream;             /* Streams for remote (i.e., inter-rank) communication */
 
   /* The buffers are allocated in device symmetric heap. Their length is the maximal length over all ranks in the comm, and therefore is the same. */
   uint64_t     *rootSendSig,*rootRecvSig;    /* [max{niranks-ndiranks}], signals used when rootbuf works as send/recv buf */
@@ -311,13 +311,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkBuildDependenceEnd(PetscSF sf,Pets
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkBuildDependenceBetweenLocalAndRemote(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
-{
-  PetscFunctionBegin;
-  if (link->BuildDependenceBetweenLocalAndRemote) {PetscErrorCode ierr = (link->BuildDependenceBetweenLocalAndRemote)(sf,link,direction);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
-}
-
 PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkRecordEndOfScatterLocal(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
   PetscFunctionBegin;
@@ -335,14 +328,14 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkRecordEndOfUnpackRemote(PetscSF sf
 PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSetUnpackStream(PetscSF sf,PetscSFLink link,PetscSFDirection direction,PetscSFScope scope)
 {
   PetscFunctionBegin;
-  link->stream = (scope == PETSCSF_LOCAL) ? PetscDefaultCudaStream : link->remote_comm_stream;
+  link->stream = (scope == PETSCSF_LOCAL) ? PetscDefaultCudaStream : link->remoteCommStream;
   PetscFunctionReturn(0);
 }
 
 PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkSetPackStream(PetscSF sf,PetscSFLink link,PetscSFDirection direction,PetscSFScope scope)
 {
   PetscFunctionBegin;
-  link->stream = (scope == PETSCSF_LOCAL) ? PetscDefaultCudaStream : link->remote_comm_stream;
+  link->stream = (scope == PETSCSF_LOCAL) ? PetscDefaultCudaStream : link->remoteCommStream;
   PetscFunctionReturn(0);
 }
 
