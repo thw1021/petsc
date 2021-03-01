@@ -615,6 +615,24 @@ static PetscErrorCode MatAXPY_SeqAIJKokkos(Mat Y,PetscScalar a,Mat X,MatStructur
   }
   PetscFunctionReturn(0);
 }
+static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFactorInfo *info);
+static PetscErrorCode MatSetFromOptions_SeqAIJKokkos(PetscOptionItems *PetscOptionsObject,Mat A)
+{
+  PetscErrorCode           ierr;
+  PetscBool                useit=PETSC_FALSE;
+
+  PetscFunctionBegin;
+  ierr = PetscOptionsHead(PetscOptionsObject,"SeqAIJKokkos options");CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-mat_kokkos_use_kokkos_lu","flag for use of (experimental) Kokkos LU factorization","MatLUFactorNumeric_SeqAIJKOKKOS",useit,&useit,NULL);CHKERRQ(ierr);
+  if (useit) {
+    A->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJKOKKOS;
+  } else {
+    exit(14);
+    A->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJ;
+  }
+  ierr = PetscOptionsTail();CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
 static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
 {
@@ -629,6 +647,7 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
   A->ops->scale                     = MatScale_SeqAIJKokkos;
   A->ops->zeroentries               = MatZeroEntries_SeqAIJKokkos;
   //A->ops->productsetfromoptions     = MatProductSetFromOptions_SeqAIJKokkos;
+  A->ops->setfromoptions            = MatSetFromOptions_SeqAIJKokkos;
   A->ops->mult                      = MatMult_SeqAIJKokkos;
   A->ops->multadd                   = MatMultAdd_SeqAIJKokkos;
   A->ops->multtranspose             = MatMultTranspose_SeqAIJKokkos;
@@ -705,7 +724,7 @@ typedef Kokkos::TeamPolicy<>::member_type team_member;
 // This factorization exploits block diagonal matrices with "Nf" attached to the matrix in a container.
 // Use -pc_factor_mat_ordering_type rcm to order decouple blocks of size N/Nf for this optimization
 //
-static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFactorInfo *info)
+static PetscErrorCode MatLUFactorNumericOld_SeqAIJKOKKOS(Mat B,Mat A,const MatFactorInfo *info)
 {
   Mat_SeqAIJ         *b=(Mat_SeqAIJ*)B->data;
   Mat_SeqAIJKokkos   *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr), *baijkok = static_cast<Mat_SeqAIJKokkos*>(B->spptr);
@@ -855,7 +874,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFacto
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatLUFactorNumericV2_SeqAIJKOKKOS(Mat B,Mat A,const MatFactorInfo *info)
+static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFactorInfo *info)
 {
   Mat_SeqAIJ         *b=(Mat_SeqAIJ*)B->data;
   Mat_SeqAIJKokkos   *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr), *baijkok = static_cast<Mat_SeqAIJKokkos*>(B->spptr);
@@ -1116,7 +1135,7 @@ static PetscErrorCode MatLUFactorSymbolic_SeqAIJKOKKOS(Mat B,Mat A,IS isrow,IS i
 
   PetscFunctionBegin;
   ierr = MatLUFactorSymbolic_SeqAIJ(B,A,isrow,iscol,info);CHKERRQ(ierr);
-  B->ops->lufactornumeric = MatLUFactorNumericV2_SeqAIJKOKKOS;
+  B->ops->lufactornumeric = A->ops->lufactornumeric;
   // move B data into Kokkos
   ierr = MatSeqAIJKokkosSyncDevice(B);CHKERRQ(ierr); // create aijkok
   ierr = MatSeqAIJKokkosSyncDevice(A);CHKERRQ(ierr); // create aijkok
