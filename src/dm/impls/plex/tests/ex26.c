@@ -318,7 +318,6 @@ int main(int argc, char **argv) {
     PetscSection coordSection;
     Vec          coord;
     PetscScalar *cval, *xyz;
-    PetscInt     cdimCoord = 24;
     PetscInt     clSize, i, j;
 
     ierr = DMGetLocalSection(dmUA, &sectionUA);CHKERRQ(ierr);

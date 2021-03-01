@@ -47,7 +47,7 @@ program ex26f90
     type(tPetscSection)                :: sectionUA,coordSection
     type(tVec)                         :: UALoc,coord
     PetscScalar,dimension(:),pointer   :: cval,xyz
-    PetscInt                           :: dofUA,offUA,clSize,c,cdimCoord = 24
+    PetscInt                           :: dofUA,offUA,c
 
     ! dof layout ordered by increasing height in the DAG: cell, face, edge, vertex
     PetscInt,dimension(3),target        :: dofS2D     = [0, 0, 3]

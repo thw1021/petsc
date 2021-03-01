@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
   PetscMPIInt       rank, size;
   PetscViewer       viewer;
   PetscErrorCode    ierr;
+  int zorglub;
 
   ierr = PetscInitialize(&argc, &argv,NULL, help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
@@ -323,7 +324,6 @@ int main(int argc, char **argv) {
     PetscSection coordSection;
     Vec          coord;
     PetscScalar *cval, *xyz;
-    PetscInt     cdimCoord = 24;
     PetscInt     clSize, i, j;
 
     ierr = DMGetLocalSection(dmUA, &sectionUA);CHKERRQ(ierr);

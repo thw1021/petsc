@@ -92,9 +92,8 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *) viewer->data;
   PetscMPIInt           rank;
-  int                   CPU_word_size, IO_word_size, EXO_mode, exoid;
+  int                   CPU_word_size, IO_word_size, EXO_mode;
   PetscErrorCode        ierr;
-  PetscBool             flg;
   MPI_Info              mpi_info = MPI_INFO_NULL;
   float                 EXO_version;
 
@@ -131,7 +130,7 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   #if defined(PETSC_USE_64BIT_INDICES)
   EXO_mode += EX_ALL_INT64_API;
   #endif
-  exo->exoid = ex_open_par(name,EX_READ,&CPU_word_size,&IO_word_size,&EXO_version,PETSC_COMM_WORLD,mpi_info);
+  exo->exoid = ex_open_par(name,EXO_mode,&CPU_word_size,&IO_word_size,&EXO_version,PETSC_COMM_WORLD,mpi_info);
   if (exo->exoid < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
   PetscFunctionReturn(0);
 }
@@ -889,7 +888,6 @@ PetscErrorCode VecViewPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, i
   DM                 dm;
   Vec                vNatural, vComp;
   const PetscScalar *varray;
-  const char        *vecname;
   PetscInt           xs, xe, bs;
   PetscBool          useNatural;
   PetscErrorCode     ierr;
@@ -964,7 +962,6 @@ PetscErrorCode VecLoadPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, i
   DM             dm;
   Vec            vNatural, vComp;
   PetscScalar   *varray;
-  const char    *vecname;
   PetscInt       xs, xe, bs;
   PetscBool      useNatural;
   PetscErrorCode ierr;
@@ -1036,7 +1033,6 @@ PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
   DM                dm;
   Vec               vNatural, vComp;
   const PetscScalar *varray;
-  const char       *vecname;
   PetscInt          xs, xe, bs;
   PetscBool         useNatural;
   IS                compIS;
@@ -1135,7 +1131,6 @@ PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
   DM                dm;
   Vec               vNatural, vComp;
   PetscScalar      *varray;
-  const char       *vecname;
   PetscInt          xs, xe, bs;
   PetscBool         useNatural;
   IS                compIS;
