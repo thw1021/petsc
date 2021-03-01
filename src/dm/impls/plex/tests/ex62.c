@@ -32,7 +32,6 @@ int main(int argc, char **argv) {
   PetscMPIInt       rank, size;
   PetscViewer       viewer;
   PetscErrorCode    ierr;
-  int zorglub;
 
   ierr = PetscInitialize(&argc, &argv,NULL, help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
