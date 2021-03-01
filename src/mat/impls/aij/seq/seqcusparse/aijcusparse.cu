@@ -256,6 +256,39 @@ PetscErrorCode MatSeqAIJCUSPARSESetGenerateTranspose(Mat A,PetscBool transgen)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode MatSeqAIJCUSPARSEILUAnalysisAndCopyToGPU(Mat A);
+
+static PetscErrorCode MatLUFactorNumeric_AIJ_SeqAIJCUSPARSE(Mat B,Mat A,const MatFactorInfo *info)
+{
+  Mat_SeqAIJ     *b = (Mat_SeqAIJ*)B->data;
+  IS             isrow = b->row,iscol = b->col;
+  PetscBool      row_identity,col_identity;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatSeqAIJCUSPARSECopyFromGPU(A);CHKERRQ(ierr);
+  ierr = MatLUFactorNumeric_SeqAIJ(B,A,info);CHKERRQ(ierr);
+  B->offloadmask = PETSC_OFFLOAD_CPU;
+  /* determine which version of MatSolve needs to be used. */
+  ierr = ISIdentity(isrow,&row_identity);CHKERRQ(ierr);
+  ierr = ISIdentity(iscol,&col_identity);CHKERRQ(ierr);
+  if (row_identity && col_identity) {
+    B->ops->solve = MatSolve_SeqAIJCUSPARSE_NaturalOrdering;
+    B->ops->solvetranspose = MatSolveTranspose_SeqAIJCUSPARSE_NaturalOrdering;
+    B->ops->matsolve = NULL;
+    B->ops->matsolvetranspose = NULL;
+  } else {
+    B->ops->solve = MatSolve_SeqAIJCUSPARSE;
+    B->ops->solvetranspose = MatSolveTranspose_SeqAIJCUSPARSE;
+    B->ops->matsolve = NULL;
+    B->ops->matsolvetranspose = NULL;
+  }
+
+  /* get the triangular factors */
+  ierr = MatSeqAIJCUSPARSEILUAnalysisAndCopyToGPU(B);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(PetscOptionItems *PetscOptionsObject,Mat A)
 {
   PetscErrorCode           ierr;
@@ -295,6 +328,11 @@ static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(PetscOptionItems *PetscOp
                             "cusparseCsr2CscAlg_t",MatCUSPARSECsr2CscAlgorithms,(PetscEnum)cusparsestruct->csr2cscAlg,(PetscEnum*)&cusparsestruct->csr2cscAlg,&flg);CHKERRQ(ierr);
     if (flg && CUSPARSE_CSR2CSC_ALG1 != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseCsr2CscAlg_t has been changed but PETSc has not been updated accordingly");
    #endif
+
+    flg = PETSC_FALSE;
+    ierr = PetscOptionsBool("-mat_cusparse_use_cuda_lu","Use Cuda sparse LU solver instead of AIJ's LU factorization","MatLUFactorNumeric_SeqAIJCUSPARSE;",flg,&flg,NULL);CHKERRQ(ierr);
+    if (flg) A->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJCUSPARSE;
+    else A->ops->lufactornumeric = MatLUFactorNumeric_AIJ_SeqAIJCUSPARSE;
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -308,7 +346,7 @@ static PetscErrorCode MatILUFactorSymbolic_SeqAIJCUSPARSE(Mat B,Mat A,IS isrow,I
   PetscFunctionBegin;
   ierr = MatSeqAIJCUSPARSETriFactors_Reset(&cusparseTriFactors);CHKERRQ(ierr);
   ierr = MatILUFactorSymbolic_SeqAIJ(B,A,isrow,iscol,info);CHKERRQ(ierr);
-  B->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJCUSPARSE;
+  B->ops->lufactornumeric = A->ops->lufactornumeric;
   PetscFunctionReturn(0);
 }
 
@@ -320,7 +358,7 @@ static PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSE(Mat B,Mat A,IS isrow,IS
   PetscFunctionBegin;
   ierr = MatSeqAIJCUSPARSETriFactors_Reset(&cusparseTriFactors);CHKERRQ(ierr);
   ierr = MatLUFactorSymbolic_SeqAIJ(B,A,isrow,iscol,info);CHKERRQ(ierr);
-  B->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJCUSPARSE;
+  B->ops->lufactornumeric = A->ops->lufactornumeric;
   if (!cusparseTriFactors->diag_d) {
     const PetscInt  n = A->rmap->n;
     Mat_SeqAIJ      *b=(Mat_SeqAIJ*)B->data;
@@ -1090,6 +1128,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
 	    *Akkv = *Akkv - sm_L_ki[threadIdx.y] * Uij; // UiK
 	  } else {
 	    PetscScalar    *start, *end, *pAkjv=NULL;
+            PetscInt       high, low;
 	    const PetscInt *startj;
 	    if (col<myk) { // L
 	      PetscScalar *pLki = ba_d + bi_d[myk] + (int)(sm_colkIdx[threadIdx.y]);
@@ -1103,11 +1142,18 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
 	      startj= bj_d + idx;
 	      end   = ba_d + bdiag_d[myk];
 	    }
-	    // search for 'col', use bisection search - TODO
-	    for (pAkjv=start; pAkjv<end; pAkjv++) {
-	      if (startj[pAkjv-start] == col) break;
-	    }
-	    if (pAkjv==end) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: *** failed to find Akj(%d,%d)\n",myk,col);
+	    // search for 'col'
+            low  = 0;
+            high = (PetscInt)(end-start);
+            while (high-low > 5) {
+              int t = (low+high)/2;
+              if (startj[t] > col) high = t;
+              else                 low  = t;
+            }
+            for (pAkjv=start+low; pAkjv<start+high; pAkjv++) {
+              if (startj[pAkjv-start] == col) break;
+            }
+            if (pAkjv==start+high) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: *** failed to find Akj(%d,%d)\n",myk,col);
 	    //printf("%04d,%04d,%04d update Akj %g --> %g, Lki=%g Uij=%g (%d) %d offset\n", ii, myk, col, *pAkjv, *pAkjv - sm_L_ki[threadIdx.y] * Uij, sm_L_ki[threadIdx.y], Uij, threadIdx.y, (int)(pAkjv-ba_d));
 	    *pAkjv = *pAkjv - sm_L_ki[threadIdx.y] * Uij; // A_kj = A_kj - L_ki * U_ij
 	    //printf("\t\t\t%d.%d: Update %c A[%d,%d] = %g with Uij=%g, Lik=%g\n",field,field_block, (col>myk) ? 'U' : 'L', myk, col, *pAkjv, Uij, sm_L_ki[]);
@@ -1197,6 +1243,9 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat B,Mat A,const MatFac
     B->ops->matsolve = NULL;
     B->ops->matsolvetranspose = NULL;
   } else {
+    // ISView(isrow,NULL);
+    // ISView(iscol,NULL);
+    // ISView(isicol,NULL);
     B->ops->solve = MatSolve_SeqAIJCUSPARSE;
     B->ops->solvetranspose = MatSolveTranspose_SeqAIJCUSPARSE;
     B->ops->matsolve = NULL;
