@@ -1021,6 +1021,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFacto
                         // printf("\t\t\t%d.%d.%d: Update D A[%d,%d] = %g, with L_ki=%g Uik=%g. 1/D=%g\n",field,field_block_idx,team.team_rank(), myk, bjUi[uiIdx], *Akkv, L_ki(), Uij, 1./(*Akkv));
                       } else {
                         PetscScalar    *start, *end, *pAkjv=NULL;
+                        PetscInt       high, low;
                         const PetscInt *startj;
                         if (col<myk) { // L
                           PetscScalar *pLki = ba_d + bi_d[myk] + colkIdx();
@@ -1035,10 +1036,17 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFacto
                           end   = ba_d + bdiag_d[myk];
                         }
                         // search for 'col', use bisection search - TODO
-                        for (pAkjv=start; pAkjv<end; pAkjv++) {
+                        low  = 0;
+                        high = (PetscInt)(end-start);
+                        while (high-low > 5) {
+                          int t = (low+high)/2;
+                          if (startj[t] > col) high = t;
+                          else                 low  = t;
+                        }
+                        for (pAkjv=start+low; pAkjv<start+high; pAkjv++) {
                           if (startj[pAkjv-start] == col) break;
                         }
-                        if (pAkjv==end) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: *** failed to find Akj(%d,%d)\n",myk,col);
+                        if (pAkjv==start+high) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: *** failed to find Akj(%d,%d)\n",myk,col);
                         *pAkjv = *pAkjv - L_ki() * Uij; // A_kj = A_kj - L_ki * U_ij
                         // printf("\t\t\t%d.%d.%d: Update %c A[%d,%d] = %g with Uij=%g, Lik=%g\n",field,field_block_idx,team.team_rank(), (col>myk) ? 'U' : 'L', myk, col, *pAkjv, Uij, L_ki());
                       }
