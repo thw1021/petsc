@@ -845,11 +845,18 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
     {
       char *ver,bs[32],*bsf;
       flg = PETSC_FALSE;
-      ierr = PetscStrstr(mpilibraryversion,"Open MPI",&ver);if (ierr) return ierr;
-      if (ver) {
-        PetscSNPrintf(bs,32,"v%d.%d",OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
-        ierr = PetscStrstr(ver,bs,&bsf);if (ierr) return ierr;
-        if (bsf) flg = PETSC_TRUE;
+#define OMPISTRSZ 2
+      char ompistr1[OMPISTRSZ][20] = {"Open MPI","FUJITSU MPI"};
+      char ompistr2[OMPISTRSZ][20] = {"v","Library "};
+      int i;
+      for (i=0; i<OMPISTRSZ; i++) {
+        ierr = PetscStrstr(mpilibraryversion,ompistr1[i],&ver);if (ierr) return ierr;
+        if (ver) {
+          PetscSNPrintf(bs,32,"%s%d.%d",ompistr2[i],OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
+          ierr = PetscStrstr(ver,bs,&bsf);if (ierr) return ierr;
+          if (bsf) flg = PETSC_TRUE;
+          break;
+        }
       }
       if (!flg) {
         fprintf(stderr,"PETSc Error --- Open MPI library version \n%s does not match what PETSc was compiled with %d.%d, aborting\n",mpilibraryversion,OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
