@@ -143,6 +143,8 @@ typedef const char* MatSolverType;
 #define MATSOLVERCUSPARSE         "cusparse"
 #define MATSOLVERCUDA             "cuda"
 #define MATSOLVERKOKKOS           "kokkos"
+#define MATSOLVERPETSCBAND        "petscband"
+#define MATSOLVERCUSPARSEBAND     "cusparseband"
 
 /*E
     MatFactorType - indicates what type of factorization is requested
