@@ -247,6 +247,8 @@ PETSC_INTERN PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat,Mat,IS,IS,const MatFa
 PETSC_INTERN PetscErrorCode MatLUFactorNumeric_SeqAIJ_inplace(Mat,Mat,const MatFactorInfo*);
 PETSC_INTERN PetscErrorCode MatLUFactorNumeric_SeqAIJ(Mat,Mat,const MatFactorInfo*);
 PETSC_INTERN PetscErrorCode MatLUFactorNumeric_SeqAIJ_InplaceWithPerm(Mat,Mat,const MatFactorInfo*);
+PETSC_INTERN PetscErrorCode MatLUBandFactorSymbolic_SeqAIJ(Mat,Mat,IS,IS,const MatFactorInfo*);
+PETSC_INTERN PetscErrorCode MatLUBandFactorNumeric_SeqAIJ(Mat,Mat,const MatFactorInfo*);
 PETSC_INTERN PetscErrorCode MatLUFactor_SeqAIJ(Mat,IS,IS,const MatFactorInfo*);
 PETSC_INTERN PetscErrorCode MatSolve_SeqAIJ_inplace(Mat,Vec,Vec);
 PETSC_INTERN PetscErrorCode MatSolve_SeqAIJ(Mat,Vec,Vec);

@@ -100,11 +100,17 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_petsc(Mat A,MatFactorType ftype,
 #endif
   ierr = MatCreate(PetscObjectComm((PetscObject)A),B);CHKERRQ(ierr);
   ierr = MatSetSizes(*B,n,n,n,n);CHKERRQ(ierr);
-  if (ftype == MAT_FACTOR_LU || ftype == MAT_FACTOR_ILU || ftype == MAT_FACTOR_ILUDT) {
+  if (ftype == MAT_FACTOR_LU || ftype == MAT_FACTOR_ILU || ftype == MAT_FACTOR_ILUDT || ftype == MAT_FACTOR_LUBAND) {
     ierr = MatSetType(*B,MATSEQAIJ);CHKERRQ(ierr);
 
     (*B)->ops->ilufactorsymbolic = MatILUFactorSymbolic_SeqAIJ;
-    (*B)->ops->lufactorsymbolic  = MatLUFactorSymbolic_SeqAIJ;
+    if (ftype == MAT_FACTOR_LUBAND) {
+      PetscPrintf(PETSC_COMM_SELF,"MatGetFactor_seqaij_petsc: have MAT_FACTOR_LUBAND\n");
+      (*B)->ops->lufactorsymbolic  = MatLUBandFactorSymbolic_SeqAIJ;
+    } else {
+      PetscPrintf(PETSC_COMM_SELF,"Normal MatGetFactor_seqaij_petsc: MAT_FACTOR_LU ...\n");
+      (*B)->ops->lufactorsymbolic  = MatLUBandFactorSymbolic_SeqAIJ;
+    }
 
     ierr = MatSetBlockSizesFromMats(*B,A,A);CHKERRQ(ierr);
   } else if (ftype == MAT_FACTOR_CHOLESKY || ftype == MAT_FACTOR_ICC) {
@@ -426,6 +432,178 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B,Mat A,IS isrow,IS iscol,const Ma
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode MatLUBandFactorSymbolic_SeqAIJ(Mat B,Mat A,IS isrow,IS iscol,const MatFactorInfo *info)
+{
+  Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data,*b;
+  IS                 isicol;
+  PetscErrorCode     ierr;
+  const PetscInt     *r,*ic,*ai=a->i,*aj=a->j;
+  PetscInt           i,n=A->rmap->n;
+  PetscInt           *bi,*bj;
+  PetscInt           *bdiag,nnz,mxL,mxU;
+  PetscBool          missing;
+
+  PetscFunctionBegin;
+  if (A->rmap->N != A->cmap->N) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"matrix must be square");
+  ierr = MatMissingDiagonal(A,&missing,&i);CHKERRQ(ierr);
+  if (missing) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %D",i);
+
+  ierr = ISInvertPermutation(iscol,PETSC_DECIDE,&isicol);CHKERRQ(ierr);
+  ierr = ISGetIndices(isrow,&r);CHKERRQ(ierr);
+  ierr = ISGetIndices(isicol,&ic);CHKERRQ(ierr);
+
+  ierr = MatSeqAIJSetPreallocation_SeqAIJ(B,MAT_SKIP_ALLOCATION,NULL);CHKERRQ(ierr);
+  ierr = PetscLogObjectParent((PetscObject)B,(PetscObject)isicol);CHKERRQ(ierr);
+  b    = (Mat_SeqAIJ*)(B)->data;
+
+
+  // debug
+  /* printf("  :"); */
+  /* for (int i=0;i<n;i++) printf("%2d, ",i); */
+  /* printf("\nr :"); */
+  /* for (int i=0;i<n;i++) printf("%2d, ",r[i]); */
+  /* printf("\nic:"); */
+  /* for (int i=0;i<n;i++) printf("%2d, ",ic[i]); */
+  /* printf("\n"); */
+  /* // debug */
+  /* for (int rowa=0;rowa<n;rowa++) { */
+  /*   const PetscInt nz = ai[rowa+1] - ai[rowa], *ajtmp = aj   + ai[rowa]; */
+  /*   PetscScalar    *aatmp                             = a->a + ai[rowa]; */
+  /*   printf("A %2d): ",rowa); */
+  /*   for (int j=0; j<nz; j++) printf("%c(%2d)(%13.6e) ", rowa==ajtmp[j] ? '*' : ' ', ajtmp[j], aatmp[j]); */
+  /*   printf("\n"); */
+  /* } */
+
+  /* get band widths */
+  mxL = mxU = 0;
+  for (int rwb=0; rwb<n; rwb++) {
+    const PetscInt rwa = ic[rwb], nnz = ai[rwb+1] - ai[rwb], *ajtmp = aj + ai[rwb];
+    for (int j=0;j<nnz;j++) {
+      PetscInt colb = ic[ajtmp[j]];
+      if (colb<rwa) { // L
+        if (rwa-colb > mxL) {
+          mxL = rwa-colb;
+          //printf("new mxL=%d from A row %d: B(%d,%d)\n",mxL, rwb, rwa, colb);
+        }
+      } else {
+        if (colb-rwa > mxU) mxU = colb-rwa;
+      }
+    }
+  }
+  nnz = (n-mxL)*mxL + (n-mxU)*mxU + (n - (mxL>mxU ? mxU : mxL)) + mxL*mxU;
+  //PetscPrintf(PETSC_COMM_SELF,"****** MatLUBandFactorSymbolic_SeqAIJ nnz=%d mxL=%D mxU=%D\n",nnz,mxL,mxU);
+
+  /* only support structurally symmetric, but it might work */
+  if (mxL!=mxU) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Only symmetric structure supported (now) W_L=%D W_U=%D",mxL,mxU);
+
+  /* get new row and diagonal pointers, must be allocated separately because they will be given to the Mat_SeqAIJ and freed separately */
+  ierr = PetscMalloc1(nnz+1,&b->a);CHKERRQ(ierr); /* no need to touch this - why is it +1 ? */
+  ierr = PetscMalloc1(n+1,&bi);CHKERRQ(ierr);
+  ierr = PetscMalloc1(n+1,&bdiag);CHKERRQ(ierr);
+  ierr = PetscMalloc1(nnz+1,&bj);CHKERRQ(ierr);
+  b->j    = bj;
+  b->i    = bi;
+  b->diag = bdiag;
+  /* fill in bj, bdiag, and bi, start with counting L */
+  bi[0] = 0;
+  for (int rowa=0;rowa<n;rowa++) {
+    PetscInt rowb = r[rowa];
+    if (rowb<mxL) bi[rowb+1] = rowb;
+    else          bi[rowb+1] = mxL;
+  }
+  /* prefix sum */
+  for (int i=0;i<n;i++) bi[i+1] += bi[i];
+
+  // debug
+  /* for (int rowb=0;rowb<n;rowb++) { */
+  /*   const PetscInt rowa = ic[rowb], nz = ai[rowa+1] - ai[rowa], *ajtmp = aj + ai[rowa]; */
+  /*   printf("b.%d) rowa=%4d: ",rowb,rowa); */
+  /*   for (int j=0; j<nz; j++) printf("%c(%2d) ", rowb==r[ajtmp[j]] ? '*' : ' ', r[ajtmp[j]]); */
+  /*   printf("\n"); */
+  /* } */
+
+  /* set bdiag */
+  bdiag[n] = bi[n] - 1;
+  for (int i=0,k=n-1;i<n;i++,k--) {
+    if (i<mxU) bdiag[k] = bdiag[k+1] + i   + 1;
+    else bdiag[k]       = bdiag[k+1] + mxU + 1;
+  }
+
+  /* set U */
+  for (int i=0;i<n;i++) {
+    PetscInt *bjU = bj + bdiag[i+1]+1, nzu = bdiag[i] - (bdiag[i+1]+1); /* without diag */
+    bj[bdiag[i]] = i; /* diagonal */
+    for (int k=0;k<nzu;k++) bjU[k] = i + k + 1;
+  }
+
+  /* set L */
+  for (int i=0;i<n;i++) {
+    PetscInt *bjL = bj + bi[i], nzl = bi[i+1] - bi[i];
+    for (int k=0;k<nzl;k++) bjL[k] = i - nzl + k;
+  }
+
+  ierr = ISRestoreIndices(isrow,&r);CHKERRQ(ierr);
+  ierr = ISRestoreIndices(isicol,&ic);CHKERRQ(ierr);
+
+  // debug
+  /* for (int i=0;i<n;i++) { */
+  /*   const PetscInt nzu = bdiag[i] - (bdiag[i+1]+1), nzl = bi[i+1] - bi[i], *bjtmp = bj + bi[i]; */
+  /*   printf("b.%2d: ",i); */
+  /*   for (int j=0; j<nzl; j++) printf("(%2d)-L ",bjtmp[j]); */
+  /*   printf("(%2d)-D*",bj[bdiag[i]]); */
+  /*   bjtmp = bj + bdiag[i+1] + 1; /\* start of U *\/ */
+  /*   for (int j=0; j<nzu; j++) printf("(%2d)-U ",bjtmp[j]); */
+  /*   printf("\n"); */
+  /* } */
+  /* Mat mat; */
+  /* ierr = MatCreateSubMatrix(A, iscol, iscol, MAT_INITIAL_MATRIX, &mat);CHKERRQ(ierr); */
+  /* MatViewFromOptions(mat,NULL,"-mat_fact_view"); */
+  /* ierr = MatDestroy(&mat);CHKERRQ(ierr); */
+
+
+  /* put together the new matrix */
+  b->free_a       = PETSC_TRUE;
+  b->free_ij      = PETSC_TRUE;
+  b->singlemalloc = PETSC_FALSE;
+  b->ilen = NULL;
+  b->imax = NULL;
+  b->row  = isrow;
+  b->col  = iscol;
+  ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
+  ierr    = PetscObjectReference((PetscObject)iscol);CHKERRQ(ierr);
+  b->icol = isicol;
+  ierr    = PetscMalloc1(n+1,&b->solve_work);CHKERRQ(ierr);
+
+  /* In b structure:  Free imax, ilen, old a, old j.  Allocate solve_work, new a, new j */
+  ierr     = PetscLogObjectMemory((PetscObject)B,(nnz+1)*(sizeof(PetscInt)+sizeof(PetscScalar)));CHKERRQ(ierr);
+  b->maxnz = b->nz = nnz+1;
+
+  B->factortype            = MAT_FACTOR_LUBAND;
+  B->info.factor_mallocs   = 0;
+  B->info.fill_ratio_given = 0;
+
+  if (ai[n]) {
+    B->info.fill_ratio_needed = ((PetscReal)(bdiag[0]+1))/((PetscReal)ai[n]);
+  } else {
+    B->info.fill_ratio_needed = 0.0;
+  }
+#if defined(PETSC_USE_INFO)
+  if (ai[n] != 0) {
+    PetscReal af = B->info.fill_ratio_needed;
+    ierr = PetscInfo1(A,"Band fill ratio %g\n",(double)af);CHKERRQ(ierr);
+  } else {
+    ierr = PetscInfo(A,"Empty matrix\n");CHKERRQ(ierr);
+  }
+#endif
+  B->ops->lufactornumeric = MatLUBandFactorNumeric_SeqAIJ;
+  if (a->inode.size) {
+    ierr = PetscInfo(A,"Warning: using inodes in band solver.\n");CHKERRQ(ierr);
+  }
+  ierr = MatSeqAIJCheckInode_FactorLU(B);CHKERRQ(ierr);
+
+  PetscFunctionReturn(0);
+}
+
 /*
     Trouble in factorization, should we dump the original matrix?
 */
@@ -614,6 +792,145 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ(Mat B,Mat A,const MatFactorInfo *info)
       ierr = PetscInfo2(A,"number of shift_inblocks applied %D, each shift_amount %g\n",sctx.nshift,(double)info->shiftamount);CHKERRQ(ierr);
     }
   }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatLUBandFactorNumeric_SeqAIJ(Mat B,Mat A,const MatFactorInfo *info)
+{
+  Mat_SeqAIJ      *a    =(Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data;
+  IS              isrow = b->row,isicol = b->icol;
+  PetscErrorCode  ierr;
+  const PetscInt  *r,*ic;
+  const PetscInt  n=A->rmap->n,*ai=a->i,*aj=a->j,*bi=b->i,*bj=b->j,*bdiag=b->diag;
+  PetscInt        Nf,Ni=1;
+  MatScalar       *ba=b->a;
+  const MatScalar *aa=a->a;
+  PetscBool       row_identity,col_identity;
+  PetscContainer  container;
+
+  PetscFunctionBegin;
+  // factor: get Nf if available
+  ierr = PetscObjectQuery((PetscObject) A, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
+  if (container) {
+    PetscInt *pNf=NULL;
+    ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
+    Nf = (*pNf)%1000;
+  } else Nf = 1;
+  if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
+  const PetscInt  nloc = n/Nf, field = 0, field_block = 0;
+  const PetscInt  start = field*nloc, end = start + nloc;
+  const PetscInt  nloc_i =  (nloc/Ni + !!(nloc%Ni)), start_i = field*nloc + field_block*nloc_i, end_i = (start_i + nloc_i) > (field+1)*nloc ? (field+1)*nloc : (start_i + nloc_i);
+
+  ierr = ISGetIndices(isrow,&r);CHKERRQ(ierr);
+  ierr = ISGetIndices(isicol,&ic);CHKERRQ(ierr);
+
+  // zero rows of B
+  for (int rowb = start_i; rowb < end_i; rowb += 1) { // rows in block
+    PetscInt    nzbL = bi[rowb+1] - bi[rowb], nzbU = bdiag[rowb] - bdiag[rowb+1]; // with diag
+    PetscScalar *baL = ba + bi[rowb];
+    PetscScalar *baU = ba + bdiag[rowb+1]+1;
+    //printf("%d (r=%d, ic=%d)): zero B |L|=%d |U|=%d\n",rowb,r[rowb],ic[rowb],nzbL,nzbU);
+    /* zero (unfactored row) */
+    for (int j=0 ; j<nzbL ; j += 1) if (j<nzbL) baL[j] = 0;
+    for (int j=0 ; j<nzbU ; j += 1) if (j<nzbU) baU[j] = 0;
+  }
+  // copy A into B -- these two loops can be fused
+  for (int rowb = start_i; rowb < end_i; rowb += 1) { // rows in block
+    PetscInt          rowa = r[rowb], nza = ai[rowa+1] - ai[rowa];
+    const PetscScalar *av    = aa + ai[rowa];
+    const int         *ajtmp = aj + ai[rowa];
+    /* load in initial (unfactored row) */
+    // for (int j=0;j<nza;j++) {
+    //printf("%d (row-A:%d): ",rowb,rowa);
+    for (int j=0 ; j<nza ; j += 1) {
+      if (j<nza) {
+        PetscInt    colb = ic[ajtmp[j]];
+        PetscScalar vala = av[j];
+        if (colb == rowb) {
+          *(ba + bdiag[rowb]) = vala;
+          //printf(" (%2d,%2d) %c %f ",rowb,colb,'D',vala);
+        } else {
+          const PetscInt    *pbj = bj + ((colb > rowb) ? bdiag[rowb+1]+1 : bi[rowb]);
+          PetscScalar       *pba = ba + ((colb > rowb) ? bdiag[rowb+1]+1 : bi[rowb]);
+          PetscInt          nz   = (colb > rowb) ? bdiag[rowb] - (bdiag[rowb+1]+1) : bi[rowb+1] - bi[rowb], set=0;
+          for (int j=0; j<nz ; j++) {
+            if (pbj[j] == colb) {
+              pba[j] = vala;
+              //printf(" (%2d,%2d) %c %f ",rowb,colb, colb > rowb ? 'U' : 'L',vala);
+              set++;
+              break;
+            }
+          }
+          if (set!=1) printf("\t\t\t ERROR DID NOT SET ????? %d\n",(int)set);
+        }
+      }
+    }
+    //if (threadIdx.x==0) printf("\n");
+  }
+
+  // A22 panel update for each row A(1,:) and col A(:,1)
+  for (int dd=start,Bw=-1; dd<end-1; dd++) {
+    //__syncthreads();
+    const PetscInt    nzUd = bdiag[dd] - (bdiag[dd+1]+1); // vector, and vector size, of column indices of U(i,(i+1):end)
+    const PetscScalar *baUd = ba + bdiag[dd+1]+1; // vector of data  U(i,i+1:end)
+    const PetscScalar Bdd = *(ba + bdiag[dd]); // diagonal in its special place
+    if (Bw == -1) Bw = nzUd; /* assuming symmetric structure */
+    for (int iIdx = 1, myi = dd+1; iIdx <= nzUd ; iIdx += 1, myi += 1) { /* assuming symmetric structure */
+      const PetscInt nL = bi[myi+1] - bi[myi], ttt = Bw - iIdx, kIdx = (ttt>dd) ? dd : ttt;
+      PetscScalar    *Lid = ba + bi[myi] + kIdx;
+      *Lid = *Lid/Bdd;
+      for (int jIdx = 0, uIdx=0; jIdx < nzUd ; jIdx += 1) {
+        const PetscScalar Bdj = baUd[jIdx], S = (*Lid)*Bdj;
+        if (kIdx+jIdx+1 < nL) {
+          ba[ bi[myi] + kIdx + jIdx+1] -= S;
+        } else if (kIdx+jIdx+1 == nL) { /* cheat for diagonal */
+          ba[bdiag[myi]] -= S;
+        } else {
+          ba[bdiag[myi+1] + 1 + uIdx++] -= S;
+        }
+      }
+    }
+    ierr = PetscLogFlops((PetscLogDouble)(nzUd*nzUd*2 + nzUd));CHKERRQ(ierr);
+  } /* endof for (i=0; i<n; i++) { */
+
+  ierr = ISRestoreIndices(isicol,&ic);CHKERRQ(ierr);
+  ierr = ISRestoreIndices(isrow,&r);CHKERRQ(ierr);
+
+  for (int rowb = start_i; rowb < end_i; rowb += 1) { // rows in block
+    ba[bdiag[rowb]] = 1. / ba[bdiag[rowb]];
+  }
+  ierr = PetscLogFlops(B->cmap->n);CHKERRQ(ierr);
+
+  // debug
+  /* printf("LU n=%d:\n",n); */
+  /* for (int i=0;i<n;i++) { */
+  /*   const PetscInt nzu = bdiag[i] - (bdiag[i+1]+1), nzl = bi[i+1] - bi[i], *bjtmp = bj + bi[i]; */
+  /*   PetscScalar    *batmp = b->a + bi[i]; */
+  /*   printf("b.%2d: ",i); */
+  /*   for (int j=0; j<nzl; j++) printf("(%13.6e)(%2d)-L ",batmp[j],bjtmp[j]); */
+  /*   printf("(%13.6e)(%2d)-D*",b->a[bdiag[i]],b->j[bdiag[i]]); */
+  /*   bjtmp = bj   + bdiag[i+1] + 1; /\* start of U *\/ */
+  /*   batmp = b->a + bdiag[i+1] + 1; /\* start of U *\/ */
+  /*   for (int j=0; j<nzu; j++) printf("(%13.6e)(%2d)-U ",batmp[j],bjtmp[j]); */
+  /*   printf("\n"); */
+  /* } */
+
+  ierr = ISIdentity(isrow,&row_identity);CHKERRQ(ierr);
+  ierr = ISIdentity(isicol,&col_identity);CHKERRQ(ierr);
+  if (b->inode.size) {
+    B->ops->solve = MatSolve_SeqAIJ_Inode;
+  } else if (row_identity && col_identity) {
+    B->ops->solve = MatSolve_SeqAIJ_NaturalOrdering;
+  } else {
+    B->ops->solve = MatSolve_SeqAIJ;
+  }
+  B->ops->solveadd          = MatSolveAdd_SeqAIJ;
+  B->ops->solvetranspose    = MatSolveTranspose_SeqAIJ;
+  B->ops->solvetransposeadd = MatSolveTransposeAdd_SeqAIJ;
+  B->ops->matsolve          = MatMatSolve_SeqAIJ;
+  B->assembled              = PETSC_TRUE;
+  B->preallocated           = PETSC_TRUE;
+
   PetscFunctionReturn(0);
 }
 
