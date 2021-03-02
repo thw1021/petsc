@@ -1102,7 +1102,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
           if (pjL[j] == ii) {
             PetscScalar *pLki = ba_d + bi_d[myk] + j;
             if ((int)sm_colkIdx[threadIdx.y] != -1) printf("\t\t\t\t\t\t\tERROR: find L_ki(%d,%d) TWICE (%d--%d)\n",(int)myk,(int)ii,(int)sm_colkIdx[threadIdx.y],j);
-            sm_colkIdx[threadIdx.y] = (PetscScalar)j; // output
+            sm_colkIdx[threadIdx.y] = j; // output
             //printf("%04d,%04d,%04d update Lki %g --> Lki=%g with Bii=%g (%d) %d offset\n", ii, myk, ii, *pLki, *pLki/Bii, Bii, threadIdx.y, (int)(pLki-ba_d));
             *pLki = *pLki/Bii; // column scaling:  L(k,i) = A(:k,i) / A(i,i)
             sm_L_ki[threadIdx.y] = *pLki;
@@ -1113,7 +1113,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
       __syncthreads(); // just needs in x direction
       if (kIdx < nzUi) {
         //if (threadIdx.x + blockIdx.x + blockIdx.y == 0) printf("%04d,%04d,%04d Lki=%g colID=%d\n", ii, myk, ii, sm_L_ki[threadIdx.y], (int)sm_colkIdx[threadIdx.y]);
-        if ((int)sm_colkIdx[threadIdx.y] == -1) printf("\t\t\t\t\t\t\tERROR: failed to find L_ki(%d,%d)\n",(int)myk,ii);
+        if (sm_colkIdx[threadIdx.y] == -1) printf("\t\t\t\t\t\t\tERROR: failed to find L_ki(%d,%d)\n",(int)myk,ii);
         // active row k, do  A_kj -= Lki * U_ij; j \in U(i,:) j != i
         // U(i+1,:end)
         // Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,nzUi), [=] (const int &uiIdx) { // index into i (U)
@@ -1131,7 +1131,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
             PetscInt       high, low;
             const PetscInt *startj;
             if (col<myk) { // L
-              PetscScalar *pLki = ba_d + bi_d[myk] + (int)(sm_colkIdx[threadIdx.y]);
+              PetscScalar *pLki = ba_d + bi_d[myk] + sm_colkIdx[threadIdx.y];
               PetscInt idx = (pLki+1) - (ba_d + bi_d[myk]); // index into row
               start = pLki+1; // start at pLki+1, A22(myk,1)
               startj= bj_d + bi_d[myk] + idx;
