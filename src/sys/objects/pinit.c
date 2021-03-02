@@ -843,13 +843,21 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
     /* check for OpenMPI version, it is not part of the MPI ABI initiative (is it part of another initiative that needs to be handled?) */
 #elif defined(OMPI_MAJOR_VERSION)
     {
-      char *ver,bs[32],*bsf;
+#define PBUFSZ 64
+#define PSTRSZ 2
+      char *ver,bs[OMPIBUFSZ],*bsf;
       flg = PETSC_FALSE;
-      ierr = PetscStrstr(mpilibraryversion,"Open MPI",&ver);if (ierr) return ierr;
-      if (ver) {
-        PetscSNPrintf(bs,32,"v%d.%d",OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
-        ierr = PetscStrstr(ver,bs,&bsf);if (ierr) return ierr;
-        if (bsf) flg = PETSC_TRUE;
+      char ompistr1[PSTRSZ][PBUFSZ] = {"Open MPI","FUJITSU MPI"};
+      char ompistr2[PSTRSZ][PBUFSZ] = {"v","Library "};
+      int i;
+      for (i=0; i<PSTRSZ; i++) {
+        ierr = PetscStrstr(mpilibraryversion,ompistr1[i],&ver);if (ierr) return ierr;
+        if (ver) {
+          PetscSNPrintf(bs,PBUFSZ,"%s%d.%d",ompistr2[i],OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
+          ierr = PetscStrstr(ver,bs,&bsf);if (ierr) return ierr;
+          if (bsf) flg = PETSC_TRUE;
+          break;
+        }
       }
       if (!flg) {
         fprintf(stderr,"PETSc Error --- Open MPI library version \n%s does not match what PETSc was compiled with %d.%d, aborting\n",mpilibraryversion,OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
