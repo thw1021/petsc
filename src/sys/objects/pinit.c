@@ -843,16 +843,17 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
     /* check for OpenMPI version, it is not part of the MPI ABI initiative (is it part of another initiative that needs to be handled?) */
 #elif defined(OMPI_MAJOR_VERSION)
     {
-      char *ver,bs[32],*bsf;
+#define PBUFSZ 64
+#define PSTRSZ 2
+      char *ver,bs[OMPIBUFSZ],*bsf;
       flg = PETSC_FALSE;
-#define OMPISTRSZ 2
-      char ompistr1[OMPISTRSZ][20] = {"Open MPI","FUJITSU MPI"};
-      char ompistr2[OMPISTRSZ][20] = {"v","Library "};
+      char ompistr1[PSTRSZ][PBUFSZ] = {"Open MPI","FUJITSU MPI"};
+      char ompistr2[PSTRSZ][PBUFSZ] = {"v","Library "};
       int i;
-      for (i=0; i<OMPISTRSZ; i++) {
+      for (i=0; i<PSTRSZ; i++) {
         ierr = PetscStrstr(mpilibraryversion,ompistr1[i],&ver);if (ierr) return ierr;
         if (ver) {
-          PetscSNPrintf(bs,32,"%s%d.%d",ompistr2[i],OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
+          PetscSNPrintf(bs,PBUFSZ,"%s%d.%d",ompistr2[i],OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
           ierr = PetscStrstr(ver,bs,&bsf);if (ierr) return ierr;
           if (bsf) flg = PETSC_TRUE;
           break;
