@@ -505,7 +505,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildILULowerTriMatrix(Mat A)
                                #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
                                  ,loTriFactor->solvePolicy, loTriFactor->solveBuffer
                                #endif
-				 );CHKERRCUSPARSE(stat);
+);CHKERRCUSPARSE(stat);
         cerr = WaitForCUDA();CHKERRCUDA(cerr);
         ierr = PetscLogEventEnd(MAT_CUSPARSESolveAnalysis,A,0,0,0);CHKERRQ(ierr);
 
@@ -647,7 +647,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildILUUpperTriMatrix(Mat A)
                                #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
                                  ,upTriFactor->solvePolicy, upTriFactor->solveBuffer
                                #endif
-				 );CHKERRCUSPARSE(stat);
+);CHKERRCUSPARSE(stat);
         cerr = WaitForCUDA();CHKERRCUDA(cerr);
         ierr = PetscLogEventEnd(MAT_CUSPARSESolveAnalysis,A,0,0,0);CHKERRQ(ierr);
 
@@ -1037,25 +1037,25 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
     //printf("%d (row-A:%d): ",rowb,rowa);
     for (int j=threadIdx.x ; j<nza ; j += blockDim.x) {
       if (j<nza) {
-	PetscInt    colb = ic[ajtmp[j]];
-	PetscScalar vala = av[j];
-	if (colb == rowb) {
-	  *(ba_d + bdiag_d[rowb]) = vala;
-	  //printf(" (%2d,%2d) %c %f ",rowb,colb,'D',vala);
-	} else {
-	  const PetscInt    *pbj = bj_d + ((colb > rowb) ? bdiag_d[rowb+1]+1 : bi_d[rowb]);
-	  PetscScalar       *pba = ba_d + ((colb > rowb) ? bdiag_d[rowb+1]+1 : bi_d[rowb]);
-	  PetscInt          nz   = (colb > rowb) ? bdiag_d[rowb] - (bdiag_d[rowb+1]+1) : bi_d[rowb+1] - bi_d[rowb], set=0;
-	  for (int j=0; j<nz ; j++) {
-	    if (pbj[j] == colb) {
-	      pba[j] = vala;
-	      //printf(" (%2d,%2d) %c %f ",rowb,colb, colb > rowb ? 'U' : 'L',vala);
-	      set++;
-	      break;
-	    }
-	  }
-	  if (set!=1) printf("\t\t\t ERROR DID NOT SET ????? %d\n",set);
-	}
+        PetscInt    colb = ic[ajtmp[j]];
+        PetscScalar vala = av[j];
+        if (colb == rowb) {
+          *(ba_d + bdiag_d[rowb]) = vala;
+          //printf(" (%2d,%2d) %c %f ",rowb,colb,'D',vala);
+        } else {
+          const PetscInt    *pbj = bj_d + ((colb > rowb) ? bdiag_d[rowb+1]+1 : bi_d[rowb]);
+          PetscScalar       *pba = ba_d + ((colb > rowb) ? bdiag_d[rowb+1]+1 : bi_d[rowb]);
+          PetscInt          nz   = (colb > rowb) ? bdiag_d[rowb] - (bdiag_d[rowb+1]+1) : bi_d[rowb+1] - bi_d[rowb], set=0;
+          for (int j=0; j<nz ; j++) {
+            if (pbj[j] == colb) {
+              pba[j] = vala;
+              //printf(" (%2d,%2d) %c %f ",rowb,colb, colb > rowb ? 'U' : 'L',vala);
+              set++;
+              break;
+            }
+          }
+          if (set!=1) printf("\t\t\t ERROR DID NOT SET ????? %d\n",set);
+        }
       }
     }
     //if (threadIdx.x==0) printf("\n");
@@ -1088,61 +1088,61 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
       if (threadIdx.x == 0) { sm_colkIdx[threadIdx.y] = -1; sm_L_ki[threadIdx.y] = -2e100; }
       __syncthreads();
       if (kIdx < nzUi) {
-	//printf("\t%d.%d) kIdx = %d/%d myk=%d\n",threadIdx.y,threadIdx.x,kIdx,nzUi,bjUi[kIdx]);
-	myk = bjUi[kIdx]; // assume symmetric structure, need a transposed meta-data here in general
-	const PetscInt *pjL = bj_d + bi_d[myk]; // look for L(myk,ii) in start of row
-	const PetscInt nzL  = bi_d[myk+1] - bi_d[myk]; // size of L_k(:)
-	// find and do L(k,i) = A(:k,i) / A(i,i)
-	//Kokkos::single(Kokkos::PerThread(team), [=]() { printf("\t\tLower B(%d,:) nzL = %d search for ii=%d field_block_idx=%d\n",myk,nzL,ii,field_block_idx); });
-	//if (threadIdx.x == 0) printf("\t\tLower B(%d,:) nzL = %d search for ii=%d\n",myk,nzL,ii);
-	// get column
-	//Kokkos::parallel_reduce(Kokkos::ThreadVectorRange(team,nzL), [&] (const int &j, size_t &idx) {
-	for (int j=threadIdx.x ; j<nzL ; j += blockDim.x) {
-	  //printf("\t\t%d.%d) j=%d, testing col %d =? %d (ii)\n",threadIdx.y,threadIdx.x,j,pjL[j],ii);
-	  if (pjL[j] == ii) {
-	    PetscScalar *pLki = ba_d + bi_d[myk] + j;
-	    if ((int)sm_colkIdx[threadIdx.y] != -1) printf("\t\t\t\t\t\t\tERROR: find L_ki(%d,%d) TWICE (%d--%d)\n",myk,ii,(int)sm_colkIdx[threadIdx.y],j);
-	    sm_colkIdx[threadIdx.y] = (PetscScalar)j; // output
-	    //printf("%04d,%04d,%04d update Lki %g --> Lki=%g with Bii=%g (%d) %d offset\n", ii, myk, ii, *pLki, *pLki/Bii, Bii, threadIdx.y, (int)(pLki-ba_d));
-	    *pLki = *pLki/Bii; // column scaling:  L(k,i) = A(:k,i) / A(i,i)
-	    sm_L_ki[threadIdx.y] = *pLki;
-	    break;
-	  }
-	}
+        //printf("\t%d.%d) kIdx = %d/%d myk=%d\n",threadIdx.y,threadIdx.x,kIdx,nzUi,bjUi[kIdx]);
+        myk = bjUi[kIdx]; // assume symmetric structure, need a transposed meta-data here in general
+        const PetscInt *pjL = bj_d + bi_d[myk]; // look for L(myk,ii) in start of row
+        const PetscInt nzL  = bi_d[myk+1] - bi_d[myk]; // size of L_k(:)
+        // find and do L(k,i) = A(:k,i) / A(i,i)
+        //Kokkos::single(Kokkos::PerThread(team), [=]() { printf("\t\tLower B(%d,:) nzL = %d search for ii=%d field_block_idx=%d\n",myk,nzL,ii,field_block_idx); });
+        //if (threadIdx.x == 0) printf("\t\tLower B(%d,:) nzL = %d search for ii=%d\n",myk,nzL,ii);
+        // get column
+        //Kokkos::parallel_reduce(Kokkos::ThreadVectorRange(team,nzL), [&] (const int &j, size_t &idx) {
+        for (int j=threadIdx.x ; j<nzL ; j += blockDim.x) {
+          //printf("\t\t%d.%d) j=%d, testing col %d =? %d (ii)\n",threadIdx.y,threadIdx.x,j,pjL[j],ii);
+          if (pjL[j] == ii) {
+            PetscScalar *pLki = ba_d + bi_d[myk] + j;
+            if ((int)sm_colkIdx[threadIdx.y] != -1) printf("\t\t\t\t\t\t\tERROR: find L_ki(%d,%d) TWICE (%d--%d)\n",myk,ii,(int)sm_colkIdx[threadIdx.y],j);
+            sm_colkIdx[threadIdx.y] = (PetscScalar)j; // output
+            //printf("%04d,%04d,%04d update Lki %g --> Lki=%g with Bii=%g (%d) %d offset\n", ii, myk, ii, *pLki, *pLki/Bii, Bii, threadIdx.y, (int)(pLki-ba_d));
+            *pLki = *pLki/Bii; // column scaling:  L(k,i) = A(:k,i) / A(i,i)
+            sm_L_ki[threadIdx.y] = *pLki;
+            break;
+          }
+        }
       }
       __syncthreads(); // just needs in x direction
       if (kIdx < nzUi) {
-	//if (threadIdx.x + blockIdx.x + blockIdx.y == 0) printf("%04d,%04d,%04d Lki=%g colID=%d\n", ii, myk, ii, sm_L_ki[threadIdx.y], (int)sm_colkIdx[threadIdx.y]);
-	if ((int)sm_colkIdx[threadIdx.y] == -1) printf("\t\t\t\t\t\t\tERROR: failed to find L_ki(%d,%d)\n",myk,ii);
-	// active row k, do  A_kj -= Lki * U_ij; j \in U(i,:) j != i
-	// U(i+1,:end)
-	// Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,nzUi), [=] (const int &uiIdx) { // index into i (U)
-	for (int uiIdx=threadIdx.x ; uiIdx < nzUi ; uiIdx += blockDim.x) {
-	  PetscScalar Uij = baUi[uiIdx];
-	  PetscInt    col = bjUi[uiIdx];
-	  // printf("\t\t row %d search for col %d\n",myk,col);
-	  if (col==myk) {
-	    // A_kk = A_kk - L_ki * U_ij(k)
-	    PetscScalar *Akkv = (ba_d + bdiag_d[myk]); // diagonal in its special place
-	    //printf("%04d,%04d,%04d update %g --> Akk=%g Uki=%g (%d) %d offset\n", ii, myk, col, *Akkv, sm_L_ki[threadIdx.y], Uij, threadIdx.y, (int)(Akkv-ba_d));
-	    *Akkv = *Akkv - sm_L_ki[threadIdx.y] * Uij; // UiK
-	  } else {
-	    PetscScalar    *start, *end, *pAkjv=NULL;
+        //if (threadIdx.x + blockIdx.x + blockIdx.y == 0) printf("%04d,%04d,%04d Lki=%g colID=%d\n", ii, myk, ii, sm_L_ki[threadIdx.y], (int)sm_colkIdx[threadIdx.y]);
+        if ((int)sm_colkIdx[threadIdx.y] == -1) printf("\t\t\t\t\t\t\tERROR: failed to find L_ki(%d,%d)\n",myk,ii);
+        // active row k, do  A_kj -= Lki * U_ij; j \in U(i,:) j != i
+        // U(i+1,:end)
+        // Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,nzUi), [=] (const int &uiIdx) { // index into i (U)
+        for (int uiIdx=threadIdx.x ; uiIdx < nzUi ; uiIdx += blockDim.x) {
+          PetscScalar Uij = baUi[uiIdx];
+          PetscInt    col = bjUi[uiIdx];
+          // printf("\t\t row %d search for col %d\n",myk,col);
+          if (col==myk) {
+            // A_kk = A_kk - L_ki * U_ij(k)
+            PetscScalar *Akkv = (ba_d + bdiag_d[myk]); // diagonal in its special place
+            //printf("%04d,%04d,%04d update %g --> Akk=%g Uki=%g (%d) %d offset\n", ii, myk, col, *Akkv, sm_L_ki[threadIdx.y], Uij, threadIdx.y, (int)(Akkv-ba_d));
+            *Akkv = *Akkv - sm_L_ki[threadIdx.y] * Uij; // UiK
+          } else {
+            PetscScalar    *start, *end, *pAkjv=NULL;
             PetscInt       high, low;
-	    const PetscInt *startj;
-	    if (col<myk) { // L
-	      PetscScalar *pLki = ba_d + bi_d[myk] + (int)(sm_colkIdx[threadIdx.y]);
-	      PetscInt idx = (pLki+1) - (ba_d + bi_d[myk]); // index into row
-	      start = pLki+1; // start at pLki+1, A22(myk,1)
-	      startj= bj_d + bi_d[myk] + idx;
-	      end   = ba_d + bi_d[myk+1];
-	    } else {
-	      PetscInt idx = bdiag_d[myk+1]+1;
-	      start = ba_d + idx;
-	      startj= bj_d + idx;
-	      end   = ba_d + bdiag_d[myk];
-	    }
-	    // search for 'col'
+            const PetscInt *startj;
+            if (col<myk) { // L
+              PetscScalar *pLki = ba_d + bi_d[myk] + (int)(sm_colkIdx[threadIdx.y]);
+              PetscInt idx = (pLki+1) - (ba_d + bi_d[myk]); // index into row
+              start = pLki+1; // start at pLki+1, A22(myk,1)
+              startj= bj_d + bi_d[myk] + idx;
+              end   = ba_d + bi_d[myk+1];
+            } else {
+              PetscInt idx = bdiag_d[myk+1]+1;
+              start = ba_d + idx;
+              startj= bj_d + idx;
+              end   = ba_d + bdiag_d[myk];
+            }
+            // search for 'col'
             low  = 0;
             high = (PetscInt)(end-start);
             while (high-low > 5) {
@@ -1154,11 +1154,11 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
               if (startj[pAkjv-start] == col) break;
             }
             if (pAkjv==start+high) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: *** failed to find Akj(%d,%d)\n",myk,col);
-	    //printf("%04d,%04d,%04d update Akj %g --> %g, Lki=%g Uij=%g (%d) %d offset\n", ii, myk, col, *pAkjv, *pAkjv - sm_L_ki[threadIdx.y] * Uij, sm_L_ki[threadIdx.y], Uij, threadIdx.y, (int)(pAkjv-ba_d));
-	    *pAkjv = *pAkjv - sm_L_ki[threadIdx.y] * Uij; // A_kj = A_kj - L_ki * U_ij
-	    //printf("\t\t\t%d.%d: Update %c A[%d,%d] = %g with Uij=%g, Lik=%g\n",field,field_block, (col>myk) ? 'U' : 'L', myk, col, *pAkjv, Uij, sm_L_ki[]);
-	  }
-	} // inner loop x
+            //printf("%04d,%04d,%04d update Akj %g --> %g, Lki=%g Uij=%g (%d) %d offset\n", ii, myk, col, *pAkjv, *pAkjv - sm_L_ki[threadIdx.y] * Uij, sm_L_ki[threadIdx.y], Uij, threadIdx.y, (int)(pAkjv-ba_d));
+            *pAkjv = *pAkjv - sm_L_ki[threadIdx.y] * Uij; // A_kj = A_kj - L_ki * U_ij
+            //printf("\t\t\t%d.%d: Update %c A[%d,%d] = %g with Uij=%g, Lik=%g\n",field,field_block, (col>myk) ? 'U' : 'L', myk, col, *pAkjv, Uij, sm_L_ki[]);
+          }
+        } // inner loop x
       }
     } // outer product
     if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) atomicAdd(flops_out,(PetscLogDouble)(2*(nzUi*nzUi)+2) + 1); // + inverse at end
