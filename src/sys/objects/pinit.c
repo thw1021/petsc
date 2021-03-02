@@ -845,7 +845,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
     {
 #define PBUFSZ 64
 #define PSTRSZ 2
-      char *ver,bs[OMPIBUFSZ],*bsf;
+      char *ver,bs[PBUFSZ],*bsf;
       flg = PETSC_FALSE;
       char ompistr1[PSTRSZ][PBUFSZ] = {"Open MPI","FUJITSU MPI"};
       char ompistr2[PSTRSZ][PBUFSZ] = {"v","Library "};
