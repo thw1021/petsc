@@ -1031,7 +1031,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
   for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block
     PetscInt          rowa = r[rowb], nza = ai_d[rowa+1] - ai_d[rowa];
     const PetscScalar *av    = aa_d + ai_d[rowa];
-    const PetscInt    *ajtmp = aj_d + ai_d[rowa];
+    const int         *ajtmp = aj_d + ai_d[rowa];
     /* load in initial (unfactored row) */
     // for (int j=0;j<nza;j++) {
     //printf("%d (row-A:%d): ",rowb,rowa);
@@ -1054,7 +1054,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
               break;
             }
           }
-          if (set!=1) printf("\t\t\t ERROR DID NOT SET ????? %d\n",set);
+          if (set!=1) printf("\t\t\t ERROR DID NOT SET ????? %d\n",(int)set);
         }
       }
     }
@@ -1101,7 +1101,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
           //printf("\t\t%d.%d) j=%d, testing col %d =? %d (ii)\n",threadIdx.y,threadIdx.x,j,pjL[j],ii);
           if (pjL[j] == ii) {
             PetscScalar *pLki = ba_d + bi_d[myk] + j;
-            if ((int)sm_colkIdx[threadIdx.y] != -1) printf("\t\t\t\t\t\t\tERROR: find L_ki(%d,%d) TWICE (%d--%d)\n",myk,ii,(int)sm_colkIdx[threadIdx.y],j);
+            if ((int)sm_colkIdx[threadIdx.y] != -1) printf("\t\t\t\t\t\t\tERROR: find L_ki(%d,%d) TWICE (%d--%d)\n",(int)myk,(int)ii,(int)sm_colkIdx[threadIdx.y],j);
             sm_colkIdx[threadIdx.y] = (PetscScalar)j; // output
             //printf("%04d,%04d,%04d update Lki %g --> Lki=%g with Bii=%g (%d) %d offset\n", ii, myk, ii, *pLki, *pLki/Bii, Bii, threadIdx.y, (int)(pLki-ba_d));
             *pLki = *pLki/Bii; // column scaling:  L(k,i) = A(:k,i) / A(i,i)
@@ -1113,7 +1113,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
       __syncthreads(); // just needs in x direction
       if (kIdx < nzUi) {
         //if (threadIdx.x + blockIdx.x + blockIdx.y == 0) printf("%04d,%04d,%04d Lki=%g colID=%d\n", ii, myk, ii, sm_L_ki[threadIdx.y], (int)sm_colkIdx[threadIdx.y]);
-        if ((int)sm_colkIdx[threadIdx.y] == -1) printf("\t\t\t\t\t\t\tERROR: failed to find L_ki(%d,%d)\n",myk,ii);
+        if ((int)sm_colkIdx[threadIdx.y] == -1) printf("\t\t\t\t\t\t\tERROR: failed to find L_ki(%d,%d)\n",(int)myk,ii);
         // active row k, do  A_kj -= Lki * U_ij; j \in U(i,:) j != i
         // U(i+1,:end)
         // Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,nzUi), [=] (const int &uiIdx) { // index into i (U)
@@ -1153,7 +1153,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
             for (pAkjv=start+low; pAkjv<start+high; pAkjv++) {
               if (startj[pAkjv-start] == col) break;
             }
-            if (pAkjv==start+high) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: *** failed to find Akj(%d,%d)\n",myk,col);
+            if (pAkjv==start+high) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: *** failed to find Akj(%d,%d)\n",(int)myk,(int)col);
             //printf("%04d,%04d,%04d update Akj %g --> %g, Lki=%g Uij=%g (%d) %d offset\n", ii, myk, col, *pAkjv, *pAkjv - sm_L_ki[threadIdx.y] * Uij, sm_L_ki[threadIdx.y], Uij, threadIdx.y, (int)(pAkjv-ba_d));
             *pAkjv = *pAkjv - sm_L_ki[threadIdx.y] * Uij; // A_kj = A_kj - L_ki * U_ij
             //printf("\t\t\t%d.%d: Update %c A[%d,%d] = %g with Uij=%g, Lik=%g\n",field,field_block, (col>myk) ? 'U' : 'L', myk, col, *pAkjv, Uij, sm_L_ki[]);
@@ -1161,7 +1161,11 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
         } // inner loop x
       }
     } // outer product
-    if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) atomicAdd(flops_out,(PetscLogDouble)(2*(nzUi*nzUi)+2) + 1); // + inverse at end
+#if !defined (PETSC_HAVE_CUDA_ATOMIC)
+    if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) *flops_out += (PetscLogDouble)(2*(nzUi*nzUi+2) + 1); // + inverse at end
+#else
+    if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) atomicAdd(flops_out,(PetscLogDouble)(2*(nzUi*nzUi+2) + 1)); // + inverse at end
+#endif
   } /* endof for (i=0; i<n; i++) { */
   /* Invert diagonal for simpler triangular solves */
   __syncthreads();
