@@ -46,7 +46,6 @@ class Configure(config.package.CMakePackage):
       args.append('-DSEACASProj_ENABLE_SEACASExodus_for:BOOL=ON')
       args.append('-DSEACASProj_ENABLE_SEACASExoIIv2for32:BOOL=ON')
       args.append('-DSEACASExodus_for_ENABLE_TESTS:BOOL=OFF')
-      self.liblist = [['libexoIIv2for32.a'] + libs for libs in self.liblist] + self.liblist
       self.popLanguage()
     else:
       args.append('-DSEACASProj_ENABLE_SEACASExodus_for:BOOL=OFF')
@@ -82,3 +81,11 @@ class Configure(config.package.CMakePackage):
     else:
       args.append('-DCMAKE_BUILD_TYPE=Release')
     return args
+
+  def generateLibList(self, framework):
+    ''' '''
+    if hasattr(self.setCompilers, 'FC'):
+      self.liblist = [['libexoIIv2for32.a',] + libs for libs in self.liblist] + self.liblist
+      #self.liblist.append(['libexoIIv2for32.a'])
+    return config.package.Package.generateLibList(self, framework)
+
