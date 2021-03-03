@@ -66,18 +66,16 @@ typedef enum {PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=1, PETSC_MEMTYPE_CUDA=1
 #define PetscMemTypeHost(m)   (((m) & 0x1) == PETSC_MEMTYPE_HOST)
 #define PetscMemTypeDevice(m) (((m) & 0x1) == PETSC_MEMTYPE_DEVICE)
 
-/*E
+/*j
   PetscStreamType - Stream type
 
   Level: beginner
 
 .seealso: PetscStreamSetType(), PetscEventSetType(), PetscStreamScalarSetType()
-E*/
-typedef enum {
-  PETSC_STREAM_INVALID = 0,
-  PETSC_STREAM_CUDA = 1,
-  PETSC_STREAM_HIP = 2
-} PetscStreamType;
+J*/
+typedef const char* PetscStreamType;
+#define PETSCSTREAMCUDA "cuda"
+#define PETSCSTREAMHIP  "hip"
 
 typedef struct _n_PetscEvent* PetscEvent;
 

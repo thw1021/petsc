@@ -1,18 +1,13 @@
-#include <petsc/private/deviceimpl.h>
+#include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
-PETSC_EXTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
-PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
-PETSC_EXTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
-PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar);
-PETSC_EXTERN PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph);
-
-PetscFunctionList PetscStreamList              = NULL;
-PetscFunctionList PetscEventList               = NULL;
-PetscFunctionList PetscStreamScalarList        = NULL;
-PetscFunctionList PetscStreamGraphList         = NULL;
-PetscBool         PetscStreamRegisterAllCalled = PETSC_FALSE;
+static PetscFunctionList PetscStreamList             = NULL;
+static PetscFunctionList PetscEventList              = NULL;
+static PetscFunctionList PetscStreamScalarList       = NULL;
+static PetscFunctionList PetscStreamGraphList        = NULL;
+static PetscBool  PetscStreamRegisterAllCalled       = PETSC_FALSE;
+static PetscBool  PetscEventRegisterAllCalled        = PETSC_FALSE;
+static PetscBool  PetscStreamScalarRegisterAllCalled = PETSC_FALSE;
+static PetscBool  PetscStreamGraphRegisterAllCalled  = PETSC_FALSE;
 
 const char *PetscStreamTypes[] = {"INVALID","CUDA","HIP",NULL};
 
@@ -245,6 +240,45 @@ PetscErrorCode PetscStreamGraphGetType(PetscStreamGraph sgraph, PetscStreamType 
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscStreamRegister(const char sname[], PetscErrorCode (*function)(PetscStream))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscFunctionListAdd(&PetscStreamList,sname,function);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscEventRegister(const char sname[], PetscErrorCode (*function)(PetscEvent))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscFunctionListAdd(&PetscEventList,sname,function);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarRegister(const char sname[], PetscErrorCode (*function)(PetscStreamScalar))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscFunctionListAdd(&PetscStreamScalarList,sname,function);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamGraphRegister(const char sname[], PetscErrorCode (*function)(PetscStreamGraph))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscFunctionListAdd(&PetscStreamGraphList,sname,function);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
+
 /*@C
   PetscStreamRegisterAll - Registers all of the stream components in the PetscStream package.
 
@@ -252,7 +286,7 @@ PetscErrorCode PetscStreamGraphGetType(PetscStreamGraph sgraph, PetscStreamType 
 
   Level: advanced
 
-.seealso:  PetscStreamCreate(), PetscEventCreate(), PetscStreamScalarCreate()
+.seealso:  PetscStreamCreate(), PetscStreamSetType(), PetscStreamGetType()
 @*/
 PetscErrorCode PetscStreamRegisterAll(void)
 {
@@ -261,12 +295,76 @@ PetscErrorCode PetscStreamRegisterAll(void)
   PetscFunctionBegin;
   if (PetscStreamRegisterAllCalled) PetscFunctionReturn(0);
   PetscStreamRegisterAllCalled = PETSC_TRUE;
-  ierr = PetscFunctionListAdd(&PetscStreamList, PetscStreamTypes[PETSC_STREAM_CUDA], PetscStreamCreate_CUDA);CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&PetscStreamList, PetscStreamTypes[PETSC_STREAM_HIP], PetscStreamCreate_HIP);CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&PetscEventList, PetscStreamTypes[PETSC_STREAM_CUDA], PetscEventCreate_CUDA);CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&PetscEventList, PetscStreamTypes[PETSC_STREAM_HIP], PetscEventCreate_HIP);CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&PetscStreamScalarList, PetscStreamTypes[PETSC_STREAM_CUDA], PetscStreamScalarCreate_CUDA);CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&PetscStreamScalarList, PetscStreamTypes[PETSC_STREAM_HIP], PetscStreamScalarCreate_HIP);CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&PetscStreamGraphList, PetscStreamTypes[PETSC_STREAM_CUDA], PetscStreamGraphCreate_CUDA);CHKERRQ(ierr);
+  ierr = PetscStreamRegister(PETSCSTREAMCUDA,PetscStreamCreate_CUDA);CHKERRQ(ierr);
+  ierr = PetscStreamRegister(PETSCSTREAMHIP,PetscStreamCreate_HIP);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
+
+/*@C
+  PetscEventRegisterAll - Registers all of the event components in the PetscStream package.
+
+  Not Collective
+
+  Level: advanced
+
+.seealso:  PetscEventCreate(), PetscEventSetType(), PetscEventGetType()
+@*/
+PetscErrorCode PetscEventRegisterAll(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscEventRegisterAllCalled) PetscFunctionReturn(0);
+  PetscEventRegisterAllCalled = PETSC_TRUE;
+  ierr = PetscEventRegister(PETSCSTREAMCUDA,PetscEventCreate_CUDA);CHKERRQ(ierr);
+  ierr = PetscEventRegister(PETSCSTREAMHIP,PetscEventCreate_HIP);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar);
+
+/*@C
+  PetscStreamScalarRegisterAll - Registers all of the stream scalar components in the PetscStream package.
+
+  Not Collective
+
+  Level: advanced
+
+.seealso:  PetscStreamScalarCreate(), PetscStreamScalarSetType(), PetscStreamScalarGetType()
+@*/
+PetscErrorCode PetscStreamScalarRegisterAll(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscStreamScalarRegisterAllCalled) PetscFunctionReturn(0);
+  PetscStreamScalarRegisterAllCalled = PETSC_TRUE;
+  ierr = PetscStreamScalarRegister(PETSCSTREAMCUDA,PetscStreamScalarCreate_CUDA);CHKERRQ(ierr);
+  ierr = PetscStreamScalarRegister(PETSCSTREAMHIP,PetscStreamScalarCreate_HIP);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph);
+
+/*@C
+  PetscStreamGraphRegisterAll - Registers all of the stream graph components in the PetscStream package.
+
+  Not Collective
+
+  Level: advanced
+
+.seealso:  PetscStreamGraphCreate(), PetscStreamGraphSetType(), PetscStreamGraphGetType()
+@*/
+PetscErrorCode PetscStreamGraphRegisterAll(void)
+{
+  PetscErrorCode ierr;
+
+  if (PetscStreamGraphRegisterAllCalled) PetscFunctionReturn(0);
+  PetscStreamGraphRegisterAllCalled = PETSC_TRUE;
+  ierr = PetscStreamGraphRegister(PETSCSTREAMCUDA,PetsccStreamGraphCreate_CUDA);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
