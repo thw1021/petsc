@@ -56,7 +56,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 /* Declaration of static functions */
 static PetscErrorCode ComputeGradEFunctionalAtPoint(DM sw, PetscInt Np, PetscQuadrature quad, PetscReal *particle, PetscReal *field, PetscReal* integral,  void* ctx);
 static PetscErrorCode ComputeAndApplyQForPPPrimePair(PetscReal* particle, PetscInt ppridx, const PetscReal *u, PetscReal *GammaS, PetscReal *particle_residual, PetscInt Np, PetscInt dim);
-static PetscErrorCode ComputelnSumFromPoint(PetscReal* u, PetscReal *particle, PetscReal *sum_ptr, void* ctx);
+//static PetscErrorCode ComputelnSumFromPoint(PetscReal* u, PetscReal *particle, PetscReal *sum_ptr, void* ctx);
 
 /* Create the mesh for velocity space */
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
@@ -254,7 +254,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   ierr = PetscDTGaussTensorQuadrature(dim, 2*dim*Np,dim*Np, -1, 1, &quad);CHKERRQ(ierr);
   if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Part  ppr     x        y\n");CHKERRQ(ierr);}
   for(p = 0; p < Np; ++p){
-    PetscReal particle[2], res[2]={0.,0.}, integral[2]={0.,0.}, ln_sum;
+    PetscReal particle[2], res[2]={0.,0.}, integral[2]={0.,0.};
 
     for(d=0; d < dim; ++d) particle[d] = velocity[p*dim+d];
     ierr = ComputeGradEFunctionalAtPoint(sw, Np, quad, particle, velocity, integral, user);CHKERRQ(ierr);
@@ -277,6 +277,9 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
       if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "%4D %4D %10.8lf %10.8lf\n", p, ppr, res[0], res[1]);CHKERRQ(ierr);}
       for(d=0; d<dim;++d) r[p*dim+d] += res[d];
     }
+    if (dbg) {
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "Final %4D %10.8lf %10.8lf\n", p, r[p*dim+0], r[p*dim+1]);CHKERRQ(ierr);
+    }
   }
   ierr = PetscQuadratureDestroy(&quad);CHKERRQ(ierr);
 
@@ -288,9 +291,12 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   ierr = VecViewFromOptions(R, NULL, "-residual_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-static PetscErrorCode ComputeAndApplyQForPPPrimePair(PetscReal* particle, PetscInt ppridx, const PetscReal *u, PetscReal *GammaS, PetscReal *particle_residual, PetscInt Np, PetscInt dim){
-  int p, d;
-  PetscReal xiTxi, xicpy[2];
+
+static PetscErrorCode ComputeAndApplyQForPPPrimePair(PetscReal* particle, PetscInt ppridx, const PetscReal *u, PetscReal *GammaS, PetscReal *particle_residual, PetscInt Np, PetscInt dim)
+{
+  PetscReal      xiTxi = 0.0, xicpy[2];
+  PetscInt       d;
+  PetscErrorCode ierr;
 
   /* Not hard, but looks gross */
   for(d=0; d<dim;++d) particle_residual[d] = 0.;
@@ -302,6 +308,7 @@ static PetscErrorCode ComputeAndApplyQForPPPrimePair(PetscReal* particle, PetscI
   for(d=0; d<dim; ++d) xiTS += xi[d]*GammaS[d];
   for(d=0; d<dim; ++d) xi[d] *= (xiTS/(mag_xi*mag_xi));
   for(d=0; d<dim; ++d) particle_residual[d] += (1/mag_xi) *(GammaS[d] - xi[d]);
+  //ierr = PetscPrintf(PETSC_COMM_WORLD, "Q GS %10.8lf %10.8lf xi %10.8lf %10.8lf\n", GammaS[0], GammaS[1], xi[0], xi[1]);CHKERRQ(ierr);
 
 
   /* check Q(xi)xi annihilates. */
@@ -391,23 +398,25 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
 
 /* Particle centered Gaussian and Gaussian gradient functions for quadrature point integration.
   Assume 2d normalization */
-static PetscReal Gaussian(PetscReal* center, PetscInt dim, PetscReal* q, PetscReal epsi){
+static PetscReal Gaussian(const PetscReal center[], PetscInt dim, const PetscReal q[], PetscReal epsi){
   return 1.0/(2.0*PETSC_PI*epsi) * exp(-((center[0]-q[0])*(center[0]-q[0])+(center[1]-q[1])*(center[1]-q[1]))/(2.0*epsi));
 }
 
+#if 0
 /* Evaluate and return the evaluation of a function composed of a collection of gaussians relative to the particle at a quadrature point. This function
 is to be used for a gaussian centered around the particle with its full "weight" integrated with a quadrature rule (tensor quadrature) */
 static void GradGaussian(PetscReal* center, PetscInt dim, PetscReal* q, PetscReal epsi, PetscReal* gradpsi){
 
   gradpsi[0] = (-1./epsi) * center[0] * Gaussian(center, dim, q, epsi);
   gradpsi[1] = (-1./epsi) * center[1] * Gaussian(center, dim, q, epsi);
-
 }
+#endif
 
 /* This is the function used to evaluate a pointwise weighted gaussian in the fully discrete-in-velocity formulation */
 /*   Comes from (3.6) instead */
 static void mollifiedGaussian(PetscReal* center, PetscInt dim, PetscReal* q, PetscReal epsi, PetscReal *points, PetscInt Np, PetscReal* gradpsi){
-  PetscInt p, d, c_e[2]={0.,0.};
+  PetscInt p, d;
+  PetscReal c_e[2]={0.,0.};
 
   /* \grad S_i = \grad \psi(v_i - v) log \sum_k \psi(v-v_k)  */
   for(p=0; p<Np; ++p){
@@ -425,8 +434,8 @@ static void mollifiedGaussian(PetscReal* center, PetscInt dim, PetscReal* q, Pet
 
 /* Integrate the gradient of the entropy functional for a particle. This should be optimized out */
 static PetscErrorCode ComputeGradEFunctionalAtPoint(DM sw, PetscInt Np, PetscQuadrature quad, PetscReal *particle, PetscReal *field, PetscReal* integral,  void* ctx){
-  PetscInt         dim, d, q, Nc, Nq, p;
-  PetscReal        *xi0, *v0, *J, *invJ, *velocity, detJ;
+  PetscInt         dim, d, q, Nc, Nq;
+  PetscReal        *xi0, *v0, *J, *invJ, detJ;
   const PetscReal  *q_weights, *points;
   AppCtx*          user = (AppCtx*) ctx;
   DM               plex;
@@ -456,11 +465,11 @@ static PetscErrorCode ComputeGradEFunctionalAtPoint(DM sw, PetscInt Np, PetscQua
   return(0);
 }
 
+#if 0
 /*
   Compute the summation of gaussian evaluations from the gaussian centered at the origin of the cell according to . This function is not needed
   but is kept around for diagnostics.
  */
-
 static PetscErrorCode ComputelnSumFromPoint(PetscReal* u, PetscReal *particle, PetscReal *sum_ptr, void* ctx){
   PetscInt       Np, p, d;
   PetscReal      sum=0.;
@@ -474,6 +483,7 @@ static PetscErrorCode ComputelnSumFromPoint(PetscReal* u, PetscReal *particle, P
   *sum_ptr = sum;
   return(0);
 }
+#endif
 
 /* ---------------------------- This whole section of code needs to be rethought so we don't have excessive N^2 operations ------------------- */
 
@@ -484,7 +494,6 @@ static PetscErrorCode ComputelnSumFromPoint(PetscReal* u, PetscReal *particle, P
 int main(int argc,char **argv)
 {
   TS             ts;     /* nonlinear solver */
-  SNES           snes;   /* Nonlinear solve for time stepping */
   DM             dm, sw; /* Velocity space mesh and Particle Swarm */
   Vec            u, v;   /* problem vector */
   MPI_Comm       comm;
@@ -525,12 +534,8 @@ int main(int argc,char **argv)
   ierr = VecDuplicate(v, &u);CHKERRQ(ierr);
   ierr = DMSwarmDestroyGlobalVectorFromField(sw, "velocity", &v);CHKERRQ(ierr);
   ierr = TSComputeInitialCondition(ts, u);CHKERRQ(ierr);
-  if(user.monitor) TSMonitorSet(ts, Monitor, &user, NULL);
+  if (user.monitor) TSMonitorSet(ts, Monitor, &user, NULL);
   ierr = TSSetPostStep(ts, UpdateSwarm);CHKERRQ(ierr);
-#if 0
-  ierr = TSGetSNES(ts, &snes);
-  ierr = SNESSetFromOptions(snes);
-#endif
   ierr = TSSolve(ts, u);CHKERRQ(ierr);
   ierr = VecDestroy(&u);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
