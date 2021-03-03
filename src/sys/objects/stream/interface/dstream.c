@@ -1,4 +1,4 @@
-#include <petsc/private/deviceimpl.h>
+#include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
 static PetscInt streamID = 0;
 
@@ -24,13 +24,12 @@ PetscErrorCode PetscStreamCreate(PetscStream *strm)
 
   PetscFunctionBegin;
   PetscValidPointer(strm,1);
-  ierr = PetscStreamRegisterAll();CHKERRQ(ierr);
+  ierr = PetscStreamInitializePackage();CHKERRQ(ierr);
   /* Setting to null taken from VecCreate(), why though? */
   *strm = NULL;
   ierr = PetscNew(&s);CHKERRQ(ierr);
   s->id = streamID++;
   s->idle = PETSC_TRUE;
-  s->type = PETSC_STREAM_INVALID;
   s->mode = PETSC_STREAM_DEFAULT_BLOCKING;
   *strm = s;
   PetscFunctionReturn(0);

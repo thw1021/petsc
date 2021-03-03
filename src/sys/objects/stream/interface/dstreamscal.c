@@ -1,4 +1,4 @@
-#include <petsc/private/deviceimpl.h>
+#include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
 /*@C
   PetscStreamScalarCreate - Creates an empty PetscStreamScalar object. The type can then be set with PetscStreamScalarSetType().
@@ -22,13 +22,13 @@ PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
 
   PetscFunctionBegin;
   PetscValidPointer(pscal,1);
-  ierr = PetscStreamRegisterAll();CHKERRQ(ierr);
+  ierr = PetscStreamScalarInitializePackage();CHKERRQ(ierr);
   /* Setting to null taken from VecCreate(), why though? */
   *pscal = NULL;
   ierr = PetscNew(&s);CHKERRQ(ierr);
   s->setup = PETSC_FALSE;
   s->omask = PETSC_OFFLOAD_UNALLOCATED;
-  s->type = PETSC_STREAM_INVALID;
+  s->type = NULL;
   s->host = NULL;
   s->device = NULL;
   s->poolID = PETSC_DEFAULT;

@@ -1,4 +1,4 @@
-#include "streamcuda.h"
+#include "streamcuda.h" /*I "petscdevice.h" I*/
 
 #if PetscDefined(HAVE_CUDA)
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamDestroy_CUDA(PetscStream strm)
