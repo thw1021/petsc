@@ -1,4 +1,4 @@
-#include <petsc/private/deviceimpl.h>
+#include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
 /*@C
   PetscEventCreate - Creates an empty PetscEvent object. The type can then be set with PetscEventSetType().
@@ -22,14 +22,13 @@ PetscErrorCode PetscEventCreate(PetscEvent *event)
 
   PetscFunctionBegin;
   PetscValidPointer(event,1);
-  ierr = PetscStreamRegisterAll();CHKERRQ(ierr);
+  ierr = PetscEventInitializePackage();CHKERRQ(ierr);
   /* Setting to null taken from VecCreate(), why though? */
   *event = NULL;
   ierr = PetscNew(&e);CHKERRQ(ierr);
   e->id = -1;
   e->idle = PETSC_TRUE;
   e->setup = PETSC_FALSE;
-  e->type = PETSC_STREAM_INVALID;
   e->eventFlags = 0;
   e->waitFlags = 0;
   *event = e;

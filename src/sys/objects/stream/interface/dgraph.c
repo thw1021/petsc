@@ -1,4 +1,4 @@
-#include <petsc/private/deviceimpl.h>
+#include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
 /*@C
   PetscStreamGraphCreate - Creates an empty PetscStreamGraph object. The type can then be set with PetscStreamSetType().

@@ -1,6 +1,8 @@
-#include "streamcuda.h"
+#include "streamcuda.h" /*I "petscdevice.h" I*/
 
 #if PetscDefined(HAVE_CUDA)
+/* How to change this? None of these routine accept a communicator on which they may call
+   petscoptions routines... */
 static const PetscInt poolSize = 100;
 static PetscScalar    *devicePool, *hostPool;
 static PetscInt       *poolIDs;
@@ -73,14 +75,15 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarAwait_CUDA(PetscStreamScalar
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
   if (pscal->omask == PETSC_OFFLOAD_GPU) {
     cudaStream_t cstream;
     cudaError_t  cerr;
 
-    ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
     ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
     cerr = cudaMemcpyAsync(pscal->host, pscal->device, sizeof(PetscScalar), cudaMemcpyDeviceToHost, cstream);CHKERRCUDA(cerr);
     ierr = PetscStreamRestoreStream(pstream, &cstream);CHKERRQ(ierr);
+    ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
     pscal->omask = PETSC_OFFLOAD_BOTH;
   }
   ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
