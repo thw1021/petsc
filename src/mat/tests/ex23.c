@@ -891,5 +891,9 @@ PetscErrorCode TestMatZeroRows(Mat A, Mat Afull, PetscBool squaretest, IS is, Pe
         requires: cuda
         suffix: cusparse
         args: -matis_localmat_type aijcusparse
+      test:
+        requires: hip
+        suffix: hipsparse
+        args: -matis_localmat_type aijhipsparse
 
 TEST*/

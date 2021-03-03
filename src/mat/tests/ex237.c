@@ -421,23 +421,24 @@ int main(int argc, char** argv)
      nsize: 1
      filter: sed "/Benchmarking/d"
      args: -f ${wPETSC_DIR}/share/petsc/datafiles/matrices/spd-real-int32-float64 -bs 1,2,3 -N 1,2,18 -check -trans -convert_aij {{false true}shared output}
+     output_file: output/ex237.out
      test:
        suffix: basic
        args: -type aij,sbaij,baij
-       output_file: output/ex237.out
      test:
        suffix: maij
        args: -type aij,maij
-       output_file: output/ex237.out
      test:
        suffix: cuda
        requires: cuda
        args: -type aij,aijcusparse
-       output_file: output/ex237.out
      test:
        suffix: mkl
        requires: mkl
        args: -type aij,aijmkl,baijmkl,sbaijmkl
-       output_file: output/ex237.out
+     test:
+       suffix: hip
+       requires: hip
+       args: -type aij,aijhipsparse
 
 TEST*/

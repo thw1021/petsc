@@ -142,13 +142,19 @@ int main(int argc,char **args)
 
    test:
       suffix: 3
-      nsize: 2
       requires: mumps
+      nsize: 2
       args: -mat_solver_type mumps
 
    test:
       suffix: 4
-      args: -mat_solver_type cusparse -mat_type aijcusparse -mat_factor_type {{lu cholesky ilu icc}separate output}
       requires: cuda
+      args: -mat_solver_type cusparse -mat_type aijcusparse -mat_factor_type {{lu cholesky ilu icc}separate output}
+
+   test:
+      suffix: hip
+      requires: hip
+      TODO:  Need to get output
+      args: -mat_solver_type hipsparse -mat_type aijhipsparse -mat_factor_type {{lu cholesky ilu icc}separate output}
 
 TEST*/

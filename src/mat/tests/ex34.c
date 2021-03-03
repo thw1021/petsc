@@ -63,15 +63,19 @@ int main(int argc, char ** argv)
 
 /*TEST
 
-   test:
-      suffix: 1
-      nsize: 2
-      output_file: output/ex34.out
+   testset:
+     suffix: 1
+     nsize: 2
+     output_file: output/ex34.out
 
-   test:
-      suffix: 1_cuda
-      requires: cuda
-      nsize: 2
-      args: -b_mat_type mpidensecuda
-      output_file: output/ex34.out
+     test:
+     test:
+        suffix: mpidensecuda
+        requires: cuda
+        args: -b_mat_type mpidensecuda
+     test:
+        suffix: mpidensehip
+        requires: hip
+        args: -b_mat_type mpidensehip
+
 TEST*/

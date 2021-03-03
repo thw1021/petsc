@@ -195,6 +195,31 @@ int main(int argc,char **args)
         args: -mat_type mpidensecuda
         suffix: stdio_cuda_5
         nsize: 5
+      test:
+        requires: hip
+        args: -mat_type seqdensehip
+        suffix: stdio_hip_1
+        nsize: 1
+      test:
+        requires: hip
+        args: -mat_type mpidensehip
+        suffix: stdio_hip_2
+        nsize: 2
+      test:
+        requires: hip
+        args: -mat_type mpidensehip
+        suffix: stdio_hip_3
+        nsize: 3
+      test:
+        requires: hip
+        args: -mat_type mpidensehip
+        suffix: stdio_hip_4
+        nsize: 4
+      test:
+        requires: hip
+        args: -mat_type mpidensehip
+        suffix: stdio_hip_5
+        nsize: 5
 
    testset:
       requires: mpiio
@@ -239,6 +264,31 @@ int main(int argc,char **args)
         requires: cuda
         args: -mat_type mpidensecuda
         suffix: mpiio_cuda_5
+        nsize: 5
+      test:
+        requires: hip
+        args: -mat_type mpidensehip
+        suffix: mpiio_hip_1
+        nsize: 1
+      test:
+        requires: hip
+        args: -mat_type mpidensehip
+        suffix: mpiio_hip_2
+        nsize: 2
+      test:
+        requires: hip
+        args: -mat_type mpidensehip
+        suffix: mpiio_hip_3
+        nsize: 3
+      test:
+        requires: hip
+        args: -mat_type mpidensehip
+        suffix: mpiio_hip_4
+        nsize: 4
+      test:
+        requires: hip
+        args: -mat_type mpidensehip
+        suffix: mpiio_hip_5
         nsize: 5
 
 TEST*/

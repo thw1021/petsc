@@ -67,12 +67,15 @@ int main(int argc,char **argv)
      nsize: 2
      output_file: output/ex236_1.out
      filter: grep -v type
-
      test:
        args: -mat_type aij
-
      test:
        requires: cuda
        suffix: cuda
        args: -mat_type aijcusparse
+     test:
+       requires: hip
+       suffix: hip
+       args: -mat_type aijhipsparse
+
 TEST*/

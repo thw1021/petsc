@@ -189,164 +189,148 @@ int main(int argc,char **argv)
 /*TEST
 
    test:
-      suffix: 11_A
-      args: -mat_type seqaij -rectA
-      filter: grep -v "Mat Object"
+     suffix: 3
+     filter: grep -v type | grep -v "Mat Object"
+     nsize: 2
+     args: -rectA
+     output_file: output/ex2_3.out
+     test:
+       args: -mat_type mpiaij
+     test:
+       suffix: aijcusparse
+       requires: cuda
+       args: -mat_type mpiaijcusparse
+     test:
+       suffix: aijhipsparse
+       requires: hip
+       args: -mat_type mpiaijhipsparse
+     test:
+       args: -mat_type mpidense
+     test:
+       requires: cuda
+       suffix: densecuda
+       args: -mat_type mpidensecuda
+     test:
+       requires: hip
+       suffix: densehip
+       args: -mat_type mpidensehip
 
-   test:
-      suffix: 12_A
-      args: -mat_type seqdense -rectA
-      filter: grep -v type | grep -v "Mat Object"
+   testset:
+     suffix: 12_A
+     args: -rectA
+     filter: grep -v type | grep -v "Mat Object"
+     output_file: output/ex2_12_A.out
+     test:
+       args: -mat_type seqaij
+     test:
+       args: -mat_type seqdense
+     test:
+       requires: cuda
+       suffix: aijcusparse
+       args: -mat_type seqaijcusparse
+     test:
+       requires: cuda
+       suffix: densecuda
+       args: -mat_type seqdensecuda
+     test:
+       requires: kokkos_kernels
+       suffix: kokkos
+       args: -mat_type seqaijkokkos
+     test:
+       requires: hip
+       suffix: seqaijhip
+       args: -mat_type seqaijhip
+     test:
+       requires: hip
+       suffix: seqdensehip
+       args: -mat_type seqdensehip
 
-   test:
-      requires: cuda
-      suffix: 12_A_cuda
-      args: -mat_type seqdensecuda -rectA
-      output_file: output/ex2_12_A.out
-      filter: grep -v type | grep -v "Mat Object"
+   testset:
+     args: -rectB
+     suffix: 12_B
+     filter: grep -v type | grep -v "Mat Object"
+     output_file: output/ex2_12_B.out
+     test:
+       args: -mat_type seqaij
+     test:
+       args: -mat_type seqdense
+     test:
+       requires: cuda
+       suffix: aijcusparse
+       args: -mat_type seqaijcusparse
+     test:
+       requires: cuda
+       suffix: seqdensecuda
+       args: -mat_type seqdensecuda
+     test:
+       requires: hip
+       suffix: aijhipsparse
+       args: -mat_type seqaijhipsparse
+     test:
+       requires: hip
+       suffix: seqdensehip
+       args: -mat_type seqdensehip
+     test:
+       requires: kokkos_kernels
+       suffix: kokkos
+       args: -mat_type seqaijkokkos
 
-   test:
-      requires: kokkos_kernels
-      suffix: 12_A_kokkos
-      args: -mat_type seqaijkokkos -rectA
-      output_file: output/ex2_12_A.out
-      filter: grep -v type | grep -v "Mat Object"
+   testset:
+     suffix: 21
+     filter: grep -v type | grep -v "MPI processes"
+     output_file: output/ex2_21.out
+     test:
+       args: -mat_type mpiaij
+     test:
+       args: -mat_type mpidense
+     test:
+       requires: cuda
+       suffix: mpidensecuda
+       args: -mat_type mpidensecuda
+     test:
+       requires: hip
+       suffix: mpidensehip
+       args: -mat_type mpidensehip
+     test:
+       requires: kokkos_kernels
+       suffix: kokkos
+       args: -mat_type mpiaijkokkos
+     test:
+       suffix: aijcusparse
+       requires: cuda
+       args: -mat_type mpiaijcusparse
+     test:
+       suffix: aijhipsparse
+       requires: hip
+       args: -mat_type mpiaijhipsparse
+     test:
+       suffix: aijkokkos
+       requires: kokkos_kernels
+       args: -mat_type mpiaijkokkos
 
-   test:
-      suffix: 11_B
-      args: -mat_type seqaij -rectB
-      filter: grep -v "Mat Object"
-
-   test:
-      suffix: 12_B
-      args: -mat_type seqdense -rectB
-      filter: grep -v type | grep -v "Mat Object"
-
-   test:
-      requires: cuda
-      suffix: 12_B_cuda
-      args: -mat_type seqdensecuda -rectB
-      output_file: output/ex2_12_B.out
-      filter: grep -v type | grep -v "Mat Object"
-
-   test:
-      requires: kokkos_kernels
-      suffix: 12_B_kokkos
-      args: -mat_type seqaijkokkos -rectB
-      output_file: output/ex2_12_B.out
-      filter: grep -v type | grep -v "Mat Object"
-
-   test:
-      suffix: 21
-      args: -mat_type mpiaij
-      filter: grep -v type | grep -v "MPI processes"
-
-   test:
-      suffix: 22
-      args: -mat_type mpidense
-      filter: grep -v type | grep -v "Mat Object"
-
-   test:
-      requires: cuda
-      suffix: 22_cuda
-      output_file: output/ex2_22.out
-      args: -mat_type mpidensecuda
-      filter: grep -v type | grep -v "Mat Object"
-
-   test:
-      requires: kokkos_kernels
-      suffix: 22_kokkos
-      output_file: output/ex2_22.out
-      args: -mat_type mpiaijkokkos
-      filter: grep -v type | grep -v "Mat Object"
-
-   test:
-      suffix: 23
-      nsize: 3
-      args: -mat_type mpiaij
-      filter: grep -v type | grep -v "MPI processes"
-
-   test:
-      suffix: 24
-      nsize: 3
-      args: -mat_type mpidense
-      filter: grep -v type | grep -v "Mat Object"
-
-   test:
-      requires: cuda
-      suffix: 24_cuda
-      nsize: 3
-      output_file: output/ex2_24.out
-      args: -mat_type mpidensecuda
-      filter: grep -v type | grep -v "Mat Object"
-
-   test:
-      suffix: 2_aijcusparse_1
-      args: -mat_type mpiaijcusparse
-      output_file: output/ex2_21.out
-      requires: cuda
-      filter: grep -v type | grep -v "MPI processes"
-
-   test:
-      suffix: 2_aijkokkos_1
-      args: -mat_type mpiaijkokkos
-      output_file: output/ex2_21.out
-      requires: kokkos_kernels
-      filter: grep -v type | grep -v "MPI processes"
-
-   test:
-      suffix: 2_aijcusparse_2
-      nsize: 3
-      args: -mat_type mpiaijcusparse
-      output_file: output/ex2_23.out
-      requires: cuda
-      filter: grep -v type | grep -v "MPI processes"
-
-   test:
-      suffix: 2_aijkokkos_2
-      nsize: 3
-      args: -mat_type mpiaijkokkos
-      output_file: output/ex2_23.out
-      requires: kokkos_kernels
-      filter: grep -v type | grep -v "MPI processes"
-
-   test:
-      suffix: 3
-      nsize: 2
-      args: -mat_type mpiaij -rectA
-
-   test:
-      suffix: 3_aijcusparse
-      nsize: 2
-      args: -mat_type mpiaijcusparse -rectA
-      requires: cuda
-
-   test:
-      suffix: 4
-      nsize: 2
-      args: -mat_type mpidense -rectA
-      filter: grep -v type | grep -v "MPI processes"
-
-   test:
-      requires: cuda
-      suffix: 4_cuda
-      nsize: 2
-      output_file: output/ex2_4.out
-      args: -mat_type mpidensecuda -rectA
-      filter: grep -v type | grep -v "MPI processes"
-
-   test:
-      suffix: aijcusparse_1
-      args: -mat_type seqaijcusparse -rectA
-      filter: grep -v "Mat Object"
-      output_file: output/ex2_11_A_aijcusparse.out
-      requires: cuda
-
-   test:
-      suffix: aijcusparse_2
-      args: -mat_type seqaijcusparse -rectB
-      filter: grep -v "Mat Object"
-      output_file: output/ex2_11_B_aijcusparse.out
-      requires: cuda
-
+   testset:
+     suffix: 23
+     nsize: 3
+     filter: grep -v type | grep -v "Mat Object"
+     output_file: output/ex2_23.out
+     test:
+       args: -mat_type mpiaij
+     test:
+       args: -mat_type mpidense
+     test:
+       requires: cuda
+       suffix: mpidensecuda
+       args: -mat_type mpidensecuda
+     test:
+       suffix: aijcusparse
+       requires: cuda
+       args: -mat_type mpiaijcusparse
+     test:
+       suffix: aijhipsparse
+       requires: hip
+       args: -mat_type mpiaijhipsparse
+     test:
+       suffix: aijkokkos
+       requires: kokkos_kernels
+       args: -mat_type mpiaijkokkos
 TEST*/

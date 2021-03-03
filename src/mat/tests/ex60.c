@@ -58,21 +58,24 @@ int main(int argc,char **args)
 /*TEST
 
    test:
-      nsize: 3
-      args: -col 7
+     nsize: 3
+     args: -col 7
 
-   test:
-      suffix: dense
-      nsize: 3
-      args: -col 7 -mat_type dense -vec_type {{mpi standard}}
-      filter: grep -v type
-
-   test:
-      requires: cuda
-      suffix: dense_cuda
-      nsize: 3
-      output_file: output/ex60_dense.out
-      args: -col 7 -mat_type {{mpidense mpidensecuda}} -vec_type {{mpi standard cuda mpicuda}}
-      filter: grep -v type
+   testset:
+     suffix: dense
+     nsize: 3
+     args: -col 7 -mat_type dense
+     filter: grep -v type
+     output_file: output/ex60_dense.out
+     test:
+       args: -mat_type dense -vec_type {{mpi standard}}
+     test:
+       requires: cuda
+       suffix: cuda
+       args: -mat_type {{mpidense mpidensecuda}} -vec_type {{mpi standard cuda mpicuda}}
+     test:
+       requires: hip
+       suffix: hip
+       args: -mat_type {{mpidense mpidensehip}} -vec_type {{mpi standard hip mpihip}}
 
 TEST*/

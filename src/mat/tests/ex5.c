@@ -148,142 +148,148 @@ int main(int argc,char **args)
 
 /*TEST
 
+   testset:
+     suffix: 11_A
+     args: -rectA
+     filter: grep -v type
+     output_file: output/ex5_11_A.out
+     test:
+       suffix: seqaij
+       args: -mat_type seqaij
+     test:
+       suffix: seqdense
+       args: -mat_type seqdense
+     test:
+        suffix: aijcusparse
+        requires: cuda
+        args: -mat_type seqaijcusparse -vec_type cuda
+     test:
+        suffix: aijhipsparse
+        requires: hip
+        args: -mat_type seqaijhipsparse -vec_type hip
 
-   test:
-      suffix: 11_A
-      args: -mat_type seqaij -rectA
-      filter: grep -v type
+   testset:
+     args: -rectB
+     suffix: 11_B
+     filter: grep -v type
+     output_file: output/ex5_11_B.out
+     test:
+       suffix: seqaij
+       args: -mat_type seqaij
+     test:
+       suffix: seqdense
+       args: -mat_type seqdense
+     test:
+        suffix: aijcusparse
+        requires: cuda
+        args: -mat_type seqaijcusparse -vec_type cuda
+     test:
+        suffix: aijhipsparse
+        requires: hip
+        args: -mat_type seqaijhipsparse -vec_type hip
 
-   test:
-      args: -mat_type seqdense -rectA
-      suffix: 12_A
+   testset:
+     suffix: 21
+     filter: grep -v type
+     output_file: output/ex5_21.out
+     test:
+       suffix: mpiaij
+       args: -mat_type mpiaij
+     test:
+       suffix: mpidense
+       args: -mat_type mpidense
+     test:
+       suffix: aijcusparse
+       requires: cuda
+       args: -mat_type mpiaijcusparse -vec_type cuda
+     test:
+       suffix: aijhipsparse
+       requires: hip
+       args: -mat_type mpiaijhipsparse -vec_type hip
 
-   test:
-      args: -mat_type seqaij -rectB
-      suffix: 11_B
-      filter: grep -v type
+   testset:
+     suffix: 23
+     nsize: 3
+     output_file: output/ex5_23.out
+     test:
+       suffix: mpiaij
+       args: -mat_type mpiaij
+     test:
+       suffix: mpidense
+       args: -mat_type mpidense
+     test:
+       suffix: aijcusparse
+       requires: cuda
+       args: -mat_type mpiaijcusparse -vec_type cuda
+       args: -sf_type {{basic neighbor}} -vecscatter_packongpu {{0 1}}
+     test:
+       suffix: aijcusparse_gpuaware
+       args: -mat_type mpiaijcusparse -vec_type cuda
+       args: -sf_type {{basic neighbor}}
+       requires: cuda define(PETSC_HAVE_MPI_GPU_AWARE)
+     test:
+       suffix: aijhipsparse
+       requires: hip
+       args: -mat_type mpiaijhipsparse -vec_type hip
+       args: -sf_type {{basic neighbor}} -vecscatter_packongpu {{0 1}}
 
-   test:
-      args: -mat_type seqdense -rectB
-      suffix: 12_B
+   testset:
+     suffix: 31
+     filter: grep -v type | grep -v "Mat Object"
+     args: -test_diagonalscale
+     output_file: output/ex5_31.out
+     test:
+       args: -mat_type mpiaij
+     test:
+       args: -mat_type mpibaij
+     test:
+        requires: cuda
+        suffix: aijcusparse
+        args: -mat_type mpiaijcusparse -vec_type cuda
+     test:
+        requires: hip
+        suffix: aijhipsparse
+        args: -mat_type mpiaijhipsparse -vec_type hip
 
-   test:
-      suffix: 21
-      args: -mat_type mpiaij
-      filter: grep -v type
+   testset:
+     suffix: 33
+     filter: grep -v type | grep -v "Mat Object"
+     nsize: 3
+     args: -test_diagonalscale
+     output_file: output/ex5_33.out
+     test:
+       suffix: mpiaij
+       args: -mat_type mpiaij
+     test:
+       suffix: mpibaij
+       args: -mat_type mpibaij
+     test:
+        suffix: aijcusparse
+        requires: cuda
+        args: -mat_type mpiaijcusparse -vec_type cuda
+     test:
+        suffix: aijhipsparse
+        requires: hip
+        args: -mat_type mpiaijhipsparse -vec_type hip
 
-   test:
-      suffix: 22
-      args: -mat_type mpidense
+   testset:
+     suffix: sell
+     filter: grep -v type | grep -v "Mat Object" | grep -v "Vec Object"
+     args: -mat_type sell
+     output_file: output/ex5_41.out
+     test:
+     test:
+       suffix: 3
+       nsize: 3
 
-   test:
-      suffix: 23
-      nsize: 3
-      args: -mat_type mpiaij
-      filter: grep -v type
-
-   test:
-      suffix: 24
-      nsize: 3
-      args: -mat_type mpidense
-
-   test:
-      suffix: 2_aijcusparse_1
-      args: -mat_type mpiaijcusparse -vec_type cuda
-      filter: grep -v type
-      output_file: output/ex5_21.out
-      requires: cuda
-
-
-   test:
-      nsize: 3
-      suffix: 2_aijcusparse_2
-      filter: grep -v type
-      args: -mat_type mpiaijcusparse -vec_type cuda
-      args: -sf_type {{basic neighbor}} -vecscatter_packongpu {{0 1}}
-      output_file: output/ex5_23.out
-      requires: cuda
-
-   test:
-      nsize: 3
-      suffix: 2_aijcusparse_3
-      filter: grep -v type
-      args: -mat_type mpiaijcusparse -vec_type cuda
-      args: -sf_type {{basic neighbor}}
-      output_file: output/ex5_23.out
-      requires: cuda define(PETSC_HAVE_MPI_GPU_AWARE)
-
-   test:
-      suffix: 31
-      args: -mat_type mpiaij -test_diagonalscale
-      filter: grep -v type
-
-   test:
-      suffix: 32
-      args: -mat_type mpibaij -test_diagonalscale
-      filter: grep -v Mat_
-
-   test:
-      suffix: 33
-      nsize: 3
-      args: -mat_type mpiaij -test_diagonalscale
-      filter: grep -v type
-
-   test:
-      suffix: 34
-      nsize: 3
-      args: -mat_type mpibaij -test_diagonalscale
-      filter: grep -v Mat_
-
-   test:
-      suffix: 3_aijcusparse_1
-      args: -mat_type mpiaijcusparse -vec_type cuda -test_diagonalscale
-      filter: grep -v type
-      output_file: output/ex5_31.out
-      requires: cuda
-
-   test:
-      suffix: 3_aijcusparse_2
-      nsize: 3
-      args: -mat_type mpiaijcusparse -vec_type cuda -test_diagonalscale
-      filter: grep -v type
-      output_file: output/ex5_33.out
-      requires: cuda
-
-   test:
-      suffix: aijcusparse_1
-      args: -mat_type seqaijcusparse -vec_type cuda -rectA
-      filter: grep -v type
-      output_file: output/ex5_11_A.out
-      requires: cuda
-
-   test:
-      suffix: aijcusparse_2
-      args: -mat_type seqaijcusparse -vec_type cuda -rectB
-      filter: grep -v type
-      output_file: output/ex5_11_B.out
-      requires: cuda
-
-   test:
-      suffix: sell_1
-      args: -mat_type sell
-      output_file: output/ex5_41.out
-
-   test:
-      suffix: sell_2
-      nsize: 3
-      args: -mat_type sell
-      output_file: output/ex5_43.out
-
-   test:
-      suffix: sell_3
-      args: -mat_type sell -test_diagonalscale
-      output_file: output/ex5_51.out
-
-   test:
-      suffix: sell_4
-      nsize: 3
-      args: -mat_type sell -test_diagonalscale
-      output_file: output/ex5_53.out
+   testset:
+     suffix: selldiag
+     filter: grep -v type | grep -v "Mat Object" | grep -v "Vec Object"
+     args: -mat_type sell -test_diagonalscale
+     output_file: output/ex5_51.out
+     test:
+     test:
+       suffix: 3
+       nsize: 3
 
 TEST*/

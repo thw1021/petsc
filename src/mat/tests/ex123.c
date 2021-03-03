@@ -178,66 +178,73 @@ int main(int argc,char **args)
 
 /*TEST
 
-   test:
-     suffix: 1
+   testset:
      filter: grep -v type
      diff_args: -j
-     args: -mat_type {{seqaij mpiaij}}
-
-   test:
-     requires: cuda
-     suffix: 1_cuda
-     filter: grep -v type
-     diff_args: -j
-     args: -mat_type {{seqaijcusparse mpiaijcusparse}}
      output_file: output/ex123_1.out
+     test:
+       suffix: 1
+       args: -mat_type {{seqaij mpiaij}}
+     test:
+       requires: cuda
+       suffix: 1_cuda
+       args: -mat_type {{seqaijcusparse mpiaijcusparse}}
+     test:
+       requires: hip
+       suffix: hip
+       args: -mat_type {{seqaijhipsparse mpiaijhipsparse}}
 
-   test:
-     suffix: 2
+   testset:
      nsize: 7
      filter: grep -v type
      diff_args: -j
-     args: -mat_type mpiaij
-
-   test:
-     requires: cuda
-     suffix: 2_cuda
-     nsize: 7
-     filter: grep -v type
-     diff_args: -j
-     args: -mat_type mpiaijcusparse
      output_file: output/ex123_2.out
+     test:
+       suffix: 2
+       args: -mat_type mpiaij
+     test:
+       requires: cuda
+       suffix: 2_cuda
+       args: -mat_type mpiaijcusparse
+     test:
+       requires: hip
+       suffix: 2_hip
+       args: -mat_type mpiaijhipsparse
 
-   test:
+   testset:
      suffix: 3
      nsize: 3
      filter: grep -v type
      diff_args: -j
-     args: -mat_type mpiaij -loc
-
-   test:
-     requires: cuda
-     suffix: 3_cuda
-     nsize: 3
-     filter: grep -v type
-     diff_args: -j
-     args: -mat_type mpiaijcusparse -loc
      output_file: output/ex123_3.out
+     args: -loc
+     test:
+       args: -mat_type mpiaij
+     test:
+       requires: cuda
+       suffix: 3_cuda
+       args: -mat_type mpiaijcusparse
+     test:
+       requires: hip
+       suffix: 3_hip
+       args: -mat_type mpiaijhipsparse
 
-   test:
+   testset:
      suffix: 4
      nsize: 4
      filter: grep -v type
      diff_args: -j
-     args: -mat_type mpiaij -loc -locdiag 0
-
-   test:
-     requires: cuda
-     suffix: 4_cuda
-     nsize: 4
-     filter: grep -v type
-     diff_args: -j
-     args: -mat_type mpiaijcusparse -loc -locdiag 0
      output_file: output/ex123_4.out
+     args: -mat_type mpiaij
+     test:
+       args: -mat_type mpiaij
+     test:
+       requires: cuda
+       suffix: 4_cuda
+       args: -mat_type mpiaijcusparse
+     test:
+       requires: hip
+       suffix: 4_hip
+       args: -mat_type mpiaijhipsparse
 
 TEST*/

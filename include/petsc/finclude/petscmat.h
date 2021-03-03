@@ -91,6 +91,9 @@
 #define MATAIJCUSPARSE     'aijcusparse'
 #define MATSEQAIJCUSPARSE  'seqaijcusparse'
 #define MATMPIAIJCUSPARSE  'mpiaijcusparse'
+#define MATAIJHIPSPARSE    'aijhipsparse'
+#define MATSEQAIJHIPSPARSE 'seqaijhipsparse'
+#define MATMPIAIJHIPSPARSE 'mpiaijhipsparse'
 #define MATAIJVIENNACL     'aijviennacl'
 #define MATSEQAIJVIENNACL  'seqaijviennacl'
 #define MATMPIAIJVIENNACL  'mpiaijviennacl'
@@ -110,6 +113,7 @@
 #define MATDENSE           'dense'
 #define MATSEQDENSE        'seqdense'
 #define MATSEQDENSECUDA    'seqdensecuda'
+#define MATSEQDENSEHIP     'seqdensehip'
 #define MATMPIDENSE        'mpidense'
 #define MATELEMENTAL       'elemental'
 #define MATSCALAPACK       'scalapack'
@@ -182,7 +186,9 @@
 #define MATSOLVERPETSC           'petsc'
 #define MATSOLVERBAS             'bas'
 #define MATSOLVERCUSPARSE        'cusparse'
+#define MATSOLVERHIPSPARSE       'hipsparse'
 #define MATSOLVERCUDA            'cuda'
+#define MATSOLVERHIP             'hip'
 #define MATSOLVERKOKKOS          'kokkos'
 
 !
@@ -190,6 +196,12 @@
 !
 #define MatCUSPARSEStorageFormat PetscEnum
 #define MatCUSPARSEFormatOperation PetscEnum
+
+!
+! GPU Storage Formats for HIPSPARSE
+!
+#define MatHIPSPARSEStorageFormat PetscEnum
+#define MatHIPSPARSEFormatOperation PetscEnum
 
 !
 ! sparsity reducing ordering for STRUMPACK

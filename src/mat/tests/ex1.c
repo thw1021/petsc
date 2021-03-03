@@ -190,15 +190,27 @@ int main(int argc,char **argv)
      output_file: output/ex1_1.out
 
    test:
+     requires: hip
+     suffix: seqdensehip
+     args: -mat_type seqdensehip -rhs_mat_type seqdensehip -ldl 0 -solver_type {{petsc hip}}
+     output_file: output/ex1_1.out
+
+   testset:
      requires: cuda
-     suffix: seqdensecuda_seqaijcusparse
-     args: -mat_type seqaijcusparse -rhs_mat_type seqdensecuda
      output_file: output/ex1_2.out
+     args: -rhs_mat_type seqdensecuda
+     test:
+       suffix: seqdensecuda_seqaijcusparse
+       args: -mat_type seqaijcusparse
+     test:
+       requires: viennacl
+       suffix: seqdensecuda_seqaijviennacl
+       args: -mat_type seqaijviennacl
 
    test:
-     requires: cuda viennacl
-     suffix: seqdensecuda_seqaijviennacl
-     args: -mat_type seqaijviennacl -rhs_mat_type seqdensecuda
+     requires: hip
+     suffix: seqdensehip_seqaijhipsparse
      output_file: output/ex1_2.out
+     args: -mat_type seqaijcusparse -rhs_mat_type seqdensehip
 
 TEST*/

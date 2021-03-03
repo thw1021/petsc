@@ -1,7 +1,7 @@
 -include ../../../../../petscdir.mk
 ALL: lib
 
-DIRS     = cuda
+DIRS     = cuda hip
 CFLAGS   =
 FFLAGS   =
 SOURCEC  = dense.c densehdf5.c

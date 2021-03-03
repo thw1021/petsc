@@ -70,27 +70,38 @@ int main(int argc,char **args)
 
 /*TEST
 
-   test:
-      suffix: aijviennacl_1
-      nsize: 1
-      args: -mat_type aijviennacl
-      requires: viennacl
+   testset:
+     suffix: 1
+     nsize: 1
+     output_file:  output/ex301_1.out
+     test:
+       suffix: aijviennacl
+       requires: viennacl
+       args: -mat_type aijviennacl
+     test:
+       suffix: aijcusparse
+       requires: cuda
+       args: -mat_type aijcusparse
+     test:
+       suffix: aijhipsparse
+       requires: hip
+       args: -mat_type aijhipsparse
 
-   test:
-      suffix: aijviennacl_2
-      nsize: 2
-      args: -mat_type aijviennacl
-      requires: viennacl
+   testset:
+     suffix: 2
+     nsize: 2
+     output_file:  output/ex301_2.out
+     test:
+       suffix: aijviennacl
+       requires: viennacl
+       args: -mat_type aijviennacl
+     test:
+       suffix: aijcusparse
+       requires: cuda
+       args: -mat_type aijcusparse
+     test:
+       suffix: aijhipsparse
+       requires: hip
+       args: -mat_type aijhipsparse
 
-   test:
-      suffix: aijcusparse_1
-      nsize: 1
-      args: -mat_type aijcusparse
-      requires: cuda
-
-   test:
-      suffix: aijcusparse_2
-      nsize: 2
-      args: -mat_type aijcusparse
-      requires: cuda
 TEST*/

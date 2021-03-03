@@ -134,98 +134,86 @@ int main(int argc,char **args)
 
 /*TEST
 
-   test:
-     suffix: 1
+   testset:
      filter: grep -v " type:" | grep -v "Mat Object"
      args: -view
      diff_args: -j
-
-   test:
      output_file: output/ex132_1.out
-     requires: cuda
-     suffix: 1_cuda
-     filter: grep -v " type:" | grep -v "Mat Object"
-     args: -view -mat_type aijcusparse
-     diff_args: -j
+     test:
+       suffix: 1
+     test:
+       requires: cuda
+       suffix: 1_cuda
+       args: -mat_type aijcusparse
+     test:
+       requires: kokkos_kernels
+       suffix: 1_kokkos
+       args: -mat_type aijkokkos
+     test:
+       requires: hip
+       suffix: 1_hip
+       args: -mat_type aijhip
 
-   test:
-     output_file: output/ex132_1.out
-     requires: kokkos_kernels
-     suffix: 1_kokkos
-     filter: grep -v " type:" | grep -v "Mat Object"
-     args: -view -mat_type aijkokkos
-     diff_args: -j
-
-   test:
-     suffix: 2
+   testset:
      filter: grep -v " type:" | grep -v "Mat Object"
      args: -view -mat_nonsym
      diff_args: -j
-
-   test:
      output_file: output/ex132_2.out
-     requires: cuda
-     suffix: 2_cuda
-     filter: grep -v " type:" | grep -v "Mat Object"
-     args: -view -mat_type aijcusparse -mat_nonsym
-     diff_args: -j
+     test:
+       suffix: 2
+     test:
+       requires: cuda
+       suffix: 2_cuda
+       args: -mat_type aijcusparse
+     test:
+       requires: kokkos_kernels
+       suffix: 2_kokkos
+       args: -mat_type aijkokkos
+     test:
+       requires: hip
+       suffix: 2_hip
+       args: -mat_type aijhip
 
-   test:
-     output_file: output/ex132_2.out
-     requires: kokkos_kernels
-     suffix: 2_kokkos
-     filter: grep -v " type:" | grep -v "Mat Object"
-     args: -view -mat_type aijkokkos -mat_nonsym
-     diff_args: -j
-
-   test:
+   testset:
      nsize: 2
-     suffix: 1_par
      filter: grep -v " type:" | grep -v "Mat Object"
      args: -view
      diff_args: -j
-
-   test:
-     nsize: 2
      output_file: output/ex132_1_par.out
-     requires: cuda
-     suffix: 1_par_cuda
-     filter: grep -v " type:" | grep -v "Mat Object"
-     args: -view -mat_type aijcusparse
-     diff_args: -j
+     test:
+       suffix: 1_par
+     test:
+       requires: cuda
+       suffix: 1_par_cuda
+       args: -mat_type aijcusparse
+     test:
+       requires: kokkos_kernels
+       suffix: 1_par_kokkos
+       args: -mat_type aijkokkos
+     test:
+       requires: hip
+       suffix: 1_par_hip
+       args: -mat_type aijhip
 
    test:
      nsize: 2
-     output_file: output/ex132_1_par.out
-     requires: kokkos_kernels
-     suffix: 1_par_kokkos
-     filter: grep -v " type:" | grep -v "Mat Object"
-     args: -view -mat_type aijkokkos
-     diff_args: -j
-
-   test:
-     nsize: 2
-     suffix: 2_par
      filter: grep -v " type:" | grep -v "Mat Object"
      args: -view -mat_nonsym
      diff_args: -j
-
-   test:
-     nsize: 2
      output_file: output/ex132_2_par.out
-     requires: cuda
-     suffix: 2_par_cuda
-     filter: grep -v " type:" | grep -v "Mat Object"
-     args: -view -mat_type aijcusparse -mat_nonsym
-     diff_args: -j
-
-   test:
-     nsize: 2
-     output_file: output/ex132_2_par.out
-     requires: kokkos_kernels
-     suffix: 2_par_kokkos
-     filter: grep -v " type:" | grep -v "Mat Object"
-     args: -view -mat_type aijkokkos -mat_nonsym
-     diff_args: -j
+     test:
+       suffix: 2_par
+     test:
+       requires: cuda
+       suffix: 2_par_cuda
+       args: -mat_type aijcusparse
+     test:
+       requires: kokkos_kernels
+       suffix: 2_par_kokkos
+       args: -mat_type aijkokkos
+     test:
+       requires: hip
+       suffix: 2_par_hip
+       args: -mat_type aijhip
 
 TEST*/
