@@ -7,9 +7,10 @@
 PETSC_EXTERN PetscBool PetscStreamRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode PetscStreamRegisterAll(void);
 
+#if PetscDefined(USE_DEBUG)
 #define PetscValidStreamType(_p_strm__,_p_arg__)                        \
   do {                                                                  \
-    if (PetscUnlikelyDebug((_p_strm__)->type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_TYPENOTSET,"PetscStreamType is not set: Argument # %d",_p_arg__); \
+    if (PetscUnlikelyDebug(!(_p_strm__)->type)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_TYPENOTSET,"PetscStreamType is not set: Argument # %d",_p_arg__); \
   } while (0)
 
 #define PetscValidStreamTypeSpecific(_p_strm__,_p_arg__,_p_type__,_v_type__) \
@@ -26,6 +27,9 @@ PETSC_EXTERN PetscErrorCode PetscStreamRegisterAll(void);
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"PetscStreamType %d is incompatible with other PetscStreamType %d in arguments #%d and #%d",(int)((_p_strm1__)->type),(int)((_p_strm2__)->type),(_p_arg1__),(_p_arg2__)); \
     }                                                                   \
 } while (0)
+#else
+#define PetscValidStreamType(_p_strm__,_p_arg__)
+#endif
 
 typedef struct _StreamOps *StreamOps;
 struct _StreamOps {
