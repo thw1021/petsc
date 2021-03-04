@@ -161,14 +161,17 @@ PetscErrorCode PetscEventSynchronize(PetscEvent event)
   PetscFunctionBegin;
   PetscValidStreamType(event,1);
   if (PetscUnlikelyDebug(!event->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscEventSetUp() before using it");
-  if (event->idle) PetscFunctionReturn(0);
-  ierr = (*event->ops->synchronize)(event);CHKERRQ(ierr);
-  event->idle = PETSC_TRUE;
+  if (event->idle) {
+    ierr = PetscEventValidateIdle_Internal(event);CHKERRQ(ierr);
+  } else {
+    ierr = (*event->ops->synchronize)(event);CHKERRQ(ierr);
+    event->idle = PETSC_TRUE;
+  }
   PetscFunctionReturn(0);
 }
 
 /*@C
-  PetscEventQuery - Returns whether a PetscEvent has work
+  PetscEventQuery - Returns whether a PetscEvent is idle
 
   Not Collective
 
@@ -176,7 +179,7 @@ PetscErrorCode PetscEventSynchronize(PetscEvent event)
 . event  - The PetscEvent object
 
   Output Parameter:
-. busy - PETSC_TRUE if the PetscEvent is busy, PETSC_FALSE otherwise
+. idle - PETSC_TRUE if the PetscEvent has NO work, PETSC_FALSE otherwise
 
   Notes:
   Results of this routine are cached on return, allowing this function to be called repeatedly in an efficient
@@ -186,21 +189,20 @@ PetscErrorCode PetscEventSynchronize(PetscEvent event)
 
 .seealso: PetscEventCreate(), PetscEventSynchronize(), PetscStreamWaitEvent(), PetscStreamSynchronize()
 @*/
-PetscErrorCode PetscEventQuery(PetscEvent event, PetscBool *busy)
+PetscErrorCode PetscEventQuery(PetscEvent event, PetscBool *idle)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidStreamType(event,1);
-  PetscValidBoolPointer(busy,2);
+  PetscValidBoolPointer(idle,2);
   if (PetscUnlikelyDebug(!event->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscEventSetUp() before using it");
-  if (!(PetscDefined(USE_DEBUG))) {
-    if (event->idle) PetscFunctionReturn(0);
+  if (event->idle) {
+    *idle = PETSC_TRUE;
+    ierr = PetscEventValidateIdle_Internal(event);CHKERRQ(ierr);
+  } else {
+    ierr = (*event->ops->query)(event,idle);CHKERRQ(ierr);
+    event->idle = *idle;
   }
-  ierr = (*event->ops->query)(event, busy);CHKERRQ(ierr);
-  if (PetscUnlikelyDebug((event->idle == PETSC_FALSE) && (*busy == PETSC_TRUE))) {
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscEvent cache corrupted, event thought it was idle when it still had work");
-  }
-  event->idle = *busy;
   PetscFunctionReturn(0);
 }

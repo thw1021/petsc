@@ -33,16 +33,12 @@ PETSC_STATIC_INLINE PetscErrorCode PetscEventSynchronize_CUDA(PetscEvent event)
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscEventQuery_CUDA(PetscEvent event, PetscBool *busy)
+PETSC_STATIC_INLINE PetscErrorCode PetscEventQuery_CUDA(PetscEvent event, PetscBool *idle)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
 
   PetscFunctionBegin;
-  *busy = PETSC_FALSE;
-  if (cudaEventQuery(pec->cevent) == cudaErrorNotReady) {
-    *busy = PETSC_TRUE;
-    cudaGetLastError();
-  }
+  *idle = cudaEventQuery(pec->cevent) == cudaErrorNotReady ? PETSC_FALSE : PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 

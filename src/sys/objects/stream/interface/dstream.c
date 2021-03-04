@@ -278,19 +278,12 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronizeDevice_Private(PetscStr
 #endif
 
   PetscFunctionBegin;
-  switch (strm->type) {
-  case PETSC_STREAM_CUDA:
 #if PetscDefined(HAVE_CUDA)
-    cerr = cudaDeviceSynchronize();CHKERRCUDA(cerr);
+  cerr = cudaDeviceSynchronize();CHKERRCUDA(cerr);
 #endif
-    break;
-  case PETSC_STREAM_HIP:
 #if PetscDefined(HAVE_HIP)
-    herr = hipDeviceSynchronize();CHKERRHIP(herr);
+  herr = hipDeviceSynchronize();CHKERRHIP(herr);
 #endif
-  default:
-    break;
-  }
   PetscFunctionReturn(0);
 }
 
@@ -323,11 +316,12 @@ PetscErrorCode PetscStreamSynchronize(PetscStream strm)
     break;
   case PETSC_STREAM_DEFAULT_BLOCKING:
   case PETSC_STREAM_GLOBAL_NONBLOCKING:
-    if (!PetscDefined(USE_DEBUG)) {
-      if (strm->idle) break;
+    if (strm->idle) {
+      ierr = PetscStreamValidateIdle_Internal(strm);CHKERRQ(ierr);
+    } else {
+      ierr = (*strm->ops->synchronize)(strm);CHKERRQ(ierr);
+      strm->idle = PETSC_TRUE;
     }
-    ierr = (*strm->ops->synchronize)(strm);CHKERRQ(ierr);
-    strm->idle = PETSC_TRUE;
   default:
     break;
   }
@@ -335,7 +329,7 @@ PetscErrorCode PetscStreamSynchronize(PetscStream strm)
 }
 
 /*@C
-  PetscStreamQuery - Returns whether or not a PetscStream is busy
+  PetscStreamQuery - Returns whether or not a PetscStream is idle
 
   Not Collective
 
@@ -343,7 +337,7 @@ PetscErrorCode PetscStreamSynchronize(PetscStream strm)
 . strm - The PetscStream object
 
   Output Parameter:
-. busy - PETSC_TRUE if PetscStream has work, PETSC_FALSE if it is idle
+. idle - PETSC_TRUE if PetscStream has NO work, PETSC_FALSE if it has work
 
   Notes:
   Results of PetscStreamQuery() are cached on return, allowing this function to be called repeatedly in an efficient
@@ -353,20 +347,19 @@ PetscErrorCode PetscStreamSynchronize(PetscStream strm)
 
 .seealso: PetscStreamCreate(), PetscStreamQuery(), PetscEventSynchronize()
 @*/
-PetscErrorCode PetscStreamQuery(PetscStream strm, PetscBool *busy)
+PetscErrorCode PetscStreamQuery(PetscStream strm, PetscBool *idle)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidStreamType(strm,1);
-  PetscValidBoolPointer(busy,2);
-  if (!(PetscDefined(USE_DEBUG))) {
-    if (strm->idle) PetscFunctionReturn(0);
+  PetscValidBoolPointer(idle,2);
+  if (strm->idle) {
+    *idle = PETSC_TRUE;
+    ierr = PetscStreamValidateIdle_Internal(strm);CHKERRQ(ierr);
+  } else {
+    ierr = (*strm->ops->query)(strm,idle);CHKERRQ(ierr);
+    strm->idle = *idle;
   }
-  ierr = (*strm->ops->query)(strm, busy);CHKERRQ(ierr);
-  if (PetscUnlikelyDebug((strm->idle == PETSC_FALSE) && (*busy == PETSC_TRUE))) {
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscStream cache corrupted, stream thought it was idle when it still had work");
-  }
-  strm->idle = *busy;
   PetscFunctionReturn(0);
 }
