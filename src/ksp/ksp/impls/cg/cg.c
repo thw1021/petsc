@@ -268,13 +268,13 @@ static PetscErrorCode KSPSolve_CGAsync(KSP ksp)
   PetscFunctionBegin;
   /* Create a stream here for now */
   ierr = PetscStreamCreate(&pstream);CHKERRQ(ierr);
-  ierr = PetscStreamSetType(pstream,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+  ierr = PetscStreamSetType(pstream,PETSCSTREAMCUDA);CHKERRQ(ierr);
   ierr = PetscStreamSetMode(pstream,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
   ierr = PetscStreamSetUp(pstream);CHKERRQ(ierr);
 
   /* Create streamscalars */
   ierr = PetscStreamScalarCreate(&pscaldp);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetType(pscaldp,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetType(pscaldp,PETSCSTREAMCUDA);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetUp(pscaldp);CHKERRQ(ierr);
 
   ierr = PetscStreamScalarDuplicate(pscaldp,&pscaldpi);CHKERRQ(ierr);
