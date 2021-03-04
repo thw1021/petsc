@@ -1026,10 +1026,10 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
     for (int j=threadIdx.x ; j<nzbL ; j += blockDim.x) if (j<nzbL) baL[j] = 0;
     for (int j=threadIdx.x ; j<nzbU ; j += blockDim.x) if (j<nzbU) baU[j] = 0;
   }
-  // copy A into B -- these two loops can be fused
+  // copy A into B -- these two loops should be fused
   // Kokkos::parallel_for(Kokkos::TeamVectorRange(team, start_i, end_i), [=] (const int &rowb) {
   for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block
-    PetscInt          rowa = r[rowb], nza = ai_d[rowa+1] - ai_d[rowa];
+    PetscInt          rowa = ic[rowb], nza = ai_d[rowa+1] - ai_d[rowa];
     const PetscScalar *av    = aa_d + ai_d[rowa];
     const int         *ajtmp = aj_d + ai_d[rowa];
     /* load in initial (unfactored row) */
@@ -1037,7 +1037,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
     //printf("%d (row-A:%d): ",rowb,rowa);
     for (int j=threadIdx.x ; j<nza ; j += blockDim.x) {
       if (j<nza) {
-        PetscInt    colb = ic[ajtmp[j]];
+        PetscInt    colb = r[ajtmp[j]];
         PetscScalar vala = av[j];
         if (colb == rowb) {
           *(ba_d + bdiag_d[rowb]) = vala;
@@ -1062,16 +1062,19 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
   }
 
   // debug
-  // if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {
-  //   for (int i=0;i<n;i++) {
-  //     const PetscInt nzu = bdiag_d[i] - bdiag_d[i+1], nzl = bi_d[i+1] - bi_d[i], *bj= bj_d + bi_d[i]; // u with diag
-  //     PetscScalar *ba = ba_d + bi_d[i];printf("w %4d) ",i);
-  //     for (int j=0; j<nzl; j++) printf("(%4d) %16.9e ",bj[j],ba[j]);
-  //     ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
-  //     for (int j=0; j<nzu; j++) printf("(%4d) %16.9e ",bj[j],ba[j]);
-  //     printf("\n");
-  //   }
-  // }
+  if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {
+    for (int i=0;i<n;i++) {
+      const PetscInt nzu = bdiag_d[i] - (bdiag_d[i+1]+1), nzl = bi_d[i+1] - bi_d[i], *bj= bj_d + bi_d[i]; // u without diag
+      PetscScalar *ba = ba_d + bi_d[i];
+      printf("w %4d) ",i);
+      for (int j=0; j<nzl; j++) printf("L-(%2d) %16.9e, ",bj[j],ba[j]);
+      bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i]; 
+                                printf("D-(%2d) %16.9e, ",bj[0],ba[0]);
+      ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
+      for (int j=0; j<nzu; j++) printf("U-(%2d) %16.9e, ",bj[j],ba[j]);
+      printf("\n");
+    }
+  }
 
   //Kokkos::parallel_for(Kokkos::TeamPolicy<>(Nf*Ni, team_size, nVec).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerThread(sizet_scr_t::shmem_size()+scalar_scr_t::shmem_size()), Kokkos::PerTeam(sizet_scr_t::shmem_size())), KOKKOS_LAMBDA (const team_member team) {
   // A22 panel update for each row A(1,:) and col A(:,1)
@@ -1198,7 +1201,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat B,Mat A,const MatFac
   const PetscScalar            *aa_d;
   PetscScalar                  *ba_d;
   PetscContainer               container;
-  int                          Ni=1, team_size=8, Nf, nVec=32;
+  int                          Ni=1, team_size=1, Nf, nVec=1;
   PetscLogDouble               flops, *flops_d;
   THRUSTINTARRAY               *icol_d;
 
