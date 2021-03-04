@@ -61,12 +61,13 @@ PetscBool   PetscBeganKokkos              = PETSC_FALSE;
 PetscBool   use_gpu_aware_mpi             = PETSC_TRUE;
 PetscBool   PetscCreatedGpuObjects        = PETSC_FALSE;
 
-MPI_Datatype MPIU_C_DOUBLE_COMPLEX_IMPL;
-MPI_Datatype MPIU_C_COMPLEX_IMPL;
-
 #if defined(PETSC_HAVE_COMPLEX)
 #if defined(PETSC_COMPLEX_INSTANTIATE)
 template <> class std::complex<double>; /* instantiate complex template class */
+#endif
+#if !defined(PETSC_HAVE_MPI_C_DOUBLE_COMPLEX)
+MPI_Datatype MPIU_C_DOUBLE_COMPLEX;
+MPI_Datatype MPIU_C_COMPLEX;
 #endif
 
 /*MC
