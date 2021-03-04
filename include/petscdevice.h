@@ -82,7 +82,7 @@ typedef enum {PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=0x01, PETSC_MEMTYPE_CUD
 #define PetscMemTypeHIP(m)     (((m) & 0xF) == PETSC_MEMTYPE_HIP)
 #define PetscMemTypeNVSHMEM(m) ((m) == PETSC_MEMTYPE_NVSHMEM)
 
-/*j
+/*J
   PetscStreamType - Stream type
 
   Level: beginner
@@ -93,8 +93,22 @@ typedef const char* PetscStreamType;
 #define PETSCSTREAMCUDA "cuda"
 #define PETSCSTREAMHIP  "hip"
 
+/*S
+  PetscEvent - Container for efficient management of device stream events.
+
+  As opposed to MPI streams are entirely decentralized objects, meaning that there exists no "super context" or manager
+  which might facilitate synchronization or communication between distinct streams (such as an MPI communicator). Any
+  coordination between streams is instead done via events. For two streams to interact, the first stream must record an
+  event which the other must wait on.
+
+  Level: beginner
+
+.seealso: PetscEventCreate(), PetscStreamType, PetscEventSetType(), PetscEventDestroy(), PetscStreamRecordEvent(), PetscStreamWaitEvent()
+S*/
 typedef struct _n_PetscEvent* PetscEvent;
 
+PETSC_EXTERN PetscErrorCode PetscEventInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscEventRegister(const char[],PetscErrorCode(*)(PetscEvent));
 PETSC_EXTERN PetscErrorCode PetscEventCreate(PetscEvent*);
 PETSC_EXTERN PetscErrorCode PetscEventDestroy(PetscEvent*);
 PETSC_EXTERN PetscErrorCode PetscEventSetType(PetscEvent,PetscStreamType);
@@ -132,6 +146,8 @@ typedef enum {
 S*/
 typedef struct _n_PetscStream* PetscStream;
 
+PETSC_EXTERN PetscErrorCode PetscStreamInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscStreamRegister(const char[],PetscErrorCode(*)(PetscStream));
 PETSC_EXTERN PetscErrorCode PetscStreamCreate(PetscStream*);
 PETSC_EXTERN PetscErrorCode PetscStreamDestroy(PetscStream*);
 PETSC_EXTERN PetscErrorCode PetscStreamSetType(PetscStream,PetscStreamType);
@@ -175,6 +191,8 @@ typedef enum {
 S*/
 typedef struct _n_PetscStreamScalar* PetscStreamScalar;
 
+PETSC_EXTERN PetscErrorCode PetscStreamScalarInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarRegister(const char[],PetscErrorCode(*)(PetscStreamScalar));
 PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar,PetscStreamType);
@@ -219,6 +237,8 @@ typedef enum {
 S*/
 typedef struct _n_PetscStreamGraph* PetscStreamGraph;
 
+PETSC_EXTERN PetscErrorCode PetscStreamGraphInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphRegister(const char[],PetscErrorCode(*)(PetscStreamGraph));
 PETSC_EXTERN PetscErrorCode PetscStreamGraphCreate(PetscStreamGraph*);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphDestroy(PetscStreamGraph*);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphSetType(PetscStreamGraph,PetscStreamType);
