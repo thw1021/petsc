@@ -3,7 +3,7 @@
 /*@C
   PetscStreamScalarCreate - Creates an empty PetscStreamScalar object. The type can then be set with PetscStreamScalarSetType().
 
-  Not Collective
+  Not Collective, Synchronous only on first call
 
   Output Parameter:
 . pscal  - The allocated PetscStream object
@@ -35,7 +35,7 @@ PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
 /*@C
   PetscStreamScalarDestroy - Destroys a PetscStreamScalar
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameter:
 . pscal - The PetscStreamScalar object
@@ -61,7 +61,7 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
 /*@C
   PetscStreamScalarSetUp - Sets up internal data structures for use
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameter:
 . pscal - The PetscStreamScalar object
@@ -88,7 +88,7 @@ PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal)
 /*@C
   PetscStreamScalarDuplicate - Duplicates a PetscStreamScalar
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameter:
 . pscalref - The PetscStreamScalar object to duplicate
@@ -124,7 +124,7 @@ PetscErrorCode PetscStreamScalarDuplicate(PetscStreamScalar pscalref, PetscStrea
 /*@C
   PetscStreamScalarSetValue - Set the value of a PetscStreamScalar
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameters:
 + pscal - The PetscStreamScalar object
@@ -163,7 +163,7 @@ PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar pscal, const PetscSca
 /*@C
   PetscStreamScalarAwait - Await completion of asynchronous operation and retrieve the results on the host.
 
-  Not Collective
+  Not Collective, Synchronous
 
   Input Parameters:
 + pscal - The PetscStreamScalar object to await
@@ -197,7 +197,7 @@ PetscErrorCode PetscStreamScalarAwait(PetscStreamScalar pscal, PetscScalar *val,
 /*@C
   PetscStreamScalarGetDeviceRead - Get the device pointer of a PetscStreamScalar
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameters:
 + pscal - The PetscStreamScalar object
@@ -229,7 +229,7 @@ PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar pscal, const Pet
 /*@C
   PetscStreamScalarGetDeviceWrite - Get the device pointer of a PetscStreamScalar
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameters:
 + pscal - The PetscStreamScalar object
@@ -268,7 +268,7 @@ PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscSca
 /*@C
   PetscStreamScalarRestoreDeviceWrite - Restores and commits changed device pointer for a PetscStreamScalar
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameters:
 + pscal - The PetscStreamScalar object
@@ -314,7 +314,7 @@ PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, Pets
 /*@C
   PetscStreamScalarGetInfo - Determines whether a PetscStreamScalar satisfies a particular property.
 
-  Not Collective
+  Not Collective, Qualified Synchronous
 
   Input Parameters:
 + pscal - The PetscStreamScalar object
@@ -359,7 +359,7 @@ PetscErrorCode PetscStreamScalarGetInfo(PetscStreamScalar pscal, PSSCacheType ct
 /*@C
   PetscStreamScalarSetInfo - Set a known information about a PetscStreamScalar
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameters:
 + pscal - The PetscStreamScalar object
@@ -398,7 +398,7 @@ PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar pscal, PSSCacheType ct
 /*@C
   PetscStreamScalarAXTY - Computes x = alpha * x * y
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameters:
 + pscalx,pscaly - The PetscStreamScalars
@@ -438,7 +438,7 @@ PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx
 /*@C
   PetscStreamScalarAYDX - Computes x = alpha * y / x
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameters:
 + pscalx,pscaly - The PetscStreamScalars
@@ -474,19 +474,5 @@ PetscErrorCode PetscStreamScalarAYDX(PetscScalar alpha, PetscStreamScalar pscalx
   } else {
     ierr = (*pscalx->ops->aydx)(alpha, pscalx, pscaly, pstream);CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscStreamScalarAccumulateOp(PetscStreamScalar pscalacc, PetscInt n, PetscStreamScalar pscal[], PetscStreamComputeOp epiop, PetscStreamComputeOp accop, PetscStream pstream)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscCheckValidSameStreamType(pscalacc,1,pstream,4);
-  if (PetscUnlikelyDebug(n > 7)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Can only accumuate up to 8 scalars at a time\n");
-  if (PetscUnlikelyDebug(n < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid number of scalars %D\n",n);
-  for (PetscInt i = 0; i < n; ++i) PetscCheckValidSameStreamType(pscal[i],3,pstream,4);
-  if (!n) PetscFunctionReturn(0);
-  ierr = (*pscalacc->ops->accumop)(pscalacc, n, pscal, epiop, accop, pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

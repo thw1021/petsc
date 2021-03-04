@@ -4,6 +4,11 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
+PETSC_EXTERN PetscErrorCode PetscStreamRegisterAll(void);
+PETSC_EXTERN PetscErrorCode PetscEventRegisterAll(void);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarRegisterAll(void);
+PETSC_EXTERN PetscErrorCode PetscStreamGraphRegisterAll(void);
+
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamTypeCompare(const char type_ref[], const char type_name[], PetscBool *same)
 {
   PetscFunctionBegin;
@@ -103,7 +108,6 @@ struct _ScalOps {
   PetscErrorCode (*restoredevice)(PetscStreamScalar,PetscScalar**,PetscStream);
   PetscErrorCode (*axty)(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
   PetscErrorCode (*aydx)(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
-  PetscErrorCode (*accumop)(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
 };
 
 typedef enum {
