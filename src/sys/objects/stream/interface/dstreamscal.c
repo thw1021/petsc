@@ -26,11 +26,7 @@ PetscErrorCode PetscStreamScalarCreate(PetscStreamScalar *pscal)
   /* Setting to null taken from VecCreate(), why though? */
   *pscal = NULL;
   ierr = PetscNew(&s);CHKERRQ(ierr);
-  s->setup = PETSC_FALSE;
   s->omask = PETSC_OFFLOAD_UNALLOCATED;
-  s->type = NULL;
-  s->host = NULL;
-  s->device = NULL;
   s->poolID = PETSC_DEFAULT;
   *pscal = s;
   PetscFunctionReturn(0);

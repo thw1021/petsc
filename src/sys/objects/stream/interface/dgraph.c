@@ -26,9 +26,6 @@ PetscErrorCode PetscStreamGraphCreate(PetscStreamGraph *sgraph)
   /* Setting to null taken from VecCreate(), why though? */
   *sgraph = NULL;
   ierr = PetscNew(&sg);CHKERRQ(ierr);
-  sg->setup = PETSC_FALSE;
-  sg->assembled = PETSC_FALSE;
-  sg->type = PETSC_STREAM_INVALID;
   sg->capStrmId = PETSC_DEFAULT;
   *sgraph = sg;
   PetscFunctionReturn(0);
