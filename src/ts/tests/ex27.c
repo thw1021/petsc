@@ -54,9 +54,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 }
 
 /* Declaration of static functions */
-static PetscErrorCode ComputeGradEFunctionalAtPoint(DM sw, PetscInt Np, PetscQuadrature quad, PetscReal *particle, PetscReal *field, PetscReal* integral,  void* ctx);
-static PetscErrorCode ComputeAndApplyQForPPPrimePair(PetscReal* particle, PetscInt ppridx, const PetscReal *u, PetscReal *GammaS, PetscReal *particle_residual, PetscInt Np, PetscInt dim);
-//static PetscErrorCode ComputelnSumFromPoint(PetscReal* u, PetscReal *particle, PetscReal *sum_ptr, void* ctx);
+static PetscErrorCode ComputeGradEFunctionalAtPoint(DM sw, PetscInt Np, PetscQuadrature quad, PetscReal *particle, PetscReal *field, PetscReal *integral, void *ctx);
 
 /* Create the mesh for velocity space */
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
@@ -224,6 +222,25 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   PetscFunctionReturn(0);
 }
 
+/* Q = 1/|xi| (I - xi xi^T / |xi|^2), xi = vp - vq */
+static PetscErrorCode QCompute(PetscInt dim, const PetscReal vp[], const PetscReal vq[], PetscReal Q[])
+{
+  PetscReal xi[3], xi2, xi3, mag;
+  PetscInt  d, e;
+
+  PetscFunctionBeginHot;
+  DMPlex_WaxpyD_Internal(dim, -1.0, vq, vp, xi);
+  xi2 = DMPlex_DotD_Internal(dim, xi, xi);
+  mag = PetscSqrtReal(xi2);
+  xi3 = xi2 * mag;
+  for (d = 0; d < dim; ++d) {
+    for (e = 0; e < dim; ++e) {
+      Q[d*dim+e] = -xi[d]*xi[e] / xi3;
+    }
+    Q[d*dim+d] += 1. / mag;
+  }
+  PetscFunctionReturn(0);
+}
 
 static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, void *ctx)
 {
@@ -254,28 +271,28 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   ierr = PetscDTGaussTensorQuadrature(dim, 2*dim*Np,dim*Np, -1, 1, &quad);CHKERRQ(ierr);
   if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Part  ppr     x        y\n");CHKERRQ(ierr);}
   for(p = 0; p < Np; ++p){
-    PetscReal particle[2], res[2]={0.,0.}, integral[2]={0.,0.};
+    PetscReal particle[2], integral[2]={0.,0.}, Q[9];
 
-    for(d=0; d < dim; ++d) particle[d] = velocity[p*dim+d];
+    for (d = 0; d < dim; ++d) particle[d] = velocity[p*dim+d];
     ierr = ComputeGradEFunctionalAtPoint(sw, Np, quad, particle, velocity, integral, user);CHKERRQ(ierr);
 
     /* compute entropy integrals for p' to subtract from S_p */
-    for(ppr = 0; ppr<Np; ++ppr){
-      PetscReal pprime[2], integral_ppr[2]={0.,0.}, GammaS[2]={0.,0.}, particle_shift[2];
+    for(ppr = 0; ppr < Np; ++ppr) {
+      PetscReal pprime[2], integral_ppr[2]={0.,0.}, GammaS[2]={0.,0.};
 
-      if(ppr == p) continue;
-      for(d=0; d < dim; ++d) pprime[d] = velocity[ppr*dim+d];
+      if (ppr == p) continue;
+      for (d = 0; d < dim; ++d) pprime[d] = velocity[ppr*dim+d];
       ierr = ComputeGradEFunctionalAtPoint(sw, Np, quad, pprime, velocity, integral_ppr, user);CHKERRQ(ierr);
 
       for(d=0;d<dim;++d) GammaS[d] = integral[d] - integral_ppr[d];
 
       /* We are done with S so swap particle to be at the midpoint */
-      for(d=0; d<dim; ++d) particle_shift[d] = u[p*dim+d];
-      ierr = ComputeAndApplyQForPPPrimePair(particle_shift, ppr, u, GammaS, res, Np, dim);
-      /* The affect had better be symmetric. */
-
-      if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "%4D %4D %10.8lf %10.8lf\n", p, ppr, res[0], res[1]);CHKERRQ(ierr);}
-      for(d=0; d<dim;++d) r[p*dim+d] += res[d];
+      ierr = QCompute(dim, &u[p*dim], &u[ppr*dim], Q);CHKERRQ(ierr);
+      switch (dim) {
+        case 2: DMPlex_MultAdd2DReal_Internal(Q, 1, GammaS, &r[p*dim]);break;
+        case 3: DMPlex_MultAdd3DReal_Internal(Q, 1, GammaS, &r[p*dim]);break;
+        default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Do not support dimension %D", dim);
+      }
     }
     if (dbg) {
       ierr = PetscPrintf(PETSC_COMM_WORLD, "Final %4D %10.8lf %10.8lf\n", p, r[p*dim+0], r[p*dim+1]);CHKERRQ(ierr);
@@ -292,32 +309,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode ComputeAndApplyQForPPPrimePair(PetscReal* particle, PetscInt ppridx, const PetscReal *u, PetscReal *GammaS, PetscReal *particle_residual, PetscInt Np, PetscInt dim)
-{
-  PetscReal      xiTxi = 0.0, xicpy[2];
-  PetscInt       d;
-  PetscErrorCode ierr;
-
-  /* Not hard, but looks gross */
-  for(d=0; d<dim;++d) particle_residual[d] = 0.;
-  PetscReal xi[2],mag_xi=0., xiTS=0.;
-  for(d=0; d<dim;++d) xi[d] = particle[d] - u[ppridx*dim+d];
-  for(d=0; d<dim;++d) mag_xi += xi[d]*xi[d];
-
-  mag_xi = PetscSqrtReal(mag_xi);
-  for(d=0; d<dim; ++d) xiTS += xi[d]*GammaS[d];
-  for(d=0; d<dim; ++d) xi[d] *= (xiTS/(mag_xi*mag_xi));
-  for(d=0; d<dim; ++d) particle_residual[d] += (1/mag_xi) *(GammaS[d] - xi[d]);
-  //ierr = PetscPrintf(PETSC_COMM_WORLD, "Q GS %10.8lf %10.8lf xi %10.8lf %10.8lf\n", GammaS[0], GammaS[1], xi[0], xi[1]);CHKERRQ(ierr);
-
-
-  /* check Q(xi)xi annihilates. */
-  for(d=0; d<dim; ++d) xi[d] = particle[d]-u[ppridx*dim+d];
-  for(d=0; d<dim; ++d) xiTxi += xi[d]*xi[d];
-  for(d=0; d<dim; ++d) xicpy[d] = xi[d]*(xiTS/(mag_xi*mag_xi));
-  for(d=0; d<dim; ++d) if((xi[d] - xicpy[d]) != 0) SETERRQ(PETSC_COMM_WORLD, 1, "Q failed to annhilate xi.\n");
-  return(0);
-}
 /*
  TS Post Step Function. Copy the solution back into the swarm for migration. We may also need to reform
  the solution vector in cases of particle migration, but we forgo that here since there is no velocity space grid
