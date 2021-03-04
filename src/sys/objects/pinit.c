@@ -215,8 +215,7 @@ PetscErrorCode  PetscMaxSum(MPI_Comm comm,const PetscInt sizes[],PetscInt *max,P
 
 /* ----------------------------------------------------------------------------*/
 
-#if (defined(PETSC_HAVE_COMPLEX) && !defined(PETSC_HAVE_MPI_C_DOUBLE_COMPLEX)) || defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
-MPI_Op MPIU_SUM = 0;
+MPI_Op MPIU_SUM_IMPL = 0;
 
 PETSC_EXTERN void PetscSum_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
 {
@@ -239,7 +238,6 @@ PETSC_EXTERN void PetscSum_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatyp
   }
   PetscFunctionReturnVoid();
 }
-#endif
 
 #if defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
 MPI_Op MPIU_MAX = 0;
@@ -968,14 +966,12 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
     PETSC_i = _Complex_I;
 #endif
   }
-
-#if !defined(PETSC_HAVE_MPI_C_DOUBLE_COMPLEX)
-  ierr = MPI_Type_contiguous(2,MPI_DOUBLE,&MPIU_C_DOUBLE_COMPLEX);CHKERRMPI(ierr);
-  ierr = MPI_Type_commit(&MPIU_C_DOUBLE_COMPLEX);CHKERRMPI(ierr);
-  ierr = MPI_Type_contiguous(2,MPI_FLOAT,&MPIU_C_COMPLEX);CHKERRMPI(ierr);
-  ierr = MPI_Type_commit(&MPIU_C_COMPLEX);CHKERRMPI(ierr);
-#endif
 #endif /* PETSC_HAVE_COMPLEX */
+
+  ierr = MPI_Type_contiguous(2,MPI_DOUBLE,&MPIU_C_DOUBLE_COMPLEX_IMPL);CHKERRMPI(ierr);
+  ierr = MPI_Type_commit(&MPIU_C_DOUBLE_COMPLEX_IMPL);CHKERRMPI(ierr);
+  ierr = MPI_Type_contiguous(2,MPI_FLOAT,&MPIU_C_COMPLEX_IMPL);CHKERRMPI(ierr);
+  ierr = MPI_Type_commit(&MPIU_C_COMPLEX_IMPL);CHKERRMPI(ierr);
 
   /*
      Create the PETSc MPI reduction operator that sums of the first
@@ -999,9 +995,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   ierr = MPI_Op_create(PetscMin_Local,1,&MPIU_MIN);CHKERRMPI(ierr);
 #endif
 
-#if (defined(PETSC_HAVE_COMPLEX) && !defined(PETSC_HAVE_MPI_C_DOUBLE_COMPLEX)) || defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
-  ierr = MPI_Op_create(PetscSum_Local,1,&MPIU_SUM);CHKERRMPI(ierr);
-#endif
+  ierr = MPI_Op_create(PetscSum_Local,1,&MPIU_SUM_IMPL);CHKERRMPI(ierr);
 
   ierr = MPI_Type_contiguous(2,MPIU_SCALAR,&MPIU_2SCALAR);CHKERRMPI(ierr);
   ierr = MPI_Type_commit(&MPIU_2SCALAR);CHKERRMPI(ierr);
@@ -1167,16 +1161,9 @@ PetscErrorCode  PetscFreeMPIResources(void)
   ierr = MPI_Op_free(&MPIU_MIN);CHKERRMPI(ierr);
 #endif
 
-#if defined(PETSC_HAVE_COMPLEX)
-#if !defined(PETSC_HAVE_MPI_C_DOUBLE_COMPLEX)
-  ierr = MPI_Type_free(&MPIU_C_DOUBLE_COMPLEX);CHKERRMPI(ierr);
-  ierr = MPI_Type_free(&MPIU_C_COMPLEX);CHKERRMPI(ierr);
-#endif
-#endif
-
-#if (defined(PETSC_HAVE_COMPLEX) && !defined(PETSC_HAVE_MPI_C_DOUBLE_COMPLEX)) || defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
-  ierr = MPI_Op_free(&MPIU_SUM);CHKERRMPI(ierr);
-#endif
+  ierr = MPI_Type_free(&MPIU_C_DOUBLE_COMPLEX_IMPL);CHKERRMPI(ierr);
+  ierr = MPI_Type_free(&MPIU_C_COMPLEX_IMPL);CHKERRMPI(ierr);
+  ierr = MPI_Op_free(&MPIU_SUM_IMPL);CHKERRMPI(ierr);
 
   ierr = MPI_Type_free(&MPIU_2SCALAR);CHKERRMPI(ierr);
 #if defined(PETSC_USE_64BIT_INDICES)
