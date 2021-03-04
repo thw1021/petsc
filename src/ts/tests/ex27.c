@@ -1,5 +1,9 @@
 static char help[] = "Particle Basis Landau Example using nonlinear solve + Implicit Midpoint-like time stepping.";
 
+/* References
+  [1] https://arxiv.org/abs/1910.03080v2
+*/
+
 #include <petscdmplex.h>
 #include <petsc/private/petscfeimpl.h> /* For CoordinatesRefToReal() */
 #include <petscdmswarm.h>
@@ -9,17 +13,12 @@ static char help[] = "Particle Basis Landau Example using nonlinear solve + Impl
 #include <petscmath.h>
 
 typedef struct {
-  PetscInt    particlesPerCell; /* The number of partices per cell */
-  PetscInt    dim;              /* Topological mesh dimension */
-  PetscReal   momentTol;        /* Tolerance for checking moment conservation */
-  PetscBool   monitor;
-  PetscBool   error;            /* Flag for printing the error */
-  PetscReal   epsi;             /* gaussian regularization parameter */
-  PetscBool   simplices;        /* True for simplices, false for tensor cells */
-  PetscInt    ostep;            /* print the energy at each ostep time steps */
-  PetscDraw   draw;             /* The draw object for histogram monitoring */
-  PetscInt    max_step;         /* Number of time steps to take */
-  PetscReal   step_size;        /* Size of each time step */
+  PetscInt  particlesPerCell; /* The number of partices per cell */
+  PetscReal momentTol;        /* Tolerance for checking moment conservation */
+  PetscBool monitor;
+  PetscReal epsilon;          /* gaussian regularization parameter */
+  PetscInt  ostep;            /* print the energy at each ostep time steps */
+  PetscDraw draw;             /* The draw object for histogram monitoring */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -31,23 +30,14 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->particlesPerCell = 1;
   options->momentTol        = 100.0*PETSC_MACHINE_EPSILON;
   options->ostep            = 100;
-  options->dim              = 2;
-
-  options->simplices        = PETSC_FALSE;
-  options->epsi             = 0.64*pow(4,1.98);
-  options->max_step         = 1;
-  options->step_size        = 0.01;
+  options->epsilon          = 0.64*pow(4,1.98);
 
   ierr = PetscOptionsBegin(comm, "", "Collision Options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscOptionsBool("-monitor", "Flag to use the TS histogram monitor", "ex27.c", options->monitor, &options->monitor, NULL);CHKERRQ(ierr);
 
-  ierr = PetscOptionsBool("-simplices", "True for simplices, falls for tensor cells", "ex27.c", options->simplices, &options->simplices, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-particles_per_cell", "Number of particles per cell", "ex27.c", options->particlesPerCell, &options->particlesPerCell, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dim", "Topological mesh dimension", "ex27.c", options->dim, &options->dim, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-output_step", "Number of time steps between output", "ex27.c", options->ostep, &options->ostep, PETSC_NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-max_step", "Maximum number of time steps, default=1", "ex27.c", options->max_step, &options->max_step, PETSC_NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-epsi", "Mollifier regularization parameter", "ex27.c", options->epsi, &options->epsi, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-step_size", "Time step dt, default=0.01", "ex27.c", options->step_size, &options->step_size, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-epsilon", "Mollifier regularization parameter", "ex27.c", options->epsilon, &options->epsilon, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
@@ -56,24 +46,20 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 /* Declaration of static functions */
 static PetscErrorCode ComputeGradEFunctionalAtPoint(DM sw, PetscInt Np, PetscQuadrature quad, PetscReal *particle, PetscReal *field, PetscReal *integral, void *ctx);
 
-/* Create the mesh for velocity space */
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMPlexCreateBoxMesh(comm, user->dim, user->simplices, NULL, NULL, NULL, NULL, PETSC_TRUE, dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateBoxMesh(comm, 2, PETSC_FALSE, NULL, NULL, NULL, NULL, PETSC_TRUE, dm);CHKERRQ(ierr);
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) *dm, "Mesh");CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
-
 }
 
 static PetscErrorCode SetInitialCoordinates(DM sw)
 {
-
   AppCtx        *user;
   PetscRandom    rnd, rndv;
   DM             dm;
@@ -116,8 +102,6 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
       ierr = DMPlexComputeCellGeometryFVM(dm, c, NULL, centroid, NULL);CHKERRQ(ierr);
       for (d = 0; d < dim; ++d){
         coords[c*dim+d] = centroid[d];
-
-
       }
       vals[c] = 1.0;
     } else {
@@ -137,14 +121,13 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
     }
   }
   /* Randomized velicities to start */
-  PetscReal v_val;
-  for(c=cStart; c<cEnd; ++c){
-    for(p=0; p<Np; ++p){
-      for(d=0; d<dim; ++d){
-        ierr = PetscRandomGetValueReal(rndv, &v_val);
-        //velocity[dim*p+d] = d == 0 ? p : 0;
-        velocity[p*dim+d] = v_val;
+  for (c = cStart; c < cEnd; ++c) {
+    for (p = 0; p < Np; ++p) {
+      for (d = 0; d < dim; ++d) {
+        PetscReal v_val;
 
+        ierr = PetscRandomGetValueReal(rndv, &v_val);
+        velocity[p*dim+d] = v_val;
       }
     }
   }
@@ -389,23 +372,23 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
 
 /* Particle centered Gaussian and Gaussian gradient functions for quadrature point integration.
   Assume 2d normalization */
-static PetscReal Gaussian(const PetscReal center[], PetscInt dim, const PetscReal q[], PetscReal epsi){
-  return 1.0/(2.0*PETSC_PI*epsi) * exp(-((center[0]-q[0])*(center[0]-q[0])+(center[1]-q[1])*(center[1]-q[1]))/(2.0*epsi));
+static PetscReal Gaussian(const PetscReal center[], PetscInt dim, const PetscReal q[], PetscReal epsilon){
+  return 1.0/(2.0*PETSC_PI*epsilon) * exp(-((center[0]-q[0])*(center[0]-q[0])+(center[1]-q[1])*(center[1]-q[1]))/(2.0*epsilon));
 }
 
 #if 0
 /* Evaluate and return the evaluation of a function composed of a collection of gaussians relative to the particle at a quadrature point. This function
 is to be used for a gaussian centered around the particle with its full "weight" integrated with a quadrature rule (tensor quadrature) */
-static void GradGaussian(PetscReal* center, PetscInt dim, PetscReal* q, PetscReal epsi, PetscReal* gradpsi){
+static void GradGaussian(PetscReal* center, PetscInt dim, PetscReal* q, PetscReal epsilon, PetscReal* gradpsi){
 
-  gradpsi[0] = (-1./epsi) * center[0] * Gaussian(center, dim, q, epsi);
-  gradpsi[1] = (-1./epsi) * center[1] * Gaussian(center, dim, q, epsi);
+  gradpsi[0] = (-1./epsilon) * center[0] * Gaussian(center, dim, q, epsilon);
+  gradpsi[1] = (-1./epsilon) * center[1] * Gaussian(center, dim, q, epsilon);
 }
 #endif
 
 /* This is the function used to evaluate a pointwise weighted gaussian in the fully discrete-in-velocity formulation */
 /*   Comes from (3.6) instead */
-static void mollifiedGaussian(PetscReal* center, PetscInt dim, PetscReal* q, PetscReal epsi, PetscReal *points, PetscInt Np, PetscReal* gradpsi){
+static void mollifiedGaussian(PetscReal* center, PetscInt dim, PetscReal* q, PetscReal epsilon, PetscReal *points, PetscInt Np, PetscReal* gradpsi){
   PetscInt p, d;
   PetscReal c_e[2]={0.,0.};
 
@@ -413,11 +396,11 @@ static void mollifiedGaussian(PetscReal* center, PetscInt dim, PetscReal* q, Pet
   for(p=0; p<Np; ++p){
     PetscReal v_k[2], c[2]={0.,0.};
     for(d=0; d<dim; ++d) v_k[d] = points[p*dim+d];//-q[d];
-    for(d=0; d<dim; ++d) gradpsi[d] += Gaussian(c, dim, v_k, epsi);
+    for(d=0; d<dim; ++d) gradpsi[d] += Gaussian(c, dim, v_k, epsilon);
   }
 
   for(d=0; d<dim; ++d) gradpsi[d] = log(gradpsi[d]);
-  for(d=0; d<dim; ++d) gradpsi[d] *= (-1./(epsi)) * (center[d]) * (Gaussian(c_e, dim, center, epsi));
+  for(d=0; d<dim; ++d) gradpsi[d] *= (-1./(epsilon)) * (center[d]) * (Gaussian(c_e, dim, center, epsilon));
 
 }
 
@@ -447,8 +430,8 @@ static PetscErrorCode ComputeGradEFunctionalAtPoint(DM sw, PetscInt Np, PetscQua
     CoordinatesRefToReal(dim, dim, xi0, v0, J, q_point, x);CHKERRQ(ierr);
     w = detJ*q_weights[q];
 
-    //GradGaussian(particle, dim, q_point, user->epsi, integrand);
-    mollifiedGaussian(particle, dim, q_point, user->epsi, field, Np, integrand);
+    //GradGaussian(particle, dim, q_point, user->epsilon, integrand);
+    mollifiedGaussian(particle, dim, q_point, user->epsilon, field, Np, integrand);
     for(d=0; d<dim;++d)integral[d] += integrand[d];//*w;
     break;
   }
@@ -469,7 +452,7 @@ static PetscErrorCode ComputelnSumFromPoint(PetscReal* u, PetscReal *particle, P
   for(p=0;p<Np;++p){
     PetscReal pprime[2];
     for(d=0;d<user->dim;++d) pprime[d] = u[p*user->dim+d];
-    sum += log(Gaussian(particle, user->dim, pprime, user->epsi));
+    sum += log(Gaussian(particle, user->dim, pprime, user->epsilon));
   }
   *sum_ptr = sum;
   return(0);
@@ -546,11 +529,11 @@ NOTE: implicit midpoint behaves better than a fully backwards euler time discret
      requires: triangle !single !complex
    test:
      suffix: euler
-     args: -dim 2 -particles_per_cell 3 -output_step 5 -ts_type euler -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
+     args: -particles_per_cell 3 -output_step 5 -ts_type euler -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
    test:
      suffix: 1
-     args: -dim 2 -particles_per_cell 3 -output_step 5 -ts_type theta -ts_theta_theta 1.0 -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -2,-2 -dm_plex_box_upper 2,2 -dm_view -monitor -output_step 1
+     args: -particles_per_cell 3 -output_step 5 -ts_type theta -ts_theta_theta 1.0 -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -2,-2 -dm_plex_box_upper 2,2 -dm_view -monitor -output_step 1
    test:
      suffix: 2
-     args: -dim 2 -particles_per_cell 3 -output_step 5 -ts_type theta -ts_theta_theta 0.5 -snes_fd -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
+     args: -particles_per_cell 3 -output_step 5 -ts_type theta -ts_theta_theta 0.5 -snes_fd -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
 TEST*/
