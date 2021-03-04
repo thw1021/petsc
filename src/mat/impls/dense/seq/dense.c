@@ -484,8 +484,15 @@ static PetscErrorCode MatSolve_SeqDense_Internal(Mat A, PetscScalar *x, PetscBLA
     }
     ierr = PetscLogFlops(nrhs*(2.0*m*m - m));CHKERRQ(ierr);
   } else if (A->factortype == MAT_FACTOR_QR) {
+    char trans;
+
+    if (PetscDefined(USE_COMPLEX)) {
+      trans = 'C';
+    } else {
+      trans = 'T';
+    }
     ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-    PetscStackCallBLAS("LAPACKormqr",LAPACKormqr_("L", "T", &m,&nrhs,&mat->rank,mat->v,&mat->lda,mat->tau,x,&xlda,mat->fwork,&mat->lfwork,&info));
+    PetscStackCallBLAS("LAPACKormqr",LAPACKormqr_("L", &trans, &m,&nrhs,&mat->rank,mat->v,&mat->lda,mat->tau,x,&xlda,mat->fwork,&mat->lfwork,&info));
     ierr = PetscFPTrapPop();CHKERRQ(ierr);
     if (info) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"ORMQR - Bad orthogonal transform");
     ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
