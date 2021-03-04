@@ -82,16 +82,12 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronize_CUDA(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamQuery_CUDA(PetscStream strm, PetscBool *busy)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamQuery_CUDA(PetscStream strm, PetscBool *idle)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
 
   PetscFunctionBegin;
-  *busy = PETSC_FALSE;
-  if (cudaStreamQuery(psc->cstream) == cudaErrorNotReady) {
-    *busy = PETSC_TRUE;
-    cudaGetLastError();
-  }
+  *idle = cudaStreamQuery(psc->cstream) == cudaErrorNotReady ? PETSC_FALSE : PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
