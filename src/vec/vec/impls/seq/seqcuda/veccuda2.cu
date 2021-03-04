@@ -1299,7 +1299,7 @@ PetscErrorCode VecSet_SeqCUDAAsync(Vec xin,PetscStreamScalar pscal,PetscStream p
       }
     } else {
       const PetscInt nt = std::min(PetscSeqCUDA::roundUpToPow2(n,warpSize),PetscSeqCUDA::maxThreadsPerBlock);
-      const dim3     dimGrid(std::max(nt/PetscSeqCUDA::maxThreadsPerBlock,1)), dimBlock(nt);
+      const dim3     dimGrid(std::max(nt/PetscSeqCUDA::maxThreadsPerBlock,(PetscInt)1)), dimBlock(nt);
 
       cerr = cudaMemcpyToSymbolAsync((void*)&PetscSeqCUDA::vecSetVal,alpha,sizeof(PetscScalar),0,cudaMemcpyDeviceToDevice,cstream);CHKERRCUDA(cerr);
       PetscSeqCUDA::vecSetAsync<<<dimGrid,dimBlock,0,cstream>>>(xarray,n);

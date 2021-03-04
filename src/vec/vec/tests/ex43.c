@@ -9,7 +9,6 @@ int main(int argc, char **argv)
   PetscInt       i,j,reps,n=15,k=6;
   PetscRandom    rctx;
   PetscScalar    *val_dot,*val_mdot,*tval_dot,*tval_mdot;
-  PetscStream    pstream;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL);CHKERRQ(ierr);
@@ -33,15 +32,14 @@ int main(int argc, char **argv)
   ierr = PetscMalloc1(k,&val_mdot);CHKERRQ(ierr);
   ierr = PetscMalloc1(k,&tval_dot);CHKERRQ(ierr);
   ierr = PetscMalloc1(k,&tval_mdot);CHKERRQ(ierr);
-  ierr = PetscStreamCreate(&pstream);CHKERRQ(ierr);
   for (i=0; i<k; i++) { ierr = VecSetRandom(V[i],rctx);CHKERRQ(ierr); }
   for (reps=0; reps<20; reps++) {
     for (i=1; i<k; i++) {
-      ierr = VecMDotAsync(t,i,V,val_mdot,pstream);CHKERRQ(ierr);
+      ierr = VecMDot(t,i,V,val_mdot);CHKERRQ(ierr);
       ierr = VecMTDot(t,i,V,tval_mdot);CHKERRQ(ierr);
       for (j=0;j<i;j++) {
-        ierr = VecDotAsync(t,V[j],&val_dot[j],pstream);CHKERRQ(ierr);
-        ierr = VecTDotAsync(t,V[j],&tval_dot[j],pstream);CHKERRQ(ierr);
+        ierr = VecDot(t,V[j],&val_dot[j]);CHKERRQ(ierr);
+        ierr = VecTDot(t,V[j],&tval_dot[j]);CHKERRQ(ierr);
       }
       /* Check result */
       for (j=0;j<i;j++) {
@@ -57,7 +55,6 @@ int main(int argc, char **argv)
     }
   }
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Test completed successfully!\n",k,n);CHKERRQ(ierr);
-  ierr = PetscStreamDestroy(&pstream);CHKERRQ(ierr);
   ierr = PetscFree(val_dot);CHKERRQ(ierr);
   ierr = PetscFree(val_mdot);CHKERRQ(ierr);
   ierr = PetscFree(tval_dot);CHKERRQ(ierr);

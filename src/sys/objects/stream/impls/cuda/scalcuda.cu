@@ -151,16 +151,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarAYDX_CUDA(PetscScalar a, Pet
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarAccumOpDispatch_CUDA(PetscStreamScalar pscalret, PetscInt n, PetscStreamScalar pscal[], PetscStreamComputeOp epiop, PetscStreamComputeOp accop, PetscStream pstream)
-{
-  //PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"NOT IMPLEMENTED");
-  //ierr = PetscStreamScalarAccumOpDispatch_Internal(pscalret, n, pscal, epiop, accop, pstream);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 static const struct _ScalOps scalcuops = {
   PetscStreamScalarCreate_CUDA,
   PetscStreamScalarDestroy_CUDA,
@@ -170,8 +160,7 @@ static const struct _ScalOps scalcuops = {
   PetscStreamScalarGetDevice_CUDA,
   NULL,
   PetscStreamScalarAXTY_CUDA,
-  PetscStreamScalarAYDX_CUDA,
-  PetscStreamScalarAccumOpDispatch_CUDA
+  PetscStreamScalarAYDX_CUDA
 };
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarFinalize_CUDA(void)

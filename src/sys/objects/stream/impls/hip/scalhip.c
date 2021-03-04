@@ -6,7 +6,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarDestroy_HIP(PetscStreamScala
   hipError_t cerr;
 
   PetscFunctionBegin;
-  cerr = hipFree(pscal->host);CHKERRHIP(cerr);
+  cerr = hipFreeHost(pscal->host);CHKERRHIP(cerr);
   cerr = hipFree(pscal->device);CHKERRHIP(cerr);
   PetscFunctionReturn(0);
 }
@@ -111,25 +111,16 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetDevice_HIP(PetscStreamSca
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarAccumOpDispatch_HIP(PetscStreamScalar pscalret, PetscInt n, PetscStreamScalar pscal[], PetscStreamComputeOp epiop, PetscStreamComputeOp accop, PetscStream pstream)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = PetscStreamScalarAccumOpDispatch_Internal(pscalret, n, pscal, epiop, accop, pstream);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 static const struct _ScalOps scalhipops = {
   PetscStreamScalarCreate_HIP,
   PetscStreamScalarDestroy_HIP,
   PetscStreamScalarSetup_HIP,
   PetscStreamScalarSetValue_HIP,
-  PetscStreamScalarGetHost_HIP,
-  PetscStreamScalarRestoreHost_HIP,
+  PetscStreamScalarAwait_HIP,
   PetscStreamScalarGetDevice_HIP,
   NULL,
-  PetscStreamScalarAccumOpDispatch_HIP
+  NULL,
+  NULL
 };
 #endif /* HAVE_HIP */
 
@@ -140,10 +131,10 @@ PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar pscal)
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"NOT FULLY IMPLEMENTED");
   {
     PetscErrorCode ierr;
-    hipError_t    cerr;
+    hipError_t     herr;
 
-    cerr = hipMallocHost((void **) &pscal->host, sizeof(PetscScalar));CHKERRHIP(cerr);
-    cerr = hipMalloc((void **) &pscal->device, sizeof(PetscScalar));CHKERRHIP(cerr);
+    herr = hipMallocHost((void **) &pscal->host, sizeof(PetscScalar));CHKERRHIP(herr);
+    herr = hipMalloc((void **) &pscal->device, sizeof(PetscScalar));CHKERRHIP(herr);
     ierr = PetscMemcpy(pscal->ops, &scalhipops, sizeof(scalcuops));CHKERRQ(ierr);
   }
 #else
