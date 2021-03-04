@@ -208,7 +208,6 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarGetInfo(PetscStreamScalar,PSSCacheT
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar,PSSCacheType,PetscBool);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAXTY(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAYDX(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
-PETSC_EXTERN PetscErrorCode PetscStreamScalarAccumulateOp(PetscStreamScalar,PetscInt,PetscStreamScalar[],PetscStreamComputeOp,PetscStreamComputeOp,PetscStream);
 
 /*E
   PetscGraphAssemblyType - Indicates if a (possibly) existing graph should be updated, or instantiated anew.
