@@ -68,7 +68,7 @@ struct _n_PetscStream {
   PetscInt          id;
   PetscBool         idle;
   PetscBool         setup;
-  PetscStreamType   type;
+  char              *type;
   PetscStreamMode   mode;
   void              *data;
 };
@@ -87,7 +87,7 @@ struct _n_PetscEvent {
   PetscInt         id;
   PetscBool        idle;
   PetscBool        setup;
-  PetscStreamType  type;
+  char             *type;
   unsigned int     eventFlags, waitFlags;
   void             *data;
 };
@@ -116,7 +116,7 @@ struct _n_PetscStreamScalar {
   struct _ScalOps  ops[1];
   PetscBool        setup;
   PetscOffloadMask omask;
-  PetscStreamType  type;
+  char             *type;
   PetscEvent       event;
   PetscScalar      *host;
   PetscScalar      *device;
@@ -139,10 +139,36 @@ struct _n_PetscStreamGraph {
   struct _GraphOps ops[1];
   PetscBool        setup;
   PetscBool        assembled;
-  PetscStreamType  type;
+  char             *type;
   PetscInt         capStrmId;
   void             *data;
 };
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamValidateIdle_Internal(PetscStream strm)
+{
+  PetscFunctionBegin;
+  if (PetscDefined(USE_DEBUG)) {
+    PetscBool      idle;
+    PetscErrorCode ierr;
+
+    ierr = (*strm->ops->query)(strm,&idle);CHKERRQ(ierr);
+    if (PetscUnlikely(strm->idle && !idle)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscStream cache corrupted, stream thought it was idle when it still had work");
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscEventValidateIdle_Internal(PetscEvent event)
+{
+  PetscFunctionBegin;
+  if (PetscDefined(USE_DEBUG)) {
+    PetscBool      idle;
+    PetscErrorCode ierr;
+
+    ierr = (*event->ops->query)(event,&idle);CHKERRQ(ierr);
+    if (PetscUnlikely(event->idle && !idle)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscEvent cache corrupted, event thought it was idle when it still had work");
+  }
+  PetscFunctionReturn(0);
+}
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateCache_Internal(PetscStreamScalar pscal, const PetscScalar *val, PetscMemType mtype)
 {

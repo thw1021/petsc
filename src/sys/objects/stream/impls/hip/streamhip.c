@@ -73,16 +73,12 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronize_HIP(PetscStream strm)
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamQuery_HIP(PetscStream strm, PetscBool *busy)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamQuery_HIP(PetscStream strm, PetscBool *idle)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
 
   PetscFunctionBegin;
-  *busy = PETSC_FALSE;
-  if (hipStreamQuery(psh->Hstream) == hipErrorNotReady) {
-    *busy = PETSC_TRUE;
-    hipGetLastError();
-  }
+  *idle = hipStreamQuery(psh->hstream) == hipErrorNotReady ? PETSC_FALSE : PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -95,7 +91,9 @@ static const struct _StreamOps hipops = {
   PetscStreamRecordEvent_HIP,
   PetscStreamWaitEvent_HIP,
   PetscStreamSynchronize_HIP,
-  PetscStreamQuery_HIP
+  PetscStreamQuery_HIP,
+  NULL,
+  NULL
 };
 #endif /* HAVE_HIP */
 

@@ -50,7 +50,7 @@ PetscErrorCode VecCUDAAllocateCheckHost(Vec v)
   }
   if (!v->event) {
     ierr = PetscEventCreate(&v->event);CHKERRQ(ierr);
-    ierr = PetscEventSetType(v->event,PETSC_STREAM_CUDA);CHKERRQ(ierr);
+    ierr = PetscEventSetType(v->event,PETSCSTREAMCUDA);CHKERRQ(ierr);
     ierr = PetscEventSetUp(v->event);CHKERRQ(ierr);
   }
   if (!s->array) {

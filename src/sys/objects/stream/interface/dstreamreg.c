@@ -166,7 +166,7 @@ PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar pscal, PetscStreamType
   ierr = PetscMemzero(pscal->ops,sizeof(struct _ScalOps));CHKERRQ(ierr);
   ierr = (*create)(pscal);CHKERRQ(ierr);
   ierr = PetscFree(pscal->type);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(type,pscal->type);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(type,&pscal->type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -379,7 +379,18 @@ PetscErrorCode PetscStreamGraphRegisterAll(void)
 
   if (PetscStreamGraphRegisterAllCalled) PetscFunctionReturn(0);
   PetscStreamGraphRegisterAllCalled = PETSC_TRUE;
-  ierr = PetscStreamGraphRegister(PETSCSTREAMCUDA,PetsccStreamGraphCreate_CUDA);CHKERRQ(ierr);
+  ierr = PetscStreamGraphRegister(PETSCSTREAMCUDA,PetscStreamGraphCreate_CUDA);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamFinalizePackage(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscFunctionListDestroy(&PetscStreamList);CHKERRQ(ierr);
+  PetscStreamRegisterAllCalled = PETSC_FALSE;
+  PetscStreamPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -395,14 +406,14 @@ PetscErrorCode PetscStreamInitializePackage(void)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamFinalizePackage(void)
+PetscErrorCode PetscEventFinalizePackage(void)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&PetscStreamList);CHKERRQ(ierr);
-  PetscStreamRegisterAllCalled = PETSC_FALSE;
-  PetscStreamPackageInitialized = PETSC_FALSE;
+  ierr = PetscFunctionListDestroy(&PetscEventList);CHKERRQ(ierr);
+  PetscEventRegisterAllCalled = PETSC_FALSE;
+  PetscEventPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -418,14 +429,14 @@ PetscErrorCode PetscEventInitializePackage(void)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscEventFinalizePackage(void)
+PetscErrorCode PetscStreamScalarFinalizePackage(void)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&PetscEventList);CHKERRQ(ierr);
-  PetscEventRegisterAllCalled = PETSC_FALSE;
-  PetscEventPackageInitialized = PETSC_FALSE;
+  ierr = PetscFunctionListDestroy(&PetscStreamScalarList);CHKERRQ(ierr);
+  PetscStreamScalarRegisterAllCalled = PETSC_FALSE;
+  PetscStreamScalarPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -441,14 +452,14 @@ PetscErrorCode PetscStreamScalarInitializePackage(void)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscStreamScalarFinalizePackage(void)
+PetscErrorCode PetscStreamGraphFinalizePackage(void)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&PetscStreamScalarList);CHKERRQ(ierr);
-  PetscStreamScalarRegisterAllCalled = PETSC_FALSE;
-  PetscStreamScalarPackageInitialized = PETSC_FALSE;
+  ierr = PetscFunctionListDestroy(&PetscStreamGraphList);CHKERRQ(ierr);
+  PetscStreamGraphRegisterAllCalled = PETSC_FALSE;
+  PetscStreamGraphPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -461,16 +472,5 @@ PetscErrorCode PetscStreamGraphInitializePackage(void)
   PetscStreamGraphPackageInitialized = PETSC_TRUE;
   ierr = PetscStreamGraphRegisterAll();CHKERRQ(ierr);
   ierr = PetscRegisterFinalize(PetscStreamGraphFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscStreamGraphFinalizePackage(void)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&PetscStreamGraphList);CHKERRQ(ierr);
-  PetscStreamGraphRegisterAllCalled = PETSC_FALSE;
-  PetscStreamGraphPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
