@@ -1029,7 +1029,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
   // copy A into B -- these two loops should be fused
   // Kokkos::parallel_for(Kokkos::TeamVectorRange(team, start_i, end_i), [=] (const int &rowb) {
   for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block
-    PetscInt          rowa = ic[rowb], nza = ai_d[rowa+1] - ai_d[rowa];
+    PetscInt          rowa = r[rowb], nza = ai_d[rowa+1] - ai_d[rowa];
     const PetscScalar *av    = aa_d + ai_d[rowa];
     const int         *ajtmp = aj_d + ai_d[rowa];
     /* load in initial (unfactored row) */
@@ -1037,7 +1037,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
     //printf("%d (row-A:%d): ",rowb,rowa);
     for (int j=threadIdx.x ; j<nza ; j += blockDim.x) {
       if (j<nza) {
-        PetscInt    colb = r[ajtmp[j]];
+        PetscInt    colb = ic[ajtmp[j]];
         PetscScalar vala = av[j];
         if (colb == rowb) {
           *(ba_d + bdiag_d[rowb]) = vala;
@@ -1059,21 +1059,6 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
       }
     }
     //if (threadIdx.x==0) printf("\n");
-  }
-
-  // debug
-  if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {
-    for (int i=0;i<n;i++) {
-      const PetscInt nzu = bdiag_d[i] - (bdiag_d[i+1]+1), nzl = bi_d[i+1] - bi_d[i], *bj= bj_d + bi_d[i]; // u without diag
-      PetscScalar *ba = ba_d + bi_d[i];
-      printf("w %4d) ",i);
-      for (int j=0; j<nzl; j++) printf("L-(%2d) %16.9e, ",bj[j],ba[j]);
-      bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i]; 
-                                printf("D-(%2d) %16.9e, ",bj[0],ba[0]);
-      ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
-      for (int j=0; j<nzu; j++) printf("U-(%2d) %16.9e, ",bj[j],ba[j]);
-      printf("\n");
-    }
   }
 
   //Kokkos::parallel_for(Kokkos::TeamPolicy<>(Nf*Ni, team_size, nVec).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerThread(sizet_scr_t::shmem_size()+scalar_scr_t::shmem_size()), Kokkos::PerTeam(sizet_scr_t::shmem_size())), KOKKOS_LAMBDA (const team_member team) {
@@ -1178,6 +1163,22 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
       //printf("x B[%04d,%04d] = %16.9e\n",rowb,rowb,*(ba_d + bdiag_d[rowb]));
     }
   }
+  
+  // debug
+  if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {
+    for (int i=0;i<n;i++) {
+      const PetscInt nzu = bdiag_d[i] - (bdiag_d[i+1]+1), nzl = bi_d[i+1] - bi_d[i], *bj= bj_d + bi_d[i]; // u without diag
+      PetscScalar *ba = ba_d + bi_d[i];
+      printf("w %4d) ",i);
+      for (int j=0; j<nzl; j++) printf("L-(%2d) %16.9e, ",bj[j],ba[j]);
+      bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i]; 
+                                printf("D-(%2d) %16.9e, ",bj[0],ba[0]);
+      ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
+      for (int j=0; j<nzu; j++) printf("U-(%2d) %16.9e, ",bj[j],ba[j]);
+      printf("\n");
+    }
+  }
+
 }
 //
 // LU factorization with optimkization for block diagonal (Nf blocks) in natural order (-mat_no_inode -pc_factor_mat_ordering_type rcm with Nf>1 fields)
