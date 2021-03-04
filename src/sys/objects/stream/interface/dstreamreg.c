@@ -1,15 +1,17 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
-static PetscFunctionList PetscStreamList             = NULL;
-static PetscFunctionList PetscEventList              = NULL;
-static PetscFunctionList PetscStreamScalarList       = NULL;
-static PetscFunctionList PetscStreamGraphList        = NULL;
-static PetscBool  PetscStreamRegisterAllCalled       = PETSC_FALSE;
-static PetscBool  PetscEventRegisterAllCalled        = PETSC_FALSE;
-static PetscBool  PetscStreamScalarRegisterAllCalled = PETSC_FALSE;
-static PetscBool  PetscStreamGraphRegisterAllCalled  = PETSC_FALSE;
-
-const char *PetscStreamTypes[] = {"INVALID","CUDA","HIP",NULL};
+static PetscFunctionList PetscStreamList                     = NULL;
+static PetscFunctionList PetscEventList                      = NULL;
+static PetscFunctionList PetscStreamScalarList               = NULL;
+static PetscFunctionList PetscStreamGraphList                = NULL;
+static PetscBool         PetscStreamRegisterAllCalled        = PETSC_FALSE;
+static PetscBool         PetscEventRegisterAllCalled         = PETSC_FALSE;
+static PetscBool         PetscStreamScalarRegisterAllCalled  = PETSC_FALSE;
+static PetscBool         PetscStreamGraphRegisterAllCalled   = PETSC_FALSE;
+static PetscBool         PetscStreamPackageInitialized       = PETSC_FALSE;
+static PetscBool         PetscEventPackageInitialized        = PETSC_FALSE;
+static PetscBool         PetscStreamScalarPackageInitialized = PETSC_FALSE;
+static PetscBool         PetscStreamGraphPackageInitialized  = PETSC_FALSE;
 
 /*@C
   PetscStreamSetType - Builds a PetscStream for a particular stream implementation
@@ -30,18 +32,21 @@ const char *PetscStreamTypes[] = {"INVALID","CUDA","HIP",NULL};
 PetscErrorCode PetscStreamSetType(PetscStream strm, PetscStreamType type)
 {
   PetscErrorCode (*create)(PetscStream);
+  PetscBool      match;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscStream to type %s",PetscStreamTypes[type]);
-  if (strm->type == type) PetscFunctionReturn(0);
+  if (PetscUnlikelyDebug(!type)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscStream to NULL type");
   if (PetscUnlikelyDebug(strm->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot change type on already setup PetscStream");
-  ierr = PetscFunctionListFind(PetscStreamList, PetscStreamTypes[type], &create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStream type: %d", type);
+  ierr = PetscStreamTypeCompare(strm->type,type,&match);CHKERRQ(ierr);
+  if (match) PetscFunctionReturn(0);
+  ierr = PetscFunctionListFind(PetscStreamList,type,&create);CHKERRQ(ierr);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStream type: %s", type);
   if (strm->ops->destroy) {ierr = (*strm->ops->destroy)(strm);CHKERRQ(ierr);}
-  ierr = PetscMemzero(strm->ops, sizeof(struct _StreamOps));CHKERRQ(ierr);
+  ierr = PetscMemzero(strm->ops,sizeof(struct _StreamOps));CHKERRQ(ierr);
   ierr = (*create)(strm);CHKERRQ(ierr);
-  strm->type = type;
+  ierr = PetscFree(strm->type);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(type,&strm->type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -88,17 +93,20 @@ PetscErrorCode PetscStreamGetType(PetscStream strm, PetscStreamType *type)
 PetscErrorCode PetscEventSetType(PetscEvent event, PetscStreamType type)
 {
   PetscErrorCode (*create)(PetscEvent);
+  PetscBool      match;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscEvent to type %s",PetscStreamTypes[type]);
-  if (event->type == type) PetscFunctionReturn(0);
-  ierr = PetscFunctionListFind(PetscEventList, PetscStreamTypes[type], &create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscEvent type: %d", type);
+  if (PetscUnlikelyDebug(!type)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscEvent to NULL type");
+  ierr = PetscStreamTypeCompare(event->type,type,&match);CHKERRQ(ierr);
+  if (match) PetscFunctionReturn(0);
+  ierr = PetscFunctionListFind(PetscEventList,type,&create);CHKERRQ(ierr);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscEvent type: %s", type);
   if (event->ops->destroy) {ierr = (*event->ops->destroy)(event);CHKERRQ(ierr);}
-  ierr = PetscMemzero(event->ops, sizeof(struct _EventOps));CHKERRQ(ierr);
+  ierr = PetscMemzero(event->ops,sizeof(struct _EventOps));CHKERRQ(ierr);
   ierr = (*create)(event);CHKERRQ(ierr);
-  event->type = type;
+  ierr = PetscFree(event->type);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(type,&event->type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -145,17 +153,20 @@ PetscErrorCode PetscEventGetType(PetscEvent event, PetscStreamType *type)
 PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar pscal, PetscStreamType type)
 {
   PetscErrorCode (*create)(PetscStreamScalar);
+  PetscBool      match;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscEvent to type %s",PetscStreamTypes[type]);
-  if (pscal->type == type) PetscFunctionReturn(0);
-  ierr = PetscFunctionListFind(PetscStreamScalarList, PetscStreamTypes[type], &create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamScalar type: %d", type);
+  if (PetscUnlikelyDebug(!type)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscEvent to NULL type");
+  ierr = PetscStreamTypeCompare(pscal->type,type,&match);CHKERRQ(ierr);
+  if (match) PetscFunctionReturn(0);
+  ierr = PetscFunctionListFind(PetscStreamScalarList,type,&create);CHKERRQ(ierr);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamScalar type: %s", type);
   if (pscal->ops->destroy) {ierr = (*pscal->ops->destroy)(pscal);CHKERRQ(ierr);}
-  ierr = PetscMemzero(pscal->ops, sizeof(struct _ScalOps));CHKERRQ(ierr);
+  ierr = PetscMemzero(pscal->ops,sizeof(struct _ScalOps));CHKERRQ(ierr);
   ierr = (*create)(pscal);CHKERRQ(ierr);
-  pscal->type = type;
+  ierr = PetscFree(pscal->type);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(type,pscal->type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -202,17 +213,20 @@ PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar pscal, PetscStreamType
 PetscErrorCode PetscStreamGraphSetType(PetscStreamGraph sgraph, PetscStreamType type)
 {
   PetscErrorCode (*create)(PetscStreamGraph);
+  PetscBool      match;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(type == PETSC_STREAM_INVALID)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscStreamGraph to type %s",PetscStreamTypes[type]);
-  if (sgraph->type == type) PetscFunctionReturn(0);
-  ierr = PetscFunctionListFind(PetscStreamGraphList, PetscStreamTypes[type], &create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamGraph type: %d", type);
+  if (PetscUnlikelyDebug(!type)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscStreamGraph to NULL type");
+  ierr = PetscStreamTypeCompare(sgraph->type,type,&match);CHKERRQ(ierr);
+  if (match) PetscFunctionReturn(0);
+  ierr = PetscFunctionListFind(PetscStreamGraphList,type,&create);CHKERRQ(ierr);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamGraph type: %s", type);
   if (sgraph->ops->destroy) {ierr = (*sgraph->ops->destroy)(sgraph);CHKERRQ(ierr);}
-  ierr = PetscMemzero(sgraph->ops, sizeof(struct _GraphOps));CHKERRQ(ierr);
+  ierr = PetscMemzero(sgraph->ops,sizeof(struct _GraphOps));CHKERRQ(ierr);
   ierr = (*create)(sgraph);CHKERRQ(ierr);
-  sgraph->type = type;
+  ierr = PetscFree(sgraph->type);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(type,&sgraph->type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -366,5 +380,97 @@ PetscErrorCode PetscStreamGraphRegisterAll(void)
   if (PetscStreamGraphRegisterAllCalled) PetscFunctionReturn(0);
   PetscStreamGraphRegisterAllCalled = PETSC_TRUE;
   ierr = PetscStreamGraphRegister(PETSCSTREAMCUDA,PetsccStreamGraphCreate_CUDA);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamInitializePackage(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscStreamPackageInitialized) PetscFunctionReturn(0);
+  PetscStreamPackageInitialized = PETSC_TRUE;
+  ierr = PetscStreamRegisterAll();CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(PetscStreamFinalizePackage);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamFinalizePackage(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscFunctionListDestroy(&PetscStreamList);CHKERRQ(ierr);
+  PetscStreamRegisterAllCalled = PETSC_FALSE;
+  PetscStreamPackageInitialized = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscEventInitializePackage(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscEventPackageInitialized) PetscFunctionReturn(0);
+  PetscEventPackageInitialized = PETSC_TRUE;
+  ierr = PetscEventRegisterAll();CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(PetscEventFinalizePackage);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscEventFinalizePackage(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscFunctionListDestroy(&PetscEventList);CHKERRQ(ierr);
+  PetscEventRegisterAllCalled = PETSC_FALSE;
+  PetscEventPackageInitialized = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarInitializePackage(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscStreamScalarPackageInitialized) PetscFunctionReturn(0);
+  PetscStreamScalarPackageInitialized = PETSC_TRUE;
+  ierr = PetscStreamScalarRegisterAll();CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(PetscStreamScalarFinalizePackage);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamScalarFinalizePackage(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscFunctionListDestroy(&PetscStreamScalarList);CHKERRQ(ierr);
+  PetscStreamScalarRegisterAllCalled = PETSC_FALSE;
+  PetscStreamScalarPackageInitialized = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamGraphInitializePackage(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscStreamGraphPackageInitialized) PetscFunctionReturn(0);
+  PetscStreamGraphPackageInitialized = PETSC_TRUE;
+  ierr = PetscStreamGraphRegisterAll();CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(PetscStreamGraphFinalizePackage);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscStreamGraphFinalizePackage(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscFunctionListDestroy(&PetscStreamGraphList);CHKERRQ(ierr);
+  PetscStreamGraphRegisterAllCalled = PETSC_FALSE;
+  PetscStreamGraphPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }

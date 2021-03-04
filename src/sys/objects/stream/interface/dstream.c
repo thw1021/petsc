@@ -236,12 +236,8 @@ PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscEvent event)
 - event - The PetscEvent object
 
   Notes:
-  As opposed to MPI, streams are entirely decentralized objects, meaning that there exists no "super" context or manager
-which might
- facilitate synchronization or communication between distinct streams (such as an MPI communicator). Any coordination
-between streams is instead facilitated via waiting on events recorded by another stream. Each event stores the ID of the
-last PetscStream to wait on it, allowing this routine to be efficiently called repeatedly for the same PetscStream and
-PetscEvent.
+  Each event stores an internal identifier of the last PetscStream to wait on it, allowing this routine to be
+  efficiently called repeatedly for the same PetscStream and PetscEvent.
 
   Usage:
 $ // Enqueue some work onto strm1

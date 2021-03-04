@@ -28,9 +28,6 @@ PetscErrorCode PetscEventCreate(PetscEvent *event)
   ierr = PetscNew(&e);CHKERRQ(ierr);
   e->id = -1;
   e->idle = PETSC_TRUE;
-  e->setup = PETSC_FALSE;
-  e->eventFlags = 0;
-  e->waitFlags = 0;
   *event = e;
   PetscFunctionReturn(0);
 }
