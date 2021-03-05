@@ -33,6 +33,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->momentTol = 100.0*PETSC_MACHINE_EPSILON;
   options->ostep     = 100;
   options->L         = 1.0;
+  options->h         = -1.0;
   options->epsilon   = -1.0;
 
   ierr = PetscOptionsBegin(comm, "", "Collision Options", "DMPLEX");CHKERRQ(ierr);
@@ -41,6 +42,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsInt("-N", "Number of particles per spatial cell", "ex27.c", options->N, &options->N, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-output_step", "Number of time steps between output", "ex27.c", options->ostep, &options->ostep, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-L", "Velocity-space extent", "ex27.c", options->L, &options->L, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-h", "Velocity-space resolution", "ex27.c", options->h, &options->h, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-epsilon", "Mollifier regularization parameter", "ex27.c", options->epsilon, &options->epsilon, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
@@ -180,6 +182,7 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 {
   PetscInt      *cellid;
   PetscInt       dim, cStart, cEnd, c, Np = user->N, p;
+  PetscBool      view = PETSC_FALSE;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
@@ -189,9 +192,13 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = DMSetDimension(*sw, dim);CHKERRQ(ierr);
 
   /* h = 2L/n and N = n^d */
-  user->h = 2.*user->L / PetscPowReal(user->N, 1./dim);
+  if (user->h < 0.) user->h = 2.*user->L / PetscPowReal(user->N, 1./dim);
   /* From Section 4 in [1], \epsilon = 0.64 h^.98 */
-  if (user->epsilon < 0) user->epsilon = 0.64*pow(user->h, 1.98);
+  if (user->epsilon < 0.) user->epsilon = 0.64*pow(user->h, 1.98);
+  ierr = PetscOptionsGetBool(NULL, NULL, "-param_view", &view, NULL);CHKERRQ(ierr);
+  if (view) {
+    ierr = PetscPrintf(PETSC_COMM_SELF, "N: %D L: %g h: %g eps: %g\n", user->N, user->L, user->h, user->epsilon);CHKERRQ(ierr);
+  }
 
   ierr = DMSwarmSetType(*sw, DMSWARM_PIC);CHKERRQ(ierr);
   ierr = DMSwarmSetCellDM(*sw, dm);CHKERRQ(ierr);
@@ -211,6 +218,70 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = DMSwarmRestoreField(*sw, DMSwarmPICField_cellid, NULL, NULL, (void **) &cellid);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) *sw, "Particles");CHKERRQ(ierr);
   ierr = DMViewFromOptions(*sw, NULL, "-sw_view");CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*
+  Gaussian - The Gaussian function G(x)
+
+  Input Parameters:
++  dim   - The number of dimensions, or size of x
+.  mu    - The mean, or center
+.  sigma - The standard deviation, or width
+-  x     - The evaluation point of the function
+
+  Output Parameter:
+. ret - The value G(x)
+*/
+static PetscReal Gaussian(PetscInt dim, const PetscReal mu[], PetscReal sigma, const PetscReal x[])
+{
+  PetscReal arg = 0.0;
+  PetscInt  d;
+
+  for (d = 0; d < dim; ++d) arg += PetscSqr(x[d] - mu[d]);
+  return PetscPowReal(2.0*PETSC_PI*sigma, -dim/2.0) * PetscExpReal(-arg/(2.0*sigma));
+}
+
+/*
+  ComputeGradS - Compute grad_v dS_eps/df
+
+  Input Parameters:
++ dim      - The dimension
+. Np       - The number of particles
+. vp       - The velocity v_p of the particle at which we evaluate
+. velocity - The velocity field for all particles
+. epsilon  - The regularization strength
+
+  Output Parameter:
+. integral - The output grad_v dS_eps/df (v_p)
+
+  Note:
+  This comes from (3.6) in [1], and we are computing
+$   \nabla_v S_p = \grad \psi_\epsilon(v_p - v) log \sum_q \psi_\epsilon(v - v_q)
+  which is discretized by using a one-point quadrature in each box l at its center v^c_l
+$   \sum_l h^d \nabla\psi_\epsilon(v_p - v^c_l) \log\left( \sum_q w_q \psi_\epsilon(v^c_l - v_q) \right)
+  where h^d is the volume of each box.
+*/
+static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp[], const PetscReal velocity[], PetscReal integral[], PetscReal epsilon) {
+  PetscReal vc_l[2] = {0., 0.};
+  PetscInt  l, d;
+
+  PetscFunctionBeginHot;
+  for (d = 0; d < dim; ++d) integral[d] = 0.0;
+  for (l = 0; l < 1; ++l) {
+    PetscReal sum = 0.0;
+    PetscInt  q, d;
+
+    /* \sum_k \psi(v - v_k)  */
+    for (q = 0; q < Np; ++q) {
+      PetscReal v_q[2];
+
+      for (d = 0; d < dim; ++d) v_q[d] = velocity[q*dim+d];
+      sum += Gaussian(dim, v_q, epsilon, vc_l);
+    }
+
+    for (d = 0; d < dim; ++d) integral[d] += (-1./(epsilon))*PetscAbsReal(vp[d] - vc_l[d])*(Gaussian(dim, vp, epsilon, vc_l)) * PetscLogReal(sum);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -364,72 +435,6 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
     }
     ierr = PetscPrintf(comm, "Total Energy: %10.8lf    Total Momentum x: %10.8lf    Total Momentum y: %10.8lf\n", tot_E, tot_Momx, tot_Momy);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-/*
-  Gaussian - The Gaussian function G(x)
-
-  Input Parameters:
-+  dim   - The number of dimensions, or size of x
-.  mu    - The mean, or center
-.  sigma - The standard deviation, or width
--  x     - The evaluation point of the function
-
-  Output Parameter:
-. ret - The value G(x)
-*/
-static PetscReal Gaussian(PetscInt dim, const PetscReal mu[], PetscReal sigma, const PetscReal x[])
-{
-  PetscReal arg = 0.0;
-  PetscInt  d;
-
-  for (d = 0; d < dim; ++d) arg += PetscSqr(x[d] - mu[d]);
-  return PetscPowReal(2.0*PETSC_PI*sigma, -dim/2.0) * PetscExpReal(-arg/(2.0*sigma));
-}
-
-/* ---------------------------- This whole section of code needs to be rethought so we don't have excessive N^2 operations ------------------- */
-
-/*
-  ComputeGradS - Compute grad_v dS_eps/df
-
-  Input Parameters:
-+ dim      - The dimension
-. Np       - The number of particles
-. vp       - The velocity v_p of the particle at which we evaluate
-. velocity - The velocity field for all particles
-. epsilon  - The regularization strength
-
-  Output Parameter:
-. integral - The output grad_v dS_eps/df (v_p)
-
-  Note:
-  This comes from (3.6) in [1], and we are computing
-$   \nabla_v S_p = \grad \psi_\epsilon(v_p - v) log \sum_q \psi_\epsilon(v - v_q)
-  which is discretized by using a one-point quadrature in each box l at its center v^c_l
-$   \sum_l h^d \nabla\psi_\epsilon(v_p - v^c_l) \log\left( \sum_q w_q \psi_\epsilon(v^c_l - v_q) \right)
-  where h^d is the volume of each box.
-*/
-static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp[], const PetscReal velocity[], PetscReal integral[], PetscReal epsilon) {
-  PetscReal vc_l[2] = {0., 0.};
-  PetscInt  l, d;
-
-  PetscFunctionBeginHot;
-  for (d = 0; d < dim; ++d) integral[d] = 0.0;
-  for (l = 0; l < 1; ++l) {
-    PetscReal sum = 0.0;
-    PetscInt  q, d;
-
-    /* \sum_k \psi(v - v_k)  */
-    for (q = 0; q < Np; ++q) {
-      PetscReal v_q[2];
-
-      for (d = 0; d < dim; ++d) v_q[d] = velocity[q*dim+d];
-      sum += Gaussian(dim, v_q, epsilon, vc_l);
-    }
-
-    for (d = 0; d < dim; ++d) integral[d] += (-1./(epsilon))*PetscAbsReal(vp[d] - vc_l[d])*(Gaussian(dim, vp, epsilon, vc_l)) * PetscLogReal(sum);
   }
   PetscFunctionReturn(0);
 }
