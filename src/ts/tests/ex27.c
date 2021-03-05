@@ -8,17 +8,19 @@ static char help[] = "Particle Basis Landau Example using nonlinear solve + Impl
 #include <petsc/private/petscfeimpl.h> /* For CoordinatesRefToReal() */
 #include <petscdmswarm.h>
 #include <petscts.h>
-#include <petscdraw.h>
 #include <petscviewer.h>
 #include <petscmath.h>
 
 typedef struct {
-  PetscInt  particlesPerCell; /* The number of partices per cell */
-  PetscReal momentTol;        /* Tolerance for checking moment conservation */
-  PetscBool monitor;
-  PetscReal epsilon;          /* gaussian regularization parameter */
-  PetscInt  ostep;            /* print the energy at each ostep time steps */
-  PetscDraw draw;             /* The draw object for histogram monitoring */
+  /* Velocity space grid and functions */
+  PetscInt  N;         /* The number of partices per spatial cell */
+  PetscReal L;         /* Velocity space is [-L, L]^d */
+  PetscReal h;         /* Spacing for grid 2L / N^{1/d} */
+  PetscReal epsilon;   /* gaussian regularization parameter */
+  /* Monitoring */
+  PetscBool monitor;   /* Conservation montior */
+  PetscInt  ostep;     /* print the energy at each ostep time steps */
+  PetscReal momentTol; /* Tolerance for checking moment conservation */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -26,17 +28,19 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  options->monitor          = PETSC_FALSE;
-  options->particlesPerCell = 1;
-  options->momentTol        = 100.0*PETSC_MACHINE_EPSILON;
-  options->ostep            = 100;
-  options->epsilon          = 0.64*pow(4,1.98);
+  options->monitor   = PETSC_FALSE;
+  options->N         = 1;
+  options->momentTol = 100.0*PETSC_MACHINE_EPSILON;
+  options->ostep     = 100;
+  options->L         = 1.0;
+  options->epsilon   = -1.0;
 
   ierr = PetscOptionsBegin(comm, "", "Collision Options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscOptionsBool("-monitor", "Flag to use the TS histogram monitor", "ex27.c", options->monitor, &options->monitor, NULL);CHKERRQ(ierr);
 
-  ierr = PetscOptionsInt("-particles_per_cell", "Number of particles per cell", "ex27.c", options->particlesPerCell, &options->particlesPerCell, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-output_step", "Number of time steps between output", "ex27.c", options->ostep, &options->ostep, PETSC_NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-N", "Number of particles per spatial cell", "ex27.c", options->N, &options->N, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-output_step", "Number of time steps between output", "ex27.c", options->ostep, &options->ostep, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-L", "Velocity-space extent", "ex27.c", options->L, &options->L, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-epsilon", "Mollifier regularization parameter", "ex27.c", options->epsilon, &options->epsilon, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
@@ -44,7 +48,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 }
 
 /* Declaration of static functions */
-static PetscErrorCode ComputeGradEFunctionalAtPoint(DM sw, PetscInt Np, PetscQuadrature quad, PetscReal *particle, PetscReal *field, PetscReal *integral, void *ctx);
+static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal particle[], const PetscReal field[], PetscReal *integral, PetscReal epsilon);
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
@@ -86,7 +90,7 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
 
 
   ierr = DMGetApplicationContext(sw, (void **) &user);CHKERRQ(ierr);
-  Np   = user->particlesPerCell;
+  Np   = user->N;
   ierr = DMGetDimension(sw, &dim);CHKERRQ(ierr);
   ierr = DMSwarmGetCellDM(sw, &dm);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
@@ -153,7 +157,7 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
   PetscFunctionBeginUser;
   ierr = VecGetLocalSize(u, &n);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dmSw, (void **) &user);CHKERRQ(ierr);
-  Np   = user->particlesPerCell;
+  Np   = user->N;
   ierr = DMSwarmGetCellDM(dmSw, &dm);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
@@ -175,7 +179,7 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
 static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 {
   PetscInt      *cellid;
-  PetscInt       dim, cStart, cEnd, c, Np = user->particlesPerCell, p;
+  PetscInt       dim, cStart, cEnd, c, Np = user->N, p;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
@@ -183,6 +187,11 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = DMCreate(PetscObjectComm((PetscObject) dm), sw);CHKERRQ(ierr);
   ierr = DMSetType(*sw, DMSWARM);CHKERRQ(ierr);
   ierr = DMSetDimension(*sw, dim);CHKERRQ(ierr);
+
+  /* h = 2L/n and N = n^d */
+  user->h = 2.*user->L / PetscPowReal(user->N, 1./dim);
+  /* From Section 4 in [1], \epsilon = 0.64 h^.98 */
+  if (user->epsilon < 0) user->epsilon = 0.64*pow(user->h, 1.98);
 
   ierr = DMSwarmSetType(*sw, DMSWARM_PIC);CHKERRQ(ierr);
   ierr = DMSwarmSetCellDM(*sw, dm);CHKERRQ(ierr);
@@ -229,12 +238,12 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
 {
   AppCtx            *user = (AppCtx *) ctx;
   PetscInt           dbg  = 0;
+  DM                 sw;                  /* point tracking, problem topology */
   const PetscScalar *u;                   /* input solution vector */
   PetscScalar       *r;
+  PetscReal         *velocity;
   PetscQuadrature    quad;                /* for integral evaluation */
-  PetscInt           dim, d, Np, p, ppr;  /* spatial dim, index tracking, no. particles, index tracking, pprime index, cell idx, cell idx, cell, quad points, quad idx */
-  PetscReal          *velocity;           //Nc, *points, *q_weights,
-  DM                 sw;                  /* point tracking, problem topology */
+  PetscInt           dim, Np, p, q;
   PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
@@ -253,33 +262,24 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
 
   ierr = PetscDTGaussTensorQuadrature(dim, 2*dim*Np,dim*Np, -1, 1, &quad);CHKERRQ(ierr);
   if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Part  ppr     x        y\n");CHKERRQ(ierr);}
-  for(p = 0; p < Np; ++p){
-    PetscReal particle[2], integral[2]={0.,0.}, Q[9];
+  for (p = 0; p < Np; ++p) {
+    PetscReal gradS_p[3] = {0., 0., 0.};
 
-    for (d = 0; d < dim; ++d) particle[d] = velocity[p*dim+d];
-    ierr = ComputeGradEFunctionalAtPoint(sw, Np, quad, particle, velocity, integral, user);CHKERRQ(ierr);
+    ierr = ComputeGradS(dim, Np, &velocity[p*dim], velocity, gradS_p, user->epsilon);CHKERRQ(ierr);
+    for (q = 0; q < Np; ++q) {
+      PetscReal gradS_q[3] = {0., 0., 0.}, GammaS[3] = {0., 0., 0.}, Q[9];
 
-    /* compute entropy integrals for p' to subtract from S_p */
-    for(ppr = 0; ppr < Np; ++ppr) {
-      PetscReal pprime[2], integral_ppr[2]={0.,0.}, GammaS[2]={0.,0.};
-
-      if (ppr == p) continue;
-      for (d = 0; d < dim; ++d) pprime[d] = velocity[ppr*dim+d];
-      ierr = ComputeGradEFunctionalAtPoint(sw, Np, quad, pprime, velocity, integral_ppr, user);CHKERRQ(ierr);
-
-      for(d=0;d<dim;++d) GammaS[d] = integral[d] - integral_ppr[d];
-
-      /* We are done with S so swap particle to be at the midpoint */
-      ierr = QCompute(dim, &u[p*dim], &u[ppr*dim], Q);CHKERRQ(ierr);
+      if (q == p) continue;
+      ierr = ComputeGradS(dim, Np, &velocity[q*dim], velocity, gradS_q, user->epsilon);CHKERRQ(ierr);
+      DMPlex_WaxpyD_Internal(dim, -1.0, gradS_q, gradS_p, GammaS);
+      ierr = QCompute(dim, &u[p*dim], &u[q*dim], Q);CHKERRQ(ierr);
       switch (dim) {
         case 2: DMPlex_MultAdd2DReal_Internal(Q, 1, GammaS, &r[p*dim]);break;
         case 3: DMPlex_MultAdd3DReal_Internal(Q, 1, GammaS, &r[p*dim]);break;
         default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Do not support dimension %D", dim);
       }
     }
-    if (dbg) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "Final %4D %10.8lf %10.8lf\n", p, r[p*dim+0], r[p*dim+1]);CHKERRQ(ierr);
-    }
+    if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Final %4D %10.8lf %10.8lf\n", p, r[p*dim+0], r[p*dim+1]);CHKERRQ(ierr);}
   }
   ierr = PetscQuadratureDestroy(&quad);CHKERRQ(ierr);
 
@@ -320,7 +320,6 @@ static PetscErrorCode UpdateSwarm(TS ts){
   PetscFunctionReturn(0);
 }
 
-#if 1
 static PetscErrorCode InitializeSolve(TS ts, Vec u)
 {
   DM             dm;
@@ -334,7 +333,6 @@ static PetscErrorCode InitializeSolve(TS ts, Vec u)
   ierr = SetInitialConditions(dm, u);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-#endif
 
 static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
 {
@@ -370,101 +368,109 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
   PetscFunctionReturn(0);
 }
 
-/* Particle centered Gaussian and Gaussian gradient functions for quadrature point integration.
-  Assume 2d normalization */
-static PetscReal Gaussian(const PetscReal center[], PetscInt dim, const PetscReal q[], PetscReal epsilon){
-  return 1.0/(2.0*PETSC_PI*epsilon) * exp(-((center[0]-q[0])*(center[0]-q[0])+(center[1]-q[1])*(center[1]-q[1]))/(2.0*epsilon));
-}
+/*
+  Gaussian - The Gaussian function G(x)
 
-#if 0
-/* Evaluate and return the evaluation of a function composed of a collection of gaussians relative to the particle at a quadrature point. This function
-is to be used for a gaussian centered around the particle with its full "weight" integrated with a quadrature rule (tensor quadrature) */
-static void GradGaussian(PetscReal* center, PetscInt dim, PetscReal* q, PetscReal epsilon, PetscReal* gradpsi){
+  Input Parameters:
++  dim   - The number of dimensions, or size of x
+.  mu    - The mean, or center
+.  sigma - The standard deviation, or width
+-  x     - The evaluation point of the function
 
-  gradpsi[0] = (-1./epsilon) * center[0] * Gaussian(center, dim, q, epsilon);
-  gradpsi[1] = (-1./epsilon) * center[1] * Gaussian(center, dim, q, epsilon);
-}
-#endif
+  Output Parameter:
+. ret - The value G(x)
+*/
+static PetscReal Gaussian(PetscInt dim, const PetscReal mu[], PetscReal sigma, const PetscReal x[])
+{
+  PetscReal arg = 0.0;
+  PetscInt  d;
 
-/* This is the function used to evaluate a pointwise weighted gaussian in the fully discrete-in-velocity formulation */
-/*   Comes from (3.6) instead */
-static void mollifiedGaussian(PetscReal* center, PetscInt dim, PetscReal* q, PetscReal epsilon, PetscReal *points, PetscInt Np, PetscReal* gradpsi){
-  PetscInt p, d;
-  PetscReal c_e[2]={0.,0.};
-
-  /* \grad S_i = \grad \psi(v_i - v) log \sum_k \psi(v-v_k)  */
-  for(p=0; p<Np; ++p){
-    PetscReal v_k[2], c[2]={0.,0.};
-    for(d=0; d<dim; ++d) v_k[d] = points[p*dim+d];//-q[d];
-    for(d=0; d<dim; ++d) gradpsi[d] += Gaussian(c, dim, v_k, epsilon);
-  }
-
-  for(d=0; d<dim; ++d) gradpsi[d] = log(gradpsi[d]);
-  for(d=0; d<dim; ++d) gradpsi[d] *= (-1./(epsilon)) * (center[d]) * (Gaussian(c_e, dim, center, epsilon));
-
+  for (d = 0; d < dim; ++d) arg += PetscSqr(x[d] - mu[d]);
+  return PetscPowReal(2.0*PETSC_PI*sigma, -dim/2.0) * PetscExpReal(-arg/(2.0*sigma));
 }
 
 /* ---------------------------- This whole section of code needs to be rethought so we don't have excessive N^2 operations ------------------- */
 
+/*
+  ComputeGradS - Compute grad_v dS_eps/df
+
+  Input Parameters:
++ dim      - The dimension
+. Np       - The number of particles
+. vp       - The velocity v_p of the particle at which we evaluate
+. velocity - The velocity field for all particles
+. epsilon  - The regularization strength
+
+  Output Parameter:
+. integral - The output grad_v dS_eps/df (v_p)
+
+  Note:
+  This comes from (3.6) in [1], and we are computing
+$   \nabla_v S_p = \grad \psi_\epsilon(v_p - v) log \sum_q \psi_\epsilon(v - v_q)
+  which is discretized by using a one-point quadrature in each box l at its center v^c_l
+$   \sum_l h^d \nabla\psi_\epsilon(v_p - v^c_l) \log\left( \sum_q w_q \psi_\epsilon(v^c_l - v_q) \right)
+  where h^d is the volume of each box.
+*/
+static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp[], const PetscReal velocity[], PetscReal integral[], PetscReal epsilon) {
+  PetscReal vc_l[2] = {0., 0.};
+  PetscInt  l, d;
+
+  PetscFunctionBeginHot;
+  for (d = 0; d < dim; ++d) integral[d] = 0.0;
+  for (l = 0; l < 1; ++l) {
+    PetscReal sum = 0.0;
+    PetscInt  q, d;
+
+    /* \sum_k \psi(v - v_k)  */
+    for (q = 0; q < Np; ++q) {
+      PetscReal v_q[2];
+
+      for (d = 0; d < dim; ++d) v_q[d] = velocity[q*dim+d];
+      sum += Gaussian(dim, v_q, epsilon, vc_l);
+    }
+
+    for (d = 0; d < dim; ++d) integral[d] += (-1./(epsilon))*PetscAbsReal(vp[d] - vc_l[d])*(Gaussian(dim, vp, epsilon, vc_l)) * PetscLogReal(sum);
+  }
+  PetscFunctionReturn(0);
+}
+
+#if 0
 /* Integrate the gradient of the entropy functional for a particle. This should be optimized out */
-static PetscErrorCode ComputeGradEFunctionalAtPoint(DM sw, PetscInt Np, PetscQuadrature quad, PetscReal *particle, PetscReal *field, PetscReal* integral,  void* ctx){
-  PetscInt         dim, d, q, Nc, Nq;
-  PetscReal        *xi0, *v0, *J, *invJ, detJ;
-  const PetscReal  *q_weights, *points;
+static PetscErrorCode ComputeGradS_Quad(PetscInt dim, PetscInt Np, PetscQuadrature quad, PetscReal *particle, PetscReal *field, PetscReal *integral, void *ctx)
+{
+  PetscInt         d, q, Nq;
+  PetscReal       *xi0, *v0, *J, *invJ, detJ;
+  const PetscReal *weights, *points;
   AppCtx*          user = (AppCtx*) ctx;
   DM               plex;
   PetscErrorCode   ierr;
 
+  PetscFunctionBeginHot;
   ierr = DMSwarmGetCellDM(sw, &plex);
 
   ierr = DMGetDimension(plex, &dim);
   ierr = PetscMalloc4(dim, &xi0, dim, &v0, dim*dim, &J, dim*dim, &invJ);CHKERRQ(ierr);
   ierr = DMPlexComputeCellGeometryFEM(plex, 0, NULL, v0, J, invJ, &detJ);CHKERRQ(ierr);
   /* Assuming 2D here, easily extrapolated to 3D when it finally works */
-  ierr = PetscQuadratureGetData(quad, &dim, &Nc, &Nq, &points, &q_weights);CHKERRQ(ierr);
+  ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, &points, &weights);CHKERRQ(ierr);
   for (q = 0; q < Nq; ++q) {
-    PetscReal   integrand[2] = {0.,0.};
-    PetscReal   w;
-    PetscReal   q_point[2]={0.,0.}, x[2];
-    for(d=0; d<dim;++d) q_point[d] = points[q*dim+d];
-    CoordinatesRefToReal(dim, dim, xi0, v0, J, q_point, x);CHKERRQ(ierr);
-    w = detJ*q_weights[q];
+    PetscReal integrand[2] = {0.,0.};
+    PetscReal w;
+    PetscReal x[2];
+
+    CoordinatesRefToReal(dim, dim, xi0, v0, J, &points[q*dim], x);CHKERRQ(ierr);
+    w = detJ*weights[q];
 
     //GradGaussian(particle, dim, q_point, user->epsilon, integrand);
-    mollifiedGaussian(particle, dim, q_point, user->epsilon, field, Np, integrand);
-    for(d=0; d<dim;++d)integral[d] += integrand[d];//*w;
+    mollifiedGaussian(dim, particle, &points[q*dim], user->epsilon, Np, field, integrand);
+    for (d = 0; d < dim; ++d) integral[d] += integrand[d]; //*w;
     break;
   }
   ierr = PetscFree4(xi0, v0, J, invJ);
-  return(0);
-}
-
-#if 0
-/*
-  Compute the summation of gaussian evaluations from the gaussian centered at the origin of the cell according to . This function is not needed
-  but is kept around for diagnostics.
- */
-static PetscErrorCode ComputelnSumFromPoint(PetscReal* u, PetscReal *particle, PetscReal *sum_ptr, void* ctx){
-  PetscInt       Np, p, d;
-  PetscReal      sum=0.;
-  AppCtx*        user = (AppCtx*) ctx;
-  Np=user->particlesPerCell;
-  for(p=0;p<Np;++p){
-    PetscReal pprime[2];
-    for(d=0;d<user->dim;++d) pprime[d] = u[p*user->dim+d];
-    sum += log(Gaussian(particle, user->dim, pprime, user->epsilon));
-  }
-  *sum_ptr = sum;
-  return(0);
+  PetscFunctionReturn(0);
 }
 #endif
 
-/* ---------------------------- This whole section of code needs to be rethought so we don't have excessive N^2 operations ------------------- */
-
-/*
-    Initialize a coordinate grid and randomly distribute particles in space and velocity. Peroform Eulerian and DG evaluations of the
-    particle basis landau collision operator.
-*/
 int main(int argc,char **argv)
 {
   TS             ts;     /* nonlinear solver */
@@ -529,11 +535,11 @@ NOTE: implicit midpoint behaves better than a fully backwards euler time discret
      requires: triangle !single !complex
    test:
      suffix: euler
-     args: -particles_per_cell 3 -output_step 5 -ts_type euler -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
+     args: -N 3 -output_step 5 -ts_type euler -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
    test:
      suffix: 1
-     args: -particles_per_cell 3 -output_step 5 -ts_type theta -ts_theta_theta 1.0 -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -2,-2 -dm_plex_box_upper 2,2 -dm_view -monitor -output_step 1
+     args: -N 3 -output_step 5 -ts_type theta -ts_theta_theta 1.0 -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -2,-2 -dm_plex_box_upper 2,2 -dm_view -monitor -output_step 1
    test:
      suffix: 2
-     args: -particles_per_cell 3 -output_step 5 -ts_type theta -ts_theta_theta 0.5 -snes_fd -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
+     args: -N 3 -output_step 5 -ts_type theta -ts_theta_theta 0.5 -snes_fd -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
 TEST*/
