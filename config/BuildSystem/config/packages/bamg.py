@@ -38,7 +38,7 @@ class Configure(config.package.Package):
        prefix = os.path.abspath(os.path.expanduser(self.argDB['prefix']))
     else:
        carg = ' BAMG_DIR='+self.packageDir+' '
-       barg = ' BAMG_DIR='+self.packageDir+' '
+       barg = ' BAMG_DIR='+self.packageDir+' SLEPC_DIR='+self.slepc.installDir+' '
        prefix = os.path.join(self.petscdir.dir,self.arch)
     if self.installSudo:
        newuser = self.installSudo+' -u $${SUDO_USER} '
@@ -49,7 +49,6 @@ class Configure(config.package.Package):
     self.framework.packages.append(self)
     # SLEPc dependency
     slepcbuilddep = 'slepc-install slepc-build'
-    oldFlags = self.compilers.CPPFLAGS
 
     self.addMakeMacro('BAMG','yes')
     self.addMakeRule('bamgbuild',slepcbuilddep, \
