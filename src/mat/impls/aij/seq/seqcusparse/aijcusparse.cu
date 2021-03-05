@@ -58,6 +58,7 @@ static PetscErrorCode MatCholeskyFactorNumeric_SeqAIJCUSPARSE(Mat,Mat,const MatF
 static PetscErrorCode MatILUFactorSymbolic_SeqAIJCUSPARSE(Mat,Mat,IS,IS,const MatFactorInfo*);
 static PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSE(Mat,Mat,IS,IS,const MatFactorInfo*);
 static PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSECUDA(Mat,Mat,IS,IS,const MatFactorInfo*);
+static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat,Mat,const MatFactorInfo*);
 static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSECUDA(Mat,Mat,const MatFactorInfo*);
 
 static PetscErrorCode MatSolve_SeqAIJCUSPARSE(Mat,Vec,Vec);
@@ -371,7 +372,7 @@ static PetscErrorCode MatILUFactorSymbolic_SeqAIJCUSPARSE(Mat B,Mat A,IS isrow,I
   PetscFunctionBegin;
   ierr = MatSeqAIJCUSPARSETriFactors_Reset(&cusparseTriFactors);CHKERRQ(ierr);
   ierr = MatILUFactorSymbolic_SeqAIJ(B,A,isrow,iscol,info);CHKERRQ(ierr);
-  B->ops->lufactornumeric = A->ops->lufactornumeric;
+  B->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJCUSPARSE;
   PetscFunctionReturn(0);
 }
 
@@ -383,18 +384,7 @@ static PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSE(Mat B,Mat A,IS isrow,IS
   PetscFunctionBegin;
   ierr = MatSeqAIJCUSPARSETriFactors_Reset(&cusparseTriFactors);CHKERRQ(ierr);
   ierr = MatLUFactorSymbolic_SeqAIJ(B,A,isrow,iscol,info);CHKERRQ(ierr);
-  B->ops->lufactornumeric = A->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJCUSPARSE;
-  if (!cusparseTriFactors->diag_d) {
-    const PetscInt  n = A->rmap->n;
-    Mat_SeqAIJ      *b=(Mat_SeqAIJ*)B->data;
-    cusparseTriFactors->diag_d = new THRUSTINTARRAY(n+1);
-    cusparseTriFactors->diag_d->assign(b->diag, b->diag + n+1);
-    cusparseTriFactors->i_d = new THRUSTINTARRAY(n+1);
-    cusparseTriFactors->i_d->assign(b->i, b->i + n+1);
-    cusparseTriFactors->j_d = new THRUSTINTARRAY(b->nz);
-    cusparseTriFactors->j_d->assign(b->j, b->j + b->nz);
-    cusparseTriFactors->a_d = new THRUSTARRAY(b->nz); // filled-in in LU factor
-  }
+  B->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJCUSPARSE;
   PetscFunctionReturn(0);
 }
 
