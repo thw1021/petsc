@@ -1,5 +1,15 @@
 static char help[] = "Particle Basis Landau Example using nonlinear solve + Implicit Midpoint-like time stepping.";
 
+/* TODO
+
+1) SNES is sensitive to epsilon. Should we do continuation in it?
+
+2) Code up new timestepper
+
+3) Visualize distributions
+
+*/
+
 /* References
   [1] https://arxiv.org/abs/1910.03080v2
 */
@@ -48,9 +58,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
   PetscFunctionReturn(0);
 }
-
-/* Declaration of static functions */
-static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal particle[], const PetscReal field[], PetscReal *integral, PetscReal epsilon);
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
@@ -262,25 +269,28 @@ $   \nabla_v S_p = \grad \psi_\epsilon(v_p - v) log \sum_q \psi_\epsilon(v - v_q
 $   \sum_l h^d \nabla\psi_\epsilon(v_p - v^c_l) \log\left( \sum_q w_q \psi_\epsilon(v^c_l - v_q) \right)
   where h^d is the volume of each box.
 */
-static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp[], const PetscReal velocity[], PetscReal integral[], PetscReal epsilon) {
-  PetscReal vc_l[2] = {0., 0.};
-  PetscInt  l, d;
+static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp[], const PetscReal velocity[], PetscReal integral[], AppCtx *ctx) {
+  PetscReal vc_l[3], L = ctx->L, h = ctx->h, epsilon = ctx->epsilon, init = 0.5*h - L;
+  PetscInt  nx = roundf(2.*L / h);
+  PetscInt  ny = dim > 1 ? nx : 1;
+  PetscInt  nz = dim > 2 ? nx : 1;
+  PetscInt  i, j, k, d, q, dbg = 0;
 
   PetscFunctionBeginHot;
   for (d = 0; d < dim; ++d) integral[d] = 0.0;
-  for (l = 0; l < 1; ++l) {
-    PetscReal sum = 0.0;
-    PetscInt  q, d;
+  for (k = 0, vc_l[2] = init; k < nz; ++k, vc_l[2] += h) {
+    for (j = 0, vc_l[1] = init; j < ny; ++j, vc_l[1] += h) {
+      for (i = 0, vc_l[0] = init; i < nx; ++i, vc_l[0] += h) {
+        PetscReal sum = 0.0;
 
-    /* \sum_k \psi(v - v_k)  */
-    for (q = 0; q < Np; ++q) {
-      PetscReal v_q[2];
+        if (dbg) {PetscPrintf(PETSC_COMM_SELF, "(%D %D) vc_l: %g %g\n", i, j, vc_l[0], vc_l[1]);}
+        /* \log \sum_k \psi(v - v_k)  */
+        for (q = 0; q < Np; ++q) sum += Gaussian(dim, &velocity[q*dim], epsilon, vc_l);
+        sum = PetscLogReal(sum);
 
-      for (d = 0; d < dim; ++d) v_q[d] = velocity[q*dim+d];
-      sum += Gaussian(dim, v_q, epsilon, vc_l);
+        for (d = 0; d < dim; ++d) integral[d] += (-1./(epsilon))*PetscAbsReal(vp[d] - vc_l[d])*(Gaussian(dim, vp, epsilon, vc_l)) * sum;
+      }
     }
-
-    for (d = 0; d < dim; ++d) integral[d] += (-1./(epsilon))*PetscAbsReal(vp[d] - vc_l[d])*(Gaussian(dim, vp, epsilon, vc_l)) * PetscLogReal(sum);
   }
   PetscFunctionReturn(0);
 }
@@ -336,12 +346,12 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   for (p = 0; p < Np; ++p) {
     PetscReal gradS_p[3] = {0., 0., 0.};
 
-    ierr = ComputeGradS(dim, Np, &velocity[p*dim], velocity, gradS_p, user->epsilon);CHKERRQ(ierr);
+    ierr = ComputeGradS(dim, Np, &velocity[p*dim], velocity, gradS_p, user);CHKERRQ(ierr);
     for (q = 0; q < Np; ++q) {
       PetscReal gradS_q[3] = {0., 0., 0.}, GammaS[3] = {0., 0., 0.}, Q[9];
 
       if (q == p) continue;
-      ierr = ComputeGradS(dim, Np, &velocity[q*dim], velocity, gradS_q, user->epsilon);CHKERRQ(ierr);
+      ierr = ComputeGradS(dim, Np, &velocity[q*dim], velocity, gradS_q, user);CHKERRQ(ierr);
       DMPlex_WaxpyD_Internal(dim, -1.0, gradS_q, gradS_p, GammaS);
       ierr = QCompute(dim, &u[p*dim], &u[q*dim], Q);CHKERRQ(ierr);
       switch (dim) {
@@ -530,10 +540,6 @@ int main(int argc,char **argv)
   ierr = PetscFinalize();
   return ierr;
 }
-/*
-NOTE: implicit midpoint behaves better than a fully backwards euler time discretization
-*/
-
 
 /*TEST
    build:
