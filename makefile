@@ -337,6 +337,7 @@ deletefortranstubs:
 # Builds all the documentation - should be done every night
 alldoc: allcite allpdf sphinx-docs-all alldoc1 alldoc2 docsetdate
 
+
 # Build just citations
 allcite: chk_loc deletemanualpages
 	-${PYTHON} lib/petsc/bin/maint/countpetsccits.py
@@ -369,6 +370,8 @@ alldoc1: chk_loc chk_concepts_dir allcite allmanpages allmanexamples
 alldoc2: chk_loc allcite
 	-${OMAKE_SELF} ACTION=html PETSC_DIR=${PETSC_DIR} alltree LOC=${LOC}
 	-${PYTHON} lib/petsc/bin/maint/update-docs.py ${PETSC_DIR} ${LOC}
+
+alldoc12: alldoc1 alldoc2
 #
 # Makes links for all manual pages in $LOC/docs/manualpages/all
 allman:
