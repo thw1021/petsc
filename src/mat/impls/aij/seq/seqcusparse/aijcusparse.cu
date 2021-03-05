@@ -1052,28 +1052,22 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
   const PetscInt  field = blockIdx.x, field_block = blockIdx.y;
   const PetscInt  start = field*nloc, end = start + nloc;
   const PetscInt  nloc_i =  (nloc/Ni + !!(nloc%Ni)), start_i = field*nloc + field_block*nloc_i, end_i = (start_i + nloc_i) > (field+1)*nloc ? (field+1)*nloc : (start_i + nloc_i);
-  //printf("Create B: rank %d.%d) local_i: %d to %d. blokc dim: %d == %d; nloc_i=%d thrdID=%d.\n",field,field_block,start_i,end_i,blockDim.x,blockDim.y,nloc_i,threadIdx.x);
   if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) *flops_out = 0;
   // zero rows of B
-  //Kokkos::parallel_for(Kokkos::TeamVectorRange(team, start_i, end_i), [=] (const int &rowb) {
   for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block
     PetscInt    nzbL = bi_d[rowb+1] - bi_d[rowb], nzbU = bdiag_d[rowb] - bdiag_d[rowb+1]; // with diag
     PetscScalar *baL = ba_d + bi_d[rowb];
     PetscScalar *baU = ba_d + bdiag_d[rowb+1]+1;
-    //printf("%d (r=%d, ic=%d)): zero B |L|=%d |U|=%d\n",rowb,r[rowb],ic[rowb],nzbL,nzbU);
     /* zero (unfactored row) */
     for (int j=threadIdx.x ; j<nzbL ; j += blockDim.x) if (j<nzbL) baL[j] = 0;
     for (int j=threadIdx.x ; j<nzbU ; j += blockDim.x) if (j<nzbU) baU[j] = 0;
   }
   // copy A into B -- these two loops should be fused
-  // Kokkos::parallel_for(Kokkos::TeamVectorRange(team, start_i, end_i), [=] (const int &rowb) {
   for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block
     PetscInt          rowa = r[rowb], nza = ai_d[rowa+1] - ai_d[rowa];
     const PetscScalar *av    = aa_d + ai_d[rowa];
     const int         *ajtmp = aj_d + ai_d[rowa];
     /* load in initial (unfactored row) */
-    // for (int j=0;j<nza;j++) {
-    //printf("%d (row-A:%d): ",rowb,rowa);
     for (int j=threadIdx.x ; j<nza ; j += blockDim.x) {
       if (j<nza) {
         PetscInt    colb = ic[ajtmp[j]];
@@ -1100,37 +1094,26 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
     //if (threadIdx.x==0) printf("\n");
   }
 
-  //Kokkos::parallel_for(Kokkos::TeamPolicy<>(Nf*Ni, team_size, nVec).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerThread(sizet_scr_t::shmem_size()+scalar_scr_t::shmem_size()), Kokkos::PerTeam(sizet_scr_t::shmem_size())), KOKKOS_LAMBDA (const team_member team) {
   // A22 panel update for each row A(1,:) and col A(:,1)
   for (int ii=start; ii<end-1; ii++) {
     __syncthreads();
     const PetscInt    *bjUi = bj_d + bdiag_d[ii+1]+1, nzUi = bdiag_d[ii] - (bdiag_d[ii+1]+1); // vector, and vector size, of column indices of U(i,(i+1):end)
     const PetscScalar *baUi = ba_d + bdiag_d[ii+1]+1; // vector of data  U(i,i+1:end)
     const PetscScalar Bii = *(ba_d + bdiag_d[ii]); // diagonal in its special place
-    //Kokkos::single(Kokkos::PerTeam(team), [=]() { printf("%d.%d.%d: U(%d,%d) = %f, %d nnzU, nUi_its=%d\n",field,field_block,team.team_rank(),ii,ii,Bii,nzUi,nUi_its); });
-    //Kokkos::parallel_for(Kokkos::TeamThreadRange(team, nUi_its), [=] (const int j) {
-    //if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) printf("%04d,%04d,%04d start update from\n", ii, 0, 0);
     for (int j_b = 0 ; j_b < nzUi ; j_b += blockDim.y*gridDim.y/*Ni*/) {
       PetscInt kIdx = j_b + /*field_block*/ blockIdx.y * blockDim.y + threadIdx.y, myk = -1;
       if (threadIdx.x == 0) { sm_colkIdx[threadIdx.y] = -1; sm_L_ki[threadIdx.y] = -2e100; }
       __syncthreads();
       if (kIdx < nzUi) {
-        //printf("\t%d.%d) kIdx = %d/%d myk=%d\n",threadIdx.y,threadIdx.x,kIdx,nzUi,bjUi[kIdx]);
         myk = bjUi[kIdx]; // assume symmetric structure, need a transposed meta-data here in general
         const PetscInt *pjL = bj_d + bi_d[myk]; // look for L(myk,ii) in start of row
         const PetscInt nzL  = bi_d[myk+1] - bi_d[myk]; // size of L_k(:)
         // find and do L(k,i) = A(:k,i) / A(i,i)
-        //Kokkos::single(Kokkos::PerThread(team), [=]() { printf("\t\tLower B(%d,:) nzL = %d search for ii=%d field_block_idx=%d\n",myk,nzL,ii,field_block_idx); });
-        //if (threadIdx.x == 0) printf("\t\tLower B(%d,:) nzL = %d search for ii=%d\n",myk,nzL,ii);
-        // get column
-        //Kokkos::parallel_reduce(Kokkos::ThreadVectorRange(team,nzL), [&] (const int &j, size_t &idx) {
         for (int j=threadIdx.x ; j<nzL ; j += blockDim.x) {
-          //printf("\t\t%d.%d) j=%d, testing col %d =? %d (ii)\n",threadIdx.y,threadIdx.x,j,pjL[j],ii);
           if (pjL[j] == ii) {
             PetscScalar *pLki = ba_d + bi_d[myk] + j;
             if ((int)sm_colkIdx[threadIdx.y] != -1) printf("\t\t\t\t\t\t\tERROR: find L_ki(%d,%d) TWICE (%d--%d)\n",(int)myk,(int)ii,(int)sm_colkIdx[threadIdx.y],j);
             sm_colkIdx[threadIdx.y] = j; // output
-            //printf("%04d,%04d,%04d update Lki %g --> Lki=%g with Bii=%g (%d) %d offset\n", ii, myk, ii, *pLki, *pLki/Bii, Bii, threadIdx.y, (int)(pLki-ba_d));
             *pLki = *pLki/Bii; // column scaling:  L(k,i) = A(:k,i) / A(i,i)
             sm_L_ki[threadIdx.y] = *pLki;
             break;
@@ -1139,11 +1122,8 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
       }
       __syncthreads(); // just needs in x direction
       if (kIdx < nzUi) {
-        //if (threadIdx.x + blockIdx.x + blockIdx.y == 0) printf("%04d,%04d,%04d Lki=%g colID=%d\n", ii, myk, ii, sm_L_ki[threadIdx.y], (int)sm_colkIdx[threadIdx.y]);
         if (sm_colkIdx[threadIdx.y] == -1) printf("\t\t\t\t\t\t\tERROR: failed to find L_ki(%d,%d)\n",(int)myk,ii);
         // active row k, do  A_kj -= Lki * U_ij; j \in U(i,:) j != i
-        // U(i+1,:end)
-        // Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,nzUi), [=] (const int &uiIdx) { // index into i (U)
         for (int uiIdx=threadIdx.x ; uiIdx < nzUi ; uiIdx += blockDim.x) {
           PetscScalar Uij = baUi[uiIdx];
           PetscInt    col = bjUi[uiIdx];
@@ -1151,7 +1131,6 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
           if (col==myk) {
             // A_kk = A_kk - L_ki * U_ij(k)
             PetscScalar *Akkv = (ba_d + bdiag_d[myk]); // diagonal in its special place
-            //printf("%04d,%04d,%04d update %g --> Akk=%g Uki=%g (%d) %d offset\n", ii, myk, col, *Akkv, sm_L_ki[threadIdx.y], Uij, threadIdx.y, (int)(Akkv-ba_d));
             *Akkv = *Akkv - sm_L_ki[threadIdx.y] * Uij; // UiK
           } else {
             PetscScalar    *start, *end, *pAkjv=NULL;
@@ -1181,9 +1160,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
               if (startj[pAkjv-start] == col) break;
             }
             if (pAkjv==start+high) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: *** failed to find Akj(%d,%d)\n",(int)myk,(int)col);
-            //printf("%04d,%04d,%04d update Akj %g --> %g, Lki=%g Uij=%g (%d) %d offset\n", ii, myk, col, *pAkjv, *pAkjv - sm_L_ki[threadIdx.y] * Uij, sm_L_ki[threadIdx.y], Uij, threadIdx.y, (int)(pAkjv-ba_d));
             *pAkjv = *pAkjv - sm_L_ki[threadIdx.y] * Uij; // A_kj = A_kj - L_ki * U_ij
-            //printf("\t\t\t%d.%d: Update %c A[%d,%d] = %g with Uij=%g, Lik=%g\n",field,field_block, (col>myk) ? 'U' : 'L', myk, col, *pAkjv, Uij, sm_L_ki[]);
           }
         } // inner loop x
       }
@@ -1199,7 +1176,6 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
   if (threadIdx.y==0) {
     for (int rowb = start_i + threadIdx.x; rowb < end_i; rowb += blockDim.x) { // rows in block
       *(ba_d + bdiag_d[rowb]) = 1. / *(ba_d + bdiag_d[rowb]);
-      //printf("x B[%04d,%04d] = %16.9e\n",rowb,rowb,*(ba_d + bdiag_d[rowb]));
     }
   }
 
@@ -1221,7 +1197,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
 
 }
 //
-// LU factorization with optimkization for block diagonal (Nf blocks) in natural order (-mat_no_inode -pc_factor_mat_ordering_type rcm with Nf>1 fields)
+// LU factorization with optimization for block diagonal (Nf blocks) in natural order (-mat_no_inode -pc_factor_mat_ordering_type rcm with Nf>1 fields)
 //
 //   requires:
 //     structurally symmetric: fix with transpose/column meta data
@@ -1256,9 +1232,6 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSECUDA(Mat B,Mat A,const Ma
   if (!matstruct) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing mat struct");
   matrixA = (CsrMatrix*)matstruct->mat; // this better be a SCR matrix!
   if (!matrixA) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing matrix cusparsestruct->mat->mat");
-  //ierr = MatSeqAIJCUSPARSECopyFromGPU(A);CHKERRQ(ierr);
-  //ierr = MatLUFactorNumeric_SeqAIJ(B,A,info);CHKERRQ(ierr);
-  //B->offloadmask = PETSC_OFFLOAD_CPU;
   // factor: get Nf if available
   ierr = PetscObjectQuery((PetscObject) A, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
   if (container) {
@@ -1331,10 +1304,8 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSECUDA(Mat B,Mat A,const Ma
   }
 
   cerr = cudaMemcpy(b->a, ba_d, b->nz*sizeof(PetscScalar), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr); // debug
-  //B->offloadmask = PETSC_OFFLOAD_GPU; -- does not work
-  /* get the triangular factors */
 
-  // from MatSeqAIJCUSPARSEILUAnalysisAndCopyToGPU in MatLUFactorNumeric_AIJ_SeqAIJCUSPARSE
+  /* get the triangular factors */
   ierr = MatSeqAIJCUSPARSEBuildILULowerTriMatrix(B);CHKERRQ(ierr);
   ierr = MatSeqAIJCUSPARSEBuildILUUpperTriMatrix(B);CHKERRQ(ierr);
 
