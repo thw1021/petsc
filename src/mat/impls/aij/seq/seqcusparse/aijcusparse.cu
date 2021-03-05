@@ -1163,7 +1163,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
       //printf("x B[%04d,%04d] = %16.9e\n",rowb,rowb,*(ba_d + bdiag_d[rowb]));
     }
   }
-  
+
   // debug
   // if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {
   //   printf("w Cuda LU\n");
@@ -1172,7 +1172,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
   //     PetscScalar *ba = ba_d + bi_d[i];
   //     printf("w %4d) ",i);
   //     for (int j=0; j<nzl; j++) printf("L-(%2d) %16.9e, ",bj[j],ba[j]);
-  //     bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i]; 
+  //     bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i];
   //                               printf("D-(%2d) %16.9e, ",bj[0],ba[0]);
   //     ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
   //     for (int j=0; j<nzu; j++) printf("U-(%2d) %16.9e, ",bj[j],ba[j]);
@@ -1292,7 +1292,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat B,Mat A,const MatFac
   }
 
   cerr = cudaMemcpy(b->a, ba_d, b->nz*sizeof(PetscScalar), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr); // debug
-  //B->offloadmask = PETSC_OFFLOAD_GPU; -- does not work, 
+  //B->offloadmask = PETSC_OFFLOAD_GPU; -- does not work
   /* get the triangular factors */
 
   // from MatSeqAIJCUSPARSEILUAnalysisAndCopyToGPU in MatLUFactorNumeric_AIJ_SeqAIJCUSPARSE
