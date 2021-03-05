@@ -1037,9 +1037,9 @@ do {                                                                            
   }                                                                                      \
  } while (0)
 
-//
-// The GPU LU factor kernel
-//
+/*
+  The GPU LU factor kernel
+*/
 __global__
 void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[], const PetscInt ic[],
                                             const int ai_d[], const int aj_d[], const PetscScalar aa_d[],
@@ -1180,20 +1180,20 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
   }
 
   // debug
-  // if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {
-  //   printf("w Cuda LU\n");
-  //   for (int i=0;i<n;i++) {
-  //     const PetscInt nzu = bdiag_d[i] - (bdiag_d[i+1]+1), nzl = bi_d[i+1] - bi_d[i], *bj= bj_d + bi_d[i]; // u without diag
-  //     PetscScalar *ba = ba_d + bi_d[i];
-  //     printf("w %4d) ",i);
-  //     for (int j=0; j<nzl; j++) printf("L-(%2d) %16.9e, ",bj[j],ba[j]);
-  //     bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i];
-  //                               printf("D-(%2d) %16.9e, ",bj[0],ba[0]);
-  //     ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
-  //     for (int j=0; j<nzu; j++) printf("U-(%2d) %16.9e, ",bj[j],ba[j]);
-  //     printf("\n");
-  //   }
-  // }
+  /* if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {
+    printf("w Cuda LU\n");
+    for (int i=0;i<n;i++) {
+      const PetscInt nzu = bdiag_d[i] - (bdiag_d[i+1]+1), nzl = bi_d[i+1] - bi_d[i], *bj= bj_d + bi_d[i]; // u without diag
+      PetscScalar *ba = ba_d + bi_d[i];
+      printf("w %4d) ",i);
+      for (int j=0; j<nzl; j++) printf("L-(%2d) %16.9e, ",bj[j],ba[j]);
+      bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i];
+                                printf("D-(%2d) %16.9e, ",bj[0],ba[0]);
+      ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
+      for (int j=0; j<nzu; j++) printf("U-(%2d) %16.9e, ",bj[j],ba[j]);
+      printf("\n");
+    }
+    } */
 
 }
 //
