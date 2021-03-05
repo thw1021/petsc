@@ -12,7 +12,6 @@ from sphinx import version_info as sphinx_version_info
 from sphinx.writers.html5 import HTML5Translator
 from sphinx.application import Sphinx
 
-
 def setup(app: Sphinx) -> None:
     _check_version(app)
     app.set_translator('html', HTML5PETScTranslator, override=True)
@@ -49,17 +48,26 @@ class HTML5PETScTranslator(HTML5Translator):
 
 
     def _get_manpage_map(self) -> Dict[str,str]:
-        """ Return the manpage strings to link, as a dict.
-
-        This may involve generating or reading from a file, so may be slow.
-
-        This is done lazily, so this function should always be used,
-        instead of the direct data member, which may not be populated yet
-        """
+        """ Return the manpage strings to link, as a dict.  """
         if not self._manpage_map:
-            htmlmap_filename = _generate_htmlmap()
+            htmlmap_filename = os.path.join('_build_classic', 'docs', 'manualpages', 'htmlmap')
+            if not os.path.isfile(htmlmap_filename):
+                raise Exception("Expected file %s not found. Run script to build classic docs subset." %  htmlmap_filename)
             manpage_map_raw = htmlmap_to_dict(htmlmap_filename)
-            manpage_prefix = 'https://www.mcs.anl.gov/petsc/petsc-current/docs/'
+
+            # ReadTheDocs adds things to your conf.py, which you can use to figure out the build URL
+            context = self.builder.globalcontext
+            if context.get('READTHEDOCS'):
+                manpage_prefix_base = os.path.join(
+                        'https://docs.petsc.org/', # FIXME - non-ideal hard-coding
+                        #context['canonical_url'].rstrip('latest/') # is somehow overwritten to None
+                        context['rtd_language'],
+                        context['version_slug']
+                        )
+            else:
+                manpage_prefix_base = self.builder.outdir
+            manpage_prefix = os.path.join(manpage_prefix_base, 'docs', '')
+
             self._manpage_map = dict_complete_links(manpage_map_raw, manpage_prefix)
         return self._manpage_map
 
@@ -164,47 +172,6 @@ def dict_complete_links(string_to_link: Dict[str,str], prefix: str = '') -> Dict
         url = link if link.startswith('http') else prefix + link
         return '<a href=\"' + url + '\">' + name + '</a>'
     return dict((k, link_string(k, v, prefix)) for (k, v) in string_to_link.items())
-
-
-def _configure_minimal_petsc(petsc_dir, petsc_arch) -> None:
-    configure = [
-        './configure',
-        '--with-mpi=0',
-        '--with-blaslapack=0',
-        '--with-fortran=0',
-        '--with-cxx=0',
-        '--with-x=0',
-        '--with-cmake=0',
-        '--with-pthread=0',
-        '--with-regexp=0',
-        '--download-sowing',
-        '--with-mkl_sparse_optimize=0',
-        '--with-mkl_sparse=0',
-        'PETSC_ARCH=' + petsc_arch,
-    ]
-    print(__file__, ': performing a minimal PETSc configuration, with PETSC_ARCH=', petsc_arch)
-    subprocess.run(configure, cwd=petsc_dir, check=True)
-
-
-def _generate_htmlmap() -> str:
-    """ Returns a filename for a valid htmlmap file.
-
-    Checks if the expected file exists in a standard location.
-
-    If this fails, performs a custom minimalist configuration and uses this to generate
-    the file.
-
-    If having to configure and build the map, this may be quite slow (on the order of ~5 minutes).
-    """
-    petsc_dir = os.path.abspath(os.path.join('..', '..', '..'))
-    htmlmap_filename = os.path.join(petsc_dir, 'docs', 'manualpages', 'htmlmap')
-    if not os.path.isfile(htmlmap_filename):
-        petsc_arch = 'arch-sphinxdocs-minimal'
-        _configure_minimal_petsc(petsc_dir, petsc_arch)
-        allcite = ['make', 'allcite', 'PETSC_DIR=' + petsc_dir,
-                   'PETSC_ARCH=' + petsc_arch, 'LOC=' + petsc_dir]
-        subprocess.run(allcite, cwd=petsc_dir, check=True)
-    return htmlmap_filename
 
 
 def get_multiple_replace_pattern(source_dict: Dict[str,str]) -> re.Pattern:
