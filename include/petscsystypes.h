@@ -221,7 +221,7 @@ M*/
 #        define PETSC_HAVE_COMPLEX 1
 #      endif
 #    endif
-#  endif
+#  endif /* PETSC_CLANGUAGE_CXX */
 #endif /* !PETSC_SKIP_COMPLEX */
 
 #if defined(PETSC_HAVE_COMPLEX)
