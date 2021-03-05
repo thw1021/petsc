@@ -969,22 +969,6 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFacto
       });
     Kokkos::fence();
 
-    // debug
-    Kokkos::parallel_for(Kokkos::TeamPolicy<>(1, 1, 1), KOKKOS_LAMBDA (const team_member team) {
-        printf("w Kokkos LU\n");
-        for (int i=0;i<n;i++) {
-          const PetscInt nzu = bdiag_d[i] - (bdiag_d[i+1]+1), nzl = bi_d[i+1] - bi_d[i], *bj= bj_d + bi_d[i]; // u without diag
-          PetscScalar *ba = ba_d + bi_d[i];
-          printf("w %4d) ", i);
-          for (int j=0; j<nzl; j++) printf("L-(%2d) %16.9e, ",bj[j],ba[j]);
-          bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i];
-          printf("D-(%2d) %16.9e, ",bj[0],ba[0]);
-          ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
-          for (int j=0; j<nzu; j++) printf("U-(%2d) %16.9e, ",bj[j],ba[j]);
-          printf("\n");
-        }
-      });
-
     Kokkos::parallel_for(Kokkos::TeamPolicy<>(Nf*Ni, team_size, nVec).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerThread(sizet_scr_t::shmem_size()+scalar_scr_t::shmem_size()), Kokkos::PerTeam(sizet_scr_t::shmem_size())), KOKKOS_LAMBDA (const team_member team) {
         sizet_scr_t     colkIdx(team.thread_scratch(KOKKOS_SHARED_LEVEL));
         scalar_scr_t    L_ki(team.thread_scratch(KOKKOS_SHARED_LEVEL));
@@ -1095,6 +1079,24 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOS(Mat B,Mat A,const MatFacto
             }
           });
       });
+
+    
+    // debug
+    Kokkos::parallel_for(Kokkos::TeamPolicy<>(1, 1, 1), KOKKOS_LAMBDA (const team_member team) {
+        printf("w Kokkos LU\n");
+        for (int i=0;i<n;i++) {
+          const PetscInt nzu = bdiag_d[i] - (bdiag_d[i+1]+1), nzl = bi_d[i+1] - bi_d[i], *bj= bj_d + bi_d[i]; // u without diag
+          PetscScalar *ba = ba_d + bi_d[i];
+          printf("w %4d) ", i);
+          for (int j=0; j<nzl; j++) printf("L-(%2d) %16.9e, ",bj[j],ba[j]);
+          bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i];
+          printf("D-(%2d) %16.9e, ",bj[0],ba[0]);
+          ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
+          for (int j=0; j<nzu; j++) printf("U-(%2d) %16.9e, ",bj[j],ba[j]);
+          printf("\n");
+        }
+      });
+
   }
 #if defined(PETSC_HAVE_DEVICE) && defined(PETSC_USE_LOG)
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
