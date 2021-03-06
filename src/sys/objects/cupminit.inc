@@ -99,7 +99,7 @@ PetscErrorCode PetscCUPMInitializeCheck(void)
       }
     }
     ierr = PetscOptionsGetBool(NULL,NULL,"-petsc_default_use_null_stream",&useNull,NULL);
-    if (!useNull) cerr = cupmStreamCreate(&PetscDefaultCupmStream);CHKERRCUPM(cerr);
+    if (!useNull) {cerr = cupmStreamCreate(&PetscDefaultCupmStream);CHKERRCUPM(cerr);}
     ierr = PetscCUPMBLASInitializeHandle();CHKERRQ(ierr);
     ierr = PetscCUPMSOLVERDnInitializeHandle();CHKERRQ(ierr);
     PetscCUPMInitialized = PETSC_TRUE;
@@ -204,7 +204,7 @@ PetscErrorCode PetscCUPMInitialize(MPI_Comm comm,PetscInt device)
       /* Do costly device handles initialization here to not to distort petsc logging later */
       PetscBool useNull = PETSC_TRUE; /* use the default (NULL) stream as petsc's default stream */
       ierr = PetscOptionsGetBool(NULL,NULL,"-petsc_default_use_null_stream",&useNull,NULL);
-      if (!useNull) cerr = cupmStreamCreate(&PetscDefaultCupmStream);CHKERRCUPM(cerr);
+      if (!useNull) {cerr = cupmStreamCreate(&PetscDefaultCupmStream);CHKERRCUPM(cerr);}
       ierr = PetscCUPMBLASInitializeHandle();CHKERRQ(ierr);
       ierr = PetscCUPMSOLVERDnInitializeHandle();CHKERRQ(ierr);
       PetscCUPMInitialized = PETSC_TRUE;
