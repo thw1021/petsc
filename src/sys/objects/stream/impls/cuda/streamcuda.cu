@@ -1,6 +1,5 @@
 #include "streamcuda.h" /*I "petscdevice.h" I*/
 
-#if PetscDefined(HAVE_CUDA)
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamDestroy_CUDA(PetscStream strm)
 {
   PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
@@ -126,22 +125,15 @@ static const struct _StreamOps cuops = {
   PetscStreamCaptureBegin_CUDA,
   PetscStreamCaptureEnd_CUDA
 };
-#endif /* HAVE_CUDA */
 
 PetscErrorCode PetscStreamCreate_CUDA(PetscStream strm)
 {
-  PetscFunctionBegin;
-#if PetscDefined(HAVE_CUDA)
-  {
-    PetscStream_CUDA *psc;
-    PetscErrorCode   ierr;
+  PetscStream_CUDA *psc;
+  PetscErrorCode   ierr;
 
-    ierr = PetscNew(&psc);CHKERRQ(ierr);
-    strm->data = (void *)psc;
-    ierr = PetscMemcpy(strm->ops, &cuops, sizeof(cuops));CHKERRQ(ierr);
-  }
-#else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with CUDA support");
-#endif
+  PetscFunctionBegin;
+  ierr = PetscNew(&psc);CHKERRQ(ierr);
+  strm->data = (void *)psc;
+  ierr = PetscMemcpy(strm->ops, &cuops, sizeof(cuops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

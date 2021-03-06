@@ -1,6 +1,5 @@
 #include "streamcuda.h" /*I "petscdevice.h" I*/
 
-#if PetscDefined(HAVE_CUDA)
 /* How to change this? None of these routine accept a communicator on which they may call
    petscoptions routines... */
 static const PetscInt poolSize = 100;
@@ -180,11 +179,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarFinalize_CUDA(void)
   poolSetup = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
-#endif /* HAVE_CUDA */
 
 PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar pscal)
 {
-#if PetscDefined(HAVE_CUDA)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -201,9 +198,5 @@ PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar pscal)
     ierr = PetscRegisterFinalize(PetscStreamScalarFinalize_CUDA);CHKERRQ(ierr);
   }
   ierr = PetscMemcpy(pscal->ops, &scalcuops, sizeof(scalcuops));CHKERRQ(ierr);
-#else
-  PetscFunctionBegin;
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with CUDA support");
-#endif
   PetscFunctionReturn(0);
 }

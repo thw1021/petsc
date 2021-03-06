@@ -113,6 +113,7 @@ struct _VecOps {
   PetscErrorCode (*copyasync)(Vec,Vec,PetscStream);
   PetscErrorCode (*normasync)(Vec,NormType,PetscStreamScalar*,PetscStream);
   PetscErrorCode (*norm_localasync)(Vec,NormType,PetscStreamScalar*,PetscStream);
+  PetscErrorCode (*scaleasync)(Vec,PetscStreamScalar,PetscStream);
 };
 
 /*

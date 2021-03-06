@@ -225,6 +225,7 @@ PETSC_EXTERN PetscErrorCode VecSum(Vec,PetscScalar*);
 PETSC_EXTERN PetscErrorCode VecMax(Vec,PetscInt*,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecMin(Vec,PetscInt*,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecScale(Vec,PetscScalar);
+PETSC_EXTERN PetscErrorCode VecScaleAsync(Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCopy(Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecCopyAsync(Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecSetRandom(Vec,PetscRandom);
