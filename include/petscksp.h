@@ -62,6 +62,7 @@ typedef const char* KSPType;
 #define   KSPPIPEBCGS   "pipebcgs"
 #define KSPCGS        "cgs"
 #define KSPTFQMR      "tfqmr"
+#define KSPQMR        "qmr"
 #define KSPCR         "cr"
 #define KSPPIPECR     "pipecr"
 #define KSPLSQR       "lsqr"
