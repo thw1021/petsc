@@ -1,6 +1,5 @@
 #include "streamcuda.h" /*I "petscdevice.h" I*/
 
-#if PetscDefined(HAVE_CUDA)
 PETSC_STATIC_INLINE PetscErrorCode PetscEventDestroy_CUDA(PetscEvent event)
 {
   PetscEvent_CUDA *pec = (PetscEvent_CUDA *)event->data;
@@ -49,22 +48,15 @@ static const struct _EventOps ecuops = {
   PetscEventSynchronize_CUDA,
   PetscEventQuery_CUDA
 };
-#endif /* HAVE_CUDA */
 
 PetscErrorCode PetscEventCreate_CUDA(PetscEvent event)
 {
-  PetscFunctionBegin;
-#if PetscDefined(HAVE_CUDA)
-  {
-    PetscEvent_CUDA *pec;
-    PetscErrorCode  ierr;
+  PetscEvent_CUDA *pec;
+  PetscErrorCode  ierr;
 
-    ierr = PetscNew(&pec);CHKERRQ(ierr);
-    event->data = (void *)pec;
-    ierr = PetscMemcpy(event->ops, &ecuops, sizeof(ecuops));CHKERRQ(ierr);
-  }
-#else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with CUDA support");
-#endif
+  PetscFunctionBegin;
+  ierr = PetscNew(&pec);CHKERRQ(ierr);
+  event->data = (void *)pec;
+  ierr = PetscMemcpy(event->ops, &ecuops, sizeof(ecuops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
