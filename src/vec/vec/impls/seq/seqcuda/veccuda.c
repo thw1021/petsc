@@ -438,6 +438,7 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->tdot                   = VecTDot_Seq;
     V->ops->tdotasync              = NULL;
     V->ops->scale                  = VecScale_Seq;
+    V->ops->scaleasync             = NULL;
     V->ops->copy                   = VecCopy_Seq;
     V->ops->copyasync              = NULL;
     V->ops->set                    = VecSet_Seq;
@@ -490,6 +491,7 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->tdot                   = VecTDot_SeqCUDA;
     V->ops->tdotasync              = VecTDot_SeqCUDAAsync;
     V->ops->scale                  = VecScale_SeqCUDA;
+    V->ops->scaleasync             = VecScale_SeqCUDAAsync;
     V->ops->copy                   = VecCopy_SeqCUDA;
     V->ops->copyasync              = VecCopy_SeqCUDAAsync;
     V->ops->set                    = VecSet_SeqCUDA;

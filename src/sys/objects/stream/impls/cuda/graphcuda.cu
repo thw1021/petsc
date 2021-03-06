@@ -1,6 +1,5 @@
 #include "streamcuda.h"
 
-#if PetscDefined(HAVE_CUDA)
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphDestroy_CUDA(PetscStreamGraph sgraph)
 {
   PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
@@ -113,24 +112,15 @@ static const struct _GraphOps gcuops = {
   PetscStreamGraphGetGraph_CUDA,
   PetscStreamGraphRestoreGraph_CUDA
 };
-#endif
 
 PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph sgraph)
 {
-  PetscFunctionBegin;
-#if PetscDefined(HAVE_CUDA)
-  {
-    PetscStreamGraph_CUDA *psgc;
-    PetscErrorCode        ierr;
+  PetscStreamGraph_CUDA *psgc;
+  PetscErrorCode        ierr;
 
-    ierr = PetscNew(&psgc);CHKERRQ(ierr);
-    psgc->cgraph = NULL;
-    psgc->cexec  = NULL;
-    sgraph->data = (void *)psgc;
-    ierr = PetscMemcpy(sgraph->ops, &gcuops, sizeof(gcuops));CHKERRQ(ierr);
-  }
-#else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with CUDA support");
-#endif
+  PetscFunctionBegin;
+  ierr = PetscNew(&psgc);CHKERRQ(ierr);
+  sgraph->data = (void *)psgc;
+  ierr = PetscMemcpy(sgraph->ops, &gcuops, sizeof(gcuops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

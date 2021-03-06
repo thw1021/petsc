@@ -133,6 +133,41 @@ PetscErrorCode PetscStreamSetUp(PetscStream strm)
 }
 
 /*@C
+  PetscStreamDuplicate - Duplicates a PetscStream object
+
+  Not Collective
+
+  Input Parameter:
+. strm - The PetscStream object to duplicate
+
+  Output Paramter:
+. strmdup - The duplicated PetscStream
+
+  Level: beginner
+
+.seealso: PetscStreamCreate(), PetscStreamSetType(), PetscStreamSetMode()
+@*/
+PetscErrorCode PetscStreamDuplicate(PetscStream strm, PetscStream *strmdup)
+{
+  PetscStreamType type;
+  PetscStreamMode mode;
+  PetscStream     s;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  PetscValidStreamType(strm,1);
+  PetscValidPointer(strmdup,2);
+  ierr = PetscStreamGetType(strm,&type);CHKERRQ(ierr);
+  ierr = PetscStreamGetMode(strm,&mode);CHKERRQ(ierr);
+  ierr = PetscStreamCreate(&s);CHKERRQ(ierr);
+  ierr = PetscStreamSetType(s,type);CHKERRQ(ierr);
+  ierr = PetscStreamSetMode(s,mode);CHKERRQ(ierr);
+  ierr = PetscStreamSetUp(s);CHKERRQ(ierr);
+  *strmdup = s;
+  PetscFunctionReturn(0);
+}
+
+/*@C
   PetscStreamGetStream - Retrieves the implementation specific stream
 
   Not Collective

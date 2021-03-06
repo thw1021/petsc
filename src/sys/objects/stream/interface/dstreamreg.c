@@ -290,8 +290,12 @@ PetscErrorCode PetscStreamGraphRegister(const char sname[], PetscErrorCode (*fun
   PetscFunctionReturn(0);
 }
 
+#if PetscDefined(HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
+#endif
+#if PetscDefined(HAVE_HIP)
 PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
+#endif
 
 /*@C
   PetscStreamRegisterAll - Registers all of the stream components in the PetscStream package.
@@ -309,13 +313,21 @@ PetscErrorCode PetscStreamRegisterAll(void)
   PetscFunctionBegin;
   if (PetscStreamRegisterAllCalled) PetscFunctionReturn(0);
   PetscStreamRegisterAllCalled = PETSC_TRUE;
+#if PetscDefined(HAVE_CUDA)
   ierr = PetscStreamRegister(PETSCSTREAMCUDA,PetscStreamCreate_CUDA);CHKERRQ(ierr);
+#endif
+#if PetscDefined(HAVE_HIP)
   ierr = PetscStreamRegister(PETSCSTREAMHIP,PetscStreamCreate_HIP);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
+#if PetscDefined(HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
+#endif
+#if PetscDefined(HAVE_HIP)
 PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
+#endif
 
 /*@C
   PetscEventRegisterAll - Registers all of the event components in the PetscStream package.
@@ -333,13 +345,21 @@ PetscErrorCode PetscEventRegisterAll(void)
   PetscFunctionBegin;
   if (PetscEventRegisterAllCalled) PetscFunctionReturn(0);
   PetscEventRegisterAllCalled = PETSC_TRUE;
+#if PetscDefined(HAVE_CUDA)
   ierr = PetscEventRegister(PETSCSTREAMCUDA,PetscEventCreate_CUDA);CHKERRQ(ierr);
+#endif
+#if PetscDefined(HAVE_HIP)
   ierr = PetscEventRegister(PETSCSTREAMHIP,PetscEventCreate_HIP);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
+#if PetscDefined(HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
+#endif
+#if PetscDefined(HAVE_HIP)
 PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar);
+#endif
 
 /*@C
   PetscStreamScalarRegisterAll - Registers all of the stream scalar components in the PetscStream package.
@@ -357,12 +377,18 @@ PetscErrorCode PetscStreamScalarRegisterAll(void)
   PetscFunctionBegin;
   if (PetscStreamScalarRegisterAllCalled) PetscFunctionReturn(0);
   PetscStreamScalarRegisterAllCalled = PETSC_TRUE;
+#if PetscDefined(HAVE_CUDA)
   ierr = PetscStreamScalarRegister(PETSCSTREAMCUDA,PetscStreamScalarCreate_CUDA);CHKERRQ(ierr);
+#endif
+#if PetscDefined(HAVE_HIP)
   ierr = PetscStreamScalarRegister(PETSCSTREAMHIP,PetscStreamScalarCreate_HIP);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
+#if PetscDefined(HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph);
+#endif
 
 /*@C
   PetscStreamGraphRegisterAll - Registers all of the stream graph components in the PetscStream package.
@@ -379,10 +405,20 @@ PetscErrorCode PetscStreamGraphRegisterAll(void)
 
   if (PetscStreamGraphRegisterAllCalled) PetscFunctionReturn(0);
   PetscStreamGraphRegisterAllCalled = PETSC_TRUE;
+#if PetscDefined(HAVE_CUDA)
   ierr = PetscStreamGraphRegister(PETSCSTREAMCUDA,PetscStreamGraphCreate_CUDA);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamFinalizePackage - This function cleans up all components of the PetscStream ppacakge.
+  It is called from PetscFinalize().
+
+  Level: developer
+
+.seealso: PetscFinalize(), PetscStreamInitializePackage()
+@*/
 PetscErrorCode PetscStreamFinalizePackage(void)
 {
   PetscErrorCode ierr;
@@ -394,6 +430,13 @@ PetscErrorCode PetscStreamFinalizePackage(void)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamInitializePackage - This function initializes everything in the PetscStream package. It is called from PetscDLLibraryRegister_petscvec() when using dynamic libraries, and on the first call to PetscStreamCreate() when using shared or static libraries.
+
+  Level: developer
+
+.seealso: PetscInitialize(), PetscStreamFinalizePackage()
+@*/
 PetscErrorCode PetscStreamInitializePackage(void)
 {
   PetscErrorCode ierr;
@@ -406,6 +449,14 @@ PetscErrorCode PetscStreamInitializePackage(void)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscEventFinalizePackage - This function cleans up all components of the PetscEvent ppacakge.
+  It is called from PetscFinalize().
+
+  Level: developer
+
+.seealso: PetscFinalize(), PetscEventInitializePackage()
+@*/
 PetscErrorCode PetscEventFinalizePackage(void)
 {
   PetscErrorCode ierr;
@@ -417,6 +468,13 @@ PetscErrorCode PetscEventFinalizePackage(void)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscEventInitializePackage - This function initializes everything in the PetscEvent package. It is called from PetscDLLibraryRegister_petscvec() when using dynamic libraries, and on the first call to PetscEventCreate() when using shared or static libraries.
+
+  Level: developer
+
+.seealso: PetscInitialize(), PetscEventFinalizePackage()
+@*/
 PetscErrorCode PetscEventInitializePackage(void)
 {
   PetscErrorCode ierr;
@@ -429,6 +487,14 @@ PetscErrorCode PetscEventInitializePackage(void)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamScalarFinalizePackage - This function cleans up all components of the PetscStreamScalar ppacakge.
+  It is called from PetscFinalize().
+
+  Level: developer
+
+.seealso: PetscFinalize(), PetscStreamScalarInitializePackage()
+@*/
 PetscErrorCode PetscStreamScalarFinalizePackage(void)
 {
   PetscErrorCode ierr;
@@ -440,6 +506,13 @@ PetscErrorCode PetscStreamScalarFinalizePackage(void)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamScalarInitializePackage - This function initializes everything in the PetscStreamScalar package. It is called from PetscDLLibraryRegister_petscvec() when using dynamic libraries, and on the first call to PetscStreamScalarCreate() when using shared or static libraries.
+
+  Level: developer
+
+.seealso: PetscInitialize(), PetscStreamScalarFinalizePackage()
+@*/
 PetscErrorCode PetscStreamScalarInitializePackage(void)
 {
   PetscErrorCode ierr;
@@ -452,6 +525,14 @@ PetscErrorCode PetscStreamScalarInitializePackage(void)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphFinalizePackage - This function cleans up all components of the PetscStreamGraph ppacakge.
+  It is called from PetscFinalize().
+
+  Level: developer
+
+.seealso: PetscFinalize(), PetscStreamGraphInitializePackage()
+@*/
 PetscErrorCode PetscStreamGraphFinalizePackage(void)
 {
   PetscErrorCode ierr;
@@ -463,6 +544,13 @@ PetscErrorCode PetscStreamGraphFinalizePackage(void)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscStreamGraphInitializePackage - This function initializes everything in the PetscStreamGraph package. It is called from PetscDLLibraryRegister_petscvec() when using dynamic libraries, and on the first call to PetscStreamGraphCreate() when using shared or static libraries.
+
+  Level: developer
+
+.seealso: PetscInitialize(), PetscStreamGraphFinalizePackage()
+@*/
 PetscErrorCode PetscStreamGraphInitializePackage(void)
 {
   PetscErrorCode ierr;

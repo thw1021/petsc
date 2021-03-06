@@ -139,6 +139,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamGetType(PetscStream,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscStreamSetMode(PetscStream,PetscStreamMode);
 PETSC_EXTERN PetscErrorCode PetscStreamGetMode(PetscStream,PetscStreamMode*);
 PETSC_EXTERN PetscErrorCode PetscStreamSetUp(PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamDuplicate(PetscStream,PetscStream*);
 PETSC_EXTERN PetscErrorCode PetscStreamGetStream(PetscStream,void*);
 PETSC_EXTERN PetscErrorCode PetscStreamRestoreStream(PetscStream,void*);
 PETSC_EXTERN PetscErrorCode PetscStreamRecordEvent(PetscStream,PetscEvent);

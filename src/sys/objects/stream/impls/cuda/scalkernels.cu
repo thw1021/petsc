@@ -13,10 +13,10 @@ PetscErrorCode PetscStreamScalarAXTY_CUDA_Kernel(PetscScalar a, PetscStreamScala
   PetscFunctionBegin;
   ierr = PetscStreamScalarGetDeviceWrite(pscalx,&dx,pstream);CHKERRQ(ierr);
   ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
-  dptrx = thrust::device_pointer_cast(dx);
   if (pscalx == pscaly) {
     try {
       using namespace thrust::placeholders;
+      dptrx = thrust::device_pointer_cast(dx);
       thrust::transform(thrust::cuda::par.on(cstream),dptrx,dptrx+1,dptrx,a*_1*_1);
     } catch (char *ex) {
       SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
@@ -24,6 +24,7 @@ PetscErrorCode PetscStreamScalarAXTY_CUDA_Kernel(PetscScalar a, PetscStreamScala
   } else if (!pscaly) {
     try {
       using namespace thrust::placeholders;
+      dptrx = thrust::device_pointer_cast(dx);
       thrust::transform(thrust::cuda::par.on(cstream),dptrx,dptrx+1,dptrx,a*_1);
     } catch (char *ex) {
       SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
@@ -32,9 +33,10 @@ PetscErrorCode PetscStreamScalarAXTY_CUDA_Kernel(PetscScalar a, PetscStreamScala
     const PetscScalar                     *dy;
     thrust::device_ptr<const PetscScalar> dptry;
     ierr = PetscStreamScalarGetDeviceRead(pscaly,&dy,pstream);CHKERRQ(ierr);
-    dptry = thrust::device_pointer_cast(dy);
     try {
       using namespace thrust::placeholders;
+      dptrx = thrust::device_pointer_cast(dx);
+      dptry = thrust::device_pointer_cast(dy);
       thrust::transform(thrust::cuda::par.on(cstream),dptrx,dptrx+1,dptry,dptrx,a*_1*_2);
     } catch (char *ex) {
       SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);

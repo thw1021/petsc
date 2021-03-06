@@ -637,8 +637,4 @@ S*/
 typedef struct _n_PetscSegBuffer *PetscSegBuffer;
 
 typedef struct _n_PetscOptionsHelpPrinted *PetscOptionsHelpPrinted;
-
-#define PetscMemTypeHost(m)   (((m) & 0x1) == PETSC_MEMTYPE_HOST)
-#define PetscMemTypeDevice(m) (((m) & 0x1) == PETSC_MEMTYPE_DEVICE)
-
 #endif
