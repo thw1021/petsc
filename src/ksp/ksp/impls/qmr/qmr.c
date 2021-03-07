@@ -249,6 +249,18 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
   PetscFunctionReturn(0);
 }
 
+PETSC_INTERN PetscErrorCode KSPBuildResidual_QMR(KSP ksp,Vec t,Vec v,Vec *V)
+{
+  PetscErrorCode ierr;
+  Mat            Amat,Pmat;
+  if (!ksp->pc) {ierr = KSPGetPC(ksp,&ksp->pc);CHKERRQ(ierr);}
+  ierr = PCGetOperators(ksp->pc,&Amat,&Pmat);CHKERRQ(ierr);
+  ierr = KSP_MatMult(ksp,Amat,ksp->vec_sol,v);CHKERRQ(ierr);
+  ierr = VecAYPX(v,-1.0,ksp->vec_rhs);CHKERRQ(ierr);
+  *V   = v;
+  PetscFunctionReturn(0);
+}
+
 /*MC
      KSPQMR - QMR (quasi minimal residual),
 
@@ -289,7 +301,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_QMR(KSP ksp)
   ksp->ops->solve          = KSPSolve_QMR;
   ksp->ops->destroy        = KSPDestroyDefault;
   ksp->ops->buildsolution  = KSPBuildSolutionDefault;
-  ksp->ops->buildresidual  = KSPBuildResidualDefault;
+  ksp->ops->buildresidual  = KSPBuildResidual_QMR;
   ksp->ops->setfromoptions = NULL;
   ksp->ops->view           = NULL;
   PetscFunctionReturn(0);
