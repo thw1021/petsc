@@ -139,12 +139,12 @@ typedef const char* MatSolverType;
 #define MATSOLVERPASTIX           "pastix"
 #define MATSOLVERMATLAB           "matlab"
 #define MATSOLVERPETSC            "petsc"
+#define MATSOLVERPETSCBAND        "petscband"
+#define MATSOLVERCUSPARSEBAND     "cusparseband"
 #define MATSOLVERBAS              "bas"
 #define MATSOLVERCUSPARSE         "cusparse"
 #define MATSOLVERCUDA             "cuda"
 #define MATSOLVERKOKKOS           "kokkos"
-#define MATSOLVERPETSCBAND        "petscband"
-#define MATSOLVERCUSPARSEBAND     "cusparseband"
 
 /*E
     MatFactorType - indicates what type of factorization is requested
