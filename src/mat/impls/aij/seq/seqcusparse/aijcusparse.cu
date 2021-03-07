@@ -142,6 +142,7 @@ PetscErrorCode MatFactorGetSolverType_seqaij_cusparse(Mat A,MatSolverType *type)
   *type = MATSOLVERCUSPARSE;
   PetscFunctionReturn(0);
 }
+
 /* Use -pc_factor_mat_solver_type cusparsecuda */
 PetscErrorCode MatFactorGetSolverType_seqaij_cusparse_cuda(Mat A,MatSolverType *type)
 {
@@ -3707,8 +3708,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJCUSPARSE(Mat B)
 .seealso: MatCreateSeqAIJCUSPARSE(), MATAIJCUSPARSE, MatCreateAIJCUSPARSE(), MatCUSPARSESetFormat(), MatCUSPARSEStorageFormat, MatCUSPARSEFormatOperation
 M*/
 
-PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse(Mat,MatFactorType,Mat*);
-
+PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse_band(Mat,MatFactorType,Mat*);
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_CUSPARSE(void)
 {
@@ -4735,6 +4735,7 @@ void __launch_bounds__(256,1) mat_lu_factor_band(const PetscInt n, const PetscIn
     } */
 
 }
+
 static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const MatFactorInfo *info)
 {
   Mat_SeqAIJ                   *b = (Mat_SeqAIJ*)B->data;
@@ -4917,7 +4918,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND_NEW(Mat B,Mat A,IS isrow,I
     }
   }
   nnz = (n-mxL)*mxL + (n-mxU)*mxU + (n - (mxL>mxU ? mxU : mxL)) + mxL*mxU;
-  PetscPrintf(PETSC_COMM_SELF,"****** MatLUBandFactorSymbolic_SeqAIJ nnz=%d mxL=%D mxU=%D\n",nnz,mxL,mxU);
+  PetscPrintf(PETSC_COMM_SELF,"****** MatLUFactorSymbolic_SeqAIJCUSPARSEBAND_NEW nnz=%d mxL=%D mxU=%D\n",nnz,mxL,mxU);
 
   /* only support structurally symmetric, but it might work */
   if (mxL!=mxU) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Only symmetric structure supported (now) W_L=%D W_U=%D",mxL,mxU);
@@ -5020,7 +5021,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND_NEW(Mat B,Mat A,IS isrow,I
     ierr = PetscInfo(A,"Empty matrix\n");CHKERRQ(ierr);
   }
 #endif
-  B->ops->lufactornumeric = MatLUBandFactorNumeric_SeqAIJ;
+  B->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJCUSPARSEBAND;
   if (a->inode.size) {
     ierr = PetscInfo(A,"Warning: using inodes in band solver.\n");CHKERRQ(ierr);
   }
@@ -5029,7 +5030,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND_NEW(Mat B,Mat A,IS isrow,I
   PetscFunctionReturn(0);
 }
 
-
+/* Use -pc_factor_mat_solver_type cusparseband */
 PetscErrorCode MatFactorGetSolverType_seqaij_cusparse_band(Mat A,MatSolverType *type)
 {
   PetscFunctionBegin;
