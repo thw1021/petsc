@@ -26,7 +26,7 @@ int main(int argc,char **args)
   Mat            A;                /* linear system matrix */
   KSP            ksp;              /* linear solver context */
   PC             pc;               /* preconditioner context */
-  PetscReal      norm,norm0,tol=1000.*PETSC_MACHINE_EPSILON;  /* norm of solution error */
+  PetscReal      norm,norm0;       /* norm of solution error */
   PetscErrorCode ierr;
   PetscInt       i,n = 10,col[3],its,rstart,rend,nlocal;
   PetscScalar    one = 1.0,value[3];
@@ -169,9 +169,7 @@ int main(int argc,char **args)
   ierr = VecNorm(r,NORM_2,&norm);CHKERRQ(ierr);
   ierr = VecNorm(b,NORM_2,&norm0);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
-  if (norm > tol) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Initial guess is zero:     Relative error %g, Iterations %D\n",(double)norm/norm0,its);CHKERRQ(ierr);
-  }
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Initial guess is zero:     Relative error %g, Iterations %D\n",(double)norm/norm0,its);CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                  Solve the linear system with a nonzero guess
@@ -194,9 +192,7 @@ int main(int argc,char **args)
   ierr = KSPBuildResidual(ksp,PETSC_NULL,PETSC_NULL,&r);CHKERRQ(ierr);
   ierr = VecNorm(r,NORM_2,&norm);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
-  if (norm > tol) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Initial guess is nonzero:  Relative error %g, Iterations %D\n",(double)norm/norm0,its);CHKERRQ(ierr);
-  }
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Initial guess is nonzero:  Relative error %g, Iterations %D\n",(double)norm/norm0,its);CHKERRQ(ierr);
 
   /*
      Free work space.  All PETSc objects should be destroyed when they
@@ -224,18 +220,22 @@ int main(int argc,char **args)
       requires: !complex !single
 
    test:
+      nsize: 1
       args: -n 900 -ksp_type qmr -pc_type none  -ksp_rtol 1e-6
 
    test:
       suffix: 2
-      args: -n 900 -ksp_type qmr -pc_type jacobi -pc_side left  -ksp_rtol 1e-6
+      nsize: 2
+      args: -n 900 -ksp_type qmr -pc_type bjacobi -sub_pc_type ilu -ksp_pc_side left  -ksp_rtol 1e-6
 
    test:
       suffix: 3
-      args: -n 900 -ksp_type qmr -pc_type jacobi -pc_side symmetric  -ksp_rtol 1e-6
+      nsize: 2
+      args: -n 900 -ksp_type qmr -pc_type jacobi -ksp_pc_side symmetric  -ksp_rtol 1e-6
 
    test:
       suffix: 4
-      args: -n 900 -ksp_type qmr -pc_type ilu -pc_side right  -ksp_rtol 1e-6
+      nsize: 2
+      args: -n 900 -ksp_type qmr -pc_type bjacobi -sub_pc_type ilu -ksp_pc_side right  -ksp_rtol 1e-6
 TEST*/
 
