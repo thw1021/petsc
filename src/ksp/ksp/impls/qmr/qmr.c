@@ -1,4 +1,3 @@
-
 #include <petsc/private/kspimpl.h>
 
 static PetscErrorCode KSPSetUp_QMR(KSP ksp)
@@ -271,8 +270,8 @@ PETSC_INTERN PetscErrorCode KSPBuildResidual_QMR(KSP ksp,Vec t,Vec v,Vec *V)
 
    Notes:
     This is the QMR solver without look-ahead.
-    Originally, QMR is designed for symmetric preconditioners M= M1*M2. However, KSPQMR supports
-    left preconditioning (in this case M2=I) and right preconditioning (in this case M1=I).
+    Originally, QMR is designed for symmetric preconditioners M = M1*M2. However, KSPQMR supports
+    left preconditioning (in this case M2 = I) and right preconditioning (in this case M1 = I).
     The symmetric preconditioning is only supported with Jacobi and ICC preconditioners.
     An upper bound is used for the convergence criterion with right preconditioning (cf. Freund and
     Nachtigal, proposition 4.1).
