@@ -94,40 +94,11 @@ These shell scripts can be run independently in those directories, and
 take arguments to show the commands run, change arguments, etc. Use the
 ``-h`` option to the shell script to see these options.
 
-Often, you want to run only a subset of tests. Our makefiles use
-``gmake``\ ’s wildcard syntax. In this syntax, ``%`` is a wild card
-character and is passed in using the ``search`` argument. Two wildcard
-characters cannot be used in a search, so the ``searchin`` argument is
-used to provide the equivalent of ``%pattern%`` search. The default
-examples have default arguments, and we often wish to test examples with
-various arguments; we use the ``argsearch`` argument for these searches.
-Like ``searchin``, it does not use wildcards, but rather whether the
-string is within the arguments.
+Often, you want to run only a subset of tests. See the examples printed by
 
-Some examples are:
+.. code-block::console
 
-.. code-block:: console
-
-   > make -f gmakefile test search='ts%'                      # Run all TS examples
-   > make -f gmakefile test searchin='tutorials'              # Run all tutorials
-   > make -f gmakefile test search='ts%' searchin='tutorials' # Run all TS tutorials
-   > make -f gmakefile test argsearch='cuda'                  # Run examples with cuda in arguments
-   > make -f gmakefile test test-fail='1'
-   > make -f gmakefile test query='requires' queryval='*MPI_PROCESS_SHARED_MEMORY*'
-
-It is useful before invoking the tests to see what targets will be run.
-The ``print-test`` target helps with this:
-
-.. code-block:: console
-
-   > make -f gmakefile print-test argsearch='cuda'
-
-To see all of the test targets which would be run, this command can be
-used:
-
-.. code-block:: console
-
-   > make -f gmakefile print-test
+   > make -f gmakefile test help-test
 
 For testing in install directories, some examples are:
 
