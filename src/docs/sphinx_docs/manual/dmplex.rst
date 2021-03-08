@@ -376,15 +376,16 @@ follows:
 
 #. A DMNetwork can consist of one or more *physical* subnetworks. When
    multiple physical subnetworks are used one can (optionally) provide
-   *coupling information between subnetworks* which consist only of
-   edges connecting the vertices of the physical subnetworks. The
+   *coupling information between subnetworks* which consist only of shared vertices of the physical subnetworks. The
    topological sizes of the network are set by calling
 
    ::
 
-      DMNetworkSetSizes(DM dm, PetscInt Nsubnet, PetscInt nV[], PetscInt nE[], PetscInt NsubnetCouple, PetscInt nec[]);
+      DMNetworkSetNumSubNetworks(DM dm,PetscInt nsubnet,PetscInt Nsubnet);
 
-   Here, ``Nsubnet`` is the number of subnetworks, ``nV`` and ``nE`` is
+   Here, ``nsubnet`` and ``Nsubnet`` are the local and global number of subnetworks. 
+   
+   ``nV`` and ``nE`` is
    the number of vertices and edges for each subnetwork,
    ``NsubnetCouple`` is the number of pairs of subnetworks that are
    coupled, and ``nec`` is the number of edges coupling each subnetwork
