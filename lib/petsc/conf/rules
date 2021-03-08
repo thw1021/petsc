@@ -531,7 +531,8 @@ exampleconcepts:
 manimplementations:
 	-@git grep "struct\s\+_p_[^\s]\+.*{" -- *.cu *.c *.h *.cxx | grep -v ";" | grep -v "/examples/" > implsClassAll.txt ; \
   git grep -n "^\(static \)\?\(PETSC_EXTERN \)\?\(PETSC_INTERN \)\?\(extern \)\?PetscErrorCode\s\+[^_\s]*_[^_\s]*(" -- */impls/*.c */impls/*.cu */impls/*.cxx */impls/*.h | grep -v ";" | grep -v "_[Pp]rivate" > implsFuncAll.txt ; \
-  for i in docs/manualpages/*/*.html; do \
+  for i in ${LOC}/docs/manualpages/*/*.html foo; do \
+       if [ "$$i" != "foo" ] ; then \
           printf "manimplementations in: $$i\n"; \
           itemName=`basename $$i .html`; \
           grep "\s$${itemName}_" implsFuncAll.txt > implsFunc.txt ; \
@@ -552,6 +553,7 @@ manimplementations:
             ${RM} tmp ; \
           fi ; \
           ${RM} implsFunc.txt implsClass.txt; \
+       fi ; \
   done ; \
   ${RM} implsClassAll.txt implsFuncAll.txt
 
