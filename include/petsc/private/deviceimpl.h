@@ -247,7 +247,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarCheckCache_Internal(PetscStr
     PetscErrorCode ierr;
     PetscScalar    alpha;
 
-    ierr = PetscStreamScalarAwait(pscal, &alpha, pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAwait(pscal,&alpha,pstream);CHKERRQ(ierr);
     if (PetscUnlikely(alpha != assertval)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bug in PetscStreamScalar cache, assumed %g but was %g",(double)assertval,(double)alpha);
   }
 #endif

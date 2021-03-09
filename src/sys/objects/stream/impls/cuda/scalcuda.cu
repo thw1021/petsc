@@ -96,16 +96,16 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateDevice_CUDA_Internal(P
 
   PetscFunctionBegin;
   /* Wait event here in case this stream scalar had work queued on another stream */
-  ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
+  ierr = PetscStreamWaitEvent(pstream,pscal->event);CHKERRQ(ierr);
   if (update && pscal->omask == PETSC_OFFLOAD_CPU) {
     cudaStream_t cstream;
     cudaError_t  cerr;
 
-    ierr = PetscStreamGetStream(pstream, &cstream);CHKERRQ(ierr);
-    cerr = cudaMemcpyAsync(pscal->device, pscal->host, sizeof(PetscScalar), cudaMemcpyHostToDevice, cstream);CHKERRCUDA(cerr);
-    ierr = PetscStreamRestoreStream(pstream, &cstream);CHKERRQ(ierr);
+    ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
+    cerr = cudaMemcpyAsync(pscal->device,pscal->host,sizeof(PetscScalar),cudaMemcpyHostToDevice,cstream);CHKERRCUDA(cerr);
+    ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
     /* Record event so other streams can wait on it */
-    ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
+    ierr = PetscStreamRecordEvent(pstream,pscal->event);CHKERRQ(ierr);
     pscal->omask = PETSC_OFFLOAD_BOTH;
   } else {pscal->omask = PETSC_OFFLOAD_GPU;}
   /* Note no wait require if the value was never moved */
@@ -114,11 +114,27 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateDevice_CUDA_Internal(P
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetDevice_CUDA(PetscStreamScalar pscal, PetscScalar **val, PetscBool update, PetscStream pstream)
 {
-  PetscErrorCode ierr;
+  const PetscScalar dummy = 1.0;
+  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscal, update, pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscal,update,pstream);CHKERRQ(ierr);
   *val = pscal->device;
+  /* MEMTYPE_DEVICE == invalidate the cache */
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal,&dummy,PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarRestoreDevice_CUDA(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
+{
+  const PetscScalar dummy = 1.0;
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  pscal->omask = PETSC_OFFLOAD_GPU;
+  *val = NULL;
+  /* MEMTYPE_DEVICE == invalidate the cache, perhaps could launch kernel to check? */
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal,&dummy,PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -127,26 +143,26 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarAXTY_CUDA(PetscScalar a, Pet
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscalx, PETSC_TRUE, pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscalx,PETSC_TRUE,pstream);CHKERRQ(ierr);
+  /* pscaly == NULL means pscaly = 1.0 */
   if (pscaly) {
-    /* pscaly == NULL means pscaly = 1.0 */
-    ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscaly, PETSC_TRUE, pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscaly,PETSC_TRUE,pstream);CHKERRQ(ierr);
   }
-  ierr = PetscStreamScalarAXTY_CUDA_Kernel(a, pscalx, pscaly, pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarAXTY_CUDA_Kernel(a,pscalx,pscaly,pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarAYDX_CUDA(PetscScalar a, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarAYDX_CUDA(PetscScalar a, PetscStreamScalar pscaly, PetscStreamScalar pscalx, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscalx, PETSC_TRUE, pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscalx,PETSC_TRUE,pstream);CHKERRQ(ierr);
+  /* pscaly == NULL means pscaly = 1.0 */
   if (pscaly) {
-    /* pscaly == NULL means pscaly = 1.0 */
-    ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscaly, PETSC_TRUE, pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarUpdateDevice_CUDA_Internal(pscaly,PETSC_TRUE,pstream);CHKERRQ(ierr);
   }
-  ierr = PetscStreamScalarAYDX_CUDA_Kernel(a, pscalx, pscaly, pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarAYDX_CUDA_Kernel(a,pscaly,pscalx,pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -157,7 +173,7 @@ static const struct _ScalOps scalcuops = {
   PetscStreamScalarSetValue_CUDA,
   PetscStreamScalarAwait_CUDA,
   PetscStreamScalarGetDevice_CUDA,
-  NULL,
+  PetscStreamScalarRestoreDevice_CUDA,
   PetscStreamScalarAXTY_CUDA,
   PetscStreamScalarAYDX_CUDA
 };
