@@ -1186,25 +1186,9 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
   if (threadIdx.y==0) {
     for (int rowb = start_i + threadIdx.x; rowb < end_i; rowb += blockDim.x) { // rows in block
       *(ba_d + bdiag_d[rowb]) = 1. / *(ba_d + bdiag_d[rowb]);
-      // printf("\tUpdate Aij(%d.%d) = %13.6e\n",rowb,rowb,*(ba_d + bdiag_d[rowb])); 
+      // printf("\tUpdate Aij(%d.%d) = %13.6e\n",rowb,rowb,*(ba_d + bdiag_d[rowb]));
     }
   }
-
-  // debug
-  // if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {
-  //   printf("w Cuda LU\n");
-  //   for (int i=0;i<n;i++) {
-  //     const PetscInt nzu = bdiag_d[i] - (bdiag_d[i+1]+1), nzl = bi_d[i+1] - bi_d[i], *bj= bj_d + bi_d[i]; // u without diag
-  //     PetscScalar *ba = ba_d + bi_d[i];
-  //     printf("w %4d) ",i);
-  //     for (int j=0; j<nzl; j++) printf("L-(%2d) %16.9e, ",bj[j],ba[j]);
-  //     bj= bj_d + bdiag_d[i]; ba = ba_d + bdiag_d[i];
-  //     printf("D-(%2d) %16.9e, ",bj[0],ba[0]);
-  //     ba = ba_d + bdiag_d[i+1] + 1; bj = bj_d + bdiag_d[i+1] + 1;
-  //     for (int j=0; j<nzu; j++) printf("U-(%2d) %16.9e, ",bj[j],ba[j]);
-  //     printf("\n");
-  //   }
-  // }
 }
 //
 // LU factorization with optimization for block diagonal (Nf blocks) in natural order (-mat_no_inode -pc_factor_mat_ordering_type rcm with Nf>1 fields)
@@ -4677,7 +4661,7 @@ void mat_lu_factor_band(const PetscInt n, const PetscInt r[], const PetscInt ic[
     //if (threadIdx.x+threadIdx.y == 0) printf("\t%d) nzUd=%d Bdd offset = %d\n",glbDD,nzUd,(int)(pBdd-ba_csr));
     const PetscInt offset = blkIdx*blockDim.y + threadIdx.y, inc = Nblk*blockDim.y;
     for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd_pad ; idx += inc, myi += inc) { /* assuming symmetric structure */
-      if(idx < nzUd && threadIdx.x==0) { /* assuming symmetric structure */
+      if (idx < nzUd && threadIdx.x==0) { /* assuming symmetric structure */
         const PetscInt bwi = myi > bw ? bw : myi, kIdx = bwi - (myi-glbDD); // cuts off just the first (global) block
         PetscScalar    *Aid = ba_csr + bi_csr[myi] + kIdx;
         //printf("\t\tUpdate Lid(%d.%d) = %13.6e to %13.6e (%d) kIdx=%d\n",myi,glbDD,*Aid,*Aid/Bdd, (int)(Aid-ba_csr),kIdx);
@@ -4685,7 +4669,7 @@ void mat_lu_factor_band(const PetscInt n, const PetscInt r[], const PetscInt ic[
         sm_pkIdx[threadIdx.y] = kIdx;
       }
       __syncthreads(); // synch on threadIdx.x only
-      if(idx < nzUd) { /* assuming symmetric structure */
+      if (idx < nzUd) { /* assuming symmetric structure */
         PetscInt    kIdx = sm_pkIdx[threadIdx.y];
         PetscScalar *Aid = ba_csr + bi_csr[myi] + kIdx;
         PetscScalar *Aij =  Aid + 1;
