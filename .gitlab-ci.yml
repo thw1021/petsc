@@ -888,8 +888,10 @@ analyze-pipeline:
 
 pages:review:
   extends: .test
-  stage: .pre
+  stage: stage-2
   image: python:3.9
+  tags:
+    - docker
   before_script:
     - time apt-get update
     - time apt-get install -y --no-install-recommends graphviz librsvg2-bin
