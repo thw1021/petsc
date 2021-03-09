@@ -889,7 +889,6 @@ analyze-pipeline:
 pages:review:
   extends: .test
   stage: stage-1
-  image: python:3.9
   tags:
     - stage1,name:pj02
   before_script:
