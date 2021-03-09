@@ -4721,7 +4721,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   PetscScalar                  *ba_d,*ba_t;
   PetscInt                     *bi_t;
   PetscContainer               container;
-  int                          Ni=1, team_size=8, Nf, nVec=32; // <= 256 apparently
+  int                          Ni=1, team_size=16, Nf, nVec=16; // <= 256 apparently
   PetscLogDouble               flops, *flops_d;
 
   PetscFunctionBegin;
