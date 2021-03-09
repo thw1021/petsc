@@ -308,7 +308,7 @@ int main(int argc,char **argv)
    test:
      requires: cuda viennacl
      suffix: seqdensecuda_seqaijviennacl
-     args: -mat_type seqaijviennacl -rhs_mat_type seqdensecuda
+     args: -mat_type seqaijviennacl -rhs_mat_type seqdensecuda -qr 0
      output_file: output/ex1_2.out
 
    test:
