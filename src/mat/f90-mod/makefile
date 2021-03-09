@@ -4,7 +4,7 @@
 CFLAGS	   =
 FFLAGS	   =
 SOURCEC	   =
-SOURCEF90  = petscmatmod.F90
+SOURCEF90  = petscmatdefmod.F90 petscmatmod.F90
 SOURCEH	   = petscmat.h petscmat.h90 petscmatfactorinfosize.h petscmatinfosize.h
 LIBBASE	   = libpetscmat
 MANSEC	   = Mat
