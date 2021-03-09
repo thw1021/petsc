@@ -186,7 +186,8 @@ def builder_init_handler(app):
 # add our css files in addition to it.
 def setup(app):
     # Register the builder_init_handler to be called __after__ app.builder has been initialized
-    app.connect('builder-inited', builder_init_handler)
+    # TODO FIXME - remove the team table gen
+    #app.connect('builder-inited', builder_init_handler)
     app.add_css_file('css/pop-up.css')
     app.add_css_file('css/colorbox.css')
     app.add_css_file('css/petsc-team-container.css')
