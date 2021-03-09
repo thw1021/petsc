@@ -893,6 +893,7 @@ pages:review:
   before_script:
     - time apt-get update
     - time apt-get install -y --no-install-recommends graphviz librsvg2-bin
+    - time apt-get install -y flex
     - time pip install -r src/docs/sphinx_docs/requirements.txt
   script:
     - cd src/docs/sphinx_docs && sphinx-build -T -E -b html -D language=en -j auto . ../../../public
