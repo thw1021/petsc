@@ -149,21 +149,15 @@ PetscErrorCode PetscStreamSetUp(PetscStream strm)
 @*/
 PetscErrorCode PetscStreamDuplicate(PetscStream strm, PetscStream *strmdup)
 {
-  PetscStreamType type;
-  PetscStreamMode mode;
-  PetscStream     s;
-  PetscErrorCode  ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidStreamType(strm,1);
   PetscValidPointer(strmdup,2);
-  ierr = PetscStreamGetType(strm,&type);CHKERRQ(ierr);
-  ierr = PetscStreamGetMode(strm,&mode);CHKERRQ(ierr);
-  ierr = PetscStreamCreate(&s);CHKERRQ(ierr);
-  ierr = PetscStreamSetType(s,type);CHKERRQ(ierr);
-  ierr = PetscStreamSetMode(s,mode);CHKERRQ(ierr);
-  ierr = PetscStreamSetUp(s);CHKERRQ(ierr);
-  *strmdup = s;
+  ierr = PetscStreamCreate(strmdup);CHKERRQ(ierr);
+  ierr = PetscStreamSetMode(*strmdup,strm->mode);CHKERRQ(ierr);
+  ierr = PetscStreamSetType(*strmdup,strm->type);CHKERRQ(ierr);
+  ierr = PetscStreamSetUp(*strmdup);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -253,7 +247,7 @@ PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscEvent event)
 
   PetscFunctionBegin;
   PetscCheckValidSameStreamType(strm,1,event,2);
-  ierr = (*strm->ops->recordevent)(strm, event);CHKERRQ(ierr);
+  ierr = (*strm->ops->recordevent)(strm,event);CHKERRQ(ierr);
   /* Imprint on the event the id of the stream, so subsequent waits need not check */
   event->id = strm->id;
   /* Assume the event has work */

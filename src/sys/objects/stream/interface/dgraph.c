@@ -231,18 +231,14 @@ PetscErrorCode PetscStreamGraphExecute(PetscStreamGraph sgraph, PetscStream pstr
 @*/
 PetscErrorCode PetscStreamGraphDuplicate(PetscStreamGraph sgraphref, PetscStreamGraph *sgraphdup)
 {
-  PetscStreamType  type;
-  PetscStreamGraph dup;
-  PetscErrorCode   ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidStreamType(sgraphref,1);
-  ierr = PetscStreamGraphGetType(sgraphref,&type);CHKERRQ(ierr);
-  ierr = PetscStreamGraphCreate(&dup);CHKERRQ(ierr);
-  ierr = PetscStreamGraphSetType(dup,type);CHKERRQ(ierr);
-  ierr = PetscStreamGraphSetUp(dup);CHKERRQ(ierr);
-  ierr = (*sgraphref->ops->duplicate)(sgraphref,dup);CHKERRQ(ierr);
-  *sgraphdup = dup;
+  ierr = PetscStreamGraphCreate(sgraphdup);CHKERRQ(ierr);
+  ierr = PetscStreamGraphSetType(*sgraphdup,sgraphref->type);CHKERRQ(ierr);
+  ierr = PetscStreamGraphSetUp(*sgraphdup);CHKERRQ(ierr);
+  ierr = (*sgraphref->ops->duplicate)(sgraphref,*sgraphdup);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

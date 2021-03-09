@@ -78,7 +78,7 @@ PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal)
   PetscValidStreamType(pscal,1);
   if (pscal->setup) PetscFunctionReturn(0);
   ierr = PetscEventCreate(&pscal->event);CHKERRQ(ierr);
-  ierr = PetscEventSetType(pscal->event, pscal->type);CHKERRQ(ierr);
+  ierr = PetscEventSetType(pscal->event,pscal->type);CHKERRQ(ierr);
   ierr = PetscEventSetUp(pscal->event);CHKERRQ(ierr);
   ierr = (*pscal->ops->setup)(pscal);CHKERRQ(ierr);
   pscal->setup = PETSC_TRUE;
@@ -106,18 +106,14 @@ PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar pscal)
 @*/
 PetscErrorCode PetscStreamScalarDuplicate(PetscStreamScalar pscalref, PetscStreamScalar *pscalout)
 {
-  PetscStreamScalar out;
-  PetscStreamType   type;
-  PetscErrorCode    ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidStreamType(pscalref,1);
   PetscValidPointer(pscalout,2);
-  ierr = PetscStreamScalarGetType(pscalref, &type);CHKERRQ(ierr);
-  ierr = PetscStreamScalarCreate(&out);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetType(out, type);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetUp(out);CHKERRQ(ierr);
-  *pscalout = out;
+  ierr = PetscStreamScalarCreate(pscalout);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetType(*pscalout,pscalref->type);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetUp(*pscalout);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -222,7 +218,7 @@ PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar pscal, const Pet
   PetscValidPointer(ptr,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
-  ierr = (*pscal->ops->getdevice)(pscal, (PetscScalar **)ptr, PETSC_TRUE, pstream);CHKERRQ(ierr);
+  ierr = (*pscal->ops->getdevice)(pscal,(PetscScalar **)ptr,PETSC_TRUE,pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -252,16 +248,13 @@ PetscErrorCode PetscStreamScalarGetDeviceRead(PetscStreamScalar pscal, const Pet
 @*/
 PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
 {
-  const PetscScalar dummy = 1.0;
-  PetscErrorCode    ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(ptr,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
-  ierr = (*pscal->ops->getdevice)(pscal, ptr, PETSC_FALSE, pstream);CHKERRQ(ierr);
-  /* MEMTYPE_DEVICE == invalidate the cache */
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal, &dummy, PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
+  ierr = (*pscal->ops->getdevice)(pscal,ptr,PETSC_FALSE,pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -285,8 +278,7 @@ PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar pscal, PetscSca
 @*/
 PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, PetscScalar **ptr, PetscStream pstream)
 {
-  const PetscScalar dummy = 1.0;
-  PetscErrorCode    ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(ptr,2);
@@ -295,19 +287,7 @@ PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, Pets
   if (PetscUnlikelyDebug(*ptr != pscal->device)) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with the same pointer retrieved from PetscStreamScalarGetDeviceWrite()");
   }
-  if (pscal->ops->restoredevice) {
-    ierr = (*pscal->ops->restoredevice)(pscal, ptr, pstream);CHKERRQ(ierr);
-  } else {
-    /*
-     This double whammy protects against the possibility that ptr was checked out and used on streamA, "returned" in
-     this function on streamB, and then used later with streamC
-     */
-    ierr = PetscStreamWaitEvent(pstream, pscal->event);CHKERRQ(ierr);
-    ierr = PetscStreamRecordEvent(pstream, pscal->event);CHKERRQ(ierr);
-    pscal->omask = PETSC_OFFLOAD_GPU;
-  }
-  /* MEMTYPE_DEVICE == invalidate the cache */
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal, &dummy, PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
+  ierr = (*pscal->ops->restoredevice)(pscal,ptr,pstream);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -410,7 +390,8 @@ PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar pscal, PSSCacheType ct
 
   Notes:
   If pscaly is NULL, it is treated as 1.0, so this routine will scale pscalx by alpha. pscalx and pscaly may be the same
-  object, making this routine scale the square of a value. This routine is optimized for alpha = 0.0.
+  object, making this routine scale the square of a value. This routine is optimized for alpha = 0.0 and alpha = 1.0
+  when pscaly is NULL.
 
   Level: beginner
 
@@ -418,6 +399,7 @@ PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar pscal, PSSCacheType ct
 @*/
 PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
 {
+  PetscBool      isYOne = PETSC_TRUE;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -426,11 +408,13 @@ PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx
   if (pscaly) {
     PetscCheckValidSameStreamType(pscaly,3,pstream,4);
     if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
+    ierr = PetscStreamScalarGetInfo(pscaly,PETSC_FALSE,PSS_ONE,&isYOne,pstream);CHKERRQ(ierr);
   }
+  if (isYOne && (alpha == (PetscScalar)1.0)) PetscFunctionReturn(0);
   if (alpha == (PetscScalar)0.0) {
     ierr = PetscStreamScalarSetValue(pscalx,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
   } else {
-    ierr = (*pscalx->ops->axty)(alpha, pscalx, pscaly, pstream);CHKERRQ(ierr);
+    ierr = (*pscalx->ops->axty)(alpha,pscalx,pscaly,pstream);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -456,23 +440,33 @@ PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx
 
 .seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamScalarAXTY()
 @*/
-PetscErrorCode PetscStreamScalarAYDX(PetscScalar alpha, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
+PetscErrorCode PetscStreamScalarAYDX(PetscScalar alpha, PetscStreamScalar pscaly, PetscStreamScalar pscalx, PetscStream pstream)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscCheckValidSameStreamType(pscalx,2,pstream,4);
-  if (PetscUnlikelyDebug(!pscalx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 2 first");
+  PetscCheckValidSameStreamType(pscalx,3,pstream,4);
+  if (PetscUnlikelyDebug(!pscalx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
   if (pscaly) {
-    PetscCheckValidSameStreamType(pscaly,3,pstream,4);
-    if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
+    PetscCheckValidSameStreamType(pscaly,2,pstream,4);
+    if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 2 first");
   }
   if (alpha == (PetscScalar)0.0) {
-    ierr = PetscStreamScalarSetValue(pscalx, NULL, PETSC_MEMTYPE_DEVICE, pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarSetValue(pscalx,NULL,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   } else if (pscalx == pscaly) {
-    ierr = PetscStreamScalarSetValue(pscalx, &alpha, PETSC_MEMTYPE_HOST, pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarSetValue(pscalx,&alpha,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   } else {
-    ierr = (*pscalx->ops->aydx)(alpha, pscalx, pscaly, pstream);CHKERRQ(ierr);
+    ierr = (*pscalx->ops->aydx)(alpha,pscaly,pscalx,pstream);CHKERRQ(ierr);
+    if (pscalx->cache[PSS_ZERO] == PSS_TRUE) {
+      /* anything/0 is NaN */
+      ierr = PetscStreamScalarSetInfo(pscalx,PSS_NAN,PETSC_TRUE);CHKERRQ(ierr);
+    }
+    if (PetscIsNanScalar(alpha)) {
+      ierr = PetscStreamScalarSetInfo(pscalx,PSS_NAN,PETSC_TRUE);CHKERRQ(ierr);
+    }
+    if (PetscIsInfScalar(alpha)) {
+      ierr = PetscStreamScalarSetInfo(pscalx,PSS_INF,PETSC_TRUE);CHKERRQ(ierr);
+    }
   }
   PetscFunctionReturn(0);
 }
