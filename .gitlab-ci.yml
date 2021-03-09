@@ -891,7 +891,7 @@ pages:review:
   stage: stage-2
   image: python:3.9
   tags:
-    - docker
+    - gitlab-org-docker
   before_script:
     - time apt-get update
     - time apt-get install -y --no-install-recommends graphviz librsvg2-bin
