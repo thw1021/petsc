@@ -2,11 +2,11 @@ static char help[] = "Particle Basis Landau Example using nonlinear solve + Impl
 
 /* TODO
 
-1) SNES is sensitive to epsilon. Should we do continuation in it?
+1) SNES is sensitive to epsilon (but not to h). Should we do continuation in it?
 
-2) Code up new timestepper
+2) Put this timestepper in library, maybe by changing DG
 
-3) Visualize distributions
+3) Add monitor to visualize distributions
 
 */
 
@@ -27,9 +27,6 @@ typedef struct {
   PetscReal L;         /* Velocity space is [-L, L]^d */
   PetscReal h;         /* Spacing for grid 2L / N^{1/d} */
   PetscReal epsilon;   /* gaussian regularization parameter */
-  /* Monitoring */
-  PetscBool monitor;   /* Conservation montior */
-  PetscInt  ostep;     /* print the energy at each ostep time steps */
   PetscReal momentTol; /* Tolerance for checking moment conservation */
 } AppCtx;
 
@@ -38,19 +35,14 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  options->monitor   = PETSC_FALSE;
   options->N         = 1;
   options->momentTol = 100.0*PETSC_MACHINE_EPSILON;
-  options->ostep     = 100;
   options->L         = 1.0;
   options->h         = -1.0;
   options->epsilon   = -1.0;
 
   ierr = PetscOptionsBegin(comm, "", "Collision Options", "DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-monitor", "Flag to use the TS histogram monitor", "ex27.c", options->monitor, &options->monitor, NULL);CHKERRQ(ierr);
-
   ierr = PetscOptionsInt("-N", "Number of particles per spatial cell", "ex27.c", options->N, &options->N, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-output_step", "Number of time steps between output", "ex27.c", options->ostep, &options->ostep, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-L", "Velocity-space extent", "ex27.c", options->L, &options->L, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-h", "Velocity-space resolution", "ex27.c", options->h, &options->h, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-epsilon", "Mollifier regularization parameter", "ex27.c", options->epsilon, &options->epsilon, NULL);CHKERRQ(ierr);
@@ -415,77 +407,6 @@ static PetscErrorCode InitializeSolve(TS ts, Vec u)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
-{
-  AppCtx            *user  = (AppCtx *) ctx;
-  const PetscScalar *u;
-  PetscReal          tot_E = 0., tot_Momx = 0., tot_Momy = 0.;
-  MPI_Comm           comm;
-  PetscReal          dt;
-  PetscInt           Np, p;
-  PetscErrorCode     ierr;
-
-  PetscFunctionBeginUser;
-  if (step%user->ostep == 0) {
-    ierr = PetscObjectGetComm((PetscObject) ts, &comm);CHKERRQ(ierr);
-    if (!step) {ierr = PetscPrintf(comm, "Time     Step Part     Energy     Momentum     v0     v1\n");CHKERRQ(ierr);}
-    ierr = TSGetTimeStep(ts, &dt);CHKERRQ(ierr);
-    ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
-    ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
-    Np /= 2;
-    for (p = 0; p < Np; ++p) {
-      PetscReal v  = PetscRealPart(u[p*2+0]*u[p*2+0]);
-      v  += PetscRealPart(u[p*2+1]*u[p*2+1]);
-      tot_Momx += PetscRealPart(u[p*2]);
-      tot_Momy += PetscRealPart(u[p*2+1]);
-      const PetscReal E  = 0.5*(v);
-      const PetscReal mom = PetscSqrtReal(v);
-      tot_E += E;
-      ierr = PetscPrintf(comm, "%.6lf %4D %4D %10.8lf %10.8lf %10.8lf %10.8lf\n", t, step, p, (double) E, (double) mom, (double)u[p*2],(double)u[p*2+1]);CHKERRQ(ierr);
-    }
-    ierr = PetscPrintf(comm, "Total Energy: %10.8lf    Total Momentum x: %10.8lf    Total Momentum y: %10.8lf\n", tot_E, tot_Momx, tot_Momy);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-#if 0
-/* Integrate the gradient of the entropy functional for a particle. This should be optimized out */
-static PetscErrorCode ComputeGradS_Quad(PetscInt dim, PetscInt Np, PetscQuadrature quad, PetscReal *particle, PetscReal *field, PetscReal *integral, void *ctx)
-{
-  PetscInt         d, q, Nq;
-  PetscReal       *xi0, *v0, *J, *invJ, detJ;
-  const PetscReal *weights, *points;
-  AppCtx*          user = (AppCtx*) ctx;
-  DM               plex;
-  PetscErrorCode   ierr;
-
-  PetscFunctionBeginHot;
-  ierr = DMSwarmGetCellDM(sw, &plex);
-
-  ierr = DMGetDimension(plex, &dim);
-  ierr = PetscMalloc4(dim, &xi0, dim, &v0, dim*dim, &J, dim*dim, &invJ);CHKERRQ(ierr);
-  ierr = DMPlexComputeCellGeometryFEM(plex, 0, NULL, v0, J, invJ, &detJ);CHKERRQ(ierr);
-  /* Assuming 2D here, easily extrapolated to 3D when it finally works */
-  ierr = PetscQuadratureGetData(quad, NULL, NULL, &Nq, &points, &weights);CHKERRQ(ierr);
-  for (q = 0; q < Nq; ++q) {
-    PetscReal integrand[2] = {0.,0.};
-    PetscReal w;
-    PetscReal x[2];
-
-    CoordinatesRefToReal(dim, dim, xi0, v0, J, &points[q*dim], x);CHKERRQ(ierr);
-    w = detJ*weights[q];
-
-    //GradGaussian(particle, dim, q_point, user->epsilon, integrand);
-    mollifiedGaussian(dim, particle, &points[q*dim], user->epsilon, Np, field, integrand);
-    for (d = 0; d < dim; ++d) integral[d] += integrand[d]; //*w;
-    break;
-  }
-  ierr = PetscFree4(xi0, v0, J, invJ);
-  PetscFunctionReturn(0);
-}
-#endif
-
 int main(int argc,char **argv)
 {
   TS             ts;     /* nonlinear solver */
@@ -504,18 +425,7 @@ int main(int argc,char **argv)
   ierr = CreateParticles(dm, &sw, &user);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(sw, &user);CHKERRQ(ierr);
   ierr = DMSwarmVectorDefineField(sw, "velocity");CHKERRQ(ierr);
-  /*
-    The following statement depends on a fully discrete in velocity, or a semi-discrete in velocity case:
 
-    Compute the time step for v^n+1 = 1(p,p')Q(v_i^n+1/2 - v_k^n+1/2)\Gamma(S^n, p, p')
-
-    A Tensor Quadrature rule is used to evaluate the integrals for S = \int_R^d \grad \psi_\epsilon (v_p)
-
-    the log of the summation for the term ln \sum_k \psi_\epsilon(v_p') is computed in relation to the gaussian centered at v_p
-
-    The midpoint velocities are found using SNES for a non linear forward solve to compute the backwards evaluation for the midpoints.
-
-  */
   ierr = TSCreate(comm, &ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts, sw);CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts, 10.0);CHKERRQ(ierr);
@@ -529,7 +439,6 @@ int main(int argc,char **argv)
   ierr = VecDuplicate(v, &u);CHKERRQ(ierr);
   ierr = DMSwarmDestroyGlobalVectorFromField(sw, "velocity", &v);CHKERRQ(ierr);
   ierr = TSComputeInitialCondition(ts, u);CHKERRQ(ierr);
-  if (user.monitor) TSMonitorSet(ts, Monitor, &user, NULL);
   ierr = TSSetPostStep(ts, UpdateSwarm);CHKERRQ(ierr);
   ierr = TSSolve(ts, u);CHKERRQ(ierr);
   ierr = VecDestroy(&u);CHKERRQ(ierr);
@@ -545,12 +454,7 @@ int main(int argc,char **argv)
    build:
      requires: triangle !single !complex
    test:
-     suffix: euler
-     args: -N 3 -output_step 5 -ts_type euler -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
-   test:
-     suffix: 1
-     args: -N 3 -output_step 5 -ts_type theta -ts_theta_theta 1.0 -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -2,-2 -dm_plex_box_upper 2,2 -dm_view -monitor -output_step 1
-   test:
-     suffix: 2
-     args: -N 3 -output_step 5 -ts_type theta -ts_theta_theta 0.5 -snes_fd -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view -monitor -output_step 1
+     suffix: midpoint
+     args: -N 3 -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view \
+           -ts_type theta -ts_theta_theta 0.5 -ts_monitor_moments -ts_monitor_step 1 -snes_fd
 TEST*/
