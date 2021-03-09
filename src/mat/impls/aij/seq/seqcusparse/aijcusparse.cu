@@ -1251,7 +1251,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSECUDA(Mat B,Mat A,const Ma
   ierr = ISIdentity(iscol,&col_identity);CHKERRQ(ierr);
   if (!col_identity && !cusparseTriFactors->cpermIndices) {
     const PetscInt *c;
- 
+
     ierr = ISGetIndices(iscol,&c);CHKERRQ(ierr);
     cusparseTriFactors->cpermIndices = new THRUSTINTARRAY(n);
     cusparseTriFactors->cpermIndices->assign(c, c+n);
