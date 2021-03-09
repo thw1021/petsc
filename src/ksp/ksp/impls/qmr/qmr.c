@@ -72,17 +72,18 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
     ierr = KSP_PCApplyTranspose(ksp,W,Z);CHKERRQ(ierr);     /* Solve M_2^H Z = W */
     ierr = VecConjugate(Z);CHKERRQ(ierr);
     ierr = VecConjugate(W);CHKERRQ(ierr);
+    ierr = VecNorm(Z,NORM_2,&ksi);CHKERRQ(ierr);
   } else if (ksp->pc_side == PC_LEFT) {
-    ierr = VecCopy(W,Z);CHKERRQ(ierr);
+    ierr = VecNorm(W,NORM_2,&ksi);CHKERRQ(ierr);
    }
   else if (ksp->pc_side == PC_SYMMETRIC) {
     ierr = VecConjugate(W);CHKERRQ(ierr);
     ierr = PCApplySymmetricLeft(ksp->pc,W,Z);CHKERRQ(ierr);
     ierr = VecConjugate(Z);CHKERRQ(ierr);
     ierr = VecConjugate(W);CHKERRQ(ierr);
+    ierr = VecNorm(Z,NORM_2,&ksi);CHKERRQ(ierr);
   }
 
-  ierr = VecNorm(Z,NORM_2,&ksi);CHKERRQ(ierr);
   KSPCheckNorm(ksp,ksi);
 
   ierr = VecNorm(Y,NORM_2,&rhoold);CHKERRQ(ierr);
@@ -114,7 +115,11 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
     }
 
     ierr = VecScale(W,1/ksi);CHKERRQ(ierr);
-    ierr = VecScale(Z,1/ksi);CHKERRQ(ierr);
+    if (ksp->pc_side == PC_LEFT) {
+      ierr = VecCopy(W,Z);CHKERRQ(ierr);
+    } else {
+      ierr = VecScale(Z,1/ksi);CHKERRQ(ierr);
+    }
 
     ierr = VecDot(Y,Z,&delta);CHKERRQ(ierr);    /* delta <- Z'*Y */
 
