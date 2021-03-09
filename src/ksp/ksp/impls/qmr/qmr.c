@@ -59,9 +59,7 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
   ierr = VecCopy(R,V);CHKERRQ(ierr);
   ierr = VecCopy(V,Y);CHKERRQ(ierr);
   ierr = VecCopy(R,W);CHKERRQ(ierr);              /* W chosen as R */
-  if (ksp->pc_side == PC_RIGHT) {
-    ierr = VecCopy(V,Y);CHKERRQ(ierr);
-  } else if (ksp->pc_side == PC_LEFT) {
+  if (ksp->pc_side == PC_LEFT) {
     ierr = KSP_PCApply(ksp,V,Y);CHKERRQ(ierr);
   }
   else if (ksp->pc_side == PC_SYMMETRIC) {
@@ -76,7 +74,7 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
     ierr = VecConjugate(W);CHKERRQ(ierr);
   } else if (ksp->pc_side == PC_LEFT) {
     ierr = VecCopy(W,Z);CHKERRQ(ierr);
-  }
+   }
   else if (ksp->pc_side == PC_SYMMETRIC) {
     ierr = VecConjugate(W);CHKERRQ(ierr);
     ierr = PCApplySymmetricLeft(ksp->pc,W,Z);CHKERRQ(ierr);
@@ -109,7 +107,12 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
     }
 
     ierr = VecScale(V,1/rhoold);CHKERRQ(ierr);
-    ierr = VecScale(Y,1/rhoold);CHKERRQ(ierr);
+    if (ksp->pc_side == PC_RIGHT) {
+      ierr = VecCopy(V,Y);CHKERRQ(ierr);
+    } else {
+      ierr = VecScale(Y,1/rhoold);CHKERRQ(ierr);
+    }
+
     ierr = VecScale(W,1/ksi);CHKERRQ(ierr);
     ierr = VecScale(Z,1/ksi);CHKERRQ(ierr);
 
@@ -156,16 +159,20 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
     }
 
     ierr = VecAYPX(V,-beta,P1);CHKERRQ(ierr);
-    if (ksp->pc_side == PC_RIGHT) {
-      ierr = VecCopy(V,Y);CHKERRQ(ierr);
-    } else if (ksp->pc_side == PC_LEFT) {
+
+    if (ksp->pc_side == PC_LEFT) {
       ierr = KSP_PCApply(ksp,V,Y);CHKERRQ(ierr);
     }
     else if (ksp->pc_side == PC_SYMMETRIC) {
       ierr = PCApplySymmetricLeft(ksp->pc,V,Y);CHKERRQ(ierr);
     }
 
-    ierr = VecNorm(Y,NORM_2,&rho);CHKERRQ(ierr);
+    if (ksp->pc_side == PC_RIGHT) {
+      ierr = VecNorm(V,NORM_2,&rho);CHKERRQ(ierr);
+    } else {
+      ierr = VecNorm(Y,NORM_2,&rho);CHKERRQ(ierr);
+    }
+
     KSPCheckNorm(ksp,rho);
     ierr = VecScale(W,-PetscConj(beta));CHKERRQ(ierr);
     ierr = MatMultHermitianTransposeAdd(Amat,Q,W,W);CHKERRQ(ierr);
