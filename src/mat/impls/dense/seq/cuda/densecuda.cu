@@ -393,11 +393,12 @@ PETSC_EXTERN PetscErrorCode MatSeqDenseCUDAInvertFactors_Private(Mat A)
 static PetscErrorCode MatSolve_SeqDenseCUDA_Internal(Mat A, Vec xx, Vec yy, PetscBool transpose,
                                                      PetscErrorCode (*matsolve)(Mat,PetscScalar*,PetscMPIInt,PetscMPIInt,PetscMPIInt,PetscMPIInt,PetscBool))
 {
-  PetscScalar    *y;
-  PetscMPIInt    m=0, k=0;
-  PetscBool      xiscuda, yiscuda, aiscuda;
-  cudaError_t    cerr;
-  PetscErrorCode ierr;
+  Mat_SeqDenseCUDA *dA = (Mat_SeqDenseCUDA*)A->spptr;
+  PetscScalar      *y;
+  PetscMPIInt      m=0, k=0;
+  PetscBool        xiscuda, yiscuda, aiscuda;
+  cudaError_t      cerr;
+  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
@@ -416,9 +417,10 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Internal(Mat A, Vec xx, Vec yy, Pets
       ierr = VecGetArrayRead(xx, &x);CHKERRQ(ierr);
     }
     if (k < m || !yiscuda) {
-      ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-      cerr = cudaMalloc((void**)&y,m*sizeof(PetscScalar));CHKERRCUDA(cerr);
-      ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+      if (!dA->workvec) {
+        ierr = VecCreateSeqCUDA(PetscObjectComm((PetscObject)A), m, &(dA->workvec));CHKERRQ(ierr);
+      }
+      ierr = VecCUDAGetArrayWrite(dA->workvec, &y);CHKERRQ(ierr);
     } else {
       ierr = VecCUDAGetArrayWrite(yy,&y);CHKERRQ(ierr);
     }
@@ -450,7 +452,7 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Internal(Mat A, Vec xx, Vec yy, Pets
     } else {
       ierr = VecRestoreArray(yy,&yv);CHKERRQ(ierr);
     }
-    cerr = cudaFree(y);CHKERRCUDA(cerr);
+    ierr = VecCUDARestoreArrayWrite(dA->workvec, &y);CHKERRQ(ierr);
   } else {
     ierr = VecCUDARestoreArrayWrite(yy,&y);CHKERRQ(ierr);
   }
@@ -934,8 +936,8 @@ static PetscErrorCode MatQRFactor_SeqDenseCUDA(Mat A,IS col,const MatFactorInfo 
   if (!dA->d_fact_info) {
     ccer = cudaMalloc((void**)&dA->d_fact_info,sizeof(*dA->d_fact_info));CHKERRCUDA(ccer);
   }
-  if (!a->qrrhs) {
-    ierr = MatCreateVecs(A, NULL, &(a->qrrhs));CHKERRQ(ierr);
+  if (!dA->workvec) {
+    ierr = VecCreateSeqCUDA(PetscObjectComm((PetscObject)A), m, &(dA->workvec));CHKERRQ(ierr);
   }
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   cerr = cusolverDnXgeqrf(handle,m,n,da,lda,dA->d_fact_tau,dA->d_fact_work,dA->fact_lwork,dA->d_fact_info);CHKERRCUSOLVER(cerr);
