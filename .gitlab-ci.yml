@@ -893,6 +893,7 @@ pages:review:
     - name:pj02
   before_script:
     - time pip3 install -r src/docs/sphinx_docs/requirements.txt
+    - printenv
   script:
     - cd src/docs/sphinx_docs && ~/.local/bin/sphinx-build -T -E -b html -D language=en -j auto . ../../../public
   artifacts:
