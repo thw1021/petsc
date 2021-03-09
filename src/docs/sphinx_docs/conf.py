@@ -168,10 +168,10 @@ def builder_init_handler(app):
     genDirName = "generated"
     cwdPath = os.path.dirname(os.path.realpath(__file__))
     genDirPath = os.path.join(cwdPath, genDirName)
-    if "PETSC_GITLAB_PRIVATE_TOKEN" in os.environ:
-        token = os.environ["PETSC_GITLAB_PRIVATE_TOKEN"]
-    else:
-        token = None
+    #if "PETSC_GITLAB_PRIVATE_TOKEN" in os.environ:
+    #    token = os.environ["PETSC_GITLAB_PRIVATE_TOKEN"]
+    #else:
+    token = None
     genteamtable.main(genDirPath, token, app.builder.name)
     return None
 
