@@ -35,7 +35,7 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch='arch-classic-docs') -> None:
         '--with-pthread=0',
         '--with-regexp=0',
         '--download-sowing',
-        '--download-c2html=0', # FIXME: need this for HTML sources, but need flex/lex on RTD and haven't figured out a trick to get it installed (since direct apt-get etc. isn't allowed)
+        '--download-c2html',
         '--with-mkl_sparse_optimize=0',
         '--with-mkl_sparse=0',
         'PETSC_ARCH=' + petsc_arch,
@@ -71,7 +71,7 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch) -> None:
     # Use htmlmap file as a sentinel
     htmlmap_filename = os.path.join(docs_loc, 'docs', 'manualpages', 'htmlmap')
     if not os.path.isfile(htmlmap_filename):
-        command = ['make', 'alldoc1', # 'alldoc2', # FIXME: need this to build HTML source
+        command = ['make', 'alldoc1', 'alldoc2',
                    'PETSC_DIR=%s' % petsc_dir,
                    'PETSC_ARCH=%s' % petsc_arch,
                    'LOC=%s' % docs_loc]
@@ -87,9 +87,7 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch) -> None:
 
 
 def _populate_html_extra_from_classic_docs(docs_loc) -> None:
-    html_extra_dir = 'html_extra_generated'
-    #for extra_dir in ['docs', 'include', 'src']: # FIXME
-    for subdir in ['docs']:
+    for subdir in ['docs', 'include', 'src']:
         if not os.path.isdir(os.path.join(html_extra_dir, subdir)):
             _mkdir_p(html_extra_dir)
             source = os.path.join(docs_loc, subdir)
