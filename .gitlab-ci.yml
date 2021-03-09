@@ -888,16 +888,14 @@ analyze-pipeline:
 
 pages:review:
   extends: .test
-  stage: stage-2
+  stage: stage-1
   image: python:3.9
   tags:
-    - gitlab-org-docker
+    - stage1,name:pj02
   before_script:
-    - time apt-get update
-    - time apt-get install -y --no-install-recommends graphviz librsvg2-bin
-    - time pip install -r src/docs/sphinx_docs/requirements.txt
+    - time pip2 install -r src/docs/sphinx_docs/requirements.txt
   script:
-    - cd src/docs/sphinx_docs && sphinx-build -T -E -b html -D language=en -j auto . ../../../public
+    - cd src/docs/sphinx_docs && ~/.local/bin/sphinx-build -T -E -b html -D language=en -j auto . ../../../public
   artifacts:
     paths:
       - public
