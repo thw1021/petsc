@@ -1121,7 +1121,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
             PetscScalar *pLki = ba_d + bi_d[myk] + j;
             if ((int)sm_colkIdx[threadIdx.y] != -1) printf("\t\t\t\t\t\t\tERROR: find L_ki(%d,%d) TWICE (%d--%d)\n",(int)myk,(int)ii,(int)sm_colkIdx[threadIdx.y],j);
             sm_colkIdx[threadIdx.y] = j; // output
-	    //printf("\t\tUpdate Lid(%d.%d) = %13.6e to %13.6e (%d) kIdx=%d\n",myk,ii,*pLki,*pLki/Bii, (int)(pLki-ba_d),kIdx);
+            //printf("\t\tUpdate Lid(%d.%d) = %13.6e to %13.6e (%d) kIdx=%d\n",myk,ii,*pLki,*pLki/Bii, (int)(pLki-ba_d),kIdx);
             *pLki = *pLki/Bii; // column scaling:  L(k,i) = A(:k,i) / A(i,i)
             sm_L_ki[threadIdx.y] = *pLki;
             break;
@@ -1139,8 +1139,8 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
           if (col==myk) {
             // A_kk = A_kk - L_ki * U_ij(k)
             PetscScalar *Akkv = (ba_d + bdiag_d[myk]); // diagonal in its special place
-	    //printf("\t\t\tUpdate Aij(%d.%d) = %13.6e to %13.6e\n",myk,col, *Akkv , *Akkv - sm_L_ki[threadIdx.y] * Uij);
-	    *Akkv = *Akkv - sm_L_ki[threadIdx.y] * Uij; // UiK
+            //printf("\t\t\tUpdate Aij(%d.%d) = %13.6e to %13.6e\n",myk,col, *Akkv , *Akkv - sm_L_ki[threadIdx.y] * Uij);
+            *Akkv = *Akkv - sm_L_ki[threadIdx.y] * Uij; // UiK
           } else {
             PetscScalar    *start, *end, *pAkjv=NULL;
             PetscInt       high, low;
@@ -1169,7 +1169,7 @@ void __launch_bounds__(256,1) mat_lu_factor(const PetscInt n, const PetscInt r[]
               if (startj[pAkjv-start] == col) break;
             }
             if (pAkjv==start+high) printf("\t\t\t\t\t\t\t\t\t\t\tERROR: *** failed to find Akj(%d,%d)\n",(int)myk,(int)col);
-	    //printf("\t\t\tUpdate Aij(%d.%d) = %13.6e to %13.6e\n",myk,col, *pAkjv , *pAkjv - sm_L_ki[threadIdx.y] * Uij);
+            //printf("\t\t\tUpdate Aij(%d.%d) = %13.6e to %13.6e\n",myk,col, *pAkjv , *pAkjv - sm_L_ki[threadIdx.y] * Uij);
             *pAkjv = *pAkjv - sm_L_ki[threadIdx.y] * Uij; // A_kj = A_kj - L_ki * U_ij
           }
         } // inner loop x
@@ -4607,8 +4607,8 @@ void mat_lu_factor_band_init_set_i(const PetscInt n, const PetscInt bw, PetscInt
 // copy AIJ to AIJ_BAND
 __global__
 void mat_lu_factor_band_copy_aij_aij(const PetscInt n, const PetscInt bw, const PetscInt r[], const PetscInt ic[],
-				     const int ai_d[], const int aj_d[], const PetscScalar aa_d[],
-				     const PetscInt bi_csr[], PetscScalar ba_csr[])
+                                     const int ai_d[], const int aj_d[], const PetscScalar aa_d[],
+                                     const PetscInt bi_csr[], PetscScalar ba_csr[])
 {
   const PetscInt  Nf = gridDim.x, Nblk = gridDim.y, nloc = n/Nf;
   const PetscInt  field = blockIdx.x, blkIdx = blockIdx.y;
@@ -4652,9 +4652,9 @@ void print_mat_aij_band(const PetscInt n, const PetscInt bw, const PetscInt bi_c
 // Band LU kernel
 __global__
 void mat_lu_factor_band(const PetscInt n, const PetscInt r[], const PetscInt ic[],
-			const int ai_d[], const int aj_d[], const PetscScalar aa_d[],
-			const PetscInt bi_d[], PetscScalar ba_d[], const PetscInt bi_csr[], PetscScalar ba_csr[],
-			const PetscInt bdiag_d[], PetscLogDouble *flops_out)
+                        const int ai_d[], const int aj_d[], const PetscScalar aa_d[],
+                        const PetscInt bi_d[], PetscScalar ba_d[], const PetscInt bi_csr[], PetscScalar ba_csr[],
+                        const PetscInt bdiag_d[], PetscLogDouble *flops_out)
 {
   extern __shared__ PetscInt smemInt[];
   PetscInt        *sm_pkIdx  = &smemInt[0];
@@ -4679,20 +4679,20 @@ void mat_lu_factor_band(const PetscInt n, const PetscInt r[], const PetscInt ic[
     for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd_pad ; idx += inc, myi += inc) { /* assuming symmetric structure */
       if(idx < nzUd && threadIdx.x==0) { /* assuming symmetric structure */
         const PetscInt bwi = myi > bw ? bw : myi, kIdx = bwi - (myi-glbDD); // cuts off just the first (global) block
-	PetscScalar    *Aid = ba_csr + bi_csr[myi] + kIdx;
-	//printf("\t\tUpdate Lid(%d.%d) = %13.6e to %13.6e (%d) kIdx=%d\n",myi,glbDD,*Aid,*Aid/Bdd, (int)(Aid-ba_csr),kIdx);
-	*Aid = *Aid/Bdd;
-	sm_pkIdx[threadIdx.y] = kIdx;
+        PetscScalar    *Aid = ba_csr + bi_csr[myi] + kIdx;
+        //printf("\t\tUpdate Lid(%d.%d) = %13.6e to %13.6e (%d) kIdx=%d\n",myi,glbDD,*Aid,*Aid/Bdd, (int)(Aid-ba_csr),kIdx);
+        *Aid = *Aid/Bdd;
+        sm_pkIdx[threadIdx.y] = kIdx;
       }
       __syncthreads(); // synch on threadIdx.x only
       if(idx < nzUd) { /* assuming symmetric structure */
-	PetscInt    kIdx = sm_pkIdx[threadIdx.y];
-	PetscScalar *Aid = ba_csr + bi_csr[myi] + kIdx;
-	PetscScalar *Aij =  Aid + 1;
-	PetscScalar Lid  = *Aid;
+        PetscInt    kIdx = sm_pkIdx[threadIdx.y];
+        PetscScalar *Aid = ba_csr + bi_csr[myi] + kIdx;
+        PetscScalar *Aij =  Aid + 1;
+        PetscScalar Lid  = *Aid;
         for (int jIdx=threadIdx.x ; jIdx<nzUd ; jIdx += blockDim.x) {
           if (jIdx<nzUd) {
-	    // printf("\t\t\tUpdate Aij(%d.%d) = %13.6e to %13.6e\n",myi,glbDD+jIdx+1, Aij[jIdx] , Aij[jIdx] - Lid*baUd[jIdx]);
+            // printf("\t\t\tUpdate Aij(%d.%d) = %13.6e to %13.6e\n",myi,glbDD+jIdx+1, Aij[jIdx] , Aij[jIdx] - Lid*baUd[jIdx]);
             Aij[jIdx] -= Lid*baUd[jIdx];
           }
         }
@@ -4710,7 +4710,7 @@ void mat_lu_factor_band(const PetscInt n, const PetscInt r[], const PetscInt ic[
     if (i < end_i) {
       const PetscInt    nzu = bdiag_d[i] - (bdiag_d[i+1]+1), nzl = bi_d[i+1] - bi_d[i];
       PetscScalar       *batmp = ba_d + bi_d[i]; // L
-      const PetscScalar	*batmp_csr = ba_csr + bi_csr[i];
+      const PetscScalar *batmp_csr = ba_csr + bi_csr[i];
       // printf("\t%d) nz L = %d.Nz U = %d\n",i,nzl,nzu);
       for (int j=threadIdx.x ; j<nzl ; j += blockDim.x) if (j<nzl) batmp[j] = batmp_csr[j];
       if (threadIdx.x==0) ba_d[bdiag_d[i]] = batmp_csr[nzl]; /* diagaonl in special place */
