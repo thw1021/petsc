@@ -86,7 +86,8 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch) -> None:
     return docs_loc
 
 
-def _populate_html_extra_from_classic_docs(docs_loc) -> None:
+def _populate_html_extra_from_classic_docs(docs_loc) -> str:
+    html_extra_dir = 'html_extra_generated'
     for subdir in ['docs', 'include', 'src']:
         if not os.path.isdir(os.path.join(html_extra_dir, subdir)):
             _mkdir_p(html_extra_dir)
