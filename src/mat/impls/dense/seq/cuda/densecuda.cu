@@ -450,6 +450,7 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Internal(Mat A, Vec xx, Vec yy, Pets
     } else {
       ierr = VecRestoreArray(yy,&yv);CHKERRQ(ierr);
     }
+    cerr = cudaFree(y);CHKERRCUDA(cerr);
   } else {
     ierr = VecCUDARestoreArrayWrite(yy,&y);CHKERRQ(ierr);
   }
@@ -538,6 +539,7 @@ static PetscErrorCode MatMatSolve_SeqDenseCUDA_Internal(Mat A, Mat B, Mat X, Pet
     } else {
       ierr = MatDenseCUDARestoreArrayWrite(X,&x);CHKERRQ(ierr);
     }
+    cerr = cudaFree(y);CHKERRCUDA(cerr);
   } else {
     ierr = MatDenseCUDARestoreArrayWrite(X,&y);CHKERRQ(ierr);
   }
