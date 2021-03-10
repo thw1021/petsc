@@ -366,7 +366,8 @@ alldoc1: chk_loc chk_concepts_dir allcite allmanpages allmanexamples
 
 # Builds .html versions of the source
 # html overwrites some stuff created by update-docs - hence this is done later.
-alldoc2: chk_loc allcite
+# TODO FIXME needed to remove allcite here or it was called twice!  Don't understand.
+alldoc2: chk_loc #allcite
 	-${OMAKE_SELF} ACTION=html PETSC_DIR=${PETSC_DIR} alltree LOC=${LOC}
 	-${PYTHON} lib/petsc/bin/maint/update-docs.py ${PETSC_DIR} ${LOC}
 #
