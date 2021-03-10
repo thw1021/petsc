@@ -5875,6 +5875,7 @@ PetscErrorCode TSErrorWeightedNorm2(TS ts,Vec U,Vec Y,PetscReal *norm,PetscReal 
         n_loc++;
       }
     }
+    printf("error estimate %g %g %g\n",sum,suma,sumr);
   }
   ierr = VecRestoreArrayRead(U,&u);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(Y,&y);CHKERRQ(ierr);
