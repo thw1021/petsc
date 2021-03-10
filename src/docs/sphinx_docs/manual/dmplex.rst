@@ -433,7 +433,7 @@ follows.
       DMNetworkAddComponent(DM dm, PetscInt p, PetscInt compkey, void* compdata, PetscInt nvar)
 
    where ``p`` is the network vertex/edge point in the range obtained by
-   either DMNetworkGetVertexRange/DMNetworkGetEdgeRange, DMNetworkGetSubnetwork, or DMNetworkGetSharedVertices,
+   either ``DMNetworkGetVertexRange()``/``DMNetworkGetEdgeRange()``, ``DMNetworkGetSubnetwork()``, or ``DMNetworkGetSharedVertices()``;
    ``compkey`` is the component key returned when registering the component
    (DMNetworkRegisterComponent), ``compdata`` holds the data for the
    component, and ``nvar`` is the number of variables associated to the added component at this network point. DMNetwork supports setting multiple components (max. 36)
