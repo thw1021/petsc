@@ -351,7 +351,7 @@ Application flow
 The general flow of an application code using DMNetwork is as
 follows.
 
-#. Create a network object
+#. Create a network object.
 
    ::
 
