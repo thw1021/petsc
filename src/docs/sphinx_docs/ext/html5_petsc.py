@@ -55,7 +55,9 @@ class HTML5PETScTranslator(HTML5Translator):
                 raise Exception("Expected file %s not found. Run script to build classic docs subset." %  htmlmap_filename)
             manpage_map_raw = htmlmap_to_dict(htmlmap_filename)
 
+            # FIXME - split into its own function, since this so hacky and brittle
             # ReadTheDocs adds things to your conf.py, which you can use to figure out the build URL
+            # GitLab CI adds things to the environment
             context = self.builder.globalcontext
             if context.get('READTHEDOCS'):
                 manpage_prefix_base = os.path.join(
@@ -64,9 +66,10 @@ class HTML5PETScTranslator(HTML5Translator):
                         context['rtd_language'],
                         context['version_slug']
                         )
-            elif os.getenv('GITLAB_CI'):
+            elif os.getenv('GITLAB_CI') is not None:
+                print("DEBUG - GITLAB CI detected") # FIXME remove
                 # FIXME - incredibly brittle and experimental!
-                manpage_prefix_base = os.env['CI_ENVIRONMENT_URL'].rstrip('/index.html')
+                manpage_prefix_base = os.environ['CI_ENVIRONMENT_URL'].rstrip('/index.html')
             else:
                 manpage_prefix_base = self.builder.outdir
             manpage_prefix = os.path.join(manpage_prefix_base, 'docs', '')
