@@ -435,7 +435,7 @@ follows.
    where ``p`` is the network vertex/edge point in the range obtained by
    either ``DMNetworkGetVertexRange()``/``DMNetworkGetEdgeRange()``, ``DMNetworkGetSubnetwork()``, or ``DMNetworkGetSharedVertices()``;
    ``compkey`` is the component key returned when registering the component
-   (DMNetworkRegisterComponent), ``compdata`` holds the data for the
+   (``DMNetworkRegisterComponent()``); ``compdata`` holds the data for the
    component, and ``nvar`` is the number of variables associated to the added component at this network point. DMNetwork supports setting multiple components (max. 36)
    at a vertex/edge. At a shared vertex, DMNetwork currently requires the owner process of the vertex adds all the components and number of variables.
 
