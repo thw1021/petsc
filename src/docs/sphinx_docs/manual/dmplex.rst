@@ -412,7 +412,7 @@ follows.
 
       DMNetworkAddSharedVertices(DM dm, PetscInt anet, PetscInt bnet, PetscInt nsv, PetscInt asv[], PetscInt bsv[]);
 
-   Here ``anet`` and ``bnet`` are the first and second subnetwork global numberings returend by DMNetworkAddSubnetwork,
+   Here ``anet`` and ``bnet`` are the first and second subnetwork global numberings returned by ``DMNetworkAddSubnetwork()``,
    ``nsv`` is the number of vertices shared by the two subnetworks, ``asv`` and ``bsv`` are the vertex indices in the subnetwork ``anet`` and ``bnet`` .
 
 #. The next step is to have DMNetwork to create a bare layout (graph) of
