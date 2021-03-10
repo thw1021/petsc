@@ -4781,7 +4781,6 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   cerr = cudaMalloc(&ba_t,b->nz*sizeof(PetscScalar));CHKERRCUDA(cerr);
   cerr = cudaMalloc(&bi_t,(n+1)*sizeof(PetscScalar));CHKERRCUDA(cerr);
   cerr = cudaMemset(ba_t,0,b->nz*sizeof(PetscScalar));CHKERRCUDA(cerr); // easier to do it here
-  cerr = cudaMemset(bi_t,0,sizeof(PetscInt));CHKERRCUDA(cerr); // only need to set first value
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   cerr = cudaMalloc(&flops_d,sizeof(PetscLogDouble));CHKERRCUDA(cerr);
 #if defined(PETSC_USE_LOG)
