@@ -1757,7 +1757,7 @@ PetscErrorCode DMNetworkGetSupportingEdges(DM dm,PetscInt vertex,PetscInt *nedge
 
   PetscFunctionBegin;
   ierr = DMPlexGetSupportSize(network->plex,vertex,nedges);CHKERRQ(ierr);
-  ierr = DMPlexGetSupport(network->plex,vertex,edges);CHKERRQ(ierr);
+  if (edges) {ierr = DMPlexGetSupport(network->plex,vertex,edges);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
