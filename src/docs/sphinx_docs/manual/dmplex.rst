@@ -340,7 +340,7 @@ This kind of calculation is used in
 Networks
 ~~~~~~~~
 
-Built on top of ``DMPlex``, the ``DMNetwork`` subclass provides
+Built on top of DMPlex, the DMNetwork subclass provides
 abstractions for representing general unstructured networks such as
 communication networks, power grid, computer networks, transportation
 networks, electrical circuits, graphs, and others.
