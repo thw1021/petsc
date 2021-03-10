@@ -64,6 +64,9 @@ class HTML5PETScTranslator(HTML5Translator):
                         context['rtd_language'],
                         context['version_slug']
                         )
+            elif os.getenv('GITLAB_CI'):
+                # FIXME - incredibly brittle and experimental!
+                manpage_prefix_base = os.env['CI_ENVIRONMENT_URL'].rstrip('/index.html')
             else:
                 manpage_prefix_base = self.builder.outdir
             manpage_prefix = os.path.join(manpage_prefix_base, 'docs', '')
