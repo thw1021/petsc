@@ -54,20 +54,8 @@ class HTML5PETScTranslator(HTML5Translator):
             if not os.path.isfile(htmlmap_filename):
                 raise Exception("Expected file %s not found. Run script to build classic docs subset." %  htmlmap_filename)
             manpage_map_raw = htmlmap_to_dict(htmlmap_filename)
-
-            # ReadTheDocs adds things to your conf.py, which you can use to figure out the build URL
-            context = self.builder.globalcontext
-            if context.get('READTHEDOCS'):
-                manpage_prefix_base = os.path.join(
-                        'https://docs.petsc.org/', # FIXME - non-ideal hard-coding
-                        #context['canonical_url'].rstrip('latest/') # is somehow overwritten to None
-                        context['rtd_language'],
-                        context['version_slug']
-                        )
-            else:
-                manpage_prefix_base = self.builder.outdir
+            manpage_prefix_base = _get_manpage_prefix_base()
             manpage_prefix = os.path.join(manpage_prefix_base, 'docs', '')
-
             self._manpage_map = dict_complete_links(manpage_map_raw, manpage_prefix)
         return self._manpage_map
 
@@ -81,6 +69,23 @@ class HTML5PETScTranslator(HTML5Translator):
         if not self._manpage_pattern:
             self._manpage_pattern = get_multiple_replace_pattern(self._get_manpage_map())
         return self._manpage_pattern
+
+    def _get_manpage_prefix_base(self) -> str:
+        """ Return the base location for the install. This varies by platform. """
+        context = self.builder.globalcontext
+        if context.get('READTHEDOCS'):
+            manpage_prefix_base = os.path.join(
+                    'https://docs.petsc.org/', # non-ideal hard-coding
+                    context['rtd_language'],
+                    context['version_slug']
+                    )
+        elif os.getenv('GITLAB_CI') is not None:
+            ci_environment_url = os.getenv('CI_ENVIRONMENT_URL')
+            if not ci_environment_url:
+                raise Exception('GitLab CI detected but expected environment variable not found')
+            manpage_prefix_base = os.environ['CI_ENVIRONMENT_URL'].rstrip('/index.html')
+        else:
+            manpage_prefix_base = self.builder.outdir
 
     def _add_manpage_links(self, string: str) -> str:
         """ Add plain HTML link tags to a string """
