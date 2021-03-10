@@ -348,7 +348,7 @@ networks, electrical circuits, graphs, and others.
 Application flow
 ^^^^^^^^^^^^^^^^
 
-The general flow of an application code using ``DMNetwork`` is as
+The general flow of an application code using DMNetwork is as
 follows.
 
 #. Create a network object
