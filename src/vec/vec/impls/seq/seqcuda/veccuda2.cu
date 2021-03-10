@@ -445,7 +445,7 @@ PetscErrorCode VecWAXPY_SeqCUDA(Vec win,PetscScalar alpha,Vec xin, Vec yin)
     PetscScalar       *warray=NULL;
     cublasHandle_t    cublasv2handle;
     cublasStatus_t    cberr;
-    cudaError_t       err;
+    cudaError_t       cerr;
     cudaStream_t      stream;
     PetscBLASInt      one = 1.0,bn=0;
 
