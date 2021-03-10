@@ -349,7 +349,7 @@ Application flow
 ^^^^^^^^^^^^^^^^
 
 The general flow of an application code using DMNetwork is as
-follows.
+follows:
 
 #. Create a network object.
 
@@ -525,7 +525,7 @@ The components and the corresponding number of variables set at a vertex/edge ca
 
    DMNetworkGetComponent(DM dm, PetscInt p, PetscInt compnum, PetscInt *compkey, void **component, PetscInt *nvar)
 
-input ``compnum`` is the component number, output ``compkey`` is the key set by DMNetworkRegisterComponent. An example
+input ``compnum`` is the component number, output ``compkey`` is the key set by ``DMNetworkRegisterComponent``. An example
 of accessing and retrieving the components and number of variables at vertices is:
 
 ::
@@ -542,6 +542,6 @@ of accessing and retrieving the components and number of variables at vertices i
      }
    }
 
-The above example does not explicitly make use the component key. It is
+The above example does not explicitly use the component key. It is
 used when different component types are set at different vertices. In
-this case, the compkey is used to differentiate the component type.
+this case, ``compkey`` is used to differentiate the component type.
