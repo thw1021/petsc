@@ -393,7 +393,7 @@ follows.
 
    Here ``name`` is the subnetwork name, ``nv`` and ``ne`` are the numbers of local vertices and local edges on the subnetwork, and ``edgelist`` is the connectivity for the subnetwork.
    The output ``netnum`` is the global numbering of the subnetwork in the network.
-   Each element of ``edgelist`` is an integer array of size 2*ne
+   Each element of ``edgelist`` is an integer array of size ``2*ne``
    containing the edge connectivity for the subnetwork.
 
    | As an example, consider a network comprising of 2 subnetworks that
