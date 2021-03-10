@@ -896,6 +896,7 @@ pages:review:
     - time apt-get install -y flex
     - time pip install -r src/docs/sphinx_docs/requirements.txt
   script:
+    - env
     - cd src/docs/sphinx_docs && sphinx-build -T -E -b html -D language=en -j auto . ../../../public
   artifacts:
     paths:
