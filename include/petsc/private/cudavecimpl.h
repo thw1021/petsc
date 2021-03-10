@@ -2,7 +2,6 @@
 #define __CUDAVECIMPL
 
 #include <petscvec.h>
-#include <petsccublas.h>
 #include <petsc/private/vecimpl.h>
 
 typedef struct {
