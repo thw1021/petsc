@@ -361,7 +361,7 @@ follows.
    is specific application data at a vertex/edge of the network required
    for its residual evaluation. For example, components could be
    resistor/inductor data for circuit applications, edge weights for
-   graph problems, generator/transmission line data for power grids.
+   graph problems, or generator/transmission line data for power grids.
    Components are registered by calling
 
    ::
