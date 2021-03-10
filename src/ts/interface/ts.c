@@ -5865,6 +5865,7 @@ PetscErrorCode TSErrorWeightedNorm2(TS ts,Vec U,Vec Y,PetscReal *norm,PetscReal 
         na_loc++;
       }
       tolr = ts->rtol * PetscMax(PetscAbsScalar(u[i]),PetscAbsScalar(y[i]));
+      printf("crazy i %d %g %g %g %g\n",i,ts->rtol,PetscAbsScalar(u[i]),PetscAbsScalar(y[i]),tolr);
       if (tolr>0.){
         sumr  += PetscSqr(diff/tolr);
         nr_loc++;
