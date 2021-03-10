@@ -402,7 +402,7 @@ follows.
    | subnetwork 0: v0 — v1 — v2 — v3
    | subnetwork 1: v1 — v2 — v0
    | The two subnetworks are coupled by merging the vertices: subnetwork 0: v0 and subnetwork 1: v2
-   | The ``edgelist`` of this network are
+   | The ``edgelist`` of this network is
    | edgelist[0] = {0,1,1,2,2,3}
    | edgelist[1] = {1,2,2,0}
 
