@@ -415,7 +415,7 @@ follows.
    Here ``anet`` and ``bnet`` are the first and second subnetwork global numberings returned by ``DMNetworkAddSubnetwork()``,
    ``nsv`` is the number of vertices shared by the two subnetworks, ``asv`` and ``bsv`` are the vertex indices in the subnetwork ``anet`` and ``bnet`` .
 
-#. The next step is to have DMNetwork to create a bare layout (graph) of
+#. The next step is to have DMNetwork create a bare layout (graph) of
    the network by calling
 
    ::
