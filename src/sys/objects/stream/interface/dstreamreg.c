@@ -308,7 +308,9 @@ PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
 @*/
 PetscErrorCode PetscStreamRegisterAll(void)
 {
+#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
   PetscErrorCode ierr;
+#endif
 
   PetscFunctionBegin;
   if (PetscStreamRegisterAllCalled) PetscFunctionReturn(0);
@@ -340,7 +342,9 @@ PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
 @*/
 PetscErrorCode PetscEventRegisterAll(void)
 {
+#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
   PetscErrorCode ierr;
+#endif
 
   PetscFunctionBegin;
   if (PetscEventRegisterAllCalled) PetscFunctionReturn(0);
@@ -372,7 +376,9 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar);
 @*/
 PetscErrorCode PetscStreamScalarRegisterAll(void)
 {
+#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
   PetscErrorCode ierr;
+#endif
 
   PetscFunctionBegin;
   if (PetscStreamScalarRegisterAllCalled) PetscFunctionReturn(0);
@@ -401,7 +407,9 @@ PETSC_EXTERN PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph);
 @*/
 PetscErrorCode PetscStreamGraphRegisterAll(void)
 {
+#if PetscDefined(HAVE_CUDA)
   PetscErrorCode ierr;
+#endif
 
   if (PetscStreamGraphRegisterAllCalled) PetscFunctionReturn(0);
   PetscStreamGraphRegisterAllCalled = PETSC_TRUE;

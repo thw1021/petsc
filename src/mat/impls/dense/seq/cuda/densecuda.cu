@@ -5,6 +5,7 @@
 #define PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND 1
 #include <../src/mat/impls/dense/seq/dense.h> /*I "petscmat.h" I*/
 
+#include <petscdevice.h>
 /* cublas definitions are here */
 #include <petsc/private/cudavecimpl.h>
 
@@ -147,7 +148,8 @@ PetscErrorCode MatSeqDenseCUDACopyToGPU(Mat A)
   if (A->boundtocpu) PetscFunctionReturn(0);
   copy = (PetscBool)(A->offloadmask == PETSC_OFFLOAD_CPU || A->offloadmask == PETSC_OFFLOAD_UNALLOCATED);
   ierr = PetscInfo3(A,"%s matrix %d x %d\n",copy ? "Copy" : "Reusing",A->rmap->n,A->cmap->n);CHKERRQ(ierr);
-  if (copy) {
+  //if (copy) {
+  if (1) {
     if (!dA->d_v) { /* Allocate GPU memory if not present */
       ierr = MatSeqDenseCUDASetPreallocation(A,NULL);CHKERRQ(ierr);
     }

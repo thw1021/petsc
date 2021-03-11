@@ -1,7 +1,6 @@
 #if !defined(__CUDAVECIMPL)
 #define __CUDAVECIMPL
 
-#include <petscvec.h>
 #include <petsc/private/vecimpl.h>
 
 typedef struct {

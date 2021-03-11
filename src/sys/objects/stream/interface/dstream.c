@@ -55,6 +55,7 @@ PetscErrorCode PetscStreamDestroy(PetscStream *strm)
   if (!*strm) PetscFunctionReturn(0);
   PetscValidPointer(strm,1);
   ierr = (*(*strm)->ops->destroy)(*strm);CHKERRQ(ierr);
+  ierr = PetscFree((*strm)->type);CHKERRQ(ierr);
   ierr = PetscFree(*strm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
