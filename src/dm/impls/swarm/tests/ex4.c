@@ -1,4 +1,4 @@
-static char help[] = "Example of simple hamiltonian system (harmonic oscillator) with particles and a basic symplectic integrator\n";
+static char help[] = "Comparing basic symplectic, theta and discrete gradients interators on a simple hamiltonian system (harmonic oscillator) with particles\n";
 
 #include <petscdmplex.h>
 #include <petsc/private/dmpleximpl.h>  /* For norm */
@@ -7,13 +7,16 @@ static char help[] = "Example of simple hamiltonian system (harmonic oscillator)
 #include <petscts.h>
 
 typedef struct {
-  PetscInt  dim;
-  PetscReal omega;            /* Oscillation frequency omega */
-  PetscInt  particlesPerCell; /* The number of partices per cell */
-  PetscReal momentTol;        /* Tolerance for checking moment conservation */
-  PetscBool monitor;          /* Flag for using the TS monitor */
-  PetscBool error;            /* Flag for printing the error */
-  PetscInt  ostep;            /* print the energy at each ostep time steps */
+  PetscInt  dim;                          /* The topological mesh dimension */
+  PetscBool simplex;                      /* Flag for simplices or tensor cells */
+  char      filename[PETSC_MAX_PATH_LEN]; /* Name of the mesh filename if any */
+  PetscReal omega;                        /* Oscillation frequency omega */
+  PetscInt  particlesPerCell;             /* The number of partices per cell */
+  PetscInt  numberOfCells;                /* Number of cells in mesh */
+  PetscReal momentTol;                    /* Tolerance for checking moment conservation */
+  PetscBool monitor;                      /* Flag for using the TS monitor */
+  PetscBool error;                        /* Flag for printing the error */
+  PetscInt  ostep;                        /* print the energy at each ostep time steps */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -24,6 +27,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->monitor          = PETSC_FALSE;
   options->error            = PETSC_FALSE;
   options->particlesPerCell = 1;
+  options->numberOfCells    = 2;
   options->momentTol        = 100.0*PETSC_MACHINE_EPSILON;
   options->omega            = 64.0;
   options->ostep            = 100;
@@ -48,7 +52,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
   ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
-  ierr = DMGetDimension(*dm, &user->dim);CHKERRQ(ierr);
+
   PetscFunctionReturn(0);
 }
 
@@ -73,6 +77,7 @@ static PetscErrorCode SetInitialCoordinates(DM dmSw)
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMPlexIsSimplex(dm, &simplex);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
+  user->numberOfCells = cEnd - cStart;
   ierr = PetscMalloc5(dim, &centroid, dim, &xi0, dim, &v0, dim*dim, &J, dim*dim, &invJ);CHKERRQ(ierr);
   for (d = 0; d < dim; ++d) xi0[d] = -1.0;
   ierr = DMSwarmGetField(dmSw, DMSwarmPICField_coor, NULL, NULL, (void **) &coords);CHKERRQ(ierr);
@@ -95,6 +100,7 @@ static PetscErrorCode SetInitialCoordinates(DM dmSw)
       }
     }
   }
+
   ierr = DMSwarmRestoreField(dmSw, DMSwarmPICField_coor, NULL, NULL, (void **) &coords);CHKERRQ(ierr);
   ierr = PetscFree5(centroid, xi0, v0, J, invJ);CHKERRQ(ierr);
   ierr = PetscRandomDestroy(&rnd);CHKERRQ(ierr);
@@ -121,15 +127,12 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
   for (c = cStart; c < cEnd; ++c) {
     for (p = 0; p < Np; ++p) {
       const PetscInt n = c*Np + p;
-
       initialConditions[n*2+0] = DMPlex_NormD_Internal(dim, &coords[n*dim]);
       initialConditions[n*2+1] = 0.0;
     }
   }
   ierr = VecRestoreArray(u, &initialConditions);CHKERRQ(ierr);
   ierr = DMSwarmRestoreField(dmSw, DMSwarmPICField_coor, NULL, NULL, (void **) &coords);CHKERRQ(ierr);
-
-  ierr = VecView(u, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -189,7 +192,6 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
       const PetscReal v  = PetscRealPart(u[p*2+1]);
       const PetscReal E  = 0.5*(v*v + PetscSqr(omega)*x*x);
       const PetscReal mE = 0.5*(v*v + PetscSqr(omega)*x*x - PetscSqr(omega)*dt*x*v);
-
       ierr = PetscPrintf(comm, "%.6lf %4D %4D %10.4lf %10.4lf\n", t, step, p, (double) E, (double) mE);CHKERRQ(ierr);
     }
     ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
@@ -219,6 +221,8 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
   const PetscScalar *u, *coords;
   PetscScalar       *e;
   PetscReal          t, omega;
+  PetscReal          ex, ev;
+  PetscReal          g1, g2, g3, g4, gp1, gp2, gp3, gp4, x0t, v0t, x1t, v1t;
   PetscInt           dim, Np, p;
   PetscErrorCode     ierr;
 
@@ -238,8 +242,9 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
     const PetscReal x  = PetscRealPart(u[p*2+0]);
     const PetscReal v  = PetscRealPart(u[p*2+1]);
     const PetscReal x0 = DMPlex_NormD_Internal(dim, &coords[p*dim]);
-    const PetscReal ex =  x0*PetscCosReal(omega*t);
-    const PetscReal ev = -x0*omega*PetscSinReal(omega*t);
+    const PetscReal v0 = 0.0;
+    ex =  x0*PetscCosReal(omega*t);
+    ev = -x0*omega*PetscSinReal(omega*t);
 
     if (user->error) {ierr = PetscPrintf(comm, "p%D error [%.2g %.2g] sol [%.6lf %.6lf] exact [%.6lf %.6lf] energy/exact energy %g / %g\n", p, (double) PetscAbsReal(x-ex), (double) PetscAbsReal(v-ev), (double) x, (double) v, (double) ex, (double) ev, 0.5*(v*v + PetscSqr(omega)*x*x), (double) 0.5*PetscSqr(omega*x0));}
     e[p*2+0] = x - ex;
@@ -292,29 +297,6 @@ static PetscErrorCode RHSFunction2(TS ts, PetscReal t, Vec X, Vec Vres, void *ct
   PetscFunctionReturn(0);
 }
 
-// static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, void *ctx)
-// {
-//   AppCtx            *user = (AppCtx *) ctx;
-//   DM                 dm;
-//   const PetscScalar *u;
-//   PetscScalar       *r;
-//   PetscInt           Np, p;
-//   PetscErrorCode     ierr;
-//
-//   PetscFunctionBeginUser;
-//   ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
-//   ierr = VecGetArray(R, &r);CHKERRQ(ierr);
-//   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
-//   ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
-//   Np  /= 2;
-//   for (p = 0; p < Np; ++p) {
-//     r[p*2+0] = u[p*2+1];
-//     r[p*2+1] = -PetscSqr(user->omega)*u[p*2+0];
-//   }
-//   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
-//   ierr = VecRestoreArray(R, &r);CHKERRQ(ierr);
-//   PetscFunctionReturn(0);
-// }
 /*----------------------------------------------------------------------------*/
 
 /*--------------------Define RHSFunction, RHSJacobian (Theta)-----------------*/
@@ -357,8 +339,6 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U , Mat J, Mat P, void
 
   PetscFunctionBeginUser;
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
-  //ierr = PetscPrintf(PETSC_COMM_WORLD, "# Particles (Np) = %d \n" , Np);CHKERRQ(ierr);
-
   ierr = MatGetOwnershipRange(J, &m, &n);CHKERRQ(ierr);
   for (i = 0; i < Np; ++i) {
     const PetscInt rows[2] = {2*i, 2*i+1};
@@ -366,11 +346,11 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U , Mat J, Mat P, void
   }
   ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  //ierr = MatView(J,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
 
 }
+
 /*----------------------------------------------------------------------------*/
 
 /*----------------Define S, F, G Functions (Discrete Gradients)---------------*/
@@ -387,13 +367,15 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U , Mat J, Mat P, void
 PetscErrorCode Sfunc(TS ts, PetscReal t, Vec U, Mat S, void *ctx)
 {
   AppCtx            *user = (AppCtx *) ctx;
-  PetscInt           Np = user->dim * user->particlesPerCell;
+  PetscInt           Np = user->numberOfCells * user->particlesPerCell;
   PetscInt           i, m, n;
+
   const PetscScalar *u;
   PetscScalar        vals[4] = {0., 1., -1, 0.};
   PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
+
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(S, &m, &n);CHKERRQ(ierr);
   for (i = 0; i < Np; ++i) {
@@ -402,8 +384,8 @@ PetscErrorCode Sfunc(TS ts, PetscReal t, Vec U, Mat S, void *ctx)
   }
   ierr = MatAssemblyBegin(S,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(S,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
+
 }
 
 PetscErrorCode Ffunc(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ctx)
@@ -411,19 +393,19 @@ PetscErrorCode Ffunc(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ctx)
   AppCtx            *user = (AppCtx *) ctx;
   DM                 dm;
   const PetscScalar *u;
-  PetscInt           Np = user->dim * user->particlesPerCell;
+  PetscInt           Np = user->numberOfCells * user->particlesPerCell;
   PetscInt           p;
   PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
-  //Define F
+
+  /*Define F*/
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
-    *F += (1/2)*PetscSqr(user->omega)*PetscSqr(u[p*2+0]) + (1/2)*PetscSqr(u[p*2+1]);
+    *F += 0.5*PetscSqr(user->omega)*PetscSqr(u[p*2+0]) + 0.5*PetscSqr(u[p*2+1]);
   }
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 }
 
@@ -433,15 +415,14 @@ PetscErrorCode gradFfunc(TS ts, PetscReal t, Vec U, Vec gradF, void *ctx)
   DM                 dm;
   const PetscScalar *u;
   PetscScalar       *g;
-  PetscInt           Np = user->dim * user->particlesPerCell;
+  PetscInt           Np = user->numberOfCells * user->particlesPerCell;
   PetscInt           p;
   PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
-
-  //Define gradF
+  /*Define gradF*/
   ierr = VecGetArray(gradF, &g);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
     g[p*2+0] = PetscSqr(user->omega)*u[p*2+0]; /*dF/dx*/
@@ -449,9 +430,9 @@ PetscErrorCode gradFfunc(TS ts, PetscReal t, Vec U, Vec gradF, void *ctx)
   }
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   ierr = VecRestoreArray(gradF, &g);CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 }
+
 /*----------------------------------------------------------------------------*/
 
 int main(int argc,char **argv)
@@ -517,6 +498,7 @@ int main(int argc,char **argv)
   ierr = TSRHSSplitSetRHSFunction(ts, "momentum", NULL, RHSFunction2, &user);CHKERRQ(ierr);
 
   /* - - - - - - - Theta (Implicit Midpoint) - - - - - - - - - - - - - - - - -*/
+
   ierr = TSSetRHSFunction(ts, NULL, RHSFunction, &user);CHKERRQ(ierr);
 
   ierr = MatCreate(PETSC_COMM_WORLD,&J);CHKERRQ(ierr);
@@ -525,7 +507,6 @@ int main(int argc,char **argv)
   ierr = MatSetUp(J);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = PetscPrintf(comm, "n = %d\n",n);CHKERRQ(ierr);//Check number of particles
   ierr = TSSetRHSJacobian(ts,J,J,RHSJacobian,&user);CHKERRQ(ierr);
 
   /* - - - - - - - Discrete Gradients - - - - - - - - - - - - - - - - - - - - */
@@ -534,7 +515,6 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
   ierr = TSComputeInitialCondition(ts, u);CHKERRQ(ierr);
   ierr = TSSolve(ts, u);CHKERRQ(ierr);
 
@@ -572,10 +552,14 @@ int main(int argc,char **argv)
 
    test:
      suffix: 5
-     args: -dm_plex_box_faces 1,1 -ts_type theta -ts_theta_theta 0.5 -ts_convergence_estimate -convest_num_refine 2 -dm_view -sw_view -monitor -output_step 50 -error
+     args: -dm_plex_box_faces 1,1 -ts_type theta -ts_theta_theta 0.5 -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2
 
    test:
      suffix: 6
      args: -dm_plex_box_faces 1,1 -ts_type discgrad -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2
+
+   test:
+     suffix: 7
+     args: -dm_plex_box_faces 1,1 -ts_type discgrad -ts_discgrad_gonzalez -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2
 
 TEST*/

@@ -1007,7 +1007,16 @@ PETSC_EXTERN PetscErrorCode TSBasicSymplecticInitializePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticRegisterDestroy(void);
 
+/*J
+  TSDiscreteGradient
+
+  Level: beginner
+
+  .seealso:
+J*/
 PETSC_EXTERN PetscErrorCode TSDiscGradSetFormulation(TS, PetscErrorCode(*)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode(*)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode(*)(TS, PetscReal, Vec, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode TSDiscGradGetGonzalez(TS,PetscBool*);
+PETSC_EXTERN PetscErrorCode TSDiscGradSetGonzalez(TS,PetscBool);
 
 /*
        PETSc interface to Sundials
