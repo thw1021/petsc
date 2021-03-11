@@ -52,6 +52,7 @@ PetscErrorCode PetscEventDestroy(PetscEvent *event)
   if (!*event) PetscFunctionReturn(0);
   PetscValidStreamType(*event,1);
   ierr = (*(*event)->ops->destroy)(*event);CHKERRQ(ierr);
+  ierr = PetscFree((*event)->type);CHKERRQ(ierr);
   ierr = PetscFree(*event);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

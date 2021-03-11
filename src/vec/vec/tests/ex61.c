@@ -8,7 +8,7 @@ PETSC_STATIC_INLINE PetscErrorCode VecViewFromOptionsSynchronized(MPI_Comm comm,
   PetscMPIInt    size,sizeWorld;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&sizeWorld);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&sizeWorld);CHKERRMPI(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   if (size == sizeWorld) {
     ierr = VecViewFromOptions(v,obj,name);CHKERRQ(ierr);
@@ -39,8 +39,8 @@ PETSC_STATIC_INLINE PetscErrorCode VecClose(Vec vref, Vec vtest)
   ierr = VecGetArrayRead(vref,&arrRef);CHKERRQ(ierr);
   ierr = VecGetArrayRead(vtest,&arrTest);CHKERRQ(ierr);
   for (PetscInt i = 0; i < n; ++i) {
-    if (!PetscIsCloseAtTol(arrRef[i],arrTest[i],1e-9,0.0)) {
-      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Vectors don't match. refVector[%D]: %g != testVector[%D]: %g",i,(double)arrRef[i],i,(double)arrTest[i]);
+    if (!PetscIsCloseAtTol(PetscRealPart(arrRef[i]),PetscRealPart(arrTest[i]),1e-7,0.0)) {
+      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Vectors don't match. refVector[%D]: %g != testVector[%D]: %g",i,(double)PetscRealPart(arrRef[i]),i,(double)PetscRealPart(arrTest[i]));
     }
   }
   ierr = VecRestoreArrayRead(vref,&arrRef);CHKERRQ(ierr);
@@ -182,26 +182,27 @@ int main(int argc,char **argv)
 
   {
     PetscScalar seqVal=1.0,mpiVal=1.0;
+    PetscReal   seqNorm=1.0,mpiNorm=1.0;
     /* Initialize the host versions */
     for (PetscInt i = 0; i < 10; ++i) {
-      ierr = VecNorm(seq1,NORM_2,&seqVal);CHKERRQ(ierr);
-      seqVal = 1.0/seqVal;
+      ierr = VecNorm(seq1,NORM_2,&seqNorm);CHKERRQ(ierr);
+      seqVal = (PetscScalar)(1.0/seqNorm);
       ierr = VecScale(seq1,seqVal);CHKERRQ(ierr);
       ierr = VecDot(seq1,seq2,&seqVal);CHKERRQ(ierr);
       seqVal = -seqVal;
       ierr = VecAXPY(seq2,seqVal,seq1);CHKERRQ(ierr);
-      ierr = VecNorm(seq2,NORM_2,&seqVal);CHKERRQ(ierr);
-      seqVal = 1.0/seqVal;
+      ierr = VecNorm(seq2,NORM_2,&seqNorm);CHKERRQ(ierr);
+      seqVal = (PetscScalar)(1.0/seqNorm);
       ierr = VecScale(seq2,seqVal);CHKERRQ(ierr);
 
-      ierr = VecNorm(mpi1,NORM_2,&mpiVal);CHKERRQ(ierr);
-      mpiVal = 1.0/mpiVal;
+      ierr = VecNorm(mpi1,NORM_2,&mpiNorm);CHKERRQ(ierr);
+      mpiVal = (PetscScalar)(1.0/mpiNorm);
       ierr = VecScale(mpi1,mpiVal);CHKERRQ(ierr);
       ierr = VecDot(mpi1,mpi2,&mpiVal);CHKERRQ(ierr);
       mpiVal = -mpiVal;
       ierr = VecAXPY(mpi2,mpiVal,mpi1);CHKERRQ(ierr);
-      ierr = VecNorm(mpi2,NORM_2,&mpiVal);CHKERRQ(ierr);
-      mpiVal = 1.0/mpiVal;
+      ierr = VecNorm(mpi2,NORM_2,&mpiNorm);CHKERRQ(ierr);
+      mpiVal = (PetscScalar)(1.0/mpiNorm);
       ierr = VecScale(mpi2,mpiVal);CHKERRQ(ierr);
     }
   }

@@ -800,7 +800,7 @@ static struct _VecOps DvOps = {VecDuplicate_Seq, /* 1 */
                                NULL,
                                VecMaxPointwiseDivide_Seq,
                                VecPointwiseMax_Seq,
-                               VecPointwiseMaxAbs_Seq,
+                               VecPointwiseMaxAbs_Seq, /* 50 */
                                VecPointwiseMin_Seq,
                                VecGetValues_Seq,
                                NULL,
@@ -810,7 +810,7 @@ static struct _VecOps DvOps = {VecDuplicate_Seq, /* 1 */
                                NULL,
                                NULL,
                                VecStrideGather_Default,
-                               VecStrideScatter_Default,
+                               VecStrideScatter_Default, /* 60 */
                                NULL,
                                NULL,
                                NULL,
@@ -818,9 +818,9 @@ static struct _VecOps DvOps = {VecDuplicate_Seq, /* 1 */
                                NULL,
                                VecStrideSubSetGather_Default,
                                VecStrideSubSetScatter_Default,
+#if PetscDefined(USE_DEBUG)
                                NULL,
-                               NULL,
-                               NULL,
+                               NULL, /* 70 */
                                NULL,
                                NULL,
                                NULL,
@@ -832,7 +832,7 @@ static struct _VecOps DvOps = {VecDuplicate_Seq, /* 1 */
                                NULL,
                                NULL, /* 80 */
                                NULL,
-                               NULL,
+                               NULL, /* aypxasync */
                                NULL,
                                NULL,
                                NULL,
@@ -841,7 +841,20 @@ static struct _VecOps DvOps = {VecDuplicate_Seq, /* 1 */
                                NULL,
                                NULL,
                                NULL,  /* 90 */
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL, /* 100 */
+                               NULL,
+                               NULL,
                                NULL
+#endif
 };
 
 

@@ -2892,7 +2892,7 @@ PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
  #if defined(PETSC_HAVE_CUDA)
   v->offloadmask = PETSC_OFFLOAD_GPU;
-  a              = NULL;
+  *a             = NULL;
  #endif
   ierr = PetscObjectStateIncrease((PetscObject)v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
