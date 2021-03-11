@@ -408,7 +408,7 @@ PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx
   if (pscaly) {
     PetscCheckValidSameStreamType(pscaly,3,pstream,4);
     if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
-    ierr = PetscStreamScalarGetInfo(pscaly,PETSC_FALSE,PSS_ONE,&isYOne,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarGetInfo(pscaly,PSS_ONE,PETSC_FALSE,&isYOne,pstream);CHKERRQ(ierr);
   }
   if (isYOne && (alpha == (PetscScalar)1.0)) PetscFunctionReturn(0);
   if (alpha == (PetscScalar)0.0) {

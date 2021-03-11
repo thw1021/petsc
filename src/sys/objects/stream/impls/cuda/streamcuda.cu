@@ -141,7 +141,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamWaitForStream_CUDA(PetscStream str
     waitCreated = PETSC_TRUE;
   }
   cerr = cudaEventRecord(waitEvent,pscy->cstream);CHKERRCUDA(cerr);
-  cerr = cudaStreamWaitEvent(pscx->cstream,waitEvent);CHKERRCUDA(cerr);
+#if defined(CUDART_VERSION) && (CUDART_VERSION >= 11011) /* 11.1.1 */
+  cerr = cudaStreamWaitEvent(pscx->cstream,waitEvent,cudaEventWaitDefault);CHKERRCUDA(cerr);
+#else
+  cerr = cudaStreamWaitEvent(pscx->cstream,waitEvent,0);CHKERRCUDA(cerr);
+#endif /* 11.1.1 */
   PetscFunctionReturn(0);
 }
 

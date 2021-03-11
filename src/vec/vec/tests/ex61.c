@@ -8,7 +8,7 @@ PETSC_STATIC_INLINE PetscErrorCode VecViewFromOptionsSynchronized(MPI_Comm comm,
   PetscMPIInt    size,sizeWorld;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&sizeWorld);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&sizeWorld);CHKERRMPI(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   if (size == sizeWorld) {
     ierr = VecViewFromOptions(v,obj,name);CHKERRQ(ierr);
