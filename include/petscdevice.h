@@ -3,8 +3,7 @@
 
 #include <petscsys.h>
 
-#if defined(PETSC_HAVE_CUDA)
-#include <cuda.h>
+#if PetscDefined(HAVE_CUDA)
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <cusolverDn.h>
@@ -24,34 +23,40 @@ PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
 
 /* Could not find exactly which CUDART_VERSION introduced cudaGetErrorName. At least it was in CUDA 8.0 (Sep. 2016) */
 #if (CUDART_VERSION >= 8000) /* CUDA 8.0 */
-#define CHKERRCUDA(cerr) \
-do { \
-   if (PetscUnlikely(cerr)) { \
-      const char *name  = cudaGetErrorName(cerr); \
-      const char *descr = cudaGetErrorString(cerr); \
+#define CHKERRCUDA(cerr)                                                \
+  do {                                                                  \
+    if (PetscUnlikely(cerr)) {                                          \
+      const char *name  = cudaGetErrorName(cerr);                       \
+      const char *descr = cudaGetErrorString(cerr);                     \
       SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d (%s) : %s",(int)cerr,name,descr); \
-   } \
-} while (0)
+    }                                                                   \
+  } while (0)
 #else
 #define CHKERRCUDA(cerr) do {if (PetscUnlikely(cerr)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d",(int)cerr);} while (0)
 #endif /* CUDART_VERSION >= 8000 */
 
-#define CHKERRCUBLAS(stat)                      \
-  do {                                          \
+#define CHKERRCUBLAS(stat)                                              \
+  do {                                                                  \
     if (PetscUnlikely(stat)) {                                          \
       const char *name = PetscCUBLASGetErrorName(stat);                 \
       if (((stat == CUBLAS_STATUS_NOT_INITIALIZED) || (stat == CUBLAS_STATUS_ALLOC_FAILED)) && PetscCUDAInitialized) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuBLAS error %d (%s). Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)stat,name); \
       else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuBLAS error %d (%s)",(int)stat,name); \
+    } else {                                                            \
+      cublasPointerMode_t mode;                                         \
+      cublasGetPointerMode(cublasv2handle,&mode);                       \
+      if (PetscUnlikely(mode != CUBLAS_POINTER_MODE_HOST)) {            \
+        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Pointer mode is device!"); \
+      }                                                                 \
     }                                                                   \
   } while (0)
 #endif /* PETSC_HAVE_CUDA */
 
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
 #include <hip/hip_runtime.h>
 #include <hipblas.h>
 #if defined(__HIP_PLATFORM_NVCC__)
 #include <cusolverDn.h>
-#else
+#else /* __HIP_PLATFORM_NVCC__ */
 #include <rocsolver.h>
 #endif /* __HIP_PLATFORM_NVCC__ */
 
@@ -101,7 +106,7 @@ PETSC_STATIC_INLINE cusolverStatus_t hipsolverCreate(hipsolverHandle_t *hipsolve
 {
   return cusolverDnCreate(hipsolverhandle)
 }
-#else
+#else /* __HIP_PLATFORM_NVCC__ */
 typedef rocblas_handle hipsolverHandle_t;
 typedef rocblas_status hipsolverStatus_t;
 

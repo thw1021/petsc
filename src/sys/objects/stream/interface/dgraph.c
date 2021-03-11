@@ -51,6 +51,7 @@ PetscErrorCode PetscStreamGraphDestroy(PetscStreamGraph *sgraph)
   if (!sgraph) PetscFunctionReturn(0);
   PetscValidPointer(sgraph,1);
   if ((*sgraph)->ops->destroy) {ierr = (*(*sgraph)->ops->destroy)(*sgraph);CHKERRQ(ierr);}
+  ierr = PetscFree((*sgraph)->type);CHKERRQ(ierr);
   ierr = PetscFree(*sgraph);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

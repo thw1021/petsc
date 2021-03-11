@@ -54,6 +54,7 @@ PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar *pscal)
   PetscValidStreamType(*pscal,1);
   ierr = (*(*pscal)->ops->destroy)(*pscal);CHKERRQ(ierr);
   ierr = PetscEventDestroy(&(*pscal)->event);CHKERRQ(ierr);
+  ierr = PetscFree((*pscal)->type);CHKERRQ(ierr);
   ierr = PetscFree(*pscal);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -408,7 +409,7 @@ PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx
   if (pscaly) {
     PetscCheckValidSameStreamType(pscaly,3,pstream,4);
     if (PetscUnlikelyDebug(!pscaly->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 3 first");
-    ierr = PetscStreamScalarGetInfo(pscaly,PETSC_FALSE,PSS_ONE,&isYOne,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarGetInfo(pscaly,PSS_ONE,PETSC_FALSE,&isYOne,pstream);CHKERRQ(ierr);
   }
   if (isYOne && (alpha == (PetscScalar)1.0)) PetscFunctionReturn(0);
   if (alpha == (PetscScalar)0.0) {
