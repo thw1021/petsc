@@ -239,7 +239,7 @@ PetscErrorCode PetscStreamRestoreStream(PetscStream strm, void *dstrm)
 
   Level: intermediate
 
-.seealso: PetscStreamCreate(), PetscEventCreate(), PetscStreamWaitEvent()
+.seealso: PetscStreamCreate(), PetscEventCreate(), PetscStreamWaitEvent(), PetscStreamWaitForStream()
 @*/
 PetscErrorCode PetscStreamRecordEvent(PetscStream strm, PetscEvent event)
 {
@@ -282,7 +282,7 @@ $ ierr = VecScaleAsync(vec1,res1);CHKERRQ(ierr);
 
   Level: intermediate
 
-.seealso: PetscStreamCreate(), PetscEventCreate(), PetscStreamRecordEvent()
+.seealso: PetscStreamCreate(), PetscEventCreate(), PetscStreamRecordEvent(), PetscStreamWaitForStream()
 @*/
 PetscErrorCode PetscStreamWaitEvent(PetscStream strm, PetscEvent event)
 {
@@ -331,7 +331,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamSynchronizeDevice_Private(PetscStr
 
   Level: advanced
 
-.seealso: PetscStreamCreate(), PetscStreamQuery(), PetscEventSynchronize()
+.seealso: PetscStreamCreate(), PetscStreamQuery(), PetscEventSynchronize(), PetscStreamWaitForStream()
 @*/
 PetscErrorCode PetscStreamSynchronize(PetscStream strm)
 {
@@ -390,5 +390,39 @@ PetscErrorCode PetscStreamQuery(PetscStream strm, PetscBool *idle)
     ierr = (*strm->ops->query)(strm,idle);CHKERRQ(ierr);
     strm->idle = *idle;
   }
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscStreamWaitForStream - Make one stream wait for another stream to finish
+
+  Not Collective, Asynchronous
+
+  Input Parameters:
++ strmx - The PetscStream object that is waiting
+- strmy - The PetscStream object that is being waited on
+
+  Notes:
+  This routine is a more stream-lined version of PetscStreamRecordEvent() -> PetscStreamWaitEvent() chain for the case
+  of serializing two streams. If one is synchronizing multiple streams however, it is recommended that one use the
+  aforementioned event recording chain. This routine uses only the state of strmy at the moment this routine was
+  called, so any future work queued will not affect strmx. It is safe to pass the same stream to both arguments.
+
+  Level: beginner
+
+.seealso: PetscStreamCreate(), PetscStreamQuery(), PetscStreamRecordEvent(), PetscStreamWaitEvent()
+@*/
+PetscErrorCode PetscStreamWaitForStream(PetscStream strmx, PetscStream strmy)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckValidSameStreamType(strmx,1,strmy,2);
+  if (strmx == strmy) PetscFunctionReturn(0);
+  if (strmy->idle) {
+    ierr = PetscStreamValidateIdle_Internal(strmy);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+  ierr = (*strmx->ops->waitforstream)(strmx,strmy);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

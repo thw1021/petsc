@@ -226,15 +226,21 @@ PETSC_EXTERN PetscErrorCode PetscStreamRecordEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamQuery(PetscStream,PetscBool*);
+PETSC_EXTERN PetscErrorCode PetscStreamWaitForStream(PetscStream,PetscStream);
 
-typedef enum {
-  STREAM_OP_SUM,
-  STREAM_OP_SUB,
-  STREAM_OP_DIV,
-  STREAM_OP_MULT,
-  STREAM_OP_EQUAL
-} PetscStreamComputeOp;
+/*E
+  PSSCacheType - PetscStreamScalar cache identifier
 
+$ PSS_ZERO - Is the PetscStreamScalar = 0
+$ PSS_ONE  - Is the PetscStreamScalar = 1
+$ PSS_INF  - Is the PetscStreamScalar = inf (such that PetscIsInfScalar() returns PETSC_TRUE)
+$ PSS_NAN  - Is the PetscStreamScalar = nan (such that PetscIsNanScalar() returns PETSC_TRUE)
+$ PSSCACHE_MAX - Always the maximum cache value
+
+  Level: intermediate
+
+.seealso: PetscStreamScalarGetInfo(), PetscStreamScalarSetInfo()
+E*/
 typedef enum {
   PSS_ZERO = 0,
   PSS_ONE,

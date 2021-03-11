@@ -24,7 +24,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamTypeCompare(const char type_ref[],
 #if PetscDefined(USE_DEBUG)
 #define PetscValidStreamType(_p_strm__,_p_arg__)                        \
   do {                                                                  \
-    if (PetscUnlikely(!(_p_strm__)->type)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_TYPENOTSET,"PetscStreamType is not set: Argument # %d",_p_arg__); \
+    if (PetscUnlikely(!(_p_strm__))) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Object is NULL: Argument #%d",(_p_arg__)); \
+    if (PetscUnlikely(!(_p_strm__)->type)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_TYPENOTSET,"PetscStreamType is not set: Argument #%d",(_p_arg__)); \
   } while (0)
 
 #define PetscValidStreamTypeSpecific(_p_strm__,_p_arg__,_p_type__,_v_type__) \
@@ -32,7 +33,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamTypeCompare(const char type_ref[],
     PetscBool      _type_same_strm_;                                    \
     PetscErrorCode _strm_ierr_;                                         \
     PetscValidStreamType(_p_strm__,_p_arg__);                           \
-    _strm_ierr_=PetscStreamTypeCompare((_p_strm__)->type,_p_type__,&_type_same_strm_);CHKERRQ(_strm_ierr_); \
+    _strm_ierr_=PetscStreamTypeCompare((_p_strm__)->type,(_p_type__),&_type_same_strm_);CHKERRQ(_strm_ierr_); \
     if (PetscUnlikely(!_type_same_strm_)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"PetscStreamType %s is incompatible with vectype %s: Argument # %d",(_p_type__),(_v_type__),(_p_arg__)); \
   } while (0)
 
@@ -66,6 +67,7 @@ struct _StreamOps {
   PetscErrorCode (*query)(PetscStream,PetscBool*);
   PetscErrorCode (*capturebegin)(PetscStream);
   PetscErrorCode (*captureend)(PetscStream,PetscStreamGraph);
+  PetscErrorCode (*waitforstream)(PetscStream,PetscStream);
 };
 
 struct _n_PetscStream {
