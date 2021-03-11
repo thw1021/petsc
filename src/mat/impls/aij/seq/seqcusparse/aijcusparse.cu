@@ -13,6 +13,7 @@
 #include <petsc/private/vecimpl.h>
 #undef VecType
 #include <../src/mat/impls/aij/seq/seqcusparse/cusparsematimpl.h>
+#include <cooperative_groups.h>
 
 const char *const MatCUSPARSEStorageFormats[]    = {"CSR","ELL","HYB","MatCUSPARSEStorageFormat","MAT_CUSPARSE_",0};
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
@@ -4646,6 +4647,7 @@ void mat_lu_factor_band(const PetscInt n, const PetscInt r[], const PetscInt ic[
   const PetscInt  field = blockIdx.x, blkIdx = blockIdx.y;
   const PetscInt  start = field*nloc, end = start + nloc;
   const PetscInt  nloc_i =  (nloc/Nblk + !!(nloc%Nblk)), start_i = field*nloc + blkIdx*nloc_i, end_i = (start_i + nloc_i) > (field+1)*nloc ? (field+1)*nloc : (start_i + nloc_i);
+  auto g = cooperative_groups::this_grid();
 
   if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {*flops_out = 0;}
   // A22 panel update for each row A(1,:) and col A(:,1)
@@ -4657,7 +4659,8 @@ void mat_lu_factor_band(const PetscInt n, const PetscInt r[], const PetscInt ic[
     const PetscScalar *baUd = pBdd + 1; // vector of data  U(i,i+1:end)
     const PetscScalar Bdd = *pBdd;
     if (threadIdx.x + threadIdx.y + blockIdx.y == 0) *pBdd = 1./(*pBdd);
-    __syncthreads(); // needs to be over all field SMs
+    //__syncthreads(); // needs to be over all field SMs
+    g.sync();
     //if (threadIdx.x+threadIdx.y == 0) printf("\t%d) nzUd=%d Bdd offset = %d\n",glbDD,nzUd,(int)(pBdd-ba_csr));
     const PetscInt offset = blkIdx*blockDim.y + threadIdx.y, inc = Nblk*blockDim.y;
     for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd_pad ; idx += inc, myi += inc) { /* assuming symmetric structure */
@@ -4795,8 +4798,14 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   CHECK_LAUNCH_ERROR(); // does a sync
   // print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, b->diag[0]-b->diag[1]-1, bi_t, ba_t);
   // CHECK_LAUNCH_ERROR(); // does a sync
-  mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam,team_size*sizeof(PetscInt)>>>(n,r,ic,ai_d,aj_d,aa_d,bi_d,ba_d,bi_t,ba_t,bdiag_d,flops_d);
+  // mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam,team_size*sizeof(PetscInt)>>>(n,r,ic,ai_d,aj_d,aa_d,bi_d,ba_d,bi_t,ba_t,bdiag_d,flops_d);
+  void *kernelArgs[] = {
+    (void*)&n, (void*)&r, (void*)&ic, (void*)&ai_d, (void*)&aj_d, (void*)&aa_d, (void*)&bi_d,
+    (void*)&ba_d, (void*)&bi_t,
+    (void*)&ba_t, (void*)&bdiag_d, (void*)&flops_d};
+  cudaLaunchCooperativeKernel((void*)mat_lu_factor_band, dimBlockLeague, dimBlockTeam, kernelArgs, team_size*sizeof(PetscInt), NULL);
   CHECK_LAUNCH_ERROR(); // does a sync
+
 #if defined(PETSC_USE_LOG)
   cerr = cudaMemcpy(&flops, flops_d, sizeof(PetscLogDouble), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
   ierr = PetscLogGpuFlops(flops);CHKERRQ(ierr);
