@@ -23,7 +23,7 @@ PETSC_INTERN PetscErrorCode VecMDot_SeqCUDAAsync(Vec,PetscInt,const Vec[],PetscS
 PETSC_EXTERN PetscErrorCode VecSet_SeqCUDA(Vec,PetscScalar);
 PETSC_EXTERN PetscErrorCode VecSet_SeqCUDAAsync(Vec,PetscStreamScalar,PetscStream);
 PETSC_INTERN PetscErrorCode VecMAXPY_SeqCUDA(Vec,PetscInt,const PetscScalar*,Vec*);
-PETSC_INTERN PetscErrorCode VecMAXPY_SeqCUDAAsync(Vec,PetscInt,const PetscStreamScalar*,Vec*,PetscStream);
+PETSC_INTERN PetscErrorCode VecMAXPY_SeqCUDAAsync(Vec,PetscInt,PetscStreamScalar*,Vec*,PetscStream);
 PETSC_INTERN PetscErrorCode VecAXPBYPCZ_SeqCUDA(Vec,PetscScalar,PetscScalar,PetscScalar,Vec,Vec);
 PETSC_INTERN PetscErrorCode VecAXPBYPCZ_SeqCUDAAsync(Vec,PetscStreamScalar,PetscStreamScalar,PetscStreamScalar,Vec,Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecPointwiseMult_SeqCUDA(Vec,Vec,Vec);

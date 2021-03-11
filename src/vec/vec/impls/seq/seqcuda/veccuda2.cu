@@ -547,7 +547,7 @@ PetscErrorCode VecMAXPY_SeqCUDA(Vec xin, PetscInt nv,const PetscScalar *alpha,Ve
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecMAXPY_SeqCUDAAsync(Vec xin, PetscInt nv,const PetscStreamScalar *pscal,Vec *y,PetscStream pstream)
+PetscErrorCode VecMAXPY_SeqCUDAAsync(Vec xin, PetscInt nv,PetscStreamScalar *pscal,Vec *y,PetscStream pstream)
 {
   PetscErrorCode    ierr;
   PetscInt          n = xin->map->n,j;
@@ -1598,18 +1598,18 @@ PetscErrorCode VecSwap_SeqCUDA(Vec xin,Vec yin)
 PetscErrorCode VecSwap_SeqCUDAAsync(Vec xin,Vec yin,PetscStream pstream)
 {
   PetscErrorCode ierr;
-  PetscBLASInt   one = 1,bn = 0;
-  PetscScalar    *xarray,*yarray;
-  cublasHandle_t cublasv2handle;
-  cublasStatus_t cberr;
 
   PetscFunctionBegin;
   PetscValidStreamTypeSpecific(pstream,3,PETSCSTREAMCUDA,VECCUDA);
-  ierr = PetscCUBLASGetHandle(&cublasv2handle);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(xin->map->n,&bn);CHKERRQ(ierr);
   if (xin != yin) {
+    PetscBLASInt   one = 1,bn = 0;
+    PetscScalar    *xarray,*yarray;
+    cublasHandle_t cublasv2handle;
+    cublasStatus_t cberr;
     cudaStream_t   cstream;
 
+    ierr = PetscCUBLASGetHandle(&cublasv2handle);CHKERRQ(ierr);
+    ierr = PetscBLASIntCast(xin->map->n,&bn);CHKERRQ(ierr);
     ierr = VecCUDAGetArrayAsync(xin,&xarray,pstream);CHKERRQ(ierr);
     ierr = VecCUDAGetArrayAsync(yin,&yarray,pstream);CHKERRQ(ierr);
     ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
@@ -2118,7 +2118,6 @@ PetscErrorCode VecGetLocalVector_SeqCUDA(Vec v,Vec w)
   PetscValidHeaderSpecific(w,VEC_CLASSID,2);
   PetscCheckTypeName(w,VECSEQCUDA);
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
-  ierr = PetscEventSynchronize(v->event);CHKERRQ(ierr);
   ierr = PetscEventSynchronize(w->event);CHKERRQ(ierr);
   if (w->data) {
     if (((Vec_Seq*)w->data)->array_allocated) {
@@ -2135,7 +2134,6 @@ PetscErrorCode VecGetLocalVector_SeqCUDA(Vec v,Vec w)
     ((Vec_Seq*)w->data)->unplacedarray = NULL;
   }
   if (w->spptr) {
-    PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
     if (((Vec_CUDA*)w->spptr)->GPUarray) {
       err = cudaFree(((Vec_CUDA*)w->spptr)->GPUarray);CHKERRCUDA(err);
       ((Vec_CUDA*)w->spptr)->GPUarray = NULL;
@@ -2143,6 +2141,7 @@ PetscErrorCode VecGetLocalVector_SeqCUDA(Vec v,Vec w)
     ierr = PetscFree(w->spptr);CHKERRQ(ierr);
   }
 
+  ierr = PetscEventSynchronize(v->event);CHKERRQ(ierr);
   if (v->petscnative) {
     ierr = PetscFree(w->data);CHKERRQ(ierr);
     w->data = v->data;

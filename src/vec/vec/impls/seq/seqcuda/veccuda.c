@@ -427,9 +427,9 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  V->boundtocpu = pin;
+  V->boundtocpu                    = pin;
   if (pin) {
-    ierr = VecCUDACopyFromGPU(V);CHKERRQ(ierr);
+    ierr                           = VecCUDACopyFromGPU(V);CHKERRQ(ierr);
     V->offloadmask                 = PETSC_OFFLOAD_CPU; /* since the CPU code will likely change values in the vector */
     V->ops->dot                    = VecDot_Seq;
     V->ops->dotasync               = NULL;
@@ -442,13 +442,19 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->copy                   = VecCopy_Seq;
     V->ops->copyasync              = NULL;
     V->ops->set                    = VecSet_Seq;
+    V->ops->setasync               = NULL;
     V->ops->swap                   = VecSwap_Seq;
+    V->ops->swapasync              = NULL;
     V->ops->axpy                   = VecAXPY_Seq;
     V->ops->axpyasync              = NULL;
     V->ops->axpby                  = VecAXPBY_Seq;
+    V->ops->axpbyasync             = NULL;
     V->ops->axpbypcz               = VecAXPBYPCZ_Seq;
+    V->ops->axpbypczasync          = NULL;
     V->ops->pointwisemult          = VecPointwiseMult_Seq;
+    V->ops->pointwisemultasync     = NULL;
     V->ops->pointwisedivide        = VecPointwiseDivide_Seq;
+    V->ops->pointwisedivideasync   = NULL;
     V->ops->setrandom              = VecSetRandom_Seq;
     V->ops->dot_local              = VecDot_Seq;
     V->ops->dot_localasync         = NULL;
@@ -460,18 +466,22 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->mdot_localasync        = NULL;
     V->ops->mtdot_local            = VecMTDot_Seq;
     V->ops->maxpy                  = VecMAXPY_Seq;
+    V->ops->maxpyasync             = NULL;
     V->ops->mdot                   = VecMDot_Seq;
     V->ops->mdotasync              = NULL;
     V->ops->mtdot                  = VecMTDot_Seq;
     V->ops->aypx                   = VecAYPX_Seq;
     V->ops->aypxasync              = NULL;
     V->ops->waxpy                  = VecWAXPY_Seq;
+    V->ops->waxpyasync             = NULL;
     V->ops->dotnorm2               = NULL;
+    V->ops->dotnorm2async          = NULL;
     V->ops->placearray             = VecPlaceArray_Seq;
     V->ops->replacearray           = VecReplaceArray_SeqCUDA;
     V->ops->resetarray             = VecResetArray_Seq;
     V->ops->duplicate              = VecDuplicate_Seq;
     V->ops->conjugate              = VecConjugate_Seq;
+    V->ops->conjugateasync         = NULL;
     V->ops->getlocalvector         = NULL;
     V->ops->restorelocalvector     = NULL;
     V->ops->getlocalvectorread     = NULL;
@@ -481,8 +491,8 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->min                    = VecMin_Seq;
 
     /* default random number generator */
-    ierr = PetscFree(V->defaultrandtype);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(PETSCRANDER48,&V->defaultrandtype);CHKERRQ(ierr);
+    ierr                           = PetscFree(V->defaultrandtype);CHKERRQ(ierr);
+    ierr                           = PetscStrallocpy(PETSCRANDER48,&V->defaultrandtype);CHKERRQ(ierr);
   } else {
     V->ops->dot                    = VecDot_SeqCUDA;
     V->ops->dotasync               = VecDot_SeqCUDAAsync;
@@ -495,13 +505,19 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->copy                   = VecCopy_SeqCUDA;
     V->ops->copyasync              = VecCopy_SeqCUDAAsync;
     V->ops->set                    = VecSet_SeqCUDA;
+    V->ops->setasync               = VecSet_SeqCUDAAsync;
     V->ops->swap                   = VecSwap_SeqCUDA;
+    V->ops->swapasync              = VecSwap_SeqCUDAAsync;
     V->ops->axpy                   = VecAXPY_SeqCUDA;
     V->ops->axpyasync              = VecAXPY_SeqCUDAAsync;
     V->ops->axpby                  = VecAXPBY_SeqCUDA;
+    V->ops->axpbyasync             = VecAXPBY_SeqCUDAAsync;
     V->ops->axpbypcz               = VecAXPBYPCZ_SeqCUDA;
+    V->ops->axpbypczasync          = VecAXPBYPCZ_SeqCUDAAsync;
     V->ops->pointwisemult          = VecPointwiseMult_SeqCUDA;
+    V->ops->pointwisemultasync     = VecPointwiseMult_SeqCUDAAsync;
     V->ops->pointwisedivide        = VecPointwiseDivide_SeqCUDA;
+    V->ops->pointwisedivideasync   = VecPointwiseDivide_SeqCUDAAsync;
     V->ops->setrandom              = VecSetRandom_SeqCUDA;
     V->ops->dot_local              = VecDot_SeqCUDA;
     V->ops->dot_localasync         = VecDot_SeqCUDAAsync;
@@ -512,18 +528,22 @@ PetscErrorCode VecBindToCPU_SeqCUDA(Vec V,PetscBool pin)
     V->ops->mdot_local             = VecMDot_SeqCUDA;
     V->ops->mdot_localasync        = VecMDot_SeqCUDAAsync;
     V->ops->maxpy                  = VecMAXPY_SeqCUDA;
+    V->ops->maxpyasync             = VecMAXPY_SeqCUDAAsync;
     V->ops->mdot                   = VecMDot_SeqCUDA;
     V->ops->mdotasync              = VecMDot_SeqCUDAAsync;
     V->ops->aypx                   = VecAYPX_SeqCUDA;
     V->ops->aypxasync              = VecAYPX_SeqCUDAAsync;
     V->ops->waxpy                  = VecWAXPY_SeqCUDA;
+    V->ops->waxpyasync             = VecWAXPY_SeqCUDAAsync;
     V->ops->dotnorm2               = VecDotNorm2_SeqCUDA;
+    V->ops->dotnorm2async          = VecDotNorm2_SeqCUDAAsync;
     V->ops->placearray             = VecPlaceArray_SeqCUDA;
     V->ops->replacearray           = VecReplaceArray_SeqCUDA;
     V->ops->resetarray             = VecResetArray_SeqCUDA;
     V->ops->destroy                = VecDestroy_SeqCUDA;
     V->ops->duplicate              = VecDuplicate_SeqCUDA;
     V->ops->conjugate              = VecConjugate_SeqCUDA;
+    V->ops->conjugateasync         = VecConjugate_SeqCUDAAsync;
     V->ops->getlocalvector         = VecGetLocalVector_SeqCUDA;
     V->ops->restorelocalvector     = VecRestoreLocalVector_SeqCUDA;
     V->ops->getlocalvectorread     = VecGetLocalVector_SeqCUDA;

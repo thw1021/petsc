@@ -5,15 +5,22 @@ static char help[] = "Tests asynchronous vector operations\n";
 PETSC_STATIC_INLINE PetscErrorCode VecViewFromOptionsSynchronized(MPI_Comm comm, Vec v, PetscObject obj, const char name[])
 {
   PetscErrorCode ierr;
-  PetscMPIInt    rank,size;
+  PetscMPIInt    size,sizeWorld;
 
   PetscFunctionBegin;
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&sizeWorld);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-  /* Force each rank to print one at a time */
-  for (PetscMPIInt i = 0; i < size; ++i) {
-    ierr = MPI_Barrier(comm);CHKERRMPI(ierr);
-    if (rank == i) {ierr = VecViewFromOptions(v,obj,name);CHKERRQ(ierr);}
+  if (size == sizeWorld) {
+    ierr = VecViewFromOptions(v,obj,name);CHKERRQ(ierr);
+  } else {
+    PetscMPIInt rank;
+
+    /* Force each rank to print one at a time */
+    ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+    for (PetscMPIInt i = 0; i < size; ++i) {
+      ierr = MPI_Barrier(comm);CHKERRMPI(ierr);
+      if (rank == i) {ierr = VecViewFromOptions(v,obj,name);CHKERRQ(ierr);}
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -253,13 +260,11 @@ int main(int argc,char **argv)
 /*TEST
 
  testset:
-   nsize: {{1 2}}
    requires: cuda
+   nsize: {{1 2}}
+   suffix: cuda
    args: -vec_type cuda
    test:
-     suffix: 0
-   test:
-     suffix: 1
-     args: -n 10000
+     args: -n {{50 10000}}
 
 TEST*/
