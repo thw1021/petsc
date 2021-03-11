@@ -1,6 +1,8 @@
 #if !defined(PETSCDSTYPES_H)
 #define PETSCDSTYPES_H
 
+#include <petscdmlabel.h>
+
 /*S
   PetscDS - PETSc object that manages a discrete system, which is a set of discretizations + continuum equations from a PetscWeakForm
 
@@ -18,5 +20,12 @@ typedef struct _p_PetscDS *PetscDS;
 .seealso: PetscWeakFormCreate(), PetscDS, PetscFECreate(), PetscFVCreate()
 S*/
 typedef struct _p_PetscWeakForm *PetscWeakForm;
+
+typedef struct _PetscHashFormKey
+{
+  DMLabel  label;
+  PetscInt value;
+  PetscInt field;
+} PetscHashFormKey;
 
 #endif

@@ -13,6 +13,7 @@ PETSC_EXTERN PetscErrorCode PetscWeakFormCreate(MPI_Comm, PetscWeakForm *);
 PETSC_EXTERN PetscErrorCode PetscWeakFormDestroy(PetscWeakForm *);
 PETSC_EXTERN PetscErrorCode PetscWeakFormGetNumFields(PetscWeakForm, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscWeakFormSetNumFields(PetscWeakForm, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscHashFormKeySort(PetscInt, PetscHashFormKey[]);
 
 PETSC_EXTERN PetscErrorCode PetscWeakFormGetObjective(PetscWeakForm, DMLabel, PetscInt, PetscInt, PetscInt *,
                                                       void (***)(PetscInt, PetscInt, PetscInt,

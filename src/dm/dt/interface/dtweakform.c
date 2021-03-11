@@ -68,21 +68,45 @@ static PetscErrorCode PetscChunkBufferEnlargeChunk(PetscChunkBuffer *buffer, Pet
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscWeakFormGetFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt val, PetscInt f, PetscInt *n, void (***func)())
+/*@C
+  PetscHashFormKeySort - Sorts an array of PetscHashFormKey in place in increasing order.
+
+  Not Collective
+
+  Input Parameters:
++ n - number of values
+- X - array of PetscHashFormKey
+
+  Level: intermediate
+
+.seealso: PetscIntSortSemiOrdered(), PetscSortInt()
+@*/
+PetscErrorCode PetscHashFormKeySort(PetscInt n, PetscHashFormKey arr[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (n <= 1) PetscFunctionReturn(0);
+  PetscValidPointer(arr, 2);
+  ierr = PetscTimSort(n, arr, sizeof(PetscHashFormKey), Compare_PetscHashFormKey_Private, NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormGetFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt *n, void (***func)())
 {
   PetscHashFormKey key;
   PetscChunk       chunk;
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  key.label = label; key.val = val; key.field = f;
+  key.label = label; key.value = value; key.field = f;
   ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
   if (chunk.size < 0) {*n = 0;          *func = NULL;}
   else                {*n = chunk.size; *func = &((void (**)()) wf->funcs->array)[chunk.start];}
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscWeakFormAddFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt val, PetscInt f, void (*func)())
+PetscErrorCode PetscWeakFormAddFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, void (*func)())
 {
   PetscHashFormKey key;
   PetscChunk       chunk;
@@ -90,7 +114,7 @@ PetscErrorCode PetscWeakFormAddFunction_Private(PetscWeakForm wf, PetscHMapForm 
 
   PetscFunctionBegin;
   if (!func) PetscFunctionReturn(0);
-  key.label = label; key.val = val; key.field = f;
+  key.label = label; key.value = value; key.field = f;
   ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
   if (chunk.size < 0) {
     ierr = PetscChunkBufferCreateChunk(wf->funcs, 1, &chunk);CHKERRQ(ierr);
@@ -104,14 +128,14 @@ PetscErrorCode PetscWeakFormAddFunction_Private(PetscWeakForm wf, PetscHMapForm 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt val, PetscInt f, PetscInt ind, void (*func)())
+PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt ind, void (*func)())
 {
   PetscHashFormKey key;
   PetscChunk       chunk;
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  key.label = label; key.val = val; key.field = f;
+  key.label = label; key.value = value; key.field = f;
   ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
   CHKMEMQ;
   if (chunk.size < 0) {

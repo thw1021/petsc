@@ -38,24 +38,33 @@ typedef struct {
   char   *array;
 } PetscChunkBuffer;
 
-typedef struct _PetscHashFormKey
-{
-  DMLabel  label;
-  PetscInt val;
-  PetscInt field;
-} PetscHashFormKey;
-
 #define PetscHashFormKeyHash(key) \
-  PetscHashCombine(PetscHashCombine(PetscHashInt(((size_t)(key).label)),PetscHashInt((key).val)),PetscHashInt((key).field))
+  PetscHashCombine(PetscHashCombine(PetscHashInt(((size_t)(key).label)),PetscHashInt((key).value)),PetscHashInt((key).field))
 
 #define PetscHashFormKeyEqual(k1,k2) \
   (((k1).label == (k2).label) ? \
-   ((k1).val   == (k2).val) ? \
+   ((k1).value == (k2).value) ? \
    ((k1).field == (k2).field) : 0 : 0)
 
 static PetscChunk _PetscInvalidChunk = {-1, -1, -1};
 
 PETSC_HASH_MAP(HMapForm, PetscHashFormKey, PetscChunk, PetscHashFormKeyHash, PetscHashFormKeyEqual, _PetscInvalidChunk)
+
+/*
+  We sort lexicographically on the structure.
+  Returns
+  -1: left < right
+   0: left = right
+   1: left > right
+*/
+PETSC_STATIC_INLINE int Compare_PetscHashFormKey_Private(const void *left, const void *right, PETSC_UNUSED void *ctx)
+{
+  PetscHashFormKey l = *(PetscHashFormKey *) left;
+  PetscHashFormKey r = *(PetscHashFormKey *) right;
+  return (l.label < r.label) ? -1 : ((l.label > r.label) ? 1 :
+           ((l.value < r.value) ? -1 : (l.value > r.value) ? 1 :
+             ((l.field < r.field) ? -1 : (l.field > r.field))));
+}
 
 typedef struct _PetscWeakFormOps *PetscWeakFormOps;
 struct _PetscWeakFormOps {
