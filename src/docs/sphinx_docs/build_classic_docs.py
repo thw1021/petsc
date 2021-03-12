@@ -46,10 +46,19 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch='arch-classic-docs') -> None:
     print('PETSC_ARCH=%s' % petsc_arch)
     print('(message from', __file__, ')')
     print('============================================')
-    subprocess.run(configure, cwd=petsc_dir, check=True)
-    # Note: if you want to see configure.log printed out on failure,
-    #       catch the subprocess.CalledProcessException exception
-    #       and dump the file before re-raising.
+    try:
+        subprocess.run(configure, cwd=petsc_dir, check=True)
+    except subprocess.CalledProcessException:
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("Configuration error - dumping configure.log"
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        with open (os.path.join(petsc_dir, 'configure.log', 'r') as log:
+             for line in log:
+                 print(line)
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("Configuration error - finished dumping configure.log"
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        raise
     return petsc_arch
 
 
