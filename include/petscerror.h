@@ -981,7 +981,7 @@ PETSC_STATIC_INLINE PetscBool PetscStackActive(void) {return PETSC_FALSE;}
    Notes:
     This is intended for external package routines that return error codes. Use PetscStackCall() for those that do not.
 
-   Developer Note: this is so that when an external packge routine results in a crash or corrupts memory, they get blamed instead of PETSc.
+   Developer Note: this is so that when an external package routine results in a crash or corrupts memory, they get blamed instead of PETSc.
 
 */
 #define PetscStackCallStandard(func,args) do {                                                            \
