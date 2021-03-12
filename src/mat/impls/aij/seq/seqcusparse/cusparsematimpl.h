@@ -209,10 +209,6 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   THRUSTARRAY                       *workVector;
   cusparseHandle_t                  handle;   /* a handle to the cusparse library */
   PetscInt                          nnz;      /* number of nonzeros ... need this for accurate logging between ICC and ILU */
-  THRUSTINTARRAY                    *diag_d;  /* diagonal data structure from PETSc's factor matrix */
-  THRUSTARRAY                       *a_d;
-  THRUSTINTARRAY                    *i_d;
-  THRUSTINTARRAY                    *j_d;
 };
 
 struct Mat_CusparseSpMV {
