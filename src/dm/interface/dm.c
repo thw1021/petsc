@@ -9381,7 +9381,7 @@ PetscErrorCode DMMonitor(DM dm)
 + dm     - The DM
 . sol    - The solution vector
 . errors - An array of length Nf, the number of fields, or NULL for no output
-. errorVec - A Vec pointer, or NULL for no output
+- errorVec - A Vec pointer, or NULL for no output
 
   Output Parameters:
 + errors   - The error in each field
