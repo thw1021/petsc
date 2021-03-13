@@ -4520,8 +4520,9 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   Ni=1;
 #else
   Ni = bw_approx/team_size + 1;
+  if (Nf < 108) while (Ni*Nf > 108) Ni--; // need to get this from the system
 #endif
-printf("bw_approx=%d Ni=%d\n",bw_approx, Ni);
+  //printf("bw_approx=%d Ni=%d\n",bw_approx, Ni);
   dim3 dimBlockTeam(nVec,team_size);
   dim3 dimBlockLeague(Nf,Ni);
 
