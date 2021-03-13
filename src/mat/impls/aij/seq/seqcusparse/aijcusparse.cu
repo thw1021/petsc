@@ -14,8 +14,9 @@
 #undef VecType
 #include <../src/mat/impls/aij/seq/seqcusparse/cusparsematimpl.h>
 #include <thrust/async/for_each.h>
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
 #include <cooperative_groups.h>
-
+#endif
 const char *const MatCUSPARSEStorageFormats[]    = {"CSR","ELL","HYB","MatCUSPARSEStorageFormat","MAT_CUSPARSE_",0};
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   /* The following are copied from cusparse.h in CUDA-11.0. In MatCUSPARSESpMVAlgorithms[] etc, we copy them in
@@ -4288,7 +4289,7 @@ static PetscErrorCode MatSeqAIJCopySubArray_SeqAIJCUSPARSE(Mat A, PetscInt n, co
   The GPU LU factor kernel
 */
 __global__
-void mat_lu_factor_band_init_set_i(const PetscInt n, const PetscInt ui_d[], PetscInt bi_csr[])
+void mat_lu_factor_band_init_set_i(const PetscInt n, const int ui_d[], int bi_csr[])
 {
   const PetscInt  Nf = gridDim.x, Nblk = gridDim.y, nloc = n/Nf, bw = ui_d[1]-ui_d[0]-1;
   const PetscInt  field = blockIdx.x, blkIdx = blockIdx.y;
@@ -4307,9 +4308,9 @@ void mat_lu_factor_band_init_set_i(const PetscInt n, const PetscInt ui_d[], Pets
 }
 // copy AIJ to AIJ_BAND
 __global__
-void mat_lu_factor_band_copy_aij_aij(const PetscInt n, const PetscInt ui_d[], const PetscInt r[], const PetscInt ic[],
+void mat_lu_factor_band_copy_aij_aij(const PetscInt n, const int ui_d[], const PetscInt r[], const PetscInt ic[],
                                      const int ai_d[], const int aj_d[], const PetscScalar aa_d[],
-                                     const PetscInt bi_csr[], PetscScalar ba_csr[])
+                                     const int bi_csr[], PetscScalar ba_csr[])
 {
   const PetscInt  Nf = gridDim.x, Nblk = gridDim.y, nloc = n/Nf, bw = ui_d[1]-ui_d[0]-1;
   const PetscInt  field = blockIdx.x, blkIdx = blockIdx.y;
@@ -4336,16 +4337,15 @@ void mat_lu_factor_band_copy_aij_aij(const PetscInt n, const PetscInt ui_d[], co
 }
 // print AIJ_BAND
 __global__
-void print_mat_aij_band(const PetscInt n, const PetscInt ui_d[], const PetscInt bi_csr[], const PetscScalar ba_csr[])
+void print_mat_aij_band(const PetscInt n, const int bi_csr[], const PetscScalar ba_csr[])
 {
-  const PetscInt bw = ui_d[1]-ui_d[0]-1;
   // debug
   if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0){
     printf("B (AIJ) n=%d:\n",n);
     for (int rowb=0;rowb<n;rowb++) {
-      const PetscInt nz = bi_csr[rowb+1] - bi_csr[rowb], bjStart = (rowb>bw) ? rowb-bw : 0; // this spans fields so needs a global synch
+      const PetscInt nz = bi_csr[rowb+1] - bi_csr[rowb];
       const PetscScalar    *batmp = ba_csr + bi_csr[rowb];
-      for (int j=0; j<nz; j++) printf("(%13.6e)(%2d) ",batmp[j],bjStart+j);
+      for (int j=0; j<nz; j++) printf("(%13.6e) ",batmp[j]);
       printf(" bi=%d\n",bi_csr[rowb+1]);
     }
   }
@@ -4361,8 +4361,9 @@ void mat_lu_factor_band(const PetscInt n, const int bi_csr[], PetscScalar ba_csr
   const PetscInt  field = blockIdx.x, blkIdx = blockIdx.y;
   const PetscInt  start = field*nloc, end = start + nloc;
   const PetscInt  nloc_i =  (nloc/Nblk + !!(nloc%Nblk)), start_i = field*nloc + blkIdx*nloc_i, end_i = (start_i + nloc_i) > (field+1)*nloc ? (field+1)*nloc : (start_i + nloc_i);
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   auto g = cooperative_groups::this_grid();
-
+#endif
   if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {*flops_out = 0;}
   // A22 panel update for each row A(1,:) and col A(:,1)
   for (int glbDD=start, locDD = 0; glbDD<end; glbDD++, locDD++) {
@@ -4372,8 +4373,11 @@ void mat_lu_factor_band(const PetscInt n, const int bi_csr[], PetscScalar ba_csr
     PetscScalar       *pBdd = ba_csr + bi_csr[glbDD] + dOffset;
     const PetscScalar *baUd = pBdd + 1; // vector of data  U(i,i+1:end)
     const PetscScalar Bdd = *pBdd;
-    //__syncthreads(); // needs to be over all field SMs
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
     g.sync();
+#else
+    __syncthreads(); // needs to be over all field SMs
+#endif
     //if (threadIdx.x+threadIdx.y == 0) printf("\t%d) nzUd=%d Bdd offset = %d\n",glbDD,nzUd,(int)(pBdd-ba_csr));
     const PetscInt offset = blkIdx*blockDim.y + threadIdx.y, inc = Nblk*blockDim.y;
     for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd_pad ; idx += inc, myi += inc) { /* assuming symmetric structure */
@@ -4436,7 +4440,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   const int                    *ai_d, *aj_d, *li_d, *ui_d;
   const PetscScalar            *aa_d,*ua_d,*la_d;
   PetscScalar                  *ba_t;
-  PetscInt                     *bi_t;
+  int                          *bi_t;
   PetscContainer               container;
   int                          Ni=1, team_size=8, Nf, nVec=32; // <= 256 apparently
   PetscLogDouble               flops, *flops_d;
@@ -4445,6 +4449,9 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   if (A->rmap->n != n) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"only square matrices supported %D %D",A->rmap->n,n);
   ierr = MatGetOption(A,MAT_STRUCTURALLY_SYMMETRIC,&row_identity);CHKERRQ(ierr);
   if (!row_identity) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"only structrally symmetric matrices supported");
+#if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
+  Ni=1;
+#endif
   // cusparse setup
 
   if (!cusparsestructA) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cusparsestructA");
@@ -4501,7 +4508,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   ua_d    = thrust::raw_pointer_cast(matrixU->values->data().get());
 
   cerr = cudaMalloc(&ba_t,b->nz*sizeof(PetscScalar));CHKERRCUDA(cerr);
-  cerr = cudaMalloc(&bi_t,(n+1)*sizeof(PetscScalar));CHKERRCUDA(cerr);
+  cerr = cudaMalloc(&bi_t,(n+1)*sizeof(int));CHKERRCUDA(cerr);
   cerr = cudaMemset(ba_t,0,b->nz*sizeof(PetscScalar));CHKERRCUDA(cerr); // easier to do it here
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   cerr = cudaMalloc(&flops_d,sizeof(PetscLogDouble));CHKERRCUDA(cerr);
@@ -4515,11 +4522,15 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   CHECK_LAUNCH_ERROR(); // does a sync
   mat_lu_factor_band_copy_aij_aij<<<dimBlockLeague,dimBlockTeam>>>(n,ui_d,r,ic,ai_d,aj_d,aa_d,bi_t,ba_t);
   CHECK_LAUNCH_ERROR(); // does a sync
-  //print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, ui_d, bi_t, ba_t);
+  //print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
   //CHECK_LAUNCH_ERROR(); // does a sync
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   void *kernelArgs[] = {
     (void*)&n, (void*)&bi_t, (void*)&ba_t, (void*)&li_d, (void*)&la_d, (void*)&ui_d, (void*)&ua_d, (void*)&flops_d};
   cudaLaunchCooperativeKernel((void*)mat_lu_factor_band, dimBlockLeague, dimBlockTeam, kernelArgs, team_size*sizeof(PetscInt), NULL);
+#else
+  mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam,team_size*sizeof(PetscInt)>>>(n,bi_t,ba_t,li_d,la_d,ui_d,ua_d,flops_d);
+#endif
   CHECK_LAUNCH_ERROR(); // does a sync
 #if defined(PETSC_USE_LOG)
   cerr = cudaMemcpy(&flops, flops_d, sizeof(PetscLogDouble), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
@@ -4634,10 +4645,10 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
     /* Create the matrix description */
     stat = cusparseCreateMatDescr(&TriFactor->descr);CHKERRCUSPARSE(stat);
     stat = cusparseSetMatIndexBase(TriFactor->descr, CUSPARSE_INDEX_BASE_ZERO);CHKERRCUSPARSE(stat);
-#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+#if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
     stat = cusparseSetMatType(TriFactor->descr, CUSPARSE_MATRIX_TYPE_GENERAL);CHKERRCUSPARSE(stat);
 #else
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"SeqAIJCUSPARSEBAND requires Cuda-11+");
+    stat = cusparseSetMatType(TriFactor->descr, CUSPARSE_MATRIX_TYPE_TRIANGULAR);CHKERRCUSPARSE(stat);
 #endif
     /* assign the pointer */
     if (LUIdx==0) { // L
