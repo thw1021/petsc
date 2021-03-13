@@ -4296,13 +4296,14 @@ void mat_lu_factor_band_init_set_i(const PetscInt n, const int ui_d[], int bi_cs
   const PetscInt  nloc_i =  (nloc/Nblk + !!(nloc%Nblk)), start_i = field*nloc + blkIdx*nloc_i, end_i = (start_i + nloc_i) > (field+1)*nloc ? (field+1)*nloc : (start_i + nloc_i);
 
   // set i (row+1)
-  //if (threadIdx.x + threadIdx.y == 0) printf("f=%d/%d %d.%d LU Band set i\n",blockIdx.x+1,gridDim.x,blockDim.x,blockDim.y);
+  //if (threadIdx.x + threadIdx.y == 0) printf("f=%d/%d block=%d/%d LU Band set i\n",blockIdx.x+1,gridDim.x,blkIdx+1,Nblk);
   if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) bi_csr[0] = 0; // dummy at zero
-  for (int rowb = start_i + blkIdx*blockDim.y + threadIdx.y; rowb < end_i; rowb += Nblk*blockDim.y) { // rows in block
+  // for (int rowb = start_i + blkIdx*blockDim.y + threadIdx.y; rowb < end_i; rowb += Nblk*blockDim.y) { // rows in block
+  for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block by thread y
     if (rowb < end_i && threadIdx.x==0) {
       PetscInt i=rowb+1, ni = (rowb>bw) ? bw+1 : i, n1L = ni*(ni-1)/2, nug= i*bw, n2L = bw*((rowb>bw) ? (rowb-bw) : 0), mi = bw + rowb + 1 - n, clip = (mi>0) ? mi*(mi-1)/2 + mi: 0;
       bi_csr[rowb+1] = n1L + nug - clip + n2L + i;
-      //printf("bi[%2d] = %3d = n1L=%3d + nu=%3d (%3d-clip(%2d)=%d) + n2L=%3d + D=%2d\n",rowb+1,bi_csr[rowb+1],n1L,nug-clip,nug,mi,clip,n2L,i);
+      // printf("bi[%2d] = %3d = n1L=%3d + nu=%3d (%3d-clip(%2d)=%d) + n2L=%3d + D=%2d\n",rowb+1,bi_csr[rowb+1],n1L,nug-clip,nug,mi,clip,n2L,i);
     }
   }
 }
@@ -4317,7 +4318,7 @@ void mat_lu_factor_band_copy_aij_aij(const PetscInt n, const int ui_d[], const P
   const PetscInt  nloc_i =  (nloc/Nblk + !!(nloc%Nblk)), start_i = field*nloc + blkIdx*nloc_i, end_i = (start_i + nloc_i) > (field+1)*nloc ? (field+1)*nloc : (start_i + nloc_i);
 
   // copy A into B with CSR format -- these two loops can be fused
-  for (int rowb = start_i + blkIdx*blockDim.y + threadIdx.y; rowb < end_i; rowb += Nblk*blockDim.y) { // rows in block
+  for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block by thread y
     if (rowb < end_i) {
       const PetscInt    rowa = r[rowb], nza = ai_d[rowa+1] - ai_d[rowa];
       const int         *ajtmp = aj_d + ai_d[rowa], bjStart = (rowb>bw) ? rowb-bw : 0;
@@ -4341,7 +4342,7 @@ void print_mat_aij_band(const PetscInt n, const int bi_csr[], const PetscScalar 
 {
   // debug
   if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0){
-    printf("B (AIJ) n=%d:\n",n);
+    printf("B (AIJ) n=%d:\n",(int)n);
     for (int rowb=0;rowb<n;rowb++) {
       const PetscInt nz = bi_csr[rowb+1] - bi_csr[rowb];
       const PetscScalar    *batmp = ba_csr + bi_csr[rowb];
@@ -4376,7 +4377,7 @@ void mat_lu_factor_band(const PetscInt n, const int bi_csr[], PetscScalar ba_csr
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
     g.sync();
 #else
-    __syncthreads(); // needs to be over all field SMs
+    __syncthreads();
 #endif
     //if (threadIdx.x+threadIdx.y == 0) printf("\t%d) nzUd=%d Bdd offset = %d\n",glbDD,nzUd,(int)(pBdd-ba_csr));
     const PetscInt offset = blkIdx*blockDim.y + threadIdx.y, inc = Nblk*blockDim.y;
@@ -4410,13 +4411,13 @@ void mat_lu_factor_band(const PetscInt n, const int bi_csr[], PetscScalar ba_csr
     //   (nzUd*nzUd*2 + nzUd + 1));
   } /* endof for (i=0; i<n; i++) { */
   /* copy into b->a, use b->i not bi_csr */
-  for (int i = start_i + blkIdx*blockDim.y + threadIdx.y; i < end_i; i += Nblk*blockDim.y) { // rows in block
-    if (i < end_i) {
-      const PetscInt    nzu = ui_d[i+1] - ui_d[i], nzl = li_d[i+1] - li_d[i] - 1; // do not set diagonal of L
-      PetscScalar       *batmp = la_d + li_d[i]; // L
-      const PetscScalar *batmp_csr = ba_csr + bi_csr[i];
+  for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block by thread y
+    if (rowb < end_i) {
+      const PetscInt    nzu = ui_d[rowb+1] - ui_d[rowb], nzl = li_d[rowb+1] - li_d[rowb] - 1; // do not set diagonal of L
+      PetscScalar       *batmp = la_d + li_d[rowb]; // L
+      const PetscScalar *batmp_csr = ba_csr + bi_csr[rowb];
       for (int j=threadIdx.x ; j<nzl ; j += blockDim.x) if (j<nzl) batmp[j] = batmp_csr[j];
-      batmp = ua_d + ui_d[i]; // U
+      batmp = ua_d + ui_d[rowb]; // U
       for (int j=threadIdx.x ; j<nzu ; j += blockDim.x) if (j<nzu) batmp[j] = batmp_csr[nzl+j];
     }
   }
@@ -4438,22 +4439,22 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   cudaError_t                  cerr;
   const PetscInt               n=A->rmap->n, *ic, *r;
   const int                    *ai_d, *aj_d, *li_d, *ui_d;
-  const PetscScalar            *aa_d,*ua_d,*la_d;
-  PetscScalar                  *ba_t;
+  const PetscScalar            *aa_d;
+  PetscScalar                  *ba_t,*ua_d,*la_d;
   int                          *bi_t;
   PetscContainer               container;
-  int                          Ni=1, team_size=8, Nf, nVec=32; // <= 256 apparently
+  int                          bw_approx = b->nz/(2*n), Ni, team_size=8, Nf, nVec=32; // team_size*nVec <= 256 apparently
   PetscLogDouble               flops, *flops_d;
 
   PetscFunctionBegin;
+  if (A->rmap->n == 0) {
+    PetscFunctionReturn(0);
+  }
   if (A->rmap->n != n) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"only square matrices supported %D %D",A->rmap->n,n);
   ierr = MatGetOption(A,MAT_STRUCTURALLY_SYMMETRIC,&row_identity);CHKERRQ(ierr);
   if (!row_identity) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"only structrally symmetric matrices supported");
-#if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
-  Ni=1;
-#endif
-  // cusparse setup
 
+  // cusparse setup
   if (!cusparsestructA) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cusparsestructA");
   matstructA = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestructA->mat; //  matstruct->cprowIndices
   if (!matstructA) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing mat struct");
@@ -4515,6 +4516,12 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
 #endif
+#if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
+  Ni=1;
+#else
+  Ni = bw_approx/team_size + 1;
+#endif
+printf("bw_approx=%d Ni=%d\n",bw_approx, Ni);
   dim3 dimBlockTeam(nVec,team_size);
   dim3 dimBlockLeague(Nf,Ni);
 
@@ -4522,8 +4529,8 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   CHECK_LAUNCH_ERROR(); // does a sync
   mat_lu_factor_band_copy_aij_aij<<<dimBlockLeague,dimBlockTeam>>>(n,ui_d,r,ic,ai_d,aj_d,aa_d,bi_t,ba_t);
   CHECK_LAUNCH_ERROR(); // does a sync
-  //print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
-  //CHECK_LAUNCH_ERROR(); // does a sync
+  // print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
+  // CHECK_LAUNCH_ERROR(); // does a sync
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   void *kernelArgs[] = {
     (void*)&n, (void*)&bi_t, (void*)&ba_t, (void*)&li_d, (void*)&la_d, (void*)&ui_d, (void*)&ua_d, (void*)&flops_d};
