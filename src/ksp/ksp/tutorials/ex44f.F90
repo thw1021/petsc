@@ -1,6 +1,7 @@
       program main              !   Solves the linear system  J x = f
 #include <petsc/finclude/petsc.h>
       use petscksp
+      use mpi
       implicit none
       Vec x,f
       Mat J

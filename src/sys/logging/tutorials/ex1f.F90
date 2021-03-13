@@ -14,6 +14,7 @@
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petsclog.h>
       use petscsys
+      use mpi
       implicit none
 
 !====================================================================

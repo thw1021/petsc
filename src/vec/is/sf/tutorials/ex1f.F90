@@ -8,6 +8,7 @@
       program main
 #include <petsc/finclude/petscvec.h>
       use petscvec
+      use mpi
       implicit none
 
       PetscErrorCode                ierr

@@ -5,6 +5,7 @@
 
 #include "petsc/finclude/petsctao.h"
       use petsctao
+      use mpi
       implicit none
 
 !  Common blocks:

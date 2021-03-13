@@ -5,7 +5,7 @@
 program main
 #include <petsc/finclude/petscsys.h>
       use petscsys
-
+      use mpi
       implicit none
       PetscErrorCode    :: ierr
       PetscMPIInt       :: myRank,mySize
