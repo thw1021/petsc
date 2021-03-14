@@ -100,7 +100,7 @@ typedef struct {
   /* computing */
   LandauDeviceType deviceType;
   PetscInt         subThreadBlockSize;
-  PetscInt         numThreaTeams; /* number of SMs in Cuda to use */
+  PetscInt         numThreadTeams; /* number of SMs in Cuda to use */
   MPI_Comm         comm; /* global communicator to use for errors and diagnostics */
 } LandauCtx;
 

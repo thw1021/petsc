@@ -4468,11 +4468,10 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   // factor: get Nf if available
   ierr = PetscObjectQuery((PetscObject) A, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
   if (container) {
-    PetscInt *pNf=NULL, nv;
+    PetscInt *pNf=NULL;
     ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
     Nf = (*pNf)%1000;
     team_size = (*pNf)/1000; // number of SMs to use
-    if (nv>0) nVec = nv;
   } else Nf = 1;
   if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
   // setup data
@@ -4519,11 +4518,13 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
 #if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
   Ni=1;
   team_size = 8;
+  nVec=32;
 #else
   Ni = team_size/Nf; // #SM / Nf
   if (Ni == 0) Ni = 1;
   team_size = bw_approx/Ni + !!(bw_approx%Ni);
-  nVec = 256/team_size;
+  // if (team_size >16) team_size = 16;
+  nVec = 512/team_size;
 #endif
   printf("bw_approx=%d Ni=%d team_size=%d nVec=%d\n",bw_approx, Ni,team_size,nVec);
   dim3 dimBlockTeam(nVec,team_size);
