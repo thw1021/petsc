@@ -383,8 +383,8 @@ PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar pscal, PSSCacheType ct
 
   Input Parameters:
 + pscalx,pscaly - The PetscStreamScalars
-. alpha - The scalar
-- pstream - The PetscStream on which to enqueue the operation
+. alpha         - The scalar
+- pstream       - The PetscStream on which to enqueue the operation
 
   Output Parameter:
 . pscalx - The adjusted output PetscStreamScalar
