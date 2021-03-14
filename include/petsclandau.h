@@ -99,7 +99,8 @@ typedef struct {
   PetscBool      aux_bool;  /* helper */
   /* computing */
   LandauDeviceType deviceType;
-  PetscInt         subThreadBlockSize; /* just used for Kokkos, could hardwire like Cuda, but Kokkos is portable */
+  PetscInt         subThreadBlockSize;
+  PetscInt         numThreaTeams; /* number of SMs in Cuda to use */
   MPI_Comm         comm; /* global communicator to use for errors and diagnostics */
 } LandauCtx;
 

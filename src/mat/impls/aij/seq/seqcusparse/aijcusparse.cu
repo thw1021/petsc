@@ -4443,7 +4443,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   PetscScalar                  *ba_t,*ua_d,*la_d;
   int                          *bi_t;
   PetscContainer               container;
-  int                          bw_approx = b->nz/(2*n), Ni, team_size=8, Nf, nVec=32; // team_size*nVec <= 256 apparently
+  int                          bw_approx = b->nz/(2*n), Ni, team_size=108, Nf, nVec=32; // team_size*nVec <= 256 apparently
   PetscLogDouble               flops, *flops_d;
 
   PetscFunctionBegin;
@@ -4471,7 +4471,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     PetscInt *pNf=NULL, nv;
     ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
     Nf = (*pNf)%1000;
-    nv = (*pNf)/1000;
+    team_size = (*pNf)/1000; // number of SMs to use
     if (nv>0) nVec = nv;
   } else Nf = 1;
   if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
@@ -4518,11 +4518,14 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
 #endif
 #if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
   Ni=1;
+  team_size = 8;
 #else
-  Ni = bw_approx/team_size + 1;
-  if (Nf < 108) while (Ni*Nf > 108) Ni--; // need to get this from the system
+  Ni = team_size/Nf; // #SM / Nf
+  if (Ni == 0) Ni = 1;
+  team_size = bw_approx/Ni + !!(bw_approx%Ni);
+  nVec = 256/team_size;
 #endif
-  //printf("bw_approx=%d Ni=%d\n",bw_approx, Ni);
+  printf("bw_approx=%d Ni=%d team_size=%d nVec=%d\n",bw_approx, Ni,team_size,nVec);
   dim3 dimBlockTeam(nVec,team_size);
   dim3 dimBlockLeague(Nf,Ni);
 
