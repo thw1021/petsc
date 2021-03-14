@@ -51,14 +51,12 @@ PETSC_STATIC_INLINE PetscErrorCode VecClose(Vec vref, Vec vtest)
 int main(int argc,char **argv)
 {
   PetscErrorCode    ierr;
+  PetscInt          n=50,nstream=3,nloop=9;
   PetscStreamType   stype=PETSCSTREAMCUDA;
   VecType           vtype=VECCUDA;
-  PetscStream       pstream1,pstream2,pstream3;
+  PetscStream       pstream[nstream];
   PetscStreamScalar pscal,pscal2;
-  PetscInt          n=50;
-  PetscInt          *idx;
   const PetscScalar one=1.0;
-  PetscScalar       *arr;
   PetscMPIInt       rank,size;
   Vec               seq1,seq2,seq1Async,seq2Async,seqReset;
   Vec               mpi1,mpi2,mpi1Async,mpi2Async,mpiReset;
@@ -73,24 +71,17 @@ int main(int argc,char **argv)
   ierr = VecCreate(PETSC_COMM_SELF,&seq1);CHKERRQ(ierr);
   ierr = VecSetSizes(seq1,n,PETSC_DECIDE);CHKERRQ(ierr);
   ierr = VecSetType(seq1,vtype);CHKERRQ(ierr);
+  ierr = VecSetRandom(seq1,NULL);CHKERRQ(ierr);
   ierr = VecSetFromOptions(seq1);CHKERRQ(ierr);
 
   /* Create mpi vector */
   ierr = VecCreate(PETSC_COMM_WORLD,&mpi1);CHKERRQ(ierr);
   ierr = VecSetSizes(mpi1,n,PETSC_DECIDE);CHKERRQ(ierr);
   ierr = VecSetType(mpi1,vtype);CHKERRQ(ierr);
+  ierr = VecSetRandom(mpi1,NULL);CHKERRQ(ierr);
   ierr = VecSetFromOptions(mpi1);CHKERRQ(ierr);
 
-  ierr = PetscMalloc1(n,&idx);CHKERRQ(ierr);
-  ierr = PetscMalloc1(n,&arr);CHKERRQ(ierr);
-
-  for (PetscInt i = 0; i < n; ++i) {
-    idx[i] = i;
-    arr[i] = (PetscScalar)(rank*n+i);
-  }
-
-  /* Initialize vectors */
-  ierr = VecSetValues(seq1,n,idx,arr,INSERT_VALUES);CHKERRQ(ierr);
+  /* Assmeble sequential vectors */
   ierr = VecAssemblyBegin(seq1);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(seq1);CHKERRQ(ierr);
   ierr = VecDuplicate(seq1,&seqReset);CHKERRQ(ierr);
@@ -102,9 +93,7 @@ int main(int argc,char **argv)
   ierr = VecCopy(seq1,seq1Async);CHKERRQ(ierr);
   ierr = VecCopy(seq1,seq2Async);CHKERRQ(ierr);
 
-  for (PetscInt i = 0; i < n; ++i) idx[i] = rank*n+i;
-
-  ierr = VecSetValues(mpi1,n,idx,arr,INSERT_VALUES);CHKERRQ(ierr);
+  /* Assemble parallel vectors */
   ierr = VecAssemblyBegin(mpi1);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(mpi1);CHKERRQ(ierr);
   ierr = VecDuplicate(mpi1,&mpiReset);CHKERRQ(ierr);
@@ -116,40 +105,33 @@ int main(int argc,char **argv)
   ierr = VecCopy(mpi1,mpi1Async);CHKERRQ(ierr);
   ierr = VecCopy(mpi1,mpi2Async);CHKERRQ(ierr);
 
-  ierr = PetscFree(idx);CHKERRQ(ierr);
-  ierr = PetscFree(arr);CHKERRQ(ierr);
-
   /* Create stream objects */
-  ierr = PetscStreamCreate(&pstream1);CHKERRQ(ierr);
-  ierr = PetscStreamSetType(pstream1,stype);CHKERRQ(ierr);
-  ierr = PetscStreamSetMode(pstream1,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
-  ierr = PetscStreamSetUp(pstream1);CHKERRQ(ierr);
-  ierr = PetscStreamDuplicate(pstream1,&pstream2);CHKERRQ(ierr);
-  ierr = PetscStreamDuplicate(pstream1,&pstream3);CHKERRQ(ierr);
+  ierr = PetscStreamCreate(&pstream[0]);CHKERRQ(ierr);
+  ierr = PetscStreamSetType(pstream[0],stype);CHKERRQ(ierr);
+  ierr = PetscStreamSetMode(pstream[0],PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
+  ierr = PetscStreamSetUp(pstream[0]);CHKERRQ(ierr);
+  ierr = PetscStreamDuplicate(pstream[0],&(pstream[1]));CHKERRQ(ierr);
+  ierr = PetscStreamDuplicate(pstream[0],&(pstream[2]));CHKERRQ(ierr);
 
+  /* Create stream scalar objects */
   ierr = PetscStreamScalarCreate(&pscal);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscal,stype);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetUp(pscal);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetValue(pscal,&one,PETSC_MEMTYPE_HOST,pstream1);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetValue(pscal,&one,PETSC_MEMTYPE_HOST,pstream[0]);CHKERRQ(ierr);
 
   /* Initialize the host versions */
-  for (PetscInt i = 0; i < 10; ++i) {
-    for (PetscInt j = 0; j < 3; ++j) {
-      ierr = VecAXPY(seq1,1.0,seq2);CHKERRQ(ierr);
-      ierr = VecAXPY(mpi1,1.0,mpi2);CHKERRQ(ierr);
-    }
+  for (PetscInt i = 0; i < nloop; ++i) {
+    ierr = VecAXPY(seq1,1.0,seq2);CHKERRQ(ierr);
+    ierr = VecAXPY(mpi1,1.0,mpi2);CHKERRQ(ierr);
   }
 
-  /* Test serialization of AXPY on different streams */
-  for (PetscInt i = 0; i < 10; ++i) {
-    ierr = VecAXPYAsync(seq1Async,pscal,seq2Async,pstream1);CHKERRQ(ierr);
-    ierr = VecAXPYAsync(seq1Async,pscal,seq2Async,pstream2);CHKERRQ(ierr);
-    ierr = VecAXPYAsync(seq1Async,pscal,seq2Async,pstream3);CHKERRQ(ierr);
-
-    ierr = VecAXPYAsync(mpi1Async,pscal,mpi2Async,pstream1);CHKERRQ(ierr);
-    ierr = VecAXPYAsync(mpi1Async,pscal,mpi2Async,pstream2);CHKERRQ(ierr);
-    ierr = VecAXPYAsync(mpi1Async,pscal,mpi2Async,pstream3);CHKERRQ(ierr);
+  /* Test asynchronous AXPY on same stream */
+  for (PetscInt i = 0; i < nloop; ++i) {
+    ierr = VecAXPYAsync(seq1Async,pscal,seq2Async,pstream[0]);CHKERRQ(ierr);
+    ierr = VecAXPYAsync(mpi1Async,pscal,mpi2Async,pstream[1]);CHKERRQ(ierr);
   }
+  ierr = PetscStreamSynchronize(pstream[0]);CHKERRQ(ierr);
+  ierr = PetscStreamSynchronize(pstream[1]);CHKERRQ(ierr);
 
   ierr = VecClose(seq1,seq1Async);CHKERRQ(ierr);
   ierr = VecClose(mpi1,mpi1Async);CHKERRQ(ierr);
@@ -158,33 +140,42 @@ int main(int argc,char **argv)
   ierr = VecCopy(seqReset,seq1Async);CHKERRQ(ierr);
   ierr = VecCopy(mpiReset,mpi1Async);CHKERRQ(ierr);
 
-  /* Test interleaving of regular and asynchronous AXPY */
-  for (PetscInt i = 0; i < 10; ++i) {
-    ierr = VecAXPYAsync(seq1Async,pscal,seq2Async,pstream1);CHKERRQ(ierr);
-    ierr = VecAXPY(seq1Async,1.0,seq2Async);CHKERRQ(ierr);
-    ierr = VecAXPYAsync(seq1Async,pscal,seq2Async,pstream2);CHKERRQ(ierr);
-
-    ierr = VecAXPYAsync(mpi1Async,pscal,mpi2Async,pstream1);CHKERRQ(ierr);
-    ierr = VecAXPY(mpi1Async,1.0,mpi2Async);CHKERRQ(ierr);
-    ierr = VecAXPYAsync(mpi1Async,pscal,mpi2Async,pstream2);CHKERRQ(ierr);
+  /* Test serialization of AXPY on different streams */
+  for (PetscInt i = 0; i < nloop; ++i) {
+    const PetscInt stri = i%nstream;
+    /* Don't need to wait on first loop */
+    if (!i) {
+      if (stri) {
+        /* if i%nstream = 1,2,...,nstream-1 wait on the one before */
+        ierr = PetscStreamWaitForStream(pstream[stri],pstream[stri-1]);CHKERRQ(ierr);
+      } else {
+        /* case that it loops back around */
+        ierr = PetscStreamWaitForStream(pstream[0],pstream[nstream-1]);CHKERRQ(ierr);
+      }
+    }
+    ierr = VecAXPYAsync(seq1Async,pscal,seq2Async,pstream[stri]);CHKERRQ(ierr);
+    ierr = VecAXPYAsync(mpi1Async,pscal,mpi2Async,pstream[stri]);CHKERRQ(ierr);
+    /* i is loop-only variable, so do sync here */
+    if (i == nloop-1) {ierr = PetscStreamSynchronize(pstream[stri]);CHKERRQ(ierr);}
   }
 
   ierr = VecClose(seq1,seq1Async);CHKERRQ(ierr);
   ierr = VecClose(mpi1,mpi1Async);CHKERRQ(ierr);
 
-    /* Reset all the vectors */
+  /* Reset all the vectors */
   ierr = VecCopy(seqReset,seq1);CHKERRQ(ierr);
   ierr = VecCopy(seqReset,seq1Async);CHKERRQ(ierr);
   ierr = VecCopy(mpiReset,mpi1);CHKERRQ(ierr);
   ierr = VecCopy(mpiReset,mpi1Async);CHKERRQ(ierr);
   ierr = PetscStreamScalarDuplicate(pscal,&pscal2);CHKERRQ(ierr);
-  ierr = PetscStreamScalarSetValue(pscal2,&one,PETSC_MEMTYPE_HOST,pstream2);CHKERRQ(ierr);
+  ierr = PetscStreamScalarSetValue(pscal2,&one,PETSC_MEMTYPE_HOST,pstream[0]);CHKERRQ(ierr);
+  ierr = PetscStreamSynchronize(pstream[0]);CHKERRQ(ierr);
 
   {
     PetscScalar seqVal=1.0,mpiVal=1.0;
     PetscReal   seqNorm=1.0,mpiNorm=1.0;
     /* Initialize the host versions */
-    for (PetscInt i = 0; i < 10; ++i) {
+    for (PetscInt i = 0; i < nloop; ++i) {
       ierr = VecNorm(seq1,NORM_2,&seqNorm);CHKERRQ(ierr);
       seqVal = (PetscScalar)(1.0/seqNorm);
       ierr = VecScale(seq1,seqVal);CHKERRQ(ierr);
@@ -207,28 +198,30 @@ int main(int argc,char **argv)
     }
   }
 
-  /* Test serialization of various vector routines to orthogonalize vectors on different streams */
-  for (PetscInt i = 0; i < 10; ++i) {
-    ierr = VecNormAsync(seq1Async,NORM_2,&pscal,pstream1);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAYDX(1.0,NULL,pscal,pstream2);CHKERRQ(ierr);
-    ierr = VecScaleAsync(seq1Async,pscal,pstream3);CHKERRQ(ierr);
-    ierr = VecDotAsync(seq1Async,seq2Async,pscal,pstream1);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAXTY(-1.0,pscal,NULL,pstream2);CHKERRQ(ierr);
-    ierr = VecAXPYAsync(seq2Async,pscal,seq1Async,pstream3);CHKERRQ(ierr);
-    ierr = VecNormAsync(seq2Async,NORM_2,&pscal,pstream1);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAYDX(1.0,NULL,pscal,pstream2);CHKERRQ(ierr);
-    ierr = VecScaleAsync(seq2Async,pscal,pstream3);CHKERRQ(ierr);
+  /* Test serialization of various vector routines to orthogonalize vectors on same streams */
+  for (PetscInt i = 0; i < nloop; ++i) {
+    ierr = VecNormAsync(seq1Async,NORM_2,&pscal,pstream[0]);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAYDX(1.0,NULL,pscal,pstream[0]);CHKERRQ(ierr);
+    ierr = VecScaleAsync(seq1Async,pscal,pstream[0]);CHKERRQ(ierr);
+    ierr = VecDotAsync(seq1Async,seq2Async,pscal,pstream[0]);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAXTY(-1.0,pscal,NULL,pstream[0]);CHKERRQ(ierr);
+    ierr = VecAXPYAsync(seq2Async,pscal,seq1Async,pstream[0]);CHKERRQ(ierr);
+    ierr = VecNormAsync(seq2Async,NORM_2,&pscal,pstream[0]);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAYDX(1.0,NULL,pscal,pstream[0]);CHKERRQ(ierr);
+    ierr = VecScaleAsync(seq2Async,pscal,pstream[0]);CHKERRQ(ierr);
 
-    ierr = VecNormAsync(mpi1Async,NORM_2,&pscal2,pstream1);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAYDX(1.0,NULL,pscal2,pstream2);CHKERRQ(ierr);
-    ierr = VecScaleAsync(mpi1Async,pscal2,pstream3);CHKERRQ(ierr);
-    ierr = VecDotAsync(mpi1Async,mpi2Async,pscal2,pstream1);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAXTY(-1.0,pscal2,NULL,pstream2);CHKERRQ(ierr);
-    ierr = VecAXPYAsync(mpi2Async,pscal2,mpi1Async,pstream3);CHKERRQ(ierr);
-    ierr = VecNormAsync(mpi2Async,NORM_2,&pscal2,pstream1);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAYDX(1.0,NULL,pscal2,pstream2);CHKERRQ(ierr);
-    ierr = VecScaleAsync(mpi2Async,pscal2,pstream3);CHKERRQ(ierr);
+    ierr = VecNormAsync(mpi1Async,NORM_2,&pscal2,pstream[1]);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAYDX(1.0,NULL,pscal2,pstream[1]);CHKERRQ(ierr);
+    ierr = VecScaleAsync(mpi1Async,pscal2,pstream[1]);CHKERRQ(ierr);
+    ierr = VecDotAsync(mpi1Async,mpi2Async,pscal2,pstream[1]);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAXTY(-1.0,pscal2,NULL,pstream[1]);CHKERRQ(ierr);
+    ierr = VecAXPYAsync(mpi2Async,pscal2,mpi1Async,pstream[1]);CHKERRQ(ierr);
+    ierr = VecNormAsync(mpi2Async,NORM_2,&pscal2,pstream[1]);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAYDX(1.0,NULL,pscal2,pstream[1]);CHKERRQ(ierr);
+    ierr = VecScaleAsync(mpi2Async,pscal2,pstream[1]);CHKERRQ(ierr);
   }
+  ierr = PetscStreamSynchronize(pstream[0]);CHKERRQ(ierr);
+  ierr = PetscStreamSynchronize(pstream[1]);CHKERRQ(ierr);
 
   ierr = VecClose(seq1,seq1Async);CHKERRQ(ierr);
   ierr = VecClose(seq2,seq2Async);CHKERRQ(ierr);
@@ -241,9 +234,7 @@ int main(int argc,char **argv)
   ierr = PetscPrintf(PETSC_COMM_WORLD,"All operations completed sucessfully\n");CHKERRQ(ierr);
   ierr = PetscStreamScalarDestroy(&pscal);CHKERRQ(ierr);
   ierr = PetscStreamScalarDestroy(&pscal2);CHKERRQ(ierr);
-  ierr = PetscStreamDestroy(&pstream1);CHKERRQ(ierr);
-  ierr = PetscStreamDestroy(&pstream2);CHKERRQ(ierr);
-  ierr = PetscStreamDestroy(&pstream3);CHKERRQ(ierr);
+  for (PetscInt i = 0; i < nstream; ++i) {ierr = PetscStreamDestroy(&pstream[i]);CHKERRQ(ierr);}
   ierr = VecDestroy(&seq1);CHKERRQ(ierr);
   ierr = VecDestroy(&seq2);CHKERRQ(ierr);
   ierr = VecDestroy(&seq1Async);CHKERRQ(ierr);

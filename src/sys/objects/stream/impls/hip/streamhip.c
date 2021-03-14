@@ -8,7 +8,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamDestroy_HIP(PetscStream strm)
   hipError_t       herr;
 
   PetscFunctionBegin;
-  if (psh->cstream) {herr = hipStreamDestroy(psh->hstream);CHKERRHIP(herr);}
+  if (psh->hstream) {herr = hipStreamDestroy(psh->hstream);CHKERRHIP(herr);}
   ierr = PetscFree(strm->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -46,10 +46,15 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamRestoreStream_HIP(PetscStream strm
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamRecordEvent_HIP(PetscStream strm, PetscEvent event)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
+  PetscEvent_HIP  *peh = (PetscEvent_HIP *)event->data;
   hipError_t      herr;
 
   PetscFunctionBegin;
-  herr = hipEventRecordWithFlags(event->hevent, psh->hstream, event->waitFlags);CHKERRHIP(herr);
+#if 0
+  herr = hipEventRecordWithFlags(peh->hevent,psh->hstream,event->waitFlags);CHKERRHIP(herr);
+#else
+  herr = hipEventRecord(peh->hevent,psh->hstream);CHKERRHIP(herr);
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -58,7 +63,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamWaitEvent_HIP(PetscStream strm, Pe
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
   hipError_t      herr;
 
-  PetscFunctioBegin;
+  PetscFunctionBegin;
   herr = hipStreamWaitEvent(psh->hstream, event->hevent, event->waitFlags);CHKERRHIP(herr);
   PetscFunctionReturn(0);
 }
@@ -83,7 +88,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamQuery_HIP(PetscStream strm, PetscB
 }
 
 static const struct _StreamOps hipops = {
-  PetscStreamCreate_HIP,
   PetscStreamDestroy_HIP,
   PetscStreamSetUp_HIP,
   PetscStreamGetStream_HIP,
@@ -107,7 +111,7 @@ PetscErrorCode PetscStreamCreate_HIP(PetscStream strm)
 
     ierr = PetscNew(&psh);CHKERRQ(ierr);
     strm->data = (void *)psh;
-    ierr = PetscMemcpy(strm->ops, &hipops, sizeof(hipops));CHKERRQ(ierr);
+    ierr = PetscMemcpy(strm->ops,&hipops,sizeof(hipops));CHKERRQ(ierr);
   }
 #else
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with HIP support");
