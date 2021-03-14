@@ -2843,7 +2843,6 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
   {
     PetscErrorCode ierr;
     ierr = VecCUDAAllocateCheck(v);CHKERRQ(ierr);
-    ierr = PetscEventSynchronize(v->event);CHKERRQ(ierr);
     *a   = ((Vec_CUDA*)v->spptr)->GPUarray;
   }
  #endif
@@ -2858,7 +2857,6 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWriteAsync(Vec v, PetscScalar **a, Pe
   {
     PetscErrorCode ierr;
     ierr = VecCUDAAllocateCheck(v);CHKERRQ(ierr);
-    ierr = PetscStreamWaitEvent(pstream,v->event);CHKERRQ(ierr);
     *a   = ((Vec_CUDA*)v->spptr)->GPUarray;
   }
  #endif

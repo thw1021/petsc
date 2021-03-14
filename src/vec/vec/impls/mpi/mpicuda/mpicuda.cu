@@ -27,7 +27,6 @@ PetscErrorCode VecDestroy_MPICUDA(Vec v)
   cudaError_t    err;
 
   PetscFunctionBegin;
-  ierr = PetscEventSynchronize(v->event);CHKERRQ(ierr);
   if (v->spptr) {
     veccuda = (Vec_CUDA*)v->spptr;
     if (veccuda->GPUarray_allocated) {
@@ -55,7 +54,6 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscEventSynchronize(xin->event);CHKERRQ(ierr);
   if (type == NORM_2 || type == NORM_FROBENIUS) {
     ierr  = VecNorm_SeqCUDA(xin,NORM_2,&work);
     work *= work;
@@ -93,12 +91,11 @@ PetscErrorCode VecNorm_MPICUDAAsync(Vec xin,NormType type,PetscStreamScalar *psc
     ierr  = VecNorm_SeqCUDAAsync(xin,NORM_2,pscalz,pstream);
     /* Must block host for stream since no guarantee stream is finished before all ranks
        arrive */
+    ierr = PetscStreamScalarAXTY(1.0,*pscalz,*pscalz,pstream);CHKERRQ(ierr); /* pscalz**2 */
     ierr = PetscStreamScalarAwait(*pscalz,&work,pstream);CHKERRQ(ierr);
-    work *= work;
     ierr  = MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
     sum = PetscSqrtReal(sum);
     ierr = PetscStreamScalarSetValue(*pscalz,&sum,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
-    //*z    = PetscSqrtReal(sum);
   } else if (type == NORM_1) {
     /* Find the local part */
     ierr = VecNorm_SeqCUDAAsync(xin,NORM_1,pscalz,pstream);CHKERRQ(ierr);
@@ -234,7 +231,6 @@ PetscErrorCode VecDuplicate_MPICUDA(Vec win,Vec *v)
   PetscScalar    *array;
 
   PetscFunctionBegin;
-  if (win->event) {ierr = PetscEventSynchronize(win->event);CHKERRQ(ierr);}
   ierr = VecCreate(PetscObjectComm((PetscObject)win),v);CHKERRQ(ierr);
   ierr = PetscLayoutReference(win->map,&(*v)->map);CHKERRQ(ierr);
 

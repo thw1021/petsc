@@ -152,8 +152,8 @@ PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar pscal, const PetscSca
     if (val) PetscValidScalarPointer(val,2);
   }
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
-  ierr = (*pscal->ops->setvalue)(pscal, val, mtype, pstream);CHKERRQ(ierr);
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal, val, mtype);CHKERRQ(ierr);
+  ierr = (*pscal->ops->setvalue)(pscal,val,mtype,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal,val,mtype);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -187,7 +187,7 @@ PetscErrorCode PetscStreamScalarAwait(PetscStreamScalar pscal, PetscScalar *val,
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
   ierr = (*pscal->ops->await)(pscal, val, pstream);CHKERRQ(ierr);
-  ierr = PetscStreamScalarUpdateCache_Internal(pscal, val, PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
+  ierr = PetscStreamScalarUpdateCache_Internal(pscal,val,PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -311,7 +311,9 @@ PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar pscal, Pets
 
   Should the compute flag be true, and the value be unknown the cache is updated by synchronizing the host value with
   the device value. If the host is out of date this results in a stream-synchronization, so the user should take care to
-  only require computation if it __cannot__ be avoided in order to preserve the asynchronicity of the stream.
+  only require computation if it __cannot__ be avoided in order to preserve the asynchronicity of the stream. Note that
+  in debugging mode this routine __always__ checks the cache for consistency (requiring a synchronization on the
+  streamscalars internal event).
 
   Level: intermediate
 
@@ -323,8 +325,11 @@ PetscErrorCode PetscStreamScalarGetInfo(PetscStreamScalar pscal, PSSCacheType ct
   PetscValidBoolPointer(val,4);
   if (PetscUnlikelyDebug(ctype >= PSSCACHE_MAX)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid CacheType %D requested, larger than maximum value %D\n",ctype,PSSCACHE_MAX-1);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
-  if (compute) {
-    if (pscal->cache[ctype] == PSS_UNKNOWN) {
+  if (compute || PetscDefined(USE_DEBUG)) {
+#if PetscDefined(USE_DEBUG)
+    PSSCacheBool old = pscal->cache[ctype];
+#endif
+    if ((pscal->cache[ctype] == PSS_UNKNOWN) || PetscDefined(USE_DEBUG)) {
       PetscScalar    host;
       PetscErrorCode ierr;
 
@@ -332,6 +337,11 @@ PetscErrorCode PetscStreamScalarGetInfo(PetscStreamScalar pscal, PSSCacheType ct
       /* Forces cache to be updated */
       ierr = PetscStreamScalarAwait(pscal,&host,pstream);CHKERRQ(ierr);
     }
+#if PetscDefined(USE_DEBUG)
+    if (!compute && (old != PSS_UNKNOWN)) {
+      if (PetscUnlikely(old != pscal->cache[ctype])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupted or invalid PetscStreamScalar cache: cached %d != returned %d",old,pscal->cache[ctype]);
+    }
+#endif
   }
   *val = pscal->cache[ctype] == PSS_TRUE ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -383,8 +393,8 @@ PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar pscal, PSSCacheType ct
 
   Input Parameters:
 + pscalx,pscaly - The PetscStreamScalars
-. alpha - The scalar
-- pstream - The PetscStream on which to enqueue the operation
+. alpha         - The scalar
+- pstream       - The PetscStream on which to enqueue the operation
 
   Output Parameter:
 . pscalx - The adjusted output PetscStreamScalar

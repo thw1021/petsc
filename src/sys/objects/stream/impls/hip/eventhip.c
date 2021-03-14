@@ -43,10 +43,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscEventQuery_HIP(PetscEvent event, PetscBo
 }
 
 static const struct _EventOps ehops = {
-  PetscEventCreate_HIP,
   PetscEventDestroy_HIP,
   PetscEventSetup_HIP,
-  PetcsEventSynchronize_HIP,
+  PetscEventSynchronize_HIP,
   PetscEventQuery_HIP
 };
 #endif /* HAVE_HIP */
