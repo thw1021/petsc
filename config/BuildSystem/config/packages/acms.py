@@ -36,7 +36,7 @@ class Configure(config.package.Package):
     self.popLanguage()
     self.pushLanguage('C')
     g.write('CC                = '+self.getCompiler()+'\n')
-    g.write('CCFLAGS           = '+self.updatePackageCFlags(self.getCompilerFlags())+'\n')
+    g.write('CFLAGS           = '+self.updatePackageCFlags(self.getCompilerFlags())+'\n')
     self.popLanguage()
     g.close()
 
