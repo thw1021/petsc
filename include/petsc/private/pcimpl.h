@@ -69,4 +69,6 @@ PETSC_EXTERN PetscLogEvent PC_ModifySubMatrices;
 PETSC_EXTERN PetscLogEvent PC_ApplyOnBlocks;
 PETSC_EXTERN PetscLogEvent PC_ApplyTransposeOnBlocks;
 
+PETSC_INTERN PetscErrorCode PCCompareSubKSP(MPI_Comm,PetscInt,KSP*,PetscBool*);
+
 #endif

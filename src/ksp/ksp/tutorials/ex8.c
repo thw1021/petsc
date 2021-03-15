@@ -270,6 +270,8 @@ int main(int argc,char **args)
     ierr = PetscPrintf(PETSC_COMM_WORLD, "Infinity norm of the error: %g\n",(double) e);CHKERRQ(ierr);
   }
 
+  ierr = KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+
   /*
      Free work space.  All PETSc objects should be destroyed when they
      are no longer needed.
@@ -297,6 +299,7 @@ int main(int argc,char **args)
 
    test:
       suffix: 1
-      args: -print_error
+      args: -print_error -user_set_subdomains {{false true}shared output}
+      filter: grep -v "  total: nonzeros=" | grep -v "  rows=" | grep -v "  total subdomain blocks ="
 
 TEST*/

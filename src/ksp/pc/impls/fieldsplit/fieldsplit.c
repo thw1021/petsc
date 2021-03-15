@@ -92,7 +92,8 @@ static PetscErrorCode PCView_FieldSplit(PC pc,PetscViewer viewer)
 {
   PC_FieldSplit     *jac = (PC_FieldSplit*)pc->data;
   PetscErrorCode    ierr;
-  PetscBool         iascii,isdraw;
+  PetscBool         iascii,isdraw,same_splits;
+  KSP               *ksp;
   PetscInt          i,j;
   PC_FieldSplitLink ilink = jac->head;
 
@@ -114,7 +115,14 @@ static PetscErrorCode PCView_FieldSplit(PC pc,PetscViewer viewer)
     if (jac->offdiag_use_amat) {
       ierr = PetscViewerASCIIPrintf(viewer,"  using Amat (not Pmat) as operator for off-diagonal blocks\n");CHKERRQ(ierr);
     }
-    ierr = PetscViewerASCIIPrintf(viewer,"  Solver info for each split is in the following KSP objects:\n");CHKERRQ(ierr);
+    ierr = PCFieldSplitGetSubKSP(pc,NULL,&ksp);CHKERRQ(ierr);
+    ierr = PCCompareSubKSP(PetscObjectComm((PetscObject)pc),jac->nsplits,ksp,&same_splits);CHKERRQ(ierr);
+    ierr = PetscFree(ksp);CHKERRQ(ierr);
+    if (same_splits) {
+      ierr = PetscViewerASCIIPrintf(viewer,"  Solver info is the same for all splits, as in the following KSP and PC objects for split 0:\n");CHKERRQ(ierr);
+    } else {
+      ierr = PetscViewerASCIIPrintf(viewer,"  Solver info for each split is in the following KSP objects:\n");CHKERRQ(ierr);
+    }
     for (i=0; i<jac->nsplits; i++) {
       if (ilink->fields) {
         ierr = PetscViewerASCIIPrintf(viewer,"Split number %D Fields ",i);CHKERRQ(ierr);
@@ -132,10 +140,11 @@ static PetscErrorCode PCView_FieldSplit(PC pc,PetscViewer viewer)
       }
       ierr  = KSPView(ilink->ksp,viewer);CHKERRQ(ierr);
       ilink = ilink->next;
+      if (same_splits) break;
     }
   }
 
- if (isdraw) {
+  if (isdraw) {
     PetscDraw draw;
     PetscReal x,y,w,wd;
 

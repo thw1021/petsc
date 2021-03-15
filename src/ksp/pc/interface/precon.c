@@ -1999,3 +1999,56 @@ PetscErrorCode PCGetCoarseOperators(PC pc,PetscInt *num_levels,Mat *coarseOperat
   ierr = PetscUseMethod(pc,"PCGetCoarseOperators_C",(PC,PetscInt*,Mat*[]),(pc,num_levels,coarseOperators));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+PetscErrorCode PCCompareSubKSP(MPI_Comm comm,PetscInt n,KSP *ksp,PetscBool *cmp)
+{
+  const char     **parray,**karray;
+  int            pn,kn;
+  PetscInt       i,reduce[4];
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidPointer(ksp,3);
+  PetscValidPointer(cmp,4);
+  *cmp = PETSC_TRUE;
+  for (i = 1; i < n && *cmp; ++i) {
+    ierr = PetscStrcmp(((PetscObject)ksp[0])->type_name,((PetscObject)ksp[i])->type_name,cmp);CHKERRQ(ierr);
+    if (cmp) {
+      ierr = PetscStrcmp(((PetscObject)ksp[0]->pc)->type_name,((PetscObject)ksp[i]->pc)->type_name,cmp);CHKERRQ(ierr);
+    }
+  }
+  ierr = PetscFunctionListGet(KSPList,&karray,&kn);CHKERRQ(ierr);
+  ierr = PetscFunctionListGet(PCList,&parray,&pn);CHKERRQ(ierr);
+#if !defined(PETSC_USE_64BIT_INDICES)
+  if (kn > PETSC_MAX_INT) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Size of the list of KSP %d exceeds PETSC_MAX_INT %D",kn,PETSC_MAX_INT);
+  if (pn > PETSC_MAX_INT) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Size of the list of PC %d exceeds PETSC_MAX_INT %D",pn,PETSC_MAX_INT);
+#endif
+  if (*cmp) {
+    if (n) {
+      *cmp = PETSC_FALSE;
+      for (i = 0; i < kn && !*cmp; ++i) {
+        ierr = PetscStrcmp(((PetscObject)ksp[0])->type_name,karray[i],cmp);CHKERRQ(ierr);
+      }
+      reduce[0] = i;
+      reduce[1] = -reduce[0];
+      *cmp = PETSC_FALSE;
+      for (i = 0; i < pn && !*cmp; ++i) {
+        ierr = PetscStrcmp(((PetscObject)ksp[0]->pc)->type_name,parray[i],cmp);CHKERRQ(ierr);
+      }
+      reduce[2] = i;
+      reduce[3] = -reduce[2];
+    } else {
+      reduce[0] = reduce[1] = -kn;
+      reduce[2] = reduce[3] = -pn;
+    }
+  } else {
+    reduce[0] = reduce[1] = kn;
+    reduce[2] = reduce[3] = pn;
+  }
+  ierr = PetscFree(karray);CHKERRQ(ierr);
+  ierr = PetscFree(parray);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(MPI_IN_PLACE,reduce,4,MPIU_INT,MPI_MAX,comm);CHKERRQ(ierr);
+  if (reduce[0] == -reduce[1] && reduce[2] == -reduce[3] && reduce[0] != kn && reduce[2] != pn) *cmp = PETSC_TRUE;
+  else *cmp = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}

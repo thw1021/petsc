@@ -119,7 +119,7 @@ PC Object: (stokes_) 4 MPI processes
     PC Object: (stokes_mg_levels_1_) 4 MPI processes
       type: fieldsplit
         FieldSplit with MULTIPLICATIVE composition: total splits = 2, blocksize = 3
-        Solver info for each split is in the following KSP objects:
+        Solver info is the same for all splits, as in the following KSP and PC objects for split 0:
       Split number 0 Fields  0, 1
       KSP Object: (stokes_mg_levels_1_fieldsplit_0_) 4 MPI processes
         type: preonly
@@ -137,23 +137,6 @@ PC Object: (stokes_) 4 MPI processes
           total: nonzeros=37636, allocated nonzeros=37636
           total number of mallocs used during MatSetValues calls=0
             using I-node (on process 0) routines: found 289 nodes, limit used is 5
-      Split number 1 Fields  2
-      KSP Object: (stokes_mg_levels_1_fieldsplit_1_) 4 MPI processes
-        type: preonly
-        maximum iterations=10000, initial guess is zero
-        tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
-        left preconditioning
-        using NONE norm type for convergence test
-      PC Object: (stokes_mg_levels_1_fieldsplit_1_) 4 MPI processes
-        type: sor
-          type = local_symmetric, iterations = 1, local iterations = 1, omega = 1.
-        linear system matrix = precond matrix:
-        Mat Object: (stokes_mg_levels_1_fieldsplit_1_) 4 MPI processes
-          type: mpiaij
-          rows=1089, cols=1089
-          total: nonzeros=9409, allocated nonzeros=9409
-          total number of mallocs used during MatSetValues calls=0
-            not using I-node (on process 0) routines
       linear system matrix = precond matrix:
       Mat Object: 4 MPI processes
         type: mpiaij
@@ -185,7 +168,7 @@ PC Object: (stokes_) 4 MPI processes
     PC Object: (stokes_mg_levels_2_) 4 MPI processes
       type: fieldsplit
         FieldSplit with MULTIPLICATIVE composition: total splits = 2, blocksize = 3
-        Solver info for each split is in the following KSP objects:
+        Solver info is the same for all splits, as in the following KSP and PC objects for split 0:
       Split number 0 Fields  0, 1
       KSP Object: (stokes_mg_levels_2_fieldsplit_0_) 4 MPI processes
         type: preonly
@@ -203,23 +186,6 @@ PC Object: (stokes_) 4 MPI processes
           total: nonzeros=148996, allocated nonzeros=148996
           total number of mallocs used during MatSetValues calls=0
             using I-node (on process 0) routines: found 1089 nodes, limit used is 5
-      Split number 1 Fields  2
-      KSP Object: (stokes_mg_levels_2_fieldsplit_1_) 4 MPI processes
-        type: preonly
-        maximum iterations=10000, initial guess is zero
-        tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
-        left preconditioning
-        using NONE norm type for convergence test
-      PC Object: (stokes_mg_levels_2_fieldsplit_1_) 4 MPI processes
-        type: sor
-          type = local_symmetric, iterations = 1, local iterations = 1, omega = 1.
-        linear system matrix = precond matrix:
-        Mat Object: (stokes_mg_levels_2_fieldsplit_1_) 4 MPI processes
-          type: mpiaij
-          rows=4225, cols=4225
-          total: nonzeros=37249, allocated nonzeros=37249
-          total number of mallocs used during MatSetValues calls=0
-            not using I-node (on process 0) routines
       linear system matrix = precond matrix:
       Mat Object: 4 MPI processes
         type: mpiaij
@@ -251,7 +217,7 @@ PC Object: (stokes_) 4 MPI processes
     PC Object: (stokes_mg_levels_3_) 4 MPI processes
       type: fieldsplit
         FieldSplit with MULTIPLICATIVE composition: total splits = 2, blocksize = 3
-        Solver info for each split is in the following KSP objects:
+        Solver info is the same for all splits, as in the following KSP and PC objects for split 0:
       Split number 0 Fields  0, 1
       KSP Object: (stokes_mg_levels_3_fieldsplit_0_) 4 MPI processes
         type: preonly
@@ -269,23 +235,6 @@ PC Object: (stokes_) 4 MPI processes
           total: nonzeros=592900, allocated nonzeros=592900
           total number of mallocs used during MatSetValues calls=0
             using I-node (on process 0) routines: found 4225 nodes, limit used is 5
-      Split number 1 Fields  2
-      KSP Object: (stokes_mg_levels_3_fieldsplit_1_) 4 MPI processes
-        type: preonly
-        maximum iterations=10000, initial guess is zero
-        tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
-        left preconditioning
-        using NONE norm type for convergence test
-      PC Object: (stokes_mg_levels_3_fieldsplit_1_) 4 MPI processes
-        type: sor
-          type = local_symmetric, iterations = 1, local iterations = 1, omega = 1.
-        linear system matrix = precond matrix:
-        Mat Object: (stokes_mg_levels_3_fieldsplit_1_) 4 MPI processes
-          type: mpiaij
-          rows=16641, cols=16641
-          total: nonzeros=148225, allocated nonzeros=148225
-          total number of mallocs used during MatSetValues calls=0
-            not using I-node (on process 0) routines
       linear system matrix = precond matrix:
       Mat Object: 4 MPI processes
         type: mpiaij

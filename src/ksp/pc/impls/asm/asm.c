@@ -18,7 +18,7 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
   PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscInt       i,bsz;
-  PetscBool      iascii,isstring;
+  PetscBool      iascii,isstring,same_local_solves;
   PetscViewer    sviewer;
 
   PetscFunctionBegin;
@@ -33,7 +33,8 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
     if (osm->dm_subdomains) {ierr = PetscViewerASCIIPrintf(viewer,"  Additive Schwarz: using DM to define subdomains\n");CHKERRQ(ierr);}
     if (osm->loctype != PC_COMPOSITE_ADDITIVE) {ierr = PetscViewerASCIIPrintf(viewer,"  Additive Schwarz: local solve composition type - %s\n",PCCompositeTypes[osm->loctype]);CHKERRQ(ierr);}
     ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank);CHKERRMPI(ierr);
-    if (osm->same_local_solves) {
+    ierr = PCCompareSubKSP(PetscObjectComm((PetscObject)pc),osm->n_local_true,osm->ksp,&same_local_solves);CHKERRQ(ierr);
+    if (same_local_solves) {
       if (osm->ksp) {
         ierr = PetscViewerASCIIPrintf(viewer,"  Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:\n");CHKERRQ(ierr);
         ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
@@ -924,12 +925,7 @@ static PetscErrorCode  PCASMGetSubKSP_ASM(PC pc,PetscInt *n_local,PetscInt *firs
     ierr          = MPI_Scan(&osm->n_local_true,first_local,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)pc));CHKERRMPI(ierr);
     *first_local -= osm->n_local_true;
   }
-  if (ksp) {
-    /* Assume that local solves are now different; not necessarily
-       true though!  This flag is used only for PCView_ASM() */
-    *ksp                   = osm->ksp;
-    osm->same_local_solves = PETSC_FALSE;
-  }
+  if (ksp) *ksp   = osm->ksp;
   PetscFunctionReturn(0);
 }
 
@@ -1367,7 +1363,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC pc)
   osm->pmat              = NULL;
   osm->type              = PC_ASM_RESTRICT;
   osm->loctype           = PC_COMPOSITE_ADDITIVE;
-  osm->same_local_solves = PETSC_TRUE;
   osm->sort_indices      = PETSC_TRUE;
   osm->dm_subdomains     = PETSC_FALSE;
   osm->sub_mat_type      = NULL;
