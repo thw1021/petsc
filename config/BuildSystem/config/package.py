@@ -1089,7 +1089,6 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
       if self.requiresversion:
         raise RuntimeError('Configure must be able to determined the version information for '+self.name+'. It was unable to, please send configure.log to petsc-maint@mcs.anl.gov')
       return
-
     self.log.write('For '+self.package+' need '+self.minversion+' <= '+self.foundversion+' <= '+self.maxversion+'\n')
 
     try:
@@ -1107,14 +1106,20 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
       if self.versionToTuple(self.minversion) > self.version_tuple:
         raise RuntimeError(self.package+' version is '+self.foundversion+' this version of PETSc needs at least '+self.minversion+suggest+'\n')
     elif self.version:
-      if self.versionToTuple(zeroPatch(self.version)) > self.version_tuple:
-        self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.package+' PETSc is tested with '+dropPatch(self.version)+suggest)
+      try:
+        if self.versionToTuple(zeroPatch(self.version)) > self.version_tuple:
+          self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.package+' PETSc is tested with '+dropPatch(self.version)+suggest)
+      except:
+        pass
     if self.maxversion:
       if self.versionToTuple(self.maxversion) < self.version_tuple:
         raise RuntimeError(self.package+' version is '+self.foundversion+' this version of PETSc needs at most '+self.maxversion+suggest+'\n')
     elif self.version:
-      if self.versionToTuple(infinitePatch(self.version)) < self.version_tuple:
-        self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.package+' PETSc is tested with '+dropPatch(self.version)+suggest)
+      try:
+        if self.versionToTuple(infinitePatch(self.version)) < self.version_tuple:
+          self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.package+' PETSc is tested with '+dropPatch(self.version)+suggest)
+      except:
+        pass
     return
 
   def configure(self):
