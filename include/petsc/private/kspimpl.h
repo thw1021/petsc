@@ -133,6 +133,8 @@ struct _p_KSP {
 
   PC         pc;
 
+  PetscInt   nmax;
+
   void       *data;                      /* holder for misc stuff associated
                                    with a particular iterative solver */
 
