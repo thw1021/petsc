@@ -1,6 +1,5 @@
 #include "streamhip.h" /*I "petscdevice.h" I*/
 
-#if PetscDefined(HAVE_HIP)
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamDestroy_HIP(PetscStream strm)
 {
   PetscStream_HIP *psh = (PetscStream_HIP *)strm->data;
@@ -99,7 +98,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamHIPDestroyWaitEvent(void)
   PetscFunctionReturn(0);
 }
 
-
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamWaitForStream_HIP(PetscStream strmx, PetscStream strmy)
 {
   PetscStream_HIP *pshx = (PetscStream_HIP *)strmx->data;
@@ -120,7 +118,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamWaitForStream_HIP(PetscStream strm
 }
 
 static const struct _StreamOps hipops = {
-  PetscStreamCreate_CUDA,
+  PetscStreamCreate_HIP,
   PetscStreamDestroy_HIP,
   PetscStreamSetUp_HIP,
   PetscStreamGetStream_HIP,
@@ -133,22 +131,15 @@ static const struct _StreamOps hipops = {
   NULL,
   PetscStreamWaitForStream_HIP
 };
-#endif /* HAVE_HIP */
 
 PetscErrorCode PetscStreamCreate_HIP(PetscStream strm)
 {
-  PetscFunctionBegin;
-#if PetscDefined(HAVE_HIP)
-  {
-    PetscStream_HIP *psh;
-    PetscErrorCode   ierr;
+  PetscStream_HIP *psh;
+  PetscErrorCode   ierr;
 
-    ierr = PetscNew(&psh);CHKERRQ(ierr);
-    strm->data = (void *)psh;
-    ierr = PetscMemcpy(strm->ops,&hipops,sizeof(hipops));CHKERRQ(ierr);
-  }
-#else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with HIP support");
-#endif
+  PetscFunctionBegin;
+  ierr = PetscNew(&psh);CHKERRQ(ierr);
+  strm->data = (void *)psh;
+  ierr = PetscMemcpy(strm->ops,&hipops,sizeof(hipops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

@@ -1,4 +1,4 @@
-#include "streamhip.hpp"
+#include "streamhip.h"
 
 /* If this every becomes changeable, also change error message in
    PetscStreamScalarSetup_HP */
@@ -108,15 +108,17 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateDevice_HIP_Internal(Pe
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetDevice_HIP(PetscStreamScalar pscal, PetscScalar **val, PetscStream pstream)
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetDevice_HIP(PetscStreamScalar pscal, PetscScalar **val, PetscBool update, PetscStream pstream)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   ierr = PetscStreamScalarUpdateDevice_HIP_Internal(pscal,update,pstream);CHKERRQ(ierr);
   *val = pscal->device;
   if (update) {
     /* MEMTYPE_DEVICE == invalidate the cache */
     const PetscScalar dummy = 1;
-    ierr = PetscStreamScalarUpdaetCache_Internal(pscal,&dummy,PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
+    ierr = PetscStreamScalarUpdateCache_Internal(pscal,&dummy,PETSC_MEMTYPE_DEVICE);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -173,8 +175,8 @@ PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar pscal)
     hipError_t herr;
 
     poolSetup = PETSC_TRUE;
-    /* Use hipHostAlloc to allow the flag to be changed, could maybe be useful */
-    herr = hipHostMalloc((void **)&hostPool,poolSize*sizeof(PetscScalar),hipHostAllocDefault);CHKERRHIP(herr);
+    /* Use hipHostMalloc to allow the flag to be changed, could maybe be useful */
+    herr = hipHostMalloc((void **)&hostPool,poolSize*sizeof(PetscScalar),0);CHKERRHIP(herr);
     herr = hipMemset(hostPool,0,poolSize*sizeof(PetscScalar));CHKERRHIP(herr);
     herr = hipMalloc((void **)&devicePool,poolSize*sizeof(PetscScalar));CHKERRHIP(herr);
     herr = hipMemset(devicePool,0,poolSize*sizeof(PetscScalar));CHKERRHIP(herr);

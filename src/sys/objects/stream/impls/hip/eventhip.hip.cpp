@@ -48,7 +48,6 @@ static const struct _EventOps ehops = {
   PetscEventSynchronize_HIP,
   PetscEventQuery_HIP
 };
-#endif /* HAVE_HIP */
 
 PetscErrorCode PetscEventCreate_HIP(PetscEvent event)
 {
