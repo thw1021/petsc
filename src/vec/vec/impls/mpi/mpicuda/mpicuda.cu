@@ -55,7 +55,7 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
 
   PetscFunctionBegin;
   if (type == NORM_2 || type == NORM_FROBENIUS) {
-    ierr  = VecNorm_SeqCUDA(xin,NORM_2,&work);
+    ierr  = VecNorm_SeqCUDA(xin,NORM_2,&work);CHKERRQ(ierr);
     work *= work;
     ierr  = MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
     *z    = PetscSqrtReal(sum);
@@ -82,45 +82,52 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
 
 PetscErrorCode VecNorm_MPICUDAAsync(Vec xin,NormType type,PetscStreamScalar *pscalz,PetscStream pstream)
 {
-  PetscReal      sum;
-  PetscReal      work;
+  PetscReal      sum,work;
+  PetscScalar    val[2];
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (type == NORM_2 || type == NORM_FROBENIUS) {
-    ierr  = VecNorm_SeqCUDAAsync(xin,NORM_2,pscalz,pstream);
-    /* Must block host for stream since no guarantee stream is finished before all ranks
-       arrive */
+    ierr = VecNorm_SeqCUDAAsync(xin,NORM_2,pscalz,pstream);CHKERRQ(ierr);
     ierr = PetscStreamScalarAXTY(1.0,*pscalz,*pscalz,pstream);CHKERRQ(ierr); /* pscalz**2 */
-    ierr = PetscStreamScalarAwait(*pscalz,&work,pstream);CHKERRQ(ierr);
-    ierr  = MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
-    sum = PetscSqrtReal(sum);
-    ierr = PetscStreamScalarSetValue(*pscalz,&sum,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAwait(*pscalz,val,pstream);CHKERRQ(ierr);
+    work = PetscRealPart(val[0]);
+    ierr = MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
+    /* ensure proper constructor is called */
+    val[0] = static_cast<PetscScalar>(PetscSqrtReal(sum));
+    ierr = PetscStreamScalarSetValue(*pscalz,val,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   } else if (type == NORM_1) {
     /* Find the local part */
     ierr = VecNorm_SeqCUDAAsync(xin,NORM_1,pscalz,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAwait(*pscalz,&work,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAwait(*pscalz,val,pstream);CHKERRQ(ierr);
+    work = PetscRealPart(val[0]);
     /* Find the global max */
     ierr = MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
-    ierr = PetscStreamScalarSetValue(*pscalz,&sum,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+    val[0] = static_cast<PetscScalar>(sum);
+    ierr = PetscStreamScalarSetValue(*pscalz,val,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   } else if (type == NORM_INFINITY) {
     /* Find the local max */
     ierr = VecNorm_SeqCUDAAsync(xin,NORM_INFINITY,pscalz,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAwait(*pscalz,&work,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAwait(*pscalz,val,pstream);CHKERRQ(ierr);
+    work = PetscRealPart(val[0]);
     /* Find the global max */
     ierr = MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
-    ierr = PetscStreamScalarSetValue(*pscalz,&sum,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+    val[0] = static_cast<PetscScalar>(sum);
+    ierr = PetscStreamScalarSetValue(*pscalz,val,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   } else if (type == NORM_1_AND_2) {
     PetscReal temp[2], z[2];
     ierr = VecNorm_SeqCUDAAsync(xin,NORM_1,pscalz,pstream);CHKERRQ(ierr);
     ierr = VecNorm_SeqCUDAAsync(xin,NORM_2,pscalz+1,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAwait(pscalz[0],temp,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamScalarAwait(pscalz[1],temp+1,pstream);CHKERRQ(ierr);
-    temp[1] = temp[1]*temp[1];
+    ierr = PetscStreamScalarAXTY(1.0,pscalz[1],pscalz[1],pstream);CHKERRQ(ierr); /* pscalz[1]**2 */
+    ierr = PetscStreamScalarAwait(pscalz[0],val,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarAwait(pscalz[1],val+1,pstream);CHKERRQ(ierr);
+    temp[0] = PetscRealPart(val[0]);
+    temp[1] = PetscRealPart(val[1]);
     ierr = MPIU_Allreduce(temp,z,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRQ(ierr);
-    z[1] = PetscSqrtReal(z[1]);
-    ierr = PetscStreamScalarSetValue(pscalz[0],z,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
-    ierr = PetscStreamScalarSetValue(pscalz[1],z+1,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+    val[0] = static_cast<PetscScalar>(z[0]);
+    val[1] = static_cast<PetscScalar>(PetscSqrtReal(z[1]));
+    ierr = PetscStreamScalarSetValue(pscalz[0],val,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarSetValue(pscalz[1],val+1,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
