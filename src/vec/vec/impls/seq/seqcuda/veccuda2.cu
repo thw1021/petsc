@@ -1484,7 +1484,7 @@ PetscErrorCode VecCopy_SeqCUDAAsync(Vec xin,Vec yin,PetscStream pstream)
     cudaStream_t cstream;
 
     if (xin->offloadmask == PETSC_OFFLOAD_GPU) {
-      PetscBool    yiscuda;
+      PetscBool yiscuda;
 
       ierr = PetscObjectTypeCompareAny((PetscObject)yin,&yiscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
       ierr = VecCUDAGetArrayReadAsync(xin,&xarray,pstream);CHKERRQ(ierr);
@@ -1513,13 +1513,17 @@ PetscErrorCode VecCopy_SeqCUDAAsync(Vec xin,Vec yin,PetscStream pstream)
     } else if (xin->offloadmask == PETSC_OFFLOAD_CPU) {
       /* copy in CPU if we are on the CPU, note using synchronous version, so must
          synchronize the stream first */
-      ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+      ierr = PetscEventSynchronize(xin->event);CHKERRQ(ierr);
+      /* dont know if yin is cuda */
+      if (yin->event) {ierr = PetscEventSynchronize(yin->event);CHKERRQ(ierr);}
       ierr = VecCopy_SeqCUDA_Private(xin,yin);CHKERRQ(ierr);
     } else if (xin->offloadmask == PETSC_OFFLOAD_BOTH) {
       /* if xin is valid in both places, see where yin is and copy there (because it's probably where we'll want to next use it) */
       if (yin->offloadmask == PETSC_OFFLOAD_CPU) {
         /* copy in CPU, again must sync first */
-        ierr = PetscStreamSynchronize(pstream);CHKERRQ(ierr);
+        ierr = PetscEventSynchronize(xin->event);CHKERRQ(ierr);
+        /* don't know if yin is cuda */
+        if (yin->event) {ierr = PetscEventSynchronize(yin->event);CHKERRQ(ierr);}
         ierr = VecCopy_SeqCUDA_Private(xin,yin);CHKERRQ(ierr);
       } else if (yin->offloadmask == PETSC_OFFLOAD_GPU) {
         /* copy in GPU */
@@ -1933,7 +1937,8 @@ PetscErrorCode VecNorm_SeqCUDAAsync(Vec xin,NormType type,PetscStreamScalar *psc
   ierr = PetscCUBLASSetStream_Internal(cublasv2handle,cstream);CHKERRQ(ierr);
   if (type == NORM_2 || type == NORM_FROBENIUS) {
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    cberr = cublasXnrm2(cublasv2handle,bn,xarray,one,static_cast<PetscReal*>(dptr));CHKERRCUBLAS(cberr);
+    /* reinterpret_cast() ~seems~ to be safe to do here */
+    cberr = cublasXnrm2(cublasv2handle,bn,xarray,one,reinterpret_cast<PetscReal*>(dptr));CHKERRCUBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(PetscMax(2.0*n-1,0.0));CHKERRQ(ierr);
   } else if (type == NORM_INFINITY) {
@@ -1956,7 +1961,7 @@ PetscErrorCode VecNorm_SeqCUDAAsync(Vec xin,NormType type,PetscStreamScalar *psc
     }
   } else if (type == NORM_1) {
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    cberr = cublasXasum(cublasv2handle,bn,xarray,one,static_cast<PetscReal*>(dptr));CHKERRCUBLAS(cberr);
+    cberr = cublasXasum(cublasv2handle,bn,xarray,one,reinterpret_cast<PetscReal*>(dptr));CHKERRCUBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(PetscMax(n-1.0,0.0));CHKERRQ(ierr);
   }

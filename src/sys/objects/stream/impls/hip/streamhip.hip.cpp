@@ -1,4 +1,4 @@
-#include "streamhip.h"
+#include "streamhip.h" /*I "petscdevice.h" I*/
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamDestroy_HIP(PetscStream strm)
 {
@@ -49,11 +49,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamRecordEvent_HIP(PetscStream strm, 
   hipError_t      herr;
 
   PetscFunctionBegin;
-#if 0
-  herr = hipEventRecordWithFlags(peh->hevent,psh->hstream,event->waitFlags);CHKERRHIP(herr);
-#else
+  /* HIP does not have hipEventRecordWithFlags atm */
   herr = hipEventRecord(peh->hevent,psh->hstream);CHKERRHIP(herr);
-#endif
   PetscFunctionReturn(0);
 }
 
@@ -64,7 +61,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamWaitEvent_HIP(PetscStream strm, Pe
   hipError_t      herr;
 
   PetscFunctionBegin;
-  herr = hipStreamWaitEvent(psh->hstream, peh->hevent, event->waitFlags);CHKERRHIP(herr);
+  herr = hipStreamWaitEvent(psh->hstream,peh->hevent,event->waitFlags);CHKERRHIP(herr);
   PetscFunctionReturn(0);
 }
 

@@ -4,7 +4,8 @@ ALL: lib
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
-SOURCEC	  = streamhip.c eventhip.c scalhip.c
+SOURCEC	  =
+SOURCEHIP = streamhip.hip.cpp eventhip.hip.cpp scalhip.hip.cpp
 SOURCEF	  =
 SOURCEH	  = streamhip.h
 MANSEC	  = Sys

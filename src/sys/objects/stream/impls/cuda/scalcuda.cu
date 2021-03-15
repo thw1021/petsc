@@ -14,9 +14,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarDestroy_CUDA(PetscStreamScal
 {
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(!poolIDs[pscal->poolID])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Pool ID %D has apparently already been released!",pscal->poolID);
-  poolIDs[pscal->poolID] = 0;
+  --poolIDs[pscal->poolID];
   pscal->poolID = PETSC_DEFAULT;
-  pscal->host = NULL;
+  pscal->host   = NULL;
   pscal->device = NULL;
   PetscFunctionReturn(0);
 }
@@ -24,17 +24,18 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarDestroy_CUDA(PetscStreamScal
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSetup_CUDA(PetscStreamScalar pscal)
 {
   PetscFunctionBegin;
+  if (PetscUnlikelyDebug(pscal->poolID != PETSC_DEFAULT)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscStreamScalar already has an assigned pool ID: %D",pscal->poolID);
   for (PetscInt i = 0; i < poolSize; ++i) {
     /* Find open slot */
     if (!poolIDs[i]) {
-      poolIDs[i]    = 1;
+      ++poolIDs[i];
       pscal->poolID = i;
       break;
     }
   }
   /* If pscal->poolID was unchanged it means no free pool alloc is found, and since CUDA has no cudaRealloc() function,
    we have no choice but to error out here */
-  if (PetscUnlikely(pscal->poolID == PETSC_DEFAULT)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum pool allocation %D reached, no free pool ID remains. Rerun with larger pool size",poolSize);
+  if (PetscUnlikelyDebug(pscal->poolID == PETSC_DEFAULT)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum pool allocation %D reached, no free pool ID remains. Rerun with larger pool size",poolSize);
   pscal->device = devicePool+pscal->poolID;
   pscal->host   = hostPool+pscal->poolID;
   pscal->omask  = PETSC_OFFLOAD_BOTH;
@@ -93,12 +94,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarAwait_CUDA(PetscStreamScalar
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateDevice_CUDA_Internal(PetscStreamScalar pscal, PetscBool update, PetscStream pstream)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (update && pscal->omask == PETSC_OFFLOAD_CPU) {
-    cudaStream_t cstream;
-    cudaError_t  cerr;
+    PetscErrorCode ierr;
+    cudaStream_t   cstream;
+    cudaError_t    cerr;
 
     ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
     cerr = cudaMemcpyAsync(pscal->device,pscal->host,sizeof(PetscScalar),cudaMemcpyHostToDevice,cstream);CHKERRCUDA(cerr);
@@ -248,7 +248,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarFinalize_CUDA(void)
   /* Heres hoping this no-op loop is optimized away by compiler when not in debug... */
   for (int i = 0; i < poolSize; ++i) {
     /* Probably wrong error type, I can't tell what the canonical "you haven't cleaned up" error code is */
-    if (PetscUnlikelyDebug(poolIDs[i])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEMC,"CUDA PetscStreamScalar pool ID %D is still checked out in PetscFinalize()",poolIDs[i]);
+    if (PetscUnlikelyDebug(poolIDs[i])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEMC,"CUDA PetscStreamScalar pool ID %d is still checked out in PetscFinalize()",i);
   }
   cerr = cudaFreeHost(hostPool);CHKERRCUDA(cerr);
   cerr = cudaFree(devicePool);CHKERRCUDA(cerr);
@@ -267,11 +267,11 @@ PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar pscal)
 
     poolSetup = PETSC_TRUE;
     /* Use cudaHostAlloc to allow the flag to be changed, could maybe be useful */
-    cerr = cudaHostAlloc((void **) &hostPool, poolSize*sizeof(PetscScalar), cudaHostAllocDefault);CHKERRCUDA(cerr);
-    cerr = cudaMemset(hostPool, 0, poolSize*sizeof(PetscScalar));CHKERRCUDA(cerr);
-    cerr = cudaMalloc((void **) &devicePool, poolSize*sizeof(PetscScalar));CHKERRCUDA(cerr);
-    cerr = cudaMemset(devicePool, 0, poolSize*sizeof(PetscScalar));CHKERRCUDA(cerr);
-    ierr = PetscCalloc1(poolSize, &poolIDs);CHKERRQ(ierr);
+    cerr = cudaHostAlloc((void **)&hostPool,poolSize*sizeof(PetscScalar),cudaHostAllocDefault);CHKERRCUDA(cerr);
+    cerr = cudaMemset(hostPool,0,poolSize*sizeof(PetscScalar));CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&devicePool,poolSize*sizeof(PetscScalar));CHKERRCUDA(cerr);
+    cerr = cudaMemset(devicePool,0,poolSize*sizeof(PetscScalar));CHKERRCUDA(cerr);
+    ierr = PetscCalloc1(poolSize,&poolIDs);CHKERRQ(ierr);
     ierr = PetscRegisterFinalize(PetscStreamScalarFinalize_CUDA);CHKERRQ(ierr);
   }
   ierr = PetscMemcpy(pscal->ops, &scalcuops, sizeof(scalcuops));CHKERRQ(ierr);

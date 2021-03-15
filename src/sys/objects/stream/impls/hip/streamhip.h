@@ -1,7 +1,7 @@
-#if !defined(__STREAMHIP_H)
-#define __STREAMHIP_H
+#if !defined(PETSCSTREAMHIP_H)
+#define PETSCSTREAMHIP_H
 
-#include <petsc/private/deviceimpl.h>
+#include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
 #if PetscDefined(HAVE_HIP)
 typedef struct {
@@ -11,5 +11,9 @@ typedef struct {
 typedef struct {
   hipEvent_t hevent;
 } PetscEvent_HIP;
-#endif
-#endif
+
+PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
+PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar);
+#endif /* HAVE_HIP */
+#endif /* PETSCSTREAMHIP_H */

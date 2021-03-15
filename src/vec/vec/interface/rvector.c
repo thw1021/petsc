@@ -272,19 +272,18 @@ PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar *pscal,PetscS
   /*
    * Cached data?
    */
-  // TODO
-#if 0
   if (type!=NORM_1_AND_2) {
-    PetscScalar val;
-    PetscBool   flg;
+    PetscReal val;
+    PetscBool flg;
 
     ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[type],val,flg);CHKERRQ(ierr);
     if (flg) {
-      ierr = PetscStreamScalarSetValue(*pscal,&val,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+      const PetscScalar vals = val;
+      ierr = PetscStreamScalarSetValue(*pscal,&vals,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
   }
-#endif
+
   ierr = PetscLogEventBegin(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
   if (PetscLikely(x->ops->normasync)) {
     ierr = (*x->ops->normasync)(x,type,pscal,pstream);CHKERRQ(ierr);

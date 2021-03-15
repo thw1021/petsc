@@ -1,5 +1,5 @@
-#if !defined(PETSC_STREAMCUDA_H__)
-#define PETSC_STREAMCUDA_H__
+#if !defined(PETSCSTREAMCUDA_H)
+#define PETSCSTREAMCUDA_H
 
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
@@ -22,8 +22,5 @@ PETSC_EXTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
 PETSC_EXTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarCreate_CUDA(PetscStreamScalar);
 PETSC_EXTERN PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph);
-
-PETSC_INTERN PetscErrorCode PetscStreamScalarAXTY_CUDA_Kernel(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
-PETSC_INTERN PetscErrorCode PetscStreamScalarAYDX_CUDA_Kernel(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 #endif /* HAVE_CUDA */
-#endif
+#endif /* PETSCSTREAMCUDA_H */

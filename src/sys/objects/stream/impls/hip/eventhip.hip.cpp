@@ -1,6 +1,5 @@
-#include "streamhip.h"
+#include "streamhip.h" /*I "petscdevice.h" I*/
 
-#if PetscDefined(HAVE_HIP)
 PETSC_STATIC_INLINE PetscErrorCode PetscEventDestroy_HIP(PetscEvent event)
 {
   PetscEvent_HIP *peh = (PetscEvent_HIP *)event->data;
@@ -19,7 +18,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscEventSetup_HIP(PetscEvent event)
   hipError_t     herr;
 
   PetscFunctionBegin;
-  herr = hipEventCreateWithFlags(&peh->hevent, event->eventFlags);CHKERRHIP(herr);
+  herr = hipEventCreateWithFlags(&peh->hevent,event->eventFlags);CHKERRHIP(herr);
   PetscFunctionReturn(0);
 }
 
@@ -43,6 +42,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscEventQuery_HIP(PetscEvent event, PetscBo
 }
 
 static const struct _EventOps ehops = {
+  PetscEventCreate_HIP,
   PetscEventDestroy_HIP,
   PetscEventSetup_HIP,
   PetscEventSynchronize_HIP,
@@ -52,18 +52,12 @@ static const struct _EventOps ehops = {
 
 PetscErrorCode PetscEventCreate_HIP(PetscEvent event)
 {
-  PetscFunctionBegin;
-#if PetscDefined(HAVE_HIP)
-  {
-    PetscEvent_HIP *peh;
-    PetscErrorCode ierr;
+  PetscEvent_HIP *peh;
+  PetscErrorCode ierr;
 
-    ierr = PetscNew(&peh);CHKERRQ(ierr);
-    event->data = (void *)peh;
-    ierr = PetscMemcpy(event->ops, &ehops, sizeof(ehops));CHKERRQ(ierr);
-  }
-#else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with HIP support");
-#endif
+  PetscFunctionBegin;
+  ierr = PetscNew(&peh);CHKERRQ(ierr);
+  event->data = (void *)peh;
+  ierr = PetscMemcpy(event->ops,&ehops,sizeof(ehops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

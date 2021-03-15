@@ -18,7 +18,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscEventSetup_CUDA(PetscEvent event)
   cudaError_t     cerr;
 
   PetscFunctionBegin;
-  cerr = cudaEventCreateWithFlags(&pec->cevent, event->eventFlags);CHKERRCUDA(cerr);
+  cerr = cudaEventCreateWithFlags(&pec->cevent,event->eventFlags);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -57,6 +57,6 @@ PetscErrorCode PetscEventCreate_CUDA(PetscEvent event)
   PetscFunctionBegin;
   ierr = PetscNew(&pec);CHKERRQ(ierr);
   event->data = (void *)pec;
-  ierr = PetscMemcpy(event->ops, &ecuops, sizeof(ecuops));CHKERRQ(ierr);
+  ierr = PetscMemcpy(event->ops,&ecuops,sizeof(ecuops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

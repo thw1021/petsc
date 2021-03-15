@@ -53,9 +53,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamRecordEvent_CUDA(PetscStream strm,
    easier. Instead you must find and *manually* search each version of the documentation until you find the version in
    which they introduced some change. $330 BILLION market cap and they can't hire some intern to do this???? */
 #if defined(CUDART_VERSION) && (CUDART_VERSION >= 11010) /* 11.1.0 */
-  cerr = cudaEventRecordWithFlags(pec->cevent, psc->cstream, event->waitFlags);CHKERRCUDA(cerr);
+  cerr = cudaEventRecordWithFlags(pec->cevent,psc->cstream,event->waitFlags);CHKERRCUDA(cerr);
 #else
-  cerr = cudaEventRecord(pec->cevent, psc->cstream);CHKERRCUDA(cerr);
+  cerr = cudaEventRecord(pec->cevent,psc->cstream);CHKERRCUDA(cerr);
 #endif /* CUDART_VERSION >= 11010 */
   PetscFunctionReturn(0);
 }
@@ -67,7 +67,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamWaitEvent_CUDA(PetscStream strm, P
   cudaError_t      cerr;
 
   PetscFunctionBegin;
-  cerr = cudaStreamWaitEvent(psc->cstream, pec->cevent, event->waitFlags);CHKERRCUDA(cerr);
+  cerr = cudaStreamWaitEvent(psc->cstream,pec->cevent,event->waitFlags);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -96,7 +96,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamCaptureBegin_CUDA(PetscStream strm
   cudaError_t      cerr;
 
   PetscFunctionBegin;
-  cerr = cudaStreamBeginCapture(psc->cstream, cudaStreamCaptureModeGlobal);CHKERRCUDA(cerr);
+  cerr = cudaStreamBeginCapture(psc->cstream,cudaStreamCaptureModeGlobal);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -108,7 +108,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamCaptureEnd_CUDA(PetscStream strm, 
 
   PetscFunctionBegin;
   if (psgc->cgraph) {cerr = cudaGraphDestroy(psgc->cgraph);CHKERRCUDA(cerr);}
-  cerr = cudaStreamEndCapture(psc->cstream, &psgc->cgraph);CHKERRCUDA(cerr);
+  cerr = cudaStreamEndCapture(psc->cstream,&psgc->cgraph);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
