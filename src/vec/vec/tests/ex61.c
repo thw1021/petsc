@@ -48,13 +48,20 @@ PETSC_STATIC_INLINE PetscErrorCode VecClose(Vec vref, Vec vtest)
   PetscFunctionReturn(0);
 }
 
+/*
+ Because apparently const PetscInt n=3;PetscInt arr[n]; is not a constant enough expression for mswin cl to be able to
+ set array size statically...
+*/
+#define THREE 3
+
 int main(int argc,char **argv)
 {
   PetscErrorCode    ierr;
-  PetscInt          n=50,nstream=3,nloop=9;
+  const PetscInt    nstream=THREE,nloop=9;
+  PetscInt          n=50;
   PetscStreamType   stype=PETSCSTREAMCUDA;
   VecType           vtype=VECCUDA;
-  PetscStream       pstream[nstream];
+  PetscStream       pstream[THREE];
   PetscStreamScalar pscal,pscal2;
   const PetscScalar one=1.0;
   PetscMPIInt       rank,size;

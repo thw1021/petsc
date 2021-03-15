@@ -172,6 +172,6 @@ PetscErrorCode PetscStreamCreate_CUDA(PetscStream strm)
   PetscFunctionBegin;
   ierr = PetscNew(&psc);CHKERRQ(ierr);
   strm->data = (void *)psc;
-  ierr = PetscMemcpy(strm->ops, &cuops, sizeof(cuops));CHKERRQ(ierr);
+  ierr = PetscMemcpy(strm->ops,&cuops,sizeof(cuops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
