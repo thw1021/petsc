@@ -47,7 +47,7 @@ int main(int argc,char **argv)
   PetscErrorCode ierr;
   PetscInt       i,its,Nx=PETSC_DECIDE,Ny=PETSC_DECIDE,nlocal,nrhs = 1;
   PetscScalar    one = 1.0;
-  Mat            A,B,X,Y;
+  Mat            A,B,X;
   GridCtx        fine_ctx;
   KSP            ksp;
   PetscBool      Brand = PETSC_FALSE,flg;
@@ -139,7 +139,6 @@ int main(int argc,char **argv)
   ierr = MatDestroy(&A);CHKERRQ(ierr);
   ierr = MatDestroy(&B);CHKERRQ(ierr);
   ierr = MatDestroy(&X);CHKERRQ(ierr);
-  ierr = MatDestroy(&Y);CHKERRQ(ierr);
   ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
 
   ierr = PetscFinalize();
@@ -239,7 +238,6 @@ PetscErrorCode FormJacobian_Grid(GridCtx *grid,Mat jac)
       args: -ksp_view_final_residual -ksp_type preonly -pc_type ml -mx 5 -my 5 -ksp_monitor -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -pc_mg_type {{additive multiplicative full kaskade}separate output} -nrhs 7 -ksp_matsolve_block_size {{4 7}separate output}
 
     test:
-      TODO: broken
       requires: hpddm
       suffix: matcycles_hpddm_mg
       nsize: {{1 2}}
