@@ -322,13 +322,13 @@ PetscErrorCode DMInterpolationAddPoints(DMInterpolationInfo ctx, PetscInt n, Pet
 + ctx - the context
 . dm  - the DM for the function space used for interpolation
 . redundantPoints - If PETSC_TRUE, all processes are passing in the same array of points. Otherwise, points need to be communicated among processes.
-. ignoreOutideDomain - If PETSC_TRUE, ignore points outside the domain, otherwise return an error
+. ignoreOutsideDomain - If PETSC_TRUE, ignore points outside the domain, otherwise return an error
 
   Level: intermediate
 
 .seealso: DMInterpolationEvaluate(), DMInterpolationAddPoints(), DMInterpolationCreate()
 @*/
-PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool redundantPoints, PetscBool ignoreOutideDomain)
+PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool redundantPoints, PetscBool ignoreOutsideDomain)
 {
   MPI_Comm          comm = ctx->comm;
   PetscScalar       *a;
@@ -399,7 +399,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   ctx->n = 0;
   for (p = 0; p < N; ++p) {
     if (globalProcs[p] == size) {
-      if (!ignoreOutideDomain) SETERRQ4(comm, PETSC_ERR_PLIB, "Point %d: %g %g %g not located in mesh", p, (double)globalPoints[p*ctx->dim+0], (double)(ctx->dim > 1 ? globalPoints[p*ctx->dim+1] : 0.0), (double)(ctx->dim > 2 ? globalPoints[p*ctx->dim+2] : 0.0));
+      if (!ignoreOutsideDomain) SETERRQ4(comm, PETSC_ERR_PLIB, "Point %d: %g %g %g not located in mesh", p, (double)globalPoints[p*ctx->dim+0], (double)(ctx->dim > 1 ? globalPoints[p*ctx->dim+1] : 0.0), (double)(ctx->dim > 2 ? globalPoints[p*ctx->dim+2] : 0.0));
       else if (!rank) ++ctx->n;
     } else if (globalProcs[p] == rank) ++ctx->n;
   }
