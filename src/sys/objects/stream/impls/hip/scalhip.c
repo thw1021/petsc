@@ -1,12 +1,11 @@
 #include "streamhip.h"
 
-#if PetscDefined(HAVE_HIP)
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarDestroy_HIP(PetscStreamScalar pscal)
 {
   hipError_t cerr;
 
   PetscFunctionBegin;
-  cerr = hipHostFreex(pscal->host);CHKERRHIP(cerr);
+  cerr = hipHostFree(pscal->host);CHKERRHIP(cerr);
   cerr = hipFree(pscal->device);CHKERRHIP(cerr);
   PetscFunctionReturn(0);
 }
@@ -28,17 +27,20 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarSetValue_HIP(PetscStreamScal
   ierr = PetscStreamGetStream(pstream,&hstream);CHKERRQ(ierr);
   if (val) {
     if (PetscMemTypeHost(mtype)) {
-      herr = hipMemcpyAsync(pscal->host,val,sizeof(PetscScalar),hipMemcpyHostToHost,hstream);CHKERRHIP(herr);
       herr = hipMemcpyAsync(pscal->device,val,sizeof(PetscScalar),hipMemcpyHostToDevice,hstream);CHKERRHIP(herr);
+      herr = hipMemcpyAsync(pscal->host,val,sizeof(PetscScalar),hipMemcpyHostToHost,hstream);CHKERRHIP(herr);
+      pscal->omask = PETSC_OFFLOAD_BOTH;
     } else {
       herr = hipMemcpyAsync(pscal->device,val,sizeof(PetscScalar),hipMemcpyDeviceToDevice,hstream);CHKERRHIP(herr);
+      pscal->omask = PETSC_OFFLOAD_GPU;
     }
   } else {
-    herr = hipMemsetAsync(pscal->device,0,sizeof(PetscScalar),cstream);CHKERRHIP(herr);
+    herr = hipMemsetAsync(pscal->device,0,sizeof(PetscScalar),hstream);CHKERRHIP(herr);
+    herr = hipMemsetAsync(pscal->host,0,sizeof(PetscScalar),hstream);CHKERRHIP(herr);
+    pscal->omask = PETSC_OFFLOAD_BOTH;
   }
   ierr = PetscStreamRestoreStream(pstream,&hstream);CHKERRQ(ierr);
   ierr = PetscStreamRecordEvent(pstream,pscal->event);CHKERRQ(ierr);
-  pscal->omask = PETSC_OFFLOAD_BOTH;
   PetscFunctionReturn(0);
 }
 
@@ -100,6 +102,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarGetDevice_HIP(PetscStreamSca
 }
 
 static const struct _ScalOps scalhipops = {
+  PetscStreamScalarCreate_HIP,
   PetscStreamScalarDestroy_HIP,
   PetscStreamScalarSetup_HIP,
   PetscStreamScalarSetValue_HIP,
@@ -109,12 +112,10 @@ static const struct _ScalOps scalhipops = {
   NULL,
   NULL
 };
-#endif /* HAVE_HIP */
 
 PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar pscal)
 {
   PetscFunctionBegin;
-#if PetscDefined(HAVE_HIP)
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"NOT FULLY IMPLEMENTED");
   {
     PetscErrorCode ierr;
@@ -124,8 +125,5 @@ PetscErrorCode PetscStreamScalarCreate_HIP(PetscStreamScalar pscal)
     herr = hipMalloc((void **)&pscal->device,sizeof(PetscScalar));CHKERRHIP(herr);
     ierr = PetscMemcpy(pscal->ops,&scalhipops,sizeof(scalhipops));CHKERRQ(ierr);
   }
-#else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with HIP support");
-#endif
   PetscFunctionReturn(0);
 }

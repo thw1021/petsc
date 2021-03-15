@@ -1,4 +1,4 @@
-
+#requirespackage 'PETSC_HAVE_HIP'
 ALL: lib
 
 CFLAGS    =
