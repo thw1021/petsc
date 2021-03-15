@@ -302,11 +302,6 @@
         PetscReal PETSC_NULL_REAL(1)
         PetscBool PETSC_NULL_BOOL
 !
-#if defined(PETSC_USE_REAL___FLOAT128)
-        integer MPIU_REAL
-        integer MPIU_SCALAR
-        integer MPIU_SUM
-#endif
 !
 !
 !
