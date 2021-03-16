@@ -8,7 +8,11 @@
       program main
 #include <petsc/finclude/petscvec.h>
       use petscvec
+#if defined(PETSC_HAVE_MPIUNI)
+      use mpiuni
+#else
       use mpi
+#endif
       implicit none
 
       PetscErrorCode                ierr

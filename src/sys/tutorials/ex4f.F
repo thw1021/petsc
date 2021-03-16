@@ -12,7 +12,11 @@
       program main
 #include <petsc/finclude/petscsys.h>
       use petscsys
+#if defined(PETSC_HAVE_MPIUNI)
+      use mpiuni
+#else
       use mpi
+#endif
       implicit none
       PetscErrorCode ierr
       PetscMPIInt    rank, size,grank,two

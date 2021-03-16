@@ -14,7 +14,11 @@
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petsclog.h>
       use petscsys
+#if defined(PETSC_HAVE_MPIUNI)
+      use mpiuni
+#else
       use mpi
+#endif
       implicit none
 
 !====================================================================
