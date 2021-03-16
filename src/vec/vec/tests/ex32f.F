@@ -5,7 +5,6 @@
       program main
 #include <petsc/finclude/petscvec.h>
       use petscvec
-      use mpi
        implicit none
 
       PetscErrorCode ierr
@@ -26,7 +25,7 @@
       call MPI_Comm_size(PETSC_COMM_WORLD,size,ierr)
       if (size .gt. 1) then
         print*,'Example for one processor only'
-        call MPI_Abort(MPI_COMM_WORLD,0,ierr)
+        call MPI_Abort(PETSC_COMM_WORLD,0,ierr)
       endif
 
       call VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,n,v,ierr)

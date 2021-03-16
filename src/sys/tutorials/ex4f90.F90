@@ -12,7 +12,6 @@
       program main
 #include <petsc/finclude/petscsys.h>
       use petscsys
-      use mpi
       implicit none
 
       PetscErrorCode ierr
@@ -30,8 +29,8 @@
 !     We can now change the communicator universe for PETSc
 
       two = 2
-      call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
-      call MPI_Comm_split(MPI_COMM_WORLD,mod(rank,two),0,PETSC_COMM_WORLD,ierr)
+      call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr)
+      call MPI_Comm_split(PETSC_COMM_WORLD,mod(rank,two),0,PETSC_COMM_WORLD,ierr)
 
 !     Every PETSc routine should begin with the PetscInitialize()
 !     routine.
