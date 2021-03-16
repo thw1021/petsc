@@ -1324,7 +1324,6 @@ class Configure(config.base.Configure):
 
   def checkPIC(self):
     '''Determine the PIC option for each compiler'''
-    self.usePIC = 0
     useSharedLibraries = 'with-shared-libraries' in self.argDB and self.argDB['with-shared-libraries']
     myLanguage = self.language[-1]
     if not self.argDB['with-pic'] and not useSharedLibraries:
@@ -1374,9 +1373,41 @@ class Configure(config.base.Configure):
           self.logPrint('Accepted '+language+' compiler flag '+testFlag+' for PIC code')
         else:
           self.logPrint('Accepted '+language+' PIC code without compiler flag')
-        self.isPIC = 1
         break
       self.popLanguage()
+    return
+
+  def checkCxxPIC(self):
+    '''Determine the PIC option for the Cxx compiler'''
+    useSharedLibraries = 'with-shared-libraries' in self.argDB and self.argDB['with-shared-libraries']
+    if not self.argDB['with-pic'] and not useSharedLibraries:
+      self.logPrint("Skip checking PIC options on user request")
+      return
+    self.pushLanguage('Cxx')
+    includeLine = _picTestIncludes()
+    compilerFlagsArg = self.getCompilerFlagsArg(0) # compiler only
+    oldCompilerFlags = getattr(self, compilerFlagsArg)
+    for testFlag in self.generatePICGuesses():
+      if testFlag:
+        self.logPrint('Trying Cxx compiler flag '+testFlag+' for PIC code')
+      else:
+        self.logPrint('Trying Cxx for PIC code without any compiler flag')
+      acceptedPIC = 1
+      try:
+        acceptedPIC = self.checkLink(includes = includeLine, body = None, codeBegin = '', codeEnd = '', cleanup = 1, shared = 1, linkLanguage = 'Cxx', linker = self.getCompiler())
+      except RuntimeError:
+        acceptedPIC = 0
+      if not acceptedPIC:
+        self.logPrint('Rejected Cxx compiler flag '+testFlag+' because shared linker cannot handle it')
+        setattr(self, compilerFlagsArg, oldCompilerFlags)
+        continue
+      if testFlag:
+        self.CxxPIC = testFlag
+        self.logPrint('Accepted Cxx compiler flag '+testFlag+' for PIC code')
+      else:
+        self.logPrint('Accepted Cxx PIC code without compiler flag')
+      break
+    self.popLanguage()
     return
 
   def checkLargeFileIO(self):
@@ -2055,6 +2086,7 @@ if (dlclose(handle)) {
     if Configure.isCygwin(self.log):
       self.executeTest(self.checkLinkerWindows)
     self.executeTest(self.checkPIC)
+    self.executeTest(self.checkCxxPIC)
     self.executeTest(self.checkSharedLinkerPaths)
     self.executeTest(self.checkLibC)
     self.executeTest(self.checkDynamicLinker)

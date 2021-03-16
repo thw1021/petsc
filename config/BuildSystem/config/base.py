@@ -578,7 +578,7 @@ class Configure(script.Script):
   def filterLinkOutput(self, output):
     return self.framework.filterLinkOutput(output)
 
-  def outputLink(self, includes, body, cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage=None, examineOutput=lambda ret,out,err:None):
+  def outputLink(self, includes, body, cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage = None, examineOutput = lambda ret,out,err:None, linker = None):
     import sys
 
     (out, err, ret) = self.outputCompile(includes, body, cleanup = 0, codeBegin = codeBegin, codeEnd = codeEnd)
@@ -603,6 +603,10 @@ class Configure(script.Script):
       cmd = self.getLinkerCmd()
     if langPushed:
       self.popLanguage()
+    if linker:
+      s = cmd.split()
+      s[0] = linker
+      cmd = ' '.join(s)
 
     linkerObj = self.linkerObj
     def report(command, status, output, error):
@@ -619,9 +623,9 @@ class Configure(script.Script):
       if os.path.isfile(pdbfile): os.remove(pdbfile)
     return (out+'\n'+err, ret)
 
-  def checkLink(self, includes = '', body = '', cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage=None, examineOutput=lambda ret,out,err:None):
+  def checkLink(self, includes = '', body = '', cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage = None, examineOutput = lambda ret,out,err:None, linker = None):
     self.logWrite('===== Checking linker\n')
-    (output, returnCode) = self.outputLink(includes, body, cleanup, codeBegin, codeEnd, shared, linkLanguage, examineOutput)
+    (output, returnCode) = self.outputLink(includes, body, cleanup, codeBegin, codeEnd, shared, linkLanguage, examineOutput, linker)
     output = self.filterLinkOutput(output)
     return not (returnCode or len(output))
 

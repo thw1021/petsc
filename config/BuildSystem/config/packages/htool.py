@@ -1,0 +1,53 @@
+import config.package
+
+class Configure(config.package.Package):
+  def __init__(self,framework):
+    config.package.Package.__init__(self,framework)
+    self.gitcommit              = '81bfad710d64189b65392bbec4673e40641e9e50' # interface apr-16-2021
+    self.download               = ['git://https://github.com/htool-ddm/htool','https://github.com/htool-ddm/htool/archive/'+self.gitcommit+'.tar.gz']
+    self.requirescxx11          = 1
+    self.cxx                    = 1
+    self.functions              = []
+    self.includes               = ['htool/htool.hpp']
+    self.skippackagewithoptions = 1
+    self.precisions             = ['double'] # coordinates are stored in double precision, other scalars are templated, just enforce PetscReal == double during ./configure, for now
+    self.usesopenmp             = 'yes'
+    return
+
+  def setupDependencies(self,framework):
+    config.package.Package.setupDependencies(self,framework)
+    self.setCompilers = framework.require('config.setCompilers',self)
+    self.mathlib      = framework.require('config.packages.mathlib',self)
+    self.cxxlibs      = framework.require('config.packages.cxxlibs',self)
+    self.mpi          = framework.require('config.packages.MPI',self)
+    self.blasLapack   = framework.require('config.packages.BlasLapack',self)
+    self.openmp       = framework.require('config.packages.openmp',self)
+    self.hpddm        = framework.require('config.packages.hpddm',self)
+    self.deps         = [self.blasLapack,self.cxxlibs,self.mathlib,self.mpi]
+    self.odeps        = [self.openmp,self.hpddm]
+    return
+
+  def Install(self):
+    import os
+    if self.framework.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
+      PETSC_DIR  = os.path.abspath(os.path.expanduser(self.argDB['prefix']))
+      PETSC_ARCH = ''
+      prefix     = os.path.abspath(os.path.expanduser(self.argDB['prefix']))
+    else:
+      PETSC_DIR  = self.petscdir.dir
+      PETSC_ARCH = self.arch
+      prefix     = os.path.join(self.petscdir.dir,self.arch)
+    incDir = os.path.join(prefix,'include')
+    if self.installSudo:
+      newuser = self.installSudo+' -u $${SUDO_USER} '
+    else:
+      newuser = ''
+    self.include = [incDir]
+    if not hasattr(self.framework,'packages'):
+      self.framework.packages = []
+    self.framework.packages.append(self)
+    cpstr = newuser+' mkdir -p '+incDir+' && '+newuser+' cp -r '+os.path.join(self.packageDir,'include','*')+' '+incDir
+    self.logPrintBox('Copying Htool; this may take several seconds')
+    output,err,ret = config.package.Package.executeShellCommand(cpstr,timeout=100,log=self.log)
+    self.log.write(output+err)
+    return self.installDir
