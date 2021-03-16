@@ -70,6 +70,9 @@ PC Object: 2 MPI processes
     PC Object: (sub_) 1 MPI processes
       type: jacobi
         type DIAGONAL
+      Vec Object: 1 MPI processes
+        type: seq
+        length=6
       linear system matrix = precond matrix:
       Mat Object: (sub_) 1 MPI processes
         type: seqaij
@@ -90,6 +93,9 @@ PC Object: 2 MPI processes
     PC Object: (sub_) 1 MPI processes
       type: jacobi
         type DIAGONAL
+      Vec Object: 1 MPI processes
+        type: seq
+        length=6
       linear system matrix = precond matrix:
       Mat Object: (sub_) 1 MPI processes
         type: seqaij
