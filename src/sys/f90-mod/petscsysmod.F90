@@ -37,9 +37,9 @@
 #endif
 #else
 #if defined (PETSC_USE_REAL_SINGLE)
-      parameter (MPIU_SCALAR = MPI_REAL)
+      integer4, parameter :: MPIU_SCALAR = MPI_REAL
 #else
-      parameter(MPIU_SCALAR = MPI_DOUBLE_PRECISION)
+      integer4, parameter :: MPIU_SCALAR = MPI_DOUBLE_PRECISION
 #endif
 #endif
 #endif
