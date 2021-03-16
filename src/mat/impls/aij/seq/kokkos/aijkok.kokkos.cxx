@@ -1018,7 +1018,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijkokkos_kokkos(Mat A,MatFactorType
   ierr = MatCreate(PetscObjectComm((PetscObject)A),B);CHKERRQ(ierr);
   ierr = MatSetSizes(*B,n,n,n,n);CHKERRQ(ierr);
   (*B)->factortype = ftype;
-  (*B)->useordering = PETSC_TRUE;
+  (*B)->canuseordering = PETSC_TRUE;
   ierr = MatSetType(*B,MATSEQAIJKOKKOS);CHKERRQ(ierr);
 
   if (ftype == MAT_FACTOR_LU) {
@@ -1040,7 +1040,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijkokkos_kokkos_device(Mat A,MatFac
   ierr = MatCreate(PetscObjectComm((PetscObject)A),B);CHKERRQ(ierr);
   ierr = MatSetSizes(*B,n,n,n,n);CHKERRQ(ierr);
   (*B)->factortype = ftype;
-  (*B)->useordering = PETSC_TRUE;
+  (*B)->canuseordering = PETSC_TRUE;
   ierr = MatSetType(*B,MATSEQAIJKOKKOS);CHKERRQ(ierr);
 
   if (ftype == MAT_FACTOR_LU) {
