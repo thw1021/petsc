@@ -1298,13 +1298,10 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
 @*/
 PetscErrorCode KSPSetMatSolveBlockSize(KSP ksp, PetscInt bs)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidLogicalCollectiveInt(ksp, bs, 2);
   ksp->nmax = bs;
-  ierr = PetscTryMethod(ksp, "KSPSetMatSolveBlockSize_C", (KSP, PetscInt), (ksp, bs));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1323,13 +1320,10 @@ PetscErrorCode KSPSetMatSolveBlockSize(KSP ksp, PetscInt bs)
 @*/
 PetscErrorCode KSPGetMatSolveBlockSize(KSP ksp, PetscInt *bs)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidIntPointer(bs, 2);
-  *bs  = ksp->nmax;
-  ierr = PetscTryMethod(ksp, "KSPGetMatSolveBlockSize_C", (KSP, PetscInt*), (ksp, bs));CHKERRQ(ierr);
+  *bs = ksp->nmax;
   PetscFunctionReturn(0);
 }
 
