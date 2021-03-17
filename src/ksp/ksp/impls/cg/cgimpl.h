@@ -34,7 +34,6 @@ typedef struct {
   PetscReal   *ee,*dd;             /* work space for Lanczos algorithm */
 
   PetscBool singlereduction;          /* use variant of CG that combines both inner products */
-  PetscBool async;
 } KSP_CG;
 
 #endif

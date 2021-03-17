@@ -1,4 +1,4 @@
-#include "streamcuda.h"
+#include "streamcuda.h" /*I "petscdevice.h" I*/
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphDestroy_CUDA(PetscStreamGraph sgraph)
 {
@@ -24,7 +24,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGrap
     if (psgc->cexec) {
       enum cudaGraphExecUpdateResult update;
 
-      cerr = cudaGraphExecUpdate(psgc->cexec, psgc->cgraph, NULL, &update);
+      cerr = cudaGraphExecUpdate(psgc->cexec,psgc->cgraph,NULL,&update);
       if (PetscUnlikely(cerr != cudaSuccess)) {
         /* "But this is code duplication!" you might say. And you'd be right. But NVIDIA did not come in peace. In their
        infinite malice they make this function return an opaque "something's gone wrong" errorcode but put the real
@@ -41,7 +41,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphAssemble_CUDA(PetscStreamGrap
     char ebuff[PETSC_MAX_PATH_LEN] = {0};
 
     if (psgc->cexec) {cerr = cudaGraphExecDestroy(psgc->cexec);CHKERRCUDA(cerr);}
-    cerr = cudaGraphInstantiate(&psgc->cexec, psgc->cgraph, NULL, ebuff, PETSC_MAX_PATH_LEN);
+    cerr = cudaGraphInstantiate(&psgc->cexec,psgc->cgraph,NULL,ebuff,PETSC_MAX_PATH_LEN);
     if (PetscUnlikely(cerr != cudaSuccess)) {
       const char *name  = cudaGetErrorName(cerr);
       const char *descr = cudaGetErrorString(cerr);
@@ -61,7 +61,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphExecute_CUDA(PetscStreamGraph
   cudaError_t              cerr;
 
   PetscFunctionBegin;
-  cerr = cudaGraphLaunch(psgc->cexec, psc->cstream);CHKERRCUDA(cerr);
+  cerr = cudaGraphLaunch(psgc->cexec,psc->cstream);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -74,9 +74,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamGraphDuplicate_CUDA(PetscStreamGra
 
   PetscFunctionBegin;
   if (PetscUnlikely(!psgcref->cgraph)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Reference graph has no graph to duplicate");
-  cerr = cudaGraphClone(&psgcdup->cgraph, psgcref->cgraph);CHKERRCUDA(cerr);
+  cerr = cudaGraphClone(&psgcdup->cgraph,psgcref->cgraph);CHKERRCUDA(cerr);
   if (sgraphref->assembled) {
-    ierr = PetscStreamGraphAssemble_CUDA(sgraphdup, PETSC_GRAPH_INIT_ASSEMBLY);CHKERRQ(ierr);
+    ierr = PetscStreamGraphAssemble_CUDA(sgraphdup,PETSC_GRAPH_INIT_ASSEMBLY);CHKERRQ(ierr);
     sgraphdup->assembled = PETSC_TRUE;
   }
   PetscFunctionReturn(0);
@@ -121,6 +121,6 @@ PetscErrorCode PetscStreamGraphCreate_CUDA(PetscStreamGraph sgraph)
   PetscFunctionBegin;
   ierr = PetscNew(&psgc);CHKERRQ(ierr);
   sgraph->data = (void *)psgc;
-  ierr = PetscMemcpy(sgraph->ops, &gcuops, sizeof(gcuops));CHKERRQ(ierr);
+  ierr = PetscMemcpy(sgraph->ops,&gcuops,sizeof(gcuops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
