@@ -17,7 +17,7 @@ namespace HPDDM {
 struct PC_HPDDM_Level {
   VecScatter                  scatter;   /* scattering from PETSc nonoverlapping numbering to HPDDM overlapping */
   Vec                         *v[2];     /* working vectors */
-  Mat                         V;         /* working matrix */
+  Mat                         V[3];      /* working matrices */
   KSP                         ksp;       /* KSP coupling the action of pc and P */
   PC                          pc;        /* inner fine-level PC, acting like a multigrid smoother */
   HPDDM::Schwarz<PetscScalar> *P;        /* coarse-level HPDDM solver */
@@ -49,6 +49,18 @@ struct KSP_HPDDM {
   unsigned short       scntl[2];
   char                 cntl [5];
 };
+
+static const char citation[] = "@article{jolivet2020petsc,\n"
+"  Author = {Jolivet, Pierre and Roman, Jose E. and Zampini, Stefano},\n"
+"  Title = {{KSPHPDDM} and {PCHPDDM}: Extending {PETSc} with Robust Overlapping {Schwarz} Preconditioners and Advanced {Krylov} Methods},\n"
+"  Year = {2021},\n"
+"  Publisher = {Elsevier},\n"
+"  Journal = {Computer \\& Mathematics with Applications},\n"
+"  Volume = {84},\n"
+"  Pages = {277--295},\n"
+"  Url = {https://github.com/prj-/jolivet2020petsc}\n"
+"}\n";
+PETSC_INTERN PetscBool HPDDMCite;
 
 #include <HPDDM.hpp>
 
