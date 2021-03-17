@@ -393,6 +393,9 @@ PETSC_EXTERN PetscErrorCode VecGetOwnershipRanges(Vec,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode VecSetLocalToGlobalMapping(Vec,ISLocalToGlobalMapping);
 PETSC_EXTERN PetscErrorCode VecSetValuesLocal(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 
+PETSC_EXTERN PetscErrorCode VecGetEvent(Vec,PetscEvent*);
+PETSC_EXTERN PetscErrorCode VecRestoreEvent(Vec,PetscEvent*);
+
 PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec,PetscScalar**);
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayAsync(Vec,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArray(Vec,PetscScalar**);
@@ -670,9 +673,6 @@ PETSC_EXTERN PetscErrorCode VecsCreateSeq(MPI_Comm,PetscInt,PetscInt,Vecs*);
 PETSC_EXTERN PetscErrorCode VecsCreateSeqWithArray(MPI_Comm,PetscInt,PetscInt,PetscScalar*,Vecs*);
 PETSC_EXTERN PetscErrorCode VecsDuplicate(Vecs,Vecs*);
 
-#include <petscdevice.h>
-PETSC_EXTERN PetscErrorCode VecSetStream(Vec,PetscStream);
-PETSC_EXTERN PetscErrorCode VecGetStream(Vec,PetscStream*);
 #if defined(PETSC_HAVE_VIENNACL)
 typedef struct _p_PetscViennaCLIndices* PetscViennaCLIndices;
 PETSC_EXTERN PetscErrorCode PetscViennaCLIndicesCreate(PetscInt, PetscInt*,PetscInt, PetscInt*,PetscViennaCLIndices*);

@@ -108,6 +108,7 @@ struct _ScalOps {
   PetscErrorCode (*await)(PetscStreamScalar,PetscScalar*,PetscStream);
   PetscErrorCode (*getdevice)(PetscStreamScalar,PetscScalar**,PetscBool,PetscStream);
   PetscErrorCode (*restoredevice)(PetscStreamScalar,PetscScalar**,PetscStream);
+  PetscErrorCode (*realpart)(PetscStreamScalar,PetscStream);
   PetscErrorCode (*axty)(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
   PetscErrorCode (*aydx)(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 };
