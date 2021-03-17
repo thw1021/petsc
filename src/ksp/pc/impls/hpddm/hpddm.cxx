@@ -574,15 +574,16 @@ static PetscErrorCode PCHPDDMShellApply(PC pc, Vec x, Vec y)
       ierr = PCApply(ctx->pc, ctx->v[1][1], ctx->v[1][0]);CHKERRQ(ierr);      /* y = M^-1 (I - A Q) x             */
       if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
         if (!ctx->parent->normal || ctx != ctx->parent->levels[0]) {
-          ierr = MatMultTranspose(A, ctx->v[1][0], ctx->v[1][1]);CHKERRQ(ierr); /* z = A^T M^-1 (I - A Q) x       */
+          ierr = MatMultTranspose(A, ctx->v[1][0], ctx->v[1][1]);CHKERRQ(ierr); /* z = A^T y                      */
         } else {
           ierr = MatMult(A, ctx->v[1][0], ctx->parent->normal);CHKERRQ(ierr);
-          ierr = MatMultTranspose(A, ctx->parent->normal, ctx->v[1][1]);CHKERRQ(ierr); /* z = A^T A M^-1 (I - A^T A Q) x */
+          ierr = MatMultTranspose(A, ctx->parent->normal, ctx->v[1][1]);CHKERRQ(ierr); /* z = A^T A y             */
         }
         ierr = PCHPDDMDeflate_Private(pc, ctx->v[1][1], ctx->v[1][1]);CHKERRQ(ierr);
-        ierr = VecAXPY(ctx->v[1][0], -1.0, ctx->v[1][1]);CHKERRQ(ierr);       /* y = (I - Q A^T) M^-1 (I - A Q) x */
+        ierr = VecAXPBYPCZ(y, -1.0, 1.0, 1.0, ctx->v[1][1], ctx->v[1][0]);CHKERRQ(ierr); /* y = (I - Q A^T) y + Q x */
+      } else {
+        ierr = VecAXPY(y, 1.0, ctx->v[1][0]);CHKERRQ(ierr);                   /* y = Q M^-1 (I - A Q) x + Q x     */
       }
-      ierr = VecAXPY(y, 1.0, ctx->v[1][0]);CHKERRQ(ierr);                     /* y = y + Q x                      */
     } else if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_ADDITIVE) {
       ierr = PCApply(ctx->pc, x, ctx->v[1][0]);CHKERRQ(ierr);
       ierr = VecAXPY(y, 1.0, ctx->v[1][0]);CHKERRQ(ierr);                     /* y = M^-1 x + Q x                 */
@@ -638,6 +639,8 @@ static PetscErrorCode PCHPDDMShellMatApply(PC pc, Mat X, Mat Y)
           ierr = MatDenseRestoreColumnVecRead(C, i, &cC);CHKERRQ(ierr);
         }
 #endif
+        ierr = PCHPDDMDeflate_Private(pc, D, D);CHKERRQ(ierr);
+        ierr = MatAXPY(C, -1.0, D, SAME_NONZERO_PATTERN);CHKERRQ(ierr);
       }
       ierr = MatAXPY(Y, 1.0, C, SAME_NONZERO_PATTERN);CHKERRQ(ierr);
       ierr = MatDestroy(&D);CHKERRQ(ierr);
