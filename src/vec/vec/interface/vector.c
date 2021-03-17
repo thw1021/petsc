@@ -420,7 +420,6 @@ PetscErrorCode  VecDestroy(Vec *v)
    Notes:
    Use VecDestroyVecs() to free the space. Use VecDuplicate() to form a single
    vector.
-   The
 
    Fortran Note:
    The Fortran interface is slightly different from that given below, it
