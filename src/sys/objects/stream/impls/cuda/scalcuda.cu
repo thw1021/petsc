@@ -139,6 +139,34 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarRestoreDevice_CUDA(PetscStre
   PetscFunctionReturn(0);
 }
 
+namespace PetscStreamScalarCUDA {
+  struct petscrealpart : public thrust::unary_function<PetscScalar,PetscReal> {
+    __host__ __device__ __forceinline__ PetscReal operator()(PetscScalar x) const {return PetscRealPart(x);}
+  };
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarRealPart_CUDA(PetscStreamScalar pscal, PetscStream pstream)
+{
+  PetscErrorCode                  ierr;
+  cudaStream_t                    cstream;
+  PetscScalar                     *dptr;
+  thrust::device_ptr<PetscScalar> dptrx;
+
+  PetscFunctionBegin;
+  ierr = PetscStreamScalarGetDevice_CUDA(pscal,&dptr,PETSC_TRUE,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
+  try {
+    dptrx = thrust::device_pointer_cast(dptr);
+    thrust::transform(thrust::cuda::par.on(cstream),dptrx,dptrx+1,dptrx,PetscStreamScalarCUDA::petscrealpart());
+  } catch (char *ex) {
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s",ex);
+  }
+  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarRestoreDevice_CUDA(pscal,&dptr,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamRecordEvent(pstream,pscal->event);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarAXTY_CUDA(PetscScalar alpha, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
 {
   PetscErrorCode                  ierr;
@@ -235,6 +263,7 @@ static const struct _ScalOps scalcuops = {
   PetscStreamScalarAwait_CUDA,
   PetscStreamScalarGetDevice_CUDA,
   PetscStreamScalarRestoreDevice_CUDA,
+  PetscStreamScalarRealPart_CUDA,
   PetscStreamScalarAXTY_CUDA,
   PetscStreamScalarAYDX_CUDA
 };

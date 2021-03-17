@@ -228,6 +228,7 @@ PetscErrorCode VecAYPX_SeqCUDA(Vec yin,PetscScalar alpha,Vec xin)
 
 PetscErrorCode VecAYPX_SeqCUDAAsync(Vec yin,PetscStreamScalar pscalalpha,Vec xin,PetscStream pstream)
 {
+  PetscBool         isZero,isOne;
   const PetscScalar *xarray;
   PetscScalar       *yarray;
   PetscErrorCode    ierr;
@@ -243,17 +244,16 @@ PetscErrorCode VecAYPX_SeqCUDAAsync(Vec yin,PetscStreamScalar pscalalpha,Vec xin
   ierr = PetscBLASIntCast(yin->map->n,&bn);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayReadAsync(xin,&xarray,pstream);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayAsync(yin,&yarray,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetInfo(pscalalpha,PSS_ZERO,PETSC_FALSE,&isZero,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetInfo(pscalalpha,PSS_ONE,PETSC_FALSE,&isOne,pstream);CHKERRQ(ierr);
   ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-  if (pscalalpha->cache[PSS_ZERO] == PSS_TRUE) {
+  if (isZero) {
     cudaError_t cerr;
-
-    ierr = PetscStreamScalarCheckCache_Internal(pscalalpha,0.0,pstream);CHKERRQ(ierr);
     cerr = cudaMemcpyAsync(yarray,xarray,bn*sizeof(PetscScalar),cudaMemcpyDeviceToDevice,cstream);CHKERRCUDA(cerr);
-  } else if (pscalalpha->cache[PSS_ONE] == PSS_TRUE) {
+  } else if (isOne) {
     const PetscScalar *alpha;
 
-    ierr = PetscStreamScalarCheckCache_Internal(pscalalpha,1.0,pstream);CHKERRQ(ierr);
     ierr = PetscCUBLASSetStream_Internal(cublasv2handle,cstream);CHKERRQ(ierr);
     ierr = PetscStreamScalarGetDeviceRead(pscalalpha,&alpha,pstream);CHKERRQ(ierr);
     cberr = cublasXaxpy(cublasv2handle,bn,alpha,xarray,one,yarray,one);CHKERRCUBLAS(cberr);
@@ -410,20 +410,16 @@ PetscErrorCode VecPointwiseDivide_SeqCUDAAsync(Vec win, Vec xin, Vec yin,PetscSt
   ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   try {
-    cudaError_t cerr;
-
     wptr = thrust::device_pointer_cast(warray);
     xptr = thrust::device_pointer_cast(xarray);
     yptr = thrust::device_pointer_cast(yarray);
     thrust::transform(thrust::cuda::par.on(cstream),xptr,xptr+n,yptr,wptr,thrust::divides<PetscScalar>());
-    /* In case thrust went wonky */
-    cerr = cudaGetLastError();CHKERRCUDA(cerr);
   } catch (char *ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
   }
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(n);CHKERRQ(ierr);
+  ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayRead(yin,&yarray);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayWrite(win,&warray);CHKERRQ(ierr);
@@ -470,12 +466,13 @@ PetscErrorCode VecWAXPY_SeqCUDA(Vec win,PetscScalar alpha,Vec xin, Vec yin)
 
 PetscErrorCode VecWAXPY_SeqCUDAAsync(Vec win,PetscStreamScalar pscal,Vec xin, Vec yin,PetscStream pstream)
 {
+  PetscBool      isZero;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidStreamTypeSpecific(pstream,5,PETSCSTREAMCUDA);
-  if (pscal->cache[PSS_ZERO] == PSS_TRUE) {
-    ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetInfo(pscal,PSS_ZERO,PETSC_FALSE,&isZero,pstream);CHKERRQ(ierr);
+  if (isZero) {
     ierr = VecCopy_SeqCUDAAsync(yin,win,pstream);CHKERRQ(ierr);
   } else {
     const PetscScalar *xarray=NULL,*yarray=NULL;
@@ -570,9 +567,9 @@ PetscErrorCode VecMAXPY_SeqCUDAAsync(Vec xin, PetscInt nv,PetscStreamScalar *psc
     ierr = PetscStreamRecordEvent(pstream,y[j]->event);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayRead(y[j],&yarray);CHKERRQ(ierr);
   }
-  ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
+  ierr = PetscStreamRecordEvent(pstream,xin->event);CHKERRQ(ierr);
   ierr = VecCUDARestoreArray(xin,&xarray);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -632,9 +629,7 @@ PetscErrorCode VecDot_SeqCUDAAsync(Vec xin,Vec yin,PetscStreamScalar pscal,Petsc
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = PetscStreamScalarRestoreDeviceWrite(pscal,&dptr,pstream);CHKERRQ(ierr);
   ierr = PetscStreamRestoreStream(pstream,&cstream);CHKERRQ(ierr);
-  if (xin->map->n >0) {
-    ierr = PetscLogGpuFlops(2.0*xin->map->n-1);CHKERRQ(ierr);
-  }
+  if (xin->map->n >0) {ierr = PetscLogGpuFlops(2.0*xin->map->n-1);CHKERRQ(ierr);}
   ierr = PetscLogGpuToCpu(sizeof(PetscScalar));CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayRead(yin,&yarray);CHKERRQ(ierr);
@@ -1205,18 +1200,18 @@ PetscErrorCode VecSet_SeqCUDA(Vec xin,PetscScalar alpha)
 }
 
 namespace PetscSeqCUDA {
-static const PetscInt    maxThreadsPerBlock = 512;
-__constant__ PetscScalar vecSetVal;
+static const PetscInt maxThreadsPerBlock = 512;
 
   /* Because thrust does not have a fill routine using device pointers */
-__global__ __launch_bounds__(PetscSeqCUDA::maxThreadsPerBlock) void
-vecSetAsync(PetscScalar *inout, PetscInt size)
+__global__ __launch_bounds__(PetscSeqCUDA::maxThreadsPerBlock)
+void vecSetAsync(PetscScalar *__restrict__ inout, const PetscScalar *__restrict__ vecSetVal, PetscInt size)
 {
-  const PetscInt tx  = threadIdx.x, bx = blockIdx.x;
-  const PetscInt bdx = blockDim.x, gdx = PetscSeqCUDA::maxThreadsPerBlock;
+  const PetscInt    tx  = threadIdx.x, bx = blockIdx.x;
+  const PetscInt    bdx = blockDim.x, gdx = PetscSeqCUDA::maxThreadsPerBlock;
+  const PetscScalar val = *vecSetVal; /* Hope this becomes a LDG load op */
 
 #pragma unroll
-  for (PetscInt i = bx*bdx+tx; i < size; i += gdx*bdx) inout[i] = vecSetVal;
+  for (PetscInt i = bx*bdx+tx; i < size; i += gdx*bdx) inout[i] = val;
   return;
 }
 
@@ -1231,6 +1226,7 @@ PETSC_STATIC_INLINE PetscInt roundUpToPow2(PetscInt operand, PetscInt multiple)
 
 PetscErrorCode VecSet_SeqCUDAAsync(Vec xin,PetscStreamScalar pscal,PetscStream pstream)
 {
+  PetscBool       isZero;
   PetscInt        n       = xin->map->n;
   PetscScalar     *xarray = NULL;
   PetscErrorCode  ierr;
@@ -1241,18 +1237,19 @@ PetscErrorCode VecSet_SeqCUDAAsync(Vec xin,PetscStreamScalar pscal,PetscStream p
   PetscValidStreamTypeSpecific(pstream,3,PETSCSTREAMCUDA);
   ierr = VecCUDAGetArrayWriteAsync(xin,&xarray,pstream);CHKERRQ(ierr);
   ierr = PetscStreamGetStream(pstream,&cstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetInfo(pscal,PSS_ZERO,PETSC_FALSE,&isZero,pstream);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-  if (pscal->cache[PSS_ZERO] == PSS_TRUE) {
-    ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
+  if (isZero) {
     cerr = cudaMemsetAsync(xarray,0,n*sizeof(PetscScalar),cstream);CHKERRCUDA(cerr);
   } else {
+    PetscBool         isOne;
     const PetscScalar *alpha;
 
     ierr = PetscStreamScalarGetDeviceRead(pscal,&alpha,pstream);CHKERRQ(ierr);
-    if (pscal->cache[PSS_ONE] == PSS_TRUE) {
+    ierr = PetscStreamScalarGetInfo(pscal,PSS_ONE,PETSC_FALSE,&isOne,pstream);CHKERRQ(ierr);
+    if (isOne) {
       thrust::device_ptr<PetscScalar> xptr;
 
-      ierr = PetscStreamScalarCheckCache_Internal(pscal,1.0,pstream);CHKERRQ(ierr);
       try {
         xptr = thrust::device_pointer_cast(xarray);
         thrust::fill(thrust::cuda::par.on(cstream),xptr,xptr+n,1);
@@ -1263,8 +1260,7 @@ PetscErrorCode VecSet_SeqCUDAAsync(Vec xin,PetscStreamScalar pscal,PetscStream p
       const PetscInt nt = std::min(PetscSeqCUDA::roundUpToPow2(n,PetscInt(32)),PetscSeqCUDA::maxThreadsPerBlock);
       const dim3     dimGrid(std::max(nt/PetscSeqCUDA::maxThreadsPerBlock,PetscInt(1))), dimBlock(nt);
 
-      cerr = cudaMemcpyToSymbolAsync((void*)&PetscSeqCUDA::vecSetVal,alpha,sizeof(PetscScalar),0,cudaMemcpyDeviceToDevice,cstream);CHKERRCUDA(cerr);
-      PetscSeqCUDA::vecSetAsync<<<dimGrid,dimBlock,0,cstream>>>(xarray,n);
+      PetscSeqCUDA::vecSetAsync<<<dimGrid,dimBlock,0,cstream>>>(xarray,alpha,n);
     }
     ierr = PetscLogCpuToGpu(sizeof(PetscScalar));CHKERRQ(ierr);
   }
@@ -1312,7 +1308,6 @@ PetscErrorCode VecScale_SeqCUDAAsync(Vec xin,PetscStreamScalar pscal,PetscStream
   ierr = PetscStreamScalarGetInfo(pscal,PSS_ZERO,PETSC_FALSE,&isZero,pstream);CHKERRQ(ierr);
   ierr = PetscStreamScalarGetInfo(pscal,PSS_ONE,PETSC_FALSE,&isOne,pstream);CHKERRQ(ierr);
   if (isZero) {
-    ierr = PetscStreamScalarCheckCache_Internal(pscal,0.0,pstream);CHKERRQ(ierr);
     ierr = VecSet_SeqCUDAAsync(xin,pscal,pstream);CHKERRQ(ierr);
   } else if (!isOne) {
     PetscScalar       *xarray;
@@ -1336,8 +1331,6 @@ PetscErrorCode VecScale_SeqCUDAAsync(Vec xin,PetscStreamScalar pscal,PetscStream
     ierr = VecCUDARestoreArray(xin,&xarray);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpu(sizeof(PetscScalar));CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(xin->map->n);CHKERRQ(ierr);
-  } else {
-    ierr = PetscStreamScalarCheckCache_Internal(pscal,1.0,pstream);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1937,7 +1930,15 @@ PetscErrorCode VecNorm_SeqCUDAAsync(Vec xin,NormType type,PetscStreamScalar *psc
   ierr = PetscCUBLASSetStream_Internal(cublasv2handle,cstream);CHKERRQ(ierr);
   if (type == NORM_2 || type == NORM_FROBENIUS) {
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    /* reinterpret_cast() ~seems~ to be safe to do here */
+    /*
+      Reinterpret_cast() ~seems~ to be safe to do here. This is supported behavior in
+      std::complex, and as per thrusts documentation: "[thrust::complex] is functionally
+      identical to [std::complex], but can also be used in device code which std::complex
+      currently cannot."
+
+      Whether or not "functionally identical" includes compatibility with C's complex
+      types is operative here though.
+    */
     cberr = cublasXnrm2(cublasv2handle,bn,xarray,one,reinterpret_cast<PetscReal*>(dptr));CHKERRCUBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(PetscMax(2.0*n-1,0.0));CHKERRQ(ierr);

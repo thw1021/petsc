@@ -287,6 +287,8 @@ PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar *pscal,PetscS
   ierr = PetscLogEventBegin(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
   if (PetscLikely(x->ops->normasync)) {
     ierr = (*x->ops->normasync)(x,type,pscal,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarRealPart(pscal[0],pstream);CHKERRQ(ierr);
+    if (type == NORM_1_AND_2) {ierr = PetscStreamScalarRealPart(pscal[1],pstream);CHKERRQ(ierr);}
   } else {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vector has no VecNormAsync method");
   }
@@ -297,7 +299,7 @@ PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar *pscal,PetscS
     PetscScalar val;
 
     ierr = PetscStreamScalarAwait(*pscal,&val,pstream);CHKERRQ(ierr);
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],val);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],PetscRealPart(val));CHKERRQ(ierr);
   }
 #endif
   PetscFunctionReturn(0);
@@ -2636,6 +2638,32 @@ PetscErrorCode  VecReplaceArray(Vec vec,const PetscScalar array[])
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecGetEvent(Vec vec, PetscEvent *event)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
+  PetscValidType(vec,1);
+  PetscValidPointer(event,2);
+#if PetscDefined(HAVE_DEVICE)
+  *event = vec->event;
+#else
+  *event = NULL;
+#endif
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecRestoreEvent(Vec vec, PetscEvent *event)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
+  PetscValidType(vec,1);
+  PetscValidPointer(event,2);
+#if PetscDefined(HAVE_DEVICE)
+  if (PetscUnlikelyDebug(*event != vec->event)) SETERRQ(PetscObjectComm((PetscObject)vec),PETSC_ERR_ARG_WRONG,"Must restore with the same PetscEvent that was checked out");
+#endif
+  *event = NULL;
+  PetscFunctionReturn(0);
+}
 
 /*@C
    VecCUDAGetArray - Provides access to the CUDA buffer inside a vector.

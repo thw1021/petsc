@@ -279,6 +279,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarGetDeviceWrite(PetscStreamScalar,Pe
 PETSC_EXTERN PetscErrorCode PetscStreamScalarRestoreDeviceWrite(PetscStreamScalar,PetscScalar**,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetInfo(PetscStreamScalar,PSSCacheType,PetscBool,PetscBool*,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar,PSSCacheType,PetscBool);
+PETSC_EXTERN PetscErrorCode PetscStreamScalarRealPart(PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAXTY(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAYDX(PetscScalar,PetscStreamScalar,PetscStreamScalar,PetscStream);
 
