@@ -1105,7 +1105,7 @@ PetscErrorCode PetscDSSetObjective(PetscDS ds, PetscInt f,
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
   if (obj) PetscValidFunction(obj, 3);
   if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
-  ierr = PetscWeakFormSetObjective(ds->wf, NULL, 0, f, 0, obj);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexObjective(ds->wf, NULL, 0, f, 0, obj);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1239,7 +1239,7 @@ PetscErrorCode PetscDSSetResidual(PetscDS ds, PetscInt f,
   if (f0) PetscValidFunction(f0, 3);
   if (f1) PetscValidFunction(f1, 4);
   if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
-  ierr = PetscWeakFormSetResidual(ds->wf, NULL, 0, f, 0, f0, 0, f1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexResidual(ds->wf, NULL, 0, f, 0, f0, 0, f1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1428,7 +1428,7 @@ PetscErrorCode PetscDSSetJacobian(PetscDS ds, PetscInt f, PetscInt g,
   if (g3) PetscValidFunction(g3, 7);
   if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
   if (g < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", g);
-  ierr = PetscWeakFormSetJacobian(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexJacobian(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1640,7 +1640,7 @@ PetscErrorCode PetscDSSetJacobianPreconditioner(PetscDS ds, PetscInt f, PetscInt
   if (g3) PetscValidFunction(g3, 7);
   if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
   if (g < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", g);
-  ierr = PetscWeakFormSetJacobianPreconditioner(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexJacobianPreconditioner(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1829,7 +1829,7 @@ PetscErrorCode PetscDSSetDynamicJacobian(PetscDS ds, PetscInt f, PetscInt g,
   if (g3) PetscValidFunction(g3, 7);
   if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
   if (g < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", g);
-  ierr = PetscWeakFormSetDynamicJacobian(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexDynamicJacobian(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1918,7 +1918,7 @@ PetscErrorCode PetscDSSetRiemannSolver(PetscDS ds, PetscInt f,
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
   if (r) PetscValidFunction(r, 3);
   if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
-  ierr = PetscWeakFormSetRiemannSolver(ds->wf, NULL, 0, f, 0, r);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexRiemannSolver(ds->wf, NULL, 0, f, 0, r);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2180,7 +2180,7 @@ PetscErrorCode PetscDSSetBdResidual(PetscDS ds, PetscInt f,
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
   if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
-  ierr = PetscWeakFormSetBdResidual(ds->wf, NULL, 0, f, 0, f0, 0, f1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexBdResidual(ds->wf, NULL, 0, f, 0, f0, 0, f1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2372,7 +2372,7 @@ PetscErrorCode PetscDSSetBdJacobian(PetscDS ds, PetscInt f, PetscInt g,
   if (g3) PetscValidFunction(g3, 7);
   if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
   if (g < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", g);
-  ierr = PetscWeakFormSetBdJacobian(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexBdJacobian(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2570,7 +2570,7 @@ PetscErrorCode PetscDSSetBdJacobianPreconditioner(PetscDS ds, PetscInt f, PetscI
   if (g3) PetscValidFunction(g3, 7);
   if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
   if (g < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", g);
-  ierr = PetscWeakFormSetBdJacobianPreconditioner(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexBdJacobianPreconditioner(ds->wf, NULL, 0, f, g, 0, g0, 0, g1, 0, g2, 0, g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

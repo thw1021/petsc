@@ -49,21 +49,22 @@ static PetscErrorCode PetscChunkBufferCreateChunk(PetscChunkBuffer *buffer, Pets
 
 static PetscErrorCode PetscChunkBufferEnlargeChunk(PetscChunkBuffer *buffer, PetscInt size, PetscChunk *chunk)
 {
+  size_t         siz = size;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (chunk->size + size > chunk->reserved) {
     PetscChunk newchunk;
-    size_t     reserved = chunk->size;
+    PetscInt   reserved = chunk->size;
 
     /* TODO Here if we had a chunk list, we could update them all to reclaim unused space */
     while (reserved < chunk->size+size) reserved *= 2;
-    ierr = PetscChunkBufferCreateChunk(buffer, reserved, &newchunk);CHKERRQ(ierr);
+    ierr = PetscChunkBufferCreateChunk(buffer, (size_t) reserved, &newchunk);CHKERRQ(ierr);
     newchunk.size = chunk->size+size;
     ierr = PetscMemcpy(&buffer->array[newchunk.start], &buffer->array[chunk->start], chunk->size * buffer->unitbytes);CHKERRQ(ierr);
     *chunk = newchunk;
   } else {
-    chunk->size += size;
+    chunk->size += siz;
   }
   PetscFunctionReturn(0);
 }
@@ -106,6 +107,29 @@ PetscErrorCode PetscWeakFormGetFunction_Private(PetscWeakForm wf, PetscHMapForm 
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt n, void (**func)())
+{
+  PetscHashFormKey key;
+  PetscChunk       chunk;
+  PetscInt         i;
+  PetscErrorCode   ierr;
+
+  PetscFunctionBegin;
+  key.label = label; key.value = value; key.field = f;
+  ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
+  if (chunk.size < 0) {
+    if (!func) PetscFunctionReturn(0);
+    ierr = PetscChunkBufferCreateChunk(wf->funcs, n, &chunk);CHKERRQ(ierr);
+    ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
+  } else if (chunk.size <= n) {
+    if (!func) PetscFunctionReturn(0);
+    ierr = PetscChunkBufferEnlargeChunk(wf->funcs, n - chunk.size, &chunk);CHKERRQ(ierr);
+    ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
+  }
+  for (i = 0; i < n; ++i) ((void (**)()) wf->funcs->array)[chunk.start+i] = func[i];
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode PetscWeakFormAddFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, void (*func)())
 {
   PetscHashFormKey key;
@@ -128,7 +152,7 @@ PetscErrorCode PetscWeakFormAddFunction_Private(PetscWeakForm wf, PetscHMapForm 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt ind, void (*func)())
+PetscErrorCode PetscWeakFormGetIndexFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt ind, void (**func)())
 {
   PetscHashFormKey key;
   PetscChunk       chunk;
@@ -137,7 +161,23 @@ PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm 
   PetscFunctionBegin;
   key.label = label; key.value = value; key.field = f;
   ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
-  CHKMEMQ;
+  if (chunk.size < 0) {*func = NULL;}
+  else {
+    if (ind >= chunk.size) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %D not in [0, %D)", ind, chunk.size);
+    *func = ((void (**)()) wf->funcs->array)[chunk.start+ind];
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt ind, void (*func)())
+{
+  PetscHashFormKey key;
+  PetscChunk       chunk;
+  PetscErrorCode   ierr;
+
+  PetscFunctionBegin;
+  key.label = label; key.value = value; key.field = f;
+  ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
   if (chunk.size < 0) {
     if (!func) PetscFunctionReturn(0);
     ierr = PetscChunkBufferCreateChunk(wf->funcs, ind+1, &chunk);CHKERRQ(ierr);
@@ -147,9 +187,7 @@ PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm 
     ierr = PetscChunkBufferEnlargeChunk(wf->funcs, ind - chunk.size + 1, &chunk);CHKERRQ(ierr);
     ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
   }
-  CHKMEMQ;
   ((void (**)()) wf->funcs->array)[chunk.start+ind] = func;
-  CHKMEMQ;
   PetscFunctionReturn(0);
 }
 
@@ -162,7 +200,20 @@ PetscErrorCode PetscWeakFormGetObjective(PetscWeakForm wf, DMLabel label, PetscI
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->obj, label, val, f, n, obj);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->obj, label, val, f, n, (void (***)(void)) obj);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetObjective(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt n,
+                                         void (**obj)(PetscInt, PetscInt, PetscInt,
+                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const  PetscScalar[],
+                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                      PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->obj, label, val, f, n, (void (**)(void)) obj);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -175,20 +226,33 @@ PetscErrorCode PetscWeakFormAddObjective(PetscWeakForm wf, DMLabel label, PetscI
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->obj, label, val, f, obj);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->obj, label, val, f, (void (*)(void)) obj);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscWeakFormSetObjective(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt n,
-                                         void (*obj)(PetscInt, PetscInt, PetscInt,
-                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
-                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
-                                                     PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+PetscErrorCode PetscWeakFormGetIndexObjective(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt ind,
+                                              void (**obj)(PetscInt, PetscInt, PetscInt,
+                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                           PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->obj, label, val, f, n, obj);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetIndexFunction_Private(wf, wf->obj, label, val, f, ind, (void (**)(void)) obj);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexObjective(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt ind,
+                                              void (*obj)(PetscInt, PetscInt, PetscInt,
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->obj, label, val, f, ind, (void (*)(void)) obj);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -207,8 +271,8 @@ PetscErrorCode PetscWeakFormGetResidual(PetscWeakForm wf, DMLabel label, PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->f0, label, val, f, n0, f0);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->f1, label, val, f, n1, f1);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->f0, label, val, f, n0, (void (***)(void)) f0);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->f1, label, val, f, n1, (void (***)(void)) f1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -225,18 +289,38 @@ PetscErrorCode PetscWeakFormAddResidual(PetscWeakForm wf, DMLabel label, PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->f0, label, val, f, f0);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->f1, label, val, f, f1);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->f0, label, val, f, (void (*)(void)) f0);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->f1, label, val, f, (void (*)(void)) f1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscWeakFormSetResidual(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f,
                                         PetscInt n0,
-                                        void (*f0)(PetscInt, PetscInt, PetscInt,
+                                        void (**f0)(PetscInt, PetscInt, PetscInt,
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                         PetscInt n1,
+                                        void (**f1)(PetscInt, PetscInt, PetscInt,
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->f0, label, val, f, n0, (void (**)(void)) f0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->f1, label, val, f, n1, (void (**)(void)) f1);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexResidual(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f,
+                                        PetscInt i0,
+                                        void (*f0)(PetscInt, PetscInt, PetscInt,
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                        PetscInt i1,
                                         void (*f1)(PetscInt, PetscInt, PetscInt,
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
@@ -245,8 +329,8 @@ PetscErrorCode PetscWeakFormSetResidual(PetscWeakForm wf, DMLabel label, PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->f0, label, val, f, n0, f0);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->f1, label, val, f, n1, f1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->f0, label, val, f, i0, (void (*)(void)) f0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->f1, label, val, f, i1, (void (*)(void)) f1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -265,8 +349,8 @@ PetscErrorCode PetscWeakFormGetBdResidual(PetscWeakForm wf, DMLabel label, Petsc
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdf0, label, val, f, n0, f0);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdf1, label, val, f, n1, f1);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdf0, label, val, f, n0, (void (***)(void)) f0);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdf1, label, val, f, n1, (void (***)(void)) f1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -283,18 +367,38 @@ PetscErrorCode PetscWeakFormAddBdResidual(PetscWeakForm wf, DMLabel label, Petsc
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdf0, label, val, f, f0);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdf1, label, val, f, f1);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdf0, label, val, f, (void (*)(void)) f0);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdf1, label, val, f, (void (*)(void)) f1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscWeakFormSetBdResidual(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f,
                                           PetscInt n0,
-                                          void (*f0)(PetscInt, PetscInt, PetscInt,
+                                          void (**f0)(PetscInt, PetscInt, PetscInt,
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                           PetscInt n1,
+                                          void (**f1)(PetscInt, PetscInt, PetscInt,
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdf0, label, val, f, n0, (void (**)(void)) f0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdf1, label, val, f, n1, (void (**)(void)) f1);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexBdResidual(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f,
+                                          PetscInt i0,
+                                          void (*f0)(PetscInt, PetscInt, PetscInt,
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                          PetscInt i1,
                                           void (*f1)(PetscInt, PetscInt, PetscInt,
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
@@ -303,8 +407,8 @@ PetscErrorCode PetscWeakFormSetBdResidual(PetscWeakForm wf, DMLabel label, Petsc
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdf0, label, val, f, n0, f0);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdf1, label, val, f, n1, f1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdf0, label, val, f, i0, (void (*)(void)) f0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdf1, label, val, f, i1, (void (*)(void)) f1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -350,10 +454,10 @@ PetscErrorCode PetscWeakFormGetJacobian(PetscWeakForm wf, DMLabel label, PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->g0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->g1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->g2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->g3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->g0, label, val, find, n0, (void (***)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->g1, label, val, find, n1, (void (***)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->g2, label, val, find, n2, (void (***)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->g3, label, val, find, n3, (void (***)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -379,30 +483,63 @@ PetscErrorCode PetscWeakFormAddJacobian(PetscWeakForm wf, DMLabel label, PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->g0, label, val, find, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->g1, label, val, find, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->g2, label, val, find, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->g3, label, val, find, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->g0, label, val, find, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->g1, label, val, find, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->g2, label, val, find, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->g3, label, val, find, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscWeakFormSetJacobian(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
                                         PetscInt n0,
-                                        void (*g0)(PetscInt, PetscInt, PetscInt,
+                                        void (**g0)(PetscInt, PetscInt, PetscInt,
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                         PetscInt n1,
-                                        void (*g1)(PetscInt, PetscInt, PetscInt,
+                                        void (**g1)(PetscInt, PetscInt, PetscInt,
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                         PetscInt n2,
-                                        void (*g2)(PetscInt, PetscInt, PetscInt,
+                                        void (**g2)(PetscInt, PetscInt, PetscInt,
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                         PetscInt n3,
+                                        void (**g3)(PetscInt, PetscInt, PetscInt,
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+{
+  PetscInt       find = f*wf->Nf + g;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->g0, label, val, find, n0, (void (**)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->g1, label, val, find, n1, (void (**)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->g2, label, val, find, n2, (void (**)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->g3, label, val, find, n3, (void (**)(void)) g3);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexJacobian(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
+                                        PetscInt i0,
+                                        void (*g0)(PetscInt, PetscInt, PetscInt,
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                        PetscInt i1,
+                                        void (*g1)(PetscInt, PetscInt, PetscInt,
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                        PetscInt i2,
+                                        void (*g2)(PetscInt, PetscInt, PetscInt,
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                   PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                        PetscInt i3,
                                         void (*g3)(PetscInt, PetscInt, PetscInt,
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
@@ -412,10 +549,10 @@ PetscErrorCode PetscWeakFormSetJacobian(PetscWeakForm wf, DMLabel label, PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->g0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->g1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->g2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->g3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->g0, label, val, find, i0, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->g1, label, val, find, i1, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->g2, label, val, find, i2, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->g3, label, val, find, i3, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -461,10 +598,10 @@ PetscErrorCode PetscWeakFormGetJacobianPreconditioner(PetscWeakForm wf, DMLabel 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->gp0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->gp1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->gp2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->gp3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->gp0, label, val, find, n0, (void (***)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->gp1, label, val, find, n1, (void (***)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->gp2, label, val, find, n2, (void (***)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->gp3, label, val, find, n3, (void (***)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -490,30 +627,63 @@ PetscErrorCode PetscWeakFormAddJacobianPreconditioner(PetscWeakForm wf, DMLabel 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->gp0, label, val, find, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->gp1, label, val, find, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->gp2, label, val, find, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->gp3, label, val, find, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->gp0, label, val, find, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->gp1, label, val, find, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->gp2, label, val, find, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->gp3, label, val, find, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscWeakFormSetJacobianPreconditioner(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
                                                       PetscInt n0,
-                                                      void (*g0)(PetscInt, PetscInt, PetscInt,
+                                                      void (**g0)(PetscInt, PetscInt, PetscInt,
                                                                  const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                  const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                  PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                                       PetscInt n1,
-                                                      void (*g1)(PetscInt, PetscInt, PetscInt,
+                                                      void (**g1)(PetscInt, PetscInt, PetscInt,
                                                                  const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                  const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                  PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                                       PetscInt n2,
-                                                      void (*g2)(PetscInt, PetscInt, PetscInt,
+                                                      void (**g2)(PetscInt, PetscInt, PetscInt,
                                                                  const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                  const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                  PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                                       PetscInt n3,
+                                                      void (**g3)(PetscInt, PetscInt, PetscInt,
+                                                                 const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                 const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                 PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+{
+  PetscInt       find = f*wf->Nf + g;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->gp0, label, val, find, n0, (void (**)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->gp1, label, val, find, n1, (void (**)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->gp2, label, val, find, n2, (void (**)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->gp3, label, val, find, n3, (void (**)(void)) g3);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexJacobianPreconditioner(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
+                                                      PetscInt i0,
+                                                      void (*g0)(PetscInt, PetscInt, PetscInt,
+                                                                 const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                 const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                 PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                                      PetscInt i1,
+                                                      void (*g1)(PetscInt, PetscInt, PetscInt,
+                                                                 const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                 const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                 PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                                      PetscInt i2,
+                                                      void (*g2)(PetscInt, PetscInt, PetscInt,
+                                                                 const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                 const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                 PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                                      PetscInt i3,
                                                       void (*g3)(PetscInt, PetscInt, PetscInt,
                                                                  const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                  const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
@@ -523,10 +693,10 @@ PetscErrorCode PetscWeakFormSetJacobianPreconditioner(PetscWeakForm wf, DMLabel 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->gp0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->gp1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->gp2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->gp3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->gp0, label, val, find, i0, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->gp1, label, val, find, i1, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->gp2, label, val, find, i2, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->gp3, label, val, find, i3, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -572,10 +742,10 @@ PetscErrorCode PetscWeakFormGetBdJacobian(PetscWeakForm wf, DMLabel label, Petsc
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdg0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdg1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdg2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdg3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdg0, label, val, find, n0, (void (***)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdg1, label, val, find, n1, (void (***)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdg2, label, val, find, n2, (void (***)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdg3, label, val, find, n3, (void (***)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -601,30 +771,63 @@ PetscErrorCode PetscWeakFormAddBdJacobian(PetscWeakForm wf, DMLabel label, Petsc
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdg0, label, val, find, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdg1, label, val, find, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdg2, label, val, find, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdg3, label, val, find, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdg0, label, val, find, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdg1, label, val, find, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdg2, label, val, find, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdg3, label, val, find, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscWeakFormSetBdJacobian(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
                                           PetscInt n0,
-                                          void (*g0)(PetscInt, PetscInt, PetscInt,
+                                          void (**g0)(PetscInt, PetscInt, PetscInt,
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                           PetscInt n1,
-                                          void (*g1)(PetscInt, PetscInt, PetscInt,
+                                          void (**g1)(PetscInt, PetscInt, PetscInt,
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                           PetscInt n2,
-                                          void (*g2)(PetscInt, PetscInt, PetscInt,
+                                          void (**g2)(PetscInt, PetscInt, PetscInt,
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                           PetscInt n3,
+                                          void (**g3)(PetscInt, PetscInt, PetscInt,
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+{
+  PetscInt       find = f*wf->Nf + g;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdg0, label, val, find, n0, (void (**)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdg1, label, val, find, n1, (void (**)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdg2, label, val, find, n2, (void (**)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdg3, label, val, find, n3, (void (**)(void)) g3);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexBdJacobian(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
+                                          PetscInt i0,
+                                          void (*g0)(PetscInt, PetscInt, PetscInt,
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                          PetscInt i1,
+                                          void (*g1)(PetscInt, PetscInt, PetscInt,
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                          PetscInt i2,
+                                          void (*g2)(PetscInt, PetscInt, PetscInt,
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                     PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                          PetscInt i3,
                                           void (*g3)(PetscInt, PetscInt, PetscInt,
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
@@ -634,10 +837,10 @@ PetscErrorCode PetscWeakFormSetBdJacobian(PetscWeakForm wf, DMLabel label, Petsc
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdg0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdg1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdg2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdg3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdg0, label, val, find, i0, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdg1, label, val, find, i1, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdg2, label, val, find, i2, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdg3, label, val, find, i3, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -683,10 +886,10 @@ PetscErrorCode PetscWeakFormGetBdJacobianPreconditioner(PetscWeakForm wf, DMLabe
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdgp0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdgp1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdgp2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdgp3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdgp0, label, val, find, n0, (void (***)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdgp1, label, val, find, n1, (void (***)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdgp2, label, val, find, n2, (void (***)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->bdgp3, label, val, find, n3, (void (***)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -712,30 +915,63 @@ PetscErrorCode PetscWeakFormAddBdJacobianPreconditioner(PetscWeakForm wf, DMLabe
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdgp0, label, val, find, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdgp1, label, val, find, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdgp2, label, val, find, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdgp3, label, val, find, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdgp0, label, val, find, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdgp1, label, val, find, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdgp2, label, val, find, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->bdgp3, label, val, find, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscWeakFormSetBdJacobianPreconditioner(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
                                                         PetscInt n0,
-                                                        void (*g0)(PetscInt, PetscInt, PetscInt,
+                                                        void (**g0)(PetscInt, PetscInt, PetscInt,
                                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                    PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                                         PetscInt n1,
-                                                        void (*g1)(PetscInt, PetscInt, PetscInt,
+                                                        void (**g1)(PetscInt, PetscInt, PetscInt,
                                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                    PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                                         PetscInt n2,
-                                                        void (*g2)(PetscInt, PetscInt, PetscInt,
+                                                        void (**g2)(PetscInt, PetscInt, PetscInt,
                                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                    PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                                         PetscInt n3,
+                                                        void (**g3)(PetscInt, PetscInt, PetscInt,
+                                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                   PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+{
+  PetscInt       find = f*wf->Nf + g;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdgp0, label, val, find, n0, (void (**)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdgp1, label, val, find, n1, (void (**)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdgp2, label, val, find, n2, (void (**)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdgp3, label, val, find, n3, (void (**)(void)) g3);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexBdJacobianPreconditioner(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
+                                                        PetscInt i0,
+                                                        void (*g0)(PetscInt, PetscInt, PetscInt,
+                                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                   PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                                        PetscInt i1,
+                                                        void (*g1)(PetscInt, PetscInt, PetscInt,
+                                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                   PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                                        PetscInt i2,
+                                                        void (*g2)(PetscInt, PetscInt, PetscInt,
+                                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                   const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                                   PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                                        PetscInt i3,
                                                         void (*g3)(PetscInt, PetscInt, PetscInt,
                                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
@@ -745,10 +981,10 @@ PetscErrorCode PetscWeakFormSetBdJacobianPreconditioner(PetscWeakForm wf, DMLabe
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdgp0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdgp1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdgp2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->bdgp3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdgp0, label, val, find, i0, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdgp1, label, val, find, i1, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdgp2, label, val, find, i2, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->bdgp3, label, val, find, i3, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -794,10 +1030,10 @@ PetscErrorCode PetscWeakFormGetDynamicJacobian(PetscWeakForm wf, DMLabel label, 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->gt0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->gt1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->gt2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->gt3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->gt0, label, val, find, n0, (void (***)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->gt1, label, val, find, n1, (void (***)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->gt2, label, val, find, n2, (void (***)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->gt3, label, val, find, n3, (void (***)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -823,30 +1059,63 @@ PetscErrorCode PetscWeakFormAddDynamicJacobian(PetscWeakForm wf, DMLabel label, 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->gt0, label, val, find, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->gt1, label, val, find, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->gt2, label, val, find, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormAddFunction_Private(wf, wf->gt3, label, val, find, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->gt0, label, val, find, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->gt1, label, val, find, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->gt2, label, val, find, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormAddFunction_Private(wf, wf->gt3, label, val, find, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscWeakFormSetDynamicJacobian(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
                                                PetscInt n0,
-                                               void (*g0)(PetscInt, PetscInt, PetscInt,
+                                               void (**g0)(PetscInt, PetscInt, PetscInt,
                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                           PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                                PetscInt n1,
-                                               void (*g1)(PetscInt, PetscInt, PetscInt,
+                                               void (**g1)(PetscInt, PetscInt, PetscInt,
                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                           PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                                PetscInt n2,
-                                               void (*g2)(PetscInt, PetscInt, PetscInt,
+                                               void (**g2)(PetscInt, PetscInt, PetscInt,
                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                           PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
                                                PetscInt n3,
+                                               void (**g3)(PetscInt, PetscInt, PetscInt,
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+{
+  PetscInt       find = f*wf->Nf + g;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->gt0, label, val, find, n0, (void (**)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->gt1, label, val, find, n1, (void (**)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->gt2, label, val, find, n2, (void (**)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->gt3, label, val, find, n3, (void (**)(void)) g3);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexDynamicJacobian(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt g,
+                                               PetscInt i0,
+                                               void (*g0)(PetscInt, PetscInt, PetscInt,
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                               PetscInt i1,
+                                               void (*g1)(PetscInt, PetscInt, PetscInt,
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                               PetscInt i2,
+                                               void (*g2)(PetscInt, PetscInt, PetscInt,
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
+                                                          PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]),
+                                               PetscInt i3,
                                                void (*g3)(PetscInt, PetscInt, PetscInt,
                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
@@ -856,10 +1125,10 @@ PetscErrorCode PetscWeakFormSetDynamicJacobian(PetscWeakForm wf, DMLabel label, 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->gt0, label, val, find, n0, g0);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->gt1, label, val, find, n1, g1);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->gt2, label, val, find, n2, g2);CHKERRQ(ierr);
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->gt3, label, val, find, n3, g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->gt0, label, val, find, i0, (void (*)(void)) g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->gt1, label, val, find, i1, (void (*)(void)) g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->gt2, label, val, find, i2, (void (*)(void)) g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->gt3, label, val, find, i3, (void (*)(void)) g3);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -869,18 +1138,29 @@ PetscErrorCode PetscWeakFormGetRiemannSolver(PetscWeakForm wf, DMLabel label, Pe
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormGetFunction_Private(wf, wf->r, label, val, f, n, r);CHKERRQ(ierr);
+  ierr = PetscWeakFormGetFunction_Private(wf, wf->r, label, val, f, n, (void (***)(void)) r);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscWeakFormSetRiemannSolver(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f,
                                              PetscInt n,
-                                             void (*r)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *))
+                                             void (**r)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *))
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscWeakFormSetFunction_Private(wf, wf->r, label, val, f, n, r);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetFunction_Private(wf, wf->r, label, val, f, n, (void (**)(void)) r);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormSetIndexRiemannSolver(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f,
+                                                  PetscInt i,
+                                                  void (*r)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->r, label, val, f, i, (void (*)(void)) r);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
