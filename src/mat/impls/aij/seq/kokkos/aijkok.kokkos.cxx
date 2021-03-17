@@ -325,52 +325,17 @@ static PetscErrorCode MatMultHermitianTransposeAdd_SeqAIJKokkos(Mat A,Vec xx,Vec
   PetscFunctionReturn(0);
 }
 
-/*@C
-   MatSeqAIJKokkosSetGenerateTranspose - Sets the flag to explicitly generate the tranpose matrix before calling MatMultTranspose
-
-   Collective on mat
-
-   Input Parameters:
-+  A - Matrix of type SEQAIJKOKKOS
--  exptrans - the boolean flag
-
-   Level: intermediate
-
-.seealso: MATSEQAIJKOKKOS
-@*/
-PetscErrorCode MatSeqAIJKokkosSetGenerateTranspose(Mat A,PetscBool exptrans)
+PetscErrorCode MatSetGenerateTranspose_SeqAIJKokkos(Mat A,PetscBool flg)
 {
   PetscErrorCode            ierr;
-  PetscBool                 flg;
   Mat_SeqAIJ                *aijseq = static_cast<Mat_SeqAIJ*>(A->data);
   Mat_SeqAIJKokkos          *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  ierr = PetscObjectTypeCompare(((PetscObject)A),MATSEQAIJKOKKOS,&flg);CHKERRQ(ierr);
-  if (flg) {
-    if (A->factortype) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-    aijseq->matmult_explicit_transpose = exptrans;
-     /* Destroy the transpose matrix if present to prevent from logic errors if exptrans is set to true later */
-    if (!exptrans && aijkok) {ierr = aijkok->DestroyMatTranspose();CHKERRQ(ierr);}
-  }
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode MatSetFromOptions_SeqAIJKokkos(PetscOptionItems *PetscOptionsObject,Mat A)
-{
-  PetscErrorCode                   ierr;
-  PetscBool                        flg,exptrans;
-  Mat_SeqAIJ                       *aijseq = static_cast<Mat_SeqAIJ*>(A->data);
-
-  PetscFunctionBegin;
-  ierr = PetscOptionsHead(PetscOptionsObject,"SeqAIJKokkos options");CHKERRQ(ierr);
-  if (A->factortype == MAT_FACTOR_NONE) {
-    exptrans = aijseq->matmult_explicit_transpose;
-    ierr     = PetscOptionsBool("-matmult_explicit_transpose","Generate explicit transpose for MatMultTranspose and varients","MatSeqAIJKokkosSetGenerateTranspose",exptrans,&exptrans,&flg);CHKERRQ(ierr);
-    if (flg) {ierr = MatSeqAIJKokkosSetGenerateTranspose(A,exptrans);CHKERRQ(ierr);}
-  }
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
+  if (A->factortype) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
+  /* Destroy the transpose matrix if present to prevent from logic errors if the flag is set to true later */
+  if (aijseq->matmult_explicit_transpose && !flg && aijkok) {ierr = aijkok->DestroyMatTranspose();CHKERRQ(ierr);}
+  aijseq->matmult_explicit_transpose = flg;
   PetscFunctionReturn(0);
 }
 
@@ -654,9 +619,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJKokkos(Mat A)
   ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
   ierr = MatCreate_SeqAIJ(A);CHKERRQ(ierr);
   ierr = MatConvert_SeqAIJ_SeqAIJKokkos(A,MATSEQAIJKOKKOS,MAT_INPLACE_MATRIX,&A);CHKERRQ(ierr);
-  ierr = PetscObjectOptionsBegin((PetscObject)A);CHKERRQ(ierr);
-  ierr = MatSetFromOptions_SeqAIJKokkos(PetscOptionsObject,A);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -781,7 +743,7 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
   A->ops->multtransposeadd          = MatMultTransposeAdd_SeqAIJKokkos;
   A->ops->multhermitiantranspose    = MatMultHermitianTranspose_SeqAIJKokkos;
   A->ops->multhermitiantransposeadd = MatMultHermitianTransposeAdd_SeqAIJKokkos;
-  A->ops->setfromoptions            = MatSetFromOptions_SeqAIJKokkos;
+  A->ops->setgeneratetranspose      = MatSetGenerateTranspose_SeqAIJKokkos;
   PetscFunctionReturn(0);
 }
 

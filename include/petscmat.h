@@ -1657,7 +1657,8 @@ typedef enum { MATOP_SET_VALUES=0,
                MATOP_MPICONCATENATESEQ=144,
                MATOP_DESTROYSUBMATRICES=145,
                MATOP_TRANSPOSE_SOLVE=146,
-               MATOP_GET_VALUES_LOCAL=147
+               MATOP_GET_VALUES_LOCAL=147,
+               MATOP_SET_GENERATE_TRANSPOSE=148
              } MatOperation;
 PETSC_EXTERN PetscErrorCode MatSetOperation(Mat,MatOperation,void(*)(void));
 PETSC_EXTERN PetscErrorCode MatGetOperation(Mat,MatOperation,void(**)(void));
@@ -1938,8 +1939,6 @@ typedef enum {MAT_CUSPARSE_MULT_DIAG, MAT_CUSPARSE_MULT_OFFDIAG, MAT_CUSPARSE_MU
 PETSC_EXTERN PetscErrorCode MatCreateSeqAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetFormat(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat);
-PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSESetGenerateTranspose(Mat,PetscBool);
-PETSC_EXTERN PetscErrorCode MatAIJCUSPARSESetGenerateTranspose(Mat,PetscBool);
 
 PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure**);
 
@@ -1998,4 +1997,6 @@ PETSC_EXTERN PetscErrorCode MatPreallocatorPreallocate(Mat,PetscBool,Mat);
 
 PETSC_INTERN PetscErrorCode MatHeaderMerge(Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat,Mat*);
+
+PETSC_EXTERN PetscErrorCode MatSetGenerateTranspose(Mat,PetscBool);
 #endif

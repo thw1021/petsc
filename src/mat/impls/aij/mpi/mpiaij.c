@@ -2662,6 +2662,19 @@ PetscErrorCode MatInvertVariableBlockDiagonal_MPIAIJ(Mat A,PetscInt nblocks,cons
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode  MatSetGenerateTranspose_MPIAIJ(Mat A, PetscBool gen)
+{
+  PetscErrorCode ierr;
+  Mat            A_d,A_o;
+
+  PetscFunctionBegin;
+  MatCheckPreallocated(A,1);
+  ierr = MatMPIAIJGetSeqAIJ(A,&A_d,&A_o,NULL);CHKERRQ(ierr);
+  ierr = MatSetGenerateTranspose(A_d,gen);CHKERRQ(ierr);
+  ierr = MatSetGenerateTranspose(A_o,gen);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /* -------------------------------------------------------------------*/
 static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        MatGetRow_MPIAIJ,
@@ -2810,7 +2823,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        MatCreateMPIMatConcatenateSeqMat_MPIAIJ,
                                 /*145*/NULL,
                                        NULL,
-                                       NULL
+                                       NULL,
+                                       MatSetGenerateTranspose_MPIAIJ
 };
 
 /* ----------------------------------------------------------------------------------------*/
