@@ -226,8 +226,10 @@ def updatePetscTypesFromMansec(types, path):
 def processf90interfaces(petscdir,verbose):
   ''' Takes all the individually generated fortran interface files and merges them into one for each mansec'''
   ptypes = set()
-  for mansec in ['sys','vec','mat','dm','ksp','snes','ts','tao']:
+  mansecs = ['sys','vec','mat','dm','ksp','snes','ts','tao']
+  for mansec in mansecs:
     ptypes = updatePetscTypesFromMansec(ptypes,os.path.join(petscdir,'src',mansec,'f90-mod'))
+  for mansec in mansecs:
     for submansec in os.listdir(os.path.join(petscdir,'src',mansec,'f90-mod','ftn-auto-interfaces')):
       if verbose: print('Processing F90 interface for '+submansec)
       if os.path.isdir(os.path.join(petscdir,'src',mansec,'f90-mod','ftn-auto-interfaces',submansec)):
