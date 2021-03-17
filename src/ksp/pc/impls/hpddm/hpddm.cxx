@@ -625,7 +625,8 @@ static PetscErrorCode PCHPDDMShellMatApply(PC pc, Mat X, Mat Y)
       ierr = MatAYPX(D, -1.0, X, SAME_NONZERO_PATTERN);CHKERRQ(ierr);
       ierr = PCMatApply(ctx->pc, D, C);CHKERRQ(ierr);
       if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
-#if 0 // TODO FIXME: there is a bug in MatTransposeMatMult(): results are inconsitent with a column-by-column product
+        ierr = MatViewFromOptions(C, NULL, "-input_mattransposematmult");CHKERRQ(ierr);
+#if 1 // TODO FIXME: there is a bug in MatTransposeMatMult(): results are inconsitent with a column-by-column product
         ierr = MatTransposeMatMult(A, C, MAT_REUSE_MATRIX, PETSC_DEFAULT, &D);CHKERRQ(ierr);
 #else
         PetscInt N;
@@ -639,6 +640,7 @@ static PetscErrorCode PCHPDDMShellMatApply(PC pc, Mat X, Mat Y)
           ierr = MatDenseRestoreColumnVecRead(C, i, &cC);CHKERRQ(ierr);
         }
 #endif
+        ierr = MatViewFromOptions(D, NULL, "-output_mattransposematmult");CHKERRQ(ierr);
         ierr = PCHPDDMDeflate_Private(pc, D, D);CHKERRQ(ierr);
         ierr = MatAXPY(C, -1.0, D, SAME_NONZERO_PATTERN);CHKERRQ(ierr);
       }
