@@ -634,3 +634,16 @@ PetscErrorCode MatIsBoundToCPU(Mat A,PetscBool *isbound)
 #endif
   PetscFunctionReturn(0);
 }
+
+/*@
+   MatSetBindingPropagates - TODO: Finish this manpage!
+@*/
+PetscErrorCode MatSetBindingPropagates(Mat A,PetscBool flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  A->bindingpropagates = flg;
+#endif
+  PetscFunctionReturn(0);
+}
