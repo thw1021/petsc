@@ -3789,6 +3789,7 @@ PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM dm, PetscSection section,
   PetscInt         cStart, cEnd, numCells;
   PetscInt         Nf, f, totDim, totDimAux, numChunks, cellChunkSize, chunk, fStart, fEnd;
   PetscInt         maxDegree = PETSC_MAX_INT;
+  PetscHashFormKey key;
   PetscQuadrature  affineQuad = NULL, *quads = NULL;
   PetscFEGeom     *affineGeom = NULL, **geoms = NULL;
   PetscErrorCode   ierr;
@@ -3857,6 +3858,8 @@ PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM dm, PetscSection section,
   numChunks     = 1;
   cellChunkSize = numCells/numChunks;
   numChunks     = PetscMin(1,numCells);
+  key.label     = NULL;
+  key.value     = -1;
   for (chunk = 0; chunk < numChunks; ++chunk) {
     PetscScalar     *elemVec, *fluxL = NULL, *fluxR = NULL;
     PetscReal       *vol = NULL;
@@ -3879,6 +3882,7 @@ PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM dm, PetscSection section,
       PetscBool    fimp;
       PetscInt     numChunks, numBatches, batchSize, numBlocks, blockSize, Ne, Nr, offset;
 
+      key.field = f;
       ierr = PetscDSGetImplicit(prob, f, &fimp);CHKERRQ(ierr);
       if (isImplicit != fimp) continue;
       ierr = PetscDSGetDiscretization(prob, f, &obj);CHKERRQ(ierr);
@@ -3903,9 +3907,9 @@ PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM dm, PetscSection section,
         /* Integrate FE residual to get elemVec (need fields at quadrature points) */
         /*   For FV, I think we use a P0 basis and the cell coefficients (for subdivided cells, we can tweak the basis tabulation to be the indicator function) */
         ierr = PetscFEGeomGetChunk(geom,0,offset,&chunkGeom);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateResidual(prob, f, Ne, chunkGeom, u, u_t, probAux, a, t, elemVec);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateResidual(prob, key, Ne, chunkGeom, u, u_t, probAux, a, t, elemVec);CHKERRQ(ierr);
         ierr = PetscFEGeomGetChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateResidual(prob, f, Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, probAux, &a[offset*totDimAux], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateResidual(prob, key, Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, probAux, &a[offset*totDimAux], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
         ierr = PetscFEGeomRestoreChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
       } else if (id == PETSCFV_CLASSID) {
         PetscFV fv = (PetscFV) obj;
@@ -4481,15 +4485,15 @@ PetscErrorCode DMPlexComputeBdResidual_Internal(DM dm, Vec locX, Vec locX_t, Pet
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *user)
+PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscHashFormKey key, IS cellIS, PetscReal time, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *user)
 {
   DM_Plex         *mesh       = (DM_Plex *) dm->data;
   const char      *name       = "Residual";
   DM               dmAux      = NULL;
   DM               dmGrad     = NULL;
   DMLabel          ghostLabel = NULL;
-  PetscDS          prob       = NULL;
-  PetscDS          probAux    = NULL;
+  PetscDS          ds         = NULL;
+  PetscDS          dsAux      = NULL;
   PetscSection     section    = NULL;
   PetscBool        useFEM     = PETSC_FALSE;
   PetscBool        useFVM     = PETSC_FALSE;
@@ -4519,16 +4523,16 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, 
   /* 1: Get sizes from dm and dmAux */
   ierr = DMGetLocalSection(dm, &section);CHKERRQ(ierr);
   ierr = DMGetLabel(dm, "ghost", &ghostLabel);CHKERRQ(ierr);
-  ierr = DMGetCellDS(dm, cells ? cells[cStart] : cStart, &prob);CHKERRQ(ierr);
-  ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
-  ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
+  ierr = DMGetCellDS(dm, cells ? cells[cStart] : cStart, &ds);CHKERRQ(ierr);
+  ierr = PetscDSGetNumFields(ds, &Nf);CHKERRQ(ierr);
+  ierr = PetscDSGetTotalDimension(ds, &totDim);CHKERRQ(ierr);
   ierr = PetscObjectQuery((PetscObject) dm, "A", (PetscObject *) &locA);CHKERRQ(ierr);
   if (locA) {
     PetscInt subcell;
     ierr = VecGetDM(locA, &dmAux);CHKERRQ(ierr);
     ierr = DMGetEnclosurePoint(dmAux, dm, DM_ENC_UNKNOWN, cStart, &subcell);CHKERRQ(ierr);
-    ierr = DMGetCellDS(dmAux, subcell, &probAux);CHKERRQ(ierr);
-    ierr = PetscDSGetTotalDimension(probAux, &totDimAux);CHKERRQ(ierr);
+    ierr = DMGetCellDS(dmAux, subcell, &dsAux);CHKERRQ(ierr);
+    ierr = PetscDSGetTotalDimension(dsAux, &totDimAux);CHKERRQ(ierr);
   }
   /* 2: Get geometric data */
   for (f = 0; f < Nf; ++f) {
@@ -4536,9 +4540,9 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, 
     PetscClassId id;
     PetscBool    fimp;
 
-    ierr = PetscDSGetImplicit(prob, f, &fimp);CHKERRQ(ierr);
+    ierr = PetscDSGetImplicit(ds, f, &fimp);CHKERRQ(ierr);
     if (isImplicit != fimp) continue;
-    ierr = PetscDSGetDiscretization(prob, f, &obj);CHKERRQ(ierr);
+    ierr = PetscDSGetDiscretization(ds, f, &obj);CHKERRQ(ierr);
     ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
     if (id == PETSCFE_CLASSID) {useFEM = PETSC_TRUE;}
     if (id == PETSCFV_CLASSID) {useFVM = PETSC_TRUE; fvm = (PetscFV) obj;}
@@ -4558,9 +4562,9 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, 
         PetscClassId id;
         PetscBool    fimp;
 
-        ierr = PetscDSGetImplicit(prob, f, &fimp);CHKERRQ(ierr);
+        ierr = PetscDSGetImplicit(ds, f, &fimp);CHKERRQ(ierr);
         if (isImplicit != fimp) continue;
-        ierr = PetscDSGetDiscretization(prob, f, &obj);CHKERRQ(ierr);
+        ierr = PetscDSGetDiscretization(ds, f, &obj);CHKERRQ(ierr);
         ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
         if (id == PETSCFE_CLASSID) {
           PetscFE fe = (PetscFE) obj;
@@ -4628,9 +4632,10 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, 
       PetscBool    fimp;
       PetscInt     numChunks, numBatches, batchSize, numBlocks, blockSize, Ne, Nr, offset;
 
-      ierr = PetscDSGetImplicit(prob, f, &fimp);CHKERRQ(ierr);
+      key.field = f;
+      ierr = PetscDSGetImplicit(ds, f, &fimp);CHKERRQ(ierr);
       if (isImplicit != fimp) continue;
-      ierr = PetscDSGetDiscretization(prob, f, &obj);CHKERRQ(ierr);
+      ierr = PetscDSGetDiscretization(ds, f, &obj);CHKERRQ(ierr);
       ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
       if (id == PETSCFE_CLASSID) {
         PetscFE         fe = (PetscFE) obj;
@@ -4652,9 +4657,9 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, 
         /* Integrate FE residual to get elemVec (need fields at quadrature points) */
         /*   For FV, I think we use a P0 basis and the cell coefficients (for subdivided cells, we can tweak the basis tabulation to be the indicator function) */
         ierr = PetscFEGeomGetChunk(geom,0,offset,&chunkGeom);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateResidual(prob, f, Ne, chunkGeom, u, u_t, probAux, a, t, elemVec);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateResidual(ds, key, Ne, chunkGeom, u, u_t, dsAux, a, t, elemVec);CHKERRQ(ierr);
         ierr = PetscFEGeomGetChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateResidual(prob, f, Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, probAux, &a[offset*totDimAux], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateResidual(ds, key, Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux, &a[offset*totDimAux], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
         ierr = PetscFEGeomRestoreChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
       } else if (id == PETSCFV_CLASSID) {
         PetscFV fv = (PetscFV) obj;
@@ -4662,7 +4667,7 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, 
         Ne = numFaces;
         /* Riemann solve over faces (need fields at face centroids) */
         /*   We need to evaluate FE fields at those coordinates */
-        ierr = PetscFVIntegrateRHSFunction(fv, prob, f, Ne, fgeom, vol, uL, uR, fluxL, fluxR);CHKERRQ(ierr);
+        ierr = PetscFVIntegrateRHSFunction(fv, ds, f, Ne, fgeom, vol, uL, uR, fluxL, fluxR);CHKERRQ(ierr);
       } else SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %D", f);
     }
     /* Loop over domain */
@@ -4693,8 +4698,8 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, 
         PetscClassId id;
         PetscInt     foff, pdim;
 
-        ierr = PetscDSGetDiscretization(prob, f, &obj);CHKERRQ(ierr);
-        ierr = PetscDSGetFieldOffset(prob, f, &foff);CHKERRQ(ierr);
+        ierr = PetscDSGetDiscretization(ds, f, &obj);CHKERRQ(ierr);
+        ierr = PetscDSGetFieldOffset(ds, f, &foff);CHKERRQ(ierr);
         ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
         if (id != PETSCFV_CLASSID) continue;
         fv   = (PetscFV) obj;
@@ -4735,7 +4740,7 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, 
         PetscClassId id;
         PetscInt     pdim, d;
 
-        ierr = PetscDSGetDiscretization(prob, f, &obj);CHKERRQ(ierr);
+        ierr = PetscDSGetDiscretization(ds, f, &obj);CHKERRQ(ierr);
         ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
         if (id != PETSCFV_CLASSID) continue;
         fv   = (PetscFV) obj;
@@ -4854,7 +4859,7 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, IS cellIS, PetscReal time, 
 
   4) Run both kernels for each non-hybrid field with correct dsAux, and then hybrid field as before
 */
-PetscErrorCode DMPlexComputeResidual_Hybrid_Internal(DM dm, IS cellIS, PetscReal time, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *user)
+PetscErrorCode DMPlexComputeResidual_Hybrid_Internal(DM dm, PetscHashFormKey key[], IS cellIS, PetscReal time, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *user)
 {
   DM_Plex         *mesh       = (DM_Plex *) dm->data;
   const char      *name       = "Hybrid Residual";
@@ -4982,18 +4987,21 @@ PetscErrorCode DMPlexComputeResidual_Hybrid_Internal(DM dm, IS cellIS, PetscReal
       Nr        = numCells % (numBatches*batchSize);
       offset    = numCells - Nr;
       if (f == Nf-1) {
+        key[2].field = f;
         ierr = PetscFEGeomGetChunk(geom,0,offset,&chunkGeom);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateHybridResidual(ds, f, Ne, chunkGeom, u, u_t, dsAux[2], a[2], t, elemVec);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateHybridResidual(ds, key[2], Ne, chunkGeom, u, u_t, dsAux[2], a[2], t, elemVec);CHKERRQ(ierr);
         ierr = PetscFEGeomGetChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateHybridResidual(ds, f, Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[2], &a[2][offset*totDimAux[2]], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateHybridResidual(ds, key[2], Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[2], &a[2][offset*totDimAux[2]], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
         ierr = PetscFEGeomRestoreChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
       } else {
+        key[0].field = f;
+        key[1].field = f;
         ierr = PetscFEGeomGetChunk(geom,0,offset,&chunkGeom);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateHybridResidual(ds, f, Ne, chunkGeom, u, u_t, dsAux[0], a[0], t, elemVec);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateHybridResidual(ds, f, Ne, chunkGeom, u, u_t, dsAux[1], a[1], t, elemVec);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateHybridResidual(ds, key[0], Ne, chunkGeom, u, u_t, dsAux[0], a[0], t, elemVec);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateHybridResidual(ds, key[1], Ne, chunkGeom, u, u_t, dsAux[1], a[1], t, elemVec);CHKERRQ(ierr);
         ierr = PetscFEGeomGetChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateHybridResidual(ds, f, Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[0], &a[0][offset*totDimAux[0]], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateHybridResidual(ds, f, Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[1], &a[1][offset*totDimAux[1]], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateHybridResidual(ds, key[0], Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[0], &a[0][offset*totDimAux[0]], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateHybridResidual(ds, key[1], Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[1], &a[1][offset*totDimAux[1]], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
         ierr = PetscFEGeomRestoreChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
       }
     }
