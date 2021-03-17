@@ -45,7 +45,7 @@ def FixFile(filename):
   with open(filename) as ff:
     data = ff.read()
 
-  data = re.subn('\00','',data)[0]  
+  data = re.subn('\00','',data)[0]
   data = re.subn('\nvoid ','\nPETSC_EXTERN void ',data)[0]
   data = re.subn('\nPetscErrorCode ','\nPETSC_EXTERN void ',data)[0]
   data = re.subn('Petsc([ToRm]*)Pointer\(int\)','Petsc\\1Pointer(void*)',data)[0]
@@ -212,38 +212,22 @@ def processDir(petscdir, bfort, verbose, dirpath, dirnames, filenames):
                  and name != 'petsc']
   return
 
-ptypes = [
-  'PetscRandom',
-  'IS',
-  'Vec',
-  'PetscViewer',
-  'PetscOptions',
-  'PetscSubcomm',
-  'ISColoring',
-  'PetscSection',
-  'VecTagger',
-  'MatNullSpace',
-  'Mat',
-  'MatFDColoring',
-  'VecScatter',
-  'DMLabel',
-  'DM',
-  'PetscSectionSym',
-  'PetscSF',
-  'DMPlexCellRefiner',
-  'KSP',
-  'PC',
-  'KSPGuess',
-  'PetscConvEst',
-  'SNES',
-  'TSTrajectory',
-  'TS',
-  'TSAdapt',
-]
+def updatePetscTypesFromMansec(types, path):
+  for file in os.listdir(path):
+    if file.endswith('.h'):
+      with open(os.path.join(path,file)) as fd:
+        txtlst = fd.readlines()
+        for line in txtlst:
+          if ' type ' in line:
+            lst = line.strip().split(' ')
+            types.add(lst[lst.index('type')+1])
+  return types
 
 def processf90interfaces(petscdir,verbose):
   ''' Takes all the individually generated fortran interface files and merges them into one for each mansec'''
+  ptypes = set()
   for mansec in ['sys','vec','mat','dm','ksp','snes','ts','tao']:
+    ptypes = updatePetscTypesFromMansec(ptypes,os.path.join(petscdir,'src',mansec,'f90-mod'))
     for submansec in os.listdir(os.path.join(petscdir,'src',mansec,'f90-mod','ftn-auto-interfaces')):
       if verbose: print('Processing F90 interface for '+submansec)
       if os.path.isdir(os.path.join(petscdir,'src',mansec,'f90-mod','ftn-auto-interfaces',submansec)):
@@ -257,9 +241,7 @@ def processf90interfaces(petscdir,verbose):
             ibuf = '      subroutine'+ibuf
             ibuf = ibuf.replace('integer z','PetscErrorCode z')
             ibuf = ibuf.replace('integer a ! MPI_Comm','MPI_Comm a ! MPI_Comm')
-            plist = []
-            for ptype in ptypes:
-              if ibuf.find(' '+ptype+' ') >= 0: plist.append('t'+ptype)
+            plist = [p for p in ptypes if ' '+p[1:]+' ' in ibuf]
             if plist: ibuf = ibuf.replace(')',')\n       import '+','.join(set(plist)),1)
             fd.write(ibuf)
           fdr.close()
