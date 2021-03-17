@@ -416,9 +416,10 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
       ierr = KSPSetDiagonalScaleFix(ksp,flag);CHKERRQ(ierr);
     }
     nmax = ksp->nmax;
-    ierr = PetscOptionsInt("-ksp_matsolve_block_size", "Maximum number of columns treated simultaneously", "KSPSetMatSolveBlockSize", nmax, &nmax, &flg);CHKERRQ(ierr);
+    ierr = PetscOptionsDeprecated("-ksp_matsolve_block_size","-ksp_matsolve_maximum_number_columns","3.15",NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-ksp_matsolve_maximum_number_columns", "Maximum number of columns treated simultaneously", "KSPSetMatSolveMaximumNumberColumns", nmax, &nmax, &flg);CHKERRQ(ierr);
     if (flg) {
-      ierr = KSPSetMatSolveBlockSize(ksp, nmax);CHKERRQ(ierr);
+      ierr = KSPSetMatSolveMaximumNumberColumns(ksp, nmax);CHKERRQ(ierr);
     }
     goto skipoptions;
   }
@@ -655,9 +656,10 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
 #endif
 
   nmax = ksp->nmax;
-  ierr = PetscOptionsInt("-ksp_matsolve_block_size", "Maximum number of columns treated simultaneously", "KSPSetMatSolveBlockSize", nmax, &nmax, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsDeprecated("-ksp_matsolve_block_size","-ksp_matsolve_maximum_number_columns","3.15",NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-ksp_matsolve_maximum_number_columns", "Maximum number of columns treated simultaneously", "KSPSetMatSolveMaximumNumberColumns", nmax, &nmax, &flg);CHKERRQ(ierr);
   if (flg) {
-    ierr = KSPSetMatSolveBlockSize(ksp, nmax);CHKERRQ(ierr);
+    ierr = KSPSetMatSolveMaximumNumberColumns(ksp, nmax);CHKERRQ(ierr);
   }
 
   flg  = PETSC_FALSE;

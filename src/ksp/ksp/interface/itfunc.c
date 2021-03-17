@@ -1227,12 +1227,12 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
       ierr = MatZeroEntries(X);CHKERRQ(ierr);
     }
     ierr = PetscLogEventBegin(KSP_MatSolve, ksp, B, X, 0);CHKERRQ(ierr);
-    ierr = KSPGetMatSolveBlockSize(ksp, &Bbn);CHKERRQ(ierr);
+    ierr = KSPGetMatSolveMaximumNumberColumns(ksp, &Bbn);CHKERRQ(ierr);
     /* by default, do a single solve with all columns */
     if (Bbn == PETSC_DECIDE) Bbn = N2;
     else if (Bbn < 1) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "KSPMatSolve() block size %D must be positive", Bbn);
     ierr = PetscInfo2(ksp, "KSP type %s solving using blocks of width at most %D\n", ((PetscObject)ksp)->type_name, Bbn);CHKERRQ(ierr);
-    /* if -ksp_matsolve_block_size is greater than the actual number of columns, do a single solve with all columns */
+    /* if -ksp_matsolve_maximum_number_columns is greater than the actual number of columns, do a single solve with all columns */
     if (Bbn >= N2) {
       ierr = (*ksp->ops->matsolve)(ksp, B, X);CHKERRQ(ierr);
       if (ksp->viewFinalRes) {
@@ -1284,7 +1284,7 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
 }
 
 /*@
-     KSPSetMatSolveBlockSize - Sets the maximum number of columns treated simultaneously in KSPMatSolve().
+     KSPSetMatSolveMaximumNumberColumns - Sets the maximum number of columns treated simultaneously in KSPMatSolve().
 
     Logically collective
 
@@ -1294,9 +1294,9 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
 
    Level: advanced
 
-.seealso:  KSPMatSolve(), KSPGetMatSolveBlockSize(), -mat_mumps_icntl_27, -matmatmult_Bbn
+.seealso:  KSPMatSolve(), KSPGetMatSolveMaximumNumberColumns(), -mat_mumps_icntl_27, -matmatmult_Bbn
 @*/
-PetscErrorCode KSPSetMatSolveBlockSize(KSP ksp, PetscInt bs)
+PetscErrorCode KSPSetMatSolveMaximumNumberColumns(KSP ksp, PetscInt bs)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -1306,7 +1306,7 @@ PetscErrorCode KSPSetMatSolveBlockSize(KSP ksp, PetscInt bs)
 }
 
 /*@
-     KSPGetMatSolveBlockSize - Gets the maximum number of columns treated simultaneously in KSPMatSolve().
+     KSPGetMatSolveMaximumNumberColumns - Gets the maximum number of columns treated simultaneously in KSPMatSolve().
 
    Input Parameter:
 .     ksp - iterative context
@@ -1316,9 +1316,9 @@ PetscErrorCode KSPSetMatSolveBlockSize(KSP ksp, PetscInt bs)
 
    Level: advanced
 
-.seealso:  KSPMatSolve(), KSPSetMatSolveBlockSize(), -mat_mumps_icntl_27, -matmatmult_Bbn
+.seealso:  KSPMatSolve(), KSPSetMatSolveMaximumNumberColumns(), -mat_mumps_icntl_27, -matmatmult_Bbn
 @*/
-PetscErrorCode KSPGetMatSolveBlockSize(KSP ksp, PetscInt *bs)
+PetscErrorCode KSPGetMatSolveMaximumNumberColumns(KSP ksp, PetscInt *bs)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
