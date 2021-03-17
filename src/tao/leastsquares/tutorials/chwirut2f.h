@@ -5,6 +5,11 @@
 
 #include "petsc/finclude/petsctao.h"
       use petsctao
+#if defined(PETSC_HAVE_MPIUNI)
+      use mpiuni
+#else
+      use mpi
+#endif
       implicit none
 
 !  Common blocks:

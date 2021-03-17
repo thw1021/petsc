@@ -4,7 +4,6 @@
 program main
 #include <petsc/finclude/petscsys.h>
       use petscsys
-
       implicit none
       PetscErrorCode                    :: ierr
       PetscMPIInt                       :: myRank,mySize
@@ -21,9 +20,9 @@ program main
       ! The following MPI calls return the number of processes
       ! being used and the rank of this process in the group
 
-      call MPI_Comm_size(MPI_COMM_WORLD,mySize,ierr)
+      call MPI_Comm_size(PETSC_COMM_WORLD,mySize,ierr)
       CHKERRA(ierr)
-      call MPI_Comm_rank(MPI_COMM_WORLD,myRank,ierr)
+      call MPI_Comm_rank(PETSC_COMM_WORLD,myRank,ierr)
       CHKERRA(ierr)
 
       ! Here we would like to print only one message that represents

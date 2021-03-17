@@ -27,7 +27,7 @@
       call ComputeRHS(da,f,ierr);CHKERRA(ierr)
       call ComputeMatrix(da,J,ierr);CHKERRA(ierr)
 
-      call KSPCreate(MPI_COMM_WORLD,ksp,ierr);CHKERRA(ierr)
+      call KSPCreate(PETSC_COMM_WORLD,ksp,ierr);CHKERRA(ierr)
       call KSPSetOperators(ksp,J,J,ierr);CHKERRA(ierr)
       call KSPSetFromOptions(ksp,ierr);CHKERRA(ierr)
       call KSPSolve(ksp,f,x,ierr);CHKERRA(ierr)

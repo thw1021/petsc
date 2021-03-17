@@ -3,7 +3,6 @@
 program main
 #include <petsc/finclude/petscsys.h>
       use petscsys
-
       implicit none
       PetscErrorCode :: ierr
       PetscMPIInt  ::  myRank,mySize
@@ -26,8 +25,8 @@ program main
 
       ! We can now change the communicator universe for PETSc
 
-      call MPI_Comm_size(MPI_COMM_WORLD,mySize,ierr); CHKERRA(ierr)
-      call MPI_Comm_rank(MPI_COMM_WORLD,myRank,ierr); CHKERRA(ierr)
+      call MPI_Comm_size(PETSC_COMM_WORLD,mySize,ierr); CHKERRA(ierr)
+      call MPI_Comm_rank(PETSC_COMM_WORLD,myRank,ierr); CHKERRA(ierr)
       write(outputString,*) 'Number of processors =',mySize,'rank =',myRank,'\n'
       call PetscPrintf(PETSC_COMM_WORLD,outputString,ierr); CHKERRA(ierr)
       call PetscFinalize(ierr)
