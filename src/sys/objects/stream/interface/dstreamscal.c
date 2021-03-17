@@ -186,7 +186,7 @@ PetscErrorCode PetscStreamScalarAwait(PetscStreamScalar pscal, PetscScalar *val,
   PetscValidScalarPointer(val,2);
   PetscCheckValidSameStreamType(pscal,1,pstream,3);
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first\n");
-  ierr = (*pscal->ops->await)(pscal, val, pstream);CHKERRQ(ierr);
+  ierr = (*pscal->ops->await)(pscal,val,pstream);CHKERRQ(ierr);
   ierr = PetscStreamScalarUpdateCache_Internal(pscal,val,PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -387,6 +387,39 @@ PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar pscal, PSSCacheType ct
 }
 
 /*@C
+  PetscStreamScalarRealPart - Replace the value of the PetscStreamScalar with its real component
+
+  Not Collective, Asynchronous
+
+  Input Parameters:
++ pscal   - The PetscStreamScalar object to convert
+- pstream - The PetscStream object to enqueue the operation on
+
+  Output Parameter:
+. pscal - The converted PetscStreamScalar
+
+  Notes:
+  This routine does nothing if PETSc is configured without complex support.
+
+  Level: beginner
+
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamAwait(), PetscStreamScalarAXTY(), PetscStreamScalarAYDX()
+@*/
+PetscErrorCode PetscStreamScalarRealPart(PetscStreamScalar pscal, PetscStream pstream)
+{
+  PetscFunctionBegin;
+  PetscCheckValidSameStreamType(pscal,1,pstream,2);
+  if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() on argument 1 first");
+#if PetscDefined(USE_COMPLEX)
+  {
+    PetscErrorCode ierr;
+    ierr = (*pscal->ops->realpart)(pscal,pstream);CHKERRQ(ierr);
+  }
+#endif
+  PetscFunctionReturn(0);
+}
+
+/*@C
   PetscStreamScalarAXTY - Computes x = alpha * x * y
 
   Not Collective, Asynchronous
@@ -406,7 +439,7 @@ PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar pscal, PSSCacheType ct
 
   Level: beginner
 
-.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamScalarAYDX()
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamScalarAYDX(), PetscStreamScalarRealPart()
 @*/
 PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx, PetscStreamScalar pscaly, PetscStream pstream)
 {
@@ -449,7 +482,7 @@ PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx
 
   Level: beginner
 
-.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamScalarAXTY()
+.seealso: PetscStreamScalarCreate(), PetscStreamCreate(), PetscStreamScalarAXTY(), PetscStreamScalarRealPart()
 @*/
 PetscErrorCode PetscStreamScalarAYDX(PetscScalar alpha, PetscStreamScalar pscaly, PetscStreamScalar pscalx, PetscStream pstream)
 {
@@ -467,15 +500,20 @@ PetscErrorCode PetscStreamScalarAYDX(PetscScalar alpha, PetscStreamScalar pscaly
   } else if (pscalx == pscaly) {
     ierr = PetscStreamScalarSetValue(pscalx,&alpha,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   } else {
+    PetscBool isOneBefore,isZero;
+
+    ierr = PetscStreamScalarGetInfo(pscalx,PSS_ONE,PETSC_FALSE,&isOneBefore,pstream);CHKERRQ(ierr);
     ierr = (*pscalx->ops->aydx)(alpha,pscaly,pscalx,pstream);CHKERRQ(ierr);
-    if (pscalx->cache[PSS_ZERO] == PSS_TRUE) {
+    ierr = PetscStreamScalarGetInfo(pscalx,PSS_ZERO,PETSC_FALSE,&isZero,pstream);CHKERRQ(ierr);
+    if (isOneBefore && !pscaly && (alpha == (PetscScalar)1.0)) {
+      ierr = PetscStreamScalarSetInfo(pscalx,PSS_ONE,PETSC_TRUE);CHKERRQ(ierr);
+    } else if (isZero) {
       /* anything/0 is NaN */
       ierr = PetscStreamScalarSetInfo(pscalx,PSS_NAN,PETSC_TRUE);CHKERRQ(ierr);
     }
     if (PetscIsNanScalar(alpha)) {
       ierr = PetscStreamScalarSetInfo(pscalx,PSS_NAN,PETSC_TRUE);CHKERRQ(ierr);
-    }
-    if (PetscIsInfScalar(alpha)) {
+    } else if (PetscIsInfScalar(alpha)) {
       ierr = PetscStreamScalarSetInfo(pscalx,PSS_INF,PETSC_TRUE);CHKERRQ(ierr);
     }
   }

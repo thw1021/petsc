@@ -1,6 +1,6 @@
 static char help[] = "Tests asynchronous vector operations\n";
 
-#include <petsc/private/vecimpl.h> /* need access to vec->event */
+#include <petscvec.h>
 
 PETSC_STATIC_INLINE PetscErrorCode VecViewFromOptionsSynchronized(MPI_Comm comm, Vec v, PetscObject obj, const char name[])
 {
@@ -39,8 +39,9 @@ PETSC_STATIC_INLINE PetscErrorCode VecClose(Vec vref, Vec vtest)
   ierr = VecGetArrayRead(vref,&arrRef);CHKERRQ(ierr);
   ierr = VecGetArrayRead(vtest,&arrTest);CHKERRQ(ierr);
   for (PetscInt i = 0; i < n; ++i) {
-    if (!PetscIsCloseAtTol(PetscRealPart(arrRef[i]),PetscRealPart(arrTest[i]),1e-5,0.0)) {
-      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Vectors don't match. refVector[%D]: %g != testVector[%D]: %g",i,(double)PetscRealPart(arrRef[i]),i,(double)PetscRealPart(arrTest[i]));
+    const PetscReal realRef = PetscRealPart(arrRef[i]), realTest = PetscRealPart(arrTest[i]);
+    if (!PetscIsCloseAtTol(realRef,realTest,1e-7,1e-7)) {
+      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Vectors don't match. refVector[%D]: %.10g != testVector[%D]: %.10g",i,(double)realRef,i,(double)realTest);
     }
   }
   ierr = VecRestoreArrayRead(vref,&arrRef);CHKERRQ(ierr);
@@ -52,8 +53,12 @@ PETSC_STATIC_INLINE PetscErrorCode VecClose(Vec vref, Vec vtest)
  Because apparently const PetscInt n=3;PetscInt arr[n]; is not a constant enough expression for mswin cl to be able to
  set array size statically...
 */
+#if !defined(THREE) && !defined(TWO)
 #define THREE 3
 #define TWO   2
+#else
+#error "THREE and TWO are already defined"
+#endif
 
 int main(int argc,char **argv)
 {
@@ -152,9 +157,19 @@ int main(int argc,char **argv)
   for (PetscInt i = 0; i < nloop; ++i) {
     const PetscInt stri = i%nstream;
     /* Don't need to wait on first loop */
-    if (!i) {ierr = PetscStreamWaitEvent(pstream[stri],seq1Async->event);CHKERRQ(ierr);}
+    if (!i) {
+      PetscEvent event;
+      ierr = VecGetEvent(seq1Async,&event);CHKERRQ(ierr);
+      ierr = PetscStreamWaitEvent(pstream[stri],event);CHKERRQ(ierr);
+      ierr = VecRestoreEvent(seq1Async,&event);CHKERRQ(ierr);
+    }
     ierr = VecAXPYAsync(seq1Async,pscal[0],seq2Async,pstream[stri]);CHKERRQ(ierr);
-    if (!i) {ierr = PetscStreamWaitEvent(pstream[stri],mpi1Async->event);CHKERRQ(ierr);}
+    if (!i) {
+      PetscEvent event;
+      ierr = VecGetEvent(mpi1Async,&event);CHKERRQ(ierr);
+      ierr = PetscStreamWaitEvent(pstream[stri],event);CHKERRQ(ierr);
+      ierr = VecRestoreEvent(mpi1Async,&event);CHKERRQ(ierr);
+    }
     ierr = VecAXPYAsync(mpi1Async,pscal[0],mpi2Async,pstream[stri]);CHKERRQ(ierr);
     /* i is loop-only variable, so do sync here */
     if (i == nloop-1) {ierr = PetscStreamSynchronize(pstream[stri]);CHKERRQ(ierr);}
@@ -211,7 +226,6 @@ int main(int argc,char **argv)
     ierr = VecNormAsync(seq2Async,NORM_2,&pscal[0],pstream[0]);CHKERRQ(ierr);
     ierr = PetscStreamScalarAYDX(1.0,NULL,pscal[0],pstream[0]);CHKERRQ(ierr);
     ierr = VecScaleAsync(seq2Async,pscal[0],pstream[0]);CHKERRQ(ierr);
-    ierr = PetscStreamSynchronize(pstream[0]);CHKERRQ(ierr);
 
     ierr = VecNormAsync(mpi1Async,NORM_2,&pscal[1],pstream[1]);CHKERRQ(ierr);
     ierr = PetscStreamScalarAYDX(1.0,NULL,pscal[1],pstream[1]);CHKERRQ(ierr);
@@ -222,7 +236,6 @@ int main(int argc,char **argv)
     ierr = VecNormAsync(mpi2Async,NORM_2,&pscal[1],pstream[1]);CHKERRQ(ierr);
     ierr = PetscStreamScalarAYDX(1.0,NULL,pscal[1],pstream[1]);CHKERRQ(ierr);
     ierr = VecScaleAsync(mpi2Async,pscal[1],pstream[1]);CHKERRQ(ierr);
-    ierr = PetscStreamSynchronize(pstream[1]);CHKERRQ(ierr);
   }
   ierr = PetscStreamSynchronize(pstream[0]);CHKERRQ(ierr);
   ierr = PetscStreamSynchronize(pstream[1]);CHKERRQ(ierr);
@@ -232,11 +245,15 @@ int main(int argc,char **argv)
   ierr = VecClose(mpi1,mpi1Async);CHKERRQ(ierr);
   ierr = VecClose(mpi2,mpi2Async);CHKERRQ(ierr);
 
-  /* Test serialization of various vector routines to orthogonalize vectors on various */
+  /* Test serialization of various vector routines to orthogonalize vectors on multiple streams */
   for (PetscInt i = 0; i < nloop; ++i) {
     const PetscInt stri = i%nstream;
+
     if (!i) {
-      ierr = PetscStreamWaitEvent(pstream[stri],seq2Async->event);CHKERRQ(ierr);
+      PetscEvent event;
+      ierr = VecGetEvent(seq2Async,&event);CHKERRQ(ierr);
+      ierr = PetscStreamWaitEvent(pstream[stri],event);CHKERRQ(ierr);
+      ierr = VecRestoreEvent(seq2Async,&event);CHKERRQ(ierr);
       ierr = VecCopyAsync(seqReset,seq1Async,pstream[stri]);CHKERRQ(ierr);
       ierr = VecCopyAsync(seqReset,seq2Async,pstream[stri]);CHKERRQ(ierr);
     }
@@ -251,7 +268,10 @@ int main(int argc,char **argv)
     ierr = VecScaleAsync(seq2Async,pscal[0],pstream[stri]);CHKERRQ(ierr);
 
     if (!i) {
-      ierr = PetscStreamWaitEvent(pstream[stri],mpi2Async->event);CHKERRQ(ierr);
+      PetscEvent event;
+      ierr = VecGetEvent(mpi2Async,&event);CHKERRQ(ierr);
+      ierr = PetscStreamWaitEvent(pstream[stri],event);CHKERRQ(ierr);
+      ierr = VecRestoreEvent(mpi2Async,&event);CHKERRQ(ierr);
       ierr = VecCopyAsync(mpiReset,mpi1Async,pstream[stri]);CHKERRQ(ierr);
       ierr = VecCopyAsync(mpiReset,mpi2Async,pstream[stri]);CHKERRQ(ierr);
     }
@@ -272,7 +292,7 @@ int main(int argc,char **argv)
   ierr = VecClose(mpi1,mpi1Async);CHKERRQ(ierr);
   ierr = VecClose(mpi2,mpi2Async);CHKERRQ(ierr);
 
-  ierr = VecViewFromOptionsSynchronized(MPI_COMM_WORLD,seq1Async,NULL,"-vec_seq_view");CHKERRQ(ierr);
+  ierr = VecViewFromOptionsSynchronized(PETSC_COMM_WORLD,seq1Async,NULL,"-vec_seq_view");CHKERRQ(ierr);
   ierr = VecViewFromOptions(mpi1Async,NULL,"-vec_mpi_view");CHKERRQ(ierr);
 
   ierr = PetscPrintf(PETSC_COMM_WORLD,"All operations completed sucessfully\n");CHKERRQ(ierr);
@@ -292,10 +312,10 @@ int main(int argc,char **argv)
   return ierr;
 }
 
-/*TEST
+#undef THREE
+#undef TWO
 
- build:
-   requires: define(PETSC_HAVE_DEVICE)
+/*TEST
 
  testset:
    requires: cuda
