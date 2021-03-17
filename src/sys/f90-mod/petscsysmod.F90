@@ -43,6 +43,7 @@
 !    This module uses mpi, but only let out the stuff that you need from it
         private
         public:: MPIU_REAL, MPIU_SUM, MPIU_SCALAR, MPIU_INTEGER
+        public:: PETSC_COMM_WORLD, PETSC_COMM_SELF
 !
 ! ----------------------------------------------------------------------------
 !    BEGIN PETSc aliases for MPI_ constants
@@ -80,6 +81,12 @@
       integer4, parameter :: MPIU_INTEGER = MPI_INTEGER
 #endif
 
+      MPI_Comm PETSC_COMM_WORLD
+      MPI_Comm PETSC_COMM_SELF
+      common /petscfortran9/ PETSC_COMM_WORLD
+      common /petscfortran10/ PETSC_COMM_SELF
+      data   PETSC_COMM_WORLD /0/
+      data   PETSC_COMM_SELF /0/
         end module
 
 
@@ -323,8 +330,6 @@
         module petscsys
         use iso_c_binding
         use petscsysdef
-        MPI_Comm PETSC_COMM_SELF
-        MPI_Comm PETSC_COMM_WORLD
         PetscChar(80) PETSC_NULL_CHARACTER = ''
         PetscInt PETSC_NULL_INTEGER(1)
         PetscFortranDouble PETSC_NULL_DOUBLE(1)
@@ -442,18 +447,4 @@
         return
         end
 
-
-      block data PetscCommInit
-      implicit none
-!
-!     this code is duplicated - because including ../src/sys/f90-mod/petscsys.h here
-!     gives compile errors.
-!
-      MPI_Comm PETSC_COMM_WORLD
-      MPI_Comm PETSC_COMM_SELF
-      common /petscfortran9/ PETSC_COMM_WORLD
-      common /petscfortran10/ PETSC_COMM_SELF
-      data   PETSC_COMM_WORLD /0/
-      data   PETSC_COMM_SELF /0/
-      end
 
