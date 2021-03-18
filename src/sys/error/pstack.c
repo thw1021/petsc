@@ -102,7 +102,7 @@ PetscErrorCode PetscStackCreate(void)
 
 PetscErrorCode  PetscStackView(FILE *file)
 {
-  int        i;
+  int        i,j;
 
   if (!file) file = PETSC_STDOUT;
 
@@ -110,7 +110,7 @@ PetscErrorCode  PetscStackView(FILE *file)
     (*PetscErrorPrintf)("Note: The EXACT line numbers in the stack are not available,\n");
     (*PetscErrorPrintf)("      INSTEAD the line number of the start of the function\n");
     (*PetscErrorPrintf)("      is given.\n");
-    for (i=petscstack->currentsize-1; i>=0; i--) (*PetscErrorPrintf)("[%d] %s() at %s:%d\n",PetscGlobalRank,petscstack->function[i],petscstack->file[i],petscstack->line[i]);
+    for (i=petscstack->currentsize-1,j=1; i>=0; i--,j++) (*PetscErrorPrintf)("#%d %s() at %s:%d\n",j,petscstack->function[i],petscstack->file[i],petscstack->line[i]);
   } else {
     fprintf(file,"Note: The EXACT line numbers in the stack are not available,\n");
     fprintf(file,"      INSTEAD the line number of the start of the function\n");
