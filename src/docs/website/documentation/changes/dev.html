@@ -123,6 +123,7 @@
       <h4>PetscPartitioner:</h4>
       <h4>Mat:</h4>
       <ul>
+        <li>Factorization types now provide their preferred ordering (which may be external) to prevent PETSc PCFactor frpm,, by default, pick the ordering when it is not ideal</li>
         <li>Deprecate MatFactorGetUseOrdering(); Use MatFactorGetCanUseOrdering() instead</li>
         <li>Add MatSetPreallocationCOO and MatSetValuesCOO to preallocate and set values in a matrix using COO format. Currently efficiently implemented only for MATCUSPARSE</li>
         <li>Add the option MAT_FORCE_DIAGONAL_ENTRIES for MatSetOption(). It forces allocation of all diagonal entries</li>
