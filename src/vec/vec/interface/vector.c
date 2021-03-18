@@ -367,6 +367,12 @@ PetscErrorCode  VecDuplicate(Vec v,Vec *newv)
   PetscValidPointer(newv,2);
   PetscValidType(v,1);
   ierr = (*v->ops->duplicate)(v,newv);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  if (v->boundtocpu && v->bindingpropagates) {
+    ierr = VecSetBindingPropagates(*newv,PETSC_TRUE);CHKERRQ(ierr);
+    ierr = VecBindToCPU(*newv,PETSC_TRUE);CHKERRQ(ierr);
+  }
+#endif
   ierr = PetscObjectStateIncrease((PetscObject)*newv);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -438,6 +444,20 @@ PetscErrorCode  VecDuplicateVecs(Vec v,PetscInt m,Vec *V[])
   PetscValidPointer(V,3);
   PetscValidType(v,1);
   ierr = (*v->ops->duplicatevecs)(v,m,V);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  if (v->boundtocpu && v->bindingpropagates) {
+    PetscInt i;
+
+    for (i=0; i<m; i++) {
+      /* Since ops->duplicatevecs might itself propagate the value of boundtocpu,
+       * avoid unnecessary overhead by only calling VecBindToCPU() if the vector isn't already bound. */
+      if (!(*V)[i]->boundtocpu) {
+        ierr = VecSetBindingPropagates((*V)[i],PETSC_TRUE);CHKERRQ(ierr);
+        ierr = VecBindToCPU((*V)[i],PETSC_TRUE);CHKERRQ(ierr);
+      }
+    }
+  }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -1275,6 +1295,8 @@ static PetscErrorCode VecSetTypeFromOptions_Private(PetscOptionItems *PetscOptio
 PetscErrorCode  VecSetFromOptions(Vec vec)
 {
   PetscErrorCode ierr;
+  PetscBool      flg;
+  PetscInt       bind_below = 0;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -1286,6 +1308,14 @@ PetscErrorCode  VecSetFromOptions(Vec vec)
   /* Handle specific vector options */
   if (vec->ops->setfromoptions) {
     ierr = (*vec->ops->setfromoptions)(PetscOptionsObject,vec);CHKERRQ(ierr);
+  }
+
+  /* Bind to CPU if below a user-specified size threshold.
+   * This perhaps belongs in the options for the GPU Vec types, but VecBindToCPU() does nothing when called on non-GPU types,
+   * and putting it here makes is more maintainable than duplicating this for all. */
+  ierr = PetscOptionsInt("-vec_bind_below","Set the size threshold (in local entries) below which the Vec is bound to the CPU","VecBindToCPU",bind_below,&bind_below,&flg);CHKERRQ(ierr);
+  if (flg && vec->map->n < bind_below) {
+    ierr = VecBindToCPU(vec,PETSC_TRUE);CHKERRQ(ierr);
   }
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
@@ -1866,6 +1896,8 @@ PetscErrorCode VecSetInf(Vec xin)
 -   flg - bind to the CPU if value of PETSC_TRUE
 
    Level: intermediate
+
+.seealso: VecIsBoundToCPU()
 @*/
 PetscErrorCode VecBindToCPU(Vec v,PetscBool flg)
 {
@@ -1882,6 +1914,45 @@ PetscErrorCode VecBindToCPU(Vec v,PetscBool flg)
 #else
   return 0;
 #endif
+}
+
+/*@
+   VecIsBoundToCPU - Indicates whether a vector has been bound to the CPU (marked as temporarily staying on the CPU and performing all computations on the CPU)
+
+   Input Parameters:
+.  v - the vector
+
+   Output Parameters:
+.  isbound - flag indicating whether the vector is bound to the CPU
+
+   Level: intermediate
+
+.seealso: VecBindToCPU(), MatIsBoundToCPU(), MatBindToCPU()
+@*/
+PetscErrorCode VecIsBoundToCPU(Vec v,PetscBool *isbound)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidBoolPointer(isbound,2);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  *isbound = v->boundtocpu;
+#else
+  *isbound = PETSC_TRUE;
+#endif
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecSetBindingPropagates - TODO: Finish this manpage!
+@*/
+PetscErrorCode VecSetBindingPropagates(Vec v,PetscBool flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  v->bindingpropagates = flg;
+#endif
+  PetscFunctionReturn(0);
 }
 
 /*@C
