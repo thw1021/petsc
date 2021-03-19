@@ -304,6 +304,7 @@
       PetscEnum, parameter :: MATOP_DESTROYSUBMATRICES=145
       PetscEnum, parameter :: MATOP_TRANSPOSE_SOLVE=146
       PetscEnum, parameter :: MATOP_GET_VALUES_LOCAL=147
+      PetscEnum, parameter :: MATOP_SET_GENERATE_TRANSPOSE=148
 !
 !
 !
