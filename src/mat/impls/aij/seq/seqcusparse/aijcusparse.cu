@@ -256,18 +256,15 @@ static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(PetscOptionItems *PetscOp
                             "MatCUSPARSESetFormat",MatCUSPARSEStorageFormats,(PetscEnum)cusparsestruct->format,(PetscEnum*)&format,&flg);CHKERRQ(ierr);
     if (flg) {ierr = MatCUSPARSESetFormat(A,MAT_CUSPARSE_ALL,format);CHKERRQ(ierr);}
    #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-    cusparsestruct->spmvAlg = CUSPARSE_CSRMV_ALG1; /* default, since we only support csr */
     ierr = PetscOptionsEnum("-mat_cusparse_spmv_alg","sets cuSPARSE algorithm used in sparse-mat dense-vector multiplication (SpMV)",
                             "cusparseSpMVAlg_t",MatCUSPARSESpMVAlgorithms,(PetscEnum)cusparsestruct->spmvAlg,(PetscEnum*)&cusparsestruct->spmvAlg,&flg);CHKERRQ(ierr);
     /* If user did use this option, check its consistency with cuSPARSE, since PetscOptionsEnum() sets enum values based on their position in MatCUSPARSESpMVAlgorithms[] */
     if (flg && CUSPARSE_CSRMV_ALG1 != 2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseSpMVAlg_t has been changed but PETSc has not been updated accordingly");
 
-    cusparsestruct->spmmAlg = CUSPARSE_SPMM_CSR_ALG1; /* default, only support column-major dense matrix B */
     ierr = PetscOptionsEnum("-mat_cusparse_spmm_alg","sets cuSPARSE algorithm used in sparse-mat dense-mat multiplication (SpMM)",
                             "cusparseSpMMAlg_t",MatCUSPARSESpMMAlgorithms,(PetscEnum)cusparsestruct->spmmAlg,(PetscEnum*)&cusparsestruct->spmmAlg,&flg);CHKERRQ(ierr);
     if (flg && CUSPARSE_SPMM_CSR_ALG1 != 4) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseSpMMAlg_t has been changed but PETSc has not been updated accordingly");
 
-    cusparsestruct->csr2cscAlg = CUSPARSE_CSR2CSC_ALG1;
     ierr = PetscOptionsEnum("-mat_cusparse_csr2csc_alg","sets cuSPARSE algorithm used in converting CSR matrices to CSC matrices",
                             "cusparseCsr2CscAlg_t",MatCUSPARSECsr2CscAlgorithms,(PetscEnum)cusparsestruct->csr2cscAlg,(PetscEnum*)&cusparsestruct->csr2cscAlg,&flg);CHKERRQ(ierr);
     if (flg && CUSPARSE_CSR2CSC_ALG1 != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseCsr2CscAlg_t has been changed but PETSc has not been updated accordingly");
@@ -1346,19 +1343,32 @@ static PetscErrorCode MatSeqAIJCUSPARSEGenerateTransposeForMult(Mat A)
       err = cudaMalloc(&csr2cscBuffer,csr2cscBufferSize);CHKERRCUDA(err);
      #endif
 
-      stat = cusparse_csr2csc(cusparsestruct->handle,
-                              A->rmap->n,A->cmap->n,matrix->num_entries,
-                              csr2csc_a.data().get(),cusparsestruct->rowoffsets_gpu->data().get(),matrix->column_indices->data().get(),
+      if (matrix->num_entries) {
+        /* When there are no nonzeros, this routine mistakenly returns CUSPARSE_STATUS_INVALID_VALUE in
+           mat_tests-ex62_15_mpiaijcusparse on ranks 0 and 2 with CUDA-11. But CUDA-10 is OK.
+           I checked every parameters and they were just fine. I have no clue why cusparse complains.
+
+           Per https://docs.nvidia.com/cuda/cusparse/index.html#csr2cscEx2, when nnz = 0, matrixT->row_offsets[]
+           should be filled with indexBase. So I just take a shortcut here.
+        */
+        stat = cusparse_csr2csc(cusparsestruct->handle, A->rmap->n,
+                              A->cmap->n,matrix->num_entries,
+                              csr2csc_a.data().get(),
+                              cusparsestruct->rowoffsets_gpu->data().get(),
+                              matrix->column_indices->data().get(),
                               matrixT->values->data().get(),
                              #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
                               matrixT->row_offsets->data().get(), matrixT->column_indices->data().get(), cusparse_scalartype,
                               CUSPARSE_ACTION_NUMERIC,indexBase,
-                              cusparsestruct->csr2cscAlg, csr2cscBuffer
+                              cusparsestruct->csr2cscAlg, csr2cscBuffer);CHKERRCUSPARSE(stat);
                              #else
                               matrixT->column_indices->data().get(), matrixT->row_offsets->data().get(),
-                              CUSPARSE_ACTION_NUMERIC, indexBase
+                              CUSPARSE_ACTION_NUMERIC, indexBase);CHKERRCUSPARSE(stat);
                              #endif
-);CHKERRCUSPARSE(stat);
+      } else {
+        matrixT->row_offsets->assign(matrixT->row_offsets->size(),indexBase);
+      }
+
       cusparsestruct->csr2csc_i = new THRUSTINTARRAY(matrix->num_entries);
       PetscStackCallThrust(thrust::transform(thrust::device,matrixT->values->begin(),matrixT->values->end(),cusparsestruct->csr2csc_i->begin(),PetscScalarToPetscInt()));
      #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
@@ -3294,13 +3304,17 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUSPARSE(Mat A, MatType mtyp
   if (reuse != MAT_REUSE_MATRIX && !B->spptr) {
     if (B->factortype == MAT_FACTOR_NONE) {
       Mat_SeqAIJCUSPARSE *spptr;
-
       ierr = PetscNew(&spptr);CHKERRQ(ierr);
-      spptr->format = MAT_CUSPARSE_CSR;
+      spptr->format     = MAT_CUSPARSE_CSR;
+      spptr->deviceMat  = NULL;
+     #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+      spptr->spmvAlg    = CUSPARSE_CSRMV_ALG1;    /* default, since we only support csr */
+      spptr->spmmAlg    = CUSPARSE_SPMM_CSR_ALG1; /* default, only support column-major dense matrix B */
+      spptr->csr2cscAlg = CUSPARSE_CSR2CSC_ALG1;
+     #endif
       stat = cusparseCreate(&spptr->handle);CHKERRCUSPARSE(stat);
       stat = cusparseSetStream(spptr->handle,PetscDefaultCudaStream);CHKERRCUSPARSE(stat);
       B->spptr = spptr;
-      spptr->deviceMat = NULL;
     } else {
       Mat_SeqAIJCUSPARSETriFactors *spptr;
 
@@ -3330,9 +3344,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJCUSPARSE(Mat B)
   PetscFunctionBegin;
   ierr = MatCreate_SeqAIJ(B);CHKERRQ(ierr);
   ierr = MatConvert_SeqAIJ_SeqAIJCUSPARSE(B,MATSEQAIJCUSPARSE,MAT_INPLACE_MATRIX,&B);CHKERRQ(ierr);
-  ierr = PetscObjectOptionsBegin((PetscObject)B);CHKERRQ(ierr);
-  ierr = MatSetFromOptions_SeqAIJCUSPARSE(PetscOptionsObject,B);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
