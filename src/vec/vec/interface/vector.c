@@ -1952,6 +1952,22 @@ PetscErrorCode VecSetBindingPropagates(Vec v,PetscBool flg)
   PetscFunctionReturn(0);
 }
 
+/*@
+   VecGetBindingPropagates - TODO: Finish this manpage!
+@*/
+PetscErrorCode VecGetBindingPropagates(Vec v,PetscBool *flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidBoolPointer(flg,2);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  *flg = v->bindingpropagates;
+#else
+  *flg = PETSC_FALSE;
+#endif
+  PetscFunctionReturn(0);
+}
+
 /*@C
   VecSetPinnedMemoryMin - Set the minimum data size for which pinned memory will be used for host (CPU) allocations.
 
