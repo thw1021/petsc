@@ -665,3 +665,19 @@ PetscErrorCode MatSetBindingPropagates(Mat A,PetscBool flg)
 #endif
   PetscFunctionReturn(0);
 }
+
+/*@
+   MatGetBindingPropagates - TODO: Finish this manpage!
+@*/
+PetscErrorCode MatGetBindingPropagates(Mat A,PetscBool *flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
+  PetscValidBoolPointer(flg,2);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  *flg = A->bindingpropagates;
+#else
+  *flg = PETSC_FALSE;
+#endif
+  PetscFunctionReturn(0);
+}
