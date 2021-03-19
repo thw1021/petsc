@@ -1238,8 +1238,8 @@ PetscErrorCode  DMCreateInterpolationScale(DM dac,DM daf,Mat mat,Vec *scale)
    * we'll need to do it for that case, too.*/
   ierr = VecGetBindingPropagates(fine,&bindingpropagates);CHKERRQ(ierr);
   ierr = MatSetBindingPropagates(mat,bindingpropagates);CHKERRQ(ierr);
-  ierr = VecIsBoundToCPU(fine,&flg);CHKERRQ(ierr);
-  ierr = MatBindToCPU(mat,flg);CHKERRQ(ierr);
+  ierr = VecIsBoundToCPU(fine,&isbound);CHKERRQ(ierr);
+  ierr = MatBindToCPU(mat,isbound);CHKERRQ(ierr);
 #endif
   ierr = MatRestrict(mat,fine,*scale);CHKERRQ(ierr);
   ierr = VecDestroy(&fine);CHKERRQ(ierr);
