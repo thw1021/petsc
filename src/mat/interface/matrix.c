@@ -10727,3 +10727,23 @@ PetscErrorCode MatSetInf(Mat A)
   ierr = (*A->ops->setinf)(A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+/*@
+     MatSetGenerateTranspose - hint it is better for a matrix to explicitly generate its tranpose and use it in MatMultTranpose like computations.
+                               It is up to a specific matrix subclass to decide whether to do it or not.
+
+   Input Parameters:
++   A - the matrix
+-   flg - if true explictily generate the transpose
+
+   Level: intermediate
+@*/
+PetscErrorCode MatSetGenerateTranspose(Mat A,PetscBool flg)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
+  if (A->ops->setgeneratetranspose) {ierr = (*A->ops->setgeneratetranspose)(A,flg);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
