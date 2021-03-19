@@ -2298,7 +2298,7 @@ static PetscErrorCode DMPlexReplace_Static(DM dm, DM dmNew)
   ierr = DMGetCoordinatesLocal(dmNew, &coords);CHKERRQ(ierr);
   ierr = DMSetCoordinateDM(dm, coordDM);CHKERRQ(ierr);
   ierr = DMSetCoordinatesLocal(dm, coords);CHKERRQ(ierr);
-  /* Do not want to create the coordinate field if it does not already exist */
+  /* Do not want to create the coordinate field if it does not already exist, so do not call DMGetCoordinateField() */
   ierr = DMFieldDestroy(&dm->coordinateField);CHKERRQ(ierr);
   dm->coordinateField = dmNew->coordinateField;
   ierr = DMGetPeriodicity(dmNew, &isper, &maxCell, &L, &bd);CHKERRQ(ierr);
