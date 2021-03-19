@@ -41,6 +41,7 @@ typedef struct {
   PetscInt   ne; /* Global number of equality constraints */
   PetscInt   ni; /* Global number of inequality constraints */
   PetscBool  noeqflag;
+   PetscBool noineqflag;
   Vec        x,xl,xu;
   Vec        ce,ci,bl,bu,Xseq;
   Mat        Ae,Ai,H;
@@ -87,12 +88,15 @@ PetscErrorCode main(int argc,char **argv)
   if (!user.noeqflag){
     ierr = TaoSetEqualityConstraintsRoutine(tao,user.ce,FormEqualityConstraints,(void*)&user);CHKERRQ(ierr);
   }
+  if (!user.noineqflag){
   ierr = TaoSetInequalityConstraintsRoutine(tao,user.ci,FormInequalityConstraints,(void*)&user);CHKERRQ(ierr);
-
+  }
   if (!user.noeqflag){
     ierr = TaoSetJacobianEqualityRoutine(tao,user.Ae,user.Ae,FormEqualityJacobian,(void*)&user);CHKERRQ(ierr); /* equality jacobian */
   }
+  if (!user.noineqflag){
   ierr = TaoSetJacobianInequalityRoutine(tao,user.Ai,user.Ai,FormInequalityJacobian,(void*)&user);CHKERRQ(ierr); /* inequality jacobian */
+  }
   ierr = TaoSetTolerances(tao,1.e-6,1.e-6,1.e-6);CHKERRQ(ierr);
   ierr = TaoSetConstraintTolerances(tao,1.e-6,1.e-6);CHKERRQ(ierr);
 
@@ -136,8 +140,10 @@ PetscErrorCode InitializeProblem(AppCtx *user)
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   user->noeqflag = PETSC_FALSE;
+  user->noineqflag = PETSC_FALSE;
   ierr = PetscOptionsGetBool(NULL,NULL,"-no_eq",&user->noeqflag,NULL);CHKERRQ(ierr);
-  if (!user->noeqflag) {
+  ierr = PetscOptionsGetBool(NULL,NULL,"-no_ineq",&user->noineqflag,NULL);CHKERRQ(ierr);
+  if (!user->noeqflag&&!user->noineqflag) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Solution should be f(1,1)=-2\n");CHKERRQ(ierr);
   }
 
@@ -167,12 +173,14 @@ PetscErrorCode InitializeProblem(AppCtx *user)
     ierr = VecSetFromOptions(user->ce);CHKERRQ(ierr);
     ierr = VecSetUp(user->ce);CHKERRQ(ierr);
   }
+  if (!user->noineqflag){
   user->ni = 2;
   niloc = (rank==0)?user->ni:0;
   ierr = VecCreate(PETSC_COMM_WORLD,&user->ci);CHKERRQ(ierr); /* a 2x1 vec for inequality constraints */
   ierr = VecSetSizes(user->ci,niloc,user->ni);CHKERRQ(ierr);
   ierr = VecSetFromOptions(user->ci);CHKERRQ(ierr);
   ierr = VecSetUp(user->ci);CHKERRQ(ierr);
+  }
 
   /* nexn & nixn matricies for equaly and inequalty constriants */
   if (!user->noeqflag){
@@ -181,17 +189,16 @@ PetscErrorCode InitializeProblem(AppCtx *user)
     ierr = MatSetFromOptions(user->Ae);CHKERRQ(ierr);
     ierr = MatSetUp(user->Ae);CHKERRQ(ierr);
   }
-
+  if (!user->noineqflag){
   ierr = MatCreate(PETSC_COMM_WORLD,&user->Ai);CHKERRQ(ierr);
-  ierr = MatCreate(PETSC_COMM_WORLD,&user->H);CHKERRQ(ierr);
-
   ierr = MatSetSizes(user->Ai,niloc,nloc,user->ni,user->n);CHKERRQ(ierr);
-  ierr = MatSetSizes(user->H,nloc,nloc,user->n,user->n);CHKERRQ(ierr);
-
   ierr = MatSetFromOptions(user->Ai);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(user->H);CHKERRQ(ierr);
-
   ierr = MatSetUp(user->Ai);CHKERRQ(ierr);
+  }
+
+  ierr = MatCreate(PETSC_COMM_WORLD,&user->H);CHKERRQ(ierr);
+  ierr = MatSetSizes(user->H,nloc,nloc,user->n,user->n);CHKERRQ(ierr);
+  ierr = MatSetFromOptions(user->H);CHKERRQ(ierr);
   ierr = MatSetUp(user->H);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -204,14 +211,18 @@ PetscErrorCode DestroyProblem(AppCtx *user)
   if (!user->noeqflag){
    ierr = MatDestroy(&user->Ae);CHKERRQ(ierr);
   }
+  if (!user->noineqflag){
   ierr = MatDestroy(&user->Ai);CHKERRQ(ierr);
+  }
   ierr = MatDestroy(&user->H);CHKERRQ(ierr);
 
   ierr = VecDestroy(&user->x);CHKERRQ(ierr);
   if (!user->noeqflag){
     ierr = VecDestroy(&user->ce);CHKERRQ(ierr);
   }
+  if (!user->noineqflag){
   ierr = VecDestroy(&user->ci);CHKERRQ(ierr);
+  }
   ierr = VecDestroy(&user->xl);CHKERRQ(ierr);
   ierr = VecDestroy(&user->xu);CHKERRQ(ierr);
   ierr = VecDestroy(&user->Xseq);CHKERRQ(ierr);
@@ -283,23 +294,31 @@ PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
    ierr = VecScatterBegin(Descat,DE,Deseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
    ierr = VecScatterEnd(Descat,DE,Deseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   }
-
+  if (!user->noineqflag){
   ierr = VecScatterBegin(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterEnd(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  }
 
   if (!rank){
     if (!user->noeqflag){
       ierr = VecGetArrayRead(Deseq,&de);CHKERRQ(ierr);  /* places equality constraint dual into array */
     }
-
+    if (!user->noineqflag){
     ierr = VecGetArrayRead(Diseq,&di);CHKERRQ(ierr);  /* places inequality constraint dual into array */
-    if (!user->noeqflag){
+    }
+    if (!user->noeqflag && !user->noineqflag){
       val = 2.0 * (1 + de[0] + di[0] - di[1]);
       ierr = VecRestoreArrayRead(Deseq,&de);CHKERRQ(ierr);
-    }else{
+      ierr = VecRestoreArrayRead(Diseq,&di);CHKERRQ(ierr);
+    }else if (user->noeqflag && !user->noineqflag){
       val = 2.0 * (1 + di[0] - di[1]);
+      ierr = VecRestoreArrayRead(Diseq,&di);CHKERRQ(ierr);
+    }else if (!user->noeqflag && user->noineqflag){
+      val = 2.0 * (1 + de[0]);
+      ierr = VecRestoreArrayRead(Deseq,&de);CHKERRQ(ierr);
+    }else {
+      val = 2.0;
     }
-    ierr = VecRestoreArrayRead(Diseq,&di);CHKERRQ(ierr);
     ierr = MatSetValues(H,1,&zero,1,&zero,&val,INSERT_VALUES);CHKERRQ(ierr);
     ierr = MatSetValues(H,1,&one,1,&one,&two,INSERT_VALUES);CHKERRQ(ierr);
   }
