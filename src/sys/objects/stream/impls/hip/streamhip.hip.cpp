@@ -121,6 +121,7 @@ static const struct _StreamOps hipops = {
   PetscStreamCreate_HIP,
   PetscStreamDestroy_HIP,
   PetscStreamSetUp_HIP,
+  NULL,
   PetscStreamGetStream_HIP,
   PetscStreamRestoreStream_HIP,
   PetscStreamRecordEvent_HIP,
