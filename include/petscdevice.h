@@ -192,6 +192,7 @@ PETSC_EXTERN PetscErrorCode PetscEventQuery(PetscEvent,PetscBool*);
 $ PETSC_STREAM_GLOBAL_BLOCKING - Alias for NULL stream. Any stream of this type will block the hostfor all other streams to finish work before starting its operations.
 $ PETSC_STREAM_DEFAULT_BLOCKING - Stream will act independent of other streams, but will still be blocked by actions on the NULL stream.
 $ PETSC_STREAM_GLOBAL_NONBLOCKING - Stream is truly asynchronous, and is blocked by nothing, not even the NULL stream.
+$ PETSC_STREAM_MAX_MODE - Always 1 greater than the largest PetscStreamMode
 
   Level: intermediate
 
@@ -200,8 +201,10 @@ E*/
 typedef enum {
   PETSC_STREAM_GLOBAL_BLOCKING = 0,
   PETSC_STREAM_DEFAULT_BLOCKING = 1,
-  PETSC_STREAM_GLOBAL_NONBLOCKING = 2
+  PETSC_STREAM_GLOBAL_NONBLOCKING = 2,
+  PETSC_STREAM_MAX_MODE = 3
 } PetscStreamMode;
+PETSC_EXTERN const char *const PetscStreamModes[];
 
 /*S
   PetscStream - Container for efficient management of a device stream.
@@ -245,11 +248,12 @@ $ PSSCACHE_MAX - Always the maximum cache value
 E*/
 typedef enum {
   PSS_ZERO = 0,
-  PSS_ONE,
-  PSS_INF,
-  PSS_NAN,
-  PSSCACHE_MAX
+  PSS_ONE = 1,
+  PSS_INF = 2,
+  PSS_NAN = 3,
+  PSS_CACHE_MAX = 4
 } PSSCacheType;
+PETSC_EXTERN const char *const PSSCacheTypes[];
 
 /*S
   PetscStreamScalar - A stream-aware container for a PetscScalar.
@@ -271,6 +275,7 @@ PETSC_EXTERN PetscErrorCode PetscStreamScalarDestroy(PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarGetType(PetscStreamScalar,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetUp(PetscStreamScalar);
+PETSC_EXTERN PetscErrorCode PetscStreamSetFromOptions(MPI_Comm,const char[],PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarDuplicate(PetscStreamScalar,PetscStreamScalar*);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarSetValue(PetscStreamScalar,const PetscScalar*,PetscMemType,PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamScalarAwait(PetscStreamScalar,PetscScalar*,PetscStream);

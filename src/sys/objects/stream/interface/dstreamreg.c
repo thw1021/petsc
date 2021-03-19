@@ -570,3 +570,59 @@ PetscErrorCode PetscStreamGraphInitializePackage(void)
   ierr = PetscRegisterFinalize(PetscStreamGraphFinalizePackage);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+/*@C
+  PetscStreamSetFromOptions - Configures a PetscStream from the options database.
+
+  Collective on comm
+
+  Input Parameters:
++ comm - The communicator on which to query the options database
+. prefix - Optional prefix to prepend to all queries using this call
+- strm - The PetscStream
+
+  Options Database Keys:
++ -stream_type <type> - cuda, hip, see PetscStreamType for complete list
+- -stream_mode <mode> - global_blocking, default_blocking, global_nonblocking, see PetscStreamMode for complete list
+
+  Notes:
+  Must be called after creating the PetscStream, but before the PetscStream is used. Run with -help to see all available
+  options for a particular stream type.
+
+  Level: beginner
+
+.seealso: PetscStreamCreate(), PetscStreamSetMode(), PetscStreamSetType()
+@*/
+PetscErrorCode PetscStreamSetFromOptions(MPI_Comm comm, const char prefix[], PetscStream strm)
+{
+  PetscBool       opt;
+  PetscInt        idx;
+  PetscStreamType defaultType;
+  char            typeName[256];
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscStreamRegisterAll();CHKERRQ(ierr);
+  if (strm->type) {defaultType = strm->type;}
+  else {
+#if PetscDefined(HAVE_CUDA)
+    defaultType = PETSCSTREAMCUDA;
+#elif PetscDefined(HAVE_HIP)
+    defaultType = PETSCSTREAMHIP;
+#else
+    SETERRQ(comm,PETSC_ERR_SUP,"No suitable default stream type exists");
+    defaultType = "invalidType";
+#endif
+  }
+  ierr = PetscOptionsBegin(comm,prefix,"PetscStream Options","Sys");CHKERRQ(ierr);
+  ierr = PetscOptionsEList("-stream_mode","PetscStream mode","PetscStreamSetMode",PetscStreamModes,PETSC_STREAM_MAX_MODE,PetscStreamModes[strm->mode],&idx,&opt);CHKERRQ(ierr);
+  if (opt) {ierr = PetscStreamSetMode(strm,(PetscStreamMode)idx);CHKERRQ(ierr);}
+  ierr = PetscOptionsFList("-stream_type","PetscStream type","PetscStreamSetType",PetscStreamList,defaultType,typeName,256,&opt);CHKERRQ(ierr);
+  ierr = PetscStreamSetType(strm,opt ? typeName : defaultType);CHKERRQ(ierr);
+  if (strm->ops->setfromoptions) {
+    ierr = (*strm->ops->setfromoptions)(PetscOptionsObject,strm);CHKERRQ(ierr);
+  }
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  ierr = PetscStreamSetUp(strm);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}

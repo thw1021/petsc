@@ -1,5 +1,6 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
+const char *const PetscStreamModes[] = {"global_blocking","default_blocking","global_nonblocking","MAX_MODE","PetscStreamMode","PETSC_STREAM_",NULL};
 static PetscInt streamID = 0;
 
 /*@C
@@ -79,6 +80,9 @@ PetscErrorCode PetscStreamDestroy(PetscStream *strm)
 PetscErrorCode PetscStreamSetMode(PetscStream strm, PetscStreamMode mode)
 {
   PetscFunctionBegin;
+  if (PetscUnlikelyDebug(mode >= PETSC_STREAM_MAX_MODE) || PetscUnlikelyDebug(mode < 0)) {
+    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscStreamMode %d is invalid, out of range of [0,%d)",(int)mode,(int)PETSC_STREAM_MAX_MODE);
+  }
   strm->mode = mode;
   PetscFunctionReturn(0);
 }

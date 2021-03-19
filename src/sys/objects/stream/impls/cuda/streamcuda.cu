@@ -153,6 +153,7 @@ static const struct _StreamOps cuops = {
   PetscStreamCreate_CUDA,
   PetscStreamDestroy_CUDA,
   PetscStreamSetUp_CUDA,
+  NULL,
   PetscStreamGetStream_CUDA,
   PetscStreamRestoreStream_CUDA,
   PetscStreamRecordEvent_CUDA,

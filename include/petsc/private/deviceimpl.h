@@ -59,6 +59,7 @@ struct _StreamOps {
   PetscErrorCode (*create)(PetscStream);
   PetscErrorCode (*destroy)(PetscStream);
   PetscErrorCode (*setup)(PetscStream);
+  PetscErrorCode (*setfromoptions)(PetscOptionItems*,PetscStream);
   PetscErrorCode (*getstream)(PetscStream,void*);
   PetscErrorCode (*restorestream)(PetscStream,void*);
   PetscErrorCode (*recordevent)(PetscStream,PetscEvent);
@@ -128,7 +129,7 @@ struct _n_PetscStreamScalar {
   PetscScalar      *host;
   PetscScalar      *device;
   PetscInt         poolID;
-  PSSCacheBool     cache[PSSCACHE_MAX];
+  PSSCacheBool     cache[PSS_CACHE_MAX];
 };
 
 struct _GraphOps {
@@ -200,7 +201,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamScalarUpdateCache_Internal(PetscSt
         pscal->cache[PSS_NAN] = PetscIsNanScalar(deref) ? PSS_TRUE : PSS_FALSE;
       }
     } else {
-      for (int i = 0; i < PSSCACHE_MAX; ++i) pscal->cache[i] = PSS_UNKNOWN;
+      for (int i = 0; i < PSS_CACHE_MAX; ++i) pscal->cache[i] = PSS_UNKNOWN;
     }
   } else {
     pscal->cache[PSS_ZERO] = PSS_TRUE;
