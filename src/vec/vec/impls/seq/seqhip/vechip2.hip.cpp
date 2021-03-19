@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 /*
    Implements the sequential hip vectors.
 */
@@ -10,10 +9,7 @@
 #include <petsc/private/vecimpl.h>
 #include <../src/vec/vec/impls/dvecimpl.h>
 #include <petsc/private/hipvecimpl.h>
-/* TODO:  Why do I need this? */
-#include <petschipblas.h>
 
-#include <hip/hip_runtime.h>
 #include <thrust/device_ptr.h>
 #include <thrust/transform.h>
 #include <thrust/functional.h>
