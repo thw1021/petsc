@@ -35,7 +35,7 @@ PETSC_INTERN PetscErrorCode VecDuplicate_SeqCUDA(Vec,Vec*);
 PETSC_INTERN PetscErrorCode VecConjugate_SeqCUDA(Vec xin);
 PETSC_INTERN PetscErrorCode VecNorm_SeqCUDA(Vec,NormType,PetscReal*);
 PETSC_INTERN PetscErrorCode VecCUDACopyToGPU(Vec);
-PETSC_INTERN PetscErrorCode VecCUDAAllocateCheck(Vec);
+PETSC_EXTERN PetscErrorCode VecCUDAAllocateCheck(Vec);
 PETSC_EXTERN PetscErrorCode VecCreate_SeqCUDA(Vec);
 PETSC_INTERN PetscErrorCode VecCreate_SeqCUDA_Private(Vec,const PetscScalar*);
 PETSC_INTERN PetscErrorCode VecCreate_MPICUDA(Vec);

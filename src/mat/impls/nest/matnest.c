@@ -1,7 +1,9 @@
 #include <../src/mat/impls/nest/matnestimpl.h> /*I   "petscmat.h"   I*/
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <petscsf.h>
-
+#if defined(PETSC_HAVE_CUDA)
+#include <petsc/private/cudavecimpl.h>
+#endif
 static PetscErrorCode MatSetUp_NestIS_Private(Mat,PetscInt,const IS[],PetscInt,const IS[]);
 static PetscErrorCode MatCreateVecs_Nest(Mat,Vec*,Vec*);
 static PetscErrorCode MatReset_Nest(Mat);
@@ -43,6 +45,19 @@ static PetscErrorCode MatMult_Nest(Mat A,Vec x,Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_CUDA)
+  PetscBool iscuda;
+  ierr = PetscObjectTypeCompareAny((PetscObject)x,&iscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
+  /* determine where y should be allocated based on location of x */
+  if (iscuda) {
+    if (x->offloadmask == PETSC_OFFLOAD_GPU) {
+      ierr = VecCUDAAllocateCheck(y);CHKERRQ(ierr);
+    }
+    if (x->offloadmask == PETSC_OFFLOAD_CPU) {
+      ierr = VecCUDAAllocateCheckHost(y);CHKERRQ(ierr);
+    }
+  }
+#endif
   for (i=0; i<nr; i++) {ierr = VecGetSubVector(y,bA->isglobal.row[i],&by[i]);CHKERRQ(ierr);}
   for (i=0; i<nc; i++) {ierr = VecGetSubVector(x,bA->isglobal.col[i],&bx[i]);CHKERRQ(ierr);}
   for (i=0; i<nr; i++) {

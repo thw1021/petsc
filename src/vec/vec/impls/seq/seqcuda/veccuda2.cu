@@ -771,6 +771,7 @@ PetscErrorCode VecCopy_SeqCUDA(Vec xin,Vec yin)
         err = cudaMemcpyAsync(yarray,xarray,yin->map->n*sizeof(PetscScalar),cudaMemcpyDeviceToDevice,PetscDefaultCudaStream);CHKERRCUDA(err);
       } else {
         err = cudaMemcpy(yarray,xarray,yin->map->n*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+        ierr = PetscLogGpuToCpu((yin->map->n)*sizeof(PetscScalar));CHKERRQ(ierr);
       }
       err  = WaitForCUDA();CHKERRCUDA(err);
       ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
