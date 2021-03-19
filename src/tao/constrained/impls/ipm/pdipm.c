@@ -583,9 +583,9 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
       ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
       if (pdipm->Nci) {
         zarr = Xarr+pdipm->off_z;
-        ierr = VecGetArrayWrite(pdipm->z,&tmparr);CHKERRQ(ierr);
+        ierr = VecGetArray(pdipm->z,&tmparr);CHKERRQ(ierr);
         for (i=0; i<pdipm->nci; i++) tmparr[i] *= Xarr[pdipm->off_z + i];
-        ierr = VecRestoreArrayWrite(pdipm->z,&tmparr);CHKERRQ(ierr);
+        ierr = VecRestoreArray(pdipm->z,&tmparr);CHKERRQ(ierr);
       }
 
       ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
@@ -1004,11 +1004,10 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
   if (pdipm->Nh) {
     ierr = VecCreateMPIWithArray(comm,1,pdipm->nh,pdipm->Nh,Xarr+pdipm->off_lambdai,&tao->DI);CHKERRQ(ierr);
   }
-
   ierr = VecCreate(comm,&pdipm->lambdai_xb);CHKERRQ(ierr);
   ierr = VecSetSizes(pdipm->lambdai_xb,(pdipm->nci - pdipm->nh),PETSC_DECIDE);CHKERRQ(ierr);
   ierr = VecSetFromOptions(pdipm->lambdai_xb);CHKERRQ(ierr);
-
+  
   ierr = VecRestoreArray(pdipm->X,&Xarr);CHKERRQ(ierr);
 
   /* (5) Create Jacobians Jce_xfixed and Jci */
