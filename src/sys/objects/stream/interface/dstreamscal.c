@@ -1,5 +1,6 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
+const char *const PSSCacheTypes[] = {"ZERO","ONE","INF","NAN","PSSCacheType","PSS_",NULL};
 /*@C
   PetscStreamScalarCreate - Creates an empty PetscStreamScalar object. The type can then be set with PetscStreamScalarSetType().
 
@@ -323,7 +324,9 @@ PetscErrorCode PetscStreamScalarGetInfo(PetscStreamScalar pscal, PSSCacheType ct
 {
   PetscFunctionBegin;
   PetscValidBoolPointer(val,4);
-  if (PetscUnlikelyDebug(ctype >= PSSCACHE_MAX)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid CacheType %D requested, larger than maximum value %D\n",ctype,PSSCACHE_MAX-1);
+  if (PetscUnlikelyDebug(ctype >= PSS_CACHE_MAX) || PetscUnlikelyDebug(ctype < 0)) {
+    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscStreamScalarCacheType %d is invalid, out of range of [0,%d)",(int)ctype,(int)PSS_CACHE_MAX);
+  }
   if (PetscUnlikelyDebug(!pscal->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscStreamScalarSetUp() first");
   if (compute || PetscDefined(USE_DEBUG)) {
 #if PetscDefined(USE_DEBUG)
@@ -381,8 +384,10 @@ PetscErrorCode PetscStreamScalarSetInfo(PetscStreamScalar pscal, PSSCacheType ct
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(ctype >= PSSCACHE_MAX)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid CacheType %D requested, larger than maximum value %D\n",ctype,PSSCACHE_MAX-1);
-  ierr = PetscStreamScalarSetCache_Internal(pscal, ctype, val ? PSS_TRUE : PSS_FALSE);CHKERRQ(ierr);
+  if (PetscUnlikelyDebug(ctype >= PSS_CACHE_MAX) || PetscUnlikelyDebug(ctype < 0)) {
+    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscStreamScalarCacheType %d is invalid, out of range of [0,%d)",(int)ctype,(int)PSS_CACHE_MAX);
+  }
+  ierr = PetscStreamScalarSetCache_Internal(pscal,ctype,val ? PSS_TRUE : PSS_FALSE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
