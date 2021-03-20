@@ -303,3 +303,51 @@ PetscErrorCode  PetscDLSym(PetscDLHandle handle,const char symbol[],void **value
 #endif
   return(0);
 }
+
+
+/*@C
+  PetscDLAddr - find the name of a symbol in a dynamic library
+
+  Not Collective
+
+  Input Parameters:
++ handle - obtained with PetscDLOpen() or NULL
+- func   - pointer to the function, NULL if not found
+
+  Output Parameter:
+. name   - name of symbol
+
+  Level: developer
+
+  Notes:
+  In order to be dynamically loadable, the symbol has to be exported as such.  On many UNIX-like
+  systems this requires platform-specific linker flags.
+@*/
+PetscErrorCode PetscDLAddr(void (*func)(void), const char **name)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(func,2);
+  PetscValidPointer(name,3);
+  *name = NULL;
+  /*
+     --- dladdr ---
+  */
+#if defined(PETSC_HAVE_DLFCN_H) && defined(PETSC_HAVE_DLADDR)
+#if defined(PETSC_HAVE_DLERROR)
+  dlerror(); /* clear any previous error */
+#endif
+  {
+    Dl_info        info;
+    PetscErrorCode ierr;
+
+    ierr = dladdr(func, &info);if (!ierr) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Failed to lookup symbol: %s", dlerror());
+    *name = info.dli_sname;
+  }
+  /*
+     --- unimplemented ---
+  */
+#else
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS, "Cannot use dynamic libraries on this platform");
+#endif
+  PetscFunctionReturn(0);
+}

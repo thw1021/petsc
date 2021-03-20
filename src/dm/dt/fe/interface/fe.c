@@ -1433,7 +1433,7 @@ PetscErrorCode PetscFEIntegrateBd(PetscDS prob, PetscInt field,
   Not collective
 
   Input Parameters:
-+ prob         - The PetscDS specifying the discretizations and continuum functions
++ ds           - The PetscDS specifying the discretizations and continuum functions
 . field        - The field being integrated
 . Ne           - The number of elements in the chunk
 . cgeom        - The cell geometry for each cell in the chunk
@@ -1458,16 +1458,16 @@ $     elemVec[i] += \psi^{fc}_f(q) f0_{fc}(u, \nabla u) + \nabla\psi^{fc}_f(q) \
 
 .seealso: PetscFEIntegrateResidual()
 @*/
-PetscErrorCode PetscFEIntegrateResidual(PetscDS prob, PetscInt field, PetscInt Ne, PetscFEGeom *cgeom,
+PetscErrorCode PetscFEIntegrateResidual(PetscDS ds, PetscHashFormKey key, PetscInt Ne, PetscFEGeom *cgeom,
                                         const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   PetscFE        fe;
   PetscErrorCode ierr;
 
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
-  ierr = PetscDSGetDiscretization(prob, field, (PetscObject *) &fe);CHKERRQ(ierr);
-  if (fe->ops->integrateresidual) {ierr = (*fe->ops->integrateresidual)(prob, field, Ne, cgeom, coefficients, coefficients_t, probAux, coefficientsAux, t, elemVec);CHKERRQ(ierr);}
+  PetscFunctionBeginHot;
+  PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
+  ierr = PetscDSGetDiscretization(ds, key.field, (PetscObject *) &fe);CHKERRQ(ierr);
+  if (fe->ops->integrateresidual) {ierr = (*fe->ops->integrateresidual)(ds, key, Ne, cgeom, coefficients, coefficients_t, probAux, coefficientsAux, t, elemVec);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -1530,7 +1530,7 @@ PetscErrorCode PetscFEIntegrateBdResidual(PetscDS prob, PetscInt field, PetscInt
 
 .seealso: PetscFEIntegrateResidual()
 @*/
-PetscErrorCode PetscFEIntegrateHybridResidual(PetscDS prob, PetscInt field, PetscInt Ne, PetscFEGeom *fgeom,
+PetscErrorCode PetscFEIntegrateHybridResidual(PetscDS prob, PetscHashFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
                                               const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   PetscFE        fe;
@@ -1538,8 +1538,8 @@ PetscErrorCode PetscFEIntegrateHybridResidual(PetscDS prob, PetscInt field, Pets
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
-  ierr = PetscDSGetDiscretization(prob, field, (PetscObject *) &fe);CHKERRQ(ierr);
-  if (fe->ops->integratehybridresidual) {ierr = (*fe->ops->integratehybridresidual)(prob, field, Ne, fgeom, coefficients, coefficients_t, probAux, coefficientsAux, t, elemVec);CHKERRQ(ierr);}
+  ierr = PetscDSGetDiscretization(prob, key.field, (PetscObject *) &fe);CHKERRQ(ierr);
+  if (fe->ops->integratehybridresidual) {ierr = (*fe->ops->integratehybridresidual)(prob, key, Ne, fgeom, coefficients, coefficients_t, probAux, coefficientsAux, t, elemVec);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
