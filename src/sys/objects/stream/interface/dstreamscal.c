@@ -464,6 +464,11 @@ PetscErrorCode PetscStreamScalarAXTY(PetscScalar alpha, PetscStreamScalar pscalx
     ierr = PetscStreamScalarSetValue(pscalx,NULL,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
   } else {
     ierr = (*pscalx->ops->axty)(alpha,pscalx,pscaly,pstream);CHKERRQ(ierr);
+    if (PetscIsNanScalar(alpha)) {
+      ierr = PetscStreamScalarSetInfo(pscalx,PSS_NAN,PETSC_TRUE);CHKERRQ(ierr);
+    } else if (PetscIsInfScalar(alpha)) {
+      ierr = PetscStreamScalarSetInfo(pscalx,PSS_INF,PETSC_TRUE);CHKERRQ(ierr);
+    }
   }
   PetscFunctionReturn(0);
 }

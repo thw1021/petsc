@@ -4,7 +4,7 @@ static const char help[] = "Tests PetscStreamScalar set/get operations\n";
 
 static PetscErrorCode CompareHost(const PetscScalar *ref, const PetscScalar *ret, PetscScalar *valHost, PetscBool *eq)
 {
-  const PetscScalar l = *ref, r = *ret;
+  const PetscScalar l = ref ? *ref : (PetscScalar)0.0, r = *ret;
 
   PetscFunctionBegin;
   *valHost = l;
@@ -104,7 +104,7 @@ static PetscErrorCode DestroyDeviceValues(PetscScalar **dev)
 
 static PetscErrorCode TestSetValWithMemtype(PetscStreamScalar ptest, const PetscScalar *valSet, PSSCacheType trueType, PetscMemType mtype, PetscStream pstream)
 {
-  const PSSCacheType types[] = {PSS_ZERO,PSS_ONE,PSS_INF,PSS_NAN};
+  const PSSCacheType types[] = {PSS_ZERO,PSS_ZERO,PSS_ONE,PSS_INF,PSS_NAN};
   PetscScalar        valRet = 0, valHost = 0;
   PetscBool          equal = PETSC_FALSE;
   PetscErrorCode     ierr;
@@ -117,7 +117,10 @@ static PetscErrorCode TestSetValWithMemtype(PetscStreamScalar ptest, const Petsc
     ierr = CompareHost(valSet,&valRet,&valHost,&equal);CHKERRQ(ierr);
     break;
   case PETSC_MEMTYPE_DEVICE:
-    ierr = CompareDevice(valSet,&valRet,&valHost,&equal);CHKERRQ(ierr);
+    if (valSet) {ierr = CompareDevice(valSet,&valRet,&valHost,&equal);CHKERRQ(ierr);}
+    /* is valSet is NULL, then it is zero, easier to just default to host compare where this is handled rather than
+     introduce messy logic to device compare */
+    else {ierr = CompareHost(valSet,&valRet,&valHost,&equal);CHKERRQ(ierr);}
     break;
   default:
     SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Memtype %s has no valid comparison function",PetscMemTypeHost(mtype)?"host":"device");
@@ -142,12 +145,13 @@ static PetscErrorCode TestSetValWithMemtype(PetscStreamScalar ptest, const Petsc
 int main(int argc, char **argv)
 {
 #if PetscDefined(HAVE_CUDA)
-  PetscStreamType   type = PETSCSTREAMCUDA;
+  PetscStreamType   itype = PETSCSTREAMCUDA;
 #elif PetscDefined(HAVE_HIP)
-  PetscStreamType   type = PETSCSTREAMHIP;
+  PetscStreamType   itype = PETSCSTREAMHIP;
 #else
-  PetscStreamType   type = "invalidType";
+  PetscStreamType   itype = "invalidType";
 #endif
+  PetscStreamType   type;
   /* Obfuscate the fact that we are dividing by zero to some overzealous compilers */
   const PetscReal   zero = PetscRealConstant(0.0), one = PetscRealConstant(1.0);
   const PetscScalar hArr[5] = {zero,one,-one/zero,one/zero,zero/zero};
@@ -155,19 +159,22 @@ int main(int argc, char **argv)
   PetscStream       pstream;
   PetscStreamScalar pscal;
   PetscErrorCode    ierr;
+  MPI_Comm          comm;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
+  comm = PETSC_COMM_WORLD;
 
   ierr = PetscStreamCreate(&pstream);CHKERRQ(ierr);
   ierr = PetscStreamSetMode(pstream,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
-  ierr = PetscStreamSetType(pstream,type);CHKERRQ(ierr);
-  ierr = PetscStreamSetFromOptions(PETSC_COMM_WORLD,"",pstream);CHKERRQ(ierr);
+  ierr = PetscStreamSetType(pstream,itype);CHKERRQ(ierr);
+  ierr = PetscStreamSetFromOptions(comm,"",pstream);CHKERRQ(ierr);
 
   ierr = PetscStreamGetType(pstream,&type);CHKERRQ(ierr);
   ierr = PetscStreamScalarCreate(&pscal);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetType(pscal,type);CHKERRQ(ierr);
   ierr = PetscStreamScalarSetUp(pscal);CHKERRQ(ierr);
 
+  ierr = TestSetValWithMemtype(pscal,NULL,PSS_ZERO,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   ierr = TestSetValWithMemtype(pscal,hArr,PSS_ZERO,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   ierr = TestSetValWithMemtype(pscal,hArr+1,PSS_ONE,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
   ierr = TestSetValWithMemtype(pscal,hArr+2,PSS_INF,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
@@ -175,6 +182,7 @@ int main(int argc, char **argv)
   ierr = TestSetValWithMemtype(pscal,hArr+4,PSS_NAN,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
 
   ierr = CreateDeviceValues(hArr,&dArr,5);CHKERRQ(ierr);
+  ierr = TestSetValWithMemtype(pscal,NULL,PSS_ZERO,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
   ierr = TestSetValWithMemtype(pscal,dArr,PSS_ZERO,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
   ierr = TestSetValWithMemtype(pscal,dArr+1,PSS_ONE,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
   ierr = TestSetValWithMemtype(pscal,dArr+2,PSS_INF,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
@@ -182,7 +190,7 @@ int main(int argc, char **argv)
   ierr = TestSetValWithMemtype(pscal,dArr+4,PSS_NAN,PETSC_MEMTYPE_DEVICE,pstream);CHKERRQ(ierr);
   ierr = DestroyDeviceValues(&dArr);CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"All operations completed successfully\n");CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"All operations completed successfully\n");CHKERRQ(ierr);
   ierr = PetscStreamScalarDestroy(&pscal);CHKERRQ(ierr);
   ierr = PetscStreamDestroy(&pstream);CHKERRQ(ierr);
   ierr = PetscFinalize();
