@@ -11,6 +11,7 @@ PETSC_EXTERN PetscClassId PETSCWEAKFORM_CLASSID;
 
 PETSC_EXTERN PetscErrorCode PetscWeakFormCreate(MPI_Comm, PetscWeakForm *);
 PETSC_EXTERN PetscErrorCode PetscWeakFormDestroy(PetscWeakForm *);
+PETSC_EXTERN PetscErrorCode PetscWeakFormView(PetscWeakForm, PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscWeakFormGetNumFields(PetscWeakForm, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscWeakFormSetNumFields(PetscWeakForm, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscHashFormKeySort(PetscInt, PetscHashFormKey[]);

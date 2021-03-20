@@ -1262,6 +1262,43 @@ PetscErrorCode PetscWeakFormDestroy(PetscWeakForm *wf)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer viewer, const char tableName[], PetscHMapForm map)
+{
+  PetscInt       Nk, k;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscHMapFormGetSize(map, &Nk);CHKERRQ(ierr);
+  if (Nk) {
+    PetscHashFormKey *keys;
+    void           (**funcs)(void);
+    const char       *name;
+    PetscInt          off = 0, n, i;
+
+    ierr = PetscMalloc1(Nk, &keys);CHKERRQ(ierr);
+    ierr = PetscHMapFormGetKeys(map, &off, keys);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "%s\n", tableName);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
+    for (k = 0; k < Nk; ++k) {
+      if (keys[k].label) {ierr = PetscObjectGetName((PetscObject) keys[k].label, &name);CHKERRQ(ierr);}
+      ierr = PetscViewerASCIIPrintf(viewer, "Key (%s, %D, %D) ", keys[k].label ? name : "None", keys[k].value, keys[k].field);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIUseTabs(viewer, PETSC_FALSE);CHKERRQ(ierr);
+      ierr = PetscWeakFormGetFunction_Private(wf, map, keys[k].label, keys[k].value, keys[k].field, &n, &funcs);CHKERRQ(ierr);
+      for (i = 0; i < n; ++i) {
+        if (i > 0) {ierr = PetscViewerASCIIPrintf(viewer, ", ");CHKERRQ(ierr);}
+        ierr = PetscDLAddr(funcs[i], &name);CHKERRQ(ierr);
+        if (name) {ierr = PetscViewerASCIIPrintf(viewer, "%s", name);CHKERRQ(ierr);}
+        else      {ierr = PetscViewerASCIIPrintf(viewer, "%p", funcs[i]);CHKERRQ(ierr);}
+      }
+      ierr = PetscViewerASCIIPrintf(viewer, "\n");CHKERRQ(ierr);
+      ierr = PetscViewerASCIIUseTabs(viewer, PETSC_TRUE);CHKERRQ(ierr);
+    }
+    ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+    ierr = PetscFree(keys);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode PetscWeakFormView_Ascii(PetscWeakForm wf, PetscViewer viewer)
 {
   PetscViewerFormat format;
@@ -1271,7 +1308,32 @@ static PetscErrorCode PetscWeakFormView_Ascii(PetscWeakForm wf, PetscViewer view
   ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer, "Weak Form System with %d fields\n", wf->Nf);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  /* Print number of function pointers? */
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Objective", wf->obj);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Residual f0", wf->f0);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Residual f1", wf->f1);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boudnary Residual f0", wf->bdf0);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boundary Residual f1", wf->bdf1);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Jacobian g0", wf->g0);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Jacobian g1", wf->g1);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Jacobian g2", wf->g2);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Jacobian g3", wf->g3);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Jacobian Preconditioner g0", wf->gp0);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Jacobian Preconditioner g1", wf->gp1);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Jacobian Preconditioner g2", wf->gp2);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Jacobian Preconditioner g3", wf->gp3);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Dynamic Jacobian g0", wf->gt0);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Dynamic Jacobian g1", wf->gt1);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Dynamic Jacobian g2", wf->gt2);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Dynamic Jacobian g3", wf->gt3);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boundary Jacobian g0", wf->bdg0);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boundary Jacobian g1", wf->bdg1);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boundary Jacobian g2", wf->bdg2);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boundary Jacobian g3", wf->bdg3);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boundary Jacobian Preconditioner g0", wf->bdgp0);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boundary Jacobian Preconditioner g1", wf->bdgp1);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boundary Jacobian Preconditioner g2", wf->bdgp2);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Boundary Jacobian Preconditioner g3", wf->bdgp3);CHKERRQ(ierr);
+  ierr = PetscWeakFormViewTable_Ascii(wf, viewer, "Riemann Solver", wf->r);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
