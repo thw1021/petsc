@@ -324,8 +324,8 @@ PETSC_STATIC_INLINE PetscInt DihedralSwap(PetscInt N, PetscInt a, PetscInt b)
   return DihedralCompose(N,DihedralInvert(N,a),b);
 }
 
-PETSC_EXTERN PetscErrorCode DMPlexComputeResidual_Internal(DM, IS , PetscReal, Vec, Vec, PetscReal, Vec, void *);
-PETSC_EXTERN PetscErrorCode DMPlexComputeResidual_Hybrid_Internal(DM, IS , PetscReal, Vec, Vec, PetscReal, Vec, void *);
+PETSC_EXTERN PetscErrorCode DMPlexComputeResidual_Internal(DM, PetscHashFormKey, IS, PetscReal, Vec, Vec, PetscReal, Vec, void *);
+PETSC_EXTERN PetscErrorCode DMPlexComputeResidual_Hybrid_Internal(DM, PetscHashFormKey[], IS, PetscReal, Vec, Vec, PetscReal, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMPlexComputeJacobian_Internal(DM, IS, PetscReal, PetscReal, Vec, Vec, Mat, Mat, void *);
 PETSC_EXTERN PetscErrorCode DMPlexComputeJacobian_Hybrid_Internal(DM, IS, PetscReal, PetscReal, Vec, Vec, Mat, Mat, void *);
 PETSC_EXTERN PetscErrorCode DMPlexReconstructGradients_Internal(DM, PetscFV, PetscInt, PetscInt, Vec, Vec, Vec, Vec);
