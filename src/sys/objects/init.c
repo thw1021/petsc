@@ -10,6 +10,7 @@
 #include <petsc/private/petscimpl.h>
 #include <petscvalgrind.h>
 #include <petscviewer.h>
+#include <petscdevice.h>
 #if defined(PETSC_USE_LOG)
 PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 #endif
@@ -19,15 +20,6 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 #endif
 #if defined(PETSC_HAVE_UNISTD_H)
 #include <unistd.h>
-#endif
-
-#if defined(PETSC_HAVE_CUDA)
-  #include <cuda_runtime.h>
-  #include <petsccublas.h>
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-  #include <hip/hip_runtime.h>
 #endif
 
 #if defined(PETSC_HAVE_DEVICE)

@@ -4,8 +4,8 @@
 #include <petscpkg_version.h>
 #define PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND 1
 #include <../src/mat/impls/dense/seq/dense.h> /*I "petscmat.h" I*/
-#include <petsccublas.h>
 
+#include <petscdevice.h>
 /* cublas definitions are here */
 #include <petsc/private/cudavecimpl.h>
 
