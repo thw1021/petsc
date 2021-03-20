@@ -486,16 +486,6 @@ PetscErrorCode TSEventHandler(TS ts)
     event->timestep_prev = dt;
     event->ptime_end = t;
   }
-  if (event->status == TSEVENT_RESET_NEXTSTEP) {
-    dt = event->timestep_posteventinterval;
-    if (ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
-      PetscReal maxdt = ts->max_time-t;
-      dt = dt > maxdt ? maxdt : (PetscIsCloseAtTol(dt,maxdt,10*PETSC_MACHINE_EPSILON,0) ? maxdt : dt);
-    }
-    ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
-    event->status = TSEVENT_NONE;
-  }
-
   ierr = VecLockReadPush(U);CHKERRQ(ierr);
   ierr = (*event->eventhandler)(ts,t,U,event->fvalue,event->ctx);CHKERRQ(ierr);
   ierr = VecLockReadPop(U);CHKERRQ(ierr);
@@ -505,12 +495,13 @@ PetscErrorCode TSEventHandler(TS ts)
 
   /* Locate the events */
   if (event->status == TSEVENT_LOCATED_INTERVAL || event->status == TSEVENT_PROCESSING) {
+    /* Approach the zero crosing by setting a new step size */
+    ierr = TSEventLocation(ts);CHKERRQ(ierr);
+
     if (event->status == TSEVENT_LOCATED_INTERVAL) { /* Roll back when new events are detected */
       ierr = TSRollBack(ts);CHKERRQ(ierr);
       ierr = TSSetConvergedReason(ts,TS_CONVERGED_ITERATING);CHKERRQ(ierr);
     }
-    /* Approach the zero crosing by setting a new step size */
-    ierr = TSEventLocation(ts);CHKERRQ(ierr);
 
     event->nevents_zero = 0;
     /* Found a zero crossing */
@@ -526,20 +517,25 @@ PetscErrorCode TSEventHandler(TS ts)
         event->side[i] = 0;
       }
       ierr = TSPostEvent(ts,t,U);CHKERRQ(ierr);
-      dt = event->ptime_end - t;
-      if (PetscAbsReal(dt) < PETSC_SMALL) { /* we hit the event, continue with the candidate time step */
-        dt = event->timestep_prev;
-        event->status = TSEVENT_NONE;
+
+      if (event->status == TSEVENT_RESET_NEXTSTEP) { /* user has specified a dt in PostEvent */
+        dt = event->timestep_posteventinterval;
+      } else {
+        dt = event->ptime_end - t;
+        if (PetscAbsReal(dt) < PETSC_SMALL) { /* we hit the event, continue with the candidate time step */
+          dt = event->timestep_prev;
+        }
       }
       if (ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
         PetscReal maxdt = ts->max_time-t;
         dt = dt > maxdt ? maxdt : (PetscIsCloseAtTol(dt,maxdt,10*PETSC_MACHINE_EPSILON,0) ? maxdt : dt);
       }
       ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
+      event->status = TSEVENT_NONE;
       event->iterctr = 0;
     }
     /* Have not found the zero crosing yet */
-    if (event->status == TSEVENT_PROCESSING){ 
+    if (event->status == TSEVENT_PROCESSING){
       if (event->monitor) {
         ierr = PetscViewerASCIIPrintf(event->monitor,"TSEvent: iter %D - Stepping forward as no event detected in interval [%g - %g]\n",event->iterctr,(double)event->ptime_prev,(double)t);CHKERRQ(ierr);
       }
