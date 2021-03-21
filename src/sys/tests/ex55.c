@@ -4,11 +4,13 @@ static const char help[] = "Tests PetscStreamScalar arithmetic operations\n";
 
 static PetscErrorCode PetscCheckCloseScalar(PetscScalar dret, PetscScalar host)
 {
-  PetscFunctionBegin;
   const PetscReal dr = PetscRealPart(dret),di = PetscImaginaryPart(dret);
   const PetscReal hr = PetscRealPart(host),hi = PetscImaginaryPart(host);
-  const PetscBool close = PetscIsCloseAtTol(dr,hr,1e-7,1e-7) && PetscIsCloseAtTol(di,hi,1e-7,1e-7);
-  if (!close) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Returned value: %g+%gi != Host value: %g+%gi",(double)dr,(double)di,(double)hr,(double)hi);
+  const PetscBool closeR = PetscIsCloseAtTol(dr,hr,1e-5,1e-7);
+  const PetscBool closeI = PetscIsCloseAtTol(di,hi,1e-5,1e-7);
+
+  PetscFunctionBegin;
+  if (!(closeR && closeI)) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Returned value: %.10g+%.10gi != Host value: %.10g+%.10gi",(double)dr,(double)di,(double)hr,(double)hi);
   PetscFunctionReturn(0);
 }
 
@@ -136,7 +138,7 @@ int main(int argc, char **argv)
   ierr = PetscStreamCreate(&pstream);CHKERRQ(ierr);
   ierr = PetscStreamSetMode(pstream,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
   ierr = PetscStreamSetType(pstream,itype);CHKERRQ(ierr);
-  ierr = PetscStreamSetFromOptions(PETSC_COMM_WORLD,"",pstream);CHKERRQ(ierr);
+  ierr = PetscStreamSetFromOptions(comm,"",pstream);CHKERRQ(ierr);
 
   ierr = PetscStreamGetType(pstream,&type);CHKERRQ(ierr);
   ierr = PetscStreamScalarCreate(&pscalx);CHKERRQ(ierr);

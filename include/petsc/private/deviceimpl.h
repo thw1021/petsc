@@ -73,12 +73,13 @@ struct _StreamOps {
 
 struct _n_PetscStream {
   struct _StreamOps ops[1];
+  char              *type;
+  void              *data;
   PetscInt          id;
   PetscBool         idle;
-  PetscBool         setup;
-  char              *type;
   PetscStreamMode   mode;
-  void              *data;
+  PetscBool         setup;
+  PetscBool         setfromoptionscalled;
 };
 
 typedef struct _EventOps *EventOps;
