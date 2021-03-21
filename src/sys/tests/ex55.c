@@ -7,7 +7,8 @@ static PetscErrorCode PetscCheckCloseScalar(PetscScalar dret, PetscScalar host)
   PetscFunctionBegin;
   const PetscReal dr = PetscRealPart(dret),di = PetscImaginaryPart(dret);
   const PetscReal hr = PetscRealPart(host),hi = PetscImaginaryPart(host);
-  const PetscBool close = PetscIsCloseAtTol(dr,hr,1e-7,1e-7) && PetscIsCloseAtTol(di,hi,1e-7,1e-7);
+  PetscBool       close = PetscIsCloseAtTol(dr,hr,1e-7,1e-7) && PetscIsCloseAtTol(di,hi,1e-7,1e-7);
+
   if (!close) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Returned value: %g+%gi != Host value: %g+%gi",(double)dr,(double)di,(double)hr,(double)hi);
   PetscFunctionReturn(0);
 }
