@@ -4312,7 +4312,7 @@ mat_lu_factor_band_init_set_i(const PetscInt n, const int bw, int bi_csr[])
 }
 // copy AIJ to AIJ_BAND
 __global__
-void __launch_bounds__(1024,1) 
+void __launch_bounds__(1024,1)
 mat_lu_factor_band_copy_aij_aij(const PetscInt n, const int bw, const PetscInt r[], const PetscInt ic[],
                                 const int ai_d[], const int aj_d[], const PetscScalar aa_d[],
                                 const int bi_csr[], PetscScalar ba_csr[])
@@ -4320,6 +4320,20 @@ mat_lu_factor_band_copy_aij_aij(const PetscInt n, const int bw, const PetscInt r
   const PetscInt  Nf = gridDim.x, Nblk = gridDim.y, nloc = n/Nf;
   const PetscInt  field = blockIdx.x, blkIdx = blockIdx.y;
   const PetscInt  nloc_i =  (nloc/Nblk + !!(nloc%Nblk)), start_i = field*nloc + blkIdx*nloc_i, end_i = (start_i + nloc_i) > (field+1)*nloc ? (field+1)*nloc : (start_i + nloc_i);
+
+  // zero B
+  if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) ba_csr[bi_csr[n]] = 0; // flop count at end
+  for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block by thread y
+    if (rowb < end_i) {
+      PetscScalar    *batmp = ba_csr + bi_csr[rowb];
+      const PetscInt nzb = bi_csr[rowb+1] - bi_csr[rowb];
+      for (int j=threadIdx.x ; j<nzb ; j += blockDim.x) {
+        if (j<nzb) {
+          batmp[j] = 0;
+        }
+      }
+    }
+  }
 
   // copy A into B with CSR format -- these two loops can be fused
   for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block by thread y
@@ -4358,7 +4372,7 @@ void print_mat_aij_band(const PetscInt n, const int bi_csr[], const PetscScalar 
 // Band LU kernel ---  ba_csr bi_csr
 __global__
 void __launch_bounds__(1024,1)
-mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], PetscScalar ba_csr[], PetscScalar *flops_out)
+mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], PetscScalar ba_csr[])
 {
   extern __shared__ PetscInt smemInt[];
   PetscInt        *sm_pkIdx  = &smemInt[0];
@@ -4368,7 +4382,6 @@ mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], Pets
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   auto g = cooperative_groups::this_grid();
 #endif
-  if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) {*flops_out = 0;}
   // A22 panel update for each row A(1,:) and col A(:,1)
   for (int glbDD=start, locDD = 0; glbDD<end; glbDD++, locDD++) {
     PetscInt          tnzUd = bw, maxU = end-1 - glbDD; // we are chopping off the inter ears
@@ -4406,11 +4419,6 @@ mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], Pets
 #else
     __syncthreads();
 #endif
-#if !defined (PETSC_HAVE_CUDA_ATOMIC)
-    if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) *flops_out += (PetscScalar)(2*(nzUd*nzUd+2));
-#else
-    if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) atomicAdd(flops_out,(PetscScalar)(2*(nzUd*nzUd+2)));
-#endif
   } /* endof for (i=0; i<n; i++) { */
 }
 
@@ -4433,8 +4441,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   PetscScalar                  *ba_t = cusparseTriFactors->a_band_d;
   int                          *bi_t = cusparseTriFactors->i_band_d;
   PetscContainer               container;
-  int                          Ni = 10, team_size=9, Nf, nVec=56, nteams = 108;
-  PetscScalar                  flops, *flops_d;
+  int                          Ni = 10, team_size=9, Nf, nVec=56, nconcurrent = 1;
 
   PetscFunctionBegin;
   if (A->rmap->n == 0) {
@@ -4457,7 +4464,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     PetscInt *pNf=NULL;
     ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
     Nf = (*pNf)%1000;
-    nteams = (*pNf)/1000; // number of SMs to use
+    if ((*pNf)/1000>0) nconcurrent = (*pNf)/1000; // number of SMs to use
   } else Nf = 1;
 
   if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
@@ -4490,8 +4497,6 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   aa_d    = thrust::raw_pointer_cast(matrixA->values->data().get());
   r       = thrust::raw_pointer_cast(cusparseTriFactors->rpermIndices->data());
 
-  cerr = cudaMemset(ba_t,0,(b->nz+1)*sizeof(PetscScalar));CHKERRCUDA(cerr); // easier to do it here
-  flops_d = &ba_t[b->nz];
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   {
@@ -4500,30 +4505,29 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     team_size = 8;
     nVec=32;
 #else
-    int bw = (2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2;
+    int bw = (2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2, bm1=bw-1,nl=n/Nf;
     int gpuid;
     cudaGetDevice(&gpuid);
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, gpuid);
-    Ni = prop.multiProcessorCount/Nf;
+    Ni = prop.multiProcessorCount/Nf/nconcurrent;
     team_size = bw/Ni + !!(bw%Ni);
     nVec = PetscMin(bw, 1024/team_size);
 #endif
     {
       dim3 dimBlockTeam(nVec,team_size);
-      dim3 dimBlockLeague(Nf,Ni); 
+      dim3 dimBlockLeague(Nf,Ni);
       mat_lu_factor_band_copy_aij_aij<<<dimBlockLeague,dimBlockTeam>>>(n, bw, r, ic, ai_d, aj_d, aa_d, bi_t, ba_t);
       CHECK_LAUNCH_ERROR(); // does a sync
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-      void *kernelArgs[] = { (void*)&n, (void*)&bw, (void*)&bi_t, (void*)&ba_t, (void*)&flops_d};
+      void *kernelArgs[] = { (void*)&n, (void*)&bw, (void*)&bi_t, (void*)&ba_t};
       cudaLaunchCooperativeKernel((void*)mat_lu_factor_band, dimBlockLeague, dimBlockTeam, kernelArgs, team_size*sizeof(PetscInt), NULL);
 #else
-      mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam,team_size*sizeof(PetscInt)>>>(n, bw, bi_t, ba_t, flops_d);
+      mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam,team_size*sizeof(PetscInt)>>>(n, bw, bi_t, ba_t);
 #endif
       CHECK_LAUNCH_ERROR(); // does a sync
 #if defined(PETSC_USE_LOG)
-      cerr = cudaMemcpy(&flops, flops_d, sizeof(PetscScalar), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
-      ierr = PetscLogGpuFlops((PetscLogDouble)flops);CHKERRQ(ierr);
+      ierr = PetscLogGpuFlops((PetscLogDouble)Nf*(bm1*(bm1 + 1)*(2*bm1 + 1)/3 + 2*(nl-bw)*bw*bw + nl*(nl+1)/2));CHKERRQ(ierr);
 #endif
       // print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
       // CHECK_LAUNCH_ERROR(); // does a sync
@@ -4719,7 +4723,7 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
   //     const PetscInt col = (i<bw) ? 0 : (i-bw), nz = bw+1 + ((i<bw) ? i : (i>n-1-bw) ? n-1-i : bw);
   //     for (int j=col,idx=0;idx<nz;j++,idx++,pLi++) {
   //       printf("%f (%d) ",*pLi, (int)(pLi-ba_csr));
-  //     } 
+  //     }
   //     printf(" = %f\n",x[i]);
   //   }
   //   printf("\n");
@@ -4761,7 +4765,7 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
     // inc past L to start of previous U
     pLi -= bw+1;
     if (glbDD<bw) pLi += bw-glbDD; // overshot in top left corner
-    if (((locDD+1) < bw) && field != Nf-1) pLi -= (bw - (locDD+1)); // skip past right corner 
+    if (((locDD+1) < bw) && field != Nf-1) pLi -= (bw - (locDD+1)); // skip past right corner
   }
 }
 
