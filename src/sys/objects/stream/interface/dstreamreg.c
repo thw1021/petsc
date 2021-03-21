@@ -23,7 +23,7 @@ static PetscBool         PetscStreamGraphPackageInitialized  = PETSC_FALSE;
 - type - The PetscStream type
 
   Notes:
-  See "petsc/include/petscdevice.h" for available stream types
+  See "petsc/include/petscdevice.h" for available stream types.
 
   Level: intermediate
 
@@ -41,7 +41,7 @@ PetscErrorCode PetscStreamSetType(PetscStream strm, PetscStreamType type)
   ierr = PetscStreamTypeCompare(strm->type,type,&match);CHKERRQ(ierr);
   if (match) PetscFunctionReturn(0);
   ierr = PetscFunctionListFind(PetscStreamList,type,&create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStream type: %s", type);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStream type: %s",type);
   if (strm->ops->destroy) {ierr = (*strm->ops->destroy)(strm);CHKERRQ(ierr);}
   ierr = PetscMemzero(strm->ops,sizeof(struct _StreamOps));CHKERRQ(ierr);
   ierr = (*create)(strm);CHKERRQ(ierr);
@@ -101,7 +101,7 @@ PetscErrorCode PetscEventSetType(PetscEvent event, PetscStreamType type)
   ierr = PetscStreamTypeCompare(event->type,type,&match);CHKERRQ(ierr);
   if (match) PetscFunctionReturn(0);
   ierr = PetscFunctionListFind(PetscEventList,type,&create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscEvent type: %s", type);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscEvent type: %s",type);
   if (event->ops->destroy) {ierr = (*event->ops->destroy)(event);CHKERRQ(ierr);}
   ierr = PetscMemzero(event->ops,sizeof(struct _EventOps));CHKERRQ(ierr);
   ierr = (*create)(event);CHKERRQ(ierr);
@@ -161,7 +161,7 @@ PetscErrorCode PetscStreamScalarSetType(PetscStreamScalar pscal, PetscStreamType
   ierr = PetscStreamTypeCompare(pscal->type,type,&match);CHKERRQ(ierr);
   if (match) PetscFunctionReturn(0);
   ierr = PetscFunctionListFind(PetscStreamScalarList,type,&create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamScalar type: %s", type);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamScalar type: %s",type);
   if (pscal->ops->destroy) {ierr = (*pscal->ops->destroy)(pscal);CHKERRQ(ierr);}
   ierr = PetscMemzero(pscal->ops,sizeof(struct _ScalOps));CHKERRQ(ierr);
   ierr = (*create)(pscal);CHKERRQ(ierr);
@@ -221,7 +221,7 @@ PetscErrorCode PetscStreamGraphSetType(PetscStreamGraph sgraph, PetscStreamType 
   ierr = PetscStreamTypeCompare(sgraph->type,type,&match);CHKERRQ(ierr);
   if (match) PetscFunctionReturn(0);
   ierr = PetscFunctionListFind(PetscStreamGraphList,type,&create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamGraph type: %s", type);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamGraph type: %s",type);
   if (sgraph->ops->destroy) {ierr = (*sgraph->ops->destroy)(sgraph);CHKERRQ(ierr);}
   ierr = PetscMemzero(sgraph->ops,sizeof(struct _GraphOps));CHKERRQ(ierr);
   ierr = (*create)(sgraph);CHKERRQ(ierr);
@@ -595,14 +595,12 @@ PetscErrorCode PetscStreamGraphInitializePackage(void)
 @*/
 PetscErrorCode PetscStreamSetFromOptions(MPI_Comm comm, const char prefix[], PetscStream strm)
 {
-  PetscBool       opt;
-  PetscInt        idx;
-  PetscStreamType defaultType;
-  char            typeName[256];
   PetscErrorCode  ierr;
+  PetscStreamType defaultType;
 
   PetscFunctionBegin;
-  ierr = PetscStreamRegisterAll();CHKERRQ(ierr);
+  if (strm->setfromoptionscalled) PetscFunctionReturn(0);
+  strm->setfromoptionscalled = PETSC_TRUE;
   if (strm->type) {defaultType = strm->type;}
   else {
 #if PetscDefined(HAVE_CUDA)
@@ -614,15 +612,21 @@ PetscErrorCode PetscStreamSetFromOptions(MPI_Comm comm, const char prefix[], Pet
     defaultType = "invalidType";
 #endif
   }
-  ierr = PetscOptionsBegin(comm,prefix,"PetscStream Options","Sys");CHKERRQ(ierr);
-  ierr = PetscOptionsEList("-stream_mode","PetscStream mode","PetscStreamSetMode",PetscStreamModes,PETSC_STREAM_MAX_MODE,PetscStreamModes[strm->mode],&idx,&opt);CHKERRQ(ierr);
-  if (opt) {ierr = PetscStreamSetMode(strm,(PetscStreamMode)idx);CHKERRQ(ierr);}
-  ierr = PetscOptionsFList("-stream_type","PetscStream type","PetscStreamSetType",PetscStreamList,defaultType,typeName,256,&opt);CHKERRQ(ierr);
-  ierr = PetscStreamSetType(strm,opt ? typeName : defaultType);CHKERRQ(ierr);
-  if (strm->ops->setfromoptions) {
-    ierr = (*strm->ops->setfromoptions)(PetscOptionsObject,strm);CHKERRQ(ierr);
+  {
+    PetscBool opt;
+    PetscInt  idx;
+    char      typeName[256];
+
+    ierr = PetscOptionsBegin(comm,prefix,"PetscStream Options","Sys");CHKERRQ(ierr);
+    ierr = PetscOptionsEList("-stream_mode","PetscStream mode","PetscStreamSetMode",PetscStreamModes,PETSC_STREAM_MAX_MODE,PetscStreamModes[strm->mode],&idx,&opt);CHKERRQ(ierr);
+    if (opt) {ierr = PetscStreamSetMode(strm,(PetscStreamMode)idx);CHKERRQ(ierr);}
+    ierr = PetscOptionsFList("-stream_type","PetscStream type","PetscStreamSetType",PetscStreamList,defaultType,typeName,256,&opt);CHKERRQ(ierr);
+    ierr = PetscStreamSetType(strm,opt ? typeName : defaultType);CHKERRQ(ierr);
+    if (strm->ops->setfromoptions) {
+      ierr = (*strm->ops->setfromoptions)(PetscOptionsObject,strm);CHKERRQ(ierr);
+    }
+    ierr = PetscOptionsEnd();CHKERRQ(ierr);
   }
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   ierr = PetscStreamSetUp(strm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
