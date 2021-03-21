@@ -18,7 +18,7 @@ class Configure(config.package.CMakePackage):
     self.hastests         = 1
     self.requiresrpath    = 1
     self.precisions       = ['double']
-    self.kokkos_cxxdialect = 'C++14' # requirement for whichever compiler used to compile Kokkos
+    self.kokkos_cxxdialect = 'C++14' # requirement for which compiler is used to compile Kokkos
     return
 
   def __str__(self):
