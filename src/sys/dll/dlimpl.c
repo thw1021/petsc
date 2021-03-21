@@ -332,22 +332,20 @@ PetscErrorCode PetscDLAddr(void (*func)(void), const char **name)
   /*
      --- dladdr ---
   */
-#if defined(PETSC_HAVE_DLFCN_H) && defined(PETSC_HAVE_DLADDR)
-#if defined(PETSC_HAVE_DLERROR)
+#if defined(PETSC_HAVE_SYMBOL_RESOLUTION)
   dlerror(); /* clear any previous error */
-#endif
   {
     Dl_info        info;
     PetscErrorCode ierr;
 
-    ierr = dladdr(func, &info);if (!ierr) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Failed to lookup symbol: %s", dlerror());
+    ierr = dladdr((const void *) func, &info);if (!ierr) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Failed to lookup symbol: %s", dlerror());
     *name = info.dli_sname;
   }
   /*
      --- unimplemented ---
   */
 #else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS, "Cannot use dynamic libraries on this platform");
+  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS, "Cannot use dladdr() on this platform");
 #endif
   PetscFunctionReturn(0);
 }
