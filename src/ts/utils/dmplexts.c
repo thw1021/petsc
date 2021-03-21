@@ -145,20 +145,37 @@ PetscErrorCode DMPlexTSComputeBoundary(DM dm, PetscReal time, Vec locX, Vec locX
 PetscErrorCode DMPlexTSComputeIFunctionFEM(DM dm, PetscReal time, Vec locX, Vec locX_t, Vec locF, void *user)
 {
   DM             plex;
-  IS             cellIS;
-  PetscInt       depth;
-  PetscHashFormKey key = {NULL, 0, 0};
+  IS             allcellIS;
+  PetscInt       Nds, s;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = DMTSConvertPlex(dm,&plex,PETSC_TRUE);CHKERRQ(ierr);
-  ierr = DMPlexGetDepth(plex, &depth);CHKERRQ(ierr);
-  ierr = DMGetStratumIS(plex, "dim", depth, &cellIS);CHKERRQ(ierr);
-  if (!cellIS) {
-    ierr = DMGetStratumIS(plex, "depth", depth, &cellIS);CHKERRQ(ierr);
+  ierr = DMTSConvertPlex(dm, &plex, PETSC_TRUE);CHKERRQ(ierr);
+  ierr = DMPlexGetAllCells_Internal(plex, &allcellIS);CHKERRQ(ierr);
+  ierr = DMGetNumDS(dm, &Nds);CHKERRQ(ierr);
+  for (s = 0; s < Nds; ++s) {
+    PetscDS          ds;
+    IS               cellIS;
+    PetscHashFormKey key;
+
+    ierr = DMGetRegionNumDS(dm, s, &key.label, NULL, &ds);CHKERRQ(ierr);
+    key.value = 0;
+    key.field = 0;
+    if (!key.label) {
+      ierr = PetscObjectReference((PetscObject) allcellIS);CHKERRQ(ierr);
+      cellIS = allcellIS;
+    } else {
+      IS pointIS;
+
+      key.value = 1;
+      ierr = DMLabelGetStratumIS(key.label, key.value, &pointIS);CHKERRQ(ierr);
+      ierr = ISIntersect_Caching_Internal(allcellIS, pointIS, &cellIS);CHKERRQ(ierr);
+      ierr = ISDestroy(&pointIS);CHKERRQ(ierr);
+    }
+    ierr = DMPlexComputeResidual_Internal(plex, key, cellIS, time, locX, locX_t, time, locF, user);CHKERRQ(ierr);
+    ierr = ISDestroy(&cellIS);CHKERRQ(ierr);
   }
-  ierr = DMPlexComputeResidual_Internal(plex, key, cellIS, time, locX, locX_t, time, locF, user);CHKERRQ(ierr);
-  ierr = ISDestroy(&cellIS);CHKERRQ(ierr);
+  ierr = ISDestroy(&allcellIS);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -184,24 +201,44 @@ PetscErrorCode DMPlexTSComputeIFunctionFEM(DM dm, PetscReal time, Vec locX, Vec 
 PetscErrorCode DMPlexTSComputeIJacobianFEM(DM dm, PetscReal time, Vec locX, Vec locX_t, PetscReal X_tShift, Mat Jac, Mat JacP, void *user)
 {
   DM             plex;
-  PetscDS        prob;
+  IS             allcellIS;
   PetscBool      hasJac, hasPrec;
-  IS             cellIS;
-  PetscInt       depth;
+  PetscInt       Nds, s;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = DMTSConvertPlex(dm,&plex,PETSC_TRUE);CHKERRQ(ierr);
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-  ierr = PetscDSHasJacobian(prob, &hasJac);CHKERRQ(ierr);
-  ierr = PetscDSHasJacobianPreconditioner(prob, &hasPrec);CHKERRQ(ierr);
-  if (hasJac && hasPrec) {ierr = MatZeroEntries(Jac);CHKERRQ(ierr);}
-  ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
-  ierr = DMPlexGetDepth(plex,&depth);CHKERRQ(ierr);
-  ierr = DMGetStratumIS(plex, "dim", depth, &cellIS);CHKERRQ(ierr);
-  if (!cellIS) {ierr = DMGetStratumIS(plex, "depth", depth, &cellIS);CHKERRQ(ierr);}
-  ierr = DMPlexComputeJacobian_Internal(plex, cellIS, time, X_tShift, locX, locX_t, Jac, JacP, user);CHKERRQ(ierr);
-  ierr = ISDestroy(&cellIS);CHKERRQ(ierr);
+  ierr = DMTSConvertPlex(dm, &plex, PETSC_TRUE);CHKERRQ(ierr);
+  ierr = DMPlexGetAllCells_Internal(plex, &allcellIS);CHKERRQ(ierr);
+  ierr = DMGetNumDS(dm, &Nds);CHKERRQ(ierr);
+  for (s = 0; s < Nds; ++s) {
+    PetscDS          ds;
+    IS               cellIS;
+    PetscHashFormKey key;
+
+    ierr = DMGetRegionNumDS(dm, s, &key.label, NULL, &ds);CHKERRQ(ierr);
+    key.value = 0;
+    key.field = 0;
+    if (!key.label) {
+      ierr = PetscObjectReference((PetscObject) allcellIS);CHKERRQ(ierr);
+      cellIS = allcellIS;
+    } else {
+      IS pointIS;
+
+      key.value = 1;
+      ierr = DMLabelGetStratumIS(key.label, key.value, &pointIS);CHKERRQ(ierr);
+      ierr = ISIntersect_Caching_Internal(allcellIS, pointIS, &cellIS);CHKERRQ(ierr);
+      ierr = ISDestroy(&pointIS);CHKERRQ(ierr);
+    }
+    if (!s) {
+      ierr = PetscDSHasJacobian(ds, &hasJac);CHKERRQ(ierr);
+      ierr = PetscDSHasJacobianPreconditioner(ds, &hasPrec);CHKERRQ(ierr);
+      if (hasJac && hasPrec) {ierr = MatZeroEntries(Jac);CHKERRQ(ierr);}
+      ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
+    }
+    ierr = DMPlexComputeJacobian_Internal(plex, key, cellIS, time, X_tShift, locX, locX_t, Jac, JacP, user);CHKERRQ(ierr);
+    ierr = ISDestroy(&cellIS);CHKERRQ(ierr);
+  }
+  ierr = ISDestroy(&allcellIS);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

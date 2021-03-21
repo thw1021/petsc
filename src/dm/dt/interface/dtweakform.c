@@ -115,6 +115,7 @@ PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm 
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
+  if (!func) PetscFunctionReturn(0);
   key.label = label; key.value = value; key.field = f;
   ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
   if (chunk.size < 0) {
@@ -176,6 +177,7 @@ PetscErrorCode PetscWeakFormSetIndexFunction_Private(PetscWeakForm wf, PetscHMap
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
+  if (!func) PetscFunctionReturn(0);
   key.label = label; key.value = value; key.field = f;
   ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
   if (chunk.size < 0) {
