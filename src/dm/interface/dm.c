@@ -1182,9 +1182,11 @@ PetscErrorCode  DMCreateInterpolationScale(DM dac,DM daf,Mat mat,Vec *scale)
    * Note that we only do this for the CUDA case, right now, but if we add support for MatMultTranspose() via ViennaCL,
    * we'll need to do it for that case, too.*/
   ierr = VecGetBindingPropagates(fine,&bindingpropagates);CHKERRQ(ierr);
-  ierr = MatSetBindingPropagates(mat,bindingpropagates);CHKERRQ(ierr);
-  ierr = VecIsBoundToCPU(fine,&isbound);CHKERRQ(ierr);
-  ierr = MatBindToCPU(mat,isbound);CHKERRQ(ierr);
+  if (bindingpropagates) {
+    ierr = MatSetBindingPropagates(mat,PETSC_TRUE);CHKERRQ(ierr);
+    ierr = VecIsBoundToCPU(fine,&isbound);CHKERRQ(ierr);
+    ierr = MatBindToCPU(mat,isbound);CHKERRQ(ierr);
+  }
 #endif
   ierr = MatRestrict(mat,fine,*scale);CHKERRQ(ierr);
   ierr = VecDestroy(&fine);CHKERRQ(ierr);
