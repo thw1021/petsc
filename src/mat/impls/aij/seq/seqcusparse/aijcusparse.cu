@@ -4532,7 +4532,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
       // print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
       // CHECK_LAUNCH_ERROR(); // does a sync
     }
-    printf("Ni=%d nVec=%d team_size=%d bw=%d nz=%d my-nz=%d my-bw=%d\n",Ni,nVec,team_size,bw,b->nz,n+(2*n-1)*bw-bw*bw,(2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2);
+    printf("Ni=%d nVec=%d team_size=%d bw=%d multiProcessorCount=%d\n",Ni,nVec,team_size,bw,prop.multiProcessorCount);
   }
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
 
