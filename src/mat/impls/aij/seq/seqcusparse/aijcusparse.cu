@@ -4730,40 +4730,38 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
   for (int glbDD=start, locDD = 0; glbDD<end; glbDD++, locDD++) {
     const PetscInt col = locDD<bw ? start : (glbDD-bw);
     PetscScalar    t = x[glbDD];
-    printf("\tstart with L(%03d.%03d) = %13.6e (%d)\n",glbDD,col,pLi[0],(int)(pLi-ba_csr));
+    //printf("\tstart with L(%03d.%03d) = %13.6e (%d)\n",glbDD,col,pLi[0],(int)(pLi-ba_csr));
     for (int j=col,idx=0;j<glbDD;j++,idx++) {
       t -= pLi[idx]*x[j];
-      printf("\t\tUpdate with L(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[idx],(int)(&pLi[idx]-ba_csr));
+      //printf("\t\tUpdate with L(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[idx],(int)(&pLi[idx]-ba_csr));
     }
     printf("\t\t\t finised L %d, L(%03d.%03d) = %13.6e (%d)\n",glbDD, glbDD, glbDD, pLi[glbDD-col],(int)(&pLi[glbDD-col]-ba_csr));
     x[glbDD] = t; // /1.0
     // inc
     pLi += glbDD-col; // get to diagonal
-printf("\t\t\t\tmove to diagonal L(%03d.%03d) (%d)\n",glbDD,glbDD,(int)(pLi-ba_csr));    
     if (glbDD > n-1-bw) pLi += n-1-glbDD; // skip over U, only last block has funny offset
     else pLi += bw;
-printf("\t\t\t\tmove to end of %03d (%d)\n",glbDD,(int)(pLi-ba_csr)); 
     pLi += 1; // skip to next row
     if (field>0 && (locDD+1)<bw) pLi += bw-(locDD+1); // skip padding at beginning (ear)
   }
   /* Then, solve U */
   pLi = ba_csr + Nf*blocknz - 2*chopnz - 1; // end of real data on block (diagonal)
   if (field != Nf-1) pLi -= blocknz_0 + (Nf-2-field)*blocknz + bw; // diagonal of last local row
-  printf ("%d) U: start at diagonal A(%d,%d) (%d)\n",field, end-1, end-1, (int)(pLi-ba_csr));
+  //printf ("%d) U: start at diagonal A(%d,%d) (%d)\n",field, end-1, end-1, (int)(pLi-ba_csr));
   for (int glbDD=end-1, locDD = 0; glbDD >= start; glbDD--, locDD++) {
     const PetscInt col = (locDD<bw) ? end-1 : glbDD+bw; // end of row in U
     PetscScalar    t = x[glbDD];
-    printf("\t start U(%03d.%03d) = %13.6e (%d)\n", glbDD, col, pLi[-1], (int)(pLi-ba_csr));
+    //printf("\t start U(%03d.%03d) = %13.6e (%d)\n", glbDD, col, pLi[-1], (int)(pLi-ba_csr));
     for (int j=col,idx=0;j>glbDD;j--,idx++) {
       t -= pLi[-idx]*x[j];
-      printf("\t\tUpdate with U(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[-idx],(int)(&pLi[-idx]-ba_csr));
+      //printf("\t\tUpdate with U(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[-idx],(int)(&pLi[-idx]-ba_csr));
     }
-    pLi -= col-glbDD + 1; // diagonal
-    printf("\t\t\t\tmove to diagonal U(%03d.%03d) (%d)\n",glbDD,glbDD,(int)(pLi-ba_csr));    
+    pLi -= col-glbDD; // diagonal
     x[glbDD] = t/pLi[0];
     // inc past L to start of previous U
     pLi -= bw+1;
-    if (glbDD<bw) pLi += bw-glbDD; // overshot
+    if (glbDD<bw) pLi += bw-glbDD; // overshot in top left corner
+    if (((locDD+1) < bw) && field != Nf-1) pLi -= (bw - (locDD+1)); // skip past right corner 
   }
 }
 
