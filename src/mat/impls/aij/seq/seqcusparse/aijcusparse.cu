@@ -4358,7 +4358,7 @@ void print_mat_aij_band(const PetscInt n, const int bi_csr[], const PetscScalar 
 // Band LU kernel ---  ba_csr bi_csr
 __global__
 void __launch_bounds__(1024,1)
-mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], PetscScalar ba_csr[], PetscLogDouble *flops_out)
+mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], PetscScalar ba_csr[], PetscScalar *flops_out)
 {
   extern __shared__ PetscInt smemInt[];
   PetscInt        *sm_pkIdx  = &smemInt[0];
@@ -4407,9 +4407,9 @@ mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], Pets
     __syncthreads();
 #endif
 #if !defined (PETSC_HAVE_CUDA_ATOMIC)
-    if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) *flops_out += (PetscLogDouble)(2*(nzUd*nzUd+2));
+    if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) *flops_out += (PetscScalar)(2*(nzUd*nzUd+2));
 #else
-    if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) atomicAdd(flops_out,(PetscLogDouble)(2*(nzUd*nzUd+2)));
+    if ((threadIdx.x + threadIdx.y + blockIdx.y) == 0) atomicAdd(flops_out,(PetscScalar)(2*(nzUd*nzUd+2)));
 #endif
   } /* endof for (i=0; i<n; i++) { */
 }
@@ -4434,7 +4434,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   int                          *bi_t = cusparseTriFactors->i_band_d;
   PetscContainer               container;
   int                          Ni = 10, team_size=9, Nf, nVec=56, nteams = 108;
-  PetscLogDouble               flops, *flops_d;
+  PetscScalar                  flops, *flops_d;
 
   PetscFunctionBegin;
   if (A->rmap->n == 0) {
@@ -4491,7 +4491,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   r       = thrust::raw_pointer_cast(cusparseTriFactors->rpermIndices->data());
 
   cerr = cudaMemset(ba_t,0,(b->nz+1)*sizeof(PetscScalar));CHKERRCUDA(cerr); // easier to do it here
-  flops_d = (PetscLogDouble*)&ba_t[b->nz];
+  flops_d = &ba_t[b->nz];
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   {
@@ -4522,11 +4522,11 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
 #endif
       CHECK_LAUNCH_ERROR(); // does a sync
 #if defined(PETSC_USE_LOG)
-      cerr = cudaMemcpy(&flops, flops_d, sizeof(PetscLogDouble), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
-      ierr = PetscLogGpuFlops(flops);CHKERRQ(ierr);
+      cerr = cudaMemcpy(&flops, flops_d, sizeof(PetscScalar), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
+      ierr = PetscLogGpuFlops((PetscLogDouble)flops);CHKERRQ(ierr);
 #endif
-      print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
-      CHECK_LAUNCH_ERROR(); // does a sync
+      // print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
+      // CHECK_LAUNCH_ERROR(); // does a sync
     }
     printf("Ni=%d nVec=%d team_size=%d bw=%d nz=%d my-nz=%d my-bw=%d\n",Ni,nVec,team_size,bw,b->nz,n+(2*n-1)*bw-bw*bw,(2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2);
   }
@@ -4725,7 +4725,7 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
   //   printf("\n");
   // }
 
-  /* Next, solve L */  printf("\nA:blocknz_0=%d = %d - %d\n",blocknz_0,blocknz,chopnz);
+  /* Next, solve L */
   pLi = ba_csr + (field==0 ? 0 : blocknz_0 + (field-1)*blocknz + bw); // diagonal (0,0) in field
   for (int glbDD=start, locDD = 0; glbDD<end; glbDD++, locDD++) {
     const PetscInt col = locDD<bw ? start : (glbDD-bw);
@@ -4735,7 +4735,7 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
       t -= pLi[idx]*x[j];
       //printf("\t\tUpdate with L(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[idx],(int)(&pLi[idx]-ba_csr));
     }
-    printf("\t\t\t finised L %d, L(%03d.%03d) = %13.6e (%d)\n",glbDD, glbDD, glbDD, pLi[glbDD-col],(int)(&pLi[glbDD-col]-ba_csr));
+    //printf("\t\t\t finised L %d, L(%03d.%03d) = %13.6e (%d)\n",glbDD, glbDD, glbDD, pLi[glbDD-col],(int)(&pLi[glbDD-col]-ba_csr));
     x[glbDD] = t; // /1.0
     // inc
     pLi += glbDD-col; // get to diagonal
@@ -4790,7 +4790,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSEBAND(Mat A,Vec bb,Vec xx)
     Nf = (*pNf)%1000;
   } else Nf = 1;
   if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
-  printf("**********************  Nf=%d c=%p\n",Nf,container);
+
   /* Get the GPU pointers */
   ierr = VecCUDAGetArrayWrite(xx,&xarray);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayRead(bb,&barray);CHKERRQ(ierr);
