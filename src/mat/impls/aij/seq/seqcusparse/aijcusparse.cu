@@ -3555,6 +3555,7 @@ static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSETriFac
     (*trifactors)->cpermIndices = NULL;
     (*trifactors)->workVector = NULL;
     if ((*trifactors)->a_band_d)   {cudaError_t cerr = cudaFree((*trifactors)->a_band_d);CHKERRCUDA(cerr);}
+    if ((*trifactors)->i_band_d)   {cudaError_t cerr = cudaFree((*trifactors)->i_band_d);CHKERRCUDA(cerr);}
   }
   PetscFunctionReturn(0);
 }
@@ -4429,8 +4430,8 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   const PetscInt               n=A->rmap->n, *ic, *r;
   const int                    *ai_d, *aj_d;
   const PetscScalar            *aa_d;
-  PetscScalar                  *ba_t;
-  int                          *bi_t;
+  PetscScalar                  *ba_t = cusparseTriFactors->a_band_d;
+  int                          *bi_t = cusparseTriFactors->i_band_d;
   PetscContainer               container;
   int                          Ni = 10, team_size=9, Nf, nVec=56, nteams = 108;
   PetscLogDouble               flops, *flops_d;
@@ -4458,6 +4459,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     Nf = (*pNf)%1000;
     nteams = (*pNf)/1000; // number of SMs to use
   } else Nf = 1;
+
   if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
   // setup data
   ierr = ISIdentity(isrow,&row_identity);CHKERRQ(ierr);
@@ -4488,53 +4490,47 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   aa_d    = thrust::raw_pointer_cast(matrixA->values->data().get());
   r       = thrust::raw_pointer_cast(cusparseTriFactors->rpermIndices->data());
 
-  cerr = cudaMalloc(&ba_t,b->nz*sizeof(PetscScalar));CHKERRCUDA(cerr);
-  cerr = cudaMalloc(&bi_t,(n+1)*sizeof(int));CHKERRCUDA(cerr);
-  cerr = cudaMemset(ba_t,0,b->nz*sizeof(PetscScalar));CHKERRCUDA(cerr); // easier to do it here
+  cerr = cudaMemset(ba_t,0,(b->nz+1)*sizeof(PetscScalar));CHKERRCUDA(cerr); // easier to do it here
+  flops_d = (PetscLogDouble*)&ba_t[b->nz];
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
-  cerr = cudaMalloc(&flops_d,sizeof(PetscLogDouble));CHKERRCUDA(cerr);
-#if defined(PETSC_USE_LOG)
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-#endif
+  {
 #if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
-  Ni=1;
-  team_size = 8;
-  nVec=32;
+    Ni=1;
+    team_size = 8;
+    nVec=32;
 #else
-  int bw = (2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2;
-  int gpuid;
-  cudaGetDevice(&gpuid);
-  cudaDeviceProp prop;
-  cudaGetDeviceProperties(&prop, gpuid);
-  Ni = prop.multiProcessorCount/Nf;
-  team_size = bw/Ni + !!(bw%Ni);
-  nVec = PetscMin(bw, 1024/team_size);
+    int bw = (2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2;
+    int gpuid;
+    cudaGetDevice(&gpuid);
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, gpuid);
+    Ni = prop.multiProcessorCount/Nf;
+    team_size = bw/Ni + !!(bw%Ni);
+    nVec = PetscMin(bw, 1024/team_size);
 #endif
-  dim3 dimBlockTeam(nVec,team_size);
-  dim3 dimBlockLeague(Nf,Ni);
-
-  mat_lu_factor_band_init_set_i<<<dimBlockLeague,dimBlockTeam>>>(n, bw, bi_t);
-  CHECK_LAUNCH_ERROR(); // does a sync
-  mat_lu_factor_band_copy_aij_aij<<<dimBlockLeague,dimBlockTeam>>>(n, bw, r, ic, ai_d, aj_d, aa_d, bi_t, ba_t);
-  CHECK_LAUNCH_ERROR(); // does a sync
+    {
+      dim3 dimBlockTeam(nVec,team_size);
+      dim3 dimBlockLeague(Nf,Ni); 
+      mat_lu_factor_band_copy_aij_aij<<<dimBlockLeague,dimBlockTeam>>>(n, bw, r, ic, ai_d, aj_d, aa_d, bi_t, ba_t);
+      CHECK_LAUNCH_ERROR(); // does a sync
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-  void *kernelArgs[] = { (void*)&n, (void*)&bw, (void*)&bi_t, (void*)&ba_t, (void*)&flops_d};
-  cudaLaunchCooperativeKernel((void*)mat_lu_factor_band, dimBlockLeague, dimBlockTeam, kernelArgs, team_size*sizeof(PetscInt), NULL);
+      void *kernelArgs[] = { (void*)&n, (void*)&bw, (void*)&bi_t, (void*)&ba_t, (void*)&flops_d};
+      cudaLaunchCooperativeKernel((void*)mat_lu_factor_band, dimBlockLeague, dimBlockTeam, kernelArgs, team_size*sizeof(PetscInt), NULL);
 #else
-  mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam,team_size*sizeof(PetscInt)>>>(n, bw, bi_t, ba_t, flops_d);
+      mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam,team_size*sizeof(PetscInt)>>>(n, bw, bi_t, ba_t, flops_d);
 #endif
-  CHECK_LAUNCH_ERROR(); // does a sync
+      CHECK_LAUNCH_ERROR(); // does a sync
 #if defined(PETSC_USE_LOG)
-  cerr = cudaMemcpy(&flops, flops_d, sizeof(PetscLogDouble), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
-  ierr = PetscLogGpuFlops(flops);CHKERRQ(ierr);
+      cerr = cudaMemcpy(&flops, flops_d, sizeof(PetscLogDouble), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
+      ierr = PetscLogGpuFlops(flops);CHKERRQ(ierr);
 #endif
+      print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
+      CHECK_LAUNCH_ERROR(); // does a sync
+    }
+    printf("Ni=%d nVec=%d team_size=%d bw=%d nz=%d my-nz=%d my-bw=%d\n",Ni,nVec,team_size,bw,b->nz,n+(2*n-1)*bw-bw*bw,(2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2);
+  }
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-  printf("Ni=%d nVec=%d team_size=%d bw=%d nz=%d my-nz=%d my-bw=%d\n",Ni,nVec,team_size,bw,b->nz,n+(2*n-1)*bw-bw*bw,(2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2);
-  cerr = cudaFree(flops_d);CHKERRCUDA(cerr);
-  cerr = cudaFree(bi_t);CHKERRCUDA(cerr);
-
-  // print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
-  // CHECK_LAUNCH_ERROR(); // does a sync
 
   /* determine which version of MatSolve needs to be used. from MatLUFactorNumeric_AIJ_SeqAIJCUSPARSE */
   if (row_identity && col_identity) {
@@ -4549,10 +4545,15 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     B->ops->matsolvetranspose = NULL;
   }
 
-  if (!cusparseTriFactors->workVector) { cusparseTriFactors->workVector = new THRUSTARRAY(n); }
-  cusparseTriFactors->nnz=b->nz; // only meta data needed: n & nz
-  cusparseTriFactors->a_band_d = ba_t;
+  PetscFunctionReturn(0);
+}
 
+static PetscErrorCode MatrixNfDestroy(void *ptr)
+{
+  PetscInt *nf = (PetscInt *)ptr;
+  PetscErrorCode  ierr;
+  PetscFunctionBegin;
+  ierr = PetscFree(nf);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -4562,21 +4563,37 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
   IS                 isicol;
   PetscErrorCode     ierr;
   cudaError_t        cerr;
-  cusparseStatus_t   stat;
   const PetscInt     *ic,*ai=a->i,*aj=a->j;
-  PetscInt           i,n=A->rmap->n;
-  PetscInt           nzBcsr,nzU,nzLower,bwL,bwU;
+  PetscScalar        *ba_t;
+  int                *bi_t;
+  PetscInt           i,n=A->rmap->n,Nf;
+  PetscInt           nzBcsr,bwL,bwU;
   PetscBool          missing;
   Mat_SeqAIJCUSPARSETriFactors *cusparseTriFactors = (Mat_SeqAIJCUSPARSETriFactors*)B->spptr;
+  PetscContainer               container;
 
   PetscFunctionBegin;
   if (A->rmap->N != A->cmap->N) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"matrix must be square");
   ierr = MatMissingDiagonal(A,&missing,&i);CHKERRQ(ierr);
   if (missing) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %D",i);
   if (!cusparseTriFactors) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"!cusparseTriFactors");
+   // factor: get Nf if available
+  ierr = PetscObjectQuery((PetscObject) A, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
+  if (container) {
+    PetscInt *pNf=NULL;
+    ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
+    Nf = (*pNf)%1000;
+    ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
+    ierr = PetscMalloc(sizeof(PetscInt), &pNf);CHKERRQ(ierr);
+    *pNf = Nf;
+    ierr = PetscContainerSetPointer(container, (void *)pNf);CHKERRQ(ierr);
+    ierr = PetscContainerSetUserDestroy(container, MatrixNfDestroy);CHKERRQ(ierr);
+    ierr = PetscObjectCompose((PetscObject)B, "Nf", (PetscObject) container);CHKERRQ(ierr);
+    ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
+  } else Nf = 1;
+  if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
 
   ierr = ISInvertPermutation(iscol,PETSC_DECIDE,&isicol);CHKERRQ(ierr);
-  //ierr = ISGetIndices(isrow,&r);CHKERRQ(ierr);
   ierr = ISGetIndices(isicol,&ic);CHKERRQ(ierr);
 
   ierr = MatSeqAIJSetPreallocation_SeqAIJ(B,MAT_SKIP_ALLOCATION,NULL);CHKERRQ(ierr);
@@ -4599,108 +4616,24 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
   ierr = ISRestoreIndices(isicol,&ic);CHKERRQ(ierr);
   /* only support structurally symmetric, but it might work */
   if (bwL!=bwU) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Only symmetric structure supported (now) W_L=%D W_U=%D",bwL,bwU);
-  if (0) {
-    nzBcsr = n + (2*n-1)*bwU - bwU*bwU;
-    ierr = MatSeqAIJCUSPARSETriFactors_Reset(&cusparseTriFactors);CHKERRQ(ierr);
-  } else {
-  PetscInt           *AiLU,*AjLU;
-  nzU = nzLower = bwL*(bwL-1)/2 + bwL + (bwL+1)*(n-bwL);
-  nzBcsr = nzLower+nzU-n;
-  ierr = PetscInfo4(A,"nzB_csr=%d, nzLower =%d band width = %d,%d\n",nzBcsr,nzLower,bwL,bwU);CHKERRQ(ierr);
-  /* create cusparseTriFactors with dummy data */
   ierr = MatSeqAIJCUSPARSETriFactors_Reset(&cusparseTriFactors);CHKERRQ(ierr);
-  /* Allocate Space for the lower(upper) triangular matrix */
-  cerr = cudaMallocHost((void**) &AiLU, (n+1)*sizeof(PetscInt));CHKERRCUDA(cerr);
-  cerr = cudaMallocHost((void**) &AjLU, nzLower*sizeof(PetscInt));CHKERRCUDA(cerr);
-  for (PetscInt LUIdx=0;LUIdx<2;LUIdx++) {
-    Mat_SeqAIJCUSPARSETriFactorStruct *TriFactor;
-    PetscScalar                       *AALo;
-
-    /* Fill the lower triangular matrix, AiLo, AjLo, AALo=1 */
-    cerr = cudaMallocHost((void**) &AALo, nzLower*sizeof(PetscScalar));CHKERRCUDA(cerr);
-    for (int i=0;i<nzLower;i++) AALo[i] = 1;
-    if (LUIdx==0) { // L
-      AiLU[0] = 0;
-      for (int i=0;i<n;i++) {
-        if (i<bwL) AiLU[i+1] = AiLU[i] + i + 1;
-        else       AiLU[i+1] = AiLU[i] + bwL+1;
-        for (int j=AiLU[i], k = (i-bwL) > 0 ? i-bwL: 0 ; j<AiLU[i+1] ; j++, k++) {
-          AjLU[j] = k;
-        }
-      }
-    } else { // U
-      AiLU[0] = 0;
-      for (int i=0;i<n;i++) {
-        if (i < n-bwU) AiLU[i+1] = AiLU[i] + bwU+1;
-        else           AiLU[i+1] = AiLU[i] + n-i;
-        for (int j=AiLU[i],k=i;j<AiLU[i+1];j++,k++) {
-          AjLU[j] = k;
-        }
-      }
-    }
-    /* allocate space for the triangular factor information */
-    ierr = PetscNew(&TriFactor);CHKERRQ(ierr);
-    TriFactor->solvePolicy = CUSPARSE_SOLVE_POLICY_USE_LEVEL;
-    /* Create the matrix description */
-    stat = cusparseCreateMatDescr(&TriFactor->descr);CHKERRCUSPARSE(stat);
-    stat = cusparseSetMatIndexBase(TriFactor->descr, CUSPARSE_INDEX_BASE_ZERO);CHKERRCUSPARSE(stat);
-#if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-    stat = cusparseSetMatType(TriFactor->descr, CUSPARSE_MATRIX_TYPE_GENERAL);CHKERRCUSPARSE(stat);
-#else
-    stat = cusparseSetMatType(TriFactor->descr, CUSPARSE_MATRIX_TYPE_TRIANGULAR);CHKERRCUSPARSE(stat);
-#endif
-    /* assign the pointer */
-    if (LUIdx==0) { // L
-      stat = cusparseSetMatFillMode(TriFactor->descr, CUSPARSE_FILL_MODE_LOWER);CHKERRCUSPARSE(stat);
-      stat = cusparseSetMatDiagType(TriFactor->descr, CUSPARSE_DIAG_TYPE_UNIT);CHKERRCUSPARSE(stat);
-      cusparseTriFactors->loTriFactorPtr = TriFactor;
-    } else { // U
-      stat = cusparseSetMatFillMode(TriFactor->descr, CUSPARSE_FILL_MODE_UPPER);CHKERRCUSPARSE(stat);
-      stat = cusparseSetMatDiagType(TriFactor->descr, CUSPARSE_DIAG_TYPE_NON_UNIT);CHKERRCUSPARSE(stat);
-      cusparseTriFactors->upTriFactorPtr = TriFactor;
-    }
-    TriFactor->AA_h = AALo; // this is probably not needed!!!!
-    ierr = PetscLogCpuToGpu((n+1+nzLower)*sizeof(int)+nzLower*sizeof(PetscScalar));CHKERRQ(ierr);
-
-    /* set the operation */
-    TriFactor->solveOp = CUSPARSE_OPERATION_NON_TRANSPOSE;
-
-    /* set the matrix */
-    TriFactor->csrMat = new CsrMatrix;
-    TriFactor->csrMat->num_rows = n;
-    TriFactor->csrMat->num_cols = n;
-    TriFactor->csrMat->num_entries = nzLower;
-
-    TriFactor->csrMat->row_offsets = new THRUSTINTARRAY32(n+1);
-    TriFactor->csrMat->row_offsets->assign(AiLU, AiLU+n+1);
-
-    TriFactor->csrMat->column_indices = new THRUSTINTARRAY32(nzLower);
-    TriFactor->csrMat->column_indices->assign(AjLU, AjLU+nzLower);
-
-    TriFactor->csrMat->values = new THRUSTARRAY(nzLower);
-    TriFactor->csrMat->values->assign(AALo, AALo+nzLower);
-
-    /* Create the solve analysis information */
-    ierr = PetscLogEventBegin(MAT_CUSPARSESolveAnalysis,B,0,0,0);CHKERRQ(ierr);
-    stat = cusparse_create_analysis_info(&TriFactor->solveInfo);CHKERRCUSPARSE(stat);
-    stat = cusparse_get_svbuffsize(cusparseTriFactors->handle, TriFactor->solveOp,
-                                   TriFactor->csrMat->num_rows, TriFactor->csrMat->num_entries, TriFactor->descr,
-                                   TriFactor->csrMat->values->data().get(), TriFactor->csrMat->row_offsets->data().get(),
-                                   TriFactor->csrMat->column_indices->data().get(), TriFactor->solveInfo,
-                                   &TriFactor->solveBufferSize);CHKERRCUSPARSE(stat);
-    cerr = cudaMalloc(&TriFactor->solveBuffer,TriFactor->solveBufferSize);CHKERRCUDA(cerr);
-    /* perform the solve analysis */
-    stat = cusparse_analysis(cusparseTriFactors->handle, TriFactor->solveOp,
-                             TriFactor->csrMat->num_rows, TriFactor->csrMat->num_entries, TriFactor->descr,
-                             TriFactor->csrMat->values->data().get(), TriFactor->csrMat->row_offsets->data().get(),
-                             TriFactor->csrMat->column_indices->data().get(), TriFactor->solveInfo,
-                             TriFactor->solvePolicy, TriFactor->solveBuffer);CHKERRCUSPARSE(stat);
-    cerr = WaitForCUDA();CHKERRCUDA(cerr);
-    ierr = PetscLogEventEnd(MAT_CUSPARSESolveAnalysis,B,0,0,0);CHKERRQ(ierr);
+  nzBcsr = n + (2*n-1)*bwU - bwU*bwU;
+  b->maxnz = b->nz = nzBcsr;
+  cusparseTriFactors->nnz = b->nz; // only meta data needed: n & nz
+  if (!cusparseTriFactors->workVector) { cusparseTriFactors->workVector = new THRUSTARRAY(n); }
+  cerr = cudaMalloc(&ba_t,(b->nz+1)*sizeof(PetscScalar));CHKERRCUDA(cerr); // incude a place for flops
+  cerr = cudaMalloc(&bi_t,(n+1)*sizeof(int));CHKERRCUDA(cerr);
+  cusparseTriFactors->a_band_d = ba_t;
+  cusparseTriFactors->i_band_d = bi_t;
+  /* In b structure:  Free imax, ilen, old a, old j.  Allocate solve_work, new a, new j */
+  ierr = PetscLogObjectMemory((PetscObject)B,(nzBcsr+1)*(sizeof(PetscInt)+sizeof(PetscScalar)));CHKERRQ(ierr);
+  {
+    dim3 dimBlockTeam(1,128);
+    dim3 dimBlockLeague(Nf,1);
+    mat_lu_factor_band_init_set_i<<<dimBlockLeague,dimBlockTeam>>>(n, bwU, bi_t);
   }
-  cerr = cudaFreeHost(AiLU);CHKERRCUDA(cerr);
-  cerr = cudaFreeHost(AjLU);CHKERRCUDA(cerr);
-  }
+  CHECK_LAUNCH_ERROR(); // does a sync
+
   /* put together the new matrix */
   b->free_a       = PETSC_FALSE;
   b->free_ij      = PETSC_FALSE;
@@ -4713,10 +4646,6 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
   ierr    = PetscObjectReference((PetscObject)iscol);CHKERRQ(ierr);
   b->icol = isicol;
   ierr    = PetscMalloc1(n+1,&b->solve_work);CHKERRQ(ierr);
-
-  /* In b structure:  Free imax, ilen, old a, old j.  Allocate solve_work, new a, new j */
-  ierr     = PetscLogObjectMemory((PetscObject)B,(nzBcsr+1)*(sizeof(PetscInt)+sizeof(PetscScalar)));CHKERRQ(ierr);
-  b->maxnz = b->nz = nzBcsr;
 
   B->factortype            = MAT_FACTOR_LU;
   B->info.factor_mallocs   = 0;
@@ -4796,45 +4725,45 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
   //   printf("\n");
   // }
 
-  /* Next, solve L */
-  pLi = ba_csr + (field==0 ? 0 : blocknz_0 + (field-1)*blocknz + bw);
+  /* Next, solve L */  printf("\nA:blocknz_0=%d = %d - %d\n",blocknz_0,blocknz,chopnz);
+  pLi = ba_csr + (field==0 ? 0 : blocknz_0 + (field-1)*blocknz + bw); // diagonal (0,0) in field
   for (int glbDD=start, locDD = 0; glbDD<end; glbDD++, locDD++) {
     const PetscInt col = locDD<bw ? start : (glbDD-bw);
     PetscScalar    t = x[glbDD];
-    //printf("\tstart with L(%03d.%03d) = %13.6e (%d)\n",glbDD,col,pLi[0],(int)(pLi-ba_csr));
+    printf("\tstart with L(%03d.%03d) = %13.6e (%d)\n",glbDD,col,pLi[0],(int)(pLi-ba_csr));
     for (int j=col,idx=0;j<glbDD;j++,idx++) {
       t -= pLi[idx]*x[j];
-      //printf("\t\tUpdate with L(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[idx],(int)(&pLi[idx]-ba_csr));
+      printf("\t\tUpdate with L(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[idx],(int)(&pLi[idx]-ba_csr));
     }
-    //printf("\t\t\t finised L %d, L(%03d.%03d) = %13.6e (%d)\n",glbDD, glbDD, glbDD, pLi[glbDD-col],(int)(&pLi[glbDD-col]-ba_csr));
-    x[glbDD] = t; ///1.0
-    
-    pLi += 1; // diagonal
-    if (glbDD<bw) pLi += glbDD; // only first block has funny offset
+    printf("\t\t\t finised L %d, L(%03d.%03d) = %13.6e (%d)\n",glbDD, glbDD, glbDD, pLi[glbDD-col],(int)(&pLi[glbDD-col]-ba_csr));
+    x[glbDD] = t; // /1.0
+    // inc
+    pLi += glbDD-col; // get to diagonal
+printf("\t\t\t\tmove to diagonal L(%03d.%03d) (%d)\n",glbDD,glbDD,(int)(pLi-ba_csr));    
+    if (glbDD > n-1-bw) pLi += n-1-glbDD; // skip over U, only last block has funny offset
     else pLi += bw;
-    if (glbDD > end-1-bw) pLi += end-1-glbDD; // only last block has funny offset
-    else pLi += bw;
+printf("\t\t\t\tmove to end of %03d (%d)\n",glbDD,(int)(pLi-ba_csr)); 
+    pLi += 1; // skip to next row
+    if (field>0 && (locDD+1)<bw) pLi += bw-(locDD+1); // skip padding at beginning (ear)
   }
   /* Then, solve U */
-  pLi = ba_csr + Nf*blocknz - 2*chopnz;
-  //printf ("%d) U: end=%d (=nnz)\n",field, Nf*blocknz - 2*chopnz);
-  if (field != Nf-1) pLi -= blocknz_0 + (Nf-2-field)*blocknz + bw;
+  pLi = ba_csr + Nf*blocknz - 2*chopnz - 1; // end of real data on block (diagonal)
+  if (field != Nf-1) pLi -= blocknz_0 + (Nf-2-field)*blocknz + bw; // diagonal of last local row
+  printf ("%d) U: start at diagonal A(%d,%d) (%d)\n",field, end-1, end-1, (int)(pLi-ba_csr));
   for (int glbDD=end-1, locDD = 0; glbDD >= start; glbDD--, locDD++) {
-    const PetscInt col = (locDD<bw) ? end-1 : glbDD+bw;
+    const PetscInt col = (locDD<bw) ? end-1 : glbDD+bw; // end of row in U
     PetscScalar    t = x[glbDD];
-    //printf("\t start U(%d) U(%03d.%03d) = %13.6e\n", glbDD, glbDD, col, pLi[-1], (int)(&pLi[-1]-ba_csr));
-    for (int j=col,idx=1;j>glbDD;j--,idx++) {
+    printf("\t start U(%03d.%03d) = %13.6e (%d)\n", glbDD, col, pLi[-1], (int)(pLi-ba_csr));
+    for (int j=col,idx=0;j>glbDD;j--,idx++) {
       t -= pLi[-idx]*x[j];
-      //printf("\t\tUpdate with U(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[-idx],(int)(&pLi[-idx]-ba_csr));
+      printf("\t\tUpdate with U(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[-idx],(int)(&pLi[-idx]-ba_csr));
     }
-    //("\t\t\tfinised U %d, D(%03d.%03d) = %13.6e (%d)\n",glbDD, glbDD, glbDD, pLi[-(col-glbDD)-1],(int)(&pLi[-(col-glbDD)-1]-ba_csr));
-    x[glbDD] = t/pLi[-(col-glbDD)-1];
-
-    pLi -= 1; // diagonal
-    if (glbDD > end-1-bw) pLi -= end-1-glbDD; // only last block has funny offset
-    else                  pLi -= bw;
-    if (glbDD<bw)         pLi -= glbDD; // only first block has funny offset
-    else                  pLi -= bw;
+    pLi -= col-glbDD + 1; // diagonal
+    printf("\t\t\t\tmove to diagonal U(%03d.%03d) (%d)\n",glbDD,glbDD,(int)(pLi-ba_csr));    
+    x[glbDD] = t/pLi[0];
+    // inc past L to start of previous U
+    pLi -= bw+1;
+    if (glbDD<bw) pLi += bw-glbDD; // overshot
   }
 }
 
@@ -4855,7 +4784,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSEBAND(Mat A,Vec bb,Vec xx)
   if (A->rmap->n == 0) {
     PetscFunctionReturn(0);
   }
-    // factor: get Nf if available
+  // factor: get Nf if available
   ierr = PetscObjectQuery((PetscObject) A, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
   if (container) {
     PetscInt *pNf=NULL;
@@ -4863,7 +4792,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSEBAND(Mat A,Vec bb,Vec xx)
     Nf = (*pNf)%1000;
   } else Nf = 1;
   if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
-
+  printf("**********************  Nf=%d c=%p\n",Nf,container);
   /* Get the GPU pointers */
   ierr = VecCUDAGetArrayWrite(xx,&xarray);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayRead(bb,&barray);CHKERRQ(ierr);
