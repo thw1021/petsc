@@ -3,14 +3,15 @@
    Low-level routines for managing dynamic link libraries (DLLs).
 */
 
-#include <petsc/private/petscimpl.h>
-#include <petscvalgrind.h>
-
+#include <petscconf.h>
 #if defined(PETSC__GNU_SOURCE)
   #if !defined(_GNU_SOURCE)
     #define _GNU_SOURCE 1
   #endif
 #endif
+
+#include <petsc/private/petscimpl.h>
+#include <petscvalgrind.h>
 
 /* XXX Should be done better !!!*/
 #if !defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
