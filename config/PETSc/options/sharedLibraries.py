@@ -28,6 +28,7 @@ class Configure(config.base.Configure):
     self.setCompilers = framework.require('config.setCompilers', self)
     self.headers      = framework.require('config.headers', self)
     self.functions    = framework.require('config.functions', self)
+    self.ftm          = framework.require('config.utilities.featureTestMacros', self)
     return
 
   def checkSharedDynamicPicOptions(self):
@@ -109,7 +110,9 @@ class Configure(config.base.Configure):
   def checkSymbolResolution(self):
     '''Checks that dladdr() works'''
     if self.headers.haveHeader('dlfcn.h') and self.functions.haveFunction('dladdr') and self.functions.haveFunction('dlerror'):
-      if self.checkCompile('#include<stdlib.h>\n#include <dlfcn.h>\n', 'Dl_info info;\n\nif (dladdr(exit, &info));\n'):
+      ftm = ''
+      if self.ftm.defines.get('_GNU_SOURCE'): ftm = '#define _GNU_SOURCE\n'
+      if self.checkCompile('%s#include<stdlib.h>\n#include <dlfcn.h>\n' % ftm, 'Dl_info info;\n\nif (dladdr(exit, &info));\n'):
         self.addDefine('HAVE_SYMBOL_RESOLUTION', 1)
 
   def configure(self):
