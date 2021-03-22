@@ -322,7 +322,7 @@ PetscErrorCode  PetscDLSym(PetscDLHandle handle,const char symbol[],void **value
 - func   - pointer to the function, NULL if not found
 
   Output Parameter:
-. name   - name of symbol
+. name   - name of symbol, or NULL if name lookup is not supported
 
   Level: developer
 
@@ -351,7 +351,7 @@ PetscErrorCode PetscDLAddr(void (*func)(void), const char **name)
      --- unimplemented ---
   */
 #else
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS, "Cannot use dladdr() on this platform");
+  *name = NULL:
 #endif
   PetscFunctionReturn(0);
 }
