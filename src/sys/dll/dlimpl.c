@@ -326,7 +326,6 @@ PetscErrorCode  PetscDLSym(PetscDLHandle handle,const char symbol[],void **value
 PetscErrorCode PetscDLAddr(void (*func)(void), const char **name)
 {
   PetscFunctionBegin;
-  PetscValidPointer(func,2);
   PetscValidPointer(name,3);
   *name = NULL;
   /*
@@ -338,7 +337,7 @@ PetscErrorCode PetscDLAddr(void (*func)(void), const char **name)
     Dl_info        info;
     PetscErrorCode ierr;
 
-    ierr = dladdr((const void *) func, &info);if (!ierr) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Failed to lookup symbol: %s", dlerror());
+    ierr = dladdr(*(void **) &func, &info);if (!ierr) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Failed to lookup symbol: %s", dlerror());
     *name = info.dli_sname;
   }
   /*
