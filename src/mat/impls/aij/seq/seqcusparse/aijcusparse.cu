@@ -4290,20 +4290,12 @@ mat_lu_factor_band_init_set_i(const PetscInt n, const int bw, int bi_csr[])
   const PetscInt  nloc_i =  (nloc/Nblk + !!(nloc%Nblk)), start_i = field*nloc + blkIdx*nloc_i, end_i = (start_i + nloc_i) > (field+1)*nloc ? (field+1)*nloc : (start_i + nloc_i);
 
   // set i (row+1)
-<<<<<<< HEAD
-=======
-  //if (threadIdx.x + threadIdx.y == 0) printf("f=%d/%d block=%d/%d LU Band set i\n",blockIdx.x+1,gridDim.x,blkIdx+1,Nblk);
->>>>>>> Add cuSparse Band LU factorization
   if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) bi_csr[0] = 0; // dummy at zero
   // for (int rowb = start_i + blkIdx*blockDim.y + threadIdx.y; rowb < end_i; rowb += Nblk*blockDim.y) { // rows in block
   for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block by thread y
     if (rowb < end_i && threadIdx.x==0) {
       PetscInt i=rowb+1, ni = (rowb>bw) ? bw+1 : i, n1L = ni*(ni-1)/2, nug= i*bw, n2L = bw*((rowb>bw) ? (rowb-bw) : 0), mi = bw + rowb + 1 - n, clip = (mi>0) ? mi*(mi-1)/2 + mi: 0;
       bi_csr[rowb+1] = n1L + nug - clip + n2L + i;
-<<<<<<< HEAD
-=======
-      // printf("bi[%2d] = %3d = n1L=%3d + nu=%3d (%3d-clip(%2d)=%d) + n2L=%3d + D=%2d\n",rowb+1,bi_csr[rowb+1],n1L,nug-clip,nug,mi,clip,n2L,i);
->>>>>>> Add cuSparse Band LU factorization
     }
   }
 }
@@ -4347,10 +4339,6 @@ mat_lu_factor_band_copy_aij_aij(const PetscInt n, const int bw, const PetscInt r
           batmp[idx] = vala;
         }
       }
-<<<<<<< HEAD
-=======
-      //if (threadIdx.x==0) printf("\t\t[%d] copy row\n",rowb);
->>>>>>> Add cuSparse Band LU factorization
     }
   }
 }
@@ -4364,11 +4352,7 @@ void print_mat_aij_band(const PetscInt n, const int bi_csr[], const PetscScalar 
     for (int rowb=0;rowb<n;rowb++) {
       const PetscInt    nz = bi_csr[rowb+1] - bi_csr[rowb];
       const PetscScalar *batmp = ba_csr + bi_csr[rowb];
-<<<<<<< HEAD
       for (int j=0; j<nz; j++) printf("(%13.6e) ",PetscRealPart(batmp[j]));
-=======
-      for (int j=0; j<nz; j++) printf("(%13.6e) ",batmp[j]);
->>>>>>> Add cuSparse Band LU factorization
       printf(" bi=%d\n",bi_csr[rowb+1]);
     }
   }
@@ -4394,19 +4378,11 @@ mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], Pets
     PetscScalar       *pBdd = ba_csr + bi_csr[glbDD] + dOffset;
     const PetscScalar *baUd = pBdd + 1; // vector of data  U(i,i+1:end)
     const PetscScalar Bdd = *pBdd;
-<<<<<<< HEAD
-=======
-    // if (threadIdx.x+threadIdx.y == 0) printf("\tblock %d, eq %d, nzUd=%d nzUd_pad=%d loop inc=%d\n",blkIdx,glbDD,nzUd,nzUd_pad,Nblk*blockDim.y);
->>>>>>> Add cuSparse Band LU factorization
     const PetscInt offset = blkIdx*blockDim.y + threadIdx.y, inc = Nblk*blockDim.y;
     for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd_pad ; idx += inc, myi += inc) { /* assuming symmetric structure */
       if (idx < nzUd && threadIdx.x==0) { /* assuming symmetric structure */
         const PetscInt bwi = myi > bw ? bw : myi, kIdx = bwi - (myi-glbDD); // cuts off just the first (global) block
         PetscScalar    *Aid = ba_csr + bi_csr[myi] + kIdx;
-<<<<<<< HEAD
-=======
-        //printf("\t\tUpdate Lid(%03d.%03d) = %13.6e to %13.6e\n",myi,glbDD,*Aid,*Aid/Bdd);
->>>>>>> Add cuSparse Band LU factorization
         *Aid = *Aid/Bdd;
         sm_pkIdx[threadIdx.y] = kIdx;
       }
@@ -4418,10 +4394,6 @@ mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], Pets
         PetscScalar Lid  = *Aid;
         for (int jIdx=threadIdx.x ; jIdx<nzUd ; jIdx += blockDim.x) {
           if (jIdx<nzUd) {
-<<<<<<< HEAD
-=======
-            //printf("\t\t\tUpdate Aij(%03d.%03d) = %13.6e to %13.6e\n",myi,glbDD+jIdx+1, Aij[jIdx] , Aij[jIdx] - Lid*baUd[jIdx]);
->>>>>>> Add cuSparse Band LU factorization
             Aij[jIdx] -= Lid*baUd[jIdx];
           }
         }
@@ -4452,11 +4424,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   PetscScalar                  *ba_t = cusparseTriFactors->a_band_d;
   int                          *bi_t = cusparseTriFactors->i_band_d;
   PetscContainer               container;
-<<<<<<< HEAD
   int                          Ni = 10, team_size=9, Nf, nVec=56, nconcurrent = 1, nsm = -1;
-=======
-  int                          Ni = 10, team_size=9, Nf, nVec=56, nconcurrent = 1;
->>>>>>> Add cuSparse Band LU factorization
 
   PetscFunctionBegin;
   if (A->rmap->n == 0) {
@@ -4498,19 +4466,12 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     Ni = 1/nconcurrent;
     Ni = 1;
 #else
-<<<<<<< HEAD
     nsm = prop.multiProcessorCount;
     Ni = nsm/Nf/nconcurrent;
 #endif
     team_size = bw/Ni + !!(bw%Ni);
     nVec = PetscMin(bw, 1024/team_size);
     ierr = PetscInfo5(A,"Matrix Bandwidth = %d, number SMs/block = %d, num concurency = %d, num fields = %d, numSMs/GPU = %d\n",bw,Ni,nconcurrent,Nf,nsm);CHKERRQ(ierr);
-=======
-    Ni = prop.multiProcessorCount/Nf/nconcurrent;
-#endif
-    team_size = bw/Ni + !!(bw%Ni);
-    nVec = PetscMin(bw, 1024/team_size);
->>>>>>> Add cuSparse Band LU factorization
     {
       dim3 dimBlockTeam(nVec,team_size);
       dim3 dimBlockLeague(Nf,Ni);
@@ -4526,14 +4487,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
 #if defined(PETSC_USE_LOG)
       ierr = PetscLogGpuFlops((PetscLogDouble)Nf*(bm1*(bm1 + 1)*(2*bm1 + 1)/3 + 2*(nl-bw)*bw*bw + nl*(nl+1)/2));CHKERRQ(ierr);
 #endif
-<<<<<<< HEAD
     }
-=======
-      // print_mat_aij_band<<<dimBlockLeague,dimBlockTeam>>>(n, bi_t, ba_t);
-      // CHECK_LAUNCH_ERROR(); // does a sync
-    }
-    printf("Ni=%d nVec=%d team_size=%d bw=%d multiProcessorCount=%d\n",Ni,nVec,team_size,bw,prop.multiProcessorCount);
->>>>>>> Add cuSparse Band LU factorization
   }
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
 
@@ -4775,39 +4729,35 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
   const PetscScalar *pLi;
   const int tid = threadIdx.x;
 
-  // if (field==0) {
-  //   pLi =ba_csr;printf("\nA:\n");
-  //   for (int i=0;i<n;i++) {
-  //     const PetscInt col = (i<bw) ? 0 : (i-bw), nz = bw+1 + ((i<bw) ? i : (i>n-1-bw) ? n-1-i : bw);
-  //     for (int j=col,idx=0;idx<nz;j++,idx++,pLi++) {
-  //       printf("%f (%d) ",*pLi, (int)(pLi-ba_csr));
-  //     }
-  //     printf(" = %f\n",x[i]);
-  //   }
-  //   printf("\n");
-  // }
-  PetscScalar t = 0;
-  for (int j=col+tid,idx=tid;j<glbDD;j+=blockDim.x,idx+=blockDim.x) {
-    t += pLi[idx]*x[j];
-  }
+  /* Next, solve L */
+  pLi = ba_csr + (field==0 ? 0 : blocknz_0 + (field-1)*blocknz + bw); // diagonal (0,0) in field
+  for (int glbDD=start, locDD = 0; glbDD<end; glbDD++, locDD++) {
+    const PetscInt col = locDD<bw ? start : (glbDD-bw);
+    PetscScalar t = 0;
+    for (int j=col+tid,idx=tid;j<glbDD;j+=blockDim.x,idx+=blockDim.x) {
+      t += pLi[idx]*x[j];
+    }
 #if defined(PETSC_USE_COMPLEX)
-  PetscReal tr = PetscRealPartComplex(t), ti = PetscImaginaryPartComplex(t);
-  PetscScalar tt(breduce<PetscReal,BLOCK_SIZE>(tr), breduce<PetscReal,BLOCK_SIZE>(ti));
-  t = tt;
+    PetscReal tr = PetscRealPartComplex(t), ti = PetscImaginaryPartComplex(t);
+    PetscScalar tt(breduce<PetscReal,BLOCK_SIZE>(tr), breduce<PetscReal,BLOCK_SIZE>(ti));
+    t = tt;
 #else
-  t = breduce<PetscReal,BLOCK_SIZE>(t);
+    t = breduce<PetscReal,BLOCK_SIZE>(t);
 #endif
-  if (threadIdx.x == 0)
-    x[glbDD] -= t; // /1.0
-  __syncthreads();
-  PetscScalar    t = x[glbDD];
-  //printf("\tstart with L(%03d.%03d) = %13.6e (%d)\n",glbDD,col,pLi[0],(int)(pLi-ba_csr));
-  for (int j=col,idx=0;j<glbDD;j++,idx++) {
-    t -= pLi[idx]*x[j];
-    //printf("\t\tUpdate with L(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[idx],(int)(&pLi[idx]-ba_csr));
+    if (threadIdx.x == 0)
+      x[glbDD] -= t; // /1.0
+    __syncthreads();
+    // inc
+    pLi += glbDD-col; // get to diagonal
+    if (glbDD > n-1-bw) pLi += n-1-glbDD; // skip over U, only last block has funny offset
+    else pLi += bw;
+    pLi += 1; // skip to next row
+    if (field>0 && (locDD+1)<bw) pLi += bw-(locDD+1); // skip padding at beginning (ear)
   }
-  //printf("\t\t\t finised L %d, L(%03d.%03d) = %13.6e (%d)\n",glbDD, glbDD, glbDD, pLi[glbDD-col],(int)(&pLi[glbDD-col]-ba_csr));
-  x[glbDD] = t; // /1.0
+  /* Then, solve U */
+  pLi = ba_csr + Nf*blocknz - 2*chopnz - 1; // end of real data on block (diagonal)
+  if (field != Nf-1) pLi -= blocknz_0 + (Nf-2-field)*blocknz + bw; // diagonal of last local row
+
   for (int glbDD=end-1, locDD = 0; glbDD >= start; glbDD--, locDD++) {
     const PetscInt col = (locDD<bw) ? end-1 : glbDD+bw; // end of row in U
     PetscScalar t = 0;
