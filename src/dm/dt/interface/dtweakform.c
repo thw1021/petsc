@@ -107,6 +107,7 @@ PetscErrorCode PetscWeakFormGetFunction_Private(PetscWeakForm wf, PetscHMapForm 
   PetscFunctionReturn(0);
 }
 
+/* A NULL argument for func causes this to clear the key */
 PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt n, void (**func)())
 {
   PetscHashFormKey key;
@@ -115,15 +116,17 @@ PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm 
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  if (!func) PetscFunctionReturn(0);
   key.label = label; key.value = value; key.field = f;
-  ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
+  if (!func) {
+    ierr = PetscHMapFormDel(ht, key);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  } else {
+    ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
+  }
   if (chunk.size < 0) {
-    if (!func) PetscFunctionReturn(0);
     ierr = PetscChunkBufferCreateChunk(wf->funcs, n, &chunk);CHKERRQ(ierr);
     ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
   } else if (chunk.size <= n) {
-    if (!func) PetscFunctionReturn(0);
     ierr = PetscChunkBufferEnlargeChunk(wf->funcs, n - chunk.size, &chunk);CHKERRQ(ierr);
     ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
   }
@@ -170,6 +173,7 @@ PetscErrorCode PetscWeakFormGetIndexFunction_Private(PetscWeakForm wf, PetscHMap
   PetscFunctionReturn(0);
 }
 
+/* A NULL argument for func causes this to clear the slot, and if there is nothing else, clear the key */
 PetscErrorCode PetscWeakFormSetIndexFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt ind, void (*func)())
 {
   PetscHashFormKey key;
@@ -177,15 +181,16 @@ PetscErrorCode PetscWeakFormSetIndexFunction_Private(PetscWeakForm wf, PetscHMap
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  if (!func) PetscFunctionReturn(0);
   key.label = label; key.value = value; key.field = f;
   ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
   if (chunk.size < 0) {
     if (!func) PetscFunctionReturn(0);
     ierr = PetscChunkBufferCreateChunk(wf->funcs, ind+1, &chunk);CHKERRQ(ierr);
     ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
+  } else if (!ind && chunk.size == 1) {
+    ierr = PetscHMapFormDel(ht, key);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
   } else if (chunk.size <= ind) {
-    if (!func) PetscFunctionReturn(0);
     ierr = PetscChunkBufferEnlargeChunk(wf->funcs, ind - chunk.size + 1, &chunk);CHKERRQ(ierr);
     ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
   }
