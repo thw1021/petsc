@@ -6,6 +6,12 @@
 #include <petsc/private/petscimpl.h>
 #include <petscvalgrind.h>
 
+#if defined(PETSC__GNU_SOURCE)
+  #if !defined(_GNU_SOURCE)
+    #define _GNU_SOURCE
+  #endif
+#endif
+
 /* XXX Should be done better !!!*/
 #if !defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
 #undef PETSC_HAVE_WINDOWS_H
