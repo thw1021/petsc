@@ -8,7 +8,7 @@
 
 #if defined(PETSC__GNU_SOURCE)
   #if !defined(_GNU_SOURCE)
-    #define _GNU_SOURCE
+    #define _GNU_SOURCE 1
   #endif
 #endif
 
