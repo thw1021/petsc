@@ -109,7 +109,7 @@ class Configure(config.base.Configure):
 
   def checkSymbolResolution(self):
     '''Checks that dladdr() works'''
-    if self.headers.haveHeader('dlfcn.h') and self.functions.haveFunction('dladdr') and self.functions.haveFunction('dlerror'):
+    if self.headers.haveHeader('dlfcn.h') and self.functions.haveFunction('dlerror'):
       ftm = ''
       if self.ftm.defines.get('_GNU_SOURCE'): ftm = '#define _GNU_SOURCE\n'
       if self.checkCompile('%s#include<stdlib.h>\n#include <dlfcn.h>\n' % ftm, 'Dl_info info;\n\nif (dladdr(exit, &info));\n'):
