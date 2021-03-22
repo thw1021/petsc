@@ -113,7 +113,7 @@ class Configure(config.base.Configure):
       ftm = ''
       if self.ftm.defines.get('_GNU_SOURCE'): ftm = '#define _GNU_SOURCE\n'
       if self.checkCompile('%s#include<stdlib.h>\n#include <dlfcn.h>\n' % ftm, 'Dl_info info;\n\nif (dladdr(exit, &info));\n'):
-        self.addDefine('HAVE_SYMBOL_RESOLUTION', 1)
+        self.addDefine('HAVE_DLADDR', 1)
 
   def configure(self):
     self.executeTest(self.checkSharedDynamicPicOptions)

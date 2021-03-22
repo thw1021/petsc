@@ -337,7 +337,7 @@ PetscErrorCode PetscDLAddr(void (*func)(void), const char **name)
   /*
      --- dladdr ---
   */
-#if defined(PETSC_HAVE_SYMBOL_RESOLUTION)
+#if defined(PETSC_HAVE_DLADDR)
   dlerror(); /* clear any previous error */
   {
     Dl_info        info;
