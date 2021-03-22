@@ -3859,7 +3859,7 @@ PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM dm, PetscSection section,
   cellChunkSize = numCells/numChunks;
   numChunks     = PetscMin(1,numCells);
   key.label     = NULL;
-  key.value     = -1;
+  key.value     = 0;
   for (chunk = 0; chunk < numChunks; ++chunk) {
     PetscScalar     *elemVec, *fluxL = NULL, *fluxR = NULL;
     PetscReal       *vol = NULL;
@@ -4109,8 +4109,8 @@ PetscErrorCode DMPlexComputeJacobian_Patch_Internal(DM dm, PetscSection section,
   /* Compute volume integrals */
   if (assembleJac) {ierr = MatZeroEntries(J);CHKERRQ(ierr);}
   ierr = MatZeroEntries(JP);CHKERRQ(ierr);
-  key.label     = NULL;
-  key.value     = -1;
+  key.label = NULL;
+  key.value = 0;
   for (chunk = 0; chunk < numChunks; ++chunk, offCell += chunkSize) {
     const PetscInt   Ncell = PetscMin(chunkSize, numCells - offCell);
     PetscInt         c;
