@@ -80,11 +80,6 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
   ierr = PetscRandomSetInterval(rnd, -1.0, 1.0);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rnd);CHKERRQ(ierr);
 
-  /*
-    Randomization for velocity if a specific initial distribution function is not chosen.
-    Its symmetric for no real reason, an assymetric function should have similar conservation
-    as there are no weights being shifted, simply velocities.
-  */
   ierr = PetscRandomCreate(PetscObjectComm((PetscObject) sw), &rndv);CHKERRQ(ierr);
   ierr = PetscRandomSetInterval(rndv, -1., 1.);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rndv);CHKERRQ(ierr);
@@ -125,7 +120,7 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
       }
     }
   }
-  /* Randomized velicities to start */
+  /* Random velocity IC */
   for (c = cStart; c < cEnd; ++c) {
     for (p = 0; p < Np; ++p) {
       for (d = 0; d < dim; ++d) {
@@ -311,7 +306,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
 {
   AppCtx            *user = (AppCtx *) ctx;
   PetscInt           dbg  = 0;
-  DM                 sw;                  /* point tracking, problem topology */
+  DM                 sw;                  /* Particles */
   const PetscScalar *u;                   /* input solution vector */
   PetscScalar       *r;
   PetscReal         *velocity;

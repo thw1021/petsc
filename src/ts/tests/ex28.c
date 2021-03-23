@@ -36,11 +36,11 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->ostep            = 100;
 
   ierr = PetscOptionsBegin(comm, "", "Collision Options", "DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-monitorhg", "Flag to use the TS histogram monitor", "ex9.c", options->monitorhg, &options->monitorhg, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-monitorsp", "Flag to use the TS scatter plot monitor", "ex9.c", options->monitorsp, &options->monitorsp, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-monitorks", "Flag to plot KS test results", "ex9.c", options->monitorks, &options->monitorks, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-particles_per_cell", "Number of particles per cell", "ex9.c", options->particlesPerCell, &options->particlesPerCell, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-output_step", "Number of time steps between output", "ex9.c", options->ostep, &options->ostep, PETSC_NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-monitorhg", "Flag to use the TS histogram monitor", "ex28.c", options->monitorhg, &options->monitorhg, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-monitorsp", "Flag to use the TS scatter plot monitor", "ex28.c", options->monitorsp, &options->monitorsp, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-monitorks", "Flag to plot KS test results", "ex28.c", options->monitorks, &options->monitorks, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-particles_per_cell", "Number of particles per cell", "ex28.c", options->particlesPerCell, &options->particlesPerCell, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-output_step", "Number of time steps between output", "ex28.c", options->ostep, &options->ostep, PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
@@ -336,15 +336,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
     ierr = DMPlexVecGetClosure(plex, coordSection, coordsLocal, c, NULL, &vcoords);CHKERRQ(ierr);
     neq  = ComputeCDF(m, n, T, vcoords[0], vcoords[1]);
     ierr = DMPlexVecRestoreClosure(plex, coordSection, coordsLocal, c, NULL, &vcoords);CHKERRQ(ierr);
-#if 1
     for (q = 0; q < Ncp; ++q) r[sp+q] = (1.0/relaxation)*(neq - u[sp+q]);
-#else
-    /* Calculate sum of particle weights for the cell */
-    for (q = 0; q < Ncp; ++q) cweight += u[sp+q];
-    /* Evauluate 1/\lambda (f_m[u]-f(u)) for the cell and calculate residual on particle weights */
-    penalization = (1.0/relaxation)*(neq - cweight);
-    for (q = 0; q < Ncp; ++q) r[sp+q] = penalization;
-#endif
   }
   /* Check update */
   for (p = 0; p < Np; ++p) {
