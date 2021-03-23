@@ -187,7 +187,7 @@ PetscErrorCode PetscWeakFormSetIndexFunction_Private(PetscWeakForm wf, PetscHMap
     if (!func) PetscFunctionReturn(0);
     ierr = PetscChunkBufferCreateChunk(wf->funcs, ind+1, &chunk);CHKERRQ(ierr);
     ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
-  } else if (!ind && chunk.size == 1) {
+  } else if (!func && !ind && chunk.size == 1) {
     ierr = PetscHMapFormDel(ht, key);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   } else if (chunk.size <= ind) {
