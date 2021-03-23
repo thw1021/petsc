@@ -169,7 +169,7 @@ PETSC_INTERN PetscErrorCode PetscFinalize_DynamicLibraries(void)
   if (flg) { ierr = PetscDLLibraryPrintPath(PetscDLLibrariesLoaded);CHKERRQ(ierr); }
   ierr = PetscDLLibraryClose(PetscDLLibrariesLoaded);CHKERRQ(ierr);
 
-#if defined(PETSC_USE_SINGLE_LIBRARY) && !(defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES))
+#if defined(PETSC_HAVE_THREADSAFETY)
   ierr = PetscCommDestroy(&PETSC_COMM_SELF_INNER);CHKERRQ(ierr);
   ierr = PetscCommDestroy(&PETSC_COMM_WORLD_INNER);CHKERRQ(ierr);
 #endif
