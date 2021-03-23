@@ -65,6 +65,7 @@ class Configure(config.package.Package):
     help.addArgument('MPI', '-with-mpiexec=<prog>',                              nargs.Arg(None, None, 'The utility used to launch MPI jobs. (should support "-n <np>" option)'))
     help.addArgument('MPI', '-with-mpi-compilers=<bool>',                        nargs.ArgBool(None, 1, 'Try to use the MPI compilers, e.g. mpicc'))
     help.addArgument('MPI', '-known-mpi-shared-libraries=<bool>',                nargs.ArgBool(None, None, 'Indicates the MPI libraries are shared (the usual test will be skipped)'))
+    help.addArgument('MPI', '-with-mpi-f90module-visibility=<bool>',             nargs.ArgBool(None, 1, 'Indicates the MPI f90 module is available via petsc module. When disabled, mpi_f08 can be used from user code'))
     return
 
   def setupDependencies(self, framework):
@@ -429,25 +430,11 @@ Unable to run hostname to check the network')
     self.compilers.CPPFLAGS += ' '+self.headers.toString(self.include)
     self.compilers.LIBS = self.libraries.toString(self.lib)+' '+self.compilers.LIBS
     mpitypes = [('MPI_LONG_DOUBLE', 'long-double'), ('MPI_INT64_T', 'int64_t')]
-    if self.getDefaultLanguage() == 'C': mpitypes.extend([('MPI_C_DOUBLE_COMPLEX', 'c-double-complex')])
     for datatype, name in mpitypes:
       includes = '#include <stdlib.h>\n#include <mpi.h>\n'
       body     = 'int size;\nint ierr;\nMPI_Init(0,0);\nierr = MPI_Type_size('+datatype+', &size);\nif(ierr || (size == 0)) exit(1);\nMPI_Finalize();\n'
       if self.checkCompile(includes, body):
-        if 'known-mpi-'+name in self.argDB:
-          if int(self.argDB['known-mpi-'+name]):
-            self.addDefine('HAVE_'+datatype, 1)
-        elif not self.argDB['with-batch']:
-          self.pushLanguage('C')
-          if self.checkRun(includes, body, defaultArg = 'known-mpi-'+name, executor = self.mpiexec, timeout = 120):
-            self.addDefine('HAVE_'+datatype, 1)
-          self.popLanguage()
-        else:
-         self.logPrintBox('***** WARNING: Cannot determine if '+datatype+' works on your system\n\
-in batch-mode! Assuming it does work. Run with --known-mpi-'+name+'=0\n\
-if you know it does not work (very unlikely). Run with --known-mpi-'+name+'=1\n\
-to remove this warning message *****')
-         self.addDefine('HAVE_'+datatype, 1)
+        self.addDefine('HAVE_'+datatype, 1)
     self.compilers.CPPFLAGS = oldFlags
     self.compilers.LIBS = oldLibs
     return
@@ -467,7 +454,6 @@ to remove this warning message *****')
     self.framework.addDefine('MPI_Comm_create_errhandler(p_err_fun,p_errhandler)', 'MPI_Errhandler_create((p_err_fun),(p_errhandler))')
     self.framework.addDefine('MPI_Comm_set_errhandler(comm,p_errhandler)', 'MPI_Errhandler_set((comm),(p_errhandler))')
     self.logWrite(self.framework.restoreLog())
-    if self.getDefaultLanguage == 'C': self.addDefine('HAVE_MPI_C_DOUBLE_COMPLEX', 1)
     self.commf2c = 1
     self.commc2f = 1
     self.usingMPIUni = 1
@@ -524,9 +510,8 @@ to remove this warning message *****')
     # check if mpi.mod exists
     if self.fortran.fortranIsF90:
       self.log.write('Checking for mpi.mod\n')
-      if self.libraries.check(self.lib,'', call = '       use mpi\n       integer ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
-        self.havef90module = 1
-        self.addDefine('HAVE_MPI_F90MODULE', 1)
+      if not self.libraries.check(self.lib,'', call = '       use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
+        raise RuntimeError('mpi.mod not found! PETSc fortran interface requires a working mpi.mod')
     self.compilers.FPPFLAGS = oldFlags
     self.libraries.popLanguage()
     return 0
@@ -639,7 +624,7 @@ to remove this warning message *****')
     '''Find MPI include paths from "mpicc -show" and use with CUDAC_FLAGS'''
     needInclude=False
     if hasattr(self.compilers, 'CUDAC'): needInclude=True
-    if hasattr(self.compilers, 'HIPCC'): needInclude=True
+    if hasattr(self.compilers, 'HIPC'): needInclude=True
     if not needInclude: return
     import re
     output = ''
@@ -660,7 +645,7 @@ to remove this warning message *****')
             self.setCompilers.pushLanguage('CUDA')
             self.setCompilers.addCompilerFlag(arg)
             self.setCompilers.popLanguage()
-          if hasattr(self.compilers, 'HIPCC'):
+          if hasattr(self.compilers, 'HIPC'):
             self.setCompilers.pushLanguage('HIP')
             self.setCompilers.addCompilerFlag(arg)
             self.setCompilers.popLanguage()
@@ -708,6 +693,8 @@ to remove this warning message *****')
     if 'with-'+self.package+'-shared' in self.argDB:
       self.argDB['with-'+self.package] = 1
     config.package.Package.configureLibrary(self)
+    if self.argDB['with-mpi-f90module-visibility']:
+      self.addDefine('HAVE_MPI_F90MODULE_VISIBILITY',1)
     if self.setCompilers.usedMPICompilers:
       if 'with-mpi-include' in self.argDB: raise RuntimeError('Do not use --with-mpi-include when using MPI compiler wrappers')
       if 'with-mpi-lib' in self.argDB: raise RuntimeError('Do not use --with-mpi-lib when using MPI compiler wrappers')

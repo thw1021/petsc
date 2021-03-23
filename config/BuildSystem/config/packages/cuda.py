@@ -45,15 +45,7 @@ class Configure(config.package.Package):
     return
 
   def getSearchDirectories(self):
-    import os
-    self.pushLanguage('CUDA')
-    petscNvcc = self.getCompiler()
-    self.popLanguage()
-    self.getExecutable(petscNvcc,getFullPath=1,resultName='systemNvcc')
-    if hasattr(self,'systemNvcc'):
-      self.nvccDir = os.path.dirname(self.systemNvcc)
-      self.cudaDir = os.path.split(self.nvccDir)[0]
-      yield self.cudaDir
+    yield self.cudaDir
     return
 
   def checkSizeofVoidP(self):
@@ -78,12 +70,10 @@ class Configure(config.package.Package):
       raise RuntimeError('Must use either single or double precision with CUDA')
     self.checkSizeofVoidP()
     if not self.thrust.found and self.scalarTypes.scalartype == 'complex': # if no user-supplied thrust, check the system's complex ability
-      if not self.compilers.cxxdialect in ['C++11','C++14']:
-        raise RuntimeError('CUDA Error: Using CUDA with PetscComplex requirs a C++ dialect at least cxx11. Use --with-cxx-dialect=xxx to specify a proper one')
+      if not self.compilers.cxxdialect in ['C++11','C++14'] or not self.compilers.cudadialect in ['C++11','C++14']:
+        raise RuntimeError('CUDA Error: Using CUDA with PetscComplex requires a C++ dialect at least cxx11. Use --with-cxx-dialect=xxx and --with-cuda-dialect=xxx to specify a suitable compiler')
       if not self.checkThrustVersion(100908):
         raise RuntimeError('CUDA Error: The thrust library is too low to support PetscComplex. Use --download-thrust or --with-thrust-dir to give a thrust >= 1.9.8')
-    if self.compilers.cxxdialect in ['C++11','C++14']: #nvcc is a C++ compiler so it is always good to add -std=xxx. It is even crucial when using thrust complex (see MR 2822)
-      self.setCompilers.CUDAFLAGS += ' -std=' + self.compilers.cxxdialect.lower()
     return
 
   def versionToStandardForm(self,ver):
@@ -102,7 +92,20 @@ class Configure(config.package.Package):
         raise RuntimeError('CUDA compiler error: memory alignment doesn\'t match C compiler (try adding -malign-double to compiler options)')
     return
 
+  def setCudaDir(self):
+    import os
+    self.pushLanguage('CUDA')
+    petscNvcc = self.getCompiler()
+    self.popLanguage()
+    self.getExecutable(petscNvcc,getFullPath=1,resultName='systemNvcc')
+    if hasattr(self,'systemNvcc'):
+      self.nvccDir = os.path.dirname(self.systemNvcc)
+      self.cudaDir = os.path.split(self.nvccDir)[0]
+    else:
+      raise RuntimeError('CUDA compiler not found!')
+
   def configureLibrary(self):
+    self.setCudaDir()
     config.package.Package.configureLibrary(self)
     if not hasattr(self.compilers, 'CXX'):
       raise RuntimeError('Using CUDA requires PETSc to be configure with a C++ compiler')
@@ -119,24 +122,20 @@ class Configure(config.package.Package):
     if 'with-cuda-gencodearch' in self.framework.clArgDB:
       self.gencodearch = self.argDB['with-cuda-gencodearch']
     else:
-      import os
-      self.getExecutable(petscNvcc,getFullPath=1,resultName='systemNvcc')
-      if hasattr(self,'systemNvcc'):
-        cudaDir = os.path.dirname(os.path.dirname(self.systemNvcc))
-        dq = os.path.join(cudaDir,'extras','demo_suite')
-        self.getExecutable('deviceQuery',path = dq)
-        if hasattr(self,'deviceQuery'):
+      dq = os.path.join(self.cudaDir,'extras','demo_suite')
+      self.getExecutable('deviceQuery',path = dq)
+      if hasattr(self,'deviceQuery'):
+        try:
+          (out, err, ret) = Configure.executeShellCommand(self.deviceQuery + ' | grep "CUDA Capability"',timeout = 60, log = self.log, threads = 1)
+        except:
+          self.log.write('deviceQuery failed\n')
+        else:
           try:
-            (out, err, ret) = Configure.executeShellCommand(self.deviceQuery + ' | grep "CUDA Capability"',timeout = 60, log = self.log, threads = 1)
+            out = out.split('\n')[0]
+            sm = out[-3:]
+            self.gencodearch = str(int(10*float(sm)))
           except:
-            self.log.write('deviceQuery failed\n')
-          else:
-            try:
-              out = out.split('\n')[0]
-              sm = out[-3:]
-              self.gencodearch = str(int(10*float(sm)))
-            except:
-              self.log.write('Unable to parse CUDA capability\n')
+            self.log.write('Unable to parse CUDA capability\n')
 
     if hasattr(self,'gencodearch'):
       if self.gencodearch == 'all':
@@ -184,5 +183,5 @@ class Configure(config.package.Package):
         self.delMakeMacro('CUDAC')
         self.addMakeMacro('CUDAC','CPLUS_INCLUDE_PATH="" '+petscNvcc)
     else:
-      self.logPrint('nvcc --dryrun failed, unable to determine CUDA_CXX and CUDA_CXXFLAGS') 
+      self.logPrint('nvcc --dryrun failed, unable to determine CUDA_CXX and CUDA_CXXFLAGS')
     return

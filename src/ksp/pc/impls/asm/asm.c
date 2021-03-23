@@ -14,12 +14,14 @@
 
 static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
 {
-  PC_ASM         *osm = (PC_ASM*)pc->data;
-  PetscErrorCode ierr;
-  PetscMPIInt    rank;
-  PetscInt       i,bsz;
-  PetscBool      iascii,isstring;
-  PetscViewer    sviewer;
+  PC_ASM            *osm = (PC_ASM*)pc->data;
+  PetscErrorCode    ierr;
+  PetscMPIInt       rank;
+  PetscInt          i,bsz;
+  PetscBool         iascii,isstring;
+  PetscViewer       sviewer;
+  PetscViewerFormat format;
+  const char        *prefix;
 
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
@@ -33,9 +35,12 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
     if (osm->dm_subdomains) {ierr = PetscViewerASCIIPrintf(viewer,"  Additive Schwarz: using DM to define subdomains\n");CHKERRQ(ierr);}
     if (osm->loctype != PC_COMPOSITE_ADDITIVE) {ierr = PetscViewerASCIIPrintf(viewer,"  Additive Schwarz: local solve composition type - %s\n",PCCompositeTypes[osm->loctype]);CHKERRQ(ierr);}
     ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank);CHKERRMPI(ierr);
-    if (osm->same_local_solves) {
+    ierr = PetscViewerGetFormat(viewer,&format);CHKERRQ(ierr);
+    if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
       if (osm->ksp) {
-        ierr = PetscViewerASCIIPrintf(viewer,"  Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:\n");CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"  Local solver information for first block is in the following KSP and PC objects on rank 0:\n");CHKERRQ(ierr);
+        ierr = PCGetOptionsPrefix(pc,&prefix);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"  Use -%sksp_view ::ascii_info_detail to display information for all blocks\n",prefix?prefix:"");CHKERRQ(ierr);
         ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
         if (!rank) {
           ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
@@ -48,7 +53,7 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"  [%d] number of local blocks = %D\n",(int)rank,osm->n_local_true);CHKERRQ(ierr);
       ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"  Local solve info for each block is in the following KSP and PC objects:\n");CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  Local solver information for each block is in the following KSP and PC objects:\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"- - - - - - - - - - - - - - - - - -\n");CHKERRQ(ierr);
       ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
@@ -924,12 +929,7 @@ static PetscErrorCode  PCASMGetSubKSP_ASM(PC pc,PetscInt *n_local,PetscInt *firs
     ierr          = MPI_Scan(&osm->n_local_true,first_local,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)pc));CHKERRMPI(ierr);
     *first_local -= osm->n_local_true;
   }
-  if (ksp) {
-    /* Assume that local solves are now different; not necessarily
-       true though!  This flag is used only for PCView_ASM() */
-    *ksp                   = osm->ksp;
-    osm->same_local_solves = PETSC_FALSE;
-  }
+  if (ksp) *ksp   = osm->ksp;
   PetscFunctionReturn(0);
 }
 
@@ -1367,7 +1367,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC pc)
   osm->pmat              = NULL;
   osm->type              = PC_ASM_RESTRICT;
   osm->loctype           = PC_COMPOSITE_ADDITIVE;
-  osm->same_local_solves = PETSC_TRUE;
   osm->sort_indices      = PETSC_TRUE;
   osm->dm_subdomains     = PETSC_FALSE;
   osm->sub_mat_type      = NULL;
@@ -1702,9 +1701,9 @@ PetscErrorCode  PCASMCreateSubdomains2D(PetscInt m,PetscInt n,PetscInt M,PetscIn
 .   pc - the preconditioner context
 
     Output Parameters:
-+   n - the number of subdomains for this processor (default value = 1)
-.   is - the index sets that define the subdomains for this processor
--   is_local - the index sets that define the local part of the subdomains for this processor (can be NULL)
++   n - if requested, the number of subdomains for this processor (default value = 1)
+.   is - if requested, the index sets that define the subdomains for this processor
+-   is_local - if requested, the index sets that define the local part of the subdomains for this processor (can be NULL)
 
 
     Notes:
@@ -1723,8 +1722,9 @@ PetscErrorCode  PCASMGetLocalSubdomains(PC pc,PetscInt *n,IS *is[],IS *is_local[
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscValidIntPointer(n,2);
+  if (n) PetscValidIntPointer(n,2);
   if (is) PetscValidPointer(is,3);
+  if (is_local) PetscValidPointer(is_local,4);
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCASM,&match);CHKERRQ(ierr);
   if (!match) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG,"PC is not a PCASM");
   if (n) *n = osm->n_local_true;
@@ -1743,8 +1743,8 @@ PetscErrorCode  PCASMGetLocalSubdomains(PC pc,PetscInt *n,IS *is[],IS *is_local[
 .   pc - the preconditioner context
 
     Output Parameters:
-+   n - the number of matrices for this processor (default value = 1)
--   mat - the matrices
++   n - if requested, the number of matrices for this processor (default value = 1)
+-   mat - if requested, the matrices
 
     Level: advanced
 
@@ -1764,7 +1764,7 @@ PetscErrorCode  PCASMGetLocalSubmatrices(PC pc,PetscInt *n,Mat *mat[])
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscValidIntPointer(n,2);
+  if (n) PetscValidIntPointer(n,2);
   if (mat) PetscValidPointer(mat,3);
   if (!pc->setupcalled) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Must call after KSPSetUp() or PCSetUp().");
   ierr = PetscObjectTypeCompare((PetscObject)pc,PCASM,&match);CHKERRQ(ierr);

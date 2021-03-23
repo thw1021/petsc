@@ -13,6 +13,7 @@
 #include <petsc/private/vecimpl.h>
 #undef VecType
 #include <../src/mat/impls/aij/seq/seqcusparse/cusparsematimpl.h>
+#include <thrust/async/for_each.h>
 
 const char *const MatCUSPARSEStorageFormats[]    = {"CSR","ELL","HYB","MatCUSPARSEStorageFormat","MAT_CUSPARSE_",0};
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
@@ -279,18 +280,15 @@ static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(PetscOptionItems *PetscOp
                             "MatCUSPARSESetFormat",MatCUSPARSEStorageFormats,(PetscEnum)cusparsestruct->format,(PetscEnum*)&format,&flg);CHKERRQ(ierr);
     if (flg) {ierr = MatCUSPARSESetFormat(A,MAT_CUSPARSE_ALL,format);CHKERRQ(ierr);}
    #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-    cusparsestruct->spmvAlg = CUSPARSE_CSRMV_ALG1; /* default, since we only support csr */
     ierr = PetscOptionsEnum("-mat_cusparse_spmv_alg","sets cuSPARSE algorithm used in sparse-mat dense-vector multiplication (SpMV)",
                             "cusparseSpMVAlg_t",MatCUSPARSESpMVAlgorithms,(PetscEnum)cusparsestruct->spmvAlg,(PetscEnum*)&cusparsestruct->spmvAlg,&flg);CHKERRQ(ierr);
     /* If user did use this option, check its consistency with cuSPARSE, since PetscOptionsEnum() sets enum values based on their position in MatCUSPARSESpMVAlgorithms[] */
     if (flg && CUSPARSE_CSRMV_ALG1 != 2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseSpMVAlg_t has been changed but PETSc has not been updated accordingly");
 
-    cusparsestruct->spmmAlg = CUSPARSE_SPMM_CSR_ALG1; /* default, only support column-major dense matrix B */
     ierr = PetscOptionsEnum("-mat_cusparse_spmm_alg","sets cuSPARSE algorithm used in sparse-mat dense-mat multiplication (SpMM)",
                             "cusparseSpMMAlg_t",MatCUSPARSESpMMAlgorithms,(PetscEnum)cusparsestruct->spmmAlg,(PetscEnum*)&cusparsestruct->spmmAlg,&flg);CHKERRQ(ierr);
     if (flg && CUSPARSE_SPMM_CSR_ALG1 != 4) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseSpMMAlg_t has been changed but PETSc has not been updated accordingly");
 
-    cusparsestruct->csr2cscAlg = CUSPARSE_CSR2CSC_ALG1;
     ierr = PetscOptionsEnum("-mat_cusparse_csr2csc_alg","sets cuSPARSE algorithm used in converting CSR matrices to CSC matrices",
                             "cusparseCsr2CscAlg_t",MatCUSPARSECsr2CscAlgorithms,(PetscEnum)cusparsestruct->csr2cscAlg,(PetscEnum*)&cusparsestruct->csr2cscAlg,&flg);CHKERRQ(ierr);
     if (flg && CUSPARSE_CSR2CSC_ALG1 != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseCsr2CscAlg_t has been changed but PETSc has not been updated accordingly");
@@ -1433,7 +1431,7 @@ static PetscErrorCode MatSolveTranspose_SeqAIJCUSPARSE(Mat A,Vec bb,Vec xx)
 
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   /* First, reorder with the row permutation */
-  thrust::copy(thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->begin()),
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->begin()),
                thrust::make_permutation_iterator(bGPU+n, cusparseTriFactors->rpermIndices->end()),
                xGPU);
 
@@ -1472,12 +1470,12 @@ static PetscErrorCode MatSolveTranspose_SeqAIJCUSPARSE(Mat A,Vec bb,Vec xx)
 );CHKERRCUSPARSE(stat);
 
   /* Last, copy the solution, xGPU, into a temporary with the column permutation ... can't be done in place. */
-  thrust::copy(thrust::make_permutation_iterator(xGPU, cusparseTriFactors->cpermIndices->begin()),
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_permutation_iterator(xGPU, cusparseTriFactors->cpermIndices->begin()),
                thrust::make_permutation_iterator(xGPU+n, cusparseTriFactors->cpermIndices->end()),
                tempGPU->begin());
 
   /* Copy the temporary to the full solution. */
-  thrust::copy(tempGPU->begin(), tempGPU->end(), xGPU);
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),tempGPU->begin(), tempGPU->end(), xGPU);
 
   /* restore */
   ierr = VecCUDARestoreArrayRead(bb,&barray);CHKERRQ(ierr);
@@ -1580,7 +1578,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSE(Mat A,Vec bb,Vec xx)
 
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   /* First, reorder with the row permutation */
-  thrust::copy(thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->begin()),
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->begin()),
                thrust::make_permutation_iterator(bGPU, cusparseTriFactors->rpermIndices->end()),
                tempGPU->begin());
 
@@ -1619,7 +1617,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSE(Mat A,Vec bb,Vec xx)
 );CHKERRCUSPARSE(stat);
 
   /* Last, reorder with the column permutation */
-  thrust::copy(thrust::make_permutation_iterator(tempGPU->begin(), cusparseTriFactors->cpermIndices->begin()),
+  thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_permutation_iterator(tempGPU->begin(), cusparseTriFactors->cpermIndices->begin()),
                thrust::make_permutation_iterator(tempGPU->begin(), cusparseTriFactors->cpermIndices->end()),
                xGPU);
 
@@ -2752,6 +2750,12 @@ static PetscErrorCode MatMultTranspose_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy)
   PetscFunctionReturn(0);
 }
 
+__global__ static void ScatterAdd(PetscInt n, PetscInt *idx,const PetscScalar *x,PetscScalar *y)
+{
+  int i = blockIdx.x*blockDim.x + threadIdx.x;
+  if (i < n) y[idx[i]] += x[i];
+}
+
 /* z = op(A) x + y. If trans & !herm, op = ^T; if trans & herm, op = ^H; if !trans, op = no-op */
 static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz,PetscBool trans,PetscBool herm)
 {
@@ -2826,7 +2830,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
       beta = yy ? matstruct->beta_one : matstruct->beta_zero;
       if (compressed) { /* Scatter x to work vector */
         thrust::device_ptr<PetscScalar> xarr = thrust::device_pointer_cast(xarray);
-        thrust::for_each(thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(xarr, matstruct->cprowIndices->begin()))),
+        thrust::for_each(thrust::cuda::par.on(PetscDefaultCudaStream),thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(xarr, matstruct->cprowIndices->begin()))),
                          thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(xarr, matstruct->cprowIndices->begin()))) + matstruct->cprowIndices->size(),
                          VecCUDAEqualsReverse());
       }
@@ -2909,11 +2913,21 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
 
       /* ScatterAdd the result from work vector into the full vector when A is compressed */
       if (compressed) {
-        thrust::device_ptr<PetscScalar> zptr = thrust::device_pointer_cast(zarray);
         ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-        thrust::for_each(thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(zptr, matstruct->cprowIndices->begin()))),
+        /* I wanted to make this for_each asynchronous but failed. thrust::async::for_each() returns an event (internally registerred)
+           and in the destructor of the scope, it will call cudaStreamSynchronize() on this stream. One has to store all events to
+           prevent that. So I just add a ScatterAdd kernel.
+         */
+       #if 0
+        thrust::device_ptr<PetscScalar> zptr = thrust::device_pointer_cast(zarray);
+        thrust::async::for_each(thrust::cuda::par.on(cusparsestruct->stream),
+                         thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(zptr, matstruct->cprowIndices->begin()))),
                          thrust::make_zip_iterator(thrust::make_tuple(cusparsestruct->workVector->begin(), thrust::make_permutation_iterator(zptr, matstruct->cprowIndices->begin()))) + matstruct->cprowIndices->size(),
                          VecCUDAPlusEquals());
+       #else
+        PetscInt n = matstruct->cprowIndices->size();
+        ScatterAdd<<<(n+255)/256,256,0,PetscDefaultCudaStream>>>(n,matstruct->cprowIndices->data().get(),cusparsestruct->workVector->data().get(),zarray);
+       #endif
         cerr = WaitForCUDA();CHKERRCUDA(cerr);
         ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
       }
@@ -3303,13 +3317,20 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCUSPARSE(Mat A, MatType mtyp
       ierr = PetscNew(&spptr);CHKERRQ(ierr);
       spptr->format = MAT_CUSPARSE_CSR;
       stat = cusparseCreate(&spptr->handle);CHKERRCUSPARSE(stat);
+      stat = cusparseSetStream(spptr->handle,PetscDefaultCudaStream);CHKERRCUSPARSE(stat);
       B->spptr = spptr;
       spptr->deviceMat = NULL;
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+      spptr->spmvAlg = CUSPARSE_CSRMV_ALG1; /* default, since we only support csr */
+      spptr->spmmAlg = CUSPARSE_SPMM_CSR_ALG1; /* default, only support column-major dense matrix B */
+      spptr->csr2cscAlg = CUSPARSE_CSR2CSC_ALG1;
+#endif
     } else {
       Mat_SeqAIJCUSPARSETriFactors *spptr;
 
       ierr = PetscNew(&spptr);CHKERRQ(ierr);
       stat = cusparseCreate(&spptr->handle);CHKERRCUSPARSE(stat);
+      stat = cusparseSetStream(spptr->handle,PetscDefaultCudaStream);CHKERRCUSPARSE(stat);
       B->spptr = spptr;
     }
     B->offloadmask = PETSC_OFFLOAD_UNALLOCATED;

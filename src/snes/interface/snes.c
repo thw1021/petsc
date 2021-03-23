@@ -353,6 +353,10 @@ PETSC_EXTERN PetscErrorCode SNESComputeJacobian_DMDA(SNES,Vec,Mat,Mat,void*);
          the file.  All other processors send their
          data to the first processor to print.
 
+   The available formats include
++     PETSC_VIEWER_DEFAULT - standard output (default)
+-     PETSC_VIEWER_ASCII_INFO_DETAIL - more verbose output for SNESNASM
+
    The user can open an alternative visualization context with
    PetscViewerASCIIOpen() - output to a specified file.
 
@@ -4119,7 +4123,7 @@ PetscErrorCode SNESGetConvergedReason(SNES snes,SNESConvergedReason *reason)
    Output Parameter:
 .  strreason - a human readable string that describes SNES converged reason
 
-   Level: basic
+   Level: beginner
 
 .seealso: SNESGetConvergedReason()
 @*/

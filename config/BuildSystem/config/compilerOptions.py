@@ -60,6 +60,7 @@ class CompilerOptions(config.base.Configure):
       # Windows Intel
       elif compiler.find('win32fe icl') >= 0:
         if bopt == '':
+          flags.extend(['-Qstd=c99'])
           if self.argDB['with-shared-libraries']:
             flags.extend(['-MD'])
           else:
@@ -111,8 +112,12 @@ class CompilerOptions(config.base.Configure):
     if config.setCompilers.Configure.isGNU(compiler, self.log) or config.setCompilers.Configure.isClang(compiler, self.log):
       if bopt == '':
         flags.extend(['-Wall', '-Wwrite-strings', '-Wno-strict-aliasing','-Wno-unknown-pragmas'])
-        # skip -fstack-protector for brew gcc - as this gives SEGV
-        if not (config.setCompilers.Configure.isDarwin(self.log) and config.setCompilers.Configure.isGNU(compiler, self.log)):
+        if not any([
+            # skip -fstack-protector for brew gcc - as this gives SEGV
+            config.setCompilers.Configure.isDarwin(self.log) and config.setCompilers.Configure.isGNU(compiler, self.log),
+            # hipcc for ROCm-4.0 crashes on some source files with -fstack-protector
+            config.setCompilers.Configure.isHIP(compiler, self.log),
+        ]):
           flags.extend(['-fstack-protector'])
         if config.setCompilers.Configure.isDarwinCatalina(self.log) and config.setCompilers.Configure.isClang(compiler, self.log):
           flags.extend(['-fno-stack-check'])
