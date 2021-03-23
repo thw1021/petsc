@@ -5,6 +5,18 @@ min f = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
 s.t.  x0^2 + x1 - 2 = 0
       0  <= x0^2 - x1 <= 1
       -1 <= x0, x1 <= 2
+
+      -->
+      g(x)  = 0
+      h(x) >= 0
+where
+      g(x) = x0^2 + x1 - 2
+      h(x) = x0^2 - x1
+             1 -(x0^2 - x1)
+             2 - x0
+             2 - x1
+             x0 + 1
+             x1 + 1
 ---------------------------------------------------------------------- */
 
 #include <petsctao.h>
@@ -14,6 +26,7 @@ Input parameters include:\n\
   -tao_type pdipm    : sets Tao solver\n\
   -no_eq             : removes the equaility constraints from the problem\n\
   -snes_fd           : snes with finite difference Jacobian (needed for pdipm)\n\
+  -snes_compare_explicit : compare user Jacobian with finite difference Jacobian \n\
   -tao_cmonitor      : convergence monitor with constraint norm \n\
   -tao_view_solution : view exact solution at each itteration\n\
   Note: external package mumps is requried to run either for pdipm. Additionally This is designed for a maximum of 2 processors, the code will error if size > 2.\n\n";
@@ -232,7 +245,8 @@ PetscErrorCode DestroyProblem(AppCtx *user)
 
 /*
   f(X) = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
-  G(X) = fx = [2.0*(x[0]-2.0) - 2.0; 2.0*(x[1]-2.0) - 2.0]
+  fx   = [2*(x0 - 2) - 2;
+          2*(x1 - 2) - 2]
 */
 PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *ctx)
 {
@@ -269,11 +283,16 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *c
   PetscFunctionReturn(0);
 }
 
+/*
+  H = fxx + grad (grad g^T*DI) - grad (grad h^T*DE)]
+    = [ 2*(1+de[0]-di[0]+di[1]), 0;
+                  0,             2]
+*/
 PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
 {
   AppCtx            *user=(AppCtx*)ctx;
   Vec               DE,DI;
-  const PetscScalar *de, *di;
+  const PetscScalar *de,*di;
   PetscInt          zero=0,one=1;
   PetscScalar       two=2.0;
   PetscScalar       val=0.0;
@@ -295,8 +314,8 @@ PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
    ierr = VecScatterEnd(Descat,DE,Deseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   }
   if (!user->noineqflag){
-  ierr = VecScatterBegin(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-  ierr = VecScatterEnd(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecScatterBegin(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecScatterEnd(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   }
 
   if (!rank){
@@ -304,25 +323,24 @@ PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
       ierr = VecGetArrayRead(Deseq,&de);CHKERRQ(ierr);  /* places equality constraint dual into array */
     }
     if (!user->noineqflag){
-    ierr = VecGetArrayRead(Diseq,&di);CHKERRQ(ierr);  /* places inequality constraint dual into array */
+      ierr = VecGetArrayRead(Diseq,&di);CHKERRQ(ierr);  /* places inequality constraint dual into array */
     }
     if (!user->noeqflag && !user->noineqflag){
-      val = 2.0 * (1 + de[0] + di[0] - di[1]);
+      val = 2.0 * (1 + de[0] - di[0] + di[1]);
       ierr = VecRestoreArrayRead(Deseq,&de);CHKERRQ(ierr);
       ierr = VecRestoreArrayRead(Diseq,&di);CHKERRQ(ierr);
-    }else if (user->noeqflag && !user->noineqflag){
-      val = 2.0 * (1 + di[0] - di[1]);
+    } else if (user->noeqflag && !user->noineqflag){
+      val = 2.0 * (1 - di[0] + di[1]);
       ierr = VecRestoreArrayRead(Diseq,&di);CHKERRQ(ierr);
-    }else if (!user->noeqflag && user->noineqflag){
+    } else if (!user->noeqflag && user->noineqflag){
       val = 2.0 * (1 + de[0]);
       ierr = VecRestoreArrayRead(Deseq,&de);CHKERRQ(ierr);
-    }else {
+    } else {
       val = 2.0;
     }
     ierr = MatSetValues(H,1,&zero,1,&zero,&val,INSERT_VALUES);CHKERRQ(ierr);
     ierr = MatSetValues(H,1,&one,1,&one,&two,INSERT_VALUES);CHKERRQ(ierr);
   }
-
   ierr = MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   if (!user->noeqflag){
@@ -332,6 +350,10 @@ PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
   PetscFunctionReturn(0);
 }
 
+/*
+  grad h = [   x0^2 - x1;
+             -(x0^2 - x1) + 1]
+*/
 PetscErrorCode FormInequalityConstraints(Tao tao,Vec X,Vec CI,void *ctx)
 {
   const PetscScalar *x;
@@ -363,6 +385,9 @@ PetscErrorCode FormInequalityConstraints(Tao tao,Vec X,Vec CI,void *ctx)
   PetscFunctionReturn(0);
 }
 
+/*
+  grad g = [ x0^2 + x1 - 2]
+*/
 PetscErrorCode FormEqualityConstraints(Tao tao,Vec X,Vec CE,void *ctx)
 {
   const PetscScalar *x;
