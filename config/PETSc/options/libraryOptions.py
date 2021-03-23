@@ -26,13 +26,13 @@ class Configure(config.base.Configure):
 
   def setupDependencies(self, framework):
     config.base.Configure.setupDependencies(self, framework)
-    self.compilers      = framework.require('config.compilers', self)
-    self.setCompilers   = framework.require('config.setCompilers', self)
-    self.libraries      = framework.require('config.libraries', self)
-    self.types          = framework.require('config.types', self)
-    self.compilerFlags  = framework.require('config.compilerFlags', self)
-    self.sharedLibaries = framework.require('PETSc.options.libraryOptions', None)
-    self.petscConfigure = framework.require('PETSc.Configure', None)
+    self.compilers        = framework.require('config.compilers', self)
+    self.setCompilers     = framework.require('config.setCompilers', self)
+    self.libraries        = framework.require('config.libraries', self)
+    self.types            = framework.require('config.types', self)
+    self.compilerFlags    = framework.require('config.compilerFlags', self)
+    self.sharedLibraries  = framework.require('PETSc.options.sharedLibraries', None)
+    self.petscConfigure   = framework.require('PETSc.Configure', None)
     return
 
   def configureLibraryOptions(self):
@@ -47,7 +47,7 @@ class Configure(config.base.Configure):
     if self.useThreadSafety and self.framework.argDB['with-log']:
       raise RuntimeError('Must use --with-log=0 with --with-threadsafety')
 
-    if self.useThreadSafety and not ((self.sharedLibaries.useShared and self.setCompilers.dynamicLibraries) or self.petscConfigure.petsclib == '-lpetsc'):
+    if self.useThreadSafety and not ((self.sharedLibraries.useShared and self.setCompilers.dynamicLibraries) or self.petscConfigure.petsclib == '-lpetsc'):
       raise RuntimeError('Must use --with-shared-libraries or --with-single-library with --with-threadsafety')
 
     self.useLog   = self.framework.argDB['with-log']
