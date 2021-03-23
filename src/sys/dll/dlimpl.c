@@ -21,7 +21,8 @@
 
 #if defined(PETSC_HAVE_WINDOWS_H)
 #include <windows.h>
-#elif defined(PETSC_HAVE_DLFCN_H)
+#endif
+#if defined(PETSC_HAVE_DLFCN_H)
 #include <dlfcn.h>
 #endif
 
