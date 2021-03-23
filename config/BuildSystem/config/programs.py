@@ -70,7 +70,8 @@ class Configure(config.base.Configure):
 
   def configurePrograms(self):
     '''Check for the programs needed to build and run PETSc'''
-    self.getExecutable('sh',   getFullPath = 1, resultName = 'SHELL')
+    for shell in ['bash','zsh','sh']:
+      if self.getExecutable(shell,   getFullPath = 1, resultName = 'SHELL'): break
     if not hasattr(self, 'SHELL'): raise RuntimeError('Could not locate sh executable')
     self.getExecutable('sed',  getFullPath = 1)
     if not hasattr(self, 'sed'): raise RuntimeError('Could not locate sed executable')
