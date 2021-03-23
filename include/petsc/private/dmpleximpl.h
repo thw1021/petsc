@@ -666,7 +666,7 @@ PETSC_INTERN PetscErrorCode DMPlexGetIndicesPointFields_Internal(PetscSection,Pe
 PETSC_INTERN PetscErrorCode DMPlexGetCompressedClosure(DM, PetscSection, PetscInt, PetscInt *, PetscInt **, PetscSection *, IS *, const PetscInt **);
 PETSC_INTERN PetscErrorCode DMPlexRestoreCompressedClosure(DM, PetscSection, PetscInt, PetscInt *, PetscInt **, PetscSection *, IS *, const PetscInt **);
 
-PETSC_INTERN PetscErrorCode DMPlexGetAllCells_Internal(DM, IS *);
+PETSC_EXTERN PetscErrorCode DMPlexGetAllCells_Internal(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMSNESGetFEGeom(DMField, IS, PetscQuadrature, PetscBool, PetscFEGeom **);
 PETSC_EXTERN PetscErrorCode DMSNESRestoreFEGeom(DMField, IS, PetscQuadrature, PetscBool, PetscFEGeom **);
 PETSC_EXTERN PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM, PetscSection, IS, PetscReal, Vec, Vec, Vec, void *);
