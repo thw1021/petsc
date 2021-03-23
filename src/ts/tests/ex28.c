@@ -329,7 +329,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   */
   for (c = cStart; c < cEnd; ++c) {
     PetscScalar *vcoords = NULL;
-    PetscReal    relaxation = 1.0, neq, penalization;
+    PetscReal    relaxation = 1.0, neq;
     PetscInt     sp      = c*Ncp, q;
 
     /* Calculate equilibrium occupation for this velocity cell */
