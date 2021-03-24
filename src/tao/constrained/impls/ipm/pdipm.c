@@ -556,13 +556,13 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
       }
       ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
     } else {
-      /* (3) L3 = - z + ci(x);
+      /* (3) L3 = z - ci(x);
          (4) L4 = Z * Lambdai * e - mu * e  */
       ierr = VecGetArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);
       larr = Xarr+pdipm->off_lambdai;
       zarr = Xarr+pdipm->off_z;
       for (i=0; i<pdipm->nci; i++) {
-        Farr[pdipm->off_lambdai + i] = - zarr[i] + carr[i];
+        Farr[pdipm->off_lambdai + i] = zarr[i] - carr[i];
         Farr[pdipm->off_z       + i] = zarr[i]*larr[i] - pdipm->mu;
       }
       ierr = VecRestoreArrayRead(pdipm->ci,&carr);CHKERRQ(ierr);

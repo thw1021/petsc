@@ -1,22 +1,18 @@
 /* Program usage: mpiexec -n 2 ./ex1 [-help] [all TAO options] */
 
 /* ----------------------------------------------------------------------
-min f = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
+min f(x) = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
 s.t.  x0^2 + x1 - 2 = 0
       0  <= x0^2 - x1 <= 1
       -1 <= x0, x1 <= 2
-
-      -->
+-->
       g(x)  = 0
       h(x) >= 0
+      -1 <= x0, x1 <= 2
 where
       g(x) = x0^2 + x1 - 2
-      h(x) = x0^2 - x1
-             1 -(x0^2 - x1)
-             2 - x0
-             2 - x1
-             x0 + 1
-             x1 + 1
+      h(x) = [x0^2 - x1
+              1 -(x0^2 - x1)]
 ---------------------------------------------------------------------- */
 
 #include <petsctao.h>
@@ -243,10 +239,10 @@ PetscErrorCode DestroyProblem(AppCtx *user)
   PetscFunctionReturn(0);
 }
 
-/*
-  f(X) = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
-  fx   = [2*(x0 - 2) - 2;
-          2*(x1 - 2) - 2]
+/* Evaluate
+   f(x) = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
+   G = grad f = [2*(x0 - 2) - 2;
+                 2*(x1 - 2) - 2]
 */
 PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *ctx)
 {
@@ -283,10 +279,10 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *c
   PetscFunctionReturn(0);
 }
 
-/*
-  H = fxx + grad (grad g^T*DI) - grad (grad h^T*DE)]
-    = [ 2*(1+de[0]-di[0]+di[1]), 0;
-                  0,             2]
+/* Evaluate
+   H = fxx + grad (grad g^T*DI) - grad (grad h^T*DE)]
+     = [ 2*(1+de[0]-di[0]+di[1]), 0;
+                   0,             2]
 */
 PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
 {
@@ -350,9 +346,9 @@ PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
   PetscFunctionReturn(0);
 }
 
-/*
-  grad h = [   x0^2 - x1;
-             -(x0^2 - x1) + 1]
+/* Evaluate
+   h = [ x0^2 - x1;
+         1 -(x0^2 - x1)]
 */
 PetscErrorCode FormInequalityConstraints(Tao tao,Vec X,Vec CI,void *ctx)
 {
@@ -385,8 +381,8 @@ PetscErrorCode FormInequalityConstraints(Tao tao,Vec X,Vec CI,void *ctx)
   PetscFunctionReturn(0);
 }
 
-/*
-  grad g = [ x0^2 + x1 - 2]
+/* Evaluate
+   g = [ x0^2 + x1 - 2]
 */
 PetscErrorCode FormEqualityConstraints(Tao tao,Vec X,Vec CE,void *ctx)
 {
@@ -417,6 +413,10 @@ PetscErrorCode FormEqualityConstraints(Tao tao,Vec X,Vec CE,void *ctx)
   PetscFunctionReturn(0);
 }
 
+/*
+  grad h = [  2*x0, -1;
+             -2*x0,  1]
+*/
 PetscErrorCode FormInequalityJacobian(Tao tao, Vec X, Mat JI, Mat JIpre,  void *ctx)
 {
   AppCtx            *user=(AppCtx*)ctx;
@@ -441,11 +441,11 @@ PetscErrorCode FormInequalityJacobian(Tao tao, Vec X, Mat JI, Mat JIpre,  void *
   cols[0] = 0; cols[1] = 1;
   for (i=min;i<max;i++) {
     if (i==0){
-      vals[0] = +2*x[0]; vals[1] = -1.0;
+      vals[0] = 2*x[0]; vals[1] = -1.0;
       ierr = MatSetValues(JI,1,&i,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
     }
     if (i==1) {
-      vals[0] = -2*x[0]; vals[1] = +1.0;
+      vals[0] = -2*x[0]; vals[1] = 1.0;
       ierr = MatSetValues(JI,1,&i,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
     }
   }
@@ -456,6 +456,10 @@ PetscErrorCode FormInequalityJacobian(Tao tao, Vec X, Mat JI, Mat JIpre,  void *
   PetscFunctionReturn(0);
 }
 
+/*
+  grad g = [2*x0
+             1.0 ]
+*/
 PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
 {
   PetscInt          rows[2];
@@ -487,7 +491,7 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
    build:
       requires: !complex !define(PETSC_USE_CXX) mumps
 
-   test:
+   test:v
       args: -tao_converged_reason -tao_pdipm_kkt_shift_pd
 
    test:
