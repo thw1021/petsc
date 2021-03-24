@@ -491,7 +491,7 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
    build:
       requires: !complex !define(PETSC_USE_CXX) mumps
 
-   test:v
+   test:
       args: -tao_converged_reason -tao_pdipm_kkt_shift_pd
 
    test:
