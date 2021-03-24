@@ -265,6 +265,9 @@
         <li>Add DMGet/SetFieldAvoidTensor() to allow fields to exclude tensor cells in their definition</li>
         <li>Remove regular refinement and marking from DMPlexCreateDoublet()</li>
         <li>Add high order FEM interpolation to DMInterpolationEvaluate()</li>
+        <li>Added a PETSCVIEWEREXODUSII viewer type for DMView/Load and VecView/Load. Note that not all DMPlex can be saved in exodusII format since this file format requires that the numbering of cell sets be compact.</li>
+        <li>Added PetscViewerExodusIIOpen convenience function</li>
+        <li>Added PetscViewerExodusIISetOrder to generate "2nd order" elements (i.e. tri6, tet10, hex27) when using DMView with a PETSCVIEWEREXODUSII viewer.</li>
       </ul>
       <h4>FE/FV:</h4>
       <ul>
