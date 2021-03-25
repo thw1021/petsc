@@ -64,7 +64,7 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch) -> None:
         print('To rebuild, manually run\n  rm -rf %s' %docs_loc)
         print('============================================')
     else:
-        command = ['make', 'alldoc1', 'alldoc2',
+        command = ['make', 'alldoc12',
                    'PETSC_DIR=%s' % petsc_dir,
                    'PETSC_ARCH=%s' % petsc_arch,
                    'LOC=%s' % docs_loc]
