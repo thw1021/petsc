@@ -929,11 +929,11 @@ pages:
   script:
     - cd src/docs/sphinx_docs && sphinx-build -T -E -b dirhtml -D language=en -j auto . ../../../public/$CI_COMMIT_REF_SLUG
   only:
-    refs:
-      - main
-      - release
     variables:
       - $PETSC_DOCS_DEPLOY_VERSION
+  cache:
+    paths:
+      - public/
 
 #
 #
