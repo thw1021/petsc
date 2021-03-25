@@ -108,6 +108,8 @@ class PETScHTMLTranslatorMixin:
             if not ci_environment_url:
                 raise Exception('GitLab CI detected but expected environment variable not found')
             manpage_prefix_base = ci_environment_url.rstrip('/index.html')
+        elif 'READTHEDOCS' in os.environ:  # Temporary - remove once ReadTheDocs is abandoned
+            manpage_prefix_base = 'https://mcs.anl.gov/petsc/petsc-main'
         else:
             manpage_prefix_base = self.builder.outdir
         return manpage_prefix_base

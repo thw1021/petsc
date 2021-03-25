@@ -37,20 +37,19 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch='arch-classic-docs') -> None:
         '--with-pthread=0',
         '--with-regexp=0',
         '--download-sowing',
-        '--download-c2html',
+        #'--download-c2html',
         '--with-mkl_sparse_optimize=0',
         '--with-mkl_sparse=0',
         'PETSC_ARCH=' + petsc_arch,
     ]
+    if 'READTHEDOCS' not in os.environ:  # Temporary - remove once ReadTheDocs is abandoned and re-add c2html above
+        configure.append('--download-c2html')
     print('============================================')
     print('Performing a minimal PETSc (re-)configuration')
     print('PETSC_DIR=%s' % petsc_dir)
     print('PETSC_ARCH=%s' % petsc_arch)
     print('============================================')
     subprocess.run(configure, cwd=petsc_dir, check=True)
-    # Note: if you want to see configure.log printed out on failure,
-    #       catch the subprocess.CalledProcessError exception
-    #       and dump the file before re-raising.
     return petsc_arch
 
 
