@@ -115,4 +115,8 @@ PETSC_EXTERN PetscErrorCode DMSwarmSortGetSizes(DM,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMSwarmProjectFields(DM,PetscInt,const char**,Vec**,PetscBool);
 PETSC_EXTERN PetscErrorCode DMSwarmCreateMassMatrixSquare(DM,DM,Mat*);
 
+PETSC_EXTERN PetscErrorCode DMSwarmGetSubSwarm(DM sw, PetscInt cellID, DM subswarm);
+PETSC_EXTERN PetscErrorCode DMSwarmRestoreSubSwarm(DM sw, PetscInt cellID, DM subswarm);
+
+
 #endif
