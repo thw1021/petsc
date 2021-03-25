@@ -177,7 +177,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse(Mat A,MatFactor
       ierr = PetscStrallocpy(MATORDERINGNATURAL,(char**)&(*B)->preferredordering[MAT_FACTOR_ICC]);CHKERRQ(ierr);
     } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Factor type not supported for CUSPARSE Matrix Types");
   } else {
-    if (A->bindingpropagates) { ierr = MatBindtoCPU(*B,PETSC_TRUE);CHKERRQ(ierr); }
+    if (A->bindingpropagates) { ierr = MatBindToCPU(*B,PETSC_TRUE);CHKERRQ(ierr); }
     if (ftype == MAT_FACTOR_LU || ftype == MAT_FACTOR_ILU || ftype == MAT_FACTOR_ILUDT) {
       ierr = MatSetBlockSizesFromMats(*B,A,A);CHKERRQ(ierr);
       (*B)->ops->ilufactorsymbolic = MatILUFactorSymbolic_SeqAIJ;
