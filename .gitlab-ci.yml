@@ -886,22 +886,22 @@ analyze-pipeline:
     - arch-ci-analyze-pipeline/*
     expire_in: 4 days
 
-.docs-review-base:
+.docs-base:
   extends: .test
   image: python:3.9
-  only:
-    variables:
-      - $CI_MERGE_REQUEST_LABELS =~ /^doc|,doc/
   before_script:
     - apt-get update
     - apt-get install -y --no-install-recommends librsvg2-bin
     - apt-get install -y flex
     - pip install -r src/docs/sphinx_docs/requirements.txt
-  script:
-    - cd src/docs/sphinx_docs && sphinx-build -T -E -b html -D language=en -j auto . ../../../public
   artifacts:
     paths:
       - public
+
+.docs-review-base:
+  extends: .docs-base
+  script:
+    - cd src/docs/sphinx_docs && sphinx-build -T -E -b html -D language=en -j auto . ../../../public
   environment:
     name: review/$CI_COMMIT_REF_NAME
     url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/public/index.html
@@ -922,6 +922,18 @@ docs-review:
   except:
     variables:
       - $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+
+docs-deploy:
+  extends: .docs-base
+  stage: .pre
+  only:
+    variables:
+      - $PETSC_DOCS_DEPLOY_SUBDIR
+  script:
+    - cd src/docs/sphinx_docs && sphinx-build -T -E -b dirhtml -D language=en -j auto . ../../../public/$PETSC_DOCS_DEPLOY_SUBDIR
+  environment:
+     name: petsc-org
+     url: https://petsc.org
 
 #
 #
