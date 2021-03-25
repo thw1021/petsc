@@ -92,11 +92,12 @@ html_logo = os.path.join('..','website','images','PETSc-TAO_RGB.svg')
 html_favicon = os.path.join('..','website','images','PETSc_RGB-logo.png')
 
 # Extra preprocessing for included "classic" docs
-import build_classic_docs
-html_extra_dir = build_classic_docs.main()
+if 'READTHEDOCS' not in os.environ:  # Temporary until ReadTheDocs is abandoned
+    import build_classic_docs
+    html_extra_dir = build_classic_docs.main()
 
-# Additional files that are simply copied over with an HTML build
-html_extra_path = [html_extra_dir]
+    # Additional files that are simply copied over with an HTML build
+    html_extra_path = [html_extra_dir]
 
 # -- Options for LaTeX output --------------------------------------------
 
