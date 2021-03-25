@@ -927,11 +927,11 @@ pages:
   extends: .docs-base
   stage: .pre
   script:
-    - cd src/docs/sphinx_docs && sphinx-build -T -E -b dirhtml -D language=en -j auto . ../../../public/$CI_COMMIT_REF_SLUG
+    - cd src/docs/sphinx_docs && sphinx-build -T -E -b dirhtml -D language=en -j auto . ../../../public/$CI_COMMIT_REF_NAME
   only:
     - release
     - main
-    - psanan/docs-deploy
+    - psanan/docs-deploy # testing only, the slash will become a directory!
   cache:
     paths:
       - public/
