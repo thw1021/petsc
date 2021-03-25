@@ -1,8 +1,6 @@
 #if !defined(__CUDAVECIMPL)
 #define __CUDAVECIMPL
 
-#include <petscvec.h>
-#include <petsccublas.h>
 #include <petsc/private/vecimpl.h>
 
 typedef struct {
@@ -13,28 +11,46 @@ typedef struct {
 } Vec_CUDA;
 
 PETSC_INTERN PetscErrorCode VecCUDAGetArrays_Private(Vec,const PetscScalar**,const PetscScalar**,PetscOffloadMask*);
-PETSC_INTERN PetscErrorCode VecDotNorm2_SeqCUDA(Vec,Vec,PetscScalar*, PetscScalar*);
+PETSC_INTERN PetscErrorCode VecDotNorm2_SeqCUDA(Vec,Vec,PetscScalar*,PetscScalar*);
+PETSC_INTERN PetscErrorCode VecDotNorm2_SeqCUDAAsync(Vec,Vec,PetscStreamScalar,PetscStreamScalar,PetscStream);
 PETSC_INTERN PetscErrorCode VecPointwiseDivide_SeqCUDA(Vec,Vec,Vec);
+PETSC_INTERN PetscErrorCode VecPointwiseDivide_SeqCUDAAsync(Vec,Vec,Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecWAXPY_SeqCUDA(Vec,PetscScalar,Vec,Vec);
+PETSC_INTERN PetscErrorCode VecWAXPY_SeqCUDAAsync(Vec,PetscStreamScalar,Vec,Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecMDot_SeqCUDA(Vec,PetscInt,const Vec[],PetscScalar*);
+PETSC_INTERN PetscErrorCode VecMDot_SeqCUDAAsync(Vec,PetscInt,const Vec[],PetscStreamScalar[],PetscStream);
 PETSC_EXTERN PetscErrorCode VecSet_SeqCUDA(Vec,PetscScalar);
+PETSC_EXTERN PetscErrorCode VecSet_SeqCUDAAsync(Vec,PetscStreamScalar,PetscStream);
 PETSC_INTERN PetscErrorCode VecMAXPY_SeqCUDA(Vec,PetscInt,const PetscScalar*,Vec*);
+PETSC_INTERN PetscErrorCode VecMAXPY_SeqCUDAAsync(Vec,PetscInt,PetscStreamScalar*,Vec*,PetscStream);
 PETSC_INTERN PetscErrorCode VecAXPBYPCZ_SeqCUDA(Vec,PetscScalar,PetscScalar,PetscScalar,Vec,Vec);
+PETSC_INTERN PetscErrorCode VecAXPBYPCZ_SeqCUDAAsync(Vec,PetscStreamScalar,PetscStreamScalar,PetscStreamScalar,Vec,Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecPointwiseMult_SeqCUDA(Vec,Vec,Vec);
+PETSC_INTERN PetscErrorCode VecPointwiseMult_SeqCUDAAsync(Vec,Vec,Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecPlaceArray_SeqCUDA(Vec,const PetscScalar*);
 PETSC_INTERN PetscErrorCode VecResetArray_SeqCUDA(Vec);
 PETSC_INTERN PetscErrorCode VecReplaceArray_SeqCUDA(Vec,const PetscScalar*);
 PETSC_INTERN PetscErrorCode VecDot_SeqCUDA(Vec,Vec,PetscScalar*);
+PETSC_INTERN PetscErrorCode VecDot_SeqCUDAAsync(Vec,Vec,PetscStreamScalar,PetscStream);
 PETSC_INTERN PetscErrorCode VecTDot_SeqCUDA(Vec,Vec,PetscScalar*);
+PETSC_INTERN PetscErrorCode VecTDot_SeqCUDAAsync(Vec,Vec,PetscStreamScalar,PetscStream);
 PETSC_INTERN PetscErrorCode VecScale_SeqCUDA(Vec,PetscScalar);
+PETSC_INTERN PetscErrorCode VecScale_SeqCUDAAsync(Vec,PetscStreamScalar,PetscStream);
 PETSC_EXTERN PetscErrorCode VecCopy_SeqCUDA(Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecCopy_SeqCUDAAsync(Vec,Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecSwap_SeqCUDA(Vec,Vec);
+PETSC_INTERN PetscErrorCode VecSwap_SeqCUDAAsync(Vec,Vec,PetscStream);
 PETSC_EXTERN PetscErrorCode VecAXPY_SeqCUDA(Vec,PetscScalar,Vec);
+PETSC_EXTERN PetscErrorCode VecAXPY_SeqCUDAAsync(Vec,PetscStreamScalar,Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecAXPBY_SeqCUDA(Vec,PetscScalar,PetscScalar,Vec);
+PETSC_INTERN PetscErrorCode VecAXPBY_SeqCUDAAsync(Vec,PetscStreamScalar,PetscStreamScalar,Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecDuplicate_SeqCUDA(Vec,Vec*);
-PETSC_INTERN PetscErrorCode VecConjugate_SeqCUDA(Vec xin);
+PETSC_INTERN PetscErrorCode VecConjugate_SeqCUDA(Vec);
+PETSC_INTERN PetscErrorCode VecConjugate_SeqCUDAAsync(Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecNorm_SeqCUDA(Vec,NormType,PetscReal*);
+PETSC_INTERN PetscErrorCode VecNorm_SeqCUDAAsync(Vec,NormType,PetscStreamScalar*,PetscStream);
 PETSC_INTERN PetscErrorCode VecCUDACopyToGPU(Vec);
+PETSC_INTERN PetscErrorCode VecCUDACopyToGPUAsync(Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecCUDAAllocateCheck(Vec);
 PETSC_EXTERN PetscErrorCode VecCreate_SeqCUDA(Vec);
 PETSC_INTERN PetscErrorCode VecCreate_SeqCUDA_Private(Vec,const PetscScalar*);
@@ -44,6 +60,7 @@ PETSC_INTERN PetscErrorCode VecCreate_CUDA(Vec);
 PETSC_INTERN PetscErrorCode VecDestroy_SeqCUDA(Vec);
 PETSC_INTERN PetscErrorCode VecDestroy_MPICUDA(Vec);
 PETSC_INTERN PetscErrorCode VecAYPX_SeqCUDA(Vec,PetscScalar,Vec);
+PETSC_INTERN PetscErrorCode VecAYPX_SeqCUDAAsync(Vec,PetscStreamScalar,Vec,PetscStream);
 PETSC_INTERN PetscErrorCode VecSetRandom_SeqCUDA(Vec,PetscRandom);
 PETSC_INTERN PetscErrorCode VecGetLocalVector_SeqCUDA(Vec,Vec);
 PETSC_INTERN PetscErrorCode VecRestoreLocalVector_SeqCUDA(Vec,Vec);
