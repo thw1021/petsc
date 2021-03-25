@@ -37,20 +37,19 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch='arch-classic-docs') -> None:
         '--with-pthread=0',
         '--with-regexp=0',
         '--download-sowing',
-        '--download-c2html',
+        #'--download-c2html',
         '--with-mkl_sparse_optimize=0',
         '--with-mkl_sparse=0',
         'PETSC_ARCH=' + petsc_arch,
     ]
+    if 'READTHEDOCS' not in os.environ:  # Temporary - remove once ReadTheDocs is abandoned and re-add c2html above
+        configure.append('--download-c2html')
     print('============================================')
     print('Performing a minimal PETSc (re-)configuration')
     print('PETSC_DIR=%s' % petsc_dir)
     print('PETSC_ARCH=%s' % petsc_arch)
     print('============================================')
     subprocess.run(configure, cwd=petsc_dir, check=True)
-    # Note: if you want to see configure.log printed out on failure,
-    #       catch the subprocess.CalledProcessError exception
-    #       and dump the file before re-raising.
     return petsc_arch
 
 
@@ -64,6 +63,10 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch) -> None:
         print('To rebuild, manually run\n  rm -rf %s' %docs_loc)
         print('============================================')
     else:
+        if 'READTHEDOCS' in os.environ:  # Temprary - remove once ReadTheDocs is abandoned
+            target = 'allcite'
+        else:
+            target = 'alldoc12'
         command = ['make', 'alldoc12',
                    'PETSC_DIR=%s' % petsc_dir,
                    'PETSC_ARCH=%s' % petsc_arch,
@@ -81,7 +84,11 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch) -> None:
 def _populate_html_extra_from_classic_docs(docs_loc) -> str:
     html_extra_dir = os.path.join('generated', 'html_extra')
     _mkdir_p(html_extra_dir)
-    for subdir in ['docs', 'include', 'src']:
+    if 'READTHEDOCS' in os.environ:  # Temporary - remove once ReadTheDocs is abandoned
+        subdirs = ['docs']
+    else:
+        subdirs = ['docs', 'include', 'src']
+    for subdir in subdirs:
         target = os.path.join(html_extra_dir, subdir)
         if os.path.isdir(target):
             shutil.rmtree(target)
