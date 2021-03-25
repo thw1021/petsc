@@ -13,6 +13,7 @@ stages:
   - stage-1
   - stage-2
   - stage-3
+  - docs
 variables:
   GIT_STRATEGY: fetch
   GIT_CLEAN_FLAGS: -ffdxq
@@ -20,7 +21,7 @@ variables:
   TIMEOUT: 450
 
 #
-# The most basic template that most tests will expand upon. In particular merge requests and branch pushes DO NOT trigger testing
+# The most basic template that most tests will expand upon
 #
 
 .test:
@@ -33,6 +34,10 @@ variables:
 #     Set with CI/CD Pipelines - Run Pipeline
       - web
       - merge_requests
+  except:
+    variables:
+      # Skip if the docs-only label is attached to a merge request
+      - $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
   dependencies: []
 
 check-ci-settings:
@@ -886,50 +891,57 @@ analyze-pipeline:
     - arch-ci-analyze-pipeline/*
     expire_in: 4 days
 
-.docs-review-base:
-  extends: .test
+
+#
+# Base job for a documentation build
+#
+.docs:
+  interruptible: true
+  stage: docs
   image: python:3.9
-  only:
-    variables:
-      - $CI_MERGE_REQUEST_LABELS =~ /^doc|,doc/
   before_script:
     - apt-get update
     - apt-get install -y --no-install-recommends librsvg2-bin
     - apt-get install -y flex
     - pip install -r src/docs/sphinx_docs/requirements.txt
+
+#
+# Build documentation and make available for review using GitLab pages
+#
+docs-review:
+  extends: .docs
   script:
-    - cd src/docs/sphinx_docs && sphinx-build -T -E -b html -D language=en -j auto . ../../../public
-  artifacts:
-    paths:
-      - public
+    - cd src/docs/sphinx_docs && 
+      sphinx-build -T -E -b dirhtml -D language=en -j auto . ../../../public
   environment:
     name: review/$CI_COMMIT_REF_NAME
     url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/public/index.html
-
-docs-only-review:
-  stage: .pre
-  extends: .docs-review-base
+  artifacts:
+    paths:
+      - public
   only:
     variables:
-      - $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      # Run if any label begins with "doc"
+      - $CI_MERGE_REQUEST_LABELS =~ /(^doc|,doc)/
 
-docs-review:
-  stage: stage-2
-  extends: .docs-review-base
+#
+# Deploy documentation using GitLab pages
+#
+pages:  # this job name has special meaning to GitLab
+  extends: .docs
+  script:
+    - DEST=../../../public/$CI_COMMIT_REF_NAME &&
+      rm -rf $DEST &&
+      cd src/docs/sphinx_docs &&
+      sphinx-build -T -E -b dirhtml -D language=en -j auto . $DEST
   only:
-    variables:
-      - $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs($|,)/
-  except:
-    variables:
-      - $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
-
-#
-#
-# The following tests are experimental; more tests by users at other sites may be added below this.  Experimental test
-# that fail produce a warning, but do not block execution of a pipeline.
-#
-
-.test-experimental:
-  extends: .test
-  allow_failure: true
-
+    - release
+    - main
+    - /^v[0-9]+\.[0-9].*$/
+    - psanan/docs-deploy # TODO FIXME DEBUG testing only, the slash will become a directory!
+  artifacts:
+    paths:
+      - public
+  cache:
+    paths:
+      - public/
