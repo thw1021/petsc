@@ -3195,8 +3195,9 @@ PetscErrorCode DMPlexCreate(MPI_Comm comm, DM *mesh)
 . numCorners - The number of vertices for each cell
 - cells - An array of numCells*numCorners numbers, the global vertex numbers for each cell
 
-  Output Parameter:
-. vertexSF - (Optional) SF describing complete vertex ownership
+  Output Parameters:
++ vertexSF - (Optional) SF describing complete vertex ownership
+- verticesAdjSaved - (Optional) vertex adjacency array
 
   Notes:
   Two triangles sharing a face
@@ -3240,7 +3241,7 @@ $        3
 
 .seealso: DMPlexBuildFromCellList(), DMPlexCreateFromCellListParallelPetsc(), DMPlexBuildCoordinatesFromCellListParallel()
 @*/
-PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, const PetscInt cells[], PetscSF *vertexSF)
+PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, const PetscInt cells[], PetscSF *vertexSF, PetscInt **verticesAdjSaved)
 {
   PetscSF         sfPoint;
   PetscLayout     layout;
@@ -3280,7 +3281,8 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
       }
     }
     ierr = PetscHSetIGetSize(vhash, &numVerticesAdj);CHKERRQ(ierr);
-    ierr = PetscMalloc1(numVerticesAdj, &verticesAdj);CHKERRQ(ierr);
+    if (!verticesAdjSaved) { ierr = PetscMalloc1(numVerticesAdj, &verticesAdj);CHKERRQ(ierr); }
+    else { verticesAdj = *verticesAdjSaved; }
     ierr = PetscHSetIGetElems(vhash, &off, verticesAdj);CHKERRQ(ierr);
     ierr = PetscHSetIDestroy(&vhash);CHKERRQ(ierr);
     if (off != numVerticesAdj) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid number of local vertices %D should be %D", off, numVerticesAdj);
@@ -3310,7 +3312,7 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
   ierr = PetscLayoutSetBlockSize(layout, 1);CHKERRQ(ierr);
   ierr = PetscSFCreateByMatchingIndices(layout, numVerticesAdj, verticesAdj, NULL, numCells, numVerticesAdj, verticesAdj, NULL, numCells, vertexSF, &sfPoint);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&layout);CHKERRQ(ierr);
-  ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
+  if (!verticesAdjSaved) { ierr = PetscFree(verticesAdj);CHKERRQ(ierr); }
   ierr = PetscObjectSetName((PetscObject) sfPoint, "point SF");CHKERRQ(ierr);
   if (dm->sf) {
     const char *prefix;
@@ -3421,7 +3423,8 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
 
   Output Parameters:
 + dm - The DM
-- vertexSF - (Optional) SF describing complete vertex ownership
+. vertexSF - (Optional) SF describing complete vertex ownership
+- verticesAdjSaved - (Optional) vertex adjacency array
 
   Notes:
   This function is just a convenient sequence of DMCreate(), DMSetType(), DMSetDimension(),
@@ -3434,7 +3437,7 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
 
 .seealso: DMPlexCreateFromCellListPetsc(), DMPlexBuildFromCellListParallel(), DMPlexBuildCoordinatesFromCellListParallel(), DMPlexCreateFromDAG(), DMPlexCreate()
 @*/
-PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, PetscBool interpolate, const PetscInt cells[], PetscInt spaceDim, const PetscReal vertexCoords[], PetscSF *vertexSF, DM *dm)
+PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, PetscBool interpolate, const PetscInt cells[], PetscInt spaceDim, const PetscReal vertexCoords[], PetscSF *vertexSF, PetscInt **verticesAdj, DM *dm)
 {
   PetscSF        sfVert;
   PetscErrorCode ierr;
@@ -3445,7 +3448,7 @@ PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim
   PetscValidLogicalCollectiveInt(*dm, dim, 2);
   PetscValidLogicalCollectiveInt(*dm, spaceDim, 9);
   ierr = DMSetDimension(*dm, dim);CHKERRQ(ierr);
-  ierr = DMPlexBuildFromCellListParallel(*dm, numCells, numVertices, NVertices, numCorners, cells, &sfVert);CHKERRQ(ierr);
+  ierr = DMPlexBuildFromCellListParallel(*dm, numCells, numVertices, NVertices, numCorners, cells, &sfVert, verticesAdj);CHKERRQ(ierr);
   if (interpolate) {
     DM idm;
 
@@ -3482,7 +3485,7 @@ PetscErrorCode DMPlexCreateFromCellListParallel(MPI_Comm comm, PetscInt dim, Pet
       pintCells[i] = (PetscInt) cells[i];
     }
   }
-  ierr = DMPlexCreateFromCellListParallelPetsc(comm, dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, pintCells, spaceDim, vertexCoords, vertexSF, dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateFromCellListParallelPetsc(comm, dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, pintCells, spaceDim, vertexCoords, vertexSF, NULL, dm);CHKERRQ(ierr);
   if (sizeof(int) != sizeof(PetscInt)) {
     ierr = PetscFree(pintCells);CHKERRQ(ierr);
   }

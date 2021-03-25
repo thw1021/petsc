@@ -81,6 +81,8 @@ Changes: Development
 - Change ``DMPlexMetricEnforceSPD()`` to have another argument, for controlling whether anisotropy is restricted
 - Change ``DMPlexMetricNormalize()`` to have another argument, for controlling whether anisotropy is restricted
 - Change ``DMAdaptor`` so that its ``-adaptor_refinement_h_min/h_max/a_max/p`` command line arguments become ``-dm_plex_metric_h_min/h_max/a_max/p``
+- Change ``DMPlexBuildFromCellListParallel()`` to have another argument, for the connectivity
+- Change ``DMPlexCreateFromCellListParallelPetsc()`` to have another argument, for the connectivity
 
 .. rubric:: FE/FV:
 
