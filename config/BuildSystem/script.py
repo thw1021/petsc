@@ -243,7 +243,6 @@ class Script(logger.Logger):
         else:
           return (thread.output, thread.error, thread.status)
       else:
-        log.write('Running Executable WITHOUT threads to time it out\n')
         return Script.runShellCommandSeq(commandseq, log, cwd)
 
     (output, error, status) = runInShell(commandseq, log, cwd)
