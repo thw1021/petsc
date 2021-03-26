@@ -4355,7 +4355,7 @@ void print_mat_aij_band(const PetscInt n, const int bi_csr[], const PetscScalar 
     for (int rowb=0;rowb<n;rowb++) {
       const PetscInt    nz = bi_csr[rowb+1] - bi_csr[rowb];
       const PetscScalar *batmp = ba_csr + bi_csr[rowb];
-      for (int j=0; j<nz; j++) printf("(%13.6e) ",batmp[j]);
+      for (int j=0; j<nz; j++) printf("(%13.6e) ",PetscRealPart(batmp[j]));
       printf(" bi=%d\n",bi_csr[rowb+1]);
     }
   }
@@ -4689,7 +4689,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse_band(Mat A,MatF
 }
 
 #define WARP_SIZE 32
-
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
 template <typename T>
 __forceinline__ __device__
 T wreduce(T a)
@@ -4702,7 +4702,14 @@ T wreduce(T a)
   }
   return a;
 }
-
+#else
+template <typename T>
+__forceinline__ __device__
+T wreduce(T a)
+{
+  T b = a;
+  return b;
+#endif
 // reduce in a block, returns result in thread 0
 template <typename T, int BLOCK_SIZE>
 __device__
@@ -4738,18 +4745,6 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
   const PetscInt    Nf = gridDim.x, nloc = n/Nf, field = blockIdx.x, start = field*nloc, end = start + nloc, chopnz = bw*(bw+1)/2, blocknz=(2*bw+1)*nloc, blocknz_0 = blocknz-chopnz;
   const PetscScalar *pLi;
   const int tid = threadIdx.x;
-
-  // if (field==0) {
-  //   pLi =ba_csr;printf("\nA:\n");
-  //   for (int i=0;i<n;i++) {
-  //     const PetscInt col = (i<bw) ? 0 : (i-bw), nz = bw+1 + ((i<bw) ? i : (i>n-1-bw) ? n-1-i : bw);
-  //     for (int j=col,idx=0;idx<nz;j++,idx++,pLi++) {
-  //       printf("%f (%d) ",*pLi, (int)(pLi-ba_csr));
-  //     }
-  //     printf(" = %f\n",x[i]);
-  //   }
-  //   printf("\n");
-  // }
 
   /* Next, solve L */
   pLi = ba_csr + (field==0 ? 0 : blocknz_0 + (field-1)*blocknz + bw); // diagonal (0,0) in field
