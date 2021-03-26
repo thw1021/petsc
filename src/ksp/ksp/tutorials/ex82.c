@@ -145,7 +145,7 @@ int main(int argc,char **args)
 
    test:
       nsize: 1
-      args: -f data/wilk.mtx -ksp_type qmr -pc_type none  -ksp_rtol 1e-6 -ksp_max_it 25 -ksp_monitor_true_residual
+      args: -f ${PETSC_DIR}/share/petsc/datafiles/matrices/wilk.mat -ksp_type qmr -pc_type none  -ksp_rtol 1e-6 -ksp_max_it 25 -ksp_monitor_true_residual
 
 TEST*/
 
