@@ -210,6 +210,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     if (!_7_same) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong subtype object:Parameter # %d must have implementation %s it is %s",arg,t,((PetscObject)(h))->type_name); \
   } while (0)
 
+#if !defined(PETSC_AST_FIX)
 #define PetscValidHeaderSpecific(h,ck,arg)                              \
   do {                                                                  \
     if (!(h)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # %d",arg); \
@@ -219,6 +220,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
       else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong type of object: Parameter # %d",arg); \
     }                                                                   \
   } while (0)
+#endif
 
 #define PetscValidHeader(h,arg)                                         \
   do {                                                                  \
@@ -228,11 +230,13 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     else if (((PetscObject)(h))->classid < PETSC_SMALLEST_CLASSID || ((PetscObject)(h))->classid > PETSC_LARGEST_CLASSID) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid type of object: Parameter # %d",arg); \
   } while (0)
 
+#if !defined(PETSC_AST_FIX)
 #define PetscValidPointer(h,arg)                                        \
   do {                                                                  \
     if (!(h)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Pointer: Parameter # %d",arg); \
     if (!PetscCheckPointer(h,PETSC_CHAR)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_BADPTR,"Invalid Pointer: Parameter # %d",arg); \
   } while (0)
+#endif
 
 #define PetscValidCharPointer(h,arg)                                    \
   do {                                                                  \
