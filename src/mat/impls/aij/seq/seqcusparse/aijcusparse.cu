@@ -4709,6 +4709,7 @@ T wreduce(T a)
 {
   T b = a;
   return b;
+}
 #endif
 // reduce in a block, returns result in thread 0
 template <typename T, int BLOCK_SIZE>
