@@ -599,7 +599,7 @@ PetscErrorCode  PCFactorGetUseInPlace(PC pc,PetscBool *flg)
      For Cholesky and ICC and the SBAIJ format the only reordering available is natural since only the upper half of the matrix is stored
      and reordering this matrix is very expensive.
 
-      You can use SeqAIJ matrix with Cholesky and ICC and use any ordering
+      You can use a SeqAIJ matrix with Cholesky and ICC and use any ordering.
 
       external means PETSc will not compute an ordering and the package will use its own ordering, for MATSOLVERCHOLMOD, MATSOLVERUMFPACK, and others
 
