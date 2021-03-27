@@ -1106,11 +1106,11 @@ static PetscErrorCode PetscViewerHDF5Traverse_Internal(PetscViewer viewer, const
   if (name) PetscValidCharPointer(name, 2);
   else name = rootGroupName;
   if (has) {
-    PetscValidIntPointer(has, 3);
+    PetscValidBoolPointer(has, 4);
     *has = PETSC_FALSE;
   }
   if (otype) {
-    PetscValidIntPointer(otype, 4);
+    PetscValidIntPointer(otype, 5);
     *otype = H5O_TYPE_UNKNOWN;
   }
   ierr = PetscViewerHDF5GetFileId(viewer, &h5);CHKERRQ(ierr);
