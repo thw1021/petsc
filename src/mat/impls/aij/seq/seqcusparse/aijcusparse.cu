@@ -4748,8 +4748,9 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
       //printf("\t\tUpdate with L(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[idx],(int)(&pLi[idx]-ba_csr));
     }
 #if defined(PETSC_USE_COMPLEX)
-    PetscRealPartComplex(t) = breduce<PetscReal,BLOCK_SIZE>(PetscRealPartComplex(t));
-    PetscImaginaryPartComplex(t) = breduce<PetscReal,BLOCK_SIZE>(PetscImaginaryPartComplex(t));
+    PetscReal tr = PetscRealPartComplex(t), ti = PetscImaginaryPartComplex(t);
+    PetscScalar tt(breduce<PetscReal,BLOCK_SIZE>(tr), breduce<PetscReal,BLOCK_SIZE>(ti) );
+    t = tt;
 #else
     t = breduce<PetscReal,BLOCK_SIZE>(t);
 #endif
@@ -4777,8 +4778,9 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
       //printf("\t\tUpdate with U(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[-idx],(int)(&pLi[-idx]-ba_csr));
     }
 #if defined(PETSC_USE_COMPLEX)
-    PetscRealPartComplex(t) = breduce<PetscReal,BLOCK_SIZE>(PetscRealPartComplex(t));
-    PetscImaginaryPartComplex(t) = breduce<PetscReal,BLOCK_SIZE>(PetscImaginaryPartComplex(t));
+    PetscReal tr = PetscRealPartComplex(t), ti = PetscImaginaryPartComplex(t);
+    PetscScalar tt(breduce<PetscReal,BLOCK_SIZE>(tr), breduce<PetscReal,BLOCK_SIZE>(ti) );
+    t = tt;
 #else
     t = breduce<PetscReal,BLOCK_SIZE>(PetscRealPart(t));
 #endif
