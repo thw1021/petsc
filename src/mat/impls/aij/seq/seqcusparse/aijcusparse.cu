@@ -4689,7 +4689,6 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse_band(Mat A,MatF
 }
 
 #define WARP_SIZE 32
-#if PETSC_PKG_CUDA_VERSION_GE(11,0,0) && defined(PETSC_CUDA_HAVE_SHFL_DOWN_SYNC)
 template <typename T>
 __forceinline__ __device__
 T wreduce(T a)
@@ -4702,15 +4701,6 @@ T wreduce(T a)
   }
   return a;
 }
-#else
-template <typename T>
-__forceinline__ __device__
-T wreduce(T a)
-{
-  T b = a;
-  return b;
-}
-#endif
 // reduce in a block, returns result in thread 0
 template <typename T, int BLOCK_SIZE>
 __device__
@@ -4757,7 +4747,7 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
       t += pLi[idx]*x[j];
       //printf("\t\tUpdate with L(%03d.%03d) = %13.6e (%d)\n",glbDD,j,pLi[idx],(int)(&pLi[idx]-ba_csr));
     }
-    t = breduce<PetscScalar,BLOCK_SIZE>(t);
+    t = breduce<PetscRealPart(PetscScalar),BLOCK_SIZE>(t);
     //printf("\t\t\t finised L %d, L(%03d.%03d) = %13.6e (%d)\n",glbDD, glbDD, glbDD, pLi[glbDD-col],(int)(&pLi[glbDD-col]-ba_csr));
     if (threadIdx.x == 0)
       x[glbDD] -= t; // /1.0
