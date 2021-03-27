@@ -4689,7 +4689,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse_band(Mat A,MatF
 }
 
 #define WARP_SIZE 32
-#if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+#if PETSC_PKG_CUDA_VERSION_GE(11,0,0) && defined(PETSC_CUDA_HAVE_SHFL_DOWN_SYNC)
 template <typename T>
 __forceinline__ __device__
 T wreduce(T a)
