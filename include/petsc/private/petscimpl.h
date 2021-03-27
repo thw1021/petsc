@@ -201,6 +201,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 #else
 
 /*  This check is for subtype methods such as DMDAGetCorners() that do not use the PetscTryMethod() or PetscUseMethod() paradigm */
+#if !defined(PETSC_AST_FIX)
 #define PetscValidHeaderSpecificType(h,ck,arg,t) \
   do {   \
     PetscErrorCode _7_ierr; \
@@ -263,7 +264,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     if (!(h)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Pointer: Parameter # %d",arg); \
     if (!PetscCheckPointer(h,PETSC_REAL)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_BADPTR,"Invalid Pointer to PetscReal: Parameter # %d",arg); \
   } while (0)
-
+#endif
 #define PetscValidFunction(f,arg)                                       \
   do {                                                                  \
     if (!(f)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Function Pointer: Parameter # %d",arg); \
@@ -302,10 +303,12 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     For example, in the dot product between two vectors,
   both vectors must be either Seq or MPI, not one of each
 */
+#if !defined(PETSC_AST_FIX)
 #define PetscCheckSameType(a,arga,b,argb)                               \
   do {                                                                  \
     if (((PetscObject)(a))->type != ((PetscObject)(b))->type) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMETYPE,"Objects not of same type: Argument # %d and %d",arga,argb); \
   } while (0)
+#endif
 /*
     Check type_name
 */
@@ -327,6 +330,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 /*
    Use this macro to check if the type is set
 */
+#if !defined(PETSC_AST_FIX)
 #define PetscValidType(a,arg)                                           \
   do {                                                                  \
     if (!((PetscObject)(a))->type_name) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"%s object's type is not set: Argument # %d",((PetscObject)(a))->class_name,arg); \
@@ -404,7 +408,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     _7_ierr = MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRMPI(_7_ierr); \
     if (-b2[0] != b2[1]) SETERRQ1(PetscObjectComm((PetscObject)(a)),PETSC_ERR_ARG_WRONG,"Enum value must be same on all processes, argument # %d",arg); \
   } while (0)
-
+#endif
 #define PetscCheckSorted(n,idx)                                                                   \
   do {                                                                                            \
     PetscBool _1_flg;                                                                             \
