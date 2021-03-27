@@ -53,6 +53,7 @@ configure_options = [
   '--download-colpack=1',
   '--download-mmg=1',
   '--download-parmmg=1',
+  '--download-kokkos',
   ]
 
 if __name__ == '__main__':
