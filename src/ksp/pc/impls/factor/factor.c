@@ -601,7 +601,7 @@ PetscErrorCode  PCFactorGetUseInPlace(PC pc,PetscBool *flg)
 
       You can use a SeqAIJ matrix with Cholesky and ICC and use any ordering.
 
-      external means PETSc will not compute an ordering and the package will use its own ordering, for MATSOLVERCHOLMOD, MATSOLVERUMFPACK, and others
+      MATORDERINGEXTERNAL means PETSc will not compute an ordering and the package will use its own ordering, usable with MATSOLVERCHOLMOD, MATSOLVERUMFPACK, and others.
 
 .seealso: MatOrderingType
 
