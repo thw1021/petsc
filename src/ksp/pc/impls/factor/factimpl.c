@@ -314,7 +314,7 @@ PetscErrorCode PCView_Factor(PC pc,PetscViewer viewer)
 
     if (factor->fact) {
       ierr = MatFactorGetCanUseOrdering(factor->fact,&canuseordering);CHKERRQ(ierr);
-      if (!canuseordering) ordering = "external";
+      if (!canuseordering) ordering = MATORDERINGEXTERNAL;
       else ordering = factor->ordering;
       ierr = PetscViewerASCIIPrintf(viewer,"  matrix ordering: %s\n",ordering);CHKERRQ(ierr);
       ierr = MatGetInfo(factor->fact,MAT_LOCAL,&info);CHKERRQ(ierr);
