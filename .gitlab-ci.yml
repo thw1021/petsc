@@ -24,7 +24,7 @@ variables:
 # The most basic template that most tests will expand upon
 #
 
-.test:
+.test-basic:
   interruptible: true
   only:
     refs:
@@ -34,6 +34,10 @@ variables:
 #     Set with CI/CD Pipelines - Run Pipeline
       - web
       - merge_requests
+  dependencies: []
+
+.test:
+  extends: .test-basic
   except:
     variables:
       # Skip if the docs-only label is attached to a merge request
@@ -41,7 +45,7 @@ variables:
   dependencies: []
 
 check-ci-settings:
-  extends: .test
+  extends: .test-basic
   stage: .pre
   tags:
     - check-ci-settings
@@ -127,7 +131,6 @@ checksource:
     - make -f gmakefile check_output SHELL=bash
 
 pause-for-approval:
-  extends: .test
   stage: .pre
   tags:
     - stage1
