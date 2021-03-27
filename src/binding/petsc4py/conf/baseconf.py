@@ -98,14 +98,29 @@ class PetscConfig:
 
     def __init__(self, petsc_dir, petsc_arch):
         self.configdict = { }
-        if not petsc_dir:
-            raise DistutilsError("PETSc not found")
-        if not os.path.isdir(petsc_dir):
-            raise DistutilsError("invalid PETSC_DIR: %s" % petsc_dir)
-        self.version    = self._get_petsc_version(petsc_dir)
-        self.configdict = self._get_petsc_config(petsc_dir, petsc_arch)
+
+        # Top-level makefile may set the paths to the directory where PETSc is
+        # being built, and the inner makefile (petscrules) preserves them into
+        # these *_BUILD_* variables; we retrieve them here.
+        petsc_build_dir = os.environ.get('PETSC_BUILD_DIR', petsc_dir)
+        petsc_build_arch = os.environ.get('PETSC_BUILD_ARCH', petsc_arch)
+
+        if not petsc_build_dir:
+            raise DistutilsError("PETSc directory was not specified")
+        if not os.path.isdir(petsc_build_dir):
+            raise DistutilsError("PETSc directory is invalid: %s" \
+                    % petsc_build_dir)
+
+        # Info is read from the build directory, but the config dict is
+        # augmented with some values that involve the installation dir.
+        self.version    = self._get_petsc_version(petsc_build_dir)
+        self.configdict = self._get_petsc_config( \
+                petsc_build_dir, petsc_build_arch, \
+                petsc_dir, petsc_arch)
+
         self.PETSC_DIR  = self['PETSC_DIR']
         self.PETSC_ARCH = self['PETSC_ARCH']
+
         language_map = {'CONLY':'c', 'CXXONLY':'c++'}
         self.language = language_map[self['PETSC_LANGUAGE']]
 
@@ -137,22 +152,31 @@ class PetscConfig:
         release = int(version_re['release'].search(data).groups()[0])
         return  (major, minor, micro), (release == 1)
 
-    def _get_petsc_config(self, petsc_dir, petsc_arch):
+    def _get_petsc_config(self, petsc_build_dir, petsc_build_arch, \
+            petsc_dir, petsc_arch):
         from os.path import join, isdir, exists
         PETSC_DIR  = petsc_dir
         PETSC_ARCH = petsc_arch
+        PETSC_BUILD_DIR = petsc_build_dir
+        PETSC_BUILD_ARCH = petsc_build_arch
         #
         confdir = join('lib', 'petsc', 'conf')
-        if not (PETSC_ARCH and isdir(join(PETSC_DIR, PETSC_ARCH))):
-            petscvars = join(PETSC_DIR, confdir, 'petscvariables')
-            PETSC_ARCH = makefile(open(petscvars, 'rt')).get('PETSC_ARCH')
-        if not (PETSC_ARCH and isdir(join(PETSC_DIR, PETSC_ARCH))):
+        # If the caller didn't give us PETSC_BUILD_ARCH, it is also available as PETSC_ARCH
+        # in one of the *variables files created by the configure stage.
+        if not (PETSC_BUILD_ARCH and isdir(join(PETSC_BUILD_DIR, PETSC_BUILD_ARCH))):
+            petscvars = join(PETSC_BUILD_DIR, confdir, 'petscvariables')
+            PETSC_BUILD_ARCH = makefile(open(petscvars, 'rt')).get('PETSC_ARCH')
+        if not (PETSC_BUILD_ARCH and isdir(join(join(PETSC_BUILD_DIR, PETSC_BUILD_ARCH)))):
+            PETSC_BUILD_ARCH = ''
+        # The final install PETSC_ARCH is not available in any of the *variables files,
+        # so it must come from the caller, otherwise we have to assume it's empty
+        if PETSC_ARCH is None:
             PETSC_ARCH = ''
         #
-        variables = join(PETSC_DIR, confdir, 'variables')
+        variables = join(PETSC_BUILD_DIR, confdir, 'variables')
         if not exists(variables):
-            variables  = join(PETSC_DIR, PETSC_ARCH, confdir, 'variables')
-        petscvariables = join(PETSC_DIR, PETSC_ARCH, confdir, 'petscvariables')
+            variables  = join(join(PETSC_BUILD_DIR, PETSC_BUILD_ARCH), confdir, 'variables')
+        petscvariables = join(join(PETSC_BUILD_DIR, PETSC_BUILD_ARCH), confdir, 'petscvariables')
         #
         with open(variables) as f:
             contents = f.read()
@@ -165,6 +189,10 @@ class PetscConfig:
             from io import StringIO
         confstr  = 'PETSC_DIR  = %s\n' % PETSC_DIR
         confstr += 'PETSC_ARCH = %s\n' % PETSC_ARCH
+        # PETSC_LIB_DIR already in the file
+        confstr += 'PETSC_BUILD_DIR  = %s\n' % PETSC_BUILD_DIR
+        confstr += 'PETSC_BUILD_ARCH  = %s\n' % PETSC_BUILD_ARCH
+        confstr += 'PETSC_LIB_BUILD_DIR = ${PETSC_BUILD_DIR}/${PETSC_BUILD_ARCH}/lib\n'
         confstr += contents
         confdict = makefile(StringIO(confstr))
         return confdict
@@ -184,7 +212,7 @@ class PetscConfig:
         # includes and libraries
         petsc_inc = flaglist(self['PETSC_CC_INCLUDES'])
         petsc_lib = flaglist(
-            '-L%s %s' % (self['PETSC_LIB_DIR'], self['PETSC_LIB_BASIC']))
+            '-L%s %s' % (self['PETSC_LIB_BUILD_DIR'], self['PETSC_LIB_BASIC']))
         # runtime_library_dirs is not supported on Windows
         if sys.platform != 'win32':
             petsc_lib['runtime_library_dirs'].append(self['PETSC_LIB_DIR'])
@@ -254,6 +282,8 @@ class PetscConfig:
     def log_info(self):
         PETSC_DIR  = self['PETSC_DIR']
         PETSC_ARCH = self['PETSC_ARCH']
+        PETSC_BUILD_DIR  = self['PETSC_BUILD_DIR']
+        PETSC_BUILD_ARCH = self['PETSC_BUILD_ARCH']
         version = ".".join([str(i) for i in self.version[0]])
         release = ("development", "release")[self.version[1]]
         version_info = version + ' ' + release
@@ -263,15 +293,17 @@ class PetscConfig:
         language     = self['PETSC_LANGUAGE']
         compiler     = self['PCC']
         linker       = self['PCC_LINKER']
-        log.info('PETSC_DIR:    %s' % PETSC_DIR )
-        log.info('PETSC_ARCH:   %s' % PETSC_ARCH )
-        log.info('version:      %s' % version_info)
-        log.info('integer-size: %s' % integer_size)
-        log.info('scalar-type:  %s' % scalar_type)
-        log.info('precision:    %s' % precision)
-        log.info('language:     %s' % language)
-        log.info('compiler:     %s' % compiler)
-        log.info('linker:       %s' % linker)
+        log.info('PETSC_DIR:            %s' % PETSC_DIR )
+        log.info('PETSC_ARCH:           %s' % PETSC_ARCH )
+        log.info('PETSC_BUILD_DIR:      %s' % PETSC_BUILD_DIR )
+        log.info('PETSC_BUILD_ARCH:     %s' % PETSC_BUILD_ARCH )
+        log.info('version:              %s' % version_info)
+        log.info('integer-size:         %s' % integer_size)
+        log.info('scalar-type:          %s' % scalar_type)
+        log.info('precision:            %s' % precision)
+        log.info('language:             %s' % language)
+        log.info('compiler:             %s' % compiler)
+        log.info('linker:               %s' % linker)
 
 # --------------------------------------------------------------------
 

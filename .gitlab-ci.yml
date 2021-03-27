@@ -111,6 +111,39 @@ c99-mlib-static-py2:
     CONFIG_OPTS: --with-mpi-dir=/home/glci/soft/mpich-3.3.2 --with-single-library=0 --with-shared-libraries=0 CFLAGS=-std=c99
     TEST_SEARCH: snes_tutorials-ex19%
 
+petsc4py-install:
+  extends: .stage-1
+  variables:
+    PYTHON: python3
+    T_PREFIX: petsc-install
+    T_DESTDIR: petsc-destdir
+    T_PY_PATH: lib
+    T_PETSC_CFG: petsc4py/lib/petsc.cfg
+  script:
+    - printf "PATH:$PATH\n"
+    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
+    - ${PYTHON} ./configure --prefix="${PWD}/${T_PREFIX}" --with-debugging=0 --with-petsc4py=1
+    - make V=1 CFLAGS=-Werror CXXFLAGS="-Werror -Wzero-as-null-pointer-constant" FFLAGS=-Werror
+    - printf "====== Test A. Install into staging directory then into prefix directory =====\n"
+    - make install V=1 DESTDIR="${PWD}/${T_DESTDIR}"
+    - test "$(find ${PWD}/${T_PREFIX} -mindepth 1 | wc -l)" -eq 0
+    - test "$(find ${PWD}/${T_DESTDIR} -mindepth 1 | wc -l)" -gt 0
+    - (cd "${PWD}/${T_DESTDIR}" && find * -type f -exec install -v -D "{}" "/{}" \; )
+    - printf "====== Test A. validate installation =====\n"
+    - PYTHONPATH="${PWD}/${T_PREFIX}/${T_PY_PATH}:${PYTHONPATH}" ${PYTHON} -c "import petsc4py"
+    - grep -q "^\s*PETSC_DIR\s*=\s*${PWD}/${T_PREFIX}\s*\$" "${PWD}/${T_PREFIX}/${T_PY_PATH}/${T_PETSC_CFG}"
+    - grep -q "^\s*PETSC_ARCH\s*=\s*\$" "${PWD}/${T_PREFIX}/${T_PY_PATH}/${T_PETSC_CFG}"
+    - printf "====== Cleanup between Test A and Test B =====\n"
+    - rm -r "${PWD}/${T_PREFIX}"
+    - mkdir "${PWD}/${T_PREFIX}"
+    - printf "====== Test B. Install directly into prefix directory =====\n"
+    - make install V=1
+    - test "$(find ${PWD}/${T_PREFIX} -mindepth 1 | wc -l)" -gt 0
+    - printf "====== Test B. validate installation =====\n"
+    - PYTHONPATH="${PWD}/${T_PREFIX}/${T_PY_PATH}:${PYTHONPATH}" ${PYTHON} -c "import petsc4py"
+    - grep -q "^\s*PETSC_DIR\s*=\s*${PWD}/${T_PREFIX}\s*\$" "${PWD}/${T_PREFIX}/${T_PY_PATH}/${T_PETSC_CFG}"
+    - grep -q "^\s*PETSC_ARCH\s*=\s*\$" "${PWD}/${T_PREFIX}/${T_PY_PATH}/${T_PETSC_CFG}"
+
 checksource:
   extends: .test
   stage: .pre

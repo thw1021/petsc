@@ -47,9 +47,10 @@ class Configure(config.package.Package):
 
     # if installing prefix location then need to set new value for PETSC_DIR/PETSC_ARCH
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
-       newdir = 'PETSC_DIR='+os.path.abspath(os.path.expanduser(self.argDB['prefix']))+' '+'PETSC_ARCH= MPICC=${PCC} '
+      newdir = 'PETSC_BUILD_DIR=$(PETSC_DIR) PETSC_BUILD_ARCH=$(PETSC_ARCH) ' + \
+        'PETSC_DIR='+os.path.abspath(os.path.expanduser(self.argDB['prefix']))+' '+'PETSC_ARCH= MPICC=${PCC} '
     else:
-       newdir = 'MPICC=${PCC} '
+      newdir = 'MPICC=${PCC} '
 
     #  if installing as Superuser than want to return to regular user for clean and build
     if self.installSudo:
