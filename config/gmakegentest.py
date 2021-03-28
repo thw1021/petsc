@@ -470,8 +470,8 @@ class generateExamples(Petsc):
           cmd+='" diff-${testname}.out diff-${testname}.out diff-${label}'
           cmd+=subst['label_suffix']+' ""'  # Quotes are painful
     cmdLines+=cmd+"\n"
-    cmdLines+=cmdindnt+'else\n'
-    cmdLines+=diffindnt+'petsc_report_tapoutput "" ${label} "SKIP Command failed so no diff"\n'
+    #cmdLines+=cmdindnt+'else\n'
+    #cmdLines+=diffindnt+'petsc_report_tapoutput "" ${label} "SKIP Command failed so no diff"\n'
     cmdLines+=cmdindnt+'fi\n'
     return cmdLines
 
