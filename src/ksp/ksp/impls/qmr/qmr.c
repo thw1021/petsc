@@ -16,21 +16,21 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
   PetscScalar    delta,eta,epsilon,beta;
   PetscReal      dp,ksi,rorig,sabs,rho,gamma,theta,gammaold,thetaold,rhoold;
   Vec            X,B,V,P,R,Q,D,Y,Z,W,P1,S;
-  Mat            Amat, Pmat;
+  Mat            Amat,Pmat;
 
   PetscFunctionBegin;
-  X    = ksp->vec_sol;
-  B    = ksp->vec_rhs;
-  V    = ksp->work[0];
-  P    = ksp->work[1];
-  R    = ksp->work[2];
-  Q    = ksp->work[3];
-  D    = ksp->work[4];
-  Y    = ksp->work[5];
-  Z    = ksp->work[6];
-  W    = ksp->work[7];
-  P1   = ksp->work[8];
-  S    = ksp->work[9];
+  X  = ksp->vec_sol;
+  B  = ksp->vec_rhs;
+  V  = ksp->work[0];
+  P  = ksp->work[1];
+  R  = ksp->work[2];
+  Q  = ksp->work[3];
+  D  = ksp->work[4];
+  Y  = ksp->work[5];
+  Z  = ksp->work[6];
+  W  = ksp->work[7];
+  P1 = ksp->work[8];
+  S  = ksp->work[9];
 
   ierr = PCGetOperators(ksp->pc,&Amat,&Pmat);CHKERRQ(ierr);
 
@@ -45,24 +45,21 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
   /* Test for nothing to do */
   ierr = VecNorm(R,NORM_2,&dp);CHKERRQ(ierr);
   KSPCheckNorm(ksp,dp);
-  ierr = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
-  if (ksp->normtype != KSP_NORM_NONE) ksp->rnorm = dp;
-  else ksp->rnorm = 0.0;
-  ksp->its = 0;
-  ierr     = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
-  ierr     = KSPMonitor(ksp,0,ksp->rnorm);CHKERRQ(ierr);
-  ierr     = (*ksp->converged)(ksp,0,ksp->rnorm,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
+  ierr       = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
+  ksp->rnorm = dp;
+  ksp->its   = 0;
+  ierr       = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
+  ierr       = KSPMonitor(ksp,0,ksp->rnorm);CHKERRQ(ierr);
+  ierr       = (*ksp->converged)(ksp,0,ksp->rnorm,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
   if (ksp->reason) PetscFunctionReturn(0);
 
   /* Set the initial conditions */
-
   ierr = VecCopy(R,V);CHKERRQ(ierr);
   ierr = VecCopy(V,Y);CHKERRQ(ierr);
   ierr = VecCopy(R,W);CHKERRQ(ierr);              /* W chosen as R */
   if (ksp->pc_side == PC_LEFT) {
     ierr = KSP_PCApply(ksp,V,Y);CHKERRQ(ierr);
-  }
-  else if (ksp->pc_side == PC_SYMMETRIC) {
+  } else if (ksp->pc_side == PC_SYMMETRIC) {
     ierr = PCApplySymmetricLeft(ksp->pc,V,Y);CHKERRQ(ierr);
   }
 
@@ -75,54 +72,51 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
     ierr = VecNorm(Z,NORM_2,&ksi);CHKERRQ(ierr);
   } else if (ksp->pc_side == PC_LEFT) {
     ierr = VecNorm(W,NORM_2,&ksi);CHKERRQ(ierr);
-   }
-  else if (ksp->pc_side == PC_SYMMETRIC) {
+  } else if (ksp->pc_side == PC_SYMMETRIC) {
     ierr = VecConjugate(W);CHKERRQ(ierr);
     ierr = PCApplySymmetricLeft(ksp->pc,W,Z);CHKERRQ(ierr);
     ierr = VecConjugate(Z);CHKERRQ(ierr);
     ierr = VecConjugate(W);CHKERRQ(ierr);
     ierr = VecNorm(Z,NORM_2,&ksi);CHKERRQ(ierr);
   }
-
   KSPCheckNorm(ksp,ksi);
-
   ierr = VecNorm(Y,NORM_2,&rhoold);CHKERRQ(ierr);
   KSPCheckNorm(ksp,rhoold);
 
-  gammaold   = 1.0;
-  eta        = -1.0;
-  thetaold   = 0.0;
-  i          = 0;
-  rorig      = dp;
-  sabs       = 1.0;
-  epsilon    = 0.0;
+  gammaold = 1.0;
+  eta      = -1.0;
+  thetaold = 0.0;
+  i        = 0;
+  rorig    = dp;
+  sabs     = 1.0;
+  epsilon  = 0.0;
 
   do {
     ierr = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
     ksp->its++;
     ierr = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
 
-    if ((rhoold == 0) || (ksi == 0)) {
-      ksp->reason = KSP_DIVERGED_BREAKDOWN;  /* Method fails */
+    if ((rhoold == 0.0) || (ksi == 0.0)) {
+      if (ksp->errorifnotconverged) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to breakdown");
+      ksp->reason = KSP_DIVERGED_BREAKDOWN;
       break;
     }
 
-    ierr = VecScale(V,1/rhoold);CHKERRQ(ierr);
+    ierr = VecScale(V,1 / rhoold);CHKERRQ(ierr);
     if (ksp->pc_side == PC_RIGHT) {
       ierr = VecCopy(V,Y);CHKERRQ(ierr);
     } else {
-      ierr = VecScale(Y,1/rhoold);CHKERRQ(ierr);
+      ierr = VecScale(Y,1 / rhoold);CHKERRQ(ierr);
     }
 
-    ierr = VecScale(W,1/ksi);CHKERRQ(ierr);
+    ierr = VecScale(W,1 / ksi);CHKERRQ(ierr);
     if (ksp->pc_side == PC_LEFT) {
       ierr = VecCopy(W,Z);CHKERRQ(ierr);
     } else {
-      ierr = VecScale(Z,1/ksi);CHKERRQ(ierr);
+      ierr = VecScale(Z,1 / ksi);CHKERRQ(ierr);
     }
 
     ierr = VecDot(Y,Z,&delta);CHKERRQ(ierr);    /* delta <- Z'*Y */
-
     if (ksp->pc_side == PC_RIGHT) {
       ierr = KSP_PCApply(ksp,Y,P1);CHKERRQ(ierr);     /* Solve M_2 Y1 = Y */
       ierr = VecCopy(P1,Y);CHKERRQ(ierr);
@@ -132,8 +126,7 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
       /* To replace with KSP_PC_ApplyHermitianTranspose, this is a workaround to obtain the solution */
       ierr = KSP_PCApplyTranspose(ksp,Z,P1);CHKERRQ(ierr);     /* Solve M_1^H P1 = Z*/
       ierr = VecConjugate(P1);
-    }
-    else if (ksp->pc_side == PC_SYMMETRIC) {
+    } else if (ksp->pc_side == PC_SYMMETRIC) {
       ierr = PCApplySymmetricRight(ksp->pc,Y,P1);CHKERRQ(ierr);
       ierr = VecCopy(P1,Y);CHKERRQ(ierr);
       ierr = VecConjugate(Z);
@@ -141,34 +134,32 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
       ierr = VecConjugate(P1);
     }
 
-
     if (i == 0) {
       ierr = VecCopy(Y,P);CHKERRQ(ierr);
       ierr = VecCopy(P1,Q);CHKERRQ(ierr);
     } else {
-      ierr = VecAYPX(P,-(ksi*delta)/epsilon,Y);CHKERRQ(ierr);
-      ierr = VecAYPX(Q,-rho*PetscConj(delta/epsilon),P1);CHKERRQ(ierr);
+      ierr = VecAYPX(P,-(ksi * delta) / epsilon,Y);CHKERRQ(ierr);
+      ierr = VecAYPX(Q,-rho * PetscConj(delta / epsilon),P1);CHKERRQ(ierr);
     }
 
     ierr = KSP_MatMult(ksp,Amat,P,P1);CHKERRQ(ierr);
-
-    ierr = VecDot(P1, Q, &epsilon);CHKERRQ(ierr);
+    ierr = VecDot(P1,Q,&epsilon);CHKERRQ(ierr);
     if (epsilon == 0) {
-      ksp->reason = KSP_DIVERGED_BREAKDOWN;  /* Method fails */
+      if (ksp->errorifnotconverged) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to breakdown");
+      ksp->reason = KSP_DIVERGED_BREAKDOWN;
       break;
     }
-    beta = epsilon/delta;
+    beta = epsilon / delta;
     if (beta == 0) {
-      ksp->reason = KSP_DIVERGED_BREAKDOWN;  /* Method fails */
+      if (ksp->errorifnotconverged) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to breakdown");
+      ksp->reason = KSP_DIVERGED_BREAKDOWN;
       break;
     }
-
     ierr = VecAYPX(V,-beta,P1);CHKERRQ(ierr);
 
     if (ksp->pc_side == PC_LEFT) {
       ierr = KSP_PCApply(ksp,V,Y);CHKERRQ(ierr);
-    }
-    else if (ksp->pc_side == PC_SYMMETRIC) {
+    } else if (ksp->pc_side == PC_SYMMETRIC) {
       ierr = PCApplySymmetricLeft(ksp->pc,V,Y);CHKERRQ(ierr);
     }
 
@@ -177,7 +168,6 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
     } else {
       ierr = VecNorm(Y,NORM_2,&rho);CHKERRQ(ierr);
     }
-
     KSPCheckNorm(ksp,rho);
     ierr = VecScale(W,-PetscConj(beta));CHKERRQ(ierr);
     ierr = MatMultHermitianTransposeAdd(Amat,Q,W,W);CHKERRQ(ierr);
@@ -190,27 +180,24 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
       ierr = VecConjugate(W);CHKERRQ(ierr);
     } else if (ksp->pc_side == PC_LEFT) {
       ierr = VecCopy(W,Z);CHKERRQ(ierr);
-    }
-    else if (ksp->pc_side == PC_SYMMETRIC) {
+    } else if (ksp->pc_side == PC_SYMMETRIC) {
       ierr = VecConjugate(W);CHKERRQ(ierr);
       ierr = PCApplySymmetricLeft(ksp->pc,W,Z);CHKERRQ(ierr);
       ierr = VecConjugate(Z);CHKERRQ(ierr);
       ierr = VecConjugate(W);CHKERRQ(ierr);
     }
-
     ierr = VecNorm(Z,NORM_2,&ksi);CHKERRQ(ierr);
-    KSPCheckNorm(ksp,ksi);CHKERRQ(ierr);
+    KSPCheckNorm(ksp,ksi);
 
-    theta = rho/(gammaold*PetscAbsScalar(beta));
-    gamma = 1/(PetscSqrtScalar(1.0 + theta*theta));
-    if (gamma==0) {
-      ksp->reason = KSP_DIVERGED_BREAKDOWN;  /* Method fails */
+    theta = rho / (gammaold * PetscAbsScalar(beta));
+    gamma = 1 / (PetscSqrtScalar(1.0 + theta * theta));
+    if (gamma == 0.0) {
+      if (ksp->errorifnotconverged) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to breakdown");
+      ksp->reason = KSP_DIVERGED_BREAKDOWN;
       break;
     }
-
-    sabs *= PetscAbsReal(gamma*theta);
-
-    eta = -eta*rhoold*gamma*gamma/(beta*gammaold*gammaold);
+    sabs *= PetscAbsReal(gamma * theta);
+    eta   = -eta * rhoold * gamma * gamma / (beta * gammaold * gammaold);
 
     if (i == 0) {
       ierr = VecCopy(P,D);CHKERRQ(ierr);
@@ -220,12 +207,11 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
         ierr = VecScale(S,eta);CHKERRQ(ierr);
       }
     } else {
-      ierr = VecAXPBY(D,eta,thetaold*thetaold*gamma*gamma,P);CHKERRQ(ierr);
+      ierr = VecAXPBY(D,eta,thetaold * thetaold * gamma * gamma,P);CHKERRQ(ierr);
       if (ksp->pc_side != PC_RIGHT) {
-        ierr = VecAXPBY(S,eta,thetaold*thetaold*gamma*gamma,P1);CHKERRQ(ierr);
+        ierr = VecAXPBY(S,eta,thetaold * thetaold * gamma * gamma,P1);CHKERRQ(ierr);
       }
     }
-
     ierr = VecAYPX(X,1.0,D);CHKERRQ(ierr);
     if (ksp->pc_side != PC_RIGHT) {
       ierr = VecAXPY(R,-1.0,S);CHKERRQ(ierr);
@@ -239,16 +225,13 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
       KSPCheckNorm(ksp,dp);
     }
 
-    ierr  = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
-    if (ksp->normtype != KSP_NORM_NONE) ksp->rnorm = dp;
-    else ksp->rnorm = 0.0;
-    ierr = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
-    ierr = KSPLogResidualHistory(ksp,ksp->rnorm);CHKERRQ(ierr);
-    ierr = KSPMonitor(ksp,i+1,ksp->rnorm);CHKERRQ(ierr);
-    ierr = (*ksp->converged)(ksp,i+1,ksp->rnorm,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
+    ierr       = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
+    ksp->rnorm = dp;
+    ierr       = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
+    ierr       = KSPLogResidualHistory(ksp,ksp->rnorm);CHKERRQ(ierr);
+    ierr       = KSPMonitor(ksp,i+1,ksp->rnorm);CHKERRQ(ierr);
+    ierr       = (*ksp->converged)(ksp,i+1,ksp->rnorm,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
     if (ksp->reason) break;
-
-
     thetaold = theta;
     rhoold   = rho;
     gammaold = gamma;
@@ -286,7 +269,6 @@ PETSC_INTERN PetscErrorCode KSPBuildSolution_QMR(KSP ksp,Vec v,Vec *V)
     The symmetric preconditioning is only supported with Jacobi and ICC preconditioners.
     An upper bound is used for the convergence criterion with right preconditioning (cf. Freund and
     Nachtigal, proposition 4.1).
-
 
    References:
 .   1. -  R. Barrett, 1994, 'Templates for the Solution of Linear Systems: Building Blocks for Iterative Methods'
