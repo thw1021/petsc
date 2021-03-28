@@ -171,6 +171,7 @@ Changes: Development
 - Replace ``DMPlexComputeJacobianAction()`` with ``DMSNESComputeJacobianAction()``
 - Add ``DMSNESCreateJacobianMF()``
 - Change ``DMPlexComputeBdResidualSingle()`` to take ``PetscFormKey`` instead of explicit label/value/field arguments
+- Add ``DMPlexInflateToGeomModel()`` which pushes refined points out to a geometric boundary
 
 .. rubric:: FE/FV:
 
