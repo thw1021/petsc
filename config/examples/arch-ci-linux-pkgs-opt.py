@@ -46,6 +46,8 @@ configure_options = [
   '--download-bamg=1',
   '--download-mmg=1',
   '--download-parmmg=1',
+  '--download-egads',
+  '--download-opencascade',
   ]
 
 if __name__ == '__main__':
