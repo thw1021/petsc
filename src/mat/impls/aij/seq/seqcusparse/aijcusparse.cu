@@ -144,14 +144,6 @@ PetscErrorCode MatFactorGetSolverType_seqaij_cusparse(Mat A,MatSolverType *type)
   PetscFunctionReturn(0);
 }
 
-/* Use -pc_factor_mat_solver_type cusparsecuda */
-// PetscErrorCode MatFactorGetSolverType_seqaij_cusparse_cuda(Mat A,MatSolverType *type)
-// {
-//   PetscFunctionBegin;
-//   *type = MATSOLVERCUSPARSECUDA;
-//   PetscFunctionReturn(0);
-// }
-
 /*MC
   MATSOLVERCUSPARSE = "cusparse" - A matrix type providing triangular solvers for seq matrices
   on a single GPU of type, seqaijcusparse, aijcusparse, or seqaijcusp, aijcusp. Currently supported
@@ -195,28 +187,6 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse(Mat A,MatFactor
   ierr = PetscObjectComposeFunction((PetscObject)(*B),"MatFactorGetSolverType_C",MatFactorGetSolverType_seqaij_cusparse);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-// PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse_cuda(Mat A,MatFactorType ftype,Mat *B)
-// {
-//   PetscErrorCode ierr;
-//   PetscInt       n = A->rmap->n;
-
-//   PetscFunctionBegin;
-//   ierr = MatCreate(PetscObjectComm((PetscObject)A),B);CHKERRQ(ierr);
-//   ierr = MatSetSizes(*B,n,n,n,n);CHKERRQ(ierr);
-//   (*B)->factortype = ftype;
-//   (*B)->useordering = PETSC_TRUE;
-//   ierr = MatSetType(*B,MATSEQAIJCUSPARSE);CHKERRQ(ierr);
-
-//   if (ftype == MAT_FACTOR_LU) {
-//     ierr = MatSetBlockSizesFromMats(*B,A,A);CHKERRQ(ierr);
-//     (*B)->ops->lufactorsymbolic  = MatLUFactorSymbolic_SeqAIJCUSPARSECUDA;
-//   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Factor type not supported for CUSPARSE Matrix Types");
-
-//   ierr = MatSeqAIJSetPreallocation(*B,MAT_SKIP_ALLOCATION,NULL);CHKERRQ(ierr);
-//   ierr = PetscObjectComposeFunction((PetscObject)(*B),"MatFactorGetSolverType_C",MatFactorGetSolverType_seqaij_cusparse_cuda);CHKERRQ(ierr);
-//   PetscFunctionReturn(0);
-// }
 
 PETSC_INTERN PetscErrorCode MatCUSPARSESetFormat_SeqAIJCUSPARSE(Mat A,MatCUSPARSEFormatOperation op,MatCUSPARSEStorageFormat format)
 {
