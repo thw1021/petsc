@@ -732,6 +732,7 @@ PETSC_EXTERN void matdestroymatrices_(PetscInt *n,Mat *smat,PetscErrorCode *ierr
 
   for (i=0; i<*n; i++) {
     *ierr = MatDestroy(&smat[i]);if (*ierr) return;
+    PETSC_FORTRAN_TYPE_INITIALIZE_VOID(&smat[i]);
   }
 }
 
@@ -750,6 +751,15 @@ PETSC_EXTERN void matdestroysubmatrices_(PetscInt *n,Mat *smat,PetscErrorCode *i
       lsmat[i] = smat[i];
   }
   *ierr = MatDestroySubMatrices(*n,&lsmat);
+  for (i=0; i<=*n; i++) {
+    PETSC_FORTRAN_TYPE_INITIALIZE_VOID(&smat[i]);
+  }
+}
+
+PETSC_EXTERN void matdestroy_(Mat *mat,int *ierr)
+{
+  *ierr = MatDestroy(mat); if (*ierr) return;
+  PETSC_FORTRAN_TYPE_INITIALIZE_VOID(mat);
 }
 
 PETSC_EXTERN void matsetoptionsprefix_(Mat *mat,char* prefix,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
