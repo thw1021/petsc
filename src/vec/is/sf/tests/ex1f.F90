@@ -33,6 +33,14 @@
       call VecScatterBegin(toall,v1,v2,INSERT_VALUES,SCATTER_FORWARD,ierr)
       call VecScatterEnd(toall,v1,v2,INSERT_VALUES,SCATTER_FORWARD,ierr)
 
+      call VecScatterDestroy(toall,ierr)
+! Destroy v2 and then re-create it in VecScatterCreateToAll() to test if petsc can differentiate NULL projects with destroyed objects
+      call VecDestroy(v2,ierr)
+
+      call VecScatterCreateToAll(v1,toall,v2,ierr)
+      call VecScatterBegin(toall,v1,v2,INSERT_VALUES,SCATTER_FORWARD,ierr)
+      call VecScatterEnd(toall,v1,v2,INSERT_VALUES,SCATTER_FORWARD,ierr)
+
       if (rank.eq.2) then
          call PetscObjectSetName(v2, 'v2',ierr)
          call VecView(v2,PETSC_VIEWER_STDOUT_SELF,ierr)

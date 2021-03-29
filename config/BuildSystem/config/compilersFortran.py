@@ -130,6 +130,7 @@ class Configure(config.base.Configure):
     else:
       self.addDefine('FORTRAN_TYPE_INITIALIZE', ' ')
       self.logPrint('Not initializing Fortran objects')
+    self.addDefine('FORTRAN_TYPE_INITIALIZE_VOID(a)', 'do {*(a) = (void*)-2;} while(0)') # Init a petsc fortran object
     return
 
   def checkFortranTypeStar(self):
