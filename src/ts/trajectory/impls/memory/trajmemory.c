@@ -2137,7 +2137,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
     if (tjsch->max_cps_disk <= 1 && (tjsch->max_cps_ram >= tjsch->stride || tjsch->max_cps_ram == -1)) tjsch->stype = TWO_LEVEL_NOREVOLVE; /* can also be handled by TWO_LEVEL_REVOLVE */
   } else { /* single level mode */
     if (fixedtimestep) {
-      if (tjsch->max_cps_ram >= tjsch->total_steps-1 || tjsch->max_cps_ram < 1)
+      if (tjsch->max_cps_ram >= tjsch->total_steps-1 || tjsch->max_cps_ram == -1)
         tjsch->stype = NONE; /* checkpoint all */
       else
 #if defined(PETSC_HAVE_ACMS)
@@ -2151,7 +2151,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
     if (tjsch->use_online) tjsch->stype = REVOLVE_ONLINE; /* trick into online (for testing purpose only) */
 #endif
   }
-
+  if (tjsch->stype != NONE && tjsch->max_cps_ram < 1 && tjsch->max_cps_disk < 1) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"The specified storage capacity is insufficient for one checkpoint, which is the minimum");
   if (tjsch->stype >= ACMS_OFFLINE) {
 #ifndef PETSC_HAVE_ACMS
     SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"ACMS is needed when there is not enough memory to checkpoint all time steps according to the user's settings, please reconfigure with the additional option --download-acms.");
