@@ -247,18 +247,6 @@ prepend-path PATH "%s"
         self.addDefine('HAVE_SO_REUSEADDR','1')
 
     self.logPrintDivider()
-    self.setCompilers.pushLanguage('C')
-    compiler = self.setCompilers.getCompiler()
-    if compiler.endswith('mpicc') or compiler.endswith('mpiicc'):
-      try:
-        output   = self.executeShellCommand(compiler + ' -show', log = self.log)[0]
-        compiler = output.split(' ')[0]
-        self.addDefine('MPICC_SHOW','"'+output.strip().replace('\n','\\\\n')+'"')
-      except:
-        self.addDefine('MPICC_SHOW','"Unavailable"')
-    else:
-      self.addDefine('MPICC_SHOW','"Unavailable"')
-    self.setCompilers.popLanguage()
 #-----------------------------------------------------------------------------------------------------
 
     # Sometimes we need C compiler, even if built with C++
