@@ -7,7 +7,7 @@ Created on Tue Mar 23 17:56:06 2021
 """
 import clang
 
-def verbose(*args,**kwargs):
+def verbosePrint(*args,**kwargs):
     '''filter predicate for show_ast: show all'''
     return True
 def noSystemIncludes(cursor,level,**kwargs):
@@ -46,7 +46,7 @@ def viewType(t,level,title):
     if checkValidType(t.get_pointee()):
         viewType(t.get_pointee(),level+1,'points to:')
 
-def viewAstRecursive(cursor,pred=verbose,level=Level(),**kwargs):
+def viewAstRecursive(cursor,pred=verbosePrint,level=Level(),**kwargs):
     '''pretty print cursor AST'''
     if pred(cursor,level,**kwargs):
       level.show(cursor.kind,cursor.spelling,cursor.displayname,cursor.location)
