@@ -12,13 +12,10 @@ class CompilerOptions(config.base.Configure):
         try:
           output   = self.executeShellCommand(compiler + ' -show', log = self.log)[0]
           self.framework.addMakeMacro('MPICC_SHOW',output.strip().replace('\n','\\\\n'))
-          self.framework.addDefine('PETSC_MPICC_SHOW','"'+output.strip().replace('\n','\\\\n')+'"')
         except:
           self.framework.addMakeMacro('MPICC_SHOW',"Unavailable")
-          self.framework.addDefine('PETSC_MPICC_SHOW','"Unavailable"')
       else:
         self.framework.addMakeMacro('MPICC_SHOW',"Unavailable")
-        self.framework.addDefine('PETSC_MPICC_SHOW','"Unavailable"')
 
     flags = []
     # GNU gcc
