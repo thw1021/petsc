@@ -1,3 +1,5 @@
+/* TODO Currently only an unfinished stub of implementation, not listed in public headers */
+
 #include <petsc/private/viewerimpl.h>    /*I   "petscsys.h"   I*/
 #include <adios2_c.h>
 #include <petsc/private/vieweradios2impl.h>
@@ -88,7 +90,8 @@ static PetscErrorCode PetscViewerFileGetName_ADIOS2(PetscViewer viewer,const cha
   PetscFunctionReturn(0);
 }
 
-/*MC
+/*
+MC
    PETSCVIEWERADIOS2 - A viewer that writes to an ADIOS2 file
 
 
@@ -98,7 +101,8 @@ static PetscErrorCode PetscViewerFileGetName_ADIOS2(PetscViewer viewer,const cha
            PetscViewerFileSetName(), PetscViewerFileSetMode(), PetscViewerFormat, PetscViewerType, PetscViewerSetType()
 
   Level: beginner
-M*/
+M
+*/
 
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_ADIOS2(PetscViewer v)
 {
@@ -122,7 +126,8 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ADIOS2(PetscViewer v)
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*
+@C
    PetscViewerADIOS2Open - Opens a file for ADIOS2 input/output.
 
    Collective
@@ -147,7 +152,8 @@ $    FILE_MODE_APPEND - open existing file for binary output
 .seealso: PetscViewerASCIIOpen(), PetscViewerPushFormat(), PetscViewerDestroy(), PetscViewerHDF5Open(),
           VecView(), MatView(), VecLoad(), PetscViewerSetType(), PetscViewerFileSetMode(), PetscViewerFileSetName()
           MatLoad(), PetscFileMode, PetscViewer
-@*/
+@
+*/
 PetscErrorCode  PetscViewerADIOS2Open(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *adios2v)
 {
   PetscErrorCode ierr;
