@@ -4394,7 +4394,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   PetscScalar                  *ba_t = cusparseTriFactors->a_band_d;
   int                          *bi_t = cusparseTriFactors->i_band_d;
   PetscContainer               container;
-  int                          Ni = 10, team_size=9, Nf, nVec=56, nconcurrent = 1;
+  int                          Ni = 10, team_size=9, Nf, nVec=56, nconcurrent = 1, nsm = -1;
 
   PetscFunctionBegin;
   if (A->rmap->n == 0) {
@@ -4436,10 +4436,12 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     Ni = 1/nconcurrent;
     Ni = 1;
 #else
-    Ni = prop.multiProcessorCount/Nf/nconcurrent;
+    nsm = prop.multiProcessorCount;
+    Ni = nsm/Nf/nconcurrent;
 #endif
     team_size = bw/Ni + !!(bw%Ni);
     nVec = PetscMin(bw, 1024/team_size);
+    ierr = PetscInfo5(A,"Matrix Bandwidth = %d, number SMs/block = %d, num concurency = %d, num fields = %d, numSMs/GPU = %d\n",bw,Ni,nconcurrent,Nf,nsm);CHKERRQ(ierr);
     {
       dim3 dimBlockTeam(nVec,team_size);
       dim3 dimBlockLeague(Nf,Ni);
