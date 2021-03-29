@@ -99,10 +99,12 @@ typedef struct _TJScheduler {
   PetscBool     recompute;
   PetscBool     skip_trajectory;
   PetscBool     save_stack;
-  PetscInt      max_cps_ram;  /* maximum checkpoints in RAM */
-  PetscInt      max_cps_disk; /* maximum checkpoints on disk */
+  PetscInt      max_units_ram;  /* maximum checkpointing units in RAM */
+  PetscInt      max_units_disk; /* maximum checkpointing units on disk */
+  PetscInt      max_cps_ram;    /* maximum checkpoints in RAM */
+  PetscInt      max_cps_disk;   /* maximum checkpoints on disk */
   PetscInt      stride;
-  PetscInt      total_steps;  /* total number of steps */
+  PetscInt      total_steps;    /* total number of steps */
   Stack         stack;
   DiskStack     diskstack;
   PetscViewer   viewer;
@@ -1890,7 +1892,7 @@ PETSC_UNUSED static PetscErrorCode TSTrajectorySetStride_Memory(TSTrajectory tj,
   PetscFunctionReturn(0);
 }
 
-PETSC_UNUSED static PetscErrorCode TSTrajectorySetMaxCpsRAM_Memory(TSTrajectory tj,PetscInt max_cps_ram)
+static PetscErrorCode TSTrajectorySetMaxCpsRAM_Memory(TSTrajectory tj,PetscInt max_cps_ram)
 {
   TJScheduler *tjsch = (TJScheduler*)tj->data;
 
@@ -1899,12 +1901,32 @@ PETSC_UNUSED static PetscErrorCode TSTrajectorySetMaxCpsRAM_Memory(TSTrajectory 
   PetscFunctionReturn(0);
 }
 
-PETSC_UNUSED static PetscErrorCode TSTrajectorySetMaxCpsDisk_Memory(TSTrajectory tj,PetscInt max_cps_disk)
+static PetscErrorCode TSTrajectorySetMaxCpsDisk_Memory(TSTrajectory tj,PetscInt max_cps_disk)
 {
   TJScheduler *tjsch = (TJScheduler*)tj->data;
 
   PetscFunctionBegin;
   tjsch->max_cps_disk = max_cps_disk;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode TSTrajectorySetMaxUnitsRAM_Memory(TSTrajectory tj,PetscInt max_units_ram)
+{
+  TJScheduler *tjsch = (TJScheduler*)tj->data;
+
+  PetscFunctionBegin;
+  if (!tjsch->max_cps_ram) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_INCOMP,"Conflict with -ts_trjaectory_max_cps_ram or TSTrajectorySetMaxCpsRAM. You can set max_cps_ram or max_units_ram, but not both at the same time.");
+  tjsch->max_units_ram = max_units_ram;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode TSTrajectorySetMaxUnitsDisk_Memory(TSTrajectory tj,PetscInt max_units_disk)
+{
+  TJScheduler *tjsch = (TJScheduler*)tj->data;
+
+  PetscFunctionBegin;
+  if (!tjsch->max_cps_disk) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_INCOMP,"Conflict with -ts_trjaectory_max_cps_disk or TSTrajectorySetMaxCpsDisk. You can set max_cps_disk or max_units_disk, but not both at the same time.");
+  tjsch->max_units_ram = max_units_disk;
   PetscFunctionReturn(0);
 }
 
@@ -1937,16 +1959,128 @@ PETSC_UNUSED static PetscErrorCode TSTrajectorySetUseDRAM(TSTrajectory tj,PetscB
   PetscFunctionReturn(0);
 }
 
+/*@
+  TSTrajectorySetMaxCpsRAM - Set maximum number of checkpoints in RAM
+
+  Logically collective
+
+  Input Parameter:
+.  tj - tstrajectory context
+
+  Output Parameter:
+.  max_cps_ram - maximum number of checkpoints in RAM
+
+  Level: intermediate
+
+.seealso: TSTrajectorySetMaxUnitsRAM()
+@*/
+PetscErrorCode TSTrajectorySetMaxCpsRAM(TSTrajectory tj,PetscInt max_cps_ram)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscUseMethod(tj,"TSTrajectorySetMaxCpsRAM_C",(TSTrajectory,PetscInt),(tj,max_cps_ram));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  TSTrajectorySetMaxCpsDisk - Set maximum number of checkpoints on disk
+
+  Logically collective
+
+  Input Parameter:
+.  tj - tstrajectory context
+
+  Output Parameter:
+.  max_cps_disk - maximum number of checkpoints on disk
+
+  Level: intermediate
+
+.seealso: TSTrajectorySetMaxUnitsDisk()
+@*/
+PetscErrorCode TSTrajectorySetMaxCpsDisk(TSTrajectory tj,PetscInt max_cps_disk)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscUseMethod(tj,"TSTrajectorySetMaxCpsDisk_C",(TSTrajectory,PetscInt),(tj,max_cps_disk));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  TSTrajectorySetMaxUnitsRAM - Set maximum number of checkpointing units in RAM
+
+  Logically collective
+
+  Input Parameter:
+.  tj - tstrajectory context
+
+  Output Parameter:
+.  max_units_ram - maximum number of checkpointing units in RAM
+
+  Level: intermediate
+
+.seealso: TSTrajectorySetMaxCpsRAM()
+@*/
+PetscErrorCode TSTrajectorySetMaxUnitsRAM(TSTrajectory tj,PetscInt max_units_ram)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscUseMethod(tj,"TSTrajectorySetMaxUnitsRAM_C",(TSTrajectory,PetscInt),(tj,max_units_ram));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  TSTrajectorySetMaxUnitsDisk - Set maximum number of checkpointing units on disk
+
+  Logically collective
+
+  Input Parameter:
+.  tj - tstrajectory context
+
+  Output Parameter:
+.  max_units_disk - maximum number of checkpointing units on disk
+
+  Level: intermediate
+
+.seealso: TSTrajectorySetMaxCpsDisk()
+@*/
+PetscErrorCode TSTrajectorySetMaxUnitsDisk(TSTrajectory tj,PetscInt max_units_disk)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscUseMethod(tj,"TSTrajectorySetMaxUnitsDisk_C",(TSTrajectory,PetscInt),(tj,max_units_disk));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode TSTrajectorySetFromOptions_Memory(PetscOptionItems *PetscOptionsObject,TSTrajectory tj)
 {
   TJScheduler    *tjsch = (TJScheduler*)tj->data;
+  PetscInt       max_cps_ram,max_cps_disk,max_units_ram,max_units_disk;
+  PetscBool      flg;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"Memory based TS trajectory options");CHKERRQ(ierr);
   {
-    ierr = PetscOptionsInt("-ts_trajectory_max_cps_ram","Maximum number of checkpoints in RAM","TSTrajectorySetMaxCpsRAM_Memory",tjsch->max_cps_ram,&tjsch->max_cps_ram,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-ts_trajectory_max_cps_disk","Maximum number of checkpoints on disk","TSTrajectorySetMaxCpsDisk_Memory",tjsch->max_cps_disk,&tjsch->max_cps_disk,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-ts_trajectory_max_cps_ram","Maximum number of checkpoints in RAM","TSTrajectorySetMaxCpsRAM_Memory",tjsch->max_cps_ram,&max_cps_ram,&flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = TSTrajectorySetMaxCpsRAM(tj,max_cps_ram);CHKERRQ(ierr);
+    }
+    ierr = PetscOptionsInt("-ts_trajectory_max_cps_disk","Maximum number of checkpoints on disk","TSTrajectorySetMaxCpsDisk_Memory",tjsch->max_cps_disk,&max_cps_disk,&flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = TSTrajectorySetMaxCpsDisk(tj,max_cps_disk);CHKERRQ(ierr);
+    }
+    ierr = PetscOptionsInt("-ts_trajectory_max_units_ram","Maximum number of checkpointing units in RAM","TSTrajectorySetMaxUnitsRAM_Memory",tjsch->max_units_ram,&max_units_ram,&flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = TSTrajectorySetMaxUnitsRAM(tj,max_units_ram);CHKERRQ(ierr);
+    }
+    ierr = PetscOptionsInt("-ts_trajectory_max_units_disk","Maximum number of checkpointing units on disk","TSTrajectorySetMaxUnitsDisk_Memory",tjsch->max_units_disk,&max_units_disk,&flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = TSTrajectorySetMaxUnitsDisk(tj,max_units_disk);CHKERRQ(ierr);
+    }
     ierr = PetscOptionsInt("-ts_trajectory_stride","Stride to save checkpoints to file","TSTrajectorySetStride_Memory",tjsch->stride,&tjsch->stride,NULL);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_REVOLVE)
     ierr = PetscOptionsBool("-ts_trajectory_revolve_online","Trick TS trajectory into using online mode of revolve","TSTrajectorySetRevolveOnline",tjsch->use_online,&tjsch->use_online,NULL);CHKERRQ(ierr);
@@ -1975,11 +2109,25 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
   PetscFunctionBegin;
   if (ts->adapt) {
     ierr = PetscObjectTypeCompare((PetscObject)ts->adapt,TSADAPTNONE,&fixedtimestep);CHKERRQ(ierr);
-  } else fixedtimestep = PETSC_TRUE;
+  } else {
+    fixedtimestep = PETSC_TRUE;
+  }
   total_steps = (PetscInt)(PetscCeilReal((ts->max_time-ts->ptime)/ts->time_step));
   total_steps = total_steps < 0 ? PETSC_MAX_INT : total_steps;
   if (fixedtimestep) tjsch->total_steps = PetscMin(ts->max_steps,total_steps);
-  if (tjsch->max_cps_ram > 0) stack->stacksize = tjsch->max_cps_ram;
+
+  ierr = TSGetStages(ts,&numY,PETSC_IGNORE);CHKERRQ(ierr);
+  if (stack->solution_only) {
+    if (tjsch->max_units_ram) tjsch->max_cps_ram = tjsch->max_units_ram;
+    else tjsch->max_units_ram = tjsch->max_cps_ram;
+    if (tjsch->max_units_disk) tjsch->max_cps_disk = tjsch->max_units_disk;
+  } else {
+    if (tjsch->max_units_ram) tjsch->max_cps_ram = (ts->stifflyaccurate) ? tjsch->max_units_ram/numY : tjsch->max_units_ram/(numY+1);
+    else tjsch->max_units_ram = (ts->stifflyaccurate) ? numY*tjsch->max_cps_ram : (numY+1)*tjsch->max_cps_ram;
+    if (tjsch->max_units_disk) tjsch->max_cps_disk = (ts->stifflyaccurate) ? tjsch->max_units_disk/numY : tjsch->max_units_disk/(numY+1);
+    else tjsch->max_units_disk = (ts->stifflyaccurate) ? numY*tjsch->max_cps_disk : (numY+1)*tjsch->max_cps_disk;
+  }
+  if (tjsch->max_cps_ram > 0) stack->stacksize = tjsch->max_units_ram; /* maximum stack size. Could be overallocated. */
 
   /* Determine the scheduler type */
   if (tjsch->stride > 1) { /* two level mode */
@@ -1989,7 +2137,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
     if (tjsch->max_cps_disk <= 1 && (tjsch->max_cps_ram >= tjsch->stride || tjsch->max_cps_ram == -1)) tjsch->stype = TWO_LEVEL_NOREVOLVE; /* can also be handled by TWO_LEVEL_REVOLVE */
   } else { /* single level mode */
     if (fixedtimestep) {
-      if (tjsch->max_cps_ram >= tjsch->total_steps-1 || tjsch->max_cps_ram < 1)
+      if (tjsch->max_cps_ram >= tjsch->total_steps-1 || tjsch->max_cps_ram == -1)
         tjsch->stype = NONE; /* checkpoint all */
       else
 #if defined(PETSC_HAVE_ACMS)
@@ -2003,7 +2151,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
     if (tjsch->use_online) tjsch->stype = REVOLVE_ONLINE; /* trick into online (for testing purpose only) */
 #endif
   }
-
+  if (tjsch->stype != NONE && tjsch->max_cps_ram < 1 && tjsch->max_cps_disk < 1) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"The specified storage capacity is insufficient for one checkpoint, which is the minimum");
   if (tjsch->stype >= ACMS_OFFLINE) {
 #ifndef PETSC_HAVE_ACMS
     SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"ACMS is needed when there is not enough memory to checkpoint all time steps according to the user's settings, please reconfigure with the additional option --download-acms.");
@@ -2014,7 +2162,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
       offline_ac_create(tjsch->total_steps,tjsch->max_cps_ram);
     } else {
       ierr = TSGetStages(ts,&ns,PETSC_IGNORE);CHKERRQ(ierr);
-      offline_acms_create(tjsch->total_steps,tjsch->max_cps_ram,ns,ts->stifflyaccurate);
+      offline_acms_create(tjsch->total_steps,tjsch->max_units_ram,ns,ts->stifflyaccurate);
     }
     ierr = PetscNew(&actx);CHKERRQ(ierr);
     actx->lastcheckpointstep    = 0;
@@ -2028,6 +2176,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
     SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"revolve is needed when there is not enough memory to checkpoint all time steps according to the user's settings, please reconfigure with the additional option --download-revolve.");
 #else
     PetscRevolveInt rfine,rsnaps,rsnaps2;
+
     switch (tjsch->stype) {
       case TWO_LEVEL_REVOLVE:
         ierr = PetscRevolveIntCast(tjsch->stride,&rfine);CHKERRQ(ierr);
@@ -2109,7 +2258,6 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
 
   stack->stacksize = PetscMax(stack->stacksize,1);
   tjsch->recompute = PETSC_FALSE;
-  ierr = TSGetStages(ts,&numY,PETSC_IGNORE);CHKERRQ(ierr);
   ierr = StackInit(stack,stack->stacksize,numY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2153,6 +2301,10 @@ static PetscErrorCode TSTrajectoryDestroy_Memory(TSTrajectory tj)
   PetscFunctionBegin;
   ierr = StackDestroy(&tjsch->stack);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&tjsch->viewer);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsRAM_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsDisk_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsRAM_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsDisk_C",NULL);CHKERRQ(ierr);
   ierr = PetscFree(tjsch);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2194,6 +2346,10 @@ PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Memory(TSTrajectory tj,TS ts)
   ierr = PetscViewerPushFormat(tjsch->viewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);
   ierr = PetscViewerFileSetMode(tjsch->viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
 
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsRAM_C",TSTrajectorySetMaxCpsRAM_Memory);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsDisk_C",TSTrajectorySetMaxCpsDisk_Memory);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsRAM_C",TSTrajectorySetMaxUnitsRAM_Memory);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsDisk_C",TSTrajectorySetMaxUnitsDisk_Memory);CHKERRQ(ierr);
   tj->data = tjsch;
   PetscFunctionReturn(0);
 }
