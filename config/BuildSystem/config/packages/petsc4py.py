@@ -45,11 +45,15 @@ class Configure(config.package.Package):
       else:
         archflags = "ARCHFLAGS=\'-arch x86_64\' "
 
-    # if installing prefix location then need to set new value for PETSC_DIR/PETSC_ARCH
+    # Set PETSC_DIR/PETSC_ARCH to point at the dir with the PETSc installation:
+    # if DESTDIR is non-empty, then PETSc has been installed into staging dir
+    petsc_dir = '${DESTDIR}'
+    # if prefix has been specified at config time, path to PETSc includes that prefix
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
-       newdir = 'PETSC_DIR='+os.path.abspath(os.path.expanduser(self.argDB['prefix']))+' '+'PETSC_ARCH= MPICC=${PCC} '
-    else:
-       newdir = 'MPICC=${PCC} '
+      petsc_dir += os.path.abspath(os.path.expanduser(self.argDB['prefix']))
+    newdir = 'PETSC_DIR='+petsc_dir + ' PETSC_ARCH= '
+
+    newdir += 'MPICC=${PCC} '
 
     #  if installing as Superuser than want to return to regular user for clean and build
     if self.installSudo:
