@@ -2768,11 +2768,15 @@ PETSC_EXTERN PetscErrorCode PetscPullJSONValue(const char[],const char[],char[],
 PETSC_EXTERN PetscErrorCode PetscPushJSONValue(char[],const char[],const char[],size_t);
 
 
-#if defined(PETSC_USE_DEBUG)
 /*
    Verify that all processes in the communicator have called this from the same line of code
  */
 PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,const char*,const char *);
+#if defined(PETSC_USE_DEBUG)
+#define PetscAllreduceBarrierCheck_debug(a,b,c,d,e) PetscAllreduceBarrierCheck(a,b,c,d,e)
+#else
+#define PetscAllreduceBarrierCheck_debug(a,b,c,d,e) 0
+#endif
 
 /*MC
    MPIU_Allreduce - a PETSc replacement for MPI_Allreduce() that tries to determine if the call from all the MPI processes occur from the
@@ -2798,19 +2802,15 @@ PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,
    Notes:
      In optimized mode this directly calls MPI_Allreduce()
 
-     If MPI produces an error code it is automatically translated to PETSC_ERR_MPI so this call should be handled with CHKERRQ() not CHKERRMPI()
-
-   Developer note:
-     The specific MPI error code is lost if an MPI error occurs in the actually MPI_Allreduce()
-
    Level: developer
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) (PetscAllreduceBarrierCheck(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__) || ((MPI_Allreduce(a,b,c,d,e,fcomm) != 0) ? PETSC_ERR_MPI : 0))
-#else
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) ((MPI_Allreduce(a,b,c,d,e,fcomm) != 0) ? PETSC_ERR_MPI : 0)
-#endif
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) 0; do { \
+  PetscErrorCode _4_ierr; \
+  _4_ierr = PetscAllreduceBarrierCheck_debug(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__);CHKERRQ(_4_ierr); \
+  _4_ierr = MPI_Allreduce(a,b,c,d,e,fcomm);CHKERRMPI(_4_ierr); \
+  } while (0)
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
 PETSC_EXTERN PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint,PetscMPIInt,MPI_Info,MPI_Comm,void*,MPI_Win*);
