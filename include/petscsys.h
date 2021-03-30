@@ -2807,7 +2807,7 @@ PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) (PetscAllreduceBarrierCheck(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__) || ((MPI_Allreduce(a,b,c,d,e,fcomm) != 0) ? PETSC_ERR_MPI : 0))
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) (PetscAllreduceBarrierCheck(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__), ((MPI_Allreduce(a,b,c,d,e,fcomm) != 0) ? PETSC_ERR_MPI : 0))
 #else
 #define MPIU_Allreduce(a,b,c,d,e,fcomm) ((MPI_Allreduce(a,b,c,d,e,fcomm) != 0) ? PETSC_ERR_MPI : 0)
 #endif
