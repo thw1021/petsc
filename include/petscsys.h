@@ -2768,15 +2768,14 @@ PETSC_EXTERN PetscErrorCode PetscPullJSONValue(const char[],const char[],char[],
 PETSC_EXTERN PetscErrorCode PetscPushJSONValue(char[],const char[],const char[],size_t);
 
 
-/*
-   Verify that all processes in the communicator have called this from the same line of code
- */
-PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,const char*,const char *);
 #if defined(PETSC_USE_DEBUG)
-#define PetscAllreduceBarrierCheck_debug(a,b,c,d,e) PetscAllreduceBarrierCheck(a,b,c,d,e)
-#else
-#define PetscAllreduceBarrierCheck_debug(a,b,c,d,e) 0
-#endif
+PETSC_STATIC_INLINE int PetscStrHash(const char *str)
+{
+  unsigned int c,hash = 5381;
+
+  while ((c = *str++)) hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+  return hash;
+}
 
 /*MC
    MPIU_Allreduce - a PETSc replacement for MPI_Allreduce() that tries to determine if the call from all the MPI processes occur from the
@@ -2806,11 +2805,22 @@ PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) 0; do { \
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) do { \
   PetscErrorCode _4_ierr; \
-  _4_ierr = PetscAllreduceBarrierCheck_debug(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__);CHKERRQ(_4_ierr); \
+  PetscMPIInt b1[6],b2[6];\
+  b1[0] = -(PetscMPIInt)__LINE__;                  b1[1] = -b1[0]; \
+  b1[2] = -(PetscMPIInt)PetscStrHash(PETSC_FUNCTION_NAME); b1[3] = -b1[2];\
+  b1[4] = -(PetscMPIInt)c;                         b1[5] = -b1[4];\
+  _4_ierr = MPI_Allreduce(b1,b2,6,MPI_INT,MPI_MAX,fcomm);CHKERRMPI(_4_ierr); \
+  if (-b2[0] != b2[1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (code lines) on different processors");\
+  if (-b2[2] != b2[3]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (functions) on different processors");\
+  if (-b2[4] != b2[5]) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called with different counts %d on different processors",c);\
   _4_ierr = MPI_Allreduce(a,b,c,d,e,fcomm);CHKERRMPI(_4_ierr); \
   } while (0)
+
+#else
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_Allreduce(a,b,c,d,e,fcomm)
+#endif
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
 PETSC_EXTERN PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint,PetscMPIInt,MPI_Info,MPI_Comm,void*,MPI_Win*);
