@@ -24,7 +24,12 @@ PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm comm,PetscMPIInt ctn,int line
   b1[2] = -(PetscMPIInt)hash(func); b1[3] = -b1[2];
   b1[4] = -(PetscMPIInt)ctn;        b1[5] = -b1[4];
   err = MPI_Allreduce(b1,b2,6,MPI_INT,MPI_MAX,comm);
-  if (err) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_LIB,PETSC_ERROR_INITIAL,"MPI_Allreduce() failed with error code %d",err);
+  if (err) {
+    char        errorstring[MPI_MAX_ERROR_STRING]; \
+    PetscMPIInt resultlen; \
+    MPI_Error_string(err,(char*)errorstring,&resultlen);
+    SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_MPI,"MPI error %d %s when called from barrier check at line %d file %d function %s()",err,errorstring,line,file,func);
+  }
   if (-b2[0] != b2[1]) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL,"MPI_Allreduce() called in different locations (code lines) on different processors");
   if (-b2[2] != b2[3]) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL,"MPI_Allreduce() called in different locations (functions) on different processors");
   if (-b2[4] != b2[5]) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL,"MPI_Allreduce() called with different counts %d on different processors",ctn);
