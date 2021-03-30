@@ -2796,15 +2796,20 @@ PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,
 .  outdata - the reduced values
 
    Notes:
-   In optimized mode this directly calls MPI_Allreduce()
+     In optimized mode this directly calls MPI_Allreduce()
+
+     If MPI produces an error code it is automatically translated to PETSC_ERR_MPI so this call should be handled with CHKERRQ() not CHKERRMPI()
+
+   Developer note:
+     The specific MPI error code is lost if an MPI error occurs in the actually MPI_Allreduce()
 
    Level: developer
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) (PetscAllreduceBarrierCheck(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__) || MPI_Allreduce(a,b,c,d,e,fcomm))
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) (PetscAllreduceBarrierCheck(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__), ((MPI_Allreduce(a,b,c,d,e,fcomm) != 0) ? PETSC_ERR_MPI : 0))
 #else
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_Allreduce(a,b,c,d,e,fcomm)
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) ((MPI_Allreduce(a,b,c,d,e,fcomm) != 0) ? PETSC_ERR_MPI : 0)
 #endif
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
