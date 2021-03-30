@@ -41,8 +41,6 @@ class Configure(config.package.CMakePackage):
     # from their code
     if hasattr(self.setCompilers, 'FC'):
       self.pushLanguage('FC')
-      args.append('-DCMAKE_Fortran_COMPILER:FILEPATH="'+self.getCompiler()+'"')
-      args.append('-DCMAKE_Fortran_FLAGS:STRING="'+self.getCompilerFlags()+'"')
       args.append('-DSEACASProj_ENABLE_SEACASExodus_for:BOOL=ON')
       args.append('-DSEACASProj_ENABLE_SEACASExoIIv2for32:BOOL=ON')
       args.append('-DSEACASExodus_for_ENABLE_TESTS:BOOL=OFF')
@@ -76,10 +74,6 @@ class Configure(config.package.CMakePackage):
     if self.checkSharedLibrariesEnabled():
       args.append('-DBUILD_SHARED_LIBS:BOOL=ON')
       args.append('-DSEACASExodus_ENABLE_SHARED:BOOL=ON')
-    if self.compilerFlags.debugging:
-      args.append('-DCMAKE_BUILD_TYPE=Debug')
-    else:
-      args.append('-DCMAKE_BUILD_TYPE=Release')
     return args
 
   def generateLibList(self, framework):
