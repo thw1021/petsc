@@ -72,7 +72,6 @@ class Configure(config.package.CMakePackage):
       args.append('-DPnetcdf_LIBRARY_DIRS:PATH='+os.path.join(self.pnetcdf.directory,'lib'))
       args.append('-DPnetcdf_INCLUDE_DIRS:PATH='+os.path.join(self.pnetcdf.directory,'include'))
     if self.checkSharedLibrariesEnabled():
-      args.append('-DBUILD_SHARED_LIBS:BOOL=ON')
       args.append('-DSEACASExodus_ENABLE_SHARED:BOOL=ON')
     return args
 
