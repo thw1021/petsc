@@ -25,25 +25,10 @@ Input parameters include:\n\
   -snes_compare_explicit : compare user Jacobian with finite difference Jacobian \n\
   -tao_cmonitor      : convergence monitor with constraint norm \n\
   -tao_view_solution : view exact solution at each itteration\n\
-  Note: external package mumps is requried to run either for pdipm. Additionally This is designed for a maximum of 2 processors, the code will error if size > 2.\n\n";
+  Note: external package MUMPS is requried to run pdipm. Additionally This is designed for a maximum of 2 processors, the code will error if size > 2.\n\n";
 
 /*
-   User-defined application context - contains data needed by the
-   application-provided call-back routines, FormFunction(),
-   FormGradient(), and FormHessian().
-*/
-
-/*
-   x,d in R^n
-   f in R
-   bin in R^mi
-   beq in R^me
-   Aeq in R^(me x n)
-   Ain in R^(mi x n)
-   H in R^(n x n)
-   min f=(1/2)*x'*H*x + d'*x
-   s.t.  Aeq*x == beq
-         Ain*x >= bin
+   User-defined application context - contains data needed by the application
 */
 typedef struct {
   PetscInt   n;  /* Global length of x */
@@ -56,7 +41,6 @@ typedef struct {
   Mat        Ae,Ai,H;
   VecScatter scat;
 } AppCtx;
-
 
 /* -------- User-defined Routines --------- */
 PetscErrorCode InitializeProblem(AppCtx *);
