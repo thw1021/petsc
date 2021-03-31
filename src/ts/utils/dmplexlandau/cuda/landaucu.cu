@@ -583,7 +583,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
   // create data
   d_BB = (PetscReal*)SData_d->B;
   d_DD = (PetscReal*)SData_d->D;
-  if (a_IPf) {  // form f and df 
+  if (a_IPf) {  // form f and df
     dim3 dimBlock(nnn>Nf ? Nf : nnn, Nq);
     ierr = PetscLogEventBegin(events[1],0,0,0,0);CHKERRQ(ierr);
     cerr = cudaMemcpy(SData_d->Eq_m, a_Eq_m,   Nf*szf, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
