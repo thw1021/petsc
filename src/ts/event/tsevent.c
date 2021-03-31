@@ -319,7 +319,7 @@ static PetscErrorCode TSPostEvent(TS ts,PetscReal t,Vec U)
   /* Handle termination events and step restart */
   for (i=0; i<event->nevents_zero; i++) if (event->terminate[event->events_zero[i]]) terminate = PETSC_TRUE;
   inflag[0] = restart; inflag[1] = terminate;
-  ierr = MPIU_Allreduce(inflag,outflag,2,MPIU_BOOL,MPI_LOR,((PetscObject)ts)->comm);CHKERRMPI(ierr);
+  ierr = MPI_Allreduce(inflag,outflag,2,MPIU_BOOL,MPI_LOR,((PetscObject)ts)->comm);CHKERRMPI(ierr);
   restart = outflag[0]; terminate = outflag[1];
   if (restart) {ierr = TSRestartStep(ts);CHKERRQ(ierr);}
   if (terminate) {ierr = TSSetConvergedReason(ts,TS_CONVERGED_EVENT);CHKERRQ(ierr);}
@@ -480,7 +480,7 @@ PetscErrorCode TSEventHandler(TS ts)
   }
 
   in[0] = event->status; in[1] = rollback;
-  ierr = MPIU_Allreduce(in,out,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)ts));CHKERRMPI(ierr);
+  ierr = MPI_Allreduce(in,out,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)ts));CHKERRMPI(ierr);
   event->status = (TSEventStatus)out[0]; rollback = out[1];
   if (rollback) event->status = TSEVENT_LOCATED_INTERVAL;
 
@@ -535,7 +535,7 @@ PetscErrorCode TSEventHandler(TS ts)
 
   if (event->status == TSEVENT_PROCESSING) event->iterctr++;
 
-  ierr = MPIU_Allreduce(&dt,&dt_min,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)ts));CHKERRMPI(ierr);
+  ierr = MPI_Allreduce(&dt,&dt_min,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)ts));CHKERRMPI(ierr);
   ierr = TSSetTimeStep(ts,dt_min);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

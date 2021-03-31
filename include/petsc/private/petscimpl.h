@@ -390,7 +390,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 #define PetscValidLogicalCollectiveBool(a,b,arg)                        \
   do {                                                                  \
     PetscErrorCode _7_ierr;                                             \
-    PetscMPIInt b0=(PetscMPIInt)(b),b1[2],b2[2];                        \
+    PetscMPIInt b0=(PetscMPIInt)(b),b1[2],b2[2] = {22,55};              \
     b1[0] = -b0; b1[1] = b0;                                            \
     _7_ierr = MPI_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRMPI(_7_ierr); \
     if (-b2[0] != b2[1]) SETERRQ1(PetscObjectComm((PetscObject)(a)),PETSC_ERR_ARG_WRONG,"Bool value must be same on all processes, argument # %d",arg); \
