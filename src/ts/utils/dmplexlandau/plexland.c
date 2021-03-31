@@ -249,8 +249,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
           const PetscInt   gidx = ei*Nq + qi;
           /* get f & df */
           for (f = 0; f < Nf; ++f) {
-            PetscInt    b, e;
-            PetscScalar refSpaceDer[LANDAU_DIM];
+            PetscInt   b, e;
+            PetscReal  refSpaceDer[LANDAU_DIM];
             ff[gidx + f*nip] = 0.0;
             for (d = 0; d < LANDAU_DIM; ++d) refSpaceDer[d] = 0.0;
             for (b = 0; b < Nb; ++b) {
@@ -265,10 +265,10 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             }
           }
           for (f=0;f<Nf;f++) {
-            dudx[gidx + f*nip] = PetscRealPart(u_x[f][0]);
-            dudy[gidx + f*nip] = PetscRealPart(u_x[f][1]);
+            dudx[gidx + f*nip] = u_x[f][0];
+            dudy[gidx + f*nip] = u_x[f][1];
 #if LANDAU_DIM==3
-            dudz[gidx + f*nip] = PetscRealPart(u_x[f][2]);
+            dudz[gidx + f*nip] = u_x[f][2];
 #endif
           }
         }
