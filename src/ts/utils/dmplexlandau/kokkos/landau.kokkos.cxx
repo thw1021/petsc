@@ -226,8 +226,8 @@ extern "C"  {
     PetscFunctionReturn(0);
   }
 
-  PetscErrorCode LandauKokkosJacobian( DM plex, const PetscInt Nq, PetscReal a_Eq_m[], PetscScalar a_IPf[], LandauGeomData *SData_d, const PetscInt num_sub_blocks, PetscReal shift,
-                                       const PetscLogEvent events[], Mat JacP)
+  PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[], PetscScalar a_IPf[], LandauGeomData *SData_d, const PetscInt num_sub_blocks, PetscReal shift,
+                                      const PetscLogEvent events[], Mat JacP)
   {
     using scr_mem_t = Kokkos::DefaultExecutionSpace::scratch_memory_space;
     using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
