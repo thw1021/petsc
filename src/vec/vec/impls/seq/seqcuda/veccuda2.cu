@@ -1311,7 +1311,7 @@ PetscErrorCode  VecAllocateNVSHMEM_SeqCUDA(Vec v)
   PetscFunctionBegin;
   cerr = cudaFree(veccuda->GPUarray_allocated);CHKERRCUDA(cerr);
   ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(MPI_IN_PLACE,&n,1,MPIU_INT,MPI_MAX,PETSC_COMM_WORLD);CHKERRMPI(ierr);
+  ierr = MPI_Allreduce(MPI_IN_PLACE,&n,1,MPIU_INT,MPI_MAX,PETSC_COMM_WORLD);CHKERRMPI(ierr);
   ierr = PetscNvshmemMalloc(n*sizeof(PetscScalar),(void**)&veccuda->GPUarray_allocated);CHKERRQ(ierr);
   veccuda->GPUarray = veccuda->GPUarray_allocated;
   veccuda->nvshmem  = PETSC_TRUE;
