@@ -7,6 +7,41 @@
 #include <petscsys.h>
 #include <petsctime.h>
 
+
+#if defined(PETSC_USE_DEBUG)
+PETSC_STATIC_INLINE int PetscStrHash(const char *str)
+{
+  unsigned int c,hash = 5381;
+
+  while ((c = *str++)) hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+  return hash;
+}
+
+/*
+   MPIU_Allreduce_Private - a PETSc replacement for MPI_Allreduce() that tries to determine if the call from all the MPI processes occur from the
+                    same place in the PETSc code. This helps to detect bugs where different MPI processes follow different code paths
+                    resulting in inconsistent and incorrect calls to MPI_Allreduce().
+*/
+#define MPIU_Allreduce_Private(a,b,c,d,e,fcomm)  do {\
+  PetscErrorCode ar_ierr;\
+  PetscMPIInt ar_b1[6],ar_b2[6];\
+  ar_b1[0] = -(PetscMPIInt)__LINE__;                          ar_b1[1] = -ar_b1[0];\
+  ar_b1[2] = -(PetscMPIInt)PetscStrHash(PETSC_FUNCTION_NAME); ar_b1[3] = -ar_b1[2];\
+  ar_b1[4] = -(PetscMPIInt)c;                                 ar_b1[5] = -ar_b1[4];\
+  ar_ierr = MPI_Allreduce(ar_b1,ar_b2,6,MPI_INT,MPI_MAX,fcomm);CHKERRMPI(ar_ierr); \
+  if (-ar_b2[0] != ar_b2[1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (code lines) on different processors");\
+  if (-ar_b2[2] != ar_b2[3]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (functions) on different processors");\
+  if (-ar_b2[4] != ar_b2[5]) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called with different counts %d on different processors",c);\
+  ar_ierr = MPI_Allreduce(a,b,c,d,e,fcomm);CHKERRMPI(ar_ierr);\
+  } while (0)
+
+#else
+#define MPIU_Allreduce_Private(a,b,c,d,e,fcomm)  do {\
+  PetscErrorCode ar_ierr = MPI_Allreduce(a,b,c,d,e,fcomm); CHKERRMPI(ar_ierr); \
+  } while (0)
+#endif
+
+
 /* General logging of information; different from event logging */
 PETSC_EXTERN PetscErrorCode PetscInfo_Private(const char[],PetscObject,const char[],...);
 #if defined(PETSC_USE_INFO)
@@ -571,8 +606,8 @@ PETSC_STATIC_INLINE int PetscMPIParallelComm(MPI_Comm comm)
 #define MPI_Waitall(count,array_of_requests,array_of_statuses) \
   ((petsc_wait_all_ct++,petsc_sum_of_waits_ct += (PetscLogDouble) (count),0) || MPI_Waitall((count),(array_of_requests),(array_of_statuses)))
 
-#define MPI_Allreduce(sendbuf,recvbuf,count,datatype,op,comm) \
-  ((petsc_allreduce_ct += PetscMPIParallelComm((comm)),0) || MPI_Allreduce((sendbuf),(recvbuf),(count),(datatype),(op),(comm)))
+#define MPI_Allreduce(sendbuf,recvbuf,count,datatype,op,comm)         \
+  (petsc_allreduce_ct += PetscMPIParallelComm((comm)),MPI_SUCCESS); MPIU_Allreduce_Private((sendbuf),(recvbuf),(count),(datatype),(op),(comm))
 
 #define MPI_Bcast(buffer,count,datatype,root,comm) \
   ((petsc_allreduce_ct += PetscMPIParallelComm((comm)),0) || MPI_Bcast((buffer),(count),(datatype),(root),(comm)))
@@ -653,6 +688,7 @@ PETSC_STATIC_INLINE int PetscMPIParallelComm(MPI_Comm comm)
 
 #define MPI_Start_neighbor_alltoallv(outdegree,indegree,sendbuf,sendcnts,sdispls,sendtype,recvbuf,recvcnts,rdispls,recvtype,comm) \
   (((outdegree) || (indegree)) && MPI_Neighbor_alltoallv((sendbuf),(sendcnts),(sdispls),(sendtype),(recvbuf),(recvcnts),(rdispls),(recvtype),(comm)))
+
 #endif /* !MPIUNI_H && ! PETSC_HAVE_BROKEN_RECURSIVE_MACRO */
 
 #else  /* ---Logging is turned off --------------------------------------------*/
@@ -731,6 +767,10 @@ PETSC_EXTERN PetscErrorCode PetscLogObjectState(PetscObject,const char[],...);
   (((outdegree) || (indegree)) && MPI_Ineighbor_alltoallv((sendbuf),(sendcnts),(sdispls),(sendtype),(recvbuf),(recvcnts),(rdispls),(recvtype),(comm),(request)))
 #define MPI_Start_neighbor_alltoallv(outdegree,indegree,sendbuf,sendcnts,sdispls,sendtype,recvbuf,recvcnts,rdispls,recvtype,comm) \
   (((outdegree) || (indegree)) && MPI_Neighbor_alltoallv((sendbuf),(sendcnts),(sdispls),(sendtype),(recvbuf),(recvcnts),(rdispls),(recvtype),(comm)))
+
+#if defined(PETSC_USE_DEBUG) && !defined((MPIUNI_H)
+#define MPI_Allreduce(sendbuf,recvbuf,count,datatype,op,comm) MPI_SUCCESS; MPIU_Allreduce_Private((sendbuf),(recvbuf),(count),(datatype),(op),(comm))
+#endif
 
 #endif   /* PETSC_USE_LOG */
 
