@@ -340,6 +340,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   AppCtx            *user = (AppCtx *) ctx;
   PetscInt           dbg  = 0;
   DM                 sw;                  /* Particles */
+  Vec                sol;                 /* Solution vector at current time */
   const PetscScalar *u;                   /* input solution vector */
   PetscScalar       *r;
   PetscReal         *velocity;
@@ -351,10 +352,11 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   ierr = TSGetDM(ts, &sw);CHKERRQ(ierr);CHKERRQ(ierr);
   ierr = DMGetDimension(sw, &dim);
   ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
+  ierr = TSGetSolution(ts, &sol);CHKERRQ(ierr);
+  ierr = VecGetArray(sol, &velocity);
   ierr = VecGetArray(R, &r);
   ierr = VecGetArrayRead(U, &u);
   Np  /= dim;
-  ierr = DMSwarmGetField(sw, "velocity", NULL, NULL, (void **) &velocity);CHKERRQ(ierr);
   if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Part  ppr     x        y\n");CHKERRQ(ierr);}
   for (p = 0; p < Np; ++p) {
     PetscReal gradS_p[3] = {0., 0., 0.};
@@ -375,9 +377,9 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
     }
     if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Final %4D %10.8lf %10.8lf\n", p, r[p*dim+0], r[p*dim+1]);CHKERRQ(ierr);}
   }
-  ierr = DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **) &velocity);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   ierr = VecRestoreArray(R, &r);CHKERRQ(ierr);
+  ierr = VecRestoreArray(sol, &velocity);CHKERRQ(ierr);
   ierr = VecViewFromOptions(R, NULL, "-residual_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
