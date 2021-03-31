@@ -241,7 +241,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       ierr = PetscMalloc5(elemMatSize, &elemMat, nip*Nf, &ff, nip*Nf, &dudx, nip*Nf, &dudy, dim==3 ? nip*Nf : 0, &dudz);CHKERRQ(ierr);
       for (ei = cStart, invJ = invJ_a; ei < cEnd; ++ei, invJ += Nq*dim*dim) {
         PetscScalar  *coef = &IPf[ei*Nb*Nf];
-        PetscScalar   u_x[LANDAU_MAX_SPECIES][LANDAU_DIM];
+        PetscReal    u_x[LANDAU_MAX_SPECIES][LANDAU_DIM];
         /* get f and df */
         for (qi = 0; qi < Nq; ++qi) {
           const PetscReal  *Bq = &BB[qi*Nb];

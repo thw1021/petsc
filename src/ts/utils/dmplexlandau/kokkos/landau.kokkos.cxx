@@ -310,8 +310,8 @@ extern "C"  {
     ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
     ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
     {
-      Kokkos::View<PetscScalar**, Kokkos::LayoutRight>                                                                 d_f_k ("f",  Nf, a_IPf ? nip : 0);      // allocated each run, computed and used on GPU
-      Kokkos::View<PetscScalar***, Kokkos::LayoutRight>                                                                d_df_k("df", dim, Nf, a_IPf ? nip : 0);
+      Kokkos::View<PetscReal**, Kokkos::LayoutRight>                                                                 d_f_k ("f",  Nf, a_IPf ? nip : 0);      // allocated each run, computed and used on GPU
+      Kokkos::View<PetscReal***, Kokkos::LayoutRight>                                                                d_df_k("df", dim, Nf, a_IPf ? nip : 0);
       const Kokkos::View<PetscScalar*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> >h_IPf_k (a_IPf, a_IPf ? nip*Nf : 0);
       const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> >  h_Eq_m_k (a_Eq_m, a_IPf ? Nf : 0);
       Kokkos::View<PetscScalar**, Kokkos::LayoutRight>                                                                 d_elem_mats("element matrices", global_elem_mat_sz, totDim*totDim);
@@ -338,7 +338,7 @@ extern "C"  {
                 const PetscReal         *Bq = &d_BB[myQi*Nb], *Dq = &d_DD[myQi*Nb*dim];
                 Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,(int)Nf), [=] (int f) {
                     PetscInt     b, e, d;
-                    PetscScalar  refSpaceDer[LANDAU_DIM];
+                    PetscReal  refSpaceDer[LANDAU_DIM];
                     d_f_k(f,ipidx) = 0.0;
                     for (d = 0; d < LANDAU_DIM; ++d) refSpaceDer[d] = 0.0;
                     for (b = 0; b < Nb; ++b) {

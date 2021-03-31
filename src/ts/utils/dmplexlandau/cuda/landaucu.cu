@@ -167,30 +167,30 @@ PetscErrorCode LandauCudaStaticDataClear(LandauGeomData *SData_d)
 //
 __global__
 void landau_form_fdf(const PetscInt nip, const PetscInt dim, const PetscInt Nf, const PetscInt Nb, const PetscReal invJ_a[],
-                     const PetscReal * const BB, const PetscReal * const DD, PetscScalar *a_coef, PetscScalar d_f[], PetscScalar d_dfdx[], PetscScalar d_dfdy[],
+                     const PetscReal * const BB, const PetscReal * const DD, PetscScalar *a_coef, PetscReal d_f[], PetscReal d_dfdx[], PetscReal d_dfdy[],
 #if LANDAU_DIM==3
-                     PetscScalar d_dfdz[],
+                     PetscReal d_dfdz[],
 #endif
                      PetscErrorCode *ierr) // output
 {
-  const PetscInt  Nq = blockDim.y, myelem = blockIdx.x;
-  const PetscInt  myQi = threadIdx.y;
-  const PetscInt  jpidx = myQi + myelem * Nq;
-  const PetscReal *invJ = &invJ_a[jpidx*dim*dim];
-  const PetscReal *Bq = &BB[myQi*Nb], *Dq = &DD[myQi*Nb*dim];
-  PetscInt        f,d,b,e;
-  PetscScalar     u_x[LANDAU_MAX_SPECIES][LANDAU_DIM];
+  const PetscInt    Nq = blockDim.y, myelem = blockIdx.x;
+  const PetscInt    myQi = threadIdx.y;
+  const PetscInt    jpidx = myQi + myelem * Nq;
+  const PetscReal   *invJ = &invJ_a[jpidx*dim*dim];
+  const PetscReal   *Bq = &BB[myQi*Nb], *Dq = &DD[myQi*Nb*dim];
+  PetscInt          f,d,b,e;
+  PetscReal         u_x[LANDAU_MAX_SPECIES][LANDAU_DIM];
   const PetscScalar *coef = &a_coef[myelem*Nb*Nf];
   *ierr = 0;
   /* get f and df */
   for (f = threadIdx.x; f < Nf; f += blockDim.x) {
-    PetscScalar refSpaceDer[LANDAU_DIM];
+    PetscReal refSpaceDer[LANDAU_DIM];
     d_f[jpidx + f*nip] = 0.0;
     for (d = 0; d < LANDAU_DIM; ++d) refSpaceDer[d] = 0.0;
     for (b = 0; b < Nb; ++b) {
       const PetscInt    cidx = b;
-      d_f[jpidx + f*nip] += Bq[cidx]*coef[f*Nb+cidx];
-      for (d = 0; d < dim; ++d) refSpaceDer[d] += Dq[cidx*dim+d]*coef[f*Nb+cidx];
+      d_f[jpidx + f*nip] += Bq[cidx]*PetscRealPart(coef[f*Nb+cidx]);
+      for (d = 0; d < dim; ++d) refSpaceDer[d] += Dq[cidx*dim+d]*PetscRealPart(coef[f*Nb+cidx]);
     }
     for (d = 0; d < dim; ++d) {
       for (e = 0, u_x[f][d] = 0.0; e < dim; ++e) {
@@ -199,10 +199,10 @@ void landau_form_fdf(const PetscInt nip, const PetscInt dim, const PetscInt Nf, 
     }
   }
   for (f = threadIdx.x; f < Nf; f += blockDim.x) {
-    d_dfdx[jpidx + f*nip] = PetscRealPart(u_x[f][0]);
-    d_dfdy[jpidx + f*nip] = PetscRealPart(u_x[f][1]);
+    d_dfdx[jpidx + f*nip] = u_x[f][0];
+    d_dfdy[jpidx + f*nip] = u_x[f][1];
 #if LANDAU_DIM==3
-    d_dfdz[jpidx + f*nip] = PetscRealPart(u_x[f][2]);
+    d_dfdz[jpidx + f*nip] = u_x[f][2];
 #endif
   }
 }
@@ -215,19 +215,19 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
                          const PetscReal * const BB, const PetscReal * const DD,
                          PetscScalar *elemMat, P4estVertexMaps *d_maps, PetscSplitCSRDataStructure *d_mat, // output
                          PetscScalar fieldMats[][LANDAU_MAX_NQ], // all these arrays are in shared memory
-                         PetscScalar g2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
-                         PetscScalar g3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
-                         PetscScalar gg2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
-                         PetscScalar gg3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
+                         PetscReal g2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
+                         PetscReal g3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
+                         PetscReal gg2[][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
+                         PetscReal gg3[][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES],
                          PetscReal s_nu_alpha[],
                          PetscReal s_nu_beta[],
                          PetscReal s_invMass[],
-                         PetscScalar s_f[],
-                         PetscScalar s_dfx[],
-                         PetscScalar s_dfy[],
-                         PetscScalar d_f[], PetscScalar d_dfdx[], PetscScalar d_dfdy[], // global memory
+                         PetscReal s_f[],
+                         PetscReal s_dfx[],
+                         PetscReal s_dfy[],
+                         PetscReal d_f[], PetscReal d_dfdx[], PetscReal d_dfdy[], // global memory
 #if LANDAU_DIM==3
-                         const PetscReal zz[], PetscScalar s_dfz[], PetscScalar d_dfdz[],
+                         const PetscReal zz[], PetscReal s_dfz[], PetscReal d_dfdz[],
 #endif
                          PetscReal d_mass_w[], PetscReal shift,
                          PetscInt myelem, PetscErrorCode *ierr)
@@ -235,7 +235,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
   int           delta,d,f,g,d2,dp,d3,fieldA,ipidx_b,nip_pad = nip; // vectorization padding not supported;
   *ierr = 0;
   if (!d_mass_w) { // get g2 & g3 -- d_mass_w flag for mass matrix
-    PetscScalar     gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
+    PetscReal     gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
     // create g2 & g3
     for (f=threadIdx.x; f<Nf; f+=blockDim.x) {
       for (d=0;d<dim;d++) { // clear accumulation data D & K
@@ -278,7 +278,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
       __syncthreads();
       if (ipidx < nip) {
         const PetscReal wi = ww[ipidx], x = xx[ipidx], y = yy[ipidx];
-        PetscScalar       temp1[3] = {0, 0, 0}, temp2 = 0;
+        PetscReal       temp1[3] = {0, 0, 0}, temp2 = 0;
 #if LANDAU_DIM==2
         PetscReal Ud[2][2], Uk[2][2];
         LandauTensor2D(vj, x, y, Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
@@ -462,9 +462,9 @@ __global__
 void __launch_bounds__(256,1) landau_kernel_v2(const PetscInt nip, const PetscInt dim, const PetscInt totDim, const PetscInt Nf, const PetscInt Nb, const PetscReal invJj[],
                                                const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
                                                const PetscReal * const BB, const PetscReal * const DD, const PetscReal xx[], const PetscReal yy[], const PetscReal ww[],
-                                               PetscScalar elemMats_out[], P4estVertexMaps *d_maps, PetscSplitCSRDataStructure *d_mat, PetscScalar d_f[], PetscScalar d_dfdx[], PetscScalar d_dfdy[],
+                                               PetscScalar elemMats_out[], P4estVertexMaps *d_maps, PetscSplitCSRDataStructure *d_mat, PetscReal d_f[], PetscReal d_dfdx[], PetscReal d_dfdy[],
 #if LANDAU_DIM==3
-                                               const PetscReal zz[], PetscScalar d_dfdz[],
+                                               const PetscReal zz[], PetscReal d_dfdz[],
 #endif
                                                PetscReal d_mass_w[], PetscReal shift,
                                                PetscErrorCode *ierr)
@@ -472,17 +472,17 @@ void __launch_bounds__(256,1) landau_kernel_v2(const PetscInt nip, const PetscIn
   const PetscInt  Nq = blockDim.y, myelem = blockIdx.x;
   extern __shared__ PetscReal smem[];
   int size = 0;
-  PetscScalar (*g2)[LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]              = // shared mem not needed when nu_alpha, etc
-    (PetscScalar (*)[LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES])             &smem[size];
+  PetscReal (*g2)[LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]              = // shared mem not needed when nu_alpha, etc
+    (PetscReal (*)[LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES])             &smem[size];
   size += LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_DIM;
-  PetscScalar (*g3)[LANDAU_DIM][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]  =
-    (PetscScalar (*)[LANDAU_DIM][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]) &smem[size];
+  PetscReal (*g3)[LANDAU_DIM][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]  =
+    (PetscReal (*)[LANDAU_DIM][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]) &smem[size];
   size += LANDAU_DIM*LANDAU_DIM*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES;
-  PetscScalar (*gg2)[LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]             =
-    (PetscScalar (*)[LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES])             &smem[size];
+  PetscReal (*gg2)[LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]             =
+    (PetscReal (*)[LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES])             &smem[size];
   size += LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_DIM;
-  PetscScalar (*gg3)[LANDAU_DIM][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES] =
-    (PetscScalar (*)[LANDAU_DIM][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]) &smem[size];
+  PetscReal (*gg3)[LANDAU_DIM][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES] =
+    (PetscReal (*)[LANDAU_DIM][LANDAU_DIM][LANDAU_MAX_NQ][LANDAU_MAX_SPECIES]) &smem[size];
   size += LANDAU_DIM*LANDAU_DIM*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES;
   PetscReal *s_nu_alpha = &smem[size];
   size += LANDAU_MAX_SPECIES;
@@ -490,14 +490,14 @@ void __launch_bounds__(256,1) landau_kernel_v2(const PetscInt nip, const PetscIn
   size += LANDAU_MAX_SPECIES;
   PetscReal *s_invMass  = &smem[size];
   size += LANDAU_MAX_SPECIES;
-  PetscScalar *s_f        = &smem[size];
+  PetscReal *s_f        = &smem[size];
   size += blockDim.x*LANDAU_MAX_SPECIES;
-  PetscScalar *s_dfx      = &smem[size];
+  PetscReal *s_dfx      = &smem[size];
   size += blockDim.x*LANDAU_MAX_SPECIES;
-  PetscScalar *s_dfy      = &smem[size];
+  PetscReal *s_dfy      = &smem[size];
   size += blockDim.x*LANDAU_MAX_SPECIES;
 #if LANDAU_DIM==3
-  PetscScalar *s_dfz      = &smem[size];
+  PetscReal *s_dfz      = &smem[size];
   size += blockDim.x*LANDAU_MAX_SPECIES;
 #endif
   PetscScalar (*fieldMats)[LANDAU_MAX_NQ][LANDAU_MAX_NQ] = d_maps ?
@@ -527,9 +527,10 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
   cudaError_t       cerr;
   PetscInt          ii,ej,*Nbf,Nb,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(PetscReal),szs=sizeof(PetscScalar);
   PetscReal         *d_BB=NULL,*d_DD=NULL,*d_invJj=NULL,*d_nu_alpha=NULL,*d_nu_beta=NULL,*d_invMass=NULL,*d_Eq_m=NULL,*d_mass_w=NULL,*d_x=NULL,*d_y=NULL,*d_w=NULL;
-  PetscScalar       *d_elemMats=NULL,*d_IPf=NULL,*d_f=NULL,*d_dfdx=NULL,*d_dfdy=NULL;
+  PetscScalar       *d_elemMats=NULL,*d_IPf=NULL;
+  PetscReal         *d_f=NULL,*d_dfdx=NULL,*d_dfdy=NULL;
 #if LANDAU_DIM==3
-  PetscScalar       *d_dfdz=NULL; PetscReal *d_z = NULL;
+  PetscReal         *d_dfdz=NULL, *d_z = NULL;
 #endif
   PetscTabulation   *Tf;
   PetscDS           prob;
@@ -597,13 +598,13 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
     d_y = (PetscReal*)SData_d->y;
     d_w = (PetscReal*)SData_d->w;
     d_Eq_m = (PetscReal*)SData_d->Eq_m;
-    d_dfdx = (PetscScalar*)SData_d->dfdx;
-    d_dfdy = (PetscScalar*)SData_d->dfdy;
+    d_dfdx = (PetscReal*)SData_d->dfdx;
+    d_dfdy = (PetscReal*)SData_d->dfdy;
 #if LANDAU_DIM==3
-    d_dfdz = (PetscScalar*)SData_d->dfdz;
+    d_dfdz = (PetscReal*)SData_d->dfdz;
     d_z = (PetscReal*)SData_d->z;
 #endif
-    d_f    = (PetscScalar*)SData_d->f;
+    d_f    = (PetscReal*)SData_d->f;
     d_IPf  = (PetscScalar*)SData_d->IPf;
     ierr = PetscLogEventBegin(events[8],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
