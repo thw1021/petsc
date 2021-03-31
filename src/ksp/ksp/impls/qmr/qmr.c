@@ -122,16 +122,16 @@ static PetscErrorCode  KSPSolve_QMR(KSP ksp)
       ierr = VecCopy(P1,Y);CHKERRQ(ierr);
       ierr = VecCopy(Z,P1);CHKERRQ(ierr);
     } else if (ksp->pc_side == PC_LEFT) {
-      ierr = VecConjugate(Z);
+      ierr = VecConjugate(Z);CHKERRQ(ierr);
       /* To replace with KSP_PC_ApplyHermitianTranspose, this is a workaround to obtain the solution */
       ierr = KSP_PCApplyTranspose(ksp,Z,P1);CHKERRQ(ierr);     /* Solve M_1^H P1 = Z*/
-      ierr = VecConjugate(P1);
+      ierr = VecConjugate(P1);CHKERRQ(ierr);
     } else if (ksp->pc_side == PC_SYMMETRIC) {
       ierr = PCApplySymmetricRight(ksp->pc,Y,P1);CHKERRQ(ierr);
       ierr = VecCopy(P1,Y);CHKERRQ(ierr);
-      ierr = VecConjugate(Z);
+      ierr = VecConjugate(Z);CHKERRQ(ierr);
       ierr = PCApplySymmetricRight(ksp->pc,Z,P1);CHKERRQ(ierr);
-      ierr = VecConjugate(P1);
+      ierr = VecConjugate(P1);CHKERRQ(ierr);
     }
 
     if (i == 0) {
@@ -249,7 +249,8 @@ PETSC_INTERN PetscErrorCode KSPBuildSolution_QMR(KSP ksp,Vec v,Vec *V)
 
   PetscFunctionBegin;
   if (v) {
-    ierr = VecCopy(ksp->vec_sol,v);CHKERRQ(ierr); *V = v;
+    ierr = VecCopy(ksp->vec_sol,v);CHKERRQ(ierr);
+    *V = v;
   } else *V = ksp->vec_sol;
   PetscFunctionReturn(0);
 }

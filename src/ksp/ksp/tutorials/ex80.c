@@ -54,7 +54,6 @@ int main(int argc,char **args)
   /* Identify the starting and ending mesh points on each
      processor for the interior part of the mesh. We let PETSc decide
      above. */
-
   ierr = VecGetOwnershipRange(x,&rstart,&rend);CHKERRQ(ierr);
   ierr = VecGetLocalSize(x,&nlocal);CHKERRQ(ierr);
 
@@ -83,8 +82,6 @@ int main(int argc,char **args)
      For matrix assembly, each processor contributes entries for
      the part that it owns locally.
   */
-
-
   if (!rstart) {
     rstart = 1;
     i      = 0; col[0] = 0; col[1] = 1; value[0] = 2.0; value[1] = 1.0;
