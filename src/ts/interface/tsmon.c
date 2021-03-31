@@ -1436,7 +1436,7 @@ PetscErrorCode  TSMonitorEnvelopeCtxDestroy(TSMonitorEnvelopeCtx *ctx)
 }
 
 /*@C
-  TSMonitorMoments - Monitors the first three moments of a DMSarm being evolved by the TS
+  TSDMSwarmMonitorMoments - Monitors the first three moments of a DMSarm being evolved by the TS
 
   Not collective
 
@@ -1448,7 +1448,7 @@ PetscErrorCode  TSMonitorEnvelopeCtxDestroy(TSMonitorEnvelopeCtx *ctx)
 - ctx  - not used
 
   Options Database:
-. -ts_monitor_moments
+. -ts_dmswarm_monitor_moments
 
   Level: intermediate
 
@@ -1457,7 +1457,7 @@ PetscErrorCode  TSMonitorEnvelopeCtxDestroy(TSMonitorEnvelopeCtx *ctx)
 
 .seealso: TSMonitorSet(), TSMonitorDefault(), DMSWARM
 @*/
-PetscErrorCode TSMonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U, PetscViewerAndFormat *vf)
+PetscErrorCode TSDMSwarmMonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U, PetscViewerAndFormat *vf)
 {
   DM                 sw;
   const PetscScalar *u;
@@ -1474,13 +1474,11 @@ PetscErrorCode TSMonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U, PetscV
   ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
   Np  /= dim;
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
-  //ierr = PetscPrintf(comm, "Time     Step Part     Energy     Momentum     v0     v1\n");CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
     for (d = 0; d < dim; ++d) {
       totE      += PetscRealPart(u[p*dim+d]*u[p*dim+d]);
       totMom[d] += PetscRealPart(u[p*dim+d]);
     }
-    //ierr = PetscPrintf(comm, "%.6lf %4D %4D %10.8lf %10.8lf %10.8lf %10.8lf\n", t, step, p, (double) E, (double) mom, (double)u[p*2],(double)u[p*2+1]);CHKERRQ(ierr);
   }
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   for (d = 0; d < dim; ++d) totMom[d] *= m;

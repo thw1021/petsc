@@ -1,8 +1,6 @@
 static char help[] = "Example usage of extracting single cells with their associated fields from a swarm and putting it in a new swarm object\n";
 
 #include <petscdmplex.h>
-#include <petsc/private/dmpleximpl.h>  /* For norm */
-#include <petsc/private/petscfeimpl.h> /* Fpr CoordinatesRefToReal() */
 #include <petscdmswarm.h>
 #include <petscts.h>
 
@@ -21,16 +19,13 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->dim              = 2;
   options->simplex          = PETSC_TRUE;
   options->particlesPerCell = 1;
-  
   ierr = PetscStrcpy(options->filename, "");CHKERRQ(ierr);
-
-  ierr = PetscOptionsBegin(comm, "", "SubSwarm Options", "DMSWARM");CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(comm, "", "CellSwarm Options", "DMSWARM");CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dim", "The topological mesh dimension", "ex3.c", options->dim, &options->dim, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-simplex", "The flag for simplices or tensor cells", "ex3.c", options->simplex, &options->simplex, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsString("-mesh", "Name of the mesh filename if any", "ex3.c", options->filename, options->filename, PETSC_MAX_PATH_LEN, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-particles_per_cell", "Number of particles per cell", "ex3.c", options->particlesPerCell, &options->particlesPerCell, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 }
 
@@ -74,7 +69,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = DMCreate(PetscObjectComm((PetscObject) dm), sw);CHKERRQ(ierr);
   ierr = DMSetType(*sw, DMSWARM);CHKERRQ(ierr);
   ierr = DMSetDimension(*sw, dim);CHKERRQ(ierr);
-
   ierr = DMSwarmSetType(*sw, DMSWARM_PIC);CHKERRQ(ierr);
   ierr = DMSwarmSetCellDM(*sw, dm);CHKERRQ(ierr);
   ierr = DMSwarmRegisterPetscDatatypeField(*sw, "kinematics", 2, PETSC_REAL);CHKERRQ(ierr);
@@ -98,27 +92,24 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 
 int main(int argc,char **argv)
 {
-  DM             dm, sw, subsw; /* Mesh and particle managers */
+  DM             dm, sw, cellsw; /* Mesh and particle managers */
   MPI_Comm       comm;
   AppCtx         user;
   PetscErrorCode ierr;
 
-
   ierr = PetscInitialize(&argc, &argv, NULL, help);if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
   ierr = ProcessOptions(comm, &user);CHKERRQ(ierr);
-
   ierr = CreateMesh(comm, &dm, &user);CHKERRQ(ierr);
   ierr = CreateParticles(dm, &sw, &user);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(sw, &user);CHKERRQ(ierr);
-
-  ierr = DMCreate(comm, &subsw);CHKERRQ(ierr);
-  ierr = DMSwarmGetSubSwarm(sw, 1, subsw);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(subsw, NULL, "-subswarm_view");CHKERRQ(ierr);
-  ierr = DMSwarmRestoreSubSwarm(sw, 1, subsw);CHKERRQ(ierr);
+  ierr = DMCreate(comm, &cellsw);CHKERRQ(ierr);
+  ierr = DMSwarmGetCellSwarm(sw, 1, cellsw);CHKERRQ(ierr);
+  ierr = DMViewFromOptions(cellsw, NULL, "-subswarm_view");CHKERRQ(ierr);
+  ierr = DMSwarmRestoreCellSwarm(sw, 1, cellsw);CHKERRQ(ierr);
   ierr = DMDestroy(&sw);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = DMDestroy(&subsw);
+  ierr = DMDestroy(&cellsw);
   ierr = PetscFinalize();
   return ierr;
 }

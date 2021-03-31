@@ -3,7 +3,6 @@ This example is a 0D-1V setting for the kinetic equation\n\
 https://en.wikipedia.org/wiki/Bhatnagar%E2%80%93Gross%E2%80%93Krook_operator\n";
 
 #include <petscdmplex.h>
-#include <petsc/private/petscfeimpl.h> /* Fpr CoordinatesRefToReal() */
 #include <petscdmswarm.h>
 #include <petscts.h>
 #include <petscdraw.h>
@@ -110,7 +109,7 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
         }
         if (simplex && sum > 0.0) for (d = 0; d < dim; ++d) refcoords[d] -= PetscSqrtReal(dim)*sum;
         vals[n] = 1.0;
-        CoordinatesRefToReal(dim, dim, xi0, v0, J, refcoords, &coords[n*dim]);
+        ierr = DMPlexReferenceToCoordinates(dm, c, 1, refcoords, &coords[n*dim]);CHKERRQ(ierr);
       }
     }
   }
@@ -165,7 +164,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = DMCreate(PetscObjectComm((PetscObject) dm), sw);CHKERRQ(ierr);
   ierr = DMSetType(*sw, DMSWARM);CHKERRQ(ierr);
   ierr = DMSetDimension(*sw, dim);CHKERRQ(ierr);
-
   ierr = DMSwarmSetType(*sw, DMSWARM_PIC);CHKERRQ(ierr);
   ierr = DMSwarmSetCellDM(*sw, dm);CHKERRQ(ierr);
   ierr = DMSwarmRegisterPetscDatatypeField(*sw, "kinematics", dim, PETSC_REAL);CHKERRQ(ierr);
@@ -202,7 +200,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 /* This computes the 1D Maxwellian distribution for given mass n, velocity v, and temperature T */
 static PetscReal ComputePDF(PetscReal m, PetscReal n, PetscReal T, PetscReal v[])
 {
-  //return (n/PetscPowReal(2*PETSC_PI*T/m, 1.5)) * PetscExpReal(-0.5*m*PetscSqr(v[0])/T);
   return (n/PetscSqrtReal(2.0*PETSC_PI*T/m)) * PetscExpReal(-0.5*m*PetscSqr(v[0])/T);
 }
 
@@ -299,7 +296,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
   ierr = VecGetArray(R, &r);CHKERRQ(ierr);
-
   ierr = TSGetDM(ts, &dmSw);CHKERRQ(ierr);
   ierr = DMSwarmGetCellDM(dmSw, &plex);CHKERRQ(ierr);
   ierr = DMGetDimension(dmSw, &dim);CHKERRQ(ierr);
@@ -308,7 +304,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   ierr = DMPlexGetHeightStratum(plex, 0, &cStart, &cEnd);CHKERRQ(ierr);
   Np  /= dim;
   Ncp  = Np / (cEnd - cStart);
-
   /* Calculate moments of particle distribution, note that velocity is in the coordinate */
   ierr = DMSwarmGetField(dmSw, DMSwarmPICField_coor, NULL, NULL, (void **) &coords);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
@@ -351,7 +346,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
     ierr = DMPlexVecGetClosure(plex, coordSection, coordsLocal, p, NULL, &vcoords);CHKERRQ(ierr);
     eqE += ComputeCDF(m, n, T, vcoords[0], vcoords[1])*m2;
     ierr = DMPlexVecRestoreClosure(plex, coordSection, coordsLocal, p, NULL, &vcoords);CHKERRQ(ierr);
-    //ierr = PetscPrintf(PETSC_COMM_SELF, "Particle %D dE: %g\n", p, r[p]*m2);CHKERRQ(ierr);
   }
   ierr = PetscInfo6(ts, "Time %.2f: mass update %.8f velocity update: %+.8f energy update: %.8f (%.8f, %.8f)\n", t, cn, cv, cE, pE, eqE);CHKERRQ(ierr);
   ierr = DMSwarmRestoreField(dmSw, DMSwarmPICField_coor, NULL, NULL, (void **) &coords);CHKERRQ(ierr);
@@ -406,6 +400,7 @@ static PetscErrorCode SPMonitor(TS ts, PetscInt step, PetscReal t, Vec U, void *
   if (step < 0) PetscFunctionReturn(0);
   if (((user->ostep > 0) && (!(step % user->ostep)))) {
     PetscDrawAxis axis;
+
     ierr = TSGetDM(ts, &dmSw);CHKERRQ(ierr);
     ierr = PetscDrawSPReset(user->drawsp);CHKERRQ(ierr);
     ierr = PetscDrawSPGetAxis(user->drawsp,&axis);CHKERRQ(ierr);
@@ -420,7 +415,6 @@ static PetscErrorCode SPMonitor(TS ts, PetscInt step, PetscReal t, Vec U, void *
     ierr = PetscDrawSPDraw(user->drawsp, PETSC_TRUE);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(U,&u);CHKERRQ(ierr);
     ierr = DMSwarmRestoreField(dmSw, DMSwarmPICField_coor, NULL, NULL, (void **) &coords);CHKERRQ(ierr);
-
     ierr = PetscFree(v);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -440,7 +434,6 @@ static PetscErrorCode KSConv(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx
   if (step < 0) PetscFunctionReturn(0);
   if (((user->ostep > 0) && (!(step % user->ostep)))) {
     PetscDrawAxis axis;
-    //ierr = PetscDrawSPReset(user->drawks);CHKERRQ(ierr);
     ierr = PetscDrawSPGetAxis(user->drawks,&axis);CHKERRQ(ierr);
     ierr = PetscDrawAxisSetLabels(axis,"Particles","t","D_n");CHKERRQ(ierr);
     ierr = PetscDrawSPSetLimits(user->drawks,0.,100,0.,3.5);CHKERRQ(ierr);
@@ -507,7 +500,6 @@ int main(int argc,char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL, help);if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
   ierr = ProcessOptions(comm, &user);CHKERRQ(ierr);
-
   ierr = CreateMesh(comm, &dm, &user);CHKERRQ(ierr);
   ierr = CreateParticles(dm, &sw, &user);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(sw, &user);CHKERRQ(ierr);
@@ -537,7 +529,6 @@ int main(int argc,char **argv)
     ierr = TSMonitorSet(ts, KSConv, &user, NULL);CHKERRQ(ierr);
   }
   ierr = TSSetRHSFunction(ts, NULL, RHSFunctionParticles, &user);CHKERRQ(ierr);
-
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   ierr = TSSetComputeInitialCondition(ts, InitializeSolve);CHKERRQ(ierr);
   ierr = DMSwarmCreateGlobalVectorFromField(sw, "w_q", &w);CHKERRQ(ierr);

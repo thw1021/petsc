@@ -15,7 +15,6 @@ static char help[] = "Particle Basis Landau Example using nonlinear solve + Impl
 */
 
 #include <petscdmplex.h>
-#include <petsc/private/petscfeimpl.h> /* For CoordinatesRefToReal() */
 #include <petscdmswarm.h>
 #include <petscts.h>
 #include <petscviewer.h>
@@ -47,7 +46,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsReal("-h", "Velocity-space resolution", "ex27.c", options->h, &options->h, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-epsilon", "Mollifier regularization parameter", "ex27.c", options->epsilon, &options->epsilon, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 }
 
@@ -79,12 +77,9 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
   ierr = PetscRandomCreate(PetscObjectComm((PetscObject) sw), &rnd);CHKERRQ(ierr);
   ierr = PetscRandomSetInterval(rnd, -1.0, 1.0);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rnd);CHKERRQ(ierr);
-
   ierr = PetscRandomCreate(PetscObjectComm((PetscObject) sw), &rndv);CHKERRQ(ierr);
   ierr = PetscRandomSetInterval(rndv, -1., 1.);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rndv);CHKERRQ(ierr);
-
-
   ierr = DMGetApplicationContext(sw, (void **) &user);CHKERRQ(ierr);
   Np   = user->N;
   ierr = DMGetDimension(sw, &dim);CHKERRQ(ierr);
@@ -116,7 +111,7 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
         }
         if (simplex && sum > 0.0) for (d = 0; d < dim; ++d) refcoords[d] -= PetscSqrtReal(dim)*sum;
         vals[n] = 1.0;
-        CoordinatesRefToReal(dim, dim, xi0, v0, J, refcoords, &coords[n*dim]);
+        ierr = DMPlexReferenceToCoordinates(dm, c, 1, refcoords, &coords[n*dim]);CHKERRQ(ierr);
       }
     }
   }
@@ -184,7 +179,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = DMCreate(PetscObjectComm((PetscObject) dm), sw);CHKERRQ(ierr);
   ierr = DMSetType(*sw, DMSWARM);CHKERRQ(ierr);
   ierr = DMSetDimension(*sw, dim);CHKERRQ(ierr);
-
   /* h = 2L/n and N = n^d */
   if (user->h < 0.) user->h = 2.*user->L / PetscPowReal(user->N, 1./dim);
   /* From Section 4 in [1], \epsilon = 0.64 h^.98 */
@@ -193,7 +187,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   if (view) {
     ierr = PetscPrintf(PETSC_COMM_SELF, "N: %D L: %g h: %g eps: %g\n", user->N, user->L, user->h, user->epsilon);CHKERRQ(ierr);
   }
-
   ierr = DMSwarmSetType(*sw, DMSWARM_PIC);CHKERRQ(ierr);
   ierr = DMSwarmSetCellDM(*sw, dm);CHKERRQ(ierr);
   ierr = DMSwarmRegisterPetscDatatypeField(*sw, "velocity", dim, PETSC_REAL);CHKERRQ(ierr);
@@ -213,6 +206,45 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = PetscObjectSetName((PetscObject) *sw, "Particles");CHKERRQ(ierr);
   ierr = DMViewFromOptions(*sw, NULL, "-sw_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
+}
+
+/* Internal dmplex function, same as found in dmpleximpl.h */
+static void DMPlex_WaxpyD_Internal(PetscInt dim, PetscReal a, const PetscReal *x, const PetscReal *y, PetscReal *w)
+{
+  PetscInt d; 
+  
+  for (d = 0; d < dim; ++d) w[d] = a*x[d] + y[d];
+}
+
+/* Internal dmplex function, same as found in dmpleximpl.h */
+static PetscReal DMPlex_DotD_Internal(PetscInt dim, const PetscScalar *x, const PetscReal *y)
+{
+  PetscReal sum = 0.0;
+  PetscInt d;
+  
+  for (d = 0; d < dim; ++d) sum += PetscRealPart(x[d])*y[d];
+  return sum;
+}
+
+/* Internal dmplex function, same as found in dmpleximpl.h */
+static void DMPlex_MultAdd2DReal_Internal(const PetscReal A[], PetscInt ldx, const PetscScalar x[], PetscScalar y[])
+{
+  PetscScalar z[2];
+  z[0] = x[0]; z[1] = x[ldx];
+  y[0]   += A[0]*z[0] + A[1]*z[1];
+  y[ldx] += A[2]*z[0] + A[3]*z[1];
+  (void)PetscLogFlops(6.0);
+}
+
+/* Internal dmplex function, same as found in dmpleximpl.h to avoid private includes. */
+static void DMPlex_MultAdd3DReal_Internal(const PetscReal A[], PetscInt ldx, const PetscScalar x[], PetscScalar y[])
+{
+  PetscScalar z[3];
+  z[0] = x[0]; z[1] = x[ldx]; z[2] = x[ldx*2];
+  y[0]     += A[0]*z[0] + A[1]*z[1] + A[2]*z[2];
+  y[ldx]   += A[3]*z[0] + A[4]*z[1] + A[5]*z[2];
+  y[ldx*2] += A[6]*z[0] + A[7]*z[1] + A[8]*z[2];
+  (void)PetscLogFlops(15.0);
 }
 
 /*
@@ -256,12 +288,14 @@ $   \nabla_v S_p = \grad \psi_\epsilon(v_p - v) log \sum_q \psi_\epsilon(v - v_q
 $   \sum_l h^d \nabla\psi_\epsilon(v_p - v^c_l) \log\left( \sum_q w_q \psi_\epsilon(v^c_l - v_q) \right)
   where h^d is the volume of each box.
 */
-static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp[], const PetscReal velocity[], PetscReal integral[], AppCtx *ctx) {
+static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp[], const PetscReal velocity[], PetscReal integral[], AppCtx *ctx)
+{
   PetscReal vc_l[3], L = ctx->L, h = ctx->h, epsilon = ctx->epsilon, init = 0.5*h - L;
   PetscInt  nx = roundf(2.*L / h);
   PetscInt  ny = dim > 1 ? nx : 1;
   PetscInt  nz = dim > 2 ? nx : 1;
   PetscInt  i, j, k, d, q, dbg = 0;
+  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   for (d = 0; d < dim; ++d) integral[d] = 0.0;
@@ -270,11 +304,10 @@ static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp
       for (i = 0, vc_l[0] = init; i < nx; ++i, vc_l[0] += h) {
         PetscReal sum = 0.0;
 
-        if (dbg) {PetscPrintf(PETSC_COMM_SELF, "(%D %D) vc_l: %g %g\n", i, j, vc_l[0], vc_l[1]);}
+        if (dbg) {ierr = PetscPrintf(PETSC_COMM_SELF, "(%D %D) vc_l: %g %g\n", i, j, vc_l[0], vc_l[1]);CHKERRQ(ierr);}
         /* \log \sum_k \psi(v - v_k)  */
         for (q = 0; q < Np; ++q) sum += Gaussian(dim, &velocity[q*dim], epsilon, vc_l);
         sum = PetscLogReal(sum);
-
         for (d = 0; d < dim; ++d) integral[d] += (-1./(epsilon))*PetscAbsReal(vp[d] - vc_l[d])*(Gaussian(dim, vp, epsilon, vc_l)) * sum;
       }
     }
@@ -310,25 +343,18 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   const PetscScalar *u;                   /* input solution vector */
   PetscScalar       *r;
   PetscReal         *velocity;
-  PetscQuadrature    quad;                /* for integral evaluation */
   PetscInt           dim, Np, p, q;
   PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   ierr = VecZeroEntries(R);CHKERRQ(ierr);
-
-  /* Create quadrature for integral evaluation */
   ierr = TSGetDM(ts, &sw);CHKERRQ(ierr);CHKERRQ(ierr);
   ierr = DMGetDimension(sw, &dim);
   ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
   ierr = VecGetArray(R, &r);
   ierr = VecGetArrayRead(U, &u);
   Np  /= dim;
-
-  /* REMOVE This is a cheat to get v^n */
   ierr = DMSwarmGetField(sw, "velocity", NULL, NULL, (void **) &velocity);CHKERRQ(ierr);
-
-  ierr = PetscDTGaussTensorQuadrature(dim, 2*dim*Np,dim*Np, -1, 1, &quad);CHKERRQ(ierr);
   if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Part  ppr     x        y\n");CHKERRQ(ierr);}
   for (p = 0; p < Np; ++p) {
     PetscReal gradS_p[3] = {0., 0., 0.};
@@ -349,11 +375,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
     }
     if (dbg) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Final %4D %10.8lf %10.8lf\n", p, r[p*dim+0], r[p*dim+1]);CHKERRQ(ierr);}
   }
-  ierr = PetscQuadratureDestroy(&quad);CHKERRQ(ierr);
-
-  /* REMOVE */
   ierr = DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **) &velocity);CHKERRQ(ierr);
-
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   ierr = VecRestoreArray(R, &r);CHKERRQ(ierr);
   ierr = VecViewFromOptions(R, NULL, "-residual_view");CHKERRQ(ierr);
@@ -365,7 +387,8 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
  the solution vector in cases of particle migration, but we forgo that here since there is no velocity space grid
  to migrate between.
 */
-static PetscErrorCode UpdateSwarm(TS ts){
+static PetscErrorCode UpdateSwarm(TS ts)
+{
   PetscInt idx, n;
   const PetscScalar *u;
   PetscScalar *velocity;
@@ -374,17 +397,14 @@ static PetscErrorCode UpdateSwarm(TS ts){
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-
   ierr = TSGetDM(ts, &sw);CHKERRQ(ierr);
   ierr = DMSwarmGetField(sw, "velocity", NULL, NULL, (void **) &velocity);CHKERRQ(ierr);
-
   ierr = TSGetSolution(ts, &sol);CHKERRQ(ierr);
   ierr = VecGetArrayRead(sol, &u);CHKERRQ(ierr);
   ierr = VecGetLocalSize(sol, &n);
-  for(idx = 0; idx < n; ++idx) velocity[idx] = u[idx];
+  for (idx = 0; idx < n; ++idx) velocity[idx] = u[idx];
   ierr = VecRestoreArrayRead(sol, &u);CHKERRQ(ierr);
   ierr = DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **) &velocity);CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 }
 
@@ -414,13 +434,11 @@ int main(int argc,char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL, help);if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
   ierr = ProcessOptions(comm, &user);CHKERRQ(ierr);
-
   /* Initialize objects and set initial conditions */
   ierr = CreateMesh(comm, &dm, &user);CHKERRQ(ierr);
   ierr = CreateParticles(dm, &sw, &user);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(sw, &user);CHKERRQ(ierr);
   ierr = DMSwarmVectorDefineField(sw, "velocity");CHKERRQ(ierr);
-
   ierr = TSCreate(comm, &ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts, sw);CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts, 10.0);CHKERRQ(ierr);
@@ -438,7 +456,6 @@ int main(int argc,char **argv)
   ierr = TSSolve(ts, u);CHKERRQ(ierr);
   ierr = VecDestroy(&u);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
-
   ierr = DMDestroy(&sw);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
   ierr = PetscFinalize();
@@ -451,5 +468,5 @@ int main(int argc,char **argv)
    test:
      suffix: midpoint
      args: -N 3 -dm_plex_box_dim 2 -dm_plex_box_faces 1,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_view \
-           -ts_type theta -ts_theta_theta 0.5 -ts_monitor_moments -ts_monitor_step 1 -snes_fd
+           -ts_type theta -ts_theta_theta 0.5 -ts_dmswarm_monitor_moments -ts_monitor_step 1 -snes_fd
 TEST*/
