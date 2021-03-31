@@ -1170,7 +1170,6 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts,PetscInt step,PetscReal ptime,Vec 
   DM                dm;
 
   PetscFunctionBegin;
-
   if (step < 0) PetscFunctionReturn(0); /* -1 indicates interpolated solution */
   if (!step) {
     PetscDrawAxis axis;
@@ -1186,7 +1185,6 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts,PetscInt step,PetscReal ptime,Vec 
     ierr = PetscDrawSPSetDimension(ctx->sp, Np);CHKERRQ(ierr);
     ierr = PetscDrawSPReset(ctx->sp);CHKERRQ(ierr);
   }
-
   ierr = VecGetLocalSize(u, &Np);CHKERRQ(ierr);
   Np /= 2*dim;
   ierr = VecGetArrayRead(u,&yy);CHKERRQ(ierr);
@@ -1197,15 +1195,12 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts,PetscInt step,PetscReal ptime,Vec 
     y[p] = PetscRealPart(yy[2*dim*p+1]);
   }
   ierr = VecRestoreArrayRead(u,&yy);CHKERRQ(ierr);
-
   if (((ctx->howoften > 0) && (!(step % ctx->howoften))) || ((ctx->howoften == -1) && ts->reason)) {
     ierr = PetscDrawSPAddPoint(ctx->sp,x,y);CHKERRQ(ierr);
     ierr = PetscDrawSPDraw(ctx->sp,PETSC_FALSE);CHKERRQ(ierr);
     ierr = PetscDrawSPSave(ctx->sp);CHKERRQ(ierr);
   }
-
   ierr = PetscFree2(x, y);CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 }
 
