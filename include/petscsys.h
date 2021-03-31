@@ -2768,11 +2768,15 @@ PETSC_EXTERN PetscErrorCode PetscPullJSONValue(const char[],const char[],char[],
 PETSC_EXTERN PetscErrorCode PetscPushJSONValue(char[],const char[],const char[],size_t);
 
 
-#if defined(PETSC_USE_DEBUG)
 /*
    Verify that all processes in the communicator have called this from the same line of code
  */
 PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,const char*,const char *);
+#if defined(PETSC_USE_DEBUG)
+#define PetscAllreduceBarrierCheck_debug(a,b,c,d,e) PetscAllreduceBarrierCheck(a,b,c,d,e)
+#else
+#define PetscAllreduceBarrierCheck_debug(a,b,c,d,e) 0
+#endif
 
 /*MC
    MPIU_Allreduce - a PETSc replacement for MPI_Allreduce() that tries to determine if the call from all the MPI processes occur from the
@@ -2796,16 +2800,19 @@ PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,
 .  outdata - the reduced values
 
    Notes:
-   In optimized mode this directly calls MPI_Allreduce()
+     In optimized mode this directly calls MPI_Allreduce()
 
    Level: developer
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) (PetscAllreduceBarrierCheck(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__) || MPI_Allreduce(a,b,c,d,e,fcomm))
-#else
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_Allreduce(a,b,c,d,e,fcomm)
-#endif
+PETSC_STATIC_INLINE PetscErrorCode MPIU_Allreduce(const void *a,void *b,PetscMPIInt c,MPI_Datatype d,MPI_Op e,MPI_Comm fcomm)
+{
+  PetscErrorCode ierr;
+  ierr = PetscAllreduceBarrierCheck_debug(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__); if (ierr) return PETSC_ERR_MPI;
+  ierr = MPI_Allreduce(a,b,c,d,e,fcomm); if (ierr) return PETSC_ERR_MPI;
+  return 0;
+}
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
 PETSC_EXTERN PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint,PetscMPIInt,MPI_Info,MPI_Comm,void*,MPI_Win*);
