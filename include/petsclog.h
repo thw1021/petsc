@@ -37,7 +37,7 @@ PETSC_STATIC_INLINE int PetscStrHash(const char *str)
 
 #else
 #define MPIU_Allreduce_Private(a,b,c,d,e,fcomm)  do {\
-  PetscErrorCode ar_ierr = MPI_Allreduce(a,b,c,d,e,fcomm); CHKERRMPI(ar_ierr); \
+  PetscErrorCode ar_ierr = MPI_Allreduce(a,b,c,d,e,fcomm);CHKERRMPI(ar_ierr); \
   } while (0)
 #endif
 
