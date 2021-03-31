@@ -256,7 +256,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             for (b = 0; b < Nb; ++b) {
               const PetscInt    cidx = b;
               ff[gidx + f*nip] += Bq[cidx]*coef[f*Nb+cidx];
-              for (d = 0; d < dim; ++d) refSpaceDer[d] += Dq[cidx*dim+d]*coef[f*Nb+cidx];
+              for (d = 0; d < dim; ++d) refSpaceDer[d] += Dq[cidx*dim+d]*PetscRealPart(coef[f*Nb+cidx]);
             }
             for (d = 0; d < dim; ++d) {
               for (e = 0, u_x[f][d] = 0.0; e < dim; ++e) {
@@ -416,7 +416,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       } else {  // GPU like assembly for debugging
         PetscInt      fieldA,idx,q,f,g,d,nr,nc,rows0[LANDAU_MAX_Q_FACE],cols0[LANDAU_MAX_Q_FACE],rows[LANDAU_MAX_Q_FACE],cols[LANDAU_MAX_Q_FACE];
         PetscScalar   vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE],row_scale[LANDAU_MAX_Q_FACE],col_scale[LANDAU_MAX_Q_FACE];
-        for (q = 0; q < maps->num_face; q++) cols0[q]     = col_scale[q] = 0; // suppress warnings
+        for (q = 0; q < maps->num_face; q++) cols0[q]     = col_scale[q] = 0.0; // suppress warnings
         /* assemble - from the diagonal (I,I) in this format for DMPlexMatSetClosure */
         for (fieldA = 0; fieldA < Nf ; fieldA++) {
           LandauIdx *const Idxs = &maps->gIdx[ej-cStart][fieldA][0];
