@@ -4701,7 +4701,7 @@ PetscErrorCode MatSolverTypeDestroy(void)
 .  flg - PETSC_TRUE if uses the ordering
 
    Notes:
-      Most internal PETSc factorizations use the ordering past to the factorization routine but external
+      Most internal PETSc factorizations use the ordering passed to the factorization routine but external
       packages do no, thus we want to skip generating the ordering when it is not needed or used.
 
    Level: developer
