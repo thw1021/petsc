@@ -4702,7 +4702,7 @@ PetscErrorCode MatSolverTypeDestroy(void)
 
    Notes:
       Most internal PETSc factorizations use the ordering passed to the factorization routine but external
-      packages do no, thus we want to skip generating the ordering when it is not needed or used.
+      packages do not, thus we want to skip generating the ordering when it is not needed or used.
 
    Level: developer
 
