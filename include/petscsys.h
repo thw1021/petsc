@@ -2806,11 +2806,13 @@ PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) 0; do { \
-  PetscErrorCode _4_ierr; \
-  _4_ierr = PetscAllreduceBarrierCheck_debug(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__);CHKERRQ(_4_ierr); \
-  _4_ierr = MPI_Allreduce(a,b,c,d,e,fcomm);CHKERRMPI(_4_ierr); \
-  } while (0)
+PETSC_STATIC_INLINE PetscErrorCode MPIU_Allreduce(const void *a,void *b,PetscMPIInt c,MPI_Datatype d,MPI_Op e,MPI_Comm fcomm)
+{
+  PetscErrorCode ierr;
+  ierr = PetscAllreduceBarrierCheck_debug(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__); if (ierr) return PETSC_ERR_MPI;
+  ierr = MPI_Allreduce(a,b,c,d,e,fcomm); if (ierr) return PETSC_ERR_MPI;
+  return 0;
+}
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
 PETSC_EXTERN PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint,PetscMPIInt,MPI_Info,MPI_Comm,void*,MPI_Win*);
