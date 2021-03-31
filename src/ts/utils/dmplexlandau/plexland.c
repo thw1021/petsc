@@ -145,7 +145,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     } /* ej */
     /* cache static data */
     if (ctx->deviceType == LANDAU_CUDA || ctx->deviceType == LANDAU_KOKKOS) {
-#if defined(PETSC_HAVE_CUDA || defined(PETSC_HAVE_KOKKOS))
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_KOKKOS)
       PetscReal invMass[LANDAU_MAX_SPECIES],nu_alpha[LANDAU_MAX_SPECIES], nu_beta[LANDAU_MAX_SPECIES];
       for (fieldA=0;fieldA<Nf;fieldA++) {
         invMass[fieldA] = m_0/ctx->masses[fieldA];
@@ -164,8 +164,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
 #else
         SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
-#endif
       }
+#endif
       /* free */
       ierr = PetscFree5(mass_w,ww,xx,yy,invJ_a);CHKERRQ(ierr);
       if (dim==3) {
