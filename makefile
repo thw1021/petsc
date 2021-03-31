@@ -508,11 +508,9 @@ update-web-snapshot: dist web-snapshot
 
 # This target updates website main pages
 update-web:
-	@cd ${PETSC_DIR}/src/docs; make PETSC_DIR=${PETSC_DIR} PETSC_ARCH=${PETSC_ARCH} bib2html; \
-	/usr/bin/rsync -az -C --exclude=documentation/index.html \
+	@/usr/bin/rsync -az -C --exclude=documentation/index.html \
           --exclude=documentation/installation.html --exclude=download/index.html \
 	  ${PETSC_DIR}/src/docs/website/ petsc@login.mcs.anl.gov:/mcs/web/research/projects/petsc
-	@cd ${PETSC_DIR}/src/docs/tex; /usr/bin/rsync -az petscapp.bib petsc.bib petsc@login.mcs.anl.gov:/mcs/web/research/projects/petsc/publications
 
 ###########################################################
 #
