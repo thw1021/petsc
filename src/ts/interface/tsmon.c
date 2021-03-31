@@ -1463,7 +1463,7 @@ PetscErrorCode TSDMSwarmMonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U,
 
   PetscFunctionBeginUser;
   ierr = TSGetDM(ts, &sw);CHKERRQ(ierr);
-  if (!sw || step%ts->monitorStep != 0) PetscFunctionReturn(0);
+  if (!sw || step%ts->monitorFrequency != 0) PetscFunctionReturn(0);
   ierr = PetscObjectGetComm((PetscObject) ts, &comm);CHKERRQ(ierr);
   ierr = DMGetDimension(sw, &dim);CHKERRQ(ierr);
   ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);

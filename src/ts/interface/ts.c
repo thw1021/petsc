@@ -141,7 +141,7 @@ PetscErrorCode  TSSetFromOptions(TS ts)
 #endif
 
   /* Monitor options */
-  ierr = PetscOptionsInt("-ts_monitor_step", "Number of time steps between monitor output", "TSMonitorSetStep", ts->monitorStep, &ts->monitorStep, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-ts_monitor_frequency", "Number of time steps between monitor output", "TSMonitorSetFrequency", ts->monitorFrequency, &ts->monitorFrequency, NULL);CHKERRQ(ierr);
   ierr = TSMonitorSetFromOptions(ts,"-ts_monitor","Monitor time and timestep size","TSMonitorDefault",TSMonitorDefault,NULL);CHKERRQ(ierr);
   ierr = TSMonitorSetFromOptions(ts,"-ts_monitor_extreme","Monitor extreme values of the solution","TSMonitorExtreme",TSMonitorExtreme,NULL);CHKERRQ(ierr);
   ierr = TSMonitorSetFromOptions(ts,"-ts_monitor_solution","View the solution at each timestep","TSMonitorSolution",TSMonitorSolution,NULL);CHKERRQ(ierr);
@@ -6107,7 +6107,7 @@ PetscErrorCode  TSClone(TS tsin, TS *tsout)
 
   /* General TS description */
   t->numbermonitors    = 0;
-  t->monitorStep       = 1;
+  t->monitorFrequency  = 1;
   t->setupcalled       = 0;
   t->ksp_its           = 0;
   t->snes_its          = 0;
