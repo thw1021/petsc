@@ -109,18 +109,12 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   elemMatSize = totDim*totDim; // used for CPU and print info
   ierr = PetscLogEventEnd(ctx->events[10],0,0,0,0);CHKERRQ(ierr);
   if (ctx->normJ == -1) {    /* create static point data, Jacobian called first */
-    PetscReal invMass[LANDAU_MAX_SPECIES],nu_alpha[LANDAU_MAX_SPECIES], nu_beta[LANDAU_MAX_SPECIES];
     PetscReal *invJ,*ww,*xx,*yy,*zz=NULL,*mass_w,*invJ_a;
     const PetscInt  nip = Nq*numCells;
 
     ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscInfo(plex, "Initialize static data\n");CHKERRQ(ierr);
     // ierr = VecNorm(locX,NORM_2,&ctx->normJ);CHKERRQ(ierr);
-    for (fieldA=0;fieldA<Nf;fieldA++) {
-      invMass[fieldA] = m_0/ctx->masses[fieldA];
-      nu_alpha[fieldA] = PetscSqr(ctx->charges[fieldA]/m_0)*m_0/ctx->masses[fieldA];
-      nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0,3);
-    }
     /* collect f data, first time is for Jacobian, but make mass now */
     if (ctx->verbose > 1 || ctx->verbose > 0) {
       PetscInt N,Nloc;
@@ -150,18 +144,28 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       } /* q */
     } /* ej */
     /* cache static data */
-    if (ctx->deviceType == LANDAU_CUDA) {
-#if defined(PETSC_HAVE_CUDA)
-      ierr = LandauCudaStaticDataSet(plex,Nq,nu_alpha,nu_beta,invMass,invJ_a,mass_w,xx,yy,zz,ww,ctx->SData_d);CHKERRQ(ierr);
+    if (ctx->deviceType == LANDAU_CUDA || ctx->deviceType == LANDAU_KOKKOS) {
+#if defined(PETSC_HAVE_CUDA || defined(PETSC_HAVE_KOKKOS))
+      PetscReal invMass[LANDAU_MAX_SPECIES],nu_alpha[LANDAU_MAX_SPECIES], nu_beta[LANDAU_MAX_SPECIES];
+      for (fieldA=0;fieldA<Nf;fieldA++) {
+        invMass[fieldA] = m_0/ctx->masses[fieldA];
+        nu_alpha[fieldA] = PetscSqr(ctx->charges[fieldA]/m_0)*m_0/ctx->masses[fieldA];
+        nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0,3);
+      }
+      if (ctx->deviceType == LANDAU_CUDA) {
+#if defined(PETSC_HAVE_CUDA
+        ierr = LandauCudaStaticDataSet(plex,Nq,nu_alpha,nu_beta,invMass,invJ_a,mass_w,xx,yy,zz,ww,ctx->SData_d);CHKERRQ(ierr);
 #else
-      SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
+        SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
-    } else if (ctx->deviceType == LANDAU_KOKKOS) {
+      } else if (ctx->deviceType == LANDAU_KOKKOS) {
 #if defined(PETSC_HAVE_KOKKOS)
-      ierr = LandauKokkosStaticDataSet(plex,Nq,nu_alpha,nu_beta,invMass,invJ_a,mass_w,xx,yy,zz,ww,ctx->SData_d);CHKERRQ(ierr);
+        ierr = LandauKokkosStaticDataSet(plex,Nq,nu_alpha,nu_beta,invMass,invJ_a,mass_w,xx,yy,zz,ww,ctx->SData_d);CHKERRQ(ierr);
 #else
-      SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
+        SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
+#endif
+      }
       /* free */
       ierr = PetscFree5(mass_w,ww,xx,yy,invJ_a);CHKERRQ(ierr);
       if (dim==3) {
@@ -174,7 +178,6 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       ctx->SData_d->z = (void*)zz;
       ctx->SData_d->invJ = (void*)invJ_a;
       ctx->SData_d->mass_w = (void*)mass_w;
-      for (fieldA=0;fieldA<Nf;fieldA++) invMass[fieldA] = nu_alpha[fieldA] = nu_beta[fieldA] = 0; // silence warnings
     }
     ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
   }
