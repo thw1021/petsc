@@ -174,6 +174,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       ctx->SData_d->z = (void*)zz;
       ctx->SData_d->invJ = (void*)invJ_a;
       ctx->SData_d->mass_w = (void*)mass_w;
+      for (fieldA=0;fieldA<Nf;fieldA++) invMass[fieldA] = nu_alpha[fieldA] = nu_beta[fieldA] = 0; // silence warnings
     }
     ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
   }
