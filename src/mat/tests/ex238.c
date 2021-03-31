@@ -1,94 +1,41 @@
-static char help[] = "Creates MatSeqBAIJ matrix of given BS for timing tests of MatMult().\n";
+static char help[] = "Test device/host memory allocation in MatDenseSeqCUDA()\n\n";
+
+/* Contributed by: Victor Eijkhout <eijkhout@tacc.utexas.edu> */
 
 #include <petscmat.h>
-
-int main(int argc,char **args)
+int main(int argc, char** argv)
 {
-  Mat            A;
-  Vec            x,y;
   PetscErrorCode ierr;
-  PetscInt       m=50000,bs=12,i,j,k,l,row,col,M;
-  PetscScalar    rval,*vals;
-  PetscRandom    rdm;
+  PetscInt       global_size=100;
+  Mat            cuda_matrix;
+  Vec            input,output;
+  MPI_Comm       comm = PETSC_COMM_SELF;
+  PetscReal      nrm = 1;
 
-  ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetInt(NULL,NULL,"-mat_block_size",&bs,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL,NULL,"-mat_size",&m,NULL);CHKERRQ(ierr);
-  M    = m*bs;
-  ierr = MatCreateSeqBAIJ(PETSC_COMM_SELF,bs,M,M,27,NULL,&A);CHKERRQ(ierr);
-  ierr = MatSetOption(A,MAT_NEW_NONZERO_ALLOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
+  ierr = PetscInitialize(&argc,&argv,NULL,help); CHKERRQ(ierr);
+  ierr = MatCreateDenseCUDA(comm,global_size,global_size,global_size,global_size,NULL,&cuda_matrix); CHKERRQ(ierr);
+  ierr = MatAssemblyBegin(cuda_matrix,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(cuda_matrix,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
 
-  ierr = PetscRandomCreate(PETSC_COMM_SELF,&rdm);CHKERRQ(ierr);
-  ierr = PetscRandomSetFromOptions(rdm);CHKERRQ(ierr);
-  ierr = VecCreateSeq(PETSC_COMM_SELF,M,&x);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&y);CHKERRQ(ierr);
+  ierr = VecCreateSeqCUDA(comm,global_size,&input); CHKERRQ(ierr);
+  ierr = VecDuplicate(input,&output); CHKERRQ(ierr);
+  ierr = VecSet(input,1.); CHKERRQ(ierr);
+  ierr = VecSet(input,2.); CHKERRQ(ierr);
 
-  /* For each block row insert at most 27 blocks */
-  ierr = PetscMalloc1(bs*bs,&vals);CHKERRQ(ierr);
-  for (i=0; i<m; i++) {
-    row = i;
-    for (j=0; j<27; j++) {
-      ierr = PetscRandomGetValue(rdm,&rval);CHKERRQ(ierr);
-      col  = (PetscInt)(PetscRealPart(rval)*m);
-      for (k=0; k<bs; k++) {
-        for (l=0; l<bs; l++) {
-          ierr = PetscRandomGetValue(rdm,&rval);CHKERRQ(ierr);
-          vals[k*bs + l] = rval;
-        }
-      }
-      ierr = MatSetValuesBlocked(A,1,&row,1,&col,vals,INSERT_VALUES);CHKERRQ(ierr);
-    }
-  }
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = PetscFree(vals);CHKERRQ(ierr);
+  ierr = MatMult(cuda_matrix,input,output); CHKERRQ(ierr);
 
-  /* Time MatMult(), MatMultAdd() */
-  for (i=0; i<25; i++) {
-    ierr  = VecSetRandom(x,rdm);CHKERRQ(ierr);
-    ierr  = MatMult(A,x,y);CHKERRQ(ierr);
-    ierr  = VecSetRandom(x,rdm);CHKERRQ(ierr);
-    ierr  = VecSetRandom(y,rdm);CHKERRQ(ierr);
-    ierr  = MatMultAdd(A,x,y,y);CHKERRQ(ierr);
-  }
-
-  ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = VecDestroy(&y);CHKERRQ(ierr);
-  ierr = PetscRandomDestroy(&rdm);CHKERRQ(ierr);
+  ierr = VecNorm(output,NORM_2,&nrm);CHKERRQ(ierr);
+  if (nrm > 1e-5) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PETSc generated wrong result. Should be 0, but is %g",nrm);
+  ierr = VecDestroy(&input);CHKERRQ(ierr);
+  ierr = VecDestroy(&output);CHKERRQ(ierr);
+  ierr = MatDestroy(&cuda_matrix);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
 
-
 /*TEST
 
-   testset:
-     requires: define(PETSC_USING_64BIT_PTR)
-     output_file: output/ex238_1.out
-     test:
-       suffix: 1
-       args: -mat_block_size 1
-     test:
-       suffix: 2
-       args: -mat_block_size 2
-     test:
-       suffix: 4
-       args: -mat_block_size 4
-     test:
-       suffix: 5
-       args: -mat_block_size 5
-     test:
-       suffix: 6
-       args: -mat_block_size 6
-     test:
-       suffix: 8
-       args: -mat_block_size 8
-     test:
-       suffix: 12
-       args: -mat_block_size 12
-     test:
-       suffix: 15
-       args: -mat_block_size 15
+   test:
+     requires: cuda
 
 TEST*/
