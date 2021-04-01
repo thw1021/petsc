@@ -4427,16 +4427,16 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   {
     int bw = (2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2, bm1=bw-1,nl=n/Nf;
+#if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
+    Ni = 1/nconcurrent;
+    Ni = 1;
+#else
     if (!cusparseTriFactors->init_dev_prop) {
       int gpuid;
       cusparseTriFactors->init_dev_prop = PETSC_TRUE;
       cudaGetDevice(&gpuid);
       cudaGetDeviceProperties(&cusparseTriFactors->dev_prop, gpuid);
     }
-#if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
-    Ni = 1/nconcurrent;
-    Ni = 1;
-#else
     nsm = cusparseTriFactors->dev_prop.multiProcessorCount;
     Ni = nsm/Nf/nconcurrent;
 #endif
