@@ -4346,7 +4346,7 @@ void __launch_bounds__(1024,1)
     PetscScalar       *pBdd = ba_csr + bi_csr[glbDD] + dOffset;
     const PetscScalar *baUd = pBdd + 1; // vector of data  U(i,i+1:end)
     const PetscScalar Bdd = *pBdd;
-    const PetscInt offset = blkIdx*blockDim.y + threadIdx.y, inc = Nblk*blockDim.y;
+    const PetscInt    offset = blkIdx*blockDim.y + threadIdx.y, inc = Nblk*blockDim.y;
     if (threadIdx.x==0) {
       for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd; idx += inc, myi += inc) { /* assuming symmetric structure */
         const PetscInt bwi = myi > bw ? bw : myi, kIdx = bwi - (myi-glbDD); // cuts off just the first (global) block
@@ -4357,9 +4357,9 @@ void __launch_bounds__(1024,1)
     __syncthreads(); // synch on threadIdx.x only
     for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd; idx += inc, myi += inc) {
       const PetscInt bwi = myi > bw ? bw : myi, kIdx = bwi - (myi-glbDD); // cuts off just the first (global) block
-      PetscScalar *Aid = ba_csr + bi_csr[myi] + kIdx;
-      PetscScalar *Aij =  Aid + 1;
-      PetscScalar Lid  = *Aid;
+      PetscScalar    *Aid = ba_csr + bi_csr[myi] + kIdx;
+      PetscScalar    *Aij =  Aid + 1;
+      PetscScalar    Lid  = *Aid;
       for (int jIdx=threadIdx.x ; jIdx<nzUd; jIdx += blockDim.x) {
         Aij[jIdx] -= Lid*baUd[jIdx];
       }
