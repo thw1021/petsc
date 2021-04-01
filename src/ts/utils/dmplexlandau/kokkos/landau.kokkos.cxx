@@ -267,7 +267,7 @@ extern "C"  {
     auto              d_IPf_k  = static_cast<Kokkos::View<PetscScalar*, Kokkos::LayoutLeft>*>(SData_d->IPf); //static data
 
     PetscFunctionBegin;
-    while (nnn & nnn - 1) nnn = nnn & nnn - 1;
+    while (nnn & (nnn - 1)) nnn = nnn & (nnn - 1);
     if (nnn>16) nnn = 16;
     ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
     ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
