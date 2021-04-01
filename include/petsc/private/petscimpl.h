@@ -187,10 +187,12 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 */
 #if !defined(PETSC_USE_DEBUG)
 
+#if !defined(PETSC_AST_FIX)
 #define PetscValidHeaderSpecific(h,ck,arg) do {(void)(h);} while (0)
 #define PetscValidHeaderSpecificType(h,ck,arg,t) do {(void)(h);} while (0)
 #define PetscValidHeader(h,arg) do {(void)(h);} while (0)
 #define PetscValidPointer(h,arg) do {(void)(h);} while (0)
+#endif
 #define PetscValidCharPointer(h,arg) do {(void)(h);} while (0)
 #define PetscValidIntPointer(h,arg) do {(void)(h);} while (0)
 #define PetscValidBoolPointer(h,arg) do {(void)(h);} while (0)
@@ -201,6 +203,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 #else
 
 /*  This check is for subtype methods such as DMDAGetCorners() that do not use the PetscTryMethod() or PetscUseMethod() paradigm */
+#if !defined(PETSC_AST_FIX)
 #define PetscValidHeaderSpecificType(h,ck,arg,t) \
   do {   \
     PetscErrorCode _7_ierr; \
@@ -210,7 +213,6 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     if (!_7_same) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong subtype object:Parameter # %d must have implementation %s it is %s",arg,t,((PetscObject)(h))->type_name); \
   } while (0)
 
-#if !defined(PETSC_AST_FIX)
 #define PetscValidHeaderSpecific(h,ck,arg)                              \
   do {                                                                  \
     if (!(h)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Object: Parameter # %d",arg); \
@@ -220,7 +222,6 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
       else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong type of object: Parameter # %d",arg); \
     }                                                                   \
   } while (0)
-#endif
 
 #define PetscValidHeader(h,arg)                                         \
   do {                                                                  \
@@ -230,7 +231,6 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     else if (((PetscObject)(h))->classid < PETSC_SMALLEST_CLASSID || ((PetscObject)(h))->classid > PETSC_LARGEST_CLASSID) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid type of object: Parameter # %d",arg); \
   } while (0)
 
-#if !defined(PETSC_AST_FIX)
 #define PetscValidPointer(h,arg)                                        \
   do {                                                                  \
     if (!(h)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Pointer: Parameter # %d",arg); \
