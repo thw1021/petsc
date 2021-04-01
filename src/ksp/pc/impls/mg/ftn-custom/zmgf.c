@@ -9,14 +9,16 @@
 
 PETSC_EXTERN void pcmgsetlevels_(PC *pc,PetscInt *levels,MPI_Fint comms[], PetscErrorCode *ierr)
 {
-  MPI_Comm *ccomms;
+  MPI_Comm  *ccomms = NULL;
+  PetscBool optional = (*comms == -2) ? PETSC_TRUE : PETSC_FALSE;
 
-  CHKFORTRANNULLOBJECT(comms);
-  *ierr = PetscMalloc1(*levels,&ccomms);if (*ierr) return;
-  for (PetscInt i=0; i<*levels; i++) {
-    ccomms[i] = MPI_Comm_f2c(comms[i]);
+  if (!optional) {
+    *ierr = PetscMalloc1(*levels,&ccomms);if (*ierr) return;
+    for (PetscInt i=0; i<*levels; i++) {
+      ccomms[i] = MPI_Comm_f2c(comms[i]);
+    }
   }
   *ierr = PCMGSetLevels(*pc,*levels,ccomms);if (*ierr) return;
-  *ierr = PetscFree(ccomms);
+  if (!optional) *ierr = PetscFree(ccomms);
 }
 

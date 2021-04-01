@@ -480,10 +480,13 @@ PetscErrorCode PCMGSetLevels_MG(PC pc,PetscInt levels,MPI_Comm *comms)
      must take special care in providing the restriction and interpolation operation. We recommend
      providing these as two step operations; first perform a standard restriction or interpolation on
      the full number of ranks for that level and then use an MPI call to copy the resulting vector
-     array entries (after calls to VecGetArray()) to the smaller or larger number of ranks, not in both
+     array entries (after calls to VecGetArray()) to the smaller or larger number of ranks, note in both
      cases the MPI calls must be made on the larger of the two communicators. Traditional MPI send and
      recieves or MPI_AlltoAllv() could be used to do the reshuffling of the vector entries.
 
+   Fortran Notes:
+     Use PETSC_COMM_IGNORE in Fortran, which works as NULL in C, for the optional comms parameter, to
+     indicate you like to have all ranks participate in the coarser problems.
 
 .seealso: PCMGSetType(), PCMGGetLevels()
 @*/
