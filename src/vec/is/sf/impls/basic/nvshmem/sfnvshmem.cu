@@ -106,7 +106,7 @@ static PetscErrorCode PetscSFSetUp_Basic_NVSHMEM(PetscSF sf)
   stmp[2] = nRemoteLeafRanks;
   stmp[3] = bas->rootbuflen[PETSCSF_REMOTE];
 
-  ierr = MPIU_Allreduce(stmp,rtmp,4,MPIU_INT,MPI_MAX,comm);CHKERRMPI(ierr);
+  ierr = MPIU_Allreduce(stmp,rtmp,4,MPIU_INT,MPI_MAX,comm);CHKERRQ(ierr);
 
   sf->nRemoteRootRanksMax   = rtmp[0];
   sf->leafbuflen_rmax       = rtmp[1];
