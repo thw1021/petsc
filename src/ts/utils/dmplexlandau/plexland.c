@@ -113,7 +113,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     const PetscInt  nip = Nq*numCells;
 
     ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
-    ierr = PetscInfo(plex, "Initialize static data\n");CHKERRQ(ierr);
+    /* ierr = PetscInfo(plex, "Initialize static data\n");CHKERRQ(ierr); */
     // ierr = VecNorm(locX,NORM_2,&ctx->normJ);CHKERRQ(ierr);
     /* collect f data, first time is for Jacobian, but make mass now */
     if (ctx->verbose > 1 || ctx->verbose > 0) {
@@ -186,7 +186,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
 
     ierr = VecNorm(locX,NORM_2,&norm);CHKERRQ(ierr);
-    ierr = PetscInfo(plex, "Get dynamic data\n");CHKERRQ(ierr);
+    /* ierr = PetscInfo(plex, "Get dynamic data\n");CHKERRQ(ierr); */
     if (norm==ctx->normJ) {
       /* can happend with ark */;
       ierr = PetscInfo(plex, "no change, but make data anyway (can happend with ark)\n");CHKERRQ(ierr);
@@ -491,7 +491,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     pointInterpolationP4est pointMaps[MAP_BF_SIZE][LANDAU_MAX_Q_FACE];
     PetscInt                q,eidx,fieldA;
     MatType                 type;
-    ierr = PetscInfo1(plex, "Make GPU maps %D\n",1);CHKERRQ(ierr);
+    /* ierr = PetscInfo1(plex, "Make GPU maps %D\n",1);CHKERRQ(ierr); */
     ierr = MatGetType(JacP,&type);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscMalloc(sizeof(P4estVertexMaps), &maps);CHKERRQ(ierr);
