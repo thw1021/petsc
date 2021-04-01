@@ -132,6 +132,7 @@ typedef struct {
   PetscInt         numConcurrency; /* number of SMs in Cuda to use */
   MPI_Comm         comm; /* global communicator to use for errors and diagnostics */
   LandauGeomData   *SData_d; /* static geometric data on device, but this pointer is a host pointer */
+  double           times[1];
 } LandauCtx;
 
 typedef int LandauIdx;

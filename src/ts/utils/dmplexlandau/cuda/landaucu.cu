@@ -85,7 +85,6 @@ PetscErrorCode LandauCudaStaticDataSet(DM plex, const PetscInt Nq, PetscReal nu_
   if (Nq != Nb) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nq != Nb. %D  %D",Nq,Nb);
   if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
-  ierr = PetscInfo(plex, "Create static data for Cuda\n");CHKERRQ(ierr);
   {
     cerr = cudaMalloc((void **)&SData_d->B,              Nq*Nb*szf);CHKERRCUDA(cerr);     // kernel input
     cerr = cudaMemcpy(          SData_d->B, Tf[0]->T[0], Nq*Nb*szf,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
