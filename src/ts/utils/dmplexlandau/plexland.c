@@ -1232,6 +1232,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->subThreadBlockSize = 1; /* for device and maybe OMP */
   ctx->numConcurrency = 1; /* for device */
   ctx->SData_d = NULL;     /* for device */
+  ctx->times[0] = 0;
   ierr = PetscOptionsBegin(ctx->comm, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
   {
     char opstring[256];
@@ -1537,6 +1538,9 @@ PetscErrorCode LandauDestroyVelocitySpace(DM *dm)
     }
   }
   ierr = PetscFree(ctx->SData_d);CHKERRQ(ierr);
+  if (ctx->times[0] > 0) {
+    ierr = PetscPrintf(ctx->comm, "Landau Operator       %d 1.0 %10.3e ....\n",10000,ctx->times[0]);CHKERRQ(ierr);
+  }
   PetscFree(ctx);
   ierr = DMDestroy(dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1993,6 +1997,9 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   LandauCtx      *ctx=(LandauCtx*)actx;
   PetscInt       dim;
   DM             dm;
+#if defined(PETSC_HAVE_THREADSAFETY)
+  double         starttime, endtime;
+#endif
 
   PetscFunctionBegin;
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
@@ -2000,6 +2007,9 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = PetscLogEventBegin(ctx->events[11],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_THREADSAFETY)
+  starttime = MPI_Wtime();
+#endif
   ierr = DMGetDimension(ctx->dmv, &dim);CHKERRQ(ierr);
   if (!ctx->aux_bool) {
     ierr = PetscInfo3(ts, "Create Landau Jacobian t=%g X=%p %s\n",time_dummy,X_t,ctx->aux_bool ? " -- seems to be in line search" : "");CHKERRQ(ierr);
@@ -2015,6 +2025,10 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   if (X_t) {
     ierr = MatMultAdd(ctx->M,X_t,F,F);CHKERRQ(ierr);
   }
+#if defined(PETSC_HAVE_THREADSAFETY)
+  endtime = MPI_Wtime();
+  ctx->times[0] += (endtime - starttime);
+#endif
   ierr = PetscLogEventEnd(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[11],0,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -2056,6 +2070,10 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   PetscInt       dim;
   DM             dm;
   PetscContainer container;
+#if defined(PETSC_HAVE_THREADSAFETY)
+  double         starttime, endtime;
+#endif
+
   PetscFunctionBegin;
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
@@ -2065,6 +2083,9 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   /* get collision Jacobian into A */
   ierr = PetscLogEventBegin(ctx->events[11],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_THREADSAFETY)
+  starttime = MPI_Wtime();
+#endif
   ierr = PetscInfo2(ts, "Adding just mass to Jacobian t=%g, shift=%g\n",(double)time_dummy,(double)shift);CHKERRQ(ierr);
   if (shift==0.0) SETERRQ(ctx->comm, PETSC_ERR_PLIB, "zero shift");
   if (!ctx->aux_bool) SETERRQ(ctx->comm, PETSC_ERR_PLIB, "wrong state");
@@ -2083,6 +2104,10 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
     ierr = PetscObjectCompose((PetscObject)ctx->J, "Nf", (PetscObject) container);CHKERRQ(ierr);
     ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
   }
+#if defined(PETSC_HAVE_THREADSAFETY)
+  endtime = MPI_Wtime();
+  ctx->times[0] += (endtime - starttime);
+#endif
   ierr = PetscLogEventEnd(ctx->events[9],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[11],0,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
