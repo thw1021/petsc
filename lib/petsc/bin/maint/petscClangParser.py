@@ -34,13 +34,20 @@ P_CXTranslationUnit_VisitImplicitAttributes              = 0x2000
 P_CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles     = 0x4000
 P_CXTranslationUnit_RetainExcludedConditionalBlocks      = 0x8000
 
+# Cursors that may be attached to function-like usage
 funcCallCursors = set([clang.cindex.CursorKind.FUNCTION_DECL,clang.cindex.CursorKind.CALL_EXPR])
 
+# Cursors that may be attached to mathemateical operations or types
 mathCursors = set([clang.cindex.CursorKind.INTEGER_LITERAL,clang.cindex.CursorKind.UNARY_OPERATOR])
 
+# Cursors that contain base literal types
+literalCursors = set([clang.cindex.CursorKind.INTEGER_LITERAL,clang.cindex.CursorKind.STRING_LITERAL])
+
+# Cursors that may be attached to casting
 castCursors = set([clang.cindex.CursorKind.CSTYLE_CAST_EXPR])
 
-refDeclCursors = set([clang.cindex.CursorKind.UNEXPOSED_EXPR,clang.cindex.CursorKind.MEMBER_REF_EXPR])
+# Cursors thta may be attached when types are converted
+convertCursors = set([clang.cindex.CursorKind.UNEXPOSED_EXPR,clang.cindex.CursorKind.CSTYLE_CAST_EXPR])
 
 strTokens = set([clang.cindex.TokenKind.IDENTIFIER])
 
@@ -50,178 +57,6 @@ pchClangOptions = (
 )
 
 baseClangOptions = (P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble)
-
-def getClangSysIncludes():
-  import subprocess
-  """
-  Get system clangs set of default include search directories.
-
-  Because for some reason these are hardcoded by the compilers and so libclang does not have them.
-  """
-  output = subprocess.run(["clang","-E","-x","c++","/dev/null","-v"],capture_output=True,check=True,universal_newlines=True)
-  output.check_returncode()
-  # goes to stderr because of /dev/null
-  includes = output.stderr.split("#include <...> search starts here:\n")[1]
-  includes = includes.split("End of search list.")[0].replace("(framework directory)","")
-  includes = includes.split("\n")
-  includes = ["-I"+os.path.abspath(i.strip()) for i in includes if i]
-  return includes
-
-def findFunctionCallExpr(tu,macroNames):
-  """
-  Finds all function call expressions in list macroNames.
-
-  Note that if a particular function call is not 100% correctly defined (i.e. would the
-  file actually compile) then it will not be picked up by clang AST.
-
-  Function-like macros can be picked up, but it will be in the wrong 'order'. The AST is
-  built as if you are about to compile it, so macros are handled before any real
-  function definitions in the AST, making it impossible to map a macro invocation to
-  its 'parent' function.
-  """
-  def findFunctionCallsRecurse(cursor,funcCalls=[],funcStack=[]):
-    """
-    Unused because slow, only for debugging
-    """
-    for c in cursor.get_children():
-      try:
-        if c.location.file.name != filename: continue
-      except AttributeError:
-        # c.location.file is None
-        continue
-      if c.kind == clang.cindex.CursorKind.FUNCTION_DECL:
-        funcStack.append(c)
-      elif c.kind == clang.cindex.CursorKind.CALL_EXPR:
-        if c.spelling in macroNames:
-          funcCalls.append((c,funcStack[-1]))
-      funcCalls,funcStack = findFunctionCallsRecurse(c,funcCalls=funcCalls,funcStack=funcStack)
-    if cursor.kind == clang.cindex.CursorKind.FUNCTION_DECL:
-      try: funcStack.pop()
-      except IndexError: pass
-    return funcCalls,funcStack
-
-  funcCalls = []
-  cursor,filename = tu.cursor,tu.cursor.spelling
-  for possibleParent in cursor.get_children():
-    try:
-      if possibleParent.location.file.name != filename: continue
-    except AttributeError:
-      # possibleParent.location.file is None
-      continue
-    if possibleParent.kind not in funcCallCursors: continue
-    # If we've gotten this far we have found a function definition
-    for funcChild in possibleParent.walk_preorder():
-      if funcChild.kind == clang.cindex.CursorKind.CALL_EXPR:
-        if funcChild.spelling in macroNames:
-          funcCalls.append((funcChild,possibleParent))
-  return funcCalls
-
-class ArgCursor(object):
-  @staticmethod
-  def getNameFromCursor(cursor):
-    if cursor.spelling:
-      name = cursor.spelling
-    else:
-      # Try to convert **&(PetscObject)obj+73 to obj
-      if cursor.kind in mathCursors:
-        tokens = [t.spelling for t in cursor.get_tokens()]
-        name = ''.join(tokens)
-      elif cursor.kind in castCursors:
-        # Need to extract the castee from the caster
-        castee = [c for c in cursor.get_children() if c.kind == clang.cindex.CursorKind.UNEXPOSED_EXPR]
-        if len(castee) != 1:
-          # If we don't have 1 symbol left then we're in trouble
-          raise RuntimeError("Cannot determine castee from the caster for cursor at {loc}".format(loc=str(cursor.location)))
-        # Easer to make a whole new temp cursor and have it figure out
-        # the naming for us than duplicate the code
-        name = ArgCursor.getNameFromCursor(castee[0])
-      else:
-        tokenlist = [t.spelling for t in cursor.get_tokens() if t.kind in strTokens]
-        tokens = tokenlist[0]
-        try:
-          tokens[0]
-        except IndexError as ie:
-          raise RuntimeError(" ".join(["Empty token array",str(tokens),"from",str(tokenlist)])) from ie
-        name = ''.join(tokens)
-      if not name:
-        raise RuntimeError("Cannot determine name of symbol")
-    return name
-
-  @staticmethod
-  def getTypenameFromCursor(cursor):
-    if cursor.type.get_pointee().spelling:
-      ctemp = cursor.type.get_pointee()
-      if ctemp.get_canonical().spelling:
-        typename = ctemp.get_canonical().spelling
-      else:
-        typename = ctemp.spelling
-    elif cursor.type.get_canonical().spelling:
-      typename = cursor.type.get_canonical().spelling
-    else:
-      typename = cursor.type.spelling
-    return typename
-
-  def __init__(self,cursor,idx=-1):
-    self.name = ArgCursor.getNameFromCursor(cursor)
-    self.typename = ArgCursor.getTypenameFromCursor(cursor)
-    self.argidx = idx
-    self.cursor = cursor
-    return
-
-  def __repr__(self):
-    loc = self.cursor.location
-    locStr = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
-    return "'"+self.name+"' of type '"+self.typename+"' at "+locStr
-
-class BadSource(object):
-  def __init__(self,prefix,printErrorMessages=True,printWarningMessages=True,lock=None):
-    self.errors = []
-    self.warnings = []
-    self.prefix = prefix
-    self.printErrorMessages = printErrorMessages
-    self.printWarningMessages = printWarningMessages
-    self.lock = lock
-    return
-
-  def __repr__(self):
-    if self.printErrorMessages: self.printErrors(self.prefix)
-    if self.printWarningMessages: self.printWarnings(self.prefix)
-    return
-
-  def __enter__(self):
-    return self
-
-  def __exit__(self,*args):
-    self.__repr__()
-    return
-
-  def __print(self,msg):
-    if self.lock:
-      with self.lock:
-        print(msg)
-    else:
-      print(msg)
-    return
-
-  def addError(self,errMsg):
-    self.errors.append(errMsg)
-    return
-
-  def printErrors(self,prefix):
-    if self.errors:
-      errmsg = prefix+" "+"\n".join(self.errors)
-      self.__print(errmsg)
-    return
-
-  def addWarning(self,warnMsg):
-    self.warnings.append(warnMsg)
-    return
-
-  def printWarnings(self,prefix):
-    if self.warnings:
-      warnmsg = prefix+" "+"\n".join(self.warnings)
-      self.__print(warnmsg)
-    return
 
 petscClassIdMap = {
   "_p_AO *"                     : "AO_CLASSID",
@@ -282,6 +117,163 @@ petscClassIdMap = {
   "_p_VecTagger *"              : "VEC_TAGGER_CLASSID",
 }
 
+class ArgCursorWarning(Exception):
+  """
+  Mostly to just have a custom "something went wrong when building an ArgCursor" to except
+  for rather than using a built-in type. These are errors that are meant to be caught and logged
+  rather than stopping execution alltogether.
+
+  This should make it so that actual errors aren't hidden.
+  """
+  pass
+
+class ArgCursor(object):
+  @staticmethod
+  def getNameFromCursor(cursor):
+    """
+    Try to convert **&(PetscObject)obj+73 to obj
+    """
+    def errorViewFromCursor(cursor):
+      """
+      Something has gone wrong, and we try to extract as much information from the cursor as
+      possible for the exception. Nothing is guaranteed to be useful here.
+      """
+      name = cursor.displayname
+      kind = cursor.kind
+      # Does not yet raise exception so we can call it here
+      typename = ArgCursor.getTypenameFromCursor(cursor)
+      loc = cursor.location
+      locStr = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
+      return "'{name}' of kind '{kind}' of type '{typename}' at {locStr}".format(name=name,kind=kind,typename=typename,locStr=locStr)
+
+    name = None
+    if cursor.spelling:
+      name = cursor.spelling
+    elif cursor.kind in mathCursors:
+      tokens = [t.spelling for t in cursor.get_tokens()]
+      name = ''.join(tokens)
+    elif cursor.kind in castCursors:
+      # Need to extract the castee from the caster
+      castee = [c for c in cursor.get_children() if c.kind == clang.cindex.CursorKind.UNEXPOSED_EXPR]
+      if len(castee) != 1:
+        # If we don't have 1 symbol left then we're in trouble, as we probably didn't
+        # pick the right cursors above
+        raise RuntimeError("Cannot determine castee from the caster for cursor {obj}".format(obj=errorViewFromCursor(cursor)))
+      # Easer to do some mild recursion to figure out the naming for us than duplicate
+      # the code. Perhaps this should have some sort of recursion check
+      name = ArgCursor.getNameFromCursor(castee[0])
+    elif cursor.type.get_canonical().kind == clang.cindex.TypeKind.POINTER:
+      if cursor.type.get_pointee().kind  == clang.cindex.TypeKind.CHAR_S:
+        # For some reason preprocessor macros that contain strings don't propogate
+        # their spelling up to the primary cursor, so we need to plumb through
+        # the various sub-cursors to find it.
+        pointees = [c for c in cursor.walk_preorder() if c.kind in literalCursors]
+        if len(pointees) != 1:
+          raise RuntimeError("Cannot determine name from nested char pointer type")
+        name = ArgCursor.getNameFromCursor(pointees[0])
+        srcstr = petscClangParserUtil.viewSourceFromCursor(cursor,ret=True)
+        if "PetscValidHeaderSpecificType" not in srcstr:
+          raise RuntimeError
+    # Catchall last attempt, literally parse the tokens
+    if not name:
+      tokenlist = [t for t in cursor.get_tokens() if t.kind in strTokens]
+      # Remove iterator variables
+      tokenlist = [t for t in tokenlist if t.cursor.type.get_canonical().kind != clang.cindex.TypeKind.INT]
+      if len(tokenlist) != 1:
+        srcstr = petscClangParserUtil.viewSourceFromCursor(cursor,ret=True)
+        # For whatever reason (perhaps because its macro stringization hell) PETSC_HASH_MAP
+        # absolutely __bricks__ the AST. The cursor has no children, no name, no tokens, and
+        # a completely incorrect SourceLocation.
+        # It is for all intents and purposes uncheckable :)
+        if "PETSC_HASH_MAP" in srcstr:
+          raise ArgCursorWarning("Encountered unparsable PETSC_HASH_MAP for cursor {cursor}".format(cursor=errorViewFromCursor(cursor)))
+        else:
+          raise RuntimeError("Unexpected number of tokens: "+str(tokenlist))
+      name = tokenlist[0].spelling
+      if not name:
+        raise ArgCursorWarning("Cannot determine name of symbol from cursor {obj}".format(obj=errorViewFromCursor(cursor)))
+    return name
+
+  @staticmethod
+  def getTypenameFromCursor(cursor):
+    if cursor.type.get_pointee().spelling:
+      ctemp = cursor.type.get_pointee()
+      if ctemp.get_canonical().spelling:
+        typename = ctemp.get_canonical().spelling
+      else:
+        typename = ctemp.spelling
+    elif cursor.type.get_canonical().spelling:
+      typename = cursor.type.get_canonical().spelling
+    else:
+      typename = cursor.type.spelling
+    return typename
+
+  def __init__(self,cursor,idx=-12345):
+    self.name = ArgCursor.getNameFromCursor(cursor)
+    self.typename = ArgCursor.getTypenameFromCursor(cursor)
+    self.argidx = idx
+    self.cursor = cursor
+    return
+
+  def __repr__(self):
+    loc = self.cursor.location
+    locStr = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
+    return "'"+self.name+"' of type '"+self.typename+"' at "+locStr
+
+class BadSource(object):
+  def __init__(self,prefix,printErrorMessages=True,printWarningMessages=True,lock=None):
+    self.errors = []
+    self.warnings = []
+    self.prefix = prefix
+    self.printErrorMessages = printErrorMessages
+    self.printWarningMessages = printWarningMessages
+    self.lock = lock
+    return
+
+  def __repr__(self):
+    print("Prefix:",self.prefix)
+    print("Lock:",self.lock)
+    self.printErrors(self.prefix)
+    self.printWarnings(self.prefix)
+    return
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self,*args):
+    if self.printErrorMessages: self.printErrors(self.prefix)
+    if self.printWarningMessages: self.printWarnings(self.prefix)
+    return
+
+  def __print(self,msg):
+    if self.lock:
+      with self.lock:
+        print(msg)
+    else:
+      print(msg)
+    return
+
+  def addError(self,errMsg):
+    self.errors.append(" ".join(["ERROR:",errMsg]))
+    return
+
+  def printErrors(self,prefix):
+    if self.errors:
+      errmsg = prefix+" "+"\n".join(self.errors)
+      self.__print(errmsg)
+    return
+
+  def addWarning(self,warnMsg):
+    self.warnings.append(" ".join(["WARNING:",warnMsg]))
+    return
+
+  def printWarnings(self,prefix):
+    if self.warnings:
+      warnmsg = prefix+" "+"\n".join(self.warnings)
+      self.__print(warnmsg)
+    return
+
+
 def checkMatchingClassid(badSource,obj,objClassid):
   """
   Does the classid match the particular PETSc type
@@ -289,6 +281,12 @@ def checkMatchingClassid(badSource,obj,objClassid):
   try:
     expectedClassid = petscClassIdMap[obj.typename]
   except KeyError:
+    petscClangParserUtil.viewSourceFromCursor(obj.cursor,numContext=10)
+    # The class doesn't exist, perhaps they passed in a wonky type
+    if obj.typename:
+      classFromClassId = list(petscClassIdMap.keys())[list(petscClassIdMap.values()).index(objClassid.name)]
+      badSource.addError("{obj} doesn't match expected type '{typen}' for '{classid}'".format(obj=str(obj),typen=classFromClassId,classid=objClassid.name))
+      return
     # Raise exception here since this isn't a bad source, moreso a failure of
     # this script since we should know about all classids
     raise RuntimeError("Unkown or invalid class "+str(obj))
@@ -309,28 +307,36 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
     macro(foo,barIdx)
     """
     defCursor = obj.cursor.get_definition()
-    if defCursor.location == obj.cursor.location:
-      # definition didn't move, so probably no definition
-      raise ValueError
-    elif defCursor.kind == clang.cindex.CursorKind.VAR_DECL:
-      # found definition, so were in business
-      # Parents here is an odd choice of words since on the very same line I loop
-      # over children, but then again clangs AST has an odd semantic for parents/children
-      potentialParents = [child for child in defCursor.walk_preorder() if child.kind in refDeclCursors]
-      # Weed out all the self-references
-      potentialParents = [parent for parent in potentialParents if parent.spelling != defCursor.spelling]
-      # At this point we should be left with a single token, otherwise somethings
-      # gone wrong, either way, probably a bug
-      if len(potentialParents) != 1:
-        raise RuntimeError("Could not determine parent of definition {defn} for object {obj}".format(defn=str(ArgCursor(defCursor)),obj=str(obj)))
-      parent = potentialParents[0]
-      name = ArgCursor.getNameFromCursor(parent)
-      return parentArgNames.index(name)
+    if defCursor:
+      if defCursor.location == obj.cursor.location:
+        # definition didn't move, so probably no definition, check for this before though
+        # to explicitly catch it, since it should be handleable
+        raise RuntimeError
+      elif defCursor.kind == clang.cindex.CursorKind.VAR_DECL:
+        # found definition, so were in business
+        # Parents here is an odd choice of words since on the very same line I loop
+        # over children, but then again clangs AST has an odd semantic for parents/children
+        potentialParents = []
+        for defChild in defCursor.get_children():
+          if defChild.kind in convertCursors:
+            potentialParents = [child for child in defChild.walk_preorder() if child.kind == clang.cindex.CursorKind.DECL_REF_EXPR]
+            # Weed out any self-references
+            potentialParents = [parent for parent in potentialParents if parent.spelling != defCursor.spelling]
+        # At this point we should be left with a single cursor, otherwise somethings
+        # gone wrong.
+        if len(potentialParents) > 1:
+          # If >1 cursor, probably a bug since we should have weeded something out
+          raise RuntimeError
+        elif len(potentialParents) < 1:
+          # if <1 cursor then probably some funky stuff is happening, we log it
+          raise ValueError("Could not map definition of object {obj} to parent function arguments".format(obj=str(ArgCursor(defCursor))))
+        parent = potentialParents[0]
+        name = ArgCursor.getNameFromCursor(parent)
+        return parentArgNames.index(name)
     raise ValueError
 
-
   if idx.cursor.canonical.kind not in mathCursors:
-    badSource.addError(" ".join(["Index value is of unexpected type","'"+str(idx.cursor.canonical.kind)+"'","not"," or ".join(["'"+str(s)+"'" for s in mathCursors]),"for",str(idx)]))
+    badSource.addWarning(" ".join(["Index value is of unexpected type","'"+str(idx.cursor.canonical.kind)+"'","not"," or ".join(["'{s}'".format(s=s) for s in mathCursors]),"for",str(idx)]))
     return
   try:
     idxNum = int(idx.name)
@@ -343,23 +349,64 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
   except ValueError:
     try:
       matchLoc = matchFromObjectDefinition(obj,parentArgNames)
-    except ValueError:
+    except ValueError as ve:
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
       # anything here but emit a warning
-      badSource.addWarning("Parent function '{parfn}()' does not contain the object {obj}, cannot deterine index correctness.\nParent arguments:\n  ".format(parfn=parentArgs[0].cursor.semantic_parent.spelling,obj=str(obj))+"\n  ".join(str(i+1)+": "+str(s) for i,s in enumerate(parentArgs)))
+      errMessPrefix = "Parent function '{parfn}()' does not contain the object {obj}, cannot determine index correctness.".format(parfn=parentArgs[0].cursor.semantic_parent.spelling,obj=str(obj))
+      errMessSuffix = "Parent arguments:\n "+"\n ".join(str(s.argidx)+": "+str(s) for s in parentArgs)
+      if str(ve): errMessPrefix = "\nSpecifically: ".join([errMessPrefix,str(ve)])
+      badSource.addWarning("\n".join([errMessPrefix,errMessSuffix]))
       return
   if idxNum != parentArgs[matchLoc].argidx:
     badSource.addError("Argument number doesn't match. Expected '{expected}' found '{found}' for {obj}".format(expected=str(parentArgs[matchLoc].argidx),found=str(idxNum),obj=str(obj)))
   return
 
+
+def checkPetscValidHeader(badSource,func,parent):
+  """
+  Specific check for PetscValidHeader(obj,idx)
+  """
+  try:
+    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  except ArgCursorWarning as acw:
+    # add warning since it isn't a source error but rather a parsing failure
+    badSource.addWarning(str(acw))
+    return
+  obj,idx = funcArgs
+  checkMatchingArgNum(badSource,obj,idx,parentArgs)
+  return
+
 def checkPetscValidHeaderSpecific(badSource,func,parent):
   """
-  Specific check for PetscValidHeaderSpecific, can be made more general
+  Specific check for PetscValidHeaderSpecific(obj,classid,idx)
   """
-  funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-  parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  try:
+    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  except ArgCursorWarning as acw:
+    # add warning since it isn't a source error but rather a parsing failure
+    badSource.addWarning(str(acw))
+    return
   obj,classid,idx = funcArgs
+  checkMatchingClassid(badSource,obj,classid)
+  checkMatchingArgNum(badSource,obj,idx,parentArgs)
+  return
+
+def checkPetscValidHeaderSpecificType(badSource,func,parent):
+  """
+  Specific check for PetscValidHeaderSpecificType(obj,classid,idx,type)
+  """
+  try:
+    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  except ArgCursorWarning as acw:
+    # add warning since it isn't a source error but rather a parsing failure
+    badSource.addWarning(str(acw))
+    return
+  # Don't need the type
+  obj,classid,idx,_ = funcArgs
   checkMatchingClassid(badSource,obj,classid)
   checkMatchingArgNum(badSource,obj,idx,parentArgs)
   return
@@ -368,23 +415,88 @@ def checkPetscValidPointer(badSource,func,parent):
   """
   Specific check for PetscValidPointer
   """
-  funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-  parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  try:
+    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  except ArgCursorWarning as acw:
+    # add warning since it isn't a source error but rather a parsing failure
+    badSource.addWarning(str(acw))
+    return
   obj,idx = funcArgs
   checkMatchingArgNum(badSource,obj,idx,parentArgs)
   return
 
+
 checkDict = {
-  "PetscValidPointer"        : checkPetscValidPointer,
-  "PetscValidHeaderSpecific" : checkPetscValidHeaderSpecific
+  "PetscValidPointer"            : checkPetscValidPointer,
+  "PetscValidHeader"             : checkPetscValidHeader,
+  "PetscValidHeaderSpecific"     : checkPetscValidHeaderSpecific,
+  "PetscValidHeaderSpecificType" : checkPetscValidHeaderSpecificType,
 }
 
+def tryFindLibClang():
+  import subprocess
+  """
+  Try to find the clang location
+  """
+  return None
+
+def getClangSysIncludes():
+  import subprocess
+  """
+  Get system clangs set of default include search directories.
+
+  Because for some reason these are hardcoded by the compilers and so libclang does not have them.
+  """
+  output = subprocess.run(["clang","-E","-x","c++","/dev/null","-v"],capture_output=True,check=True,universal_newlines=True)
+  output.check_returncode()
+  # goes to stderr because of /dev/null
+  includes = output.stderr.split("#include <...> search starts here:\n")[1]
+  includes = includes.split("End of search list.")[0].replace("(framework directory)","")
+  includes = includes.split("\n")
+  includes = ["-I"+os.path.abspath(i.strip()) for i in includes if i]
+  return includes
+
+def findFunctionCallExpr(tu,macroNames):
+  """
+  Finds all function call expressions in list macroNames.
+
+  Note that if a particular function call is not 100% correctly defined (i.e. would the
+  file actually compile) then it will not be picked up by clang AST.
+
+  Function-like macros can be picked up, but it will be in the wrong 'order'. The AST is
+  built as if you are about to compile it, so macros are handled before any real
+  function definitions in the AST, making it impossible to map a macro invocation to
+  its 'parent' function.
+  """
+  cursor,filename = tu.cursor,tu.cursor.spelling
+  for possibleParent in cursor.get_children():
+    try:
+      if possibleParent.location.file.name != filename: continue
+    except AttributeError:
+      # possibleParent.location.file is None
+      continue
+    if possibleParent.kind not in funcCallCursors: continue
+    # If we've gotten this far we have found a function definition
+    for funcChild in possibleParent.walk_preorder():
+      if funcChild.kind == clang.cindex.CursorKind.CALL_EXPR:
+        if funcChild.spelling in macroNames:
+          yield (funcChild,possibleParent)
+
+
 def queueWorker(clangLib,args,options,verbose,errorMismatch,exceptions,queue,lock):
-  clang.cindex.Config.set_library_file(clangLib)
+  if not clang.cindex.conf.loaded:
+    clang.cindex.conf.set_library_file(clangLib)
   index = clang.cindex.Index.create()
   printPrefix = mp.current_process().name+" --"
+  if verbose:
+    with lock:
+      print(printPrefix,15*"=","Entering queue",15*"=")
   while True:
     filename = queue.get()
+    if filename == "__EXIT_QUEUE__":
+      queue.task_done()
+      break
     try:
       if verbose:
         with lock:
@@ -403,17 +515,20 @@ def queueWorker(clangLib,args,options,verbose,errorMismatch,exceptions,queue,loc
       preamble = " ".join([printPrefix,"Error detected while processing",filename])
       exceptions.put("\n".join([preamble,traceback.format_exc()]))
     queue.task_done()
+  if verbose:
+    with lock:
+      print(printPrefix,15*"=","Exiting queue",15*"=")
   return
 
 def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMismatch=None,threads=True):
-  if not clang.cindex.Config.loaded:
-    clang.cindex.Config.set_compatibility_check(True)
+  if not clang.cindex.conf.loaded:
+    clang.cindex.conf.set_compatibility_check(True)
     if clangDir:
       clangDir = os.path.abspath(os.path.expanduser(os.path.expandvars(clangDir)))
-      clang.cindex.Config.set_library_path(clangDir)
+      clang.cindex.conf.set_library_path(clangDir)
     elif clangLib:
       clangLib = os.path.abspath(os.path.expanduser(os.path.expandvars(clangLib)))
-      clang.cindex.Config.set_library_file(clangLib)
+      clang.cindex.conf.set_library_file(clangLib)
     else:
       raise RuntimeError("Must supply either clangdir or clangloc")
   with open(os.path.join(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
@@ -435,7 +550,9 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMisma
   if verbose: print("Creating precompiled header",petscPrecompiledHeader)
   index = clang.cindex.Index.create()
   tu = index.parse(petscHeader,args=flags,options=pchClangOptions)
-  if tu.diagnostics: print("\n".join([d.spelling for d in tu.diagnostics]))
+  if tu.diagnostics:
+    print("\n".join([d.spelling for d in tu.diagnostics]))
+    raise clang.cindex.LibclangError("Warnings generated when creating the precompiled header. This usually means that the libclang set is faulty!")
   tu.save(petscPrecompiledHeader)
   pchIncl = ["-include-pch",petscPrecompiledHeader]
 
@@ -452,10 +569,10 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMisma
   clangOptions = baseClangOptions
   if threads:
     # Spin up a queue and threads
-    maxWorkers = mp.cpu_count()-1
-    fileProcessorQueue = mp.JoinableQueue(maxWorkers)
+    fileProcessorQueue = mp.JoinableQueue()
     exceptionSignalQueue = mp.Queue()
     fileProcessorLock = mp.Lock()
+    maxWorkers = mp.cpu_count()-1
     for i in range(maxWorkers):
       workerName = "[{i}]".format(i=i)
       worker = mp.Process(target=queueWorker,args=(clangLib,compilerFlags,clangOptions,verbose,errorMismatch,exceptionSignalQueue,fileProcessorQueue,fileProcessorLock,),name=workerName,daemon=True)
@@ -466,25 +583,26 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMisma
   oldloc = os.getcwd()
   os.chdir(srcDir)
   #for mansec in ["sys","vec","mat","dm","ksp","snes","ts","tao"]:
-  for mansec in ["sys"]:
+  for mansec in ["dm"]:
     for root,dirs,files in os.walk(os.path.join(srcDir,mansec)):
       if verbose: print("[ROOT] Processing directory",root)
       dirs[:] = [d for d in dirs if d not in excludeDirs]
       dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuffixes)]
       files[:] = [os.path.join(root,f) for f in files if f.endswith(suffixes)]
       if threads:
-        stopThreads = False
         for filename in files:
           fileProcessorQueue.put(filename)
-        # Join here to collocate error messages to a directory
-        fileProcessorQueue.join()
-        while not exceptionSignalQueue.empty():
-          stopThreads = True
-          exception = exceptionSignalQueue.get()
-          print("[ERROR] ------------------------------------------------------------------------------------ [ERROR]")
-          print(exception)
-          print("[ERROR] ------------------------------------------------------------------------------------ [ERROR]")
-        if stopThreads: raise RuntimeError("Error in child process detected")
+        if files:
+          stopThreads = False
+          # Join here to colocate error messages to a directory
+          fileProcessorQueue.join()
+          while not exceptionSignalQueue.empty():
+            stopThreads = True
+            exception = exceptionSignalQueue.get()
+            print("[ERROR] ------------------------------------------------------------------------------------   [ERROR]")
+            print(exception)
+            print("[ERROR] ------------------------------------------------------------------------------------ [ERROR]")
+          if stopThreads: raise RuntimeError("Error in child process detected")
       else: # threads
         for filename in files:
           printPrefix = "[ROOT]"
@@ -498,7 +616,20 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMisma
             for func,parent in findFunctionCallExpr(tu,checkDict.keys()):
               checkDict[func.spelling](badSource,func,parent)
   if threads:
+    # Send stop-signal to child processes
+    for _ in range(maxWorkers):
+      fileProcessorQueue.put("__EXIT_QUEUE__")
     fileProcessorQueue.close()
+    # Wait for queue to close
+    fileProcessorQueue.join()
+    stopThreads = False
+    while not exceptionSignalQueue.empty():
+      stopThreads = True
+      exception = exceptionSignalQueue.get()
+      print("[ERROR] ------------------------------------------------------------------------------------   [ERROR]")
+      print(exception)
+      print("[ERROR] ------------------------------------------------------------------------------------ [ERROR]")
+    if stopThreads: raise RuntimeError("Error in child process detected")
     exceptionSignalQueue.close()
   os.chdir(oldloc)
   if os.path.exists(petscPrecompiledHeader):
@@ -509,16 +640,17 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMisma
 if __name__ == "__main__":
   import argparse
 
-  parser = argparse.ArgumentParser(description="Set options for clang static analysis tool",formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("--PETSC_DIR",required=False,help="If this option is unused defaults to environment variable $PETSC_DIR",dest="petscdir")
-  parser.add_argument("--PETSC_ARCH",required=False,help="If this option is unused defaults to environment variable $PETSC_ARCH",dest="petscarch")
+  parser = argparse.ArgumentParser(description="set options for clang static analysis tool",formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument("--PETSC_DIR",required=False,help="if this option is unused defaults to environment variable $PETSC_DIR",dest="petscdir")
+  parser.add_argument("--PETSC_ARCH",required=False,help="if this option is unused defaults to environment variable $PETSC_ARCH",dest="petscarch")
   parser.add_argument("--verbose",required=False,action="store_true")
-  parser.add_argument("--error",required=False,nargs="*",default=["None"],help="Error on linter diagnostic instead of continuing, optionally provide list of macros to error for")
-  parser.add_argument("--no-threads",required=False,action="store_false",help="Don't use threads",dest="threads")
+  parser.add_argument("--error",required=False,nargs="*",default=["None"],help="error on linter diagnostic instead of continuing, optionally provide list of macros to error for")
+  parser.add_argument("--no_threads",required=False,action="store_false",help="don't use threads",dest="threads")
   group = parser.add_mutually_exclusive_group(required=True)
-  group.add_argument("--clang_dir",help="Directory containing libclang.[so|dylib|dll]",dest="clangdir")
-  group.add_argument("--clang_lib",help="Location of libclang.[so|dylib|dll]",dest="clanglib")
+  group.add_argument("--clang_dir",help="directory containing libclang.[so|dylib|dll]",dest="clangdir")
+  group.add_argument("--clang_lib",help="direct location of libclang.[so|dylib|dll]",dest="clanglib")
   args = parser.parse_args()
+
   if "None" in args.error  or not args.error:
     if not args.error:
       raise RuntimeError("not implemented yet")

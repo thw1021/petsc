@@ -77,8 +77,8 @@ def viewSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=
   minSpaces = min([len(s)-len(s.lstrip(' ')) for s in lineList])
   lineList[:] = [s[minSpaces:].rstrip() for s in lineList]
   srcStr = "\n".join(lineList)
+  if ret: return srcStr
   print(srcStr)
-  return srcStr if ret else None
 
 def viewCursorFull(cursor):
   print("Arguments:"," ".join([a.displayname for a in cursor.get_arguments()]))
