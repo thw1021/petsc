@@ -81,6 +81,7 @@ PetscErrorCode  DMCreate(MPI_Comm comm,DM *dm)
   ierr = PetscDSCreate(PetscObjectComm((PetscObject) v), &ds);CHKERRQ(ierr);
   ierr = DMSetRegionDS(v, NULL, NULL, ds);CHKERRQ(ierr);
   ierr = PetscDSDestroy(&ds);CHKERRQ(ierr);
+  ierr = PetscHMapAuxCreate(&v->auxData);CHKERRQ(ierr);
   v->dmBC = NULL;
   v->coarseMesh = NULL;
   v->outputSequenceNum = -1;
@@ -735,6 +736,7 @@ PetscErrorCode  DMDestroy(DM *dm)
     }
     ierr = PetscObjectDereference((PetscObject) (*dm)->sfMigration);CHKERRQ(ierr);
   }
+  ierr = PetscHMapAuxDestroy(&(*dm)->auxData);CHKERRQ(ierr);
   if ((*dm)->coarseMesh && (*dm)->coarseMesh->fineMesh == *dm) {
     ierr = DMSetFineDM((*dm)->coarseMesh,NULL);CHKERRQ(ierr);
   }
@@ -9506,5 +9508,77 @@ PetscErrorCode DMComputeError(DM dm, Vec sol, PetscReal errors[], Vec *errorVec)
     ierr = DMDestroy(&edm);CHKERRQ(ierr);
   }
   ierr = PetscFree2(exactSol, ctxs);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGetNumAuxiliaryData(DM dm, PetscInt *numAux)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  ierr = PetscHMapAuxGetSize(dm->auxData, numAux);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGetAuxiliaryData(DM dm, DMLabel label, PetscInt value, Vec *aux)
+{
+  PetscHashAuxKey key;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
+  key.label = label;
+  key.value = value;
+  ierr = PetscHMapAuxGet(dm->auxData, key, aux);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMSetAuxiliaryData(DM dm, DMLabel label, PetscInt value, Vec aux)
+{
+  Vec             old;
+  PetscHashAuxKey key;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
+  key.label = label;
+  key.value = value;
+  ierr = PetscHMapAuxGet(dm->auxData, key, &old);CHKERRQ(ierr);
+  ierr = PetscObjectReference((PetscObject) aux);CHKERRQ(ierr);
+  ierr = PetscObjectDereference((PetscObject) old);CHKERRQ(ierr);
+  if (!aux) {ierr = PetscHMapAuxDel(dm->auxData, key);CHKERRQ(ierr);}
+  else      {ierr = PetscHMapAuxSet(dm->auxData, key, aux);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGetAuxiliaryLabels(DM dm, DMLabel labels[], PetscInt values[])
+{
+  PetscHashAuxKey *keys;
+  PetscInt         n, i, off = 0;
+  PetscErrorCode   ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidPointer(labels, 2);
+  PetscValidPointer(values, 3);
+  ierr = DMGetNumAuxiliaryData(dm, &n);CHKERRQ(ierr);
+  ierr = PetscMalloc1(n, &keys);CHKERRQ(ierr);
+  ierr = PetscHMapAuxGetKeys(dm->auxData, &off, keys);CHKERRQ(ierr);
+  for (i = 0; i < n; ++i) {labels[i] = keys[i].label; values[i] = keys[i].value;}
+  ierr = PetscFree(keys);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMCopyAuxiliaryData(DM dm, DM dmNew)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  ierr = PetscHMapAuxDestroy(&dmNew->auxData);CHKERRQ(ierr);
+  ierr = PetscHMapAuxDuplicate(dm->auxData, &dmNew->auxData);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
