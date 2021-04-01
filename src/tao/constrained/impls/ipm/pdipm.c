@@ -1,6 +1,8 @@
 #include <petsctaolinesearch.h>
 #include <../src/tao/constrained/impls/ipm/pdipm.h>
 #include <petscsnes.h>
+#include <petsc/private/pcimpl.h>  /*I "petscksp.h" I*/
+#include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
 
 /*
    TaoPDIPMEvaluateFunctionsAndJacobians - Evaluate the objective function f, gradient fx, constraints, and all the Jacobians at current vector
@@ -645,7 +647,110 @@ static PetscErrorCode TaoSNESFunction_PDIPM_residual(SNES snes,Vec X,Vec F,void 
   PetscFunctionReturn(0);
 }
 
-#include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
+/*
+  KKTAddShifts - Check the inertia of Cholesky factor of KKT matrix.
+  If it does not match the numbers of prime and dual variables, add shifts to the KKT matrix.
+*/
+static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
+{
+  PetscErrorCode ierr;
+  TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
+  KSP            ksp;
+  PC             pc;
+  PCType         ptype;
+  Mat            Factor;
+  PetscBool      isCHOL;
+  PetscInt       nneg,nzero,npos;
+
+  PetscFunctionBegin;
+  /* Get the inertia of Cholesky factor */
+  ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
+  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
+  ierr = PCGetType(pc,&ptype);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
+
+  if (isCHOL) {
+    PetscMPIInt       size;
+    ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
+    ierr = MPI_Comm_size(PetscObjectComm((PetscObject)Factor),&size);CHKERRMPI(ierr);
+    if (Factor->ops->getinertia) {
+#if defined(PETSC_HAVE_MUMPS)
+      MatSolverType     stype;
+      PetscBool         isMUMPS;
+      ierr = PCFactorGetMatSolverType(pc,&stype);CHKERRQ(ierr);
+      ierr = PetscStrcmp(stype, MATSOLVERMUMPS, &isMUMPS);CHKERRQ(ierr);
+      if (isMUMPS) { /* must set mumps ICNTL(13)=1 and ICNTL(24)=1 to call MatGetInertia() */
+        ierr = MatMumpsSetIcntl(Factor,24,1);CHKERRQ(ierr);
+        if (size > 1) {
+          ierr = MatMumpsSetIcntl(Factor,13,1);CHKERRQ(ierr);
+        }
+      }
+#else
+      if (size > 1) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires external package MUMPS");
+#endif
+      ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
+
+      if (npos < pdipm->Nx+pdipm->Nci) {
+        pdipm->deltaw = PetscMax(pdipm->lastdeltaw/3, 1.e-4*PETSC_MACHINE_EPSILON);
+        ierr = PetscInfo5(tao,"Test reduced deltaw=%g; previous MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
+        printf("  PDIPMKKTAddShifts: Test reduced deltaw=%g; previous MatInertia: nneg %d, nzero %d, npos %d\n",pdipm->deltaw,nneg,nzero,npos);
+        ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
+        ierr = PCSetUp(pc);CHKERRQ(ierr);
+        ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
+
+        if (npos < pdipm->Nx+pdipm->Nci) {
+          pdipm->deltaw = pdipm->lastdeltaw; /* in case reduction update does not help, this prevents that step from impacting increasing update */
+          while (npos < pdipm->Nx+pdipm->Nci && pdipm->deltaw <= 1.e10) { /* increase deltaw */
+            ierr = PetscInfo5(tao,"  deltaw=%g fails, MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
+            printf("  deltaw=%g fails, MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);
+            pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,20));
+            ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
+            ierr = PCSetUp(pc);CHKERRQ(ierr);
+            ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);CHKERRQ(ierr);
+          }
+
+          if (pdipm->deltaw >= 1.e10) {
+            SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_CONV_FAILED,"Reached maximum delta w will not converge, try different inital x0");
+          }
+          ierr = PetscInfo1(tao,"Updated deltaw %g\n",pdipm->deltaw);CHKERRQ(ierr);
+          pdipm->lastdeltaw = pdipm->deltaw;
+          pdipm->deltaw     = 0.0;
+        }
+      }
+
+      if (nzero) { /* Jacobian is singular */
+        if (pdipm->deltac == 0.0) {
+          pdipm->deltac = 1.e8*PETSC_MACHINE_EPSILON;
+        } else {
+          pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
+        }
+        ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",pdipm->deltac,nneg,nzero,npos);
+        ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
+        ierr = PCSetUp(pc);CHKERRQ(ierr);
+        ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
+      }
+    } else
+      SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires an external package that supports MatGetInertia()");
+  }
+  PetscFunctionReturn(0);
+}
+
+/*
+  PCPreSolve_PDIPM -- called betwee MatFactorNumeric() and MatSolve()
+*/
+PetscErrorCode PCPreSolve_PDIPM(PC pc,KSP ksp,Vec rhs,Vec x)
+{
+  PetscErrorCode ierr;
+  Tao            tao;
+  TAO_PDIPM      *pdipm;
+
+  PetscFunctionBegin;
+  ierr = KSPGetApplicationContext(ksp,&tao);CHKERRQ(ierr);
+  pdipm = (TAO_PDIPM*)tao->data;
+  ierr = KKTAddShifts(tao,pdipm->snes,pdipm->X);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*
    PDIPMLineSearch - Custom line search used with PDIPM.
 
@@ -666,16 +771,11 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   Tao               tao=(Tao)ctx;
   TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
   SNES              snes;
-  KSP               ksp;
-  PC                pc;
-  PCType            ptype;
-  Mat               Factor;
   Vec               X,F,Y,W,G;
-  PetscInt          i,iter,nneg,nzero,npos;
+  PetscInt          i,iter;
   PetscReal         alpha_p=1.0,alpha_d=1.0,alpha[4];
   PetscScalar       *Xarr,*z,*lambdai,dot,*taosolarr;
   const PetscScalar *dXarr,*dz,*dlambdai;
-  PetscBool         isCHOL;
 
   PetscFunctionBegin;
   ierr = SNESLineSearchGetSNES(linesearch,&snes);CHKERRQ(ierr);
@@ -716,26 +816,19 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
 
   ierr = VecGetArray(X,&Xarr);CHKERRQ(ierr);
   ierr = VecGetArrayRead(Y,&dXarr);CHKERRQ(ierr);
-  for (i=0; i<pdipm->nx; i++) {
-    Xarr[i] = Xarr[i] - alpha_p * dXarr[i];
-  }
+  for (i=0; i<pdipm->nx; i++) Xarr[i] -= alpha_p * dXarr[i];
 
   for (i=0; i<pdipm->nce; i++) {
-    Xarr[i+pdipm->off_lambdae] = Xarr[i+pdipm->off_lambdae] - alpha_d * dXarr[i+pdipm->off_lambdae];
+    Xarr[i+pdipm->off_lambdae] -= alpha_d * dXarr[i+pdipm->off_lambdae];
   }
 
   for (i=0; i<pdipm->nci; i++) {
-    Xarr[i+pdipm->off_lambdai] = Xarr[i+pdipm->off_lambdai] - alpha_d * dXarr[i+pdipm->off_lambdai];
+    Xarr[i+pdipm->off_lambdai] -= alpha_d * dXarr[i+pdipm->off_lambdai];
+    Xarr[i+pdipm->off_z]       -= alpha_p * dXarr[i+pdipm->off_z];
   }
-
-  for (i=0; i<pdipm->nci; i++) {
-    Xarr[i+pdipm->off_z] = Xarr[i+pdipm->off_z] - alpha_p * dXarr[i+pdipm->off_z];
-  }
-
   ierr = VecGetArray(tao->solution,&taosolarr);CHKERRQ(ierr);
   ierr = PetscMemcpy(taosolarr,Xarr,pdipm->nx*sizeof(PetscScalar));CHKERRQ(ierr);
   ierr = VecRestoreArray(tao->solution,&taosolarr);CHKERRQ(ierr);
-
 
   ierr = VecRestoreArray(X,&Xarr);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(Y,&dXarr);CHKERRQ(ierr);
@@ -759,73 +852,6 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
   ierr = (*tao->ops->convergencetest)(tao,tao->cnvP);CHKERRQ(ierr);
   if (tao->reason) {
     ierr = SNESSetConvergedReason(snes,SNES_CONVERGED_FNORM_ABS);CHKERRQ(ierr);
-  }
-
-  if (!pdipm->kkt_pd) PetscFunctionReturn(0);
-
-  /* Get the inertia of Cholesky factor to set shifts for next SNES interation */
-  ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
-  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
-  ierr = PCGetType(pc,&ptype);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)pc,PCCHOLESKY,&isCHOL);CHKERRQ(ierr);
-
-  if (isCHOL) {
-    PetscMPIInt       size;
-    ierr = PCFactorGetMatrix(pc,&Factor);CHKERRQ(ierr);
-    ierr = MPI_Comm_size(PetscObjectComm((PetscObject)Factor),&size);CHKERRMPI(ierr);
-    if (Factor->ops->getinertia) {
-#if defined(PETSC_HAVE_MUMPS)
-      MatSolverType     stype;
-      PetscBool         isMUMPS;
-      ierr = PCFactorGetMatSolverType(pc,&stype);CHKERRQ(ierr);
-      ierr = PetscStrcmp(stype, MATSOLVERMUMPS, &isMUMPS);CHKERRQ(ierr);
-      if (isMUMPS) { /* must set mumps ICNTL(13)=1 and ICNTL(24)=1 to call MatGetInertia() */
-        ierr = MatMumpsSetIcntl(Factor,24,1);CHKERRQ(ierr);
-        if (size > 1) {
-          ierr = MatMumpsSetIcntl(Factor,13,1);CHKERRQ(ierr);
-        }
-      }
-#else
-      if (size > 1) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires external package MUMPS");
-#endif
-      ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
-
-      if (npos < pdipm->Nx+pdipm->Nci) {
-        pdipm->deltaw = PetscMax(pdipm->lastdeltaw/3, 1.e-4*PETSC_MACHINE_EPSILON);
-        ierr = PetscInfo5(tao,"Test reduced deltaw=%g; previous MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
-        ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
-        ierr = PCSetUp(pc);CHKERRQ(ierr);
-        ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
-
-        if (npos < pdipm->Nx+pdipm->Nci) {
-          pdipm->deltaw = pdipm->lastdeltaw; /* in case reduction update does not help, this prevents that step from impacting increasing update */
-          while (npos < pdipm->Nx+pdipm->Nci && pdipm->deltaw <= 1.e10) { /* increase deltaw */
-            ierr = PetscInfo5(tao,"  deltaw=%g fails, MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
-            pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,20));
-            ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
-            ierr = PCSetUp(pc);CHKERRQ(ierr);
-            ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);CHKERRQ(ierr);
-          }
-
-          if (pdipm->deltaw >= 1.e10) {
-            SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_CONV_FAILED,"Reached maximum delta w will not converge, try different inital x0");
-          }
-          ierr = PetscInfo1(tao,"Updated deltaw %g\n",pdipm->deltaw);CHKERRQ(ierr);
-          pdipm->lastdeltaw = pdipm->deltaw;
-          pdipm->deltaw     = 0.0;
-        }
-      }
-
-      if (nzero) { /* Jacobian is singular */
-        if (pdipm->deltac == 0.0) {
-          pdipm->deltac = 1.e8*PETSC_MACHINE_EPSILON;
-        } else {
-          pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
-        }
-        ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",pdipm->deltac,nneg,nzero,npos);
-      }
-    } else
-      SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires an external package that supports MatGetInertia()");
   }
   PetscFunctionReturn(0);
 }
@@ -1416,6 +1442,15 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
   }
   ierr = MatDestroy(&Jci_xb_trans);CHKERRQ(ierr);
   ierr = PetscFree3(ng_all,nh_all,Jranges);CHKERRQ(ierr);
+
+  /* (10) Setup PCPreSolve() for pdipm->solve_symmetric_kkt */
+  if (pdipm->solve_symmetric_kkt) {
+    KSP ksp;
+    PC  pc;
+    ierr = SNESGetKSP(pdipm->snes,&ksp);CHKERRQ(ierr);
+    ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
+    pc->ops->presolve = PCPreSolve_PDIPM;
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1570,5 +1605,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
   ierr = SNESSetOptionsPrefix(pdipm->snes,tao->hdr.prefix);CHKERRQ(ierr);
   ierr = SNESGetKSP(pdipm->snes,&tao->ksp);CHKERRQ(ierr);
   ierr = PetscObjectReference((PetscObject)tao->ksp);CHKERRQ(ierr);
+  ierr = KSPSetApplicationContext(tao->ksp,(void *)tao);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
