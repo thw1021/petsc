@@ -265,6 +265,11 @@ PETSC_EXTERN PetscErrorCode DMClearDS(DM);
 PETSC_EXTERN PetscErrorCode DMCopyDS(DM, DM);
 PETSC_EXTERN PetscErrorCode DMCopyDisc(DM, DM);
 PETSC_EXTERN PetscErrorCode DMComputeExactSolution(DM, PetscReal, Vec, Vec);
+PETSC_EXTERN PetscErrorCode DMGetNumAuxiliaryData(DM, PetscInt *);
+PETSC_EXTERN PetscErrorCode DMGetAuxiliaryData(DM, DMLabel, PetscInt, Vec *);
+PETSC_EXTERN PetscErrorCode DMSetAuxiliaryData(DM, DMLabel, PetscInt, Vec);
+PETSC_EXTERN PetscErrorCode DMGetAuxiliaryLabels(DM, DMLabel[], PetscInt[]);
+PETSC_EXTERN PetscErrorCode DMCopyAuxiliaryData(DM, DM);
 
 /*MC
   DMInterpolationInfo - Structure for holding information about interpolation on a mesh
