@@ -136,7 +136,7 @@ extern "C"  {
     if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
     ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
     BB   = Tf[0]->T[0]; DD = Tf[0]->T[1];
-    ierr = PetscInfo(plex, "Create static data for Kokkos\n");CHKERRQ(ierr);
+    ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
     {
       const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_alpha (nu_alpha, Nf);
       auto alpha = new Kokkos::View<PetscReal*, Kokkos::LayoutLeft> ("alpha", Nf);
