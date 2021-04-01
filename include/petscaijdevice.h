@@ -80,14 +80,13 @@ PETSC_DEVICE_FUNC_DECL void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat
         nrow1    = ai[row+1] - ai[row];
         low1     = 0;
         high1    = nrow1;
-        if (bj) {
-          lastcol2 = -1;
-          rp2      = bj + bi[row];
-          ap2      = ba + bi[row];
-          nrow2    = bi[row+1] - bi[row];
-          low2     = 0;
-          high2    = nrow2;
-        }
+        lastcol2 = -1;
+        rp2      = bj + bi[row];
+        ap2      = ba + bi[row];
+        nrow2    = bi[row+1] - bi[row];
+        low2     = 0;
+        high2    = nrow2;
+
         for (j=0; j<n; j++) {
           if (v)  value = roworiented ? v[i*n+j] : v[i+j*m];
           if (ignorezeroentries && PetscRealPart(value) == 0.0 && is == ADD_VALUES && im[i] != in[j]) continue;
