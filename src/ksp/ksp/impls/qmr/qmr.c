@@ -5,6 +5,7 @@ static PetscErrorCode KSPSetUp_QMR(KSP ksp)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  /* Ten auxiliary vectors are required by the QMR algorithm */
   ierr = KSPSetWorkVecs(ksp,10);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -256,7 +257,7 @@ PETSC_INTERN PetscErrorCode KSPBuildSolution_QMR(KSP ksp,Vec v,Vec *V)
 }
 
 /*MC
-     KSPQMR - QMR (quasi minimal residual),
+   KSPQMR - QMR (quasi minimal residual),
 
    Options Database Keys:
 .   see KSPSolve()
