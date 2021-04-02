@@ -7,18 +7,17 @@
 #define pcmgsetlevels_             pcmgsetlevels
 #endif
 
-PETSC_EXTERN void pcmgsetlevels_(PC *pc,PetscInt *levels,MPI_Fint comms[], PetscErrorCode *ierr)
+PETSC_EXTERN void pcmgsetlevels_(PC *pc,PetscInt *levels,MPI_Fint fcomms[], PetscErrorCode *ierr)
 {
-  MPI_Comm  *ccomms = NULL;
-  PetscBool optional = (*comms == -2) ? PETSC_TRUE : PETSC_FALSE;
-
-  if (!optional) {
+  MPI_Comm *ccomms = NULL;
+  CHKFORTRANNULLMPICOMM(fcomms);
+  if (fcomms) {
     *ierr = PetscMalloc1(*levels,&ccomms);if (*ierr) return;
     for (PetscInt i=0; i<*levels; i++) {
-      ccomms[i] = MPI_Comm_f2c(comms[i]);
+      ccomms[i] = MPI_Comm_f2c(fcomms[i]);
     }
   }
   *ierr = PCMGSetLevels(*pc,*levels,ccomms);if (*ierr) return;
-  if (!optional) *ierr = PetscFree(ccomms);
+  if (fcomms) *ierr = PetscFree(ccomms);
 }
 
