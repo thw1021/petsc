@@ -486,8 +486,9 @@ PetscErrorCode PCMGSetLevels_MG(PC pc,PetscInt levels,MPI_Comm *comms)
      recieves or MPI_AlltoAllv() could be used to do the reshuffling of the vector entries.
 
    Fortran Notes:
-     Use comms = PETSC_COMM_IGNORE in Fortran, which works like comms = NULL in C, to indicate you like
-     to have all ranks participate in the coarser problems.
+     Use comms = PETSC_NULL_MPI_COMM in Fortran, which works like comms = NULL in C. Note PETSC_NULL_MPI_COMM
+     is not the equivelent of MPI_COMM_NULL. It is more like PETSC_NULL_INTEGER, PETSC_NULL_REAL etc. constant
+     variables.
 
 .seealso: PCMGSetType(), PCMGGetLevels()
 @*/
