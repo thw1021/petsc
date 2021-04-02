@@ -12,7 +12,7 @@
 #endif
 
         public:: MPIU_REAL, MPIU_SUM, MPIU_SCALAR, MPIU_INTEGER
-        public:: PETSC_COMM_WORLD, PETSC_COMM_SELF
+        public:: PETSC_COMM_WORLD, PETSC_COMM_SELF, PETSC_COMM_IGNORE
 
 ! ----------------------------------------------------------------------------
 !    BEGIN PETSc aliases for MPI_ constants
@@ -49,6 +49,8 @@
 #else
       integer4, parameter :: MPIU_INTEGER = MPI_INTEGER
 #endif
+! Used as the optional comms parameter in PCMGSETLEVELS()
+      MPI_Comm, parameter :: PETSC_COMM_IGNORE = -2
 
       MPI_Comm PETSC_COMM_WORLD
       MPI_Comm PETSC_COMM_SELF
@@ -63,13 +65,14 @@
 !DEC$ ATTRIBUTES DLLEXPORT::MPIU_SUM
 !DEC$ ATTRIBUTES DLLEXPORT::MPIU_SCALAR
 !DEC$ ATTRIBUTES DLLEXPORT::MPIU_INTEGER
+!DEC$ ATTRIBUTES DLLEXPORT::PETSC_COMM_IGNORE
 #endif
 
         module petscsysdefdummy
 #if defined(PETSC_HAVE_MPI_F90MODULE_VISIBILITY)
         use petscmpi
 #else
-        use petscmpi, only: MPIU_REAL,MPIU_SUM,MPIU_SCALAR,MPIU_INTEGER,PETSC_COMM_WORLD,PETSC_COMM_SELF
+        use petscmpi, only: MPIU_REAL,MPIU_SUM,MPIU_SCALAR,MPIU_INTEGER,PETSC_COMM_WORLD,PETSC_COMM_SELF,PETSC_COMM_IGNORE
 #endif
 #include <../src/sys/f90-mod/petscsys.h>
 #include <../src/sys/f90-mod/petscdraw.h>
