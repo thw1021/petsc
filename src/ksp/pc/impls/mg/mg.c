@@ -459,7 +459,8 @@ PetscErrorCode PCMGSetLevels_MG(PC pc,PetscInt levels,MPI_Comm *comms)
 .  levels - the number of levels
 -  comms - optional communicators for each level; this is to allow solving the coarser problems
            on smaller sets of processes. For processes that are not included in the computation
-           you must pass MPI_COMM_NULL.
+           you must pass MPI_COMM_NULL. Pass comms = NULL to indicate you like to have all processes
+           participate in each level of problem.
 
    Level: intermediate
 
@@ -485,8 +486,8 @@ PetscErrorCode PCMGSetLevels_MG(PC pc,PetscInt levels,MPI_Comm *comms)
      recieves or MPI_AlltoAllv() could be used to do the reshuffling of the vector entries.
 
    Fortran Notes:
-     Use PETSC_COMM_IGNORE in Fortran, which works as NULL in C, for the optional comms parameter, to
-     indicate you like to have all ranks participate in the coarser problems.
+     Use comms = PETSC_COMM_IGNORE in Fortran, which works like comms = NULL in C, to indicate you like
+     to have all ranks participate in the coarser problems.
 
 .seealso: PCMGSetType(), PCMGGetLevels()
 @*/
