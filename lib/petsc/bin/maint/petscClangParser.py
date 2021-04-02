@@ -51,6 +51,16 @@ convertCursors = set([clang.cindex.CursorKind.UNEXPOSED_EXPR,clang.cindex.Cursor
 
 strTokens = set([clang.cindex.TokenKind.IDENTIFIER])
 
+# General Array types
+arrayTypes = set([clang.cindex.TypeKind.INCOMPLETEARRAY,clang.cindex.TypeKind.CONSTANTARRAY,clang.cindex.TypeKind.VARIABLEARRAY])
+
+# Specific types
+charTypes = set([clang.cindex.TypeKind.CHAR_S,clang.cindex.TypeKind.UCHAR])
+intTypes = set([clang.cindex.TypeKind.USHORT,clang.cindex.TypeKind.SHORT,clang.cindex.TypeKind.INT,clang.cindex.TypeKind.UINT,clang.cindex.TypeKind.LONGLONG,clang.cindex.TypeKind.ULONGLONG,clang.cindex.TypeKind.ENUM])
+enumTypes = set([clang.cindex.TypeKind.ENUM])
+realTypes = set([clang.cindex.TypeKind.FLOAT,clang.cindex.TypeKind.DOUBLE,clang.cindex.TypeKind.LONGDOUBLE,clang.cindex.TypeKind.FLOAT128])
+scalarTypes = realTypes|set([clang.cindex.TypeKind.COMPLEX])
+
 pchClangOptions = (
   P_CXTranslationUnit_CreatePreambleOnFirstParse |
   P_CXTranslationUnit_ForSerialization
@@ -117,6 +127,26 @@ petscClassIdMap = {
   "_p_VecTagger *"              : "VEC_TAGGER_CLASSID",
 }
 
+class PetscCursor(clang.cindex.Cursor):
+  """
+  This class exists purely for purpose of making viewing a cursor easier
+  """
+  @classmethod
+  def cast(cls, cursor: clang.cindex.Cursor):
+    """
+    Cast an clang cursor into a petsc cursor
+    """
+    assert isinstance(cursor,clang.cindex.Cursor)
+    cursor.__class__ = cls  # can now use our __repr__
+    assert isinstance(cursor,PetscCursor)
+    return cursor
+
+  def __repr__(self):
+    return "\n".join(petscClangParserUtil.viewAstFromCursor(self))
+
+  def viewSource(self,nbefore=10,nafter=10,nboth=10,ret=False):
+    return petscClangParserUtil.viewSourceFromCursor(self,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,ret=ret)
+
 class ArgCursorWarning(Exception):
   """
   Mostly to just have a custom "something went wrong when building an ArgCursor" to except
@@ -168,12 +198,11 @@ class ArgCursor(object):
         # their spelling up to the primary cursor, so we need to plumb through
         # the various sub-cursors to find it.
         pointees = [c for c in cursor.walk_preorder() if c.kind in literalCursors]
-        if len(pointees) != 1:
-          raise RuntimeError("Cannot determine name from nested char pointer type")
-        name = ArgCursor.getNameFromCursor(pointees[0])
-        srcstr = petscClangParserUtil.viewSourceFromCursor(cursor,ret=True)
-        if "PetscValidHeaderSpecificType" not in srcstr:
-          raise RuntimeError
+        if len(pointees) == 1:
+          name = ArgCursor.getNameFromCursor(pointees[0])
+          srcstr = petscClangParserUtil.viewSourceFromCursor(cursor,ret=True)
+          if "PetscValidHeaderSpecificType" not in srcstr:
+            raise RuntimeError
     # Catchall last attempt, literally parse the tokens
     if not name:
       tokenlist = [t for t in cursor.get_tokens() if t.kind in strTokens]
@@ -182,11 +211,13 @@ class ArgCursor(object):
       if len(tokenlist) != 1:
         srcstr = petscClangParserUtil.viewSourceFromCursor(cursor,ret=True)
         # For whatever reason (perhaps because its macro stringization hell) PETSC_HASH_MAP
-        # absolutely __bricks__ the AST. The cursor has no children, no name, no tokens, and
-        # a completely incorrect SourceLocation.
-        # It is for all intents and purposes uncheckable :)
+        # and PetscKernel_XXX absolutely __brick__ the AST. The resultant cursors have no
+        # children, no name, no tokens, and a completely incorrect SourceLocation.
+        # They are for all intents and purposes uncheckable :)
         if "PETSC_HASH_MAP" in srcstr:
           raise ArgCursorWarning("Encountered unparsable PETSC_HASH_MAP for cursor {cursor}".format(cursor=errorViewFromCursor(cursor)))
+        elif "PetscKernel_" in srcstr:
+          raise ArgCursorWarning("Encountered unparsable PetscKernel_XXX for cursor {cursor}".format(cursor=errorViewFromCursor(cursor)))
         else:
           raise RuntimeError("Unexpected number of tokens: "+str(tokenlist))
       name = tokenlist[0].spelling
@@ -209,6 +240,7 @@ class ArgCursor(object):
     return typename
 
   def __init__(self,cursor,idx=-12345):
+    cursor = PetscCursor.cast(cursor)
     self.name = ArgCursor.getNameFromCursor(cursor)
     self.typename = ArgCursor.getTypenameFromCursor(cursor)
     self.argidx = idx
@@ -281,14 +313,14 @@ def checkMatchingClassid(badSource,obj,objClassid):
   try:
     expectedClassid = petscClassIdMap[obj.typename]
   except KeyError:
-    petscClangParserUtil.viewSourceFromCursor(obj.cursor,numContext=10)
-    # The class doesn't exist, perhaps they passed in a wonky type
-    if obj.typename:
+    # The class doesn't exist, perhaps they passed in a wonky type, at the very least it
+    # isn't a petsc type
+    if not (obj.typename.startswith("_p_") or obj.typename.startswith("_n_")):
       classFromClassId = list(petscClassIdMap.keys())[list(petscClassIdMap.values()).index(objClassid.name)]
       badSource.addError("{obj} doesn't match expected type '{typen}' for '{classid}'".format(obj=str(obj),typen=classFromClassId,classid=objClassid.name))
       return
     # Raise exception here since this isn't a bad source, moreso a failure of
-    # this script since we should know about all classids
+    # this script since it should know about all petsc classes
     raise RuntimeError("Unkown or invalid class "+str(obj))
   if expectedClassid != objClassid.name:
     badSource.addError("Classid doesn't match for {obj}. Expected '{expected}' found '{found}'".format(obj=str(obj),expected=expectedClassid,found=objClassid.name))
@@ -362,36 +394,32 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
     badSource.addError("Argument number doesn't match. Expected '{expected}' found '{found}' for {obj}".format(expected=str(parentArgs[matchLoc].argidx),found=str(idxNum),obj=str(obj)))
   return
 
-
-def checkPetscValidHeader(badSource,func,parent):
+def checkMatchingSpecificPointerType(badSource,obj,expectedTypeKinds,filterTypeKinds):
   """
-  Specific check for PetscValidHeader(obj,idx)
+  Checks that obj is of a particular pointer kind, for example char*
   """
-  try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
-    badSource.addWarning(str(acw))
-    return
-  obj,idx = funcArgs
-  checkMatchingArgNum(badSource,obj,idx,parentArgs)
-  return
-
-def checkPetscValidHeaderSpecific(badSource,func,parent):
-  """
-  Specific check for PetscValidHeaderSpecific(obj,classid,idx)
-  """
-  try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
-    badSource.addWarning(str(acw))
-    return
-  obj,classid,idx = funcArgs
-  checkMatchingClassid(badSource,obj,classid)
-  checkMatchingArgNum(badSource,obj,idx,parentArgs)
+  objType = obj.cursor.canonical.type.get_canonical()
+  if objType.kind in expectedTypeKinds:
+    raise RuntimeError
+    badSource.addError("\n".join(["Object {obj} of clang type {otype} is not a pointer to expected types:".format(obj=str(obj),otype=objType.kind),"\n".join(map(str,expectedTypeKinds))]))
+  if objType.kind == clang.cindex.TypeKind.INCOMPLETEARRAY:
+    objType = objType.element_type
+    # get rid of any nested array types
+    while objType.kind in arrayTypes:
+      objType = objType.element_type
+  if objType.kind == clang.cindex.TypeKind.POINTER:
+    objType = objType.get_pointee()
+    # get rid of any nested pointer types
+    while objType.kind == clang.cindex.TypeKind.POINTER:
+      objType = objType.get_pointee()
+  if objType.kind in expectedTypeKinds:
+    try:
+      filterTypeKinds(badSource,obj)
+    except TypeError:
+      # 'NoneType' object is not callable
+      pass
+  else:
+    badSource.addError("\n".join(["Object {obj} of clang type {otype} is not in expected types:".format(obj=str(obj),otype=objType.kind),"\n".join(map(str,expectedTypeKinds))]))
   return
 
 def checkPetscValidHeaderSpecificType(badSource,func,parent):
@@ -411,9 +439,25 @@ def checkPetscValidHeaderSpecificType(badSource,func,parent):
   checkMatchingArgNum(badSource,obj,idx,parentArgs)
   return
 
-def checkPetscValidPointer(badSource,func,parent):
+def checkPetscValidHeaderSpecific(badSource,func,parent):
   """
-  Specific check for PetscValidPointer
+  Specific check for PetscValidHeaderSpecific(obj,classid,idx)
+  """
+  try:
+    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  except ArgCursorWarning as acw:
+    # add warning since it isn't a source error but rather a parsing failure
+    badSource.addWarning(str(acw))
+    return
+  obj,classid,idx = funcArgs
+  checkMatchingClassid(badSource,obj,classid)
+  checkMatchingArgNum(badSource,obj,idx,parentArgs)
+  return
+
+def checkPetscValidHeader(badSource,func,parent):
+  """
+  Specific check for PetscValidHeader(obj,idx)
   """
   try:
     funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
@@ -426,20 +470,143 @@ def checkPetscValidPointer(badSource,func,parent):
   checkMatchingArgNum(badSource,obj,idx,parentArgs)
   return
 
+def checkPetscValidPointer(badSource,func,parent,pointerFilter=None):
+  """
+  Specific check for PetscValidPointer(obj,idx)
+  """
+  try:
+    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  except ArgCursorWarning as acw:
+    # add warning since it isn't a source error but rather a parsing failure
+    badSource.addWarning(str(acw))
+    return
+  obj,idx = funcArgs
+  if pointerFilter is not None:
+    expected,filterFunc = pointerFilter
+    checkMatchingSpecificPointerType(badSource,obj,expected,filterFunc)
+  checkMatchingArgNum(badSource,obj,idx,parentArgs)
+  return
+
+def checkPetscValidCharPointer(badSource,func,parent):
+  """
+  Specific check for PetscValidCharPointer(obj,idx)
+  """
+  checkPetscValidPointer(badSource,func,parent,pointerFilter=(charTypes,None))
+  return
+
+def checkPetscValidIntPointer(badSource,func,parent):
+  """
+  Specific check for PetscValidIntPointer(obj,idx)
+  """
+  def checkIntIsNotPetscBool(badSource,obj):
+    if "PetscBool" in obj.typename:
+      badSource.addError("Incorrect use of PetscValidIntPointer() for object {obj}. Use PetscValidBoolPointer() instead".format(obj=str(obj)))
+    return
+
+  checkPetscValidPointer(badSource,func,parent,pointerFilter=(intTypes,checkIntIsNotPetscBool))
+  return
+
+def checkPetscValidBoolPointer(badSource,func,parent):
+  """
+  Specific check for PetscValidBoolPointer(obj,idx)
+  """
+  def checkIsPetscBool(badSource,obj):
+    if "PetscBool" not in obj.typename:
+      badSource.addError("Incorrect use of PetscValidBoolPointer() for object {obj}. PetsccValidBoolPointer() should only be used for PetscBool".format(obj=str(obj)))
+    return
+
+  checkPetscValidPointer(badSource,func,parent,pointerFilter=(enumTypes,checkIsPetscBool))
+  return
+
+def checkPetscValidScalarPointer(badSource,func,parent):
+  """
+  Specific check for PetscValidScalarPointer(obj,idx)
+  """
+  def checkIsPetscScalar(badSource,obj):
+    if "PetscScalar" not in obj.cursor.type.spelling:
+      badSource.addError("Incorrect use of PetscValidScalarPointer() for object {obj}. PetsccValidScalarPointer() should only be used for PetscScalars".format(obj=str(obj)))
+    return
+
+  checkPetscValidPointer(badSource,func,parent,pointerFilter=(scalarTypes,checkIsPetscScalar))
+  return
+
+def checkPetscValidRealPointer(badSource,func,parent):
+  """
+  Specific check for PetscValidRealPointer(obj,idx)
+  """
+  def checkIsPetscReal(badSource,obj):
+    if "PetscReal" not in obj.cursor.type.spelling:
+      print(obj.cursor)
+      obj.cursor.viewSource(nbefore=15)
+      badSource.addError("Incorrect use of PetscValidRealPointer() for object {obj}. PetsccValidRealPointer() should only be used for PetscReals".format(obj=str(obj)))
+    return
+
+  checkPetscValidPointer(badSource,func,parent,pointerFilter=(realTypes,checkIsPetscReal))
+  return
 
 checkDict = {
-  "PetscValidPointer"            : checkPetscValidPointer,
-  "PetscValidHeader"             : checkPetscValidHeader,
-  "PetscValidHeaderSpecific"     : checkPetscValidHeaderSpecific,
   "PetscValidHeaderSpecificType" : checkPetscValidHeaderSpecificType,
+  "PetscValidHeaderSpecific"     : checkPetscValidHeaderSpecific,
+  "PetscValidHeader"             : checkPetscValidHeader,
+  "PetscValidPointer"            : checkPetscValidPointer,
+  "PetscValidCharPointer"        : checkPetscValidCharPointer,
+  "PetscValidIntPointer"         : checkPetscValidIntPointer,
+  "PetscValidBoolPointer"        : checkPetscValidBoolPointer,
+  "PetscValidScalarPointer"      : checkPetscValidScalarPointer,
+  "PetscValidRealPointer"        : checkPetscValidRealPointer,
 }
 
-def tryFindLibClang():
-  import subprocess
-  """
-  Try to find the clang location
-  """
-  return None
+def updatePetscClassIdMap(petscDir):
+  import re
+  global petscClassIdMap
+
+  includeBaseDir = os.path.join(petscDir,"include")
+  regclass = re.compile("(\s*typedef\s+struct\s+)(_[pn]_[A-Za-z_]*\s+\*)")
+  for root,_,filenames in os.walk(includeBaseDir):
+    for fname in filenames:
+      if fname.endswith(".h"):
+        with open(os.path.join(root,fname),"r") as rfile:
+          line = rfile.readline()
+          while line:
+            fl = regclass.search(line)
+            if fl:
+              struct = fl.group(2)
+              if struct not in petscClassIdMap:
+                petscClassIdMap[struct] = "ERROR_UNKNOWN_PETSC_CLASSID"
+            line = rfile.readline()
+  return
+
+def updatePetscScalarType(petscDir,petscArch):
+  import re
+  global scalarTypes
+
+  confFile = os.path.join(petscDir,petscArch,"include","petscconf.h")
+  regcomplex = re.compile("^#define\s*PETSC_USE_DEBUG\s")
+  with open(confFile,"r") as rfile:
+    line = rfile.readline()
+    while line:
+      fl = regcomplex.search(line)
+      if fl: return
+      line = rfile.readline()
+  # petsc is configured to NOT use complex numbers, so we remove them from scalartypes
+  scalarTypes.remove(clang.cindex.TypeKind.COMPLEX)
+  return
+
+def getPetscExtraIncludes(petscDir,petscArch):
+  import re
+
+  with open(os.path.join(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
+    refccinc = re.compile("^PETSC_CC_INCLUDES\s*=")
+    line     = pv.readline()
+    while line:
+      incl = refccinc.search(line)
+      if incl:
+        extraIncludes = line.split("=")[1]
+        break
+      line = pv.readline()
+  extraIncludes = extraIncludes.strip().split(" ")
+  return extraIncludes
 
 def getClangSysIncludes():
   import subprocess
@@ -507,17 +674,57 @@ def queueWorker(clangLib,args,options,verbose,errorMismatch,exceptions,queue,loc
         diags = "\n".join(diags.keys())
         with lock:
           print(diags)
-      with BadSource(printPrefix,lock=lock) as badSource:
+      with BadSource(printPrefix,printWarningMessages=verbose,lock=lock) as badSource:
         for func,parent in findFunctionCallExpr(tu,checkDict.keys()):
           checkDict[func.spelling](badSource,func,parent)
     except Exception:
       import traceback
-      preamble = " ".join([printPrefix,"Error detected while processing",filename])
+      preamble = " ".join([printPrefix,"Exception detected while processing",filename])
       exceptions.put("\n".join([preamble,traceback.format_exc()]))
     queue.task_done()
   if verbose:
     with lock:
       print(printPrefix,15*"=","Exiting queue",15*"=")
+  return
+
+def miniTest(compilerFlags):
+  import sys
+  testCode = """
+  #include <petscastfix.hpp>
+  void func1(unsigned char arrayBob[][3])
+  {
+   PetscValidCharPointer(arrayBob,1);
+   return;
+  }
+  void func2(char arrayFred[])
+  {
+   PetscValidCharPointer(arrayFred,1);
+   return;
+  }
+  void func3(char *arrayAlice)
+  {
+   PetscValidCharPointer(arrayAlice,1);
+   return;
+  }
+  int main(int argc, char *argv[])
+  {
+   unsigned char arrayBob[][3];
+   char arrayFred[];
+   char *arrayAlice;
+
+   func1(arrayBob);
+   func2(arrayFred);
+   func3(arrayAlice);
+   return 0;
+  }
+"""
+  clangOptions = baseClangOptions
+  index = clang.cindex.Index.create()
+  tu = index.parse("mytest.cpp",args=compilerFlags,unsaved_files=[("mytest.cpp",testCode)],options=clangOptions)
+  with BadSource("[ROOT]") as badSource:
+    for func,parent in findFunctionCallExpr(tu,checkDict.keys()):
+      checkDict[func.spelling](badSource,func,parent)
+  sys.exit(0)
   return
 
 def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMismatch=None,threads=True):
@@ -530,31 +737,39 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMisma
       clangLib = os.path.abspath(os.path.expanduser(os.path.expandvars(clangLib)))
       clang.cindex.conf.set_library_file(clangLib)
     else:
-      raise RuntimeError("Must supply either clangdir or clangloc")
-  with open(os.path.join(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
-    line = pv.readline()
-    while line:
-      if line.startswith("PETSC_CC_INCLUDES"):
-        extraIncludes = line.split("=")[1]
-        break
-      line = pv.readline()
-  extraIncludes = extraIncludes.strip().split(" ")
-  sysincludes = getClangSysIncludes()
-  flags = sysincludes+["-x","c++","-include",os.path.join(petscDir,"include","petscastfix.hpp")]+extraIncludes
-  if verbose: print("Compile flags","\n".join(flags))
+      raise clang.cindex.LibclangError("Must supply either clangDir or clangLib")
 
-  # Create a precompiled header from petsc.h, this saves a lot of time since this
-  # includes almost every sub-header in petsc
-  petscHeader = os.path.join(petscDir,"include","petsc.h")
+  updatePetscClassIdMap(petscDir)
+  updatePetscScalarType(petscDir,petscArch)
+  rootPrintPrefix = "[ROOT]"
+  extraIncludes   = getPetscExtraIncludes(petscDir,petscArch)
+  sysincludes     = getClangSysIncludes()
+  petscastinclude = ["-include",os.path.join(petscDir,"include","petscastfix.hpp")]
+  forceCxxFlag    = ["-x","c++"]
+  compilerFlags   = sysincludes+forceCxxFlag+petscastinclude+extraIncludes+["-Wno-nullability-completeness"]
+  if verbose: print("\n".join([rootPrintPrefix+" Compile flags:",*compilerFlags]))
+
+  # Create a precompiled header from petsc.h, and all of the major "impl" headers,
+  # this saves a lot of time since this includes almost every sub-header in petsc.
+  # Including petsc.h first should define almost everything we need so no side effects
+  # from including headers in the wrong order below
+  mansecs = ["sys","vec","mat","dm","ksp","snes","ts","tao"]
+  mansecimpls = [m+"impl.h" for m in mansecs]
+  megaHeaderLines = ["#include <petscastfix.hpp>\n","#include <petsc.h>\n"]
+  for headerFile in os.listdir(os.path.join(petscDir,"include","petsc","private")):
+    if headerFile in mansecimpls:
+      megaHeaderLines.append("#include <petsc/private/{headerFile}>\n".format(headerFile=headerFile))
+  megaHeader = "".join(megaHeaderLines)
+  if verbose: print("\n".join([rootPrintPrefix+" Mega header:",megaHeader]))
   petscPrecompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.pch")
-  if verbose: print("Creating precompiled header",petscPrecompiledHeader)
+  if verbose: print(rootPrintPrefix,"Creating precompiled header",petscPrecompiledHeader)
   index = clang.cindex.Index.create()
-  tu = index.parse(petscHeader,args=flags,options=pchClangOptions)
+  tu = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
   if tu.diagnostics:
     print("\n".join([d.spelling for d in tu.diagnostics]))
-    raise clang.cindex.LibclangError("Warnings generated when creating the precompiled header. This usually means that the libclang set is faulty!")
+    raise clang.cindexx.LibclangError("Warnings generated when creating the precompiled header. This usually means that the libclang set is faulty!")
   tu.save(petscPrecompiledHeader)
-  pchIncl = ["-include-pch",petscPrecompiledHeader]
+  pchIncludes = ["-include-pch",petscPrecompiledHeader]
 
   # exclude these directories
   excludeDirs = set(["f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels"])
@@ -562,12 +777,14 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMisma
   suffixes = (".c",)
 
   # Get the library file to pass to subprocesses
-  clangLib = clang.cindex.Config().get_filename()
-  # For some reason clang doesn't like this when precompiling the header
-  flags.append("-Wno-nullability-completeness")
-  compilerFlags = flags+pchIncl
+  clangLib = clang.cindex.conf.get_filename()
+  compilerFlags = forceCxxFlag+sysincludes+pchIncludes+extraIncludes+["-Wno-nullability-completeness"]
   clangOptions = baseClangOptions
+  #miniTest(compilerFlags)
   if threads:
+    # Need these later for error printing
+    errBars = "[ERROR]"+(85*"-")+"[ERROR]\n"
+    errBars = [errBars,errBars]
     # Spin up a queue and threads
     fileProcessorQueue = mp.JoinableQueue()
     exceptionSignalQueue = mp.Queue()
@@ -582,8 +799,8 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMisma
   srcDir = os.path.join(petscDir,"src")
   oldloc = os.getcwd()
   os.chdir(srcDir)
-  #for mansec in ["sys","vec","mat","dm","ksp","snes","ts","tao"]:
-  for mansec in ["dm"]:
+  for mansec in mansecs:
+  #for mansec in ["mat"]:
     for root,dirs,files in os.walk(os.path.join(srcDir,mansec)):
       if verbose: print("[ROOT] Processing directory",root)
       dirs[:] = [d for d in dirs if d not in excludeDirs]
@@ -597,43 +814,40 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,errorMisma
           # Join here to colocate error messages to a directory
           fileProcessorQueue.join()
           while not exceptionSignalQueue.empty():
-            stopThreads = True
             exception = exceptionSignalQueue.get()
-            print("[ERROR] ------------------------------------------------------------------------------------   [ERROR]")
-            print(exception)
-            print("[ERROR] ------------------------------------------------------------------------------------ [ERROR]")
+            errMess = str(exception).join(errBars)
+            print(errMess)
+            stopThreads = True
           if stopThreads: raise RuntimeError("Error in child process detected")
       else: # threads
         for filename in files:
-          printPrefix = "[ROOT]"
-          if verbose: print(printPrefix,"Processing file",filename)
+          if verbose: print(rootPrintPrefix,"Processing file",filename)
           tu = index.parse(filename,args=compilerFlags,options=clangOptions)
           if verbose and tu.diagnostics:
-            diags = {" ".join([printPrefix,filename,":",d.spelling]) : 0 for d in tu.diagnostics}
+            diags = {" ".join([rootPrintPrefix,filename,":",d.spelling]) : 0 for d in tu.diagnostics}
             diags = "\n".join(diags.keys())
             print(diags)
-          with BadSource(printPrefix) as badSource:
+          with BadSource(rootPrintPrefix,printWarningMessage=verbose) as badSource:
             for func,parent in findFunctionCallExpr(tu,checkDict.keys()):
               checkDict[func.spelling](badSource,func,parent)
   if threads:
     # Send stop-signal to child processes
     for _ in range(maxWorkers):
       fileProcessorQueue.put("__EXIT_QUEUE__")
+    stopThreads = False
     fileProcessorQueue.close()
     # Wait for queue to close
     fileProcessorQueue.join()
-    stopThreads = False
     while not exceptionSignalQueue.empty():
-      stopThreads = True
       exception = exceptionSignalQueue.get()
-      print("[ERROR] ------------------------------------------------------------------------------------   [ERROR]")
-      print(exception)
-      print("[ERROR] ------------------------------------------------------------------------------------ [ERROR]")
+      errMess = str(exception).join(errBars)
+      print(errMess)
+      stopThreads = True
     if stopThreads: raise RuntimeError("Error in child process detected")
     exceptionSignalQueue.close()
   os.chdir(oldloc)
   if os.path.exists(petscPrecompiledHeader):
-    if verbose: print("Deleteing precompiled header",petscPrecompiledHeader)
+    if verbose: print(rootPrintPrefix,"Deleteing precompiled header",petscPrecompiledHeader)
     os.remove(petscPrecompiledHeader)
   return
 
