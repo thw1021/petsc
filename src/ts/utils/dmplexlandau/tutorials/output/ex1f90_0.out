@@ -17,15 +17,15 @@ thermal T (K): e= 5.802e+07 i= 5.802e+07 imp= 5.802e+06. v_0= 2.965e+07 n_0= 1.0
     0 SNES Function norm 4.980259039460e-03 
 [0] LandauFormJacobian_Internal(): Get dynamic data
     1 SNES Function norm 1.085715489942e-09 
-  Nonlinear ex1_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear ex1f90_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
     0 SNES Function norm 4.980170777171e-03 
 [0] LandauFormJacobian_Internal(): Get dynamic data
     1 SNES Function norm 5.452982004507e-10 
-  Nonlinear ex1_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear ex1f90_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
     0 SNES Function norm 4.980214580721e-03 
 [0] LandauFormJacobian_Internal(): Get dynamic data
     1 SNES Function norm 5.413220024657e-10 
-  Nonlinear ex1_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear ex1f90_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
 [0] TSAdaptChoose_Basic(): Estimated scaled local truncation error 8.72501e-06, accepting step of size 1e-06
 1 TS dt 1.25e-06 time 1e-06
   1) species-0: charge density= -1.6025746508216e+01 z-momentum= -1.9685319089509e-19 energy=  1.2010145623914e+05
