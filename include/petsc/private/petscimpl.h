@@ -192,14 +192,13 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 #define PetscValidHeaderSpecificType(h,ck,arg,t) do {(void)(h);} while (0)
 #define PetscValidHeader(h,arg) do {(void)(h);} while (0)
 #define PetscValidPointer(h,arg) do {(void)(h);} while (0)
-#endif
 #define PetscValidCharPointer(h,arg) do {(void)(h);} while (0)
 #define PetscValidIntPointer(h,arg) do {(void)(h);} while (0)
 #define PetscValidBoolPointer(h,arg) do {(void)(h);} while (0)
 #define PetscValidScalarPointer(h,arg) do {(void)(h);} while (0)
 #define PetscValidRealPointer(h,arg) do {(void)(h);} while (0)
 #define PetscValidFunction(h,arg) do {(void)(h);} while (0)
-
+#endif
 #else
 
 /*  This check is for subtype methods such as DMDAGetCorners() that do not use the PetscTryMethod() or PetscUseMethod() paradigm */
@@ -236,7 +235,6 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     if (!(h)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Pointer: Parameter # %d",arg); \
     if (!PetscCheckPointer(h,PETSC_CHAR)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_BADPTR,"Invalid Pointer: Parameter # %d",arg); \
   } while (0)
-#endif
 
 #define PetscValidCharPointer(h,arg)                                    \
   do {                                                                  \
@@ -272,7 +270,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
   do {                                                                  \
     if (!(f)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Function Pointer: Parameter # %d",arg); \
   } while (0)
-
+#endif
 #endif
 
 #define PetscSorted(n,idx,sorted)           \

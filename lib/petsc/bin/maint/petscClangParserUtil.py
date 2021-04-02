@@ -22,39 +22,52 @@ def onlyFile(cursor,level,**kwargs):
 # A function show(level, *args) would have been simpler but less fun
 # and you'd need a separate parameter for the AST walkers if you want it to be exchangeable.
 class Level(int):
-    '''represent currently visited level of a tree'''
-    def show(self,*args):
-        '''pretty print an indented line'''
-        print('\t'*self+' '.join(map(str, args)))
-    def __add__(self,inc):
-        '''increase level'''
-        return Level(super(Level, self).__add__(inc))
+  """
+  represent currently visited level of a tree
+  """
+  def view(self,*args):
+    """
+    pretty print an indented line
+    """
+    return '\t'*self+' '.join(map(str, args))
+  def __add__(self,inc):
+    """
+    increase number of tabs and newlines
+    """
+    return Level(super(Level, self).__add__(inc))
 
 def checkValidType(t):
     return t.kind != clang.cindex.TypeKind.INVALID
 
 def fullyQualify(t):
-    q = set()
-    if t.is_const_qualified(): q.add('const')
-    if t.is_volatile_qualified(): q.add('volatile')
-    if t.is_restrict_qualified(): q.add('restrict')
-    return q
+  q = set()
+  if t.is_const_qualified(): q.add('const')
+  if t.is_volatile_qualified(): q.add('volatile')
+  if t.is_restrict_qualified(): q.add('restrict')
+  return q
 
 def viewType(t,level,title):
-    '''pretty print type AST'''
-    level.show(title, str(t.kind),' '.join(fullyQualify(t)))
-    if checkValidType(t.get_pointee()):
-        viewType(t.get_pointee(),level+1,'points to:')
+  """
+  pretty print type AST
+  """
+  retList = [level.view(title, str(t.kind),' '.join(fullyQualify(t)))]
+  if checkValidType(t.get_pointee()):
+    retList.extend(viewType(t.get_pointee(),level+1,'points to:'))
+  return retList
 
-def viewAstRecursive(cursor,pred=verbosePrint,level=Level(),**kwargs):
-    '''pretty print cursor AST'''
-    if pred(cursor,level,**kwargs):
-      level.show(cursor.kind,cursor.spelling,cursor.displayname,cursor.location)
-      if checkValidType(cursor.type):
-        viewType(cursor.type,level+1,'type:')
-        viewType(cursor.type.get_canonical(),level+1,'canonical type:')
-      for c in cursor.get_children():
-        viewAstRecursive(c,pred=pred,level=level+1,**kwargs)
+def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
+  """
+  pretty print cursor AST
+  """
+  retList = []
+  if pred(cursor,level,**kwargs):
+    retList.append(level.view(cursor.kind,cursor.spelling,cursor.displayname,cursor.location))
+    if checkValidType(cursor.type):
+      retList.extend(viewType(cursor.type,level+1,'type:'))
+      retList.extend(viewType(cursor.type.get_canonical(),level+1,'canonical type:'))
+    for c in cursor.get_children():
+      retList.extend(viewAstFromCursor(c,pred=pred,level=level+1,**kwargs))
+  return retList
 
 def viewSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,ret=False):
   filename,lineno = cursor.location.file.name,cursor.location.line
@@ -85,5 +98,5 @@ def viewCursorFull(cursor):
   print("Parent:",cursor.semantic_parent.displayname)
   print("Children:"," ".join([c.spelling for c in cursor.get_children()]))
   print("AST View")
-  viewAstRecursive(cursor)
+  print("\n".join(viewAstFromCursor(cursor)))
   return
