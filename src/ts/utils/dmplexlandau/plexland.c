@@ -297,6 +297,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             gg2_temp[d] = 0;
             for (d2=0;d2<dim;d2++) gg3_temp[d][d2] = 0;
           }
+#pragma omp parallel for shared(gg2_temp,gg3_temp,Nf) private(ipidx,d2,d3,fieldA)
           for (ipidx = 0; ipidx < nip; ipidx++) {
             const PetscReal wi = ww[ipidx], x = xx[ipidx], y = yy[ipidx];
             PetscReal       temp1[3] = {0, 0, 0}, temp2 = 0;
@@ -325,8 +326,10 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             for (d2 = 0; d2 < 2; d2++) {
               for (d3 = 0; d3 < 2; ++d3) {
                 /* K = U * grad(f): g2=e: i,A */
+#pragma omp critical
                 gg2_temp[d2] += Uk[d2][d3]*temp1[d3];
                 /* D = -U * (I \kron (fx)): g3=f: i,j,A */
+#pragma omp critical
                 gg3_temp[d2][d3] += Ud[d2][d3]*temp2;
               }
             }
@@ -334,8 +337,10 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             for (d2 = 0; d2 < 3; ++d2) {
               for (d3 = 0; d3 < 3; ++d3) {
                 /* K = U * grad(f): g2 = e: i,A */
+#pragma omp critical
                 gg2_temp[d2] += U[d2][d3]*temp1[d3];
                 /* D = -U * (I \kron (fx)): g3 = f: i,j,A */
+#pragma omp critical
                 gg3_temp[d2][d3] += U[d2][d3]*temp2;
               }
             }
