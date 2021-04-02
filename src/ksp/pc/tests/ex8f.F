@@ -132,7 +132,7 @@
       call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
       call KSPGetPC(ksp,pc,ierr)
       call PCSetType(pc,PCMG,ierr)
-      call PCMGSetLevels(pc,one,PETSC_COMM_IGNORE,ierr)
+      call PCMGSetLevels(pc,one,PETSC_NULL_MPI_COMM,ierr)
       call PCMGSetResidual(pc,zero,MyResidual,A,ierr)
 
 !  Set operators. Here the matrix that defines the linear system
