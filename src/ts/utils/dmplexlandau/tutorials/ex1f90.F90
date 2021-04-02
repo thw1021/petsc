@@ -52,10 +52,10 @@ program DMPlexTestLandauInterface
   !    Create timestepping solver context
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   call TSCreate(PETSC_COMM_SELF,ts,ierr);CHKERRA(ierr)
-  call TSSetOptionsPrefix(ts, 'ex1f90_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
+  call TSSetOptionsPrefix(ts, 'ex1_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
   call TSSetDM(ts,dm,ierr);CHKERRA(ierr)
   call TSGetSNES(ts,snes,ierr);CHKERRA(ierr)
-  call SNESSetOptionsPrefix(snes, 'ex1f90_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
+  call SNESSetOptionsPrefix(snes, 'ex1_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
   call SNESGetLineSearch(snes,linesearch,ierr);CHKERRA(ierr)
   call SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC,ierr);CHKERRA(ierr)
   call TSSetIFunction(ts,PETSC_NULL_VEC,LandauIFunction,PETSC_NULL_VEC,ierr);CHKERRA(ierr)
@@ -63,9 +63,9 @@ program DMPlexTestLandauInterface
   call TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER,ierr);CHKERRA(ierr)
 
   call SNESGetKSP(snes,ksp,ierr);CHKERRA(ierr)
-  call KSPSetOptionsPrefix(ksp, 'ex1f90_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
+  call KSPSetOptionsPrefix(ksp, 'ex1_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
   call KSPGetPC(ksp,pc,ierr);CHKERRA(ierr)
-  call PCSetOptionsPrefix(pc, 'ex1f90_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
+  call PCSetOptionsPrefix(pc, 'ex1_', ierr);CHKERRA(ierr) ! should get this from the dm or give it to the dm
 
   call TSSetFromOptions(ts,ierr);CHKERRA(ierr)
   call TSSetSolution(ts,X,ierr);CHKERRA(ierr)
