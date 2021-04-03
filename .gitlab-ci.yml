@@ -13,7 +13,7 @@ stages:
   - stage-1
   - stage-2
   - stage-3
-  - docs
+  - deploy
 variables:
   GIT_STRATEGY: fetch
   GIT_CLEAN_FLAGS: -ffdxq
@@ -902,7 +902,6 @@ analyze-pipeline:
 # Base job for a documentation build
 #
 .docs:
-  stage: docs
   image: python:3.9
   before_script:
     - apt-get update
@@ -917,6 +916,7 @@ docs-review:
   extends:
     - .docs
     - .test-basic
+  stage: stage-2
   script:
     - cd src/docs/sphinx_docs &&
       sphinx-build -T -E -b dirhtml -D language=en -j auto . ../../../public
@@ -932,6 +932,7 @@ docs-review:
 #
 pages:  # this job name has special meaning to GitLab
   extends: .docs
+  stage: deploy
   interruptible: true
   script:
     - VERSION_NAME=$(sed 's/release-//' <<< $CI_COMMIT_REF_NAME) &&
