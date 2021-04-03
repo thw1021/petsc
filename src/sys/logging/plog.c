@@ -1495,6 +1495,7 @@ PetscErrorCode PetscLogView_CSV(PetscViewer viewer)
     PetscCallMPI(MPI_Allreduce(&stageLog->stageInfo[stage].eventLog->numEvents, &numEvents, 1, MPI_INT, MPI_MAX, comm));
     for (event = 0; event < numEvents; event++) {
       eventInfo = &stageLog->stageInfo[stage].eventLog->eventInfo[event];
+      if (!eventInfo->count) continue;
       PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%s,%s,%d,%d,%g,%g,%g,%g,%g", stageLog->stageInfo[stage].name, stageLog->eventLog->eventInfo[event].name, rank, eventInfo->count, eventInfo->time, eventInfo->numMessages, eventInfo->messageLength,
                                                    eventInfo->numReductions, eventInfo->flops));
       if (eventInfo->dof[0] >= 0.) {

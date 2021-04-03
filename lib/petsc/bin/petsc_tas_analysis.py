@@ -25,7 +25,6 @@ import pandas as pd
 from tasClasses import File
 from tasClasses import Field
 
-
 def main(cmdLineArgs):
     data = []
     # This section handles the command arguments that edit configurTas.py
@@ -136,7 +135,7 @@ def checkAlias(alias, path):
     :returns:   a tuple of True/False, The first is True if the alias exists in configureTAS.py and the second is
                 True if is should continue and edit configureTAS.py..
     """
-
+    
     if alias in config.filePath:
         print(f'\nalias: {alias}\nalready has path: {config.filePath[alias]}\n\n'
               f'Do you wish to replace with \npath: {path}\n')
@@ -468,7 +467,6 @@ def dataProcesCSV(cmdLineArgs, fileName):
 
     for f in range(Nf):
         try:
-            print(' in try')
             if cmdLineArgs.fieldList is not None:
                 if len(cmdLineArgs.fieldList) != Nf:
                     print(f'\nYou specified {len(cmdLineArgs.fieldList)} from the command line, while the log file has {Nf} fields.\n\n'
@@ -759,11 +757,12 @@ def graphGen(file, enable_graphs, graph_flops_scaling, dim):
     #Loop through each file and add the data/line for that file to the Mesh Convergence, Static Scaling, and Efficacy Graphs
     for field in file.fieldList:
         #Least squares solution for Mesh Convergence
-        if isinstance(field.fieldData['Errors'][0], str):
+        if isinstance(field.fieldData['Errors'][0], str) or field.fieldData['Errors'][0] == -1:
             print(
                 'Mesh Convergence can not be calculated, nan values in Error field will change to 1')
             for x in range(len(field.fieldData['Errors'])):
                 field.fieldData['Errors'][x] = 1
+        
 
         lstSqMeshConv[0], lstSqMeshConv[1] = leastSquares(
             field.fieldData['dofs'], field.fieldData['Errors'])
@@ -773,7 +772,7 @@ def graphGen(file, enable_graphs, graph_flops_scaling, dim):
         print('Alpha: {} \n  {}'.format(lstSqMeshConv[0], lstSqMeshConv[1]))
 
         convRate = lstSqMeshConv[0] * -dim
-        print('convRate: {} of {} data'.format(convRate, file.fileName))
+        print('convRate: {} of {} field'.format(convRate, field.fieldName))
 
         field.setConvergeRate(convRate)
         field.setAlpha(lstSqMeshConv[0])
@@ -783,28 +782,25 @@ def graphGen(file, enable_graphs, graph_flops_scaling, dim):
         #Uses the specified style sheet for generating the plots
         styleDir = os.path.join(os.environ.get('PETSC_DIR'), 'lib/petsc/bin')
         plt.style.use(os.path.join(styleDir, 'petsc_tas_style.mplstyle'))
-
+    
         #Set up plots with labels
         if not pd.isna(field.fieldData['Errors'][0]):
             meshConvFig = plt.figure()
             meshConvOrigHandles = []
             meshConvLstSqHandles = []
             axMeshConv = meshConvFig.add_subplot(1, 1, 1)
-            axMeshConv.set(xlabel='Problem Size $\log N$',
-                           ylabel='Error $\log |x - x^*|$', title='Mesh Convergence')
+            axMeshConv.set(xlabel='Problem Size $\log N$', ylabel='Error $\log |x - x^*|$', title='Mesh Convergence')
 
         statScaleFig = plt.figure()
         statScaleHandles = []
         axStatScale = statScaleFig.add_subplot(1, 1, 1)
-        axStatScale.set(xlabel='Time(s)',
-                        ylabel='Flop Rate (F/s)', title='Static Scaling')
+        axStatScale.set(xlabel='Time(s)', ylabel='Flop Rate (F/s)', title='Static Scaling')
 
         statScaleFig = plt.figure()
         statScaleHandles = []
         axStatScale = statScaleFig.add_subplot(1, 1, 1)
-        axStatScale.set(xlabel='Time(s)',
-                        ylabel='DoF Rate (DoF/s)', title='Static Scaling')
-
+        axStatScale.set(xlabel='Time(s)', ylabel='DoF Rate (DoF/s)', title='Static Scaling')
+        
         efficFig = plt.figure()
         efficHandles = []
         axEffic = efficFig.add_subplot(1, 1, 1)
@@ -814,8 +810,8 @@ def graphGen(file, enable_graphs, graph_flops_scaling, dim):
         #Loop through each file and add the data/line for that file to the Mesh Convergence, Static Scaling, and Efficacy Graphs
         for field in file.fieldList:
             ##Start Mesh Convergence graph
-            convRate = str(convRate)
-
+            convRate = str(round(field.cRate, 3))
+            
             x, = axMeshConv.loglog(field.fieldData['dofs'], field.fieldData['Errors'],
                                    label='Field ' + field.fieldName + ' Orig Data', marker='^')
 
@@ -824,7 +820,7 @@ def graphGen(file, enable_graphs, graph_flops_scaling, dim):
             y, = axMeshConv.loglog(field.fieldData['dofs'], ((field.fieldData['dofs']**lstSqMeshConv[0] * 10**lstSqMeshConv[1])),
                                    label=field.fieldName + ' Convergence rate =  ' + convRate, marker='x')
 
-            meshConvLstSqHandles.append(y)
+            #meshConvLstSqHandles.append(y)
 
             ##Start Static Scaling Graph, only if graph_flops_scaling equals 1.  Specified on the command line.
             if graph_flops_scaling == 1:
@@ -844,18 +840,19 @@ def graphGen(file, enable_graphs, graph_flops_scaling, dim):
 
             counter = counter + 1
 
-            meshConvHandles = meshConvOrigHandles + meshConvLstSqHandles
-            meshConvLabels = [h.get_label() for h in meshConvOrigHandles]
-            meshConvLabels = meshConvLabels + \
-                [h.get_label() for h in meshConvLstSqHandles]
-            meshConvFig.legend(handles=meshConvHandles, labels=meshConvLabels)
+        #meshConvHandles = meshConvOrigHandles + meshConvLstSqHandles
+        #meshConvLabels = [h.get_label() for h in meshConvOrigHandles]
+        #meshConvLabels = meshConvLabels + [h.get_label() for h in meshConvLstSqHandles]
+        
+        #meshConvFig.legend(handles=meshConvHandles, labels=meshConvLabels)
+        meshConvFig.legend()    
+        #statScaleLabels = [h.get_label() for h in statScaleHandles]
+        #statScaleFig.legend(handles=statScaleHandles, labels=statScaleLabels)
+        statScaleFig.legend()
 
-            statScaleLabels = [h.get_label() for h in statScaleHandles]
-            statScaleFig.legend(handles=statScaleHandles,
-                                labels=statScaleLabels)
-
-            efficLabels = [h.get_label() for h in efficHandles]
-            efficFig.legend(handles=efficHandles, labels=efficLabels)
+        #efficLabels = [h.get_label() for h in efficHandles]
+        #efficFig.legend(handles=efficHandles, labels=efficLabels)
+        efficFig.legend()
 
         axStatScale.set_ylim(ymin=0.1)
 
