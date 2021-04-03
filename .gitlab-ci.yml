@@ -13,7 +13,6 @@ stages:
   - stage-1
   - stage-2
   - stage-3
-  - docs
 variables:
   GIT_STRATEGY: fetch
   GIT_CLEAN_FLAGS: -ffdxq
@@ -902,7 +901,7 @@ analyze-pipeline:
 # Base job for a documentation build
 #
 .docs:
-  stage: docs
+  stage: stage-2
   image: python:3.9
   before_script:
     - apt-get update
