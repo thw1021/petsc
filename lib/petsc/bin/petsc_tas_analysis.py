@@ -172,8 +172,8 @@ def dataProces(cmdLineArgs):
                 if level > 1:
                     timeGrowthRate.append(meanTime[level-1]/meanTime[level-2])
                     flopGrowthRate.append(meanFlop[level-1]/meanFlop[level-2])
-                    if module.Stages[stageName]["MatLUFactorNum"][n]["time"] != 0:
-                        luFactorGrowthRate.append(luFactorMean[level-1]/luFactorMean[level-2])
+                    #if module.Stages[stageName]["MatLUFactorNum"][n]["time"] != 0:
+                    #    luFactorGrowthRate.append(luFactorMean[level-1]/luFactorMean[level-2])
 
                 for f in range(Nf):
                     dofs[f].append(module.Stages[stageName]["ConvEst Error"][0]["dof"][f])
@@ -286,7 +286,7 @@ def graphGen(file, enable_graphs, graph_flops_scaling, dim):
         field.setConvergeRate(convRate)
         field.setAlpha(lstSqMeshConv[0])
         field.setBeta(lstSqMeshConv[1])
-    file.writeCSV()
+    #file.writeCSV()
 
     if cmdLineArgs.enable_graphs == 1:
         #Set up plots with labels
