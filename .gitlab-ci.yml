@@ -902,6 +902,8 @@ analyze-pipeline:
 #
 .docs:
   stage: stage-2
+  tags:
+    - name:pj02
   image: python:3.9
   before_script:
     - apt-get update
