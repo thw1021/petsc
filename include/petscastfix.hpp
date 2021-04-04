@@ -14,6 +14,7 @@ template <typename T>
 void PetscValidHeaderSpecificType(T,PetscClassId,int,const char[]);
 template <typename T>
 void PetscValidHeader(T,int);
+
 template <typename T>
 void PetscValidPointer(T,int);
 template <typename T>
@@ -35,4 +36,17 @@ template <typename Ta,typename Tb>
 void PetscCheckSameComm(Ta,int,Tb,int);
 template <typename Ta,typename Tb>
 void PetscCheckSameTypeAndComm(Ta,int,Tb,int);
+
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveScalar(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveReal(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveInt(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveMPIInt(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveBool(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
 #endif
