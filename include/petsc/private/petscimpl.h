@@ -187,7 +187,6 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 */
 #if !defined(PETSC_USE_DEBUG)
 
-#if !defined(PETSC_AST_FIX)
 #define PetscValidHeaderSpecific(h,ck,arg) do {(void)(h);} while (0)
 #define PetscValidHeaderSpecificType(h,ck,arg,t) do {(void)(h);} while (0)
 #define PetscValidHeader(h,arg) do {(void)(h);} while (0)
@@ -198,7 +197,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 #define PetscValidScalarPointer(h,arg) do {(void)(h);} while (0)
 #define PetscValidRealPointer(h,arg) do {(void)(h);} while (0)
 #define PetscValidFunction(h,arg) do {(void)(h);} while (0)
-#endif
+
 #else
 
 /*  This check is for subtype methods such as DMDAGetCorners() that do not use the PetscTryMethod() or PetscUseMethod() paradigm */
@@ -265,12 +264,12 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     if (!(h)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Pointer: Parameter # %d",arg); \
     if (!PetscCheckPointer(h,PETSC_REAL)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_BADPTR,"Invalid Pointer to PetscReal: Parameter # %d",arg); \
   } while (0)
-
+#endif
 #define PetscValidFunction(f,arg)                                       \
   do {                                                                  \
     if (!(f)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Function Pointer: Parameter # %d",arg); \
   } while (0)
-#endif
+
 #endif
 
 #define PetscSorted(n,idx,sorted)           \
@@ -304,10 +303,12 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     For example, in the dot product between two vectors,
   both vectors must be either Seq or MPI, not one of each
 */
+#if !defined(PETSC_AST_FIX)
 #define PetscCheckSameType(a,arga,b,argb)                               \
   do {                                                                  \
     if (((PetscObject)(a))->type != ((PetscObject)(b))->type) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMETYPE,"Objects not of same type: Argument # %d and %d",arga,argb); \
   } while (0)
+#endif
 /*
     Check type_name
 */
@@ -329,6 +330,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 /*
    Use this macro to check if the type is set
 */
+#if !defined(PETSC_AST_FIX)
 #define PetscValidType(a,arg)                                           \
   do {                                                                  \
     if (!((PetscObject)(a))->type_name) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"%s object's type is not set: Argument # %d",((PetscObject)(a))->class_name,arg); \
@@ -349,7 +351,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     PetscCheckSameType(a,arga,b,argb);                  \
     PetscCheckSameComm(a,arga,b,argb);                  \
   } while (0)
-
+#endif
 #define PetscValidLogicalCollectiveScalar(a,b,arg)                      \
   do {                                                                  \
     PetscErrorCode _7_ierr;                                             \

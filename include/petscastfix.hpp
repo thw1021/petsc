@@ -19,10 +19,6 @@ void PetscValidPointer(T,int);
 template <typename T>
 void PetscValidCharPointer(T*,int);
 template <typename T>
-void PetscValidCharPointer(const T*,int);
-template <typename T>
-void PetscValidCharPointer(const T[],int);
-template <typename T>
 void PetscValidIntPointer(T*,int);
 template <typename T>
 void PetscValidBoolPointer(T*,int);
@@ -30,6 +26,13 @@ template <typename T>
 void PetscValidScalarPointer(T*,int);
 template <typename T>
 void PetscValidRealPointer(T*,int);
+
+template <typename Ta,typename Tb>
+void PetscCheckSameType(Ta,int,Tb,int);
 template <typename T>
-void PetscValidFunction(T*,int);
+void PetscValidType(T,int);
+template <typename Ta,typename Tb>
+void PetscCheckSameComm(Ta,int,Tb,int);
+template <typename Ta,typename Tb>
+void PetscCheckSameTypeAndComm(Ta,int,Tb,int);
 #endif
