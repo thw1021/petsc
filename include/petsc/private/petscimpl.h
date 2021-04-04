@@ -351,7 +351,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     PetscCheckSameType(a,arga,b,argb);                  \
     PetscCheckSameComm(a,arga,b,argb);                  \
   } while (0)
-#endif
+
 #define PetscValidLogicalCollectiveScalar(a,b,arg)                      \
   do {                                                                  \
     PetscErrorCode _7_ierr;                                             \
@@ -408,7 +408,7 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
     _7_ierr = MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRQ(_7_ierr); \
     if (-b2[0] != b2[1]) SETERRQ1(PetscObjectComm((PetscObject)(a)),PETSC_ERR_ARG_WRONG,"Enum value must be same on all processes, argument # %d",arg); \
   } while (0)
-
+#endif
 #define PetscCheckSorted(n,idx)                                                                   \
   do {                                                                                            \
     PetscBool _1_flg;                                                                             \
