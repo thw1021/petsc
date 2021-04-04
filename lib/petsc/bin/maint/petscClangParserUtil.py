@@ -71,8 +71,8 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
 
 def viewSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,ret=False):
   filename,lineno = cursor.location.file.name,cursor.location.line
-  numBeforeContext = max(numBeforeContext,numContext)
-  numAfterContext = max(numAfterContext,numContext)
+  numBeforeContext = numBeforeContext if numBeforeContext else numContext
+  numAfterContext = numAfterContext if numAfterContext else numContext
   maxWidth = len(str(lineno+numAfterContext))
   lineList = []
   with open(filename,"r") as fd:
@@ -81,14 +81,14 @@ def viewSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=
     while line:
       if lineFile >= lineno-numBeforeContext and lineFile <= lineno+numAfterContext:
         prefix = "{indicator} {lineFile: <{width}}: ".format(indicator=" " if lineFile != lineno else ">",lineFile=lineFile,width=maxWidth)
-        lineList.append(prefix+line)
+        lineList.append((prefix,line))
       lineFile += 1
       line = fd.readline()
   # Find number of spaces to remove from beginning of line based on lowest.
   # This keeps indentation between lines, but doesn't start the string halfway
   # across the screeen
-  minSpaces = min([len(s)-len(s.lstrip(' ')) for s in lineList])
-  lineList[:] = [s[minSpaces:].rstrip() for s in lineList]
+  minSpaces = min([len(s)-len(s.lstrip(' ')) for _,s in lineList])
+  lineList[:] = [p+s[minSpaces:].rstrip() for p,s in lineList]
   srcStr = "\n".join(lineList)
   if ret: return srcStr
   print(srcStr)
