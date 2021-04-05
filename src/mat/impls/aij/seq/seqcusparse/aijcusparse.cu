@@ -4431,7 +4431,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   {
-    int bw = (2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2, bm1=bw-1,nl=n/Nf;
+    int bw = (int)(2.*(double)n-1. - (double)(PetscSqrtReal(1.+4.*((double)n*(double)n-(double)b->nz))+PETSC_MACHINE_EPSILON))/2, bm1=bw-1,nl=n/Nf;
 #if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
     Ni = 1/nconcurrent;
     Ni = 1;
@@ -4554,6 +4554,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
   nzBcsr = n + (2*n-1)*bwU - bwU*bwU;
   b->maxnz = b->nz = nzBcsr;
   cusparseTriFactors->nnz = b->nz; // only meta data needed: n & nz
+  ierr = PetscInfo2(A,"Matrix Bandwidth = %d, nnz = %d\n",bwL,b->nz);CHKERRQ(ierr);
   if (!cusparseTriFactors->workVector) { cusparseTriFactors->workVector = new THRUSTARRAY(n); }
   cerr = cudaMalloc(&ba_t,(b->nz+1)*sizeof(PetscScalar));CHKERRCUDA(cerr); // incude a place for flops
   cerr = cudaMalloc(&bi_t,(n+1)*sizeof(int));CHKERRCUDA(cerr);
@@ -4772,7 +4773,8 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSEBAND(Mat A,Vec bb,Vec xx)
   thrust::device_ptr<PetscScalar>       xGPU;
   Mat_SeqAIJCUSPARSETriFactors          *cusparseTriFactors = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
   THRUSTARRAY                           *tempGPU = (THRUSTARRAY*)cusparseTriFactors->workVector;
-  PetscInt                              n=A->rmap->n, nz=cusparseTriFactors->nnz, bw=(2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-nz))+PETSC_MACHINE_EPSILON))/2, Nf;
+  PetscInt                              n=A->rmap->n, nz=cusparseTriFactors->nnz, Nf;
+  PetscInt                              bw = (int)(2.*(double)n-1.-(double)(PetscSqrtReal(1.+4.*((double)n*(double)n-(double)nz))+PETSC_MACHINE_EPSILON))/2;
   PetscErrorCode                        ierr;
   cudaError_t                           cerr;
   PetscContainer                        container;
