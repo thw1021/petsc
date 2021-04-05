@@ -297,7 +297,6 @@
         PetscScalar PETSC_NULL_SCALAR(1)
         PetscReal PETSC_NULL_REAL(1)
         PetscBool PETSC_NULL_BOOL
-! Used as the optional comms parameter in PCMGSETLEVELS()
         MPI_Comm  PETSC_NULL_MPI_COMM(1)
 !
 !
