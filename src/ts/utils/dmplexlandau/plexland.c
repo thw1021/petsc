@@ -78,7 +78,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     if (!maps) SETERRQ(ctx->comm,PETSC_ERR_ARG_WRONG,"empty GPU matrix container");
   }
   ierr = DMConvert(ctx->dmv, DMPLEX, &plex);CHKERRQ(ierr);
-  ierr = DMCreateLocalVector(plex, &locX);CHKERRQ(ierr);
+  ierr = DMGetLocalVector(plex, &locX);CHKERRQ(ierr);
   ierr = VecZeroEntries(locX);CHKERRQ(ierr); /* zero BCs so don't set */
   ierr = DMGlobalToLocalBegin(plex, a_X, INSERT_VALUES, locX);CHKERRQ(ierr);
   ierr = DMGlobalToLocalEnd  (plex, a_X, INSERT_VALUES, locX);CHKERRQ(ierr);
@@ -108,13 +108,12 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   }
   elemMatSize = totDim*totDim; // used for CPU and print info
   ierr = PetscLogEventEnd(ctx->events[10],0,0,0,0);CHKERRQ(ierr);
-  if (ctx->normJ == -1) {    /* create static point data, Jacobian called first */
+  if (ctx->state == 0) {    /* create static point data, Jacobian called first */
     PetscReal *invJ,*ww,*xx,*yy,*zz=NULL,*mass_w,*invJ_a;
     const PetscInt  nip = Nq*numCells;
 
     ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscInfo(plex, "Initialize static data\n");CHKERRQ(ierr);
-    // ierr = VecNorm(locX,NORM_2,&ctx->normJ);CHKERRQ(ierr);
     /* collect f data, first time is for Jacobian, but make mass now */
     if (ctx->verbose > 1 || ctx->verbose > 0) {
       PetscInt N,Nloc;
@@ -179,18 +178,17 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       ctx->SData_d->invJ = (void*)invJ_a;
       ctx->SData_d->mass_w = (void*)mass_w;
     }
+    ierr = DMPlexCreateClosureIndex(plex, section);CHKERRQ(ierr);
     ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
   }
   if (shift==0) { /* create dynamic point data */
-    PetscReal norm;
+    PetscObjectState state;
     ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
-
-    ierr = VecNorm(locX,NORM_2,&norm);CHKERRQ(ierr);
-    ierr = PetscInfo(plex, "Get dynamic data\n");CHKERRQ(ierr);
-    if (norm==ctx->normJ) {
+    ierr = PetscObjectStateGet((PetscObject)a_X,&state);CHKERRQ(ierr);
+    if (state==ctx->state) {
       /* can happend with ark */;
       ierr = PetscInfo(plex, "no change, but make data anyway (can happend with ark)\n");CHKERRQ(ierr);
-    } else ctx->normJ = norm;
+    } else ctx->state = state;
     for (fieldA=0;fieldA<Nf;fieldA++) {
       Eq_m[fieldA] = ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
       if (dim==2) Eq_m[fieldA] *=  2 * PETSC_PI; /* add the 2pi term that is not in Landau */
@@ -592,7 +590,6 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
   if (IPf) {
     ierr = PetscFree(IPf);CHKERRQ(ierr);
-
   }
   PetscFunctionReturn(0);
 }
@@ -1196,7 +1193,6 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscFunctionBegin;
   ierr = DMCreate(ctx->comm,&dummy);CHKERRQ(ierr);
   /* get options - initialize context */
-  ctx->normJ = -1;
   ctx->verbose = 1;
   ctx->interpolate = PETSC_TRUE;
   ctx->gpu_assembly = PETSC_TRUE;
@@ -1233,6 +1229,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->numConcurrency = 1; /* for device */
   ctx->SData_d = NULL;     /* for device */
   ctx->times[0] = 0;
+  ctx->state = 0; // doit first time
   ierr = PetscOptionsBegin(ctx->comm, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
   {
     char opstring[256];
@@ -1379,8 +1376,6 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ierr = PetscLogEventRegister(" Copy to CPU", DM_CLASSID, &ctx->events[5]);CHKERRQ(ierr); /* 5 */
     ierr = PetscLogEventRegister(" Jac-assemble", DM_CLASSID, &ctx->events[6]);CHKERRQ(ierr); /* 6 */
     ierr = PetscLogEventRegister(" Jac asmbl setup", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
-
-
 
     if (rank) { /* turn off output stuff for duplicate runs - do we need to add the prefix to all this? */
       ierr = PetscOptionsClearValue(NULL,"-snes_converged_reason");CHKERRQ(ierr);

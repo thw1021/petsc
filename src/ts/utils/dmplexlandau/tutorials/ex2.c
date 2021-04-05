@@ -706,7 +706,6 @@ int main(int argc, char **argv)
     rectx->plotting = PETSC_FALSE;
     ierr = PetscLogStagePop();CHKERRQ(ierr);
     ierr = VecDestroy(&vec);CHKERRQ(ierr);
-    ctx->normJ = 0;
     ctx->aux_bool = PETSC_FALSE; // flag for not a clean Jacobian
   }
   ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr); // inital condition (monitor plots after step)
