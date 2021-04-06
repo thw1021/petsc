@@ -149,12 +149,13 @@ int main(int argc,char **argv)
 
   /* finished using B */
   ierr = MatDenseCUDAGetArray(B,&aa);CHKERRQ(ierr);
+  ierr = VecCUDAGetArray(v,&vv);CHKERRQ(ierr);
   if (vv != aa-l*nloc) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong array");
+  ierr = VecCUDARestoreArray(v,&vv);CHKERRQ(ierr);
   ierr = MatDenseCUDARestoreArray(B,&aa);CHKERRQ(ierr);
   if (reset) {
     ierr = MatDenseCUDAResetArray(B);CHKERRQ(ierr);
   }
-  ierr = VecCUDARestoreArray(v,&vv);CHKERRQ(ierr);
 
   if (test == 1) {
     ierr = MatDenseCUDAGetArray(B,&aa);CHKERRQ(ierr);
