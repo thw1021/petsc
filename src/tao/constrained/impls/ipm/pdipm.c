@@ -693,7 +693,6 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
       if (npos < pdipm->Nx+pdipm->Nci) {
         pdipm->deltaw = PetscMax(pdipm->lastdeltaw/3, 1.e-4*PETSC_MACHINE_EPSILON);
         ierr = PetscInfo5(tao,"Test reduced deltaw=%g; previous MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
-        printf("  PDIPMKKTAddShifts: Test reduced deltaw=%g; previous MatInertia: nneg %d, nzero %d, npos %d\n",pdipm->deltaw,nneg,nzero,npos);
         ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
         ierr = PCSetUp(pc);CHKERRQ(ierr);
         ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
@@ -702,7 +701,6 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
           pdipm->deltaw = pdipm->lastdeltaw; /* in case reduction update does not help, this prevents that step from impacting increasing update */
           while (npos < pdipm->Nx+pdipm->Nci && pdipm->deltaw <= 1.e10) { /* increase deltaw */
             ierr = PetscInfo5(tao,"  deltaw=%g fails, MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
-            printf("  deltaw=%g fails, MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);
             pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,20));
             ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
             ierr = PCSetUp(pc);CHKERRQ(ierr);
