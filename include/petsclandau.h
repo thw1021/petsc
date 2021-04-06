@@ -133,6 +133,7 @@ typedef struct {
   LandauGeomData   *SData_d; /* static geometric data on device, but this pointer is a host pointer */
   double           times[1];
   PetscObjectState state;
+  PetscBool        use_matrix_mass;
 } LandauCtx;
 
 typedef int LandauIdx;

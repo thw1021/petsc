@@ -1230,6 +1230,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->SData_d = NULL;     /* for device */
   ctx->times[0] = 0;
   ctx->state = 0; // doit first time
+  ctx->use_matrix_mass = PETSC_FALSE; /* fast but slightly fragile */
   ierr = PetscOptionsBegin(ctx->comm, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
   {
     char opstring[256];
@@ -1282,6 +1283,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ierr = PetscOptionsReal("-dm_landau_ln_lambda","Cross section parameter","plexland.c",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_landau_num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "plexland.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_landau_num_thread_teams", "The number of other concurrent runs to make room for", "plexland.c", ctx->numConcurrency, &ctx->numConcurrency, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-dm_landau_use_mataxpy_mass", "Use fast but slightly fragile MATAXPY to add mass term", "plexland.c", ctx->use_matrix_mass, &ctx->use_matrix_mass, NULL);CHKERRQ(ierr);
 
   /* get num species with tempurature*/
   {
@@ -2082,7 +2084,11 @@ PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy,
   ierr = PetscInfo2(ts, "Adding just mass to Jacobian t=%g, shift=%g\n",(double)time_dummy,(double)shift);CHKERRQ(ierr);
   if (shift==0.0) SETERRQ(ctx->comm, PETSC_ERR_PLIB, "zero shift");
   if (!ctx->aux_bool) SETERRQ(ctx->comm, PETSC_ERR_PLIB, "wrong state");
-  ierr = LandauFormJacobian_Internal(X,ctx->J,dim,shift,(void*)ctx);CHKERRQ(ierr);
+  if (!ctx->use_matrix_mass) {
+    ierr = LandauFormJacobian_Internal(X,ctx->J,dim,shift,(void*)ctx);CHKERRQ(ierr);
+  } else { /* add mass */
+    ierr = MatAXPY(Pmat,shift,ctx->M,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+  }
   ctx->aux_bool = PETSC_FALSE;
   ierr = MatViewFromOptions(Pmat,NULL,"-landau_mat_view");CHKERRQ(ierr);
   /* set number species in Jacobian */
