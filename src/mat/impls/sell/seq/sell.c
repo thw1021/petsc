@@ -898,6 +898,7 @@ PetscErrorCode MatDestroy_SeqSELL(Mat A)
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqSELLGetFillRatio_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqSELLGetMaxSliceWidth_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqSELLGetAvgSliceWidth_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqSELLGetVarSliceSize_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSeqSELLSetSliceHeight_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2038,6 +2039,23 @@ PetscErrorCode MatSeqSELLGetAvgSliceWidth_SeqSELL(Mat mat,PetscReal *slicewidth)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode MatSeqSELLGetVarSliceSize_SeqSELL(Mat mat,PetscReal *variance)
+{
+  Mat_SeqSELL *a = (Mat_SeqSELL*)mat->data;
+  PetscReal   mean;
+  PetscInt    i,totalslices = a->totalslices,*sliidx = a->sliidx;
+
+  PetscFunctionBegin;
+  *variance = 0;
+  if (totalslices) {
+    mean = (PetscReal)sliidx[totalslices]/totalslices;
+    for (i=1; i<=totalslices; i++) {
+      *variance += ((PetscReal)(sliidx[i]-sliidx[i-1])-mean)*((PetscReal)(sliidx[i]-sliidx[i-1])-mean)/totalslices;
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode MatSeqSELLSetSliceHeight_SeqSELL(Mat A,PetscInt sliceheight)
 {
   Mat_SeqSELL *a=(Mat_SeqSELL*)A->data;
@@ -2159,6 +2177,26 @@ PetscErrorCode MatSeqSELLSetSliceHeight(Mat A,PetscInt sliceheight)
   PetscFunctionReturn(0);
 }
 
+/*#C
+ MatSeqSELLGetVarSliceSize - returns the variance of the slice size.
+
+ Not Collective
+
+ Input Parameter
+ .  mat - a MATSEQSELL matrix
+ .  variance - variance of the slice size
+
+ Level: intermediate
+ @*/
+PetscErrorCode MatSeqSELLGetVarSliceSize(Mat A,PetscReal *variance)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscUseMethod(A,"MatSeqSELLGetVarSliceSize_C",(Mat,PetscReal*),(A,variance));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode MatConvert_SeqSELL_SeqSELLCUDA(Mat);
 #endif
@@ -2212,6 +2250,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSELL(Mat B)
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLGetFillRatio_C",MatSeqSELLGetFillRatio_SeqSELL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLGetMaxSliceWidth_C",MatSeqSELLGetMaxSliceWidth_SeqSELL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLGetAvgSliceWidth_C",MatSeqSELLGetAvgSliceWidth_SeqSELL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLGetVarSliceSize_C",MatSeqSELLGetVarSliceSize_SeqSELL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSeqSELLSetSliceHeight_C",MatSeqSELLSetSliceHeight_SeqSELL);CHKERRQ(ierr);
 
   ierr = PetscObjectOptionsBegin((PetscObject)B);
