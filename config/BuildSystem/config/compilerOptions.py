@@ -268,6 +268,8 @@ class CompilerOptions(config.base.Configure):
     return flags
 
   def getCompilerFlags(self, language, compiler, bopt):
+    if bopt == 'gcov' and (language == 'CUDA' or language == 'HIP' or language == 'SYCL'):
+      return ''
     if bopt == 'gcov' and not config.setCompilers.Configure.isGNU(compiler, self.log) and not config.setCompilers.Configure.isClang(compiler, self.log):
       raise RuntimeError('Having --with-gcov but the compiler is neither GCC nor Clang, we do not know how to do gcov')
     flags = ''
