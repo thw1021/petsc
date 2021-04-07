@@ -269,7 +269,7 @@ PetscErrorCode PetscWeakFormCopy(PetscWeakForm wf, PetscWeakForm wfNew)
   ierr = PetscHMapFormDuplicate(wf->bdf0, &wfNew->bdf0);CHKERRQ(ierr);
   ierr = PetscHMapFormDestroy(&wfNew->bdf1);CHKERRQ(ierr);
   ierr = PetscHMapFormDuplicate(wf->bdf1, &wfNew->bdf1);CHKERRQ(ierr);
-  ierr = PetscHMapFormDestroy(&wfNew->g0);CHKERRQ(ierr);
+  ierr = PetscHMapFormDestroy(&wfNew->bdg0);CHKERRQ(ierr);
   ierr = PetscHMapFormDuplicate(wf->bdg0, &wfNew->bdg0);CHKERRQ(ierr);
   ierr = PetscHMapFormDestroy(&wfNew->bdg1);CHKERRQ(ierr);
   ierr = PetscHMapFormDuplicate(wf->bdg1, &wfNew->bdg1);CHKERRQ(ierr);
