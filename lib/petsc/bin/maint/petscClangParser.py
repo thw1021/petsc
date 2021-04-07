@@ -21,7 +21,6 @@ P_CXTranslationUnit_Incomplete                           = 0x02
 P_CXTranslationUnit_PrecompiledPreamble                  = 0x04
 P_CXTranslationUnit_CacheCompletionResults               = 0x08
 P_CXTranslationUnit_ForSerialization                     = 0x10
-P_CXTranslationUnit_CXXChainedPCH                        = 0x20
 P_CXTranslationUnit_SkipFunctionBodies                   = 0x40
 P_CXTranslationUnit_IncludeBriefCommentsInCodeCompletion = 0x80
 P_CXTranslationUnit_CreatePreambleOnFirstParse           = 0x100
@@ -215,11 +214,16 @@ class ArgCursor(object):
         # and PetscKernel_XXX absolutely __brick__ the AST. The resultant cursors have no
         # children, no name, no tokens, and a completely incorrect SourceLocation.
         # They are for all intents and purposes uncheckable :)
-        if "PETSC_HASH_MAP" in srcstr:
-          raise ArgCursorWarning("Encountered unparsable PETSC_HASH_MAP for cursor {cursor}".format(cursor=errorViewFromCursor(cursor)))
+        if "PETSC_HASH" in srcstr:
+          if "_MAP" in srcstr:
+            raise ArgCursorWarning("Encountered unparsable PETSC_HASH_MAP for cursor {cursor}".format(cursor=errorViewFromCursor(cursor)))
+          elif "_SET" in srcstr:
+            raise ArgCursorWarning("Encountered unparsable PETSC_HASH_SET for cursor {cursor}".format(cursor=errorViewFromCursor(cursor)))
         elif "PetscKernel_" in srcstr:
           raise ArgCursorWarning("Encountered unparsable PetscKernel_XXX for cursor {cursor}".format(cursor=errorViewFromCursor(cursor)))
         else:
+          import pdb
+          pdb.set_trace()
           raise RuntimeError("Unexpected number of tokens for cursor {obj}".format(obj=errorViewFromCursor(cursor)))
       name = tokenList[0].spelling
       if not name:
@@ -315,7 +319,7 @@ class BadSource(object):
 
   def addWarningFromCursor(self,locCursor,warnMsg):
     warnPrefix = str(locCursor)
-    self.warnings.append("".join(["\nWARNING {warnno}: ".format(warnno=len(self.warnings)),self.warnPrefix,"\n",warnMsg]))
+    self.warnings.append("".join(["\nWARNING {warnno}: ".format(warnno=len(self.warnings)),warnPrefix,"\n",warnMsg]))
     return
 
   def getWarnings(self):
@@ -840,18 +844,18 @@ def findFunctionCallExpr(tu,macroNames):
   """
   cursor,filename = tu.cursor,tu.cursor.spelling
   for possibleParent in cursor.get_children():
+    # getting filename is for some reason stupidly expensive, so we do this check first
+    if possibleParent.kind not in funcCallCursors: continue
     try:
       if possibleParent.location.file.name != filename: continue
     except AttributeError:
       # possibleParent.location.file is None
       continue
-    if possibleParent.kind not in funcCallCursors: continue
-    # If we've gotten this far we have found a function definition
+    # if we've gotten this far we have found a function definition
     for funcChild in possibleParent.walk_preorder():
       if funcChild.kind == clx.CursorKind.CALL_EXPR:
         if funcChild.spelling in macroNames:
           yield (funcChild,possibleParent)
-
 
 """Main functions for root and queue processes"""
 def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbose,printWarnings,exceptions,queue,lock):
@@ -882,9 +886,9 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
     try:
       if verbose:
         with lock:
-          print(printPrefix,"Processing file",filename)
+          print(printPrefix,"Processing file     ",filename)
       tu = index.parse(filename,args=args,options=options)
-      if (verbose or printWarnings) and tu.diagnostics:
+      if tu.diagnostics and (verbose or printWarnings):
         diags = {" ".join([printPrefix,filename+":",d.spelling]) for d in tu.diagnostics}
         diags = "\n".join(diags)
         with lock:
@@ -914,17 +918,18 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     else:
       raise clx.LibclangError("Must supply either clangDir or clangLib")
 
+  rootPrintPrefix = "[ROOT]"
   pchClangOptions = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
                      P_CXTranslationUnit_Incomplete |
                      P_CXTranslationUnit_ForSerialization)
-  baseClangOptions = (P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble)
-  rootPrintPrefix = "[ROOT]"
-  extraIncludes   = getPetscExtraIncludes(petscDir,petscArch)
-  sysincludes     = getClangSysIncludes()
-  petscastinclude = ["-include",os.path.join(petscDir,"include","petscastfix.hpp")]
+  baseClangOptions = (P_CXTranslationUnit_PrecompiledPreamble |
+                      P_CXTranslationUnit_SkipFunctionBodies |
+                      P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble)
   forceCxxFlag    = ["-x","c++"]
-  nullabilityFlag = ["-Wno-nullability-completeness"]
-  compilerFlags   = sysincludes+forceCxxFlag+petscastinclude+extraIncludes+nullabilityFlag
+  miscFlags       = ["-Wno-nullability-completeness","-O0"]
+  sysincludes     = getClangSysIncludes()
+  extraIncludes   = getPetscExtraIncludes(petscDir,petscArch)
+  compilerFlags   = sysincludes+forceCxxFlag+extraIncludes+miscFlags
   if verbose: print("\n".join([rootPrintPrefix+" Compile flags:",*compilerFlags]))
 
   # create a precompiled header from petsc.h, and all of the major "impl" headers,
@@ -932,14 +937,15 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   # Including petsc.h first should define almost everything we need so no side effects
   # from including headers in the wrong order below
   mansecs         = ["sys","vec","mat","dm","ksp","snes","ts","tao"]
-  mansecimpls     = [m+"impl.h" for m in mansecs]
+  mansecimpls     = [m+"impl.h" for m in mansecs]+["isimpl.h","dtimpl.h","dmpleximpl.h","petscfeimpl.h","dmlabelimpl.h","sfimpl.h","viewerimpl.h","characteristicimpl.h"]
   megaHeaderLines = ["#include <petscastfix.hpp>","#include <petsc.h>"]
   for headerFile in os.listdir(os.path.join(petscDir,"include","petsc","private")):
-    if headerFile in mansecimpls:
+    if headerFile in mansecimpls or headerFile.startswith(("hash","pc")):
       megaHeaderLines.append("#include <petsc/private/{headerFile}>".format(headerFile=headerFile))
+
   megaHeader = "\n".join(megaHeaderLines)+"\n" # extra newline for last line
+  petscPrecompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.h.pch")
   if verbose: print("\n".join([rootPrintPrefix+" Mega header:",megaHeader]))
-  petscPrecompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.pch")
   if verbose: print(rootPrintPrefix,"Creating precompiled header",petscPrecompiledHeader)
   index = clx.Index.create()
   tu = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
@@ -947,16 +953,15 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     print("\n".join(map(str,tu.diagnostics)))
     raise clx.LibclangError("Warnings generated when creating the precompiled header. This usually means that the libclang set is faulty!")
   tu.save(petscPrecompiledHeader)
+  compilerFlags.extend(["-include-pch",petscPrecompiledHeader])
 
-  pchIncludes = ["-include-pch",petscPrecompiledHeader]
-  compilerFlags = forceCxxFlag+sysincludes+pchIncludes+extraIncludes+nullabilityFlag
   if multiproc:
     import multiprocessing as mp
 
     # get the library file to pass to subprocesses
     clangLib = clx.conf.get_filename()
-    # -2 since num workers+root = numCpu-1
-    maxWorkers = mp.cpu_count()-2
+    # -1 since num workers+root = numCpu
+    maxWorkers = mp.cpu_count()-1
     # spin up a queue and multiproc
     fileProcessorQueue = mp.JoinableQueue(3*maxWorkers)
     exceptionSignalQueue = mp.Queue()
@@ -979,12 +984,12 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   oldloc = os.getcwd()
   os.chdir(srcDir)
   # exclude these directories
-  excludeDirs = set(["f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels"])
+  excludeDirs = set(["f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","tests","tutorials"])
   excludeDirSuffixes = (".dSYM",)
   # allow these file suffixes
-  allowFileSuffixes = (".c",)
+  allowFileSuffixes = (".c",".cpp",".cxx",".cu",)
   for mansec in mansecs:
-  #for mansec in ["dm"]:
+  #for mansec in ["vec"]:
     for root,dirs,files in os.walk(os.path.join(srcDir,mansec)):
       if verbose: print(rootPrintPrefix,"Processing directory",root)
       dirs[:] = [d for d in dirs if d not in excludeDirs]
@@ -995,9 +1000,9 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
           fileProcessorQueue.put(filename)
       else:
         for filename in files:
-          if verbose: print(rootPrintPrefix,"Processing file",filename)
+          if verbose: print(rootPrintPrefix,"Processing file     ",filename)
           tu = index.parse(filename,args=compilerFlags,options=baseClangOptions)
-          if (verbose or printWarnings) and tu.diagnostics:
+          if tu.diagnostics and (verbose or printWarnings):
             diags = {" ".join([rootPrintPrefix,str(d)]) for d in tu.diagnostics}
             diags = "\n".join(diags)
             print(diags)
