@@ -205,6 +205,11 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   ierr = DMRestoreLocalVector(plex, &locX);CHKERRQ(ierr);
   /* do it */
   if (ctx->deviceType == LANDAU_CUDA || ctx->deviceType == LANDAU_KOKKOS) {
+    /* static PetscLogStage stage = 0; */
+    /* if (!stage) { */
+    /*   ierr = PetscLogStageRegister("Landau", &stage);CHKERRQ(ierr); */
+    /* } */
+    /* ierr = PetscLogStagePush(stage);CHKERRQ(ierr); */
     if (ctx->deviceType == LANDAU_CUDA) {
 #if defined(PETSC_HAVE_CUDA)
       ierr = LandauCUDAJacobian(plex,Nq,Eq_m,IPf,ctx->SData_d,ctx->subThreadBlockSize,shift,ctx->events,JacP);CHKERRQ(ierr);
@@ -218,6 +223,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
     }
+    //ierr = PetscLogStagePop();CHKERRQ(ierr);
   } else { /* CPU version */
     PetscInt        ei, qi;
     PetscScalar     *elemMat;
@@ -2000,6 +2006,7 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
+  //ierr = MPI_Barrier(MPI_COMM_WORLD);CHKERRMPI(ierr);
   ierr = PetscLogEventBegin(ctx->events[11],0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(ctx->events[0],0,0,0,0);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_THREADSAFETY)
