@@ -134,16 +134,29 @@
       <h4>TAO:</h4>
       <h4>DM/DA:</h4>
       <ul>
-        <li>Changed management of auxiliary data in DM from objet composition to DMGet/SetAuxiliaryVec(), DMCopyAuxiliaryVec()</li>
+        <li>Change management of auxiliary data in DM from objet composition to DMGet/SetAuxiliaryVec(), DMCopyAuxiliaryVec()</li>
+        <li>Remove DMGetNumBoundary() and DMGetBoundary() in favor of DS counterparts</li>
+        <li>Remove DMCopyBoundary()</li>
+        <li>Change interface for DMAddBoundary(), PetscDSAddBoundary(), PetscDSGetBoundary(), PetscDSUpdateBoundary()</li>
       </ul>
       <h4>DMSwarm:</h4>
       <ul>
         <li> Add DMSwarmGetCellSwarm() and DMSwarmRestoreCellSwarm()</li>
       </ul>
       <h4>DMPlex:</h4>
+      <ul>
+        <li>Change DMPlexComputeBdResidualSingle() and DMPlexComputeBdJacobianSingle() to take a form key</li>
+      </ul>
       <h4>FE/FV:</h4>
+      <ul>
+        <li>Change PetscFEIntegrateBdResidual() and PetscFEIntegrateBdJacobian() to take both PetscWeakForm and form key</li>
+      </ul>
       <h4>DMNetwork:</h4>
       <h4>DT:</h4>
+      <ul>
+        <li>Add PetscWeakFormCopy() and PetscWeakFormRewriteKeys()</li>
+        <li>Add PetscDSDestroyBoundary() and PetscDSCopyExactSolutions()</li>
+      </ul>
       <h4>Fortran:</h4>
     </div>
 
