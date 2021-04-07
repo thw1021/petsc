@@ -711,6 +711,7 @@ int main(int argc, char **argv)
   ierr = VecViewFromOptions(X,NULL,"-vec_view");CHKERRQ(ierr); // inital condition (monitor plots after step)
   /* go */
   ierr = PetscLogStageRegister("Solve", &stage);CHKERRQ(ierr);
+  ierr = MPI_Barrier(MPI_COMM_WORLD);CHKERRMPI(ierr);
   ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
