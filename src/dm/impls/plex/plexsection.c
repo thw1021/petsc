@@ -469,7 +469,7 @@ PetscErrorCode DMCreateLocalSection_Plex(DM dm)
       DMBoundaryConditionType type;
       DMLabel                 label;
 
-      ierr = PetscDSGetBoundary(dsBC, bd, NULL, &type, NULL, &label, &field, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
+      ierr = PetscDSGetBoundary(dsBC, bd, NULL, &type, NULL, &label, NULL, NULL, &field, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
       if (label && isFE[field] && (type & DM_BC_ESSENTIAL)) ++numBC;
     }
   }
