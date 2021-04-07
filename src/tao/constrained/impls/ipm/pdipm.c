@@ -17,7 +17,7 @@
 
 .seealso: TaoPDIPMUpdateConstraints(), TaoPDIPMSetUpBounds()
 */
-PetscErrorCode TaoPDIPMEvaluateFunctionsAndJacobians(Tao tao,Vec x)
+static PetscErrorCode TaoPDIPMEvaluateFunctionsAndJacobians(Tao tao,Vec x)
 {
   PetscErrorCode ierr;
   TAO_PDIPM      *pdipm=(TAO_PDIPM*)tao->data;
@@ -53,7 +53,7 @@ PetscErrorCode TaoPDIPMEvaluateFunctionsAndJacobians(Tao tao,Vec x)
 
 .seealso: TaoPDIPMEvaluateFunctionsAndJacobians()
 */
-PetscErrorCode TaoPDIPMUpdateConstraints(Tao tao,Vec x)
+static PetscErrorCode TaoPDIPMUpdateConstraints(Tao tao,Vec x)
 {
   PetscErrorCode    ierr;
   TAO_PDIPM         *pdipm=(TAO_PDIPM*)tao->data;
@@ -152,7 +152,7 @@ PetscErrorCode TaoPDIPMUpdateConstraints(Tao tao,Vec x)
 
 .seealso: TaoPDIPMUpdateConstraints
 */
-PetscErrorCode TaoPDIPMSetUpBounds(Tao tao)
+static PetscErrorCode TaoPDIPMSetUpBounds(Tao tao)
 {
   PetscErrorCode    ierr;
   TAO_PDIPM         *pdipm=(TAO_PDIPM*)tao->data;
@@ -235,7 +235,7 @@ PetscErrorCode TaoPDIPMSetUpBounds(Tao tao)
 
    Level: beginner
 */
-PetscErrorCode TaoPDIPMInitializeSolution(Tao tao)
+static PetscErrorCode TaoPDIPMInitializeSolution(Tao tao)
 {
   PetscErrorCode    ierr;
   TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
@@ -301,7 +301,7 @@ PetscErrorCode TaoPDIPMInitializeSolution(Tao tao)
    J - Hessian matrix
    Jpre - Preconditioner
 */
-PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx)
+static PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx)
 {
   PetscErrorCode    ierr;
   Tao               tao=(Tao)ctx;
@@ -474,7 +474,7 @@ PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx
    Output Parameter:
    F - Updated Lagrangian vector
 */
-PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
+static PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 {
   PetscErrorCode    ierr;
   Tao               tao=(Tao)ctx;
