@@ -755,7 +755,7 @@ PetscErrorCode PCPreSolve_PDIPM(PC pc,KSP ksp,Vec rhs,Vec x)
 
    Notes:
    This routine employs a simple backtracking line-search to keep
-   the slack variables (z) and inequality constraints lagrange multipliers
+   the slack variables (z) and inequality constraints Lagrange multipliers
    (lambdai) positive, i.e., z,lambdai >=0. It does this by calculating scalars
    alpha_p and alpha_d to keep z,lambdai non-negative. The decision (x), and the
    slack variables are updated as X = X + alpha_d*dx. The constraint multipliers
