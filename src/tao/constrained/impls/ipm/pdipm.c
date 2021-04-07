@@ -692,7 +692,7 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
 
       if (npos < pdipm->Nx+pdipm->Nci) {
         pdipm->deltaw = PetscMax(pdipm->lastdeltaw/3, 1.e-4*PETSC_MACHINE_EPSILON);
-        ierr = PetscInfo5(tao,"Test reduced deltaw=%g; previous MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
+        ierr = PetscInfo5(tao,"Test reduced deltaw=%g; previous MatInertia: nneg %D, nzero %D, npos %D(<%D)\n",(double)pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
         ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
         ierr = PCSetUp(pc);CHKERRQ(ierr);
         ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
@@ -700,7 +700,7 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
         if (npos < pdipm->Nx+pdipm->Nci) {
           pdipm->deltaw = pdipm->lastdeltaw; /* in case reduction update does not help, this prevents that step from impacting increasing update */
           while (npos < pdipm->Nx+pdipm->Nci && pdipm->deltaw <= 1.e10) { /* increase deltaw */
-            ierr = PetscInfo5(tao,"  deltaw=%g fails, MatInertia: nneg %d, nzero %d, npos %d(<%d)\n",pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
+            ierr = PetscInfo5(tao,"  deltaw=%g fails, MatInertia: nneg %D, nzero %D, npos %D(<%D)\n",(double)pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci);CHKERRQ(ierr);
             pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,20));
             ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
             ierr = PCSetUp(pc);CHKERRQ(ierr);
@@ -710,7 +710,7 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
           if (pdipm->deltaw >= 1.e10) {
             SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_CONV_FAILED,"Reached maximum delta w will not converge, try different inital x0");
           }
-          ierr = PetscInfo1(tao,"Updated deltaw %g\n",pdipm->deltaw);CHKERRQ(ierr);
+          ierr = PetscInfo1(tao,"Updated deltaw %g\n",(double)pdipm->deltaw);CHKERRQ(ierr);
           pdipm->lastdeltaw = pdipm->deltaw;
           pdipm->deltaw     = 0.0;
         }
@@ -718,17 +718,16 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
 
       if (nzero) { /* Jacobian is singular */
         if (pdipm->deltac == 0.0) {
-          pdipm->deltac = 1.e8*PETSC_MACHINE_EPSILON;
+          pdipm->deltac = PETSC_SQRT_MACHINE_EPSILON;
         } else {
           pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
         }
-        ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",pdipm->deltac,nneg,nzero,npos);
+        ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",(double)pdipm->deltac,nneg,nzero,npos);CHKERRQ(ierr);
         ierr = TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao);CHKERRQ(ierr);
         ierr = PCSetUp(pc);CHKERRQ(ierr);
         ierr = MatGetInertia(Factor,&nneg,&nzero,&npos);CHKERRQ(ierr);
       }
-    } else
-      SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires an external package that supports MatGetInertia()");
+    } else SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires an external package that supports MatGetInertia()");
   }
   PetscFunctionReturn(0);
 }
@@ -750,12 +749,12 @@ PetscErrorCode PCPreSolve_PDIPM(PC pc,KSP ksp,Vec rhs,Vec x)
 }
 
 /*
-   PDIPMLineSearch - Custom line search used with PDIPM.
+   SNESLineSearch_PDIPM - Custom line search used with PDIPM.
 
    Collective on TAO
 
    Notes:
-   PDIPMLineSearch employs a simple backtracking line-search to keep
+   This routine employs a simple backtracking line-search to keep
    the slack variables (z) and inequality constraints lagrange multipliers
    (lambdai) positive, i.e., z,lambdai >=0. It does this by calculating scalars
    alpha_p and alpha_d to keep z,lambdai non-negative. The decision (x), and the
@@ -763,7 +762,7 @@ PetscErrorCode PCPreSolve_PDIPM(PC pc,KSP ksp,Vec rhs,Vec x)
    are updated as Lambdai = Lambdai + alpha_p*dLambdai. The barrier parameter mu
    is also updated as mu = mu + z'lambdai/Nci
 */
-PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
+static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
 {
   PetscErrorCode    ierr;
   Tao               tao=(Tao)ctx;
@@ -879,7 +878,7 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
   /* Set linesearch */
   ierr = SNESGetLineSearch(pdipm->snes,&linesearch);CHKERRQ(ierr);
   ierr = SNESLineSearchSetType(linesearch,SNESLINESEARCHSHELL);CHKERRQ(ierr);
-  ierr = SNESLineSearchShellSetUserFunc(linesearch,PDIPMLineSearch,tao);CHKERRQ(ierr);
+  ierr = SNESLineSearchShellSetUserFunc(linesearch,SNESLineSearch_PDIPM,tao);CHKERRQ(ierr);
   ierr = SNESLineSearchSetFromOptions(linesearch);CHKERRQ(ierr);
 
   tao->reason = TAO_CONTINUE_ITERATING;
@@ -931,7 +930,7 @@ PetscErrorCode TaoView_PDIPM(Tao tao,PetscViewer viewer)
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"Number of prime=%D, Number of dual=%D\n",pdipm->Nx+pdipm->Nci,pdipm->Nce + pdipm->Nci);CHKERRQ(ierr);
   if (pdipm->kkt_pd) {
-    ierr = PetscViewerASCIIPrintf(viewer,"KKT shifts deltaw=%g, deltac=%g\n",pdipm->deltaw,pdipm->deltac);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"KKT shifts deltaw=%g, deltac=%g\n",(double)pdipm->deltaw,(double)pdipm->deltac);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
