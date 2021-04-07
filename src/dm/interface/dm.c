@@ -5083,9 +5083,8 @@ PetscErrorCode DMSetBasicAdjacency(DM dm, PetscBool useCone, PetscBool useClosur
 }
 
 /* Complete labels that are being used for FEM BC */
-static PetscErrorCode DMCompleteBoundaryLabel_Internal(DM dm, PetscDS ds, PetscInt field, PetscInt bdNum, const char labelname[])
+static PetscErrorCode DMCompleteBoundaryLabel_Internal(DM dm, PetscDS ds, PetscInt field, PetscInt bdNum, DMLabel label)
 {
-  DMLabel        label;
   PetscObject    obj;
   PetscClassId   id;
   PetscInt       Nbd, bd;
@@ -5097,15 +5096,14 @@ static PetscErrorCode DMCompleteBoundaryLabel_Internal(DM dm, PetscDS ds, PetscI
   ierr = DMGetField(dm, field, NULL, &obj);CHKERRQ(ierr);
   ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
   if (id == PETSCFE_CLASSID) isFE = PETSC_TRUE;
-  ierr = DMGetLabel(dm, labelname, &label);CHKERRQ(ierr);
   if (isFE && label) {
     /* Only want to modify label once */
     ierr = PetscDSGetNumBoundary(ds, &Nbd);CHKERRQ(ierr);
     for (bd = 0; bd < PetscMin(Nbd, bdNum); ++bd) {
-      const char *lname;
+      DMLabel l;
 
-      ierr = PetscDSGetBoundary(ds, bd, NULL, NULL, &lname, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
-      ierr = PetscStrcmp(lname, labelname, &duplicate);CHKERRQ(ierr);
+      ierr = PetscDSGetBoundary(ds, bd, NULL, NULL, NULL, &l, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
+      duplicate = l == label ? PETSC_TRUE : PETSC_FALSE;
       if (duplicate) break;
     }
     if (!duplicate) {
@@ -5743,6 +5741,35 @@ PetscErrorCode DMComputeExactSolution(DM dm, PetscReal time, Vec u, Vec u_t)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode DMTransferDS_Internal(DM dm, DMLabel label, IS fields, PetscDS ds)
+{
+  PetscDS        dsNew;
+  DSBoundary     b;
+  PetscInt       cdim;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscDSCreate(PetscObjectComm((PetscObject) ds), &dsNew);CHKERRQ(ierr);
+  ierr = PetscDSGetCoordinateDimension(ds, &cdim);CHKERRQ(ierr);
+  ierr = PetscDSSetCoordinateDimension(dsNew, cdim);CHKERRQ(ierr);
+  ierr = PetscDSCopyConstants(ds, dsNew);CHKERRQ(ierr);
+  ierr = PetscDSSelectDiscretizations(ds, PETSC_DETERMINE, NULL, dsNew);CHKERRQ(ierr);
+  ierr = PetscDSCopyEquations(ds, dsNew);CHKERRQ(ierr);
+  /* Do not check if label exists here, since p4est calls this for the reference tree which does not have the labels */
+  ierr = PetscDSCopyBoundary(ds, PETSC_DETERMINE, NULL, dsNew);CHKERRQ(ierr);
+  for (b = dsNew->boundary; b; b = b->next) {
+    const char *name;
+
+    ierr = PetscObjectGetName((PetscObject) b->label, &name);CHKERRQ(ierr);
+    ierr = DMGetLabel(dm, name, &b->label);CHKERRQ(ierr);
+    if (!b->label) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Label %s missing in new DM", name);
+  }
+
+  ierr = DMSetRegionDS(dm, label, fields, dsNew);CHKERRQ(ierr);
+  ierr = PetscDSDestroy(&dsNew);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
   DMCopyDS - Copy the discrete systems for the DM into another DM
 
@@ -5770,19 +5797,20 @@ PetscErrorCode DMCopyDS(DM dm, DM newdm)
   for (s = 0; s < Nds; ++s) {
     DMLabel  label;
     IS       fields;
-    PetscDS  ds;
+    PetscDS  ds, newds;
     PetscInt Nbd, bd;
 
     ierr = DMGetRegionNumDS(dm, s, &label, &fields, &ds);CHKERRQ(ierr);
-    ierr = DMSetRegionDS(newdm, label, fields, ds);CHKERRQ(ierr);
-    ierr = PetscDSGetNumBoundary(ds, &Nbd);CHKERRQ(ierr);
+    ierr = DMTransferDS_Internal(newdm, label, fields, ds);CHKERRQ(ierr);
+    /* Commplete new labels in the new DS */
+    ierr = DMGetRegionDS(newdm, label, NULL, &newds);CHKERRQ(ierr);
+    ierr = PetscDSGetNumBoundary(newds, &Nbd);CHKERRQ(ierr);
     for (bd = 0; bd < Nbd; ++bd) {
-      const char *labelname, *name;
-      PetscInt    field;
+      DMLabel  label;
+      PetscInt field;
 
-      /* Do not check if label exists here, since p4est calls this for the reference tree which does not have the labels */
-      ierr = PetscDSGetBoundary(ds, bd, NULL, &name, &labelname, &field, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
-      ierr = DMCompleteBoundaryLabel_Internal(newdm, ds, field, bd, labelname);CHKERRQ(ierr);
+      ierr = PetscDSGetBoundary(newds, bd, NULL, NULL, NULL, &label, NULL, NULL, &field, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
+      ierr = DMCompleteBoundaryLabel_Internal(newdm, newds, field, bd, label);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -8307,36 +8335,27 @@ PetscErrorCode DMSetFineDM(DM dm, DM fdm)
 
 /*=== DMBoundary code ===*/
 
-PetscErrorCode DMCopyBoundary(DM dm, DM dmNew)
-{
-  PetscInt       d;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  for (d = 0; d < dm->Nds; ++d) {
-    ierr = PetscDSCopyBoundary(dm->probs[d].ds, PETSC_DETERMINE, NULL, dmNew->probs[d].ds);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
 /*@C
   DMAddBoundary - Add a boundary condition to the model
 
   Collective on dm
 
   Input Parameters:
-+ dm          - The DM, with a PetscDS that matches the problem being constrained
-. type        - The type of condition, e.g. DM_BC_ESSENTIAL_ANALYTIC/DM_BC_ESSENTIAL_FIELD (Dirichlet), or DM_BC_NATURAL (Neumann)
-. name        - The BC name
-. labelname   - The label defining constrained points
-. field       - The field to constrain
-. numcomps    - The number of constrained field components (0 will constrain all fields)
-. comps       - An array of constrained component numbers
-. bcFunc      - A pointwise function giving boundary values
-. bcFunc_t    - A pointwise function giving the time deriative of the boundary values, or NULL
-. numids      - The number of DMLabel ids for constrained points
-. ids         - An array of ids for constrained points
-- ctx         - An optional user context for bcFunc
++ dm       - The DM, with a PetscDS that matches the problem being constrained
+. type     - The type of condition, e.g. DM_BC_ESSENTIAL_ANALYTIC/DM_BC_ESSENTIAL_FIELD (Dirichlet), or DM_BC_NATURAL (Neumann)
+. name     - The BC name
+. label    - The label defining constrained points
+. Nv       - The number of DMLabel values for constrained points
+. values   - An array of values for constrained points
+. field    - The field to constrain
+. Nc       - The number of constrained field components (0 will constrain all fields)
+. comps    - An array of constrained component numbers
+. bcFunc   - A pointwise function giving boundary values
+. bcFunc_t - A pointwise function giving the time deriative of the boundary values, or NULL
+- ctx      - An optional user context for bcFunc
+
+  Output Parameter:
+. bd          - (Optional) Boundary number
 
   Options Database Keys:
 + -bc_<boundary name> <num> - Overrides the boundary ids
@@ -8374,9 +8393,9 @@ $        PetscReal time, const PetscReal x[], PetscScalar bcval[])
 
   Level: developer
 
-.seealso: DMGetBoundary(), PetscDSAddBoundary()
+.seealso: DSGetBoundary(), PetscDSAddBoundary()
 @*/
-PetscErrorCode DMAddBoundary(DM dm, DMBoundaryConditionType type, const char name[], const char labelname[], PetscInt field, PetscInt numcomps, const PetscInt *comps, void (*bcFunc)(void), void (*bcFunc_t)(void), PetscInt numids, const PetscInt *ids, void *ctx)
+PetscErrorCode DMAddBoundary(DM dm, DMBoundaryConditionType type, const char name[], DMLabel label, PetscInt Nv, const PetscInt values[], PetscInt field, PetscInt Nc, const PetscInt comps[], void (*bcFunc)(void), void (*bcFunc_t)(void), void *ctx, PetscInt *bd)
 {
   PetscDS        ds;
   PetscErrorCode ierr;
@@ -8384,80 +8403,17 @@ PetscErrorCode DMAddBoundary(DM dm, DMBoundaryConditionType type, const char nam
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidLogicalCollectiveEnum(dm, type, 2);
-  PetscValidLogicalCollectiveInt(dm, field, 5);
-  PetscValidLogicalCollectiveInt(dm, numcomps, 6);
-  PetscValidLogicalCollectiveInt(dm, numids, 9);
+  PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 4);
+  PetscValidLogicalCollectiveInt(dm, Nv, 5);
+  PetscValidLogicalCollectiveInt(dm, field, 7);
+  PetscValidLogicalCollectiveInt(dm, Nc, 8);
   ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
-  ierr = DMCompleteBoundaryLabel_Internal(dm, ds, field, PETSC_MAX_INT, labelname);CHKERRQ(ierr);
-  ierr = PetscDSAddBoundary(ds, type,name, labelname, field, numcomps, comps, bcFunc, bcFunc_t, numids, ids, ctx);CHKERRQ(ierr);
+  ierr = DMCompleteBoundaryLabel_Internal(dm, ds, field, PETSC_MAX_INT, label);CHKERRQ(ierr);
+  ierr = PetscDSAddBoundary(ds, type, name, label, Nv, values, field, Nc, comps, bcFunc, bcFunc_t, ctx, bd);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-/*@
-  DMGetNumBoundary - Get the number of registered BC
-
-  Input Parameters:
-. dm - The mesh object
-
-  Output Parameters:
-. numBd - The number of BC
-
-  Level: intermediate
-
-.seealso: DMAddBoundary(), DMGetBoundary()
-@*/
-PetscErrorCode DMGetNumBoundary(DM dm, PetscInt *numBd)
-{
-  PetscDS        ds;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
-  ierr = PetscDSGetNumBoundary(ds, numBd);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-  DMGetBoundary - Get a model boundary condition
-
-  Input Parameters:
-+ dm          - The mesh object
-- bd          - The BC number
-
-  Output Parameters:
-+ type        - The type of condition, e.g. DM_BC_ESSENTIAL_ANALYTIC/DM_BC_ESSENTIAL_FIELD (Dirichlet), or DM_BC_NATURAL (Neumann)
-. name        - The BC name
-. labelname   - The label defining constrained points
-. field       - The field to constrain
-. numcomps    - The number of constrained field components
-. comps       - An array of constrained component numbers
-. bcFunc      - A pointwise function giving boundary values
-. bcFunc_t    - A pointwise function giving the time derviative of the boundary values
-. numids      - The number of DMLabel ids for constrained points
-. ids         - An array of ids for constrained points
-- ctx         - An optional user context for bcFunc
-
-  Options Database Keys:
-+ -bc_<boundary name> <num> - Overrides the boundary ids
-- -bc_<boundary name>_comp <num> - Overrides the boundary components
-
-  Level: developer
-
-.seealso: DMAddBoundary()
-@*/
-PetscErrorCode DMGetBoundary(DM dm, PetscInt bd, DMBoundaryConditionType *type, const char **name, const char **labelname, PetscInt *field, PetscInt *numcomps, const PetscInt **comps, void (**func)(void), void (**func_t)(void), PetscInt *numids, const PetscInt **ids, void **ctx)
-{
-  PetscDS        ds;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
-  ierr = PetscDSGetBoundary(ds, bd, type, name, labelname, field, numcomps, comps, func, func_t, numids, ids, ctx);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
+/* TODO Remove this since now the structures are the same */
 static PetscErrorCode DMPopulateBoundary(DM dm)
 {
   PetscDS        ds;
@@ -8489,8 +8445,7 @@ static PetscErrorCode DMPopulateBoundary(DM dm)
 
     ierr = PetscNew(&dmbound);CHKERRQ(ierr);
     dmbound->dsboundary = dsbound;
-    ierr = DMGetLabel(dm, dsbound->labelname, &(dmbound->label));CHKERRQ(ierr);
-    if (!dmbound->label) {ierr = PetscInfo2(dm, "DSBoundary %s wants label %s, which is not in this dm.\n",dsbound->name,dsbound->labelname);CHKERRQ(ierr);}
+    dmbound->label      = dsbound->label;
     /* push on the back instead of the front so that it is in the same order as in the PetscDS */
     *lastnext = dmbound;
     lastnext = &(dmbound->next);
@@ -8512,14 +8467,11 @@ PetscErrorCode DMIsBoundaryPoint(DM dm, PetscInt point, PetscBool *isBd)
   b = dm->boundary;
   while (b && !(*isBd)) {
     DMLabel    label = b->label;
-    DSBoundary dsb = b->dsboundary;
+    DSBoundary dsb   = b->dsboundary;
+    PetscInt   i;
 
     if (label) {
-      PetscInt i;
-
-      for (i = 0; i < dsb->numids && !(*isBd); ++i) {
-        ierr = DMLabelStratumHasPoint(label, dsb->ids[i], point, isBd);CHKERRQ(ierr);
-      }
+      for (i = 0; i < dsb->Nv && !(*isBd); ++i) {ierr = DMLabelStratumHasPoint(label, dsb->values[i], point, isBd);CHKERRQ(ierr);}
     }
     b = b->next;
   }
