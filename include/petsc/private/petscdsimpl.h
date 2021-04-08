@@ -13,6 +13,7 @@ typedef struct _n_DSBoundary *DSBoundary;
 struct _n_DSBoundary {
   const char             *name;          /* A unique identifier for the condition */
   DMLabel                 label;         /* The DMLabel indicating the mesh region over which the condition holds */
+  const char             *lname;         /* The label name if the label is missing from the DM */
   PetscInt                Nv;            /* The nubmer of label values defining the region */
   PetscInt               *values;        /* The labels values defining the region */
   PetscWeakForm           wf;            /* Holds the pointwise functions defining the form (only for NATURAL conditions) */

@@ -5765,7 +5765,8 @@ PetscErrorCode DMTransferDS_Internal(DM dm, DMLabel label, IS fields, PetscDS ds
 {
   PetscDS        dsNew;
   DSBoundary     b;
-  PetscInt       cdim;
+  PetscInt       cdim, Nf, f;
+  void          *ctx;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -5776,14 +5777,16 @@ PetscErrorCode DMTransferDS_Internal(DM dm, DMLabel label, IS fields, PetscDS ds
   ierr = PetscDSCopyExactSolutions(ds, dsNew);CHKERRQ(ierr);
   ierr = PetscDSSelectDiscretizations(ds, PETSC_DETERMINE, NULL, dsNew);CHKERRQ(ierr);
   ierr = PetscDSCopyEquations(ds, dsNew);CHKERRQ(ierr);
-  /* Do not check if label exists here, since p4est calls this for the reference tree which does not have the labels */
+  ierr = PetscDSGetNumFields(ds, &Nf);CHKERRQ(ierr);
+  for (f = 0; f < Nf; ++f) {
+    ierr = PetscDSGetContext(ds, f, &ctx);CHKERRQ(ierr);
+    ierr = PetscDSSetContext(dsNew, f, ctx);CHKERRQ(ierr);
+  }
   ierr = PetscDSCopyBoundary(ds, PETSC_DETERMINE, NULL, dsNew);CHKERRQ(ierr);
   for (b = dsNew->boundary; b; b = b->next) {
-    const char *name;
-
-    ierr = PetscObjectGetName((PetscObject) b->label, &name);CHKERRQ(ierr);
-    ierr = DMGetLabel(dm, name, &b->label);CHKERRQ(ierr);
-    if (!b->label) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Label %s missing in new DM", name);
+    ierr = DMGetLabel(dm, b->lname, &b->label);CHKERRQ(ierr);
+    /* Do not check if label exists here, since p4est calls this for the reference tree which does not have the labels */
+    //if (!b->label) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Label %s missing in new DM", name);
   }
 
   ierr = DMSetRegionDS(dm, label, fields, dsNew);CHKERRQ(ierr);

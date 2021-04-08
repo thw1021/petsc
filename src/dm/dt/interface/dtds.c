@@ -185,13 +185,11 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS prob, PetscViewer viewer)
     ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
 
     for (b = prob->boundary; b; b = b->next) {
-      const char *name;
-      PetscInt    c, i;
+      PetscInt c, i;
 
       if (b->field != f) continue;
-      ierr = PetscObjectGetName((PetscObject) b->label, &name);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, "Boundary %s (%s) %s\n", b->name, name, DMBoundaryConditionTypes[b->type]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "Boundary %s (%s) %s\n", b->name, b->lname, DMBoundaryConditionTypes[b->type]);CHKERRQ(ierr);
       if (!b->Nc) {
         ierr = PetscViewerASCIIPrintf(viewer, "  all components\n");CHKERRQ(ierr);
       } else {
@@ -3165,6 +3163,7 @@ PetscErrorCode PetscDSAddBoundary(PetscDS ds, DMBoundaryConditionType type, cons
 {
   DSBoundary     head = ds->boundary, b;
   PetscInt       n    = 0;
+  const char    *lname;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -3181,6 +3180,8 @@ PetscErrorCode PetscDSAddBoundary(PetscDS ds, DMBoundaryConditionType type, cons
   if (Nv) {ierr = PetscArraycpy(b->values, values, Nv);CHKERRQ(ierr);}
   ierr = PetscMalloc1(Nc, &b->comps);CHKERRQ(ierr);
   if (Nc) {ierr = PetscArraycpy(b->comps, comps, Nc);CHKERRQ(ierr);}
+  ierr = PetscObjectGetName((PetscObject) label, &lname);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(lname, (char **) &b->lname);CHKERRQ(ierr);
   b->type   = type;
   b->label  = label;
   b->Nv     = Nv;
@@ -3248,7 +3249,14 @@ PetscErrorCode PetscDSUpdateBoundary(PetscDS ds, PetscInt bd, DMBoundaryConditio
     ierr = PetscStrallocpy(name, (char **) &b->name);CHKERRQ(ierr);
   }
   b->type = type;
-  if (label) b->label = label;
+  if (label) {
+    const char *name;
+
+    b->label = label;
+    ierr = PetscFree(b->lname);CHKERRQ(ierr);
+    ierr = PetscObjectGetName((PetscObject) label, &name);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(name, (char **) &b->lname);CHKERRQ(ierr);
+  }
   if (Nv >= 0) {
     b->Nv = Nv;
     ierr = PetscFree(b->values);CHKERRQ(ierr);
@@ -3395,6 +3403,7 @@ static PetscErrorCode DSBoundaryDuplicate_Internal(DSBoundary b, DSBoundary *bNe
   ierr = PetscWeakFormCreate(PETSC_COMM_SELF, &(*bNew)->wf);CHKERRQ(ierr);
   ierr = PetscWeakFormCopy(b->wf, (*bNew)->wf);CHKERRQ(ierr);
   ierr = PetscStrallocpy(b->name,(char **) &((*bNew)->name));CHKERRQ(ierr);
+  ierr = PetscStrallocpy(b->lname,(char **) &((*bNew)->lname));CHKERRQ(ierr);
   (*bNew)->type   = b->type;
   (*bNew)->label  = b->label;
   (*bNew)->Nv     = b->Nv;
@@ -3469,6 +3478,7 @@ PetscErrorCode PetscDSDestroyBoundary(PetscDS ds)
     next = b->next;
     ierr = PetscWeakFormDestroy(&b->wf);CHKERRQ(ierr);
     ierr = PetscFree(b->name);CHKERRQ(ierr);
+    ierr = PetscFree(b->lname);CHKERRQ(ierr);
     ierr = PetscFree(b->values);CHKERRQ(ierr);
     ierr = PetscFree(b->comps);CHKERRQ(ierr);
     ierr = PetscFree(b);CHKERRQ(ierr);
