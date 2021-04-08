@@ -912,7 +912,7 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
       print(printPrefix,15*"=","Exiting queue",15*"=")
   return
 
-def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=True,checkFunctionFilter=None,printWarnings=False):
+def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=True,checkFunctionFilter=None,printWarnings=False,maxWorkers=0):
   if not clx.conf.loaded:
     clx.conf.set_compatibility_check(True)
     if clangDir:
@@ -967,7 +967,8 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     # get the library file to pass to subprocesses
     clangLib = clx.conf.get_filename()
     # -1 since num workers+root = numCpu
-    maxWorkers = mp.cpu_count()-1
+    if not maxWorkers:
+      maxWorkers = max(mp.cpu_count()-1,2)
     # spin up a queue and multiproc
     fileProcessorQueue = mp.JoinableQueue(3*maxWorkers)
     exceptionSignalQueue = mp.Queue()
@@ -1063,6 +1064,7 @@ if __name__ == "__main__":
   parser.add_argument("--show-warnings",required=False,action="store_true",help="show ast matching warnings",dest="warn")
   parser.add_argument("--filter",required=False,nargs="+",choices=list(checkFunctionMap.keys()),help="filter for errors from available function names")
   parser.add_argument("--no-multiprocessing",required=False,action="store_false",help="use multiprocessing",dest="multiproc")
+  parser.add_argument("--jobs",required=False,type=int,help="number of multiprocessing jobs")
   args = parser.parse_args()
 
   if args.petscdir is None:
@@ -1072,4 +1074,4 @@ if __name__ == "__main__":
 
   if args.verbose:
     args.warn = True
-  main(args.petscdir,args.petscarch,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,multiproc=args.multiproc,checkFunctionFilter=args.filter,printWarnings=args.warn)
+  main(args.petscdir,args.petscarch,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,multiproc=args.multiproc,checkFunctionFilter=args.filter,printWarnings=args.warn,maxWorkers=args.jobs)
