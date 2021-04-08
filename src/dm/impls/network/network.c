@@ -26,8 +26,12 @@ static PetscErrorCode CreateNetworkHeaderComponentValue(DM dm,PetscInt np,DMNetw
   *compvalue = cvalue;
   /* The size of the header is the size of struct _p_DMNetworkComponentHeader. Since the struct contains PetscInt pointers we cannot use sizeof(struct). So,we need to explicitly calculate the size. If the data header struct changes then this headaer size calculation needs to be updated.
    */
-  dataheadersize = (3*sizeof(PetscInt) + 5*network->max_comps_per_point*sizeof(PetscInt))/sizeof(DMNetworkComponentGenericDataType);
+  dataheadersize = 3*sizeof(PetscInt) + 5*network->max_comps_per_point*sizeof(PetscInt);
+  /* Align it to nearest scalar multiple */
+  if(dataheadersize % PetscMax(sizeof(double),sizeof(PetscScalar)) != 0) dataheadersize += dataheadersize % PetscMax(sizeof(double),sizeof(PetscScalar));
 
+  dataheadersize = dataheadersize/sizeof(DMNetworkComponentGenericDataType);
+  
   *headersize = dataheadersize;
   PetscFunctionReturn(0);
 }
