@@ -163,7 +163,8 @@ PetscErrorCode DMForestTemplate(DM dm, MPI_Comm comm, DM *tdm)
     ierr = (*forest->ftemplate)(dm, *tdm);CHKERRQ(ierr);
   }
   ierr = DMForestSetAdaptivityForest(*tdm,dm);CHKERRQ(ierr);
-  ierr = DMCopyDisc(dm,*tdm);CHKERRQ(ierr);
+  ierr = DMCopyFields(dm,*tdm);CHKERRQ(ierr);
+  ierr = DMCopyDS(dm,PETSC_FALSE,*tdm);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(dm,&ctx);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(*tdm,&ctx);CHKERRQ(ierr);
   {

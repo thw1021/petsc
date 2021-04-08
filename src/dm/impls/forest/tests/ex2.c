@@ -5,6 +5,22 @@ static char help[] = "Create a mesh, refine and coarsen simultaneously, and tran
 #include <petscdmforest.h>
 #include <petscoptions.h>
 
+static PetscErrorCode CreateBCLabel(DM dm, const char name[])
+{
+  DM             plex;
+  DMLabel        label;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  ierr = DMCreateLabel(dm, name);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, name, &label);CHKERRQ(ierr);
+  ierr = DMSetUp(dm);CHKERRQ(ierr);
+  ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
+  ierr = DMPlexMarkBoundaryFaces(plex, 1, label);CHKERRQ(ierr);
+  ierr = DMDestroy(&plex);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode AddIdentityLabel(DM dm)
 {
   PetscInt       pStart,pEnd,p;
@@ -273,12 +289,19 @@ int main(int argc, char **argv)
   /* the pre adaptivity forest */
   ierr = DMCreate(comm,&preForest);CHKERRQ(ierr);
   ierr = DMSetType(preForest,(dim == 2) ? DMP4EST : DMP8EST);CHKERRQ(ierr);
-  ierr = DMCopyDisc(base,preForest);CHKERRQ(ierr);
   ierr = DMForestSetBaseDM(preForest,base);CHKERRQ(ierr);
   ierr = DMForestSetMinimumRefinement(preForest,0);CHKERRQ(ierr);
   ierr = DMForestSetInitialRefinement(preForest,1);CHKERRQ(ierr);
   ierr = DMSetFromOptions(preForest);CHKERRQ(ierr);
+  ierr = DMCopyFields(base,preForest);CHKERRQ(ierr);
+  if (1) {
+    ierr = DMCopyDS(base,PETSC_FALSE,preForest);CHKERRQ(ierr);
+  }
   ierr = DMSetUp(preForest);CHKERRQ(ierr);
+  if (1) {
+    ierr = CreateBCLabel(preForest, "marker");CHKERRQ(ierr);
+    ierr = DMCopyDS(base,PETSC_TRUE,preForest);CHKERRQ(ierr);
+  }
   ierr = DMViewFromOptions(preForest,NULL,"-dm_pre_view");CHKERRQ(ierr);
 
   /* the pre adaptivity field */

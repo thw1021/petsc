@@ -547,6 +547,7 @@ static PetscErrorCode CreateBCLabel(DM dm, const char name[])
   PetscFunctionBeginUser;
   ierr = DMCreateLabel(dm, name);CHKERRQ(ierr);
   ierr = DMGetLabel(dm, name, &label);CHKERRQ(ierr);
+  ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
   ierr = DMPlexMarkBoundaryFaces(plex, 1, label);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
@@ -600,20 +601,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     if (distributedMesh) {
       ierr = DMDestroy(dm);CHKERRQ(ierr);
       *dm  = distributedMesh;
-    }
-  }
-  if (interpolate) {
-    if (user->bcType == NEUMANN) {
-      DMLabel   label;
-
-      ierr = DMCreateLabel(*dm, "boundary");CHKERRQ(ierr);
-      ierr = DMGetLabel(*dm, "boundary", &label);CHKERRQ(ierr);
-      ierr = DMPlexMarkBoundaryFaces(*dm, 1, label);CHKERRQ(ierr);
-    } else if (user->bcType == DIRICHLET) {
-      PetscBool hasLabel;
-
-      ierr = DMHasLabel(*dm,"marker",&hasLabel);CHKERRQ(ierr);
-      if (!hasLabel) {ierr = CreateBCLabel(*dm, "marker");CHKERRQ(ierr);}
     }
   }
   {
@@ -671,6 +658,20 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       ierr = DMView(cdm, viewer);CHKERRQ(ierr);
       ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
       ierr = DMGetCoarseDM(cdm, &cdm);CHKERRQ(ierr);
+    }
+  }
+  if (interpolate) {
+    if (user->bcType == NEUMANN) {
+      DMLabel   label;
+
+      ierr = DMCreateLabel(*dm, "boundary");CHKERRQ(ierr);
+      ierr = DMGetLabel(*dm, "boundary", &label);CHKERRQ(ierr);
+      ierr = DMPlexMarkBoundaryFaces(*dm, 1, label);CHKERRQ(ierr);
+    } else if (user->bcType == DIRICHLET) {
+      PetscBool hasLabel;
+
+      ierr = DMHasLabel(*dm,"marker",&hasLabel);CHKERRQ(ierr);
+      if (!hasLabel) {ierr = CreateBCLabel(*dm, "marker");CHKERRQ(ierr);}
     }
   }
   ierr = PetscLogEventEnd(user->createMeshEvent,0,0,0,0);CHKERRQ(ierr);

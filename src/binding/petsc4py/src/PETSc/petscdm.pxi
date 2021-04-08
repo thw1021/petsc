@@ -64,7 +64,7 @@ cdef extern from * nogil:
     int DMCreateDS(PetscDM)
     int DMClearDS(PetscDM)
     int DMGetDS(PetscDM,PetscDS*)
-    int DMCopyDS(PetscDM,PetscDM)
+    int DMCopyDS(PetscDM,PetscBool,PetscDM)
     int DMCopyDisc(PetscDM,PetscDM)
 
     int DMGetBlockSize(PetscDM,PetscInt*)

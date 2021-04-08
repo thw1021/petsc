@@ -262,7 +262,7 @@ PETSC_EXTERN PetscErrorCode DMSetRegionNumDS(DM, PetscInt, DMLabel, IS, PetscDS)
 PETSC_EXTERN PetscErrorCode DMFindRegionNum(DM, PetscDS, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMCreateDS(DM);
 PETSC_EXTERN PetscErrorCode DMClearDS(DM);
-PETSC_EXTERN PetscErrorCode DMCopyDS(DM, DM);
+PETSC_EXTERN PetscErrorCode DMCopyDS(DM, PetscBool, DM);
 PETSC_EXTERN PetscErrorCode DMCopyDisc(DM, DM);
 PETSC_EXTERN PetscErrorCode DMComputeExactSolution(DM, PetscReal, Vec, Vec);
 PETSC_EXTERN PetscErrorCode DMGetNumAuxiliaryVec(DM, PetscInt *);

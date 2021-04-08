@@ -193,8 +193,9 @@ cdef class DM(Object):
         PetscINCREF(ds.obj)
         return ds
 
-    def copyDS(self, DM dm):
-        CHKERR( DMCopyDS(self.dm, dm.dm) )
+    def copyDS(self, DM dm, copyBC = True):
+        cdef PetscBool cpbc = asBool(copyBC)
+        CHKERR( DMCopyDS(self.dm, cpbc, dm.dm) )
 
     def copyDisc(self, DM dm):
         CHKERR( DMCopyDisc(self.dm, dm.dm) )
