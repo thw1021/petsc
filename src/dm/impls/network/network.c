@@ -905,7 +905,7 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
     }
   }
   if (network->ncomponent == network->max_comps_registered) {
-    SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components registered exceeds the max %d set with PETSC_DMNETWORK_MAXIMUM_COMPONENTS in dmnetworkimpl.h",network->max_comps_registered);
+    SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components registered exceeds the max %d set. Use DMNetworkSetMaxComponents or -dmnetwork_max_components_registered to increase the max. allowed registered components",network->max_comps_registered);
   }
 
   ierr = PetscStrcpy(component->name,name);CHKERRQ(ierr);
