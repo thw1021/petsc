@@ -333,6 +333,8 @@ PETSC_EXTERN PetscErrorCode DMCreate_Network(DM dm)
   network->nEdges    = 0;
   network->nsubnet   = 0;
 
+  network->max_comps_registered = 100;
+  network->max_comps_per_point = 3;
 
   ierr = DMInitialize_Network(dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);

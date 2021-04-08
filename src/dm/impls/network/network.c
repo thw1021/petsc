@@ -841,11 +841,18 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
 {
   PetscErrorCode        ierr;
   DM_Network            *network = (DM_Network*) dm->data;
-  DMNetworkComponent    *component=&network->component[network->ncomponent];
+  DMNetworkComponent    *component;
   PetscBool             flg=PETSC_FALSE;
   PetscInt              i;
 
   PetscFunctionBegin;
+
+  if(!network->component) {
+    /* DMNetworkSetMaxComponents not called, set default max. comps for network */
+    ierr = DMNetworkSetMaxComponents(dm,network->max_comps_registered,network->max_comps_per_point);CHKERRQ(ierr);
+  }
+  component = &network->component[network->ncomponent];
+  
   for (i=0; i < network->ncomponent; i++) {
     ierr = PetscStrcmp(component->name,name,&flg);CHKERRQ(ierr);
     if (flg) {
@@ -853,14 +860,49 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
       PetscFunctionReturn(0);
     }
   }
-  if (network->ncomponent == PETSC_DMNETWORK_MAXIMUM_COMPONENTS) {
-    SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components registered exceeds the max %d set with PETSC_DMNETWORK_MAXIMUM_COMPONENTS in dmnetworkimpl.h",PETSC_DMNETWORK_MAXIMUM_COMPONENTS);
+  if (network->ncomponent == network->max_comps_registered) {
+    SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components registered exceeds the max %d set with PETSC_DMNETWORK_MAXIMUM_COMPONENTS in dmnetworkimpl.h",network->max_comps_registered);
   }
 
   ierr = PetscStrcpy(component->name,name);CHKERRQ(ierr);
   component->size = size/sizeof(DMNetworkComponentGenericDataType);
   *key = network->ncomponent;
   network->ncomponent++;
+  PetscFunctionReturn(0);
+}
+
+/*@
+ DMNetworkSetMaxComponents - Sets the max. components
+
+ Not Collective
++ dm - the DMNetwork object
+. max_comps_registered - max. components allowed to be registered
+- max_comps_per_point - max. components allowed per point
+
+ Level: beginner
+
+ Options database keys:
++ -dmnetwork_max_comps_registered - Sets max. components allowed to be registerd
+- -dmnetwork_max_comps_per_point - Sets max. components allowed per node/edge
+
+ Notes:
+ Must call this routine before registering any component
+@*/
+PetscErrorCode DMNetworkSetMaxComponents(DM dm,PetscInt max_comps_registered,PetscInt max_comps_per_point)
+{
+  PetscErrorCode ierr;
+  DM_Network *network = (DM_Network*)dm->data;
+    
+  PetscFunctionBegin;
+  if(network->ncomponent) {
+    SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ORDER,"Must call DMNetworkSetMaxComponents before registering any component");
+  }
+  ierr = PetscObjectOptionsBegin((PetscObject)dm);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dmnetwork_max_comps_registered","Maximum components allowed to be registered","DMNetworkSetMaxComponents",network->max_comps_registered,&network->max_comps_registered,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dmnetwork_max_comps_per_point","Maximum components allowed per node/edge","DMNetworkSetMaxComponents",network->max_comps_per_point,&network->max_comps_per_point,NULL);CHKERRQ(ierr);  
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+
+  ierr = PetscMalloc1(network->max_comps_registered,&network->component);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2519,6 +2561,7 @@ PetscErrorCode DMDestroy_Network(DM dm)
 
   ierr = PetscTableDestroy(&network->svtable);CHKERRQ(ierr);
   ierr = PetscFree(network->subnet);CHKERRQ(ierr);
+  ierr = PetscFree(network->component);CHKERRQ(ierr);
   ierr = PetscFree(network->componentdataarray);CHKERRQ(ierr);
   ierr = PetscFree2(network->header,network->cvalue);CHKERRQ(ierr);
   ierr = PetscFree(network);CHKERRQ(ierr);

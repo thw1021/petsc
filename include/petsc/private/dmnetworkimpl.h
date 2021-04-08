@@ -88,9 +88,8 @@ typedef struct {
   DMNetworkVertexInfo               vertex;
   DMNetworkEdgeInfo                 edge;
 
-#define PETSC_DMNETWORK_MAXIMUM_COMPONENTS 100   /* Maximum number of components that can be registered */
   PetscInt                          ncomponent;  /* Number of components that have been registered */
-  DMNetworkComponent                component[PETSC_DMNETWORK_MAXIMUM_COMPONENTS]; /* List of components that have been registered */
+  DMNetworkComponent                *component; /* List of components that have been registered */
   DMNetworkComponentHeader          header;
   DMNetworkComponentValue           cvalue;
   PetscInt                          dataheadersize;
@@ -113,6 +112,8 @@ typedef struct {
                                               Jvpt[v-vStart]+2i+1: Jacobian(v,e[i]),   e[i]: i-th supporting edge
                                               Jvpt[v-vStart]+2i+2: Jacobian(v,vc[i]), vc[i]: i-th connected vertex
                                               */
+  PetscInt                          max_comps_registered; /* Max. number of components that can be registered */
+  PetscInt                          max_comps_per_point; /* Max. components per point */
 } DM_Network;
 
 #endif /* _NETWORKIMPL_H */
