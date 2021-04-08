@@ -815,13 +815,16 @@ def getPetscExtraIncludes(petscDir,petscArch):
   return extraIncludes
 
 def getClangSysIncludes():
-  import subprocess
+  import subprocess,sys
   """
   Get system clangs set of default include search directories.
 
   Because for some reason these are hardcoded by the compilers and so libclang does not have them.
   """
-  output = subprocess.run(["clang","-E","-x","c++","/dev/null","-v"],capture_output=True,check=True,universal_newlines=True)
+  if sys.version_info >= (3,7):
+    output = subprocess.run(["clang","-E","-x","c++","/dev/null","-v"],capture_output=True,check=True,universal_newlines=True)
+  else:
+    output = subprocess.run(["clang","-E","-x","c++","/dev/null","-v"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
   output.check_returncode()
   # goes to stderr because of /dev/null
   includes = output.stderr.split("#include <...> search starts here:\n")[1]
