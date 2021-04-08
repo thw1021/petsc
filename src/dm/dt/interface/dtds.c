@@ -3504,7 +3504,8 @@ PetscErrorCode PetscDSSelectDiscretizations(PetscDS prob, PetscInt numFields, co
   PetscValidHeaderSpecific(newprob, PETSCDS_CLASSID, 4);
   ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetNumFields(newprob, &Nfn);CHKERRQ(ierr);
-  if (numFields > Nfn) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields %D to transfer must not be greater then the total number of fields %D", numFields, Nfn);
+  if (numFields > Nf) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields %D to transfer must not be greater then the total number of fields %D", numFields, Nf);
+  numFields = numFields < 0 ? Nf : numFields;
   for (fn = 0; fn < numFields; ++fn) {
     const PetscInt f = fields ? fields[fn] : fn;
     PetscObject    disc;
@@ -3608,6 +3609,7 @@ PetscErrorCode PetscDSCopyEquations(PetscDS prob, PetscDS newprob)
   ierr = PetscDSSelectEquations(prob, Nf, NULL, newprob);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
 /*@
   PetscDSCopyConstants - Copy all constants to the new problem
 
@@ -3634,6 +3636,41 @@ PetscErrorCode PetscDSCopyConstants(PetscDS prob, PetscDS newprob)
   PetscValidHeaderSpecific(newprob, PETSCDS_CLASSID, 2);
   ierr = PetscDSGetConstants(prob, &Nc, &constants);CHKERRQ(ierr);
   ierr = PetscDSSetConstants(newprob, Nc, (PetscScalar *) constants);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  PetscDSCopyExactSolutions - Copy all exact solutions to the new problem
+
+  Not collective
+
+  Input Parameter:
+. ds - The PetscDS object
+
+  Output Parameter:
+. newds - The PetscDS copy
+
+  Level: intermediate
+
+.seealso: PetscDSCopyBoundary(), PetscDSCopyEquations(), PetscDSSetResidual(), PetscDSSetJacobian(), PetscDSSetRiemannSolver(), PetscDSSetBdResidual(), PetscDSSetBdJacobian(), PetscDSCreate()
+@*/
+PetscErrorCode PetscDSCopyExactSolutions(PetscDS ds, PetscDS newds)
+{
+  PetscSimplePointFunc sol;
+  void                *ctx;
+  PetscInt             Nf, f;
+  PetscErrorCode       ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
+  PetscValidHeaderSpecific(newds, PETSCDS_CLASSID, 2);
+  ierr = PetscDSGetNumFields(ds, &Nf);CHKERRQ(ierr);
+  for (f = 0; f < Nf; ++f) {
+    ierr = PetscDSGetExactSolution(ds,    f, &sol, &ctx);CHKERRQ(ierr);
+    ierr = PetscDSSetExactSolution(newds, f,  sol,  ctx);CHKERRQ(ierr);
+    ierr = PetscDSGetExactSolutionTimeDerivative(ds,    f, &sol, &ctx);CHKERRQ(ierr);
+    ierr = PetscDSSetExactSolutionTimeDerivative(newds, f,  sol,  ctx);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
