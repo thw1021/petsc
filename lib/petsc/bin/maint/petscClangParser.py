@@ -803,15 +803,17 @@ def getPetscExtraIncludes(petscDir,petscArch):
   import re
 
   with open(os.path.join(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
-    refccinc = re.compile("^PETSC_CC_INCLUDES\s*=")
-    line     = pv.readline()
+    ccinc  = re.compile("^PETSC_CC_INCLUDES\s*=")
+    mpiinc = re.compile("^MPI_INCLUDE\s*=")
+    shoinc = re.compile("^MPICC_SHOW\s*=")
+    line   = pv.readline()
+    extraIncludes = []
     while line:
-      incl = refccinc.search(line)
-      if incl:
-        extraIncludes = line.split("=")[1]
-        break
+      if ccinc.search(line) or mpiinc.search(line) or shoinc.search(line):
+        extraIncludes.append(line.split("=")[1])
       line = pv.readline()
-  extraIncludes = extraIncludes.strip().split(" ")
+  extraIncludes = [l.strip().split(" ") for l in extraIncludes]
+  extraIncludes = list({item for sublist in extraIncludes for item in sublist if item.startswith("-I")})
   return extraIncludes
 
 def getClangSysIncludes():
