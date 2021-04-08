@@ -613,7 +613,10 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       PetscBool hasLabel;
 
       ierr = DMHasLabel(*dm,"marker",&hasLabel);CHKERRQ(ierr);
-      if (!hasLabel) {ierr = CreateBCLabel(*dm, "marker");CHKERRQ(ierr);}
+      if (!hasLabel) {
+        //ierr = DMSetUp(*dm);CHKERRQ(ierr);
+        ierr = CreateBCLabel(*dm, "marker");CHKERRQ(ierr);
+      }
     }
   }
   {
@@ -787,7 +790,12 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   /* Setup Boundary Conditions */
   if (user->bcType == DIRICHLET) {
     ierr = DMGetLabel(dm, "marker", &label);CHKERRQ(ierr);
-    ierr = DMAddBoundary(dm, user->fieldBC ? DM_BC_ESSENTIAL_FIELD : DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, user->fieldBC ? (void (*)(void)) user->exactFields[0] : (void (*)(void)) user->exactFuncs[0], NULL, user, NULL);CHKERRQ(ierr);
+    if (!label) {
+      /* Right now, p4est cannot create labels immediately */
+      ierr = PetscDSAddBoundaryByName(ds, user->fieldBC ? DM_BC_ESSENTIAL_FIELD : DM_BC_ESSENTIAL, "wall", "marker", 1, &id, 0, 0, NULL, user->fieldBC ? (void (*)(void)) user->exactFields[0] : (void (*)(void)) user->exactFuncs[0], NULL, user, NULL);CHKERRQ(ierr);
+    } else {
+      ierr = DMAddBoundary(dm, user->fieldBC ? DM_BC_ESSENTIAL_FIELD : DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, user->fieldBC ? (void (*)(void)) user->exactFields[0] : (void (*)(void)) user->exactFuncs[0], NULL, user, NULL);CHKERRQ(ierr);
+    }
   }
   PetscFunctionReturn(0);
 }
