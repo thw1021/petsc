@@ -967,20 +967,23 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     # get the library file to pass to subprocesses
     clangLib = clx.conf.get_filename()
     # -1 since num workers+root = numCpu
-    if not maxWorkers:
-      maxWorkers = max(mp.cpu_count()-1,2)
-    # spin up a queue and multiproc
-    fileProcessorQueue = mp.JoinableQueue(3*maxWorkers)
-    exceptionSignalQueue = mp.Queue()
-    fileProcessorLock = mp.Lock()
-    workerArgs = (clangLib,checkFunctionFilter,petscDir,petscArch,compilerFlags,baseClangOptions,verbose,printWarnings,exceptionSignalQueue,fileProcessorQueue,fileProcessorLock,)
-    for i in range(maxWorkers):
-      workerName = "[{i}]".format(i=i)
-      worker = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
-      worker.start()
-    # need these later for error printing
-    errBars = "[ERROR]"+(85*"-")+"[ERROR]\n"
-    errBars = [errBars,errBars]
+    if not maxWorkers: maxWorkers = max(mp.cpu_count()-1,1)
+    if maxWorkers == 1:
+      multiproc = False
+      print(rootPrintPrefix,"Number of processes ({numproc}) too small. Not using multiprocessing".format(numproc=maxWorkers))
+    else:
+      # spin up a queue and multiproc
+      fileProcessorQueue = mp.JoinableQueue(3*maxWorkers)
+      exceptionSignalQueue = mp.Queue()
+      fileProcessorLock = mp.Lock()
+      workerArgs = (clangLib,checkFunctionFilter,petscDir,petscArch,compilerFlags,baseClangOptions,verbose,printWarnings,exceptionSignalQueue,fileProcessorQueue,fileProcessorLock,)
+      for i in range(maxWorkers):
+        workerName = "[{i}]".format(i=i)
+        worker = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
+        worker.start()
+      # need these later for error printing
+      errBars = "[ERROR]"+(85*"-")+"[ERROR]\n"
+      errBars = [errBars,errBars]
   else:
     updateCheckFunctionMap(checkFunctionFilter)
     updatePetscClassIdMap(petscDir)
@@ -1064,7 +1067,7 @@ if __name__ == "__main__":
   parser.add_argument("--show-warnings",required=False,action="store_true",help="show ast matching warnings",dest="warn")
   parser.add_argument("--filter",required=False,nargs="+",choices=list(checkFunctionMap.keys()),help="filter for errors from available function names")
   parser.add_argument("--no-multiprocessing",required=False,action="store_false",help="use multiprocessing",dest="multiproc")
-  parser.add_argument("--jobs",required=False,type=int,help="number of multiprocessing jobs")
+  parser.add_argument("--jobs",required=False,type=int,default=0,nargs="?",help="number of multiprocessing jobs, 0 defaults to number of processors on machine")
   args = parser.parse_args()
 
   if args.petscdir is None:
