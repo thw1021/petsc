@@ -1663,7 +1663,8 @@ static PetscErrorCode DMPlexComputeAnchorMatrix_Tree_FromReference(DM dm, PetscS
   ierr = PetscDSGetNumFields(ds,&numFields);CHKERRQ(ierr);
   maxFields = PetscMax(1,numFields);
   ierr = DMPlexGetReferenceTree(dm,&refTree);CHKERRQ(ierr);
-  ierr = DMCopyDisc(dm,refTree);CHKERRQ(ierr);
+  ierr = DMCopyFields(dm,refTree);CHKERRQ(ierr);
+  ierr = DMCopyDS(dm,PETSC_FALSE,refTree);CHKERRQ(ierr);
   ierr = DMGetDefaultConstraints(refTree,&refConSec,&refCmat);CHKERRQ(ierr);
   ierr = DMPlexGetAnchors(refTree,&refAnSec,&refAnIS);CHKERRQ(ierr);
   ierr = DMPlexGetAnchors(dm,&anSec,&anIS);CHKERRQ(ierr);
@@ -4192,7 +4193,8 @@ static PetscErrorCode DMPlexTransferVecTree_Interpolate(DM coarse, Vec vecCoarse
     ierr = DMGetWorkArray(fine,maxDof,MPIU_INT,&rowIndices);CHKERRQ(ierr);
     ierr = DMGetWorkArray(fine,maxDof,MPIU_SCALAR,&pointWork);CHKERRQ(ierr);
     ierr = DMPlexGetReferenceTree(fine,&refTree);CHKERRQ(ierr);
-    ierr = DMCopyDisc(fine,refTree);CHKERRQ(ierr);
+    ierr = DMCopyFields(fine,refTree);CHKERRQ(ierr);
+    ierr = DMCopyDS(fine,PETSC_FALSE,refTree);CHKERRQ(ierr);
     ierr = DMPlexReferenceTreeGetChildrenMatrices(refTree,&refPointFieldMats,&refPointFieldN);CHKERRQ(ierr);
     ierr = DMGetDefaultConstraints(refTree,&refConSec,NULL);CHKERRQ(ierr);
     ierr = DMPlexGetAnchors(refTree,&refAnSec,NULL);CHKERRQ(ierr);

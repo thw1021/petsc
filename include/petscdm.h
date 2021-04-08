@@ -262,7 +262,7 @@ PETSC_EXTERN PetscErrorCode DMSetRegionNumDS(DM, PetscInt, DMLabel, IS, PetscDS)
 PETSC_EXTERN PetscErrorCode DMFindRegionNum(DM, PetscDS, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMCreateDS(DM);
 PETSC_EXTERN PetscErrorCode DMClearDS(DM);
-PETSC_EXTERN PetscErrorCode DMCopyDS(DM, DM);
+PETSC_EXTERN PetscErrorCode DMCopyDS(DM, PetscBool, DM);
 PETSC_EXTERN PetscErrorCode DMCopyDisc(DM, DM);
 PETSC_EXTERN PetscErrorCode DMComputeExactSolution(DM, PetscReal, Vec, Vec);
 PETSC_EXTERN PetscErrorCode DMGetNumAuxiliaryVec(DM, PetscInt *);
@@ -336,11 +336,8 @@ PETSC_EXTERN PetscErrorCode DMRemoveLabel(DM, const char [], DMLabel *);
 PETSC_EXTERN PetscErrorCode DMRemoveLabelBySelf(DM, DMLabel *, PetscBool);
 PETSC_EXTERN PetscErrorCode DMCopyLabels(DM, DM, PetscCopyMode, PetscBool);
 
-PETSC_EXTERN PetscErrorCode DMAddBoundary(DM, DMBoundaryConditionType, const char[], const char[], PetscInt, PetscInt, const PetscInt *, void (*)(void), void (*)(void), PetscInt, const PetscInt *, void *);
-PETSC_EXTERN PetscErrorCode DMGetNumBoundary(DM, PetscInt *);
-PETSC_EXTERN PetscErrorCode DMGetBoundary(DM, PetscInt, DMBoundaryConditionType *, const char **, const char **, PetscInt *, PetscInt *, const PetscInt **, void (**)(void), void (**)(void), PetscInt *, const PetscInt **, void **);
+PETSC_EXTERN PetscErrorCode DMAddBoundary(DM, DMBoundaryConditionType, const char[], DMLabel, PetscInt, const PetscInt[], PetscInt, PetscInt, const PetscInt[], void (*)(void), void (*)(void), void *, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMIsBoundaryPoint(DM, PetscInt, PetscBool *);
-PETSC_EXTERN PetscErrorCode DMCopyBoundary(DM, DM);
 
 PETSC_EXTERN PetscErrorCode DMProjectFunction(DM,PetscReal,PetscErrorCode(**)(PetscInt,PetscReal,const PetscReal[],PetscInt,PetscScalar *,void *),void**,InsertMode,Vec);
 PETSC_EXTERN PetscErrorCode DMProjectFunctionLocal(DM,PetscReal,PetscErrorCode(**)(PetscInt,PetscReal,const PetscReal[],PetscInt,PetscScalar *,void *),void**,InsertMode,Vec);
