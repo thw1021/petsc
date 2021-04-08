@@ -156,6 +156,7 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
       const PetscInt n = c*Np + p;
 
       initialConditions[n*2+0] = DMPlex_NormD_Internal(dim, &coords[n*dim]);
+	  ierr = PetscPrintf(PETSC_COMM_WORLD, "Initial Position (p = %d) = %1.6lf\n", p, (double) initialConditions[n*2+0]);CHKERRQ(ierr);
       initialConditions[n*2+1] = 0.0;
     }
   }
@@ -210,7 +211,7 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
   PetscFunctionBeginUser;
   if (step%user->ostep == 0) {
     ierr = PetscObjectGetComm((PetscObject) ts, &comm);CHKERRQ(ierr);
-    if (!step) {ierr = PetscPrintf(comm, "Time     Step Part     Energy Mod Energy\n");CHKERRQ(ierr);}
+    if (!step) {ierr = PetscPrintf(comm, "Time     Step Part     Energy Mod Energy Position Velocity\n");CHKERRQ(ierr);}
     ierr = TSGetTimeStep(ts, &dt);CHKERRQ(ierr);
     ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
     ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
@@ -218,10 +219,18 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
     for (p = 0; p < Np; ++p) {
       const PetscReal x  = PetscRealPart(u[p*2+0]);
       const PetscReal v  = PetscRealPart(u[p*2+1]);
-      const PetscReal E  = 0.5*(v*v + PetscSqr(omega)*x*x);
-      const PetscReal mE = 0.5*(v*v + PetscSqr(omega)*x*x - PetscSqr(omega)*dt*x*v);
 
-      ierr = PetscPrintf(comm, "%.6lf %4D %4D %10.4lf %10.4lf\n", t, step, p, (double) E, (double) mE);CHKERRQ(ierr);
+	  if (user->harmonic) {
+		  const PetscReal E  = 0.5*(v*v + PetscSqr(omega)*(x*x + x*x*x*x));
+		  const PetscReal mE = 0.5*(v*v + PetscSqr(omega)*(x*x + x*x*x*x) - PetscSqr(omega)*(dt*x*v + dt*dt*x*x*v*v));
+		  ierr = PetscPrintf(comm, "%.6lf %4D %4D %10.4lf %10.4lf %1.6lf %1.6lf\n", t, step, p, (double) E, (double) mE, (double) x, (double) v);CHKERRQ(ierr);
+	  } else {
+		  const PetscReal E  = 0.5*(v*v + PetscSqr(omega)*x*x);
+		  const PetscReal mE = 0.5*(v*v + PetscSqr(omega)*x*x - PetscSqr(omega)*dt*x*v);
+		  ierr = PetscPrintf(comm, "%.6lf %4D %4D %10.4lf %10.4lf %1.6lf %1.6lf\n", t, step, p, (double) E, (double) mE, (double) x, (double) v);CHKERRQ(ierr);
+	  }
+
+
     }
     ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   }
@@ -379,6 +388,8 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U , Mat J, Mat P, void
 }
 
 /* Extra RHSFunction and RHSJacobian routines for the addition of a fourth order term */
+/* RHSFunction = (       v       )
+                 ( -w^2*(x+2x^3) )*/
 static PetscErrorCode RHSFunctionHarmonic(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
 {
   AppCtx            *user = (AppCtx *) ctx;
@@ -396,7 +407,7 @@ static PetscErrorCode RHSFunctionHarmonic(TS ts, PetscReal t, Vec U, Vec G, void
   Np  /= 2;
   for (p = 0; p < Np; ++p) {
     g[p*2+0] = u[p*2+1];
-    g[p*2+1] = -PetscSqr(user->omega)*u[p*2+0] - 4*PetscSqr(user->omega)*powf(u[p*2+0],3);
+    g[p*2+1] = -PetscSqr(user->omega) * (u[p*2+0] + 2*powf(u[p*2+0],3));
   }
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   ierr = VecRestoreArray(G, &g);CHKERRQ(ierr);
@@ -404,8 +415,8 @@ static PetscErrorCode RHSFunctionHarmonic(TS ts, PetscReal t, Vec U, Vec G, void
 }
 
 /*Ji = dFi/dxj
-J= (0    1)
-   (-w^2 0)
+J= (0                   1)
+   (-w^2*(1+6*w^2*x^2)  0)
 */
 static PetscErrorCode RHSJacobianHarmonic(TS ts, PetscReal t, Vec U , Mat J, Mat P, void *ctx)
 {
@@ -413,13 +424,14 @@ static PetscErrorCode RHSJacobianHarmonic(TS ts, PetscReal t, Vec U , Mat J, Mat
   PetscInt           Np = user->dim * user->particlesPerCell;
   PetscInt           i, m, n;
   const PetscScalar *u;
-  PetscScalar        vals[4] = {0., 1., -PetscSqr(user->omega), 0.};
+  PetscScalar        vals[4] = {0., 1., 0, 0.};
   PetscErrorCode     ierr;
 
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(J, &m, &n);CHKERRQ(ierr);
   for (i = 0; i < Np; ++i) {
     const PetscInt rows[2] = {2*i, 2*i+1};
+	vals[3] = -PetscSqr(user->omega) * (1+6*powf(u[i*2+0],2));
     ierr = MatSetValues(J, 2, rows, 2, rows, vals, INSERT_VALUES);CHKERRQ(ierr);
   }
   ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -513,7 +525,7 @@ PetscErrorCode gradFfunc(TS ts, PetscReal t, Vec U, Vec gradF, void *ctx)
 }
 
 /* Extra F, gradF routines for the addition of a fourth order term */
-/* H = (1/2) * v^2  +  (1/2) * w^2 * x^2  +  w^2 * x^4 */
+/* H = (1/2) * v^2 + (1/2) * w^2 * (x^2  + x^4) */
 PetscErrorCode FfuncHarmonic(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ctx)
 {
   AppCtx            *user = (AppCtx *) ctx;
@@ -529,7 +541,7 @@ PetscErrorCode FfuncHarmonic(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ct
   /*Define F*/
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
-    *F +=  0.5*PetscSqr(u[p*2+1]) + 0.5*PetscSqr(user->omega)*PetscSqr(u[p*2+0]) + PetscSqr(user->omega)*powf(u[p*2+0],4);
+    *F +=  0.5*PetscSqr(u[p*2+1]) + 0.5*PetscSqr(user->omega)*(PetscSqr(u[p*2+0]) + powf(u[p*2+0],4));
   }
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -551,7 +563,7 @@ PetscErrorCode gradFfuncHarmonic(TS ts, PetscReal t, Vec U, Vec gradF, void *ctx
   /*Define gradF*/
   ierr = VecGetArray(gradF, &g);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
-    g[p*2+0] = PetscSqr(user->omega)*u[p*2+0] + 4*PetscSqr(user->omega)*powf(u[p*2+0],3); /*dF/dx*/
+    g[p*2+0] = PetscSqr(user->omega) * (u[p*2+0] + 2.0*powf(u[p*2+0],3)); /*dF/dx*/
     g[p*2+1] = u[p*2+1]; /*dF/dv*/
   }
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
@@ -629,7 +641,6 @@ int main(int argc,char **argv)
 
   if (user.harmonic) {ierr = TSSetRHSFunction(ts, NULL, RHSFunctionHarmonic, &user);CHKERRQ(ierr);}
   else {ierr = TSSetRHSFunction(ts, NULL, RHSFunction, &user);CHKERRQ(ierr);}
-
 
   ierr = MatCreate(PETSC_COMM_WORLD,&J);CHKERRQ(ierr);
   ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,n,n);CHKERRQ(ierr);

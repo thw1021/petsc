@@ -323,9 +323,17 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   ierr = MatAssemblyEnd(S,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
   ierr = TSDiscGradGetX0AndXdot(ts, dm, &X0, &Xdot);CHKERRQ(ierr);
-  ierr = VecAXPBYPCZ(Xdot, -shift, shift, 0, X0, x);CHKERRQ(ierr); /* Xdot = shift (x - X0) */
 
-  ierr = VecAXPBYPCZ(Xp, -1, 2, 0, X0, x);CHKERRQ(ierr); /* Xp = 2*x - X0 + (0)*Xmid */
+  /* Variable Reference:
+  x = (x_n+1 + x_n)/2
+  Xp = x_n+1
+  X0 = x_n
+  Xdiff = x_n+1 - x_n
+  Xdot = (x_n+1 - x_n)/dt
+  */
+
+  ierr = VecAXPBYPCZ(Xdot, -shift, shift, 0, X0, x);CHKERRQ(ierr); /* Xdot = shift (x - X0) */
+  ierr = VecAXPBYPCZ(Xp, -1, 2, 0, X0, x);CHKERRQ(ierr); /* Xp = 2*x - X0 + (0)*Xp*/
   ierr = VecAXPBYPCZ(Xdiff, -1, 1, 0, X0, Xp);CHKERRQ(ierr); /* Xdiff = xp - X0 + (0)*Xdiff */
 
   if (dg->gonzalez){
@@ -340,21 +348,21 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
     if(normsq < 0.00001) {
       Gp = 0;
     } else {
-      Gp   = (F - F0 - Gp)/normsq; /* Gp = (1/|xn+1 - xn|^2) * ( F(xn+1) - F(xn) - Gp ) */
+      Gp   = (F - F0 - Gp)/normsq; /* Gp = ( F(x_n+1) - F(x_n) - gradF(x)*(x_n+1 - x_n) ) / (|x_n+1 - x_n|^2) */
     }
-    ierr = VecAXPY(G, Gp, Xdiff);CHKERRQ(ierr);
+    ierr = VecAXPY(G, Gp, Xdiff);CHKERRQ(ierr); /*gradF = gradF(x) + GonzalezTerm*Xdiff */
     ierr = MatMult(S, G , SgF);CHKERRQ(ierr); /* S*gradF */
 
   } else {
-    ierr = (*dg->Sfunc)(ts, dg->stage_time, x, S,  dg->funcCtx);CHKERRQ(ierr);
-    ierr = (*dg->Gfunc)(ts, dg->stage_time, x, G,  dg->funcCtx);CHKERRQ(ierr);
+    ierr = (*dg->Sfunc)(ts, dg->stage_time, x, S,  dg->funcCtx);CHKERRQ(ierr); /* S((x_n+1 + x_n)/2) */
+    ierr = (*dg->Gfunc)(ts, dg->stage_time, x, G,  dg->funcCtx);CHKERRQ(ierr); /* gradF((x_n+1 + x_n)/2) */
 
     ierr = MatMult(S, G , SgF);CHKERRQ(ierr);/* Xdot = S*gradF */
   }
   /* DM monkey-business allows user code to call TSGetDM() inside of functions evaluated on levels of FAS */
   dmsave = ts->dm;
   ts->dm = dm;
-  ierr = VecAXPBYPCZ(y, 1, -1, 0, Xdot, SgF);CHKERRQ(ierr);
+  ierr = VecAXPBYPCZ(y, 1, -1, 0, Xdot, SgF);CHKERRQ(ierr); /* y = Xdot - SgF */
   ts->dm = dmsave;
   ierr   = TSDiscGradRestoreX0AndXdot(ts, dm, &X0, &Xdot);CHKERRQ(ierr);
 
