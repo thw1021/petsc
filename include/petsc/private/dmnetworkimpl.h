@@ -11,16 +11,16 @@ struct _p_DMNetworkComponentHeader {
   PetscInt index;    /* index for user input global edge and vertex */
   PetscInt subnetid; /* Id for subnetwork */
   PetscInt ndata;    /* number of components */
-  PetscInt size[PETSC_DMNETWORK_MAXIMUM_COMPONENTS_PER_POINT];
-  PetscInt key[PETSC_DMNETWORK_MAXIMUM_COMPONENTS_PER_POINT];
-  PetscInt offset[PETSC_DMNETWORK_MAXIMUM_COMPONENTS_PER_POINT];
-  PetscInt nvar[PETSC_DMNETWORK_MAXIMUM_COMPONENTS_PER_POINT]; /* Number of variables */
-  PetscInt offsetvarrel[PETSC_DMNETWORK_MAXIMUM_COMPONENTS_PER_POINT]; /* offset from the first variable of the network point */
+  PetscInt *size;
+  PetscInt *key;
+  PetscInt *offset;
+  PetscInt *nvar;
+  PetscInt *offsetvarrel;
 } PETSC_ATTRIBUTEALIGNED(PetscMax(sizeof(double),sizeof(PetscScalar)));
 
 typedef struct _p_DMNetworkComponentValue *DMNetworkComponentValue;
 struct _p_DMNetworkComponentValue {
-  void* data[PETSC_DMNETWORK_MAXIMUM_COMPONENTS_PER_POINT];
+  void* *data;
 } PETSC_ATTRIBUTEALIGNED(PetscMax(sizeof(double),sizeof(PetscScalar)));
 
 typedef struct {
