@@ -125,7 +125,7 @@ class PetscCursor(clx.Cursor):
   This class exists purely for purpose of making viewing a cursor easier
   """
   @classmethod
-  def cast(cls, cursor: clx.Cursor):
+  def cast(cls,cursor):
     """
     Cast an clang cursor into a petsc cursor
     """
