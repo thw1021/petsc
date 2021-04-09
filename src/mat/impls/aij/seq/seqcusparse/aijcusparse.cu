@@ -4336,7 +4336,7 @@ void print_mat_aij_band(const PetscInt n, const int bi_csr[], const PetscScalar 
 // Band LU kernel ---  ba_csr bi_csr
 __global__
 void __launch_bounds__(1024,1)
-  mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], PetscScalar ba_csr[], int *use_grroup_sync)
+  mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], PetscScalar ba_csr[], int *use_group_sync)
 {
   const PetscInt  Nf = gridDim.x, Nblk = gridDim.y, nloc = n/Nf;
   const PetscInt  field = blockIdx.x, blkIdx = blockIdx.y;
@@ -4370,7 +4370,7 @@ void __launch_bounds__(1024,1)
       }
     }
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-    if (use_grroup_sync) {
+    if (use_group_sync) {
       g.sync();
     } else {
       __syncthreads();
@@ -4774,7 +4774,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSEBAND(Mat A,Vec bb,Vec xx)
   Mat_SeqAIJCUSPARSETriFactors          *cusparseTriFactors = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
   THRUSTARRAY                           *tempGPU = (THRUSTARRAY*)cusparseTriFactors->workVector;
   PetscInt                              n=A->rmap->n, nz=cusparseTriFactors->nnz, Nf;
-  PetscInt                              bw = (int)(2.*(double)n-1.-(double)(PetscSqrtReal(1.+4.*((double)n*(double)n-(double)nz))+PETSC_MACHINE_EPSILON))/2;
+  PetscInt                              bw = (int)(2.*(double)n-1.-(double)(PetscSqrtReal(1.+4.*((double)n*(double)n-(double)nz))+PETSC_MACHINE_EPSILON))/2; // quadric formula for bandwidth
   PetscErrorCode                        ierr;
   cudaError_t                           cerr;
   PetscContainer                        container;
