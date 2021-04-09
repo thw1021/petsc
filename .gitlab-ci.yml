@@ -211,7 +211,7 @@ check-py-vermin:
     - make updatedatafiles
     - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so make petsc4pytest; fi; fi
     - if [ -z ${DISABLE_TESTS+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" cleantest allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS}; fi
-    - if [ -z ${RUN_LINT+x} ]; then make LINTER_OPTIONS=${LINTER_OPTIONS} lint; fi
+    - if [ ! -z ${RUN_LINT+x} ]; then make LINTER_OPTIONS="${LINTER_OPTIONS}" lint; fi
     - if [ ! -z ${RUN_GCOV+x} ]; then make gcov && bash <(curl -s https://codecov.io/bash) -c > /dev/null 2>&1; fi
   artifacts:
     reports:
@@ -737,7 +737,7 @@ linux-analyzer:
     - gce-nfs
   variables:
     TEST_ARCH: arch-ci-linux-analyzer
-    LOAD_MODULES: llvm/11.0.0-snbtima
+    LOAD_MODULES: llvm/11.0.0-snbtima cmake/3.20.0-vov726r
     DISABLE_TESTS: 1
     RUN_LINT: 1
     LINTER_OPTIONS: "--clang_lib=`llvm-config --libdir`/libclang.so.11"
