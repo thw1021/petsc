@@ -711,7 +711,7 @@ checkbadSource:
 	@test ! -s badSourceChar.out
 
 lint:
-	@${PYTHON} ${PETSC_DIR}/lib/petsc/bin/maint/petscClangParser.py ${LINTER_OPTIONS} > ${PETSC_DIR}/checkbadSourceLint.out
+	@${PYTHON3} ${PETSC_DIR}/lib/petsc/bin/maint/petscClangParser.py ${LINTER_OPTIONS} > ${PETSC_DIR}/checkbadSourceLint.out
 	@a=`cat checkbadSourceLint.out | wc -l` ;\
          if [ $$a -gt 0 ] ; then \
            echo "errors detected in source code formatting" ;\
