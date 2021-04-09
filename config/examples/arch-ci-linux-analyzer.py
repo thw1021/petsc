@@ -29,7 +29,6 @@ configure_options = [
   '--download-make=1',
   '--download-metis=1',
   '--download-parmetis=1',
-  '--download-ptscotch=1',
   '--download-superlu_dist=1',
   '--download-hdf5=1',
   '--download-netcdf=1',
