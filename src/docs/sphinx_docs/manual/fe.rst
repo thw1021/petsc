@@ -32,7 +32,7 @@ This divides the computational domain into subdomains, called *regions* in PETSc
 
   DMGetCellDS(dm, cell, &ds);
 
-Each `PetscDS`` object has a set of fields, each with a ``PetscFE`` discretization. This allows it to calculate the size of the local discrete approximation, as well as allocate scratch space for all the associated computations. The last thing we want to do is specify the actual equations to be enforced on each region. The ``PetscDS`` contains a ``PetscWeakForm`` object that holds callback function pointers that define the equations. A simplified, toplevel interface through ``PetscDS`` allows users to quickly define problems for a single region. For example, in `SNES Tutorial ex13 <https://www.mcs.anl.gov/petsc/petsc-current/src/snes/tutorials/ex13.c.html>`__, we define the Poisson problem using
+Each `PetscDS`` object has a set of fields, each with a ``PetscFE`` discretization. This allows it to calculate the size of the local discrete approximation, as well as allocate scratch space for all the associated computations. The final thing needed is specify the actual equations to be enforced on each region. The ``PetscDS`` contains a ``PetscWeakForm`` object that holds callback function pointers that define the equations. A simplified, top-level interface through ``PetscDS`` allows users to quickly define problems for a single region. For example, in `SNES Tutorial ex13 <https://www.mcs.anl.gov/petsc/petsc-current/src/snes/tutorials/ex13.c.html>`__, we define the Poisson problem using
 
 ::
 
