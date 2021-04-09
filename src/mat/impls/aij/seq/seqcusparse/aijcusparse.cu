@@ -3522,6 +3522,7 @@ static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSETriFac
     (*trifactors)->workVector = NULL;
     if ((*trifactors)->a_band_d)   {cudaError_t cerr = cudaFree((*trifactors)->a_band_d);CHKERRCUDA(cerr);}
     if ((*trifactors)->i_band_d)   {cudaError_t cerr = cudaFree((*trifactors)->i_band_d);CHKERRCUDA(cerr);}
+    (*trifactors)->init_dev_prop = PETSC_FALSE;
   }
   PetscFunctionReturn(0);
 }
@@ -4335,10 +4336,8 @@ void print_mat_aij_band(const PetscInt n, const int bi_csr[], const PetscScalar 
 // Band LU kernel ---  ba_csr bi_csr
 __global__
 void __launch_bounds__(1024,1)
-mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], PetscScalar ba_csr[])
+  mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], PetscScalar ba_csr[], int *use_grroup_sync)
 {
-  extern __shared__ PetscInt smemInt[];
-  PetscInt        *sm_pkIdx  = &smemInt[0];
   const PetscInt  Nf = gridDim.x, Nblk = gridDim.y, nloc = n/Nf;
   const PetscInt  field = blockIdx.x, blkIdx = blockIdx.y;
   const PetscInt  start = field*nloc, end = start + nloc;
@@ -4349,33 +4348,33 @@ mat_lu_factor_band(const PetscInt n, const PetscInt bw, const int bi_csr[], Pets
   for (int glbDD=start, locDD = 0; glbDD<end; glbDD++, locDD++) {
     PetscInt          tnzUd = bw, maxU = end-1 - glbDD; // we are chopping off the inter ears
     const PetscInt    nzUd  = (tnzUd>maxU) ? maxU : tnzUd, dOffset = (glbDD > bw) ? bw : glbDD; // global to go past ears after first
-    const PetscInt    nzUd_pad = blockDim.y*(nzUd/blockDim.y + !!(nzUd%blockDim.y));
     PetscScalar       *pBdd = ba_csr + bi_csr[glbDD] + dOffset;
     const PetscScalar *baUd = pBdd + 1; // vector of data  U(i,i+1:end)
     const PetscScalar Bdd = *pBdd;
-    const PetscInt offset = blkIdx*blockDim.y + threadIdx.y, inc = Nblk*blockDim.y;
-    for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd_pad ; idx += inc, myi += inc) { /* assuming symmetric structure */
-      if (idx < nzUd && threadIdx.x==0) { /* assuming symmetric structure */
+    const PetscInt    offset = blkIdx*blockDim.y + threadIdx.y, inc = Nblk*blockDim.y;
+    if (threadIdx.x==0) {
+      for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd; idx += inc, myi += inc) { /* assuming symmetric structure */
         const PetscInt bwi = myi > bw ? bw : myi, kIdx = bwi - (myi-glbDD); // cuts off just the first (global) block
         PetscScalar    *Aid = ba_csr + bi_csr[myi] + kIdx;
         *Aid = *Aid/Bdd;
-        sm_pkIdx[threadIdx.y] = kIdx;
       }
-      __syncthreads(); // synch on threadIdx.x only
-      if (idx < nzUd) { /* assuming symmetric structure */
-        PetscInt    kIdx = sm_pkIdx[threadIdx.y];
-        PetscScalar *Aid = ba_csr + bi_csr[myi] + kIdx;
-        PetscScalar *Aij =  Aid + 1;
-        PetscScalar Lid  = *Aid;
-        for (int jIdx=threadIdx.x ; jIdx<nzUd ; jIdx += blockDim.x) {
-          if (jIdx<nzUd) {
-            Aij[jIdx] -= Lid*baUd[jIdx];
-          }
-        }
+    }
+    __syncthreads(); // synch on threadIdx.x only
+    for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd; idx += inc, myi += inc) {
+      const PetscInt bwi = myi > bw ? bw : myi, kIdx = bwi - (myi-glbDD); // cuts off just the first (global) block
+      PetscScalar    *Aid = ba_csr + bi_csr[myi] + kIdx;
+      PetscScalar    *Aij =  Aid + 1;
+      PetscScalar    Lid  = *Aid;
+      for (int jIdx=threadIdx.x ; jIdx<nzUd; jIdx += blockDim.x) {
+        Aij[jIdx] -= Lid*baUd[jIdx];
       }
     }
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-    g.sync();
+    if (use_grroup_sync) {
+      g.sync();
+    } else {
+      __syncthreads();
+    }
 #else
     __syncthreads();
 #endif
@@ -4432,31 +4431,37 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   {
-    int bw = (2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-b->nz))+PETSC_MACHINE_EPSILON))/2, bm1=bw-1,nl=n/Nf;
-    int gpuid;
-    cudaDeviceProp prop;
-    cudaGetDevice(&gpuid);
-    cudaGetDeviceProperties(&prop, gpuid);
+    int bw = (int)(2.*(double)n-1. - (double)(PetscSqrtReal(1.+4.*((double)n*(double)n-(double)b->nz))+PETSC_MACHINE_EPSILON))/2, bm1=bw-1,nl=n/Nf;
 #if PETSC_PKG_CUDA_VERSION_LT(11,0,0)
     Ni = 1/nconcurrent;
     Ni = 1;
 #else
-    nsm = prop.multiProcessorCount;
+    if (!cusparseTriFactors->init_dev_prop) {
+      int gpuid;
+      cusparseTriFactors->init_dev_prop = PETSC_TRUE;
+      cudaGetDevice(&gpuid);
+      cudaGetDeviceProperties(&cusparseTriFactors->dev_prop, gpuid);
+    }
+    nsm = cusparseTriFactors->dev_prop.multiProcessorCount;
     Ni = nsm/Nf/nconcurrent;
 #endif
     team_size = bw/Ni + !!(bw%Ni);
     nVec = PetscMin(bw, 1024/team_size);
-    ierr = PetscInfo5(A,"Matrix Bandwidth = %d, number SMs/block = %d, num concurency = %d, num fields = %d, numSMs/GPU = %d\n",bw,Ni,nconcurrent,Nf,nsm);CHKERRQ(ierr);
+    ierr = PetscInfo7(A,"Matrix Bandwidth = %d, number SMs/block = %d, num concurency = %d, num fields = %d, numSMs/GPU = %d, thread group size = %d,%d\n",bw,Ni,nconcurrent,Nf,nsm,team_size,nVec);CHKERRQ(ierr);
     {
       dim3 dimBlockTeam(nVec,team_size);
       dim3 dimBlockLeague(Nf,Ni);
       mat_lu_factor_band_copy_aij_aij<<<dimBlockLeague,dimBlockTeam>>>(n, bw, r, ic, ai_d, aj_d, aa_d, bi_t, ba_t);
       CHECK_LAUNCH_ERROR(); // does a sync
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-      void *kernelArgs[] = { (void*)&n, (void*)&bw, (void*)&bi_t, (void*)&ba_t};
-      cudaLaunchCooperativeKernel((void*)mat_lu_factor_band, dimBlockLeague, dimBlockTeam, kernelArgs, team_size*sizeof(PetscInt), NULL);
+      if (Ni > 1) {
+        void *kernelArgs[] = { (void*)&n, (void*)&bw, (void*)&bi_t, (void*)&ba_t, (void*)&nsm };
+        cudaLaunchCooperativeKernel((void*)mat_lu_factor_band, dimBlockLeague, dimBlockTeam, kernelArgs, 0, NULL);
+      } else {
+        mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam>>>(n, bw, bi_t, ba_t, NULL);
+      }
 #else
-      mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam,team_size*sizeof(PetscInt)>>>(n, bw, bi_t, ba_t);
+      mat_lu_factor_band<<<dimBlockLeague,dimBlockTeam>>>(n, bw, bi_t, ba_t, NULL);
 #endif
       CHECK_LAUNCH_ERROR(); // does a sync
 #if defined(PETSC_USE_LOG)
@@ -4465,7 +4470,6 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     }
   }
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-
   /* determine which version of MatSolve needs to be used. from MatLUFactorNumeric_AIJ_SeqAIJCUSPARSE */
   B->ops->solve = MatSolve_SeqAIJCUSPARSEBAND;
   B->ops->solvetranspose = NULL; // need transpose
@@ -4550,6 +4554,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
   nzBcsr = n + (2*n-1)*bwU - bwU*bwU;
   b->maxnz = b->nz = nzBcsr;
   cusparseTriFactors->nnz = b->nz; // only meta data needed: n & nz
+  ierr = PetscInfo2(A,"Matrix Bandwidth = %d, nnz = %d\n",bwL,b->nz);CHKERRQ(ierr);
   if (!cusparseTriFactors->workVector) { cusparseTriFactors->workVector = new THRUSTARRAY(n); }
   cerr = cudaMalloc(&ba_t,(b->nz+1)*sizeof(PetscScalar));CHKERRCUDA(cerr); // incude a place for flops
   cerr = cudaMalloc(&bi_t,(n+1)*sizeof(int));CHKERRCUDA(cerr);
@@ -4649,6 +4654,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse_band(Mat A,MatF
     ierr = MatSetBlockSizesFromMats(*B,A,A);CHKERRQ(ierr);
     (*B)->ops->ilufactorsymbolic = MatILUFactorSymbolic_SeqAIJCUSPARSE;
     (*B)->ops->lufactorsymbolic  = MatLUFactorSymbolic_SeqAIJCUSPARSEBAND;
+    ierr = PetscStrallocpy(MATORDERINGRCM,(char**)&(*B)->preferredordering[MAT_FACTOR_LU]);CHKERRQ(ierr);
   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Factor type not supported for CUSPARSEBAND Matrix Types");
 
   ierr = MatSeqAIJSetPreallocation(*B,MAT_SKIP_ALLOCATION,NULL);CHKERRQ(ierr);
@@ -4694,7 +4700,6 @@ T breduce(T a)
   return a;
 }
 
-
 // Band LU kernel ---  ba_csr bi_csr
 template <int BLOCK_SIZE>
 __global__
@@ -4733,6 +4738,7 @@ mat_solve_band(const PetscInt n, const PetscInt bw, const PetscScalar ba_csr[], 
   /* Then, solve U */
   pLi = ba_csr + Nf*blocknz - 2*chopnz - 1; // end of real data on block (diagonal)
   if (field != Nf-1) pLi -= blocknz_0 + (Nf-2-field)*blocknz + bw; // diagonal of last local row
+
   for (int glbDD=end-1, locDD = 0; glbDD >= start; glbDD--, locDD++) {
     const PetscInt col = (locDD<bw) ? end-1 : glbDD+bw; // end of row in U
     PetscScalar t = 0;
@@ -4767,7 +4773,8 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSEBAND(Mat A,Vec bb,Vec xx)
   thrust::device_ptr<PetscScalar>       xGPU;
   Mat_SeqAIJCUSPARSETriFactors          *cusparseTriFactors = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
   THRUSTARRAY                           *tempGPU = (THRUSTARRAY*)cusparseTriFactors->workVector;
-  PetscInt                              n=A->rmap->n, nz=cusparseTriFactors->nnz, bw=(2*n-1 - (int)(PetscSqrtReal(1+4*(n*n-nz))+PETSC_MACHINE_EPSILON))/2, Nf;
+  PetscInt                              n=A->rmap->n, nz=cusparseTriFactors->nnz, Nf;
+  PetscInt                              bw = (int)(2.*(double)n-1.-(double)(PetscSqrtReal(1.+4.*((double)n*(double)n-(double)nz))+PETSC_MACHINE_EPSILON))/2;
   PetscErrorCode                        ierr;
   cudaError_t                           cerr;
   PetscContainer                        container;
@@ -4783,7 +4790,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSEBAND(Mat A,Vec bb,Vec xx)
     ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
     Nf = (*pNf)%1000;
   } else Nf = 1;
-  if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %D %D",n,Nf);
+  if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n(%D) % Nf(%D) != 0",n,Nf);
 
   /* Get the GPU pointers */
   ierr = VecCUDAGetArrayWrite(xx,&xarray);CHKERRQ(ierr);
