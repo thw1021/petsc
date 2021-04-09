@@ -6,27 +6,24 @@ petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
 configure_options = [
   '--package-prefix-hash='+petsc_hash_pkgs,
   '--with-cc=clang',
-  '--with-fc=gfortran',
+  '--with-fc=0',
   '--with-cxx=clang++',
-
-  # hack for analyzer
-  'CFLAGS=-fPIC',
-  'CXXFLAGS=-fPIC',
-  'FLAGS=-fPIC',
-
-  'COPTFLAGS=-g -O',
-  'FOPTFLAGS=-g -O',
-  'CXXOPTFLAGS=-g -O',
 
   '--download-mpich=1',
   '--download-cmake=1',
   '--download-make=1',
   '--download-metis=1',
   '--download-parmetis=1',
-  '--download-pastix=1',
   '--download-hwloc=1',
   '--download-ptscotch=1',
-  '--download-superlu_dist=1'
+  '--download-superlu_dist=1',
+  '--download-hdf5=1',
+  '--download-netcdf=1',
+  '--download-pnetcdf=1',
+  '--download-zlib=1',
+  '--download-triangle=1',
+  '--download-exodusii=1',
+  '--download-ctetgen=1'
   ]
 
 if __name__ == '__main__':
