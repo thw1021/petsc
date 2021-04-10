@@ -463,13 +463,14 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf,MPI_Datatype unit,void *array,
     link->addr  = array;
     link->paddr = array;
     break;
+#if defined(PETSC_HAVE_MPI_WIN_ALLOCATE)
   case PETSCSF_WINDOW_FLAVOR_DYNAMIC:
     ierr = MPI_Win_create_dynamic(w->info,PetscObjectComm((PetscObject)sf),&link->win);CHKERRMPI(ierr);
-#if defined(PETSC_HAVE_OMPI_MAJOR_VERSION) /* some OpenMPI versions do not support MPI_Win_attach(win,NULL,0); */
+ #if defined(PETSC_HAVE_OMPI_MAJOR_VERSION) /* some OpenMPI versions do not support MPI_Win_attach(win,NULL,0); */
     ierr = MPI_Win_attach(link->win,wsize ? array : &ierr,wsize);CHKERRMPI(ierr);
-#else
+ #else
     ierr = MPI_Win_attach(link->win,array,wsize);CHKERRMPI(ierr);
-#endif
+ #endif
     link->addr  = array;
     link->paddr = array;
     if (!w->dynsf) SETERRQ(PetscObjectComm((PetscObject)sf),PETSC_ERR_ORDER,"Must call PetscSFSetUp()");
@@ -485,6 +486,7 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf,MPI_Datatype unit,void *array,
     update = PETSC_TRUE;
     link->paddr = array;
     break;
+#endif
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
   case PETSCSF_WINDOW_FLAVOR_SHARED:
     ierr = MPI_Win_allocate_shared(wsize,(PetscMPIInt)bytes,w->info,PetscObjectComm((PetscObject)sf),&link->addr,&link->win);CHKERRMPI(ierr);
