@@ -73,6 +73,7 @@ PetscErrorCode LandauCudaStaticDataSet(DM plex, const PetscInt Nq, PetscReal nu_
   PetscInt        *Nbf,dim,Nf,Nb,nip,cStart,cEnd,szf=sizeof(PetscReal),szs=sizeof(PetscScalar);
   PetscDS         prob;
   cudaError_t     cerr;
+
   PetscFunctionBegin;
   ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
