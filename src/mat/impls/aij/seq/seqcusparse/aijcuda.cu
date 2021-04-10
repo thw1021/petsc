@@ -259,7 +259,6 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   B->ops->solvetranspose = NULL; // need transpose
   B->ops->matsolve = NULL;
   B->ops->matsolvetranspose = NULL;
-
   PetscFunctionReturn(0);
 }
 
