@@ -674,6 +674,7 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
   PetscErrorCode    ierr;
   PetscInt          blocky,nblocks,blocksize = 512; /* blocksize must be multiple of SLICE_HEIGHT*32 */
   dim3              block2(256,2),block4(128,4),block8(64,8),block16(32,16),block32(16,32);
+  PetscReal         maxoveravg;
 
   PetscFunctionBegin;
   if (32 % sliceheight) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"The kernel requires the slice height to be a divisor of 32, but the input matrix has a slice height of %D\n",sliceheight);
@@ -767,22 +768,37 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A,Vec xx,Vec yy)
       matmult_seqsell_basic_kernel<<<nblocks,blocksize>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
       break;
     case 0:
-      if (sliceheight*a->maxslicewidth > 20800) { /* important threshold */
-        nblocks = 1+(nrows-1)/sliceheight;
-        matmult_seqsell_tiled_kernel9<32><<<nblocks,dim3(32,32)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
+      maxoveravg = a->maxslicewidth/a->avgslicewidth;
+      if (maxoveravg > 12.0 && maxoveravg/nrows > 0.001) { /* important threshold */
+        /* each block handles approximately one slice */
+        nchunks         = cudastruct->totalchunks;
+        blocky          = a->chunksize/32;
+        chunksperblock  = cudastruct->chunksperblock ? cudastruct->chunksperblock : 1+(cudastruct->totalentries/cudastruct->totalslices-1)/a->chunksize;
+        nblocks         = 1+(nchunks-1)/chunksperblock;
+        chunk_slice_map = cudastruct->chunk_slice_map;
+        if (blocky == 2) {
+          matmult_seqsell_tiled_kernel8<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y);
+        } else if (blocky == 4) {
+          matmult_seqsell_tiled_kernel8<4><<<nblocks,dim3(32,4)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y);
+        } else if (blocky == 8) {
+          matmult_seqsell_tiled_kernel8<8><<<nblocks,dim3(32,8)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y);
+        } else if (blocky == 16) {
+          matmult_seqsell_tiled_kernel8<16><<<nblocks,dim3(32,16)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y);
+        } else if (blocky == 32) {
+          matmult_seqsell_tiled_kernel8<32><<<nblocks,dim3(32,32)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y);
+        } else{
+          matmult_seqsell_tiled_kernel8<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y);
+        }
       } else {
         PetscInt avgslicesize = sliceheight*a->avgslicewidth;
-        if (avgslicesize <= 96) {
+        if (avgslicesize <= 432) {
           if (sliceheight*a->maxslicewidth < 2048 && nrows > 100000) {
             nblocks = 1+(nrows-1)/(2*sliceheight); /* two slices per block */
             matmult_seqsell_tiled_kernel7<<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
           } else {
             nblocks = 1+(nrows-1)/sliceheight;
-            matmult_seqsell_tiled_kernel9<32><<<nblocks,dim3(32,32)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
+            matmult_seqsell_tiled_kernel9<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
           }
-        } else if (avgslicesize <= 432) {
-          nblocks = 1+(nrows-1)/sliceheight;
-          matmult_seqsell_tiled_kernel9<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
         } else if (avgslicesize <= 2400) {
           nblocks = 1+(nrows-1)/sliceheight;
           matmult_seqsell_tiled_kernel9<8><<<nblocks,dim3(32,8)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y);
@@ -812,6 +828,7 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
   PetscInt          *acolidx = cudastruct->colidx;
   PetscInt          *sliidx = cudastruct->sliidx;
   PetscErrorCode    ierr;
+  PetscReal         maxoveravg;
 
   PetscFunctionBegin;
   if (sliceheight !=16) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"The kernel requires a slice height of 16, but the input matrix has a slice height of %D\n",sliceheight);
@@ -903,22 +920,37 @@ PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A,Vec xx,Vec yy,Vec zz)
         matmultadd_seqsell_basic_kernel<<<nblocks,blocksize>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
         break;
       case 0:
-        if (sliceheight*a->maxslicewidth > 20800) {
-          nblocks = 1+(nrows-1)/sliceheight;
-          matmultadd_seqsell_tiled_kernel9<32><<<nblocks,dim3(32,32)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
+        maxoveravg = a->maxslicewidth/a->avgslicewidth;
+        if (maxoveravg > 12.0 && maxoveravg/nrows > 0.001) { /* important threshold */
+          /* each block handles approximately one slice */
+          nchunks         = cudastruct->totalchunks;
+          blocky          = a->chunksize/32;
+          chunksperblock  = cudastruct->chunksperblock ? cudastruct->chunksperblock : 1+(cudastruct->totalentries/cudastruct->totalslices-1)/a->chunksize;
+          nblocks         = 1+(nchunks-1)/chunksperblock;
+          chunk_slice_map = cudastruct->chunk_slice_map;
+          if (blocky == 2) {
+            matmultadd_seqsell_tiled_kernel8<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y,z);
+          } else if (blocky == 4) {
+            matmultadd_seqsell_tiled_kernel8<4><<<nblocks,dim3(32,4)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y,z);
+          } else if (blocky == 8) {
+            matmultadd_seqsell_tiled_kernel8<8><<<nblocks,dim3(32,8)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y,z);
+          } else if (blocky == 16) {
+            matmultadd_seqsell_tiled_kernel8<16><<<nblocks,dim3(32,16)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y,z);
+          } else if (blocky == 32) {
+            matmultadd_seqsell_tiled_kernel8<32><<<nblocks,dim3(32,32)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y,z);
+          } else{
+            matmultadd_seqsell_tiled_kernel8<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,chunksperblock,nchunks,chunk_slice_map,acolidx,aval,sliidx,x,y,z);
+          }
         } else {
           PetscInt avgslicesize = sliceheight*a->avgslicewidth;
-          if (avgslicesize <= 96) {
+          if (avgslicesize <= 432) {
             if (sliceheight*a->maxslicewidth < 2048 && nrows > 100000) {
               nblocks = 1+(nrows-1)/(2*sliceheight); /* two slices per block */
               matmultadd_seqsell_tiled_kernel7<<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
             } else {
               nblocks = 1+(nrows-1)/sliceheight;
-              matmultadd_seqsell_tiled_kernel9<32><<<nblocks,dim3(32,32)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
+              matmultadd_seqsell_tiled_kernel9<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
             }
-          } else if (avgslicesize <= 432) {
-            nblocks = 1+(nrows-1)/sliceheight;
-            matmultadd_seqsell_tiled_kernel9<2><<<nblocks,dim3(32,2)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
           } else if (avgslicesize <= 2400) {
             nblocks = 1+(nrows-1)/sliceheight;
             matmultadd_seqsell_tiled_kernel9<8><<<nblocks,dim3(32,8)>>>(nrows,sliceheight,acolidx,aval,sliidx,x,y,z);
