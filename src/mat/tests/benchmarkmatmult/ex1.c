@@ -16,7 +16,7 @@ int main(int argc,char **args)
   PetscViewer    fd;
   PetscBool      flg,test_sell = PETSC_FALSE, verify_sell = PETSC_FALSE;
   PetscInt       size,maxslicewidth,niter = 10;
-  PetscReal      ratio,avgslicewidth;
+  PetscReal      ratio,avgslicewidth,varslicesize;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
 
@@ -68,6 +68,7 @@ int main(int argc,char **args)
       ierr = MatSeqSELLGetFillRatio(A,&ratio);CHKERRQ(ierr);
       ierr = MatSeqSELLGetMaxSliceWidth(A,&maxslicewidth);CHKERRQ(ierr);
       ierr = MatSeqSELLGetAvgSliceWidth(A,&avgslicewidth);CHKERRQ(ierr);
+      ierr = MatSeqSELLGetVarSliceSize(A,&varslicesize);CHKERRQ(ierr);
     }
 #if defined(PETSC_HAVE_CUDA)
     ierr = MatConvert(A,MATSELLCUDA,MAT_INPLACE_MATRIX,&A);CHKERRQ(ierr);
@@ -131,7 +132,7 @@ int main(int argc,char **args)
     if (test_sell && size == 1) {
       PetscReal bw;
       bw = 1e-9*(avgslicewidth*m*(sizeof(PetscReal)+sizeof(PetscInt))+n*(sizeof(PetscReal)+sizeof(PetscInt)))/gmaxt;
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e %.6lf %d %.2lf %.2lf\n", (double)gtotf/gmaxt/1.e6,gmaxt,maxt,ratio,maxslicewidth,avgslicewidth,bw);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e %.6lf %d %.2lf %.2lf %.2lf\n", (double)gtotf/gmaxt/1.e6,gmaxt,maxt,ratio,maxslicewidth,avgslicewidth,bw,varslicesize);CHKERRQ(ierr);
     } else {
       ierr = PetscPrintf(PETSC_COMM_WORLD, "%.2lf %.4e %.4e\n", (double)gtotf/gmaxt/1.e6,gmaxt,maxt);CHKERRQ(ierr);
     }
