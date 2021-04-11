@@ -132,7 +132,7 @@ typedef struct {
   MPI_Comm         comm; /* global communicator to use for errors and diagnostics */
   LandauGeomData   *SData_d; /* static geometric data on device, but this pointer is a host pointer */
   double           times[1];
-  PetscObjectState state;
+  PetscBool        init;
   PetscBool        use_matrix_mass;
 } LandauCtx;
 
