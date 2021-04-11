@@ -159,6 +159,10 @@
         <li>Add PetscViewerExodusIIOpen() convenience function</li>
         <li>Add PetscViewerExodusIISetOrder() PetscViewerExodusIISetOrder() to generate "2nd order" elements (i.e. tri6, tet10, hex27) when using DMView with a PETSCVIEWEREXODUSII viewer</li>
         <li>Change DMPlexComputeBdResidualSingle() and DMPlexComputeBdJacobianSingle() to take a form key</li>
+        <li>Add DMPlexIsSimplex() to check the shape of the first cell</li>
+        <li>Add DMPlexShape to describe prebuilt mesh domains</li>
+        <li>Add DMPlexCreateCoordinateSpace() to make an FE space for the coordinates</li>
+        <li>Now a Plex can be created automatically from options, see DMSetFromOptions()</li>
       </ul>
       <h4>FE/FV:</h4>
       <ul>
