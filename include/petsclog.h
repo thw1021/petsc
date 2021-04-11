@@ -354,7 +354,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuFlops(PetscLogDouble n)
    Level: intermediate
 
       Notes:
-        The timer is run on the CPU, it is a separate logging of time devoted to GPU computations (including kernel launch times).
+        When CUDA or HIP is enabled, the timer is run on the GPU, it is a separate logging of time devoted to GPU computations (excluding kernel launch times).
+        When CUDA or HIP is not available, the timer is run on the CPU, it is a separate logging of time devoted to GPU computations (including kernel launch times).
+        There is no need to call WaitForCUDA() or WaitForHIP() between PetscLogGpuTimeBegin and PetscLogGpuTimeEnd
         This timer should NOT include times for data transfers between the GPU and CPU, nor setup actions such as allocating space.
         The regular logging captures the time for data transfers and any CPU activites during the event
         It is used to compute the flop rate on the GPU as it is actively engaged in running a kernel.
