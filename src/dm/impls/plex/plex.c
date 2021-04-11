@@ -1156,6 +1156,16 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       ierr = ISRestoreIndices(valueIS, &values);CHKERRQ(ierr);
       ierr = ISDestroy(&valueIS);CHKERRQ(ierr);
     }
+#ifdef PETSC_HAVE_LIBCEED
+    {
+      Ceed        ceed;
+      const char *usedresource;
+
+      ierr = DMGetCeed(dm, &ceed);CHKERRQ(ierr);
+      ierr = CeedGetResource(ceed, &usedresource);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "libCEED Backend: %s\n", usedresource);CHKERRQ(ierr);
+    }
+#endif
     /* If no fields are specified, people do not want to see adjacency */
     if (dm->Nf) {
       PetscInt f;
