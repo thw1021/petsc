@@ -321,7 +321,8 @@ PetscErrorCode PCView_Factor(PC pc,PetscViewer viewer)
       else ordering = factor->ordering;
       ierr = PetscViewerASCIIPrintf(viewer,"  matrix ordering: %s\n",ordering);CHKERRQ(ierr);
       if (!factor->fact->preallocated) {
-        ierr = PetscViewerASCIIPrintf(viewer,"  matrix not yet factor; no additional information available\n");CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"  matrix not yet factored; no additional information available
+");CHKERRQ(ierr);
       } else {
         ierr = MatGetInfo(factor->fact,MAT_LOCAL,&info);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPrintf(viewer,"  factor fill ratio given %g, needed %g\n",(double)info.fill_ratio_given,(double)info.fill_ratio_needed);CHKERRQ(ierr);
