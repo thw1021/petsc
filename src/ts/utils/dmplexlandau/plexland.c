@@ -100,19 +100,14 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   if (!ctx->SData_d) {
     ierr = PetscNew(&ctx->SData_d);CHKERRQ(ierr);
   }
-  if (shift==0.0) {
-    ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
-    flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf + 165);
-  } else {
-    flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf);
-  }
   elemMatSize = totDim*totDim; // used for CPU and print info
   ierr = PetscLogEventEnd(ctx->events[10],0,0,0,0);CHKERRQ(ierr);
-  if (ctx->state == 0) {    /* create static point data, Jacobian called first */
+  if (!ctx->init) {    /* create static point data, Jacobian called first */
     PetscReal *invJ,*ww,*xx,*yy,*zz=NULL,*mass_w,*invJ_a;
     const PetscInt  nip = Nq*numCells;
 
     ierr = PetscLogEventBegin(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
+    ctx->init = PETSC_TRUE;
     ierr = PetscInfo(plex, "Initialize static data\n");CHKERRQ(ierr);
     /* collect f data, first time is for Jacobian, but make mass now */
     if (ctx->verbose > 1 || ctx->verbose > 0) {
@@ -178,17 +173,12 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       ctx->SData_d->invJ = (void*)invJ_a;
       ctx->SData_d->mass_w = (void*)mass_w;
     }
-    ierr = DMPlexCreateClosureIndex(plex, section);CHKERRQ(ierr);
     ierr = PetscLogEventEnd(ctx->events[7],0,0,0,0);CHKERRQ(ierr);
   }
   if (shift==0) { /* create dynamic point data */
-    PetscObjectState state;
     ierr = PetscLogEventBegin(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
-    ierr = PetscObjectStateGet((PetscObject)a_X,&state);CHKERRQ(ierr);
-    if (state==ctx->state) {
-      /* can happend with ark */;
-      ierr = PetscInfo(plex, "no change, but make data anyway (can happend with ark)\n");CHKERRQ(ierr);
-    } else ctx->state = state;
+    ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
+    flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf + 165);
     for (fieldA=0;fieldA<Nf;fieldA++) {
       Eq_m[fieldA] = ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
       if (dim==2) Eq_m[fieldA] *=  2 * PETSC_PI; /* add the 2pi term that is not in Landau */
@@ -201,6 +191,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       ierr = DMPlexVecRestoreClosure(plex, section, locX, cStart+ej, NULL, &coef);CHKERRQ(ierr);
     } /* ej */
     ierr = PetscLogEventEnd(ctx->events[1],0,0,0,0);CHKERRQ(ierr);
+  } else {
+    flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf);
   }
   ierr = DMRestoreLocalVector(plex, &locX);CHKERRQ(ierr);
   /* do it */
@@ -420,8 +412,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       } else {  // GPU like assembly for debugging
         PetscInt      fieldA,idx,q,f,g,d,nr,nc,rows0[LANDAU_MAX_Q_FACE],cols0[LANDAU_MAX_Q_FACE],rows[LANDAU_MAX_Q_FACE],cols[LANDAU_MAX_Q_FACE];
         PetscScalar   vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE],row_scale[LANDAU_MAX_Q_FACE],col_scale[LANDAU_MAX_Q_FACE];
-        for (q = 0; q < maps->num_face; q++) cols0[q] = 0;
-        for (q = 0; q < maps->num_face; q++) col_scale[q] = 0.0; // suppress warnings
+        for (q = 0; q <LANDAU_MAX_Q_FACE; q++) cols0[q] = 0;
+        for (q = 0; q < LANDAU_MAX_Q_FACE; q++) col_scale[q] = 0.0; // suppress warnings
         /* assemble - from the diagonal (I,I) in this format for DMPlexMatSetClosure */
         for (fieldA = 0; fieldA < Nf ; fieldA++) {
           LandauIdx *const Idxs = &maps->gIdx[ej-cStart][fieldA][0];
@@ -1235,7 +1227,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->numConcurrency = 1; /* for device */
   ctx->SData_d = NULL;     /* for device */
   ctx->times[0] = 0;
-  ctx->state = 0; // doit first time
+  ctx->init = PETSC_FALSE; // doit first time
   ctx->use_matrix_mass = PETSC_FALSE; /* fast but slightly fragile */
   ierr = PetscOptionsBegin(ctx->comm, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
   {
