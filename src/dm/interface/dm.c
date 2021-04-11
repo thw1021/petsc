@@ -822,6 +822,17 @@ PetscErrorCode  DMSetUp(DM dm)
 .   -dm_mat_type <type>  - type of matrix to create inside DM
 -   -dm_is_coloring_type - <global or local>
 
+    DMPLEX Specific creation options
++ -dm_plex_shape <shape>      - The domain shape, such as DM_SHAPE_BOX, DM_SHAPE_SPHERE, etc.
++ -dm_plex_dim <dim>          - Set the topological dimension
+. -dm_plex_simplex <bool>     - PETSC_TRUE for simplex elements, PETSC_FALSE for tensor elements
+. -dm_plex_interpolate <bool> - PETSC_TRUE turns on topological interpolation (creating edges and faces)
+. -dm_plex_box_faces <m,n,p>  - Number of faces in each linear direction
+. -dm_plex_box_lower <x,y,z>  - Specify lower-left-bottom coordinates for the box
+. -dm_plex_box_upper <x,y,z>  - Specify upper-right-top coordinates for the box
+. -dm_plex_box_bd <bx,by,bz>  - Specify the DMBoundaryType for each direction
+- -dm_plex_sphere_radius <r>  - The sphere radius
+
     DMPLEX Specific Checks
 +   -dm_plex_check_symmetry        - Check that the adjacency information in the mesh is symmetric - DMPlexCheckSymmetry()
 .   -dm_plex_check_skeleton        - Check that each cell has the correct number of vertices (only for homogeneous simplex or tensor meshes) - DMPlexCheckSkeleton()
