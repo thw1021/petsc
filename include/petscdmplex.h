@@ -451,4 +451,8 @@ PETSC_EXTERN PetscErrorCode DMPlexCellRefinerGetAffineTransforms(DMPlexCellRefin
 PETSC_EXTERN PetscErrorCode DMPlexCellRefinerGetAffineFaceTransforms(DMPlexCellRefiner, DMPolytopeType, PetscInt *, PetscReal *[], PetscReal *[], PetscReal *[], PetscReal *[]);
 PETSC_EXTERN PetscErrorCode DMPlexRefineUniform(DM, DMPlexCellRefiner, DM *);
 
+#ifdef PETSC_HAVE_LIBCEED
+PETSC_EXTERN PetscErrorCode DMPlexGetCEEDRestriction(DM, CeedElemRestriction *);
+#endif
+
 #endif
