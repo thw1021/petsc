@@ -5,7 +5,7 @@ Created on Tue Mar 23 17:56:06 2021
 
 @author: jacobfaibussowitsch
 """
-import clang
+import clang.cindex as clx
 
 def verbosePrint(*args,**kwargs):
     '''filter predicate for show_ast: show all'''
@@ -37,7 +37,7 @@ class Level(int):
     return Level(super(Level, self).__add__(inc))
 
 def checkValidType(t):
-    return t.kind != clang.cindex.TypeKind.INVALID
+    return t.kind != clx.TypeKind.INVALID
 
 def fullyQualify(t):
   q = set()
@@ -69,6 +69,28 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
       retList.extend(viewAstFromCursor(c,pred=pred,level=level+1,**kwargs))
   return retList
 
+def getSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
+  filename,lineno = cursor.location.file.name,cursor.location.line
+  numBeforeContext = numBeforeContext if numBeforeContext else numContext
+  numAfterContext = numAfterContext if numAfterContext else numContext
+  lineList = []
+  with open(filename,"r") as fd:
+    lineFile = 1
+    line = fd.readline()
+    while line:
+      if lineFile >= lineno-numBeforeContext and lineFile <= lineno+numAfterContext:
+        lineList.append(line)
+      lineFile += 1
+      line = fd.readline()
+  # Find number of spaces to remove from beginning of line based on lowest.
+  # This keeps indentation between lines, but doesn't start the string halfway
+  # across the screeen
+  if trim:
+    minSpaces = min([len(s)-len(s.lstrip(' ')) for s in lineList])
+    lineList = [s[minSpaces:].rstrip() for s in lineList]
+  srcStr = "\n".join(lineList)
+  return srcStr
+
 def viewSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,ret=False):
   filename,lineno = cursor.location.file.name,cursor.location.line
   numBeforeContext = numBeforeContext if numBeforeContext else numContext
@@ -80,8 +102,14 @@ def viewSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=
     line = fd.readline()
     while line:
       if lineFile >= lineno-numBeforeContext and lineFile <= lineno+numAfterContext:
-        prefix = "{indicator} {lineFile: <{width}}: ".format(indicator=" " if lineFile != lineno else ">",lineFile=lineFile,width=maxWidth)
+        prefix = "{indicator} {lineFile: <{width}}: ".format(indicator=">" if lineFile == lineno else " ",lineFile=lineFile,width=maxWidth)
         lineList.append((prefix,line))
+        if lineFile == lineno:
+          extent = cursor.extent
+          begin,end = max(extent.start.column-1,0),max(extent.end.column-1,1)
+          lenUnderline = max(abs(end-begin),1)
+          underline = begin*" "+lenUnderline*"^"
+          lineList.append((" "*len(prefix),underline))
       lineFile += 1
       line = fd.readline()
   # Find number of spaces to remove from beginning of line based on lowest.

@@ -9,6 +9,50 @@ import os
 import clang.cindex as clx
 import petscClangParserUtil
 
+def unifiedDiff(a,b,fromfile="",tofile="",fromfiledate="",tofiledate="",n=0,lineterm="\n",ignoreCharFunc=None):
+  """
+  carbon copy of difflib.unified_diff, but allows one to set the isjunk option
+  """
+  from difflib import SequenceMatcher
+
+  def formatRangeUnified(start,stop):
+    "Convert range to the 'ed' format"
+    # Per the diff spec at http://www.unix.org/single_unix_specification/
+    beginning = start+1     # lines start numbering with one
+    length = stop-start
+    if length == 1:
+      return "{}".format(beginning)
+    if not length:
+      beginning -= 1        # empty ranges begin at line just before the range
+    return "{},{}".format(beginning,length)
+
+  started = False
+  auto    = ignoreCharFunc == None # necessary otherwise ignoreLineFunc will be ignored
+  for group in SequenceMatcher(isjunk=ignoreCharFunc,a=a,b=b,autojunk=auto).get_grouped_opcodes(n):
+    if not started:
+      started  = True
+      fromdate = "\t{}".format(fromfiledate) if fromfiledate else ""
+      todate   = "\t{}".format(tofiledate) if tofiledate else ""
+      yield "--- {}{}{}".format(fromfile,fromdate,lineterm)
+      yield "+++ {}{}{}".format(tofile,todate,lineterm)
+
+    first,last  = group[0],group[-1]
+    file1_range = formatRangeUnified(first[1],last[2])
+    file2_range = formatRangeUnified(first[3],last[4])
+    yield "@@ -{} +{} @@{}".format(file1_range,file2_range,lineterm)
+
+    for tag,i1,i2,j1,j2 in group:
+      if tag == "equal":
+        for line in a[i1:i2]:
+          yield " "+line
+        continue
+      if tag in {"replace","delete"}:
+        for line in a[i1:i2]:
+          yield "-"+line
+      if tag in {"replace","insert"}:
+        for line in b[j1:j2]:
+          yield "+"+line
+
 """
 clang.cindex.TranslationUnit does not have all latest flags, but we prefix
 with P_ just in case
@@ -122,10 +166,11 @@ petscClassIdMap = {
 
 class PetscCursor(clx.Cursor):
   """
-  This class exists purely for purpose of making viewing a cursor easier
+  This class exists purely for purpose of making it easier to extract the source from a cursor
   """
   @classmethod
   def cast(cls,cursor):
+    raise RuntimeError
     """
     Cast an clang cursor into a petsc cursor
     """
@@ -136,9 +181,6 @@ class PetscCursor(clx.Cursor):
 
   def __repr__(self):
     return "\n".join(petscClangParserUtil.viewAstFromCursor(self))
-
-  def viewSource(self,nbefore=0,nafter=0,nboth=0,ret=False):
-    return petscClangParserUtil.viewSourceFromCursor(self,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,ret=ret)
 
 class ArgCursorWarning(Exception):
   """
@@ -209,7 +251,7 @@ class ArgCursor(object):
       # removes all cursors that have duplicate spelling
       tokenList = list({t.spelling: t for t in tokenList}.values())
       if len(tokenList) != 1:
-        srcstr = petscClangParserUtil.viewSourceFromCursor(cursor,ret=True)
+        srcstr = petscClangParserUtil.getSourceFromCursor(cursor)
         # For whatever reason (perhaps because its macro stringization hell) PETSC_HASH_MAP
         # and PetscKernel_XXX absolutely __brick__ the AST. The resultant cursors have no
         # children, no name, no tokens, and a completely incorrect SourceLocation.
@@ -222,8 +264,6 @@ class ArgCursor(object):
         elif "PetscKernel_" in srcstr:
           raise ArgCursorWarning("Encountered unparsable PetscKernel_XXX for cursor {cursor}".format(cursor=errorViewFromCursor(cursor)))
         else:
-          import pdb
-          pdb.set_trace()
           raise RuntimeError("Unexpected number of tokens for cursor {obj}".format(obj=errorViewFromCursor(cursor)))
       name = tokenList[0].spelling
       if not name:
@@ -248,24 +288,63 @@ class ArgCursor(object):
   def getDerivedTypeNameFromCursor(cursor):
     return cursor.type.spelling
 
+  @staticmethod
+  def getSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,trim=False):
+    return petscClangParserUtil.getSourceFromCursor(cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,trim=trim)
+
+  def getSource(self,nbefore=0,nafter=0,nboth=0,trim=False):
+    return ArgCursor.getSourceFromCursor(self,nbefore=nbefore,nafter=nafter,nboth=nboth,trim=trim)
+
+  @staticmethod
+  def viewSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,ret=True):
+    return petscClangParserUtil.viewSourceFromCursor(cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,ret=ret)
+
+  def viewSource(self,nbefore=0,nafter=0,nboth=0,ret=True):
+    return ArgCursor.viewSourceFromCursor(self,nbefore=nbefore,nafter=nafter,nboth=nboth,ret=ret)
+
+  @staticmethod
+  def viewAstFromCursor(cursor):
+    return print("\n".join(petscClangParserUtil.viewAstFromCursor(cursor)))
+
+  def viewAst(self):
+    return ArgCursor.viewAstFromCursor(self)
+
   def __init__(self,cursor,idx=-12345):
-    cursor = PetscCursor.cast(cursor)
+    self.__cursor = cursor
     self.name = ArgCursor.getNameFromCursor(cursor)
     self.typename = ArgCursor.getTypenameFromCursor(cursor)
     self.derivedtypename = ArgCursor.getDerivedTypeNameFromCursor(cursor)
     self.argidx = idx
-    self.cursor = cursor
     return
 
+  def __getattr__(self,attr):
+    # Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
+    # (i.e. the value wasn't found in self), then we try the cursor. So we can do things
+    # like self.translation_unit, but keep all of our variables out of the cursors
+    # namespace
+    return getattr(self.__cursor,attr)
+
   def __repr__(self):
-    loc = self.cursor.location
+    loc = self.location
     locStr = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
-    srcStr = self.cursor.viewSource(ret=True)
+    srcStr = self.viewSource(ret=True)
     return "{loc}\n'{name}' of derived type '{derivedtype}', canonical type '{type}'\n{src}\n".format(loc=locStr,name=self.name,derivedtype=self.derivedtypename,type=self.typename,src=srcStr)
+
+class SourceFix(object):
+  def __init__(self,cursor,value):
+    extent = cursor.extent
+    begin,end = extent.start.column-1,extent.end.column-1
+    self.filename = cursor.location.file.name
+    self.startLine = extent.start.line
+    assert self.startLine >= 1
+    self.srcStr = ArgCursor.getSourceFromCursor(cursor)
+    self.fixedStr = self.srcStr[:begin]+str(value)+self.srcStr[end:]
+    return
 
 class BadSource(object):
   def __init__(self,prefix,printWarningMessages=True,lock=None):
     self.errors = []
+    self.diffs = dict()
     self.warnings = []
     self.prefix = prefix
     self.printWarningMessages = printWarningMessages
@@ -288,10 +367,11 @@ class BadSource(object):
   def __enter__(self):
     return self
 
-  def __exit__(self,*args):
-    if self.printWarningMessages:
-      self.__print(self.getWarnings())
-    self.__print(self.getErrors())
+  def __exit__(self,excType,*args):
+    if not excType:
+      if self.printWarningMessages:
+        self.__print(self.getWarnings())
+      self.__print(self.getErrors())
     return
 
   def __print(self,msg):
@@ -303,9 +383,17 @@ class BadSource(object):
         print(msg)
     return
 
-  def addErrorFromCursor(self,locCursor,errMsg):
+  def addErrorFromCursor(self,locCursor,errMsg,fix=None):
     errPrefix = str(locCursor)
-    self.errors.append("".join(["\nERROR {errno}: ".format(errno=len(self.errors)),errPrefix,"\n",errMsg]))
+    errMess = "".join(["\nERROR {errno}: ".format(errno=len(self.errors)),errPrefix,"\n",errMsg])
+    self.errors.append(errMess)
+    try:
+      self.diffs[fix.filename].append(fix)
+    except KeyError:
+      self.diffs[fix.filename] = [fix]
+    except AttributeError:
+      # fix = None
+      pass
     return
 
   def getErrors(self):
@@ -327,42 +415,106 @@ class BadSource(object):
       return "\n".join([self.warnPrefix,"\n".join(self.warnings)[1:],self.warnPrefix])
     return
 
+  def coalesceDiffs(self):
+    def ignoreComment(char):
+      return char in " #\t"
+
+    combinedDiffs = []
+    for filename,diffs in self.diffs.items():
+      maxLine = diffs[-1].startLine
+      # hack to make difflib think we are starting at a particular line number, any line
+      # starting with # is ignored, so we insert our changed lines at the correct line
+      # numbers in the source
+      srcList   = ["#\n" for _ in range(maxLine)]
+      fixedList = srcList.copy()
+      for d in diffs:
+        # -1 to be 0 indexed
+        srcList[d.startLine-1]   = d.srcStr
+        fixedList[d.startLine-1] = d.fixedStr
+      unified = unifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename,ignoreCharFunc=ignoreComment)
+      combinedDiffs.append("".join(unified))
+    return combinedDiffs
+
 class FilterFunctor(object):
-  def __init__(self,expected,func,funcName,preferredFuncName=None):
-    self.expected = expected
-    self.functor = func
-    self.funcName = funcName
-    self.preferredFuncName = preferredFuncName
+  def __init__(self,expected,funcCursor,pointer=False,notPointerHook=None,pointerHook=None,successHook=None,failureHook=None,**kwargs):
+    self.expectedTypeKinds = expected
+    self.funcCursor = funcCursor
+    self.pointer = pointer
+    self.unexpectedNotPointerFunction = notPointerHook
+    self.unexpectedPointerFunction = pointerHook
+    self.successFunction = successHook
+    self.failureFunction = failureHook
+    self.extraArgs = kwargs
     return
 
-  def __call__(self,badSource,obj):
-    return self.functor(badSource,obj,self.funcName,self.preferredFuncName)
+  def unexpectedNotPointerHook(self,badSource,obj,objType):
+    try:
+      self.unexpectedNotPointerFunction(badSource,obj,objType,**vars(self))
+    except TypeError:
+      badSource.addErrorFromCursor(obj,"Object of clang type {otype} is not a pointer. Expected pointer of one of the following types: {types}".format(otype=objType.kind,types=self.expectedTypeKinds))
+    return
+
+  def unexpectedPointerHook(self,badSource,obj,objType):
+    try:
+      self.unexpectedPointerFunction(badSource,obj,objType,**vars(self))
+    except TypeError:
+      badSource.addErrorFromCursor(obj,"Object of clang type {otype} is a pointer when it should not be".format(otype=objType.kind))
+    return
+
+  def successHook(self,badSource,obj,objType):
+    try:
+      self.successFunction(badSource,obj,objType,**vars(self))
+    except TypeError:
+      pass
+    return
+
+  def failureHook(self,badSource,obj,objType):
+    try:
+      handled = self.failureFunction(badSource,obj,objType,**vars(self))
+    except TypeError:
+      handled = False
+    if not handled:
+      badSource.addErrorFromCursor(obj,"Object of clang type {otype} is not in expected types: {types}".format(otype=objType.kind,types=self.expectedTypeKinds))
+    return
 
 
 """Generic test functions"""
-def checkIsPetscScalar(badSource,obj,funcName,preferredFuncName):
+def checkIsPetscScalar(badSource,obj,objType,**kwargs):
   if "PetscScalar" not in obj.derivedtypename:
-    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscScalars".format(funcName=funcName))
+    funcCursor = kwargs["funcCursor"]
+    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscScalars".format(funcName=funcCursor.displayname))
   return
 
-def checkIsPetscReal(badSource,obj,funcName,preferredFuncName):
+def checkIsPetscReal(badSource,obj,objType,**kwargs):
   if "PetscReal" not in obj.derivedtypename:
-    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscReals".format(funcName=funcName))
+    funcCursor = kwargs["funcCursor"]
+    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscReals".format(funcName=funcCursor.displayname))
   return
 
-def checkIntIsNotPetscBool(badSource,obj,funcName,preferredFuncName):
+def checkIntIsNotPetscBool(badSource,obj,objType,**kwargs):
   if "PetscBool" in obj.derivedtypename:
-    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {preferredFuncName}() instead".format(funcName=funcName,preferredFuncName=preferredFuncName))
+    funcCursor,validFunc = kwargs["funcCursor"],kwargs["extraArgs"]["validFunc"]
+    call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
+    assert len(call) == 1
+    fix = SourceFix(call[0],validFunc)
+    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {validFunc}() instead".format(funcName=funcCursor.displayname,validFunc=validFunc),fix=fix)
   return
 
-def checkMPIIntIsNotPetscInt(badSource,obj,funcName,preferredFuncName):
+def checkMPIIntIsNotPetscInt(badSource,obj,objType,**kwargs):
   if "PetscInt" in obj.derivedtypename:
-    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {preferredFuncName}() instead".format(funcName=funcName,preferredFuncName=preferredFuncName))
+    funcCursor,validFunc = kwargs["funcCursor"],kwargs["extraArgs"]["validFunc"]
+    call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
+    assert len(call) == 1
+    fix = SourceFix(call[0],preferredFuncName)
+    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {validFunc}() instead".format(funcName=funcCursor.displayname,validFunc=validFunc),fix=fix)
   return
 
-def checkIsPetscBool(badSource,obj,funcName,preferredFuncName):
+def checkIsPetscBool(badSource,obj,objType,**kwargs):
   if ("PetscBool" not in obj.derivedtypename) and ("bool" not in obj.typename):
-    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscBool or bool".format(funcName=funcName))
+    import pdb
+    pdb.set_trace()
+    funcCursor = kwargs["funcCursor"]
+    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscBool or bool".format(funcName=funcCursor.displayname))
   return
 
 def checkMatchingClassid(badSource,obj,objClassid):
@@ -381,8 +533,9 @@ def checkMatchingClassid(badSource,obj,objClassid):
     # Raise exception here since this isn't a bad source, moreso a failure of
     # this script since it should know about all petsc classes
     raise RuntimeError("Unkown or invalid class "+str(obj))
-  if expectedClassid != objClassid.name:
-    badSource.addErrorFromCursor(obj,"Classid doesn't match. Expected '{expected}' found '{found}'".format(expected=expectedClassid,found=objClassid.name))
+  if objClassid.name != expectedClassid:
+    fix = SourceFix(objClassid,expectedClassid)
+    badSource.addErrorFromCursor(obj,"Classid doesn't match. Expected '{expected}' found '{found}'".format(expected=expectedClassid,found=objClassid.name),fix=fix)
   return
 
 def checkMatchingArgNum(badSource,obj,idx,parentArgs):
@@ -399,10 +552,10 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
     or
     macro(bar->baz,barIdx)
     """
-    defCursor = obj.cursor.get_definition()
+    defCursor = obj.get_definition()
     if not defCursor: raise ValueError
     potentialParents = []
-    if defCursor.location == obj.cursor.location:
+    if defCursor.location == obj.location:
       # definition didn't move, so probably no definition, check for this before though
       # to explicitly catch it, since it should be handleable
       raise RuntimeError
@@ -419,7 +572,7 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
     elif defCursor.kind == clx.CursorKind.FIELD_DECL:
       # we have deduced that the original cursor may refer to a struct member
       # reference, so we go back and see if indeed this is the case
-      for memberChild in obj.cursor.get_children():
+      for memberChild in obj.get_children():
         if memberChild.kind == clx.CursorKind.MEMBER_REF_EXPR:
           potentialParentsTemp = [c for c in memberChild.walk_preorder() if c.kind == clx.CursorKind.DECL_REF_EXPR]
           potentialParentsTemp = [parent for parent in potentialParentsTemp if parent.spelling != memberChild.spelling]
@@ -432,8 +585,8 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
       return parentArgNames.index(name)
     raise ValueError
 
-  if idx.cursor.canonical.kind not in mathCursors:
-    badSource.addWarningFromCursor(idx,"Index value is of unexpected type '{kind}'".format(kind=idx.cursor.canonical.kind))
+  if idx.canonical.kind not in mathCursors:
+    badSource.addWarningFromCursor(idx,"Index value is of unexpected type '{kind}'".format(kind=idx.canonical.kind))
     return
   try:
     idxNum = int(idx.name)
@@ -450,56 +603,42 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
       # anything here but emit a warning
-      badSource.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{parfn}()' seemingly does not contain the object:\n\n{proofParent}".format(parfn=parentArgs[0].cursor.semantic_parent.spelling,proofParent=parentArgs[0].cursor.viewSource(ret=True)))
+      parentFunc = ArgCursor(parentArgs[0].semantic_parent)
+      badSource.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{parfn}()' seemingly does not contain the object:\n\n{proofParent}".format(parfn=parentFunc.name,proofParent=parentFunc.viewSource(ret=True)))
       return
   if idxNum != parentArgs[matchLoc].argidx:
-    badSource.addErrorFromCursor(idx,"Argument number doesn't match for '{badObj}'. Found '{found}' expected '{expected}' from\n\n{proofParent}".format(badObj=obj.name,expected=str(parentArgs[matchLoc].argidx),found=str(idxNum),proofParent=parentArgs[matchLoc].cursor.viewSource(ret=True)))
+    errMess = "Argument number doesn't match for '{badObj}'. Found '{found}' expected '{expected}' from\n\n{proofParent}".format(badObj=obj.name,expected=str(parentArgs[matchLoc].argidx),found=str(idxNum),proofParent=parentArgs[matchLoc].viewSource(ret=True))
+    fix = SourceFix(idx,parentArgs[matchLoc].argidx)
+    badSource.addErrorFromCursor(idx,errMess,fix=fix)
   return
 
-def checkMatchingSpecificPointerType(badSource,obj,expectedTypeKinds,filterCtx=None):
+def checkMatchingSpecificType(badSource,obj,filterFunctor):
   """
-  Checks that obj is of a particular pointer kind, for example char*
+  Checks that obj is of a particular kind, for example char. Can optionally handle pointers too.
   """
-  objType = obj.cursor.canonical.type.get_canonical()
-  if objType.kind in expectedTypeKinds:
-    raise RuntimeError
-    badSource.addErrorFromCursor(obj,"Object of clang type {otype} is not a pointer to expected types: {types}".format(otype=objType.kind,types=expectedTypeKinds))
-  if objType.kind == clx.TypeKind.INCOMPLETEARRAY:
-    objType = objType.element_type
-    # get rid of any nested array types
-    while objType.kind in arrayTypes:
+  objType = obj.canonical.type.get_canonical()
+  if filterFunctor.pointer:
+    if objType.kind in filterFunctor.expectedTypeKinds:
+      filterFunctor.unexpectedNotPointerHook(badSource,obj,objType)
+      return
+    if objType.kind == clx.TypeKind.INCOMPLETEARRAY:
       objType = objType.element_type
-  if objType.kind == clx.TypeKind.POINTER:
-    objType = objType.get_pointee()
-    # get rid of any nested pointer types
-    while objType.kind == clx.TypeKind.POINTER:
+      # get rid of any nested array types
+      while objType.kind in arrayTypes:
+        objType = objType.element_type
+    if objType.kind == clx.TypeKind.POINTER:
       objType = objType.get_pointee()
-  if objType.kind in expectedTypeKinds:
-    try:
-      filterCtx(badSource,obj)
-    except TypeError:
-      # 'NoneType' object is not callable
-      pass
+      # get rid of any nested pointer types
+      while objType.kind == clx.TypeKind.POINTER:
+        objType = objType.get_pointee()
   else:
-    badSource.addErrorFromCursor(obj,"Object of clang type {otype} is not in expected types: {types}".format(otype=objType.kind,types=expectedTypeKinds))
-  return
-
-def checkMatchingSpecificType(badSource,obj,expectedTypeKinds,filterCtx=None):
-  """
-  Checks that obj is of a particular NON-POINTER kind, for example char.
-  """
-  objType = obj.cursor.canonical.type.get_canonical()
-  if objType.kind in arrayTypes or objType.kind == clx.TypeKind.POINTER:
-    badSource.addErrorFromCursor(obj,"Object of clang type {otype} is a pointer when it should not be".format(otype=objType.kind))
-    raise RuntimeError
-  if objType.kind in expectedTypeKinds:
-    try:
-      filterCtx(badSource,obj)
-    except TypeError:
-      # 'NoneType' object is not callable
-      pass
+    if objType.kind in arrayTypes or objType.kind == clx.TypeKind.POINTER:
+      filterFunctor.unexpectedPointerHook(badSource,obj,objType)
+      return
+  if objType.kind in filterFunctor.expectedTypeKinds:
+    filterFunctor.successHook(badSource,obj,objType)
   else:
-    badSource.addErrorFromCursor(obj,"Object of clang type {otype} is not in expected types: {types}".format(otype=objType.kind,types=expectedTypeKinds))
+    filterFunctor.failureHook(badSource,obj,objType)
   return
 
 
@@ -545,14 +684,13 @@ def checkPetscValidHeader(badSource,func,parent):
     funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
     parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
     badSource.addWarning(str(acw))
     return
   obj,idx = funcArgs
   checkMatchingArgNum(badSource,obj,idx,parentArgs)
   return
 
-def checkPetscValidPointer(badSource,func,parent,pointerFilter=None):
+def checkPetscValidPointer(badSource,func,parent,filterFunctor=None):
   """
   Specific check for PetscValidPointer(obj,idx)
   """
@@ -560,15 +698,12 @@ def checkPetscValidPointer(badSource,func,parent,pointerFilter=None):
     funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
     parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
     badSource.addWarning(str(acw))
     return
   obj,idx = funcArgs
-  try:
-    checkMatchingSpecificPointerType(badSource,obj,pointerFilter.expected,pointerFilter)
-  except AttributeError:
-    # 'NoneType' object has no attribute 'expected'
-    pass
+  if filterFunctor:
+    assert filterFunctor.pointer == True
+    checkMatchingSpecificType(badSource,obj,filterFunctor)
   checkMatchingArgNum(badSource,obj,idx,parentArgs)
   return
 
@@ -576,40 +711,40 @@ def checkPetscValidCharPointer(badSource,func,parent):
   """
   Specific check for PetscValidCharPointer(obj,idx)
   """
-  charFilter = FilterFunctor(charTypes,None,None)
-  checkPetscValidPointer(badSource,func,parent,pointerFilter=charFilter)
+  charFilter = FilterFunctor(charTypes,func,pointer=True)
+  checkPetscValidPointer(badSource,func,parent,filterFunctor=charFilter)
   return
 
 def checkPetscValidIntPointer(badSource,func,parent):
   """
   Specific check for PetscValidIntPointer(obj,idx)
   """
-  intFilter = FilterFunctor(intTypes,checkIntIsNotPetscBool,"PetscValidIntPointer",preferredFuncName="PetscValidBoolPointer")
-  checkPetscValidPointer(badSource,func,parent,pointerFilter=intFilter)
+  intFilter = FilterFunctor(intTypes,func,pointer=True,successHook=checkIntIsNotPetscBool,validFunc="PetscValidBoolPointer")
+  checkPetscValidPointer(badSource,func,parent,filterFunctor=intFilter)
   return
 
 def checkPetscValidBoolPointer(badSource,func,parent):
   """
   Specific check for PetscValidBoolPointer(obj,idx)
   """
-  boolFilter = FilterFunctor(boolTypes,checkIsPetscBool,"PetscValidBoolPointer")
-  checkPetscValidPointer(badSource,func,parent,pointerFilter=boolFilter)
+  boolFilter = FilterFunctor(boolTypes,func,pointer=True,successHook=checkIsPetscBool)
+  checkPetscValidPointer(badSource,func,parent,filterFunctor=boolFilter)
   return
 
 def checkPetscValidScalarPointer(badSource,func,parent):
   """
   Specific check for PetscValidScalarPointer(obj,idx)
   """
-  scalarFilter = FilterFunctor(scalarTypes,checkIsPetscScalar,"PetscValidScalarPointer")
-  checkPetscValidPointer(badSource,func,parent,pointerFilter=scalarFilter)
+  scalarFilter = FilterFunctor(scalarTypes,func,pointer=True,successHook=checkIsPetscScalar)
+  checkPetscValidPointer(badSource,func,parent,filterFunctor=scalarFilter)
   return
 
 def checkPetscValidRealPointer(badSource,func,parent):
   """
   Specific check for PetscValidRealPointer(obj,idx)
   """
-  realFilter = FilterFunctor(realTypes,checkIsPetscReal,"PetscValidRealPointer")
-  checkPetscValidPointer(badSource,func,parent,pointerFilter=realFilter)
+  realFilter = FilterFunctor(realTypes,func,pointer=True,successHook=checkIsPetscReal)
+  checkPetscValidPointer(badSource,func,parent,filterFunctor=realFilter)
   return
 
 def checkPetscCheckSameType(badSource,func,parent):
@@ -620,7 +755,6 @@ def checkPetscCheckSameType(badSource,func,parent):
     funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
     parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
     badSource.addWarning(str(acw))
     return
   objA,idxA,objB,idxB = funcArgs
@@ -636,7 +770,6 @@ def checkPetscValidType(badSource,func,parent):
     funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
     parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
     badSource.addWarning(str(acw))
     return
   obj,idx = funcArgs
@@ -651,7 +784,6 @@ def checkPetscCheckSameComm(badSource,func,parent):
     funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
     parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
     badSource.addWarning(str(acw))
     return
   objA,idxA,objB,idxB = funcArgs
@@ -659,7 +791,7 @@ def checkPetscCheckSameComm(badSource,func,parent):
   checkMatchingArgNum(badSource,objB,idxB,parentArgs)
   return
 
-def checkPetscValidLogicalCollective(badSource,func,parent,typeFilter):
+def checkPetscValidLogicalCollective(badSource,func,parent,filterFunctor):
   """
   Generic check for PetscValidLogicalCollectiveXXX(pobj,obj,idx)
   """
@@ -667,12 +799,12 @@ def checkPetscValidLogicalCollective(badSource,func,parent,typeFilter):
     funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
     parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
     badSource.addWarning(str(acw))
     return
   # dont need the petsc object, nothing to check there
   _,obj,idx = funcArgs
-  checkMatchingSpecificType(badSource,obj,typeFilter.expected,typeFilter)
+  assert filterFunctor.pointer == False
+  checkMatchingSpecificType(badSource,obj,filterFunctor)
   checkMatchingArgNum(badSource,obj,idx,parentArgs)
   return
 
@@ -680,7 +812,7 @@ def checkPetscValidLogicalCollectiveScalar(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveScalar(pobj,obj,idx)
   """
-  scalarFilter = FilterFunctor(scalarTypes,checkIsPetscScalar,"PetscValidLogicalCollectiveScalar")
+  scalarFilter = FilterFunctor(scalarTypes,func,successHook=checkIsPetscScalar)
   checkPetscValidLogicalCollective(badSource,func,parent,scalarFilter)
   return
 
@@ -688,7 +820,7 @@ def checkPetscValidLogicalCollectiveReal(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveReal(pobj,obj,idx)
   """
-  realFilter = FilterFunctor(realTypes,checkIsPetscReal,"PetscValidLogicalCollectiveReal")
+  realFilter = FilterFunctor(realTypes,func,successHook=checkIsPetscReal)
   checkPetscValidLogicalCollective(badSource,func,parent,realFilter)
   return
 
@@ -696,7 +828,7 @@ def checkPetscValidLogicalCollectiveInt(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveInt(pobj,obj,idx)
   """
-  intFilter = FilterFunctor(intTypes,checkIntIsNotPetscBool,"PetscValidLogicalCollectiveInt",preferredFuncName="PetscValidLogicalCollectiveBool")
+  intFilter = FilterFunctor(intTypes,func,successHook=checkIntIsNotPetscBool,validFunc="PetscValidLogicalCollectiveBool")
   checkPetscValidLogicalCollective(badSource,func,parent,intFilter)
   return
 
@@ -704,7 +836,7 @@ def checkPetscValidLogicalCollectiveMPIInt(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveMPIInt(pobj,obj,idx)
   """
-  mpiIntFilter = FilterFunctor(mpiIntTypes,checkMPIIntIsNotPetscInt,"PetscValidLogicalCollectiveMPIInt",preferredFuncName="PetscValidLogicalCollectiveInt")
+  mpiIntFilter = FilterFunctor(mpiIntTypes,func,successHook=checkMPIIntIsNotPetscInt,validFunc="PetscValidLogicalCollectiveInt")
   checkPetscValidLogicalCollective(badSource,func,parent,mpiIntFilter)
   return
 
@@ -712,7 +844,7 @@ def checkPetscValidLogicalCollectiveBool(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveBool(pobj,obj,idx)
   """
-  boolFilter = FilterFunctor(boolTypes,checkIsPetscBool,"PetscValidLogicalCollectiveBool")
+  boolFilter = FilterFunctor(boolTypes,func,successHook=checkIsPetscBool)
   checkPetscValidLogicalCollective(badSource,func,parent,boolFilter)
   return
 
@@ -720,7 +852,7 @@ def checkPetscValidLogicalCollectiveEnum(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveEnum(pobj,obj,idx)
   """
-  enumFilter = FilterFunctor(enumTypes,None,None)
+  enumFilter = FilterFunctor(enumTypes,func)
   checkPetscValidLogicalCollective(badSource,func,parent,enumFilter)
   return
 
@@ -802,18 +934,29 @@ def updatePetscScalarType(petscDir,petscArch):
 def getPetscExtraIncludes(petscDir,petscArch):
   import re
 
+  # keep these separate, since ORDER MATTERS HERE. Imagine that for example the
+  # mpiInclude dir has copies of old petsc headers, you don't want these to come first
+  # in the include search path and hence override those found in petsc/include.
+
+  # You might be thinking that seems suspiciously specific, but I was this close to filing
+  # a bug report for python believing that cdll.load() was not deterministic...
+  petscIncludes = []
+  mpiIncludes   = []
   with open(os.path.join(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
     ccinc  = re.compile("^PETSC_CC_INCLUDES\s*=")
     mpiinc = re.compile("^MPI_INCLUDE\s*=")
     shoinc = re.compile("^MPICC_SHOW\s*=")
     line   = pv.readline()
-    extraIncludes = []
     while line:
-      if ccinc.search(line) or mpiinc.search(line) or shoinc.search(line):
-        extraIncludes.append(line.split("=")[1])
+      if ccinc.search(line):
+        petscIncludes.append(line.split("=")[1])
+      elif mpiinc.search(line) or shoinc.search(line):
+        mpiIncludes.append(line.split("=")[1])
       line = pv.readline()
-  extraIncludes = [l.strip().split(" ") for l in extraIncludes]
-  extraIncludes = list({item for sublist in extraIncludes for item in sublist if item.startswith("-I")})
+  extraIncludes = [l.strip().split(" ") for l in petscIncludes+mpiIncludes if l]
+  extraIncludes = [item for sublist in extraIncludes for item in sublist if item.startswith("-I")]
+  seen          = set()
+  extraIncludes = [item for item in extraIncludes if not item in seen and not seen.add(item)]
   return extraIncludes
 
 def getClangSysIncludes():
@@ -864,7 +1007,7 @@ def findFunctionCallExpr(tu,macroNames):
 
 
 """Main functions for root and queue processes"""
-def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbose,printWarnings,exceptions,queue,lock):
+def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbose,printWarnings,exceptions,diffQueue,queue,lock):
   import multiprocessing as mp
 
   proc = mp.current_process().name
@@ -887,7 +1030,6 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
     filename = queue.get()
     if filename == "__EXIT_QUEUE__":
       queue.task_done()
-      exceptions.close()
       break
     try:
       if verbose:
@@ -902,11 +1044,15 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
       with BadSource(printPrefix,printWarningMessages=printWarnings,lock=lock) as badSource:
         for func,parent in findFunctionCallExpr(tu,checkFunctionMap.keys()):
           checkFunctionMap[func.spelling](badSource,func,parent)
-    except Exception:
+        for diff in badSource.coalesceDiffs():
+          diffQueue.put(diff)
+    except:
       import traceback
       preamble = " ".join([errorPrefix,filename])
       exceptions.put("\n".join([preamble,traceback.format_exc()]))
     queue.task_done()
+  exceptions.close()
+  diffQueue.close()
   if verbose:
     with lock:
       print(printPrefix,15*"=","Exiting queue",15*"=")
@@ -932,7 +1078,7 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
                       P_CXTranslationUnit_SkipFunctionBodies |
                       P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble)
   forceCxxFlag    = ["-x","c++"]
-  miscFlags       = ["-Wno-nullability-completeness","-O0"]
+  miscFlags       = ["-Wno-nullability-completeness"]
   sysincludes     = getClangSysIncludes()
   extraIncludes   = getPetscExtraIncludes(petscDir,petscArch)
   compilerFlags   = sysincludes+forceCxxFlag+extraIncludes+miscFlags
@@ -977,8 +1123,9 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     # spin up a queue and multiproc
     fileProcessorQueue = mp.JoinableQueue(3*maxWorkers)
     exceptionSignalQueue = mp.Queue()
+    diffQueue = mp.Queue()
     fileProcessorLock = mp.Lock()
-    workerArgs = (clangLib,checkFunctionFilter,petscDir,petscArch,compilerFlags,baseClangOptions,verbose,printWarnings,exceptionSignalQueue,fileProcessorQueue,fileProcessorLock,)
+    workerArgs = (clangLib,checkFunctionFilter,petscDir,petscArch,compilerFlags,baseClangOptions,verbose,printWarnings,exceptionSignalQueue,diffQueue,fileProcessorQueue,fileProcessorLock,)
     for i in range(maxWorkers):
       workerName = "[{i}]".format(i=i)
       worker = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
@@ -1001,8 +1148,9 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   excludeDirSuffixes = (".dSYM",)
   # allow these file suffixes
   allowFileSuffixes = (".c",".cpp",".cxx",".cu",)
-  for mansec in mansecs:
-  #for mansec in ["vec"]:
+  diffs = []
+  #for mansec in mansecs:
+  for mansec in ["sys"]:
     for root,dirs,files in os.walk(os.path.join(srcDir,mansec)):
       if verbose: print(rootPrintPrefix,"Processing directory",root)
       dirs[:] = [d for d in dirs if d not in excludeDirs]
@@ -1022,6 +1170,7 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
           with BadSource(rootPrintPrefix,printWarningMessages=printWarnings) as badSource:
             for func,parent in findFunctionCallExpr(tu,checkFunctionMap.keys()):
               checkFunctionMap[func.spelling](badSource,func,parent)
+            diffs.extend(badSource.coalesceDiffs())
     if multiproc:
       stopMultiproc = False
       # join here to colocate error messages to a mansec
@@ -1040,10 +1189,14 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     # wait for queue to close
     fileProcessorQueue.join()
     exceptionSignalQueue.close()
+    while not diffQueue.empty():
+      diffs.extend(diffQueue.get())
+    diffQueue.close()
   os.chdir(oldloc)
   if os.path.exists(petscPrecompiledHeader):
     if verbose: print(rootPrintPrefix,"Deleting precompiled header",petscPrecompiledHeader)
     os.remove(petscPrecompiledHeader)
+  print("".join(diffs))
   return
 
 if __name__ == "__main__":
