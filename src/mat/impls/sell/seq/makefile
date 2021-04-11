@@ -7,7 +7,7 @@ SOURCEC  = sell.c fdsell.c
 SOURCEF  =
 SOURCEH  = sell.h
 LIBBASE  = libpetscmat
-DIRS     =
+DIRS     = seqcuda
 MANSEC   = Mat
 LOCDIR   = src/mat/impls/sell/seq/
 
