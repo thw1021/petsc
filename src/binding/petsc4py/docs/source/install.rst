@@ -25,6 +25,12 @@ from the `petsc4py` source directory:
 You may use the `--install-lib` argument to the `install` command to alter the
 `site-packages` directory where the package is to be installed.
 
+If you are cross-compiling, and the `numpy` module cannot be loaded on your
+build host, then before invoking `setup.py`, set `NUMPY_INCLUDE` environment
+variable to the path that would be returned by `import numpy;
+numpy.get_include()`:
+
+  $ export NUMPY_INCLUDE=/usr/lib/pythonX/site-packages/numpy/core/include
 
 From PETSc source
 -----------------
@@ -39,6 +45,11 @@ of `petsc4py`, then to build the `petsc4py` module along with PETSc, add the
 
 This will install PETSc and the `petsc4py` module into the PETSc directory
 under the prefix specified to the PETSc configure command.
+
+If you are cross-compiling, and `numpy` cannot be loaded on your build host,
+then pass `--have-numpy=1 --with-numpy-include=PATH`, where `PATH` is the path
+that would be returned by `import numpy; print(numpy.get_include())`. This will
+suppress autodetection of the include path on the build host.
 
 If you wish to make the module importable without having to set the
 `PYTHONPATH` environment variable, you may add a shortcut to the system-wide
