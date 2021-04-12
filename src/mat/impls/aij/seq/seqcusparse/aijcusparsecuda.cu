@@ -1,5 +1,5 @@
 /*
-  Cuda matrix back-end.
+  AIJCUSPARSE methods implemented with Cuda kernels. Uses cuSparse/Thrust maps from AIJCUSPARSE
 */
 #define PETSC_SKIP_SPINLOCK
 #define PETSC_SKIP_CXX_COMPLEX_FIX
@@ -51,7 +51,6 @@ mat_lu_factor_band_init_set_i(const PetscInt n, const int bw, int bi_csr[])
 
   // set i (row+1)
   if (threadIdx.x + threadIdx.y + blockIdx.x + blockIdx.y == 0) bi_csr[0] = 0; // dummy at zero
-  // for (int rowb = start_i + blkIdx*blockDim.y + threadIdx.y; rowb < end_i; rowb += Nblk*blockDim.y) { // rows in block
   for (int rowb = start_i + threadIdx.y; rowb < end_i; rowb += blockDim.y) { // rows in block by thread y
     if (rowb < end_i && threadIdx.x==0) {
       PetscInt i=rowb+1, ni = (rowb>bw) ? bw+1 : i, n1L = ni*(ni-1)/2, nug= i*bw, n2L = bw*((rowb>bw) ? (rowb-bw) : 0), mi = bw + rowb + 1 - n, clip = (mi>0) ? mi*(mi-1)/2 + mi: 0;
@@ -145,10 +144,10 @@ void __launch_bounds__(1024,1)
     }
     __syncthreads(); // synch on threadIdx.x only
     for (int idx = offset, myi = glbDD + offset + 1; idx < nzUd; idx += inc, myi += inc) {
-      const PetscInt bwi = myi > bw ? bw : myi, kIdx = bwi - (myi-glbDD); // cuts off just the first (global) block
-      PetscScalar    *Aid = ba_csr + bi_csr[myi] + kIdx;
-      PetscScalar    *Aij =  Aid + 1;
-      PetscScalar    Lid  = *Aid;
+      const PetscInt    bwi = myi > bw ? bw : myi, kIdx = bwi - (myi-glbDD); // cuts off just the first (global) block
+      PetscScalar       *Aid = ba_csr + bi_csr[myi] + kIdx;
+      PetscScalar       *Aij =  Aid + 1;
+      const PetscScalar Lid  = *Aid;
       for (int jIdx=threadIdx.x ; jIdx<nzUd; jIdx += blockDim.x) {
         Aij[jIdx] -= Lid*baUd[jIdx];
       }
