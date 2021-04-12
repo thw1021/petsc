@@ -112,7 +112,7 @@ with only minor differences in the user interface.
 using PETSc from Fortran and C, as well as several complete Fortran
 examples. 
 
-**Note to Python Programmers**: To program with PETSc in Python you need to enable python bindings
+**Note to Python Programmers**: To program with PETSc in Python you need to enable Python bindings
 (i.e petsc4py) with the configure option ``--with-petsc4py=1``. See the
 `PETSc installation guide <https://www.mcs.anl.gov/petsc/documentation/installation.html>`__ 
 for more details.
