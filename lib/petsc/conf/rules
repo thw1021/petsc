@@ -710,6 +710,15 @@ checkbadSource:
          fi
 	@test ! -s badSourceChar.out
 
+lint:
+	@${PYTHON3} ${PETSC_DIR}/lib/petsc/bin/maint/petscClangParser.py ${LINTER_OPTIONS} > ${PETSC_DIR}/checkbadSourceLint.out
+	@a=`cat checkbadSourceLint.out | wc -l` ;\
+         if [ $$a -gt 0 ] ; then \
+           echo "errors detected in source code formatting" ;\
+           cat checkbadSourceLint.out ;\
+         fi;\
+         test ! $$a -gt 0
+
 check_petsc4py_rst:
 	@${RM} -f petsc4py_rst.log
 	@echo "Checking src/binding/petsc4py/DESCRIPTION.rst"
