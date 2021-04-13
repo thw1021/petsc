@@ -389,8 +389,10 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf,MPI_Datatype unit,void *array,
   PetscErrorCode ierr;
   MPI_Aint       lb,lb_true,bytes,bytes_true;
   PetscSFWinLink link;
+#if defined(PETSC_HAVE_MPI_WIN_ALLOCATE)
   MPI_Aint       winaddr;
   PetscInt       nranks;
+#endif
   PetscBool      reuse = PETSC_FALSE, update = PETSC_FALSE;
   PetscBool      dummy[2];
   MPI_Aint       wsize;
