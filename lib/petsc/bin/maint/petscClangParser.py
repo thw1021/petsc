@@ -5,7 +5,7 @@ Created on Mon Mar 22 17:05:39 2021
 
 @author: jacobfaibussowitsch
 """
-import os
+import os,enum
 import clang.cindex as clx
 import petscClangParserUtil
 
@@ -164,23 +164,10 @@ petscClassIdMap = {
   "_p_VecTagger *"              : "VEC_TAGGER_CLASSID",
 }
 
-class PetscCursor(clx.Cursor):
-  """
-  This class exists purely for purpose of making it easier to extract the source from a cursor
-  """
-  @classmethod
-  def cast(cls,cursor):
-    raise RuntimeError
-    """
-    Cast an clang cursor into a petsc cursor
-    """
-    assert isinstance(cursor,clx.Cursor)
-    cursor.__class__ = cls  # can now use our __repr__
-    assert isinstance(cursor,PetscCursor)
-    return cursor
-
-  def __repr__(self):
-    return "\n".join(petscClangParserUtil.viewAstFromCursor(self))
+class QueueSignal(enum.IntEnum):
+  UNIFIED_DIFF = enum.auto()
+  ERRORS_LEFT  = enum.auto()
+  EXIT_QUEUE   = enum.auto()
 
 class ArgCursorWarning(Exception):
   """
@@ -358,7 +345,7 @@ class BadSource(object):
     lockStr   = "Lock:          {lock}".format(lock="True" if self.lock else "False")
     showStr   = "Show warnings: {warn}".format(warn=self.printWarningMessages)
     printList = [prefixStr,lockStr,showStr]
-    errorStr  = self.getErrors()
+    errorStr  = self.getAllErrors()
     if errorStr: printList.append(errorStr)
     warnStr   = self.getWarnings()
     if warnStr: printList.append(warnStr)
@@ -371,7 +358,7 @@ class BadSource(object):
     if not excType:
       if self.printWarningMessages:
         self.__print(self.getWarnings())
-      self.__print(self.getErrors())
+      self.__print(self.getAllErrors())
     return
 
   def __print(self,msg):
@@ -386,7 +373,7 @@ class BadSource(object):
   def addErrorFromCursor(self,locCursor,errMsg,fix=None):
     errPrefix = str(locCursor)
     errMess = "".join(["\nERROR {errno}: ".format(errno=len(self.errors)),errPrefix,"\n",errMsg])
-    self.errors.append(errMess)
+    self.errors.append((errMess,fix != None))
     try:
       self.diffs[fix.filename].append(fix)
     except KeyError:
@@ -396,9 +383,15 @@ class BadSource(object):
       pass
     return
 
-  def getErrors(self):
+  def getAllErrors(self):
     if self.errors:
-      return "\n".join([self.errPrefix,"\n".join(self.errors)[1:],self.errPrefix])
+      return "\n".join([self.errPrefix,"\n".join(err for err,_ in self.errors)[1:],self.errPrefix])
+    return
+
+  def getErrorsLeft(self):
+    errLeft = [err for err,fixed in self.errors if not fixed]
+    if errLeft:
+      return "\n".join([self.errPrefix,"\n".join(errLeft)[1:],self.errPrefix])
     return
 
   def addWarning(self,warnMsg):
@@ -432,7 +425,7 @@ class BadSource(object):
         srcList[d.startLine-1]   = d.srcStr
         fixedList[d.startLine-1] = d.fixedStr
       unified = unifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename,ignoreCharFunc=ignoreComment)
-      combinedDiffs.append("".join(unified))
+      combinedDiffs.append((filename,"".join(unified)))
     return combinedDiffs
 
 class FilterFunctor(object):
@@ -470,6 +463,8 @@ class FilterFunctor(object):
 
   def failureHook(self,badSource,obj,objType):
     try:
+      # currently no function does this, but in case a "try one more thing" function,
+      # one can implement it in the if not handled clause
       handled = self.failureFunction(badSource,obj,objType,**vars(self))
     except TypeError:
       handled = False
@@ -479,16 +474,30 @@ class FilterFunctor(object):
 
 
 """Generic test functions"""
-def checkIsPetscScalar(badSource,obj,objType,**kwargs):
+def checkIsPetscScalarAndNotPetscReal(badSource,obj,objType,**kwargs):
   if "PetscScalar" not in obj.derivedtypename:
     funcCursor = kwargs["funcCursor"]
-    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscScalars".format(funcName=funcCursor.displayname))
+    if "PetscReal" in obj.derivedtypename:
+      validFunc = kwargs["extraArgs"]["validFunc"]
+      call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
+      assert len(call) == 1
+      fix = SourceFix(call[0],validFunc)
+      badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {validFunc}() instead".format(funcName=funcCursor.displayname,validFunc=validFunc),fix=fix)
+    else:
+      badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscScalars".format(funcName=funcCursor.displayname))
   return
 
-def checkIsPetscReal(badSource,obj,objType,**kwargs):
+def checkIsPetscRealAndNotPetscScalar(badSource,obj,objType,**kwargs):
   if "PetscReal" not in obj.derivedtypename:
     funcCursor = kwargs["funcCursor"]
-    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscReals".format(funcName=funcCursor.displayname))
+    if "PetscScalar" in obj.derivedtypename:
+      validFunc = kwargs["extraArgs"]["validFunc"]
+      call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
+      assert len(call) == 1
+      fix = SourceFix(call[0],validFunc)
+      badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {validFunc}() instead".format(funcName=funcCursor.displayname,validFunc=validFunc),fix=fix)
+    else:
+      badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscReals".format(funcName=funcCursor.displayname))
   return
 
 def checkIntIsNotPetscBool(badSource,obj,objType,**kwargs):
@@ -511,8 +520,6 @@ def checkMPIIntIsNotPetscInt(badSource,obj,objType,**kwargs):
 
 def checkIsPetscBool(badSource,obj,objType,**kwargs):
   if ("PetscBool" not in obj.derivedtypename) and ("bool" not in obj.typename):
-    import pdb
-    pdb.set_trace()
     funcCursor = kwargs["funcCursor"]
     badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscBool or bool".format(funcName=funcCursor.displayname))
   return
@@ -735,7 +742,7 @@ def checkPetscValidScalarPointer(badSource,func,parent):
   """
   Specific check for PetscValidScalarPointer(obj,idx)
   """
-  scalarFilter = FilterFunctor(scalarTypes,func,pointer=True,successHook=checkIsPetscScalar)
+  scalarFilter = FilterFunctor(scalarTypes,func,pointer=True,successHook=checkIsPetscScalarAndNotPetscReal,validFunc="PetscValidRealPointer")
   checkPetscValidPointer(badSource,func,parent,filterFunctor=scalarFilter)
   return
 
@@ -743,7 +750,7 @@ def checkPetscValidRealPointer(badSource,func,parent):
   """
   Specific check for PetscValidRealPointer(obj,idx)
   """
-  realFilter = FilterFunctor(realTypes,func,pointer=True,successHook=checkIsPetscReal)
+  realFilter = FilterFunctor(realTypes,func,pointer=True,successHook=checkIsPetscRealAndNotPetscScalar,validFunc="PetscValidScalarPointer")
   checkPetscValidPointer(badSource,func,parent,filterFunctor=realFilter)
   return
 
@@ -812,7 +819,7 @@ def checkPetscValidLogicalCollectiveScalar(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveScalar(pobj,obj,idx)
   """
-  scalarFilter = FilterFunctor(scalarTypes,func,successHook=checkIsPetscScalar)
+  scalarFilter = FilterFunctor(scalarTypes,func,successHook=checkIsPetscScalarAndNotPetscReal,validFunc="PetscValidLogicalCollectiveReal")
   checkPetscValidLogicalCollective(badSource,func,parent,scalarFilter)
   return
 
@@ -820,7 +827,7 @@ def checkPetscValidLogicalCollectiveReal(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveReal(pobj,obj,idx)
   """
-  realFilter = FilterFunctor(realTypes,func,successHook=checkIsPetscReal)
+  realFilter = FilterFunctor(realTypes,func,successHook=checkIsPetscRealAndNotPetscScalar,validFunc="PetscValidLogicalCollectiveScalar")
   checkPetscValidLogicalCollective(badSource,func,parent,realFilter)
   return
 
@@ -900,7 +907,7 @@ def updatePetscClassIdMap(petscDir):
   global petscClassIdMap
 
   includeBaseDir = os.path.join(petscDir,"include")
-  regclass = re.compile("(\s*typedef\s+struct\s+)(_[pn]_[A-Za-z_]*\s+\*)")
+  regclass       = re.compile("(\s*typedef\s+struct\s+)(_[pn]_[A-Za-z_]*\s+\*)")
   for root,_,filenames in os.walk(includeBaseDir):
     for fname in filenames:
       if fname.endswith(".h"):
@@ -919,13 +926,12 @@ def updatePetscScalarType(petscDir,petscArch):
   import re
   global scalarTypes
 
-  confFile = os.path.join(petscDir,petscArch,"include","petscconf.h")
-  regcomplex = re.compile("^#define\s*PETSC_USE_DEBUG\s")
+  confFile   = os.path.join(petscDir,petscArch,"include","petscconf.h")
+  regcomplex = re.compile("^#define\s*PETSC_USE_COMPLEX\s")
   with open(confFile,"r") as rfile:
     line = rfile.readline()
     while line:
-      fl = regcomplex.search(line)
-      if fl: return
+      if regcomplex.search(line): return
       line = rfile.readline()
   # petsc is configured to NOT use complex numbers, so we remove them from scalartypes
   scalarTypes.remove(clx.TypeKind.COMPLEX)
@@ -1007,7 +1013,7 @@ def findFunctionCallExpr(tu,macroNames):
 
 
 """Main functions for root and queue processes"""
-def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbose,printWarnings,exceptions,diffQueue,queue,lock):
+def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbose,printWarnings,exceptions,dataQueue,queue,lock):
   import multiprocessing as mp
 
   proc = mp.current_process().name
@@ -1028,7 +1034,7 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
       print(printPrefix,15*"=","Entering queue",15*"=")
   while True:
     filename = queue.get()
-    if filename == "__EXIT_QUEUE__":
+    if filename == QueueSignal.EXIT_QUEUE:
       queue.task_done()
       break
     try:
@@ -1044,15 +1050,15 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
       with BadSource(printPrefix,printWarningMessages=printWarnings,lock=lock) as badSource:
         for func,parent in findFunctionCallExpr(tu,checkFunctionMap.keys()):
           checkFunctionMap[func.spelling](badSource,func,parent)
-        for diff in badSource.coalesceDiffs():
-          diffQueue.put(diff)
+        dataQueue.put((QueueSignal.UNIFIED_DIFF,badSource.coalesceDiffs()))
+        dataQueue.put((QueueSignal.ERRORS_LEFT,badSource.getErrorsLeft()))
     except:
       import traceback
       preamble = " ".join([errorPrefix,filename])
       exceptions.put("\n".join([preamble,traceback.format_exc()]))
     queue.task_done()
   exceptions.close()
-  diffQueue.close()
+  dataQueue.close()
   if verbose:
     with lock:
       print(printPrefix,15*"=","Exiting queue",15*"=")
@@ -1123,9 +1129,9 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     # spin up a queue and multiproc
     fileProcessorQueue = mp.JoinableQueue(3*maxWorkers)
     exceptionSignalQueue = mp.Queue()
-    diffQueue = mp.Queue()
+    dataQueue = mp.Queue()
     fileProcessorLock = mp.Lock()
-    workerArgs = (clangLib,checkFunctionFilter,petscDir,petscArch,compilerFlags,baseClangOptions,verbose,printWarnings,exceptionSignalQueue,diffQueue,fileProcessorQueue,fileProcessorLock,)
+    workerArgs = (clangLib,checkFunctionFilter,petscDir,petscArch,compilerFlags,baseClangOptions,verbose,printWarnings,exceptionSignalQueue,dataQueue,fileProcessorQueue,fileProcessorLock,)
     for i in range(maxWorkers):
       workerName = "[{i}]".format(i=i)
       worker = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
@@ -1139,19 +1145,15 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     updatePetscClassIdMap(petscDir)
     updatePetscScalarType(petscDir,petscArch)
 
-  # change dirs to $PETSC_DIR/src since we are pretending to be the makefile
-  srcDir = os.path.join(petscDir,"src")
-  oldloc = os.getcwd()
-  os.chdir(srcDir)
   # exclude these directories
   excludeDirs = set(["f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","tests","tutorials"])
   excludeDirSuffixes = (".dSYM",)
   # allow these file suffixes
   allowFileSuffixes = (".c",".cpp",".cxx",".cu",)
-  diffs = []
+  errorsLeft,diffs = [],[]
   #for mansec in mansecs:
   for mansec in ["sys"]:
-    for root,dirs,files in os.walk(os.path.join(srcDir,mansec)):
+    for root,dirs,files in os.walk(os.path.join(petscDir,"src",mansec)):
       if verbose: print(rootPrintPrefix,"Processing directory",root)
       dirs[:] = [d for d in dirs if d not in excludeDirs]
       dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuffixes)]
@@ -1171,6 +1173,7 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
             for func,parent in findFunctionCallExpr(tu,checkFunctionMap.keys()):
               checkFunctionMap[func.spelling](badSource,func,parent)
             diffs.extend(badSource.coalesceDiffs())
+            errorsLeft.append(badSource.getErrorsLeft())
     if multiproc:
       stopMultiproc = False
       # join here to colocate error messages to a mansec
@@ -1184,19 +1187,45 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   if multiproc:
     # send stop-signal to child processes
     for _ in range(maxWorkers):
-      fileProcessorQueue.put("__EXIT_QUEUE__")
+      fileProcessorQueue.put(QueueSignal.EXIT_QUEUE)
     fileProcessorQueue.close()
     # wait for queue to close
     fileProcessorQueue.join()
     exceptionSignalQueue.close()
-    while not diffQueue.empty():
-      diffs.extend(diffQueue.get())
-    diffQueue.close()
-  os.chdir(oldloc)
+    while not dataQueue.empty():
+      signal,returnData = dataQueue.get()
+      if signal == QueueSignal.ERRORS_LEFT:
+        errorsLeft.append(returnData)
+      elif signal == QueueSignal.UNIFIED_DIFF:
+        diffs.extend(returnData)
+    dataQueue.close()
   if os.path.exists(petscPrecompiledHeader):
     if verbose: print(rootPrintPrefix,"Deleting precompiled header",petscPrecompiledHeader)
     os.remove(petscPrecompiledHeader)
-  print("".join(diffs))
+  errorsLeft = [e for e in errorsLeft if e] # remove any None's
+  diffs      = [d for d in diffs if d]
+  if diffs:
+    import time
+
+    srcDir,outputDir = os.path.join(petscDir,"src"),os.path.join(petscDir,"petscClangParserDiffs")
+    try:
+      os.mkdir(outputDir)
+    except FileExistsError:
+      pass
+    manglePostfix = "_"+str(int(time.time()))+".diff"
+    for filename,diff in diffs:
+      filename    = filename.replace(srcDir,"").replace(os.path.sep,"_")[1:]
+      mangledFile = filename.split(".")[0]+manglePostfix
+      mangledFile = os.path.join(outputDir,mangledFile)
+      with open(mangledFile,"w") as fd:
+        if verbose: print(rootPrintPrefix,"Writing diff to file",mangledFile)
+        fd.write(diff)
+  if errorsLeft:
+    print(rootPrintPrefix,27*"=","REMAINING UNCORRECTABLE ERRORS",26*"=")
+    print("".join(errorsLeft))
+  elif diffs:
+    print(rootPrintPrefix,27*"=","NO UNCORRECTABLE ERRORS REMAIN",26*"=")
+    print(rootPrintPrefix,"All errors fixable via diff files written to",outputDir)
   return
 
 if __name__ == "__main__":
