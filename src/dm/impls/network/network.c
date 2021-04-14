@@ -504,7 +504,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   network->dataheadersize = sizeof(struct _p_DMNetworkComponentHeader)/sizeof(DMNetworkComponentGenericDataType);
   ierr = PetscCalloc2(np,&network->header,np,&network->cvalue);CHKERRQ(ierr);
    */
-  
+
   /* (4) Create vidxlTog: maps MERGED plex local vertex index (including ghosts) to User's global vertex index (without merging shared vertices) */
   np = network->vEnd - vStart; /* include ghost vertices */
   ierr = PetscMalloc2(np,&vidxlTog,size+1,&eowners);CHKERRQ(ierr);
@@ -671,7 +671,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   /*
   ierr = PetscCalloc2(np,&network->header,np,&network->cvalue);CHKERRQ(ierr);
 
-  for(i=0; i < np; i++) {
+  for (i=0; i < np; i++) {
     ierr = PetscCalloc5(network->max_comps_per_point,&network->header[i].size,network->max_comps_per_point,&network->header[i].key,network->max_comps_per_point,&network->header[i].offset,network->max_comps_per_point,&network->header[i].nvar,network->max_comps_per_point,&network->header[i].offsetvarrel);CHKERRQ(ierr);
     ierr = PetscMalloc1(network->max_comps_per_point,&network->cvalue[i].data);CHKERRQ(ierr);
   }
@@ -679,7 +679,6 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
    */
   ierr = CreateNetworkHeaderComponentValue(dm,np,&network->header,&network->cvalue,&network->dataheadersize);CHKERRQ(ierr);
 
-  
   /* Create edge and vertex arrays for the subnetworks */
   for (j=0; j < network->Nsubnet; j++) {
     ierr = PetscCalloc1(network->subnet[j].nedge,&network->subnet[j].edges);CHKERRQ(ierr);
@@ -2647,8 +2646,8 @@ PetscErrorCode DMDestroy_Network(DM dm)
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   np = network->pEnd - network->pStart;
-  if(network->header) {
-    for(j=0; j < np; j++) {
+  if (network->header) {
+    for (j=0; j < np; j++) {
       ierr = PetscFree5(network->header[j].size,network->header[j].key,network->header[j].offset,network->header[j].nvar,network->header[j].offsetvarrel);CHKERRQ(ierr);
       ierr = PetscFree(network->cvalue[j].data);CHKERRQ(ierr);
     }
