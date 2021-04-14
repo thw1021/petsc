@@ -39,6 +39,7 @@ configure_options = [
   '--download-mpi4py=1',
   '--download-saws',
   '--download-egads',
+  '--download-opencascade',
   '--package-prefix-hash='+petsc_hash_pkgs,
   '--download-adolc',
   '--download-colpack',
