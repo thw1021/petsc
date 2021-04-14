@@ -225,6 +225,7 @@ check-py-vermin:
     - ${TEST_ARCH}/tests/test_${TEST_ARCH}_tap.log
     - ${TEST_ARCH}/tests/test_${TEST_ARCH}_err.log
     - ${TEST_ARCH}/gcov.tar.gz
+    - ./petscLintFixup/*.diff
     expire_in: 4 days
   variables:
     OPENBLAS_NUM_THREADS: 1
