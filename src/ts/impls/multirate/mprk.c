@@ -489,7 +489,7 @@ PetscErrorCode TSMPRKRegister(TSMPRKType name,PetscInt order,
 
   PetscFunctionBegin;
   PetscValidCharPointer(name,1);
-  PetscValidRealPointer(Asb,4);
+  PetscValidRealPointer(Asb,6);
   if (bsb) PetscValidRealPointer(bsb,7);
   if (csb) PetscValidRealPointer(csb,8);
   if (rsb) PetscValidRealPointer(rsb,9);
