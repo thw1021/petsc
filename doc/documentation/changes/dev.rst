@@ -24,6 +24,11 @@ Changes: Development
       pushed group
    -  Add input argument to ``PetscViewerHDF5ReadAttribute()`` for default
       value that is used if attribute is not found in the HDF5 file
+   -  Add PetscViewerHDF5{Push,Pop,Is}Timestepping(). One can call
+      PetscViewerHDF5{Increment,Set,Get}Timestep() only if timestepping mode
+      is active
+   -  Error if timestepped dataset is read/written out of timestepping mode, or
+      vice-versa
 
    .. rubric:: PetscDraw:
 
