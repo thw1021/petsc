@@ -904,7 +904,7 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
       PetscFunctionReturn(0);
     }
   }
-  if (network->ncomponent == network->max_comps_registered) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components registered exceeds the maximum %D set. Use DMNetworkSetMaxComponents or -dmnetwork_max_components_registered to increase the maximum allowed registered components",network->max_comps_registered);
+  if (network->ncomponent == network->max_comps_registered) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components registered exceeds the maximum %D set. Use DMNetworkSetMaxComponents or -dmnetwork_maximum_components_registered to increase the maximum allowed registered components",network->max_comps_registered);
 
   ierr = PetscStrcpy(component->name,name);CHKERRQ(ierr);
   component->size = size/sizeof(DMNetworkComponentGenericDataType);
@@ -920,13 +920,13 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
 
 + dm - the DMNetwork object
 . max_comps_registered - maximum components allowed to be registered
-- max_comps_per_point - maximum components allowed per point
+- max_comps_per_point - maximum components allowed per network point
 
  Level: beginner
 
  Options database keys:
-+ -dmnetwork_max_comps_registered - Sets maximum components allowed to be registerd
-- -dmnetwork_max_comps_per_point - Sets maximum components allowed per vertex/edge
++ -dmnetwork_maximum_components_registered - Sets maximum components allowed to be registerd
+- -dmnetwork_maximum_components_per_point - Sets maximum components allowed per vertex/edge
 
  Notes:
  Must call this routine before registering any component
@@ -940,8 +940,8 @@ PetscErrorCode DMNetworkSetMaxComponents(DM dm,PetscInt max_comps_registered,Pet
   if (network->ncomponent) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ORDER,"Must call DMNetworkSetMaxComponents before registering any component");
 
   ierr = PetscObjectOptionsBegin((PetscObject)dm);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dmnetwork_max_comps_registered","Maximum components allowed to be registered","DMNetworkSetMaxComponents",network->max_comps_registered,&network->max_comps_registered,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dmnetwork_max_comps_per_point","Maximum components allowed per node/edge","DMNetworkSetMaxComponents",network->max_comps_per_point,&network->max_comps_per_point,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dmnetwork_maximum_components_registered","Maximum components allowed to be registered","DMNetworkSetMaxComponents",network->max_comps_registered,&network->max_comps_registered,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dmnetwork_maximum_components_per_point","Maximum components allowed per vertex/edge","DMNetworkSetMaxComponents",network->max_comps_per_point,&network->max_comps_per_point,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   ierr = PetscCalloc1(network->max_comps_registered,&network->component);CHKERRQ(ierr);
