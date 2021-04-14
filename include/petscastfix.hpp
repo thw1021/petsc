@@ -69,4 +69,9 @@ template <typename Ta,typename Tb>
 void PetscValidLogicalCollectiveBool(Ta,Tb,int);
 template <typename Ta,typename Tb>
 void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
+
+template <typename Tv> /* Tv = Vec, but I don't want to have to import the headers for it */
+void VecNestCheckCompatible2(Tv,int,Tv,int);
+template <typename Tv>
+void VecNestCheckCompatible3(Tv,int,Tv,int,Tv,int);
 #endif
