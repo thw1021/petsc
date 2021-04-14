@@ -193,16 +193,20 @@ static PetscErrorCode ISView_General_HDF5(IS is, PetscViewer viewer)
   hid_t           inttype;    /* int type (H5T_NATIVE_INT or H5T_NATIVE_LLONG) */
   hid_t           file_id, group;
   hsize_t         dim, maxDims[3], dims[3], chunkDims[3], count[3],offset[3];
-  PetscInt        bs, N, n, timestep, low;
+  PetscInt        bs, N, n, timestep = PETSC_MIN_INT, low;
   const PetscInt *ind;
   const char     *isname;
+  PetscBool       timestepping;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   ierr = ISGetBlockSize(is,&bs);CHKERRQ(ierr);
   bs   = PetscMax(bs, 1); /* If N = 0, bs  = 0 as well */
   ierr = PetscViewerHDF5OpenGroup(viewer, &file_id, &group);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5GetTimestep(viewer, &timestep);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5IsTimestepping(viewer, &timestepping);CHKERRQ(ierr);
+  if (timestepping) {
+    ierr = PetscViewerHDF5GetTimestep(viewer, &timestep);CHKERRQ(ierr);
+  }
 
   /* Create the dataspace for the dataset.
    *
@@ -216,7 +220,7 @@ static PetscErrorCode ISView_General_HDF5(IS is, PetscViewer viewer)
    * permit extending dataset).
    */
   dim = 0;
-  if (timestep >= 0) {
+  if (timestepping) {
     dims[dim]      = timestep+1;
     maxDims[dim]   = H5S_UNLIMITED;
     chunkDims[dim] = 1;
@@ -260,7 +264,7 @@ static PetscErrorCode ISView_General_HDF5(IS is, PetscViewer viewer)
 
   /* Each process defines a dataset and writes it to the hyperslab in the file */
   dim = 0;
-  if (timestep >= 0) {
+  if (timestepping) {
     count[dim] = 1;
     ++dim;
   }
@@ -280,7 +284,7 @@ static PetscErrorCode ISView_General_HDF5(IS is, PetscViewer viewer)
   /* Select hyperslab in the file */
   ierr = PetscLayoutGetRange(is->map, &low, NULL);CHKERRQ(ierr);
   dim  = 0;
-  if (timestep >= 0) {
+  if (timestepping) {
     offset[dim] = timestep;
     ++dim;
   }
@@ -308,6 +312,8 @@ static PetscErrorCode ISView_General_HDF5(IS is, PetscViewer viewer)
   PetscStackCallHDF5(H5Sclose,(filespace));
   PetscStackCallHDF5(H5Sclose,(memspace));
   PetscStackCallHDF5(H5Dclose,(dset_id));
+
+  ierr = PetscViewerHDF5WriteObjectAttribute(viewer,(PetscObject)is,"timestepping",PETSC_BOOL,&timestepping);CHKERRQ(ierr);
   ierr = PetscInfo1(is, "Wrote IS object with name %s\n", isname);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
