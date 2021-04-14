@@ -357,8 +357,6 @@ class SourceFix(object):
     is arguably a completely valid case. I just have not seen an example of it that I
     can use to debug with yet.
     """
-    import pdb
-    pdb.set_trace()
     if self.fixDepth == len(self.deltas): # already collapsed, no need to do it again
       assert self.fixed
       return
