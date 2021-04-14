@@ -303,37 +303,41 @@ class ArgCursor(object):
     return ArgCursor.viewAstFromCursor(self)
 
   def __init__(self,cursor,idx=-12345):
-    self.__cursor = cursor
-    self.name = ArgCursor.getNameFromCursor(cursor)
-    self.typename = ArgCursor.getTypenameFromCursor(cursor)
+    assert isinstance(cursor,clx.Cursor)
+    self.__cursor        = cursor
+    self.name            = ArgCursor.getNameFromCursor(cursor)
+    self.typename        = ArgCursor.getTypenameFromCursor(cursor)
     self.derivedtypename = ArgCursor.getDerivedTypeNameFromCursor(cursor)
-    self.argidx = idx
+    self.argidx          = idx
     return
 
   def __getattr__(self,attr):
-    # Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
-    # (i.e. the value wasn't found in self), then we try the cursor. So we can do things
-    # like self.translation_unit, but keep all of our variables out of the cursors
-    # namespace
+    """
+    Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
+    (i.e. the value wasn't found in self), then we try the cursor. So we can do things
+    like self.translation_unit, but keep all of our variables out of the cursors
+    namespace
+    """
     return getattr(self.__cursor,attr)
 
   def __repr__(self):
-    loc = self.location
+    loc    = self.location
     locStr = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
     srcStr = self.viewSource(ret=True)
     return "{loc}\n'{name}' of derived type '{derivedtype}', canonical type '{type}'\n{src}\n".format(loc=locStr,name=self.name,derivedtype=self.derivedtypename,type=self.typename,src=srcStr)
 
 class SourceFix(object):
   def __init__(self,cursor,value):
-    self.filename = cursor.location.file.name
+    self.filename  = cursor.location.file.name
     self.startLine = cursor.extent.start.line
     assert self.startLine >= 1
-    self.src = ArgCursor.getSourceFromCursor(cursor)
-    self.fixed = None
-    self.begins = [cursor.extent.start.column-1]
-    self.ends = [cursor.extent.end.column-1]
-    self.replace = [self.src[self.begins[0]:self.ends[0]]]
-    self.deltas = [str(value)]
+    self.src       = ArgCursor.getSourceFromCursor(cursor)
+    self.fixed     = None
+    self.begins    = [cursor.extent.start.column-1]
+    self.ends      = [cursor.extent.end.column-1]
+    self.replace   = [self.src[self.begins[0]:self.ends[0]]]
+    self.deltas    = [str(value)]
+    self.fixDepth  = 0
     return
 
   def appendFix(self,fix):
@@ -350,9 +354,14 @@ class SourceFix(object):
     """
     Collapses a list of fixes and produces a fixed src line.
     Fixes probably should not overwrite each other (for now), so we error out, but this
-    is arguably a completely valid case, I just have not seen an example of it that I
+    is arguably a completely valid case. I just have not seen an example of it that I
     can use to debug with yet.
     """
+    import pdb
+    pdb.set_trace()
+    if self.fixDepth == len(self.deltas): # already collapsed, no need to do it again
+      assert self.fixed
+      return
     idxDelta = 0
     newSrc   = self.src
     for begin,end,replace,delta in zip(self.begins,self.ends,self.replace,self.deltas):
@@ -363,19 +372,22 @@ class SourceFix(object):
       newSrcTemp = newSrc[:begin+idxDelta]+delta+newSrc[end+idxDelta:]
       idxDelta   = len(newSrcTemp)-len(newSrc)
       newSrc     = newSrcTemp
-    self.fixed = newSrc
+    self.fixDepth = len(self.deltas)
+    self.fixed    = newSrc
     return
 
 class BadSource(object):
   def __init__(self,prefix,printWarningMessages=True,lock=None):
-    self.errors = []
-    self.diffs = dict()
-    self.warnings = []
-    self.prefix = prefix
+    self.errors               = []
+    self.warnings             = []
+    # This can actually just be a straight list, since each badSource object only ever
+    # handles a single file, but use dict nonetheless
+    self.diffs                = dict()
+    self.prefix               = prefix
     self.printWarningMessages = printWarningMessages
-    self.lock = lock
-    self.errPrefix = " ".join([prefix,85*"-"])
-    self.warnPrefix = " ".join([prefix,85*"%"])
+    self.lock                 = lock
+    self.errPrefix            = " ".join([prefix,85*"-"])
+    self.warnPrefix           = " ".join([prefix,85*"%"])
     return
 
   def __repr__(self):
@@ -460,22 +472,22 @@ class BadSource(object):
       minLine,maxLine = diffs[0].startLine-1,diffs[-1].startLine
       for d in diffs:
         d.mergeCollapse()
-      srcList = [(d.src,d.startLine) for d in diffs]
+      srcList   = [(d.src,d.startLine) for d in diffs]
       fixedList = [(d.fixed,d.startLine) for d in diffs]
-      unified = fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename)
+      unified   = fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename)
       combinedDiffs.append((filename,"".join(unified)))
     return combinedDiffs
 
 class FilterFunctor(object):
   def __init__(self,expected,funcCursor,pointer=False,notPointerHook=None,pointerHook=None,successHook=None,failureHook=None,**kwargs):
-    self.expectedTypeKinds = expected
-    self.funcCursor = funcCursor
-    self.pointer = pointer
+    self.expectedTypeKinds            = expected
+    self.funcCursor                   = funcCursor
+    self.pointer                      = pointer
     self.unexpectedNotPointerFunction = notPointerHook
-    self.unexpectedPointerFunction = pointerHook
-    self.successFunction = successHook
-    self.failureFunction = failureHook
-    self.extraArgs = kwargs
+    self.unexpectedPointerFunction    = pointerHook
+    self.successFunction              = successHook
+    self.failureFunction              = failureHook
+    self.extraArgs                    = kwargs
     return
 
   def unexpectedNotPointerHook(self,badSource,obj,objType):
@@ -1245,7 +1257,7 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   if diffs:
     import time
 
-    srcDir,outputDir = os.path.join(petscDir,"src"),os.path.join(petscDir,"petscClangParserDiffs")
+    srcDir,outputDir = os.path.join(petscDir,"src"),os.path.join(petscDir,"petscLintFixup")
     try:
       os.mkdir(outputDir)
     except FileExistsError:
