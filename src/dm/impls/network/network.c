@@ -904,7 +904,7 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
       PetscFunctionReturn(0);
     }
   }
-  if (network->ncomponent == network->max_comps_registered) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components registered exceeds the max %d set. Use DMNetworkSetMaxComponents or -dmnetwork_max_components_registered to increase the max. allowed registered components",network->max_comps_registered);
+  if (network->ncomponent == network->max_comps_registered) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components registered exceeds the maximum %D set. Use DMNetworkSetMaxComponents or -dmnetwork_max_components_registered to increase the maximum allowed registered components",network->max_comps_registered);
 
   ierr = PetscStrcpy(component->name,name);CHKERRQ(ierr);
   component->size = size/sizeof(DMNetworkComponentGenericDataType);
@@ -914,18 +914,19 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
 }
 
 /*@
- DMNetworkSetMaxComponents - Sets the max. components
+ DMNetworkSetMaxComponents - Sets the maximum components
 
  Not Collective
+
 + dm - the DMNetwork object
-. max_comps_registered - max. components allowed to be registered
-- max_comps_per_point - max. components allowed per point
+. max_comps_registered - maximum components allowed to be registered
+- max_comps_per_point - maximum components allowed per point
 
  Level: beginner
 
  Options database keys:
-+ -dmnetwork_max_comps_registered - Sets max. components allowed to be registerd
-- -dmnetwork_max_comps_per_point - Sets max. components allowed per node/edge
++ -dmnetwork_max_comps_registered - Sets maximum components allowed to be registerd
+- -dmnetwork_max_comps_per_point - Sets maximum components allowed per vertex/edge
 
  Notes:
  Must call this routine before registering any component
@@ -1404,11 +1405,9 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
     headerarr += network->max_comps_per_point;
     ierr = PetscMemcpy(headerarr,header->offsetvarrel,network->max_comps_per_point*sizeof(PetscInt));CHKERRQ(ierr);
 
-
-    //    ierr = PetscMemcpy(componentdataarray+offsetp,header,network->dataheadersize*sizeof(DMNetworkComponentGenericDataType));CHKERRQ(ierr);
     /* Copy data */
     cvalue = &network->cvalue[p];
-    ncomp = header->ndata;
+    ncomp  = header->ndata;
 
     for (i = 0; i < ncomp; i++) {
       offset = offsetp + network->dataheadersize + header->offset[i];
@@ -1626,7 +1625,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   ierr = DMNetworkCreate(PetscObjectComm((PetscObject)*dm),&newDM);CHKERRQ(ierr);
   newDMnetwork = (DM_Network*)newDM->data;
   newDMnetwork->max_comps_registered = oldDMnetwork->max_comps_registered;
-  newDMnetwork->max_comps_per_point = oldDMnetwork->max_comps_per_point;
+  newDMnetwork->max_comps_per_point  = oldDMnetwork->max_comps_per_point;
   ierr = PetscMalloc1(newDMnetwork->max_comps_registered,&newDMnetwork->component);CHKERRQ(ierr);
   newDMnetwork->dataheadersize = oldDMnetwork->dataheadersize;
 
@@ -2640,13 +2639,8 @@ PetscErrorCode DMDestroy_Network(DM dm)
   ierr = PetscFree(network->component);CHKERRQ(ierr);
   ierr = PetscFree(network->componentdataarray);CHKERRQ(ierr);
 
-  MPI_Comm comm;
-  PetscMPIInt rank;
-  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-
-  np = network->pEnd - network->pStart;
   if (network->header) {
+    np = network->pEnd - network->pStart;
     for (j=0; j < np; j++) {
       ierr = PetscFree5(network->header[j].size,network->header[j].key,network->header[j].offset,network->header[j].nvar,network->header[j].offsetvarrel);CHKERRQ(ierr);
       ierr = PetscFree(network->cvalue[j].data);CHKERRQ(ierr);
