@@ -887,7 +887,7 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
 {
   PetscErrorCode        ierr;
   DM_Network            *network = (DM_Network*) dm->data;
-  DMNetworkComponent    *component;
+  DMNetworkComponent    *component=NULL;
   PetscBool             flg=PETSC_FALSE;
   PetscInt              i;
 
@@ -944,7 +944,7 @@ PetscErrorCode DMNetworkSetMaxComponents(DM dm,PetscInt max_comps_registered,Pet
   ierr = PetscOptionsInt("-dmnetwork_max_comps_per_point","Maximum components allowed per node/edge","DMNetworkSetMaxComponents",network->max_comps_per_point,&network->max_comps_per_point,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
-  ierr = PetscMalloc1(network->max_comps_registered,&network->component);CHKERRQ(ierr);
+  ierr = PetscCalloc1(network->max_comps_registered,&network->component);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1386,7 +1386,7 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
 
   ierr = PetscSectionSetUp(network->DataSection);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(network->DataSection,&arr_size);CHKERRQ(ierr);
-  ierr = PetscMalloc1(arr_size,&network->componentdataarray);CHKERRQ(ierr);
+  ierr = PetscCalloc1(arr_size,&network->componentdataarray);CHKERRQ(ierr);
   componentdataarray = network->componentdataarray;
   for (p = network->pStart; p < network->pEnd; p++) {
     ierr = PetscSectionGetOffset(network->DataSection,p,&offsetp);CHKERRQ(ierr);
