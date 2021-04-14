@@ -500,10 +500,6 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 
   np = network->pEnd - network->pStart;
   ierr = CreateNetworkHeaderComponentValue(dm,np,&network->header,&network->cvalue,&network->dataheadersize);CHKERRQ(ierr);
-  /*
-  network->dataheadersize = sizeof(struct _p_DMNetworkComponentHeader)/sizeof(DMNetworkComponentGenericDataType);
-  ierr = PetscCalloc2(np,&network->header,np,&network->cvalue);CHKERRQ(ierr);
-   */
 
   /* (4) Create vidxlTog: maps MERGED plex local vertex index (including ghosts) to User's global vertex index (without merging shared vertices) */
   np = network->vEnd - vStart; /* include ghost vertices */
@@ -668,15 +664,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = PetscSectionSetChart(network->DofSection,network->pStart,network->pEnd);CHKERRQ(ierr);
 
   np = network->pEnd - network->pStart;
-  /*
-  ierr = PetscCalloc2(np,&network->header,np,&network->cvalue);CHKERRQ(ierr);
 
-  for (i=0; i < np; i++) {
-    ierr = PetscCalloc5(network->max_comps_per_point,&network->header[i].size,network->max_comps_per_point,&network->header[i].key,network->max_comps_per_point,&network->header[i].offset,network->max_comps_per_point,&network->header[i].nvar,network->max_comps_per_point,&network->header[i].offsetvarrel);CHKERRQ(ierr);
-    ierr = PetscMalloc1(network->max_comps_per_point,&network->cvalue[i].data);CHKERRQ(ierr);
-  }
-  network->dataheadersize = sizeof(struct _p_DMNetworkComponentHeader)/sizeof(DMNetworkComponentGenericDataType);
-   */
   ierr = CreateNetworkHeaderComponentValue(dm,np,&network->header,&network->cvalue,&network->dataheadersize);CHKERRQ(ierr);
 
   /* Create edge and vertex arrays for the subnetworks */
