@@ -342,6 +342,8 @@ class SourceFix(object):
     self.fixed     = None
     self.begins    = [cursor.extent.start.column-1]
     self.ends      = [cursor.extent.end.column-1]
+    if self.ends[0] <= self.begins[0]:
+      raise RuntimeError("end <= begin, ill-formed source fix")
     self.replace   = [self.src[self.begins[0]:self.ends[0]]]
     self.deltas    = [str(value)]
     self.fixDepth  = 0
@@ -918,6 +920,28 @@ def checkPetscValidLogicalCollectiveEnum(badSource,func,parent):
   checkPetscValidLogicalCollective(badSource,func,parent,enumFilter)
   return
 
+def checkVecNestCheckCompatible(badSource,func,parent):
+  """
+  Specific check for VecNestCheckCompatible[2|3](objA,idxA,objB,idxB[,objC,idxC])
+  """
+  try:
+    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  except ArgCursorWarning as acw:
+    badSource.addWarning(str(acw))
+    return
+  if len(funcArgs) == 4:
+    objA,idxA,objB,idxB = funcArgs
+    checkMatchingArgNum(badSource,objA,idxA,parentArgs)
+    checkMatchingArgNum(badSource,objB,idxB,parentArgs)
+  elif len(funcArgs) == 6:
+    objA,idxA,objB,idxB,objC,idxC = funcArgs
+    checkMatchingArgNum(badSource,objA,idxA,parentArgs)
+    checkMatchingArgNum(badSource,objB,idxB,parentArgs)
+    checkMatchingArgNum(badSource,objC,idxC,parentArgs)
+  else:
+    raise RuntimeError("Unexepected number of arguments {} to VecNestCheckCompatible".format(len(funcArgs)))
+  return
 
 mansecs          = ["sys","vec","mat","dm","ksp","snes","ts","tao"]
 checkFunctionMap = {
@@ -939,6 +963,8 @@ checkFunctionMap = {
   "PetscValidLogicalCollectiveMPIInt" : checkPetscValidLogicalCollectiveMPIInt,
   "PetscValidLogicalCollectiveBool"   : checkPetscValidLogicalCollectiveBool,
   "PetscValidLogicalCollectiveEnum"   : checkPetscValidLogicalCollectiveEnum,
+  "VecNestCheckCompatible2"           : checkVecNestCheckCompatible,
+  "VecNestCheckCompatible3"           : checkVecNestCheckCompatible,
 }
 
 """Utility and pre-check setup"""
