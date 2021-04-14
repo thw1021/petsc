@@ -27,8 +27,15 @@ def fastUnifiedDiff(listA,listB,fromfile="",tofile="",fromfiledate="",tofiledate
       beginning -= 1        # empty ranges begin at line just before the range
     return "{},{}".format(beginning,length)
 
-  fromdate = "\t{}".format(fromfiledate) if fromfiledate else ""
-  todate   = "\t{}".format(tofiledate) if tofiledate else ""
+  if not fromfiledate or not tofiledate:
+    import datetime
+    rn = datetime.datetime.now().ctime()
+    if not fromfiledate:
+      fromfiledate = rn
+    if not tofiledate:
+      tofiledate   = rn
+  fromdate = "\t{}".format(fromfiledate)
+  todate   = "\t{}".format(tofiledate)
   yield "--- {}{}{}".format(fromfile,fromdate,lineterm)
   yield "+++ {}{}{}".format(tofile,todate,lineterm)
   deletes = set(["replace","delete"])
@@ -912,6 +919,7 @@ def checkPetscValidLogicalCollectiveEnum(badSource,func,parent):
   return
 
 
+mansecs          = ["sys","vec","mat","dm","ksp","snes","ts","tao"]
 checkFunctionMap = {
   "PetscValidHeaderSpecificType"      : checkPetscValidHeaderSpecificType,
   "PetscValidHeaderSpecific"          : checkPetscValidHeaderSpecific,
@@ -934,13 +942,24 @@ checkFunctionMap = {
 }
 
 """Utility and pre-check setup"""
+def updateMansecs(mansecFilter):
+  """
+  Remove directories from mansecs if they are not in mansecFilter
+  """
+  if mansecFilter:
+    global mansecs
+
+    mansecFilter = set(mansecFilter)
+    mansecs      = [m for m in mansecs if m in mansecFilter]
+  return
+
 def updateCheckFunctionMap(filterChecks):
   """
   Remove checks from checkFunctionMap if they are not in filterChecks
   """
-  global checkFunctionMap
-
   if filterChecks:
+    global checkFunctionMap
+
     # note the list, this makes a copy of the keys allowing us to delete entries "in place"
     for key in list(checkFunctionMap.keys()):
       if key not in filterChecks:
@@ -1024,7 +1043,6 @@ def getClangSysIncludes():
     output = subprocess.run(["clang","-E","-x","c++","/dev/null","-v"],capture_output=True,check=True,universal_newlines=True)
   else:
     output = subprocess.run(["clang","-E","-x","c++","/dev/null","-v"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
-  output.check_returncode()
   # goes to stderr because of /dev/null
   includes = output.stderr.split("#include <...> search starts here:\n")[1]
   includes = includes.split("End of search list.")[0].replace("(framework directory)","")
@@ -1112,7 +1130,7 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
       print(printPrefix,15*"=","Exiting queue",15*"=")
   return
 
-def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=True,checkFunctionFilter=None,printWarnings=False,maxWorkers=0):
+def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=True,mansecFilter=None,checkFunctionFilter=None,printWarnings=False,maxWorkers=0,applyPatches=False):
   if not clx.conf.loaded:
     clx.conf.set_compatibility_check(True)
     if clangDir:
@@ -1142,7 +1160,7 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   # this saves a lot of time since this includes almost every sub-header in petsc.
   # Including petsc.h first should define almost everything we need so no side effects
   # from including headers in the wrong order below
-  mansecs         = ["sys","vec","mat","dm","ksp","snes","ts","tao"]
+  updateMansecs(mansecFilter)
   mansecimpls     = [m+"impl.h" for m in mansecs]+["isimpl.h","dtimpl.h","dmpleximpl.h","petscfeimpl.h","dmlabelimpl.h","sfimpl.h","viewerimpl.h","characteristicimpl.h"]
   megaHeaderLines = ["#include <petscastfix.hpp>","#include <petsc.h>"]
   for headerFile in os.listdir(os.path.join(petscDir,"include","petsc","private")):
@@ -1200,7 +1218,6 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   allowFileSuffixes = (".c",".cpp",".cxx",".cu",)
   errorsLeft,diffs = [],[]
   for mansec in mansecs:
-  #for mansec in ["mat"]:
     for root,dirs,files in os.walk(os.path.join(petscDir,"src",mansec)):
       if verbose: print(rootPrintPrefix,"Processing directory",root)
       dirs[:] = [d for d in dirs if d not in excludeDirs]
@@ -1255,19 +1272,32 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   if diffs:
     import time
 
-    srcDir,outputDir = os.path.join(petscDir,"src"),os.path.join(petscDir,"petscLintFixup")
+    srcDir,patchDir = os.path.join(petscDir,"src"),os.path.join(petscDir,"petscLintPatches")
     try:
-      os.mkdir(outputDir)
+      os.mkdir(patchDir)
     except FileExistsError:
       pass
-    manglePostfix = "_"+str(int(time.time()))+".diff"
+    manglePostfix = "_"+str(int(time.time()))+".patch"
     for filename,diff in diffs:
       filename    = filename.replace(srcDir,"").replace(os.path.sep,"_")[1:]
       mangledFile = filename.split(".")[0]+manglePostfix
-      mangledFile = os.path.join(outputDir,mangledFile)
+      mangledFile = os.path.join(patchDir,mangledFile)
       with open(mangledFile,"w") as fd:
-        if verbose: print(rootPrintPrefix,"Writing diff to file",mangledFile)
+        if verbose: print(rootPrintPrefix,"Writing patch to file",mangledFile)
         fd.write(diff)
+    if applyPatches:
+      import subprocess,glob,sys
+
+      if verbose: print(rootPrintPrefix,"Applying patches from patch directory",patchDir)
+      rootDir = "-d"+os.path.abspath(os.path.sep)
+      patchGlob = patchDir+os.path.sep+"*"+manglePostfix
+      for patch in glob.iglob(patchGlob):
+        if verbose: print(rootPrintPrefix,"Applying patch",patch)
+        if sys.version_info >= (3,7):
+          output = subprocess.run(["patch",rootDir,"-p0","--unified","--dry-run","-i",patch],check=True,universal_newlines=True,capture_output=True)
+        else:
+          output = subprocess.run(["patch",rootDir,"-p0","--unified","--dry-run","-i",patch],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
+        print(output.stdout)
   if errorsLeft:
     print(rootPrintPrefix,27*"=","UNCORRECTABLE ERRORS BEGIN",30*"=")
     print("\n".join(errorsLeft))
@@ -1275,7 +1305,10 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     print(rootPrintPrefix,"Some errors could not be automatically corrected via the diff files, see above")
   elif diffs:
     print(rootPrintPrefix,27*"=","NO UNCORRECTABLE ERRORS REMAIN",26*"=")
-    print(rootPrintPrefix,"All errors fixable via diff files written to",outputDir)
+    if applyPatches:
+      print(rootPrintPrefix,"All errors fixed via patch files written to",patchDir)
+    else:
+      print(rootPrintPrefix,"All errors fixable via patch files written to",patchDir)
   return
 
 if __name__ == "__main__":
@@ -1300,9 +1333,11 @@ if __name__ == "__main__":
   grouppetsc.add_argument("--PETSC_ARCH",required=False,default=petscArch,help="if this option is unused defaults to environment variable $PETSC_ARCH",dest="petscarch")
   parser.add_argument("--verbose",required=False,action="store_true",help="verbose progress printed to screen")
   parser.add_argument("--show-warnings",required=False,action="store_true",help="show ast matching warnings",dest="warn")
-  parser.add_argument("--filter",required=False,nargs="+",choices=list(checkFunctionMap.keys()),help="filter for errors from available function names")
+  parser.add_argument("--filter-functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),help="filter for errors from available function names",dest="filterfunc")
+  parser.add_argument("--filter-mansec",required=False,nargs="+",choices=mansecs,help="run only over specified mansecs, defaults to all",dest="filtermansec")
   parser.add_argument("--no-multiprocessing",required=False,action="store_false",help="use multiprocessing",dest="multiproc")
   parser.add_argument("--jobs",required=False,type=int,default=0,nargs="?",help="number of multiprocessing jobs, 0 defaults to number of processors on machine")
+  parser.add_argument("--apply-patches",required=False,action="store_true",help="apply patches automatically instead of saving to file",dest="apply")
   args = parser.parse_args()
 
   if args.petscdir is None:
@@ -1312,4 +1347,4 @@ if __name__ == "__main__":
 
   if args.verbose:
     args.warn = True
-  main(args.petscdir,args.petscarch,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,multiproc=args.multiproc,checkFunctionFilter=args.filter,printWarnings=args.warn,maxWorkers=args.jobs)
+  main(args.petscdir,args.petscarch,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,multiproc=args.multiproc,mansecFilter=args.filtermansec,checkFunctionFilter=args.filterfunc,printWarnings=args.warn,maxWorkers=args.jobs,applyPatches=args.apply)
