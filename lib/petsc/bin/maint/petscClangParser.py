@@ -9,14 +9,15 @@ import os,enum
 import clang.cindex as clx
 import petscClangParserUtil
 
-def unifiedDiff(a,b,fromfile="",tofile="",fromfiledate="",tofiledate="",n=0,lineterm="\n",ignoreCharFunc=None):
+def fastUnifiedDiff(listA,listB,fromfile="",tofile="",fromfiledate="",tofiledate="",n=0,lineterm="\n"):
   """
-  carbon copy of difflib.unified_diff, but allows one to set the isjunk option
+  Optimized version of difflib.unified_diff. difflib.SequenceMatcher is unbelievably slow but we can aggresively cut corners since we know the general location of all of the differences. This function only really serves to format the changes into the unified diff format.
   """
-  from difflib import SequenceMatcher
-
-  def formatRangeUnified(start,stop):
+  import difflib,itertools
+  def formatRangeUnified(pre,start,stop):
     "Convert range to the 'ed' format"
+    start += pre
+    stop += pre
     # Per the diff spec at http://www.unix.org/single_unix_specification/
     beginning = start+1     # lines start numbering with one
     length = stop-start
@@ -26,32 +27,37 @@ def unifiedDiff(a,b,fromfile="",tofile="",fromfiledate="",tofiledate="",n=0,line
       beginning -= 1        # empty ranges begin at line just before the range
     return "{},{}".format(beginning,length)
 
-  started = False
-  auto    = ignoreCharFunc == None # necessary otherwise ignoreLineFunc will be ignored
-  for group in SequenceMatcher(isjunk=ignoreCharFunc,a=a,b=b,autojunk=auto).get_grouped_opcodes(n):
-    if not started:
-      started  = True
-      fromdate = "\t{}".format(fromfiledate) if fromfiledate else ""
-      todate   = "\t{}".format(tofiledate) if tofiledate else ""
-      yield "--- {}{}{}".format(fromfile,fromdate,lineterm)
-      yield "+++ {}{}{}".format(tofile,todate,lineterm)
+  fromdate = "\t{}".format(fromfiledate) if fromfiledate else ""
+  todate   = "\t{}".format(tofiledate) if tofiledate else ""
+  yield "--- {}{}{}".format(fromfile,fromdate,lineterm)
+  yield "+++ {}{}{}".format(tofile,todate,lineterm)
+  deletes = set(["replace","delete"])
+  inserts = set(["replace","insert"])
 
-    first,last  = group[0],group[-1]
-    file1_range = formatRangeUnified(first[1],last[2])
-    file2_range = formatRangeUnified(first[3],last[4])
-    yield "@@ -{} +{} @@{}".format(file1_range,file2_range,lineterm)
+  # find consecutive streaks of values, do this by taking the difference between a value
+  # and its index. If the values are consecutive val-idx(val) will be equal.
+  for _,g in itertools.groupby(enumerate(val for _,val in listA),lambda x: x[0]-x[1]):
+    groupIdxs = list(g)
+    lineStart = min(l for _,l in groupIdxs)
+    groupA,groupB = [listA[i][0] for i,_ in groupIdxs],[listB[i][0] for i,_ in groupIdxs]
+    for group in difflib.SequenceMatcher(a=groupA,b=groupB).get_grouped_opcodes(n):
+      first,last  = group[0],group[-1]
+      file1_range = formatRangeUnified(lineStart,first[1],last[2])
+      file2_range = formatRangeUnified(lineStart,first[3],last[4])
+      yield "@@ -{} +{} @@{}".format(file1_range,file2_range,lineterm)
 
-    for tag,i1,i2,j1,j2 in group:
-      if tag == "equal":
-        for line in a[i1:i2]:
-          yield " "+line
-        continue
-      if tag in {"replace","delete"}:
-        for line in a[i1:i2]:
-          yield "-"+line
-      if tag in {"replace","insert"}:
-        for line in b[j1:j2]:
-          yield "+"+line
+      for tag,i1,i2,j1,j2 in group:
+        if tag == "equal":
+          for line in groupA[i1:i2]:
+            yield " "+line
+          continue
+        if tag in deletes:
+          for line in groupA[i1:i2]:
+            yield "-"+line
+        if tag in inserts:
+          for line in groupB[j1:j2]:
+            yield "+"+line
+
 
 """
 clang.cindex.TranslationUnit does not have all latest flags, but we prefix
@@ -319,13 +325,45 @@ class ArgCursor(object):
 
 class SourceFix(object):
   def __init__(self,cursor,value):
-    extent = cursor.extent
-    begin,end = extent.start.column-1,extent.end.column-1
     self.filename = cursor.location.file.name
-    self.startLine = extent.start.line
+    self.startLine = cursor.extent.start.line
     assert self.startLine >= 1
-    self.srcStr = ArgCursor.getSourceFromCursor(cursor)
-    self.fixedStr = self.srcStr[:begin]+str(value)+self.srcStr[end:]
+    self.src = ArgCursor.getSourceFromCursor(cursor)
+    self.fixed = None
+    self.begins = [cursor.extent.start.column-1]
+    self.ends = [cursor.extent.end.column-1]
+    self.replace = [self.src[self.begins[0]:self.ends[0]]]
+    self.deltas = [str(value)]
+    return
+
+  def appendFix(self,fix):
+    assert isinstance(fix,SourceFix)
+    if self.src != fix.src:
+      raise RuntimeError("Cannot combine fixes that do not share identical source!")
+    self.begins.extend(fix.begins)
+    self.ends.extend(fix.ends)
+    self.replace.extend(fix.replace)
+    self.deltas.extend(fix.deltas)
+    return
+
+  def mergeCollapse(self):
+    """
+    Collapses a list of fixes and produces a fixed src line.
+    Fixes probably should not overwrite each other (for now), so we error out, but this
+    is arguably a completely valid case, I just have not seen an example of it that I
+    can use to debug with yet.
+    """
+    idxDelta = 0
+    newSrc   = self.src
+    for begin,end,replace,delta in zip(self.begins,self.ends,self.replace,self.deltas):
+      if replace not in newSrc:
+        raise RuntimeError("Target replacement not in src anymore, fix no longer relevant")
+      if (begin+idxDelta < 0) or (end+idxDelta > len(newSrc)):
+        raise RuntimeError("Idx out of bounds of src, fix not viable")
+      newSrcTemp = newSrc[:begin+idxDelta]+delta+newSrc[end+idxDelta:]
+      idxDelta   = len(newSrcTemp)-len(newSrc)
+      newSrc     = newSrcTemp
+    self.fixed = newSrc
     return
 
 class BadSource(object):
@@ -378,9 +416,17 @@ class BadSource(object):
       self.diffs[fix.filename].append(fix)
     except KeyError:
       self.diffs[fix.filename] = [fix]
+      return
     except AttributeError:
-      # fix = None
-      pass
+      # fix = None, return
+      return
+    # check if this is a compound error, i.e. an additional error on the same line
+    # in which case we need to combine with previous fix
+    if fix.startLine == self.diffs[fix.filename][-2].startLine:
+      # remove ourselves from the list
+      fix = self.diffs[fix.filename].pop()
+      # this should now be the previous fix on the same line, so we combine with it
+      self.diffs[fix.filename][-1].appendFix(fix)
     return
 
   def getAllErrors(self):
@@ -409,22 +455,14 @@ class BadSource(object):
     return
 
   def coalesceDiffs(self):
-    def ignoreComment(char):
-      return char in " #\t"
-
     combinedDiffs = []
     for filename,diffs in self.diffs.items():
-      maxLine = diffs[-1].startLine
-      # hack to make difflib think we are starting at a particular line number, any line
-      # starting with # is ignored, so we insert our changed lines at the correct line
-      # numbers in the source
-      srcList   = ["#\n" for _ in range(maxLine)]
-      fixedList = srcList.copy()
+      minLine,maxLine = diffs[0].startLine-1,diffs[-1].startLine
       for d in diffs:
-        # -1 to be 0 indexed
-        srcList[d.startLine-1]   = d.srcStr
-        fixedList[d.startLine-1] = d.fixedStr
-      unified = unifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename,ignoreCharFunc=ignoreComment)
+        d.mergeCollapse()
+      srcList = [(d.src,d.startLine) for d in diffs]
+      fixedList = [(d.fixed,d.startLine) for d in diffs]
+      unified = fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename)
       combinedDiffs.append((filename,"".join(unified)))
     return combinedDiffs
 
@@ -1151,8 +1189,8 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   # allow these file suffixes
   allowFileSuffixes = (".c",".cpp",".cxx",".cu",)
   errorsLeft,diffs = [],[]
-  #for mansec in mansecs:
-  for mansec in ["sys"]:
+  for mansec in mansecs:
+  #for mansec in ["mat"]:
     for root,dirs,files in os.walk(os.path.join(petscDir,"src",mansec)):
       if verbose: print(rootPrintPrefix,"Processing directory",root)
       dirs[:] = [d for d in dirs if d not in excludeDirs]
@@ -1221,8 +1259,10 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
         if verbose: print(rootPrintPrefix,"Writing diff to file",mangledFile)
         fd.write(diff)
   if errorsLeft:
-    print(rootPrintPrefix,27*"=","REMAINING UNCORRECTABLE ERRORS",26*"=")
-    print("".join(errorsLeft))
+    print(rootPrintPrefix,27*"=","UNCORRECTABLE ERRORS BEGIN",30*"=")
+    print("\n".join(errorsLeft))
+    print(rootPrintPrefix,27*"=","UNCORRECTABLE ERRORS END",32*"=")
+    print(rootPrintPrefix,"Some errors could not be automatically corrected via the diff files, see above")
   elif diffs:
     print(rootPrintPrefix,27*"=","NO UNCORRECTABLE ERRORS REMAIN",26*"=")
     print(rootPrintPrefix,"All errors fixable via diff files written to",outputDir)

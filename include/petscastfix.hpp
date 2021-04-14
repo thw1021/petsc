@@ -6,6 +6,26 @@
 #endif
 
 #include <petscsystypes.h>
+/* define these here, as these clutter up the AST immensely (each adding ~20 branches per instantiation!)*/
+#define CHKERRQ(ierr)
+#define CHKERRV(ierr)
+#define CHKMEMQ
+#define CHKMEMA
+#define CHKERRMPI(ierr)
+#define CHKERRABORT(comm,ierr)
+#define CHKERRCONTINUE(ierr)
+#define PetscStackPush(n)
+#define PetscStackPop
+#define PetscStackPushNoCheck(funct,petsc_routine,hot)
+#define PetscStackPopNoCheck
+#define PetscStackCall(name,routine)
+#define PetscStackCallStandard(name,routine)
+#define PetscFunctionBegin
+#define PetscFunctionBeginHot
+#define PetscFunctionBeginUser
+#define PetscFunctionReturn(a)    return(a)
+#define PetscFunctionReturnVoid() return
+
 template <typename T>
 void PetscValidHeaderSpecific(const T,PetscClassId,int);
 template <typename T>
