@@ -19,7 +19,7 @@ def fastUnifiedDiff(listA,listB,fromfile="",tofile="",fromfiledate="",tofiledate
     start += pre
     stop += pre
     # Per the diff spec at http://www.unix.org/single_unix_specification/
-    beginning = start+1     # lines start numbering with one
+    beginning = max(start,1)# lines start numbering with one
     length = stop-start
     if length == 1:
       return "{}".format(beginning)
@@ -1294,16 +1294,16 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
       for patch in glob.iglob(patchGlob):
         if verbose: print(rootPrintPrefix,"Applying patch",patch)
         if sys.version_info >= (3,7):
-          output = subprocess.run(["patch",rootDir,"-p0","--unified","--dry-run","-i",patch],check=True,universal_newlines=True,capture_output=True)
+          output = subprocess.run(["patch",rootDir,"-p0","--unified","-i",patch],check=True,universal_newlines=True,capture_output=True)
         else:
-          output = subprocess.run(["patch",rootDir,"-p0","--unified","--dry-run","-i",patch],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
-        print(output.stdout)
+          output = subprocess.run(["patch",rootDir,"-p0","--unified","-i",patch],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
+        if verbose: print(output.stdout)
   if errorsLeft:
     print(rootPrintPrefix,27*"=","UNCORRECTABLE ERRORS BEGIN",30*"=")
     print("\n".join(errorsLeft))
     print(rootPrintPrefix,27*"=","UNCORRECTABLE ERRORS END",32*"=")
     print(rootPrintPrefix,"Some errors could not be automatically corrected via the diff files, see above")
-  elif diffs:
+  elif diffs and verbose:
     print(rootPrintPrefix,27*"=","NO UNCORRECTABLE ERRORS REMAIN",26*"=")
     if applyPatches:
       print(rootPrintPrefix,"All errors fixed via patch files written to",patchDir)
