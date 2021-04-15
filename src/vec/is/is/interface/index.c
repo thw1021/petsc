@@ -1144,7 +1144,7 @@ PetscErrorCode ISGetLayout(IS is,PetscLayout *map)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
-  PetscValidIntPointer(map,2);
+  PetscValidPointer(map,2);
   *map = is->map;
   PetscFunctionReturn(0);
 }

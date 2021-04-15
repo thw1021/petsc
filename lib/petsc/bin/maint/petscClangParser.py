@@ -9,63 +9,6 @@ import os,enum
 import clang.cindex as clx
 import petscClangParserUtil
 
-def fastUnifiedDiff(listA,listB,fromfile="",tofile="",fromfiledate="",tofiledate="",n=0,lineterm="\n"):
-  """
-  Optimized version of difflib.unified_diff. difflib.SequenceMatcher is unbelievably slow but we can aggresively cut corners since we know the general location of all of the differences. This function only really serves to format the changes into the unified diff format.
-  """
-  import difflib,itertools
-  def formatRangeUnified(pre,start,stop):
-    "Convert range to the 'ed' format"
-    start += pre
-    stop += pre
-    # Per the diff spec at http://www.unix.org/single_unix_specification/
-    beginning = max(start,1)# lines start numbering with one
-    length = stop-start
-    if length == 1:
-      return "{}".format(beginning)
-    if not length:
-      beginning -= 1        # empty ranges begin at line just before the range
-    return "{},{}".format(beginning,length)
-
-  if not fromfiledate or not tofiledate:
-    import datetime
-    rn = datetime.datetime.now().ctime()
-    if not fromfiledate:
-      fromfiledate = rn
-    if not tofiledate:
-      tofiledate   = rn
-  fromdate = "\t{}".format(fromfiledate)
-  todate   = "\t{}".format(tofiledate)
-  yield "--- {}{}{}".format(fromfile,fromdate,lineterm)
-  yield "+++ {}{}{}".format(tofile,todate,lineterm)
-  deletes = {"replace","delete"}
-  inserts = {"replace","insert"}
-
-  # find consecutive streaks of values, do this by taking the difference between a value
-  # and its index. If the values are consecutive val-idx(val) will be equal.
-  for _,g in itertools.groupby(enumerate(val for _,val in listA),lambda x: x[0]-x[1]):
-    groupIdxs = list(g)
-    lineStart = min(l for _,l in groupIdxs)
-    groupA,groupB = [listA[i][0] for i,_ in groupIdxs],[listB[i][0] for i,_ in groupIdxs]
-    for group in difflib.SequenceMatcher(a=groupA,b=groupB).get_grouped_opcodes(n):
-      first,last  = group[0],group[-1]
-      file1_range = formatRangeUnified(lineStart,first[1],last[2])
-      file2_range = formatRangeUnified(lineStart,first[3],last[4])
-      yield "@@ -{} +{} @@{}".format(file1_range,file2_range,lineterm)
-
-      for tag,i1,i2,j1,j2 in group:
-        if tag == "equal":
-          for line in groupA[i1:i2]:
-            yield " "+line
-          continue
-        if tag in deletes:
-          for line in groupA[i1:i2]:
-            yield "-"+line
-        if tag in inserts:
-          for line in groupB[j1:j2]:
-            yield "+"+line
-
-
 """
 clang.cindex.TranslationUnit does not have all latest flags, but we prefix
 with P_ just in case
@@ -176,6 +119,63 @@ petscClassIdMap = {
   "_p_Vec *"                    : "VEC_CLASSID",
   "_p_VecTagger *"              : "VEC_TAGGER_CLASSID",
 }
+
+def fastUnifiedDiff(listA,listB,fromfile="",tofile="",fromfiledate="",tofiledate="",n=0,lineterm="\n"):
+  """
+  Optimized version of difflib.unified_diff. difflib.SequenceMatcher is unbelievably slow but we can aggresively cut corners since we know the general location of all of the differences. This function only really serves to format the changes into the unified diff format.
+  """
+  import difflib,itertools
+  def formatRangeUnified(pre,start,stop):
+    "Convert range to the 'ed' format"
+    start += pre
+    stop += pre
+    # Per the diff spec at http://www.unix.org/single_unix_specification/
+    beginning = max(start,1)# lines start numbering with one
+    length = stop-start
+    if length == 1:
+      return "{}".format(beginning)
+    if not length:
+      beginning -= 1        # empty ranges begin at line just before the range
+    return "{},{}".format(beginning,length)
+
+  if not fromfiledate or not tofiledate:
+    import datetime
+    rn = datetime.datetime.now().ctime()
+    if not fromfiledate:
+      fromfiledate = rn
+    if not tofiledate:
+      tofiledate   = rn
+  fromdate = "\t{}".format(fromfiledate)
+  todate   = "\t{}".format(tofiledate)
+  yield "--- {}{}{}".format(fromfile,fromdate,lineterm)
+  yield "+++ {}{}{}".format(tofile,todate,lineterm)
+  deletes = {"replace","delete"}
+  inserts = {"replace","insert"}
+
+  # find consecutive streaks of values, do this by taking the difference between a value
+  # and its index. If the values are consecutive val-idx(val) will be equal.
+  for _,g in itertools.groupby(enumerate(val for _,val in listA),lambda x: x[0]-x[1]):
+    groupIdxs = list(g)
+    lineStart = min(l for _,l in groupIdxs)
+    groupA,groupB = [listA[i][0] for i,_ in groupIdxs],[listB[i][0] for i,_ in groupIdxs]
+    for group in difflib.SequenceMatcher(a=groupA,b=groupB).get_grouped_opcodes(n):
+      first,last  = group[0],group[-1]
+      file1_range = formatRangeUnified(lineStart,first[1],last[2])
+      file2_range = formatRangeUnified(lineStart,first[3],last[4])
+      yield "@@ -{} +{} @@{}".format(file1_range,file2_range,lineterm)
+
+      for tag,i1,i2,j1,j2 in group:
+        if tag == "equal":
+          for line in groupA[i1:i2]:
+            yield " "+line
+          continue
+        if tag in deletes:
+          for line in groupA[i1:i2]:
+            yield "-"+line
+        if tag in inserts:
+          for line in groupB[j1:j2]:
+            yield "+"+line
+
 
 class QueueSignal(enum.IntEnum):
   UNIFIED_DIFF = enum.auto()
@@ -756,15 +756,29 @@ def checkMatchingSpecificType(badSource,obj,filterFunctor):
 
 
 """Specific 'driver' function to test a particular macro archetype"""
+def checkObjIdxGenericN(badSource,func,parent):
+  """
+  For generic checks where the general form is func(obj1,idx1,...,objN,idxN)
+  """
+  try:
+    funcArgs   = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+  except ArgCursorWarning as acw:
+    # add warning since it isn't a source error but rather a parsing failure
+    badSource.addWarning(str(acw))
+    return
+  for obj,idx in zip(funcArgs[::2],funcArgs[1::2]):
+    checkMatchingArgNum(badSource,obj,idx,parentArgs)
+  return
+
 def checkPetscValidHeaderSpecificType(badSource,func,parent):
   """
   Specific check for PetscValidHeaderSpecificType(obj,classid,idx,type)
   """
   try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    funcArgs   = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
     parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
     badSource.addWarning(str(acw))
     return
   # Don't need the type
@@ -778,10 +792,9 @@ def checkPetscValidHeaderSpecific(badSource,func,parent):
   Specific check for PetscValidHeaderSpecific(obj,classid,idx)
   """
   try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    funcArgs   = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
     parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ArgCursorWarning as acw:
-    # add warning since it isn't a source error but rather a parsing failure
     badSource.addWarning(str(acw))
     return
   obj,classid,idx = funcArgs
@@ -789,34 +802,19 @@ def checkPetscValidHeaderSpecific(badSource,func,parent):
   checkMatchingArgNum(badSource,obj,idx,parentArgs)
   return
 
-def checkPetscValidHeader(badSource,func,parent):
+def checkPetscValidPointerAndType(badSource,func,parent,filterFunctor):
   """
-  Specific check for PetscValidHeader(obj,idx)
+  Generic check for PetscValidXXXPointer(obj,idx)
   """
   try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    funcArgs   = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
     parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ArgCursorWarning as acw:
     badSource.addWarning(str(acw))
     return
   obj,idx = funcArgs
-  checkMatchingArgNum(badSource,obj,idx,parentArgs)
-  return
-
-def checkPetscValidPointer(badSource,func,parent,filterFunctor=None):
-  """
-  Specific check for PetscValidPointer(obj,idx)
-  """
-  try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ArgCursorWarning as acw:
-    badSource.addWarning(str(acw))
-    return
-  obj,idx = funcArgs
-  if filterFunctor:
-    assert filterFunctor.pointer == True
-    checkMatchingSpecificType(badSource,obj,filterFunctor)
+  assert filterFunctor.pointer == True
+  checkMatchingSpecificType(badSource,obj,filterFunctor)
   checkMatchingArgNum(badSource,obj,idx,parentArgs)
   return
 
@@ -825,7 +823,7 @@ def checkPetscValidCharPointer(badSource,func,parent):
   Specific check for PetscValidCharPointer(obj,idx)
   """
   charFilter = FilterFunctor(charTypes,func,pointer=True)
-  checkPetscValidPointer(badSource,func,parent,filterFunctor=charFilter)
+  checkPetscValidPointerAndType(badSource,func,parent,charFilter)
   return
 
 def checkPetscValidIntPointer(badSource,func,parent):
@@ -833,7 +831,7 @@ def checkPetscValidIntPointer(badSource,func,parent):
   Specific check for PetscValidIntPointer(obj,idx)
   """
   intFilter = FilterFunctor(intTypes,func,pointer=True,successHook=checkIntIsNotPetscBool,failureHook=convertToCorrectPetscValidXXXPointer,validFunc="PetscValidBoolPointer")
-  checkPetscValidPointer(badSource,func,parent,filterFunctor=intFilter)
+  checkPetscValidPointerAndType(badSource,func,parent,intFilter)
   return
 
 def checkPetscValidBoolPointer(badSource,func,parent):
@@ -841,7 +839,7 @@ def checkPetscValidBoolPointer(badSource,func,parent):
   Specific check for PetscValidBoolPointer(obj,idx)
   """
   boolFilter = FilterFunctor(boolTypes,func,pointer=True,successHook=checkIsPetscBool,failureHook=convertToCorrectPetscValidXXXPointer)
-  checkPetscValidPointer(badSource,func,parent,filterFunctor=boolFilter)
+  checkPetscValidPointerAndType(badSource,func,parent,boolFilter)
   return
 
 def checkPetscValidScalarPointer(badSource,func,parent):
@@ -849,7 +847,7 @@ def checkPetscValidScalarPointer(badSource,func,parent):
   Specific check for PetscValidScalarPointer(obj,idx)
   """
   scalarFilter = FilterFunctor(scalarTypes,func,pointer=True,successHook=checkIsPetscScalarAndNotPetscReal,failureHook=convertToCorrectPetscValidXXXPointer,validFunc="PetscValidRealPointer")
-  checkPetscValidPointer(badSource,func,parent,filterFunctor=scalarFilter)
+  checkPetscValidPointerAndType(badSource,func,parent,scalarFilter)
   return
 
 def checkPetscValidRealPointer(badSource,func,parent):
@@ -857,51 +855,7 @@ def checkPetscValidRealPointer(badSource,func,parent):
   Specific check for PetscValidRealPointer(obj,idx)
   """
   realFilter = FilterFunctor(realTypes,func,pointer=True,successHook=checkIsPetscRealAndNotPetscScalar,failureHook=convertToCorrectPetscValidXXXPointer,validFunc="PetscValidScalarPointer")
-  checkPetscValidPointer(badSource,func,parent,filterFunctor=realFilter)
-  return
-
-def checkPetscCheckSameType(badSource,func,parent):
-  """
-  Specific check for PetscCheckSameType(objA,idxA,objB,idxB)
-  """
-  try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ArgCursorWarning as acw:
-    badSource.addWarning(str(acw))
-    return
-  objA,idxA,objB,idxB = funcArgs
-  checkMatchingArgNum(badSource,objA,idxA,parentArgs)
-  checkMatchingArgNum(badSource,objB,idxB,parentArgs)
-  return
-
-def checkPetscValidType(badSource,func,parent):
-  """
-  Specific check for PetscValidType(obj,idx)
-  """
-  try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ArgCursorWarning as acw:
-    badSource.addWarning(str(acw))
-    return
-  obj,idx = funcArgs
-  checkMatchingArgNum(badSource,obj,idx,parentArgs)
-  return
-
-def checkPetscCheckSameComm(badSource,func,parent):
-  """
-  Specific check for PetscCheckSameComm(objA,idxA,objB,idxB)
-  """
-  try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ArgCursorWarning as acw:
-    badSource.addWarning(str(acw))
-    return
-  objA,idxA,objB,idxB = funcArgs
-  checkMatchingArgNum(badSource,objA,idxA,parentArgs)
-  checkMatchingArgNum(badSource,objB,idxB,parentArgs)
+  checkPetscValidPointerAndType(badSource,func,parent,realFilter)
   return
 
 def checkPetscValidLogicalCollective(badSource,func,parent,filterFunctor):
@@ -969,52 +923,33 @@ def checkPetscValidLogicalCollectiveEnum(badSource,func,parent):
   checkPetscValidLogicalCollective(badSource,func,parent,enumFilter)
   return
 
-def checkVecNestCheckCompatible(badSource,func,parent):
-  """
-  Specific check for VecNestCheckCompatible[2|3](objA,idxA,objB,idxB[,objC,idxC])
-  """
-  try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ArgCursorWarning as acw:
-    badSource.addWarning(str(acw))
-    return
-  if len(funcArgs) == 4:
-    objA,idxA,objB,idxB = funcArgs
-    checkMatchingArgNum(badSource,objA,idxA,parentArgs)
-    checkMatchingArgNum(badSource,objB,idxB,parentArgs)
-  elif len(funcArgs) == 6:
-    objA,idxA,objB,idxB,objC,idxC = funcArgs
-    checkMatchingArgNum(badSource,objA,idxA,parentArgs)
-    checkMatchingArgNum(badSource,objB,idxB,parentArgs)
-    checkMatchingArgNum(badSource,objC,idxC,parentArgs)
-  else:
-    raise RuntimeError("Unexepected number of arguments {} to VecNestCheckCompatible".format(len(funcArgs)))
-  return
-
 
 mansecs          = ["sys","vec","mat","dm","ksp","snes","ts","tao"]
 checkFunctionMap = {
   "PetscValidHeaderSpecificType"      : checkPetscValidHeaderSpecificType,
   "PetscValidHeaderSpecific"          : checkPetscValidHeaderSpecific,
-  "PetscValidHeader"                  : checkPetscValidHeader,
-  "PetscValidPointer"                 : checkPetscValidPointer,
+  "PetscValidHeader"                  : checkObjIdxGenericN,
+  "PetscValidPointer"                 : checkObjIdxGenericN,
   "PetscValidCharPointer"             : checkPetscValidCharPointer,
   "PetscValidIntPointer"              : checkPetscValidIntPointer,
   "PetscValidBoolPointer"             : checkPetscValidBoolPointer,
   "PetscValidScalarPointer"           : checkPetscValidScalarPointer,
   "PetscValidRealPointer"             : checkPetscValidRealPointer,
-  "PetscCheckSameType"                : checkPetscCheckSameType,
-  "PetscValidType"                    : checkPetscValidType,
-  "PetscCheckSameComm"                : checkPetscCheckSameComm,
+  "PetscCheckSameType"                : checkObjIdxGenericN,
+  "PetscValidType"                    : checkObjIdxGenericN,
+  "PetscCheckSameComm"                : checkObjIdxGenericN,
   "PetscValidLogicalCollectiveScalar" : checkPetscValidLogicalCollectiveScalar,
   "PetscValidLogicalCollectiveReal"   : checkPetscValidLogicalCollectiveReal,
   "PetscValidLogicalCollectiveInt"    : checkPetscValidLogicalCollectiveInt,
   "PetscValidLogicalCollectiveMPIInt" : checkPetscValidLogicalCollectiveMPIInt,
   "PetscValidLogicalCollectiveBool"   : checkPetscValidLogicalCollectiveBool,
   "PetscValidLogicalCollectiveEnum"   : checkPetscValidLogicalCollectiveEnum,
-  "VecNestCheckCompatible2"           : checkVecNestCheckCompatible,
-  "VecNestCheckCompatible3"           : checkVecNestCheckCompatible,
+  "VecNestCheckCompatible2"           : checkObjIdxGenericN,
+  "VecNestCheckCompatible3"           : checkObjIdxGenericN,
+  "MatCheckPreallocated"              : checkObjIdxGenericN,
+  "MatCheckProduect"                  : checkObjIdxGenericN,
+  "MatCheckSameLocalSize"             : checkObjIdxGenericN,
+  "MatCheckSameSize"                  : checkObjIdxGenericN,
 }
 
 """Utility and pre-check setup"""
@@ -1063,21 +998,6 @@ def updatePetscClassIdMap(petscDir):
               if struct not in petscClassIdMap:
                 petscClassIdMap[struct] = "ERROR_UNKNOWN_PETSC_CLASSID"
             line = rfile.readline()
-  return
-
-def updatePetscScalarType(petscDir,petscArch):
-  import re
-  global scalarTypes
-
-  confFile   = os.path.join(petscDir,petscArch,"include","petscconf.h")
-  regcomplex = re.compile("^#define\s*PETSC_USE_COMPLEX\s")
-  with open(confFile,"r") as rfile:
-    line = rfile.readline()
-    while line:
-      if regcomplex.search(line): return
-      line = rfile.readline()
-  # petsc is configured to NOT use complex numbers, so we remove them from scalartypes
-  scalarTypes.remove(clx.TypeKind.COMPLEX)
   return
 
 def getPetscExtraIncludes(petscDir,petscArch):
@@ -1187,6 +1107,7 @@ def tryToFindLibclangDir():
         pass
   return llvmLibDir
 
+
 """Main functions for root and queue processes"""
 def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbose,printWarnings,exceptions,dataQueue,queue,lock):
   import multiprocessing as mp
@@ -1203,7 +1124,6 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
   errorPrefix = printPrefix+" Exception detected while processing"
   updateCheckFunctionMap(checkFunctionFilter)
   updatePetscClassIdMap(petscDir)
-  updatePetscScalarType(petscDir,petscArch)
   if verbose:
     with lock:
       print(printPrefix,15*"=","Entering queue",15*"=")
@@ -1269,7 +1189,6 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   # this saves a lot of time since this includes almost every sub-header in petsc.
   # Including petsc.h first should define almost everything we need so no side effects
   # from including headers in the wrong order below
-  updateMansecs(mansecFilter)
   mansecimpls     = [m+"impl.h" for m in mansecs]+["isimpl.h","dtimpl.h","dmpleximpl.h","petscfeimpl.h","dmlabelimpl.h","sfimpl.h","viewerimpl.h","characteristicimpl.h"]
   megaHeaderLines = ["#include <petscastfix.hpp>","#include <petsc.h>"]
   for headerFile in os.listdir(os.path.join(petscDir,"include","petsc","private")):
@@ -1317,13 +1236,14 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     # apply the filters if we aren't using workers
     updateCheckFunctionMap(checkFunctionFilter)
     updatePetscClassIdMap(petscDir)
-    updatePetscScalarType(petscDir,petscArch)
 
+  # always update mansecs
+  updateMansecs(mansecFilter)
   # exclude these directories
   excludeDirs = {"f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","tests","tutorials"}
   excludeDirSuffixes = (".dSYM",)
   # allow these file suffixes
-  allowFileSuffixes = (".c",".cpp",".cxx",".cu",)
+  allowFileSuffixes = (".c",".cpp",".cxx",".cu")
   errorsLeft,diffs = [],[]
   for mansec in mansecs:
     for root,dirs,files in os.walk(os.path.join(petscDir,"src",mansec)):

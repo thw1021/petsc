@@ -74,4 +74,13 @@ template <typename Tv> /* Tv = Vec, but I don't want to have to import the heade
 void VecNestCheckCompatible2(Tv,int,Tv,int);
 template <typename Tv>
 void VecNestCheckCompatible3(Tv,int,Tv,int,Tv,int);
+
+template <typename Tm>
+void MatCheckPreallocated(Tm,int);
+template <typename Tm>
+void MatCheckProduct(Tm,int);
+template <typename Tm>
+void MatCheckSameLocalSize(Tm,int,Tm,int);
+template <typename Tm>
+void MatCheckSameSize(Tm,int,Tm,int);
 #endif
