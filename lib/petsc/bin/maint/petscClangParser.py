@@ -38,8 +38,8 @@ def fastUnifiedDiff(listA,listB,fromfile="",tofile="",fromfiledate="",tofiledate
   todate   = "\t{}".format(tofiledate)
   yield "--- {}{}{}".format(fromfile,fromdate,lineterm)
   yield "+++ {}{}{}".format(tofile,todate,lineterm)
-  deletes = set(["replace","delete"])
-  inserts = set(["replace","insert"])
+  deletes = {"replace","delete"}
+  inserts = {"replace","insert"}
 
   # find consecutive streaks of values, do this by taking the difference between a value
   # and its index. If the values are consecutive val-idx(val) will be equal.
@@ -90,33 +90,33 @@ P_CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles     = 0x4000
 P_CXTranslationUnit_RetainExcludedConditionalBlocks      = 0x8000
 
 # Cursors that may be attached to function-like usage
-funcCallCursors = set([clx.CursorKind.FUNCTION_DECL,clx.CursorKind.CALL_EXPR])
+funcCallCursors = {clx.CursorKind.FUNCTION_DECL,clx.CursorKind.CALL_EXPR}
 
 # Cursors that may be attached to mathemateical operations or types
-mathCursors = set([clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.UNARY_OPERATOR,clx.CursorKind.BINARY_OPERATOR])
+mathCursors     = {clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.UNARY_OPERATOR,clx.CursorKind.BINARY_OPERATOR}
 
 # Cursors that contain base literal types
-literalCursors = set([clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.STRING_LITERAL])
+literalCursors  = {clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.STRING_LITERAL}
 
 # Cursors that may be attached to casting
-castCursors = set([clx.CursorKind.CSTYLE_CAST_EXPR])
+castCursors     = {clx.CursorKind.CSTYLE_CAST_EXPR,clx.CursorKind.CXX_STATIC_CAST_EXPR,clx.CursorKind.CXX_DYNAMIC_CAST_EXPR,clx.CursorKind.CXX_REINTERPRET_CAST_EXPR,clx.CursorKind.CXX_CONST_CAST_EXPR,clx.CursorKind.CXX_FUNCTIONAL_CAST_EXPR}
 
 # Cursors that may be attached when types are converted
-convertCursors = castCursors|set([clx.CursorKind.UNEXPOSED_EXPR])
+convertCursors  = castCursors|{clx.CursorKind.UNEXPOSED_EXPR}
 
-strTokens = set([clx.TokenKind.IDENTIFIER])
+strTokens       = {clx.TokenKind.IDENTIFIER}
 
 # General Array types
-arrayTypes = set([clx.TypeKind.INCOMPLETEARRAY,clx.TypeKind.CONSTANTARRAY,clx.TypeKind.VARIABLEARRAY])
+arrayTypes      = {clx.TypeKind.INCOMPLETEARRAY,clx.TypeKind.CONSTANTARRAY,clx.TypeKind.VARIABLEARRAY}
 
 # Specific types
-enumTypes   = set([clx.TypeKind.ENUM])
-boolTypes   = enumTypes|set([clx.TypeKind.BOOL])
-charTypes   = set([clx.TypeKind.CHAR_S,clx.TypeKind.UCHAR])
-mpiIntTypes = set([clx.TypeKind.INT])
-intTypes    = enumTypes|mpiIntTypes|set([clx.TypeKind.USHORT,clx.TypeKind.SHORT,clx.TypeKind.UINT,clx.TypeKind.LONGLONG,clx.TypeKind.ULONGLONG])
-realTypes   = set([clx.TypeKind.FLOAT,clx.TypeKind.DOUBLE,clx.TypeKind.LONGDOUBLE,clx.TypeKind.FLOAT128])
-scalarTypes = realTypes|set([clx.TypeKind.COMPLEX])
+enumTypes   = {clx.TypeKind.ENUM}
+boolTypes   = enumTypes|{clx.TypeKind.BOOL}
+charTypes   = {clx.TypeKind.CHAR_S,clx.TypeKind.UCHAR}
+mpiIntTypes = {clx.TypeKind.INT}
+intTypes    = enumTypes|mpiIntTypes|{clx.TypeKind.USHORT,clx.TypeKind.SHORT,clx.TypeKind.UINT,clx.TypeKind.LONGLONG,clx.TypeKind.ULONGLONG}
+realTypes   = {clx.TypeKind.FLOAT,clx.TypeKind.DOUBLE,clx.TypeKind.LONGDOUBLE,clx.TypeKind.FLOAT128}
+scalarTypes = realTypes|{clx.TypeKind.COMPLEX}
 
 petscClassIdMap = {
   "_p_AO *"                     : "AO_CLASSID",
@@ -337,15 +337,21 @@ class SourceFix(object):
   def __init__(self,cursor,value):
     self.filename  = cursor.location.file.name
     self.startLine = cursor.extent.start.line
-    assert self.startLine >= 1
-    self.src       = ArgCursor.getSourceFromCursor(cursor)
-    self.fixed     = None
-    self.begins    = [cursor.extent.start.column-1]
-    self.ends      = [cursor.extent.end.column-1]
-    if self.ends[0] <= self.begins[0]:
+    if self.startLine < 1:
+      raise RuntimeError("startline {} < 1".format(startline))
+    begin,end      = cursor.extent.start.column-1,cursor.extent.end.column-1
+    if end <= begin:
       raise RuntimeError("end <= begin, ill-formed source fix")
-    self.replace   = [self.src[self.begins[0]:self.ends[0]]]
-    self.deltas    = [str(value)]
+    self.begins    = [begin]
+    self.ends      = [end]
+    self.src       = ArgCursor.getSourceFromCursor(cursor)
+    value,replace  = str(value),self.src[begin:end]
+    if replace == value:
+      # this is an error, since previous detection should not have created a fix
+      raise RuntimeError("trying to replace {} with itself".format(replace))
+    self.replace   = [replace]
+    self.deltas    = [value]
+    self.fixed     = None
     self.fixDepth  = 0
     return
 
@@ -520,8 +526,9 @@ class FilterFunctor(object):
 
   def failureHook(self,badSource,obj,objType):
     try:
-      # currently no function does this, but in case a "try one more thing" function,
-      # one can implement it in the if not handled clause
+      # must return whether they handled the failure, this can mean either determining
+      # that the object was correct all along, or that a more helpful error message was
+      # logged and/or that a fix was created.
       handled = self.failureFunction(badSource,obj,objType,**vars(self))
     except TypeError:
       handled = False
@@ -530,16 +537,67 @@ class FilterFunctor(object):
     return
 
 
-"""Generic test functions"""
+"""Generic test and utility functions"""
+def addFunctionFixToBadSource(badSource,obj,funcCursor,validFuncName):
+  call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
+  assert len(call) == 1
+  fix = SourceFix(call[0],validFuncName)
+  badSource.addErrorFromCursor(obj,"Incorrect use of {}(), use {}() instead".format(funcCursor.displayname,validFuncName),fix=fix)
+  return
+
+def convertToCorrectPetscValidLogicalCollectiveXXX(badSource,obj,objType,**kwargs):
+  validFuncName = None
+  objTypeKind   = objType.kind
+  if objTypeKind in scalarTypes:
+    if "PetscReal" in obj.derivedtypename:
+      validFuncName = "PetscValidLogicalCollectiveReal"
+    elif "PetscScalar" in obj.derivedtypename:
+      validFuncName = "PetscValidLogicalCollectiveScalar"
+  elif objTypeKind in intTypes:
+    if "PetscInt" in obj.derivedtypename:
+      validFuncName = "PetscValidLogicalCollectiveInt"
+    elif "PetscMPIInt" in obj.derivedtypename:
+      validFuncName = "PetscValidLogicalCollectiveMPIInt"
+  elif objTypeKind in enumTypes:
+    if "PetscBool" in obj.derivedtypename:
+      validFuncName = "PetscValidLogicalCollectiveBool"
+    else:
+      validFuncName = "PetscValidLogicalCollectiveEnum"
+  if validFuncName:
+    funcCursor = kwargs["funcCursor"]
+    addFunctionFixToBadSource(badSource,obj,funcCursor,validFuncName)
+    return True
+  return False
+
+def convertToCorrectPetscValidXXXPointer(badSource,obj,objType,**kwargs):
+  validFuncName = None
+  objTypeKind = objType.kind
+  if objTypeKind == clx.TypeKind.RECORD:
+    # pointer to struct, use PetscValidPointer() instead
+    validFuncName = "PetscValidPointer"
+  elif objTypeKind in scalarTypes:
+    if "PetscReal" in obj.derivedtypename:
+      validFuncName = "PetscValidRealPointer"
+    elif "PetscScalar" in obj.derivedtypename:
+      validFuncName = "PetscValidScalarPointer"
+  elif objTypeKind in intTypes:
+    if "PetscInt" in obj.derivedtypename:
+      validFuncName = "PetscValidIntPointer"
+  elif objTypeKind in enumTypes:
+    if "PetscBool" in obj.derivedtypename:
+      validFuncName = "PetscValidBoolPointer"
+  if validFuncName:
+    funcCursor = kwargs["funcCursor"]
+    addFunctionFixToBadSource(badSource,obj,funcCursor,validFuncName)
+    return True
+  return False
+
 def checkIsPetscScalarAndNotPetscReal(badSource,obj,objType,**kwargs):
   if "PetscScalar" not in obj.derivedtypename:
     funcCursor = kwargs["funcCursor"]
     if "PetscReal" in obj.derivedtypename:
       validFunc = kwargs["extraArgs"]["validFunc"]
-      call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
-      assert len(call) == 1
-      fix = SourceFix(call[0],validFunc)
-      badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {validFunc}() instead".format(funcName=funcCursor.displayname,validFunc=validFunc),fix=fix)
+      addFunctionFixToBadSource(badSource,obj,funcCursor,validFunc)
     else:
       badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscScalars".format(funcName=funcCursor.displayname))
   return
@@ -549,10 +607,7 @@ def checkIsPetscRealAndNotPetscScalar(badSource,obj,objType,**kwargs):
     funcCursor = kwargs["funcCursor"]
     if "PetscScalar" in obj.derivedtypename:
       validFunc = kwargs["extraArgs"]["validFunc"]
-      call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
-      assert len(call) == 1
-      fix = SourceFix(call[0],validFunc)
-      badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {validFunc}() instead".format(funcName=funcCursor.displayname,validFunc=validFunc),fix=fix)
+      addFunctionFixToBadSource(badSource,obj,funcCursor,validFunc)
     else:
       badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscReals".format(funcName=funcCursor.displayname))
   return
@@ -560,19 +615,13 @@ def checkIsPetscRealAndNotPetscScalar(badSource,obj,objType,**kwargs):
 def checkIntIsNotPetscBool(badSource,obj,objType,**kwargs):
   if "PetscBool" in obj.derivedtypename:
     funcCursor,validFunc = kwargs["funcCursor"],kwargs["extraArgs"]["validFunc"]
-    call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
-    assert len(call) == 1
-    fix = SourceFix(call[0],validFunc)
-    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {validFunc}() instead".format(funcName=funcCursor.displayname,validFunc=validFunc),fix=fix)
+    addFunctionFixToBadSource(badSource,obj,funcCursor,validFunc)
   return
 
 def checkMPIIntIsNotPetscInt(badSource,obj,objType,**kwargs):
   if "PetscInt" in obj.derivedtypename:
     funcCursor,validFunc = kwargs["funcCursor"],kwargs["extraArgs"]["validFunc"]
-    call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
-    assert len(call) == 1
-    fix = SourceFix(call[0],preferredFuncName)
-    badSource.addErrorFromCursor(obj,"Incorrect use of {funcName}(), use {validFunc}() instead".format(funcName=funcCursor.displayname,validFunc=validFunc),fix=fix)
+    addFunctionFixToBadSource(badSource,obj,funcCursor,validFunc)
   return
 
 def checkIsPetscBool(badSource,obj,objType,**kwargs):
@@ -783,7 +832,7 @@ def checkPetscValidIntPointer(badSource,func,parent):
   """
   Specific check for PetscValidIntPointer(obj,idx)
   """
-  intFilter = FilterFunctor(intTypes,func,pointer=True,successHook=checkIntIsNotPetscBool,validFunc="PetscValidBoolPointer")
+  intFilter = FilterFunctor(intTypes,func,pointer=True,successHook=checkIntIsNotPetscBool,failureHook=convertToCorrectPetscValidXXXPointer,validFunc="PetscValidBoolPointer")
   checkPetscValidPointer(badSource,func,parent,filterFunctor=intFilter)
   return
 
@@ -791,7 +840,7 @@ def checkPetscValidBoolPointer(badSource,func,parent):
   """
   Specific check for PetscValidBoolPointer(obj,idx)
   """
-  boolFilter = FilterFunctor(boolTypes,func,pointer=True,successHook=checkIsPetscBool)
+  boolFilter = FilterFunctor(boolTypes,func,pointer=True,successHook=checkIsPetscBool,failureHook=convertToCorrectPetscValidXXXPointer)
   checkPetscValidPointer(badSource,func,parent,filterFunctor=boolFilter)
   return
 
@@ -799,7 +848,7 @@ def checkPetscValidScalarPointer(badSource,func,parent):
   """
   Specific check for PetscValidScalarPointer(obj,idx)
   """
-  scalarFilter = FilterFunctor(scalarTypes,func,pointer=True,successHook=checkIsPetscScalarAndNotPetscReal,validFunc="PetscValidRealPointer")
+  scalarFilter = FilterFunctor(scalarTypes,func,pointer=True,successHook=checkIsPetscScalarAndNotPetscReal,failureHook=convertToCorrectPetscValidXXXPointer,validFunc="PetscValidRealPointer")
   checkPetscValidPointer(badSource,func,parent,filterFunctor=scalarFilter)
   return
 
@@ -807,7 +856,7 @@ def checkPetscValidRealPointer(badSource,func,parent):
   """
   Specific check for PetscValidRealPointer(obj,idx)
   """
-  realFilter = FilterFunctor(realTypes,func,pointer=True,successHook=checkIsPetscRealAndNotPetscScalar,validFunc="PetscValidScalarPointer")
+  realFilter = FilterFunctor(realTypes,func,pointer=True,successHook=checkIsPetscRealAndNotPetscScalar,failureHook=convertToCorrectPetscValidXXXPointer,validFunc="PetscValidScalarPointer")
   checkPetscValidPointer(badSource,func,parent,filterFunctor=realFilter)
   return
 
@@ -876,7 +925,7 @@ def checkPetscValidLogicalCollectiveScalar(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveScalar(pobj,obj,idx)
   """
-  scalarFilter = FilterFunctor(scalarTypes,func,successHook=checkIsPetscScalarAndNotPetscReal,validFunc="PetscValidLogicalCollectiveReal")
+  scalarFilter = FilterFunctor(scalarTypes,func,successHook=checkIsPetscScalarAndNotPetscReal,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX,validFunc="PetscValidLogicalCollectiveReal")
   checkPetscValidLogicalCollective(badSource,func,parent,scalarFilter)
   return
 
@@ -884,7 +933,7 @@ def checkPetscValidLogicalCollectiveReal(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveReal(pobj,obj,idx)
   """
-  realFilter = FilterFunctor(realTypes,func,successHook=checkIsPetscRealAndNotPetscScalar,validFunc="PetscValidLogicalCollectiveScalar")
+  realFilter = FilterFunctor(realTypes,func,successHook=checkIsPetscRealAndNotPetscScalar,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX,validFunc="PetscValidLogicalCollectiveScalar")
   checkPetscValidLogicalCollective(badSource,func,parent,realFilter)
   return
 
@@ -892,7 +941,7 @@ def checkPetscValidLogicalCollectiveInt(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveInt(pobj,obj,idx)
   """
-  intFilter = FilterFunctor(intTypes,func,successHook=checkIntIsNotPetscBool,validFunc="PetscValidLogicalCollectiveBool")
+  intFilter = FilterFunctor(intTypes,func,successHook=checkIntIsNotPetscBool,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX,validFunc="PetscValidLogicalCollectiveBool")
   checkPetscValidLogicalCollective(badSource,func,parent,intFilter)
   return
 
@@ -900,7 +949,7 @@ def checkPetscValidLogicalCollectiveMPIInt(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveMPIInt(pobj,obj,idx)
   """
-  mpiIntFilter = FilterFunctor(mpiIntTypes,func,successHook=checkMPIIntIsNotPetscInt,validFunc="PetscValidLogicalCollectiveInt")
+  mpiIntFilter = FilterFunctor(mpiIntTypes,func,successHook=checkMPIIntIsNotPetscInt,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX,validFunc="PetscValidLogicalCollectiveInt")
   checkPetscValidLogicalCollective(badSource,func,parent,mpiIntFilter)
   return
 
@@ -908,7 +957,7 @@ def checkPetscValidLogicalCollectiveBool(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveBool(pobj,obj,idx)
   """
-  boolFilter = FilterFunctor(boolTypes,func,successHook=checkIsPetscBool)
+  boolFilter = FilterFunctor(boolTypes,func,successHook=checkIsPetscBool,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX)
   checkPetscValidLogicalCollective(badSource,func,parent,boolFilter)
   return
 
@@ -916,7 +965,7 @@ def checkPetscValidLogicalCollectiveEnum(badSource,func,parent):
   """
   Specific check for PetscValidLogicalCollectiveEnum(pobj,obj,idx)
   """
-  enumFilter = FilterFunctor(enumTypes,func)
+  enumFilter = FilterFunctor(enumTypes,func,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX)
   checkPetscValidLogicalCollective(badSource,func,parent,enumFilter)
   return
 
@@ -942,6 +991,7 @@ def checkVecNestCheckCompatible(badSource,func,parent):
   else:
     raise RuntimeError("Unexepected number of arguments {} to VecNestCheckCompatible".format(len(funcArgs)))
   return
+
 
 mansecs          = ["sys","vec","mat","dm","ksp","snes","ts","tao"]
 checkFunctionMap = {
@@ -1103,6 +1153,39 @@ def findFunctionCallExpr(tu,macroNames):
         if funcChild.spelling in macroNames:
           yield (funcChild,possibleParent)
 
+def tryToFindLibclangDir():
+  """
+  Crudely tries to find libclang directory first using llvm-config, and then checks a few places on macos
+  """
+  import subprocess,sys
+
+  llvmLibDir = None
+  try:
+    if sys.version_info >= (3,7):
+      output = subprocess.run(["llvm-config","--libdir"],capture_output=True,universal_newlines=True,check=True)
+    else:
+      output = subprocess.run(["llvm-config","--libdir"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,check=True)
+    llvmLibDir = output.stdout.strip()
+  except FileNotFoundError:
+    # FileNotFoundError: [Errno 2] No such file or directory: 'llvm-config'
+    # try to find llvmLibDir by hand
+    import platform
+
+    if platform.system().lower() == "darwin":
+      try:
+        if sys.version_info >= (3,7):
+          output = subprocess.run(["xcode-select","-p"],capture_output=True,universal_newlines=True,check=True)
+        else:
+          output = subprocess.run(["xcode-select","-p"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,check=True)
+        xcodeDir = output.stdout.strip()
+        if xcodeDir == "/Applications/Xcode.app/Contents/Developer": # default Xcode path
+          llvmLibDir = os.path.join(xcodeDir,"Toolchains","XcodeDefault.xctoolchain","usr","lib")
+        elif xcodeDir == "/Library/Developer/CommandLineTools":      # CLT path
+          llvmLibDir = os.path.join(xcodeDir,"usr","lib")
+      except FileNotFoundError:
+        # FileNotFoundError: [Errno 2] No such file or directory: 'xcode-select'
+        pass
+  return llvmLibDir
 
 """Main functions for root and queue processes"""
 def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbose,printWarnings,exceptions,dataQueue,queue,lock):
@@ -1166,7 +1249,7 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
       clangLib = os.path.abspath(os.path.expanduser(os.path.expandvars(clangLib)))
       clx.conf.set_library_file(clangLib)
     else:
-      raise clx.LibclangError("Must supply either clangDir or clangLib")
+      raise RuntimeError("Must supply either clang directory path or clang library path")
 
   rootPrintPrefix = "[ROOT]"
   pchClangOptions = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
@@ -1192,16 +1275,15 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   for headerFile in os.listdir(os.path.join(petscDir,"include","petsc","private")):
     if headerFile in mansecimpls or headerFile.startswith(("hash","pc")):
       megaHeaderLines.append("#include <petsc/private/{headerFile}>".format(headerFile=headerFile))
-
+  index = clx.Index.create()
   megaHeader = "\n".join(megaHeaderLines)+"\n" # extra newline for last line
   petscPrecompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.h.pch")
   if verbose: print("\n".join([rootPrintPrefix+" Mega header:",megaHeader]))
   if verbose: print(rootPrintPrefix,"Creating precompiled header",petscPrecompiledHeader)
-  index = clx.Index.create()
   tu = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
   if tu.diagnostics:
     print("\n".join(map(str,tu.diagnostics)))
-    raise clx.LibclangError("Warnings generated when creating the precompiled header. This usually means that the libclang set is faulty!")
+    raise clx.LibclangError("Warnings generated when creating the precompiled header. This usually means that the provided libclang is faulty")
   tu.save(petscPrecompiledHeader)
   compilerFlags.extend(["-include-pch",petscPrecompiledHeader])
 
@@ -1238,7 +1320,7 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     updatePetscScalarType(petscDir,petscArch)
 
   # exclude these directories
-  excludeDirs = set(["f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","tests","tutorials"])
+  excludeDirs = {"f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","tests","tutorials"}
   excludeDirSuffixes = (".dSYM",)
   # allow these file suffixes
   allowFileSuffixes = (".c",".cpp",".cxx",".cu",)
@@ -1337,9 +1419,11 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
       print(rootPrintPrefix,"All errors fixable via patch files written to",patchDir)
   return
 
+
 if __name__ == "__main__":
   import argparse
 
+  clangDir = tryToFindLibclangDir()
   try:
     petscDir = os.environ["PETSC_DIR"]
   except KeyError:
@@ -1351,16 +1435,18 @@ if __name__ == "__main__":
 
   parser = argparse.ArgumentParser(description="set options for clang static analysis tool",formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   grouplibclang = parser.add_argument_group(title="libclang location settings")
-  group = grouplibclang.add_mutually_exclusive_group(required=True)
-  group.add_argument("--clang_dir",help="directory containing libclang.[so|dylib|dll]",dest="clangdir")
-  group.add_argument("--clang_lib",help="direct location of libclang.[so|dylib|dll]",dest="clanglib")
+  group = grouplibclang.add_mutually_exclusive_group(required=False)
+  group.add_argument("--clang_dir",nargs="?",help="directory containing libclang.[so|dylib|dll], if not given attempts to automatically detect it via llvm-config",default=clangDir,dest="clangdir")
+  group.add_argument("--clang_lib",nargs="?",help="direct location of libclang.[so|dylib|dll], overrides clang directory if set",dest="clanglib")
   grouppetsc = parser.add_argument_group(title="petsc location settings")
   grouppetsc.add_argument("--PETSC_DIR",required=False,default=petscDir,help="if this option is unused defaults to environment variable $PETSC_DIR",dest="petscdir")
   grouppetsc.add_argument("--PETSC_ARCH",required=False,default=petscArch,help="if this option is unused defaults to environment variable $PETSC_ARCH",dest="petscarch")
   parser.add_argument("--verbose",required=False,action="store_true",help="verbose progress printed to screen")
   parser.add_argument("--show-warnings",required=False,action="store_true",help="show ast matching warnings",dest="warn")
-  parser.add_argument("--filter-functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),help="filter for errors from available function names",dest="filterfunc")
-  parser.add_argument("--filter-mansec",required=False,nargs="+",choices=mansecs,help="run only over specified mansecs, defaults to all",dest="filtermansec")
+  filterFuncChoices = ", ".join(list(checkFunctionMap.keys()))
+  parser.add_argument("--filter-functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="filterfunc")
+  mansecChoices = ", ".join(mansecs)
+  parser.add_argument("--filter-mansec",required=False,nargs="+",choices=mansecs,metavar="MANSEC",help="run only over specified mansecs (defaults to all), choose from: "+mansecChoices,dest="filtermansec")
   parser.add_argument("--no-multiprocessing",required=False,action="store_false",help="use multiprocessing",dest="multiproc")
   parser.add_argument("--jobs",required=False,type=int,default=0,nargs="?",help="number of multiprocessing jobs, 0 defaults to number of processors on machine")
   parser.add_argument("--apply-patches",required=False,action="store_true",help="apply patches automatically instead of saving to file",dest="apply")
@@ -1370,6 +1456,9 @@ if __name__ == "__main__":
     raise RuntimeError("Could not determine PETSC_DIR from environment, please set via options")
   if args.petscarch is None:
     raise RuntimeError("Could not determine PETSC_ARCH from environment, please set via options")
+
+  if args.clanglib:
+    args.clangdir = None
 
   if args.verbose:
     args.warn = True
