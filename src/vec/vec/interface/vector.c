@@ -3,6 +3,7 @@
    These are the vector functions the user calls.
 */
 #include <petsc/private/vecimpl.h>    /*I  "petscvec.h"   I*/
+#include <petsc/private/deviceimpl.h>
 
 /* Logging support */
 PetscClassId  VEC_CLASSID;
@@ -335,6 +336,31 @@ PetscErrorCode  VecPointwiseDivide(Vec w,Vec x,Vec y)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode  VecPointwiseDivideAsync(Vec w,Vec x,Vec y,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
+  PetscValidType(w,1);
+  PetscValidType(x,2);
+  PetscValidType(y,3);
+  PetscCheckSameTypeAndComm(x,2,y,3);
+  PetscCheckSameTypeAndComm(y,3,w,1);
+  VecCheckSameSize(w,1,x,2);
+  VecCheckSameSize(w,1,y,3);
+  PetscValidStreamType(pstream,4);
+  ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
+  if (PetscLikely(w->ops->pointwisedivideasync)) {
+    ierr = (*w->ops->pointwisedivideasync)(w,x,y,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)w),PETSC_ERR_SUP,"Vector has no VecPointWiseDivideAsync method");
+  }
+  ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
 /*@
    VecDuplicate - Creates a new vector of the same type as an existing vector.
@@ -400,6 +426,9 @@ PetscErrorCode  VecDestroy(Vec *v)
   ierr = PetscFree((*v)->defaultrandtype);CHKERRQ(ierr);
   /* destroy the external/common part */
   ierr = PetscLayoutDestroy(&(*v)->map);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_DEVICE)
+  ierr = PetscEventDestroy(&(*v)->event);CHKERRQ(ierr);
+#endif
   ierr = PetscHeaderDestroy(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1103,6 +1132,30 @@ PetscErrorCode  VecConjugate(Vec x)
 #endif
 }
 
+PetscErrorCode  VecConjugateAsync(Vec x,PetscStream pstream)
+{
+#if defined(PETSC_USE_COMPLEX)
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->stash.insertmode != NOT_SET_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscValidStreamType(pstream,2);
+  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+  if (PetscLikely(x->ops->conjugateasync)) {
+    ierr = (*x->ops->conjugateasync)(x,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vector has not VecConjugateAsync method");
+  }
+  /* we need to copy norms here */
+  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+#else
+  return(0);
+#endif
+}
+
 /*@
    VecPointwiseMult - Computes the componentwise multiplication w = x*y.
 
@@ -1139,6 +1192,34 @@ PetscErrorCode  VecPointwiseMult(Vec w, Vec x,Vec y)
   ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(VEC_PointwiseMult,x,y,w,0);CHKERRQ(ierr);
   ierr = (*w->ops->pointwisemult)(w,x,y);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_PointwiseMult,x,y,w,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecPointwiseMultAsync(Vec w,Vec x,Vec y,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
+  PetscValidType(w,1);
+  PetscValidType(x,2);
+  PetscValidType(y,3);
+  PetscCheckSameTypeAndComm(x,2,y,3);
+  PetscCheckSameTypeAndComm(y,3,w,1);
+  VecCheckSameSize(w,1,x,2);
+  VecCheckSameSize(w,2,y,3);
+  PetscValidStreamType(pstream,4);
+  ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_PointwiseMult,x,y,w,0);CHKERRQ(ierr);
+  if (PetscLikely(w->ops->pointwisemultasync)) {
+    ierr = (*w->ops->pointwisemultasync)(w,x,y,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)w),PETSC_ERR_SUP,"Vector has not VecPointwiseMultAsync method");
+  }
   ierr = PetscLogEventEnd(VEC_PointwiseMult,x,y,w,0);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1617,6 +1698,53 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode  VecCopyAsync(Vec x,Vec y,PetscStream pstream)
+{
+  PetscBool      flgs[4];
+  PetscReal      norms[4] = {0.0,0.0,0.0,0.0};
+  PetscErrorCode ierr;
+  PetscInt       i;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  if (x == y) PetscFunctionReturn(0);
+  VecCheckSameLocalSize(x,1,y,2);
+  if (x->stash.insertmode != NOT_SET_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscValidStreamType(pstream,3);
+  ierr = VecSetErrorIfLocked(y,2);CHKERRQ(ierr);
+
+#if !defined(PETSC_USE_MIXED_PRECISION)
+  for (i=0; i<4; i++) {
+    ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],norms[i],flgs[i]);CHKERRQ(ierr);
+  }
+#endif
+
+  ierr = PetscLogEventBegin(VEC_Copy,x,y,0,0);CHKERRQ(ierr);
+#if defined(PETSC_USE_MIXED_PRECISION)
+  SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vec has no VecCopyAsync method");
+#else
+  if (PetscLikely(x->ops->copyasync)) {
+    ierr = (*x->ops->copyasync)(x,y,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vec has no VecCopyAsync method");
+  }
+#endif
+
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+#if !defined(PETSC_USE_MIXED_PRECISION)
+  for (i=0; i<4; i++) {
+    if (flgs[i]) {
+      ierr = PetscObjectComposedDataSetReal((PetscObject)y,NormIds[i],norms[i]);CHKERRQ(ierr);
+    }
+  }
+#endif
+  ierr = PetscLogEventEnd(VEC_Copy,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecSwap - Swaps the vectors x and y.
 
@@ -1653,6 +1781,51 @@ PetscErrorCode  VecSwap(Vec x,Vec y)
     ierr = PetscObjectComposedDataGetReal((PetscObject)y,NormIds[i],normys[i],flgys[i]);CHKERRQ(ierr);
   }
   ierr = (*x->ops->swap)(x,y);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  for (i=0; i<4; i++) {
+    if (flgxs[i]) {
+      ierr = PetscObjectComposedDataSetReal((PetscObject)y,NormIds[i],normxs[i]);CHKERRQ(ierr);
+    }
+    if (flgys[i]) {
+      ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[i],normys[i]);CHKERRQ(ierr);
+    }
+  }
+  ierr = PetscLogEventEnd(VEC_Swap,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecSwapAsync(Vec x,Vec y,PetscStream pstream)
+{
+  PetscReal      normxs[4]={0.0,0.0,0.0,0.0},normys[4]={0.0,0.0,0.0,0.0};
+  PetscBool      flgxs[4],flgys[4];
+  PetscErrorCode ierr;
+  PetscInt       i;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+  if (x->stash.insertmode != NOT_SET_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  if (y->stash.insertmode != NOT_SET_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscValidStreamType(pstream,3);
+  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+  ierr = VecSetErrorIfLocked(y,2);CHKERRQ(ierr);
+
+  ierr = PetscLogEventBegin(VEC_Swap,x,y,0,0);CHKERRQ(ierr);
+  for (i=0; i<4; i++) {
+    ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],normxs[i],flgxs[i]);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataGetReal((PetscObject)y,NormIds[i],normys[i],flgys[i]);CHKERRQ(ierr);
+  }
+  if (PetscLikely(x->ops->swapasync)) {
+    ierr = (*x->ops->swapasync)(x,y,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vec has no VecSwapAsync method");
+  }
+
   ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
   for (i=0; i<4; i++) {

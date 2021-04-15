@@ -61,7 +61,6 @@ static PetscErrorCode KSPSetUp_CG(KSP ksp)
   /* get work vectors needed by CG */
   if (cgP->singlereduction) nwork += 2;
   ierr = KSPSetWorkVecs(ksp,nwork);CHKERRQ(ierr);
-
   /*
      If user requested computations of eigenvalues then allocate
      work space needed
