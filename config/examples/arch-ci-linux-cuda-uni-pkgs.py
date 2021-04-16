@@ -20,6 +20,8 @@ if __name__ == '__main__':
     '--download-superlu',
     '--download-mumps',
     '--with-mumps-serial',
+    '--download-p4est=1',
+    '--with-zlib=1',
     '--with-shared-libraries=1',
   ]
   configure.petsc_configure(configure_options)
