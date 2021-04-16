@@ -642,7 +642,7 @@ ALCF - Argonne National Laboratory - theta machine - Intel KNL based system
 - PI:
 - Notes on usage:
 
-  - Log into theta.alcf.anl.gov
+  - Log into theta.alcf.anl.gov (Use MobilePass app for the password)
   - There are three compiler suites `Modules`_
 
     - module load PrgEnv-intel intel
@@ -672,16 +672,24 @@ ALCF - Argonne National Laboratory - thetagpu machine - AMD CPUs with NVIDIA GPU
 Notes on usage:
 
   - Log into theta.alcf.anl.gov
-  - Log into thetagpusn1
-  - qsub -I -t TimeInMinutes -n 1 -A AProjectName (for example, gpu_hack)
-  - The connection to the outside world does not exist so do
+    - The GPU system does not allow access to gitlab so one must checkout the appropriate branch of PETSc
+      here before logging into thetagpusn1 (arghhh!)
+    - Log into thetagpusn1
+      - The connection to the outside world does not exist so do
+        export http_proxy=http://proxy.tmi.alcf.anl.gov:3128
+        export https_proxy=http://proxy.tmi.alcf.anl.gov:3128
+      - module load nvhpc (Do not module load any MPI)
+      - module load libtool-2.4.6-gcc-7.5.0-jdxbjft
+      - ./configure --with-mpi-dir=$CUDA_DIR/../comm_libs/mpi/ -with-cuda-dir=$CUDA_DIR/11.0  --download-f2cblaslapack=1
 
-      export http_proxy=http://proxy.tmi.alcf.anl.gov:3128
-      export https_proxy=http://proxy.tmi.alcf.anl.gov:3128
+      - to install cmake add --download-cmake --download-cmake-configure-arguments="-- -DCMAKE_USE_OPENSSL=OFF"
+      - to install Kokkos need to do
+        export CUDA_ROOT=$CUDA_DIR/11.2
 
-  - There is no default BLAS/LAPACK so use a --download option for BLAS/LAPACK
-  - Use the configure option --with-cuda-gencodearch=80  because this machine does not have deviceQuery
-  - Use -with-kokkos-cuda-arch=AMPERE80
+      - Log into interactive nodes with
+        - qsub -I -t TimeInMinutes -n 1 -A AProjectName (for example, gpu_hack)
+        - Run executables with $CUDA_DIR/../comm_libs/mpi/bin/mpirun
+
 
 
 OLCF - Oak Ridge National Laboratory - Summit machine - NVIDIA GPUs and IBM Power PC processors
