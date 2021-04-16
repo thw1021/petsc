@@ -407,16 +407,16 @@ static PetscErrorCode RHSFunctionHarmonic(TS ts, PetscReal t, Vec U, Vec G, void
   Np  /= 2;
   for (p = 0; p < Np; ++p) {
     g[p*2+0] = u[p*2+1];
-    g[p*2+1] = -PetscSqr(user->omega) * (u[p*2+0] + 2*powf(u[p*2+0],3));
+    g[p*2+1] = -PetscSqr(user->omega) * (u[p*2+0] + 2*PetscPowReal(u[p*2+0],3));
   }
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   ierr = VecRestoreArray(G, &g);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-/*Ji = dFi/dxj
-J= (0                   1)
-   (-w^2*(1+6*w^2*x^2)  0)
+/*Jij = dFi/dxj
+J= (0               1)
+   (-w^2*(1+6*x^2)  0)
 */
 static PetscErrorCode RHSJacobianHarmonic(TS ts, PetscReal t, Vec U , Mat J, Mat P, void *ctx)
 {
@@ -431,7 +431,8 @@ static PetscErrorCode RHSJacobianHarmonic(TS ts, PetscReal t, Vec U , Mat J, Mat
   ierr = MatGetOwnershipRange(J, &m, &n);CHKERRQ(ierr);
   for (i = 0; i < Np; ++i) {
     const PetscInt rows[2] = {2*i, 2*i+1};
-	vals[3] = -PetscSqr(user->omega) * (1+6*powf(u[i*2+0],2));
+	vals[2] = -PetscSqr(user->omega) * (1+6*PetscPowReal(u[i*2+0],2));
+	//ierr = PetscPrintf(PETSC_COMM_WORLD, "x[%d] = %f, J = (%f, %f; %f, %f)\n", i*2+0, u[i*2+0],vals[0],vals[1],vals[2],vals[3]);CHKERRQ(ierr);
     ierr = MatSetValues(J, 2, rows, 2, rows, vals, INSERT_VALUES);CHKERRQ(ierr);
   }
   ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -541,7 +542,7 @@ PetscErrorCode FfuncHarmonic(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ct
   /*Define F*/
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
-    *F +=  0.5*PetscSqr(u[p*2+1]) + 0.5*PetscSqr(user->omega)*(PetscSqr(u[p*2+0]) + powf(u[p*2+0],4));
+    *F +=  0.5*PetscSqr(u[p*2+1]) + 0.5*PetscSqr(user->omega)*(PetscSqr(u[p*2+0]) + PetscPowReal(u[p*2+0],4));
   }
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -563,7 +564,7 @@ PetscErrorCode gradFfuncHarmonic(TS ts, PetscReal t, Vec U, Vec gradF, void *ctx
   /*Define gradF*/
   ierr = VecGetArray(gradF, &g);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
-    g[p*2+0] = PetscSqr(user->omega) * (u[p*2+0] + 2.0*powf(u[p*2+0],3)); /*dF/dx*/
+    g[p*2+0] = PetscSqr(user->omega) * (u[p*2+0] + 2.0*PetscPowReal(u[p*2+0],3)); /*dF/dx*/
     g[p*2+1] = u[p*2+1]; /*dF/dv*/
   }
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
@@ -663,7 +664,6 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
   ierr = TSComputeInitialCondition(ts, u);CHKERRQ(ierr);
   ierr = TSSolve(ts, u);CHKERRQ(ierr);
 
@@ -722,6 +722,6 @@ int main(int argc,char **argv)
 
    test:
      suffix: 10
-     args: -dm_plex_box_faces 1,1 -ts_type discgrad -ts_discgrad_gonzalez -harmonic -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2
+     args: -dm_plex_box_faces 1,1 -ts_type discgrad -ts_discgrad_gonzalez -harmonic -output_step 50 -ts_convergence_estimate -convest_num_refine 2
 
 TEST*/
