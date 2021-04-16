@@ -642,7 +642,7 @@ ALCF - Argonne National Laboratory - theta machine - Intel KNL based system
 - PI:
 - Notes on usage:
 
-  - Log into theta.alcf.anl.gov
+  - Log into theta.alcf.anl.gov (Use MobilePass app for the password)
   - There are three compiler suites `Modules`_
 
     - module load PrgEnv-intel intel
@@ -672,16 +672,17 @@ ALCF - Argonne National Laboratory - thetagpu machine - AMD CPUs with NVIDIA GPU
 
   - Log into theta.alcf.anl.gov
     - Log into thetagpusn1
-      - qsub -I -t TimeInMinutes -n 1 -A AProjectName (for example, gpu_hack)
-        - The connection to the outside world does not exist so do
-          export http_proxy=http://proxy.tmi.alcf.anl.gov:3128
-          export https_proxy=http://proxy.tmi.alcf.anl.gov:3128
+      - The connection to the outside world does not exist so do
+        export http_proxy=http://proxy.tmi.alcf.anl.gov:3128
+        export https_proxy=http://proxy.tmi.alcf.anl.gov:3128
+      - module load nvhpc/21.2 (Do not module load any MPI)
+      - module load libtool-2.4.6-gcc-7.5.0-jdxbjft
+      - ./configure --with-mpi-dir=$OPAL_PREFIX -with-cuda-dir=$CUDA_DIR/11.2  --download-f2cblaslapack=1
 
-        - There is no default BLAS/LAPACK so use a --download option for BLAS/LAPACK
+      - Log into interactive nodes with
+        - qsub -I -t TimeInMinutes -n 1 -A AProjectName (for example, gpu_hack)
+        - Run executables with $OPAL_PREFIX/bin/mpirun 
 
-        - Use the configure option --with-cuda-gencodearch=80  because this machine does not have deviceQuery
-
-        - Use -with-kokkos-cuda-arch=AMPERE80
 
 
 OLCF - Oak Ridge National Laboratory - Summit machine - NVIDIA GPUs and IBM Power PC processors
