@@ -1,0 +1,4 @@
+PetscRandom Object: 1 MPI processes
+  type: rander48
+[0] Random type rander48, seed 305419896
+All operations completed successfully

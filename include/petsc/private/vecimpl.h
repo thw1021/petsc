@@ -10,7 +10,6 @@
 
 #include <petscvec.h>
 #include <petsc/private/petscimpl.h>
-#include <petscviewer.h>
 
 PETSC_EXTERN PetscBool VecRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecRegisterAll(void);
@@ -102,6 +101,28 @@ struct _VecOps {
   PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**);
   PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**);
   PetscErrorCode (*concatenate)(PetscInt,const Vec[],Vec*,IS*[]);
+  PetscErrorCode (*aypxasync)(Vec,PetscStreamScalar,Vec,PetscStream);
+  PetscErrorCode (*axpyasync)(Vec,PetscStreamScalar,Vec,PetscStream);
+  PetscErrorCode (*pointwisedivideasync)(Vec,Vec,Vec,PetscStream);
+  PetscErrorCode (*waxpyasync)(Vec,PetscStreamScalar,Vec,Vec,PetscStream);
+  PetscErrorCode (*maxpyasync)(Vec,PetscInt,PetscStreamScalar*,Vec*,PetscStream);
+  PetscErrorCode (*dotasync)(Vec,Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*dot_localasync)(Vec,Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*mdotasync)(Vec,PetscInt,const Vec[],PetscStreamScalar*,PetscStream);
+  PetscErrorCode (*mdot_localasync)(Vec,PetscInt,const Vec[],PetscStreamScalar*,PetscStream);
+  PetscErrorCode (*setasync)(Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*scaleasync)(Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*tdotasync)(Vec,Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*tdot_localasync)(Vec,Vec,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*copyasync)(Vec,Vec,PetscStream);
+  PetscErrorCode (*swapasync)(Vec,Vec,PetscStream);
+  PetscErrorCode (*axpbyasync)(Vec,PetscStreamScalar,PetscStreamScalar,Vec,PetscStream);
+  PetscErrorCode (*axpbypczasync)(Vec,PetscStreamScalar,PetscStreamScalar,PetscStreamScalar,Vec,Vec,PetscStream);
+  PetscErrorCode (*pointwisemultasync)(Vec,Vec,Vec,PetscStream);
+  PetscErrorCode (*normasync)(Vec,NormType,PetscStreamScalar*,PetscStream);
+  PetscErrorCode (*norm_localasync)(Vec,NormType,PetscStreamScalar*,PetscStream);
+  PetscErrorCode (*dotnorm2async)(Vec,Vec,PetscStreamScalar,PetscStreamScalar,PetscStream);
+  PetscErrorCode (*conjugateasync)(Vec,PetscStream);
 };
 
 /*
@@ -152,6 +173,7 @@ struct _p_Vec {
   PetscBool              boundtocpu;
   size_t                 minimum_bytes_pinned_memory; /* minimum data size in bytes for which pinned memory will be allocated */
   PetscBool              pinned_memory; /* PETSC_TRUE if the current host allocation has been made from pinned memory. */
+  PetscEvent             event;         /* simple wrapper containing device events */
 #endif
   char                   *defaultrandtype;
 };
@@ -207,6 +229,7 @@ PETSC_EXTERN PetscErrorCode VecViennaCLCopyFromGPU(Vec v);
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode VecCUDAAllocateCheckHost(Vec v);
 PETSC_EXTERN PetscErrorCode VecCUDACopyFromGPU(Vec v);
+PETSC_EXTERN PetscErrorCode VecCUDACopyFromGPUAsync(Vec,PetscStream);
 #endif
 #if defined(PETSC_HAVE_HIP)
 PETSC_EXTERN PetscErrorCode VecHIPAllocateCheckHost(Vec v);
@@ -348,5 +371,4 @@ PETSC_EXTERN PetscBool      VecTaggerRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecTaggerRegisterAll(void);
 PETSC_EXTERN PetscErrorCode VecTaggerComputeIS_FromBoxes(VecTagger,Vec,IS*);
 PETSC_EXTERN PetscMPIInt Petsc_Reduction_keyval;
-
 #endif

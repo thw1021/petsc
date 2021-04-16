@@ -32,7 +32,7 @@ def getlangsplit(name):
     file = os.path.basename(name)
     loc = file.find('.')
     if loc > -1: return os.path.join(os.path.dirname(name),file[:loc])
-    raise RuntimeError("No . in filename")
+    raise RuntimeError("No . in filename"+os.path.join(os.path.dirname(name),file))
 
 class Mistakes(object):
     def __init__(self, log, verbose=False):

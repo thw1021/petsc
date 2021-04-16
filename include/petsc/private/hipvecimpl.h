@@ -1,8 +1,6 @@
 #if !defined(__HIPVECIMPL)
 #define __HIPVECIMPL
 
-#include <petscvec.h>
-#include <petschipblas.h>
 #include <petsc/private/vecimpl.h>
 
 typedef struct {
