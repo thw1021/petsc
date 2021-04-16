@@ -131,7 +131,7 @@ static PetscErrorCode TSSetFromOptions_DiscGrad(PetscOptionItems *PetscOptionsOb
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject, "Discrete Gradients ODE solver options");CHKERRQ(ierr);
   {
-    ierr = PetscOptionsBool("-ts_discgrad_gonzalez","Use Gonzalez term in discrete gradients formulation","TSThetaSetGonzalez",dg->gonzalez,&dg->gonzalez,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-ts_discgrad_gonzalez","Use Gonzalez term in discrete gradients formulation","TSDiscGradSetGonzalez",dg->gonzalez,&dg->gonzalez,NULL);CHKERRQ(ierr);
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -541,7 +541,7 @@ PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS, Petsc
 }
 
 /*@
-  TSThetaGetGonzalez - Gets whether to use the gonzalez term in DG formulation.
+  TSDiscGradGetGonzalez - Gets whether to use the gonzalez term in DG formulation.
 
   Not Collective
 
@@ -553,21 +553,21 @@ PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS, Petsc
 
   Level: Advanced
 
-.seealso: TSThetaSetGonzalez(), TSDISCGRAD
+.seealso: TSDiscGradSetGonzalez(), TSDISCGRAD
 @*/
-PetscErrorCode TSThetaGetGonzalez(TS ts,PetscBool *gonzalez)
+PetscErrorCode TSDiscGradGetGonzalez(TS ts,PetscBool *gonzalez)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidPointer(gonzalez,2);
-  ierr = PetscUseMethod(ts,"TSThetaGetGonzalez_C",(TS,PetscBool*),(ts,gonzalez));CHKERRQ(ierr);
+  ierr = PetscUseMethod(ts,"TSDiscGradGetGonzalez_C",(TS,PetscBool*),(ts,gonzalez));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@
-  TSThetaSetGonzalez - Sets whether to use the gonzalez term in DG formulation.
+  TSDiscGradSetGonzalez - Sets whether to use the gonzalez term in DG formulation.
 
   Not Collective
 
@@ -582,12 +582,12 @@ PetscErrorCode TSThetaGetGonzalez(TS ts,PetscBool *gonzalez)
 
 .seealso: TSDISCGRAD
 @*/
-PetscErrorCode TSThetaSetGonzalez(TS ts,PetscBool flg)
+PetscErrorCode TSDiscGradSetGonzalez(TS ts,PetscBool flg)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  ierr = PetscTryMethod(ts,"TSThetaSetGonzalez_C",(TS,PetscBool),(ts,flg));CHKERRQ(ierr);
+  ierr = PetscTryMethod(ts,"TSDiscGradSetGonzalez_C",(TS,PetscBool),(ts,flg));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
