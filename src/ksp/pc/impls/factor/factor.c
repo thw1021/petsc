@@ -6,23 +6,27 @@
 */
 PetscErrorCode PCFactorSetDefaultOrdering_Factor(PC pc)
 {
-  PetscErrorCode  ierr;
+  PetscBool      foundmtype;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (pc->pmat) {
     PC_Factor *fact = (PC_Factor*)pc->data;
-    if (!fact->fact) {
-      ierr = MatGetFactor(pc->pmat,fact->solvertype,fact->factortype,&fact->fact);CHKERRQ(ierr);
-    }
-    if (!fact->ordering) {
-      PetscBool       canuseordering;
-      MatOrderingType otype;
+    ierr = MatSolverTypeGet(fact->solvertype,((PetscObject)pc->pmat)->type_name,fact->factortype,NULL,&foundmtype,NULL);CHKERRQ(ierr);
+    if (foundmtype) {
+      if (!fact->fact) {
+        ierr = MatGetFactor(pc->pmat,fact->solvertype,fact->factortype,&fact->fact);CHKERRQ(ierr);
+      }
+      if (!fact->ordering) {
+        PetscBool       canuseordering;
+        MatOrderingType otype;
 
-      ierr = MatFactorGetCanUseOrdering(fact->fact,&canuseordering);CHKERRQ(ierr);
-      if (canuseordering) {
-        ierr = MatFactorGetPreferredOrdering(fact->fact,fact->factortype,&otype);CHKERRQ(ierr);
-      } else otype = MATORDERINGEXTERNAL;
-      ierr = PetscStrallocpy(otype,(char **)&fact->ordering);CHKERRQ(ierr);
+        ierr = MatFactorGetCanUseOrdering(fact->fact,&canuseordering);CHKERRQ(ierr);
+        if (canuseordering) {
+          ierr = MatFactorGetPreferredOrdering(fact->fact,fact->factortype,&otype);CHKERRQ(ierr);
+        } else otype = MATORDERINGEXTERNAL;
+        ierr = PetscStrallocpy(otype,(char **)&fact->ordering);CHKERRQ(ierr);
+      }
     }
   }
   PetscFunctionReturn(0);
