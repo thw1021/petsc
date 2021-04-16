@@ -585,18 +585,20 @@ PetscErrorCode VecView_MPI_HDF5(Vec xin, PetscViewer viewer)
   PetscInt          bs = PetscAbs(xin->map->bs);
   hsize_t           dim;
   hsize_t           maxDims[4], dims[4], chunkDims[4], count[4], offset[4];
-  PetscInt          timestep;
   PetscInt          low;
   hsize_t           chunksize;
   const PetscScalar *x;
   const char        *vecname;
   PetscErrorCode    ierr;
-  PetscBool         dim2;
-  PetscBool         spoutput;
+  PetscBool         timestepping, dim2, spoutput;
+  PetscInt          timestep = PETSC_MIN_INT;
 
   PetscFunctionBegin;
   ierr = PetscViewerHDF5OpenGroup(viewer, &file_id, &group);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5GetTimestep(viewer, &timestep);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5IsTimestepping(viewer, &timestepping);CHKERRQ(ierr);
+  if (timestepping) {
+    ierr = PetscViewerHDF5GetTimestep(viewer, &timestep);CHKERRQ(ierr);
+  }
   ierr = PetscViewerHDF5GetBaseDimension2(viewer,&dim2);CHKERRQ(ierr);
   ierr = PetscViewerHDF5GetSPOutput(viewer,&spoutput);CHKERRQ(ierr);
 
@@ -613,7 +615,7 @@ PetscErrorCode VecView_MPI_HDF5(Vec xin, PetscViewer viewer)
    */
   dim = 0;
   chunksize = 1;
-  if (timestep >= 0) {
+  if (timestepping) {
     dims[dim]      = timestep+1;
     maxDims[dim]   = H5S_UNLIMITED;
     chunkDims[dim] = 1;
@@ -698,7 +700,7 @@ PetscErrorCode VecView_MPI_HDF5(Vec xin, PetscViewer viewer)
 
   /* Each process defines a dataset and writes it to the hyperslab in the file */
   dim = 0;
-  if (timestep >= 0) {
+  if (timestepping) {
     count[dim] = 1;
     ++dim;
   }
@@ -722,7 +724,7 @@ PetscErrorCode VecView_MPI_HDF5(Vec xin, PetscViewer viewer)
   /* Select hyperslab in the file */
   ierr = VecGetOwnershipRange(xin, &low, NULL);CHKERRQ(ierr);
   dim  = 0;
-  if (timestep >= 0) {
+  if (timestepping) {
     offset[dim] = timestep;
     ++dim;
   }
@@ -761,7 +763,8 @@ PetscErrorCode VecView_MPI_HDF5(Vec xin, PetscViewer viewer)
     ierr = PetscViewerHDF5WriteObjectAttribute(viewer,(PetscObject)xin,"complex",PETSC_BOOL,&tru);CHKERRQ(ierr);
   }
 #endif
-  ierr   = PetscInfo1(xin,"Wrote Vec object with name %s\n",vecname);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5WriteObjectAttribute(viewer,(PetscObject)xin,"timestepping",PETSC_BOOL,&timestepping);CHKERRQ(ierr);
+  ierr = PetscInfo1(xin,"Wrote Vec object with name %s\n",vecname);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 #endif
