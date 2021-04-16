@@ -12,6 +12,8 @@ if __name__ == '__main__':
     '--package-prefix-hash='+petsc_hash_pkgs,
     '--with-64-bit-indices',
     'FFLAGS=-Wall -ffree-line-length-0 -Wno-unused-dummy-argument -fdefault-integer-8',
+    '--download-p4est=1',
+    '--with-zlib=1',
     '--with-mpi=0'
   ]
   configure.petsc_configure(configure_options)
