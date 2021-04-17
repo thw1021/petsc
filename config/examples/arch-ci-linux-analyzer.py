@@ -9,6 +9,9 @@ configure_options = [
   '--with-fc=mpif90',
   '--with-cxx=mpicxx',
 
+  '--with-64-bit-indices=1',
+  '--with-scalar-type=complex',
+
   '--download-sprng=1',
   '--download-random123=1',
   '--download-saws=1',
