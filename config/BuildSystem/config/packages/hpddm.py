@@ -42,6 +42,8 @@ class Configure(config.package.Package):
     self.pushLanguage('Cxx')
     cxx = self.getCompiler()
     cxxflags = self.getCompilerFlags()
+    if hasattr(self.setCompilers, 'CxxPIC'):
+      cxxflags += ' '+self.setCompilers.CxxPIC
     self.popLanguage()
     if self.framework.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
       PETSC_DIR  = os.path.abspath(os.path.expanduser(self.argDB['prefix']))
