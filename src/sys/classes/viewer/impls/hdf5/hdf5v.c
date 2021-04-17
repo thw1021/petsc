@@ -1067,7 +1067,7 @@ PetscErrorCode PetscViewerHDF5ReadObjectAttribute(PetscViewer viewer, PetscObjec
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscValidHeader(obj,2);
   PetscValidCharPointer(name,3);
-  PetscValidPointer(value, 5);
+  PetscValidPointer(value, 6);
   ierr = PetscViewerHDF5CheckNamedObject_Internal(viewer, obj);CHKERRQ(ierr);
   ierr = PetscViewerHDF5ReadAttribute(viewer, obj->name, name, datatype, defaultValue, value);CHKERRQ(ierr);
   PetscFunctionReturn(0);
