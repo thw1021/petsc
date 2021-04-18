@@ -682,6 +682,8 @@ Notes on usage:
       - module load libtool-2.4.6-gcc-7.5.0-jdxbjft
       - ./configure --with-mpi-dir=$CUDA_DIR/../comm_libs/mpi/ -with-cuda-dir=$CUDA_DIR/11.0  --download-f2cblaslapack=1
 
+      - to install cmake add --download-cmake --download-cmake-configure-arguments="-- -DCMAKE_USE_OPENSSL=OFF"
+
       - Log into interactive nodes with
         - qsub -I -t TimeInMinutes -n 1 -A AProjectName (for example, gpu_hack)
         - Run executables with $CUDA_DIR/../comm_libs/mpi/bin/mpirun
