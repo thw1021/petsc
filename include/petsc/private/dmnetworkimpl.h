@@ -100,7 +100,6 @@ typedef struct {
   DMNetworkComponent                *component; /* List of components that have been registered */
   DMNetworkComponentHeader          header;
   DMNetworkComponentValue           cvalue;
-  PetscInt                          dataheadersize;
   DMNetworkComponentGenericDataType *componentdataarray; /* Array to hold the data */
 
   PetscInt                          nsubnet,Nsubnet; /* Local and global number of subnetworks */
@@ -121,7 +120,6 @@ typedef struct {
                                               Jvpt[v-vStart]+2i+2: Jacobian(v,vc[i]), vc[i]: i-th connected vertex
                                               */
   PetscInt                          max_comps_registered; /* Max. number of components that can be registered */
-  PetscInt                          max_comps_per_point; /* Max. components per point */
 } DM_Network;
 
 #endif /* _NETWORKIMPL_H */
