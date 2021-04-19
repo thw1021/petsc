@@ -225,6 +225,7 @@ class Configure(config.package.Package):
         self.addMakeMacro('CUDA_CXXFLAGS',self.setCompilers.CUDA_CXXFLAGS)
       else:
         self.logPrint('No CUDA_CXXFLAGS available')
+      self.addMakeMacro('CUDA_CXX',self.setCompilers.CUDA_CXX)
 
       # Intel compiler environment breaks GNU compilers, fix it just enough to allow g++ to run
       if self.setCompilers.CUDA_CXX == 'gcc' and config.setCompilers.Configure.isIntel(self.compilers.CXX,self.log):
