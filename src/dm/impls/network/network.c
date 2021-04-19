@@ -1,8 +1,8 @@
 #include <petsc/private/dmnetworkimpl.h>  /*I  "petscdmnetwork.h"  I*/
 
-/* Creates the component header and value objects, and returns the size of
- the header
- */
+/*
+ Creates the component header and value objects, and returns the size of the header
+*/
 static PetscErrorCode CreateNetworkHeaderComponentValue(DM dm,PetscInt np,DMNetworkComponentHeader *compheader,DMNetworkComponentValue *compvalue,PetscInt *headersize)
 {
   PetscErrorCode           ierr;
@@ -22,9 +22,11 @@ static PetscErrorCode CreateNetworkHeaderComponentValue(DM dm,PetscInt np,DMNetw
 
   *compheader = header;
   *compvalue  = cvalue;
-  /* The size of the header is the size of struct _p_DMNetworkComponentHeader. Since the struct contains PetscInt pointers we cannot use sizeof(struct). So, we need to explicitly calculate the size. If the data header struct changes then this header size calculation needs to be updated.
-   */
+
+  /* The size of the header is the size of struct _p_DMNetworkComponentHeader. Since the struct contains PetscInt pointers we cannot use sizeof(struct). So, we need to explicitly calculate the size.
+     If the data header struct changes then this header size calculation needs to be updated. */
   dataheadersize = sizeof(struct _p_DMNetworkComponentHeader) + 5*network->max_comps_per_point*sizeof(PetscInt);
+
   /* Align it to nearest scalar multiple */
   if (dataheadersize % PetscMax(sizeof(double),sizeof(PetscScalar)) != 0) dataheadersize += dataheadersize % PetscMax(sizeof(double),sizeof(PetscScalar));
 
