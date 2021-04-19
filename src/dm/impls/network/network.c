@@ -15,9 +15,11 @@ static PetscErrorCode CreateNetworkHeaderComponentValue(DM dm,PetscInt np,DMNetw
   ierr = PetscCalloc2(np,&header,np,&cvalue);CHKERRQ(ierr);
 
   for (i=0; i < np; i++) {
+    header[i].maxcomps = 1; /* Initial max. number of components */
     /* Allocate members */
-    ierr = PetscCalloc5(network->max_comps_per_point,&header[i].size,network->max_comps_per_point,&header[i].key,network->max_comps_per_point,&header[i].offset,network->max_comps_per_point,&header[i].nvar,network->max_comps_per_point,&header[i].offsetvarrel);CHKERRQ(ierr);
-    ierr = PetscMalloc1(network->max_comps_per_point,&cvalue[i].data);CHKERRQ(ierr);
+    ierr = PetscCalloc5(header[i].maxcomps,&header[i].size,header[i].maxcomps,&header[i].key,header[i].maxcomps,&header[i].offset,header[i].maxcomps,&header[i].nvar,header[i].maxcomps,&header[i].offsetvarrel);CHKERRQ(ierr);
+    ierr = PetscMalloc1(header[i].maxcomps,&cvalue[i].data);CHKERRQ(ierr);
+    header[i].hsize = sizeof(struct _p_DMNetworkComponentHeader) + 5*header[i].maxcomps*sizeof(PetscInt);
   }
 
   *compheader = header;
@@ -876,25 +878,37 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
 {
   PetscErrorCode        ierr;
   DM_Network            *network = (DM_Network*) dm->data;
-  DMNetworkComponent    *component=NULL;
+  DMNetworkComponent    *component=NULL,*newcomponent=NULL;
   PetscBool             flg=PETSC_FALSE;
   PetscInt              i;
 
   PetscFunctionBegin;
   if (!network->component) {
-    /* DMNetworkSetMaxComponents not called, set default max. comps for network */
-    ierr = DMNetworkSetMaxComponents(dm,network->max_comps_registered,network->max_comps_per_point);CHKERRQ(ierr);
+    ierr = PetscCalloc1(network->max_comps_registered,&network->component);CHKERRQ(ierr);
   }
-  component = &network->component[network->ncomponent];
+
+  if (network->ncomponent == network->max_comps_registered) {
+    /* Resize component */
+    network->max_comps_registered += 1;
+    ierr = PetscCalloc1(network->max_comps_registered,&newcomponent);CHKERRQ(ierr);
+    /* Copy over the previous component info */
+    for(i=0; i < network->ncomponent; i++) {
+      ierr = PetscStrcpy(newcomponent[i].name,network->component[i].name);CHKERRQ(ierr);
+      newcomponent[i].size = network->component[i].size;
+    }
+    ierr = PetscFree(network->component);CHKERRQ(ierr);
+    network->component = newcomponent;
+  }
 
   for (i=0; i < network->ncomponent; i++) {
-    ierr = PetscStrcmp(component->name,name,&flg);CHKERRQ(ierr);
+    ierr = PetscStrcmp(network->component[i].name,name,&flg);CHKERRQ(ierr);
     if (flg) {
       *key = i;
       PetscFunctionReturn(0);
     }
   }
-  if (network->ncomponent == network->max_comps_registered) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Number of components registered exceeds the maximum %D set. Use DMNetworkSetMaxComponents or -dmnetwork_maximum_components_registered to increase the maximum allowed registered components",network->max_comps_registered);
+
+  component = &network->component[network->ncomponent];
 
   ierr = PetscStrcpy(component->name,name);CHKERRQ(ierr);
   component->size = size/sizeof(DMNetworkComponentGenericDataType);

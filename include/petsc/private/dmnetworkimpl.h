@@ -11,11 +11,19 @@ struct _p_DMNetworkComponentHeader {
   PetscInt index;    /* index for user input global edge and vertex */
   PetscInt subnetid; /* Id for subnetwork */
   PetscInt ndata;    /* number of components */
-  PetscInt *size;
-  PetscInt *key;
-  PetscInt *offset;
-  PetscInt *nvar;
-  PetscInt *offsetvarrel;
+  PetscInt hsize;    /* Size of the header */
+  PetscInt maxcomps; /* Maximum components at this point (ndata <= maxcomps). maxcomps
+                        is set initially to a default value and is incremented every time 
+                        ndata exceeds maxcomps */
+  /* The following arrays store the different attributes for each component at the given point.
+     The length of these arrays equals maxcomps. The arrays are resized every time
+     ndata exceeds maxcomps
+  */
+  PetscInt *size;    /* component data struct sizes */
+  PetscInt *key;     /* component keys */
+  PetscInt *offset;  /* component offset in the vector */
+  PetscInt *nvar;    /* number of variabes for the component */
+  PetscInt *offsetvarrel; /* relative offset from the first component at this point */
 } PETSC_ATTRIBUTEALIGNED(PetscMax(sizeof(double),sizeof(PetscScalar)));
 
 typedef struct _p_DMNetworkComponentValue *DMNetworkComponentValue;
