@@ -1,26 +1,21 @@
 #include <petsc/private/dmnetworkimpl.h>  /*I  "petscdmnetwork.h"  I*/
 
 /*
- Creates the component header and value objects for a point
+  Creates the component header and value objects for a network point
 */
 static PetscErrorCode SetUpNetworkHeaderComponentValue(DM dm,DMNetworkComponentHeader header,DMNetworkComponentValue cvalue)
 {
-  PetscErrorCode           ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-
   /* Allocate arrays for component information */
   ierr = PetscCalloc5(header->maxcomps,&header->size,header->maxcomps,&header->key,header->maxcomps,&header->offset,header->maxcomps,&header->nvar,header->maxcomps,&header->offsetvarrel);CHKERRQ(ierr);
-
-  ierr = PetscMalloc1(header->maxcomps,&cvalue->data);CHKERRQ(ierr);
+  ierr = PetscCalloc1(header->maxcomps,&cvalue->data);CHKERRQ(ierr);
 
   /* The size of the header is the size of struct _p_DMNetworkComponentHeader. Since the struct contains PetscInt pointers we cannot use sizeof(struct). So, we need to explicitly calculate the size.
    If the data header struct changes then this header size calculation needs to be updated. */
-
   header->hsize = sizeof(struct _p_DMNetworkComponentHeader) + 5*header->maxcomps*sizeof(PetscInt);
-
   header->hsize /= sizeof(DMNetworkComponentGenericDataType);
-
   PetscFunctionReturn(0);
 }
 
@@ -490,7 +485,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 
   np = network->pEnd - network->pStart;
   ierr = PetscCalloc2(np,&network->header,np,&network->cvalue);CHKERRQ(ierr);
-  for(i=0; i < np; i++) {
+  for (i=0; i<np; i++) {
     network->header[i].maxcomps = 3;
     ierr = SetUpNetworkHeaderComponentValue(dm,&network->header[i],&network->cvalue[i]);CHKERRQ(ierr);
   }
@@ -1271,7 +1266,7 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   cvalue = &network->cvalue[p];
 
   compnum = header->ndata;
-  
+
   header->size[compnum] = component->size;
   ierr = PetscSectionAddDof(network->DataSection,p,component->size);CHKERRQ(ierr);
   header->key[compnum] = componentkey;
