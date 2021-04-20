@@ -68,7 +68,7 @@ intTypes    = enumTypes|mpiIntTypes|{clx.TypeKind.USHORT,clx.TypeKind.SHORT,clx.
 realTypes   = {clx.TypeKind.FLOAT,clx.TypeKind.DOUBLE,clx.TypeKind.LONGDOUBLE,clx.TypeKind.FLOAT128}
 scalarTypes = realTypes|{clx.TypeKind.COMPLEX}
 
-petscClassIdMap = {
+classIdMap = {
   "_p_AO *"                     : "AO_CLASSID",
   "_p_Characteristic *"         : "CHARACTERISTIC_CLASSID",
   "_p_DM *"                     : "DM_CLASSID",
@@ -583,16 +583,16 @@ def convertToCorrectPetscValidLogicalCollectiveXXX(badSource,obj,objType,**kwarg
       validFuncName = "PetscValidLogicalCollectiveReal"
     elif "PetscScalar" in obj.derivedtypename:
       validFuncName = "PetscValidLogicalCollectiveScalar"
-  elif objTypeKind in intTypes:
-    if "PetscInt" in obj.derivedtypename:
-      validFuncName = "PetscValidLogicalCollectiveInt"
-    elif "PetscMPIInt" in obj.derivedtypename:
-      validFuncName = "PetscValidLogicalCollectiveMPIInt"
   elif objTypeKind in enumTypes:
     if "PetscBool" in obj.derivedtypename:
       validFuncName = "PetscValidLogicalCollectiveBool"
     else:
       validFuncName = "PetscValidLogicalCollectiveEnum"
+  elif objTypeKind in intTypes:
+    if "PetscInt" in obj.derivedtypename:
+      validFuncName = "PetscValidLogicalCollectiveInt"
+    elif "PetscMPIInt" in obj.derivedtypename:
+      validFuncName = "PetscValidLogicalCollectiveMPIInt"
   if validFuncName:
     funcCursor = kwargs["funcCursor"]
     addFunctionFixToBadSource(badSource,obj,funcCursor,validFuncName)
@@ -605,20 +605,22 @@ def convertToCorrectPetscValidXXXPointer(badSource,obj,objType,**kwargs):
   """
   validFuncName = None
   objTypeKind   = objType.kind
-  if objTypeKind == clx.TypeKind.RECORD:
-    # pointer to struct, use PetscValidPointer() instead
+  if (objTypeKind == clx.TypeKind.RECORD) or (objTypeKind == clx.TypeKind.VOID):
+    # pointer to struct or void pointer, use PetscValidPointer() instead
     validFuncName = "PetscValidPointer"
+  elif objTypeKind in charTypes:
+    validFuncName = "PetscValidCharPointer"
   elif objTypeKind in scalarTypes:
     if "PetscReal" in obj.derivedtypename:
       validFuncName = "PetscValidRealPointer"
     elif "PetscScalar" in obj.derivedtypename:
       validFuncName = "PetscValidScalarPointer"
-  elif objTypeKind in intTypes:
-    if "PetscInt" in obj.derivedtypename:
-      validFuncName = "PetscValidIntPointer"
   elif objTypeKind in enumTypes:
     if "PetscBool" in obj.derivedtypename:
       validFuncName = "PetscValidBoolPointer"
+  elif objTypeKind in intTypes:
+    if ("PetscInt" in obj.derivedtypename) or ("PetscMPIInt" in obj.derivedtypename):
+      validFuncName = "PetscValidIntPointer"
   if validFuncName:
     funcCursor = kwargs["funcCursor"]
     addFunctionFixToBadSource(badSource,obj,funcCursor,validFuncName)
@@ -671,12 +673,12 @@ def checkMatchingClassid(badSource,obj,objClassid):
   Does the classid match the particular PETSc type
   """
   try:
-    expectedClassid = petscClassIdMap[obj.typename]
+    expectedClassid = classIdMap[obj.typename]
   except KeyError:
     # The class doesn't exist, perhaps they passed in a wonky type, at the very least it
     # isn't a petsc type
     if not (obj.typename.startswith("_p_") or obj.typename.startswith("_n_")):
-      classFromClassId = list(petscClassIdMap.keys())[list(petscClassIdMap.values()).index(objClassid.name)]
+      classFromClassId = list(classIdMap.keys())[list(classIdMap.values()).index(objClassid.name)]
       badSource.addWarningFromCursor(obj,"Non-PETSc type doesn't match classid. Expected type '{}' for '{}'".format(classFromClassId,objClassid.name))
       return
     # Raise exception here since this isn't a bad source, moreso a failure of
@@ -862,7 +864,7 @@ def checkPetscValidCharPointer(badSource,func,parent):
   """
   Specific check for PetscValidCharPointer(obj,idx)
   """
-  charFilter = FilterFunctor(charTypes,func,pointer=True)
+  charFilter = FilterFunctor(charTypes,func,pointer=True,failureHook=convertToCorrectPetscValidXXXPointer)
   checkPetscValidPointerAndType(badSource,func,parent,charFilter)
   return
 
@@ -964,7 +966,7 @@ def checkPetscValidLogicalCollectiveEnum(badSource,func,parent):
   return
 
 
-mansecs          = ["sys","vec","mat","dm","ksp","snes","ts","tao"]
+petscMansecs     = ["sys","vec","mat","dm","ksp","snes","ts","tao"]
 checkFunctionMap = {
   "PetscValidHeaderSpecificType"      : checkPetscValidHeaderSpecificType,
   "PetscValidHeaderSpecific"          : checkPetscValidHeaderSpecific,
@@ -1002,17 +1004,6 @@ def osRemoveSilent(filename):
       raise # re-raise exception if a different error occurred
   return
 
-def updateMansecs(mansecFilter):
-  """
-  Remove directories from mansecs if they are not in mansecFilter
-  """
-  if mansecFilter:
-    global mansecs
-
-    mansecFilter = set(mansecFilter)
-    mansecs      = [m for m in mansecs if m in mansecFilter]
-  return
-
 def updateCheckFunctionMap(filterChecks):
   """
   Remove checks from checkFunctionMap if they are not in filterChecks
@@ -1026,15 +1017,16 @@ def updateCheckFunctionMap(filterChecks):
         del checkFunctionMap[key]
   return
 
-def updatePetscClassIdMap(petscDir):
+def updateClassIdMap(includeBaseDir,extraClassIdMap=None):
   """
-  add additional petsc classes by traipsing through the headers and looking for typedefs
+  add additional petsc-style classes by traipsing through the headers and looking for typedefs
   """
   import re
-  global petscClassIdMap
+  global classIdMap
 
-  includeBaseDir = os.path.join(petscDir,"include")
-  regclass       = re.compile("(\s*typedef\s+struct\s+)(_[pn]_[A-Za-z_]*\s+\*)")
+  if extraClassIdMap:
+    classIdMap.update(extraClassIdMap)
+  regclass = re.compile("(\s*typedef\s+struct\s+)(_[pn]_[A-Za-z_]*\s+\*)")
   for root,_,filenames in os.walk(includeBaseDir):
     for fname in filenames:
       if fname.endswith(".h"):
@@ -1044,8 +1036,8 @@ def updatePetscClassIdMap(petscDir):
             fl = regclass.search(line)
             if fl:
               struct = fl.group(2)
-              if struct not in petscClassIdMap:
-                petscClassIdMap[struct] = "ERROR_UNKNOWN_PETSC_CLASSID"
+              if struct not in classIdMap:
+                classIdMap[struct] = "ERROR_UNKNOWN_PETSC_CLASSID"
             line = rfile.readline()
   return
 
@@ -1157,18 +1149,22 @@ def tryToFindLibclangDir():
   return llvmLibDir
 
 
-"""Main functions for root and queue processes"""
-def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbose,printWarnings,exceptions,dataQueue,queue,lock):
-  import multiprocessing as mp
 
+"""Main functions for root and queue processes"""
+def queueMain(clangLib,checkFunctionMap,classIdMap,args,options,verbose,exceptions,dataQueue,queue,lock):
+  def updateGlobals(updatedClassIdMap):
+    global classIdMap # in a function so the "globalness" doesn't leak
+    classIdMap = updatedClassIdMap
+    return
+
+  import multiprocessing as mp
+  updateGlobals(classIdMap)
   proc        = mp.current_process().name
   printPrefix = proc+" --"[:len("[ROOT]")-len(proc)]
   errorPrefix = " ".join([printPrefix,"Exception detected while processing"])
   if verbose:
     with lock:
       print(printPrefix,15*"=","Performing setup",15*"=")
-  updateCheckFunctionMap(checkFunctionFilter)
-  updatePetscClassIdMap(petscDir)
   if not clx.conf.loaded:
     clx.conf.set_compatibility_check(True)
     clx.conf.set_library_file(clangLib)
@@ -1186,12 +1182,12 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
         with lock:
           print(printPrefix,"Processing file     ",filename)
       tu = index.parse(filename,args=args,options=options)
-      if tu.diagnostics and (verbose or printWarnings):
+      if tu.diagnostics and verbose:
         diags = "\n".join({" ".join(["--",d]) for d in map(str,tu.diagnostics)})
         dpref = " ".join([printPrefix,"Compiler error(s) in",filename+":\n"])
         with lock:
           print(dpref,diags,sep="")
-      with BadSource(printPrefix,printWarningMessages=printWarnings,lock=lock) as badSource:
+      with BadSource(printPrefix,printWarningMessages=verbose,lock=lock) as badSource:
         for func,parent in findFunctionCallExpr(tu,checkFunctionMap.keys()):
           checkFunctionMap[func.spelling](badSource,func,parent)
         dataQueue.put((QueueSignal.UNIFIED_DIFF,badSource.coalesceDiffs()))
@@ -1209,7 +1205,7 @@ def queueMain(clangLib,checkFunctionFilter,petscDir,petscArch,args,options,verbo
       print(printPrefix,15*"=","Exiting queue",15*"=")
   return
 
-def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=True,mansecFilter=None,checkFunctionFilter=None,printWarnings=False,maxWorkers=0,applyPatches=False):
+def main(petscDir,petscArch,altBaseDir=None,clangDir=None,clangLib=None,verbose=False,multiproc=True,maxWorkers=0,mansecs=petscMansecs,checkFunctionFilter=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[]):
   if not clx.conf.loaded:
     clx.conf.set_compatibility_check(True)
     if clangLib:
@@ -1221,6 +1217,9 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     else:
       raise RuntimeError("Must supply either clang directory path or clang library path")
 
+  baseDir          = os.path.abspath(altBaseDir) if altBaseDir else petscDir
+  petscIncludeDir  = os.path.join(petscDir,"include")
+  baseIncludeDir   = os.path.join(baseDir,"include")
   rootPrintPrefix  = "[ROOT]"
   pchClangOptions  = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
                       P_CXTranslationUnit_Incomplete |
@@ -1231,25 +1230,26 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   miscFlags        = ["-x","c++","-Wno-nullability-completeness"]
   sysincludes      = getClangSysIncludes()
   extraIncludes    = getPetscExtraIncludes(petscDir,petscArch)
-  compilerFlags    = sysincludes+miscFlags+extraIncludes
+  compilerFlags    = sysincludes+miscFlags+extraIncludes+extraCompilerFlags
   if verbose: print("\n".join([rootPrintPrefix+" Compile flags:",*compilerFlags]))
 
   # create a precompiled header from petsc.h, and all of the major "impl" headers,
   # this saves a lot of time since this includes almost every sub-header in petsc.
   # Including petsc.h first should define almost everything we need so no side effects
   # from including headers in the wrong order below
-  mansecimpls     = [m+"impl.h" for m in mansecs]+["isimpl.h","dtimpl.h","dmpleximpl.h","petscfeimpl.h","dmlabelimpl.h","sfimpl.h","viewerimpl.h","characteristicimpl.h"]
+  mansecimpls     = [m+"impl.h" for m in petscMansecs]+["isimpl.h","dtimpl.h","dmpleximpl.h","petscfeimpl.h","dmlabelimpl.h","dmdaimpl.h","sfimpl.h","viewerimpl.h","characteristicimpl.h"]
   megaHeaderLines = ["#include <petscastfix.hpp>","#include <petsc.h>"]
-  for headerFile in os.listdir(os.path.join(petscDir,"include","petsc","private")):
+  for headerFile in os.listdir(os.path.join(petscIncludeDir,"petsc","private")):
     if headerFile in mansecimpls or headerFile.startswith(("hash","pc")):
       megaHeaderLines.append("#include <petsc/private/{}>".format(headerFile))
-  index = clx.Index.create()
+  megaHeaderLines.extend(extraHeaderIncludes)
   megaHeader = "\n".join(megaHeaderLines)+"\n" # extra newline for last line
-  petscPrecompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.h.pch")
+  petscPrecompiledHeader = os.path.join(petscIncludeDir,"petsc_ast_precompile.h.pch")
   if verbose:
     print("\n".join([rootPrintPrefix+" Mega header:",megaHeader]))
     print(rootPrintPrefix,"Creating precompiled header",petscPrecompiledHeader)
-  tu = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
+  index = clx.Index.create()
+  tu    = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
   if tu.diagnostics:
     print("\n".join(map(str,tu.diagnostics)))
     raise clx.LibclangError("Warnings generated when creating the precompiled header. This usually means that the provided libclang is faulty")
@@ -1257,6 +1257,11 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   tu.save(petscPrecompiledHeader)
   compilerFlags.extend(["-include-pch",petscPrecompiledHeader])
 
+  # apply the filters before sending to child processes
+  updateCheckFunctionMap(checkFunctionFilter)
+  updateClassIdMap(petscIncludeDir)
+  if baseDir != petscDir:
+    updateClassIdMap(baseIncludeDir)
   if multiproc:
     import multiprocessing as mp
     # -1 since num workers+root = numCpu
@@ -1264,31 +1269,21 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
     if maxWorkers == 1:
       multiproc = False
       print(rootPrintPrefix,"Number of processes ({}) too small. Not using multiprocessing".format(maxWorkers))
-  # need a second "if multiproc" since the above might turn multiproc off. it might have
-  # been a great place to use "goto" to jump to the else but since thats apparently far
-  # too complex a construct according to python devs we do this stupid song and dance
-  if multiproc:
-    # get the library file to pass to subprocesses
-    clangLib = clx.conf.get_filename()
-    fileProcessorQueue = mp.JoinableQueue(3*maxWorkers)
-    exceptionSignalQueue = mp.Queue()
-    dataQueue = mp.Queue()
-    fileProcessorLock = mp.Lock()
-    workerArgs = (clangLib,checkFunctionFilter,petscDir,petscArch,compilerFlags,baseClangOptions,verbose,printWarnings,exceptionSignalQueue,dataQueue,fileProcessorQueue,fileProcessorLock,)
-    for i in range(maxWorkers):
-      workerName = "[{}]".format(i)
-      worker = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
-      worker.start()
-    # need these later for error printing
-    errBars = "".join(["[ERROR]",85*"-","[ERROR]\n"])
-    errBars = [errBars,errBars]
-  else:
-    # apply the filters if we aren't using workers
-    updateCheckFunctionMap(checkFunctionFilter)
-    updatePetscClassIdMap(petscDir)
+    else:
+      # get the library file to pass to subprocesses
+      clangLib = clx.conf.get_filename()
+      fileProcessorQueue = mp.JoinableQueue(3*maxWorkers)
+      exceptionSignalQueue = mp.Queue()
+      dataQueue = mp.Queue()
+      fileProcessorLock = mp.Lock()
+      workerArgs = (clangLib,checkFunctionMap,classIdMap,compilerFlags,baseClangOptions,verbose,exceptionSignalQueue,dataQueue,fileProcessorQueue,fileProcessorLock,)
+      for i in range(maxWorkers):
+        workerName = "[{}]".format(i)
+        worker = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
+        worker.start()
+      errBars = "".join(["[ERROR]",85*"-","[ERROR]\n"])
+      errBars = [errBars,errBars]
 
-  # always update mansecs
-  updateMansecs(mansecFilter)
   # exclude these directories
   excludeDirs = {"f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","tests","tutorials"}
   excludeDirSuffixes = (".dSYM",)
@@ -1296,7 +1291,7 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   allowFileSuffixes = (".c",".cpp",".cxx",".cu")
   warnings,errorsLeft,diffs = [],[],[]
   for mansec in mansecs:
-    for root,dirs,files in os.walk(os.path.join(petscDir,"src",mansec)):
+    for root,dirs,files in os.walk(os.path.join(baseDir,"src",mansec)):
       if verbose: print(rootPrintPrefix,"Processing directory",root)
       dirs[:] = [d for d in dirs if d not in excludeDirs]
       dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuffixes)]
@@ -1308,10 +1303,10 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
         for filename in files:
           if verbose: print(rootPrintPrefix,"Processing file     ",filename)
           tu = index.parse(filename,args=compilerFlags,options=baseClangOptions)
-          if tu.diagnostics and (verbose or printWarnings):
+          if tu.diagnostics and verbose:
             diags = {" ".join([rootPrintPrefix,d]) for d in map(str,tu.diagnostics)}
             print("\n".join(diags))
-          with BadSource(rootPrintPrefix,printWarningMessages=printWarnings) as badSource:
+          with BadSource(rootPrintPrefix,printWarningMessages=verbose) as badSource:
             for func,parent in findFunctionCallExpr(tu,checkFunctionMap.keys()):
               checkFunctionMap[func.spelling](badSource,func,parent)
             diffs.extend(badSource.coalesceDiffs())
@@ -1352,7 +1347,7 @@ def main(petscDir,petscArch,clangDir=None,clangLib=None,verbose=False,multiproc=
   if diffs:
     import time
 
-    srcDir,patchDir = os.path.join(petscDir,"src"),os.path.join(petscDir,"petscLintPatches")
+    srcDir, patchDir = os.path.join(baseDir,"src"),os.path.join(baseDir,"petscLintPatches")
     try:
       os.mkdir(patchDir)
     except FileExistsError:
@@ -1422,8 +1417,8 @@ if __name__ == "__main__":
   parser.add_argument("--show-warnings",required=False,action="store_true",help="show ast matching warnings",dest="warn")
   filterFuncChoices = ", ".join(list(checkFunctionMap.keys()))
   parser.add_argument("--filter-functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="filterfunc")
-  mansecChoices = ", ".join(mansecs)
-  parser.add_argument("--filter-mansec",required=False,nargs="+",choices=mansecs,metavar="MANSEC",help="run only over specified mansecs (defaults to all), choose from: "+mansecChoices,dest="filtermansec")
+  mansecChoices = ", ".join(petscMansecs)
+  parser.add_argument("--filter-mansec",required=False,nargs="+",default=petscMansecs,choices=petscMansecs,metavar="MANSEC",help="run only over specified mansecs (defaults to all), choose from: "+mansecChoices,dest="filtermansec")
   parser.add_argument("--no-multiprocessing",required=False,action="store_false",help="use multiprocessing",dest="multiproc")
   parser.add_argument("--jobs",required=False,type=int,default=0,nargs="?",help="number of multiprocessing jobs, 0 defaults to number of processors on machine")
   parser.add_argument("--apply-patches",required=False,action="store_true",help="apply patches automatically instead of saving to file",dest="apply")
@@ -1439,5 +1434,6 @@ if __name__ == "__main__":
 
   if args.verbose:
     args.warn = True
-  ret = main(args.petscdir,args.petscarch,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,multiproc=args.multiproc,mansecFilter=args.filtermansec,checkFunctionFilter=args.filterfunc,printWarnings=args.warn,maxWorkers=args.jobs,applyPatches=args.apply)
+
+  ret = main(args.petscdir,args.petscarch,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,multiproc=args.multiproc,maxWorkers=args.jobs,mansecs=args.filtermansec,checkFunctionFilter=args.filterfunc,applyPatches=args.apply)
   sys.exit(ret)
