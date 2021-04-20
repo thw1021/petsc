@@ -10,6 +10,7 @@
 /* These are used internally by PETSc ASCII IO routines*/
 #include <stdarg.h>
 PETSC_EXTERN PetscErrorCode PetscVFPrintfDefault(FILE*,const char[],va_list);
+PETSC_EXTERN void PetscSetVFPrintf(PetscErrorCode(*)(FILE*,const char[],va_list));
 
 #if defined(PETSC_HAVE_CLOSURE)
 PETSC_EXTERN PetscErrorCode PetscVFPrintfSetClosure(int (^)(const char*));
