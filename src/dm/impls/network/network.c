@@ -654,7 +654,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 
   np = network->pEnd - network->pStart;
   ierr = PetscCalloc2(np,&network->header,np,&network->cvalue);CHKERRQ(ierr);
-  for(i=0; i < np; i++) {
+  for (i=0; i < np; i++) {
     network->header[i].maxcomps = 3;
     ierr = SetUpNetworkHeaderComponentValue(dm,&network->header[i],&network->cvalue[i]);CHKERRQ(ierr);
   }
@@ -888,7 +888,7 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
     network->max_comps_registered += 2;
     ierr = PetscCalloc1(network->max_comps_registered,&newcomponent);CHKERRQ(ierr);
     /* Copy over the previous component info */
-    for(i=0; i < network->ncomponent; i++) {
+    for (i=0; i < network->ncomponent; i++) {
       ierr = PetscStrcpy(newcomponent[i].name,network->component[i].name);CHKERRQ(ierr);
       newcomponent[i].size = network->component[i].size;
     }

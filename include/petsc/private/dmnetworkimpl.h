@@ -13,7 +13,7 @@ struct _p_DMNetworkComponentHeader {
   PetscInt ndata;    /* number of components */
   PetscInt hsize;    /* Size of the header */
   PetscInt maxcomps; /* Maximum components at this point (ndata <= maxcomps). maxcomps
-                        is set initially to a default value and is incremented every time 
+                        is set initially to a default value and is incremented every time
                         ndata exceeds maxcomps */
   /* The following arrays store the different attributes for each component at the given point.
      The length of these arrays equals maxcomps. The arrays are resized every time
