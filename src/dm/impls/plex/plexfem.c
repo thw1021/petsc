@@ -3398,7 +3398,7 @@ static PetscErrorCode DMPlexGetHybridAuxFields(DM dmAux[], PetscDS dsAux[], IS c
   DM              plexA[2];
   PetscSection    sectionAux[2];
   const PetscInt *cells;
-  PetscInt        cStart, cEnd, numCells, cell, c, totDimAux[2];
+  PetscInt        cStart, cEnd, numCells, c, s, totDimAux[2];
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
@@ -3409,34 +3409,34 @@ static PetscErrorCode DMPlexGetHybridAuxFields(DM dmAux[], PetscDS dsAux[], IS c
   PetscValidPointer(a, 5);
   ierr = ISGetPointRange(cellIS, &cStart, &cEnd, &cells);CHKERRQ(ierr);
   numCells = cEnd - cStart;
-  for (c = 0; c < 2; ++c) {
-    PetscValidHeaderSpecific(dmAux[c], DM_CLASSID, 1);
-    PetscValidHeaderSpecific(dsAux[c], PETSCDS_CLASSID, 2);
-    PetscValidHeaderSpecific(locA[c], VEC_CLASSID, 4);
-    ierr = DMPlexConvertPlex(dmAux[c], &plexA[c], PETSC_FALSE);CHKERRQ(ierr);
-    ierr = DMGetLocalSection(dmAux[c], &sectionAux[c]);CHKERRQ(ierr);
-    ierr = PetscDSGetTotalDimension(dsAux[c], &totDimAux[c]);CHKERRQ(ierr);
-    ierr = DMGetWorkArray(dmAux[c], numCells*totDimAux[c], MPIU_SCALAR, &a[c]);CHKERRQ(ierr);
+  for (s = 0; s < 2; ++s) {
+    PetscValidHeaderSpecific(dmAux[s], DM_CLASSID, 1);
+    PetscValidHeaderSpecific(dsAux[s], PETSCDS_CLASSID, 2);
+    PetscValidHeaderSpecific(locA[s], VEC_CLASSID, 4);
+    ierr = DMPlexConvertPlex(dmAux[s], &plexA[s], PETSC_FALSE);CHKERRQ(ierr);
+    ierr = DMGetLocalSection(dmAux[s], &sectionAux[s]);CHKERRQ(ierr);
+    ierr = PetscDSGetTotalDimension(dsAux[s], &totDimAux[s]);CHKERRQ(ierr);
+    ierr = DMGetWorkArray(dmAux[s], numCells*totDimAux[s], MPIU_SCALAR, &a[s]);CHKERRQ(ierr);
   }
-  for (cell = cStart; cell < cEnd; ++cell) {
+  for (c = cStart; c < cEnd; ++c) {
     const PetscInt  cell = cells ? cells[c] : c;
     const PetscInt  cind = c - cStart;
     const PetscInt *cone, *ornt;
 
     ierr = DMPlexGetCone(dmAux[0], cell, &cone);CHKERRQ(ierr);
     ierr = DMPlexGetConeOrientation(dmAux[0], cell, &ornt);CHKERRQ(ierr);
-    for (c = 0; c < 2; ++c) {
-      PetscScalar   *x = NULL, *al = a[c];
-      const PetscInt tdA = totDimAux[c];
+    for (s = 0; s < 2; ++s) {
+      PetscScalar   *x = NULL, *al = a[s];
+      const PetscInt tdA = totDimAux[s];
       PetscInt       Na, i;
 
-      if (ornt[c]) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Face %D in hybrid cell %D has orientation %D != 0", cone[c], cell, ornt[c]);
-      ierr = DMPlexVecGetClosure(plexA[c], sectionAux[c], locA[c], cone[c], &Na, &x);CHKERRQ(ierr);
+      if (ornt[s]) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Face %D in hybrid cell %D has orientation %D != 0", cone[s], cell, ornt[s]);
+      ierr = DMPlexVecGetClosure(plexA[s], sectionAux[s], locA[s], cone[s], &Na, &x);CHKERRQ(ierr);
       for (i = 0; i < Na; ++i) al[cind*tdA+i] = x[i];
-      ierr = DMPlexVecRestoreClosure(plexA[c], sectionAux[c], locA[c], cone[c], &Na, &x);CHKERRQ(ierr);
+      ierr = DMPlexVecRestoreClosure(plexA[s], sectionAux[s], locA[s], cone[s], &Na, &x);CHKERRQ(ierr);
     }
   }
-  for (c = 0; c < 2; ++c) {ierr = DMDestroy(&plexA[c]);CHKERRQ(ierr);}
+  for (s = 0; s < 2; ++s) {ierr = DMDestroy(&plexA[s]);CHKERRQ(ierr);}
   ierr = ISRestorePointRange(cellIS, &cStart, &cEnd, &cells);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -5505,10 +5505,12 @@ PetscErrorCode DMPlexComputeJacobian_Hybrid_Internal(DM dm, PetscHashFormKey key
   PetscInt         maxDegree = PETSC_MAX_INT;
   PetscQuadrature  affineQuad = NULL, *quads = NULL;
   PetscFEGeom     *affineGeom = NULL, **geoms = NULL;
-  PetscBool        isMatIS = PETSC_FALSE, isMatISP = PETSC_FALSE, hasBdJac, hasBdPrec;
+  PetscBool        repeatKey = PETSC_FALSE, isMatIS = PETSC_FALSE, isMatISP = PETSC_FALSE, hasBdJac, hasBdPrec;
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
+  /* If keys are the same, both kernel will be run using the first key */
+  repeatKey = ((key[0].label == key[1].label) && (key[0].value == key[1].value)) ? PETSC_TRUE : PETSC_FALSE;
   ierr = PetscLogEventBegin(DMPLEX_JacobianFEM,dm,0,0,0);CHKERRQ(ierr);
   ierr = ISGetLocalSize(cellIS, &numCells);CHKERRQ(ierr);
   ierr = ISGetPointRange(cellIS, &cStart, &cEnd, &cells);CHKERRQ(ierr);
@@ -5643,15 +5645,19 @@ PetscErrorCode DMPlexComputeJacobian_Hybrid_Internal(DM dm, PetscHashFormKey key
           key[1].field = fieldI*Nf+fieldJ;
           if (hasBdJac) {
             ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN, key[0], Ne, chunkGeom, u, u_t, dsAux[0], a[0], t, X_tShift, elemMat);CHKERRQ(ierr);
-            ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN, key[1], Ne, chunkGeom, u, u_t, dsAux[1], a[1], t, X_tShift, elemMat);CHKERRQ(ierr);
             ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN, key[0], Nr, remGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[0], &a[0][offset*totDimAux[0]], t, X_tShift, &elemMat[offset*totDim*totDim]);CHKERRQ(ierr);
-            ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN, key[1], Nr, remGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[1], &a[1][offset*totDimAux[1]], t, X_tShift, &elemMat[offset*totDim*totDim]);CHKERRQ(ierr);
+            if (!repeatKey) {
+              ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN, key[1], Ne, chunkGeom, u, u_t, dsAux[1], a[1], t, X_tShift, elemMat);CHKERRQ(ierr);
+              ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN, key[1], Nr, remGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[1], &a[1][offset*totDimAux[1]], t, X_tShift, &elemMat[offset*totDim*totDim]);CHKERRQ(ierr);
+            }
           }
           if (hasBdPrec) {
             ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN_PRE, key[0], Ne, chunkGeom, u, u_t, dsAux[0], a[0], t, X_tShift, elemMatP);CHKERRQ(ierr);
-            ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN_PRE, key[1], Ne, chunkGeom, u, u_t, dsAux[1], a[1], t, X_tShift, elemMatP);CHKERRQ(ierr);
             ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN_PRE, key[0], Nr, remGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[0], &a[0][offset*totDimAux[0]], t, X_tShift, &elemMatP[offset*totDim*totDim]);CHKERRQ(ierr);
-            ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN_PRE, key[1], Nr, remGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[1], &a[1][offset*totDimAux[1]], t, X_tShift, &elemMatP[offset*totDim*totDim]);CHKERRQ(ierr);
+            if (!repeatKey) {
+              ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN_PRE, key[1], Ne, chunkGeom, u, u_t, dsAux[1], a[1], t, X_tShift, elemMatP);CHKERRQ(ierr);
+              ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN_PRE, key[1], Nr, remGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[1], &a[1][offset*totDimAux[1]], t, X_tShift, &elemMatP[offset*totDim*totDim]);CHKERRQ(ierr);
+            }
           }
         }
       }
