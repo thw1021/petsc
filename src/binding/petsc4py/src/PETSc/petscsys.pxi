@@ -44,6 +44,7 @@ cdef extern from * nogil:
 
     int PetscPrintf(MPI_Comm,char[],...)
     int PetscVSNPrintf(char*,size_t,const char[],size_t *,va_list)
+    int (*PetscVFPrintf)(FILE*,const char[],va_list)
     int PetscVFPrintfDefault(FILE*,const char[],va_list)
     int PetscSynchronizedPrintf(MPI_Comm,char[],...)
     int PetscSynchronizedFlush(MPI_Comm,FILE*)

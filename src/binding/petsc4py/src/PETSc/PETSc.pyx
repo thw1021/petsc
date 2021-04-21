@@ -349,6 +349,15 @@ cdef int PetscVFPrintf_PythonStdout(FILE *fd, const char formt[], va_list ap):
         PetscVFPrintfDefault(fd, formt, ap)
     return 0
 
+cdef int(*prevfprintf)(FILE*, char*, va_list)
+
+cdef int _push_stdout(int (*vfprintf)(FILE *, const char*, va_list)) except -1:
+    prevfprintf = <int(*)(FILE *, char*, va_list)>PetscVFPrintf
+    PetscSetVFPrintf(vfprintf)
+
+cdef int _pop_stdout() except -1:
+    PetscSetVFPrintf(<int(*)(FILE *, const char*, va_list)>prevfprintf)
+
 cdef int initialize(object args, object comm) except -1:
     if (<int>PetscInitializeCalled): return 1
     if (<int>PetscFinalizeCalled):   return 0
@@ -366,7 +375,7 @@ cdef int initialize(object args, object comm) except -1:
     CHKERR( PetscPushErrorHandler(handler, NULL) )
     import sys
     if sys.stdout != sys.__stdout__:
-        PetscSetVFPrintf(&PetscVFPrintf_PythonStdout)
+        _push_stdout(&PetscVFPrintf_PythonStdout)
     # register finalization function
     if Py_AtExit(finalize) < 0:
         PySys_WriteStderr(b"warning: could not register %s with Py_AtExit()",
@@ -486,5 +495,11 @@ def _finalize():
     event_registry.clear()
     global citations_registry
     citations_registry.clear()
+
+def _push_python_stdout():
+    _push_stdout(&PetscVFPrintf_PythonStdout)
+
+def _pop_python_stdout():
+    _pop_stdout()
 
 # --------------------------------------------------------------------
