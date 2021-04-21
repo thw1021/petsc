@@ -3393,9 +3393,10 @@ PetscErrorCode DMPlexRestoreCellFields(DM dm, IS cellIS, Vec locX, Vec locX_t, V
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMPlexGetHybridAuxFields(DM dmAux[], PetscDS dsAux[], IS cellIS, Vec locA[], PetscScalar *a[])
+static PetscErrorCode DMPlexGetHybridAuxFields(DM dm, DM dmAux[], PetscDS dsAux[], IS cellIS, Vec locA[], PetscScalar *a[])
 {
   DM              plexA[2];
+  DMEnclosureType encAux[2];
   PetscSection    sectionAux[2];
   const PetscInt *cells;
   PetscInt        cStart, cEnd, numCells, c, s, totDimAux[2];
@@ -3414,6 +3415,7 @@ static PetscErrorCode DMPlexGetHybridAuxFields(DM dmAux[], PetscDS dsAux[], IS c
     PetscValidHeaderSpecific(dsAux[s], PETSCDS_CLASSID, 2);
     PetscValidHeaderSpecific(locA[s], VEC_CLASSID, 4);
     ierr = DMPlexConvertPlex(dmAux[s], &plexA[s], PETSC_FALSE);CHKERRQ(ierr);
+    ierr = DMGetEnclosureRelation(dmAux[s], dm, &encAux[s]);CHKERRQ(ierr);
     ierr = DMGetLocalSection(dmAux[s], &sectionAux[s]);CHKERRQ(ierr);
     ierr = PetscDSGetTotalDimension(dsAux[s], &totDimAux[s]);CHKERRQ(ierr);
     ierr = DMGetWorkArray(dmAux[s], numCells*totDimAux[s], MPIU_SCALAR, &a[s]);CHKERRQ(ierr);
@@ -3423,17 +3425,18 @@ static PetscErrorCode DMPlexGetHybridAuxFields(DM dmAux[], PetscDS dsAux[], IS c
     const PetscInt  cind = c - cStart;
     const PetscInt *cone, *ornt;
 
-    ierr = DMPlexGetCone(dmAux[0], cell, &cone);CHKERRQ(ierr);
-    ierr = DMPlexGetConeOrientation(dmAux[0], cell, &ornt);CHKERRQ(ierr);
+    ierr = DMPlexGetCone(dm, cell, &cone);CHKERRQ(ierr);
+    ierr = DMPlexGetConeOrientation(dm, cell, &ornt);CHKERRQ(ierr);
+    if (ornt[0]) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Face %D in hybrid cell %D has orientation %D != 0", cone[0], cell, ornt[0]);
     for (s = 0; s < 2; ++s) {
       PetscScalar   *x = NULL, *al = a[s];
       const PetscInt tdA = totDimAux[s];
-      PetscInt       Na, i;
+      PetscInt       subface, Na, i;
 
-      if (ornt[s]) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Face %D in hybrid cell %D has orientation %D != 0", cone[s], cell, ornt[s]);
-      ierr = DMPlexVecGetClosure(plexA[s], sectionAux[s], locA[s], cone[s], &Na, &x);CHKERRQ(ierr);
+      ierr = DMGetEnclosurePoint(plexA[s], dm, encAux[s], cone[0], &subface);CHKERRQ(ierr);
+      ierr = DMPlexVecGetClosure(plexA[s], sectionAux[s], locA[s], subface, &Na, &x);CHKERRQ(ierr);
       for (i = 0; i < Na; ++i) al[cind*tdA+i] = x[i];
-      ierr = DMPlexVecRestoreClosure(plexA[s], sectionAux[s], locA[s], cone[s], &Na, &x);CHKERRQ(ierr);
+      ierr = DMPlexVecRestoreClosure(plexA[s], sectionAux[s], locA[s], subface, &Na, &x);CHKERRQ(ierr);
     }
   }
   for (s = 0; s < 2; ++s) {ierr = DMDestroy(&plexA[s]);CHKERRQ(ierr);}
@@ -4941,7 +4944,7 @@ PetscErrorCode DMPlexComputeResidual_Hybrid_Internal(DM dm, PetscHashFormKey key
   /* Extract field coefficients */
   /* NOTE This needs the end cap faces to have identical orientations */
   ierr = DMPlexGetCellFields(dm, cellIS, locX, locX_t, locA[2], &u, &u_t, &a[2]);CHKERRQ(ierr);
-  ierr = DMPlexGetHybridAuxFields(dmAux, dsAux, cellIS, locA, a);CHKERRQ(ierr);
+  ierr = DMPlexGetHybridAuxFields(dm, dmAux, dsAux, cellIS, locA, a);CHKERRQ(ierr);
   ierr = DMGetWorkArray(dm, cellChunkSize*totDim, MPIU_SCALAR, &elemVec);CHKERRQ(ierr);
   for (chunk = 0; chunk < numChunks; ++chunk) {
     PetscInt cS = cStart+chunk*cellChunkSize, cE = PetscMin(cS+cellChunkSize, cEnd), numCells = cE - cS, c;
@@ -5577,7 +5580,7 @@ PetscErrorCode DMPlexComputeJacobian_Hybrid_Internal(DM dm, PetscHashFormKey key
   ierr = PetscCalloc1(2*cellChunkSize, &faces);CHKERRQ(ierr);
   ierr = ISCreateGeneral(PETSC_COMM_SELF, cellChunkSize, faces, PETSC_USE_POINTER, &chunkIS);CHKERRQ(ierr);
   ierr = DMPlexGetCellFields(dm, cellIS, locX, locX_t, locA[2], &u, &u_t, &a[2]);CHKERRQ(ierr);
-  ierr = DMPlexGetHybridAuxFields(dmAux, dsAux, cellIS, locA, a);CHKERRQ(ierr);
+  ierr = DMPlexGetHybridAuxFields(dm, dmAux, dsAux, cellIS, locA, a);CHKERRQ(ierr);
   ierr = DMGetWorkArray(dm, hasBdJac  ? cellChunkSize*totDim*totDim : 0, MPIU_SCALAR, &elemMat);CHKERRQ(ierr);
   ierr = DMGetWorkArray(dm, hasBdPrec ? cellChunkSize*totDim*totDim : 0, MPIU_SCALAR, &elemMatP);CHKERRQ(ierr);
   for (chunk = 0; chunk < numChunks; ++chunk) {
