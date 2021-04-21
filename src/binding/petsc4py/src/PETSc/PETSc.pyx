@@ -349,13 +349,14 @@ cdef int PetscVFPrintf_PythonStdout(FILE *fd, const char formt[], va_list ap):
         PetscVFPrintfDefault(fd, formt, ap)
     return 0
 
-cdef int(*prevfprintf)(FILE*, char*, va_list)
+cdef int(*prevfprintf)(FILE*, char*, va_list) = NULL
 
 cdef int _push_stdout(int (*vfprintf)(FILE *, const char*, va_list)) except -1:
     prevfprintf = <int(*)(FILE *, char*, va_list)>PetscVFPrintf
     PetscSetVFPrintf(vfprintf)
 
 cdef int _pop_stdout() except -1:
+    assert prevfprintf != NULL
     PetscSetVFPrintf(<int(*)(FILE *, const char*, va_list)>prevfprintf)
 
 cdef int initialize(object args, object comm) except -1:
