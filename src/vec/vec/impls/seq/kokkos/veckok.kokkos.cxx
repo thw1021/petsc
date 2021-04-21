@@ -130,17 +130,10 @@ PetscErrorCode VecMin_SeqKokkos(Vec xin,PetscInt *p,PetscReal *val)
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   ierr = VecGetKokkosView(xin,&xv);CHKERRQ(ierr);
   Kokkos::parallel_reduce("VecMin",xin->map->n,KOKKOS_LAMBDA(PetscInt i,MinLocValue_t& lminloc) {
-   #if defined(PETSC_USE_COMPLEX)
-    if (xv(i).real() < lminloc.val) {
-      lminloc.val = xv(i).real();
+    if (PetscRealPart(xv(i)) < lminloc.val) {
+      lminloc.val = PetscRealPart(xv(i));
       lminloc.loc = i;
     }
-   #else
-    if (xv(i) < lminloc.val) {
-      lminloc.val = xv(i);
-      lminloc.loc = i;
-    }
-   #endif
   },Kokkos::MinLoc<PetscReal,PetscInt>(minloc)); /* Kokkos will set minloc properly even if xin is zero-lengthed */
   if (p) *p = minloc.loc;
   *val = minloc.val;
@@ -161,17 +154,10 @@ PetscErrorCode VecMax_SeqKokkos(Vec xin,PetscInt *p,PetscReal *val)
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   ierr = VecGetKokkosView(xin,&xv);CHKERRQ(ierr);
   Kokkos::parallel_reduce("VecMax",xin->map->n,KOKKOS_LAMBDA(PetscInt i,MaxLocValue_t& lmaxloc) {
-   #if defined(PETSC_USE_COMPLEX)
-    if (xv(i).real() > lmaxloc.val) {
-      lmaxloc.val = xv(i).real();
+    if (PetscRealPart(xv(i)) > lmaxloc.val) {
+      lmaxloc.val = PetscRealPart(xv(i));
       lmaxloc.loc = i;
     }
-   #else
-    if (xv(i) > lmaxloc.val) {
-      lmaxloc.val = xv(i);
-      lmaxloc.loc = i;
-    }
-   #endif
   },Kokkos::MaxLoc<PetscReal,PetscInt>(maxloc));
   if (p) *p = maxloc.loc;
   *val = maxloc.val;

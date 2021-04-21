@@ -864,7 +864,7 @@ PETSC_STATIC_INLINE PetscScalar PetscPowScalarInt(PetscScalar base,PetscInt powe
 
 PETSC_STATIC_INLINE PetscScalar PetscPowScalarReal(PetscScalar base,PetscReal power)
 {
- #if defined(PETSC_HAVE_KOKKOS)
+ #if defined(__cplusplus) && defined(PETSC_HAVE_KOKKOS)
   return PetscPowScalar(base,power);
  #else
   PetscScalar cpower = power;
