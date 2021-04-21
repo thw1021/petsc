@@ -226,7 +226,10 @@ M*/
 
 #if defined(PETSC_HAVE_COMPLEX)
 #  if defined(__cplusplus)  /* C++ complex support */
-#    if defined(PETSC_HAVE_CUDA)
+#    if defined(PETSC_HAVE_KOKKOS)
+#      define petsccomplexlib Kokkos
+#      include <Kokkos_Core.hpp>
+#    elif defined(PETSC_HAVE_CUDA)
 #      define petsccomplexlib thrust
 #      include <thrust/complex.h>
 #    else
