@@ -306,6 +306,13 @@ PetscErrorCode PetscVFPrintfDefault(FILE *fd,const char *format,va_list Argp)
   PetscFunctionReturn(0);
 }
 
+/* I couldn't figure out how to set an extern function pointer in cython directly,
+ * so I wrapped the access in a function call */
+void PetscSetVFPrintf(PetscErrorCode (*vfprintf)(FILE*,const char[],va_list))
+{
+  PetscVFPrintf = vfprintf;
+}
+
 /*@C
     PetscSNPrintf - Prints to a string of given length
 
