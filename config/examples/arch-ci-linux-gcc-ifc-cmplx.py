@@ -28,6 +28,9 @@ configure_options = [
   '--with-scalar-type=complex',
   '--download-hdf5',
   '--with-zlib=1',
+  '--download-kokkos=1',
+  '--download-kokkos-kernels=1',
+  '--download-cmake',
   '--download-fblaslapack=1'
   ]
 
