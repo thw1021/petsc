@@ -257,6 +257,10 @@ cdef extern from "stdlib.h" nogil:
     void* realloc (void*,size_t)
     void free(void*)
 
+cdef extern from "stdarg.h" nogil:
+    ctypedef struct va_list:
+        pass
+
 cdef extern from "string.h"  nogil:
     void* memset(void*,int,size_t)
     void* memcpy(void*,void*,size_t)
@@ -332,6 +336,19 @@ cdef void finalize() nogil:
                 "[error code: %d]\n", ierr)
     # and we are done, see you later !!
 
+cdef int PetscVFPrintf_PythonStdout(FILE *fd, const char formt[], va_list ap):
+    import sys
+    cdef char cstring[8192]
+    cdef size_t stringlen = 8192
+    cdef size_t final_pos
+    if (fd == PETSC_STDOUT) and not (sys.stdout == sys.__stdout__):
+        CHKERR( PetscVSNPrintf(&cstring[0],stringlen,formt,&final_pos,ap))
+        ustring = cstring[:final_pos].decode('UTF-8')
+        sys.stdout.write(ustring)
+    else:
+        PetscVFPrintfDefault(fd, formt, ap)
+    return 0
+
 cdef int initialize(object args, object comm) except -1:
     if (<int>PetscInitializeCalled): return 1
     if (<int>PetscFinalizeCalled):   return 0
@@ -347,6 +364,9 @@ cdef int initialize(object args, object comm) except -1:
     cdef PetscErrorHandlerFunction handler = NULL
     handler = <PetscErrorHandlerFunction>PetscPythonErrorHandler
     CHKERR( PetscPushErrorHandler(handler, NULL) )
+    import sys
+    if sys.stdout != sys.__stdout__:
+        PetscSetVFPrintf(&PetscVFPrintf_PythonStdout)
     # register finalization function
     if Py_AtExit(finalize) < 0:
         PySys_WriteStderr(b"warning: could not register %s with Py_AtExit()",
