@@ -25,8 +25,7 @@ static PetscErrorCode PetscViewerHDF5ReadInitialize_Private(PetscViewer viewer, 
   PetscStackCallHDF5Return(h->dataset,H5Dopen2,(h->group, name, H5P_DEFAULT));
   PetscStackCallHDF5Return(h->dataspace,H5Dget_space,(h->dataset));
   ierr = PetscViewerHDF5GetTimestep(viewer, &h->timestep);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5HasAttribute(viewer,name,"complex",&h->complexVal);CHKERRQ(ierr);
-  if (h->complexVal) {ierr = PetscViewerHDF5ReadAttribute(viewer,name,"complex",PETSC_BOOL,&h->complexVal);CHKERRQ(ierr);}
+  ierr = PetscViewerHDF5ReadAttribute(viewer,name,"complex",PETSC_BOOL,&h->complexVal,&h->complexVal);CHKERRQ(ierr);
   /* MATLAB stores column vectors horizontally */
   ierr = PetscViewerHDF5HasAttribute(viewer,name,"MATLAB_class",&h->horizontal);CHKERRQ(ierr);
   *ctx = h;
@@ -188,6 +187,7 @@ static PetscErrorCode PetscViewerHDF5ReadArray_Private(PetscViewer viewer, HDF5R
 @*/
 PetscErrorCode PetscViewerHDF5Load(PetscViewer viewer, const char *name, PetscLayout map, hid_t datatype, void **newarr)
 {
+  PetscBool       has;
   HDF5ReadCtx     h=NULL;
   hid_t           memspace=0;
   size_t          unitsize;
@@ -195,6 +195,12 @@ PetscErrorCode PetscViewerHDF5Load(PetscViewer viewer, const char *name, PetscLa
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
+  ierr = PetscViewerHDF5HasDataset(viewer, name, &has);CHKERRQ(ierr);
+  if (!has) {
+    const char *group;
+    ierr = PetscViewerHDF5GetGroup(viewer, &group);CHKERRQ(ierr);
+    SETERRQ2(PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Object (dataset) \"%s\" not stored in group %s", name, group ? group : "/");
+  }
   ierr = PetscViewerHDF5ReadInitialize_Private(viewer, name, &h);CHKERRQ(ierr);
 #if defined(PETSC_USE_COMPLEX)
   if (!h->complexVal) {

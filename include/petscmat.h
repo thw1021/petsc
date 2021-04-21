@@ -160,7 +160,8 @@ PETSC_EXTERN const char *const MatFactorTypes[];
 
 PETSC_EXTERN PetscErrorCode MatGetFactor(Mat,MatSolverType,MatFactorType,Mat*);
 PETSC_EXTERN PetscErrorCode MatGetFactorAvailable(Mat,MatSolverType,MatFactorType,PetscBool *);
-PETSC_EXTERN PetscErrorCode MatFactorGetUseOrdering(Mat, PetscBool*);
+PETSC_EXTERN PetscErrorCode MatFactorGetCanUseOrdering(Mat, PetscBool*);
+PETSC_DEPRECATED_FUNCTION("Use MatFactorGetCanUseOrdering() (since version 3.15)") PETSC_STATIC_INLINE PetscErrorCode MatFactorGetUseOrdering(Mat A,PetscBool *b) {return MatFactorGetCanUseOrdering(A,b);}
 PETSC_EXTERN PetscErrorCode MatFactorGetSolverType(Mat,MatSolverType*);
 PETSC_EXTERN PetscErrorCode MatGetFactorType(Mat,MatFactorType*);
 PETSC_EXTERN PetscErrorCode MatSetFactorType(Mat,MatFactorType);
@@ -1176,6 +1177,8 @@ PETSC_EXTERN PetscFunctionList MatOrderingList;
 PETSC_EXTERN PetscErrorCode MatReorderForNonzeroDiagonal(Mat,PetscReal,IS,IS);
 PETSC_EXTERN PetscErrorCode MatCreateLaplacian(Mat,PetscReal,PetscBool,Mat*);
 
+PETSC_EXTERN PetscErrorCode MatFactorGetPreferredOrdering(Mat,MatFactorType,MatOrderingType*);
+
 /*S
     MatFactorShiftType - Numeric Shift for factorizations
 
@@ -1949,6 +1952,8 @@ typedef enum {MAT_CUSPARSE_MULT_DIAG, MAT_CUSPARSE_MULT_OFFDIAG, MAT_CUSPARSE_MU
 PETSC_EXTERN PetscErrorCode MatCreateSeqAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetFormat(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat);
+typedef struct Mat_SeqAIJCUSPARSETriFactors* Mat_SeqAIJCUSPARSETriFactors_p;
+PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSETriFactors_p*);
 
 PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure**);
 

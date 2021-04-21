@@ -195,24 +195,26 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *ctx)
 
 static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
 {
-  PetscDS        prob;
+  PetscDS        ds;
+  DMLabel        label;
   const PetscInt id = 1;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
+  ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
   switch (ctx->formType) {
   case PRIMITIVE:
-    ierr = PetscDSSetResidual(prob, 0, f0_prim_phi, NULL);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobian(prob, 0, 0, g0_prim_phi, g1_prim_phi, NULL, NULL);CHKERRQ(ierr);
+    ierr = PetscDSSetResidual(ds, 0, f0_prim_phi, NULL);CHKERRQ(ierr);
+    ierr = PetscDSSetJacobian(ds, 0, 0, g0_prim_phi, g1_prim_phi, NULL, NULL);CHKERRQ(ierr);
     break;
   case INT_BY_PARTS:
-    ierr = PetscDSSetResidual(prob, 0, f0_ibp_phi, f1_ibp_phi);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobian(prob, 0, 0, g0_prim_phi, NULL, g2_ibp_phi, NULL);CHKERRQ(ierr);
+    ierr = PetscDSSetResidual(ds, 0, f0_ibp_phi, f1_ibp_phi);CHKERRQ(ierr);
+    ierr = PetscDSSetJacobian(ds, 0, 0, g0_prim_phi, NULL, g2_ibp_phi, NULL);CHKERRQ(ierr);
     break;
   }
   ctx->exactFuncs[0] = analytic_phi;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)(void)) ctx->exactFuncs[0], NULL, 1, &id, ctx);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "marker", &label);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void)) ctx->exactFuncs[0], NULL, ctx, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -225,7 +227,7 @@ static PetscErrorCode SetupVelocity(DM dm, DM dmAux, AppCtx *user)
   PetscFunctionBeginUser;
   ierr = DMCreateLocalVector(dmAux, &v);CHKERRQ(ierr);
   ierr = DMProjectFunctionLocal(dmAux, 0.0, funcs, NULL, INSERT_ALL_VALUES, v);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject) dm, "A", (PetscObject) v);CHKERRQ(ierr);
+  ierr = DMSetAuxiliaryVec(dm, NULL, 0, v);CHKERRQ(ierr);
   ierr = VecDestroy(&v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -240,7 +242,6 @@ static PetscErrorCode SetupAuxDM(DM dm, PetscFE feAux, AppCtx *user)
   ierr = DMGetCoordinateDM(dm, &coordDM);CHKERRQ(ierr);
   if (!feAux) PetscFunctionReturn(0);
   ierr = DMClone(dm, &dmAux);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject) dm, "dmAux", (PetscObject) dmAux);CHKERRQ(ierr);
   ierr = DMSetCoordinateDM(dmAux, coordDM);CHKERRQ(ierr);
   ierr = DMSetField(dmAux, 0, NULL, (PetscObject) feAux);CHKERRQ(ierr);
   ierr = DMCreateDS(dmAux);CHKERRQ(ierr);

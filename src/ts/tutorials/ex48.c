@@ -460,27 +460,29 @@ static PetscErrorCode initialSolution_jz(PetscInt dim, PetscReal time, const Pet
 
 static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
 {
-  PetscDS        prob;
+  PetscDS        ds;
+  DMLabel        label;
   const PetscInt id = 1;
   PetscErrorCode ierr, f;
 
   PetscFunctionBeginUser;
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 0, f0_n,     f1_n);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 1, f0_Omega, f1_Omega);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 2, f0_psi,   f1_psi);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 3, f0_phi,   f1_phi);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 4, f0_jz,    f1_jz);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "marker", &label);CHKERRQ(ierr);
+  ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 0, f0_n,     f1_n);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 1, f0_Omega, f1_Omega);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 2, f0_psi,   f1_psi);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 3, f0_phi,   f1_phi);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 4, f0_jz,    f1_jz);CHKERRQ(ierr);
   ctx->initialFuncs[0] = initialSolution_n;
   ctx->initialFuncs[1] = initialSolution_Omega;
   ctx->initialFuncs[2] = initialSolution_psi;
   ctx->initialFuncs[3] = initialSolution_phi;
   ctx->initialFuncs[4] = initialSolution_jz;
   for (f = 0; f < 5; ++f) {
-    ierr = PetscDSSetImplicit(prob, f, ctx->implicit);CHKERRQ(ierr);
-    ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", "marker", f, 0, NULL, (void (*)(void)) ctx->initialFuncs[f], NULL, 1, &id, ctx);CHKERRQ(ierr);
+    ierr = PetscDSSetImplicit(ds, f, ctx->implicit);CHKERRQ(ierr);
+    ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, f, 0, NULL, (void (*)(void)) ctx->initialFuncs[f], NULL, ctx, NULL);CHKERRQ(ierr);
   }
-  ierr = PetscDSSetContext(prob, 0, ctx);CHKERRQ(ierr);
+  ierr = PetscDSSetContext(ds, 0, ctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -495,7 +497,7 @@ static PetscErrorCode SetupEquilibriumFields(DM dm, DM dmAux, AppCtx *ctx)
   PetscFunctionBegin;
   ierr = DMCreateLocalVector(dmAux, &eq);CHKERRQ(ierr);
   ierr = DMProjectFunctionLocal(dmAux, 0.0, eqFuncs, (void **)ctxarr, INSERT_ALL_VALUES, eq);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject) dm, "A", (PetscObject) eq);CHKERRQ(ierr);
+  ierr = DMSetAuxiliaryVec(dm, NULL, 0, eq);CHKERRQ(ierr);
   if (ctx->plotRef) {  /* plot reference functions */
     PetscViewer       viewer = NULL;
     PetscBool         isHDF5,isVTK;
@@ -544,7 +546,6 @@ static PetscErrorCode SetupAuxDM(DM dm, PetscInt NfAux, PetscFE feAux[], AppCtx 
   ierr = DMGetCoordinateDM(dm, &coordDM);CHKERRQ(ierr);
   if (!feAux) PetscFunctionReturn(0);
   ierr = DMClone(dm, &dmAux);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject) dm, "dmAux", (PetscObject) dmAux);CHKERRQ(ierr);
   ierr = DMSetCoordinateDM(dmAux, coordDM);CHKERRQ(ierr);
   for (f = 0; f < NfAux; ++f) {ierr = DMSetField(dmAux, f, NULL, (PetscObject) feAux[f]);CHKERRQ(ierr);}
   ierr = DMCreateDS(dmAux);CHKERRQ(ierr);

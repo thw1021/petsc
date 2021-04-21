@@ -207,33 +207,37 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 
 static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
 {
-  PetscDS        prob;
+  PetscDS        ds;
+  DMLabel        label;
   const PetscInt id = 1;
   PetscPointFunc f0 = user->homogeneous ? f0_trig_homogeneous_u : f0_trig_inhomogeneous_u;
   PetscErrorCode (*ex)(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar *, void *) = user->homogeneous ? trig_homogeneous_u : trig_inhomogeneous_u;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 0, f0, f1_u);CHKERRQ(ierr);
-  ierr = PetscDSSetExactSolution(prob, 0, ex, user);CHKERRQ(ierr);
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)(void)) ex, NULL, 1, &id, user);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(prob, 0, 0, NULL, NULL, NULL, g3_uu);CHKERRQ(ierr);
+  ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 0, f0, f1_u);CHKERRQ(ierr);
+  ierr = PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, g3_uu);CHKERRQ(ierr);
+  ierr = PetscDSSetExactSolution(ds, 0, ex, user);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "marker", &label);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void)) ex, NULL, user, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode SetupAdjointProblem(DM dm, AppCtx *user)
 {
-  PetscDS        prob;
+  PetscDS        ds;
+  DMLabel        label;
   const PetscInt id = 1;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 0, f0_unity_u, f1_u);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(prob, 0, 0, NULL, NULL, NULL, g3_uu);CHKERRQ(ierr);
-  ierr = PetscDSSetObjective(prob, 0, obj_error_u);CHKERRQ(ierr);
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)(void)) zero, NULL, 1, &id, user);CHKERRQ(ierr);
+  ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 0, f0_unity_u, f1_u);CHKERRQ(ierr);
+  ierr = PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, g3_uu);CHKERRQ(ierr);
+  ierr = PetscDSSetObjective(ds, 0, obj_error_u);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "marker", &label);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void)) zero, NULL, user, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -459,11 +463,9 @@ int main(int argc, char **argv)
       ierr = DMGlobalToLocalBegin(dmAdj, uAdj, INSERT_VALUES, uAdjLoc);CHKERRQ(ierr);
       ierr = DMGlobalToLocalEnd(dmAdj, uAdj, INSERT_VALUES, uAdjLoc);CHKERRQ(ierr);
       ierr = DMGetGlobalVector(dm, &uAdjProj);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject) dm, "dmAux", (PetscObject) dmAdj);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject) dm, "A", (PetscObject) uAdjLoc);CHKERRQ(ierr);
+      ierr = DMSetAuxiliaryVec(dm, NULL, 0, uAdjLoc);CHKERRQ(ierr);
       ierr = DMProjectField(dm, 0.0, u, identity, INSERT_VALUES, uAdjProj);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject) dm, "dmAux", NULL);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject) dm, "A", NULL);CHKERRQ(ierr);
+      ierr = DMSetAuxiliaryVec(dm, NULL, 0, NULL);CHKERRQ(ierr);
       ierr = DMRestoreLocalVector(dmAdj, &uAdjLoc);CHKERRQ(ierr);
       /*   Attach auxiliary data */
       dms[0] = dm; dms[1] = dm;
@@ -494,13 +496,11 @@ int main(int argc, char **argv)
       ierr = DMGlobalToLocalBegin(dm, uErr, INSERT_VALUES, uErrLoc);CHKERRQ(ierr);
       ierr = DMGlobalToLocalEnd(dm, uErr, INSERT_VALUES, uErrLoc);CHKERRQ(ierr);
       ierr = DMRestoreGlobalVector(dmErrAux, &uErr);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject) dmAdj, "dmAux", (PetscObject) dmErrAux);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject) dmAdj, "A", (PetscObject) uErrLoc);CHKERRQ(ierr);
+      ierr = DMSetAuxiliaryVec(dmAdj, NULL, 0, uErrLoc);CHKERRQ(ierr);
       /*   Compute cellwise error estimate */
       ierr = VecSet(errorEst, 0.0);CHKERRQ(ierr);
       ierr = DMPlexComputeCellwiseIntegralFEM(dmAdj, uAdj, errorEst, &user);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject) dmAdj, "dmAux", NULL);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject) dmAdj, "A", NULL);CHKERRQ(ierr);
+      ierr = DMSetAuxiliaryVec(dmAdj, NULL, 0, NULL);CHKERRQ(ierr);
       ierr = DMRestoreLocalVector(dmErrAux, &uErrLoc);CHKERRQ(ierr);
       ierr = DMDestroy(&dmErrAux);CHKERRQ(ierr);
       /*   Plot cellwise error vector */

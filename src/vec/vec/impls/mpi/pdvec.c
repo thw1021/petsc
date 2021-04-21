@@ -569,31 +569,6 @@ PetscErrorCode VecView_MPI_ADIOS(Vec xin, PetscViewer viewer)
 }
 #endif
 
-#if defined(PETSC_HAVE_ADIOS2)
-#include <adios2_c.h>
-#include <petsc/private/vieweradios2impl.h>
-#include <petsc/private/viewerimpl.h>
-
-PetscErrorCode VecView_MPI_ADIOS2(Vec xin, PetscViewer viewer)
-{
-  PetscErrorCode     ierr;
-  PetscViewer_ADIOS2 *adios2 = (PetscViewer_ADIOS2*)viewer->data;
-  PetscInt           n,N,rstart;
-  const char         *vecname;
-  const PetscScalar  *array;
-
-  PetscFunctionBegin;
-  ierr = PetscObjectGetName((PetscObject) xin, &vecname);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(xin,&n);CHKERRQ(ierr);
-  ierr = VecGetSize(xin,&N);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(xin,&rstart,NULL);CHKERRQ(ierr);
-
-  ierr = VecGetArrayRead(xin,&array);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(xin,&array);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-#endif
-
 #if defined(PETSC_HAVE_HDF5)
 PetscErrorCode VecView_MPI_HDF5(Vec xin, PetscViewer viewer)
 {
@@ -807,9 +782,6 @@ PETSC_EXTERN PetscErrorCode VecView_MPI(Vec xin,PetscViewer viewer)
 #if defined(PETSC_HAVE_ADIOS)
   PetscBool      isadios;
 #endif
-#if defined(PETSC_HAVE_ADIOS2)
-  PetscBool      isadios2;
-#endif
   PetscBool      isglvis;
 
   PetscFunctionBegin;
@@ -828,9 +800,6 @@ PETSC_EXTERN PetscErrorCode VecView_MPI(Vec xin,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERGLVIS,&isglvis);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_ADIOS)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERADIOS,&isadios);CHKERRQ(ierr);
-#endif
-#if defined(PETSC_HAVE_ADIOS2)
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERADIOS2,&isadios2);CHKERRQ(ierr);
 #endif
   if (iascii) {
     ierr = VecView_MPI_ASCII(xin,viewer);CHKERRQ(ierr);
@@ -855,10 +824,6 @@ PETSC_EXTERN PetscErrorCode VecView_MPI(Vec xin,PetscViewer viewer)
 #if defined(PETSC_HAVE_ADIOS)
   } else if (isadios) {
     ierr = VecView_MPI_ADIOS(xin,viewer);CHKERRQ(ierr);
-#endif
-#if defined(PETSC_HAVE_ADIOS2)
-  } else if (isadios2) {
-    ierr = VecView_MPI_ADIOS2(xin,viewer);CHKERRQ(ierr);
 #endif
 #if defined(PETSC_HAVE_MATLAB_ENGINE)
   } else if (ismatlab) {
@@ -997,7 +962,7 @@ PetscErrorCode VecAssemblyBegin_MPI(Vec xin)
   ierr = PetscObjectGetComm((PetscObject)xin,&comm);CHKERRQ(ierr);
   if (xin->stash.donotstash) PetscFunctionReturn(0);
 
-  ierr = MPIU_Allreduce((PetscEnum*)&xin->stash.insertmode,(PetscEnum*)&addv,1,MPIU_ENUM,MPI_BOR,comm);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce((PetscEnum*)&xin->stash.insertmode,(PetscEnum*)&addv,1,MPIU_ENUM,MPI_BOR,comm);CHKERRMPI(ierr);
   if (addv == (ADD_VALUES|INSERT_VALUES)) SETERRQ(comm,PETSC_ERR_ARG_NOTSAMETYPE,"Some processors inserted values while others added");
   xin->stash.insertmode = addv; /* in case this processor had no cache */
   xin->bstash.insertmode = addv; /* Block stash implicitly tracks InsertMode of scalar stash */
