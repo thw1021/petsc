@@ -309,10 +309,10 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscFunctionBegin;
   ierr = SNESGetDM(snes, &dm);CHKERRQ(ierr);
 
-  ierr = VecDuplicate(y, &Xp );CHKERRQ(ierr);
+  ierr = VecDuplicate(y, &Xp);CHKERRQ(ierr);
   ierr = VecDuplicate(y, &Xdiff);CHKERRQ(ierr);
-  ierr = VecDuplicate(y, &SgF  );CHKERRQ(ierr);
-  ierr = VecDuplicate(y, &G    );CHKERRQ(ierr);
+  ierr = VecDuplicate(y, &SgF);CHKERRQ(ierr);
+  ierr = VecDuplicate(y, &G);CHKERRQ(ierr);
 
   ierr = VecGetLocalSize(y, &n);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD, &S);CHKERRQ(ierr);
@@ -345,10 +345,10 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
     /*Adding Extra Gonzalez Term*/
     ierr = VecDot(Xdiff, G, &Gp);CHKERRQ(ierr);
     ierr = VecDot(Xdiff, Xdiff, &normsq);CHKERRQ(ierr);
-    if(normsq < 0.00001) {
+    if (normsq < 0.00001) {
       Gp = 0;
     } else {
-      Gp   = (F - F0 - Gp)/normsq; /* Gp = ( F(x_n+1) - F(x_n) - gradF(x)*(x_n+1 - x_n) ) / (|x_n+1 - x_n|^2) */
+      Gp   = (F - F0 - Gp)/normsq; /* Gp = (F(x_n+1) - F(x_n) - gradF(x)*(x_n+1 - x_n)) / (|x_n+1 - x_n|^2) */
     }
     ierr = VecAXPY(G, Gp, Xdiff);CHKERRQ(ierr); /*gradF = gradF(x) + GonzalezTerm*Xdiff */
     ierr = MatMult(S, G , SgF);CHKERRQ(ierr); /* S*gradF */
@@ -366,11 +366,11 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   ts->dm = dmsave;
   ierr   = TSDiscGradRestoreX0AndXdot(ts, dm, &X0, &Xdot);CHKERRQ(ierr);
 
-  ierr = VecDestroy(&Xp );CHKERRQ(ierr);
+  ierr = VecDestroy(&Xp);CHKERRQ(ierr);
   ierr = VecDestroy(&Xdiff);CHKERRQ(ierr);
-  ierr = VecDestroy(&SgF  );CHKERRQ(ierr);
-  ierr = VecDestroy(&G    );CHKERRQ(ierr);
-  ierr = MatDestroy(&S    );CHKERRQ(ierr);
+  ierr = VecDestroy(&SgF);CHKERRQ(ierr);
+  ierr = VecDestroy(&G);CHKERRQ(ierr);
+  ierr = MatDestroy(&S);CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
 }
