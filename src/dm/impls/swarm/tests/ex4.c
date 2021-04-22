@@ -217,9 +217,9 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
     for (p = 0; p < Np; ++p) {
       const PetscReal x  = PetscRealPart(u[p*2+0]);
       const PetscReal v  = PetscRealPart(u[p*2+1]);
-	  if (user->harmonic) {
-		  const PetscReal E  = 0.5*(v*v + PetscSqr(omega)*(x*x + x*x*x*x));
-		  const PetscReal mE = 0.5*(v*v + PetscSqr(omega)*(x*x + x*x*x*x) - PetscSqr(omega)*(dt*x*v + dt*dt*x*x*v*v));
+    if (user->harmonic) {
+      const PetscReal E  = 0.5*(v*v + PetscSqr(omega)*(x*x + x*x*x*x));
+      const PetscReal mE = 0.5*(v*v + PetscSqr(omega)*(x*x + x*x*x*x) - PetscSqr(omega)*(dt*x*v + dt*dt*x*x*v*v));
           ierr = PetscPrintf(comm, "%.6lf %4D %4D %10.4lf %10.4lf %1.6lf %1.6lf\n", t, step, p, (double) E, (double) mE, (double) x, (double) v);CHKERRQ(ierr);
       } else {
           const PetscReal E  = 0.5*(v*v + PetscSqr(omega)*x*x);
