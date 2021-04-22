@@ -1,4 +1,5 @@
 #requirespackage 'PETSC_HAVE_KOKKOS'
+#requiresscalar real
 -include ../../../../../petscdir.mk
 ALL: lib
 

@@ -40,7 +40,7 @@ static PetscErrorCode LandauGPUDataDestroy(void *ptr)
   PetscErrorCode  ierr;
   PetscFunctionBegin;
   if (maps->deviceType != LANDAU_CPU) {
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS) && !defined(PETSC_USE_COMPLEX)
     if (maps->deviceType == LANDAU_KOKKOS) {
       ierr = LandauKokkosDestroyMatMaps(maps);CHKERRQ(ierr); // imples Kokkos does
     } // else could be CUDA
@@ -208,7 +208,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
     } else if (ctx->deviceType == LANDAU_KOKKOS) {
-#if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS) && !defined(PETSC_USE_COMPLEX)
       ierr = LandauKokkosJacobian(plex,Nq,nu_alpha,nu_beta,invMass,Eq_m,&IPData,invJ_a,ctx->subThreadBlockSize,mass_w,shift,ctx->events,JacP);CHKERRQ(ierr);
 #else
       SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
@@ -554,7 +554,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
         maps->c_maps[ej][q].gid = pointMaps[ej][q].gid;
       }
     }
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS) && !defined(PETSC_USE_COMPLEX)
     if (ctx->deviceType == LANDAU_KOKKOS) {
       ierr = LandauKokkosCreateMatMaps(maps, pointMaps,Nf,Nq);CHKERRQ(ierr); // imples Kokkos does
     } // else could be CUDA
