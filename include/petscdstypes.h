@@ -28,4 +28,24 @@ typedef struct _PetscHashFormKey
   PetscInt field;
 } PetscHashFormKey;
 
+/*E
+  PetscWeakFormKind - The kind of weak form being specified.
+
+  Supported kinds include:
+$ OBJECTIVE                  - Objective form
+$ F0, F1                     - Residual forms
+$ G0, G1, G2, G3             - Jacobian forms
+$ GP0, GP1, GP2, GP3         - Jacobian preconditioner matrix forms
+$ GT0, GT1, GT2, GT3         - Dynamic Jacobian matrix forms
+$ BDF0, BDF1                 - Boudnary Residual forms
+$ BDG0, BDG1, BDG2, BDG3     - Jacobian forms
+$ BDGP0, BDGP1, BDGP2, BDGP3 - Jacobian preconditioner matrix forms
+$ R                          - Riemann solver
+
+  Level: beginner
+
+.seealso: PetscWeakFormSetIndexResidual(), PetscWeakFormClearIndex()
+E*/
+typedef enum {PETSC_WF_OBJECTIVE, PETSC_WF_F0, PETSC_WF_F1, PETSC_WF_G0, PETSC_WF_G1, PETSC_WF_G2, PETSC_WF_G3, PETSC_WF_GP0, PETSC_WF_GP1, PETSC_WF_GP2, PETSC_WF_GP3, PETSC_WF_GT0, PETSC_WF_GT1, PETSC_WF_GT2, PETSC_WF_GT3, PETSC_WF_BDF0, PETSC_WF_BDF1, PETSC_WF_BDG0, PETSC_WF_BDG1, PETSC_WF_BDG2, PETSC_WF_BDG3, PETSC_WF_BDGP0, PETSC_WF_BDGP1, PETSC_WF_BDGP2, PETSC_WF_BDGP3, PETSC_WF_R} PetscWeakFormKind;
+
 #endif
