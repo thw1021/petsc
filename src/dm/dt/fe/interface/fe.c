@@ -1458,7 +1458,7 @@ $     elemVec[i] += \psi^{fc}_f(q) f0_{fc}(u, \nabla u) + \nabla\psi^{fc}_f(q) \
 
 .seealso: PetscFEIntegrateResidual()
 @*/
-PetscErrorCode PetscFEIntegrateResidual(PetscDS ds, PetscHashFormKey key, PetscInt Ne, PetscFEGeom *cgeom,
+PetscErrorCode PetscFEIntegrateResidual(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom,
                                         const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   PetscFE        fe;
@@ -1495,7 +1495,7 @@ PetscErrorCode PetscFEIntegrateResidual(PetscDS ds, PetscHashFormKey key, PetscI
 
 .seealso: PetscFEIntegrateResidual()
 @*/
-PetscErrorCode PetscFEIntegrateBdResidual(PetscDS ds, PetscWeakForm wf, PetscHashFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
+PetscErrorCode PetscFEIntegrateBdResidual(PetscDS ds, PetscWeakForm wf, PetscFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
                                           const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   PetscFE        fe;
@@ -1531,7 +1531,7 @@ PetscErrorCode PetscFEIntegrateBdResidual(PetscDS ds, PetscWeakForm wf, PetscHas
 
 .seealso: PetscFEIntegrateResidual()
 @*/
-PetscErrorCode PetscFEIntegrateHybridResidual(PetscDS prob, PetscHashFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
+PetscErrorCode PetscFEIntegrateHybridResidual(PetscDS prob, PetscFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
                                               const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   PetscFE        fe;
@@ -1578,7 +1578,7 @@ $                      + \nabla\psi^{fc}_f(q) \cdot g3_{fc,gc,df,dg}(u, \nabla u
 
 .seealso: PetscFEIntegrateResidual()
 @*/
-PetscErrorCode PetscFEIntegrateJacobian(PetscDS ds, PetscFEJacobianType jtype, PetscHashFormKey key, PetscInt Ne, PetscFEGeom *cgeom,
+PetscErrorCode PetscFEIntegrateJacobian(PetscDS ds, PetscFEJacobianType jtype, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom,
                                         const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscReal u_tshift, PetscScalar elemMat[])
 {
   PetscFE        fe;
@@ -1627,7 +1627,7 @@ $                      + \nabla\psi^{fc}_f(q) \cdot g3_{fc,gc,df,dg}(u, \nabla u
 
 .seealso: PetscFEIntegrateJacobian(), PetscFEIntegrateResidual()
 @*/
-PetscErrorCode PetscFEIntegrateBdJacobian(PetscDS ds, PetscWeakForm wf, PetscHashFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
+PetscErrorCode PetscFEIntegrateBdJacobian(PetscDS ds, PetscWeakForm wf, PetscFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
                                           const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscReal u_tshift, PetscScalar elemMat[])
 {
   PetscFE        fe;
@@ -1676,7 +1676,7 @@ $                      + \nabla\psi^{fc}_f(q) \cdot g3_{fc,gc,df,dg}(u, \nabla u
 
 .seealso: PetscFEIntegrateJacobian(), PetscFEIntegrateResidual()
 @*/
-PetscErrorCode PetscFEIntegrateHybridJacobian(PetscDS ds, PetscFEJacobianType jtype, PetscHashFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
+PetscErrorCode PetscFEIntegrateHybridJacobian(PetscDS ds, PetscFEJacobianType jtype, PetscFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
                                               const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscReal u_tshift, PetscScalar elemMat[])
 {
   PetscFE        fe;

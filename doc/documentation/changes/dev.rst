@@ -126,7 +126,7 @@ Changes: Development
 
 .. rubric:: DT:
 
--  Add ``PetscWeakFormCopy()`` and ``PetscWeakFormRewriteKeys()``
+-  Add ``PetscWeakFormCopy()``, ``PetscWeakFormClear()``, ``PetscWeakFormRewriteKeys()`` and ``PetscWeakFormClearIndex()``
 -  Add ``PetscDSDestroyBoundary()`` and ``PetscDSCopyExactSolutions()``
 
 .. rubric:: Fortran:

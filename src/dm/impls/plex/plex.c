@@ -8410,7 +8410,7 @@ PetscErrorCode DMCreateMassMatrix_Plex(DM dmCoarse, DM dmFine, Mat *mass)
     PetscDS  ds;
     Vec      u;
     IS       cellIS;
-    PetscHashFormKey key;
+    PetscFormKey key;
     PetscInt depth;
 
     ierr = DMClone(dmFine, &dmc);CHKERRQ(ierr);
