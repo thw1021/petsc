@@ -113,6 +113,7 @@ Changes: Development
 -  Add ``DMPlexTopologyLoad()``, ``DMPlexCoordinatesLoad()``, and
    ``DMPlexLabelsLoad()`` for incremental loading of a ``DMPlex`` object
    from an HDF5 file
+-  Add ``DMSNESComputeJacobianAction()`` and move ``DMPlexComputeJacobianAction()`` to ``DMPlexComputeJacobian_Action_Internal()``
 
 .. rubric:: FE/FV:
 
