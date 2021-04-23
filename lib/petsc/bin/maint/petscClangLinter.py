@@ -1012,14 +1012,14 @@ checkFunctionMap = {
 def testExtendLibClang(cursor):
   import ctypes
 
+  callbackVisit = ctypes.CFUNCTYPE(ctypes.c_uint,ctypes.c_void_p,clx.Cursor,clx.SourceRange)
   class CXCursorAndRangeVisitor(ctypes.Structure):
-    _fields_ = [("context", ctypes.c_void_p),("visit",ctypes.CFUNCTYPE(ctypes.c_uint,ctypes.c_void_p,clx.Cursor,clx.SourceRange))]
+    _fields_ = [("context", ctypes.c_void_p),("visit",callbackVisit)]
 
+    @staticmethod
     def visit(ctx,cursor,srcRange):
       print("IN VISIT")
-      print(cursor)
-      print(srcRange)
-      return 1
+      return 0
 
   item = ("clang_findReferencesInFile",
           [clx.Cursor,clx.File,CXCursorAndRangeVisitor],
@@ -1222,7 +1222,7 @@ def main(petscDir,petscArch,altBaseDir=None,clangDir=None,clangLib=None,verbose=
   checkFunctionFilter -- list of function names as strings to only check for, none == all of them. For example ["PetscValidPointer","PetscValidHeaderSpecific"] (default: None)
   applyPatches -- automatically apply patch files to source if they are generated (default: False)
   extraCompilerFlags -- list of extra compiler flags to append to petsc and system flags. For example ["-I/my/non/standard/include","-Wsome_warning"] (default: None)
-  extraHeaderIncludes -- list of #include statements to append to the precompiled mega-header, these must be in the include search path (use extraCompilerFlags to make such search path additions). For example ["#include <slepc/private/epsimpl.h>"] (default: None)
+  extraHeaderIncludes -- list of #include statements to append to the precompiled mega-header, these must be in the include search path. Note that setting altBaseDir automatically appends altBaseDir/include to the search path (in last place). Use extraCompilerFlags to make any other search path additions. For example ["#include <slepc/private/epsimpl.h>"] (default: None)
   """
   def osResolvePath(path):
     if path:
@@ -1300,7 +1300,7 @@ def main(petscDir,petscArch,altBaseDir=None,clangDir=None,clangLib=None,verbose=
     if not maxWorkers: maxWorkers = max(mp.cpu_count()-1,1)
     if maxWorkers == 1:
       multiproc = False
-      print(rootPrintPrefix,"Number of processes ({}) too small. Not using multiprocessing".format(maxWorkers))
+      print(rootPrintPrefix,"Number of worker processes ({}) too small, disabling multiprocessing".format(maxWorkers))
     else:
       # get the library file to pass to subprocesses
       clangLib = clx.conf.get_filename()
@@ -1445,16 +1445,15 @@ if __name__ == "__main__":
   grouppetsc = parser.add_argument_group(title="petsc location settings")
   grouppetsc.add_argument("--PETSC_DIR",required=False,default=petscDir,help="if this option is unused defaults to environment variable $PETSC_DIR",dest="petscdir")
   grouppetsc.add_argument("--PETSC_ARCH",required=False,default=petscArch,help="if this option is unused defaults to environment variable $PETSC_ARCH",dest="petscarch")
-  parser.add_argument("--alt-base",required=False,default=petscDir,help="Alternate base directory of source tree (e.g. $SLEPC_DIR), defaults to $PETSC_DIR",dest="altbase")
-  parser.add_argument("--verbose",required=False,action="store_true",help="verbose progress printed to screen")
-  parser.add_argument("--show-warnings",required=False,action="store_true",help="show ast matching warnings",dest="warn")
+  parser.add_argument("-d","--alt-base",required=False,default=petscDir,help="Alternate base directory of source tree, must contain 'src' and 'include' directories (e.g. $SLEPC_DIR), defaults to $PETSC_DIR",dest="altbase")
+  parser.add_argument("-v","--verbose",required=False,action="store_true",help="verbose progress printed to screen")
   filterFuncChoices = ", ".join(list(checkFunctionMap.keys()))
-  parser.add_argument("--filter-functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="filterfunc")
+  parser.add_argument("-f","--functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="funcs")
   mansecChoices = ", ".join(petscMansecs)
-  parser.add_argument("--mansecs",required=False,nargs="+",default=petscMansecs,choices=petscMansecs,metavar="MANSEC",help="run only over specified mansecs (defaults to all), choose from: "+mansecChoices)
-  parser.add_argument("--no-multiprocessing",required=False,action="store_false",help="use multiprocessing",dest="multiproc")
-  parser.add_argument("--jobs",required=False,type=int,default=0,nargs="?",help="number of multiprocessing jobs, 0 defaults to number of processors on machine")
-  parser.add_argument("--apply-patches",required=False,action="store_true",help="apply patches automatically instead of saving to file",dest="apply")
+  parser.add_argument("-m","--mansecs",required=False,nargs="+",default=petscMansecs,choices=petscMansecs,metavar="MANSEC",help="run only over specified mansecs, choose from: "+mansecChoices)
+  parser.add_argument("-s","--no-multiprocessing",required=False,action="store_false",help="run linter in serial mode",dest="multiproc")
+  parser.add_argument("-j","--jobs",required=False,type=int,default=0,nargs="?",help="number of multiprocessing jobs, 0 means number of processors on machine")
+  parser.add_argument("-a","--apply-patches",required=False,action="store_true",help="automatically apply patches that are saved to file",dest="apply")
   parser.add_argument("--CXXFLAGS",required=False,nargs="+",default=[],help="extra flags to pass to CXX compiler",dest="cxxflags")
   args = parser.parse_args()
 
@@ -1466,8 +1465,5 @@ if __name__ == "__main__":
   if args.clanglib:
     args.clangdir = None
 
-  if args.verbose:
-    args.warn = True
-
-  ret = main(args.petscdir,args.petscarch,altBaseDir=args.altbase,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,multiproc=args.multiproc,maxWorkers=args.jobs,mansecs=args.mansecs,checkFunctionFilter=args.filterfunc,applyPatches=args.apply,extraCompilerFlags=args.cxxflags)
+  ret = main(args.petscdir,args.petscarch,altBaseDir=args.altbase,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,multiproc=args.multiproc,maxWorkers=args.jobs,mansecs=args.mansecs,checkFunctionFilter=args.funcs,applyPatches=args.apply,extraCompilerFlags=args.cxxflags)
   sys.exit(ret)
