@@ -13,10 +13,12 @@ PETSC_EXTERN PetscErrorCode PetscWeakFormCreate(MPI_Comm, PetscWeakForm *);
 PETSC_EXTERN PetscErrorCode PetscWeakFormDestroy(PetscWeakForm *);
 PETSC_EXTERN PetscErrorCode PetscWeakFormView(PetscWeakForm, PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscWeakFormCopy(PetscWeakForm, PetscWeakForm);
+PETSC_EXTERN PetscErrorCode PetscWeakFormClear(PetscWeakForm);
 PETSC_EXTERN PetscErrorCode PetscWeakFormGetNumFields(PetscWeakForm, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscWeakFormSetNumFields(PetscWeakForm, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscHashFormKeySort(PetscInt, PetscHashFormKey[]);
 PETSC_EXTERN PetscErrorCode PetscWeakFormRewriteKeys(PetscWeakForm, DMLabel, PetscInt, const PetscInt[]);
+PETSC_EXTERN PetscErrorCode PetscWeakFormClearIndex(PetscWeakForm, DMLabel, PetscInt, PetscInt, PetscWeakFormKind, PetscInt);
 
 PETSC_EXTERN PetscErrorCode PetscWeakFormGetObjective(PetscWeakForm, DMLabel, PetscInt, PetscInt, PetscInt *,
                                                       void (***)(PetscInt, PetscInt, PetscInt,
