@@ -8,31 +8,41 @@ class TestStdout(unittest.TestCase):
         from io import StringIO
         import sys
         prevstdout = sys.stdout
+        prevstderr = sys.stderr
         sys.stdout = StringIO()
+        sys.stderr = StringIO()
 
         import numpy as np
         from petsc4py import PETSc
 
         if not (__name__ == '__main__'):
-            PETSc._push_python_stdout()
+            PETSc._push_python_vfprintf()
 
         a = np.array([0.,0.,0.])
         a_vec = PETSc.Vec().createWithArray(a,comm=PETSc.COMM_SELF)
         a_vec.view()
+        v = PETSc.Viewer.STDERR(PETSc.COMM_SELF)
+        v.printfASCII("Error message")
+
         newstdout = sys.stdout
+        newstderr = sys.stderr
         sys.stdout = prevstdout
+        sys.stderr = prevstderr
+
         output = newstdout.getvalue()
-        sys.stdout = prevstdout
+        error = newstderr.getvalue()
         if not (__name__ == '__main__'):
-            PETSc._pop_python_stdout()
-        shouldbe = \
+            PETSc._pop_python_vfprintf()
+        stdoutshouldbe = \
 """Vec Object:\x00 1 MPI processes
 \x00  type: seq
 \x000.
 0.
 0.
 """
-        self.assertEqual(output,shouldbe)
+        stderrshouldbe = "Error message\x00"
+        self.assertEqual(output,stdoutshouldbe)
+        self.assertEqual(error,stderrshouldbe)
 
 
 
