@@ -25,7 +25,7 @@ static PetscErrorCode MatGetDiagonal_Htool(Mat A,Vec v)
 
   PetscFunctionBegin;
   ierr = MatHasCongruentLayouts(A,&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Only congruent layouts supported");
+  if (!flg) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Only congruent layouts supported");
   ierr = VecGetArrayWrite(v,&x);CHKERRQ(ierr);
   a->hmatrix->copy_local_diagonal(x);
   ierr = VecRestoreArrayWrite(v,&x);CHKERRQ(ierr);
@@ -43,7 +43,7 @@ static PetscErrorCode MatGetDiagonalBlock_Htool(Mat A,Mat *b)
 
   PetscFunctionBegin;
   ierr = MatHasCongruentLayouts(A,&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Only congruent layouts supported");
+  if (!flg) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Only congruent layouts supported");
   ierr = PetscObjectQuery((PetscObject)A,"DiagonalBlock",(PetscObject*)&B);CHKERRQ(ierr); /* same logic as in MatGetDiagonalBlock_MPIDense() */
   if (!B) {
     ierr = MatCreateDense(PETSC_COMM_SELF,A->rmap->n,A->rmap->n,A->rmap->n,A->rmap->n,NULL,&B);CHKERRQ(ierr);
@@ -120,7 +120,7 @@ static PetscErrorCode MatIncreaseOverlap_Htool(Mat A,PetscInt is_max,IS is[],Pet
         if (idx[j] + k < A->rmap->N && idx[j] + k < A->cmap->N) set.insert(idx[j] + k); /* do not insert indices greater than the dimension of A */
       }
     }
-    ierr = ISRestoreIndices(is[i],&idx);
+    ierr = ISRestoreIndices(is[i],&idx);CHKERRQ(ierr);
     ierr = ISDestroy(is+i);CHKERRQ(ierr);
     size = set.size(); /* size with overlap */
     ierr = PetscMalloc1(size,&oidx);CHKERRQ(ierr);
@@ -479,7 +479,7 @@ static PetscErrorCode MatProductSymbolic_Htool(Mat C)
   A = product->A;
   B = product->B;
   ierr = PetscObjectTypeCompareAny((PetscObject)B,&flg,MATSEQDENSE,MATMPIDENSE,"");CHKERRQ(ierr);
-  if (!flg) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"MatProduct_AB not supported for %s",((PetscObject)product->B)->type_name);
+  if (!flg) SETERRQ1(PetscObjectComm((PetscObject)B),PETSC_ERR_SUP,"MatProduct_AB not supported for %s",((PetscObject)product->B)->type_name);
   switch (product->type) {
   case MATPRODUCT_AB:
     if (C->rmap->n == PETSC_DECIDE || C->cmap->n == PETSC_DECIDE || C->rmap->N == PETSC_DECIDE || C->cmap->N == PETSC_DECIDE) {
@@ -492,7 +492,7 @@ static PetscErrorCode MatProductSymbolic_Htool(Mat C)
     ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"ProductType %s is not supported",MatProductTypes[product->type]);
+    SETERRQ1(PetscObjectComm((PetscObject)B),PETSC_ERR_SUP,"ProductType %s is not supported",MatProductTypes[product->type]);
   }
   C->ops->productsymbolic = NULL;
   C->ops->productnumeric = MatProductNumeric_Htool;
@@ -626,7 +626,7 @@ static PetscErrorCode MatTranspose_Htool(Mat A,MatReuse reuse,Mat *B)
   PetscErrorCode          ierr;
 
   PetscFunctionBegin;
-  if (reuse == MAT_INPLACE_MATRIX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"MatTranspose() with MAT_INPLACE_MATRIX not supported");
+  if (reuse == MAT_INPLACE_MATRIX) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatTranspose() with MAT_INPLACE_MATRIX not supported");
   if (reuse == MAT_INITIAL_MATRIX) {
     ierr = MatCreate(PetscObjectComm((PetscObject)A),&C);CHKERRQ(ierr);
     ierr = MatSetSizes(C,n,m,N,M);CHKERRQ(ierr);
