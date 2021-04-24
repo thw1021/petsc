@@ -1450,7 +1450,7 @@ if __name__ == "__main__":
   filterFuncChoices = ", ".join(list(checkFunctionMap.keys()))
   parser.add_argument("-f","--functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="funcs")
   mansecChoices = ", ".join(petscMansecs)
-  parser.add_argument("-m","--mansecs",required=False,nargs="+",default=petscMansecs,choices=petscMansecs,metavar="MANSEC",help="run only over specified mansecs, choose from: "+mansecChoices)
+  parser.add_argument("-m","--mansecs",required=False,nargs="+",default=petscMansecs,choices=petscMansecs,metavar="MANSEC",help="run only over specified mansecs, choose from: "+mansecChoices,dest="mansecs")
   parser.add_argument("-s","--no-multiprocessing",required=False,action="store_false",help="run linter in serial mode",dest="multiproc")
   parser.add_argument("-j","--jobs",required=False,type=int,default=0,nargs="?",help="number of multiprocessing jobs, 0 means number of processors on machine")
   parser.add_argument("-a","--apply-patches",required=False,action="store_true",help="automatically apply patches that are saved to file",dest="apply")
