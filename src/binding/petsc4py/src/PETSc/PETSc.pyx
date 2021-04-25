@@ -348,10 +348,14 @@ cdef int PetscVFPrintf_PythonStd(FILE *fd, const char formt[], va_list ap):
     cdef size_t final_pos
     if (fd == PETSC_STDOUT) and not (sys.stdout == sys.__stdout__):
         CHKERR( PetscVSNPrintf(&cstring[0],stringlen,formt,&final_pos,ap))
+        if final_pos > 0 and cstring[final_pos-1] == '\x00':
+            final_pos -= 1
         ustring = cstring[:final_pos].decode('UTF-8')
         sys.stdout.write(ustring)
     elif (fd == PETSC_STDERR) and not (sys.stderr == sys.__stderr__):
         CHKERR( PetscVSNPrintf(&cstring[0],stringlen,formt,&final_pos,ap))
+        if final_pos > 0 and cstring[final_pos-1] == '\x00':
+            final_pos -= 1
         ustring = cstring[:final_pos].decode('UTF-8')
         sys.stderr.write(ustring)
     else:

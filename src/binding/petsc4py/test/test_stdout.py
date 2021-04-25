@@ -34,13 +34,13 @@ class TestStdout(unittest.TestCase):
         if not (__name__ == '__main__'):
             PETSc._pop_python_vfprintf()
         stdoutshouldbe = \
-"""Vec Object:\x00 1 MPI processes
-\x00  type: seq
-\x000.
+"""Vec Object: 1 MPI processes
+  type: seq
+0.
 0.
 0.
 """
-        stderrshouldbe = "Error message\x00"
+        stderrshouldbe = "Error message"
         if PETSc._stdout_is_stderr():
             stdoutshouldbe = stdoutshouldbe + stderrshouldbe
             stderrshouldbe = ""
