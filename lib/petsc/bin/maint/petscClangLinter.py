@@ -53,7 +53,7 @@ castCursors     = {clx.CursorKind.CSTYLE_CAST_EXPR,clx.CursorKind.CXX_STATIC_CAS
 # Cursors that may be attached when types are converted
 convertCursors  = castCursors|{clx.CursorKind.UNEXPOSED_EXPR}
 
-strTokens       = {clx.TokenKind.IDENTIFIER}
+varTokens       = {clx.TokenKind.IDENTIFIER}
 
 # General Array types, note this doesn't contain the pointer type since that is usually handled
 # differently
@@ -264,7 +264,7 @@ class ArgCursor(object):
           name = ArgCursor.getNameFromCursor(pointees[0])
     if not name:
       # Catchall last attempt, we become the compiler and parse the tokens ourselves
-      tokenList = [t for t in cursor.get_tokens() if t.kind in strTokens]
+      tokenList = [t for t in cursor.get_tokens() if t.kind in varTokens]
       # Remove iterator variables
       tokenList = [t for t in tokenList if t.cursor.kind not in mathCursors]
       # removes all cursors that have duplicate spelling
@@ -562,6 +562,38 @@ class FilterFunctor(object):
 
 
 """Generic test and utility functions"""
+def findAllCursorReferences(cursor):
+  import ctypes
+
+  foundCursors  = []
+  callbackProto = ctypes.CFUNCTYPE(ctypes.c_uint,ctypes.c_void_p,clx.Cursor,clx.SourceRange)
+
+  class CXCursorAndRangeVisitor(ctypes.Structure):
+    # Not strictly accurate recreation, this struct expects (void *) for the context, but
+    # since C lets anything be a (void *) we can pass in a (PyObject *)
+    _fields_ = [("context",ctypes.py_object),("visit",callbackProto)]
+
+    @staticmethod
+    def callBack(ctx,cursor,srcRange):
+      # convert to py_object then take value of the pointer, i.e. the original class
+      origCursor = ctypes.cast(ctx,ctypes.py_object).value
+      # The "cursor" returned here is actually just a CXCursor, not the real
+      # clx.Cursor that we lead python to believe in our function prototype. Luckily we
+      # have all we need to remake the python object from scratch
+      cursor = ArgCursor(clx.Cursor.from_location(origCursor.translation_unit,srcRange.start))
+      foundCursors.append(cursor)
+      return 1 # continue
+
+  if not hasattr(clx.conf.lib,"clang_findReferencesInFile"):
+    item = ("clang_findReferencesInFile",[clx.Cursor,clx.File,CXCursorAndRangeVisitor],ctypes.c_uint)
+    clx.register_function(clx.conf.lib,item,False)
+
+  pyCtx      = ctypes.py_object(cursor)
+  callBack   = callbackProto(CXCursorAndRangeVisitor.callBack)
+  cxCallback = CXCursorAndRangeVisitor(pyCtx,callBack)
+  clx.conf.lib.clang_findReferencesInFile(cursor._ArgCursor__cursor,cursor.location.file,cxCallback)
+  return foundCursors
+
 def addFunctionFixToBadSource(badSource,obj,funcCursor,validFuncName):
   """
   shorthand for extracting a fix from a function cursor
@@ -700,21 +732,16 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
     myFunction(barType bar)
     ...
     fooType foo = bar->baz;
-    macro(foo,barIdx)
-    /* or */
-    macro(bar->baz,barIdx)
-
-    Note it CANNOT decode the following:
-
-    fooType foo;
-    foo = bar->baz;
     macro(foo,barIdx);
-
-    as foo is no longer directly linked to bar either on definition or use
+    /* or */
+    macro(bar->baz,barIdx);
+    /* or */
+    initFooFromBar(bar,&foo);
+    macro(foo,barIdx);
     """
-    defCursor = obj.get_definition()
+    potentialParents = []
+    defCursor        = obj.get_definition()
     if defCursor:
-      potentialParents = []
       if defCursor.location == obj.location:
         raise RuntimeError("Object has definition cursor, yet the cursor did not move. This should be handled!")
       elif defCursor.kind == clx.CursorKind.VAR_DECL:
@@ -735,21 +762,75 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
             potentialParentsTemp = [c for c in memberChild.walk_preorder() if c.kind == clx.CursorKind.DECL_REF_EXPR]
             potentialParentsTemp = [parent for parent in potentialParentsTemp if parent.spelling != memberChild.spelling]
             potentialParents.extend(potentialParentsTemp)
-      if potentialParents:
-        # arguably at this point anything other than len(potentialParents) should be 1,
-        # and anything else can be considered a failure of this routine (therefore a RTE)
-        # as it should be able to detect the definition.
-        if len(potentialParents) > 1:
-          # If >1 cursor, probably a bug since we should have weeded something out
-          raise RuntimeError("Cannot determine a unique definition cursor for object")
-        name = ArgCursor.getNameFromCursor(potentialParents[0])
-        try:
-          loc  = parentArgNames.index(name)
-        except ValueError as ve:
-          # name isn't in the parent arguments, so we raise parsing error from it
-          raise ParsingError from ve
-        return loc
-    raise ParsingError
+    if not potentialParents:
+      # this is the if-all-else-fails approach, first we search the __entire__ file for
+      # references to the cursor. Once we have some matches we take the earliest one
+      # as this one is in theory where the current cursor is instantiated. Then we select
+      # the best match for the possible instantiating cursor and recursively call this
+      # function. This section stops when the cursor definition is of type PARM_DECL (i.e.
+      # defined as the function parameter to the parent function).
+      if obj.kind in convertCursors:
+        curs = [ArgCursor(c,obj.argidx) for c in obj.walk_preorder() if (c.kind == clx.CursorKind.DECL_REF_EXPR) and (c.displayname == obj.name)]
+        assert len(curs) == 1
+        obj = curs[0]
+      refsAll = findAllCursorReferences(obj)
+      # don't care about uses of object __after__ the macro, and don't want to pick up
+      # the actual macro location either
+      refsAll = [r for r in refsAll if r.location.line < obj.location.line]
+      # we just tried those and they didn't work, also more importantly weeds out the
+      # instantiation line if this is an intermediate cursor in a recursive call to this
+      # function
+      refsAll = [r for r in refsAll if r.kind not in {clx.CursorKind.VAR_DECL,clx.CursorKind.FIELD_DECL}]
+      if not len(refsAll):
+        raise RuntimeError("Could not determine the origin of cursor {}".format(obj))
+      # take the first, as this is the earliest
+      firstRef  = refsAll[0]
+      tu,loc    = firstRef.translation_unit,firstRef.location
+      srcLen    = len(firstRef.getRawSource())
+      # why the following song and dance? Because you cannot walk the AST backwards, and
+      # in the case that the current cursor is in a function call we need to access
+      # our co-arguments to the function, i.e. "adjacent" branches since they should link
+      # to (or be) in the parent functions argument list. So we have to
+      # essentially reparse this line to be able to start from the top.
+      lineStart = clx.SourceLocation.from_position(tu,loc.file,loc.line,1)
+      lineEnd   = clx.SourceLocation.from_position(tu,loc.file,loc.line,srcLen+1)
+      lineRange = clx.SourceRange.from_locations(lineStart,lineEnd)
+      tGroup    = list(clx.TokenGroup.get_tokens(tu,lineRange))
+      funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind == clx.TypeKind.FUNCTIONPROTO]
+      if funcProto:
+        import itertools
+
+        if len(funcProto) != 1:
+          raise RuntimeError("Could not determine unique function prototype from {} for prevenance of {}".format("".join([t.spelling for t in tGroup]),obj))
+        idx      = funcProto[0]
+        iterator = itertools.takewhile(lambda t: (t.spelling != ")") and t.kind in varTokens,tGroup[idx+2:])
+        args     = [a.cursor for a in iterator if ArgCursor.getNameFromCursor(a.cursor) != obj.name]
+
+        # we now have completely different cursor selected, so we recursively call this
+        # function
+        if args[0].get_definition().kind != clx.CursorKind.PARM_DECL:
+          assert len(args) == 1
+          return matchFromObjectDefinition(ArgCursor(args[0]),parentArgNames)
+        potentialParents.extend(args)
+      else:
+        raise NotImplementedError("Need to implement handling previous definitions that do not come from function calls")
+    if potentialParents:
+      # arguably at this point anything other than len(potentialParents) should be 1,
+      # and anything else can be considered a failure of this routine (therefore a RTE)
+      # as it should be able to detect the definition.
+      if len(potentialParents) > 1:
+        # If >1 cursor, probably a bug since we should have weeded something out
+        raise RuntimeError("Cannot determine a unique definition cursor for object")
+      assert potentialParents[0].get_definition().kind == clx.CursorKind.PARM_DECL
+      name = ArgCursor.getNameFromCursor(potentialParents[0])
+      try:
+        loc  = parentArgNames.index(name)
+      except ValueError as ve:
+        # name isn't in the parent arguments, so we raise parsing error from it
+        raise ParsingError from ve
+      return loc
+    else:
+      raise ParsingError
 
   if idx.canonical.kind not in mathCursors:
     # sometimes it is impossible to tell if the index is correct so this is a warnning not
@@ -1009,24 +1090,6 @@ checkFunctionMap = {
 }
 
 """Utility and pre-check setup"""
-def testExtendLibClang(cursor):
-  import ctypes
-
-  callbackVisit = ctypes.CFUNCTYPE(ctypes.c_uint,ctypes.c_void_p,clx.Cursor,clx.SourceRange)
-  class CXCursorAndRangeVisitor(ctypes.Structure):
-    _fields_ = [("context", ctypes.c_void_p),("visit",callbackVisit)]
-
-    @staticmethod
-    def visit(ctx,cursor,srcRange):
-      print("IN VISIT")
-      return 0
-
-  item = ("clang_findReferencesInFile",
-          [clx.Cursor,clx.File,CXCursorAndRangeVisitor],
-          ctypes.c_uint)
-  clx.register_function(clx.conf.lib,item,True)
-  return
-
 def filterCheckFunctionMap(filterChecks):
   """
   Remove checks from checkFunctionMap if they are not in filterChecks
@@ -1115,36 +1178,37 @@ def findFunctionCallExpr(tu,macroNames):
 
 def tryToFindLibclangDir():
   """
-  Crudely tries to find libclang directory first using llvm-config, and then checks a few places on macos
+  Crudely tries to find libclang directory first using ctypes.util.find_library(), then llvm-config, and then finally checks a few places on macos
   """
-  import subprocess
+  import subprocess,ctypes.util
 
-  llvmLibDir = None
-  try:
-    if sys.version_info >= (3,7):
-      output = subprocess.run(["llvm-config","--libdir"],capture_output=True,universal_newlines=True,check=True)
-    else:
-      output = subprocess.run(["llvm-config","--libdir"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,check=True)
-    llvmLibDir = output.stdout.strip()
-  except FileNotFoundError:
-    # FileNotFoundError: [Errno 2] No such file or directory: 'llvm-config'
-    # try to find llvmLibDir by hand
-    import platform
+  llvmLibDir = ctypes.util.find_library("clang")
+  if not llvmLibDir:
+    try:
+      if sys.version_info >= (3,7):
+        output = subprocess.run(["llvm-config","--libdir"],capture_output=True,universal_newlines=True,check=True)
+      else:
+        output = subprocess.run(["llvm-config","--libdir"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,check=True)
+      llvmLibDir = output.stdout.strip()
+    except FileNotFoundError:
+      # FileNotFoundError: [Errno 2] No such file or directory: 'llvm-config'
+      # try to find llvmLibDir by hand
+      import platform
 
-    if platform.system().lower() == "darwin":
-      try:
-        if sys.version_info >= (3,7):
-          output = subprocess.run(["xcode-select","-p"],capture_output=True,universal_newlines=True,check=True)
-        else:
-          output = subprocess.run(["xcode-select","-p"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,check=True)
-        xcodeDir = output.stdout.strip()
-        if xcodeDir == "/Applications/Xcode.app/Contents/Developer": # default Xcode path
-          llvmLibDir = os.path.join(xcodeDir,"Toolchains","XcodeDefault.xctoolchain","usr","lib")
-        elif xcodeDir == "/Library/Developer/CommandLineTools":      # CLT path
-          llvmLibDir = os.path.join(xcodeDir,"usr","lib")
-      except FileNotFoundError:
-        # FileNotFoundError: [Errno 2] No such file or directory: 'xcode-select'
-        pass
+      if platform.system().lower() == "darwin":
+        try:
+          if sys.version_info >= (3,7):
+            output = subprocess.run(["xcode-select","-p"],capture_output=True,universal_newlines=True,check=True)
+          else:
+            output = subprocess.run(["xcode-select","-p"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,check=True)
+          xcodeDir = output.stdout.strip()
+          if xcodeDir == "/Applications/Xcode.app/Contents/Developer": # default Xcode path
+            llvmLibDir = os.path.join(xcodeDir,"Toolchains","XcodeDefault.xctoolchain","usr","lib")
+          elif xcodeDir == "/Library/Developer/CommandLineTools":      # CLT path
+            llvmLibDir = os.path.join(xcodeDir,"usr","lib")
+        except FileNotFoundError:
+          # FileNotFoundError: [Errno 2] No such file or directory: 'xcode-select'
+          pass
   return llvmLibDir
 
 
