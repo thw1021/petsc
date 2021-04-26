@@ -420,4 +420,9 @@ PETSC_STATIC_INLINE PetscInt DMPolytopeTypeGetNumVertices(DMPolytopeType ct)
   }
 }
 
+#ifdef PETSC_HAVE_LIBCEED
+#include <ceed.h>
+PETSC_EXTERN PetscErrorCode DMGetCeed(DM, Ceed *);
+#endif
+
 #endif
