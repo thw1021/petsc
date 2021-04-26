@@ -776,6 +776,10 @@ PetscErrorCode  DMDestroy(DM *dm)
     ierr = (*(*dm)->ops->destroy)(*dm);CHKERRQ(ierr);
   }
   ierr = DMMonitorCancel(*dm);CHKERRQ(ierr);
+#ifdef PETSC_HAVE_LIBCEED
+  ierr = CeedElemRestrictionDestroy(&(*dm)->ceedERestrict);CHKERRQ(ierr);
+  ierr = CeedDestroy(&(*dm)->ceed);CHKERRQ(ierr);
+#endif
   /* We do not destroy (*dm)->data here so that we can reference count backend objects */
   ierr = PetscHeaderDestroy(dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -821,6 +825,17 @@ PetscErrorCode  DMSetUp(DM dm)
 .   -dm_vec_type <type>  - type of vector to create inside DM
 .   -dm_mat_type <type>  - type of matrix to create inside DM
 -   -dm_is_coloring_type - <global or local>
+
+    DMPLEX Specific creation options
++ -dm_plex_shape <shape>      - The domain shape, such as DM_SHAPE_BOX, DM_SHAPE_SPHERE, etc.
++ -dm_plex_dim <dim>          - Set the topological dimension
+. -dm_plex_simplex <bool>     - PETSC_TRUE for simplex elements, PETSC_FALSE for tensor elements
+. -dm_plex_interpolate <bool> - PETSC_TRUE turns on topological interpolation (creating edges and faces)
+. -dm_plex_box_faces <m,n,p>  - Number of faces in each linear direction
+. -dm_plex_box_lower <x,y,z>  - Specify lower-left-bottom coordinates for the box
+. -dm_plex_box_upper <x,y,z>  - Specify upper-right-top coordinates for the box
+. -dm_plex_box_bd <bx,by,bz>  - Specify the DMBoundaryType for each direction
+- -dm_plex_sphere_radius <r>  - The sphere radius
 
     DMPLEX Specific Checks
 +   -dm_plex_check_symmetry        - Check that the adjacency information in the mesh is symmetric - DMPlexCheckSymmetry()
@@ -5522,6 +5537,20 @@ PetscErrorCode DMCreateDS(DM dm)
     DMLabel  label = dm->fields[f].label;
     PetscInt l;
 
+#ifdef PETSC_HAVE_LIBCEED
+    /* Move CEED context to discretizations */
+    {
+      PetscClassId id;
+
+      ierr = PetscObjectGetClassId(dm->fields[f].disc, &id);CHKERRQ(ierr);
+      if (id == PETSCFE_CLASSID) {
+        Ceed ceed;
+
+        ierr = DMGetCeed(dm, &ceed);CHKERRQ(ierr);
+        ierr = PetscFESetCEED((PetscFE) dm->fields[f].disc, ceed);CHKERRQ(ierr);
+      }
+    }
+#endif
     if (!label) {++Ndef; continue;}
     for (l = 0; l < Nl; ++l) if (label == labelSet[l]) break;
     if (l < Nl) continue;

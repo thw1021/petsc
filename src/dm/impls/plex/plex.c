@@ -13,6 +13,34 @@ PetscLogEvent DMPLEX_Interpolate, DMPLEX_Partition, DMPLEX_Distribute, DMPLEX_Di
 PETSC_EXTERN PetscErrorCode VecView_MPI(Vec, PetscViewer);
 
 /*@
+  DMPlexIsSimplex - Is the first cell in this mesh a simplex?
+
+  Input Parameter:
+. dm      - The DMPlex object
+
+  Output Parameter:
+. simplex - Flag checking for a simplex
+
+  Note: This just gives the first range of cells found. If the mesh has several cell types, it will only give the first.
+
+  Level: intermediate
+
+.seealso DMPlexGetSimplexOrBoxCells(), DMPlexGetCellType(), DMPlexGetHeightStratum(), DMPolytopeTypeGetNumVertices()
+@*/
+PetscErrorCode DMPlexIsSimplex(DM dm, PetscBool *simplex)
+{
+  DMPolytopeType ct;
+  PetscInt       cStart;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMPlexGetHeightStratum(dm, 0, &cStart, NULL);CHKERRQ(ierr);
+  ierr = DMPlexGetCellType(dm, cStart, &ct);CHKERRQ(ierr);
+  *simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct)+1 ? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+/*@
   DMPlexGetSimplexOrBoxCells - Get the range of cells which are neither prisms nor ghost FV cells
 
   Input Parameter:
@@ -1128,6 +1156,16 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       ierr = ISRestoreIndices(valueIS, &values);CHKERRQ(ierr);
       ierr = ISDestroy(&valueIS);CHKERRQ(ierr);
     }
+#ifdef PETSC_HAVE_LIBCEED
+    {
+      Ceed        ceed;
+      const char *usedresource;
+
+      ierr = DMGetCeed(dm, &ceed);CHKERRQ(ierr);
+      ierr = CeedGetResource(ceed, &usedresource);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "libCEED Backend: %s\n", usedresource);CHKERRQ(ierr);
+    }
+#endif
     /* If no fields are specified, people do not want to see adjacency */
     if (dm->Nf) {
       PetscInt f;

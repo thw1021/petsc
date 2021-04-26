@@ -282,6 +282,10 @@ struct _p_DM {
   PetscInt                numbermonitors;
 
   PetscObject             dmksp,dmsnes,dmts;
+#ifdef PETSC_HAVE_LIBCEED
+  Ceed                    ceed;                 /* LibCEED context */
+  CeedElemRestriction     ceedERestrict;        /* Map from the local vector (Lvector) to the cells (Evector) */
+#endif
 };
 
 PETSC_EXTERN PetscLogEvent DM_Convert;

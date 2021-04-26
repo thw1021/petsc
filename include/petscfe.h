@@ -287,4 +287,11 @@ PETSC_EXTERN PetscErrorCode PetscFECreatePointTrace(PetscFE, PetscInt, PetscFE *
 PETSC_EXTERN PetscErrorCode PetscFEOpenCLSetRealType(PetscFE, PetscDataType);
 PETSC_EXTERN PetscErrorCode PetscFEOpenCLGetRealType(PetscFE, PetscDataType *);
 
+#ifdef PETSC_HAVE_LIBCEED
+#include <ceed.h>
+
+PETSC_EXTERN PetscErrorCode PetscFEGetCEEDBasis(PetscFE, CeedBasis *);
+PETSC_EXTERN PetscErrorCode PetscFESetCEED(PetscFE, Ceed);
+#endif
+
 #endif
