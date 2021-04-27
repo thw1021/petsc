@@ -55,6 +55,8 @@ convertCursors  = castCursors|{clx.CursorKind.UNEXPOSED_EXPR}
 
 varTokens       = {clx.TokenKind.IDENTIFIER}
 
+functionTypes   = {clx.TypeKind.FUNCTIONPROTO,clx.TypeKind.FUNCTIONNOPROTO}
+
 # General Array types, note this doesn't contain the pointer type since that is usually handled
 # differently
 arrayTypes      = {clx.TypeKind.INCOMPLETEARRAY,clx.TypeKind.CONSTANTARRAY,clx.TypeKind.VARIABLEARRAY}
@@ -217,7 +219,8 @@ class ArgCursor(object):
       locStr   = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
       # Does not yet raise exception so we can call it here
       typename = ArgCursor.getTypenameFromCursor(cursor)
-      return "'{}' of kind '{}' of type '{}' at {}".format(name,kind,typename,locStr)
+      srcStr   = ArgCursor.getFormattedSourceFromCursor(cursor,nboth=2)
+      return "'{}' of kind '{}' of type '{}' at {}:\n{}".format(name,kind,typename,locStr,srcStr)
 
     name = None
     if cursor.spelling:
@@ -263,18 +266,19 @@ class ArgCursor(object):
       if len(pointees) == 1:
           name = ArgCursor.getNameFromCursor(pointees[0])
     if not name:
-      # Catchall last attempt, we become the compiler and parse the tokens ourselves
+      # Catchall last attempt, we become the very thing we swore to destroy and parse the
+      # tokens ourselves
       tokenList = [t for t in cursor.get_tokens() if t.kind in varTokens]
       # Remove iterator variables
       tokenList = [t for t in tokenList if t.cursor.kind not in mathCursors]
       # removes all cursors that have duplicate spelling
       tokenList = list({t.spelling: t for t in tokenList}.values())
       if len(tokenList) != 1:
-        srcstr = petscClangLinterUtil.getRawSourceFromCursor(cursor)
         # For whatever reason (perhaps because its macro stringization hell) PETSC_HASH_MAP
         # and PetscKernel_XXX absolutely __brick__ the AST. The resultant cursors have no
         # children, no name, no tokens, and a completely incorrect SourceLocation.
         # They are for all intents and purposes uncheckable :)
+        srcstr = petscClangLinterUtil.getRawSourceFromCursor(cursor)
         if "PETSC_HASH" in srcstr:
           if "_MAP" in srcstr:
             raise ParsingError("Encountered unparsable PETSC_HASH_MAP for cursor {}".format(errorViewFromCursor(cursor)))
@@ -282,8 +286,10 @@ class ArgCursor(object):
             raise ParsingError("Encountered unparsable PETSC_HASH_SET for cursor {}".format(errorViewFromCursor(cursor)))
         elif "PetscKernel_" in srcstr:
           raise ParsingError("Encountered unparsable PetscKernel_XXX for cursor {}".format(errorViewFromCursor(cursor)))
+        elif ("PetscOptions" in srcstr) or ("PetscObjectOptions" in srcstr):
+          raise ParsingError("Encountered unparsable Petsc[Object]OptionsBegin for cursor {}".format(errorViewFromCursor(cursor)))
         else:
-          raise RuntimeError("Unexpected number of tokens for cursor {}".format(errorViewFromCursor(cursor)))
+          raise RuntimeError("Unexpected number of tokens ({}) for cursor {}".format(len(tokenList),errorViewFromCursor(cursor)))
       name = tokenList[0].spelling
       if not name:
         raise RuntimeError("Cannot determine name of symbol from cursor {}".format(errorViewFromCursor(cursor)))
@@ -328,13 +334,67 @@ class ArgCursor(object):
   def viewAst(self):
     return ArgCursor.viewAstFromCursor(self)
 
+  @staticmethod
+  def findCursorReferencesFromCursor(cursor):
+    import ctypes
+
+    foundCursors  = []
+    callbackProto = ctypes.CFUNCTYPE(ctypes.c_uint,ctypes.c_void_p,clx.Cursor,clx.SourceRange)
+
+    class CXCursorAndRangeVisitor(ctypes.Structure):
+      # see https://clang.llvm.org/doxygen/structCXCursorAndRangeVisitor.html
+      #
+      # typedef struct CXCursorAndRangeVisitor {
+      #   void *context;
+      #   enum CXVisitorResult (*visit)(void *context, CXCursor, CXSourceRange);
+      # } CXCursorAndRangeVisitor;
+      #
+      # Note this is not a  strictly accurate recreation, as this struct expects a
+      # (void *) but since C lets anything be a (void *) we can pass in a (PyObject *)
+      _fields_ = [("context",ctypes.py_object),("visit",callbackProto)]
+
+      @staticmethod
+      def callBack(ctx,cursor,srcRange):
+        # convert to py_object then take value of the pointer, i.e. the original class
+        origCursor = ctypes.cast(ctx,ctypes.py_object).value
+        # The "cursor" returned here is actually just a CXCursor, not the real
+        # clx.Cursor that we lead python to believe in our function prototype. Luckily we
+        # have all we need to remake the python object from scratch
+        cursor = clx.Cursor.from_location(origCursor.translation_unit,srcRange.start)
+        try:
+          cursor = ArgCursor(cursor)
+          foundCursors.append(cursor)
+        except ParsingError:
+          pass
+        return 1 # continue
+
+    if not hasattr(clx.conf.lib,"clang_findReferencesInFile"):
+      item = ("clang_findReferencesInFile",[clx.Cursor,clx.File,CXCursorAndRangeVisitor],ctypes.c_uint)
+      clx.register_function(clx.conf.lib,item,False)
+
+    pyCtx      = ctypes.py_object(cursor) # pyCtx = (PyObject *)cursor;
+    callBack   = callbackProto(CXCursorAndRangeVisitor.callBack)
+    cxCallback = CXCursorAndRangeVisitor(pyCtx,callBack)
+    clx.conf.lib.clang_findReferencesInFile(cursor._ArgCursor__cursor,cursor.location.file,cxCallback)
+    return foundCursors
+
+  def findCursorReferences(self):
+    return ArgCursor.findCursorReferencesFromCursor(self)
+
   def __init__(self,cursor,idx=-12345):
-    assert isinstance(cursor,clx.Cursor)
-    self.__cursor        = cursor
-    self.name            = ArgCursor.getNameFromCursor(cursor)
-    self.typename        = ArgCursor.getTypenameFromCursor(cursor)
-    self.derivedtypename = ArgCursor.getDerivedTypeNameFromCursor(cursor)
-    self.argidx          = idx
+    assert isinstance(cursor,clx.Cursor) or isinstance(cursor,ArgCursor)
+    if isinstance(cursor,ArgCursor):
+      self.__cursor        = cursor._ArgCursor__cursor
+      self.name            = cursor.name
+      self.typename        = cursor.typename
+      self.derivedtypename = cursor.derivedtypename
+      self.argidx          = cursor.argidx if idx == -12345 else idx
+    else:
+      self.__cursor        = cursor
+      self.name            = ArgCursor.getNameFromCursor(cursor)
+      self.typename        = ArgCursor.getTypenameFromCursor(cursor)
+      self.derivedtypename = ArgCursor.getDerivedTypeNameFromCursor(cursor)
+      self.argidx          = idx
     return
 
   def __getattr__(self,attr):
@@ -349,7 +409,7 @@ class ArgCursor(object):
   def __repr__(self):
     loc    = self.location
     locStr = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
-    srcStr = self.getFormattedSource()
+    srcStr = self.getFormattedSource(nboth=2)
     return "{}\n'{}' of derived type '{}', canonical type '{}'\n{}\n".format(locStr,self.name,self.derivedtypename,self.typename,srcStr)
 
 class SourceFix(object):
@@ -428,7 +488,7 @@ class BadSource(object):
     printList = [prefixStr,lockStr,showStr]
     errorStr  = self.getAllErrors()
     if errorStr: printList.append(errorStr)
-    warnStr   = self.getWarnings()
+    warnStr   = self.getAllWarnings()
     if warnStr: printList.append(warnStr)
     return "\n".join(printList)
 
@@ -486,7 +546,7 @@ class BadSource(object):
   def addWarning(self,warnMsg):
     try:
       if warnMsg in self.warnings[-1]:
-        # we just had the exact same warning, we can ignore it. this happens very often
+        # we just had the exact same warning, we can ignore it. This happens very often
         # for warnings occuring deep within a macro
         return
     except IndexError:
@@ -562,38 +622,6 @@ class FilterFunctor(object):
 
 
 """Generic test and utility functions"""
-def findAllCursorReferences(cursor):
-  import ctypes
-
-  foundCursors  = []
-  callbackProto = ctypes.CFUNCTYPE(ctypes.c_uint,ctypes.c_void_p,clx.Cursor,clx.SourceRange)
-
-  class CXCursorAndRangeVisitor(ctypes.Structure):
-    # Not strictly accurate recreation, this struct expects (void *) for the context, but
-    # since C lets anything be a (void *) we can pass in a (PyObject *)
-    _fields_ = [("context",ctypes.py_object),("visit",callbackProto)]
-
-    @staticmethod
-    def callBack(ctx,cursor,srcRange):
-      # convert to py_object then take value of the pointer, i.e. the original class
-      origCursor = ctypes.cast(ctx,ctypes.py_object).value
-      # The "cursor" returned here is actually just a CXCursor, not the real
-      # clx.Cursor that we lead python to believe in our function prototype. Luckily we
-      # have all we need to remake the python object from scratch
-      cursor = ArgCursor(clx.Cursor.from_location(origCursor.translation_unit,srcRange.start))
-      foundCursors.append(cursor)
-      return 1 # continue
-
-  if not hasattr(clx.conf.lib,"clang_findReferencesInFile"):
-    item = ("clang_findReferencesInFile",[clx.Cursor,clx.File,CXCursorAndRangeVisitor],ctypes.c_uint)
-    clx.register_function(clx.conf.lib,item,False)
-
-  pyCtx      = ctypes.py_object(cursor)
-  callBack   = callbackProto(CXCursorAndRangeVisitor.callBack)
-  cxCallback = CXCursorAndRangeVisitor(pyCtx,callBack)
-  clx.conf.lib.clang_findReferencesInFile(cursor._ArgCursor__cursor,cursor.location.file,cxCallback)
-  return foundCursors
-
 def addFunctionFixToBadSource(badSource,obj,funcCursor,validFuncName):
   """
   shorthand for extracting a fix from a function cursor
@@ -725,7 +753,7 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
   """
   Is the Arg # correct w.r.t. the function arguments
   """
-  def matchFromObjectDefinition(obj,parentArgNames):
+  def checkArgDefinition(obj,parentArgNames):
     """
     Try and see if the cursor corresponds to:
 
@@ -773,7 +801,7 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
         curs = [ArgCursor(c,obj.argidx) for c in obj.walk_preorder() if (c.kind == clx.CursorKind.DECL_REF_EXPR) and (c.displayname == obj.name)]
         assert len(curs) == 1
         obj = curs[0]
-      refsAll = findAllCursorReferences(obj)
+      refsAll = obj.findCursorReferences()
       # don't care about uses of object __after__ the macro, and don't want to pick up
       # the actual macro location either
       refsAll = [r for r in refsAll if r.location.line < obj.location.line]
@@ -796,24 +824,28 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
       lineEnd   = clx.SourceLocation.from_position(tu,loc.file,loc.line,srcLen+1)
       lineRange = clx.SourceRange.from_locations(lineStart,lineEnd)
       tGroup    = list(clx.TokenGroup.get_tokens(tu,lineRange))
-      funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind == clx.TypeKind.FUNCTIONPROTO]
+      funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind in functionTypes]
       if funcProto:
         import itertools
 
         if len(funcProto) != 1:
           raise RuntimeError("Could not determine unique function prototype from {} for prevenance of {}".format("".join([t.spelling for t in tGroup]),obj))
-        idx      = funcProto[0]
-        iterator = itertools.takewhile(lambda t: (t.spelling != ")") and t.kind in varTokens,tGroup[idx+2:])
-        args     = [a.cursor for a in iterator if ArgCursor.getNameFromCursor(a.cursor) != obj.name]
-
-        # we now have completely different cursor selected, so we recursively call this
-        # function
-        if args[0].get_definition().kind != clx.CursorKind.PARM_DECL:
-          assert len(args) == 1
-          return matchFromObjectDefinition(ArgCursor(args[0]),parentArgNames)
-        potentialParents.extend(args)
+        idx        = funcProto[0]
+        lambdaExpr = lambda t: (t.spelling != ")") and t.kind in varTokens
+        iterator   = map(lambda x: x.cursor,itertools.takewhile(lambdaExpr,tGroup[idx+2:]))
+      # we now have completely different cursor selected, so we recursively call this
+      # function
       else:
-        raise NotImplementedError("Need to implement handling previous definitions that do not come from function calls")
+        # not a function call, must be an assignment statement, meaning we should now
+        # assert that the current obj is being assigned to
+        assert ArgCursor.getNameFromCursor(tGroup[0].cursor) == obj.name
+        # find the binary operator, it will contain the most comprehensive AST
+        eqLoc    = list(map(lambda x: x.spelling,tGroup)).index("=")
+        iterator = tGroup[eqLoc].cursor.walk_preorder()
+        iterator = [c for c in iterator if c.kind == clx.CursorKind.DECL_REF_EXPR]
+
+      altCursor = [c for c in iterator if ArgCursor.getNameFromCursor(c) != obj.name]
+      potentialParents.extend(altCursor)
     if potentialParents:
       # arguably at this point anything other than len(potentialParents) should be 1,
       # and anything else can be considered a failure of this routine (therefore a RTE)
@@ -821,13 +853,18 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
       if len(potentialParents) > 1:
         # If >1 cursor, probably a bug since we should have weeded something out
         raise RuntimeError("Cannot determine a unique definition cursor for object")
-      assert potentialParents[0].get_definition().kind == clx.CursorKind.PARM_DECL
-      name = ArgCursor.getNameFromCursor(potentialParents[0])
-      try:
-        loc  = parentArgNames.index(name)
-      except ValueError as ve:
-        # name isn't in the parent arguments, so we raise parsing error from it
-        raise ParsingError from ve
+      parent = potentialParents[0]
+      if parent.get_definition().kind == clx.CursorKind.PARM_DECL:
+        name = ArgCursor.getNameFromCursor(parent)
+        try:
+          loc  = parentArgNames.index(name)
+        except ValueError as ve:
+          # name isn't in the parent arguments, so we raise parsing error from it
+          raise ParsingError from ve
+      else:
+        parent = ArgCursor(parent,obj.argidx)
+        # deeper into the rabbit hole
+        loc = checkArgDefinition(parent,parentArgNames)
       return loc
     else:
       raise ParsingError
@@ -848,7 +885,7 @@ def checkMatchingArgNum(badSource,obj,idx,parentArgs):
     matchLoc = parentArgNames.index(obj.name)
   except ValueError:
     try:
-      matchLoc = matchFromObjectDefinition(obj,parentArgNames)
+      matchLoc = checkArgDefinition(obj,parentArgNames)
     except ParsingError:
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
@@ -1075,6 +1112,7 @@ checkFunctionMap = {
   "PetscCheckSameType"                : checkObjIdxGenericN,
   "PetscValidType"                    : checkObjIdxGenericN,
   "PetscCheckSameComm"                : checkObjIdxGenericN,
+  "PetscCheckSameTypeAndComm"         : checkObjIdxGenericN,
   "PetscValidLogicalCollectiveScalar" : checkPetscValidLogicalCollectiveScalar,
   "PetscValidLogicalCollectiveReal"   : checkPetscValidLogicalCollectiveReal,
   "PetscValidLogicalCollectiveInt"    : checkPetscValidLogicalCollectiveInt,
