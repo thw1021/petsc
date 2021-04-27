@@ -86,7 +86,7 @@ def getRawSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContex
   # This keeps indentation between lines, but doesn't start the string halfway
   # across the screeen
   if trim:
-    minSpaces = min([len(s)-len(s.lstrip(' ')) for s in lineList])
+    minSpaces = min([len(s)-len(s.lstrip(' ')) for s in lineList if s.replace("\n","")])
     lineList  = [s[minSpaces:].rstrip() for s in lineList]
   srcStr = "\n".join(lineList)
   return srcStr
@@ -114,12 +114,11 @@ def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,num
   # Find number of spaces to remove from beginning of line based on lowest.
   # This keeps indentation between lines, but doesn't start the string halfway
   # across the screeen
-  minSpaces = min([len(s)-len(s.lstrip(' ')) for _,s in lineList])
+  minSpaces = min([len(s)-len(s.lstrip(' ')) for _,s in lineList if s.replace("\n","")])
   lineList  = [p+s[minSpaces:].rstrip() for p,s in lineList]
   srcStr    = "\n".join(lineList)
   if view:
-    print(srcStr)
-    return
+    return print(srcStr)
   return srcStr
 
 def viewCursorFull(cursor):

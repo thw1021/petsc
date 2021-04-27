@@ -1117,7 +1117,7 @@ PetscErrorCode  VecMTDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
   PetscValidScalarPointer(val,4);
   PetscValidType(x,1);
   PetscValidType(*y,3);
-  PetscCheckSameTypeAndComm(x,2,*y,3);
+  PetscCheckSameTypeAndComm(x,1,*y,3);
   VecCheckSameSize(x,1,*y,3);
 
   ierr = PetscLogEventBegin(VEC_MTDot,x,*y,0,0);CHKERRQ(ierr);
@@ -1167,7 +1167,7 @@ PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
   PetscValidScalarPointer(val,4);
   PetscValidType(x,1);
   PetscValidType(*y,3);
-  PetscCheckSameTypeAndComm(x,2,*y,3);
+  PetscCheckSameTypeAndComm(x,1,*y,3);
   VecCheckSameSize(x,1,*y,3);
 
   ierr = PetscLogEventBegin(VEC_MDot,x,*y,0,0);CHKERRQ(ierr);
