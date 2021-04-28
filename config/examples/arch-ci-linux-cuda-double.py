@@ -19,7 +19,9 @@ if __name__ == '__main__':
     '--with-precision=double',
     '--with-clanguage=c',
     '--download-kokkos',
+    '--download-kokkos-commit=d4ed86ffb1b156faaa0f936ce839cfd6d3282478',  # on 2021-04-28
     '--download-kokkos-kernels',
+    '--download-kokkos-kernels-commit=54e4213ca028163a76639d23b1204b213203bc79', # on 2021-04-28
     '--download-hwloc',
     # Note: If using nvcc with a host compiler other than the CUDA SDK default for your platform (GCC on Linux, clang
     # on Mac OS X, MSVC on Windows), you must set -ccbin appropriately in CUDAFLAGS, as in the example for PGI below:
