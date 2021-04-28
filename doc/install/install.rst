@@ -668,7 +668,6 @@ ALCF - Argonne National Laboratory - theta machine - Intel KNL based system
 
 ALCF - Argonne National Laboratory - thetagpu machine - AMD CPUs with NVIDIA GPUs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
- (yes it is beyond silly it has theta in the name)
 
 Notes on usage:
 
