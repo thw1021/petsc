@@ -503,6 +503,7 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
     }
     veccuda = (Vec_CUDA*)vv->spptr;
     veccuda->GPUarray = (PetscScalar*)array;
+    vv->offloadmask = PETSC_OFFLOAD_GPU;
   }
   PetscFunctionReturn(0);
 }
