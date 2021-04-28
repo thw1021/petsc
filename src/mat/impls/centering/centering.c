@@ -24,7 +24,7 @@ PetscErrorCode MatMult_Centering(Mat A,Vec xx,Vec yy)
 }
 
 /*@
-   MatCreateCentering - Creates a new matrix object that behaves like the centering matrix, I - (1/N) * ones*ones'
+   MatCreateCentering - Creates a new matrix object that implements the centering matrix, I - (1/N) * ones*ones'
 
    Collective on Mat
 
