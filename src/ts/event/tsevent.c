@@ -394,10 +394,11 @@ static PetscErrorCode TSEventDetection(TS ts)
       if (!event->iterctr) event->zerocrossing[i] = PETSC_TRUE;
       event->status = TSEVENT_LOCATED_INTERVAL;
       if (event->monitor) {
-        ierr = PetscViewerASCIIPrintf(event->monitor,"TSEvent: iter %D - Event %D interval detected [%g - %g]\n",event->iterctr,i,(double)event->ptime_prev,(double)t);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(event->monitor,"TSEvent: iter %D - Event %D interval detected due to zero value (tol=%g) [%g - %g]\n",event->iterctr,i,(double)event->vtol[i],(double)event->ptime_prev,(double)t);CHKERRQ(ierr);
       }
       continue;
     }
+    if (PetscAbsScalar(event->fvalue_prev[i]) < event->vtol[i]) continue; /* avoid duplicative detection if the previous endpoint is an event location */
     fvalue_sign = PetscSign(PetscRealPart(event->fvalue[i]));
     fvalueprev_sign = PetscSign(PetscRealPart(event->fvalue_prev[i]));
     if (fvalueprev_sign != 0 && (fvalue_sign != fvalueprev_sign)) {
@@ -405,7 +406,7 @@ static PetscErrorCode TSEventDetection(TS ts)
       if (!event->iterctr) event->zerocrossing[i] = PETSC_TRUE;
       event->status = TSEVENT_LOCATED_INTERVAL;
       if (event->monitor) {
-        ierr = PetscViewerASCIIPrintf(event->monitor,"TSEvent: iter %D - Event %D interval detected [%g - %g]\n",event->iterctr,i,(double)event->ptime_prev,(double)t);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(event->monitor,"TSEvent: iter %D - Event %D interval detected due to sign change [%g - %g]\n",event->iterctr,i,(double)event->ptime_prev,(double)t);CHKERRQ(ierr);
       }
     }
   }
@@ -422,7 +423,7 @@ static PetscErrorCode TSEventLocation(TS ts,PetscReal *dt)
   TSEvent        event = ts->event;
   PetscInt       i;
   PetscReal      t;
-  PetscInt       fvalue_sign;
+  PetscInt       fvalue_sign,fvalueprev_sign;
   PetscInt       in,out;
 
   PetscFunctionBegin;
@@ -442,38 +443,36 @@ static PetscErrorCode TSEventLocation(TS ts,PetscReal *dt)
       }
       /* Compute new time step */
       *dt = TSEventComputeStepSize(event->ptime_prev,t,event->ptime_right,event->fvalue_prev[i],event->fvalue[i],event->fvalue_right[i],event->side[i],*dt);
-      if (event->status == TSEVENT_LOCATED_INTERVAL) {
-        fvalue_sign = PetscSign(PetscRealPart(event->fvalue[i]));
-        switch (event->direction[i]) {
-        case -1:
-          if (fvalue_sign < 0) {
-            event->fvalue_right[i] = event->fvalue[i];
-            event->side[i] = 1;
-          }
-          break;
-        case 1:
-          if (fvalue_sign > 0) {
-            event->fvalue_right[i] = event->fvalue[i];
-            event->side[i] = 1;
-          }
-          break;
-        case 0:
+      fvalue_sign = PetscSign(PetscRealPart(event->fvalue[i]));
+      fvalueprev_sign = PetscSign(PetscRealPart(event->fvalue_prev[i]));
+      switch (event->direction[i]) {
+      case -1:
+        if (fvalue_sign < 0) {
           event->fvalue_right[i] = event->fvalue[i];
           event->side[i] = 1;
-          break;
         }
+        break;
+      case 1:
+        if (fvalue_sign > 0) {
+          event->fvalue_right[i] = event->fvalue[i];
+          event->side[i] = 1;
+        }
+        break;
+      case 0:
+        if (fvalue_sign != fvalueprev_sign) { /* trigger rollback only when there is a sign change */
+          event->fvalue_right[i] = event->fvalue[i];
+          event->side[i] = 1;
+        }
+        break;
       }
-      if (event->status == TSEVENT_PROCESSING) {
-        event->fvalue_prev[i] = event->fvalue[i];
-        event->side[i] = -1;
-      }
+      if (event->status == TSEVENT_PROCESSING) event->side[i] = -1;
     }
   }
   in = event->status;
   ierr = MPIU_Allreduce(&in,&out,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)ts));CHKERRMPI(ierr);
   event->status = (TSEventStatus)out;
   if (event->status == TSEVENT_ZERO) {
-      for (i=0; i<event->nevents; i++) event->side[i] = 0;
+    for (i=0; i < event->nevents; i++) event->side[i] = 0;
   }
   PetscFunctionReturn(0);
 }
@@ -485,7 +484,7 @@ PetscErrorCode TSEventHandler(TS ts)
   PetscReal      t;
   Vec            U;
   PetscInt       i;
-  PetscReal      dt,dt_min;
+  PetscReal      dt,dt_min,dt_reset = 0.0;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -500,16 +499,8 @@ PetscErrorCode TSEventHandler(TS ts)
     event->timestep_prev = dt;
     event->ptime_end = t;
   }
-  if (event->status == TSEVENT_RESET_NEXTSTEP) {
-    /* user has specified a PostEventInterval dt */
-    dt = event->timestep_posteventinterval;
-    if (ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
-      PetscReal maxdt = ts->max_time-t;
-      dt = dt > maxdt ? maxdt : (PetscIsCloseAtTol(dt,maxdt,10*PETSC_MACHINE_EPSILON,0) ? maxdt : dt);
-    }
-    ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
-    event->status = TSEVENT_NONE;
-  }
+  /* user has specified a PostEventInterval dt */
+  if (event->status == TSEVENT_RESET_NEXTSTEP) dt_reset = event->timestep_posteventinterval;
 
   ierr = VecLockReadPush(U);CHKERRQ(ierr);
   ierr = (*event->eventhandler)(ts,t,U,event->fvalue,event->ctx);CHKERRQ(ierr);
@@ -517,6 +508,15 @@ PetscErrorCode TSEventHandler(TS ts)
 
   /* Detect the events */
   ierr = TSEventDetection(ts);CHKERRQ(ierr);
+
+  if (event->status == TSEVENT_RESET_NEXTSTEP) {
+    if (ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
+       PetscReal maxdt = ts->max_time-t;
+       dt_reset = dt_reset > maxdt ? maxdt : (PetscIsCloseAtTol(dt_reset,maxdt,10*PETSC_MACHINE_EPSILON,0) ? maxdt : dt_reset);
+    }
+    ierr = TSSetTimeStep(ts,dt_reset);CHKERRQ(ierr);
+    event->status = TSEVENT_NONE;
+  }
 
   /* Locate the events */
   if (event->status == TSEVENT_LOCATED_INTERVAL || event->status == TSEVENT_PROCESSING) {
@@ -529,6 +529,7 @@ PetscErrorCode TSEventHandler(TS ts)
       event->iterctr++;
     }
     ierr = MPIU_Allreduce(&dt,&dt_min,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)ts));CHKERRMPI(ierr);
+    if (dt_reset > 0.0 && dt_reset < dt_min) dt_min = dt_reset;
     ierr = TSSetTimeStep(ts,dt_min);CHKERRQ(ierr);
 
     /* Found the zero crossing */
