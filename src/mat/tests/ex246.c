@@ -11,13 +11,13 @@ int main(int argc,char **argv)
   Vec            x,y;
   PetscScalar    *array;
   PetscReal      norm;
-  PetscMPIInt    nranks;
+  PetscMPIInt    size;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&nranks);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
-  /* Create a parallel vector of size 10*nranks, and fill it with 1s. */
-  n = 10 * nranks;
+  /* Create a parallel vector with 10*size total entries, and fill it with 1s. */
+  n = 10 * size;
   ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
   ierr = VecSetSizes(x,PETSC_DECIDE,n);CHKERRQ(ierr);
   ierr = VecSetFromOptions(x);CHKERRQ(ierr);
