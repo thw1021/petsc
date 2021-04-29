@@ -39,12 +39,12 @@ PetscErrorCode MatMult_Centering(Mat A,Vec xx,Vec yy)
 .  C - the matrix
 
    Notes:
-   The matrix C is not formed! The new matrix object is a shell that simply
-   performs the action of the centering matrix, i.e., multiplying C*x subtracts
-   the mean of the vector x from each of its elements. This is useful for
-   preserving sparsity when mean-centering the columns of a matrix is required.
-   For instance, to perform principal components analysis with a matrix A, the
-   composite matrix C*A can be passed to a partial SVD solver.
+   The entries of the matrix C are not explicitly stored. Instead, the new matrix
+   object is a shell that simply performs the action of the centering matrix, i.e.,
+   multiplying C*x subtracts the mean of the vector x from each of its elements.
+   This is useful for preserving sparsity when mean-centering the columns of a
+   matrix is required. For instance, to perform principal components analysis with
+   a matrix A, the composite matrix C*A can be passed to a partial SVD solver.
 
    Level: intermediate
 @*/
