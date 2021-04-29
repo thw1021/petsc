@@ -29,12 +29,12 @@ int main(int argc,char **argv)
 
   /* Verify that the centered vector y has norm 0. */
   ierr = VecNorm(y,NORM_2,&norm);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Vector norm after MatMult() with centering matrix applied to vector of ones is %f.\n",norm);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Vector norm after MatMult() with centering matrix applied to vector of ones is %f.\n",(double)norm);CHKERRQ(ierr);
 
   /* Now repeat, but using MatMultTranspose(). */
   ierr = MatMultTranspose(C,x,y);CHKERRQ(ierr);
   ierr = VecNorm(y,NORM_2,&norm);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Vector norm after MatMultTranspose() with centering matrix applied to vector of ones is %f.\n",norm);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Vector norm after MatMultTranspose() with centering matrix applied to vector of ones is %f.\n",(double)norm);CHKERRQ(ierr);
 
   /* Clean up. */
   ierr = VecDestroy(&x);CHKERRQ(ierr);
