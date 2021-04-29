@@ -21,7 +21,6 @@ configure_options = [
   #'-download-fblaslapack=1',
   '--download-mpich=1',
   '--download-mpich-device=ch3:sock',
-  '--download-cmake=1',
   '--download-metis=1',
   '--download-parmetis=1',
   '--download-ptscotch=1',
@@ -55,6 +54,7 @@ configure_options = [
   '--download-parmmg=1',
   '--download-kokkos=1',
   '--download-kokkos-kernels=1',
+  '--download-cmake=https://github.com/Kitware/CMake/releases/download/v3.20.1/cmake-3.20.1.tar.gz',
   '--download-htool=1',
   ]
 

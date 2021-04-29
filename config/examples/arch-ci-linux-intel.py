@@ -27,5 +27,6 @@ if __name__ == '__main__':
     '--download-codipack=1',
     '--download-adblaslapack=1',
     '--download-kokkos',
+    '--download-cmake=https://github.com/Kitware/CMake/releases/download/v3.20.1/cmake-3.20.1.tar.gz',
   ]
   configure.petsc_configure(configure_options)
