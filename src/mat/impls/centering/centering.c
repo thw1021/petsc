@@ -47,6 +47,8 @@ PetscErrorCode MatMult_Centering(Mat A,Vec xx,Vec yy)
    a matrix A, the composite matrix C*A can be passed to a partial SVD solver.
 
    Level: intermediate
+
+.seealso: MatCreateLRC(), MatCreateComposite()
 @*/
 PetscErrorCode MatCreateCentering(MPI_Comm comm,PetscInt n,PetscInt N,Mat *C)
 {
