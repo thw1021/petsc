@@ -7,6 +7,11 @@ cupmStream_t  PetscDefaultCupmStream = NULL;
 
 static PetscBool PetscNotUseCUPM   = PETSC_FALSE; /* Assert the code will not use this type of devices */
 
+#if defined(PETSC_HAVE_CUDA)
+cudaEvent_t petsc_gt_begin = NULL; /* The CUDA event for begin */
+cudaEvent_t petsc_gt_end   = NULL; /* The CUDA event for end */
+#endif
+
 /* Device validation after it is lazily initialized */
 static PetscErrorCode PetscCUPMValidate(void)
 {
@@ -104,7 +109,11 @@ PetscErrorCode PetscCUPMInitializeCheck(void)
     ierr = PetscCUPMSOLVERDnInitializeHandle();CHKERRQ(ierr);
     PetscCUPMInitialized = PETSC_TRUE;
   }
-
+  #if defined(PETSC_HAVE_CUDA)
+  /* Initialize CUDA event timers */
+  cerr = cudaEventCreate(&petsc_gt_begin);CHKERRCUDA(cerr);
+  cerr = cudaEventCreate(&petsc_gt_end);CHKERRCUDA(cerr);
+  #endif
   if (!cupmValdidateChecked) {
     ierr = PetscCUPMValidate();CHKERRQ(ierr);
     cupmValdidateChecked = PETSC_TRUE;
@@ -209,6 +218,11 @@ PetscErrorCode PetscCUPMInitialize(MPI_Comm comm,PetscInt device)
       ierr = PetscCUPMSOLVERDnInitializeHandle();CHKERRQ(ierr);
       PetscCUPMInitialized = PETSC_TRUE;
     }
+    #if defined(PETSC_HAVE_CUDA)
+    /* Initialize CUDA event timers */
+    cerr = cudaEventCreate(&petsc_gt_begin);CHKERRCUDA(cerr);
+    cerr = cudaEventCreate(&petsc_gt_end);CHKERRCUDA(cerr);
+    #endif
   }
   PetscFunctionReturn(0);
 }

@@ -1563,6 +1563,12 @@ PetscErrorCode  PetscFinalize(void)
 
 #if defined(PETSC_HAVE_CUDA)
   if (PetscDefaultCudaStream) {cudaError_t cerr = cudaStreamDestroy(PetscDefaultCudaStream);CHKERRCUDA(cerr);}
+  if (petsc_gt_begin) {
+    cudaError_t cerr = cudaEventDestroy(petsc_gt_begin);CHKERRCUDA(cerr);
+  }
+  if (petsc_gt_end) {
+    cudaError_t cerr = cudaEventDestroy(petsc_gt_end);CHKERRCUDA(cerr);
+  }
 #endif
 
 #if defined(PETSC_HAVE_HIP)
