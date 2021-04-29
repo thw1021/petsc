@@ -6,10 +6,9 @@ static char help[] = "Tests MATCENTERING matrix type.\n\n";
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
-  PetscInt       i,n,nlocal;
+  PetscInt       n;
   Mat            C;
   Vec            x,y;
-  PetscScalar    *array;
   PetscReal      norm;
   PetscMPIInt    size;
 
@@ -17,14 +16,11 @@ int main(int argc,char **argv)
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   /* Create a parallel vector with 10*size total entries, and fill it with 1s. */
-  n = 10 * size;
+  n = 10*size;
   ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
   ierr = VecSetSizes(x,PETSC_DECIDE,n);CHKERRQ(ierr);
   ierr = VecSetFromOptions(x);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(x,&nlocal);CHKERRQ(ierr);
-  ierr = VecGetArray(x,&array);CHKERRQ(ierr);
-  for (i=0; i<nlocal; i++) array[i] = 1.0;
-  ierr = VecRestoreArray(x,&array);CHKERRQ(ierr);
+  ierr = VecSet(x,1.0);CHKERRQ(ierr);
 
   /* Create a corresponding n x n centering matrix and use it to create a mean-centered y = C * x. */
   ierr = VecDuplicate(x,&y);CHKERRQ(ierr);
