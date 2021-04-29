@@ -183,7 +183,10 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateMedFromFile(MPI_Comm, const char [], Pet
 PETSC_EXTERN PetscErrorCode DMPlexCreatePLYFromFile(MPI_Comm, const char [], PetscBool, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateEGADSFromFile(MPI_Comm, const char [], DM *);
 
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *exo);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetId(PetscViewer, int *);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer,PetscInt);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer,PetscInt*);
 
 /* Mesh Partitioning and Distribution */
 PETSC_EXTERN PetscErrorCode DMPlexCreateNeighborCSR(DM, PetscInt, PetscInt *, PetscInt **, PetscInt **);
@@ -393,8 +396,8 @@ PETSC_EXTERN PetscErrorCode DMPlexSNESComputeBoundaryFEM(DM, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMPlexSNESComputeResidualFEM(DM, Vec, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMPlexSNESComputeJacobianFEM(DM, Vec, Mat, Mat, void *);
 PETSC_EXTERN PetscErrorCode DMPlexComputeJacobianAction(DM, IS, PetscReal, PetscReal, Vec, Vec, Vec, Vec, void *);
-PETSC_EXTERN PetscErrorCode DMPlexComputeBdResidualSingle(DM, PetscReal, DMLabel, PetscInt, const PetscInt[], PetscInt, Vec, Vec, Vec);
-PETSC_EXTERN PetscErrorCode DMPlexComputeBdJacobianSingle(DM, PetscReal, DMLabel, PetscInt, const PetscInt[], PetscInt, Vec, Vec, PetscReal, Mat, Mat);
+PETSC_EXTERN PetscErrorCode DMPlexComputeBdResidualSingle(DM, PetscReal, PetscWeakForm, DMLabel, PetscInt, const PetscInt[], PetscInt, Vec, Vec, Vec);
+PETSC_EXTERN PetscErrorCode DMPlexComputeBdJacobianSingle(DM, PetscReal, PetscWeakForm, DMLabel, PetscInt, const PetscInt[], PetscInt, Vec, Vec, PetscReal, Mat, Mat);
 
 PETSC_EXTERN PetscErrorCode DMPlexTSComputeBoundary(DM, PetscReal, Vec, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMPlexTSComputeRHSFunctionFVM(DM, PetscReal, Vec, Vec, void *);

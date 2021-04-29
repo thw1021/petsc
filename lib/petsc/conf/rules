@@ -683,7 +683,7 @@ checkbadSource:
 	-@echo "Two ;; -----------------------------------------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P -e ';;' -- ${GITSRC} | grep -v ' for (' >> checkbadSource.out;true
 	-@echo "CHKERRQ for an MPI error code ------------------------" >> checkbadSource.out
-	-@git --no-pager grep -n -P -e '= MPI_\w*\(.*CHKERRQ' -- ${GITSRC} >> checkbadSource.out;true
+	-@git --no-pager grep -n -P -e '= MPI[U]*_\w*\(.*CHKERRQ' -- ${GITSRC} | grep -v MPIU_File >> checkbadSource.out;true
 	-@echo "Missing if (ierr) return ierr; -----------------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P -e 'ierr = PetscInitialize\(' -- '*.[ch]' '*.cpp' '*.cxx' '*.cu' | grep -v 'if (ierr) return ierr;' | egrep "(test|tutorial)" >> checkbadSource.out;true
 	-@echo "DOS file (with DOS newlines) -------------------------" >> checkbadSource.out
@@ -694,9 +694,11 @@ checkbadSource:
 	-@git --no-pager grep -n -P -e 'PetscErrorCode[ ]+[a-zA-Z0-9_-]+(.*) {$$' -- ${GITSRC} >> checkbadSource.out;true
 	-@echo "wrong usage of PetscDefined() ------------------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P 'PetscDefined.PETSC' -- ${GITSRC} >> checkbadSource.out;true
+	-@echo "SETERRQ() without defined error code -----------------" >> checkbadSource.out
+	-@git --no-pager grep -n -P 'SETERRQ\(' -- ${GITSRC} | grep -v PETSC_ERR  | grep " if " | grep -v flow.c >> checkbadSource.out;true
 #	-@echo "Missing CHKERRQ --------------------------" >> checkbadSource.out
 #	-@git --no-pager grep -P 'ierr = ' -- '*.[ch]' '*.cxx' | grep ');' | egrep -v '(PetscFinalize|PetscInitialize|sys|benchmark|interfaces|fun3d|ftn-custom|f90-custom|CHK)' >> checkbadSource.out;true
-	@a=`cat checkbadSource.out | wc -l`; l=`expr $$a - 13` ;\
+	@a=`cat checkbadSource.out | wc -l`; l=`expr $$a - 14` ;\
          if [ $$l -gt 0 ] ; then \
            echo $$l " files with errors detected in source code formatting" ;\
            cat checkbadSource.out ;\
