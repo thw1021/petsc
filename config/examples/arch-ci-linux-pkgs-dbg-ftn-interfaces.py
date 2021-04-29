@@ -17,7 +17,6 @@ configure_options = [
   '--with-openmp=1',
   '--download-hwloc=1',
   #'--download-hypre=1', disabled as hypre produces wrong results when openmp is enabled
-  '--download-cmake=1',
   '--download-metis=1',
   '--download-parmetis=1',
   '--download-ptscotch=1',
@@ -33,6 +32,7 @@ configure_options = [
   '--download-parms=1',
   '--download-kokkos=1',
   '--download-kokkos-kernels=1',
+  '--download-cmake=https://github.com/Kitware/CMake/releases/download/v3.20.1/cmake-3.20.1.tar.gz',
   '--download-chaco=1'
   ]
 
