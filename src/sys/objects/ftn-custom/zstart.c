@@ -359,17 +359,25 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   }
 #endif
 
-#if defined(PETSC_USE_REAL___FLOAT128)
+#if defined(PETSC_HAVE_REAL___FLOAT128)
   *ierr = MPI_Type_contiguous(2,MPI_DOUBLE,&MPIU___FLOAT128);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
   *ierr = MPI_Type_commit(&MPIU___FLOAT128);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
-#if defined(PETSC_HAVE_COMPLEX)
+#if defined(PETSC_HAVE_COMPLEX___FLOAT128)
   *ierr = MPI_Type_contiguous(4,MPI_DOUBLE,&MPIU___COMPLEX128);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
   *ierr = MPI_Type_commit(&MPIU___COMPLEX128);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
 #endif
+#endif
+#if defined(PETSC_HAVE_REAL___FP16)
+  *ierr = MPI_Type_contiguous(2,MPI_CHAR,&MPIU___FP16);
+  if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
+  *ierr = MPI_Type_commit(&MPIU___FP16);
+#endif
+
+#if defined(PETSC_USE_REAL___FLOAT128)
   *ierr = MPI_Op_create(PetscSum_Local,1,&MPIU_SUM);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI ops\n");return;}
   *ierr = MPI_Op_create(PetscMax_Local,1,&MPIU_MAX);
@@ -377,9 +385,6 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   *ierr = MPI_Op_create(PetscMin_Local,1,&MPIU_MIN);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI ops\n");return;}
 #elif defined(PETSC_USE_REAL___FP16)
-  *ierr = MPI_Type_contiguous(2,MPI_CHAR,&MPIU___FP16);
-  if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
-  *ierr = MPI_Type_commit(&MPIU___FP16);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
   *ierr = MPI_Op_create(PetscSum_Local,1,&MPIU_SUM);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI ops\n");return;}

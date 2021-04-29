@@ -94,7 +94,13 @@
 #define PetscChar(a) character(len = a) ::
 
 #if defined(PETSC_USE_COMPLEX)
-#define PETSC_SCALAR PETSC_COMPLEX
+#if defined(PETSC_USE_REAL_SINGLE)
+#define PETSC_SCALAR PETSC_FLOAT_COMPLEX
+#elif defined(PETSC_USE_REAL___FLOAT128)
+#define PETSC_SCALAR PETSC___FLOAT128_COMPLEX
+#else
+#define PETSC_SCALAR PETSC_DOUBLE_COMPLEX
+#endif
 #else
 #if defined(PETSC_USE_REAL_SINGLE)
 #define PETSC_SCALAR PETSC_FLOAT

@@ -105,6 +105,7 @@ class Configure(config.base.Configure):
       if hasattr(self.compilers, 'FC'):
         raise RuntimeError('__fp16 can only be used with C compiler, not Fortran')
       self.addDefine('USE_REAL___FP16', '1')
+      self.addDefine('HAVE_REAL___FP16', '1')
       self.addMakeMacro('PETSC_SCALAR_SIZE', '16')
     elif self.precision == 'single':
       self.addDefine('USE_REAL_SINGLE', '1')
