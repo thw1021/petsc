@@ -1563,10 +1563,22 @@ PetscErrorCode  PetscFinalize(void)
 
 #if defined(PETSC_HAVE_CUDA)
   if (PetscDefaultCudaStream) {cudaError_t cerr = cudaStreamDestroy(PetscDefaultCudaStream);CHKERRCUDA(cerr);}
+  if (petsc_gt_begin) {
+    cudaError_t cerr = cudaEventDestroy(petsc_gt_begin);CHKERRCUDA(cerr);
+  }
+  if (petsc_gt_end) {
+    cudaError_t cerr = cudaEventDestroy(petsc_gt_end);CHKERRCUDA(cerr);
+  }
 #endif
 
 #if defined(PETSC_HAVE_HIP)
   if (PetscDefaultHipStream)  {hipError_t cerr  = hipStreamDestroy(PetscDefaultHipStream);CHKERRHIP(cerr);}
+  if (petsc_gt_begin) {
+    hipError_t cerr = hipEventDestroy(petsc_gt_begin);CHKERRHIP(cerr);
+  }
+  if (petsc_gt_end) {
+    hipError_t cerr = hipEventDestroy(petsc_gt_end);CHKERRHIP(cerr);
+  }
 #endif
 
   ierr = PetscFreeMPIResources();CHKERRQ(ierr);
