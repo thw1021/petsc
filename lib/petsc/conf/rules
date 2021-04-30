@@ -724,6 +724,9 @@ help-lint:
 	-@echo "  LINTER_OPTIONS=\"--linter_options ...\"  See above for available options"
 	-@echo
 
+test-lint:
+	${PYTHON3} ${PETSC_DIR}/lib/petsc/bin/maint/petscClangLinter.py --verbose --src-dir ${PETSC_DIR}/src/sys/tests/linter --test --no-multiprocessing
+
 check_petsc4py_rst:
 	@${RM} -f petsc4py_rst.log
 	@echo "Checking src/binding/petsc4py/DESCRIPTION.rst"
