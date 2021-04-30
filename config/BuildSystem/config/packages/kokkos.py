@@ -18,7 +18,6 @@ class Configure(config.package.CMakePackage):
     self.downloadonWindows= 0
     self.hastests         = 1
     self.requiresrpath    = 1
-    self.precisions       = ['double']
     self.kokkos_cxxdialect = 'C++14' # requirement for which compiler is used to compile Kokkos
     return
 
