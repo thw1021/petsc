@@ -3,6 +3,7 @@
 
 #include <petsc/private/vecimpl_kokkos.hpp>
 #include <KokkosSparse_CrsMatrix.hpp>
+#include <KokkosSparse_spiluk.hpp>
 
 using MatRowOffsetType    = PetscInt;
 using MatColumnIndexType  = PetscInt;
@@ -16,15 +17,43 @@ using KokkosCsrMatrix                     = KokkosCsrMatrixType<DefaultMemorySpa
 
 using KokkosCsrGraphHost                  = KokkosCsrGraphType<DefaultMemorySpace>::HostMirror;
 
-using MatColumnIndexKokkosView            = KokkosCsrGraph::entries_type;
-using MatRowOffsetKokkosView              = KokkosCsrGraph::row_map_type;
-using MatValueKokkosView                  = KokkosCsrMatrix::values_type;
+using ConstMatColumnIndexKokkosView       = KokkosCsrGraph::entries_type;
+using ConstMatRowOffsetKokkosView         = KokkosCsrGraph::row_map_type;
+using ConstMatValueKokkosView             = KokkosCsrMatrix::values_type;
+
+using MatColumnIndexKokkosView            = KokkosCsrGraph::entries_type::non_const_type;
+using MatRowOffsetKokkosView              = KokkosCsrGraph::row_map_type::non_const_type;
+using MatValueKokkosView                  = KokkosCsrMatrix::values_type::non_const_type;
 
 using MatColumnIndexKokkosViewHost        = MatColumnIndexKokkosView::HostMirror;
 using MatRowOffsetKokkosViewHost          = MatRowOffsetKokkosView::HostMirror;
 using MatValueKokkosViewHost              = MatValueKokkosView::HostMirror;
 
 using MatValueKokkosDualView              = Kokkos::DualView<MatValueType*>;
+
+using KernelHandle                        = KokkosKernels::Experimental::KokkosKernelsHandle<MatRowOffsetType,MatColumnIndexType,MatValueType,DefaultExecutionSpace,DefaultMemorySpace,DefaultMemorySpace>;
+
+struct Mat_SeqAIJKokkosTriFactors {
+  MatRowOffsetKokkosView         iL_d,iU_d,iLt_d,iUt_d; /* rowmap for L, U, L^t, U^t of A=LU */
+  MatColumnIndexKokkosView       jL_d,jU_d,jLt_d,jUt_d; /* column ids */
+  MatValueKokkosView             aL_d,aU_d,aLt_d,aUt_d; /* matrix values */
+  KernelHandle                   kh,khL,khU,khLt,khUt;  /* Kernel handles for A, L, U, L^t, U^t */
+  PetscBool                      transpose_updated;     /* Are L^T, U^T updated wrt L, U*/
+  PetscBool                      sptrsv_symbolic_completed; /* Have we completed the symbolic solve for L and U */
+
+  Mat_SeqAIJKokkosTriFactors() : transpose_updated(PETSC_FALSE),sptrsv_symbolic_completed(PETSC_FALSE) {}
+
+  ~Mat_SeqAIJKokkosTriFactors() {Destroy();}
+
+  void Destroy() {
+    kh.destroy_spiluk_handle();
+    khL.destroy_sptrsv_handle();
+    khU.destroy_sptrsv_handle();
+    khLt.destroy_sptrsv_handle();
+    khUt.destroy_sptrsv_handle();
+    transpose_updated = sptrsv_symbolic_completed = PETSC_FALSE;
+  }
+};
 
 struct Mat_SeqAIJKokkos {
   MatRowOffsetKokkosViewHost     i_h;
@@ -52,7 +81,7 @@ struct Mat_SeqAIJKokkos {
   Kokkos::View<PetscSplitCSRDataStructure,DefaultMemorySpace> device_mat_d;
   Kokkos::View<PetscInt*>        *diag_d; // factorizations
 
-  /* Construct a nrows by ncols matrix of nnz nonzeros with (i,j,a) for the CSR */
+   /* Construct a nrows by ncols matrix of nnz nonzeros with (i,j,a) for the CSR */
   Mat_SeqAIJKokkos(MatColumnIndexType nrows,MatColumnIndexType ncols,MatRowOffsetType nnz,MatRowOffsetType *i,MatColumnIndexType *j,MatValueType *a)
    : i_h(i,nrows+1),j_h(j,nnz),a_h(a,nnz),At(NULL),Ah(NULL),need_sync_At_values(PETSC_FALSE),need_sync_Ah_values(PETSC_FALSE),
      i_uncompressed_d(NULL),colmap_d(NULL),device_mat_d(NULL),diag_d(NULL)
