@@ -18,6 +18,9 @@ if __name__ == '__main__':
     '--with-precision=single',
     '--with-cuda-dir=/usr/local/cuda-11.0',
     '--with-mpi-f90module-visibility=0',
+    '--download-kokkos',
+    '--download-kokkos-kernels',
+    '--download-cmake',
   ]
 
   configure.petsc_configure(configure_options)
