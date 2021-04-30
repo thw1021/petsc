@@ -18,7 +18,6 @@
 #include "viennacl/ocl/backend.hpp"
 #endif
 
-
 PETSC_EXTERN PetscErrorCode VecViennaCLGetArray(Vec v, ViennaCLVector **a)
 {
   PetscErrorCode ierr;
@@ -109,7 +108,10 @@ PETSC_EXTERN PetscErrorCode PetscViennaCLInit()
       /* A default (sequential) CPU backend is always available - even if OpenMP is not enabled. */
       if (flg_openmp) viennacl::backend::default_memory_type(viennacl::MAIN_MEMORY);
 #if defined(PETSC_HAVE_CUDA)
-      else if (flg_cuda) viennacl::backend::default_memory_type(viennacl::CUDA_MEMORY);
+      else if (flg_cuda) {
+        viennacl::backend::default_memory_type(viennacl::CUDA_MEMORY);
+        ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+      }
 #endif
 #if defined(PETSC_HAVE_OPENCL)
       else if (flg_opencl) viennacl::backend::default_memory_type(viennacl::OPENCL_MEMORY);
