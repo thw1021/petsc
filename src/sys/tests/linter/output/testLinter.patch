@@ -1,0 +1,75 @@
+--- /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testLinter.c	Fri Apr 30 17:35:18 2021
++++ /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testLinter.c	Fri Apr 30 17:35:18 2021
+@@ -6,8 +6,8 @@
+-  PetscValidCharPointer(a,2);
+-  PetscValidIntPointer(b,3);
+-  PetscValidBoolPointer(c,4);
+-  PetscValidRealPointer(d,5);
+-  PetscValidScalarPointer(e,6);
+-  PetscValidIntPointer(f,7);
+-  PetscValidRealPointer(g,8);
+-  PetscValidScalarPointer(h,9);
++  PetscValidPointer(a,1);
++  PetscValidCharPointer(b,2);
++  PetscValidIntPointer(c,3);
++  PetscValidIntPointer(d,4);
++  PetscValidIntPointer(e,5);
++  PetscValidBoolPointer(f,6);
++  PetscValidScalarPointer(g,7);
++  PetscValidRealPointer(h,8);
+@@ -32,6 +32,6 @@
+-  PetscValidLogicalCollectiveInt(v,d,2);
+-  PetscValidLogicalCollectiveEnum(v,e,3);
+-  PetscValidLogicalCollectiveMPIInt(v,f,4);
+-  PetscValidLogicalCollectiveScalar(v,a,5);
+-  PetscValidLogicalCollectiveReal(v,b,6);
+-  PetscValidLogicalCollectiveEnum(v,c,7);
++  PetscValidLogicalCollectiveBool(v,d,4);
++  PetscValidLogicalCollectiveScalar(v,e,5);
++  PetscValidLogicalCollectiveReal(v,f,6);
++  PetscValidLogicalCollectiveInt(v,a,1);
++  PetscValidLogicalCollectiveMPIInt(v,b,2);
++  PetscValidLogicalCollectiveInt(v,c,3);
+@@ -52,4 +52,4 @@
+-  PetscValidHeaderSpecificType(m,VEC_CLASSID,0,DMDA);
+-  PetscValidHeaderSpecificType(v,KSP_CLASSID,0,DMDA);
+-  PetscValidHeaderSpecificType(k,SNES_CLASSID,0,DMDA);
+-  PetscValidHeaderSpecificType(s,MAT_CLASSID,0,DMDA);
++  PetscValidHeaderSpecificType(m,MAT_CLASSID,1,DMDA);
++  PetscValidHeaderSpecificType(v,VEC_CLASSID,2,DMDA);
++  PetscValidHeaderSpecificType(k,KSP_CLASSID,3,DMDA);
++  PetscValidHeaderSpecificType(s,SNES_CLASSID,4,DMDA);
+@@ -64,4 +64,4 @@
+-  PetscValidHeaderSpecific(m,KSP_CLASSID,0);
+-  PetscValidHeaderSpecific(v,SNES_CLASSID,0);
+-  PetscValidHeaderSpecific(k,MAT_CLASSID,0);
+-  PetscValidHeaderSpecific(s,VEC_CLASSID,0);
++  PetscValidHeaderSpecific(m,MAT_CLASSID,1);
++  PetscValidHeaderSpecific(v,VEC_CLASSID,2);
++  PetscValidHeaderSpecific(k,KSP_CLASSID,3);
++  PetscValidHeaderSpecific(s,SNES_CLASSID,4);
+@@ -76,4 +76,4 @@
+-  PetscValidHeader(m,55);
+-  PetscValidHeader(v,56);
+-  PetscValidHeader(k,57);
+-  PetscValidHeader(s,58);
++  PetscValidHeader(m,1);
++  PetscValidHeader(v,2);
++  PetscValidHeader(k,3);
++  PetscValidHeader(s,4);
+@@ -92,4 +92,4 @@
+-  PetscValidType(m,-1);
+-  PetscCheckSameType(m,-1,v,-1);
+-  PetscCheckSameComm(k,-2,s,-2);
+-  PetscCheckSameTypeAndComm(m,-3,s,-3);
++  PetscValidType(m,1);
++  PetscCheckSameType(m,1,v,2);
++  PetscCheckSameComm(k,3,s,4);
++  PetscCheckSameTypeAndComm(m,1,s,4);
+@@ -120,3 +120,3 @@
+-  PetscValidPointer(foo,-1);
+-  PetscValidPointer(bar,-2);
+-  PetscValidPointer(baz,-3);
++  PetscValidPointer(foo,1);
++  PetscValidPointer(bar,1);
++  PetscValidPointer(baz,1);
