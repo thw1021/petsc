@@ -1,8 +1,7 @@
-#include <petsc.h>
+#include <petscsnes.h>
 
-PetscErrorCode testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h, int *i)
+void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
 {
-  PetscFunctionBegin;
   /* incorrect */
   PetscValidCharPointer(a,2);
   PetscValidIntPointer(b,3);
@@ -12,7 +11,6 @@ PetscErrorCode testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, 
   PetscValidIntPointer(f,7);
   PetscValidRealPointer(g,8);
   PetscValidScalarPointer(h,9);
-  PetscValidBoolPointer(i,10);
 
   /* correct */
   PetscValidPointer(a,1);
@@ -23,35 +21,33 @@ PetscErrorCode testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, 
   PetscValidBoolPointer(f,6);
   PetscValidScalarPointer(g,7);
   PetscValidRealPointer(h,8);
-  PetscValidIntPointer(i,9);
-  PetscFunctionReturn(0);
+  return;
 }
 
-PetscErrorCode testValidLogicalCollective(PetscInt *a, PetscMPIInt *b, PetscInt64 *c, PetscBool *d, PetscScalar *e, PetscReal *f, int *g)
+void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
 {
-  PetscFunctionBegin;
+  Vec v; /* dummy variable to satisfy the PetscObject for the following */
+
   /* incorrect */
-  PetscValidLogicalCollectiveInt(d,2);
-  PetscValidLogicalCollectiveEnum(e,3);
-  PetscValidLogicalCollectiveMPIInt(f,4);
-  PetscValidLogicalCollectiveBool(g,5);
-  PetscValidLogicalCollectiveScalar(a,6);
-  PetscValidLogicalCollectiveReal(b,7);
+  PetscValidLogicalCollectiveInt(v,d,2);
+  PetscValidLogicalCollectiveEnum(v,e,3);
+  PetscValidLogicalCollectiveMPIInt(v,f,4);
+  PetscValidLogicalCollectiveScalar(v,a,5);
+  PetscValidLogicalCollectiveReal(v,b,6);
+  PetscValidLogicalCollectiveEnum(v,c,7);
 
   /* correct */
-  PetscValidLogicalCollectiveInt(a,1);
-  PetscValidLogicalCollectiveMPIInt(b,2);
-  PetscValidLogicalCollectiveInt(c,3);
-  PetscValidLogicalCollectiveBool(d,4);
-  PetscValidLogicalCollectiveScalar(e,5);
-  PetscValidLogicalCollectiveReal(f,6);
-  PetscValidLogicalCollectiveInt(g,7);
-  PetscFunctionReturn(0);
+  PetscValidLogicalCollectiveInt(v,a,1);
+  PetscValidLogicalCollectiveMPIInt(v,b,2);
+  PetscValidLogicalCollectiveInt(v,c,3);
+  PetscValidLogicalCollectiveBool(v,d,4);
+  PetscValidLogicalCollectiveScalar(v,e,5);
+  PetscValidLogicalCollectiveReal(v,f,6);
+  return;
 }
 
-PetscErrorCode testValidHeaders(Mat m, Vec v, KSP k, SNES s)
+void testValidHeaders(Mat m, Vec v, KSP k, SNES s)
 {
-  PetscFunctionBegin;
   /* incorrect */
   PetscValidHeaderSpecificType(m,VEC_CLASSID,0,DMDA);
   PetscValidHeaderSpecificType(v,KSP_CLASSID,0,DMDA);
@@ -87,12 +83,11 @@ PetscErrorCode testValidHeaders(Mat m, Vec v, KSP k, SNES s)
   PetscValidHeader(v,2);
   PetscValidHeader(k,3);
   PetscValidHeader(s,4);
-  PetscFunctionReturn(0);
+  return;
 }
 
-PetscErrorCode testTypes(Mat m, Vec v, KSP k, SNES s)
+void testTypes(Mat m, Vec v, KSP k, SNES s)
 {
-  PetscFunctionBegin;
   /* incorrect */
   PetscValidType(m,-1);
   PetscCheckSameType(m,-1,v,-1);
@@ -104,5 +99,31 @@ PetscErrorCode testTypes(Mat m, Vec v, KSP k, SNES s)
   PetscCheckSameType(m,1,v,2);
   PetscCheckSameComm(k,3,s,4);
   PetscCheckSameTypeAndComm(m,1,s,4);
-  PetscFunctionReturn(0);
+  return;
+}
+
+/* for access to private vec members */
+#include <petsc/private/vecimpl.h>
+
+/* foward declare */
+void extractFunc(Vec,void**);
+
+void testOutOfLineReference(Vec v, Mat m, KSP k, SNES s)
+{
+  /* linter should be able to connect all of these to v */
+  void *foo = v->data,*bar,*baz;
+
+  bar = v->data;
+  extractFunc(v,&baz);
+
+  /* incorrect */
+  PetscValidPointer(foo,-1);
+  PetscValidPointer(bar,-2);
+  PetscValidPointer(baz,-3);
+
+  /* correct */
+  PetscValidPointer(foo,1);
+  PetscValidPointer(bar,1);
+  PetscValidPointer(baz,1);
+  return;
 }
