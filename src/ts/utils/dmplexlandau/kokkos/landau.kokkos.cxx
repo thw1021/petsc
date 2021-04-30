@@ -609,12 +609,12 @@ extern "C"  {
         }
         ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
         // transition to use of maps for VecGetClosure
-        {
+        if (ctx->gpu_assembly) {
           auto IPf = static_cast<Kokkos::View<PetscScalar*, Kokkos::LayoutLeft>*>(SData_d->IPf);
           delete IPf;
           SData_d->IPf = NULL;
+          if (!(a_IPf || a_xarray)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "transition without Jacobian");
         }
-        if (!(a_IPf || a_xarray)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "transition without Jacobian");
       }
     }
     PetscFunctionReturn(0);

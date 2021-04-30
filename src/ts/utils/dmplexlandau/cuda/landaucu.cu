@@ -724,9 +724,12 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
     }
     ierr = PetscFree(elemMats);CHKERRQ(ierr);
     ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
-    // transition to use of maps for VecGetClosure
-    cerr = cudaFree(SData_d->IPf);CHKERRCUDA(cerr);
-    SData_d->IPf = NULL;
+    if (ctx->gpu_assembly) {
+      // transition to use of maps for VecGetClosure
+      cerr = cudaFree(SData_d->IPf);CHKERRCUDA(cerr);
+      SData_d->IPf = NULL;
+      if (!(a_IPf || a_xarray)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "transition without Jacobian");
+    }
   }
 
   PetscFunctionReturn(0);
