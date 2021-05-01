@@ -296,12 +296,12 @@ PETSC_EXTERN PetscLogDouble petsc_gtoc_sz;
 PETSC_EXTERN PetscLogDouble petsc_gflops;
 PETSC_EXTERN PetscLogDouble petsc_gtime;
 #if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN cudaEvent_t petsc_gt_begin;
-PETSC_EXTERN cudaEvent_t petsc_gt_end;
+PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
+PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
 #endif
 #if defined(PETSC_HAVE_HIP)
-PETSC_EXTERN hipEvent_t petsc_gt_begin;
-PETSC_EXTERN hipEvent_t petsc_gt_end;
+PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
+PETSC_EXTERN hipEvent_t petsc_gputimer_end;
 #endif
 #if defined(PETSC_USE_DEBUG)
 PETSC_EXTERN PetscBool      petsc_gtime_inuse;
@@ -379,9 +379,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuTimeBegin()
   petsc_gtime_inuse = PETSC_TRUE;
 #endif
 #if defined(PETSC_HAVE_CUDA)
-  cerr = cudaEventRecord(petsc_gt_begin,0);CHKERRCUDA(cerr);
+  cerr = cudaEventRecord(petsc_gputimer_begin,0);CHKERRCUDA(cerr);
 #elif defined(PETSC_HAVE_HIP)
-  cerr = hipEventRecord(petsc_gt_begin,0);CHKERRHIP(cerr);
+  cerr = hipEventRecord(petsc_gputimer_begin,0);CHKERRHIP(cerr);
 #else
   ierr = PetscTimeSubtract(&petsc_gtime);CHKERRQ(ierr);
 #endif
@@ -411,14 +411,14 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuTimeEnd()
   petsc_gtime_inuse = PETSC_FALSE;
 #endif
 #if defined(PETSC_HAVE_CUDA)
-  cerr = cudaEventRecord(petsc_gt_end,0);CHKERRCUDA(cerr);
-  cerr = cudaEventSynchronize(petsc_gt_end);CHKERRCUDA(cerr);
-  cerr = cudaEventElapsedTime(&gtime,petsc_gt_begin,petsc_gt_end);CHKERRCUDA(cerr);
+  cerr = cudaEventRecord(petsc_gputimer_end,0);CHKERRCUDA(cerr);
+  cerr = cudaEventSynchronize(petsc_gputimer_end);CHKERRCUDA(cerr);
+  cerr = cudaEventElapsedTime(&gtime,petsc_gputimer_begin,petsc_gputimer_end);CHKERRCUDA(cerr);
   petsc_gtime += (PetscLogDouble)gtime/1000.0; /* convert milliseconds to seconds */
 #elif defined(PETSC_HAVE_HIP)
-  cerr = hipEventRecord(petsc_gt_end,0);CHKERRHIP(cerr);
-  cerr = hipEventSynchronize(petsc_gt_end);CHKERRHIP(cerr);
-  cerr = hipEventElapsedTime(&gtime,petsc_gt_begin,petsc_gt_end);CHKERRHIP(cerr);
+  cerr = hipEventRecord(petsc_gputimer_end,0);CHKERRHIP(cerr);
+  cerr = hipEventSynchronize(petsc_gputimer_end);CHKERRHIP(cerr);
+  cerr = hipEventElapsedTime(&gtime,petsc_gputimer_begin,petsc_gputimer_end);CHKERRHIP(cerr);
   petsc_gtime += (PetscLogDouble)gtime/1000.0; /* convert milliseconds to seconds */
 #else
   ierr = PetscTimeAdd(&petsc_gtime);CHKERRQ(ierr);
