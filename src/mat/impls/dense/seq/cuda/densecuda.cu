@@ -330,8 +330,8 @@ PETSC_EXTERN PetscErrorCode MatSeqDenseCUDAInvertFactors_Private(Mat A)
   PetscFunctionBegin;
   if (!A->rmap->n || !A->cmap->n) PetscFunctionReturn(0);
   ierr = PetscCUSOLVERDnGetHandle(&handle);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(A->cmap->n,&n);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(a->lda,&lda);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(A->cmap->n,&n);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(a->lda,&lda);CHKERRQ(ierr);
   if (A->factortype == MAT_FACTOR_LU) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"cusolverDngetri not implemented");
   else if (A->factortype == MAT_FACTOR_CHOLESKY) {
     if (!dA->d_fact_ipiv) { /* spd */
@@ -403,10 +403,10 @@ static PetscErrorCode MatMatSolve_SeqDenseCUDA(Mat A,Mat B,Mat X)
     ierr = MatConvert(X,MATSEQDENSECUDA,MAT_INPLACE_MATRIX,&X);CHKERRQ(ierr);
   }
   ierr = MatDenseCUDAGetArray(X,&dx);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(A->rmap->n,&n);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(X->cmap->n,&nrhs);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(a->lda,&lda);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(x->lda,&ldx);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(A->rmap->n,&n);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(X->cmap->n,&nrhs);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(a->lda,&lda);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(x->lda,&ldx);CHKERRQ(ierr);
   ierr = PetscCUSOLVERDnGetHandle(&handle);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   if (A->factortype == MAT_FACTOR_LU) {
@@ -454,7 +454,7 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,PetscBoo
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
   if (!dA->d_fact_work) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
-  ierr = PetscMPIIntCast(A->rmap->n,&n);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(A->rmap->n,&n);CHKERRQ(ierr);
   /* MatSolve does not have a dispatching mechanism, we may end up with a VECSTANDARD here */
   ierr = PetscObjectTypeCompareAny((PetscObject)yy,&iscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
   if (iscuda) {
@@ -468,7 +468,7 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,PetscBoo
     ierr = VecCUDAGetArray(dA->workvec,&y);CHKERRQ(ierr);
   }
   ierr = MatDenseCUDAGetArrayRead(A,&da);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(a->lda,&lda);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(a->lda,&lda);CHKERRQ(ierr);
   ierr = PetscCUSOLVERDnGetHandle(&handle);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   if (A->factortype == MAT_FACTOR_LU) {
@@ -535,9 +535,9 @@ static PetscErrorCode MatLUFactor_SeqDenseCUDA(Mat A,IS rperm,IS cperm,const Mat
   if (!A->rmap->n || !A->cmap->n) PetscFunctionReturn(0);
   ierr = PetscCUSOLVERDnGetHandle(&handle);CHKERRQ(ierr);
   ierr = MatDenseCUDAGetArray(A,&da);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(A->cmap->n,&n);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(A->rmap->n,&m);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(a->lda,&lda);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(A->cmap->n,&n);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(A->rmap->n,&m);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(a->lda,&lda);CHKERRQ(ierr);
   ierr = PetscInfo2(A,"LU factor %d x %d on backend\n",m,n);CHKERRQ(ierr);
   if (!dA->d_fact_ipiv) {
     ccer = cudaMalloc((void**)&dA->d_fact_ipiv,n*sizeof(*dA->d_fact_ipiv));CHKERRCUDA(ccer);
@@ -588,11 +588,11 @@ static PetscErrorCode MatCholeskyFactor_SeqDenseCUDA(Mat A,IS perm,const MatFact
   PetscFunctionBegin;
   if (!A->rmap->n || !A->cmap->n) PetscFunctionReturn(0);
   ierr = PetscCUSOLVERDnGetHandle(&handle);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(A->rmap->n,&n);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(A->rmap->n,&n);CHKERRQ(ierr);
   ierr = PetscInfo2(A,"Cholesky factor %d x %d on backend\n",n,n);CHKERRQ(ierr);
   if (A->spd) {
     ierr = MatDenseCUDAGetArray(A,&da);CHKERRQ(ierr);
-    ierr = PetscMPIIntCast(a->lda,&lda);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(a->lda,&lda);CHKERRQ(ierr);
     if (!dA->fact_lwork) {
       cerr = cusolverDnXpotrf_bufferSize(handle,CUBLAS_FILL_MODE_LOWER,n,da,lda,&dA->fact_lwork);CHKERRCUSOLVER(cerr);
       ccer = cudaMalloc((void**)&dA->d_fact_work,dA->fact_lwork*sizeof(*dA->d_fact_work));CHKERRCUDA(ccer);
@@ -665,12 +665,12 @@ PETSC_INTERN PetscErrorCode MatMatMultNumeric_SeqDenseCUDA_SeqDenseCUDA_Private(
   if (!Biscuda) {
     ierr = MatConvert(B,MATSEQDENSECUDA,MAT_INPLACE_MATRIX,&B);CHKERRQ(ierr);
   }
-  ierr = PetscMPIIntCast(C->rmap->n,&m);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(C->cmap->n,&n);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(C->rmap->n,&m);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(C->cmap->n,&n);CHKERRQ(ierr);
   if (tA) {
-    ierr = PetscMPIIntCast(A->rmap->n,&k);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(A->rmap->n,&k);CHKERRQ(ierr);
   } else {
-    ierr = PetscMPIIntCast(A->cmap->n,&k);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(A->cmap->n,&k);CHKERRQ(ierr);
   }
   if (!m || !n || !k) PetscFunctionReturn(0);
   ierr = PetscInfo3(C,"Matrix-Matrix product %d x %d x %d on backend\n",m,k,n);CHKERRQ(ierr);
@@ -759,9 +759,9 @@ static PetscErrorCode MatMultAdd_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,Vec zz
     PetscFunctionReturn(0);
   }
   ierr = PetscInfo2(A,"Matrix-vector product %d x %d on backend\n",A->rmap->n,A->cmap->n);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(A->rmap->n,&m);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(A->cmap->n,&n);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(mat->lda,&lda);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(A->rmap->n,&m);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(A->cmap->n,&n);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(mat->lda,&lda);CHKERRQ(ierr);
   ierr = PetscCUBLASGetHandle(&cublasv2handle);CHKERRQ(ierr);
   ierr = MatDenseCUDAGetArrayRead(A,&da);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayRead(xx,&xarray);CHKERRQ(ierr);
@@ -863,9 +863,9 @@ PetscErrorCode MatScale_SeqDenseCUDA(Mat Y,PetscScalar alpha)
   PetscFunctionBegin;
   ierr = PetscCUBLASGetHandle(&cublasv2handle);CHKERRQ(ierr);
   ierr = MatDenseCUDAGetArray(Y,&dy);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(Y->rmap->n*Y->cmap->n,&N);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(Y->rmap->n,&m);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(y->lda,&lday);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(Y->rmap->n*Y->cmap->n,&N);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(Y->rmap->n,&m);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(y->lda,&lday);CHKERRQ(ierr);
   ierr = PetscInfo2(Y,"Performing Scale %d x %d on backend\n",Y->rmap->n,Y->cmap->n);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   if (lday>m) {
@@ -903,10 +903,10 @@ PetscErrorCode MatAXPY_SeqDenseCUDA(Mat Y,PetscScalar alpha,Mat X,MatStructure s
   } else {
     ierr = MatDenseCUDAGetArrayWrite(Y,&dy);CHKERRQ(ierr);
   }
-  ierr = PetscMPIIntCast(X->rmap->n*X->cmap->n,&N);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(X->rmap->n,&m);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(x->lda,&ldax);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(y->lda,&lday);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(X->rmap->n*X->cmap->n,&N);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(X->rmap->n,&m);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(x->lda,&ldax);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(y->lda,&lday);CHKERRQ(ierr);
   ierr = PetscInfo2(Y,"Performing AXPY %d x %d on backend\n",Y->rmap->n,Y->cmap->n);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   if (ldax>m || lday>m) {

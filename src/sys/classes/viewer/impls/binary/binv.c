@@ -937,7 +937,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadMPIIO(PetscViewer viewer,void *d
   MPI_File           mfdes = vbinary->mfdes;
   PetscErrorCode     ierr;
   MPI_Datatype       mdtype;
-  PetscMPIInt        rank,cnt;
+  PetscMPIInt        rank,acnt,cnt;
   MPI_Status         status;
   MPI_Aint           ul,dsize;
 
@@ -952,10 +952,10 @@ static PetscErrorCode PetscViewerBinaryWriteReadMPIIO(PetscViewer viewer,void *d
   } else {
     if (!rank) {
       ierr = MPIU_File_read_at(mfdes,vbinary->moff,data,cnt,mdtype,&status);CHKERRQ(ierr);
-      if (cnt > 0) {ierr = MPI_Get_count(&status,mdtype,&cnt);CHKERRMPI(ierr);}
+      if (cnt > 0) {ierr = MPI_Get_count(&status,mdtype,&acnt);CHKERRMPI(ierr);}
     }
-    ierr = MPI_Bcast(&cnt,1,MPI_INT,0,comm);CHKERRMPI(ierr);
-    ierr = MPI_Bcast(data,cnt,mdtype,0,comm);CHKERRMPI(ierr);
+    ierr = MPI_Bcast(&acnt,1,MPI_INT,0,comm);CHKERRMPI(ierr);
+    ierr = MPI_Bcast(data,acnt,mdtype,0,comm);CHKERRMPI(ierr);
   }
   ierr = MPI_Type_get_extent(mdtype,&ul,&dsize);CHKERRMPI(ierr);
   vbinary->moff += dsize*cnt;
@@ -1072,7 +1072,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
   if (useMPIIO) {
     MPI_File       mfdes;
     MPI_Offset     off;
-    PetscMPIInt    cnt;
+    PetscMPICount  cnt;
 
     if (start == PETSC_DETERMINE) {
       ierr = MPI_Scan(&count,&start,1,MPIU_INT,MPI_SUM,comm);CHKERRMPI(ierr);
@@ -1082,7 +1082,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
       total = start + count;
       ierr = MPI_Bcast(&total,1,MPIU_INT,size-1,comm);CHKERRMPI(ierr);
     }
-    ierr = PetscMPIIntCast(count,&cnt);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(count,&cnt);CHKERRQ(ierr);
     ierr = PetscViewerBinaryGetMPIIODescriptor(viewer,&mfdes);CHKERRQ(ierr);
     ierr = PetscViewerBinaryGetMPIIOOffset(viewer,&off);CHKERRQ(ierr);
     off += (MPI_Offset)(start*dsize);
@@ -1097,16 +1097,17 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
   }
 #endif
   {
-    int         fdes;
-    char        *workbuf = NULL;
-    PetscInt    tcount = !rank ? 0 : count,maxcount=0,message_count,flowcontrolcount;
-    PetscMPIInt tag,cnt,maxcnt,scnt=0,rcnt=0,j;
-    MPI_Status  status;
+    int           fdes;
+    char          *workbuf = NULL;
+    PetscInt      tcount = !rank ? 0 : count,maxcount=0,message_count,flowcontrolcount;
+    PetscMPIInt   tag,scnt=0,rcnt=0,j;
+    PetscMPICount cnt,maxcnt;
+    MPI_Status    status;
 
     ierr = PetscCommGetNewTag(comm,&tag);CHKERRQ(ierr);
     ierr = MPI_Reduce(&tcount,&maxcount,1,MPIU_INT,MPI_MAX,0,comm);CHKERRMPI(ierr);
-    ierr = PetscMPIIntCast(maxcount,&maxcnt);CHKERRQ(ierr);
-    ierr = PetscMPIIntCast(count,&cnt);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(maxcount,&maxcnt);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(count,&cnt);CHKERRQ(ierr);
 
     ierr = PetscViewerBinaryGetDescriptor(viewer,&fdes);CHKERRQ(ierr);
     ierr = PetscViewerFlowControlStart(viewer,&message_count,&flowcontrolcount);CHKERRQ(ierr);
