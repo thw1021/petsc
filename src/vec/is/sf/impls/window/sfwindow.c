@@ -98,8 +98,8 @@ static PetscErrorCode PetscSFWindowGetDataTypes(PetscSF sf,MPI_Datatype unit,con
     PetscInt j;
     ierr = PetscMalloc2(rcount,&rmine,rcount,&rremote);CHKERRQ(ierr);
     for (j=0; j<rcount; j++) {
-      ierr = PetscMPIIntCast(sf->rmine[sf->roffset[i]+j],rmine+j);CHKERRQ(ierr);
-      ierr = PetscMPIIntCast(sf->rremote[sf->roffset[i]+j],rremote+j);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(sf->rmine[sf->roffset[i]+j],rmine+j);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(sf->rremote[sf->roffset[i]+j],rremote+j);CHKERRQ(ierr);
     }
 #endif
 
