@@ -361,6 +361,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuFlops(PetscLogDouble n)
         The regular logging captures the time for data transfers and any CPU activites during the event
         It is used to compute the flop rate on the GPU as it is actively engaged in running a kernel.
 
+      Developer Notes:
+        The GPU event timer captures the execution time of all the kernels launched between PetscLogGpuTimeBegin() and PetsLogGpuTimeEnd().
+        It currently works for the default stream (0) only.
 
 .seealso:  PetscLogView(), PetscLogGpuFlops(), PetscLogGpuTimeEnd()
 @*/
