@@ -2,12 +2,12 @@
 #include <petsc/private/matimpl.h>          /*I "petscmat.h" I*/
 
 typedef struct {
-  Mat         A;           /* sparse matrix */
-  Mat         U,V;         /* dense tall-skinny matrices */
-  Vec         c;           /* sequential vector containing the diagonal of C */
-  Vec         work1,work2; /* sequential vectors that hold partial products */
-  PetscMPIInt nwork;       /* length of work vectors */
-  Vec         xl,yl;       /* auxiliary sequential vectors for matmult operation */
+  Mat           A;           /* sparse matrix */
+  Mat           U,V;         /* dense tall-skinny matrices */
+  Vec           c;           /* sequential vector containing the diagonal of C */
+  Vec           work1,work2; /* sequential vectors that hold partial products */
+  PetscMPICount nwork;       /* length of work vectors */
+  Vec           xl,yl;       /* auxiliary sequential vectors for matmult operation */
 } Mat_LRC;
 
 
@@ -210,7 +210,7 @@ PetscErrorCode MatCreateLRC(Mat A,Mat U,Vec c,Mat V,Mat *N)
 
   ierr = VecCreateSeq(PETSC_COMM_SELF,U->cmap->N,&Na->work1);CHKERRQ(ierr);
   ierr = VecDuplicate(Na->work1,&Na->work2);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(U->cmap->N,&Na->nwork);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(U->cmap->N,&Na->nwork);CHKERRQ(ierr);
 
   ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,V->rmap->n,NULL,&Na->xl);CHKERRQ(ierr);
   ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,U->rmap->n,NULL,&Na->yl);CHKERRQ(ierr);

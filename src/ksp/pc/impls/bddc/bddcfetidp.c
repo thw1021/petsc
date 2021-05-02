@@ -136,7 +136,8 @@ PetscErrorCode PCBDDCSetupFETIDPMatContext(FETIDPMat_ctx fetidpmat_ctx)
   PetscBool      skip_node,fully_redundant;
   PetscInt       i,j,k,s,n_boundary_dofs,n_global_lambda,n_vertices,partial_sum;
   PetscInt       cum,n_local_lambda,n_lambda_for_dof,dual_size,n_neg_values,n_pos_values;
-  PetscMPIInt    rank,size,buf_size,neigh;
+  PetscMPIInt    rank,size,neigh;
+  PetscMPICount  buf_size;
   PetscScalar    scalar_value;
   const PetscInt *vertex_indices;
   PetscInt       *dual_dofs_boundary_indices,*aux_local_numbering_1;
@@ -329,7 +330,7 @@ PetscErrorCode PCBDDCSetupFETIDPMatContext(FETIDPMat_ctx fetidpmat_ctx)
       for (j=0;j<pcis->n_shared[i];j++) {
         send_buffer[ptrs_buffer[i-1]+j]=array[pcis->shared[i][j]];
       }
-      ierr = PetscMPIIntCast(ptrs_buffer[i]-ptrs_buffer[i-1],&buf_size);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(ptrs_buffer[i]-ptrs_buffer[i-1],&buf_size);CHKERRQ(ierr);
       ierr = PetscMPIIntCast(pcis->neigh[i],&neigh);CHKERRQ(ierr);
       ierr = MPI_Isend(&send_buffer[ptrs_buffer[i-1]],buf_size,MPIU_SCALAR,neigh,0,comm,&send_reqs[i-1]);CHKERRMPI(ierr);
       ierr = MPI_Irecv(&recv_buffer[ptrs_buffer[i-1]],buf_size,MPIU_SCALAR,neigh,0,comm,&recv_reqs[i-1]);CHKERRMPI(ierr);
