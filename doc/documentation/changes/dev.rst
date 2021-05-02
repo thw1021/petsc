@@ -7,7 +7,7 @@ Changes: Development
    -  Change ``MPIU_Allreduce()`` to always returns a MPI error code that
       should be checked with ``CHKERRMPI(ierr)``
 
-   -  Add ``PetscMPICount`` and change  ``PetscMPIIntCast`` to  ``PetscMPICountCount``
+   -  Add ``PetscMPICount`` and change  ``PetscMPIIntCast`` to  ``PetscMPICountCast``
 
 .. rubric:: Configure/Build:
 
