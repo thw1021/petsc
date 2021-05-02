@@ -547,6 +547,14 @@ Unable to run hostname to check the network')
     self.compilers.CPPFLAGS = oldFlags
     return
 
+  def checkMPICount(self):
+    '''Checks if MPI_Count is supported'''
+    self.setCompilers.pushLanguage('C')
+    test = '#include <mpi.h>\nMPI_Count cnt;\n'
+    if self.checkCompile(test):
+      self.addDefine('HAVE_MPI_COUNT','1')
+    self.setCompilers.popLanguage()
+
   def checkMPIDistro(self):
     '''Determine if MPICH_NUMVERSION, OMPI_MAJOR_VERSION or MSMPI_VER exist in mpi.h
        Used for consistency checking of MPI installation at compile time'''
@@ -730,6 +738,7 @@ You may need to set the environmental variable HWLOC_COMPONENTS to -x86 to preve
     self.executeTest(self.configureIO) #depends on checkMPIDistro
     self.executeTest(self.findMPIInc)
     self.executeTest(self.PetscArchMPICheck)
+    self.executeTest(self.checkMPICount)
     funcs = '''MPI_Type_get_envelope  MPI_Type_dup MPI_Init_thread MPI_Iallreduce MPI_Ibarrier MPI_Finalized MPI_Exscan MPI_Reduce_scatter MPI_Reduce_scatter_block'''.split()
     found, missing = self.libraries.checkClassify(self.dlib, funcs)
     for f in found:

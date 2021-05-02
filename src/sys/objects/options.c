@@ -447,13 +447,14 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm,PetscOptions opt
   PetscErrorCode ierr;
   size_t         i,len,bytes;
   FILE           *fd;
-  PetscToken     token=NULL;
+  PetscToken     token = NULL;
   int            err;
   char           *cmatch;
   const char     cmt='#';
   PetscInt       line=1;
-  PetscMPIInt    rank,cnt=0,acnt=0,counts[2];
-  PetscBool      isdir,alias=PETSC_FALSE,valid;
+  PetscMPIInt    rank,counts[2];
+  PetscMPICount  cnt = 0,acnt = 0;
+  PetscBool      isdir,alias = PETSC_FALSE,valid;
 
   PetscFunctionBegin;
 
@@ -549,11 +550,11 @@ destroy:
       err = fclose(fd);
       if (err) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SYS,"fclose() failed on file %s",fname);
       ierr = PetscSegBufferGetSize(aseg,&bytes);CHKERRQ(ierr); /* size without null termination */
-      ierr = PetscMPIIntCast(bytes,&acnt);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(bytes,&acnt);CHKERRQ(ierr);
       ierr = PetscSegBufferGet(aseg,1,&astring);CHKERRQ(ierr);
       astring[0] = 0;
       ierr = PetscSegBufferGetSize(vseg,&bytes);CHKERRQ(ierr); /* size without null termination */
-      ierr = PetscMPIIntCast(bytes,&cnt);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(bytes,&cnt);CHKERRQ(ierr);
       ierr = PetscSegBufferGet(vseg,1,&vstring);CHKERRQ(ierr);
       vstring[0] = 0;
       ierr = PetscMalloc1(2+acnt+cnt,&packed);CHKERRQ(ierr);

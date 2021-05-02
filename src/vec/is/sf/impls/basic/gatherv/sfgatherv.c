@@ -10,7 +10,7 @@ PETSC_INTERN PetscErrorCode PetscSFBcastBegin_Gatherv(PetscSF sf,MPI_Datatype un
 {
   PetscErrorCode       ierr;
   PetscSFLink          link;
-  PetscMPIInt          sendcount;
+  PetscMPICount        sendcount;
   MPI_Comm             comm;
   PetscSF_Gatherv      *dat = (PetscSF_Gatherv*)sf->data;
   void                 *rootbuf = NULL,*leafbuf = NULL; /* buffer seen by MPI */
@@ -21,7 +21,7 @@ PETSC_INTERN PetscErrorCode PetscSFBcastBegin_Gatherv(PetscSF sf,MPI_Datatype un
   ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
   ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(sf->nroots,&sendcount);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(sf->nroots,&sendcount);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
   ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = MPIU_Igatherv(rootbuf,sendcount,unit,leafbuf,dat->recvcounts,dat->displs,unit,0/*rank 0*/,comm,req);CHKERRMPI(ierr);
@@ -32,7 +32,7 @@ static PetscErrorCode PetscSFReduceBegin_Gatherv(PetscSF sf,MPI_Datatype unit,Pe
 {
   PetscErrorCode       ierr;
   PetscSFLink          link;
-  PetscMPIInt          recvcount;
+  PetscMPICount        recvcount;
   MPI_Comm             comm;
   PetscSF_Gatherv      *dat = (PetscSF_Gatherv*)sf->data;
   void                 *rootbuf = NULL,*leafbuf = NULL; /* buffer seen by MPI */
@@ -43,7 +43,7 @@ static PetscErrorCode PetscSFReduceBegin_Gatherv(PetscSF sf,MPI_Datatype unit,Pe
   ierr = PetscSFLinkPackLeafData(sf,link,PETSCSF_REMOTE,leafdata);CHKERRQ(ierr);
   ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(sf->nroots,&recvcount);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(sf->nroots,&recvcount);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_LEAF2ROOT,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
   ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
   ierr = MPIU_Iscatterv(leafbuf,dat->recvcounts,dat->displs,unit,rootbuf,recvcount,unit,0,comm,req);CHKERRMPI(ierr);

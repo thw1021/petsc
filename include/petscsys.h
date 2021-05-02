@@ -141,6 +141,30 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #endif
 
 /*MC
+    PetscMPICount - datatype used to represent 'count' parameters to MPI functions.
+
+    Level: intermediate
+
+    Notes:
+    usually this is the same as PetscInt, but if PETSc was built with --with-64-bit-indices then it is MPI_Count
+
+
+    PetscMPICountCast(a,&b) checks if the given PetscInt a will fit in a PetscMPIInt, if not it
+      generates a PETSC_ERR_ARG_OUTOFRANGE error.
+
+    PetscMPICountCast(a,&b) checks if the given PetscInt a will fit in a PetscMPICount, if not it
+      generates a PETSC_ERR_ARG_OUTOFRANGE error.
+
+.seealso: PetscBLASInt, PetscInt, PetscMPICountCast(), PetscBLASIntCast()
+
+M*/
+#if defined(PETSC_HAVE_MPI_COUNT)
+typedef MPI_Count PetscMPICount;
+#else
+typedef int PetscMPICount;
+#endif
+
+/*MC
   PetscDefined - determine whether a boolean macro is defined
 
   Notes:
@@ -2149,7 +2173,7 @@ PETSC_EXTERN PetscErrorCode MPIU_File_read_at_all(MPI_File,MPI_Offset,void*,Pets
 
    Not available from Fortran
 
-.seealso: PetscBLASInt, PetscMPIInt, PetscInt, PetscMPIIntCast(), PetscBLASIntCast(), PetscIntMultError(), PetscIntSumError()
+.seealso: PetscBLASInt, PetscMPIInt, PetscInt, PetscMPICountCast(), PetscBLASIntCast(), PetscIntMultError(), PetscIntSumError()
 @*/
 PETSC_STATIC_INLINE PetscErrorCode PetscIntCast(PetscInt64 a,PetscInt *b)
 {
@@ -2179,7 +2203,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscIntCast(PetscInt64 a,PetscInt *b)
       Not available from Fortran
       Errors if the integer is negative since PETSc calls to BLAS/LAPACK never need to cast negative integer inputs
 
-.seealso: PetscBLASInt, PetscMPIInt, PetscInt, PetscMPIIntCast(), PetscIntCast()
+.seealso: PetscBLASInt, PetscMPIInt, PetscInt, PetscMPICountCast(), PetscIntCast()
 @*/
 PETSC_STATIC_INLINE PetscErrorCode PetscBLASIntCast(PetscInt a,PetscBLASInt *b)
 {
@@ -2225,6 +2249,36 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCuBLASIntCast(PetscInt a,PetscBLASInt *b
 
 /*@C
     PetscMPIIntCast - casts a PetscInt (which may be 64 bits in size) to a PetscMPIInt (which may be 32 bits in size), generates an
+    PetscMPICountCast - casts a PetscInt (which may be 64 bits in size) to a PetscMPICount (which may be 32 bits in size), generates an
+         error if the PetscMPICount is not large enough to hold the number.
+
+   Not Collective
+
+   Input Parameter:
+.     a - the PetscInt value
+
+   Output Parameter:
+.     b - the resulting PetscMPICount value
+
+   Level: advanced
+
+   Not available from Fortran
+
+.seealso: PetscBLASInt, PetscMPIInt, PetscInt, PetscBLASIntCast(), PetscIntCast(), PetscMPICount, PetscMPIIntCast()
+@*/
+PETSC_STATIC_INLINE PetscErrorCode PetscMPICountCast(PetscInt a,PetscMPICount *b)
+{
+  PetscFunctionBegin;
+#if defined(PETSC_USE_64BIT_INDICES) && !defined(PETSC_HAVE_MPI_COUNT)
+  *b = 0;
+  if ((a) > PETSC_MPI_INT_MAX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Array too long for MPI, which is restricted to 32 bit integers");
+#endif
+  *b =  (PetscMPICount)(a);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+    PetscMPIIntCast -  casts a PetscInt (which may be 64 bits in size) to a PetscMPIInt (which is 32 bits in size), generates an
          error if the PetscMPIInt is not large enough to hold the number.
 
    Not Collective
@@ -2239,7 +2293,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCuBLASIntCast(PetscInt a,PetscBLASInt *b
 
    Not available from Fortran
 
-.seealso: PetscBLASInt, PetscMPIInt, PetscInt, PetscBLASIntCast(), PetscIntCast()
+.seealso: PetscBLASInt, PetscMPIInt, PetscInt, PetscBLASIntCast(), PetscIntCast(), PetscMPICount, PetscMPICountCast()
 @*/
 PETSC_STATIC_INLINE PetscErrorCode PetscMPIIntCast(PetscInt a,PetscMPIInt *b)
 {

@@ -1325,7 +1325,8 @@ static PetscErrorCode ISGatherTotal_Private(IS is)
   PetscInt       i,n,N;
   const PetscInt *lindices;
   MPI_Comm       comm;
-  PetscMPIInt    rank,size,*sizes = NULL,*offsets = NULL,nn;
+  PetscMPIInt    rank,size,*sizes = NULL,*offsets = NULL;
+  PetscMPICount  nn;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
@@ -1336,7 +1337,7 @@ static PetscErrorCode ISGatherTotal_Private(IS is)
   ierr = ISGetLocalSize(is,&n);CHKERRQ(ierr);
   ierr = PetscMalloc2(size,&sizes,size,&offsets);CHKERRQ(ierr);
 
-  ierr = PetscMPIIntCast(n,&nn);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(n,&nn);CHKERRQ(ierr);
   ierr = MPI_Allgather(&nn,1,MPI_INT,sizes,1,MPI_INT,comm);CHKERRMPI(ierr);
   offsets[0] = 0;
   for (i=1; i<size; ++i) offsets[i] = offsets[i-1] + sizes[i-1];

@@ -5667,19 +5667,20 @@ PetscErrorCode MatGetBrowsOfAcols(Mat A,Mat B,MatReuse scall,IS *rowb,IS *colb,M
 */
 PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat A,Mat B,MatReuse scall,PetscInt **startsj_s,PetscInt **startsj_r,MatScalar **bufa_ptr,Mat *B_oth)
 {
-  PetscErrorCode         ierr;
-  Mat_MPIAIJ             *a=(Mat_MPIAIJ*)A->data;
-  Mat_SeqAIJ             *b_oth;
-  VecScatter             ctx;
-  MPI_Comm               comm;
-  const PetscMPIInt      *rprocs,*sprocs;
-  const PetscInt         *srow,*rstarts,*sstarts;
-  PetscInt               *rowlen,*bufj,*bufJ,ncols = 0,aBn=a->B->cmap->n,row,*b_othi,*b_othj,*rvalues=NULL,*svalues=NULL,*cols,sbs,rbs;
-  PetscInt               i,j,k=0,l,ll,nrecvs,nsends,nrows,*rstartsj = NULL,*sstartsj,len;
-  PetscScalar            *b_otha,*bufa,*bufA,*vals = NULL;
-  MPI_Request            *rwaits = NULL,*swaits = NULL;
-  MPI_Status             rstatus;
-  PetscMPIInt            size,tag,rank,nsends_mpi,nrecvs_mpi;
+  PetscErrorCode           ierr;
+  Mat_MPIAIJ               *a = (Mat_MPIAIJ*)A->data;
+  Mat_SeqAIJ               *b_oth;
+  VecScatter               ctx;
+  MPI_Comm                 comm;
+  const PetscMPIInt        *rprocs,*sprocs;
+  const PetscInt           *srow,*rstarts,*sstarts;
+  PetscInt                 *rowlen,*bufj,*bufJ,ncols = 0,aBn=a->B->cmap->n,row,*b_othi,*b_othj,*rvalues=NULL,*svalues=NULL,*cols,sbs,rbs;
+  PetscInt                 i,j,k=0,l,ll,nrecvs,nsends,nrows,*rstartsj = NULL,*sstartsj,len;
+  PetscScalar              *b_otha,*bufa,*bufA,*vals = NULL;
+  MPI_Request              *rwaits = NULL,*swaits = NULL;
+  MPI_Status               rstatus;
+  PetscMPIInt              size,tag,rank;
+  PetscMPICount            nsends_mpi,nrecvs_mpi;
   PETSC_UNUSED PetscMPIInt jj;
 
   PetscFunctionBegin;
@@ -5705,8 +5706,8 @@ PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat A,Mat B,MatReuse scall,PetscInt **
   ierr = VecScatterGetRemote_Private(ctx,PETSC_TRUE/*send*/,&nsends,&sstarts,&srow,&sprocs,&sbs);CHKERRQ(ierr);
   /* rprocs[] must be ordered so that indices received from them are ordered in rvalues[], which is key to algorithms used in this subroutine */
   ierr = VecScatterGetRemoteOrdered_Private(ctx,PETSC_FALSE/*recv*/,&nrecvs,&rstarts,NULL/*indices not needed*/,&rprocs,&rbs);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(nsends,&nsends_mpi);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(nrecvs,&nrecvs_mpi);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(nsends,&nsends_mpi);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(nrecvs,&nrecvs_mpi);CHKERRQ(ierr);
   ierr = PetscMalloc2(nrecvs,&rwaits,nsends,&swaits);CHKERRQ(ierr);
 
   if (!startsj_s || !bufa_ptr) scall = MAT_INITIAL_MATRIX;

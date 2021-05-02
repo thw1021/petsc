@@ -124,7 +124,8 @@ static PetscErrorCode PetscScanString(MPI_Comm comm,size_t n,char str[])
 {
   size_t         i;
   char           c;
-  PetscMPIInt    rank,nm;
+  PetscMPIInt    rank;
+  PetscMPICount  nm;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -138,7 +139,7 @@ static PetscErrorCode PetscScanString(MPI_Comm comm,size_t n,char str[])
     }
     str[i] = 0;
   }
-  ierr = PetscMPIIntCast(n,&nm);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(n,&nm);CHKERRQ(ierr);
   ierr = MPI_Bcast(str,nm,MPI_CHAR,0,comm);CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
