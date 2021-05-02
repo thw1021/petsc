@@ -148,7 +148,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
 
       ierr = PetscObjectGetName((PetscObject)xin,&name);CHKERRQ(ierr);
       ierr = VecGetLocalSize(xin, &nLen);CHKERRQ(ierr);
-      ierr = PetscMPIIntCast(nLen,&n);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(nLen,&n);CHKERRQ(ierr);
       ierr = VecGetBlockSize(xin, &bs);CHKERRQ(ierr);
       if (format == PETSC_VIEWER_ASCII_VTK_DEPRECATED) {
         if (outputState == 0) {
@@ -218,7 +218,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
       PetscInt bs, b;
 
       ierr = VecGetLocalSize(xin, &nLen);CHKERRQ(ierr);
-      ierr = PetscMPIIntCast(nLen,&n);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(nLen,&n);CHKERRQ(ierr);
       ierr = VecGetBlockSize(xin, &bs);CHKERRQ(ierr);
       if ((bs < 1) || (bs > 3)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "VTK can only handle 3D objects, but vector dimension is %d", bs);
 
@@ -254,7 +254,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
       PetscInt bs, b, vertexCount = 1;
 
       ierr = VecGetLocalSize(xin, &nLen);CHKERRQ(ierr);
-      ierr = PetscMPIIntCast(nLen,&n);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(nLen,&n);CHKERRQ(ierr);
       ierr = VecGetBlockSize(xin, &bs);CHKERRQ(ierr);
       if ((bs < 1) || (bs > 3)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "PCICE can only handle up to 3D objects, but vector dimension is %d", bs);
 
@@ -405,8 +405,8 @@ PetscErrorCode VecView_MPI_Draw_LG(Vec xin,PetscViewer viewer)
   if (isnull) PetscFunctionReturn(0);
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)xin),&rank);CHKERRMPI(ierr);
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)xin),&size);CHKERRMPI(ierr);
-  ierr = PetscMPIIntCast(xin->map->n,&n);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(xin->map->N,&N);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(xin->map->n,&n);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(xin->map->N,&N);CHKERRQ(ierr);
 
   ierr = VecGetArrayRead(xin,&xarray);CHKERRQ(ierr);
 #if defined(PETSC_USE_COMPLEX)

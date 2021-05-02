@@ -1089,7 +1089,7 @@ static PetscErrorCode MatMumpsSetUpDistRHSInfo(Mat A,PetscInt nrhs,const PetscSc
       }
 
       /* Setup recvcounts[], disps[], recvbuf on omp rank 0 for the upcoming MPI_Gatherv */
-      for (j=0; j<ompsize; j++) {ierr = PetscMPIIntCast(mumps->rhs_nrow[j]*nrhs,&mumps->rhs_recvcounts[j]);CHKERRQ(ierr);}
+      for (j=0; j<ompsize; j++) {ierr = PetscMPICountCast(mumps->rhs_nrow[j]*nrhs,&mumps->rhs_recvcounts[j]);CHKERRQ(ierr);}
       mumps->rhs_disps[0] = 0;
       for (j=1; j<ompsize; j++) {
         mumps->rhs_disps[j] = mumps->rhs_disps[j-1] + mumps->rhs_recvcounts[j-1];
@@ -1098,7 +1098,7 @@ static PetscErrorCode MatMumpsSetUpDistRHSInfo(Mat A,PetscInt nrhs,const PetscSc
       recvbuf = (nrhs == 1) ? mumps->rhs_loc : mumps->rhs_recvbuf; /* Directly use rhs_loc[] as recvbuf. Single rhs is common in Ax=b */
     }
 
-    ierr = PetscMPIIntCast(m*nrhs,&sendcount);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(m*nrhs,&sendcount);CHKERRQ(ierr);
     ierr = MPI_Gatherv(array,sendcount,MPIU_SCALAR,recvbuf,mumps->rhs_recvcounts,mumps->rhs_disps,MPIU_SCALAR,0,mumps->omp_comm);CHKERRMPI(ierr);
 
     if (mumps->is_omp_master) {

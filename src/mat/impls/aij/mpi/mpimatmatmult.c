@@ -548,8 +548,8 @@ PetscErrorCode MatMPIDenseScatter(Mat A,Mat B,PetscInt Bbidx,Mat C,Mat *outworkB
   contents = (MPIAIJ_MPIDense*)C->product->data;
   ierr = VecScatterGetRemote_Private(ctx,PETSC_TRUE/*send*/,&nsends,&sstarts,&sindices,&sprocs,NULL/*bs*/);CHKERRQ(ierr);
   ierr = VecScatterGetRemoteOrdered_Private(ctx,PETSC_FALSE/*recv*/,&nrecvs,&rstarts,NULL,&rprocs,NULL/*bs*/);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(nsends,&nsends_mpi);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(nrecvs,&nrecvs_mpi);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(nsends,&nsends_mpi);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(nrecvs,&nrecvs_mpi);CHKERRQ(ierr);
   if (Bbidx == 0) {
     workB = *outworkB = contents->workB;
   } else {

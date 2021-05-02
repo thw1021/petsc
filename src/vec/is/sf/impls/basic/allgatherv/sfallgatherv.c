@@ -49,8 +49,8 @@ PETSC_INTERN PetscErrorCode PetscSFSetUp_Allgatherv(PetscSF sf)
     ierr = PetscLayoutGetRanges(sf->map,&range);CHKERRQ(ierr);
 
     for (i=0; i<size; i++) {
-      ierr = PetscMPIIntCast(range[i],&dat->displs[i]);CHKERRQ(ierr);
-      ierr = PetscMPIIntCast(range[i+1]-range[i],&dat->recvcounts[i]);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(range[i],&dat->displs[i]);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(range[i+1]-range[i],&dat->recvcounts[i]);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -99,7 +99,7 @@ static PetscErrorCode PetscSFBcastBegin_Allgatherv(PetscSF sf,MPI_Datatype unit,
   ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
   ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(sf->nroots,&sendcount);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(sf->nroots,&sendcount);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
   ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = MPIU_Iallgatherv(rootbuf,sendcount,unit,leafbuf,dat->recvcounts,dat->displs,unit,comm,req);CHKERRMPI(ierr);
@@ -131,14 +131,14 @@ static PetscErrorCode PetscSFReduceBegin_Allgatherv(PetscSF sf,MPI_Datatype unit
     ierr = PetscSFLinkPackLeafData(sf,link,PETSCSF_REMOTE,leafdata);CHKERRQ(ierr);
     ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
     ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_LEAF2ROOT,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
-    ierr = PetscMPIIntCast(dat->rootbuflen[PETSCSF_REMOTE],&recvcount);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(dat->rootbuflen[PETSCSF_REMOTE],&recvcount);CHKERRQ(ierr);
     /* Allocate a separate leaf buffer on rank 0 */
     if (!rank && !link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi]) {
       ierr = PetscSFMalloc(sf,link->leafmtype_mpi,sf->leafbuflen[PETSCSF_REMOTE]*link->unitbytes,(void**)&link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi]);CHKERRQ(ierr);
     }
     /* In case we already copied leafdata from device to host (i.e., no use_gpu_aware_mpi), we need to adjust leafbuf on rank 0 */
     if (!rank && link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi] == leafbuf) leafbuf = MPI_IN_PLACE;
-    ierr = PetscMPIIntCast(sf->nleaves*link->bs,&count);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(sf->nleaves*link->bs,&count);CHKERRQ(ierr);
     ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
     ierr = MPI_Reduce(leafbuf,link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi],count,link->basicunit,op,0,comm);CHKERRMPI(ierr); /* Must do reduce with MPI builltin datatype basicunit */
     ierr = MPIU_Iscatterv(link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi],dat->recvcounts,dat->displs,unit,rootbuf,recvcount,unit,0,comm,req);CHKERRMPI(ierr);
@@ -225,10 +225,10 @@ PETSC_INTERN PetscErrorCode PetscSFFetchAndOpBegin_Allgatherv(PetscSF sf,MPI_Dat
     ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
     prev = rank ?            rank-1 : MPI_PROC_NULL;
     next = (rank < size-1) ? rank+1 : MPI_PROC_NULL;
-    ierr = PetscMPIIntCast(sf->nleaves,&count);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(sf->nleaves,&count);CHKERRQ(ierr);
     ierr = MPI_Sendrecv_replace(leafupdate,count,unit,next,link->tag,prev,link->tag,comm,MPI_STATUSES_IGNORE);CHKERRMPI(ierr);
   } else {
-    ierr = PetscMPIIntCast(sf->nleaves*link->bs,&count);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(sf->nleaves*link->bs,&count);CHKERRQ(ierr);
     ierr = MPI_Exscan(MPI_IN_PLACE,leafupdate,count,link->basicunit,op,comm);CHKERRMPI(ierr);
   }
   ierr = PetscSFLinkReclaim(sf,&link);CHKERRQ(ierr);

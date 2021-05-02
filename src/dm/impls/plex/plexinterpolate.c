@@ -690,7 +690,7 @@ PetscErrorCode DMPlexOrientInterface_Internal(DM dm)
           continue;
         }
         /* Find index of rank leavesRanks[p][c] among remote ranks */
-        /* No need for PetscMPIIntCast because these integers were originally cast from PetscMPIInt. */
+        /* No need for PetscMPICountCast because these integers were originally cast from PetscMPIInt. */
         ierr = PetscFindMPIInt((PetscMPIInt)leavesRanks[p][c], nranks, ranks, &r);CHKERRQ(ierr);
         if (PetscUnlikely(r < 0)) SETERRQ7(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point %D cone[%D]=%D root (%d,%D) leave (%d,%D): leave rank not found among remote ranks",p,c,cone[c],rootsRanks[p][c],roots[p][c],leavesRanks[p][c],leaves[p][c]);
         if (PetscUnlikely(ranks[r] < 0 || ranks[r] >= size)) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_PLIB, "p=%D c=%D commsize=%d: ranks[%D] = %d makes no sense",p,c,size,r,ranks[r]);

@@ -44,7 +44,7 @@ static PetscErrorCode PetscSFBcastBegin_Allgather(PetscSF sf,MPI_Datatype unit,P
   ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
   ierr = PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(sf->nroots,&sendcount);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(sf->nroots,&sendcount);CHKERRQ(ierr);
   ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
   ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
   ierr = MPIU_Iallgather(rootbuf,sendcount,unit,leafbuf,sendcount,unit,comm,req);CHKERRMPI(ierr);
@@ -75,12 +75,12 @@ static PetscErrorCode PetscSFReduceBegin_Allgather(PetscSF sf,MPI_Datatype unit,
     ierr = PetscSFLinkPackLeafData(sf,link,PETSCSF_REMOTE,leafdata);CHKERRQ(ierr);
     ierr = PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf,link,PETSC_TRUE/* device2host before sending */);CHKERRQ(ierr);
     ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_LEAF2ROOT,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
-    ierr = PetscMPIIntCast(dat->rootbuflen[PETSCSF_REMOTE],&recvcount);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(dat->rootbuflen[PETSCSF_REMOTE],&recvcount);CHKERRQ(ierr);
     if (!rank && !link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi]) {
       ierr = PetscSFMalloc(sf,link->leafmtype_mpi,sf->leafbuflen[PETSCSF_REMOTE]*link->unitbytes,(void**)&link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi]);CHKERRQ(ierr);
     }
     if (!rank && link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi] == leafbuf) leafbuf = MPI_IN_PLACE;
-    ierr = PetscMPIIntCast(sf->nleaves*link->bs,&count);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(sf->nleaves*link->bs,&count);CHKERRQ(ierr);
     ierr = PetscSFLinkSyncStreamBeforeCallMPI(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
     ierr = MPI_Reduce(leafbuf,link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi],count,link->basicunit,op,0,comm);CHKERRMPI(ierr); /* Must do reduce with MPI builltin datatype basicunit */
     ierr = MPIU_Iscatter(link->leafbuf_alloc[PETSCSF_REMOTE][link->leafmtype_mpi],recvcount,unit,rootbuf,recvcount,unit,0/*rank 0*/,comm,req);CHKERRMPI(ierr);

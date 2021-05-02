@@ -329,8 +329,8 @@ PetscErrorCode PCBDDCSetupFETIDPMatContext(FETIDPMat_ctx fetidpmat_ctx)
       for (j=0;j<pcis->n_shared[i];j++) {
         send_buffer[ptrs_buffer[i-1]+j]=array[pcis->shared[i][j]];
       }
-      ierr = PetscMPIIntCast(ptrs_buffer[i]-ptrs_buffer[i-1],&buf_size);CHKERRQ(ierr);
-      ierr = PetscMPIIntCast(pcis->neigh[i],&neigh);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(ptrs_buffer[i]-ptrs_buffer[i-1],&buf_size);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(pcis->neigh[i],&neigh);CHKERRQ(ierr);
       ierr = MPI_Isend(&send_buffer[ptrs_buffer[i-1]],buf_size,MPIU_SCALAR,neigh,0,comm,&send_reqs[i-1]);CHKERRMPI(ierr);
       ierr = MPI_Irecv(&recv_buffer[ptrs_buffer[i-1]],buf_size,MPIU_SCALAR,neigh,0,comm,&recv_reqs[i-1]);CHKERRMPI(ierr);
     }

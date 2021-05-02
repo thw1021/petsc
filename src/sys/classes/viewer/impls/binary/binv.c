@@ -943,7 +943,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadMPIIO(PetscViewer viewer,void *d
 
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-  ierr = PetscMPIIntCast(num,&cnt);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(num,&cnt);CHKERRQ(ierr);
   ierr = PetscDataTypeToMPIDataType(dtype,&mdtype);CHKERRQ(ierr);
   if (write) {
     if (!rank) {
@@ -1082,7 +1082,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
       total = start + count;
       ierr = MPI_Bcast(&total,1,MPIU_INT,size-1,comm);CHKERRMPI(ierr);
     }
-    ierr = PetscMPIIntCast(count,&cnt);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(count,&cnt);CHKERRQ(ierr);
     ierr = PetscViewerBinaryGetMPIIODescriptor(viewer,&mfdes);CHKERRQ(ierr);
     ierr = PetscViewerBinaryGetMPIIOOffset(viewer,&off);CHKERRQ(ierr);
     off += (MPI_Offset)(start*dsize);
@@ -1105,8 +1105,8 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
 
     ierr = PetscCommGetNewTag(comm,&tag);CHKERRQ(ierr);
     ierr = MPI_Reduce(&tcount,&maxcount,1,MPIU_INT,MPI_MAX,0,comm);CHKERRMPI(ierr);
-    ierr = PetscMPIIntCast(maxcount,&maxcnt);CHKERRQ(ierr);
-    ierr = PetscMPIIntCast(count,&cnt);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(maxcount,&maxcnt);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(count,&cnt);CHKERRQ(ierr);
 
     ierr = PetscViewerBinaryGetDescriptor(viewer,&fdes);CHKERRQ(ierr);
     ierr = PetscViewerFlowControlStart(viewer,&message_count,&flowcontrolcount);CHKERRQ(ierr);
