@@ -814,7 +814,7 @@ PetscErrorCode PetscNvshmemSum(PetscInt count,float *dst,const float *src)
   PetscMPIInt       num; /* Assume nvshmem's int is MPI's int */
 
   PetscFunctionBegin;
-  ierr = PetscMPIIntCast(count,&num);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(count,&num);CHKERRQ(ierr);
   nvshmemx_float_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,dst,src,num,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
@@ -825,7 +825,7 @@ PetscErrorCode PetscNvshmemMax(PetscInt count,float *dst,const float *src)
   PetscMPIInt       num;
 
   PetscFunctionBegin;
-  ierr = PetscMPIIntCast(count,&num);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(count,&num);CHKERRQ(ierr);
   nvshmemx_float_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,dst,src,num,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
@@ -836,7 +836,7 @@ PetscErrorCode PetscNvshmemSum(PetscInt count,double *dst,const double *src)
   PetscMPIInt       num;
 
   PetscFunctionBegin;
-  ierr = PetscMPIIntCast(count,&num);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(count,&num);CHKERRQ(ierr);
   nvshmemx_double_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,dst,src,num,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }
@@ -847,7 +847,7 @@ PetscErrorCode PetscNvshmemMax(PetscInt count,double *dst,const double *src)
   PetscMPIInt       num;
 
   PetscFunctionBegin;
-  ierr = PetscMPIIntCast(count,&num);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(count,&num);CHKERRQ(ierr);
   nvshmemx_double_max_reduce_on_stream(NVSHMEM_TEAM_WORLD,dst,src,num,PetscDefaultCudaStream);
   PetscFunctionReturn(0);
 }

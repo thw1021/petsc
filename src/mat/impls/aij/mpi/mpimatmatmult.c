@@ -536,7 +536,8 @@ PetscErrorCode MatMPIDenseScatter(Mat A,Mat B,PetscInt Bbidx,Mat C,Mat *outworkB
   PetscInt          i,nsends,nrecvs;
   MPI_Request       *swaits,*rwaits;
   MPI_Comm          comm;
-  PetscMPIInt       tag=((PetscObject)ctx)->tag,ncols=B->cmap->N,nrows=aij->B->cmap->n,nsends_mpi,nrecvs_mpi;
+  PetscMPIInt       tag=((PetscObject)ctx)->tag,ncols=B->cmap->N,nrows=aij->B->cmap->n;
+  PetscMPICount     nsends_mpi,nrecvs_mpi;
   MPIAIJ_MPIDense   *contents;
   Mat               workB;
   MPI_Datatype      *stype,*rtype;
@@ -548,8 +549,8 @@ PetscErrorCode MatMPIDenseScatter(Mat A,Mat B,PetscInt Bbidx,Mat C,Mat *outworkB
   contents = (MPIAIJ_MPIDense*)C->product->data;
   ierr = VecScatterGetRemote_Private(ctx,PETSC_TRUE/*send*/,&nsends,&sstarts,&sindices,&sprocs,NULL/*bs*/);CHKERRQ(ierr);
   ierr = VecScatterGetRemoteOrdered_Private(ctx,PETSC_FALSE/*recv*/,&nrecvs,&rstarts,NULL,&rprocs,NULL/*bs*/);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(nsends,&nsends_mpi);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(nrecvs,&nrecvs_mpi);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(nsends,&nsends_mpi);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(nrecvs,&nrecvs_mpi);CHKERRQ(ierr);
   if (Bbidx == 0) {
     workB = *outworkB = contents->workB;
   } else {

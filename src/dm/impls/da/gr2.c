@@ -585,7 +585,8 @@ static PetscErrorCode DMDAArrayMPIIO(DM da,PetscViewer viewer,Vec xin,PetscBool 
 {
   PetscErrorCode    ierr;
   MPI_File          mfdes;
-  PetscMPIInt       gsizes[4],lsizes[4],lstarts[4],asiz,dof;
+  PetscMPIInt       gsizes[4],lsizes[4],lstarts[4],asiz;
+  PetscMPICount     dof;
   MPI_Datatype      view;
   const PetscScalar *array;
   MPI_Offset        off;
@@ -614,7 +615,7 @@ static PetscErrorCode DMDAArrayMPIIO(DM da,PetscViewer viewer,Vec xin,PetscBool 
     }
   }
 
-  ierr       = PetscMPIIntCast(dd->w,&dof);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->w,&dof);CHKERRQ(ierr);
   gsizes[0]  = dof;
   ierr       = PetscMPIIntCast(dd->M,gsizes+1);CHKERRQ(ierr);
   ierr       = PetscMPIIntCast(dd->N,gsizes+2);CHKERRQ(ierr);

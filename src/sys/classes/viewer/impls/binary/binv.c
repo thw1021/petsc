@@ -1070,9 +1070,9 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
   ierr = PetscViewerBinaryGetUseMPIIO(viewer,&useMPIIO);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_MPIIO)
   if (useMPIIO) {
-    MPI_File       mfdes;
-    MPI_Offset     off;
-    PetscMPIInt    cnt;
+    MPI_File     mfdes;
+    MPI_Offset   off;
+    PetscMPIInt  cnt;
 
     if (start == PETSC_DETERMINE) {
       ierr = MPI_Scan(&count,&start,1,MPIU_INT,MPI_SUM,comm);CHKERRMPI(ierr);
@@ -1097,11 +1097,11 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
   }
 #endif
   {
-    int         fdes;
-    char        *workbuf = NULL;
-    PetscInt    tcount = !rank ? 0 : count,maxcount=0,message_count,flowcontrolcount;
-    PetscMPIInt tag,cnt,maxcnt,scnt=0,rcnt=0,j;
-    MPI_Status  status;
+    int           fdes;
+    char          *workbuf = NULL;
+    PetscInt      tcount = !rank ? 0 : count,maxcount=0,message_count,flowcontrolcount;
+    PetscMPIInt   tag,scnt=0,rcnt=0,j,cnt,maxcnt;
+    MPI_Status    status;
 
     ierr = PetscCommGetNewTag(comm,&tag);CHKERRQ(ierr);
     ierr = MPI_Reduce(&tcount,&maxcount,1,MPIU_INT,MPI_MAX,0,comm);CHKERRMPI(ierr);
