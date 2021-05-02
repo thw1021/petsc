@@ -958,7 +958,8 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newsf)
 #else
     PetscInt       j,k,n,disp,rlentotal,*sstart,*xindices_sorted,*yindices_sorted;
     const PetscInt *yrange;
-    PetscMPIInt    nsend,nrecv,nreq,count,yrank,*slens,*rlens,*sendto,*recvfrom,tag1,tag2;
+    PetscMPICount  nsend,nreq,count;
+    PetscMPIInt    yrank,*slens,*rlens,*sendto,*recvfrom,tag1,tag2,nrecv;
     PetscInt       *rxindices,*ryindices;
     MPI_Request    *reqs,*sreqs,*rreqs;
 
@@ -1028,7 +1029,7 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newsf)
     ierr  = PetscCommGetNewTag(ycomm,&tag1);CHKERRQ(ierr);
     ierr  = PetscCommGetNewTag(ycomm,&tag2);CHKERRQ(ierr);
     ierr  = PetscMalloc2(rlentotal,&rxindices,rlentotal,&ryindices);CHKERRQ(ierr);
-    ierr  = PetscMPIIntCast((nsend+nrecv)*2,&nreq);CHKERRQ(ierr);
+    ierr  = PetscMPICountCast((nsend+nrecv)*2,&nreq);CHKERRQ(ierr);
     ierr  = PetscMalloc1(nreq,&reqs);CHKERRQ(ierr);
     sreqs = reqs;
     rreqs = reqs + nsend*2;
@@ -1041,7 +1042,7 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newsf)
     }
 
     for (i=0; i<nsend; i++) {
-      ierr  = PetscMPIIntCast(sstart[i+1]-sstart[i],&count);CHKERRQ(ierr);
+      ierr  = PetscMPICountCast(sstart[i+1]-sstart[i],&count);CHKERRQ(ierr);
       ierr  = MPI_Isend(xindices_sorted+sstart[i],count,MPIU_INT,sendto[i],tag1,ycomm,sreqs+i);CHKERRMPI(ierr);
       ierr  = MPI_Isend(yindices_sorted+sstart[i],count,MPIU_INT,sendto[i],tag2,ycomm,sreqs+nsend+i);CHKERRMPI(ierr);
     }

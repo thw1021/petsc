@@ -83,7 +83,8 @@ static PetscErrorCode PetscParallelSortInt_Bitonic_Recursive(MPI_Comm comm, Pets
 
 static PetscErrorCode PetscParallelSortInt_Bitonic(MPI_Comm comm, PetscInt n, PetscInt keys[])
 {
-  PetscMPIInt size, rank, tag, mpin;
+  PetscMPIInt    size, rank, tag;
+  PetscMPICount  mpin;
   PetscInt       *buffer;
   PetscErrorCode ierr;
 
@@ -92,7 +93,7 @@ static PetscErrorCode PetscParallelSortInt_Bitonic(MPI_Comm comm, PetscInt n, Pe
   ierr = PetscCommGetNewTag(comm, &tag);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  ierr = PetscMPIIntCast(n, &mpin);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(n, &mpin);CHKERRQ(ierr);
   ierr = PetscMalloc1(n, &buffer);CHKERRQ(ierr);
   ierr = PetscParallelSortInt_Bitonic_Recursive(comm, tag, 0, size, rank, mpin, keys, buffer, PETSC_TRUE);CHKERRQ(ierr);
   ierr = PetscFree(buffer);CHKERRQ(ierr);

@@ -368,7 +368,8 @@ PetscErrorCode  MatFDColoringApply_AIJ(Mat J,MatFDColoring coloring,Vec x1,void 
 PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat,ISColoring iscoloring,MatFDColoring c)
 {
   PetscErrorCode         ierr;
-  PetscMPIInt            size,*ncolsonproc,*disp,nn;
+  PetscMPIInt            size,*ncolsonproc,*disp;
+  PetscMPICount          nn;
   PetscInt               i,n,nrows,nrows_i,j,k,m,ncols,col,*rowhit,cstart,cend,colb;
   const PetscInt         *is,*A_ci,*A_cj,*B_ci,*B_cj,*row=NULL,*ltog=NULL;
   PetscInt               nis=iscoloring->n,nctot,*cols,tmp = 0;
@@ -501,7 +502,7 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat,ISColoring iscoloring,MatFDCol
     if (ctype == IS_COLORING_GLOBAL) {
       /* Determine nctot, the total (parallel) number of columns of this color */
       /* ncolsonproc[j]: local ncolumns on proc[j] of this color */
-      ierr  = PetscMPIIntCast(n,&nn);CHKERRQ(ierr);
+      ierr  = PetscMPICountCast(n,&nn);CHKERRQ(ierr);
       ierr  = MPI_Allgather(&nn,1,MPI_INT,ncolsonproc,1,MPI_INT,PetscObjectComm((PetscObject)mat));CHKERRMPI(ierr);
       nctot = 0; for (j=0; j<size; j++) nctot += ncolsonproc[j];
       if (!nctot) {

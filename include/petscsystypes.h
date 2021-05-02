@@ -40,10 +40,7 @@ typedef int PetscClassId;
     usually this is the same as PetscInt, but if PETSc was built with --with-64-bit-indices but
            standard C/Fortran integers are 32 bit then this is NOT the same as PetscInt; it remains 32 bit.
 
-    PetscMPIIntCast(a,&b) checks if the given PetscInt a will fit in a PetscMPIInt, if not it
-      generates a PETSC_ERR_ARG_OUTOFRANGE error.
-
-.seealso: PetscBLASInt, PetscInt, PetscMPIIntCast()
+.seealso: PetscBLASInt, PetscInt, PetscMPICountCast(), PetscMPICount
 
 M*/
 typedef int PetscMPIInt;
@@ -214,7 +211,6 @@ M*/
           See PetscScalar for details on how to ./configure the size of PetscReal
 
           Complex numbers are automatically available if PETSc was able to find a working complex implementation
-
 
     Petsc has a 'fix' for complex numbers to support expressions such as std::complex<PetscReal> + PetscInt, which are not supported by the standard
     C++ library, but are convenient for petsc users. If the C++ compiler is able to compile code in petsccxxcomplexfix.h (This is checked by

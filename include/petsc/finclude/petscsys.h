@@ -67,6 +67,12 @@
 #define MPI_Comm integer4
 #define MPI_Group integer4
 #define PetscMPIInt integer4
+#if defined(PETSC_HAVE_MPI_COUNT)
+! Should use #define PetscMPICount INTEGER,KIND=MPI_COUNT_KIND but cannot since does not use mpif08
+#define PetscMPICount integer8
+#else
+#define PetscMPICount integer4
+#endif
 #endif
 !
 #define PetscEnum PetscFortranInt
