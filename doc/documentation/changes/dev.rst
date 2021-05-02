@@ -10,6 +10,8 @@ Changes: Development
    .. rubric:: Configure/Build:
 
    .. rubric:: Sys:
+   -  Add GPU event timers to capture kernel execution time accurately.
+   -  Remove ``WaitForCUDA()`` and ``WaitForHIP()`` before ``PetscLogGpuTimeEnd()``
 
    .. rubric:: PetscViewer:
 
