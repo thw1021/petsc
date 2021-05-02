@@ -210,7 +210,7 @@ PetscErrorCode MatCreateLRC(Mat A,Mat U,Vec c,Mat V,Mat *N)
 
   ierr = VecCreateSeq(PETSC_COMM_SELF,U->cmap->N,&Na->work1);CHKERRQ(ierr);
   ierr = VecDuplicate(Na->work1,&Na->work2);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(U->cmap->N,&Na->nwork);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(U->cmap->N,&Na->nwork);CHKERRQ(ierr);
 
   ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,V->rmap->n,NULL,&Na->xl);CHKERRQ(ierr);
   ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,U->rmap->n,NULL,&Na->yl);CHKERRQ(ierr);

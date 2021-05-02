@@ -549,11 +549,11 @@ destroy:
       err = fclose(fd);
       if (err) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SYS,"fclose() failed on file %s",fname);
       ierr = PetscSegBufferGetSize(aseg,&bytes);CHKERRQ(ierr); /* size without null termination */
-      ierr = PetscMPIIntCast(bytes,&acnt);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(bytes,&acnt);CHKERRQ(ierr);
       ierr = PetscSegBufferGet(aseg,1,&astring);CHKERRQ(ierr);
       astring[0] = 0;
       ierr = PetscSegBufferGetSize(vseg,&bytes);CHKERRQ(ierr); /* size without null termination */
-      ierr = PetscMPIIntCast(bytes,&cnt);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(bytes,&cnt);CHKERRQ(ierr);
       ierr = PetscSegBufferGet(vseg,1,&vstring);CHKERRQ(ierr);
       vstring[0] = 0;
       ierr = PetscMalloc1(2+acnt+cnt,&packed);CHKERRQ(ierr);

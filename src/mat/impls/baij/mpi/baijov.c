@@ -594,7 +594,7 @@ PetscErrorCode PetscGetProc(const PetscInt row, const PetscMPIInt size, const Pe
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMPIIntCast((PetscInt)(((float)row * (float)size / (float)nGlobalNd + 0.5)),&fproc);CHKERRQ(ierr);
+  ierr = PetscMPICountCast((PetscInt)(((float)row * (float)size / (float)nGlobalNd + 0.5)),&fproc);CHKERRQ(ierr);
   if (fproc > size) fproc = size;
   while (row < proc_gnode[fproc] || row >= proc_gnode[fproc+1]) {
     if (row < proc_gnode[fproc]) fproc--;

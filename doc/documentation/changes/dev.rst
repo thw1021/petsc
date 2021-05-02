@@ -7,7 +7,9 @@ Changes: Development
    -  Change ``MPIU_Allreduce()`` to always returns a MPI error code that
       should be checked with ``CHKERRMPI(ierr)``
 
-   .. rubric:: Configure/Build:
+   -  Add ``PetscMPICount`` and change  ``PetscMPIIntCast`` to  ``PetscMPICountCount``
+
+.. rubric:: Configure/Build:
 
    .. rubric:: Sys:
 

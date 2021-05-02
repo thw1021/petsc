@@ -5708,8 +5708,8 @@ PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat A,Mat B,MatReuse scall,PetscInt **
   ierr = VecScatterGetRemote_Private(ctx,PETSC_TRUE/*send*/,&nsends,&sstarts,&srow,&sprocs,&sbs);CHKERRQ(ierr);
   /* rprocs[] must be ordered so that indices received from them are ordered in rvalues[], which is key to algorithms used in this subroutine */
   ierr = VecScatterGetRemoteOrdered_Private(ctx,PETSC_FALSE/*recv*/,&nrecvs,&rstarts,NULL/*indices not needed*/,&rprocs,&rbs);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(nsends,&nsends_mpi);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(nrecvs,&nrecvs_mpi);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(nsends,&nsends_mpi);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(nrecvs,&nrecvs_mpi);CHKERRQ(ierr);
   ierr = PetscMalloc2(nrecvs,&rwaits,nsends,&swaits);CHKERRQ(ierr);
 
   if (!startsj_s || !bufa_ptr) scall = MAT_INITIAL_MATRIX;

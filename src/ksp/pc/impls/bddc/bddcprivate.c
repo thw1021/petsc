@@ -7423,7 +7423,7 @@ PetscErrorCode PCBDDCMatISGetSubassemblingPattern(Mat mat, PetscInt *n_subdomain
   ierr = PetscMalloc1(1,&ranks_send_to_idx);CHKERRQ(ierr);
 
   /* Restrict work on active processes only */
-  ierr = PetscMPIIntCast(im_active,&color);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(im_active,&color);CHKERRQ(ierr);
   if (void_procs) {
     ierr = PetscSubcommCreate(PetscObjectComm((PetscObject)mat),&psubcomm);CHKERRQ(ierr);
     ierr = PetscSubcommSetNumber(psubcomm,2);CHKERRQ(ierr); /* 2 groups, active process and not active processes */
@@ -7662,7 +7662,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
 
   /* compute number of sends */
   ierr = ISGetLocalSize(is_sends_internal,&i);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(i,&n_sends);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(i,&n_sends);CHKERRQ(ierr);
 
   /* compute number of receives */
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
@@ -7741,7 +7741,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
     ierr = ISLocalToGlobalMappingGetIndices(mat->rmap->mapping,(const PetscInt**)&ptr_idxs);CHKERRQ(ierr);
     ierr = PetscArraycpy(&send_buffer_idxs[2],ptr_idxs,i);CHKERRQ(ierr);
     ierr = ISLocalToGlobalMappingRestoreIndices(mat->rmap->mapping,(const PetscInt**)&ptr_idxs);CHKERRQ(ierr);
-    ierr = PetscMPIIntCast(i,&len);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(i,&len);CHKERRQ(ierr);
     for (i=0;i<n_sends;i++) {
       ilengths_vals[is_indices[i]] = len*len;
       ilengths_idxs[is_indices[i]] = len+2;
@@ -7755,7 +7755,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
     for (j=0,psum=0;j<nis;j++) {
       PetscInt plen;
       ierr = ISGetLocalSize(isarray[j],&plen);CHKERRQ(ierr);
-      ierr = PetscMPIIntCast(plen,&len);CHKERRQ(ierr);
+      ierr = PetscMPICountCast(plen,&len);CHKERRQ(ierr);
       psum += len+1; /* indices + lenght */
     }
     ierr = PetscMalloc1(psum,&send_buffer_idxs_is);CHKERRQ(ierr);
@@ -7830,7 +7830,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
     }
   }
   for (i=0;i<n_sends;i++) {
-    ierr = PetscMPIIntCast(is_indices[i],&source_dest);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(is_indices[i],&source_dest);CHKERRQ(ierr);
     ierr = MPI_Isend(send_buffer_idxs,ilengths_idxs[source_dest],MPIU_INT,source_dest,tag_idxs,comm,&send_req_idxs[i]);CHKERRMPI(ierr);
     ierr = MPI_Isend((PetscScalar*)send_buffer_vals,ilengths_vals[source_dest],MPIU_SCALAR,source_dest,tag_vals,comm,&send_req_vals[i]);CHKERRMPI(ierr);
     if (nis) {

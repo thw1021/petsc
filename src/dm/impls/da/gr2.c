@@ -614,19 +614,19 @@ static PetscErrorCode DMDAArrayMPIIO(DM da,PetscViewer viewer,Vec xin,PetscBool 
     }
   }
 
-  ierr       = PetscMPIIntCast(dd->w,&dof);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->w,&dof);CHKERRQ(ierr);
   gsizes[0]  = dof;
-  ierr       = PetscMPIIntCast(dd->M,gsizes+1);CHKERRQ(ierr);
-  ierr       = PetscMPIIntCast(dd->N,gsizes+2);CHKERRQ(ierr);
-  ierr       = PetscMPIIntCast(dd->P,gsizes+3);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->M,gsizes+1);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->N,gsizes+2);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->P,gsizes+3);CHKERRQ(ierr);
   lsizes[0]  = dof;
-  ierr       = PetscMPIIntCast((dd->xe-dd->xs)/dof,lsizes+1);CHKERRQ(ierr);
-  ierr       = PetscMPIIntCast(dd->ye-dd->ys,lsizes+2);CHKERRQ(ierr);
-  ierr       = PetscMPIIntCast(dd->ze-dd->zs,lsizes+3);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast((dd->xe-dd->xs)/dof,lsizes+1);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->ye-dd->ys,lsizes+2);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->ze-dd->zs,lsizes+3);CHKERRQ(ierr);
   lstarts[0] = 0;
-  ierr       = PetscMPIIntCast(dd->xs/dof,lstarts+1);CHKERRQ(ierr);
-  ierr       = PetscMPIIntCast(dd->ys,lstarts+2);CHKERRQ(ierr);
-  ierr       = PetscMPIIntCast(dd->zs,lstarts+3);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->xs/dof,lstarts+1);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->ys,lstarts+2);CHKERRQ(ierr);
+  ierr       = PetscMPICountCast(dd->zs,lstarts+3);CHKERRQ(ierr);
   ierr       = MPI_Type_create_subarray(da->dim+1,gsizes,lsizes,lstarts,MPI_ORDER_FORTRAN,MPIU_SCALAR,&view);CHKERRMPI(ierr);
   ierr       = MPI_Type_commit(&view);CHKERRMPI(ierr);
 

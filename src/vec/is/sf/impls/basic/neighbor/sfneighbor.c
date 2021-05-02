@@ -70,13 +70,13 @@ static PetscErrorCode PetscSFSetUp_Neighbor(PetscSF sf)
   /* Only setup MPI displs/counts for non-distinguished ranks. Distinguished ranks use shared memory */
   ierr = PetscMalloc4(dat->rootdegree,&dat->rootdispls,dat->rootdegree,&dat->rootcounts,dat->leafdegree,&dat->leafdispls,dat->leafdegree,&dat->leafcounts);CHKERRQ(ierr);
   for (i=ndrootranks,j=0; i<nrootranks; i++,j++) {
-    ierr = PetscMPIIntCast(rootoffset[i]-rootoffset[ndrootranks],&m);CHKERRQ(ierr); dat->rootdispls[j] = m;
-    ierr = PetscMPIIntCast(rootoffset[i+1]-rootoffset[i],        &n);CHKERRQ(ierr); dat->rootcounts[j] = n;
+    ierr = PetscMPICountCast(rootoffset[i]-rootoffset[ndrootranks],&m);CHKERRQ(ierr); dat->rootdispls[j] = m;
+    ierr = PetscMPICountCast(rootoffset[i+1]-rootoffset[i],        &n);CHKERRQ(ierr); dat->rootcounts[j] = n;
   }
 
   for (i=ndleafranks,j=0; i<nleafranks; i++,j++) {
-    ierr = PetscMPIIntCast(leafoffset[i]-leafoffset[ndleafranks],&m);CHKERRQ(ierr); dat->leafdispls[j] = m;
-    ierr = PetscMPIIntCast(leafoffset[i+1]-leafoffset[i],        &n);CHKERRQ(ierr); dat->leafcounts[j] = n;
+    ierr = PetscMPICountCast(leafoffset[i]-leafoffset[ndleafranks],&m);CHKERRQ(ierr); dat->leafdispls[j] = m;
+    ierr = PetscMPICountCast(leafoffset[i+1]-leafoffset[i],        &n);CHKERRQ(ierr); dat->leafcounts[j] = n;
   }
   PetscFunctionReturn(0);
 }

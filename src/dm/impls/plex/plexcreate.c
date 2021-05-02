@@ -2613,7 +2613,7 @@ static PetscErrorCode DMGetNeighbors_Plex(DM dm, PetscInt *nranks, const PetscMP
     n = njranks + niranks;
     ierr = PetscSortRemoveDupsMPIInt(&n, data->neighbors + 1);CHKERRQ(ierr);
     /* The following cast should never fail: can't have more neighbors than PETSC_MPI_INT_MAX */
-    ierr = PetscMPIIntCast(n, data->neighbors);CHKERRQ(ierr);
+    ierr = PetscMPICountCast(n, data->neighbors);CHKERRQ(ierr);
   }
   if (nranks) *nranks = data->neighbors[0];
   if (ranks) {

@@ -486,10 +486,10 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
 
       count  = graph->count[graph->subset_idxs[i][0]];
       neighs = graph->neighbours_set[graph->subset_idxs[i][0]];
-      ierr   = PetscMPIIntCast(2*graph->subset_ref_node[i],&tag);CHKERRQ(ierr);
+      ierr   = PetscMPICountCast(2*graph->subset_ref_node[i],&tag);CHKERRQ(ierr);
       for (k=0;k<count;k++) {
 
-        ierr = PetscMPIIntCast(neighs[k],&neigh);CHKERRQ(ierr);
+        ierr = PetscMPICountCast(neighs[k],&neigh);CHKERRQ(ierr);
         ierr = MPI_Isend(send_buffer_bool + i,           1,MPIU_BOOL,neigh,tag,interface_comm,&send_requests[sum_requests]);CHKERRMPI(ierr);
         ierr = MPI_Irecv(recv_buffer_bool + sum_requests,1,MPIU_BOOL,neigh,tag,interface_comm,&recv_requests[sum_requests]);CHKERRMPI(ierr);
         sum_requests++;
@@ -553,9 +553,9 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
         PetscInt    size_of_send = graph->subset_size[i];
 
         j    = graph->subset_idxs[i][0];
-        ierr = PetscMPIIntCast(2*graph->subset_ref_node[i]+1,&tag);CHKERRQ(ierr);
+        ierr = PetscMPICountCast(2*graph->subset_ref_node[i]+1,&tag);CHKERRQ(ierr);
         for (k=0;k<graph->count[j];k++) {
-          ierr = PetscMPIIntCast(graph->neighbours_set[j][k],&neigh);CHKERRQ(ierr);
+          ierr = PetscMPICountCast(graph->neighbours_set[j][k],&neigh);CHKERRQ(ierr);
           ierr = MPI_Isend(&send_buffer[start_of_send],size_of_send,MPIU_INT,neigh,tag,interface_comm,&send_requests[sum_requests]);CHKERRMPI(ierr);
           ierr = MPI_Irecv(&recv_buffer[start_of_recv],size_of_send,MPIU_INT,neigh,tag,interface_comm,&recv_requests[sum_requests]);CHKERRMPI(ierr);
           start_of_recv += size_of_send;

@@ -501,7 +501,7 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat,ISColoring iscoloring,MatFDCol
     if (ctype == IS_COLORING_GLOBAL) {
       /* Determine nctot, the total (parallel) number of columns of this color */
       /* ncolsonproc[j]: local ncolumns on proc[j] of this color */
-      ierr  = PetscMPIIntCast(n,&nn);CHKERRQ(ierr);
+      ierr  = PetscMPICountCast(n,&nn);CHKERRQ(ierr);
       ierr  = MPI_Allgather(&nn,1,MPI_INT,ncolsonproc,1,MPI_INT,PetscObjectComm((PetscObject)mat));CHKERRMPI(ierr);
       nctot = 0; for (j=0; j<size; j++) nctot += ncolsonproc[j];
       if (!nctot) {

@@ -149,7 +149,7 @@ PetscErrorCode  PetscSubcommSetNumber(PetscSubcomm psubcomm,PetscInt nsubcomm)
   PetscFunctionBegin;
   if (!psubcomm) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"PetscSubcomm is not created. Call PetscSubcommCreate() first");
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
-  ierr = PetscMPIIntCast(nsubcomm,&msub);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(nsubcomm,&msub);CHKERRQ(ierr);
   if (msub < 1 || msub > size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Num of subcommunicators %d cannot be < 1 or > input comm size %d",msub,size);
 
   psubcomm->n = msub;
