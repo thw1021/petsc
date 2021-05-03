@@ -2,6 +2,13 @@
 Changes: Development
 ====================
 
+..
+   STYLE GUIDELINES:
+   * Start a sentence with the initial cap
+   * Use imperative, e.g., Add, Improve, Change etc.
+   * Don't use the period (.) at the end
+   * If multiple sentences are needed, use the period or semicolon to divide sentences, but not at the end of the final sentence
+
 .. rubric:: General:
 
 -  Change ``MPIU_Allreduce()`` to always returns a MPI error code that
