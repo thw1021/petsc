@@ -207,11 +207,14 @@ check-py-vermin:
     - printf "./config/examples/${TEST_ARCH}.py\n"
     - cat ./config/examples/${TEST_ARCH}.py
     - ./config/examples/${TEST_ARCH}.py
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}"
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" check
-    - make updatedatafiles
+    - if [ -z ${RUN_LINT+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}"; fi
+    - if [ -z ${RUN_LINT+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" check; fi
+    - if [ -z ${RUN_LINT+x} ]; then make updatedatafiles; fi
     - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so make petsc4pytest; fi; fi
     - if [ -z ${DISABLE_TESTS+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" cleantest allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS}; fi
+    - if [ ! -z ${RUN_LINT+x} ]; then make LINTER_OPTIONS="${LINTER_OPTIONS}" test-lint; fi
+    - if [ ! -z ${RUN_LINT+x} ]; then make LINTER_OPTIONS="${LINTER_OPTIONS}" lint; fi
+    - if [ ! -z ${RUN_GCOV+x} ]; then make gcov && bash <(curl -s https://codecov.io/bash) -c > /dev/null 2>&1; fi
   artifacts:
     reports:
       junit: ${TEST_ARCH}/tests/testresults.xml
@@ -224,6 +227,7 @@ check-py-vermin:
     - ${TEST_ARCH}/tests/test_${TEST_ARCH}_tap.log
     - ${TEST_ARCH}/tests/test_${TEST_ARCH}_err.log
     - ${TEST_ARCH}/gcov.tar.gz
+    - ./petscLintPatches/*.patch
     expire_in: 4 days
   variables:
     OPENBLAS_NUM_THREADS: 1
@@ -736,6 +740,10 @@ linux-analyzer:
     - gce-nfs
   variables:
     TEST_ARCH: arch-ci-linux-analyzer
+    LOAD_MODULES: llvm/11.0.0-snbtima cmake/3.20.0-vov726r
+    DISABLE_TESTS: 1
+    RUN_LINT: 1
+    LINTER_OPTIONS: "--PETSC_ARCH=${TEST_ARCH} --clang_lib=`llvm-config --libdir`/libclang.so.11 --verbose"
 
 linux-intel:
   extends:

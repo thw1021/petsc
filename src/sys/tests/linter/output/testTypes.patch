@@ -1,0 +1,11 @@
+--- /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testTypes.c	Mon May  3 16:51:17 2021
++++ /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testTypes.c	Mon May  3 16:51:17 2021
+@@ -6,4 +6,4 @@
+-  PetscValidType(m,-1);
+-  PetscCheckSameType(m,-1,v,-1);
+-  PetscCheckSameComm(k,-2,s,-2);
+-  PetscCheckSameTypeAndComm(m,-3,s,-3);
++  PetscValidType(m,1);
++  PetscCheckSameType(m,1,v,2);
++  PetscCheckSameComm(k,3,s,4);
++  PetscCheckSameTypeAndComm(m,1,s,4);
