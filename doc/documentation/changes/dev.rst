@@ -2,6 +2,9 @@
 Changes: Development
 ====================
 
+..
+   Please use Imperative with first letter cap, e.g. Add, Improve, Change etc. WITHOUT dot at the end
+
 .. rubric:: General:
 
 -  Change ``MPIU_Allreduce()`` to always returns a MPI error code that
