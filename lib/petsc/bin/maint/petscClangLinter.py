@@ -136,6 +136,13 @@ classIdMap = {
   "_p_VecTagger *"              : "VEC_TAGGER_CLASSID",
 }
 
+# directory names to exclude from processing, case sensitive
+excludeDirNames     = {"tests","tutorials","f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","benchmarks","docs"}
+# directory suffixes to exclude from processing, case sensitive
+excludeDirSuffixes  = (".dSYM",)
+# file extensions to process, case sensitve
+allowFileExtensions = (".c",".cpp",".cxx",".cu",".cc")
+
 class QueueSignal(enum.IntEnum):
   WARNING      = enum.auto()
   UNIFIED_DIFF = enum.auto()
@@ -477,7 +484,52 @@ class SourceFix(object):
             for line in groupB[j1:j2]:
               yield "+"+line
 
-class LinterContext(object):
+class FilterFunctor(object):
+  def __init__(self,expected,funcCursor,pointer=False,notPointerHook=None,pointerHook=None,successHook=None,failureHook=None,**kwargs):
+    self.expectedTypeKinds            = expected
+    self.funcCursor                   = funcCursor
+    self.pointer                      = pointer
+    self.unexpectedNotPointerFunction = notPointerHook
+    self.unexpectedPointerFunction    = pointerHook
+    self.successFunction              = successHook
+    self.failureFunction              = failureHook
+    self.extraArgs                    = kwargs
+    return
+
+  def unexpectedNotPointerHook(self,linter,obj,objType):
+    try:
+      self.unexpectedNotPointerFunction(linter,obj,objType,**vars(self))
+    except TypeError:
+      linter.addErrorFromCursor(obj,"Object of clang type {} is not a pointer. Expected pointer of one of the following types: {}".format(objType.kind,self.expectedTypeKinds))
+    return
+
+  def unexpectedPointerHook(self,linter,obj,objType):
+    try:
+      self.unexpectedPointerFunction(linter,obj,objType,**vars(self))
+    except TypeError:
+      linter.addErrorFromCursor(obj,"Object of clang type {} is a pointer when it should not be".format(objType.kind))
+    return
+
+  def successHook(self,linter,obj,objType):
+    try:
+      self.successFunction(linter,obj,objType,**vars(self))
+    except TypeError:
+      pass
+    return
+
+  def failureHook(self,linter,obj,objType):
+    try:
+      # must return whether they handled the failure, this can mean either determining
+      # that the object was correct all along, or that a more helpful error message was
+      # logged and/or that a fix was created.
+      handled = self.failureFunction(linter,obj,objType,**vars(self))
+    except TypeError:
+      handled = False
+    if not handled:
+      linter.addErrorFromCursor(obj,"Object of clang type {} is not in expected types: {}".format(objType.kind,self.expectedTypeKinds))
+    return
+
+class PetscLinter(object):
   def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=True,lock=None):
     self.flags      = compilerFlags
     self.clangOpts  = clangOptions
@@ -528,6 +580,34 @@ class LinterContext(object):
       print(*args,**kwargs)
     return
 
+  @staticmethod
+  def findFunctionCallExpr(tu,functionNames):
+    __doc__="""
+    Finds all function call expressions in container macroNames.
+
+    Note that if a particular function call is not 100% correctly defined (i.e. would the
+    file actually compile) then it will not be picked up by clang AST.
+
+    Function-like macros can be picked up, but it will be in the wrong 'order'. The AST is
+    built as if you are about to compile it, so macros are handled before any real
+    function definitions in the AST, making it impossible to map a macro invocation to
+    its 'parent' function.
+    """
+    cursor,filename = tu.cursor,tu.cursor.spelling
+    for possibleParent in cursor.get_children():
+      # getting filename is for some reason stupidly expensive, so we do this check first
+      if possibleParent.kind not in funcCallCursors: continue
+      try:
+        if possibleParent.location.file.name != filename: continue
+      except AttributeError:
+        # possibleParent.location.file is None
+        continue
+      # if we've gotten this far we have found a function definition
+      for funcChild in possibleParent.walk_preorder():
+        if funcChild.kind == clx.CursorKind.CALL_EXPR:
+          if funcChild.spelling in functionNames:
+            yield (funcChild,possibleParent)
+
   def clear(self):
     self.errors   = []
     self.warnings = []
@@ -541,7 +621,11 @@ class LinterContext(object):
     if tu.diagnostics and self.verbose:
       diags = {" ".join([self.prefix,d]) for d in map(str,tu.diagnostics)}
       self.__print("\n".join(diags))
-    for func,parent in findFunctionCallExpr(tu,checkFunctionMap.keys()):
+    self.process(tu)
+    return
+
+  def process(self,tu):
+    for func,parent in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
       checkFunctionMap[func.spelling](self,func,parent)
     return
 
@@ -609,132 +693,125 @@ class LinterContext(object):
       combinedPatches.append((filename,unified))
     return combinedPatches
 
-class FilterFunctor(object):
-  def __init__(self,expected,funcCursor,pointer=False,notPointerHook=None,pointerHook=None,successHook=None,failureHook=None,**kwargs):
-    self.expectedTypeKinds            = expected
-    self.funcCursor                   = funcCursor
-    self.pointer                      = pointer
-    self.unexpectedNotPointerFunction = notPointerHook
-    self.unexpectedPointerFunction    = pointerHook
-    self.successFunction              = successHook
-    self.failureFunction              = failureHook
-    self.extraArgs                    = kwargs
-    return
-
-  def unexpectedNotPointerHook(self,linter,obj,objType):
-    try:
-      self.unexpectedNotPointerFunction(linter,obj,objType,**vars(self))
-    except TypeError:
-      linter.addErrorFromCursor(obj,"Object of clang type {} is not a pointer. Expected pointer of one of the following types: {}".format(objType.kind,self.expectedTypeKinds))
-    return
-
-  def unexpectedPointerHook(self,linter,obj,objType):
-    try:
-      self.unexpectedPointerFunction(linter,obj,objType,**vars(self))
-    except TypeError:
-      linter.addErrorFromCursor(obj,"Object of clang type {} is a pointer when it should not be".format(objType.kind))
-    return
-
-  def successHook(self,linter,obj,objType):
-    try:
-      self.successFunction(linter,obj,objType,**vars(self))
-    except TypeError:
-      pass
-    return
-
-  def failureHook(self,linter,obj,objType):
-    try:
-      # must return whether they handled the failure, this can mean either determining
-      # that the object was correct all along, or that a more helpful error message was
-      # logged and/or that a fix was created.
-      handled = self.failureFunction(linter,obj,objType,**vars(self))
-    except TypeError:
-      handled = False
-    if not handled:
-      linter.addErrorFromCursor(obj,"Object of clang type {} is not in expected types: {}".format(objType.kind,self.expectedTypeKinds))
-    return
-
 class WorkerPool(mp.queues.JoinableQueue):
-  def __init__(self,maxWorkers,*args,verbose=False,timeout=2,**kwargs):
-    super().__init__(3*maxWorkers,*args,**kwargs,ctx=mp.get_context())
-    self.maxWorkers  = maxWorkers
-    self.workers     = []
-    self.verbose     = verbose
-    self.timeout     = timeout
-    self.errorQueue  = mp.Queue()
-    self.returnQueue = mp.Queue()
-    self.lock        = mp.Lock()
+  def __init__(self,numWorkers=-1,timeout=2,verbose=False,prefix="[ROOT]",**kwargs):
+    if numWorkers < 0:
+      numWorkers = max(mp.cpu_count()-1,1)
+    super().__init__(3*numWorkers,**kwargs,ctx=mp.get_context())
+    if numWorkers in {0,1}:
+      print(prefix,"Number of worker processes ({}) too small, disabling multiprocessing".format(numWorkers))
+      self.parallel    = False
+      self.errorQueue  = None
+      self.returnQueue = None
+      self.lock        = None
+    else:
+      print(prefix,"Number of worker processes ({}) sufficient, enabling multiprocessing".format(numWorkers))
+      self.parallel    = True
+      self.errorQueue  = mp.Queue()
+      self.returnQueue = mp.Queue()
+      self.lock        = mp.Lock()
+    self.workers    = []
+    self.numWorkers = numWorkers
+    self.timeout    = timeout
+    self.verbose    = verbose
+    self.prefix     = prefix
+    self.warnings   = []
+    self.errorsLeft = []
+    self.patches    = []
     return
 
-  def start(self,compilerFlags,clangOptions=baseClangOptions):
-    clangLib   = clx.conf.get_filename()
-    workerArgs = (clangLib,checkFunctionMap,classIdMap,compilerFlags,clangOptions,self.verbose,self.errorQueue,self.returnQueue,self,self.lock,)
-    for i in range(self.maxWorkers):
-      workerName = "[{}]".format(i)
-      worker = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
-      worker.start()
-      self.workers.append(worker)
+  def setup(self,compilerFlags,clangLib=None,clangOptions=baseClangOptions):
+    if clangLib is None:
+      assert clx.conf.loaded, "Must initialize libClang first"
+      clangLib = clx.conf.get_filename()
+    if self.parallel:
+      workerArgs = (clangLib,checkFunctionMap,classIdMap,compilerFlags,clangOptions,self.verbose,self.errorQueue,self.returnQueue,self,self.lock,)
+      for i in range(self.numWorkers):
+        workerName = "[{}]".format(i)
+        worker     = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
+        worker.start()
+        self.workers.append(worker)
+    else:
+      self.linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=self.prefix,verbose=self.verbose)
     return
 
-  def put(self,arg):
-    import queue
-    # continuously put files onto the queue, if the queue is full we block for
-    # queueTimeout seconds and if we still cannot insert to the queue we check
-    # children for errors. If no errors are found we try again.
-    success  = False
-    superput = super().put
-    while not success:
-      try:
-        superput(arg,True,self.timeout)
-        success = True
-      except queue.Full:
-        # we don't want to join here since a child may have encountered an error!
-        self.check(join=False)
+  def walk(self,srcDir,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
+    for root,dirs,files in os.walk(srcDir):
+      if self.verbose: print(self.prefix,"Processing directory",root)
+      dirs[:] = [d for d in dirs if d not in excludeDirs]
+      dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
+      files   = [os.path.join(root,f) for f in files if f.endswith(allowFileSuff)]
+      for filename in files:
+        self.put(filename)
+    return
+
+  def put(self,filename,*args):
+    if self.parallel:
+      import queue
+      # continuously put files onto the queue, if the queue is full we block for
+      # queueTimeout seconds and if we still cannot insert to the queue we check
+      # children for errors. If no errors are found we try again.
+      while True:
+        try:
+          super().put(filename,True,self.timeout)
+          break # only get here if put is successful
+        except queue.Full:
+          # we don't want to join here since a child may have encountered an error!
+          self.check()
+    else:
+      self.linter.parse(filename)
+      self.patches.extend(self.linter.coalescePatches())
+      self.errorsLeft.append(self.linter.getErrorsLeft())
+      self.warnings.append(self.linter.getAllWarnings())
+      self.linter.clear()
     return
 
   def check(self,join=False):
-    stopMultiproc = False
-    # join here to colocate error messages if needs be
-    if join:
-      self.join()
-    while not self.errorQueue.empty():
-      # while this does get recreated for every error, we do not want to needlessly
-      # reinitialize it when no errors exist. If we get to this point however we no longer
-      # care about performance as we are about to crash everything.
-      errBars   = "".join(["[ERROR]",85*"-","[ERROR]\n"])
-      errBars   = [errBars,errBars]
-      exception = self.errorQueue.get()
-      try:
-        errMess = str(exception).join(errBars)
-      except:
-        errMess = exception
-      print(errMess)
-      stopMultiproc = True
-    if stopMultiproc:
-      raise RuntimeError("Error in child process detected")
+    if self.parallel:
+      stopMultiproc = False
+      # join here to colocate error messages if needs be
+      if join: self.join()
+      while not self.errorQueue.empty():
+        # while this does get recreated for every error, we do not want to needlessly
+        # reinitialize it when no errors exist. If we get to this point however we no longer
+        # care about performance as we are about to crash everything.
+        errBars   = "".join(["[ERROR]",85*"-","[ERROR]\n"])
+        errBars   = [errBars,errBars]
+        exception = self.errorQueue.get()
+        try:
+          errMess = str(exception).join(errBars)
+        except:
+          errMess = exception
+        print(errMess)
+        stopMultiproc = True
+      if stopMultiproc:
+        raise RuntimeError("Error in child process detected")
     return
 
   def finalize(self):
-    self.check(join=True)
-    self.errorQueue.close()
-    # send stop-signal to child processes
-    for _ in range(self.maxWorkers):
-      self.put(QueueSignal.EXIT_QUEUE)
-    self.join()
-    warnings,errorsLeft,patches = [],[],[]
-    while not self.returnQueue.empty():
-      signal,returnData = self.returnQueue.get()
-      if signal == QueueSignal.ERRORS_LEFT:
-        errorsLeft.append(returnData)
-      elif signal == QueueSignal.UNIFIED_DIFF:
-        patches.extend(returnData)
-      elif signal == QueueSignal.WARNING:
-        warnings.append(returnData)
-      else:
-        raise ValueError("Unknown data returned by returnQueue {}, {}".format(signal,returnData))
-    self.returnQueue.close()
-    self.close()
-    return warnings,errorsLeft,patches
+    if self.parallel:
+      self.check(join=True)
+      self.errorQueue.close()
+      # send stop-signal to child processes
+      for _ in range(self.numWorkers):
+        self.put(QueueSignal.EXIT_QUEUE)
+      self.join()
+      while not self.returnQueue.empty():
+        signal,returnData = self.returnQueue.get()
+        if signal == QueueSignal.ERRORS_LEFT:
+          self.errorsLeft.append(returnData)
+        elif signal == QueueSignal.UNIFIED_DIFF:
+          self.patches.extend(returnData)
+        elif signal == QueueSignal.WARNING:
+          self.warnings.append(returnData)
+        else:
+          raise ValueError("Unknown data returned by returnQueue {}, {}".format(signal,returnData))
+      self.returnQueue.close()
+      self.close()
+    self.errorsLeft = [e for e in self.errorsLeft if e] # remove any None's
+    self.warnings   = [w for w in self.warnings if w]
+    self.patches    = [p for p in self.patches if p]
+    return self.warnings,self.errorsLeft,self.patches
 
 
 """Generic test and utility functions"""
@@ -1406,57 +1483,6 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
   compilerFlags.extend(["-include-pch",precompiledHeader])
   return precompiledHeader
 
-def checkChildErrors(fileQueue,errorQueue,join=True):
-  __doc__="""
-  check for child errors by polling the errorQueue, optionally also join the processes. If ~anything~ is returned on the error queue we attempt to stringify it, otherwise just print the raw exception, and exit once the error queue is empty.
-  """
-  stopMultiproc = False
-  # join here to colocate error messages if needs be
-  if join:
-    fileQueue.join()
-  while not errorQueue.empty():
-    # while this does get recreated for every error, we do not want to needlessly
-    # reinitialize it when no errors exist. If we get to this point however we no longer
-    # care about performance as we are about to crash everything.
-    errBars   = "".join(["[ERROR]",85*"-","[ERROR]\n"])
-    errBars   = [errBars,errBars]
-    exception = errorQueue.get()
-    try:
-      errMess = str(exception).join(errBars)
-    except:
-      errMess = exception
-    print(errMess)
-    stopMultiproc = True
-  if stopMultiproc:
-    raise RuntimeError("Error in child process detected")
-  return
-
-def findFunctionCallExpr(tu,macroNames):
-  __doc__="""
-  Finds all function call expressions in list macroNames.
-
-  Note that if a particular function call is not 100% correctly defined (i.e. would the
-  file actually compile) then it will not be picked up by clang AST.
-
-  Function-like macros can be picked up, but it will be in the wrong 'order'. The AST is
-  built as if you are about to compile it, so macros are handled before any real
-  function definitions in the AST, making it impossible to map a macro invocation to
-  its 'parent' function.
-  """
-  cursor,filename = tu.cursor,tu.cursor.spelling
-  for possibleParent in cursor.get_children():
-    # getting filename is for some reason stupidly expensive, so we do this check first
-    if possibleParent.kind not in funcCallCursors: continue
-    try:
-      if possibleParent.location.file.name != filename: continue
-    except AttributeError:
-      # possibleParent.location.file is None
-      continue
-    # if we've gotten this far we have found a function definition
-    for funcChild in possibleParent.walk_preorder():
-      if funcChild.kind == clx.CursorKind.CALL_EXPR:
-        if funcChild.spelling in macroNames:
-          yield (funcChild,possibleParent)
 
 
 """Main functions for root and queue processes"""
@@ -1486,7 +1512,7 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
     errorPrefix = " ".join([printPrefix,"Exception detected while processing"])
     lockPrint(printPrefix,15*"=","Performing setup",15*"=")
     initializeLibclang(clangLib=clangLib)
-    linter = LinterContext(compilerFlags,clangOptions=clangOptions,prefix=printPrefix,verbose=verbose,lock=lock)
+    linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=printPrefix,verbose=verbose,lock=lock)
     lockPrint(printPrefix,15*"=","Entering queue",15*"=")
     while True:
       filename = fileQueue.get()
@@ -1515,12 +1541,14 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
         # putting our exception on the queue
         fileQueue.task_done()
       except ValueError:
+        # task_done() called more times than get(), means we threw before getting the
+        # filename
         pass
   errorQueue.close()
   returnQueue.close()
   return
 
-def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=False,multiproc=True,maxWorkers=0,checkFunctionFilter=None,patchDir=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[],testDir=None):
+def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=False,workers=-1,checkFunctionFilter=None,patchDir=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[],testDir=None):
   __doc__="""
   entry point for linter
 
@@ -1533,13 +1561,13 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   clangDir            -- directory containing libclang.[so|dylib|dll] (default: None)
   clangLib            -- direct path to libclang.[so|dylib|dll], overrrides clangDir if set (default: None)
   verbose             -- display debugging statements (default: False)
-  multiproc           -- use multiprocessing (default: True)
-  maxWorkers          -- number of processes for multiprocessing, 0 is number of system CPU's-1 (default: 0)
+  workers             -- number of processes for multiprocessing, -1 is number of system CPU's-1, 0 or 1 for serial computation (default: -1)
   checkFunctionFilter -- list of function names as strings to only check for, none == all of them. For example ["PetscValidPointer","PetscValidHeaderSpecific"] (default: None)
   patchDir            -- directory to store patches if they are generated (default: $PETSC_DIR/petscLintPatches)
   applyPatches        -- automatically apply patch files to source if they are generated (default: False)
   extraCompilerFlags  -- list of extra compiler flags to append to petsc and system flags. For example ["-I/my/non/standard/include","-Wsome_warning"] (default: None)
   extraHeaderIncludes -- list of #include statements to append to the precompiled mega-header, these must be in the include search path. Note that setting altBaseDir automatically appends altBaseDir/include to the search path (in last place). Use extraCompilerFlags to make any other search path additions. For example ["#include <slepc/private/epsimpl.h>"] (default: None)
+  testDir             -- directory containing test output to compare patches against, use special keyword '__at_src__' to use srcDir/output (default: None)
   """
 
   # pre-processing setup
@@ -1556,50 +1584,16 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   precompiledHeader = buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=extraHeaderIncludes,verbose=verbose)
   filterCheckFunctionMap(checkFunctionFilter)
 
-  if multiproc:
-    # -1 since num workers+root = numCpu
-    if not maxWorkers: maxWorkers = max(mp.cpu_count()-1,1)
-    if maxWorkers == 1:
-      multiproc = False
-      print(rootPrintPrefix,"Number of worker processes ({}) too small, disabling multiprocessing".format(maxWorkers))
-    else:
-      pool = WorkerPool(maxWorkers,verbose=verbose)
-      pool.start(compilerFlags)
-
-  if not multiproc:
-    linter = LinterContext(compilerFlags,prefix=rootPrintPrefix,verbose=verbose)
-    warnings,errorsLeft,patches = [],[],[]
-  # exclude these directories
-  excludeDirs = {"tests","tutorials","f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","benchmarks","docs"}
-  excludeDirSuffixes = (".dSYM",)
-  # allow these file suffixes
-  allowFileSuffixes  = (".c",".cpp",".cxx",".cu")
-  for root,dirs,files in os.walk(srcDir):
-    if verbose: print(rootPrintPrefix,"Processing directory",root)
-    dirs[:] = [d for d in dirs if d not in excludeDirs]
-    dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuffixes)]
-    files   = [os.path.join(root,f) for f in files if f.endswith(allowFileSuffixes)]
-    if multiproc:
-      for filename in files:
-        pool.put(filename)
-    else:
-      for filename in files:
-        linter.parse(filename)
-        patches.extend(linter.coalescePatches())
-        errorsLeft.append(linter.getErrorsLeft())
-        warnings.append(linter.getAllWarnings())
-        linter.clear()
-  if multiproc:
-    warnings,errorsLeft,patches = pool.finalize()
-  errorsLeft = [e for e in errorsLeft if e] # remove any None's
-  warnings   = [w for w in warnings if w]
-  patches    = [p for p in patches if p]
+  pool = WorkerPool(numWorkers=workers,verbose=verbose)
+  pool.setup(compilerFlags)
+  pool.walk(srcDir)
+  warnings,errorsLeft,patches = pool.finalize()
   if patches:
     import time,glob
 
     if testDir:
-      if testDir == "default":
-        testDir = os.path.join(srcDir,"output")
+      if testDir == "__at_src__":
+        testDir  = os.path.join(srcDir,"output")
       testGlob   = "".join([testDir,os.path.sep,"*.patch"])
       testFiles  = {os.path.basename(f):f for f in glob.glob(testGlob)}
       patchError = {}
@@ -1717,12 +1711,11 @@ if __name__ == "__main__":
   parser.add_argument("-v","--verbose",required=False,action="store_true",help="verbose progress printed to screen")
   filterFuncChoices = ", ".join(list(checkFunctionMap.keys()))
   parser.add_argument("-f","--functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="funcs")
-  parser.add_argument("--no-multiprocessing",required=False,action="store_false",help="run linter in serial mode",dest="multiproc")
-  parser.add_argument("-j","--jobs",required=False,type=int,default=0,nargs="?",help="number of multiprocessing jobs, 0 means number of processors on machine")
+  parser.add_argument("-j","--jobs",required=False,type=int,default=-1,nargs="?",help="number of multiprocessing jobs, -1 means number of processors on machine")
   parser.add_argument("-p","--patch-dir",required=False,help="directory to store patches in if they are generated",dest="patchdir")
   parser.add_argument("-a","--apply-patches",required=False,action="store_true",help="automatically apply patches that are saved to file",dest="apply")
   parser.add_argument("--CXXFLAGS",required=False,nargs="+",default=[],help="extra flags to pass to CXX compiler",dest="cxxflags")
-  parser.add_argument("--test",required=False,nargs="?",const="default",help="test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to srcDir/output. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out")
+  parser.add_argument("--test",required=False,nargs="?",const="__at_src__",help="test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to srcDir/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out")
   args = parser.parse_args()
 
   if args.petscdir is None:
@@ -1736,5 +1729,5 @@ if __name__ == "__main__":
   if args.src == "$PETSC_DIR/src":
     args.src = os.path.join(petscDir,"src")
 
-  ret = main(args.petscdir,args.petscarch,srcDir=args.src,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,multiproc=args.multiproc,maxWorkers=args.jobs,checkFunctionFilter=args.funcs,patchDir=args.patchdir,applyPatches=args.apply,extraCompilerFlags=args.cxxflags,testDir=args.test)
+  ret = main(args.petscdir,args.petscarch,srcDir=args.src,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,workers=args.jobs,checkFunctionFilter=args.funcs,patchDir=args.patchdir,applyPatches=args.apply,extraCompilerFlags=args.cxxflags,testDir=args.test)
   sys.exit(ret)
