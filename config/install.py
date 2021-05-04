@@ -142,7 +142,7 @@ class Installer(script.Script):
     except (IOError, os.error) as why:
       errors.append((srcname, dstname, str(why)))
     except shutil.Error as err:
-      errors.extend((srcname,dstname,str(err.args[0])))
+      errors.append((srcname,dstname,str(err.args[0])))
     if errors:
       raise shutil.Error(errors)
     return copies
