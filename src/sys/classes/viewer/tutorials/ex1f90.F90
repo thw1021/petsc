@@ -20,8 +20,10 @@
 
 !/*TEST
 !
-!   test:
+! build:
 !      requires: define(PETSC_USING_F2003) define(PETSC_USING_F90FREEFORM)
+!
+!   test:
 !      output_file: output/ex1_1.out
 !
 !TEST*/
