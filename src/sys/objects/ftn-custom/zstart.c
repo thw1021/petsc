@@ -25,7 +25,7 @@
 #define petsccommandargumentcount_    PETSCCOMMANDARGUMENTCOUNT
 #define petscgetcommandargument_      PETSCGETCOMMANDARGUMENT
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
-#define petscinitializef_             petscinitializefnohelp
+#define petscinitializef_             petscinitializef
 #define petscinitializenoarguments_   petscinitializenoarguments
 #define petscfinalize_                petscfinalize
 #define petscend_                     petscend
