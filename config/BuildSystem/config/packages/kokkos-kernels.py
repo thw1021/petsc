@@ -4,16 +4,16 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = '3.2.00'
+    self.gitcommit        = '54e4213ca028163a76639d23b1204b213203bc79' # origin/develop of 2021-04-28
     self.versionname      = 'KOKKOS_KERNELS_VERSION'  # It looks kokkos-kernels does not yet have a macro for version number
     self.download         = ['git://https://github.com/kokkos/kokkos-kernels.git']
-    self.includes         = ['KokkosBlas.hpp','KokkosSparse_CrsMatrix.hpp']
+    #TODO: See comments in kokkos.py
+    #self.includes         = ['KokkosBlas.hpp','KokkosSparse_CrsMatrix.hpp']
     self.liblist          = [['libkokkoskernels.a']]
     self.functions        = ['']
     # I don't know how to make it work since all KK routines are templated and always need Kokkos::View. So I cheat here and use functionCxx from Kokkos.
     self.functionsCxx     = [1,'namespace Kokkos {void initialize(int&,char*[]);}','int one = 1;char* args[1];Kokkos::initialize(one,args);']
     self.cxx              = 1
-    self.requirescxx11    = 1
     self.downloadonWindows= 0
     self.hastests         = 1
     self.requiresrpath    = 1
@@ -59,7 +59,8 @@ class Configure(config.package.CMakePackage):
     args.append('-DKokkos_ROOT='+KokkosRoot)
     # By default it installs in lib64, change it to lib
     if self.checkSharedLibrariesEnabled():
-      args.append('-DCMAKE_INSTALL_RPATH:PATH='+os.path.join(KokkosRoot,self.kokkos.libdir))
+      args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
+      args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
     if self.cuda.found:
       self.system = 'CUDA'
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
@@ -70,12 +71,14 @@ class Configure(config.package.CMakePackage):
         args.append('-DKokkosKernels_ENABLE_TPL_CUSPARSE=OFF')
     elif self.hip.found:
       self.system = 'HIP'
-      self.pushLanguage('HIP')
-      petscHipcc = self.getCompiler()
-      self.popLanguage()
-      self.getExecutable(petscHipcc,getFullPath=1,resultName='systemHipcc')
-      if not hasattr(self,'systemHipcc'):
-        raise RuntimeError('HIP error: could not find path of hipcc')
+      with self.Language('HIP'):
+        petscHipc = self.getCompiler()
+        hipFlags = self.updatePackageCFlags(self.getCompilerFlags())
+      self.getExecutable(petscHipc,getFullPath=1,resultName='systemHipc')
+      if not hasattr(self,'systemHipc'):
+        raise RuntimeError('HIP error: could not find path of hipc')
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
-      args.append('-DCMAKE_CXX_COMPILER='+self.systemHipcc)
+      args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
+      args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
+      args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
     return args

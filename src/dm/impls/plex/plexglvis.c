@@ -546,9 +546,15 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     ierr = ISRestoreIndices(globalNum,&gNum);CHKERRQ(ierr);
   }
 
+  /* vertex_parents (Non-conforming meshes) */
+  parentSection  = NULL;
+  if (enable_ncmesh) {
+    ierr = DMPlexGetTree(dm,&parentSection,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+    enable_ncmesh = (PetscBool)(enable_ncmesh && parentSection);
+  }
   /* return if this process is disabled */
   if (!enabled) {
-    ierr = PetscViewerASCIIPrintf(viewer,"MFEM mesh v1.1\n");CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"MFEM mesh %s\n",enable_ncmesh ? "v1.1" : "v1.0");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"\ndimension\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"%D\n",dim);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"\nelements\n");CHKERRQ(ierr);
@@ -649,7 +655,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
   if (hovec && dim == 3) enable_boundary = PETSC_TRUE;
 
   /* header */
-  ierr = PetscViewerASCIIPrintf(viewer,"MFEM mesh v1.1\n");CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"MFEM mesh %s\n",enable_ncmesh ? "v1.1" : "v1.0");CHKERRQ(ierr);
 
   /* topological dimension */
   ierr = PetscViewerASCIIPrintf(viewer,"\ndimension\n");CHKERRQ(ierr);
@@ -672,7 +678,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
       ierr = ISDestroy(&vals);CHKERRQ(ierr);
       lminl = PetscMin(ldef,lminl);
     }
-    ierr = MPIU_Allreduce(&lminl,&minl,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&lminl,&minl,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
     if (minl == PETSC_MAX_INT) minl = 1;
   }
   ierr = PetscViewerASCIIPrintf(viewer,"\nelements\n");CHKERRQ(ierr);
@@ -878,7 +884,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
         ierr = ISDestroy(&vals);CHKERRQ(ierr);
         lminl = PetscMin(ldef,lminl);
       }
-      ierr = MPIU_Allreduce(&lminl,&minl,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(&lminl,&minl,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
       if (minl == PETSC_MAX_INT) minl = 1;
     }
     ierr = PetscViewerASCIIPrintf(viewer,"%D\n",bf);CHKERRQ(ierr);
@@ -954,11 +960,6 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     }
   }
 
-  /* vertex_parents (Non-conforming meshes) */
-  parentSection  = NULL;
-  if (enable_ncmesh) {
-    ierr = DMPlexGetTree(dm,&parentSection,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
-  }
   if (parentSection) {
     PetscInt vp,gvp;
 
@@ -972,7 +973,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
       ierr = DMPlexGetTreeParent(dm,p,&parent,NULL);CHKERRQ(ierr);
       if (parent != p) vp++;
     }
-    ierr = MPIU_Allreduce(&vp,&gvp,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&vp,&gvp,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
     if (gvp) {
       PetscInt  maxsupp;
       PetscBool *skip = NULL;

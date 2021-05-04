@@ -382,6 +382,7 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
   ierr = KSPMonitorSetFromOptions(ksp, "-ksp_monitor_solution", "solution", NULL);CHKERRQ(ierr);
   ierr = KSPMonitorSetFromOptions(ksp, "-ksp_monitor_singular_value", "singular_value", ksp);CHKERRQ(ierr);
   ierr = KSPMonitorSetFromOptions(ksp, "-ksp_monitor_error", "error", ksp);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-ksp_monitor_pause_final", "Pauses all draw monitors at the final iterate", "KSPMonitorPauseFinal_Internal", PETSC_FALSE, &ksp->pauseFinal, NULL);CHKERRQ(ierr);
 
   ierr = PetscObjectTypeCompare((PetscObject)ksp,KSPPREONLY,&flg);CHKERRQ(ierr);
   if (flg) {
@@ -390,7 +391,11 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
     ierr = KSPSetReusePreconditioner(ksp,reuse);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-ksp_error_if_not_converged","Generate error if solver does not converge","KSPSetErrorIfNotConverged",ksp->errorifnotconverged,&ksp->errorifnotconverged,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_view",&ksp->viewer, &ksp->format,&ksp->view);CHKERRQ(ierr);
-    ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_converged_reason",&ksp->viewerReason,&ksp->formatReason,&ksp->viewReason);CHKERRQ(ierr);
+    flg = PETSC_FALSE;
+    ierr = PetscOptionsBool("-ksp_converged_reason_view_cancel","Cancel all the converged reason view functions set using KSPConvergedReasonViewSet","KSPConvergedReasonViewCancel",PETSC_FALSE,&flg,&set);CHKERRQ(ierr);
+    if (set && flg) {
+      ierr = KSPConvergedReasonViewCancel(ksp);CHKERRQ(ierr);
+    }
     ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_view_mat",&ksp->viewerMat,&ksp->formatMat,&ksp->viewMat);CHKERRQ(ierr);
     ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_view_pmat",&ksp->viewerPMat,&ksp->formatPMat,&ksp->viewPMat);CHKERRQ(ierr);
     ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_view_rhs",&ksp->viewerRhs,&ksp->formatRhs,&ksp->viewRhs);CHKERRQ(ierr);
@@ -409,6 +414,12 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
     ierr = PetscOptionsBool("-ksp_diagonal_scale_fix","Fix diagonally scaled matrix after solve","KSPSetDiagonalScaleFix",flag,&flag,&flg);CHKERRQ(ierr);
     if (flg) {
       ierr = KSPSetDiagonalScaleFix(ksp,flag);CHKERRQ(ierr);
+    }
+    nmax = ksp->nmax;
+    ierr = PetscOptionsDeprecated("-ksp_matsolve_block_size","-ksp_matsolve_batch_size","3.15",NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-ksp_matsolve_batch_size", "Maximum number of columns treated simultaneously", "KSPSetMatSolveBatchSize", nmax, &nmax, &flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = KSPSetMatSolveBatchSize(ksp, nmax);CHKERRQ(ierr);
     }
     goto skipoptions;
   }
@@ -547,7 +558,12 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
   }
   ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_view",&ksp->viewer,&ksp->format,&ksp->view);CHKERRQ(ierr);
   ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_view_pre",&ksp->viewerPre,&ksp->formatPre,&ksp->viewPre);CHKERRQ(ierr);
-  ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_converged_reason",&ksp->viewerReason,&ksp->formatReason,&ksp->viewReason);CHKERRQ(ierr);
+
+  flg = PETSC_FALSE;
+  ierr = PetscOptionsBool("-ksp_converged_reason_view_cancel","Cancel all the converged reason view functions set using KSPConvergedReasonViewSet","KSPConvergedReasonViewCancel",PETSC_FALSE,&flg,&set);CHKERRQ(ierr);
+  if (set && flg) {
+    ierr = KSPConvergedReasonViewCancel(ksp);CHKERRQ(ierr);
+  }
   ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_converged_rate",&ksp->viewerRate,&ksp->formatRate,&ksp->viewRate);CHKERRQ(ierr);
   ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_view_mat",&ksp->viewerMat,&ksp->formatMat,&ksp->viewMat);CHKERRQ(ierr);
   ierr = PetscOptionsGetViewer(comm,((PetscObject) ksp)->options,prefix,"-ksp_view_pmat",&ksp->viewerPMat,&ksp->formatPMat,&ksp->viewPMat);CHKERRQ(ierr);
@@ -630,19 +646,20 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
 
 #if defined(PETSC_HAVE_SAWS)
   {
-  PetscBool set;
-  flg  = PETSC_FALSE;
-  ierr = PetscOptionsBool("-ksp_saws_block","Block for SAWs at end of KSPSolve","PetscObjectSAWsBlock",((PetscObject)ksp)->amspublishblock,&flg,&set);CHKERRQ(ierr);
-  if (set) {
-    ierr = PetscObjectSAWsSetBlock((PetscObject)ksp,flg);CHKERRQ(ierr);
-  }
+    PetscBool set;
+    flg  = PETSC_FALSE;
+    ierr = PetscOptionsBool("-ksp_saws_block","Block for SAWs at end of KSPSolve","PetscObjectSAWsBlock",((PetscObject)ksp)->amspublishblock,&flg,&set);CHKERRQ(ierr);
+    if (set) {
+      ierr = PetscObjectSAWsSetBlock((PetscObject)ksp,flg);CHKERRQ(ierr);
+    }
   }
 #endif
 
-  nmax = PETSC_DECIDE;
-  ierr = PetscOptionsInt("-ksp_matsolve_block_size", "Maximum number of columns treated simultaneously", "KSPMatSolve", nmax, &nmax, &flg);CHKERRQ(ierr);
+  nmax = ksp->nmax;
+  ierr = PetscOptionsDeprecated("-ksp_matsolve_block_size","-ksp_matsolve_batch_size","3.15",NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-ksp_matsolve_batch_size", "Maximum number of columns treated simultaneously", "KSPSetMatSolveBatchSize", nmax, &nmax, &flg);CHKERRQ(ierr);
   if (flg) {
-    ierr = KSPSetMatSolveBlockSize(ksp, nmax);CHKERRQ(ierr);
+    ierr = KSPSetMatSolveBatchSize(ksp, nmax);CHKERRQ(ierr);
   }
 
   flg  = PETSC_FALSE;

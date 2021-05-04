@@ -72,8 +72,8 @@ int main(int argc, char **argv)
     contig = tmp;
   }
   for (i=0;i<10000;i++) {
-    ierr = PetscSFBcastBegin(sf,contig,bufA,bufAout);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(sf,contig,bufA,bufAout);CHKERRQ(ierr);
+    ierr = PetscSFBcastBegin(sf,contig,bufA,bufAout,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(sf,contig,bufA,bufAout,MPI_REPLACE);CHKERRQ(ierr);
   }
   ierr = VecRestoreArrayRead(A,(const PetscScalar**)&bufA);CHKERRQ(ierr);
   ierr = VecRestoreArray(Aout,&bufAout);CHKERRQ(ierr);
@@ -101,13 +101,13 @@ int main(int argc, char **argv)
       suffix: window
       filter: grep -v "type" | grep -v "sort"
       args: -sf_type window -sf_window_sync {{fence active lock}} -sf_window_flavor {{create allocate dynamic}}
-      requires: define(PETSC_HAVE_MPI_ONE_SIDED)
+      requires: define(PETSC_HAVE_MPI_ONE_SIDED) defined(PETSC_HAVE_MPI_FEATURE_DYNAMIC_WINDOW)
 
    test:
       suffix: window_dupped
       filter: grep -v "type" | grep -v "sort"
       args: -test_dupped_type -sf_type window -sf_window_sync {{fence active lock}} -sf_window_flavor {{create allocate dynamic}}
-      requires: define(PETSC_HAVE_MPI_ONE_SIDED)
+      requires: define(PETSC_HAVE_MPI_ONE_SIDED) defined(PETSC_HAVE_MPI_FEATURE_DYNAMIC_WINDOW)
 
    test:
       suffix: window_shared

@@ -170,8 +170,8 @@ PetscErrorCode PetscViewerFlush_ASCII(PetscViewer viewer)
       ierr = MPI_Recv(&dummy,1,MPI_INT,0,tag,comm,&status);CHKERRMPI(ierr);
       ierr = MPI_Send(&vascii->petsc_printfqueuelength,1,MPI_INT,0,tag,comm);CHKERRMPI(ierr);
       for (i=0; i<vascii->petsc_printfqueuelength; i++) {
-        ierr     = MPI_Send(&next->size,1,MPI_INT,0,tag,comm);CHKERRQ(ierr);
-        ierr     = MPI_Send(next->string,next->size,MPI_CHAR,0,tag,comm);CHKERRQ(ierr);
+        ierr     = MPI_Send(&next->size,1,MPI_INT,0,tag,comm);CHKERRMPI(ierr);
+        ierr     = MPI_Send(next->string,next->size,MPI_CHAR,0,tag,comm);CHKERRMPI(ierr);
         previous = next;
         next     = next->next;
         ierr     = PetscFree(previous->string);CHKERRQ(ierr);
@@ -760,7 +760,7 @@ PetscErrorCode  PetscViewerFileSetName_ASCII(PetscViewer viewer,const char name[
         }
         break;
       default:
-        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG, "Invalid file mode %d", vascii->mode);
+        SETERRQ1(PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Unsupported file mode %s",PetscFileModes[vascii->mode]);
       }
       if (!vascii->fd) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open PetscViewer file: %s",fname);
     }

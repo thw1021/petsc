@@ -52,7 +52,7 @@ int main(int argc,char **args)
   ierr = PetscOptionsInt("-PN","Number of columns of P","",PN,&PN,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-mcheck","Number of matmult checks","",mcheck,&mcheck,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsString("-fA","Path for matrix A","",file[0],file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"Must indicate a file name for matrix A with the -fA option.");
+  if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must indicate a file name for matrix A with the -fA option.");
   ierr = PetscOptionsString("-fB","Path for matrix B","",file[1],file[1],sizeof(file[1]),&flg);CHKERRQ(ierr);
   ierr = PetscOptionsFList("-A_mat_type","Matrix type","MatSetType",MatList,deft,A_mattype,256,&flgA);CHKERRQ(ierr);
   ierr = PetscOptionsFList("-B_mat_type","Matrix type","MatSetType",MatList,deft,B_mattype,256,&flgB);CHKERRQ(ierr);
@@ -412,21 +412,21 @@ int main(int argc,char **args)
    test:
      suffix: 14_seqaijcusparse
      requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES)
-     args: -A_mat_type aijcusparse -B_mat_type aijcusparse -mat_cusparse_transgen -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     args: -A_mat_type aijcusparse -B_mat_type aijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
      output_file: output/ex62_1.out
 
    test:
      suffix: 14_mpiaijcusparse_seq
      nsize: 1
      requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES)
-     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_cusparse_transgen -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
      output_file: output/ex62_1.out
 
    test:
      suffix: 14_mpiaijcusparse
      nsize: 3
      requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES)
-     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_cusparse_transgen -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
      output_file: output/ex62_1.out
 
    test:
@@ -439,21 +439,21 @@ int main(int argc,char **args)
    test:
      suffix: 15_seqaijcusparse
      requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES) datafilespath
-     args: -A_mat_type aijcusparse -mat_cusparse_transgen -fA ${DATAFILESPATH}/matrices/matmatmult/A4.BGriffith
+     args: -A_mat_type aijcusparse -mat_form_explicit_transpose -fA ${DATAFILESPATH}/matrices/matmatmult/A4.BGriffith
      output_file: output/ex62_1.out
 
    test:
      suffix: 15_mpiaijcusparse_seq
      nsize: 1
      requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES) datafilespath
-     args: -A_mat_type mpiaijcusparse -mat_cusparse_transgen -fA ${DATAFILESPATH}/matrices/matmatmult/A4.BGriffith
+     args: -A_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${DATAFILESPATH}/matrices/matmatmult/A4.BGriffith
      output_file: output/ex62_1.out
 
    test:
      nsize: 3
      suffix: 15_mpiaijcusparse
      requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES) datafilespath
-     args: -A_mat_type mpiaijcusparse -mat_cusparse_transgen -fA ${DATAFILESPATH}/matrices/matmatmult/A4.BGriffith
+     args: -A_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${DATAFILESPATH}/matrices/matmatmult/A4.BGriffith
      output_file: output/ex62_1.out
 
 TEST*/

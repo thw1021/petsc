@@ -51,7 +51,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da,PetscViewer viewer)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)da,&comm);CHKERRQ(ierr);
-  if (PetscDefined(PETSC_USE_COMPLEX)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Complex values not supported");
+  if (PetscDefined(USE_COMPLEX)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Complex values not supported");
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = DMDAGetInfo(da,&dim,&mx,&my,&mz,NULL,NULL,NULL,&bs,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
@@ -79,7 +79,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da,PetscViewer viewer)
   rloc[3] = info.ym;
   rloc[4] = info.zs;
   rloc[5] = info.zm;
-  ierr    = MPI_Gather(rloc,6,MPIU_INT,&grloc[0][0],6,MPIU_INT,0,comm);CHKERRQ(ierr);
+  ierr    = MPI_Gather(rloc,6,MPIU_INT,&grloc[0][0],6,MPIU_INT,0,comm);CHKERRMPI(ierr);
 
   /* Write XML header */
   maxnnodes = 0;                /* Used for the temporary array size on rank 0 */
@@ -282,7 +282,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da,PetscViewer viewer)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)da,&comm);CHKERRQ(ierr);
-  if (PetscDefined(PETSC_USE_COMPLEX)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Complex values not supported");
+  if (PetscDefined(USE_COMPLEX)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Complex values not supported");
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = DMDAGetInfo(da,&dim,&mx,&my,&mz,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
@@ -299,7 +299,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da,PetscViewer viewer)
   rloc[3] = info.ym;
   rloc[4] = info.zs;
   rloc[5] = info.zm;
-  ierr    = MPI_Gather(rloc,6,MPIU_INT,&grloc[0][0],6,MPIU_INT,0,comm);CHKERRQ(ierr);
+  ierr    = MPI_Gather(rloc,6,MPIU_INT,&grloc[0][0],6,MPIU_INT,0,comm);CHKERRMPI(ierr);
 
   /* Write XML header */
   maxnnodes = 0;                /* Used for the temporary array size on rank 0 */

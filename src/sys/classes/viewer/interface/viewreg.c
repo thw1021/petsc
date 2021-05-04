@@ -470,7 +470,7 @@ $     PetscViewerSetType(viewer,"my_viewer_type")
    or at runtime via the option
 $     -viewer_type my_viewer_type
 
-.seealso: PetscViewerRegisterAll(), PetscViewerRegisterDestroy()
+.seealso: PetscViewerRegisterAll()
  @*/
 PetscErrorCode  PetscViewerRegister(const char *sname,PetscErrorCode (*function)(PetscViewer))
 {
@@ -540,7 +540,7 @@ PetscErrorCode PetscViewerFlowControlStart(PetscViewer viewer,PetscInt *mcnt,Pet
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscViewerFlowControlStepMaster(PetscViewer viewer,PetscInt i,PetscInt *mcnt,PetscInt cnt)
+PetscErrorCode PetscViewerFlowControlStepMain(PetscViewer viewer,PetscInt i,PetscInt *mcnt,PetscInt cnt)
 {
   PetscErrorCode ierr;
   MPI_Comm       comm;
@@ -554,7 +554,7 @@ PetscErrorCode PetscViewerFlowControlStepMaster(PetscViewer viewer,PetscInt i,Pe
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscViewerFlowControlEndMaster(PetscViewer viewer,PetscInt *mcnt)
+PetscErrorCode PetscViewerFlowControlEndMain(PetscViewer viewer,PetscInt *mcnt)
 {
   PetscErrorCode ierr;
   MPI_Comm       comm;

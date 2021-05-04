@@ -55,7 +55,7 @@ typedef struct _n_Model *Model;
 /* 'User' implements a discretization of a continuous model. */
 typedef struct _n_User *User;
 typedef PetscErrorCode (*SolutionFunction)(Model,PetscReal,const PetscReal*,PetscScalar*,void*);
-typedef PetscErrorCode (*SetUpBCFunction)(PetscDS,Physics);
+typedef PetscErrorCode (*SetUpBCFunction)(DM,PetscDS,Physics);
 typedef PetscErrorCode (*FunctionalFunction)(Model,PetscReal,const PetscReal*,const PetscScalar*,PetscReal*,void*);
 typedef PetscErrorCode (*SetupFields)(Physics,PetscSection);
 static PetscErrorCode ModelSolutionSetDefault(Model,SolutionFunction,void*);
@@ -271,7 +271,7 @@ static PetscErrorCode PhysicsFunctional_Advect(Model mod,PetscReal time,const Pe
 {
   Physics        phys    = (Physics)ctx;
   Physics_Advect *advect = (Physics_Advect*)phys->data;
-  PetscScalar    yexact[1];
+  PetscScalar    yexact[1] = {0.0};
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
@@ -281,15 +281,17 @@ static PetscErrorCode PhysicsFunctional_Advect(Model mod,PetscReal time,const Pe
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetUpBC_Advect(PetscDS prob, Physics phys)
+static PetscErrorCode SetUpBC_Advect(DM dm, PetscDS prob, Physics phys)
 {
   PetscErrorCode ierr;
   const PetscInt inflowids[] = {100,200,300},outflowids[] = {101};
+  DMLabel        label;
 
   PetscFunctionBeginUser;
   /* Register "canned" boundary conditions and defaults for where to apply. */
-  ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "inflow",  "Face Sets", 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Advect_Inflow, NULL,  ALEN(inflowids),  inflowids,  phys);CHKERRQ(ierr);
-  ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "outflow", "Face Sets", 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Advect_Outflow, NULL, ALEN(outflowids), outflowids, phys);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "Face Sets", &label);CHKERRQ(ierr);
+  ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "inflow",  label, ALEN(inflowids),  inflowids,  0, 0, NULL, (void (*)(void)) PhysicsBoundary_Advect_Inflow, NULL,  phys, NULL);CHKERRQ(ierr);
+  ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "outflow", label, ALEN(outflowids), outflowids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Advect_Outflow, NULL, phys, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -516,12 +518,15 @@ static PetscErrorCode PhysicsFunctional_SW(Model mod,PetscReal time,const PetscR
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetUpBC_SW(PetscDS prob,Physics phys)
+static PetscErrorCode SetUpBC_SW(DM dm, PetscDS prob,Physics phys)
 {
   PetscErrorCode ierr;
   const PetscInt wallids[] = {100,101,200,300};
+  DMLabel        label;
+
   PetscFunctionBeginUser;
-  ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", "Face Sets", 0, 0, NULL, (void (*)(void)) PhysicsBoundary_SW_Wall, NULL, ALEN(wallids), wallids, phys);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "Face Sets", &label);CHKERRQ(ierr);
+  ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, ALEN(wallids), wallids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_SW_Wall, NULL, phys, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -787,17 +792,20 @@ static PetscErrorCode PhysicsFunctional_Euler(Model mod,PetscReal time,const Pet
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetUpBC_Euler(PetscDS prob,Physics phys)
+static PetscErrorCode SetUpBC_Euler(DM dm, PetscDS prob,Physics phys)
 {
   PetscErrorCode  ierr;
   Physics_Euler   *eu = (Physics_Euler *) phys->data;
+  DMLabel         label;
+
+  ierr = DMGetLabel(dm, "Face Sets", &label);CHKERRQ(ierr);
   if (eu->type == EULER_LINEAR_WAVE) {
     const PetscInt wallids[] = {100,101};
-    ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", "Face Sets", 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Euler_Wall, NULL, ALEN(wallids), wallids, phys);CHKERRQ(ierr);
+    ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, ALEN(wallids), wallids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Euler_Wall, NULL, phys, NULL);CHKERRQ(ierr);
   }
   else {
     const PetscInt wallids[] = {100,101,200,300};
-    ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", "Face Sets", 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Euler_Wall, NULL, ALEN(wallids), wallids, phys);CHKERRQ(ierr);
+    ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, ALEN(wallids), wallids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Euler_Wall, NULL, phys, NULL);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1147,8 +1155,8 @@ PetscErrorCode SplitFaces(DM *dmSplit, const char labelName[], User user)
     if (numRoots >= 0) {
       ierr = PetscMalloc2(numRoots,&newLocation,pEnd-pStart,&newRemoteLocation);CHKERRQ(ierr);
       for (l=0; l<numRoots; l++) newLocation[l] = l; /* + (l >= cEnd ? numGhostCells : 0); */
-      ierr = PetscSFBcastBegin(sfPoint, MPIU_INT, newLocation, newRemoteLocation);CHKERRQ(ierr);
-      ierr = PetscSFBcastEnd(sfPoint, MPIU_INT, newLocation, newRemoteLocation);CHKERRQ(ierr);
+      ierr = PetscSFBcastBegin(sfPoint, MPIU_INT, newLocation, newRemoteLocation,MPI_REPLACE);CHKERRQ(ierr);
+      ierr = PetscSFBcastEnd(sfPoint, MPIU_INT, newLocation, newRemoteLocation,MPI_REPLACE);CHKERRQ(ierr);
       ierr = PetscMalloc1(numLeaves,    &glocalPoints);CHKERRQ(ierr);
       ierr = PetscMalloc1(numLeaves, &gremotePoints);CHKERRQ(ierr);
       for (l = 0; l < numLeaves; ++l) {
@@ -1873,7 +1881,7 @@ int main(int argc, char **argv)
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
   ierr = PetscDSSetRiemannSolver(prob, 0, user->model->physics->riemann);CHKERRQ(ierr);
   ierr = PetscDSSetContext(prob, 0, user->model->physics);CHKERRQ(ierr);
-  ierr = (*mod->setupbc)(prob,phys);CHKERRQ(ierr);
+  ierr = (*mod->setupbc)(dm, prob,phys);CHKERRQ(ierr);
   ierr = PetscDSSetFromOptions(prob);CHKERRQ(ierr);
   {
     char      convType[256];
@@ -2393,11 +2401,6 @@ int godunovflux( const PetscScalar *ul, const PetscScalar *ur,
     static PetscScalar bn[3], fn, ft, tg[3], pl, rl, pm, pr, rr, xp, ubl, ubm,
             ubr, dtt, unm, tmp, utl, utm, uxl, utr, uxr, gaml, gamm, gamr,
             xcen, rhom, rho1l, rho1m, rho1r;
-    /* Parameter adjustments */
-    --nn;
-    --flux;
-    --ur;
-    --ul;
 
     /* Function Body */
     xcen = 0.;
@@ -2409,17 +2412,17 @@ int godunovflux( const PetscScalar *ul, const PetscScalar *ur,
     }
     dtt = 1.;
     if (*ndim == 3) {
-        if (nn[1] == 0. && nn[2] == 0.) {
+        if (nn[0] == 0. && nn[1] == 0.) {
             tg[0] = 1.;
         } else {
-            tg[0] = -nn[2];
-            tg[1] = nn[1];
+            tg[0] = -nn[1];
+            tg[1] = nn[0];
         }
 /*           tmp=dsqrt(tg(1)**2+tg(2)**2) */
 /*           tg=tg/tmp */
-        bn[0] = -nn[3] * tg[1];
-        bn[1] = nn[3] * tg[0];
-        bn[2] = nn[1] * tg[1] - nn[2] * tg[0];
+        bn[0] = -nn[2] * tg[1];
+        bn[1] = nn[2] * tg[0];
+        bn[2] = nn[0] * tg[1] - nn[1] * tg[0];
 /* Computing 2nd power */
         d__1 = bn[0];
 /* Computing 2nd power */
@@ -2432,16 +2435,16 @@ int godunovflux( const PetscScalar *ul, const PetscScalar *ur,
             bn[k - 1] /= tmp;
         }
     } else if (*ndim == 2) {
-        tg[0] = -nn[2];
-        tg[1] = nn[1];
+        tg[0] = -nn[1];
+        tg[1] = nn[0];
 /*           tmp=dsqrt(tg(1)**2+tg(2)**2) */
 /*           tg=tg/tmp */
         bn[0] = 0.;
         bn[1] = 0.;
         bn[2] = 1.;
     }
-    rl = ul[1];
-    rr = ur[1];
+    rl = ul[0];
+    rr = ur[0];
     uxl = 0.;
     uxr = 0.;
     utl = 0.;
@@ -2450,12 +2453,12 @@ int godunovflux( const PetscScalar *ul, const PetscScalar *ur,
     ubr = 0.;
     i__1 = *ndim;
     for (k = 1; k <= i__1; ++k) {
-        uxl += ul[k + 1] * nn[k];
-        uxr += ur[k + 1] * nn[k];
-        utl += ul[k + 1] * tg[k - 1];
-        utr += ur[k + 1] * tg[k - 1];
-        ubl += ul[k + 1] * bn[k - 1];
-        ubr += ur[k + 1] * bn[k - 1];
+        uxl += ul[k] * nn[k-1];
+        uxr += ur[k] * nn[k-1];
+        utl += ul[k] * tg[k - 1];
+        utr += ur[k] * tg[k - 1];
+        ubl += ul[k] * bn[k - 1];
+        ubr += ur[k] * bn[k - 1];
     }
     uxl /= rl;
     uxr /= rr;
@@ -2472,14 +2475,14 @@ int godunovflux( const PetscScalar *ul, const PetscScalar *ur,
     d__2 = utl;
 /* Computing 2nd power */
     d__3 = ubl;
-    pl = (*gamma - 1.) * (ul[*ndim + 2] - rl * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
+    pl = (*gamma - 1.) * (ul[*ndim + 1] - rl * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
 /* Computing 2nd power */
     d__1 = uxr;
 /* Computing 2nd power */
     d__2 = utr;
 /* Computing 2nd power */
     d__3 = ubr;
-    pr = (*gamma - 1.) * (ur[*ndim + 2] - rr * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
+    pr = (*gamma - 1.) * (ur[*ndim + 1] - rr * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
     rho1l = rl;
     rho1r = rr;
 
@@ -2487,19 +2490,19 @@ int godunovflux( const PetscScalar *ul, const PetscScalar *ur,
                           rho1l, &rr, &uxr, &pr, &utr, &ubr, &gamr, &rho1r, &rhom, &unm, &
                           pm, &utm, &ubm, &gamm, &rho1m);
 
-    flux[1] = rhom * unm;
+    flux[0] = rhom * unm;
     fn = rhom * unm * unm + pm;
     ft = rhom * unm * utm;
 /*           flux(2)=fn*nn(1)+ft*nn(2) */
 /*           flux(3)=fn*tg(1)+ft*tg(2) */
-    flux[2] = fn * nn[1] + ft * tg[0];
-    flux[3] = fn * nn[2] + ft * tg[1];
+    flux[1] = fn * nn[0] + ft * tg[0];
+    flux[2] = fn * nn[1] + ft * tg[1];
 /*           flux(2)=rhom*unm*(unm)+pm */
 /*           flux(3)=rhom*(unm)*utm */
     if (*ndim == 3) {
-        flux[4] = rhom * unm * ubm;
+        flux[3] = rhom * unm * ubm;
     }
-    flux[*ndim + 2] = (rhom * .5 * (unm * unm + utm * utm + ubm * ubm) + gamm / (gamm - 1.) * pm) * unm;
+    flux[*ndim + 1] = (rhom * .5 * (unm * unm + utm * utm + ubm * ubm) + gamm / (gamm - 1.) * pm) * unm;
     return iwave;
 } /* godunovflux_ */
 
@@ -2703,13 +2706,13 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
   test:
     suffix: adv_2d_tri_0
     requires: triangle
-    TODO: how did this ever get in master when there is no support for this
+    TODO: how did this ever get in main when there is no support for this
     args: -ufv_vtk_interval 0 -simplex -dm_refine 3 -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3
 
   test:
     suffix: adv_2d_tri_1
     requires: triangle
-    TODO: how did this ever get in master when there is no support for this
+    TODO: how did this ever get in main when there is no support for this
     args: -ufv_vtk_interval 0 -simplex -dm_refine 5 -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow 3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1
 
   test:

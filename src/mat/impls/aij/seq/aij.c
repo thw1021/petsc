@@ -1395,6 +1395,9 @@ PetscErrorCode MatSetOption_SeqAIJ(Mat A,MatOption op,PetscBool flg)
     if (flg) A->ops->setvalues = MatSetValues_SeqAIJ_SortedFull;
     else     A->ops->setvalues = MatSetValues_SeqAIJ;
     break;
+  case MAT_FORM_EXPLICIT_TRANSPOSE:
+    A->form_explicit_transpose = flg;
+    break;
   default:
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"unknown option %d",op);
   }
@@ -2338,9 +2341,9 @@ PetscErrorCode MatGetRow_SeqAIJ(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,P
 PetscErrorCode MatRestoreRow_SeqAIJ(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
   PetscFunctionBegin;
-  *nz = 0;
+  if (nz)  *nz = 0;
   if (idx) *idx = NULL;
-  if (v) *v = NULL;
+  if (v)   *v = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -3207,7 +3210,7 @@ PetscErrorCode MatAXPY_SeqAIJ(Mat Y,PetscScalar a,Mat X,MatStructure str)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode  MatConjugate_SeqAIJ(Mat mat)
+PETSC_INTERN PetscErrorCode MatConjugate_SeqAIJ(Mat mat)
 {
 #if defined(PETSC_USE_COMPLEX)
   Mat_SeqAIJ     *aij = (Mat_SeqAIJ*)mat->data;
@@ -4427,7 +4430,6 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_ScaLAPACK(Mat,MatType,MatReuse,Mat*);
 #if defined(PETSC_HAVE_HYPRE)
 PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A,MatType,MatReuse,Mat*);
 #endif
-PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqDense(Mat,MatType,MatReuse,Mat*);
 
 PETSC_EXTERN PetscErrorCode MatConvert_SeqAIJ_SeqSELL(Mat,MatType,MatReuse,Mat*);
 PETSC_INTERN PetscErrorCode MatConvert_XAIJ_IS(Mat,MatType,MatReuse,Mat*);

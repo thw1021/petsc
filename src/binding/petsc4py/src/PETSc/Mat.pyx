@@ -129,10 +129,12 @@ class MatStructure(object):
     SAME_NONZERO_PATTERN      = MAT_SAME_NONZERO_PATTERN
     DIFFERENT_NONZERO_PATTERN = MAT_DIFFERENT_NONZERO_PATTERN
     SUBSET_NONZERO_PATTERN    = MAT_SUBSET_NONZERO_PATTERN
+    UNKNOWN_NONZERO_PATTERN   = MAT_UNKNOWN_NONZERO_PATTERN
     # aliases
     SAME      = SAME_NZ      = SAME_NONZERO_PATTERN
     SUBSET    = SUBSET_NZ    = SUBSET_NONZERO_PATTERN
     DIFFERENT = DIFFERENT_NZ = DIFFERENT_NONZERO_PATTERN
+    UNKNOWN   = UNKNOWN_NZ   = UNKNOWN_NONZERO_PATTERN
 
 class MatOrderingType(object):
     NATURAL     = S_(MATORDERINGNATURAL)
@@ -1028,6 +1030,22 @@ cdef class Mat(Object):
         else:
             rows = iarray_i(rows, &ni, &i)
             CHKERR( MatZeroRowsColumnsLocal(self.mat, ni, i, sval, xvec, bvec) )
+
+    def zeroRowsColumnsStencil(self, rows, diag=1, Vec x=None, Vec b=None):
+        cdef PetscScalar sval = asScalar(diag)
+        cdef PetscInt nrows = asInt(len(rows))
+        cdef PetscMatStencil st
+        cdef _Mat_Stencil r
+        cdef PetscMatStencil *crows = NULL 
+        CHKERR( PetscMalloc(<size_t>(nrows+1)*sizeof(st), &crows) )
+        for i in range(nrows):
+            r = rows[i]
+            crows[i] = r.stencil
+        cdef PetscVec xvec = NULL, bvec = NULL
+        if x is not None: xvec = x.vec
+        if b is not None: bvec = b.vec
+        CHKERR( MatZeroRowsColumnsStencil(self.mat, nrows, crows, sval, xvec, bvec) )
+        CHKERR( PetscFree( crows ) )
 
     def storeValues(self):
         CHKERR( MatStoreValues(self.mat) )

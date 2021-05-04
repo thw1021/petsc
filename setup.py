@@ -23,7 +23,7 @@ all message-passing communication.
   You can also install the in-development versions with::
 
     $ python -m pip install Cython numpy mpi4py
-    $ python -m pip install --no-deps https://gitlab.com/petsc/petsc/-/archive/master/petsc-master.tar.gz
+    $ python -m pip install --no-deps https://gitlab.com/petsc/petsc/-/archive/main/petsc-main.tar.gz
 
   To set the MPI compilers use the environmental variables ``MPICC``, ``MPICXX``, ``MPIF90``.
 
@@ -159,7 +159,7 @@ def config(prefix, dry_run=False):
         import logger
         logger.Logger.defaultLog = None
     else:
-        python = find_executable('python2') or find_executable('python')
+        python = sys.executable
         command = [python, './configure'] + options
         status = os.system(" ".join(command))
         if status != 0: raise RuntimeError(status)
@@ -268,7 +268,7 @@ def tarball():
     VERSION = version()
     if '.dev' in VERSION: return None
     return ('http://ftp.mcs.anl.gov/pub/petsc/release-snapshots//'
-            'petsc-lite-%s.tar.gz#egg=petsc-%s' % (VERSION, VERSION))
+            'petsc-%s.tar.gz#egg=petsc-%s' % (VERSION, VERSION))
 
 description = __doc__.split('\n')[1:-1]; del description[1:3]
 classifiers = """

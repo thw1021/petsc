@@ -29,8 +29,8 @@ PetscErrorCode KSPAGMRESRoddecInitNeighboor(KSP ksp)
   ierr = PetscObjectGetComm((PetscObject)agmres->vecs[0], &comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
-  ierr = MPIU_Allreduce(&rank, &First, 1, MPI_INT, MPI_MIN, comm);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&rank, &Last, 1, MPI_INT, MPI_MAX, comm);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&rank, &First, 1, MPI_INT, MPI_MIN, comm);CHKERRMPI(ierr);
+  ierr = MPIU_Allreduce(&rank, &Last, 1, MPI_INT, MPI_MAX, comm);CHKERRMPI(ierr);
 
   if ((rank != Last) && (!rank)) {
     agmres->Ileft  = rank - 1;
@@ -289,14 +289,14 @@ PetscErrorCode KSPAGMRESRodvec(KSP ksp, PetscInt nvec, PetscScalar *In, Vec Out)
           zq      = zloc[0];
           y[d]    =      c * zp + s * zq;
           zloc[0] =   -s * zp + c * zq;
-          ierr    = MPI_Send(&(y[d]), 1, MPIU_SCALAR, Ileft, agmres->tag, comm);CHKERRQ(ierr);
+          ierr    = MPI_Send(&(y[d]), 1, MPIU_SCALAR, Ileft, agmres->tag, comm);CHKERRMPI(ierr);
         } else {
-          ierr    = MPI_Recv(&yd, 1, MPIU_SCALAR, Iright, agmres->tag, comm, &status);CHKERRQ(ierr);
+          ierr    = MPI_Recv(&yd, 1, MPIU_SCALAR, Iright, agmres->tag, comm, &status);CHKERRMPI(ierr);
           zp      = yd;
           zq      = zloc[0];
           yd      =      c * zp + s * zq;
           zloc[0] =   -s * zp + c * zq;
-          ierr    = MPI_Send(&yd, 1, MPIU_SCALAR, Ileft, agmres->tag, comm);CHKERRQ(ierr);
+          ierr    = MPI_Send(&yd, 1, MPIU_SCALAR, Ileft, agmres->tag, comm);CHKERRMPI(ierr);
         }
       }
     }

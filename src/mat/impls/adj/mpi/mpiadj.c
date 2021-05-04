@@ -48,10 +48,10 @@ static PetscErrorCode MatCreateSubMatrix_MPIAdj_data(Mat adj,IS irows, IS icols,
   ierr = PetscSFSetGraph(sf,nroots,nleaves,NULL,PETSC_OWN_POINTER,iremote,PETSC_OWN_POINTER);CHKERRQ(ierr);
   ierr = PetscSFSetType(sf,PETSCSFBASIC);CHKERRQ(ierr);
   ierr = PetscSFSetFromOptions(sf);CHKERRQ(ierr);
-  ierr = PetscSFBcastBegin(sf,MPIU_INT,ncols_send,ncols_recv);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sf,MPIU_INT,ncols_send,ncols_recv);CHKERRQ(ierr);
-  ierr = PetscSFBcastBegin(sf,MPIU_INT,xadj,xadj_recv);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sf,MPIU_INT,xadj,xadj_recv);CHKERRQ(ierr);
+  ierr = PetscSFBcastBegin(sf,MPIU_INT,ncols_send,ncols_recv,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastEnd(sf,MPIU_INT,ncols_send,ncols_recv,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastBegin(sf,MPIU_INT,xadj,xadj_recv,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastEnd(sf,MPIU_INT,xadj,xadj_recv,MPI_REPLACE);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&sf);CHKERRQ(ierr);
   Ncols_recv =0;
   for (i=0; i<nlrows_is; i++){
@@ -81,11 +81,11 @@ static PetscErrorCode MatCreateSubMatrix_MPIAdj_data(Mat adj,IS irows, IS icols,
   ierr = PetscSFSetGraph(sf,nroots,nleaves,NULL,PETSC_OWN_POINTER,iremote,PETSC_OWN_POINTER);CHKERRQ(ierr);
   ierr = PetscSFSetType(sf,PETSCSFBASIC);CHKERRQ(ierr);
   ierr = PetscSFSetFromOptions(sf);CHKERRQ(ierr);
-  ierr = PetscSFBcastBegin(sf,MPIU_INT,adjncy,adjncy_recv);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sf,MPIU_INT,adjncy,adjncy_recv);CHKERRQ(ierr);
+  ierr = PetscSFBcastBegin(sf,MPIU_INT,adjncy,adjncy_recv,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastEnd(sf,MPIU_INT,adjncy,adjncy_recv,MPI_REPLACE);CHKERRQ(ierr);
   if (a->useedgeweights){
-    ierr = PetscSFBcastBegin(sf,MPIU_INT,a->values,values_recv);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(sf,MPIU_INT,a->values,values_recv);CHKERRQ(ierr);
+    ierr = PetscSFBcastBegin(sf,MPIU_INT,a->values,values_recv,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(sf,MPIU_INT,a->values,values_recv,MPI_REPLACE);CHKERRQ(ierr);
   }
   ierr = PetscSFDestroy(&sf);CHKERRQ(ierr);
   ierr = MatRestoreRowIJ(adj,0,PETSC_FALSE,PETSC_FALSE,&nlrows_mat,&xadj,&adjncy,&done);CHKERRQ(ierr);
@@ -371,7 +371,7 @@ static PetscErrorCode MatEqual_MPIAdj(Mat A,Mat B,PetscBool * flg)
   /* if a->j are the same */
   ierr = PetscMemcmp(a->j,b->j,(a->nz)*sizeof(PetscInt),&flag);CHKERRQ(ierr);
 
-  ierr = MPIU_Allreduce(&flag,flg,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&flag,flg,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -630,7 +630,7 @@ static PetscErrorCode  MatMPIAdjSetPreallocation_MPIAdj(Mat B,PetscInt *i,PetscI
   ierr = PetscLayoutSetUp(B->cmap);CHKERRQ(ierr);
   if (values) useedgeweights = PETSC_TRUE; else useedgeweights = PETSC_FALSE;
   /* Make everybody knows if they are using edge weights or not */
-  ierr = MPIU_Allreduce((int*)&useedgeweights,(int*)&b->useedgeweights,1,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)B));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce((int*)&useedgeweights,(int*)&b->useedgeweights,1,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)B));CHKERRMPI(ierr);
 
   if (PetscDefined(USE_DEBUG)) {
     PetscInt ii;
@@ -671,8 +671,8 @@ static PetscErrorCode MatMPIAdjCreateNonemptySubcommMat_MPIAdj(Mat A,Mat *B)
   PetscFunctionBegin;
   *B    = NULL;
   ierr  = PetscObjectGetComm((PetscObject)A,&acomm);CHKERRQ(ierr);
-  ierr  = MPI_Comm_size(acomm,&size);CHKERRQ(ierr);
-  ierr  = MPI_Comm_size(acomm,&rank);CHKERRQ(ierr);
+  ierr  = MPI_Comm_size(acomm,&size);CHKERRMPI(ierr);
+  ierr  = MPI_Comm_size(acomm,&rank);CHKERRMPI(ierr);
   ierr  = MatGetOwnershipRanges(A,&ranges);CHKERRQ(ierr);
   for (i=0,nranks=0; i<size; i++) {
     if (ranges[i+1] - ranges[i] > 0) nranks++;
@@ -701,7 +701,7 @@ static PetscErrorCode MatMPIAdjCreateNonemptySubcommMat_MPIAdj(Mat A,Mat *B)
     ierr       = MatCreateMPIAdj(bcomm,m,N,a->i,a->j,a->values,B);CHKERRQ(ierr);
     b          = (Mat_MPIAdj*)(*B)->data;
     b->freeaij = PETSC_FALSE;
-    ierr       = MPI_Comm_free(&bcomm);CHKERRQ(ierr);
+    ierr       = MPI_Comm_free(&bcomm);CHKERRMPI(ierr);
   }
   PetscFunctionReturn(0);
 }

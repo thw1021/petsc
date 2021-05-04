@@ -218,7 +218,7 @@ PetscErrorCode KSPMonitorResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Pe
   Collective on ksp
 
   Input Parameters:
-+ viewer - The PetsViewer
++ viewer - The PetscViewer
 . format - The viewer format
 - ctx    - An optional user context
 
@@ -288,7 +288,7 @@ PetscErrorCode KSPMonitorRange_Private(KSP ksp, PetscInt it, PetscReal *per)
   for (i = 0; i < n; ++i) pwork += (PetscAbsScalar(r[i]) > .20*rmax);
   ierr = VecRestoreArrayRead(resid, &r);CHKERRQ(ierr);
   ierr = VecDestroy(&resid);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&pwork, per, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject) ksp));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&pwork, per, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject) ksp));CHKERRMPI(ierr);
   *per = *per/N;
   PetscFunctionReturn(0);
 }
@@ -486,7 +486,7 @@ PetscErrorCode KSPMonitorTrueResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm
   Collective on ksp
 
   Input Parameters:
-+ viewer - The PetsViewer
++ viewer - The PetscViewer
 . format - The viewer format
 - ctx    - An optional user context
 
@@ -730,7 +730,7 @@ PetscErrorCode KSPMonitorErrorDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Petsc
   Collective on ksp
 
   Input Parameters:
-+ viewer - The PetsViewer
++ viewer - The PetscViewer
 . format - The viewer format
 - ctx    - An optional user context
 
@@ -907,7 +907,7 @@ PetscErrorCode KSPMonitorSolutionDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Pe
   Collective on ksp
 
   Input Parameters:
-+ viewer - The PetsViewer
++ viewer - The PetscViewer
 . format - The viewer format
 - ctx    - An optional user context
 
@@ -986,7 +986,7 @@ PetscErrorCode KSPMonitorSingularValue(KSP ksp, PetscInt n, PetscReal rnorm, Pet
   Collective on ksp
 
   Input Parameters:
-+ viewer - The PetsViewer
++ viewer - The PetscViewer
 . format - The viewer format
 - ctx    - An optional user context
 
@@ -1548,15 +1548,21 @@ PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn
 {
   PetscErrorCode ierr;
   Vec            vecr = NULL,vecl = NULL;
-  PetscBool      matset,pmatset;
+  PetscBool      matset,pmatset,isshell,preferdm = PETSC_FALSE;
   Mat            mat = NULL;
 
   PetscFunctionBegin;
+  if (ksp->dm) {
+    ierr = PetscObjectTypeCompare((PetscObject) ksp->dm, DMSHELL, &isshell);CHKERRQ(ierr);
+    preferdm = isshell ? PETSC_FALSE : PETSC_TRUE;
+  }
   if (rightn) {
     if (!right) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"You asked for right vectors but did not pass a pointer to hold them");
     if (ksp->vec_sol) vecr = ksp->vec_sol;
     else {
-      if (ksp->pc) {
+      if (preferdm) {
+        ierr = DMGetGlobalVector(ksp->dm,&vecr);CHKERRQ(ierr);
+      } else if (ksp->pc) {
         ierr = PCGetOperatorsSet(ksp->pc,&matset,&pmatset);CHKERRQ(ierr);
         /* check for mat before pmat because for KSPLSQR pmat may be a different size than mat since pmat maybe mat'*mat */
         if (matset) {
@@ -1567,15 +1573,16 @@ PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn
           ierr = MatCreateVecs(mat,&vecr,NULL);CHKERRQ(ierr);
         }
       }
-      if (!vecr) {
-        if (ksp->dm) {
-          ierr = DMGetGlobalVector(ksp->dm,&vecr);CHKERRQ(ierr);
-        } else SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"You requested a vector from a KSP that cannot provide one");
+      if (!vecr && ksp->dm) {
+        ierr = DMGetGlobalVector(ksp->dm,&vecr);CHKERRQ(ierr);
       }
+      if (!vecr) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"You requested a vector from a KSP that cannot provide one");
     }
     ierr = VecDuplicateVecs(vecr,rightn,right);CHKERRQ(ierr);
     if (!ksp->vec_sol) {
-      if (mat) {
+      if (preferdm) {
+        ierr = DMRestoreGlobalVector(ksp->dm,&vecr);CHKERRQ(ierr);
+      } else if (mat) {
         ierr = VecDestroy(&vecr);CHKERRQ(ierr);
       } else if (ksp->dm) {
         ierr = DMRestoreGlobalVector(ksp->dm,&vecr);CHKERRQ(ierr);
@@ -1586,7 +1593,9 @@ PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn
     if (!left) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"You asked for left vectors but did not pass a pointer to hold them");
     if (ksp->vec_rhs) vecl = ksp->vec_rhs;
     else {
-      if (ksp->pc) {
+      if (preferdm) {
+        ierr = DMGetGlobalVector(ksp->dm,&vecl);CHKERRQ(ierr);
+      } else if (ksp->pc) {
         ierr = PCGetOperatorsSet(ksp->pc,&matset,&pmatset);CHKERRQ(ierr);
         /* check for mat before pmat because for KSPLSQR pmat may be a different size than mat since pmat maybe mat'*mat */
         if (matset) {
@@ -1597,15 +1606,16 @@ PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn
           ierr = MatCreateVecs(mat,NULL,&vecl);CHKERRQ(ierr);
         }
       }
-      if (!vecl) {
-        if (ksp->dm) {
-          ierr = DMGetGlobalVector(ksp->dm,&vecl);CHKERRQ(ierr);
-        } else SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"You requested a vector from a KSP that cannot provide one");
+      if (!vecl && ksp->dm) {
+        ierr = DMGetGlobalVector(ksp->dm,&vecl);CHKERRQ(ierr);
       }
+      if (!vecl) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"You requested a vector from a KSP that cannot provide one");
     }
     ierr = VecDuplicateVecs(vecl,leftn,left);CHKERRQ(ierr);
     if (!ksp->vec_rhs) {
-      if (mat) {
+      if (preferdm) {
+        ierr = DMRestoreGlobalVector(ksp->dm,&vecl);CHKERRQ(ierr);
+      } else if (mat) {
         ierr = VecDestroy(&vecl);CHKERRQ(ierr);
       } else if (ksp->dm) {
         ierr = DMRestoreGlobalVector(ksp->dm,&vecl);CHKERRQ(ierr);
@@ -1706,6 +1716,30 @@ PetscErrorCode  KSPGetConvergedReason(KSP ksp,KSPConvergedReason *reason)
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidPointer(reason,2);
   *reason = ksp->reason;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+   KSPGetConvergedReasonString - Return a human readable string for ksp converged reason
+
+   Not Collective
+
+   Input Parameter:
+.  ksp - the KSP context
+
+   Output Parameter:
+.  strreason - a human readable string that describes ksp converged reason
+
+   Level: beginner
+
+.seealso: KSPGetConvergedReason()
+@*/
+PetscErrorCode KSPGetConvergedReasonString(KSP ksp,const char** strreason)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
+  PetscValidCharPointer(strreason,2);
+  *strreason = KSPConvergedReasons[ksp->reason];
   PetscFunctionReturn(0);
 }
 

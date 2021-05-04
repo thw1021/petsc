@@ -396,6 +396,34 @@ PetscErrorCode DMShellSetGlobalVector(DM dm,Vec X)
   PetscFunctionReturn(0);
 }
 
+/*@
+  DMShellGetGlobalVector - Returns the template global vector associated with the DMShell, or NULL if it was not set
+
+   Not collective
+
+   Input Arguments:
++  dm - shell DM
+-  X - template vector
+
+   Level: advanced
+
+.seealso: DMShellSetGlobalVector(), DMShellSetCreateGlobalVector(), DMCreateGlobalVector()
+@*/
+PetscErrorCode DMShellGetGlobalVector(DM dm, Vec *X)
+{
+  DM_Shell      *shell = (DM_Shell *) dm->data;
+  PetscBool      isshell;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
+  PetscValidPointer(X,2);
+  ierr = PetscObjectTypeCompare((PetscObject)dm,DMSHELL,&isshell);CHKERRQ(ierr);
+  if (!isshell) PetscFunctionReturn(0);
+  *X = shell->Xglobal;
+  PetscFunctionReturn(0);
+}
+
 /*@C
    DMShellSetCreateGlobalVector - sets the routine to create a global vector associated with the shell DM
 
@@ -499,7 +527,8 @@ PetscErrorCode DMShellSetCreateLocalVector(DM dm,PetscErrorCode (*func)(DM,Vec*)
 
 .seealso: DMShellSetLocalToGlobal(), DMGlobalToLocalBeginDefaultShell(), DMGlobalToLocalEndDefaultShell()
 @*/
-PetscErrorCode DMShellSetGlobalToLocal(DM dm,PetscErrorCode (*begin)(DM,Vec,InsertMode,Vec),PetscErrorCode (*end)(DM,Vec,InsertMode,Vec)) {
+PetscErrorCode DMShellSetGlobalToLocal(DM dm,PetscErrorCode (*begin)(DM,Vec,InsertMode,Vec),PetscErrorCode (*end)(DM,Vec,InsertMode,Vec))
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   dm->ops->globaltolocalbegin = begin;
@@ -525,7 +554,8 @@ PetscErrorCode DMShellSetGlobalToLocal(DM dm,PetscErrorCode (*begin)(DM,Vec,Inse
 
 .seealso: DMShellSetGlobalToLocal()
 @*/
-PetscErrorCode DMShellSetLocalToGlobal(DM dm,PetscErrorCode (*begin)(DM,Vec,InsertMode,Vec),PetscErrorCode (*end)(DM,Vec,InsertMode,Vec)) {
+PetscErrorCode DMShellSetLocalToGlobal(DM dm,PetscErrorCode (*begin)(DM,Vec,InsertMode,Vec),PetscErrorCode (*end)(DM,Vec,InsertMode,Vec))
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   dm->ops->localtoglobalbegin = begin;
@@ -551,7 +581,8 @@ PetscErrorCode DMShellSetLocalToGlobal(DM dm,PetscErrorCode (*begin)(DM,Vec,Inse
 
 .seealso: DMShellSetGlobalToLocal(), DMLocalToLocalBeginDefaultShell(), DMLocalToLocalEndDefaultShell()
 @*/
-PetscErrorCode DMShellSetLocalToLocal(DM dm,PetscErrorCode (*begin)(DM,Vec,InsertMode,Vec),PetscErrorCode (*end)(DM,Vec,InsertMode,Vec)) {
+PetscErrorCode DMShellSetLocalToLocal(DM dm,PetscErrorCode (*begin)(DM,Vec,InsertMode,Vec),PetscErrorCode (*end)(DM,Vec,InsertMode,Vec))
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   dm->ops->localtolocalbegin = begin;

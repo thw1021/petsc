@@ -59,7 +59,7 @@ class Configure(config.package.Package):
       ldflags=self.getDynamicLinkerFlags()
     else:
       ldflags=''
-    ldflags+=self.setCompilers.LDFLAGS
+    ldflags += ' '+self.setCompilers.LDFLAGS
     # SuiteSparse 5.6.0 makefile has a bug in how it treats LDFLAGS (not using the override directive)
     ldflags+=" -L\$(INSTALL_LIB)"
     self.popLanguage()
@@ -81,6 +81,9 @@ class Configure(config.package.Package):
     args.append('INSTALL_DOC='+self.installDir+'/share/doc/suitesparse')
     args.append('BLAS="'+self.libraries.toString(self.blasLapack.dlib)+'"')
     args.append('LAPACK="'+self.libraries.toString(self.blasLapack.dlib)+'"')
+    # fix for bug in SuiteSparse
+    if self.setCompilers.isDarwin(self.log):
+      args.append('LDLIBS=""')
     if self.blasLapack.mangling == 'underscore':
       flg = ''
     elif self.blasLapack.mangling == 'caps':

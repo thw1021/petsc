@@ -93,8 +93,10 @@ PETSC_EXTERN PetscErrorCode KSPSolve(KSP,Vec,Vec);
 PETSC_EXTERN PetscErrorCode KSPSolveTranspose(KSP,Vec,Vec);
 PETSC_EXTERN PetscErrorCode KSPSetUseExplicitTranspose(KSP,PetscBool);
 PETSC_EXTERN PetscErrorCode KSPMatSolve(KSP,Mat,Mat);
-PETSC_EXTERN PetscErrorCode KSPSetMatSolveBlockSize(KSP,PetscInt);
-PETSC_EXTERN PetscErrorCode KSPGetMatSolveBlockSize(KSP,PetscInt*);
+PETSC_EXTERN PetscErrorCode KSPSetMatSolveBatchSize(KSP,PetscInt);
+PETSC_DEPRECATED_FUNCTION("Use KSPSetMatSolveBatchSize() (since version 3.15)") PETSC_STATIC_INLINE PetscErrorCode KSPSetMatSolveBlockSize(KSP ksp,PetscInt n) {return KSPSetMatSolveBatchSize(ksp,n);}
+PETSC_EXTERN PetscErrorCode KSPGetMatSolveBatchSize(KSP,PetscInt*);
+PETSC_DEPRECATED_FUNCTION("Use KSPGetMatSolveBatchSize() (since version 3.15)") PETSC_STATIC_INLINE PetscErrorCode KSPGetMatSolveBlockSize(KSP ksp,PetscInt *n) {return KSPGetMatSolveBatchSize(ksp,n);}
 PETSC_EXTERN PetscErrorCode KSPReset(KSP);
 PETSC_EXTERN PetscErrorCode KSPResetViewers(KSP);
 PETSC_EXTERN PetscErrorCode KSPDestroy(KSP*);
@@ -380,6 +382,9 @@ PETSC_EXTERN PetscErrorCode KSPMonitorSolutionDrawLG(KSP,PetscInt,PetscReal,Pets
 PETSC_EXTERN PetscErrorCode KSPMonitorSolutionDrawLGCreate(PetscViewer,PetscViewerFormat,void *,PetscViewerAndFormat **);
 PETSC_EXTERN PetscErrorCode KSPMonitorSingularValue(KSP,PetscInt,PetscReal,PetscViewerAndFormat*);
 PETSC_EXTERN PetscErrorCode KSPMonitorSingularValueCreate(PetscViewer,PetscViewerFormat,void *,PetscViewerAndFormat **);
+PETSC_DEPRECATED_FUNCTION("Use KSPMonitorResidual() (since version 3.15)") PETSC_STATIC_INLINE PetscErrorCode KSPMonitorDefault(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf) {return KSPMonitorResidual(ksp,n,rnorm,vf);}
+PETSC_DEPRECATED_FUNCTION("Use KSPMonitorTrueResidual() (since version 3.15)") PETSC_STATIC_INLINE PetscErrorCode KSPMonitorTrueResidualNorm(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf) {return KSPMonitorTrueResidual(ksp,n,rnorm,vf);}
+PETSC_DEPRECATED_FUNCTION("Use KSPMonitorTrueResidualMax() (since version 3.15)") PETSC_STATIC_INLINE PetscErrorCode KSPMonitorTrueResidualMaxNorm(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf) {return KSPMonitorTrueResidualMax(ksp,n,rnorm,vf);}
 
 PETSC_EXTERN PetscErrorCode KSPGMRESMonitorKrylov(KSP,PetscInt,PetscReal,void*);
 PETSC_EXTERN PetscErrorCode KSPMonitorDynamicTolerance(KSP ksp,PetscInt its,PetscReal fnorm,void *dummy);
@@ -407,7 +412,9 @@ PETSC_EXTERN PetscErrorCode KSPView(KSP,PetscViewer);
 PETSC_EXTERN PetscErrorCode KSPLoad(KSP,PetscViewer);
 PETSC_EXTERN PetscErrorCode KSPViewFromOptions(KSP,PetscObject,const char[]);
 PETSC_EXTERN PetscErrorCode KSPConvergedReasonView(KSP,PetscViewer);
+PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewSet(KSP,PetscErrorCode (*)(KSP,void*),void *vctx,PetscErrorCode (*)(void**));
 PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewFromOptions(KSP);
+PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewCancel(KSP);
 PETSC_EXTERN PetscErrorCode KSPConvergedRateView(KSP,PetscViewer);
 
 PETSC_DEPRECATED_FUNCTION("Use KSPConvergedReasonView() (since version 3.14)") PETSC_STATIC_INLINE PetscErrorCode KSPReasonView(KSP ksp,PetscViewer v) {return KSPConvergedReasonView(ksp,v);}
@@ -685,6 +692,7 @@ PETSC_EXTERN PetscErrorCode KSPConvergedDefaultSetUMIRNorm(KSP);
 PETSC_EXTERN PetscErrorCode KSPConvergedDefaultSetConvergedMaxits(KSP,PetscBool);
 PETSC_EXTERN PetscErrorCode KSPConvergedSkip(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*);
 PETSC_EXTERN PetscErrorCode KSPGetConvergedReason(KSP,KSPConvergedReason*);
+PETSC_EXTERN PetscErrorCode KSPGetConvergedReasonString(KSP,const char**);
 PETSC_EXTERN PetscErrorCode KSPComputeConvergenceRate(KSP,PetscReal*,PetscReal*,PetscReal*,PetscReal*);
 
 PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefault() (since version 3.5)") PETSC_STATIC_INLINE void KSPDefaultConverged(void) { /* never called */ }

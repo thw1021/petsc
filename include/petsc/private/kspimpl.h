@@ -66,6 +66,7 @@ PETSC_EXTERN PetscErrorCode KSPGuessCreate_POD(KSPGuess);
      Maximum number of monitors you can run with a single KSP
 */
 #define MAXKSPMONITORS 5
+#define MAXKSPREASONVIEWS 5
 typedef enum {KSP_SETUP_NEW, KSP_SETUP_NEWMATRIX, KSP_SETUP_NEWRHS} KSPSetUpStage;
 
 /*
@@ -112,11 +113,20 @@ struct _p_KSP {
   PetscInt      chknorm;             /* only compute/check norm if iterations is great than this */
   PetscBool     lagnorm;             /* Lag the residual norm calculation so that it is computed as part of the
                                         MPI_Allreduce() for computing the inner products for the next iteration. */
+
+  PetscInt   nmax;                   /* maximum number of right-hand sides to be handled simultaneously */
+
   /* --------User (or default) routines (most return -1 on error) --------*/
   PetscErrorCode (*monitor[MAXKSPMONITORS])(KSP,PetscInt,PetscReal,void*); /* returns control to user after */
   PetscErrorCode (*monitordestroy[MAXKSPMONITORS])(void**);         /* */
   void *monitorcontext[MAXKSPMONITORS];                  /* residual calculation, allows user */
   PetscInt  numbermonitors;                                   /* to, for instance, print residual norm, etc. */
+  PetscBool        pauseFinal;        /* Pause all drawing monitor at the final iterate */
+
+  PetscErrorCode (*reasonview[MAXKSPREASONVIEWS])(KSP,void*);       /* KSP converged reason view */
+  PetscErrorCode (*reasonviewdestroy[MAXKSPREASONVIEWS])(void**);   /* Optional destroy routine */
+  void *reasonviewcontext[MAXKSPREASONVIEWS];                       /* User context */
+  PetscInt  numberreasonviews;                                      /* Number if reason viewers */
 
   PetscErrorCode (*converged)(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*);
   PetscErrorCode (*convergeddestroy)(void*);
@@ -129,9 +139,9 @@ struct _p_KSP {
   void       *data;                      /* holder for misc stuff associated
                                    with a particular iterative solver */
 
-  PetscBool         view,   viewPre,   viewReason,   viewRate,   viewMat,   viewPMat,   viewRhs,   viewSol,   viewMatExp,   viewEV,   viewSV,   viewEVExp,   viewFinalRes,   viewPOpExp,   viewDScale;
-  PetscViewer       viewer, viewerPre, viewerReason, viewerRate, viewerMat, viewerPMat, viewerRhs, viewerSol, viewerMatExp, viewerEV, viewerSV, viewerEVExp, viewerFinalRes, viewerPOpExp, viewerDScale;
-  PetscViewerFormat format, formatPre, formatReason, formatRate, formatMat, formatPMat, formatRhs, formatSol, formatMatExp, formatEV, formatSV, formatEVExp, formatFinalRes, formatPOpExp, formatDScale;
+  PetscBool         view,   viewPre,   viewRate,   viewMat,   viewPMat,   viewRhs,   viewSol,   viewMatExp,   viewEV,   viewSV,   viewEVExp,   viewFinalRes,   viewPOpExp,   viewDScale;
+  PetscViewer       viewer, viewerPre, viewerRate, viewerMat, viewerPMat, viewerRhs, viewerSol, viewerMatExp, viewerEV, viewerSV, viewerEVExp, viewerFinalRes, viewerPOpExp, viewerDScale;
+  PetscViewerFormat format, formatPre, formatRate, formatMat, formatPMat, formatRhs, formatSol, formatMatExp, formatEV, formatSV, formatEVExp, formatFinalRes, formatPOpExp, formatDScale;
 
   /* ----------------Default work-area management -------------------- */
   PetscInt       nwork;

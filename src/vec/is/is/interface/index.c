@@ -59,7 +59,7 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
     else if (idxs[i] > lbounds[1]) lbounds[1] = idxs[i];
   }
   lbounds[0] = -lbounds[0];
-  ierr = MPIU_Allreduce(lbounds,gbounds,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)subset));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(lbounds,gbounds,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)subset));CHKERRMPI(ierr);
   gbounds[0] = -gbounds[0];
   N_n  = gbounds[1] - gbounds[0] + 1;
 
@@ -112,9 +112,9 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
   /* cumulative of number of indexes and size of subset without holes */
 #if defined(PETSC_HAVE_MPI_EXSCAN)
   start = 0;
-  ierr  = MPI_Exscan(&nlocals,&start,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)subset));CHKERRQ(ierr);
+  ierr  = MPI_Exscan(&nlocals,&start,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)subset));CHKERRMPI(ierr);
 #else
-  ierr  = MPI_Scan(&nlocals,&start,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)subset));CHKERRQ(ierr);
+  ierr  = MPI_Scan(&nlocals,&start,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)subset));CHKERRMPI(ierr);
   start = start-nlocals;
 #endif
 
@@ -146,8 +146,8 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
   }
 
   /* from roots to leaves */
-  ierr = PetscSFBcastBegin(sf,MPIU_INT,root_data,leaf_data);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sf,MPIU_INT,root_data,leaf_data);CHKERRQ(ierr);
+  ierr = PetscSFBcastBegin(sf,MPIU_INT,root_data,leaf_data,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastEnd(sf,MPIU_INT,root_data,leaf_data,MPI_REPLACE);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&sf);CHKERRQ(ierr);
 
   /* create new IS with global indexes without holes */
@@ -240,8 +240,8 @@ PetscErrorCode ISCreateSubIS(IS is,IS comps,IS *subis)
 
   ierr = PetscMalloc1(nleaves,&subis_indices);CHKERRQ(ierr);
   ierr = ISGetIndices(is, &is_indices);CHKERRQ(ierr);
-  ierr = PetscSFBcastBegin(sf,MPIU_INT,is_indices,subis_indices);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sf,MPIU_INT,is_indices,subis_indices);CHKERRQ(ierr);
+  ierr = PetscSFBcastBegin(sf,MPIU_INT,is_indices,subis_indices,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastEnd(sf,MPIU_INT,is_indices,subis_indices,MPI_REPLACE);CHKERRQ(ierr);
   ierr = ISRestoreIndices(is,&is_indices);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&sf);CHKERRQ(ierr);
   ierr = ISCreateGeneral(comm,nleaves,subis_indices,PETSC_OWN_POINTER,subis);CHKERRQ(ierr);
@@ -989,7 +989,7 @@ PetscErrorCode  ISSetPermutation(IS is)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
    ISDestroy - Destroys an index set.
 
    Collective on IS
@@ -1857,8 +1857,6 @@ PetscErrorCode  ISCopy(IS is,IS isy)
    logically independent serial ISs.
 
    The input IS must have the same type on every process.
-
-.seealso: ISSplit()
 @*/
 PetscErrorCode  ISOnComm(IS is,MPI_Comm comm,PetscCopyMode mode,IS *newis)
 {

@@ -59,6 +59,7 @@ typedef const char* MatType;
 #define MATSEQBAIJMKL      "seqbaijmkl"
 #define MATMPIBAIJMKL      "mpibaijmkl"
 #define MATSHELL           "shell"
+#define MATCENTERING       "centering"
 #define MATDENSE           "dense"
 #define MATDENSECUDA       "densecuda"
 #define MATSEQDENSE        "seqdense"
@@ -109,6 +110,7 @@ typedef const char* MatType;
 #define MATLMVMDIAGBROYDEN   "lmvmdiagbroyden"
 #define MATCONSTANTDIAGONAL  "constantdiagonal"
 #define MATHARA              "hara"
+#define MATHTOOL           "htool"
 
 /*J
     MatSolverType - String with the name of a PETSc matrix solver type.
@@ -117,7 +119,7 @@ typedef const char* MatType;
 
    Level: beginner
 
-   Notes:  MATSOLVERUMFPACK, MATSOLVERCHOLMOD, MATSOLVERKLU form the SuiteSparse package for which you can use --download-suitesparse
+   Notes:  MATSOLVERUMFPACK, MATSOLVERCHOLMOD, MATSOLVERKLU, MATSOLVERSPQR form the SuiteSparse package for which you can use --download-suitesparse
 
 .seealso: MatGetFactor(), PCFactorSetMatSolverType(), PCFactorGetMatSolverType()
 J*/
@@ -141,8 +143,10 @@ typedef const char* MatSolverType;
 #define MATSOLVERPETSC            "petsc"
 #define MATSOLVERBAS              "bas"
 #define MATSOLVERCUSPARSE         "cusparse"
+#define MATSOLVERCUSPARSEBAND     "cusparseband"
 #define MATSOLVERCUDA             "cuda"
 #define MATSOLVERKOKKOS           "kokkos"
+#define MATSOLVERKOKKOSDEVICE     "kokkosdevice"
 
 /*E
     MatFactorType - indicates what type of factorization is requested
@@ -153,12 +157,13 @@ typedef const char* MatSolverType;
 
 .seealso: MatSolverType, MatGetFactor(), MatGetFactorAvailable(), MatSolverTypeRegister()
 E*/
-typedef enum {MAT_FACTOR_NONE, MAT_FACTOR_LU, MAT_FACTOR_CHOLESKY, MAT_FACTOR_ILU, MAT_FACTOR_ICC,MAT_FACTOR_ILUDT} MatFactorType;
+typedef enum {MAT_FACTOR_NONE, MAT_FACTOR_LU, MAT_FACTOR_CHOLESKY, MAT_FACTOR_ILU, MAT_FACTOR_ICC, MAT_FACTOR_ILUDT, MAT_FACTOR_QR, MAT_FACTOR_NUM_TYPES} MatFactorType;
 PETSC_EXTERN const char *const MatFactorTypes[];
 
 PETSC_EXTERN PetscErrorCode MatGetFactor(Mat,MatSolverType,MatFactorType,Mat*);
 PETSC_EXTERN PetscErrorCode MatGetFactorAvailable(Mat,MatSolverType,MatFactorType,PetscBool *);
-PETSC_EXTERN PetscErrorCode MatFactorGetUseOrdering(Mat, PetscBool*);
+PETSC_EXTERN PetscErrorCode MatFactorGetCanUseOrdering(Mat, PetscBool*);
+PETSC_DEPRECATED_FUNCTION("Use MatFactorGetCanUseOrdering() (since version 3.15)") PETSC_STATIC_INLINE PetscErrorCode MatFactorGetUseOrdering(Mat A,PetscBool *b) {return MatFactorGetCanUseOrdering(A,b);}
 PETSC_EXTERN PetscErrorCode MatFactorGetSolverType(Mat,MatSolverType*);
 PETSC_EXTERN PetscErrorCode MatGetFactorType(Mat,MatFactorType*);
 PETSC_EXTERN PetscErrorCode MatSetFactorType(Mat,MatFactorType);
@@ -233,11 +238,11 @@ typedef enum {MAT_INITIAL_MATRIX,MAT_REUSE_MATRIX,MAT_IGNORE_MATRIX,MAT_INPLACE_
 
 /*E
     MatCreateSubMatrixOption - Indicates if matrices obtained from a call to MatCreateSubMatrices()
-     include the matrix values. Currently it is only used by MatGetSeqNonzerostructure().
+     include the matrix values. Currently it is only used by MatGetSeqNonzeroStructure().
 
     Level: beginner
 
-.seealso: MatGetSeqNonzerostructure()
+.seealso: MatGetSeqNonzeroStructure()
 E*/
 typedef enum {MAT_DO_NOT_GET_VALUES,MAT_GET_VALUES} MatCreateSubMatrixOption;
 
@@ -266,9 +271,15 @@ PETSC_EXTERN PetscFunctionList MatPartitioningList;
 
     Level: beginner
 
-   Any additions/changes here MUST also be made in src/mat/f90-mod/petscmat.h
+$  SAME_NONZERO_PATTERN  - the two matrices have identical nonzero patterns
+$  DIFFERENT_NONZERO_PATTERN - the two matrices may have different nonzero patterns
+$  SUBSET_NONZERO_PATTERN - the nonzero pattern of the second matrix is a subset of the nonzero pattern of the first matrix
+$  UNKNOWN_NONZERO_PATTERN - there is no known relationship between the nonzero patterns. In this case the implementations may try to detect a relationship to optimize the operation
 
-.seealso: MatCopy(), MatAXPY()
+   Developer Notes:
+     Any additions/changes here MUST also be made in src/mat/f90-mod/petscmat.h
+
+.seealso: MatCopy(), MatAXPY(), MatAYPX()
 E*/
 typedef enum {DIFFERENT_NONZERO_PATTERN,SUBSET_NONZERO_PATTERN,SAME_NONZERO_PATTERN,UNKNOWN_NONZERO_PATTERN} MatStructure;
 PETSC_EXTERN const char *const MatStructures[];
@@ -311,6 +322,7 @@ PETSC_EXTERN PetscErrorCode MatMPISBAIJSetPreallocationCSR(Mat,PetscInt,const Pe
 PETSC_EXTERN PetscErrorCode MatXAIJSetPreallocation(Mat,PetscInt,const PetscInt[],const PetscInt[],const PetscInt[],const PetscInt[]);
 
 PETSC_EXTERN PetscErrorCode MatCreateShell(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,void *,Mat*);
+PETSC_EXTERN PetscErrorCode MatCreateCentering(MPI_Comm,PetscInt,PetscInt,Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateNormal(Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateNormalHermitian(Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateLRC(Mat,Mat,Vec,Mat,Mat*);
@@ -454,7 +466,8 @@ typedef enum {MAT_OPTION_MIN = -3,
               MAT_SUBMAT_SINGLEIS = 21,
               MAT_STRUCTURE_ONLY = 22,
               MAT_SORTED_FULL = 23,
-              MAT_OPTION_MAX = 24} MatOption;
+              MAT_FORM_EXPLICIT_TRANSPOSE = 24,
+              MAT_OPTION_MAX = 25} MatOption;
 
 PETSC_EXTERN const char *const *MatOptions;
 PETSC_EXTERN PetscErrorCode MatSetOption(Mat,MatOption,PetscBool);
@@ -704,6 +717,9 @@ PETSC_EXTERN PetscErrorCode MatStashGetInfo(Mat,PetscInt*,PetscInt*,PetscInt*,Pe
 PETSC_EXTERN PetscErrorCode MatInterpolate(Mat,Vec,Vec);
 PETSC_EXTERN PetscErrorCode MatInterpolateAdd(Mat,Vec,Vec,Vec);
 PETSC_EXTERN PetscErrorCode MatRestrict(Mat,Vec,Vec);
+PETSC_EXTERN PetscErrorCode MatMatInterpolate(Mat,Mat,Mat*);
+PETSC_EXTERN PetscErrorCode MatMatInterpolateAdd(Mat,Mat,Mat,Mat*);
+PETSC_EXTERN PetscErrorCode MatMatRestrict(Mat,Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateVecs(Mat,Vec*,Vec*);
 PETSC_DEPRECATED_FUNCTION("Use MatCreateVecs() (since version 3.6)") PETSC_STATIC_INLINE PetscErrorCode MatGetVecs(Mat mat,Vec *x,Vec *y) {return MatCreateVecs(mat,x,y);}
 PETSC_EXTERN PetscErrorCode MatCreateRedundantMatrix(Mat,PetscInt,MPI_Comm,MatReuse,Mat*);
@@ -1164,6 +1180,8 @@ PETSC_EXTERN PetscFunctionList MatOrderingList;
 PETSC_EXTERN PetscErrorCode MatReorderForNonzeroDiagonal(Mat,PetscReal,IS,IS);
 PETSC_EXTERN PetscErrorCode MatCreateLaplacian(Mat,PetscReal,PetscBool,Mat*);
 
+PETSC_EXTERN PetscErrorCode MatFactorGetPreferredOrdering(Mat,MatFactorType,MatOrderingType*);
+
 /*S
     MatFactorShiftType - Numeric Shift for factorizations
 
@@ -1234,6 +1252,9 @@ PETSC_EXTERN PetscErrorCode MatILUFactorSymbolic(Mat,Mat,IS,IS,const MatFactorIn
 PETSC_EXTERN PetscErrorCode MatICCFactorSymbolic(Mat,Mat,IS,const MatFactorInfo*);
 PETSC_EXTERN PetscErrorCode MatICCFactor(Mat,IS,const MatFactorInfo*);
 PETSC_EXTERN PetscErrorCode MatLUFactorNumeric(Mat,Mat,const MatFactorInfo*);
+PETSC_EXTERN PetscErrorCode MatQRFactor(Mat,IS,const MatFactorInfo*);
+PETSC_EXTERN PetscErrorCode MatQRFactorSymbolic(Mat,Mat,IS,const MatFactorInfo*);
+PETSC_EXTERN PetscErrorCode MatQRFactorNumeric(Mat,Mat,const MatFactorInfo*);
 PETSC_EXTERN PetscErrorCode MatGetInertia(Mat,PetscInt*,PetscInt*,PetscInt*);
 PETSC_EXTERN PetscErrorCode MatSolve(Mat,Vec,Vec);
 PETSC_EXTERN PetscErrorCode MatForwardSolve(Mat,Vec,Vec);
@@ -1808,6 +1829,25 @@ PETSC_EXTERN PetscErrorCode MatCreateHaraFromMat(Mat,PetscInt,const PetscReal[],
 PETSC_EXTERN PetscErrorCode MatHaraSetSamplingMat(Mat,Mat,PetscInt,PetscReal);
 #endif
 
+#ifdef PETSC_HAVE_HTOOL
+PETSC_EXTERN_TYPEDEF typedef PetscScalar (*MatHtoolKernel)(PetscInt,PetscInt,PetscInt,void*);
+PETSC_EXTERN PetscErrorCode MatCreateHtoolFromKernel(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscReal[],const PetscReal[],MatHtoolKernel,void*,Mat*);
+PETSC_EXTERN PetscErrorCode MatHtoolSetKernel(Mat,MatHtoolKernel,void*);
+/*E
+     MatHtoolCompressorType - Indicates the type of compressor used by a MATHTOOL
+
+   Level: beginner
+
+    Values:
++   MAT_HTOOL_COMPRESSOR_SYMPARTIAL_ACA (default) - symmetric partial adaptive cross approximation
+.   MAT_HTOOL_COMPRESSOR_FULL_ACA - full adaptive cross approximation
+-   MAT_HTOOL_COMPRESSOR_SVD - singular value decomposition
+
+.seealso: MatCreateHtoolFromKernel(), MATHTOOL
+E*/
+typedef enum { MAT_HTOOL_COMPRESSOR_SYMPARTIAL_ACA, MAT_HTOOL_COMPRESSOR_FULL_ACA, MAT_HTOOL_COMPRESSOR_SVD } MatHtoolCompressorType;
+#endif
+
 /*
    PETSc interface to MUMPS
 */
@@ -1934,8 +1974,8 @@ typedef enum {MAT_CUSPARSE_MULT_DIAG, MAT_CUSPARSE_MULT_OFFDIAG, MAT_CUSPARSE_MU
 PETSC_EXTERN PetscErrorCode MatCreateSeqAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetFormat(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat);
-PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSESetGenerateTranspose(Mat,PetscBool);
-PETSC_EXTERN PetscErrorCode MatAIJCUSPARSESetGenerateTranspose(Mat,PetscBool);
+typedef struct Mat_SeqAIJCUSPARSETriFactors* Mat_SeqAIJCUSPARSETriFactors_p;
+PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSETriFactors_p*);
 
 PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure**);
 
@@ -1994,4 +2034,5 @@ PETSC_EXTERN PetscErrorCode MatPreallocatorPreallocate(Mat,PetscBool,Mat);
 
 PETSC_INTERN PetscErrorCode MatHeaderMerge(Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat,Mat*);
+
 #endif

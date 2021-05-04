@@ -126,7 +126,7 @@ PetscErrorCode EvaluateFunction(Tao tao, Vec X, Vec F, void *ptr)
       ierr = RunSimulation(x,i,&f[i],user);CHKERRQ(ierr);
     }
   } else {
-    /* Multiprocessor master */
+    /* Multiprocessor main */
     PetscMPIInt tag;
     PetscInt    finishedtasks,next_task,checkedin;
     PetscReal   f_i=0.0;
@@ -411,7 +411,7 @@ PetscErrorCode TaskWorker(AppCtx *user)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  /* Send check-in message to master */
+  /* Send check-in message to rank-0 */
 
   ierr = MPI_Send(&f,1,MPIU_REAL,0,IDLE_TAG,PETSC_COMM_WORLD);CHKERRMPI(ierr);
   while (tag != DIE_TAG) {
@@ -421,8 +421,8 @@ PetscErrorCode TaskWorker(AppCtx *user)
       ierr = MPI_Send(&f,1,MPIU_REAL,0,IDLE_TAG,PETSC_COMM_WORLD);CHKERRMPI(ierr);
     } else if (tag != DIE_TAG) {
       index = (PetscInt)tag;
-      ierr=RunSimulation(x,index,&f,user);CHKERRQ(ierr);
-      ierr=MPI_Send(&f,1,MPIU_REAL,0,tag,PETSC_COMM_WORLD);CHKERRQ(ierr);
+      ierr = RunSimulation(x,index,&f,user);CHKERRQ(ierr);
+      ierr = MPI_Send(&f,1,MPIU_REAL,0,tag,PETSC_COMM_WORLD);CHKERRMPI(ierr);
     }
   }
   PetscFunctionReturn(0);

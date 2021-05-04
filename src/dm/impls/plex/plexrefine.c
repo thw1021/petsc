@@ -2503,7 +2503,7 @@ static PetscErrorCode DMPlexCellRefinerSetUp_SBR(DMPlexCellRefiner cr)
   if (refineIS) {ierr = ISRestoreIndices(refineIS, &refineCells);CHKERRQ(ierr);}
   ierr = ISDestroy(&refineIS);CHKERRQ(ierr);
   /* Setup communication */
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject) cr->dm), &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject) cr->dm), &size);CHKERRMPI(ierr);
   ierr = DMGetPointSF(cr->dm, &pointSF);CHKERRQ(ierr);
   if (size > 1) {
     PetscInt pStart, pEnd;
@@ -2513,7 +2513,7 @@ static PetscErrorCode DMPlexCellRefinerSetUp_SBR(DMPlexCellRefiner cr)
   }
   /* While edge queue is not empty: */
   empty = PointQueueEmpty(queue);
-  ierr = MPI_Allreduce(MPI_IN_PLACE, &empty, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject) cr->dm));CHKERRQ(ierr);
+  ierr = MPI_Allreduce(MPI_IN_PLACE, &empty, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject) cr->dm));CHKERRMPI(ierr);
   while (!empty) {
     ierr = SBRSplitLocalEdges_Private(cr, queue);CHKERRQ(ierr);
     /* Communicate marked edges
@@ -2532,12 +2532,12 @@ static PetscErrorCode DMPlexCellRefinerSetUp_SBR(DMPlexCellRefiner cr)
       ierr = SBRInitializeComm(cr, pointSF);CHKERRQ(ierr);
       ierr = PetscSFReduceBegin(pointSF, MPIU_INT, sbr->splitArray, sbr->splitArray, MPI_MAX);CHKERRQ(ierr);
       ierr = PetscSFReduceEnd(pointSF, MPIU_INT, sbr->splitArray, sbr->splitArray, MPI_MAX);CHKERRQ(ierr);
-      ierr = PetscSFBcastBegin(pointSF, MPIU_INT, sbr->splitArray, sbr->splitArray);CHKERRQ(ierr);
-      ierr = PetscSFBcastEnd(pointSF, MPIU_INT, sbr->splitArray, sbr->splitArray);CHKERRQ(ierr);
+      ierr = PetscSFBcastBegin(pointSF, MPIU_INT, sbr->splitArray, sbr->splitArray,MPI_REPLACE);CHKERRQ(ierr);
+      ierr = PetscSFBcastEnd(pointSF, MPIU_INT, sbr->splitArray, sbr->splitArray,MPI_REPLACE);CHKERRQ(ierr);
       ierr = SBRFinalizeComm(cr, pointSF, queue);CHKERRQ(ierr);
     }
     empty = PointQueueEmpty(queue);
-    ierr = MPI_Allreduce(MPI_IN_PLACE, &empty, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject) cr->dm));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(MPI_IN_PLACE, &empty, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject) cr->dm));CHKERRMPI(ierr);
   }
   ierr = PetscFree(sbr->splitArray);CHKERRQ(ierr);
   /* Calculate refineType for each cell */
@@ -3881,7 +3881,7 @@ PetscErrorCode DMPlexCreateProcessSF(DM dm, PetscSF sfPoint, IS *processRanks, P
   PetscValidHeaderSpecific(sfPoint, PETSCSF_CLASSID, 2);
   if (processRanks) {PetscValidPointer(processRanks, 3);}
   if (sfProcess)    {PetscValidPointer(sfProcess, 4);}
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject) dm), &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject) dm), &size);CHKERRMPI(ierr);
   ierr = PetscSFGetGraph(sfPoint, &numRoots, &numLeaves, &localPoints, &remotePoints);CHKERRQ(ierr);
   ierr = PetscMalloc1(numLeaves, &ranks);CHKERRQ(ierr);
   for (l = 0; l < numLeaves; ++l) {
@@ -3993,8 +3993,8 @@ static PetscErrorCode DMPlexCellRefinerCreateSF(DMPlexCellRefiner cr, DM rdm)
         }
       }
     }
-    ierr = PetscSFBcastBegin(rsf, MPIU_INT, rootPointsNew, rootPointsNew);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(rsf, MPIU_INT, rootPointsNew, rootPointsNew);CHKERRQ(ierr);
+    ierr = PetscSFBcastBegin(rsf, MPIU_INT, rootPointsNew, rootPointsNew,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(rsf, MPIU_INT, rootPointsNew, rootPointsNew,MPI_REPLACE);CHKERRQ(ierr);
     ierr = PetscSFDestroy(&rsf);CHKERRQ(ierr);
     ierr = PetscMalloc1(numLeavesNew, &localPointsNew);CHKERRQ(ierr);
     ierr = PetscMalloc1(numLeavesNew, &remotePointsNew);CHKERRQ(ierr);
@@ -4024,13 +4024,13 @@ static PetscErrorCode DMPlexCellRefinerCreateSF(DMPlexCellRefiner cr, DM rdm)
     ierr = DMPlexCreateProcessSF(dm, sf, &processRanks, &sfProcess);CHKERRQ(ierr);
     ierr = ISGetLocalSize(processRanks, &numNeighbors);CHKERRQ(ierr);
     ierr = PetscMalloc2(ctSize*numNeighbors, &ctStartRem, ctSize*numNeighbors, &ctStartNewRem);CHKERRQ(ierr);
-    ierr = MPI_Type_contiguous(ctSize, MPIU_INT, &ctType);CHKERRQ(ierr);
-    ierr = MPI_Type_commit(&ctType);CHKERRQ(ierr);
-    ierr = PetscSFBcastBegin(sfProcess, ctType, cr->ctStart, ctStartRem);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(sfProcess, ctType, cr->ctStart, ctStartRem);CHKERRQ(ierr);
-    ierr = PetscSFBcastBegin(sfProcess, ctType, cr->ctStartNew, ctStartNewRem);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(sfProcess, ctType, cr->ctStartNew, ctStartNewRem);CHKERRQ(ierr);
-    ierr = MPI_Type_free(&ctType);CHKERRQ(ierr);
+    ierr = MPI_Type_contiguous(ctSize, MPIU_INT, &ctType);CHKERRMPI(ierr);
+    ierr = MPI_Type_commit(&ctType);CHKERRMPI(ierr);
+    ierr = PetscSFBcastBegin(sfProcess, ctType, cr->ctStart, ctStartRem,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(sfProcess, ctType, cr->ctStart, ctStartRem,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastBegin(sfProcess, ctType, cr->ctStartNew, ctStartNewRem,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(sfProcess, ctType, cr->ctStartNew, ctStartNewRem,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = MPI_Type_free(&ctType);CHKERRMPI(ierr);
     ierr = PetscSFDestroy(&sfProcess);CHKERRQ(ierr);
     ierr = PetscMalloc1(numNeighbors, &crRem);CHKERRQ(ierr);
     for (n = 0; n < numNeighbors; ++n) {
@@ -4132,7 +4132,7 @@ static PetscErrorCode RefineLabel_Internal(DMPlexCellRefiner cr, DMLabel label, 
       DMPolytopeType  ct;
       DMPolytopeType *rct;
       PetscInt       *rsize, *rcone, *rornt;
-      PetscInt        Nct, n, r, pNew;
+      PetscInt        Nct, n, r, pNew=0;
 
       ierr = DMPlexGetCellType(dm, point, &ct);CHKERRQ(ierr);
       ierr = DMPlexCellRefinerRefine(cr, ct, point, NULL, &Nct, &rct, &rsize, &rcone, &rornt);CHKERRQ(ierr);
@@ -4448,7 +4448,7 @@ PetscErrorCode DMPlexCellRefinerAdaptLabel(DM dm, DMLabel adaptLabel, DM *dmRefi
   ierr = DMGetCoordinateDM(*dmRefined, &rcdm);CHKERRQ(ierr);
   ierr = DMCopyDisc(cdm, rcdm);CHKERRQ(ierr);
   ierr = RefineDiscLabels_Internal(cr, *dmRefined);CHKERRQ(ierr);
-  ierr = DMCopyBoundary(dm, *dmRefined);CHKERRQ(ierr);
+  ierr = DMCopyDisc(dm, *dmRefined);CHKERRQ(ierr);
   ierr = DMPlexCellRefinerDestroy(&cr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -4476,10 +4476,13 @@ PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *dmRefined)
     ierr = DMGetCoordinateDM(*dmRefined, &rcdm);CHKERRQ(ierr);
     ierr = DMCopyDisc(cdm, rcdm);CHKERRQ(ierr);
     ierr = RefineDiscLabels_Internal(cr, *dmRefined);CHKERRQ(ierr);
-    ierr = DMCopyBoundary(dm, *dmRefined);CHKERRQ(ierr);
     ierr = DMPlexCellRefinerDestroy(&cr);CHKERRQ(ierr);
   } else {
     ierr = DMPlexRefine_Internal(dm, NULL, dmRefined);CHKERRQ(ierr);
+  }
+  if (*dmRefined) {
+    ((DM_Plex *) (*dmRefined)->data)->printFEM = ((DM_Plex *) dm->data)->printFEM;
+    ((DM_Plex *) (*dmRefined)->data)->printL2  = ((DM_Plex *) dm->data)->printL2;
   }
   PetscFunctionReturn(0);
 }
@@ -4509,9 +4512,12 @@ PetscErrorCode DMRefineHierarchy_Plex(DM dm, PetscInt nlevels, DM dmRefined[])
       ierr = DMGetCoordinateDM(dmRefined[r], &rcodm);CHKERRQ(ierr);
       ierr = DMCopyDisc(codm, rcodm);CHKERRQ(ierr);
       ierr = RefineDiscLabels_Internal(cr, dmRefined[r]);CHKERRQ(ierr);
-      ierr = DMCopyBoundary(cdm, dmRefined[r]);CHKERRQ(ierr);
       ierr = DMSetCoarseDM(dmRefined[r], cdm);CHKERRQ(ierr);
       ierr = DMPlexSetRegularRefinement(dmRefined[r], PETSC_TRUE);CHKERRQ(ierr);
+      if (dmRefined[r]) {
+        ((DM_Plex *) (dmRefined[r])->data)->printFEM = ((DM_Plex *) dm->data)->printFEM;
+        ((DM_Plex *) (dmRefined[r])->data)->printL2  = ((DM_Plex *) dm->data)->printL2;
+      }
       cdm  = dmRefined[r];
       ierr = DMPlexCellRefinerDestroy(&cr);CHKERRQ(ierr);
     }
@@ -4519,9 +4525,12 @@ PetscErrorCode DMRefineHierarchy_Plex(DM dm, PetscInt nlevels, DM dmRefined[])
     for (r = 0; r < nlevels; ++r) {
       ierr = DMRefine(cdm, PetscObjectComm((PetscObject) dm), &dmRefined[r]);CHKERRQ(ierr);
       ierr = DMCopyDisc(cdm, dmRefined[r]);CHKERRQ(ierr);
-      ierr = DMCopyBoundary(cdm, dmRefined[r]);CHKERRQ(ierr);
       if (localized) {ierr = DMLocalizeCoordinates(dmRefined[r]);CHKERRQ(ierr);}
       ierr = DMSetCoarseDM(dmRefined[r], cdm);CHKERRQ(ierr);
+      if (dmRefined[r]) {
+        ((DM_Plex *) (dmRefined[r])->data)->printFEM = ((DM_Plex *) dm->data)->printFEM;
+        ((DM_Plex *) (dmRefined[r])->data)->printL2  = ((DM_Plex *) dm->data)->printL2;
+      }
       cdm  = dmRefined[r];
     }
   }

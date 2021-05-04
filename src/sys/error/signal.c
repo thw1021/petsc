@@ -156,7 +156,7 @@ PetscErrorCode  PetscSignalHandlerDefault(int sig,void *ptr)
     (*PetscErrorPrintf)("configure using --with-debugging=yes, recompile, link, and run \n");
     (*PetscErrorPrintf)("to get more information on the crash.\n");
   }
-  ierr =  PetscError(PETSC_COMM_SELF,0,"User provided function"," unknown file",PETSC_ERR_SIG,PETSC_ERROR_INITIAL,NULL);
+  ierr =  PetscError(PETSC_COMM_SELF,0,"User provided function","unknown file",PETSC_ERR_SIG,PETSC_ERROR_INITIAL,NULL);
 #if !defined(PETSC_MISSING_SIGBUS)
   if (sig == SIGSEGV || sig == SIGBUS) {
 #else
@@ -250,7 +250,10 @@ PetscErrorCode  PetscPushSignalHandler(PetscErrorCode (*routine)(int,void*),void
     signal(SIGSYS,  PETSC_SIGNAL_CAST PetscSignalHandler_Private);
 #endif
 #if !defined(PETSC_MISSING_SIGTERM)
+#if !defined(OMPI_MAJOR_VERSION)
+    /* OpenMPI may use SIGTERM to close down all its ranks; we don't want to generate many confusing PETSc error messages in that case */
     signal(SIGTERM,  PETSC_SIGNAL_CAST PetscSignalHandler_Private);
+#endif
 #endif
 #if !defined(PETSC_MISSING_SIGTRAP)
     signal(SIGTRAP,  PETSC_SIGNAL_CAST PetscSignalHandler_Private);

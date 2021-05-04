@@ -189,8 +189,10 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat B, PetscInt n, c
   ierr = MatCUSPARSESetFormat(b->B,MAT_CUSPARSE_MULT,cusp->offdiagGPUMatFormat);CHKERRQ(ierr);
   ierr = MatCUSPARSESetHandle(b->A,cusp->handle);CHKERRQ(ierr);
   ierr = MatCUSPARSESetHandle(b->B,cusp->handle);CHKERRQ(ierr);
+  /*
   ierr = MatCUSPARSESetStream(b->A,cusp->stream);CHKERRQ(ierr);
   ierr = MatCUSPARSESetStream(b->B,cusp->stream);CHKERRQ(ierr);
+  */
   ierr = MatSetUpMultiply_MPIAIJ(B);CHKERRQ(ierr);
   B->preallocated = PETSC_TRUE;
   B->nonzerostate++;
@@ -263,7 +265,7 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJCUSPARSE(Mat B,PetscInt d_nz,cons
   }
   if (!b->B) {
     PetscMPIInt size;
-    ierr = MPI_Comm_size(PetscObjectComm((PetscObject)B),&size);CHKERRQ(ierr);
+    ierr = MPI_Comm_size(PetscObjectComm((PetscObject)B),&size);CHKERRMPI(ierr);
     ierr = MatCreate(PETSC_COMM_SELF,&b->B);CHKERRQ(ierr);
     ierr = MatSetSizes(b->B,B->rmap->n,size > 1 ? B->cmap->N : 0,B->rmap->n,size > 1 ? B->cmap->N : 0);CHKERRQ(ierr);
     ierr = PetscLogObjectParent((PetscObject)B,(PetscObject)b->B);CHKERRQ(ierr);
@@ -278,44 +280,11 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJCUSPARSE(Mat B,PetscInt d_nz,cons
   ierr = MatCUSPARSESetFormat(b->B,MAT_CUSPARSE_MULT,cusparseStruct->offdiagGPUMatFormat);CHKERRQ(ierr);
   ierr = MatCUSPARSESetHandle(b->A,cusparseStruct->handle);CHKERRQ(ierr);
   ierr = MatCUSPARSESetHandle(b->B,cusparseStruct->handle);CHKERRQ(ierr);
+  /* Let A, B use b's handle with pre-set stream
   ierr = MatCUSPARSESetStream(b->A,cusparseStruct->stream);CHKERRQ(ierr);
   ierr = MatCUSPARSESetStream(b->B,cusparseStruct->stream);CHKERRQ(ierr);
-
+  */
   B->preallocated = PETSC_TRUE;
-  PetscFunctionReturn(0);
-}
-
-/*@
-   MatAIJCUSPARSESetGenerateTranspose - Sets the flag to explicitly generate the transpose matrix before calling MatMultTranspose
-
-   Not collective
-
-   Input Parameters:
-+  A - Matrix of type SEQAIJCUSPARSE or MPIAIJCUSPARSE
--  gen - the boolean flag
-
-   Level: intermediate
-
-.seealso: MATSEQAIJCUSPARSE, MATMPIAIJCUSPARSE
-@*/
-PetscErrorCode  MatAIJCUSPARSESetGenerateTranspose(Mat A, PetscBool gen)
-{
-  PetscErrorCode ierr;
-  PetscBool      ismpiaij;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  MatCheckPreallocated(A,1);
-  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATMPIAIJ,&ismpiaij);CHKERRQ(ierr);
-  if (ismpiaij) {
-    Mat A_d,A_o;
-
-    ierr = MatMPIAIJGetSeqAIJ(A,&A_d,&A_o,NULL);CHKERRQ(ierr);
-    ierr = MatSeqAIJCUSPARSESetGenerateTranspose(A_d,gen);CHKERRQ(ierr);
-    ierr = MatSeqAIJCUSPARSESetGenerateTranspose(A_o,gen);CHKERRQ(ierr);
-  } else {
-    ierr = MatSeqAIJCUSPARSESetGenerateTranspose(A,gen);CHKERRQ(ierr);
-  }
   PetscFunctionReturn(0);
 }
 
@@ -458,11 +427,21 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   ierr = MatAssemblyEnd_MPIAIJ(A,mode);CHKERRQ(ierr);
   if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) {
     ierr = VecSetType(mpiaij->lvec,VECSEQCUDA);CHKERRQ(ierr);
+   #if defined(PETSC_HAVE_NVSHMEM)
+    {
+      PetscMPIInt result;
+      PetscBool   useNvshmem = PETSC_FALSE;
+      ierr = PetscOptionsGetBool(NULL,NULL,"-use_nvshmem",&useNvshmem,NULL);CHKERRQ(ierr);
+      if (useNvshmem) {
+        ierr = MPI_Comm_compare(PETSC_COMM_WORLD,PetscObjectComm((PetscObject)A),&result);CHKERRMPI(ierr);
+        if (result == MPI_IDENT || result == MPI_CONGRUENT) {ierr = VecAllocateNVSHMEM_SeqCUDA(mpiaij->lvec);CHKERRQ(ierr);}
+      }
+    }
+   #endif
   }
   if (d_mat) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // if we assembled on the device
   }
-
   PetscFunctionReturn(0);
 }
 
@@ -495,9 +474,11 @@ PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
     if (aij->A) { ierr = MatCUSPARSEClearHandle(aij->A);CHKERRQ(ierr); }
     if (aij->B) { ierr = MatCUSPARSEClearHandle(aij->B);CHKERRQ(ierr); }
     stat = cusparseDestroy(cusparseStruct->handle);CHKERRCUSPARSE(stat);
+    /* We want cusparseStruct to use PetscDefaultCudaStream
     if (cusparseStruct->stream) {
       err = cudaStreamDestroy(cusparseStruct->stream);CHKERRCUDA(err);
     }
+    */
     delete cusparseStruct->coo_p;
     delete cusparseStruct->coo_pw;
     delete cusparseStruct;
@@ -547,8 +528,9 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat B, MatType mtyp
     cusparseStruct->offdiagGPUMatFormat = MAT_CUSPARSE_CSR;
     cusparseStruct->coo_p               = NULL;
     cusparseStruct->coo_pw              = NULL;
-    cusparseStruct->stream              = 0;
+    cusparseStruct->stream              = 0; /* We should not need cusparseStruct->stream */
     stat = cusparseCreate(&(cusparseStruct->handle));CHKERRCUSPARSE(stat);
+    stat = cusparseSetStream(cusparseStruct->handle,PetscDefaultCudaStream);CHKERRCUSPARSE(stat);
     cusparseStruct->deviceMat = NULL;
   }
 

@@ -264,7 +264,7 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckPreallocated(A,arg) do {                              \
-    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation() or MatSetUp() on argument %D \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
+    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation(), MatSetUp() or the matrix has not yet been factored on argument %D \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
   } while (0)
 #else
 #  define MatCheckPreallocated(A,arg) do {} while (0)
@@ -450,7 +450,8 @@ struct _p_Mat {
   PetscLayout            rmap,cmap;
   void                   *data;            /* implementation-specific data */
   MatFactorType          factortype;       /* MAT_FACTOR_LU, ILU, CHOLESKY or ICC */
-  PetscBool              useordering;      /* factorization using ordering provide to routine (most PETSc implementations) */
+  PetscBool              canuseordering;   /* factorization can use ordering provide to routine (most PETSc implementations) */
+  MatOrderingType        preferredordering[MAT_FACTOR_NUM_TYPES] ;/* what is the preferred (or default) ordering for the matrix solver type */
   PetscBool              assembled;        /* is the matrix assembled? */
   PetscBool              was_assembled;    /* new values inserted into assembled mat */
   PetscInt               num_ass;          /* number of times matrix has been assembled */
@@ -492,11 +493,14 @@ struct _p_Mat {
   PetscInt               nblocks,*bsizes;   /* support for MatSetVariableBlockSizes() */
   char                   *defaultvectype;
   Mat_Product            *product;
+  PetscBool              form_explicit_transpose; /* hint to generate an explicit mat tranpsose for operations like MatMultTranspose() */
+  PetscBool              transupdated;            /* whether or not the explicitly generated transpose is up-to-date */
 };
 
 PETSC_INTERN PetscErrorCode MatAXPY_Basic(Mat,PetscScalar,Mat,MatStructure);
 PETSC_INTERN PetscErrorCode MatAXPY_BasicWithPreallocation(Mat,Mat,PetscScalar,Mat,MatStructure);
 PETSC_INTERN PetscErrorCode MatAXPY_Basic_Preallocate(Mat,Mat,Mat*);
+PETSC_INTERN PetscErrorCode MatAXPY_Dense_Nest(Mat,PetscScalar,Mat);
 
 /*
     Utility for MatFactor (Schur complement)

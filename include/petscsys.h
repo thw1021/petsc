@@ -545,6 +545,12 @@ PETSC_EXTERN PetscErrorCode PetscHIPInitializeCheck(void);
 PETSC_EXTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
 #endif
 
+#if defined(PETSC_HAVE_NVSHMEM)
+PETSC_EXTERN PetscBool      PetscBeganNvshmem;
+PETSC_EXTERN PetscBool      PetscNvshmemInitialized;
+PETSC_EXTERN PetscErrorCode PetscNvshmemFinalize(void);
+#endif
+
 #if defined(PETSC_HAVE_ELEMENTAL)
 PETSC_EXTERN PetscErrorCode PetscElementalInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscElementalInitialized(PetscBool*);
@@ -622,6 +628,33 @@ M*/
 
 M*/
 #define PetscAddrAlign(a) (void*)((((PETSC_UINTPTR_T)(a))+(PETSC_MEMALIGN-1)) & ~(PETSC_MEMALIGN-1))
+
+/*MC
+   PetscCalloc - Allocates a cleared (zeroed) memory region aligned to PETSC_MEMALIGN
+
+   Synopsis:
+    #include <petscsys.h>
+   PetscErrorCode PetscCalloc(size_t m,void **result)
+
+   Not Collective
+
+   Input Parameter:
+.  m - number of bytes to allocate
+
+   Output Parameter:
+.  result - memory allocated
+
+   Level: beginner
+
+   Notes:
+   Memory is always allocated at least double aligned. This macro is useful in allocating memory pointed by void pointers
+
+   It is safe to allocate size 0 and pass the resulting pointer (which may or may not be NULL) to PetscFree().
+
+.seealso: PetscFree(), PetscNew()
+
+M*/
+#define PetscCalloc(m,result)  PetscMallocA(1,PETSC_TRUE,__LINE__,PETSC_FUNCTION_NAME,__FILE__,(size_t)(m),(result))
 
 /*MC
    PetscMalloc1 - Allocates an array of memory aligned to PETSC_MEMALIGN
@@ -1348,15 +1381,12 @@ PETSC_EXTERN PetscErrorCode PetscEnumFind(const char *const*,const char*,PetscEn
    These are MPI operations for MPI_Allreduce() etc
 */
 PETSC_EXTERN MPI_Op MPIU_MAXSUM_OP;
-#if (defined(PETSC_HAVE_COMPLEX) && !defined(PETSC_HAVE_MPI_C_DOUBLE_COMPLEX)) || defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
-PETSC_EXTERN MPI_Op MPIU_SUM;
-#else
-#define MPIU_SUM MPI_SUM
-#endif
 #if defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
+PETSC_EXTERN MPI_Op MPIU_SUM;
 PETSC_EXTERN MPI_Op MPIU_MAX;
 PETSC_EXTERN MPI_Op MPIU_MIN;
 #else
+#define MPIU_SUM MPI_SUM
 #define MPIU_MAX MPI_MAX
 #define MPIU_MIN MPI_MIN
 #endif
@@ -1510,6 +1540,7 @@ PETSC_EXTERN PetscErrorCode PetscStackSAWsViewOff(void);
 PETSC_EXTERN PetscErrorCode PetscDLOpen(const char[],PetscDLMode,PetscDLHandle *);
 PETSC_EXTERN PetscErrorCode PetscDLClose(PetscDLHandle *);
 PETSC_EXTERN PetscErrorCode PetscDLSym(PetscDLHandle,const char[],void **);
+PETSC_EXTERN PetscErrorCode PetscDLAddr(void (*)(void), const char **);
 
 #if defined(PETSC_USE_DEBUG)
 PETSC_EXTERN PetscErrorCode PetscMallocGetStack(void*,PetscStack**);
@@ -1557,8 +1588,8 @@ PETSC_EXTERN PetscErrorCode PetscSequentialPhaseBegin(MPI_Comm,PetscMPIInt);
 PETSC_EXTERN PetscErrorCode PetscSequentialPhaseEnd(MPI_Comm,PetscMPIInt);
 PETSC_EXTERN PetscErrorCode PetscBarrier(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscMPIDump(FILE*);
-PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm,PetscInt[],PetscInt[]);
-PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm,PetscReal[],PetscReal[]);
+PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm,PetscInt[2],PetscInt[2]);
+PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm,PetscReal[2],PetscReal[2]);
 
 /*MC
     PetscNot - negates a logical type value and returns result as a PetscBool
@@ -2421,32 +2452,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscIntSumError(PetscInt a,PetscInt b,PetscI
 
 M*/
 
-/*MC
-
-    UsingFortran - To use PETSc with Fortran you must use both PETSc include files and modules. At the beginning
-      of every function and module definition you need something like
-
-$
-$#include "petsc/finclude/petscXXX.h"
-$         use petscXXX
-
-     You can declare PETSc variables using either of the following.
-
-$    XXX variablename
-$    type(tXXX) variablename
-
-    For example,
-
-$#include "petsc/finclude/petscvec.h"
-$         use petscvec
-$
-$    Vec b
-$    type(tVec) x
-
-    Level: beginner
-
-M*/
-
 PETSC_EXTERN PetscErrorCode PetscGetArchType(char[],size_t);
 PETSC_EXTERN PetscErrorCode PetscGetHostName(char[],size_t);
 PETSC_EXTERN PetscErrorCode PetscGetUserName(char[],size_t);
@@ -2738,10 +2743,13 @@ PETSC_EXTERN PetscErrorCode PetscPushJSONValue(char[],const char[],const char[],
 
 
 #if defined(PETSC_USE_DEBUG)
-/*
-   Verify that all processes in the communicator have called this from the same line of code
- */
-PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,const char*,const char *);
+PETSC_STATIC_INLINE unsigned int PetscStrHash(const char *str)
+{
+  unsigned int c,hash = 5381;
+
+  while ((c = (unsigned int)*str++)) hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+  return hash;
+}
 
 /*MC
    MPIU_Allreduce - a PETSc replacement for MPI_Allreduce() that tries to determine if the call from all the MPI processes occur from the
@@ -2755,25 +2763,40 @@ PETSC_EXTERN PetscErrorCode PetscAllreduceBarrierCheck(MPI_Comm,PetscMPIInt,int,
      PetscErrorCode MPIU_Allreduce(void *indata,void *outdata,PetscMPIInt count,MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
 
    Input Parameters:
-+  indata - pointer to the input data to be reduced
-.  count - the number of MPI data items in indata and outdata
-.  datatype - the MPI datatype, for example MPI_INT
-.  op - the MPI operation, for example MPI_SUM
--  comm - the MPI communicator on which the operation occurs
++  a - pointer to the input data to be reduced
+.  c - the number of MPI data items in a and b
+.  d - the MPI datatype, for example MPI_INT
+.  e - the MPI operation, for example MPI_SUM
+-  fcomm - the MPI communicator on which the operation occurs
 
    Output Parameter:
-.  outdata - the reduced values
+.  b - the reduced values
 
    Notes:
-   In optimized mode this directly calls MPI_Allreduce()
+     In optimized mode this directly calls MPI_Allreduce()
+
+     This is defined as a macro that can return error codes internally so it cannot be used in a subroutine that returns void.
+
+     The error code this returns should be checked with CHKERRMPI()
 
    Level: developer
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) (PetscAllreduceBarrierCheck(fcomm,c,__LINE__,PETSC_FUNCTION_NAME,__FILE__) || MPI_Allreduce(a,b,c,d,e,fcomm))
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_SUCCESS; do {\
+  PetscErrorCode _4_ierr; \
+  PetscMPIInt a_b1[6],a_b2[6];\
+  a_b1[0] = -(PetscMPIInt)__LINE__;                          a_b1[1] = -a_b1[0];\
+  a_b1[2] = -(PetscMPIInt)PetscStrHash(PETSC_FUNCTION_NAME); a_b1[3] = -a_b1[2];\
+  a_b1[4] = -(PetscMPIInt)(c);                               a_b1[5] = -a_b1[4];\
+  _4_ierr = MPI_Allreduce(a_b1,a_b2,6,MPI_INT,MPI_MAX,fcomm);CHKERRMPI(_4_ierr);\
+  if (-a_b2[0] != a_b2[1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (code lines) on different processors");\
+  if (-a_b2[2] != a_b2[3]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (functions) on different processors");\
+  if (-a_b2[4] != a_b2[5]) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called with different counts %d on different processors",c);\
+  _4_ierr = MPI_Allreduce((a),(b),(c),d,e,(fcomm));CHKERRMPI(_4_ierr);\
+  } while (0)
 #else
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_Allreduce(a,b,c,d,e,fcomm)
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_Allreduce((a),(b),(c),d,e,(fcomm))
 #endif
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)

@@ -322,9 +322,9 @@ PetscErrorCode PipesView(Vec X,DM networkdm,Wash wash)
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
-  /* get num of local and global total nnodes */
+  /* get number of local and global total nnodes */
   nidx = wash->nnodes_loc;
-  ierr = MPIU_Allreduce(&nidx,&nx,1,MPIU_INT,MPI_SUM,PETSC_COMM_WORLD);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&nidx,&nx,1,MPIU_INT,MPI_SUM,PETSC_COMM_WORLD);CHKERRMPI(ierr);
 
   ierr = VecCreate(PETSC_COMM_WORLD,&Xq);CHKERRQ(ierr);
   if (rank == 0) { /* all entries of Xq are in proc[0] */
@@ -615,7 +615,7 @@ int main(int argc,char ** argv)
   DMNetworkMonitor  monitor;
   MPI_Comm          comm;
 
-  PetscInt          nedges,nvertices; /* local num of edges and vertices */
+  PetscInt          nedges,nvertices; /* local number of edges and vertices */
   PetscInt          nnodes = 6;
 
   ierr = PetscInitialize(&argc,&argv,"pOption",help);if (ierr) return ierr;
@@ -646,7 +646,7 @@ int main(int argc,char ** argv)
   /* Create a distributed wash network (user-specific) */
   ierr = WashNetworkCreate(comm,pipesCase,&wash);CHKERRQ(ierr);
   nedges      = wash->nedge;
-  nvertices   = wash->nvertex; /* local num of vertices, excluding ghosts */
+  nvertices   = wash->nvertex; /* local number of vertices, excluding ghosts */
   edgelist    = wash->edgelist;
   vtype       = wash->vtype;
   junctions   = wash->junction;
@@ -663,11 +663,11 @@ int main(int argc,char ** argv)
   /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] eStart/End: %d - %d; vStart/End: %d - %d\n",rank,eStart,eEnd,vStart,vEnd);CHKERRQ(ierr); */
 
   if (rank) { /* junctions[] and pipes[] for proc[0] are allocated in WashNetworkCreate() */
-    /* vEnd - vStart = nvertices + num of ghost vertices! */
+    /* vEnd - vStart = nvertices + number of ghost vertices! */
     ierr = PetscCalloc2(vEnd - vStart,&junctions,nedges,&pipes);CHKERRQ(ierr);
   }
 
-  /* Add Pipe component and num of variables to all local edges */
+  /* Add Pipe component and number of variables to all local edges */
   for (e = eStart; e < eEnd; e++) {
     pipes[e-eStart].nnodes = nnodes;
     ierr = DMNetworkAddComponent(networkdm,e,KeyPipe,&pipes[e-eStart],2*pipes[e-eStart].nnodes);CHKERRQ(ierr);
@@ -679,7 +679,7 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Add Junction component and num of variables to all local vertices, including ghost vertices! (current implemetation requires setting same num of variables at ghost points */
+  /* Add Junction component and number of variables to all local vertices, including ghost vertices! (current implementation requires setting the same number of variables at ghost points */
   for (v = vStart; v < vEnd; v++) {
     ierr = DMNetworkAddComponent(networkdm,v,KeyJunction,&junctions[v-vStart],2);CHKERRQ(ierr);
   }
@@ -736,7 +736,7 @@ int main(int argc,char ** argv)
   for (e=eStart; e<eEnd; e++) { /* each edge has only one component, pipe */
     ierr = DMNetworkGetComponent(networkdm,e,0,&type,(void**)&pipe,NULL);CHKERRQ(ierr);
 
-    wash->nnodes_loc += pipe->nnodes; /* local total num of nodes, will be used by PipesView() */
+    wash->nnodes_loc += pipe->nnodes; /* local total number of nodes, will be used by PipesView() */
     ierr = PipeSetParameters(pipe,
                              600.0,          /* length */
                              0.5,            /* diameter */
@@ -847,63 +847,59 @@ int main(int argc,char ** argv)
 
    build:
      depends: pipeInterface.c pipeImpls.c
+     requires: mumps
 
    test:
-      args: -ts_monitor -case 1 -ts_max_steps 1 -options_left no -viewX
+      args: -ts_monitor -case 1 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_1.out
 
    test:
       suffix: 2
       nsize: 2
-      requires: mumps
-      args: -ts_monitor -case 1 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -viewX
+      args: -ts_monitor -case 1 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_2.out
 
    test:
       suffix: 3
       nsize: 2
-      requires: mumps
-      args: -ts_monitor -case 0 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -viewX
+      args: -ts_monitor -case 0 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_3.out
 
    test:
       suffix: 4
-      args: -ts_monitor -case 2 -ts_max_steps 1 -options_left no -viewX
+      args: -ts_monitor -case 2 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_4.out
 
    test:
       suffix: 5
       nsize: 3
-      requires: mumps
-      args: -ts_monitor -case 2 -ts_max_steps 10 -petscpartitioner_type simple -options_left no -viewX
+      args: -ts_monitor -case 2 -ts_max_steps 10 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -viewX
       localrunfiles: pOption
       output_file: output/pipes1_5.out
 
    test:
       suffix: 6
       nsize: 2
-      requires: mumps
-      args: -ts_monitor -case 1 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX
+      args: -ts_monitor -case 1 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX
       localrunfiles: pOption
       output_file: output/pipes1_6.out
 
    test:
       suffix: 7
       nsize: 2
-      requires: mumps
-      args: -ts_monitor -case 2 -ts_max_steps 1 -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX
+      args: -ts_monitor -case 2 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX
       localrunfiles: pOption
       output_file: output/pipes1_7.out
 
    test:
       suffix: 8
       nsize: 2
-      requires: mumps parmetis
-      args: -ts_monitor -case 2 -ts_max_steps 1 -petscpartitioner_type parmetis -options_left no -wash_distribute 1
+      requires: parmetis
+      args: -ts_monitor -case 2 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type parmetis -options_left no -wash_distribute 1
       localrunfiles: pOption
       output_file: output/pipes1_8.out
 

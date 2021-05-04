@@ -18,6 +18,9 @@ typedef struct {
   Vec      b;                                  /* Right hand side */
   Vec      x;                                  /* Solution */
   Vec      r;                                  /* Residual */
+  Mat      B;
+  Mat      X;
+  Mat      R;
   Vec     *coarseSpace;                        /* A vector space which should be accurately captured by the next coarser mesh,
                                                   and thus accurately interpolated. This array should have the same size on each
                                                   level, and the vectors should correspond to the same function discretized in
@@ -25,6 +28,8 @@ typedef struct {
 
   PetscErrorCode (*residual)(Mat,Vec,Vec,Vec);
   PetscErrorCode (*residualtranspose)(Mat,Vec,Vec,Vec);
+  PetscErrorCode (*matresidual)(Mat,Mat,Mat,Mat);
+  PetscErrorCode (*matresidualtranspose)(Mat,Mat,Mat,Mat);
 
   Mat           A;                             /* matrix used in forming residual*/
   KSP           smoothd;                       /* pre smoother */
@@ -79,18 +84,14 @@ PETSC_INTERN PetscErrorCode PCSetFromOptions_MG(PetscOptionItems *PetscOptionsOb
 PETSC_INTERN PetscErrorCode PCView_MG(PC,PetscViewer);
 PETSC_INTERN PetscErrorCode PCMGGetLevels_MG(PC,PetscInt *);
 PETSC_INTERN PetscErrorCode PCMGSetLevels_MG(PC,PetscInt,MPI_Comm *);
-PETSC_DEPRECATED_FUNCTION("Use PCMGResidualDefault() (since version 3.5)") PETSC_STATIC_INLINE PetscErrorCode PCMGResidual_Default(Mat A,Vec b,Vec x,Vec r) {
-  return PCMGResidualDefault(A,b,x,r);
-}
+PETSC_DEPRECATED_FUNCTION("Use PCMGResidualDefault() (since version 3.5)") PETSC_STATIC_INLINE PetscErrorCode PCMGResidual_Default(Mat A,Vec b,Vec x,Vec r) { return PCMGResidualDefault(A,b,x,r); }
 
 PETSC_INTERN PetscErrorCode DMSetBasisFunction_Internal(PetscInt, PetscBool, PetscInt, PetscErrorCode (**)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *));
 PETSC_INTERN PetscErrorCode PCMGComputeCoarseSpace_Internal(PC, PetscInt, PCMGCoarseSpaceType, PetscInt, const Vec[], Vec *[]);
 PETSC_INTERN PetscErrorCode PCMGAdaptInterpolator_Internal(PC, PetscInt, KSP, KSP, PetscInt, Vec[], Vec[]);
 PETSC_INTERN PetscErrorCode PCMGRecomputeLevelOperators_Internal(PC, PetscInt);
-
-PETSC_INTERN PetscErrorCode PCMGACycle_Private(PC,PC_MG_Levels**,PetscBool);
-PETSC_INTERN PetscErrorCode PCMGFCycle_Private(PC,PC_MG_Levels**,PetscBool);
-PETSC_INTERN PetscErrorCode PCMGKCycle_Private(PC,PC_MG_Levels**,PetscBool);
-PETSC_INTERN PetscErrorCode PCMGMCycle_Private(PC,PC_MG_Levels**,PetscBool,PCRichardsonConvergedReason*);
-
+PETSC_INTERN PetscErrorCode PCMGACycle_Private(PC,PC_MG_Levels**,PetscBool,PetscBool);
+PETSC_INTERN PetscErrorCode PCMGFCycle_Private(PC,PC_MG_Levels**,PetscBool,PetscBool);
+PETSC_INTERN PetscErrorCode PCMGKCycle_Private(PC,PC_MG_Levels**,PetscBool,PetscBool);
+PETSC_INTERN PetscErrorCode PCMGMCycle_Private(PC,PC_MG_Levels**,PetscBool,PetscBool,PCRichardsonConvergedReason*);
 #endif

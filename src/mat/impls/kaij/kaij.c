@@ -1180,7 +1180,9 @@ PetscErrorCode MatGetRow_SeqKAIJ(Mat A,PetscInt row,PetscInt *ncols,PetscInt **c
 PetscErrorCode MatRestoreRow_SeqKAIJ(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
   PetscErrorCode ierr;
+
   PetscFunctionBegin;
+  if (nz) *nz = 0;
   ierr = PetscFree2(*idx,*v);CHKERRQ(ierr);
   ((Mat_SeqKAIJ*)A->data)->getrowactive = PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -1393,7 +1395,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_KAIJ(Mat A)
   A->ops->setup = MatSetUp_KAIJ;
 
   b->w    = NULL;
-  ierr    = MPI_Comm_size(PetscObjectComm((PetscObject)A),&size);CHKERRQ(ierr);
+  ierr    = MPI_Comm_size(PetscObjectComm((PetscObject)A),&size);CHKERRMPI(ierr);
   if (size == 1) {
     ierr = PetscObjectChangeTypeName((PetscObject)A,MATSEQKAIJ);CHKERRQ(ierr);
     A->ops->setup               = MatSetUp_KAIJ;

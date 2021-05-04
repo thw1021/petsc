@@ -23,10 +23,11 @@ const char       *MatOptions_Shifted[] = {"UNUSED_NONZERO_LOCATION_ERR",
                                   "NO_OFF_PROC_ENTRIES",
                                   "NEW_NONZERO_LOCATIONS",
                                   "NEW_NONZERO_ALLOCATION_ERR",
-                                  "MAT_SUBSET_OFF_PROC_ENTRIES",
-                                  "MAT_SUBMAT_SINGLEIS",
-                                  "MAT_STRUCTURE_ONLY",
-                                  "MAT_SORTED_FULL",
+                                  "SUBSET_OFF_PROC_ENTRIES",
+                                  "SUBMAT_SINGLEIS",
+                                  "STRUCTURE_ONLY",
+                                  "SORTED_FULL",
+                                  "FORM_EXPLICIT_TRANSPOSE",
                                   "MatOption","MAT_",NULL};
 const char *const* MatOptions = MatOptions_Shifted+2;
 const char *const MatFactorShiftTypes[] = {"NONE","NONZERO","POSITIVE_DEFINITE","INBLOCKS","MatFactorShiftType","PC_FACTOR_",NULL};
@@ -368,6 +369,7 @@ PetscErrorCode  MatInitializePackage(void)
   ierr = MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE,      MAT_FACTOR_LU,MatGetFactor_seqdense_petsc);CHKERRQ(ierr);
   ierr = MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE,      MAT_FACTOR_ILU,MatGetFactor_seqdense_petsc);CHKERRQ(ierr);
   ierr = MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE,      MAT_FACTOR_CHOLESKY,MatGetFactor_seqdense_petsc);CHKERRQ(ierr);
+  ierr = MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE,      MAT_FACTOR_QR,MatGetFactor_seqdense_petsc);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
   ierr = MatSolverTypeRegister(MATSOLVERCUDA, MATSEQDENSE,       MAT_FACTOR_LU,MatGetFactor_seqdense_cuda);CHKERRQ(ierr);
   ierr = MatSolverTypeRegister(MATSOLVERCUDA, MATSEQDENSE,       MAT_FACTOR_CHOLESKY,MatGetFactor_seqdense_cuda);CHKERRQ(ierr);

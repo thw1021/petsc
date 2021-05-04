@@ -22,6 +22,8 @@ class CompilerOptions(config.base.Configure):
     if config.setCompilers.Configure.isGNU(compiler, self.log) or config.setCompilers.Configure.isClang(compiler, self.log):
       if bopt == '':
         flags.extend(['-Wall', '-Wwrite-strings', '-Wno-strict-aliasing','-Wno-unknown-pragmas'])
+        if config.setCompilers.Configure.isGcc110plus(compiler, self.log):
+          flags.extend(['-Wno-misleading-indentation','-Wno-stringop-overflow'])
         # skip -fstack-protector for brew gcc - as this gives SEGV
         if not (config.setCompilers.Configure.isDarwin(self.log) and config.setCompilers.Configure.isGNU(compiler, self.log)):
           flags.extend(['-fstack-protector'])
@@ -38,7 +40,7 @@ class CompilerOptions(config.base.Configure):
       elif bopt == 'g':
         flags.append('-g3')
       elif bopt == 'gcov':
-        flags.extend(['--coverage','-Og']) # --coverage is equal to -fprofile-arcs -ftest-coverage. Use -Og to have accurate coverage result and fine performance
+        flags.extend(['--coverage','-Og']) # --coverage is equal to -fprofile-arcs -ftest-coverage. Use -Og to have accurate coverage results and good performance
       elif bopt == 'O':
         flags.append('-g')
         if config.setCompilers.Configure.isClang(compiler, self.log):
@@ -60,6 +62,7 @@ class CompilerOptions(config.base.Configure):
       # Windows Intel
       elif compiler.find('win32fe icl') >= 0:
         if bopt == '':
+          flags.extend(['-Qstd=c99'])
           if self.argDB['with-shared-libraries']:
             flags.extend(['-MD'])
           else:
@@ -97,7 +100,7 @@ class CompilerOptions(config.base.Configure):
   def getCxxFlags(self, compiler, bopt):
     import config.setCompilers
 
-    if [s for s in ['mpiCC','mpicxx','mpiicxx','mpiicpc'] if os.path.basename(compiler).find(s)>=0]:
+    if [s for s in ['mpiCC','mpic++','mpicxx','mpiicxx','mpiicpc'] if os.path.basename(compiler).find(s)>=0]:
       try:
         output   = self.executeShellCommand(compiler+' -show', log = self.log)[0]
         self.framework.addMakeMacro('MPICXX_SHOW',output.strip().replace('\n','\\\\n'))
@@ -111,8 +114,12 @@ class CompilerOptions(config.base.Configure):
     if config.setCompilers.Configure.isGNU(compiler, self.log) or config.setCompilers.Configure.isClang(compiler, self.log):
       if bopt == '':
         flags.extend(['-Wall', '-Wwrite-strings', '-Wno-strict-aliasing','-Wno-unknown-pragmas'])
-        # skip -fstack-protector for brew gcc - as this gives SEGV
-        if not (config.setCompilers.Configure.isDarwin(self.log) and config.setCompilers.Configure.isGNU(compiler, self.log)):
+        if not any([
+            # skip -fstack-protector for brew gcc - as this gives SEGV
+            config.setCompilers.Configure.isDarwin(self.log) and config.setCompilers.Configure.isGNU(compiler, self.log),
+            # hipcc for ROCm-4.0 crashes on some source files with -fstack-protector
+            config.setCompilers.Configure.isHIP(compiler, self.log),
+        ]):
           flags.extend(['-fstack-protector'])
         if config.setCompilers.Configure.isDarwinCatalina(self.log) and config.setCompilers.Configure.isClang(compiler, self.log):
           flags.extend(['-fno-stack-check'])
@@ -263,8 +270,10 @@ class CompilerOptions(config.base.Configure):
     return flags
 
   def getCompilerFlags(self, language, compiler, bopt):
+    if bopt == 'gcov' and (language == 'CUDA' or language == 'HIP' or language == 'SYCL'):
+      return ''
     if bopt == 'gcov' and not config.setCompilers.Configure.isGNU(compiler, self.log) and not config.setCompilers.Configure.isClang(compiler, self.log):
-      raise RuntimeError('Having --with-gcov but the compiler is neither GCC nor Clang, we do not know how to do gcov')
+      raise RuntimeError('Have --with-gcov but the compiler is neither GCC nor Clang, we do not know how to do gcov with other compilers')
     flags = ''
     if language == 'C' or language == 'CUDA':
       flags = self.getCFlags(compiler, bopt, language)
@@ -303,6 +312,7 @@ class CompilerOptions(config.base.Configure):
       if not status:
         if compiler.find('win32fe') > -1:
           version = '\\n'.join(output.split('\n')[0:2])
+          version = version.replace('\r','')
         else:
           #PGI/Windows writes an empty '\r\n' on the first line of output
           if output.count('\n') > 1 and output.split('\n')[0] == '\r':

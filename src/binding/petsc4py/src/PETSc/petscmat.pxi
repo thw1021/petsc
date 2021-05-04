@@ -151,6 +151,7 @@ cdef extern from * nogil:
         MAT_SAME_NONZERO_PATTERN      "SAME_NONZERO_PATTERN"
         MAT_DIFFERENT_NONZERO_PATTERN "DIFFERENT_NONZERO_PATTERN"
         MAT_SUBSET_NONZERO_PATTERN    "SUBSET_NONZERO_PATTERN"
+        MAT_UNKNOWN_NONZERO_PATTERN   "UNKNOWN_NONZERO_PATTERN"
 
     ctypedef enum PetscMatOption "MatOption":
         MAT_OPTION_MIN
@@ -337,6 +338,7 @@ cdef extern from * nogil:
     int MatZeroRowsColumnsLocal(PetscMat,PetscInt,PetscInt[],PetscScalar,PetscVec,PetscVec)
     int MatZeroRowsColumnsIS(PetscMat,PetscIS,PetscScalar,PetscVec,PetscVec)
     int MatZeroRowsColumnsLocalIS(PetscMat,PetscIS,PetscScalar,PetscVec,PetscVec)
+    int MatZeroRowsColumnsStencil(PetscMat,PetscInt,const PetscMatStencil[], PetscScalar,PetscVec,PetscVec)
 
     int MatGetDiagonal(PetscMat,PetscVec)
     int MatGetRowSum(PetscMat,PetscVec)

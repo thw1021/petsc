@@ -21,7 +21,7 @@ class Configure(config.package.Package):
 
   def Install(self):
     import os
-    pp = os.path.join(self.installDir,'lib','python*','site-packages')
+    installLibPath = os.path.join(self.installDir, 'lib')
     if self.setCompilers.isDarwin(self.log):
       apple = 'You may need to\n (csh/tcsh) setenv MACOSX_DEPLOYMENT_TARGET 10.X\n (sh/bash) MACOSX_DEPLOYMENT_TARGET=10.X; export MACOSX_DEPLOYMENT_TARGET\nbefore running make on PETSc'
     else:
@@ -47,14 +47,17 @@ class Configure(config.package.Package):
     self.addMakeRule('mpi4pyinstall','', \
                        ['@echo "*** Installing mpi4py ***"',\
                           '@(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && \\\n\
-           '+archflags+self.python.pyexe+' setup.py install --install-lib='+os.path.join(self.installDir,'lib')+') >> ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log 2>&1 || \\\n\
+           '+archflags+self.python.pyexe+' setup.py install --install-lib='+installLibPath+') \\\n\
+               >> ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log 2>&1 || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
              echo "Error building mpi4py. Check ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log" && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)',\
                           '@echo "====================================="',\
-                          '@echo "To use mpi4py, add '+os.path.join(self.installDir,'lib')+' to PYTHONPATH"',\
+                          '@echo "To use mpi4py, add '+installLibPath+' to PYTHONPATH"',\
+                          '@echo "export PYTHONPATH=${PYTHONPATH}:"'+os.path.join(self.installDir,'lib'),\
                           '@echo "====================================="'])
+    self.addMakeMacro('MPI4PY',"yes")
     if self.framework.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
       self.addMakeRule('mpi4py-build','mpi4pybuild')
       self.addMakeRule('mpi4py-install','mpi4pyinstall')
@@ -69,7 +72,9 @@ class Configure(config.package.Package):
     if not self.sharedLibraries.useShared:
         raise RuntimeError('mpi4py requires PETSc be built with shared libraries; rerun with --with-shared-libraries')
     if not self.python.numpy:
-        raise RuntimeError('mpi4py requires Python with numpy module installed')
+        raise RuntimeError('mpi4py, in the context of PETSc,requires Python with numpy module installed.\n'
+                           'Please install using package managers - for ex: "apt" or "dnf" (on linux),\n'
+                           'or with "pip" using: %s -m pip install %s' % (self.python.pyexe, 'numpy'))
 
   def alternateConfigureLibrary(self):
     self.addMakeRule('mpi4py-build','')

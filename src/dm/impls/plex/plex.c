@@ -27,7 +27,7 @@ PETSC_EXTERN PetscErrorCode VecView_MPI(Vec, PetscViewer);
 
   Level: developer
 
-.seealso DMPlexConstructGhostCells(), DMPlexSetGhostCellStratum()
+.seealso DMPlexConstructGhostCells(), DMPlexGetGhostCellStratum()
 @*/
 PetscErrorCode DMPlexGetSimplexOrBoxCells(DM dm, PetscInt height, PetscInt *cStart, PetscInt *cEnd)
 {
@@ -103,7 +103,7 @@ PetscErrorCode DMPlexGetFieldType_Internal(DM dm, PetscSection section, PetscInt
       ierr = PetscSectionGetFieldName(section, field, &fieldname);CHKERRQ(ierr);
       ierr = PetscInfo2((PetscObject) dm, "Could not classify VTK output type of section field %D \"%s\"\n", field, fieldname);CHKERRQ(ierr);
     } else {
-      ierr = PetscInfo((PetscObject) dm, "Could not classify VTK output typp of section\"%s\"\n");CHKERRQ(ierr);
+      ierr = PetscInfo((PetscObject) dm, "Could not classify VTK output type of section\"%s\"\n");CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -355,16 +355,17 @@ PetscErrorCode VecView_Plex_Local(Vec v, PetscViewer viewer)
 PetscErrorCode VecView_Plex(Vec v, PetscViewer viewer)
 {
   DM             dm;
-  PetscBool      isvtk, ishdf5, isdraw, isglvis;
+  PetscBool      isvtk, ishdf5, isdraw, isglvis, isexodusii;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = VecGetDM(v, &dm);CHKERRQ(ierr);
   if (!dm) SETERRQ(PetscObjectComm((PetscObject)v), PETSC_ERR_ARG_WRONG, "Vector not generated from a DM");
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERVTK,   &isvtk);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERHDF5,  &ishdf5);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERDRAW,  &isdraw);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERGLVIS, &isglvis);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERVTK,      &isvtk);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERHDF5,     &ishdf5);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERDRAW,     &isdraw);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERGLVIS,    &isglvis);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWEREXODUSII, &isexodusii);CHKERRQ(ierr);
   if (isvtk || isdraw || isglvis) {
     Vec         locv;
     PetscObject isZero;
@@ -385,6 +386,12 @@ PetscErrorCode VecView_Plex(Vec v, PetscViewer viewer)
     ierr = VecView_Plex_HDF5_Internal(v, viewer);CHKERRQ(ierr);
 #else
     SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
+#endif
+  } else if (isexodusii) {
+#if defined(PETSC_HAVE_EXODUSII)
+    ierr = VecView_PlexExodusII_Internal(v, viewer);CHKERRQ(ierr);
+#else
+    SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "ExodusII not supported in this build.\nPlease reconfigure using --download-exodusii");
 #endif
   } else {
     PetscBool isseq;
@@ -484,18 +491,25 @@ PetscErrorCode VecLoad_Plex_Local(Vec v, PetscViewer viewer)
 PetscErrorCode VecLoad_Plex(Vec v, PetscViewer viewer)
 {
   DM             dm;
-  PetscBool      ishdf5;
+  PetscBool      ishdf5,isexodusii;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = VecGetDM(v, &dm);CHKERRQ(ierr);
   if (!dm) SETERRQ(PetscObjectComm((PetscObject)v), PETSC_ERR_ARG_WRONG, "Vector not generated from a DM");
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERHDF5, &ishdf5);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERHDF5,     &ishdf5);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWEREXODUSII, &isexodusii);CHKERRQ(ierr);
   if (ishdf5) {
 #if defined(PETSC_HAVE_HDF5)
     ierr = VecLoad_Plex_HDF5_Internal(v, viewer);CHKERRQ(ierr);
 #else
     SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
+#endif
+  } else if (isexodusii) {
+#if defined(PETSC_HAVE_EXODUSII)
+    ierr = VecLoad_PlexExodusII_Internal(v, viewer);CHKERRQ(ierr);
+#else
+    SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "ExodusII not supported in this build.\nPlease reconfigure using --download-exodusii");
 #endif
   } else {
     ierr = VecLoad_Default(v, viewer);CHKERRQ(ierr);
@@ -1017,12 +1031,12 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     ierr  = VecRestoreArray(acown,&array);CHKERRQ(ierr);
     lm[0] = numVertices > 0 ?  numVertices : PETSC_MAX_INT;
     lm[1] = -numVertices;
-    ierr  = MPIU_Allreduce(lm,gm,2,MPIU_INT64,MPI_MIN,comm);CHKERRQ(ierr);
+    ierr  = MPIU_Allreduce(lm,gm,2,MPIU_INT64,MPI_MIN,comm);CHKERRMPI(ierr);
     ierr  = PetscViewerASCIIPrintf(viewer,"  Cell balance: %.2f (max %D, min %D",-((double)gm[1])/((double)gm[0]),-(PetscInt)gm[1],(PetscInt)gm[0]);CHKERRQ(ierr);
     lm[0] = ect; /* edgeCut */
     lm[1] = ectn; /* node-aware edgeCut */
     lm[2] = numVertices > 0 ? 0 : 1; /* empty processes */
-    ierr  = MPIU_Allreduce(lm,gm,3,MPIU_INT64,MPI_SUM,comm);CHKERRQ(ierr);
+    ierr  = MPIU_Allreduce(lm,gm,3,MPIU_INT64,MPI_SUM,comm);CHKERRMPI(ierr);
     ierr  = PetscViewerASCIIPrintf(viewer,", empty %D)\n",(PetscInt)gm[2]);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
     ierr  = PetscViewerASCIIPrintf(viewer,"  Edge Cut: %D (on node %.3f)\n",(PetscInt)(gm[0]/2),gm[0] ? ((double)(gm[1]))/((double)gm[0]) : 1.);CHKERRQ(ierr);
@@ -1053,7 +1067,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     else      {ierr = PetscViewerASCIIPrintf(viewer, "Mesh in %D dimension%s:\n", dim, dim == 1 ? "" : "s");CHKERRQ(ierr);}
     if (cellHeight) {ierr = PetscViewerASCIIPrintf(viewer, "  Cells are at height %D\n", cellHeight);CHKERRQ(ierr);}
     ierr = DMPlexGetDepth(dm, &locDepth);CHKERRQ(ierr);
-    ierr = MPIU_Allreduce(&locDepth, &depth, 1, MPIU_INT, MPI_MAX, comm);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&locDepth, &depth, 1, MPIU_INT, MPI_MAX, comm);CHKERRMPI(ierr);
     ierr = DMPlexGetGhostCellStratum(dm, &gcStart, &gcEnd);CHKERRQ(ierr);
     gcNum = gcEnd - gcStart;
     ierr = PetscCalloc3(size,&sizes,size,&hybsizes,size,&ghostsizes);CHKERRQ(ierr);
@@ -1257,8 +1271,8 @@ static PetscErrorCode DMPlexView_Draw(DM dm, PetscViewer viewer)
     bound[1] = PetscMin(bound[1], PetscRealPart(coords[c+1])); bound[3] = PetscMax(bound[3], PetscRealPart(coords[c+1]));
   }
   ierr = VecRestoreArrayRead(coordinates, &coords);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&bound[0],xyl,2,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&bound[2],xyr,2,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&bound[0],xyl,2,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
+  ierr = MPIU_Allreduce(&bound[2],xyr,2,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
   ierr = PetscDrawSetCoordinates(draw, xyl[0], xyl[1], xyr[0], xyr[1]);CHKERRQ(ierr);
   ierr = PetscDrawClear(draw);CHKERRQ(ierr);
 
@@ -1283,6 +1297,7 @@ static PetscErrorCode DMPlexView_Draw(DM dm, PetscViewer viewer)
 
 #if defined(PETSC_HAVE_EXODUSII)
 #include <exodusII.h>
+#include <petscviewerexodusii.h>
 #endif
 
 PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer)
@@ -1322,14 +1337,22 @@ PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer)
     ierr = DMPlexView_GLVis(dm, viewer);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_EXODUSII)
   } else if (isexodus) {
-    int exoid;
-    PetscInt cStart, cEnd, c;
-
-    ierr = DMCreateLabel(dm, "Cell Sets");CHKERRQ(ierr);
-    ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
-    for (c = cStart; c < cEnd; ++c) {ierr = DMSetLabelValue(dm, "Cell Sets", c, 1);CHKERRQ(ierr);}
-    ierr = PetscViewerExodusIIGetId(viewer, &exoid);CHKERRQ(ierr);
-    ierr = DMPlexView_ExodusII_Internal(dm, exoid, 1);CHKERRQ(ierr);
+/*
+      exodusII requires that all sets be part of exactly one cell set.
+      If the dm does not have a "Cell Sets" label defined, we create one
+      with ID 1, containig all cells.
+      Note that if the Cell Sets label is defined but does not cover all cells,
+      we may still have a problem. This should probably be checked here or in the viewer;
+    */
+    PetscInt numCS;
+    ierr = DMGetLabelSize(dm,"Cell Sets",&numCS);CHKERRQ(ierr);
+    if (!numCS){
+      PetscInt cStart, cEnd, c;
+      ierr = DMCreateLabel(dm, "Cell Sets");CHKERRQ(ierr);
+      ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
+      for (c = cStart; c < cEnd; ++c) {ierr = DMSetLabelValue(dm, "Cell Sets", c, 1);CHKERRQ(ierr);}
+    }
+    ierr = DMView_PlexExodusII(dm, viewer);CHKERRQ(ierr);
 #endif
   } else {
     SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMPlex writing", ((PetscObject)viewer)->type_name);
@@ -1391,6 +1414,7 @@ PetscErrorCode DMDestroy_Plex(DM dm)
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMSetUpGLVisViewer_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMPlexInsertBoundaryValues_C", NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMCreateNeumannOverlap_C", NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)dm,"DMInterpolateSolution_C", NULL);CHKERRQ(ierr);
   if (--mesh->refct > 0) PetscFunctionReturn(0);
   ierr = PetscSectionDestroy(&mesh->coneSection);CHKERRQ(ierr);
   ierr = PetscFree(mesh->cones);CHKERRQ(ierr);
@@ -6604,7 +6628,7 @@ PetscErrorCode DMPlexMatSetClosure(DM dm, PetscSection section, PetscSection glo
     PetscMPIInt    rank;
     PetscErrorCode ierr2;
 
-    ierr2 = MPI_Comm_rank(PetscObjectComm((PetscObject)A), &rank);CHKERRQ(ierr2);
+    ierr2 = MPI_Comm_rank(PetscObjectComm((PetscObject)A), &rank);CHKERRMPI(ierr2);
     ierr2 = (*PetscErrorPrintf)("[%d]ERROR in DMPlexMatSetClosure\n", rank);CHKERRQ(ierr2);
     ierr2 = DMPlexPrintMatSetValues(PETSC_VIEWER_STDERR_SELF, A, point, numIndices, indices, 0, NULL, values);CHKERRQ(ierr2);
     ierr2 = DMPlexRestoreClosureIndices(dm, section, globalSection, point, PETSC_TRUE, &numIndices, &indices, NULL, (PetscScalar **) &values);CHKERRQ(ierr2);
@@ -6674,7 +6698,7 @@ PetscErrorCode DMPlexMatSetClosureGeneral(DM dmRow, PetscSection sectionRow, Pet
     PetscMPIInt    rank;
     PetscErrorCode ierr2;
 
-    ierr2 = MPI_Comm_rank(PetscObjectComm((PetscObject)A), &rank);CHKERRQ(ierr2);
+    ierr2 = MPI_Comm_rank(PetscObjectComm((PetscObject)A), &rank);CHKERRMPI(ierr2);
     ierr2 = (*PetscErrorPrintf)("[%d]ERROR in DMPlexMatSetClosure\n", rank);CHKERRQ(ierr2);
     ierr2 = DMPlexPrintMatSetValues(PETSC_VIEWER_STDERR_SELF, A, point, numIndicesRow, indicesRow, numIndicesCol, indicesCol, values);CHKERRQ(ierr2);
     ierr2 = DMPlexRestoreClosureIndices(dmRow, sectionRow, globalSectionRow, point, PETSC_TRUE, &numIndicesRow, &indicesRow, NULL, (PetscScalar **) &values);CHKERRQ(ierr2);
@@ -6836,7 +6860,7 @@ PetscErrorCode DMPlexMatSetClosureRefined(DM dmf, PetscSection fsection, PetscSe
     PetscMPIInt    rank;
     PetscErrorCode ierr2;
 
-    ierr2 = MPI_Comm_rank(PetscObjectComm((PetscObject)A), &rank);CHKERRQ(ierr2);
+    ierr2 = MPI_Comm_rank(PetscObjectComm((PetscObject)A), &rank);CHKERRMPI(ierr2);
     ierr2 = (*PetscErrorPrintf)("[%d]ERROR in DMPlexMatSetClosure\n", rank);CHKERRQ(ierr2);
     ierr2 = DMPlexPrintMatSetValues(PETSC_VIEWER_STDERR_SELF, A, point, numFIndices, findices, numCIndices, cindices, values);CHKERRQ(ierr2);
     ierr2 = DMRestoreWorkArray(dmf, numFIndices, MPIU_INT, &findices);CHKERRQ(ierr2);
@@ -7047,7 +7071,7 @@ PetscErrorCode DMPlexSetVTKCellHeight(DM dm, PetscInt cellHeight)
 
   Level: advanced
 
-.seealso DMPlexConstructGhostCells(), DMPlexSetGhostCellStratum()
+.seealso DMPlexConstructGhostCells(), DMPlexGetGhostCellStratum()
 @*/
 PetscErrorCode DMPlexGetGhostCellStratum(DM dm, PetscInt *gcStart, PetscInt *gcEnd)
 {
@@ -7202,7 +7226,7 @@ PetscErrorCode DMPlexCreatePointNumbering(DM dm, IS *globalPointNumbers)
     if (!(starts[d]-end)) { starts[d] = depths[d] = -1; }
   }
   ierr = PetscSortIntWithArray(depth+1, starts, depths);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(depths, gdepths, depth+1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject) dm));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(depths, gdepths, depth+1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject) dm));CHKERRMPI(ierr);
   for (d = 0; d <= depth; ++d) {
     if (starts[d] >= 0 && depths[d] != gdepths[d]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected depth %D, found %D",depths[d],gdepths[d]);
   }
@@ -8091,6 +8115,113 @@ PetscErrorCode DMPlexComputeOrthogonalQuality(DM dm, PetscFV fv, PetscReal atol,
   PetscFunctionReturn(0);
 }
 
+/* this is here insead of DMGetOutputDM because output DM still has constraints in the local indices that affect
+ * interpolator construction */
+static PetscErrorCode DMGetFullDM(DM dm, DM *odm)
+{
+  PetscSection   section, newSection, gsection;
+  PetscSF        sf;
+  PetscBool      hasConstraints, ghasConstraints;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
+  PetscValidPointer(odm,2);
+  ierr = DMGetLocalSection(dm, &section);CHKERRQ(ierr);
+  ierr = PetscSectionHasConstraints(section, &hasConstraints);CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&hasConstraints, &ghasConstraints, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject) dm));CHKERRMPI(ierr);
+  if (!ghasConstraints) {
+    ierr = PetscObjectReference((PetscObject)dm);CHKERRQ(ierr);
+    *odm = dm;
+    PetscFunctionReturn(0);
+  }
+  ierr = DMClone(dm, odm);CHKERRQ(ierr);
+  ierr = DMCopyFields(dm, *odm);CHKERRQ(ierr);
+  ierr = DMGetLocalSection(*odm, &newSection);CHKERRQ(ierr);
+  ierr = DMGetPointSF(*odm, &sf);CHKERRQ(ierr);
+  ierr = PetscSectionCreateGlobalSection(newSection, sf, PETSC_TRUE, PETSC_FALSE, &gsection);CHKERRQ(ierr);
+  ierr = DMSetGlobalSection(*odm, gsection);CHKERRQ(ierr);
+  ierr = PetscSectionDestroy(&gsection);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode DMCreateAffineInterpolationCorrection_Plex(DM dmc, DM dmf, Vec *shift)
+{
+  DM             dmco, dmfo;
+  Mat            interpo;
+  Vec            rscale;
+  Vec            cglobalo, clocal;
+  Vec            fglobal, fglobalo, flocal;
+  PetscBool      regular;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGetFullDM(dmc, &dmco);CHKERRQ(ierr);
+  ierr = DMGetFullDM(dmf, &dmfo);CHKERRQ(ierr);
+  ierr = DMSetCoarseDM(dmfo, dmco);CHKERRQ(ierr);
+  ierr = DMPlexGetRegularRefinement(dmf, &regular);CHKERRQ(ierr);
+  ierr = DMPlexSetRegularRefinement(dmfo, regular);CHKERRQ(ierr);
+  ierr = DMCreateInterpolation(dmco, dmfo, &interpo, &rscale);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(dmco, &cglobalo);CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(dmc, &clocal);CHKERRQ(ierr);
+  ierr = VecSet(cglobalo, 0.);CHKERRQ(ierr);
+  ierr = VecSet(clocal, 0.);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(dmf, &fglobal);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(dmfo, &fglobalo);CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(dmf, &flocal);CHKERRQ(ierr);
+  ierr = VecSet(fglobal, 0.);CHKERRQ(ierr);
+  ierr = VecSet(fglobalo, 0.);CHKERRQ(ierr);
+  ierr = VecSet(flocal, 0.);CHKERRQ(ierr);
+  ierr = DMPlexInsertBoundaryValues(dmc, PETSC_TRUE, clocal, 0., NULL, NULL, NULL);CHKERRQ(ierr);
+  ierr = DMLocalToGlobalBegin(dmco, clocal, INSERT_VALUES, cglobalo);CHKERRQ(ierr);
+  ierr = DMLocalToGlobalEnd(dmco, clocal, INSERT_VALUES, cglobalo);CHKERRQ(ierr);
+  ierr = MatMult(interpo, cglobalo, fglobalo);CHKERRQ(ierr);
+  ierr = DMGlobalToLocalBegin(dmfo, fglobalo, INSERT_VALUES, flocal);CHKERRQ(ierr);
+  ierr = DMGlobalToLocalEnd(dmfo, fglobalo, INSERT_VALUES, flocal);CHKERRQ(ierr);
+  ierr = DMLocalToGlobalBegin(dmf, flocal, INSERT_VALUES, fglobal);CHKERRQ(ierr);
+  ierr = DMLocalToGlobalEnd(dmf, flocal, INSERT_VALUES, fglobal);CHKERRQ(ierr);
+  *shift = fglobal;
+  ierr = VecDestroy(&flocal);CHKERRQ(ierr);
+  ierr = VecDestroy(&fglobalo);CHKERRQ(ierr);
+  ierr = VecDestroy(&clocal);CHKERRQ(ierr);
+  ierr = VecDestroy(&cglobalo);CHKERRQ(ierr);
+  ierr = VecDestroy(&rscale);CHKERRQ(ierr);
+  ierr = MatDestroy(&interpo);CHKERRQ(ierr);
+  ierr = DMDestroy(&dmfo);CHKERRQ(ierr);
+  ierr = DMDestroy(&dmco);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_INTERN PetscErrorCode DMInterpolateSolution_Plex(DM coarse, DM fine, Mat interp, Vec coarseSol, Vec fineSol)
+{
+  PetscObject    shifto;
+  Vec            shift;
+
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (!interp) {
+    Vec rscale;
+
+    ierr = DMCreateInterpolation(coarse, fine, &interp, &rscale);CHKERRQ(ierr);
+    ierr = VecDestroy(&rscale);CHKERRQ(ierr);
+  } else {
+    ierr = PetscObjectReference((PetscObject)interp);CHKERRQ(ierr);
+  }
+  ierr = PetscObjectQuery((PetscObject)interp, "_DMInterpolateSolution_Plex_Vec", &shifto);CHKERRQ(ierr);
+  if (!shifto) {
+    ierr = DMCreateAffineInterpolationCorrection_Plex(coarse, fine, &shift);CHKERRQ(ierr);
+    ierr = PetscObjectCompose((PetscObject)interp, "_DMInterpolateSolution_Plex_Vec", (PetscObject) shift);CHKERRQ(ierr);
+    shifto = (PetscObject) shift;
+    ierr = VecDestroy(&shift);CHKERRQ(ierr);
+  }
+  shift = (Vec) shifto;
+  ierr = MatInterpolate(interp, coarseSol, fineSol);CHKERRQ(ierr);
+  ierr = VecAXPY(fineSol, 1.0, shift);CHKERRQ(ierr);
+  ierr = MatDestroy(&interp);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /* Pointwise interpolation
      Just code FEM for now
      u^f = I u^c
@@ -8166,6 +8297,7 @@ PetscErrorCode DMCreateMassMatrix_Plex(DM dmCoarse, DM dmFine, Mat *mass)
     PetscDS  ds;
     Vec      u;
     IS       cellIS;
+    PetscHashFormKey key;
     PetscInt depth;
 
     ierr = DMClone(dmFine, &dmc);CHKERRQ(ierr);
@@ -8177,7 +8309,10 @@ PetscErrorCode DMCreateMassMatrix_Plex(DM dmCoarse, DM dmFine, Mat *mass)
     ierr = DMPlexGetDepth(dmc, &depth);CHKERRQ(ierr);
     ierr = DMGetStratumIS(dmc, "depth", depth, &cellIS);CHKERRQ(ierr);
     ierr = MatZeroEntries(*mass);CHKERRQ(ierr);
-    ierr = DMPlexComputeJacobian_Internal(dmc, cellIS, 0.0, 0.0, u, NULL, *mass, *mass, NULL);CHKERRQ(ierr);
+    key.label = NULL;
+    key.value = 0;
+    key.field = 0;
+    ierr = DMPlexComputeJacobian_Internal(dmc, key, cellIS, 0.0, 0.0, u, NULL, *mass, *mass, NULL);CHKERRQ(ierr);
     ierr = ISDestroy(&cellIS);CHKERRQ(ierr);
     ierr = DMRestoreGlobalVector(dmc, &u);CHKERRQ(ierr);
     ierr = DMDestroy(&dmc);CHKERRQ(ierr);
@@ -8491,6 +8626,7 @@ static PetscErrorCode DMPlexCreateConstraintMatrix_Anchors(DM dm, PetscSection s
     }
     else {
       annz = 0;
+      ierr = PetscSectionGetDof(cSec,p,&dof);CHKERRQ(ierr);
       for (q = 0; q < dof; q++) {
         a = anchors[off + q];
         ierr = PetscSectionGetDof(section,a,&aDof);CHKERRQ(ierr);
@@ -8684,8 +8820,8 @@ PetscErrorCode DMCreateSubDomainDM_Plex(DM dm, DMLabel label, PetscInt value, IS
     }
     if (f < Nf) {
       MatNullSpace nullSpace;
-
       ierr = (*(*subdm)->nullspaceConstructors[f])(*subdm, f, f, &nullSpace);CHKERRQ(ierr);
+
       ierr = PetscObjectCompose((PetscObject) *is, "nullspace", (PetscObject) nullSpace);CHKERRQ(ierr);
       ierr = MatNullSpaceDestroy(&nullSpace);CHKERRQ(ierr);
     }

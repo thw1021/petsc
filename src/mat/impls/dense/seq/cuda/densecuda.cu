@@ -90,16 +90,19 @@ PetscErrorCode MatSeqDenseCUDASetPreallocation(Mat A, PetscScalar *d_data)
   if (cA->lda <= 0) cA->lda = A->rmap->n;
   if (!dA->user_alloc) { cerr = cudaFree(dA->d_v);CHKERRCUDA(cerr); }
   if (!d_data) { /* petsc-allocated storage */
+    size_t sz;
     ierr = PetscIntMultError(cA->lda,A->cmap->n,NULL);CHKERRQ(ierr);
-    cerr = cudaMalloc((void**)&dA->d_v,cA->lda*A->cmap->n*sizeof(PetscScalar));CHKERRCUDA(cerr);
+    sz   = cA->lda*A->cmap->n*sizeof(PetscScalar);
+    cerr = cudaMalloc((void**)&dA->d_v,sz);CHKERRCUDA(cerr);
+    cerr = cudaMemset(dA->d_v,0,sz);CHKERRCUDA(cerr);
     dA->user_alloc = PETSC_FALSE;
   } else { /* user-allocated storage */
     dA->d_v        = d_data;
     dA->user_alloc = PETSC_TRUE;
-    A->offloadmask = PETSC_OFFLOAD_GPU;
   }
+  A->offloadmask  = PETSC_OFFLOAD_GPU;
   A->preallocated = PETSC_TRUE;
-  A->assembled = PETSC_TRUE;
+  A->assembled    = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -1039,9 +1042,12 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqdense_cuda(Mat A,MatFactorType ftype
     (*fact)->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_SeqDense;
   }
   (*fact)->factortype = ftype;
-
   ierr = PetscFree((*fact)->solvertype);CHKERRQ(ierr);
   ierr = PetscStrallocpy(MATSOLVERCUDA,&(*fact)->solvertype);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(MATORDERINGEXTERNAL,(char**)&(*fact)->preferredordering[MAT_FACTOR_LU]);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(MATORDERINGEXTERNAL,(char**)&(*fact)->preferredordering[MAT_FACTOR_ILU]);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(MATORDERINGEXTERNAL,(char**)&(*fact)->preferredordering[MAT_FACTOR_CHOLESKY]);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(MATORDERINGEXTERNAL,(char**)&(*fact)->preferredordering[MAT_FACTOR_ICC]);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

@@ -48,7 +48,7 @@ class Package(config.base.Configure):
     self.useddirectly           = 1    # 1 indicates used by PETSc directly, 0 indicates used by a package used by PETSc
     self.linkedbypetsc          = 1    # 1 indicates PETSc shared libraries (and PETSc executables) need to link against this library
     self.gitcommit              = None # Git commit to use for downloads
-    self.gitcommitmaster        = None # Git commit to use for petsc/master or similar non-release branches
+    self.gitcommitmain          = None # Git commit to use for petsc/main or similar non-release branches
     self.download               = []   # list of URLs where repository or tarballs may be found (git is tested before tarballs)
     self.deps                   = []   # other packages whose dlib or include we depend on, usually we also use self.framework.require()
     self.odeps                  = []   # dependent packages that are optional
@@ -1129,8 +1129,8 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
         self.download = [downloadPackageVal]
     if self.download and self.argDB['download-'+self.downloadname.lower()+'-commit']:
       self.gitcommit = self.argDB['download-'+self.downloadname.lower()+'-commit']
-    elif self.gitcommitmaster and not self.petscdir.versionRelease:
-      self.gitcommit = self.gitcommitmaster
+    elif self.gitcommitmain and not self.petscdir.versionRelease:
+      self.gitcommit = self.gitcommitmain
     if not 'with-'+self.package in self.argDB:
       self.argDB['with-'+self.package] = 0
     if 'with-'+self.package+'-dir' in self.argDB or 'with-'+self.package+'-include' in self.argDB or 'with-'+self.package+'-lib' in self.argDB:
@@ -1169,15 +1169,28 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
 
     mpicc = os.path.join(installDir,"bin",mpiccName)
     if not os.path.isfile(mpicc): raise RuntimeError('Could not locate installed MPI compiler: '+mpicc)
+    try:
+      self.logPrint('Showing compiler and options used by newly built MPI')
+      self.executeShellCommand(mpicc + ' -show', log = self.log)[0]
+    except:
+      pass
     if hasattr(self.compilers, 'CXX'):
       mpicxx = os.path.join(installDir,"bin",mpicxxName)
       if not os.path.isfile(mpicxx): raise RuntimeError('Could not locate installed MPI compiler: '+mpicxx)
+      try:
+        self.executeShellCommand(mpicxx + ' -show', log = self.log)[0]
+      except:
+        pass
     if hasattr(self.compilers, 'FC'):
       if self.fortran.fortranIsF90:
         mpifc = os.path.join(installDir,"bin",mpif90Name)
       else:
         mpifc = os.path.join(installDir,"bin",mpif77Name)
       if not os.path.isfile(mpifc): raise RuntimeError('Could not locate installed MPI compiler: '+mpifc)
+      try:
+        self.executeShellCommand(mpifc + ' -show', log = self.log)[0]
+      except:
+        pass
     # redo compiler detection
     self.setCompilers.updateMPICompilers(mpicc,mpicxx,mpifc)
     self.compilers.__init__(self.framework)

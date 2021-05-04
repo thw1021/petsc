@@ -183,7 +183,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MAIJ(Mat A)
   b->OAIJ = NULL;
   b->ctx  = NULL;
   b->w    = NULL;
-  ierr    = MPI_Comm_size(PetscObjectComm((PetscObject)A),&size);CHKERRQ(ierr);
+  ierr    = MPI_Comm_size(PetscObjectComm((PetscObject)A),&size);CHKERRMPI(ierr);
   if (size == 1) {
     ierr = PetscObjectChangeTypeName((PetscObject)A,MATSEQMAIJ);CHKERRQ(ierr);
   } else {
@@ -3578,8 +3578,7 @@ PetscErrorCode  MatCreateMAIJ(Mat A,PetscInt dof,Mat *maij)
     }
     B->ops->createsubmatrix   = MatCreateSubMatrix_MAIJ;
     B->ops->createsubmatrices = MatCreateSubMatrices_MAIJ;
-    ierr  = MatSetFromOptions(B);CHKERRQ(ierr);
-    ierr  = MatSetUp(B);CHKERRQ(ierr);
+    ierr = MatSetUp(B);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
     /* temporary until we have CUDA implementation of MAIJ */
     {
@@ -3593,7 +3592,6 @@ PetscErrorCode  MatCreateMAIJ(Mat A,PetscInt dof,Mat *maij)
     }
 #endif
     *maij = B;
-    ierr  = MatViewFromOptions(B,NULL,"-mat_view");CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

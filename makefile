@@ -33,7 +33,7 @@ all:
 	+@${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} chk_petscdir chk_upgrade | tee ${PETSC_ARCH}/lib/petsc/conf/make.log
 	@ln -sf ${PETSC_ARCH}/lib/petsc/conf/make.log make.log
 	+@${OMAKE_SELF_PRINTDIR} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} all-local 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log;
-	@egrep '(out of memory allocating.*after a total of|gfortran: fatal error: Killed signal terminated program f951)' ${PETSC_ARCH}/lib/petsc/conf/make.log | tee ${PETSC_ARCH}/lib/petsc/conf/memoryerror.log > /dev/null
+	@egrep '(out of memory allocating.*after a total of|gfortran: fatal error: Killed signal terminated program f951|f95: fatal error: Killed signal terminated program f951)' ${PETSC_ARCH}/lib/petsc/conf/make.log | tee ${PETSC_ARCH}/lib/petsc/conf/memoryerror.log > /dev/null
 	@egrep -i "( error | error: |no such file or directory)" ${PETSC_ARCH}/lib/petsc/conf/make.log | tee ${PETSC_ARCH}/lib/petsc/conf/error.log > /dev/null
 	+@if test -s ${PETSC_ARCH}/lib/petsc/conf/memoryerror.log; then \
            printf ${PETSC_TEXT_HILIGHT}"**************************ERROR*************************************\n" 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log; \
@@ -159,8 +159,8 @@ check_build:
 	+@if [ "${CUDA_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ] &&  [ "${PETSC_SCALAR}" = "real" ]; then \
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex19_cuda; \
          fi;
-	+@if [ "${KOKKOS_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ] &&  [ "${PETSC_SCALAR}" = "real" ] && [ "${PETSC_PRECISION}" = "double" ]; then \
-          cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex3_kokkos; \
+	+@if [ "${KOKKOS_KERNELS_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ] &&  [ "${PETSC_SCALAR}" = "real" ] && [ "${PETSC_PRECISION}" = "double" ]; then \
+          cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex3k_kokkos; \
          fi;
 	+@if [ "${MUMPS_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ]; then \
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR}  DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex19_fieldsplit_mumps; \
@@ -187,6 +187,10 @@ check_build:
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex19_suitesparse; \
          fi;
 	+@cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} ex19.rm
+	+@if [ "${MPI4PY}" = "yes" ]; then \
+          cd src/sys/tests >/dev/null; \
+          ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} testex55; \
+         fi;
 	+@if [ "${PETSC4PY}" = "yes" ]; then \
           cd src/ksp/ksp/tutorials >/dev/null; \
           ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} clean-legacy; \
@@ -369,6 +373,8 @@ alldoc1: chk_loc chk_concepts_dir allcite allmanpages allmanexamples
 alldoc2: chk_loc allcite
 	-${OMAKE_SELF} ACTION=html PETSC_DIR=${PETSC_DIR} alltree LOC=${LOC}
 	-${PYTHON} lib/petsc/bin/maint/update-docs.py ${PETSC_DIR} ${LOC}
+
+alldoc12: alldoc1 alldoc2
 #
 # Makes links for all manual pages in $LOC/docs/manualpages/all
 allman:
@@ -384,7 +390,7 @@ docsetdate: chk_petscdir
         version_minor=`grep '^#define PETSC_VERSION_MINOR ' include/petscversion.h |tr -s ' ' | cut -d ' ' -f 3`; \
         version_subminor=`grep '^#define PETSC_VERSION_SUBMINOR ' include/petscversion.h |tr -s ' ' | cut -d ' ' -f 3`; \
         if  [ $${version_release} = 0 ]; then \
-          petscversion=petsc-master; \
+          petscversion=petsc-main; \
           export petscversion; \
         elif [ $${version_release} = 1 ]; then \
           petscversion=petsc-$${version_major}.$${version_minor}.$${version_subminor}; \
@@ -414,12 +420,11 @@ docsetdate: chk_petscdir
 # your own Python environment and directly build the Sphinx docs by using
 # the makefile in ${PETSC_SPHINX_ROOT}, paying attention to the requirements.txt
 # there.
-PETSC_SPHINX_ROOT=src/docs/sphinx_docs
+PETSC_SPHINX_ROOT=doc
 PETSC_SPHINX_ENV=${PETSC_ARCH}/sphinx_docs_env
 PETSC_SPHINX_DEST=docs/sphinx_docs
 
 sphinx-docs-all: sphinx-docs-manual sphinx-docs-html
-	-@cd src/binding/petsc4py ; make docs
 
 sphinx-docs-fast: chk_loc sphinx-docs-env
 	@. ${PETSC_SPHINX_ENV}/bin/activate && ${OMAKE} -C ${PETSC_SPHINX_ROOT} \
@@ -481,26 +486,26 @@ srchtml:
 # targets to build distribution and update docs
 ###########################################################
 
-# Creates ${HOME}/petsc.tar.gz [and petsc-lite.tar.gz]
+# Creates ${HOME}/petsc.tar.gz [and petsc-with-docs.tar.gz]
 dist:
-	${PETSC_DIR}/lib/petsc/bin/maint/builddist ${PETSC_DIR} master
+	${PETSC_DIR}/lib/petsc/bin/maint/builddist ${PETSC_DIR} main
 
 # This target works only if you can do 'ssh petsc@login.mcs.anl.gov'
 # also copy the file over to ftp site.
 web-snapshot:
-	@if [ ! -f "${HOME}/petsc-master.tar.gz" ]; then \
-	    echo "~/petsc-master.tar.gz missing! cannot update petsc-master snapshot on mcs-web-site"; \
+	@if [ ! -f "${HOME}/petsc-with-docs-main.tar.gz" ]; then \
+	    echo "~/petsc-with-docs-main.tar.gz missing! cannot update petsc-main snapshot on mcs-web-site"; \
 	  else \
-            echo "updating petsc-master snapshot on mcs-web-site"; \
+            echo "updating petsc-main snapshot on mcs-web-site"; \
 	    tmpdir=`mktemp -d -t petsc-doc.XXXXXXXX`; \
-	    cd $${tmpdir}; tar -xzf ${HOME}/petsc-master.tar.gz; \
-	    /usr/bin/rsync  -e ssh -az --delete $${tmpdir}/petsc-master/ \
-              petsc@login.mcs.anl.gov:/mcs/web/research/projects/petsc/petsc-master ;\
-	    /bin/cp -f /home/petsc/petsc-master.tar.gz /mcs/ftp/pub/petsc/petsc-master.tar.gz;\
+	    cd $${tmpdir}; tar -xzf ${HOME}/petsc-with-docs-main.tar.gz; \
+	    /usr/bin/rsync  -e ssh -az --delete $${tmpdir}/petsc-main/ \
+              petsc@login.mcs.anl.gov:/mcs/web/research/projects/petsc/petsc-main ;\
+	    /bin/cp -f /home/petsc/petsc-main.tar.gz /mcs/ftp/pub/petsc/petsc-main.tar.gz;\
 	    ${RM} -rf $${tmpdir} ;\
 	  fi
 
-# build the tarfile - and then update petsc-master snapshot on mcs-web-site
+# build the tarfile - and then update petsc-main snapshot on mcs-web-site
 update-web-snapshot: dist web-snapshot
 
 # This target updates website main pages

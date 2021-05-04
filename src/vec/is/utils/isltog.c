@@ -15,7 +15,31 @@ typedef struct {
   PetscHMapI globalht;
 } ISLocalToGlobalMapping_Hash;
 
+/*@C
+  ISGetPointRange - Returns a description of the points in an IS suitable for traversal
 
+  Not collective
+
+  Input Parameter:
+. pointIS - The IS object
+
+  Output Parameters:
++ pStart - The first index, see notes
+. pEnd   - One past the last index, see notes
+- points - The indices, see notes
+
+  Notes:
+  If the IS contains contiguous indices in an ISSTRIDE, then the indices are contained in [pStart, pEnd) and points = NULL. Otherwise, pStart = 0, pEnd = numIndices, and points is an array of the indices. This supports the following pattern
+$ ISGetPointRange(is, &pStart, &pEnd, &points);
+$ for (p = pStart; p < pEnd; ++p) {
+$   const PetscInt point = points ? points[p] : p;
+$ }
+$ ISRestorePointRange(is, &pstart, &pEnd, &points);
+
+  Level: intermediate
+
+.seealso: ISRestorePointRange(), ISGetPointSubrange(), ISGetIndices(), ISCreateStride()
+@*/
 PetscErrorCode ISGetPointRange(IS pointIS, PetscInt *pStart, PetscInt *pEnd, const PetscInt **points)
 {
   PetscInt       numCells, step = 1;
@@ -33,6 +57,29 @@ PetscErrorCode ISGetPointRange(IS pointIS, PetscInt *pStart, PetscInt *pEnd, con
   PetscFunctionReturn(0);
 }
 
+/*@C
+  ISRestorePointRange - Destroys the traversal description
+
+  Not collective
+
+  Input Parameters:
++ pointIS - The IS object
+. pStart  - The first index, from ISGetPointRange()
+. pEnd    - One past the last index, from ISGetPointRange()
+- points  - The indices, from ISGetPointRange()
+
+  Notes:
+  If the IS contains contiguous indices in an ISSTRIDE, then the indices are contained in [pStart, pEnd) and points = NULL. Otherwise, pStart = 0, pEnd = numIndices, and points is an array of the indices. This supports the following pattern
+$ ISGetPointRange(is, &pStart, &pEnd, &points);
+$ for (p = pStart; p < pEnd; ++p) {
+$   const PetscInt point = points ? points[p] : p;
+$ }
+$ ISRestorePointRange(is, &pstart, &pEnd, &points);
+
+  Level: intermediate
+
+.seealso: ISGetPointRange(), ISGetPointSubrange(), ISGetIndices(), ISCreateStride()
+@*/
 PetscErrorCode ISRestorePointRange(IS pointIS, PetscInt *pStart, PetscInt *pEnd, const PetscInt **points)
 {
   PetscInt       step = 1;
@@ -46,6 +93,27 @@ PetscErrorCode ISRestorePointRange(IS pointIS, PetscInt *pStart, PetscInt *pEnd,
   PetscFunctionReturn(0);
 }
 
+/*@C
+  ISGetPointSubrange - Configures the input IS to be a subrange for the traversal information given
+
+  Not collective
+
+  Input Parameters:
++ subpointIS - The IS object to be configured
+. pStar   t  - The first index of the subrange
+. pEnd       - One past the last index for the subrange
+- points     - The indices for the entire range, from ISGetPointRange()
+
+  Output Parameters:
+. subpointIS - The IS object now configured to be a subrange
+
+  Notes:
+  The input IS will now respond properly to calls to ISGetPointRange() and return the subrange.
+
+  Level: intermediate
+
+.seealso: ISGetPointRange(), ISRestorePointRange(), ISGetIndices(), ISCreateStride()
+@*/
 PetscErrorCode ISGetPointSubrange(IS subpointIS, PetscInt pStart, PetscInt pEnd, const PetscInt *points)
 {
   PetscErrorCode ierr;
@@ -393,8 +461,8 @@ PetscErrorCode ISLocalToGlobalMappingCreateSF(PetscSF sf,PetscInt start,ISLocalT
   ierr = PetscMalloc1(maxlocal,&ltog);CHKERRQ(ierr);
   for (i=0; i<nroots; i++) globals[i] = start + i;
   for (i=0; i<maxlocal; i++) ltog[i] = -1;
-  ierr = PetscSFBcastBegin(sf,MPIU_INT,globals,ltog);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sf,MPIU_INT,globals,ltog);CHKERRQ(ierr);
+  ierr = PetscSFBcastBegin(sf,MPIU_INT,globals,ltog,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastEnd(sf,MPIU_INT,globals,ltog,MPI_REPLACE);CHKERRQ(ierr);
   ierr = ISLocalToGlobalMappingCreate(comm,1,maxlocal,ltog,PETSC_OWN_POINTER,mapping);CHKERRQ(ierr);
   ierr = PetscFree(globals);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1042,10 +1110,10 @@ static PetscErrorCode  ISLocalToGlobalMappingGetBlockInfo_Private(ISLocalToGloba
   for (i=0; i<n; i++) {
     if (lindices[i] > max) max = lindices[i];
   }
-  ierr   = MPIU_Allreduce(&max,&Ng,1,MPIU_INT,MPI_MAX,comm);CHKERRQ(ierr);
+  ierr   = MPIU_Allreduce(&max,&Ng,1,MPIU_INT,MPI_MAX,comm);CHKERRMPI(ierr);
   Ng++;
-  ierr   = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr   = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr   = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+  ierr   = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   scale  = Ng/size + 1;
   ng     = scale; if (rank == size-1) ng = Ng - scale*(size-1); ng = PetscMax(1,ng);
   rstart = scale*rank;
@@ -1095,7 +1163,7 @@ static PetscErrorCode  ISLocalToGlobalMappingGetBlockInfo_Private(ISLocalToGloba
   cnt = 0;
   for (i=0; i<size; i++) {
     if (nprocs[2*i]) {
-      ierr      = MPI_Isend(sends+starts[i],2*nprocs[2*i],MPIU_INT,i,tag1,comm,send_waits+cnt);CHKERRQ(ierr);
+      ierr      = MPI_Isend(sends+starts[i],2*nprocs[2*i],MPIU_INT,i,tag1,comm,send_waits+cnt);CHKERRMPI(ierr);
       dest[cnt] = i;
       cnt++;
     }
@@ -1110,7 +1178,7 @@ static PetscErrorCode  ISLocalToGlobalMappingGetBlockInfo_Private(ISLocalToGloba
   while (cnt) {
     ierr = MPI_Waitany(nrecvs,recv_waits,&imdex,&recv_status);CHKERRMPI(ierr);
     /* unpack receives into our local space */
-    ierr          = MPI_Get_count(&recv_status,MPIU_INT,&len[imdex]);CHKERRQ(ierr);
+    ierr          = MPI_Get_count(&recv_status,MPIU_INT,&len[imdex]);CHKERRMPI(ierr);
     source[imdex] = recv_status.MPI_SOURCE;
     len[imdex]    = len[imdex]/2;
     /* count how many local owners for each of my global owned indices */
@@ -1938,4 +2006,3 @@ PetscErrorCode  ISLocalToGlobalMappingRegisterAll(void)
   ierr = ISLocalToGlobalMappingRegister(ISLOCALTOGLOBALMAPPINGHASH, ISLocalToGlobalMappingCreate_Hash);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-

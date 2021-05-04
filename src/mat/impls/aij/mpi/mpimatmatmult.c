@@ -403,7 +403,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIDense(Mat A,Mat B,PetscReal f
 {
   PetscErrorCode  ierr;
   Mat_MPIAIJ      *aij=(Mat_MPIAIJ*)A->data;
-  PetscInt        nz=aij->B->cmap->n,nsends,nrecvs,i,nrows_to,j,blda,clda;
+  PetscInt        nz=aij->B->cmap->n,nsends,nrecvs,i,nrows_to,j,blda,clda,m,M,n,N;
   MPIAIJ_MPIDense *contents;
   VecScatter      ctx=aij->Mvctx;
   PetscInt        Am=A->rmap->n,Bm=B->rmap->n,BN=B->cmap->N,Bbn,Bbn1,bs,nrows_from,numBb;
@@ -421,7 +421,11 @@ static PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIDense(Mat A,Mat B,PetscReal f
   if (!cisdense) {
     ierr = MatSetType(C,((PetscObject)B)->type_name);CHKERRQ(ierr);
   }
-  ierr = MatSetSizes(C,Am,B->cmap->n,A->rmap->N,BN);CHKERRQ(ierr);
+  ierr = MatGetLocalSize(C,&m,&n);CHKERRQ(ierr);
+  ierr = MatGetSize(C,&M,&N);CHKERRQ(ierr);
+  if (m == PETSC_DECIDE || n == PETSC_DECIDE || M == PETSC_DECIDE || N == PETSC_DECIDE) {
+    ierr = MatSetSizes(C,Am,B->cmap->n,A->rmap->N,BN);CHKERRQ(ierr);
+  }
   ierr = MatSetBlockSizesFromMats(C,A,B);CHKERRQ(ierr);
   ierr = MatSetUp(C);CHKERRQ(ierr);
   ierr = MatDenseGetLDA(B,&blda);CHKERRQ(ierr);
@@ -435,6 +439,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIDense(Mat A,Mat B,PetscReal f
   /* Estimate Bbn, column size of Bb */
   if (nz) {
     Bbn1 = 2*Am*BN/nz;
+    if (!Bbn1) Bbn1 = 1;
   } else Bbn1 = BN;
 
   bs = PetscAbs(B->cmap->bs);
@@ -606,6 +611,7 @@ static PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIDense(Mat A,Mat B,Mat C)
   } else {
     Mat      Bb,Cb;
     PetscInt BN=B->cmap->N,n=contents->workB->cmap->n,i;
+    if (n <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Column block size %D must be positive",n);
 
     for (i=0; i<BN; i+=n) {
       ierr = MatDenseGetSubMatrix(B,i,PetscMin(i+n,BN),&Bb);CHKERRQ(ierr);
@@ -2194,7 +2200,7 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_AB(Mat C)
       nz_local = (PetscInt)(Ainfo.nz_allocated + Binfo.nz_allocated);
 
       if (B->cmap->N > product->fill*nz_local) alg_scalable_loc = PETSC_TRUE;
-      ierr = MPIU_Allreduce(&alg_scalable_loc,&alg_scalable,1,MPIU_BOOL,MPI_LOR,comm);CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(&alg_scalable_loc,&alg_scalable,1,MPIU_BOOL,MPI_LOR,comm);CHKERRMPI(ierr);
 
       if (alg_scalable) {
         alg  = 0; /* scalable algorithm would 50% slower than nonscalable algorithm */
@@ -2256,7 +2262,7 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_AtB(Mat C)
     nz_local = (PetscInt)(Ainfo.nz_allocated + Binfo.nz_allocated);
 
     if (B->cmap->N > product->fill*nz_local) alg_scalable_loc = PETSC_TRUE;
-    ierr = MPIU_Allreduce(&alg_scalable_loc,&alg_scalable,1,MPIU_BOOL,MPI_LOR,comm);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&alg_scalable_loc,&alg_scalable,1,MPIU_BOOL,MPI_LOR,comm);CHKERRMPI(ierr);
 
     if (alg_scalable) {
       alg  = 0; /* scalable algorithm would 50% slower than nonscalable algorithm */
@@ -2322,7 +2328,7 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_PtAP(Mat C)
       nz_local = (PetscInt)(Ainfo.nz_allocated + Pinfo.nz_allocated);
 
       if (pN > product->fill*nz_local) alg_scalable_loc = PETSC_TRUE;
-      ierr = MPIU_Allreduce(&alg_scalable_loc,&alg_scalable,1,MPIU_BOOL,MPI_LOR,comm);CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(&alg_scalable_loc,&alg_scalable,1,MPIU_BOOL,MPI_LOR,comm);CHKERRMPI(ierr);
 
       if (alg_scalable) {
         alg = 0; /* scalable algorithm would 50% slower than nonscalable algorithm */

@@ -102,7 +102,7 @@ PetscErrorCode DMPlexSnapToGeomModel(DM dm, PetscInt p, const PetscScalar mcoord
     double range[4]; // [umin, umax, vmin, vmax]
     int    peri;
     ierr = EG_getRange(face, range, &peri);CHKERRQ(ierr);
-    if ((paramsNew[0] < range[0]) || (paramsNew[0] > range[1]) || (paramsNew[1] < range[2]) || (paramsNew[1] > range[3])) SETERRQ();
+    if ((paramsNew[0] < range[0]) || (paramsNew[0] > range[1]) || (paramsNew[1] < range[2]) || (paramsNew[1] > range[3])) SETERRQ(PETSC_ERR_ARG_OUTOFRANGE);
   */
   /* Put coordinates for new vertex in result[] */
   ierr = EG_evaluate(obj, params, result);CHKERRQ(ierr);
@@ -231,7 +231,7 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   if (!rank) {
     const PetscInt debug = 0;
 
@@ -654,7 +654,7 @@ PetscErrorCode DMPlexCreateEGADSFromFile(MPI_Comm comm, const char filename[], D
   PetscFunctionBegin;
   PetscValidCharPointer(filename, 2);
   ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_egads_print_model", &printModel, NULL);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
 #if defined(PETSC_HAVE_EGADS)
   if (!rank) {
 

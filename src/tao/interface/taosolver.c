@@ -277,7 +277,7 @@ PetscErrorCode TaoSetUp(Tao tao)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   TaoDestroy - Destroys the TAO context that was created with
   TaoCreate()
 
@@ -1551,7 +1551,7 @@ PetscErrorCode TaoSetMonitor(Tao tao, PetscErrorCode (*func)(Tao, void*), void *
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  if (tao->numbermonitors >= MAXTAOMONITORS) SETERRQ1(PetscObjectComm((PetscObject)tao),1,"Cannot attach another monitor -- max=",MAXTAOMONITORS);
+  if (tao->numbermonitors >= MAXTAOMONITORS) SETERRQ1(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Cannot attach another monitor -- max=%d",MAXTAOMONITORS);
 
   for (i=0; i<tao->numbermonitors;i++) {
     ierr = PetscMonitorCompare((PetscErrorCode (*)(void))func,ctx,dest,(PetscErrorCode (*)(void))tao->monitor[i],tao->monitorcontext[i],tao->monitordestroy[i],&identical);CHKERRQ(ierr);
@@ -2855,15 +2855,15 @@ PetscErrorCode  TaoGetGradientNorm(Tao tao, Mat *M)
   PetscFunctionReturn(0);
 }
 
-/*c
+/*@C
    TaoGradientNorm - Compute the norm with respect to the inner product the user has set.
 
    Collective on tao
 
    Input Parameter:
-.  tao      - the Tao context
++  tao      - the Tao context
 .  gradient - the gradient to be computed
-.  norm     - the norm type
+-  norm     - the norm type
 
    Output Parameter:
 .  gnorm    - the gradient norm

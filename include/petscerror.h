@@ -470,10 +470,31 @@ M*/
     where you may pass back a NULL to indicate an error. You can also call CHKERRABORT(comm,n) to have
     MPI_Abort() returned immediately.
 
+   Fortran Notes:
+      CHKERRQ() may be called from Fortran subroutines but CHKERRA() must be called from the
+      Fortran main program.
+
 .seealso: PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), CHKMEMQ, SETERRQ1(), SETERRQ2(), SETERRQ2()
 M*/
 #define CHKERRQ(ierr)          do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) return PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");} while (0)
 #define CHKERRV(ierr)          do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");return;}} while (0)
+
+/*MC
+   CHKERRABORT - Checks error code returned from PETSc function. If non-zero it aborts immediately.
+
+   Synopsis:
+   #include <petscsys.h>
+   PetscErrorCode CHKERRABORT(MPI_Comm comm,PetscErrorCode ierr)
+
+   Not Collective
+
+   Input Parameters:
+.  ierr - nonzero error code, see the list of standard error codes in include/petscerror.h
+
+  Level: intermediate
+
+.seealso: PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), CHKMEMQ, SETERRQ1(), SETERRQ2(), SETERRQ2(), SETERRABORT(), CHKERRMPI()
+M*/
 #define CHKERRABORT(comm,ierr) do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");MPI_Abort(comm,ierr);}} while (0)
 #define CHKERRCONTINUE(ierr)   do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");}} while (0)
 
@@ -512,7 +533,7 @@ M*/
       PetscInt       idx = 0;                                         \
       PetscMPIInt    errcode;                                         \
       PetscAbortFindSourceFile_Private(__FILE__,&idx);                \
-      errcode = (PetscMPIInt)(idx*10000000 + __LINE__*1000 + ierr);   \
+      errcode = (PetscMPIInt)(0*idx*10000000 + 0*__LINE__*1000 + ierr);   \
       if (petscwaitonerrorflg) PetscSleep(1000);                      \
       if (petscindebugger) abort();                                   \
       else MPI_Abort(comm,errcode);                                   \
@@ -535,15 +556,15 @@ M*/
    Notes:
     Always returns the error code PETSC_ERR_MPI; the MPI error code and string are embedded in the string error message
 
-.seealso: CHKERRQ(), PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), CHKMEMQ, SETERRQ1(), SETERRQ2(), SETERRQ2(), SETERRMPI()
+.seealso: CHKERRQ(), PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), CHKMEMQ, SETERRQ1(), SETERRQ2(), SETERRQ2(), SETERRMPI(), SETERRABORT(), CHKERRABORT()
 M*/
 #define CHKERRMPI(ierr) \
 do { \
   PetscErrorCode _7_errorcode = (ierr); \
   if (PetscUnlikely(_7_errorcode)) { \
-    char        _7_errorstring[MPI_MAX_ERROR_STRING]; \
-    PETSC_UNUSED PetscMPIInt _7_resultlen; \
-    MPI_Error_string(_7_errorcode,(char*)_7_errorstring,&_7_resultlen); \
+    char _7_errorstring[MPI_MAX_ERROR_STRING]; \
+    PetscMPIInt _7_resultlen; \
+    MPI_Error_string(_7_errorcode,(char*)_7_errorstring,&_7_resultlen); (void)_7_resultlen; \
     SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_MPI,"MPI error %d %s",(int)_7_errorcode,_7_errorstring); \
   } \
 } while (0)
@@ -576,9 +597,6 @@ M*/
 
 #endif
 
-#if defined(PETSC_HAVE_CUDA)
-#define CHKERRCUSOLVER(err) do {if (PetscUnlikely(err)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"CUSOLVER error %d",err);} while (0)
-#endif
 /* TODO: SEK:  Need to figure out the hipsolver issues */
 #if defined(PETSC_HAVE_HIP)
 #define CHKERRHIPSOLVER(err) do {if (PetscUnlikely(err)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"HIPSOLVER error %d",err);} while (0)

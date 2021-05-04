@@ -89,7 +89,7 @@ PetscErrorCode  KSPLoad(KSP newdm, PetscViewer viewer)
 -  viewer - visualization context
 
    Options Database Keys:
-.  -ksp_view - print the ksp data structure at the end of a KSPSolve call
+.  -ksp_view - print the KSP data structure at the end of a KSPSolve call
 
    Note:
    The available visualization contexts include
@@ -98,6 +98,10 @@ PetscErrorCode  KSPLoad(KSP newdm, PetscViewer viewer)
          output where only the first processor opens
          the file.  All other processors send their
          data to the first processor to print.
+
+   The available formats include
++     PETSC_VIEWER_DEFAULT - standard output (default)
+-     PETSC_VIEWER_ASCII_INFO_DETAIL - more verbose output for PCBJACOBI and PCASM
 
    The user can open an alternative visualization context with
    PetscViewerASCIIOpen() - output to a specified file.
@@ -721,7 +725,9 @@ PetscErrorCode  KSPCreate(MPI_Comm comm,KSP *inksp)
   ksp->err_hist_max   = 0;
   ksp->err_hist_reset = PETSC_TRUE;
   ksp->numbermonitors = 0;
+  ksp->numberreasonviews = 0;
   ksp->setfromoptionscalled = 0;
+  ksp->nmax = PETSC_DECIDE;
 
   ierr                    = KSPConvergedDefaultCreate(&ctx);CHKERRQ(ierr);
   ierr                    = KSPSetConvergenceTest(ksp,KSPConvergedDefault,ctx,KSPConvergedDefaultDestroy);CHKERRQ(ierr);
@@ -896,19 +902,18 @@ PetscErrorCode KSPMonitorMakeKey_Internal(const char name[], PetscViewerType vty
 . format  - A PetscViewerFormat for the output
 . monitor - Monitor routine
 . create  - Creation routine, or NULL
-. destroy - Destruction routine, or NULL
-- ctx     - An optional user context, or NULL
+- destroy - Destruction routine, or NULL
 
   Notes:
-  KSMonitorRegister() may be called multiple times to add several user-defined monitors.
+  KSPMonitorRegister() may be called multiple times to add several user-defined monitors.
 
   Sample usage:
 .vb
-  KSPMonitorRegister("my_monitor",PETSCVIEWERASCII,PETSC_VIEWER_ASCII_INFO_DETAIL,MyMonitor,NULL,NULL,NULL);
+  KSPMonitorRegister("my_monitor",PETSCVIEWERASCII,PETSC_VIEWER_ASCII_INFO_DETAIL,MyMonitor,NULL,NULL);
 .ve
 
   Then, your monitor can be chosen with the procedural interface via
-$     KSPMonitorSetFormOptions(ksp,"my_monitor")
+$     KSPMonitorSetFromOptions(ksp,"-ksp_monitor_my_monitor","my_monitor",NULL)
   or at runtime via the option
 $     -ksp_monitor_my_monitor
 

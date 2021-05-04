@@ -230,7 +230,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_VTK(PetscViewer v)
   v->data         = (void*)vtk;
   v->ops->destroy = PetscViewerDestroy_VTK;
   v->ops->flush   = PetscViewerFlush_VTK;
-  vtk->btype      = (PetscFileMode) -1;
+  vtk->btype      = FILE_MODE_UNDEFINED;
   vtk->filename   = NULL;
 
   ierr = PetscObjectComposeFunction((PetscObject)v,"PetscViewerFileSetName_C",PetscViewerFileSetName_VTK);CHKERRQ(ierr);
@@ -328,7 +328,7 @@ PetscErrorCode PetscViewerVTKFWrite(PetscViewer viewer,FILE *fp,const void *data
       vdtype = MPI_DOUBLE;
     }
 #endif
-    ierr  = MPI_Type_size(vdtype,&dsize);CHKERRQ(ierr);
+    ierr  = MPI_Type_size(vdtype,&dsize);CHKERRMPI(ierr);
     bytes = PetscVTKIntCast(dsize*n);
 
     count = fwrite(&bytes,sizeof(int),1,fp);

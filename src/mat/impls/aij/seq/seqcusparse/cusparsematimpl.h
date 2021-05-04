@@ -23,7 +23,7 @@ do {\
   if (PetscUnlikely(stat)) {\
     const char *name  = cusparseGetErrorName(stat);\
     const char *descr = cusparseGetErrorString(stat);\
-    if (((stat == CUSPARSE_STATUS_NOT_INITIALIZED) || (stat == CUSPARSE_STATUS_ALLOC_FAILED)) && PetscCUDAInitialized) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSPARSE error %d (%s) : %s. Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)stat,name,descr); \
+    if ((stat == CUSPARSE_STATUS_NOT_INITIALIZED) || (stat == CUSPARSE_STATUS_ALLOC_FAILED)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSPARSE error %d (%s) : %s. Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)stat,name,descr); \
     else SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE error %d (%s) : %s",(int)stat,name,descr);\
   }\
 } while (0)
@@ -209,6 +209,10 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   THRUSTARRAY                       *workVector;
   cusparseHandle_t                  handle;   /* a handle to the cusparse library */
   PetscInt                          nnz;      /* number of nonzeros ... need this for accurate logging between ICC and ILU */
+  PetscScalar                       *a_band_d; /* GPU data for banded CSR LU factorization matrix diag(L)=1 */
+  int                               *i_band_d; /* this could be optimized away */
+  cudaDeviceProp                    dev_prop;
+  PetscBool                         init_dev_prop;
 };
 
 struct Mat_CusparseSpMV {
@@ -248,8 +252,6 @@ struct Mat_SeqAIJCUSPARSE {
   cudaStream_t                 stream;          /* a stream for the parallel SpMV ... this is not owned and should not be deleted */
   cusparseHandle_t             handle;          /* a handle to the cusparse library ... this may not be owned (if we're working in parallel i.e. multiGPUs) */
   PetscObjectState             nonzerostate;    /* track nonzero state to possibly recreate the GPU matrix */
-  PetscBool                    transgen;        /* whether or not to generate explicit transpose for MatMultTranspose operations */
-  PetscBool                    transupdated;    /* whether or not the explicitly generated transpose is up-to-date */
  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   size_t                       csr2cscBufferSize; /* stuff used to compute the matTranspose above */
   void                         *csr2cscBuffer;    /* This is used as a C struct and is calloc'ed by PetscNewLog() */
