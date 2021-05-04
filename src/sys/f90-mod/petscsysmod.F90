@@ -345,7 +345,7 @@
 #include <../src/sys/f90-mod/ftn-auto-interfaces/petscsys.h90>
         end interface
         interface PetscInitialize
-          module procedure PetscInitializeWithHelp, PetscInitializenoHelp
+          module procedure PetscInitializeWithHelp, PetscInitializeNoHelp
         end interface
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
