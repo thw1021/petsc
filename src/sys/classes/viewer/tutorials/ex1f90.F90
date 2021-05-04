@@ -20,7 +20,7 @@
 
 !/*TEST
 !
-! build:
+!   build:
 !      requires: define(PETSC_USING_F2003) define(PETSC_USING_F90FREEFORM)
 !
 !   test:
