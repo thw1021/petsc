@@ -150,10 +150,6 @@
        PetscErrorCode, intent(in) :: ierr
       end Subroutine PetscErrorf
 
-      subroutine PetscInitializeNoArguments(ierr)
-       PetscErrorCode, intent(out) :: ierr
-      end Subroutine PetscInitializeNoArguments
-
       subroutine PetscFinalize(ierr)
        PetscErrorCode, intent(out) :: ierr
       end Subroutine PetscFinalize

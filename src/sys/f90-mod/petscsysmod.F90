@@ -345,7 +345,7 @@
 #include <../src/sys/f90-mod/ftn-auto-interfaces/petscsys.h90>
         end interface
         interface PetscInitialize
-          module procedure PetscInitializeWithHelp, PetscInitializeNoHelp
+          module procedure PetscInitializeWithHelp, PetscInitializeNoHelp, PetscInitializeNoArguments
         end interface
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
@@ -388,6 +388,12 @@
 
           call PetscInitializeF(trim(filename),PETSC_NULL_CHARACTER,ierr)
         end subroutine PetscInitializeNoHelp
+
+        subroutine PetscInitializeNoArguments(ierr)
+          PetscErrorCode             :: ierr
+
+          call PetscInitializeF(PETSC_NULL_CHARACTER,PETSC_NULL_CHARACTER,ierr)
+        end subroutine PetscInitializeNoArguments
         end module
 
         subroutine PetscSetCOMM(c1,c2)

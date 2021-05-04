@@ -15,7 +15,6 @@
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
 #define petscinitializef_             PETSCINITIALIZEF
-#define petscinitializenoarguments_   PETSCINITIALIZENOARGUMENTS
 #define petscfinalize_                PETSCFINALIZE
 #define petscend_                     PETSCEND
 #define iargc_                        IARGC
@@ -26,7 +25,6 @@
 #define petscgetcommandargument_      PETSCGETCOMMANDARGUMENT
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
 #define petscinitializef_             petscinitializef
-#define petscinitializenoarguments_   petscinitializenoarguments
 #define petscfinalize_                petscfinalize
 #define petscend_                     petscend
 #define mpi_init_                     mpi_init
@@ -487,12 +485,6 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscErrorCode *ie
 {
   petscinitialize_internal(filename, len, help, helplen, PETSC_TRUE, ierr);
 }
-
-PETSC_EXTERN void petscinitializenoarguments_(PetscErrorCode *ierr)
-{
-  petscinitialize_internal(NULL, (PetscInt) 0, NULL, (PetscInt) 0, PETSC_FALSE, ierr);
-}
-
 
 PETSC_EXTERN void petscfinalize_(PetscErrorCode *ierr)
 {
