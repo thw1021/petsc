@@ -132,7 +132,7 @@ PetscErrorCode  DMLocalToLocalEnd_DA(DM da,Vec g,InsertMode mode,Vec l)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da,DM_CLASSID,1);
   PetscValidHeaderSpecific(g,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(g,VEC_CLASSID,4);
+  PetscValidHeaderSpecific(g,VEC_CLASSID,2);
   ierr = VecScatterEnd(dd->ltol,g,l,mode,SCATTER_FORWARD);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

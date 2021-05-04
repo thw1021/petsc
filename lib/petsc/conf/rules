@@ -712,6 +712,22 @@ checkbadSource:
          fi
 	@test ! -s badSourceChar.out
 
+lint:
+	${PYTHON3} ${PETSC_DIR}/lib/petsc/bin/maint/petscClangLinter.py $(LINTER_OPTIONS)
+
+help-lint:
+	@${PYTHON3} ${PETSC_DIR}/lib/petsc/bin/maint/petscClangLinter.py --help
+	-@echo "Basic usage:"
+	-@echo "   make lint      <options>"
+	-@echo "   make test-lint <options>"
+	-@echo
+	-@echo "Options:"
+	-@echo "  LINTER_OPTIONS=\"--linter_options ...\"  See above for available options"
+	-@echo
+
+test-lint:
+	${PYTHON3} ${PETSC_DIR}/lib/petsc/bin/maint/petscClangLinter.py --verbose --src-dir ${PETSC_DIR}/src/sys/tests/linter --test -j0 $(LINTER_OPTIONS)
+
 check_petsc4py_rst:
 	@${RM} -f petsc4py_rst.log
 	@echo "Checking src/binding/petsc4py/DESCRIPTION.rst"

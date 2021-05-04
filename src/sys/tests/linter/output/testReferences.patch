@@ -1,0 +1,9 @@
+--- /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testReferences.c	Mon May  3 16:51:17 2021
++++ /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testReferences.c	Mon May  3 16:51:17 2021
+@@ -18,3 +18,3 @@
+-  PetscValidPointer(foo,-1);
+-  PetscValidPointer(bar,-2);
+-  PetscValidPointer(baz,-3);
++  PetscValidPointer(foo,1);
++  PetscValidPointer(bar,1);
++  PetscValidPointer(baz,1);
