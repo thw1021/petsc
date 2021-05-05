@@ -379,14 +379,20 @@
           character(len=*)           :: help
           PetscErrorCode             :: ierr
 
-          call PetscInitializeF(trim(filename),help,PETSC_TRUE,ierr)
+          if (filename .ne. PETSC_NULL_CHARACTER) then
+             filename = trim(filename)
+          endif
+          call PetscInitializeF(filename,help,PETSC_TRUE,ierr)
         end subroutine PetscInitializeWithHelp
 
         subroutine PetscInitializeNoHelp(filename,ierr)
           character(len=*)           :: filename
           PetscErrorCode             :: ierr
 
-          call PetscInitializeF(trim(filename),PETSC_NULL_CHARACTER,PETSC_TRUE,ierr)
+          if (filename .ne. PETSC_NULL_CHARACTER) then
+             filename = trim(filename)
+          endif
+          call PetscInitializeF(filename,PETSC_NULL_CHARACTER,PETSC_TRUE,ierr)
         end subroutine PetscInitializeNoHelp
 
         subroutine PetscInitializeNoArguments(ierr)
