@@ -67,7 +67,7 @@ int main(int argc,char **argv)
     if (mycolor == 0) { /* subcomm0 contains ranks 0, 3, 6, ... in PETSC_COMM_WORLD */
       Vec         y;
       PetscScalar *yvalue;
-      ierr = VecCreate(subcomm, &y);CHKERRQ(ierr);
+       ierr = VecCreate(subcomm, &y);CHKERRQ(ierr);
       ierr = VecSetSizes(y, PETSC_DECIDE, N);CHKERRQ(ierr);
       if (iscuda) {
         ierr = VecSetType(y, VECCUDA);CHKERRQ(ierr);
@@ -78,7 +78,9 @@ int main(int argc,char **argv)
       ierr = PetscObjectSetName((PetscObject)y,"y_subcomm_0");CHKERRQ(ierr); /* Give a name to view y clearly */
       ierr = VecGetLocalSize(y,&n);CHKERRQ(ierr);
       if (iscuda) {
-        ierr = VecCUDAGetArray(y,&yvalue);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCUDAGetArray(y,&yvalue);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecGetArray(y,&yvalue);CHKERRQ(ierr);
       }
@@ -86,7 +88,9 @@ int main(int argc,char **argv)
         Note this is a collective call. All processes have to call it and supply consistent N.
       */
       if (iscuda) {
-        ierr = VecCreateMPICUDAWithArray(PETSC_COMM_WORLD,1,n,N,yvalue,&yg);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCreateMPICUDAWithArray(PETSC_COMM_WORLD,1,n,N,yvalue,&yg);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD,1,n,N,yvalue,&yg);CHKERRQ(ierr);
       }
@@ -105,7 +109,9 @@ int main(int argc,char **argv)
         VecGetArray must be paired with VecRestoreArray.
       */
       if (iscuda) {
-         ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+         #if defined(PETSC_HAVE_CUDA)
+           ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+         #endif
       } else {
         ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
       }
@@ -122,7 +128,9 @@ int main(int argc,char **argv)
       ierr = VecScatterEnd(vscat,yg,x,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
       ierr = VecResetArray(yg);CHKERRQ(ierr);
       if (iscuda) {
-        ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
       }
@@ -131,7 +139,9 @@ int main(int argc,char **argv)
     } else {
       /* Ranks outside of subcomm0 do not supply values to yg */
       if (iscuda) {
-        ierr = VecCreateMPICUDAWithArray(PETSC_COMM_WORLD,1,0/*n*/,N,NULL,&yg);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCreateMPICUDAWithArray(PETSC_COMM_WORLD,1,0/*n*/,N,NULL,&yg);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD,1,0/*n*/,N,NULL,&yg);CHKERRQ(ierr);
       }
@@ -210,8 +220,10 @@ int main(int argc,char **argv)
       /* Create a vector xg on parentcomm, which shares memory with x */
       ierr = VecGetLocalSize(x,&n);CHKERRQ(ierr);
       if (iscuda) {
-        ierr = VecCUDAGetArrayRead(x,&xvalue);CHKERRQ(ierr);
-        ierr = VecCreateMPICUDAWithArray(parentcomm,1,n,N,xvalue,&xg);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCUDAGetArrayRead(x,&xvalue);CHKERRQ(ierr);
+          ierr = VecCreateMPICUDAWithArray(parentcomm,1,n,N,xvalue,&xg);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecGetArrayRead(x,&xvalue);CHKERRQ(ierr);
         ierr = VecCreateMPIWithArray(parentcomm,1,n,N,xvalue,&xg);CHKERRQ(ierr);
@@ -219,7 +231,9 @@ int main(int argc,char **argv)
 
       /* Ranks in subcomm 0 have nothing on yg, so they simply have n=0, array=NULL */
       if (iscuda) {
-        ierr = VecCreateMPICUDAWithArray(parentcomm,1,0/*n*/,N,NULL/*array*/,&yg);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCreateMPICUDAWithArray(parentcomm,1,0/*n*/,N,NULL/*array*/,&yg);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecCreateMPIWithArray(parentcomm,1,0/*n*/,N,NULL/*array*/,&yg);CHKERRQ(ierr);
       }
@@ -236,7 +250,9 @@ int main(int argc,char **argv)
 
       /* After the VecScatter is done, xg is idle so we can safely return xvalue to x */
       if (iscuda) {
-        ierr = VecCUDARestoreArrayRead(x,&xvalue);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCUDARestoreArrayRead(x,&xvalue);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecRestoreArrayRead(x,&xvalue);CHKERRQ(ierr);
       }
@@ -270,7 +286,9 @@ int main(int argc,char **argv)
 
       /* Ranks in subcomm1 have nothing on xg, so they simply have n=0, array=NULL.*/
       if (iscuda) {
-        ierr = VecCreateMPICUDAWithArray(parentcomm,1/*bs*/,0/*n*/,N,NULL/*array*/,&xg);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCreateMPICUDAWithArray(parentcomm,1/*bs*/,0/*n*/,N,NULL/*array*/,&xg);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecCreateMPIWithArray(parentcomm,1/*bs*/,0/*n*/,N,NULL/*array*/,&xg);CHKERRQ(ierr);
       }
@@ -287,7 +305,9 @@ int main(int argc,char **argv)
       ierr = PetscObjectSetName((PetscObject)y,"y_subcomm_1");CHKERRQ(ierr); /* Give a name to view y clearly */
       ierr = VecGetLocalSize(y,&n);CHKERRQ(ierr);
       if (iscuda) {
-        ierr = VecCUDAGetArray(y,&yvalue);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCUDAGetArray(y,&yvalue);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecGetArray(y,&yvalue);CHKERRQ(ierr);
       }
@@ -296,7 +316,9 @@ int main(int argc,char **argv)
         creating xg and yg in subcomm1.
       */
       if (iscuda) {
-        ierr = VecCreateMPICUDAWithArray(parentcomm,1/*bs*/,n,N,yvalue,&yg);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCreateMPICUDAWithArray(parentcomm,1/*bs*/,n,N,yvalue,&yg);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecCreateMPIWithArray(parentcomm,1/*bs*/,n,N,yvalue,&yg);CHKERRQ(ierr);
       }
@@ -314,7 +336,9 @@ int main(int argc,char **argv)
 
       /* After the VecScatter is done, values in yg are available. y is our interest, so we return yvalue to y */
       if (iscuda) {
-        ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+        #if defined(PETSC_HAVE_CUDA)
+          ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+        #endif
       } else {
         ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
       }
@@ -377,8 +401,10 @@ int main(int argc,char **argv)
        0, 3, 6 etc from PETSC_COMM_WORLD. So subcomm0's pieces are interleaved with pieces from other subcomms in yg.
     */
     if (iscuda) {
-      ierr = VecCUDAGetArray(y,&yvalue);CHKERRQ(ierr);
-      ierr = VecCreateMPICUDAWithArray(PETSC_COMM_WORLD,1,n,PETSC_DECIDE,yvalue,&yg);CHKERRQ(ierr);
+      #if defined(PETSC_HAVE_CUDA)
+        ierr = VecCUDAGetArray(y,&yvalue);CHKERRQ(ierr);
+        ierr = VecCreateMPICUDAWithArray(PETSC_COMM_WORLD,1,n,PETSC_DECIDE,yvalue,&yg);CHKERRQ(ierr);
+      #endif
     } else {
       ierr = VecGetArray(y,&yvalue);CHKERRQ(ierr);
       ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD,1,n,PETSC_DECIDE,yvalue,&yg);CHKERRQ(ierr);
@@ -403,7 +429,9 @@ int main(int argc,char **argv)
 
     /* Restory yvalue so that processes in subcomm can use y from now on. */
     if (iscuda) {
-      ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+      #if defined(PETSC_HAVE_CUDA)
+        ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+      #endif
     } else {
       ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
     }
