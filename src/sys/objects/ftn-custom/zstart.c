@@ -244,7 +244,7 @@ PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private();
       Since this is called from Fortran it does not return error codes
 
 */
-PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarguments,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len,PETSC_FORTRAN_CHARLEN_T helplen)
+PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscInt *readarguments,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len,PETSC_FORTRAN_CHARLEN_T helplen)
 {
   int            j,i;
 #if defined (PETSC_USE_NARGS)

@@ -378,7 +378,7 @@
           character(len=*)           :: filename
           character(len=*)           :: help
           PetscErrorCode             :: ierr
-          integer4,parameter         :: flg = 1
+          PetscInt,parameter         :: flg = 1
           if (filename .ne. PETSC_NULL_CHARACTER) then
              filename = trim(filename)
           endif
@@ -388,7 +388,7 @@
         subroutine PetscInitializeNoHelp(filename,ierr)
           character(len=*)           :: filename
           PetscErrorCode             :: ierr
-          integer4,parameter         :: flg = 1
+          PetscInt,parameter         :: flg = 1
           if (filename .ne. PETSC_NULL_CHARACTER) then
              filename = trim(filename)
           endif
@@ -397,7 +397,7 @@
 
         subroutine PetscInitializeNoArguments(ierr)
           PetscErrorCode             :: ierr
-          integer4,parameter         :: flg = 0
+          PetscInt,parameter         :: flg = 0
           call PetscInitializeF(PETSC_NULL_CHARACTER,PETSC_NULL_CHARACTER,flg,ierr)
         end subroutine PetscInitializeNoArguments
         end module
