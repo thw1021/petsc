@@ -213,7 +213,7 @@ int main(int argc,char **argv)
         ierr = VecCreateMPICUDAWithArray(parentcomm,1,n,N,xvalue,&xg);CHKERRQ(ierr);
       } else {
         ierr = VecGetArrayRead(x,&xvalue);CHKERRQ(ierr);
-        ierr = VecCreateMPIWithArray(parentcomm,1,n,N,xvalue,&xg);CHKERRQ(ierr);    
+        ierr = VecCreateMPIWithArray(parentcomm,1,n,N,xvalue,&xg);CHKERRQ(ierr);
       }
 
       /* Ranks in subcomm 0 have nothing on yg, so they simply have n=0, array=NULL */
@@ -273,7 +273,7 @@ int main(int argc,char **argv)
       } else {
         ierr = VecCreateMPIWithArray(parentcomm,1/*bs*/,0/*n*/,N,NULL/*array*/,&xg);CHKERRQ(ierr);
       }
-  
+
       ierr = VecCreate(subcomm, &y);CHKERRQ(ierr);
       ierr = VecSetSizes(y, PETSC_DECIDE, N);CHKERRQ(ierr);
       if (iscuda) {
