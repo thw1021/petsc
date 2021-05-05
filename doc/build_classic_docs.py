@@ -70,7 +70,7 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch):
     if os.path.isfile(htmlmap_filename):
         print('============================================')
         print('Assuming that the classic docs in %s are current' % CLASSIC_DOCS_LOC)
-        print('To rebuild, manually run\n  rm -rf %s' % CLASSIC_DOCS_LOC)
+        print('To rebuild, manually run the following before re-making:\n  rm -rf %s' % CLASSIC_DOCS_LOC)
         print('============================================')
     else:
         command = ['make', 'alldoc12',
