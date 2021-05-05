@@ -15,7 +15,7 @@ int main(int argc,char **argv)
   IS             ix,iy;
   PetscBool      iscuda = PETSC_FALSE;      /* Option to use VECCUDA vectors */
   PetscBool      optionflag, compareflag;
-  char           typename[PETSC_MAX_PATH_LEN];
+  char           vectypename[PETSC_MAX_PATH_LEN];
   PetscBool      world2sub  = PETSC_FALSE;  /* Copy a vector from WORLD to a subcomm? */
   PetscBool      sub2sub    = PETSC_FALSE;  /* Copy a vector from a subcomm to another subcomm? */
   PetscBool      world2subs = PETSC_FALSE;  /* Copy a vector from WORLD to multiple subcomms? */
@@ -29,9 +29,9 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetBool(NULL,0,"-world2sub",&world2sub,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,0,"-sub2sub",&sub2sub,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,0,"-world2subs",&world2subs,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL,NULL,"-vectype",typename,sizeof(typename),&optionflag);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-vectype",vectypename,sizeof(vectypename),&optionflag);CHKERRQ(ierr);
   if (optionflag) {
-    ierr = PetscStrncmp(typename, "cuda", (size_t)4, &compareflag);CHKERRQ(ierr);
+    ierr = PetscStrncmp(vectypename, "cuda", (size_t)4, &compareflag);CHKERRQ(ierr);
     if (compareflag) iscuda = PETSC_TRUE;
   }
 
