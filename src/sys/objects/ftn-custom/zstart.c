@@ -244,7 +244,7 @@ PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private();
       Since this is called from Fortran it does not return error codes
 
 */
-static void petscinitialize_internal(char* filename, PetscInt len, char* help, PetscInt helplen, PetscBool readarguments, PetscErrorCode *ierr)
+PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarguments,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len,PETSC_FORTRAN_CHARLEN_T helplen)
 {
   int            j,i;
 #if defined (PETSC_USE_NARGS)
@@ -422,7 +422,7 @@ static void petscinitialize_internal(char* filename, PetscInt len, char* help, P
      below.
   */
   PetscInitializeFortran();
-  if (readarguments == PETSC_TRUE) {
+  if (*readarguments == PETSC_TRUE) {
     PETScParseFortranArgs_Private(&PetscGlobalArgc,&PetscGlobalArgs);
     FIXCHAR(filename,len,t1);
     *ierr = PetscOptionsInsert(NULL,&PetscGlobalArgc,&PetscGlobalArgs,t1);
@@ -479,11 +479,6 @@ static void petscinitialize_internal(char* filename, PetscInt len, char* help, P
   *ierr = adios_read_init_method(ADIOS_READ_METHOD_BP,PETSC_COMM_WORLD,"");
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:adios_read_init_method()\n");return;}
 #endif
-}
-
-PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len,PETSC_FORTRAN_CHARLEN_T helplen)
-{
-  petscinitialize_internal(filename, len, help, helplen, PETSC_TRUE, ierr);
 }
 
 PETSC_EXTERN void petscfinalize_(PetscErrorCode *ierr)
