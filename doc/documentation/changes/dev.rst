@@ -122,3 +122,6 @@ Changes: Development
 -  Add ``PetscDSDestroyBoundary()`` and ``PetscDSCopyExactSolutions()``
 
 .. rubric:: Fortran:
+
+-  Add support for ``PetscInitialize(filename,help,ierr)``,
+   ``PetscInitialize(ierr)`` in addition to current ``PetscInitialize(filename,ierr)``
