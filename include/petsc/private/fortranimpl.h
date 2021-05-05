@@ -54,8 +54,6 @@ if (flg) {                                   \
   for (; __i<n; __i++) a[__i] = ' ' ; \
 }
 
-#define FIXBOOL(a,b) (b) = ((int)(a)==0 ? PETSC_FALSE : PETSC_TRUE)
-
 /*
     The cast through PETSC_UINTPTR_T is so that compilers that warn about casting to/from void * to void(*)(void)
     will not complain about these comparisons. It is not know if this works for all compilers
