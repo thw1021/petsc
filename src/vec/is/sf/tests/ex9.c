@@ -12,6 +12,9 @@ int main(int argc,char **argv)
   Vec            x,yg; /* global vectors on PETSC_COMM_WORLD */
   VecScatter     vscat;
   IS             ix,iy;
+  PetscBool      iscuda;
+  PetscBool      optionflag, compareflag;
+  char           typename[PETSC_MAX_PATH_LEN];
   PetscBool      world2sub  = PETSC_FALSE;  /* Copy a vector from WORLD to a subcomm? */
   PetscBool      sub2sub    = PETSC_FALSE;  /* Copy a vector from a subcomm to another subcomm? */
   PetscBool      world2subs = PETSC_FALSE;  /* Copy a vector from WORLD to multiple subcomms? */
@@ -25,6 +28,11 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetBool(NULL,0,"-world2sub",&world2sub,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,0,"-sub2sub",&sub2sub,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,0,"-world2subs",&world2subs,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-vectype",typename,sizeof(typename),&optionflag);CHKERRQ(ierr);
+  if (optionflag) {
+    ierr = PetscStrncmp(typename, "cuda", (size_t)4, &compareflag);CHKERRQ(ierr);
+    if (compareflag) iscuda = PETSC_TRUE;
+  }
 
   /* Split PETSC_COMM_WORLD into three subcomms. Each process can only see the subcomm it belongs to */
   mycolor = grank % 3;
@@ -35,7 +43,14 @@ int main(int argc,char **argv)
    *  a subcommunicator of PETSC_COMM_WORLD and vice versa.
    *===========================================================================*/
   if (world2sub) {
-    ierr = VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,N,&x);CHKERRQ(ierr);
+    ierr = VecCreate(PETSC_COMM_WORLD, &x);CHKERRQ(ierr);
+    ierr = VecSetSizes(x, PETSC_DECIDE, N);CHKERRQ(ierr);
+    if (iscuda) {
+      ierr = VecSetType(x, VECCUDA);CHKERRQ(ierr);
+    } else {
+      ierr = VecSetType(x, VECSTANDARD);CHKERRQ(ierr);
+    }
+    ierr = VecSetUp(x);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)x,"x_commworld");CHKERRQ(ierr); /* Give a name to view x clearly */
 
     /* Initialize x to [-0.0, -1.0, -2.0, ..., -19.0] */
@@ -51,15 +66,29 @@ int main(int argc,char **argv)
     if (mycolor == 0) { /* subcomm0 contains ranks 0, 3, 6, ... in PETSC_COMM_WORLD */
       Vec         y;
       PetscScalar *yvalue;
-
-      ierr = VecCreateMPI(subcomm,PETSC_DECIDE,N,&y);CHKERRQ(ierr);
+      ierr = VecCreate(subcomm, &y);CHKERRQ(ierr);
+      ierr = VecSetSizes(y, PETSC_DECIDE, N);CHKERRQ(ierr);
+      if (iscuda) {
+        ierr = VecSetType(y, VECCUDA);CHKERRQ(ierr);
+      } else {
+        ierr = VecSetType(y, VECSTANDARD);CHKERRQ(ierr);
+      }
+      ierr = VecSetUp(y);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject)y,"y_subcomm_0");CHKERRQ(ierr); /* Give a name to view y clearly */
       ierr = VecGetLocalSize(y,&n);CHKERRQ(ierr);
-      ierr = VecGetArray(y,&yvalue);CHKERRQ(ierr);
+      if (iscuda) {
+        ierr = VecCUDAGetArray(y,&yvalue);CHKERRQ(ierr);
+      } else {
+        ierr = VecGetArray(y,&yvalue);CHKERRQ(ierr);
+      }
       /* Create yg on PETSC_COMM_WORLD and alias yg with y. They share the memory pointed by yvalue.
         Note this is a collective call. All processes have to call it and supply consistent N.
       */
-      ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD,1,n,N,yvalue,&yg);CHKERRQ(ierr);
+      if (iscuda) {
+        ierr = VecCreateMPICUDAWithArray(PETSC_COMM_WORLD,1,n,N,yvalue,&yg);CHKERRQ(ierr);
+      } else {
+        ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD,1,n,N,yvalue,&yg);CHKERRQ(ierr);
+      }
 
       /* Create an identity map that makes yg[i] = x[i], i=0..N-1 */
       ierr = VecGetOwnershipRange(yg,&low,&high);CHKERRQ(ierr); /* low, high are global indices */
@@ -74,7 +103,11 @@ int main(int argc,char **argv)
       /* Once yg got the data from x, we return yvalue to y so that we can use y in other operations.
         VecGetArray must be paired with VecRestoreArray.
       */
-      ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
+      if (iscuda) {
+         ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+      } else {
+        ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
+      }
 
       /* Libraries on subcomm0 can safely use y now, for example, view and scale it */
       ierr = VecView(y,PETSC_VIEWER_STDOUT_(subcomm));CHKERRQ(ierr);
@@ -87,12 +120,20 @@ int main(int argc,char **argv)
       ierr = VecScatterBegin(vscat,yg,x,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
       ierr = VecScatterEnd(vscat,yg,x,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
       ierr = VecResetArray(yg);CHKERRQ(ierr);
-      ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
+      if (iscuda) {
+        ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+      } else {
+        ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
+      }
 
       ierr = VecDestroy(&y);CHKERRQ(ierr);
     } else {
       /* Ranks outside of subcomm0 do not supply values to yg */
-      ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD,1,0/*n*/,N,NULL,&yg);CHKERRQ(ierr);
+      if (iscuda) {
+        ierr = VecCreateMPICUDAWithArray(PETSC_COMM_WORLD,1,0/*n*/,N,NULL,&yg);CHKERRQ(ierr);
+      } else {
+        ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD,1,0/*n*/,N,NULL,&yg);CHKERRQ(ierr);
+      }
 
       /* Ranks in subcomm0 already specified the full range of the identity map. The remaining
         ranks just need to create empty ISes to cheat VecScatterCreate.
@@ -260,14 +301,28 @@ int main(int argc,char **argv)
     PetscScalar *yvalue;
 
     /* Initialize x to [0, 1, 2, 3, ..., N-1] */
-    ierr = VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,N,&x);CHKERRQ(ierr);
+    ierr = VecCreate(PETSC_COMM_WORLD, &x);CHKERRQ(ierr);
+    ierr = VecSetSizes(x, PETSC_DECIDE, N);CHKERRQ(ierr);
+    if (iscuda) {
+      ierr = VecSetType(x, VECCUDA);CHKERRQ(ierr);
+    } else {
+      ierr = VecSetType(x, VECSTANDARD);CHKERRQ(ierr);
+    }
+    ierr = VecSetUp(x);CHKERRQ(ierr);
     ierr = VecGetOwnershipRange(x,&low,&high);CHKERRQ(ierr);
     for (i=low; i<high; i++) {ierr = VecSetValue(x,i,(PetscScalar)i,INSERT_VALUES);CHKERRQ(ierr);}
     ierr = VecAssemblyBegin(x);CHKERRQ(ierr);
     ierr = VecAssemblyEnd(x);CHKERRQ(ierr);
 
     /* Every subcomm has a y as long as x */
-    ierr = VecCreateMPI(subcomm,PETSC_DECIDE,N,&y);CHKERRQ(ierr);
+    ierr = VecCreate(subcomm, &y);CHKERRQ(ierr);
+    ierr = VecSetSizes(y, PETSC_DECIDE, N);CHKERRQ(ierr);
+    if (iscuda) {
+      ierr = VecSetType(y, VECCUDA);CHKERRQ(ierr);
+    } else {
+      ierr = VecSetType(y, VECSTANDARD);CHKERRQ(ierr);
+    }
+    ierr = VecSetUp(y);CHKERRQ(ierr);
     ierr = VecGetLocalSize(y,&n);CHKERRQ(ierr);
 
     /* Create a global vector yg on PETSC_COMM_WORLD using y's memory. yg's global size = N*(number of subcommunicators).
@@ -275,8 +330,13 @@ int main(int argc,char **argv)
        necessarily consecutive in yg. That depends on how PETSC_COMM_WORLD is split. In our case, subcomm0 is made of rank
        0, 3, 6 etc from PETSC_COMM_WORLD. So subcomm0's pieces are interleaved with pieces from other subcomms in yg.
     */
-    ierr = VecGetArray(y,&yvalue);CHKERRQ(ierr);
-    ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD,1,n,PETSC_DECIDE,yvalue,&yg);CHKERRQ(ierr);
+    if (iscuda) {
+      ierr = VecCUDAGetArray(y,&yvalue);CHKERRQ(ierr);
+      ierr = VecCreateMPICUDAWithArray(PETSC_COMM_WORLD,1,n,PETSC_DECIDE,yvalue,&yg);CHKERRQ(ierr);
+    } else {
+      ierr = VecGetArray(y,&yvalue);CHKERRQ(ierr);
+      ierr = VecCreateMPIWithArray(PETSC_COMM_WORLD,1,n,PETSC_DECIDE,yvalue,&yg);CHKERRQ(ierr);
+    }
     ierr = PetscObjectSetName((PetscObject)yg,"yg_on_subcomms");CHKERRQ(ierr); /* Give a name to view yg clearly */
 
     /* The following two lines are key. From xstart, we know where to pull entries from x. Note that we get xstart from y,
@@ -296,7 +356,11 @@ int main(int argc,char **argv)
     ierr = VecDestroy(&yg);CHKERRQ(ierr);
 
     /* Restory yvalue so that processes in subcomm can use y from now on. */
-    ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
+    if (iscuda) {
+      ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
+    } else {
+      ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
+    }
     ierr = VecScale(y,3.0);CHKERRQ(ierr);
 
     ierr = ISDestroy(&ix);CHKERRQ(ierr); /* One can also destroy ix, iy immediately after VecScatterCreate() */
@@ -332,6 +396,16 @@ int main(int argc,char **argv)
 
      test:
        suffix: 4
+       args: -world2sub -vectype cuda
+       requires: cuda
+
+    test:
+      suffix: 5
+      args: -world2subs -vectype cuda
+      requires: cuda
+
+     test:
+       suffix: 6
        args: -world2sub -sf_type neighbor
        output_file: output/ex9_1.out
        # OpenMPI has a bug wrt MPI_Neighbor_alltoallv etc (https://github.com/open-mpi/ompi/pull/6782). Once the patch is in, we can remove !define(PETSC_HAVE_OMPI_MAJOR_VERSION)
