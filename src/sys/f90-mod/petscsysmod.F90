@@ -378,27 +378,27 @@
           character(len=*)           :: filename
           character(len=*)           :: help
           PetscErrorCode             :: ierr
-
+          PetscInt,parameter         :: flg = 1
           if (filename .ne. PETSC_NULL_CHARACTER) then
              filename = trim(filename)
           endif
-          call PetscInitializeF(filename,help,PETSC_TRUE,ierr)
+          call PetscInitializeF(filename,help,flg,ierr)
         end subroutine PetscInitializeWithHelp
 
         subroutine PetscInitializeNoHelp(filename,ierr)
           character(len=*)           :: filename
           PetscErrorCode             :: ierr
-
+          PetscInt,parameter         :: flg = 1
           if (filename .ne. PETSC_NULL_CHARACTER) then
              filename = trim(filename)
           endif
-          call PetscInitializeF(filename,PETSC_NULL_CHARACTER,PETSC_TRUE,ierr)
+          call PetscInitializeF(filename,PETSC_NULL_CHARACTER,flg,ierr)
         end subroutine PetscInitializeNoHelp
 
         subroutine PetscInitializeNoArguments(ierr)
           PetscErrorCode             :: ierr
-
-          call PetscInitializeF(PETSC_NULL_CHARACTER,PETSC_NULL_CHARACTER,PETSC_FALSE,ierr)
+          PetscInt,parameter         :: flg = 0
+          call PetscInitializeF(PETSC_NULL_CHARACTER,PETSC_NULL_CHARACTER,flg,ierr)
         end subroutine PetscInitializeNoArguments
         end module
 
