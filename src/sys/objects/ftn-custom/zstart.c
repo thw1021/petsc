@@ -244,7 +244,7 @@ PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private();
       Since this is called from Fortran it does not return error codes
 
 */
-PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarguments,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len,PETSC_FORTRAN_CHARLEN_T helplen)
+PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *freadarguments,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len,PETSC_FORTRAN_CHARLEN_T helplen)
 {
   int            j,i;
 #if defined (PETSC_USE_NARGS)
@@ -254,6 +254,9 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   PetscMPIInt    size;
   char           *t1,name[256],hostname[64];
   PetscMPIInt    f_petsc_comm_world;
+  PetscBool      readarguments;
+
+  FIXBOOL(*freadarguments,readarguments);
 
   *ierr = PetscMemzero(name,sizeof(name)); if (*ierr) return;
   if (PetscInitializeCalled) {*ierr = 0; return;}
@@ -422,7 +425,7 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
      below.
   */
   PetscInitializeFortran();
-  if (*readarguments == PETSC_TRUE) {
+  if (readarguments == PETSC_TRUE) {
     PETScParseFortranArgs_Private(&PetscGlobalArgc,&PetscGlobalArgs);
     FIXCHAR(filename,len,t1);
     *ierr = PetscOptionsInsert(NULL,&PetscGlobalArgc,&PetscGlobalArgs,t1);
