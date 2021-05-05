@@ -1,6 +1,6 @@
 static char help[]= "This example shows 1) how to transfer vectors from a parent communicator to vectors on a child communicator and vice versa;\n\
   2) how to transfer vectors from a subcommunicator to vectors on another subcommunicator. The two subcommunicators are not\n\
-  required to cover all processes in PETSC_COMM_WORLD; 3) how to copy a vector from a parent communicator to vectors on its child communicators.\n
+  required to cover all processes in PETSC_COMM_WORLD; 3) how to copy a vector from a parent communicator to vectors on its child communicators.\n\
   To run any example with VECCUDA vectors, add -vectype cuda to the argument list\n\n";
 
 #include <petscvec.h>
