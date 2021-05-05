@@ -422,7 +422,7 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
      below.
   */
   PetscInitializeFortran();
-  if (*readarguments == PETSC_TRUE) {
+  if (*readarguments) {
     PETScParseFortranArgs_Private(&PetscGlobalArgc,&PetscGlobalArgs);
     FIXCHAR(filename,len,t1);
     *ierr = PetscOptionsInsert(NULL,&PetscGlobalArgc,&PetscGlobalArgs,t1);
