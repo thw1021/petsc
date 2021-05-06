@@ -974,9 +974,9 @@ pages:  # this job name has special meaning to GitLab
   interruptible: true
   script:
     - git fetch --unshallow --no-tags origin +release:remotes/origin/release +main:remotes/origin/main
-    - git checkout origin/main && make dirhtml SPHINXOPTS="-T -E" BUILDDIR="../public/main"
-    - make clean BUILDDIR="../public/main"
     - git checkout origin/release && make dirhtml SPHINXOPTS="-T -E" BUILDDIR="../public/release"
+    - make clean BUILDDIR="../public/release"
+    - git checkout origin/main && make dirhtml SPHINXOPTS="-T -E" BUILDDIR="../public/main"
   only:
     variables:
       - $PETSC_CI_SCHEDULED == "yes"
