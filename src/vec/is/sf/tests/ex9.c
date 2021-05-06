@@ -10,7 +10,8 @@ int main(int argc,char **argv)
   PetscMPIInt    nproc,grank,mycolor;
   PetscInt       i,n,N = 20,low,high;
   MPI_Comm       subcomm;
-  Vec            x,yg; /* global vectors on PETSC_COMM_WORLD */
+  Vec            x  = PETSC_NULL; /* global vectors on PETSC_COMM_WORLD */
+  Vec            yg = PETSC_NULL; /* global vectors on PETSC_COMM_WORLD */
   VecScatter     vscat;
   IS             ix,iy;
   PetscBool      iscuda = PETSC_FALSE;      /* Option to use VECCUDA vectors */
