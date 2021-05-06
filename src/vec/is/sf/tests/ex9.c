@@ -367,7 +367,7 @@ int main(int argc,char **argv)
    *  to achieve that.
    *===========================================================================*/
   if (world2subs) {
-    Vec         y,yg;
+    Vec         y;
     PetscInt    n,N=15,xstart,ystart,low,high;
     PetscScalar *yvalue;
 
