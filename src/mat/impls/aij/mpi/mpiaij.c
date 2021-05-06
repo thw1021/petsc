@@ -1383,15 +1383,22 @@ PetscErrorCode MatView_MPIAIJ_ASCIIorDraworSocket(Mat mat,PetscViewer viewer)
 PetscErrorCode MatView_MPIAIJ(Mat mat,PetscViewer viewer)
 {
   PetscErrorCode ierr;
-  PetscBool      iascii,isdraw,issocket,isbinary;
+  PetscBool      iascii,isdraw,issocket,isbinary,ishdf5;
 
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&ishdf5);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSOCKET,&issocket);CHKERRQ(ierr);
   if (iascii || isdraw || isbinary || issocket) {
     ierr = MatView_MPIAIJ_ASCIIorDraworSocket(mat,viewer);CHKERRQ(ierr);
+  } else if (ishdf5) {
+#if defined(PETSC_HAVE_HDF5)
+    ierr = MatView_AIJ_HDF5(mat,viewer);CHKERRQ(ierr);
+#else
+    SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
+#endif
   }
   PetscFunctionReturn(0);
 }
