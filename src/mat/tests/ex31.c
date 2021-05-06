@@ -18,6 +18,8 @@ int main(int argc,char **args)
 #if defined(PETSC_USE_LOG)
   PetscLogEvent MATRIX_GENERATE,MATRIX_READ;
 #endif
+  PetscBool      flg;
+  PetscViewerFormat format;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
@@ -33,6 +35,7 @@ int main(int argc,char **args)
 
   /* Generate matrix */
   ierr = MatCreate(PETSC_COMM_WORLD,&C);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)C,"C");CHKERRQ(ierr);
   ierr = MatSetSizes(C,PETSC_DECIDE,PETSC_DECIDE,N,N);CHKERRQ(ierr);
   ierr = MatSetFromOptions(C);CHKERRQ(ierr);
   ierr = MatSetUp(C);CHKERRQ(ierr);
@@ -50,7 +53,13 @@ int main(int argc,char **args)
   ierr = MatView(C,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   ierr = PetscPrintf(PETSC_COMM_WORLD,"writing matrix in binary to matrix.dat ...\n");CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"matrix.dat",FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
+  ierr = PetscViewerCreate(PETSC_COMM_WORLD,&viewer);CHKERRQ(ierr);
+  ierr = PetscViewerSetType(viewer,PETSCVIEWERBINARY);CHKERRQ(ierr);
+  ierr = PetscViewerSetFromOptions(viewer);CHKERRQ(ierr);
+  ierr = PetscOptionsGetEnum(NULL,NULL,"-viewer_format",PetscViewerFormats,(PetscEnum*)&format,&flg);CHKERRQ(ierr);
+  if (flg) {ierr = PetscViewerPushFormat(viewer,format);CHKERRQ(ierr);}
+  ierr = PetscViewerFileSetMode(viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
+  ierr = PetscViewerFileSetName(viewer,"matrix.dat");CHKERRQ(ierr);
   ierr = MatView(C,viewer);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
   ierr = MatDestroy(&C);CHKERRQ(ierr);
@@ -64,8 +73,15 @@ int main(int argc,char **args)
   ierr = PetscLogEventRegister("Read Matrix",0,&MATRIX_READ);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(MATRIX_READ,0,0,0,0);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"reading matrix in binary from matrix.dat ...\n");CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"matrix.dat",FILE_MODE_READ,&viewer);CHKERRQ(ierr);
+  ierr = PetscViewerCreate(PETSC_COMM_WORLD,&viewer);CHKERRQ(ierr);
+  ierr = PetscViewerSetType(viewer,PETSCVIEWERBINARY);CHKERRQ(ierr);
+  ierr = PetscViewerSetFromOptions(viewer);CHKERRQ(ierr);
+  ierr = PetscOptionsGetEnum(NULL,NULL,"-viewer_format",PetscViewerFormats,(PetscEnum*)&format,&flg);CHKERRQ(ierr);
+  if (flg) {ierr = PetscViewerPushFormat(viewer,format);CHKERRQ(ierr);}
+  ierr = PetscViewerFileSetMode(viewer,FILE_MODE_READ);CHKERRQ(ierr);
+  ierr = PetscViewerFileSetName(viewer,"matrix.dat");CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&C);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)C,"C");CHKERRQ(ierr);
   ierr = MatLoad(C,viewer);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(MATRIX_READ,0,0,0,0);CHKERRQ(ierr);
@@ -84,6 +100,18 @@ int main(int argc,char **args)
 /*TEST
 
    test:
+      suffix: 1
       filter: grep -v "MPI processes"
+
+   test:
+      suffix: 2
+      requires: hdf5
+      args: -viewer_type hdf5
+
+   test:
+      suffix: 3
+      requires: hdf5
+      nsize: 3
+      args: -viewer_type hdf5
 
 TEST*/

@@ -5,6 +5,79 @@
 #include <petsclayouthdf5.h>
 
 #if defined(PETSC_HAVE_HDF5)
+PetscErrorCode MatView_AIJ_HDF5(Mat mat, PetscViewer viewer)
+{
+  PetscViewerFormat format;
+  const char        *mat_name;
+  PetscMPIInt       size, rank;
+  MPI_Comm          comm;
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
+  switch (format) {
+    case PETSC_VIEWER_HDF5_PETSC:
+    case PETSC_VIEWER_DEFAULT:
+    case PETSC_VIEWER_NATIVE:
+      break;
+    default:
+      SETERRQ1(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"PetscViewerFormat %s not supported for HDF5 output.",PetscViewerFormats[format]);
+  }
+  ierr = PetscObjectGetName((PetscObject)mat,&mat_name);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PushGroup(viewer, mat_name);CHKERRQ(ierr);
+  comm = PetscObjectComm((PetscObject)mat);
+  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  if (size > 1) {
+    ierr = MatMPIAIJGetLocalMat(mat, MAT_INITIAL_MATRIX, &mat);CHKERRQ(ierr);
+  } else {
+    ierr = PetscObjectReference((PetscObject)mat);CHKERRQ(ierr);
+  }
+  {
+    Mat_SeqAIJ        *aij = (Mat_SeqAIJ *) mat->data;
+    const PetscInt    *i = aij->i;
+    const PetscInt    *j = aij->j;
+    const PetscScalar *a = aij->a;
+    PetscInt          m, N, *i_glob, nzloc, i_off;
+    IS                is_i, is_j;
+    Vec               v;
+    const char        i_name[] = "i";
+    const char        j_name[] = "j";
+    const char        a_name[] = "a";
+    const char        c_name[] = "N";
+
+    ierr = MatGetLocalSize(mat, &m, &N);CHKERRQ(ierr);
+
+    ierr = PetscViewerHDF5WriteAttribute(viewer,NULL,c_name,PETSC_INT,&N);CHKERRQ(ierr);
+
+    ierr = PetscMalloc1(m+1, &i_glob);CHKERRQ(ierr);
+    ierr = PetscArraycpy(i_glob, i, m+1);CHKERRQ(ierr);
+    nzloc = i[m];
+    i_off = 0;
+    ierr = MPI_Exscan(&nzloc,&i_off, 1, MPIU_INT, MPI_SUM, comm);CHKERRQ(ierr);
+    for (PetscInt row = 0; row <= m; row++) i_glob[row] += i_off;
+    ierr = ISCreateGeneral(comm, (rank == (size - 1)) ? m + 1 : m, i_glob, PETSC_OWN_POINTER, &is_i);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)is_i, i_name);CHKERRQ(ierr);
+    ierr = ISView(is_i, viewer);CHKERRQ(ierr);
+    ierr = ISDestroy(&is_i);CHKERRQ(ierr);
+
+    ierr = ISCreateGeneral(comm, nzloc, j, PETSC_USE_POINTER, &is_j);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)is_j, j_name);CHKERRQ(ierr);
+    ierr = ISView(is_j, viewer);CHKERRQ(ierr);
+    ierr = ISDestroy(&is_j);CHKERRQ(ierr);
+
+    ierr = VecCreateMPI(comm, nzloc, PETSC_DETERMINE, &v);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)v, a_name);CHKERRQ(ierr);
+    ierr = VecPlaceArray(v, a);CHKERRQ(ierr);
+    ierr = VecView(v, viewer);CHKERRQ(ierr);
+    ierr = VecResetArray(v);CHKERRQ(ierr);
+    ierr = VecDestroy(&v);CHKERRQ(ierr);
+  }
+  ierr = MatDestroy(&mat);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode MatLoad_AIJ_HDF5(Mat mat, PetscViewer viewer)
 {
   PetscViewerFormat format;
@@ -47,12 +120,11 @@ PetscErrorCode MatLoad_AIJ_HDF5(Mat mat, PetscViewer viewer)
     ierr = PetscStrallocpy("data",&a_name);CHKERRQ(ierr);
     ierr = PetscStrallocpy("MATLAB_sparse",&c_name);CHKERRQ(ierr);
   } else {
-    /* TODO Once corresponding MatView is implemented, change the names to i,j,a */
     /* TODO Maybe there could be both namings in the file, using "symbolic link" features of HDF5. */
-    ierr = PetscStrallocpy("jc",&i_name);CHKERRQ(ierr);
-    ierr = PetscStrallocpy("ir",&j_name);CHKERRQ(ierr);
-    ierr = PetscStrallocpy("data",&a_name);CHKERRQ(ierr);
-    ierr = PetscStrallocpy("MATLAB_sparse",&c_name);CHKERRQ(ierr);
+    ierr = PetscStrallocpy("i",&i_name);CHKERRQ(ierr);
+    ierr = PetscStrallocpy("j",&j_name);CHKERRQ(ierr);
+    ierr = PetscStrallocpy("a",&a_name);CHKERRQ(ierr);
+    ierr = PetscStrallocpy("N",&c_name);CHKERRQ(ierr);
   }
 
   ierr = PetscOptionsBegin(comm,NULL,"Options for loading matrix from HDF5","Mat");CHKERRQ(ierr);
