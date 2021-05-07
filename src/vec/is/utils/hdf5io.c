@@ -8,7 +8,7 @@ struct _n_HDF5ReadCtx {
   hid_t     file, group, dataset, dataspace;
   int       lenInd, bsInd, rdim;
   hsize_t   *dims;
-  PetscBool complexVal, dim2, horizontal;
+  PetscBool complexVal, dim2;
 };
 typedef struct _n_HDF5ReadCtx* HDF5ReadCtx;
 
@@ -38,8 +38,6 @@ static PetscErrorCode PetscViewerHDF5ReadInitialize_Private(PetscViewer viewer, 
   PetscStackCallHDF5Return(h->dataset,H5Dopen2,(h->group, name, H5P_DEFAULT));
   PetscStackCallHDF5Return(h->dataspace,H5Dget_space,(h->dataset));
   ierr = PetscViewerHDF5ReadAttribute(viewer,name,"complex",PETSC_BOOL,&h->complexVal,&h->complexVal);CHKERRQ(ierr);
-  /* MATLAB stores column vectors horizontally */
-  ierr = PetscViewerHDF5HasAttribute(viewer,name,"MATLAB_class",&h->horizontal);CHKERRQ(ierr);
   *ctx = h;
   PetscFunctionReturn(0);
 }
@@ -108,7 +106,7 @@ static PetscErrorCode PetscViewerHDF5ReadSizes_Private(PetscViewer viewer, HDF5R
 
   /* Get global size */
   len = ctx->dims[ctx->lenInd];
-  if (ctx->horizontal) {
+  if (hdf5->horizontal) {
     PetscInt t;
     /* support horizontal 1D arrays (MATLAB vectors) - swap meaning of blocks and entries */
     if (ctx->complexVal) SETERRQ(PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP, "Complex and horizontal at the same time not allowed.");
