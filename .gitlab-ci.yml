@@ -980,9 +980,9 @@ pages-test:
   interruptible: true
   script:
     - git fetch --unshallow --no-tags origin +release:remotes/origin/release +main:remotes/origin/main
-    - git checkout origin/main && make dirhtml SPHINXOPTS="-T -E" BUILDDIR="../public/main"
+    - git checkout origin/main && make website-deploy BUILDDIR="../public/main"
     - git checkout origin/psanan/docs-clean-classic-build && make clean BUILDDIR="../public/release"
-    - git checkout origin/psanan/docs-clean-classic-build && make dirhtml SPHINXOPTS="-T -E" BUILDDIR="../public/release"
+    - git checkout origin/psanan/docs-clean-classic-build && make website-deploy BUILDDIR="../public/release"
   only:
     variables:
       - $PETSC_CI_SCHEDULED == "yes"
