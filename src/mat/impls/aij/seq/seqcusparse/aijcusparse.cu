@@ -58,7 +58,9 @@ static PetscErrorCode MatCholeskyFactorNumeric_SeqAIJCUSPARSE(Mat,Mat,const MatF
 
 static PetscErrorCode MatILUFactorSymbolic_SeqAIJCUSPARSE(Mat,Mat,IS,IS,const MatFactorInfo*);
 static PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSE(Mat,Mat,IS,IS,const MatFactorInfo*);
+static PetscErrorCode MatLUFactorSymbolic_SeqAIJSolve_SeqAIJCUSPARSE(Mat,Mat,IS,IS,const MatFactorInfo*);
 static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat,Mat,const MatFactorInfo*);
+static PetscErrorCode MatLUFactorNumeric_SeqAIJSolve_SeqAIJCUSPARSE(Mat,Mat,const MatFactorInfo*);
 
 static PetscErrorCode MatSolve_SeqAIJCUSPARSE(Mat,Vec,Vec);
 static PetscErrorCode MatSolve_SeqAIJCUSPARSE_NaturalOrdering(Mat,Vec,Vec);
@@ -139,6 +141,13 @@ PetscErrorCode MatFactorGetSolverType_seqaij_cusparse(Mat A,MatSolverType *type)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode MatFactorGetSolverType_seqaij_petsc(Mat A,MatSolverType *type)
+{
+  PetscFunctionBegin;
+  *type = MATSOLVERPETSC;
+  PetscFunctionReturn(0);
+}
+
 /*MC
   MATSOLVERCUSPARSE = "cusparse" - A matrix type providing triangular solvers for seq matrices
   on a single GPU of type, seqaijcusparse, aijcusparse, or seqaijcusp, aijcusp. Currently supported
@@ -180,6 +189,37 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse(Mat A,MatFactor
   ierr = MatSeqAIJSetPreallocation(*B,MAT_SKIP_ALLOCATION,NULL);CHKERRQ(ierr);
   (*B)->canuseordering = PETSC_TRUE;
   ierr = PetscObjectComposeFunction((PetscObject)(*B),"MatFactorGetSolverType_C",MatFactorGetSolverType_seqaij_cusparse);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_seqaij(Mat A,MatFactorType ftype,Mat *B)
+{
+  PetscErrorCode ierr;
+  PetscInt       n = A->rmap->n;
+
+  PetscFunctionBegin;
+  ierr = MatCreate(PetscObjectComm((PetscObject)A),B);CHKERRQ(ierr);
+  ierr = MatSetSizes(*B,n,n,n,n);CHKERRQ(ierr);
+  (*B)->factortype = ftype;
+  ierr = MatSetType(*B,MATSEQAIJCUSPARSE);CHKERRQ(ierr);
+PetscPrintf(PETSC_COMM_SELF,"+++++++++++++++++++ I MatGetFactor_seqaijcusparse_seqaij\n");
+  if (ftype == MAT_FACTOR_LU || ftype == MAT_FACTOR_ILU || ftype == MAT_FACTOR_ILUDT) {
+    ierr = MatSetBlockSizesFromMats(*B,A,A);CHKERRQ(ierr);
+    (*B)->ops->ilufactorsymbolic = NULL; // MatILUFactorSymbolic_SeqAIJCUSPARSE;
+    (*B)->ops->lufactorsymbolic  = MatLUFactorSymbolic_SeqAIJSolve_SeqAIJCUSPARSE;
+    ierr = PetscStrallocpy(MATORDERINGND,(char**)&(*B)->preferredordering[MAT_FACTOR_LU]);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(MATORDERINGNATURAL,(char**)&(*B)->preferredordering[MAT_FACTOR_ILU]);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(MATORDERINGNATURAL,(char**)&(*B)->preferredordering[MAT_FACTOR_ILUDT]);CHKERRQ(ierr);
+  } else if (ftype == MAT_FACTOR_CHOLESKY || ftype == MAT_FACTOR_ICC) {
+    (*B)->ops->iccfactorsymbolic      = NULL; //MatICCFactorSymbolic_SeqAIJCUSPARSE;
+    (*B)->ops->choleskyfactorsymbolic = NULL; //MatCholeskyFactorSymbolic_SeqAIJCUSPARSE;
+    ierr = PetscStrallocpy(MATORDERINGND,(char**)&(*B)->preferredordering[MAT_FACTOR_CHOLESKY]);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(MATORDERINGNATURAL,(char**)&(*B)->preferredordering[MAT_FACTOR_ICC]);CHKERRQ(ierr);
+  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Factor type not supported for CUSPARSE Matrix Types");
+
+  ierr = MatSeqAIJSetPreallocation(*B,MAT_SKIP_ALLOCATION,NULL);CHKERRQ(ierr);
+  (*B)->canuseordering = PETSC_TRUE;
+  ierr = PetscObjectComposeFunction((PetscObject)(*B),"MatFactorGetSolverType_C",MatFactorGetSolverType_seqaij_petsc);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -268,14 +308,30 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat B,Mat A,const MatFac
     B->ops->matsolve = NULL;
     B->ops->matsolvetranspose = NULL;
   } else {
-    B->ops->solve = MatSolve_SeqAIJ;
-    B->ops->solvetranspose = MatSolveTranspose_SeqAIJ;
+    B->ops->solve = MatSolve_SeqAIJCUSPARSE;
+    B->ops->solvetranspose = MatSolveTranspose_SeqAIJCUSPARSE;
     B->ops->matsolve = NULL;
     B->ops->matsolvetranspose = NULL;
   }
 
   /* get the triangular factors */
   ierr = MatSeqAIJCUSPARSEILUAnalysisAndCopyToGPU(B);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode MatLUFactorNumeric_SeqAIJSolve_SeqAIJCUSPARSE(Mat B,Mat A,const MatFactorInfo *info)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatSeqAIJCUSPARSECopyFromGPU(A);CHKERRQ(ierr); // this could have been assembled on the GPU (otherwise this is pure CPU solve should not be here)
+  ierr = MatLUFactorNumeric_SeqAIJ(B,A,info);CHKERRQ(ierr);
+  B->offloadmask = PETSC_OFFLOAD_CPU;
+  B->ops->solve = MatSolve_SeqAIJ;
+  B->ops->solvetranspose = MatSolveTranspose_SeqAIJ;
+  B->ops->matsolve = NULL;
+  B->ops->matsolvetranspose = NULL;
+
   PetscFunctionReturn(0);
 }
 
@@ -336,6 +392,16 @@ static PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSE(Mat B,Mat A,IS isrow,IS
   ierr = MatSeqAIJCUSPARSETriFactors_Reset(&cusparseTriFactors);CHKERRQ(ierr);
   ierr = MatLUFactorSymbolic_SeqAIJ(B,A,isrow,iscol,info);CHKERRQ(ierr);
   B->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJCUSPARSE;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode MatLUFactorSymbolic_SeqAIJSolve_SeqAIJCUSPARSE(Mat B,Mat A,IS isrow,IS iscol,const MatFactorInfo *info)
+{
+  PetscErrorCode               ierr;
+
+  PetscFunctionBegin;
+  ierr = MatLUFactorSymbolic_SeqAIJ(B,A,isrow,iscol,info);CHKERRQ(ierr);
+  B->ops->lufactornumeric = MatLUFactorNumeric_SeqAIJSolve_SeqAIJCUSPARSE;
   PetscFunctionReturn(0);
 }
 
@@ -3381,6 +3447,7 @@ PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_CUSPARSE(void)
   PetscFunctionBegin;
   ierr = MatSolverTypeRegister(MATSOLVERCUSPARSEBAND, MATSEQAIJ, MAT_FACTOR_LU,MatGetFactor_seqaijcusparse_cusparse_band);CHKERRQ(ierr);
   ierr = MatSolverTypeRegister(MATSOLVERCUSPARSE,MATSEQAIJCUSPARSE,MAT_FACTOR_LU,MatGetFactor_seqaijcusparse_cusparse);CHKERRQ(ierr);
+  ierr = MatSolverTypeRegister(MATSOLVERPETSC,MATSEQAIJCUSPARSE,MAT_FACTOR_LU,MatGetFactor_seqaijcusparse_seqaij);CHKERRQ(ierr);
   ierr = MatSolverTypeRegister(MATSOLVERCUSPARSE,MATSEQAIJCUSPARSE,MAT_FACTOR_CHOLESKY,MatGetFactor_seqaijcusparse_cusparse);CHKERRQ(ierr);
   ierr = MatSolverTypeRegister(MATSOLVERCUSPARSE,MATSEQAIJCUSPARSE,MAT_FACTOR_ILU,MatGetFactor_seqaijcusparse_cusparse);CHKERRQ(ierr);
   ierr = MatSolverTypeRegister(MATSOLVERCUSPARSE,MATSEQAIJCUSPARSE,MAT_FACTOR_ICC,MatGetFactor_seqaijcusparse_cusparse);CHKERRQ(ierr);
