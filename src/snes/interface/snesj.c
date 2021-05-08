@@ -49,8 +49,11 @@ PetscErrorCode  SNESComputeJacobianDefault(SNES snes,Vec x1,Mat J,Mat B,void *ct
   const char        *list[2] = {"ds","wp"};
   PetscMPIInt       size;
   const PetscInt    *ranges;
+  DM                dm;
+  DMSNES            dms;
 
   PetscFunctionBegin;
+  snes->max_funcs = PETSC_MAX_INT;
   /* Since this Jacobian will possibly have "extra" nonzero locations just turn off errors for these locations */
   ierr = MatSetOption(B,MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);CHKERRQ(ierr);
   ierr = PetscOptionsGetReal(((PetscObject)snes)->options,((PetscObject)snes)->prefix,"-snes_test_err",&epsilon,NULL);CHKERRQ(ierr);
@@ -76,7 +79,13 @@ PetscErrorCode  SNESComputeJacobianDefault(SNES snes,Vec x1,Mat J,Mat B,void *ct
 
   ierr = VecGetSize(x1,&N);CHKERRQ(ierr);
   ierr = VecGetOwnershipRange(x1,&start,&end);CHKERRQ(ierr);
-  ierr = SNESComputeFunction(snes,x1,j1a);CHKERRQ(ierr);
+  ierr = SNESGetDM(snes,&dm);CHKERRQ(ierr);
+  ierr = DMGetDMSNES(dm,&dms);CHKERRQ(ierr);
+  if (dms->ops->computemffunction) {
+    ierr = SNESComputeMFFunction(snes,x1,j1a);CHKERRQ(ierr);
+  } else {
+    ierr = SNESComputeFunction(snes,x1,j1a);CHKERRQ(ierr);
+  }
 
   ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)snes),((PetscObject)snes)->prefix,"Differencing options","SNES");CHKERRQ(ierr);
   ierr = PetscOptionsEList("-mat_fd_type","Algorithm to compute difference parameter","SNESComputeJacobianDefault",list,2,"wp",&value,&flg);CHKERRQ(ierr);
@@ -106,7 +115,11 @@ PetscErrorCode  SNESComputeJacobianDefault(SNES snes,Vec x1,Mat J,Mat B,void *ct
     }
     ierr = VecAssemblyBegin(x2);CHKERRQ(ierr);
     ierr = VecAssemblyEnd(x2);CHKERRQ(ierr);
-    ierr = SNESComputeFunction(snes,x2,j2a);CHKERRQ(ierr);
+    if (dms->ops->computemffunction) {
+      ierr = SNESComputeMFFunction(snes,x2,j2a);CHKERRQ(ierr);
+    } else {
+      ierr = SNESComputeFunction(snes,x2,j2a);CHKERRQ(ierr);
+    }
     ierr = VecAXPY(j2a,-1.0,j1a);CHKERRQ(ierr);
     /* Communicate scale=1/dx_i to all processors */
     ierr = VecGetOwnershipRanges(x1,&ranges);CHKERRQ(ierr);
@@ -116,7 +129,6 @@ PetscErrorCode  SNESComputeJacobianDefault(SNES snes,Vec x1,Mat J,Mat B,void *ct
       if (i>=ranges[j]) break;
     }
     ierr = MPI_Bcast(&wscale,1,MPIU_SCALAR,root,comm);CHKERRMPI(ierr);
-
     ierr = VecScale(j2a,wscale);CHKERRQ(ierr);
     ierr = VecNorm(j2a,NORM_INFINITY,&amax);CHKERRQ(ierr); amax *= 1.e-14;
     ierr = VecGetArray(j2a,&y);CHKERRQ(ierr);
