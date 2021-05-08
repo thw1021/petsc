@@ -744,24 +744,14 @@ linux-analyzer:
     - make LINTER_OPTIONS="${LINTER_OPTIONS}" test-lint
     - make LINTER_OPTIONS="${LINTER_OPTIONS}" lint
   variables:
-    OPENBLAS_NUM_THREADS: 1
     TEST_ARCH: arch-ci-linux-analyzer
     LOAD_MODULES: llvm/11.0.0-snbtima cmake/3.20.0-vov726r
     LINTER_OPTIONS: "--PETSC_ARCH=${TEST_ARCH} --clang_lib=`llvm-config --libdir`/libclang.so.11 --verbose"
   artifacts:
-    reports:
-      junit: ${TEST_ARCH}/tests/testresults.xml
-    name: "$CI_JOB_NAME"
-    when: always
+    expire_in: 4 days
     paths:
     - ${TEST_ARCH}/lib/petsc/conf/*.log
-    - ${TEST_ARCH}/lib/pkgconfig/PETSc.pc
-    - ${TEST_ARCH}/tests/testresults.xml
-    - ${TEST_ARCH}/tests/test_${TEST_ARCH}_tap.log
-    - ${TEST_ARCH}/tests/test_${TEST_ARCH}_err.log
-    - ${TEST_ARCH}/gcov.tar.gz
     - ./petscLintPatches/*.patch
-    expire_in: 4 days
 
 linux-intel:
   extends:
