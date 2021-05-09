@@ -261,6 +261,9 @@ int main(int argc,char **argv)
   Vec            lambda[1];
   PetscBool      forwardonly=PETSC_FALSE,implicitform=PETSC_TRUE,mf = PETSC_FALSE;
   PetscLogDouble v1,v2;
+#if defined(PETSC_USE_LOG)
+  PetscLogStage  stage;
+#endif
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   ierr = PetscOptionsGetBool(NULL,NULL,"-forwardonly",&forwardonly,NULL);CHKERRQ(ierr);
@@ -274,6 +277,7 @@ int main(int argc,char **argv)
   appctx.gamma = .024;
   appctx.kappa = .06;
 
+  PetscLogStageRegister("MyAdjoint", &stage);
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create distributed array (DMDA) to manage parallel grid and vectors
   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -372,7 +376,9 @@ int main(int argc,char **argv)
     /*   Reset initial conditions for the adjoint integration */
     ierr = InitializeLambda(da,lambda[0],0.5,0.5);CHKERRQ(ierr);
     ierr = TSSetCostGradients(ts,1,lambda,NULL);CHKERRQ(ierr);
+    PetscLogStagePush(stage);
     ierr = TSAdjointSolve(ts);CHKERRQ(ierr);
+    PetscLogStagePop();
     ierr = VecDestroy(&lambda[0]);CHKERRQ(ierr);
   }
   ierr = PetscTime(&v2);CHKERRQ(ierr);
