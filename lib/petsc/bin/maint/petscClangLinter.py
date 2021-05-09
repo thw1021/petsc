@@ -1450,7 +1450,7 @@ def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,pr
   __doc__="""
   build the baseline set of compiler flags, these are passed to all translation unit parse attempts
   """
-  miscFlags        = ["-x","c++","-Wno-nullability-completeness"]
+  miscFlags        = ["-D","PETSC_CLANG_STATIC_ANALYZER","-x","c++","-Wno-nullability-completeness"]
   sysincludes      = getClangSysIncludes()
   petscIncludes    = getPetscExtraIncludes(petscDir,petscArch)
   compilerFlags    = sysincludes+miscFlags+petscIncludes+extraCompilerFlags
@@ -1465,7 +1465,7 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
     pchClangOptions = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
                        P_CXTranslationUnit_Incomplete |
                        P_CXTranslationUnit_ForSerialization)
-  megaHeaderLines = ["#include <petscastfix.hpp>","#include <petsc.h>"]
+  megaHeaderLines = ["#include <petsc.h>"]
   mansecimpls     = ["petscimpl.h","vecimpl.h","matimpl.h","dmimpl.h","kspimpl.h","snesimpl.h",
                      "tsimpl.h","taoimpl.h","isimpl.h","dtimpl.h","dmpleximpl.h","petscfeimpl.h",
                      "dmlabelimpl.h","dmdaimpl.h","sfimpl.h","viewerimpl.h","characteristicimpl.h"]
