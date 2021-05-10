@@ -1,5 +1,5 @@
---- /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidPointers.c	Wed May  5 12:19:08 2021
-+++ /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidPointers.c	Wed May  5 12:19:08 2021
+--- /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidPointers.c	Mon May 10 11:08:00 2021
++++ /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidPointers.c	Mon May 10 11:08:00 2021
 @@ -6,8 +6,8 @@
 -  PetscValidCharPointer(a,2);
 -  PetscValidIntPointer(b,3);

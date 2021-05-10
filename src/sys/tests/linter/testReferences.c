@@ -1,10 +1,10 @@
 /* for access to private vec members */
-#include <petsc/private/vecimpl.h>
+#include <petsc/private/viewerimpl.h>
 
 /* foward declare */
-void extractFunc(Vec,void**);
+void extractFunc(PetscViewer,void**);
 
-void testOutOfLineReference(Vec v, Vec v2)
+void testOutOfLineReference(PetscViewer v, PetscViewer v2)
 {
   /* linter should be able to connect all of these to v */
   void *foo = v->data,*bar,*baz,*blop;

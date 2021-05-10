@@ -1,41 +1,41 @@
-#include <petscsnes.h>
+#include <petscsys.h>
 
-void testValidHeaders(Mat m, Vec v, KSP k, SNES s)
+void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
 {
   /* incorrect */
-  PetscValidHeaderSpecificType(m,VEC_CLASSID,0,DMDA);
-  PetscValidHeaderSpecificType(v,KSP_CLASSID,0,DMDA);
-  PetscValidHeaderSpecificType(k,SNES_CLASSID,0,DMDA);
-  PetscValidHeaderSpecificType(s,MAT_CLASSID,0,DMDA);
+  PetscValidHeaderSpecificType(r,PETSC_VIEWER_CLASSID,0,DMDA);
+  PetscValidHeaderSpecificType(v,PETSC_DRAW_CLASSID,0,DMDA);
+  PetscValidHeaderSpecificType(d,PETSC_DRAWAXIS_CLASSID,0,DMDA);
+  PetscValidHeaderSpecificType(a,PETSC_RANDOM_CLASSID,0,DMDA);
 
   /* correct */
-  PetscValidHeaderSpecificType(m,MAT_CLASSID,1,DMDA);
-  PetscValidHeaderSpecificType(v,VEC_CLASSID,2,DMDA);
-  PetscValidHeaderSpecificType(k,KSP_CLASSID,3,DMDA);
-  PetscValidHeaderSpecificType(s,SNES_CLASSID,4,DMDA);
+  PetscValidHeaderSpecificType(r,PETSC_RANDOM_CLASSID,1,DMDA);
+  PetscValidHeaderSpecificType(v,PETSC_VIEWER_CLASSID,2,DMDA);
+  PetscValidHeaderSpecificType(d,PETSC_DRAW_CLASSID,3,DMDA);
+  PetscValidHeaderSpecificType(a,PETSC_DRAWAXIS_CLASSID,4,DMDA);
 
   /* incorrect */
-  PetscValidHeaderSpecific(m,KSP_CLASSID,0);
-  PetscValidHeaderSpecific(v,SNES_CLASSID,0);
-  PetscValidHeaderSpecific(k,MAT_CLASSID,0);
-  PetscValidHeaderSpecific(s,VEC_CLASSID,0);
+  PetscValidHeaderSpecific(r,PETSC_DRAW_CLASSID,0);
+  PetscValidHeaderSpecific(v,PETSC_DRAWAXIS_CLASSID,0);
+  PetscValidHeaderSpecific(d,PETSC_RANDOM_CLASSID,0);
+  PetscValidHeaderSpecific(a,PETSC_VIEWER_CLASSID,0);
 
   /* correct */
-  PetscValidHeaderSpecific(m,MAT_CLASSID,1);
-  PetscValidHeaderSpecific(v,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(k,KSP_CLASSID,3);
-  PetscValidHeaderSpecific(s,SNES_CLASSID,4);
+  PetscValidHeaderSpecific(r,PETSC_RANDOM_CLASSID,1);
+  PetscValidHeaderSpecific(v,PETSC_VIEWER_CLASSID,2);
+  PetscValidHeaderSpecific(d,PETSC_DRAW_CLASSID,3);
+  PetscValidHeaderSpecific(a,PETSC_DRAWAXIS_CLASSID,4);
 
   /* incorrect */
-  PetscValidHeader(m,55);
+  PetscValidHeader(r,55);
   PetscValidHeader(v,56);
-  PetscValidHeader(k,57);
-  PetscValidHeader(s,58);
+  PetscValidHeader(d,57);
+  PetscValidHeader(a,58);
 
   /* correct */
-  PetscValidHeader(m,1);
+  PetscValidHeader(r,1);
   PetscValidHeader(v,2);
-  PetscValidHeader(k,3);
-  PetscValidHeader(s,4);
+  PetscValidHeader(d,3);
+  PetscValidHeader(a,4);
   return;
 }
