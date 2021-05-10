@@ -266,7 +266,7 @@ PetscErrorCode  KSPGuessFischerSetModel(KSPGuess guess,PetscInt model,PetscInt s
   PetscFunctionBegin;
   PetscValidHeaderSpecific(guess,KSPGUESS_CLASSID,1);
   PetscValidLogicalCollectiveInt(guess,model,2);
-  PetscValidLogicalCollectiveInt(guess,model,3);
+  PetscValidLogicalCollectiveInt(guess,model,2);
   ierr = PetscTryMethod(guess,"KSPGuessFischerSetModel_C",(KSPGuess,PetscInt,PetscInt),(guess,model,size));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
