@@ -211,6 +211,16 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
   ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
+#ifdef PETSC_HAVE_LIBCEED
+  {
+    Ceed        ceed;
+    const char *usedresource;
+
+    ierr = DMGetCeed(*dm, &ceed);CHKERRQ(ierr);
+    ierr = CeedGetResource(ceed, &usedresource);CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject) *dm), "libCEED Backend: %s\n", usedresource);CHKERRQ(ierr);
+  }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -347,6 +357,7 @@ int main(int argc, char **argv)
   ierr = VecDuplicate(U, &V);CHKERRQ(ierr);
   ierr = VecDuplicate(Uloc, &Vloc);CHKERRQ(ierr);
 
+  /**/
   ierr = VecZeroEntries(V);CHKERRQ(ierr);
   ierr = VecZeroEntries(Vloc);CHKERRQ(ierr);
   ierr = VecGetArray(Vloc, &v);CHKERRQ(ierr);
