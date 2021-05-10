@@ -267,7 +267,7 @@ class ArgCursor(object):
     return typename
 
   @staticmethod
-  def getDerivedTypeNameFromCursor(cursor):
+  def getDerivedTypenameFromCursor(cursor):
     return cursor.type.spelling
 
   @staticmethod
@@ -283,6 +283,15 @@ class ArgCursor(object):
 
   def getFormattedSource(self,nbefore=0,nafter=0,nboth=0,view=False):
     return petscClangLinterUtil.getFormattedSourceFromCursor(self,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view)
+
+  @staticmethod
+  def getFormattedLocationStringFromCursor(cursor):
+    loc = cursor.location
+    return ":".join([loc.file.name,str(loc.column),str(loc.line)])
+
+  def getFormattedLocationString(self):
+    loc = self.location
+    return ":".join([loc.file.name,str(loc.column),str(loc.line)])
 
   @staticmethod
   def viewAstFromCursor(cursor):
@@ -350,7 +359,7 @@ class ArgCursor(object):
       self.__cursor        = cursor
       self.name            = ArgCursor.getNameFromCursor(cursor)
       self.typename        = ArgCursor.getTypenameFromCursor(cursor)
-      self.derivedtypename = ArgCursor.getDerivedTypeNameFromCursor(cursor)
+      self.derivedtypename = ArgCursor.getDerivedTypenameFromCursor(cursor)
       self.argidx          = idx
     return
 
@@ -364,8 +373,7 @@ class ArgCursor(object):
     return getattr(self.__cursor,attr)
 
   def __repr__(self):
-    loc    = self.location
-    locStr = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
+    locStr = self.getFormattedLocationString()
     srcStr = self.getFormattedSource(nboth=2)
     return "{}\n'{}' of derived type '{}', canonical type '{}'\n{}\n".format(locStr,self.name,self.derivedtypename,self.typename,srcStr)
 
@@ -921,152 +929,174 @@ def checkIsPetscBool(linter,obj,objType,**kwargs):
     linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscBool or bool".format(funcName=funcCursor.displayname))
   return
 
-def checkMatchingClassid(linter,obj,objClassid):
+def checkIsPetscObject(linter,obj):
+  __doc__="""
+  Returns True if obj is a valid PetscObject, otherwise False. Automatically adds the error to the linter. Raises RuntimeError if obj is a PetscObject that isn't registered in the classIdMap.
   """
-  Does the classid match the particular PETSc type
-  """
-  try:
-    expectedClassid = classIdMap[obj.typename]
-  except KeyError:
-    # The class doesn't exist, perhaps they passed in a wonky type, at the very least it
-    # isn't a petsc type
-    if not (obj.typename.startswith("_p_") or obj.typename.startswith("_n_")):
-      classFromClassId = list(classIdMap.keys())[list(classIdMap.values()).index(objClassid.name)]
-      linter.addWarningFromCursor(obj,"Non-PETSc type doesn't match classid. Expected type '{}' for '{}'".format(classFromClassId,objClassid.name))
-      return
+  if not obj.typename.startswith("_p_"):
+    linter.addErrorFromCursor(obj,"Non-PETSc type when PETSc object expected.")
+    return False
+  elif obj.typename not in classIdMap:
     # Raise exception here since this isn't a bad source, moreso a failure of
     # this script since it should know about all petsc classes
     raise RuntimeError("Unkown or invalid class "+str(obj))
-  if objClassid.name != expectedClassid:
-    fix = SourceFix(objClassid,expectedClassid)
-    linter.addErrorFromCursor(obj,"Classid doesn't match. Expected '{}' found '{}'".format(expectedClassid,objClassid.name),patch=fix)
+  validObject = True
+  pObjType = obj.type.get_canonical().get_pointee()
+  # Must have a struct here, e.g. _p_Vec
+  assert pObjType.kind == clx.TypeKind.RECORD
+  objFields = list(pObjType.get_fields())
+  if len(objFields) >= 2:
+    petscHeader = objFields[0]
+    if ArgCursor.getTypenameFromCursor(petscHeader) != "_p_PetscObject":
+      validObject = False
+    petscOps = objFields[1]
+    if ArgCursor.getNameFromCursor(petscOps) != "ops":
+      validObject = False
+  else:
+    validObject = False
+  if not validObject:
+    objDecl = ArgCursor(pObjType.get_declaration())
+    if len(objFields) == 0:
+      linter.addWarningFromCursor(obj,"Object '{}' of derived type '{}', canonical type '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n\n{}\n{}".format(objDecl.name,objDecl.derivedtypename,objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
+    else:
+      linter.addErrorFromCursor(obj,"Object '{}' of derived type '{}', canonical type '{}' is prefixed with '_p_' to indicate it is a PetscObject but its definition is missing a PETSCHEADER:\n\n{}\n{}".format(objDecl.name,objDecl.derivedtypename,objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
+  return validObject
+
+def checkMatchingClassid(linter,obj,objClassid):
+  __doc__="""
+  Does the classid match the particular PETSc type
+  """
+  if checkIsPetscObject(linter,obj):
+    expectedClassid = classIdMap[obj.typename]
+    if objClassid.name != expectedClassid:
+      fix = SourceFix(objClassid,expectedClassid)
+      linter.addErrorFromCursor(obj,"Classid doesn't match. Expected '{}' found '{}'".format(expectedClassid,objClassid.name),patch=fix)
   return
+
+def checkTraceableToParentArgs(obj,parentArgNames):
+  __doc__="""
+  Try and see if the cursor can be linked to parent function arguments. If it can be successfully linked return the index of the matched object otherwise raises ParsingError.
+
+  myFunction(barType bar)
+  ...
+  fooType foo = bar->baz;
+  macro(foo,barIdx);
+  /* or */
+  macro(bar->baz,barIdx);
+  /* or */
+  initFooFromBar(bar,&foo);
+  macro(foo,barIdx);
+  """
+  potentialParents = []
+  defCursor        = obj.get_definition()
+  if defCursor:
+    assert defCursor.location != obj.location, "Object has definition cursor, yet the cursor did not move. This should be handled!"
+    if defCursor.kind == clx.CursorKind.VAR_DECL:
+      # found definition, so were in business
+      # Parents here is an odd choice of words since on the very same line I loop
+      # over children, but then again clangs AST has an odd semantic for parents/children
+      convertOrDereferenceCursors = convertCursors|{clx.CursorKind.UNARY_OPERATOR}
+      for defChild in defCursor.get_children():
+        if defChild.kind in convertOrDereferenceCursors:
+          potentialParentsTemp = [child for child in defChild.walk_preorder() if child.kind == clx.CursorKind.DECL_REF_EXPR]
+          # Weed out any self-references
+          potentialParentsTemp = [parent for parent in potentialParentsTemp if parent.spelling != defCursor.spelling]
+          potentialParents.extend(potentialParentsTemp)
+    elif defCursor.kind == clx.CursorKind.FIELD_DECL:
+      # we have deduced that the original cursor may refer to a struct member
+      # reference, so we go back and see if indeed this is the case
+      for memberChild in obj.get_children():
+        if memberChild.kind == clx.CursorKind.MEMBER_REF_EXPR:
+          potentialParentsTemp = [c for c in memberChild.walk_preorder() if c.kind == clx.CursorKind.DECL_REF_EXPR]
+          potentialParentsTemp = [parent for parent in potentialParentsTemp if parent.spelling != memberChild.spelling]
+          potentialParents.extend(potentialParentsTemp)
+  elif obj.kind in convertCursors:
+    curs = [ArgCursor(c,obj.argidx) for c in obj.walk_preorder() if c.kind == clx.CursorKind.DECL_REF_EXPR]
+    if len(curs) > 1:
+      curs = [c for c in curs if c.displayname == obj.name]
+    assert len(curs) == 1, "Could not uniquely determine base cursor from conversion cursor {}".format(obj)
+    obj = curs[0]
+    # for cases with casting + struct member reference:
+    #
+    # macro((type *)bar->baz,barIdx);
+    #
+    # the object "name" will (rightly) refer to 'baz', but since this is an inline
+    # "definition" it doesn't show up in get_definition(), thus we check here
+    potentialParents.append(obj)
+  if not potentialParents:
+    # this is the if-all-else-fails approach, first we search the __entire__ file for
+    # references to the cursor. Once we have some matches we take the earliest one
+    # as this one is in theory where the current cursor is instantiated. Then we select
+    # the best match for the possible instantiating cursor and recursively call this
+    # function. This section stops when the cursor definition is of type PARM_DECL (i.e.
+    # defined as the function parameter to the parent function).
+    refsAll = obj.findCursorReferences()
+    # don't care about uses of object __after__ the macro, and don't want to pick up
+    # the actual macro location either
+    refsAll = [r for r in refsAll if r.location.line < obj.location.line]
+    # we just tried those and they didn't work, also more importantly weeds out the
+    # instantiation line if this is an intermediate cursor in a recursive call to this
+    # function
+    refsAll = [r for r in refsAll if r.kind not in {clx.CursorKind.VAR_DECL,clx.CursorKind.FIELD_DECL}]
+    assert len(refsAll), "Could not determine the origin of cursor {}".format(obj)
+    # take the first, as this is the earliest
+    firstRef  = refsAll[0]
+    tu,loc    = firstRef.translation_unit,firstRef.location
+    srcLen    = len(firstRef.getRawSource())
+    # why the following song and dance? Because you cannot walk the AST backwards, and
+    # in the case that the current cursor is in a function call we need to access
+    # our co-arguments to the function, i.e. "adjacent" branches since they should link
+    # to (or be) in the parent functions argument list. So we have to
+    # essentially reparse this line to be able to start from the top.
+    lineStart = clx.SourceLocation.from_position(tu,loc.file,loc.line,1)
+    lineEnd   = clx.SourceLocation.from_position(tu,loc.file,loc.line,srcLen+1)
+    lineRange = clx.SourceRange.from_locations(lineStart,lineEnd)
+    tGroup    = list(clx.TokenGroup.get_tokens(tu,lineRange))
+    funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind in functionTypes]
+    if funcProto:
+      import itertools
+
+      assert len(funcProto) == 1, "Could not determine unique function prototype from {} for provenance of {}".format("".join([t.spelling for t in tGroup]),obj)
+      idx        = funcProto[0]
+      lambdaExpr = lambda t: (t.spelling != ")") and t.kind in varTokens
+      iterator   = map(lambda x: x.cursor,itertools.takewhile(lambdaExpr,tGroup[idx+2:]))
+    # we now have completely different cursor selected, so we recursively call this
+    # function
+    else:
+      # not a function call, must be an assignment statement, meaning we should now
+      # assert that the current obj is being assigned to
+      assert ArgCursor.getNameFromCursor(tGroup[0].cursor) == obj.name
+      # find the binary operator, it will contain the most comprehensive AST
+      eqLoc    = list(map(lambda x: x.spelling,tGroup)).index("=")
+      iterator = tGroup[eqLoc].cursor.walk_preorder()
+      iterator = [c for c in iterator if c.kind == clx.CursorKind.DECL_REF_EXPR]
+    altCursor = [c for c in iterator if ArgCursor.getNameFromCursor(c) != obj.name]
+    potentialParents.extend(altCursor)
+  if not potentialParents:
+    raise ParsingError
+  # arguably at this point anything other than len(potentialParents) should be 1,
+  # and anything else can be considered a failure of this routine (therefore a RTE)
+  # as it should be able to detect the definition.
+  assert len(potentialParents) == 1, "Cannot determine a unique definition cursor for object"
+  # If >1 cursor, probably a bug since we should have weeded something out
+  parent = potentialParents[0]
+  if parent.get_definition().kind == clx.CursorKind.PARM_DECL:
+    name = ArgCursor.getNameFromCursor(parent)
+    try:
+      loc  = parentArgNames.index(name)
+    except ValueError as ve:
+      # name isn't in the parent arguments, so we raise parsing error from it
+      raise ParsingError from ve
+  else:
+    parent = ArgCursor(parent,obj.argidx)
+    # deeper into the rabbit hole
+    loc = checkTraceableToParentArgs(parent,parentArgNames)
+  return loc
 
 def checkMatchingArgNum(linter,obj,idx,parentArgs):
   __doc__="""
   Is the Arg # correct w.r.t. the function arguments
   """
-  def checkArgDefinition(obj,parentArgNames):
-    __doc__="""
-    Try and see if the cursor corresponds to:
-
-    myFunction(barType bar)
-    ...
-    fooType foo = bar->baz;
-    macro(foo,barIdx);
-    /* or */
-    macro(bar->baz,barIdx);
-    /* or */
-    initFooFromBar(bar,&foo);
-    macro(foo,barIdx);
-    """
-    potentialParents = []
-    defCursor        = obj.get_definition()
-    if defCursor:
-      assert defCursor.location != obj.location, "Object has definition cursor, yet the cursor did not move. This should be handled!"
-      if defCursor.kind == clx.CursorKind.VAR_DECL:
-        # found definition, so were in business
-        # Parents here is an odd choice of words since on the very same line I loop
-        # over children, but then again clangs AST has an odd semantic for parents/children
-        convertOrDereferenceCursors = convertCursors|{clx.CursorKind.UNARY_OPERATOR}
-        for defChild in defCursor.get_children():
-          if defChild.kind in convertOrDereferenceCursors:
-            potentialParentsTemp = [child for child in defChild.walk_preorder() if child.kind == clx.CursorKind.DECL_REF_EXPR]
-            # Weed out any self-references
-            potentialParentsTemp = [parent for parent in potentialParentsTemp if parent.spelling != defCursor.spelling]
-            potentialParents.extend(potentialParentsTemp)
-      elif defCursor.kind == clx.CursorKind.FIELD_DECL:
-        # we have deduced that the original cursor may refer to a struct member
-        # reference, so we go back and see if indeed this is the case
-        for memberChild in obj.get_children():
-          if memberChild.kind == clx.CursorKind.MEMBER_REF_EXPR:
-            potentialParentsTemp = [c for c in memberChild.walk_preorder() if c.kind == clx.CursorKind.DECL_REF_EXPR]
-            potentialParentsTemp = [parent for parent in potentialParentsTemp if parent.spelling != memberChild.spelling]
-            potentialParents.extend(potentialParentsTemp)
-    elif obj.kind in convertCursors:
-      curs = [ArgCursor(c,obj.argidx) for c in obj.walk_preorder() if c.kind == clx.CursorKind.DECL_REF_EXPR]
-      if len(curs) > 1:
-        curs = [c for c in curs if c.displayname == obj.name]
-      assert len(curs) == 1, "Could not uniquely determine base cursor from conversion cursor {}".format(obj)
-      obj = curs[0]
-      # for cases with casting + struct member reference:
-      #
-      # macro((type *)bar->baz,barIdx);
-      #
-      # the object "name" will (rightly) refer to 'baz', but since this is an inline
-      # "definition" it doesn't show up in get_definition(), thus we check here
-      potentialParents.append(obj)
-    if not potentialParents:
-      # this is the if-all-else-fails approach, first we search the __entire__ file for
-      # references to the cursor. Once we have some matches we take the earliest one
-      # as this one is in theory where the current cursor is instantiated. Then we select
-      # the best match for the possible instantiating cursor and recursively call this
-      # function. This section stops when the cursor definition is of type PARM_DECL (i.e.
-      # defined as the function parameter to the parent function).
-      refsAll = obj.findCursorReferences()
-      # don't care about uses of object __after__ the macro, and don't want to pick up
-      # the actual macro location either
-      refsAll = [r for r in refsAll if r.location.line < obj.location.line]
-      # we just tried those and they didn't work, also more importantly weeds out the
-      # instantiation line if this is an intermediate cursor in a recursive call to this
-      # function
-      refsAll = [r for r in refsAll if r.kind not in {clx.CursorKind.VAR_DECL,clx.CursorKind.FIELD_DECL}]
-      assert len(refsAll), "Could not determine the origin of cursor {}".format(obj)
-      # take the first, as this is the earliest
-      firstRef  = refsAll[0]
-      tu,loc    = firstRef.translation_unit,firstRef.location
-      srcLen    = len(firstRef.getRawSource())
-      # why the following song and dance? Because you cannot walk the AST backwards, and
-      # in the case that the current cursor is in a function call we need to access
-      # our co-arguments to the function, i.e. "adjacent" branches since they should link
-      # to (or be) in the parent functions argument list. So we have to
-      # essentially reparse this line to be able to start from the top.
-      lineStart = clx.SourceLocation.from_position(tu,loc.file,loc.line,1)
-      lineEnd   = clx.SourceLocation.from_position(tu,loc.file,loc.line,srcLen+1)
-      lineRange = clx.SourceRange.from_locations(lineStart,lineEnd)
-      tGroup    = list(clx.TokenGroup.get_tokens(tu,lineRange))
-      funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind in functionTypes]
-      if funcProto:
-        import itertools
-
-        assert len(funcProto) == 1, "Could not determine unique function prototype from {} for provenance of {}".format("".join([t.spelling for t in tGroup]),obj)
-        idx        = funcProto[0]
-        lambdaExpr = lambda t: (t.spelling != ")") and t.kind in varTokens
-        iterator   = map(lambda x: x.cursor,itertools.takewhile(lambdaExpr,tGroup[idx+2:]))
-      # we now have completely different cursor selected, so we recursively call this
-      # function
-      else:
-        # not a function call, must be an assignment statement, meaning we should now
-        # assert that the current obj is being assigned to
-        assert ArgCursor.getNameFromCursor(tGroup[0].cursor) == obj.name
-        # find the binary operator, it will contain the most comprehensive AST
-        eqLoc    = list(map(lambda x: x.spelling,tGroup)).index("=")
-        iterator = tGroup[eqLoc].cursor.walk_preorder()
-        iterator = [c for c in iterator if c.kind == clx.CursorKind.DECL_REF_EXPR]
-      altCursor = [c for c in iterator if ArgCursor.getNameFromCursor(c) != obj.name]
-      potentialParents.extend(altCursor)
-    if potentialParents:
-      # arguably at this point anything other than len(potentialParents) should be 1,
-      # and anything else can be considered a failure of this routine (therefore a RTE)
-      # as it should be able to detect the definition.
-      assert len(potentialParents) == 1, "Cannot determine a unique definition cursor for object"
-      # If >1 cursor, probably a bug since we should have weeded something out
-      parent = potentialParents[0]
-      if parent.get_definition().kind == clx.CursorKind.PARM_DECL:
-        name = ArgCursor.getNameFromCursor(parent)
-        try:
-          loc  = parentArgNames.index(name)
-        except ValueError as ve:
-          # name isn't in the parent arguments, so we raise parsing error from it
-          raise ParsingError from ve
-      else:
-        parent = ArgCursor(parent,obj.argidx)
-        # deeper into the rabbit hole
-        loc = checkArgDefinition(parent,parentArgNames)
-      return loc
-    else:
-      raise ParsingError
-
   if idx.canonical.kind not in mathCursors:
     # sometimes it is impossible to tell if the index is correct so this is a warnning not
     # an error. For example in the case of a loop:
@@ -1083,7 +1113,7 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
     matchLoc = parentArgNames.index(obj.name)
   except ValueError:
     try:
-      matchLoc = checkArgDefinition(obj,parentArgNames)
+      matchLoc = checkTraceableToParentArgs(obj,parentArgNames)
     except ParsingError:
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
@@ -1457,7 +1487,7 @@ def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,pr
   if verbose: print("\n".join([printPrefix+" Compile flags:",*compilerFlags]))
   return compilerFlags
 
-def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=None):
+def buildPrecompiledHeaderOld(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=None):
   __doc__="""
   create a precompiled header from petsc.h, and all of the major "impl" headers, this saves a lot of time since this includes almost every sub-header in petsc. Including petsc.h first should define almost everything we need so no side effects from including headers in the wrong order below.
   """
@@ -1482,12 +1512,91 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
   tu    = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
   if tu.diagnostics:
     print("\n".join(map(str,tu.diagnostics)))
-    raise clx.LibclangError("Warnings generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.")
+    raise clx.LibclangError("\n\nWarnings generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.")
   osRemoveSilent(precompiledHeader)
   tu.save(precompiledHeader)
   compilerFlags.extend(["-include-pch",precompiledHeader])
   return precompiledHeader
 
+def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=None):
+  __doc__="""
+  create a precompiled header from petsc.h, and all of the private headers, this not only saves a lot of time, but is critical to finding struct definitions. Header contents are not parsed during the actual linting, since this balloons the parsing time as libclang provides no builtin auto header-precompilation like the normal compiler does.
+
+  Including petsc.h first should define almost everything we need so no side effects from including headers in the wrong order below.
+  """
+  if pchClangOptions is None:
+    pchClangOptions = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
+                       P_CXTranslationUnit_Incomplete |
+                       P_CXTranslationUnit_ForSerialization |
+                       P_CXTranslationUnit_KeepGoing)
+  index             = clx.Index.create()
+  precompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.pch")
+  megaHeaderLines   = [("petsc.h","#include <petsc.h>")]
+  privateDirName    = os.path.join(petscDir,"include","petsc","private")
+  # build a megaheader from every header in private first
+  for headerFile in os.listdir(privateDirName):
+    if headerFile.endswith((".h",".hpp")):
+      megaHeaderLines.append((headerFile,"#include <petsc/private/{}>".format(headerFile)))
+  while True:
+    # loop until we get a completely clean compilation, any problematic headers are simply
+    # discarded
+    megaHeader = "\n".join(hfi for _,hfi in megaHeaderLines)+"\n"  # extra newline for last line
+    tu = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
+    diags = {}
+    for diag in tu.diagnostics:
+      try:
+        filename = diag.location.file.name
+      except AttributeError:
+        continue
+      basename,filename = os.path.split(filename)
+      if filename not in diags:
+        # save the problematic header name as well as its path (a surprise tool that will
+        # help us later)
+        diags[filename] = (basename,diag)
+    for dirname,diag in tuple(diags.values()):
+      # the reason this is done twice is because as usual libclang hides
+      # everything in children. Suppose you have a primary header A (which might be
+      # include/petsc/private/headerA.h), header B and header C. Header B and C are in
+      # unknown locations and all we know is that Header A includes B which includes C.
+      #
+      # Now suppose header C is missing, meaning that Header A needs to be removed.
+      # libclang isn't gonna tell you that without some elbow grease since that would be
+      # far too easy. Instead it raises the error about header B, so we need to link it
+      # back to header A.
+      if dirname != privateDirName:
+        # problematic header is NOT in include/petsc/private, so we have a header B on our
+        # hands
+        for child in diag.children:
+          # child of header B here is header A not header C
+          filename = child.location.file.name
+          # filter out our fake header
+          if filename != "megaHeader.hpp":
+            # this will be include/petsc/private, headerA.h
+            basename,filename = os.path.split(filename)
+            if filename not in diags:
+              diags[filename] = (basename,diag)
+    if diags:
+      diagerrs = map(str,(d for _,d in diags.values()))
+      print(printPrefix,"Included header has errors, removing","\n"+"\n".join(diagerrs))
+      megaHeaderLines = [(hdr,hfi) for hdr,hfi in megaHeaderLines if hdr not in diags]
+    else:
+      break
+  if extraHeaderIncludes:
+    # now include the other headers but this time immediately crash on errors, let the
+    # user figure out their own busted header files
+    megaHeader = megaHeader+"\n".join(extraHeaderIncludes)
+    if verbose:
+      print("\n".join([printPrefix+" Mega header:",megaHeader]))
+    tu = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
+    if tu.diagnostics:
+      print("\n".join(map(str,tu.diagnostics)))
+      raise clx.LibclangError("\n\nWarnings generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.")
+  elif verbose:
+    print("\n".join([printPrefix+" Mega header:",megaHeader]))
+  osRemoveSilent(precompiledHeader)
+  tu.save(precompiledHeader)
+  compilerFlags.extend(["-include-pch",precompiledHeader])
+  return precompiledHeader
 
 
 """Main functions for root and queue processes"""
@@ -1515,7 +1624,7 @@ def testMain(petscDir,testDir,patches,replace=False,verbose=False):
       testFile = testFiles[mangledBase]
     except KeyError:
       print("\tNOT OK ",shortName)
-      patchError[filename] = "File had no corresponding test '{}'".format(os.path.join(testDir,mangledBase))
+      patchError[filename] = "File had no corresponding test: '{}'\n".format(os.path.join(testDir,mangledBase))
       continue
     # skip first 2 lines containing path
     patchLines = patch.splitlines(True)[2:]
@@ -1699,6 +1808,16 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
 
 if __name__ == "__main__":
   import argparse
+  def str2bool(v):
+    if isinstance(v,bool):
+      return v
+    v = v.lower()
+    if v in {"yes","true","t","y","1"}:
+      return True
+    elif v in {"no","false","f","n","0",""}:
+      return False
+    else:
+      raise argparse.ArgumentTypeError("Boolean value expected, got '{}'".format(v))
 
   clangDir = tryToFindLibclangDir()
   try:
@@ -1712,17 +1831,6 @@ if __name__ == "__main__":
   except KeyError:
     petscArch = None
 
-  def str2bool(v):
-    if isinstance(v,bool):
-      return v
-    v = v.lower()
-    if v in {"yes","true","t","y","1"}:
-      return True
-    elif v in {"no","false","f","n","0",""}:
-      return False
-    else:
-      raise argparse.ArgumentTypeError("Boolean value expected, got '{}'".format(v))
-
   parser = argparse.ArgumentParser(description="set options for clang static analysis tool",formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   grouplibclang = parser.add_argument_group(title="libclang location settings")
   group = grouplibclang.add_mutually_exclusive_group(required=False)
@@ -1735,7 +1843,7 @@ if __name__ == "__main__":
   parser.add_argument("-v","--verbose",required=False,type=str2bool,nargs="?",const=True,default=False,help="verbose progress printed to screen")
   filterFuncChoices = ", ".join(list(checkFunctionMap.keys()))
   parser.add_argument("-f","--functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="funcs")
-  parser.add_argument("-j","--jobs",required=False,type=int,default=-1,nargs="?",help="number of multiprocessing jobs, -1 means number of processors on machine")
+  parser.add_argument("-j","--jobs",required=False,type=int,const=-1,default=-1,nargs="?",help="number of multiprocessing jobs, -1 means number of processors on machine")
   parser.add_argument("-p","--patch-dir",required=False,help="directory to store patches in if they are generated, defaults to SRC_DIR/../petscLintPatches",dest="patchdir")
   parser.add_argument("-a","--apply-patches",required=False,type=str2bool,nargs="?",const=True,default=False,help="automatically apply patches that are saved to file",dest="apply")
   parser.add_argument("--CXXFLAGS",required=False,nargs="+",default=[],help="extra flags to pass to CXX compiler",dest="cxxflags")
