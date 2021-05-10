@@ -159,7 +159,7 @@ class ParsingError(Exception):
   """
   pass
 
-class ArgCursor(object):
+class PetscCursor(object):
   @staticmethod
   def getNameFromCursor(cursor):
     __doc__="""
@@ -175,8 +175,8 @@ class ArgCursor(object):
       loc      = cursor.location
       locStr   = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
       # Does not yet raise exception so we can call it here
-      typename = ArgCursor.getTypenameFromCursor(cursor)
-      srcStr   = ArgCursor.getFormattedSourceFromCursor(cursor,nboth=2)
+      typename = PetscCursor.getTypenameFromCursor(cursor)
+      srcStr   = PetscCursor.getFormattedSourceFromCursor(cursor,nboth=2)
       return "'{}' of kind '{}' of type '{}' at {}:\n{}".format(name,kind,typename,locStr,srcStr)
 
     name = None
@@ -205,7 +205,7 @@ class ArgCursor(object):
         raise RuntimeError("Cannot determine castee from the caster for cursor {}".format(errorViewFromCursor(cursor)))
       # Easer to do some mild recursion to figure out the naming for us than duplicate
       # the code. Perhaps this should have some sort of recursion check
-      name = ArgCursor.getNameFromCursor(castee[0])
+      name = PetscCursor.getNameFromCursor(castee[0])
     elif (cursor.type.get_canonical().kind == clx.TypeKind.POINTER) or (cursor.kind == clx.CursorKind.UNEXPOSED_EXPR):
       pointees = []
       if cursor.type.get_pointee().kind  == clx.TypeKind.CHAR_S:
@@ -221,7 +221,7 @@ class ArgCursor(object):
           pointees = [c for c in cursor.walk_preorder() if c.type.kind == clx.TypeKind.POINTER]
       pointees = list({p.spelling: p for p in pointees}.values())
       if len(pointees) == 1:
-          name = ArgCursor.getNameFromCursor(pointees[0])
+          name = PetscCursor.getNameFromCursor(pointees[0])
     if not name:
       # Catchall last attempt, we become the very thing we swore to destroy and parse the
       # tokens ourselves
@@ -235,7 +235,7 @@ class ArgCursor(object):
         # and PetscKernel_XXX absolutely __brick__ the AST. The resultant cursors have no
         # children, no name, no tokens, and a completely incorrect SourceLocation.
         # They are for all intents and purposes uncheckable :)
-        srcstr = petscClangLinterUtil.getRawSourceFromCursor(cursor)
+        srcstr = PetscCursor.getRawSourceFromCursor(cursor)
         if "PETSC_HASH" in srcstr:
           if "_MAP" in srcstr:
             raise ParsingError("Encountered unparsable PETSC_HASH_MAP for cursor {}".format(errorViewFromCursor(cursor)))
@@ -298,7 +298,7 @@ class ArgCursor(object):
     return print("\n".join(petscClangLinterUtil.viewAstFromCursor(cursor)))
 
   def viewAst(self):
-    return ArgCursor.viewAstFromCursor(self)
+    return PetscCursor.viewAstFromCursor(self)
 
   @staticmethod
   def findCursorReferencesFromCursor(cursor):
@@ -328,7 +328,7 @@ class ArgCursor(object):
         # have all we need to remake the python object from scratch
         cursor = clx.Cursor.from_location(origCursor.translation_unit,srcRange.start)
         try:
-          cursor = ArgCursor(cursor)
+          cursor = PetscCursor(cursor)
           foundCursors.append(cursor)
         except ParsingError:
           pass
@@ -341,25 +341,25 @@ class ArgCursor(object):
     pyCtx      = ctypes.py_object(cursor) # pyCtx = (PyObject *)cursor;
     callBack   = callbackProto(CXCursorAndRangeVisitor.callBack)
     cxCallback = CXCursorAndRangeVisitor(pyCtx,callBack)
-    clx.conf.lib.clang_findReferencesInFile(cursor._ArgCursor__cursor,cursor.location.file,cxCallback)
+    clx.conf.lib.clang_findReferencesInFile(cursor._PetscCursor__cursor,cursor.location.file,cxCallback)
     return foundCursors
 
   def findCursorReferences(self):
-    return ArgCursor.findCursorReferencesFromCursor(self)
+    return PetscCursor.findCursorReferencesFromCursor(self)
 
   def __init__(self,cursor,idx=-12345):
-    assert isinstance(cursor,clx.Cursor) or isinstance(cursor,ArgCursor)
-    if isinstance(cursor,ArgCursor):
-      self.__cursor        = cursor._ArgCursor__cursor
+    assert isinstance(cursor,(clx.Cursor,PetscCursor))
+    if isinstance(cursor,PetscCursor):
+      self.__cursor        = cursor._PetscCursor__cursor
       self.name            = cursor.name
       self.typename        = cursor.typename
       self.derivedtypename = cursor.derivedtypename
       self.argidx          = cursor.argidx if idx == -12345 else idx
     else:
       self.__cursor        = cursor
-      self.name            = ArgCursor.getNameFromCursor(cursor)
-      self.typename        = ArgCursor.getTypenameFromCursor(cursor)
-      self.derivedtypename = ArgCursor.getDerivedTypenameFromCursor(cursor)
+      self.name            = PetscCursor.getNameFromCursor(cursor)
+      self.typename        = PetscCursor.getTypenameFromCursor(cursor)
+      self.derivedtypename = PetscCursor.getDerivedTypenameFromCursor(cursor)
       self.argidx          = idx
     return
 
@@ -378,19 +378,18 @@ class ArgCursor(object):
     return "{}\n'{}' of derived type '{}', canonical type '{}'\n{}\n".format(locStr,self.name,self.derivedtypename,self.typename,srcStr)
 
 class SourceFix(object):
-  def __init__(self,cursor,value):
-    self.filename  = cursor.location.file.name
-    self.startLine = cursor.extent.start.line
+  def __init__(self,filename,src,startline,begin,end,value):
+    self.filename  = filename
+    self.src       = src
+    self.startLine = startline
     if self.startLine < 1:
       raise RuntimeError("startline {} < 1".format(self.startLine))
-    begin,end      = cursor.extent.start.column-1,cursor.extent.end.column-1
     if end <= begin:
       raise RuntimeError("end <= begin, ill-formed source fix")
     self.begins    = [begin]
     self.ends      = [end]
-    self.src       = ArgCursor.getRawSourceFromCursor(cursor)
     value,replace  = str(value),self.src[begin:end]
-    if replace == value:
+    if value == replace:
       # this is an error, since previous detection should not have created a fix
       raise RuntimeError("trying to replace {} with itself".format(replace))
     self.replace   = [replace]
@@ -398,6 +397,14 @@ class SourceFix(object):
     self.fixed     = None
     self.fixDepth  = 0
     return
+
+  @classmethod
+  def fromCursor(cls,cursor,value):
+    fname     = cursor.location.file.name
+    src       = PetscCursor.getRawSourceFromCursor(cursor)
+    startline = cursor.extent.start.line
+    begin,end = cursor.extent.start.column-1,cursor.extent.end.column-1
+    return cls(fname,src,startline,begin,end,value)
 
   def appendFix(self,fix):
     assert isinstance(fix,SourceFix)
@@ -409,7 +416,7 @@ class SourceFix(object):
     self.deltas.extend(fix.deltas)
     return
 
-  def mergeCollapse(self):
+  def collapse(self):
     __doc__="""
     Collapses a list of fixes and produces a fixed src line.
     Fixes probably should not overwrite each other (for now), so we error out, but this
@@ -490,7 +497,7 @@ class SourceFix(object):
               yield "-"+line
           if tag in inserts:
             for line in groupB[j1:j2]:
-              yield "+"+line
+              yield "+"+line if line else ""
 
 class FilterFunctor(object):
   def __init__(self,expected,funcCursor,pointer=False,notPointerHook=None,pointerHook=None,successHook=None,failureHook=None,**kwargs):
@@ -637,6 +644,36 @@ class PetscLinter(object):
       checkFunctionMap[func.spelling](self,func,parent)
     return
 
+  def processRemoveDuplicates(self,tu):
+    raise NotImplementedError("Not functioning, requires informmation about the scope of a cursor to accurately detect duplicate calls")
+    processedFuncs = {}
+    for func,parent in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
+      checkFunctionMap[func.spelling](self,func,parent)
+      func  = PetscCursor(func)
+      pname = PetscCursor.getNameFromCursor(parent)
+      try:
+        processedFuncs[pname].append(func)
+      except KeyError:
+        processedFuncs[pname] = [func]
+    for func in processedFuncs.values():
+      seen = {}
+      for f in func:
+        try:
+          combo = tuple([f.name]+[PetscCursor.getNameFromCursor(a) for a in f.get_arguments()])
+        except ParsingError:
+          continue
+        if combo not in seen:
+          seen[combo] = f
+          continue
+        seenStart = seen[combo].extent.start.line
+        fname     = f.location.file.name
+        src       = f.getRawSource()
+        startline = f.extent.start.line
+        begin,end = 0,len(src)
+        patch     = SourceFix(fname,src,startline,begin,end,"")
+        self.addErrorFromCursor(f,"Duplicate function found previous identical usage:\n\n{}".format(seen[combo].getFormattedSource(nbefore=2,nafter=startline-seenStart)),patch=patch)
+    return
+
   def addErrorFromCursor(self,locCursor,errMsg,patch=None):
     errPrefix = str(locCursor)
     errMess   = "".join(["\nERROR {}: ".format(len(self.errors)),errPrefix,"\n",errMsg])
@@ -651,11 +688,13 @@ class PetscLinter(object):
       return
     # check if this is a compound error, i.e. an additional error on the same line
     # in which case we need to combine with previous patch
-    if patch.startLine == self.patches[patch.filename][-2].startLine:
-      # remove ourselves from the list
-      patch = self.patches[patch.filename].pop()
-      # this should now be the previous patch on the same line, so we combine with it
-      self.patches[patch.filename][-1].appendFix(patch)
+    for prevPatch in self.patches[patch.filename][:-1]:
+      if prevPatch.startLine == patch.startLine:
+        # remove ourselves from the list
+        patch = self.patches[patch.filename].pop()
+        # this should now be the previous patch on the same line, so we combine with it
+        prevPatch.appendFix(patch)
+        break
     return
 
   def getAllErrors(self):
@@ -694,7 +733,7 @@ class PetscLinter(object):
     combinedPatches = []
     for filename,patches in self.patches.items():
       for p in patches:
-        p.mergeCollapse()
+        p.collapse()
       srcList   = [(p.src,p.startLine) for p in patches]
       fixedList = [(p.fixed,p.startLine) for p in patches]
       unified   = "".join(SourceFix.fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename))
@@ -829,7 +868,7 @@ def addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName):
   """
   call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
   assert len(call) == 1
-  fix = SourceFix(call[0],validFuncName)
+  fix = SourceFix.fromCursor(call[0],validFuncName)
   linter.addErrorFromCursor(obj,"Incorrect use of {}(), use {}() instead".format(funcCursor.displayname,validFuncName),patch=fix)
   return
 
@@ -947,15 +986,15 @@ def checkIsPetscObject(linter,obj):
   objFields = list(pObjType.get_fields())
   if len(objFields) >= 2:
     petscHeader = objFields[0]
-    if ArgCursor.getTypenameFromCursor(petscHeader) != "_p_PetscObject":
+    if PetscCursor.getTypenameFromCursor(petscHeader) != "_p_PetscObject":
       validObject = False
     petscOps = objFields[1]
-    if ArgCursor.getNameFromCursor(petscOps) != "ops":
+    if PetscCursor.getNameFromCursor(petscOps) != "ops":
       validObject = False
   else:
     validObject = False
   if not validObject:
-    objDecl = ArgCursor(pObjType.get_declaration())
+    objDecl = PetscCursor(pObjType.get_declaration())
     if len(objFields) == 0:
       linter.addWarningFromCursor(obj,"Object '{}' of derived type '{}', canonical type '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n\n{}\n{}".format(objDecl.name,objDecl.derivedtypename,objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
     else:
@@ -969,7 +1008,7 @@ def checkMatchingClassid(linter,obj,objClassid):
   if checkIsPetscObject(linter,obj):
     expectedClassid = classIdMap[obj.typename]
     if objClassid.name != expectedClassid:
-      fix = SourceFix(objClassid,expectedClassid)
+      fix = SourceFix.fromCursor(objClassid,expectedClassid)
       linter.addErrorFromCursor(obj,"Classid doesn't match. Expected '{}' found '{}'".format(expectedClassid,objClassid.name),patch=fix)
   return
 
@@ -1011,7 +1050,7 @@ def checkTraceableToParentArgs(obj,parentArgNames):
           potentialParentsTemp = [parent for parent in potentialParentsTemp if parent.spelling != memberChild.spelling]
           potentialParents.extend(potentialParentsTemp)
   elif obj.kind in convertCursors:
-    curs = [ArgCursor(c,obj.argidx) for c in obj.walk_preorder() if c.kind == clx.CursorKind.DECL_REF_EXPR]
+    curs = [PetscCursor(c,obj.argidx) for c in obj.walk_preorder() if c.kind == clx.CursorKind.DECL_REF_EXPR]
     if len(curs) > 1:
       curs = [c for c in curs if c.displayname == obj.name]
     assert len(curs) == 1, "Could not uniquely determine base cursor from conversion cursor {}".format(obj)
@@ -1065,12 +1104,12 @@ def checkTraceableToParentArgs(obj,parentArgNames):
     else:
       # not a function call, must be an assignment statement, meaning we should now
       # assert that the current obj is being assigned to
-      assert ArgCursor.getNameFromCursor(tGroup[0].cursor) == obj.name
+      assert PetscCursor.getNameFromCursor(tGroup[0].cursor) == obj.name
       # find the binary operator, it will contain the most comprehensive AST
       eqLoc    = list(map(lambda x: x.spelling,tGroup)).index("=")
       iterator = tGroup[eqLoc].cursor.walk_preorder()
       iterator = [c for c in iterator if c.kind == clx.CursorKind.DECL_REF_EXPR]
-    altCursor = [c for c in iterator if ArgCursor.getNameFromCursor(c) != obj.name]
+    altCursor = [c for c in iterator if PetscCursor.getNameFromCursor(c) != obj.name]
     potentialParents.extend(altCursor)
   if not potentialParents:
     raise ParsingError
@@ -1081,14 +1120,14 @@ def checkTraceableToParentArgs(obj,parentArgNames):
   # If >1 cursor, probably a bug since we should have weeded something out
   parent = potentialParents[0]
   if parent.get_definition().kind == clx.CursorKind.PARM_DECL:
-    name = ArgCursor.getNameFromCursor(parent)
+    name = PetscCursor.getNameFromCursor(parent)
     try:
       loc  = parentArgNames.index(name)
     except ValueError as ve:
       # name isn't in the parent arguments, so we raise parsing error from it
       raise ParsingError from ve
   else:
-    parent = ArgCursor(parent,obj.argidx)
+    parent = PetscCursor(parent,obj.argidx)
     # deeper into the rabbit hole
     loc = checkTraceableToParentArgs(parent,parentArgNames)
   return loc
@@ -1118,12 +1157,12 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
       # anything here but emit a warning
-      parentFunc = ArgCursor(parentArgs[0].semantic_parent)
+      parentFunc = PetscCursor(parentArgs[0].semantic_parent)
       linter.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{}()' seemingly does not contain the object:\n\n{}".format(parentFunc.name,parentFunc.getFormattedSource()))
       return
   if idxNum != parentArgs[matchLoc].argidx:
     errMess = "Argument number doesn't match for '{}'. Found '{}' expected '{}' from\n\n{}".format(obj.name,str(idxNum),str(parentArgs[matchLoc].argidx),parentArgs[matchLoc].getFormattedSource())
-    fix = SourceFix(idx,parentArgs[matchLoc].argidx)
+    fix = SourceFix.fromCursor(idx,parentArgs[matchLoc].argidx)
     linter.addErrorFromCursor(idx,errMess,patch=fix)
   return
 
@@ -1163,8 +1202,8 @@ def checkObjIdxGenericN(linter,func,parent):
   For generic checks where the form is func(obj1,idx1,...,objN,idxN)
   """
   try:
-    funcArgs   = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ParsingError as pe:
     # add warning since it isn't a source error but rather a parsing failure
     linter.addWarning(str(pe))
@@ -1178,8 +1217,8 @@ def checkPetscValidHeaderSpecificType(linter,func,parent):
   Specific check for PetscValidHeaderSpecificType(obj,classid,idx,type)
   """
   try:
-    funcArgs   = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ParsingError as pe:
     linter.addWarning(str(pe))
     return
@@ -1194,8 +1233,8 @@ def checkPetscValidHeaderSpecific(linter,func,parent):
   Specific check for PetscValidHeaderSpecific(obj,classid,idx)
   """
   try:
-    funcArgs   = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ParsingError as pe:
     linter.addWarning(str(pe))
     return
@@ -1209,8 +1248,8 @@ def checkPetscValidPointerAndType(linter,func,parent,filterFunctor):
   Generic check for PetscValidXXXPointer(obj,idx)
   """
   try:
-    funcArgs   = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ParsingError as pe:
     linter.addWarning(str(pe))
     return
@@ -1265,8 +1304,8 @@ def checkPetscValidLogicalCollective(linter,func,parent,filterFunctor):
   Generic check for PetscValidLogicalCollectiveXXX(pobj,obj,idx)
   """
   try:
-    funcArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(ArgCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
+    funcArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
+    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
   except ParsingError as pe:
     linter.addWarning(str(pe))
     return
@@ -1682,6 +1721,7 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
       returnQueue.put((QueueSignal.UNIFIED_DIFF,linter.coalescePatches()))
       returnQueue.put((QueueSignal.ERRORS_LEFT ,linter.getErrorsLeft()))
       returnQueue.put((QueueSignal.WARNING     ,linter.getAllWarnings()))
+      lockPrint(linter.getAllErrors())
       linter.clear()
       fileQueue.task_done()
     lockPrint(printPrefix,15*"=","Exiting queue",15*"=")
