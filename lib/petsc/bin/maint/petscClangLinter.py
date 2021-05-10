@@ -583,7 +583,7 @@ class PetscLinter(object):
   @staticmethod
   def findFunctionCallExpr(tu,functionNames):
     __doc__="""
-    Finds all function call expressions in container macroNames.
+    Finds all function call expressions in container functionNames.
 
     Note that if a particular function call is not 100% correctly defined (i.e. would the
     file actually compile) then it will not be picked up by clang AST.
@@ -1712,6 +1712,17 @@ if __name__ == "__main__":
   except KeyError:
     petscArch = None
 
+  def str2bool(v):
+    if isinstance(v,bool):
+      return v
+    v = v.lower()
+    if v in {"yes","true","t","y","1"}:
+      return True
+    elif v in {"no","false","f","n","0",""}:
+      return False
+    else:
+      raise argparse.ArgumentTypeError("Boolean value expected, got '{}'".format(v))
+
   parser = argparse.ArgumentParser(description="set options for clang static analysis tool",formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   grouplibclang = parser.add_argument_group(title="libclang location settings")
   group = grouplibclang.add_mutually_exclusive_group(required=False)
@@ -1721,15 +1732,15 @@ if __name__ == "__main__":
   grouppetsc.add_argument("--PETSC_DIR",required=False,default=petscDir,help="if this option is unused defaults to environment variable $PETSC_DIR",dest="petscdir")
   grouppetsc.add_argument("--PETSC_ARCH",required=False,default=petscArch,help="if this option is unused defaults to environment variable $PETSC_ARCH",dest="petscarch")
   parser.add_argument("-s","--src-dir",required=False,default=defaultSrcDir,help="Alternate base directory of source tree (e.g. $SLEPC_DIR/src)",dest="src")
-  parser.add_argument("-v","--verbose",required=False,action="store_true",help="verbose progress printed to screen")
+  parser.add_argument("-v","--verbose",required=False,type=str2bool,nargs="?",const=True,default=False,help="verbose progress printed to screen")
   filterFuncChoices = ", ".join(list(checkFunctionMap.keys()))
   parser.add_argument("-f","--functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="funcs")
   parser.add_argument("-j","--jobs",required=False,type=int,default=-1,nargs="?",help="number of multiprocessing jobs, -1 means number of processors on machine")
-  parser.add_argument("-p","--patch-dir",required=False,help="directory to store patches in if they are generated",dest="patchdir")
-  parser.add_argument("-a","--apply-patches",required=False,action="store_true",help="automatically apply patches that are saved to file",dest="apply")
+  parser.add_argument("-p","--patch-dir",required=False,help="directory to store patches in if they are generated, defaults to SRC_DIR/../petscLintPatches",dest="patchdir")
+  parser.add_argument("-a","--apply-patches",required=False,type=str2bool,nargs="?",const=True,default=False,help="automatically apply patches that are saved to file",dest="apply")
   parser.add_argument("--CXXFLAGS",required=False,nargs="+",default=[],help="extra flags to pass to CXX compiler",dest="cxxflags")
-  parser.add_argument("--test",required=False,nargs="?",const="__at_src__",help="test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to srcDir/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out")
-  parser.add_argument("--replace",required=False,action="store_true",help="replace output files in test directory with patches generated")
+  parser.add_argument("--test",required=False,nargs="?",const="__at_src__",help="test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to SRC_DIR/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out")
+  parser.add_argument("--replace",required=False,type=str2bool,nargs="?",const=True,default=False,help="replace output files in test directory with patches generated")
   args = parser.parse_args()
 
   if args.petscdir is None:

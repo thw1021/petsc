@@ -1,17 +1,17 @@
-#include <petscsnes.h>
+#include <petscsys.h>
 
-void testTypes(Mat m, Vec v, KSP k, SNES s)
+void testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
 {
   /* incorrect */
-  PetscValidType(m,-1);
-  PetscCheckSameType(m,-1,v,-1);
-  PetscCheckSameComm(k,-2,s,-2);
-  PetscCheckSameTypeAndComm(m,-3,s,-3);
+  PetscValidType(r,-1);
+  PetscCheckSameType(r,-1,v,-1);
+  PetscCheckSameComm(o,-2,f,-2);
+  PetscCheckSameTypeAndComm(r,-3,f,-3);
 
   /* correct */
-  PetscValidType(m,1);
-  PetscCheckSameType(m,1,v,2);
-  PetscCheckSameComm(k,3,s,4);
-  PetscCheckSameTypeAndComm(m,1,s,4);
+  PetscValidType(r,1);
+  PetscCheckSameType(r,1,v,2);
+  PetscCheckSameComm(o,3,f,4);
+  PetscCheckSameTypeAndComm(r,1,f,4);
   return;
 }

@@ -1,8 +1,8 @@
-#include <petscvec.h>
+#include <petscsys.h>
 
 void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
 {
-  Vec v; /* dummy variable to satisfy the PetscObject for the following */
+  PetscViewer v; /* dummy variable to satisfy the PetscObject for the following */
 
   /* incorrect */
   PetscValidLogicalCollectiveInt(v,d,2);

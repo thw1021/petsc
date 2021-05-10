@@ -1,5 +1,5 @@
---- /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidLogicalCollective.c	Wed May  5 12:19:08 2021
-+++ /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidLogicalCollective.c	Wed May  5 12:19:08 2021
+--- /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidLogicalCollective.c	Mon May 10 11:08:00 2021
++++ /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidLogicalCollective.c	Mon May 10 11:08:00 2021
 @@ -8,6 +8,6 @@
 -  PetscValidLogicalCollectiveInt(v,d,2);
 -  PetscValidLogicalCollectiveEnum(v,e,3);
