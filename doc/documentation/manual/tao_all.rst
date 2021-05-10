@@ -1,29 +1,31 @@
 TAO Users Manual
 ================
 
-| 
-| **Mathematics and Computer Science Division**
+.. admonition:: Migration in progress
 
-.. image:: ArgonneReportTemplatePage2.pdf
-   :alt: image
+  The TAO manual is being migrated to Sphinx, and has not been thoroughly re-checked.
+  The previous, LaTeX manual is available `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/tao_manual.pdf>`__.
+
+
+**Argonne National Laboratory**
+
+**Mathematics and Computer Science Division**
 
 --------------
 
-| Prepared by
-| **Alp Dener
-  Adam Denchfield
-  Hansol Suh
-  Todd Munson
-  Jason Sarich
-  Stefan Wild
-  Steven Benson
-  Lois Curfman McInnes**
-| March 2021
+Prepared by
 
-| This work was supported by the Office of Advanced Scientific Computing
-  Research,
-| Office of Science, U.S. Department of Energy, under Contract
-  DE-AC02-06CH11357.
+**Alp Dener**,
+**Adam Denchfield**,
+**Hansol Suh**,
+**Todd Munson**,
+**Jason Sarich**,
+**Stefan Wild**,
+**Steven Benson**, and
+**Lois Curfman McInnes**
+
+This work was supported by the Office of Advanced Scientific Computing Research,
+Office of Science, U.S. Department of Energy, under Contract DE-AC02-06CH11357.
 
 Preface
 =======
@@ -167,8 +169,14 @@ higher-level application frameworks. Our design decisions are strongly
 motivated by the challenges inherent in the use of large-scale
 distributed memory architectures and the reality of working with large
 and often poorly structured legacy codes for specific applications.
-Figure `[tao:design] <#tao:design>`__ illustrates how the TAO software
+:numref:`fig_tao_design` illustrates how the TAO software
 works with external libraries and application code.
+
+
+.. figure:: images/taofig.svg
+  :name: fig_tao_design
+
+  TAO Design
 
 The TAO solvers use fundamental PETSc objects to define and solve
 optimization problems: vectors, matrices, index sets, and linear
@@ -246,7 +254,7 @@ using TAO:
 #. Select the example program matching the application most closely, and
    use it as a starting point for developing a customized code.
 
-.. _sec_simple:
+.. _sec_tao_simple:
 
 A Simple TAO Example
 --------------------
@@ -420,7 +428,7 @@ The :doc:`/documentation/manual/index` discusses
 various matrix formats as well as the details of some basic matrix
 manipulation routines.
 
-.. _sec_options:
+.. _sec_tao_options:
 
 The Options Database
 ~~~~~~~~~~~~~~~~~~~~
@@ -562,7 +570,7 @@ A TAO solver can be created by calling the
       TaoCreate(MPI_Comm comm,Tao *newsolver);
 
 routine. Much like creating PETSc vector and matrix objects, the first
-argument is an MPI *communicator*. An MPI :cite:`using-mpi`
+argument is an MPI *communicator*. An MPI [#mpi]_
 communicator indicates a collection of processors that will be used to
 evaluate the objective function, compute constraints, and provide
 derivative information. When only one processor is being used, the
@@ -790,7 +798,7 @@ Hessian evaluation routines. All these routines should return the
 integer :math:`0` after successful completion and a nonzero integer if
 the function is undefined at that point or an error occurred.
 
-.. _sec_matrixfree:
+.. _sec_tao_matrixfree:
 
 Hessian Evaluation
 ~~~~~~~~~~~~~~~~~~
@@ -2179,7 +2187,7 @@ BMRM
 ~~~~
 
 The Bundle Method for Regularized Risk Minimization
-(BMRM) :cite:`brmrm` is a numerical approach to optimizing an
+(BMRM) is a numerical approach to optimizing an
 unconstrained objective in the form of
 :math:`f(x) + 0.5 * \lambda \| x \|^2`. Here :math:`f` is a convex
 function that is finite on the whole space. :math:`\lambda` is a
@@ -2351,7 +2359,7 @@ The reduction check features a safeguard for numerical values below
 machine epsilon, scaled by the latest function value, where the full
 Newton step is accepted without modification.
 
-.. _sec:bntr:
+.. _sec:bntl:
 
 Bounded Newton Trust Region with Line Search Fall-back (BNTL)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2994,7 +3002,7 @@ dictionary is provided, the dictionary is assumed to be an identity
 matrix and the regularizer reduces to a sparse solution term.
 
 The regularization selection can be made using the command line option
-``-tao_brgn_regularization_type`` ```` where the “user” option allows
+``-tao_brgn_regularization_type <l2pure, l2prox, l1dict, user>`` where the ``user`` option allows
 the user to define a custom :math:`\mathcal{C}2`-continuous
 regularization term. This custom term can be defined by using the
 interface functions:
@@ -3959,6 +3967,10 @@ dynamic loading, then the fourth argument will be ignored.
 Once the solver has been registered, the new solver can be selected
 either by using the ``TaoSetType()`` function or by using the
 ``-tao_type`` command line option.
+
+.. rubric:: Footnoes
+
+.. [#mpi] For more on MPI and PETSc, see :any:`sec-running`.
 
 .. raw:: html
 
