@@ -39,8 +39,8 @@
 \setlength{\textheight}{8.5in}
 
 \newcommand{\half}{{\textstyle{\frac{1}{2}}}}
-\newcommand{\findex}[1]{\index{#1}}
-\newcommand{\sindex}[1]{\index{#1}}
+%\newcommand{\findex}[1]{\index{#1}}
+%\newcommand{\sindex}[1]{\index{#1}}
 \newcommand{\F}{\mbox{\boldmath \(F\)}}
 \newcommand{\x}{\mbox{\boldmath \(x\)}}
 \newcommand{\rr}{\mbox{\boldmath \(r\)}}
@@ -539,9 +539,9 @@ performing these steps
 using TAO are shown in Figure \ref{fig_tao_commands}.  Details of these commands are presented in
 Chapter~\ref{chapter_tao_solver}.
 
-\findex{TaoCreate()} \findex{TaoSetObjectiveAndGradientRoutine()}
-\findex{TaoSetRoutine()} \findex{TaoSolve()}
-\findex{TaoDestroy()} \findex{TaoSetInitialVector()}
+%\findex{TaoCreate()} \findex{TaoSetObjectiveAndGradientRoutine()}
+%\findex{TaoSetRoutine()} \findex{TaoSolve()}
+%\findex{TaoDestroy()} \findex{TaoSetInitialVector()}
 \begin{figure}[H]
 \begin{verbatim}
    TaoCreate(MPI_Comm comm, Tao *tao); 
@@ -620,7 +620,7 @@ in the PETSc users manual \cite{petsc-user-ref}.
 
 \subsection*{Matrices}
 
-Usage of matrices and vectors is similar. \sindex{matrix} 
+Usage of matrices and vectors is similar. %\sindex{matrix} 
 The user can create a new parallel or sequential matrix \texttt{H} with 
 \texttt{M} global rows and \texttt{N} global columns, with the routines
 
@@ -813,7 +813,7 @@ in each file that uses a routine in the TAO libraries.
 \section{Creation and Destruction}
 
 A TAO solver can be created by calling the
-\findex{TaoCreate()}
+%\findex{TaoCreate()}
 \begin{verbatim}
    TaoCreate(MPI_Comm comm,Tao *newsolver);
 \end{verbatim}
@@ -832,7 +832,7 @@ parallel environments can employ the communicator {\tt
 PETSC\_COMM\_WORLD} to indicate all processes known to PETSc in a given run.
 
 The routine
-\findex{TaoSetType()}
+%\findex{TaoSetType()}
 \begin{verbatim}
    TaoSetType(Tao tao,TaoType type);
 \end{verbatim}
@@ -858,7 +858,7 @@ at the command line.
 
 Each TAO solver that has been created should also be destroyed by using
 the  
-\findex{TaoDestroy()}
+%\findex{TaoDestroy()}
 \begin{verbatim}
    TaoDestroy(Tao tao);
 \end{verbatim}
@@ -867,7 +867,7 @@ This routine frees the internal data structures used by the solver.
 
 
 \section{TAO Applications}
-\sindex{application}
+%\sindex{application}
 \label{sec_taoapplication}
 \label{sec_petscapp}
 
@@ -899,7 +899,7 @@ If this vector is distributed over multiple processors, it
 should have a parallel distribution that allows
 for efficient scaling, inner products, and
 function evaluations.  This vector can be passed to the
-application object by using the  \findex{TaoAppSetInitialSolutionVec()}
+application object by using the  %\findex{TaoAppSetInitialSolutionVec()}
 \begin{verbatim}
    TaoSetInitialVector(Tao,Vec);
 \end{verbatim}
@@ -910,7 +910,7 @@ TAO solver.
 This vector will be used by the TAO solver to store the solution.
 Elsewhere in the application, 
 this solution vector can be retrieved from the application object 
-by using the  \findex{TaoGetSolutionVector()}
+by using the  %\findex{TaoGetSolutionVector()}
 \begin{verbatim}
    TaoGetSolutionVector(Tao,Vec *);
 \end{verbatim}
@@ -918,7 +918,7 @@ routine.
 This routine takes the address of a {\tt Vec} in the second argument and sets it to
 the solution vector used in the application.
 
-\subsection{Application Context}  \sindex{application context}
+\subsection{Application Context}  %\sindex{application context}
 Writing a TAO application may require
 use of an {\em application context}.
 An application context is a structure or object defined by an
@@ -972,7 +972,7 @@ specified by the vector in the second argument.
 
 This routine, and the application context, should be passed to the 
 application object by using
-the  \findex{TaoSetObjectiveRoutine()}
+the  %\findex{TaoSetObjectiveRoutine()}
 \begin{verbatim}
    TaoSetObjectiveRoutine(Tao,
                      PetscErrorCode(*)(Tao,Vec,PetscReal*,void*),
@@ -990,7 +990,7 @@ back to the appropriate type.  Examples of these structures and their
 usage are provided in the distribution.
 
 Many TAO solvers also require gradient information from the 
-application \sindex{gradients}.
+application %\sindex{gradients}.
   The gradient of the objective function is specified in a similar manner.
 Routines that evaluate the gradient should have the calling sequence
 \begin{verbatim}
@@ -1006,7 +1006,7 @@ the objective function.  The numbers in the gradient vector have no
 meaning when passed into this routine, but they should represent the gradient
 of the objective at the specified point at the end of the routine.
 This routine, and the user-defined pointer, can be passed to the application
-object by using the  \findex{TaoSetGradientRoutine()}
+object by using the  %\findex{TaoSetGradientRoutine()}
 \begin{verbatim}
    TaoSetGradientRoutine(Tao,
                      PetscErrorCode (*)(Tao,Vec,Vec,void*),
@@ -1034,7 +1034,7 @@ function and gradient. The third argument should return the
 function value, while the fourth argument should return the gradient vector.
 The fifth argument is a pointer to a user-defined context.
 This context and the name of the routine should be set with the
-call \findex{TaoSetObjectiveAndGradientRoutine()}
+call %\findex{TaoSetObjectiveAndGradientRoutine()}
 \begin{verbatim}
    TaoSetObjectiveAndGradientRoutine(Tao,
                      PetscErrorCode (*)(Tao,Vec,PetscReal*,Vec,void*),
@@ -1073,8 +1073,8 @@ matrix will be the same as the Hessian matrix.  The fifth
 argument is the flag used to set the Hessian matrix and
 linear solver in the routine {\tt KSPSetOperators()}.
 
-One can set the Hessian evaluation routine by calling the \sindex{Hessian}
-\findex{TaoSetHessianRoutine()}
+One can set the Hessian evaluation routine by calling the %\sindex{Hessian}
+%\findex{TaoSetHessianRoutine()}
 \begin{verbatim}
    TaoSetHessianRoutine(Tao,Mat H, Mat Hpre,
                      PetscErrorCode (*)(Tao,Vec,Mat,Mat,
@@ -1089,19 +1089,19 @@ argument is the function that evaluates the Hessian,
 and the fifth argument is a pointer to a user-defined context,
 cast to {\tt (void*)}.
 
-\subsubsection{Finite Differences} \sindex{finite differences}
+\subsubsection{Finite Differences} %\sindex{finite differences}
 Finite-difference approximations can be used to compute the gradient and the
 Hessian of an objective
 function.  These approximations will slow the solve considerably and 
 are recommended primarily  
 for checking the accuracy of hand-coded gradients and Hessians.
 These routines are
-\findex{TaoDefaultComputeGradient()}
+%\findex{TaoDefaultComputeGradient()}
 \begin{verbatim}
    TaoDefaultComputeGradient(Tao, Vec, Vec, void*);
 \end{verbatim}
 and 
-\findex{TaoDefaultComputeHessian()}
+%\findex{TaoDefaultComputeHessian()}
 \begin{verbatim}
    TaoDefaultComputeHessian(Tao, Vec, Mat*, Mat*,void*);
 \end{verbatim}
@@ -1137,7 +1137,7 @@ in combination with no preconditioning ({\tt PCNONE} or {\tt -pc\_type none}),
 a user-provided preconditioner matrix, or a user-provided preconditioner
 shell ({\tt PCSHELL}). In other words,
 matrix-free methods cannot be used if a direct solver is to 
-be employed. \sindex{matrix-free options} %\findex{PCSHELL}
+be employed. %\sindex{matrix-free options} %\findex{PCSHELL}
 Details about using matrix-free methods are provided in the
 PETSc users manual \cite{petsc-user-ref}.
 
@@ -1151,7 +1151,7 @@ require that the variables satisfy a set of linear or  nonlinear equations.
 The simplest type of constraint on an optimization problem puts lower
 or upper bounds on the variables. 
 Vectors that represent lower and upper bounds for each variable 
-can be set with the   \sindex{bounds}\findex{TaoSetVariableBounds}
+can be set with the   %\sindex{bounds}\findex{TaoSetVariableBounds}
 \begin{verbatim}
    TaoSetVariableBounds(Tao,Vec,Vec);
 \end{verbatim}
@@ -1187,7 +1187,7 @@ to select a solver that acknowledges these bounds.
 
 \section{Solving}
 Once the application and solver have been set up, the solver can be 
-\findex{TaoSolve()} called by using the 
+%\findex{TaoSolve()} called by using the 
 \begin{verbatim}
    TaoSolve(Tao);
 \end{verbatim}
@@ -1221,8 +1221,8 @@ A relative tolerance of $\epsilon_{frtol}=0.01$ indicates that two
 significant digits are desired in the objective function.
 Each solver sets its own  convergence tolerances, but they can
 be changed by using the routine
-\findex{TaoSetTolerances()} 
-\sindex{convergence tests}
+%\findex{TaoSetTolerances()} 
+%\sindex{convergence tests}
 {\tt TaoSetTolerances()}.
 Another set of convergence tolerances 
 terminates the solver when the norm of the gradient function
@@ -1231,11 +1231,11 @@ is sufficiently close to zero.
 
 Other stopping criteria include a minimum trust-region radius or 
 a maximum number of iterations.  These parameters can be set with
-the routines {\tt Tao\-Set\-Trust\-Region\-Tolerance()}\sindex{trust region}\findex{TaoSetTrustRegionTolerance}
-and {\tt Tao\-Set\-Max\-imum\-Iter\-ations()}\findex{TaoSetMaximumIterations()}.
+the routines {\tt Tao\-Set\-Trust\-Region\-Tolerance()} %\sindex{trust region}\findex{TaoSetTrustRegionTolerance}
+and {\tt Tao\-Set\-Max\-imum\-Iter\-ations()}%\findex{TaoSetMaximumIterations()}.
 Similarly, a maximum number of function evaluations can be set 
 with the command 
-\findex{TaoSetMaximumFunctionEvaluations()}
+%\findex{TaoSetMaximumFunctionEvaluations()}
 {\tt Tao\-Set\-Max\-imum\-Func\-tion\-Evaluations()}.
 \texttt{-tao\_max\_it}, and \texttt{-tao\_max\_funcs}.
 
@@ -1260,7 +1260,7 @@ The user also has access to information about the current solution.
 The current iteration number, objective function value, gradient
 norm, infeasibility norm, and step length 
 can be retrieved with the follwing command.
-\findex{TaoGetSolutionStatus()}
+%\findex{TaoGetSolutionStatus()}
 \begin{verbatim}
    TaoGetSolutionStatus(Tao tao, PetscInt *iterate, PetscReal *f,
                      PetscReal *gnorm, PetscReal *cnorm, PetscReal *xdiff,
@@ -1275,7 +1275,7 @@ for {\tt Tao\-Get\-Converged\-Reason()}.
 \subsection{Obtaining a Solution}
 
 After exiting the {\tt Tao\-Solve()} function, the solution, gradient, and 
-\findex{TaoGetSolution()} dual variables (if available) can be recovered 
+%\findex{TaoGetSolution()} dual variables (if available) can be recovered 
 with the following routines.
 \begin{verbatim}
    TaoGetSolutionVector(Tao, Vec *X);
@@ -1292,8 +1292,8 @@ and customized monitoring routine or after the solver has terminated.
 
 \subsection{Additional Options}
 Additional options for the TAO solver 
-can be be set from the command line by using the  \sindex{options}
-\findex{TaoSetOptions()}
+can be be set from the command line by using the  %\sindex{options}
+%\findex{TaoSetOptions()}
 \begin{verbatim}
    TaoSetFromOptions(Tao)
 \end{verbatim}
@@ -1351,7 +1351,7 @@ should be evaluated.
 The third argument is the vector of function values $c(x)$, and the fourth
 argument is a pointer to a user-defined context.  This routine and the 
 user-defined context should be set in the TAO solver with the 
-\findex{TaoSetConstraintsRoutine()}
+%\findex{TaoSetConstraintsRoutine()}
 \begin{verbatim}
    TaoSetConstraintsRoutine(Tao,Vec,
                      PetscErrorCode (*)(Tao,Vec,Vec,void*),
@@ -1482,7 +1482,7 @@ argument is a pointer to a user-defined context.
 
 This routine and the user-defined context 
 must be registered with TAO by using the
-\findex{TaoSetConstraintsRoutine()}
+%\findex{TaoSetConstraintsRoutine()}
 \begin{verbatim}
    TaoSetConstraintRoutine(Tao, Vec,
                      PetscErrorCode (*)(Tao,Vec,Vec,void*),
@@ -1517,7 +1517,7 @@ argument is the flag used to set the Jacobian matrix and
 linear solver in the routine {\tt KSPSetOperators()}.
 
 This routine should be specified to TAO by using the
-\findex{TaoAppSetJacobianRoutine()}
+%\findex{TaoAppSetJacobianRoutine()}
 \begin{verbatim}
    TaoSetJacobianRoutine(Tao,Mat J, Mat Jpre,
                      PetscErrorCode (*)(Tao,Vec,Mat,Mat, 
@@ -1608,7 +1608,7 @@ Two options can be set specifically for the Nelder-Mead algorithm:
 is $\mu_0=1$.
 \end{description}
 
-\subsection{Limited-Memory, Variable-Metric Method}\sindex{line search}\sindex{gradients}
+\subsection{Limited-Memory, Variable-Metric Method}%\sindex{line search}\sindex{gradients}
 
 The limited-memory, variable-metric method computes a positive definite
 approximation to the Hessian matrix from a limited number of previous
@@ -1657,7 +1657,7 @@ This algorithm will be deprecated in the next version and replaced by the
 bounded quasi-Newton Line Search (BQNLS) algorithm that can solve both bound constrained 
 and unconstrained problems.
 
-\subsection{Nonlinear Conjugate Gradient Method}\sindex{line search}\sindex{gradients}
+\subsection{Nonlinear Conjugate Gradient Method}%\sindex{line search}\sindex{gradients}
 
 The nonlinear conjugate gradient method can be viewed as an extension of the 
 conjugate gradient method for solving symmetric, positive-definite linear 
@@ -1684,7 +1684,7 @@ ratio is greater than $\eta$, the algorithm restarts using the gradient
 direction.  The parameter $\eta$ can be set by using the command line argument 
 {\tt -tao\_cg\_eta <real>}; 0.1 is the default value.  
 
-\subsection{Newton Line Search Method}\sindex{Newtons method}\sindex{line search}
+\subsection{Newton Line Search Method}%\sindex{Newtons method}\sindex{line search}
 
 The Newton line search method solves the symmetric system of equations
 \[
@@ -1926,8 +1926,7 @@ This algorithm will be deprecated in the next version and replaced by the
 bounded Newton Line Search (BNLS) algorithm that can solve both bound constrained 
 and unconstrained problems.
 
-\subsection{Newton Trust-Region Method}\sindex{Newton method}\sindex{trust
-region}
+\subsection{Newton Trust-Region Method}%\sindex{Newton method}\sindex{trust region}
 
 The Newton trust-region method solves the constrained quadratic programming
 problem
@@ -2058,7 +2057,7 @@ This algorithm will be deprecated in the next version and replaced by the
 bounded Newton Trust Region (BNTR) algorithm that can solve both bound constrained 
 and unconstrained problems.
 
-\subsection{BMRM}\sindex{BMRM}
+\subsection{BMRM}%\sindex{BMRM}
 The Bundle Method for Regularized Risk Minimization (BMRM)\cite{brmrm} is a 
 numerical approach to optimizing an unconstrained objective in the form of 
 $f(x) + 0.5 * \lambda \| x \|^2$.  Here $f$ is a convex function that is finite on 
@@ -2067,7 +2066,7 @@ weight parameter, and $\| x \|$ is the Euclidean norm of $x$.  The algorithm onl
 requires a routine which, given an $x$, returns the value of $f(x)$ and the 
 gradient of $f$ at $x$.
 
-\subsection{OWL-QN}\sindex{OWLQN}
+\subsection{OWL-QN}%\sindex{OWLQN}
 The Orthant-Wise Limited-memory Quasi-Newton algorithm (OWL-QN)\cite{owlqn}
 is a numerical approach to optimizing an unconstrained objective in the 
 form of $f(x) + \lambda \|x\|_1$.  Here f is a convex and differentiable 
@@ -2075,7 +2074,7 @@ function, $\lambda$ is a positive weight parameter, and $\| x \|_1$ is the
 $L1$ norm of $x$: $\sum_i |x_i|$.  The algorithm only requires evaluating the 
 value of $f$ and its gradient.
 
-\section{Bound-Constrained Optimization}\sindex{bounds}
+\section{Bound-Constrained Optimization}%\sindex{bounds}
 \label{chapter:bound}
 
 Bound-constrained optimization algorithms solve optimization problems of the form
@@ -2115,8 +2114,8 @@ x_i & \mbox{otherwise}
 \]
 \end{itemize}
 
-\subsection{Bounded Newton-Krylov Methods}\sindex{projected Newton's
-method}\sindex{trust region}\label{sec:bnk}
+\subsection{Bounded Newton-Krylov Methods}%\sindex{projected Newton's method}%\sindex{trust region}
+\label{sec:bnk}
 
 TAO features three bounded Newton-Krylov (BNK) class of algorithms, separated by their 
 globalization methods: projected line search (BNLS), trust region (BNTR), and trust region 
@@ -2279,7 +2278,7 @@ The minimum number of quadratic-like steps before a restart is
 set using {\tt -tao\_bncg\_min\_quad} and is 6 by default. 
 
 
-\subsection{Trust-Region Newton Method}\label{sec:tron}\sindex{trust region}
+\subsection{Trust-Region Newton Method}\label{sec:tron}%\sindex{trust region}
 The TRON \cite{lin_c3} algorithm is an active-set method that uses a 
 combination of gradient projections and 
 a preconditioned conjugate gradient method to minimize an objective function.
@@ -3116,7 +3115,7 @@ The performance of the linear solver may be critical to an efficient
 computation of the solution.  Since linear equation solvers often have 
 a wide variety of options associated with them, TAO allows the user to 
 access the linear solver with the
-\findex{TaoGetKSP()}
+%\findex{TaoGetKSP()}
 \begin{verbatim}
    TaoGetKSP(Tao, KSP *);
 \end{verbatim}
@@ -3130,7 +3129,7 @@ PETSc can be found in the PETSc users manual \cite{petsc-user-ref}.
 \section{Monitors}
 By default the TAO solvers run silently without displaying information
 about the iterations. The user can initiate monitoring with the
-command \findex{TaoSetMonitor()} 
+command %\findex{TaoSetMonitor()} 
 \begin{verbatim}
    TaoSetMonitor(Tao,
                      PetscErrorCode (*mon)(Tao,void*),
@@ -3165,7 +3164,7 @@ Section \ref{sec_customize}.
 These methods include absolute and relative convergence tolerances as well
 as a maximum number of iterations of function evaluations.
 If these choices are not sufficient, 
-the user can specify a customized test\sindex{convergence tests}. 
+the user can specify a customized test%\sindex{convergence tests}. 
 
 Users can set their own customized convergence tests of the form
 \begin{verbatim}
@@ -3179,7 +3178,7 @@ or other statistic at the current iteration through routines such as
 {\tt TaoGetSolutionStatus()} and  {\tt TaoGetTolerances()}.
 
 To use this convergence test within a TAO solver, one uses
-the command \findex{TaoSetConvergenceTest()}
+the command %\findex{TaoSetConvergenceTest()}
 \begin{verbatim}
    TaoSetConvergenceTest(Tao,
                      PetscErrorCode (*conv)(Tao,void*),
@@ -3199,7 +3198,7 @@ The termination flag can be set by using the routine
 
 
 
-\section{Line Searches} \sindex{line search}
+\section{Line Searches} %\sindex{line search}
 \label{sec_TaoLineSearch}
 
 By using the command line option  {\tt -tao\_ls\_type}.  
@@ -3223,7 +3222,7 @@ One should run a TAO program with the option
 for details.  Users may write their own customized line search codes
 by modeling them after one of the defaults provided.
 
-\section{Recycling History} \sindex{recycle}
+\section{Recycling History} %\sindex{recycle}
 \label{sec_TaoRecycleHistory}
 
 Some TAO algorithms can re-use information accumulated in the previous 
@@ -3654,8 +3653,8 @@ either by using the \texttt{TaoSetType()} function or by using the \texttt{-tao\
 \newpage
 
 % \special{pdf..} is read by the dvipdfm to make a bookmark in the pdf doc
-\label{sec_index}
-\include{sindex}
+%\label{sec_index}
+%\include{sindex}
 
 \bibliographystyle{plain}
 \bibliography{../tao,mathprog}
