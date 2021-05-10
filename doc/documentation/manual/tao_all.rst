@@ -80,7 +80,7 @@ structure. In previous versions of TAO, this structure was created by
 the application programmer for application-specific data and routines.
 In order to more closely follow PETSc design principles, this
 information is now directly attached to a Tao object instead. See
-Figure `[fig:tao_commands] <#fig:tao_commands>`__ for a listing of what
+:any:`sec_tao_solvers` for a listing of what
 the most common TAO routines now look like without the TaoApplication
 object.
 
@@ -88,13 +88,13 @@ object.
 nonlinear least squares problems, POUNDerS, that can efficiently solve
 parameter optimization problems when no derivatives are available and
 function evaluations are expensive. See
-Section `4.4.1 <#sec:pounders>`__ for more information on the details of
-the algorithm and Section `4.4 <#sec:leastsquares>`__ for how to use it.
+:any:`sec_pounders` for more information on the details of
+the algorithm and :any:`sec_leastsquares` for how to use it.
 TAO now also provides a new algorithm for the solution of optimization
 problems with partial differential equation (PDE) constraints based on a
 linearly constrained augmented Lagrangian (LCL) method. More information
 on PDE-constrained optimization and LCL can be found in
-Section `4.3 <#sec:lcl>`__.
+:any:`sec_lcl`.
 
 **TaoLineSearch Object**. TAO has promoted the line search to a full
 object. Any of the available TAO line search algorithms (Armijo,
@@ -102,7 +102,7 @@ Moré-Thuente, GPCG, and unit) can now be selected regardless of the
 overlying TAO algorithm. Users can also create new line search
 algorithms that may be more suitable for their applications. More
 information is available in
-Section `[sec:TaoLineSearch] <#sec:TaoLineSearch>`__.
+:any:`sec_taolinesearch`.
 
 **Better Adherence to PETSc Style**. TAO now features a tighter
 association with PETSc standards and practices. All TAO constructs now
@@ -260,9 +260,9 @@ A Simple TAO Example
 --------------------
 
 To help the user start using TAO immediately, we introduce here a simple
-uniprocessor example. Please read Section `3 <#chapter_tao_solver>`__
+uniprocessor example. Please read :any:`chapter_tao_solver`
 for a more in-depth discussion on using the TAO solvers. The code
-presented in Figure `[fig:example1] <#fig:example1>`__ minimizes the
+presented `below <#tao-example1>`_ minimizes the
 extended Rosenbrock function :math:`f: \mathbb R^n \to \mathbb R`
 defined by
 
@@ -274,10 +274,10 @@ defined by
 where :math:`n = 2m` is the number of variables. Note that while we use
 the C language to introduce the TAO software, the package is fully
 usable from C++ and Fortran77/90.
-Section `[chapter_fortran] <#chapter_fortran>`__ discusses additional
+:any:`chapter_fortran` discusses additional
 issues concerning Fortran usage.
 
-The code in Figure `[fig_example1] <#fig_example1>`__ contains many of
+The code in `the example <#tao-example1>`_ contains many of
 the components needed to write most TAO programs and thus is
 illustrative of the features present in complex optimization problems.
 Note that for display purposes we have omitted some nonessential lines
@@ -285,9 +285,16 @@ of code as well as the (essential) code required for the routine
 ``FormFunctionGradient``, which evaluates the function and gradient, and
 the code for ``FormHessian``, which evaluates the Hessian matrix for
 Rosenbrock’s function. The complete code is available in
-`$TAO_DIR/src/unconstrained/tutorials/rosenbrock1.c <$TAO_DIR/src/unconstrained/tutorials/rosenbrock1.c>`__.
-The following sections annotates the lines of code in
-Figure `[fig_example1] <#fig_example1>`__.
+`$TAO_DIR/src/unconstrained/tutorials/rosenbrock1.c <../../src/tao/unconstrained/tutorials/rosenbrock1.c.html>`__.
+The following sections annotate the lines of code in
+`the example <#tao-example1>`_.
+
+.. admonition:: Listing: ``src/tao/unconstrained/tutorials/rosenbrock1.c``
+   :name: tao-example1
+
+   .. literalinclude:: /../src/tao/unconstrained/tutorials/rosenbrock1.c
+      :end-at: return ierr;
+      :append: }
 
 Include Files
 -------------
@@ -301,6 +308,9 @@ The include file for TAO should be used via the statement
 The required lower-level include files are automatically included within
 this high-level file.
 
+
+.. _sec_tao_solvers:
+
 TAO Solvers
 -----------
 
@@ -312,8 +322,8 @@ call-back routines will be used for evaluating the objective function,
 gradient, and perhaps the Hessian matrix. The user then invokes TAO to
 solve the optimization problem and finally destroys the ``Tao`` context.
 A list of the necessary functions for performing these steps using TAO
-are shown in Figure `[fig_tao_commands] <#fig_tao_commands>`__. Details
-of these commands are presented in Chapter `3 <#chapter_tao_solver>`__.
+is show below. Details
+of these commands are presented in :any:`chapter_tao_solver`.
 
 ::
 
@@ -361,7 +371,7 @@ discussion of PETSc.
 Vectors
 ~~~~~~~
 
-In the example in Figure `[fig_example1] <#fig_example1>`__, the vector
+In `the example above <#tao-example1>`_ the vector
 data structure (``Vec``) is used to store the solution and gradient for
 the TAO unconstrained minimization solvers. A new parallel or sequential
 vector ``x`` of global dimension ``M`` is created with the command
@@ -461,7 +471,7 @@ a nonzero value if an error has been detected. The macro
 handler upon error detection. ``CHKERRQ()`` should be used after all
 subroutines to enable a complete error traceback.
 
-In Figure `[fig_traceback] <#fig_traceback>`__ we indicate a traceback
+Below, we indicate a traceback
 generated by error detection within a sample program. The error occurred
 on line 2110 of the file ``${PETSC_DIR}/src/mat/interface/matrix.c`` in
 the routine ``MatMult()`` and was caused by failure to assemble the
@@ -618,8 +628,6 @@ solver.
 
 TAO Applications
 ----------------
-
-[sec_petscapp]
 
 The solvers in TAO address applications that have a set of variables, an
 objective function, and possibly constraints on the variables. Many
@@ -802,8 +810,6 @@ the function is undefined at that point or an error occurred.
 
 Hessian Evaluation
 ~~~~~~~~~~~~~~~~~~
-
-[sec_finitedifference]
 
 Some optimization routines also require a Hessian matrix from the user.
 The routine that evaluates the Hessian should have the form
@@ -1296,7 +1302,7 @@ algorithms for solving these problems are detailed in this section, a
 particular algorithm can chosen by using the ``TaoSetType()`` function
 or using the command line arguments ``-tao_type <name>``. For those
 interested in extending these algorithms or using new ones, please see
-Chapter `6 <#chapter:addsolver>`__ for more information.
+:any:`chapter_addsolver` for more information.
 
 .. _chapter:unconstrained:
 
@@ -1475,99 +1481,97 @@ optimization problem
 
 The Newton line search method can be selected by using the TAO solver
 ``tao_nls``. The options available for this solver are listed in
-Table `4.1 <#table:nlsoptions>`__. For the best efficiency, function and
+:numref:`table_nlsoptions`. For the best efficiency, function and
 gradient evaluations should be performed simultaneously when using this
 algorithm.
 
-.. container::
-   :name: table:nlsoptions
+ .. table:: Summary of ``nls`` options
+    :name: table_nlsoptions
 
-   .. table:: Summary of ``nls`` options
-
-      +----------------+----------------+----------------+----------------+
-      | Name           | Value          | Default        | Description    |
-      +================+================+================+================+
-      | ``-tao_        | cg, nash,      | stcg           | Type of Krylov |
-      | nls_ksp_type`` | stcg, gltr,    |                | subspace       |
-      |                | gmres, ...     |                | method to use  |
-      |                |                |                | when solving   |
-      |                |                |                | linear system  |
-      +----------------+----------------+----------------+----------------+
-      | ``-tao         | none, jacobi,  | lmvm           | Type of        |
-      | _nls_pc_type`` | icc, ilu, lmvm |                | preconditioner |
-      |                |                |                | to use when    |
-      |                |                |                | solving linear |
-      |                |                |                | system         |
-      +----------------+----------------+----------------+----------------+
-      | ``-            | real           | :math:`0`      | Initial        |
-      | tao_nls_sval`` |                |                | perturbation   |
-      |                |                |                | value          |
-      +----------------+----------------+----------------+----------------+
-      | ``-            | real           | :              | Minimum        |
-      | tao_nls_imin`` |                | math:`10^{-4}` | initial        |
-      |                |                |                | perturbation   |
-      |                |                |                | value          |
-      +----------------+----------------+----------------+----------------+
-      | ``-            | real           | :math:`100`    | Maximum        |
-      | tao_nls_imax`` |                |                | initial        |
-      |                |                |                | perturbation   |
-      |                |                |                | value          |
-      +----------------+----------------+----------------+----------------+
-      | ``-t           | real           | :math:`0.1`    | Factor applied |
-      | ao_nls_imfac`` |                |                | to norm of     |
-      |                |                |                | gradient when  |
-      |                |                |                | initializing   |
-      |                |                |                | perturbation   |
-      +----------------+----------------+----------------+----------------+
-      | ``-            | real           | :math:`100`    | Maximum        |
-      | tao_nls_pmax`` |                |                | perturbation   |
-      |                |                |                | when           |
-      |                |                |                | increasing     |
-      |                |                |                | value          |
-      +----------------+----------------+----------------+----------------+
-      | ``-t           | real           | :math:`10`     | Growth factor  |
-      | ao_nls_pgfac`` |                |                | applied to     |
-      |                |                |                | perturbation   |
-      |                |                |                | when           |
-      |                |                |                | increasing     |
-      |                |                |                | value          |
-      +----------------+----------------+----------------+----------------+
-      | ``-ta          | real           | :math:`0.1`    | Factor applied |
-      | o_nls_pmgfac`` |                |                | to norm of     |
-      |                |                |                | gradient when  |
-      |                |                |                | increasing     |
-      |                |                |                | perturbation   |
-      +----------------+----------------+----------------+----------------+
-      | ``-            | real           | :m             | Minimum        |
-      | tao_nls_pmin`` |                | ath:`10^{-12}` | perturbation   |
-      |                |                |                | when           |
-      |                |                |                | decreasing     |
-      |                |                |                | value; smaller |
-      |                |                |                | values set to  |
-      |                |                |                | zero           |
-      +----------------+----------------+----------------+----------------+
-      | ``-t           | real           | :math:`0.4`    | Shrink factor  |
-      | ao_nls_psfac`` |                |                | applied to     |
-      |                |                |                | perturbation   |
-      |                |                |                | when           |
-      |                |                |                | decreasing     |
-      |                |                |                | value          |
-      +----------------+----------------+----------------+----------------+
-      | ``-ta          | real           | :math:`0.1`    | Factor applied |
-      | o_nls_pmsfac`` |                |                | to norm of     |
-      |                |                |                | gradient when  |
-      |                |                |                | decreasing     |
-      |                |                |                | perturbation   |
-      +----------------+----------------+----------------+----------------+
-      | ``-tao_n       | constant,      | interpolation  | Method used to |
-      | ls_init_type`` | direction,     |                | initialize     |
-      |                | interpolation  |                | trust-region   |
-      |                |                |                | radius when    |
-      |                |                |                | using          |
-      |                |                |                | ``nash``,      |
-      |                |                |                | ``stcg``, or   |
-      |                |                |                | ``gltr``       |
-      +----------------+----------------+----------------+----------------+
+    +----------------+----------------+----------------+----------------+
+    | Name           | Value          | Default        | Description    |
+    +================+================+================+================+
+    | ``-tao_        | cg, nash,      | stcg           | Type of Krylov |
+    | nls_ksp_type`` | stcg, gltr,    |                | subspace       |
+    |                | gmres, ...     |                | method to use  |
+    |                |                |                | when solving   |
+    |                |                |                | linear system  |
+    +----------------+----------------+----------------+----------------+
+    | ``-tao         | none, jacobi,  | lmvm           | Type of        |
+    | _nls_pc_type`` | icc, ilu, lmvm |                | preconditioner |
+    |                |                |                | to use when    |
+    |                |                |                | solving linear |
+    |                |                |                | system         |
+    +----------------+----------------+----------------+----------------+
+    | ``-            | real           | :math:`0`      | Initial        |
+    | tao_nls_sval`` |                |                | perturbation   |
+    |                |                |                | value          |
+    +----------------+----------------+----------------+----------------+
+    | ``-            | real           | :              | Minimum        |
+    | tao_nls_imin`` |                | math:`10^{-4}` | initial        |
+    |                |                |                | perturbation   |
+    |                |                |                | value          |
+    +----------------+----------------+----------------+----------------+
+    | ``-            | real           | :math:`100`    | Maximum        |
+    | tao_nls_imax`` |                |                | initial        |
+    |                |                |                | perturbation   |
+    |                |                |                | value          |
+    +----------------+----------------+----------------+----------------+
+    | ``-t           | real           | :math:`0.1`    | Factor applied |
+    | ao_nls_imfac`` |                |                | to norm of     |
+    |                |                |                | gradient when  |
+    |                |                |                | initializing   |
+    |                |                |                | perturbation   |
+    +----------------+----------------+----------------+----------------+
+    | ``-            | real           | :math:`100`    | Maximum        |
+    | tao_nls_pmax`` |                |                | perturbation   |
+    |                |                |                | when           |
+    |                |                |                | increasing     |
+    |                |                |                | value          |
+    +----------------+----------------+----------------+----------------+
+    | ``-t           | real           | :math:`10`     | Growth factor  |
+    | ao_nls_pgfac`` |                |                | applied to     |
+    |                |                |                | perturbation   |
+    |                |                |                | when           |
+    |                |                |                | increasing     |
+    |                |                |                | value          |
+    +----------------+----------------+----------------+----------------+
+    | ``-ta          | real           | :math:`0.1`    | Factor applied |
+    | o_nls_pmgfac`` |                |                | to norm of     |
+    |                |                |                | gradient when  |
+    |                |                |                | increasing     |
+    |                |                |                | perturbation   |
+    +----------------+----------------+----------------+----------------+
+    | ``-            | real           | :m             | Minimum        |
+    | tao_nls_pmin`` |                | ath:`10^{-12}` | perturbation   |
+    |                |                |                | when           |
+    |                |                |                | decreasing     |
+    |                |                |                | value; smaller |
+    |                |                |                | values set to  |
+    |                |                |                | zero           |
+    +----------------+----------------+----------------+----------------+
+    | ``-t           | real           | :math:`0.4`    | Shrink factor  |
+    | ao_nls_psfac`` |                |                | applied to     |
+    |                |                |                | perturbation   |
+    |                |                |                | when           |
+    |                |                |                | decreasing     |
+    |                |                |                | value          |
+    +----------------+----------------+----------------+----------------+
+    | ``-ta          | real           | :math:`0.1`    | Factor applied |
+    | o_nls_pmsfac`` |                |                | to norm of     |
+    |                |                |                | gradient when  |
+    |                |                |                | decreasing     |
+    |                |                |                | perturbation   |
+    +----------------+----------------+----------------+----------------+
+    | ``-tao_n       | constant,      | interpolation  | Method used to |
+    | ls_init_type`` | direction,     |                | initialize     |
+    |                | interpolation  |                | trust-region   |
+    |                |                |                | radius when    |
+    |                |                |                | using          |
+    |                |                |                | ``nash``,      |
+    |                |                |                | ``stcg``, or   |
+    |                |                |                | ``gltr``       |
+    +----------------+----------------+----------------+----------------+
 
 .. table:: Summary of ``nls`` options (continued)
 
@@ -1939,14 +1943,12 @@ rejected, the trust-region radius is reduced, and the quadratic program
 is re-solved by using the updated trust-region radius. The Newton
 trust-region method can be set by using the TAO solver ``tao_ntr``. The
 options available for this solver are listed in
-Table `4.2 <#table:ntroptions>`__. For the best efficiency, function and
+:numref:`table_ntroptions`. For the best efficiency, function and
 gradient evaluations should be performed separately when using this
 algorithm.
 
-.. container::
-   :name: table:ntroptions
-
    .. table:: Summary of ``ntr`` options
+      :name: table_ntroptions
 
       +----------------+----------------+----------------+----------------+
       | Name           | Value          | Default        | Description    |
@@ -2256,7 +2258,7 @@ operations used by all bound constrained algorithms.
       \end{array}
       \right.
 
-.. _sec:bnk:
+.. _sec_bnk:
 
 Bounded Newton-Krylov Methods
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2318,7 +2320,7 @@ estimation falls back onto using an identity matrix in place of
 :math:`D_k` (this is equivalent to estimating the active-set using a
 gradient descent step).
 
-A special option is available to “accelerate” the convergence of the BNK
+A special option is available to *accelerate* the convergence of the BNK
 algorithms by taking a finite number of BNCG iterations at each Newton
 iteration. By default, the number of BNCG iterations is set to zero and
 the algorithms do not take any BNCG steps. This can be changed using the
@@ -2329,7 +2331,7 @@ in the BNCG solver. However, it may be useful for certain types of
 problems where the Hessian evaluation is disproportionately more
 expensive than the objective function or its gradient.
 
-.. _sec:bnls:
+.. _sec_bnls:
 
 Bounded Newton Line Search (BNLS)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2347,7 +2349,7 @@ trust-region conjugate gradient method is used for the Hessian
 inversion, the trust radius is modified based on the line search step
 length.
 
-.. _sec:bntr:
+.. _sec_bntr:
 
 Bounded Newton Trust Region (BNTR)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2359,7 +2361,7 @@ The reduction check features a safeguard for numerical values below
 machine epsilon, scaled by the latest function value, where the full
 Newton step is accepted without modification.
 
-.. _sec:bntl:
+.. _sec_bntl:
 
 Bounded Newton Trust Region with Line Search Fall-back (BNTL)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2371,7 +2373,7 @@ find a viable step length for the Newton step, it falls back onto a
 scaled gradient or a gradient descent step. The trust radius is then
 modified based on the line search step length.
 
-.. _sec:bncg:
+.. _sec_bncg:
 
 Bounded Nonlinear Conjugate Gradient
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2443,7 +2445,7 @@ user-defined ``Mat`` object that serves as a preconditioner. For an
 example of similar usage, see ``tao/tutorials/ex3.c``.
 
 The active set estimation uses the Bertsekas-based method described in
-Section `4.2.1 <#sec:bnk>`__, which can be deactivated using
+:any:`sec_bnk`, which can be deactivated using
 ``-tao_bncg_as_type none``, in which case the algorithm will use the
 current iterate to determine the bounded variables with no tolerancing
 and no look-ahead step. As in the BNK algorithm, the initial bound
@@ -2467,7 +2469,7 @@ default since the CG solver usually does better in those cases anyway.
 The minimum number of quadratic-like steps before a restart is set using
 ``-tao_bncg_min_quad`` and is 6 by default.
 
-.. _sec:tron:
+.. _sec_tron:
 
 Trust-Region Newton Method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2480,7 +2482,7 @@ evaluations. In each iteration, the algorithm first applies several
 conjugate gradient iterations. After these iterates, the TRON solver
 momentarily ignores the variables that equal one of its bounds and
 applies a preconditioned conjugate gradient method to a quadratic model
-of the remaining set of “free” variables.
+of the remaining set of *free* variables.
 
 The TRON algorithm solves a reduced linear system defined by the rows
 and columns corresponding to the variables that lie between the upper
@@ -2493,7 +2495,7 @@ The initial trust region can significantly alter the rate of convergence
 for the algorithm and should be tuned and adjusted for optimal
 performance.
 
-.. _sec:blmvm:
+.. _sec_blmvm:
 
 Bound-constrained Limited-Memory Variable-Metric Method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2509,7 +2511,7 @@ documentation in the PETSc manual.
 This algorithm will be deprecated in the next version in favor of the
 bounded quasi-Newton line search (BQNLS) algorithm.
 
-.. _sec:bqnk:
+.. _sec_bqnk:
 
 Bounded Quasi-Newton-Krylov
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2533,7 +2535,7 @@ three forms separated by the globalization technique: line search
 fall-back (BQNKTL). These algorithms are available via
 ``tao_type <bqnkls, bqnktr, bqnktl>``.
 
-.. _sec:bqnls:
+.. _sec_bqnls:
 
 Bounded Quasi-Newton Line Search (BQNLS)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2545,7 +2547,7 @@ solution, and therefore the quasi-Newton method chosen must guarantee a
 positive-definite Hessian approximation. This algorithm is available via
 ``tao_type bqnls``.
 
-.. _sec:lcl:
+.. _sec_lcl:
 
 PDE-Constrained Optimization
 ----------------------------
@@ -2760,7 +2762,7 @@ limited-memory quasi-Newton approximation to the reduced Hessian matrix
 used in the next iteration of the code. The update is skipped if it
 cannot be performed.
 
-.. _sec:leastsquares:
+.. _sec_leastsquares:
 
 Nonlinear Least-Squares
 -----------------------
@@ -2769,20 +2771,20 @@ Given a function :math:`F: \mathbb R^n \to \mathbb R^m`, the nonlinear
 least-squares problem minimizes
 
 .. math::
+   :label: eq_nlsf
 
    f(x)= \| F(x) \|_2^2 = \sum_{i=1}^m F_i(x)^2.
-    \label{eq:nlsf}
 
 The nonlinear equations :math:`F` should be specified with the function
 ``TaoSetResidual()``.
 
-.. _sec:pounders:
+.. _sec_pounders:
 
 POUNDerS
 ~~~~~~~~
 
 One algorithm for solving the least squares problem
-(`[eq:nlsf] <#eq:nlsf>`__) when the Jacobian of the residual vector
+(:eq:`eq_nlsf`) when the Jacobian of the residual vector
 :math:`F` is unavailable is the model-based POUNDerS (Practical
 Optimization Using No Derivatives for sums of Squares) algorithm
 (``tao_pounders``). POUNDerS employs a derivative-free trust-region
@@ -2804,22 +2806,22 @@ point :math:`x_+` to be evaluated is obtained by solving the
 trust-region subproblem
 
 .. math::
+   :label: eq_poundersp
 
    \min\left\{
     m_k(x) : 
     \|x-x_k\|_{p} \leq \Delta_k, 
     \right \}, 
-    \label{eq:poundersp}
 
 where :math:`\Delta_k` is the current trust-region radius. By default we
 use a trust-region norm with :math:`p=\infty` and solve
-(`[eq:poundersp] <#eq:poundersp>`__) with the BLMVM method described in
-Section `4.2.4 <#sec:blmvm>`__. While the subproblem is a
+(:eq:`eq_poundersp`) with the BLMVM method described in
+:any:`sec_blmvm`. While the subproblem is a
 bound-constrained quadratic program, it may not be convex and the BQPIP
 and GPCG methods may not solve the subproblem. Therefore, either BLMVM
 (the default) or TRON should be used. Note: TRON uses its own internal
 trust region that may interfere with the infinity-norm trust region used
-in the model problem (`[eq:poundersp] <#eq:poundersp>`__).
+in the model problem (:eq:`eq_poundersp`).
 
 The residual vector is then evaluated to obtain :math:`F(x_+)` and hence
 :math:`f(x_+)`. The ratio of actual decrease to predicted decrease,
@@ -2873,11 +2875,11 @@ interpolatory quadratic model of each residual component. The :math:`m`
 quadratic models
 
 .. math::
+   :label: eq_models
 
    q_k^{(i)}(x) = 
     F_i(x_k) + (x-x_k)^T g_k^{(i)} + \frac{1}{2} (x-x_k)^T H_k^{(i)} (x-x_k), 
     \qquad i = 1, \ldots, m
-   \label{eq:models}
 
 thus satisfy the interpolation conditions
 
@@ -2887,17 +2889,17 @@ on a common interpolation set :math:`\{y_1, \cdots , y_{l_k}\}` of size
 :math:`l_k\in[n+1,`\ ``npmax``\ :math:`]`.
 
 The gradients and Hessians of the models in
-(`[eq:models] <#eq:models>`__) are then used to construct the main
+(`:eq:eq_models`) are then used to construct the main
 model,
 
 .. math::
+  :label: eq_newton2
 
    m_k(x) = f(x_k) + 
    2(x-x_k)^T \sum_{i=1}^{m} F_i(x_k) g_k^{(i)} +
    (x-x_k)^T \sum_{i=1}^{m}
    \left( g_k^{(i)} \left(g_k^{(i)}\right)^T +  F_i(x_k)
    H_k^{(i)}\right) (x-x_k).
-    \label{eq:newton2}
 
 The process of forming these models also computes the indicator
 ``valid`` of the model’s local quality.
@@ -2921,12 +2923,12 @@ command line or PETSc options file:
 
 ``-tao_pounders_gqt``
    Use the gqt algorithm to solve the
-   subproblem (`[eq:poundersp] <#eq:poundersp>`__) (uses :math:`p=2`)
+   subproblem (:eq:`eq_poundersp`) (uses :math:`p=2`)
    instead of BQPIP.
 
 ``-pounders_subsolver``
    If the default BQPIP algorithm is used to solve the
-   subproblem (`[eq:poundersp] <#eq:poundersp>`__), the parameters of
+   subproblem (:eq:`eq_poundersp`), the parameters of
    the subproblem solver can be accessed using the command line options
    prefix ``-pounders_subsolver_``. For example,
 
@@ -2940,8 +2942,8 @@ command line or PETSc options file:
 Additionally, the user provides an initial solution vector, a vector for
 storing the separable objective function, and a routine for evaluating
 the residual vector :math:`F`. These are described in detail in
-Sections `[sec:fghj] <#sec:fghj>`__ and
-`[sec:evalsof] <#sec:evalsof>`__. Here we remark that because gradient
+:any:`sec_fghj` and
+:any:`sec_evalsof`. Here we remark that because gradient
 information is not available for scaling purposes, it can be useful to
 ensure that the problem is reasonably well scaled. A simple way to do so
 is to rescale the decision variables :math:`x` so that their typical
@@ -3014,7 +3016,7 @@ interface functions:
 -  ``TaoBRGNSetRegularizerHessianRoutine()`` - Provide user call-back
    for evaluating the Hessian of the regularization term.
 
-.. _sec:complementarity:
+.. _sec_complementarity:
 
 Complementarity
 ---------------
@@ -3130,8 +3132,8 @@ direction. A standard Armijo search
 :cite:`armijo:minimization` is used to find the new
 iteration. Nonmonotone searches
 :cite:`grippo.lampariello.ea:nonmonotone` are also available
-by setting appropriate runtime options. See Section
-`[sec:TaoLineSearch] <#sec:TaoLineSearch>`__ for further details.
+by setting appropriate runtime options. See
+:any:`sec_taolinesearch` for further details.
 
 The first semismooth algorithm available in TAO is not guaranteed to
 remain feasible with respect to the bounds, :math:`[\ell, u]`, and is
@@ -3184,7 +3186,7 @@ Gradient Projection Conjugate Gradient Method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The GPCG :cite:`more-toraldo` algorithm is much like the
-TRON algorithm, discussed in Section `4.2.3 <#sec:tron>`__, except that
+TRON algorithm, discussed in Section :any:`sec_tron`, except that
 it assumes that the objective function is quadratic and convex.
 Therefore, it evaluates the function, gradient, and Hessian only once.
 Since the objective function is quadratic, the algorithm does not use a
@@ -3192,7 +3194,7 @@ trust region. All the options that apply to TRON except for trust-region
 options also apply to GPCG. It can be set by using the TAO solver
 ``tao_gpcg`` or via the optio flag ``-tao_type gpcg``.
 
-.. _sec:bqpip:
+.. _sec_bqpip:
 
 Interior-Point Newton’s Method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3339,6 +3341,7 @@ General Nonlinear Programming problems
 General nonlinear programming problems are of the form
 
 .. math::
+   :label: eq_nlp_gen1
 
    \begin{array}{ll}
    \displaystyle \min_{x} & f(x) \\
@@ -3346,7 +3349,6 @@ General nonlinear programming problems are of the form
                      & h(x) \geq 0 \\
                      & x^- \leq x \leq x^+
    \end{array}
-   \label{eq:nlp_gen}
 
 Here, :math:`f(x)` is the nonlinear objective function, :math:`g(x)`,
 :math:`h(x)` are the equality and inequality constraints, and
@@ -3359,9 +3361,10 @@ Interior-point Newton’s method
 The PDIPM (``-tao_type pdipm``) algorithm implements a primal-dual
 interior point method for solving general nonlinear programming
 problems. Using slack variables :math:`z` and a log-barrier term,
-`[eq:nlp_gen] <#eq:nlp_gen>`__ is transformed to
+:eq:`eq_nlp_gen1` is transformed to
 
 .. math::
+   :label: eq_nlp_gen2
 
    \begin{aligned}
        \text{min}~&f(x) - \mu\sum_{i=1}^{nci}\ln z_i\\
@@ -3369,7 +3372,6 @@ problems. Using slack variables :math:`z` and a log-barrier term,
            &ce(x) = 0 \\
            &ci(x) - z = 0 \\
        \end{aligned}
-       \label{eq:nlp_gen}
 
 Here, :math:`ce(x)` is set of equality constraints that include
 :math:`g(x)` and fixed decision variables, i.e., :math:`x^- = x = x^+`.
@@ -3377,12 +3379,12 @@ Similarly, :math:`ci(x)` are inequality constraints including
 :math:`h(x)` and lower/upper/box-constraints on :math:`x`. :math:`\mu`
 is a parameter that is driven to zero as the optimization progresses.
 
-The Lagrangian for Equation(`[eq:nlp_gen] <#eq:nlp_gen>`__) is
+The Lagrangian for :eq:`eq_nlp_gen2`) is
 
 .. math::
+   :label: eq_lagrangian
 
    L_{\mu}(x,\lambda_{ce},\lambda_{ci},z) = f(x) + \lambda_{ce}^Tce(x) - \lambda_{ci}^T(ci(x) - z) - \mu\sum_{i=1}^{nci}\ln z_i
-       \label{eq:lagrangian}
 
 where, :math:`\lambda_{ce}` and :math:`\lambda_{ci}` are the lagrangian
 multipliers for the equality and inequality constraints, respectively.
@@ -3390,6 +3392,7 @@ multipliers for the equality and inequality constraints, respectively.
 The first order KKT conditions for optimality are as follows
 
 .. math::
+   :label: eq_nlp_kkt
 
    \nabla L_{\mu}(x,\lambda_{ce},\lambda_{ci},z)    =
        \begin{bmatrix}
@@ -3399,9 +3402,8 @@ The first order KKT conditions for optimality are as follows
            Z\Lambda_{ci}e - \mu e
        \end{bmatrix}
    = 0
-   \label{eq:nlp_kkt}
 
-Eq. `[eq:nlp_kkt] <#eq:nlp_kkt>`__ is solved iteratively using Newton’s
+:eq:`eq_nlp_kkt` is solved iteratively using Newton’s
 method using PETSc’s SNES object. After each Newton iteration, a
 line-search is performed to update :math:`x` and enforce
 :math:`z,\lambda_{ci} \geq 0`. The barrier parameter :math:`\mu` is also
@@ -3420,7 +3422,7 @@ This section discusses options and routines that apply to most TAO
 solvers and problem classes. In particular, we focus on linear solvers,
 convergence tests, and line searches.
 
-.. _sec_TaoLinearSolvers:
+.. _sec_taolinearsolvers:
 
 Linear Solvers
 --------------
@@ -3461,13 +3463,13 @@ iteration of the optimization solver. Hence, the user can employ this
 routine for any application-specific computations that should be done
 after the solution update.
 
-.. _sec_Taoconvergence:
+.. _sec_taoconvergence:
 
 Convergence Tests
 -----------------
 
 Convergence of a solver can be defined in many ways. The methods TAO
-uses by default are mentioned in Section `3.4.1 <#sec_customize>`__.
+uses by default are mentioned in :any:`sec_customize`.
 These methods include absolute and relative convergence tolerances as
 well as a maximum number of iterations of function evaluations. If these
 choices are not sufficient, the user can specify a customized test
@@ -3501,7 +3503,7 @@ be set by using the routine
 
       TaoSetConvergedReason(Tao, TaoConvergedReason);
 
-.. _sec_TaoLineSearch:
+.. _sec_taolinesearch:
 
 Line Searches
 -------------
@@ -3530,7 +3532,7 @@ One should run a TAO program with the option ``-help`` for details.
 Users may write their own customized line search codes by modeling them
 after one of the defaults provided.
 
-.. _sec_TaoRecycleHistory:
+.. _sec_taorecyclehistory:
 
 Recycling History
 -----------------
@@ -3555,7 +3557,7 @@ of every new ``TaoSolve()``.
 
 The option flag has no effect on other TAO solvers.
 
-.. _chapter:addsolver:
+.. _chapter_addsolver:
 
 Adding a Solver
 ===============
@@ -3767,7 +3769,7 @@ provides several line searches and support for using them. The routine
 passes the current solution, gradient, and objective value to the line
 search and returns a new solution, gradient, and objective value. More
 details on line searches can be found in
-Section `[sec:TaoLineSearch] <#sec:TaoLineSearch>`__. The details of the
+:any:`sec_taolinesearch`. The details of the
 line search applied are specified elsewhere, when the line search is
 created.
 
