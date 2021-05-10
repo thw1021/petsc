@@ -216,25 +216,10 @@ Writing Application Codes with TAO
 
 Examples throughout the library demonstrate the software usage and can
 serve as templates for developing custom applications. We suggest that
-new TAO users examine programs in
+new TAO users examine programs in ``${PETSC_DIR}/src/tao/<unconstrained,bound,..>/tutorials``
 
-::
-
-      ${PETSC_DIR}/src/tao/<unconstrained,bound,..>/tutorials.
-
-The HTML version of the manual pages located at
-
-::
-
-      ${PETSC_DIR}/docs/manpages/index.html
-
-and
-
-::
-
-      https://www.mcs.anl.gov/petsc/documentation/index.html
-
-provides indices (organized by both routine names and concepts) to the
+The `manual pages </documentation/manualpages/index>`
+provide indices (organized by both routine names and concepts) to the
 tutorial examples.
 
 We suggest the following procedure for writing a new application program
@@ -243,11 +228,7 @@ using TAO:
 #. Install PETSc/TAO according to the instructions in
    https://www.mcs.anl.gov/petsc/documentation/installation.html.
 
-#. Copy an example and makefile from the directories
-
-   ::
-
-         ${PETSC_DIR}/src/tao/<unconstrained,bound,..>/tutorials.
+#. Copy an example and makefile from the directories ``${PETSC_DIR}/src/tao/<unconstrained,bound,..>/tutorials``.
 
    compile the example, and run the program.
 
@@ -301,7 +282,7 @@ Include Files
 
 The include file for TAO should be used via the statement
 
-::
+.. code::
 
       #include <petsctao.h>
 
@@ -325,7 +306,7 @@ A list of the necessary functions for performing these steps using TAO
 is show below. Details
 of these commands are presented in :any:`chapter_tao_solver`.
 
-::
+.. code::
 
       TaoCreate(MPI_Comm comm, Tao *tao); 
       TaoSetType(Tao tao, TaoType type);
@@ -376,7 +357,7 @@ data structure (``Vec``) is used to store the solution and gradient for
 the TAO unconstrained minimization solvers. A new parallel or sequential
 vector ``x`` of global dimension ``M`` is created with the command
 
-::
+.. code::
 
       info = VecCreate(MPI_Comm comm,int m,int M,Vec *x);
 
@@ -385,13 +366,13 @@ vector may be set with calls either to ``VecSetType()`` or to
 ``VecSetFromOptions()``. Additional vectors of the same type can be
 formed with
 
-::
+.. code::
 
       info = VecDuplicate(Vec old,Vec *new);
 
 The commands
 
-::
+.. code::
 
       info = VecSet(Vec X,PetscScalar value);
       info = VecSetValues(Vec x,int n,int *indices,
@@ -410,7 +391,7 @@ Usage of matrices and vectors is similar. The user can create a new
 parallel or sequential matrix ``H`` with ``M`` global rows and ``N``
 global columns, with the routines
 
-::
+.. code::
 
       ierr = MatCreate(MPI_Comm comm,Mat *H);
       ierr = MatSetSizes(H,PETSC_DECIDE,PETSC_DECIDE,M,N);
@@ -421,7 +402,7 @@ using ``m`` and ``n`` instead of ``PETSC_DECIDE``. ``H`` can then be
 used to store the Hessian matrix, as indicated by the call to
 ``TaoSetHessianMat()``. Matrix entries can be set with the command
 
-::
+.. code::
 
       ierr = MatSetValues(Mat H,PetscInt m,PetscInt *im, PetscInt n,
                           PetscInt *in, PetscScalar *values,INSERT_VALUES);
@@ -429,7 +410,7 @@ used to store the Hessian matrix, as indicated by the call to
 After all elements have been inserted into the matrix, it must be
 processed with the pair of commands
 
-::
+.. code::
 
       ierr = MatAssemblyBegin(Mat H,MAT_FINAL_ASSEMBLY);
       ierr = MatAssemblyEnd(Mat H,MAT_FINAL_ASSEMBLY);
@@ -451,7 +432,7 @@ application may have a grid discretization parameter ``nx`` that can be
 set with the command line option ``-nx <integer>``. The application can
 read this option with the following line of code:
 
-::
+.. code::
 
       PetscOptionsGetInt(NULL,NULL, "-nx", &nx, &flg);
 
@@ -481,7 +462,7 @@ line 154 of ``TaoSolve()`` from the ``main()`` routine in the program
 ``rosenbrock1.c``. The :doc:`/documentation/manual/index` provides further details regarding
 error checking, including information about error handling in Fortran.
 
-::
+.. code-block:: console
 
    > rosenbrock1 -tao_type nls
    [0]PETSC ERROR: --------------------- Error Message ------------------------------------
@@ -530,7 +511,7 @@ object (such as a vector, matrix, or solver) to indicate the processors
 over which the object is to be distributed. For example, some commands
 for matrix, vector, and solver creation are as follows.
 
-::
+.. code::
 
       ierr = MatCreate(MPI_Comm comm,Mat *H);
       ierr = VecCreate(MPI_Comm comm,Vec *x);
@@ -564,7 +545,7 @@ Header File
 
 TAO applications written in C/C++ should have the statement
 
-::
+.. code::
 
       #include <petsctao.h>
 
@@ -575,7 +556,7 @@ Creation and Destruction
 
 A TAO solver can be created by calling the
 
-::
+.. code::
 
       TaoCreate(MPI_Comm comm,Tao *newsolver);
 
@@ -593,7 +574,7 @@ PETSc in a given run.
 
 The routine
 
-::
+.. code::
 
       TaoSetType(Tao tao,TaoType type);
 
@@ -617,7 +598,7 @@ are not required at the command line.
 Each TAO solver that has been created should also be destroyed by using
 the
 
-::
+.. code::
 
       TaoDestroy(Tao tao);
 
@@ -657,7 +638,7 @@ should have a parallel distribution that allows for efficient scaling,
 inner products, and function evaluations. This vector can be passed to
 the application object by using the
 
-::
+.. code::
 
       TaoSetInitialVector(Tao,Vec);
 
@@ -667,7 +648,7 @@ calling the TAO solver. This vector will be used by the TAO solver to
 store the solution. Elsewhere in the application, this solution vector
 can be retrieved from the application object by using the
 
-::
+.. code::
 
       TaoGetSolutionVector(Tao,Vec *);
 
@@ -714,7 +695,7 @@ object and must follow a strict calling sequence.
 
 Routines should follow the form
 
-::
+.. code::
 
       PetscErrorCode EvaluateObjective(Tao,Vec,PetscReal*,void*);
 
@@ -729,7 +710,7 @@ by the vector in the second argument.
 This routine, and the application context, should be passed to the
 application object by using the
 
-::
+.. code::
 
       TaoSetObjectiveRoutine(Tao,
                         PetscErrorCode(*)(Tao,Vec,PetscReal*,void*),
@@ -749,7 +730,7 @@ Many TAO solvers also require gradient information from the application
 The gradient of the objective function is specified in a similar manner.
 Routines that evaluate the gradient should have the calling sequence
 
-::
+.. code::
 
       PetscErrorCode EvaluateGradient(Tao,Vec,Vec,void*);
 
@@ -763,7 +744,7 @@ should represent the gradient of the objective at the specified point at
 the end of the routine. This routine, and the user-defined pointer, can
 be passed to the application object by using the
 
-::
+.. code::
 
       TaoSetGradientRoutine(Tao,
                         PetscErrorCode (*)(Tao,Vec,Vec,void*),
@@ -779,7 +760,7 @@ gradient in the same routine. In fact, some solvers are more efficient
 when both function and gradient information can be computed in the same
 routine. These routines should follow the form
 
-::
+.. code::
 
       PetscErrorCode EvaluateFunctionAndGradient(Tao,Vec,
                         PetscReal*,Vec,void*);
@@ -791,7 +772,7 @@ fourth argument should return the gradient vector. The fifth argument is
 a pointer to a user-defined context. This context and the name of the
 routine should be set with the call
 
-::
+.. code::
 
       TaoSetObjectiveAndGradientRoutine(Tao,
                         PetscErrorCode (*)(Tao,Vec,PetscReal*,Vec,void*),
@@ -814,7 +795,7 @@ Hessian Evaluation
 Some optimization routines also require a Hessian matrix from the user.
 The routine that evaluates the Hessian should have the form
 
-::
+.. code::
 
       PetscErrorCode EvaluateHessian(Tao,Vec,Mat,Mat,void*);
 
@@ -831,7 +812,7 @@ set the Hessian matrix and linear solver in the routine
 
 One can set the Hessian evaluation routine by calling the
 
-::
+.. code::
 
       TaoSetHessianRoutine(Tao,Mat H, Mat Hpre,
                         PetscErrorCode (*)(Tao,Vec,Mat,Mat,
@@ -852,13 +833,13 @@ the Hessian of an objective function. These approximations will slow the
 solve considerably and are recommended primarily for checking the
 accuracy of hand-coded gradients and Hessians. These routines are
 
-::
+.. code::
 
       TaoDefaultComputeGradient(Tao, Vec, Vec, void*);
 
 and
 
-::
+.. code::
 
       TaoDefaultComputeHessian(Tao, Vec, Mat*, Mat*,void*);
 
@@ -872,7 +853,7 @@ PETSc ``MatFDColoring`` object, it can be applied to the
 finite-difference approximation by setting the Hessian evaluation
 routine to
 
-::
+.. code::
 
       TaoDefaultComputeHessianColor(Tao, Vec, Mat*, Mat*,void* );
 
@@ -912,7 +893,7 @@ The simplest type of constraint on an optimization problem puts lower or
 upper bounds on the variables. Vectors that represent lower and upper
 bounds for each variable can be set with the
 
-::
+.. code::
 
       TaoSetVariableBounds(Tao,Vec,Vec);
 
@@ -926,7 +907,7 @@ Alternatively, it may be more convenient for the user to designate a
 routine for computing these bounds that the solver will call before
 starting its algorithm. This routine will have the form
 
-::
+.. code::
 
       PetscErrorCode EvaluateBounds(Tao,Vec,Vec,void*);
 
@@ -935,7 +916,7 @@ respectfully, will be computed.
 
 This routine can be set with the
 
-::
+.. code::
 
       TaoSetVariableBoundsRoutine(Tao
                         PetscErrorCode (*)(Tao,Vec,Vec,void*),void*);
@@ -951,7 +932,7 @@ Solving
 
 Once the application and solver have been set up, the solver can be
 
-::
+.. code::
 
       TaoSolve(Tao);
 
@@ -1003,7 +984,7 @@ Viewing Status
 
 To see parameters and performance statistics for the solver, the routine
 
-::
+.. code::
 
       TaoView(Tao tao)
 
@@ -1022,7 +1003,7 @@ current iteration number, objective function value, gradient norm,
 infeasibility norm, and step length can be retrieved with the follwing
 command.
 
-::
+.. code::
 
       TaoGetSolutionStatus(Tao tao, PetscInt *iterate, PetscReal *f,
                         PetscReal *gnorm, PetscReal *cnorm, PetscReal *xdiff,
@@ -1039,7 +1020,7 @@ Obtaining a Solution
 After exiting the ``TaoSolve()`` function, the solution, gradient, and
 with the following routines.
 
-::
+.. code::
 
       TaoGetSolutionVector(Tao, Vec *X);
       TaoGetGradientVector(Tao, Vec *G);
@@ -1056,7 +1037,7 @@ Additional Options
 Additional options for the TAO solver can be be set from the command
 line by using the
 
-::
+.. code::
 
       TaoSetFromOptions(Tao)
 
@@ -1100,7 +1081,7 @@ function and gradient evaluation with
 include the combined state and design variables. Index sets for the
 state and design variables must be passed to TAO by using the function
 
-::
+.. code::
 
       TaoSetStateDesignIS(Tao, IS, IS);
 
@@ -1113,7 +1094,7 @@ be specified in a routine, written by the user, that evaluates
 :math:`c(x)`. The routine that evaluates the constraint equations should
 have the form
 
-::
+.. code::
 
       PetscErrorCode EvaluateConstraints(Tao,Vec,Vec,void*);
 
@@ -1124,7 +1105,7 @@ be evaluated. The third argument is the vector of function values
 context. This routine and the user-defined context should be set in the
 TAO solver with the
 
-::
+.. code::
 
       TaoSetConstraintsRoutine(Tao,Vec,
                         PetscErrorCode (*)(Tao,Vec,Vec,void*),
@@ -1142,7 +1123,7 @@ partial derivatives of :math:`c(x)` with respect to one variable. The
 evaluation of the Jacobian of :math:`c` should be performed by calling
 the
 
-::
+.. code::
 
       PetscErrorCode JacobianState(Tao,Vec,Mat,Mat,Mat,void*);
       PetscErrorCode JacobianDesign(Tao,Vec,Mat*,void*);
@@ -1158,7 +1139,7 @@ inverse matrix may be ``PETSC_NULL``, in which case TAO will use a PETSc
 Krylov subspace solver to solve the state system. These evaluation
 routines should be registered with TAO by using the
 
-::
+.. code::
 
       TaoSetJacobianStateRoutine(Tao,Mat,Mat,Mat,
                         PetscErrorCode (*)(Tao,Vec,Mat,Mat,
@@ -1192,13 +1173,13 @@ optimization problem
 For these problems, the objective function value should be computed as a
 vector of residuals, :math:`r(x)`, computed with a function of the form
 
-::
+.. code::
 
       PetscErrorCode EvaluateResidual(Tao,Vec,Vec,void*);
 
 and set with the
 
-::
+.. code::
 
       TaoSetResidualRoutine(Tao, PetscErrorCode (*)(Tao,Vec,Vec,void*), 
                             void *);
@@ -1207,13 +1188,13 @@ routine. If required by the algorithm, the Jacobian of the residual,
 :math:`J = \partial r(x) / \partial x`, should be computed with a
 function of the form
 
-::
+.. code::
 
       PetscErrorCode EvaluateJacobian(Tao,Vec,Mat,void*);
 
 and set with the
 
-::
+.. code::
 
       TaoSetJacobianResidualRoutine(Tao, PetscErrorCode (*)(Tao,Vec,Mat,void*),
                                     void *);
@@ -1228,7 +1209,7 @@ nonlinear equations :math:`C(X) = 0`, where
 :math:`C: \mathbb R^n \to \mathbb R^m`. These constraints should be
 specified in a routine written by the user with the form
 
-::
+.. code::
 
       PetscErrorCode EqualityConstraints(Tao,Vec,Vec,void*);
 
@@ -1241,7 +1222,7 @@ argument is a pointer to a user-defined context.
 This routine and the user-defined context must be registered with TAO by
 using the
 
-::
+.. code::
 
       TaoSetConstraintRoutine(Tao, Vec,
                         PetscErrorCode (*)(Tao,Vec,Vec,void*),
@@ -1259,7 +1240,7 @@ partial derivatives of ``f`` with respect to one variable. The
 evaluation of the Jacobian of :math:`C` should be performed in a routine
 of the form
 
-::
+.. code::
 
       PetscErrorCode EvaluateJacobian(Tao,Vec,Mat,Mat,void*);
 
@@ -1276,7 +1257,7 @@ in the routine ``KSPSetOperators()``.
 
 This routine should be specified to TAO by using the
 
-::
+.. code::
 
       TaoSetJacobianRoutine(Tao,Mat J, Mat Jpre,
                         PetscErrorCode (*)(Tao,Vec,Mat,Mat, 
