@@ -208,7 +208,7 @@ then gradually learn more details according to their needs. The current
 version of TAO and the most recent help concerning installation and
 usage can be found at https://www.petsc.org .
 
-See `/documentation/manual/index` and `/documentation/install/index.html` for how to
+See :doc:`/documentation/manual/index` and :doc:`/install/index` for how to
 install and start using PETSc/TAO.
 
 Writing Application Codes with TAO
@@ -274,8 +274,10 @@ The following sections annotate the lines of code in
    :name: tao-example1
 
    .. literalinclude:: /../src/tao/unconstrained/tutorials/rosenbrock1.c
-      :end-at: return ierr;
-      :append: }
+      :prepend: #include <petsctao.h>
+      :start-at: typedef struct
+      :end-at: PetscFinalize
+      :append: return ierr;}
 
 Include Files
 -------------
