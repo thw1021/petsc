@@ -206,9 +206,9 @@ but fully understanding its usage requires time. Application programmers
 can easily begin to use TAO by working with the examples provided and
 then gradually learn more details according to their needs. The current
 version of TAO and the most recent help concerning installation and
-usage can be found at https://www.mcs.anl.gov/research/projects/tao/.
+usage can be found at https://www.petsc.org .
 
-See the PETSc users manual and https://www.mcs.anl.gov/petsc for how to
+See `/documentation/manual/index` and `/documentation/install/index.html` for how to
 install and start using PETSc/TAO.
 
 Writing Application Codes with TAO
@@ -218,15 +218,15 @@ Examples throughout the library demonstrate the software usage and can
 serve as templates for developing custom applications. We suggest that
 new TAO users examine programs in ``${PETSC_DIR}/src/tao/<unconstrained,bound,..>/tutorials``
 
-The `manual pages </documentation/manualpages/index>`
+The :doc:`manual pages </documentation/manualpages/index>`
 provide indices (organized by both routine names and concepts) to the
 tutorial examples.
 
 We suggest the following procedure for writing a new application program
 using TAO:
 
-#. Install PETSc/TAO according to the instructions in
-   https://www.mcs.anl.gov/petsc/documentation/installation.html.
+#. Install PETSc/TAO according to the instructions at
+   :doc:``/documentation/install/index.rst``.
 
 #. Copy an example and makefile from the directories ``${PETSC_DIR}/src/tao/<unconstrained,bound,..>/tutorials``.
 
