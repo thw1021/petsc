@@ -162,7 +162,7 @@ The TAO design philosophy place strong emphasis on the reuse of external
 tools where appropriate. Our design enables bidirectional connection to
 lower-level linear algebra support (e.g., parallel sparse matrix data
 structures) provided in toolkits such as PETSc
-:raw-latex:`\cite{petsc-web-page,petsc,petsc-user-ref}` vas well as
+as well as
 higher-level application frameworks. Our design decisions are strongly
 motivated by the challenges inherent in the use of large-scale
 distributed memory architectures and the reality of working with large
@@ -347,7 +347,7 @@ TAO relies heavily on PETSc not only for its vectors, matrices, and
 linear solvers but also for its programming utilities such as command
 line option handling, error handling, and compiling system. We provide
 here a quick overview of some of these PETSc features. Please refer to
-the PETSc manual :raw-latex:`\cite{petsc-user-ref}` for a more in-depth
+the :doc:`/documentation/manual/index` for a more in-depth
 discussion of PETSc.
 
 Vectors
@@ -383,7 +383,7 @@ respectively set all the components of a vector to a particular scalar
 value and assign a different value to each component. More detailed
 information about PETSc vectors, including their basic operations,
 scattering/gathering, index sets, and distributed arrays, may be found
-in the PETSc users manual :raw-latex:`\cite{petsc-user-ref}`.
+in the :doc:`/documentation/manual/index`.
 
 Matrices
 ~~~~~~~~
@@ -416,7 +416,7 @@ processed with the pair of commands
       ierr = MatAssemblyBegin(Mat H,MAT_FINAL_ASSEMBLY);
       ierr = MatAssemblyEnd(Mat H,MAT_FINAL_ASSEMBLY);
 
-The PETSc users manual :raw-latex:`\cite{petsc-user-ref}` discusses
+The :doc:`/documentation/manual/index` discusses
 various matrix formats as well as the details of some basic matrix
 manipulation routines.
 
@@ -439,8 +439,8 @@ read this option with the following line of code:
 
 If the command line option is present, the variable ``nx`` is set
 accordingly; otherwise, ``nx`` remains unchanged. A complete description
-of the options database may be found in the PETSc users manual
-:raw-latex:`\cite{petsc-user-ref}`.
+of the options database may be found in the :doc:`/documentation/manual/index`.
+
 
 Error Checking
 ~~~~~~~~~~~~~~
@@ -460,8 +460,7 @@ the routine ``MatMult()`` and was caused by failure to assemble the
 matrix in the Hessian evaluation routine. The ``MatMult()`` routine was
 called from the ``TaoSolve_NLS()`` routine, which was in turn called on
 line 154 of ``TaoSolve()`` from the ``main()`` routine in the program
-``rosenbrock1.c``. The PETSc users manual
-:raw-latex:`\cite{petsc-user-ref}` provides further details regarding
+``rosenbrock1.c``. The :doc:`/documentation/manual/index` provides further details regarding
 error checking, including information about error handling in Fortran.
 
 ::
@@ -563,7 +562,7 @@ A TAO solver can be created by calling the
       TaoCreate(MPI_Comm comm,Tao *newsolver);
 
 routine. Much like creating PETSc vector and matrix objects, the first
-argument is an MPI *communicator*. An MPI :raw-latex:`\cite{using-mpi}`
+argument is an MPI *communicator*. An MPI :cite:`using-mpi`
 communicator indicates a collection of processors that will be used to
 evaluate the objective function, compute constraints, and provide
 derivative information. When only one processor is being used, the
@@ -884,8 +883,7 @@ preconditioning (``PCNONE`` or ``-pc_type none``), a user-provided
 preconditioner matrix, or a user-provided preconditioner shell
 (``PCSHELL``). In other words, matrix-free methods cannot be used if a
 direct solver is to be employed. Details about using matrix-free methods
-are provided in the PETSc users manual
-:raw-latex:`\cite{petsc-user-ref}`.
+are provided in the :doc:`/documentation/manual/index`.
 
 .. _sec_bounds:
 
@@ -1326,7 +1324,7 @@ briefly discussed in this chapter.
 Nelder-Mead Method
 ~~~~~~~~~~~~~~~~~~
 
-The Nelder-Mead algorithm :raw-latex:`\cite{nelder.mead:simplex}` is a
+The Nelder-Mead algorithm :cite:`nelder.mead:simplex` is a
 direct search method for finding a local minimum of a function
 :math:`f(x)`. This algorithm does not require any gradient or Hessian
 information of :math:`f` and therefore has some expected advantages and
@@ -1429,7 +1427,7 @@ should be performed simultaneously when using this algorithm.
 
 Five variations are currently supported by the TAO implementation: the
 Fletcher-Reeves method, the Polak-Ribiére method, the Polak-Ribiére-Plus
-method :raw-latex:`\cite{NW99}`, the Hestenes-Stiefel method, and the
+method :cite:`NW99`, the Hestenes-Stiefel method, and the
 Dai-Yuan method. These conjugate gradient methods can be specified by
 using the command line argument ``-tao_cg_type <fr,pr,prp,hs,dy>``,
 respectively. The default value is ``prp``.
@@ -1850,7 +1848,7 @@ method. The method for initializing the trust-region radius is set with
 the command line argument
 ``-tao_nls_init_type <constant,direction,interpolation>``;
 ``interpolation``, which chooses an initial value based on the
-interpolation scheme found in :raw-latex:`\cite{CGT}`, is the default.
+interpolation scheme found in :cite:`CGT`, is the default.
 This scheme performs a number of function and gradient evaluations to
 determine a radius such that the reduction predicted by the quadratic
 model along the gradient direction coincides with the actual reduction
@@ -2135,7 +2133,7 @@ The method for computing an initial trust-region radius is set with the
 command line arguments
 ``-tao_ntr_init_type <constant,direction,interpolation>``;
 ``interpolation``, which chooses an initial value based on the
-interpolation scheme found in :raw-latex:`\cite{CGT}`, is the default.
+interpolation scheme found in :cite:`CGT`, is the default.
 This scheme performs a number of function and gradient evaluations to
 determine a radius such that the reduction predicted by the quadratic
 model along the gradient direction coincides with the actual reduction
@@ -2181,7 +2179,7 @@ BMRM
 ~~~~
 
 The Bundle Method for Regularized Risk Minimization
-(BMRM):raw-latex:`\cite{brmrm}` is a numerical approach to optimizing an
+(BMRM) :cite:`brmrm` is a numerical approach to optimizing an
 unconstrained objective in the form of
 :math:`f(x) + 0.5 * \lambda \| x \|^2`. Here :math:`f` is a convex
 function that is finite on the whole space. :math:`\lambda` is a
@@ -2194,7 +2192,7 @@ OWL-QN
 ~~~~~~
 
 The Orthant-Wise Limited-memory Quasi-Newton algorithm
-(OWL-QN):raw-latex:`\cite{owlqn}` is a numerical approach to optimizing
+(OWL-QN) :cite:`owlqn` is a numerical approach to optimizing
 an unconstrained objective in the form of
 :math:`f(x) + \lambda \|x\|_1`. Here f is a convex and differentiable
 function, :math:`\lambda` is a positive weight parameter, and
@@ -2269,7 +2267,7 @@ symmetric system of equations,
 
 only for inactive variables in the interior of the bounds. The
 active-set estimation is based on Bertsekas
-:raw-latex:`\cite{bertsekas:projected}` with the following variable
+:cite:`bertsekas:projected` with the following variable
 index categories:
 
 .. math::
@@ -2466,7 +2464,7 @@ The minimum number of quadratic-like steps before a restart is set using
 Trust-Region Newton Method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The TRON :raw-latex:`\cite{lin_c3}` algorithm is an active-set method
+The TRON :cite:`lin_c3` algorithm is an active-set method
 that uses a combination of gradient projections and a preconditioned
 conjugate gradient method to minimize an objective function. Each
 iteration of the TRON algorithm requires function, gradient, and Hessian
@@ -2780,10 +2778,10 @@ One algorithm for solving the least squares problem
 :math:`F` is unavailable is the model-based POUNDerS (Practical
 Optimization Using No Derivatives for sums of Squares) algorithm
 (``tao_pounders``). POUNDerS employs a derivative-free trust-region
-framework as described in :raw-latex:`\cite{Dfobook}` in order to
+framework as described in :cite:`Dfobook` in order to
 converge to local minimizers. An example of this version of POUNDerS
 applied to a practical least-squares problem can be found in
-:raw-latex:`\cite{UNEDF0}`.
+:cite:`UNEDF0`.
 
 Derivative-Free Trust-Region Algorithm
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3036,11 +3034,11 @@ MCP(:math:`F`, :math:`\ell`, :math:`u`) if for each
 Note that when :math:`\ell = \{-\infty\}^n` and
 :math:`u = \{\infty\}^n`, we have a nonlinear system of equations, and
 :math:`\ell = \{0\}^n` and :math:`u = \{\infty\}^n` correspond to the
-nonlinear complementarity problem :raw-latex:`\cite{cottle:nonlinear}`.
+nonlinear complementarity problem :cite:`cottle:nonlinear`.
 
 Simple complementarity conditions arise from the first-order optimality
 conditions from optimization
-:raw-latex:`\cite{karush:minima, kuhn.tucker:nonlinear}`. In the simple
+:cite:`karush:minima` :cite:`kuhn.tucker:nonlinear`. In the simple
 bound-constrained optimization case, these conditions correspond to
 MCP(:math:`\nabla f`, :math:`\ell`, :math:`u`), where
 :math:`f: \mathbb R^n \to \mathbb R` is the objective function. In a
@@ -3050,9 +3048,9 @@ is at the lower bound, then the function must be increasing and
 function must be decreasing and :math:`\nabla f \leq 0`. If the solution
 is strictly between the bounds, we must be at a stationary point and
 :math:`\nabla f = 0`. Other complementarity problems arise in economics
-and engineering :raw-latex:`\cite{ferris.pang:engineering}`, game theory
-:raw-latex:`\cite{nash:equilibrium}`, and finance
-:raw-latex:`\cite{huang.pang:option}`.
+and engineering :cite:`ferris.pang:engineering`, game theory
+:cite:`nash:equilibrium`, and finance
+:cite:`huang.pang:option`.
 
 Evaluation routines for :math:`F` and its Jacobian must be supplied
 prior to solving the application. The bounds, :math:`[\ell,u]`, on the
@@ -3063,11 +3061,11 @@ Semismooth Methods
 ~~~~~~~~~~~~~~~~~~
 
 TAO has two implementations of semismooth algorithms
-:raw-latex:`\cite{munson.facchinei.ea:semismooth, deluca.facchinei.ea:semismooth, 
-facchinei.fischer.ea:semismooth}` for solving mixed complementarity
+:cite:`munson.facchinei.ea:semismooth` :cite:`deluca.facchinei.ea:semismooth`
+:cite:`facchinei.fischer.ea:semismooth` for solving mixed complementarity
 problems. Both are based on a reformulation of the mixed complementarity
 problem as a nonsmooth system of equations using the Fischer-Burmeister
-function :raw-latex:`\cite{fischer:special}`. A nonsmooth Newton method
+function :cite:`fischer:special`. A nonsmooth Newton method
 is applied to the reformulated system to calculate a solution. The
 theoretical properties of such methods are detailed in the
 aforementioned references.
@@ -3107,7 +3105,7 @@ componentwise as
 
 We note that :math:`\Phi` is not differentiable everywhere but satisfies
 a semismoothness property
-:raw-latex:`\cite{mifflin:semismooth, qi:convergence, qi.sun:nonsmooth}`.
+:cite:`mifflin:semismooth` :cite:`qi:convergence` :cite:`qi.sun:nonsmooth`.
 Furthermore, the natural merit function,
 :math:`\Psi(x) := \frac{1}{2} \| \Phi(x) \|_2^2`, is continuously
 differentiable.
@@ -3116,14 +3114,14 @@ The two semismooth TAO solvers both solve the system :math:`\Phi(x) = 0`
 by applying a nonsmooth Newton method with a line search. We calculate a
 direction, :math:`d^k`, by solving the system
 :math:`H^kd^k = -\Phi(x^k)`, where :math:`H^k` is an element of the
-:math:`B`-subdifferential :raw-latex:`\cite{qi.sun:nonsmooth}` of
+:math:`B`-subdifferential :cite:`qi.sun:nonsmooth` of
 :math:`\Phi` at :math:`x^k`. If the direction calculated does not
 satisfy a suitable descent condition, then we use the negative gradient
 of the merit function, :math:`-\nabla \Psi(x^k)`, as the search
 direction. A standard Armijo search
-:raw-latex:`\cite{armijo:minimization}` is used to find the new
+:cite:`armijo:minimization` is used to find the new
 iteration. Nonmonotone searches
-:raw-latex:`\cite{grippo.lampariello.ea:nonmonotone}` are also available
+:cite:`grippo.lampariello.ea:nonmonotone` are also available
 by setting appropriate runtime options. See Section
 `[sec:TaoLineSearch] <#sec:TaoLineSearch>`__ for further details.
 
@@ -3177,7 +3175,7 @@ where the gradient and the Hessian of the objective are both constant.
 Gradient Projection Conjugate Gradient Method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The GPCG :raw-latex:`\cite{more-toraldo}` algorithm is much like the
+The GPCG :cite:`more-toraldo` algorithm is much like the
 TRON algorithm, discussed in Section `4.2.3 <#sec:tron>`__, except that
 it assumes that the objective function is quadratic and convex.
 Therefore, it evaluates the function, gradient, and Hessian only once.
@@ -3253,10 +3251,10 @@ iteration :math:`k`.
 
 TAOALMM offers two versions of the augmented Lagrangian formulation: the
 canonical Hestenes-Powell augmented
-Lagrangian :raw-latex:`\cite{hestenes1969multiplier,powell1969method}`
+Lagrangian :cite:`hestenes1969multiplier` :cite:`powell1969method`
 with inequality constrained converted to equality constraints via slack
 variables, and the slack-less Powell-Hestenes-Rockafellar
-formulation :raw-latex:`\cite{rockafellar1974augmented}` that utilizes a
+formulation :cite:`rockafellar1974augmented` that utilizes a
 pointwise ``max()`` on the inequality constraints. For most
 applications, the canonical Hestenes-Powell formulation is likely to
 perform better. However, the PHR formulation may be desirable for
@@ -3274,7 +3272,7 @@ Alternating Direction Method of Multipliers
 
 The ADMM is an algorithm that is intended to blend the decomposability
 of dual ascent with the superior convergence properties of the method of
-multipliers. :raw-latex:`\cite{boyd}` The algorithm solves problems in
+multipliers. :cite:`boyd` The algorithm solves problems in
 the form
 
 .. math::
@@ -3432,8 +3430,7 @@ access the linear solver with the
 
 command. With access to the KSP object, users can customize it for their
 application to achieve improved performance. Additional details on the
-KSP options in PETSc can be found in the PETSc users manual
-:raw-latex:`\cite{petsc-user-ref}`.
+KSP options in PETSc can be found in the :doc:`/documentation/manual/index`.
 
 Monitors
 --------
@@ -3502,7 +3499,7 @@ Line Searches
 -------------
 
 By using the command line option ``-tao_ls_type``. Available line
-searches include Moré-Thuente :raw-latex:`\cite{more:92}`, Armijo, gpcg,
+searches include Moré-Thuente :cite:`more:92`, Armijo, gpcg,
 and unit.
 
 The line search routines involve several parameters, which are set to
@@ -3962,3 +3959,13 @@ dynamic loading, then the fourth argument will be ignored.
 Once the solver has been registered, the new solver can be selected
 either by using the ``TaoSetType()`` function or by using the
 ``-tao_type`` command line option.
+
+.. raw:: html
+
+    <hr>
+
+.. bibliography:: /../src/docs/tao_tex/tao.bib
+   :filter: docname in docnames
+
+.. bibliography:: /../src/docs/tao_tex/manual/mathprog.bib
+   :filter: docname in docnames
