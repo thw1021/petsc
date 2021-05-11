@@ -1607,7 +1607,10 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
         # hands
         for child in diag.children:
           # child of header B here is header A not header C
-          filename = child.location.file.name
+          try:
+            filename = child.location.file.name
+          except AttributeError:
+            continue
           # filter out our fake header
           if filename != "megaHeader.hpp":
             # this will be include/petsc/private, headerA.h
