@@ -226,7 +226,7 @@ We suggest the following procedure for writing a new application program
 using TAO:
 
 #. Install PETSc/TAO according to the instructions at
-   :doc:``/documentation/install/index.rst``.
+   :doc:`/documentation/install/index`.
 
 #. Copy an example and makefile from the directories ``${PETSC_DIR}/src/tao/<unconstrained,bound,..>/tutorials``.
 
