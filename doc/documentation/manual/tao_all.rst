@@ -958,7 +958,7 @@ constraints is less than :math:`\epsilon_{crtol}` and either
 
    \begin{array}{lcl}
    ||g(X)|| &\leq& \epsilon_{gatol}, \\
-   ||g(X)||/|f(X)| &\leq& \epsilon_{grtol}, \quad \mbox{or} \\
+   ||g(X)||/|f(X)| &\leq& \epsilon_{grtol}, \quad \text{or} \\
    ||g(X)||/|g(X_0)| &\leq& \epsilon_{gttol},
    \end{array}
 
@@ -1063,7 +1063,7 @@ TAO can solve PDE-constrained optimization applications of the form
 
    \begin{array}{ll}
    \displaystyle \min_{u,v} & f(u,v) \\
-   \mbox{subject to} & g(u,v) = 0,
+   \text{subject to} & g(u,v) = 0,
    \end{array}
 
 where the state variable :math:`u` is the solution to the discretized
@@ -1753,7 +1753,7 @@ perturbation. These cases are described below.
    direction or the Krylov subspace method, the perturbation is
    initialized to
 
-   .. math:: \rho_{k+1} = \mbox{median}\left\{\mbox{imin}, \mbox{imfac} * \|g(x_k)\|, \mbox{imax}\right\},
+   .. math:: \rho_{k+1} = \text{median}\left\{\text{imin}, \text{imfac} * \|g(x_k)\|, \text{imax}\right\},
 
    where :math:`g(x_k)` is the gradient of the objective function and
    ``imin`` is set with the command line argument
@@ -1770,7 +1770,7 @@ perturbation. These cases are described below.
    the direction or Krylov subspace method, the perturbation is
    increased to
 
-   .. math:: \rho_{k+1} = \min\left\{\mbox{pmax}, \max\left\{\mbox{pgfac} * \rho_k, \mbox{pmgfac} * \|g(x_k)\|\right\}\right\},
+   .. math:: \rho_{k+1} = \min\left\{\text{pmax}, \max\left\{\text{pgfac} * \rho_k, \text{pmgfac} * \|g(x_k)\|\right\}\right\},
 
    where :math:`g(x_k)` is the gradient of the objective function and
    ``pgfac`` is set with the command line argument ``-tao_nls_pgfac``
@@ -1782,13 +1782,13 @@ perturbation. These cases are described below.
    either the direction or Krylov subspace method, the perturbation is
    decreased to
 
-   .. math:: \rho_{k+1} = \min\left\{\mbox{psfac} * \rho_k, \mbox{pmsfac} * \|g(x_k)\|\right\},
+   .. math:: \rho_{k+1} = \min\left\{\text{psfac} * \rho_k, \text{pmsfac} * \|g(x_k)\|\right\},
 
    where :math:`g(x_k)` is the gradient of the objective function,
    ``psfac`` is set with the command line argument ``-tao_nls_psfac``
    with a default value of 0.4, and ``pmsfac`` is set by
    ``-tao_nls_pmsfac`` with a default value of 0.1. Moreover, if
-   :math:`\rho_{k+1} < \mbox{pmin}`, then :math:`\rho_{k+1} = 0`, where
+   :math:`\rho_{k+1} < \text{pmin}`, then :math:`\rho_{k+1} = 0`, where
    ``pmin`` is set with the command line argument ``-tao_nls_pmin`` and
    has a default value of :math:`10^{-12}`.
 
@@ -1826,11 +1826,11 @@ radius based on the value of :math:`\tau_k`. In particular,
 .. math::
 
    \Delta_{k+1} = \left\{\begin{array}{ll}
-   \omega_1 \mbox{min}(\Delta_k, \|d_k\|) & \mbox{if } \tau_k \in [0, \nu_1) \\
-   \omega_2 \mbox{min}(\Delta_k, \|d_k\|) & \mbox{if } \tau_k \in [\nu_1, \nu_2) \\
-   \omega_3 \Delta_k & \mbox{if } \tau_k \in [\nu_2, \nu_3) \\
-   \mbox{max}(\Delta_k, \omega_4 \|d_k\|) & \mbox{if } \tau_k \in [\nu_3, \nu_4) \\
-   \mbox{max}(\Delta_k, \omega_5 \|d_k\|) & \mbox{if } \tau_k \in [\nu_4, \infty),
+   \omega_1 \text{min}(\Delta_k, \|d_k\|) & \text{if } \tau_k \in [0, \nu_1) \\
+   \omega_2 \text{min}(\Delta_k, \|d_k\|) & \text{if } \tau_k \in [\nu_1, \nu_2) \\
+   \omega_3 \Delta_k & \text{if } \tau_k \in [\nu_2, \nu_3) \\
+   \text{max}(\Delta_k, \omega_4 \|d_k\|) & \text{if } \tau_k \in [\nu_3, \nu_4) \\
+   \text{max}(\Delta_k, \omega_5 \|d_k\|) & \text{if } \tau_k \in [\nu_4, \infty),
    \end{array}
    \right.
 
@@ -1846,11 +1846,11 @@ where :math:`q_k` is the quadratic model. The radius is then updated as
 .. math::
 
    \Delta_{k+1} = \left\{\begin{array}{ll}
-   \alpha_1 \mbox{min}(\Delta_k, \|d_k\|) & \mbox{if } \kappa_k \in (-\infty, \eta_1) \\
-   \alpha_2 \mbox{min}(\Delta_k, \|d_k\|) & \mbox{if } \kappa_k \in [\eta_1, \eta_2) \\
-   \alpha_3 \Delta_k & \mbox{if } \kappa_k \in [\eta_2, \eta_3) \\
-   \mbox{max}(\Delta_k, \alpha_4 \|d_k\|) & \mbox{if } \kappa_k \in [\eta_3, \eta_4) \\
-   \mbox{max}(\Delta_k, \alpha_5 \|d_k\|) & \mbox{if } \kappa_k \in [\eta_4, \infty),
+   \alpha_1 \text{min}(\Delta_k, \|d_k\|) & \text{if } \kappa_k \in (-\infty, \eta_1) \\
+   \alpha_2 \text{min}(\Delta_k, \|d_k\|) & \text{if } \kappa_k \in [\eta_1, \eta_2) \\
+   \alpha_3 \Delta_k & \text{if } \kappa_k \in [\eta_2, \eta_3) \\
+   \text{max}(\Delta_k, \alpha_4 \|d_k\|) & \text{if } \kappa_k \in [\eta_3, \eta_4) \\
+   \text{max}(\Delta_k, \alpha_5 \|d_k\|) & \text{if } \kappa_k \in [\eta_4, \infty),
    \end{array}
    \right.
 
@@ -1874,7 +1874,7 @@ programming problem
 
    \begin{array}{ll}
    \min_d  & \frac{1}{2}d^T H_k d  + g_k^T d \\
-   \mbox{subject to} & \|d\| \leq \Delta_k
+   \text{subject to} & \|d\| \leq \Delta_k
    \end{array}
 
 to obtain a direction :math:`d_k`, where :math:`H_k` is the Hessian of
@@ -2076,11 +2076,11 @@ where :math:`q_k` is the quadratic model. The radius is then updated as
 .. math::
 
    \Delta_{k+1} = \left\{\begin{array}{ll}
-   \alpha_1 \mbox{min}(\Delta_k, \|d_k\|) & \mbox{if } \kappa_k \in (-\infty, \eta_1) \\
-   \alpha_2 \mbox{min}(\Delta_k, \|d_k\|) & \mbox{if } \kappa_k \in [\eta_1, \eta_2) \\
-   \alpha_3 \Delta_k & \mbox{if } \kappa_k \in [\eta_2, \eta_3) \\
-   \mbox{max}(\Delta_k, \alpha_4 \|d_k\|) & \mbox{if } \kappa_k \in [\eta_3, \eta_4) \\
-   \mbox{max}(\Delta_k, \alpha_5 \|d_k\|) & \mbox{if } \kappa_k \in [\eta_4, \infty),
+   \alpha_1 \text{min}(\Delta_k, \|d_k\|) & \text{if } \kappa_k \in (-\infty, \eta_1) \\
+   \alpha_2 \text{min}(\Delta_k, \|d_k\|) & \text{if } \kappa_k \in [\eta_1, \eta_2) \\
+   \alpha_3 \Delta_k & \text{if } \kappa_k \in [\eta_2, \eta_3) \\
+   \text{max}(\Delta_k, \alpha_4 \|d_k\|) & \text{if } \kappa_k \in [\eta_3, \eta_4) \\
+   \text{max}(\Delta_k, \alpha_5 \|d_k\|) & \text{if } \kappa_k \in [\eta_4, \infty),
    \end{array}
    \right.
 
@@ -2131,7 +2131,7 @@ the form
 
    \begin{array}{ll} \displaystyle
    \min_{x} & f(x) \\
-   \mbox{subject to} & l \leq x \leq u.
+   \text{subject to} & l \leq x \leq u.
    \end{array}
 
 These solvers use the bounds on the variables as well as objective
@@ -2151,8 +2151,8 @@ operations used by all bound constrained algorithms.
    .. math::
 
       \mathfrak{P}(g) = \left\{\begin{array}{ll}
-      0 & \mbox{if} \; (x \leq l_i \land g_i > 0) \lor (x \geq u_i \land g_i < 0) \\
-      g_i & \mbox{otherwise}
+      0 & \text{if} \; (x \leq l_i \land g_i > 0) \lor (x \geq u_i \land g_i < 0) \\
+      g_i & \text{otherwise}
       \end{array}
       \right.
 
@@ -2161,9 +2161,9 @@ operations used by all bound constrained algorithms.
    .. math::
 
       \mathfrak{B}(x) = \left\{\begin{array}{ll}
-      l_i & \mbox{if} \; x_i < l_i \\
-      u_i & \mbox{if} \; x_i > u_i \\
-      x_i & \mbox{otherwise}
+      l_i & \text{if} \; x_i < l_i \\
+      u_i & \text{if} \; x_i > u_i \\
+      x_i & \text{otherwise}
       \end{array}
       \right.
 
@@ -2192,15 +2192,15 @@ index categories:
 .. math::
 
    \begin{array}{rlll} \displaystyle
-   \mbox{lower bounded}: & \mathcal{L}(x) & = & \{ i \; : \; x_i \leq l_i + \epsilon \; \land \; g(x)_i > 0 \}, \\
-   \mbox{upper bounded}: & \mathcal{U}(x) & = & \{ i \; : \; x_i \geq u_i + \epsilon \; \land \; g(x)_i < 0 \}, \\
-   \mbox{fixed}: & \mathcal{F}(x) & = & \{ i \; : \; l_i = u_i \}, \\
-   \mbox{active-set}: & \mathcal{A}(x) & = & \{ \mathcal{L}(x) \; \bigcup \; \mathcal{U}(x) \; \bigcup \; \mathcal{F}(x) \}, \\
-   \mbox{inactive-set}: & \mathcal{I}(x) & = & \{ 1,2,\ldots,n \} \; \backslash \; \mathcal{A}(x).
+   \text{lower bounded}: & \mathcal{L}(x) & = & \{ i \; : \; x_i \leq l_i + \epsilon \; \land \; g(x)_i > 0 \}, \\
+   \text{upper bounded}: & \mathcal{U}(x) & = & \{ i \; : \; x_i \geq u_i + \epsilon \; \land \; g(x)_i < 0 \}, \\
+   \text{fixed}: & \mathcal{F}(x) & = & \{ i \; : \; l_i = u_i \}, \\
+   \text{active-set}: & \mathcal{A}(x) & = & \{ \mathcal{L}(x) \; \bigcup \; \mathcal{U}(x) \; \bigcup \; \mathcal{F}(x) \}, \\
+   \text{inactive-set}: & \mathcal{I}(x) & = & \{ 1,2,\ldots,n \} \; \backslash \; \mathcal{A}(x).
    \end{array}
 
 At each iteration, the bound tolerance is estimated as
-:math:`\epsilon_{k+1} = \mbox{min}(\epsilon_k, ||w_k||_2)` with
+:math:`\epsilon_{k+1} = \text{min}(\epsilon_k, ||w_k||_2)` with
 :math:`w_k = x_k - \mathfrak{B}(x_k - \beta D_k g_k)`, where the
 diagonal matrix :math:`D_k` is an approximation of the Hessian inverse
 :math:`H_k^{-1}`. The initial bound tolerance :math:`\epsilon_0` and the
@@ -2467,7 +2467,7 @@ TAO solves PDE-constrained optimization problems of the form
 
    \begin{array}{ll}
    \displaystyle \min_{u,v} & f(u,v) \\
-   \mbox{subject to} & g(u,v) = 0,
+   \text{subject to} & g(u,v) = 0,
    \end{array}
 
 where the state variable :math:`u` is the solution to the discretized
@@ -2493,7 +2493,7 @@ optimization problem
 
    \begin{array}{ll}
    \displaystyle \min_{u,v} & \tilde{f}_k(u, v) \\
-   \mbox{subject to} & A_k (u-u_k) + B_k (v-v_k) + g_k = 0,
+   \text{subject to} & A_k (u-u_k) + B_k (v-v_k) + g_k = 0,
    \end{array}
 
 where :math:`A_k = \nabla_u g(u_k,v_k)`,
@@ -2562,7 +2562,7 @@ optimization problem:
 
    \begin{array}{ll}
    \displaystyle \min_{u,v} & \tilde{f}_k(u, v) \\
-   \mbox{subject to} & A_k (u-u_k) + B_k (v-v_k) + \alpha_k g_k = 0.
+   \text{subject to} & A_k (u-u_k) + B_k (v-v_k) + \alpha_k g_k = 0.
    \end{array}
 
 We begin with the change of variables
@@ -2571,7 +2571,7 @@ We begin with the change of variables
 
    \begin{array}{ll}
    \displaystyle \min_{du,dv} & \tilde{f}_k(u_k+du, v_k+dv) \\
-   \mbox{subject to} & A_k du + B_k dv + \alpha_k g_k = 0
+   \text{subject to} & A_k du + B_k dv + \alpha_k g_k = 0
    \end{array}
 
 and make the substitution
@@ -2743,10 +2743,10 @@ approximation on the trust region is then used to update the iterate,
 .. math::
 
    x_{k+1} = \left\{\begin{array}{ll}
-   x_+ & \mbox{if } \rho_k \geq \eta_1 \\
-   x_+ & \mbox{if } 0<\rho_k <\eta_1  \mbox{ and \texttt{valid}=\texttt{true}}
+   x_+ & \text{if } \rho_k \geq \eta_1 \\
+   x_+ & \text{if } 0<\rho_k <\eta_1  \text{ and \texttt{valid}=\texttt{true}}
    \\
-   x_k & \mbox{else}, 
+   x_k & \text{else}, 
    \end{array}
    \right.
 
@@ -2755,11 +2755,11 @@ and trust-region radius,
 .. math::
 
    \Delta_{k+1} = \left\{\begin{array}{ll}
-    \mbox{min}(\gamma_1\Delta_k, \Delta_{\max}) & \mbox{if } \rho_k \geq
-   \eta_1 \mbox{ and } \|x_+-x_k\|_p\geq \omega_1\Delta_k \\
-   \gamma_0\Delta_k & \mbox{if } \rho_k < \eta_1 \mbox{ and
+    \text{min}(\gamma_1\Delta_k, \Delta_{\max}) & \text{if } \rho_k \geq
+   \eta_1 \text{ and } \|x_+-x_k\|_p\geq \omega_1\Delta_k \\
+   \gamma_0\Delta_k & \text{if } \rho_k < \eta_1 \text{ and
    \texttt{valid}=\texttt{true}} \\
-   \Delta_k &  \mbox{else,}
+   \Delta_k &  \text{else,}
    \end{array}
    \right.
 
@@ -2937,7 +2937,7 @@ defined by a continuously differentiable function,
 :math:`\ell \in \{\mathbb R\cup \{-\infty\}\}^n` and
 :math:`u \in \{\mathbb R\cup \{\infty\}\}^n`, on the variables such that
 :math:`\ell \leq u`. Given this information,
-:math:`\mbox{\boldmath \(x\)}^* \in [\ell,u]` is a solution to
+:math:`\text{\boldmath \(x\)}^* \in [\ell,u]` is a solution to
 MCP(:math:`F`, :math:`\ell`, :math:`u`) if for each
 :math:`i \in \{1, \ldots, n\}` we have at least one of the following:
 
@@ -2945,9 +2945,9 @@ MCP(:math:`F`, :math:`\ell`, :math:`u`) if for each
 
    \begin{aligned}
    \begin{array}{ll}
-   F_i(x^*) \geq 0 & \mbox{if } x^*_i = \ell_i \\
-   F_i(x^*) = 0 & \mbox{if } \ell_i < x^*_i < u_i \\
-   F_i(x^*) \leq 0 & \mbox{if } x^*_i = u_i.
+   F_i(x^*) \geq 0 & \text{if } x^*_i = \ell_i \\
+   F_i(x^*) = 0 & \text{if } \ell_i < x^*_i < u_i \\
+   F_i(x^*) \leq 0 & \text{if } x^*_i = u_i.
    \end{array}\end{aligned}
 
 Note that when :math:`\ell = \{-\infty\}^n` and
@@ -3015,11 +3015,11 @@ componentwise as
 
    \begin{aligned}
    \Phi_i(x) := \left\{ \begin{array}{ll}
-      \phi(x_i - l_i, F_i(x)) & \mbox{if } -\infty < l_i < u_i = \infty, \\
-      -\phi(u_i-x_i, -F_i(x)) & \mbox{if } -\infty = l_i < u_i < \infty, \\
-      \phi(x_i - l_i, \phi(u_i - x_i, - F_i(x))) & \mbox{if } -\infty < l_i < u_i < \infty, \\
-      -F_i(x) & \mbox{if } -\infty = l_i < u_i = \infty, \\
-      l_i - x_i & \mbox{if } -\infty < l_i = u_i < \infty.
+      \phi(x_i - l_i, F_i(x)) & \text{if } -\infty < l_i < u_i = \infty, \\
+      -\phi(u_i-x_i, -F_i(x)) & \text{if } -\infty = l_i < u_i < \infty, \\
+      \phi(x_i - l_i, \phi(u_i - x_i, - F_i(x))) & \text{if } -\infty < l_i < u_i < \infty, \\
+      -F_i(x) & \text{if } -\infty = l_i < u_i = \infty, \\
+      l_i - x_i & \text{if } -\infty < l_i = u_i < \infty.
       \end{array} \right.\end{aligned}
 
 We note that :math:`\Phi` is not differentiable everywhere but satisfies
@@ -3086,7 +3086,7 @@ Quadratic solvers solve optimization problems of the form
 
    \begin{array}{ll}
    \displaystyle \min_{x} & \frac{1}{2}x^T Q x + c^T x \\
-   \mbox{subject to} & l \geq x \geq u
+   \text{subject to} & l \geq x \geq u
    \end{array}
 
 where the gradient and the Hessian of the objective are both constant.
@@ -3125,7 +3125,7 @@ Constrained solvers solve optimization problems of the form
 
    \begin{array}{ll}
    \displaystyle \min_{x} & f(x) \\
-   \mbox{subject to} & g(x) = c \\
+   \text{subject to} & g(x) = c \\
                      & l \leq x \leq u
    \end{array}
 
@@ -3144,7 +3144,7 @@ The TAOALMM method solves problems of the form
 
    \begin{array}{ll}
    \displaystyle \min_{x} & f(x) \\
-   \mbox{subject to} & g(x) = 0\\
+   \text{subject to} & g(x) = 0\\
                      & h(x) \geq 0 \\
                      & l \leq x \leq u
    \end{array}
@@ -3161,7 +3161,7 @@ of bound constrained problems at each outer iteration
 
    \begin{array}{ll}
    \displaystyle \min_{x} & L(x, \lambda_k) \\
-   \mbox{subject to} & l \leq x \leq u
+   \text{subject to} & l \leq x \leq u
    \end{array}
 
 where :math:`L(x, \lambda_k)` is the augmented Lagrangian merit function
@@ -3198,7 +3198,7 @@ the form
 
    \begin{array}{ll}
    \displaystyle \min_{x} & f(x) + g(z) \\ 
-   \mbox{subject to} & Ax + Bz = c
+   \text{subject to} & Ax + Bz = c
    \end{array}
 
 where :math:`x \in \mathbb R^n`, :math:`z \in \mathbb R^m`,
@@ -3254,7 +3254,7 @@ General nonlinear programming problems are of the form
 
    \begin{array}{ll}
    \displaystyle \min_{x} & f(x) \\
-   \mbox{subject to} & g(x) = 0 \\
+   \text{subject to} & g(x) = 0 \\
                      & h(x) \geq 0 \\
                      & x^- \leq x \leq x^+
    \end{array}
