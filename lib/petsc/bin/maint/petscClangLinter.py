@@ -13,7 +13,7 @@ try:
   import petscClangLinterUtil
 except ModuleNotFoundError as mnfe:
   if mnfe.name == "clang":
-    raise RuntimeError("Must run e.g. 'pip install clang' to use linter") from mnfe
+    raise RuntimeError("Must run e.g. 'python -m pip install clang' to use linter") from mnfe
   elif mnfe.name == "petscClangLinterUtil":
     raise RuntimeError("Must run the linter from ${PETSC_DIR}/lib/petsc/bin/maint/") from mnfe
 
