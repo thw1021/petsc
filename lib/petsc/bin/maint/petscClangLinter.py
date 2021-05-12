@@ -41,15 +41,21 @@ P_CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles     = 0x4000
 P_CXTranslationUnit_RetainExcludedConditionalBlocks      = 0x8000
 
 # clang options used for parsing files
-baseClangOptions  = (P_CXTranslationUnit_PrecompiledPreamble |
-                     P_CXTranslationUnit_SkipFunctionBodies |
-                     P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble)
+baseClangOptions = (P_CXTranslationUnit_PrecompiledPreamble |
+                    P_CXTranslationUnit_SkipFunctionBodies |
+                    P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble)
+
+# clang options for creating the precompiled megaheader
+basePCHClangOptions  = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
+                        P_CXTranslationUnit_Incomplete |
+                        P_CXTranslationUnit_ForSerialization |
+                        P_CXTranslationUnit_KeepGoing)
 
 # Cursors that may be attached to function-like usage
 funcCallCursors = {clx.CursorKind.FUNCTION_DECL,clx.CursorKind.CALL_EXPR}
 
 # Cursors that indicate change of logical scope
-scopeCursors = {clx.CursorKind.COMPOUND_STMT}
+scopeCursors    = {clx.CursorKind.COMPOUND_STMT}
 
 # Cursors that may be attached to mathemateical operations or types
 mathCursors     = {clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.UNARY_OPERATOR,clx.CursorKind.BINARY_OPERATOR}
@@ -147,9 +153,13 @@ excludeDirSuffixes  = (".dSYM",)
 allowFileExtensions = (".c",".cpp",".cxx",".cu",".cc")
 
 class QueueSignal(enum.IntEnum):
+  __doc__="""
+  Various signals to indicate return type on the data queue from child processes
+  """
   WARNING      = enum.auto()
   UNIFIED_DIFF = enum.auto()
   ERRORS_LEFT  = enum.auto()
+  ERRORS_FIXED = enum.auto()
   EXIT_QUEUE   = enum.auto()
 
 class ParsingError(Exception):
@@ -163,29 +173,37 @@ class ParsingError(Exception):
   pass
 
 class PetscCursor(object):
+  __doc__="""
+  A utility wrapper around clang.cindex.Cursor that makes retrieving certain useful properties (such as demangled names) from a cursor easier.
+  Also provides a host of utility functions that get and (optionally format) the source code around a particular cursor. As it is a wrapper any
+  operation done on a clang Cursor may be performed directly on a PetscCursor (although this object does not pass the isinstance() check).
+
+  See __getattr__ below for more info.
+  """
+  @staticmethod
+  def errorViewFromCursor(cursor):
+    __doc__="""
+    Something has gone wrong, and we try to extract as much information from the cursor as
+    possible for the exception. Nothing is guaranteed to be useful here.
+    """
+    name = cursor.displayname
+    kind = cursor.kind
+    loc  = cursor.location
+    try:
+      fname  = loc.file.name
+    except AttributeError:
+      fname  = "UNKNOWN_FILE"
+    locStr   = ":".join([fname,str(loc.column),str(loc.line)])
+    # Does not yet raise exception so we can call it here
+    typename = PetscCursor.getTypenameFromCursor(cursor)
+    srcStr   = PetscCursor.getFormattedSourceFromCursor(cursor,nboth=2)
+    return "'{}' of kind '{}' of type '{}' at {}:\n{}".format(name,kind,typename,locStr,srcStr)
+
   @staticmethod
   def getNameFromCursor(cursor):
     __doc__="""
     Try to convert **&(PetscObject)obj[i]+73 to obj
     """
-    def errorViewFromCursor(cursor):
-      __doc__="""
-      Something has gone wrong, and we try to extract as much information from the cursor as
-      possible for the exception. Nothing is guaranteed to be useful here.
-      """
-      name     = cursor.displayname
-      kind     = cursor.kind
-      loc      = cursor.location
-      try:
-        fname  = loc.file.name
-      except AttributeError:
-        fnmae  = "UNKNOWN_FILE"
-      locStr   = ':'.join([fname,str(loc.column),str(loc.line)])
-      # Does not yet raise exception so we can call it here
-      typename = PetscCursor.getTypenameFromCursor(cursor)
-      srcStr   = PetscCursor.getFormattedSourceFromCursor(cursor,nboth=2)
-      return "'{}' of kind '{}' of type '{}' at {}:\n{}".format(name,kind,typename,locStr,srcStr)
-
     name = None
     if cursor.spelling:
       name = cursor.spelling
@@ -194,22 +212,19 @@ class PetscCursor(object):
         # we arbitrarily use the first token here since we assume that it is the important
         # one.
         operands = [c for c in cursor.get_children()]
-        if len(operands) != 2:
-          # its certainly funky when a binary operation doesn't have a binary system of
-          # operands
-          raise RuntimeError("Found {} operands for binary operator when only expecting 2 for cursor {}".format(len(operands),errorViewFromCursor(cursor)))
+        # its certainly funky when a binary operation doesn't have a binary system of
+        # operands
+        assert len(operands) == 2, "Found {} operands for binary operator when only expecting 2 for cursor {}".format(len(operands),PetscCursor.errorViewFromCursor(cursor))
         name = operands[0].spelling
       else:
         # just a plain old number or unary operator
-        tokens = [t.spelling for t in cursor.get_tokens()]
-        name   = ''.join(tokens)
+        name = "".join(t.spelling for t in cursor.get_tokens())
     elif cursor.kind in castCursors:
       # Need to extract the castee from the caster
       castee = [c for c in cursor.get_children() if c.kind == clx.CursorKind.UNEXPOSED_EXPR]
-      if len(castee) != 1:
-        # If we don't have 1 symbol left then we're in trouble, as we probably didn't
-        # pick the right cursors above
-        raise RuntimeError("Cannot determine castee from the caster for cursor {}".format(errorViewFromCursor(cursor)))
+      # If we don't have 1 symbol left then we're in trouble, as we probably didn't
+      # pick the right cursors above
+      assert len(castee) == 1, "Cannot determine castee from the caster for cursor {}".format(PetscCursor.errorViewFromCursor(cursor))
       # Easer to do some mild recursion to figure out the naming for us than duplicate
       # the code. Perhaps this should have some sort of recursion check
       name = PetscCursor.getNameFromCursor(castee[0])
@@ -243,24 +258,58 @@ class PetscCursor(object):
         # children, no name, no tokens, and a completely incorrect SourceLocation.
         # They are for all intents and purposes uncheckable :)
         srcstr = PetscCursor.getRawSourceFromCursor(cursor)
+        errstr = PetscCursor.errorViewFromCursor(cursor)
         if "PETSC_HASH" in srcstr:
           if "_MAP" in srcstr:
-            raise ParsingError("Encountered unparsable PETSC_HASH_MAP for cursor {}".format(errorViewFromCursor(cursor)))
+            raise ParsingError("Encountered unparsable PETSC_HASH_MAP for cursor {}".format(errstr))
           elif "_SET" in srcstr:
-            raise ParsingError("Encountered unparsable PETSC_HASH_SET for cursor {}".format(errorViewFromCursor(cursor)))
+            raise ParsingError("Encountered unparsable PETSC_HASH_SET for cursor {}".format(errstr))
+          else:
+            raise RuntimeError("Unhandled unparsable PETSC_HASH_XXX for cursor {}".format(errstr))
         elif "PetscKernel_" in srcstr:
-          raise ParsingError("Encountered unparsable PetscKernel_XXX for cursor {}".format(errorViewFromCursor(cursor)))
+          raise ParsingError("Encountered unparsable PetscKernel_XXX for cursor {}".format(errstr))
         elif ("PetscOptions" in srcstr) or ("PetscObjectOptions" in srcstr):
-          raise ParsingError("Encountered unparsable Petsc[Object]OptionsBegin for cursor {}".format(errorViewFromCursor(cursor)))
+          raise ParsingError("Encountered unparsable Petsc[Object]OptionsBegin for cursor {}".format(errstr))
         else:
-          raise RuntimeError("Unexpected number of tokens ({}) for cursor {}".format(len(tokenList),errorViewFromCursor(cursor)))
+          raise RuntimeError("Unexpected number of tokens ({}) for cursor {}".format(len(tokenList),errstr))
       name = tokenList[0].spelling
-      if not name:
-        raise RuntimeError("Cannot determine name of symbol from cursor {}".format(errorViewFromCursor(cursor)))
+      assert name, "Cannot determine name of symbol from cursor {}".format(PetscCursor.errorViewFromCursor(cursor))
+    return name
+
+  @staticmethod
+  def getRawNameFromCursor(cursor):
+    __doc__="""
+    if getNameFromCursor tries to convert **&(PetscObject)obj[i]+73 to obj then this function tries to extract **&(PetscObject)obj[i]+73
+    in the cleanest way possible
+    """
+    name = "".join(t.spelling for t in cursor.get_tokens())
+    if not name:
+      try:
+        # now we try for the formatted name
+        name = PetscCursor.getNameFromCursor(cursor)
+      except ParsingError:
+        srcstr = PetscCursor.getRawSourceFromCursor(cursor)
+        errstr = PetscCursor.errorViewFromCursor(cursor)
+        if "PETSC_HASH" in srcstr:
+          if "_MAP" in srcstr:
+            raise ParsingError("Encountered unparsable PETSC_HASH_MAP for cursor {}".format(errstr))
+          elif "_SET" in srcstr:
+            raise ParsingError("Encountered unparsable PETSC_HASH_SET for cursor {}".format(errstr))
+          else:
+            raise RuntimeError("Unhandled unparsable PETSC_HASH_XXX for cursor {}".format(errstr))
+        elif "PetscKernel_" in srcstr:
+          raise ParsingError("Encountered unparsable PetscKernel_XXX for cursor {}".format(errstr))
+        elif ("PetscOptions" in srcstr) or ("PetscObjectOptions" in srcstr):
+          raise ParsingError("Encountered unparsable Petsc[Object]OptionsBegin for cursor {}".format(errstr))
+        else:
+          raise RuntimeError("Could not determine useful name for cursor {}".format(errstr))
     return name
 
   @staticmethod
   def getTypenameFromCursor(cursor):
+    __doc__="""
+    Try to get the most canonical type from a cursor so DM -> _p_DM *
+    """
     if cursor.type.get_pointee().spelling:
       ctemp = cursor.type.get_pointee()
       if ctemp.get_canonical().spelling:
@@ -275,6 +324,9 @@ class PetscCursor(object):
 
   @staticmethod
   def getDerivedTypenameFromCursor(cursor):
+    __doc__="""
+    Get the least canonical type form a cursor so DM -> DM
+    """
     return cursor.type.spelling
 
   @staticmethod
@@ -305,10 +357,14 @@ class PetscCursor(object):
     return print("\n".join(petscClangLinterUtil.viewAstFromCursor(cursor)))
 
   def viewAst(self):
-    return PetscCursor.viewAstFromCursor(self)
+    return self.viewAstFromCursor(self)
 
   @staticmethod
   def findCursorReferencesFromCursor(cursor):
+    __doc__="""
+    Brute force find and collect all references in a file that pertain to a particular cursor. Essentially refers to finding every cursor that contains the symbol
+    that the cursor represents, so this function is only useful for first-class symbols (i.e. variables, functions)
+    """
     import ctypes
 
     foundCursors  = []
@@ -364,9 +420,9 @@ class PetscCursor(object):
       self.argidx          = cursor.argidx if idx == -12345 else idx
     else:
       self.__cursor        = cursor
-      self.name            = PetscCursor.getNameFromCursor(cursor)
-      self.typename        = PetscCursor.getTypenameFromCursor(cursor)
-      self.derivedtypename = PetscCursor.getDerivedTypenameFromCursor(cursor)
+      self.name            = self.getNameFromCursor(cursor)
+      self.typename        = self.getTypenameFromCursor(cursor)
+      self.derivedtypename = self.getDerivedTypenameFromCursor(cursor)
       self.argidx          = idx
     return
 
@@ -396,9 +452,8 @@ class SourceFix(object):
     self.begins    = [begin]
     self.ends      = [end]
     value,replace  = str(value),self.src[begin:end]
-    if value == replace:
-      # this is an error, since previous detection should not have created a fix
-      raise RuntimeError("trying to replace {} with itself".format(replace))
+    # this is an error, since previous detection should not have created a fix
+    assert value != replace, "trying to replace {} with itself".format(replace)
     self.replace   = [replace]
     self.deltas    = [value]
     self.fixed     = None
@@ -415,8 +470,7 @@ class SourceFix(object):
 
   def appendFix(self,fix):
     assert isinstance(fix,SourceFix)
-    if self.src != fix.src:
-      raise RuntimeError("Cannot combine fixes that do not share identical source!")
+    assert self.src == fix.src, "Cannot combine fixes that do not share identical source!"
     self.begins.extend(fix.begins)
     self.ends.extend(fix.ends)
     self.replace.extend(fix.replace)
@@ -431,13 +485,12 @@ class SourceFix(object):
     can use to debug with yet.
     """
     if self.fixDepth == len(self.deltas): # already collapsed, no need to do it again
-      assert self.fixed
+      assert self.fixed, "Fix depth {} = number of deltas {} but no fixed string exists".format(self.fixDepth,len(self.deltas))
       return
     idxDelta = 0
     newSrc   = self.src
     for begin,end,replace,delta in zip(self.begins,self.ends,self.replace,self.deltas):
-      if replace not in newSrc:
-        raise RuntimeError("Target replacement not in src anymore, fix no longer relevant")
+      assert replace in newSrc, "Target replacement '{}' not in src '{}' anymore, fix no longer relevant".format(replace,newSrc)
       if (begin+idxDelta < 0) or (end+idxDelta > len(newSrc)):
         raise RuntimeError("Idx out of bounds of src, fix not viable")
       newSrcTemp = newSrc[:begin+idxDelta]+delta+newSrc[end+idxDelta:]
@@ -487,7 +540,7 @@ class SourceFix(object):
     for _,g in itertools.groupby(enumerate(val for _,val in listA),lambda x: x[0]-x[1]):
       groupIdxs = list(g)
       lineStart = min(l for _,l in groupIdxs)
-      groupA,groupB = [listA[i][0] for i,_ in groupIdxs],[listB[i][0] for i,_ in groupIdxs]
+      groupA,groupB = [listA[i][0] for i,_ in groupIdxs],[listB[i][0] for i,_ in groupIdxs if listB[i][0]]
       for group in difflib.SequenceMatcher(a=groupA,b=groupB).get_grouped_opcodes(n):
         first,last  = group[0],group[-1]
         file1_range = formatRangeUnified(lineStart,first[1],last[2])
@@ -504,7 +557,7 @@ class SourceFix(object):
               yield "-"+line
           if tag in inserts:
             for line in groupB[j1:j2]:
-              yield "+"+line if line else ""
+                yield "+"+line
 
 class FilterFunctor(object):
   def __init__(self,expected,funcCursor,pointer=False,notPointerHook=None,pointerHook=None,successHook=None,failureHook=None,**kwargs):
@@ -552,7 +605,7 @@ class FilterFunctor(object):
     return
 
 class PetscLinter(object):
-  def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=True,lock=None):
+  def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=False,lock=None):
     self.flags      = compilerFlags
     self.clangOpts  = clangOptions
     self.prefix     = prefix
@@ -714,9 +767,13 @@ class PetscLinter(object):
         return other.isParentOf(self)
 
     def walkScopeSwitch(parent,scope):
-      __doc__="""special treatment for switch-case since the AST setup for it is
-      mind-boggingly stupid. The first node after a case statement is listed as the cases
-      *child* whereas every other node (including the break!!) is the cases *sibling*"""
+      __doc__="""
+      special treatment for switch-case since the AST setup for it is mind-boggingly stupid.
+      The first node after a case statement is listed as the cases *child* whereas every other
+      node (including the break!!) is the cases *sibling*
+      """
+      # in case we get here from a scope decrease within a case
+      caseScope = scope
       for child in parent.get_children():
         if child.kind == clx.CursorKind.CASE_STMT:
           # create a new scope every time we encounter a case, this is now for all intents
@@ -731,8 +788,10 @@ class PetscLinter(object):
           yield from walkScopeSwitch(child,caseScope.sub())
 
     def walkScope(parent,scope=Scope()):
-      __doc__="""walk the tree determining the scope of a node. here 'scope' refers not only
-      to lexical scope but also to logical scope, see Scope object above"""
+      __doc__="""
+      walk the tree determining the scope of a node. here 'scope' refers not only
+      to lexical scope but also to logical scope, see Scope object above
+      """
       for child in parent.get_children():
         if child.kind == clx.CursorKind.SWITCH_STMT:
           # switch-case statements require special treatment, we skip to the compound
@@ -779,7 +838,7 @@ class PetscLinter(object):
     return
 
   def process(self,tu):
-    for func,parent,scope in self.findFunctionCallExpr(tu,checkFunctionMap.keys()):
+    for func,parent,_ in self.findFunctionCallExpr(tu,checkFunctionMap.keys()):
       checkFunctionMap[func.spelling](self,func,parent)
     return
 
@@ -797,8 +856,8 @@ class PetscLinter(object):
       seen = {}
       for func,scope in functionList:
         try:
-          combo = tuple([func.name]+[PetscCursor.getNameFromCursor(a) for a in func.get_arguments()])
-        except ParsingError as pe:
+          combo = tuple([func.displayname]+[PetscCursor.getRawNameFromCursor(a) for a in func.get_arguments()])
+        except ParsingError:
           continue
         if combo not in seen:
           seen[combo] = (func,scope)
@@ -836,15 +895,18 @@ class PetscLinter(object):
     return
 
   def getAllErrors(self):
-    if self.errors:
-      return "\n".join([self.errPrefix,"\n".join(err for err,_ in self.errors)[1:],self.errPrefix])
-    return
-
-  def getErrorsLeft(self):
-    errLeft = [err for err,fixed in self.errors if not fixed]
+    errLeftStr,errFixedStr = "",""
+    errLeft,errFixed       = [],[]
+    for err,fixed in self.errors:
+      if fixed:
+        errFixed.append(err)
+      else:
+        errLeft.append(err)
     if errLeft:
-      return "\n".join([self.errPrefix,"\n".join(errLeft)[1:],self.errPrefix])
-    return
+      errLeftStr = "\n".join([self.errPrefix,"\n".join(errLeft)[1:],self.errPrefix])
+    if errFixed:
+      errFixedStr = "\n".join([self.errPrefix,"\n".join(errFixed)[1:],self.errPrefix])
+    return errLeftStr,errFixedStr
 
   def addWarning(self,warnMsg):
     try:
@@ -895,14 +957,15 @@ class WorkerPool(mp.queues.JoinableQueue):
       self.errorQueue  = mp.Queue()
       self.returnQueue = mp.Queue()
       self.lock        = mp.Lock()
-    self.workers    = []
-    self.numWorkers = numWorkers
-    self.timeout    = timeout
-    self.verbose    = verbose
-    self.prefix     = prefix
-    self.warnings   = []
-    self.errorsLeft = []
-    self.patches    = []
+    self.workers     = []
+    self.numWorkers  = numWorkers
+    self.timeout     = timeout
+    self.verbose     = verbose
+    self.prefix      = prefix
+    self.warnings    = []
+    self.errorsLeft  = []
+    self.errorsFixed = []
+    self.patches     = []
     return
 
   def setup(self,compilerFlags,clangLib=None,clangOptions=baseClangOptions):
@@ -946,7 +1009,9 @@ class WorkerPool(mp.queues.JoinableQueue):
     else:
       self.linter.parse(filename)
       self.patches.extend(self.linter.coalescePatches())
-      self.errorsLeft.append(self.linter.getErrorsLeft())
+      errLeft,errFixed = self.linter.getAllErrors()
+      self.errorsLeft.append(errLeft)
+      self.errorsFixed.append(errFixed)
       self.warnings.append(self.linter.getAllWarnings())
       self.linter.clear()
     return
@@ -985,6 +1050,8 @@ class WorkerPool(mp.queues.JoinableQueue):
         signal,returnData = self.returnQueue.get()
         if signal == QueueSignal.ERRORS_LEFT:
           self.errorsLeft.append(returnData)
+        elif signal == QueueSignal.ERRORS_FIXED:
+          self.errorsFixed.append(returnData)
         elif signal == QueueSignal.UNIFIED_DIFF:
           self.patches.extend(returnData)
         elif signal == QueueSignal.WARNING:
@@ -993,10 +1060,11 @@ class WorkerPool(mp.queues.JoinableQueue):
           raise ValueError("Unknown data returned by returnQueue {}, {}".format(signal,returnData))
       self.returnQueue.close()
       self.close()
-    self.errorsLeft = [e for e in self.errorsLeft if e] # remove any None's
-    self.warnings   = [w for w in self.warnings if w]
-    self.patches    = [p for p in self.patches if p]
-    return self.warnings,self.errorsLeft,self.patches
+    self.errorsLeft  = [e for e in self.errorsLeft if e] # remove any None's
+    self.errorsFixed = [e for e in self.errorsFixed if e]
+    self.warnings    = [w for w in self.warnings if w]
+    self.patches     = [p for p in self.patches if p]
+    return self.warnings,self.errorsLeft,self.errorsFixed,self.patches
 
 
 """Generic test and utility functions"""
@@ -1533,11 +1601,17 @@ checkFunctionMap = {
 
 """Utility and pre-check setup"""
 def osResolvePath(path):
+  __doc__="""
+  Fully resolve a path, expanding any shell variables, the home variable and making an absolute path
+  """
   if path:
     path = os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
   return path
 
 def osRemoveSilent(filename):
+  __doc__="""
+  Silently remove a file, suppressing error if the file does not exist
+  """
   try:
     os.remove(filename)
   except OSError as ose:
@@ -1582,6 +1656,9 @@ def tryToFindLibclangDir():
   return llvmLibDir
 
 def initializeLibclang(clangDir=None,clangLib=None):
+  __doc__="""
+  Set the required library file or directory path to initialize libclang
+  """
   if not clx.conf.loaded:
     clx.conf.set_compatibility_check(True)
     if clangLib:
@@ -1595,7 +1672,7 @@ def initializeLibclang(clangDir=None,clangLib=None):
   return
 
 def filterCheckFunctionMap(filterChecks):
-  """
+  __doc__="""
   Remove checks from checkFunctionMap if they are not in filterChecks
   """
   if filterChecks:
@@ -1637,7 +1714,7 @@ def getPetscExtraIncludes(petscDir,petscArch):
 
 def getClangSysIncludes():
   import subprocess
-  """
+  __doc__="""
   Get system clangs set of default include search directories.
 
   Because for some reason these are hardcoded by the compilers and so libclang does not have them.
@@ -1664,17 +1741,12 @@ def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,pr
   if verbose: print("\n".join([printPrefix+" Compile flags:",*compilerFlags]))
   return compilerFlags
 
-def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=None):
+def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=basePCHClangOptions):
   __doc__="""
   create a precompiled header from petsc.h, and all of the private headers, this not only saves a lot of time, but is critical to finding struct definitions. Header contents are not parsed during the actual linting, since this balloons the parsing time as libclang provides no builtin auto header-precompilation like the normal compiler does.
 
   Including petsc.h first should define almost everything we need so no side effects from including headers in the wrong order below.
   """
-  if pchClangOptions is None:
-    pchClangOptions = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
-                       P_CXTranslationUnit_Incomplete |
-                       P_CXTranslationUnit_ForSerialization |
-                       P_CXTranslationUnit_KeepGoing)
   index             = clx.Index.create()
   precompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.pch")
   megaHeaderLines   = [("petsc.h","#include <petsc.h>")]
@@ -1725,8 +1797,8 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
             if filename not in diags:
               diags[filename] = (basename,diag)
     if diags:
-      diagerrs = map(str,(d for _,d in diags.values()))
-      print(printPrefix,"Included header has errors, removing","\n"+"\n".join(diagerrs))
+      diagerrs = "\n"+"\n".join(str(d) for _,d in diags.values())
+      print(printPrefix,"Included header has errors, removing",diagerrs)
       megaHeaderLines = [(hdr,hfi) for hdr,hfi in megaHeaderLines if hdr not in diags]
     else:
       break
@@ -1739,12 +1811,14 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
     tu = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
     if tu.diagnostics:
       print("\n".join(map(str,tu.diagnostics)))
-      raise clx.LibclangError("\n\nWarnings generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.")
+      raise clx.LibclangError("\n\nWarnings or errors generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.")
   elif verbose:
     print("\n".join([printPrefix+" Mega header:",megaHeader]))
   osRemoveSilent(precompiledHeader)
   tu.save(precompiledHeader)
   compilerFlags.extend(["-include-pch",precompiledHeader])
+  if verbose:
+    print(printPrefix,"Saving precompiled header",precompiledHeader)
   return precompiledHeader
 
 
@@ -1830,7 +1904,9 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
         break
       linter.parse(filename)
       returnQueue.put((QueueSignal.UNIFIED_DIFF,linter.coalescePatches()))
-      returnQueue.put((QueueSignal.ERRORS_LEFT ,linter.getErrorsLeft()))
+      errLeft,errFixed = linter.getAllErrors()
+      returnQueue.put((QueueSignal.ERRORS_LEFT ,errLeft))
+      returnQueue.put((QueueSignal.ERRORS_FIXED,errFixed))
       returnQueue.put((QueueSignal.WARNING     ,linter.getAllWarnings()))
       linter.clear()
       fileQueue.task_done()
@@ -1904,7 +1980,7 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   pool = WorkerPool(numWorkers=workers,verbose=verbose)
   pool.setup(compilerFlags)
   pool.walk(srcDir)
-  warnings,errorsLeft,patches = pool.finalize()
+  warnings,errorsLeft,errorsFixed,patches = pool.finalize()
   if verbose: print(rootPrintPrefix,"Deleting precompiled header",precompiledHeader)
   osRemoveSilent(precompiledHeader)
   if testDir is not None:
@@ -1938,20 +2014,28 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
           output = subprocess.run(["patch",rootDir,"-p0","--unified","-i",patchFile],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
         if verbose: print(output.stdout)
   returnCode = 0
-  if errorsLeft or (warnings and verbose):
-    print(rootPrintPrefix,27*"=","UNCORRECTABLE SOURCE BEGIN",30*"=")
-    if warnings and verbose:
-      print("\n".join(warnings))
-    if errorsLeft:
-      print("\n".join(errorsLeft))
-      returnCode = 11
-    print(rootPrintPrefix,27*"=","UNCORRECTABLE SOURCE END",32*"=")
-    print(rootPrintPrefix,"Some errors or warnings could not be automatically corrected via the patch files, see above")
+  if warnings and verbose:
+    print("\n"+rootPrintPrefix,30*"=","Found warnings      ",33*"=")
+    print("\n".join(warnings))
+    print(rootPrintPrefix,30*"=","End warnings        ",33*"=")
+  if errorsFixed and verbose:
+    print("\n"+rootPrintPrefix,30*"=","Fixed Errors        ",33*"=")
+    print("\n".join(errorsFixed))
+    print(rootPrintPrefix,30*"=","End fixed errors    ",33*"=")
+  if errorsLeft:
+    print("\n"+rootPrintPrefix,30*"=","Unfixable Errors    ",33*"=")
+    print("\n".join(errorsLeft))
+    print(rootPrintPrefix,30*"=","End unfixable errors",33*"=")
+    returnCode = 11
+    print("Some errors or warnings could not be automatically corrected via the patch files, see above")
   elif patches:
     if applyPatches:
-      print(rootPrintPrefix,"All errors or warnings successfully patched")
+      print("\nAll errors or warnings successfully patched")
     else:
-      print(rootPrintPrefix,"All errors fixable via patch files written to",patchDir)
+      rootDir = "".join(["-d",os.path.abspath(os.path.sep)])
+      print("\nAll errors fixable via patch files written to",patchDir)
+      patchGlob = "*".join([patchDir+os.path.sep,manglePostfix])
+      print("Apply manually using:\n\tpatch {} -p0 --unified -i {}".format(rootDir,patchGlob))
       returnCode = 12
   return returnCode
 

@@ -2253,7 +2253,6 @@ PetscErrorCode DMInterpolateSolution(DM coarse, DM fine, Mat interp, Vec coarseS
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(coarse,DM_CLASSID,1);
-  PetscValidHeaderSpecific(coarse,DM_CLASSID,1);
   if (interp) PetscValidHeaderSpecific(interp,MAT_CLASSID,3);
   PetscValidHeaderSpecific(coarseSol,VEC_CLASSID,4);
   PetscValidHeaderSpecific(fineSol,VEC_CLASSID,5);
