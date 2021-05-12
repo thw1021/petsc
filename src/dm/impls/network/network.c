@@ -2011,7 +2011,7 @@ PetscErrorCode DMSetUp_Network(DM dm)
   dm->setupcalled = PETSC_TRUE;
 
   /* View dmnetwork */
-  ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-dmnetwork_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
