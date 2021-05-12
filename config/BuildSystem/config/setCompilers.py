@@ -459,6 +459,18 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
+  def isNEC(compiler, log):
+    '''Returns true if the compiler is a NEC compiler'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version',checkCommand = noCheck, log = log)
+      output = output + error
+      if output.find('NEC Corporation') >= 0:
+        if log: log.write('Detected NEC compiler\n')
+        return 1
+    except RuntimeError:
+      pass
+
+  @staticmethod
   def isSolarisAR(ar, log):
     '''Returns true AR is solaris'''
     try:
@@ -740,6 +752,7 @@ class Configure(config.base.Configure):
         yield 'mpxlc'
         yield 'hcc'
         self.usedMPICompilers = 0
+      yield 'ncc'
       yield 'gcc'
       yield 'clang'
       yield 'icc'
@@ -1071,6 +1084,8 @@ class Configure(config.base.Configure):
           yield 'icpc'
         elif self.CC == 'xlc':
           yield 'xlC'
+        elif self.CC == 'ncc':
+          yield 'nc++'
         yield 'g++'
         yield 'clang++'
         yield 'c++'
@@ -1207,6 +1222,8 @@ class Configure(config.base.Configure):
         elif self.CC == 'xlc':
           yield 'xlf90'
           yield 'xlf'
+        elif self.CC == 'ncc':
+          yield 'nfort'
         elif self.CC.find('win32fe cl') >= 0:
           yield 'win32fe f90'
           yield 'win32fe ifc'
