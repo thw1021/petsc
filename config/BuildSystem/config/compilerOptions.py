@@ -87,6 +87,14 @@ class CompilerOptions(config.base.Configure):
       elif compiler.find('win32fe bcc32') >= 0:
         if bopt == '':
           flags.append('-RT -w-8019 -w-8060 -w-8057 -w-8004 -w-8066')
+      # NEC
+      elif config.setCompilers.Configure.isNEC(compiler, self.log):
+        if bopt == '':
+          flags.extend(['-Wall', '-fdiag-vector=0', '-fdiag-parallel=0', '-fdiag-inline=0', '-O1']) #defaults to O2, which is quite buggy
+        elif bopt == 'O':
+          flags.extend(['-Wall', '-fdiag-vector=0', '-fdiag-parallel=0', '-fdiag-inline=0', '-O2','-fnamed-alias'])
+        elif bopt == 'g':
+          flags.append('-g -traceback=verbose')
     # Generic
     if not len(flags):
       if bopt == 'g':
@@ -186,6 +194,14 @@ class CompilerOptions(config.base.Configure):
       elif compiler.find('win32fe bcc32') >= 0:
         if bopt == '':
           flags.append('-RT -w-8019 -w-8060 -w-8057 -w-8004 -w-8066')
+      # NEC
+      elif config.setCompilers.Configure.isNEC(compiler, self.log):
+        if bopt == '':
+          flags.extend(['-Wall', '-fdiag-vector=0', '-fdiag-parallel=0', '-fdiag-inline=0', '-O1']) #defaults to O2, which is quite buggy
+        elif bopt == 'O':
+          flags.extend(['-Wall', '-fdiag-vector=0', '-fdiag-parallel=0', '-fdiag-inline=0', '-O2','-fnamed-alias'])
+        elif bopt == 'g':
+          flags.append('-g -traceback=verbose')
     # Generic
     if not len(flags):
       if bopt in ['g']:
@@ -259,6 +275,14 @@ class CompilerOptions(config.base.Configure):
           flags.extend(['-debug:full'])
         elif bopt == 'O':
           flags.extend(['-optimize:5', '-fast'])
+      # NEC
+      elif config.setCompilers.Configure.isNEC(compiler, self.log):
+        if bopt == '':
+          flags.extend(['-Wall', '-fdiag-vector=0', '-fdiag-parallel=0', '-fdiag-inline=0', '-O1']) #defaults to O2, which is quite buggy
+        elif bopt == 'O':
+          flags.extend(['-Wall', '-fdiag-vector=0', '-fdiag-parallel=0', '-fdiag-inline=0', '-O2','-fnamed-alias'])
+        elif bopt == 'g':
+          flags.append('-g -traceback=verbose')
     # Generic
     if not len(flags):
       if bopt == 'g':

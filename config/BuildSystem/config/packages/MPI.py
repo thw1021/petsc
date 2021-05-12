@@ -369,7 +369,7 @@ Unable to run hostname to check the network')
     if not self.checkLink('#include <mpi.h>\n', 'int ptr[1]; MPI_Win win; if (MPI_Accumulate(ptr,1,MPI_INT,0,0,1,MPI_INT,MPI_REPLACE,win));\n'):
       raise RuntimeError('PETSc requires MPI_REPLACE (introduced in MPI-2.1 in 2008). Please update or switch to MPI that supports MPI_REPLACE. Let us know at petsc-maint@mcs.anl.gov if this is not possible')
     # flag broken one-sided tests
-    if not 'HAVE_MSMPI' in self.defines and not (hasattr(self, 'mpich_numversion') and int(self.mpich_numversion) <= 30004300):
+    if not 'HAVE_MSMPI' in self.defines and not (hasattr(self, 'mpich_numversion') and int(self.mpich_numversion) <= 30004300) and not (hasattr(self, 'isNec')):
       self.addDefine('HAVE_MPI_ONE_SIDED', 1)
     self.compilers.CPPFLAGS = oldFlags
     self.compilers.LIBS = oldLibs
@@ -585,6 +585,12 @@ Unable to run hostname to check the network')
       self.mpi_pkg_version = MPI_VER+'\n'
       return
 
+    # NEC MPI is derived from MPICH but it does not keep MPICH related NUMVERSION
+    necmpi_test = '#include <mpi.h>\nMPI_NEC_Function f = MPI_NEC_FUNCTION_NULL;\n'
+    if self.checkCompile(necmpi_test):
+      self.isNec = 1
+      self.addDefine('HAVE_NECMPI',1)
+
     # IBM Spectrum MPI is derived from OpenMPI, we do not yet have specific tests for it
     # https://www.ibm.com/us-en/marketplace/spectrum-mpi
     openmpi_test = '#include <mpi.h>\nint ompi_major = OMPI_MAJOR_VERSION;\nint ompi_minor = OMPI_MINOR_VERSION;\nint ompi_release = OMPI_RELEASE_VERSION;\n'
@@ -723,7 +729,11 @@ You may need to set the environmental variable HWLOC_COMPONENTS to -x86 to preve
     self.executeTest(self.configureIO) #depends on checkMPIDistro
     self.executeTest(self.findMPIInc)
     self.executeTest(self.PetscArchMPICheck)
-    funcs = '''MPI_Type_get_envelope  MPI_Type_dup MPI_Init_thread MPI_Iallreduce MPI_Ibarrier MPI_Finalized MPI_Exscan MPI_Reduce_scatter MPI_Reduce_scatter_block'''.split()
+    # deadlock AO tests ex1 with test 3
+    if not (hasattr(self, 'isNec')):
+      funcs = '''MPI_Type_get_envelope  MPI_Type_dup MPI_Init_thread MPI_Iallreduce MPI_Ibarrier MPI_Finalized MPI_Exscan MPI_Reduce_scatter MPI_Reduce_scatter_block'''.split()
+    else:
+      funcs = '''MPI_Type_get_envelope  MPI_Type_dup MPI_Init_thread MPI_Iallreduce MPI_Ibarrier MPI_Finalized MPI_Exscan MPI_Reduce_scatter'''.split()
     found, missing = self.libraries.checkClassify(self.dlib, funcs)
     for f in found:
       self.addDefine('HAVE_' + f.upper(),1)
