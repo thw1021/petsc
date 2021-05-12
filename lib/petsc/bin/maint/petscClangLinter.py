@@ -48,6 +48,9 @@ baseClangOptions  = (P_CXTranslationUnit_PrecompiledPreamble |
 # Cursors that may be attached to function-like usage
 funcCallCursors = {clx.CursorKind.FUNCTION_DECL,clx.CursorKind.CALL_EXPR}
 
+# Cursors that indicate change of logical scope
+scopeCursors = {clx.CursorKind.COMPOUND_STMT}
+
 # Cursors that may be attached to mathemateical operations or types
 mathCursors     = {clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.UNARY_OPERATOR,clx.CursorKind.BINARY_OPERATOR}
 
@@ -173,7 +176,11 @@ class PetscCursor(object):
       name     = cursor.displayname
       kind     = cursor.kind
       loc      = cursor.location
-      locStr   = ':'.join([loc.file.name,str(loc.column),str(loc.line)])
+      try:
+        fname  = loc.file.name
+      except AttributeError:
+        fnmae  = "UNKNOWN_FILE"
+      locStr   = ':'.join([fname,str(loc.column),str(loc.line)])
       # Does not yet raise exception so we can call it here
       typename = PetscCursor.getTypenameFromCursor(cursor)
       srcStr   = PetscCursor.getFormattedSourceFromCursor(cursor,nboth=2)
@@ -372,7 +379,7 @@ class PetscCursor(object):
     """
     return getattr(self.__cursor,attr)
 
-  def __repr__(self):
+  def __str__(self):
     locStr = self.getFormattedLocationString()
     srcStr = self.getFormattedSource(nboth=2)
     return "{}\n'{}' of derived type '{}', canonical type '{}'\n{}\n".format(locStr,self.name,self.derivedtypename,self.typename,srcStr)
@@ -561,7 +568,7 @@ class PetscLinter(object):
     self.index      = clx.Index.create()
     return
 
-  def __repr__(self):
+  def __str__(self):
     prefixStr = "Prefix:        '{}'".format(self.prefix)
     flagStr   = "Compiler Flags: {}".format(self.flags)
     clangStr  = "Clang Options:  {}".format(self.clangOpts)
@@ -608,6 +615,141 @@ class PetscLinter(object):
     function definitions in the AST, making it impossible to map a macro invocation to
     its 'parent' function.
     """
+    class Scope(object):
+      __doc__="""
+      Scope encompasses both the logical and lexical reach of a callsite, and is used to
+      determine if two function calls may be occur in chronological order. Scopes may be
+      approximated by incrementing or decrementing a counter every time a pair of '{}' are
+      encountered however it is not that simple. In practice they behave almost identically
+      to sets. Every relation between scopes may be formed by the following axioms.
+
+      - Scope A is said to be greater than scope B if one is able to get to scope B from scope A
+      e.g.:
+      { // scope A
+        { // scope B < scope A
+          ...
+        }
+      }
+      - Scope A is said to be equivalent to scope B if and only if they are the same object.
+      e.g.:
+      { // scope A and scope B
+        ...
+      }
+
+      One notable exception are switch-case statements. Here every 'case' label acts as its
+      own scope, regardless of whether a "break" is inserted i.e.:
+
+      switch (cond) { // scope A
+      case 1: // scope B begin
+        ...
+        break; // scope B end
+      case 2: // scope C begin
+        ...
+      case 2:// scope C end, scope D begin
+        ...
+        break; // scope D end
+      }
+
+      Semantics here are weird, as:
+      - scope B, C, D < scope A
+      - scope B != scope C != scope D
+      """
+      __slots__ = ("gen","super","children")
+
+      def __init__(self,superScope=None):
+        if superScope:
+          assert isinstance(superScope,Scope)
+          self.gen      = superScope.gen+1
+        else:
+          self.gen      = 0
+        self.super      = superScope
+        self.children   = []
+        return
+
+      def __str__(self):
+        return "gen {} id {}".format(self.gen,id(self))
+
+      def __lt__(self,other):
+        assert isinstance(other,Scope)
+        return not (self >= other)
+
+      def __gt__(self,other):
+        assert isinstance(other,Scope)
+        return self.isChildOf(other)
+
+      def __le__(self,other):
+        assert isinstance(other,Scope)
+        return not (self > other)
+
+      def __ge__(self,other):
+        assert isinstance(other,Scope)
+        return (self > other) or (self == other)
+
+      def __eq__(self,other):
+        if other is not None:
+          assert isinstance(other,Scope)
+          return id(self) == id(other)
+        return False
+
+      def __ne__(self,other):
+        return not (self == other)
+
+      def sub(self):
+        __doc__="""spawn sub-scope"""
+        child = Scope(self)
+        self.children.append(child)
+        return child
+
+      def isParentOf(self,other):
+        __doc__="""self is parent of other"""
+        if self == other:
+          return False
+        for child in self.children:
+          if (other == child) or child.isParentOf(other):
+            return True
+        return False
+
+      def isChildOf(self,other):
+        __doc__="""self is child of other, or other is parent of self"""
+        return other.isParentOf(self)
+
+    def walkScopeSwitch(parent,scope):
+      __doc__="""special treatment for switch-case since the AST setup for it is
+      mind-boggingly stupid. The first node after a case statement is listed as the cases
+      *child* whereas every other node (including the break!!) is the cases *sibling*"""
+      for child in parent.get_children():
+        if child.kind == clx.CursorKind.CASE_STMT:
+          # create a new scope every time we encounter a case, this is now for all intents
+          # and purposes the 'scope' going forward. We don't overwrite the original scope
+          # since we still need each case scope to be the previous scopes sibling
+          caseScope = scope.sub()
+          yield from walkScope(child,caseScope)
+        elif child.kind == clx.CursorKind.CALL_EXPR:
+          if child.spelling in functionNames:
+            yield (child,possibleParent,caseScope)
+        elif child.kind in scopeCursors:
+          yield from walkScopeSwitch(child,caseScope.sub())
+
+    def walkScope(parent,scope=Scope()):
+      __doc__="""walk the tree determining the scope of a node. here 'scope' refers not only
+      to lexical scope but also to logical scope, see Scope object above"""
+      for child in parent.get_children():
+        if child.kind == clx.CursorKind.SWITCH_STMT:
+          # switch-case statements require special treatment, we skip to the compound
+          # statement
+          switchChildren = [c for c in child.get_children() if c.kind == clx.CursorKind.COMPOUND_STMT]
+          assert len(switchChildren) == 1, "Switch statement has multiple '{' operators?"
+          yield from walkScopeSwitch(switchChildren[0],scope.sub())
+        elif child.kind == clx.CursorKind.CALL_EXPR:
+          if child.spelling in functionNames:
+            yield (child,possibleParent,scope)
+        elif child.kind in scopeCursors:
+          # scope has descreased
+          yield from walkScope(child,scope.sub())
+        else:
+          # same scope
+          yield from walkScope(child,scope)
+
     cursor,filename = tu.cursor,tu.cursor.spelling
     for possibleParent in cursor.get_children():
       # getting filename is for some reason stupidly expensive, so we do this check first
@@ -618,10 +760,7 @@ class PetscLinter(object):
         # possibleParent.location.file is None
         continue
       # if we've gotten this far we have found a function definition
-      for funcChild in possibleParent.walk_preorder():
-        if funcChild.kind == clx.CursorKind.CALL_EXPR:
-          if funcChild.spelling in functionNames:
-            yield (funcChild,possibleParent)
+      yield from walkScope(possibleParent)
 
   def clear(self):
     self.errors   = []
@@ -636,42 +775,41 @@ class PetscLinter(object):
     if tu.diagnostics and self.verbose:
       diags = {" ".join([self.prefix,d]) for d in map(str,tu.diagnostics)}
       self.__print("\n".join(diags))
-    self.process(tu)
+    self.processRemoveDuplicates(tu)
     return
 
   def process(self,tu):
-    for func,parent in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
+    for func,parent,scope in self.findFunctionCallExpr(tu,checkFunctionMap.keys()):
       checkFunctionMap[func.spelling](self,func,parent)
     return
 
   def processRemoveDuplicates(self,tu):
-    raise NotImplementedError("Not functioning, requires informmation about the scope of a cursor to accurately detect duplicate calls")
     processedFuncs = {}
-    for func,parent in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
+    for func,parent,scope in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
       checkFunctionMap[func.spelling](self,func,parent)
       func  = PetscCursor(func)
       pname = PetscCursor.getNameFromCursor(parent)
       try:
-        processedFuncs[pname].append(func)
+        processedFuncs[pname].append((func,scope))
       except KeyError:
-        processedFuncs[pname] = [func]
-    for func in processedFuncs.values():
+        processedFuncs[pname] = [(func,scope)]
+    for pname,functionList in processedFuncs.items():
       seen = {}
-      for f in func:
+      for func,scope in functionList:
         try:
-          combo = tuple([f.name]+[PetscCursor.getNameFromCursor(a) for a in f.get_arguments()])
-        except ParsingError:
+          combo = tuple([func.name]+[PetscCursor.getNameFromCursor(a) for a in func.get_arguments()])
+        except ParsingError as pe:
           continue
         if combo not in seen:
-          seen[combo] = f
-          continue
-        seenStart = seen[combo].extent.start.line
-        fname     = f.location.file.name
-        src       = f.getRawSource()
-        startline = f.extent.start.line
-        begin,end = 0,len(src)
-        patch     = SourceFix(fname,src,startline,begin,end,"")
-        self.addErrorFromCursor(f,"Duplicate function found previous identical usage:\n\n{}".format(seen[combo].getFormattedSource(nbefore=2,nafter=startline-seenStart)),patch=patch)
+          seen[combo] = (func,scope)
+        elif scope >= seen[combo][1]:
+          seenStart = seen[combo][0].extent.start.line
+          fname     = func.location.file.name
+          src       = func.getRawSource()
+          startline = func.extent.start.line
+          begin,end = 0,len(src)
+          patch     = SourceFix(fname,src,startline,begin,end,"")
+          self.addErrorFromCursor(func,"Duplicate function found previous identical usage:\n\n{}".format(seen[combo][0].getFormattedSource(nbefore=2,nafter=startline-seenStart)),patch=patch)
     return
 
   def addErrorFromCursor(self,locCursor,errMsg,patch=None):
@@ -1526,37 +1664,6 @@ def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,pr
   if verbose: print("\n".join([printPrefix+" Compile flags:",*compilerFlags]))
   return compilerFlags
 
-def buildPrecompiledHeaderOld(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=None):
-  __doc__="""
-  create a precompiled header from petsc.h, and all of the major "impl" headers, this saves a lot of time since this includes almost every sub-header in petsc. Including petsc.h first should define almost everything we need so no side effects from including headers in the wrong order below.
-  """
-  if pchClangOptions is None:
-    pchClangOptions = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
-                       P_CXTranslationUnit_Incomplete |
-                       P_CXTranslationUnit_ForSerialization)
-  megaHeaderLines = ["#include <petsc.h>"]
-  mansecimpls     = ["petscimpl.h","vecimpl.h","matimpl.h","dmimpl.h","kspimpl.h","snesimpl.h",
-                     "tsimpl.h","taoimpl.h","isimpl.h","dtimpl.h","dmpleximpl.h","petscfeimpl.h",
-                     "dmlabelimpl.h","dmdaimpl.h","sfimpl.h","viewerimpl.h","characteristicimpl.h"]
-  for headerFile in os.listdir(os.path.join(petscDir,"include","petsc","private")):
-    if headerFile in mansecimpls or headerFile.startswith(("hash","pc")):
-      megaHeaderLines.append("#include <petsc/private/{}>".format(headerFile))
-  megaHeaderLines.extend(extraHeaderIncludes)
-  megaHeader        = "\n".join(megaHeaderLines)+"\n" # extra newline for last line
-  precompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.pch")
-  if verbose:
-    print("\n".join([printPrefix+" Mega header:",megaHeader]))
-    print(printPrefix,"Creating precompiled header",precompiledHeader)
-  index = clx.Index.create()
-  tu    = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
-  if tu.diagnostics:
-    print("\n".join(map(str,tu.diagnostics)))
-    raise clx.LibclangError("\n\nWarnings generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.")
-  osRemoveSilent(precompiledHeader)
-  tu.save(precompiledHeader)
-  compilerFlags.extend(["-include-pch",precompiledHeader])
-  return precompiledHeader
-
 def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=None):
   __doc__="""
   create a precompiled header from petsc.h, and all of the private headers, this not only saves a lot of time, but is critical to finding struct definitions. Header contents are not parsed during the actual linting, since this balloons the parsing time as libclang provides no builtin auto header-precompilation like the normal compiler does.
@@ -1659,6 +1766,7 @@ def testMain(petscDir,testDir,patches,replace=False,verbose=False):
     if replace:
       print("\tREPLACE",shortName)
       replaceFile = os.path.join(testDir,mangledBase)
+      patch = "".join(patch.splitlines(True)[2:])
       with open(replaceFile,"w") as fd:
         fd.write(patch)
       continue
@@ -1668,10 +1776,10 @@ def testMain(petscDir,testDir,patches,replace=False,verbose=False):
       print("\tNOT OK ",shortName)
       patchError[filename] = "File had no corresponding test: '{}'\n".format(os.path.join(testDir,mangledBase))
       continue
-    # skip first 2 lines containing path
+    # skip header lines containing date, the output files shouldn't contain them
     patchLines = patch.splitlines(True)[2:]
     with open(testFile,"r") as fd:
-      fileLines = fd.readlines()[2:]
+      fileLines = fd.readlines()
       diffs     = list(difflib.unified_diff(fileLines,patchLines,fromfile=testFile,tofile=mangledFile,n=0))
       if diffs:
         patchError[filename] = "".join(diffs)
@@ -1724,7 +1832,6 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
       returnQueue.put((QueueSignal.UNIFIED_DIFF,linter.coalescePatches()))
       returnQueue.put((QueueSignal.ERRORS_LEFT ,linter.getErrorsLeft()))
       returnQueue.put((QueueSignal.WARNING     ,linter.getAllWarnings()))
-      lockPrint(linter.getAllErrors())
       linter.clear()
       fileQueue.task_done()
     lockPrint(printPrefix,15*"=","Exiting queue",15*"=")

@@ -1,5 +1,3 @@
---- /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidHeaders.c	Mon May 10 18:39:12 2021
-+++ /Users/jacobfaibussowitsch/NoSync/petsc/src/sys/tests/linter/testValidHeaders.c	Mon May 10 18:39:12 2021
 @@ -6,4 +6,4 @@
 -  PetscValidHeaderSpecificType(r,PETSC_VIEWER_CLASSID,0,DMDA);
 -  PetscValidHeaderSpecificType(v,PETSC_DRAW_CLASSID,0,DMDA);
