@@ -1603,7 +1603,7 @@ PetscErrorCode DMNetworkAssembleGraphStructures(DM dm)
 - overlap - the overlap of partitions, 0 is the default
 
   Options Database Key:
-. -dm_view_distributed - Calls DMView() at the conclusion of DMNetworkDistribute()
+. -dmnetwork_view_distributed - Calls DMView() at the conclusion of DMNetworkDistribute()
 
   Notes:
   Distributes the network with <overlap>-overlapping partitioning of the edges.
