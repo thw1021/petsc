@@ -427,6 +427,18 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
+  def isNEC(compiler, log):
+    '''Returns true if the compiler is a NEC compiler'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version',checkCommand = noCheck, log = log)
+      output = output + error
+      if output.find('NEC Corporation') >= 0:
+        if log: log.write('Detected NEC compiler\n')
+        return 1
+    except RuntimeError:
+      pass
+
+  @staticmethod
   def isSolarisAR(ar, log):
     '''Returns true AR is solaris'''
     try:
