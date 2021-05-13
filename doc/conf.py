@@ -28,6 +28,13 @@ needs_sphinx='3.5'
 # Sphinx-build fails for any broken __internal__ links. For external use make linkcheck.
 nitpicky = True
 
+# -- Check for images submodule ----------------------------------------------
+if not os.path.isfile(os.path.join('images', '.git')):
+    print("images submodule does not appear to exist. Aborting. You can try")
+    print("   git submodule update --init")
+    raise Exception("Aborting because image submodule does not appear to exist")
+
+
 # -- Project information -----------------------------------------------------
 
 project = 'PETSc'

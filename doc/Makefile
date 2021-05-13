@@ -13,7 +13,7 @@ GENDIR        = $(SOURCEDIR)/generated
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
 
-.PHONY: help Makefile checklinks
+.PHONY: help Makefile checklinks images
 
 checklinks:
 	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(LINKCHECKDIR)" $(SPHINXOPTS)
@@ -29,10 +29,14 @@ clean-classic-docs:
 
 clean: clean-classic-docs clear-generated
 
-website-deploy:
+images:
+	git submodule update --init images
+
+website-deploy: images
 	$(SPHINXBUILD) -b dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) -T -E -j auto
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.
-%: Makefile
+%: Makefile images
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) -j auto
+
