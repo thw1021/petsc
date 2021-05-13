@@ -99,38 +99,46 @@ MPI_Op MPIU_MININDEX_OP = 0;
 
 static void MPIAPI MPIU_MaxIndex_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
 {
-  PetscReal *xin = (PetscReal*)in,*xout = (PetscReal*)out;
+  struct petsc_mpiu_intreal *xin = (struct petsc_mpiu_intreal*)in;
+  struct petsc_mpiu_intreal *xout = (struct petsc_mpiu_intreal*)out;
+  int c;
 
   PetscFunctionBegin;
-  if (*datatype != MPIU_REAL) {
-    (*PetscErrorPrintf)("Can only handle MPIU_REAL data types");
+  if (*datatype != MPIU_INTREAL) {
+    (*PetscErrorPrintf)("Can only handle MPIU_INTREAL data types");
     PETSCABORT(MPI_COMM_SELF,PETSC_ERR_ARG_WRONG);
   }
-  if (xin[0] > xout[0]) {
-    xout[0] = xin[0];
-    xout[1] = xin[1];
-  } else if (xin[0] == xout[0]) {
-    xout[1] = PetscMin(xin[1],xout[1]);
+  for (c = 0; c < *cnt; c++) {
+    if (xin[c].v > xout[c].v) {
+      xout[c].v = xin[c].v;
+      xout[c].i = xin[c].i;
+    } else if (xin[c].v == xout[c].v) {
+      xout[c].i = PetscMin(xin[c].i,xout[c].i);
+    }
   }
   PetscFunctionReturnVoid(); /* cannot return a value */
 }
 
 static void MPIAPI MPIU_MinIndex_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
 {
-  PetscReal *xin = (PetscReal*)in,*xout = (PetscReal*)out;
+  struct petsc_mpiu_intreal *xin = (struct petsc_mpiu_intreal*)in;
+  struct petsc_mpiu_intreal *xout = (struct petsc_mpiu_intreal*)out;
+  int c;
 
   PetscFunctionBegin;
-  if (*datatype != MPIU_REAL) {
-    (*PetscErrorPrintf)("Can only handle MPIU_REAL data types");
+  if (*datatype != MPIU_INTREAL) {
+    (*PetscErrorPrintf)("Can only handle MPIU_INTREAL data types");
     PETSCABORT(MPI_COMM_SELF,PETSC_ERR_ARG_WRONG);
   }
-  if (xin[0] < xout[0]) {
-    xout[0] = xin[0];
-    xout[1] = xin[1];
-  } else if (xin[0] == xout[0]) {
-    xout[1] = PetscMin(xin[1],xout[1]);
+  for (c = 0; c < *cnt; c++) {
+    if (xin[c].v < xout[c].v) {
+      xout[c].v = xin[c].v;
+      xout[c].i = xin[c].i;
+    } else if (xin[c].v == xout[c].v) {
+      xout[c].i = PetscMin(xin[c].i,xout[c].i);
+    }
   }
-  PetscFunctionReturnVoid();
+  PetscFunctionReturnVoid(); /* cannot return a value */
 }
 
 PETSC_EXTERN void MPIAPI PetscSplitReduction_Local(void*,void*,PetscMPIInt*,MPI_Datatype*);
@@ -253,8 +261,8 @@ PetscErrorCode  VecInitializePackage(void)
     Create the special MPI reduction operation that may be used by VecNorm/DotBegin()
   */
   ierr = MPI_Op_create(PetscSplitReduction_Local,1,&PetscSplitReduction_Op);CHKERRMPI(ierr);
-  ierr = MPI_Op_create(MPIU_MaxIndex_Local,2,&MPIU_MAXINDEX_OP);CHKERRMPI(ierr);
-  ierr = MPI_Op_create(MPIU_MinIndex_Local,2,&MPIU_MININDEX_OP);CHKERRMPI(ierr);
+  ierr = MPI_Op_create(MPIU_MaxIndex_Local,1,&MPIU_MAXINDEX_OP);CHKERRMPI(ierr);
+  ierr = MPI_Op_create(MPIU_MinIndex_Local,1,&MPIU_MININDEX_OP);CHKERRMPI(ierr);
 
   /* Register the different norm types for cached norms */
   for (i=0; i<4; i++) {

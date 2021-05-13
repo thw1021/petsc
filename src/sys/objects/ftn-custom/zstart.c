@@ -400,6 +400,39 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
   *ierr = MPI_Type_commit(&MPIU_2SCALAR);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
+
+  /* create datatypes used by MPIU_MAXINDEX_OP, MPIU_MININDEX_OP and PetscSplitReduction_Op */
+#if !defined(PETSC_HAVE_MPIUNI)
+  {
+    PetscMPIInt  blockSizes[2] = {1,1};
+    MPI_Aint     blockOffsets[2] = {offsetof(struct petsc_mpiu_intreal,i),offsetof(struct petsc_mpiu_intreal,v)};
+    MPI_Datatype blockTypes[2] = {MPIU_INT,MPIU_REAL}, tmpStruct;
+
+    *ierr = MPI_Type_create_struct(2,blockSizes,blockOffsets,blockTypes,&tmpStruct);
+    if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI struct\n");return;}
+    *ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(struct petsc_mpiu_intreal),&MPIU_INTREAL);
+    if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI resized\n");return;}
+    *ierr = MPI_Type_free(&tmpStruct);
+    if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Freeing MPI types\n");return;}
+    *ierr = MPI_Type_commit(&MPIU_INTREAL);
+    if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
+  }
+  {
+    PetscMPIInt  blockSizes[2] = {1,1};
+    MPI_Aint     blockOffsets[2] = {offsetof(struct petsc_mpiu_intscalar,t),offsetof(struct petsc_mpiu_intscalar,v)};
+    MPI_Datatype blockTypes[2] = {MPIU_INT,MPIU_SCALAR}, tmpStruct;
+
+    *ierr = MPI_Type_create_struct(2,blockSizes,blockOffsets,blockTypes,&tmpStruct);
+    if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI struct\n");return;}
+    *ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(struct petsc_mpiu_intreal),&MPIU_INTSCALAR);
+    if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI resized\n");return;}
+    *ierr = MPI_Type_free(&tmpStruct);
+    if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Freeing MPI types\n");return;}
+    *ierr = MPI_Type_commit(&MPIU_INTSCALAR);
+    if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
+  }
+#endif
+
 #if defined(PETSC_USE_64BIT_INDICES)
   *ierr = MPI_Type_contiguous(2,MPIU_INT,&MPIU_2INT);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}

@@ -91,14 +91,13 @@ PetscErrorCode VecMax_MPI(Vec xin,PetscInt *idx,PetscReal *z)
   if (!idx) {
     ierr = MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
   } else {
-    PetscReal work2[2],z2[2];
-    PetscInt  rstart;
-    rstart   = xin->map->rstart;
-    work2[0] = work;
-    work2[1] = *idx + rstart;
-    ierr     = MPIU_Allreduce(work2,z2,2,MPIU_REAL,MPIU_MAXINDEX_OP,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
-    *z       = z2[0];
-    *idx     = (PetscInt)z2[1];
+    struct petsc_mpiu_intreal in,out;
+
+    in.i  = *idx + xin->map->rstart;
+    in.v  = work;
+    ierr  = MPIU_Allreduce(&in,&out,1,MPIU_INTREAL,MPIU_MAXINDEX_OP,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
+    *idx  = out.i;
+    *z    = out.v;
   }
   PetscFunctionReturn(0);
 }
@@ -116,15 +115,13 @@ PetscErrorCode VecMin_MPI(Vec xin,PetscInt *idx,PetscReal *z)
   if (!idx) {
     ierr = MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
   } else {
-    PetscReal work2[2],z2[2];
-    PetscInt  rstart;
+    struct petsc_mpiu_intreal in,out;
 
-    ierr = VecGetOwnershipRange(xin,&rstart,NULL);CHKERRQ(ierr);
-    work2[0] = work;
-    work2[1] = *idx + rstart;
-    ierr = MPIU_Allreduce(work2,z2,2,MPIU_REAL,MPIU_MININDEX_OP,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
-    *z   = z2[0];
-    *idx = (PetscInt)z2[1];
+    in.i  = *idx + xin->map->rstart;
+    in.v  = work;
+    ierr  = MPIU_Allreduce(&in,&out,1,MPIU_INTREAL,MPIU_MININDEX_OP,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
+    *idx  = out.i;
+    *z    = out.v;
   }
   PetscFunctionReturn(0);
 }
