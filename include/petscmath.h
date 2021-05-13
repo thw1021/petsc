@@ -802,6 +802,10 @@ typedef PetscReal MatReal;
 
 struct petsc_mpiu_2scalar {PetscScalar a,b;};
 PETSC_EXTERN MPI_Datatype MPIU_2SCALAR PetscAttrMPITypeTagLayoutCompatible(struct petsc_mpiu_2scalar);
+struct petsc_mpiu_real_int {PetscReal v; PetscInt i;};
+PETSC_EXTERN MPI_Datatype MPIU_REAL_INT PetscAttrMPITypeTagLayoutCompatible(struct petsc_mpiu_real_int);
+struct petsc_mpiu_scalar_int {PetscScalar v; PetscInt i;};
+PETSC_EXTERN MPI_Datatype MPIU_SCALAR_INT PetscAttrMPITypeTagLayoutCompatible(struct petsc_mpiu_scalar_int);
 
 #if defined(PETSC_USE_64BIT_INDICES)
 struct petsc_mpiu_2int {PetscInt a,b;};
