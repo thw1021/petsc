@@ -16,3 +16,4 @@ interesting enough to share.
    threads
    saws
    codemanagement
+   logos
