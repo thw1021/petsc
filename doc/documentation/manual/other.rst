@@ -1016,7 +1016,7 @@ from with ``<Tab>``.
 
 More powerful autocompletion, such as completing the fieldname of a struct, is
 available from external plugins that can be added to Vim, such as `SuperTab
-<https://github.com/ervandew/supertab>`_, `VimCompleteMe
+<https://github.com/ervandew/supertab>`_, `VimCompletesMe
 <https://github.com/ackyshake/VimCompletesMe>`_, or `YouCompleteMe
 <https://github.com/ycm-core/YouCompleteMe>`_.
 
