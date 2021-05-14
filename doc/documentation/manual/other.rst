@@ -1032,7 +1032,7 @@ mentioned above, is one; another popular one is `ale
 <https://github.com/dense-analysis/ale>`__. These can check for syntax errors,
 check for compilation errors in the background, and provide sophisticated tools
 for refactoring.  Like lsp-mode, they also rely on a compilation database, so
-``bear make -B`` should be used as well to generate the file
+``bear -- make -B`` should be used as well to generate the file
 ``compile_commands.json``.
 
 Etc.
