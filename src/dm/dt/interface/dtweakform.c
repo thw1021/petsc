@@ -187,8 +187,29 @@ PetscErrorCode PetscWeakFormGetIndexFunction_Private(PetscWeakForm wf, PetscHMap
   PetscFunctionReturn(0);
 }
 
-/* A NULL argument for func causes this to clear the slot, and if there is nothing else, clear the key */
+/* Ignore a NULL func */
 PetscErrorCode PetscWeakFormSetIndexFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt ind, void (*func)())
+{
+  PetscHashFormKey key;
+  PetscChunk       chunk;
+  PetscErrorCode   ierr;
+
+  PetscFunctionBegin;
+  if (!func) PetscFunctionReturn(0);
+  key.label = label; key.value = value; key.field = f;
+  ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
+  if (chunk.size < 0) {
+    ierr = PetscChunkBufferCreateChunk(wf->funcs, ind+1, &chunk);CHKERRQ(ierr);
+    ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
+  } else if (chunk.size <= ind) {
+    ierr = PetscChunkBufferEnlargeChunk(wf->funcs, ind - chunk.size + 1, &chunk);CHKERRQ(ierr);
+    ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
+  }
+  ((void (**)()) &wf->funcs->array[chunk.start])[ind] = func;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormClearIndexFunction_Private(PetscWeakForm wf, PetscHMapForm ht, DMLabel label, PetscInt value, PetscInt f, PetscInt ind)
 {
   PetscHashFormKey key;
   PetscChunk       chunk;
@@ -198,17 +219,14 @@ PetscErrorCode PetscWeakFormSetIndexFunction_Private(PetscWeakForm wf, PetscHMap
   key.label = label; key.value = value; key.field = f;
   ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
   if (chunk.size < 0) {
-    if (!func) PetscFunctionReturn(0);
-    ierr = PetscChunkBufferCreateChunk(wf->funcs, ind+1, &chunk);CHKERRQ(ierr);
-    ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
-  } else if (!func && !ind && chunk.size == 1) {
+    PetscFunctionReturn(0);
+  } else if (!ind && chunk.size == 1) {
     ierr = PetscHMapFormDel(ht, key);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   } else if (chunk.size <= ind) {
-    ierr = PetscChunkBufferEnlargeChunk(wf->funcs, ind - chunk.size + 1, &chunk);CHKERRQ(ierr);
-    ierr = PetscHMapFormSet(ht, key, chunk);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
   }
-  ((void (**)()) &wf->funcs->array[chunk.start])[ind] = func;
+  ((void (**)()) &wf->funcs->array[chunk.start])[ind] = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -287,6 +305,52 @@ PetscErrorCode PetscWeakFormCopy(PetscWeakForm wf, PetscWeakForm wfNew)
   ierr = PetscHMapFormDuplicate(wf->bdgp3, &wfNew->bdgp3);CHKERRQ(ierr);
   ierr = PetscHMapFormDestroy(&wfNew->r);CHKERRQ(ierr);
   ierr = PetscHMapFormDuplicate(wf->r, &wfNew->r);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  PetscWeakFormClear - Clear all functions from the PetscWeakForm
+
+  Not Collective
+
+  Input Parameter:
+. wf - The original PetscWeakForm
+
+  Level: intermediate
+
+.seealso: PetscWeakFormCopy(), PetscWeakFormCreate(), PetscWeakFormDestroy()
+@*/
+PetscErrorCode PetscWeakFormClear(PetscWeakForm wf)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscHMapFormClear(wf->obj);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->f0);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->f1);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->g0);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->g1);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->g2);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->g3);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->gp0);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->gp1);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->gp2);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->gp3);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->gt0);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->gt1);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->gt2);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->gt3);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdf0);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdf1);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdg0);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdg1);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdg2);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdg3);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdgp0);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdgp1);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdgp2);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->bdgp3);CHKERRQ(ierr);
+  ierr = PetscHMapFormClear(wf->r);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -431,6 +495,42 @@ PetscErrorCode PetscWeakFormSetIndexObjective(PetscWeakForm wf, DMLabel label, P
 
   PetscFunctionBegin;
   ierr = PetscWeakFormSetIndexFunction_Private(wf, wf->obj, label, val, f, ind, (void (*)(void)) obj);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscWeakFormClearIndex(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscWeakFormKind kind, PetscInt ind)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  switch (kind) {
+    case PETSC_WF_OBJECTIVE: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->obj, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_F0: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->f0, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_F1: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->f1, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_G0: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->g0, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_G1: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->g1, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_G2: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->g2, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_G3: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->g3, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_GP0: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->gp0, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_GP1: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->gp1, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_GP2: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->gp2, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_GP3: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->gp3, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_GT0: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->gt0, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_GT1: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->gt1, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_GT2: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->gt2, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_GT3: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->gt3, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDF0: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdf0, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDF1: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdf1, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDG0: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdg0, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDG1: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdg1, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDG2: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdg2, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDG3: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdg3, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDGP0: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdgp0, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDGP1: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdgp1, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDGP2: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdgp2, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_BDGP3: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->bdgp3, label, val, f, ind);CHKERRQ(ierr);break;
+    case PETSC_WF_R: ierr = PetscWeakFormClearIndexFunction_Private(wf, wf->r, label, val, f, ind);CHKERRQ(ierr);break;
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1467,10 +1567,13 @@ static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer
       else            {ierr = PetscViewerASCIIPrintf(viewer, "(%D) ", keys[k].field);CHKERRQ(ierr);}
       ierr = PetscWeakFormGetFunction_Private(wf, map, keys[k].label, keys[k].value, keys[k].field, &n, &funcs);CHKERRQ(ierr);
       for (i = 0; i < n; ++i) {
+        char *fname;
+
         if (i > 0) {ierr = PetscViewerASCIIPrintf(viewer, ", ");CHKERRQ(ierr);}
-        ierr = PetscDLAddr(funcs[i], &name);CHKERRQ(ierr);
-        if (name) {ierr = PetscViewerASCIIPrintf(viewer, "%s", name);CHKERRQ(ierr);}
-        else      {ierr = PetscViewerASCIIPrintf(viewer, "%p", funcs[i]);CHKERRQ(ierr);}
+        ierr = PetscDLAddr(funcs[i], &fname);CHKERRQ(ierr);
+        if (fname) {ierr = PetscViewerASCIIPrintf(viewer, "%s", fname);CHKERRQ(ierr);}
+        else       {ierr = PetscViewerASCIIPrintf(viewer, "%p", funcs[i]);CHKERRQ(ierr);}
+        ierr = PetscFree(fname);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPrintf(viewer, "\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_TRUE);CHKERRQ(ierr);
