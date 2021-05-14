@@ -1016,20 +1016,20 @@ from with ``<Tab>``.
 
 More powerful autocompletion, such as completing the fieldname of a struct, is
 available from external plugins that can be added to Vim, such as `SuperTab
-<https://github.com/ervandew/supertab>`_, `VimCompletesMe
-<https://github.com/ackyshake/VimCompletesMe>`_, or `YouCompleteMe
-<https://github.com/ycm-core/YouCompleteMe>`_.
+<https://github.com/ervandew/supertab>`__, `VimCompletesMe
+<https://github.com/ackyshake/VimCompletesMe>`__, or `YouCompleteMe
+<https://github.com/ycm-core/YouCompleteMe>`__.
 
 Along the same lines, plugins can be added that fill in the boilerplate
 associated with PETSc programming with code snippets.  One such tool is
-`UltiSnips <https://github.com/sirver/UltiSnips>`_.
+`UltiSnips <https://github.com/sirver/UltiSnips>`__.
 
 LSP for Vim
 ^^^^^^^^^^^
 
 Several plugins provide the equivalent of emacs' lsp-mode: YouCompleteMe,
 mentioned above, is one; another popular one is `ale
-<https://github.com/dense-analysis/ale>`_. These can check for syntax errors,
+<https://github.com/dense-analysis/ale>`__. These can check for syntax errors,
 check for compilation errors in the background, and provide sophisticated tools
 for refactoring.  Like lsp-mode, they also rely on a compilation database, so
 ``bear make -B`` should be used as well to generate the file
@@ -1038,7 +1038,7 @@ for refactoring.  Like lsp-mode, they also rely on a compilation database, so
 Etc.
 ^^^^
 
-See `online tutorials <http://www.yolinux.com/TUTORIALS/LinuxTutorialAdvanced_vi.html>`_
+See `online tutorials <http://www.yolinux.com/TUTORIALS/LinuxTutorialAdvanced_vi.html>`__
 for additional Vi/Vim options.
 
 Eclipse Users
