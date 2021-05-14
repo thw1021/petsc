@@ -3404,16 +3404,16 @@ static PetscErrorCode DMPlexGetHybridAuxFields(DM dm, DM dmAux[], PetscDS dsAux[
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(locA, 4);
+  PetscValidPointer(locA, 5);
   if (!locA[0] || !locA[1]) PetscFunctionReturn(0);
-  PetscValidPointer(dmAux, 1);
-  PetscValidPointer(dsAux, 2);
-  PetscValidPointer(a, 5);
+  PetscValidPointer(dmAux, 2);
+  PetscValidPointer(dsAux, 3);
+  PetscValidPointer(a, 6);
   ierr = ISGetPointRange(cellIS, &cStart, &cEnd, &cells);CHKERRQ(ierr);
   numCells = cEnd - cStart;
   for (s = 0; s < 2; ++s) {
-    PetscValidHeaderSpecific(dmAux[s], DM_CLASSID, 1);
-    PetscValidHeaderSpecific(dsAux[s], PETSCDS_CLASSID, 2);
+    PetscValidHeaderSpecific(dmAux[s], DM_CLASSID, 2);
+    PetscValidHeaderSpecific(dsAux[s], PETSCDS_CLASSID, 3);
     PetscValidHeaderSpecific(locA[s], VEC_CLASSID, 4);
     ierr = DMPlexConvertPlex(dmAux[s], &plexA[s], PETSC_FALSE);CHKERRQ(ierr);
     ierr = DMGetEnclosureRelation(dmAux[s], dm, &encAux[s]);CHKERRQ(ierr);
