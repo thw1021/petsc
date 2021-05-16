@@ -484,7 +484,6 @@ int main(int argc, char **argv)
     requires: ctetgen
     args: -dim 3 -ctetgen_verbose 4 -refinement_limit 0.0625 -dm_view ascii::ascii_info_detail -info :~sys
 
-
   # 2D LaTex and ASCII output 2-9
   test:
     suffix: 2

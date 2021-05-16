@@ -5,7 +5,6 @@ static char FILENAME[] = "ex31.c";
 #include <petscviewerhdf5.h>
 #include "petscsf.h"
 
-
 typedef struct {
   PetscInt  dim;                          /* The topological mesh dimension */ PetscInt  faces[3];                     /* Number of faces per dimension */
   PetscBool simplex;                      /* Use simplices or hexes */
@@ -43,7 +42,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {

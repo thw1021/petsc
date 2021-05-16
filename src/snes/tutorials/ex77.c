@@ -585,7 +585,6 @@ PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscFunctionReturn(0);
 }
 
-
 int main(int argc, char **argv)
 {
   SNES           snes;                 /* nonlinear solver */

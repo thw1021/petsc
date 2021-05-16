@@ -423,7 +423,6 @@ static PetscErrorCode SetupDiscretization(DM mesh,PetscErrorCode (*setup)(DM,Use
   const PetscInt dim = user->dim;
   PetscErrorCode ierr;
 
-
   PetscFunctionBegin;
   /* Create FE objects and give them names so that options can be set from
    * command line */
@@ -460,8 +459,6 @@ static PetscErrorCode SetupDiscretization(DM mesh,PetscErrorCode (*setup)(DM,Use
   ierr = DMDestroy(&cdm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-
 
 int main(int argc,char **argv)
 {
@@ -513,9 +510,7 @@ int main(int argc,char **argv)
   ierr           = VecRestoreSubVector(computed,fieldIS[2],&divErr);CHKERRQ(ierr);
   exampleSuccess = (PetscBool)(divErrNorm <= errTol);
 
-
   ierr = PetscPrintf(PETSC_COMM_WORLD,stdFormat,divErrNorm,exampleSuccess ? "true" : "false");CHKERRQ(ierr);
-
 
   /* Tear down */
   ierr = VecDestroy(&divErr);CHKERRQ(ierr);

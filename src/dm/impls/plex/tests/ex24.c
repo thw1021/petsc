@@ -69,7 +69,6 @@ static PetscErrorCode ScotchResetRandomSeed()
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
   PetscInt       dim          = user->dim;

@@ -2721,7 +2721,6 @@ PETSC_INTERN PetscErrorCode DMClone_Plex(DM dm, DM *newdm)
 . -dm_plex_view_scale <num>          - Scale the TikZ
 - -dm_plex_print_fem <num>           - View FEM assembly information, such as element vectors and matrices
 
-
   Level: intermediate
 
 .seealso: DMType, DMPlexCreate(), DMCreate(), DMSetType()
@@ -3093,7 +3092,6 @@ PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim
   else {ierr = PetscSFDestroy(&sfVert);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
-
 
 /*@
   DMPlexCreateFromCellListParallel - Deprecated, use DMPlexCreateFromCellListParallelPetsc()

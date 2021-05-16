@@ -188,7 +188,6 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscFunctionReturn(0);
 }
 
-
 int main(int argc, char **argv)
 {
   DM             dm;

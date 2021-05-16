@@ -134,7 +134,6 @@ PetscErrorCode  PetscDLOpen(const char name[],PetscDLMode mode,PetscDLHandle *ha
   PetscFunctionReturn(0);
 }
 
-
 /*@C
    PetscDLClose -  closes a dynamic library
 
@@ -311,7 +310,6 @@ PetscErrorCode  PetscDLSym(PetscDLHandle handle,const char symbol[],void **value
 #endif
   return(0);
 }
-
 
 /*@C
   PetscDLAddr - find the name of a symbol in a dynamic library
