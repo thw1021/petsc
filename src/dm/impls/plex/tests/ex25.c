@@ -5,7 +5,6 @@ static char FILENAME[] = "ex25.c";
 #include <petscds.h>
 #include <petscsnes.h>
 
-
 typedef struct {
   PetscInt  test;
   PetscInt  dim;                          /* The topological mesh dimension */

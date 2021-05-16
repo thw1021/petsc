@@ -415,7 +415,6 @@ static PetscErrorCode TestL2ProjectionParticlesToField(DM dm, DM sw, AppCtx *use
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode TestL2ProjectionFieldToParticles(DM dm, DM sw, AppCtx *user)
 {
 
@@ -677,7 +676,6 @@ int main (int argc, char * argv[]) {
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

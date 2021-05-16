@@ -65,7 +65,6 @@ should become
       \ | /      /
         3-------
 
-
 Quadrilateral
 -------------
 Test 0:

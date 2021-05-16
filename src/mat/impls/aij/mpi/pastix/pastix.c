@@ -439,7 +439,6 @@ PetscErrorCode MatLUFactorSymbolic_AIJPASTIX(Mat F,Mat A,IS r,IS c,const MatFact
   PetscFunctionReturn(0);
 }
 
-
 /* Note the Petsc r permutation is ignored */
 PetscErrorCode MatCholeskyFactorSymbolic_SBAIJPASTIX(Mat F,Mat A,IS r,const MatFactorInfo *info)
 {
@@ -476,7 +475,6 @@ PetscErrorCode MatView_PaStiX(Mat A,PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-
 /*MC
      MATSOLVERPASTIX  - A solver package providing direct solvers (LU) for distributed
   and sequential matrices via the external package PaStiX.
@@ -498,7 +496,6 @@ PetscErrorCode MatView_PaStiX(Mat A,PetscViewer viewer)
 .seealso: PCFactorSetMatSolverType(), MatSolverType
 
 M*/
-
 
 PetscErrorCode MatGetInfo_PaStiX(Mat A,MatInfoType flag,MatInfo *info)
 {
