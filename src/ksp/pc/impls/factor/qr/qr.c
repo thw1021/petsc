@@ -4,9 +4,7 @@
    Note: this need not be consided a preconditioner since it supplies
          a direct solver.
 */
-
 #include <../src/ksp/pc/impls/factor/qr/qr.h>  /*I "petscpc.h" I*/
-
 
 static PetscErrorCode PCSetUp_QR(PC pc)
 {
@@ -62,7 +60,6 @@ static PetscErrorCode PCSetUp_QR(PC pc)
     if (err) { /* FactorNumeric() fails */
       pc->failedreason = (PCFailedReason)err;
     }
-
   }
 
   ierr = PCFactorGetMatSolverType(pc,&stype);CHKERRQ(ierr);
