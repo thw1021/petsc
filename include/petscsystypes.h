@@ -256,7 +256,7 @@ M*/
         So we just disable PETSC_SKIP_CXX_COMPLEX_FIX in such combination.
      */
      #if defined(__GNUC__) && (__GNUC__ < 5) && (__cplusplus >= 201402L)
-       #define PETSC_SKIP_CXX_COMPLEX_FIX
+       #define PETSC_SKIP_CXX_COMPLEX_FIX 1
      #endif
 #    if !defined(PETSC_SKIP_CXX_COMPLEX_FIX)
 #      include <petsccxxcomplexfix.h>
