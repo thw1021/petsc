@@ -1330,70 +1330,6 @@ PetscErrorCode DMPlexSNESComputeBoundaryFEM(DM dm, Vec X, void *user)
 }
 
 /*@
-  DMPlexSNESComputeJacobianFEM - Form the local portion of the Jacobian matrix J at the local solution X using pointwise functions specified by the user.
-
-  Input Parameters:
-+ dm - The mesh
-. X  - Local input vector
-- user - The user context
-
-  Output Parameter:
-. Jac  - Jacobian matrix
-
-  Note:
-  We form the residual one batch of elements at a time. This allows us to offload work onto an accelerator,
-  like a GPU, or vectorize on a multicore machine.
-
-  Level: developer
-
-.seealso: FormFunctionLocal()
-@*/
-PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP,void *user)
-{
-  DM             plex;
-  IS             allcellIS;
-  PetscBool      hasJac, hasPrec;
-  PetscInt       Nds, s;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = DMSNESConvertPlex(dm, &plex, PETSC_TRUE);CHKERRQ(ierr);
-  ierr = DMPlexGetAllCells_Internal(plex, &allcellIS);CHKERRQ(ierr);
-  ierr = DMGetNumDS(dm, &Nds);CHKERRQ(ierr);
-  for (s = 0; s < Nds; ++s) {
-    PetscDS          ds;
-    IS               cellIS;
-    PetscHashFormKey key;
-
-    ierr = DMGetRegionNumDS(dm, s, &key.label, NULL, &ds);CHKERRQ(ierr);
-    key.value = 0;
-    key.field = 0;
-    if (!key.label) {
-      ierr = PetscObjectReference((PetscObject) allcellIS);CHKERRQ(ierr);
-      cellIS = allcellIS;
-    } else {
-      IS pointIS;
-
-      key.value = 1;
-      ierr = DMLabelGetStratumIS(key.label, key.value, &pointIS);CHKERRQ(ierr);
-      ierr = ISIntersect_Caching_Internal(allcellIS, pointIS, &cellIS);CHKERRQ(ierr);
-      ierr = ISDestroy(&pointIS);CHKERRQ(ierr);
-    }
-    if (!s) {
-      ierr = PetscDSHasJacobian(ds, &hasJac);CHKERRQ(ierr);
-      ierr = PetscDSHasJacobianPreconditioner(ds, &hasPrec);CHKERRQ(ierr);
-      if (hasJac && hasPrec) {ierr = MatZeroEntries(Jac);CHKERRQ(ierr);}
-      ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
-    }
-    ierr = DMPlexComputeJacobian_Internal(plex, key, cellIS, 0.0, 0.0, X, NULL, Jac, JacP, user);CHKERRQ(ierr);
-    ierr = ISDestroy(&cellIS);CHKERRQ(ierr);
-  }
-  ierr = ISDestroy(&allcellIS);CHKERRQ(ierr);
-  ierr = DMDestroy(&plex);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@
   DMSNESComputeJacobianAction - Compute the action of the Jacobian J(X) on Y
 
   Input Parameters:
@@ -1472,6 +1408,70 @@ PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, void *use
       }
       ierr = PetscFree(jackeys);CHKERRQ(ierr);
     }
+  }
+  ierr = ISDestroy(&allcellIS);CHKERRQ(ierr);
+  ierr = DMDestroy(&plex);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMPlexSNESComputeJacobianFEM - Form the local portion of the Jacobian matrix J at the local solution X using pointwise functions specified by the user.
+
+  Input Parameters:
++ dm - The mesh
+. X  - Local input vector
+- user - The user context
+
+  Output Parameter:
+. Jac  - Jacobian matrix
+
+  Note:
+  We form the residual one batch of elements at a time. This allows us to offload work onto an accelerator,
+  like a GPU, or vectorize on a multicore machine.
+
+  Level: developer
+
+.seealso: FormFunctionLocal()
+@*/
+PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP,void *user)
+{
+  DM             plex;
+  IS             allcellIS;
+  PetscBool      hasJac, hasPrec;
+  PetscInt       Nds, s;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMSNESConvertPlex(dm, &plex, PETSC_TRUE);CHKERRQ(ierr);
+  ierr = DMPlexGetAllCells_Internal(plex, &allcellIS);CHKERRQ(ierr);
+  ierr = DMGetNumDS(dm, &Nds);CHKERRQ(ierr);
+  for (s = 0; s < Nds; ++s) {
+    PetscDS          ds;
+    IS               cellIS;
+    PetscHashFormKey key;
+
+    ierr = DMGetRegionNumDS(dm, s, &key.label, NULL, &ds);CHKERRQ(ierr);
+    key.value = 0;
+    key.field = 0;
+    if (!key.label) {
+      ierr = PetscObjectReference((PetscObject) allcellIS);CHKERRQ(ierr);
+      cellIS = allcellIS;
+    } else {
+      IS pointIS;
+
+      key.value = 1;
+      ierr = DMLabelGetStratumIS(key.label, key.value, &pointIS);CHKERRQ(ierr);
+      ierr = ISIntersect_Caching_Internal(allcellIS, pointIS, &cellIS);CHKERRQ(ierr);
+      ierr = ISDestroy(&pointIS);CHKERRQ(ierr);
+    }
+    if (!s) {
+      ierr = PetscDSHasJacobian(ds, &hasJac);CHKERRQ(ierr);
+      ierr = PetscDSHasJacobianPreconditioner(ds, &hasPrec);CHKERRQ(ierr);
+      if (hasJac && hasPrec) {ierr = MatZeroEntries(Jac);CHKERRQ(ierr);}
+      ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
+    }
+    ierr = DMPlexComputeJacobian_Internal(plex, key, cellIS, 0.0, 0.0, X, NULL, Jac, JacP, user);CHKERRQ(ierr);
+    ierr = ISDestroy(&cellIS);CHKERRQ(ierr);
   }
   ierr = ISDestroy(&allcellIS);CHKERRQ(ierr);
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
