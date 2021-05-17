@@ -3,6 +3,7 @@
      Some useful vector utility functions.
 */
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>          /*I "petscvec.h" I*/
+#include <petsc/private/deviceimpl.h>
 
 /*@
    VecStrideSet - Sets a subvector of a vector defined
@@ -1323,6 +1324,31 @@ PetscErrorCode  VecDotNorm2(Vec s,Vec t,PetscScalar *dp, PetscReal *nm)
     ierr = VecRestoreArrayRead(t, &tx);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(s, &sx);CHKERRQ(ierr);
     ierr = PetscLogFlops(4.0*n);CHKERRQ(ierr);
+  }
+  ierr = PetscLogEventEnd(VEC_DotNorm2,s,t,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecDotNorm2Async(Vec s,Vec t,PetscStreamScalar pscaldp,PetscStreamScalar pscalnm,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(s,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(t,VEC_CLASSID,2);
+  PetscValidType(s,1);
+  PetscValidType(t,2);
+  PetscCheckSameTypeAndComm(s,1,t,2);
+  if (s->map->N != t->map->N) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible vector global lengths");
+  if (s->map->n != t->map->n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible vector local lengths");
+  PetscCheckValidSameStreamType(pscaldp,3,pstream,5);
+  PetscCheckValidSameStreamType(pscalnm,4,pstream,5);
+
+  ierr = PetscLogEventBegin(VEC_DotNorm2,s,t,0,0);CHKERRQ(ierr);
+  if (PetscLikely(s->ops->dotnorm2async)) {
+    ierr = (*s->ops->dotnorm2async)(s,t,pscaldp,pscalnm,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)s),PETSC_ERR_SUP,"Vector has no VecDotNorm2Async method");
   }
   ierr = PetscLogEventEnd(VEC_DotNorm2,s,t,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);

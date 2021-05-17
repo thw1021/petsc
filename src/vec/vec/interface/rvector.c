@@ -5,6 +5,7 @@
 #include "petsc/private/sfimpl.h"
 #include "petscsystypes.h"
 #include <petsc/private/vecimpl.h>       /*I  "petscvec.h"   I*/
+#include <petsc/private/deviceimpl.h>
 #if defined(PETSC_HAVE_CUDA)
 #include <../src/vec/vec/impls/dvecimpl.h>
 #include <petsc/private/cudavecimpl.h>
@@ -131,6 +132,48 @@ PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
   PetscFunctionReturn(0);
 }
 
+ /*@
+   VecDotAsync - Asynchronously computes the vector dot product.
+
+   Collective on Vec
+
+   Input Parameters:
++  x, y - the vectors
+-  pstream - the stream on which to enqueue the operation
+
+   Output Parameter:
+.  val - the stream scalar containing dot product
+
+   Notes:
+   See VecDot() for detailed notes on this routines use. See VecGetEvent() for detailed
+   notes on asynchronicity semantics for vectors.
+
+   Level: intermediate
+
+.seealso: VecDot(), VecGetEvent(), PetscStreamScalarCreate(), PetscStreamCreate()
+@*/
+PetscErrorCode VecDotAsync(Vec x,Vec y,PetscStreamScalar pscal,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+  PetscCheckValidSameStreamType(pscal,3,pstream,4);
+
+  ierr = PetscLogEventBegin(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+  if (PetscLikely(x->ops->dotasync)) {
+    ierr = (*x->ops->dotasync)(x,y,pscal,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vector has no VecDotAsync() method");
+  }
+  ierr = PetscLogEventEnd(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 /*@
    VecDotRealPart - Computes the real part of the vector dot product.
 
@@ -209,7 +252,6 @@ $    work load inbalance that causes certain processes to arrive much earlier th
           VecNormBegin(), VecNormEnd()
 
 @*/
-
 PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
 {
   PetscBool      flg;
@@ -233,6 +275,74 @@ PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
   if (type!=NORM_1_AND_2) {
     ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],*val);CHKERRQ(ierr);
   }
+  PetscFunctionReturn(0);
+}
+
+ /*@
+   VecNormAsync  - Asynchronously computes the vector norm.
+
+   Collective on Vec, Asynchronous
+
+   Input Parameters:
++  x - the vector
+.  type - one of NORM_1, NORM_2, NORM_INFINITY.  Also available
+          NORM_1_AND_2, which computes both norms and stores them
+          in a two element array.
+-  pstream - the PetscStream on which to enqueue the operation
+
+   Output Parameter:
+.  pscal - the stream scalar containing the norm
+
+   Notes:
+   See VecNorm() for detailed notes on this routines use. See VecGetEvent() for detailed
+   notes on asynchronicity semantics for vectors.
+
+   Level: intermediate
+
+.seealso: VecNorm(), VecGetEvent(), PetscStreamScalarCreate(), PetscStreamCreate()x
+@*/
+PetscErrorCode  VecNormAsync(Vec x,NormType type,PetscStreamScalar *pscal,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscValidPointer(pscal,3);
+  PetscCheckValidSameStreamType(*pscal,3,pstream,4);
+  if (type == NORM_1_AND_2) {
+    PetscCheckValidSameStreamType(pscal[1],3,pstream,4);
+  } else {
+    PetscReal val;
+    PetscBool flg;
+
+    /* Cached data? */
+    ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[type],val,flg);CHKERRQ(ierr);
+    if (flg) {
+      const PetscScalar vals = val;
+      ierr = PetscStreamScalarSetValue(*pscal,&vals,PETSC_MEMTYPE_HOST,pstream);CHKERRQ(ierr);
+      PetscFunctionReturn(0);
+    }
+  }
+
+  ierr = PetscLogEventBegin(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
+  if (PetscLikely(x->ops->normasync)) {
+    ierr = (*x->ops->normasync)(x,type,pscal,pstream);CHKERRQ(ierr);
+    ierr = PetscStreamScalarRealPart(pscal[0],pstream);CHKERRQ(ierr);
+    if (type == NORM_1_AND_2) {ierr = PetscStreamScalarRealPart(pscal[1],pstream);CHKERRQ(ierr);}
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vector has no VecNormAsync() method");
+  }
+  ierr = PetscLogEventEnd(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
+  /* TODO this should really be asynchronous */
+#if 0
+  if (type!=NORM_1_AND_2) {
+    PetscScalar val;
+
+    ierr = PetscStreamScalarAwait(*pscal,&val,pstream);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],PetscRealPart(val));CHKERRQ(ierr);
+  }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -441,6 +551,29 @@ PetscErrorCode  VecTDot(Vec x,Vec y,PetscScalar *val)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode  VecTDotAsync(Vec x,Vec y,PetscStreamScalar pscal,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+  PetscCheckValidSameStreamType(pscal,3,pstream,4);
+
+  ierr = PetscLogEventBegin(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
+  if (PetscLikely(x->ops->tdotasync)) {
+    ierr = (*x->ops->tdotasync)(x,y,pscal,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vector has no VecTDotAsync method");
+  }
+  ierr = PetscLogEventEnd(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecScale - Scales a vector.
 
@@ -487,6 +620,52 @@ PetscErrorCode  VecScale(Vec x, PetscScalar alpha)
         ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[i],PetscAbsScalar(alpha)*norms[i]);CHKERRQ(ierr);
       }
     }
+  }
+  ierr = PetscLogEventEnd(VEC_Scale,x,0,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecScaleAsync - Asynchronously scales a vector.
+
+   Not collective on Vec, Asynchronous
+
+   Input Parameters:
++  x - the vector
+.  alpha - the stream scalar to scale by
+-  pstream - the stream on which to enqueue the operation
+
+   Output Parameter:
+.  x - the scaled vector
+
+   Note:
+   See VecScale() for detailed notes on this routines use. See VecGetEvent() for detailed
+   notes on asynchronicity semantics for vectors.
+
+   Level: intermediate
+
+.seeealso: VecScale(), VecGetEvent(), PetscStreamScalarCreate(), PetscStreamCreate()
+@*/
+PetscErrorCode  VecScaleAsync(Vec x, PetscStreamScalar pscal, PetscStream pstream)
+{
+  PetscBool      isOne;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscCheckValidSameStreamType(pscal,2,pstream,3);
+  if (x->stash.insertmode != NOT_SET_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  ierr = PetscStreamScalarGetInfo(pscal,PSS_ONE,PETSC_FALSE,&isOne,pstream);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_Scale,x,0,0,0);CHKERRQ(ierr);
+  if (!isOne) {
+    ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+    if (PetscLikely(x->ops->scaleasync)) {
+      ierr = (*x->ops->scaleasync)(x,pscal,pstream);CHKERRQ(ierr);
+    } else {
+      SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vector has no VecScaleAsync() routine");
+    }
+    ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
   }
   ierr = PetscLogEventEnd(VEC_Scale,x,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -555,6 +734,41 @@ PetscErrorCode  VecSet(Vec x,PetscScalar alpha)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode  VecSetAsync(Vec x,PetscStreamScalar pscala,PetscStream pstream)
+{
+  PetscBool      isZero,isOne;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->stash.insertmode != NOT_SET_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You cannot call this after you have called VecSetValues() but\n before you have called VecAssemblyBegin/End()");
+  PetscCheckValidSameStreamType(pscala,2,pstream,3);
+  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+
+  ierr = PetscLogEventBegin(VEC_Set,x,0,0,0);CHKERRQ(ierr);
+  if (PetscLikely(x->ops->setasync)) {
+    ierr = (*x->ops->setasync)(x,pscala,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vector has no VecSetAsync() method");
+  }
+  ierr = PetscLogEventEnd(VEC_Set,x,0,0,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetInfo(pscala,PSS_ZERO,PETSC_FALSE,&isZero,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetInfo(pscala,PSS_ONE,PETSC_FALSE,&isOne,pstream);CHKERRQ(ierr);
+  if (x->map->N == 0 || isZero) {
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_1],0.0l);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_INFINITY],0.0);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_2],0.0);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_FROBENIUS],0.0);CHKERRQ(ierr);
+  } else if (isOne) {
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_1],x->map->N);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_INFINITY],1.0);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_2],PetscSqrtReal((PetscReal)x->map->N));CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_FROBENIUS],1.0);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
 
 /*@
    VecAXPY - Computes y = alpha x + y.
@@ -582,7 +796,7 @@ $    VecAXPBYPCZ(w,alpha,beta,gamma,x,y)  z = alpha x           + beta y + gamma
 $    VecMAXPY(y,nv,alpha[],x[])           y = sum alpha[i] x[i] +      y
 
 
-.seealso:  VecAYPX(), VecMAXPY(), VecWAXPY(), VecAXPBYPCZ(), VecAXPBY()
+.seealso:  VecAYPX(), VecMAXPY(), VecWAXPY(), VecAXPBYPCZ(), VecAXPBY(), VecAXPYAsync()
 @*/
 PetscErrorCode  VecAXPY(Vec y,PetscScalar alpha,Vec x)
 {
@@ -603,6 +817,60 @@ PetscErrorCode  VecAXPY(Vec y,PetscScalar alpha,Vec x)
   ierr = VecLockReadPush(x);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
   ierr = (*y->ops->axpy)(y,alpha,x);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  ierr = VecLockReadPop(x);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecAXPYAsync - Computes y = alpha x + y.
+
+   Logically Collective on Vec, Asynchronous
+
+   Input Parameters:
++  alpha   - the stream scalar
+.  x, y    - the vectors
+-  pstream - the PetscStream on which to enqueue the operation
+
+   Output Parameter:
+.  y - output vector
+
+   Level: intermediate
+
+   Notes:
+   See VecAXPY() for detailed notes on this routines use. See VecGetEvent() for detailed
+   notes on asynchronicity semantics for vectors.
+
+
+.seealso:  PetscStreamCreate(), PetscStreamScalarCreate(), VecAXPY(), VecMAXPY(), VecWAXPY(), VecAXPBYPCZ(), VecAXPBY()
+@*/
+PetscErrorCode  VecAXPYAsync(Vec y,PetscStreamScalar pscal,Vec x,PetscStream pstream)
+{
+  PetscBool      isZero;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,3);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
+  PetscValidType(x,3);
+  PetscValidType(y,1);
+  PetscCheckSameTypeAndComm(x,3,y,1);
+  VecCheckSameSize(x,1,y,3);
+  PetscCheckValidSameStreamType(pscal,2,pstream,4);
+
+  if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
+  ierr = PetscStreamScalarGetInfo(pscal,PSS_ZERO,PETSC_FALSE,&isZero,pstream);CHKERRQ(ierr);
+  if (isZero) PetscFunctionReturn(0);
+  ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
+
+  ierr = VecLockReadPush(x);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  if (PetscLikely(y->ops->axpyasync)) {
+    ierr = (*y->ops->axpyasync)(y,pscal,x,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)y),PETSC_ERR_ARG_WRONG,"Vector has no VecAXPYAsync() method");
+  }
   ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
   ierr = VecLockReadPop(x);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
@@ -648,6 +916,36 @@ PetscErrorCode  VecAXPBY(Vec y,PetscScalar alpha,PetscScalar beta,Vec x)
   ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
   ierr = (*y->ops->axpby)(y,alpha,beta,x);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecAXPBYAsync(Vec y,PetscStreamScalar pscala,PetscStreamScalar pscalb,Vec x,PetscStream pstream)
+{
+  PetscBool      isAZero,isBOne;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,4);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
+  PetscValidType(x,4);
+  PetscValidType(y,1);
+  PetscCheckSameTypeAndComm(x,4,y,1);
+  VecCheckSameSize(y,1,x,4);
+  if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
+  PetscCheckValidSameStreamType(pscala,2,pstream,5);
+  PetscCheckValidSameStreamType(pscalb,3,pstream,5);
+  ierr = PetscStreamScalarGetInfo(pscala,PSS_ZERO,PETSC_FALSE,&isAZero,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetInfo(pscalb,PSS_ONE,PETSC_FALSE,&isBOne,pstream);CHKERRQ(ierr);
+  if (isAZero && isBOne) PetscFunctionReturn(0);
+  ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  if (PetscLikely(y->ops->axpbyasync)) {
+    ierr = (*y->ops->axpbyasync)(y,pscala,pscalb,x,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)y),PETSC_ERR_SUP,"Vector has not VecAXPBYAsync() method");
+  }
   ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -704,6 +1002,44 @@ PetscErrorCode  VecAXPBYPCZ(Vec z,PetscScalar alpha,PetscScalar beta,PetscScalar
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode  VecAXPBYPCZAsync(Vec z,PetscStreamScalar pscala,PetscStreamScalar pscalb,PetscStreamScalar pscalg,Vec x,Vec y,PetscStream pstream)
+{
+  PetscBool      isAZero,isBZero,isGOne;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,5);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,6);
+  PetscValidHeaderSpecific(z,VEC_CLASSID,1);
+  PetscValidType(x,5);
+  PetscValidType(y,6);
+  PetscValidType(z,1);
+  PetscCheckSameTypeAndComm(x,5,y,6);
+  PetscCheckSameTypeAndComm(x,5,z,1);
+  VecCheckSameSize(x,1,y,5);
+  VecCheckSameSize(x,1,z,6);
+  if (x == y || x == z) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x, y, and z must be different vectors");
+  if (y == z) SETERRQ(PetscObjectComm((PetscObject)y),PETSC_ERR_ARG_IDN,"x, y, and z must be different vectors");
+  PetscCheckValidSameStreamType(pscala,2,pstream,7);
+  PetscCheckValidSameStreamType(pscalb,3,pstream,7);
+  PetscCheckValidSameStreamType(pscalg,4,pstream,7);
+  ierr = PetscStreamScalarGetInfo(pscala,PSS_ZERO,PETSC_FALSE,&isAZero,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetInfo(pscalb,PSS_ZERO,PETSC_FALSE,&isBZero,pstream);CHKERRQ(ierr);
+  ierr = PetscStreamScalarGetInfo(pscalg,PSS_ONE,PETSC_FALSE,&isGOne,pstream);CHKERRQ(ierr);
+  if (isAZero && isBZero && isGOne) PetscFunctionReturn(0);
+  ierr = VecSetErrorIfLocked(z,1);CHKERRQ(ierr);
+
+  ierr = PetscLogEventBegin(VEC_AXPBYPCZ,x,y,z,0);CHKERRQ(ierr);
+  if (PetscLikely(y->ops->axpbypczasync)) {
+    ierr = (*y->ops->axpbypczasync)(z,pscala,pscalb,pscalg,x,y,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)y),PETSC_ERR_SUP,"Vector has no VecAXPBYPCZAsync() method");
+  }
+  ierr = PetscLogEventEnd(VEC_AXPBYPCZ,x,y,z,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)z);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecAYPX - Computes y = x + beta y.
 
@@ -742,6 +1078,33 @@ PetscErrorCode  VecAYPX(Vec y,PetscScalar beta,Vec x)
 
   ierr = PetscLogEventBegin(VEC_AYPX,x,y,0,0);CHKERRQ(ierr);
   ierr =  (*y->ops->aypx)(y,beta,x);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_AYPX,x,y,0,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecAYPXAsync(Vec y,PetscStreamScalar pscal,Vec x,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,3);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
+  PetscValidType(x,3);
+  PetscValidType(y,1);
+  PetscCheckSameTypeAndComm(x,3,y,1);
+  VecCheckSameSize(x,1,y,3);
+  PetscCheckValidSameStreamType(pscal,2,pstream,4);
+
+  if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
+  ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
+
+  ierr = PetscLogEventBegin(VEC_AYPX,x,y,0,0);CHKERRQ(ierr);
+  if (PetscLikely(y->ops->aypxasync)) {
+    ierr = (*y->ops->aypxasync)(y,pscal,x,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)y),PETSC_ERR_ARG_WRONG,"Vector has no VecAYPXAsync() method");
+  }
   ierr = PetscLogEventEnd(VEC_AYPX,x,y,0,0);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -796,6 +1159,36 @@ PetscErrorCode  VecWAXPY(Vec w,PetscScalar alpha,Vec x,Vec y)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode  VecWAXPYAsync(Vec w,PetscStreamScalar pscala,Vec x,Vec y,PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(x,VEC_CLASSID,3);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,4);
+  PetscValidType(w,1);
+  PetscValidType(x,3);
+  PetscValidType(y,4);
+  PetscCheckSameTypeAndComm(x,3,y,4);
+  PetscCheckSameTypeAndComm(y,4,w,1);
+  VecCheckSameSize(x,3,y,4);
+  VecCheckSameSize(x,3,w,1);
+  if (w == y) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Result vector w cannot be same as input vector y, suggest VecAXPY()");
+  if (w == x) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Result vector w cannot be same as input vector x, suggest VecAYPX()");
+  PetscCheckValidSameStreamType(pscala,2,pstream,5);
+  ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
+
+  ierr = PetscLogEventBegin(VEC_WAXPY,x,y,w,0);CHKERRQ(ierr);
+  if (PetscLikely(w->ops->waxpyasync)) {
+    ierr =  (*w->ops->waxpyasync)(w,pscala,x,y,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)w),PETSC_ERR_SUP,"Vector has no VecWAXPYAsync() method");
+  }
+  ierr = PetscLogEventEnd(VEC_WAXPY,x,y,w,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
 /*@C
    VecSetValues - Inserts or adds values into certain locations of a vector.
@@ -1176,6 +1569,35 @@ PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode  VecMDotAsync(Vec x,PetscInt nv,const Vec y[],PetscStreamScalar pscal[],PetscStream pstream)
+{
+  PetscInt       i;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidLogicalCollectiveInt(x,nv,2);
+  if (!nv) PetscFunctionReturn(0);
+  if (nv < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %D) cannot be negative",nv);
+  PetscValidPointer(y,3);
+  PetscValidHeaderSpecific(*y,VEC_CLASSID,3);
+  PetscValidType(x,2);
+  PetscValidType(*y,3);
+  PetscCheckSameTypeAndComm(x,2,*y,3);
+  VecCheckSameSize(x,1,*y,3);
+  PetscValidPointer(pscal,4);
+  for (i = 0; i < nv; ++i) {PetscCheckValidSameStreamType(pscal[i],4,pstream,5);}
+
+  ierr = PetscLogEventBegin(VEC_MDot,x,*y,0,0);CHKERRQ(ierr);
+  if (x->ops->mdotasync) {
+    ierr = (*x->ops->mdotasync)(x,nv,y,pscal,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Vector has no VecMDotAsync() method");
+  }
+  ierr = PetscLogEventEnd(VEC_MDot,x,*y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecMAXPY - Computes y = y + sum alpha[i] x[i]
 
@@ -1218,6 +1640,37 @@ PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
   ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(VEC_MAXPY,*x,y,0,0);CHKERRQ(ierr);
   ierr = (*y->ops->maxpy)(y,nv,alpha,x);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_MAXPY,*x,y,0,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode  VecMAXPYAsync(Vec y,PetscInt nv,PetscStreamScalar pscala[],Vec x[],PetscStream pstream)
+{
+  PetscInt       i;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
+  PetscValidLogicalCollectiveInt(y,nv,2);
+  if (!nv) PetscFunctionReturn(0);
+  if (nv < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %D) cannot be negative",nv);
+  PetscValidPointer(x,4);
+  PetscValidHeaderSpecific(*x,VEC_CLASSID,4);
+  PetscValidType(y,1);
+  PetscValidType(*x,4);
+  PetscCheckSameTypeAndComm(y,1,*x,4);
+  VecCheckSameSize(y,1,*x,4);
+  PetscValidPointer(pscala,3);
+  for (i = 0; i < nv; ++i) {PetscCheckValidSameStreamType(pscala[i],3,pstream,5);}
+
+  ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_MAXPY,*x,y,0,0);CHKERRQ(ierr);
+  if (PetscLikely(y->ops->maxpyasync)) {
+    ierr = (*y->ops->maxpyasync)(y,nv,pscala,x,pstream);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)y),PETSC_ERR_SUP,"Vector has no VecMAXPYAsync() method");
+  }
   ierr = PetscLogEventEnd(VEC_MAXPY,*x,y,0,0);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -2262,6 +2715,93 @@ PetscErrorCode  VecReplaceArray(Vec vec,const PetscScalar array[])
   PetscFunctionReturn(0);
 }
 
+/*@C
+   VecGetEvent - Retrieves the PetscEvent from an asynchronous vector
+
+   Not Collective
+
+   Input Parameter:
+.  vec - the vector
+
+   Output Parameter:
+.  event - the event
+
+   Notes:
+   All asynchronous vector routines exhibit "regular" stream memory behaviour. Memory
+   accesses are always valid on the same stream, only valid after record-and-wait
+   exchanges between streams, and never valid without explicit synchronization on the
+   host.
+
+   Asynchronous vector routines record a PetscEvent on all relevant participating vectors
+   if any data on a vector is accessed -- read or write -- but make no attempt to check
+   the status of the PetscEvent before making such accesses. The user is expected to
+   enforce ordering of asynchronous routines.
+
+   Example of Usage:
+.vb
+   // Perform AXPY on one stream
+   ierr = VecAXPYAsync(vec1,pscal,vec2,pstream1);CHKERRQ(ierr);
+   // All participating vectors have events recorded, even unchanged ones
+   ierr = VecGetEvent(vec2,&event);CHKERRQ(ierr);
+   ierr = PetscStreamWaitEvent(pstream2,event);CHKERRQ(ierr);
+   // Will only execute after the first AXPY has finished
+   ierr = VecAXPYAsync(vec1,pscal,vec3,pstream2);CHKERRQ(ierr);
+.ve
+
+   The PetscEvent is only created if this vector has had previous asynchronous work
+   queued, otherwise returns NULL. This routine also returns NULL if PETSc is configured
+   without GPU support.
+
+   This is a borrowed reference, the user should not destroy the event. Must be restored
+   with VecRestoreEvent().
+
+   Level: intermediate
+
+.seealso: VecRestoreEvent(), PetscStreamWaitEvent(), PetscEventQuery()
+@*/
+PetscErrorCode VecGetEvent(Vec vec, PetscEvent *event)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
+  PetscValidType(vec,1);
+  PetscValidPointer(event,2);
+#if PetscDefined(HAVE_DEVICE)
+  *event = vec->event;
+#else
+  *event = NULL;
+#endif
+  PetscFunctionReturn(0);
+}
+
+/*@C
+   VecRestoreEvent - Restores a PetscEvent retrieved from a vector
+
+   Not Collective
+
+   Input Parameters:
++  vec - the vector
+-  event - the event
+
+   Notes:
+   The restored event must be the same event retrieved via VecGetEvent(). The event
+   pointer is invalidated after this routine returns.
+
+   Level: intermediate
+
+.seealso: VecGetEvent(), PetscStreamWaitEvent(), PetscEventQuery()
+@*/
+PetscErrorCode VecRestoreEvent(Vec vec, PetscEvent *event)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
+  PetscValidType(vec,1);
+  PetscValidPointer(event,2);
+#if PetscDefined(HAVE_DEVICE)
+  if (PetscUnlikelyDebug(*event != vec->event)) SETERRQ(PetscObjectComm((PetscObject)vec),PETSC_ERR_ARG_WRONG,"Must restore with the same PetscEvent that was checked out");
+#endif
+  *event = NULL;
+  PetscFunctionReturn(0);
+}
 
 /*@C
    VecCUDAGetArray - Provides access to the CUDA buffer inside a vector.
@@ -2309,6 +2849,20 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
   PetscFunctionReturn(0);
 }
 
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayAsync(Vec v, PetscScalar **a, PetscStream pstream)
+{
+  PetscFunctionBegin;
+  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
+ #if defined(PETSC_HAVE_CUDA)
+  {
+    PetscErrorCode ierr;
+    ierr = VecCUDACopyToGPUAsync(v,pstream);CHKERRQ(ierr);
+    *a   = ((Vec_CUDA*)v->spptr)->GPUarray;
+  }
+ #endif
+  PetscFunctionReturn(0);
+}
+
 /*@C
    VecCUDARestoreArray - Restore a CUDA device pointer previously acquired with VecCUDAGetArray().
 
@@ -2336,6 +2890,22 @@ PETSC_EXTERN PetscErrorCode VecCUDARestoreArray(Vec v, PetscScalar **a)
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
 #if defined(PETSC_HAVE_CUDA)
   v->offloadmask = PETSC_OFFLOAD_GPU;
+  *a             = NULL;
+#endif
+  ierr = PetscObjectStateIncrease((PetscObject)v);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayAsync(Vec v, PetscScalar **a, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
+#if defined(PETSC_HAVE_CUDA)
+  ierr = PetscStreamRecordEvent(pstream,v->event);CHKERRQ(ierr);
+  v->offloadmask = PETSC_OFFLOAD_GPU;
+  *a             = NULL;
 #endif
   ierr = PetscObjectStateIncrease((PetscObject)v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -2380,6 +2950,14 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayRead(Vec v,const PetscScalar** a)
    PetscFunctionReturn(0);
 }
 
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayReadAsync(Vec v,const PetscScalar** a,PetscStream pstream)
+{
+   PetscErrorCode ierr;
+   PetscFunctionBegin;
+   ierr = VecCUDAGetArrayAsync(v,(PetscScalar**)a,pstream);CHKERRQ(ierr);
+   PetscFunctionReturn(0);
+}
+
 /*@C
    VecCUDARestoreArrayRead - Restore a CUDA device pointer previously acquired with VecCUDAGetArrayRead().
 
@@ -2404,6 +2982,20 @@ PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayRead(Vec v, const PetscScalar **a
 {
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
+  *a = NULL;
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayReadAsync(Vec v, const PetscScalar **a, PetscStream pstream)
+{
+  PetscFunctionBegin;
+  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
+#if defined(PETSC_HAVE_CUDA)
+  {
+    PetscErrorCode ierr;
+    ierr = PetscStreamRecordEvent(pstream,v->event);CHKERRQ(ierr);
+  }
+#endif
   *a = NULL;
   PetscFunctionReturn(0);
 }
@@ -2451,6 +3043,20 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
   PetscFunctionReturn(0);
 }
 
+PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWriteAsync(Vec v, PetscScalar **a, PetscStream pstream)
+{
+  PetscFunctionBegin;
+  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
+ #if defined(PETSC_HAVE_CUDA)
+  {
+    PetscErrorCode ierr;
+    ierr = VecCUDAAllocateCheck(v);CHKERRQ(ierr);
+    *a   = ((Vec_CUDA*)v->spptr)->GPUarray;
+  }
+ #endif
+  PetscFunctionReturn(0);
+}
+
 /*@C
    VecCUDARestoreArrayWrite - Restore a CUDA device pointer previously acquired with VecCUDAGetArrayWrite().
 
@@ -2476,10 +3082,25 @@ PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
- #if defined(PETSC_HAVE_CUDA)
+#if defined(PETSC_HAVE_CUDA)
   v->offloadmask = PETSC_OFFLOAD_GPU;
-  if (a) *a = NULL;
- #endif
+  *a             = NULL;
+#endif
+  ierr = PetscObjectStateIncrease((PetscObject)v);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWriteAsync(Vec v, PetscScalar **a, PetscStream pstream)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
+#if defined(PETSC_HAVE_CUDA)
+  ierr = PetscStreamRecordEvent(pstream,v->event);CHKERRQ(ierr);
+  v->offloadmask = PETSC_OFFLOAD_GPU;
+  *a             = NULL;
+#endif
   ierr = PetscObjectStateIncrease((PetscObject)v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

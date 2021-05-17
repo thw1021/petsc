@@ -6,7 +6,7 @@
 
 #include <petscsys.h>        /*I  "petscsys.h"   I*/
 #include <petsc/private/petscimpl.h>
-#include <petschipblas.h>
+#include <petscdevice.h>
 
 
 
