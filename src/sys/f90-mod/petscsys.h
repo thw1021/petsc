@@ -219,3 +219,33 @@
       parameter(PETSC_INFO_COMM_ALL=-1)
       parameter(PETSC_INFO_COMM_NO_SELF=0)
       parameter(PETSC_INFO_COMM_ONLY_SELF=1)
+
+! ----------------------------------------------------------------------------
+!
+!     PetscStream
+!
+      type tPetscStream
+        PetscFortranAddr:: v PETSC_FORTRAN_TYPE_INITIALIZE
+      end type tPetscStream
+
+      PetscStream, parameter :: PETSC_NULL_STREAM = tPetscStream(0)
+
+#define PETSCSTREAMCUDA 'cuda'
+#define PETSCSTREAMHIP  'hip'
+
+      PetscEnum, parameter :: PETSC_STREAM_GLOBAL_BLOCKING = 0
+      PetscEnum, parameter :: PETSC_STREAM_DEFAULT_BLOCKING = 1
+      PetscEnum, parameter :: PETSC_STREAM_GLOBAL_NONBLOCKING = 2
+      PetscEnum, parameter :: PETSC_STREAM_MAX_MODE = 3
+
+      type tPetscStreamScalar
+        PetscFortranAddr:: v PETSC_FORTRAN_TYPE_INITIALIZE
+      end type tPetscStreamScalar
+
+      PetscStreamScalar, parameter :: PETSC_NULL_STREAM_SCALAR = tPetscStreamScalar(0)
+
+      PetscEnum, parameter :: PSS_ZERO = 0
+      PetscEnum, parameter :: PSS_ONE = 1
+      PetscEnum, parameter :: PSS_INF = 2
+      PetscEnum, parameter :: PSS_NAN = 3
+      PetscEnum, parameter :: PSS_CACHE_MAX = 4
