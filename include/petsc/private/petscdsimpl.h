@@ -61,8 +61,8 @@ PETSC_HASH_MAP(HMapForm, PetscHashFormKey, PetscChunk, PetscHashFormKeyHash, Pet
 */
 PETSC_STATIC_INLINE int Compare_PetscHashFormKey_Private(const void *left, const void *right, PETSC_UNUSED void *ctx)
 {
-  PetscHashFormKey l = *(PetscHashFormKey *) left;
-  PetscHashFormKey r = *(PetscHashFormKey *) right;
+  PetscHashFormKey l = *(const PetscHashFormKey *) left;
+  PetscHashFormKey r = *(const PetscHashFormKey *) right;
   return (l.label < r.label) ? -1 : ((l.label > r.label) ? 1 :
            ((l.value < r.value) ? -1 : (l.value > r.value) ? 1 :
              ((l.field < r.field) ? -1 : (l.field > r.field))));
