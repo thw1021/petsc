@@ -241,26 +241,15 @@ M*/
        typedef petsccomplexlib::complex<__float128> PetscComplex; /* Notstandard and not expected to work, use __complex128 */
 #    endif  /* PETSC_USE_REAL_ */
 
-     /* Add some complex 'fix' to support expressions like std::complex<PetscReal> + PetscInt, which are not supported by the
-        standard library, but are convenient for petsc users. If the fix causes compilation errors, one can define
-        PETSC_SKIP_CXX_COMPLEX_FIX at the beginning of the offdending C++ file to not include the fix file.
-     */
+     /* Petsc has some complex 'fix' to support expressions like std::complex<PetscReal> + PetscInt, which are not supported by the standard
+        C++ library, but are convenient for petsc users. If the C++ compiler is able to compile code in petsccxxcomplexfix.h (checked during
+        petsc configure), we try to include petsccxxcomplexfix.h to provide this convenience.
 
-     /* gcc-4.x libstdc++ uses constexpr, which implies const in C++11 but not anymore in C++14, which can cause problems.
-        For example, petsccxxcomplexfix.h requires imag() be a const method, however gcc-4.x has
-          #if __cplusplus >= 201103L
-            constexpr _Tp imag() { return _M_imag; }
-          #else
-            ...
-          #endif
-        So we just skip the fix in such combination.
+        If the fix causes other errors, one can define PETSC_SKIP_CXX_COMPLEX_FIX at the beginning of the offdending C++ file to skip the fix.
      */
-     #if defined(__GNUC__) && (__GNUC__ < 5) && (__cplusplus >= 201402L) && !defined(PETSC_SKIP_CXX_COMPLEX_FIX)
-       #define PETSC_SKIP_CXX_COMPLEX_FIX 1
-     #endif
-#    if !defined(PETSC_SKIP_CXX_COMPLEX_FIX)
+#    if defined(PETSC_HAVE_CXX_COMPLEX_FIX) && !defined(PETSC_SKIP_CXX_COMPLEX_FIX)
 #      include <petsccxxcomplexfix.h>
-#    endif /* ! PETSC_SKIP_CXX_COMPLEX_FIX */
+#    endif
 #  else /* c99 complex support */
 #    include <complex.h>
 #    if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL___FP16)
