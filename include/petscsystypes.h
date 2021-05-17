@@ -240,9 +240,15 @@ M*/
 #    elif defined(PETSC_USE_REAL___FLOAT128)
        typedef petsccomplexlib::complex<__float128> PetscComplex; /* Notstandard and not expected to work, use __complex128 */
 #    endif  /* PETSC_USE_REAL_ */
-#    if !defined(PETSC_SKIP_CXX_COMPLEX_FIX)
+
+     /* Petsc has some complex 'fix' to support expressions like std::complex<PetscReal> + PetscInt, which are not supported by the standard
+        C++ library, but are convenient for petsc users. If the C++ compiler is able to compile code in petsccxxcomplexfix.h (checked during
+        petsc configure), we simply include petsccxxcomplexfix.h to provide this convenience, otherwise one needs to avoid using expressions
+        aforementioned.
+     */
+#    if defined(PETSC_HAVE_CXX_COMPLEX_FIX)
 #      include <petsccxxcomplexfix.h>
-#    endif /* ! PETSC_SKIP_CXX_COMPLEX_FIX */
+#    endif
 #  else /* c99 complex support */
 #    include <complex.h>
 #    if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL___FP16)
