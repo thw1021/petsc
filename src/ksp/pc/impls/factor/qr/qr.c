@@ -1,7 +1,7 @@
 
 /*
    Defines a direct QR factorization preconditioner for any Mat implementation
-   Note: this need not be consided a preconditioner since it supplies
+   Note: this need not be considered a preconditioner since it supplies
          a direct solver.
 */
 #include <../src/ksp/pc/impls/factor/qr/qr.h>  /*I "petscpc.h" I*/
