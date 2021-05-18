@@ -25,7 +25,7 @@ class Configure(config.package.GNUPackage):
     help.addArgument('CMAKE', '-with-ctest-exec=<executable>',                nargs.Arg(None, None, 'Ctest executable to look for'))
     return
 
-  # To added CMake arguments in building CMake use, for example, -download-cmake-configure-arguments="-- -DCMAKE_USE_OPENSSL=OFF"
+  # To specify CMake arguments in CMake build, use e.g. -download-cmake-configure-arguments="-- -DCMAKE_USE_OPENSSL=OFF"
   def formGNUConfigureArgs(self):
     '''Does not use the standard arguments at all since this does not use the MPI compilers etc
        Cmake will chose its own compilers if they are not provided explicitly here'''
