@@ -683,7 +683,7 @@ Notes on usage:
       - ./configure --with-mpi-dir=$CUDA_DIR/../comm_libs/mpi/ -with-cuda-dir=$CUDA_DIR/11.0  --download-f2cblaslapack=1
 
       - to install cmake add --download-cmake --download-cmake-configure-arguments="-- -DCMAKE_USE_OPENSSL=OFF"
-      - to install Kokkos need to do
+      - to install Kokkos, do
         export CUDA_ROOT=$CUDA_DIR/11.2
 
       - Log into interactive nodes with
