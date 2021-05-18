@@ -10,7 +10,7 @@
 #endif
 #if defined(PETSC_HAVE_HIP)
 #include <hip/hip_runtime.h>
-#include <petschipblas.h>
+#include <petscdevice.h>
 #endif
 /*
  * MPI_Reduce_local is not really useful because it can't handle sparse data and it vectorizes "in the wrong direction",
