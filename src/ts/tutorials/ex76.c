@@ -25,6 +25,9 @@ F*/
 #include <petscds.h>
 #include <petscbag.h>
 
+typedef enum {MOD_INCOMPRESSIBLE, MOD_CONDUCTING, NUM_MOD_TYPES} ModType;
+const char *modTypes[NUM_MOD_TYPES+1] = {"incompressible", "conducting", "unknown"};
+
 typedef enum {SOL_QUADRATIC, SOL_CUBIC, SOL_CUBIC_TRIG, SOL_TAYLOR_GREEN, NUM_SOL_TYPES} SolType;
 const char *solTypes[NUM_SOL_TYPES+1] = {"quadratic", "cubic", "cubic_trig", "taylor_green", "unknown"};
 
@@ -41,10 +44,10 @@ const PetscInt STROUHAL = 0;
 const PetscInt FROUDE   = 1;
 const PetscInt REYNOLDS = 2;
 const PetscInt PECLET   = 3;
-const PetscInt PTH      = 4;
+const PetscInt P_TH     = 4;
 const PetscInt MU       = 5;
 const PetscInt NU       = 6;
-const PetscInt CP       = 7;
+const PetscInt C_P      = 7;
 const PetscInt K        = 8;
 const PetscInt ALPHA    = 9;
 const PetscInt T_IN     = 10;
@@ -68,6 +71,7 @@ typedef struct {
 typedef struct {
   /* Problem definition */
   PetscBag bag;     /* Holds problem parameters */
+  ModType  modType; /* model type */
   SolType  solType; /* MMS solution type */
   /* Flow diagnostics */
   DM       dmCell;  /* A DM with piecewise constant discretization */
@@ -159,6 +163,78 @@ static void f0_quadratic_w(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                            PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
   f0[0] -= 2*t + 1 + 3*X[0]*X[0] - 2*X[0]*X[1] + X[1]*X[1];
+}
+
+/*
+  CASE: quadratic
+  In 2D we use exact solution:
+
+    u = t + x^2 + y^2
+    v = t + 2x^2 - 2xy
+    p = x + y - 1
+    T = t + x + y + 1
+  rho = p^{th} / T
+
+  so that
+
+    \nabla \cdot u = 2x - 2x = 0
+    grad u = <<2 x, 4x - 2y>, <2 y, -2x>>
+    epsilon(u) = 1/2 (grad u + grad u^T) = <<2x, 2x>, <2x, -2x>>
+    epsilon'(u) = epsilon(u) - 1/3 (div u) I = epsilon(u)
+    div epsilon'(u) = <2, 2>
+
+  f = rho S du/dt + rho u \cdot \nabla u - 2\mu/Re div \epsilon'(u) + \nabla p + rho / F^2 \hat y
+    = rho S <1, 1> + rho <t + x^2 + y^2, t + 2x^2 - 2xy> . <<2x, 4x - 2y>, <2y, -2x>> - 2\mu/Re <2, 2> + <1, 1> + rho/F^2 <0, 1>
+    = rho S <1, 1> + rho <t (2x + 2y) + 2x^3 + 4x^2y - 2xy^2, t (2x - 2y) + 2x^2y + 4xy^2 - 2y^3> - mu/Re <4, 4> + <1, 1> + rho/F^2 <0, 1>
+
+  g = S rho_t + div (rho u)
+    = -S pth T_t/T^2 + rho div (u) + u . grad rho
+    = -S pth 1/T^2 - pth u . grad T / T^2
+    = -pth / T^2 (S + 2t + 3 x^2 - 2xy + y^2)
+
+  Q = rho c_p S dT/dt + rho c_p u . grad T - 1/Pe div k grad T
+    = c_p S pth / T + c_p pth (2t + 3 x^2 - 2xy + y^2) / T - k/Pe 0
+    = c_p pth / T (S + 2t + 3 x^2 - 2xy + y^2)
+*/
+static void f0_conduct_quadratic_v(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                                   PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+{
+  const PetscReal S    = constants[STROUHAL];
+  const PetscReal F    = constants[FROUDE];
+  const PetscReal Re   = constants[REYNOLDS];
+  const PetscReal mu   = constants[MU];
+  const PetscReal p_th = constants[P_TH];
+  const PetscReal rho  = p_th / (t + X[0] + X[1] + 1.);
+  const PetscInt  gd   = (PetscInt) constants[G_DIR];
+
+  f0[0]  -= rho * S + rho * (2.*t*(X[0] + X[1]) + 2.*X[0]*X[0]*X[0] + 4.*X[0]*X[0]*X[1] - 2.*X[0]*X[1]*X[1]) - 4.*mu/Re + 1.;
+  f0[1]  -= rho * S + rho * (2.*t*(X[0] - X[1]) + 2.*X[0]*X[0]*X[1] + 4.*X[0]*X[1]*X[1] - 2.*X[1]*X[1]*X[1]) - 4.*mu/Re + 1.;
+  f0[gd] -= rho/PetscSqr(F);
+}
+
+static void f0_conduct_quadratic_q(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                                   PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+{
+  const PetscReal S    = constants[STROUHAL];
+  const PetscReal p_th = constants[P_TH];
+
+  f0[0] += p_th * (S + 2.*t + 3.*X[0]*X[0] - 2.*X[0]*X[1] + X[1]*X[1]) / PetscSqr(t + X[0] + X[1] + 1.);
+}
+
+static void f0_conduct_quadratic_w(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                                   PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+{
+  const PetscReal S    = constants[STROUHAL];
+  const PetscReal c_p  = constants[C_P];
+  const PetscReal p_th = constants[P_TH];
+
+  f0[0] -= c_p*p_th * (S + 2.*t + 3.*X[0]*X[0] - 2.*X[0]*X[1] + X[1]*X[1]) / (t + X[0] + X[1] + 1.);
 }
 
 /*
@@ -435,16 +511,16 @@ static void f0_conduct_q(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   PetscInt d;
 
   // -\frac{S p^{th}}{T^2} \frac{\partial T}{\partial t}
-  f0[0] = -u_t[uOff[TEMP]] * constants[STROUHAL] * constants[PTH] / PetscSqr(u[uOff[TEMP]]);
+  f0[0] = -u_t[uOff[TEMP]] * constants[STROUHAL] * constants[P_TH] / PetscSqr(u[uOff[TEMP]]);
 
   // \frac{p^{th}}{T} \nabla \cdot \vb{u}
   for (d = 0; d < dim; ++d) {
-    f0[0] += constants[PTH] / u[uOff[TEMP]] * u_x[uOff_x[VEL] + d*dim + d];
+    f0[0] += constants[P_TH] / u[uOff[TEMP]] * u_x[uOff_x[VEL] + d*dim + d];
   }
 
   // - \frac{p^{th}}{T^2} \vb{u} \cdot \nabla T
   for (d = 0; d < dim; ++d) {
-    f0[0] -= constants[PTH] / (u[uOff[TEMP]] * u[uOff[TEMP]]) * u[uOff[VEL] + d] * u_x[uOff_x[TEMP] + d];
+    f0[0] -= constants[P_TH] / (u[uOff[TEMP]] * u[uOff[TEMP]]) * u[uOff[VEL] + d] * u_x[uOff_x[TEMP] + d];
   }
 
   // Add in any fixed source term
@@ -476,7 +552,7 @@ static void f0_conduct_v(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
                          PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  const PetscReal rho  = constants[PTH] / u[uOff[TEMP]];
+  const PetscReal rho  = constants[P_TH] / u[uOff[TEMP]];
   const PetscInt  gdir = (PetscInt) constants[G_DIR];
   PetscInt        Nc   = dim;
   PetscInt        c, d;
@@ -575,11 +651,11 @@ static void f0_conduct_w(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                          PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
   // \frac{C_p S p^{th}}{T} \frac{\partial T}{\partial t}
-  f0[0] = constants[CP] * constants[STROUHAL] * constants[PTH] / u[uOff[TEMP]] * u_t[uOff[TEMP]];
+  f0[0] = constants[C_P] * constants[STROUHAL] * constants[P_TH] / u[uOff[TEMP]] * u_t[uOff[TEMP]];
 
   // \frac{C_p p^{th}}{T} \vb{u} \cdot \nabla T
   for (PetscInt d = 0; d < dim; ++d) {
-    f0[0] += constants[CP] * constants[PTH] / u[uOff[TEMP]] * u[uOff[VEL] + d] * u_x[uOff_x[TEMP] + d];
+    f0[0] += constants[C_P] * constants[P_TH] / u[uOff[TEMP]] * u[uOff[VEL] + d] * u_x[uOff_x[TEMP] + d];
   }
 
   // Add in any fixed source term
@@ -658,6 +734,57 @@ static void g1_vu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   }
 }
 
+static void g0_conduct_qu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  PetscInt d;
+  // - \phi_i \frac{p^{th}}{T^2} \frac{\partial T}{\partial x_c} \psi_{j, u_c}
+  for (d = 0; d < dim; ++d) {
+    g0[d] = -constants[P_TH] / PetscSqr(u[uOff[TEMP]]) * u_x[uOff_x[TEMP] + d];
+  }
+}
+
+static void g1_conduct_qu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+{
+  PetscInt d;
+  // \phi_i \frac{p^{th}}{T} \frac{\partial \psi_{u_c,j}}{\partial x_c}
+  for (d = 0; d < dim; ++d) {
+    g1[d * dim + d] = constants[P_TH] / u[uOff[TEMP]];
+  }
+}
+
+static void g0_conduct_qT(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  PetscInt d;
+  // - \phi_i \frac{S p^{th}}{T^2} \psi_j
+  g0[0] -= constants[STROUHAL] * constants[P_TH] / PetscSqr(u[uOff[TEMP]]) * u_tShift;
+  // \phi_i 2 \frac{S p^{th}}{T^3} T_t \psi_j
+  g0[0] += 2.0 * constants[STROUHAL] * constants[P_TH] / PetscPowScalarInt(u[uOff[TEMP]], 3) * u_t[uOff[TEMP]];
+  // \phi_i \frac{p^{th}}{T^2} \left( - \nabla \cdot \vb{u} \psi_j + \frac{2}{T} \vb{u} \cdot \nabla T \psi_j \right)
+  for (d = 0; d < dim; ++d) {
+    g0[0] += constants[P_TH] / PetscSqr(u[uOff[TEMP]]) * (-u_x[uOff_x[VEL] + d * dim + d] + 2.0 / u[uOff[TEMP]] * u[uOff[VEL] + d] * u_x[uOff_x[TEMP] + d]);
+  }
+}
+
+static void g1_conduct_qT(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+{
+  PetscInt d;
+  // - \phi_i \frac{p^{th}}{T^2} \vb{u} \cdot \nabla \psi_j
+  for (d = 0; d < dim; ++d) {
+    g1[d] = -constants[P_TH] / PetscSqr(u[uOff[TEMP]]) * u[uOff[VEL] + d];
+  }
+}
 
 static void g2_vp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
@@ -682,6 +809,104 @@ static void g3_vu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
       g3[((c*Nc+c)*dim+d)*dim+d] += nu;
       g3[((c*Nc+d)*dim+d)*dim+c] += nu;
     }
+  }
+}
+
+static void g0_conduct_vT(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  const PetscInt  gdir = (PetscInt) constants[G_DIR];
+  const PetscInt  Nc = dim;
+  PetscInt        c, d;
+
+  // - \vb{\phi}_i \cdot \vb{u}_t \frac{p^{th} S}{T^2} \psi_j
+  for (d = 0; d < dim; ++d) {
+    g0[d] -= constants[P_TH] * constants[STROUHAL] / PetscSqr(u[uOff[TEMP]]) * u_t[uOff[VEL] + d];
+  }
+
+  // - \vb{\phi}_i \cdot \vb{u} \cdot \nabla \vb{u} \frac{p^{th}}{T^2} \psi_j
+  for (c = 0; c < Nc; ++c) {
+    for (d = 0; d < dim; ++d) {
+      g0[c] -= constants[P_TH] / PetscSqr(u[uOff[TEMP]]) * u[uOff[VEL] + d] * u_x[uOff_x[VEL] + c * dim + d];
+    }
+  }
+
+  // - \vb{\phi}_i \cdot \vu{z} \frac{p^{th}}{T^2 F^2} \psi_j
+  g0[gdir] -= constants[P_TH] / PetscSqr(u[uOff[TEMP]] * constants[FROUDE]);
+}
+
+static void g0_conduct_vu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  const PetscInt Nc = dim;
+  PetscInt       c, d;
+
+  // \vb{\phi}_i \cdot S \rho \psi_j
+  for (d = 0; d < dim; ++d) {
+    g0[d * dim + d] = constants[STROUHAL] * constants[P_TH] / u[uOff[TEMP]] * u_tShift;
+  }
+
+  // \phi^c_i \cdot \rho \frac{\partial u^c}{\partial x^d} \psi^d_j
+  for (c = 0; c < Nc; ++c) {
+    for (d = 0; d < dim; ++d) {
+      g0[c * Nc + d] += constants[P_TH] / u[uOff[TEMP]] * u_x[uOff_x[VEL] + c * Nc + d];
+    }
+  }
+}
+
+static void g1_conduct_vu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+{
+  const PetscInt NcI = dim;
+  const PetscInt NcJ = dim;
+  PetscInt       c, d, e;
+
+  // \phi^c_i \rho u^e \frac{\partial \psi^d_j}{\partial x^e}
+  for (c = 0; c < NcI; ++c) {
+    for (d = 0; d < NcJ; ++d) {
+      for (e = 0; e < dim; ++e) {
+        if (c == d) {
+          g1[(c * NcJ + d) * dim + e] += constants[P_TH] / u[uOff[TEMP]] * u[uOff[VEL] + e];
+        }
+      }
+    }
+  }
+}
+
+static void g3_conduct_vu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
+{
+  const PetscInt Nc = dim;
+  PetscInt       c, d;
+
+  for (c = 0; c < Nc; ++c) {
+    for (d = 0; d < dim; ++d) {
+      // \frac{\partial \phi^c_i}{\partial x^d} \mu/Re \frac{\partial \psi^c_i}{\partial x^d}
+      g3[((c * Nc + c) * dim + d) * dim + d] += constants[MU] / constants[REYNOLDS];  // gradU
+      // \frac{\partial \phi^c_i}{\partial x^d} \mu/Re \frac{\partial \psi^d_i}{\partial x^c}
+      g3[((c * Nc + d) * dim + d) * dim + c] += constants[MU] / constants[REYNOLDS];  // gradU transpose
+      // \frac{\partial \phi^c_i}{\partial x^d} -2/3 \mu/Re \frac{\partial \psi^d_i}{\partial x^c}
+      g3[((c * Nc + d) * dim + d) * dim + c] -= 2.0 / 3.0 * constants[MU] / constants[REYNOLDS];
+    }
+  }
+}
+
+static void g2_conduct_vp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g2[])
+{
+  PetscInt d;
+  for (d = 0; d < dim; ++d) {
+    g2[d * dim + d] = -1.0;
   }
 }
 
@@ -722,30 +947,90 @@ static void g3_wT(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   for (d = 0; d < dim; ++d) g3[d*dim+d] = alpha;
 }
 
+static void g0_conduct_wu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  PetscInt d;
+  // \phi_i \frac{C_p p^{th}}{T} \nabla T \cdot \psi_j
+  for (d = 0; d < dim; ++d) {
+    g0[d] = constants[C_P] * constants[P_TH] / u[uOff[TEMP]] * u_x[uOff_x[TEMP] + d];
+  }
+}
+
+static void g0_conduct_wT(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  PetscInt d;
+  // \psi_i C_p S p^{th}\T \psi_{j}
+  g0[0] += constants[C_P] * constants[STROUHAL] * constants[P_TH] / u[uOff[TEMP]] * u_tShift;
+  // - \phi_i C_p S p^{th}/T^2 T_t \psi_j
+  g0[0] -= constants[C_P] * constants[STROUHAL] * constants[P_TH] / PetscSqr(u[uOff[TEMP]]) * u_t[uOff[TEMP]];
+  // - \phi_i C_p p^{th}/T^2 \vb{u} \cdot \nabla T \psi_j
+  for (d = 0; d < dim; ++d) {
+    g0[0] -= constants[C_P] * constants[P_TH] / PetscSqr(u[uOff[TEMP]]) * u[uOff[VEL] + d] * u_x[uOff_x[TEMP] + d];
+  }
+}
+
+static void g1_conduct_wT(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+{
+  PetscInt d;
+  // \phi_i C_p p^{th}/T \vb{u} \cdot \nabla \psi_j
+  for (d = 0; d < dim; ++d) {
+    g1[d] += constants[C_P] * constants[P_TH] / u[uOff[TEMP]] * u[uOff[VEL] + d];
+  }
+}
+
+static void g3_conduct_wT(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
+{
+  PetscInt d;
+  // \nabla \phi_i \frac{k}{Pe} \nabla \phi_j
+  for (d = 0; d < dim; ++d) {
+    g3[d * dim + d] = constants[K] / constants[PECLET];
+  }
+}
+
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscInt       sol;
+  PetscInt       mod, sol;
   PetscErrorCode ierr;
 
 
   PetscFunctionBeginUser;
+  options->modType = MOD_INCOMPRESSIBLE;
   options->solType = SOL_QUADRATIC;
 
   ierr = PetscOptionsBegin(comm, "", "Low Mach flow Problem Options", "DMPLEX");CHKERRQ(ierr);
+  mod = options->modType;
+  ierr = PetscOptionsEList("-mod_type", "The model type", "ex76.c", modTypes, NUM_MOD_TYPES, modTypes[options->modType], &mod, NULL);CHKERRQ(ierr);
+  options->modType = (ModType) mod;
   sol = options->solType;
-  ierr = PetscOptionsEList("-sol_type", "The solution type", "ex62.c", solTypes, NUM_SOL_TYPES, solTypes[options->solType], &sol, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsEList("-sol_type", "The solution type", "ex76.c", solTypes, NUM_SOL_TYPES, solTypes[options->solType], &sol, NULL);CHKERRQ(ierr);
   options->solType = (SolType) sol;
   ierr = PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetupParameters(AppCtx *user)
+static PetscErrorCode SetupParameters(DM dm, AppCtx *user)
 {
   PetscBag       bag;
   Parameter     *p;
+  PetscReal      dir;
+  PetscInt       dim;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
+  ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+  dir  = (PetscReal) (dim-1);
   /* setup PETSc parameter bag */
   ierr = PetscBagGetData(user->bag, (void **) &p);CHKERRQ(ierr);
   ierr = PetscBagSetName(user->bag, "par", "Low Mach flow parameters");CHKERRQ(ierr);
@@ -761,7 +1046,7 @@ static PetscErrorCode SetupParameters(AppCtx *user)
   ierr = PetscBagRegisterReal(bag, &p->k,        1.0, "k",     "Thermal conductivity");CHKERRQ(ierr);
   ierr = PetscBagRegisterReal(bag, &p->alpha,    1.0, "alpha", "Thermal diffusivity");CHKERRQ(ierr);
   ierr = PetscBagRegisterReal(bag, &p->T_in,     1.0, "T_in",  "Inlet temperature");CHKERRQ(ierr);
-  ierr = PetscBagRegisterReal(bag, &p->g_dir,    2.0, "g_dir", "Gravity direction");CHKERRQ(ierr);
+  ierr = PetscBagRegisterReal(bag, &p->g_dir,    dir, "g_dir", "Gravity direction");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -793,60 +1078,95 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
   ierr = PetscDSGetWeakForm(ds, &wf);CHKERRQ(ierr);
 
-  ierr = PetscDSSetResidual(ds, VEL,  f0_v, f1_v);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(ds, PRES, f0_q, NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(ds, TEMP, f0_w, f1_w);CHKERRQ(ierr);
+  switch(user->modType) {
+    case MOD_INCOMPRESSIBLE:
+      ierr = PetscDSSetResidual(ds, VEL,  f0_v, f1_v);CHKERRQ(ierr);
+      ierr = PetscDSSetResidual(ds, PRES, f0_q, NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetResidual(ds, TEMP, f0_w, f1_w);CHKERRQ(ierr);
 
-  ierr = PetscDSSetJacobian(ds, VEL,  VEL,  g0_vu, g1_vu, NULL,  g3_vu);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(ds, VEL,  PRES, NULL,  NULL,  g2_vp, NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(ds, PRES, VEL,  NULL,  g1_qu, NULL,  NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(ds, TEMP, VEL,  g0_wu, NULL,  NULL,  NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(ds, TEMP, TEMP, g0_wT, g1_wT, NULL,  g3_wT);CHKERRQ(ierr);
-  switch(user->solType){
-  case SOL_QUADRATIC:
-    ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, VEL,  1, f0_quadratic_v, 1, NULL);CHKERRQ(ierr);
-    ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, TEMP, 1, f0_quadratic_w, 1, NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, VEL,  VEL,  g0_vu, g1_vu, NULL,  g3_vu);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, VEL,  PRES, NULL,  NULL,  g2_vp, NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, PRES, VEL,  NULL,  g1_qu, NULL,  NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, TEMP, VEL,  g0_wu, NULL,  NULL,  NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, TEMP, TEMP, g0_wT, g1_wT, NULL,  g3_wT);CHKERRQ(ierr);
 
-    exactFuncs[VEL]    = quadratic_u;
-    exactFuncs[PRES]   = quadratic_p;
-    exactFuncs[TEMP]   = quadratic_T;
-    exactFuncs_t[VEL]  = quadratic_u_t;
-    exactFuncs_t[PRES] = NULL;
-    exactFuncs_t[TEMP] = quadratic_T_t;
-    break;
-  case SOL_CUBIC:
-    ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, VEL,  1, f0_cubic_v, 1, NULL);CHKERRQ(ierr);
-    ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, TEMP, 1, f0_cubic_w, 1, NULL);CHKERRQ(ierr);
+      switch(user->solType) {
+      case SOL_QUADRATIC:
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, VEL,  1, f0_quadratic_v, 0, NULL);CHKERRQ(ierr);
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, TEMP, 1, f0_quadratic_w, 0, NULL);CHKERRQ(ierr);
 
-    exactFuncs[VEL]    = cubic_u;
-    exactFuncs[PRES]   = cubic_p;
-    exactFuncs[TEMP]   = cubic_T;
-    exactFuncs_t[VEL]  = cubic_u_t;
-    exactFuncs_t[PRES] = NULL;
-    exactFuncs_t[TEMP] = cubic_T_t;
-    break;
-  case SOL_CUBIC_TRIG:
-    ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, VEL,  1, f0_cubic_trig_v, 1, NULL);CHKERRQ(ierr);
-    ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, TEMP, 1, f0_cubic_trig_w, 1, NULL);CHKERRQ(ierr);
+        exactFuncs[VEL]    = quadratic_u;
+        exactFuncs[PRES]   = quadratic_p;
+        exactFuncs[TEMP]   = quadratic_T;
+        exactFuncs_t[VEL]  = quadratic_u_t;
+        exactFuncs_t[PRES] = NULL;
+        exactFuncs_t[TEMP] = quadratic_T_t;
+        break;
+      case SOL_CUBIC:
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, VEL,  1, f0_cubic_v, 0, NULL);CHKERRQ(ierr);
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, TEMP, 1, f0_cubic_w, 0, NULL);CHKERRQ(ierr);
 
-    exactFuncs[VEL]    = cubic_trig_u;
-    exactFuncs[PRES]   = cubic_trig_p;
-    exactFuncs[TEMP]   = cubic_trig_T;
-    exactFuncs_t[VEL]  = cubic_trig_u_t;
-    exactFuncs_t[PRES] = NULL;
-    exactFuncs_t[TEMP] = cubic_trig_T_t;
-    break;
-  case SOL_TAYLOR_GREEN:
-    ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, TEMP, 1, f0_taylor_green_w, 1, NULL);CHKERRQ(ierr);
+        exactFuncs[VEL]    = cubic_u;
+        exactFuncs[PRES]   = cubic_p;
+        exactFuncs[TEMP]   = cubic_T;
+        exactFuncs_t[VEL]  = cubic_u_t;
+        exactFuncs_t[PRES] = NULL;
+        exactFuncs_t[TEMP] = cubic_T_t;
+        break;
+      case SOL_CUBIC_TRIG:
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, VEL,  1, f0_cubic_trig_v, 0, NULL);CHKERRQ(ierr);
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, TEMP, 1, f0_cubic_trig_w, 0, NULL);CHKERRQ(ierr);
 
-    exactFuncs[VEL]    = taylor_green_u;
-    exactFuncs[PRES]   = taylor_green_p;
-    exactFuncs[TEMP]   = taylor_green_T;
-    exactFuncs_t[VEL]  = taylor_green_u_t;
-    exactFuncs_t[PRES] = taylor_green_p_t;
-    exactFuncs_t[TEMP] = taylor_green_T_t;
-    break;
-   default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%D)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+        exactFuncs[VEL]    = cubic_trig_u;
+        exactFuncs[PRES]   = cubic_trig_p;
+        exactFuncs[TEMP]   = cubic_trig_T;
+        exactFuncs_t[VEL]  = cubic_trig_u_t;
+        exactFuncs_t[PRES] = NULL;
+        exactFuncs_t[TEMP] = cubic_trig_T_t;
+        break;
+      case SOL_TAYLOR_GREEN:
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, TEMP, 1, f0_taylor_green_w, 0, NULL);CHKERRQ(ierr);
+
+        exactFuncs[VEL]    = taylor_green_u;
+        exactFuncs[PRES]   = taylor_green_p;
+        exactFuncs[TEMP]   = taylor_green_T;
+        exactFuncs_t[VEL]  = taylor_green_u_t;
+        exactFuncs_t[PRES] = taylor_green_p_t;
+        exactFuncs_t[TEMP] = taylor_green_T_t;
+        break;
+       default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%D)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+      }
+      break;
+    case MOD_CONDUCTING:
+      ierr = PetscDSSetResidual(ds, VEL,  f0_conduct_v, f1_conduct_v);CHKERRQ(ierr);
+      ierr = PetscDSSetResidual(ds, PRES, f0_conduct_q, NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetResidual(ds, TEMP, f0_conduct_w, f1_conduct_w);CHKERRQ(ierr);
+
+      ierr = PetscDSSetJacobian(ds, VEL,  VEL,  g0_conduct_vu, g1_conduct_vu, NULL,          g3_conduct_vu);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, VEL,  PRES, NULL,          NULL,          g2_conduct_vp, NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, VEL,  TEMP, g0_conduct_vT, NULL,          NULL,          NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, PRES, VEL,  g0_conduct_qu, g1_conduct_qu, NULL,          NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, PRES, TEMP, g0_conduct_qT, g1_conduct_qT, NULL,          NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, TEMP, VEL,  g0_conduct_wu, NULL,          NULL,          NULL);CHKERRQ(ierr);
+      ierr = PetscDSSetJacobian(ds, TEMP, TEMP, g0_conduct_wT, g1_conduct_wT, NULL,          g3_conduct_wT);CHKERRQ(ierr);
+
+      switch(user->solType) {
+      case SOL_QUADRATIC:
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, VEL,  1, f0_conduct_quadratic_v, 0, NULL);CHKERRQ(ierr);
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, PRES, 1, f0_conduct_quadratic_q, 0, NULL);CHKERRQ(ierr);
+        ierr = PetscWeakFormSetIndexResidual(wf, NULL, 0, TEMP, 1, f0_conduct_quadratic_w, 0, NULL);CHKERRQ(ierr);
+
+        exactFuncs[VEL]    = quadratic_u;
+        exactFuncs[PRES]   = quadratic_p;
+        exactFuncs[TEMP]   = quadratic_T;
+        exactFuncs_t[VEL]  = quadratic_u_t;
+        exactFuncs_t[PRES] = NULL;
+        exactFuncs_t[TEMP] = quadratic_T_t;
+        break;
+       default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%D)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+      }
+      break;
+    default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported model type: %s (%D)", solTypes[PetscMin(user->modType, NUM_MOD_TYPES)], user->modType);
   }
   /* Setup constants */
   {
@@ -859,10 +1179,10 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     constants[FROUDE]   = param->Froude;
     constants[REYNOLDS] = param->Reynolds;
     constants[PECLET]   = param->Peclet;
-    constants[PTH]      = param->p_th;
+    constants[P_TH]     = param->p_th;
     constants[MU]       = param->mu;
     constants[NU]       = param->nu;
-    constants[CP]       = param->c_p;
+    constants[C_P]      = param->c_p;
     constants[K]        = param->k;
     constants[ALPHA]    = param->alpha;
     constants[T_IN]     = param->T_in;
@@ -1007,6 +1327,7 @@ static PetscErrorCode RemoveDiscretePressureNullspace(TS ts)
 
 static PetscErrorCode SetInitialConditions(TS ts, Vec u)
 {
+  AppCtx        *user;
   DM             dm;
   PetscReal      t;
   PetscErrorCode ierr;
@@ -1015,6 +1336,7 @@ static PetscErrorCode SetInitialConditions(TS ts, Vec u)
   ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
   ierr = TSGetTime(ts, &t);CHKERRQ(ierr);
   ierr = DMComputeExactSolution(dm, t, u, NULL);CHKERRQ(ierr);
+  ierr = DMGetApplicationContext(dm, (void **) &user);CHKERRQ(ierr);
   ierr = RemoveDiscretePressureNullspace_Private(ts, u);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1080,9 +1402,9 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = ProcessOptions(PETSC_COMM_WORLD, &user);CHKERRQ(ierr);
   ierr = PetscBagCreate(PETSC_COMM_WORLD, sizeof(Parameter), &user.bag);CHKERRQ(ierr);
-  ierr = SetupParameters(&user);CHKERRQ(ierr);
-  ierr = TSCreate(PETSC_COMM_WORLD, &ts);CHKERRQ(ierr);
   ierr = CreateMesh(PETSC_COMM_WORLD, &user, &dm);CHKERRQ(ierr);
+  ierr = SetupParameters(dm, &user);CHKERRQ(ierr);
+  ierr = TSCreate(PETSC_COMM_WORLD, &ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts, dm);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(dm, &user);CHKERRQ(ierr);
   /* Setup problem */
@@ -1121,86 +1443,68 @@ int main(int argc, char **argv)
 
 /*TEST
 
-  test:
-    suffix: 2d_tri_p2_p1_p1
+  testset:
     requires: triangle !single
-    args: -dm_plex_separate_marker -sol_type quadratic -dm_refine 0 \
-      -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
-      -div_petscdualspace_lagrange_use_moments -div_petscdualspace_lagrange_moment_order 3 \
-      -dmts_check .001 -ts_max_steps 4 -ts_dt 0.1 \
-      -ksp_type fgmres -ksp_gmres_restart 10 -ksp_rtol 1.0e-9 -ksp_error_if_not_converged \
-      -pc_type fieldsplit -pc_fieldsplit_0_fields 0,2 -pc_fieldsplit_1_fields 1 -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full \
-        -fieldsplit_0_pc_type lu \
-        -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type jacobi
+    args: -dm_plex_separate_marker \
+          -div_petscdualspace_lagrange_use_moments -div_petscdualspace_lagrange_moment_order 3 \
+          -snes_error_if_not_converged -snes_convergence_test correct_pressure \
+          -ksp_type fgmres -ksp_gmres_restart 10 -ksp_rtol 1.0e-9 -ksp_error_if_not_converged \
+          -pc_type fieldsplit -pc_fieldsplit_0_fields 0,2 -pc_fieldsplit_1_fields 1 \
+          -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full \
+            -fieldsplit_0_pc_type lu \
+            -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type jacobi
 
-  # TODO Need trig t for convergence in time, also need to refine in space
-  test:
-    # Using -dm_refine 5 -convest_num_refine 2 gives L_2 convergence rate: [0.89, 0.011, 1.0]
-    suffix: 2d_tri_p2_p1_p1_tconv
-    requires: triangle !single
-    args: -dm_plex_separate_marker -sol_type cubic_trig -dm_refine 0 \
-      -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
-      -div_petscdualspace_lagrange_use_moments -div_petscdualspace_lagrange_moment_order 3 \
-      -ts_max_steps 4 -ts_dt 0.1 -ts_convergence_estimate -convest_num_refine 1 \
-      -snes_error_if_not_converged -snes_convergence_test correct_pressure \
-      -ksp_type fgmres -ksp_gmres_restart 10 -ksp_rtol 1.0e-9 -ksp_error_if_not_converged \
-      -pc_type fieldsplit -pc_fieldsplit_0_fields 0,2 -pc_fieldsplit_1_fields 1 -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full \
-        -fieldsplit_0_pc_type lu \
-        -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type jacobi
+    test:
+      suffix: 2d_tri_p2_p1_p1
+      args: -sol_type quadratic \
+            -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
+            -dmts_check .001 -ts_max_steps 4 -ts_dt 0.1
 
-  test:
-    # Using -dm_refine 3 -convest_num_refine 3 gives L_2 convergence rate: [3.0, 2.5, 1.9]
-    suffix: 2d_tri_p2_p1_p1_sconv
-    requires: triangle !single
-    args: -dm_plex_separate_marker -sol_type cubic -dm_refine 0 \
-      -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
-      -div_petscdualspace_lagrange_use_moments -div_petscdualspace_lagrange_moment_order 3 \
-      -ts_max_steps 1 -ts_dt 1e-4 -ts_convergence_estimate -ts_convergence_temporal 0 -convest_num_refine 1 \
-      -snes_error_if_not_converged -snes_convergence_test correct_pressure \
-      -ksp_type fgmres -ksp_gmres_restart 10 -ksp_rtol 1.0e-9 -ksp_atol 1e-16 -ksp_error_if_not_converged \
-      -pc_type fieldsplit -pc_fieldsplit_0_fields 0,2 -pc_fieldsplit_1_fields 1 -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full \
-        -fieldsplit_0_pc_type lu \
-        -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type jacobi
+    test:
+      # Using -dm_refine 5 -convest_num_refine 2 gives L_2 convergence rate: [0.89, 0.011, 1.0]
+      suffix: 2d_tri_p2_p1_p1_tconv
+      args: -sol_type cubic_trig \
+            -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
+            -ts_max_steps 4 -ts_dt 0.1 -ts_convergence_estimate -convest_num_refine 1
 
-  test:
-    suffix: 2d_tri_p3_p2_p2
-    requires: triangle !single
-    args: -dm_plex_separate_marker -sol_type cubic -dm_refine 0 \
-      -vel_petscspace_degree 3 -pres_petscspace_degree 2 -temp_petscspace_degree 2 \
-      -div_petscdualspace_lagrange_use_moments -div_petscdualspace_lagrange_moment_order 3 \
-      -dmts_check .001 -ts_max_steps 4 -ts_dt 0.1 \
-      -snes_convergence_test correct_pressure \
-      -ksp_type fgmres -ksp_gmres_restart 10 -ksp_rtol 1.0e-9 -ksp_error_if_not_converged \
-      -pc_type fieldsplit -pc_fieldsplit_0_fields 0,2 -pc_fieldsplit_1_fields 1 -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full \
-        -fieldsplit_0_pc_type lu \
-        -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type jacobi
+    test:
+      # Using -dm_refine 3 -convest_num_refine 3 gives L_2 convergence rate: [3.0, 2.5, 1.9]
+      suffix: 2d_tri_p2_p1_p1_sconv
+      args: -sol_type cubic \
+            -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
+            -ts_max_steps 1 -ts_dt 1e-4 -ts_convergence_estimate -ts_convergence_temporal 0 -convest_num_refine 1
 
-  test:
-    # Using -dm_refine 3 -convest_num_refine 3 gives L_2 convergence rate: [3.0, 2.1, 3.1]
-    suffix: 2d_tri_p2_p1_p1_tg_sconv
-    requires: triangle !single
-    args: -dm_plex_separate_marker -sol_type taylor_green -dm_refine 0 \
-      -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
-      -div_petscdualspace_lagrange_use_moments -div_petscdualspace_lagrange_moment_order 3 \
-      -ts_max_steps 1 -ts_dt 1e-8 -ts_convergence_estimate -ts_convergence_temporal 0 -convest_num_refine 1 \
-      -snes_error_if_not_converged -snes_convergence_test correct_pressure \
-      -ksp_type fgmres -ksp_gmres_restart 10 -ksp_rtol 1.0e-9 -ksp_atol 1e-16 -ksp_error_if_not_converged \
-      -pc_type fieldsplit -pc_fieldsplit_0_fields 0,2 -pc_fieldsplit_1_fields 1 -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full \
-        -fieldsplit_0_pc_type lu \
-        -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type jacobi
+    test:
+      suffix: 2d_tri_p3_p2_p2
+      args: -sol_type cubic \
+            -vel_petscspace_degree 3 -pres_petscspace_degree 2 -temp_petscspace_degree 2 \
+            -dmts_check .001 -ts_max_steps 4 -ts_dt 0.1
 
-  test:
-    # Using -dm_refine 3 -convest_num_refine 2 gives L_2 convergence rate: [1.2, 1.5, 1.2]
-    suffix: 2d_tri_p2_p1_p1_tg_tconv
-    requires: triangle !single
-    args: -dm_plex_separate_marker -sol_type taylor_green -dm_refine 0 \
-      -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
-      -div_petscdualspace_lagrange_use_moments -div_petscdualspace_lagrange_moment_order 3 \
-      -ts_max_steps 4 -ts_dt 0.1 -ts_convergence_estimate -convest_num_refine 1 \
-      -snes_error_if_not_converged -snes_convergence_test correct_pressure \
-      -ksp_type fgmres -ksp_gmres_restart 10 -ksp_rtol 1.0e-9 -ksp_atol 1e-16 -ksp_error_if_not_converged \
-      -pc_type fieldsplit -pc_fieldsplit_0_fields 0,2 -pc_fieldsplit_1_fields 1 -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full \
-        -fieldsplit_0_pc_type lu \
-        -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type jacobi
+    test:
+      # Using -dm_refine 3 -convest_num_refine 3 gives L_2 convergence rate: [3.0, 2.1, 3.1]
+      suffix: 2d_tri_p2_p1_p1_tg_sconv
+      args: -sol_type taylor_green \
+            -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
+            -ts_max_steps 1 -ts_dt 1e-8 -ts_convergence_estimate -ts_convergence_temporal 0 -convest_num_refine 1
+
+    test:
+      # Using -dm_refine 3 -convest_num_refine 2 gives L_2 convergence rate: [1.2, 1.5, 1.2]
+      suffix: 2d_tri_p2_p1_p1_tg_tconv
+      args: -sol_type taylor_green \
+            -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
+            -ts_max_steps 4 -ts_dt 0.1 -ts_convergence_estimate -convest_num_refine 1
+
+    test:
+      # At this resolution, the rhs is inconsistent on some Newton steps
+      suffix: 2d_tri_p2_p1_p1_conduct
+      args: -mod_type conducting -sol_type quadratic \
+            -vel_petscspace_degree 2 -pres_petscspace_degree 1 -temp_petscspace_degree 1 \
+            -dmts_check .001 -ts_max_steps 4 -ts_dt 0.1 \
+            -snes_error_if_not_converged -snes_max_linear_solve_fail 5 \
+            -ksp_type fgmres -ksp_max_it 2 -ksp_gmres_restart 10 -ksp_rtol 1.0e-9 -ksp_error_if_not_converged \
+            -pc_type fieldsplit -pc_fieldsplit_0_fields 0,2 -pc_fieldsplit_1_fields 1 \
+            -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition full \
+              -fieldsplit_0_pc_type lu \
+              -fieldsplit_pressure_ksp_max_it 2 -fieldsplit_pressure_pc_type svd
 
 TEST*/
