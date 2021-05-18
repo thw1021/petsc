@@ -1,6 +1,6 @@
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 #include <hip/hip_runtime.h>
-#include <petschipblas.h> /* For CHKERRHIP */
+#include <petscdevice.h> /* For CHKERRHIP */
 
 /* Map a thread id to an index in root/leaf space through a series of 3D subdomains. See PetscSFPackOpt. */
 __device__ static inline PetscInt MapTidToIndex(const PetscInt *opt,PetscInt tid)
