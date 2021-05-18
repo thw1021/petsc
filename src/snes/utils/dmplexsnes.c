@@ -1480,6 +1480,79 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP,void
   PetscFunctionReturn(0);
 }
 
+struct _DMSNESJacobianMFCtx
+{
+  DM    dm;
+  Vec   X;
+  void *ctx;
+};
+
+static PetscErrorCode DMSNESJacobianMF_Destroy_Private(Mat A)
+{
+  struct _DMSNESJacobianMFCtx *ctx;
+  PetscErrorCode               ierr;
+
+  PetscFunctionBegin;
+  ierr = MatShellGetContext(A, (void **) &ctx);CHKERRQ(ierr);
+  ierr = MatShellSetContext(A, NULL);CHKERRQ(ierr);
+  ierr = DMDestroy(&ctx->dm);CHKERRQ(ierr);
+  ierr = VecDestroy(&ctx->X);CHKERRQ(ierr);
+  ierr = PetscFree(ctx);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode DMSNESJacobianMF_Mult_Private(Mat A, Vec Y, Vec Z)
+{
+  struct _DMSNESJacobianMFCtx *ctx;
+  PetscErrorCode               ierr;
+
+  PetscFunctionBegin;
+  ierr = MatShellGetContext(A, (void **) &ctx);CHKERRQ(ierr);
+  ierr = DMSNESComputeJacobianAction(ctx->dm, ctx->X, Y, Z, ctx->ctx);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMSNESCreateJacobianMF - Create a Mat which computes the action of the Jacobian matrix-free
+
+  Collective on dm
+
+  Input Parameters:
++ dm   - The DM
+. X    - The evaluation point for the Jacobian
+- user - A user context, or NULL
+
+  Output Parameter:
+. J    - The Mat
+
+  Level: advanced
+
+.seealso: DMSNESComputeJacobianAction()
+@*/
+PetscErrorCode DMSNESCreateJacobianMF(DM dm, Vec X, void *user, Mat *J)
+{
+  struct _DMSNESJacobianMFCtx *ctx;
+  PetscInt                     n, N;
+  PetscErrorCode               ierr;
+
+  PetscFunctionBegin;
+  ierr = MatCreate(PetscObjectComm((PetscObject) dm), J);CHKERRQ(ierr);
+  ierr = MatSetType(*J, MATSHELL);CHKERRQ(ierr);
+  ierr = VecGetLocalSize(X, &n);CHKERRQ(ierr);
+  ierr = VecGetSize(X, &N);CHKERRQ(ierr);
+  ierr = MatSetSizes(*J, n, n, N, N);CHKERRQ(ierr);
+  ierr = PetscObjectReference((PetscObject) dm);CHKERRQ(ierr);
+  ierr = PetscObjectReference((PetscObject) X);CHKERRQ(ierr);
+  ierr = PetscMalloc1(1, &ctx);CHKERRQ(ierr);
+  ctx->dm  = dm;
+  ctx->X   = X;
+  ctx->ctx = user;
+  ierr = MatShellSetContext(*J, ctx);CHKERRQ(ierr);
+  MatShellSetOperation(*J, MATOP_DESTROY, (void (*)(void)) DMSNESJacobianMF_Destroy_Private);CHKERRQ(ierr);
+  MatShellSetOperation(*J, MATOP_MULT,    (void (*)(void)) DMSNESJacobianMF_Mult_Private);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*
      MatComputeNeumannOverlap - Computes an unassembled (Neumann) local overlapping Mat in nonlinear context.
 
