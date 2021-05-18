@@ -10,7 +10,7 @@
 #endif
 
 #if defined(PETSC_HAVE_CUDA)
-#include <petsccublas.h>
+#include <petscdevice.h>
 PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
 PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
 #endif
