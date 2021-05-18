@@ -2249,7 +2249,7 @@ PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
 
 #if defined(PETSC_HAVE_HIP)
 #include <hip/hip_runtime.h>
-#include <petschipblas.h>
+#include <petscdevice.h>
 PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
 PETSC_EXTERN hipEvent_t petsc_gputimer_end;
 #endif
