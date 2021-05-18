@@ -9,7 +9,7 @@
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-  #include <petschipblas.h>
+  #include <petscdevice.h>
   typedef hipStream_t   cupmStream_t;
   typedef hipEvent_t    cupmEvent_t;
 #endif
