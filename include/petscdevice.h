@@ -1,0 +1,176 @@
+#if !defined(PETSCDEVICE_H)
+#define PETSCDEVICE_H
+
+#include <petscsys.h>
+#include <petscdevicetypes.h>
+
+#if PetscDefined(HAVE_CUDA)
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+#include <cusolverDn.h>
+#include <cusolverSp.h>
+
+PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
+PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
+
+/* cuBLAS does not have cublasGetErrorName(). We create one on our own. */
+PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRCUBLAS macro */
+PETSC_EXTERN const char *PetscCUSolverGetErrorName(cusolverStatus_t);
+
+#define WaitForCUDA() PetscCUDASynchronize ? cudaDeviceSynchronize() : cudaSuccess;
+
+/* CUDART_VERSION = 1000 x major + 10 x minor version */
+
+/* Could not find exactly which CUDART_VERSION introduced cudaGetErrorName. At least it was in CUDA 8.0 (Sep. 2016) */
+#if (CUDART_VERSION >= 8000) /* CUDA 8.0 */
+#define CHKERRCUDA(cerr)                                                \
+  do {                                                                  \
+    if (PetscUnlikely(cerr)) {                                          \
+      const char *name  = cudaGetErrorName(cerr);                       \
+      const char *descr = cudaGetErrorString(cerr);                     \
+      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d (%s) : %s",(int)cerr,name,descr); \
+    }                                                                   \
+  } while (0)
+#else
+#define CHKERRCUDA(cerr) do {if (PetscUnlikely(cerr)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d",(int)cerr);} while (0)
+#endif /* CUDART_VERSION >= 8000 */
+
+#define CHKERRCUBLAS(stat)                                              \
+  do {                                                                  \
+    if (PetscUnlikely(stat)) {                                          \
+      const char *name = PetscCUBLASGetErrorName(stat);                 \
+      if (((stat == CUBLAS_STATUS_NOT_INITIALIZED) || (stat == CUBLAS_STATUS_ALLOC_FAILED)) && PetscCUDAInitialized) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuBLAS error %d (%s). Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)stat,name); \
+      else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuBLAS error %d (%s)",(int)stat,name); \
+    }                                                                   \
+  } while (0)
+
+#define CHKERRCUSOLVER(stat)                                            \
+  do {                                                                  \
+    if (PetscUnlikely(stat)) {                                          \
+      const char *name = PetscCUSolverGetErrorName(stat);               \
+      if ((stat == CUSOLVER_STATUS_NOT_INITIALIZED) || (stat == CUSOLVER_STATUS_ALLOC_FAILED) || (stat == CUSOLVER_STATUS_INTERNAL_ERROR)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSolver error %d (%s). This indicates the GPU has run out resources",(int)stat,name); \
+      else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSolver error %d (%s)",(int)stat,name); \
+    }                                                                   \
+  } while (0)
+
+PETSC_EXTERN cudaStream_t   PetscDefaultCudaStream; /* The default stream used by PETSc */
+PETSC_INTERN PetscErrorCode PetscCUBLASInitializeHandle(void);
+PETSC_INTERN PetscErrorCode PetscCUSOLVERDnInitializeHandle(void);
+
+PETSC_EXTERN PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t*);
+PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
+#endif /* PETSC_HAVE_CUDA */
+
+#if PetscDefined(HAVE_HIP)
+#include <hip/hip_runtime.h>
+#include <hipblas.h>
+#if defined(__HIP_PLATFORM_NVCC__)
+#include <cusolverDn.h>
+#else /* __HIP_PLATFORM_NVCC__ */
+#include <rocsolver.h>
+#endif /* __HIP_PLATFORM_NVCC__ */
+
+#define WaitForHIP() PetscHIPSynchronize ? hipDeviceSynchronize() : hipSuccess;
+
+PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
+PETSC_EXTERN hipEvent_t petsc_gputimer_end;
+
+/* hipBLAS does not have hipblasGetErrorName(). We create one on our own. */
+PETSC_EXTERN const char* PetscHIPBLASGetErrorName(hipblasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRHIPBLAS macro */
+
+#define CHKERRHIP(cerr) \
+do { \
+   if (PetscUnlikely(cerr)) { \
+      const char *name  = hipGetErrorName(cerr); \
+      const char *descr = hipGetErrorString(cerr); \
+      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_LIB,"hip error %d (%s) : %s",(int)cerr,name,descr); \
+   } \
+} while (0)
+
+#define CHKERRHIPBLAS(stat) \
+do { \
+   if (PetscUnlikely(stat)) { \
+      const char *name = PetscHIPBLASGetErrorName(stat); \
+      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB,"hipBLAS error %d (%s)",(int)stat,name); \
+   } \
+} while (0)
+
+/* hipSolver does not exist yet so we work around it
+   rocSOLVER users rocBLAS for the handle
+ * */
+#if defined(__HIP_PLATFORM_NVCC__)
+typedef cusolverDnHandle_t hipsolverHandle_t;
+typedef cusolverStatus_t hipsolverStatus_t;
+
+/* Alias hipsolverDestroy to cusolverDnDestroy*/
+PETSC_STATIC_INLINE cusolverStatus_t hipsolverDestroy(hipsolverHandle_t *hipsolverhandle)
+{
+  return cusolverDnDestroy(hipsolverhandle)
+}
+
+/* Alias hipsolverCreate to cusolverDnCreate*/
+PETSC_STATIC_INLINE cusolverStatus_t hipsolverCreate(hipsolverHandle_t *hipsolverhandle)
+{
+  return cusolverDnCreate(hipsolverhandle)
+}
+#else /* __HIP_PLATFORM_NVCC__ */
+typedef rocblas_handle hipsolverHandle_t;
+typedef rocblas_status hipsolverStatus_t;
+
+/* Alias hipsolverDestroy to rocblas_destroy_handle*/
+PETSC_STATIC_INLINE rocblas_status hipsolverDestroy(rocblas_handle hipsolverhandle)
+{
+  return rocblas_destroy_handle(hipsolverhandle);
+}
+
+/* Alias hipsolverCreate to rocblas_destroy_handle*/
+PETSC_STATIC_INLINE rocblas_status hipsolverCreate(hipsolverHandle_t *hipsolverhandle)
+{
+  return rocblas_create_handle(hipsolverhandle);
+}
+#endif /* __HIP_PLATFORM_NVCC__ */
+
+PETSC_EXTERN hipStream_t    PetscDefaultHipStream; /* The default stream used by PETSc */
+PETSC_INTERN PetscErrorCode PetscHIPBLASInitializeHandle(void);
+PETSC_INTERN PetscErrorCode PetscHIPSOLVERInitializeHandle(void);
+
+
+PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t*);
+PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
+#endif /* PETSC_HAVE_HIP */
+
+/* PetscEvent */
+PETSC_EXTERN PetscErrorCode PetscEventInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscEventRegister(const char[],PetscErrorCode(*)(PetscEvent));
+PETSC_EXTERN PetscErrorCode PetscEventCreate(PetscEvent*);
+PETSC_EXTERN PetscErrorCode PetscEventDestroy(PetscEvent*);
+PETSC_EXTERN PetscErrorCode PetscEventSetType(PetscEvent,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscEventGetType(PetscEvent,PetscStreamType*);
+PETSC_EXTERN PetscErrorCode PetscEventSetFlags(PetscEvent,unsigned int,unsigned int);
+PETSC_EXTERN PetscErrorCode PetscEventGetFlags(PetscEvent,unsigned int*,unsigned int*);
+PETSC_EXTERN PetscErrorCode PetscEventSetUp(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscEventSetFromOptions(MPI_Comm,const char[],PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscEventSynchronize(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscEventQuery(PetscEvent,PetscBool*);
+
+/* PetscStream */
+PETSC_EXTERN PetscErrorCode PetscStreamInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscStreamRegister(const char[],PetscErrorCode(*)(PetscStream));
+PETSC_EXTERN PetscErrorCode PetscStreamCreate(PetscStream*);
+PETSC_EXTERN PetscErrorCode PetscStreamDestroy(PetscStream*);
+PETSC_EXTERN PetscErrorCode PetscStreamSetType(PetscStream,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscStreamGetType(PetscStream,PetscStreamType*);
+PETSC_EXTERN PetscErrorCode PetscStreamSetMode(PetscStream,PetscStreamMode);
+PETSC_EXTERN PetscErrorCode PetscStreamGetMode(PetscStream,PetscStreamMode*);
+PETSC_EXTERN PetscErrorCode PetscStreamSetUp(PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamSetFromOptions(MPI_Comm,const char[],PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamDuplicate(PetscStream,PetscStream*);
+PETSC_EXTERN PetscErrorCode PetscStreamGetStream(PetscStream,void*);
+PETSC_EXTERN PetscErrorCode PetscStreamRestoreStream(PetscStream,void*);
+PETSC_EXTERN PetscErrorCode PetscStreamRecordEvent(PetscStream,PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream);
+PETSC_EXTERN PetscErrorCode PetscStreamQuery(PetscStream,PetscBool*);
+PETSC_EXTERN PetscErrorCode PetscStreamWaitForStream(PetscStream,PetscStream);
+#endif /* PETSCDEVICE_H */
