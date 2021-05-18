@@ -9551,7 +9551,7 @@ PetscErrorCode DMGetNumAuxiliaryVec(DM dm, PetscInt *numAux)
   Output Parameter:
 . aux    - The Vec holding auxiliary field data
 
-  Note: If no auxiliary vector is found for this label+value, NULL+0 is checked as well.
+  Note: If no auxiliary vector is found for this (label, value), (NULL, 0) is checked as well.
 
   Level: advanced
 
