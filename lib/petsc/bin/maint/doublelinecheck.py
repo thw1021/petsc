@@ -11,7 +11,3 @@ for a in fd.readlines():
     print('Found double blank line '+str(num)+' '+f)
     found = 0
   prevnum = num
-
-
-
-
