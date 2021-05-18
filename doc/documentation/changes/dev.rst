@@ -20,6 +20,13 @@ Changes: Development
 -  For --download-hdf5, disable --download-hdf5-fortran-bindings by default
 
 .. rubric:: Sys:
+-  Add ``PetscDeviceContext`` class to manage asynchronous GPU compute support via a fork-join model
+-  Add ``PetscDeviceContextType``, ``PetscStreamType``, ``PetscDeviceContextJoinMode``
+-  Add ``PetscDeviceContextCreate()``, ``PetscDeviceContextDestroy()``, ``PetscDeviceContextSetType()``, ``PetscDeviceContextGetType()``,
+   ``PetscDeviceContextSetStreamType()``, ``PetscDeviceContextGetStreamType()``, ``PetscDeviceContextSetUp()``, ``PetscDeviceContextDuplicate()``,
+   ``PetscDeviceContextQueryIdle()``, ``PetscDeviceContextWaitForContext()``, ``PetscDeviceContextFork()``, ``PetscDeviceContextJoin()``,
+   ``PetscDeviceContextSynchronize()``, ``PetscDeviceContextSetDefaultRootContextSettings()``, ``PetscDeviceContextGetDefaultRootContextSettings()``,
+   ``PetscDeviceContextGetCurrentContext()``, ``PetscDeviceContextSetCurrentContext()``, ``PetscDeviceContextRegister()``
 -  Add GPU event timers to capture kernel execution time accurately.
 -  Remove ``WaitForCUDA()`` and ``WaitForHIP()`` before ``PetscLogGpuTimeEnd()``
 -  Add MPIU_REAL_INT and MPIU_SCALAR_INT datatypes to be used for reduction operations
