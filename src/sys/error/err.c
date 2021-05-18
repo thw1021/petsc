@@ -731,7 +731,7 @@ PetscErrorCode  PetscScalarView(PetscInt N,const PetscScalar idx[],PetscViewer v
 }
 
 #if defined(PETSC_HAVE_CUDA)
-#include <petsccublas.h>
+#include <petscdevice.h>
 PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t status)
 {
   switch(status) {
