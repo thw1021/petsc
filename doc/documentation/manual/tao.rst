@@ -3879,7 +3879,7 @@ Once the solver has been registered, the new solver can be selected
 either by using the ``TaoSetType()`` function or by using the
 ``-tao_type`` command line option.
 
-.. rubric:: Footnoes
+.. rubric:: Footnotes
 
 .. [#mpi] For more on MPI and PETSc, see :any:`sec-running`.
 
