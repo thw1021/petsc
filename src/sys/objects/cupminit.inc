@@ -103,7 +103,7 @@ PetscErrorCode PetscCUPMInitializeCheck(void)
           int                   gen;
           cerr = cudaGetDeviceProperties(&dp,devId);CHKERRCUPM(cerr);
           gen  = 10*dp.major+dp.minor;
-          if (gen < PETSC_CUDA_GENERATION) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"PETSc compiled for NVIDIA generation %d but hardware is generation %d",gen,PETSC_CUDA_GENERATION);
+          if (gen < PETSC_CUDA_GENERATION) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"PETSc compiled for NVIDIA generation %d but hardware is generation %d",PETSC_CUDA_GENERATION,gen);
         }
 #endif
       } else if (cerr == cupmErrorSetOnActiveProcess) {
