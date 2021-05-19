@@ -30,7 +30,7 @@ This work was supported by the Office of Advanced Scientific Computing Research,
 Office of Science, U.S. Department of Energy, under Contract DE-AC02-06CH11357.
 
 Preface
-=======
+-------
 
 The Toolkit for Advanced Optimization (TAO) focuses on the development
 of algorithms and software for the solution of large-scale optimization
@@ -51,7 +51,7 @@ architectures and the reality of working with large, often poorly
 structured legacy codes for specific applications.
 
 Changes in Version 3.5
-======================
+----------------------
 
 TAO is now included in the PETSc distribution and the PETSc repository,
 thus it versions will always match the PETSc version. The TaoSolver
@@ -61,7 +61,7 @@ more PETSc-like. All future changes will be listed in the PETSc changes
 documentation.
 
 Changes in Version 2.0
-======================
+----------------------
 
 TAO version numbers will now adhere to the new PETSc standard of
 Major-Minor-Patch. Any patch-level changes will have an attempt to keep
@@ -120,7 +120,7 @@ requires a C++ compiler. However, TAO is not compatible with PETSc
 installations using complex data types.
 
 Acknowledgments
-===============
+---------------
 
 We especially thank Jorge Moré for his leadership, vision, and effort on
 previous versions of TAO.
@@ -147,7 +147,7 @@ their machines.
 .. _sec_tao_introduction:
 
 Introduction
-============
+------------
 
 The Toolkit for Advanced Optimization (TAO) focuses on the design and
 implementation of optimization software for solving large-scale
@@ -200,7 +200,7 @@ algorithms that exploit their features.
 .. _sec_tao_getting_started:
 
 Getting Started
-===============
+---------------
 
 TAO can be used on a personal computer with a single processor or within
 a parallel environment. Its basic usage involves only a few commands,
@@ -214,7 +214,7 @@ See :doc:`/documentation/manual/index` and :doc:`/install/index` for how to
 install and start using PETSc/TAO.
 
 Writing Application Codes with TAO
-----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Examples throughout the library demonstrate the software usage and can
 serve as templates for developing custom applications. We suggest that
@@ -240,7 +240,7 @@ using TAO:
 .. _sec_tao_simple:
 
 A Simple TAO Example
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 To help the user start using TAO immediately, we introduce here a simple
 uniprocessor example. Please read :any:`sec_tao_solver`
@@ -282,7 +282,7 @@ The following sections annotate the lines of code in
       :append: return ierr;}
 
 Include Files
--------------
+~~~~~~~~~~~~~
 
 The include file for TAO should be used via the statement
 
@@ -297,7 +297,7 @@ this high-level file.
 .. _sec_tao_solvers:
 
 TAO Solvers
------------
+~~~~~~~~~~~
 
 Many TAO applications will follow an ordered set of procedures for
 solving an optimization problem: The user creates a ``Tao`` context and
@@ -335,7 +335,7 @@ and so forth. See :any:`sec_tao_solver` for more
 information on the solver methods available in TAO.
 
 Function Evaluations
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 Users of TAO are required to provide routines that perform function
 evaluations. Depending on the solver chosen, they may also have to write
@@ -344,7 +344,7 @@ routines that evaluate the gradient vector and Hessian matrix.
 .. _sec_tao_programming:
 
 Programming with PETSc
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 TAO relies heavily on PETSc not only for its vectors, matrices, and
 linear solvers but also for its programming utilities such as command
@@ -354,7 +354,7 @@ the :doc:`/documentation/manual/index` for a more in-depth
 discussion of PETSc.
 
 Vectors
-~~~~~~~
+^^^^^^^
 
 In `the example above <#tao-example1>`_ the vector
 data structure (``Vec``) is used to store the solution and gradient for
@@ -389,7 +389,7 @@ scattering/gathering, index sets, and distributed arrays, may be found
 in the :doc:`/documentation/manual/index`.
 
 Matrices
-~~~~~~~~
+^^^^^^^^
 
 Usage of matrices and vectors is similar. The user can create a new
 parallel or sequential matrix ``H`` with ``M`` global rows and ``N``
@@ -426,7 +426,7 @@ manipulation routines.
 .. _sec_tao_options:
 
 The Options Database
-~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^
 
 A TAO application can access the command line options presented at
 runtime through the PETSc options database. This database gives the
@@ -446,7 +446,7 @@ of the options database may be found in the :doc:`/documentation/manual/index`.
 
 
 Error Checking
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
 All TAO commands begin with the ``Tao`` prefix and return an integer
 indicating whether an error has occurred during the call. The error code
@@ -498,7 +498,7 @@ many) of these macros into an application code, one can usually track
 down the code segment where corruption has occurred.
 
 Parallel Programming
-~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^
 
 Since TAO uses the message-passing model for parallel programming and
 employs MPI for all interprocessor communication, the user is free to
@@ -532,7 +532,7 @@ called in the same order on each processor.
 .. _sec_tao_solver:
 
 Using TAO Solvers
-=================
+-----------------
 
 TAO contains unconstrained minimization, bound-constrained minimization,
 nonlinear complementarity, nonlinear least squares solvers, and solvers
@@ -545,7 +545,7 @@ can also be set at the command line. These options can also be found by
 running a program with the ``-help`` option.
 
 Header File
------------
+~~~~~~~~~~~
 
 TAO applications written in C/C++ should have the statement
 
@@ -556,7 +556,7 @@ TAO applications written in C/C++ should have the statement
 in each file that uses a routine in the TAO libraries.
 
 Creation and Destruction
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 A TAO solver can be created by calling the
 
@@ -612,7 +612,7 @@ solver.
 .. _sec_taoapplication:
 
 TAO Applications
-----------------
+~~~~~~~~~~~~~~~~
 
 The solvers in TAO address applications that have a set of variables, an
 objective function, and possibly constraints on the variables. Many
@@ -632,7 +632,7 @@ function :math:`c: \, \mathbb R^n \to \mathbb R^m`. The TAO solvers use
 these objects to compute a solution to the application.
 
 Defining Variables
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 In all the optimization solvers, the application must provide a **Vec**
 object of appropriate dimension to represent the variables. This vector
@@ -660,7 +660,7 @@ routine. This routine takes the address of a ``Vec`` in the second
 argument and sets it to the solution vector used in the application.
 
 Application Context
-~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^
 
 Writing a TAO application may require use of an *application context*.
 An application context is a structure or object defined by an
@@ -689,7 +689,7 @@ needed by the application then a NULL pointer can be used.
 .. _sec_fghj:
 
 Objective Function and Gradient Routines
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 TAO solvers that minimize an objective function require the application
 to evaluate the objective function. Some solvers may also require the
@@ -794,7 +794,7 @@ the function is undefined at that point or an error occurred.
 .. _sec_tao_matrixfree:
 
 Hessian Evaluation
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 Some optimization routines also require a Hessian matrix from the user.
 The routine that evaluates the Hessian should have the form
@@ -830,7 +830,7 @@ evaluates the Hessian, and the fifth argument is a pointer to a
 user-defined context, cast to ``(void*)``.
 
 Finite Differences
-^^^^^^^^^^^^^^^^^^
+""""""""""""""""""
 
 Finite-difference approximations can be used to compute the gradient and
 the Hessian of an objective function. These approximations will slow the
@@ -871,7 +871,7 @@ solver ``tao_fd_test`` together with the option ``-tao_test_gradient``
 or ``-tao_test_hessian``.
 
 Matrix-Free Methods
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
 
 TAO fully supports matrix-free methods. The matrices specified in the
 Hessian evaluation routine need not be conventional matrices; instead,
@@ -887,7 +887,7 @@ are provided in the :doc:`/documentation/manual/index`.
 .. _sec_bounds:
 
 Bounds on Variables
-~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^
 
 Some optimization problems also impose constraints on the variables. The
 constraints may impose simple bounds on the variables or require that
@@ -932,7 +932,7 @@ variables, the user must be careful to select a solver that acknowledges
 these bounds.
 
 Solving
--------
+~~~~~~~
 
 Once the application and solver have been set up, the solver can be
 
@@ -945,7 +945,7 @@ routine. We discuss several universal options below.
 .. _sec_customize:
 
 Convergence
-~~~~~~~~~~~
+^^^^^^^^^^^
 
 Although TAO and its solvers set default parameters that are useful for
 many problems, the user may need to modify these parameters in order to
@@ -984,7 +984,7 @@ evaluations can be set with the command
 ``-tao_max_funcs``.
 
 Viewing Status
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
 To see parameters and performance statistics for the solver, the routine
 
@@ -1019,7 +1019,7 @@ found, while negative numbers indicate a failure. A list of reasons can
 be found in the manual page for ``TaoGetConvergedReason()``.
 
 Obtaining a Solution
-~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^
 
 After exiting the ``TaoSolve()`` function, the solution, gradient, and
 with the following routines.
@@ -1036,7 +1036,7 @@ obtained during user-defined routines such as a function evaluation and
 customized monitoring routine or after the solver has terminated.
 
 Additional Options
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 Additional options for the TAO solver can be be set from the command
 line by using the
@@ -1049,7 +1049,7 @@ routine. This command also provides information about runtime options
 when the user includes the ``-help`` option on the command line.
 
 Special Problem Structures
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Below we discuss how to exploit the special structures for three classes
 of problems that TAO solves.
@@ -1057,7 +1057,7 @@ of problems that TAO solves.
 .. _sec_pde_applications:
 
 PDE-Constrained Optimization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 TAO can solve PDE-constrained optimization applications of the form
 
@@ -1167,7 +1167,7 @@ no need to provide preconditioner or inverse matrices.
 .. _sec_evalsof:
 
 Nonlinear Least Squares
-~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^
 
 For nonlinear least squares applications, we are solving the
 optimization problem
@@ -1206,7 +1206,7 @@ and set with the
 routine.
 
 Complementarity
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 Complementarity applications have equality constraints in the form of
 nonlinear equations :math:`C(X) = 0`, where
@@ -1278,7 +1278,7 @@ variable vector can be stored in the constraint vector.
 .. _tao-solvers-1:
 
 TAO Solvers
-===========
+-----------
 
 TAO includes a variety of optimization algorithms for several classes of
 problems (unconstrained, bound-constrained, and PDE-constrained
@@ -1292,7 +1292,7 @@ interested in extending these algorithms or using new ones, please see
 .. _sec_tao_unconstrained:
 
 Unconstrained Minimization
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Unconstrained minimization is used to minimize a function of many
 variables without any constraints on the variables, such as bounds. The
@@ -1321,7 +1321,7 @@ command line arguments. These algorithms and the associated options are
 briefly discussed in this section.
 
 Nelder-Mead Method
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 The Nelder-Mead algorithm :cite:`nelder.mead:simplex` is a
 direct search method for finding a local minimum of a function
@@ -1359,7 +1359,7 @@ Two options can be set specifically for the Nelder-Mead algorithm:
    sets the value of :math:`\mu_0`; the default is :math:`\mu_0=1`.
 
 Limited-Memory, Variable-Metric Method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The limited-memory, variable-metric method computes a positive definite
 approximation to the Hessian matrix from a limited number of previous
@@ -1413,7 +1413,7 @@ the bounded quasi-Newton Line Search (BQNLS) algorithm that can solve
 both bound constrained and unconstrained problems.
 
 Nonlinear Conjugate Gradient Method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The nonlinear conjugate gradient method can be viewed as an extension of
 the conjugate gradient method for solving symmetric, positive-definite
@@ -1442,7 +1442,7 @@ set by using the command line argument ``-tao_cg_eta <real>``; 0.1 is
 the default value.
 
 Newton Line Search Method
-~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Newton line search method solves the symmetric system of equations
 
@@ -1867,7 +1867,7 @@ the bounded Newton Line Search (BNLS) algorithm that can solve both
 bound constrained and unconstrained problems.
 
 Newton Trust-Region Method
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Newton trust-region method solves the constrained quadratic
 programming problem
@@ -2097,7 +2097,7 @@ the bounded Newton Trust Region (BNTR) algorithm that can solve both
 bound constrained and unconstrained problems.
 
 BMRM
-~~~~
+^^^^
 
 The Bundle Method for Regularized Risk Minimization
 (BMRM) is a numerical approach to optimizing an
@@ -2110,7 +2110,7 @@ positive weight parameter, and :math:`\| x \|` is the Euclidean norm of
 :math:`f` at :math:`x`.
 
 OWL-QN
-~~~~~~
+^^^^^^
 
 The Orthant-Wise Limited-memory Quasi-Newton algorithm
 (OWL-QN) :cite:`owlqn` is a numerical approach to optimizing
@@ -2124,7 +2124,7 @@ of :math:`f` and its gradient.
 .. _sec_tao_bound:
 
 Bound-Constrained Optimization
-------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Bound-constrained optimization algorithms solve optimization problems of
 the form
@@ -2172,7 +2172,7 @@ operations used by all bound constrained algorithms.
 .. _sec_bnk:
 
 Bounded Newton-Krylov Methods
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 TAO features three bounded Newton-Krylov (BNK) class of algorithms,
 separated by their globalization methods: projected line search (BNLS),
@@ -2245,7 +2245,7 @@ expensive than the objective function or its gradient.
 .. _sec_bnls:
 
 Bounded Newton Line Search (BNLS)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""""""""""
 
 BNLS safeguards the Newton step by falling back onto a BFGS, scaled
 gradient, or gradient steps based on descent direction verifications.
@@ -2263,7 +2263,7 @@ length.
 .. _sec_bntr:
 
 Bounded Newton Trust Region (BNTR)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""""
 
 BNTR globalizes the Newton step using a trust region method based on the
 predicted versus actual reduction in the cost function. The trust radius
@@ -2275,7 +2275,7 @@ Newton step is accepted without modification.
 .. _sec_bntl:
 
 Bounded Newton Trust Region with Line Search Fall-back (BNTL)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 BNTL safeguards the trust-region globalization such that a line search
 is used in the event that the step is initially rejected by the
@@ -2287,7 +2287,7 @@ modified based on the line search step length.
 .. _sec_bncg:
 
 Bounded Nonlinear Conjugate Gradient
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 BNCG extends the unconstrained nonlinear conjugate gradient algorithm to
 bound constraints via gradient projections and a bounded More-Thuente
@@ -2383,7 +2383,7 @@ The minimum number of quadratic-like steps before a restart is set using
 .. _sec_tron:
 
 Trust-Region Newton Method
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The TRON :cite:`lin_c3` algorithm is an active-set method
 that uses a combination of gradient projections and a preconditioned
@@ -2409,7 +2409,7 @@ performance.
 .. _sec_blmvm:
 
 Bound-constrained Limited-Memory Variable-Metric Method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 BLMVM is a limited-memory, variable-metric method and is the
 bound-constrained variant of the LMVM method for unconstrained
@@ -2425,7 +2425,7 @@ bounded quasi-Newton line search (BQNLS) algorithm.
 .. _sec_bqnk:
 
 Bounded Quasi-Newton-Krylov
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 BQNK algorithms use the BNK infrastructure, but replace the exact
 Hessian with a quasi-Newton approximation. The matrix-free forward
@@ -2449,7 +2449,7 @@ fall-back (BQNKTL). These algorithms are available via
 .. _sec_bqnls:
 
 Bounded Quasi-Newton Line Search (BQNLS)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 BQNLS algorithm uses the BNLS infrastructure, but replaces the step
 calculation with a direct inverse application of the approximate Hessian
@@ -2461,7 +2461,7 @@ positive-definite Hessian approximation. This algorithm is available via
 .. _sec_lcl:
 
 PDE-Constrained Optimization
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 TAO solves PDE-constrained optimization problems of the form
 
@@ -2485,7 +2485,7 @@ the optimization problem as finite dimensional and
 :math:`\nabla_u g(u,v)` is invertible for all :math:`u` and :math:`v`.
 
 Linearly-Constrained Augmented Lagrangian Method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Given the current iterate :math:`(u_k, v_k, y_k)`, the linearly
 constrained augmented Lagrangian method approximately solves the
@@ -2511,7 +2511,7 @@ linearized constraints and improves the augmented Lagrangian merit
 function.
 
 Newton Step
-^^^^^^^^^^^
+"""""""""""
 
 The Newton direction is obtained by fixing the design variables at their
 current value and solving the linearized constraint for the state
@@ -2555,7 +2555,7 @@ implication that the intermediate point approximately satisfies the
 linear constraint is no longer true.
 
 Modified Reduced-Space Step
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""""
 
 We are now ready to compute a reduced-space step for the modified
 optimization problem:
@@ -2676,7 +2676,7 @@ cannot be performed.
 .. _sec_leastsquares:
 
 Nonlinear Least-Squares
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Given a function :math:`F: \mathbb R^n \to \mathbb R^m`, the nonlinear
 least-squares problem minimizes
@@ -2692,7 +2692,7 @@ The nonlinear equations :math:`F` should be specified with the function
 .. _sec_pounders:
 
 POUNDerS
-~~~~~~~~
+^^^^^^^^
 
 One algorithm for solving the least squares problem
 (:eq:`eq_nlsf`) when the Jacobian of the residual vector
@@ -2705,7 +2705,7 @@ applied to a practical least-squares problem can be found in
 :cite:`UNEDF0`.
 
 Derivative-Free Trust-Region Algorithm
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""""""""
 
 In each iteration :math:`k`, the algorithm maintains a model
 :math:`m_k(x)`, described below, of the nonlinear least squares function
@@ -2778,7 +2778,7 @@ The iteration counter is then updated, and the next model :math:`m_{k}`
 is obtained as described next.
 
 Forming the Trust-Region Model
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""
 
 In each iteration, POUNDerS uses a subset of the available evaluated
 residual vectors :math:`\{ F(y_1), F(y_2), \cdots \}` to form an
@@ -2816,7 +2816,7 @@ The process of forming these models also computes the indicator
 ``valid`` of the model’s local quality.
 
 Parameters
-^^^^^^^^^^
+""""""""""
 
 POUNDerS supports the following parameters that can be set from the
 command line or PETSc options file:
@@ -2861,7 +2861,7 @@ is to rescale the decision variables :math:`x` so that their typical
 values are expected to lie within the unit hypercube :math:`[0,1]^n`.
 
 Convergence Notes
-^^^^^^^^^^^^^^^^^
+"""""""""""""""""
 
 Because the gradient function is not provided to POUNDerS, the norm of
 the gradient of the objective function is not available. Therefore, for
@@ -2872,7 +2872,7 @@ the typical grounds for termination for expensive derivative-free
 problems is the maximum number of function evaluations allowed.
 
 Bound-constrained Regularized Gauss-Newton
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Gauss-Newton method is used to iteratively solve nonlinear least
 squares problem with the iterations
@@ -2930,7 +2930,7 @@ interface functions:
 .. _sec_complementarity:
 
 Complementarity
----------------
+~~~~~~~~~~~~~~~
 
 Mixed complementarity problems, or box-constrained variational
 inequalities, are related to nonlinear systems of equations. They are
@@ -2979,7 +2979,7 @@ variables must also be provided. If no starting point is supplied, a
 default starting point of all zeros is used.
 
 Semismooth Methods
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 TAO has two implementations of semismooth algorithms
 :cite:`munson.facchinei.ea:semismooth` :cite:`deluca.facchinei.ea:semismooth`
@@ -3080,7 +3080,7 @@ outside of the box, :math:`[\ell,u]`, perhaps because of the presence of
 algorithm, ``tao_ssfls``, is a reasonable alternative.
 
 Quadratic Solvers
------------------
+~~~~~~~~~~~~~~~~~
 
 Quadratic solvers solve optimization problems of the form
 
@@ -3094,7 +3094,7 @@ Quadratic solvers solve optimization problems of the form
 where the gradient and the Hessian of the objective are both constant.
 
 Gradient Projection Conjugate Gradient Method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The GPCG :cite:`more-toraldo` algorithm is much like the
 TRON algorithm, discussed in Section :any:`sec_tron`, except that
@@ -3108,7 +3108,7 @@ options also apply to GPCG. It can be set by using the TAO solver
 .. _sec_bqpip:
 
 Interior-Point Newton’s Method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The BQPIP algorithm is an interior-point method for bound constrained
 quadratic optimization. It can be set by using the TAO solver of
@@ -3119,7 +3119,7 @@ of systems of linear equations, whose solver can be accessed and
 modified with the command ``TaoGetKSP()``.
 
 Constrained Solvers
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 Constrained solvers solve optimization problems of the form
 
@@ -3138,7 +3138,7 @@ Where applicable, TAO algorithms may convert inequality constraints to
 equality constraints via slack variables or penalty functions.
 
 Augmented Lagrangian Multiplier Method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The TAOALMM method solves problems of the form
 
@@ -3189,7 +3189,7 @@ TAOBNCG and TAOBQNLS are also appropriate, but a trust-region
 globalization is strongly recommended for most applications.
 
 Alternating Direction Method of Multipliers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ADMM is an algorithm that is intended to blend the decomposability
 of dual ascent with the superior convergence properties of the method of
@@ -3247,7 +3247,7 @@ singular depending on the :math:`\rho`, which may change in the case of
 This issue can be prevented by ``TaoADMMSetMinimumSpectralPenalty()``.
 
 General Nonlinear Programming problems
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 General nonlinear programming problems are of the form
 
@@ -3267,7 +3267,7 @@ Here, :math:`f(x)` is the nonlinear objective function, :math:`g(x)`,
 variables :math:`x`.
 
 Interior-point Newton’s method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The PDIPM (``-tao_type pdipm``) algorithm implements a primal-dual
 interior point method for solving general nonlinear programming
@@ -3327,7 +3327,7 @@ recommend using LU preconditioner ``-pc_type lu`` and using direct
 linear solver packages such ``SuperLU_Dist`` or ``MUMPS``.
 
 Advanced Options
-================
+----------------
 
 This section discusses options and routines that apply to most TAO
 solvers and problem classes. In particular, we focus on linear solvers,
@@ -3336,7 +3336,7 @@ convergence tests, and line searches.
 .. _sec_taolinearsolvers:
 
 Linear Solvers
---------------
+~~~~~~~~~~~~~~
 
 One of the most computationally intensive phases of many optimization
 algorithms involves the solution of linear systems of equations. The
@@ -3354,7 +3354,7 @@ application to achieve improved performance. Additional details on the
 KSP options in PETSc can be found in the :doc:`/documentation/manual/index`.
 
 Monitors
---------
+~~~~~~~~
 
 By default the TAO solvers run silently without displaying information
 about the iterations. The user can initiate monitoring with the command
@@ -3377,7 +3377,7 @@ after the solution update.
 .. _sec_taoconvergence:
 
 Convergence Tests
------------------
+~~~~~~~~~~~~~~~~~
 
 Convergence of a solver can be defined in many ways. The methods TAO
 uses by default are mentioned in :any:`sec_customize`.
@@ -3417,7 +3417,7 @@ be set by using the routine
 .. _sec_taolinesearch:
 
 Line Searches
--------------
+~~~~~~~~~~~~~
 
 By using the command line option ``-tao_ls_type``. Available line
 searches include Moré-Thuente :cite:`more:92`, Armijo, gpcg,
@@ -3446,7 +3446,7 @@ after one of the defaults provided.
 .. _sec_taorecyclehistory:
 
 Recycling History
------------------
+~~~~~~~~~~~~~~~~~
 
 Some TAO algorithms can re-use information accumulated in the previous
 ``TaoSolve()`` call to hot-start the new solution. This can be enabled
@@ -3471,7 +3471,7 @@ The option flag has no effect on other TAO solvers.
 .. _sec_tao_addsolver:
 
 Adding a Solver
-===============
+---------------
 
 One of the strengths of both TAO and PETSc is the ability to allow users
 to extend the built-in solvers with new user-defined algorithms. It is
@@ -3514,7 +3514,7 @@ framework, but Using TAO to implement a solver has many advantages,
 .. _header-file-1:
 
 Header File
------------
+~~~~~~~~~~~
 
 TAO solver implementation files must include the TAO implementation file
 ``taoimpl.h``:
@@ -3528,7 +3528,7 @@ application programmers, but may be necessary for solver implementations
 to access.
 
 TAO Interface with Solvers
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 TAO solvers must be written in C or C++ and include several routines
 with a particular calling sequence. Two of these routines are mandatory:
@@ -3557,7 +3557,7 @@ vectors. Vectors for the solution and gradient are not needed here
 because the TAO structure has pointers to them.
 
 Solver Routine
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
 All TAO solvers have a routine that accepts a TAO structure and computes
 a solution. TAO will call this routine when the application program uses
@@ -3690,7 +3690,7 @@ important part of many algorithms. Details on the use of these solvers
 can be found in the PETSc users manual.
 
 Creation Routine
-~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^
 
 The TAO solver is initialized for a particular algorithm in a separate
 routine. This routine sets default convergence tolerances, creates a
@@ -3753,7 +3753,7 @@ this routine. These macros are required to preserve the name of this
 function without any name-mangling from the C++ compiler (if used).
 
 Destroy Routine
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 Another routine needed by most solvers destroys the data structures
 created by earlier routines. For the nonlinear conjugate gradient method
@@ -3785,7 +3785,7 @@ objects indexed by TAO (``tao->linesearch``, ``tao->ksp``,
 algorithm-specific destroy routine completes.
 
 SetUp Routine
-~~~~~~~~~~~~~
+^^^^^^^^^^^^^
 
 If the SetUp routine has been set by the initialization routine, TAO
 will call it during the execution of ``TaoSolve()``. While this routine
@@ -3810,7 +3810,7 @@ have the following form.
    }
 
 SetFromOptions Routine
-~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^
 
 The SetFromOptions routine should be used to check for any
 algorithm-specific options set by the user and will be called when the
@@ -3834,7 +3834,7 @@ following form.
    }
 
 View Routine
-~~~~~~~~~~~~
+^^^^^^^^^^^^
 
 The View routine should be used to output any algorithm-specific
 information or statistics at the end of a solve. This routine will be
@@ -3858,7 +3858,7 @@ form.
    }
 
 Registering the Solver
-~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^
 
 Once a new solver is implemented, TAO needs to know the name of the
 solver and what function to use to create the solver. To this end, one
