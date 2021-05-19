@@ -90,28 +90,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamQuery_CUDA(PetscStream strm, Petsc
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamCaptureBegin_CUDA(PetscStream strm)
-{
-  PetscStream_CUDA *psc = (PetscStream_CUDA *)strm->data;
-  cudaError_t      cerr;
-
-  PetscFunctionBegin;
-  cerr = cudaStreamBeginCapture(psc->cstream,cudaStreamCaptureModeGlobal);CHKERRCUDA(cerr);
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscStreamCaptureEnd_CUDA(PetscStream strm, PetscStreamGraph sgraph)
-{
-  PetscStream_CUDA      *psc = (PetscStream_CUDA *)strm->data;
-  PetscStreamGraph_CUDA *psgc = (PetscStreamGraph_CUDA *)sgraph->data;
-  cudaError_t           cerr;
-
-  PetscFunctionBegin;
-  if (psgc->cgraph) {cerr = cudaGraphDestroy(psgc->cgraph);CHKERRCUDA(cerr);}
-  cerr = cudaStreamEndCapture(psc->cstream,&psgc->cgraph);CHKERRCUDA(cerr);
-  PetscFunctionReturn(0);
-}
-
 static cudaEvent_t waitEvent   = NULL;
 static PetscBool   waitCreated = PETSC_FALSE;
 
@@ -160,8 +138,6 @@ static const struct _StreamOps cuops = {
   PetscStreamWaitEvent_CUDA,
   PetscStreamSynchronize_CUDA,
   PetscStreamQuery_CUDA,
-  PetscStreamCaptureBegin_CUDA,
-  PetscStreamCaptureEnd_CUDA,
   PetscStreamWaitForStream_CUDA
 };
 
