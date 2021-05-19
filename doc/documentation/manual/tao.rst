@@ -1,7 +1,7 @@
 .. _chapter_tao:
 
-TAO Users Manual
-================
+TAO: Optimization Solvers
+=========================
 
 .. admonition:: Migration in progress
 
