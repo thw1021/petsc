@@ -180,7 +180,8 @@ class Configure(config.package.Package):
           continue
         else:
           self.popLanguage()
-          self.log.write('Flag from checkLink on CUDA compile with gencode '+str(valid)+'\n')
+          self.log.write('Flag from checkCompile on CUDA compile with gencode '+str(valid)+'
+')
           if not valid:
             self.setCompilers.CUDAFLAGS = cflags
             continue
