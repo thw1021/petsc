@@ -25,7 +25,7 @@ PetscErrorCode PetscStreamCreate(PetscStream *strm)
 
   PetscFunctionBegin;
   PetscValidPointer(strm,1);
-  ierr = PetscStreamInitializePackage();CHKERRQ(ierr);
+  ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
   /* Setting to null taken from VecCreate(), why though? */
   *strm = NULL;
   ierr = PetscNew(&s);CHKERRQ(ierr);
