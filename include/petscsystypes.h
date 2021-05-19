@@ -242,10 +242,10 @@ M*/
 #    endif  /* PETSC_USE_REAL_ */
 
      /* Petsc has some complex 'fix' to support expressions like std::complex<PetscReal> + PetscInt, which are not supported by the standard
-        C++ library, but are convenient for petsc users. If the C++ compiler is able to compile code in petsccxxcomplexfix.h (checked during
-        petsc configure), we try to include petsccxxcomplexfix.h to provide this convenience.
+        C++ library, but are convenient for petsc users. If the C++ compiler is able to compile code in petsccxxcomplexfix.h (This is checked by 
+        configure), we include petsccxxcomplexfix.h to provide this convenience.
 
-        If the fix causes conflicts, or one really does not want this fix for a perticular C++ file, one can define PETSC_SKIP_CXX_COMPLEX_FIX
+        If the fix causes conflicts, or one really does not want this fix for a particular C++ file, one can define PETSC_SKIP_CXX_COMPLEX_FIX
         at the beginning of the the C++ file to skip the fix.
      */
 #    if defined(PETSC_HAVE_CXX_COMPLEX_FIX) && !defined(PETSC_SKIP_CXX_COMPLEX_FIX)
