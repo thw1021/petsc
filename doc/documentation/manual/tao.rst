@@ -144,7 +144,7 @@ Computing Resource Center and the National Energy Research Scientific
 Computing Center for allowing us to test and run TAO applications on
 their machines.
 
-.. _chapter:introduction:
+.. _sec_tao_introduction:
 
 Introduction
 ============
@@ -158,7 +158,7 @@ optimization software. The TAO design allows the reuse of toolkits that
 provide lower-level support (parallel sparse matrix data structures,
 preconditioners, solvers), and thus we are able to build on top of these
 toolkits instead of having to redevelop code. The advantages in terms of
-efficiency and development time are significant. This chapter provides a
+efficiency and development time are significant. This section provides a
 short introduction to our design philosophy and the importance of this
 design.
 
@@ -197,7 +197,7 @@ software adaptable to the continual evolution of parallel and
 distributed architectures and the research community’s discovery of new
 algorithms that exploit their features.
 
-.. _chapter_intro_tao:
+.. _sec_tao_getting_started:
 
 Getting Started
 ===============
@@ -243,7 +243,7 @@ A Simple TAO Example
 --------------------
 
 To help the user start using TAO immediately, we introduce here a simple
-uniprocessor example. Please read :any:`chapter_tao_solver`
+uniprocessor example. Please read :any:`sec_tao_solver`
 for a more in-depth discussion on using the TAO solvers. The code
 presented `below <#tao-example1>`_ minimizes the
 extended Rosenbrock function :math:`f: \mathbb R^n \to \mathbb R`
@@ -308,7 +308,7 @@ gradient, and perhaps the Hessian matrix. The user then invokes TAO to
 solve the optimization problem and finally destroys the ``Tao`` context.
 A list of the necessary functions for performing these steps using TAO
 is show below. Details
-of these commands are presented in :any:`chapter_tao_solver`.
+of these commands are presented in :any:`sec_tao_solver`.
 
 .. code::
 
@@ -331,7 +331,7 @@ minimization method (e.g., limited-memory variable metric, conjugate
 gradient, Newton with line search or trust region) but also can
 prescribe the convergence tolerance, set various monitoring routines,
 set iterative methods and preconditions for solving the linear systems,
-and so forth. See Chapter `3 <#chapter_tao_solver>`__ for more
+and so forth. See :any:`sec_tao_solver` for more
 information on the solver methods available in TAO.
 
 Function Evaluations
@@ -529,7 +529,7 @@ communicator *must* call the creation routine. In addition, if a
 sequence of collective routines is being used, the routines *must* be
 called in the same order on each processor.
 
-.. _chapter_tao_solver:
+.. _sec_tao_solver:
 
 Using TAO Solvers
 =================
@@ -539,7 +539,7 @@ nonlinear complementarity, nonlinear least squares solvers, and solvers
 for optimization problems with partial differential equation
 constraints. The structure of these problems can differ significantly,
 but TAO has a similar interface to all its solvers. Routines that most
-solvers have in common are discussed in this chapter. A complete list of
+solvers have in common are discussed in this section. A complete list of
 options can be found by consulting the manual pages. Many of the options
 can also be set at the command line. These options can also be found by
 running a program with the ``-help`` option.
@@ -584,7 +584,7 @@ The routine
 
 can be used to set the algorithm TAO uses to solve the application. The
 various types of TAO solvers and the flags that identify them will be
-discussed in the following chapters. The solution method should be
+discussed in the following sections. The solution method should be
 carefully chosen depending on the problem being solved. Some solvers,
 for instance, are meant for problems with no constraints, whereas other
 solvers acknowledge constraints in the problem and handle them
@@ -1287,9 +1287,9 @@ algorithms for solving these problems are detailed in this section, a
 particular algorithm can chosen by using the ``TaoSetType()`` function
 or using the command line arguments ``-tao_type <name>``. For those
 interested in extending these algorithms or using new ones, please see
-:any:`chapter_addsolver` for more information.
+:any:`sec_tao_addsolver` for more information.
 
-.. _chapter:unconstrained:
+.. _sec_tao_unconstrained:
 
 Unconstrained Minimization
 --------------------------
@@ -1318,7 +1318,7 @@ only as a last resort when no gradient information is available.
 
 Each solver has a set of options associated with it that can be set with
 command line arguments. These algorithms and the associated options are
-briefly discussed in this chapter.
+briefly discussed in this section.
 
 Nelder-Mead Method
 ~~~~~~~~~~~~~~~~~~
@@ -2121,7 +2121,7 @@ function, :math:`\lambda` is a positive weight parameter, and
 :math:`\sum_i |x_i|`. The algorithm only requires evaluating the value
 of :math:`f` and its gradient.
 
-.. _chapter:bound:
+.. _sec_tao_bound:
 
 Bound-Constrained Optimization
 ------------------------------
@@ -3468,7 +3468,7 @@ of every new ``TaoSolve()``.
 
 The option flag has no effect on other TAO solvers.
 
-.. _chapter_addsolver:
+.. _sec_tao_addsolver:
 
 Adding a Solver
 ===============
