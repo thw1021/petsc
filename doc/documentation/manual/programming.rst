@@ -10,5 +10,6 @@ Programming with PETSc
    snes
    ts
    sensitivity_analysis
+   tao
    high_level_mg
    dmplex

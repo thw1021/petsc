@@ -1,10 +1,12 @@
+.. _chapter_tao:
+
 TAO Users Manual
 ================
 
 .. admonition:: Migration in progress
 
-  The TAO manual is being migrated to Sphinx, and has not been thoroughly re-checked.
-  The previous, LaTeX manual is available `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/tao_manual.pdf>`__.
+  The TAO manual has being migrated to Sphinx, and has not been thoroughly re-checked.
+  The previous, standalone, manual is available `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/tao_manual.pdf>`__.
 
 
 **Argonne National Laboratory**

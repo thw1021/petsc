@@ -61,4 +61,3 @@ Office of Science, U.S. Department of Energy, under Contract DE-AC02-06CH11357.
    introduction
    programming
    additional
-   TAO Users Manual <tao>
