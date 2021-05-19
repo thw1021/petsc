@@ -128,8 +128,6 @@ static const struct _StreamOps hipops = {
   PetscStreamWaitEvent_HIP,
   PetscStreamSynchronize_HIP,
   PetscStreamQuery_HIP,
-  NULL,
-  NULL,
   PetscStreamWaitForStream_HIP
 };
 
