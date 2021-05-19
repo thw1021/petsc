@@ -1,11 +1,10 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
-static PetscFunctionList PetscStreamList                     = NULL;
-static PetscFunctionList PetscEventList                      = NULL;
-static PetscBool         PetscStreamRegisterAllCalled        = PETSC_FALSE;
-static PetscBool         PetscEventRegisterAllCalled         = PETSC_FALSE;
-static PetscBool         PetscStreamPackageInitialized       = PETSC_FALSE;
-static PetscBool         PetscEventPackageInitialized        = PETSC_FALSE;
+static PetscFunctionList PetscEventList                = NULL;
+static PetscFunctionList PetscStreamList               = NULL;
+static PetscFunctionList PetscDeviceContextList        = NULL;
+static PetscBool         PetscDeviceRegisterAllCalled  = PETSC_FALSE;
+static PetscBool         PetscDevicePackageInitialized = PETSC_FALSE;
 
 /*@C
   PetscStreamSetType - Builds a PetscStream for a particular stream implementation
@@ -128,6 +127,35 @@ PetscErrorCode PetscEventGetType(PetscEvent event, PetscStreamType *type)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscStreamType type)
+{
+  PetscErrorCode (*create)(PetscDeviceContext);
+  PetscBool      match;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscUnlikelyDebug(!type)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscDeviceContext to NULL type");
+  ierr = PetscStreamTypeCompare(dctx->type,type,&match);CHKERRQ(ierr);
+  if (match) PetscFunctionReturn(0);
+  ierr = PetscFunctionListFind(PetscDeviceContextList,type,&create);CHKERRQ(ierr);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDeviceContext type: %s",type);
+  if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
+  ierr = PetscMemzero(dctx->ops,sizeof(struct _DeviceContextOps));CHKERRQ(ierr);
+  ierr = (*create)(dctx);CHKERRQ(ierr);
+  ierr = PetscFree(dctx->type);CHKERRQ(ierr);
+  ierr = PetscStrallocpy(type,&dctx->type);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext dctx, PetscStreamType *type)
+{
+  PetscFunctionBegin;
+  PetscValidStreamType(dctx,1);
+  PetscValidPointer(type,2);
+  *type = dctx->type;
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode PetscStreamRegister(const char sname[], PetscErrorCode (*function)(PetscStream))
 {
   PetscErrorCode ierr;
@@ -146,147 +174,92 @@ PetscErrorCode PetscEventRegister(const char sname[], PetscErrorCode (*function)
   PetscFunctionReturn(0);
 }
 
-#if PetscDefined(HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
-#endif
-#if PetscDefined(HAVE_HIP)
-PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
-#endif
-
-/*@C
-  PetscStreamRegisterAll - Registers all of the stream components in the PetscStream package.
-
-  Not Collective
-
-  Level: advanced
-
-.seealso:  PetscStreamCreate(), PetscStreamSetType(), PetscStreamGetType()
-@*/
-PetscErrorCode PetscStreamRegisterAll(void)
+PetscErrorCode PetscDeviceContextRegister(const char sname[], PetscErrorCode (*function)(PetscDeviceContext))
 {
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
   PetscErrorCode ierr;
-#endif
 
   PetscFunctionBegin;
-  if (PetscStreamRegisterAllCalled) PetscFunctionReturn(0);
-  PetscStreamRegisterAllCalled = PETSC_TRUE;
-#if PetscDefined(HAVE_CUDA)
-  ierr = PetscStreamRegister(PETSCSTREAMCUDA,PetscStreamCreate_CUDA);CHKERRQ(ierr);
-#endif
-#if PetscDefined(HAVE_HIP)
-  ierr = PetscStreamRegister(PETSCSTREAMHIP,PetscStreamCreate_HIP);CHKERRQ(ierr);
-#endif
+  ierr = PetscFunctionListAdd(&PetscDeviceContextList,sname,function);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 #if PetscDefined(HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscStreamCreate_CUDA(PetscStream);
 #endif
 #if PetscDefined(HAVE_HIP)
 PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
+PETSC_EXTERN PetscErrorCode PetscStreamCreate_HIP(PetscStream);
 #endif
 
 /*@C
-  PetscEventRegisterAll - Registers all of the event components in the PetscStream package.
+  PetscDeviceRegisterAll - Registers all of the stream components in the PetscDevice package.
 
   Not Collective
 
   Level: advanced
 
-.seealso:  PetscEventCreate(), PetscEventSetType(), PetscEventGetType()
+.seealso:  PetscEventCreate(), PetscStreamCreate(), PetscDeviceContextCreate(), PetscDeviceFinalizePackage()
 @*/
-PetscErrorCode PetscEventRegisterAll(void)
+PetscErrorCode PetscDeviceRegisterAll(void)
 {
 #if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
   PetscErrorCode ierr;
 #endif
 
   PetscFunctionBegin;
-  if (PetscEventRegisterAllCalled) PetscFunctionReturn(0);
-  PetscEventRegisterAllCalled = PETSC_TRUE;
+  if (PetscDeviceRegisterAllCalled) PetscFunctionReturn(0);
+  PetscDeviceRegisterAllCalled = PETSC_TRUE;
 #if PetscDefined(HAVE_CUDA)
   ierr = PetscEventRegister(PETSCSTREAMCUDA,PetscEventCreate_CUDA);CHKERRQ(ierr);
+  ierr = PetscStreamRegister(PETSCSTREAMCUDA,PetscStreamCreate_CUDA);CHKERRQ(ierr);
 #endif
 #if PetscDefined(HAVE_HIP)
   ierr = PetscEventRegister(PETSCSTREAMHIP,PetscEventCreate_HIP);CHKERRQ(ierr);
+  ierr = PetscStreamRegister(PETSCSTREAMHIP,PetscStreamCreate_HIP);CHKERRQ(ierr);
 #endif
   PetscFunctionReturn(0);
 }
 
 /*@C
-  PetscStreamFinalizePackage - This function cleans up all components of the PetscStream ppacakge.
+  PetscDeviceFinalizePackage - This function cleans up all components of the PetscDevice package.
   It is called from PetscFinalize().
 
   Level: developer
 
-.seealso: PetscFinalize(), PetscStreamInitializePackage()
+.seealso: PetscFinalize(), PetscDeviceInitializePackage()
 @*/
-PetscErrorCode PetscStreamFinalizePackage(void)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&PetscStreamList);CHKERRQ(ierr);
-  PetscStreamRegisterAllCalled = PETSC_FALSE;
-  PetscStreamPackageInitialized = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-/*@C
-  PetscStreamInitializePackage - This function initializes everything in the PetscStream package. It is called from PetscDLLibraryRegister_petscvec() when using dynamic libraries, and on the first call to PetscStreamCreate() when using shared or static libraries.
-
-  Level: developer
-
-.seealso: PetscInitialize(), PetscStreamFinalizePackage()
-@*/
-PetscErrorCode PetscStreamInitializePackage(void)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (PetscStreamPackageInitialized) PetscFunctionReturn(0);
-  PetscStreamPackageInitialized = PETSC_TRUE;
-  ierr = PetscStreamRegisterAll();CHKERRQ(ierr);
-  ierr = PetscRegisterFinalize(PetscStreamFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-  PetscEventFinalizePackage - This function cleans up all components of the PetscEvent ppacakge.
-  It is called from PetscFinalize().
-
-  Level: developer
-
-.seealso: PetscFinalize(), PetscEventInitializePackage()
-@*/
-PetscErrorCode PetscEventFinalizePackage(void)
+PetscErrorCode PetscDeviceFinalizePackage(void)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = PetscFunctionListDestroy(&PetscEventList);CHKERRQ(ierr);
-  PetscEventRegisterAllCalled = PETSC_FALSE;
-  PetscEventPackageInitialized = PETSC_FALSE;
+  ierr = PetscFunctionListDestroy(&PetscStreamList);CHKERRQ(ierr);
+  ierr = PetscFunctionListDestroy(&PetscDeviceContextList);CHKERRQ(ierr);
+  PetscDeviceRegisterAllCalled = PETSC_FALSE;
+  PetscDevicePackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
 /*@C
-  PetscEventInitializePackage - This function initializes everything in the PetscEvent package. It is called from PetscDLLibraryRegister_petscvec() when using dynamic libraries, and on the first call to PetscEventCreate() when using shared or static libraries.
+  PetscDeviceInitializePackage - This function initializes everything in the PetscDevice package. It is called from
+  PetscDLLibraryRegister_petscsys() when using dynamic libraries, and on the first call to PetscEventCreate(),
+  PetscStreamCreate(), or PetscDeviceContextCreate() when using shared or static libraries.
 
   Level: developer
 
-.seealso: PetscInitialize(), PetscEventFinalizePackage()
+.seealso: PetscInitialize(), PetscDeviceFinalizePackage()
 @*/
-PetscErrorCode PetscEventInitializePackage(void)
+PetscErrorCode PetsDeviceInitializePackage(void)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscEventPackageInitialized) PetscFunctionReturn(0);
-  PetscEventPackageInitialized = PETSC_TRUE;
-  ierr = PetscEventRegisterAll();CHKERRQ(ierr);
-  ierr = PetscRegisterFinalize(PetscEventFinalizePackage);CHKERRQ(ierr);
+  if (PetscDevicePackageInitialized) PetscFunctionReturn(0);
+  PetscDevicePackageInitialized = PETSC_TRUE;
+  ierr = PetscDeviceRegisterAll();CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(PetscDeviceFinalizePackage);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

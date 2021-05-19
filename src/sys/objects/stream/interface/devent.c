@@ -22,7 +22,7 @@ PetscErrorCode PetscEventCreate(PetscEvent *event)
 
   PetscFunctionBegin;
   PetscValidPointer(event,1);
-  ierr = PetscEventInitializePackage();CHKERRQ(ierr);
+  ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
   /* Setting to null taken from VecCreate(), why though? */
   *event = NULL;
   ierr = PetscNew(&e);CHKERRQ(ierr);
