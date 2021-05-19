@@ -173,7 +173,8 @@ class Configure(config.package.Package):
         try:
           valid = self.checkCompile()
         except Exception as e:
-          self.log.write('checkLink on CUDA compile with gencode failed '+str(e)+'\n')
+          self.log.write('checkCompile on CUDA compile with gencode failed '+str(e)+'
+')
           self.popLanguage()
           self.setCompilers.CUDAFLAGS = cflags
           continue
