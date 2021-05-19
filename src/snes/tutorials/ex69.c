@@ -3064,33 +3064,42 @@ static PetscErrorCode SetUpParameters(AppCtx *user)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
+/* Make split labels so that we can have corners in multiple labels */
+static PetscErrorCode CreateSplitLabels(DM dm)
 {
+  const char    *names[4] = {"markerBottom", "markerRight", "markerTop", "markerLeft"};
+  PetscInt       ids[4]   = {1, 2, 3, 4};
+  DMLabel        label;
+  IS             is;
+  PetscInt       f;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMPlexCreateBoxMesh(comm, 2, PETSC_TRUE, NULL, NULL, NULL, NULL, PETSC_TRUE, dm);CHKERRQ(ierr);
-  /* Make split labels so that we can have corners in multiple labels */
-  {
-    const char *names[4] = {"markerBottom", "markerRight", "markerTop", "markerLeft"};
-    PetscInt    ids[4]   = {1, 2, 3, 4};
-    DMLabel     label;
-    IS          is;
-    PetscInt    f;
-
-    for (f = 0; f < 4; ++f) {
-      ierr = DMGetStratumIS(*dm, "marker", ids[f],  &is);CHKERRQ(ierr);
-      if (!is) continue;
-      ierr = DMCreateLabel(*dm, names[f]);CHKERRQ(ierr);
-      ierr = DMGetLabel(*dm, names[f], &label);CHKERRQ(ierr);
-      if (is) {
-        ierr = DMLabelInsertIS(label, is, 1);CHKERRQ(ierr);
-      }
-      ierr = ISDestroy(&is);CHKERRQ(ierr);
-    }
+  for (f = 0; f < 4; ++f) {
+    ierr = DMCreateLabel(dm, names[f]);CHKERRQ(ierr);
+    ierr = DMGetStratumIS(dm, "marker", ids[f],  &is);CHKERRQ(ierr);
+    if (!is) continue;
+    ierr = DMGetLabel(dm, names[f], &label);CHKERRQ(ierr);
+    ierr = DMLabelInsertIS(label, is, 1);CHKERRQ(ierr);
+    ierr = ISDestroy(&is);CHKERRQ(ierr);
   }
-  ierr = PetscObjectSetName((PetscObject)(*dm), "Mesh");CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
+{
+  DM             cdm;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  ierr = DMCreate(comm, dm);CHKERRQ(ierr);
+  ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
+  cdm  = *dm;
+  while (cdm) {
+    ierr = CreateSplitLabels(cdm);CHKERRQ(ierr);
+    ierr = DMGetCoarseDM(cdm, &cdm);CHKERRQ(ierr);
+  }
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -3099,6 +3108,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 {
   PetscErrorCode (*exactFunc)(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
   PetscDS        prob;
+  DMLabel        label;
   const PetscInt id  = 1;
   PetscInt       dim, comp;
   Parameter     *ctx;
@@ -3183,13 +3193,17 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   /* Setup Boundary Conditions */
   ierr = PetscDSGetExactSolution(prob, 0, &exactFunc, (void **) &ctx);CHKERRQ(ierr);
   comp = 1;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallB", "markerBottom", 0, 1, &comp, (void (*)(void)) exactFunc, NULL, 1, &id, ctx);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "markerBottom", &label);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallB", label, 1, &id, 0, 1, &comp, (void (*)(void)) exactFunc, NULL, ctx, NULL);CHKERRQ(ierr);
   comp = 0;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallR", "markerRight",  0, 1, &comp, (void (*)(void)) exactFunc, NULL, 1, &id, ctx);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "markerRight", &label);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallR", label, 1, &id, 0, 1, &comp, (void (*)(void)) exactFunc, NULL, ctx, NULL);CHKERRQ(ierr);
   comp = 1;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallT", "markerTop",    0, 1, &comp, (void (*)(void)) exactFunc, NULL, 1, &id, ctx);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "markerTop", &label);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallT", label, 1, &id, 0, 1, &comp, (void (*)(void)) exactFunc, NULL, ctx, NULL);CHKERRQ(ierr);
   comp = 0;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallL", "markerLeft",   0, 1, &comp, (void (*)(void)) exactFunc, NULL, 1, &id, ctx);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "markerLeft", &label);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallL", label, 1, &id, 0, 1, &comp, (void (*)(void)) exactFunc, NULL, ctx, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -3439,7 +3453,7 @@ int main(int argc, char **argv)
   test:
     suffix: q2q1_conv
     # -dm_refine 2 gives L_2 convergence rate: [3.0, 2.1]
-    args: -dm_plex_box_simplex 0 -dm_plex_separate_marker -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
       -snes_error_if_not_converged -snes_convergence_estimate -convest_num_refine 2 \
       -ksp_rtol 1.e-9 -ksp_error_if_not_converged -pc_use_amat \
       -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 \
@@ -3448,7 +3462,7 @@ int main(int argc, char **argv)
   test:
     suffix: q1p0_conv
     # -dm_refine 2 gives L_2 convergence rate: [2.0, 1.0]
-    args: -dm_plex_box_simplex 0 -dm_plex_separate_marker -vel_petscspace_degree 1 -pres_petscspace_degree 0 \
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker -vel_petscspace_degree 1 -pres_petscspace_degree 0 \
       -snes_error_if_not_converged -snes_convergence_estimate -convest_num_refine 2 \
       -ksp_rtol 1.e-9 -ksp_error_if_not_converged -pc_use_amat \
       -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 \
@@ -3457,7 +3471,7 @@ int main(int argc, char **argv)
   test:
     suffix: q2p1_conv
     # -dm_refine 2 gives L_2 convergence rate: [3.0, 2.0]
-    args: -dm_plex_box_simplex 0 -dm_plex_separate_marker \
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker \
       -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 \
       -snes_error_if_not_converged -snes_convergence_estimate -convest_num_refine 2 \
       -ksp_rtol 1.e-9 -ksp_error_if_not_converged -pc_use_amat \
@@ -3471,7 +3485,7 @@ int main(int argc, char **argv)
     suffix: q2p1fetidp
     requires: !single
     nsize: 5
-    args: -dm_distribute -dm_plex_box_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple \
+    args: -dm_distribute -dm_plex_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple \
       -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 \
       -snes_error_if_not_converged \
       -ksp_error_if_not_converged \
@@ -3494,7 +3508,7 @@ int main(int argc, char **argv)
     output_file: output/ex69_q2p1fetidp_deluxe.out
     requires: mumps double
     nsize: 5
-    args: -dm_distribute -dm_plex_box_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple \
+    args: -dm_distribute -dm_plex_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple \
       -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 \
       -snes_error_if_not_converged \
       -ksp_error_if_not_converged \
@@ -3521,7 +3535,7 @@ int main(int argc, char **argv)
     output_file: output/ex69_q2p1fetidp_deluxe_adaptive.out
     requires: mumps double
     nsize: 5
-    args: -dm_distribute -dm_plex_box_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple \
+    args: -dm_distribute -dm_plex_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple \
       -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 \
       -snes_error_if_not_converged \
       -ksp_error_if_not_converged \
@@ -3650,7 +3664,7 @@ int main(int argc, char **argv)
     suffix: q2p1bddc
     output_file: output/ex69_q2p1fetidp_deluxe.out
     nsize: 5
-    args: -dm_distribute -dm_plex_box_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 -petscds_jac_pre 0 -snes_error_if_not_converged -ksp_error_if_not_converged -ksp_type cg -ksp_norm_type natural -pc_type bddc -pc_bddc_benign_trick -pc_bddc_nonetflux -pc_bddc_detect_disconnected -pc_bddc_vertex_size 2 -pc_bddc_coarse_redundant_pc_type svd -pc_bddc_use_qr_single
+    args: -dm_distribute -dm_plex_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 -petscds_jac_pre 0 -snes_error_if_not_converged -ksp_error_if_not_converged -ksp_type cg -ksp_norm_type natural -pc_type bddc -pc_bddc_benign_trick -pc_bddc_nonetflux -pc_bddc_detect_disconnected -pc_bddc_vertex_size 2 -pc_bddc_coarse_redundant_pc_type svd -pc_bddc_use_qr_single
     test:
       requires: double
       suffix: benign_card

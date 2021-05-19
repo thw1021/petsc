@@ -547,6 +547,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = [s for s in lines if s.find('may conflict with libgfortran') < 0]
       # MacOS libraries built for different MacOS versions
       lines = [s for s in lines if s.find(' was built for newer macOS version') < 0]
+      lines = [s for s in lines if s.find(' was built for newer OSX version') < 0]
       if lines: output = '\n'.join(lines)
       else: output = ''
       self.log.write("Linker output after filtering:\n"+output+":\n")
@@ -692,8 +693,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     # we need to keep the libraries in this list and simply not print them at the end
     # because libraries.havelib() is used to find library in this list we had to list the libraries in the
     # list even though we don't need them in petscconf.h
-    # two packages have LIB in there name so we have to include them here
-    if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
+    # Some packages have LIB in their name, so we have to include them here
+    if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG','PETSC_HAVE_LIBCEED']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
     if value:
       if (condition):
         f.write('#if (%s)\n' % condition)

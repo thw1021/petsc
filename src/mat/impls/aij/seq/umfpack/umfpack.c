@@ -205,9 +205,6 @@ static PetscErrorCode MatLUFactorNumeric_UMFPACK(Mat F,Mat A,const MatFactorInfo
   PetscFunctionReturn(0);
 }
 
-/*
-   Note the r permutation is ignored
-*/
 static PetscErrorCode MatLUFactorSymbolic_UMFPACK(Mat F,Mat A,IS r,IS c,const MatFactorInfo *info)
 {
   Mat_SeqAIJ     *a  = (Mat_SeqAIJ*)A->data;
@@ -368,10 +365,9 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_umfpack(Mat A,MatFactorType ftyp
   Mat_UMFPACK    *lu;
   PetscErrorCode ierr;
   PetscInt       m=A->rmap->n,n=A->cmap->n,idx;
-
-  const char *strategy[]={"AUTO","UNSYMMETRIC","SYMMETRIC"};
-  const char *scale[]   ={"NONE","SUM","MAX"};
-  PetscBool  flg;
+  const char     *strategy[]={"AUTO","UNSYMMETRIC","SYMMETRIC"};
+  const char     *scale[]   ={"NONE","SUM","MAX"};
+  PetscBool      flg;
 
   PetscFunctionBegin;
   /* Create the factorization matrix F */
@@ -397,7 +393,8 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_umfpack(Mat A,MatFactorType ftyp
 
   ierr = PetscFree(B->solvertype);CHKERRQ(ierr);
   ierr = PetscStrallocpy(MATSOLVERUMFPACK,&B->solvertype);CHKERRQ(ierr);
-  B->useordering = PETSC_FALSE;
+  B->canuseordering = PETSC_TRUE;
+  ierr = PetscStrallocpy(MATORDERINGEXTERNAL,(char**)&B->preferredordering[MAT_FACTOR_LU]);CHKERRQ(ierr);
 
   /* initializations */
   /* ------------------------------------------------*/

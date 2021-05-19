@@ -12,7 +12,7 @@
     one to reinitialize and set the seed.
  */
 
-#include <../src/sys/classes/random/randomimpl.h>                              /*I "petscsys.h" I*/
+#include <petsc/private/randomimpl.h>                              /*I "petscsys.h" I*/
 #include <petscviewer.h>
 
 /* Logging support */
@@ -348,7 +348,7 @@ PetscErrorCode  PetscRandomCreate(MPI_Comm comm,PetscRandom *r)
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  PetscValidPointer(r,3);
+  PetscValidPointer(r,2);
   *r = NULL;
   ierr = PetscRandomInitializePackage();CHKERRQ(ierr);
 

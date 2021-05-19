@@ -7,11 +7,15 @@
 #include <petscviewer.h>
 
 #if defined(PETSC_HAVE_CUDA)
-  #include <petsccublas.h>
+#include <petsccublas.h>
+PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
+PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-  #include <petschipblas.h>
+#include <petschipblas.h>
+PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
+PETSC_EXTERN hipEvent_t petsc_gputimer_end;
 #endif
 
 #if defined(PETSC_USE_GCOV)
@@ -213,7 +217,7 @@ PetscErrorCode  PetscMaxSum(MPI_Comm comm,const PetscInt sizes[],PetscInt *max,P
     ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
     ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
     ierr = PetscMalloc1(size,&work);CHKERRQ(ierr);
-    ierr = MPIU_Allreduce((void*)sizes,work,size,MPIU_2INT,MPIU_MAXSUM_OP,comm);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce((void*)sizes,work,size,MPIU_2INT,MPIU_MAXSUM_OP,comm);CHKERRMPI(ierr);
     *max = work[rank].max;
     *sum = work[rank].sum;
     ierr = PetscFree(work);CHKERRQ(ierr);
@@ -653,9 +657,6 @@ PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private(void)
 #include <adios.h>
 #include <adios_read.h>
 int64_t Petsc_adios_group;
-#endif
-#if defined(PETSC_HAVE_ADIOS2)
-#include <adios2_c.h>
 #endif
 #if defined(PETSC_HAVE_OPENMP)
 #include <omp.h>
@@ -1128,8 +1129,6 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   ierr = adios_select_method(Petsc_adios_group,"MPI","","");CHKERRQ(ierr);
   ierr = adios_read_init_method(ADIOS_READ_METHOD_BP,PETSC_COMM_WORLD,"");CHKERRQ(ierr);
 #endif
-#if defined(PETSC_HAVE_ADIOS2)
-#endif
 
   /*
       Set flag that we are completely initialized
@@ -1226,8 +1225,6 @@ PetscErrorCode  PetscFinalize(void)
 #if defined(PETSC_HAVE_ADIOS)
   ierr = adios_read_finalize_method(ADIOS_READ_METHOD_BP_AGGREGATE);CHKERRQ(ierr);
   ierr = adios_finalize(rank);CHKERRQ(ierr);
-#endif
-#if defined(PETSC_HAVE_ADIOS2)
 #endif
   ierr = PetscOptionsHasName(NULL,NULL,"-citations",&flg);CHKERRQ(ierr);
   if (flg) {
@@ -1570,10 +1567,22 @@ PetscErrorCode  PetscFinalize(void)
 
 #if defined(PETSC_HAVE_CUDA)
   if (PetscDefaultCudaStream) {cudaError_t cerr = cudaStreamDestroy(PetscDefaultCudaStream);CHKERRCUDA(cerr);}
+  if (petsc_gputimer_begin) {
+    cudaError_t cerr = cudaEventDestroy(petsc_gputimer_begin);CHKERRCUDA(cerr);
+  }
+  if (petsc_gputimer_end) {
+    cudaError_t cerr = cudaEventDestroy(petsc_gputimer_end);CHKERRCUDA(cerr);
+  }
 #endif
 
 #if defined(PETSC_HAVE_HIP)
   if (PetscDefaultHipStream)  {hipError_t cerr  = hipStreamDestroy(PetscDefaultHipStream);CHKERRHIP(cerr);}
+  if (petsc_gputimer_begin) {
+    hipError_t cerr = hipEventDestroy(petsc_gputimer_begin);CHKERRHIP(cerr);
+  }
+  if (petsc_gputimer_end) {
+    hipError_t cerr = hipEventDestroy(petsc_gputimer_end);CHKERRHIP(cerr);
+  }
 #endif
 
   ierr = PetscFreeMPIResources();CHKERRQ(ierr);

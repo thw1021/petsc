@@ -534,7 +534,7 @@ PetscErrorCode VecISCopy(Vec vfull, IS is, ScatterMode mode, Vec vreduced)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vfull,VEC_CLASSID,1);
   PetscValidHeaderSpecific(is,IS_CLASSID,2);
-  PetscValidHeaderSpecific(vreduced,VEC_CLASSID,3);
+  PetscValidHeaderSpecific(vreduced,VEC_CLASSID,4);
   ierr = VecGetSize(vfull, &nfull);CHKERRQ(ierr);
   ierr = VecGetSize(vreduced, &nreduced);CHKERRQ(ierr);
 
@@ -641,7 +641,7 @@ PetscErrorCode VecISSet(Vec V,IS S, PetscScalar c)
   if (!S) PetscFunctionReturn(0); /* simply return with no-op if the index set is NULL */
   PetscValidHeaderSpecific(V,VEC_CLASSID,1);
   PetscValidHeaderSpecific(S,IS_CLASSID,2);
-  PetscValidType(V,3);
+  PetscValidType(V,1);
 
   ierr = VecGetOwnershipRange(V,&low,&high);CHKERRQ(ierr);
   ierr = ISGetLocalSize(S,&nloc);CHKERRQ(ierr);
@@ -745,8 +745,8 @@ PetscErrorCode VecStepMaxBounded(Vec X, Vec DX, Vec XL, Vec XU, PetscReal *stepm
   PetscReal         localmax=0;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(X,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(DX,VEC_CLASSID,5);
+  PetscValidHeaderSpecific(X,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(DX,VEC_CLASSID,2);
   PetscValidHeaderSpecific(XL,VEC_CLASSID,3);
   PetscValidHeaderSpecific(XU,VEC_CLASSID,4);
 
@@ -766,7 +766,7 @@ PetscErrorCode VecStepMaxBounded(Vec X, Vec DX, Vec XL, Vec XU, PetscReal *stepm
   ierr = VecRestoreArrayRead(XL,&xl);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(XU,&xu);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(DX,&dx);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&localmax,stepmax,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)X));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&localmax,stepmax,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)X));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -802,9 +802,9 @@ PetscErrorCode VecStepBoundInfo(Vec X, Vec DX, Vec XL, Vec XU, PetscReal *boundm
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(X,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(XL,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(XU,VEC_CLASSID,3);
-  PetscValidHeaderSpecific(DX,VEC_CLASSID,4);
+  PetscValidHeaderSpecific(XL,VEC_CLASSID,3);
+  PetscValidHeaderSpecific(XU,VEC_CLASSID,4);
+  PetscValidHeaderSpecific(DX,VEC_CLASSID,2);
 
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
   ierr = VecGetArrayRead(XL,&xl);CHKERRQ(ierr);
@@ -836,15 +836,15 @@ PetscErrorCode VecStepBoundInfo(Vec X, Vec DX, Vec XL, Vec XU, PetscReal *boundm
   ierr = PetscObjectGetComm((PetscObject)X,&comm);CHKERRQ(ierr);
 
   if (boundmin){
-    ierr = MPIU_Allreduce(&localmin,boundmin,1,MPIU_REAL,MPIU_MIN,comm);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&localmin,boundmin,1,MPIU_REAL,MPIU_MIN,comm);CHKERRMPI(ierr);
     ierr = PetscInfo1(X,"Step Bound Info: Closest Bound: %20.19e\n",(double)*boundmin);CHKERRQ(ierr);
   }
   if (wolfemin){
-    ierr = MPIU_Allreduce(&localwolfemin,wolfemin,1,MPIU_REAL,MPIU_MIN,comm);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&localwolfemin,wolfemin,1,MPIU_REAL,MPIU_MIN,comm);CHKERRMPI(ierr);
     ierr = PetscInfo1(X,"Step Bound Info: Wolfe: %20.19e\n",(double)*wolfemin);CHKERRQ(ierr);
   }
   if (boundmax) {
-    ierr = MPIU_Allreduce(&localmax,boundmax,1,MPIU_REAL,MPIU_MAX,comm);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&localmax,boundmax,1,MPIU_REAL,MPIU_MAX,comm);CHKERRMPI(ierr);
     if (*boundmax < 0) *boundmax=PETSC_INFINITY;
     ierr = PetscInfo1(X,"Step Bound Info: Max: %20.19e\n",(double)*boundmax);CHKERRQ(ierr);
   }
@@ -888,7 +888,7 @@ PetscErrorCode VecStepMax(Vec X, Vec DX, PetscReal *step)
   }
   ierr = VecRestoreArrayRead(X,&xx);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(DX,&dx);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&stepmax,step,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)X));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&stepmax,step,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)X));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 

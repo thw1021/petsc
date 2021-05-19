@@ -332,7 +332,7 @@ static PetscErrorCode DMPlexInterpolateFaces_Internal(DM dm, PetscInt cellDepth,
   DMLabel        ctLabel;
   PetscHashIJKL  faceTable;
   PetscInt       faceTypeNum[DM_NUM_POLYTOPES];
-  PetscInt       depth, d, Np, cStart, cEnd, c, fStart, fEnd;
+  PetscInt       depth, d, pStart, Np, cStart, cEnd, c, fStart, fEnd;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -417,8 +417,8 @@ static PetscErrorCode DMPlexInterpolateFaces_Internal(DM dm, PetscInt cellDepth,
     }
   }
   /* Add new points, always at the end of the numbering */
-  ierr = DMPlexGetChart(dm, NULL, &Np);CHKERRQ(ierr);
-  ierr = DMPlexSetChart(idm, 0, Np + (fEnd - fStart));CHKERRQ(ierr);
+  ierr = DMPlexGetChart(dm, &pStart, &Np);CHKERRQ(ierr);
+  ierr = DMPlexSetChart(idm, pStart, Np + (fEnd - fStart));CHKERRQ(ierr);
   /* Set cone sizes */
   /*   Must create the celltype label here so that we do not automatically try to compute the types */
   ierr = DMCreateLabel(idm, "celltype");CHKERRQ(ierr);
@@ -989,7 +989,7 @@ PetscErrorCode DMPlexInterpolatePointSF(DM dm, PetscSF pointSF)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidHeaderSpecific(pointSF, PETSCSF_CLASSID, 3);
+  PetscValidHeaderSpecific(pointSF, PETSCSF_CLASSID, 2);
   ierr = DMPlexIsDistributed(dm, &flg);CHKERRQ(ierr);
   if (!flg) PetscFunctionReturn(0);
   /* Set initial SF so that lower level queries work */

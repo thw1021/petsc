@@ -463,11 +463,11 @@ PetscErrorCode  VecDestroyVecs(PetscInt m,Vec *vv[])
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(vv,1);
+  PetscValidPointer(vv,2);
   if (m < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy negative number of vectors %D",m);
   if (!m || !*vv) {*vv  = NULL; PetscFunctionReturn(0);}
-  PetscValidHeaderSpecific(**vv,VEC_CLASSID,1);
-  PetscValidType(**vv,1);
+  PetscValidHeaderSpecific(**vv,VEC_CLASSID,2);
+  PetscValidType(**vv,2);
   ierr = (*(**vv)->ops->destroyvecs)(m,*vv);CHKERRQ(ierr);
   *vv  = NULL;
   PetscFunctionReturn(0);
@@ -833,7 +833,7 @@ PetscErrorCode VecDestroyVecs_Default(PetscInt m,Vec v[])
   PetscInt       i;
 
   PetscFunctionBegin;
-  PetscValidPointer(v,1);
+  PetscValidPointer(v,2);
   for (i=0; i<m; i++) {ierr = VecDestroy(&v[i]);CHKERRQ(ierr);}
   ierr = PetscFree(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -928,7 +928,7 @@ PetscErrorCode  VecResetArray(Vec vec)
 PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
 {
   PetscErrorCode    ierr;
-  PetscBool         isbinary,ishdf5,isadios,isadios2;
+  PetscBool         isbinary,ishdf5,isadios,isexodusii;
   PetscViewerFormat format;
 
   PetscFunctionBegin;
@@ -938,8 +938,9 @@ PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&ishdf5);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERADIOS,&isadios);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERADIOS,&isadios2);CHKERRQ(ierr);
-  if (!isbinary && !ishdf5 && !isadios && !isadios2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
+  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWEREXODUSII,&isexodusii);CHKERRQ(ierr);
+  if (!isbinary && !ishdf5 && !isadios && !isexodusii) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
+
 
   ierr = VecSetErrorIfLocked(vec,1);CHKERRQ(ierr);
   if (!((PetscObject)vec)->type_name && !vec->ops->create) {

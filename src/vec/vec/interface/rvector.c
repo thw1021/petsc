@@ -279,7 +279,7 @@ PetscErrorCode  VecNormAvailable(Vec x,NormType type,PetscBool  *available,Petsc
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidRealPointer(val,3);
+  PetscValidRealPointer(val,4);
   PetscValidType(x,1);
 
   *available = PETSC_FALSE;
@@ -339,7 +339,7 @@ PetscErrorCode  VecNormalize(Vec x,PetscReal *val)
 -  val - the maximum component
 
    Notes:
-   Returns the value PETSC_MIN_REAL and p = -1 if the vector is of length 0.
+   Returns the value PETSC_MIN_REAL and negative p if the vector is of length 0.
 
    Returns the smallest index with the maximum value
    Level: intermediate
@@ -353,7 +353,7 @@ PetscErrorCode  VecMax(Vec x,PetscInt *p,PetscReal *val)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidScalarPointer(val,3);
+  PetscValidRealPointer(val,3);
   PetscValidType(x,1);
   ierr = PetscLogEventBegin(VEC_Max,x,0,0,0);CHKERRQ(ierr);
   ierr = (*x->ops->max)(x,p,val);CHKERRQ(ierr);
@@ -376,7 +376,7 @@ PetscErrorCode  VecMax(Vec x,PetscInt *p,PetscReal *val)
    Level: intermediate
 
    Notes:
-   Returns the value PETSC_MAX_REAL and p = -1 if the vector is of length 0.
+   Returns the value PETSC_MAX_REAL and negative p if the vector is of length 0.
 
    This returns the smallest index with the minumum value
 
@@ -389,7 +389,7 @@ PetscErrorCode  VecMin(Vec x,PetscInt *p,PetscReal *val)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidScalarPointer(val,3);
+  PetscValidRealPointer(val,3);
   PetscValidType(x,1);
   ierr = PetscLogEventBegin(VEC_Min,x,0,0,0);CHKERRQ(ierr);
   ierr = (*x->ops->min)(x,p,val);CHKERRQ(ierr);
@@ -1115,9 +1115,9 @@ PetscErrorCode  VecMTDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
   PetscValidPointer(y,3);
   PetscValidHeaderSpecific(*y,VEC_CLASSID,3);
   PetscValidScalarPointer(val,4);
-  PetscValidType(x,2);
+  PetscValidType(x,1);
   PetscValidType(*y,3);
-  PetscCheckSameTypeAndComm(x,2,*y,3);
+  PetscCheckSameTypeAndComm(x,1,*y,3);
   VecCheckSameSize(x,1,*y,3);
 
   ierr = PetscLogEventBegin(VEC_MTDot,x,*y,0,0);CHKERRQ(ierr);
@@ -1165,9 +1165,9 @@ PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
   PetscValidPointer(y,3);
   PetscValidHeaderSpecific(*y,VEC_CLASSID,3);
   PetscValidScalarPointer(val,4);
-  PetscValidType(x,2);
+  PetscValidType(x,1);
   PetscValidType(*y,3);
-  PetscCheckSameTypeAndComm(x,2,*y,3);
+  PetscCheckSameTypeAndComm(x,1,*y,3);
   VecCheckSameSize(x,1,*y,3);
 
   ierr = PetscLogEventBegin(VEC_MDot,x,*y,0,0);CHKERRQ(ierr);
@@ -1355,11 +1355,11 @@ PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
     ierr = ISContiguousLocal(is,gstart,gend,&start,&red[0]);CHKERRQ(ierr);
     /* block size is given by IS if ibs > 1; otherwise, check the vector */
     if (ibs > 1) {
-      ierr = MPIU_Allreduce(MPI_IN_PLACE,red,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)is));CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(MPI_IN_PLACE,red,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)is));CHKERRMPI(ierr);
       bs   = ibs;
     } else {
       if (n%vbs || vbs == 1) red[1] = PETSC_FALSE; /* this process invalidate the collectiveness of block size */
-      ierr = MPIU_Allreduce(MPI_IN_PLACE,red,2,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)is));CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(MPI_IN_PLACE,red,2,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)is));CHKERRMPI(ierr);
       if (red[0] && red[1]) bs = vbs; /* all processes have a valid block size and the access will be contiguous */
     }
     if (red[0]) { /* We can do a no-copy implementation */
@@ -3877,7 +3877,7 @@ PetscErrorCode  VecRestoreArray4d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscIn
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidPointer(a,8);
+  PetscValidPointer(a,10);
   PetscValidType(x,1);
   dummy = (void*)(*a + mstart);
   ierr  = PetscFree(dummy);CHKERRQ(ierr);
@@ -3923,7 +3923,7 @@ PetscErrorCode  VecRestoreArray4dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,Pe
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidPointer(a,8);
+  PetscValidPointer(a,10);
   PetscValidType(x,1);
   dummy = (void*)(*a + mstart);
   ierr  = PetscFree(dummy);CHKERRQ(ierr);
@@ -4311,7 +4311,7 @@ PetscErrorCode  VecRestoreArray4dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,Pet
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidPointer(a,8);
+  PetscValidPointer(a,10);
   PetscValidType(x,1);
   dummy = (void*)(*a + mstart);
   ierr  = PetscFree(dummy);CHKERRQ(ierr);

@@ -601,8 +601,8 @@ PetscErrorCode  ISLocalToGlobalMappingCreate(MPI_Comm comm,PetscInt bs,PetscInt 
   PetscInt       *in;
 
   PetscFunctionBegin;
-  if (n) PetscValidIntPointer(indices,3);
-  PetscValidPointer(mapping,4);
+  if (n) PetscValidIntPointer(indices,4);
+  PetscValidPointer(mapping,6);
 
   *mapping = NULL;
   ierr = ISInitializePackage();CHKERRQ(ierr);
@@ -1110,7 +1110,7 @@ static PetscErrorCode  ISLocalToGlobalMappingGetBlockInfo_Private(ISLocalToGloba
   for (i=0; i<n; i++) {
     if (lindices[i] > max) max = lindices[i];
   }
-  ierr   = MPIU_Allreduce(&max,&Ng,1,MPIU_INT,MPI_MAX,comm);CHKERRQ(ierr);
+  ierr   = MPIU_Allreduce(&max,&Ng,1,MPIU_INT,MPI_MAX,comm);CHKERRMPI(ierr);
   Ng++;
   ierr   = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr   = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);

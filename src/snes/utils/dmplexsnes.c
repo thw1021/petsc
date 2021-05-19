@@ -145,15 +145,8 @@ static PetscErrorCode DMSNESConvertPlex(DM dm, DM *plex, PetscBool copy)
       ierr = DMConvert(dm,DMPLEX,plex);CHKERRQ(ierr);
       ierr = PetscObjectCompose((PetscObject) dm, "dm_plex", (PetscObject) *plex);CHKERRQ(ierr);
       if (copy) {
-        PetscInt    i;
-        PetscObject obj;
-        const char *comps[3] = {"A","dmAux","dmCh"};
-
         ierr = DMCopyDMSNES(dm, *plex);CHKERRQ(ierr);
-        for (i = 0; i < 3; i++) {
-          ierr = PetscObjectQuery((PetscObject) dm, comps[i], &obj);CHKERRQ(ierr);
-          ierr = PetscObjectCompose((PetscObject) *plex, comps[i], obj);CHKERRQ(ierr);
-        }
+        ierr = DMCopyAuxiliaryVec(dm, *plex);CHKERRQ(ierr);
       }
     } else {
       ierr = PetscObjectReference((PetscObject) *plex);CHKERRQ(ierr);
@@ -348,7 +341,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   PetscInt          n, N, numFound;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   if (ctx->dim < 0) SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
@@ -395,7 +388,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
     if (foundCells[p].index >= 0) foundProcs[foundPoints ? foundPoints[p] : p] = rank;
   }
   /* Let the lowest rank process own each point */
-  ierr   = MPIU_Allreduce(foundProcs, globalProcs, N, MPI_INT, MPI_MIN, comm);CHKERRQ(ierr);
+  ierr   = MPIU_Allreduce(foundProcs, globalProcs, N, MPI_INT, MPI_MIN, comm);CHKERRMPI(ierr);
   ctx->n = 0;
   for (p = 0; p < N; ++p) {
     if (globalProcs[p] == size) {
@@ -1103,7 +1096,7 @@ PetscErrorCode DMInterpolationDestroy(DMInterpolationInfo *ctx)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(ctx, 2);
+  PetscValidPointer(ctx, 1);
   ierr = VecDestroy(&(*ctx)->coords);CHKERRQ(ierr);
   ierr = PetscFree((*ctx)->points);CHKERRQ(ierr);
   ierr = PetscFree((*ctx)->cells);CHKERRQ(ierr);
@@ -1160,7 +1153,7 @@ PetscErrorCode SNESMonitorFields(SNES snes, PetscInt its, PetscReal fgnorm, Pets
     }
   }
   ierr = VecRestoreArrayRead(res, &r);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(lnorms, norms, numFields, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject) dm));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(lnorms, norms, numFields, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject) dm));CHKERRMPI(ierr);
   ierr = PetscViewerPushFormat(viewer,vf->format);CHKERRQ(ierr);
   ierr = PetscViewerASCIIAddTab(viewer, ((PetscObject) snes)->tablevel);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer, "%3D SNES Function norm %14.12e [", its, (double) fgnorm);CHKERRQ(ierr);
@@ -1365,7 +1358,7 @@ PetscErrorCode DMPlexComputeJacobianAction(DM dm, IS cellIS, PetscReal t, PetscR
 {
   DM_Plex          *mesh  = (DM_Plex *) dm->data;
   const char       *name  = "Jacobian";
-  DM                dmAux, plex, plexAux = NULL;
+  DM                dmAux = NULL, plex, plexAux = NULL;
   DMEnclosureType   encAux;
   Vec               A;
   PetscDS           prob, probAux = NULL;
@@ -1404,9 +1397,9 @@ PetscErrorCode DMPlexComputeJacobianAction(DM dm, IS cellIS, PetscReal t, PetscR
   ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
   ierr = PetscDSHasDynamicJacobian(prob, &hasDyn);CHKERRQ(ierr);
   hasDyn = hasDyn && (X_tShift != 0.0) ? PETSC_TRUE : PETSC_FALSE;
-  ierr = PetscObjectQuery((PetscObject) dm, "dmAux", (PetscObject *) &dmAux);CHKERRQ(ierr);
-  ierr = PetscObjectQuery((PetscObject) dm, "A", (PetscObject *) &A);CHKERRQ(ierr);
-  if (dmAux) {
+  ierr = DMGetAuxiliaryVec(dm, NULL, 0, &A);CHKERRQ(ierr);
+  if (A) {
+    ierr = VecGetDM(A, &dmAux);CHKERRQ(ierr);
     ierr = DMGetEnclosureRelation(dmAux, dm, &encAux);CHKERRQ(ierr);
     ierr = DMConvert(dmAux, DMPLEX, &plexAux);CHKERRQ(ierr);
     ierr = DMGetLocalSection(plexAux, &sectionAux);CHKERRQ(ierr);
@@ -1696,7 +1689,7 @@ PetscErrorCode DMSNESCheckDiscretization(SNES snes, DM dm, PetscReal t, Vec u, P
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
-  PetscValidHeaderSpecific(u, VEC_CLASSID, 3);
+  PetscValidHeaderSpecific(u, VEC_CLASSID, 4);
   if (error) PetscValidRealPointer(error, 6);
 
   ierr = DMComputeExactSolution(dm, t, u, NULL);CHKERRQ(ierr);
@@ -1836,7 +1829,7 @@ PetscErrorCode DMSNESCheckJacobian(SNES snes, DM dm, Vec u, PetscReal tol, Petsc
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscValidHeaderSpecific(u, VEC_CLASSID, 3);
   if (isLinear) PetscValidBoolPointer(isLinear, 5);
-  if (convRate) PetscValidRealPointer(convRate, 5);
+  if (convRate) PetscValidRealPointer(convRate, 6);
   ierr = PetscObjectGetComm((PetscObject) snes, &comm);CHKERRQ(ierr);
   ierr = DMComputeExactSolution(dm, 0.0, u, NULL);CHKERRQ(ierr);
   /* Create and view matrices */
