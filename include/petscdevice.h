@@ -140,8 +140,11 @@ PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 #endif /* PETSC_HAVE_HIP */
 
+PETSC_EXTERN PetscErrorCode PetscDeviceRegisterAll(void);
+PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
+
 /* PetscEvent */
-PETSC_EXTERN PetscErrorCode PetscEventInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscEventRegister(const char[],PetscErrorCode(*)(PetscEvent));
 PETSC_EXTERN PetscErrorCode PetscEventCreate(PetscEvent*);
 PETSC_EXTERN PetscErrorCode PetscEventDestroy(PetscEvent*);
@@ -155,7 +158,6 @@ PETSC_EXTERN PetscErrorCode PetscEventSynchronize(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscEventQuery(PetscEvent,PetscBool*);
 
 /* PetscStream */
-PETSC_EXTERN PetscErrorCode PetscStreamInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscStreamRegister(const char[],PetscErrorCode(*)(PetscStream));
 PETSC_EXTERN PetscErrorCode PetscStreamCreate(PetscStream*);
 PETSC_EXTERN PetscErrorCode PetscStreamDestroy(PetscStream*);
@@ -173,4 +175,18 @@ PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream);
 PETSC_EXTERN PetscErrorCode PetscStreamQuery(PetscStream,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscStreamWaitForStream(PetscStream,PetscStream);
+
+/* PetscDeviceContext */
+PETSC_EXTERN PetscErrorCode PetscDeviceContextRegister(const char[],PetscErrorCode(*)(PetscDeviceContext));
+PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext,PetscStreamType*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetMode(PetscDeviceContext,PetscStreamMode);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextGetMode(PetscDeviceContext,PetscStreamMode*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSplit(PetscDeviceContext,PetscInt,PetscDeviceContext**);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextMerge(PetscDeviceContext,PetscInt,PetscDeviceContext*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextRestore(PetscDeviceContext,PetscInt,PetscDeviceContext**);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext);
 #endif /* PETSCDEVICE_H */
