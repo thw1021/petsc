@@ -4,8 +4,7 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
-PETSC_EXTERN PetscErrorCode PetscStreamRegisterAll(void);
-PETSC_EXTERN PetscErrorCode PetscEventRegisterAll(void);
+PETSC_EXTERN PetscErrorCode PetscDeviceRegisterAll(void);
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamTypeCompare(const char type_ref[], const char type_name[], PetscBool *same)
 {
@@ -52,34 +51,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamTypeCompare(const char type_ref[],
 #define PetscCheckValidSameStreamType(_p_strm1__,_p_arg1__,_p_strm2__,_p_arg2__) do {(void)(_p_strm1__);(void)(_p_strm2__);} while (0)
 #endif
 
-typedef struct _StreamOps *StreamOps;
-struct _StreamOps {
-  PetscErrorCode (*create)(PetscStream);
-  PetscErrorCode (*destroy)(PetscStream);
-  PetscErrorCode (*setup)(PetscStream);
-  PetscErrorCode (*setfromoptions)(PetscOptionItems*,PetscStream);
-  PetscErrorCode (*getstream)(PetscStream,void*);
-  PetscErrorCode (*restorestream)(PetscStream,void*);
-  PetscErrorCode (*recordevent)(PetscStream,PetscEvent);
-  PetscErrorCode (*waitevent)(PetscStream,PetscEvent);
-  PetscErrorCode (*synchronize)(PetscStream);
-  PetscErrorCode (*query)(PetscStream,PetscBool*);
-  PetscErrorCode (*capturebegin)(PetscStream);
-  PetscErrorCode (*captureend)(PetscStream,PetscStreamGraph);
-  PetscErrorCode (*waitforstream)(PetscStream,PetscStream);
-};
-
-struct _n_PetscStream {
-  struct _StreamOps ops[1];
-  char              *type;
-  void              *data;
-  PetscInt          id;
-  PetscBool         idle;
-  PetscStreamMode   mode;
-  PetscBool         setup;
-  PetscBool         setfromoptionscalled;
-};
-
 typedef struct _EventOps *EventOps;
 struct _EventOps {
   PetscErrorCode (*create)(PetscEvent);
@@ -99,6 +70,51 @@ struct _n_PetscEvent {
   PetscBool        idle;
   PetscBool        setup;
   PetscBool        setfromoptionscalled;
+};
+
+typedef struct _StreamOps *StreamOps;
+struct _StreamOps {
+  PetscErrorCode (*create)(PetscStream);
+  PetscErrorCode (*destroy)(PetscStream);
+  PetscErrorCode (*setup)(PetscStream);
+  PetscErrorCode (*setfromoptions)(PetscOptionItems*,PetscStream);
+  PetscErrorCode (*getstream)(PetscStream,void*);
+  PetscErrorCode (*restorestream)(PetscStream,void*);
+  PetscErrorCode (*recordevent)(PetscStream,PetscEvent);
+  PetscErrorCode (*waitevent)(PetscStream,PetscEvent);
+  PetscErrorCode (*synchronize)(PetscStream);
+  PetscErrorCode (*query)(PetscStream,PetscBool*);
+  PetscErrorCode (*waitforstream)(PetscStream,PetscStream);
+};
+
+struct _n_PetscStream {
+  struct _StreamOps ops[1];
+  char              *type;
+  void              *data;
+  PetscInt          id;
+  PetscBool         idle;
+  PetscStreamMode   mode;
+  PetscBool         setup;
+  PetscBool         setfromoptionscalled;
+};
+
+typedef struct _DeviceContextOps *DeviceContextOps;
+struct _DeviceContextOps {
+  PetscErrorCode (*create)(PetscDeviceContext);
+  PetscErrorCode (*destroy)(PetscDeviceContext);
+  PetscErrorCode (*setup)(PetscDeviceContext);
+};
+
+struct _n_PetscDeviceContext {
+  struct _DeviceContextOps  ops[1];
+  char                     *type;
+  void                     *data; // solver contexts
+  PetscInt                 *childIDs;
+  PetscInt                  id,numChildren,maxNumChildren;
+  PetscStream               stream;
+  PetscEvent                event;
+  PetscStreamMode           mode;
+  PetscBool                 setup;
 };
 
 PETSC_STATIC_INLINE PetscErrorCode PetscStreamValidateIdle_Internal(PetscStream strm)
