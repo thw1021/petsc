@@ -13,10 +13,12 @@ configure_options = [
   '--download-mpich-configure-arguments=--enable-error-messages=all --enable-g', # note --enable-g=memit - used by --with-debugging=1 does not help
   '--download-openblas=1',
   '--download-openblas-make-options=TARGET=GENERIC',
+  '--download-hwloc=1',
   '--download-hypre=1',
   '--download-cmake=1',
   '--download-metis=1',
   '--download-parmetis=1',
+  '--download-pastix=1',
   '--download-ptscotch=1',
   '--download-suitesparse=1',
   '--download-triangle=1',
