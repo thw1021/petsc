@@ -1,5 +1,5 @@
-Programming with PETSc
-======================
+Programming with PETSc/TAO
+==========================
 
 .. toctree::
    :maxdepth: 2

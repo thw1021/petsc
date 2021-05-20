@@ -1,11 +1,11 @@
-===================
-PETSc Documentation
-===================
+=======================
+PETSc/TAO Documentation
+=======================
 
 .. toctree::
    :maxdepth: 1
 
-   PETSc and TAO Users Manuals <manual/index>
+   manual/index
    manualpages/index
    changes/index
 

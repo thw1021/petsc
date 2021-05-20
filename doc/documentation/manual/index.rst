@@ -1,5 +1,5 @@
-PETSc Users Manual
-==================
+PETSc/TAO Users Manual
+======================
 
 **Argonne National Laboratory**
 
