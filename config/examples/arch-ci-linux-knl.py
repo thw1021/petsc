@@ -23,8 +23,10 @@ if __name__ == '__main__':
     'FOPTFLAGS=-g -xMIC-AVX512 -O3',
     '--with-avx512-kernels=1',
     '--with-blaslapack-dir='+os.environ['MKLROOT'],
+    '--download-hwloc=1',
     '--download-metis=1',
     '--download-parmetis=1',
+    '--download-pastix=1',
     '--download-superlu_dist=1'
   ]
   configure.petsc_configure(configure_options)
