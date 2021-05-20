@@ -13,7 +13,6 @@ configure_options = [
   '--download-metis=1',
   '--download-parmetis=1',
   '--download-hwloc=1',
-  '--download-pastix=1',
   '--download-ptscotch=1',
   '--download-hypre=1',
   '--download-hypre-configure-arguments=--enable-bigint=no --enable-mixedint=yes', # HYPRE with mixed integers
