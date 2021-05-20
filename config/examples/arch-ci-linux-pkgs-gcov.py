@@ -23,7 +23,6 @@ configure_options = [
   '--download-spai=1',
   '--download-parms=1',
   '--download-chaco=1',
-  '--download-pastix=1',
   '--download-hwloc=1',
   '--download-ctetgen',
   '--download-netcdf',
