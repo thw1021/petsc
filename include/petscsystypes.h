@@ -271,7 +271,7 @@ M*/
       typedef petsccomplexlib::complex<__float128> PetscComplex; /* Notstandard and not expected to work, use __complex128 */
     #endif
 
-    /* Include a petsc C++ complex 'fix'. See more at manual of PetscComplex */
+    /* Include a PETSc C++ complex 'fix'. Check PetscComplex manual page for details */
     #if defined(PETSC_HAVE_CXX_COMPLEX_FIX) && !defined(PETSC_SKIP_CXX_COMPLEX_FIX)
       #include <petsccxxcomplexfix.h>
     #endif
