@@ -34,8 +34,8 @@ class Configure(config.package.CMakePackage):
     def formCMakeConfigureArgs(self):
         args = config.package.CMakePackage.formCMakeConfigureArgs(self)
 
-        # if self.blasLapack.has_cheaders != 1 :
-        #     self.blasLapack.checkCHeaders()
+        if not self.blasLapack.has_cheaders and not self.blasLapack.mkl:
+          raise RuntimeError('PaStiX requires LAPACKE to work')
 
         args.append('-DPASTIX_LR_TESTINGS=OFF')
 
@@ -48,11 +48,6 @@ class Configure(config.package.CMakePackage):
             args.append("-DPASTIX_INT64=ON")
         else:
             args.append("-DPASTIX_INT64=OFF")
-
-        # if self.blasLapack.found :
-        #     if self.blasLapack.checkForRoutine( 'dgetrf' ) :
-        #         self.log.write("FOUND LAPACKE_dgetrf in the library")
-        #     args.append('-DLAPACKE_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
 
         if self.metis.found :
             args.append("-DPASTIX_WITH_METIS=ON")
