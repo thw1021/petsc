@@ -27,6 +27,7 @@ if git diff --diff-filter=A --name-only ${dest} | grep -i \
   -e '\.jpg$' \
   -e '\.pdf$' \
   -e '\.png$' \
+  -e '\.ps$' \
   -e '\.svg$' \
   -e '\.tar$' \
   -e '\.tif$' \
