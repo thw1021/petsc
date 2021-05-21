@@ -73,10 +73,10 @@ PetscErrorCode MatSolve_PaStiX(Mat A,Vec b,Vec x)
     ierr = VecScatterEnd(pastix->scat_rhs, b, x_seq, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
   } else {  /* size == 1 */
     ierr = VecDuplicate(b, &x_seq);CHKERRQ(ierr);
-    ierr = VecCopy(b,  x_seq);CHKERRQ(ierr);
+    ierr = VecCopy(b, x_seq);CHKERRQ(ierr);
   }
   ierr = VecDuplicate(x_seq, &b_cpy);CHKERRQ(ierr);
-  ierr = VecCopy(x_seq,  b_cpy);CHKERRQ(ierr);
+  ierr = VecCopy(x_seq, b_cpy);CHKERRQ(ierr);
 
   ierr = VecGetArray(x_seq, &(pastix->rhs));CHKERRQ(ierr);
   ierr = VecGetArray(b_cpy, &array);CHKERRQ(ierr);
@@ -95,7 +95,7 @@ PetscErrorCode MatSolve_PaStiX(Mat A,Vec b,Vec x)
   if (pastix->spm->clustnbr > 1) {
     ierr = VecRestoreArray(x_seq, &(pastix->rhs));CHKERRQ(ierr);
     ierr = VecScatterBegin(pastix->scat_sol, x_seq, x, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(  pastix->scat_sol, x_seq, x, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecScatterEnd(pastix->scat_sol, x_seq, x, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
   } else {
     ierr = VecGetArray(x, &array);CHKERRQ(ierr);
     ierr = VecRestoreArray(x, &(pastix->rhs));CHKERRQ(ierr);
