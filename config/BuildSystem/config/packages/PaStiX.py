@@ -27,8 +27,8 @@ class Configure(config.package.CMakePackage):
         self.mpi             = framework.require('config.packages.MPI',self)
         self.pthread         = framework.require('config.packages.pthread',self)
         self.hwloc           = framework.require('config.packages.hwloc',self)
-        self.deps            = [ self.blasLapack, self.scotch, self.pthread, self.hwloc ]
-        self.odeps           = [ self.mpi, self.metis ]
+        self.deps            = [ self.blasLapack, self.pthread, self.hwloc ]
+        self.odeps           = [ self.mpi, self.scotch, self.metis ]
         return
 
     def formCMakeConfigureArgs(self):
@@ -36,6 +36,9 @@ class Configure(config.package.CMakePackage):
 
         if not self.blasLapack.has_cheaders and not self.blasLapack.mkl:
           raise RuntimeError('PaStiX requires LAPACKE to work')
+
+        if not self.scotch.found and not self.metis.found :
+            raise RuntimeError('PaStiX requires an ordering library : either METIS, SCOTCH or PT-SCOTCH')
 
         args.append('-DPASTIX_LR_TESTINGS=OFF')
 
@@ -55,7 +58,6 @@ class Configure(config.package.CMakePackage):
             args.append("-DPASTIX_WITH_METIS=OFF")
 
         if self.scotch.found :
-            args.append("-DSCOTCH_DIR="+self.scotch.installDir)
             args.append("-DPASTIX_WITH_SCOTCH=ON")
         else :
             args.append("-DPASTIX_WITH_SCOTCH=OFF")

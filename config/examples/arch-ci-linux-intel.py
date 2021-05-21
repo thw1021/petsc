@@ -28,8 +28,7 @@ if __name__ == '__main__':
     '--download-adblaslapack=1',
     '--download-kokkos',
     '--download-cmake', # need cmake-3.16+ to build Kokkos
-    '--download-hwloc=1',
-    '--download-pastix=1',
-    '--download-ptscotch=1'
+    '--download-hwloc',
+    '--download-pastix',
   ]
   configure.petsc_configure(configure_options)
