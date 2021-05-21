@@ -263,7 +263,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
   ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
-  ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
 
   ierr = DMGetBoundingBox(*dm, ctx->lower, ctx->upper);CHKERRQ(ierr);
   ctx->a = (ctx->upper[0] - ctx->lower[0])/2.0;
@@ -547,7 +546,7 @@ int main(int argc, char **argv)
           -ts_max_steps 1 -ts_max_time 10. -ts_dt 1.0
   test:
     suffix: 1
-    args: -debug 1 -dm_plex_shape cylinder -dm_plex_dim 3 -dm_refine 1 -dm_plex_cylinder_bd periodic -dm_plex_boundary_label marker \
+    args: -debug 1 -dm_plex_shape cylinder -dm_plex_dim 3 -dm_refine 0 -dm_plex_cylinder_bd periodic -dm_plex_boundary_label marker \
            -ts_max_steps 1 -ts_max_time 10. -ts_dt 1.0
 
 TEST*/
