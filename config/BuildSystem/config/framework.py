@@ -704,7 +704,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     return
 
   def outputPoison(self, f, name):
-    '''Outputs a poison version of name to prevent accidental usage, see outputDefine'''
+    '''Outputs a poison version of name to prevent accidental usage, see outputHeader'''
     if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG','PETSC_HAVE_LIBCEED']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
     if name.startswith('PETSC_USE_') or name.startswith('PETSC_HAVE_') or name.startswith('PETSC_SKIP_'): 
         f.write('#pragma GCC poison PETSC_%s\n' % name)
