@@ -673,7 +673,7 @@ Notes on usage:
 
   - Log into theta.alcf.anl.gov
     - The GPU system does not allow access to gitlab so one must checkout the appropriate branch of PETSc
-      here before logging into thetagpusn1
+    - The GPU nodes do not have external network access - so best to use ``git fetch`` etc. (in PETSc clone) on the theta login node
     - Log into thetagpusn1
       - The connection to the outside world does not exist so do
         export http_proxy=http://proxy.tmi.alcf.anl.gov:3128
