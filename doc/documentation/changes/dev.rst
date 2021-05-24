@@ -171,6 +171,9 @@ Changes: Development
 - Replace ``DMPlexComputeJacobianAction()`` with ``DMSNESComputeJacobianAction()``
 - Add ``DMSNESCreateJacobianMF()``
 - Change ``DMPlexComputeBdResidualSingle()`` to take ``PetscFormKey`` instead of explicit label/value/field arguments
+- Remove ``DMPlexReverseCell()`` and ``DMPlexOrientCell()`` in favor of ``DMPlexOrientPoint()``
+- Remove ``DMPlexCompareOrientations()`` in favor of ``DMPolytopeMatchOrientation()``
+- Add ``DMPlexGetCompressedClosure()`` and ``DMPlexRestoreCompressedClosure()``
 
 .. rubric:: FE/FV:
 
