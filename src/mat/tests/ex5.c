@@ -145,9 +145,7 @@ int main(int argc,char **args)
   return ierr;
 }
 
-
 /*TEST
-
 
    test:
       suffix: 11_A
@@ -193,7 +191,6 @@ int main(int argc,char **args)
       filter: grep -v type
       output_file: output/ex5_21.out
       requires: cuda
-
 
    test:
       nsize: 3
