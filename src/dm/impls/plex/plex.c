@@ -729,10 +729,10 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     char         lname[PETSC_MAX_PATH_LEN];
     PetscReal    scale         = 2.0;
     PetscReal    tikzscale     = 1.0;
-    PetscBool    useNumbers    = PETSC_TRUE, useLabels, useColors;
+    PetscBool    useNumbers    = PETSC_TRUE, drawNumbers[4], drawColors[4], useLabels, useColors;
     double       tcoords[3];
     PetscScalar *coords;
-    PetscInt     numLabels, l, numColors, numLColors, dim, depth, cStart, cEnd, c, vStart, vEnd, v, eStart = 0, eEnd = 0, e, p;
+    PetscInt     numLabels, l, numColors, numLColors, dim, d, depth, cStart, cEnd, c, vStart, vEnd, v, eStart = 0, eEnd = 0, e, p, n;
     PetscMPIInt  rank, size;
     char         **names, **colors, **lcolors;
     PetscBool    plotEdges, flg, lflg;
@@ -749,6 +749,13 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     ierr = PetscOptionsGetReal(((PetscObject) viewer)->options,((PetscObject) viewer)->prefix, "-dm_plex_view_scale", &scale, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsGetReal(((PetscObject) viewer)->options,((PetscObject) viewer)->prefix, "-dm_plex_view_tikzscale", &tikzscale, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsGetBool(((PetscObject) viewer)->options,((PetscObject) viewer)->prefix, "-dm_plex_view_numbers", &useNumbers, NULL);CHKERRQ(ierr);
+    for (d = 0; d < 4; ++d) drawNumbers[d] = useNumbers;
+    for (d = 0; d < 4; ++d) drawColors[d]  = PETSC_TRUE;
+    n = 4;
+    ierr = PetscOptionsGetBoolArray(((PetscObject) viewer)->options,((PetscObject) viewer)->prefix, "-dm_plex_view_numbers_depth", drawNumbers, &n, &flg);CHKERRQ(ierr);
+    if (flg && n != dim+1) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Number of flags %D != %D dim+1", n, dim+1);
+    ierr = PetscOptionsGetBoolArray(((PetscObject) viewer)->options,((PetscObject) viewer)->prefix, "-dm_plex_view_colors_depth", drawColors, &n, &flg);CHKERRQ(ierr);
+    if (flg && n != dim+1) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Number of flags %D != %D dim+1", n, dim+1);
     ierr = PetscOptionsGetStringArray(((PetscObject) viewer)->options,((PetscObject) viewer)->prefix, "-dm_plex_view_labels", names, &numLabels, &useLabels);CHKERRQ(ierr);
     if (!useLabels) numLabels = 0;
     ierr = PetscOptionsGetStringArray(((PetscObject) viewer)->options,((PetscObject) viewer)->prefix, "-dm_plex_view_colors", colors, &numColors, &useColors);CHKERRQ(ierr);
@@ -762,13 +769,16 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       for (c = 0; c < numLColors; ++c) {ierr = PetscStrallocpy(deflcolors[c], &lcolors[c]);CHKERRQ(ierr);}
     }
     ierr = PetscOptionsGetString(((PetscObject) viewer)->options, ((PetscObject) viewer)->prefix, "-dm_plex_view_label_filter", lname, sizeof(lname), &lflg);CHKERRQ(ierr);
-    plotEdges = (PetscBool)(depth > 1 && useNumbers && dim < 3);
+    plotEdges = (PetscBool)(depth > 1 && drawNumbers[1] && dim < 3);
     ierr = PetscOptionsGetBool(((PetscObject) viewer)->options,((PetscObject) viewer)->prefix, "-dm_plex_view_edges", &plotEdges, &flg);CHKERRQ(ierr);
     if (flg && plotEdges && depth < dim) SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Mesh must be interpolated");
     if (depth < dim) plotEdges = PETSC_FALSE;
 
     /* filter points with labelvalue != labeldefaultvalue */
     ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dm, 1, &eStart, &eEnd);CHKERRQ(ierr);
+    ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
     if (lflg) {
       DMLabel lbl;
 
@@ -818,7 +828,6 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer, "\\begin{tikzpicture}[scale = %g,font=\\fontsize{8}{8}\\selectfont]\n", (double) tikzscale);CHKERRQ(ierr);
 
     /* Plot vertices */
-    ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
     ierr = VecGetArray(coordinates, &coords);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
     for (v = vStart; v < vEnd; ++v) {
@@ -846,18 +855,56 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
         ierr = DMGetLabelValue(dm, names[l], v, &val);CHKERRQ(ierr);
         if (val >= 0) {color = lcolors[l%numLColors]; isLabeled = PETSC_TRUE; break;}
       }
-      if (useNumbers) {
+      if (drawNumbers[0]) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer, ") node(%D_%d) [draw,shape=circle,color=%s] {%D};\n", v, rank, color, v);CHKERRQ(ierr);
-      } else {
+      } else if (drawColors[0]) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer, ") node(%D_%d) [fill,inner sep=%dpt,shape=circle,color=%s] {};\n", v, rank, !isLabeled ? 1 : 2, color);CHKERRQ(ierr);
+      } else {
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer, ") node(%D_%d) [] {};\n", v, rank);CHKERRQ(ierr);
       }
     }
     ierr = VecRestoreArray(coordinates, &coords);CHKERRQ(ierr);
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
+    /* Plot edges */
+    if (plotEdges) {
+      ierr = VecGetArray(coordinates, &coords);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "\\path\n");CHKERRQ(ierr);
+      for (e = eStart; e < eEnd; ++e) {
+        const PetscInt *cone;
+        PetscInt        coneSize, offA, offB, dof, d;
+
+        if (wp && !PetscBTLookup(wp,e - pStart)) continue;
+        ierr = DMPlexGetConeSize(dm, e, &coneSize);CHKERRQ(ierr);
+        if (coneSize != 2) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Edge %D cone should have two vertices, not %D", e, coneSize);
+        ierr = DMPlexGetCone(dm, e, &cone);CHKERRQ(ierr);
+        ierr = PetscSectionGetDof(coordSection, cone[0], &dof);CHKERRQ(ierr);
+        ierr = PetscSectionGetOffset(coordSection, cone[0], &offA);CHKERRQ(ierr);
+        ierr = PetscSectionGetOffset(coordSection, cone[1], &offB);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "(");CHKERRQ(ierr);
+        for (d = 0; d < dof; ++d) {
+          tcoords[d] = (double) (0.5*scale*PetscRealPart(coords[offA+d]+coords[offB+d]));
+          tcoords[d] = PetscAbs(tcoords[d]) < 1e-10 ? 0.0 : tcoords[d];
+        }
+        /* Rotate coordinates since PGF makes z point out of the page instead of up */
+        if (dim == 3) {PetscReal tmp = tcoords[1]; tcoords[1] = tcoords[2]; tcoords[2] = -tmp;}
+        for (d = 0; d < dof; ++d) {
+          if (d > 0) {ierr = PetscViewerASCIISynchronizedPrintf(viewer, ",");CHKERRQ(ierr);}
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer, "%g", (double)tcoords[d]);CHKERRQ(ierr);
+        }
+        color = colors[rank%numColors];
+        for (l = 0; l < numLabels; ++l) {
+          PetscInt val;
+          ierr = DMGetLabelValue(dm, names[l], v, &val);CHKERRQ(ierr);
+          if (val >= 0) {color = lcolors[l%numLColors]; break;}
+        }
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer, ") node(%D_%d) [draw,shape=circle,color=%s] {%D} --\n", e, rank, color, e);CHKERRQ(ierr);
+      }
+      ierr = VecRestoreArray(coordinates, &coords);CHKERRQ(ierr);
+      ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "(0,0);\n");CHKERRQ(ierr);
+    }
     /* Plot cells */
-    ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
-    ierr = DMPlexGetDepthStratum(dm, 1, &eStart, &eEnd);CHKERRQ(ierr);
-    if (dim == 3 || !useNumbers) {
+    if (dim == 3 || !drawNumbers[1]) {
       for (e = eStart; e < eEnd; ++e) {
         const PetscInt *cone;
 
@@ -872,24 +919,59 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
         ierr = PetscViewerASCIISynchronizedPrintf(viewer, "\\draw[color=%s] (%D_%d) -- (%D_%d);\n", color, cone[0], rank, cone[1], rank);CHKERRQ(ierr);
       }
     } else {
+       DMPolytopeType ct;
+
+      /* Drawing a 2D polygon */
       for (c = cStart; c < cEnd; ++c) {
-        PetscInt *closure = NULL;
-        PetscInt  closureSize, firstPoint = -1;
+        if (wp && !PetscBTLookup(wp, c - pStart)) continue;
+        ierr = DMPlexGetCellType(dm, c, &ct);CHKERRQ(ierr);
+        if (ct == DM_POLYTOPE_SEG_PRISM_TENSOR ||
+            ct == DM_POLYTOPE_TRI_PRISM_TENSOR ||
+            ct == DM_POLYTOPE_QUAD_PRISM_TENSOR) {
+          const PetscInt *cone;
+          PetscInt        coneSize, e;
 
-        if (wp && !PetscBTLookup(wp,c - pStart)) continue;
-        ierr = DMPlexGetTransitiveClosure(dm, c, PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "\\draw[color=%s] ", colors[rank%numColors]);CHKERRQ(ierr);
-        for (p = 0; p < closureSize*2; p += 2) {
-          const PetscInt point = closure[p];
+          ierr = DMPlexGetCone(dm, c, &cone);CHKERRQ(ierr);
+          ierr = DMPlexGetConeSize(dm, c, &coneSize);CHKERRQ(ierr);
+          for (e = 0; e < coneSize; ++e) {
+            const PetscInt *econe;
 
-          if ((point < vStart) || (point >= vEnd)) continue;
-          if (firstPoint >= 0) {ierr = PetscViewerASCIISynchronizedPrintf(viewer, " -- ");CHKERRQ(ierr);}
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer, "(%D_%d)", point, rank);CHKERRQ(ierr);
-          if (firstPoint < 0) firstPoint = point;
+            ierr = DMPlexGetCone(dm, cone[e], &econe);CHKERRQ(ierr);
+            ierr = PetscViewerASCIISynchronizedPrintf(viewer, "\\draw[color=%s] (%D_%d) -- (%D_%d) -- (%D_%d);\n", colors[rank%numColors], econe[0], rank, cone[e], rank, econe[1], rank);CHKERRQ(ierr);
+          }
+        } else {
+          PetscInt *closure = NULL;
+          PetscInt  closureSize, Nv = 0, v;
+
+          ierr = DMPlexGetTransitiveClosure(dm, c, PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
+          for (p = 0; p < closureSize*2; p += 2) {
+            const PetscInt point = closure[p];
+
+            if ((point >= vStart) && (point < vEnd)) closure[Nv++] = point;
+          }
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer, "\\draw[color=%s] ", colors[rank%numColors]);CHKERRQ(ierr);
+          for (v = 0; v <= Nv; ++v) {
+            const PetscInt vertex = closure[v%Nv];
+
+            if (v > 0) {
+              if (plotEdges) {
+                const PetscInt *edge;
+                PetscInt        endpoints[2], ne;
+
+                endpoints[0] = closure[v-1]; endpoints[1] = vertex;
+                ierr = DMPlexGetJoin(dm, 2, endpoints, &ne, &edge);CHKERRQ(ierr);
+                if (ne != 1) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find edge for vertices %D, %D", endpoints[0], endpoints[1]);
+                ierr = PetscViewerASCIISynchronizedPrintf(viewer, " -- (%D_%d) -- ", edge[0], rank);CHKERRQ(ierr);
+                ierr = DMPlexRestoreJoin(dm, 2, endpoints, &ne, &edge);CHKERRQ(ierr);
+              } else {
+                ierr = PetscViewerASCIISynchronizedPrintf(viewer, " -- ");CHKERRQ(ierr);
+              }
+            }
+            ierr = PetscViewerASCIISynchronizedPrintf(viewer, "(%D_%d)", vertex, rank);CHKERRQ(ierr);
+          }
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer, ";\n");CHKERRQ(ierr);
+          ierr = DMPlexRestoreTransitiveClosure(dm, c, PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
         }
-        /* Why doesn't this work? ierr = PetscViewerASCIISynchronizedPrintf(viewer, " -- cycle;\n");CHKERRQ(ierr); */
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, " -- (%D_%d);\n", firstPoint, rank);CHKERRQ(ierr);
-        ierr = DMPlexRestoreTransitiveClosure(dm, c, PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
       }
     }
     ierr = VecGetArray(coordinates, &coords);CHKERRQ(ierr);
@@ -930,51 +1012,15 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
         ierr = DMGetLabelValue(dm, names[l], c, &val);CHKERRQ(ierr);
         if (val >= 0) {color = lcolors[l%numLColors]; isLabeled = PETSC_TRUE; break;}
       }
-      if (useNumbers) {
+      if (drawNumbers[dim]) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer, ") node(%D_%d) [draw,shape=circle,color=%s] {%D};\n", c, rank, color, c);CHKERRQ(ierr);
-      } else {
+      } else if (drawColors[dim]) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer, ") node(%D_%d) [fill,inner sep=%dpt,shape=circle,color=%s] {};\n", c, rank, !isLabeled ? 1 : 2, color);CHKERRQ(ierr);
+      } else {
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer, ") node(%D_%d) [] {};\n", c, rank);CHKERRQ(ierr);
       }
     }
     ierr = VecRestoreArray(coordinates, &coords);CHKERRQ(ierr);
-    /* Plot edges */
-    if (plotEdges) {
-      ierr = VecGetArray(coordinates, &coords);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, "\\path\n");CHKERRQ(ierr);
-      for (e = eStart; e < eEnd; ++e) {
-        const PetscInt *cone;
-        PetscInt        coneSize, offA, offB, dof, d;
-
-        if (wp && !PetscBTLookup(wp,e - pStart)) continue;
-        ierr = DMPlexGetConeSize(dm, e, &coneSize);CHKERRQ(ierr);
-        if (coneSize != 2) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Edge %D cone should have two vertices, not %D", e, coneSize);
-        ierr = DMPlexGetCone(dm, e, &cone);CHKERRQ(ierr);
-        ierr = PetscSectionGetDof(coordSection, cone[0], &dof);CHKERRQ(ierr);
-        ierr = PetscSectionGetOffset(coordSection, cone[0], &offA);CHKERRQ(ierr);
-        ierr = PetscSectionGetOffset(coordSection, cone[1], &offB);CHKERRQ(ierr);
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "(");CHKERRQ(ierr);
-        for (d = 0; d < dof; ++d) {
-          tcoords[d] = (double) (0.5*scale*PetscRealPart(coords[offA+d]+coords[offB+d]));
-          tcoords[d] = PetscAbs(tcoords[d]) < 1e-10 ? 0.0 : tcoords[d];
-        }
-        /* Rotate coordinates since PGF makes z point out of the page instead of up */
-        if (dim == 3) {PetscReal tmp = tcoords[1]; tcoords[1] = tcoords[2]; tcoords[2] = -tmp;}
-        for (d = 0; d < dof; ++d) {
-          if (d > 0) {ierr = PetscViewerASCIISynchronizedPrintf(viewer, ",");CHKERRQ(ierr);}
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer, "%g", (double)tcoords[d]);CHKERRQ(ierr);
-        }
-        color = colors[rank%numColors];
-        for (l = 0; l < numLabels; ++l) {
-          PetscInt val;
-          ierr = DMGetLabelValue(dm, names[l], v, &val);CHKERRQ(ierr);
-          if (val >= 0) {color = lcolors[l%numLColors]; break;}
-        }
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, ") node(%D_%d) [draw,shape=circle,color=%s] {%D} --\n", e, rank, color, e);CHKERRQ(ierr);
-      }
-      ierr = VecRestoreArray(coordinates, &coords);CHKERRQ(ierr);
-      ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, "(0,0);\n");CHKERRQ(ierr);
-    }
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "\\end{tikzpicture}\n");CHKERRQ(ierr);
@@ -2662,8 +2708,6 @@ PetscErrorCode DMPlexRestoreConeRecursive(DM dm, IS points, PetscInt *depth, IS 
 
   Note:
   This should be called after all calls to DMPlexSetConeSize() and DMSetUp().
-
-  Developer Note: Why not call this DMPlexSetCover()
 
   Level: beginner
 
