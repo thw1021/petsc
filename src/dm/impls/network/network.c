@@ -1314,7 +1314,7 @@ PetscErrorCode DMNetworkGetComponent(DM dm,PetscInt p,PetscInt compnum,PetscInt 
   }
 
   ierr = PetscSectionGetOffset(network->DataSection,p,&offset);CHKERRQ(ierr);
-  header = (DMNetworkComponentHeader)(network->componentdataarray+offset);CHKERRQ(ierr);
+  header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
 
   if (compnum >= 0) {
     if (compkey) *compkey = header->key[compnum];
@@ -2929,12 +2929,18 @@ PetscErrorCode DMNetworkSetVertexLocalToGlobalOrdering(DM dm)
 PETSC_STATIC_INLINE PetscErrorCode ISAddLocalSize(DM dm,PetscInt p,PetscInt numkeys,PetscInt keys[],PetscInt blocksize[],PetscInt nselectedvar[],PetscInt *nidx)
 {
   PetscErrorCode ierr;
-  PetscInt       i,j,ncomps,nvar,key;
+  PetscInt       i,j,ncomps,nvar,key,offset=0;
+  DM_Network     *network = (DM_Network*)dm->data;
+  DMNetworkComponentHeader header;
 
   PetscFunctionBegin;
-  ierr = DMNetworkGetNumComponents(dm,p,&ncomps);CHKERRQ(ierr);
+  ierr = PetscSectionGetOffset(network->DataSection,p,&offset);CHKERRQ(ierr);
+  ncomps = ((DMNetworkComponentHeader)(network->componentdataarray+offset))->ndata;
+  header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
+
   for (i=0; i<ncomps; i++) {
-    ierr = DMNetworkGetComponent(dm,p,i,&key,NULL,&nvar);CHKERRQ(ierr);
+    key  = header->key[i];
+    nvar = header->nvar[i];
     for (j=0; j<numkeys; j++) {
       if (key == keys[j]) *nidx += nselectedvar[j]*nvar/blocksize[j];
     }
@@ -2945,12 +2951,18 @@ PETSC_STATIC_INLINE PetscErrorCode ISAddLocalSize(DM dm,PetscInt p,PetscInt numk
 PETSC_STATIC_INLINE PetscErrorCode ISComputeLocalIdx(DM dm,PetscInt p,PetscInt numkeys,PetscInt keys[],PetscInt blocksize[],PetscInt nselectedvar[],PetscInt *selectedvar[],PetscInt *ii,PetscInt *idx)
 {
   PetscErrorCode ierr;
-  PetscInt       i,j,ncomps,nvar,key,offsetg,k,k1;
+  PetscInt       i,j,ncomps,nvar,key,offsetg,k,k1,offset=0;
+  DM_Network     *network = (DM_Network*)dm->data;
+  DMNetworkComponentHeader header;
 
   PetscFunctionBegin;
-  ierr = DMNetworkGetNumComponents(dm,p,&ncomps);CHKERRQ(ierr);
+  ierr = PetscSectionGetOffset(network->DataSection,p,&offset);CHKERRQ(ierr);
+  ncomps = ((DMNetworkComponentHeader)(network->componentdataarray+offset))->ndata;
+  header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
+
   for (i=0; i<ncomps; i++) {
-    ierr = DMNetworkGetComponent(dm,p,i,&key,NULL,&nvar);CHKERRQ(ierr);
+    key  = header->key[i];
+    nvar = header->nvar[i];
     for (j=0; j<numkeys; j++) {
       if (key != keys[j]) continue;
 
