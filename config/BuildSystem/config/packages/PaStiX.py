@@ -34,6 +34,13 @@ class Configure(config.package.CMakePackage):
     def formCMakeConfigureArgs(self):
         args = config.package.CMakePackage.formCMakeConfigureArgs(self)
 
+        toremove = []
+        for arg in args :
+            if "-ffree-line-length-0" in arg :
+                toremove.append(arg)
+        for rm in toremove :
+            args.remove(rm)
+
         if not self.blasLapack.has_cheaders and not self.blasLapack.mkl:
           raise RuntimeError('PaStiX requires LAPACKE to work')
 
