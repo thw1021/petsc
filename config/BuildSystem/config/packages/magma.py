@@ -148,17 +148,23 @@ class Configure(config.package.Package):
       ldflags += ' ' + self.openmp.ompflag
 
     with open(os.path.join(self.packageDir,'make.inc'),'w') as g:
+      gputarget = ''
+      if self.argDB['with-magma-gputarget']:
+        gputarget = self.argDB['with-magma-gputarget']
+      else:
+      if self.cuda.found and hasattr(self.cuda,'gencodearch') and self.cuda.gencodearch:
+        gputarget = 'sm_'+self.cuda.gencodearch
       g.write('CC = '+cc+'\n')
       g.write('CFLAGS = '+cflags+'\n')
       g.write('CXX = '+cxx+'\n')
       g.write('CXXFLAGS = '+cxxflags+'\n')
-      if self.cuda.found:
+      if usecuda:
         g.write('BACKEND = cuda\n')
         g.write('NVCC = '+nvcc+'\n')
         g.write('DEVCC = '+nvcc+'\n')
         g.write('NVCCFLAGS = '+nvccflags+'\n')
         g.write('DEVCCFLAGS = '+nvccflags+'\n')
-      if self.hip.found:
+      if usehip:
         g.write('BACKEND = hip\n')
         g.write('HIPCC = '+hipcc+'\n')
         g.write('DEVCC = '+hipcc+'\n')
@@ -168,8 +174,8 @@ class Configure(config.package.Package):
         g.write('FORT = '+fc+'\n')
         g.write('FFLAGS = '+fcflags+'\n')
         g.write('F90LAGS = '+fcflags+'\n')
-      if self.argDB['with-magma-gputarget']:
-        g.write('GPU_TARGET = '+self.argDB['with-magma-gputarget']+'\n')
+      if gputarget:
+        g.write('GPU_TARGET = '+gputarget+'\n')
       if self.cuda.found and hasattr(self.cuda,'gencodearch') and self.cuda.gencodearch:
         g.write('NVCCFLAGS += -gencode arch=compute_'+self.cuda.gencodearch+',code=sm_'+self.cuda.gencodearch+'\n')
         g.write('MIN_ARCH = '+self.cuda.gencodearch+'0\n')
