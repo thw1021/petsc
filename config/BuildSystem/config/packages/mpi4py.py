@@ -50,7 +50,7 @@ class Configure(config.package.Package):
            '+archflags+self.python.pyexe+' setup.py install --install-lib='+installLibPath+') \\\n\
                >> ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log 2>&1 || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building mpi4py. Check ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log" && \\\n\
+             echo "Error installing mpi4py. Check ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log" && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)',\
                           '@echo "====================================="',\
