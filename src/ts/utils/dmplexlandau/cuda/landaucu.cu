@@ -434,7 +434,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
       if (fieldMats) {
         PetscScalar            vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
         PetscReal              row_scale[LANDAU_MAX_Q_FACE],col_scale[LANDAU_MAX_Q_FACE];
-        PetscInt               nr,nc,rows0[LANDAU_MAX_Q_FACE],cols0[LANDAU_MAX_Q_FACE],rows[LANDAU_MAX_Q_FACE],cols[LANDAU_MAX_Q_FACE];
+        PetscInt               nr,nc,rows0[LANDAU_MAX_Q_FACE],cols0[LANDAU_MAX_Q_FACE]; // ,rows[LANDAU_MAX_Q_FACE],cols[LANDAU_MAX_Q_FACE];
         const LandauIdx *const Idxs = &d_maps->gIdx[elem][fieldA][0];
         for (f = threadIdx.y; f < Nb ; f += blockDim.y) {
           idx = Idxs[f];
@@ -464,14 +464,14 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
                 col_scale[q] = d_maps->c_maps[idx][q].scale;
               }
             }
-            for (q = 0; q < nr; q++) rows[q] = rows0[q];
-            for (q = 0; q < nc; q++) cols[q] = cols0[q];
+            //for (q = 0; q < nr; q++) rows[q] = rows0[q];
+            //for (q = 0; q < nc; q++) cols[q] = cols0[q];
             for (q = 0; q < nr; q++) {
               for (d = 0; d < nc; d++) {
                 vals[q*nc + d] = row_scale[q]*col_scale[d]*fieldMats[f][g];
               }
             }
-            MatSetValuesDevice(d_mat,nr,rows,nc,cols,vals,ADD_VALUES,ierr);
+            MatSetValuesDevice(d_mat,nr,rows0,nc,cols0,vals,ADD_VALUES,ierr);
             if (*ierr) return;
           }
         }
