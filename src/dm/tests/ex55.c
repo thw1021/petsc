@@ -7,16 +7,12 @@ static char help[] = "Calculates moments for Gaussian functions.\n\n";
 #include <gsl/gsl_sf_hermite.h>
 #include <gsl/gsl_randist.h>
 
-double mo(double x,int moment)
-{
-  return pow(x,moment);
-}
-
 int main(int argc, char **argv)
 {
   PetscErrorCode ierr;
-  int            s,n = 15,tick, moment = 0,momentummax = 7;
-  double         *zeros,*weights,scale,h,sigma = 1/sqrt(2), g = 0, mu = 0;
+  int            s,n = 15;
+  PetscInt       tick, moment = 0,momentummax = 7;
+  PetscReal      *zeros,*weights,scale,h,sigma = 1/sqrt(2), g = 0, mu = 0;
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
 
@@ -38,7 +34,7 @@ int main(int argc, char **argv)
   scale = exp2(n-1)*scale*PetscSqrtReal(PETSC_PI)/(n*n);
   ierr = PetscMalloc1(n+1,&weights);CHKERRQ(ierr);
   for (s=0; s<n; s++) {
-    h          = gsl_sf_hermite(n-1, zeros[s]);
+    h          = gsl_sf_hermite(n-1, (double) zeros[s]);
     weights[s] = scale/(h*h);
   }
   /* zeros and weights verfied up to n = 5 with http://mathworld.wolfram.com/Hermite-GaussQuadrature.html */
@@ -54,11 +50,11 @@ int main(int argc, char **argv)
     */
     g = 0;
     for (s=0; s<n; s++) {
-      g += weights[s]*mo(sqrt(2)*sigma*zeros[s] + mu,moment);
+      g += weights[s]*PetscPowRealInt(sqrt(2)*sigma*zeros[s] + mu,moment);
     }
     g /= sqrt(PETSC_PI);
     /* results confirmed with https://en.wikipedia.org/wiki/Normal_distribution#Moments sigma^p * (p-1)!!*/
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Moment %d %g \n",moment,g);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Moment %D %g \n",moment,(double)g);CHKERRQ(ierr);
 
   }
   ierr = PetscFree(zeros);CHKERRQ(ierr);
@@ -70,10 +66,9 @@ int main(int argc, char **argv)
 /*TEST
 
   build:
-    requires: gsl
+    requires: gsl double
 
   test:
-    requires: gsl
 
 TEST*/
 
