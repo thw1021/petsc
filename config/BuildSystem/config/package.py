@@ -50,6 +50,7 @@ class Package(config.base.Configure):
     self.gitcommit              = None # Git commit to use for downloads
     self.gitcommitmain          = None # Git commit to use for petsc/main or similar non-release branches
     self.download               = []   # list of URLs where repository or tarballs may be found (git is tested before tarballs)
+    self.recursive              = ''   # If requires --recursive option for git
     self.deps                   = []   # other packages whose dlib or include we depend on, usually we also use self.framework.require()
     self.odeps                  = []   # dependent packages that are optional
     self.defaultLanguage        = 'C'  # The language in which to run tests
@@ -257,6 +258,7 @@ class Package(config.base.Configure):
         outflags.append(flag)
     return ' '.join(outflags)
 
+  # TODO: move down to the setCompilers() level since they are used by Petsc.Configure not just here
   def removeWarningFlags(self,flags):
     outflags = []
     for flag in flags:
@@ -804,7 +806,10 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
           continue
       self.logPrintBox('Trying to download '+url+' for '+self.PACKAGE)
       try:
-        retriever.genericRetrieve(url, self.externalPackagesDir, self.package)
+        if self.recursive:
+          retriever.genericRetrieve(url, self.externalPackagesDir, self.package, self.recursive)
+        else:
+          retriever.genericRetrieve(url, self.externalPackagesDir, self.package)
         self.logWrite(retriever.restoreLog())
         retriever.saveLog()
         pkgdir = self.getDir()
@@ -1579,7 +1584,7 @@ class GNUPackage(Package):
         args.append('CXX="'+self.setCompilers.cross_CC+'"')
       else:
         args.append('CXX="'+self.getCompiler()+'"')
-      args.append('CXXFLAGS="'+self.updatePackageCxxFlags(self.getCompilerFlags())+'"')
+      args.append('CXXFLAGS=" -g -O0 '+self.updatePackageCxxFlags(self.getCompilerFlags())+'"')
       self.popLanguage()
     else:
       args.append('--disable-cxx')
@@ -1633,15 +1638,18 @@ class GNUPackage(Package):
         raise RuntimeError('libtoolize required for ' + self.PACKAGE+' not found! Use your package manager to install libtool')
       try:
         self.logPrintBox('Running libtoolize on ' +self.PACKAGE+'; this may take several minutes')
-        output,err,ret  = config.base.Configure.executeShellCommand(self.programs.libtoolize, cwd=self.packageDir, timeout=100, log=self.log)
+        output,err,ret  = config.base.Configure.executeShellCommand(self.programs.libtoolize+' --install ', cwd=self.packageDir, timeout=100, log=self.log)
         if ret:
-          raise RuntimeError('Error in libtoolize: ' + str(e))
-        self.logPrintBox('Running autoreconf on ' +self.PACKAGE+'; this may take several minutes')
-        output,err,ret  = config.base.Configure.executeShellCommand([self.programs.autoreconf, '--force', '--install'], cwd=self.packageDir, timeout=200, log = self.log)
-        if ret:
-          raise RuntimeError('Error in autoreconf: ' + str(e))
+          raise RuntimeError('Error in libtoolize: ' + output+err)
       except RuntimeError as e:
-        raise RuntimeError('Error running libtoolize or autoreconf on ' + self.PACKAGE+': '+str(e))
+        raise RuntimeError('Error running libtoolize on ' + self.PACKAGE+': '+str(e))
+      try:
+        self.logPrintBox('Running autoreconf on ' +self.PACKAGE+'; this may take several minutes')
+        output,err,ret  = config.base.Configure.executeShellCommand(self.programs.autoreconf+' --force --install', cwd=self.packageDir, timeout=200, log = self.log)
+        if ret:
+          raise RuntimeError('Error in autoreconf: ' + output+err)
+      except RuntimeError as e:
+        raise RuntimeError('Error running autoreconf on ' + self.PACKAGE+': '+str(e))
 
 
   def Install(self):
