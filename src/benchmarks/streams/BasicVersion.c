@@ -40,7 +40,7 @@ struct timezone { int tz_minuteswest;
            value of 'N' (below) to give a 'timing calibration' of
            at least 20 clock-ticks.  This will provide rate estimates
            that should be good to about 5% precision.
- /
+ */
 
 # define N      200000
 # define NTIMES     50
