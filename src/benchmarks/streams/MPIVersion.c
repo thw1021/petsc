@@ -218,7 +218,7 @@ int checktick(void)
   Determine the minimum difference between these M values.
   This result will be our estimate (in microseconds) for the
   clock granularity.
- */ /
+ */
 
   minDelta = 1000000;
   for (i = 1; i < M; i++) {
