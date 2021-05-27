@@ -625,7 +625,6 @@ void __launch_bounds__(256,4) mass_kernel(const PetscInt nip, const PetscInt dim
   }
 }
 
-
 PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[], PetscScalar a_IPf[], const PetscInt N, const PetscScalar a_xarray[], LandauGeomData *SData_d, const PetscInt num_sub_blocks,
                                   PetscReal shift, const PetscLogEvent events[], Mat JacP)
 {
