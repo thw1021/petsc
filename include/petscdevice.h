@@ -157,25 +157,6 @@ PETSC_EXTERN PetscErrorCode PetscEventSetFromOptions(MPI_Comm,const char[],Petsc
 PETSC_EXTERN PetscErrorCode PetscEventSynchronize(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscEventQuery(PetscEvent,PetscBool*);
 
-/* PetscStream */
-PETSC_EXTERN PetscErrorCode PetscStreamRegister(const char[],PetscErrorCode(*)(PetscStream));
-PETSC_EXTERN PetscErrorCode PetscStreamCreate(PetscStream*);
-PETSC_EXTERN PetscErrorCode PetscStreamDestroy(PetscStream*);
-PETSC_EXTERN PetscErrorCode PetscStreamSetType(PetscStream,PetscStreamType);
-PETSC_EXTERN PetscErrorCode PetscStreamGetType(PetscStream,PetscStreamType*);
-PETSC_EXTERN PetscErrorCode PetscStreamSetMode(PetscStream,PetscStreamMode);
-PETSC_EXTERN PetscErrorCode PetscStreamGetMode(PetscStream,PetscStreamMode*);
-PETSC_EXTERN PetscErrorCode PetscStreamSetUp(PetscStream);
-PETSC_EXTERN PetscErrorCode PetscStreamSetFromOptions(MPI_Comm,const char[],PetscStream);
-PETSC_EXTERN PetscErrorCode PetscStreamDuplicate(PetscStream,PetscStream*);
-PETSC_EXTERN PetscErrorCode PetscStreamGetStream(PetscStream,void*);
-PETSC_EXTERN PetscErrorCode PetscStreamRestoreStream(PetscStream,void*);
-PETSC_EXTERN PetscErrorCode PetscStreamRecordEvent(PetscStream,PetscEvent);
-PETSC_EXTERN PetscErrorCode PetscStreamWaitEvent(PetscStream,PetscEvent);
-PETSC_EXTERN PetscErrorCode PetscStreamSynchronize(PetscStream);
-PETSC_EXTERN PetscErrorCode PetscStreamQuery(PetscStream,PetscBool*);
-PETSC_EXTERN PetscErrorCode PetscStreamWaitForStream(PetscStream,PetscStream);
-
 /* PetscDeviceContext */
 PETSC_EXTERN PetscErrorCode PetscDeviceContextRegister(const char[],PetscErrorCode(*)(PetscDeviceContext));
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext*);
