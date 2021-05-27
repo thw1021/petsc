@@ -4,7 +4,7 @@ ALL: lib
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
-SOURCEC	  = devent.c dstream.c dcontext.c dstreamreg.c
+SOURCEC	  = devent.c dcontext.c dstreamreg.c
 SOURCECXX =
 SOURCEF	  =
 SOURCEH	  =
