@@ -38,7 +38,7 @@ class CompilerOptions(config.base.Configure):
         if not nargs.ArgBool('with-errorchecking', arg if arg is not None else '1', isTemporary=True).getValue():
           flags.extend(['-Wno-unused-but-set-variable'])
       elif bopt == 'g':
-        flags.append('-g3')
+        flags.extend(['-g3','-O0'])
       elif bopt == 'gcov':
         flags.extend(['--coverage','-Og']) # --coverage is equal to -fprofile-arcs -ftest-coverage. Use -Og to have accurate coverage results and good performance
       elif bopt == 'O':
@@ -55,7 +55,7 @@ class CompilerOptions(config.base.Configure):
           # next one fails in OpenMP build and we don't use it anyway so remove
           # flags.append('-Qoption,cpp,--extended_float_type')
         elif bopt == 'g':
-          flags.append('-g')
+          flags.extend(['-g','-O0'])
         elif bopt == 'O':
           flags.append('-g')
           flags.append('-O3')
@@ -69,6 +69,7 @@ class CompilerOptions(config.base.Configure):
             flags.extend(['-MT'])
         elif bopt == 'g':
           flags.extend(['-Z7'])
+          flags.append('-O0')
         elif bopt == 'O':
           flags.extend(['-O3', '-QxW'])
       # Windows Microsoft
@@ -81,6 +82,7 @@ class CompilerOptions(config.base.Configure):
             flags.extend(['-MT','-wd4996'])
         elif bopt == 'g':
           flags.extend(['-Z7'])
+          flags.append('-O0')
         elif bopt == 'O':
           flags.extend(['-O2', '-QxW'])
       # Windows Borland
@@ -90,7 +92,7 @@ class CompilerOptions(config.base.Configure):
     # Generic
     if not len(flags):
       if bopt == 'g':
-        flags.append('-g')
+        flags.extend(['-g','-O0'])
       elif bopt == 'O':
         flags.append('-O')
     if bopt == 'O':
@@ -132,7 +134,7 @@ class CompilerOptions(config.base.Configure):
           flags.extend(['-Wno-unused-but-set-variable'])
       elif bopt in ['g']:
         # -g3 causes an as SEGV on OSX
-        flags.append('-g')
+        flags.extend(['-g','-O0'])
       elif bopt == 'gcov':
         flags.extend(['--coverage','-Og'])
       elif bopt in ['O']:
@@ -147,7 +149,7 @@ class CompilerOptions(config.base.Configure):
       if bopt == '':
         flags.append('-qrtti=dyna')  # support dynamic casts in C++
       elif bopt in ['g']:
-        flags.append('-g')
+        flags.extend(['-g','-O0'])
       elif bopt in ['O']:
         flags.append('-O')
     else:
@@ -156,7 +158,7 @@ class CompilerOptions(config.base.Configure):
         if bopt == '':
           flags.append('-wd1572')
         elif bopt == 'g':
-          flags.append('-g')
+          flags.extend(['-g','-O0'])
         elif bopt == 'O':
           flags.append('-g')
           flags.append('-O3')
@@ -169,6 +171,7 @@ class CompilerOptions(config.base.Configure):
             flags.extend(['-MT','-GR','-EHsc']) # removing GX in favor of EHsc
         elif bopt in ['g']:
           flags.extend(['-Z7'])
+          flags.append('-O0')
         elif bopt in ['O']:
           flags.extend(['-O3', '-QxW'])
       # Windows Microsoft
@@ -180,6 +183,7 @@ class CompilerOptions(config.base.Configure):
             flags.extend(['-MT','-GR','-EHsc']) # removing GX in favor of EHsc
         elif bopt == 'g':
           flags.extend(['-Z7','-Zm200'])
+          flags.append('-O0')
         elif bopt == 'O':
           flags.extend(['-O2','-QxW','-Zm200'])
       # Windows Borland
@@ -189,7 +193,7 @@ class CompilerOptions(config.base.Configure):
     # Generic
     if not len(flags):
       if bopt in ['g']:
-        flags.append('-g')
+        flags.extend(['-g','-O0'])
       elif bopt in ['O']:
         flags.append('-O')
     if bopt == 'O':
@@ -219,7 +223,7 @@ class CompilerOptions(config.base.Configure):
           flags.extend(['-Wno-line-truncation']) # Work around bug in this series, fixed in 4.6: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=42852
       elif bopt == 'g':
         # g77 3.2.3 preprocesses the file into nothing if we give -g3
-        flags.append('-g')
+        flags.extend(['-g','-O0'])
       elif bopt == 'gcov':
         flags.extend(['--coverage','-Og'])
       elif bopt == 'O':
@@ -236,7 +240,7 @@ class CompilerOptions(config.base.Configure):
       # Linux Intel
       if config.setCompilers.Configure.isIntel(compiler, self.log) and not compiler.find('win32fe') >=0:
         if bopt == 'g':
-          flags.append('-g')
+          flags.extend(['-g','-O0'])
         elif bopt == 'O':
           flags.append('-g')
           flags.append('-O3')
@@ -249,7 +253,8 @@ class CompilerOptions(config.base.Configure):
             flags.extend(['-MT'])
         elif bopt == 'g':
           flags.extend(['-Z7'])
-        elif bopt == 'O':
+          flags.append('-O0')
+      elif bopt == 'O':
           flags.extend(['-O3', '-QxW'])
       # Compaq Visual FORTRAN
       elif compiler.find('win32fe f90') >= 0 or compiler.find('win32fe df') >= 0:
@@ -257,12 +262,13 @@ class CompilerOptions(config.base.Configure):
           flags.append('-threads')
         elif bopt == 'g':
           flags.extend(['-debug:full'])
+          flags.append('-O0')
         elif bopt == 'O':
           flags.extend(['-optimize:5', '-fast'])
     # Generic
     if not len(flags):
       if bopt == 'g':
-        flags.append('-g')
+        flags.extend(['-g','-O0'])
       elif bopt == 'O':
         flags.append('-O')
     if bopt == 'O':
