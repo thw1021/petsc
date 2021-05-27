@@ -1,3 +1,4 @@
+#if 0
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
 /*@C
@@ -207,3 +208,4 @@ PetscErrorCode PetscEventQuery(PetscEvent event, PetscBool *idle)
   }
   PetscFunctionReturn(0);
 }
+#endif
