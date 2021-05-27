@@ -46,7 +46,28 @@
    This facilitates using the C version of PETSc from C++ and the C++ version from C.
 */
 #if defined(__cplusplus)
+#if defined(__GNUG__)
+/*
+    Prints C++ functions and methods with their namespaces and/or class name pre-pended
+    - Functions in namespaces will have the namespace preappended as in nameofspace::function()
+    - Class members will have the class name appended as in nameofclass::function()
+    - Templated functions will not include the template as in function()
+    - Classnames with templates with be discarded
+*/
+#include <string>
+static std::string PETSC_PRETTY_FUNCTION(const std::string &prettyFunction,const std::string &Function)
+{
+ size_t locFunName = prettyFunction.find(Function);
+  size_t beginb = prettyFunction.rfind(" ",locFunName) + 1;
+  size_t beging = prettyFunction.rfind(">",locFunName) + 1;
+  size_t begin = (beginb > beging) ? beginb : beging +2 ;
+  size_t end = prettyFunction.find("(",locFunName + Function.length());
+  return prettyFunction.substr(begin,end - begin);
+}
+#  define PETSC_FUNCTION_NAME PETSC_PRETTY_FUNCTION(__PRETTY_FUNCTION__,__FUNCTION__).c_str()
+#else
 #  define PETSC_FUNCTION_NAME PETSC_FUNCTION_NAME_CXX
+#endif
 #else
 #  define PETSC_FUNCTION_NAME PETSC_FUNCTION_NAME_C
 #endif
