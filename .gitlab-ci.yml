@@ -959,6 +959,7 @@ docs-review:
     - .docs
     - .test-basic
   script:
+    - make html BUILDDIR="../public" SPHINXOPTS="-T -E"
     - sphinx-build -T -E -b html -D language=en -j auto . ../public
   environment:
     name: review/$CI_COMMIT_REF_NAME
