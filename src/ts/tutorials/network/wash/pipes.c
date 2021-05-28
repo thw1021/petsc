@@ -1,6 +1,6 @@
 static char help[] = "This example demonstrates DMNetwork. It is used for testing parallel generation of dmnetwork, then redistribute. \n\\n";
 /*
-  Example: mpiexec -n <np> ./pipes1 -ts_max_steps 10
+  Example: mpiexec -n <np> ./pipes -ts_max_steps 10
 */
 
 #include "wash.h"
@@ -311,7 +311,7 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
 {
   PetscErrorCode ierr;
   PetscInt       i,numkeys=1,*blocksize,*numselectedvariable,**selectedvariables,n;
-  IS             isfrom_q,isto,isfrom_h;
+  IS             isfrom_q,isfrom_h;
   Vec            Xto;
   VecScatter     ctx;
   MPI_Comm       comm;
@@ -337,10 +337,9 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
   ierr = VecSet(Xto,0.0);CHKERRQ(ierr);
 
   ierr = VecGetOwnershipRange(Xto,&i,NULL);CHKERRQ(ierr);
-  ierr = ISCreateStride(comm,n,i,1,&isto);CHKERRQ(ierr);
 
   /* 3. Create scatter */
-  ierr = VecScatterCreate(X,isfrom_q,Xto,isto,&ctx);CHKERRQ(ierr);
+  ierr = VecScatterCreate(X,isfrom_q,Xto,NULL,&ctx);CHKERRQ(ierr);
 
   /* 4. Scatter to Xq */
   ierr = VecScatterBegin(ctx,X,Xto,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
@@ -357,7 +356,7 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
   }
   ierr = DMNetworkCreateIS(networkdm,numkeys,&KeyPipe,blocksize,numselectedvariable,selectedvariables,&isfrom_h);CHKERRQ(ierr);
 
-  ierr = VecScatterCreate(X,isfrom_h,Xto,isto,&ctx);CHKERRQ(ierr);
+  ierr = VecScatterCreate(X,isfrom_h,Xto,NULL,&ctx);CHKERRQ(ierr);
   ierr = VecScatterBegin(ctx,X,Xto,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterEnd(ctx,X,Xto,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterDestroy(&ctx);CHKERRQ(ierr);
@@ -371,7 +370,6 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
     ierr = PetscFree(selectedvariables[i]);CHKERRQ(ierr);
   }
   ierr = PetscFree3(blocksize,numselectedvariable,selectedvariables);CHKERRQ(ierr);
-  ierr = ISDestroy(&isto);CHKERRQ(ierr);
   ierr = VecDestroy(&Xto);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -835,48 +833,48 @@ int main(int argc,char ** argv)
    test:
       args: -ts_monitor -case 1 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -options_left no -viewX
       localrunfiles: pOption
-      output_file: output/pipes1_1.out
+      output_file: output/pipes_1.out
 
    test:
       suffix: 2
       nsize: 2
       args: -ts_monitor -case 1 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -viewX
       localrunfiles: pOption
-      output_file: output/pipes1_2.out
+      output_file: output/pipes_2.out
 
    test:
       suffix: 3
       nsize: 2
       args: -ts_monitor -case 0 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -viewX
       localrunfiles: pOption
-      output_file: output/pipes1_3.out
+      output_file: output/pipes_3.out
 
    test:
       suffix: 4
       args: -ts_monitor -case 2 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -options_left no -viewX
       localrunfiles: pOption
-      output_file: output/pipes1_4.out
+      output_file: output/pipes_4.out
 
    test:
       suffix: 5
       nsize: 3
       args: -ts_monitor -case 2 -ts_max_steps 10 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -viewX
       localrunfiles: pOption
-      output_file: output/pipes1_5.out
+      output_file: output/pipes_5.out
 
    test:
       suffix: 6
       nsize: 2
       args: -ts_monitor -case 1 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX
       localrunfiles: pOption
-      output_file: output/pipes1_6.out
+      output_file: output/pipes_6.out
 
    test:
       suffix: 7
       nsize: 2
       args: -ts_monitor -case 2 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -wash_distribute 0 -viewX
       localrunfiles: pOption
-      output_file: output/pipes1_7.out
+      output_file: output/pipes_7.out
 
    test:
       suffix: 8
@@ -884,13 +882,13 @@ int main(int argc,char ** argv)
       requires: parmetis
       args: -ts_monitor -case 2 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type parmetis -options_left no -wash_distribute 1
       localrunfiles: pOption
-      output_file: output/pipes1_8.out
+      output_file: output/pipes_8.out
 
    test:
       suffix: 9
       nsize: 2
       args: -case 0 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -wash_distribute 0 -pipe_view
       localrunfiles: pOption
-      output_file: output/pipes1_9.out
+      output_file: output/pipes_9.out
 
 TEST*/
