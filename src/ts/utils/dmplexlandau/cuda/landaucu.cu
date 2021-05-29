@@ -568,13 +568,10 @@ void __launch_bounds__(256,4) mass_kernel(const PetscInt nip, const PetscInt dim
     PetscInt               nr,nc;
     const LandauIdx *const Idxs = &d_maps->gIdx[elem][fieldA][0];
     for (f = threadIdx.y; f < Nb ; f += blockDim.y) {
-      const PetscInt i = fieldA*Nb + f; /* Element matrix row */
       for (g = threadIdx.x; g < Nb; g += blockDim.x) {
-        const PetscInt j    = fieldA*Nb + g; /* Element matrix column */
-        const PetscInt fOff = i*totDim + j;
         PetscScalar t = 0;
         for (qj = 0 ; qj < Nq ; qj++) {
-          const PetscReal *BJq = &BB[qj*Nb], *DIq = &DD[qj*Nb*dim];
+          const PetscReal *BJq = &BB[qj*Nb];
           const PetscInt jpidx = qj + elem * Nq;
           t += BJq[f] * d_mass_w[jpidx]*shift * BJq[g];
         }
