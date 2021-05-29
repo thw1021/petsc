@@ -67,5 +67,7 @@ class Configure(config.package.GNUPackage):
       return self.defaultInstallDir
     installDir = config.package.GNUPackage.Install(self)
     self.updateCompilers(installDir,'mpicc','mpicxx','mpif77','mpif90')
+    if self.cuda.found:
+      self.cuda.configureLibrary()
     return installDir
 
