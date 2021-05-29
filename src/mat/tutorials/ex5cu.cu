@@ -14,6 +14,7 @@ static char help[] = "Test of CUDA matrix assemble with simple matrix.\n\n";
 #include <petsccublas.h>
 #include <assert.h>
 
+#include <petscaijdevice.h>
 __global__
 void assemble_on_gpu(PetscSplitCSRDataStructure d_mat, PetscInt start, PetscInt end, PetscInt Ne, PetscMPIInt rank)
 {
@@ -62,8 +63,8 @@ int main(int argc,char **args)
   ierr = PetscOptionsGetBool(NULL,NULL, "-testmpiseq", &testmpiseq, NULL);CHKERRQ(ierr);
   if (nz<3)   nz=3;
   if (nz>N+1) nz=N+1;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   ierr = PetscLogEventRegister("GPU operator", MAT_CLASSID, &event);CHKERRQ(ierr);
   ierr = MatCreateAIJCUSPARSE(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,N,N,nz,NULL,nz-1,NULL,&A);CHKERRQ(ierr);

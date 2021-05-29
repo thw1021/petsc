@@ -259,6 +259,7 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseCsr2CscAlg_t         csr2cscAlg;        /* algorithms can be selected from command line options */
   cusparseSpMVAlg_t            spmvAlg;
   cusparseSpMMAlg_t            spmmAlg;
+  THRUSTINTARRAY               *csr2csc_i;
  #endif
   PetscSplitCSRDataStructure   deviceMat;       /* Matrix on device for, eg, assembly */
   THRUSTINTARRAY               *cooPerm;

@@ -66,6 +66,11 @@ class Configure(config.package.GNUPackage):
     if 'package-prefix-hash' in self.argDB and self.argDB['package-prefix-hash'] == 'reuse':
       return self.defaultInstallDir
     installDir = config.package.GNUPackage.Install(self)
+    print("first"+str(self.cuda))
     self.updateCompilers(installDir,'mpicc','mpicxx','mpif77','mpif90')
+    print("after update compilers"+str(self.cuda))
+    if self.cuda.found:
+      self.cuda.configureLibrary()
+    print("after new configure of cuda"+str(self.cuda))
     return installDir
 
