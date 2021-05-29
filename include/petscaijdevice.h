@@ -3,35 +3,38 @@
 
 #include <petscmat.h>
 
-#define PetscCSRDataStructure_(datatype) \
-  int              *i;                   \
-  int              *j;                   \
-  datatype         *a;                   \
-  PetscInt         n;                    \
+#define CSRDataStructure(datatype)  \
+  int         *i; \
+  int         *j; \
+  datatype    *a;\
+  PetscInt    n;\
+  PetscInt    ignorezeroentries;
 
 typedef struct {
-  PetscCSRDataStructure_(PetscScalar)
+  CSRDataStructure(PetscScalar)
 } PetscCSRDataStructure;
 
 struct _n_SplitCSRMat {
   PetscInt              cstart,cend,rstart,rend;
   PetscCSRDataStructure diag,offdiag;
-  int                   *colmap;
-  /* global number of columns in matrix and PETSc global rank; used for error checking */
-  PetscMPIInt rank;
-  PetscInt    N;
+  PetscInt              *colmap,N;
+  PetscMPIInt           rank;
 };
 
 /* no atomicAdd for complex numbers */
-#if defined(PETSC_USE_COMPLEX)
-#define PetscAtomicAdd(a,b) {       \
-  PetscReal *_a = (PetscReal*)(a);  \
-  PetscReal *_b = (PetscReal*)&(b); \
-  atomicAdd(_a  ,_b[0]);            \
-  atomicAdd(_a+1,_b[1]);            \
-}
+#if defined(__CUDA_ARCH__)
+  #if defined(PETSC_USE_COMPLEX)
+    #define PetscAtomicAdd(a,b) {       \
+      PetscReal *_a = (PetscReal*)(a);  \
+      PetscReal *_b = (PetscReal*)&(b); \
+      atomicAdd(_a  ,_b[0]);            \
+      atomicAdd(_a+1,_b[1]);            \
+  }
+  #else
+    #define PetscAtomicAdd(a,b) atomicAdd(a,b)
+  #endif
 #else
-#define PetscAtomicAdd(a,b) atomicAdd(a,b)
+#define PetscAtomicAdd(a,b) *(a) += b
 #endif
 
 #define MatSetValues_SeqAIJ_A_Private(row,col,value,addv)              \
@@ -93,9 +96,31 @@ struct _n_SplitCSRMat {
 #define SETERR { return PETSC_ERR_ARG_OUTOFRANGE; }
 #endif
 
-#if defined(PETSC_HAVE_CUDA)
-static __device__
+#if defined(__CUDA_ARCH__)
+__device__
+#elif defined(KOKKOS_INLINE_FUNCTION)
+KOKKOS_INLINE_FUNCTION
+#else
+static
 #endif
+/*@C
+       MatSetValuesDevice - sets a set of values into a matrix, this may be called by CUDA or KOKKOS kernels
+
+    Input Parameters:
++   d_mat - an object obtained with MatCUSPARSEGetDeviceMatWrite() or MatKokkosGetDeviceMatWrite()
+.   m - the number of rows to insert or add to
+.   im - the rows to insert or add to
+.   n - number of columns to insert or add to
+.   in - the columns to insert or add to
+.   v - the values to insert or add to the matrix (treated as a  by n row oriented dense array
++   is - either INSERT_VALUES or ADD_VALUES
+
+    Notes:
+      Any row or column indices that are outside the bounds of the matrix on the rank are discarded
+
+.seealso: MatSetValues(), MatCreate(), MatCreateDenseCUDA(), MatCreateAIJCUSPARSE(), MatKokkosGetDeviceMatWrite(),
+          MatCUSPARSEGetDeviceMatWrite()
+@*/
 PetscErrorCode MatSetValuesDevice(PetscSplitCSRDataStructure d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is)
 {
   MatScalar       value;
@@ -134,7 +159,7 @@ PetscErrorCode MatSetValuesDevice(PetscSplitCSRDataStructure d_mat, PetscInt m,c
         } else if (in[j] < 0) {
           continue;
         } else if (in[j] >= N) {
-          SETERR;
+          continue;
         } else {
           col = d_mat->colmap[in[j]] - 1;
           if (col < 0) SETERR;

@@ -80,7 +80,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSEMult
 static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Destroy(Mat_SeqAIJCUSPARSETriFactors**);
 static PetscErrorCode MatSeqAIJCUSPARSE_Destroy(Mat_SeqAIJCUSPARSE**);
 
-static PetscErrorCode MatSeqAIJCUSPARSECopyToGPU(Mat);
+PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSECopyToGPU(Mat);
 static PetscErrorCode MatSeqAIJCUSPARSECopyFromGPU(Mat);
 static PetscErrorCode MatSeqAIJCUSPARSEInvalidateTranspose(Mat,PetscBool);
 
@@ -3207,9 +3207,9 @@ static PetscErrorCode MatScale_SeqAIJCUSPARSE(Mat Y,PetscScalar a)
 
 static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
 {
-  PetscErrorCode             ierr;
-  PetscBool                  both = PETSC_FALSE;
-  Mat_SeqAIJ                 *a = (Mat_SeqAIJ*)A->data;
+  PetscErrorCode ierr;
+  PetscBool      both = PETSC_FALSE;
+  Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
 
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) {
@@ -3233,7 +3233,6 @@ static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
   ierr = MatSeqAIJInvalidateDiagonal(A);CHKERRQ(ierr);
   if (both) A->offloadmask = PETSC_OFFLOAD_BOTH;
   else A->offloadmask = PETSC_OFFLOAD_CPU;
-
   PetscFunctionReturn(0);
 }
 
@@ -3285,33 +3284,6 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
   }
   A->boundtocpu = flg;
   a->inode.use = flg;
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
-{
-  PetscErrorCode ierr;
-  PetscBool      both = PETSC_FALSE;
-
-  PetscFunctionBegin;
-  if (A->factortype == MAT_FACTOR_NONE) {
-    Mat_SeqAIJCUSPARSE *spptr = (Mat_SeqAIJCUSPARSE*)A->spptr;
-    if (spptr->mat) {
-      CsrMatrix* matrix = (CsrMatrix*)spptr->mat->mat;
-      if (matrix->values) {
-        both = PETSC_TRUE;
-        thrust::fill(thrust::device,matrix->values->begin(),matrix->values->end(),0.);
-      }
-    }
-    if (spptr->matTranspose) {
-      CsrMatrix* matrix = (CsrMatrix*)spptr->matTranspose->mat;
-      if (matrix->values) {
-        thrust::fill(thrust::device,matrix->values->begin(),matrix->values->end(),0.);
-      }
-    }
-  }
-  ierr = MatZeroEntries_SeqAIJ(A);CHKERRQ(ierr);
-  if (both) A->offloadmask = PETSC_OFFLOAD_BOTH;
   PetscFunctionReturn(0);
 }
 

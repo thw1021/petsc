@@ -1,5 +1,5 @@
-#if !defined(__CUSPARSEMATIMPL)
-#define __CUSPARSEMATIMPL
+#if !defined(CUSPARSEMATIMPL)
+#define CUSPARSEMATIMPL
 
 #include <petscpkg_version.h>
 #include <petsc/private/cudavecimpl.h>
@@ -260,6 +260,7 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseSpMVAlg_t            spmvAlg;
   cusparseSpMMAlg_t            spmmAlg;
  #endif
+  THRUSTINTARRAY               *csr2csc_i;
   PetscSplitCSRDataStructure   deviceMat;       /* Matrix on device for, eg, assembly */
   THRUSTINTARRAY               *cooPerm;
   THRUSTINTARRAY               *cooPerm_a;

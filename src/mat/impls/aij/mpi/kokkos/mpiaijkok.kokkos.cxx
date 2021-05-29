@@ -228,7 +228,7 @@ PetscErrorCode  MatCreateAIJKokkos(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt 
 }
 
 // get GPU pointer to stripped down Mat. For both Seq and MPI Mat.
-PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
+PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
 {
   #if defined(PETSC_USE_CTABLE)
   SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Device metadata does not support ctable (--with-ctable=0)");
@@ -236,7 +236,7 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
   PetscMPIInt                size,rank;
   MPI_Comm                   comm;
   PetscErrorCode             ierr;
-  PetscSplitCSRDataStructure *d_mat=NULL;
+  PetscSplitCSRDataStructure d_mat=NULL;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
@@ -259,12 +259,13 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
     // SETERRQ(comm,PETSC_ERR_SUP,"Need assemble matrix");
   }
   if (!d_mat) {
-    PetscSplitCSRDataStructure  h_mat; /* host container */
-    Mat_SeqAIJKokkos            *aijkokA;
-    Mat_SeqAIJ                  *jaca;
-    PetscInt                    n = A->rmap->n, nnz;
-    Mat                         Amat;
-    // create and copy
+    struct _n_SplitCSRMat h_mat; /* host container */
+    Mat_SeqAIJKokkos      *aijkokA;
+    Mat_SeqAIJ            *jaca;
+    PetscInt              n = A->rmap->n, nnz;
+    Mat                   Amat;
+
+    /* create and copy h_mat */
     ierr = PetscInfo(A,"Create device matrix in Kokkos\n");CHKERRQ(ierr);
     if (size == 1) {
       Amat = A;
@@ -281,6 +282,7 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
       Mat_SeqAIJ       *jacb = (Mat_SeqAIJ*)aij->B->data;
       PetscInt         ii;
       Mat_SeqAIJKokkos *aijkokB;
+
       Amat = aij->A;
       aijkokA = static_cast<Mat_SeqAIJKokkos*>(aij->A->spptr);
       aijkokB = static_cast<Mat_SeqAIJKokkos*>(aij->B->spptr);
@@ -330,9 +332,8 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure **B)
     h_mat.diag.n = n;
     h_mat.diag.ignorezeroentries = jaca->ignorezeroentries;
     ierr = MPI_Comm_rank(comm,&h_mat.rank);CHKERRMPI(ierr);
-    if (jaca->compressedrow.use) {
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"A does not suppport compressed row (todo)");
-    } else {
+    if (jaca->compressedrow.use) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"A does not suppport compressed row (todo)");
+    else {
       h_mat.diag.i = (PetscInt*)aijkokA->i_d.data();
     }
     //h_mat.diag.j = aj;
