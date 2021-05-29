@@ -564,6 +564,9 @@ void __launch_bounds__(256,4) mass_kernel(const PetscInt nip, const PetscInt dim
 
   /* FE mass matrix construction */
   for (fieldA = 0; fieldA < Nf; fieldA++) {
+    PetscScalar            vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
+    PetscInt               nr,nc;
+    const LandauIdx *const Idxs = &d_maps->gIdx[elem][fieldA][0];
     for (f = threadIdx.y; f < Nb ; f += blockDim.y) {
       const PetscInt i = fieldA*Nb + f; /* Element matrix row */
       for (g = threadIdx.x; g < Nb; g += blockDim.x) {
@@ -578,9 +581,6 @@ void __launch_bounds__(256,4) mass_kernel(const PetscInt nip, const PetscInt dim
         s_fieldMats[f][g] = t;
       }
     }
-    PetscScalar vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
-    PetscInt    nr,nc;
-    const LandauIdx *const Idxs = &d_maps->gIdx[elem][fieldA][0];
     __syncthreads();
     if (threadIdx.y == 0) {
       for (f = threadIdx.x; f < Nb ; f += blockDim.x) {
@@ -752,11 +752,11 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
                                                       d_mass_w, shift,
                                                       d_ierr);
     } else {
-      mass_kernel<<<numGCells,dimBlock,ii*szf>>>(nip,dim,totDim,Nf,Nb,
-                                                 d_BB, d_DD,
-                                                 d_maps, d_mat,
-                                                 d_mass_w, shift,
-                                                 d_ierr);
+      mass_kernel<<<numGCells,dimBlock>>>(nip,dim,totDim,Nf,Nb,
+                                          d_BB, d_DD,
+                                          d_maps, d_mat,
+                                          d_mass_w, shift,
+                                          d_ierr);
     }
 
     CHECK_LAUNCH_ERROR(); // has sync
