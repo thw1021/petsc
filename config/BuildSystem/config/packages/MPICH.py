@@ -36,6 +36,8 @@ class Configure(config.package.GNUPackage):
       self.logWrite('Reusing package prefix install of '+self.defaultInstallDir+' for MPICH')
       self.installDir = self.defaultInstallDir
       self.updateCompilers(self.installDir,'mpicc','mpicxx','mpif77','mpif90')
+      if self.cuda.found:
+        self.cuda.configureLibrary()
       return self.installDir
     if self.cuda.found:
       self.logPrintBox('***** WARNING: CUDA enabled! Its best to use --download-openmpi instead of --download-mpich as it provides CUDA enabled MPI! ****')
@@ -78,6 +80,8 @@ class Configure(config.package.GNUPackage):
       return self.defaultInstallDir
     installDir = config.package.GNUPackage.Install(self)
     self.updateCompilers(installDir,'mpicc','mpicxx','mpif77','mpif90')
+    if self.cuda.found:
+        self.cuda.configureLibrary()
     return installDir
 
   def configure(self):

@@ -56,6 +56,8 @@ class Configure(config.package.GNUPackage):
       self.logWrite('Reusing package prefix install of '+self.defaultInstallDir+' for OpenMPI')
       self.installDir = self.defaultInstallDir
       self.updateCompilers(self.installDir,'mpicc','mpicxx','mpif77','mpif90')
+      if self.cuda.found:
+        self.cuda.configureLibrary()
       return self.installDir
     if self.argDB['download-'+self.downloadname.lower()]:
       return self.getInstallDir()
@@ -67,5 +69,7 @@ class Configure(config.package.GNUPackage):
       return self.defaultInstallDir
     installDir = config.package.GNUPackage.Install(self)
     self.updateCompilers(installDir,'mpicc','mpicxx','mpif77','mpif90')
+    if self.cuda.found:
+      self.cuda.configureLibrary()
     return installDir
 
