@@ -559,8 +559,7 @@ extern "C"  {
                           vals[q*nc + d] = row_scale[q]*col_scale[d]*t;
                         }
                       }
-                      MatSetValuesDevice(d_mat,nr,rows,nc,cols,vals,ADD_VALUES,&ierr);
-                      if (ierr) return;
+                      MatSetValuesDevice(d_mat,nr,rows,nc,cols,vals,ADD_VALUES);
                     }
                   }
                 });
