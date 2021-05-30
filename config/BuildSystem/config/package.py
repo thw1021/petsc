@@ -1640,7 +1640,7 @@ class GNUPackage(Package):
         raise RuntimeError('Error running libtoolize on ' + self.PACKAGE+': '+str(e))
       try:
         self.logPrintBox('Running autoreconf on ' +self.PACKAGE+'; this may take several minutes')
-        output,err,ret  = config.base.Configure.executeShellCommand(self.programs.autoreconf+' --force --install', cwd=self.packageDir, timeout=200, log = self.log)
+        output,err,ret  = config.base.Configure.executeShellCommand([self.programs.autoreconf, '--force', '--install'], cwd=self.packageDir, timeout=200, log = self.log)
         if ret:
           raise RuntimeError('Error in autoreconf: ' + output+err)
       except RuntimeError as e:
