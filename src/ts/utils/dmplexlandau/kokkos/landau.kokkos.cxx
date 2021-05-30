@@ -237,7 +237,7 @@ extern "C"  {
     using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
     using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
     PetscErrorCode    ierr;
-    PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,global_elem_mat_sz,nip;
+    PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,global_elem_mat_sz,nip,nfaces=0;
     PetscDS           prob;
     LandauCtx         *ctx;
     PetscReal         *d_Eq_m=NULL;
@@ -292,6 +292,7 @@ extern "C"  {
         ierr = PetscContainerGetPointer(container, (void **) &h_maps);CHKERRQ(ierr);
         if (h_maps->data) {
           d_maps = h_maps->data;
+          nfaces = h_maps->num_face;
         } else {
           SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
         }
@@ -312,7 +313,7 @@ extern "C"  {
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     Kokkos::View<PetscScalar**, Kokkos::LayoutRight> d_elem_mats("element matrices", global_elem_mat_sz, totDim*totDim);
     if (a_IPf || a_xarray) { // Jacobian
-      const int num_face = d_maps ? d_maps->num_face : 0;
+      const int num_face = nfaces;
       const int scr_bytes = 2*(g2_scr_t::shmem_size(dim,Nf,Nq) + g3_scr_t::shmem_size(dim,dim,Nf,Nq)) + fieldMats_scr_t::shmem_size(Nb,Nb) + idx_scr_t::shmem_size(Nb,num_face) + scale_scr_t::shmem_size(Nb,num_face);
 #if defined(LANDAU_LAYOUT_LEFT)
       Kokkos::View<PetscReal***, Kokkos::LayoutLeft >                               d_fdf_k("df", dim+1, Nf, (a_IPf || a_xarray) ? nip : 0);
@@ -398,7 +399,7 @@ extern "C"  {
 #else
       ierr = PetscLogFlops(nip*(PetscLogDouble)((nip*(11*Nf+ 4*dim*dim) + 6*Nf*dim*dim*dim + 10*Nf*dim*dim + 4*Nf*dim + Nb*Nf*Nb*Nq*dim*dim*5)));CHKERRQ(ierr);
 #endif
-      ierr = PetscInfo4(plex, "Jacobian shared memory size: %d bytes in level %d conc=%D team size=%D\n",scr_bytes,KOKKOS_SHARED_LEVEL,conc,team_size);CHKERRQ(ierr);
+      ierr = PetscInfo5(plex, "Jacobian shared memory size: %d bytes in level %d conc=%D team size=%D #face=%D\n",scr_bytes,KOKKOS_SHARED_LEVEL,conc,team_size,nfaces);CHKERRQ(ierr);
       Kokkos::parallel_for("Landau Jacobian", Kokkos::TeamPolicy<>(numCells, team_size, /*Kokkos::AUTO*/ 16).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
           const PetscInt  elem = team.league_rank();
           g2_scr_t        g2(team.team_scratch(KOKKOS_SHARED_LEVEL),dim,Nf,Nq);
@@ -499,11 +500,8 @@ extern "C"  {
             for (fieldA = 0; fieldA < Nf; fieldA++) {
               /* assemble */
               Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nb), [=] (int f) {
-                  const PetscInt i = fieldA*Nb + f; /* Element matrix row */
                   Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,Nb), [=] (int g) {
-                      const PetscInt j = fieldA*Nb + g; /* Element matrix column */
-                      const PetscInt fOff = i*totDim + j;
-                      PetscScalar t = global_elem_mat_sz ? d_elem_mats(elem,fOff) : 0;
+                      PetscScalar t = 0;
                       for (int qj = 0 ; qj < Nq ; qj++) { // look at others integration points
                         const PetscReal *BJq = &d_BB[qj*Nb], *DIq = &d_DD[qj*Nb*dim];
                         for (int d = 0; d < dim; ++d) {
@@ -513,8 +511,10 @@ extern "C"  {
                           }
                         }
                       }
-                      if (global_elem_mat_sz) d_elem_mats(elem,fOff) = t; // can set this because local element matrix[fOff]
-                      else s_fieldMats(f,g) = t;
+                      if (global_elem_mat_sz) {
+                        const PetscInt fOff = (fieldA*Nb + f)*totDim + fieldA*Nb + g;
+                        d_elem_mats(elem,fOff) = t;
+                      } else s_fieldMats(f,g) = t;
                     });
                 });
               if (!global_elem_mat_sz) {
@@ -527,7 +527,7 @@ extern "C"  {
                       s_scale(f,0) = 1.;
                     } else {
                       idx = -idx - 1;
-                      for (q = 0; q < d_maps->num_face; q++) {
+                      for (q = 0; q < nfaces; q++) {
                         s_idx(f,q) = d_maps->c_maps[idx][q].gid;
                         s_scale(f,q) = d_maps->c_maps[idx][q].scale;
                       }
@@ -539,7 +539,7 @@ extern "C"  {
                     if (idx >= 0) {
                       nr = 1;
                     } else {
-                      nr = d_maps->num_face;
+                      nr = nfaces;
                     }
                     Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,Nb), [=] (int g) {
                         PetscScalar     vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
@@ -548,7 +548,7 @@ extern "C"  {
                         if (idx >= 0) {
                           nc = 1;
                         } else {
-                          nc = d_maps->num_face;
+                          nc = nfaces;
                         }
                         for (q = 0; q < nr; q++) {
                           for (d = 0; d < nc; d++) {
@@ -565,7 +565,7 @@ extern "C"  {
         });
       ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
     } else { // mass
-      int scr_bytes = fieldMats_scr_t::shmem_size(Nq,Nq) + idx_scr_t::shmem_size(Nb,d_maps->num_face) + scale_scr_t::shmem_size(Nb,d_maps->num_face);
+      int scr_bytes = fieldMats_scr_t::shmem_size(Nq,Nq) + idx_scr_t::shmem_size(Nb,nfaces) + scale_scr_t::shmem_size(Nb,nfaces);
       ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
       ierr = PetscLogGpuFlops(nip*(PetscLogDouble)(Nb*Nf*Nb*Nq*4));CHKERRQ(ierr);
@@ -573,14 +573,13 @@ extern "C"  {
 #else
       ierr = PetscLogFlops(nip*(PetscLogDouble)(Nb*Nf*Nb*Nq*4));CHKERRQ(ierr);
 #endif
-      ierr = PetscInfo4(plex, "Mass shared memory size: %d bytes in level %d conc=%D team size=%D\n",scr_bytes,KOKKOS_SHARED_LEVEL,conc,team_size);CHKERRQ(ierr);
+      ierr = PetscInfo5(plex, "Mass shared memory size: %d bytes in level %d conc=%D team size=%D #face=%D\n",scr_bytes,KOKKOS_SHARED_LEVEL,conc,team_size,nfaces);CHKERRQ(ierr);
       Kokkos::parallel_for("Landau mass", Kokkos::TeamPolicy<>(numCells, team_size, /*Kokkos::AUTO*/ 16).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
           const PetscInt  elem = team.league_rank();
           fieldMats_scr_t s_fieldMats(team.team_scratch(KOKKOS_SHARED_LEVEL),Nb,Nb);
-          idx_scr_t       s_idx(team.team_scratch(KOKKOS_SHARED_LEVEL),Nb,d_maps->num_face);
-          scale_scr_t     s_scale(team.team_scratch(KOKKOS_SHARED_LEVEL),Nb,d_maps->num_face);
+          idx_scr_t       s_idx(team.team_scratch(KOKKOS_SHARED_LEVEL),Nb,nfaces);
+          scale_scr_t     s_scale(team.team_scratch(KOKKOS_SHARED_LEVEL),Nb,nfaces);
           for (int fieldA = 0; fieldA < Nf; fieldA++) {
-            const LandauIdx *const Idxs = &d_maps->gIdx[elem][fieldA][0];
             /* assemble */
             Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nb), [=] (int f) {
                 Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,Nb), [=] (int g) {
@@ -590,49 +589,55 @@ extern "C"  {
                       const PetscInt jpidx = qj + elem * Nq;
                       t += BJq[f] * d_mass_w_k(jpidx) * shift * BJq[g];
                     }
-                    s_fieldMats(f,g) = t;
+                    if (global_elem_mat_sz) {
+                      const PetscInt fOff = (fieldA*Nb + f)*totDim + fieldA*Nb + g;
+                      d_elem_mats(elem,fOff) = t;
+                    } else s_fieldMats(f,g) = t;
                   });
               });
-            team.team_barrier();
-            Kokkos::parallel_for(Kokkos::TeamVectorRange(team,0,Nb), [=] (int f) {
-                PetscInt q,idx = Idxs[f];
-                if (idx >= 0) {
-                  s_idx(f,0) = idx;
-                  s_scale(f,0) = 1.;
-                } else {
-                  idx = -idx - 1;
-                  for (q = 0; q < d_maps->num_face; q++) {
-                    s_idx(f,q) = d_maps->c_maps[idx][q].gid;
-                    s_scale(f,q) = d_maps->c_maps[idx][q].scale;
+            if (!global_elem_mat_sz) {
+              const LandauIdx *const Idxs = &d_maps->gIdx[elem][fieldA][0];
+              team.team_barrier(); // needed ????
+              Kokkos::parallel_for(Kokkos::TeamVectorRange(team,0,Nb), [=] (int f) {
+                  PetscInt q,idx = Idxs[f];
+                  if (idx >= 0) {
+                    s_idx(f,0) = idx;
+                    s_scale(f,0) = 1.;
+                  } else {
+                    idx = -idx - 1;
+                    for (q = 0; q < nfaces; q++) {
+                      s_idx(f,q) = d_maps->c_maps[idx][q].gid;
+                      s_scale(f,q) = d_maps->c_maps[idx][q].scale;
+                    }
                   }
-                }
-              });
-            team.team_barrier();
-            Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nb), [=] (int f) {
-                PetscInt nr,idx = Idxs[f];
-                if (idx >= 0) {
-                  nr = 1;
-                } else {
-                  nr = d_maps->num_face;
-                }
-                Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,Nb), [=] (int g) {
-                    PetscScalar vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
-                    PetscInt    q,d,nc,idx = Idxs[g];
-                    PetscErrorCode  ierr = 0;
-                    if (idx >= 0) {
-                      nc = 1;
-                    } else {
-                      nc = d_maps->num_face;
-                    }
-                    for (q = 0; q < nr; q++) {
-                      for (d = 0; d < nc; d++) {
-                        vals[q*nc + d] = s_scale(f,q)*s_scale(g,d)*s_fieldMats(f,g);
+                });
+              team.team_barrier();
+              Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nb), [=] (int f) {
+                  PetscInt nr,idx = Idxs[f];
+                  if (idx >= 0) {
+                    nr = 1;
+                  } else {
+                    nr = nfaces;
+                  }
+                  Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,Nb), [=] (int g) {
+                      PetscScalar vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
+                      PetscInt    q,d,nc,idx = Idxs[g];
+                      PetscErrorCode  ierr = 0;
+                      if (idx >= 0) {
+                        nc = 1;
+                      } else {
+                        nc = nfaces;
                       }
-                    }
-                    MatSetValuesDevice(d_mat,nr,&s_idx(f,0),nc,&s_idx(g,0),vals,ADD_VALUES,&ierr);
-                    if (ierr) return;
-                  });
-              });
+                      for (q = 0; q < nr; q++) {
+                        for (d = 0; d < nc; d++) {
+                          vals[q*nc + d] = s_scale(f,q)*s_scale(g,d)*s_fieldMats(f,g);
+                        }
+                      }
+                      MatSetValuesDevice(d_mat,nr,&s_idx(f,0),nc,&s_idx(g,0),vals,ADD_VALUES,&ierr);
+                      if (ierr) return;
+                    });
+                });
+            }
           }
         });
       ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
