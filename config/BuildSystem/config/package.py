@@ -1633,7 +1633,7 @@ class GNUPackage(Package):
         raise RuntimeError('libtoolize required for ' + self.PACKAGE+' not found! Use your package manager to install libtool')
       try:
         self.logPrintBox('Running libtoolize on ' +self.PACKAGE+'; this may take several minutes')
-        output,err,ret  = config.base.Configure.executeShellCommand(self.programs.libtoolize+' --install ', cwd=self.packageDir, timeout=100, log=self.log)
+        output,err,ret  = config.base.Configure.executeShellCommand([self.programs.libtoolize, '--install'], cwd=self.packageDir, timeout=100, log=self.log)
         if ret:
           raise RuntimeError('Error in libtoolize: ' + output+err)
       except RuntimeError as e:
