@@ -1,4 +1,29 @@
 #include "contextcuda.hpp" /*I "petscdevice.h" I*/
+#include <stack>
+
+
+#if defined(SETERRXX)
+/* this shouldn't exist anyways, but there are certain .seealso's that reference this
+   phantom macro so we guard just in case */
+#error "SETERRX already defined"
+#else
+/*
+  Not really kosher to throw an "exception" in a dtor since we may inadvertently
+  clobber another petsc error on the way. Instead we build everything as if we were
+  about to burn the house down __except__ throw the match.
+*/
+#define SETERRXX(comm,ierr,s) do {                                      \
+    PetscBool      _finalized_xx_;                                      \
+    PetscErrorCode _ierr_xx_ = reinterpret_cast<PetscErrorCode>(ierr);  \
+    _ierr_xx_ = PetscFinalized(&_finalized_xx_);CHKERRQ(_ierr_xx_);     \
+    if (_finalized_xx_) {                                               \
+      /* were in deep trouble now */                                    \
+      printf(s);                                                        \
+    } else {                                                            \
+      _ierr_xx_ = PetscError(comm,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr,PETSC_ERROR_INITIAL,s);CHKERRCONTINUE(_ierr_xx_); \
+    }                                                                   \
+  } while (0);
+#endif
 
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextCreateCUBLASHandle_Internal(cublasHandle_t *handle)
 {
@@ -18,63 +43,164 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextCreateCUBLASHandle_Internal
   PetscFunctionReturn(0);
 }
 
-/*
-  TODO: the pool can be dynamically managed, however this requires some sort of pool
-  manager, since you can't realloc the array of context pointers unless __ALL__ are
-  checked back in.
+static PetscBool                      setupCublasHandles   = PETSC_FALSE;
+static PetscBool                      setupCusolverHandles = PETSC_FALSE;
+static std::stack<cublasHandle_t>     cublasHandleStack;
+static std::stack<cusolverDnHandle_t> cusolverHandleStack;
 
-  One idea I had would be to have a set of "linked arrays" which allocate n contexts at a
-  time but have a "next" member such that they can act as linked lists. Once all members
-  of a particular link in the chain are checked back in, they can merge previous links in.
-*/
-static const PetscInt     numHandles = 64;
-static PetscBool          cublasHandleOwned[numHandles],cusolverHandleOwned[numHandles];
-static cublasHandle_t     cublasV2HandleList[numHandles];
-static cusolverDnHandle_t cusolverDnHandlesList[numHandles];
+/* allow getting around nodiscard */
+template <typename T> void discard(const T&) {}
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetCUBLASHandle_Internal(cublasHandle_t *handle, PetscInt *handleId)
+template <typename handleT>
+struct handleStack {
+private:
+  PetscBool           _registered;
+  std::stack<handleT> _stack;
+
+  [[nodiscard]] inline PetscErrorCode _finalize(void)
+  {
+    PetscFunctionBegin;
+    try {
+      while (!this->_stack.empty()) {
+        cublasStatus_t cberr;
+        cublasHandle_t handle = this->_stack.top();
+
+        cberr = cublasDestroy(handle);CHKERRCUBLAS(cberr);
+        this->_stack.pop();
+      }
+    } catch (std::exception const &ex) {
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error finalizing handles: %s",ex.what());
+    }
+    this->_registered = PETSC_FALSE;
+    PetscFunctionReturn(0);
+  }
+
+public:
+  handleStack() : _registered(PETSC_FALSE) noexcept {}
+
+  ~handleStack() noexcept
+  {
+    PetscErrorCode ierr;
+
+    if (PetscUnlikelyDebug(this->_registered)) SETERRXX(PETSC_COM_SELF,PETSC_ERR_PLIB,"stack destructor called before PetscFinalize()");
+    discard(this->_finalize());
+  }
+
+  /* better pop semantics */
+  [[nodiscard]] inline PetscErrorCode pop(handleT &handle)
+  {
+    PetscFunctionBegin;
+    if (!this->_registered) {
+      PetscErrorCode ierr;
+      ierr = PetscRegisterFinalize(this->_finalize);CHKERRQ(ierr);
+      this->_registered = PETSC_TRUE;
+    }
+    try {
+      handle = this->_stack.top();
+      this->_stack.pop();
+    } catch (std::exception const &ex) {
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error popping handle: %s",ex.what());
+    }
+    PetscFunctionReturn(0);
+  }
+
+  [[nodiscard]] inline PetscErrorCode push(handleT &&handle)
+  {
+    PetscFunctionBegin;
+    try {
+      _stack.push(handle);
+    } catch (std::exception const &ex) {
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error pushing handle: %s",ex.what());
+    }
+    PetscFunctionReturn(0);
+  }
+
+  [[nodiscard]] inline PetscErrorCode push(const handleT &handle)
+  {
+    PetscFunctionBegin;
+    try {
+      _stack.push(handle);
+    } catch (std::exception const &ex) {
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error pushing handle: %s",ex.what());
+    }
+    PetscFunctionReturn(0);
+  }
+};
+
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyCUSOLVERHandles_Internal(void)
 {
   PetscFunctionBegin;
-  PetscValidPointer(handle,1);
-  PetscValidIntPointer(handleId,2);
-  if (PetscUnlikelyDebug(*handleId != PETSC_DEFAULT || *handle)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Trying to get cuBLAS handle for object which seeming has already checked out a handle with ID %D",*handleId);
-  *handle   = NULL;
-  *handleId = PETSC_DEFAULT;
-  for (PetscInt i = 0; i < numHandles; ++i) {
-    if (!cublasHandledOwned[i]) {
-      /* handle isn't currently owned by anyone, first check it exists though */
-      if (!cublasV2Handlelist[i]) {
-	PetscErrorCode ierr;
-        /* doesn't exist, initialize it */
-        ierr = PetscDeviceContextCreateCUBLASHandle_Internal(cublasV2Handlelist+i);CHKERRQ(ierr);
-      }
-      /* pass the handle back and log the fact that it's checked out */
-      *handle   = cublasV2Handlelist[i];
-      *handleId = i;
-      cublasHandledOwned[i] = PETSC_TRUE;
-      break;
+  try {
+    while (!cublasHandleStack.empty()) {
+      cusolverStatus_t   cserr;
+      cusolverDnHandle_t handle = cusolverHandleStack.top();
+
+      cserr = cusolverDnDestroy(handle);CHKERRCUSOLVER(cserr);
+      cusolverHandleStack.pop();
+    }
+  } catch (std::exception const &ex) {
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error finalizing cuSolver handles: %s",ex.what());
+  }
+  setupCusolverHandles = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyCUBLASHandles_Internal(void)
+{
+  PetscFunctionBegin;
+  try {
+    while (!cublasHandleStack.empty()) {
+      cublasStatus_t cberr;
+      cublasHandle_t handle = cublasHandleStack.top();
+
+      cberr = cublasDestroy(handle);CHKERRCUBLAS(cberr);
+      cublasHandleStack.pop();
+    }
+  } catch (std::exception const &ex) {
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error finalizing cuBLAS handles: %s",ex.what());
+  }
+  setupCublasHandles = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextAcquireCUBLASHandle_Internal(cublasHandle_t *handle)
+{
+  PetscFunctionBegin;
+  if (!setupCublasHandles) {
+    ierr = PetscRegisterFinalize(PetscDeviceContextDestroyCUBLASHandles_Internal);CHKERRQ(ierr);
+    setupCublasHandles = PETSC_TRUE;
+  }
+  if (cublasHandleStack.empty()) {
+    PetscErrorCode ierr;
+    /* stack is empty, need to create a handle */
+    ierr = PetscDeviceContextCreateCUBLASHandle_Internal(handle);CHKERRQ(ierr);
+  } else {
+    /* stuff on the stack, pop from it */
+    try {
+      *handle = cublasHandleStack.top();
+      cublasHandleStack.pop();
+    } catch (std::exception const &ex) {
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error popping from std::stack: %s",ex.what());
     }
   }
-  /* can also make this command line option */
-  if (PetscUnlikelyDebug(*handleId == PETSC_DEFAULT)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot create more than %D cuBLAS handles",numHandles);
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextRestoreCUBLASHandle_Internal(cublasHandle_t *handle, PetscInt *handleId)
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextReleaseCUBLASHandle_Internal(cublasHandle_t *handle)
 {
   PetscFunctionBegin;
-  PetscValidPointer(handle,1);
-  PetscValidIntPointer(handleId,2);
-  if (PetscUnlikelyDebug(*handleId >= numHandles)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Returned handle with ID %D > max ID %D",*handleId,numHandles-1);
-  if (PetscUnlikelyDebug(!cublasHandleOwned[*handleId])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Restored handle with ID %D has seemingly already been restored",*handleId);
-  if (PetscUnlikelyDebug(handle != cublasV2HandleList[*handleId])) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore the same cuBLAS handle as was checked out in PetscDeviceContextSetUp_CUDA()");
-  cublasHandleOwned[*handleId] = PETSC_FALSE;
-  *handleId = PETSC_DEFAULT;
-  *handle   = NULL;
+  try {
+    /* release the handle so it may be recycled */
+    cublasHandleStack.push(*handle);
+  } catch (std::exception const &ex) {
+    /* or not */
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error pushing to std::stack: %s",ex.what());
+  }
+  *handle = NULL;
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroy_CCUDA(PetscDeviceContext dctx)
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroy_CUDA(PetscDeviceContext dctx)
 {
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
   PetscErrorCode          ierr;
@@ -84,7 +210,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroy_CCUDA(PetscDeviceCo
   if (dcu->stream) {cerr = cudaStreamDestroy(dcu->stream);CHKERRCUDA(cerr);}
   if (dcu->event)  {cerr = cudaEventDestroy(dcu->event);CHKERRCUDA(cerr);}
   if (dcu->cublasv2handle) {
-    ierr = PetscDeviceContextRestoreCUBLASHandle_Internal(&dcu->cublasv2handle,&dcu->blasHandleId);CHKERRQ(ierr);
+    ierr = PetscDeviceContextReleaseCUBLASHandle_Internal(dcu);CHKERRQ(ierr);
   }
   ierr = PetscFree(dctx->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -98,6 +224,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetUp_CUDA(PetscDeviceConte
   PetscFunctionBegin;
   cerr = cudaStreamCreate(&dcu->stream);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&dcu->event);CHKERRCUDA(cerr);
+  /* don't also create solver contexts here since they aren't always used, and given the
+     limited real estate frugality is prudent */
   PetscFunctionReturn(0);
 }
 
@@ -131,7 +259,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetBLASHandle_CUDA(PetscDev
     cudaStream_t   blasStream;
     PetscErrorCode ierr;
 
-    ierr = PetscDeviceContextGetCUBLASHandle_Internal(&dcu->cublasv2handle,&dcu->blasHandleId);CHKERRQ(ierr);
+    ierr  = PetscDeviceContextAcquireCUBLASHandle_Internal(&dcu->cublasv2handle);CHKERRQ(ierr);
     cberr = cublasGetStream(dcu->cublasv2handle,&blasStream);CHKERRCUBLAS(cberr);
     /* do this check since cublasSetStream UNCONDITIONALLY clears the workspace on
        setStream, something we want to avoid */
