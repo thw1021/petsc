@@ -51,9 +51,7 @@
 PETSC_DEVICE_FUNC_DECL void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat, PetscInt m,const PetscInt im[],PetscInt n,const PetscInt in[],const PetscScalar v[],InsertMode is, PetscErrorCode *ierr)
 {
   if (m > 0 && !d_mat) {
-#ifdef PETSC_USE_DEBUG
     printf("Trying to add to null pointer\n");
-#endif
     *ierr = 1;
     return;
   }
@@ -100,9 +98,7 @@ PETSC_DEVICE_FUNC_DECL void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat
             continue; // need to checm for > N also
           } else {
             if (!d_mat->colmap) {
-#ifdef PETSC_USE_DEBUG
               printf("ERROR, !d_mat->colmap\n");
-#endif
               *ierr = 1;
               return;
             }
@@ -114,12 +110,10 @@ PETSC_DEVICE_FUNC_DECL void MatSetValuesDevice(PetscSplitCSRDataStructure *d_mat
             col = d_mat->colmap[in[j]] - 1;
 #endif
             if (col < 0) {
-#ifdef PETSC_USE_DEBUG
               int ii;
               printf("ERROR col %d not found, colmap:\n",(int)in[j]);
               for (ii=0;d_mat->colmap[ii]>=0;ii++)printf(" %d ",(int)d_mat->colmap[ii]);
               printf("\n");
-#endif
               *ierr = 1;
               return;
             }
