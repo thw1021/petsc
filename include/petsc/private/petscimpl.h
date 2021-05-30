@@ -881,7 +881,7 @@ typedef struct {
   PetscScalar    *gvalues;     /* values after call to MPI_Allreduce() */
   void           **invecs;     /* for debugging only, vector/memory used with each op */
   PetscInt       *reducetype;  /* is particular value to be summed or maxed? */
-  PetscScalarInt *lvalues_mix,*gvalues_mix; /* used when mixing reduce operations */
+  struct { PetscScalar v; PetscInt i; } *lvalues_mix,*gvalues_mix; /* used when mixing reduce operations */
   SRState        state;        /* are we calling xxxBegin() or xxxEnd()? */
   PetscInt       maxops;       /* total amount of space we have for requests */
   PetscInt       numopsbegin;  /* number of requests that have been queued in */

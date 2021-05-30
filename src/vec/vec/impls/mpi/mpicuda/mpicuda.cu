@@ -334,7 +334,7 @@ PetscErrorCode VecMax_MPICUDA(Vec xin,PetscInt *idx,PetscReal *z)
   if (!idx) {
     ierr = MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
   } else {
-    PetscRealInt in,out;
+    struct { PetscReal v; PetscInt i; } in,out;
 
     in.v  = work;
     in.i  = *idx + xin->map->rstart;
@@ -355,7 +355,7 @@ PetscErrorCode VecMin_MPICUDA(Vec xin,PetscInt *idx,PetscReal *z)
   if (!idx) {
     ierr = MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
   } else {
-    PetscRealInt in,out;
+    struct { PetscReal v; PetscInt i; } in,out;
 
     in.v  = work;
     in.i  = *idx + xin->map->rstart;

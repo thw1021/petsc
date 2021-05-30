@@ -404,13 +404,14 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   /* create datatypes used by MPIU_MAXLOC, MPIU_MINLOC and PetscSplitReduction_Op */
 #if !defined(PETSC_HAVE_MPIUNI)
   {
+    struct PetscRealInt { PetscReal v; PetscInt i; };
     PetscMPIInt  blockSizes[2] = {1,1};
-    MPI_Aint     blockOffsets[2] = {offsetof(PetscRealInt,v),offsetof(PetscRealInt,i)};
+    MPI_Aint     blockOffsets[2] = {offsetof(struct PetscRealInt,v),offsetof(struct PetscRealInt,i)};
     MPI_Datatype blockTypes[2] = {MPIU_REAL,MPIU_INT}, tmpStruct;
 
     *ierr = MPI_Type_create_struct(2,blockSizes,blockOffsets,blockTypes,&tmpStruct);
     if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI struct\n");return;}
-    *ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(PetscRealInt),&MPIU_REAL_INT);
+    *ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(struct PetscRealInt),&MPIU_REAL_INT);
     if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI resized\n");return;}
     *ierr = MPI_Type_free(&tmpStruct);
     if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Freeing MPI types\n");return;}
@@ -418,13 +419,14 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
     if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
   }
   {
+    struct PetscScalarInt { PetscScalar v; PetscInt i; };
     PetscMPIInt  blockSizes[2] = {1,1};
-    MPI_Aint     blockOffsets[2] = {offsetof(PetscScalarInt,v),offsetof(PetscScalarInt,i)};
+    MPI_Aint     blockOffsets[2] = {offsetof(struct PetscScalarInt,v),offsetof(struct PetscScalarInt,i)};
     MPI_Datatype blockTypes[2] = {MPIU_SCALAR,MPIU_INT}, tmpStruct;
 
     *ierr = MPI_Type_create_struct(2,blockSizes,blockOffsets,blockTypes,&tmpStruct);
     if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI struct\n");return;}
-    *ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(PetscScalarInt),&MPIU_SCALAR_INT);
+    *ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(struct PetscScalarInt),&MPIU_SCALAR_INT);
     if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI resized\n");return;}
     *ierr = MPI_Type_free(&tmpStruct);
     if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Freeing MPI types\n");return;}

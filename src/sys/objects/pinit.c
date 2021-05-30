@@ -1011,22 +1011,24 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   /* create datatypes used by MPIU_MAXLOC, MPIU_MINLOC and PetscSplitReduction_Op */
 #if !defined(PETSC_HAVE_MPIUNI)
   {
+    struct PetscRealInt { PetscReal v; PetscInt i; };
     PetscMPIInt  blockSizes[2] = {1,1};
-    MPI_Aint     blockOffsets[2] = {offsetof(PetscRealInt,v),offsetof(PetscRealInt,i)};
+    MPI_Aint     blockOffsets[2] = {offsetof(struct PetscRealInt,v),offsetof(struct PetscRealInt,i)};
     MPI_Datatype blockTypes[2] = {MPIU_REAL,MPIU_INT}, tmpStruct;
 
     ierr = MPI_Type_create_struct(2,blockSizes,blockOffsets,blockTypes,&tmpStruct);CHKERRMPI(ierr);
-    ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(PetscRealInt),&MPIU_REAL_INT);CHKERRMPI(ierr);
+    ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(struct PetscRealInt),&MPIU_REAL_INT);CHKERRMPI(ierr);
     ierr = MPI_Type_free(&tmpStruct);CHKERRMPI(ierr);
     ierr = MPI_Type_commit(&MPIU_REAL_INT);CHKERRMPI(ierr);
   }
   {
+    struct PetscScalarInt { PetscScalar v; PetscInt i; };
     PetscMPIInt  blockSizes[2] = {1,1};
-    MPI_Aint     blockOffsets[2] = {offsetof(PetscScalarInt,v),offsetof(PetscScalarInt,i)};
+    MPI_Aint     blockOffsets[2] = {offsetof(struct PetscScalarInt,v),offsetof(struct PetscScalarInt,i)};
     MPI_Datatype blockTypes[2] = {MPIU_SCALAR,MPIU_INT}, tmpStruct;
 
     ierr = MPI_Type_create_struct(2,blockSizes,blockOffsets,blockTypes,&tmpStruct);CHKERRMPI(ierr);
-    ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(PetscScalarInt),&MPIU_SCALAR_INT);CHKERRMPI(ierr);
+    ierr = MPI_Type_create_resized(tmpStruct,0,sizeof(struct PetscScalarInt),&MPIU_SCALAR_INT);CHKERRMPI(ierr);
     ierr = MPI_Type_free(&tmpStruct);CHKERRMPI(ierr);
     ierr = MPI_Type_commit(&MPIU_SCALAR_INT);CHKERRMPI(ierr);
   }

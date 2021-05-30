@@ -75,9 +75,10 @@ MPI_Op PetscSplitReduction_Op = 0;
 
 PETSC_EXTERN void MPIAPI PetscSplitReduction_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
 {
-  PetscScalarInt *xin = (PetscScalarInt*)in;
-  PetscScalarInt *xout = (PetscScalarInt*)out;
-  PetscInt       i,count = (PetscInt)*cnt;
+  struct PetscScalarInt { PetscScalar v; PetscInt i; };
+  struct PetscScalarInt *xin = (struct PetscScalarInt*)in;
+  struct PetscScalarInt *xout = (struct PetscScalarInt*)out;
+  PetscInt              i,count = (PetscInt)*cnt;
 
   PetscFunctionBegin;
   if (*datatype != MPIU_SCALAR_INT) {
@@ -239,11 +240,13 @@ static PetscErrorCode PetscSplitReductionApply(PetscSplitReduction *sr)
 */
 PetscErrorCode  PetscSplitReductionExtend(PetscSplitReduction *sr)
 {
-  PetscErrorCode ierr;
-  PetscInt       maxops   = sr->maxops,*reducetype = sr->reducetype;
-  PetscScalar    *lvalues = sr->lvalues,*gvalues = sr->gvalues;
-  PetscScalarInt *lvalues_mix = sr->lvalues_mix,*gvalues_mix = sr->gvalues_mix;
-  void           **invecs = sr->invecs;
+  struct PetscScalarInt { PetscScalar v; PetscInt i; };
+  PetscErrorCode        ierr;
+  PetscInt              maxops   = sr->maxops,*reducetype = sr->reducetype;
+  PetscScalar           *lvalues = sr->lvalues,*gvalues = sr->gvalues;
+  struct PetscScalarInt *lvalues_mix = (struct PetscScalarInt*)sr->lvalues_mix;
+  struct PetscScalarInt *gvalues_mix = (struct PetscScalarInt*)sr->gvalues_mix;
+  void                  **invecs = sr->invecs;
 
   PetscFunctionBegin;
   sr->maxops = 2*maxops;

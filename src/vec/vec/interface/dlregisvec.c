@@ -99,9 +99,10 @@ MPI_Op MPIU_MINLOC = 0;
 
 static void MPIAPI MPIU_MaxIndex_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
 {
-  PetscRealInt *xin = (PetscRealInt*)in;
-  PetscRealInt *xout = (PetscRealInt*)out;
-  int c;
+  struct PetscRealInt { PetscReal v; PetscInt i; };
+  struct PetscRealInt *xin = (struct PetscRealInt*)in;
+  struct PetscRealInt *xout = (struct PetscRealInt*)out;
+  int                 c;
 
   PetscFunctionBegin;
   if (*datatype != MPIU_REAL_INT) {
@@ -121,9 +122,10 @@ static void MPIAPI MPIU_MaxIndex_Local(void *in,void *out,PetscMPIInt *cnt,MPI_D
 
 static void MPIAPI MPIU_MinIndex_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
 {
-  PetscRealInt *xin = (PetscRealInt*)in;
-  PetscRealInt *xout = (PetscRealInt*)out;
-  int c;
+  struct PetscRealInt { PetscReal v; PetscInt i; };
+  struct PetscRealInt *xin = (struct PetscRealInt*)in;
+  struct PetscRealInt *xout = (struct PetscRealInt*)out;
+  int                 c;
 
   PetscFunctionBegin;
   if (*datatype != MPIU_REAL_INT) {

@@ -231,8 +231,8 @@ PetscErrorCode  VecStrideMax(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
   if (!idex) {
     ierr = MPIU_Allreduce(&max,nrm,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)v));CHKERRMPI(ierr);
   } else {
-    PetscRealInt in,out;
-    PetscInt     rstart;
+    struct { PetscReal v; PetscInt i; } in,out;
+    PetscInt rstart;
 
     ierr  = VecGetOwnershipRange(v,&rstart,NULL);CHKERRQ(ierr);
     in.v  = max;
@@ -308,8 +308,8 @@ PetscErrorCode  VecStrideMin(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
   if (!idex) {
     ierr = MPIU_Allreduce(&min,nrm,1,MPIU_REAL,MPIU_MIN,comm);CHKERRMPI(ierr);
   } else {
-    PetscRealInt in,out;
-    PetscInt     rstart;
+    struct { PetscReal v; PetscInt i; } in,out;
+    PetscInt rstart;
 
     ierr  = VecGetOwnershipRange(v,&rstart,NULL);CHKERRQ(ierr);
     in.v  = min;
