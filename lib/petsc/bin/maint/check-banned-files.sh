@@ -1,10 +1,5 @@
 #!/bin/bash -ex
 
-if [ ! -z "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME+x}" -a "${CI_MERGE_REQUEST_EVENT_TYPE}" != "detached" ]; then
-  echo Skipping as this is MR CI for ${CI_MERGE_REQUEST_TARGET_BRANCH_NAME} branch
-  exit 0
-fi
-
 git fetch --unshallow --no-tags origin +release:remotes/origin/release +main:remotes/origin/main
 
 base_release=$(git merge-base --octopus origin/release origin/main HEAD)
