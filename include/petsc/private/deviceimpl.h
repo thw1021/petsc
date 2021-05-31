@@ -88,41 +88,4 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(Petsc
   }
   PetscFunctionReturn(0);
 }
-
-#if PetscDefined(HAVE_CUDA)
-PETSC_STATIC_INLINE PetscErrorCode PetscCUBLASSetStream_Internal(cublasHandle_t cublasv2handle, cudaStream_t cstrm)
-{
-  cudaStream_t        cublasStrm;
-  cublasPointerMode_t mode;
-  cublasStatus_t      cberr;
-
-  PetscFunctionBegin;
-  /* We get an check these since setting these blindly would "reset the workspace". It is not clear whether cublas
-   checks for equality internally. */
-  cberr = cublasGetStream(cublasv2handle,&cublasStrm);CHKERRCUBLAS(cberr);
-  if (cstrm != cublasStrm) {cberr = cublasSetStream(cublasv2handle,cstrm);CHKERRCUBLAS(cberr);}
-  cberr = cublasGetPointerMode(cublasv2handle,&mode);CHKERRCUBLAS(cberr);
-  if (mode != CUBLAS_POINTER_MODE_DEVICE) {
-    cberr = cublasSetPointerMode(cublasv2handle,CUBLAS_POINTER_MODE_DEVICE);CHKERRCUBLAS(cberr);
-  }
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscCUBLASSetHost_Internal(cublasHandle_t cublasv2handle)
-{
-  cudaStream_t        cublasStrm;
-  cublasPointerMode_t mode;
-  cublasStatus_t      cberr;
-
-  PetscFunctionBegin;
-  cberr = cublasGetStream(cublasv2handle,&cublasStrm);CHKERRCUBLAS(cberr);
-  if (cublasStrm) {cberr = cublasSetStream(cublasv2handle,NULL);CHKERRCUBLAS(cberr);}
-  cberr = cublasGetPointerMode(cublasv2handle,&mode);CHKERRCUBLAS(cberr);
-  if (mode != CUBLAS_POINTER_MODE_HOST) {
-    cberr = cublasSetPointerMode(cublasv2handle,CUBLAS_POINTER_MODE_HOST);CHKERRCUBLAS(cberr);
-  }
-  PetscFunctionReturn(0);
-
-}
-#endif
 #endif /* DEVICEIMPL_H */
