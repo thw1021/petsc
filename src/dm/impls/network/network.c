@@ -2992,7 +2992,8 @@ PETSC_STATIC_INLINE PetscErrorCode ISComputeLocalIdx(DM dm,PetscInt p,PetscInt n
 . is - the index set
 
   Level: Advanced
-
+   Notes:
+     Use blocksize[i] of -1 to indicate select all the variables of that component. nselectvar[i] and selectedvar[i] are ignored for that i. Use NULL, NULL, NULL to indicate for all selected components one wishes to obtain all the values of that component. For example, DMNetworkCreateIS(dm,1,&zero,NULL,NULL,NULL,IS) will return an IS that extracts all the variables for the zeroth component.
 .seealso: DMNetworkCreate(), ISCreateGeneral(), DMNetworkCreateLocalIS()
 @*/
 PetscErrorCode DMNetworkCreateIS(DM dm,PetscInt numkeys,PetscInt keys[],PetscInt blocksize[],PetscInt nselectedvar[],PetscInt *selectedvar[],IS *is)
