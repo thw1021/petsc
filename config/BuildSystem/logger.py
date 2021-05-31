@@ -131,18 +131,23 @@ class Logger(args.ArgumentProcessor):
 
   def saveLog(self):
     import io
-    self.logBkp = self.log
-    if sys.version_info < (3,):
-      self.log = io.BytesIO()
-    else:
-      self.log = io.StringIO()
+    pass
+    #  Turned off since there is not currently parallel configure steps
+    #self.logBkp = self.log
+    #if sys.version_info < (3,):
+    #  self.log = io.BytesIO()
+    #else:
+    #  self.log = io.StringIO()
 
   def restoreLog(self):
-    s = self.log.getvalue()
-    self.log.close()
-    self.log = self.logBkp
-    del(self.logBkp)
-    return s
+    pass
+    #  Turned off since there is not currently parallel configure steps
+    #s = self.log.getvalue()
+    #self.log.close()
+    #self.log = self.logBkp
+    #del(self.logBkp)
+    #return s
+    return None
 
   def getLinewidth(self):
     global LineWidth
@@ -244,6 +249,7 @@ class Logger(args.ArgumentProcessor):
   def logWrite(self, msg, debugLevel = -1, debugSection = None, forceScroll = 0):
     '''Write the message to the log streams'''
     '''Generally goes to the file but not the screen'''
+    if not msg: return
     for writeAll, f in enumerate([self.out, self.log]):
       if self.checkWrite(f, debugLevel, debugSection, writeAll):
         if not forceScroll and not writeAll and self.linewidth > 0:
