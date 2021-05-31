@@ -37,7 +37,7 @@ class Configure(config.package.Package):
 
     if self.installNeeded(mkfile):
       try:
-        self.logPrintBox('Compiling and installing chaco; this may take several minutes')
+        self.logPrintBox('Compiling and installing CHACO; this may take several minutes')
         self.installDirProvider.printSudoPasswordMessage()
         output,err,ret  = config.package.Package.executeShellCommandSeq(
           ['make clean',
@@ -57,5 +57,5 @@ class Configure(config.package.Package):
   def configureLibrary(self):
     config.package.Package.configureLibrary(self)
     if not self.libraries.check(self.lib, 'ddot_chaco',otherLibs=self.mathlib.lib):
-      raise RuntimeError('You cannot use Chaco package from Sandia as it contains an incorrect ddot() routine that conflicts with BLAS\nUse --download-chaco')
+      raise RuntimeError('You cannot use CHACO package from Sandia as it contains an incorrect ddot() routine that conflicts with BLAS\nUse --download-chaco')
 

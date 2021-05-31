@@ -156,7 +156,7 @@ class Configure(config.package.Package):
       except RuntimeError as e:
         pass
       try:
-        self.logPrintBox('Compiling Mumps; this may take several minutes')
+        self.logPrintBox('Compiling MUMPS; this may take several minutes')
         if self.setCompilers.isDarwin(self.log):
           output2,err2,ret2 = config.package.Package.executeShellCommand(self.make.make_jnp+' alllib', cwd=self.packageDir, timeout=2500, log = self.log)
           output3 = ''
@@ -166,7 +166,7 @@ class Configure(config.package.Package):
           output3,err3,ret3 = config.package.Package.executeShellCommand(self.make.make_jnp+' all', cwd=os.path.join(self.packageDir,'src'), timeout=2500, log = self.log)
         libDir     = os.path.join(self.installDir, self.libdir)
         includeDir = os.path.join(self.installDir, self.includedir)
-        self.logPrintBox('Installing Mumps; this may take several minutes')
+        self.logPrintBox('Installing MUMPS; this may take several minutes')
         self.installDirProvider.printSudoPasswordMessage()
         output,err,ret = config.package.Package.executeShellCommandSeq(
           [self.installSudo+'mkdir -p '+libDir+' '+includeDir,

@@ -38,11 +38,11 @@ class Configure(config.package.Package):
 
     if self.installNeeded('compiledata'):
       try:
-        self.logPrintBox('Compiling and installing ascem-io; this may take several minutes')
+        self.logPrintBox('Compiling and installing ASCEM-IO; this may take several minutes')
         self.installDirProvider.printSudoPasswordMessage()
         output,err,ret = config.package.Package.executeShellCommand('cd '+os.path.join(self.packageDir,'src')+' && '+self.make.make+' '+MAKEARGS+' && '+self.installSudo+' '+self.make.make+' '+INSTALLARGS+' install', timeout=2500, log = self.log)
       except RuntimeError as e:
-        raise RuntimeError('Error running make on ascem-io: '+str(e))
+        raise RuntimeError('Error running make on ASCEM-IO: '+str(e))
       self.postInstall(output+err,'compiledata')
     return self.installDir
 

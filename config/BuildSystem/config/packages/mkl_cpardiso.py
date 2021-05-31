@@ -21,7 +21,7 @@ class Configure(config.package.Package):
     config.package.Package.consistencyChecks(self)
     if self.argDB['with-'+self.package]:
       if not self.blasLapack.mkl:
-        raise RuntimeError('MKL_CPardiso requires Intel MKL. Please rerun configure using --with-blaslapack-dir=LOCATION_OF_INTEL_MKL')
+        raise RuntimeError('MKL_CPARDISO requires Intel MKL. Please rerun configure using --with-blaslapack-dir=LOCATION_OF_INTEL_MKL')
       elif self.blasLapack.has64bitindices and not self.defaultIndexSize == 64:
-        raise RuntimeError('MKL_CPardiso cannot work with 32 integers but 64 bit Blas/Lapack integers')
+        raise RuntimeError('MKL_CPARDISO cannot work with 32 integers but 64 bit Blas/Lapack integers')
     return

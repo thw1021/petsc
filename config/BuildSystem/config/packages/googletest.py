@@ -27,5 +27,5 @@ class Configure(config.package.CMakePackage):
     args.append('-DBUILD_GMOCK=ON')
     args.append('-DBUILD_GTEST=OFF')
     if not hasattr(self.compilers, 'CXX'):
-      raise RuntimeError("googletest requires a C++ compiler\n")
+      raise RuntimeError("GOOGLETEST requires a C++ compiler\n")
     return args

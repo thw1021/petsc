@@ -24,7 +24,7 @@ class Configure(config.package.CMakePackage):
     import os
     import sys
     if not self.cmake.found:
-      raise RuntimeError('CMake > 2.5 is needed to build exodusII\nSuggest adding --download-cmake to ./configure arguments')
+      raise RuntimeError('CMake > 2.5 is needed to build EXODUSII\nSuggest adding --download-cmake to ./configure arguments')
 
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
 
@@ -61,12 +61,12 @@ class Configure(config.package.CMakePackage):
     args.append('-DTPL_ENABLE_Pamgen:BOOL=OFF')
     args.append('-DTPL_ENABLE_CGNS:BOOL=OFF')
     if not self.netcdf.directory:
-      raise RuntimeError('NetCDF dir is not known! ExodusII requires explicit path to NetCDF. Suggest using --with-netcdf-dir or --download-netcdf')
+      raise RuntimeError('NetCDF dir is not known! EXODUSII requires explicit path to NetCDF. Suggest using --with-netcdf-dir or --download-netcdf')
     else:
       args.append('-DNetCDF_DIR:PATH='+self.netcdf.directory)
     args.append('-DHDF5_ROOT:PATH='+self.hdf5.directory)
     if not self.pnetcdf.directory:
-      raise RuntimeError('PNetCDF dir is not known! ExodusII requires explicit path to PNetCDF. Suggest using --with-pnetcdf-dir or --download-pnetcdf')
+      raise RuntimeError('PNetCDF dir is not known! EXODUSII requires explicit path to PNetCDF. Suggest using --with-pnetcdf-dir or --download-pnetcdf')
     else:
       args.append('-DPnetcdf_LIBRARY_DIRS:PATH='+os.path.join(self.pnetcdf.directory,'lib'))
       args.append('-DPnetcdf_INCLUDE_DIRS:PATH='+os.path.join(self.pnetcdf.directory,'include'))

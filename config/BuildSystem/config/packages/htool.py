@@ -41,7 +41,7 @@ class Configure(config.package.Package):
       self.framework.packages = []
     self.framework.packages.append(self)
     cpstr = newuser+' mkdir -p '+incDir+' && '+newuser+' cp -r '+os.path.join(self.packageDir,'include','*')+' '+incDir
-    self.logPrintBox('Copying Htool; this may take several seconds')
+    self.logPrintBox('Copying HTOOL; this may take several seconds')
     output,err,ret = config.package.Package.executeShellCommand(cpstr,timeout=100,log=self.log)
     self.log.write(output+err)
     return self.installDir

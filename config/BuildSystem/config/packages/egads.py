@@ -89,15 +89,15 @@ clean:
   def configureLibrary(self):
     ''' Since egads cannot be built until after PETSc configure is complete we need to just assume the downloaded library will work'''
     if 'with-egads' in self.framework.clArgDB:
-      raise RuntimeError('egads does not support --with-egads; only --download-egads')
+      raise RuntimeError('EGADS does not support --with-egads; only --download-egads')
     if 'with-egads-dir' in self.framework.clArgDB:
       self.egadsDir = self.framework.argDB['with-egads-dir']
     if 'with-egads-include' in self.framework.clArgDB:
-      raise RuntimeError('egads does not support --with-egads-include; only --download-egads')
+      raise RuntimeError('EGADS does not support --with-egads-include; only --download-egads')
     if 'with-egads-lib' in self.framework.clArgDB:
-      raise RuntimeError('egads does not support --with-egads-lib; only --download-egads')
+      raise RuntimeError('EGADS does not support --with-egads-lib; only --download-egads')
     if 'with-egads-shared' in self.framework.clArgDB:
-      raise RuntimeError('egads does not support --with-egads-shared')
+      raise RuntimeError('EGADS does not support --with-egads-shared')
 
     if not hasattr(self,'egadsDir'):
       self.checkDownload()
@@ -114,7 +114,7 @@ clean:
     if not hasattr(self,'installDir'):
       return
     try:
-      self.logPrintBox('Compiling egads; this may take several minutes')
+      self.logPrintBox('Compiling EGADS; this may take several minutes')
       # uses the regular PETSc library builder and then moves result
       # turn off any compiler optimizations as they may break egads
       self.pushLanguage('C')
@@ -122,10 +122,10 @@ clean:
       self.popLanguage()
       output,err,ret  = config.package.GNUPackage.executeShellCommand(self.make.make+' -f make.inc PETSC_DIR=' + self.petscdir.dir + ' clean lib PCC_FLAGS="' + cflags + '"', timeout=1000, log = self.log, cwd=self.packageDir)
       self.log.write(output+err)
-      self.logPrintBox('Installing egads; this may take several minutes')
+      self.logPrintBox('Installing EGADS; this may take several minutes')
       # TODO: This message should not be printed if egads is install in PETSc arch directory; need self.printSudoPasswordMessage() defined in package.py
       self.installDirProvider.printSudoPasswordMessage(1)
       output,err,ret  = config.package.GNUPackage.executeShellCommand(self.installSudo+self.make.make+' -f make.inc PETSC_DIR='+self.petscdir.dir+' prefix='+self.installDir+' install-egads',timeout=1000, log = self.log, cwd=self.packageDir)
       self.log.write(output+err)
     except RuntimeError as e:
-      raise RuntimeError('Error running make on egads: '+str(e))
+      raise RuntimeError('Error running make on EGADS: '+str(e))

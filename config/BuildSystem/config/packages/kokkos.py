@@ -90,7 +90,7 @@ class Configure(config.package.CMakePackage):
       pthreadfound = 0
 
     if self.openmp.found + pthreadfound + self.cuda.found > 1:
-      raise RuntimeError("Kokkos only supports a single parallel system during its configuration")
+      raise RuntimeError("KOKKOS only supports a single parallel system during its configuration")
 
     args.append('-DKokkos_ENABLE_SERIAL=ON')
     if self.openmp.found:
@@ -159,7 +159,7 @@ class Configure(config.package.CMakePackage):
     else:
       langdialect = getattr(self.compilers,lang+'dialect')
       if langdialect < self.kokkos_cxxdialect:
-        raise RuntimeError('Kokkos requires '+self.kokkos_cxxdialect+' but the '+lang.upper()+ 'compiler only supports '+langdialect)
+        raise RuntimeError('KOKKOS requires '+self.kokkos_cxxdialect+' but the '+lang.upper()+ 'compiler only supports '+langdialect)
       else:
         args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
         args.append('-DCMAKE_CXX_STANDARD="' + langdialect.split("C++",1)[1] + '"') # e.g., extract 14 from C++14

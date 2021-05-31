@@ -27,7 +27,7 @@ class Configure(config.package.GNUPackage):
       args.append('--with-id-type=ullong')
     args.append('--enable-mpi')
     if not hasattr(self.compilers, 'CXX'):
-      raise RuntimeError('Error: Zoltan requires C++ compiler. None specified')
+      raise RuntimeError('Error: ZOLTAN requires C++ compiler. None specified')
 
     args.append('CPPFLAGS="'+self.headers.toStringNoDupes(self.dinclude)+'"')
     args.append('LIBS="'+self.libraries.toStringNoDupes(self.dlib)+'"')

@@ -115,13 +115,13 @@ class Configure(config.package.Package):
     if not self.installNeeded('tmpmakefile'): return self.installDir
 
     try:
-      self.logPrintBox('Compiling OpenBLAS; this may take several minutes')
+      self.logPrintBox('Compiling OPENBLAS; this may take several minutes')
       output1,err1,ret  = config.package.Package.executeShellCommand('cd '+blasDir+' && make '+cmdline, timeout=2500, log = self.log)
     except RuntimeError as e:
       self.logPrint('Error running make on '+blasDir+': '+str(e))
       raise RuntimeError('Error running make on '+blasDir)
     try:
-      self.logPrintBox('Installing OpenBLAS')
+      self.logPrintBox('Installing OPENBLAS')
       self.installDirProvider.printSudoPasswordMessage()
       output2,err2,ret  = config.package.Package.executeShellCommand('cd '+blasDir+' && '+self.installSudo+' make PREFIX='+self.installDir+' '+cmdline+' install', timeout=60, log = self.log)
     except RuntimeError as e:

@@ -74,21 +74,21 @@ class Configure(config.package.GNUPackage):
 
   def generateGMakeGuesses(self):
     if self.argDB['download-make']:
-      self.log.write('Checking downloaded make\n')
+      self.log.write('Checking downloaded MAKE\n')
       yield os.path.join(self.installDir,'bin','make')
       raise RuntimeError('Error! --download-make does not work on this system')
 
     if 'with-make-exec' in self.argDB:
-      self.log.write('Looking for user provided Make executable '+self.argDB['with-make-exec']+'\n')
+      self.log.write('Looking for user provided MAKE executable '+self.argDB['with-make-exec']+'\n')
       yield self.argDB['with-make-exec']
-      raise RuntimeError('Error! User provided with-make-exec is not GNU make: '+self.argDB['with-make-exec'])
+      raise RuntimeError('Error! User provided with-make-exec is not GNU MAKE: '+self.argDB['with-make-exec'])
 
     if 'with-make-dir' in self.argDB:
       d = self.argDB['with-make-dir']
       self.log.write('Looking in user provided directory '+d+'\n')
       yield os.path.join(d,'bin','gmake')
       yield os.path.join(d,'bin','make')
-      raise RuntimeError('Error! User provided --with-make-dir=%s but %s/bin does not contain GNU make' % (d, d))
+      raise RuntimeError('Error! User provided --with-make-dir=%s but %s/bin does not contain GNU MAKE' % (d, d))
 
     yield 'gmake'
     yield 'make'
@@ -113,8 +113,8 @@ class Configure(config.package.GNUPackage):
       if not self.haveGNUMake4:
         self.logPrintBox('***** WARNING: You have a version of GNU make older than 4.0. It will work,\n\
 but may not support all the parallel testing options. You can install the \n\
-latest GNU make with your package manager, such as brew or macports, or use\n\
-the --download-make option to get the latest GNU make *****')
+latest GNU MAKE with your package manager, such as brew or macports, or use\n\
+the --download-make option to get the latest GNU MAKE *****')
       return
 
     if os.path.exists('/usr/bin/cygcheck.exe'):
@@ -123,7 +123,7 @@ Incomplete cygwin install detected: the make utility is missing.
 Please rerun cygwin-setup and select module "make" for install, or try --download-make''')
     else:
       raise RuntimeError('''\
-Could not locate the GNU make utility (version greater than or equal to %s) on your system.
+Could not locate the GNU MAKE utility (version greater than or equal to %s) on your system.
 If it is already installed, specify --with-make-exec=<executable> or --with-make-dir=<directory>, or add it to PATH.
 Otherwise try --download-make or install "make" with a package manager.''' % self.minversion)
 

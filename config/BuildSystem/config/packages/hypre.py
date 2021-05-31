@@ -39,7 +39,7 @@ class Configure(config.package.GNUPackage):
     self.packageDir = os.path.join(self.packageDir,'src')
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
     if not hasattr(self.compilers, 'CXX'):
-      raise RuntimeError('Error: Hypre requires C++ compiler. None specified')
+      raise RuntimeError('Error: HYPRE requires C++ compiler. None specified')
     if not hasattr(self.compilers, 'FC'):
       args.append('--disable-fortran')
     if self.mpi.include:
@@ -106,8 +106,8 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.consistencyChecks(self)
     if self.argDB['with-'+self.package]:
       if not self.blasLapack.checkForRoutine('dgels'):
-        raise RuntimeError('hypre requires the LAPACK routine dgels(), the current Lapack libraries '+str(self.blasLapack.lib)+' does not have it')
-      self.log.write('Found dgels() in Lapack library as needed by hypre\n')
+        raise RuntimeError('HYPRE requires the LAPACK routine dgels(), the current Lapack libraries '+str(self.blasLapack.lib)+' does not have it')
+      self.log.write('Found dgels() in Lapack library as needed by HYPRE\n')
     return
 
   def configureLibrary(self):
@@ -123,7 +123,7 @@ class Configure(config.package.GNUPackage):
       code = '#if defined(HYPRE_BIGINT)\n#error HYPRE_BIGINT defined!\n#endif\n#if defined(HYPRE_MIXEDINT)\n#error HYPRE_MIXEDINT defined!\n#endif\n'
       msg  = 'Hypre with --enable-bigint/--enable-mixedint appears to be specified for a 32-bit-indices build of PETSc.\n'
     if not self.checkCompile('#include "HYPRE_config.h"',code):
-      raise RuntimeError('Hypre specified is incompatible!\n'+msg+'Suggest using --download-hypre for a compatible hypre')
+      raise RuntimeError('HYPRE specified is incompatible!\n'+msg+'Suggest using --download-hypre for a compatible HYPRE')
     code = '#if defined(HYPRE_MIXEDINT)\n#error HYPRE_MIXEDINT defined!\n#endif\n'
     if not self.checkCompile('#include "HYPRE_config.h"',code):
       self.addDefine('HAVE_HYPRE_MIXEDINT', 1)

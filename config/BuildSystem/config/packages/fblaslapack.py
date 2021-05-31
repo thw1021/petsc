@@ -19,9 +19,9 @@ class Configure(config.package.Package):
 
   def configureLibrary(self):
     if self.argDB['with-64-bit-blas-indices']:
-      raise RuntimeError('fblaslapack does not support -with-64-bit-blas-indices')
+      raise RuntimeError('FBLASLAPACK does not support -with-64-bit-blas-indices')
     if hasattr(self.argDB,'known-64-bit-blas-indices') and self.argDB['known-64-bit-blas-indices']:
-      raise RuntimeError('fblaslapack does not support -known-64-bit-blas-indices')
+      raise RuntimeError('FBLASLAPACK does not support -known-64-bit-blas-indices')
     config.package.Package.configureLibrary(self)
 
   def alternateConfigureLibrary(self):
@@ -85,7 +85,7 @@ class Configure(config.package.Package):
       if line.startswith('include'):
         line = '\n'
       if line.find("-no-prec-div") >= 1:
-         raise RuntimeError('Some versions of the Intel compiler generate incorrect code on fblaslapack with the option -no-prec-div\nRun configure without this option')
+         raise RuntimeError('Some versions of the Intel compiler generate incorrect code on FBLASLAPACK with the option -no-prec-div\nRun configure without this option')
       g.write(line) 
       line = f.readline()
     f.close()

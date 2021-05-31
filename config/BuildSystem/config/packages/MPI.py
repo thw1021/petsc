@@ -233,13 +233,13 @@ shared libraries and run with --known-mpi-shared-libraries=1')
       self.logWrite('Unable to run '+self.mpiexec+' with option "-n 1 printenv"\nThis could be ok, some MPI implementations such as SGI produce a non-zero status with non-MPI programs\n'+out+err)
     else:
       if out.find('MPIR_CVAR_CH3') > -1:
-        if hasattr(self,'ompi_major_version'): raise RuntimeError("Your libraries are from OpenMPI but it appears your mpiexec is from MPICH");
+        if hasattr(self,'ompi_major_version'): raise RuntimeError("Your libraries are from OPENMPI but it appears your mpiexec is from MPICH");
         self.addDefine('HAVE_MPIEXEC_ENVIRONMENTAL_VARIABLE', 'MPIR_CVAR_CH3')
       elif  out.find('MPIR_CVAR_CH3') > -1:
-        if hasattr(self,'ompi_major_version'): raise RuntimeError("Your libraries are from OpenMPI but it appears your mpiexec is from MPICH");
+        if hasattr(self,'ompi_major_version'): raise RuntimeError("Your libraries are from OPENMPI but it appears your mpiexec is from MPICH");
         self.addDefine('HAVE_MPIEXEC_ENVIRONMENTAL_VARIABLE', 'MPICH')
       elif out.find('OMPI_COMM_WORLD_SIZE') > -1:
-        if hasattr(self,'mpich_numversion'): raise RuntimeError("Your libraries are from MPICH but it appears your mpiexec is from OpenMPI");
+        if hasattr(self,'mpich_numversion'): raise RuntimeError("Your libraries are from MPICH but it appears your mpiexec is from OPENMPI");
         self.addDefine('HAVE_MPIEXEC_ENVIRONMENTAL_VARIABLE', 'OMP')
 
     self.addMakeMacro('MPIEXEC', self.mpiexec)
@@ -417,7 +417,7 @@ Unable to run hostname to check the network')
                        if (MPI_Ineighbor_alltoallv(0,0,0,MPI_INT,0,0,0,MPI_INT,distcomm,&req));\n'):
       self.addDefine('HAVE_MPI_NEIGHBORHOOD_COLLECTIVES',1)
     if hasattr(self, 'ompi_major_version'):
-      openmpi_cuda_test = '#include<mpi.h>\n #include <mpi-ext.h>\n #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT\n #else\n #error This OpenMPI is not CUDA-aware\n #endif\n'
+      openmpi_cuda_test = '#include<mpi.h>\n #include <mpi-ext.h>\n #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT\n #else\n #error This OPENMPI is not CUDA-aware\n #endif\n'
       if self.checkCompile(openmpi_cuda_test):
         self.addDefine('HAVE_MPI_GPU_AWARE', 1)
     if self.checkLink('#include <mpi.h>\n', 'int ptr[1]; MPI_Win win; if (MPI_Get_accumulate(ptr,1,MPI_INT,ptr,1,MPI_INT,0,0,1,MPI_INT,MPI_SUM,win));\n'):
@@ -472,7 +472,7 @@ Unable to run hostname to check the network')
     if 'download-mpi' in self.argDB and self.argDB['download-mpi']:
       raise RuntimeError('Option --download-mpi does not exist! Use --download-mpich or --download-openmpi instead.')
     if self.argDB['download-mpich'] and self.argDB['download-openmpi']:
-      raise RuntimeError('Cannot install more than one of OpenMPI or  MPICH for a single configuration. \nUse different PETSC_ARCH if you want to be able to switch between two')
+      raise RuntimeError('Cannot install more than one of OPENMPI or  MPICH for a single configuration. \nUse different PETSC_ARCH if you want to be able to switch between two')
     return None
 
   def SGIMPICheck(self):
@@ -603,7 +603,7 @@ Unable to run hostname to check the network')
         self.mpi_pkg_version = '  OMPI_VERSION: '+ompi_major_version+'.'+ompi_minor_version+'.'+ompi_release_version+'\n'
         MPI_VER = '  OMPI_VERSION: '+ompi_major_version+'.'+ompi_minor_version+'.'+ompi_release_version
       except:
-        self.logPrint('Unable to parse OpenMPI version from header. Probably a buggy preprocessor')
+        self.logPrint('Unable to parse OPENMPI version from header. Probably a buggy preprocessor')
     if MPI_VER:
       self.compilers.CPPFLAGS = oldFlags
       self.mpi_pkg_version = MPI_VER+'\n'
