@@ -628,7 +628,7 @@ PETSC_EXTERN const char* PetscCUSolverGetErrorName(cusolverStatus_t);
 
    Notes:
     We highly recommend using valgrind https://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind or for NVIDIA CUDA systems
-    https://docs.nvidia.com/cuda/cuda-memcheck/index.html for finding memory problems. The CHKMEMQ macro is useful on systems that
+    https://docs.nvidia.com/cuda/cuda-memcheck/index.html for finding memory problems. The ``CHKMEMQ`` macro is useful on systems that
     do not have valgrind, but is not as good as valgrind or cuda-memcheck.
 
     Must run with the option -malloc_debug (-malloc_test in debug mode; or if PetscMallocSetDebug() called) to enable this option
