@@ -56,7 +56,7 @@ static PetscErrorCode DMMoab_GetWriteOptions_Private(PetscInt fsetid, PetscInt n
 PetscErrorCode DMMoabOutput(DM dm, const char* filename, const char* usrwriteopts)
 {
   DM_Moab         *dmmoab;
-  const char      *writeopts;
+  const char      *writeopts = NULL;
   PetscBool       isftype;
   PetscErrorCode  ierr;
   moab::ErrorCode merr;
