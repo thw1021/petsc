@@ -311,7 +311,7 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
 {
   PetscErrorCode ierr;
   PetscInt       i,numkeys=1,*blocksize,*numselectedvariable,**selectedvariables,n;
-  IS             isfrom_q,isfrom_h;
+  IS             isfrom_q,isfrom_h,isfrom;
   Vec            Xto;
   VecScatter     ctx;
   MPI_Comm       comm;
@@ -319,7 +319,7 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)networkdm,&comm);CHKERRQ(ierr);
 
-  /* 1. Create isfrom_q for q-variable */
+  /* 1. Create isfrom_q for q-variable of pipes */
   ierr = PetscMalloc3(numkeys,&blocksize,numkeys,&numselectedvariable,numkeys,&selectedvariables);CHKERRQ(ierr);
   for (i=0; i<numkeys; i++) {
     blocksize[i]           = 2;
@@ -336,8 +336,6 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
   ierr = VecSetFromOptions(Xto);CHKERRQ(ierr);
   ierr = VecSet(Xto,0.0);CHKERRQ(ierr);
 
-  ierr = VecGetOwnershipRange(Xto,&i,NULL);CHKERRQ(ierr);
-
   /* 3. Create scatter */
   ierr = VecScatterCreate(X,isfrom_q,Xto,NULL,&ctx);CHKERRQ(ierr);
 
@@ -347,10 +345,10 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
   ierr = VecScatterDestroy(&ctx);CHKERRQ(ierr);
   ierr = ISDestroy(&isfrom_q);CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Xq: \n");CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Xq:\n");CHKERRQ(ierr);
   ierr = VecView(Xto,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
-  /* 5. Create isfrom for h-variable; Create scatter; Scatter to Xh */
+  /* 5. Create isfrom_h for h-variable of pipes; Create scatter; Scatter to Xh */
   for (i=0; i<numkeys; i++) {
     selectedvariables[i][0] = 1; /* h-variable */
   }
@@ -362,10 +360,34 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
   ierr = VecScatterDestroy(&ctx);CHKERRQ(ierr);
   ierr = ISDestroy(&isfrom_h);CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Xh: \n");CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Xh:\n");CHKERRQ(ierr);
+  ierr = VecView(Xto,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  ierr = VecDestroy(&Xto);CHKERRQ(ierr);
+
+  /* 6. Create isfrom for all pipe variable; Create scatter; Scatter to Xpipes */
+  for (i=0; i<numkeys; i++) {
+    blocksize[i] = -1; /* select all the variables of the i-th component */
+  }
+  ierr = DMNetworkCreateIS(networkdm,numkeys,&KeyPipe,blocksize,NULL,NULL,&isfrom);CHKERRQ(ierr);
+  ierr = ISDestroy(&isfrom);CHKERRQ(ierr);
+  ierr = DMNetworkCreateIS(networkdm,numkeys,&KeyPipe,NULL,NULL,NULL,&isfrom);CHKERRQ(ierr);
+
+  ierr = ISGetLocalSize(isfrom, &n);CHKERRQ(ierr);
+  ierr = VecCreate(comm,&Xto);CHKERRQ(ierr);
+  ierr = VecSetSizes(Xto,n,PETSC_DECIDE);CHKERRQ(ierr);
+  ierr = VecSetFromOptions(Xto);CHKERRQ(ierr);
+  ierr = VecSet(Xto,0.0);CHKERRQ(ierr);
+
+  ierr = VecScatterCreate(X,isfrom,Xto,NULL,&ctx);CHKERRQ(ierr);
+  ierr = VecScatterBegin(ctx,X,Xto,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  ierr = VecScatterEnd(ctx,X,Xto,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  ierr = VecScatterDestroy(&ctx);CHKERRQ(ierr);
+  ierr = ISDestroy(&isfrom);CHKERRQ(ierr);
+
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Xpipes:\n");CHKERRQ(ierr);
   ierr = VecView(Xto,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
-  /* 6. Free spaces */
+  /* 7. Free spaces */
   for (i=0; i<numkeys; i++) {
     ierr = PetscFree(selectedvariables[i]);CHKERRQ(ierr);
   }

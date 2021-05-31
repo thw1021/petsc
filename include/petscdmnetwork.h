@@ -54,6 +54,7 @@ PETSC_EXTERN PetscErrorCode DMNetworkGetSubnetwork(DM,PetscInt,PetscInt*,PetscIn
 PETSC_EXTERN PetscErrorCode DMNetworkAddSharedVertices(DM,PetscInt,PetscInt,PetscInt,PetscInt[],PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMNetworkGetSharedVertices(DM,PetscInt*,const PetscInt**);
 PETSC_EXTERN PetscErrorCode DMNetworkCreateIS(DM,PetscInt,PetscInt[],PetscInt[],PetscInt[],PetscInt*[],IS*);
+PETSC_EXTERN PetscErrorCode DMNetworkCreateLocalIS(DM,PetscInt,PetscInt[],PetscInt[],PetscInt[],PetscInt*[],IS*);
 
 typedef struct _p_DMNetworkMonitorList *DMNetworkMonitorList;
 struct _p_DMNetworkMonitorList
