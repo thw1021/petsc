@@ -664,6 +664,8 @@ GITSRCEXCL = \
 ':!include/*/khash.h' \
 ':!src/sys/yaml/*'
 checkbadSource:
+	 -@grep "self\.gitcommit" config/BuildSystem/config/packages/*.py | grep "'origin/main'" ; if [[ "$$?" == "0" ]]; then echo "Error: cannot use origin/main for package self.gitcommit" ; false; fi
+	 -@grep "self\.gitcommit" config/BuildSystem/config/packages/*.py | grep "'origin/master'" ; if [[ "$$?" == "0" ]]; then echo "Error: cannot use origin/master for package self.gitcommit" ; false; fi
 	-@${RM} -f checkbadSource.out
 	-@echo "Double blank lines in file ---------------------------" > checkbadSource.out
 	-@git --no-pager grep -n -P '^$$' -- ${GITSRC} > doublelinecheck.out
