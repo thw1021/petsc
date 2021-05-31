@@ -2986,7 +2986,7 @@ PETSC_STATIC_INLINE PetscErrorCode ISComputeLocalIdx(DM dm,PetscInt p,PetscInt n
 . keys - array of keys that define the components of the variables you wish to extract
 . blocksize - block size of the variables associated to the component
 . nselectedvar - number of variables in each block to select
-- selectedvar - indices of selected varables in the block
+- selectedvar - the offset into the block of each variable in each block to select
 
   Output Parameters:
 . is - the index set
