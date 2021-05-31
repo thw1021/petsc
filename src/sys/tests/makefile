@@ -24,11 +24,11 @@ testex55:
            echo "*mpiexec not found*. Please run src/sys/tests/ex55.py manually"; \
 	else \
            if [[ "X${PYTHONPATH}" == "X" ]]; then \
-             export PYTHONPATH=${PETSC_DIR}/${PETSC_ARCH}/lib; \
+             export PYTHONPATH=${PETSC_MPI4PY_PYTHONPATH}; \
              echo "Setting PYTHONPATH to $${PYTHONPATH} to locate mpi4py for test"; \
            else \
-             export PYTHONPATH=${PYTHONPATH}:${PETSC_DIR}/${PETSC_ARCH}/lib; \
-             echo "Appending $${PYTHONPATH} to PYTHONPATH locate mpi4py for test"; \
+             export PYTHONPATH=${PYTHONPATH}:${PETSC_MPI4PY_PYTHONPATH}; \
+             echo "Appended PYTHONPATH is $${PYTHONPATH} to locate mpi4py for test"; \
            fi; \
            ${MPIEXEC} -n 2 ${PYTHON} ./ex55.py > ex55_1.tmp  2>&1;\
 	   if (${DIFF} output/ex55_1.testout ex55_1.tmp > /dev/null 2>&1) then \

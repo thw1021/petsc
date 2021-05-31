@@ -54,12 +54,13 @@ class Configure(config.package.Package):
     self.framework.popLanguage()
 
     if 'PYTHONPATH' in os.environ:
-      self.logPrintBox('To use mpi4py, add '+installLibPath+' to PYTHONPATH\nexport PYTHONPATH=${PYTHONPATH}:'+installLibPath)
+      self.logPrintBox('To use mpi4py, do\nexport PYTHONPATH=${PYTHONPATH}'+os.pathsep+installLibPath)
       os.environ['PYTHONPATH'] = os.environ['PYTHONPATH']+os.pathsep+installLibPath
     else:
-      self.logPrintBox('To use mpi4py, set '+installLibPath+' to PYTHONPATH\nexport PYTHONPATH='+installLibPath)
-      os.environ['PYTHONPATH'] = os.pathsep+installLibPath
+      self.logPrintBox('To use mpi4py, do\nexport PYTHONPATH='+installLibPath)
+      os.environ['PYTHONPATH'] = installLibPath
     self.addMakeMacro('MPI4PY',"yes")
+    self.addMakeMacro('PETSC_MPI4PY_PYTHONPATH',installLibPath)
     self.found = 1
     return self.installDir
 
