@@ -41,7 +41,7 @@ class Configure(config.package.GNUPackage):
     self.getExecutable('flex')
     self.getExecutable('lex')
     if not hasattr(self, 'flex') and not hasattr(self, 'lex'):
-      raise RuntimeError('Cannot build c2html. It requires either "flex" or "lex" in PATH. Please install flex and retry.\nOr disable c2html with --with-c2html=0')
+      raise RuntimeError('Cannot build C2HTML. It requires either "flex" or "lex" in PATH. Please install flex and retry.\nOr disable C2HTML with --with-c2html=0')
     return config.package.GNUPackage.Install(self)
 
   def configure(self):
@@ -53,6 +53,6 @@ class Configure(config.package.GNUPackage):
     elif (not self.argDB['with-c2html']  == 0 and not self.argDB['with-c2html']  == 'no') or 'with-c2html-exec' in self.argDB:
       self.executeTest(self.locateC2html)
     else:
-      self.log.write('Not checking for C2html\n')
+      self.log.write('Not checking for C2HTML\n')
     if hasattr(self, 'c2html'): self.found = 1
     return

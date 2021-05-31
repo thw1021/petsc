@@ -61,7 +61,7 @@ class Configure(config.package.Package):
                touch ${PETSC_ARCH}/tests/testfiles && \\\n\
              '+barg+'${OMAKE} '+barg+') > ${PETSC_ARCH}/lib/petsc/conf/bamg.log 2>&1 || \\\n\
                (echo "**************************ERROR*************************************" && \\\n\
-               echo "Error building bamg. Check ${PETSC_ARCH}/lib/petsc/conf/bamg.log" && \\\n\
+               echo "Error building BAMG. Check ${PETSC_ARCH}/lib/petsc/conf/bamg.log" && \\\n\
                echo "********************************************************************" && \\\n\
                touch ${PETSC_ARCH}/lib/petsc/conf/bamg.errorflg && \\\n\
                exit 1)'])
@@ -70,7 +70,7 @@ class Configure(config.package.Package):
                             '@(cd '+self.packageDir+' && \\\n\
              '+newuser+barg+'${OMAKE} install '+barg+') >> ${PETSC_ARCH}/lib/petsc/conf/bamg.log 2>&1 || \\\n\
                (echo "**************************ERROR*************************************" && \\\n\
-               echo "Error building bamg. Check ${PETSC_ARCH}/lib/petsc/conf/bamg.log" && \\\n\
+               echo "Error installing BAMG. Check ${PETSC_ARCH}/lib/petsc/conf/bamg.log" && \\\n\
                echo "********************************************************************" && \\\n\
                exit 1)'])
       if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:

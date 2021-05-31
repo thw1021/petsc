@@ -30,8 +30,8 @@ class Configure(config.package.Package):
 
     if self.framework.argDB['boost-headers-only']:
        boostIncludeDir = os.path.join(os.path.join(self.installDir, self.includedir), 'boost')
-       self.logPrintBox('Configure option --boost-headers-only is ENABLED ... boost libraries will not be built')
-       self.logPrintBox('Installing boost headers, this should not take long')
+       self.logPrintBox('Configure option --boost-headers-only is ENABLED ... BOOST libraries will not be built')
+       self.logPrintBox('Installing BOOST headers, this should not take long')
        try:
          if os.path.lexists(boostIncludeDir): os.remove(boostIncludeDir)
          output,err,ret  = config.base.Configure.executeShellCommand('cd '+self.packageDir+';' + 'ln -s $PWD/boost/ ' + boostIncludeDir, timeout=6000, log = self.log)
@@ -40,14 +40,14 @@ class Configure(config.package.Package):
        return self.installDir
     else:
        if not self.checkCompile('#include <bzlib.h>', ''):
-         raise RuntimeError('Boost requires bzlib.h. Please install it in default compiler search location.')
+         raise RuntimeError('BOOST requires bzlib.h. Please install it in default compiler search location.')
 
        self.log.write('boostDir = '+self.packageDir+' installDir '+self.installDir+'\n')
-       self.logPrintBox('Building and installing boost; this may take many minutes')
+       self.logPrintBox('Building and installing BOOST; this may take many minutes')
        self.installDirProvider.printSudoPasswordMessage()
        try:
          output,err,ret  = config.base.Configure.executeShellCommand('cd '+self.packageDir+'; ./bootstrap.sh --prefix='+self.installDir+'; ./b2 -j'+str(self.make.make_np)+';'+self.installSudo+'./b2 install', timeout=6000, log = self.log)
        except RuntimeError as e:
-         raise RuntimeError('Error building/install Boost files from '+os.path.join(self.packageDir, 'Boost')+' to '+self.packageDir)
+         raise RuntimeError('Error building/install BOOST files from '+self.packageDir+' to '+self.packageDir)
        self.postInstall(output+err,conffile)
     return self.installDir

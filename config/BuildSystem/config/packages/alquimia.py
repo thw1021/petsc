@@ -84,13 +84,13 @@ class Configure(config.package.CMakePackage):
     config.package.CMakePackage.Install(self)
     if not self.argDB['with-batch']:
       try:
-        self.logPrintBox('Testing Alquimia; this may take several minutes')
+        self.logPrintBox('Testing ALQUIMIA; this may take several minutes')
         output,err,ret  = config.package.CMakePackage.executeShellCommand('cd '+os.path.join(self.packageDir,'petsc-build')+' && '+self.make.make+' test_install',timeout=60, log = self.log)
         output = output+err
         self.log.write(output)
         if output.find('Failure') > -1:
-          raise RuntimeError('Error running make test on Alquimia: '+output)
+          raise RuntimeError('Error running make test on ALQUIMIA: '+output)
       except RuntimeError as e:
-        raise RuntimeError('Error running make test on Alquimia: '+str(e))
+        raise RuntimeError('Error running make test on ALQUIMIA: '+str(e))
 
 

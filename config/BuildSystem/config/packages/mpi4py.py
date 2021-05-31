@@ -36,25 +36,25 @@ class Configure(config.package.Package):
         archflags = "ARCHFLAGS=\'-arch x86_64\' "
 
     self.addMakeRule('mpi4pybuild','', \
-                       ['@echo "*** Building mpi4py ***"',\
+                       ['@echo "*** Building MPI4PY ***"',\
                           '@(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && \\\n\
            '+self.python.pyexe+' setup.py clean --all && \\\n\
            '+archflags+self.python.pyexe+' setup.py build ) > ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log 2>&1 || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building mpi4py. Check ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log" && \\\n\
+             echo "Error building MPI4PY. Check ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log" && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)'])
     self.addMakeRule('mpi4pyinstall','', \
-                       ['@echo "*** Installing mpi4py ***"',\
+                       ['@echo "*** Installing MPI4PY ***"',\
                           '@(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && \\\n\
            '+archflags+self.python.pyexe+' setup.py install --install-lib='+installLibPath+') \\\n\
                >> ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log 2>&1 || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building mpi4py. Check ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log" && \\\n\
+             echo "Error installing MPI4PY. Check ${PETSC_ARCH}/lib/petsc/conf/mpi4py.log" && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)',\
                           '@echo "====================================="',\
-                          '@echo "To use mpi4py, add '+installLibPath+' to PYTHONPATH"',\
+                          '@echo "To use MPI4PY, add '+installLibPath+' to PYTHONPATH"',\
                           '@echo "export PYTHONPATH=${PYTHONPATH}:"'+os.path.join(self.installDir,'lib'),\
                           '@echo "====================================="'])
     self.addMakeMacro('MPI4PY',"yes")
@@ -70,9 +70,9 @@ class Configure(config.package.Package):
   def configureLibrary(self):
     self.checkDownload()
     if not self.sharedLibraries.useShared:
-        raise RuntimeError('mpi4py requires PETSc be built with shared libraries; rerun with --with-shared-libraries')
+        raise RuntimeError('MPI4PY requires PETSc be built with shared libraries; rerun with --with-shared-libraries')
     if not self.python.numpy:
-        raise RuntimeError('mpi4py, in the context of PETSc,requires Python with numpy module installed.\n'
+        raise RuntimeError('MPI4PY, in the context of PETSc,requires Python with numpy module installed.\n'
                            'Please install using package managers - for ex: "apt" or "dnf" (on linux),\n'
                            'or with "pip" using: %s -m pip install %s' % (self.python.pyexe, 'numpy'))
 

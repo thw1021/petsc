@@ -18,7 +18,7 @@ class Configure(config.package.GNUPackage):
 
   def formGNUConfigureArgs(self):
     if not self.languages.clanguage == 'C':
-      raise RuntimeError('Concurrencykit cannot be used with --with-clanguage=cxx since it cannot be included in C++ code\nUse --with-clanguage=c but you can still compile your application with C++')
+      raise RuntimeError('CONCURRENCYKIT cannot be used with --with-clanguage=cxx since it cannot be included in C++ code\nUse --with-clanguage=c but you can still compile your application with C++')
 
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
 
@@ -38,7 +38,7 @@ class Configure(config.package.GNUPackage):
     self.compilers.LIBS = self.libraries.toString(self.lib)+' '+self.compilers.LIBS
     self.pushLanguage('C')
     if not self.checkLink(include, body):
-      raise RuntimeError('Concurrencykit cannot be used')
+      raise RuntimeError('CONCURRENCYKIT cannot be used')
     self.popLanguage()
     self.compilers.CPPFLAGS = oldFlags
     self.compilers.LIBS = oldLibs

@@ -31,7 +31,7 @@ class Configure(config.package.CMakePackage):
 
   def formCMakeConfigureArgs(self):
     if not self.parmetis.ComputeVertexSeparator:
-      raise RuntimeError('Elemental requires modified Parmetis! Use options: --download-metis=1 --download-parmetis=1')
+      raise RuntimeError('ELEMENTAL requires modified Parmetis! Use options: --download-metis=1 --download-parmetis=1')
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     if self.compilerFlags.debugging:
       args.append('-DEL_ZERO_INIT=ON')
@@ -63,6 +63,6 @@ class Configure(config.package.CMakePackage):
 
     self.pushLanguage('Cxx')
     if config.setCompilers.Configure.isSolaris(self.log):
-       raise RuntimeError('Elemental does not compile with Oracle/Solaris/Sun compilers')
+       raise RuntimeError('ELEMENTAL does not compile with Oracle/Solaris/Sun compilers')
     self.popLanguage()
     return args

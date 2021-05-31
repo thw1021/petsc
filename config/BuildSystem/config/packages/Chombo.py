@@ -31,7 +31,7 @@ class Configure(config.package.Package):
     import os
     self.getExecutable('csh',path='/bin')
     if not hasattr(self, 'csh'):
-      raise RuntimeError('Cannot build Chombo. It requires /bin/csh. Please install csh and retry.\n')
+      raise RuntimeError('Cannot build CHOMBO. It requires /bin/csh. Please install csh and retry.\n')
     if not hasattr(self.compilers, 'FC'):
       raise RuntimeError('Cannot install '+self.name+' without Fortran, make sure you do NOT have --with-fc=0')
     if not self.make.haveGNUMake:
@@ -97,7 +97,7 @@ class Configure(config.package.Package):
     g.close()
     if True: #self.installNeeded(os.path.join('lib','mk','Make.defs.local')):
       try:
-        self.logPrintBox('Compiling and installing chombo; this may take several minutes')
+        self.logPrintBox('Compiling and installing CHOMBO; this may take several minutes')
         self.installDirProvider.printSudoPasswordMessage()
         output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+os.path.join(self.installDir,'lib'), timeout=2500, log=self.log)
         output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+os.path.join(self.installDir,'include'), timeout=2500, log=self.log)
@@ -110,8 +110,8 @@ class Configure(config.package.Package):
             config_value = line.split('=')[1]
             break
         if config_value is None:
-          raise RuntimeError('Error running make on Chombo: config value not found')
-        self.logPrint('Chombo installed using config=%s\n'%config_value)
+          raise RuntimeError('Error running make on CHOMBO: config value not found')
+        self.logPrint('CHOMBO installed using config=%s\n'%config_value)
         import glob
         output,err,ret = config.package.Package.executeShellCommandSeq(
           ['make clean',
@@ -120,7 +120,7 @@ class Configure(config.package.Package):
            self.installSudo+'cp -f include/*.H '+os.path.join(self.installDir,self.includedir,'')
           ], cwd=os.path.join(self.packageDir,'lib'), timeout=2500, log = self.log)
       except RuntimeError as e:
-        raise RuntimeError('Error running make on Chombo: '+str(e))
+        raise RuntimeError('Error running make on CHOMBO: '+str(e))
 
 
       self.libdir = 'lib'

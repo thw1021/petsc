@@ -50,10 +50,10 @@ class Configure(config.package.GNUPackage):
 
   def locateCMake(self):
     if 'with-cmake-exec' in self.argDB:
-      self.log.write('Looking for specified CMake executable '+self.argDB['with-cmake-exec']+'\n')
+      self.log.write('Looking for specified CMAKE executable '+self.argDB['with-cmake-exec']+'\n')
       self.getExecutable(self.argDB['with-cmake-exec'], getFullPath=1, resultName='cmake')
     else:
-      self.log.write('Looking for default CMake executable\n')
+      self.log.write('Looking for default CMAKE executable\n')
       self.getExecutable('cmake', getFullPath=1, resultName='cmake')
     if 'with-ctest-exec' in self.argDB:
       self.log.write('Looking for specified Ctest executable '+self.argDB['with-ctest-exec']+'\n')
@@ -69,52 +69,52 @@ class Configure(config.package.GNUPackage):
   def configure(self):
     '''Locate cmake and download it if requested'''
     if self.argDB['download-cmake']:
-      self.log.write('Building CMake\n')
+      self.log.write('Building CMAKE\n')
       if config.setCompilers.Configure.isSolaris(self.log):
         self.download = self.download_311
       config.package.GNUPackage.configure(self)
-      self.log.write('Looking for Cmake in '+os.path.join(self.installDir,'bin')+'\n')
+      self.log.write('Looking for CMAKE in '+os.path.join(self.installDir,'bin')+'\n')
       self.getExecutable('cmake',    path=os.path.join(self.installDir,'bin'), getFullPath = 1)
       self.getExecutable('ctest',    path=os.path.join(self.installDir,'bin'), getFullPath = 1)
     elif (not self.argDB['with-cmake']  == 0 and not self.argDB['with-cmake']  == 'no') or 'with-cmake-exec' in self.argDB:
       self.executeTest(self.locateCMake)
     else:
-      self.log.write('Not checking for CMake\n')
+      self.log.write('Not checking for CMAKE\n')
     if hasattr(self, 'cmake'):
       import re
       self.found = 1
       try:
         (output, error, status) = config.base.Configure.executeShellCommand(self.cmake+' --version', log = self.log)
         if status:
-          self.log.write('cmake --version failed: '+str(error)+'\n')
+          self.log.write('CMAKE --version failed: '+str(error)+'\n')
           return
       except RuntimeError as e:
-        self.log.write('cmake --version failed: '+str(e)+'\n')
+        self.log.write('CMAKE --version failed: '+str(e)+'\n')
         return
       output = output.replace('stdout: ','')
       gver = None
       try:
-        gver = re.compile('cmake version ([0-9]+).([0-9]+).([0-9]+)').match(output)
+        gver = re.compile('CMAKE version ([0-9]+).([0-9]+).([0-9]+)').match(output)
       except: pass
       if gver:
         try:
            self.foundversion = ".".join(gver.groups())
-           self.log.write('cmake version found '+self.foundversion+'\n')
+           self.log.write('CMAKE version found '+self.foundversion+'\n')
            return
         except: pass
       gver = None
       try:
-        gver = re.compile('cmake version ([0-9]+).([0-9]+)-patch ([0-9]+)').match(output)
+        gver = re.compile('CMAKE version ([0-9]+).([0-9]+)-patch ([0-9]+)').match(output)
       except: pass
       if gver:
         try:
            val = list(gver.groups())
            v = [val[0],val[1],'0',val[2]]
            self.foundversion = ".".join(v)
-           self.log.write('cmake version found '+self.foundversion+'\n')
+           self.log.write('CMAKE version found '+self.foundversion+'\n')
            return
         except: pass
-      self.log.write('cmake version check failed\n')
+      self.log.write('CMAKE version check failed\n')
     else:
-      self.log.write('cmake not found\n')
+      self.log.write('CMAKE not found\n')
     return
