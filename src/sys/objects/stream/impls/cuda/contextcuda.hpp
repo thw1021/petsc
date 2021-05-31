@@ -7,7 +7,6 @@
 typedef struct {
   cudaStream_t       stream;
   cudaEvent_t        event;
-  PetscInt           blasHandleId,solverHandleId;
   cublasHandle_t     cublasv2handle;
   cusolverDnHandle_t cusolverdnhandle;
 } PetscDeviceContext_CUDA;
