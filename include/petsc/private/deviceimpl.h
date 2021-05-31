@@ -51,39 +51,18 @@ PETSC_STATIC_INLINE PetscErrorCode PetscStreamTypeCompare(const char type_ref[],
 #define PetscCheckValidSameStreamType(_p_strm1__,_p_arg1__,_p_strm2__,_p_arg2__) do {(void)(_p_strm1__);(void)(_p_strm2__);} while (0)
 #endif
 
-typedef struct _EventOps *EventOps;
-struct _EventOps {
-  PetscErrorCode (*create)(PetscEvent);
-  PetscErrorCode (*destroy)(PetscEvent);
-  PetscErrorCode (*setup)(PetscEvent);
-  PetscErrorCode (*setfromoptions)(PetscOptionItems*,PetscEvent);
-  PetscErrorCode (*synchronize)(PetscEvent);
-  PetscErrorCode (*query)(PetscEvent,PetscBool*);
-};
-
-struct _n_PetscEvent {
-  struct _EventOps ops[1];
-  char             *type;
-  void             *data;
-  unsigned int     eventFlags, waitFlags;
-  PetscInt         laststreamid;
-  PetscBool        idle;
-  PetscBool        setup;
-  PetscBool        setfromoptionscalled;
-};
-
 typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
   PetscErrorCode (*create)(PetscDeviceContext);
   PetscErrorCode (*destroy)(PetscDeviceContext);
   PetscErrorCode (*setup)(PetscDeviceContext);
-  PetscErrorCode (*getstream)(PetscDeviceContext,void*);
-  PetscErrorCode (*restorestream)(PetscDeviceContext,void*);
   PetscErrorCode (*getblashandle)(PetscDeviceContext,void*);
   PetscErrorCode (*restoreblashandle)(PetscDeviceContext,void*);
+  PetscErrorCode (*getsolverhandle)(PetscDeviceContext,void*);
+  PetscErrorCode (*restoresolverhandle)(PetscDeviceContext,void*);
   PetscErrorCode (*query)(PetscDeviceContext,PetscBool*);
   PetscErrorCode (*waitforctx)(PetscDeviceContext,PetscDeviceContext);
-  PetscErrorCode (*join)(PetscDeviceContext);
+  PetscErrorCode (*synchronize)(PetscDeviceContext);
 };
 
 struct _n_PetscDeviceContext {
@@ -94,7 +73,6 @@ struct _n_PetscDeviceContext {
   PetscInt                 *childIDs;
   PetscInt                  id,numChildren,maxNumChildren;
   PetscStreamMode           mode;
-  PetscEvent                event;
   PetscBool                 setup;
 };
 
@@ -107,19 +85,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(Petsc
 
     ierr = (*dctx->ops->query)(dctx,&idle);CHKERRQ(ierr);
     if (PetscUnlikely(dctx->idle && !idle)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContext cache corrupted, stream thought it was idle when it still had work");
-  }
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscEventValidateIdle_Internal(PetscEvent event)
-{
-  PetscFunctionBegin;
-  if (PetscDefined(USE_DEBUG)) {
-    PetscBool      idle;
-    PetscErrorCode ierr;
-
-    ierr = (*event->ops->query)(event,&idle);CHKERRQ(ierr);
-    if (PetscUnlikely(event->idle && !idle)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscEvent cache corrupted, event thought it was idle when it still had work");
   }
   PetscFunctionReturn(0);
 }
