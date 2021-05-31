@@ -1314,7 +1314,7 @@ PetscErrorCode DMNetworkGetComponent(DM dm,PetscInt p,PetscInt compnum,PetscInt 
   }
 
   ierr = PetscSectionGetOffset(network->DataSection,p,&offset);CHKERRQ(ierr);
-  header = (DMNetworkComponentHeader)(network->componentdataarray+offset);CHKERRQ(ierr);
+  header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
 
   if (compnum >= 0) {
     if (compkey) *compkey = header->key[compnum];
@@ -2923,5 +2923,122 @@ PetscErrorCode DMNetworkSetVertexLocalToGlobalOrdering(DM dm)
   ierr = VecDestroy(&Vleaves);CHKERRQ(ierr);
   ierr = VecDestroy(&Vleaves_seq);CHKERRQ(ierr);
   ierr = VecScatterDestroy(&ctx);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode ISAddLocalSize(DM dm,PetscInt p,PetscInt numkeys,PetscInt keys[],PetscInt blocksize[],PetscInt nselectedvar[],PetscInt *nidx)
+{
+  PetscErrorCode ierr;
+  PetscInt       i,j,ncomps,nvar,key,offset=0;
+  DM_Network     *network = (DM_Network*)dm->data;
+  DMNetworkComponentHeader header;
+
+  PetscFunctionBegin;
+  ierr = PetscSectionGetOffset(network->DataSection,p,&offset);CHKERRQ(ierr);
+  ncomps = ((DMNetworkComponentHeader)(network->componentdataarray+offset))->ndata;
+  header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
+
+  for (i=0; i<ncomps; i++) {
+    key  = header->key[i];
+    nvar = header->nvar[i];
+    for (j=0; j<numkeys; j++) {
+      if (key == keys[j]) *nidx += nselectedvar[j]*nvar/blocksize[j];
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode ISComputeLocalIdx(DM dm,PetscInt p,PetscInt numkeys,PetscInt keys[],PetscInt blocksize[],PetscInt nselectedvar[],PetscInt *selectedvar[],PetscInt *ii,PetscInt *idx)
+{
+  PetscErrorCode ierr;
+  PetscInt       i,j,ncomps,nvar,key,offsetg,k,k1,offset=0;
+  DM_Network     *network = (DM_Network*)dm->data;
+  DMNetworkComponentHeader header;
+
+  PetscFunctionBegin;
+  ierr = PetscSectionGetOffset(network->DataSection,p,&offset);CHKERRQ(ierr);
+  ncomps = ((DMNetworkComponentHeader)(network->componentdataarray+offset))->ndata;
+  header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
+
+  for (i=0; i<ncomps; i++) {
+    key  = header->key[i];
+    nvar = header->nvar[i];
+    for (j=0; j<numkeys; j++) {
+      if (key != keys[j]) continue;
+
+      ierr = DMNetworkGetGlobalVecOffset(dm,p,i,&offsetg);CHKERRQ(ierr);
+      for (k=0; k<nvar; k+=blocksize[j]) {
+        for (k1=0; k1<nselectedvar[j]; k1++) idx[(*ii)++] = offsetg + k + selectedvar[j][k1];
+      }
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMNetworkCreateIS - Create an index set object from the global vector of the network
+
+  Collective
+
+  Input Parameters:
++ dm - DMNetwork object
+. numkeys - number of keys
+. keys - array of keys that define the components of the variables you wish to extract
+. blocksize - block size of the variables associated to the component
+. nselectedvar - number of variables in each block to select
+- selectedvar - the offset into the block of each variable in each block to select
+
+  Output Parameters:
+. is - the index set
+
+  Level: Advanced
+   Notes:
+     Use blocksize[i] of -1 to indicate select all the variables of that component. nselectvar[i] and selectedvar[i] are ignored for that i. Use NULL, NULL, NULL to indicate for all selected components one wishes to obtain all the values of that component. For example, DMNetworkCreateIS(dm,1,&zero,NULL,NULL,NULL,IS) will return an IS that extracts all the variables for the zeroth component.
+.seealso: DMNetworkCreate(), ISCreateGeneral(), DMNetworkCreateLocalIS()
+@*/
+PetscErrorCode DMNetworkCreateIS(DM dm,PetscInt numkeys,PetscInt keys[],PetscInt blocksize[],PetscInt nselectedvar[],PetscInt *selectedvar[],IS *is)
+{
+  PetscErrorCode ierr;
+  MPI_Comm       comm;
+  PetscInt       i,p,estart,eend,vstart,vend,nidx,*idx;
+  PetscBool      ghost;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+
+  /* Check input parameters */
+  for (i=0; i<numkeys; i++) {
+    if (nselectedvar[i] > blocksize[i]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"number of selectedvariables %D cannot be larger than blocksize %D",nselectedvar[i],blocksize[i]);
+  }
+
+  ierr = DMNetworkGetEdgeRange(dm,&estart,&eend);CHKERRQ(ierr);
+  ierr = DMNetworkGetVertexRange(dm,&vstart,&vend);CHKERRQ(ierr);
+
+  /* Get local number of idx */
+  nidx = 0;
+  for (p=estart; p<eend; p++) {
+    ierr = ISAddLocalSize(dm,p,numkeys,keys,blocksize,nselectedvar,&nidx);CHKERRQ(ierr);
+  }
+  for (p=vstart; p<vend; p++) {
+    ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
+    if (ghost) continue;
+    ierr = ISAddLocalSize(dm,p,numkeys,keys,blocksize,nselectedvar,&nidx);CHKERRQ(ierr);
+  }
+
+  /* Compute idx */
+  ierr = PetscMalloc1(nidx,&idx);CHKERRQ(ierr);
+  i = 0;
+  for (p=estart; p<eend; p++) {
+    ierr = ISComputeLocalIdx(dm,p,numkeys,keys,blocksize,nselectedvar,selectedvar,&i,idx);CHKERRQ(ierr);
+  }
+  for (p=vstart; p<vend; p++) {
+    ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
+    if (ghost) continue;
+    ierr = ISComputeLocalIdx(dm,p,numkeys,keys,blocksize,nselectedvar,selectedvar,&i,idx);CHKERRQ(ierr);
+  }
+
+  /* Create is */
+  ierr = ISCreateGeneral(comm,nidx,idx,PETSC_COPY_VALUES,is);CHKERRQ(ierr);
+  ierr = PetscFree(idx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
