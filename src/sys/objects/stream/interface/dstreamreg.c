@@ -1,69 +1,8 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
-static PetscFunctionList PetscEventList                = NULL;
 static PetscFunctionList PetscDeviceContextList        = NULL;
 static PetscBool         PetscDeviceRegisterAllCalled  = PETSC_FALSE;
 static PetscBool         PetscDevicePackageInitialized = PETSC_FALSE;
-
-/*@C
-  PetscEventSetType - Builds a PetscEvent for a particular stream implementation
-
-  Not Collective
-
-  Input Parameters:
-+ event - The PetscEvent object
-- type - The PetscStream type
-
-  Notes:
-  See "petsc/include/petscdevice.h" for available stream types
-
-  Level: intermediate
-
-.seealso: PetscEventCreate(), PetscEventGetType()
-@*/
-PetscErrorCode PetscEventSetType(PetscEvent event, PetscStreamType type)
-{
-  PetscErrorCode (*create)(PetscEvent);
-  PetscBool      match;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (PetscUnlikelyDebug(!type)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscEvent to NULL type");
-  ierr = PetscStreamTypeCompare(event->type,type,&match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
-  ierr = PetscFunctionListFind(PetscEventList,type,&create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscEvent type: %s",type);
-  if (event->ops->destroy) {ierr = (*event->ops->destroy)(event);CHKERRQ(ierr);}
-  ierr = PetscMemzero(event->ops,sizeof(struct _EventOps));CHKERRQ(ierr);
-  ierr = (*create)(event);CHKERRQ(ierr);
-  ierr = PetscFree(event->type);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(type,&event->type);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-  PetscEventGetType - Gets the typename of a PetscEvent
-
-  Not Collective
-
-  Input Parameter:
-. event - The PetscEvent object
-
-  Output Parameter:
-. type - The PetscStream type
-
-  Level: intermediate
-
-.seealso: PetscEventCreate(), PetscEventSetType()
-@*/
-PetscErrorCode PetscEventGetType(PetscEvent event, PetscStreamType *type)
-{
-  PetscFunctionBegin;
-  PetscValidStreamType(event,1);
-  PetscValidPointer(type,2);
-  *type = event->type;
-  PetscFunctionReturn(0);
-}
 
 /*@C
   PetscDeviceContextSetType - Builds a PetscDeviceContext for a particular stream implementation
@@ -128,15 +67,6 @@ PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext dctx, PetscStreamTyp
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscEventRegister(const char sname[], PetscErrorCode (*function)(PetscEvent))
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = PetscFunctionListAdd(&PetscEventList,sname,function);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 PetscErrorCode PetscDeviceContextRegister(const char sname[], PetscErrorCode (*function)(PetscDeviceContext))
 {
   PetscErrorCode ierr;
@@ -147,11 +77,9 @@ PetscErrorCode PetscDeviceContextRegister(const char sname[], PetscErrorCode (*f
 }
 
 #if PetscDefined(HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode PetscEventCreate_CUDA(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
 #endif
 #if PetscDefined(HAVE_HIP)
-PETSC_EXTERN PetscErrorCode PetscEventCreate_HIP(PetscEvent);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
 #endif
 
@@ -174,11 +102,9 @@ PetscErrorCode PetscDeviceRegisterAll(void)
   if (PetscDeviceRegisterAllCalled) PetscFunctionReturn(0);
   PetscDeviceRegisterAllCalled = PETSC_TRUE;
 #if PetscDefined(HAVE_CUDA)
-  ierr = PetscEventRegister(PETSCSTREAMCUDA,PetscEventCreate_CUDA);CHKERRQ(ierr);
   ierr = PetscDeviceContextRegister(PETSCSTREAMCUDA,PetscDeviceContextCreate_CUDA);CHKERRQ(ierr);
 #endif
 #if PetscDefined(HAVE_HIP)
-  ierr = PetscEventRegister(PETSCSTREAMHIP,PetscEventCreate_HIP);CHKERRQ(ierr);
   ierr = PetscDeviceContextRegister(PETSCSTREAMHIP,PetscDeviceContextCreate_HIP);CHKERRQ(ierr);
 #endif
   PetscFunctionReturn(0);
@@ -197,7 +123,6 @@ PetscErrorCode PetscDeviceFinalizePackage(void)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&PetscEventList);CHKERRQ(ierr);
   ierr = PetscFunctionListDestroy(&PetscDeviceContextList);CHKERRQ(ierr);
   PetscDeviceRegisterAllCalled  = PETSC_FALSE;
   PetscDevicePackageInitialized = PETSC_FALSE;
@@ -225,6 +150,7 @@ PetscErrorCode PetsDeviceInitializePackage(void)
   PetscFunctionReturn(0);
 }
 
+#if 0
 /*@C
   PetscEventSetFromOptions - Configures a PetscEvent from the options database.
 
@@ -286,3 +212,4 @@ PetscErrorCode PetscEventSetFromOptions(MPI_Comm comm, const char prefix[], Pets
   ierr = PetscEventSetUp(event);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+#endif
