@@ -366,7 +366,7 @@ class Package(config.base.Configure):
     self.libDir     = os.path.join(self.installDir, 'lib')
     installDir = self.Install()
     if not installDir:
-      raise RuntimeError(self.package+' forgot to return the install directory from the method Install()\n')
+      raise RuntimeError(self.PACKAGE+' forgot to return the install directory from the method Install()\n')
     return os.path.abspath(installDir)
 
   def withSudo(self, *args):
@@ -486,7 +486,7 @@ class Package(config.base.Configure):
           continue
         for l in self.generateLibList(libdirpath):
           yield('Download '+self.PACKAGE, d, l, self.getIncludeDirs(d, self.includedir))
-      raise RuntimeError('Downloaded '+self.package+' could not be used. Please check install in '+d+'\n')
+      raise RuntimeError('Downloaded '+self.PACKAGE+' could not be used. Please check install in '+d+'\n')
 
     if 'with-'+self.package+'-pkg-config' in self.argDB:
       if self.argDB['with-'+self.package+'-pkg-config']:
@@ -503,7 +503,7 @@ class Package(config.base.Configure):
         if path: os.environ['PKG_CONFIG_PATH'] = path
         else: os.environ['PKG_CONFIG_PATH'] = ''
       yield('pkg-config located libraries and includes '+self.PACKAGE, None, l, i)
-      raise RuntimeError('pkg-config could not locate correct includes and libraries for '+self.package)
+      raise RuntimeError('pkg-config could not locate correct includes and libraries for '+self.PACKAGE)
 
 
     if 'with-'+self.package+'-dir' in self.argDB:
@@ -585,7 +585,7 @@ class Package(config.base.Configure):
             yield('Compiler specific search '+self.PACKAGE, d, l, includedir)
 
     if not self.lookforbydefault or ('with-'+self.package in self.framework.clArgDB and self.argDB['with-'+self.package]):
-      mesg = 'Unable to find '+self.package+' in default locations!\nPerhaps you can specify with --with-'+self.package+'-dir=<directory>\nIf you do not want '+self.name+', then give --with-'+self.package+'=0'
+      mesg = 'Unable to find '+self.PACKAGE+' in default locations!\nPerhaps you can specify with --with-'+self.package+'-dir=<directory>\nIf you do not want '+self.name+', then give --with-'+self.package+'=0'
       if self.download: mesg +='\nYou might also consider using --download-'+self.package+' instead'
       if self.alternativedownload: mesg +='\nYou might also consider using --download-'+self.alternativedownload+' instead'
       raise RuntimeError(mesg)
@@ -681,7 +681,7 @@ class Package(config.base.Configure):
     '''Checkout the correct gitcommit for the gitdir - and update pkg.gitcommit'''
     if hasattr(self.sourceControl, 'git') and (self.packageDir == os.path.join(self.externalPackagesDir,'git.'+self.package)):
       if not (hasattr(self, 'gitcommit') and self.gitcommit):
-        raise RuntimeError('Trying to update '+self.package+' package source directory '+self.packageDir+' which is supposed to be a git repository, but no gitcommit is set for this package.\n\
+        raise RuntimeError('Trying to update '+self.PACKAGE+' package source directory '+self.packageDir+' which is supposed to be a git repository, but no gitcommit is set for this package.\n\
 Try to delete '+self.packageDir+' and rerun configure.\n\
 If the problem persists, please send your configure.log to petsc-maint@mcs.anl.gov')
       # verify that packageDir is actually a git clone
@@ -751,7 +751,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
           Dir.append(d)
 
     if len(Dir) > 1:
-      raise RuntimeError('Located multiple directories with package '+self.package+' '+str(Dir)+'\nDelete directory '+self.arch+' and rerun ./configure')
+      raise RuntimeError('Located multiple directories with package '+self.PACKAGE+' '+str(Dir)+'\nDelete directory '+self.arch+' and rerun ./configure')
 
     if Dir:
       self.logPrint('Found a copy of '+self.PACKAGE+' in '+str(Dir[0]))
@@ -821,7 +821,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     raise RuntimeError('Error during download/extract/detection of '+self.PACKAGE+':\n'+err)
 
   def Install(self):
-    raise RuntimeError('No custom installation implemented for package '+self.package+'\n')
+    raise RuntimeError('No custom installation implemented for package '+self.PACKAGE+'\n')
 
   def checkInclude(self, incl, hfiles, otherIncludes = [], timeout = 600.0):
     if self.cxx:
@@ -1082,7 +1082,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
         version = i.split('(')[1].split(')')[0]
         break
     if not version:
-      self.log.write('For '+self.package+' unable to find version information: output below, skipping version check\n')
+      self.log.write('For '+self.PACKAGE+' unable to find version information: output below, skipping version check\n')
       self.log.write(output)
       if self.requiresversion:
         raise RuntimeError('Configure must be able to determined the version information for '+self.name+'. It was unable to, please send configure.log to petsc-maint@mcs.anl.gov')
@@ -1090,17 +1090,17 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     try:
       self.foundversion = self.versionToStandardForm(version)
     except:
-      self.log.write('For '+self.package+' unable to convert version information ('+version+') to standard form, skipping version check\n')
+      self.log.write('For '+self.PACKAGE+' unable to convert version information ('+version+') to standard form, skipping version check\n')
       if self.requiresversion:
         raise RuntimeError('Configure must be able to determined the version information for '+self.name+'. It was unable to, please send configure.log to petsc-maint@mcs.anl.gov')
       return
 
-    self.log.write('For '+self.package+' need '+self.minversion+' <= '+self.foundversion+' <= '+self.maxversion+'\n')
+    self.log.write('For '+self.PACKAGE+' need '+self.minversion+' <= '+self.foundversion+' <= '+self.maxversion+'\n')
 
     try:
       self.version_tuple = self.versionToTuple(self.foundversion)
     except:
-      self.log.write('For '+self.package+' unable to convert version string to tuple, skipping version check\n')
+      self.log.write('For '+self.PACKAGE+' unable to convert version string to tuple, skipping version check\n')
       if self.requiresversion:
         raise RuntimeError('Configure must be able to determined the version information for '+self.name+'; it appears to be '+self.foundversion+'. It was unable to, please send configure.log to petsc-maint@mcs.anl.gov')
       self.foundversion = ''
@@ -1110,16 +1110,16 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     if self.download: suggest = '\nSuggest using --download-'+self.package+' for a compatible '+self.name
     if self.minversion:
       if self.versionToTuple(self.minversion) > self.version_tuple:
-        raise RuntimeError(self.package+' version is '+self.foundversion+' this version of PETSc needs at least '+self.minversion+suggest+'\n')
+        raise RuntimeError(self.PACKAGE+' version is '+self.foundversion+' this version of PETSc needs at least '+self.minversion+suggest+'\n')
     elif self.version:
       if self.versionToTuple(zeroPatch(self.version)) > self.version_tuple:
-        self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.package+' PETSc is tested with '+dropPatch(self.version)+suggest)
+        self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.PACKAGE+' PETSc is tested with '+dropPatch(self.version)+suggest)
     if self.maxversion:
       if self.versionToTuple(self.maxversion) < self.version_tuple:
-        raise RuntimeError(self.package+' version is '+self.foundversion+' this version of PETSc needs at most '+self.maxversion+suggest+'\n')
+        raise RuntimeError(self.PACKAGE+' version is '+self.foundversion+' this version of PETSc needs at most '+self.maxversion+suggest+'\n')
     elif self.version:
       if self.versionToTuple(infinitePatch(self.version)) < self.version_tuple:
-        self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.package+' PETSc is tested with '+dropPatch(self.version)+suggest)
+        self.logPrintBox('Warning: Using version '+self.foundversion+' of package '+self.PACKAGE+' PETSc is tested with '+dropPatch(self.version)+suggest)
     return
 
   def configure(self):
@@ -1238,7 +1238,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     else:
       useShared = True
     if 'download-'+self.package+'-shared' in self.framework.clArgDB and self.argDB['download-'+self.package+'-shared']:
-      raise RuntimeError(self.package+' cannot use download-'+self.package+'-shared=1. This flag can only be used to disable '+self.package+' shared libraries')
+      raise RuntimeError(self.PACKAGE+' cannot use download-'+self.package+'-shared=1. This flag can only be used to disable '+self.PACKAGE+' shared libraries')
     if not useShared or ('download-'+self.package+'-shared' in self.framework.clArgDB and not self.argDB['download-'+self.package+'-shared']):
       return False
     else:

@@ -127,22 +127,22 @@ class Configure(config.package.CMakePackage):
     self.addDefine('HAVE_AMREX',1)
     self.addMakeMacro('AMREX','yes')
     self.addMakeRule('amrexbuild','', \
-                       ['@echo "*** Building AMReX ***"',\
+                       ['@echo "*** Building AMREX ***"',\
                           '@${RM} -f ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/amrex.errorflg',\
                           '@cd '+os.path.join(self.packageDir,'petsc-build')+' && \\\n\
            '+carg+' '+self.cmake.cmake+' .. '+args+'  > ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/amrex.log 2>&1 &&'+\
            self.make.make_jnp+' '+self.makerulename+'  >> ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/amrex.log 2>&1  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building AMReX. Check ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/amrex.log" && \\\n\
+             echo "Error building AMREX. Check ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/amrex.log" && \\\n\
              echo "********************************************************************" && \\\n\
              touch ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/amrex.errorflg && \\\n\
              exit 1)'])
     self.addMakeRule('amrexinstall','', \
-                       ['@echo "*** Installing AMReX ***"',\
+                       ['@echo "*** Installing AMREX ***"',\
                           '@(cd '+os.path.join(self.packageDir,'petsc-build')+' && \\\n\
            '+newuser+'${OMAKE} install) >> ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/amrex.log 2>&1 || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error installing AMReX. Check ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/amrex.log" && \\\n\
+             echo "Error installing AMREX. Check ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/amrex.log" && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)'])
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:

@@ -72,26 +72,26 @@ class Configure(config.package.Package):
     self.addDefine('PETSC4PY_INSTALL_PATH','"'+os.path.join(self.installdir.dir,'lib')+'"')
     self.addMakeMacro('PETSC4PY','yes')
     self.addMakeRule('petsc4pybuild','', \
-                       ['@echo "*** Building petsc4py ***"',\
+                       ['@echo "*** Building PETSC4PY ***"',\
                           '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/petsc4py.errorflg',\
                           '@(cd '+self.packageDir+' && \\\n\
            '+newuser+newdir+archflags+self.python.pyexe+' setup.py build )  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error installing petsc4py." && \\\n\
+             echo "Error installing PETSC4PY." && \\\n\
              echo "********************************************************************" && \\\n\
              touch ${PETSC_ARCH}/lib/petsc/conf/petsc4py.errorflg && \\\n\
              exit 1)'])
     self.addMakeRule('petsc4pyinstall','', \
-                       ['@echo "*** Installing petsc4py ***"',\
+                       ['@echo "*** Installing PETSC4PY ***"',\
                           '@(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && \\\n\
            '+newdir+archflags+self.python.pyexe+' setup.py install --install-lib='+installLibPath+' \\\n\
                $(if $(DESTDIR),--root=\'$(DESTDIR)\') ) || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building petsc4py." && \\\n\
+             echo "Error building PETSC4PY." && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)',\
                           '@echo "====================================="',\
-                          '@echo "To use petsc4py, add '+installLibPath+' to PYTHONPATH"',\
+                          '@echo "To use PETSC4PY, add '+installLibPath+' to PYTHONPATH"',\
                           '@echo "====================================="'])
 
     np = self.make.make_test_np
@@ -117,13 +117,13 @@ class Configure(config.package.Package):
 
   def configureLibrary(self):
     if not self.sharedLibraries.useShared and not self.setCompilers.isCygwin(self.log):
-        raise RuntimeError('petsc4py requires PETSc be built with shared libraries; rerun with --with-shared-libraries')
+        raise RuntimeError('PETSC4PY requires PETSc be built with shared libraries; rerun with --with-shared-libraries')
     chkpkgs = ['cython','numpy']
     npkgs  = []
     for pkg in chkpkgs:
       if not getattr(self.python,pkg): npkgs.append(pkg)
     if npkgs:
-      raise RuntimeError('PETSc4py requires Python with "%s" module(s) installed!\n'
+      raise RuntimeError('PETSC4PY requires Python with "%s" module(s) installed!\n'
                          'Please install using package managers - for ex: "apt" or "dnf" (on linux),\n'
                          'or with "pip" using: %s -m pip install %s' % (" ".join(npkgs), self.python.pyexe, " ".join(npkgs)))
     self.getInstallDir()
