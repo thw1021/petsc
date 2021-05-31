@@ -12,7 +12,5 @@ include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
 pipes: pipes.o $(OBJECTS_PIPE)
-	-${CLINKER} -o pipes pipes.o $(OBJECTS_PIPE) ${PETSC_TS_LIB}
-	${RM} pipes.o $(OBJECTS_PIPE)
 
 include ${PETSC_DIR}/lib/petsc/conf/test
