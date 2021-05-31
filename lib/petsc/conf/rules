@@ -664,6 +664,7 @@ GITSRCEXCL = \
 ':!include/*/khash.h' \
 ':!src/sys/yaml/*'
 checkbadSource:
+	-@grep "self\.gitcommit" config/BuildSystem/config/packages/*.py | grep "origin/" ; if [[ "$$?" == "0" ]]; then echo "Error: Do not use a branch name in a configure package file"; false; fi
 	-@${RM} -f checkbadSource.out
 	-@echo "Tabs in file -----------------------------------------" > checkbadSource.out
 	-@git --no-pager grep -n -P '\t' -- ${GITSRC} >> checkbadSource.out;true

@@ -30,6 +30,7 @@ OMAKE_SELF_PRINTDIR = $(OMAKE_PRINTDIR) -f makefile
 # Basic targets to build PETSc libraries.
 #
 all:
+	grep "self\.gitcommit" config/BuildSystem/config/packages/*.py | grep "origin/" ; if [[ "?$" == "0" ]]; then echo "Error: Do not use a branch name in a configure package file"; false; fi
 	+@${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} chk_petscdir chk_upgrade | tee ${PETSC_ARCH}/lib/petsc/conf/make.log
 	@ln -sf ${PETSC_ARCH}/lib/petsc/conf/make.log make.log
 	+@${OMAKE_SELF_PRINTDIR} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} all-local 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log;
