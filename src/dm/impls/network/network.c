@@ -2983,7 +2983,7 @@ PETSC_STATIC_INLINE PetscErrorCode ISComputeLocalIdx(DM dm,PetscInt p,PetscInt n
   Input Parameters:
 + dm - DMNetwork object
 . numkeys - number of keys
-. keys - array of keys that define the components
+. keys - array of keys that define the components of the variables you wish to extract
 . blocksize - block size of the variables associated to the component
 . nselectedvar - number of selected variables in the block
 - selectedvar - indices of selected varables in the block
