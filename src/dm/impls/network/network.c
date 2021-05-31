@@ -2993,7 +2993,7 @@ PETSC_STATIC_INLINE PetscErrorCode ISComputeLocalIdx(DM dm,PetscInt p,PetscInt n
 
   Level: Advanced
 
-.seealso: DMNetworkCreate(), ISCreateGeneral()
+.seealso: DMNetworkCreate(), ISCreateGeneral(), DMNetworkCreateLocalIS()
 @*/
 PetscErrorCode DMNetworkCreateIS(DM dm,PetscInt numkeys,PetscInt keys[],PetscInt blocksize[],PetscInt nselectedvar[],PetscInt *selectedvar[],IS *is)
 {
