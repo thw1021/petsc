@@ -55,20 +55,6 @@ typedef const char* PetscStreamType;
 #define PETSCSTREAMCUDA "cuda"
 #define PETSCSTREAMHIP  "hip"
 
-/*S
-  PetscEvent - Container for efficient management of device stream events.
-
-  As opposed to MPI streams are entirely decentralized objects, meaning that there exists no "super context" or manager
-  which might facilitate synchronization or communication between distinct streams (such as an MPI communicator). Any
-  coordination between streams is instead done via events. For two streams to interact, the first stream must record an
-  event which the other must wait on.
-
-  Level: beginner
-
-.seealso: PetscEventCreate(), PetscStreamType, PetscEventSetType(), PetscEventDestroy(), PetscDeviceContextRecordEvent(), PetscDeviceContextWaitEvent()
-S*/
-typedef struct _n_PetscEvent* PetscEvent;
-
 /*E
   PetscStreamMode - Stream blocking mode, indicates how a strea implementation will interact with the default "NULL"
   stream, which is usually blocking.
