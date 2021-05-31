@@ -1,45 +1,5 @@
 #include "contextcuda.hpp" /*I "petscdevice.h" I*/
 #include <stack>
-#include <functional>
-
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextCreateCUBLASHandle_Internal(cublasHandle_t *handle)
-{
-  cublasStatus_t cberr;
-
-  PetscFunctionBegin;
-  for (int i = 0; i < 3; ++i) {
-    cberr = cublasCreate(handle);
-    if (cberr == CUBLAS_STATUS_SUCCESS) break;
-    if (cberr != CUBLAS_STATUS_ALLOC_FAILED && cberr != CUBLAS_STATUS_NOT_INITIALIZED) CHKERRCUBLAS(cberr);
-    if (i < 2) {
-      PetscErrorCode ierr;
-      ierr = PetscSleep(3);CHKERRQ(ierr);
-    }
-  }
-  if (cberr) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize cuBLAS");
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextCreateCUSOLVERHandle_Internal(cusolverDnHandle_t *handle)
-{
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyCUBLASHandle_Internal(cublasHandle_t &handle)
-{
-  cublasStatus_t cberr;
-
-  PetscFunctionBegin;
-  cberr = cublasDestroy(handle);CHKERRCUBLAS(cberr);
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyCUSOLVERHandle_Internal(cusolverDnHandle_t &handle)
-{
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
-}
 
 template <typename handleT> struct errorType;
 template <> struct errorType<cublasHandle_t> { typedef cublasStatus_t errorT; };
@@ -48,43 +8,85 @@ template <> struct errorType<cusolverDnHandle_t> { typedef cusolverStatus_t erro
 template <typename handleT>
 struct handleAllocator : errorType<handleT> {
   using errorType<handleT>::errorT;
-  const std::function<PetscErrorCode(handleT*)> create;
-  const std::function<PetscErrorCode(handleT&)> destroy;
-  handleAllocator() noexcept {}
+  [[nodiscard]] PetscErrorCode create(handleT*) noexcept;
+  [[nodiscard]] PetscErrorCode destroy(handleT&) noexcept;
 };
 
 template <>
-handleAllocator<cublasHandle_t>::handleAllocator() noexcept :
-  create(PetscDeviceContextCreateCUBLASHandle_Internal),
-  destroy(PetscDeviceContextDestroyCUBLASHandle_Internal)
-{}
+PetscErrorCode handleAllocator<cublasHandle_t>::create(cublasHandle_t *handle) noexcept
+{
+  PetscErrorCode ierr;
+  errorT         err;
+
+  PetscFunctionBegin;
+  for (int i = 0; i < 3; ++i) {
+    err = cublasCreate(handle);
+    if (err == CUBLAS_STATUS_SUCCESS) break;
+    if (err != CUBLAS_STATUS_ALLOC_FAILED && err != CUBLAS_STATUS_NOT_INITIALIZED) CHKERRCUBLAS(err);
+    if (i < 2) {ierr = PetscSleep(3);CHKERRQ(ierr);}
+  }
+  if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize cuBLAS");
+  PetscFunctionReturn(0);
+}
 
 template <>
-handleAllocator<cusolverDnHandle_t>::handleAllocator() noexcept :
-  create(PetscDeviceContextCreateCUSOLVERHandle_Internal),
-  destroy(PetscDeviceContextDestroyCUSOLVERHandle_Internal)
-{}
+PetscErrorCode handleAllocator<cusolverDnHandle_t>::create(cusolverDnHandle_t *handle) noexcept
+{
+  PetscErrorCode ierr;
+  errorT         err;
+
+  PetscFunctionBegin;
+  for (int i = 0; i < 3; ++i) {
+    err = cusolverDnCreate(handle);
+    if (err == CUSOLVER_STATUS_SUCCESS) break;
+    if (err != CUSOLVER_STATUS_ALLOC_FAILED) CHKERRCUSOLVER(err);
+    if (i < 2) {ierr = PetscSleep(3);CHKERRQ(ierr);}
+  }
+  if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize cuSolverDn");
+  PetscFunctionReturn(0);
+}
+
+template <>
+PetscErrorCode handleAllocator<cublasHandle_t>::destroy(cublasHandle_t &handle) noexcept
+{
+  errorT err;
+
+  PetscFunctionBegin;
+  err    = cublasDestroy(handle);CHKERRCUBLAS(err);
+  handle = NULL;
+  PetscFunctionReturn(0);
+}
+
+template <>
+PetscErrorCode handleAllocator<cusolverDnHandle_t>::destroy(cusolverDnHandle_t &handle) noexcept
+{
+  errorT err;
+
+  PetscFunctionBegin;
+  err    = cusolverDnDestroy(handle);CHKERRCUSOLVER(err);
+  handle = NULL;
+  PetscFunctionReturn(0);
+}
 
 template <typename handleT>
-struct handleStack : handleAllocator<handleT> {
+struct handlePool : handleAllocator<handleT> {
 private:
   std::stack<handleT> _stack;
   PetscBool           _registered;
 
-protected:
+public:
   using handleAllocator<handleT>::create;
   using handleAllocator<handleT>::destroy;
 
-public:
-  constexpr handleStack() noexcept : _registered(PETSC_FALSE) {}
+  constexpr handlePool() noexcept : _registered(PETSC_FALSE) {}
 
-  [[nodiscard]] inline PetscErrorCode get(handleT &handle) noexcept;
-  [[nodiscard]] inline PetscErrorCode reclaim(handleT &handle) noexcept;
-  [[nodiscard]] inline PetscErrorCode empty(void) noexcept;
+  [[nodiscard]] PetscErrorCode get(handleT &handle) noexcept;
+  [[nodiscard]] PetscErrorCode reclaim(handleT &handle) noexcept;
+  [[nodiscard]] PetscErrorCode finalize(void) noexcept;
 };
 
-static handleStack<cublasHandle_t>     cublasHandleStack;
-static handleStack<cusolverDnHandle_t> cusolverHandleStack;
+static handlePool<cublasHandle_t>     cublasHandlePool;
+static handlePool<cusolverDnHandle_t> cusolverHandlePool;
 
 /* exists purely to be an extern "C" wrapper to pass to PetscRegisterFinalize() */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyCUBLASHandles_Internal(void)
@@ -92,7 +94,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyCUBLASHandles_Intern
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = cublasHandleStack.empty();CHKERRQ(ierr);
+  ierr = cublasHandlePool.finalize();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -101,12 +103,12 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyCUSOLVERHandles_Inte
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = cusolverHandleStack.empty();CHKERRQ(ierr);
+  ierr = cusolverHandlePool.finalize();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 template <typename handleT>
-PetscErrorCode handleStack<handleT>::get(handleT &handle) noexcept
+PetscErrorCode handlePool<handleT>::get(handleT &handle) noexcept
 {
   PetscFunctionBegin;
   if (!this->_registered) {
@@ -136,7 +138,7 @@ PetscErrorCode handleStack<handleT>::get(handleT &handle) noexcept
 }
 
 template <typename handleT>
-PetscErrorCode handleStack<handleT>::reclaim(handleT &handle) noexcept
+PetscErrorCode handlePool<handleT>::reclaim(handleT &handle) noexcept
 {
   PetscFunctionBegin;
   try {
@@ -149,7 +151,7 @@ PetscErrorCode handleStack<handleT>::reclaim(handleT &handle) noexcept
 }
 
 template <typename handleT>
-PetscErrorCode handleStack<handleT>::empty(void) noexcept
+PetscErrorCode handlePool<handleT>::finalize(void) noexcept
 {
   PetscFunctionBegin;
   try {
@@ -162,6 +164,7 @@ PetscErrorCode handleStack<handleT>::empty(void) noexcept
   } catch (std::exception const &ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
   }
+  this->_registered = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -175,12 +178,16 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroy_CUDA(PetscDeviceCon
   if (dcu->stream) {cerr = cudaStreamDestroy(dcu->stream);CHKERRCUDA(cerr);}
   if (dcu->event)  {cerr = cudaEventDestroy(dcu->event);CHKERRCUDA(cerr);}
   if (dcu->cublasv2handle) {
-    ierr = cublasHandleStack.reclaim(dcu->cublasv2handle);CHKERRQ(ierr);
+    ierr = cublasHandlePool.reclaim(dcu->cublasv2handle);CHKERRQ(ierr);
+  }
+  if (dcu->cusolverdnhandle) {
+    ierr = cusolverHandlePool.reclaim(dcu->cusolverdnhandle);CHKERRQ(ierr);
   }
   ierr = PetscFree(dctx->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
+/* don't also create solver contexts here since they aren't always used, and given the limited real estate frugality is prudent */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetUp_CUDA(PetscDeviceContext dctx)
 {
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
@@ -189,32 +196,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetUp_CUDA(PetscDeviceConte
   PetscFunctionBegin;
   cerr = cudaStreamCreate(&dcu->stream);CHKERRCUDA(cerr);
   cerr = cudaEventCreate(&dcu->event);CHKERRCUDA(cerr);
-  /* don't also create solver contexts here since they aren't always used, and given the
-     limited real estate frugality is prudent */
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetStream_CUDA(PetscDeviceContext dctx, void *dstrm)
-{
-  PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
-
-  PetscFunctionBegin;
-  *((cudaStream_t *)dstrm) = dcu->stream;
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextRestoreStream_CUDA(PetscDeviceContext dctx, void *dstrm)
-{
-  PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
-
-  PetscFunctionBegin;
-  if (PetscUnlikelyDebug(*((cudaStream_t *)dstrm) != dcu->stream)) {
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"CUDA stream is not the same as the one that was checked out");
-  }
-  PetscFunctionReturn(0);
-}
-
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetBLASHandle_CUDA(PetscDeviceContext dctx, void *handle)
+/* cublas handle created here */
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetCUBLASHandle_CUDA(PetscDeviceContext dctx, void *handle)
 {
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
 
@@ -224,7 +210,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetBLASHandle_CUDA(PetscDev
     cudaStream_t   blasStream;
     PetscErrorCode ierr;
 
-    ierr = cublasHandleStack.get(dcu->cublasv2handle);CHKERRQ(ierr);
+    ierr = cublasHandlePool.get(dcu->cublasv2handle);CHKERRQ(ierr);
     cberr = cublasGetStream(dcu->cublasv2handle,&blasStream);CHKERRCUBLAS(cberr);
     /* do this check since cublasSetStream UNCONDITIONALLY clears the workspace on
        setStream, something we want to avoid */
@@ -236,13 +222,43 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetBLASHandle_CUDA(PetscDev
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextRestoreBLASHandle_CUDA(PetscDeviceContext dctx, void *handle)
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextRestoreCUBLASHandle_CUDA(PetscDeviceContext dctx, void *handle)
 {
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(*((cublasHandle_t *)handle) != dcu->cublasv2handle)) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"cuBLAS handle is not the same as the one that was checked out");
+  }
+  PetscFunctionReturn(0);
+}
+
+/* cusolver handle created here */
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetCUSOLVERHandle_CUDA(PetscDeviceContext dctx, void *handle)
+{
+  PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
+
+  PetscFunctionBegin;
+  if (!dcu->cusolverdnhandle) {
+    cusolverStatus_t cserr;
+    PetscErrorCode   ierr;
+
+    ierr = cusolverHandlePool.get(dcu->cusolverdnhandle);CHKERRQ(ierr);
+    /* no need to do the checks as with blas, docs make no mention of workspace reset so
+       we take their (implicit) word for it */
+    cserr = cusolverDnSetStream(dcu->cusolverdnhandle,dcu->stream);CHKERRCUSOLVER(cserr);
+  }
+  *((cusolverDnHandle_t *)handle) = dcu->cusolverdnhandle;
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextRestoreCUSOLVERHandle_CUDA(PetscDeviceContext dctx, void *handle)
+{
+  PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
+
+  PetscFunctionBegin;
+  if (PetscUnlikelyDebug(*((cusolverDnHandle_t *)handle) != dcu->cusolverdnhandle)) {
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"cusolver handle is not the same as the one that was checked out");
   }
   PetscFunctionReturn(0);
 }
@@ -256,21 +272,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextQuery_CUDA(PetscDeviceConte
   PetscFunctionReturn(0);
 }
 
-static cudaEvent_t waitEvent   = NULL;
-static PetscBool   waitCreated = PETSC_FALSE;
-
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyWaitEvent_CUDA_Internal(void)
-{
-  cudaError_t cerr;
-
-  PetscFunctionBegin;
-  if (PetscUnlikelyDebug(!waitCreated)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContextDestroyWaitEvent_CUDA_Internal() has been called (or registered at PetscFinalize()) but the wait event was never created");
-  cerr = cudaEventDestroy(waitEvent);CHKERRCUDA(cerr);
-  waitEvent   = NULL;
-  waitCreated = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextWaitForContext_CUDA(PetscDeviceContext dctxa, PetscDeviceContext dctxb)
 {
   PetscDeviceContext_CUDA *dcua = (PetscDeviceContext_CUDA *)dctxa->data;
@@ -278,30 +279,27 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextWaitForContext_CUDA(PetscDe
   cudaError_t             cerr;
 
   PetscFunctionBegin;
-  if (!waitCreated) {
-    PetscErrorCode ierr;
-
-    cerr = cudaEventCreateWithFlags(&waitEvent,cudaEventDisableTiming);CHKERRCUDA(cerr);
-    ierr = PetscRegisterFinalize(PetscDeviceContextDestroyWaitEvent_CUDA_Internal);CHKERRQ(ierr);
-    waitCreated = PETSC_TRUE;
-  }
-  cerr = cudaEventRecord(waitEvent,dcub->stream);CHKERRCUDA(cerr);
+  cerr = cudaEventRecord(dcub->event,dcub->stream);CHKERRCUDA(cerr);
 #if defined(CUDART_VERSION) && (CUDART_VERSION >= 11011) /* 11.1.1 */
-  cerr = cudaStreamWaitEvent(dcua->stream,waitEvent,cudaEventWaitDefault);CHKERRCUDA(cerr);
+  cerr = cudaStreamWaitEvent(dcua->stream,dcub->event,cudaEventWaitDefault);CHKERRCUDA(cerr);
 #else
-  cerr = cudaStreamWaitEvent(dcua->stream,waitEvent,0);CHKERRCUDA(cerr);
+  cerr = cudaStreamWaitEvent(dcua->stream,dcub->event,0);CHKERRCUDA(cerr);
 #endif /* 11.1.1 */
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextJoin_CUDA(PetscDeviceContext dctx)
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSynchronize_CUDA(PetscDeviceContext dctx)
 {
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
   cudaError_t             cerr;
 
   PetscFunctionBegin;
   /* in case anything was queued on the event */
-  cerr = cudaStreamWaitEvent(dcu->stream,dcu->event);CHKERRCUDA(cerr);
+#if defined(CUDART_VERSION) && (CUDART_VERSION >= 11011) /* 11.1.1 */
+  cerr = cudaStreamWaitEvent(dcu->stream,dcu->event,cudaEventWaitDefault);CHKERRCUDA(cerr);
+#else
+  cerr = cudaStreamWaitEvent(dcu->stream,dcu->event,0);CHKERRCUDA(cerr);
+#endif /* 11.1.1 */
   cerr = cudaStreamSynchronize(dcu->stream);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
@@ -310,13 +308,13 @@ static const struct _DeviceContextOps cuops = {
   PetscDeviceContextCreate_CUDA,
   PetscDeviceContextDestroy_CUDA,
   PetscDeviceContextSetUp_CUDA,
-  PetscDeviceContextGetStream_CUDA,
-  PetscDeviceContextRestoreStream_CUDA,
-  PetscDeviceContextGetBLASHandle_CUDA,
-  PetscDeviceContextRestoreBLASHandle_CUDA,
+  PetscDeviceContextGetCUBLASHandle_CUDA,
+  PetscDeviceContextRestoreCUBLASHandle_CUDA,
+  PetscDeviceContextGetCUSOLVERHandle_CUDA,
+  PetscDeviceContextRestoreCUSOLVERHandle_CUDA,
   PetscDeviceContextQuery_CUDA,
   PetscDeviceContextWaitForContext_CUDA,
-  PetscDeviceContextJoin_CUDA,
+  PetscDeviceContextSynchronize_CUDA,
 };
 
 PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext dctx)
@@ -326,8 +324,6 @@ PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext dctx)
 
   PetscFunctionBegin;
   ierr = PetscNew(&dcu);CHKERRQ(ierr);
-  dcu->blasHandleId   = PETSC_DEFAULT;
-  dcu->solverHandleId = PETSC_DEFAULT;
   dctx->data = (void *)dcu;
   ierr = PetscMemcpy(dctx->ops,&cuops,sizeof(cuops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
