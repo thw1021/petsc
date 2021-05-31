@@ -632,7 +632,7 @@ static PetscErrorCode PetscLogNestedTreeCreate(PetscViewer viewer, PetscNestedEv
 {
   PetscNestedEventTree *tree = NULL, *newTree;
   int                  *treeIndices;
-  int                  nTimers, totalNTimers, i, j, iTimer0, maxDefaultTimer;
+  int                  nTimers, totalNTimers = 0, i, j, iTimer0, maxDefaultTimer;
   int                  yesno;
   PetscBool            done;
   PetscErrorCode       ierr;
