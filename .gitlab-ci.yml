@@ -55,7 +55,7 @@ check-banned-files:
   extends: .test-basic
   stage: .pre
   tags:
-    - check-ci-settings
+    - stage1
   script:
     - lib/petsc/bin/maint/check-banned-files.sh
 
