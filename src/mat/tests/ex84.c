@@ -90,7 +90,7 @@ int main(int argc, char **argv)
   ierr = MatDestroy(&data_mat);CHKERRQ(ierr);
 
   for (i=0; i<NNORMS; i++) {
-    if (PetscAbs(norms0[i] - norms1[i]) > PETSC_SMALL) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "norm0[%D] = %g != %g = norms1[%D]", i, norms0[i], norms1[i], i);
+    if (PetscAbs(norms0[i] - norms1[i]) > PETSC_SMALL) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "norm0[%D] = %g != %g = norms1[%D]", i, (double)norms0[i], (double)norms1[i], i);
   }
 
   ierr = PetscFinalize();
