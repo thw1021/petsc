@@ -1082,6 +1082,15 @@ class Configure(config.base.Configure):
       if hasattr(self, 'CXX'):
         try:
           self.executeShellCommand(self.CXX+' --version', log = self.log)
+          if [s for s in ['mpiCC','mpic++','mpicxx','mpiicxx','mpiicpc'] if os.path.basename(self.CXX).find(s)>=0]:
+            try:
+              output = self.executeShellCommand(self.CXX + ' -show', log = self.log)[0]
+              self.framework.addMakeMacro('MPICXX_SHOW',output.strip().replace('\n','\\\\n'))
+              self.framework.mpishow['Cxx'] = output.split(' ')
+            except:
+              self.framework.addMakeMacro('MPICXX_SHOW',"Unavailable")
+          else:
+            self.framework.addMakeMacro('MPICXX_SHOW',"Unavailable")
         except:
           pass
         break
@@ -1219,6 +1228,15 @@ class Configure(config.base.Configure):
     if hasattr(self, 'FC'):
       try:
         self.executeShellCommand(self.FC+' --version', log = self.log)
+        if [s for s in ['mpif77','mpif90','mpifort','mpiifort'] if os.path.basename(self.FC).find(s)>=0]:
+          try:
+            output = self.executeShellCommand(self.FC + ' -show', log = self.log)[0]
+            self.framework.addMakeMacro('MPIFC_SHOW',output.strip().replace('\n','\\\\n'))
+            self.framework.mpishow['FC'] = output.split(' ')
+          except:
+            self.framework.addMakeMacro('MPIFC_SHOW',"Unavailable")
+        else:
+          self.framework.addMakeMacro('MPIFC_SHOW',"Unavailable")
       except:
         pass
     return
@@ -1290,7 +1308,7 @@ class Configure(config.base.Configure):
     flagsArg = self.getCompilerFlagsArg(compilerOnly)
     if self.language[-1] in self.framework.mpishow:
       if flag.strip() in self.framework.mpishow[self.language[-1]]:
-        self.logPrint('Not using compiler flag '+flag+' because it is already used the the MPI compiler')
+        self.logPrint('Not using compiler flag '+flag+' because it is already used in the MPI '+self.language[-1]+' compiler')
         return 0
     oldFlags = getattr(self, flagsArg)
     setattr(self, flagsArg, oldFlags+' '+flag)
