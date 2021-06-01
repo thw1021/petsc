@@ -737,10 +737,17 @@ class Configure(config.base.Configure):
       self.executeShellCommand(self.CC+' --version', log = self.log)
     except:
       pass
-    if os.path.basename(self.CC).startswith('mpi'):
-       self.logPrint('Since MPI c compiler starts with mpi, force searches for other compilers to only look for MPI compilers\n')
-       self.argDB['with-mpi-compilers'] = 1
-    return
+    if [s for s in ['mpicc','mpiicc'] if os.path.basename(self.CC).find(s)>=0]:
+      self.logPrint('Since MPI c compiler starts with mpi, force searches for other compilers to only look for MPI compilers\n')
+      self.argDB['with-mpi-compilers'] = 1
+      try:
+        output = self.executeShellCommand(self.CC + ' -show', log = self.log)[0]
+        self.framework.addMakeMacro('MPICC_SHOW',output.strip().replace('\n','\\\\n'))
+        self.framework.mpishow['C'] = output.split(' ')
+      except:
+        self.framework.addMakeMacro('MPICC_SHOW',"Unavailable")
+    else:
+      self.framework.addMakeMacro('MPICC_SHOW',"Unavailable")
 
   def generateCPreprocessorGuesses(self):
     '''Determines the C preprocessor from CPP, then --with-cpp, then the C compiler'''
@@ -1075,6 +1082,15 @@ class Configure(config.base.Configure):
       if hasattr(self, 'CXX'):
         try:
           self.executeShellCommand(self.CXX+' --version', log = self.log)
+          if [s for s in ['mpiCC','mpic++','mpicxx','mpiicxx','mpiicpc'] if os.path.basename(self.CXX).find(s)>=0]:
+            try:
+              output = self.executeShellCommand(self.CXX + ' -show', log = self.log)[0]
+              self.framework.addMakeMacro('MPICXX_SHOW',output.strip().replace('\n','\\\\n'))
+              self.framework.mpishow['Cxx'] = output.split(' ')
+            except:
+              self.framework.addMakeMacro('MPICXX_SHOW',"Unavailable")
+          else:
+            self.framework.addMakeMacro('MPICXX_SHOW',"Unavailable")
         except:
           pass
         break
@@ -1212,6 +1228,15 @@ class Configure(config.base.Configure):
     if hasattr(self, 'FC'):
       try:
         self.executeShellCommand(self.FC+' --version', log = self.log)
+        if [s for s in ['mpif77','mpif90','mpifort','mpiifort'] if os.path.basename(self.FC).find(s)>=0]:
+          try:
+            output = self.executeShellCommand(self.FC + ' -show', log = self.log)[0]
+            self.framework.addMakeMacro('MPIFC_SHOW',output.strip().replace('\n','\\\\n'))
+            self.framework.mpishow['FC'] = output.split(' ')
+          except:
+            self.framework.addMakeMacro('MPIFC_SHOW',"Unavailable")
+        else:
+          self.framework.addMakeMacro('MPIFC_SHOW',"Unavailable")
       except:
         pass
     return
@@ -1281,6 +1306,10 @@ class Configure(config.base.Configure):
   def checkCompilerFlag(self, flag, includes = '', body = '', compilerOnly = 0):
     '''Determine whether the compiler accepts the given flag'''
     flagsArg = self.getCompilerFlagsArg(compilerOnly)
+    if self.language[-1] in self.framework.mpishow:
+      if flag.strip() in self.framework.mpishow[self.language[-1]]:
+        self.logPrint('Not using compiler flag '+flag+' because it is already used in the MPI '+self.language[-1]+' compiler')
+        return 0
     oldFlags = getattr(self, flagsArg)
     setattr(self, flagsArg, oldFlags+' '+flag)
     (output, error, status) = self.outputCompile(includes, body)
