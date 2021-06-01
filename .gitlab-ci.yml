@@ -47,9 +47,18 @@ check-ci-settings:
   extends: .test-basic
   stage: .pre
   tags:
-    - check-ci-settings
+    - stage1
   script:
     - lib/petsc/bin/maint/check-ci-settings.sh
+
+check-banned-files:
+  extends: .test-basic
+  stage: .pre
+  tags:
+    - stage1
+  script:
+    - lib/petsc/bin/maint/check-banned-files.sh
+
 #
 #  This provides the basic order of operations and options template for cloud based stage 1 tests.
 #  Not all test-short need to follow this template but most will.
