@@ -42,18 +42,15 @@ E*/
 typedef enum {PETSC_OFFLOAD_UNALLOCATED=0x0,PETSC_OFFLOAD_CPU=0x1,PETSC_OFFLOAD_GPU=0x2,PETSC_OFFLOAD_BOTH=0x3,PETSC_OFFLOAD_VECKOKKOS=0x100} PetscOffloadMask;
 
 /*J
-  PetscStreamType - Stream type
+  PetscDeviceContextType - device context type
 
   Level: beginner
 
-  Developer Notes:
-  Any changes here must also be made in src/sys/f90-mod/petscsys.h
-
-.seealso: PetscDeviceContextSetType(), PetscEventSetType()
+.seealso: PetscDeviceContextSetType(), PetscDeviceContextGetType()
 J*/
-typedef const char* PetscStreamType;
-#define PETSCSTREAMCUDA "cuda"
-#define PETSCSTREAMHIP  "hip"
+typedef const char* PetscDeviceContextType;
+#define PETSCDEVICECONTEXTCUDA "cuda"
+#define PETSCDEVICECONTEXTHIP  "hip"
 
 /*E
   PetscStreamMode - Stream blocking mode, indicates how a strea implementation will interact with the default "NULL"
@@ -65,9 +62,6 @@ $ PETSC_STREAM_GLOBAL_NONBLOCKING - Stream is truly asynchronous, and is blocked
 $ PETSC_STREAM_MAX_MODE - Always 1 greater than the largest PetscStreamMode
 
   Level: intermediate
-
-  Developer Notes:
-  Any changes here must also be made in src/sys/f90-mod/petscsys.h
 
 .seealso: PetscDeviceContextSetMode(), PetscDeviceContextGetMode()
 E*/
@@ -84,7 +78,7 @@ PETSC_EXTERN const char *const PetscStreamModes[];
 
   level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscStreamType, PetscDeviceContextSetType(), PetscDeviceContextDestroy()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextType, PetscDeviceContextSetType(), PetscDeviceContextDestroy()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
 #endif /* PETSCDEVICETYPES_H */
