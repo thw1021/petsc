@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-dest=$(sh lib/petsc/bin/maint/check-merge-branch.sh)
+dest=$(bash lib/petsc/bin/maint/check-merge-branch.sh)
 
 # Search for and print newly-added files with banned extensions
 # If grep's exit code is zero (success), there was a match, so declare overall failure
