@@ -11,7 +11,7 @@ static PetscBool         PetscDevicePackageInitialized = PETSC_FALSE;
 
   Input Parameters:
 + dctx - The PetscDeviceContext object
-- type - The PetscStreamType
+- type - The PetscDeviceContextType
 
   Notes:
   See "include/petscdevicetypes.h" for available stream types.
@@ -20,7 +20,7 @@ static PetscBool         PetscDevicePackageInitialized = PETSC_FALSE;
 
 .seealso: PetscDeviceContextCreate(), PetscDeviceContextGetType()
 @*/
-PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscStreamType type)
+PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscDeviceContextType type)
 {
   PetscErrorCode (*create)(PetscDeviceContext);
   PetscBool      match;
@@ -28,10 +28,10 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscStreamTyp
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(!type)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscDeviceContext to NULL type");
-  ierr = PetscStreamTypeCompare(dctx->type,type,&match);CHKERRQ(ierr);
+  ierr = PetscDeviceContextTypeCompare(dctx->type,type,&match);CHKERRQ(ierr);
   if (match) PetscFunctionReturn(0);
   ierr = PetscFunctionListFind(PetscDeviceContextList,type,&create);CHKERRQ(ierr);
-  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown PetscStreamType: %s",type);
+  if (!create) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown PetscDeviceContextType: %s",type);
   if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
   ierr = PetscMemzero(dctx->ops,sizeof(struct _DeviceContextOps));CHKERRQ(ierr);
   ierr = (*create)(dctx);CHKERRQ(ierr);
@@ -49,7 +49,7 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscStreamTyp
 . strm - The PetscDeviceContext object
 
   Output Parameter:
-. type - The PetscStreamType
+. type - The PetscDeviceContextType
 
   Notes:
   See "include/petscdevicetypes.h" for available stream types.
@@ -58,7 +58,7 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscStreamTyp
 
 .seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType()
 @*/
-PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext dctx, PetscStreamType *type)
+PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext dctx, PetscDeviceContextType *type)
 {
   PetscFunctionBegin;
   PetscValidStreamType(dctx,1);
@@ -102,10 +102,10 @@ PetscErrorCode PetscDeviceRegisterAll(void)
   if (PetscDeviceRegisterAllCalled) PetscFunctionReturn(0);
   PetscDeviceRegisterAllCalled = PETSC_TRUE;
 #if PetscDefined(HAVE_CUDA)
-  ierr = PetscDeviceContextRegister(PETSCSTREAMCUDA,PetscDeviceContextCreate_CUDA);CHKERRQ(ierr);
+  ierr = PetscDeviceContextRegister(PETSCDEVICECONTEXTCUDA,PetscDeviceContextCreate_CUDA);CHKERRQ(ierr);
 #endif
 #if PetscDefined(HAVE_HIP)
-  ierr = PetscDeviceContextRegister(PETSCSTREAMHIP,PetscDeviceContextCreate_HIP);CHKERRQ(ierr);
+  ierr = PetscDeviceContextRegister(PETSCDEVICECONTEXTHIP,PetscDeviceContextCreate_HIP);CHKERRQ(ierr);
 #endif
   PetscFunctionReturn(0);
 }
@@ -162,7 +162,7 @@ PetscErrorCode PetsDeviceInitializePackage(void)
 - event - The PetscEvent
 
   Options Database Keys:
-+ -stream_type <type> - cuda, hip, see PetscStreamType for complete list
++ -stream_type <type> - cuda, hip, see PetscDeviceContextType for complete list
 . -event_create_flag <int> - Flags for special event behavior, such as disabling timing. See PetscEventSetFlags() for
 more information
 - -event_wait_flag <int> - Flags for special wait-on-event behavior. See PetscEventSetFlags() for more information
@@ -178,7 +178,7 @@ more information
 PetscErrorCode PetscEventSetFromOptions(MPI_Comm comm, const char prefix[], PetscEvent event)
 {
   PetscErrorCode  ierr;
-  PetscStreamType defaultType;
+  PetscDeviceContextType defaultType;
 
   PetscFunctionBegin;
   if (event->setfromoptionscalled) PetscFunctionReturn(0);
@@ -186,9 +186,9 @@ PetscErrorCode PetscEventSetFromOptions(MPI_Comm comm, const char prefix[], Pets
   if (event->type) {defaultType = event->type;}
   else {
 #if PetscDefined(HAVE_CUDA)
-    defaultType = PETSCSTREAMCUDA;
+    defaultType = PETSCDEVICECONTEXTCUDA;
 #elif PetscDefined(HAVE_HIP)
-    defaultType = PETSCSTREAMHIP;
+    defaultType = PETSCDEVICECONTEXTHIP;
 #else
     SETERRQ(comm,PETSC_ERR_SUP,"No suitable default stream type exists");
     defaultType = "invalidType";
