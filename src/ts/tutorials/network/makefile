@@ -1,10 +1,10 @@
 -include ../../../../petscdir.mk
-CFLAGS	         =
-FFLAGS	         =
+CFLAGS           =
+FFLAGS           =
 CPPFLAGS         =
 FPPFLAGS         =
 EXAMPLESC        = pipes.c pipeInterface.c pipeImpls.c
-LOCDIR           = src/ts/tutorials/network/wash/
+LOCDIR           = src/ts/tutorials/network/
 
 OBJECTS_PIPE = pipeInterface.o pipeImpls.o
 

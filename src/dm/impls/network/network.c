@@ -3003,7 +3003,7 @@ PETSC_STATIC_INLINE PetscErrorCode DMISComputeIdx_private(DM dm,PetscInt p,Petsc
   Level: Advanced
 
   Notes:
-    Use blocksize[i] of -1 to indicate select all the variables of the i-th component, for which nselectvar[i] and selectedvar[i] are ignored. Use NULL, NULL, NULL to indicate for all selected components one wishes to obtain all the values of that component. For example, DMNetworkCreateIS(dm,1,&key,NULL,NULL,NULL,IS) will return an IS that extracts all the variables for the zeroth component.
+    Use blocksize[i] of -1 to indicate select all the variables of the i-th component, for which nselectvar[i] and selectedvar[i] are ignored. Use NULL, NULL, NULL to indicate for all selected components one wishes to obtain all the values of that component. For example, DMNetworkCreateIS(dm,1,&key,NULL,NULL,NULL,&is) will return an is that extracts all the variables for the 0-th component.
 
 .seealso: DMNetworkCreate(), ISCreateGeneral(), DMNetworkCreateLocalIS()
 @*/
@@ -3106,7 +3106,7 @@ PETSC_STATIC_INLINE PetscErrorCode DMISComputeLocalIdx_private(DM dm,PetscInt p,
   Level: Advanced
 
   Notes:
-    Use blocksize[i] of -1 to indicate select all the variables of the i-th component, for which nselectvar[i] and selectedvar[i] are ignored. Use NULL, NULL, NULL to indicate for all selected components one wishes to obtain all the values of that component. For example, DMNetworkCreateLocalIS(dm,1,&key,NULL,NULL,NULL,IS) will return an IS that extracts all the variables for the zeroth component.
+    Use blocksize[i] of -1 to indicate select all the variables of the i-th component, for which nselectvar[i] and selectedvar[i] are ignored. Use NULL, NULL, NULL to indicate for all selected components one wishes to obtain all the values of that component. For example, DMNetworkCreateLocalIS(dm,1,&key,NULL,NULL,NULL,&is) will return an is that extracts all the variables for the 0-th component.
 
 .seealso: DMNetworkCreate(), DMNetworkCreateIS, ISCreateGeneral()
 @*/
