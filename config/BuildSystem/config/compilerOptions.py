@@ -104,6 +104,7 @@ class CompilerOptions(config.base.Configure):
       try:
         output   = self.executeShellCommand(compiler+' -show', log = self.log)[0]
         self.framework.addMakeMacro('MPICXX_SHOW',output.strip().replace('\n','\\\\n'))
+        self.framework.mpishow['Cxx'] = output.split(' ')
       except:
         self.framework.addMakeMacro('MPICXX_SHOW',"Unavailable")
     else:
@@ -202,6 +203,7 @@ class CompilerOptions(config.base.Configure):
       try:
         output   = self.executeShellCommand(compiler+' -show', log = self.log)[0]
         self.framework.addMakeMacro('MPIFC_SHOW',output.strip().replace('\n','\\\\n'))
+        self.framework.mpishow['FC'] = output.split(' ')
       except:
         self.framework.addMakeMacro('MPIFC_SHOW',"Unavailable")
     else:
