@@ -364,7 +364,7 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
   ierr = VecView(Xto,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = VecDestroy(&Xto);CHKERRQ(ierr);
 
-  /* 6. Create isfrom for all pipe variable; Create scatter; Scatter to Xpipes */
+  /* 6. Create isfrom for all pipe variables; Create scatter; Scatter to Xpipes */
   for (i=0; i<numkeys; i++) {
     blocksize[i] = -1; /* select all the variables of the i-th component */
   }
@@ -393,6 +393,34 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
   }
   ierr = PetscFree3(blocksize,numselectedvariable,selectedvariables);CHKERRQ(ierr);
   ierr = VecDestroy(&Xto);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode ISJunctionsView(DM networkdm,PetscInt KeyJunc)
+{
+  PetscErrorCode ierr;
+  PetscInt       numkeys=1;
+  IS             isfrom;
+  MPI_Comm       comm;
+  PetscMPIInt    rank;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)networkdm,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+
+  /* Create a global isfrom for all junction variables */
+  ierr = DMNetworkCreateIS(networkdm,numkeys,&KeyJunc,NULL,NULL,NULL,&isfrom);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"ISJunctions:\n");CHKERRQ(ierr);
+  ierr = ISView(isfrom,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  ierr = ISDestroy(&isfrom);CHKERRQ(ierr);
+
+  /* Create a local isfrom for all junction variables */
+  ierr = DMNetworkCreateLocalIS(networkdm,numkeys,&KeyJunc,NULL,NULL,NULL,&isfrom);CHKERRQ(ierr);
+  if (!rank) {
+    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] ISLocalJunctions:\n",rank);CHKERRQ(ierr);
+    ierr = ISView(isfrom,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
+  }
+  ierr = ISDestroy(&isfrom);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -613,7 +641,7 @@ int main(int argc,char ** argv)
   TS                ts;
   PetscInt          steps=1;
   TSConvergedReason reason;
-  PetscBool         viewpipes,monipipes=PETSC_FALSE,userJac=PETSC_TRUE,viewdm=PETSC_FALSE,viewX=PETSC_FALSE;
+  PetscBool         viewpipes,viewjuncs,monipipes=PETSC_FALSE,userJac=PETSC_TRUE,viewdm=PETSC_FALSE,viewX=PETSC_FALSE;
   PetscInt          pipesCase=0;
   DMNetworkMonitor  monitor;
   MPI_Comm          comm;
@@ -805,12 +833,19 @@ int main(int argc,char ** argv)
     ierr = MatView(Jac,PETSC_VIEWER_DRAW_WORLD);CHKERRQ(ierr);
   }
 
-  /* View solution q and h */
-  /* --------------------- */
+  /* View solutions */
+  /* -------------- */
   viewpipes = PETSC_FALSE;
   ierr = PetscOptionsGetBool(NULL,NULL, "-pipe_view", &viewpipes,NULL);CHKERRQ(ierr);
   if (viewpipes) {
     ierr = PipesView(networkdm,KeyPipe,X);CHKERRQ(ierr);
+  }
+
+  /* Test IS */
+  viewjuncs = PETSC_FALSE;
+  ierr = PetscOptionsGetBool(NULL,NULL, "-isjunc_view", &viewjuncs,NULL);CHKERRQ(ierr);
+  if (viewjuncs) {
+    ierr = ISJunctionsView(networkdm,KeyJunction);CHKERRQ(ierr);
   }
 
   /* Free spaces */
@@ -912,5 +947,12 @@ int main(int argc,char ** argv)
       args: -case 0 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -wash_distribute 0 -pipe_view
       localrunfiles: pOption
       output_file: output/pipes_9.out
+
+   test:
+      suffix: 10
+      nsize: 2
+      args: -case 0 -ts_max_steps 1 -pc_factor_mat_solver_type mumps -petscpartitioner_type simple -options_left no -wash_distribute 0 -isjunc_view
+      localrunfiles: pOption
+      output_file: output/pipes_10.out
 
 TEST*/
