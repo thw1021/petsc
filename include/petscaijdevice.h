@@ -17,7 +17,8 @@ typedef struct {
 struct _n_SplitCSRMat {
   PetscInt              cstart,cend,rstart,rend;
   PetscCSRDataStructure diag,offdiag;
-  PetscInt              *colmap,N;
+  int                   *colmap;
+  PetscInt              N;
   PetscMPIInt           rank;
 };
 
@@ -86,11 +87,10 @@ struct _n_SplitCSRMat {
 }
 
 #if defined(PETSC_USE_DEBUG)
-#define SETERR {                                                                                                 \
-   printf("[%d] ERROR in %s() line %d in %s: Location (%ld,%ld) not found, must be in [%ld,%ld) x [%ld,%ld)!\n", \
-           d_mat->rank,__func__,__LINE__,__FILE__,(long int)im[i],(long int)in[j],                               \
-           (long int)d_mat->rstart,(long int)d_mat->rend,(long int)d_mat->cstart,(long int)d_mat->cend);         \
-   return PETSC_ERR_ARG_OUTOFRANGE;                                                                              \
+#define SETERR {                                                                                 \
+   printf("[%d] ERROR in %s() line %d in %s: Location (%ld,%ld) with value %g not found!\n",     \
+          d_mat->rank,__func__,__LINE__,__FILE__,(long int)im[i],(long int)in[j],(double)value); \
+   return PETSC_ERR_ARG_OUTOFRANGE;                                                              \
 }
 #else
 #define SETERR { return PETSC_ERR_ARG_OUTOFRANGE; }
@@ -103,6 +103,7 @@ KOKKOS_INLINE_FUNCTION
 #else
 static
 #endif
+
 /*@C
        MatSetValuesDevice - sets a set of values into a matrix, this may be called by CUDA or KOKKOS kernels
 
