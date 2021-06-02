@@ -50,6 +50,9 @@ class Configure(config.package.CMakePackage):
         args.append('-DPASTIX_WITH_FORTRAN=OFF')
         args.append('-DPASTIX_LR_TESTINGS=OFF')
 
+        if self.blasLapack.mkl :
+            args.append('-DBLA_VENDOR=Intel10_64lp_seq')
+            
         if self.compilerFlags.debugging:
             args.append('-DCMAKE_BUILD_TYPE=Debug')
         else:
@@ -61,14 +64,14 @@ class Configure(config.package.CMakePackage):
             args.append("-DPASTIX_INT64=OFF")
 
         if self.metis.found :
-            args.append("-DPASTIX_WITH_METIS=ON")
+            args.append("-DPASTIX_ORDERING_METIS=ON")
         else :
-            args.append("-DPASTIX_WITH_METIS=OFF")
+            args.append("-DPASTIX_ORDERING_METIS=OFF")
 
         if self.scotch.found :
-            args.append("-DPASTIX_WITH_SCOTCH=ON")
+            args.append("-DPASTIX_ORDERING_SCOTCH=ON")
         else :
-            args.append("-DPASTIX_WITH_SCOTCH=OFF")
+            args.append("-DPASTIX_ORDERING_SCOTCH=OFF")
 
         if self.mpi.found:
             args.append("-DPASTIX_WITH_MPI=ON")
