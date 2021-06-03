@@ -140,7 +140,8 @@ class Configure(config.package.Package):
     self.setCudaDir()
     if not hasattr(self.compilers, 'CXX'):
       raise RuntimeError('Using CUDA requires PETSc to be configure with a C++ compiler')
-    config.package.Package.configureLibrary(self)
+    # skip this because it does not properly set self.lib and self.include if they have already been set
+    if not self.found: config.package.Package.configureLibrary(self)
     self.checkNVCCDoubleAlign()
     self.configureTypes()
     # includes from --download-thrust should override the prepackaged version in cuda - so list thrust.include before cuda.include on the compile command.
