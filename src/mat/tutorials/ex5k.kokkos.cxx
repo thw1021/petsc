@@ -106,7 +106,7 @@ int main(int argc,char **argv)
 /*TEST
 
    build:
-     requires: kokkos_kernels !define(PETSC_USE_CTABLE)
+     requires: kokkos_kernels
 
    test:
      suffix: 0

@@ -1,5 +1,4 @@
 #requirespackage 'PETSC_HAVE_KOKKOS'
-#requiresdefine 'PETSC_NOT_USE_CTABLE'
 -include ../../../../../petscdir.mk
 ALL: lib
 

@@ -1,5 +1,4 @@
 #requirespackage 'PETSC_HAVE_CUDA'
-#requiresdefine 'PETSC_NOT_USE_CTABLE'
 -include ../../../../../petscdir.mk
 
 CPPFLAGS =

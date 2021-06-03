@@ -68,9 +68,7 @@ class Configure(config.base.Configure):
 
     self.useCtable = self.framework.argDB['with-ctable']
     if self.useCtable:
-      #self.addDefine('USE_CTABLE', '1')
-      self.logPrintBox('***** WARNING turning off ctable for temporary CI testing *******')
-      self.addDefine('NOT_USE_CTABLE', '1')
+      self.addDefine('USE_CTABLE', '1')
     else:
       self.addDefine('NOT_USE_CTABLE', '1')
 
