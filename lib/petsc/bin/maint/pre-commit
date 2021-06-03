@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jun 03 17:15:31 2021
+
+@author: jacobfaibussowitsch
+"""
+import os
+
+sizeLimit = 10e8 # 100 MB
+
+try:
+  petscDir = os.environ["PETSC_DIR"]
+except KeyError:
+  # no petsc_dir? no problem, we act like this never happened
+  exit()
+
+try:
+  import git,gitdb.exc
+except ImportError:
+  # also fail silently if no git package installed, maybe this shouldn't fail silently
+  # afterall.
+  exit()
+
+petscRepo = git.Repo(petscDir)
+assert not petscRepo.bare, "PETSc repository is bare!"
+
+# get the list of all file paths that are to be committed
+try:
+  filenames = (obj.a_path for obj in petscRepo.index.diff("HEAD"))
+except gitdb.exc.BadName:
+  # new repo, no 'HEAD' or master until first commit completed
+  filenames = (filename for filename,_ in petscRepo.index.entries.keys())
+
+for filename in filenames:
+  filesize = os.stat(filename).st_size
+  if filesize >= sizeLimit:
+    print("{} ({} MB) is larger than the {} MB limit, aborting commit".format(filename,filesize//10e6,sizeLimit//10e6))
+    exit(1)
