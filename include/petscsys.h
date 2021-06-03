@@ -51,6 +51,24 @@
 #  define PETSC_FUNCTION_NAME PETSC_FUNCTION_NAME_C
 #endif
 
+#if defined(__FILE_NAME__) /* gcc extension, but most compilers should have this */
+#  define PETSC_BASE_FILE_NAME __FILE_NAME__
+#elif defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11) /* can also do it via constexpr at compile time */
+constexpr const char* PetscGetPathEnd_Internal(const char *path) {return *path ? PetscGetPathEnd_Internal(path+1) : path;}
+constexpr bool        PetscIsPathSep_Internal(const char *path) {
+  return *path == PETSC_DIR_SEPARATOR ? true : (*path ? PetscIsPathSep_Internal(path+1) : false);
+}
+constexpr const char* PetscWalkBackUntilPathSep_Internal(const char *path) {
+  return *path == PETSC_DIR_SEPARATOR ? path+1 : PetscWalkBackUntilPathSep_Internal(path-1);
+}
+constexpr const char* PetscRemovePathFrom__FILE__Internal(const char *path) {
+  return PetscIsPathSep_Internal(path) ? PetscWalkBackUntilPathSep_Internal(PetscGetPathEnd_Internal(path)) : path;
+}
+#  define PETSC_FORCE_CONSTEXPR(expr) [&]() {constexpr auto x = (expr);return x;}()
+#  define PETSC_BASE_FILE_NAME PETSC_FORCE_CONSTEXPR(PetscRemovePathFrom__FILE__Internal(__FILE__))
+#else
+#  define PETSC_BASE_FILE_NAME __FILE__
+#endif
 /* ========================================================================== */
 /*
    Since PETSc manages its own extern "C" handling users should never include PETSc include
