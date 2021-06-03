@@ -53,18 +53,22 @@
 
 #if defined(__FILE_NAME__) /* gcc extension, but most compilers should have this */
 #  define PETSC_BASE_FILE_NAME __FILE_NAME__
-#elif defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11) /* can also do it via constexpr at compile time */
-constexpr const char* PetscGetPathEnd_Internal(const char *path) {return *path ? PetscGetPathEnd_Internal(path+1) : path;}
-constexpr PetscBool         PetscIsPathSep_Internal(const char *path) {
-  return *path == PETSC_DIR_SEPARATOR ? PETSC_TRUE : (*path ? PetscIsPathSep_Internal(path+1) : PETSC_FALSE);
+#elif defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+/* alternatively do it via constexpr at compile time, we walk backwards from the end of the
+   string util we find a "/", then return the index of that location. Has the effect of
+   chopping off the file name */
+namespace PetscPrivate__ {
+  /* namespace this stuff since it should never see the light of day */
+  template <typename T, int L>
+  inline constexpr int PetscBaseFileName_Internal(const T (&path)[L], int i = L-1)
+  {return (path[i] == PETSC_DIR_SEPARATOR) ? i+1 : (i ? PetscBaseFileName_Internal(path,i-1) : i);}
+  /* in case __FILE__  is just "/" */
+  template <typename T> inline constexpr int PetscBaseFileName_Internal(const T (&path)[1])
+  {return 0;}
 }
-constexpr const char* PetscWalkBackUntilPathSep_Internal(const char *path) {
-  return *path == PETSC_DIR_SEPARATOR ? path+1 : PetscWalkBackUntilPathSep_Internal(path-1);
-}
-constexpr const char* PetscRemovePathFrom__FILE__Internal(const char *path) {
-  return PetscIsPathSep_Internal(path) ? PetscWalkBackUntilPathSep_Internal(PetscGetPathEnd_Internal(path)) : path;
-}
-#  define PETSC_BASE_FILE_NAME PetscRemovePathFrom__FILE__Internal(__FILE__)
+
+#  define PETSC_FORCE_CONSTEXPR(expr) std::integral_constant<decltype(expr),expr>::value
+#  define PETSC_BASE_FILE_NAME  &__FILE__[PETSC_FORCE_CONSTEXPR(PetscPrivate__::PetscBaseFileName_Internal(__FILE__))]
 #else
 #  define PETSC_BASE_FILE_NAME __FILE__
 #endif
