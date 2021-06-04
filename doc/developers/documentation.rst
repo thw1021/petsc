@@ -182,7 +182,7 @@ Sphinx Documentation Guidelines
   You must include ``.. bibliography::`` blocks at the bottom of a page including citations (`example <https://gitlab.com/petsc/petsc/-/raw/main/doc/manual/ksp.rst>`__).
   To cite the same reference in more than one page, use `this workaround <https://sphinxcontrib-bibtex.readthedocs.io/en/latest/usage.html#key-prefixing>`__ on one of them (`example <https://gitlab.com/petsc/petsc/-/raw/main/doc/developers/articles.rst>`__) [#bibtex_footnote]_.
 
-* Do **not** check in large images (or PDFs), more than a few KB, since they will be downloaded every time the repository is cloned. When possible, please use SVG for images.  SVG is web-friendly and will be automatically converted to PDF using ``rsvg-convert`` (installable with your package manager, e.g., ``librsvg2-bin`` on Debian/Ubuntu systems).
+* See special instructions on :any:`docs_images`.
 
 * Prefer formatting styles that are easy to modify and maintain.  In particular, use of `list-table <https://docutils.sourceforge.io/docs/ref/rst/directives.html#list-table>`_ is recommended.
 
@@ -194,6 +194,59 @@ Sphinx Documentation Guidelines
 
 * Use restraint in adding new Sphinx extensions, in particular those which aren't
   widely-used and well-supported, or those with hidden system dependencies.
+
+.. _docs_images:
+
+Images
+======
+
+PETSc's documentation is tightly coupled to the source code and tests, which
+motivates including the documentation in the main Git repository. However, this
+precludes being able to directly track images with Git, as they are large files
+which most clones of the repository will not need, and which which persist indefinitely
+in the history of integration branches.
+
+For this reason, we make the non-standard choice to store image files in a
+`Git submodule <https://git-scm.com/book/en/v2/Git-Tools-Submodules>`__. To avoid
+potential complication and confusion, we only use the submodule in a limited way:
+the main repository only refers to commits on the ``main`` branch of the submodule repository,
+and the only operation permitted on the images submodule, outside of a :any:`dedicated cleanup process <docs_images_cleanup>`,
+is to add new image files in the ``main`` branch.
+
+Adding new images
+-----------------
+
+* Whenever possible,
+
+    - Use SVG files.  SVG is web-friendly and will be automatically converted to PDF using ``rsvg-convert`` [#svg_footnote]_
+    - Avoid large files and large numbers of images.
+    - Use the structure of the ``doc/`` tree in the main PETSc repository.
+* Strongly prefer vector formats like SVG.
+* Do not add videos or any other non-image files.
+* Either with a new branch or directly (maintainers only), add your new images to the `main` branch in the upstream images repository
+* Make sure that your local images submodule state corresponds to this new state, and commit these changes to your branch which uses the new images in the documentation.
+
+Removing, renaming, moving or updating images
+---------------------------------------------
+
+Do not directly move, rename, update, or delete images in the images repository.
+Simply add a logically-numbered copy of any new version of the image,
+and if it is not used in *any* :any:`integration branch <sec_integration_branches>` (``main`` or ``release``),
+add to-be-deleted files to the top-level list in the images repository.
+
+.. _docs_images_cleanup:
+
+Cleaning up the images repository
+---------------------------------
+
+(Maintainers only)
+
+When the size of the image repository grows too large,
+
+* Create a backup branch named ``main-archive-YYYY-MM-DD`` from the current ``main``
+* Create a new commit deleting all files in the to-delete list and clearing the list
+* Reset ``main`` to a single commit with this new, cleaned-up state
+* Update both ``release`` and ``main`` in the main PETSc repository to point to this new state
 
 .. _classic_docs_build:
 
@@ -227,4 +280,6 @@ To get a quick preview of manual pages from a single source directory (mainly to
 
 .. rubric:: Footnotes
 
-.. [#bibtex_footnote] The extensions's `development branch <https://github.com/mcmtroffaes/sphinxcontrib-bibtex>`__ `supports our use case better <https://github.com/mcmtroffaes/sphinxcontrib-bibtex/pull/185>`__ (`:footcite:`), which can be investigated if a release is ever made.
+.. [#bibtex_footnote] The extensions's `development branch <https://github.com/mcmtroffaes/sphinxcontrib-bibtex>`__ `supports our use case better <https://github.com/mcmtroffaes/sphinxcontrib-bibtex/pull/185>`__ (``:footcite:``), which can be investigated if a release is ever made.
+
+.. [#svg_footnote] ``rsvg-convert`` is installable with your package manager, e.g., ``librsvg2-bin`` on Debian/Ubuntu systems).
