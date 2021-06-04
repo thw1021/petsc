@@ -248,9 +248,8 @@ class CompilerOptions(config.base.Configure):
           else:
             flags.extend(['-MT'])
         elif bopt == 'g':
-          flags.extend(['-Z7'])
-          flags.append('-O0')
-      elif bopt == 'O':
+         flags.extend(['-Z7','-O0'])
+        elif bopt == 'O':
           flags.extend(['-O3', '-QxW'])
       # Compaq Visual FORTRAN
       elif compiler.find('win32fe f90') >= 0 or compiler.find('win32fe df') >= 0:
