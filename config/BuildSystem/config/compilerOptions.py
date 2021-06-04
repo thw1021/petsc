@@ -68,8 +68,7 @@ class CompilerOptions(config.base.Configure):
           else:
             flags.extend(['-MT'])
         elif bopt == 'g':
-          flags.extend(['-Z7'])
-          flags.append('-O0')
+          flags.extend(['-Z7','-O0'])
         elif bopt == 'O':
           flags.extend(['-O3', '-QxW'])
       # Windows Microsoft
