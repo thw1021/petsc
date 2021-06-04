@@ -24,6 +24,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
+  options->dim              = 2;
+  options->simplex          = PETSC_TRUE;
   options->monitor          = PETSC_FALSE;
   options->error            = PETSC_FALSE;
   options->particlesPerCell = 1;
@@ -32,15 +34,21 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->omega            = 64.0;
   options->ostep            = 100;
 
+  ierr = PetscStrcpy(options->filename, "");CHKERRQ(ierr);
+
   ierr = PetscOptionsBegin(comm, "", "Harmonic Oscillator Options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscOptionsInt("-output_step", "Number of time steps between output", "ex4.c", options->ostep, &options->ostep, PETSC_NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dim", "The topological mesh dimension", "ex4.c", options->dim, &options->dim, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-monitor", "Flag to use the TS monitor", "ex4.c", options->monitor, &options->monitor, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-error", "Flag to print the error", "ex4.c", options->error, &options->error, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-simplex", "The flag for simplices or tensor cells", "ex4.c", options->simplex, &options->simplex, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsString("-mesh", "Name of the mesh filename if any", "ex4.c", options->filename, options->filename, sizeof(options->filename), NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-particles_per_cell", "Number of particles per cell", "ex4.c", options->particlesPerCell, &options->particlesPerCell, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-omega", "Oscillator frequency", "ex4.c", options->omega, &options->omega, PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
+
 }
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
@@ -221,8 +229,6 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
   const PetscScalar *u, *coords;
   PetscScalar       *e;
   PetscReal          t, omega;
-  PetscReal          ex, ev;
-  PetscReal          g1, g2, g3, g4, gp1, gp2, gp3, gp4, x0t, v0t, x1t, v1t;
   PetscInt           dim, Np, p;
   PetscErrorCode     ierr;
 
@@ -242,9 +248,8 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
     const PetscReal x  = PetscRealPart(u[p*2+0]);
     const PetscReal v  = PetscRealPart(u[p*2+1]);
     const PetscReal x0 = DMPlex_NormD_Internal(dim, &coords[p*dim]);
-    const PetscReal v0 = 0.0;
-    ex =  x0*PetscCosReal(omega*t);
-    ev = -x0*omega*PetscSinReal(omega*t);
+    const PetscReal ex =  x0*PetscCosReal(omega*t);
+    const PetscReal ev = -x0*omega*PetscSinReal(omega*t);
 
     if (user->error) {ierr = PetscPrintf(comm, "p%D error [%.2g %.2g] sol [%.6lf %.6lf] exact [%.6lf %.6lf] energy/exact energy %g / %g\n", p, (double) PetscAbsReal(x-ex), (double) PetscAbsReal(v-ev), (double) x, (double) v, (double) ex, (double) ev, 0.5*(v*v + PetscSqr(omega)*x*x), (double) 0.5*PetscSqr(omega*x0));}
     e[p*2+0] = x - ex;
@@ -331,13 +336,16 @@ J= (0    1)
 static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U , Mat J, Mat P, void *ctx)
 {
   AppCtx            *user = (AppCtx *) ctx;
-  PetscInt           Np = user->dim * user->particlesPerCell;
+
+  PetscInt           Np;
   PetscInt           i, m, n;
   const PetscScalar *u;
   PetscScalar        vals[4] = {0., 1., -PetscSqr(user->omega), 0.};
   PetscErrorCode     ierr;
 
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
+  ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
+  Np /= 2;
   ierr = MatGetOwnershipRange(J, &m, &n);CHKERRQ(ierr);
   for (i = 0; i < Np; ++i) {
     const PetscInt rows[2] = {2*i, 2*i+1};
@@ -345,7 +353,6 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U , Mat J, Mat P, void
   }
   ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 
 }
