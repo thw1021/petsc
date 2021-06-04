@@ -19,8 +19,8 @@ int main(int argc, char **args)
     PetscReal      norm;
 
     ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-    ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex184","Mat");CHKERRQ(ierr);
     M=8;
@@ -36,7 +36,7 @@ int main(int argc, char **args)
     ierr = MatSetUp(A);CHKERRQ(ierr);
     ierr = MatGetLocalSize(A,&m,NULL);CHKERRQ(ierr);
     ierr = PetscMalloc1(m/bs,&dnnz);CHKERRQ(ierr);
-    for(j = 0; j < m/bs; j++) {
+    for (j = 0; j < m/bs; j++) {
         dnnz[j] = 1;
     }
     ierr = MatXAIJSetPreallocation(A,bs,dnnz,NULL,NULL,NULL);CHKERRQ(ierr);

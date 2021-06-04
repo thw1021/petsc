@@ -35,7 +35,6 @@ typedef struct {
   PetscScalar *rowvalues;          /* nonzero values in row */
   PetscBool   getrowactive;        /* indicates MatGetRow(), not restored */
 
-  /* Used by MatDistribute_MPISELL() to allow reuse of previous matrix allocation  and nonzero pattern */
   PetscInt *ld;                    /* number of entries per row left of diagona block */
 } Mat_MPISELL;
 
@@ -49,7 +48,6 @@ PETSC_INTERN PetscErrorCode MatDestroy_MPISELL_PtAP(Mat);
 PETSC_INTERN PetscErrorCode MatDestroy_MPISELL(Mat);
 
 PETSC_INTERN PetscErrorCode MatSetValues_MPISELL(Mat,PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar [],InsertMode);
-PETSC_INTERN PetscErrorCode MatDestroy_MPISELL_MatMatMult(Mat);
 PETSC_INTERN PetscErrorCode MatSetOption_MPISELL(Mat,MatOption,PetscBool);
 PETSC_INTERN PetscErrorCode MatGetSeqNonzeroStructure_MPISELL(Mat,Mat*);
 

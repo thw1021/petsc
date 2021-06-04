@@ -5,8 +5,6 @@ static char help[] = "Tests TSLINESEARCHL2 handing of Inf/Nan.\n\n";
    Concepts: SNES^basic example
 T*/
 
-
-
 /*
    Include "petscsnes.h" so that we can use SNES solvers.  Note that this
    file automatically includes:
@@ -52,7 +50,7 @@ int main(int argc,char **argv)
   char           type[256];
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetString(NULL,NULL,"-snes_linesearch_type",type,256,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-snes_linesearch_type",type,sizeof(type),&flg);CHKERRQ(ierr);
   if (flg) {
     ierr = PetscStrcmp(type,SNESLINESEARCHBT,&flg);CHKERRQ(ierr);
     if (flg) infatcount = 1;
@@ -60,7 +58,7 @@ int main(int argc,char **argv)
     if (flg) infatcount = 2;
   }
 
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Example is only for sequential runs");
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -90,7 +88,6 @@ int main(int argc,char **argv)
   ierr = SNESSetFunction(snes,r,FormFunction2,NULL);CHKERRQ(ierr);
   ierr = SNESSetObjective(snes,FormObjective,NULL);CHKERRQ(ierr);
   ierr = SNESSetJacobian(snes,J,J,FormJacobian2,NULL);CHKERRQ(ierr);
-
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Customize nonlinear solver; set runtime options
@@ -229,13 +226,10 @@ PetscErrorCode FormJacobian2(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
   return 0;
 }
 
-
-
-
 /*TEST
 
    build:
-      requires: c99 infinity
+      requires: infinity
 
    test:
       args: -snes_converged_reason -snes_linesearch_monitor -snes_linesearch_type l2

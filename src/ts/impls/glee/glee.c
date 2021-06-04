@@ -1,7 +1,6 @@
 /*
   Code for time stepping with the General Linear with Error Estimation method
 
-
   Notes:
   The general system is written as
 
@@ -486,8 +485,8 @@ PetscErrorCode TSGLEERegister(TSGLEEType name,PetscInt order,PetscInt s, PetscIn
   ierr     = PetscArraycpy(t->B,B,r*s);CHKERRQ(ierr);
   ierr     = PetscArraycpy(t->U,U,s*r);CHKERRQ(ierr);
   ierr     = PetscArraycpy(t->V,V,r*r);CHKERRQ(ierr);
-  ierr     = PetscArraycpy(t->S,S,r  );CHKERRQ(ierr);
-  ierr     = PetscArraycpy(t->F,F,r  );CHKERRQ(ierr);
+  ierr     = PetscArraycpy(t->S,S,r);CHKERRQ(ierr);
+  ierr     = PetscArraycpy(t->F,F,r);CHKERRQ(ierr);
   if (c) {
     ierr   = PetscArraycpy(t->c,c,s);CHKERRQ(ierr);
   } else {
@@ -582,7 +581,7 @@ static PetscErrorCode TSStep_GLEE(TS ts)
                   *F = tab->F,
                   *c = tab->c;
   Vec             *Y = glee->Y, *X = glee->X,
-                  *YStage = glee->YStage, 
+                  *YStage = glee->YStage,
                   *YdotStage = glee->YdotStage,
                   W = glee->W;
   SNES            snes;
@@ -746,7 +745,6 @@ static PetscErrorCode TSGLEEGetVecs(TS ts,DM dm,Vec *Ydot)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode TSGLEERestoreVecs(TS ts,DM dm,Vec *Ydot)
 {
   PetscErrorCode ierr;
@@ -821,7 +819,6 @@ static PetscErrorCode DMRestrictHook_TSGLEE(DM fine,Mat restrct,Vec rscale,Mat i
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode DMSubDomainHook_TSGLEE(DM dm,DM subdm,void *ctx)
 {
   PetscFunctionBegin;
@@ -873,14 +870,13 @@ PetscErrorCode TSStartingMethod_GLEE(TS ts)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  for (i=0; i<r; i++) { 
-    ierr = VecZeroEntries(glee->Y[i]);CHKERRQ(ierr); 
+  for (i=0; i<r; i++) {
+    ierr = VecZeroEntries(glee->Y[i]);CHKERRQ(ierr);
     ierr = VecAXPY(glee->Y[i],S[i],ts->vec_sol);CHKERRQ(ierr);
   }
 
   PetscFunctionReturn(0);
 }
-
 
 /*------------------------------------------------------------*/
 
@@ -1029,7 +1025,6 @@ PetscErrorCode  TSGLEESetType_GLEE(TS ts,TSGLEEType gleetype)
     }
   }
   SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_UNKNOWN_TYPE,"Could not find '%s'",gleetype);
-  PetscFunctionReturn(0);
 }
 
 static PetscErrorCode  TSGetStages_GLEE(TS ts,PetscInt *ns,Vec **Y)
@@ -1051,7 +1046,7 @@ PetscErrorCode TSGetSolutionComponents_GLEE(TS ts,PetscInt *n,Vec *Y)
   PetscFunctionBegin;
   if (!Y) *n = tab->r;
   else {
-    if ((*n >= 0) && (*n < tab->r)) { 
+    if ((*n >= 0) && (*n < tab->r)) {
       ierr = VecCopy(glee->Y[*n],*Y);CHKERRQ(ierr);
     } else SETERRQ3(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Second argument (%d) out of range[%d,%d].",*n,0,tab->r-1);
   }
@@ -1089,10 +1084,10 @@ PetscErrorCode TSGetTimeError_GLEE(TS ts,PetscInt n,Vec *X)
 
   PetscFunctionBegin;
   ierr = VecZeroEntries(*X);CHKERRQ(ierr);
-  if(n==0){
+  if (n==0){
     for (i=0; i<r; i++) wr[i] = F[i];
     ierr = VecMAXPY((*X),r,wr,Y);CHKERRQ(ierr);
-  } else if(n==-1) {
+  } else if (n==-1) {
     *X=glee->yGErr;
   }
   PetscFunctionReturn(0);
@@ -1137,7 +1132,7 @@ static PetscErrorCode TSDestroy_GLEE(TS ts)
 /*MC
       TSGLEE - ODE and DAE solver using General Linear with Error Estimation schemes
 
-  The user should provide the right hand side of the equation 
+  The user should provide the right hand side of the equation
   using TSSetRHSFunction().
 
   Notes:
@@ -1146,7 +1141,7 @@ static PetscErrorCode TSDestroy_GLEE(TS ts)
   Level: beginner
 
 .seealso:  TSCreate(), TS, TSSetType(), TSGLEESetType(), TSGLEEGetType(),
-           TSGLEE23, TTSGLEE24, TSGLEE35, TSGLEE25I, TSGLEEEXRK2A, 
+           TSGLEE23, TTSGLEE24, TSGLEE35, TSGLEE25I, TSGLEEEXRK2A,
            TSGLEERK32G1, TSGLEERK285EX, TSGLEEType, TSGLEERegister()
 
 M*/
@@ -1156,9 +1151,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_GLEE(TS ts)
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-#if !defined(PETSC_USE_DYNAMIC_LIBRARIES)
   ierr = TSGLEEInitializePackage();CHKERRQ(ierr);
-#endif
 
   ts->ops->reset                  = TSReset_GLEE;
   ts->ops->destroy                = TSDestroy_GLEE;

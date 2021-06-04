@@ -1,5 +1,5 @@
 #include <petsctaolinesearch.h>
-#include <../src/tao/bound/impls/bncg/bncg.h>
+#include <../src/tao/bound/impls/bncg/bncg.h> /*I "petsctao.h" I*/
 #include <petscksp.h>
 
 #define CG_GradientDescent      0
@@ -24,15 +24,6 @@ static const char *CG_Table[64] = {"gd", "hs", "fr", "pr", "prp", "dy", "hz", "d
 #define CG_AS_SIZE       2
 
 static const char *CG_AS_TYPE[64] = {"none", "bertsekas"};
-
-PetscErrorCode TaoBNCGSetRecycleFlag(Tao tao, PetscBool recycle)
-{
-  TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
-
-  PetscFunctionBegin;
-  cg->recycle = recycle;
-  PetscFunctionReturn(0);
-}
 
 PetscErrorCode TaoBNCGEstimateActiveSet(Tao tao, PetscInt asType)
 {
@@ -103,7 +94,7 @@ static PetscErrorCode TaoSolve_BNCG(Tao tao)
   /* Project the initial point onto the feasible region */
   ierr = TaoBoundSolution(tao->solution, tao->XL,tao->XU, 0.0, &nDiff, tao->solution);CHKERRQ(ierr);
 
-  if (nDiff > 0 || !cg->recycle){
+  if (nDiff > 0 || !tao->recycle){
     ierr = TaoComputeObjectiveAndGradient(tao, tao->solution, &cg->f, cg->unprojected_gradient);CHKERRQ(ierr);
   }
   ierr = VecNorm(cg->unprojected_gradient,NORM_2,&gnorm);CHKERRQ(ierr);
@@ -136,12 +127,12 @@ static PetscErrorCode TaoSolve_BNCG(Tao tao)
   ierr = (*tao->ops->convergencetest)(tao,tao->cnvP);CHKERRQ(ierr);
   if (tao->reason != TAO_CONTINUE_ITERATING) PetscFunctionReturn(0);
   /* Calculate initial direction. */
-  if (!cg->recycle) {
+  if (!tao->recycle) {
     /* We are not recycling a solution/history from a past TaoSolve */
     ierr = TaoBNCGResetUpdate(tao, gnorm2);CHKERRQ(ierr);
   }
   /* Initial gradient descent step. Scaling by 1.0 also does a decent job for some problems. */
-  while(1) {
+  while (1) {
     /* Call general purpose update function */
     if (tao->ops->update) {
       ierr = (*tao->ops->update)(tao, tao->niter, tao->user_update);CHKERRQ(ierr);
@@ -149,7 +140,6 @@ static PetscErrorCode TaoSolve_BNCG(Tao tao)
     ierr = TaoBNCGConductIteration(tao, gnorm);CHKERRQ(ierr);
     if (tao->reason != TAO_CONTINUE_ITERATING) PetscFunctionReturn(0);
   }
-  PetscFunctionReturn(0);
 }
 
 static PetscErrorCode TaoSetUp_BNCG(Tao tao)
@@ -269,7 +259,6 @@ static PetscErrorCode TaoSetFromOptions_BNCG(PetscOptionItems *PetscOptionsObjec
     ierr = PetscOptionsReal("-tao_bncg_zeta", "(developer) Free parameter for the Kou-Dai method", "", cg->zeta, &cg->zeta, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsInt("-tao_bncg_min_quad", "(developer) Number of iterations with approximate quadratic behavior needed for restart", "", cg->min_quad, &cg->min_quad, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsInt("-tao_bncg_min_restart_num", "(developer) Number of iterations between restarts (times dimension)", "", cg->min_restart_num, &cg->min_restart_num, NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-tao_bncg_recycle","enable recycling the existing solution, gradient, and diagonal scaling vector at the start of a new TaoSolve() call","",cg->recycle,&cg->recycle,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-tao_bncg_spaced_restart","(developer) Enable regular steepest descent restarting every fixed number of iterations","",cg->spaced_restart,&cg->spaced_restart,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-tao_bncg_no_scaling","Disable all scaling except in restarts","",cg->no_scaling,&cg->no_scaling,NULL);CHKERRQ(ierr);
     if (cg->no_scaling){
@@ -461,12 +450,10 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BNCG(Tao tao)
   cg->eps_23 = PetscPowReal(PETSC_MACHINE_EPSILON, 2.0/3.0); /* Just a little tighter*/
   cg->as_type = CG_AS_BERTSEKAS;
   cg->cg_type = CG_SSML_BFGS;
-  cg->recycle = PETSC_FALSE;
   cg->alpha = 1.0;
   cg->diag_scaling = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
-
 
 PetscErrorCode TaoBNCGResetUpdate(Tao tao, PetscReal gnormsq)
 {
@@ -525,7 +512,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
   PetscFunctionBegin;
 
   /* Local curvature check to see if we need to restart */
-  if (tao->niter >= 1 || cg->recycle){
+  if (tao->niter >= 1 || tao->recycle){
     ierr = VecWAXPY(cg->yk, -1.0, cg->G_old, tao->gradient);CHKERRQ(ierr);
     ierr = VecNorm(cg->yk, NORM_2, &ynorm);CHKERRQ(ierr);
     ynorm2 = ynorm*ynorm;
@@ -554,20 +541,20 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
    must be derived as a preconditioned CG method rather than as
    a Hessian initialization like in the Broyden methods. */
 
-  /* In that case, one writes the objective function as 
-   f(x) \equiv f(Ay). Gradient evaluations yield g(x_k) = A g(Ay_k) = A g(x_k). 
-   Furthermore, the direction d_k \equiv (x_k - x_{k-1})/step according to 
-   HZ (2006) becomes A^{-1} d_k, such that d_k^T g_k remains the 
+  /* In that case, one writes the objective function as
+   f(x) \equiv f(Ay). Gradient evaluations yield g(x_k) = A g(Ay_k) = A g(x_k).
+   Furthermore, the direction d_k \equiv (x_k - x_{k-1})/step according to
+   HZ (2006) becomes A^{-1} d_k, such that d_k^T g_k remains the
    same under preconditioning. Note that A is diagonal, such that A^T = A. */
 
-  /* This yields questions like what the dot product d_k^T y_k 
-   should look like. HZ mistakenly treats that as the same under 
+  /* This yields questions like what the dot product d_k^T y_k
+   should look like. HZ mistakenly treats that as the same under
    preconditioning, but that is not necessarily true. */
 
-  /* Observe y_k \equiv g_k - g_{k-1}, and under the P.C. transformation, 
-   we get d_k^T y_k = (d_k^T A_k^{-T} A_k g_k - d_k^T A_k^{-T} A_{k-1} g_{k-1}), 
-   yielding d_k^T y_k = d_k^T g_k - d_k^T (A_k^{-T} A_{k-1} g_{k-1}), which is 
-   NOT the same if our preconditioning matrix is updated between iterations. 
+  /* Observe y_k \equiv g_k - g_{k-1}, and under the P.C. transformation,
+   we get d_k^T y_k = (d_k^T A_k^{-T} A_k g_k - d_k^T A_k^{-T} A_{k-1} g_{k-1}),
+   yielding d_k^T y_k = d_k^T g_k - d_k^T (A_k^{-T} A_{k-1} g_{k-1}), which is
+   NOT the same if our preconditioning matrix is updated between iterations.
    This same issue is found when considering dot products of the form g_{k+1}^T y_k. */
 
   /* Compute CG step direction */
@@ -741,7 +728,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       break;
 
     case CG_DaiKou:
-      /* Dai, Yu-Hong, and Cai-Xia Kou. "A nonlinear conjugate gradient algorithm with an optimal property and an improved Wolfe line search." 
+      /* Dai, Yu-Hong, and Cai-Xia Kou. "A nonlinear conjugate gradient algorithm with an optimal property and an improved Wolfe line search."
          SIAM Journal on Optimization 23, no. 1 (2013): 296-320. */
       ierr = VecDot(tao->gradient, tao->stepdirection, &gd);CHKERRQ(ierr);
       ierr = VecDot(cg->G_old, tao->stepdirection, &gd_old);CHKERRQ(ierr);
@@ -783,7 +770,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       break;
 
     case CG_KouDai:
-      /* Kou, Cai-Xia, and Yu-Hong Dai. "A modified self-scaling memoryless Broyden–Fletcher–Goldfarb–Shanno method for unconstrained optimization."
+      /* Kou, Cai-Xia, and Yu-Hong Dai. "A modified self-scaling memoryless Broyden-Fletcher-Goldfarb-Shanno method for unconstrained optimization."
          Journal of Optimization Theory and Applications 165, no. 1 (2015): 209-224. */
       ierr = VecDot(tao->gradient, tao->stepdirection, &gd);CHKERRQ(ierr);
       ierr = VecDot(cg->G_old, tao->stepdirection, &gd_old);CHKERRQ(ierr);
@@ -806,7 +793,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
             gamma = 0.0;
           } else {
             if (gkp1_yk < 0 && cg->neg_xi) gamma = -1.0*gd/dk_yk;
-            /* This seems to be very effective when there's no tau_k scaling. 
+            /* This seems to be very effective when there's no tau_k scaling.
                This guarantees a large descent step every iteration, going through DK 2015 Lemma 3.1's proof but allowing for negative xi */
             else {
               gamma = cg->xi*gd/dk_yk;
@@ -981,7 +968,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGConductIteration(Tao tao, PetscReal gnorm)
   f_old = cg->f;
   /* Perform bounded line search. If we are recycling a solution from a previous */
   /* TaoSolve, then we want to immediately skip to calculating a new direction rather than performing a linesearch */
-  if (!(cg->recycle && 0 == tao->niter)){
+  if (!(tao->recycle && 0 == tao->niter)){
     /* Above logic: the below code happens every iteration, except for the first iteration of a recycled TaoSolve */
     ierr = TaoLineSearchSetInitialStepLength(tao->linesearch, 1.0);CHKERRQ(ierr);
     ierr = TaoLineSearchApply(tao->linesearch, tao->solution, &cg->f, cg->unprojected_gradient, tao->stepdirection, &step, &ls_status);CHKERRQ(ierr);

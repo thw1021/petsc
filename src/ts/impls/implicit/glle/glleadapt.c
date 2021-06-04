@@ -167,7 +167,7 @@ PetscErrorCode  TSGLLEAdaptDestroy(TSGLLEAdapt *adapt)
   PetscFunctionBegin;
   if (!*adapt) PetscFunctionReturn(0);
   PetscValidHeaderSpecific(*adapt,TSGLLEADAPT_CLASSID,1);
-  if (--((PetscObject)(*adapt))->refct > 0) {*adapt = 0; PetscFunctionReturn(0);}
+  if (--((PetscObject)(*adapt))->refct > 0) {*adapt = NULL; PetscFunctionReturn(0);}
   if ((*adapt)->ops->destroy) {ierr = (*(*adapt)->ops->destroy)(*adapt);CHKERRQ(ierr);}
   ierr = PetscHeaderDestroy(adapt);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -204,7 +204,7 @@ PetscErrorCode  TSGLLEAdaptChoose(TSGLLEAdapt adapt,PetscInt n,const PetscInt or
   PetscValidPointer(cost,5);
   PetscValidIntPointer(next_sc,9);
   PetscValidPointer(next_h,10);
-  PetscValidIntPointer(finish,11);
+  PetscValidBoolPointer(finish,11);
   ierr = (*adapt->ops->choose)(adapt,n,orders,errors,cost,cur,h,tleft,next_sc,next_h,finish);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -221,9 +221,8 @@ PetscErrorCode  TSGLLEAdaptCreate(MPI_Comm comm,TSGLLEAdapt *inadapt)
   PetscFunctionReturn(0);
 }
 
-
 /*
-*  Implementations
+   Implementations
 */
 
 static PetscErrorCode TSGLLEAdaptDestroy_JustFree(TSGLLEAdapt adapt)
@@ -272,7 +271,6 @@ typedef struct {
   PetscReal desired_h;
 } TSGLLEAdapt_Size;
 
-
 static PetscErrorCode TSGLLEAdaptChoose_Size(TSGLLEAdapt adapt,PetscInt n,const PetscInt orders[],const PetscReal errors[],const PetscReal cost[],PetscInt cur,PetscReal h,PetscReal tleft,PetscInt *next_sc,PetscReal *next_h,PetscBool  *finish)
 {
   TSGLLEAdapt_Size *sz = (TSGLLEAdapt_Size*)adapt->data;
@@ -315,7 +313,6 @@ typedef struct {
   PetscInt  count_at_order;
   PetscReal desired_h;
 } TSGLLEAdapt_Both;
-
 
 static PetscErrorCode TSGLLEAdaptChoose_Both(TSGLLEAdapt adapt,PetscInt n,const PetscInt orders[],const PetscReal errors[],const PetscReal cost[],PetscInt cur,PetscReal h,PetscReal tleft,PetscInt *next_sc,PetscReal *next_h,PetscBool  *finish)
 {

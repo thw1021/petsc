@@ -40,7 +40,7 @@
 #define petscbagcreate_ petscbagcreate
 #endif
 
-PETSC_EXTERN void  petscbagcreate_(MPI_Fint * comm,size_t *bagsize,PetscBag *bag, PetscErrorCode *ierr )
+PETSC_EXTERN void  petscbagcreate_(MPI_Fint * comm,size_t *bagsize,PetscBag *bag, PetscErrorCode *ierr)
 {
   *ierr = PetscBagCreate(MPI_Comm_f2c(*(comm)),*bagsize,bag);
 }
@@ -170,7 +170,6 @@ PETSC_EXTERN void petscbagregisterstring_(PetscBag *bag,char* p,char* cs1,char* 
   FREECHAR(s1,t1);
   FREECHAR(s2,t2);
 }
-
 
 PETSC_EXTERN void petscbaggetdata_(PetscBag *bag,void **data,PetscErrorCode *ierr)
 {

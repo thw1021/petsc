@@ -24,6 +24,7 @@
 
 #define DMAdaptor        PetscFortranAddr
 #define PetscQuadrature  PetscFortranAddr
+#define PetscWeakForm    PetscFortranAddr
 #define PetscDS          PetscFortranAddr
 #define PetscFE          PetscFortranAddr
 #define PetscSpace       PetscFortranAddr
@@ -32,7 +33,6 @@
 #define PetscLimiter     PetscFortranAddr
 #define PetscPartitioner PetscFortranAddr
 #define DMField          PetscFortranAddr
-
 
 #define DMDA        'da'
 #define DMCOMPOSITE 'composite'

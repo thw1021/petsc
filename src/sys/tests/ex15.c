@@ -14,7 +14,7 @@ static char help[] = "Tests inclusion of petscsystypes.h.\n\n";
     z = x; z /= x; z = z / x; z = x / z;        \
     (void)(z==x); (void)(x==z);                 \
     (void)(z!=x); (void)(x!=z);                 \
-  } while(0)
+  } while (0)
 #endif
 
 int main(int argc,char **argv)
@@ -177,7 +177,6 @@ int main(int argc,char **argv)
   (void)oh;
   return ierr;
 }
-
 
 /*TEST
 

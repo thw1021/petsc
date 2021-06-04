@@ -53,7 +53,7 @@ struct _p_PetscDrawHG {
 
 .seealso: PetscDrawHGDestroy(), PetscDrawHG, PetscDrawBarCreate(), PetscDrawBar, PetscDrawLGCreate(), PetscDrawLG, PetscDrawSPCreate(), PetscDrawSP,
           PetscDrawHGSetNumberBins(), PetscDrawHGReset(), PetscDrawHGAddValue(), PetscDrawHGDraw(), PetscDrawHGSave(), PetscDrawHGView(), PetscDrawHGSetColor(),
-          PetscDrawHGSetLimits(), PetscDrawHGCalcStats(), PetscDrawHGIntegerBins(), PetscDrawHGGetAxis(), PetscDrawAxis, PetscDrawHGGetDraw() 
+          PetscDrawHGSetLimits(), PetscDrawHGCalcStats(), PetscDrawHGIntegerBins(), PetscDrawHGGetAxis(), PetscDrawAxis, PetscDrawHGGetDraw()
 
 @*/
 PetscErrorCode  PetscDrawHGCreate(PetscDraw draw,int bins,PetscDrawHG *hist)
@@ -219,7 +219,7 @@ PetscErrorCode  PetscDrawHGAddValue(PetscDrawHG hist, PetscReal value)
   }
   /* I disagree with the original Petsc implementation here. There should be no overshoot, but rather the
      stated convention of using half-open intervals (always the way to go) */
-  if (!hist->numValues) {
+  if (!hist->numValues && (hist->xmin == PETSC_MAX_REAL) && (hist->xmax == PETSC_MIN_REAL)) {
     hist->xmin = value;
     hist->xmax = value;
 #if 1
@@ -274,7 +274,7 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
   PetscValidHeaderSpecific(hist,PETSC_DRAWHG_CLASSID,1);
   ierr = PetscDrawIsNull(hist->win,&isnull);CHKERRQ(ierr);
   if (isnull) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)hist),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)hist),&rank);CHKERRMPI(ierr);
 
   if ((hist->xmin >= hist->xmax) || (hist->ymin >= hist->ymax)) PetscFunctionReturn(0);
   if (hist->numValues < 1) PetscFunctionReturn(0);
@@ -659,4 +659,3 @@ PetscErrorCode  PetscDrawHGGetDraw(PetscDrawHG hist,PetscDraw *draw)
   *draw = hist->win;
   PetscFunctionReturn(0);
 }
-

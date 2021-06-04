@@ -1,9 +1,9 @@
--include ../petscdir.mk
+-include ../../../../../petscdir.mk
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
-SOURCEC   = fe.c fegeom.c
+SOURCEC   = fe.c fegeom.c feceed.c
 SOURCEF   =
 SOURCEH   =
 DIRS      =

@@ -14,11 +14,11 @@ class Configure(config.base.Configure):
     return
 
   def __str2__(self):
-    desc = []
+    desc = ['  Using GNU make: ' + self.make.make]
     if not self.installed:
       desc.append('xxx=========================================================================xxx')
       desc.append(' Configure stage complete. Now build PETSc libraries with:')
-      desc.append('   make PETSC_DIR='+self.petscdir.dir+' PETSC_ARCH='+self.arch.arch+' all')
+      desc.append('   %s PETSC_DIR=%s PETSC_ARCH=%s all' % (self.make.make_user, self.petscdir.dir, self.arch.arch))
       desc.append('xxx=========================================================================xxx')
     else:
       desc.append('xxx=========================================================================xxx')
@@ -28,16 +28,16 @@ class Configure(config.base.Configure):
 
   def setupHelp(self, help):
     import nargs
-    help.addArgument('PETSc',  '-prefix=<dir>',                   nargs.Arg(None, '', 'Specifiy location to install PETSc (eg. /usr/local)'))
-    help.addArgument('PETSc',  '-with-prefetch=<bool>',           nargs.ArgBool(None, 1,'Enable checking for prefetch instructions'))
-    help.addArgument('Windows','-with-windows-graphics=<bool>',   nargs.ArgBool(None, 1,'Enable check for Windows Graphics'))
-    help.addArgument('PETSc', '-with-default-arch=<bool>',        nargs.ArgBool(None, 1, 'Allow using the last configured arch without setting PETSC_ARCH'))
-    help.addArgument('PETSc','-with-single-library=<bool>',       nargs.ArgBool(None, 1,'Put all PETSc code into the single -lpetsc library'))
-    help.addArgument('PETSc','-with-fortran-bindings=<bool>',     nargs.ArgBool(None, 1,'Build PETSc fortran bindings in the library and corresponding module files'))
-    help.addArgument('PETSc', '-with-ios=<bool>',              nargs.ArgBool(None, 0, 'Build an iPhone/iPad version of PETSc library'))
-    help.addArgument('PETSc', '-with-xsdk-defaults', nargs.ArgBool(None, 0, 'Set the following as defaults for the xSDK standard: --enable-debug=1, --enable-shared=1, --with-precision=double, --with-index-size=32, locate blas/lapack automatically'))
-    help.addArgument('PETSc', '-with-display=<x11display>',       nargs.Arg(None, '', 'Specifiy DISPLAY env variable for use with matlab test)'))
-    help.addArgument('PETSc', '-with-package-scripts=<pyscripts>',nargs.ArgFileList(None,None,'Specify configure package scripts for user provided packages'))
+    help.addArgument('PETSc',  '-prefix=<dir>',                              nargs.Arg(None, '', 'Specifiy location to install PETSc (eg. /usr/local)'))
+    help.addArgument('PETSc',  '-with-prefetch=<bool>',                      nargs.ArgBool(None, 1,'Enable checking for prefetch instructions'))
+    help.addArgument('Windows','-with-windows-graphics=<bool>',              nargs.ArgBool(None, 1,'Enable check for Windows Graphics'))
+    help.addArgument('PETSc', '-with-default-arch=<bool>',                   nargs.ArgBool(None, 1, 'Allow using the last configured arch without setting PETSC_ARCH'))
+    help.addArgument('PETSc','-with-single-library=<bool>',                  nargs.ArgBool(None, 1,'Put all PETSc code into the single -lpetsc library'))
+    help.addArgument('PETSc','-with-fortran-bindings=<bool>',                nargs.ArgBool(None, 1,'Build PETSc fortran bindings in the library and corresponding module files'))
+    help.addArgument('PETSc', '-with-ios=<bool>',                            nargs.ArgBool(None, 0, 'Build an iPhone/iPad version of PETSc library'))
+    help.addArgument('PETSc', '-with-xsdk-defaults',                         nargs.ArgBool(None, 0, 'Set the following as defaults for the xSDK standard: --enable-debug=1, --enable-shared=1, --with-precision=double, --with-index-size=32, locate blas/lapack automatically'))
+    help.addArgument('PETSc', '-with-display=<x11display>',                  nargs.Arg(None, '', 'Specifiy DISPLAY env variable for use with matlab test)'))
+    help.addArgument('PETSc', '-with-package-scripts=<pyscripts>',           nargs.ArgFileList(None,None,'Specify configure package scripts for user provided packages'))
     return
 
   def registerPythonFile(self,filename,directory):
@@ -66,6 +66,7 @@ class Configure(config.base.Configure):
     self.arch          = framework.require('PETSc.options.arch',        self.setCompilers)
     self.petscdir      = framework.require('PETSc.options.petscdir',    self.arch)
     self.installdir    = framework.require('PETSc.options.installDir',  self)
+    self.dataFilesPath = framework.require('PETSc.options.dataFilesPath',self)
     self.scalartypes   = framework.require('PETSc.options.scalarTypes', self)
     self.indexTypes    = framework.require('PETSc.options.indexTypes',  self)
     self.languages     = framework.require('PETSc.options.languages',   self.setCompilers)
@@ -132,7 +133,7 @@ class Configure(config.base.Configure):
                  'readlink','realpath','usleep','sleep','_sleep',
                  'uname','snprintf','_snprintf','lseek','_lseek','time','fork','stricmp',
                  'strcasecmp','bzero','dlopen','dlsym','dlclose','dlerror',
-                 '_set_output_format','_mkdir','socket','gethostbyname','_pipe']
+                 '_set_output_format','_mkdir','socket','gethostbyname','_pipe','fpresetsticky','fpsetsticky']
     libraries = [(['fpe'],'handle_sigfpes')]
     librariessock = [(['socket','nsl'],'socket')]
     self.headers.headers.extend(headersC)
@@ -142,49 +143,54 @@ class Configure(config.base.Configure):
       self.libraries.libraries.extend(librariessock)
     return
 
-  def DumpPkgconfig(self):
+  def DumpPkgconfig(self, petsc_pc):
     ''' Create a pkg-config file '''
     if not os.path.exists(os.path.join(self.petscdir.dir,self.arch.arch,'lib','pkgconfig')):
       os.makedirs(os.path.join(self.petscdir.dir,self.arch.arch,'lib','pkgconfig'))
-    fd = open(os.path.join(self.petscdir.dir,self.arch.arch,'lib','pkgconfig','PETSc.pc'),'w')
-    cflags_inc = ['-I${includedir}']
-    if self.framework.argDB['prefix']:
-      fd.write('prefix='+self.installdir.dir+'\n')
-    else:
-      fd.write('prefix='+os.path.join(self.petscdir.dir, self.arch.arch)+'\n')
-      cflags_inc.append('-I' + os.path.join(self.petscdir.dir, 'include'))
-    fd.write('exec_prefix=${prefix}\n')
-    fd.write('includedir=${prefix}/include\n')
-    fd.write('libdir=${prefix}/lib\n')
+    with open(os.path.join(self.petscdir.dir,self.arch.arch,'lib','pkgconfig',petsc_pc),'w') as fd:
+      cflags_inc = ['-I${includedir}']
+      if self.framework.argDB['prefix']:
+        fd.write('prefix='+self.installdir.dir+'\n')
+      else:
+        fd.write('prefix='+os.path.join(self.petscdir.dir, self.arch.arch)+'\n')
+        cflags_inc.append('-I' + os.path.join(self.petscdir.dir, 'include'))
+      fd.write('exec_prefix=${prefix}\n')
+      fd.write('includedir=${prefix}/include\n')
+      fd.write('libdir=${prefix}/lib\n')
 
-    self.setCompilers.pushLanguage('C')
-    fd.write('ccompiler='+self.setCompilers.getCompiler()+'\n')
-    fd.write('cflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
-    fd.write('cflags_dep='+self.compilers.dependenciesGenerationFlag.get('C','')+'\n')
-    fd.write('ldflag_rpath='+self.setCompilers.CSharedLinkerFlag+'\n')
-    self.setCompilers.popLanguage()
-    if hasattr(self.compilers, 'CXX'):
-      self.setCompilers.pushLanguage('C++')
-      fd.write('cxxcompiler='+self.setCompilers.getCompiler()+'\n')
-      fd.write('cxxflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
-      self.setCompilers.popLanguage()
-    if hasattr(self.compilers, 'FC'):
-      self.setCompilers.pushLanguage('FC')
-      fd.write('fcompiler='+self.setCompilers.getCompiler()+'\n')
-      fd.write('fflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
-      self.setCompilers.popLanguage()
+      with self.setCompilers.Language('C'):
+        fd.write('ccompiler='+self.setCompilers.getCompiler()+'\n')
+        fd.write('cflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
+        fd.write('cflags_dep='+self.compilers.dependenciesGenerationFlag.get('C','')+'\n')
+        fd.write('ldflag_rpath='+self.setCompilers.CSharedLinkerFlag+'\n')
+      if hasattr(self.compilers, 'CXX'):
+        with self.setCompilers.Language('C++'):
+          fd.write('cxxcompiler='+self.setCompilers.getCompiler()+'\n')
+          fd.write('cxxflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
+      if hasattr(self.compilers, 'FC'):
+        with self.setCompilers.Language('FC'):
+          fd.write('fcompiler='+self.setCompilers.getCompiler()+'\n')
+          fd.write('fflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
+      if hasattr(self.compilers, 'CUDAC'):
+        with self.setCompilers.Language('CUDA'):
+          fd.write('cudacompiler='+self.setCompilers.getCompiler()+'\n')
+          fd.write('cudaflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
+          p = self.framework.require('config.packages.cuda')
+          fd.write('cudalib='+self.libraries.toStringNoDupes(p.lib)+'\n')
+          fd.write('cudainclude='+self.headers.toStringNoDupes(p.include)+'\n')
+          if hasattr(self.setCompilers,'CUDA_CXX'):
+            fd.write('cuda_cxx='+self.setCompilers.CUDA_CXX+'\n')
+            fd.write('cuda_cxxflags='+self.setCompilers.CUDA_CXXFLAGS+'\n')
 
-    fd.write('\n')
-    fd.write('Name: PETSc\n')
-    fd.write('Description: Library to solve ODEs and algebraic equations\n')
-    fd.write('Version: %s\n' % self.petscdir.version)
-    fd.write('Cflags: ' + ' '.join([self.setCompilers.CPPFLAGS] + cflags_inc) + '\n')
-    fd.write('Libs: '+self.libraries.toStringNoDupes(['-L${libdir}', self.petsclib], with_rpath=False)+'\n')
-    # Remove RPATH flags from library list.  User can add them using
-    # pkg-config --variable=ldflag_rpath and pkg-config --libs-only-L
-    fd.write('Libs.private: '+self.libraries.toStringNoDupes([f for f in self.packagelibs+self.complibs if not f.startswith(self.setCompilers.CSharedLinkerFlag)], with_rpath=False)+'\n')
-
-    fd.close()
+      fd.write('\n')
+      fd.write('Name: PETSc\n')
+      fd.write('Description: Library to solve ODEs and algebraic equations\n')
+      fd.write('Version: %s\n' % self.petscdir.version)
+      fd.write('Cflags: ' + ' '.join([self.setCompilers.CPPFLAGS] + cflags_inc) + '\n')
+      fd.write('Libs: '+self.libraries.toStringNoDupes(['-L${libdir}', self.petsclib], with_rpath=False)+'\n')
+      # Remove RPATH flags from library list.  User can add them using
+      # pkg-config --variable=ldflag_rpath and pkg-config --libs-only-L
+      fd.write('Libs.private: '+self.libraries.toStringNoDupes([f for f in self.packagelibs+self.complibs if not f.startswith(self.setCompilers.CSharedLinkerFlag)], with_rpath=False)+'\n')
     return
 
   def DumpModule(self):
@@ -230,9 +236,20 @@ prepend-path PATH "%s"
       # Remove any MPI/MPICH include files that may have been put here by previous runs of ./configure
       self.executeShellCommand('rm -rf  '+os.path.join(self.petscdir.dir,self.arch.arch,'include','mpi*')+' '+os.path.join(self.petscdir.dir,self.arch.arch,'include','opa*'), log = self.log)
 
+    self.logPrintDivider()
+    # Test for compiler-specific macros that need to be defined.
+    if self.setCompilers.isCrayVector('CC', self.log):
+      self.addDefine('HAVE_CRAY_VECTOR','1')
+
+    if self.functions.haveFunction('gethostbyname') and self.functions.haveFunction('socket') and self.headers.haveHeader('netinet/in.h'):
+      self.addDefine('USE_SOCKET_VIEWER','1')
+      if self.checkCompile('#include <sys/socket.h>','setsockopt(0,SOL_SOCKET,SO_REUSEADDR,0,0)'):
+        self.addDefine('HAVE_SO_REUSEADDR','1')
+
+    self.logPrintDivider()
     self.setCompilers.pushLanguage('C')
     compiler = self.setCompilers.getCompiler()
-    if compiler.endswith('mpicc') or compiler.endswith('mpiicc'):
+    if [s for s in ['mpicc','mpiicc'] if os.path.basename(compiler).find(s)>=0]:
       try:
         output   = self.executeShellCommand(compiler + ' -show', log = self.log)[0]
         compiler = output.split(' ')[0]
@@ -325,6 +342,17 @@ prepend-path PATH "%s"
       self.addMakeMacro('CUDAC_FLAGS',self.setCompilers.getCompilerFlags())
       self.setCompilers.popLanguage()
 
+    if hasattr(self.compilers, 'HIPC'):
+      self.setCompilers.pushLanguage('HIP')
+      self.addMakeMacro('HIPC_FLAGS',self.setCompilers.getCompilerFlags())
+      self.addMakeMacro('HIPPP_FLAGS',self.setCompilers.HIPPPFLAGS)
+      self.setCompilers.popLanguage()
+
+    if hasattr(self.compilers, 'SYCLCXX'):
+      self.setCompilers.pushLanguage('SYCL')
+      self.addMakeMacro('SYCLCXX_FLAGS',self.setCompilers.getCompilerFlags())
+      self.setCompilers.popLanguage()
+
     # shared library linker values
     self.setCompilers.pushLanguage(self.languages.clanguage)
     # need to fix BuildSystem to collect these separately
@@ -357,21 +385,16 @@ prepend-path PATH "%s"
     if self.framework.argDB['with-batch']:
       self.addMakeMacro('PETSC_WITH_BATCH','1')
 
-    # Test for compiler-specific macros that need to be defined.
-    if self.setCompilers.isCrayVector('CC', self.log):
-      self.addDefine('HAVE_CRAY_VECTOR','1')
-
-#-----------------------------------------------------------------------------------------------------
-    if self.functions.haveFunction('gethostbyname') and self.functions.haveFunction('socket') and self.headers.haveHeader('netinet/in.h'):
-      self.addDefine('USE_SOCKET_VIEWER','1')
-      if self.checkCompile('#include <sys/socket.h>','setsockopt(0,SOL_SOCKET,SO_REUSEADDR,0,0)'):
-        self.addDefine('HAVE_SO_REUSEADDR','1')
-
 #-----------------------------------------------------------------------------------------------------
     # print include and lib for makefiles
+    self.logPrintDivider()
     self.framework.packages.reverse()
     petscincludes = [os.path.join(self.petscdir.dir,'include'),os.path.join(self.petscdir.dir,self.arch.arch,'include')]
-    petscincludes_install = [os.path.join(self.installdir.dir, 'include')] if self.framework.argDB['prefix'] else petscincludes
+    if self.framework.argDB['prefix']:
+      petscincludes_install = [os.path.join(self.installdir.dir, 'include')]
+      petscincludes.extend(petscincludes_install) # add the prefix include dir to petscincludes
+    else:
+      petscincludes_install = petscincludes
     includes = []
     self.packagelibs = []
     for i in self.framework.packages:
@@ -458,7 +481,7 @@ prepend-path PATH "%s"
   def dumpConfigInfo(self):
     import time
     fd = open(os.path.join(self.arch.arch,'include','petscconfiginfo.h'),'w')
-    fd.write('static const char *petscconfigureoptions = "'+self.framework.getOptionsString(['configModules', 'optionsModule']).replace('\"','\\"')+'";\n')
+    fd.write('static const char *petscconfigureoptions = "'+self.framework.getOptionsString(['configModules', 'optionsModule']).replace('\"','\\"').replace('\\ ','\\\\ ')+'";\n')
     fd.close()
     return
 
@@ -561,6 +584,13 @@ prepend-path PATH "%s"
     else:
       self.addDefine('Prefetch(a,b,c)', ' ')
     self.popLanguage()
+
+  def delGenFiles(self):
+    '''Delete generated files'''
+    delfile = os.path.join(self.arch.arch,'lib','petsc','conf','files')
+    try:
+      os.unlink(delfile)
+    except: pass
 
   def configureAtoll(self):
     '''Checks if atoll exists'''
@@ -768,11 +798,17 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
       self.addDefine('DIR','"'+petscdir.replace('\\','\\\\')+'"')
       (petscdir,error,status) = self.executeShellCommand('cygpath -m '+self.installdir.petscDir, log = self.log)
       self.addMakeMacro('wPETSC_DIR',petscdir)
+      if self.dataFilesPath.datafilespath:
+        (datafilespath,error,status) = self.executeShellCommand('cygpath -m '+self.dataFilesPath.datafilespath, log = self.log)
+        self.addMakeMacro('DATAFILESPATH',datafilespath)
+
     else:
       self.addDefine('REPLACE_DIR_SEPARATOR','\'\\\\\'')
       self.addDefine('DIR_SEPARATOR','\'/\'')
       self.addDefine('DIR','"'+self.installdir.petscDir+'"')
       self.addMakeMacro('wPETSC_DIR',self.installdir.petscDir)
+      if self.dataFilesPath.datafilespath:
+        self.addMakeMacro('DATAFILESPATH',self.dataFilesPath.datafilespath)
     self.addDefine('ARCH','"'+self.installdir.petscArch+'"')
     return
 
@@ -852,13 +888,17 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
   def configureInstall(self):
     '''Setup the directories for installation'''
     if self.framework.argDB['prefix']:
-      self.addMakeRule('print_mesg_after_build','',['-@echo "Now to install the libraries do:"',\
-                                              '-@echo "'+self.installdir.installSudo+'make PETSC_DIR=${PETSC_DIR} PETSC_ARCH=${PETSC_ARCH} install"',\
-                                              '-@echo "========================================="'])
+      self.addMakeRule('print_mesg_after_build','',
+       ['-@echo "========================================="',
+        '-@echo "Now to install the libraries do:"',
+        '-@echo "%s${MAKE_USER} PETSC_DIR=${PETSC_DIR} PETSC_ARCH=${PETSC_ARCH} install"' % self.installdir.installSudo,
+        '-@echo "========================================="'])
     else:
-      self.addMakeRule('print_mesg_after_build','',['-@echo "Now to check if the libraries are working do:"',\
-                                              '-@echo "make PETSC_DIR=${PETSC_DIR} PETSC_ARCH=${PETSC_ARCH} check"',\
-                                              '-@echo "========================================="'])
+      self.addMakeRule('print_mesg_after_build','',
+       ['-@echo "========================================="',
+        '-@echo "Now to check if the libraries are working do:"',
+        '-@echo "${MAKE_USER} PETSC_DIR=${PETSC_DIR} PETSC_ARCH=${PETSC_ARCH} check"',
+        '-@echo "========================================="'])
       return
 
   def configureGCOV(self):
@@ -919,10 +959,10 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     self.executeTest(self.configureUnused)
     self.executeTest(self.configureDeprecated)
     self.executeTest(self.configureIsatty)
-    self.executeTest(self.configureExpect);
-    self.executeTest(self.configureAlign);
-    self.executeTest(self.configureFunctionName);
-    self.executeTest(self.configureIntptrt);
+    self.executeTest(self.configureExpect)
+    self.executeTest(self.configureAlign)
+    self.executeTest(self.configureFunctionName)
+    self.executeTest(self.configureIntptrt)
     self.executeTest(self.configureSolaris)
     self.executeTest(self.configureLinux)
     self.executeTest(self.configureWin32)
@@ -936,11 +976,13 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     self.Dump()
     self.dumpConfigInfo()
     self.dumpMachineInfo()
+    self.delGenFiles()
     # need to save the current state of BuildSystem so that postProcess() packages can read it in and perhaps run make install
     self.framework.storeSubstitutions(self.framework.argDB)
     self.framework.argDB['configureCache'] = pickle.dumps(self.framework)
     self.framework.argDB.save(force = True)
-    self.DumpPkgconfig()
+    self.DumpPkgconfig('PETSc.pc')
+    self.DumpPkgconfig('petsc.pc')
     self.DumpModule()
     self.postProcessPackages()
     self.framework.log.write('================================================================================\n')

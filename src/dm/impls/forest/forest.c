@@ -174,7 +174,6 @@ PetscErrorCode DMForestTemplate(DM dm, MPI_Comm comm, DM *tdm)
     ierr = DMGetPeriodicity(dm,&isper,&maxCell,&L,&bd);CHKERRQ(ierr);
     ierr = DMSetPeriodicity(*tdm,isper,maxCell,L,bd);CHKERRQ(ierr);
   }
-  ierr = DMCopyBoundary(dm,*tdm);CHKERRQ(ierr);
   ierr = DMGetMatType(dm,&mtype);CHKERRQ(ierr);
   ierr = DMSetMatType(*tdm,mtype);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1218,7 +1217,7 @@ PetscErrorCode DMForestGetCellChart(DM dm, PetscInt *cStart, PetscInt *cEnd)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidIntPointer(cStart,2);
-  PetscValidIntPointer(cEnd,2);
+  PetscValidIntPointer(cEnd,3);
   if (((forest->cStart == PETSC_DETERMINE) || (forest->cEnd == PETSC_DETERMINE)) && forest->createcellchart) {
     ierr = forest->createcellchart(dm,&forest->cStart,&forest->cEnd);CHKERRQ(ierr);
   }
@@ -1460,7 +1459,7 @@ PETSC_EXTERN PetscErrorCode DMSetFromOptions_Forest(PetscOptionItems *PetscOptio
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   ierr                         = DMForestGetTopology(dm, &oldTopo);CHKERRQ(ierr);
   ierr                         = PetscOptionsHead(PetscOptionsObject,"DMForest Options");CHKERRQ(ierr);
-  ierr                         = PetscOptionsString("-dm_forest_topology","the topology of the forest's base mesh","DMForestSetTopology",oldTopo,stringBuffer,256,&flg1);CHKERRQ(ierr);
+  ierr                         = PetscOptionsString("-dm_forest_topology","the topology of the forest's base mesh","DMForestSetTopology",oldTopo,stringBuffer,sizeof(stringBuffer),&flg1);CHKERRQ(ierr);
   ierr                         = PetscOptionsViewer("-dm_forest_base_dm","load the base DM from a viewer specification","DMForestSetBaseDM",&viewer,&format,&flg2);CHKERRQ(ierr);
   ierr                         = PetscOptionsViewer("-dm_forest_coarse_forest","load the coarse forest from a viewer specification","DMForestSetCoarseForest",&viewer,&format,&flg3);CHKERRQ(ierr);
   ierr                         = PetscOptionsViewer("-dm_forest_fine_forest","load the fine forest from a viewer specification","DMForestSetFineForest",&viewer,&format,&flg4);CHKERRQ(ierr);
@@ -1550,7 +1549,7 @@ PETSC_EXTERN PetscErrorCode DMSetFromOptions_Forest(PetscOptionItems *PetscOptio
     ierr = DMForestSetMaximumRefinement(dm,maxRefinement);CHKERRQ(ierr);
   }
   ierr = DMForestGetAdaptivityStrategy(dm,&adaptStrategy);CHKERRQ(ierr);
-  ierr = PetscOptionsString("-dm_forest_adaptivity_strategy","the forest's adaptivity-flag resolution strategy","DMForestSetAdaptivityStrategy",adaptStrategy,stringBuffer,256,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsString("-dm_forest_adaptivity_strategy","the forest's adaptivity-flag resolution strategy","DMForestSetAdaptivityStrategy",adaptStrategy,stringBuffer,sizeof(stringBuffer),&flg);CHKERRQ(ierr);
   if (flg) {
     ierr = DMForestSetAdaptivityStrategy(dm,(DMForestAdaptivityStrategy)stringBuffer);CHKERRQ(ierr);
   }
@@ -1615,7 +1614,7 @@ PetscErrorCode DMCoarsen_Forest(DM dm, MPI_Comm comm, DM *dmCoarsened)
     PetscMPIInt mpiComparison;
     MPI_Comm    dmcomm = PetscObjectComm((PetscObject)dm);
 
-    ierr = MPI_Comm_compare(comm, dmcomm, &mpiComparison);CHKERRQ(ierr);
+    ierr = MPI_Comm_compare(comm, dmcomm, &mpiComparison);CHKERRMPI(ierr);
     if (mpiComparison != MPI_IDENT && mpiComparison != MPI_CONGRUENT) SETERRQ(dmcomm,PETSC_ERR_SUP,"No support for different communicators yet");
   }
   ierr = DMGetCoarseDM(dm,&coarseDM);CHKERRQ(ierr);

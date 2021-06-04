@@ -4,7 +4,7 @@ static char help[]="This program illustrates the use of parallel real 3D fftw (w
 #include <fftw3.h>
 #include <fftw3-mpi.h>
 
-PetscInt main(PetscInt argc,char **args)
+int main(int argc,char **args)
 {
   ptrdiff_t      N0=256,N1=256,N2=256,N3=2,dim[4];
   fftw_plan      bplan,fplan;
@@ -24,16 +24,14 @@ PetscInt main(PetscInt argc,char **args)
   PetscInt       *indx3,k,l,*indx4;
   PetscInt       low,tempindx,tempindx1;
 
-
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
 #if defined(PETSC_USE_COMPLEX)
   SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP, "This example requires real numbers. Your current scalar type is complex");
 #endif
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
 
   PetscRandomCreate(PETSC_COMM_WORLD,&rnd);
-
 
   alloc_local = fftw_mpi_local_size_3d_transposed(N0,N1,N2/2+1,PETSC_COMM_WORLD,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
@@ -48,7 +46,6 @@ PetscInt main(PetscInt argc,char **args)
   in1=(double*)fftw_malloc(sizeof(double)*alloc_local*2);
   in2=(double*)fftw_malloc(sizeof(double)*alloc_local*2);
   out=(fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-
 
   N=2*N0*N1*(N2/2+1);N_factor=N0*N1*N2;
   n=2*local_n0*N1*(N2/2+1);n1=local_n1*N0*2*N1;
@@ -72,7 +69,6 @@ PetscInt main(PetscInt argc,char **args)
   VecAssemblyEnd(fin);
 /*    VecView(fin,PETSC_VIEWER_STDOUT_WORLD); */
 
-
   VecGetArray(fin,&x_arr);
   VecGetArray(fout1,&z_arr);
   VecGetArray(fout,&y_arr);
@@ -86,7 +82,6 @@ PetscInt main(PetscInt argc,char **args)
   VecRestoreArray(fin,&x_arr);
   VecRestoreArray(fout1,&z_arr);
   VecRestoreArray(fout,&y_arr);
-
 
 /*    a = 1.0/(PetscReal)N_factor; */
 /*    ierr = VecScale(fout1,a);CHKERRQ(ierr); */

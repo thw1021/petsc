@@ -7,8 +7,8 @@ static char help[] = "Time-dependent PDE in 2d for calculating joint PDF. \n";
    Zero dirichlet in y using ghosted values
    Periodic in x
 
-   Note that x_t and y_t in the above are given functions of x and y; they are not derivatives of x and y. 
-   x_t = (y - ws)  
+   Note that x_t and y_t in the above are given functions of x and y; they are not derivatives of x and y.
+   x_t = (y - ws)
    y_t = (ws/2H)*(Pm - Pmax*sin(x) - D*(w - ws))
 
    In this example, we can see the effect of a fault, that zeroes the electrical power output
@@ -147,7 +147,7 @@ PetscErrorCode ini_bou(Vec X,AppCtx* user)
   PetscMPIInt    rank;
 
   PetscFunctionBeginUser;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = DMDAGetInfo(user->da,NULL,&M,&N,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
   user->dx = (user->xmax - user->xmin)/(M-1); user->dy = (user->ymax - user->ymin)/(N-1);
   ierr = DMGetCoordinateDM(user->da,&cda);CHKERRQ(ierr);

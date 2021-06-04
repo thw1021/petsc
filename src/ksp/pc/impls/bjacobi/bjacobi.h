@@ -1,10 +1,8 @@
-
 #if !defined(__BJACOBI_H)
 #define __BJACOBI_H
 /*
     Private data for block Jacobi and block Gauss-Seidel preconditioner.
 */
-#include <petscksp.h>
 #include <petsc/private/pcimpl.h>
 
 /*
@@ -17,7 +15,6 @@ typedef struct {
   PetscBool    use_true_local;    /* use block from true matrix, not preconditioner matrix for local MatMult() */
   KSP          *ksp;              /* KSP contexts for blocks or for subcommunicator */
   void         *data;             /* implementation-specific data */
-  PetscBool    same_local_solves; /* flag indicating whether all local solvers are same (used for PCView()) */
   PetscInt     *l_lens;           /* lens of each block */
   PetscInt     *g_lens;
   PetscSubcomm psubcomm;          /* for multiple processors per block */
@@ -48,5 +45,3 @@ typedef struct {
   PetscSubcomm psubcomm;
 } PC_BJacobi_Multiproc;
 #endif
-
-

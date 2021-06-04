@@ -8,8 +8,7 @@ if (PetscUnlikely(!(expr)))               \
   SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB, \
            "Assertion: `%s' failed.",     \
            PetscStringize(expr));         \
-} while(0)
-
+} while (0)
 
 int main(int argc,char **argv)
 {
@@ -148,7 +147,6 @@ int main(int argc,char **argv)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

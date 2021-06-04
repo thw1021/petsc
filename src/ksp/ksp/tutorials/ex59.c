@@ -63,7 +63,6 @@ typedef struct {
   Mat elem_mat;
 } GLLData;
 
-
 static PetscErrorCode BuildCSRGraph(DomainData dd, PetscInt **xadj, PetscInt **adjncy)
 {
   PetscErrorCode ierr;
@@ -811,7 +810,6 @@ static PetscErrorCode ComputeKSPFETIDP(DomainData dd, KSP ksp_bddc, KSP *ksp_fet
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode ComputeKSPBDDC(DomainData dd,Mat A,KSP *ksp)
 {
   PetscErrorCode ierr;
@@ -938,8 +936,8 @@ static PetscErrorCode InitializeDomainData(DomainData *dd)
 
   PetscFunctionBeginUser;
   dd->gcomm = PETSC_COMM_WORLD;
-  ierr      = MPI_Comm_size(dd->gcomm,&sizes);CHKERRQ(ierr);
-  ierr      = MPI_Comm_rank(dd->gcomm,&rank);CHKERRQ(ierr);
+  ierr      = MPI_Comm_size(dd->gcomm,&sizes);CHKERRMPI(ierr);
+  ierr      = MPI_Comm_rank(dd->gcomm,&rank);CHKERRMPI(ierr);
   /* Get informations from command line */
   /* Processors/subdomains per dimension */
   /* Default is 1d problem */
@@ -1200,6 +1198,5 @@ int main(int argc,char **args)
    test:
      suffix: bddc_fetidp_ml_eqlimit_2
      args: -physical_pc_bddc_coarse_eqs_limit 46
-
 
 TEST*/

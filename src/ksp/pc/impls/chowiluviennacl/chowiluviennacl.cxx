@@ -22,7 +22,6 @@ typedef struct {
   viennacl::linalg::chow_patel_ilu_precond< viennacl::compressed_matrix<PetscScalar> > *CHOWILUVIENNACL;
 } PC_CHOWILUVIENNACL;
 
-
 /* -------------------------------------------------------------------------- */
 /*
    PCSetUp_CHOWILUVIENNACL - Prepares for the use of the CHOWILUVIENNACL preconditioner
@@ -61,7 +60,7 @@ static PetscErrorCode PCSetUp_CHOWILUVIENNACL(PC pc)
 #else
     ierr      = MatViennaCLCopyToGPU(pc->pmat);CHKERRQ(ierr);
     gpustruct = (Mat_SeqAIJViennaCL*)(pc->pmat->spptr);
-    
+
     viennacl::linalg::chow_patel_tag ilu_tag;
     ViennaCLAIJMatrix *mat = (ViennaCLAIJMatrix*)gpustruct->mat;
     ilu->CHOWILUVIENNACL = new viennacl::linalg::chow_patel_ilu_precond<viennacl::compressed_matrix<PetscScalar> >(*mat, ilu_tag);
@@ -162,7 +161,6 @@ static PetscErrorCode PCSetFromOptions_CHOWILUVIENNACL(PetscOptionItems *PetscOp
 
 /* -------------------------------------------------------------------------- */
 
-
 /*MC
      PCCHOWILUViennaCL  - A smoothed agglomeration algorithm that can be used via the CUDA, OpenCL, and OpenMP backends of ViennaCL
 
@@ -209,4 +207,3 @@ PETSC_EXTERN PetscErrorCode PCCreate_CHOWILUVIENNACL(PC pc)
   pc->ops->applysymmetricright = 0;
   PetscFunctionReturn(0);
 }
-

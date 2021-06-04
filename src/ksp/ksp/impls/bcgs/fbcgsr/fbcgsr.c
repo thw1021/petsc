@@ -32,7 +32,7 @@ static PetscErrorCode  KSPSolve_FBCGSR(KSP ksp)
   KSP_BCGS          *bcgs = (KSP_BCGS*)ksp->data;
   PC                pc;
   Mat               mat;
-  
+
   PetscFunctionBegin;
   if (!ksp->vec_rhs->petscnative) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Only coded for PETSc vectors");
   ierr = VecGetLocalSize(ksp->vec_sol,&N);CHKERRQ(ierr);
@@ -75,13 +75,14 @@ static PetscErrorCode  KSPSolve_FBCGSR(KSP ksp)
 
   /* Test for nothing to do */
   ierr = VecNorm(R,NORM_2,&rho);CHKERRQ(ierr);
-  ierr       = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
-  ksp->its   = 0;
-  ksp->rnorm = rho;
+  ierr     = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
+  ksp->its = 0;
+  if (ksp->normtype != KSP_NORM_NONE) ksp->rnorm = rho;
+  else ksp->rnorm = 0;
   ierr = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
-  ierr = KSPLogResidualHistory(ksp,rho);CHKERRQ(ierr);
-  ierr = KSPMonitor(ksp,0,rho);CHKERRQ(ierr);
-  ierr = (*ksp->converged)(ksp,0,rho,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
+  ierr = KSPLogResidualHistory(ksp,ksp->rnorm);CHKERRQ(ierr);
+  ierr = KSPMonitor(ksp,0,ksp->rnorm);CHKERRQ(ierr);
+  ierr = (*ksp->converged)(ksp,0,ksp->rnorm,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
   if (ksp->reason) PetscFunctionReturn(0);
 
   /* Initialize iterates */
@@ -111,7 +112,7 @@ static PetscErrorCode  KSPSolve_FBCGSR(KSP ksp)
       insums[0] = tau;
       insums[1] = sigma;
       ierr      = PetscLogEventBegin(VEC_ReduceCommunication,0,0,0,0);CHKERRQ(ierr);
-      ierr      = MPIU_Allreduce(insums,outsums,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)ksp));CHKERRQ(ierr);
+      ierr      = MPIU_Allreduce(insums,outsums,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)ksp));CHKERRMPI(ierr);
       ierr      = PetscLogEventEnd(VEC_ReduceCommunication,0,0,0,0);CHKERRQ(ierr);
       tau       = outsums[0];
       sigma     = outsums[1];
@@ -145,7 +146,7 @@ static PetscErrorCode  KSPSolve_FBCGSR(KSP ksp)
     insums[3] = xi4;
 
     ierr = PetscLogEventBegin(VEC_ReduceCommunication,0,0,0,0);CHKERRQ(ierr);
-    ierr = MPIU_Allreduce(insums,outsums,4,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)ksp));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(insums,outsums,4,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)ksp));CHKERRMPI(ierr);
     ierr = PetscLogEventEnd(VEC_ReduceCommunication,0,0,0,0);CHKERRQ(ierr);
     xi1  = outsums[0];
     xi2  = outsums[1];
@@ -167,11 +168,12 @@ static PetscErrorCode  KSPSolve_FBCGSR(KSP ksp)
     /* convergence test */
     ierr = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
     ksp->its++;
-    ksp->rnorm = rho;
+    if (ksp->normtype != KSP_NORM_NONE) ksp->rnorm = rho;
+    else ksp->rnorm = 0;
     ierr = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
-    ierr = KSPLogResidualHistory(ksp,rho);CHKERRQ(ierr);
-    ierr = KSPMonitor(ksp,i+1,rho);CHKERRQ(ierr);
-    ierr = (*ksp->converged)(ksp,i+1,rho,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
+    ierr = KSPLogResidualHistory(ksp,ksp->rnorm);CHKERRQ(ierr);
+    ierr = KSPMonitor(ksp,i+1,ksp->rnorm);CHKERRQ(ierr);
+    ierr = (*ksp->converged)(ksp,i+1,ksp->rnorm,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
     if (ksp->reason) break;
 
     /* vector updates */
@@ -222,5 +224,6 @@ PETSC_EXTERN PetscErrorCode KSPCreate_FBCGSR(KSP ksp)
 
   ierr = KSPSetSupportedNorm(ksp,KSP_NORM_PRECONDITIONED,PC_LEFT,3);CHKERRQ(ierr);
   ierr = KSPSetSupportedNorm(ksp,KSP_NORM_UNPRECONDITIONED,PC_RIGHT,2);CHKERRQ(ierr);
+  ierr = KSPSetSupportedNorm(ksp,KSP_NORM_NONE,PC_RIGHT,1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

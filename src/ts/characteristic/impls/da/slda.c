@@ -38,7 +38,7 @@ PetscErrorCode CharacteristicSetUp_DA(Characteristic c)
   PetscInt       dim, numValues;
   PetscErrorCode ierr;
 
-  ierr = DMDAGetInfo(c->velocityDA, &dim, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(c->velocityDA, &dim, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
   if (c->structured) c->numIds = dim;
   else c->numIds = 3;
   if (c->numFieldComp > MAX_COMPONENTS) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "The maximum number of fields allowed is %d, you have %d. You can recompile after increasing MAX_COMPONENTS.", MAX_COMPONENTS, c->numFieldComp);
@@ -47,8 +47,8 @@ PetscErrorCode CharacteristicSetUp_DA(Characteristic c)
   /* Create new MPI datatype for communication of characteristic point structs */
   blockLen[0] = 1+c->numIds; indices[0] = 0;                              oldtypes[0] = MPIU_INT;
   blockLen[1] = numValues;   indices[1] = (1+c->numIds)*sizeof(PetscInt); oldtypes[1] = MPIU_SCALAR;
-  ierr = MPI_Type_create_struct(2, blockLen, indices, oldtypes, &c->itemType);CHKERRQ(ierr);
-  ierr = MPI_Type_commit(&c->itemType);CHKERRQ(ierr);
+  ierr = MPI_Type_create_struct(2, blockLen, indices, oldtypes, &c->itemType);CHKERRMPI(ierr);
+  ierr = MPI_Type_commit(&c->itemType);CHKERRMPI(ierr);
 
   /* Initialize the local queue for char foot values */
   ierr = VecGetLocalSize(c->velocity, &c->queueMax);CHKERRQ(ierr);
@@ -96,7 +96,7 @@ PetscErrorCode DMDAMapCoordsToPeriodicDomain(DM da, PetscScalar *x, PetscScalar 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = DMDAGetInfo(da, &dim, &gx, &gy, 0, 0, 0, 0, 0, 0, &bx, &by, 0, 0);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(da, &dim, &gx, &gy, NULL, NULL, NULL, NULL, NULL, NULL, &bx, &by, NULL, NULL);CHKERRQ(ierr);
 
   if (bx == DM_BOUNDARY_PERIODIC) {
       while (*x >= (PetscScalar)gx) *x -= (PetscScalar)gx;

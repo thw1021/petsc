@@ -8,6 +8,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_VPBJacobi(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_ILU(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_None(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_LU(PC);
+PETSC_EXTERN PetscErrorCode PCCreate_QR(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_SOR(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_Shell(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_MG(PC);
@@ -58,8 +59,11 @@ PETSC_EXTERN PetscErrorCode PCCreate_PARMS(PC);
 #endif
 PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_Deflation(PC);
-#if defined(PETSC_HAVE_HPDDM)
+#if defined(PETSC_HAVE_HPDDM) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
 PETSC_EXTERN PetscErrorCode PCCreate_HPDDM(PC);
+#endif
+#if defined(PETSC_HAVE_HARA)
+PETSC_EXTERN PetscErrorCode PCCreate_HARA(PC);
 #endif
 
 /*@C
@@ -89,6 +93,7 @@ PetscErrorCode  PCRegisterAll(void)
   ierr = PCRegister(PCBJACOBI      ,PCCreate_BJacobi);CHKERRQ(ierr);
   ierr = PCRegister(PCSOR          ,PCCreate_SOR);CHKERRQ(ierr);
   ierr = PCRegister(PCLU           ,PCCreate_LU);CHKERRQ(ierr);
+  ierr = PCRegister(PCQR           ,PCCreate_QR);CHKERRQ(ierr);
   ierr = PCRegister(PCSHELL        ,PCCreate_Shell);CHKERRQ(ierr);
   ierr = PCRegister(PCMG           ,PCCreate_MG);CHKERRQ(ierr);
   ierr = PCRegister(PCEISENSTAT    ,PCCreate_Eisenstat);CHKERRQ(ierr);
@@ -139,8 +144,11 @@ PetscErrorCode  PCRegisterAll(void)
   ierr = PCRegister(PCBDDC         ,PCCreate_BDDC);CHKERRQ(ierr);
   ierr = PCRegister(PCLMVM         ,PCCreate_LMVM);CHKERRQ(ierr);
   ierr = PCRegister(PCDEFLATION    ,PCCreate_Deflation);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_HPDDM)
+#if defined(PETSC_HAVE_HPDDM) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
   ierr = PCRegister(PCHPDDM        ,PCCreate_HPDDM);CHKERRQ(ierr);
+#endif
+#if defined(PETSC_HAVE_HARA)
+  ierr = PCRegister(PCHARA         ,PCCreate_HARA);CHKERRQ(ierr);
 #endif
   PetscFunctionReturn(0);
 }

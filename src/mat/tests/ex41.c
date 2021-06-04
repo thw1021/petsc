@@ -21,8 +21,8 @@ int main(int argc,char **args)
   PetscScalar    rand;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,sizeof(file),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-nd",&nd,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-ov",&ov,NULL);CHKERRQ(ierr);
 
@@ -92,8 +92,6 @@ int main(int argc,char **args)
   return ierr;
 }
 
-
-
 /*TEST
 
    build:
@@ -103,6 +101,5 @@ int main(int argc,char **args)
       nsize: 3
       requires: datafilespath double !define(PETSC_USE_64BIT_INDICES) !complex
       args: -f ${DATAFILESPATH}/matrices/arco1 -nd 3 -ov 1
-
 
 TEST*/

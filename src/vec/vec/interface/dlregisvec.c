@@ -8,7 +8,7 @@
 
 static PetscBool         ISPackageInitialized = PETSC_FALSE;
 extern PetscFunctionList ISLocalToGlobalMappingList;
-const char       *ISInfos[] = {"SORTED", "UNIQUE", "PERMUTATION", "INTERVAL", "IDENTITY", "ISInfo", "IS_",0};
+const char       *ISInfos[] = {"SORTED", "UNIQUE", "PERMUTATION", "INTERVAL", "IDENTITY", "ISInfo", "IS_",NULL};
 
 /*@C
   ISFinalizePackage - This function destroys everything in the IS package. It is
@@ -94,48 +94,58 @@ extern MPI_Op PetscSplitReduction_Op;
    A call to MPI_Op_create() converts the function Vec[Max,Min]_Local() to the MPI operator Vec[Max,Min]_Local_Op.
 
 */
-MPI_Op MPIU_MAXINDEX_OP = 0;
-MPI_Op MPIU_MININDEX_OP = 0;
+MPI_Op MPIU_MAXLOC = 0;
+MPI_Op MPIU_MINLOC = 0;
 
 static void MPIAPI MPIU_MaxIndex_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
 {
-  PetscReal *xin = (PetscReal*)in,*xout = (PetscReal*)out;
+  struct PetscRealInt { PetscReal v; PetscInt i; };
+  struct PetscRealInt *xin = (struct PetscRealInt*)in;
+  struct PetscRealInt *xout = (struct PetscRealInt*)out;
+  int                 c;
 
   PetscFunctionBegin;
-  if (*datatype != MPIU_REAL) {
-    (*PetscErrorPrintf)("Can only handle MPIU_REAL data types");
+  if (*datatype != MPIU_REAL_INT) {
+    (*PetscErrorPrintf)("Can only handle MPIU_REAL_INT data types");
     PETSCABORT(MPI_COMM_SELF,PETSC_ERR_ARG_WRONG);
   }
-  if (xin[0] > xout[0]) {
-    xout[0] = xin[0];
-    xout[1] = xin[1];
-  } else if (xin[0] == xout[0]) {
-    xout[1] = PetscMin(xin[1],xout[1]);
+  for (c = 0; c < *cnt; c++) {
+    if (xin[c].v > xout[c].v) {
+      xout[c].v = xin[c].v;
+      xout[c].i = xin[c].i;
+    } else if (xin[c].v == xout[c].v) {
+      xout[c].i = PetscMin(xin[c].i,xout[c].i);
+    }
   }
   PetscFunctionReturnVoid(); /* cannot return a value */
 }
 
 static void MPIAPI MPIU_MinIndex_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
 {
-  PetscReal *xin = (PetscReal*)in,*xout = (PetscReal*)out;
+  struct PetscRealInt { PetscReal v; PetscInt i; };
+  struct PetscRealInt *xin = (struct PetscRealInt*)in;
+  struct PetscRealInt *xout = (struct PetscRealInt*)out;
+  int                 c;
 
   PetscFunctionBegin;
-  if (*datatype != MPIU_REAL) {
-    (*PetscErrorPrintf)("Can only handle MPIU_REAL data types");
+  if (*datatype != MPIU_REAL_INT) {
+    (*PetscErrorPrintf)("Can only handle MPIU_REAL_INT data types");
     PETSCABORT(MPI_COMM_SELF,PETSC_ERR_ARG_WRONG);
   }
-  if (xin[0] < xout[0]) {
-    xout[0] = xin[0];
-    xout[1] = xin[1];
-  } else if (xin[0] == xout[0]) {
-    xout[1] = PetscMin(xin[1],xout[1]);
+  for (c = 0; c < *cnt; c++) {
+    if (xin[c].v < xout[c].v) {
+      xout[c].v = xin[c].v;
+      xout[c].i = xin[c].i;
+    } else if (xin[c].v == xout[c].v) {
+      xout[c].i = PetscMin(xin[c].i,xout[c].i);
+    }
   }
-  PetscFunctionReturnVoid();
+  PetscFunctionReturnVoid(); /* cannot return a value */
 }
 
 PETSC_EXTERN void MPIAPI PetscSplitReduction_Local(void*,void*,PetscMPIInt*,MPI_Datatype*);
 
-const char *const NormTypes[] = {"1","2","FROBENIUS","INFINITY","1_AND_2","NormType","NORM_",0};
+const char *const NormTypes[] = {"1","2","FROBENIUS","INFINITY","1_AND_2","NormType","NORM_",NULL};
 PetscInt          NormIds[7];  /* map from NormType to IDs used to cache Normvalues */
 
 static PetscBool  VecPackageInitialized = PETSC_FALSE;
@@ -159,8 +169,6 @@ PetscErrorCode  VecInitializePackage(void)
   PetscFunctionBegin;
   if (VecPackageInitialized) PetscFunctionReturn(0);
   VecPackageInitialized = PETSC_TRUE;
-  /* Initialize subpackage */
-  ierr = VecScatterInitializePackage();CHKERRQ(ierr);
   /* Register Classes */
   ierr = PetscClassIdRegister("Vector",&VEC_CLASSID);CHKERRQ(ierr);
   /* Register Constructors */
@@ -208,6 +216,12 @@ PetscErrorCode  VecInitializePackage(void)
   ierr = PetscLogEventRegister("VecCopyToSome",    VEC_CLASSID,&VEC_CUDACopyToGPUSome);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("VecCopyFromSome",  VEC_CLASSID,&VEC_CUDACopyFromGPUSome);CHKERRQ(ierr);
 #endif
+#if defined(PETSC_HAVE_HIP)
+  ierr = PetscLogEventRegister("VecHIPCopyTo",    VEC_CLASSID,&VEC_HIPCopyToGPU);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("VecHIPCopyFrom",  VEC_CLASSID,&VEC_HIPCopyFromGPU);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("VecCopyToSome",    VEC_CLASSID,&VEC_HIPCopyToGPUSome);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("VecCopyFromSome",  VEC_CLASSID,&VEC_HIPCopyFromGPUSome);CHKERRQ(ierr);
+#endif
 
   /* Mark non-collective events */
   ierr = PetscLogEventSetCollective(VEC_SetValues,           PETSC_FALSE);CHKERRQ(ierr);
@@ -220,6 +234,12 @@ PetscErrorCode  VecInitializePackage(void)
   ierr = PetscLogEventSetCollective(VEC_CUDACopyFromGPU,     PETSC_FALSE);CHKERRQ(ierr);
   ierr = PetscLogEventSetCollective(VEC_CUDACopyToGPUSome,   PETSC_FALSE);CHKERRQ(ierr);
   ierr = PetscLogEventSetCollective(VEC_CUDACopyFromGPUSome, PETSC_FALSE);CHKERRQ(ierr);
+#endif
+#if defined(PETSC_HAVE_HIP)
+  ierr = PetscLogEventSetCollective(VEC_HIPCopyToGPU,       PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscLogEventSetCollective(VEC_HIPCopyFromGPU,     PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscLogEventSetCollective(VEC_HIPCopyToGPUSome,   PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscLogEventSetCollective(VEC_HIPCopyFromGPUSome, PETSC_FALSE);CHKERRQ(ierr);
 #endif
   /* Turn off high traffic events by default */
   ierr = PetscLogEventSetActiveAll(VEC_SetValues, PETSC_FALSE);CHKERRQ(ierr);
@@ -235,15 +255,15 @@ PetscErrorCode  VecInitializePackage(void)
   if (opt) {
     ierr = PetscStrInList("vec",logList,',',&pkg);CHKERRQ(ierr);
     if (pkg) {ierr = PetscLogEventExcludeClass(VEC_CLASSID);CHKERRQ(ierr);}
-    if (pkg) {ierr = PetscLogEventExcludeClass(VEC_SCATTER_CLASSID);CHKERRQ(ierr);}
+    if (pkg) {ierr = PetscLogEventExcludeClass(PETSCSF_CLASSID);CHKERRQ(ierr);}
   }
 
   /*
     Create the special MPI reduction operation that may be used by VecNorm/DotBegin()
   */
-  ierr = MPI_Op_create(PetscSplitReduction_Local,1,&PetscSplitReduction_Op);CHKERRQ(ierr);
-  ierr = MPI_Op_create(MPIU_MaxIndex_Local,2,&MPIU_MAXINDEX_OP);CHKERRQ(ierr);
-  ierr = MPI_Op_create(MPIU_MinIndex_Local,2,&MPIU_MININDEX_OP);CHKERRQ(ierr);
+  ierr = MPI_Op_create(PetscSplitReduction_Local,1,&PetscSplitReduction_Op);CHKERRMPI(ierr);
+  ierr = MPI_Op_create(MPIU_MaxIndex_Local,1,&MPIU_MAXLOC);CHKERRMPI(ierr);
+  ierr = MPI_Op_create(MPIU_MinIndex_Local,1,&MPIU_MINLOC);CHKERRMPI(ierr);
 
   /* Register the different norm types for cached norms */
   for (i=0; i<4; i++) {
@@ -269,12 +289,11 @@ PetscErrorCode  VecFinalizePackage(void)
 
   PetscFunctionBegin;
   ierr = PetscFunctionListDestroy(&VecList);CHKERRQ(ierr);
-  ierr = PetscFunctionListDestroy(&VecScatterList);CHKERRQ(ierr);
-  ierr = MPI_Op_free(&PetscSplitReduction_Op);CHKERRQ(ierr);
-  ierr = MPI_Op_free(&MPIU_MAXINDEX_OP);CHKERRQ(ierr);
-  ierr = MPI_Op_free(&MPIU_MININDEX_OP);CHKERRQ(ierr);
+  ierr = MPI_Op_free(&PetscSplitReduction_Op);CHKERRMPI(ierr);
+  ierr = MPI_Op_free(&MPIU_MAXLOC);CHKERRMPI(ierr);
+  ierr = MPI_Op_free(&MPIU_MINLOC);CHKERRMPI(ierr);
   if (Petsc_Reduction_keyval != MPI_KEYVAL_INVALID) {
-    ierr = MPI_Comm_free_keyval(&Petsc_Reduction_keyval);CHKERRQ(ierr);
+    ierr = MPI_Comm_free_keyval(&Petsc_Reduction_keyval);CHKERRMPI(ierr);
   }
   VecPackageInitialized = PETSC_FALSE;
   VecRegisterAllCalled  = PETSC_FALSE;

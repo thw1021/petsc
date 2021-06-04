@@ -68,6 +68,7 @@ static void g3_uu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
 {
   PetscDS        prob;
+  DMLabel        label;
   const PetscInt id = 1;
   PetscErrorCode ierr;
 
@@ -76,7 +77,8 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   ierr = PetscDSSetResidual(prob, 0, f0_trig_u, f1_u);CHKERRQ(ierr);
   ierr = PetscDSSetJacobian(prob, 0, 0, NULL, NULL, NULL, g3_uu);CHKERRQ(ierr);
   ierr = PetscDSSetExactSolution(prob, 0, trig_u, user);CHKERRQ(ierr);
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)(void)) trig_u, 1, &id, user);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "marker", &label);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void)) trig_u, NULL, user, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -208,8 +210,10 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
   PetscScalar    *u, *elemVec;
   IS              cellIS;
   PetscInt        depth, cStart, cEnd, cell, chunkSize = cbs, Nch = 0, Nf, f, totDim, i, k;
+#if defined(PETSC_USE_LOG)
   PetscLogStage   stage;
   PetscLogEvent   event;
+#endif
   PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
@@ -238,12 +242,14 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
       /* TODO Replace with DMPlexGetCellFields() */
       for (k = 0; k < chunkSize*totDim; ++k) u[k] = 1.0;
       for (f = 0; f < Nf; ++f) {
-        PetscFEGeom    *geom = affineGeom ? affineGeom : geoms[f];
+        PetscFormKey key;
+        PetscFEGeom     *geom = affineGeom ? affineGeom : geoms[f];
         /* PetscQuadrature quad = affineQuad ? affineQuad : quads[f]; */
 
+        key.label = NULL; key.value = 0; key.field = f;
         ierr = PetscFEGeomGetChunk(geom, cS, cE, &chunkGeom);CHKERRQ(ierr);
         ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateResidual(ds, f, Ne, chunkGeom, u, NULL, NULL, NULL, 0.0, elemVec);CHKERRQ(ierr);
+        ierr = PetscFEIntegrateResidual(ds, key, Ne, chunkGeom, u, NULL, NULL, NULL, 0.0, elemVec);CHKERRQ(ierr);
         ierr = PetscLogEventEnd(event,0,0,0,0);CHKERRQ(ierr);
       }
     }
@@ -253,6 +259,7 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
   ierr = ISDestroy(&cellIS);CHKERRQ(ierr);
   ierr = PetscFree2(u, elemVec);CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
+#if defined(PETSC_USE_LOG)
   {
     const char        *title = "Petsc FE Residual Integration";
     PetscEventPerfInfo eventInfo;
@@ -264,20 +271,21 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
     cellRate = eventInfo.time != 0.0 ? N/eventInfo.time : 0.0;
     ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "%s: %D integrals %D chunks %D reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, Nch, its, (double)cellRate, (double)(flopRate/1.e6));CHKERRQ(ierr);
   }
+#endif
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode TestIntegration2(DM dm, PetscInt cbs, PetscInt its)
 {
   Vec             X, F;
+#if defined(PETSC_USE_LOG)
   PetscLogStage   stage;
-  PetscLogEvent   event;
+#endif
   PetscInt        i;
   PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   ierr = PetscLogStageRegister("DMPlex Residual Integration Test", &stage);CHKERRQ(ierr);
-  ierr = PetscLogEventGetId("DMPlexResidualFE", &event);CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
   ierr = DMGetLocalVector(dm, &X);CHKERRQ(ierr);
   ierr = DMGetLocalVector(dm, &F);CHKERRQ(ierr);
@@ -287,20 +295,24 @@ static PetscErrorCode TestIntegration2(DM dm, PetscInt cbs, PetscInt its)
   ierr = DMRestoreLocalVector(dm, &X);CHKERRQ(ierr);
   ierr = DMRestoreLocalVector(dm, &F);CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
+#if defined(PETSC_USE_LOG)
   {
-    const char        *title = "DMPlex Residual Integration";
+    const char         *title = "DMPlex Residual Integration";
     PetscEventPerfInfo eventInfo;
     PetscReal          flopRate, cellRate;
     PetscInt           cStart, cEnd, Nf, N;
+    PetscLogEvent      event;
 
     ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
     ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
+    ierr = PetscLogEventGetId("DMPlexResidualFE", &event);CHKERRQ(ierr);
     ierr = PetscLogEventGetPerfInfo(stage, event, &eventInfo);CHKERRQ(ierr);
     N        = (cEnd - cStart)*Nf*eventInfo.count;
     flopRate = eventInfo.time != 0.0 ? eventInfo.flops/eventInfo.time : 0.0;
     cellRate = eventInfo.time != 0.0 ? N/eventInfo.time : 0.0;
     ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "%s: %D integrals %D reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, eventInfo.count, (double)cellRate, (double)(flopRate/1.e6));CHKERRQ(ierr);
   }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -312,11 +324,12 @@ int main(int argc, char **argv)
   PetscErrorCode ierr;
 
   ierr = PetscInitialize(&argc, &argv, NULL, help); if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "This is a uniprocessor example only.");
   ierr = ProcessOptions(PETSC_COMM_WORLD, &ctx);CHKERRQ(ierr);
   ierr = PetscLogDefaultBegin();CHKERRQ(ierr);
-  ierr = DMPlexCreateBoxMesh(PETSC_COMM_WORLD, ctx.dim, ctx.simplex, NULL, NULL, NULL, NULL, PETSC_TRUE, &dm);CHKERRQ(ierr);
+  ierr = DMCreate(PETSC_COMM_WORLD, &dm);CHKERRQ(ierr);
+  ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) dm, "Mesh");CHKERRQ(ierr);
   ierr = PetscObjectViewFromOptions((PetscObject) dm, NULL, "-dm_view");CHKERRQ(ierr);

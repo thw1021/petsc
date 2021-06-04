@@ -298,7 +298,7 @@ static PetscErrorCode SNESSolve_Patch(SNES snes)
   if (snes->ops->converged) {
     ierr = (*snes->ops->converged)(snes,its,xnorm,ynorm,fnorm,&snes->reason,snes->cnvP);CHKERRQ(ierr);
   } else {
-    ierr = SNESConvergedSkip(snes,its,xnorm,ynorm,fnorm,&snes->reason,0);CHKERRQ(ierr);
+    ierr = SNESConvergedSkip(snes,its,xnorm,ynorm,fnorm,&snes->reason,NULL);CHKERRQ(ierr);
   }
   ierr = SNESLogConvergenceHistory(snes, fnorm, 0);CHKERRQ(ierr); /* should we count lits from the patches? */
   ierr = SNESMonitor(snes, its, fnorm);CHKERRQ(ierr);
@@ -313,8 +313,8 @@ static PetscErrorCode SNESSolve_Patch(SNES snes)
        in PCApply_PATCH_Nonlinear. */
     ierr = VecGetArrayRead(state, &globalState);CHKERRQ(ierr);
     ierr = VecGetArray(pcpatch->localState, &localState);CHKERRQ(ierr);
-    ierr = PetscSFBcastBegin(pcpatch->sectionSF, MPIU_SCALAR, globalState, localState);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(pcpatch->sectionSF, MPIU_SCALAR, globalState, localState);CHKERRQ(ierr);
+    ierr = PetscSFBcastBegin(pcpatch->sectionSF, MPIU_SCALAR, globalState, localState,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(pcpatch->sectionSF, MPIU_SCALAR, globalState, localState,MPI_REPLACE);CHKERRQ(ierr);
     ierr = VecRestoreArray(pcpatch->localState, &localState);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(state, &globalState);CHKERRQ(ierr);
 
@@ -333,7 +333,7 @@ static PetscErrorCode SNESSolve_Patch(SNES snes)
     if (snes->ops->converged) {
       ierr = (*snes->ops->converged)(snes,its,xnorm,ynorm,fnorm,&snes->reason,snes->cnvP);CHKERRQ(ierr);
     } else {
-      ierr = SNESConvergedSkip(snes,its,xnorm,ynorm,fnorm,&snes->reason,0);CHKERRQ(ierr);
+      ierr = SNESConvergedSkip(snes,its,xnorm,ynorm,fnorm,&snes->reason,NULL);CHKERRQ(ierr);
     }
     ierr = SNESLogConvergenceHistory(snes, fnorm, 0);CHKERRQ(ierr); /* FIXME: should we count lits? */
     ierr = SNESMonitor(snes, its, fnorm);CHKERRQ(ierr);

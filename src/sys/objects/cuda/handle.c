@@ -37,7 +37,14 @@ PetscErrorCode PetscCUBLASInitializeHandle(void)
 
   PetscFunctionBegin;
   if (!cublasv2handle) {
-    cberr = cublasCreate(&cublasv2handle);CHKERRCUBLAS(cberr);
+    for (int i=0; i<3; i++) {
+      cberr = cublasCreate(&cublasv2handle);
+      if (cberr == CUBLAS_STATUS_SUCCESS) break;
+      if (cberr != CUBLAS_STATUS_ALLOC_FAILED && cberr != CUBLAS_STATUS_NOT_INITIALIZED) CHKERRCUBLAS(cberr);
+      if (i < 2) {ierr = PetscSleep(3);CHKERRQ(ierr);}
+    }
+    if (cberr) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize cuBLAS");
+    cberr = cublasSetStream(cublasv2handle,PetscDefaultCudaStream);CHKERRCUBLAS(cberr);
     /* Make sure that the handle will be destroyed properly */
     ierr = PetscRegisterFinalize(PetscCUBLASDestroyHandle);CHKERRQ(ierr);
   }
@@ -58,7 +65,7 @@ PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t *handle)
 /* cusolver */
 static PetscErrorCode PetscCUSOLVERDnDestroyHandle()
 {
-  cusolverStatus_t  cerr;
+  cusolverStatus_t cerr;
 
   PetscFunctionBegin;
   if (cusolverdnhandle) {
@@ -70,12 +77,19 @@ static PetscErrorCode PetscCUSOLVERDnDestroyHandle()
 
 PetscErrorCode PetscCUSOLVERDnInitializeHandle(void)
 {
-  PetscErrorCode    ierr;
-  cusolverStatus_t  cerr;
+  PetscErrorCode   ierr;
+  cusolverStatus_t cerr;
 
   PetscFunctionBegin;
   if (!cusolverdnhandle) {
-    cerr = cusolverDnCreate(&cusolverdnhandle);CHKERRCUSOLVER(cerr);
+    for (int i=0; i<3; i++) {
+      cerr = cusolverDnCreate(&cusolverdnhandle);
+      if (cerr == CUSOLVER_STATUS_SUCCESS) break;
+      if (cerr != CUSOLVER_STATUS_ALLOC_FAILED) CHKERRCUSOLVER(cerr);
+      if (i < 2) {ierr = PetscSleep(3);CHKERRQ(ierr);}
+    }
+    if (cerr) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize cuSolverDn");
+    cerr = cusolverDnSetStream(cusolverdnhandle,PetscDefaultCudaStream);CHKERRCUSOLVER(cerr);
     ierr = PetscRegisterFinalize(PetscCUSOLVERDnDestroyHandle);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -83,7 +97,7 @@ PetscErrorCode PetscCUSOLVERDnInitializeHandle(void)
 
 PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t *handle)
 {
-  PetscErrorCode     ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(handle,1);
@@ -91,4 +105,3 @@ PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t *handle)
   *handle = cusolverdnhandle;
   PetscFunctionReturn(0);
 }
-

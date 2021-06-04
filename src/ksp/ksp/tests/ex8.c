@@ -90,10 +90,10 @@ int main(int argc,char **args)
   /* Set operators. */
   ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
 
-  ierr = KSPSetTolerances(ksp,1.e-2/((m+1)*(n+1)),1.e-50,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+  ierr = KSPSetTolerances(ksp,1.e-2/((m+1)*(n+1)),PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 
   ierr = KSPSetType(ksp,KSPPREONLY);CHKERRQ(ierr);
-  ierr = KSPGetPC(ksp, &pc); CHKERRQ(ierr);
+  ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
   ierr = PCSetType(pc,PCCHOLESKY);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_MUMPS)
 #if defined(PETSC_USE_COMPLEX)
@@ -106,7 +106,7 @@ int main(int argc,char **args)
   */
   ierr = PetscOptionsInsertString(NULL,"-mat_mumps_icntl_13 1");CHKERRQ(ierr);
 #else
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size>1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Configure with MUMPS if you want to run this example in parallel");
 #endif
 

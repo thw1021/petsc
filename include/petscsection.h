@@ -25,6 +25,8 @@ PETSC_EXTERN PetscErrorCode PetscSectionGetPermutation(PetscSection, IS *);
 PETSC_EXTERN PetscErrorCode PetscSectionSetPermutation(PetscSection, IS);
 PETSC_EXTERN PetscErrorCode PetscSectionGetPointMajor(PetscSection, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscSectionSetPointMajor(PetscSection, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscSectionGetIncludesConstraints(PetscSection, PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscSectionSetIncludesConstraints(PetscSection, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscSectionGetDof(PetscSection, PetscInt, PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscSectionSetDof(PetscSection, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscSectionAddDof(PetscSection, PetscInt, PetscInt);
@@ -72,9 +74,9 @@ PETSC_EXTERN PetscErrorCode PetscSectionExtractDofsFromArray(PetscSection, MPI_D
 
 PETSC_EXTERN PetscErrorCode PetscSectionSetClosureIndex(PetscSection, PetscObject, PetscSection, IS);
 PETSC_EXTERN PetscErrorCode PetscSectionGetClosureIndex(PetscSection, PetscObject, PetscSection *, IS *);
-PETSC_EXTERN PetscErrorCode PetscSectionSetClosurePermutation(PetscSection, PetscObject, IS);
-PETSC_EXTERN PetscErrorCode PetscSectionGetClosurePermutation(PetscSection, PetscObject, IS *);
-PETSC_EXTERN PetscErrorCode PetscSectionGetClosureInversePermutation(PetscSection, PetscObject, IS *);
+PETSC_EXTERN PetscErrorCode PetscSectionSetClosurePermutation(PetscSection, PetscObject, PetscInt, IS);
+PETSC_EXTERN PetscErrorCode PetscSectionGetClosurePermutation(PetscSection, PetscObject, PetscInt, PetscInt, IS *);
+PETSC_EXTERN PetscErrorCode PetscSectionGetClosureInversePermutation(PetscSection, PetscObject, PetscInt, PetscInt, IS *);
 
 PETSC_EXTERN PetscClassId PETSC_SECTION_SYM_CLASSID;
 

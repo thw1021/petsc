@@ -10,7 +10,7 @@ static char help[] = "Test sequential USFFT interface on a uniform DMDA and comp
 #include <petscmat.h>
 #include <petscdm.h>
 #include <petscdmda.h>
-PetscInt main(PetscInt argc,char **args)
+int main(int argc,char **args)
 {
   typedef enum {RANDOM, CONSTANT, TANH, NUM_FUNCS} FuncType;
   const char     *funcNames[NUM_FUNCS] = {"random", "constant", "tanh"};
@@ -30,7 +30,7 @@ PetscInt main(PetscInt argc,char **args)
   PetscErrorCode ierr;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP, "This is a uniprocessor example only!");
   ierr     = PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "USFFT Options", "ex27");CHKERRQ(ierr);
   ierr     = PetscOptionsEList("-function", "Function type", "ex27", funcNames, NUM_FUNCS, funcNames[function], &func, NULL);CHKERRQ(ierr);
@@ -88,7 +88,6 @@ PetscInt main(PetscInt argc,char **args)
     N   *= dim[i];
   }
   ierr = PetscPrintf(PETSC_COMM_SELF, "; total size %d \n",N);CHKERRQ(ierr);
-
 
   if (function == RANDOM) {
     ierr = PetscRandomCreate(PETSC_COMM_SELF, &rdm);CHKERRQ(ierr);
@@ -174,7 +173,6 @@ PetscInt main(PetscInt argc,char **args)
   ierr = VecNorm(z,NORM_1,&enorm);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_SELF, "|z|_2 = %g\n",norm);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_SELF, "|z-zz| = %g\n",enorm);CHKERRQ(ierr);
-
 
   /* free spaces */
   ierr = DMRestoreGlobalVector(da,&x);CHKERRQ(ierr);

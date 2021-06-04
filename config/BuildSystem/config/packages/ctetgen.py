@@ -4,8 +4,9 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.gitcommit         = 'ctetgen-0.5'
-    self.download          = ['git://https://bitbucket.org/petsc/ctetgen.git','http://ftp.mcs.anl.gov/pub/petsc/externalpackages/ctetgen-0.5.tar.gz']
+    self.gitcommit         = 'ctetgen-0.9'
+    self.download          = ['git://https://bitbucket.org/petsc/ctetgen','https://bitbucket.org/petsc/ctetgen/get/'+self.gitcommit+'.tar.gz']
+    self.downloaddirnames  = ['ctetgen','petsc-ctetgen']
     self.functions         = []
     self.includes          = []
     self.hastests          = 1
@@ -15,13 +16,13 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.setupDependencies(self, framework)
     return
 
-  # the install is delayed until postProcess() since ctetgen install requires PETSc to have created its build/makefiles before installing
-  # note that ctetgen can (and is) built before PETSc is built.
+  # the install of ctetgen is delayed until postProcess() since ctetgen install requires PETSc to have created its build/makefiles before installing
+  # ctetgen can (and is) built and installed before the PETSc source code and libraries are made
   def Install(self):
     return self.installDir
 
   def configureLibrary(self):
-    ''' Since ctergen cannot be built until after PETSc configure is complete we need to just assume the downloaded library will work'''
+    '''Since ctetgen cannot be built until after PETSc configure is complete we need to just assume the downloaded library will work'''
     if 'with-ctetgen' in self.framework.clArgDB:
       raise RuntimeError('Ctetgen does not support --with-ctetgen; only --download-ctetgen')
     if 'with-ctetgen-dir' in self.framework.clArgDB:
@@ -49,11 +50,11 @@ class Configure(config.package.GNUPackage):
       return
     try:
       self.logPrintBox('Compiling Ctetgen; this may take several minutes')
-      # uses the regular PETSc library builder and then moves result 
+      # uses the regular PETSc library builder and then moves result
       # turn off any compiler optimizations as they may break CTETGEN
-      self.setCompilers.pushLanguage('C')
-      cflags = self.checkNoOptFlag()+' '+self.getSharedFlag(self.setCompilers.getCompilerFlags())+' '+self.getPointerSizeFlag(self.setCompilers.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.setCompilers.getCompilerFlags())+' '+self.getDebugFlags(self.setCompilers.getCompilerFlags())
-      self.setCompilers.popLanguage()
+      self.pushLanguage('C')
+      cflags = self.checkNoOptFlag()+' '+self.getSharedFlag(self.getCompilerFlags())+' '+self.getPointerSizeFlag(self.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.getCompilerFlags())+' '+self.getDebugFlags(self.getCompilerFlags())
+      self.popLanguage()
       output,err,ret  = config.package.GNUPackage.executeShellCommand(self.make.make+' PETSC_DIR='+self.petscdir.dir+' clean lib PCC_FLAGS="'+cflags+'"',timeout=1000, log = self.log, cwd=self.packageDir)
       self.log.write(output+err)
       self.logPrintBox('Installing Ctetgen; this may take several minutes')
@@ -63,5 +64,3 @@ class Configure(config.package.GNUPackage):
       self.log.write(output+err)
     except RuntimeError as e:
       raise RuntimeError('Error running make on Ctetgen: '+str(e))
-
-

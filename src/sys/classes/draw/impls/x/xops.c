@@ -13,7 +13,6 @@
 #define ITRANS(draw,xwin,i)  ((draw)->coor_xl + (((PetscReal)(i))*((draw)->coor_xr - (draw)->coor_xl)/((xwin)->w-1) - (draw)->port_xl)/((draw)->port_xr - (draw)->port_xl))
 #define JTRANS(draw,xwin,j)  ((draw)->coor_yl + (((PetscReal)(j))/((xwin)->h-1) + (draw)->port_yl - 1)*((draw)->coor_yr - (draw)->coor_yl)/((draw)->port_yl - (draw)->port_yr))
 
-
 static PetscErrorCode PetscDrawSetViewport_X(PetscDraw draw,PetscReal xl,PetscReal yl,PetscReal xr,PetscReal yr)
 {
   PetscDraw_X    *XiWin = (PetscDraw_X*)draw->data;
@@ -261,16 +260,16 @@ static PetscErrorCode PetscDrawFlush_X(PetscDraw draw)
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   XSync(XiWin->disp,False);
   ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+  ierr = MPI_Barrier(PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
 
   /* transfer pixmap contents to window (only the first process does this) */
   if (XiWin->drw && XiWin->win) {
-    ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRMPI(ierr);
     ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     if (!rank) XCopyArea(XiWin->disp,XiWin->drw,XiWin->win,XiWin->gc.set,0,0,XiWin->w,XiWin->h,0,0);
     if (!rank) XSync(XiWin->disp,False);
     ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
-    ierr = MPI_Barrier(PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+    ierr = MPI_Barrier(PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -289,11 +288,11 @@ static PetscErrorCode PetscDrawClear_X(PetscDraw draw)
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   XSync(XiWin->disp,False);
   ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+  ierr = MPI_Barrier(PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
 
   /* only the first process handles the clearing business */
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRMPI(ierr);
   if (!rank) {
     int xa = (int)(xl*xmax), ya = ymax - (int)(yr*ymax);
     int xb = (int)(xr*xmax), yb = ymax - (int)(yl*ymax);
@@ -304,7 +303,7 @@ static PetscErrorCode PetscDrawClear_X(PetscDraw draw)
     XSync(XiWin->disp,False);
   }
   ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
-  ierr = MPI_Barrier(PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+  ierr = MPI_Barrier(PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -316,12 +315,12 @@ static PetscErrorCode PetscDrawSetDoubleBuffer_X(PetscDraw draw)
 
   PetscFunctionBegin;
   if (win->drw) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRMPI(ierr);
 
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   if (!rank) {ierr = PetscDrawXiQuickPixmap(win);CHKERRQ(ierr);}
   ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
-  ierr = MPI_Bcast(&win->drw,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+  ierr = MPI_Bcast(&win->drw,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -351,7 +350,7 @@ static PetscErrorCode PetscDrawSetTitle_X(PetscDraw draw,const char title[])
 
   PetscFunctionBegin;
   if (!win->win) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRMPI(ierr);
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   if (!rank) {
     size_t        len;
@@ -376,12 +375,12 @@ static PetscErrorCode PetscDrawCheckResizedWindow_X(PetscDraw draw)
 
   PetscFunctionBegin;
   if (!win->win) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRMPI(ierr);
 
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   if (!rank) {ierr = PetscDrawXiGetGeometry(win,xywh,xywh+1,xywh+2,xywh+3);CHKERRQ(ierr);}
   ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
-  ierr = MPI_Bcast(xywh,4,MPI_INT,0,PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+  ierr = MPI_Bcast(xywh,4,MPI_INT,0,PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
 
   /* record new window position */
   draw->x = win->x = xywh[0];
@@ -395,7 +394,7 @@ static PetscErrorCode PetscDrawCheckResizedWindow_X(PetscDraw draw)
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   if (!rank && win->drw) {ierr = PetscDrawXiQuickPixmap(win);CHKERRQ(ierr);}
   ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
-  ierr = MPI_Bcast(&win->drw,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+  ierr = MPI_Bcast(&win->drw,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
   /* reset the clipping */
   ierr = PetscDrawSetViewport_X(draw,draw->port_xl,draw->port_yl,draw->port_xr,draw->port_yr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -409,7 +408,7 @@ static PetscErrorCode PetscDrawResizeWindow_X(PetscDraw draw,int w,int h)
 
   PetscFunctionBegin;
   if (w == win->w && h == win->h) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRMPI(ierr);
 
   if (win->win) {
     ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
@@ -421,7 +420,7 @@ static PetscErrorCode PetscDrawResizeWindow_X(PetscDraw draw,int w,int h)
     /* recreate pixmap (only first processor does this) */
     ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     if (!rank) {ierr = PetscDrawXiQuickPixmap(win);CHKERRQ(ierr);}
-    ierr = MPI_Bcast(&win->drw,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+    ierr = MPI_Bcast(&win->drw,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
     /* reset the clipping */
     ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     ierr = PetscDrawSetViewport_X(draw,draw->port_xl,draw->port_yl,draw->port_xr,draw->port_yr);CHKERRQ(ierr);
@@ -447,7 +446,7 @@ static PetscErrorCode PetscDrawGetMouseButton_X(PetscDraw draw,PetscDrawButton *
   PetscFunctionBegin;
   *button = PETSC_BUTTON_NONE;
   if (!win->win) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRMPI(ierr);
 
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   if (rank) goto finally;
@@ -565,7 +564,6 @@ static struct _PetscDrawOps DvOps = { PetscDrawSetDoubleBuffer_X,
                                       PetscDrawPointPixel_X,
                                       NULL};
 
-
 static PetscErrorCode PetscDrawGetSingleton_X(PetscDraw draw,PetscDraw *sdraw)
 {
   PetscDraw_X    *Xwin = (PetscDraw_X*)draw->data,*sXwin;
@@ -657,7 +655,7 @@ static PetscErrorCode PetscDrawXGetDisplaySize_Private(const char name[],int *wi
 +  -display <display> - sets the display to use
 .  -x_virtual - forces use of a X virtual display Xvfb that will not display anything but -draw_save will still work.
                 Xvfb is automatically started up in PetscSetDisplay() with this option
-.  -draw_size w,h - percentage of screeen (either 1, .5, .3, .25), or size in pixels
+.  -draw_size w,h - percentage of screen (either 1, .5, .3, .25), or size in pixels
 .  -geometry x,y,w,h - set location and size in pixels
 .  -draw_virtual - do not open a window (draw on a pixmap), -draw_save will still work
 -  -draw_double_buffer - avoid window flickering (draw on pixmap and flush to window)
@@ -678,12 +676,13 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_X(PetscDraw draw)
   PetscBool      set,dvirtual = PETSC_FALSE,doublebuffer = PETSC_TRUE,has_display;
   PetscInt       xywh[4],osize = 4,nsizes=2;
   PetscReal      sizes[2] = {.3,.3};
+  static size_t  DISPLAY_LENGTH = 265;
 
   PetscFunctionBegin;
   /* get the display variable */
   if (!draw->display) {
-    ierr = PetscMalloc1(256,&draw->display);CHKERRQ(ierr);
-    ierr = PetscGetDisplay(draw->display,256);CHKERRQ(ierr);
+    ierr = PetscMalloc1(DISPLAY_LENGTH,&draw->display);CHKERRQ(ierr);
+    ierr = PetscGetDisplay(draw->display,DISPLAY_LENGTH);CHKERRQ(ierr);
   }
 
   /* initialize the display size */
@@ -779,9 +778,9 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_X(PetscDraw draw)
       ybottom    = 0;
     }
 
-  } /* endif(!dvirtual) */
+  } /* endif (!dvirtual) */
 
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank);CHKERRMPI(ierr);
   if (!rank && (w <= 0 || h <= 0)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative window width or height");
 
   ierr = PetscNewLog(draw,&Xwin);CHKERRQ(ierr);
@@ -793,14 +792,14 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_X(PetscDraw draw)
     Xwin->x = x; Xwin->y = y;
     Xwin->w = w; Xwin->h = h;
     if (!rank) {ierr = PetscDrawXiQuickWindow(Xwin,draw->title,x,y,w,h);CHKERRQ(ierr);}
-    ierr = MPI_Bcast(&Xwin->win,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+    ierr = MPI_Bcast(&Xwin->win,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
     if (rank) {ierr = PetscDrawXiQuickWindowFromWindow(Xwin,Xwin->win);CHKERRQ(ierr);}
   } else {
     Xwin->x = 0; Xwin->y = 0;
     Xwin->w = w; Xwin->h = h;
     ierr = PetscDrawXiColormap(Xwin);CHKERRQ(ierr);
     if (!rank) {ierr = PetscDrawXiQuickPixmap(Xwin);CHKERRQ(ierr);}
-    ierr = MPI_Bcast(&Xwin->drw,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
+    ierr = MPI_Bcast(&Xwin->drw,1,MPI_UNSIGNED_LONG,0,PetscObjectComm((PetscObject)draw));CHKERRMPI(ierr);
   }
   ierr = PetscDrawXiGetGeometry(Xwin,&Xwin->x,&Xwin->y,&Xwin->w,&Xwin->h);CHKERRQ(ierr);
   draw->x = Xwin->x; draw->y = Xwin->y;

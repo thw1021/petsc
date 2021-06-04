@@ -24,11 +24,42 @@ static PetscErrorCode SplitPath_Private(char path[], char name[])
   PetscFunctionReturn(0);
 }
 
+/*
+  - invert (involute) cells of some types according to XDMF/VTK numbering of vertices in a cells
+  - cell type is identified using the number of vertices
+*/
+static PetscErrorCode DMPlexInvertCells_XDMF_Private(DM dm)
+{
+  PetscInt       dim, *cones, cHeight, cStart, cEnd, p;
+  PetscSection   cs;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+  if (dim != 3) PetscFunctionReturn(0);
+  ierr = DMPlexGetCones(dm, &cones);CHKERRQ(ierr);
+  ierr = DMPlexGetConeSection(dm, &cs);CHKERRQ(ierr);
+  ierr = DMPlexGetVTKCellHeight(dm, &cHeight);CHKERRQ(ierr);
+  ierr = DMPlexGetHeightStratum(dm, cHeight, &cStart, &cEnd);CHKERRQ(ierr);
+  for (p=cStart; p<cEnd; p++) {
+    PetscInt numCorners, o;
+
+    ierr = PetscSectionGetDof(cs, p, &numCorners);CHKERRQ(ierr);
+    ierr = PetscSectionGetOffset(cs, p, &o);CHKERRQ(ierr);
+    switch (numCorners) {
+      case 4: ierr = DMPlexInvertCell(DM_POLYTOPE_TETRAHEDRON,&cones[o]);CHKERRQ(ierr); break;
+      case 6: ierr = DMPlexInvertCell(DM_POLYTOPE_TRI_PRISM,&cones[o]);CHKERRQ(ierr); break;
+      case 8: ierr = DMPlexInvertCell(DM_POLYTOPE_HEXAHEDRON,&cones[o]);CHKERRQ(ierr); break;
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode DMPlexLoad_HDF5_Xdmf_Internal(DM dm, PetscViewer viewer)
 {
   Vec             coordinates;
   IS              cells;
-  PetscInt        spatialDim, numCells, numVertices, numCorners;
+  PetscInt        spatialDim, topoDim = -1, numCells, numVertices, NVertices, numCorners;
   PetscMPIInt     rank;
   MPI_Comm        comm;
   PetscErrorCode  ierr;
@@ -38,12 +69,12 @@ PetscErrorCode DMPlexLoad_HDF5_Xdmf_Internal(DM dm, PetscViewer viewer)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
 
   ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)dm),((PetscObject)dm)->prefix,"DMPlex HDF5/XDMF Loader Options","PetscViewer");CHKERRQ(ierr);
   ierr = PetscOptionsString("-dm_plex_hdf5_topology_path","HDF5 path of topology dataset",NULL,topo_path,topo_path,sizeof(topo_path),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsString("-dm_plex_hdf5_geometry_path","HDF5 path to geometry dataset",NULL,geom_path,geom_path,sizeof(geom_path),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool(  "-dm_plex_hdf5_force_sequential","force sequential loading",NULL,seq,&seq,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-dm_plex_hdf5_force_sequential","force sequential loading",NULL,seq,&seq,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   ierr = SplitPath_Private(topo_path, topo_name);CHKERRQ(ierr);
@@ -64,6 +95,7 @@ PetscErrorCode DMPlexLoad_HDF5_Xdmf_Internal(DM dm, PetscViewer viewer)
   ierr = ISLoad(cells, viewer);CHKERRQ(ierr);
   ierr = ISGetLocalSize(cells, &numCells);CHKERRQ(ierr);
   ierr = ISGetBlockSize(cells, &numCorners);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5ReadAttribute(viewer, topo_name, "cell_dim", PETSC_INT, &topoDim, &topoDim);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   numCells /= numCorners;
 
@@ -79,40 +111,22 @@ PetscErrorCode DMPlexLoad_HDF5_Xdmf_Internal(DM dm, PetscViewer viewer)
   }
   ierr = VecLoad(coordinates, viewer);CHKERRQ(ierr);
   ierr = VecGetLocalSize(coordinates, &numVertices);CHKERRQ(ierr);
+  ierr = VecGetSize(coordinates, &NVertices);CHKERRQ(ierr);
   ierr = VecGetBlockSize(coordinates, &spatialDim);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   numVertices /= spatialDim;
+  NVertices /= spatialDim;
 
-  ierr = PetscInfo4(NULL, "Loaded mesh dimensions: numCells %d numCorners %d numVertices %d spatialDim %d\n", numCells, numCorners, numVertices, spatialDim);CHKERRQ(ierr);
-
-  if (PetscDefined(USE_DEBUG)) {
-    /* Check that maximum index referred in cells is in line with global number of vertices */
-    PetscInt max1, max2;
-    ierr = ISGetMinMax(cells, NULL, &max1);CHKERRQ(ierr);
-    ierr = VecGetSize(coordinates, &max2);CHKERRQ(ierr);
-    max2 /= spatialDim; max2--;
-    if (max1 > max2) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "maximum index in cells = %d > %d = total number of vertices - 1", max1, max2);
-  }
-
+  ierr = PetscInfo4(NULL, "Loaded mesh dimensions: numCells %D numCorners %D numVertices %D spatialDim %D\n", numCells, numCorners, numVertices, spatialDim);CHKERRQ(ierr);
   {
     const PetscScalar *coordinates_arr;
-    PetscReal *coordinates_arr_real;
-    const PetscInt *cells_arr;
-    int *cells_arr_int;
-    PetscSF sfVert=NULL;
-    PetscInt i;
+    PetscReal         *coordinates_arr_real;
+    const PetscInt    *cells_arr;
+    PetscSF           sfVert = NULL;
+    PetscInt          i;
 
     ierr = VecGetArrayRead(coordinates, &coordinates_arr);CHKERRQ(ierr);
     ierr = ISGetIndices(cells, &cells_arr);CHKERRQ(ierr);
-
-    if (PetscDefined(USE_64BIT_INDICES)) {
-      /* convert to 32-bit integers if PetscInt is 64-bit */
-      /*TODO More systematic would be to change all the function arguments to PetscInt */
-      ierr = PetscMalloc1(numCells*numCorners, &cells_arr_int);CHKERRQ(ierr);
-      for (i = 0; i < numCells*numCorners; ++i) {
-        ierr = PetscMPIIntCast(cells_arr[i], &cells_arr_int[i]);CHKERRQ(ierr);
-      }
-    } else cells_arr_int = (int*)cells_arr;
 
     if (PetscDefined(USE_COMPLEX)) {
       /* convert to real numbers if PetscScalar is complex */
@@ -126,13 +140,13 @@ PetscErrorCode DMPlexLoad_HDF5_Xdmf_Internal(DM dm, PetscViewer viewer)
       }
     } else coordinates_arr_real = (PetscReal*)coordinates_arr;
 
-    ierr = DMSetDimension(dm, spatialDim);CHKERRQ(ierr);
-    ierr = DMPlexBuildFromCellList_Parallel_Internal(dm, spatialDim, numCells, numVertices, numCorners, cells_arr_int, PETSC_TRUE, &sfVert);CHKERRQ(ierr);
-    ierr = DMPlexBuildCoordinates_Parallel_Internal( dm, spatialDim, numCells, numVertices, sfVert, coordinates_arr_real);CHKERRQ(ierr);
+    ierr = DMSetDimension(dm, topoDim < 0 ? spatialDim : topoDim);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellListParallel(dm, numCells, numVertices, NVertices, numCorners, cells_arr, &sfVert);CHKERRQ(ierr);
+    ierr = DMPlexInvertCells_XDMF_Private(dm);CHKERRQ(ierr);
+    ierr = DMPlexBuildCoordinatesFromCellListParallel(dm, spatialDim, sfVert, coordinates_arr_real);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(coordinates, &coordinates_arr);CHKERRQ(ierr);
     ierr = ISRestoreIndices(cells, &cells_arr);CHKERRQ(ierr);
     ierr = PetscSFDestroy(&sfVert);CHKERRQ(ierr);
-    if (PetscDefined(USE_64BIT_INDICES)) {ierr = PetscFree(cells_arr_int);CHKERRQ(ierr);}
     if (PetscDefined(USE_COMPLEX)) {ierr = PetscFree(coordinates_arr_real);CHKERRQ(ierr);}
   }
   ierr = ISDestroy(&cells);CHKERRQ(ierr);
@@ -149,7 +163,7 @@ PetscErrorCode DMPlexLoad_HDF5_Xdmf_Internal(DM dm, PetscViewer viewer)
 
   /* Read Labels */
   /* TODO: this probably does not work as elements get permuted */
-  /* ierr = DMPlexLoadLabels_HDF5_Internal(dm, viewer);CHKERRQ(ierr); */
+  /* ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr); */
   PetscFunctionReturn(0);
 }
 #endif

@@ -8,6 +8,8 @@ TS Object: 1 MPI processes
   type: bdf
     Order=2
   maximum time=0.5
+  total number of I function evaluations=114
+  total number of I Jacobian evaluations=93
   total number of nonlinear solver iterations=93
   total number of linear solver iterations=93
   total number of nonlinear solve failures=0
@@ -58,7 +60,6 @@ TS Object: 1 MPI processes
               rows=2, cols=2
               package used to perform factorization: petsc
               total: nonzeros=4, allocated nonzeros=4
-              total number of mallocs used during MatSetValues calls=0
                 using I-node routines: found 1 nodes, limit used is 5
       linear system matrix = precond matrix:
       Mat Object: 1 MPI processes

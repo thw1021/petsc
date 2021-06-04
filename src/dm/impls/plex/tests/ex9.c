@@ -177,7 +177,7 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, DM *newdm)
   ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetDimension(dm, dim);CHKERRQ(ierr);
   ierr = DMPlexCreateFromDAG(dm, depth, numPoints, coneSize, cones, coneOrientations, vertexCoords);CHKERRQ(ierr);
-  for(p = 0; p < 12; ++p) {
+  for (p = 0; p < 12; ++p) {
     ierr = DMSetLabelValue(dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);
   }
   *newdm = dm;
@@ -245,7 +245,7 @@ static PetscErrorCode TestCone(DM dm, AppCtx *user)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = PetscLogStageRegister("DMPlex Cone Test", &stage);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("Cone", PETSC_OBJECT_CLASSID, &event);CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
@@ -289,7 +289,7 @@ static PetscErrorCode TestTransitiveClosure(DM dm, AppCtx *user)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = PetscLogStageRegister("DMPlex Transitive Closure Test", &stage);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("TransitiveClosure", PETSC_OBJECT_CLASSID, &event);CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
@@ -339,7 +339,7 @@ static PetscErrorCode TestVecClosure(DM dm, PetscBool useIndex, PetscBool useSpe
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   if (useIndex) {
     if (useSpectral) {
       ierr = PetscLogStageRegister("DMPlex Vector Closure with Index Test", &stage);CHKERRQ(ierr);

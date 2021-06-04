@@ -1,10 +1,10 @@
--include ../petscdir.mk
+-include ../../../../petscdir.mk
 CFLAGS		 = 
 FFLAGS		 = 
 CPPFLAGS         =
 FPPFLAGS         =
-EXAMPLESC        = maros.c toy.c tomographyADMM.c ex1.c
-EXAMPLESF        = toyf.F90
+EXAMPLESC        = maros.c tomographyADMM.c ex1.c
+EXAMPLESF        = 
 EXAMPLESCH       =
 EXAMPLESFH       = 
 TUTORIALS        = 

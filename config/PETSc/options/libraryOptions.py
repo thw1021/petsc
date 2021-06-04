@@ -26,13 +26,14 @@ class Configure(config.base.Configure):
 
   def setupDependencies(self, framework):
     config.base.Configure.setupDependencies(self, framework)
-    self.compilers   = framework.require('config.compilers', self)
-    self.libraries   = framework.require('config.libraries', self)
-    self.types       = framework.require('config.types', self)
-    self.compilerFlags = framework.require('config.compilerFlags', self)
+    self.compilers        = framework.require('config.compilers', self)
+    self.setCompilers     = framework.require('config.setCompilers', self)
+    self.libraries        = framework.require('config.libraries', self)
+    self.types            = framework.require('config.types', self)
+    self.compilerFlags    = framework.require('config.compilerFlags', self)
+    self.sharedLibraries  = framework.require('PETSc.options.sharedLibraries', None)
+    self.petscConfigure   = framework.require('PETSc.Configure', None)
     return
-
-
 
   def configureLibraryOptions(self):
     '''Sets PETSC_USE_DEBUG, PETSC_USE_INFO, PETSC_USE_LOG, PETSC_USE_CTABLE, PETSC_USE_FORTRAN_KERNELS, and PETSC_USE_AVX512_KERNELS'''
@@ -45,6 +46,9 @@ class Configure(config.base.Configure):
 
     if self.useThreadSafety and self.framework.argDB['with-log']:
       raise RuntimeError('Must use --with-log=0 with --with-threadsafety')
+
+    if self.useThreadSafety and not ((self.sharedLibraries.useShared and self.setCompilers.dynamicLibraries) or self.framework.argDB['with-single-library']):
+      raise RuntimeError('Must use --with-shared-libraries or --with-single-library with --with-threadsafety')
 
     self.useLog   = self.framework.argDB['with-log']
     self.addDefine('USE_LOG',   self.useLog)
@@ -93,7 +97,7 @@ class Configure(config.base.Configure):
     return
 
   def configureISColorValueType(self):
-    '''Sets PETSC_IS_COLOR_VALUE_TYPE, MPIU_COLORING_VALUE, IS_COLORING_MAX required by ISColor'''
+    '''Sets PETSC_IS_COLORING_VALUE_TYPE, PETSC_MPIU_IS_COLORING_VALUE_TYPE, and PETSC_IS_COLORING_MAX as required by ISColoring'''
     self.isColorValueType  = self.framework.argDB['with-is-color-value-type']
     if self.isColorValueType != 'char' and self.isColorValueType != 'short':
       raise RuntimeError('Incorrect --with-is-color-value-type value specified. Can be either char or short. Specified value is :'+self.isColorValueType)
@@ -106,10 +110,10 @@ class Configure(config.base.Configure):
       mpi_type = 'MPI_UNSIGNED_SHORT'
       type_f = 'integer2'
 
-    self.framework.addDefine('MPIU_COLORING_VALUE',mpi_type)
-    self.framework.addDefine('IS_COLORING_MAX',max_value)
-    self.addDefine('IS_COLOR_VALUE_TYPE', self.isColorValueType)
-    self.addDefine('IS_COLOR_VALUE_TYPE_F', type_f)
+    self.addDefine('MPIU_IS_COLORING_VALUE_TYPE',mpi_type)
+    self.addDefine('IS_COLORING_MAX',max_value)
+    self.addDefine('IS_COLORING_VALUE_TYPE',self.isColorValueType)
+    self.addDefine('IS_COLORING_VALUE_TYPE_F',type_f)
     return
 
   def configure(self):

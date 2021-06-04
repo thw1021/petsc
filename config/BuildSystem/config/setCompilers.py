@@ -23,6 +23,7 @@ def _picTestIncludes(export=''):
                     '}',
                     'void bar(void){foo();}\n'])
 
+
 class Configure(config.base.Configure):
   def __init__(self, framework):
     config.base.Configure.__init__(self, framework)
@@ -36,29 +37,17 @@ class Configure(config.base.Configure):
     self.compilerflags = self.framework.getChild('config.compilerFlags')
     desc = ['Compilers:']
     if hasattr(self, 'CC'):
-      self.pushLanguage('C')
-      desc.append('  C Compiler:         '+self.getCompiler()+' '+self.getCompilerFlags())
-      if self.compilerflags.version['C']: desc.append('    Version: '+self.compilerflags.version['C'])
-      if not self.getLinker() == self.getCompiler(): desc.append('  C Linker:           '+self.getLinker()+' '+self.getLinkerFlags())
-      self.popLanguage()
+      self._setupCompiler('C',desc)
     if hasattr(self, 'CUDAC'):
-      self.pushLanguage('CUDA')
-      desc.append('  CUDA Compiler:      '+self.getCompiler()+' '+self.getCompilerFlags())
-      if self.compilerflags.version['CUDA']: desc.append('    Version: '+self.compilerflags.version['CUDA'])
-      if not self.getLinker() == self.getCompiler(): desc.append('  CUDA Linker:        '+self.getLinker()+' '+self.getLinkerFlags())
-      self.popLanguage()
+      self._setupCompiler('CUDA',desc)
+    if hasattr(self, 'HIPC'):
+      self._setupCompiler('HIP',desc)
+    if hasattr(self, 'SYCLCXX'):
+      self._setupCompiler('SYCL',desc)
     if hasattr(self, 'CXX'):
-      self.pushLanguage('Cxx')
-      desc.append('  C++ Compiler:       '+self.getCompiler()+' '+self.getCompilerFlags())
-      if self.compilerflags.version['Cxx']: desc.append('    Version: '+self.compilerflags.version['Cxx'])
-      if not self.getLinker() == self.getCompiler(): desc.append('  C++ Linker:         '+self.getLinker()+' '+self.getLinkerFlags())
-      self.popLanguage()
+      self._setupCompiler('Cxx',desc)
     if hasattr(self, 'FC'):
-      self.pushLanguage('FC')
-      desc.append('  Fortran Compiler:   '+self.getCompiler()+' '+self.getCompilerFlags())
-      if self.compilerflags.version['FC']: desc.append('    Version: '+self.compilerflags.version['FC'])
-      if not self.getLinker() == self.getCompiler(): desc.append('  Fortran Linker:     '+self.getLinker()+' '+self.getLinkerFlags())
-      self.popLanguage()
+      self._setupCompiler('FC',desc)
     desc.append('Linkers:')
     if hasattr(self, 'staticLinker'):
       desc.append('  Static linker:   '+self.getSharedLinker()+' '+self.AR_FLAGS)
@@ -68,6 +57,22 @@ class Configure(config.base.Configure):
       desc.append('  Dynamic linker:   '+self.getDynamicLinker()+' '+self.getDynamicLinkerFlags())
       desc.append('  Libraries linked against:   '+self.LIBS)
     return '\n'.join(desc)+'\n'
+
+  def _setupCompiler(self,compiler,desc):
+    """ Simple utility routine to minimize verbiage"""
+    clabel='  '+compiler+' '
+    if compiler == 'Cxx': clabel='  C++ '
+    if compiler == 'FC':  clabel='  Fortran '
+    self.pushLanguage(compiler)
+    desc.append(clabel+'Compiler:         '
+                +self.getCompiler()+' '+self.getCompilerFlags())
+    if self.compilerflags.version[compiler]:
+      desc.append('    Version: '+self.compilerflags.version[compiler])
+    if not self.getLinker() == self.getCompiler():
+      desc.append(clabel+'Linker:           '
+                  +self.getLinker()+' '+self.getLinkerFlags())
+    self.popLanguage()
+    return
 
   def setupHelp(self, help):
     import nargs
@@ -104,6 +109,20 @@ class Configure(config.base.Configure):
     help.addArgument('Compilers', '-CUDAFLAGS=<string>',   nargs.Arg(None, None, 'Specify the CUDA compiler options'))
     help.addArgument('Compilers', '-CUDAC_LINKER_FLAGS=<string>',        nargs.Arg(None, [], 'Specify the CUDA linker flags'))
 
+    help.addArgument('Compilers', '-HIPPP=<prog>', nargs.Arg(None, None, 'Specify the HIP preprocessor'))
+    help.addArgument('Compilers', '-HIPPPFLAGS=<string>', nargs.Arg(None, None, 'Specify the HIP preprocessor options'))
+    help.addArgument('Compilers', '-with-hipc=<prog>', nargs.Arg(None, None, 'Specify the HIP compiler'))
+    help.addArgument('Compilers', '-HIPC=<prog>',         nargs.Arg(None, None, 'Specify the HIP compiler'))
+    help.addArgument('Compilers', '-HIPFLAGS=<string>',   nargs.Arg(None, None, 'Specify the HIP compiler options'))
+    help.addArgument('Compilers', '-HIPC_LINKER_FLAGS=<string>',        nargs.Arg(None, [], 'Specify the HIP linker flags'))
+
+    help.addArgument('Compilers', '-SYCLPP=<prog>', nargs.Arg(None, None, 'Specify the SYCL preprocessor'))
+    help.addArgument('Compilers', '-SYCLPPFLAGS=<string>', nargs.Arg(None, '-Wno-deprecated-gpu-targets', 'Specify the SYCL preprocessor options'))
+    help.addArgument('Compilers', '-with-syclcxx=<prog>', nargs.Arg(None, None, 'Specify the SYCLcompiler'))
+    help.addArgument('Compilers', '-SYCLCXX=<prog>',         nargs.Arg(None, None, 'Specify the SYCL compiler'))
+    help.addArgument('Compilers', '-SYCLCXXFLAGS=<string>',   nargs.Arg(None, None, 'Specify the SYCL compiler options'))
+    help.addArgument('Compilers', '-SYCLCXX_LINKER_FLAGS=<string>',        nargs.Arg(None, [], 'Specify the SYCL linker flags'))
+
 ##    help.addArgument('Compilers', '-LD=<prog>',              nargs.Arg(None, None, 'Specify the executable linker'))
 ##    help.addArgument('Compilers', '-CC_LD=<prog>',           nargs.Arg(None, None, 'Specify the linker for C only'))
 ##    help.addArgument('Compilers', '-CXX_LD=<prog>',          nargs.Arg(None, None, 'Specify the linker for C++ only'))
@@ -126,7 +145,7 @@ class Configure(config.base.Configure):
     config.base.Configure.setupDependencies(self, framework)
     self.languages = framework.require('PETSc.options.languages', self)
     self.libraries = self.framework.getChild('config.libraries')
-    self.headers   = self.framework.getChild('config.headers')    
+    self.headers   = self.framework.getChild('config.headers')
     return
 
   @staticmethod
@@ -136,6 +155,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -V',checkCommand = noCheck, log = log)
       output = output + error
       if output.find('NAGWare Fortran') >= 0 or output.find('The Numerical Algorithms Group Ltd') >= 0:
+        if log: log.write('Detected NAG Fortran compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -147,6 +167,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -v',checkCommand = noCheck, log = log)
       output = output + error
       if output.find('w64-mingw32') >= 0:
+        if log: log.write('Detected MINGW GCC compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -157,7 +178,7 @@ class Configure(config.base.Configure):
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 20 ', log = log)
       output = output + error
-      return (any([s in output for s in ['www.gnu.org',
+      found = (any([s in output for s in ['www.gnu.org',
                                          'bugzilla.redhat.com',
                                          'gcc.gnu.org',
                                          'gcc version',
@@ -171,6 +192,9 @@ class Configure(config.base.Configure):
               and not any([s in output for s in ['Intel(R)',
                                                  'Unrecognised option --help passed to ld', # NAG f95 compiler
                                                  ]]))
+      if found:
+        if log: log.write('Detected GNU compiler\n')
+        return 1
     except RuntimeError:
       pass
 
@@ -180,7 +204,38 @@ class Configure(config.base.Configure):
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 500', log = log, logOutputflg = False)
       output = output + error
-      return any([s in output for s in ['Emit Clang AST']])
+      found = any([s in output for s in ['Emit Clang AST']])
+      if found:
+        if log: log.write('Detected CLANG compiler\n')
+        return 1
+    except RuntimeError:
+      pass
+
+  @staticmethod
+  def isHIP(compiler, log):
+    '''Returns true if the compiler is a HIP compiler'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
+      output = output + error
+      if 'HIP version:' in output:
+        if log: log.write('Detected HIP compiler\n')
+        return 1
+    except RuntimeError:
+      pass
+
+  @staticmethod
+  def isGcc110plus(compiler, log):
+    '''returns true if the compiler is gcc-11.0.x or later'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
+      output = output +  error
+      import re
+      strmatch = re.match('gcc\s+\(.*\)\s+(\d+)\.(\d+)',output)
+      if strmatch:
+        VMAJOR,VMINOR = strmatch.groups()
+        if (int(VMAJOR),int(VMINOR)) >= (11,0):
+          if log: log.write('Detected Gcc110plus compiler\n')
+          return 1
     except RuntimeError:
       pass
 
@@ -192,6 +247,7 @@ class Configure(config.base.Configure):
       output = output +  error
       import re
       if re.match(r'GNU Fortran \(.*\) (4.5.\d+|4.6.0 20100703)', output):
+        if log: log.write('Detected GFortran45x compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -207,6 +263,7 @@ class Configure(config.base.Configure):
       if strmatch:
         VMAJOR,VMINOR = strmatch.groups()
         if (int(VMAJOR),int(VMINOR)) >= (4,6):
+          if log: log.write('Detected GFortran46plus compiler\n')
           return 1
     except RuntimeError:
       pass
@@ -222,6 +279,7 @@ class Configure(config.base.Configure):
       if strmatch:
         VMAJOR,VMINOR = strmatch.groups()
         if (int(VMAJOR),int(VMINOR)) >= (4,7):
+          if log: log.write('Detected GFortran47plus compiler\n')
           return 1
     except RuntimeError:
       pass
@@ -237,6 +295,7 @@ class Configure(config.base.Configure):
       if strmatch:
         VMAJOR,VMINOR = strmatch.groups()
         if (int(VMAJOR),int(VMINOR)) >= (10,0):
+          if log: log.write('Detected GFortran100plus compiler\n')
           return 1
     except RuntimeError:
       pass
@@ -252,6 +311,7 @@ class Configure(config.base.Configure):
       if strmatch:
         VMAJOR,VMINOR = strmatch.groups()
         if (int(VMAJOR),int(VMINOR)) >= (8,0):
+          if log: log.write('Detected GFortran8plus compiler\n')
           return 1
     except RuntimeError:
       pass
@@ -265,6 +325,7 @@ class Configure(config.base.Configure):
       if output.find('Unrecognised option --help passed to ld') >=0:    # NAG f95 compiler
         return 0
       if output.find('http://www.g95.org') >= 0:
+        if log: log.write('Detected g95 compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -278,6 +339,7 @@ class Configure(config.base.Configure):
       if output.find('Unrecognised option --help passed to ld') >=0:    # NAG f95 compiler
         return 0
       if output.find('Compaq Visual Fortran') >= 0 or output.find('Digital Visual Fortran') >=0 :
+        if log: log.write('Detected Compaq Visual Fortran compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -289,6 +351,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -V',checkCommand = noCheck, log = log)
       output = output + error
       if output.find(' Sun ') >= 0:
+        if log: log.write('Detected Sun/Oracle compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -300,6 +363,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -qversion', log = log)
       output = output + error
       if 'IBM XL' in output:
+        if log: log.write('Detected IBM compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -310,7 +374,8 @@ class Configure(config.base.Configure):
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 20', log = log)
       output = output + error
-      if output.find('Intel Corporation') >= 0 :
+      if output.find('Intel') >= 0:
+        if log: log.write('Detected Intel compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -320,6 +385,7 @@ class Configure(config.base.Configure):
     '''Returns true if the compiler is a compiler for KNL running on a Cray'''
     x = os.getenv('PE_PRODUCT_LIST')
     if x and x.find('CRAYPE_MIC-KNL') > -1:
+      if log: log.write('Detected Cray KNL compiler\n')
       return 1
 
   @staticmethod
@@ -329,6 +395,7 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -V', log = log)
       output = output + error
       if output.find('Cray Standard C') >= 0 or output.find('Cray C++') >= 0 or output.find('Cray Fortran') >= 0:
+        if log: log.write('Detected Cray compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -342,6 +409,7 @@ class Configure(config.base.Configure):
       if not status and output.find('x86') >= 0:
         return 0
       elif not status:
+        if log: log.write('Detected Cray vector compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -352,7 +420,8 @@ class Configure(config.base.Configure):
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -V',checkCommand = noCheck, log = log)
       output = output + error
-      if output.find('The Portland Group') >= 0:
+      if output.find('The Portland Group') >= 0 or output.find('PGI Compilers and Tools') >= 0:
+        if log: log.write('Detected PGI compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -384,6 +453,7 @@ class Configure(config.base.Configure):
     '''Returns true if system is linux'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status and output.lower().strip().find('linux') >= 0:
+      if log: log.write('Detected Linux OS')
       return 1
 
   @staticmethod
@@ -391,6 +461,7 @@ class Configure(config.base.Configure):
     '''Returns true if system is cygwin'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status and output.lower().strip().find('cygwin') >= 0:
+      if log: log.write('Detected Cygwin\n')
       return 1
 
   @staticmethod
@@ -398,6 +469,7 @@ class Configure(config.base.Configure):
     '''Returns true if system is solaris'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status and output.lower().strip().find('sunos') >= 0:
+      if log: log.write('Detected Solaris OS\n')
       return 1
 
   @staticmethod
@@ -405,7 +477,10 @@ class Configure(config.base.Configure):
     '''Returns true if system is Darwin/MacOSX'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status:
-      return output.lower().strip() == 'darwin'
+      found = (output.lower().strip() == 'darwin')
+      if found:
+        if log: log.write('Detected Darwin/MacOSX OS\n\n')
+      return found
 
   @staticmethod
   def isDarwinCatalina(log):
@@ -414,6 +489,7 @@ class Configure(config.base.Configure):
     if platform.system() != 'Darwin': return 0
     v = tuple([int(a) for a in platform.mac_ver()[0].split('.')])
     if v < (10,15,0): return 0
+    if log: log.write('Detected Darwin/MacOSX Catalina OS\n')
     return 1
 
   @staticmethod
@@ -421,16 +497,22 @@ class Configure(config.base.Configure):
     '''Returns true if system is FreeBSD'''
     (output, error, status) = config.base.Configure.executeShellCommand('uname -s', log = log)
     if not status:
-      return output.lower().strip() == 'freebsd'
+      found = output.lower().strip() == 'freebsd'
+      if found:
+        if log: log.write('Detected FreeBSD OS\n')
+      return found
 
   @staticmethod
   def isWindows(compiler, log):
     '''Returns true if the compiler is a Windows compiler'''
     if compiler in ['icl', 'cl', 'bcc32', 'ifl', 'df']:
+      if log: log.write('Detected Windows OS\n')
       return 1
     if compiler in ['ifort','f90'] and Configure.isCygwin(log):
+      if log: log.write('Detected Windows OS\n')
       return 1
     if compiler in ['lib', 'tlib']:
+      if log: log.write('Detected Windows OS\n')
       return 1
 
   @staticmethod
@@ -459,16 +541,21 @@ class Configure(config.base.Configure):
 
   def checkInitialFlags(self):
     '''Initialize the compiler and linker flags'''
-    for language in ['C', 'CUDA', 'Cxx', 'FC']:
+    for language in ['C', 'CUDA', 'HIP', 'SYCL', 'Cxx', 'FC']:
       self.pushLanguage(language)
       for flagsArg in [config.base.Configure.getCompilerFlagsName(language), config.base.Configure.getCompilerFlagsName(language, 1), config.base.Configure.getLinkerFlagsName(language)]:
         if flagsArg in self.argDB: setattr(self, flagsArg, self.argDB[flagsArg])
         else: setattr(self, flagsArg, '')
         self.logPrint('Initialized '+flagsArg+' to '+str(getattr(self, flagsArg)))
       self.popLanguage()
-    for flagsArg in ['CPPFLAGS', 'FPPFLAGS', 'CUDAPPFLAGS', 'CXXPPFLAGS', 'CC_LINKER_FLAGS', 'CXX_LINKER_FLAGS', 'FC_LINKER_FLAGS', 'CUDAC_LINKER_FLAGS','sharedLibraryFlags', 'dynamicLibraryFlags']:
+    for flagsArg in ['CPPFLAGS', 'FPPFLAGS', 'CUDAPPFLAGS', 'CXXPPFLAGS', 'HIPPPFLAGS', 'SYCLPPFLAGS']:
       if flagsArg in self.argDB: setattr(self, flagsArg, self.argDB[flagsArg])
       else: setattr(self, flagsArg, '')
+      self.logPrint('Initialized '+flagsArg+' to '+str(getattr(self, flagsArg)))
+    for flagsArg in ['CC_LINKER_FLAGS', 'CXX_LINKER_FLAGS', 'FC_LINKER_FLAGS', 'CUDAC_LINKER_FLAGS', 'HIPC_LINKER_FLAGS', 'SYCLCXX_LINKER_FLAGS', 'sharedLibraryFlags', 'dynamicLibraryFlags']:
+      if isinstance(self.argDB[flagsArg],str): val = [self.argDB[flagsArg]]
+      else: val = self.argDB[flagsArg]
+      setattr(self, flagsArg, val)
       self.logPrint('Initialized '+flagsArg+' to '+str(getattr(self, flagsArg)))
     if 'LIBS' in self.argDB:
       self.LIBS = self.argDB['LIBS']
@@ -483,7 +570,7 @@ class Configure(config.base.Configure):
       msg = 'Cannot compile '+language+' with '+self.getCompiler()+'.'
       self.popLanguage()
       raise RuntimeError(msg)
-    if language == 'CUDA': # do not check CUDA linker since it is never used (and is broken on Mac with -m64)
+    if language == 'CUDA' or language == 'HIP' or language == 'SYCL': # do not check CUDA/HIP/SYCL linker since it is never used (assumed for now)
       self.popLanguage()
       return
     if not self.checkLink(linkLanguage=linkLanguage,includes=includes,body=body):
@@ -756,6 +843,130 @@ class Configure(config.base.Configure):
         self.popLanguage()
     return
 
+  def generateHIPCompilerGuesses(self):
+    '''Determine the HIP compiler using HIPC, then --with-hipc
+       - Any given category can be excluded'''
+    if hasattr(self, 'HIPC'):
+      yield self.HIPC
+      raise RuntimeError('Error: '+self.mesg)
+    elif 'with-hipc' in self.argDB:
+      yield self.argDB['with-hipc']
+      raise RuntimeError('HIPC compiler you provided with -with-hipc='+self.argDB['with-hipc']+' cannot be found or does not work.'+'\n'+self.mesg)
+    elif 'HIPC' in self.argDB:
+      yield self.argDB['HIPC']
+      raise RuntimeError('HIP compiler you provided with -HIPC='+self.argDB['HIPC']+' cannot be found or does not work.'+'\n'+self.mesg)
+    elif 'with-hip-dir' in self.argDB:
+      hipPath = os.path.join(self.argDB['with-hip-dir'], 'bin','hipcc')
+      yield hipPath
+    else:
+      yield 'hipcc'
+      yield os.path.join('opt','rocm','bin','hipcc')
+    return
+
+  def checkHIPCompiler(self):
+    '''Locate a functional HIP compiler'''
+    if ('with-hipc' in self.argDB and self.argDB['with-hipc'] == '0'):
+      if 'HIPC' in self.argDB:
+        del self.argDB['HIPC']
+      return
+    self.mesg = 'in generateHIPCompilerGuesses'
+    for compiler in self.generateHIPCompilerGuesses():
+      try:
+        if self.getExecutable(compiler, resultName = 'HIPC'):
+          self.checkCompiler('HIP')
+          # Put version info into the log
+          compilerVersion = self.executeShellCommand(self.HIPC+' --version', log = self.log)
+          if 'nvcc' in compilerVersion and 'NVIDIA' in compilerVersion:
+            hipLine = compilerVersion.split('\n')[0]
+            self.compilerVersionHIP = hipLine.split(':')[1]
+            nvccReleaseLine = compilerVersion.split('\n')[-1]
+            import re
+            if 'release' in nvccReleaseLine:
+              self.compilerVersionCUDA = re.split('release',nvccReleaseLine)[1]
+            else:
+              raise RuntimeError('Error: Could not determine CUDA version from HIPC')
+          else:
+            self.compilerVersionHIP = compilerVersion[0]
+          break
+      except RuntimeError as e:
+        self.mesg = str(e)
+        self.logPrint('HERE Error testing HIP compiler: '+str(e))
+        self.delMakeMacro('HIPC')
+        del self.HIPC
+    return
+
+  def generateHIPPreprocessorGuesses(self):
+    '''Determines the HIP preprocessor from --with-hipcpp, then HIPPP, then the HIP compiler'''
+    if 'with-hipcpp' in self.argDB:
+      yield self.argDB['with-cudacpp']
+    elif 'HIPPP' in self.argDB:
+      yield self.argDB['HIPPP']
+    else:
+      if hasattr(self, 'HIPC'):
+        yield self.HIPC+' -E'
+    return
+
+  def checkHIPPreprocessor(self):
+    '''Locate a functional HIP preprocessor'''
+    for compiler in self.generateHIPPreprocessorGuesses():
+      try:
+        if self.getExecutable(compiler, resultName = 'HIPPP'):
+          self.pushLanguage('HIP')
+          if not self.checkPreprocess('#include <stdlib.h>\n__global__ void testFunction() {return;};'):
+            raise RuntimeError('Cannot preprocess HIP with '+self.HIPPP+'.')
+          self.popLanguage()
+          return
+      except RuntimeError as e:
+        self.popLanguage()
+    return
+
+  def generateSYCLCompilerGuesses(self):
+    '''Determine the SYCL compiler using SYCLCXX, then --with-syclcxx
+       - Any given category can be excluded'''
+    if hasattr(self, 'SYCLCXX'):
+      yield self.SYCLCXX
+      raise RuntimeError('Error: '+self.mesg)
+    elif 'with-syclcxx' in self.argDB:
+      yield self.argDB['with-syclcxx']
+      raise RuntimeError('SYCLCXX compiler you provided with -with-syclxx='+self.argDB['with-syclxx']+' cannot be found or does not work.'+'\n'+self.mesg)
+    elif 'SYCLCXX' in self.argDB:
+      yield self.argDB['SYCLCXX']
+      raise RuntimeError('SYCLCXX compiler you provided with -SYCLCXX='+self.argDB['SYCLCXX']+' cannot be found or does not work.'+'\n'+self.mesg)
+    elif 'with-sycl-dir' in self.argDB:
+      syclPath = os.path.join(self.argDB['with-sycl-dir'], 'bin','dpcpp')
+      yield syclPath
+    return
+
+  def checkSYCLCompiler(self):
+    '''Locate a functional SYCL compiler'''
+    if ('with-syclcxx' in self.argDB and self.argDB['with-syclcxx'] == '0'):
+      if 'SYCLCXX' in self.argDB:
+        del self.argDB['SYCLCXX']
+      return
+    self.mesg = 'in generateSYCLCompilerGuesses'
+    for compiler in self.generateSYCLCompilerGuesses():
+      try:
+        if self.getExecutable(compiler, resultName = 'SYCLCXX'):
+          self.checkCompiler('SYCL')
+          # Put version info into the log
+          compilerVersion = self.executeShellCommand(self.SYCLCXX+' --version', log = self.log)
+          compilerVersion = compilerVersion[0]
+          compilerVersoin = compilerVersion.partition('Compiler')[-1].strip()
+          break
+      except RuntimeError as e:
+        self.mesg = str(e)
+        self.delMakeMacro('SYCLCXX')
+        del self.SYCLCXX
+    return
+
+  def generateSYCLPreprocessorGuesses(self):
+    ''' Placeholder for now '''
+    return
+
+  def checkSYCLPreprocessor(self):
+    ''' Placeholder for now '''
+    return
+
   def generateCxxCompilerGuesses(self):
     '''Determine the Cxx compiler'''
 
@@ -783,19 +994,17 @@ class Configure(config.base.Configure):
       else:
         yield self.argDB['CXX']
       raise RuntimeError('C++ compiler you provided with -CXX='+self.argDB['CXX']+' cannot be found or does not work.'+'\n'+self.mesg)
-    elif self.useMPICompilers() and 'with-mpi-dir' in self.argDB and os.path.isdir(os.path.join(self.argDB['with-mpi-dir'], 'bin')):
-      self.usedMPICompilers = 1
+    elif self.usedMPICompilers and 'with-mpi-dir' in self.argDB and os.path.isdir(os.path.join(self.argDB['with-mpi-dir'], 'bin')):
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpiicpc')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpicxx')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'hcp')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpic++')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpiCC')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpCC_r')
-      self.usedMPICompilers = 0
       raise RuntimeError('bin/<mpiCC,mpicxx,hcp,mpCC_r> you provided with -with-mpi-dir='+self.argDB['with-mpi-dir']+' cannot be found or does not work. See https://www.mcs.anl.gov/petsc/documentation/faq.html#mpi-compilers')
     else:
-      if self.useMPICompilers():
-        self.usedMPICompilers = 1
+      if self.usedMPICompilers:
+        # TODO: Should only look for the MPI CXX compiler related to the found MPI C compiler
         cray = os.getenv('CRAYPE_DIR')
         if cray:
           cross_CC = self.crayCrossCompiler('CC')
@@ -811,34 +1020,34 @@ class Configure(config.base.Configure):
         yield 'mpic++'
         yield 'mpCC'
         yield 'mpxlC'
-        self.usedMPICompilers = 0
-      #attempt to match c++ compiler with c compiler
-      if self.CC.find('win32fe cl') >= 0:
-        yield 'win32fe cl'
-      elif self.CC.find('win32fe icl') >= 0:
-        yield 'win32fe icl'
-      elif self.CC == 'gcc':
+      else:
+        #attempt to match c++ compiler with c compiler
+        if self.CC.find('win32fe cl') >= 0:
+          yield 'win32fe cl'
+        elif self.CC.find('win32fe icl') >= 0:
+          yield 'win32fe icl'
+        elif self.CC == 'gcc':
+          yield 'g++'
+        elif self.CC == 'clang':
+          yield 'clang++'
+        elif self.CC == 'icc':
+          yield 'icpc'
+        elif self.CC == 'xlc':
+          yield 'xlC'
         yield 'g++'
-      elif self.CC == 'clang':
         yield 'clang++'
-      elif self.CC == 'icc':
+        yield 'c++'
         yield 'icpc'
-      elif self.CC == 'xlc':
+        yield 'CC'
+        yield 'cxx'
+        yield 'cc++'
         yield 'xlC'
-      yield 'g++'
-      yield 'clang++'
-      yield 'c++'
-      yield 'icpc'
-      yield 'CC'
-      yield 'cxx'
-      yield 'cc++'
-      yield 'xlC'
-      yield 'ccpc'
-      yield 'win32fe icl'
-      yield 'win32fe cl'
-      yield 'pgCC'
-      yield 'CC'
-      yield 'win32fe bcc32'
+        yield 'ccpc'
+        yield 'win32fe icl'
+        yield 'win32fe cl'
+        yield 'pgCC'
+        yield 'CC'
+        yield 'win32fe bcc32'
     return
 
   def checkCxxCompiler(self):
@@ -925,20 +1134,18 @@ class Configure(config.base.Configure):
         yield self.argDB['FC']
       yield self.argDB['FC']
       raise RuntimeError('Fortran compiler you provided with -FC='+self.argDB['FC']+' cannot be found or does not work.'+'\n'+self.mesg)
-    elif self.useMPICompilers() and 'with-mpi-dir' in self.argDB and os.path.isdir(os.path.join(self.argDB['with-mpi-dir'], 'bin')):
-      self.usedMPICompilers = 1
+    elif self.usedMPICompilers and 'with-mpi-dir' in self.argDB and os.path.isdir(os.path.join(self.argDB['with-mpi-dir'], 'bin')):
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpiifort')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpif90')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpf90')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpxlf95_r')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpxlf90_r')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpxlf_r')
-      self.usedMPICompilers = 0
       if os.path.isfile(os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpif90')):
         raise RuntimeError('bin/mpif90 you provided with --with-mpi-dir='+self.argDB['with-mpi-dir']+' cannot be found or does not work.\nRun with --with-fc=0 if you wish to use this MPI and disable Fortran. See https://www.mcs.anl.gov/petsc/documentation/faq.html#mpi-compilers')
     else:
-      if self.useMPICompilers():
-        self.usedMPICompilers = 1
+      if self.usedMPICompilers:
+        # TODO: Should only look for the MPI Fortran compiler related to the found MPI C compiler
         cray = os.getenv('CRAYPE_DIR')
         if cray:
           cross_fc = self.crayCrossCompiler('ftn')
@@ -952,35 +1159,35 @@ class Configure(config.base.Configure):
         yield 'mpxlf_r'
         yield 'mpxlf'
         yield 'mpf90'
-        self.usedMPICompilers = 0
-      #attempt to match fortran compiler with c compiler
-      if self.CC == 'gcc':
+      else:
+        #attempt to match fortran compiler with c compiler
+        if self.CC == 'gcc':
+          yield 'gfortran'
+        elif self.CC == 'clang':
+          yield 'gfortran'
+        elif self.CC == 'icc':
+          yield 'ifort'
+        elif self.CC == 'xlc':
+          yield 'xlf90'
+          yield 'xlf'
+        elif self.CC.find('win32fe cl') >= 0:
+          yield 'win32fe f90'
+          yield 'win32fe ifc'
+        elif self.CC.find('win32fe icl') >= 0:
+          yield 'win32fe ifc'
         yield 'gfortran'
-      elif self.CC == 'clang':
-        yield 'gfortran'
-      elif self.CC == 'icc':
-        yield 'ifort'
-      elif self.CC == 'xlc':
+        yield 'g95'
         yield 'xlf90'
         yield 'xlf'
-      elif self.CC.find('win32fe cl') >= 0:
-        yield 'win32fe f90'
-        yield 'win32fe ifc'
-      elif self.CC.find('win32fe icl') >= 0:
-        yield 'win32fe ifc'
-      yield 'gfortran'
-      yield 'g95'
-      yield 'xlf90'
-      yield 'xlf'
-      yield 'f90'
-      yield 'lf95'
-      yield 'win32fe ifort'
-      yield 'win32fe ifl'
-      yield 'ifort'
-      yield 'ifc'
-      yield 'pgf90'
-      yield 'f95'
-      yield 'f90'
+        yield 'f90'
+        yield 'lf95'
+        yield 'win32fe ifort'
+        yield 'win32fe ifl'
+        yield 'ifort'
+        yield 'ifc'
+        yield 'pgf90'
+        yield 'f95'
+        yield 'f90'
     return
 
   def checkFortranCompiler(self):
@@ -1078,6 +1285,7 @@ class Configure(config.base.Configure):
     setattr(self, flagsArg, oldFlags+' '+flag)
     (output, error, status) = self.outputCompile(includes, body)
     output += error
+    self.logPrint('Output from compiling with '+oldFlags+' '+flag+'\n'+output)
     valid   = 1
     setattr(self, flagsArg, oldFlags)
     # Please comment each entry and provide an example line
@@ -1108,17 +1316,28 @@ class Configure(config.base.Configure):
     raise RuntimeError('Bad compiler flag: '+flag)
 
   def generatePICGuesses(self):
-    yield ''
     if self.language[-1] == 'CUDA':
       yield '-Xcompiler -fPIC'
-    elif config.setCompilers.Configure.isGNU(self.getCompiler(), self.log):
-      yield '-fPIC'
+      return
+    if config.setCompilers.Configure.isGNU(self.getCompiler(), self.log):
+      PICFlags = ['-fPIC']
     else:
-      yield '-PIC'
-      yield '-fPIC'
-      yield '-KPIC'
-      yield '-qpic'
-    return
+      PICFlags = ['-PIC','-fPIC','-KPIC','-qpic']
+    try:
+      output = self.executeShellCommand(self.getCompiler() + ' -show', log = self.log)[0]
+    except:
+      self.logPrint('Skipping checking MPI compiler command for PIC flag since MPI compiler -show causes an exception so is likely not an MPI compiler')
+      output = ''
+    output = output + ' ' + getattr(self, self.getCompilerFlagsArg(1)) + ' '
+    # Try without specific PIC flag only if the MPI compiler or user compiler flag already provides a PIC option
+    for i in PICFlags:
+      if output.find(' '+i+' ') > -1:
+        self.logPrint('Trying no specific compiler flag for PIC code since MPI compiler or current flags seem to provide such a flag with '+i)
+        yield ''
+        break
+    for i in PICFlags:
+      yield i
+    yield ''
 
   def checkPIC(self):
     '''Determine the PIC option for each compiler'''
@@ -1141,9 +1360,13 @@ class Configure(config.base.Configure):
       languages.append('FC')
     if hasattr(self, 'CUDAC'):
       languages.append('CUDA')
+    if hasattr(self, 'HIPC'):
+      languages.append('HIP')
+    if hasattr(self, 'SYCLCXX'):
+      languages.append('SYCL')
     for language in languages:
       self.pushLanguage(language)
-      if language in ['C','Cxx','CUDA']:
+      if language in ['C','Cxx','CUDA','HIP','SYCL']:
         includeLine = _picTestIncludes()
       else:
         includeLine = '      function foo(a)\n      real:: a,x,bar\n      common /xx/ x\n      x=a\n      foo = bar(x)\n      end\n'
@@ -1278,6 +1501,7 @@ class Configure(config.base.Configure):
     arcUnix    = os.path.join(self.tmpDir, 'libconf1.a')
     arcWindows = os.path.join(self.tmpDir, 'libconf1.lib')
     def checkArchive(command, status, output, error):
+      if error in ["xiar: executing 'ar'\n"]: error = None
       if error or status:
         self.logError('archiver', status, output, error)
         if os.path.isfile(objName):
@@ -1334,6 +1558,35 @@ class Configure(config.base.Configure):
     self.LIBS = oldLibs
     self.popLanguage()
     return
+
+  def checkArchiverRecipeArgfile(self):
+    '''Checks if AR handles @ notation'''
+    def checkArchiverArgfile(command, status, output, error):
+      if error or status:
+        self.logError('archiver', status, output, error)
+        if os.path.isfile(objName):
+          os.remove(objName)
+        raise RuntimeError('ArchiverArgfile error')
+      return
+    oldDir = os.getcwd()
+    os.chdir(self.tmpDir)
+    try:
+      objName = 'checkRecipeArgfile.o'
+      obj = open(objName, 'a').close()
+      argsName = 'checkRecipeArgfile.args'
+      args = open(argsName, 'a')
+      args.write(objName)
+      args.close()
+      archiveName = 'checkRecipeArgfile.'+self.AR_LIB_SUFFIX
+      (output, error, status) = config.base.Configure.executeShellCommand(self.AR+' '+self.AR_FLAGS+' '+archiveName+' @'+argsName,checkCommand = checkArchiverArgfile, log = self.log)
+      os.remove(objName)
+      os.remove(argsName)
+      os.remove(archiveName)
+      if not status:
+        self.framework.addMakeMacro('AR_ARGFILE','yes')
+    except RuntimeError:
+      pass
+    os.chdir(oldDir)
 
   def setStaticLinker(self):
     language = self.language[-1]
@@ -1444,6 +1697,7 @@ class Configure(config.base.Configure):
     if status:
       valid = 0
       self.logPrint('Rejecting linker flag '+flag+' due to nonzero status from link')
+    output = self.filterLinkOutput(output)
     if self.containsInvalidFlag(output):
       valid = 0
       self.logPrint('Rejecting '+self.language[-1]+' linker flag '+flag+' due to \n'+output)
@@ -1462,7 +1716,7 @@ class Configure(config.base.Configure):
 
   def checkLinkerMac(self):
     '''Tests some Apple Mac specific linker flags'''
-    langMap = {'C':'CC','FC':'FC','Cxx':'CXX','CUDA':'CUDAC'}
+    langMap = {'C':'CC','FC':'FC','Cxx':'CXX','CUDA':'CUDAC','HIP':'HIPC','SYCL':'SYCLCXX'}
     languages = ['C']
     if hasattr(self, 'CXX'):
       languages.append('Cxx')
@@ -1470,7 +1724,7 @@ class Configure(config.base.Configure):
       languages.append('FC')
     for language in languages:
       self.pushLanguage(language)
-      for testFlag in ['-Wl,-multiply_defined,suppress', '-Wl,-multiply_defined -Wl,suppress', '-Wl,-commons,use_dylibs', '-Wl,-search_paths_first', '-Wl,-no_compact_unwind']:
+      for testFlag in ['-Wl,-bind_at_load','-Wl,-multiply_defined,suppress', '-Wl,-multiply_defined -Wl,suppress', '-Wl,-commons,use_dylibs', '-Wl,-search_paths_first', '-Wl,-no_compact_unwind']:
         if self.checkLinkerFlag(testFlag):
           # expand to CC_LINKER_FLAGS or CXX_LINKER_FLAGS or FC_LINKER_FLAGS
           linker_flag_var = langMap[language]+'_LINKER_FLAGS'
@@ -1482,7 +1736,7 @@ class Configure(config.base.Configure):
 
   def checkLinkerWindows(self):
     '''Turns off linker warning about unknown .o files extension'''
-    langMap = {'C':'CC','FC':'FC','Cxx':'CXX','CUDA':'CUDAC'}
+    langMap = {'C':'CC','FC':'FC','Cxx':'CXX','CUDA':'CUDAC','HIP':'HIPC','SYCL':'SYCLCXX'}
     languages = ['C']
     if hasattr(self, 'CXX'):
       languages.append('Cxx')
@@ -1511,6 +1765,10 @@ class Configure(config.base.Configure):
       languages.append('FC')
     if hasattr(self, 'CUDAC'):
       languages.append('CUDA')
+    if hasattr(self, 'HIPC'):
+      languages.append('HIP')
+    if hasattr(self, 'SYCLCXX'):
+      languages.append('SYCL')
     for language in languages:
       flag = '-L'
       self.pushLanguage(language)
@@ -1643,6 +1901,18 @@ if (dlclose(handle)) {
     if hasattr(self, 'CUDAPP'):
       self.addSubstitution('CUDAPP', self.CUDAPP)
       self.addSubstitution('CUDAPPFLAGS', self.CUDAPPFLAGS)
+    if hasattr(self, 'HIPC'):
+      self.addSubstitution('HIPC', self.HIPC)
+      self.addSubstitution('HIPFLAGS', self.HIPFLAGS)
+    if hasattr(self, 'HIPPP'):
+      self.addSubstitution('HIPPP', self.HIPPP)
+      self.addSubstitution('HIPPPFLAGS', self.HIPPPFLAGS)
+    if hasattr(self, 'SYCLCXX'):
+      self.addSubstitution('SYCLCXX', self.SYCLCXX)
+      self.addSubstitution('SYCLCXXFLAGS', self.SYCLCXXFLAGS)
+    if hasattr(self, 'SYCLPP'):
+      self.addSubstitution('SYCLPP', self.SYCLPP)
+      self.addSubstitution('SYCLPPFLAGS', self.SYCLPPFLAGS)
     if hasattr(self, 'CXX'):
       self.addSubstitution('CXX', self.CXX)
       self.addSubstitution('CXX_CXXFLAGS', self.CXX_CXXFLAGS)
@@ -1717,13 +1987,6 @@ if (dlclose(handle)) {
         self.logPrint('Adding to LD_LIBRARY_PATH '+libdir)
     return
 
-  def printEnvVariables(self):
-    buf = '**** printenv ****'
-    for key,val in os.environ.items():
-      buf += '\n'+str(key)+'='+str(val)
-    self.logPrint(buf)
-    return
-
   def resetEnvCompilers(self):
     ignoreEnvCompilers = ['CC','CXX','FC','F77','F90']
     for envVal in ignoreEnvCompilers:
@@ -1740,7 +2003,7 @@ if (dlclose(handle)) {
           self.logPrintBox('***** WARNING: '+envVal+' (set to '+os.environ[envVal]+') found in environment variables - ignoring \n use ./configure '+envVal+'=$'+envVal+' if you really want to use that value ******')
           del os.environ[envVal]
 
-    ignoreEnv = ['CFLAGS','CXXFLAGS','FCFLAGS','FFLAGS','F90FLAGS','CPP','CPPFLAGS','CXXPP','CXXPPFLAGS','LDFLAGS','LIBS','MPI_DIR','RM','MAKEFLAGS','AR']
+    ignoreEnv = ['CFLAGS','CXXFLAGS','FCFLAGS','FFLAGS','F90FLAGS','CPP','CPPFLAGS','CXXPP','CXXPPFLAGS','LDFLAGS','LIBS','MPI_DIR','RM','MAKEFLAGS','AR','RANLIB']
     for envVal in ignoreEnv:
       if envVal in os.environ:
         if envVal in self.framework.clArgDB:
@@ -1780,7 +2043,6 @@ if (dlclose(handle)) {
 
   def configure(self):
     self.mainLanguage = self.languages.clanguage
-    self.executeTest(self.printEnvVariables)
     self.executeTest(self.resetEnvCompilers)
     self.executeTest(self.checkEnvCompilers)
     self.executeTest(self.checkMPICompilerOverride)
@@ -1790,6 +2052,10 @@ if (dlclose(handle)) {
     self.executeTest(self.checkCPreprocessor)
     self.executeTest(self.checkCUDACompiler)
     self.executeTest(self.checkCUDAPreprocessor)
+    self.executeTest(self.checkHIPCompiler)
+    self.executeTest(self.checkHIPPreprocessor)
+    self.executeTest(self.checkSYCLCompiler)
+    self.executeTest(self.checkSYCLPreprocessor)
     self.executeTest(self.checkCxxCompiler)
     if hasattr(self, 'CXX'):
       self.executeTest(self.checkCxxPreprocessor)
@@ -1799,6 +2065,7 @@ if (dlclose(handle)) {
       self.executeTest(self.checkFortranComments)
     self.executeTest(self.checkLargeFileIO)
     self.executeTest(self.checkArchiver)
+    self.executeTest(self.checkArchiverRecipeArgfile)
     self.executeTest(self.checkSharedLinker)
     if Configure.isDarwin(self.log):
       self.executeTest(self.checkLinkerMac)

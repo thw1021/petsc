@@ -33,7 +33,7 @@ static PetscErrorCode VecLoadIfExists_Private(Vec b,PetscViewer fd,PetscBool *ha
 #endif
   } else {
     PetscErrorCode ierrp;
-    ierr  = PetscPushErrorHandler(PetscIgnoreErrorHandler,NULL);CHKERRQ(ierr);
+    ierr  = PetscPushErrorHandler(PetscReturnErrorHandler,NULL);CHKERRQ(ierr);
     ierrp = VecLoad(b,fd);
     ierr  = PetscPopErrorHandler();CHKERRQ(ierr);
     *has  = ierrp ? PETSC_FALSE : PETSC_TRUE;
@@ -62,17 +62,17 @@ int main(int argc,char **args)
   PetscMPIInt    rank,size;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   /*
      Determine files from which we read the linear system
      (matrix, right-hand-side and initial guess vector).
   */
-  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL,NULL,"-f_x0",file_x0,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL,NULL,"-A_name",A_name,128,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL,NULL,"-b_name",b_name,128,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL,NULL,"-x0_name",x0_name,128,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,sizeof(file),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-f_x0",file_x0,sizeof(file_x0),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-A_name",A_name,sizeof(A_name),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-b_name",b_name,sizeof(b_name),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-x0_name",x0_name,sizeof(x0_name),NULL);CHKERRQ(ierr);
   /*
      Decide whether to solve the original system (-solve_normal 0)
      or the normal equation (-solve_normal 1).
@@ -285,8 +285,6 @@ int main(int argc,char **args)
   return ierr;
 }
 
-
-
 /*TEST
 
    test:
@@ -364,7 +362,6 @@ int main(int argc,char **args)
       args: -f ${DATAFILESPATH}/matrices/rectangular_ultrasound_4889x841
       args: -ksp_converged_reason -ksp_rtol 1e-2 -ksp_max_it 100
       args: -solve_normal 0 -ksp_type cgls
-
 
    # Load a matrix, RHS and solution from HDF5 (Version 7.3 MAT-File). Test immediate convergence.
    testset:

@@ -17,7 +17,6 @@ typedef struct {
   PetscInt hopt_resets;      /* number of times we've reset the hopt estimate */
 } DIFFPAR_MORE;
 
-
 PETSC_INTERN PetscErrorCode SNESDefaultMatrixFreeSetParameters2(Mat,double,double,double);
 PETSC_INTERN PetscErrorCode SNESUnSetMatrixFreeParameter(SNES snes);
 PETSC_INTERN PetscErrorCode SNESNoise_dnest_(PetscInt*,PetscScalar*,PetscScalar*,PetscScalar*,PetscScalar*,PetscScalar*,PetscInt*,PetscScalar*);
@@ -54,7 +53,7 @@ PetscErrorCode SNESDiffParameterCreate_More(SNES snes,Vec x,void **outneP)
   ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
 
   /* Open output file */
-  ierr = PetscOptionsGetString(((PetscObject)snes)->options,((PetscObject)snes)->prefix,"-snes_mf_noise_file",noise_file,PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(((PetscObject)snes)->options,((PetscObject)snes)->prefix,"-snes_mf_noise_file",noise_file,sizeof(noise_file),&flg);CHKERRQ(ierr);
   if (flg) neP->fp = fopen(noise_file,"w");
   else     neP->fp = fopen("noise.out","w");
   if (!neP->fp) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open file");

@@ -4,11 +4,11 @@
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
 #define dmplexcreateboxmesh_  DMPLEXCREATEBOXMESH
 #define dmplexcreatefromfile_ DMPLEXCREATEFROMFILE
-#define petscpartitionerviewfromoptions_ PETSCPARTITIONERVIEWFROMOPTIONS
+#define dmplexextrude_        DMPLEXEXTRUDE
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
 #define dmplexcreateboxmesh_  dmplexcreateboxmesh
 #define dmplexcreatefromfile_ dmplexcreatefromfile
-#define petscpartitionerviewfromoptions_ petscpartitionerviewfromoptions
+#define dmplexextrude_        dmplexextrude
 #endif
 
 /* Definitions of Fortran Wrapper routines */
@@ -31,12 +31,8 @@ PETSC_EXTERN void dmplexcreatefromfile_(MPI_Fint *comm, char* name, PetscBool *i
   FREECHAR(name, filename);
 }
 
-PETSC_EXTERN void petscpartitionerviewfromoptions_(PetscPartitioner *part,PetscObject obj,char* type,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
+PETSC_EXTERN void dmplexextrude_(DM *idm, PetscInt *layers, PetscReal *height, PetscBool *orderHeight, PetscReal extNormal[], PetscBool *interpolate, DM *dm, int *ierr)
 {
-  char *t;
-
-  FIXCHAR(type,len,t);
-  *ierr = PetscPartitionerViewFromOptions(*part,obj,t);if (*ierr) return;
-  FREECHAR(type,t);
+  CHKFORTRANNULLREAL(extNormal);
+  *ierr = DMPlexExtrude(*idm,*layers,*height,*orderHeight,extNormal,*interpolate,dm);
 }
-

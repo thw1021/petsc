@@ -53,13 +53,11 @@
       call PetscFinalize(ierr)
       end
 
-
-
 !/*TEST
 !
 !   test:
 !     output_file: output/ex4_1.out
-!     
+!
 !   test:
 !      suffix: 2
 !      nsize: 2

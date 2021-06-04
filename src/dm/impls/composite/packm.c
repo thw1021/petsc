@@ -85,7 +85,7 @@ static PetscErrorCode DMCreateMatrix_Composite_AIJ(DM dm,Mat *J)
     PetscFunctionReturn(0);
   }
 
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank);CHKERRMPI(ierr);
   ierr = MatPreallocateInitialize(PetscObjectComm((PetscObject)dm),m,m,dnz,onz);CHKERRQ(ierr);
   /* loop over packed objects, handling one at at time */
   next = com->next;
@@ -102,8 +102,8 @@ static PetscErrorCode DMCreateMatrix_Composite_AIJ(DM dm,Mat *J)
     maxnc = 0;
     for (i=0; i<mA; i++) {
       ierr  = MatGetRow(Atmp,rstart+i,&nc,NULL,NULL);CHKERRQ(ierr);
-      ierr  = MatRestoreRow(Atmp,rstart+i,NULL,NULL,NULL);CHKERRQ(ierr);
       maxnc = PetscMax(nc,maxnc);
+      ierr  = MatRestoreRow(Atmp,rstart+i,&nc,NULL,NULL);CHKERRQ(ierr);
     }
     ierr = PetscMalloc1(maxnc,&ccols);CHKERRQ(ierr);
     for (i=0; i<mA; i++) {
@@ -180,6 +180,7 @@ PetscErrorCode DMCreateMatrix_Composite(DM dm,Mat *J)
   ISLocalToGlobalMapping ltogmap;
 
   PetscFunctionBegin;
+  ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = PetscStrcmp(dm->mattype,MATNEST,&usenest);CHKERRQ(ierr);
   if (usenest) {

@@ -10,13 +10,13 @@ int main(int argc,char **args)
   PetscMPIInt       size,rank;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
 
   nsubcomm = size;
   ierr = PetscOptionsGetInt(NULL,NULL,"-nsubcomm",&nsubcomm,NULL);CHKERRQ(ierr);
 
-  ierr = MatCreate(PETSC_COMM_WORLD, &A); CHKERRQ(ierr);
+  ierr = MatCreate(PETSC_COMM_WORLD, &A);CHKERRQ(ierr);
   ierr = MatSetSizes(A, m, n, PETSC_DETERMINE, PETSC_DETERMINE);CHKERRQ(ierr);
   ierr = MatSetType(A, MATAIJ);CHKERRQ(ierr);
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
@@ -24,7 +24,7 @@ int main(int argc,char **args)
 
   if (!rank) {
     for (i=0;i<size*PetscMin(m,n);i++) {
-      ierr = MatSetValue(A, i, i, 1.0, INSERT_VALUES); CHKERRQ(ierr);
+      ierr = MatSetValue(A, i, i, 1.0, INSERT_VALUES);CHKERRQ(ierr);
     }
   }
   ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -47,7 +47,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

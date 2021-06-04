@@ -5,7 +5,7 @@
 #include <petsc/private/snesimpl.h> /*I "petscsnes.h" I*/
 #include <petscblaslapack.h>
 
-const char *const        SNESCompositeTypes[]   = {"ADDITIVE","MULTIPLICATIVE","ADDITIVEOPTIMAL","SNESCompositeType","SNES_COMPOSITE",0};
+const char *const        SNESCompositeTypes[]   = {"ADDITIVE","MULTIPLICATIVE","ADDITIVEOPTIMAL","SNESCompositeType","SNES_COMPOSITE",NULL};
 
 typedef struct _SNES_CompositeLink *SNES_CompositeLink;
 struct _SNES_CompositeLink {
@@ -272,9 +272,9 @@ static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes,Vec X,Vec B,V
   jac->rcond = -1.;
   ierr          = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
 #if defined(PETSC_USE_COMPLEX)
-  PetscStackCall("LAPACKgelss",LAPACKgelss_(&jac->n,&jac->n,&jac->nrhs,jac->h,&jac->lda,jac->beta,&jac->lda,jac->s,&jac->rcond,&jac->rank,jac->work,&jac->lwork,jac->rwork,&jac->info));
+  PetscStackCallBLAS("LAPACKgelss",LAPACKgelss_(&jac->n,&jac->n,&jac->nrhs,jac->h,&jac->lda,jac->beta,&jac->lda,jac->s,&jac->rcond,&jac->rank,jac->work,&jac->lwork,jac->rwork,&jac->info));
 #else
-  PetscStackCall("LAPACKgelss",LAPACKgelss_(&jac->n,&jac->n,&jac->nrhs,jac->h,&jac->lda,jac->beta,&jac->lda,jac->s,&jac->rcond,&jac->rank,jac->work,&jac->lwork,&jac->info));
+  PetscStackCallBLAS("LAPACKgelss",LAPACKgelss_(&jac->n,&jac->n,&jac->nrhs,jac->h,&jac->lda,jac->beta,&jac->lda,jac->s,&jac->rcond,&jac->rank,jac->work,&jac->lwork,&jac->info));
 #endif
   ierr = PetscFPTrapPop();CHKERRQ(ierr);
   if (jac->info < 0) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"Bad argument to GELSS");
@@ -518,7 +518,7 @@ static PetscErrorCode  SNESCompositeAddSNES_Composite(SNES snes,SNESType type)
 
   PetscFunctionBegin;
   ierr        = PetscNewLog(snes,&ilink);CHKERRQ(ierr);
-  ilink->next = 0;
+  ilink->next = NULL;
   ierr        = SNESCreate(PetscObjectComm((PetscObject)snes),&ilink->snes);CHKERRQ(ierr);
   ierr        = PetscLogObjectParent((PetscObject)snes,(PetscObject)ilink->snes);CHKERRQ(ierr);
   ierr        = SNESGetDM(snes,&dm);CHKERRQ(ierr);
@@ -881,7 +881,7 @@ PETSC_EXTERN PetscErrorCode SNESCreate_Composite(SNES snes)
   jac->Xes   = NULL;
   jac->fnorms = NULL;
   jac->nsnes = 0;
-  jac->head  = 0;
+  jac->head  = NULL;
   jac->stol  = 0.1;
   jac->rtol  = 1.1;
 

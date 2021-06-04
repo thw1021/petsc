@@ -7,7 +7,7 @@
 #endif
 
 /*@C
-   PetscIgnoreErrorHandler - Ignores the error, allows program to continue as if error did not occure
+   PetscIgnoreErrorHandler - Deprecated, use PetscReturnErrorHandler(). Ignores the error, allows program to continue as if error did not occure
 
    Not Collective
 
@@ -28,14 +28,7 @@
    the calling sequence
 $     SETERRQ(comm,number,p,mess)
 
-   Notes for experienced users:
-   Use PetscPushErrorHandler() to set the desired error handler.  The
-   currently available PETSc error handlers include PetscTraceBackErrorHandler(),
-   PetscAttachDebuggerErrorHandler(), PetscAbortErrorHandler(), and PetscMPIAbortErrorHandler()
-
-
-.seealso:  PetscPushErrorHandler(), PetscAttachDebuggerErrorHandler(),
-          PetscAbortErrorHandler(), PetscTraceBackErrorHandler()
+.seealso:  PetscReturnErrorHandler()
  @*/
 PetscErrorCode  PetscIgnoreErrorHandler(MPI_Comm comm,int line,const char *fun,const char *file,PetscErrorCode n,PetscErrorType p,const char *mess,void *ctx)
 {
@@ -50,7 +43,7 @@ static PetscBool PetscErrorPrintfInitializeCalled = PETSC_FALSE;
 static char      version[256];
 
 /*
-   Initializes arch, hostname, username,date so that system calls do NOT need
+   Initializes arch, hostname, username, date so that system calls do NOT need
    to be made during the error handler.
 */
 PetscErrorCode  PetscErrorPrintfInitialize(void)
@@ -62,7 +55,7 @@ PetscErrorCode  PetscErrorPrintfInitialize(void)
   ierr = PetscGetArchType(arch,sizeof(arch));CHKERRQ(ierr);
   ierr = PetscGetHostName(hostname,sizeof(hostname));CHKERRQ(ierr);
   ierr = PetscGetUserName(username,sizeof(username));CHKERRQ(ierr);
-  ierr = PetscGetProgramName(pname,PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  ierr = PetscGetProgramName(pname,sizeof(pname));CHKERRQ(ierr);
   ierr = PetscGetDate(date,sizeof(date));CHKERRQ(ierr);
   ierr = PetscGetVersion(version,sizeof(version));CHKERRQ(ierr);
 
@@ -116,10 +109,16 @@ PetscErrorCode  PetscErrorPrintfDefault(const char format[],...)
   return 0;
 }
 
+/*
+   On some systems when the stderr is nested through several levels of shell script
+   before being passed to a file the isatty() falsely returns true resulting in
+   the screen highlight variables being passed through the test harness. Therefore
+   simply do not highlight when the PETSC_STDERR is PETSC_STDOUT.
+*/
 static void PetscErrorPrintfHilight(void)
 {
 #if defined(PETSC_HAVE_UNISTD_H) && defined(PETSC_USE_ISATTY)
-  if (PetscErrorPrintf == PetscErrorPrintfDefault) {
+  if (PetscErrorPrintf == PetscErrorPrintfDefault && PETSC_STDERR != PETSC_STDOUT) {
     if (isatty(fileno(PETSC_STDERR))) fprintf(PETSC_STDERR,"\033[1;31m");
   }
 #endif
@@ -128,7 +127,7 @@ static void PetscErrorPrintfHilight(void)
 static void PetscErrorPrintfNormal(void)
 {
 #if defined(PETSC_HAVE_UNISTD_H) && defined(PETSC_USE_ISATTY)
-  if (PetscErrorPrintf == PetscErrorPrintfDefault) {
+  if (PetscErrorPrintf == PetscErrorPrintfDefault && PETSC_STDERR != PETSC_STDOUT) {
     if (isatty(fileno(PETSC_STDERR))) fprintf(PETSC_STDERR,"\033[0;39m\033[0;49m");
   }
 #endif
@@ -152,7 +151,9 @@ PETSC_EXTERN PetscErrorCode  PetscOptionsViewError(void);
 .  p - PETSC_ERROR_INITIAL if this is the first call the error handler, otherwise PETSC_ERROR_REPEAT
 -  ctx - error handler context
 
-   Level: developer
+  Options Database:
++  -error_output_stdout - output the error messages to stdout instead of the default stderr
+-  -error_output_none - do not output the error messages
 
    Notes:
    Most users need not directly employ this routine and the other error
@@ -161,13 +162,12 @@ PETSC_EXTERN PetscErrorCode  PetscOptionsViewError(void);
 $     SETERRQ(comm,number,n,mess)
 
    Notes for experienced users:
-   Use PetscPushErrorHandler() to set the desired error handler.  The
-   currently available PETSc error handlers include PetscTraceBackErrorHandler(),
-   PetscAttachDebuggerErrorHandler(), PetscAbortErrorHandler(), and PetscMPIAbortErrorHandler()
+   Use PetscPushErrorHandler() to set the desired error handler.
 
+   Level: developer
 
-.seealso:  PetscPushErrorHandler(), PetscAttachDebuggerErrorHandler(),
-          PetscAbortErrorHandler()
+.seealso: PetscError(), PetscPushErrorHandler(), PetscPopErrorHandler(), PetscAttachDebuggerErrorHandler(),
+          PetscAbortErrorHandler(), PetscMPIAbortErrorHandler(), PetscReturnErrorHandler(), PetscEmacsClientErrorHandler()
  @*/
 PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fun,const char *file,PetscErrorCode n,PetscErrorType p,const char *mess,void *ctx)
 {
@@ -182,7 +182,7 @@ PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fu
     PetscBool  ismain;
     static int cnt = 1;
 
-    if (p == PETSC_ERROR_INITIAL) {
+    if (cnt == 1) {
       PetscErrorPrintfHilight();
       (*PetscErrorPrintf)("--------------------- Error Message --------------------------------------------------------------\n");
       PetscErrorPrintfNormal();
@@ -213,9 +213,12 @@ PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fu
       (*PetscErrorPrintf)("Configure options %s\n",petscconfigureoptions);
     }
     /* print line of stack trace */
-    (*PetscErrorPrintf)("#%d %s() line %d in %s\n",cnt++,fun,line,file);
+    (*PetscErrorPrintf)("#%d %s() at %s:%d\n",cnt++,fun,file,line);
     PetscStrncmp(fun,"main",4,&ismain);
     if (ismain) {
+      if ((n <= PETSC_ERR_MIN_VALUE) || (n >= PETSC_ERR_MAX_VALUE)) {
+        (*PetscErrorPrintf)("Reached the main program with an out-of-range error code %d. This should never happen\n",n);
+      }
       PetscOptionsViewError();
       PetscErrorPrintfHilight();
       (*PetscErrorPrintf)("----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------\n");
@@ -224,7 +227,7 @@ PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fu
   } else {
     /* do not print error messages since process 0 will print them, sleep before aborting so will not accidently kill process 0*/
     PetscSleep(10.0);
-    abort();
+    exit(0);
   }
   PetscFunctionReturn(n);
 }

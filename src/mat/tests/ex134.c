@@ -45,7 +45,7 @@ PetscErrorCode Assemble(MPI_Comm comm,PetscInt bs,MatType mtype)
   ierr = MatView(A,viewer);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_MUMPS) || defined(PETSC_HAVE_MKL_CPARDISO)
   ierr = PetscStrcmp(mtype,MATMPISBAIJ,&issbaij);CHKERRQ(ierr);
-  if(!issbaij) {
+  if (!issbaij) {
     ierr = MatShift(A,10);CHKERRQ(ierr);
   }
   ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rdm);CHKERRQ(ierr);
@@ -102,7 +102,7 @@ int main(int argc,char *argv[])
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   if (size != 2) SETERRQ(comm,PETSC_ERR_USER,"This example must be run with exactly two processes");
   ierr = Assemble(comm,2,MATMPIBAIJ);CHKERRQ(ierr);
   ierr = Assemble(comm,2,MATMPISBAIJ);CHKERRQ(ierr);
@@ -112,12 +112,11 @@ int main(int argc,char *argv[])
   return ierr;
 }
 
-
 /*TEST
 
    test:
       nsize: 2
-      args: -mat_ignore_lower_triangular -vecscatter_type sf
+      args: -mat_ignore_lower_triangular
       filter: sed -e "s~mem [0-9]*~mem~g"
 
 TEST*/

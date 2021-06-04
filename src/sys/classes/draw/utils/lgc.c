@@ -55,7 +55,6 @@ PetscErrorCode  PetscDrawLGGetDraw(PetscDrawLG lg,PetscDraw *draw)
   PetscFunctionReturn(0);
 }
 
-
 /*@
    PetscDrawLGSPDraw - Redraws a line graph.
 
@@ -83,10 +82,10 @@ PetscErrorCode  PetscDrawLGSPDraw(PetscDrawLG lg,PetscDrawSP spin)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,2);
+  PetscValidHeaderSpecific(sp,PETSC_DRAWLG_CLASSID,2);
   ierr = PetscDrawIsNull(lg->win,&isnull);CHKERRQ(ierr);
   if (isnull) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)lg),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)lg),&rank);CHKERRMPI(ierr);
 
   draw = lg->win;
   ierr = PetscDrawCheckResizedWindow(draw);CHKERRQ(ierr);
@@ -124,7 +123,6 @@ PetscErrorCode  PetscDrawLGSPDraw(PetscDrawLG lg,PetscDrawSP spin)
   ierr = PetscDrawPause(draw);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*@
     PetscDrawLGCreate - Creates a line graph data structure.
@@ -320,7 +318,6 @@ PetscErrorCode  PetscDrawLGSetDimension(PetscDrawLG lg,PetscInt dim)
   PetscFunctionReturn(0);
 }
 
-
 /*@
    PetscDrawLGSetLimits - Sets the axis limits for a line graph. If more
    points are added after this call, the limits will be adjusted to
@@ -461,7 +458,7 @@ PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
   PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
   ierr = PetscDrawIsNull(lg->win,&isnull);CHKERRQ(ierr);
   if (isnull) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)lg),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)lg),&rank);CHKERRMPI(ierr);
 
   draw = lg->win;
   ierr = PetscDrawCheckResizedWindow(draw);CHKERRQ(ierr);

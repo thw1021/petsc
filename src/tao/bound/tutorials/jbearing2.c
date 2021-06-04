@@ -35,8 +35,6 @@ The command line options are:\n\
    Processors: n
 T*/
 
-
-
 /*
    User-defined application context - contains data needed by the
    application-provided call-back routines, FormFunctionGradient(),
@@ -62,7 +60,7 @@ static PetscErrorCode ComputeB(AppCtx*);
 static PetscErrorCode Monitor(Tao, void*);
 static PetscErrorCode ConvergenceTest(Tao, void*);
 
-int main( int argc, char **argv )
+int main(int argc, char **argv)
 {
   PetscErrorCode     ierr;            /* used to check for functions returning nonzeros */
   PetscInt           Nx, Ny;          /* number of processors in x- and y- directions */
@@ -77,7 +75,7 @@ int main( int argc, char **argv )
   PetscReal          zero = 0.0;      /* lower bound on all variables */
 
   /* Initialize PETSC and TAO */
-  ierr = PetscInitialize( &argc, &argv,(char *)0,help );if (ierr) return ierr;
+  ierr = PetscInitialize(&argc, &argv,(char *)0,help);if (ierr) return ierr;
 
   /* Set the default values for the problem parameters */
   user.nx = 50; user.ny = 50; user.ecc = 0.1; user.b = 10.0;
@@ -114,7 +112,6 @@ int main( int argc, char **argv )
   ierr = DMCreateGlobalVector(user.dm,&x);CHKERRQ(ierr); /* Solution */
   ierr = VecDuplicate(x,&user.B);CHKERRQ(ierr); /* Linear objective */
 
-
   /*  Create matrix user.A to store quadratic, Create a local ordering scheme. */
   ierr = VecGetLocalSize(x,&m);CHKERRQ(ierr);
   ierr = DMCreateMatrix(user.dm,&user.A);CHKERRQ(ierr);
@@ -134,7 +131,6 @@ int main( int argc, char **argv )
   */
   ierr = TaoCreate(PETSC_COMM_WORLD,&tao);CHKERRQ(ierr);
   ierr = TaoSetType(tao,TAOBLMVM);CHKERRQ(ierr);
-
 
   /* Set the initial vector */
   ierr = VecSet(x, zero);CHKERRQ(ierr);
@@ -186,7 +182,6 @@ int main( int argc, char **argv )
   return ierr;
 }
 
-
 static PetscReal p(PetscReal xi, PetscReal ecc)
 {
   PetscReal t=1.0+ecc*PetscCosScalar(xi);
@@ -209,7 +204,6 @@ PetscErrorCode ComputeB(AppCtx* user)
   hy=two*user->b/(ny+1.0);
   ehxhy = ecc*hx*hy;
 
-
   /*
      Get local grid boundaries
   */
@@ -226,7 +220,7 @@ PetscErrorCode ComputeB(AppCtx* user)
     }
   }
   ierr = VecRestoreArray(user->B,&b);CHKERRQ(ierr);
-  ierr = PetscLogFlops(5*xm*ym+3*xm);CHKERRQ(ierr);
+  ierr = PetscLogFlops(5.0*xm*ym+3.0*xm);CHKERRQ(ierr);
 
   return 0;
 }
@@ -271,10 +265,10 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn,Vec G,void *p
 
   for (i=xs; i< xs+xm; i++){
     xi=(i+1)*hx;
-    trule1=hxhy*( p(xi,ecc) + p(xi+hx,ecc) + p(xi,ecc) ) / six; /* L(i,j) */
-    trule2=hxhy*( p(xi,ecc) + p(xi-hx,ecc) + p(xi,ecc) ) / six; /* U(i,j) */
-    trule3=hxhy*( p(xi,ecc) + p(xi+hx,ecc) + p(xi+hx,ecc) ) / six; /* U(i+1,j) */
-    trule4=hxhy*( p(xi,ecc) + p(xi-hx,ecc) + p(xi-hx,ecc) ) / six; /* L(i-1,j) */
+    trule1=hxhy*(p(xi,ecc) + p(xi+hx,ecc) + p(xi,ecc)) / six; /* L(i,j) */
+    trule2=hxhy*(p(xi,ecc) + p(xi-hx,ecc) + p(xi,ecc)) / six; /* U(i,j) */
+    trule3=hxhy*(p(xi,ecc) + p(xi+hx,ecc) + p(xi+hx,ecc)) / six; /* U(i+1,j) */
+    trule4=hxhy*(p(xi,ecc) + p(xi-hx,ecc) + p(xi-hx,ecc)) / six; /* L(i-1,j) */
     trule5=trule1; /* L(i,j-1) */
     trule6=trule2; /* U(i,j+1) */
 
@@ -328,12 +322,10 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn,Vec G,void *p
   ierr = VecAXPY(G, one, user->B);CHKERRQ(ierr);
   *fcn = f1/2.0 + f2;
 
-
-  ierr = PetscLogFlops((91 + 10*ym) * xm);CHKERRQ(ierr);
+  ierr = PetscLogFlops((91 + 10.0*ym) * xm);CHKERRQ(ierr);
   return 0;
 
 }
-
 
 /*
    FormHessian computes the quadratic term in the quadratic objective function
@@ -371,10 +363,10 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat hes, Mat Hpre, void *ptr)
 
   for (i=xs; i< xs+xm; i++){
     xi=(i+1)*hx;
-    trule1=hxhy*( p(xi,ecc) + p(xi+hx,ecc) + p(xi,ecc) ) / six; /* L(i,j) */
-    trule2=hxhy*( p(xi,ecc) + p(xi-hx,ecc) + p(xi,ecc) ) / six; /* U(i,j) */
-    trule3=hxhy*( p(xi,ecc) + p(xi+hx,ecc) + p(xi+hx,ecc) ) / six; /* U(i+1,j) */
-    trule4=hxhy*( p(xi,ecc) + p(xi-hx,ecc) + p(xi-hx,ecc) ) / six; /* L(i-1,j) */
+    trule1=hxhy*(p(xi,ecc) + p(xi+hx,ecc) + p(xi,ecc)) / six; /* L(i,j) */
+    trule2=hxhy*(p(xi,ecc) + p(xi-hx,ecc) + p(xi,ecc)) / six; /* U(i,j) */
+    trule3=hxhy*(p(xi,ecc) + p(xi+hx,ecc) + p(xi+hx,ecc)) / six; /* U(i+1,j) */
+    trule4=hxhy*(p(xi,ecc) + p(xi-hx,ecc) + p(xi-hx,ecc)) / six; /* L(i-1,j) */
     trule5=trule1; /* L(i,j-1) */
     trule6=trule2; /* U(i,j+1) */
 
@@ -428,7 +420,7 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat hes, Mat Hpre, void *ptr)
   ierr = MatSetOption(hes,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatSetOption(hes,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
 
-  ierr = PetscLogFlops(9*xm*ym+49*xm);CHKERRQ(ierr);
+  ierr = PetscLogFlops(9.0*xm*ym+49.0*xm);CHKERRQ(ierr);
   ierr = MatNorm(hes,NORM_1,&hx);CHKERRQ(ierr);
   return 0;
 }
@@ -464,7 +456,6 @@ PetscErrorCode ConvergenceTest(Tao tao, void *ctx)
 
 }
 
-
 /*TEST
 
    build:
@@ -492,32 +483,32 @@ PetscErrorCode ConvergenceTest(Tao tao, void *ctx)
       args: -tao_smonitor -mx 10 -my 16 -ecc 0.9 -tao_type bqpip -tao_gatol 1.e-4 -test_getdiagonal
       output_file: output/jbearing2_3.out
       requires: !single
-      
+
    test:
       suffix: 5
       args: -tao_smonitor -mx 8 -my 12 -tao_type bncg -tao_bncg_type gd -tao_gatol 1e-4
       requires: !single
-      
+
    test:
       suffix: 6
       args: -tao_smonitor -mx 8 -my 12 -tao_type bncg -tao_gatol 1e-4
       requires: !single
-      
+
    test:
       suffix: 7
       args: -tao_smonitor -mx 8 -my 12 -tao_type bnls -tao_gatol 1e-5
       requires: !single
-      
+
    test:
       suffix: 8
       args: -tao_smonitor -mx 8 -my 12 -tao_type bntr -tao_gatol 1e-5
       requires: !single
-      
+
    test:
       suffix: 9
       args: -tao_smonitor -mx 8 -my 12 -tao_type bntl -tao_gatol 1e-5
       requires: !single
-      
+
    test:
       suffix: 10
       args: -tao_smonitor -mx 8 -my 12 -tao_type bnls -tao_gatol 1e-5 -tao_bnk_max_cg_its 3
@@ -532,12 +523,12 @@ PetscErrorCode ConvergenceTest(Tao tao, void *ctx)
       suffix: 12
       args: -tao_smonitor -mx 8 -my 12 -tao_type bntl -tao_gatol 1e-5 -tao_bnk_max_cg_its 3
       requires: !single
-      
+
    test:
      suffix: 13
      args: -tao_smonitor -mx 8 -my 12 -tao_gatol 1e-4 -tao_type bqnls
      requires: !single
-     
+
    test:
      suffix: 14
      args: -tao_smonitor -mx 8 -my 12 -tao_gatol 1e-4 -tao_type blmvm
@@ -547,17 +538,17 @@ PetscErrorCode ConvergenceTest(Tao tao, void *ctx)
      suffix: 15
      args: -tao_smonitor -mx 8 -my 12 -tao_gatol 1e-4 -tao_type bqnkls -tao_bqnk_mat_type lmvmbfgs
      requires: !single
-     
+
    test:
      suffix: 16
      args: -tao_smonitor -mx 8 -my 12 -tao_gatol 1e-4 -tao_type bqnktr -tao_bqnk_mat_type lmvmsr1
      requires: !single
-     
+
    test:
      suffix: 17
      args: -tao_smonitor -mx 8 -my 12 -tao_gatol 1e-4 -tao_type bqnls -tao_bqnls_mat_lmvm_scale_type scalar -tao_view
      requires: !single
-     
+
    test:
      suffix: 18
      args: -tao_smonitor -mx 8 -my 12 -tao_gatol 1e-4 -tao_type bqnls -tao_bqnls_mat_lmvm_scale_type none -tao_view

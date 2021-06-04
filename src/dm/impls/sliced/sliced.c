@@ -226,7 +226,7 @@ static PetscErrorCode  DMCreateGlobalVector_Sliced(DM dm,Vec *gvec)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(gvec,2);
-  *gvec = 0;
+  *gvec = NULL;
   ierr  = VecCreateGhostBlock(PetscObjectComm((PetscObject)dm),slice->bs,slice->n*slice->bs,PETSC_DETERMINE,slice->Nghosts,slice->ghosts,gvec);CHKERRQ(ierr);
   ierr  = VecSetDM(*gvec,dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -319,7 +319,7 @@ PetscErrorCode  DMSlicedCreate(MPI_Comm comm,PetscInt bs,PetscInt nlocal,PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(dm,2);
+  PetscValidPointer(dm,8);
   ierr = DMCreate(comm,dm);CHKERRQ(ierr);
   ierr = DMSetType(*dm,DMSLICED);CHKERRQ(ierr);
   ierr = DMSlicedSetGhosts(*dm,bs,nlocal,Nghosts,ghosts);CHKERRQ(ierr);

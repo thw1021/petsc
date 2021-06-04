@@ -156,12 +156,13 @@ struct _p_TS {
   /* ---------------- User (or PETSc) Provided stuff ---------------------*/
   PetscErrorCode (*monitor[MAXTSMONITORS])(TS,PetscInt,PetscReal,Vec,void*);
   PetscErrorCode (*monitordestroy[MAXTSMONITORS])(void**);
-  void *monitorcontext[MAXTSMONITORS];
-  PetscInt  numbermonitors;
+  void            *monitorcontext[MAXTSMONITORS];
+  PetscInt         numbermonitors;
   PetscErrorCode (*adjointmonitor[MAXTSMONITORS])(TS,PetscInt,PetscReal,Vec,PetscInt,Vec*,Vec*,void*);
   PetscErrorCode (*adjointmonitordestroy[MAXTSMONITORS])(void**);
-  void *adjointmonitorcontext[MAXTSMONITORS];
-  PetscInt  numberadjointmonitors;
+  void            *adjointmonitorcontext[MAXTSMONITORS];
+  PetscInt         numberadjointmonitors;
+  PetscInt         monitorFrequency; /* Number of timesteps between monitor output */
 
   PetscErrorCode (*prestep)(TS);
   PetscErrorCode (*prestage)(TS,PetscReal);
@@ -249,6 +250,7 @@ struct _p_TS {
     PetscReal shift;            /* The derivative of the lhs wrt to Xdot */
   } ijacobian;
 
+  MatStructure  axpy_pattern;  /* information about the nonzero pattern of the RHS Jacobian in reference to the implicit Jacobian */
   /* --------------------Nonlinear Iteration------------------------------*/
   SNES     snes;
   PetscBool usessnes;   /* Flag set by each TSType to indicate if the type actually uses a SNES;
@@ -257,6 +259,9 @@ struct _p_TS {
   PetscInt snes_its;               /* total number of nonlinear solver iterations */
   PetscInt num_snes_failures;
   PetscInt max_snes_failures;
+
+  /* --- Logging --- */
+  PetscInt ifuncs,rhsfuncs,ijacs,rhsjacs;
 
   /* --- Data that is unique to each particular solver --- */
   PetscInt setupcalled;             /* true if setup has been called */
@@ -412,6 +417,8 @@ struct _n_TSEvent {
   PetscInt       *side;            /* Used for detecting repetition of end-point, -1 => left, +1 => right */
   PetscReal       timestep_prev;   /* previous time step */
   PetscReal       timestep_posteventinterval;  /* time step immediately after the event interval */
+  PetscReal       timestep_postevent;  /* time step immediately after the event */
+  PetscReal       timestep_min;    /* Minimum time step */
   PetscBool      *zerocrossing;    /* Flag to signal zero crossing detection */
   PetscErrorCode  (*eventhandler)(TS,PetscReal,Vec,PetscScalar*,void*); /* User event handler function */
   PetscErrorCode  (*postevent)(TS,PetscInt,PetscInt[],PetscReal,Vec,PetscBool,void*); /* User post event function */

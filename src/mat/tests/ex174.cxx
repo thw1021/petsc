@@ -20,20 +20,20 @@ int main(int argc,char **args)
   PetscInt       M,N;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   /* Load PETSc matrices */
-  ierr = PetscOptionsGetString(NULL,NULL,"-fA",file[0],PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-fA",file[0],sizeof(file[0]),NULL);CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[0],FILE_MODE_READ,&view);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"orig_");CHKERRQ(ierr);
-  ierr = MatSetType(A,MATAIJ);CHKERRQ(ierr); 
+  ierr = MatSetType(A,MATAIJ);CHKERRQ(ierr);
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
   ierr = MatLoad(A,view);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&view);CHKERRQ(ierr);
 
-  PetscOptionsGetString(NULL,NULL,"-fB",file[1],PETSC_MAX_PATH_LEN,&flgB);
+  PetscOptionsGetString(NULL,NULL,"-fB",file[1],sizeof(file[1]),&flgB);
   if (flgB) {
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[1],FILE_MODE_READ,&view);CHKERRQ(ierr);
     ierr = MatCreate(PETSC_COMM_WORLD,&B);CHKERRQ(ierr);
@@ -110,7 +110,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

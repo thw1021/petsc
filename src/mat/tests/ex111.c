@@ -50,8 +50,8 @@ int main(int argc,char **argv)
   const PetscInt *ia,*ja;
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   /* Get size of fine grids and coarse grids */
   user.ratio     = 2;
@@ -159,7 +159,7 @@ int main(int argc,char **argv)
 
   ierr = MatMatMatMult(R,A,P,MAT_INITIAL_MATRIX,fill,&C);CHKERRQ(ierr);
   ierr = MatMatMatMult(R,A,P,MAT_REUSE_MATRIX,fill,&C);CHKERRQ(ierr);
-  ierr = MatFreeIntermediateDataStructures(C);CHKERRQ(ierr);
+  ierr = MatProductClear(C);CHKERRQ(ierr);
 
   /* Test D == C */
   ierr = MatEqual(D,C,&flg);CHKERRQ(ierr);

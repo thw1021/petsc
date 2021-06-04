@@ -3,7 +3,6 @@ static char help[] = "Tests retrieving unused PETSc options.\n\n";
 
 #include <petscsys.h>
 
-
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
@@ -33,6 +32,6 @@ int main(int argc,char **argv)
 
    test:
       args: -unused_petsc_option_1 -unused_petsc_option_2 -get_an_integer 10 -options_left no
-      filter: egrep -v \(malloc_dump\|options_left\|nox\|vecscatter_mpi1\)
+      filter: egrep -v \(malloc_dump\|options_left\|nox\|vecscatter_mpi1\|saws_port_auto_select\|saws_port_auto_select_silent\)
 
 TEST*/

@@ -125,7 +125,7 @@ PetscErrorCode random_network(PetscInt nvertex,PetscInt *pnbranch,Node **pnode,B
   }
 
   ierr = PetscCalloc2(nvertex,&node,nedges,&branch);CHKERRQ(ierr);
-  
+
   for (i = 0; i < nvertex; i++) {
     node[i].id  = i;
     node[i].inj = 0;
@@ -137,12 +137,12 @@ PetscErrorCode random_network(PetscInt nvertex,PetscInt *pnbranch,Node **pnode,B
     branch[i].r   = 1.0;
     branch[i].bat = 0;
   }
-  
+
   /* Chose random node as ground voltage */
   ierr = PetscRandomSetInterval(rnd,0.0,nvertex);CHKERRQ(ierr);
   ierr = PetscRandomGetValueReal(rnd,&value);CHKERRQ(ierr);
   node[(int)value].gr = PETSC_TRUE;
-  
+
   /* Create random current and battery injectionsa */
   for (i=0; i<ncurr; i++) {
     ierr = PetscRandomSetInterval(rnd,0.0,nvertex);CHKERRQ(ierr);
@@ -200,12 +200,12 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
   /* Branch equations: i/r + uj - ui = battery */
   ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
   for (e = 0; e < eEnd; e++) {
-    ierr = DMNetworkGetComponent(networkdm,e,0,NULL,(void**)&branch);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableOffset(networkdm,e,&lofst);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,e,0,NULL,(void**)&branch,NULL);CHKERRQ(ierr);
+    ierr = DMNetworkGetLocalVecOffset(networkdm,e,ALL_COMPONENTS,&lofst);CHKERRQ(ierr);
 
     ierr = DMNetworkGetConnectedVertices(networkdm,e,&cone);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableOffset(networkdm,cone[0],&lofst_fr);CHKERRQ(ierr);
-    ierr = DMNetworkGetVariableOffset(networkdm,cone[1],&lofst_to);CHKERRQ(ierr);
+    ierr = DMNetworkGetLocalVecOffset(networkdm,cone[0],ALL_COMPONENTS,&lofst_fr);CHKERRQ(ierr);
+    ierr = DMNetworkGetLocalVecOffset(networkdm,cone[1],ALL_COMPONENTS,&lofst_to);CHKERRQ(ierr);
 
     barr[lofst] = branch->bat;
 
@@ -216,7 +216,7 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
     ierr = MatSetValuesLocal(A,1,row,3,col,val,ADD_VALUES);CHKERRQ(ierr);
 
     /* from node */
-    ierr = DMNetworkGetComponent(networkdm,cone[0],0,NULL,(void**)&node);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,cone[0],0,NULL,(void**)&node,NULL);CHKERRQ(ierr);
 
     if (!node->gr) {
       row[0] = lofst_fr;
@@ -225,7 +225,7 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
     }
 
     /* to node */
-    ierr = DMNetworkGetComponent(networkdm,cone[1],0,NULL,(void**)&node);CHKERRQ(ierr);
+    ierr = DMNetworkGetComponent(networkdm,cone[1],0,NULL,(void**)&node,NULL);CHKERRQ(ierr);
 
     if (!node->gr) {
       row[0] = lofst_to;
@@ -238,8 +238,8 @@ PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
   for (v = vStart; v < vEnd; v++) {
     ierr = DMNetworkIsGhostVertex(networkdm,v,&ghost);CHKERRQ(ierr);
     if (!ghost) {
-      ierr = DMNetworkGetComponent(networkdm,v,0,NULL,(void**)&node);CHKERRQ(ierr);
-      ierr = DMNetworkGetVariableOffset(networkdm,v,&lofst);CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,v,0,NULL,(void**)&node,NULL);CHKERRQ(ierr);
+      ierr = DMNetworkGetLocalVecOffset(networkdm,v,ALL_COMPONENTS,&lofst);CHKERRQ(ierr);
 
       if (node->gr) {
         row[0] = lofst;
@@ -281,8 +281,8 @@ int main(int argc,char ** argv)
 #endif
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   ierr = PetscOptionsGetInt(NULL,NULL,"-seed",&seed,NULL);CHKERRQ(ierr);
 
@@ -304,26 +304,23 @@ int main(int argc,char ** argv)
   ierr = DMNetworkRegisterComponent(networkdm,"nstr",sizeof(Node),&componentkey[0]);CHKERRQ(ierr);
   ierr = DMNetworkRegisterComponent(networkdm,"bsrt",sizeof(Branch),&componentkey[1]);CHKERRQ(ierr);
 
-  /* Set number of nodes/edges */
-  ierr = DMNetworkSetSizes(networkdm,1,&nnode,&nbranch,0,NULL);CHKERRQ(ierr);
-  /* Add edge connectivity */
-  ierr = DMNetworkSetEdgeList(networkdm,&edgelist,NULL);CHKERRQ(ierr);
+  /* Set number of nodes/edges and edge connectivity */
+  ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"",nnode,nbranch,edgelist,NULL);CHKERRQ(ierr);
+
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
 
-  /* Add network components: physical parameters of nodes and branches*/
+  /* Add network components (physical parameters of nodes and branches) and num of variables */
   if (!rank) {
     ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
     for (i = eStart; i < eEnd; i++) {
-      ierr = DMNetworkAddComponent(networkdm,i,componentkey[1],&branch[i-eStart]);CHKERRQ(ierr);
-      ierr = DMNetworkAddNumVariables(networkdm,i,1);CHKERRQ(ierr);
+      ierr = DMNetworkAddComponent(networkdm,i,componentkey[1],&branch[i-eStart],1);CHKERRQ(ierr);
     }
 
     ierr = DMNetworkGetVertexRange(networkdm,&vStart,&vEnd);CHKERRQ(ierr);
     for (i = vStart; i < vEnd; i++) {
-      ierr = DMNetworkAddComponent(networkdm,i,componentkey[0],&node[i-vStart]);CHKERRQ(ierr);
-      /* Add number of variables */
-      ierr = DMNetworkAddNumVariables(networkdm,i,1);CHKERRQ(ierr);
+      ierr = DMNetworkAddComponent(networkdm,i,componentkey[0],&node[i-vStart],1);CHKERRQ(ierr);
     }
   }
 
@@ -356,7 +353,7 @@ int main(int argc,char ** argv)
   ierr = KSPSolve(ksp, b, x);CHKERRQ(ierr);
 
   ierr = PetscLogStagePop();CHKERRQ(ierr);
-  
+
   /* Free work space */
   ierr = VecDestroy(&x);CHKERRQ(ierr);
   ierr = VecDestroy(&b);CHKERRQ(ierr);
@@ -366,7 +363,6 @@ int main(int argc,char ** argv)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

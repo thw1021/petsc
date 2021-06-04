@@ -42,7 +42,7 @@ PETSC_EXTERN PetscErrorCode DMStagCreate1d(MPI_Comm comm,DMBoundaryType bndx,Pet
   PetscMPIInt    size;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = DMCreate(comm,dm);CHKERRQ(ierr);
   ierr = DMSetDimension(*dm,1);CHKERRQ(ierr);
   ierr = DMStagInitialize(bndx,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,M,0,0,size,0,0,dof0,dof1,0,0,stencilType,stencilWidth,lx,NULL,NULL,*dm);CHKERRQ(ierr);
@@ -54,10 +54,10 @@ PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_1d(DM dm,PetscRe
   PetscErrorCode ierr;
   DM_Stag        *stagCoord;
   DM             dmCoord;
-  Vec            coordLocal,coord;
+  Vec            coordLocal;
   PetscReal      h,min;
   PetscScalar    **arr;
-  PetscInt       ind,start,n,nExtra,s;
+  PetscInt       start_ghost,n_ghost,s;
   PetscInt       ileft,ielement;
 
   PetscFunctionBegin;
@@ -66,7 +66,7 @@ PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_1d(DM dm,PetscRe
   for (s=0; s<2; ++s) {
     if (stagCoord->dof[s] !=0 && stagCoord->dof[s] != 1) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Coordinate DM in 1 dimensions must have 0 or 1 dof on each stratum, but stratum %d has %d dof",s,stagCoord->dof[s]);
   }
-  ierr = DMGetLocalVector(dmCoord,&coordLocal);CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(dmCoord,&coordLocal);CHKERRQ(ierr);
 
   ierr = DMStagVecGetArray(dmCoord,coordLocal,&arr);CHKERRQ(ierr);
   if (stagCoord->dof[0]) {
@@ -75,12 +75,12 @@ PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_1d(DM dm,PetscRe
   if (stagCoord->dof[1]) {
     ierr = DMStagGetLocationSlot(dmCoord,DMSTAG_ELEMENT,0,&ielement);CHKERRQ(ierr);
   }
-  ierr = DMStagGetCorners(dmCoord,&start,NULL,NULL,&n,NULL,NULL,&nExtra,NULL,NULL);CHKERRQ(ierr);
+  ierr = DMStagGetGhostCorners(dmCoord,&start_ghost,NULL,NULL,&n_ghost,NULL,NULL);CHKERRQ(ierr);
 
   min = xmin;
   h = (xmax-xmin)/stagCoord->N[0];
 
-  for(ind=start; ind<start + n + nExtra; ++ind) {
+  for (PetscInt ind=start_ghost; ind<start_ghost + n_ghost; ++ind) {
     if (stagCoord->dof[0]) {
       const PetscReal off = 0.0;
         arr[ind][ileft] = min + ((PetscReal)ind + off) * h;
@@ -91,13 +91,9 @@ PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_1d(DM dm,PetscRe
     }
   }
   ierr = DMStagVecRestoreArray(dmCoord,coordLocal,&arr);CHKERRQ(ierr);
-  ierr = DMCreateGlobalVector(dmCoord,&coord);CHKERRQ(ierr);
-  ierr = DMLocalToGlobalBegin(dmCoord,coordLocal,INSERT_VALUES,coord);CHKERRQ(ierr);
-  ierr = DMLocalToGlobalEnd(dmCoord,coordLocal,INSERT_VALUES,coord);CHKERRQ(ierr);
-  ierr = DMSetCoordinates(dm,coord);CHKERRQ(ierr);
-  ierr = PetscLogObjectParent((PetscObject)dm,(PetscObject)coord);CHKERRQ(ierr);
-  ierr = VecDestroy(&coord);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dmCoord,&coordLocal);CHKERRQ(ierr);
+  ierr = DMSetCoordinatesLocal(dm,coordLocal);CHKERRQ(ierr);
+  ierr = PetscLogObjectParent((PetscObject)dm,(PetscObject)coordLocal);CHKERRQ(ierr);
+  ierr = VecDestroy(&coordLocal);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -114,8 +110,8 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   /* Check Global size */
   if (stag->N[0] < 1) SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"Global grid size of %D < 1 specified",stag->N[0]);
@@ -145,12 +141,12 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
     case DM_BOUNDARY_NONE:
     case DM_BOUNDARY_GHOSTED:  stag->entries = stag->n[0] * stag->entriesPerElement + (stag->lastRank[0] ?  stag->dof[0] : 0); break;
     case DM_BOUNDARY_PERIODIC: stag->entries = stag->n[0] * stag->entriesPerElement;                                           break;
-    default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
+    default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
   }
 
   /* Starting element */
   stag->start[0] = 0;
-  for(j=0; j<stag->rank[0]; ++j) stag->start[0] += stag->l[0][j];
+  for (j=0; j<stag->rank[0]; ++j) stag->start[0] += stag->l[0][j];
 
   /* Local/ghosted size and starting element */
   switch (stag->boundaryType[0]) {
@@ -168,7 +164,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
           stag->nGhost[0] += stag->lastRank[0]  ? 1 : stag->stencilWidth;
           break;
         default :
-          SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unrecognized ghost stencil type %d",stag->stencilType);
+          SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unrecognized ghost stencil type %d",stag->stencilType);
       }
       break;
     case DM_BOUNDARY_GHOSTED:
@@ -183,7 +179,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
           stag->nGhost[0]     = stag->n[0] + 2*stag->stencilWidth + (stag->lastRank[0] && stag->stencilWidth == 0 ? 1 : 0);
           break;
         default :
-          SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unrecognized ghost stencil type %d",stag->stencilType);
+          SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unrecognized ghost stencil type %d",stag->stencilType);
       }
       break;
     case DM_BOUNDARY_PERIODIC:
@@ -198,11 +194,11 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
           stag->nGhost[0]     = stag->n[0] + 2*stag->stencilWidth;
           break;
         default :
-          SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unrecognized ghost stencil type %d",stag->stencilType);
+          SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unrecognized ghost stencil type %d",stag->stencilType);
       }
       break;
     default :
-      SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
+      SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
   }
 
   /* Total size of ghosted/local represention */
@@ -215,7 +211,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
       case DM_BOUNDARY_GHOSTED:
       case DM_BOUNDARY_NONE:     stag->neighbors[0] = -1;                break;
       case DM_BOUNDARY_PERIODIC: stag->neighbors[0] = stag->nRanks[0]-1; break;
-      default : SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
+      default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
     }
   } else {
     stag->neighbors[0] = stag->rank[0]-1;
@@ -226,7 +222,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
       case DM_BOUNDARY_GHOSTED:
       case DM_BOUNDARY_NONE:     stag->neighbors[2] = -1;                break;
       case DM_BOUNDARY_PERIODIC: stag->neighbors[2] = 0;                 break;
-      default : SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
+      default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
     }
   } else {
     stag->neighbors[2] = stag->rank[0]+1;
@@ -261,7 +257,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
         entriesToTransferTotal = stag->entriesGhost; /* No dummy points */
         break;
       default :
-        SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
+        SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
     }
 
     ierr = PetscMalloc1(entriesToTransferTotal,&idxLocal);CHKERRQ(ierr);
@@ -279,7 +275,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
       }
       /* Ghost points on the right
          Special case for last (partial dummy) element on the last rank */
-      if (stag->lastRank[0] ) {
+      if (stag->lastRank[0]) {
         i      = stag->N[0];
         iLocal = (stag->nGhost[0]-ghostOffsetEnd);
         /* Only vertex (0-cell) dofs in global representation */
@@ -328,7 +324,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
       PetscInt count = 0,countAll = 0;
       /* Dummy elements on the left, on the first rank */
       if (stag->firstRank[0]) {
-        for(iLocal=0; iLocal<ghostOffsetStart; ++iLocal) {
+        for (iLocal=0; iLocal<ghostOffsetStart; ++iLocal) {
           /* Complete elements full of dummy entries */
           for (d=0; d<stag->entriesPerElement; ++d,++countAll) {
             idxGlobalAll[countAll] = -1;
@@ -373,7 +369,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
           }
         }
       }
-    } else SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
+    } else SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported x boundary type %s",DMBoundaryTypes[stag->boundaryType[0]]);
 
     /* Create Local IS (transferring pointer ownership) */
     ierr = ISCreateGeneral(PetscObjectComm((PetscObject)dm),entriesToTransferTotal,idxLocal,PETSC_OWN_POINTER,&isLocal);CHKERRQ(ierr);

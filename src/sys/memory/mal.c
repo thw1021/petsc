@@ -26,14 +26,18 @@ PetscMemkindType previousmktype = PETSC_MK_HBW_PREFERRED;
 PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem,PetscBool clear,int line,const char func[],const char file[],void **result)
 {
   PetscErrorCode ierr;
+#if defined(PETSC_HAVE_MEMKIND)
+  int            err;
+#endif
 
   if (!mem) {*result = NULL; return 0;}
 #if defined(PETSC_HAVE_MEMKIND)
   {
-    if (!currentmktype) ierr = memkind_posix_memalign(MEMKIND_DEFAULT,result,PETSC_MEMALIGN,mem);
-    else ierr = memkind_posix_memalign(MEMKIND_HBW_PREFERRED,result,PETSC_MEMALIGN,mem);
-    if (ierr == EINVAL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Memkind: invalid 3rd or 4th argument of memkind_posix_memalign()");
-    if (ierr == ENOMEM) PetscInfo1(0,"Memkind: fail to request HBW memory %.0f, falling back to normal memory\n",(PetscLogDouble)mem);
+    if (!currentmktype) err = memkind_posix_memalign(MEMKIND_DEFAULT,result,PETSC_MEMALIGN,mem);
+    else err = memkind_posix_memalign(MEMKIND_HBW_PREFERRED,result,PETSC_MEMALIGN,mem);
+    if (err == EINVAL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Memkind: invalid 3rd or 4th argument of memkind_posix_memalign()");
+    if (err == ENOMEM) PetscInfo1(0,"Memkind: fail to request HBW memory %.0f, falling back to normal memory\n",(PetscLogDouble)mem);
+    if (!*result) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_MEM,PETSC_ERROR_INITIAL,"Memory requested %.0f",(PetscLogDouble)mem);
     if (clear) {ierr = PetscMemzero(*result,mem);CHKERRQ(ierr);}
   }
 #else
@@ -43,16 +47,18 @@ PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem,PetscBool clear,int line
   } else {
     *result = malloc(mem);
   }
+  if (!*result) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_MEM,PETSC_ERROR_INITIAL,"Memory requested %.0f",(PetscLogDouble)mem);
   if (PetscLogMemory) {ierr = PetscMemzero(*result,mem);CHKERRQ(ierr);}
 
 #  elif defined(PETSC_HAVE_MEMALIGN)
   *result = memalign(PETSC_MEMALIGN,mem);
+  if (!*result) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_MEM,PETSC_ERROR_INITIAL,"Memory requested %.0f",(PetscLogDouble)mem);
   if (clear || PetscLogMemory) {
     ierr = PetscMemzero(*result,mem);CHKERRQ(ierr);
   }
 #  else
   {
-    int *ptr;
+    int *ptr,shift;
     /*
       malloc space for two extra chunks and shift ptr 1 + enough to get it PetscScalar aligned
     */
@@ -61,21 +67,16 @@ PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem,PetscBool clear,int line
     } else {
       ptr = (int*)malloc(mem + 2*PETSC_MEMALIGN);
     }
-    if (ptr) {
-      int shift    = (int)(((PETSC_UINTPTR_T) ptr) % PETSC_MEMALIGN);
-      shift        = (2*PETSC_MEMALIGN - shift)/sizeof(int);
-      ptr[shift-1] = shift + SHIFT_CLASSID;
-      ptr         += shift;
-      *result      = (void*)ptr;
-      if (PetscLogMemory) {ierr = PetscMemzero(*result,mem);CHKERRQ(ierr);}
-    } else {
-      *result      = NULL;
-    }
+    if (!ptr) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_MEM,PETSC_ERROR_INITIAL,"Memory requested %.0f",(PetscLogDouble)mem);
+    shift        = (int)(((PETSC_UINTPTR_T) ptr) % PETSC_MEMALIGN);
+    shift        = (2*PETSC_MEMALIGN - shift)/sizeof(int);
+    ptr[shift-1] = shift + SHIFT_CLASSID;
+    ptr         += shift;
+    *result      = (void*)ptr;
+    if (PetscLogMemory) {ierr = PetscMemzero(*result,mem);CHKERRQ(ierr);}
   }
 #  endif
 #endif
-
-  if (!*result) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_MEM,PETSC_ERROR_INITIAL,"Memory requested %.0f",(PetscLogDouble)mem);
   return 0;
 }
 
@@ -163,11 +164,11 @@ PETSC_EXTERN PetscErrorCode PetscReallocAlign(size_t mem, int line, const char f
     void *newResult;
 #  if defined(PETSC_HAVE_MEMKIND)
     {
-      int ierr;
-      if (!currentmktype) ierr = memkind_posix_memalign(MEMKIND_DEFAULT,&newResult,PETSC_MEMALIGN,mem);
-      else ierr = memkind_posix_memalign(MEMKIND_HBW_PREFERRED,&newResult,PETSC_MEMALIGN,mem);
-      if (ierr == EINVAL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Memkind: invalid 3rd or 4th argument of memkind_posix_memalign()");
-      if (ierr == ENOMEM) PetscInfo1(0,"Memkind: fail to request HBW memory %.0f, falling back to normal memory\n",(PetscLogDouble)mem);
+      int err;
+      if (!currentmktype) err = memkind_posix_memalign(MEMKIND_DEFAULT,&newResult,PETSC_MEMALIGN,mem);
+      else err = memkind_posix_memalign(MEMKIND_HBW_PREFERRED,&newResult,PETSC_MEMALIGN,mem);
+      if (err == EINVAL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Memkind: invalid 3rd or 4th argument of memkind_posix_memalign()");
+      if (err == ENOMEM) PetscInfo1(0,"Memkind: fail to request HBW memory %.0f, falling back to normal memory\n",(PetscLogDouble)mem);
     }
 #  else
     newResult = memalign(PETSC_MEMALIGN,mem);

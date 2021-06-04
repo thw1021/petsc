@@ -85,7 +85,7 @@ PetscErrorCode ComputeRhs(DM da,PetscGLL *gll,Vec b)
      Run with -build_twosided allreduce -pc_type bjacobi -sub_pc_type lu -q 16 -ksp_rtol 1.e-34 (or 1.e-14 for double precision)
 
      -q <q> number of spectral elements to use
-     -N <N> maximum number of GLL points per element 
+     -N <N> maximum number of GLL points per element
 
 */
 int main(int argc,char **args)
@@ -108,8 +108,8 @@ int main(int argc,char **args)
   PetscMPIInt    rank,size;
 
   ierr = PetscInitialize(&argc,&args,NULL,NULL);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-N",&N,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-q",&q,NULL);CHKERRQ(ierr);
 

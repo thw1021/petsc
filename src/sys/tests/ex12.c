@@ -6,7 +6,9 @@ static char help[] = "Tests timing PetscSortInt().\n\n";
 int main(int argc,char **argv)
 {
   PetscInt       i,n = 1000,*values;
-  int            event;
+#if defined(PETSC_USE_LOG)
+  PetscLogEvent  event;
+#endif
   PetscRandom    rand;
   PetscReal      value;
   PetscErrorCode ierr;
@@ -14,7 +16,7 @@ int main(int argc,char **argv)
   PetscMPIInt    rank;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,0,"-values_view",&values_view,NULL);CHKERRQ(ierr);
 
@@ -48,8 +50,6 @@ int main(int argc,char **argv)
   ierr = PetscFinalize();
   return ierr;
 }
-
-
 
 /*TEST
 

@@ -15,8 +15,8 @@ int main(int argc,char **args)
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = PetscOptionsHasName(NULL,NULL,"-detect_bug",&detect_bug);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   n    = 2*size;
 
   ierr = MatCreate(PETSC_COMM_WORLD,&C);CHKERRQ(ierr);
@@ -55,7 +55,7 @@ int main(int argc,char **args)
   ierr = MatCreateSubMatrix(C,isrow,NULL,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
 
   /* Change C to test the case MAT_REUSE_MATRIX */
-  if (!rank ) {
+  if (!rank) {
     i = 0; j = 0; v = 100;
     ierr = MatSetValues(C,1,&i,1,&j,&v,INSERT_VALUES);CHKERRQ(ierr);
   }
@@ -77,7 +77,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

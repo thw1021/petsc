@@ -86,11 +86,9 @@ static PetscErrorCode KSPFGMRESResidual(KSP ksp)
 .        itcount - number of iterations used.  If null, ignored.
 .        converged - 0 if not converged
 
-
     Notes:
     On entry, the value in vector VEC_VV(0) should be
     the initial residual.
-
 
  */
 PetscErrorCode KSPFGMRESCycle(PetscInt *itcount,KSP ksp)
@@ -160,7 +158,6 @@ PetscErrorCode KSPFGMRESCycle(PetscInt *itcount,KSP ksp)
        change the PC or its attributes before its applied */
     (*fgmres->modifypc)(ksp,ksp->its,loc_it,res_norm,fgmres->modifyctx);
 
-
     /* apply PRECONDITIONER to direction vector and store with
        preconditioned vectors in prevec */
     ierr = KSP_PCApply(ksp,VEC_VV(loc_it),PREVEC(loc_it));CHKERRQ(ierr);
@@ -168,7 +165,6 @@ PetscErrorCode KSPFGMRESCycle(PetscInt *itcount,KSP ksp)
     ierr = PCGetOperators(ksp->pc,&Amat,&Pmat);CHKERRQ(ierr);
     /* Multiply preconditioned vector by operator - put in VEC_VV(loc_it+1) */
     ierr = KSP_MatMult(ksp,Amat,PREVEC(loc_it),VEC_VV(1+loc_it));CHKERRQ(ierr);
-
 
     /* update hessenberg matrix and do Gram-Schmidt - new direction is in
        VEC_VV(1+loc_it)*/
@@ -199,7 +195,6 @@ PetscErrorCode KSPFGMRESCycle(PetscInt *itcount,KSP ksp)
        to be nonsingular when PREVECS are linearly independent and A is
        nonsingular (in GMRES, the nonsingularity of A implies the nonsingularity
        of HES). So we should really add a check to verify that HES is nonsingular.*/
-
 
     /* Now apply rotations to new col of hessenberg (and right side of system),
        calculate new rotation, and get new residual norm at the same time*/
@@ -254,7 +249,6 @@ PetscErrorCode KSPFGMRESCycle(PetscInt *itcount,KSP ksp)
 
 /*
     KSPSolve_FGMRES - This routine applies the FGMRES method.
-
 
    Input Parameter:
 .     ksp - the Krylov space object that was set to use fgmres
@@ -556,9 +550,9 @@ PetscErrorCode KSPSetFromOptions_FGMRES(PetscOptionItems *PetscOptionsObject,KSP
   ierr = KSPSetFromOptions_GMRES(PetscOptionsObject,ksp);CHKERRQ(ierr);
   ierr = PetscOptionsHead(PetscOptionsObject,"KSP flexible GMRES Options");CHKERRQ(ierr);
   ierr = PetscOptionsBoolGroupBegin("-ksp_fgmres_modifypcnochange","do not vary the preconditioner","KSPFGMRESSetModifyPC",&flg);CHKERRQ(ierr);
-  if (flg) {ierr = KSPFGMRESSetModifyPC(ksp,KSPFGMRESModifyPCNoChange,0,0);CHKERRQ(ierr);}
+  if (flg) {ierr = KSPFGMRESSetModifyPC(ksp,KSPFGMRESModifyPCNoChange,NULL,NULL);CHKERRQ(ierr);}
   ierr = PetscOptionsBoolGroupEnd("-ksp_fgmres_modifypcksp","vary the KSP based preconditioner","KSPFGMRESSetModifyPC",&flg);CHKERRQ(ierr);
-  if (flg) {ierr = KSPFGMRESSetModifyPC(ksp,KSPFGMRESModifyPCKSP,0,0);CHKERRQ(ierr);}
+  if (flg) {ierr = KSPFGMRESSetModifyPC(ksp,KSPFGMRESModifyPCKSP,NULL,NULL);CHKERRQ(ierr);}
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -576,7 +570,6 @@ static PetscErrorCode  KSPFGMRESSetModifyPC_FGMRES(KSP ksp,FCN1 fcn,void *ctx,FC
   PetscFunctionReturn(0);
 }
 
-
 PetscErrorCode KSPReset_FGMRES(KSP ksp)
 {
   KSP_FGMRES     *fgmres = (KSP_FGMRES*)ksp->data;
@@ -585,7 +578,7 @@ PetscErrorCode KSPReset_FGMRES(KSP ksp)
 
   PetscFunctionBegin;
   ierr = PetscFree (fgmres->prevecs);CHKERRQ(ierr);
-  if(fgmres->nwork_alloc>0){
+  if (fgmres->nwork_alloc>0){
     i=0;
     /* In the first allocation we allocated VEC_OFFSET fewer vectors in prevecs */
     ierr = VecDestroyVecs(fgmres->mwork_alloc[i]-VEC_OFFSET,&fgmres->prevecs_user_work[i]);CHKERRQ(ierr);
@@ -631,7 +624,6 @@ PetscErrorCode  KSPGMRESGetRestart_FGMRES(KSP ksp,PetscInt *max_k)
 /*MC
      KSPFGMRES - Implements the Flexible Generalized Minimal Residual method.
                 developed by Saad with restart
-
 
    Options Database Keys:
 +   -ksp_gmres_restart <restart> - the number of Krylov directions to orthogonalize against
@@ -698,16 +690,15 @@ PETSC_EXTERN PetscErrorCode KSPCreate_FGMRES(KSP ksp)
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetCGSRefinementType_C",KSPGMRESSetCGSRefinementType_GMRES);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESGetCGSRefinementType_C",KSPGMRESGetCGSRefinementType_GMRES);CHKERRQ(ierr);
 
-
   fgmres->haptol         = 1.0e-30;
   fgmres->q_preallocate  = 0;
   fgmres->delta_allocate = FGMRES_DELTA_DIRECTIONS;
   fgmres->orthog         = KSPGMRESClassicalGramSchmidtOrthogonalization;
-  fgmres->nrs            = 0;
-  fgmres->sol_temp       = 0;
+  fgmres->nrs            = NULL;
+  fgmres->sol_temp       = NULL;
   fgmres->max_k          = FGMRES_DEFAULT_MAXK;
-  fgmres->Rsvd           = 0;
-  fgmres->orthogwork     = 0;
+  fgmres->Rsvd           = NULL;
+  fgmres->orthogwork     = NULL;
   fgmres->modifypc       = KSPFGMRESModifyPCNoChange;
   fgmres->modifyctx      = NULL;
   fgmres->modifydestroy  = NULL;

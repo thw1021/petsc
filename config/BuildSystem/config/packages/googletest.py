@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit = 'master'
+    self.gitcommit = 'fe4d5f10840c5f62b984364a4d41719f1bc079a2' # master sep-24-2020
     self.download  = ['git://https://github.com/google/googletest.git']
     self.functions = []
     self.includes  = ['gtest/gtest.h']
@@ -20,24 +20,12 @@ class Configure(config.package.CMakePackage):
     return
 
   def formCMakeConfigureArgs(self):
-    if not self.cmake.found:
-      raise RuntimeError('CMake > 2.5 is needed to build googletest\nSuggest adding --download-cmake to ./configure arguments')
-
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-Dgtest_build_tests=ON')
     args.append('-Dgmock_build_tests=ON')
     args.append('-Dgtest_build_samples=ON')
     args.append('-DBUILD_GMOCK=ON')
     args.append('-DBUILD_GTEST=OFF')
-    if hasattr(self.compilers, 'CXX'):
-      self.framework.pushLanguage('Cxx')
-      args.append('-DMPI_CXX_COMPILER="'+self.framework.getCompiler()+'"')
-      args.append('-DCMAKE_CXX_FLAGS:STRING="'+self.removeWarningFlags(self.framework.getCompilerFlags())+'"')
-    else:
-        raise RuntimeError("googletest requires a C++ compiler\n")
-    self.framework.popLanguage()
-    self.framework.pushLanguage('C')
-    args.append('-DMPI_C_COMPILER="'+self.framework.getCompiler()+'"')
-    args.append('-DCMAKE_C_FLAGS:STRING="'+self.removeWarningFlags(self.framework.getCompilerFlags())+'"')
-    self.framework.popLanguage()
+    if not hasattr(self.compilers, 'CXX'):
+      raise RuntimeError("googletest requires a C++ compiler\n")
     return args

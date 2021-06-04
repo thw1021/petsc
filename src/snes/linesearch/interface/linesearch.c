@@ -206,6 +206,7 @@ PetscErrorCode SNESLineSearchCreate(MPI_Comm comm, SNESLineSearch *outlinesearch
   linesearch->postcheckctx = NULL;
   linesearch->max_its      = 1;
   linesearch->setupcalled  = PETSC_FALSE;
+  linesearch->monitor      = NULL;
   *outlinesearch           = linesearch;
   PetscFunctionReturn(0);
 }
@@ -255,7 +256,6 @@ PetscErrorCode SNESLineSearchSetUp(SNESLineSearch linesearch)
   }
   PetscFunctionReturn(0);
 }
-
 
 /*@
    SNESLineSearchReset - Undoes the SNESLineSearchSetUp() and deletes any Vecs or Mats allocated by the line search.
@@ -599,7 +599,7 @@ PetscErrorCode SNESLineSearchApply(SNESLineSearch linesearch, Vec X, Vec F, Pets
   PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
   PetscValidHeaderSpecific(X,VEC_CLASSID,2);
   PetscValidHeaderSpecific(F,VEC_CLASSID,3);
-  PetscValidHeaderSpecific(Y,VEC_CLASSID,4);
+  PetscValidHeaderSpecific(Y,VEC_CLASSID,5);
 
   linesearch->result = SNES_LINESEARCH_SUCCEEDED;
 
@@ -645,7 +645,7 @@ PetscErrorCode SNESLineSearchDestroy(SNESLineSearch * linesearch)
   PetscFunctionBegin;
   if (!*linesearch) PetscFunctionReturn(0);
   PetscValidHeaderSpecific((*linesearch),SNESLINESEARCH_CLASSID,1);
-  if (--((PetscObject)(*linesearch))->refct > 0) {*linesearch = 0; PetscFunctionReturn(0);}
+  if (--((PetscObject)(*linesearch))->refct > 0) {*linesearch = NULL; PetscFunctionReturn(0);}
   ierr = PetscObjectSAWsViewOff((PetscObject)*linesearch);CHKERRQ(ierr);
   ierr = SNESLineSearchReset(*linesearch);CHKERRQ(ierr);
   if ((*linesearch)->ops->destroy) (*linesearch)->ops->destroy(*linesearch);
@@ -708,10 +708,7 @@ PetscErrorCode  SNESLineSearchGetDefaultMonitor(SNESLineSearch linesearch, Petsc
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  if (monitor) {
-    PetscValidPointer(monitor, 2);
-    *monitor = linesearch->monitor;
-  }
+  *monitor = linesearch->monitor;
   PetscFunctionReturn(0);
 }
 
@@ -969,14 +966,13 @@ PetscErrorCode SNESLineSearchSetType(SNESLineSearch linesearch, SNESLineSearchTy
   /* Destroy the previous private linesearch context */
   if (linesearch->ops->destroy) {
     ierr = (*(linesearch)->ops->destroy)(linesearch);CHKERRQ(ierr);
-
     linesearch->ops->destroy = NULL;
   }
   /* Reinitialize function pointers in SNESLineSearchOps structure */
-  linesearch->ops->apply          = 0;
-  linesearch->ops->view           = 0;
-  linesearch->ops->setfromoptions = 0;
-  linesearch->ops->destroy        = 0;
+  linesearch->ops->apply          = NULL;
+  linesearch->ops->view           = NULL;
+  linesearch->ops->setfromoptions = NULL;
+  linesearch->ops->destroy        = NULL;
 
   ierr = PetscObjectChangeTypeName((PetscObject)linesearch,type);CHKERRQ(ierr);
   ierr = (*r)(linesearch);CHKERRQ(ierr);
@@ -1199,7 +1195,7 @@ PetscErrorCode  SNESLineSearchSetTolerances(SNESLineSearch linesearch,PetscReal 
   }
 
   if (ltol != PETSC_DEFAULT) {
-    if (ltol < 0.0) SETERRQ1(PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Labmda tolerance %14.12e must be non-negative",(double)ltol);
+    if (ltol < 0.0) SETERRQ1(PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Lambda tolerance %14.12e must be non-negative",(double)ltol);
     linesearch->ltol = ltol;
   }
 

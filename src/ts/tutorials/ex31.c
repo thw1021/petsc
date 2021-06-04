@@ -57,18 +57,18 @@ PetscInt GetSize(const char *p)
          ||(!strcmp(p,"hull1972a2"))
          ||(!strcmp(p,"hull1972a3"))
          ||(!strcmp(p,"hull1972a4"))
-         ||(!strcmp(p,"hull1972a5")) )  PetscFunctionReturn(1);
-  else if  (!strcmp(p,"hull1972b1")  )  PetscFunctionReturn(2);
+         ||(!strcmp(p,"hull1972a5"))) PetscFunctionReturn(1);
+  else if  (!strcmp(p,"hull1972b1")) PetscFunctionReturn(2);
   else if ((!strcmp(p,"hull1972b2"))
          ||(!strcmp(p,"hull1972b3"))
          ||(!strcmp(p,"hull1972b4"))
-         ||(!strcmp(p,"hull1972b5")) )  PetscFunctionReturn(3);
-  else if ((!strcmp(p,"kulik2013i")) )  PetscFunctionReturn(4);
+         ||(!strcmp(p,"hull1972b5"))) PetscFunctionReturn(3);
+  else if ((!strcmp(p,"kulik2013i"))) PetscFunctionReturn(4);
   else if ((!strcmp(p,"hull1972c1"))
          ||(!strcmp(p,"hull1972c2"))
-         ||(!strcmp(p,"hull1972c3")) )  PetscFunctionReturn(10);
-  else if  (!strcmp(p,"hull1972c4")  )  PetscFunctionReturn(51);
-  else                                  PetscFunctionReturn(-1);
+         ||(!strcmp(p,"hull1972c3"))) PetscFunctionReturn(10);
+  else if  (!strcmp(p,"hull1972c4")) PetscFunctionReturn(51);
+  else PetscFunctionReturn(-1);
 }
 
 /****************************************************************/
@@ -147,7 +147,7 @@ PetscErrorCode RHSFunction_Hull1972A2(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
   PetscErrorCode    ierr;
   const PetscScalar *y;
-  PetscScalar       *f;  
+  PetscScalar       *f;
 
   PetscFunctionBegin;
   ierr = VecGetArrayRead(Y,&y);CHKERRQ(ierr);
@@ -701,7 +701,6 @@ PetscErrorCode IJacobian_Hull1972B5(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
   PetscFunctionReturn(0);
 }
 
-
 /* Kulikov, 2013, Problem I */
 
 PetscErrorCode RHSFunction_Kulikov2013I(TS ts, PetscReal t, Vec Y, Vec F, void *s)
@@ -790,7 +789,6 @@ PetscErrorCode IJacobian_Kulikov2013I(TS ts, PetscReal t, Vec Y, Vec Ydot, Petsc
   ierr = VecRestoreArrayRead(Y,&y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /* Hull, 1972, Problem C1 */
 
@@ -992,7 +990,7 @@ PetscErrorCode IJacobian_Hull1972C34(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscR
 {
   PetscErrorCode    ierr;
   const PetscScalar *y;
-  PetscScalar       value[3];  
+  PetscScalar       value[3];
   PetscInt          N,i,col[3];
 
   PetscFunctionBegin;
@@ -1188,7 +1186,7 @@ PetscErrorCode SolveODE(char* ptype, PetscReal dt, PetscReal tfinal, PetscInt ma
   Vec             Yerr;             /* Auxiliary solution vector              */
   PetscReal       err_norm;         /* Estimated error norm                   */
   PetscReal       final_time;       /* Actual final time from the integrator  */
-  
+
   PetscFunctionBegin;
   N = GetSize((const char *)&ptype[0]);
   if (N < 0) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_SIZ,"Illegal problem specification.\n");
@@ -1214,7 +1212,7 @@ PetscErrorCode SolveODE(char* ptype, PetscReal dt, PetscReal tfinal, PetscInt ma
   ierr = TSSetSolution(ts,Y);CHKERRQ(ierr);
   /* Specify left/right-hand side functions                               */
   ierr = TSGetType(ts,&time_scheme);CHKERRQ(ierr);
-  
+
   if ((!strcmp(time_scheme,TSEULER)) || (!strcmp(time_scheme,TSRK)) || (!strcmp(time_scheme,TSSSP) || (!strcmp(time_scheme,TSGLEE)))) {
     /* Explicit time-integration -> specify right-hand side function ydot = f(y) */
     ierr = TSSetRHSFunction(ts,NULL,RHSFunction,&ptype[0]);CHKERRQ(ierr);
@@ -1248,7 +1246,7 @@ PetscErrorCode SolveODE(char* ptype, PetscReal dt, PetscReal tfinal, PetscInt ma
 
   /* Exact solution */
   ierr = VecDuplicate(Y,&Yex);CHKERRQ(ierr);
-  if(PetscAbsScalar(final_time-tfinal)>2.*PETSC_MACHINE_EPSILON) {
+  if (PetscAbsScalar(final_time-tfinal)>2.*PETSC_MACHINE_EPSILON) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Note: There is a difference between the prescribed final time %g and the actual final time, %g.\n",(double)tfinal,(double)final_time);CHKERRQ(ierr);
   }
   ierr = ExactSolution(Yex,&ptype[0],final_time,exact_flag);CHKERRQ(ierr);
@@ -1286,7 +1284,7 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
 
   /* Check if running with only 1 proc */
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size>1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Only for sequential runs");
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex31",NULL);CHKERRQ(ierr);

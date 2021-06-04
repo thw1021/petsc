@@ -1,7 +1,6 @@
 #include <petscksp.h>
 #include <../src/tao/quadratic/impls/gpcg/gpcg.h>        /*I "gpcg.h" I*/
 
-
 static PetscErrorCode GPCGGradProjections(Tao tao);
 static PetscErrorCode GPCGObjectiveAndGradient(TaoLineSearch,Vec,PetscReal*,Vec,void*);
 
@@ -257,7 +256,7 @@ static PetscErrorCode GPCGGradProjections(Tao tao)
   */
   PetscFunctionBegin;
   for (i=0;i<gpcg->maxgpits;i++){
-    if ( -actred <= (gpcg->pg_ftol)*actred_max) break;
+    if (-actred <= (gpcg->pg_ftol)*actred_max) break;
     ierr = VecBoundGradientProjection(G,X,XL,XU,DX);CHKERRQ(ierr);
     ierr = VecScale(DX,-1.0);CHKERRQ(ierr);
     ierr = VecDot(DX,G,&gdx);CHKERRQ(ierr);

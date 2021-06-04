@@ -15,7 +15,7 @@ static PetscErrorCode DMSequenceView_HDF5(DM dm, const char *seqname, PetscInt s
 
   PetscFunctionBegin;
   if (seqnum < 0) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) viewer), &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) viewer), &rank);CHKERRMPI(ierr);
   ierr = VecCreateMPI(PetscObjectComm((PetscObject) viewer), rank ? 0 : 1, 1, &stamp);CHKERRQ(ierr);
   ierr = VecSetBlockSize(stamp, 1);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) stamp, seqname);CHKERRQ(ierr);
@@ -30,8 +30,10 @@ static PetscErrorCode DMSequenceView_HDF5(DM dm, const char *seqname, PetscInt s
   ierr = VecAssemblyBegin(stamp);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(stamp);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "/");CHKERRQ(ierr);
-  ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PushTimestepping(viewer);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr); /* seqnum < 0 jumps out above */
   ierr = VecView(stamp, viewer);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PopTimestepping(viewer);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   ierr = VecDestroy(&stamp);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -45,13 +47,15 @@ PetscErrorCode DMSequenceLoad_HDF5_Internal(DM dm, const char *seqname, PetscInt
 
   PetscFunctionBegin;
   if (seqnum < 0) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) viewer), &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) viewer), &rank);CHKERRMPI(ierr);
   ierr = VecCreateMPI(PetscObjectComm((PetscObject) viewer), rank ? 0 : 1, 1, &stamp);CHKERRQ(ierr);
   ierr = VecSetBlockSize(stamp, 1);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) stamp, seqname);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "/");CHKERRQ(ierr);
-  ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PushTimestepping(viewer);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr);  /* seqnum < 0 jumps out above */
   ierr = VecLoad(stamp, viewer);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PopTimestepping(viewer);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   if (!rank) {
     const PetscScalar *a;
@@ -130,7 +134,6 @@ PetscErrorCode VecView_Plex_Local_HDF5_Internal(Vec v, PetscViewer viewer)
   ierr = VecGetDM(v, &dm);CHKERRQ(ierr);
   ierr = DMGetLocalSection(dm, &section);CHKERRQ(ierr);
   ierr = DMGetOutputSequenceNumber(dm, &seqnum, &seqval);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr);
   ierr = DMSequenceView_HDF5(dm, "time", seqnum, (PetscScalar) seqval, viewer);CHKERRQ(ierr);
   ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
   ierr = DMGetOutputDM(dm, &dmBC);CHKERRQ(ierr);
@@ -236,6 +239,7 @@ PetscErrorCode VecView_Plex_HDF5_Internal(Vec v, PetscViewer viewer)
 {
   DM             dm;
   Vec            locv;
+  PetscObject    isZero;
   const char    *name;
   PetscReal      time;
   PetscErrorCode ierr;
@@ -245,6 +249,8 @@ PetscErrorCode VecView_Plex_HDF5_Internal(Vec v, PetscViewer viewer)
   ierr = DMGetLocalVector(dm, &locv);CHKERRQ(ierr);
   ierr = PetscObjectGetName((PetscObject) v, &name);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) locv, name);CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject) v, "__Vec_bc_zero__", &isZero);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject) locv, "__Vec_bc_zero__", isZero);CHKERRQ(ierr);
   ierr = DMGlobalToLocalBegin(dm, v, INSERT_VALUES, locv);CHKERRQ(ierr);
   ierr = DMGlobalToLocalEnd(dm, v, INSERT_VALUES, locv);CHKERRQ(ierr);
   ierr = DMGetOutputSequenceNumber(dm, NULL, &time);CHKERRQ(ierr);
@@ -254,6 +260,7 @@ PetscErrorCode VecView_Plex_HDF5_Internal(Vec v, PetscViewer viewer)
   ierr = VecView_Plex_Local_HDF5_Internal(locv, viewer);CHKERRQ(ierr);
   ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject) locv, "__Vec_bc_zero__", NULL);CHKERRQ(ierr);
   ierr = DMRestoreLocalVector(dm, &locv);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -286,9 +293,15 @@ PetscErrorCode VecLoad_Plex_HDF5_Internal(Vec v, PetscViewer viewer)
   ierr = PetscObjectGetName((PetscObject) v, &name);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) locv, name);CHKERRQ(ierr);
   ierr = DMGetOutputSequenceNumber(dm, &seqnum, NULL);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "/fields");CHKERRQ(ierr);
+  if (seqnum >= 0) {
+    ierr = PetscViewerHDF5PushTimestepping(viewer);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr);
+  }
   ierr = VecLoad_Plex_Local(locv, viewer);CHKERRQ(ierr);
+  if (seqnum >= 0) {
+    ierr = PetscViewerHDF5PopTimestepping(viewer);CHKERRQ(ierr);
+  }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   ierr = DMLocalToGlobalBegin(dm, locv, INSERT_VALUES, v);CHKERRQ(ierr);
   ierr = DMLocalToGlobalEnd(dm, locv, INSERT_VALUES, v);CHKERRQ(ierr);
@@ -305,9 +318,15 @@ PetscErrorCode VecLoad_Plex_HDF5_Native_Internal(Vec v, PetscViewer viewer)
   PetscFunctionBegin;
   ierr = VecGetDM(v, &dm);CHKERRQ(ierr);
   ierr = DMGetOutputSequenceNumber(dm, &seqnum, NULL);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "/fields");CHKERRQ(ierr);
+  if (seqnum >= 0) {
+    ierr = PetscViewerHDF5PushTimestepping(viewer);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr);
+  }
   ierr = VecLoad_Default(v, viewer);CHKERRQ(ierr);
+  if (seqnum >= 0) {
+    ierr = PetscViewerHDF5PopTimestepping(viewer);CHKERRQ(ierr);
+  }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -375,12 +394,12 @@ static PetscErrorCode DMPlexWriteTopology_HDF5_Static(DM dm, IS globalPointNumbe
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEnd, PetscInt *numCorners, IS *cellIS)
+static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEnd, IS globalCellNumbers, PetscInt *numCorners, IS *cellIS)
 {
   PetscSF         sfPoint;
   DMLabel         cutLabel, cutVertexLabel = NULL;
   IS              globalVertexNumbers, cutvertices = NULL;
-  const PetscInt *gvertex, *cutverts = NULL;
+  const PetscInt *gcell, *gvertex, *cutverts = NULL;
   PetscInt       *vertices;
   PetscInt        conesSize = 0;
   PetscInt        dim, numCornersLocal = 0, cell, vStart, vEnd, vExtra = 0, v;
@@ -390,11 +409,13 @@ static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEn
   *numCorners = 0;
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
+  ierr = ISGetIndices(globalCellNumbers, &gcell);CHKERRQ(ierr);
 
   for (cell = cStart; cell < cEnd; ++cell) {
     PetscInt *closure = NULL;
     PetscInt  closureSize, v, Nc = 0;
 
+    if (gcell[cell] < 0) continue;
     ierr = DMPlexGetTransitiveClosure(dm, cell, PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
     for (v = 0; v < closureSize*2; v += 2) {
       if ((closure[v] >= vStart) && (closure[v] < vEnd)) ++Nc;
@@ -404,7 +425,7 @@ static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEn
     if (!numCornersLocal)           numCornersLocal = Nc;
     else if (numCornersLocal != Nc) numCornersLocal = 1;
   }
-  ierr = MPIU_Allreduce(&numCornersLocal, numCorners, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject) dm));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&numCornersLocal, numCorners, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject) dm));CHKERRMPI(ierr);
   if (numCornersLocal && (numCornersLocal != *numCorners || *numCorners == 1)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Visualization topology currently only supports identical cell shapes");
   /* Handle periodic cuts by identifying vertices which should be duplicated */
   ierr = DMGetLabel(dm, "periodic_cut", &cutLabel);CHKERRQ(ierr);
@@ -441,6 +462,7 @@ static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEn
     PetscInt  closureSize, Nc = 0, p, value = -1;
     PetscBool replace;
 
+    if (gcell[cell] < 0) continue;
     if (cutLabel) {ierr = DMLabelGetValue(cutLabel, cell, &value);CHKERRQ(ierr);}
     replace = (value == 2) ? PETSC_TRUE : PETSC_FALSE;
     ierr = DMPlexGetTransitiveClosure(dm, cell, PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
@@ -463,6 +485,7 @@ static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEn
   }
   ierr = ISRestoreIndices(globalVertexNumbers, &gvertex);CHKERRQ(ierr);
   ierr = ISDestroy(&globalVertexNumbers);CHKERRQ(ierr);
+  ierr = ISRestoreIndices(globalCellNumbers, &gcell);CHKERRQ(ierr);
   if (cutvertices) {ierr = ISRestoreIndices(cutvertices, &cutverts);CHKERRQ(ierr);}
   ierr = ISDestroy(&cutvertices);CHKERRQ(ierr);
   ierr = DMLabelDestroy(&cutVertexLabel);CHKERRQ(ierr);
@@ -473,7 +496,7 @@ static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEn
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMPlexWriteTopology_Vertices_HDF5_Static(DM dm, PetscViewer viewer)
+static PetscErrorCode DMPlexWriteTopology_Vertices_HDF5_Static(DM dm, IS globalCellNumbers, PetscViewer viewer)
 {
   DM              cdm;
   DMLabel         depthLabel, ctLabel;
@@ -499,14 +522,15 @@ static PetscErrorCode DMPlexWriteTopology_Vertices_HDF5_Static(DM dm, PetscViewe
     PetscInt             pStart, pEnd, dep, numCorners, n = 0;
     PetscBool            output = PETSC_FALSE, doOutput;
 
+    if (ict == DM_POLYTOPE_FV_GHOST) continue;
     ierr = DMLabelGetStratumBounds(ctLabel, ict, &pStart, &pEnd);CHKERRQ(ierr);
     if (pStart >= 0) {
       ierr = DMLabelGetValue(depthLabel, pStart, &dep);CHKERRQ(ierr);
       if (dep == depth - cellHeight) output = PETSC_TRUE;
     }
-    ierr = MPI_Allreduce(&output, &doOutput, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject) dm));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&output, &doOutput, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject) dm));CHKERRMPI(ierr);
     if (!doOutput) continue;
-    ierr = CreateConesIS_Private(dm, pStart, pEnd, &numCorners,  &cellIS);CHKERRQ(ierr);
+    ierr = CreateConesIS_Private(dm, pStart, pEnd, globalCellNumbers, &numCorners,  &cellIS);CHKERRQ(ierr);
     if (!n) {
       ierr = PetscViewerHDF5PushGroup(viewer, "/viz/topology");CHKERRQ(ierr);
     } else {
@@ -690,7 +714,6 @@ static PetscErrorCode DMPlexWriteCoordinates_Vertices_HDF5_Static(DM dm, PetscVi
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode DMPlexWriteLabels_HDF5_Static(DM dm, IS globalPointNumbers, PetscViewer viewer)
 {
   const PetscInt   *gpoint;
@@ -781,6 +804,8 @@ PetscErrorCode DMPlexView_HDF5_Internal(DM dm, PetscViewer viewer)
   ierr = DMPlexWriteCoordinates_HDF5_Static(dm, viewer);CHKERRQ(ierr);
   ierr = DMPlexWriteLabels_HDF5_Static(dm, globalPointNumbers, viewer);CHKERRQ(ierr);
 
+  ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "petsc_version_git", PETSC_STRING, PETSC_VERSION_GIT);CHKERRQ(ierr);
+
   ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
   switch (format) {
     case PETSC_VIEWER_HDF5_VIZ:
@@ -804,7 +829,7 @@ PetscErrorCode DMPlexView_HDF5_Internal(DM dm, PetscViewer viewer)
   }
 
   if (viz_geom)   {ierr = DMPlexWriteCoordinates_Vertices_HDF5_Static(dm, viewer);CHKERRQ(ierr);}
-  if (xdmf_topo)  {ierr = DMPlexWriteTopology_Vertices_HDF5_Static(dm, viewer);CHKERRQ(ierr);}
+  if (xdmf_topo)  {ierr = DMPlexWriteTopology_Vertices_HDF5_Static(dm, globalPointNumbers, viewer);CHKERRQ(ierr);}
   if (petsc_topo) {ierr = DMPlexWriteTopology_HDF5_Static(dm, globalPointNumbers, viewer);CHKERRQ(ierr);}
 
   ierr = ISDestroy(&globalPointNumbers);CHKERRQ(ierr);
@@ -864,7 +889,7 @@ static herr_t ReadLabelHDF5_Static(hid_t g_id, const char *name, const H5L_info_
   return err;
 }
 
-PetscErrorCode DMPlexLoadLabels_HDF5_Internal(DM dm, PetscViewer viewer)
+PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
 {
   LabelCtx        ctx;
   hid_t           fileId, groupId;
@@ -872,7 +897,7 @@ PetscErrorCode DMPlexLoadLabels_HDF5_Internal(DM dm, PetscViewer viewer)
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &ctx.rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &ctx.rank);CHKERRMPI(ierr);
   ctx.dm     = dm;
   ctx.viewer = viewer;
   ierr = PetscViewerHDF5PushGroup(viewer, "/labels");CHKERRQ(ierr);
@@ -883,44 +908,41 @@ PetscErrorCode DMPlexLoadLabels_HDF5_Internal(DM dm, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-/* The first version will read everything onto proc 0, letting the user distribute
-   The next will create a naive partition, and then rebalance after reading
-*/
-PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
+PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF *sf)
 {
-  PetscSection    coordSection;
-  Vec             coordinates;
+  MPI_Comm        comm;
   IS              orderIS, conesIS, cellsIS, orntsIS;
   const PetscInt *order, *cones, *cells, *ornts;
-  PetscReal       lengthScale;
   PetscInt       *cone, *ornt;
-  PetscInt        dim, spatialDim, N, numVertices, vStart, vEnd, v, pEnd, p, q, maxConeSize = 0, c;
-  PetscMPIInt     rank;
+  PetscInt        dim, N, Np, pEnd, p, q, maxConeSize = 0, c;
+  PetscMPIInt     size, rank;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &rank);CHKERRQ(ierr);
+  ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   /* Read toplogy */
   ierr = PetscViewerHDF5PushGroup(viewer, "/topology");CHKERRQ(ierr);
-  ierr = ISCreate(PetscObjectComm((PetscObject) dm), &orderIS);CHKERRQ(ierr);
+  ierr = ISCreate(comm, &orderIS);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) orderIS, "order");CHKERRQ(ierr);
-  ierr = ISCreate(PetscObjectComm((PetscObject) dm), &conesIS);CHKERRQ(ierr);
+  ierr = ISCreate(comm, &conesIS);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) conesIS, "cones");CHKERRQ(ierr);
-  ierr = ISCreate(PetscObjectComm((PetscObject) dm), &cellsIS);CHKERRQ(ierr);
+  ierr = ISCreate(comm, &cellsIS);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) cellsIS, "cells");CHKERRQ(ierr);
-  ierr = ISCreate(PetscObjectComm((PetscObject) dm), &orntsIS);CHKERRQ(ierr);
+  ierr = ISCreate(comm, &orntsIS);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) orntsIS, "orientation");CHKERRQ(ierr);
-  ierr = PetscViewerHDF5ReadObjectAttribute(viewer, (PetscObject) cellsIS, "cell_dim", PETSC_INT, (void *) &dim);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5ReadObjectAttribute(viewer, (PetscObject) cellsIS, "cell_dim", PETSC_INT, NULL, &dim);CHKERRQ(ierr);
   ierr = DMSetDimension(dm, dim);CHKERRQ(ierr);
   {
     /* Force serial load */
-    ierr = PetscViewerHDF5ReadSizes(viewer, "order", NULL, &pEnd);CHKERRQ(ierr);
-    ierr = PetscLayoutSetLocalSize(orderIS->map, !rank ? pEnd : 0);CHKERRQ(ierr);
-    ierr = PetscLayoutSetSize(orderIS->map, pEnd);CHKERRQ(ierr);
-    ierr = PetscViewerHDF5ReadSizes(viewer, "cones", NULL, &pEnd);CHKERRQ(ierr);
-    ierr = PetscLayoutSetLocalSize(conesIS->map, !rank ? pEnd : 0);CHKERRQ(ierr);
-    ierr = PetscLayoutSetSize(conesIS->map, pEnd);CHKERRQ(ierr);
-    pEnd = !rank ? pEnd : 0;
+    ierr = PetscViewerHDF5ReadSizes(viewer, "order", NULL, &Np);CHKERRQ(ierr);
+    ierr = PetscLayoutSetLocalSize(orderIS->map, !rank ? Np : 0);CHKERRQ(ierr);
+    ierr = PetscLayoutSetSize(orderIS->map, Np);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5ReadSizes(viewer, "cones", NULL, &Np);CHKERRQ(ierr);
+    ierr = PetscLayoutSetLocalSize(conesIS->map, !rank ? Np : 0);CHKERRQ(ierr);
+    ierr = PetscLayoutSetSize(conesIS->map, Np);CHKERRQ(ierr);
+    pEnd = !rank ? Np : 0;
     ierr = PetscViewerHDF5ReadSizes(viewer, "cells", NULL, &N);CHKERRQ(ierr);
     ierr = PetscLayoutSetLocalSize(cellsIS->map, !rank ? N : 0);CHKERRQ(ierr);
     ierr = PetscLayoutSetSize(cellsIS->map, N);CHKERRQ(ierr);
@@ -933,23 +955,6 @@ PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   ierr = ISLoad(cellsIS, viewer);CHKERRQ(ierr);
   ierr = ISLoad(orntsIS, viewer);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
-  /* Read geometry */
-  ierr = PetscViewerHDF5PushGroup(viewer, "/geometry");CHKERRQ(ierr);
-  ierr = VecCreate(PetscObjectComm((PetscObject) dm), &coordinates);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) coordinates, "vertices");CHKERRQ(ierr);
-  {
-    /* Force serial load */
-    ierr = PetscViewerHDF5ReadSizes(viewer, "vertices", &spatialDim, &N);CHKERRQ(ierr);
-    ierr = VecSetSizes(coordinates, !rank ? N : 0, N);CHKERRQ(ierr);
-    ierr = VecSetBlockSize(coordinates, spatialDim);CHKERRQ(ierr);
-  }
-  ierr = VecLoad(coordinates, viewer);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
-  ierr = DMPlexGetScale(dm, PETSC_UNIT_LENGTH, &lengthScale);CHKERRQ(ierr);
-  ierr = VecScale(coordinates, 1.0/lengthScale);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(coordinates, &numVertices);CHKERRQ(ierr);
-  ierr = VecGetBlockSize(coordinates, &spatialDim);CHKERRQ(ierr);
-  numVertices /= spatialDim;
   /* Create Plex */
   ierr = DMPlexSetChart(dm, 0, pEnd);CHKERRQ(ierr);
   ierr = ISGetIndices(orderIS, &order);CHKERRQ(ierr);
@@ -968,6 +973,25 @@ PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
     ierr = DMPlexSetConeOrientation(dm, order[p], ornt);CHKERRQ(ierr);
   }
   ierr = PetscFree2(cone,ornt);CHKERRQ(ierr);
+  /* Create global section migration SF */
+  if (sf) {
+    PetscLayout  layout;
+    PetscInt    *globalIndices;
+
+    ierr = PetscMalloc1(pEnd, &globalIndices);CHKERRQ(ierr);
+    /* plex point == globalPointNumber in this case */
+    for (p = 0; p < pEnd; ++p) globalIndices[p] = p;
+    ierr = PetscLayoutCreate(comm, &layout);CHKERRQ(ierr);
+    ierr = PetscLayoutSetSize(layout, Np);CHKERRQ(ierr);
+    ierr = PetscLayoutSetBlockSize(layout, 1);CHKERRQ(ierr);
+    ierr = PetscLayoutSetUp(layout);CHKERRQ(ierr);
+    ierr = PetscSFCreate(comm, sf);CHKERRQ(ierr);
+    ierr = PetscSFSetFromOptions(*sf);CHKERRQ(ierr);
+    ierr = PetscSFSetGraphLayout(*sf, layout, pEnd, NULL, PETSC_OWN_POINTER, globalIndices);CHKERRQ(ierr);
+    ierr = PetscLayoutDestroy(&layout);CHKERRQ(ierr);
+    ierr = PetscFree(globalIndices);CHKERRQ(ierr);
+  }
+  /*  */
   ierr = ISRestoreIndices(orderIS, &order);CHKERRQ(ierr);
   ierr = ISRestoreIndices(conesIS, &cones);CHKERRQ(ierr);
   ierr = ISRestoreIndices(cellsIS, &cells);CHKERRQ(ierr);
@@ -978,6 +1002,37 @@ PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   ierr = ISDestroy(&orntsIS);CHKERRQ(ierr);
   ierr = DMPlexSymmetrize(dm);CHKERRQ(ierr);
   ierr = DMPlexStratify(dm);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer)
+{
+  PetscSection    coordSection;
+  Vec             coordinates;
+  PetscReal       lengthScale;
+  PetscInt        spatialDim, N, numVertices, vStart, vEnd, v;
+  PetscMPIInt     rank;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &rank);CHKERRMPI(ierr);
+  /* Read geometry */
+  ierr = PetscViewerHDF5PushGroup(viewer, "/geometry");CHKERRQ(ierr);
+  ierr = VecCreate(PetscObjectComm((PetscObject) dm), &coordinates);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) coordinates, "vertices");CHKERRQ(ierr);
+  {
+    /* Force serial load */
+    ierr = PetscViewerHDF5ReadSizes(viewer, "vertices", &spatialDim, &N);CHKERRQ(ierr);
+    ierr = VecSetSizes(coordinates, !rank ? N : 0, N);CHKERRQ(ierr);
+    ierr = VecSetBlockSize(coordinates, spatialDim);CHKERRQ(ierr);
+  }
+  ierr = VecLoad(coordinates, viewer);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  ierr = DMPlexGetScale(dm, PETSC_UNIT_LENGTH, &lengthScale);CHKERRQ(ierr);
+  ierr = VecScale(coordinates, 1.0/lengthScale);CHKERRQ(ierr);
+  ierr = VecGetLocalSize(coordinates, &numVertices);CHKERRQ(ierr);
+  ierr = VecGetBlockSize(coordinates, &spatialDim);CHKERRQ(ierr);
+  numVertices /= spatialDim;
   /* Create coordinates */
   ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
   if (numVertices != vEnd - vStart) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of coordinates loaded %d does not match number of vertices %d", numVertices, vEnd - vStart);
@@ -992,8 +1047,20 @@ PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   ierr = PetscSectionSetUp(coordSection);CHKERRQ(ierr);
   ierr = DMSetCoordinates(dm, coordinates);CHKERRQ(ierr);
   ierr = VecDestroy(&coordinates);CHKERRQ(ierr);
-  /* Read Labels */
-  ierr = DMPlexLoadLabels_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/* The first version will read everything onto proc 0, letting the user distribute
+   The next will create a naive partition, and then rebalance after reading
+*/
+PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
+{
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = DMPlexTopologyLoad_HDF5_Internal(dm, viewer, NULL);CHKERRQ(ierr);
+  ierr = DMPlexCoordinatesLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
+  ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 #endif

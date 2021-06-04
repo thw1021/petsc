@@ -35,7 +35,7 @@
         three = 3.0
       PetscScalar :: dot
       PetscScalar, dimension(3) :: dots
-      character(len=40) ::  name
+      character(len=PETSC_MAX_PATH_LEN) ::  name
       PetscReal    :: nfloat
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -180,7 +180,6 @@
       if (v .gt. -PETSC_SMALL .and. v .lt. PETSC_SMALL) v = 0.0
       if (rank == 0) write(6,210) v
  210  format ('VecPointwiseDivide ',1pe9.2)
-
 
       dots(1) = one
       dots(2) = three

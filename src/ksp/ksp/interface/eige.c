@@ -127,8 +127,8 @@ PetscErrorCode  KSPComputeEigenvaluesExplicitly(KSP ksp,PetscInt nmax,PetscReal 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)ksp,&comm);CHKERRQ(ierr);
   ierr = KSPComputeOperator(ksp,MATDENSE,&BA);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   ierr = MatGetSize(BA,&n,&n);CHKERRQ(ierr);
   if (size > 1) { /* assemble matrix on first processor */
@@ -321,7 +321,7 @@ PetscErrorCode KSPPlotEigenContours_Private(KSP ksp,PetscInt neig,const PetscRea
   PetscDrawAxis  drawaxis;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)ksp),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)ksp),&rank);CHKERRMPI(ierr);
   if (rank) PetscFunctionReturn(0);
   M    = 80;
   N    = 80;
@@ -354,7 +354,7 @@ PetscErrorCode KSPPlotEigenContours_Private(KSP ksp,PetscInt neig,const PetscRea
       value[i+j*M] = PetscLogReal(tmod) / PetscLogReal(10.0);
     }
   }
-  ierr = PetscViewerDrawOpen(PETSC_COMM_SELF,0,"Iteratively Computed Eigen-contours",PETSC_DECIDE,PETSC_DECIDE,450,450,&viewer);CHKERRQ(ierr);
+  ierr = PetscViewerDrawOpen(PETSC_COMM_SELF,NULL,"Iteratively Computed Eigen-contours",PETSC_DECIDE,PETSC_DECIDE,450,450,&viewer);CHKERRQ(ierr);
   ierr = PetscViewerDrawGetDraw(viewer,0,&draw);CHKERRQ(ierr);
   ierr = PetscDrawTensorContour(draw,M,N,NULL,NULL,value);CHKERRQ(ierr);
   if (0) {

@@ -6,7 +6,7 @@
 #include <petsc/private/matimpl.h>
 #include <petscmat.h>  /*I "petscmat.h" I*/
 
-PetscFunctionList MatOrderingList              = 0;
+PetscFunctionList MatOrderingList              = NULL;
 PetscBool         MatOrderingRegisterAllCalled = PETSC_FALSE;
 
 extern PetscErrorCode MatGetOrdering_Flow_SeqAIJ(Mat,MatOrderingType,IS*,IS*);
@@ -15,7 +15,6 @@ PetscErrorCode MatGetOrdering_Flow(Mat mat,MatOrderingType type,IS *irow,IS *ico
 {
   PetscFunctionBegin;
   SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot do default flow ordering for matrix type");
-  PetscFunctionReturn(0);
 }
 
 PETSC_INTERN PetscErrorCode MatGetOrdering_Natural(Mat mat,MatOrderingType type,IS *irow,IS *icol)
@@ -104,7 +103,7 @@ $     MatOrderingSetType(part,"my_order)
    or at runtime via the option
 $     -pc_factor_mat_ordering_type my_order
 
-.seealso: MatOrderingRegisterDestroy(), MatOrderingRegisterAll()
+.seealso: MatOrderingRegisterAll()
 @*/
 PetscErrorCode  MatOrderingRegister(const char sname[],PetscErrorCode (*function)(Mat,MatOrderingType,IS*,IS*))
 {
@@ -132,6 +131,7 @@ $      MATORDERINGND - Nested Dissection
 $      MATORDERING1WD - One-way Dissection
 $      MATORDERINGRCM - Reverse Cuthill-McKee
 $      MATORDERINGQMD - Quotient Minimum Degree
+$      MATORDERINGEXTERNAL - Use an ordering internal to the factorzation package and do not compute or use PETSc's
 
    Output Parameters:
 +  rperm - row permutation indices
@@ -152,9 +152,10 @@ $      MATORDERINGQMD - Quotient Minimum Degree
 
    These are generally only implemented for sequential sparse matrices.
 
-   The external packages that PETSc can use for direct factorization such as SuperLU do not accept orderings provided by
+   Some external packages that PETSc can use for direct factorization such as SuperLU do not accept orderings provided by
    this call.
 
+   If MATORDERINGEXTERNAL is used then PETSc does not compute an ordering and utilizes one built into the factorization package
 
            fill, reordering, natural, Nested Dissection,
            One-way Dissection, Cholesky, Reverse Cuthill-McKee,
@@ -165,9 +166,9 @@ $      MATORDERINGQMD - Quotient Minimum Degree
 PetscErrorCode  MatGetOrdering(Mat mat,MatOrderingType type,IS *rperm,IS *cperm)
 {
   PetscErrorCode ierr;
-  PetscInt       mmat,nmat,mis,m;
+  PetscInt       mmat,nmat,mis;
   PetscErrorCode (*r)(Mat,MatOrderingType,IS*,IS*);
-  PetscBool      flg = PETSC_FALSE,isseqdense,ismpidense,ismpiaij,ismpibaij,ismpisbaij,ismpiaijcusparse,iselemental,flg1;
+  PetscBool      flg,ismpiaij;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -175,16 +176,13 @@ PetscErrorCode  MatGetOrdering(Mat mat,MatOrderingType type,IS *rperm,IS *cperm)
   PetscValidPointer(cperm,4);
   if (!mat->assembled) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
   if (mat->factortype) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
+  if (!type) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Ordering type cannot be null");
 
-  ierr = PetscStrcmp(type,MATORDERINGNATURAL_OR_ND,&flg1);CHKERRQ(ierr);
-  if (flg1) {
-    PetscBool isseqsbaij;
-    ierr = PetscObjectTypeCompareAny((PetscObject)mat,&isseqsbaij,MATSEQSBAIJ,MATSEQBAIJ,NULL);CHKERRQ(ierr);
-    if (isseqsbaij) {
-      type = MATORDERINGNATURAL;
-    } else {
-      type = MATORDERINGND;
-    }
+  ierr = PetscStrcmp(type,MATORDERINGEXTERNAL,&flg);CHKERRQ(ierr);
+  if (flg) {
+    *rperm = NULL;
+    *cperm = NULL;
+    PetscFunctionReturn(0);
   }
 
   /* This code is terrible. MatGetOrdering() multiple dispatch should use matrix and this code should move to impls/aij/mpi. */
@@ -218,26 +216,6 @@ PetscErrorCode  MatGetOrdering(Mat mat,MatOrderingType type,IS *rperm,IS *cperm)
     PetscFunctionReturn(0);
   }
 
-  /* this chunk of code is REALLY bad, should maybe get the ordering from the factor matrix,
-     then those that don't support orderings will handle their cases themselves. */
-  ierr = PetscObjectTypeCompare((PetscObject)mat,MATSEQDENSE,&isseqdense);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)mat,MATMPIDENSE,&ismpidense);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)mat,MATMPIAIJCUSPARSE,&ismpiaijcusparse);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)mat,MATMPIBAIJ,&ismpibaij);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)mat,MATMPISBAIJ,&ismpisbaij);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)mat,MATELEMENTAL,&iselemental);CHKERRQ(ierr);
-  if (isseqdense || ismpidense || ismpibaij || ismpisbaij || ismpiaijcusparse || iselemental) {
-    ierr = MatGetLocalSize(mat,&m,NULL);CHKERRQ(ierr);
-    /*
-       These matrices only give natural ordering
-    */
-    ierr = ISCreateStride(PETSC_COMM_SELF,m,0,1,cperm);CHKERRQ(ierr);
-    ierr = ISCreateStride(PETSC_COMM_SELF,m,0,1,rperm);CHKERRQ(ierr);
-    ierr = ISSetIdentity(*cperm);CHKERRQ(ierr);
-    ierr = ISSetIdentity(*rperm);CHKERRQ(ierr);
-    PetscFunctionReturn(0);
-  }
-
   if (!mat->rmap->N) { /* matrix has zero rows */
     ierr = ISCreateStride(PETSC_COMM_SELF,0,0,1,cperm);CHKERRQ(ierr);
     ierr = ISCreateStride(PETSC_COMM_SELF,0,0,1,rperm);CHKERRQ(ierr);
@@ -261,7 +239,6 @@ PetscErrorCode  MatGetOrdering(Mat mat,MatOrderingType type,IS *rperm,IS *cperm)
   ierr = ISGetLocalSize(*rperm,&mis);CHKERRQ(ierr);
   if (mmat > mis) {ierr = MatInodeAdjustForInodes(mat,rperm,cperm);CHKERRQ(ierr);}
   ierr = PetscLogEventEnd(MAT_GetOrdering,mat,0,0,0);CHKERRQ(ierr);
-
 
   ierr = PetscOptionsHasName(((PetscObject)mat)->options,((PetscObject)mat)->prefix,"-mat_view_ordering",&flg);CHKERRQ(ierr);
   if (flg) {

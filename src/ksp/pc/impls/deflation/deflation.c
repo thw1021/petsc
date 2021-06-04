@@ -12,7 +12,7 @@ const char *const PCDeflationSpaceTypes[] = {
   "user",
   "PCDeflationSpaceType",
   "PC_DEFLATION_SPACE_",
-  0
+  NULL
 };
 
 static PetscErrorCode PCDeflationSetInitOnly_Deflation(PC pc,PetscBool flg)
@@ -52,7 +52,6 @@ PetscErrorCode PCDeflationSetInitOnly(PC pc,PetscBool flg)
   ierr = PetscTryMethod(pc,"PCDeflationSetInitOnly_C",(PC,PetscBool),(pc,flg));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode PCDeflationSetLevels_Deflation(PC pc,PetscInt current,PetscInt max)
 {
@@ -413,7 +412,7 @@ PetscErrorCode PCDeflationGetPC(PC pc,PC *apc)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscValidPointer(pc,2);
+  PetscValidPointer(pc,1);
   ierr = PetscTryMethod(pc,"PCDeflationGetPC_C",(PC,PC*),(pc,apc));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -671,7 +670,7 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
       /* Reduction factor choice */
       red = def->reductionfact;
       if (red < 0) {
-        ierr = MPI_Comm_size(comm,&commsize);CHKERRQ(ierr);
+        ierr = MPI_Comm_size(comm,&commsize);CHKERRMPI(ierr);
         red  = ceil((float)commsize/ceil((float)m/commsize));
         ierr = PetscObjectTypeCompareAny((PetscObject)(def->WtAW),&match,MATSEQDENSE,MATMPIDENSE,MATDENSE,"");CHKERRQ(ierr);
         if (match) red = commsize;
@@ -881,7 +880,7 @@ static PetscErrorCode PCSetFromOptions_Deflation(PetscOptionItems *PetscOptionsO
      Prof. Reinhard Nabben at the Institute of Mathematics, TU Berlin.
 
    References:
-+    [1] - A. Nicolaides. “Deflation of conjugate gradients with applications to boundary valueproblems”, SIAM J. Numer. Anal. 24.2, 1987.
++    [1] - A. Nicolaides. "Deflation of conjugate gradients with applications to boundary value problems", SIAM J. Numer. Anal. 24.2, 1987.
 .    [2] - Z. Dostal. "Conjugate gradient method with preconditioning by projector", Int J. Comput. Math. 23.3-4, 1988.
 .    [3] - Y. A. Erlangga and R. Nabben. "Multilevel Projection-Based Nested Krylov Iteration for Boundary Value Problems", SIAM J. Sci. Comput. 30.3, 2008.
 -    [4] - J. Kruzik "Implementation of the Deflated Variants of the Conjugate Gradient Method", Master's thesis, VSB-TUO, 2018 - http://dspace5.vsb.cz/bitstream/handle/10084/130303/KRU0097_USP_N2658_2612T078_2018.pdf

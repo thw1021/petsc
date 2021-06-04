@@ -25,9 +25,8 @@ F*/
 typedef enum {RUN_FULL, RUN_TEST} RunType;
 
 typedef struct {
-  RunType           runType;        /* Whether to run tests, or solve the full problem */
-  PetscBool         useDualPenalty; /* Penalize deviation from both goals */
-  PetscErrorCode (**exactFuncs)(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
+  RunType   runType;        /* Whether to run tests, or solve the full problem */
+  PetscBool useDualPenalty; /* Penalize deviation from both goals */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -51,17 +50,11 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  DM             distributedMesh = NULL;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMPlexCreateBoxMesh(comm, 2, PETSC_TRUE, NULL, NULL, NULL, NULL, PETSC_TRUE, dm);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) *dm, "Mesh");CHKERRQ(ierr);
-  ierr = DMPlexDistribute(*dm, 0, NULL, &distributedMesh);CHKERRQ(ierr);
-  if (distributedMesh) {
-    ierr = DMDestroy(dm);CHKERRQ(ierr);
-    *dm  = distributedMesh;
-  }
+  ierr = DMCreate(comm, dm);CHKERRQ(ierr);
+  ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -199,28 +192,30 @@ PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt 
 
 PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 {
-  PetscDS        prob;
+  PetscDS        ds;
+  DMLabel        label;
   const PetscInt id = 1;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 0, user->useDualPenalty == PETSC_TRUE ? f0_u_full : f0_u, f1_u);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 1, f0_a, NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 2, f0_l, f1_l);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(prob, 0, 0, user->useDualPenalty == PETSC_TRUE ? g0_uu_full : g0_uu, NULL, NULL, NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(prob, 0, 2, NULL, NULL, NULL, g3_ul);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(prob, 1, 1, g0_aa, NULL, NULL, NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(prob, 1, 2, g0_al, NULL, NULL, NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(prob, 2, 1, g0_la, NULL, NULL, NULL);CHKERRQ(ierr);
-  ierr = PetscDSSetJacobian(prob, 2, 0, NULL, NULL, NULL, g3_lu);CHKERRQ(ierr);
+  ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 0, user->useDualPenalty == PETSC_TRUE ? f0_u_full : f0_u, f1_u);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 1, f0_a, NULL);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 2, f0_l, f1_l);CHKERRQ(ierr);
+  ierr = PetscDSSetJacobian(ds, 0, 0, user->useDualPenalty == PETSC_TRUE ? g0_uu_full : g0_uu, NULL, NULL, NULL);CHKERRQ(ierr);
+  ierr = PetscDSSetJacobian(ds, 0, 2, NULL, NULL, NULL, g3_ul);CHKERRQ(ierr);
+  ierr = PetscDSSetJacobian(ds, 1, 1, g0_aa, NULL, NULL, NULL);CHKERRQ(ierr);
+  ierr = PetscDSSetJacobian(ds, 1, 2, g0_al, NULL, NULL, NULL);CHKERRQ(ierr);
+  ierr = PetscDSSetJacobian(ds, 2, 1, g0_la, NULL, NULL, NULL);CHKERRQ(ierr);
+  ierr = PetscDSSetJacobian(ds, 2, 0, NULL, NULL, NULL, g3_lu);CHKERRQ(ierr);
 
-  user->exactFuncs[0] = quadratic_u_2d;
-  user->exactFuncs[1] = constant_a_2d;
-  user->exactFuncs[2] = zero;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", "marker", 0, 0, NULL, (void (*)()) user->exactFuncs[0], 1, &id, user);CHKERRQ(ierr);
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", "marker", 1, 0, NULL, (void (*)()) user->exactFuncs[1], 1, &id, user);CHKERRQ(ierr);
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", "marker", 2, 0, NULL, (void (*)()) user->exactFuncs[2], 1, &id, user);CHKERRQ(ierr);
+  ierr = PetscDSSetExactSolution(ds, 0, quadratic_u_2d, NULL);CHKERRQ(ierr);
+  ierr = PetscDSSetExactSolution(ds, 1, constant_a_2d, NULL);CHKERRQ(ierr);
+  ierr = PetscDSSetExactSolution(ds, 2, zero, NULL);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "marker", &label);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)()) quadratic_u_2d, NULL, user, NULL);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 1, 0, NULL, (void (*)()) constant_a_2d, NULL, user, NULL);CHKERRQ(ierr);
+  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 2, 0, NULL, (void (*)()) zero, NULL, user, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -269,8 +264,6 @@ int main(int argc, char **argv)
   ierr = SNESCreate(PETSC_COMM_WORLD, &snes);CHKERRQ(ierr);
   ierr = CreateMesh(PETSC_COMM_WORLD, &user, &dm);CHKERRQ(ierr);
   ierr = SNESSetDM(snes, dm);CHKERRQ(ierr);
-
-  ierr = PetscMalloc(3 * sizeof(void (*)()), &user.exactFuncs);CHKERRQ(ierr);
   ierr = SetupDiscretization(dm, &user);CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(dm, &u);CHKERRQ(ierr);
@@ -279,22 +272,27 @@ int main(int argc, char **argv)
   ierr = DMPlexSetSNESLocalFEM(dm,&user,&user,&user);CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-  ierr = DMProjectFunction(dm, 0.0, user.exactFuncs, NULL, INSERT_ALL_VALUES, u);CHKERRQ(ierr);
-  ierr = DMSNESCheckFromOptions(snes, u, user.exactFuncs, NULL);CHKERRQ(ierr);
+  ierr = DMSNESCheckFromOptions(snes, u);CHKERRQ(ierr);
   if (user.runType == RUN_FULL) {
+    PetscDS          ds;
+    PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
     PetscErrorCode (*initialGuess[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar u[], void *ctx);
     PetscReal        error;
 
+    ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
+    ierr = PetscDSGetExactSolution(ds, 0, &exactFuncs[0], NULL);CHKERRQ(ierr);
+    ierr = PetscDSGetExactSolution(ds, 1, &exactFuncs[1], NULL);CHKERRQ(ierr);
+    ierr = PetscDSGetExactSolution(ds, 2, &exactFuncs[2], NULL);CHKERRQ(ierr);
     initialGuess[0] = zero;
     initialGuess[1] = zero;
     initialGuess[2] = zero;
     ierr = DMProjectFunction(dm, 0.0, initialGuess, NULL, INSERT_VALUES, u);CHKERRQ(ierr);
     ierr = VecViewFromOptions(u, NULL, "-initial_vec_view");CHKERRQ(ierr);
-    ierr = DMComputeL2Diff(dm, 0.0, user.exactFuncs, NULL, u, &error);CHKERRQ(ierr);
+    ierr = DMComputeL2Diff(dm, 0.0, exactFuncs, NULL, u, &error);CHKERRQ(ierr);
     if (error < 1.0e-11) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Initial L_2 Error: < 1.0e-11\n");CHKERRQ(ierr);}
     else                 {ierr = PetscPrintf(PETSC_COMM_WORLD, "Initial L_2 Error: %g\n", error);CHKERRQ(ierr);}
     ierr = SNESSolve(snes, NULL, u);CHKERRQ(ierr);
-    ierr = DMComputeL2Diff(dm, 0.0, user.exactFuncs, NULL, u, &error);CHKERRQ(ierr);
+    ierr = DMComputeL2Diff(dm, 0.0, exactFuncs, NULL, u, &error);CHKERRQ(ierr);
     if (error < 1.0e-11) {ierr = PetscPrintf(PETSC_COMM_WORLD, "Final L_2 Error: < 1.0e-11\n");CHKERRQ(ierr);}
     else                 {ierr = PetscPrintf(PETSC_COMM_WORLD, "Final L_2 Error: %g\n", error);CHKERRQ(ierr);}
   }
@@ -304,7 +302,6 @@ int main(int argc, char **argv)
   ierr = VecDestroy(&r);CHKERRQ(ierr);
   ierr = SNESDestroy(&snes);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = PetscFree(user.exactFuncs);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }

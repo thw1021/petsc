@@ -4,7 +4,7 @@ static char help[] = "Test PC redistribute on matrix with load imbalance. \n\
 Input parameters include:\n\
   -random_exact_sol : use a random exact solution vector\n\
   -view_exact_sol   : write exact solution vector to stdout\n\
-  -n <mesh_n>       : number of mesh points in y-direction\n\n";
+  -n <mesh_y>       : number of mesh points\n\n";
 /*
 Example:
   mpiexec -n 8 ./ex3 -n 10000 -ksp_type cg -pc_type bjacobi -sub_pc_type icc -ksp_rtol 1.e-8 -log_view
@@ -30,8 +30,8 @@ int main(int argc,char **args)
 #endif
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   if (size < 2) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This example requires at least 2 MPI processes!");
 
   ierr = PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL);CHKERRQ(ierr);
@@ -118,7 +118,7 @@ int main(int argc,char **args)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
-  ierr = KSPSetTolerances(ksp,1.e-2/((m+1)*(n+1)),1.e-50,PETSC_DEFAULT,
+  ierr = KSPSetTolerances(ksp,1.e-2/((m+1)*(n+1)),PETSC_DEFAULT,PETSC_DEFAULT,
                           PETSC_DEFAULT);CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
 
@@ -142,7 +142,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

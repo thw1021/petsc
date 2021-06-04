@@ -137,7 +137,7 @@ PetscErrorCode ini_bou(Vec X,AppCtx* user)
   PetscMPIInt    rank;
 
   PetscFunctionBeginUser;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = DMDAGetInfo(user->da,NULL,&M,&N,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
   user->dx = (user->xmax - user->xmin)/(M-1); user->dy = (user->ymax - user->ymin)/(N-1);
   ierr = DMGetCoordinateDM(user->da,&cda);CHKERRQ(ierr);
@@ -244,7 +244,7 @@ PetscErrorCode BoundaryConditions(PetscScalar **p,DMDACoor2d **coors,PetscInt i,
     } else if (j == N-1) { /* Right edge */
       f[j][i] = fwc*(p[j][i+1] - p[j][i-1])/(2*user->dx) + fthetac*p[j][i] - user->disper_coe*(p[j][i] - p[j-1][i])/(user->dy);
     }
-  }    
+  }
   PetscFunctionReturn(0);
 }
 
@@ -415,7 +415,7 @@ PetscErrorCode Parameter_settings(AppCtx *user)
   user->xmin   = -1.0; user->xmax = 10.0;
   user->ymin   = -1.0; user->ymax = 10.0;
   user->bc     = 0;
-  
+
   ierr = PetscOptionsGetScalar(NULL,NULL,"-ws",&user->ws,&flg);CHKERRQ(ierr);
   ierr = PetscOptionsGetScalar(NULL,NULL,"-Inertia",&user->H,&flg);CHKERRQ(ierr);
   ierr = PetscOptionsGetScalar(NULL,NULL,"-Pmax",&user->Pmax,&flg);CHKERRQ(ierr);
@@ -437,7 +437,6 @@ PetscErrorCode Parameter_settings(AppCtx *user)
   user->muy = user->ws;
   PetscFunctionReturn(0);
 }
-
 
 /*TEST
 

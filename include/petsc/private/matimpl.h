@@ -47,17 +47,17 @@ struct _MatOps {
   PetscErrorCode (*lufactor)(Mat,IS,IS,const MatFactorInfo*);
   PetscErrorCode (*choleskyfactor)(Mat,IS,const MatFactorInfo*);
   PetscErrorCode (*sor)(Mat,Vec,PetscReal,MatSORType,PetscReal,PetscInt,PetscInt,Vec);
-  PetscErrorCode (*transpose)(Mat,MatReuse,Mat *);
+  PetscErrorCode (*transpose)(Mat,MatReuse,Mat*);
   /*15*/
   PetscErrorCode (*getinfo)(Mat,MatInfoType,MatInfo*);
-  PetscErrorCode (*equal)(Mat,Mat,PetscBool  *);
+  PetscErrorCode (*equal)(Mat,Mat,PetscBool*);
   PetscErrorCode (*getdiagonal)(Mat,Vec);
   PetscErrorCode (*diagonalscale)(Mat,Vec,Vec);
   PetscErrorCode (*norm)(Mat,NormType,PetscReal*);
   /*20*/
   PetscErrorCode (*assemblybegin)(Mat,MatAssemblyType);
   PetscErrorCode (*assemblyend)(Mat,MatAssemblyType);
-  PetscErrorCode (*setoption)(Mat,MatOption,PetscBool );
+  PetscErrorCode (*setoption)(Mat,MatOption,PetscBool);
   PetscErrorCode (*zeroentries)(Mat);
   /*24*/
   PetscErrorCode (*zerorows)(Mat,PetscInt,const PetscInt[],PetscScalar,Vec,Vec);
@@ -70,7 +70,7 @@ struct _MatOps {
   PetscErrorCode (*ilufactorsymbolic)(Mat,Mat,IS,IS,const MatFactorInfo*);
   PetscErrorCode (*iccfactorsymbolic)(Mat,Mat,IS,const MatFactorInfo*);
   PetscErrorCode (*getdiagonalblock)(Mat,Mat*);
-  PetscErrorCode (*freeintermediatedatastructures)(Mat);
+  PetscErrorCode (*setinf)(Mat);
   /*34*/
   PetscErrorCode (*duplicate)(Mat,MatDuplicateOption,Mat*);
   PetscErrorCode (*forwardsolve)(Mat,Vec,Vec);
@@ -106,7 +106,7 @@ struct _MatOps {
   PetscErrorCode (*destroy)(Mat);
   PetscErrorCode (*view)(Mat,PetscViewer);
   PetscErrorCode (*convertfrom)(Mat,MatType,MatReuse,Mat*);
-  PetscErrorCode (*placeholder_63)(Mat);
+  PetscErrorCode (*placeholder_63)(void);
   /*64*/
   PetscErrorCode (*matmatmultsymbolic)(Mat,Mat,Mat,PetscReal,Mat);
   PetscErrorCode (*matmatmultnumeric)(Mat,Mat,Mat,Mat);
@@ -118,7 +118,7 @@ struct _MatOps {
   PetscErrorCode (*getrowminabs)(Mat,Vec,PetscInt[]);
   PetscErrorCode (*convert)(Mat, MatType,MatReuse,Mat*);
   PetscErrorCode (*hasoperation)(Mat,MatOperation,PetscBool*);
-  PetscErrorCode (*placeholder_73)(Mat,void*);
+  PetscErrorCode (*placeholder_73)(void);
   /*74*/
   PetscErrorCode (*setvaluesadifor)(Mat,PetscInt,void*);
   PetscErrorCode (*fdcoloringapply)(Mat,MatFDColoring,Vec,void*);
@@ -127,25 +127,25 @@ struct _MatOps {
   PetscErrorCode (*multtransposeconstrained)(Mat,Vec,Vec);
   /*79*/
   PetscErrorCode (*findzerodiagonals)(Mat,IS*);
-  PetscErrorCode (*mults)(Mat, Vecs, Vecs);
-  PetscErrorCode (*solves)(Mat, Vecs, Vecs);
+  PetscErrorCode (*mults)(Mat,Vecs,Vecs);
+  PetscErrorCode (*solves)(Mat,Vecs,Vecs);
   PetscErrorCode (*getinertia)(Mat,PetscInt*,PetscInt*,PetscInt*);
-  PetscErrorCode (*load)(Mat, PetscViewer);
+  PetscErrorCode (*load)(Mat,PetscViewer);
   /*84*/
-  PetscErrorCode (*issymmetric)(Mat,PetscReal,PetscBool *);
-  PetscErrorCode (*ishermitian)(Mat,PetscReal,PetscBool *);
+  PetscErrorCode (*issymmetric)(Mat,PetscReal,PetscBool*);
+  PetscErrorCode (*ishermitian)(Mat,PetscReal,PetscBool*);
   PetscErrorCode (*isstructurallysymmetric)(Mat,PetscBool *);
   PetscErrorCode (*setvaluesblockedlocal)(Mat,PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
   PetscErrorCode (*getvecs)(Mat,Vec*,Vec*);
   /*89*/
-  PetscErrorCode (*placeholder_89)(Mat,void*);
+  PetscErrorCode (*placeholder_89)(void);
   PetscErrorCode (*matmultsymbolic)(Mat,Mat,PetscReal,Mat);
   PetscErrorCode (*matmultnumeric)(Mat,Mat,Mat);
-  PetscErrorCode (*placeholder_92)(Mat,void*);
+  PetscErrorCode (*placeholder_92)(void);
   PetscErrorCode (*ptapsymbolic)(Mat,Mat,PetscReal,Mat); /* double dispatch wrapper routine */
   /*94*/
   PetscErrorCode (*ptapnumeric)(Mat,Mat,Mat);            /* double dispatch wrapper routine */
-  PetscErrorCode (*placeholder_95)(Mat,void*);
+  PetscErrorCode (*placeholder_95)(void);
   PetscErrorCode (*mattransposemultsymbolic)(Mat,Mat,PetscReal,Mat);
   PetscErrorCode (*mattransposemultnumeric)(Mat,Mat,Mat);
   PetscErrorCode (*bindtocpu)(Mat,PetscBool);
@@ -187,14 +187,14 @@ struct _MatOps {
   PetscErrorCode (*createsubmatricesmpi)(Mat,PetscInt,const IS[], const IS[], MatReuse, Mat**);
   /*129*/
   PetscErrorCode (*setvaluesbatch)(Mat,PetscInt,PetscInt,PetscInt*,const PetscScalar*);
-  PetscErrorCode (*placeholder_130)(Mat,void*);
+  PetscErrorCode (*placeholder_130)(void);
   PetscErrorCode (*transposematmultsymbolic)(Mat,Mat,PetscReal,Mat);
   PetscErrorCode (*transposematmultnumeric)(Mat,Mat,Mat);
   PetscErrorCode (*transposecoloringcreate)(Mat,ISColoring,MatTransposeColoring);
   /*134*/
   PetscErrorCode (*transcoloringapplysptoden)(MatTransposeColoring,Mat,Mat);
   PetscErrorCode (*transcoloringapplydentosp)(MatTransposeColoring,Mat,Mat);
-  PetscErrorCode (*placeholder_136)(Mat,void*);
+  PetscErrorCode (*placeholder_136)(void);
   PetscErrorCode (*rartsymbolic)(Mat,Mat,PetscReal,Mat); /* double dispatch wrapper routine */
   PetscErrorCode (*rartnumeric)(Mat,Mat,Mat);            /* double dispatch wrapper routine */
   /*139*/
@@ -235,27 +235,54 @@ PETSC_INTERN PetscErrorCode MatConvert_Shell(Mat,MatType,MatReuse,Mat*);
 PETSC_INTERN PetscErrorCode MatConvertFrom_Shell(Mat,MatType,MatReuse,Mat*);
 PETSC_INTERN PetscErrorCode MatCopy_Basic(Mat,Mat,MatStructure);
 PETSC_INTERN PetscErrorCode MatDiagonalSet_Default(Mat,Vec,InsertMode);
+#if defined(PETSC_HAVE_SCALAPACK)
+PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat,MatType,MatReuse,Mat*);
+#endif
+PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat,PetscInt,const PetscInt[],const PetscInt[]);
+PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat,const PetscScalar[],InsertMode);
 
-PETSC_INTERN PetscErrorCode MatProductSymbolic_Basic(Mat);
-PETSC_EXTERN PetscErrorCode MatProductSymbolic_AB(Mat);
-PETSC_EXTERN PetscErrorCode MatProductNumeric_AB(Mat);
-PETSC_EXTERN PetscErrorCode MatProductSymbolic_AtB(Mat);
-PETSC_EXTERN PetscErrorCode MatProductNumeric_AtB(Mat);
-PETSC_EXTERN PetscErrorCode MatProductSymbolic_ABt(Mat);
-PETSC_EXTERN PetscErrorCode MatProductNumeric_ABt(Mat);
-PETSC_EXTERN PetscErrorCode MatProductNumeric_PtAP(Mat);
-PETSC_EXTERN PetscErrorCode MatProductNumeric_RARt(Mat);
-PETSC_EXTERN PetscErrorCode MatProductSymbolic_ABC(Mat);
-PETSC_EXTERN PetscErrorCode MatProductNumeric_ABC(Mat);
-PETSC_EXTERN PetscErrorCode MatProductCreate_Private(Mat,Mat,Mat,Mat);
+/* these callbacks rely on the old matrix function pointers for
+   matmat operations. They are unsafe, and should be removed.
+   However, the amount of work needed to clean up all the
+   implementations is not negligible */
+PETSC_INTERN PetscErrorCode MatProductSymbolic_AB(Mat);
+PETSC_INTERN PetscErrorCode MatProductNumeric_AB(Mat);
+PETSC_INTERN PetscErrorCode MatProductSymbolic_AtB(Mat);
+PETSC_INTERN PetscErrorCode MatProductNumeric_AtB(Mat);
+PETSC_INTERN PetscErrorCode MatProductSymbolic_ABt(Mat);
+PETSC_INTERN PetscErrorCode MatProductNumeric_ABt(Mat);
+PETSC_INTERN PetscErrorCode MatProductNumeric_PtAP(Mat);
+PETSC_INTERN PetscErrorCode MatProductNumeric_RARt(Mat);
+PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC(Mat);
+PETSC_INTERN PetscErrorCode MatProductNumeric_ABC(Mat);
 
+PETSC_INTERN PetscErrorCode MatProductCreate_Private(Mat,Mat,Mat,Mat);
+/* this callback handles all the different triple products and
+   does not rely on the function pointers; used by cuSPARSE and KOKKOS-KERNELS */
+PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
+
+#if !defined(PETSC_CLANG_STATIC_ANALYZER)
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckPreallocated(A,arg) do {                              \
-    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation() or MatSetUp() on argument %D \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
+    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation(), MatSetUp() or the matrix has not yet been factored on argument %D \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
   } while (0)
 #else
 #  define MatCheckPreallocated(A,arg) do {} while (0)
 #endif
+
+#if defined(PETSC_USE_DEBUG)
+#  define MatCheckProduct(A,arg) do {                              \
+    if (PetscUnlikely(!(A)->product)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Argument %D \"%s\" is not a matrix obtained from MatProductCreate()",(arg),#A); \
+  } while (0)
+#else
+#  define MatCheckProduct(A,arg) do {} while (0)
+#endif
+#else  /* PETSC_CLANG_STATIC_ANALYZER */
+template <typename Tm>
+void MatCheckPreallocated(Tm,int);
+template <typename Tm>
+void MatCheckProduct(Tm,int);
+#endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 /*
   The stash is used to temporarily store inserted matrix values that
@@ -356,8 +383,8 @@ PETSC_INTERN PetscErrorCode MatStashDestroy_Private(MatStash*);
 PETSC_INTERN PetscErrorCode MatStashScatterEnd_Private(MatStash*);
 PETSC_INTERN PetscErrorCode MatStashSetInitialSize_Private(MatStash*,PetscInt);
 PETSC_INTERN PetscErrorCode MatStashGetInfo_Private(MatStash*,PetscInt*,PetscInt*);
-PETSC_INTERN PetscErrorCode MatStashValuesRow_Private(MatStash*,PetscInt,PetscInt,const PetscInt[],const PetscScalar[],PetscBool );
-PETSC_INTERN PetscErrorCode MatStashValuesCol_Private(MatStash*,PetscInt,PetscInt,const PetscInt[],const PetscScalar[],PetscInt,PetscBool );
+PETSC_INTERN PetscErrorCode MatStashValuesRow_Private(MatStash*,PetscInt,PetscInt,const PetscInt[],const PetscScalar[],PetscBool);
+PETSC_INTERN PetscErrorCode MatStashValuesCol_Private(MatStash*,PetscInt,PetscInt,const PetscInt[],const PetscScalar[],PetscInt,PetscBool);
 PETSC_INTERN PetscErrorCode MatStashValuesRowBlocked_Private(MatStash*,PetscInt,PetscInt,const PetscInt[],const PetscScalar[],PetscInt,PetscInt,PetscInt);
 PETSC_INTERN PetscErrorCode MatStashValuesColBlocked_Private(MatStash*,PetscInt,PetscInt,const PetscInt[],const PetscScalar[],PetscInt,PetscInt,PetscInt);
 PETSC_INTERN PetscErrorCode MatStashScatterBegin_Private(Mat,MatStash*,PetscInt*);
@@ -391,19 +418,47 @@ typedef struct { /* used by MatCreateRedundantMatrix() for reusing matredundant 
 } Mat_Redundant;
 
 typedef struct { /* used by MatProduct() */
-  MatProductType       type;
-  MatProductAlgorithm  alg;
-  Mat                  A,B,C,Dwork;
-  PetscReal            fill;
-  PetscBool            Areplaced,Breplaced; /* if an internal implementation changes user's input A or B, these matrices cannot be called by MatProductReplaceMats(). */
-  PetscBool            api_user; /* used by MatProductSetFromOptions_xxx() */
+  MatProductType type;
+  char           *alg;
+  Mat            A,B,C,Dwork;
+  PetscReal      fill;
+  PetscBool      api_user; /* used to distinguish command line options and to indicate the matrix values are ready to be consumed at symbolic phase if needed */
+
+  /* Some products may display the information on the algorithm used */
+  PetscErrorCode (*view)(Mat,PetscViewer);
+
+  /* many products have intermediate data structures, each specific to Mat types and product type */
+  PetscBool      clear;             /* whether or not to clear the data structures after MatProductNumeric has been called */
+  void           *data;             /* where to stash those structures */
+  PetscErrorCode (*destroy)(void*); /* destroy routine */
 } Mat_Product;
+
+#define CSRDataStructure(datatype)  \
+  int         *i; \
+  int         *j; \
+  datatype    *a;\
+  PetscInt    n;\
+  PetscInt    ignorezeroentries;
+
+typedef struct {
+  CSRDataStructure(PetscScalar)
+} PetscCSRDataStructure;
+
+struct _p_SplitCSRMat {
+  PetscInt              cstart,cend,rstart,rend;
+  PetscCSRDataStructure diag,offdiag;
+  PetscInt              *colmap;
+  PetscMPIInt           rank;
+};
 
 struct _p_Mat {
   PETSCHEADER(struct _MatOps);
   PetscLayout            rmap,cmap;
   void                   *data;            /* implementation-specific data */
   MatFactorType          factortype;       /* MAT_FACTOR_LU, ILU, CHOLESKY or ICC */
+  PetscBool              trivialsymbolic;  /* indicates the symbolic factorization doesn't actually do a symbolic factorization, it is delayed to the numeric factorization */
+  PetscBool              canuseordering;   /* factorization can use ordering provide to routine (most PETSc implementations) */
+  MatOrderingType        preferredordering[MAT_FACTOR_NUM_TYPES] ;/* what is the preferred (or default) ordering for the matrix solver type */
   PetscBool              assembled;        /* is the matrix assembled? */
   PetscBool              was_assembled;    /* new values inserted into assembled mat */
   PetscInt               num_ass;          /* number of times matrix has been assembled */
@@ -426,7 +481,8 @@ struct _p_Mat {
   PetscBool              submat_singleis;  /* for efficient PCSetUp_ASM() */
   PetscBool              structure_only;
   PetscBool              sortedfull;       /* full, sorted rows are inserted */
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  PetscBool              force_diagonals;  /* set by MAT_FORCE_DIAGONAL_ENTRIES */
+#if defined(PETSC_HAVE_DEVICE)
   PetscOffloadMask       offloadmask;      /* a mask which indicates where the valid matrix data is (GPU, CPU or both) */
   PetscBool              boundtocpu;
 #endif
@@ -444,11 +500,14 @@ struct _p_Mat {
   PetscInt               nblocks,*bsizes;   /* support for MatSetVariableBlockSizes() */
   char                   *defaultvectype;
   Mat_Product            *product;
+  PetscBool              form_explicit_transpose; /* hint to generate an explicit mat tranpsose for operations like MatMultTranspose() */
+  PetscBool              transupdated;            /* whether or not the explicitly generated transpose is up-to-date */
 };
 
 PETSC_INTERN PetscErrorCode MatAXPY_Basic(Mat,PetscScalar,Mat,MatStructure);
 PETSC_INTERN PetscErrorCode MatAXPY_BasicWithPreallocation(Mat,Mat,PetscScalar,Mat,MatStructure);
 PETSC_INTERN PetscErrorCode MatAXPY_Basic_Preallocate(Mat,Mat,Mat*);
+PETSC_INTERN PetscErrorCode MatAXPY_Dense_Nest(Mat,PetscScalar,Mat);
 
 /*
     Utility for MatFactor (Schur complement)
@@ -468,7 +527,6 @@ PETSC_INTERN PetscErrorCode MatZeroRowsMapLocal_Private(Mat,PetscInt,const Petsc
 */
 PETSC_INTERN PetscErrorCode MatView_Binary_BlockSizes(Mat,PetscViewer);
 PETSC_INTERN PetscErrorCode MatLoad_Binary_BlockSizes(Mat,PetscViewer);
-
 
 /*
     Object for partitioning graphs
@@ -512,7 +570,6 @@ struct _MatCoarsenOps {
 struct _p_MatCoarsen {
   PETSCHEADER(struct _MatCoarsenOps);
   Mat              graph;
-  PetscInt         setupcalled;
   void             *subctx;
   /* */
   PetscBool        strict_aggs;
@@ -983,7 +1040,7 @@ PETSC_STATIC_INLINE PetscErrorCode MatPivotCheck(Mat fact,Mat mat,const MatFacto
   for (_k=0; _k<_nidx; _k++){\
     _entry = indices[_k];\
     nzbd++;\
-    if ( _entry== diag) im[idx_start] = nzbd;\
+    if (_entry== diag) im[idx_start] = nzbd;\
     if (!PetscBTLookupSet(bt,_entry)){  /* new entry */\
       /* search for insertion location */\
       do {\
@@ -1298,13 +1355,19 @@ do {\
 */
 #define PetscIncompleteLLDestroy(lnk,bt) (PetscFree(lnk) || PetscBTDestroy(&(bt)))
 
+#if !defined(PETSC_CLANG_STATIC_ANALYZER)
 #define MatCheckSameLocalSize(A,ar1,B,ar2) do { \
   PetscCheckSameComm(A,ar1,B,ar2); \
   if ((A->rmap->n != B->rmap->n) || (A->cmap->n != B->cmap->n)) SETERRQ6(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible matrix local sizes: parameter # %d (%D x %D) != parameter # %d (%D x %D)",ar1,A->rmap->n,A->cmap->n,ar2,B->rmap->n,B->cmap->n);} while (0)
-
 #define MatCheckSameSize(A,ar1,B,ar2) do { \
   if ((A->rmap->N != B->rmap->N) || (A->cmap->N != B->cmap->N)) SETERRQ6(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Incompatible matrix global sizes: parameter # %d (%D x %D) != parameter # %d (%D x %D)",ar1,A->rmap->N,A->cmap->N,ar2,B->rmap->N,B->cmap->N);\
   MatCheckSameLocalSize(A,ar1,B,ar2);} while (0)
+#else
+template <typename Tm>
+void MatCheckSameLocalSize(Tm,int,Tm,int);
+template <typename Tm>
+void MatCheckSameSize(Tm,int,Tm,int);
+#endif
 
 #define VecCheckMatCompatible(M,x,ar1,b,ar2) do { \
   if (M->cmap->N != x->map->N) SETERRQ3(PetscObjectComm((PetscObject)M),PETSC_ERR_ARG_SIZ,"Vector global length incompatible with matrix: parameter # %d global size %D != matrix column global size %D",ar1,x->map->N,M->cmap->N); \
@@ -1743,6 +1806,9 @@ PETSC_EXTERN PetscLogEvent MAT_GetSequentialNonzeroStructure;
 PETSC_EXTERN PetscLogEvent MATMFFD_Mult;
 PETSC_EXTERN PetscLogEvent MAT_GetMultiProcBlock;
 PETSC_EXTERN PetscLogEvent MAT_CUSPARSECopyToGPU;
+PETSC_EXTERN PetscLogEvent MAT_CUSPARSECopyFromGPU;
+PETSC_EXTERN PetscLogEvent MAT_CUSPARSEGenerateTranspose;
+PETSC_EXTERN PetscLogEvent MAT_CUSPARSESolveAnalysis;
 PETSC_EXTERN PetscLogEvent MAT_SetValuesBatch;
 PETSC_EXTERN PetscLogEvent MAT_ViennaCLCopyToGPU;
 PETSC_EXTERN PetscLogEvent MAT_DenseCopyToGPU;
@@ -1752,6 +1818,8 @@ PETSC_EXTERN PetscLogEvent MAT_Residual;
 PETSC_EXTERN PetscLogEvent MAT_SetRandom;
 PETSC_EXTERN PetscLogEvent MAT_FactorFactS;
 PETSC_EXTERN PetscLogEvent MAT_FactorInvS;
+PETSC_EXTERN PetscLogEvent MAT_PreallCOO;
+PETSC_EXTERN PetscLogEvent MAT_SetVCOO;
 PETSC_EXTERN PetscLogEvent MATCOLORING_Apply;
 PETSC_EXTERN PetscLogEvent MATCOLORING_Comm;
 PETSC_EXTERN PetscLogEvent MATCOLORING_Local;

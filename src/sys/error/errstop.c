@@ -28,8 +28,8 @@ $     SETERRQ(comm,n,p,mess)
    currently available PETSc error handlers include PetscTraceBackErrorHandler(),
    PetscMPIAbortErrorHandler(), PetscAttachDebuggerErrorHandler(), and PetscAbortErrorHandler().
 
-.seealso:  PetscPushErrorHandler(), PetscAttachDebuggerErrorHandler(),
-           PetscAbortErrorHandler(), PetscTraceBackErrorHandler()
+.seealso:  PetscError(), PetscPushErrorHandler(), PetscPopErrorHandler(), PetscAttachDebuggerErrorHandler(),
+           PetscAbortErrorHandler(), PetscMPIAbortErrorHandler(), PetscTraceBackErrorHandler(), PetscEmacsClientErrorHandler(), PetscReturnErrorHandler()
  @*/
 PetscErrorCode  PetscMPIAbortErrorHandler(MPI_Comm comm,int line,const char *fun,const char *file,PetscErrorCode n,PetscErrorType p,const char *mess,void *ctx)
 {
@@ -40,7 +40,7 @@ PetscErrorCode  PetscMPIAbortErrorHandler(MPI_Comm comm,int line,const char *fun
   if (!mess) mess = " ";
 
   if (n == PETSC_ERR_MEM) {
-    (*PetscErrorPrintf)("%s() line %d in %s\n",fun,line,file);
+    (*PetscErrorPrintf)("%s() at %s:%d\n",fun,file,line);
     (*PetscErrorPrintf)("Out of memory. This could be due to allocating\n");
     (*PetscErrorPrintf)("too large an object or bleeding by not properly\n");
     (*PetscErrorPrintf)("destroying unneeded objects.\n");
@@ -55,11 +55,11 @@ PetscErrorCode  PetscMPIAbortErrorHandler(MPI_Comm comm,int line,const char *fun
       else (*PetscErrorPrintf)("Try running with -malloc_dump or -malloc_view for info.\n");
     }
   } else if (n == PETSC_ERR_SUP) {
-    (*PetscErrorPrintf)("%s() line %d in %s\n",fun,line,file);
+    (*PetscErrorPrintf)("%s() at %s:%d\n",fun,file,line);
     (*PetscErrorPrintf)("No support for this operation for this object type!\n");
     (*PetscErrorPrintf)("%s\n",mess);
-  } else if (n == PETSC_ERR_SIG) (*PetscErrorPrintf)("%s() line %d in %s %s\n",fun,line,file,mess);
-  else (*PetscErrorPrintf)("%s() line %d in %s\n    %s\n",fun,line,file,mess);
+  } else if (n == PETSC_ERR_SIG) (*PetscErrorPrintf)("%s() at %s:%d %s\n",fun,file,line,mess);
+  else (*PetscErrorPrintf)("%s() at %s:%d\n    %s\n",fun,file,line,mess);
 
   PETSCABORT(PETSC_COMM_WORLD,n);
   PetscFunctionReturn(0);

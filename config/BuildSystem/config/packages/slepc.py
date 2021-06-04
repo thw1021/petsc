@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = 'c7de62a5' # master apr-01-2020
+    self.gitcommit              = '01f1cf83a9b036ee6abb7bb788205e4b967dfe5f' # main may-06-2021
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
     self.includes               = []
@@ -14,12 +14,14 @@ class Configure(config.package.Package):
     return
 
   def setupHelp(self, help):
-    config.package.Package.setupHelp(self,help)
     import nargs
+    config.package.Package.setupHelp(self,help)
+    help.addArgument('SLEPC', '-download-slepc-configure-arguments=string', nargs.Arg(None, None, 'Additional configure arguments for the build of SLEPc'))
     return
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
+    self.python          = framework.require('config.packages.python',self)
     self.setCompilers    = framework.require('config.setCompilers',self)
     self.sharedLibraries = framework.require('PETSc.options.sharedLibraries', self)
     self.installdir      = framework.require('PETSc.options.installDir',self)
@@ -38,7 +40,7 @@ class Configure(config.package.Package):
 
     # if installing prefix location then need to set new value for PETSC_DIR/PETSC_ARCH
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
-       iarch = 'installed-'+self.parch.nativeArch
+       iarch = 'installed-'+self.parch.nativeArch.replace('linux-','linux2-')
        if self.scalartypes.scalartype != 'real':
          iarch += '-' + self.scalartypes.scalartype
        carg = 'SLEPC_DIR='+self.packageDir+' PETSC_DIR='+os.path.abspath(os.path.expanduser(self.argDB['prefix']))+' PETSC_ARCH="" '
@@ -49,25 +51,32 @@ class Configure(config.package.Package):
        barg = ' SLEPC_DIR='+self.packageDir+' '
        prefix = os.path.join(self.petscdir.dir,self.arch)
 
+    if 'download-slepc-configure-arguments' in self.argDB and self.argDB['download-slepc-configure-arguments']:
+      configargs = self.argDB['download-slepc-configure-arguments']
+      if '--with-slepc4py' in self.argDB['download-slepc-configure-arguments']:
+        carg += ' PYTHONPATH='+os.path.join(self.installDir,'lib')+':${PYTHONPATH}'
+    else:
+      configargs = ''
+
     self.addDefine('HAVE_SLEPC',1)
     self.addMakeMacro('SLEPC','yes')
     self.addMakeRule('slepcbuild','', \
-                       ['@echo "*** Building slepc ***"',\
+                       ['@echo "*** Building SLEPc ***"',\
                           '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/slepc.errorflg',\
                           '@(cd '+self.packageDir+' && \\\n\
-           '+carg+'./configure --prefix='+prefix+' && \\\n\
-           '+barg+'${OMAKE} '+barg+') > ${PETSC_ARCH}/lib/petsc/conf/slepc.log 2>&1 || \\\n\
+           '+carg+self.python.pyexe+' ./configure --with-clean --prefix='+prefix+' '+configargs+' && \\\n\
+           '+barg+'${OMAKE} '+barg+') || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building slepc. Check ${PETSC_ARCH}/lib/petsc/conf/slepc.log" && \\\n\
+             echo "Error building SLEPc." && \\\n\
              echo "********************************************************************" && \\\n\
              touch ${PETSC_ARCH}/lib/petsc/conf/slepc.errorflg && \\\n\
              exit 1)'])
     self.addMakeRule('slepcinstall','', \
-                       ['@echo "*** Installing slepc ***"',\
+                       ['@echo "*** Installing SLEPc ***"',\
                           '@(cd '+self.packageDir+' && \\\n\
-           '+newuser+barg+'${OMAKE} install '+barg+') >> ${PETSC_ARCH}/lib/petsc/conf/slepc.log 2>&1 || \\\n\
+           '+newuser+barg+'${OMAKE} install '+barg+')  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building slepc. Check ${PETSC_ARCH}/lib/petsc/conf/slepc.log" && \\\n\
+             echo "Error building SLEPc." && \\\n\
              echo "********************************************************************" && \\\n\
              exit 1)'])
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
@@ -79,13 +88,12 @@ class Configure(config.package.Package):
       self.addMakeRule('slepc-install','')
 
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
-      self.logPrintBox('Slepc examples are available at '+os.path.join('${PETSC_DIR}',self.arch,'externalpackages','git.slepc')+'\nexport SLEPC_DIR='+prefix)
+      self.logPrintBox('SLEPc examples are available at '+os.path.join('${PETSC_DIR}',self.arch,'externalpackages','git.slepc')+'\nexport SLEPC_DIR='+prefix)
     else:
-      self.logPrintBox('Slepc examples are available at '+os.path.join('${PETSC_DIR}',self.arch,'externalpackages','git.slepc')+'\nexport SLEPC_DIR='+os.path.join('${PETSC_DIR}',self.arch))
+      self.logPrintBox('SLEPc examples are available at '+os.path.join('${PETSC_DIR}',self.arch,'externalpackages','git.slepc')+'\nexport SLEPC_DIR='+os.path.join('${PETSC_DIR}',self.arch))
 
     return self.installDir
 
   def alternateConfigureLibrary(self):
     self.addMakeRule('slepc-build','')
     self.addMakeRule('slepc-install','')
-

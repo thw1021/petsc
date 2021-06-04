@@ -2,9 +2,9 @@ static char help[] = "Test MatSetValues() by converting MATDENSE to MATELEMENTAL
 Modified from the code contributed by Yaning Liu @lbl.gov \n\n";
 /*
  Example:
-   mpiexec -n <np> ./ex103 
+   mpiexec -n <np> ./ex103
    mpiexec -n <np> ./ex103 -mat_type elemental -mat_view
-   mpiexec -n <np> ./ex103 -mat_type aij 
+   mpiexec -n <np> ./ex103 -mat_type aij
 */
 
 #include <petscmat.h>
@@ -22,8 +22,8 @@ int main(int argc, char** argv)
   PetscBool      isDense,isAIJ,flg;
 
   ierr = PetscInitialize(&argc, &argv, (char*)0, help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   /* Creat a matrix */
   ierr = PetscOptionsGetInt(NULL,NULL,"-M",&M,NULL);CHKERRQ(ierr);
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
   for (i=0; i<nrows; i++) {
     for (j=0; j<ncols; j++) {
       if (size == 1) {
-        v[i*ncols+j] = (PetscScalar)(i+j);  
+        v[i*ncols+j] = (PetscScalar)(i+j);
       } else {
         v[i*ncols+j] = (PetscScalar)rank+j*0.1;
       }
@@ -71,9 +71,9 @@ int main(int argc, char** argv)
     Mat Aexplicit;
     ierr = MatConvert(A, MATELEMENTAL, MAT_INITIAL_MATRIX, &A_elemental);CHKERRQ(ierr);
     ierr = MatComputeOperator(A_elemental,isAIJ ? MATAIJ : MATDENSE,&Aexplicit);CHKERRQ(ierr);
-    ierr = MatMultEqual(Aexplicit,A_elemental,5,&flg);CHKERRQ(ierr); 
+    ierr = MatMultEqual(Aexplicit,A_elemental,5,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Aexplicit != A_elemental.");
-    ierr = MatDestroy(&Aexplicit);CHKERRQ(ierr); 
+    ierr = MatDestroy(&Aexplicit);CHKERRQ(ierr);
 
     /* Test MAT_REUSE_MATRIX which is only supported for inplace conversion */
     ierr = MatConvert(A, MATELEMENTAL, MAT_INPLACE_MATRIX, &A);CHKERRQ(ierr);
@@ -91,7 +91,6 @@ int main(int argc, char** argv)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

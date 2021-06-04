@@ -9,7 +9,7 @@ static PetscErrorCode DMKSPDestroy(DMKSP *kdm)
   PetscFunctionBegin;
   if (!*kdm) PetscFunctionReturn(0);
   PetscValidHeaderSpecific((*kdm),DMKSP_CLASSID,1);
-  if (--((PetscObject)(*kdm))->refct > 0) {*kdm = 0; PetscFunctionReturn(0);}
+  if (--((PetscObject)(*kdm))->refct > 0) {*kdm = NULL; PetscFunctionReturn(0);}
   if ((*kdm)->ops->destroy) {ierr = ((*kdm)->ops->destroy)(kdm);CHKERRQ(ierr);}
   ierr = PetscHeaderDestroy(kdm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -24,7 +24,6 @@ static PetscErrorCode DMKSPCreate(MPI_Comm comm,DMKSP *kdm)
   ierr = PetscHeaderCreate(*kdm, DMKSP_CLASSID, "DMKSP", "DMKSP", "DMKSP", comm, DMKSPDestroy, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /* Attaches the DMKSP to the coarse level.
  * Under what conditions should we copy versus duplicate?

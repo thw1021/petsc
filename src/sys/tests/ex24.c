@@ -1,7 +1,6 @@
 static char help[] = "Tests %D and %g formatting\n";
 #include <petscsys.h>
 
-
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
@@ -15,10 +14,9 @@ int main(int argc,char **argv)
   return ierr;
 }
 
-
-
 /*TEST
 
    test:
+     diff_args: -j
 
 TEST*/

@@ -140,14 +140,14 @@ PetscErrorCode IFunctionActive2(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,AppCtx *c
 */
 PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,AppCtx *ctx)
 {
-  PetscErrorCode ierr;
-  AppCtx         *appctx = (AppCtx*)ctx;
-  PetscScalar    *u;
+  PetscErrorCode    ierr;
+  AppCtx            *appctx = (AppCtx*)ctx;
+  const PetscScalar *u;
 
   PetscFunctionBegin;
-  ierr = VecGetArray(U,&u);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(U,&u);CHKERRQ(ierr);
   ierr = PetscAdolcComputeIJacobian(1,2,A,u,a,appctx->adctx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(U,&u);CHKERRQ(ierr);
+  ierr = VecRestoreArrayRead(U,&u);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -191,7 +191,7 @@ int main(int argc,char **argv)
      Initialize program
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Only for sequential runs");
   ierr = PetscNew(&adctx);CHKERRQ(ierr);
   adctx->m = n;adctx->n = n;adctx->p = n;

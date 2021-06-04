@@ -3,11 +3,13 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.version          = '5.2.1'
+    self.version          = '5.4.0'
+    self.minversion       = '5.2.1'
     self.versionname      = 'MUMPS_VERSION'
-    self.gitcommit        = 'v'+self.version+'-p2'
-    self.download         = ['git://https://bitbucket.org/petsc/pkg-mumps.git',
-                             'https://bitbucket.org/petsc/pkg-mumps/get/'+self.gitcommit+'.tar.gz']
+    self.requiresversion  = 1
+    self.download         = ['http://mumps.enseeiht.fr/MUMPS_'+self.version+'.tar.gz',
+                             'https://ftp.mcs.anl.gov/pub/petsc/externalpackages/MUMPS_'+self.version+'.tar.gz']
+    self.download_darwin  = ['https://bitbucket.org/petsc/pkg-mumps/get/v5.2.1-p2.tar.gz']
     self.downloaddirnames = ['petsc-pkg-mumps','MUMPS']
     self.liblist          = [['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a'],
                             ['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a','libpthread.a'],
@@ -100,24 +102,23 @@ class Configure(config.package.Package):
     g.write('IORDERINGSF = $(ISCOTCH)\n')
 
     g.write('RM = /bin/rm -f\n')
-    self.setCompilers.pushLanguage('C')
-    g.write('CC = '+self.setCompilers.getCompiler()+'\n')
-    g.write('OPTC    = ' + self.removeWarningFlags(self.setCompilers.getCompilerFlags())+'\n')
+    self.pushLanguage('C')
+    g.write('CC = '+self.getCompiler()+'\n')
+    g.write('OPTC    = ' + self.updatePackageCFlags(self.getCompilerFlags())+'\n')
     g.write('OUTC = -o \n')
-    self.setCompilers.popLanguage()
+    self.popLanguage()
     if not self.fortran.fortranIsF90:
       raise RuntimeError('Installing MUMPS requires a F90 compiler')
-    self.setCompilers.pushLanguage('FC')
-    g.write('FC = '+self.setCompilers.getCompiler()+'\n')
-    g.write('FL = '+self.setCompilers.getCompiler()+'\n')
-    extra_fcflags = ''
-    if config.setCompilers.Configure.isNAG(self.setCompilers.getLinker(), self.log):
-      extra_fcflags = '-dusty -dcfuns '
-    elif config.setCompilers.Configure.isGfortran100plus(self.setCompilers.getCompiler(), self.log):
-      extra_fcflags = '-fallow-argument-mismatch '
-    g.write('OPTF    = '+extra_fcflags+self.setCompilers.getCompilerFlags().replace('-Wall','').replace('-Wshadow','').replace('-Mfree','') +'\n')
+    self.pushLanguage('FC')
+    g.write('FC = '+self.getCompiler()+'\n')
+    g.write('FL = '+self.getCompiler()+'\n')
+    g.write('OPTF    = '+self.updatePackageFFlags(self.getCompilerFlags())+'\n')
+    if self.openmp.found:
+      g.write('OPTF   += -DBLR_MT\n')
+    if self.blasLapack.checkForRoutine('dgemmt'):
+      g.write('OPTF   += -DGEMMT_AVAILABLE \n')
     g.write('OUTF = -o \n')
-    self.setCompilers.popLanguage()
+    self.popLanguage()
 
     # set fortran name mangling
     # this mangling information is for both BLAS and the Fortran compiler so cannot use the BlasLapack mangling flag
@@ -140,7 +141,7 @@ class Configure(config.package.Package):
     g.write('INCSEQ  = -I$(topdir)/libseq\n')
     g.write('LIBSEQ  =  $(LAPACK) -L$(topdir)/libseq -lmpiseq\n')
     g.write('LIBBLAS = '+self.libraries.toString(self.blasLapack.dlib)+'\n')
-    g.write('OPTL    = -O -I.\n')
+    g.write('OPTL    = '+self.getLinkerFlags()+'\n')
     g.write('INCS = $(INCPAR)\n')
     g.write('LIBS = $(LIBPAR)\n')
     if self.argDB['with-mumps-serial']:
@@ -156,7 +157,13 @@ class Configure(config.package.Package):
         pass
       try:
         self.logPrintBox('Compiling Mumps; this may take several minutes')
-        output2,err2,ret2 = config.package.Package.executeShellCommand(self.make.make_jnp+' alllib', cwd=self.packageDir, timeout=2500, log = self.log)
+        if self.setCompilers.isDarwin(self.log):
+          output2,err2,ret2 = config.package.Package.executeShellCommand(self.make.make_jnp+' alllib', cwd=self.packageDir, timeout=2500, log = self.log)
+          output3 = ''
+          err3 = ''
+        else:
+          output2,err2,ret2 = config.package.Package.executeShellCommand(self.make.make_jnp+' prerequisites', cwd=self.packageDir, timeout=2500, log = self.log)
+          output3,err3,ret3 = config.package.Package.executeShellCommand(self.make.make_jnp+' all', cwd=os.path.join(self.packageDir,'src'), timeout=2500, log = self.log)
         libDir     = os.path.join(self.installDir, self.libdir)
         includeDir = os.path.join(self.installDir, self.includedir)
         self.logPrintBox('Installing Mumps; this may take several minutes')
@@ -171,6 +178,6 @@ class Configure(config.package.Package):
       except RuntimeError as e:
         self.logPrint('Error running make on MUMPS: '+str(e))
         raise RuntimeError('Error running make on MUMPS')
-      self.postInstall(output1+err1+output2+err2,'Makefile.inc')
+      self.postInstall(output1+err1+output2+err2+output3+err3,'Makefile.inc')
     return self.installDir
 

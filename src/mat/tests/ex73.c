@@ -6,8 +6,6 @@ static char help[] = "Reads a PETSc matrix from a file partitions it\n\n";
    Processors: n
 T*/
 
-
-
 /*
   Include "petscmat.h" so that we can use matrices.  Note that this file
   automatically includes:
@@ -36,8 +34,8 @@ int main(int argc,char **args)
   VecScatter      scat;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscOptionsHasName(NULL,NULL, "-view_mats", &viewMats);CHKERRQ(ierr);
   ierr = PetscOptionsHasName(NULL,NULL, "-view_is", &viewIS);CHKERRQ(ierr);
   ierr = PetscOptionsHasName(NULL,NULL, "-view_vecs", &viewVecs);CHKERRQ(ierr);
@@ -47,7 +45,7 @@ int main(int argc,char **args)
   /*
      Determine file from which we read the matrix
   */
-  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,sizeof(file),&flg);CHKERRQ(ierr);
 
   /*
        Open binary file.  Note that we use FILE_MODE_READ to indicate

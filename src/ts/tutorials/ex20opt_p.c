@@ -5,7 +5,7 @@ Input parameters include:\n";
 /*
    Concepts: TS^time-dependent nonlinear problems
    Concepts: TS^van der Pol equation DAE equivalent
-   Concepts: Optimization using adjoint sensitivity analysis
+   Concepts: TS^Optimization using adjoint sensitivity analysis
    Processors: 1
 */
 /* ------------------------------------------------------------------------
@@ -402,7 +402,7 @@ int main(int argc,char **argv)
      Initialize program
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
 
   /* Create TAO solver and set desired solution method */
@@ -507,7 +507,7 @@ int main(int argc,char **argv)
   }
   ierr = TaoSetFromOptions(tao);CHKERRQ(ierr);
 
-  ierr = TaoSolve(tao); CHKERRQ(ierr);
+  ierr = TaoSolve(tao);CHKERRQ(ierr);
 
   ierr = VecView(P,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   /* Free TAO data structures */

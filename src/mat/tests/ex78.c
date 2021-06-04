@@ -33,7 +33,6 @@ solu
 0 1.0
 */
 
-
 #include <petscmat.h>
 
 int main(int argc,char **args)
@@ -52,11 +51,11 @@ int main(int argc,char **args)
   PetscMPIInt    size;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"This is a uniprocessor example only!");
 
   /* Read in matrix, rhs and exact solution from ascii files */
-  ierr = PetscOptionsGetString(NULL,NULL,"-Ain",Ain,PETSC_MAX_PATH_LEN,&flg_A);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-Ain",Ain,sizeof(Ain),&flg_A);CHKERRQ(ierr);
   ierr = PetscOptionsHasName(NULL,NULL,"-noshift",&flg);CHKERRQ(ierr);
   if (flg) shift = 0;
   if (flg_A) {
@@ -90,7 +89,7 @@ int main(int argc,char **args)
     fclose(Afile);
   }
 
-  ierr = PetscOptionsGetString(NULL,NULL,"-rhs",rhs,PETSC_MAX_PATH_LEN,&flg_b);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-rhs",rhs,sizeof(rhs),&flg_b);CHKERRQ(ierr);
   if (flg_b) {
     ierr = VecCreate(PETSC_COMM_SELF,&b);CHKERRQ(ierr);
     ierr = VecSetSizes(b,PETSC_DECIDE,n);CHKERRQ(ierr);
@@ -106,7 +105,7 @@ int main(int argc,char **args)
     fclose(bfile);
   }
 
-  ierr = PetscOptionsGetString(NULL,NULL,"-solu",solu,PETSC_MAX_PATH_LEN,&flg_u);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-solu",solu,sizeof(solu),&flg_u);CHKERRQ(ierr);
   if (flg_u) {
     ierr = VecCreate(PETSC_COMM_SELF,&u);CHKERRQ(ierr);
     ierr = VecSetSizes(u,PETSC_DECIDE,n);CHKERRQ(ierr);
@@ -157,9 +156,10 @@ int main(int argc,char **args)
 /*TEST
 
    build:
-      requires:  !define(PETSC_USE_64BIT_INDICES) double !complex datafilespath
+      requires:  !define(PETSC_USE_64BIT_INDICES) double !complex
 
    test:
+      requires: datafilespath
       args: -Ain ${DATAFILESPATH}/matrices/indefinite/afiro_A.dat
 
 TEST*/

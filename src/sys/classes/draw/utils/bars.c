@@ -49,7 +49,7 @@ struct _p_PetscDrawBar {
 
 .seealso: PetscDrawLGCreate(), PetscDrawLG, PetscDrawSPCreate(), PetscDrawSP, PetscDrawHGCreate(), PetscDrawHG, PetscDrawBarDestroy(), PetscDrawBarSetData(),
           PetscDrawBar, PetscDrawBarDraw(), PetscDrawBarSave(), PetscDrawBarSetColor(), PetscDrawBarSort(), PetscDrawBarSetLimits(), PetscDrawBarGetAxis(), PetscDrawAxis,
-          PetscDrawBarGetDraw(), PetscDrawBarSetFromOptions() 
+          PetscDrawBarGetDraw(), PetscDrawBarSetFromOptions()
 @*/
 PetscErrorCode  PetscDrawBarCreate(PetscDraw draw,PetscDrawBar *bar)
 {
@@ -175,7 +175,7 @@ PetscErrorCode  PetscDrawBarDraw(PetscDrawBar bar)
   PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
   ierr = PetscDrawIsNull(bar->win,&isnull);CHKERRQ(ierr);
   if (isnull) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)bar),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)bar),&rank);CHKERRMPI(ierr);
 
   if (bar->numBins < 1) PetscFunctionReturn(0);
 
@@ -403,7 +403,6 @@ PetscErrorCode  PetscDrawBarGetDraw(PetscDrawBar bar,PetscDraw *draw)
 
     Level: intermediate
 
-
 .seealso:  PetscDrawBarDestroy(), PetscDrawBarCreate(), PetscDrawBarSort()
 @*/
 PetscErrorCode  PetscDrawBarSetFromOptions(PetscDrawBar bar)
@@ -422,4 +421,3 @@ PetscErrorCode  PetscDrawBarSetFromOptions(PetscDrawBar bar)
   }
   PetscFunctionReturn(0);
 }
-

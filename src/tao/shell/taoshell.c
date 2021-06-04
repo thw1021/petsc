@@ -68,7 +68,7 @@ PetscErrorCode  TaoShellGetContext(Tao tao,void **ctx)
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidPointer(ctx,2);
   ierr = PetscObjectTypeCompare((PetscObject)tao,TAOSHELL,&flg);CHKERRQ(ierr);
-  if (!flg) *ctx = 0;
+  if (!flg) *ctx = NULL;
   else      *ctx = ((Tao_Shell*)(tao->data))->ctx;
   PetscFunctionReturn(0);
 }
@@ -87,7 +87,6 @@ PetscErrorCode  TaoShellGetContext(Tao tao,void **ctx)
    Fortran Notes:
     The context can only be an integer or a PetscObject
       unfortunately it cannot be a Fortran array or derived type.
-
 
 .seealso: TaoCreateShell(), TaoShellGetContext()
 @*/

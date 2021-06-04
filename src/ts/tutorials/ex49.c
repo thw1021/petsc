@@ -18,7 +18,7 @@ Input parameters include:\n";
        mu = 10^6.
    This is a nonlinear equation.
 
-   This is a copy and modification of ex20.c to exactly match a test 
+   This is a copy and modification of ex20.c to exactly match a test
    problem that comes with the Radau5 integrator package.
 
   ------------------------------------------------------------------------- */
@@ -30,7 +30,6 @@ struct _n_User {
   PetscReal mu;
   PetscReal next_output;
 };
-
 
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
@@ -75,7 +74,6 @@ static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat
   PetscFunctionReturn(0);
 }
 
-
 int main(int argc,char **argv)
 {
   TS             ts;            /* nonlinear solver */
@@ -92,7 +90,7 @@ int main(int argc,char **argv)
      Initialize program
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

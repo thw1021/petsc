@@ -1,10 +1,10 @@
--include ../petscdir.mk
+-include ../../../../petscdir.mk
 CFLAGS	        =
 FFLAGS	        =
 CPPFLAGS        =
 FPPFLAGS        =
 LOCDIR          = src/dm/dt/tests/
-EXAMPLESC       = ex1.c ex2.c ex3.c ex4.c ex5.c ex6.c ex7.c
+EXAMPLESC       = ex1.c ex2.c ex3.c ex4.c ex5.c ex6.c ex7.c ex11.c
 EXAMPLESF       =
 MANSEC          = DM
 

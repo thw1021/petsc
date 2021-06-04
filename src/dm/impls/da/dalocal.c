@@ -299,7 +299,6 @@ PetscErrorCode DMDAGetConeSize(DM dm, PetscInt p, PetscInt *coneSize)
     break;
   case 3:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Too lazy to do 3D");
-    break;
   }
   PetscFunctionReturn(0);
 }
@@ -345,7 +344,6 @@ PetscErrorCode DMDAGetCone(DM dm, PetscInt p, PetscInt *cone[])
     break;
   case 3:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Too lazy to do 3D");
-    break;
   }
   PetscFunctionReturn(0);
 }
@@ -371,7 +369,7 @@ PetscErrorCode DMDASetVertexCoordinates(DM dm, PetscReal xl, PetscReal xu, Petsc
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1,DMDA);
-  ierr = DMDAGetInfo(dm, &dim, &M, &N, &P, 0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(dm, &dim, &M, &N, &P, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
   if (dim > 3) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"The following code only works for dim <= 3");
   h[0] = (xu - xl)/M;
   h[1] = (yu - yl)/N;
@@ -561,7 +559,7 @@ done:
 PetscErrorCode  DMDARestoreArray(DM da,PetscBool ghosted,void *vptr)
 {
   PetscInt i;
-  void     **iptr = (void**)vptr,*iarray_start = 0;
+  void     **iptr = (void**)vptr,*iarray_start = NULL;
   DM_DA    *dd    = (DM_DA*)da->data;
 
   PetscFunctionBegin;

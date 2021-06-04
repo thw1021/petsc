@@ -20,6 +20,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_BDF(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_GLEE(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_BasicSymplectic(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_MPRK(TS);
+PETSC_EXTERN PetscErrorCode TSCreate_DiscGrad(TS);
 
 /*@C
   TSRegisterAll - Registers all of the timesteppers in the TS package.
@@ -50,7 +51,7 @@ PetscErrorCode  TSRegisterAll(void)
   ierr = TSRegister(TSTHETA,          TSCreate_Theta);CHKERRQ(ierr);
   ierr = TSRegister(TSALPHA,          TSCreate_Alpha);CHKERRQ(ierr);
   ierr = TSRegister(TSALPHA2,         TSCreate_Alpha2);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_SUNDIALS)
+#if defined(PETSC_HAVE_SUNDIALS2)
   ierr = TSRegister(TSSUNDIALS,       TSCreate_Sundials);CHKERRQ(ierr);
 #endif
 #if defined(PETSC_HAVE_RADAU5)
@@ -65,6 +66,6 @@ PetscErrorCode  TSRegisterAll(void)
   ierr = TSRegister(TSBDF,            TSCreate_BDF);CHKERRQ(ierr);
   ierr = TSRegister(TSBASICSYMPLECTIC,TSCreate_BasicSymplectic);CHKERRQ(ierr);
   ierr = TSRegister(TSMPRK,           TSCreate_MPRK);CHKERRQ(ierr);
+  ierr = TSRegister(TSDISCGRAD,       TSCreate_DiscGrad);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-

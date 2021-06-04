@@ -6,17 +6,17 @@ Usage:  ./ex72 -fin <infile> -fout <outfile> \n\
 The option -aij_only allows to use MATAIJ for all cases.\n\\n";
 
 /*
-*   NOTES:
-*
-*   1) Matrix Market files are always 1-based, i.e. the index of the first
-*      element of a matrix is (1,1), not (0,0) as in C.  ADJUST THESE
-*      OFFSETS ACCORDINGLY offsets accordingly when reading and writing
-*      to files.
-*
-*   2) ANSI C requires one to use the "l" format modifier when reading
-*      double precision floating point numbers in scanf() and
-*      its variants.  For example, use "%lf", "%lg", or "%le"
-*      when reading doubles, otherwise errors will occur.
+   NOTES:
+
+   1) Matrix Market files are always 1-based, i.e. the index of the first
+      element of a matrix is (1,1), not (0,0) as in C.  ADJUST THESE
+      OFFSETS ACCORDINGLY offsets accordingly when reading and writing
+      to files.
+
+   2) ANSI C requires one to use the "l" format modifier when reading
+      double precision floating point numbers in scanf() and
+      its variants.  For example, use "%lf", "%lg", or "%le"
+      when reading doubles, otherwise errors will occur.
 */
 #include <petscmat.h>
 #include "ex72mmio.h"
@@ -36,12 +36,12 @@ int main(int argc,char **argv)
   PetscBool   sametype,flag,symmetric = PETSC_FALSE,skew = PETSC_FALSE,real = PETSC_FALSE,pattern = PETSC_FALSE,aijonly = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,(char *)0,help);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
 
-  ierr = PetscOptionsGetString(NULL,NULL,"-fin",filein,PETSC_MAX_PATH_LEN,&flag);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-fin",filein,sizeof(filein),&flag);CHKERRQ(ierr);
   if (!flag) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER_INPUT,"Please use -fin <filename> to specify the input file name!");
-  ierr = PetscOptionsGetString(NULL,NULL,"-fout",fileout,PETSC_MAX_PATH_LEN,&flag);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-fout",fileout,sizeof(fileout),&flag);CHKERRQ(ierr);
   if (!flag) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER_INPUT,"Please use -fout <filename> to specify the output file name!");
   ierr = PetscOptionsGetBool(NULL,NULL,"-aij_only",&aijonly,NULL);CHKERRQ(ierr);
 

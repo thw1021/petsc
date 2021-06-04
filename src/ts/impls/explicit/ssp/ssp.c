@@ -3,7 +3,7 @@
 */
 #include <petsc/private/tsimpl.h>                /*I   "petscts.h"   I*/
 
-PetscFunctionList TSSSPList = 0;
+PetscFunctionList TSSSPList = NULL;
 static PetscBool TSSSPPackageInitialized;
 
 typedef struct {
@@ -14,7 +14,6 @@ typedef struct {
   PetscInt       nwork;
   PetscBool      workout;
 } TS_SSP;
-
 
 static PetscErrorCode TSSSPGetWorkVectors(TS ts,PetscInt n,Vec **work)
 {
@@ -184,7 +183,6 @@ static PetscErrorCode TSSSPStep_RK_10_4(TS ts,PetscReal t0,PetscReal dt,Vec sol)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode TSSetUp_SSP(TS ts)
 {
   PetscErrorCode ierr;
@@ -208,7 +206,7 @@ static PetscErrorCode TSStep_SSP(TS ts)
   ierr = (*ssp->onestep)(ts,ts->ptime,ts->time_step,sol);CHKERRQ(ierr);
   ierr = TSPostStage(ts,ts->ptime,0,&sol);CHKERRQ(ierr);
   ierr = TSAdaptCheckStage(ts->adapt,ts,ts->ptime+ts->time_step,sol,&stageok);CHKERRQ(ierr);
-  if(!stageok) {ts->reason = TS_DIVERGED_STEP_REJECTED; PetscFunctionReturn(0);}
+  if (!stageok) {ts->reason = TS_DIVERGED_STEP_REJECTED; PetscFunctionReturn(0);}
 
   ierr = TSAdaptChoose(ts->adapt,ts,ts->time_step,NULL,&next_time_step,&accept);CHKERRQ(ierr);
   if (!accept) {ts->reason = TS_DIVERGED_STEP_REJECTED; PetscFunctionReturn(0);}

@@ -49,7 +49,6 @@ PetscErrorCode test_3d(const char filename[])
   return 0;
 }
 
-
 /*
   Write 2D DMDA vector with coordinates in VTK VTR format
 
@@ -90,7 +89,6 @@ PetscErrorCode test_2d(const char filename[])
   return 0;
 }
 
-
 /*
   Write 2D DMDA vector without coordinates in VTK VTR format
 
@@ -129,7 +127,6 @@ PetscErrorCode test_2d_nocoord(const char filename[])
   ierr = DMDestroy(&da);CHKERRQ(ierr);
   return 0;
 }
-
 
 /*
   Write 3D DMDA vector without coordinates in VTK VTR format
@@ -177,7 +174,7 @@ PetscErrorCode test_3d_nocoord(const char filename[])
 int main(int argc, char *argv[])
 {
   PetscErrorCode ierr;
-  
+
   ierr = PetscInitialize(&argc,&argv,0,help);if (ierr) return ierr;
   ierr = test_3d("3d.vtr");CHKERRQ(ierr);
   ierr = test_2d("2d.vtr");CHKERRQ(ierr);
@@ -186,7 +183,6 @@ int main(int argc, char *argv[])
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

@@ -42,10 +42,9 @@ PetscErrorCode DMMoabCreateVector(DM dm, moab::Tag tag, const moab::Range* range
   PetscFunctionBegin;
   if (!tag && (!range || range->empty())) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Both tag and range cannot be null.");
 
-  ierr = DMCreateVector_Moab_Private(dm, tag, range, is_global_vec, destroy_tag, vec); CHKERRQ(ierr);
+  ierr = DMCreateVector_Moab_Private(dm, tag, range, is_global_vec, destroy_tag, vec);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*@C
   DMMoabGetVecTag - Get the MOAB tag associated with this Vec
@@ -70,13 +69,12 @@ PetscErrorCode DMMoabGetVecTag(Vec vec, moab::Tag *tag)
   PetscValidPointer(tag, 2);
 
   /* Get the MOAB private data */
-  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-  ierr = PetscContainerGetPointer(moabdata, (void**) &vmoab); CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+  ierr = PetscContainerGetPointer(moabdata, (void**) &vmoab);CHKERRQ(ierr);
 
   *tag = vmoab->tag;
   PetscFunctionReturn(0);
 }
-
 
 /*@C
   DMMoabGetVecRange - Get the MOAB entities associated with this Vec
@@ -101,13 +99,12 @@ PetscErrorCode DMMoabGetVecRange(Vec vec, moab::Range *range)
   PetscValidPointer(range, 2);
 
   /* Get the MOAB private data handle */
-  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-  ierr = PetscContainerGetPointer(moabdata, (void**) &vmoab); CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+  ierr = PetscContainerGetPointer(moabdata, (void**) &vmoab);CHKERRQ(ierr);
 
   *range = *vmoab->tag_range;
   PetscFunctionReturn(0);
 }
-
 
 /*@C
   DMMoabVecGetArray - Returns the writable direct access array to the local representation of MOAB tag data for the underlying vector using locally owned+ghosted range of entities
@@ -144,8 +141,8 @@ PetscErrorCode  DMMoabVecGetArray(DM dm, Vec vec, void* array)
   dmmoab = (DM_Moab*)dm->data;
 
   /* Get the Vec_MOAB struct for the original vector */
-  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab); CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab);CHKERRQ(ierr);
 
   /* Get the real scalar array handle */
   varray = reinterpret_cast<PetscScalar**>(array);
@@ -153,32 +150,32 @@ PetscErrorCode  DMMoabVecGetArray(DM dm, Vec vec, void* array)
   if (vmoab->is_native_vec) {
 
     /* get the local representation of the arrays from Vectors */
-    ierr = DMGetLocalVector(dm, &vmoab->local); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalBegin(dm, vec, INSERT_VALUES, vmoab->local); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalEnd(dm, vec, INSERT_VALUES, vmoab->local); CHKERRQ(ierr);
+    ierr = DMGetLocalVector(dm, &vmoab->local);CHKERRQ(ierr);
+    ierr = DMGlobalToLocalBegin(dm, vec, INSERT_VALUES, vmoab->local);CHKERRQ(ierr);
+    ierr = DMGlobalToLocalEnd(dm, vec, INSERT_VALUES, vmoab->local);CHKERRQ(ierr);
 
     /* Get the Vec_MOAB struct for the original vector */
-    ierr = PetscObjectQuery((PetscObject)vmoab->local, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-    ierr = PetscContainerGetPointer(moabdata, (void**)&xmoab); CHKERRQ(ierr);
+    ierr = PetscObjectQuery((PetscObject)vmoab->local, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+    ierr = PetscContainerGetPointer(moabdata, (void**)&xmoab);CHKERRQ(ierr);
 
     /* get the local representation of the arrays from Vectors */
-    ierr = VecGhostGetLocalForm(vmoab->local, &xmoab->local); CHKERRQ(ierr);
-    ierr = VecGhostUpdateBegin(vmoab->local, INSERT_VALUES, SCATTER_FORWARD); CHKERRQ(ierr);
-    ierr = VecGhostUpdateEnd(vmoab->local, INSERT_VALUES, SCATTER_FORWARD); CHKERRQ(ierr);
+    ierr = VecGhostGetLocalForm(vmoab->local, &xmoab->local);CHKERRQ(ierr);
+    ierr = VecGhostUpdateBegin(vmoab->local, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecGhostUpdateEnd(vmoab->local, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
 
-    ierr = VecGetArray(xmoab->local, varray); CHKERRQ(ierr);
+    ierr = VecGetArray(xmoab->local, varray);CHKERRQ(ierr);
   }
   else {
 
     /* Get the MOAB private data */
-    ierr = DMMoabGetVecTag(vec, &vtag); CHKERRQ(ierr);
+    ierr = DMMoabGetVecTag(vec, &vtag);CHKERRQ(ierr);
 
 #ifdef MOAB_HAVE_MPI
     /* exchange the data into ghost cells first */
     merr = dmmoab->pcomm->exchange_tags(vtag, *dmmoab->vlocal); MBERRNM(merr);
 #endif
 
-    ierr = PetscMalloc1((dmmoab->nloc + dmmoab->nghost) * dmmoab->numFields, varray); CHKERRQ(ierr);
+    ierr = PetscMalloc1((dmmoab->nloc + dmmoab->nghost) * dmmoab->numFields, varray);CHKERRQ(ierr);
 
     /* Get the array data for local entities */
     merr = dmmoab->mbiface->tag_iterate(vtag, dmmoab->vlocal->begin(), dmmoab->vlocal->end(), count, reinterpret_cast<void*&>(marray), false); MBERRNM(merr);
@@ -193,7 +190,6 @@ PetscErrorCode  DMMoabVecGetArray(DM dm, Vec vec, void* array)
   }
   PetscFunctionReturn(0);
 }
-
 
 /*@C
   DMMoabVecRestoreArray - Restores the writable direct access array obtained via DMMoabVecGetArray
@@ -228,8 +224,8 @@ PetscErrorCode  DMMoabVecRestoreArray(DM dm, Vec vec, void* array)
   dmmoab = (DM_Moab*)dm->data;
 
   /* Get the Vec_MOAB struct for the original vector */
-  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab); CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab);CHKERRQ(ierr);
 
   /* Get the real scalar array handle */
   varray = reinterpret_cast<PetscScalar**>(array);
@@ -237,24 +233,24 @@ PetscErrorCode  DMMoabVecRestoreArray(DM dm, Vec vec, void* array)
   if (vmoab->is_native_vec) {
 
     /* Get the Vec_MOAB struct for the original vector */
-    ierr = PetscObjectQuery((PetscObject)vmoab->local, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-    ierr = PetscContainerGetPointer(moabdata, (void**)&xmoab); CHKERRQ(ierr);
+    ierr = PetscObjectQuery((PetscObject)vmoab->local, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+    ierr = PetscContainerGetPointer(moabdata, (void**)&xmoab);CHKERRQ(ierr);
 
     /* get the local representation of the arrays from Vectors */
-    ierr = VecRestoreArray(xmoab->local, varray); CHKERRQ(ierr);
-    ierr = VecGhostUpdateBegin(vmoab->local, ADD_VALUES, SCATTER_REVERSE); CHKERRQ(ierr);
-    ierr = VecGhostUpdateEnd(vmoab->local, ADD_VALUES, SCATTER_REVERSE); CHKERRQ(ierr);
-    ierr = VecGhostRestoreLocalForm(vmoab->local, &xmoab->local); CHKERRQ(ierr);
+    ierr = VecRestoreArray(xmoab->local, varray);CHKERRQ(ierr);
+    ierr = VecGhostUpdateBegin(vmoab->local, ADD_VALUES, SCATTER_REVERSE);CHKERRQ(ierr);
+    ierr = VecGhostUpdateEnd(vmoab->local, ADD_VALUES, SCATTER_REVERSE);CHKERRQ(ierr);
+    ierr = VecGhostRestoreLocalForm(vmoab->local, &xmoab->local);CHKERRQ(ierr);
 
     /* restore local pieces */
-    ierr = DMLocalToGlobalBegin(dm, vmoab->local, INSERT_VALUES, vec); CHKERRQ(ierr);
-    ierr = DMLocalToGlobalEnd(dm, vmoab->local, INSERT_VALUES, vec); CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(dm, &vmoab->local); CHKERRQ(ierr);
+    ierr = DMLocalToGlobalBegin(dm, vmoab->local, INSERT_VALUES, vec);CHKERRQ(ierr);
+    ierr = DMLocalToGlobalEnd(dm, vmoab->local, INSERT_VALUES, vec);CHKERRQ(ierr);
+    ierr = DMRestoreLocalVector(dm, &vmoab->local);CHKERRQ(ierr);
   }
   else {
 
     /* Get the MOAB private data */
-    ierr = DMMoabGetVecTag(vec, &vtag); CHKERRQ(ierr);
+    ierr = DMMoabGetVecTag(vec, &vtag);CHKERRQ(ierr);
 
     /* Get the array data for local entities */
     merr = dmmoab->mbiface->tag_iterate(vtag, dmmoab->vlocal->begin(), dmmoab->vlocal->end(), count, reinterpret_cast<void*&>(marray), false); MBERRNM(merr);
@@ -272,7 +268,7 @@ PetscErrorCode  DMMoabVecRestoreArray(DM dm, Vec vec, void* array)
       For all FEM residual based assembly calculations, MPI_SUM should serve well */
     merr = dmmoab->pcomm->reduce_tags(vtag, MPI_SUM, *dmmoab->vlocal); MBERRV(dmmoab->mbiface, merr);
 #endif
-    ierr = PetscFree(*varray); CHKERRQ(ierr);
+    ierr = PetscFree(*varray);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -312,37 +308,37 @@ PetscErrorCode  DMMoabVecGetArrayRead(DM dm, Vec vec, void* array)
   dmmoab = (DM_Moab*)dm->data;
 
   /* Get the Vec_MOAB struct for the original vector */
-  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab); CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab);CHKERRQ(ierr);
 
   /* Get the real scalar array handle */
   varray = reinterpret_cast<PetscScalar**>(array);
 
   if (vmoab->is_native_vec) {
     /* get the local representation of the arrays from Vectors */
-    ierr = DMGetLocalVector(dm, &vmoab->local); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalBegin(dm, vec, INSERT_VALUES, vmoab->local); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalEnd(dm, vec, INSERT_VALUES, vmoab->local); CHKERRQ(ierr);
+    ierr = DMGetLocalVector(dm, &vmoab->local);CHKERRQ(ierr);
+    ierr = DMGlobalToLocalBegin(dm, vec, INSERT_VALUES, vmoab->local);CHKERRQ(ierr);
+    ierr = DMGlobalToLocalEnd(dm, vec, INSERT_VALUES, vmoab->local);CHKERRQ(ierr);
 
     /* Get the Vec_MOAB struct for the original vector */
-    ierr = PetscObjectQuery((PetscObject)vmoab->local, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-    ierr = PetscContainerGetPointer(moabdata, (void**)&xmoab); CHKERRQ(ierr);
+    ierr = PetscObjectQuery((PetscObject)vmoab->local, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+    ierr = PetscContainerGetPointer(moabdata, (void**)&xmoab);CHKERRQ(ierr);
 
     /* get the local representation of the arrays from Vectors */
-    ierr = VecGhostGetLocalForm(vmoab->local, &xmoab->local); CHKERRQ(ierr);
-    ierr = VecGhostUpdateBegin(vmoab->local, INSERT_VALUES, SCATTER_FORWARD); CHKERRQ(ierr);
-    ierr = VecGhostUpdateEnd(vmoab->local, INSERT_VALUES, SCATTER_FORWARD); CHKERRQ(ierr);
-    ierr = VecGetArray(xmoab->local, varray); CHKERRQ(ierr);
+    ierr = VecGhostGetLocalForm(vmoab->local, &xmoab->local);CHKERRQ(ierr);
+    ierr = VecGhostUpdateBegin(vmoab->local, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecGhostUpdateEnd(vmoab->local, INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecGetArray(xmoab->local, varray);CHKERRQ(ierr);
   }
   else {
     /* Get the MOAB private data */
-    ierr = DMMoabGetVecTag(vec, &vtag); CHKERRQ(ierr);
+    ierr = DMMoabGetVecTag(vec, &vtag);CHKERRQ(ierr);
 
 #ifdef MOAB_HAVE_MPI
     /* exchange the data into ghost cells first */
     merr = dmmoab->pcomm->exchange_tags(vtag, *dmmoab->vlocal); MBERRNM(merr);
 #endif
-    ierr = PetscMalloc1((dmmoab->nloc + dmmoab->nghost) * dmmoab->numFields, varray); CHKERRQ(ierr);
+    ierr = PetscMalloc1((dmmoab->nloc + dmmoab->nghost) * dmmoab->numFields, varray);CHKERRQ(ierr);
 
     /* Get the array data for local entities */
     merr = dmmoab->mbiface->tag_iterate(vtag, dmmoab->vlocal->begin(), dmmoab->vlocal->end(), count, reinterpret_cast<void*&>(marray), false); MBERRNM(merr);
@@ -357,7 +353,6 @@ PetscErrorCode  DMMoabVecGetArrayRead(DM dm, Vec vec, void* array)
   }
   PetscFunctionReturn(0);
 }
-
 
 /*@C
   DMMoabVecRestoreArray - Restores the read-only direct access array obtained via DMMoabVecGetArray
@@ -386,32 +381,31 @@ PetscErrorCode  DMMoabVecRestoreArrayRead(DM dm, Vec vec, void* array)
   PetscValidPointer(array, 3);
 
   /* Get the Vec_MOAB struct for the original vector */
-  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab); CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)vec, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab);CHKERRQ(ierr);
 
   /* Get the real scalar array handle */
   varray = reinterpret_cast<PetscScalar**>(array);
 
   if (vmoab->is_native_vec) {
     /* Get the Vec_MOAB struct for the original vector */
-    ierr = PetscObjectQuery((PetscObject)vmoab->local, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-    ierr = PetscContainerGetPointer(moabdata, (void**)&xmoab); CHKERRQ(ierr);
+    ierr = PetscObjectQuery((PetscObject)vmoab->local, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+    ierr = PetscContainerGetPointer(moabdata, (void**)&xmoab);CHKERRQ(ierr);
 
     /* restore the local representation of the arrays from Vectors */
-    ierr = VecRestoreArray(xmoab->local, varray); CHKERRQ(ierr);
-    ierr = VecGhostRestoreLocalForm(vmoab->local, &xmoab->local); CHKERRQ(ierr);
+    ierr = VecRestoreArray(xmoab->local, varray);CHKERRQ(ierr);
+    ierr = VecGhostRestoreLocalForm(vmoab->local, &xmoab->local);CHKERRQ(ierr);
 
     /* restore local pieces */
-    ierr = DMRestoreLocalVector(dm, &vmoab->local); CHKERRQ(ierr);
+    ierr = DMRestoreLocalVector(dm, &vmoab->local);CHKERRQ(ierr);
   }
   else {
     /* Nothing to do but just free the memory allocated before */
-    ierr = PetscFree(*varray); CHKERRQ(ierr);
+    ierr = PetscFree(*varray);CHKERRQ(ierr);
 
   }
   PetscFunctionReturn(0);
 }
-
 
 PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Range* userrange, PetscBool is_global_vec, PetscBool destroy_tag, Vec *vec)
 {
@@ -445,13 +439,13 @@ PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Ran
 #endif
 
 #ifdef MOAB_HAVE_MPI
-  ierr = MPIU_Allreduce(&lnative_vec, &gnative_vec, 1, MPI_INT, MPI_MAX, (((PetscObject)dm)->comm)); CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&lnative_vec, &gnative_vec, 1, MPI_INT, MPI_MAX, (((PetscObject)dm)->comm));CHKERRMPI(ierr);
 #else
   gnative_vec = lnative_vec;
 #endif
 
   /* Create the MOAB internal data object */
-  ierr = PetscNew(&vmoab); CHKERRQ(ierr);
+  ierr = PetscNew(&vmoab);CHKERRQ(ierr);
   vmoab->is_native_vec = (gnative_vec > 0 ? PETSC_TRUE : PETSC_FALSE);
 
   if (!vmoab->is_native_vec) {
@@ -461,20 +455,20 @@ PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Ran
       /* get the new name for the anonymous MOABVec -> the tag_name will be destroyed along with Tag */
       char *tag_name = NULL;
 #ifdef MOAB_HAVE_MPI
-      ierr = DMVecCreateTagName_Moab_Private(mbiface,pcomm,&tag_name); CHKERRQ(ierr);
+      ierr = DMVecCreateTagName_Moab_Private(mbiface,pcomm,&tag_name);CHKERRQ(ierr);
 #else
-      ierr = DMVecCreateTagName_Moab_Private(mbiface,&tag_name); CHKERRQ(ierr);
+      ierr = DMVecCreateTagName_Moab_Private(mbiface,&tag_name);CHKERRQ(ierr);
 #endif
       is_newtag = PETSC_TRUE;
 
       /* Create the default value for the tag (all zeros) */
-      ierr = PetscCalloc1(dmmoab->numFields, &defaultvals); CHKERRQ(ierr);
+      ierr = PetscCalloc1(dmmoab->numFields, &defaultvals);CHKERRQ(ierr);
 
       /* Create the tag */
       merr = mbiface->tag_get_handle(tag_name, dmmoab->numFields, moab::MB_TYPE_DOUBLE, tag,
                                      moab::MB_TAG_DENSE | moab::MB_TAG_CREAT, defaultvals); MBERRNM(merr);
-      ierr = PetscFree(tag_name); CHKERRQ(ierr);
-      ierr = PetscFree(defaultvals); CHKERRQ(ierr);
+      ierr = PetscFree(tag_name);CHKERRQ(ierr);
+      ierr = PetscFree(defaultvals);CHKERRQ(ierr);
     }
     else {
       /* Make sure the tag data is of type "double" */
@@ -500,14 +494,14 @@ PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Ran
     if (!is_global_vec) {
       /* This is an MPI Vector with ghosted padding */
       ierr = VecCreateGhostBlock((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * dmmoab->nloc,
-                                 dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], vec); CHKERRQ(ierr);
+                                 dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], vec);CHKERRQ(ierr);
     }
     else {
       /* This is an MPI/SEQ Vector */
-      ierr = VecCreate((((PetscObject)dm)->comm), vec); CHKERRQ(ierr);
-      ierr = VecSetSizes(*vec, dmmoab->numFields * dmmoab->nloc, PETSC_DECIDE); CHKERRQ(ierr);
-      ierr = VecSetBlockSize(*vec, dmmoab->bs); CHKERRQ(ierr);
-      ierr = VecSetType(*vec, VECMPI); CHKERRQ(ierr);
+      ierr = VecCreate((((PetscObject)dm)->comm), vec);CHKERRQ(ierr);
+      ierr = VecSetSizes(*vec, dmmoab->numFields * dmmoab->nloc, PETSC_DECIDE);CHKERRQ(ierr);
+      ierr = VecSetBlockSize(*vec, dmmoab->bs);CHKERRQ(ierr);
+      ierr = VecSetType(*vec, VECMPI);CHKERRQ(ierr);
     }
   }
   else {
@@ -526,35 +520,34 @@ PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Ran
     if (!is_global_vec) {
       /* This is an MPI Vector with ghosted padding */
       ierr = VecCreateGhostBlockWithArray((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * dmmoab->nloc,
-                                          dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], data_ptr, vec); CHKERRQ(ierr);
+                                          dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], data_ptr, vec);CHKERRQ(ierr);
     }
     else {
       /* This is an MPI Vector without ghosted padding */
       ierr = VecCreateMPIWithArray((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * range->size(),
-                                   PETSC_DECIDE, data_ptr, vec); CHKERRQ(ierr);
+                                   PETSC_DECIDE, data_ptr, vec);CHKERRQ(ierr);
     }
   }
-  ierr = VecSetFromOptions(*vec); CHKERRQ(ierr);
+  ierr = VecSetFromOptions(*vec);CHKERRQ(ierr);
 
   /* create a container and store the internal MOAB data for faster access based on Entities etc */
   PetscContainer moabdata;
-  ierr = PetscContainerCreate(PETSC_COMM_WORLD, &moabdata); CHKERRQ(ierr);
-  ierr = PetscContainerSetPointer(moabdata, vmoab); CHKERRQ(ierr);
-  ierr = PetscContainerSetUserDestroy(moabdata, DMVecUserDestroy_Moab); CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject) * vec, "MOABData", (PetscObject)moabdata); CHKERRQ(ierr);
+  ierr = PetscContainerCreate(PETSC_COMM_WORLD, &moabdata);CHKERRQ(ierr);
+  ierr = PetscContainerSetPointer(moabdata, vmoab);CHKERRQ(ierr);
+  ierr = PetscContainerSetUserDestroy(moabdata, DMVecUserDestroy_Moab);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject) * vec, "MOABData", (PetscObject)moabdata);CHKERRQ(ierr);
   (*vec)->ops->duplicate = DMVecDuplicate_Moab;
-  ierr = PetscContainerDestroy(&moabdata); CHKERRQ(ierr);
+  ierr = PetscContainerDestroy(&moabdata);CHKERRQ(ierr);
 
   /* Vector created, manually set local to global mapping */
   if (dmmoab->ltog_map) {
-    ierr = VecSetLocalToGlobalMapping(*vec, dmmoab->ltog_map); CHKERRQ(ierr);
+    ierr = VecSetLocalToGlobalMapping(*vec, dmmoab->ltog_map);CHKERRQ(ierr);
   }
 
   /* set the DM reference to the vector */
-  ierr = VecSetDM(*vec, dm); CHKERRQ(ierr);
+  ierr = VecSetDM(*vec, dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*  DMVecCreateTagName_Moab_Private
  *
@@ -580,7 +573,7 @@ PetscErrorCode DMVecCreateTagName_Moab_Private(moab::Interface *mbiface, char** 
 
   PetscFunctionBegin;
   const char*       PVEC_PREFIX      = "__PETSC_VEC_";
-  ierr = PetscMalloc1(PETSC_MAX_PATH_LEN, tag_name); CHKERRQ(ierr);
+  ierr = PetscMalloc1(PETSC_MAX_PATH_LEN, tag_name);CHKERRQ(ierr);
 
   moab::EntityHandle rootset = mbiface->get_root_set();
 
@@ -597,17 +590,16 @@ PetscErrorCode DMVecCreateTagName_Moab_Private(moab::Interface *mbiface, char** 
 
 #ifdef MOAB_HAVE_MPI
   /* Make sure that n is consistent across all processes */
-  ierr = MPIU_Allreduce(&n, &global_n, 1, MPI_INT, MPI_MAX, pcomm->comm()); CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&n, &global_n, 1, MPI_INT, MPI_MAX, pcomm->comm());CHKERRMPI(ierr);
 #else
   global_n = n;
 #endif
 
   /* Set the new name accordingly and return */
-  ierr = PetscSNPrintf(*tag_name, PETSC_MAX_PATH_LEN - 1, "%s_%D", PVEC_PREFIX, global_n); CHKERRQ(ierr);
+  ierr = PetscSNPrintf(*tag_name, PETSC_MAX_PATH_LEN - 1, "%s_%D", PVEC_PREFIX, global_n);CHKERRQ(ierr);
   mberr = mbiface->tag_set_data(indexTag, &rootset, 1, (const void*)&global_n); MBERRNM(mberr);
   PetscFunctionReturn(0);
 }
-
 
 PETSC_EXTERN PetscErrorCode DMCreateGlobalVector_Moab(DM dm, Vec *gvec)
 {
@@ -621,7 +613,6 @@ PETSC_EXTERN PetscErrorCode DMCreateGlobalVector_Moab(DM dm, Vec *gvec)
   PetscFunctionReturn(0);
 }
 
-
 PETSC_EXTERN PetscErrorCode DMCreateLocalVector_Moab(DM dm, Vec *lvec)
 {
   PetscErrorCode  ierr;
@@ -633,7 +624,6 @@ PETSC_EXTERN PetscErrorCode DMCreateLocalVector_Moab(DM dm, Vec *lvec)
   ierr = DMCreateVector_Moab_Private(dm,NULL,dmmoab->vlocal,PETSC_FALSE,PETSC_TRUE,lvec);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 PetscErrorCode DMVecDuplicate_Moab(Vec x, Vec *y)
 {
@@ -647,17 +637,16 @@ PetscErrorCode DMVecDuplicate_Moab(Vec x, Vec *y)
   PetscValidPointer(y, 2);
 
   /* Get the Vec_MOAB struct for the original vector */
-  ierr = PetscObjectQuery((PetscObject)x, "MOABData", (PetscObject*) &moabdata); CHKERRQ(ierr);
-  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab); CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)x, "MOABData", (PetscObject*) &moabdata);CHKERRQ(ierr);
+  ierr = PetscContainerGetPointer(moabdata, (void**)&vmoab);CHKERRQ(ierr);
 
-  ierr = VecGetDM(x, &dm); CHKERRQ(ierr);
+  ierr = VecGetDM(x, &dm);CHKERRQ(ierr);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
 
   ierr = DMCreateVector_Moab_Private(dm,NULL,vmoab->tag_range,vmoab->is_global_vec,PETSC_TRUE,y);CHKERRQ(ierr);
   ierr = VecSetDM(*y, dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 PetscErrorCode DMVecUserDestroy_Moab(void *user)
 {
@@ -676,10 +665,9 @@ PetscErrorCode DMVecUserDestroy_Moab(void *user)
 #ifdef MOAB_HAVE_MPI
   vmoab->pcomm = NULL;
 #endif
-  ierr = PetscFree(vmoab); CHKERRQ(ierr);
+  ierr = PetscFree(vmoab);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 PETSC_EXTERN PetscErrorCode  DMGlobalToLocalBegin_Moab(DM dm, Vec g, InsertMode mode, Vec l)
 {
@@ -687,10 +675,9 @@ PETSC_EXTERN PetscErrorCode  DMGlobalToLocalBegin_Moab(DM dm, Vec g, InsertMode 
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;
-  ierr = VecScatterBegin(dmmoab->ltog_sendrecv, g, l, mode, SCATTER_REVERSE); CHKERRQ(ierr);
+  ierr = VecScatterBegin(dmmoab->ltog_sendrecv, g, l, mode, SCATTER_REVERSE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 PETSC_EXTERN PetscErrorCode  DMGlobalToLocalEnd_Moab(DM dm, Vec g, InsertMode mode, Vec l)
 {
@@ -698,10 +685,9 @@ PETSC_EXTERN PetscErrorCode  DMGlobalToLocalEnd_Moab(DM dm, Vec g, InsertMode mo
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;
-  ierr = VecScatterEnd(dmmoab->ltog_sendrecv, g, l, mode, SCATTER_REVERSE); CHKERRQ(ierr);
+  ierr = VecScatterEnd(dmmoab->ltog_sendrecv, g, l, mode, SCATTER_REVERSE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 PETSC_EXTERN PetscErrorCode  DMLocalToGlobalBegin_Moab(DM dm, Vec l, InsertMode mode, Vec g)
 {
@@ -709,10 +695,9 @@ PETSC_EXTERN PetscErrorCode  DMLocalToGlobalBegin_Moab(DM dm, Vec l, InsertMode 
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;
-  ierr = VecScatterBegin(dmmoab->ltog_sendrecv, l, g, mode, SCATTER_FORWARD); CHKERRQ(ierr);
+  ierr = VecScatterBegin(dmmoab->ltog_sendrecv, l, g, mode, SCATTER_FORWARD);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 PETSC_EXTERN PetscErrorCode  DMLocalToGlobalEnd_Moab(DM dm, Vec l, InsertMode mode, Vec g)
 {
@@ -720,7 +705,7 @@ PETSC_EXTERN PetscErrorCode  DMLocalToGlobalEnd_Moab(DM dm, Vec l, InsertMode mo
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;
-  ierr = VecScatterEnd(dmmoab->ltog_sendrecv, l, g, mode, SCATTER_FORWARD); CHKERRQ(ierr);
+  ierr = VecScatterEnd(dmmoab->ltog_sendrecv, l, g, mode, SCATTER_FORWARD);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

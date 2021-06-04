@@ -19,7 +19,6 @@
       return
       end
 
-
 !============================== FORLINK ==============================72
 !
 !  FORLINK establishes links between FORTRAN common blocks and C
@@ -125,8 +124,8 @@
 !
 !  The following u0,v0,w0 are Kyle's original (no yaw) components
 !
-!     u0 = xmach * cos( alpha/conv )
-!     v0 = xmach * sin( alpha/conv )
+!     u0 = xmach * cos(alpha/conv)
+!     v0 = xmach * sin(alpha/conv)
 !     w0 = 0.0
 !
 !  The following u0,v0,w0 are CFL3D's yawed components, based
@@ -156,13 +155,13 @@
       v0 = - xmach * sin(yaw/conv)
       w0 =   xmach * sin(alpha/conv) * cos(yaw/conv)
 #else
-      u0 = xmach * cos( alpha/conv )
-      v0 = xmach * sin( alpha/conv )
+      u0 = xmach * cos(alpha/conv)
+      v0 = xmach * sin(alpha/conv)
       w0 = 0.0
 #endif
 !
-      ei0   = p0/(( gamma - 1.0 )*rho0)
-      et0   = rho0*( ei0 + 0.5*(u0*u0 + v0*v0 + w0*w0))
+      ei0   = p0/((gamma - 1.0)*rho0)
+      et0   = rho0*(ei0 + 0.5*(u0*u0 + v0*v0 + w0*w0))
       h0    = (et0 + p0)/rho0
 !      pt0   = p0*(1.0 + 0.5*gm1*xmach*xmach)**3.5
       pt0 = 1.0
@@ -249,7 +248,6 @@
 
       end
 
-
 !================================ READR1 ====================================
 !
 !  Reads input parameters
@@ -309,7 +307,6 @@
       return
       end
 
-
 !================================ RDGPAR =============================72
 !
 ! Reads grid parameters
@@ -363,7 +360,6 @@
 
       return
       end
-
 
 !================================ README =============================72
 !
@@ -541,7 +537,6 @@
       return
       end
 
-
 !================================ RREST ==============================72
 !
 ! Reads input data for restarts
@@ -580,7 +575,6 @@
 !
       end
 
-
 !================================ WREST ==============================72
 !
 ! Writes output flowfield for restarts
@@ -610,7 +604,6 @@
 ! End of subroutine WREST
 !
       end
-
 
 !================================ PLLAN ====================================
 !
@@ -656,7 +649,6 @@
 !
       return
       end
-
 
 !================================ TECFLO =============================72
 !
@@ -782,7 +774,6 @@
       return
       end
 
-
 !=============================== FASFLO ==============================72
 !
 ! Write a FAST binary file
@@ -862,7 +853,6 @@
       return
       end
 
-
 !================================ HTOE ===============================72
 !
 !  Converts total enthalpy to total energy
@@ -904,7 +894,6 @@
       return
       end
 
-
 !================================ ETOP ===============================72
 !
 !  Converts total energy to pressure
@@ -945,7 +934,6 @@
 !
       return
       end
-
 
 !================================ PTOE ===============================72
 !
@@ -1097,7 +1085,6 @@
 !
       return
       end
-
 
 !================================ FORCE  ============================72
 !
@@ -1724,7 +1711,6 @@
       return
       end
 
-
 !================================ DELTAT2 ============================72
 !
 ! Calculate a time step for each cell
@@ -1944,7 +1930,6 @@
       return
       end
 
-
 !================================= SPLIT =============================72
 !
 ! Calculates the fluxes on the face and performs the flux balance
@@ -1987,7 +1972,6 @@
       real x(nvertices), y(nvertices), z(nvertices)
 !     real phi(nvertices,5)
       real xn(nedge), yn(nedge), zn(nedge), ra(nedge)
-
 
 #if defined(INTERLACING)
       real qvec(5,nvertices)
@@ -2491,7 +2475,6 @@
       real fxn(1),fyn(1),fzn(1)
       real x(nvertices), y(nvertices), z(nvertices)
       real xn(nedge), yn(nedge), zn(nedge), ra(nedge)
-
 
 #if defined(INTERLACING)
       real qvec(5,nvertices)
@@ -3251,7 +3234,6 @@
       return
       end
 
-
 !================================= LSTGS =============================72
 !
 ! Calculates the Gradients at the nodes using weighted least squares
@@ -3278,7 +3260,6 @@
       data node2_label/'NODE2           '/
       save grad_event, grad_label, flag
       save node1_event,node2_event,node1_label, node2_label
-
 
 !
       common/info/title(20),xmach,alpha,yaw,Re,dt,tot,res0,resc,
@@ -3532,7 +3513,6 @@
 !
       return
       end
-
 
 !=================================== GETRES ==========================72
 !

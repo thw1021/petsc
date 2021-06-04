@@ -385,7 +385,6 @@ PetscErrorCode VecDestroy_MPIFFTW(Vec v)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode VecDuplicate_FFTW_fin(Vec fin,Vec *fin_new)
 {
   PetscErrorCode ierr;
@@ -418,7 +417,6 @@ static PetscErrorCode VecDuplicate_FFTW_bout(Vec bout, Vec *bout_new)
   ierr = MatCreateVecsFFTW_FFTW(A,NULL,NULL,bout_new);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*@
    MatCreateVecsFFTW - Get vector(s) compatible with the matrix, i.e. with the
@@ -475,8 +473,8 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
   PetscValidType(A,1);
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
 
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   if (size == 1) { /* sequential case */
 #if defined(PETSC_USE_COMPLEX)
     if (fin)  {ierr = VecCreateSeq(PETSC_COMM_SELF,N,fin);CHKERRQ(ierr);}
@@ -756,8 +754,8 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = VecGetOwnershipRange(y,&low,NULL);
 
   if (size==1) {
@@ -988,8 +986,8 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = VecGetOwnershipRange(x,&low,NULL);CHKERRQ(ierr);
 
   if (size==1) {
@@ -1194,8 +1192,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
 
   fftw_mpi_init();
   pdim    = (ptrdiff_t*)calloc(ndim,sizeof(ptrdiff_t));
@@ -1307,8 +1305,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
 
   for (ctr=0;ctr<ndim;ctr++) (fftw->dim_fftw)[ctr]=dim[ctr];
 
-  fftw->p_forward  = 0;
-  fftw->p_backward = 0;
+  fftw->p_forward  = NULL;
+  fftw->p_backward = NULL;
   fftw->p_flag     = FFTW_ESTIMATE;
 
   if (size == 1) {
@@ -1335,7 +1333,4 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-
-
 

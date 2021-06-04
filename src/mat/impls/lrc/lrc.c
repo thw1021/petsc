@@ -10,7 +10,6 @@ typedef struct {
   Vec         xl,yl;       /* auxiliary sequential vectors for matmult operation */
 } Mat_LRC;
 
-
 PetscErrorCode MatMult_LRC(Mat N,Vec x,Vec y)
 {
   Mat_LRC           *Na = (Mat_LRC*)N->data;
@@ -37,7 +36,7 @@ PetscErrorCode MatMult_LRC(Mat N,Vec x,Vec y)
      sum_{all processors} work1 */
   ierr = VecGetArray(Na->work1,&w1);CHKERRQ(ierr);
   ierr = VecGetArray(Na->work2,&w2);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(w1,w2,Na->nwork,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)N));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(w1,w2,Na->nwork,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)N));CHKERRMPI(ierr);
   ierr = VecRestoreArray(Na->work1,&w1);CHKERRQ(ierr);
   ierr = VecRestoreArray(Na->work2,&w2);CHKERRQ(ierr);
 
@@ -129,7 +128,7 @@ PetscErrorCode  MatLRCGetMats(Mat N,Mat *A,Mat *U,Vec *c,Mat *V)
    Input Parameters:
 +  A    - the (sparse) matrix (can be NULL)
 .  U, V - two dense rectangular (tall and skinny) matrices
--  c    - a sequential vector containing the diagonal of C (can be NULL) 
+-  c    - a sequential vector containing the diagonal of C (can be NULL)
 
    Output Parameter:
 .  N    - the matrix that represents A + U*C*V'
@@ -227,4 +226,3 @@ PetscErrorCode MatCreateLRC(Mat A,Mat U,Vec c,Mat V,Mat *N)
   ierr = PetscObjectComposeFunction((PetscObject)(*N),"MatLRCGetMats_C",MatLRCGetMats_LRC);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-

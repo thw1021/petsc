@@ -15,12 +15,6 @@ PETSC_EXTERN PetscErrorCode PetscVFPrintfDefault(FILE*,const char[],va_list);
 PETSC_EXTERN PetscErrorCode PetscVFPrintfSetClosure(int (^)(const char*));
 #endif
 
-
-#if defined(PETSC_HAVE_CUDA)
-#include <cuda.h>
-#include <cublas_v2.h>
-#endif
-
 /*
    All major PETSc data structures have a common core; this is defined
    below by PETSCHEADER.
@@ -184,13 +178,10 @@ PETSC_EXTERN PetscErrorCode PetscObjectGetFortranCallback(PetscObject,PetscFortr
 
 PETSC_INTERN PetscErrorCode PetscCitationsInitialize(void);
 PETSC_INTERN PetscErrorCode PetscFreeMPIResources(void);
-
-
+PETSC_INTERN PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions,PetscBool*);
 
 PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
-#if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
-#endif
+#if !defined(PETSC_CLANG_STATIC_ANALYZER)
 /*
     Macros to test if a PETSc object is valid and if pointers are valid
 */
@@ -277,8 +268,30 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
   do {                                                                  \
     if (!(f)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Null Function Pointer: Parameter # %d",arg); \
   } while (0)
-
 #endif
+#else /* PETSC_CLANG_STATIC_ANALYZER */
+template <typename T>
+void PetscValidHeaderSpecificType(T,PetscClassId,int,const char[]);
+template <typename T>
+void PetscValidHeaderSpecific(T,PetscClassId,int);
+template <typename T>
+void PetscValidHeaderSpecific(const T,PetscClassId,int);
+template <typename T>
+void PetscValidHeader(T,int);
+template <typename T>
+void PetscValidPointer(T,int);
+template <typename T>
+void PetscValidCharPointer(T*,int);
+template <typename T>
+void PetscValidIntPointer(T*,int);
+template <typename T>
+void PetscValidBoolPointer(T*,int);
+template <typename T>
+void PetscValidScalarPointer(T*,int);
+template <typename T>
+void PetscValidRealPointer(T*,int);
+#define PetscValidFunction(f,arg)
+#endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 #define PetscSorted(n,idx,sorted)           \
   do {                                      \
@@ -287,8 +300,9 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
     for (_i_ = 1; _i_ < (n); _i_++)         \
       if ((idx)[_i_] < (idx)[_i_ - 1])      \
         { (sorted) = PETSC_FALSE; break; }  \
-  } while(0)
+  } while (0)
 
+#if !defined(PETSC_CLANG_STATIC_ANALYZER)
 #if !defined(PETSC_USE_DEBUG)
 
 #define PetscCheckSameType(a,arga,b,argb) do {(void)(a);(void)(b);} while (0)
@@ -315,6 +329,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
   do {                                                                  \
     if (((PetscObject)(a))->type != ((PetscObject)(b))->type) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMETYPE,"Objects not of same type: Argument # %d and %d",arga,argb); \
   } while (0)
+
 /*
     Check type_name
 */
@@ -336,6 +351,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
 /*
    Use this macro to check if the type is set
 */
+
 #define PetscValidType(a,arg)                                           \
   do {                                                                  \
     if (!((PetscObject)(a))->type_name) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"%s object's type is not set: Argument # %d",((PetscObject)(a))->class_name,arg); \
@@ -347,7 +363,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
   do {                                                                  \
     PetscErrorCode _7_ierr;                                             \
     PetscMPIInt    _7_flag;                                             \
-    _7_ierr = MPI_Comm_compare(PetscObjectComm((PetscObject)(a)),PetscObjectComm((PetscObject)(b)),&_7_flag);CHKERRQ(_7_ierr); \
+    _7_ierr = MPI_Comm_compare(PetscObjectComm((PetscObject)(a)),PetscObjectComm((PetscObject)(b)),&_7_flag);CHKERRMPI(_7_ierr); \
     if (_7_flag != MPI_CONGRUENT && _7_flag != MPI_IDENT) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMECOMM,"Different communicators in the two objects: Argument # %d and %d flag %d",arga,argb,_7_flag); \
   } while (0)
 
@@ -364,7 +380,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
     PetscReal b1[5],b2[5];                                              \
     if (PetscIsNanScalar(b0)) {b1[4] = 1;} else {b1[4] = 0;};           \
     b1[0] = -PetscRealPart(b0); b1[1] = PetscRealPart(b0); b1[2] = -PetscImaginaryPart(b0); b1[3] = PetscImaginaryPart(b0); \
-    _7_ierr = MPI_Allreduce(b1,b2,5,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)(a)));CHKERRQ(_7_ierr); \
+    _7_ierr = MPIU_Allreduce(b1,b2,5,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)(a)));CHKERRMPI(_7_ierr); \
     if (!(b2[4] > 0) && !(PetscEqualReal(-b2[0],b2[1]) && PetscEqualReal(-b2[2],b2[3]))) SETERRQ1(PetscObjectComm((PetscObject)(a)),PETSC_ERR_ARG_WRONG,"Scalar value must be same on all processes, argument # %d",arg); \
   } while (0)
 
@@ -374,7 +390,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
     PetscReal b0=(b),b1[3],b2[3];                                       \
     if (PetscIsNanReal(b0)) {b1[2] = 1;} else {b1[2] = 0;};             \
     b1[0] = -b0; b1[1] = b0;                                            \
-    _7_ierr = MPI_Allreduce(b1,b2,3,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)(a)));CHKERRQ(_7_ierr); \
+    _7_ierr = MPIU_Allreduce(b1,b2,3,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)(a)));CHKERRMPI(_7_ierr); \
     if (!(b2[2] > 0) && !PetscEqualReal(-b2[0],b2[1])) SETERRQ1(PetscObjectComm((PetscObject)(a)),PETSC_ERR_ARG_WRONG,"Real value must be same on all processes, argument # %d",arg); \
   } while (0)
 
@@ -383,7 +399,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
     PetscErrorCode _7_ierr;                                             \
     PetscInt b0=(b),b1[2],b2[2];                                        \
     b1[0] = -b0; b1[1] = b0;                                            \
-    _7_ierr = MPIU_Allreduce(b1,b2,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRQ(_7_ierr); \
+    _7_ierr = MPIU_Allreduce(b1,b2,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRMPI(_7_ierr); \
     if (-b2[0] != b2[1]) SETERRQ1(PetscObjectComm((PetscObject)(a)),PETSC_ERR_ARG_WRONG,"Int value must be same on all processes, argument # %d",arg); \
   } while (0)
 
@@ -392,7 +408,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
     PetscErrorCode _7_ierr;                                             \
     PetscMPIInt b0=(b),b1[2],b2[2];                                     \
     b1[0] = -b0; b1[1] = b0;                                            \
-    _7_ierr = MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRQ(_7_ierr); \
+    _7_ierr = MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRMPI(_7_ierr); \
     if (-b2[0] != b2[1]) SETERRQ1(PetscObjectComm((PetscObject)(a)),PETSC_ERR_ARG_WRONG,"PetscMPIInt value must be same on all processes, argument # %d",arg); \
   } while (0)
 
@@ -401,7 +417,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
     PetscErrorCode _7_ierr;                                             \
     PetscMPIInt b0=(PetscMPIInt)(b),b1[2],b2[2];                        \
     b1[0] = -b0; b1[1] = b0;                                            \
-    _7_ierr = MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRQ(_7_ierr); \
+    _7_ierr = MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRMPI(_7_ierr); \
     if (-b2[0] != b2[1]) SETERRQ1(PetscObjectComm((PetscObject)(a)),PETSC_ERR_ARG_WRONG,"Bool value must be same on all processes, argument # %d",arg); \
   } while (0)
 
@@ -410,7 +426,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
     PetscErrorCode _7_ierr;                                             \
     PetscMPIInt b0=(PetscMPIInt)(b),b1[2],b2[2];                        \
     b1[0] = -b0; b1[1] = b0;                                            \
-    _7_ierr = MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRQ(_7_ierr); \
+    _7_ierr = MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)(a)));CHKERRMPI(_7_ierr); \
     if (-b2[0] != b2[1]) SETERRQ1(PetscObjectComm((PetscObject)(a)),PETSC_ERR_ARG_WRONG,"Enum value must be same on all processes, argument # %d",arg); \
   } while (0)
 
@@ -422,6 +438,31 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
   } while (0)
 
 #endif
+#else /* PETSC_CLANG_STATIC_ANALYZER */
+template <typename Ta,typename Tb>
+void PetscCheckSameType(Ta,int,Tb,int);
+#define PetscCheckTypeName(a,type)
+#define PetscCheckTypeNames(a,type1,type2)
+template <typename T>
+void PetscValidType(T,int);
+template <typename Ta,typename Tb>
+void PetscCheckSameComm(Ta,int,Tb,int);
+template <typename Ta,typename Tb>
+void PetscCheckSameTypeAndComm(Ta,int,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveScalar(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveReal(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveInt(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveMPIInt(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveBool(Ta,Tb,int);
+template <typename Ta,typename Tb>
+void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
+#define PetscCheckSorted(n,idx)
+#endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 /*
    PetscTryMethod - Queries an object for a method, if it exists then calls it.
@@ -435,7 +476,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
   0; do { PetscErrorCode (*_7_f)B, _7_ierr; \
     _7_ierr = PetscObjectQueryFunction((PetscObject)(obj),A,&_7_f);CHKERRQ(_7_ierr); \
     if (_7_f) {_7_ierr = (*_7_f)C;CHKERRQ(_7_ierr);} \
-  } while(0)
+  } while (0)
 
 /*
    PetscUseMethod - Queries an object for a method, if it exists then calls it, otherwise generates an error.
@@ -450,7 +491,7 @@ PETSC_EXTERN PetscBool PetscCheckMpiGpuAwareness(void);
     _7_ierr = PetscObjectQueryFunction((PetscObject)(obj),A,&_7_f);CHKERRQ(_7_ierr); \
     if (_7_f) {_7_ierr = (*_7_f)C;CHKERRQ(_7_ierr);} \
     else SETERRQ1(PetscObjectComm((PetscObject)(obj)),PETSC_ERR_SUP,"Cannot locate function %s in object",A); \
-  } while(0)
+  } while (0)
 
 /*MC
    PetscObjectStateIncrease - Increases the state of any PetscObject
@@ -744,7 +785,7 @@ M*/
 M*/
 #if defined(PETSC_USE_COMPLEX)
 #define PetscObjectComposedDataGetScalar(obj,id,data,flag)                              \
-  ((((obj)->scalarcomposedstate && ((obj)->scalarcomposedstate[id] == (obj)->state) ) ? \
+  ((((obj)->scalarcomposedstate && ((obj)->scalarcomposedstate[id] == (obj)->state)) ? \
    (data = (obj)->scalarcomposeddata[id],flag = PETSC_TRUE) : (flag = PETSC_FALSE)),0)
 #else
 #define PetscObjectComposedDataGetScalar(obj,id,data,flag)                             \
@@ -827,34 +868,24 @@ typedef struct {
   PetscMPIInt *iflags;          /* length of comm size, shared by all calls to PetscCommBuildTwoSided_Allreduce/RedScatter on this comm */
 } PetscCommCounter;
 
-/*E
-    PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
-
-   PETSC_OFFLOAD_UNALLOCATED  - no memory contains valid matrix entries; NEVER used for vectors
-   PETSC_OFFLOAD_GPU - GPU has valid vector/matrix entries
-   PETSC_OFFLOAD_CPU - CPU has valid vector/matrix entries
-   PETSC_OFFLOAD_BOTH - Both GPU and CPU have valid vector/matrix entries and they match
-
-   Level: developer
-E*/
-typedef enum {PETSC_OFFLOAD_UNALLOCATED=0x0,PETSC_OFFLOAD_CPU=0x1,PETSC_OFFLOAD_GPU=0x2,PETSC_OFFLOAD_BOTH=0x3} PetscOffloadMask;
-
 typedef enum {STATE_BEGIN, STATE_PENDING, STATE_END} SRState;
 
 typedef enum {PETSC_SR_REDUCE_SUM=0,PETSC_SR_REDUCE_MAX=1,PETSC_SR_REDUCE_MIN=2} PetscSRReductionType;
 
 typedef struct {
-  MPI_Comm    comm;
-  MPI_Request request;
-  PetscBool   async;
-  PetscScalar *lvalues;     /* this are the reduced values before call to MPI_Allreduce() */
-  PetscScalar *gvalues;     /* values after call to MPI_Allreduce() */
-  void        **invecs;     /* for debugging only, vector/memory used with each op */
-  PetscInt    *reducetype;  /* is particular value to be summed or maxed? */
-  SRState     state;        /* are we calling xxxBegin() or xxxEnd()? */
-  PetscInt    maxops;       /* total amount of space we have for requests */
-  PetscInt    numopsbegin;  /* number of requests that have been queued in */
-  PetscInt    numopsend;    /* number of requests that have been gotten by user */
+  MPI_Comm       comm;
+  MPI_Request    request;
+  PetscBool      mix;
+  PetscBool      async;
+  PetscScalar    *lvalues;     /* this are the reduced values before call to MPI_Allreduce() */
+  PetscScalar    *gvalues;     /* values after call to MPI_Allreduce() */
+  void           **invecs;     /* for debugging only, vector/memory used with each op */
+  PetscInt       *reducetype;  /* is particular value to be summed or maxed? */
+  struct { PetscScalar v; PetscInt i; } *lvalues_mix,*gvalues_mix; /* used when mixing reduce operations */
+  SRState        state;        /* are we calling xxxBegin() or xxxEnd()? */
+  PetscInt       maxops;       /* total amount of space we have for requests */
+  PetscInt       numopsbegin;  /* number of requests that have been queued in */
+  PetscInt       numopsend;    /* number of requests that have been gotten by user */
 } PetscSplitReduction;
 
 PETSC_EXTERN PetscErrorCode PetscSplitReductionGet(MPI_Comm,PetscSplitReduction**);
@@ -945,4 +976,22 @@ PETSC_EXTERN PetscBool     use_gpu_aware_mpi;
 PETSC_EXTERN int64_t Petsc_adios_group;
 #endif
 
+#if defined(PETSC_HAVE_KOKKOS)
+PETSC_INTERN PetscBool      PetscBeganKokkos;
+PETSC_EXTERN PetscBool      PetscKokkosInitialized;
+PETSC_INTERN PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool*);
+PETSC_INTERN PetscErrorCode PetscKokkosFinalize_Private(void);
+#endif
+
+#if defined(PETSC_HAVE_CUDA)
+PETSC_EXTERN PetscBool      PetscCUDAInitialized;  /* Is CUDA initialized? One can use this flag to guard CUDA calls. */
+PETSC_EXTERN PetscBool      PetscMPICUDAAwarenessCheck(void);
+#endif
+
+#if defined(PETSC_HAVE_HIP)
+PETSC_EXTERN PetscBool      PetscHIPInitialized;
+PETSC_EXTERN PetscBool      PetscMPIHIPAwarenessCheck(void);
+#endif
+
+PETSC_EXTERN PetscBool      PetscCreatedGpuObjects;
 #endif /* PETSCIMPL_H */

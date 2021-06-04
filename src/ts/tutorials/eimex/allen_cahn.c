@@ -18,12 +18,10 @@ typedef struct {
   PetscInt    mx;           /* Discretization in x-direction */
 }AppCtx;
 
-
 static PetscErrorCode RHSFunction(TS,PetscReal,Vec,Vec,void*);
 static PetscErrorCode FormIFunction(TS,PetscReal,Vec,Vec,Vec,void*);
 static PetscErrorCode FormIJacobian(TS,PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *ctx);
 static PetscErrorCode FormInitialSolution(TS,Vec,void*);
-
 
 int main(int argc, char **argv)
 {
@@ -104,7 +102,6 @@ int main(int argc, char **argv)
   return ierr;
 }
 
-
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 {
   PetscErrorCode    ierr;
@@ -121,7 +118,7 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
   ierr = VecGetArray(F,&f);CHKERRQ(ierr);
   f[0] = 2.*eps*(x[1]-x[0])/(hx*hx); /*boundary*/
-  for(i=1;i<mx-1;i++) {
+  for (i=1;i<mx-1;i++) {
     f[i]= eps*(x[i+1]-2.*x[i]+x[i-1])/(hx*hx);
   }
   f[mx-1] = 2.*eps*(x[mx-2]- x[mx-1])/(hx*hx); /*boundary*/
@@ -129,7 +126,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
   ierr = VecRestoreArray(F,&f);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ptr)
 {
@@ -145,7 +141,7 @@ static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
   ierr = VecGetArrayRead(Xdot,&xdot);CHKERRQ(ierr);
   ierr = VecGetArray(F,&f);CHKERRQ(ierr);
 
-  for(i=0;i<mx;i++) {
+  for (i=0;i<mx;i++) {
     f[i]= xdot[i] - x[i]*(1.-x[i]*x[i]);
   }
 
@@ -154,7 +150,6 @@ static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
   ierr = VecRestoreArray(F,&f);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec U, Vec Udot, PetscReal a, Mat J,Mat Jpre,void *ctx)
 {
@@ -166,7 +161,7 @@ static PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec U, Vec Udot, PetscReal
 
   PetscFunctionBegin;
   ierr = VecGetArrayRead(U,&x);CHKERRQ(ierr);
-  for(i=0; i < user->mx; i++) {
+  for (i=0; i < user->mx; i++) {
     v = a - 1. + 3.*x[i]*x[i];
     col = i;
     ierr = MatSetValues(J,1,&i,1,&col,&v,INSERT_VALUES);CHKERRQ(ierr);
@@ -183,7 +178,6 @@ static PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec U, Vec Udot, PetscReal
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode FormInitialSolution(TS ts,Vec U,void *ctx)
 {
   AppCtx *user = (AppCtx*)ctx;
@@ -195,17 +189,17 @@ static PetscErrorCode FormInitialSolution(TS ts,Vec U,void *ctx)
   PetscFunctionBegin;
   hx = (user->xright-user->xleft)/(PetscReal)(user->mx-1);
   ierr = VecGetArray(U,&x);CHKERRQ(ierr);
-  for(i=0;i<user->mx;i++) {
+  for (i=0;i<user->mx;i++) {
     x_map = user->xleft + i*hx;
-    if(x_map >= 0.7065) {
+    if (x_map >= 0.7065) {
       x[i] = PetscTanhReal((x_map-0.8)/(2.*PetscSqrtReal(user->param)));
-    } else if(x_map >= 0.4865) {
+    } else if (x_map >= 0.4865) {
       x[i] = PetscTanhReal((0.613-x_map)/(2.*PetscSqrtReal(user->param)));
-    } else if(x_map >= 0.28) {
+    } else if (x_map >= 0.28) {
       x[i] = PetscTanhReal((x_map-0.36)/(2.*PetscSqrtReal(user->param)));
-    } else if(x_map >= -0.7) {
+    } else if (x_map >= -0.7) {
       x[i] = PetscTanhReal((0.2-x_map)/(2.*PetscSqrtReal(user->param)));
-    } else if(x_map >= -1) {
+    } else if (x_map >= -1) {
       x[i] = PetscTanhReal((x_map+0.9)/(2.*PetscSqrtReal(user->param)));
     }
   }

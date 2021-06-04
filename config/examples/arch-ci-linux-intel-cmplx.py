@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -30,7 +30,9 @@ if __name__ == '__main__':
     # '--download-mumps',
     '--download-p4est',
     '--download-parmetis',
-    '--download-petsc4py',
+    '--with-petsc4py',
+    '--download-slepc',
+    '--download-slepc-configure-arguments="--with-slepc4py"',
     '--download-scalapack',
     '--download-strumpack',
     '--download-suitesparse',

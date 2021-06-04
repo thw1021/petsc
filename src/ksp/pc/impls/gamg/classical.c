@@ -139,7 +139,7 @@ PetscErrorCode PCGAMGGraph_Classical(PC pc,Mat A,Mat *G)
   }
   ierr = PetscMalloc2(cmax,&gval,cmax,&gcol);CHKERRQ(ierr);
 
-  ierr = MatCreate(PetscObjectComm((PetscObject)A),G); CHKERRQ(ierr);
+  ierr = MatCreate(PetscObjectComm((PetscObject)A),G);CHKERRQ(ierr);
   ierr = MatGetType(A,&mtype);CHKERRQ(ierr);
   ierr = MatSetType(*G,mtype);CHKERRQ(ierr);
   ierr = MatSetSizes(*G,n,n,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
@@ -159,14 +159,13 @@ PetscErrorCode PCGAMGGraph_Classical(PC pc,Mat A,Mat *G)
     ierr = MatSetValues(*G,1,&r,idx,gcol,gval,INSERT_VALUES);CHKERRQ(ierr);
     ierr = MatRestoreRow(A,r,&ncols,&rcol,&rval);CHKERRQ(ierr);
   }
-  ierr = MatAssemblyBegin(*G, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyBegin(*G, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(*G, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
   ierr = PetscFree2(gval,gcol);CHKERRQ(ierr);
   ierr = PetscFree3(lsparse,gsparse,Amax);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 PetscErrorCode PCGAMGCoarsen_Classical(PC pc,Mat *G,PetscCoarsenData **agg_lists)
 {
@@ -233,7 +232,7 @@ PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, PetscCoar
   cn = 0;
   for (i=0;i<fn;i++) {
     /* filter out singletons */
-    ierr = PetscCDEmptyAt(agg_lists,i,&iscoarse); CHKERRQ(ierr);
+    ierr = PetscCDEmptyAt(agg_lists,i,&iscoarse);CHKERRQ(ierr);
     lcid[i] = -1;
     if (!iscoarse) {
       cn++;
@@ -246,7 +245,7 @@ PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, PetscCoar
 
   cn = 0;
   for (i=0;i<fn;i++) {
-    ierr = PetscCDEmptyAt(agg_lists,i,&iscoarse); CHKERRQ(ierr);
+    ierr = PetscCDEmptyAt(agg_lists,i,&iscoarse);CHKERRQ(ierr);
     if (!iscoarse) {
       lcid[i] = cs+cn;
       cn++;
@@ -256,8 +255,8 @@ PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, PetscCoar
   }
 
   if (gA) {
-    ierr = PetscSFBcastBegin(sf,MPIU_INT,lcid,gcid);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(sf,MPIU_INT,lcid,gcid);CHKERRQ(ierr);
+    ierr = PetscSFBcastBegin(sf,MPIU_INT,lcid,gcid,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(sf,MPIU_INT,lcid,gcid,MPI_REPLACE);CHKERRQ(ierr);
   }
 
   /* determine the largest off-diagonal entries in each row */
@@ -265,7 +264,7 @@ PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, PetscCoar
     Amax_pos[i-fs] = 0.;
     Amax_neg[i-fs] = 0.;
     ierr = MatGetRow(A,i,&ncols,&rcol,&rval);CHKERRQ(ierr);
-    for(j=0;j<ncols;j++){
+    for (j=0;j<ncols;j++){
       if ((PetscRealPart(-rval[j]) > Amax_neg[i-fs]) && i != rcol[j]) Amax_neg[i-fs] = PetscAbsScalar(rval[j]);
       if ((PetscRealPart(rval[j])  > Amax_pos[i-fs]) && i != rcol[j]) Amax_pos[i-fs] = PetscAbsScalar(rval[j]);
     }
@@ -307,7 +306,7 @@ PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, PetscCoar
   }
 
   /* preallocate and create the prolongator */
-  ierr = MatCreate(PetscObjectComm((PetscObject)A),P); CHKERRQ(ierr);
+  ierr = MatCreate(PetscObjectComm((PetscObject)A),P);CHKERRQ(ierr);
   ierr = MatGetType(G,&mtype);CHKERRQ(ierr);
   ierr = MatSetType(*P,mtype);CHKERRQ(ierr);
   ierr = MatSetSizes(*P,fn,cn,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
@@ -589,7 +588,7 @@ PetscErrorCode PCGAMGProlongator_Classical_Standard(PC pc, Mat A, Mat G, PetscCo
   IS                lis;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)A),&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)A),&size);CHKERRMPI(ierr);
   ierr = MatGetOwnershipRange(A,&fs,&fe);CHKERRQ(ierr);
   fn = fe-fs;
   ierr = ISCreateStride(PETSC_COMM_SELF,fe-fs,fs,1,&lis);CHKERRQ(ierr);
@@ -626,7 +625,7 @@ PetscErrorCode PCGAMGProlongator_Classical_Standard(PC pc, Mat A, Mat G, PetscCo
   ierr = VecGetOwnershipRange(cv,&cs,&ce);CHKERRQ(ierr);
   cn = 0;
   for (i=0;i<fn;i++) {
-    ierr = PetscCDEmptyAt(agg_lists,i,&iscoarse); CHKERRQ(ierr);
+    ierr = PetscCDEmptyAt(agg_lists,i,&iscoarse);CHKERRQ(ierr);
     if (!iscoarse) {
       gcid[i] = cs+cn;
       cn++;
@@ -636,8 +635,8 @@ PetscErrorCode PCGAMGProlongator_Classical_Standard(PC pc, Mat A, Mat G, PetscCo
   }
   if (size > 1) {
     ierr = PetscMalloc1(nl,&lcid);CHKERRQ(ierr);
-    ierr = PetscSFBcastBegin(sf,MPIU_INT,gcid,lcid);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(sf,MPIU_INT,gcid,lcid);CHKERRQ(ierr);
+    ierr = PetscSFBcastBegin(sf,MPIU_INT,gcid,lcid,MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(sf,MPIU_INT,gcid,lcid,MPI_REPLACE);CHKERRQ(ierr);
   } else {
     lcid = gcid;
   }
@@ -859,13 +858,13 @@ PetscErrorCode PCGAMGOptProlongator_Classical_Jacobi(PC pc,Mat A,Mat *P)
     }
     ierr = MatRestoreRow(*P,i,&ncols,&pcols,&pvals);CHKERRQ(ierr);
   }
-  ierr = MatCreateVecs(A,&diag,0);CHKERRQ(ierr);
+  ierr = MatCreateVecs(A,&diag,NULL);CHKERRQ(ierr);
   ierr = MatGetDiagonal(A,diag);CHKERRQ(ierr);
   ierr = VecReciprocal(diag);CHKERRQ(ierr);
   for (i=0;i<cls->nsmooths;i++) {
     ierr = MatMatMult(A,*P,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&Pnew);CHKERRQ(ierr);
     ierr = MatZeroRows(Pnew,idx,coarserows,0.,NULL,NULL);CHKERRQ(ierr);
-    ierr = MatDiagonalScale(Pnew,diag,0);CHKERRQ(ierr);
+    ierr = MatDiagonalScale(Pnew,diag,NULL);CHKERRQ(ierr);
     ierr = MatAYPX(Pnew,-1.0,*P,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
     ierr = MatDestroy(P);CHKERRQ(ierr);
     *P  = Pnew;
@@ -939,7 +938,6 @@ PetscErrorCode PCGAMGSetData_Classical(PC pc, Mat A)
   pc_gamg->data_sz        = 0;
   PetscFunctionReturn(0);
 }
-
 
 PetscErrorCode PCGAMGClassicalFinalizePackage(void)
 {

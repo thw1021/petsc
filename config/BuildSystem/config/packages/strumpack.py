@@ -57,29 +57,10 @@ class Configure(config.package.CMakePackage):
     else:
       args.append('-DTPL_ENABLE_SCOTCH=OFF')
 
-    if self.compilerFlags.debugging:
-      args.append('-DCMAKE_BUILD_TYPE=Debug')
-    else:
-      args.append('-DCMAKE_BUILD_TYPE=Release')
-
     if self.openmp.found:
       args.append('-DSTRUMPACK_USE_OPENMP=ON')
     else:
       args.append('-DSTRUMPACK_USE_OPENMP=OFF')
-
-    self.framework.pushLanguage('C')
-    args.append('-DMPI_C_COMPILER="' + self.framework.getCompiler() + '"')
-    self.framework.popLanguage()
-
-    self.framework.pushLanguage('Cxx')
-    args.append('-DMPI_CXX_COMPILER="' + self.framework.getCompiler() + '"')
-    self.framework.popLanguage()
-
-    self.framework.pushLanguage('FC')
-    args.append('-DMPI_Fortran_COMPILER="' + self.framework.getCompiler() + '"')
-    self.framework.popLanguage()
-
-    args.append('-DCMAKE_INSTALL_NAME_DIR:STRING="'+os.path.join(self.installDir,self.libdir)+'"')
 
     return args
 

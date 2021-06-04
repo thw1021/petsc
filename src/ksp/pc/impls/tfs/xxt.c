@@ -349,7 +349,6 @@ static PetscErrorCode xxt_generate(xxt_ADT xxt_handle)
       x_ptr+=len;
     }
 
-
     /* uu = X^T.u_l (comm portion) */
     ierr = PCTFS_ssgl_radd  (uu, w, dim, stages);CHKERRQ(ierr);
 
@@ -591,12 +590,12 @@ static PetscErrorCode det_separators(xxt_ADT xxt_handle)
       /* set lsh of hc, fire, and collect rhs responses */
       (id<mask) ? PCTFS_rvec_set(rhs,1.0,m) : PCTFS_rvec_zero(rhs,m);
       PCTFS_gs_gop_hc(PCTFS_gs_handle,rhs,"+\0",edge);
-    
+
       for (i=0;i<n;i++) {
-        if (id< mask) {                
+        if (id< mask) {
           if (lhs[i]!=0.0) lhs[i]=1.0;
         }
-        if (id>=mask) {                
+        if (id>=mask) {
           if (rhs[i]!=0.0) rhs[i]=1.0;
         }
       }
@@ -611,11 +610,11 @@ static PetscErrorCode det_separators(xxt_ADT xxt_handle)
           /* number of unmarked dofs on node */
           ct++;
           /* number of dofs to be marked on lhs hc */
-          if (id< mask) {                
+          if (id< mask) {
             if (lhs[i]!=0.0) { sum[0]++; rsum[0]+=1.0/lhs[i]; }
           }
           /* number of dofs to be marked on rhs hc */
-          if (id>=mask) {                
+          if (id>=mask) {
             if (rhs[i]!=0.0) { sum[1]++; rsum[1]+=1.0/rhs[i]; }
           }
         }
@@ -738,7 +737,6 @@ static PetscErrorCode det_separators(xxt_ADT xxt_handle)
     }
   }
 
-
   /* level 0 is on processor case - so mark the remainder */
   for (ct=i=0; i<n; i++) {
     if (!used[i]) {
@@ -769,7 +767,6 @@ static mv_info *set_mvi(PetscInt *local2global,PetscInt n,PetscInt m,PetscErrorC
 {
   mv_info *mvi;
 
-
   mvi               = (mv_info*)malloc(sizeof(mv_info));
   mvi->n            = n;
   mvi->m            = m;
@@ -794,6 +791,3 @@ static PetscErrorCode do_matvec(mv_info *A, PetscScalar *v, PetscScalar *u)
   A->matvec((mv_info*)A->grid_data,v,u);
   PetscFunctionReturn(0);
 }
-
-
-

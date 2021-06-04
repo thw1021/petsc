@@ -55,16 +55,12 @@ int main(int argc,char **argv)
   PetscMPIInt    size;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"This is a uniprocessor example only");
-
-  ierr = PetscOptionsGetInt(NULL,NULL,"-nphase",&nphase,NULL);CHKERRQ(ierr);
-  if (nphase > 3) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"nphase must be an integer between 1 and 3");
 
   /* initializations */
   zInitial  = 0.0;
   zFinal    = 1.0;
-  T         = 0.014/nphase;
   nz        = num_z;
   m         = nz-2;
   appctx.nz = nz;
@@ -75,8 +71,12 @@ int main(int argc,char **argv)
   appctx.debug      = PETSC_FALSE;
   appctx.useAlhs    = PETSC_FALSE;
 
-  ierr = PetscOptionsHasName(NULL,NULL,"-debug",&appctx.debug);CHKERRQ(ierr);
-  ierr = PetscOptionsHasName(NULL,NULL,"-useAlhs",&appctx.useAlhs);CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"","");CHKERRQ(ierr);
+  ierr = PetscOptionsName("-debug",NULL,NULL,&appctx.debug);CHKERRQ(ierr);
+  ierr = PetscOptionsName("-useAlhs",NULL,NULL,&appctx.useAlhs);CHKERRQ(ierr);
+  ierr = PetscOptionsRangeInt("-nphase",NULL,NULL,nphase,&nphase,NULL,1,3);CHKERRQ(ierr);
+  PetscOptionsEnd();
+  T         = 0.014/nphase;
 
   /* create vector to hold ts solution */
   /*-----------------------------------*/
@@ -149,7 +149,7 @@ int main(int argc,char **argv)
   /* get the command line options if there are any and set them */
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
-#if defined(PETSC_HAVE_SUNDIALS)
+#if defined(PETSC_HAVE_SUNDIALS2)
   {
     TSType    type;
     PetscBool sundialstype=PETSC_FALSE;
@@ -232,9 +232,9 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
   PetscScalar    *u_exact;
 
   /* Compute the exact solution */
-  ierr = VecGetArray(appctx->solution,&u_exact);CHKERRQ(ierr);
+  ierr = VecGetArrayWrite(appctx->solution,&u_exact);CHKERRQ(ierr);
   for (i=0; i<m; i++) u_exact[i] = exact(appctx->z[i+1],time);
-  ierr = VecRestoreArray(appctx->solution,&u_exact);CHKERRQ(ierr);
+  ierr = VecRestoreArrayWrite(appctx->solution,&u_exact);CHKERRQ(ierr);
 
   /* Print debugging information if desired */
   if (appctx->debug) {
@@ -250,8 +250,7 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 
   norm_2 = PetscSqrtReal(h)*norm_2;
   ierr   = VecNorm(appctx->solution,NORM_MAX,&norm_max);CHKERRQ(ierr);
-
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Timestep %D: time = %g, 2-norm error = %6.4f, max norm error = %6.4f\n",step,(double)time,(double)norm_2,(double)norm_max);CHKERRQ(ierr);
+  ierr   = PetscPrintf(PETSC_COMM_SELF,"Timestep %D: time = %g, 2-norm error = %6.4f, max norm error = %6.4f\n",step,(double)time,(double)norm_2,(double)norm_max);CHKERRQ(ierr);
 
   /*
      Print debugging information if desired
@@ -264,7 +263,7 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 }
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%      Function to solve a linear system using KSP                                           %%
+      Function to solve a linear system using KSP
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
 PetscErrorCode Petsc_KSPSolve(AppCtx *obj)
@@ -288,26 +287,25 @@ PetscErrorCode Petsc_KSPSolve(AppCtx *obj)
   /*get the linear system (ksp) solve*/
   ierr = KSPSolve(ksp,obj->ksp_rhs,obj->ksp_sol);CHKERRQ(ierr);
 
-  KSPDestroy(&ksp);
+  ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
   return 0;
 }
 
 /***********************************************************************
- * Function to return value of basis function or derivative of basis   *
- *              function.                                              *
+  Function to return value of basis function or derivative of basis function.
  ***********************************************************************
- *                                                                     *
- *       Arguments:                                                    *
- *         x       = array of xpoints or nodal values                  *
- *         xx      = point at which the basis function is to be        *
- *                     evaluated.                                      *
- *         il      = interval containing xx.                           *
- *         iq      = indicates which of the two basis functions in     *
- *                     interval intrvl should be used                  *
- *         nll     = array containing the endpoints of each interval.  *
- *         id      = If id ~= 2, the value of the basis function       *
- *                     is calculated; if id = 2, the value of the      *
- *                     derivative of the basis function is returned.   *
+
+        Arguments:
+          x       = array of xpoints or nodal values
+          xx      = point at which the basis function is to be
+                      evaluated.
+          il      = interval containing xx.
+          iq      = indicates which of the two basis functions in
+                      interval intrvl should be used
+          nll     = array containing the endpoints of each interval.
+          id      = If id ~= 2, the value of the basis function
+                      is calculated; if id = 2, the value of the
+                      derivative of the basis function is returned.
  ***********************************************************************/
 
 PetscScalar bspl(PetscScalar *x, PetscScalar xx,PetscInt il,PetscInt iq,PetscInt nll[][2],PetscInt id)
@@ -315,23 +313,22 @@ PetscScalar bspl(PetscScalar *x, PetscScalar xx,PetscInt il,PetscInt iq,PetscInt
   PetscScalar x1,x2,bfcn;
   PetscInt    i1,i2,iq1,iq2;
 
-  /*** Determine which basis function in interval intrvl is to be used in ***/
+  /* Determine which basis function in interval intrvl is to be used in */
   iq1 = iq;
   if (iq1==0) iq2 = 1;
   else iq2 = 0;
 
-  /***  Determine endpoint of the interval intrvl ***/
+  /*    Determine endpoint of the interval intrvl   */
   i1=nll[il][iq1];
   i2=nll[il][iq2];
 
-  /*** Determine nodal values at the endpoints of the interval intrvl ***/
+  /*   Determine nodal values at the endpoints of the interval intrvl   */
   x1=x[i1];
   x2=x[i2];
-  /* printf("x1=%g\tx2=%g\txx=%g\n",x1,x2,xx); */
-  /*** Evaluate basis function ***/
+
+  /*   Evaluate basis function   */
   if (id == 2) bfcn=(1.0)/(x1-x2);
   else bfcn=(xx-x2)/(x1-x2);
-  /* printf("bfcn=%g\n",bfcn); */
   return bfcn;
 }
 
@@ -426,7 +423,6 @@ PetscErrorCode femA(AppCtx *obj,PetscInt nz,PetscScalar *z)
   PetscErrorCode ierr;
 
   /*  initializing everything  */
-
   for (i=0; i < nz; i++) {
     nli[i][0]   = 0;
     nli[i][1]   = 0;
@@ -528,8 +524,6 @@ PetscErrorCode rhs(AppCtx *obj,PetscScalar *y, PetscInt nz, PetscScalar *z, Pets
   }
   ierr = VecAssemblyBegin(obj->ksp_rhs);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(obj->ksp_rhs);CHKERRQ(ierr);
-
-  /*  return to main driver function  */
   return 0;
 }
 

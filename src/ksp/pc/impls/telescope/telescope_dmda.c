@@ -1,5 +1,4 @@
 
-
 #include <petsc/private/matimpl.h>
 #include <petsc/private/pcimpl.h>
 #include <petsc/private/dmimpl.h>
@@ -46,7 +45,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJK(PetscInt dim,PetscInt i,Pe
   pi = pj = pk = -1;
   if (_pi) {
     for (n=0; n<Mp; n++) {
-      if ( (i >= start_i[n]) && (i < start_i[n]+span_i[n]) ) {
+      if ((i >= start_i[n]) && (i < start_i[n]+span_i[n])) {
         pi = n;
         break;
       }
@@ -57,7 +56,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJK(PetscInt dim,PetscInt i,Pe
 
   if (_pj) {
     for (n=0; n<Np; n++) {
-      if ( (j >= start_j[n]) && (j < start_j[n]+span_j[n]) ) {
+      if ((j >= start_j[n]) && (j < start_j[n]+span_j[n])) {
         pj = n;
         break;
       }
@@ -68,7 +67,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJK(PetscInt dim,PetscInt i,Pe
 
   if (_pk) {
     for (n=0; n<Pp; n++) {
-      if ( (k >= start_k[n]) && (k < start_k[n]+span_k[n]) ) {
+      if ((k >= start_k[n]) && (k < start_k[n]+span_k[n])) {
         pk = n;
         break;
       }
@@ -354,8 +353,8 @@ static PetscErrorCode PCTelescopeSetUp_dmda_repart_coors(PC pc,PC_Telescope sred
   ierr = PetscInfo(pc,"PCTelescope: setting up the coordinates (DMDA)\n");CHKERRQ(ierr);
   ierr = DMDAGetInfo(dm,&dim,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
   switch (dim) {
-  case 1: SETERRQ(comm,PETSC_ERR_SUP,"Telescope: DMDA (1D) repartitioning not provided");
-    break;
+  case 1:
+    SETERRQ(comm,PETSC_ERR_SUP,"Telescope: DMDA (1D) repartitioning not provided");
   case 2: ierr = PCTelescopeSetUp_dmda_repart_coors2d(sred,dm,subdm);CHKERRQ(ierr);
     break;
   case 3: ierr = PCTelescopeSetUp_dmda_repart_coors3d(sred,dm,subdm);CHKERRQ(ierr);
@@ -446,9 +445,9 @@ PetscErrorCode PCTelescopeSetUp_dmda_repart(PC pc,PC_Telescope sred,PC_Telescope
   /* generate ranges for repartitioned dm */
   /* note - assume rank 0 always participates */
   /* TODO: use a single MPI call */
-  ierr = MPI_Bcast(&ctx->Mp_re,1,MPIU_INT,0,comm);CHKERRQ(ierr);
-  ierr = MPI_Bcast(&ctx->Np_re,1,MPIU_INT,0,comm);CHKERRQ(ierr);
-  ierr = MPI_Bcast(&ctx->Pp_re,1,MPIU_INT,0,comm);CHKERRQ(ierr);
+  ierr = MPI_Bcast(&ctx->Mp_re,1,MPIU_INT,0,comm);CHKERRMPI(ierr);
+  ierr = MPI_Bcast(&ctx->Np_re,1,MPIU_INT,0,comm);CHKERRMPI(ierr);
+  ierr = MPI_Bcast(&ctx->Pp_re,1,MPIU_INT,0,comm);CHKERRMPI(ierr);
 
   ierr = PetscCalloc3(ctx->Mp_re,&ctx->range_i_re,ctx->Np_re,&ctx->range_j_re,ctx->Pp_re,&ctx->range_k_re);CHKERRQ(ierr);
 
@@ -457,9 +456,9 @@ PetscErrorCode PCTelescopeSetUp_dmda_repart(PC pc,PC_Telescope sred,PC_Telescope
   if (_range_k_re) {ierr = PetscArraycpy(ctx->range_k_re,_range_k_re,ctx->Pp_re);CHKERRQ(ierr);}
 
   /* TODO: use a single MPI call */
-  ierr = MPI_Bcast(ctx->range_i_re,ctx->Mp_re,MPIU_INT,0,comm);CHKERRQ(ierr);
-  ierr = MPI_Bcast(ctx->range_j_re,ctx->Np_re,MPIU_INT,0,comm);CHKERRQ(ierr);
-  ierr = MPI_Bcast(ctx->range_k_re,ctx->Pp_re,MPIU_INT,0,comm);CHKERRQ(ierr);
+  ierr = MPI_Bcast(ctx->range_i_re,ctx->Mp_re,MPIU_INT,0,comm);CHKERRMPI(ierr);
+  ierr = MPI_Bcast(ctx->range_j_re,ctx->Np_re,MPIU_INT,0,comm);CHKERRMPI(ierr);
+  ierr = MPI_Bcast(ctx->range_k_re,ctx->Pp_re,MPIU_INT,0,comm);CHKERRMPI(ierr);
 
   ierr = PetscMalloc3(ctx->Mp_re,&ctx->start_i_re,ctx->Np_re,&ctx->start_j_re,ctx->Pp_re,&ctx->start_k_re);CHKERRQ(ierr);
 
@@ -715,8 +714,8 @@ PetscErrorCode PCTelescopeSetUp_dmda(PC pc,PC_Telescope sred)
   PCTelescopeSetUp_dmda_repart(pc,sred,ctx);
   PCTelescopeSetUp_dmda_repart_coors(pc,sred,ctx);
   switch (dim) {
-  case 1: SETERRQ(comm,PETSC_ERR_SUP,"Telescope: DMDA (1D) repartitioning not provided");
-    break;
+  case 1:
+    SETERRQ(comm,PETSC_ERR_SUP,"Telescope: DMDA (1D) repartitioning not provided");
   case 2: ierr = PCTelescopeSetUp_dmda_permutation_2d(pc,sred,ctx);CHKERRQ(ierr);
     break;
   case 3: ierr = PCTelescopeSetUp_dmda_permutation_3d(pc,sred,ctx);CHKERRQ(ierr);
@@ -1056,7 +1055,7 @@ PetscErrorCode DMView_DA_Short_3d(DM dm,PetscViewer v)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = DMGetOptionsPrefix(dm,&prefix);CHKERRQ(ierr);
   ierr = DMDAGetInfo(dm,NULL,&M,&N,&P,&m,&n,&p,&ndof,&nsw,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
   if (prefix) {ierr = PetscViewerASCIIPrintf(v,"DMDA Object:    (%s)    %d MPI processes\n",prefix,size);CHKERRQ(ierr);}
@@ -1075,11 +1074,11 @@ PetscErrorCode DMView_DA_Short_2d(DM dm,PetscViewer v)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = DMGetOptionsPrefix(dm,&prefix);CHKERRQ(ierr);
   ierr = DMDAGetInfo(dm,NULL,&M,&N,NULL,&m,&n,NULL,&ndof,&nsw,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
   if (prefix) {PetscViewerASCIIPrintf(v,"DMDA Object:    (%s)    %d MPI processes\n",prefix,size);CHKERRQ(ierr);}
-  else {ierr = PetscViewerASCIIPrintf(v,"DMDA Object:    %d MPI processes\n",size);CHKERRQ(ierr);} 
+  else {ierr = PetscViewerASCIIPrintf(v,"DMDA Object:    %d MPI processes\n",size);CHKERRQ(ierr);}
   ierr = PetscViewerASCIIPrintf(v,"  M %D N %D m %D n %D dof %D overlap %D\n",M,N,m,n,ndof,nsw);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1099,4 +1098,3 @@ PetscErrorCode DMView_DA_Short(DM dm,PetscViewer v)
   }
   PetscFunctionReturn(0);
 }
-

@@ -6,6 +6,7 @@
 #include <petscsys.h>
 #include <petscviewertypes.h>
 
+#define PETSC_MAX_OPTION_NAME 512
 typedef struct _n_PetscOptions* PetscOptions;
 PETSC_EXTERN PetscErrorCode PetscOptionsCreate(PetscOptions*);
 PETSC_EXTERN PetscErrorCode PetscOptionsPush(PetscOptions);
@@ -47,11 +48,11 @@ PETSC_EXTERN PetscErrorCode PetscOptionsView(PetscOptions,PetscViewer);
 
 PETSC_EXTERN PetscErrorCode PetscOptionsReject(PetscOptions,const char[],const char[],const char[]);
 PETSC_EXTERN PetscErrorCode PetscOptionsInsert(PetscOptions,int*,char***,const char[]);
-PETSC_EXTERN PetscErrorCode PetscOptionsInsertFile(MPI_Comm,PetscOptions,const char[],PetscBool );
-#if defined(PETSC_HAVE_YAML)
-PETSC_EXTERN PetscErrorCode PetscOptionsInsertFileYAML(MPI_Comm,const char[],PetscBool);
-#endif
+PETSC_EXTERN PetscErrorCode PetscOptionsInsertFile(MPI_Comm,PetscOptions,const char[],PetscBool);
+PETSC_EXTERN PetscErrorCode PetscOptionsInsertFileYAML(MPI_Comm,PetscOptions,const char[],PetscBool);
 PETSC_EXTERN PetscErrorCode PetscOptionsInsertString(PetscOptions,const char[]);
+PETSC_EXTERN PetscErrorCode PetscOptionsInsertStringYAML(PetscOptions,const char[]);
+PETSC_EXTERN PetscErrorCode PetscOptionsInsertArgs(PetscOptions,int,char**);
 PETSC_EXTERN PetscErrorCode PetscOptionsClear(PetscOptions);
 PETSC_EXTERN PetscErrorCode PetscOptionsPrefixPush(PetscOptions,const char[]);
 PETSC_EXTERN PetscErrorCode PetscOptionsPrefixPop(PetscOptions);
@@ -63,14 +64,12 @@ PETSC_EXTERN PetscErrorCode PetscOptionsStringToReal(const char[],PetscReal*);
 PETSC_EXTERN PetscErrorCode PetscOptionsStringToScalar(const char[],PetscScalar*);
 
 PETSC_EXTERN PetscErrorCode PetscOptionsMonitorSet(PetscErrorCode (*)(const char[], const char[], void*), void*, PetscErrorCode (*)(void**));
-PETSC_EXTERN PetscErrorCode PetscOptionsMonitorCancel(void);
 PETSC_EXTERN PetscErrorCode PetscOptionsMonitorDefault(const char[], const char[], void*);
 
 PETSC_EXTERN PetscErrorCode PetscObjectSetOptions(PetscObject,PetscOptions);
 PETSC_EXTERN PetscErrorCode PetscObjectGetOptions(PetscObject,PetscOptions*);
 
 PETSC_EXTERN PetscBool PetscOptionsPublish;
-
 
 /*
     See manual page for PetscOptionsBegin()
@@ -107,7 +106,6 @@ typedef struct _p_PetscOptionItems {
   PetscObject      object;
   PetscOptions     options;
 } PetscOptionItems;
-
 
 /*MC
     PetscOptionsBegin - Begins a set of queries on the options database that are related and should be
@@ -259,7 +257,7 @@ PETSC_EXTERN PetscErrorCode PetscOptionsHead(PetscOptionItems *,const char[]);
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList(), PetscOptionsEnum()
 M*/
-#define    PetscOptionsTail() 0; do {if (PetscOptionsObject->count != 1) PetscFunctionReturn(0);} while(0)
+#define    PetscOptionsTail() 0; do {if (PetscOptionsObject->count != 1) PetscFunctionReturn(0);} while (0)
 
 #define PetscOptionsEnum(a,b,c,d,e,f,g) PetscOptionsEnum_Private(PetscOptionsObject,a,b,c,d,e,f,g)
 #define PetscOptionsInt(a,b,c,d,e,f) PetscOptionsInt_Private(PetscOptionsObject,a,b,c,d,e,f,PETSC_MIN_INT,PETSC_MAX_INT)
@@ -284,7 +282,6 @@ M*/
 #define PetscOptionsDeprecated(a,b,c,d) PetscOptionsDeprecated_Private(PetscOptionsObject,a,b,c,d)
 #define PetscOptionsDeprecatedNoObject(a,b,c,d) PetscOptionsDeprecated_Private(NULL,a,b,c,d)
 
-
 PETSC_EXTERN PetscErrorCode PetscOptionsEnum_Private(PetscOptionItems*,const char[],const char[],const char[],const char *const*,PetscEnum,PetscEnum*,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscOptionsInt_Private(PetscOptionItems*,const char[],const char[],const char[],PetscInt,PetscInt*,PetscBool*,PetscInt,PetscInt);
 PETSC_EXTERN PetscErrorCode PetscOptionsReal_Private(PetscOptionItems*,const char[],const char[],const char[],PetscReal,PetscReal*,PetscBool*);
@@ -305,8 +302,6 @@ PETSC_EXTERN PetscErrorCode PetscOptionsBoolArray_Private(PetscOptionItems*,cons
 PETSC_EXTERN PetscErrorCode PetscOptionsEnumArray_Private(PetscOptionItems*,const char[],const char[],const char[],const char *const*,PetscEnum[],PetscInt*,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems*,const char[],const char[],const char[],const char[]);
 
-
-PETSC_EXTERN PetscErrorCode PetscOptionsSetFromOptions(PetscOptions);
 PETSC_EXTERN PetscErrorCode PetscOptionsSAWsDestroy(void);
 
 PETSC_EXTERN PetscErrorCode PetscObjectAddOptionsHandler(PetscObject,PetscErrorCode (*)(PetscOptionItems*,PetscObject,void*),PetscErrorCode (*)(PetscObject,void*),void*);

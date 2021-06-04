@@ -35,7 +35,7 @@ PetscErrorCode PetscConvEstDestroy(PetscConvEst *ce)
     PetscFunctionReturn(0);
   }
   ierr = PetscFree3((*ce)->initGuess, (*ce)->exactSol, (*ce)->ctxs);CHKERRQ(ierr);
-  ierr = PetscFree((*ce)->errors);CHKERRQ(ierr);
+  ierr = PetscFree2((*ce)->dofs, (*ce)->errors);CHKERRQ(ierr);
   ierr = PetscHeaderDestroy(ce);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -153,19 +153,33 @@ PetscErrorCode PetscConvEstSetSolver(PetscConvEst ce, PetscObject solver)
 @*/
 PetscErrorCode PetscConvEstSetUp(PetscConvEst ce)
 {
-  PetscDS        ds;
-  PetscInt       Nf, f;
+  PetscInt       Nf, f, Nds, s;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = DMGetDS(ce->idm, &ds);CHKERRQ(ierr);
-  ierr = PetscDSGetNumFields(ds, &Nf);CHKERRQ(ierr);
+  ierr = DMGetNumFields(ce->idm, &Nf);CHKERRQ(ierr);
   ce->Nf = PetscMax(Nf, 1);
-  ierr = PetscMalloc1((ce->Nr+1)*ce->Nf, &ce->errors);CHKERRQ(ierr);
-  ierr = PetscMalloc3(ce->Nf, &ce->initGuess, ce->Nf, &ce->exactSol, ce->Nf, &ce->ctxs);CHKERRQ(ierr);
+  ierr = PetscMalloc2((ce->Nr+1)*ce->Nf, &ce->dofs, (ce->Nr+1)*ce->Nf, &ce->errors);CHKERRQ(ierr);
+  ierr = PetscCalloc3(ce->Nf, &ce->initGuess, ce->Nf, &ce->exactSol, ce->Nf, &ce->ctxs);CHKERRQ(ierr);
   for (f = 0; f < Nf; ++f) ce->initGuess[f] = zero_private;
+  ierr = DMGetNumDS(ce->idm, &Nds);CHKERRQ(ierr);
+  for (s = 0; s < Nds; ++s) {
+    PetscDS         ds;
+    DMLabel         label;
+    IS              fieldIS;
+    const PetscInt *fields;
+    PetscInt        dsNf;
+
+    ierr = DMGetRegionNumDS(ce->idm, s, &label, &fieldIS, &ds);CHKERRQ(ierr);
+    ierr = PetscDSGetNumFields(ds, &dsNf);CHKERRQ(ierr);
+    if (fieldIS) {ierr = ISGetIndices(fieldIS, &fields);CHKERRQ(ierr);}
+    for (f = 0; f < dsNf; ++f) {
+      const PetscInt field = fields[f];
+      ierr = PetscDSGetExactSolution(ds, field, &ce->exactSol[field], &ce->ctxs[field]);CHKERRQ(ierr);
+    }
+    if (fieldIS) {ierr = ISRestoreIndices(fieldIS, &fields);CHKERRQ(ierr);}
+  }
   for (f = 0; f < Nf; ++f) {
-    ierr = PetscDSGetExactSolution(ds, f, &ce->exactSol[f], &ce->ctxs[f]);CHKERRQ(ierr);
     if (!ce->exactSol[f]) SETERRQ1(PetscObjectComm((PetscObject) ce), PETSC_ERR_ARG_WRONG, "DS must contain exact solution functions in order to estimate convergence, missing for field %D", f);
   }
   PetscFunctionReturn(0);
@@ -196,7 +210,23 @@ PetscErrorCode PetscConvEstComputeError(PetscConvEst ce, PetscInt r, DM dm, Vec 
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscConvEstMonitor_Private(PetscConvEst ce, PetscInt r)
+/*@
+  PetscConvEstMonitorDefault - Monitors the convergence estimation loop
+
+  Collective on PetscConvEst
+
+  Input Parameter:
++ ce - The PetscConvEst object
+- r  - The refinement level
+
+  Options database keys:
+. -convest_monitor - Activate the monitor
+
+  Level: intermediate
+
+.seealso: PetscConvEstCreate(), PetscConvEstGetConvRate(), SNESSolve(), TSSolve()
+@*/
+PetscErrorCode PetscConvEstMonitorDefault(PetscConvEst ce, PetscInt r)
 {
   MPI_Comm       comm;
   PetscInt       f;
@@ -204,9 +234,18 @@ static PetscErrorCode PetscConvEstMonitor_Private(PetscConvEst ce, PetscInt r)
 
   PetscFunctionBegin;
   if (ce->monitor) {
+    PetscInt  *dofs   = &ce->dofs[r*ce->Nf];
     PetscReal *errors = &ce->errors[r*ce->Nf];
 
     ierr = PetscObjectGetComm((PetscObject) ce, &comm);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm, "N: ");CHKERRQ(ierr);
+    if (ce->Nf > 1) {ierr = PetscPrintf(comm, "[");CHKERRQ(ierr);}
+    for (f = 0; f < ce->Nf; ++f) {
+      if (f > 0) {ierr = PetscPrintf(comm, ", ");CHKERRQ(ierr);}
+      ierr = PetscPrintf(comm, "%7D", dofs[f]);CHKERRQ(ierr);
+    }
+    if (ce->Nf > 1) {ierr = PetscPrintf(comm, "]");CHKERRQ(ierr);}
+    ierr = PetscPrintf(comm, "  ");CHKERRQ(ierr);
     ierr = PetscPrintf(comm, "L_2 Error: ");CHKERRQ(ierr);
     if (ce->Nf > 1) {ierr = PetscPrintf(comm, "[");CHKERRQ(ierr);}
     for (f = 0; f < ce->Nf; ++f) {
@@ -250,13 +289,40 @@ static PetscErrorCode PetscConvEstComputeErrorSNES_Private(PetscConvEst ce, Pets
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PetscConvEstSetJacobianNullspace_Private(PetscConvEst ce, SNES snes)
+{
+  DM             dm;
+  PetscInt       f;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = SNESGetDM(snes, &dm);CHKERRQ(ierr);
+  for (f = 0; f < ce->Nf; ++f) {
+    PetscErrorCode (*nspconstr)(DM, PetscInt, PetscInt, MatNullSpace *);
+
+    ierr = DMGetNullSpaceConstructor(dm, f, &nspconstr);CHKERRQ(ierr);
+    if (nspconstr) {
+      MatNullSpace nullsp;
+      Mat          J;
+
+      ierr = (*nspconstr)(dm, f, f,&nullsp);CHKERRQ(ierr);
+      ierr = SNESSetUp(snes);CHKERRQ(ierr);
+      ierr = SNESGetJacobian(snes, &J, NULL, NULL, NULL);CHKERRQ(ierr);
+      ierr = MatSetNullSpace(J, nullsp);CHKERRQ(ierr);
+      ierr = MatNullSpaceDestroy(&nullsp);CHKERRQ(ierr);
+      break;
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, PetscReal alpha[])
 {
   SNES           snes = (SNES) ce->solver;
   DM            *dm;
   PetscObject    disc;
   PetscReal     *x, *y, slope, intercept;
-  PetscInt      *dof, Nr = ce->Nr, r, f, dim, oldlevel, oldnlev;
+  PetscInt       Nr = ce->Nr, r, f, dim, oldlevel, oldnlev;
   void          *ctx;
   PetscErrorCode ierr;
 
@@ -266,7 +332,7 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
   ierr = DMGetApplicationContext(ce->idm, &ctx);CHKERRQ(ierr);
   ierr = DMPlexSetRefinementUniform(ce->idm, PETSC_TRUE);CHKERRQ(ierr);
   ierr = DMGetRefineLevel(ce->idm, &oldlevel);CHKERRQ(ierr);
-  ierr = PetscMalloc2((Nr+1), &dm, (Nr+1)*ce->Nf, &dof);CHKERRQ(ierr);
+  ierr = PetscMalloc1((Nr+1), &dm);CHKERRQ(ierr);
   /* Loop over meshes */
   dm[0] = ce->idm;
   for (r = 0; r <= Nr; ++r) {
@@ -283,12 +349,11 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
     if (r > 0) {
       ierr = DMRefine(dm[r-1], MPI_COMM_NULL, &dm[r]);CHKERRQ(ierr);
       ierr = DMSetCoarseDM(dm[r], dm[r-1]);CHKERRQ(ierr);
-      ierr = DMCopyDisc(ce->idm, dm[r]);CHKERRQ(ierr);
       ierr = DMCopyTransform(ce->idm, dm[r]);CHKERRQ(ierr);
       ierr = PetscObjectGetName((PetscObject) dm[r-1], &dmname);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject) dm[r], dmname);CHKERRQ(ierr);
-      for (f = 0; f <= ce->Nf; ++f) {
-        PetscErrorCode (*nspconstr)(DM, PetscInt, MatNullSpace *);
+      for (f = 0; f < ce->Nf; ++f) {
+        PetscErrorCode (*nspconstr)(DM, PetscInt, PetscInt, MatNullSpace *);
 
         ierr = DMGetNullSpaceConstructor(dm[r-1], f, &nspconstr);CHKERRQ(ierr);
         ierr = DMSetNullSpaceConstructor(dm[r],   f,  nspconstr);CHKERRQ(ierr);
@@ -305,6 +370,8 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
     ierr = SNESSetDM(snes, dm[r]);CHKERRQ(ierr);
     ierr = DMPlexSetSNESLocalFEM(dm[r], ctx, ctx, ctx);CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+    /* Set nullspace for Jacobian */
+    ierr = PetscConvEstSetJacobianNullspace_Private(ce, snes);CHKERRQ(ierr);
     /* Create initial guess */
     ierr = PetscConvEstComputeInitialGuess(ce, r, dm[r], u);CHKERRQ(ierr);
     ierr = SNESSolve(snes, NULL, u);CHKERRQ(ierr);
@@ -319,12 +386,12 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
       ierr = DMGetLocalSection(dm[r], &s);CHKERRQ(ierr);
       ierr = PetscSectionGetField(s, f, &fs);CHKERRQ(ierr);
       ierr = PetscSectionGetConstrainedStorageSize(fs, &lsize);CHKERRQ(ierr);
-      ierr = MPI_Allreduce(&lsize, &dof[r*ce->Nf+f], 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject) snes));CHKERRQ(ierr);
-      ierr = PetscLogEventSetDof(ce->event, f, dof[r*ce->Nf+f]);CHKERRQ(ierr);
+      ierr = MPI_Allreduce(&lsize, &ce->dofs[r*ce->Nf+f], 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject) snes));CHKERRMPI(ierr);
+      ierr = PetscLogEventSetDof(ce->event, f, ce->dofs[r*ce->Nf+f]);CHKERRQ(ierr);
       ierr = PetscLogEventSetError(ce->event, f, ce->errors[r*ce->Nf+f]);CHKERRQ(ierr);
     }
     /* Monitor */
-    ierr = PetscConvEstMonitor_Private(ce, r);CHKERRQ(ierr);
+    ierr = PetscConvEstMonitorDefault(ce, r);CHKERRQ(ierr);
     if (!r) {
       /* PCReset() does not wipe out the level structure */
       KSP ksp;
@@ -345,7 +412,7 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
   ierr = PetscMalloc2(Nr+1, &x, Nr+1, &y);CHKERRQ(ierr);
   for (f = 0; f < ce->Nf; ++f) {
     for (r = 0; r <= Nr; ++r) {
-      x[r] = PetscLog10Real(dof[r*ce->Nf+f]);
+      x[r] = PetscLog10Real(ce->dofs[r*ce->Nf+f]);
       y[r] = PetscLog10Real(ce->errors[r*ce->Nf+f]);
     }
     ierr = PetscLinearRegression(Nr+1, x, y, &slope, &intercept);CHKERRQ(ierr);
@@ -353,7 +420,7 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
     alpha[f] = -slope * dim;
   }
   ierr = PetscFree2(x, y);CHKERRQ(ierr);
-  ierr = PetscFree2(dm, dof);CHKERRQ(ierr);
+  ierr = PetscFree(dm);CHKERRQ(ierr);
   /* Restore solver */
   ierr = SNESReset(snes);CHKERRQ(ierr);
   {
@@ -369,6 +436,7 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
   ierr = SNESSetDM(snes, ce->idm);CHKERRQ(ierr);
   ierr = DMPlexSetSNESLocalFEM(ce->idm, ctx, ctx, ctx);CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+  ierr = PetscConvEstSetJacobianNullspace_Private(ce, snes);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

@@ -1,4 +1,3 @@
-
 /*
     Provides an interface to the FFT packages.
 */
@@ -16,7 +15,7 @@ PetscErrorCode MatDestroy_FFT(Mat A)
   }
   ierr = PetscFree(fft->dim);CHKERRQ(ierr);
   ierr = PetscFree(A->data);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)A,0);CHKERRQ(ierr);
+  ierr = PetscObjectChangeTypeName((PetscObject)A,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -41,6 +40,7 @@ PetscErrorCode MatDestroy_FFT(Mat A)
 
    Level: intermediate
 
+.seealso: MatCreateVecsFFTW()
 @*/
 PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],MatType mattype,Mat *A)
 {
@@ -52,7 +52,7 @@ PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],Mat
 
   PetscFunctionBegin;
   if (ndim < 1) SETERRQ1(comm,PETSC_ERR_USER,"ndim %d must be > 0",ndim);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
 
   ierr      = MatCreate(comm,&FFT);CHKERRQ(ierr);
   ierr      = PetscNewLog(FFT,&fft);CHKERRQ(ierr);

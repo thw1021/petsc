@@ -233,7 +233,7 @@ PetscErrorCode RHSFunction(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
       f[j][i].v = appctx->D2*(vxx + vyy) + uc*vc*vc - (appctx->gamma + appctx->kappa)*vc;
     }
   }
-  ierr = PetscLogFlops(16*xm*ym);CHKERRQ(ierr);
+  ierr = PetscLogFlops(16.0*xm*ym);CHKERRQ(ierr);
 
   /*
      Restore vectors
@@ -275,7 +275,7 @@ PetscErrorCode InitialConditions(DM da,Vec U)
     y = j*hy;
     for (i=xs; i<xs+xm; i++) {
       x = i*hx;
-      if ((1.0 <= x) && (x <= 1.5) && (1.0 <= y) && (y <= 1.5)) u[j][i].v = .25*PetscPowReal(PetscSinReal(4.0*PETSC_PI*x),2.0)*PetscPowReal(PetscSinReal(4.0*PETSC_PI*y),2.0);
+      if (PetscGTE(x,1.0) && PetscLTE(x,1.5) && PetscGTE(y,1.0) && PetscLTE(y,1.5)) u[j][i].v = PetscPowReal(PetscSinReal(4.0*PETSC_PI*x),2.0)*PetscPowReal(PetscSinReal(4.0*PETSC_PI*y),2.0)/4.0;
       else u[j][i].v = 0.0;
 
       u[j][i].u = 1.0 - 2.0*u[j][i].v;
@@ -390,7 +390,7 @@ PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat A,Mat BB,void *ctx)
   /*
      Restore vectors
   */
-  ierr = PetscLogFlops(19*xm*ym);CHKERRQ(ierr);
+  ierr = PetscLogFlops(19.0*xm*ym);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArrayRead(da,localU,&u);CHKERRQ(ierr);
   ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -467,11 +467,11 @@ PetscErrorCode IFunction(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *ptr)
       vc        = u[j][i].v;
       vxx       = (-2.0*vc + u[j][i-1].v + u[j][i+1].v)*sx;
       vyy       = (-2.0*vc + u[j-1][i].v + u[j+1][i].v)*sy;
-      f[j][i].u = udot[j][i].u - ( appctx->D1*(uxx + uyy) - uc*vc*vc + appctx->gamma*(1.0 - uc) );
-      f[j][i].v = udot[j][i].v - ( appctx->D2*(vxx + vyy) + uc*vc*vc - (appctx->gamma + appctx->kappa)*vc );
+      f[j][i].u = udot[j][i].u - ( appctx->D1*(uxx + uyy) - uc*vc*vc + appctx->gamma*(1.0 - uc));
+      f[j][i].v = udot[j][i].v - ( appctx->D2*(vxx + vyy) + uc*vc*vc - (appctx->gamma + appctx->kappa)*vc);
     }
   }
-  ierr = PetscLogFlops(16*xm*ym);CHKERRQ(ierr);
+  ierr = PetscLogFlops(16.0*xm*ym);CHKERRQ(ierr);
 
   /*
      Restore vectors
@@ -584,7 +584,7 @@ PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat 
   /*
      Restore vectors
   */
-  ierr = PetscLogFlops(19*xm*ym);CHKERRQ(ierr);
+  ierr = PetscLogFlops(19.0*xm*ym);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArrayRead(da,localU,&u);CHKERRQ(ierr);
   ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -597,7 +597,6 @@ PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat 
   }
   PetscFunctionReturn(0);
 }
-
 
 /*TEST
 
@@ -689,4 +688,13 @@ PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat 
       args: -ts_max_steps 10 -ts_monitor -ts_adjoint_monitor -ts_trajectory_type memory -ts_trajectory_solution_only 0 -dm_mat_type sell -pc_type jacobi
       output_file: output/ex5adj_sell_6.out
 
+   test:
+      suffix: gamg1
+      args: -pc_type gamg -pc_mg_levels 2 -mg_levels_pc_type jacobi -ksp_monitor_short -ts_max_steps 2 -ts_monitor -ts_adjoint_monitor -ts_trajectory_type memory
+      output_file: output/ex5adj_gamg_1.out
+
+   test:
+      suffix: gamg2
+      args: -pc_type gamg -pc_mg_levels 2 -mg_levels_pc_type jacobi -ksp_monitor_short -ts_max_steps 2 -ts_monitor -ts_adjoint_monitor -ts_trajectory_type memory -ksp_use_explicittranspose
+      output_file: output/ex5adj_gamg_2.out
 TEST*/

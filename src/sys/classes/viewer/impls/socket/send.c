@@ -159,7 +159,6 @@ PetscErrorCode  PetscOpenSocket(const char hostname[],int portnum,int *t)
   PetscFunctionReturn(0);
 }
 
-#define MAXHOSTNAME 100
 /*@C
    PetscSocketEstablish - starts a listener on a socket
 
@@ -176,6 +175,7 @@ PetscErrorCode  PetscOpenSocket(const char hostname[],int portnum,int *t)
 @*/
 PETSC_INTERN PetscErrorCode PetscSocketEstablish(int portnum,int *ss)
 {
+  static size_t      MAXHOSTNAME = 100;
   char               myname[MAXHOSTNAME+1];
   int                s;
   PetscErrorCode     ierr;
@@ -183,7 +183,7 @@ PETSC_INTERN PetscErrorCode PetscSocketEstablish(int portnum,int *ss)
   struct hostent     *hp;
 
   PetscFunctionBegin;
-  ierr = PetscGetHostName(myname,MAXHOSTNAME);CHKERRQ(ierr);
+  ierr = PetscGetHostName(myname,sizeof(myname));CHKERRQ(ierr);
 
   ierr = PetscMemzero(&sa,sizeof(struct sockaddr_in));CHKERRQ(ierr);
 
@@ -296,7 +296,6 @@ $    -viewer_socket_port <port>
      .mat file. Use PetscMatlabEngineCreate() or PETSC_MATLAB_ENGINE_(), PETSC_MATLAB_ENGINE_SELF, or PETSC_MATLAB_ENGINE_WORLD
      for communicating with a MATLAB Engine
 
-
 .seealso: MatView(), VecView(), PetscViewerDestroy(), PetscViewerCreate(), PetscViewerSetType(),
           PetscViewerSocketSetConnection(), PETSC_VIEWER_SOCKET_, PETSC_VIEWER_SOCKET_WORLD,
           PETSC_VIEWER_SOCKET_SELF, PetscViewerBinaryWrite(), PetscViewerBinaryRead(), PetscViewerBinaryWriteStringArray(),
@@ -332,10 +331,10 @@ static PetscErrorCode PetscViewerSetFromOptions_Socket(PetscOptionItems *PetscOp
   } else def = PETSCSOCKETDEFAULTPORT;
   ierr = PetscOptionsInt("-viewer_socket_port","Port number to use for socket","PetscViewerSocketSetConnection",def,NULL,NULL);CHKERRQ(ierr);
 
-  ierr = PetscOptionsString("-viewer_socket_machine","Machine to use for socket","PetscViewerSocketSetConnection",sdef,NULL,0,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetenv(PetscObjectComm((PetscObject)v),"PETSC_VIEWER_SOCKET_MACHINE",sdef,256,&tflg);CHKERRQ(ierr);
+  ierr = PetscOptionsString("-viewer_socket_machine","Machine to use for socket","PetscViewerSocketSetConnection",sdef,NULL,sizeof(sdef),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetenv(PetscObjectComm((PetscObject)v),"PETSC_VIEWER_SOCKET_MACHINE",sdef,sizeof(sdef),&tflg);CHKERRQ(ierr);
   if (!tflg) {
-    ierr = PetscGetHostName(sdef,256);CHKERRQ(ierr);
+    ierr = PetscGetHostName(sdef,sizeof(sdef));CHKERRQ(ierr);
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -368,7 +367,6 @@ static PetscErrorCode  PetscViewerBinaryGetFlowControl_Socket(PetscViewer viewer
 
 /*MC
    PETSCVIEWERSOCKET - A viewer that writes to a Unix socket
-
 
 .seealso:  PetscViewerSocketOpen(), PetscViewerDrawOpen(), PETSC_VIEWER_DRAW_(),PETSC_VIEWER_DRAW_SELF, PETSC_VIEWER_DRAW_WORLD,
            PetscViewerCreate(), PetscViewerASCIIOpen(), PetscViewerBinaryOpen(), PETSCVIEWERBINARY, PETSCVIEWERDRAW,
@@ -436,15 +434,15 @@ PetscErrorCode  PetscViewerSocketSetConnection(PetscViewer v,const char machine[
     } else port = PETSCSOCKETDEFAULTPORT;
   }
   if (!machine) {
-    ierr = PetscOptionsGetenv(PetscObjectComm((PetscObject)v),"PETSC_VIEWER_SOCKET_MACHINE",mach,256,&tflg);CHKERRQ(ierr);
+    ierr = PetscOptionsGetenv(PetscObjectComm((PetscObject)v),"PETSC_VIEWER_SOCKET_MACHINE",mach,sizeof(mach),&tflg);CHKERRQ(ierr);
     if (!tflg) {
-      ierr = PetscGetHostName(mach,256);CHKERRQ(ierr);
+      ierr = PetscGetHostName(mach,sizeof(mach));CHKERRQ(ierr);
     }
   } else {
-    ierr = PetscStrncpy(mach,machine,256);CHKERRQ(ierr);
+    ierr = PetscStrncpy(mach,machine,sizeof(mach));CHKERRQ(ierr);
   }
 
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)v),&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)v),&rank);CHKERRMPI(ierr);
   if (!rank) {
     ierr = PetscStrcmp(mach,"server",&tflg);CHKERRQ(ierr);
     if (tflg) {
@@ -468,7 +466,6 @@ PetscErrorCode  PetscViewerSocketSetConnection(PetscViewer v,const char machine[
 */
 PetscMPIInt Petsc_Viewer_Socket_keyval = MPI_KEYVAL_INVALID;
 
-
 /*@C
      PETSC_VIEWER_SOCKET_ - Creates a socket viewer shared by all processors in a communicator.
 
@@ -490,8 +487,8 @@ $    -viewer_socket_port <port>
 -   PETSC_VIEWER_SOCKET_MACHINE - machine name
 
      Notes:
-     Unlike almost all other PETSc routines, PetscViewer_SOCKET_ does not return
-     an error code.  The socket PetscViewer is usually used in the form
+     Unlike almost all other PETSc routines, Petsc_VIEWER_SOCKET_ does not return
+     an error code, it returns NULL if it fails. The socket PetscViewer is usually used in the form
 $       XXXView(XXX object,PETSC_VIEWER_SOCKET_(comm));
 
      Currently the only socket client available is MATLAB. See
@@ -500,7 +497,7 @@ $       XXXView(XXX object,PETSC_VIEWER_SOCKET_(comm));
      Connects to a waiting socket and stays connected until PetscViewerDestroy() is called.
 
      Use this for communicating with an interactive MATLAB session, see PETSC_VIEWER_MATLAB_() for writing output to a
-     .mat file. Use PetscMatlabEngineCreate() or PETSC_MATLAB_ENGINE_(), PETSC_MATLAB_ENGINE_SELF, or PETSC_MATLAB_ENGINE_WORLD 
+     .mat file. Use PetscMatlabEngineCreate() or PETSC_MATLAB_ENGINE_(), PETSC_MATLAB_ENGINE_SELF, or PETSC_MATLAB_ENGINE_WORLD
      for communicating with a MATLAB Engine
 
 .seealso: PETSC_VIEWER_SOCKET_WORLD, PETSC_VIEWER_SOCKET_SELF, PetscViewerSocketOpen(), PetscViewerCreate(),
@@ -524,14 +521,13 @@ PetscViewer  PETSC_VIEWER_SOCKET_(MPI_Comm comm)
   if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_SOCKET_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
   if (!flg) { /* PetscViewer not yet created */
     ierr = PetscViewerSocketOpen(ncomm,NULL,0,&viewer);
-    if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_SOCKET_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
+    if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_SOCKET_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_REPEAT," ");PetscFunctionReturn(NULL);}
     ierr = PetscObjectRegisterDestroy((PetscObject)viewer);
-    if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_SOCKET_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
+    if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_SOCKET_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_REPEAT," ");PetscFunctionReturn(NULL);}
     ierr = MPI_Comm_set_attr(ncomm,Petsc_Viewer_Socket_keyval,(void*)viewer);
     if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_SOCKET_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
   }
   ierr = PetscCommDestroy(&ncomm);
-  if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_SOCKET_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_INITIAL," ");PetscFunctionReturn(NULL);}
+  if (ierr) {PetscError(PETSC_COMM_SELF,__LINE__,"PETSC_VIEWER_SOCKET_",__FILE__,PETSC_ERR_PLIB,PETSC_ERROR_REPEAT," ");PetscFunctionReturn(NULL);}
   PetscFunctionReturn(viewer);
 }
-

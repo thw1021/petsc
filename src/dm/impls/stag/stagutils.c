@@ -14,7 +14,7 @@
 
   Level: intermediate
 
-.seealso: DMSTAG, DMDAGetBoundaryTypes()
+.seealso: DMSTAG
 @*/
 PetscErrorCode DMStagGetBoundaryTypes(DM dm,DMBoundaryType *boundaryTypeX,DMBoundaryType *boundaryTypeY,DMBoundaryType *boundaryTypeZ)
 {
@@ -25,7 +25,7 @@ PetscErrorCode DMStagGetBoundaryTypes(DM dm,DMBoundaryType *boundaryTypeX,DMBoun
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMSTAG);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
-  if (boundaryTypeX           ) *boundaryTypeX = stag->boundaryType[0];
+  if (boundaryTypeX) *boundaryTypeX = stag->boundaryType[0];
   if (boundaryTypeY && dim > 1) *boundaryTypeY = stag->boundaryType[1];
   if (boundaryTypeZ && dim > 2) *boundaryTypeZ = stag->boundaryType[2];
   PetscFunctionReturn(0);
@@ -639,6 +639,9 @@ PetscErrorCode DMStagGetOwnershipRanges(DM dm,const PetscInt *lx[],const PetscIn
 
   Notes:
   Dof supplied for strata too big for the dimension are ignored; these may be set to 0.
+  For example, for a 2-dimensional DMStag, dof2 sets the number of dof per element,
+  and dof3 is unused. For a 3-dimensional DMStag, dof3 sets the number of dof per element.
+
   In contrast to DMDACreateCompatibleDMDA(), coordinates are not reused.
 
   Level: intermediate
@@ -1240,9 +1243,17 @@ PetscErrorCode DMStagSetOwnershipRanges(DM dm,PetscInt const *lx,PetscInt const 
   DMStag supports 2 different types of coordinate DM: DMSTAG and DMPRODUCT.
   Arguments corresponding to higher dimensions are ignored for 1D and 2D grids.
 
+  Local coordinates are populated (using DMSetCoordinatesLocal()), linearly
+  extrapolated to ghost cells, including those outside the physical domain.
+  This is also done in case of periodic boundaries, meaning that the same
+  global point may have different coordinates in different local representations,
+  which are equivalent assuming a periodicity implied by the arguments to this function,
+  i.e. two points are equivalent if their difference is a multiple of (xmax - xmin)
+  in the x direction, (ymax - ymin) in the y direction, and (zmax - zmin) in the z direction.
+
   Level: advanced
 
-.seealso: DMSTAG, DMPRODUCT, DMStagSetUniformCoordinatesExplicit(), DMStagSetUniformCoordinatesProduct(), DMStagSetCoordinateDMType(), DMGetCoordinateDM(), DMGetCoordinates(), DMDASetUniformCoordinates()
+.seealso: DMSTAG, DMPRODUCT, DMStagSetUniformCoordinatesExplicit(), DMStagSetUniformCoordinatesProduct(), DMStagSetCoordinateDMType(), DMGetCoordinateDM(), DMGetCoordinates(), DMDASetUniformCoordinates(), DMBoundaryType
 @*/
 PetscErrorCode DMStagSetUniformCoordinates(DM dm,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax,PetscReal zmin,PetscReal zmax)
 {
@@ -1276,7 +1287,11 @@ PetscErrorCode DMStagSetUniformCoordinates(DM dm,PetscReal xmin,PetscReal xmax,P
   Notes:
   DMStag supports 2 different types of coordinate DM: either another DMStag, or a DMProduct.
   If the grid is orthogonal, using DMProduct should be more efficient.
+
   Arguments corresponding to higher dimensions are ignored for 1D and 2D grids.
+
+  See the manual page for DMStagSetUniformCoordinates() for information on how
+  coordinates for dummy cells outside the physical domain boundary are populated.
 
   Level: beginner
 
@@ -1323,6 +1338,9 @@ PetscErrorCode DMStagSetUniformCoordinatesExplicit(DM dm,PetscReal xmin,PetscRea
   always have active 0-cells (vertices, element boundaries) and 1-cells
   (element centers).
 
+  See the manual page for DMStagSetUniformCoordinates() for information on how
+  coordinates for dummy cells outside the physical domain boundary are populated.
+
   Level: intermediate
 
 .seealso: DMSTAG, DMPRODUCT, DMStagSetUniformCoordinates(), DMStagSetUniformCoordinatesExplicit(), DMStagSetCoordinateDMType()
@@ -1362,7 +1380,7 @@ PetscErrorCode DMStagSetUniformCoordinatesProduct(DM dm,PetscReal xmin,PetscReal
       case 2: color =            stag->rank[0]       +            stag->nRanks[0]*stag->rank[1]     ; break;
       default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP,"Unsupported dimension index %D",d);
     }
-    ierr = MPI_Comm_split(PetscObjectComm((PetscObject)dm),color,key,&subcomm);CHKERRQ(ierr);
+    ierr = MPI_Comm_split(PetscObjectComm((PetscObject)dm),color,key,&subcomm);CHKERRMPI(ierr);
 
     /* Create sub-DMs living on these new communicators (which are destroyed by DMProduct) */
     ierr = DMStagCreate1d(subcomm,stag->boundaryType[d],stag->N[d],dof0,dof1,stag->stencilType,stag->stencilWidth,stag->l[d],&subdm);CHKERRQ(ierr);
@@ -1382,7 +1400,7 @@ PetscErrorCode DMStagSetUniformCoordinatesProduct(DM dm,PetscReal xmin,PetscReal
     ierr = DMProductSetDM(dmc,d,subdm);CHKERRQ(ierr);
     ierr = DMProductSetDimensionIndex(dmc,d,0);CHKERRQ(ierr);
     ierr = DMDestroy(&subdm);CHKERRQ(ierr);
-    ierr = MPI_Comm_free(&subcomm);CHKERRQ(ierr);
+    ierr = MPI_Comm_free(&subcomm);CHKERRMPI(ierr);
   }
   PetscFunctionReturn(0);
 }

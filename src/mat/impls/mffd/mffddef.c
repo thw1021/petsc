@@ -13,7 +13,6 @@
       MatCreateMFFD _ - fills in the MatMFFD data structure
                            for this particular implementation
 
-
    Optional functions:
    -------------------
       MatMFFDView_ - prints information about the parameters being used.
@@ -54,7 +53,6 @@ typedef struct {
 +  ctx - the matrix free context
 .  U - the location at which you want the Jacobian
 -  a - the direction you want the derivative
-
 
    Output Parameter:
 .  h - the scale computed
@@ -145,7 +143,7 @@ static PetscErrorCode MatMFFDSetFromOptions_DS(PetscOptionItems *PetscOptionsObj
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"Finite difference matrix free parameters");CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-mat_mffd_umin","umin","MatMFFDDSSetUmin",hctx->umin,&hctx->umin,0);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-mat_mffd_umin","umin","MatMFFDDSSetUmin",hctx->umin,&hctx->umin,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -263,10 +261,4 @@ PETSC_EXTERN PetscErrorCode MatCreateMFFD_DS(MatMFFD ctx)
   ierr = PetscObjectComposeFunction((PetscObject)ctx->mat,"MatMFFDDSSetUmin_C",MatMFFDDSSetUmin_DS);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-
-
-
-
-
 

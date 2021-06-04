@@ -4,8 +4,8 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.download          = ['https://cmake.org/files/v3.15/cmake-3.15.6.tar.gz',
-                              'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/cmake-3.15.6.tar.gz']
+    self.download          = ['https://cmake.org/files/v3.20/cmake-3.20.1.tar.gz',
+                              'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/cmake-3.20.1.tar.gz']
     self.download_311      = ['https://cmake.org/files/v3.11/cmake-3.11.4.tar.gz',
                               'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/cmake-3.11.4.tar.gz']
     self.downloadonWindows = 1
@@ -21,11 +21,11 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.setupHelp(self, help)
     help.addArgument('CMAKE', '-download-cmake-cc=<prog>',                   nargs.Arg(None, None, 'C compiler for Cmake configure'))
     help.addArgument('CMAKE', '-download-cmake-cxx=<prog>',                  nargs.Arg(None, None, 'C++ compiler for Cmake configure'))
-    help.addArgument('CMAKE', '-download-cmake-configure-options=<options>', nargs.Arg(None, None, 'Additional options for Cmake configure'))
     help.addArgument('CMAKE', '-with-cmake-exec=<executable>',                nargs.Arg(None, None, 'CMake executable to look for'))
     help.addArgument('CMAKE', '-with-ctest-exec=<executable>',                nargs.Arg(None, None, 'Ctest executable to look for'))
     return
 
+  # Due to -DCMAKE_USE_OPENSSL=OFF usage below, currently -download-cmake-configure-arguments will only work with bootstrap cmake-options and not regular options
   def formGNUConfigureArgs(self):
     '''Does not use the standard arguments at all since this does not use the MPI compilers etc
        Cmake will chose its own compilers if they are not provided explicitly here'''
@@ -35,9 +35,18 @@ class Configure(config.package.GNUPackage):
       args.append('CC="'+self.argDB['download-cmake-cc']+'"')
     if 'download-cmake-cxx' in self.argDB and self.argDB['download-cmake-cxx']:
       args.append('CXX="'+self.argDB['download-cmake-cxx']+'"')
-    if 'download-cmake-configure-options' in self.argDB and self.argDB['download-cmake-configure-options']:
-      args.append(self.argDB['download-cmake-configure-options'])
+    if not config.setCompilers.Configure.isSolaris(self.log):
+      args.append('-- -DCMAKE_USE_OPENSSL=OFF')
     return args
+
+  def Install(self):
+    save_path = os.environ['PATH']
+    make_loc = os.path.dirname(self.make.make)
+    self.log.write('CMAKE build - adding MAKE location to PATH: '+make_loc+'\n')
+    os.environ['PATH'] += ':'+make_loc
+    retdir = config.package.GNUPackage.Install(self)
+    os.environ['PATH'] = save_path
+    return retdir
 
   def locateCMake(self):
     if 'with-cmake-exec' in self.argDB:

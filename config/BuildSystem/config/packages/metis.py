@@ -4,7 +4,7 @@ class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
     self.versionname       = 'METIS_VER_MAJOR.METIS_VER_MINOR.METIS_VER_SUBMINOR'
-    self.gitcommit         = 'v5.1.0-p8'
+    self.gitcommit         = 'v5.1.0-p10'
     self.download          = ['git://https://bitbucket.org/petsc/pkg-metis.git','https://bitbucket.org/petsc/pkg-metis/get/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames  = ['petsc-pkg-metis']
     self.functions         = ['METIS_PartGraphKway']
@@ -28,9 +28,6 @@ class Configure(config.package.CMakePackage):
     return
 
   def formCMakeConfigureArgs(self):
-    if not self.cmake.found:
-      raise RuntimeError('CMake > 2.5 is needed to build METIS\nSuggest adding --download-cmake to ./configure arguments')
-
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DGKLIB_PATH=../GKlib')
     # force metis/parmetis to use a portable random number generator that will produce the same partitioning results on all systems

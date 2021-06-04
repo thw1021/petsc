@@ -102,7 +102,7 @@ int main(int argc,char **argv)
 PetscErrorCode  FormFunction(SNES snes,Vec x,Vec f,void *dummy)
 {
   const PetscScalar *xx,*FF;
-  PetscScalar       *ff,d;  
+  PetscScalar       *ff,d;
   PetscInt          i,n;
   PetscErrorCode    ierr;
 
@@ -236,7 +236,6 @@ PetscErrorCode  Monitor(SNES snes,PetscInt its,PetscReal fnorm,void *dummy)
   ierr = VecView(x,monP->viewer);CHKERRQ(ierr);
   return 0;
 }
-
 
 /*TEST
 

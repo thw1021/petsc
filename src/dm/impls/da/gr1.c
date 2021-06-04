@@ -36,7 +36,7 @@ PetscErrorCode  DMDASetUniformCoordinates(DM da,PetscReal xmin,PetscReal xmax,Pe
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
   if (!dd->gtol) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONGSTATE,"Cannot set coordinates until after DMDA has been setup");
-  ierr = DMDAGetInfo(da,&dim,&M,&N,&P,0,0,0,0,0,&bx,&by,&bz,0);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(da,&dim,&M,&N,&P,NULL,NULL,NULL,NULL,NULL,&bx,&by,&bz,NULL);CHKERRQ(ierr);
   if (xmax < xmin) SETERRQ2(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_INCOMP,"xmax must be larger than xmin %g %g",(double)xmin,(double)xmax);
   if ((dim > 1) && (ymax < ymin)) SETERRQ2(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_INCOMP,"ymax must be larger than ymin %g %g",(double)ymin,(double)ymax);
   if ((dim > 2) && (zmax < zmin)) SETERRQ2(PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_INCOMP,"zmax must be larger than zmin %g %g",(double)zmin,(double)zmax);
@@ -102,7 +102,7 @@ PetscErrorCode DMDASelectFields(DM da,PetscInt *outfields,PetscInt **fields)
   PetscBool      flg;
 
   PetscFunctionBegin;
-  ierr = DMDAGetInfo(da,0,0,0,0,0,0,0,&step,0,0,0,0,0);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(da,NULL,NULL,NULL,NULL,NULL,NULL,NULL,&step,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
   ierr = PetscMalloc1(step,&displayfields);CHKERRQ(ierr);
   for (k=0; k<step; k++) displayfields[k] = k;
   ndisplayfields = step;
@@ -172,8 +172,8 @@ PetscErrorCode VecView_MPI_Draw_DA1d(Vec xin,PetscViewer v)
   ierr = VecGetDM(xin,&da);CHKERRQ(ierr);
   if (!da) SETERRQ(PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
   ierr = PetscObjectGetComm((PetscObject)xin,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   ierr = PetscOptionsGetBool(NULL,NULL,"-draw_vec_use_markers",&showmarkers,NULL);CHKERRQ(ierr);
 
@@ -195,8 +195,8 @@ PetscErrorCode VecView_MPI_Draw_DA1d(Vec xin,PetscViewer v)
   /* Determine the min and max coordinate in plot */
   if (!rank) xmin = PetscRealPart(xg[0]);
   if (rank == size-1) xmax = PetscRealPart(xg[n-1]);
-  ierr = MPI_Bcast(&xmin,1,MPIU_REAL,0,comm);CHKERRQ(ierr);
-  ierr = MPI_Bcast(&xmax,1,MPIU_REAL,size-1,comm);CHKERRQ(ierr);
+  ierr = MPI_Bcast(&xmin,1,MPIU_REAL,0,comm);CHKERRMPI(ierr);
+  ierr = MPI_Bcast(&xmax,1,MPIU_REAL,size-1,comm);CHKERRMPI(ierr);
 
   ierr = DMDASelectFields(da,&ndisplayfields,&displayfields);CHKERRQ(ierr);
   ierr = PetscViewerGetFormat(v,&format);CHKERRQ(ierr);
@@ -246,12 +246,12 @@ PetscErrorCode VecView_MPI_Draw_DA1d(Vec xin,PetscViewer v)
     /* draw local part of vector */
     ierr = PetscObjectGetNewTag((PetscObject)xin,&tag);CHKERRQ(ierr);
     if (rank < size-1) { /*send value to right */
-      ierr = MPI_Send((void*)&xg[n-1],1,MPIU_REAL,rank+1,tag,comm);CHKERRQ(ierr);
-      ierr = MPI_Send((void*)&array[j+(n-1)*dof],1,MPIU_REAL,rank+1,tag,comm);CHKERRQ(ierr);
+      ierr = MPI_Send((void*)&xg[n-1],1,MPIU_REAL,rank+1,tag,comm);CHKERRMPI(ierr);
+      ierr = MPI_Send((void*)&array[j+(n-1)*dof],1,MPIU_REAL,rank+1,tag,comm);CHKERRMPI(ierr);
     }
     if (rank) { /* receive value from left */
-      ierr = MPI_Recv(&xgtmp,1,MPIU_REAL,rank-1,tag,comm,&status);CHKERRQ(ierr);
-      ierr = MPI_Recv(&tmp,1,MPIU_REAL,rank-1,tag,comm,&status);CHKERRQ(ierr);
+      ierr = MPI_Recv(&xgtmp,1,MPIU_REAL,rank-1,tag,comm,&status);CHKERRMPI(ierr);
+      ierr = MPI_Recv(&tmp,1,MPIU_REAL,rank-1,tag,comm,&status);CHKERRMPI(ierr);
     }
     ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     if (rank) {

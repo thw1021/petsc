@@ -71,11 +71,13 @@ PETSC_EXTERN PetscErrorCode PetscEventPerfInfoCopy(PetscEventPerfInfo *, PetscEv
 /* Registration functions */
 PETSC_EXTERN PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog, const char [], PetscClassId, PetscLogEvent *);
 /* Query functions */
-PETSC_EXTERN PetscErrorCode PetscEventPerfLogSetVisible(PetscEventPerfLog, PetscLogEvent, PetscBool );
+PETSC_EXTERN PetscErrorCode PetscEventPerfLogSetVisible(PetscEventPerfLog, PetscLogEvent, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscEventPerfLogGetVisible(PetscEventPerfLog, PetscLogEvent, PetscBool  *);
 /* Activaton functions */
 PETSC_EXTERN PetscErrorCode PetscEventPerfLogActivate(PetscEventPerfLog, PetscLogEvent);
 PETSC_EXTERN PetscErrorCode PetscEventPerfLogDeactivate(PetscEventPerfLog, PetscLogEvent);
+PETSC_EXTERN PetscErrorCode PetscEventPerfLogDeactivatePush(PetscEventPerfLog,PetscLogEvent);
+PETSC_EXTERN PetscErrorCode PetscEventPerfLogDeactivatePop(PetscEventPerfLog,PetscLogEvent);
 PETSC_EXTERN PetscErrorCode PetscEventPerfLogActivateClass(PetscEventPerfLog, PetscEventRegLog, PetscClassId);
 PETSC_EXTERN PetscErrorCode PetscEventPerfLogDeactivateClass(PetscEventPerfLog, PetscEventRegLog, PetscClassId);
 
@@ -112,9 +114,9 @@ PETSC_EXTERN PetscErrorCode PetscStageLogRegister(PetscStageLog, const char [], 
 /* Runtime functions */
 PETSC_EXTERN PetscErrorCode PetscStageLogPush(PetscStageLog, int);
 PETSC_EXTERN PetscErrorCode PetscStageLogPop(PetscStageLog);
-PETSC_EXTERN PetscErrorCode PetscStageLogSetActive(PetscStageLog, int, PetscBool );
+PETSC_EXTERN PetscErrorCode PetscStageLogSetActive(PetscStageLog, int, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscStageLogGetActive(PetscStageLog, int, PetscBool  *);
-PETSC_EXTERN PetscErrorCode PetscStageLogSetVisible(PetscStageLog, int, PetscBool );
+PETSC_EXTERN PetscErrorCode PetscStageLogSetVisible(PetscStageLog, int, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscStageLogGetVisible(PetscStageLog, int, PetscBool  *);
 PETSC_EXTERN PetscErrorCode PetscStageLogGetStage(PetscStageLog, const char [], PetscLogStage *);
 PETSC_EXTERN PetscErrorCode PetscStageLogGetClassRegLog(PetscStageLog, PetscClassRegLog *);
@@ -125,4 +127,5 @@ PETSC_EXTERN PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog, const cha
 
 PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscViewer);
 PETSC_INTERN PetscErrorCode PetscLogNestedEnd(void);
+PETSC_INTERN PetscErrorCode PetscLogView_Flamegraph(PetscViewer);
 #endif /* PETSC_USE_LOG */

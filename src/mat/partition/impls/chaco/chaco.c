@@ -68,7 +68,7 @@ static PetscErrorCode MatPartitioningApply_Chaco(MatPartitioning part,IS *partit
 #if defined(PETSC_HAVE_CHACO_INT_ASSIGNMENT)
   int                   *assignment;
 #else
-  short                 *assignment;  
+  short                 *assignment;
 #endif
   double                eigtol;
   long                  seed;
@@ -78,9 +78,10 @@ static PetscErrorCode MatPartitioningApply_Chaco(MatPartitioning part,IS *partit
 #endif
 
   PetscFunctionBegin;
+  if (part->use_edge_weights) SETERRQ(PetscObjectComm((PetscObject)part),PETSC_ERR_SUP,"Chaco does not support edge weights");
   FREE_GRAPH = 0; /* otherwise Chaco will attempt to free memory for adjacency graph */
-  ierr       = MPI_Comm_size(PetscObjectComm((PetscObject)mat),&size);CHKERRQ(ierr);
-  ierr       = MPI_Comm_rank(PetscObjectComm((PetscObject)mat),&rank);CHKERRQ(ierr);
+  ierr       = MPI_Comm_size(PetscObjectComm((PetscObject)mat),&size);CHKERRMPI(ierr);
+  ierr       = MPI_Comm_rank(PetscObjectComm((PetscObject)mat),&rank);CHKERRMPI(ierr);
   ierr       = PetscObjectTypeCompare((PetscObject)mat,MATMPIADJ,&flg);CHKERRQ(ierr);
   if (size>1) {
     if (flg) {
@@ -698,6 +699,7 @@ PetscErrorCode MatPartitioningDestroy_Chaco(MatPartitioning part)
 
    Notes:
     See http://www.cs.sandia.gov/CRF/chac.html
+    Does not using MatPartitioningSetUseEdgeWeights()
 
 .seealso: MatPartitioningSetType(), MatPartitioningType
 M*/

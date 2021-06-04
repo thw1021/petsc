@@ -11,8 +11,8 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.version                = '0.3.7'
-    self.gitcommit              = 'e7c4d6705a41910240dd19b9e7082a422563bf15'
+    self.version                = '0.3.10'
+    self.gitcommit              = '63b03efc2af332c88b86d4fd8079d00f4b439adf'
     self.versionname            = 'OPENBLAS_VERSION'
     self.download               = ['git://https://github.com/xianyi/OpenBLAS.git','https://github.com/xianyi/OpenBLAS/archive/'+self.gitcommit+'.tar.gz']
     self.optionalincludes       = ['openblas_config.h']
@@ -54,8 +54,9 @@ class Configure(config.package.Package):
     if self.found:
       # TODO: Use openblas_get_config() or openblas_config.h to determine use of OpenMP and 64 bit indices for prebuilt OpenBLAS libraries
       if not hasattr(self,'usesopenmp'): self.usesopenmp = 'unknown'
-      if  self.directory:
+      if self.directory:
         self.libDir = os.path.join(self.directory,'lib')
+        self.include = [os.path.join(self.directory,'include')]
       else:
         self.libDir = None
     if not hasattr(self,'known64'): self.known64 = 'unknown'
@@ -84,7 +85,10 @@ class Configure(config.package.Package):
     if not self.argDB['with-shared-libraries']:
       cmdline += " NO_SHARED=1 "
     cmdline += " MAKE_NB_JOBS="+str(self.make.make_np)+" "
-    if self.openmp.found:
+    usespthreads = False
+    if 'download-openblas-use-pthreads' in self.argDB and self.argDB['download-openblas-use-pthreads']:
+      usespthreads = True
+    if self.openmp.found and not usespthreads:
       cmdline += " USE_OPENMP=1 "
       self.usesopenmp = 'yes'
       # use the environmental variable OMP_NUM_THREADS to control the number of threads used
@@ -101,6 +105,7 @@ class Configure(config.package.Package):
     cmdline += " NO_EXPRECISION=1 "
     cmdline += " libs netlib re_lapack shared "
 
+    self.include = [os.path.join(self.installDir,'include')]
     libdir = self.libDir
     blasDir = self.packageDir
 
@@ -124,5 +129,3 @@ class Configure(config.package.Package):
       raise RuntimeError('Error moving '+blasDir+' libraries')
     self.postInstall(output1+err1+output2+err2,'tmpmakefile')
     return self.installDir
-
-

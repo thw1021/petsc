@@ -26,10 +26,6 @@ users manual for a discussion of preloading.  Input parameters include\n\
    Processors: n
 T*/
 
-
-
-
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -57,27 +53,27 @@ int main(int argc,char **args)
   char           initialguessfilename[PETSC_MAX_PATH_LEN];
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-table",&table,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-constantnullspace",&constantnullspace,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-trans",&trans,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-initialguess",&initialguess,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-output_solution",&outputSoln,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL,NULL,"-initialguessfilename",initialguessfilename,PETSC_MAX_PATH_LEN,&initialguessfile);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-initialguessfilename",initialguessfilename,sizeof(initialguessfilename),&initialguessfile);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-nearnulldim",&nearnulldim,NULL);CHKERRQ(ierr);
 
   /*
      Determine files from which we read the two linear systems
      (matrix and right-hand-side vector).
   */
-  ierr = PetscOptionsGetString(NULL,NULL,"-f",file[0],PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-f",file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
   if (flg) {
     ierr    = PetscStrcpy(file[1],file[0]);CHKERRQ(ierr);
     preload = PETSC_FALSE;
   } else {
-    ierr = PetscOptionsGetString(NULL,NULL,"-f0",file[0],PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL,NULL,"-f0",file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must indicate binary file with the -f0 or -f option");
-    ierr = PetscOptionsGetString(NULL,NULL,"-f1",file[1],PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL,NULL,"-f1",file[1],sizeof(file[1]),&flg);CHKERRQ(ierr);
     if (!flg) preload = PETSC_FALSE;   /* don't bother with second system */
   }
 
@@ -133,7 +129,7 @@ int main(int argc,char **args)
     ierr = MatNullSpaceDestroy(&constant);CHKERRQ(ierr);
   }
   flg  = PETSC_FALSE;
-  ierr = PetscOptionsGetString(NULL,NULL,"-rhs",file[2],PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-rhs",file[2],sizeof(file[2]),&flg);CHKERRQ(ierr);
   ierr = VecCreate(PETSC_COMM_WORLD,&b);CHKERRQ(ierr);
   if (flg) {   /* rhs is stored in a separate file */
     if (file[2][0] == '0' || file[2][0] == 0) {
@@ -220,7 +216,6 @@ int main(int argc,char **args)
     ierr = VecSet(x,0.0);CHKERRQ(ierr);
   }
 
-
   /* Check scaling in A */
   flg  = PETSC_FALSE;
   ierr = PetscOptionsGetBool(NULL,NULL, "-check_scaling", &flg,NULL);CHKERRQ(ierr);
@@ -278,7 +273,7 @@ int main(int argc,char **args)
     PetscBool lsqr,isbddc,ismatis;
     char      str[32];
 
-    ierr = PetscOptionsGetString(NULL,NULL,"-ksp_type",str,32,&lsqr);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL,NULL,"-ksp_type",str,sizeof(str),&lsqr);CHKERRQ(ierr);
     if (lsqr) {
       ierr = PetscStrcmp("lsqr",str,&lsqr);CHKERRQ(ierr);
     }
@@ -397,7 +392,7 @@ int main(int argc,char **args)
         }
       }
     }
-    ierr = PetscOptionsGetString(NULL,NULL,"-solution",file[3],PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL,NULL,"-solution",file[3],sizeof(file[3]),&flg);CHKERRQ(ierr);
     if (flg) {
       Vec         xstar;
       PetscReal   norm;
@@ -422,7 +417,7 @@ int main(int argc,char **args)
     if (flg) {
       KSPConvergedReason reason;
       ierr = KSPGetConvergedReason(ksp,&reason);CHKERRQ(ierr);
-      PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason);CHKERRQ(ierr);
     }
 
   }   /* while (num_numfac--) */
@@ -442,7 +437,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 
@@ -546,7 +540,6 @@ int main(int argc,char **args)
          nsize: 3
          args: -mat_type mpibaij -trans
 
-
    testset:
       suffix: 10
       nsize: 2
@@ -598,7 +591,6 @@ int main(int argc,char **args)
       test:
       test:
          args: -mat_type seqsbaij
-
 
    testset:
       suffix: ILU
@@ -780,7 +772,6 @@ int main(int argc,char **args)
       requires: datafilespath double !define(PETSC_USE_64BIT_INDICES) pastix
       args: -f0 ${DATAFILESPATH}/matrices/medium -ksp_type preonly -pc_type redundant -pc_redundant_number {{8 7 6 5 4 3 2 1}} -redundant_pc_factor_mat_solver_type pastix -num_numfac 2 -num_rhs 2
 
-
    testset:
       suffix: superlu_dist_lu
       requires: datafilespath double !define(PETSC_USE_64BIT_INDICES) superlu_dist
@@ -805,7 +796,6 @@ int main(int argc,char **args)
       suffix: umfpack
       requires: datafilespath double !define(PETSC_USE_64BIT_INDICES) suitesparse
       args: -f0 ${DATAFILESPATH}/matrices/small -ksp_type preonly -pc_type lu -mat_type seqaij -pc_factor_mat_solver_type umfpack -num_numfac 2 -num_rhs 2
-
 
    testset:
       suffix: zeropivot

@@ -13,8 +13,6 @@ Accepts an option -diagfunc [1,2,3] to select from different eigenvalue distribu
    Processors: n
 T*/
 
-
-
 /*
   Solve (in parallel) a diagonal linear system.
 
@@ -100,7 +98,7 @@ PetscScalar diagFunc2(PetscInt i, PetscInt n)
 PetscScalar diagFunc3(PetscInt i, PetscInt n)
 {
   const PetscScalar kappa = 10.0;
-  if(!i){
+  if (!i){
     return 1e-2;
   }else{
     return 1. + (kappa*((PetscScalar)(i-1)))/(PetscScalar)(n-2);
@@ -116,7 +114,7 @@ static PetscErrorCode AssembleDiagonalMatrix(Mat A, PetscScalar (*diagfunc)(Pets
   PetscFunctionBeginUser;
   ierr = MatGetSize(A,NULL,&n);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(A,&rstart,&rend);CHKERRQ(ierr);
-  for(i=rstart;i<rend;++i){
+  for (i=rstart;i<rend;++i){
     val = diagfunc(i,n);
     ierr = MatSetValues(A,1,&i,1,&i,&val,INSERT_VALUES);CHKERRQ(ierr);
   }
@@ -181,9 +179,9 @@ int main(int argc, char **argv)
   ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
   ierr = PCSetType(pc,PCCOMPOSITE);CHKERRQ(ierr); /* default composite with single Identity PC */
   ierr = PCCompositeSetType(pc,PC_COMPOSITE_ADDITIVE);CHKERRQ(ierr);
-  ierr = PCCompositeAddPC(pc,PCNONE);CHKERRQ(ierr);
-  if(eta > 0){
-    ierr = PCCompositeAddPC(pc,PCSHELL);CHKERRQ(ierr);
+  ierr = PCCompositeAddPCType(pc,PCNONE);CHKERRQ(ierr);
+  if (eta > 0){
+    ierr = PCCompositeAddPCType(pc,PCSHELL);CHKERRQ(ierr);
     ierr = PCCompositeGetPC(pc,1,&pcnoise);CHKERRQ(ierr);
     ctx.eta = eta;
     ierr = PCShellSetContext(pcnoise,&ctx);CHKERRQ(ierr);
@@ -215,7 +213,6 @@ int main(int argc, char **argv)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

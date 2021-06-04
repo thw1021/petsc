@@ -27,8 +27,8 @@ int main(int argc,char **args)
   PetscInt        *indx3,tempindx,low,*indx4,tempindx1;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
 
   ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rnd);CHKERRQ(ierr);
 
@@ -49,7 +49,7 @@ int main(int argc,char **args)
 
   N        = 2*N0*(N1/2+1);
   N_factor = N0*N1;
-  n        = 2*local_n0*(N1/2+1); 
+  n        = 2*local_n0*(N1/2+1);
 
 /*    printf("The value N is  %d from process %d\n",N,rank);  */
 /*    printf("The value n is  %d from process %d\n",n,rank);  */
@@ -127,7 +127,7 @@ int main(int argc,char **args)
   }
 
   ierr = PetscMalloc2(local_n0*N1,&x_arr,local_n0*N1,&y_arr);CHKERRQ(ierr); /* arr must be allocated for VecGetValues() */
-  ierr = VecGetValues(fin,local_n0*N1,indx4,(PetscScalar*)x_arr);CHKERRQ(ierr); 
+  ierr = VecGetValues(fin,local_n0*N1,indx4,(PetscScalar*)x_arr);CHKERRQ(ierr);
   ierr = VecSetValues(ini,local_n0*N1,indx3,x_arr,INSERT_VALUES);CHKERRQ(ierr);
 
   ierr = VecAssemblyBegin(ini);CHKERRQ(ierr);
@@ -159,7 +159,6 @@ int main(int argc,char **args)
   ierr = VecScale(fout1,a);CHKERRQ(ierr);
   ierr = VecScale(final,a);CHKERRQ(ierr);
 
-
 /*    VecView(ini,PETSC_VIEWER_STDOUT_WORLD);   */
 /*    VecView(final,PETSC_VIEWER_STDOUT_WORLD); */
   ierr = VecAXPY(final,-1.0,ini);CHKERRQ(ierr);
@@ -185,9 +184,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
-
-
 
 /*TEST
 

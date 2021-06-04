@@ -10,8 +10,6 @@ Compare this to ex2 which solves the same problem without a DM.\n\n";
    Processors: n
 T*/
 
-
-
 /*
   Include "petscdmda.h" so that we can use distributed arrays (DMDAs).
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
@@ -36,7 +34,9 @@ int main(int argc,char **argv)
   PetscInt       i,j,its;
   PetscErrorCode ierr;
   PetscBool      flg = PETSC_FALSE;
+#if defined(PETSC_USE_LOG)
   PetscLogStage  stage;
+#endif
   DMDALocalInfo  info;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
@@ -197,7 +197,6 @@ int main(int argc,char **argv)
   return ierr;
 }
 
-
 /*TEST
 
    testset:
@@ -220,6 +219,5 @@ int main(int argc,char **argv)
         args: -use_gpu_aware_mpi 0
       test:
         suffix: aijcusparse_2_mpi_gpu_aware
-
 
 TEST*/

@@ -194,7 +194,6 @@ int main(int argc,char **argv)
   return ierr;
 }
 
-
 /*
   IJacobian - Compute IJacobian = dF/dU + a dF/dUdot
 */
@@ -217,10 +216,10 @@ PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat J,
   /* compute local element sizes - structured grid */
   hx = 1.0/user->n;
 
-  /* Compute function over the locally owned part of the grid 
+  /* Compute function over the locally owned part of the grid
      Assemble the operator by looping over edges and computing
      contribution for each vertex dof                         */
-  for(moab::Range::iterator iter = vlocal->begin(); iter != vlocal->end(); iter++) {
+  for (moab::Range::iterator iter = vlocal->begin(); iter != vlocal->end(); iter++) {
     const moab::EntityHandle vhandle = *iter;
 
     ierr = DMMoabGetDofsBlocked(dm, 1, &vhandle, &dof);CHKERRQ(ierr);
@@ -250,7 +249,6 @@ PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat J,
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 {
   UserCtx           user = (UserCtx)ptr;
@@ -275,7 +273,7 @@ static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
   ierr = DMMoabGetLocalVertices(dm, &ownedvtx, NULL);CHKERRQ(ierr);
 
   /* Compute function over the locally owned part of the grid */
-  for(moab::Range::iterator iter = ownedvtx->begin(); iter != ownedvtx->end(); iter++) {
+  for (moab::Range::iterator iter = ownedvtx->begin(); iter != ownedvtx->end(); iter++) {
     const moab::EntityHandle vhandle = *iter;
     ierr = DMMoabGetDofsBlockedLocal(dm, 1, &vhandle, &dof);CHKERRQ(ierr);
 
@@ -289,7 +287,6 @@ static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
   ierr = DMMoabVecRestoreArray(dm, F, &f);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
@@ -323,7 +320,7 @@ static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
   ierr = DMMoabVecGetArray(dm, F, &f);CHKERRQ(ierr);
 
   /* loop over local elements */
-  for(moab::Range::iterator iter = vlocal->begin(); iter != vlocal->end(); iter++) {
+  for (moab::Range::iterator iter = vlocal->begin(); iter != vlocal->end(); iter++) {
     const moab::EntityHandle vhandle = *iter;
 
     ierr = DMMoabGetDofsBlockedLocal(dm,1,&vhandle,&i);CHKERRQ(ierr);
@@ -355,7 +352,6 @@ static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
   PetscFunctionReturn(0);
 }
 
-
 PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
 {
   UserCtx           user = (UserCtx)ctx;
@@ -369,7 +365,7 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
 
   PetscFunctionBegin;
   ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
-  
+
   /* get the essential MOAB mesh related quantities needed for FEM assembly */
   ierr = DMMoabGetLocalVertices(dm, &vowned, NULL);CHKERRQ(ierr);
 
@@ -379,7 +375,7 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
   ierr = DMMoabVecGetArray(dm, X, &x);CHKERRQ(ierr);
 
   /* Compute function over the locally owned part of the grid */
-  for(moab::Range::iterator iter = vowned->begin(); iter != vowned->end(); iter++) {
+  for (moab::Range::iterator iter = vowned->begin(); iter != vowned->end(); iter++) {
     const moab::EntityHandle vhandle = *iter;
     ierr = DMMoabGetDofsBlockedLocal(dm, 1, &vhandle, &dof);CHKERRQ(ierr);
 

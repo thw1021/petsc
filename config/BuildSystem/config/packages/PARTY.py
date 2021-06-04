@@ -3,21 +3,28 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit    = 'v1.99p1'
-    self.download     = ['git://https://bitbucket.org/petsc/pkg-party.git','http://ftp.mcs.anl.gov/pub/petsc/externalpackages/PARTY_1.99p1.tar.gz']
-    self.functions    = ['party_lib']
-    self.includes     = ['party_lib.h']
-    self.liblist      = [['libparty.a']]
-    self.license      = 'http://www2.cs.uni-paderborn.de/cs/robsy/party.html'
+    self.versionname       = 'VERSION'
+    self.gitcommit         = 'v1.99p2'
+    self.download          = ['git://https://bitbucket.org/petsc/pkg-party.git',
+                              'https://bitbucket.org/petsc/pkg-party/get/'+self.gitcommit+'.tar.gz']
+    self.downloaddirnames  = ['petsc-pkg-party','PARTY']
+    self.functions         = ['party_lib']
+    self.includes          = ['party_lib.h']
+    self.liblist           = [['libparty.a']]
+    self.license           = 'http://www2.cs.uni-paderborn.de/cs/robsy/party.html'
     return
+
+  def versionToStandardForm(self,ver):
+    import re
+    return re.compile('[=A-Za-z]([\.0-9]*),').search(ver).group(1)
 
   def Install(self):
     import os
 
     g = open(os.path.join(self.packageDir,'make.inc'),'w')
-    self.setCompilers.pushLanguage('C')
-    g.write('CC = '+self.setCompilers.getCompiler()+' '+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+'\n')
-    self.setCompilers.popLanguage()
+    self.pushLanguage('C')
+    g.write('CC = '+self.getCompiler()+' '+self.updatePackageCFlags(self.getCompilerFlags())+'\n')
+    self.popLanguage()
     g.close()
 
     if self.installNeeded('make.inc'):

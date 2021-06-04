@@ -22,8 +22,8 @@ PetscErrorCode MatCholeskyFactorNumeric_SeqSBAIJ_5_NaturalOrdering(Mat C,Mat A,c
   ierr = PetscCalloc1(25*mbs,&rtmp);CHKERRQ(ierr);
   ierr = PetscMalloc2(mbs,&il,mbs,&jl);CHKERRQ(ierr);
   il[0] = 0;
-  for (i=0; i<mbs; i++) jl[i] = mbs; 
-  
+  for (i=0; i<mbs; i++) jl[i] = mbs;
+
   ierr = PetscMalloc2(25,&dk,25,&uik);CHKERRQ(ierr);
   ai   = a->i; aj = a->j; aa = a->a;
 
@@ -84,7 +84,6 @@ PetscErrorCode MatCholeskyFactorNumeric_SeqSBAIJ_5_NaturalOrdering(Mat C,Mat A,c
       uik[22]= -(d[2]*u[20] + d[7]*u[21] + d[12]*u[22] + d[17]*u[23] + d[22]*u[24]);
       uik[23]= -(d[3]*u[20] + d[8]*u[21] + d[13]*u[22] + d[18]*u[23] + d[23]*u[24]);
       uik[24]= -(d[4]*u[20] + d[9]*u[21] + d[14]*u[22] + d[19]*u[23] + d[24]*u[24]);
-
 
       /* update D(k) += -U(i,k)^T * U_bar(i,k) */
       dk[0] +=  uik[0]*u[0] + uik[1]*u[1] + uik[2]*u[2] + uik[3]*u[3] + uik[4]*u[4];

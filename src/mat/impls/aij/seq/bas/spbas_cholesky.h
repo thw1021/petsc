@@ -15,7 +15,6 @@ PetscErrorCode spbas_cholesky_row_alloc(spbas_matrix retval, PetscInt k, PetscIn
   PetscFunctionReturn(0);
 }
 
-
 /*
   spbas_cholesky_garbage_collect:
      move the rows which have been calculated so far, as well as
@@ -102,13 +101,12 @@ PetscErrorCode spbas_cholesky_garbage_collect(spbas_matrix *result,         /* I
   if (n_alloc_max == n_alloc_est) {
     ierr = PetscInfo(NULL,"this is the correct size\n");CHKERRQ(ierr);
   } else if (n_alloc_now >= n_alloc_est) {
-    ierr = PetscInfo(NULL,"the current size, which seems enough\n");CHKERRQ(ierr); 
+    ierr = PetscInfo(NULL,"the current size, which seems enough\n");CHKERRQ(ierr);
   } else if (n_alloc_max < n_alloc_est * (1+xtra_perc/100.0)) {
     ierr = PetscInfo(NULL,"the maximum estimate\n");CHKERRQ(ierr);
   } else {
     ierr = PetscInfo1(NULL,"%6.2f %% more than the estimate\n",xtra_perc);CHKERRQ(ierr);
   }
-
 
   /**********************************************************
   2. Rescue arrays which would be lost
@@ -199,7 +197,6 @@ PetscErrorCode spbas_cholesky_garbage_collect(spbas_matrix *result,         /* I
     /* Delete old array */
     ierr = PetscFree(alloc_val_old);CHKERRQ(ierr);
   }
-
 
   /*********************************************************
   4. Copy all the arrays to their proper places */
@@ -435,4 +432,3 @@ PetscErrorCode spbas_incomplete_cholesky(Mat A, const PetscInt *rip, const Petsc
   *matrix_L = retval;
   PetscFunctionReturn(0);
 }
-

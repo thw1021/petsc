@@ -169,7 +169,7 @@ PetscErrorCode TSBasicSymplecticRegister(TSRosWType name,PetscInt order,PetscInt
   PetscFunctionBegin;
   PetscValidCharPointer(name,1);
   PetscValidPointer(c,4);
-  PetscValidPointer(d,4);
+  PetscValidPointer(d,5);
 
   ierr = TSBasicSymplecticInitializePackage();CHKERRQ(ierr);
   ierr = PetscNew(&link);CHKERRQ(ierr);
@@ -234,9 +234,9 @@ static PetscErrorCode TSStep_BasicSymplectic(TS ts)
     }
     ierr = TSPostStage(ts,ts->ptime,0,&solution);CHKERRQ(ierr);
     ierr = TSAdaptCheckStage(ts->adapt,ts,ts->ptime,solution,&stageok);CHKERRQ(ierr);
-    if(!stageok) {ts->reason = TS_DIVERGED_STEP_REJECTED; PetscFunctionReturn(0);}
+    if (!stageok) {ts->reason = TS_DIVERGED_STEP_REJECTED; PetscFunctionReturn(0);}
     ierr = TSFunctionDomainError(ts,ts->ptime+ts->time_step,update,&stageok);CHKERRQ(ierr);
-    if(!stageok) {ts->reason = TS_DIVERGED_STEP_REJECTED; PetscFunctionReturn(0);}
+    if (!stageok) {ts->reason = TS_DIVERGED_STEP_REJECTED; PetscFunctionReturn(0);}
   }
 
   ts->time_step = next_time_step;
@@ -437,7 +437,6 @@ static PetscErrorCode TSBasicSymplecticSetType_BasicSymplectic(TS ts,TSBasicSymp
     }
   }
   SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_UNKNOWN_TYPE,"Could not find '%s'",bsymptype);
-  PetscFunctionReturn(0);
 }
 
 static PetscErrorCode  TSBasicSymplecticGetType_BasicSymplectic(TS ts,TSBasicSymplecticType *bsymptype)

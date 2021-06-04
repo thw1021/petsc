@@ -43,8 +43,8 @@ int main(int argc,char **args)
   N    = (m+1)*(m+1); /* dimension of matrix */
   M    = m*m; /* number of elements */
   h    = 1.0/m;    /* mesh width */
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   /* Create stiffness matrix */
   ierr  = MatCreate(PETSC_COMM_WORLD,&C);CHKERRQ(ierr);
@@ -166,6 +166,13 @@ int main(int argc,char **args)
       suffix: 2
       nsize: 2
       args: -pc_type jacobi -ksp_monitor_short -m 5 -ksp_gmres_cgs_refinement_type refine_always
+
+    test:
+      suffix: 2_kokkos
+      nsize: 2
+      args: -pc_type jacobi -ksp_monitor_short -m 5 -ksp_gmres_cgs_refinement_type refine_always -mat_type aijkokkos -vec_type kokkos
+      output_file: output/ex3_2.out
+      requires: kokkos_kernels
 
     test:
       suffix: nocheby

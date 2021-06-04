@@ -247,7 +247,7 @@ PetscErrorCode TSDestroy_Sundials(TS ts)
 
   PetscFunctionBegin;
   ierr = TSReset_Sundials(ts);CHKERRQ(ierr);
-  ierr = MPI_Comm_free(&(cvode->comm_sundials));CHKERRQ(ierr);
+  ierr = MPI_Comm_free(&(cvode->comm_sundials));CHKERRMPI(ierr);
   ierr = PetscFree(ts->data);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSSundialsSetType_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSSundialsSetMaxl_C",NULL);CHKERRQ(ierr);
@@ -300,8 +300,8 @@ PetscErrorCode TSSetUp_Sundials(TS ts)
     allocated with zero space arrays because the actual array space is provided
     by Sundials and set using VecPlaceArray().
   */
-  ierr = VecCreateMPIWithArray(PetscObjectComm((PetscObject)ts),1,locsize,PETSC_DECIDE,0,&cvode->w1);CHKERRQ(ierr);
-  ierr = VecCreateMPIWithArray(PetscObjectComm((PetscObject)ts),1,locsize,PETSC_DECIDE,0,&cvode->w2);CHKERRQ(ierr);
+  ierr = VecCreateMPIWithArray(PetscObjectComm((PetscObject)ts),1,locsize,PETSC_DECIDE,NULL,&cvode->w1);CHKERRQ(ierr);
+  ierr = VecCreateMPIWithArray(PetscObjectComm((PetscObject)ts),1,locsize,PETSC_DECIDE,NULL,&cvode->w2);CHKERRQ(ierr);
   ierr = PetscLogObjectParent((PetscObject)ts,(PetscObject)cvode->w1);CHKERRQ(ierr);
   ierr = PetscLogObjectParent((PetscObject)ts,(PetscObject)cvode->w2);CHKERRQ(ierr);
 
@@ -374,9 +374,9 @@ PetscErrorCode TSSetUp_Sundials(TS ts)
 }
 
 /* type of CVODE linear multistep method */
-const char *const TSSundialsLmmTypes[] = {"","ADAMS","BDF","TSSundialsLmmType","SUNDIALS_",0};
+const char *const TSSundialsLmmTypes[] = {"","ADAMS","BDF","TSSundialsLmmType","SUNDIALS_",NULL};
 /* type of G-S orthogonalization used by CVODE linear solver */
-const char *const TSSundialsGramSchmidtTypes[] = {"","MODIFIED","CLASSICAL","TSSundialsGramSchmidtType","SUNDIALS_",0};
+const char *const TSSundialsGramSchmidtTypes[] = {"","MODIFIED","CLASSICAL","TSSundialsGramSchmidtType","SUNDIALS_",NULL};
 
 PetscErrorCode TSSetFromOptions_Sundials(PetscOptionItems *PetscOptionsObject,TS ts)
 {
@@ -480,7 +480,6 @@ PetscErrorCode TSView_Sundials(TS ts,PetscViewer viewer)
   }
   PetscFunctionReturn(0);
 }
-
 
 /* --------------------------------------------------------------------------*/
 PetscErrorCode  TSSundialsSetType_Sundials(TS ts,TSSundialsLmmType type)
@@ -887,7 +886,6 @@ PetscErrorCode  TSSundialsMonitorInternalSteps(TS ts,PetscBool ft)
 .    -ts_sundials_maxl <maxl> - Max dimension of the Krylov subspace
 -    -ts_sundials_monitor_steps - Monitor SUNDIALS internal steps
 
-
     Notes:
     This uses its own nonlinear solver and Krylov method so PETSc SNES and KSP options do not apply,
            only PETSc PC options.
@@ -926,7 +924,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_Sundials(TS ts)
   cvode->linear_tol  = .05;
   cvode->monitorstep = PETSC_TRUE;
 
-  ierr = MPI_Comm_dup(PetscObjectComm((PetscObject)ts),&(cvode->comm_sundials));CHKERRQ(ierr);
+  ierr = MPI_Comm_dup(PetscObjectComm((PetscObject)ts),&(cvode->comm_sundials));CHKERRMPI(ierr);
 
   cvode->mindt = -1.;
   cvode->maxdt = -1.;

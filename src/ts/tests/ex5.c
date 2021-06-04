@@ -108,7 +108,6 @@ typedef struct {
   PetscInt    interval;
 } MonitorCtx;
 
-
 /* Inputs read in from text file */
 struct in {
   PetscScalar Ts;     /* surface temperature  */
@@ -136,7 +135,7 @@ extern PetscScalar cloud(PetscScalar);                              /* cloud rad
 extern PetscErrorCode FormInitialSolution(DM,Vec,void*);            /* Specifies initial conditions for the system of equations (PETSc defined function) */
 extern PetscErrorCode RhsFunc(TS,PetscReal,Vec,Vec,void*);          /* Specifies the user defined functions                     (PETSc defined function) */
 extern PetscErrorCode Monitor(TS,PetscInt,PetscReal,Vec,void*);     /* Specifies output and visualization tools                 (PETSc defined function) */
-extern void readinput(struct in *put);                              /* reads input from text file */
+extern PetscErrorCode readinput(struct in *put);                              /* reads input from text file */
 extern PetscErrorCode calcfluxs(PetscScalar, PetscScalar, PetscScalar, PetscScalar, PetscScalar, PetscScalar*); /* calculates upward IR from surface */
 extern PetscErrorCode calcfluxa(PetscScalar, PetscScalar, PetscScalar, PetscScalar*);                           /* calculates downward IR from atmosphere */
 extern PetscErrorCode sensibleflux(PetscScalar, PetscScalar, PetscScalar, PetscScalar*);                        /* calculates sensible heat flux */
@@ -147,7 +146,7 @@ extern PetscErrorCode calc_gflux(PetscScalar, PetscScalar, PetscScalar*);       
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
-  int            time;           /* amount of loops */
+  PetscInt       time;           /* amount of loops */
   struct in      put;
   PetscScalar    rh;             /* relative humidity */
   PetscScalar    x;              /* memory varialbe for relative humidity calculation */
@@ -162,7 +161,6 @@ int main(int argc,char **argv)
   PetscScalar    cloudTemp;      /* temperature at base of cloud */
   AppCtx         user;           /*  user-defined work context */
   MonitorCtx     usermonitor;    /* user-defined monitor context */
-  PetscMPIInt    rank,size;
   TS             ts;
   SNES           snes;
   DM             da;
@@ -175,11 +173,9 @@ int main(int argc,char **argv)
   PetscBool      monitor_off = PETSC_FALSE;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
 
   /* Inputs */
-  readinput(&put);
+  ierr = readinput(&put);CHKERRQ(ierr);
 
   sfctemp   = put.Ts;
   dewtemp   = put.Td;
@@ -187,7 +183,7 @@ int main(int argc,char **argv)
   airtemp   = put.Ta;
   pwat      = put.pwt;
 
-  if (!rank) PetscPrintf(PETSC_COMM_SELF,"Initial Temperature = %g\n",(double)sfctemp); /* input surface temperature */
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Initial Temperature = %g\n",(double)sfctemp);CHKERRQ(ierr); /* input surface temperature */
 
   deep_grnd_temp = sfctemp - 10;   /* set underlying ground layer temperature */
   emma           = emission(pwat); /* accounts for radiative effects of water vapor */
@@ -211,7 +207,7 @@ int main(int argc,char **argv)
   mixratio = calcmixingr(sfctemp,pressure1);
   rh       = (x/mixratio)*100;
 
-  if (!rank) printf("Initial RH = %.1f percent\n\n",(double)rh);   /* prints initial relative humidity */
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Initial RH = %.1f percent\n\n",(double)rh);CHKERRQ(ierr);   /* prints initial relative humidity */
 
   time = 3600*put.time;                         /* sets amount of timesteps to run model */
 
@@ -294,7 +290,7 @@ int main(int argc,char **argv)
   ierr  = FormInitialSolution(da,T,&user);CHKERRQ(ierr);
   dt    = TIMESTEP; /* initial time step */
   ftime = TIMESTEP*time;
-  if (!rank) printf("time %d, ftime %g hour, TIMESTEP %g\n",time,(double)(ftime/3600),(double)dt);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"time %D, ftime %g hour, TIMESTEP %g\n",time,(double)(ftime/3600),(double)dt);CHKERRQ(ierr);
 
   ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
   ierr = TSSetMaxSteps(ts,time);CHKERRQ(ierr);
@@ -314,8 +310,7 @@ int main(int argc,char **argv)
   ierr = TSSolve(ts,T);CHKERRQ(ierr);
   ierr = TSGetSolveTime(ts,&ftime);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
-  if (!rank) PetscPrintf(PETSC_COMM_WORLD,"Solution T after %g hours %d steps\n",(double)(ftime/3600),steps);
-
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Solution T after %g hours %D steps\n",(double)(ftime/3600),steps);CHKERRQ(ierr);
 
   if (matfdcoloring) {ierr = MatFDColoringDestroy(&matfdcoloring);CHKERRQ(ierr);}
   if (usermonitor.drawcontours) {
@@ -479,55 +474,56 @@ extern PetscScalar cel_to_fahr(PetscScalar temp)
   temp = ((temp*9)/5) + 32; /* converts from celsuis to farhrenheit */
   return temp;
 }
-void readinput(struct in *put)
+PetscErrorCode readinput(struct in *put)
 {
   int    i;
   char   x;
   FILE   *ifp;
   double tmp;
 
+  PetscFunctionBegin;
   ifp = fopen("ex5_control.txt", "r");
-
-  for (i=0; i<110; i++) { if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp) != 1) abort();
+  if (!ifp) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to open input file");
+  for (i=0; i<110; i++) { if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->Ts = tmp;
 
-  for (i=0; i<43; i++) { if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp) != 1) abort();
+  for (i=0; i<43; i++) { if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->Td = tmp;
 
-  for (i=0; i<43; i++) { if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp) != 1) abort();
+  for (i=0; i<43; i++) { if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->Ta = tmp;
 
-  for (i=0; i<43; i++) { if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp)!= 1) abort();
+  for (i=0; i<43; i++) { if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp)!= 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->Tc = tmp;
 
-  for (i=0; i<43; i++) { if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp) != 1) abort();
+  for (i=0; i<43; i++) { if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->fr = tmp;
 
-  for (i=0; i<43; i++) {if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp) != 1) abort();
+  for (i=0; i<43; i++) {if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->wnd = tmp;
 
-  for (i=0; i<43; i++) {if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp) != 1) abort();  
+  for (i=0; i<43; i++) {if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->pwt = tmp;
 
-  for (i=0; i<43; i++) {if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp) != 1) abort();  
+  for (i=0; i<43; i++) {if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->wndDir = tmp;
 
-  for (i=0; i<43; i++) {if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp) != 1) abort();  
+  for (i=0; i<43; i++) {if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->time = tmp;
 
-  for (i=0; i<63; i++) {if (fscanf(ifp, "%c", &x) != 1) abort();}
-  if (fscanf(ifp, "%lf", &tmp) != 1) abort();
+  for (i=0; i<63; i++) {if (fscanf(ifp, "%c", &x) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
+  if (fscanf(ifp, "%lf", &tmp) != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->init = tmp;
-
+  PetscFunctionReturn(0);
 }
 
 /* ------------------------------------------------------------------- */
@@ -632,7 +628,6 @@ PetscErrorCode RhsFunc(TS ts,PetscReal t,Vec Xglobal,Vec F,void *ctx)
   dhx = (PetscReal)(Mx-1)/(5000*(Mx-1));  /* dhx = 1/dx; assume 2D space domain: [0.0, 1.e5] x [0.0, 1.e5] */
   dhy = (PetscReal)(My-1)/(5000*(Mx-1));  /* dhy = 1/dy; */
 
-
   /*
      Scatter ghost points to local vector,using the 2-step process
         DAGlobalToLocalBegin(),DAGlobalToLocalEnd().
@@ -718,16 +713,14 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec T,void *ctx)
   const PetscScalar *array;
   MonitorCtx        *user  = (MonitorCtx*)ctx;
   PetscViewer       viewer = user->drawviewer;
-  PetscMPIInt       rank;
   PetscReal         norm;
 
   PetscFunctionBeginUser;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)ts),&rank);CHKERRQ(ierr);
   ierr = VecNorm(T,NORM_INFINITY,&norm);CHKERRQ(ierr);
 
   if (step%user->interval == 0) {
     ierr = VecGetArrayRead(T,&array);CHKERRQ(ierr);
-    if (!rank) printf("step %4d, time %8.1f,  %6.4f, %6.4f, %6.4f, %6.4f, %6.4f, %6.4f\n",(int)step,(double)time,(double)(((array[0]-273)*9)/5 + 32),(double)(((array[1]-273)*9)/5 + 32),(double)array[2],(double)array[3],(double)array[4],(double)array[5]);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"step %D, time %8.1f,  %6.4f, %6.4f, %6.4f, %6.4f, %6.4f, %6.4f\n",step,(double)time,(double)(((array[0]-273)*9)/5 + 32),(double)(((array[1]-273)*9)/5 + 32),(double)array[2],(double)array[3],(double)array[4],(double)array[5]);
     ierr = VecRestoreArrayRead(T,&array);CHKERRQ(ierr);
   }
 
@@ -736,8 +729,6 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec T,void *ctx)
   }
   PetscFunctionReturn(0);
 }
-
-
 
 /*TEST
 

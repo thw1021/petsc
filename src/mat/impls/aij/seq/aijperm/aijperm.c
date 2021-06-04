@@ -79,8 +79,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJPERM_SeqAIJ(Mat A,MatType type,MatR
   B->ops->multadd     = MatMultAdd_SeqAIJ;
 
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatConvert_seqaijperm_seqaij_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)B,"MatMatMultSymbolic_seqdense_seqaijperm_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)B,"MatMatMultNumeric_seqdense_seqaijperm_C",NULL);CHKERRQ(ierr);
 
   /* Free everything in the Mat_SeqAIJPERM data structure.*/
   ierr = PetscFree(aijperm->xgroup);CHKERRQ(ierr);
@@ -138,8 +136,6 @@ PetscErrorCode MatDuplicate_SeqAIJPERM(Mat A, MatDuplicateOption op, Mat *M)
     (*M)->spptr = (void*) aijperm_dest;
     ierr        = PetscObjectChangeTypeName((PetscObject)*M,MATSEQAIJPERM);CHKERRQ(ierr);
     ierr        = PetscObjectComposeFunction((PetscObject)*M,"MatConvert_seqaijperm_seqaij_C",MatConvert_SeqAIJPERM_SeqAIJ);CHKERRQ(ierr);
-    ierr        = PetscObjectComposeFunction((PetscObject)*M,"MatMatMultSymbolic_seqdense_seqaijperm_C",MatMatMultSymbolic_SeqDense_SeqAIJ);CHKERRQ(ierr);
-    ierr        = PetscObjectComposeFunction((PetscObject)*M,"MatMatMultNumeric_seqdense_seqaijperm_C",MatMatMultNumeric_SeqDense_SeqAIJ);CHKERRQ(ierr);
   }
   ierr        = PetscArraycpy(aijperm_dest,aijperm,1);CHKERRQ(ierr);
   /* Allocate space for, and copy the grouping and permutation info.
@@ -261,7 +257,6 @@ PetscErrorCode MatSeqAIJPERM_create_perm(Mat A)
   ierr = PetscFree(nz_in_row);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 PetscErrorCode MatAssemblyEnd_SeqAIJPERM(Mat A, MatAssemblyType mode)
 {
@@ -475,7 +470,6 @@ PetscErrorCode MatMult_SeqAIJPERM(Mat A,Vec xx,Vec yy)
   PetscFunctionReturn(0);
 }
 
-
 /* MatMultAdd_SeqAIJPERM() calculates yy = ww + A * xx.
  * Note that the names I used to designate the vectors differs from that
  * used in MatMultAdd_SeqAIJ().  I did this to keep my notation consistent
@@ -667,8 +661,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJPERM(Mat A,MatType type,MatR
   }
 
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatConvert_seqaijperm_seqaij_C",MatConvert_SeqAIJPERM_SeqAIJ);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)B,"MatMatMultSymbolic_seqdense_seqaijperm_C",MatMatMultSymbolic_SeqDense_SeqAIJ);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)B,"MatMatMultNumeric_seqdense_seqaijperm_C",MatMatMultNumeric_SeqDense_SeqAIJ);CHKERRQ(ierr);
 
   ierr    = PetscObjectChangeTypeName((PetscObject)B,MATSEQAIJPERM);CHKERRQ(ierr);
   *newmat = B;

@@ -515,7 +515,6 @@ PetscErrorCode TSAdaptGetMaxIgnore(TSAdapt adapt,PetscReal *max_ignore)
   PetscFunctionReturn(0);
 }
 
-
 /*@
    TSAdaptSetClip - Sets the admissible decrease/increase factor in step size
 
@@ -541,7 +540,7 @@ PetscErrorCode TSAdaptSetClip(TSAdapt adapt,PetscReal low,PetscReal high)
   PetscValidLogicalCollectiveReal(adapt,high,3);
   if (low  != PETSC_DEFAULT && low  < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Decrease factor %g must be non negative",(double)low);
   if (low  != PETSC_DEFAULT && low  > 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Decrease factor %g must be less than one",(double)low);
-  if (high != PETSC_DEFAULT && high < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Increase factor %g must be geather than one",(double)high);
+  if (high != PETSC_DEFAULT && high < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Increase factor %g must be greater than one",(double)high);
   if (low  != PETSC_DEFAULT) adapt->clip[0] = low;
   if (high != PETSC_DEFAULT) adapt->clip[1] = high;
   PetscFunctionReturn(0);
@@ -581,7 +580,7 @@ PetscErrorCode TSAdaptGetClip(TSAdapt adapt,PetscReal *low,PetscReal *high)
 
    Input Arguments:
 +  adapt - adaptive controller context
-.  scale - scale
+-  scale - scale
 
    Options Database Keys:
 .  -ts_adapt_scale_solve_failed <scale> - to set scale step by this factor if solve fails
@@ -610,7 +609,7 @@ PetscErrorCode TSAdaptSetScaleSolveFailed(TSAdapt adapt,PetscReal scale)
 .  adapt - adaptive controller context
 
    Ouput Arguments:
-+  scale - scale factor
+.  scale - scale factor
 
    Level: intermediate
 
@@ -656,7 +655,7 @@ PetscErrorCode TSAdaptSetStepLimits(TSAdapt adapt,PetscReal hmin,PetscReal hmax)
   if (hmax != PETSC_DEFAULT) adapt->dt_max = hmax;
   hmin = adapt->dt_min;
   hmax = adapt->dt_max;
-  if (hmax <= hmin) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Maximum time step %g must geather than minimum time step %g",(double)hmax,(double)hmin);
+  if (hmax <= hmin) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Maximum time step %g must greater than minimum time step %g",(double)hmax,(double)hmin);
   PetscFunctionReturn(0);
 }
 
@@ -725,7 +724,7 @@ PetscErrorCode  TSAdaptSetFromOptions(PetscOptionItems *PetscOptionsObject,TSAda
   PetscInt       two;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
+  PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,2);
   /* This should use PetscOptionsBegin() if/when this becomes an object used outside of TS, but currently this
    * function can only be called from inside TSSetFromOptions()  */
   ierr = PetscOptionsHead(PetscOptionsObject,"TS Adaptivity options");CHKERRQ(ierr);
@@ -907,7 +906,7 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt,TS ts,PetscReal h,PetscInt *next_sc,P
   PetscValidHeaderSpecific(ts,TS_CLASSID,2);
   if (next_sc) PetscValidIntPointer(next_sc,4);
   PetscValidPointer(next_h,5);
-  PetscValidIntPointer(accept,6);
+  PetscValidBoolPointer(accept,6);
   if (next_sc) *next_sc = 0;
 
   /* Do not mess with adaptivity while handling events*/
@@ -1001,7 +1000,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt,TS ts,PetscReal t,Vec Y,PetscBool
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
   PetscValidHeaderSpecific(ts,TS_CLASSID,2);
-  PetscValidIntPointer(accept,3);
+  PetscValidBoolPointer(accept,5);
 
   if (ts->snes) {ierr = SNESGetConvergedReason(ts->snes,&snesreason);CHKERRQ(ierr);}
   if (snesreason < 0) {
@@ -1070,7 +1069,7 @@ PetscErrorCode  TSAdaptCreate(MPI_Comm comm,TSAdapt *inadapt)
   TSAdapt        adapt;
 
   PetscFunctionBegin;
-  PetscValidPointer(inadapt,1);
+  PetscValidPointer(inadapt,2);
   *inadapt = NULL;
   ierr = TSAdaptInitializePackage();CHKERRQ(ierr);
 

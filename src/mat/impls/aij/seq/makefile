@@ -1,4 +1,4 @@
--include ../petscdir.mk
+-include ../../../../../petscdir.mk
 ALL: lib
 
 CFLAGS   =
@@ -10,7 +10,7 @@ SOURCEF  =
 SOURCEH  = aij.h
 LIBBASE  = libpetscmat
 DIRS     = superlu umfpack essl lusol matlab aijperm aijsell aijmkl crl bas ftn-kernels seqviennacl seqviennaclcuda \
-           cholmod seqcusparse klu mkl_pardiso
+           cholmod seqcusparse klu mkl_pardiso kokkos spqr
 MANSEC   = Mat
 LOCDIR   = src/mat/impls/aij/seq/
 

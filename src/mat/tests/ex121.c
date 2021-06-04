@@ -7,7 +7,7 @@ static char help[] = "Test sequential FFTW convolution\n\n";
 
 #include <petscmat.h>
 
-PetscInt main(PetscInt argc,char **args)
+int main(int argc,char **args)
 {
   typedef enum {RANDOM, CONSTANT, TANH, NUM_FUNCS} FuncType;
   const char     *funcNames[NUM_FUNCS] = {"random", "constant", "tanh"};
@@ -25,7 +25,7 @@ PetscInt main(PetscInt argc,char **args)
   PetscErrorCode ierr;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP, "This is a uniprocessor example only!");
   ierr     = PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "FFTW Options", "ex112");CHKERRQ(ierr);
   ierr     = PetscOptionsEList("-function", "Function type", "ex121", funcNames, NUM_FUNCS, funcNames[function], &func, NULL);CHKERRQ(ierr);
@@ -97,7 +97,6 @@ PetscInt main(PetscInt argc,char **args)
     for (i = 0; i < N; ++i) {
       /* PetscInt checkInd = (i > N/2-1)? i-N/2: i+N/2;*/
 
-      /*if (!(i%100)) PetscPrintf(PETSC_COMM_WORLD, "Finished convolution row %d\n", i);*/
       a3[i] = 0.0;
       for (j = -N/2+1; j < N/2; ++j) {
         PetscInt xpInd   = (j < 0) ? N+j : j;
@@ -105,7 +104,6 @@ PetscInt main(PetscInt argc,char **args)
 
         a3[i] += a[xpInd]*a2[diffInd];
       }
-      /*if (PetscAbsScalar(a3[i]) > PetscAbsScalar(a[checkInd])+0.1) PetscPrintf(PETSC_COMM_WORLD, "Invalid convolution at row %d\n", i);*/
     }
     ierr = VecRestoreArray(x, &a);CHKERRQ(ierr);
     ierr = VecRestoreArray(w, &a2);CHKERRQ(ierr);
@@ -135,7 +133,6 @@ PetscInt main(PetscInt argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

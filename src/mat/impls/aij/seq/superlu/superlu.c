@@ -358,11 +358,11 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU(Mat F,Mat A,const MatFactorInfo
       } else if (sinfo == lu->A.ncol + 1) {
         /*
          U is nonsingular, but RCOND is less than machine
- 		      precision, meaning that the matrix is singular to
- 		      working precision. Nevertheless, the solution and
- 		      error bounds are computed because there are a number
- 		      of situations where the computed solution can be more
- 		      accurate than the value of RCOND would suggest.
+                      precision, meaning that the matrix is singular to
+                      working precision. Nevertheless, the solution and
+                      error bounds are computed because there are a number
+                      of situations where the computed solution can be more
+                      accurate than the value of RCOND would suggest.
          */
         ierr = PetscInfo1(F,"Matrix factor U is nonsingular, but is singular to working precision. The solution is computed. info %D",sinfo);CHKERRQ(ierr);
       } else { /* sinfo > lu->A.ncol + 1 */
@@ -455,9 +455,6 @@ PetscErrorCode MatMatSolve_SuperLU(Mat A,Mat B,Mat X)
   PetscFunctionReturn(0);
 }
 
-/*
-   Note the r permutation is ignored
-*/
 static PetscErrorCode MatLUFactorSymbolic_SuperLU(Mat F,Mat A,IS r,IS c,const MatFactorInfo *info)
 {
   Mat_SuperLU    *lu = (Mat_SuperLU*)(F->data);
@@ -554,6 +551,8 @@ PetscErrorCode MatFactorGetSolverType_seqaij_superlu(Mat A,MatSolverType *type)
    Notes:
     Do not confuse this with MATSOLVERSUPERLU_DIST which is for parallel sparse solves
 
+    Cannot currently use ordering provided by PETSc.
+
    Level: beginner
 
 .seealso: PCLU, PCILU, MATSOLVERSUPERLU_DIST, MATSOLVERMUMPS, PCFactorSetMatSolverType(), MatSolverType
@@ -576,6 +575,7 @@ static PetscErrorCode MatGetFactor_seqaij_superlu(Mat A,MatFactorType ftype,Mat 
   ierr = MatSetSizes(B,A->rmap->n,A->cmap->n,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
   ierr = PetscStrallocpy("superlu",&((PetscObject)B)->type_name);CHKERRQ(ierr);
   ierr = MatSetUp(B);CHKERRQ(ierr);
+  B->trivialsymbolic = PETSC_TRUE;
   if (ftype == MAT_FACTOR_LU || ftype == MAT_FACTOR_ILU) {
     B->ops->lufactorsymbolic  = MatLUFactorSymbolic_SuperLU;
     B->ops->ilufactorsymbolic = MatLUFactorSymbolic_SuperLU;

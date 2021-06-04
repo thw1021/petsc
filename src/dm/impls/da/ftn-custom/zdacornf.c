@@ -18,7 +18,6 @@
 #define dmdagetcorners011011_          dmdagetcorners011011
 #endif
 
-
 PETSC_EXTERN void dmdasetfieldname_(DM *da,PetscInt *nf,char* name,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
 {
   char *t;
@@ -36,7 +35,7 @@ PETSC_EXTERN void dmdagetfieldname_(DM *da,PetscInt *nf,char* name,PetscErrorCod
   FIXRETURNCHAR(PETSC_TRUE,name,len);
 }
 
-PETSC_EXTERN void  dmdagetcorners_(DM *da,PetscInt *x,PetscInt *y,PetscInt *z,PetscInt *m,PetscInt *n,PetscInt *p, int *ierr )
+PETSC_EXTERN void  dmdagetcorners_(DM *da,PetscInt *x,PetscInt *y,PetscInt *z,PetscInt *m,PetscInt *n,PetscInt *p, int *ierr)
 {
   CHKFORTRANNULLINTEGER(y);
   CHKFORTRANNULLINTEGER(z);
@@ -46,17 +45,17 @@ PETSC_EXTERN void  dmdagetcorners_(DM *da,PetscInt *x,PetscInt *y,PetscInt *z,Pe
   *ierr = DMDAGetCorners(*da,x,y,z,m,n,p);
 }
 
-PETSC_EXTERN void  dmdagetcorners000000_(DM *da,PetscInt *x,PetscInt *y,PetscInt *z,PetscInt *m,PetscInt *n,PetscInt *p, int *ierr )
+PETSC_EXTERN void  dmdagetcorners000000_(DM *da,PetscInt *x,PetscInt *y,PetscInt *z,PetscInt *m,PetscInt *n,PetscInt *p, int *ierr)
 {
   dmdagetcorners_(da,x,y,z,m,n,p,ierr);
 }
 
-PETSC_EXTERN void  dmdagetcorners001001_(DM *da,PetscInt *x,PetscInt *y,PetscInt *z,PetscInt *m,PetscInt *n,PetscInt *p, int *ierr )
+PETSC_EXTERN void  dmdagetcorners001001_(DM *da,PetscInt *x,PetscInt *y,PetscInt *z,PetscInt *m,PetscInt *n,PetscInt *p, int *ierr)
 {
   dmdagetcorners_(da,x,y,z,m,n,p,ierr);
 }
 
-PETSC_EXTERN void  dmdagetcorners011011_(DM *da,PetscInt *x,PetscInt *y,PetscInt *z,PetscInt *m,PetscInt *n,PetscInt *p, int *ierr )
+PETSC_EXTERN void  dmdagetcorners011011_(DM *da,PetscInt *x,PetscInt *y,PetscInt *z,PetscInt *m,PetscInt *n,PetscInt *p, int *ierr)
 {
   dmdagetcorners_(da,x,y,z,m,n,p,ierr);
 }

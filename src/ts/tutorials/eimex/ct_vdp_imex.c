@@ -42,7 +42,6 @@ static PetscErrorCode RHSFunction(TS,PetscReal,Vec,Vec,void*);
 static PetscErrorCode IFunction(TS,PetscReal,Vec,Vec,Vec,void*);
 static PetscErrorCode IJacobian(TS,PetscReal,Vec,Vec,PetscReal,Mat,Mat,void*);
 
-
 int main(int argc, char **argv)
 {
   TS                ts;
@@ -167,7 +166,6 @@ int main(int argc, char **argv)
   return ierr;
 }
 
-
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 {
   PetscErrorCode    ierr;
@@ -190,7 +188,7 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ptr
   PetscScalar       *f;
   const PetscScalar *x,*xdot;
   PetscErrorCode    ierr;
-  
+
   PetscFunctionBegin;
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
   ierr = VecGetArrayRead(Xdot,&xdot);CHKERRQ(ierr);
@@ -247,4 +245,3 @@ static PetscErrorCode IJacobian(TS  ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Ma
      requires: x
 
  TEST*/
-

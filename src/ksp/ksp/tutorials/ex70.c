@@ -41,7 +41,6 @@ static PetscErrorCode DMDAApplyBoundaryConditions(DM,Mat,Vec);
 #define P_DOFS         1 /* degrees of freedom per pressure node */
 #define GAUSS_POINTS   4
 
-
 static void EvaluateBasis_Q1(PetscScalar _xi[],PetscScalar N[])
 {
   PetscScalar xi  = _xi[0];
@@ -717,7 +716,7 @@ PetscErrorCode MaterialPoint_PopulateCell(DM dm_vp,DM dm_mpoint)
       cnt++;
     }
   }
-  ierr = MPI_Allreduce(&cnt,&cnt_g,1,MPIU_INT,MPI_SUM,PETSC_COMM_WORLD);CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&cnt,&cnt_g,1,MPIU_INT,MPI_SUM,PETSC_COMM_WORLD);CHKERRMPI(ierr);
   if (cnt_g > 0) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,".... ....pop cont: adjusted %D cells\n",cnt_g);CHKERRQ(ierr);
   }
@@ -1034,7 +1033,7 @@ static PetscErrorCode SolveTimeDepStokes(PetscInt mx,PetscInt my)
     PetscRandom r;
     PetscMPIInt rank;
 
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
     ierr = PetscRandomCreate(PETSC_COMM_SELF,&r);CHKERRQ(ierr);
     ierr = PetscRandomSetInterval(r,-randomize_fac*dh,randomize_fac*dh);CHKERRQ(ierr);
@@ -1486,7 +1485,7 @@ static PetscErrorCode BCApplyZero_NORTH(DM da,PetscInt d_idx,Mat A,Vec b)
     ierr = VecAssemblyEnd(b);CHKERRQ(ierr);
   }
   if (A) {
-    ierr = MatZeroRowsColumns(A,nbcs,bc_global_ids,1.0,0,0);CHKERRQ(ierr);
+    ierr = MatZeroRowsColumns(A,nbcs,bc_global_ids,1.0,NULL,NULL);CHKERRQ(ierr);
   }
 
   ierr = PetscFree(bc_vals);CHKERRQ(ierr);

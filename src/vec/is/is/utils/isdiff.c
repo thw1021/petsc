@@ -20,6 +20,8 @@
    that are not in is1. This requires O(imax-imin) memory and O(imax-imin)
    work, where imin and imax are the bounds on the indices in is1.
 
+   If is2 is NULL, the result is the same as for an empty IS, i.e., a duplicate of is1.
+
    Level: intermediate
 
 .seealso: ISDestroy(), ISView(), ISSum(), ISExpand()
@@ -34,8 +36,12 @@ PetscErrorCode  ISDifference(IS is1,IS is2,IS *isout)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is1,IS_CLASSID,1);
-  PetscValidHeaderSpecific(is2,IS_CLASSID,2);
   PetscValidPointer(isout,3);
+  if (!is2) {
+    ierr = ISDuplicate(is1, isout);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+  PetscValidHeaderSpecific(is2,IS_CLASSID,2);
 
   ierr = ISGetIndices(is1,&i1);CHKERRQ(ierr);
   ierr = ISGetLocalSize(is1,&n1);CHKERRQ(ierr);
@@ -107,7 +113,6 @@ PetscErrorCode  ISDifference(IS is1,IS is2,IS *isout)
 
 .seealso: ISDestroy(), ISView(), ISDifference(), ISExpand()
 
-
 @*/
 PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
 {
@@ -122,7 +127,7 @@ PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
   PetscValidHeaderSpecific(is1,IS_CLASSID,1);
   PetscValidHeaderSpecific(is2,IS_CLASSID,2);
   ierr = PetscObjectGetComm((PetscObject)(is1),&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   if (size>1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Currently only for uni-processor IS");
 
   ierr = ISSorted(is1,&f);CHKERRQ(ierr);
@@ -234,7 +239,6 @@ PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
    Level: intermediate
 
 .seealso: ISDestroy(), ISView(), ISDifference(), ISSum()
-
 
 @*/
 PetscErrorCode ISExpand(IS is1,IS is2,IS *isout)
@@ -348,7 +352,7 @@ PetscErrorCode ISIntersect(IS is1,IS is2,IS *isout)
     n2  = ntemp;
   }
   ierr = ISSorted(is1,&lsorted);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&lsorted,&sorted,1,MPIU_BOOL,MPI_LAND,comm);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&lsorted,&sorted,1,MPIU_BOOL,MPI_LAND,comm);CHKERRMPI(ierr);
   if (!sorted) {
     ierr = ISDuplicate(is1,&is1sorted);CHKERRQ(ierr);
     ierr = ISSort(is1sorted);CHKERRQ(ierr);
@@ -359,7 +363,7 @@ PetscErrorCode ISIntersect(IS is1,IS is2,IS *isout)
     ierr = ISGetIndices(is1,&i1);CHKERRQ(ierr);
   }
   ierr = ISSorted(is2,&lsorted);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&lsorted,&sorted,1,MPIU_BOOL,MPI_LAND,comm);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&lsorted,&sorted,1,MPIU_BOOL,MPI_LAND,comm);CHKERRMPI(ierr);
   if (!sorted) {
     ierr = ISDuplicate(is2,&is2sorted);CHKERRQ(ierr);
     ierr = ISSort(is2sorted);CHKERRQ(ierr);
@@ -421,7 +425,6 @@ PetscErrorCode ISIntersect_Caching_Internal(IS is1, IS is2, IS *isect)
 /*@
    ISConcatenate - Forms a new IS by locally concatenating the indices from an IS list without reordering.
 
-
    Collective.
 
    Input Parameter:
@@ -438,7 +441,6 @@ PetscErrorCode ISIntersect_Caching_Internal(IS is1, IS is2, IS *isect)
    Level: intermediate
 
 .seealso: ISDifference(), ISSum(), ISExpand()
-
 
 @*/
 PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS *isout)
@@ -485,7 +487,6 @@ PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS 
    ISListToPair     -    convert an IS list to a pair of ISs of equal length defining an equivalent integer multimap.
                         Each IS on the input list is assigned an integer j so that all of the indices of that IS are
                         mapped to j.
-
 
   Collective.
 
@@ -547,7 +548,6 @@ PetscErrorCode ISListToPair(MPI_Comm comm, PetscInt listlen, IS islist[], IS *xi
   PetscFunctionReturn(0);
 }
 
-
 /*@
    ISPairToList   -   convert an IS pair encoding an integer map to a list of ISs.
                      Each IS on the output list contains the preimage for each index on the second input IS.
@@ -590,8 +590,8 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
   PetscValidIntPointer(listlen,3);
   PetscValidPointer(islist,4);
   ierr = PetscObjectGetComm((PetscObject)xis,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &size);CHKERRMPI(ierr);
   /* Extract, copy and sort the local indices and colors on the color. */
   ierr = ISGetLocalSize(coloris, &llen);CHKERRQ(ierr);
   ierr = ISGetLocalSize(indis,   &ilen);CHKERRQ(ierr);
@@ -612,8 +612,8 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
     lhigh = PetscMax(lhigh,colors[lstart]);
     ++lcount;
   }
-  ierr     = MPIU_Allreduce(&llow,&low,1,MPI_INT,MPI_MIN,comm);CHKERRQ(ierr);
-  ierr     = MPIU_Allreduce(&lhigh,&high,1,MPI_INT,MPI_MAX,comm);CHKERRQ(ierr);
+  ierr     = MPIU_Allreduce(&llow,&low,1,MPI_INT,MPI_MIN,comm);CHKERRMPI(ierr);
+  ierr     = MPIU_Allreduce(&lhigh,&high,1,MPI_INT,MPI_MAX,comm);CHKERRMPI(ierr);
   *listlen = 0;
   if (low <= high) {
     if (lcount > 0) {
@@ -645,13 +645,13 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
       }
       color = (PetscMPIInt)(colors[lstart] == l);
       /* Check whether a proper subcommunicator exists. */
-      ierr = MPIU_Allreduce(&color,&subsize,1,MPI_INT,MPI_SUM,comm);CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(&color,&subsize,1,MPI_INT,MPI_SUM,comm);CHKERRMPI(ierr);
 
       if (subsize == 1) subcomm = PETSC_COMM_SELF;
       else if (subsize == size) subcomm = comm;
       else {
         /* a proper communicator is necessary, so we create it. */
-        ierr = MPI_Comm_split(comm, color, rank, &subcomm);CHKERRQ(ierr);
+        ierr = MPI_Comm_split(comm, color, rank, &subcomm);CHKERRMPI(ierr);
       }
       if (colors[lstart] == l) {
         /* If we have l among the local colors, we create an IS to hold the corresponding indices. */
@@ -667,14 +667,13 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
          a subcomm used in the IS creation above is duplicated
          into a proper PETSc comm.
          */
-        ierr = MPI_Comm_free(&subcomm);CHKERRQ(ierr);
+        ierr = MPI_Comm_free(&subcomm);CHKERRMPI(ierr);
       }
     } /* for (l = low; l < high; ++l) */
   } /* if (low <= high) */
   ierr = PetscFree2(inds,colors);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*@
    ISEmbed   -   embed IS a into IS b by finding the locations in b that have the same indices as in a.
@@ -731,7 +730,6 @@ PetscErrorCode ISEmbed(IS a, IS b, PetscBool drop, IS *c)
   PetscFunctionReturn(0);
 }
 
-
 /*@
   ISSortPermutation  -  calculate the permutation of the indices into a nondecreasing order.
 
@@ -743,7 +741,6 @@ PetscErrorCode ISEmbed(IS a, IS b, PetscBool drop, IS *c)
 
   Output argument:
 . h    -  permutation or NULL, if f is nondecreasing and always == PETSC_FALSE.
-
 
   Note: Indices in f are unchanged. f[h[i]] is the i-th smallest f index.
         If always == PETSC_FALSE, an extra check is peformed to see whether

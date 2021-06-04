@@ -30,9 +30,6 @@ The command line options are:\n\
    Processors: n
 T*/
 
-
-
-
 /*
    User-defined application context - contains data needed by the
    application-provided call-back routines, FormFunctionGradient(),
@@ -63,7 +60,7 @@ PetscErrorCode FormHessian(Tao,Vec,Mat,Mat,void*);
 PetscErrorCode MatrixFreeHessian(Tao,Vec,Mat, Mat,void*);
 PetscErrorCode MyMatMult(Mat,Vec,Vec);
 
-int main( int argc, char **argv )
+int main(int argc, char **argv)
 {
   PetscErrorCode         ierr;                 /* used to check for functions returning nonzeros */
   PetscInt               Nx, Ny;               /* number of processors in x- and y- directions */
@@ -76,7 +73,7 @@ int main( int argc, char **argv )
   AppCtx                 user;                 /* user-defined work context */
 
   /* Initialize PETSc, TAO */
-  ierr = PetscInitialize( &argc, &argv,(char *)0,help );if (ierr) return ierr;
+  ierr = PetscInitialize(&argc, &argv,(char *)0,help);if (ierr) return ierr;
 
   /* Specify default dimension of the problem */
   user.mx = 10; user.my = 10; user.bheight=0.1;
@@ -297,9 +294,9 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G,void *
       d8 = (xt-xlt);
 
       df1dxc = d1*hydhx;
-      df2dxc = ( d1*hydhx + d4*hxdhy );
+      df2dxc = (d1*hydhx + d4*hxdhy);
       df3dxc = d3*hxdhy;
-      df4dxc = ( d2*hydhx + d3*hxdhy );
+      df4dxc = (d2*hydhx + d3*hxdhy);
       df5dxc = d2*hydhx;
       df6dxc = d4*hxdhy;
 
@@ -312,12 +309,12 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G,void *
       d7 *= rhy;
       d8 *= rhx;
 
-      f1 = PetscSqrtScalar( 1.0 + d1*d1 + d7*d7);
-      f2 = PetscSqrtScalar( 1.0 + d1*d1 + d4*d4);
-      f3 = PetscSqrtScalar( 1.0 + d3*d3 + d8*d8);
-      f4 = PetscSqrtScalar( 1.0 + d3*d3 + d2*d2);
-      f5 = PetscSqrtScalar( 1.0 + d2*d2 + d5*d5);
-      f6 = PetscSqrtScalar( 1.0 + d4*d4 + d6*d6);
+      f1 = PetscSqrtScalar(1.0 + d1*d1 + d7*d7);
+      f2 = PetscSqrtScalar(1.0 + d1*d1 + d4*d4);
+      f3 = PetscSqrtScalar(1.0 + d3*d3 + d8*d8);
+      f4 = PetscSqrtScalar(1.0 + d3*d3 + d2*d2);
+      f5 = PetscSqrtScalar(1.0 + d2*d2 + d5*d5);
+      f6 = PetscSqrtScalar(1.0 + d4*d4 + d6*d6);
 
       ft = ft + (f2 + f4);
 
@@ -328,25 +325,24 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G,void *
       df5dxc /= f5;
       df6dxc /= f6;
 
-      g[row] = (df1dxc+df2dxc+df3dxc+df4dxc+df5dxc+df6dxc ) * 0.5;
+      g[row] = (df1dxc+df2dxc+df3dxc+df4dxc+df5dxc+df6dxc) * 0.5;
 
     }
   }
-
 
   /* Compute triangular areas along the border of the domain. */
   if (xs==0){ /* left side */
     for (j=ys; j<ys+ym; j++){
       d3=(left[j-ys+1] - left[j-ys+2])*rhy;
       d2=(left[j-ys+1] - x[(j-gys)*gxm])*rhx;
-      ft = ft+PetscSqrtScalar( 1.0 + d3*d3 + d2*d2);
+      ft = ft+PetscSqrtScalar(1.0 + d3*d3 + d2*d2);
     }
   }
   if (ys==0){ /* bottom side */
     for (i=xs; i<xs+xm; i++){
       d2=(bottom[i+1-xs]-bottom[i-xs+2])*rhx;
       d3=(bottom[i-xs+1]-x[i-gxs])*rhy;
-      ft = ft+PetscSqrtScalar( 1.0 + d3*d3 + d2*d2);
+      ft = ft+PetscSqrtScalar(1.0 + d3*d3 + d2*d2);
     }
   }
 
@@ -354,31 +350,30 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G,void *
     for (j=ys; j< ys+ym; j++){
       d1=(x[(j+1-gys)*gxm-1]-right[j-ys+1])*rhx;
       d4=(right[j-ys]-right[j-ys+1])*rhy;
-      ft = ft+PetscSqrtScalar( 1.0 + d1*d1 + d4*d4);
+      ft = ft+PetscSqrtScalar(1.0 + d1*d1 + d4*d4);
     }
   }
   if (ys+ym==my){ /* top side */
     for (i=xs; i<xs+xm; i++){
       d1=(x[(gym-1)*gxm + i-gxs] - top[i-xs+1])*rhy;
       d4=(top[i-xs+1] - top[i-xs])*rhx;
-      ft = ft+PetscSqrtScalar( 1.0 + d1*d1 + d4*d4);
+      ft = ft+PetscSqrtScalar(1.0 + d1*d1 + d4*d4);
     }
   }
 
   if (ys==0 && xs==0){
     d1=(left[0]-left[1])*rhy;
     d2=(bottom[0]-bottom[1])*rhx;
-    ft +=PetscSqrtScalar( 1.0 + d1*d1 + d2*d2);
+    ft +=PetscSqrtScalar(1.0 + d1*d1 + d2*d2);
   }
   if (ys+ym == my && xs+xm == mx){
     d1=(right[ym+1] - right[ym])*rhy;
     d2=(top[xm+1] - top[xm])*rhx;
-    ft +=PetscSqrtScalar( 1.0 + d1*d1 + d2*d2);
+    ft +=PetscSqrtScalar(1.0 + d1*d1 + d2*d2);
   }
 
   ft=ft*area;
-  ierr = MPI_Allreduce(&ft,fcn,1,MPIU_REAL,MPIU_SUM,MPI_COMM_WORLD);CHKERRQ(ierr);
-
+  ierr = MPI_Allreduce(&ft,fcn,1,MPIU_REAL,MPIU_SUM,MPI_COMM_WORLD);CHKERRMPI(ierr);
 
   /* Restore vectors */
   ierr = VecRestoreArray(localX,&x);CHKERRQ(ierr);
@@ -392,7 +387,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G,void *
   ierr = DMLocalToGlobalBegin(user->dm,localG,INSERT_VALUES,G);CHKERRQ(ierr);
   ierr = DMLocalToGlobalEnd(user->dm,localG,INSERT_VALUES,G);CHKERRQ(ierr);
 
-  ierr = PetscLogFlops(70*xm*ym);CHKERRQ(ierr);
+  ierr = PetscLogFlops(70.0*xm*ym);CHKERRQ(ierr);
 
   return 0;
 }
@@ -450,7 +445,6 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat Hptr, Mat Hessian, void *ptr)
   PetscReal      v[7];
   Vec            localX = user->localX;
   PetscBool      assembled;
-
 
   /* Set various matrix options */
   ierr = MatSetOption(Hessian,MAT_IGNORE_OFF_PROC_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
@@ -521,7 +515,6 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat Hptr, Mat Hessian, void *ptr)
         xrb = x[row+1-gxm];
       }
 
-
       d1 = (xc-xl)*rhx;
       d2 = (xc-xr)*rhx;
       d3 = (xc-xt)*rhy;
@@ -531,13 +524,12 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat Hptr, Mat Hessian, void *ptr)
       d7 = (xlt-xl)*rhy;
       d8 = (xlt-xt)*rhx;
 
-      f1 = PetscSqrtScalar( 1.0 + d1*d1 + d7*d7);
-      f2 = PetscSqrtScalar( 1.0 + d1*d1 + d4*d4);
-      f3 = PetscSqrtScalar( 1.0 + d3*d3 + d8*d8);
-      f4 = PetscSqrtScalar( 1.0 + d3*d3 + d2*d2);
-      f5 = PetscSqrtScalar( 1.0 + d2*d2 + d5*d5);
-      f6 = PetscSqrtScalar( 1.0 + d4*d4 + d6*d6);
-
+      f1 = PetscSqrtScalar(1.0 + d1*d1 + d7*d7);
+      f2 = PetscSqrtScalar(1.0 + d1*d1 + d4*d4);
+      f3 = PetscSqrtScalar(1.0 + d3*d3 + d8*d8);
+      f4 = PetscSqrtScalar(1.0 + d3*d3 + d2*d2);
+      f5 = PetscSqrtScalar(1.0 + d2*d2 + d5*d5);
+      f6 = PetscSqrtScalar(1.0 + d4*d4 + d6*d6);
 
       hl = (-hydhx*(1.0+d7*d7)+d1*d7)/(f1*f1*f1)+
         (-hydhx*(1.0+d4*d4)+d1*d4)/(f2*f2*f2);
@@ -573,15 +565,15 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat Hptr, Mat Hessian, void *ptr)
 
       v[k]= hc; col[k]=row; k++;
 
-      if (i < mx-1 ){
+      if (i < mx-1){
         v[k]= hr; col[k]=row+1; k++;
       }
 
-      if (i>0 && j < my-1 ){
+      if (i>0 && j < my-1){
         v[k]= htl; col[k] = row+gxm-1; k++;
       }
 
-      if (j < my-1 ){
+      if (j < my-1){
         v[k]= ht; col[k] = row+gxm; k++;
       }
 
@@ -605,7 +597,7 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat Hptr, Mat Hessian, void *ptr)
   ierr = MatAssemblyBegin(Hessian,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(Hessian,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
-  ierr = PetscLogFlops(199*xm*ym);CHKERRQ(ierr);
+  ierr = PetscLogFlops(199.0*xm*ym);CHKERRQ(ierr);
   return 0;
 }
 
@@ -638,7 +630,6 @@ static PetscErrorCode MSA_BoundaryConditions(AppCtx * user)
   /* Get local mesh boundaries */
   ierr = DMDAGetCorners(user->dm,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
   ierr = DMDAGetGhostCorners(user->dm,&gxs,&gys,NULL,&gxm,&gym,NULL);CHKERRQ(ierr);
-
 
   bsize=xm+2;
   lsize=ym+2;
@@ -737,7 +728,6 @@ static PetscErrorCode MSA_BoundaryConditions(AppCtx * user)
   return 0;
 }
 
-
 /* ------------------------------------------------------------------- */
 /*
    MSA_Plate -  Calculates an obstacle for surface to stretch over.
@@ -779,7 +769,7 @@ static PetscErrorCode MSA_Plate(Vec XL,Vec XU,void *ctx){
         t1=(2.0*i-mx)*bmy;
         t2=(2.0*j-my)*bmx;
         t3=bmx*bmx*bmy*bmy;
-        if ( t1*t1 + t2*t2 <= t3 ){
+        if (t1*t1 + t2*t2 <= t3){
           xl[row] = user->bheight;
         }
       }
@@ -790,7 +780,7 @@ static PetscErrorCode MSA_Plate(Vec XL,Vec XU,void *ctx){
       for (j=ys; j<ys+ym; j++){
         row=(j-ys)*xm + (i-xs);
         if (i>=(mx-bmx)/2 && i<mx-(mx-bmx)/2 &&
-            j>=(my-bmy)/2 && j<my-(my-bmy)/2 ){
+            j>=(my-bmy)/2 && j<my-(my-bmy)/2){
           xl[row] = user->bheight;
         }
       }
@@ -800,7 +790,6 @@ static PetscErrorCode MSA_Plate(Vec XL,Vec XU,void *ctx){
 
   return 0;
 }
-
 
 /* ------------------------------------------------------------------- */
 /*
@@ -855,8 +844,7 @@ static PetscErrorCode MSA_InitialPoint(AppCtx * user, Vec X)
     for (j=ys; j<ys+ym; j++){
       for (i=xs; i< xs+xm; i++){
         row=(j-gys)*gxm + (i-gxs);
-        x[row] = ( (j+1)*bottom[i-xs+1]/my + (my-j+1)*top[i-xs+1]/(my+2)+
-                   (i+1)*left[j-ys+1]/mx + (mx-i+1)*right[j-ys+1]/(mx+2))/2.0;
+        x[row] = ((j+1)*bottom[i-xs+1]/my + (my-j+1)*top[i-xs+1]/(my+2)+(i+1)*left[j-ys+1]/mx + (mx-i+1)*right[j-ys+1]/(mx+2))/2.0;
       }
     }
 
@@ -896,7 +884,6 @@ PetscErrorCode MyMatMult(Mat H_shell, Vec X, Vec Y)
   ierr = MatMult(user->H,X,Y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*TEST
 
@@ -942,32 +929,32 @@ PetscErrorCode MyMatMult(Mat H_shell, Vec X, Vec Y)
       nsize: 3
       args: -tao_smonitor -mx 8 -my 12 -bmx 4 -bmy 10 -bheight 0.1 -tao_subset_type matrixfree -pc_type none -tao_type gpcg -tao_gatol 1.e-5
       requires: !single
-      
+
    test:
       suffix: 8
       args: -tao_smonitor -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bncg -tao_bncg_type gd -tao_gatol 1e-4
       requires: !single
-      
+
    test:
       suffix: 9
       args: -tao_smonitor -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bncg -tao_gatol 1e-4
       requires: !single
-      
+
    test:
       suffix: 10
       args: -tao_smonitor -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bnls -tao_gatol 1e-5
       requires: !single
-      
+
    test:
       suffix: 11
       args: -tao_smonitor -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bntr -tao_gatol 1e-5
       requires: !single
-      
+
    test:
       suffix: 12
       args: -tao_smonitor -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bntl -tao_gatol 1e-5
       requires: !single
-      
+
    test:
       suffix: 13
       args: -tao_smonitor -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bnls -tao_gatol 1e-5 -tao_bnk_max_cg_its 3
@@ -982,7 +969,7 @@ PetscErrorCode MyMatMult(Mat H_shell, Vec X, Vec Y)
       suffix: 15
       args: -tao_smonitor -mx 8 -my 6 -bmx 3 -bmy 3 -bheight 0.2 -tao_type bntl -tao_gatol 1e-5 -tao_bnk_max_cg_its 3
       requires: !single
-      
+
    test:
      suffix: 16
      args: -tao_smonitor -mx 8 -my 8 -bmx 2 -bmy 5 -bheight 0.3 -tao_gatol 1e-4 -tao_type bqnls

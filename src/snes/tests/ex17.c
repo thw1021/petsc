@@ -6,8 +6,6 @@ Concepts: SNES^basic uniprocessor example, block objects
 Processors: 1
 T*/
 
-
-
 /*
 Include "petscsnes.h" so that we can use SNES solvers.  Note that this
 file automatically includes:
@@ -56,7 +54,6 @@ static PetscErrorCode FormFunction1_block(SNES,Vec,Vec,void*);
 static PetscErrorCode FormJacobian2_block(SNES,Vec,Mat,Mat,void*);
 static PetscErrorCode FormFunction2_block(SNES,Vec,Vec,void*);
 
-
 static PetscErrorCode assembled_system(void)
 {
   SNES           snes;         /* nonlinear solver context */
@@ -70,7 +67,7 @@ static PetscErrorCode assembled_system(void)
   PetscBool      flg;
 
   PetscFunctionBeginUser;
-  PetscPrintf(PETSC_COMM_WORLD, "\n\n========================= Assembled system =========================\n\n");
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "\n\n========================= Assembled system =========================\n\n");CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   Create nonlinear solver context
@@ -160,7 +157,6 @@ static PetscErrorCode assembled_system(void)
     ierr = SNESGetFunction(snes,&f,0,0);CHKERRQ(ierr);
     ierr = VecView(r,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }
-
   ierr = PetscPrintf(PETSC_COMM_SELF,"number of SNES iterations = %D\n\n",its);CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -207,7 +203,6 @@ static PetscErrorCode FormFunction1(SNES snes,Vec x,Vec f,void *dummy)
   */
   ff[0] = xx[0]*xx[0] + xx[0]*xx[1] - 3.0;
   ff[1] = xx[0]*xx[1] + xx[1]*xx[1] - 6.0;
-
 
   /*
   Restore vectors
@@ -265,7 +260,6 @@ static PetscErrorCode FormJacobian1(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
   PetscFunctionReturn(0);
 }
 
-
 /* ------------------------------------------------------------------- */
 static PetscErrorCode FormFunction2(SNES snes,Vec x,Vec f,void *dummy)
 {
@@ -302,7 +296,7 @@ static PetscErrorCode FormFunction2(SNES snes,Vec x,Vec f,void *dummy)
 static PetscErrorCode FormJacobian2(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 {
   const PetscScalar *xx;
-  PetscScalar       A[4];  
+  PetscScalar       A[4];
   PetscErrorCode    ierr;
   PetscInt          idx[2] = {0,1};
 
@@ -334,7 +328,7 @@ static PetscErrorCode FormJacobian2(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
   PetscFunctionReturn(0);
 }
 
-static int block_system(void)
+static PetscErrorCode block_system(void)
 {
   SNES           snes;         /* nonlinear solver context */
   KSP            ksp;         /* linear solver context */
@@ -346,14 +340,14 @@ static int block_system(void)
   PetscScalar    pfive = .5;
   PetscBool      flg;
 
-  Mat j11, j12, j21, j22;
-  Vec x1, x2, r1, r2;
-  Vec bv;
-  Vec bx[2];
-  Mat bA[2][2];
+  Mat            j11, j12, j21, j22;
+  Vec            x1, x2, r1, r2;
+  Vec            bv;
+  Vec            bx[2];
+  Mat            bA[2][2];
 
   PetscFunctionBeginUser;
-  PetscPrintf(PETSC_COMM_WORLD, "\n\n========================= Block system =========================\n\n");
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "\n\n========================= Block system =========================\n\n");CHKERRQ(ierr);
 
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
 
@@ -672,18 +666,13 @@ int main(int argc,char **argv)
   PetscErrorCode ierr;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  if (size != 1) SETERRQ(PETSC_COMM_WORLD, 1,"This is a uniprocessor example only!");
-
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  if (size != 1) SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
   ierr = assembled_system();CHKERRQ(ierr);
-
   ierr = block_system();CHKERRQ(ierr);
-
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

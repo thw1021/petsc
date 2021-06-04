@@ -67,9 +67,14 @@ static PetscErrorCode PetscSortReal_Private(PetscReal *v,PetscInt right)
 +  n  - number of values
 -  v  - array of doubles
 
+   Notes:
+   This function serves as an alternative to PetscRealSortSemiOrdered(), and may perform faster especially if the array
+   is completely random. There are exceptions to this and so it is __highly__ recomended that the user benchmark their
+   code to see which routine is fastest.
+
    Level: intermediate
 
-.seealso: PetscSortInt(), PetscSortRealWithPermutation(), PetscSortRealWithArrayInt()
+.seealso: PetscRealSortSemiOrdered(), PetscSortInt(), PetscSortRealWithPermutation(), PetscSortRealWithArrayInt()
 @*/
 PetscErrorCode  PetscSortReal(PetscInt n,PetscReal v[])
 {
@@ -182,7 +187,7 @@ PetscErrorCode PetscFindReal(PetscReal key, PetscInt n, const PetscReal t[], Pet
   PetscInt lo = 0,hi = n;
 
   PetscFunctionBegin;
-  PetscValidPointer(loc,4);
+  PetscValidPointer(loc,5);
   if (!n) {*loc = -1; PetscFunctionReturn(0);}
   PetscValidPointer(t,3);
   PetscCheckSorted(n,t);
@@ -348,4 +353,3 @@ PetscErrorCode  PetscSortSplitReal(PetscInt ncut,PetscInt n,PetscReal a[],PetscI
   }
   PetscFunctionReturn(0);
 }
-

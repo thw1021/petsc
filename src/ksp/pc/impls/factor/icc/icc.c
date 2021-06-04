@@ -4,25 +4,36 @@
 static PetscErrorCode PCSetUp_ICC(PC pc)
 {
   PC_ICC                 *icc = (PC_ICC*)pc->data;
-  IS                     perm,cperm;
+  IS                     perm = NULL,cperm = NULL;
   PetscErrorCode         ierr;
   MatInfo                info;
   MatSolverType          stype;
   MatFactorError         err;
+  PetscBool              canuseordering;
 
   PetscFunctionBegin;
   pc->failedreason = PC_NOERROR;
-  ierr = MatGetOrdering(pc->pmat, ((PC_Factor*)icc)->ordering,&perm,&cperm);CHKERRQ(ierr);
 
   ierr = MatSetErrorIfFailure(pc->pmat,pc->erroriffailure);CHKERRQ(ierr);
   if (!pc->setupcalled) {
     if (!((PC_Factor*)icc)->fact) {
       ierr = MatGetFactor(pc->pmat,((PC_Factor*)icc)->solvertype,MAT_FACTOR_ICC,&((PC_Factor*)icc)->fact);CHKERRQ(ierr);
     }
+    ierr = MatFactorGetCanUseOrdering(((PC_Factor*)icc)->fact,&canuseordering);CHKERRQ(ierr);
+    if (canuseordering) {
+      ierr = PCFactorSetDefaultOrdering_Factor(pc);CHKERRQ(ierr);
+      ierr = MatGetOrdering(pc->pmat, ((PC_Factor*)icc)->ordering,&perm,&cperm);CHKERRQ(ierr);
+    }
     ierr = MatICCFactorSymbolic(((PC_Factor*)icc)->fact,pc->pmat,perm,&((PC_Factor*)icc)->info);CHKERRQ(ierr);
   } else if (pc->flag != SAME_NONZERO_PATTERN) {
+    PetscBool canuseordering;
     ierr = MatDestroy(&((PC_Factor*)icc)->fact);CHKERRQ(ierr);
     ierr = MatGetFactor(pc->pmat,((PC_Factor*)icc)->solvertype,MAT_FACTOR_ICC,&((PC_Factor*)icc)->fact);CHKERRQ(ierr);
+    ierr = MatFactorGetCanUseOrdering(((PC_Factor*)icc)->fact,&canuseordering);CHKERRQ(ierr);
+    if (canuseordering) {
+      ierr = PCFactorSetDefaultOrdering_Factor(pc);CHKERRQ(ierr);
+      ierr = MatGetOrdering(pc->pmat, ((PC_Factor*)icc)->ordering,&perm,&cperm);CHKERRQ(ierr);
+    }
     ierr = MatICCFactorSymbolic(((PC_Factor*)icc)->fact,pc->pmat,perm,&((PC_Factor*)icc)->info);CHKERRQ(ierr);
   }
   ierr                = MatGetInfo(((PC_Factor*)icc)->fact,MAT_LOCAL,&info);CHKERRQ(ierr);
@@ -36,7 +47,7 @@ static PetscErrorCode PCSetUp_ICC(PC pc)
     pc->failedreason = (PCFailedReason)err;
     PetscFunctionReturn(0);
   }
- 
+
   ierr = MatCholeskyFactorNumeric(((PC_Factor*)icc)->fact,pc->pmat,&((PC_Factor*)icc)->info);CHKERRQ(ierr);
   ierr = MatFactorGetError(((PC_Factor*)icc)->fact,&err);CHKERRQ(ierr);
   if (err) { /* FactorNumeric() fails */
@@ -82,6 +93,16 @@ static PetscErrorCode PCApply_ICC(PC pc,Vec x,Vec y)
 
   PetscFunctionBegin;
   ierr = MatSolve(((PC_Factor*)icc)->fact,x,y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PCMatApply_ICC(PC pc,Mat X,Mat Y)
+{
+  PC_ICC         *icc = (PC_ICC*)pc->data;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatMatSolve(((PC_Factor*)icc)->fact,X,Y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -155,10 +176,9 @@ extern PetscErrorCode  PCFactorSetDropTolerance_ILU(PC,PetscReal,PetscReal,Petsc
           to turn off the shift.
 
    References:
-.  1. - TONY F. CHAN AND HENK A. VAN DER VORST, Review article: APPROXIMATE AND INCOMPLETE FACTORIZATIONS, 
+.  1. - TONY F. CHAN AND HENK A. VAN DER VORST, Review article: APPROXIMATE AND INCOMPLETE FACTORIZATIONS,
       Chapter in Parallel Numerical Algorithms, edited by D. Keyes, A. Semah, V. Venkatakrishnan, ICASE/LaRC Interdisciplinary Series in
       Science and Engineering, Kluwer.
-
 
 .seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC, PCSOR, MatOrderingType,
            PCFactorSetZeroPivot(), PCFactorSetShiftType(), PCFactorSetShiftAmount(),
@@ -175,15 +195,14 @@ PETSC_EXTERN PetscErrorCode PCCreate_ICC(PC pc)
   PetscFunctionBegin;
   ierr     = PetscNewLog(pc,&icc);CHKERRQ(ierr);
   pc->data = (void*)icc;
-  ierr     = PCFactorInitialize(pc);CHKERRQ(ierr);
-  ierr     = PetscStrallocpy(MATORDERINGNATURAL,(char**)&((PC_Factor*)icc)->ordering);CHKERRQ(ierr);
+  ierr     = PCFactorInitialize(pc, MAT_FACTOR_ICC);CHKERRQ(ierr);
 
-  ((PC_Factor*)icc)->factortype     = MAT_FACTOR_ICC;
   ((PC_Factor*)icc)->info.fill      = 1.0;
   ((PC_Factor*)icc)->info.dtcol     = PETSC_DEFAULT;
   ((PC_Factor*)icc)->info.shifttype = (PetscReal) MAT_SHIFT_POSITIVE_DEFINITE;
 
   pc->ops->apply               = PCApply_ICC;
+  pc->ops->matapply            = PCMatApply_ICC;
   pc->ops->applytranspose      = PCApply_ICC;
   pc->ops->setup               = PCSetUp_ICC;
   pc->ops->reset               = PCReset_ICC;
@@ -194,5 +213,3 @@ PETSC_EXTERN PetscErrorCode PCCreate_ICC(PC pc)
   pc->ops->applysymmetricright = PCApplySymmetricRight_ICC;
   PetscFunctionReturn(0);
 }
-
-

@@ -14,6 +14,7 @@ class Configure(config.package.Package):
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
+    self.valgrind = framework.require('config.packages.valgrind',self)
     return
 
   def configureLibrary(self):
@@ -22,6 +23,12 @@ class Configure(config.package.Package):
     if hasattr(self.argDB,'known-64-bit-blas-indices') and self.argDB['known-64-bit-blas-indices']:
       raise RuntimeError('fblaslapack does not support -known-64-bit-blas-indices')
     config.package.Package.configureLibrary(self)
+
+  def alternateConfigureLibrary(self):
+    '''The Apple Accelerate library uses threads that valgrind cannot handle'''
+    if self.valgrind.found and config.setCompilers.Configure.isDarwin(self.log):
+      if not self.argDB['download-f2cblaslapack']:
+        self.logPrintBox('WARNING: If you plan to use valgrind you must use --download-fblaslapack or --download-f2cblaslapack')
 
   def Install(self):
     import os
@@ -38,14 +45,14 @@ class Configure(config.package.Package):
         cc = self.compilers.CC
         line = 'CC = '+cc+'\n'
       if line.startswith('COPTFLAGS '):
-        self.setCompilers.pushLanguage('C')
-        line = 'COPTFLAGS  = '+self.setCompilers.getCompilerFlags()
+        self.pushLanguage('C')
+        line = 'COPTFLAGS  = '+self.getCompilerFlags()
         noopt = self.checkNoOptFlag()
-        self.setCompilers.popLanguage()
+        self.popLanguage()
       if line.startswith('CNOOPT'):
-        self.setCompilers.pushLanguage('C')
-        line = 'CNOOPT = '+noopt+ ' '+self.getSharedFlag(self.setCompilers.getCompilerFlags())+' '+self.getPointerSizeFlag(self.setCompilers.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.setCompilers.getCompilerFlags())
-        self.setCompilers.popLanguage()
+        self.pushLanguage('C')
+        line = 'CNOOPT = '+noopt+ ' '+self.getSharedFlag(self.getCompilerFlags())+' '+self.getPointerSizeFlag(self.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.getCompilerFlags())
+        self.popLanguage()
       if line.startswith('FC  '):
         fc = self.compilers.FC
         if fc.find('f90') >= 0 or fc.find('f95') >=0:
@@ -54,24 +61,14 @@ class Configure(config.package.Package):
             self.log.write('Using IBM f90 compiler, switching to xlf for compiling BLAS/LAPACK\n')
         line = 'FC = '+fc+'\n'
       if line.startswith('FOPTFLAGS '):
-        self.setCompilers.pushLanguage('FC')
-        line = 'FOPTFLAGS  = '+self.setCompilers.getCompilerFlags().replace('-Mfree','')
-        if config.setCompilers.Configure.isNAG(self.setCompilers.getLinker(), self.log):
-          line = line + ' -dusty -dcfuns'
-        elif config.setCompilers.Configure.isGfortran100plus(self.setCompilers.getCompiler(), self.log):
-          line = line + ' -fallow-argument-mismatch'
-        line = line + '\n'
+        self.pushLanguage('FC')
+        line = 'FOPTFLAGS  = '+self.updatePackageFFlags(self.getCompilerFlags())+'\n'
         noopt = self.checkNoOptFlag()
-        self.setCompilers.popLanguage()
+        self.popLanguage()
       if line.startswith('FNOOPT'):
-        self.setCompilers.pushLanguage('FC')
-        line = 'FNOOPT = '+noopt+' '+self.getSharedFlag(self.setCompilers.getCompilerFlags())+' '+self.getPointerSizeFlag(self.setCompilers.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.setCompilers.getCompilerFlags())
-        if config.setCompilers.Configure.isNAG(self.setCompilers.getLinker(), self.log):
-          line = line + ' -dusty -dcfuns'
-        elif config.setCompilers.Configure.isGfortran100plus(self.setCompilers.getCompiler(), self.log):
-          line = line + ' -fallow-argument-mismatch'
-        line = line + '\n'
-        self.setCompilers.popLanguage()
+        self.pushLanguage('FC')
+        line = 'FNOOPT = '+noopt+' '+self.getSharedFlag(self.getCompilerFlags())+' '+self.getPointerSizeFlag(self.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.getCompilerFlags())+' '+self.updatePackageFFlags('')+'\n'
+        self.popLanguage()
       if line.startswith('AR  '):
         line = 'AR      = '+self.setCompilers.AR+'\n'
       if line.startswith('AR_FLAGS  '):

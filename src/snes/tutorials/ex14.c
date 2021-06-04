@@ -12,8 +12,6 @@ The command line options include:\n\
    Processors: n
 T*/
 
-
-
 /* ------------------------------------------------------------------------
 
     Solid Fuel Ignition (SFI) problem.  This problem is modeled by
@@ -28,7 +26,6 @@ T*/
     A finite difference approximation with the usual 7-point stencil
     is used to discretize the boundary value problem to obtain a nonlinear
     system of equations.
-
 
   ------------------------------------------------------------------------- */
 
@@ -45,7 +42,6 @@ T*/
 #include <petscdm.h>
 #include <petscdmda.h>
 #include <petscsnes.h>
-
 
 /*
    User-defined application context - contains data needed by the
@@ -275,7 +271,7 @@ PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
 
    Input Parameters:
 .  snes - the SNES context
-.  localX - input vector, this contains the ghosted region needed 
+.  localX - input vector, this contains the ghosted region needed
 .  ptr - optional user-defined context, as set by SNESSetFunction()
 
    Output Parameter:
@@ -500,8 +496,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec X,Mat J,Mat jac,void *ptr)
   ierr = MatSetOption(jac,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-
 
 /*TEST
 

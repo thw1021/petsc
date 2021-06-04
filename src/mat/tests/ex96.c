@@ -66,8 +66,8 @@ int main(int argc,char **argv)
 
   if (user.coarse.mz) Test_3D = PETSC_TRUE;
 
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-Npx",&Npx,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-Npy",&Npy,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-Npz",&Npz,NULL);CHKERRQ(ierr);
@@ -161,7 +161,7 @@ int main(int argc,char **argv)
       ierr   = MatMatMult(A_tmp,P,MAT_REUSE_MATRIX,fill,&C);CHKERRQ(ierr);
     }
     /* Free intermediate data structures created for reuse of C=Pt*A*P */
-    ierr = MatFreeIntermediateDataStructures(C);CHKERRQ(ierr);
+    ierr = MatProductClear(C);CHKERRQ(ierr);
 
     /* Test MatDuplicate()        */
     /*----------------------------*/
@@ -212,7 +212,7 @@ int main(int argc,char **argv)
     }
 
     /* Free intermediate data structures created for reuse of C=Pt*A*P */
-    ierr = MatFreeIntermediateDataStructures(C);CHKERRQ(ierr);
+    ierr = MatProductClear(C);CHKERRQ(ierr);
 
     /* Test MatDuplicate()        */
     /*----------------------------*/

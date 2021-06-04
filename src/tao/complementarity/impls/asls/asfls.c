@@ -52,7 +52,6 @@
        University of Wisconsin  Madison, 1999.
 */
 
-
 static PetscErrorCode TaoSetUp_ASFLS(Tao tao)
 {
   TAO_SSLS       *asls = (TAO_SSLS *)tao->data;
@@ -158,7 +157,7 @@ static PetscErrorCode TaoSolve_ASFLS(Tao tao)
     ierr = TaoMonitor(tao,tao->niter,asls->merit,ndpsi,0.0,t);CHKERRQ(ierr);
     ierr = (*tao->ops->convergencetest)(tao,tao->cnvP);CHKERRQ(ierr);
     if (TAO_CONTINUE_ITERATING != tao->reason) break;
-    
+
     /* Call general purpose update function */
     if (tao->ops->update) {
       ierr = (*tao->ops->update)(tao, tao->niter, tao->user_update);CHKERRQ(ierr);
@@ -255,7 +254,6 @@ static PetscErrorCode TaoSolve_ASFLS(Tao tao)
 
     /* Add the direction in the free variables back into the real direction. */
     ierr = VecISAXPY(tao->stepdirection, asls->free, 1.0,asls->dxfree);CHKERRQ(ierr);
-
 
     /* Check the projected real direction for descent and if not, use the negative
        gradient direction. */

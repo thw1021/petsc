@@ -17,7 +17,6 @@
 !   Concepts: KSP^solving a system of linear equations
 !T*/
 
-
 ! -----------------------------------------------------------------------
       program main
 #include <petsc/finclude/petscksp.h>
@@ -29,8 +28,8 @@
       KSP              ksp
       PetscErrorCode   ierr
       PetscViewer viewer
-      PetscInt qj,qi,ne,M,Istart,Iend,geq,ix
-      PetscInt ki,kj,lint,nel,ll,j1,i1,ndf,f4
+      PetscInt qj,qi,ne,M,Istart,Iend,geq
+      PetscInt ki,kj,nel,ll,j1,i1,ndf,f4
       PetscInt f2,f9,f6,one
       PetscInt :: idx(4)
       PetscBool  flg,out_matlab
@@ -73,10 +72,10 @@
       call PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-epsilon',eps,flg,ierr)
       ki = 2
       call PetscOptionsGetRealArray(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-blob_center',blb,ki,flg,ierr)
-      if ( .not. flg ) then
+      if (.not. flg) then
          blb(1) = 0.0
          blb(2) = 0.0
-      else if ( ki .ne. 2 ) then
+      else if (ki .ne. 2) then
          print *, 'error: ', ki,' arguments read for -blob_center.  Needs to be two.'
       endif
       call PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-out_matlab',out_matlab,flg,ierr)
@@ -91,22 +90,24 @@
 !  Create matrix.  When using MatCreate(), the matrix format can
 !  be specified at runtime.
       call MatCreate(PETSC_COMM_WORLD,Amat,ierr)
-      call MatSetSizes( Amat,PETSC_DECIDE, PETSC_DECIDE, M, M, ierr )
-      if ( size == 1 ) then
-         call MatSetType( Amat, MATAIJ, ierr )
+      call MatSetSizes( Amat,PETSC_DECIDE, PETSC_DECIDE, M, M, ierr)
+      call MatSetType( Amat, MATAIJ, ierr)
+      call MatSetOption(Amat,MAT_SPD,PETSC_TRUE,ierr)
+      if (size == 1) then
+         call MatSetType( Amat, MATAIJ, ierr)
       else
-         call MatSetType( Amat, MATMPIAIJ, ierr )
+         call MatSetType( Amat, MATMPIAIJ, ierr)
       endif
       call MatMPIAIJSetPreallocation(Amat,f9,PETSC_NULL_INTEGER,f6,PETSC_NULL_INTEGER, ierr)
-      call MatSetFromOptions( Amat, ierr )
-      call MatSetUp( Amat, ierr )
-      call MatGetOwnershipRange( Amat, Istart, Iend, ierr )
+      call MatSetFromOptions( Amat, ierr)
+      call MatSetUp( Amat, ierr)
+      call MatGetOwnershipRange( Amat, Istart, Iend, ierr)
 !  Create vectors.  Note that we form 1 vector from scratch and
 !  then duplicate as needed.
-      call MatCreateVecs( Amat, PETSC_NULL_VEC, xvec, ierr )
-      call VecSetFromOptions( xvec, ierr )
-      call VecDuplicate( xvec, bvec, ierr )
-      call VecDuplicate( xvec, uvec, ierr )
+      call MatCreateVecs( Amat, PETSC_NULL_VEC, xvec, ierr)
+      call VecSetFromOptions( xvec, ierr)
+      call VecDuplicate( xvec, bvec, ierr)
+      call VecDuplicate( xvec, uvec, ierr)
 !  Assemble matrix.
 !   - Note that MatSetValues() uses 0-based row and column numbers
 !     in Fortran as well as in C (as set here in the array "col").
@@ -114,19 +115,17 @@
       nel = 4                   ! nodes per element (quad)
       ndf = 1
       call int2d(f2,sg)
-      lint = 4
-      ix = 0
       do geq=Istart,Iend-1,1
          qj = geq/(ne+1); qi = mod(geq,(ne+1))
          x = h*qi - 1.0; y = h*qj - 1.0 ! lower left corner (-1,-1)
-         if ( qi < ne .and. qj < ne ) then
+         if (qi < ne .and. qj < ne) then
             coord(1,1) = x;   coord(2,1) = y
             coord(1,2) = x+h; coord(2,2) = y
             coord(1,3) = x+h; coord(2,3) = y+h
             coord(1,4) = x;   coord(2,4) = y+h
 ! form stiff
             ss = 0.0
-            do ll = 1,lint
+            do ll = 1,4
                call shp2dquad(sg(1,ll),sg(2,ll),coord,shp,xsj,f2)
                xsj = xsj*sg(3,ll)*thk
                call thfx2d(ev,coord,shp,dd,f2,f2,f4,ex54_psi)
@@ -148,13 +147,13 @@
 
             idx(1) = geq; idx(2) = geq+1; idx(3) = geq+(ne+1)+1
             idx(4) = geq+(ne+1)
-            if ( qj > 0 ) then
+            if (qj > 0) then
                call MatSetValues(Amat,f4,idx,f4,idx,ss,ADD_VALUES,ierr)
             else                !     a BC
                do ki=1,4,1
                   do kj=1,4,1
-                     if (ki<3 .or. kj<3 ) then
-                        if ( ki==kj ) then
+                     if (ki<3 .or. kj<3) then
+                        if (ki==kj) then
                            ss(ki,kj) = .1*ss(ki,kj)
                         else
                            ss(ki,kj) = 0.0
@@ -165,7 +164,7 @@
                call MatSetValues(Amat,f4,idx,f4,idx,ss,ADD_VALUES,ierr)
             endif               ! BC
          endif                  ! add element
-         if ( qj > 0 ) then      ! set rhs
+         if (qj > 0) then      ! set rhs
             val = h*h*exp(-100*((x+h/2)-blb(1))**2)*exp(-100*((y+h/2)-blb(2))**2)
             call VecSetValues(bvec,one,geq,val,INSERT_VALUES,ierr)
          endif
@@ -203,11 +202,10 @@
       call KSPSolve(ksp,bvec,xvec,ierr)
       CHKERRA(ierr)
 
-
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                      output
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      if ( out_matlab ) then
+      if (out_matlab) then
          call PetscViewerBinaryOpen(PETSC_COMM_WORLD,'Amat',FILE_MODE_WRITE,viewer,ierr)
          call MatView(Amat,viewer,ierr)
          call PetscViewerDestroy(viewer,ierr)
@@ -227,7 +225,7 @@
          call VecView(uvec,viewer,ierr)
          call PetscViewerDestroy(viewer,ierr)
 
-         if ( rank == 0 ) then
+         if (rank == 0) then
             open(1,file='ex54f.m', FORM='formatted')
             write (1,*) 'A = PetscBinaryRead(''Amat'');'
             write (1,*) '[m n] = size(A);'
@@ -401,18 +399,13 @@
 !     l       - Number of points/direction
 
 !     Outputs:
-!     lint    - Total number of points
 !     sg(3,*) - Array of points and weights
 !-----[--.----+----.----+----.-----------------------------------------]
       implicit  none
-      PetscInt   l,i,lint,lr(9),lz(9)
+      PetscInt   l,i,lr(9),lz(9)
       PetscReal    g,third,sg(3,*)
       data      lr/-1,1,1,-1,0,1,0,-1,0/,lz/-1,-1,1,1,-1,0,1,0,0/
       data      third / 0.3333333333333333 /
-
-!     Set number of total points
-
-      lint = l*l
 
 !     2x2 integration
       g = sqrt(third)
@@ -432,7 +425,7 @@
       PetscReal x,y,theta
       common /ex54_theta/ theta
       ex54_psi = theta
-      if ( theta < 0. ) then     ! circular
+      if (theta < 0.) then     ! circular
          if (y==0) then
             ex54_psi = 2.0*atan(1.0)
          else
@@ -445,11 +438,10 @@
 !/*TEST
 !
 !   build:
-!      requires: !pgf90_compiler
 !
 !   test:
 !      nsize: 4
-!      args: -ne 39 -theta 30.0 -epsilon 1.e-1 -blob_center 0.,0. -ksp_type cg -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.05 -mat_coarsen_type hem -pc_gamg_square_graph 0 -ksp_monitor_short -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 5
+!      args: -ne 39 -theta 30.0 -epsilon 1.e-1 -blob_center 0.,0. -ksp_type cg -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.05 -mat_coarsen_type hem -pc_gamg_square_graph 0 -ksp_monitor_short -pc_gamg_esteig_ksp_max_it 5
 !      requires: !single
 !
 !TEST*/

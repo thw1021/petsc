@@ -123,13 +123,13 @@ static PetscErrorCode DMCreateMatrix_Stag(DM dm,Mat *mat)
       default : SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported stencil");
     }
     width = (dof[0] + dof[1] + dof[2] + dof[3]) * nNeighbors;
-    ierr = MatCreateAIJ(PETSC_COMM_WORLD,entries,entries,PETSC_DETERMINE,PETSC_DETERMINE,width,NULL,width,NULL,mat);CHKERRQ(ierr);
+    ierr = MatCreateAIJ(PetscObjectComm((PetscObject)dm),entries,entries,PETSC_DETERMINE,PETSC_DETERMINE,width,NULL,width,NULL,mat);CHKERRQ(ierr);
   } else if (isshell) {
     ierr = MatCreate(PetscObjectComm((PetscObject)dm),mat);CHKERRQ(ierr);
     ierr = MatSetSizes(*mat,entries,entries,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
     ierr = MatSetType(*mat,MATSHELL);CHKERRQ(ierr);
     ierr = MatSetUp(*mat);CHKERRQ(ierr);
-  } else SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Not implemented for Mattype %s",matType);
+  } else SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Not implemented for Mattype %s",matType);
 
   ierr = DMGetLocalToGlobalMapping(dm,&ltogmap);CHKERRQ(ierr);
   ierr = MatSetLocalToGlobalMapping(*mat,ltogmap,ltogmap);CHKERRQ(ierr);
@@ -158,13 +158,13 @@ static PetscErrorCode DMGetCompatibility_Stag(DM dm,DM dm2,PetscBool *compatible
   }
 
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_compare(comm,PetscObjectComm((PetscObject)dm2),&sameComm);CHKERRQ(ierr);
+  ierr = MPI_Comm_compare(comm,PetscObjectComm((PetscObject)dm2),&sameComm);CHKERRMPI(ierr);
   if (sameComm != MPI_IDENT) {
     ierr = PetscInfo2((PetscObject)dm,"DMStag objects have different communicators: %d != %d\n",comm,PetscObjectComm((PetscObject)dm2));CHKERRQ(ierr);
     *set = PETSC_FALSE;
     PetscFunctionReturn(0);
   }
-  ierr = DMGetDimension(dm ,&dim );CHKERRQ(ierr);
+  ierr = DMGetDimension(dm ,&dim);CHKERRQ(ierr);
   ierr = DMGetDimension(dm2,&dim2);CHKERRQ(ierr);
   if (dim != dim2) {
     ierr = PetscInfo((PetscObject)dm,"DMStag objects have different dimensions");CHKERRQ(ierr);
@@ -212,7 +212,6 @@ static PetscErrorCode DMGetCompatibility_Stag(DM dm,DM dm2,PetscBool *compatible
   *compatible = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
-
 
 /*
 Note there are several orderings in play here.
@@ -339,8 +338,8 @@ static PetscErrorCode DMView_Stag(DM dm,PetscViewer viewer)
   PetscInt        dim,maxRanksToView,i;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)dm),&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)dm),&size);CHKERRMPI(ierr);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
@@ -370,7 +369,7 @@ static PetscErrorCode DMView_Stag(DM dm,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer," %D:%D",i,stag->dof[i]);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
-    if(dm->coordinateDM) {
+    if (dm->coordinateDM) {
       ierr = PetscViewerASCIIPrintf(viewer,"Has coordinate DM\n");CHKERRQ(ierr);
     }
     maxRanksToView = 16;
@@ -391,7 +390,7 @@ static PetscErrorCode DMView_Stag(DM dm,PetscViewer viewer)
           break;
         default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"not implemented for dim==%D",dim);
       }
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local native entries: %d\n",rank,stag->entries     );CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local native entries: %d\n",rank,stag->entries);CHKERRQ(ierr);
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local entries total : %d\n",rank,stag->entriesGhost);CHKERRQ(ierr);
       ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);

@@ -87,9 +87,6 @@ PetscErrorCode MatLUFactorNumeric_Essl(Mat F,Mat A,const MatFactorInfo *info)
   PetscFunctionReturn(0);
 }
 
-
-
-
 PetscErrorCode MatLUFactorSymbolic_Essl(Mat B,Mat A,IS r,IS c,const MatFactorInfo *info)
 {
   Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
@@ -161,6 +158,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_essl(Mat A,MatFactorType ftype,M
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatFactorGetSolverType_C",MatFactorGetSolverType_essl);CHKERRQ(ierr);
 
   B->factortype = MAT_FACTOR_LU;
+  ierr = PetscStrallocpy(MATORDERINGEXTERNAL,(char**)&B->preferredordering[MAT_FACTOR_LU);CHKERRQ(ierr);
   ierr = PetscFree(B->solvertype);CHKERRQ(ierr);
   ierr = PetscStrallocpy(MATSOLVERESSL,&B->solvertype);CHKERRQ(ierr);
 

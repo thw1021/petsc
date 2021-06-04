@@ -63,7 +63,7 @@ $(generated) : $(petscconf) $(petscvariables) config/gmakegen.py
 	$(PYTHON) ./config/gmakegen.py --petsc-arch=$(PETSC_ARCH)
 
 # Skip including generated files (which triggers rebuilding them) when we're just going to clean anyway.
-ifneq ($(filter-out clean check,$(MAKECMDGOALS:clean%=clean)),)
+ifneq ($(filter-out clean check info,$(MAKECMDGOALS:clean%=clean)),)
 include $(generated)
 endif
 
@@ -71,11 +71,29 @@ endif
 ifeq ($(PETSC_DLL_EXPORTS),1)
 $(OBJDIR)/%.o : CCPPFLAGS+=-Dpetsc_EXPORTS
 $(OBJDIR)/%.o : CXXCPPFLAGS+=-Dpetsc_EXPORTS
+$(OBJDIR)/%.o : CUDACPPFLAGS+=-Dpetsc_EXPORTS
 endif
 
-langs := F F90 cu cxx c
+langs := F F90 cxx c
+ifneq ($(CUDAC),)
+langs += cu
+endif
+ifneq ($(HIPC),)
+langs += hip.cpp
+endif
+ifneq ($(SYCLCPP),)
+langs += sycl.cxx
+endif
+ifneq ($(KOKKOS_LIB),)
+langs += kokkos.cxx
+endif
+
 concatlang = $(foreach lang, $(langs), $(srcs-$(1).$(lang):src/%.$(lang)=$(OBJDIR)/%.o))
 srcs.o := $(foreach pkg, $(pkgs), $(call concatlang,$(pkg)))
+concatlangsrc = $(foreach lang, $(langs), $(srcs-$(1).$(lang)))
+csrc := $(foreach pkg, $(pkgs),  $(srcs-$(pkg).c))
+showcsrc:
+	-@echo $(csrc)
 
 define SHARED_RECIPE_DLL
   @$(RM) $@ dllcmd.${PETSC_ARCH}
@@ -106,6 +124,14 @@ define ARCHIVE_RECIPE_WIN32FE_LIB
   @$(RM) $@.args
 endef
 
+define ARCHIVE_RECIPE_ARGFILE
+  @$(RM) $@
+  $(file > $@.args,$^)
+  $(call quiet,AR) $(AR_FLAGS) $@ @$@.args
+  @$(RM) $@.args
+  $(call quiet,RANLIB) $@
+endef
+
 define ARCHIVE_RECIPE_DEFAULT
   @$(RM) $@
   $(call quiet,AR) $(AR_FLAGS) $@ $^
@@ -113,7 +139,7 @@ define ARCHIVE_RECIPE_DEFAULT
 endef
 
 %.$(AR_LIB_SUFFIX) : $$(obj) | $$(@D)/.DIR
-	$(if $(findstring win32fe lib,$(AR)),$(ARCHIVE_RECIPE_WIN32FE_LIB),$(ARCHIVE_RECIPE_DEFAULT))
+	$(if $(findstring win32fe lib,$(AR)),$(ARCHIVE_RECIPE_WIN32FE_LIB),$(if $(findstring yes,$(AR_ARGFILE)),$(if $(findstring 3.99,$(firstword $(sort 3.99 $(MAKE_VERSION)))),$(ARCHIVE_RECIPE_ARGFILE),$(ARCHIVE_RECIPE_DEFAULT)),$(ARCHIVE_RECIPE_DEFAULT)))
 
 # with-single-library=0
 libpkg = $(foreach pkg, $1, $(LIBDIR)/libpetsc$(pkg).$(SL_LINKER_SUFFIX))
@@ -158,8 +184,18 @@ $(call soname_function,%) : $(call libname_function,%)
 $(OBJDIR)/%.o : src/%.c | $$(@D)/.DIR
 	$(PETSC_COMPILE.c) $(abspath $<) -o $@
 
+$(OBJDIR)/%.o : src/%.kokkos.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.kokkos.cxx) $(abspath $<) -o $@
+
 $(OBJDIR)/%.o : src/%.cxx | $$(@D)/.DIR
 	$(PETSC_COMPILE.cxx) $(abspath $<) -o $@
+
+#$(OBJDIR)/%.hip.o : src/%.hip.cpp | $$(@D)/.DIR
+$(OBJDIR)/%.o : src/%.hip.cpp | $$(@D)/.DIR
+	$(PETSC_COMPILE.hip.cpp) $(abspath $<) -o $@
+
+$(OBJDIR)/%.o : src/%.sycl.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.sycl.cxx) $(abspath $<) -o $@
 
 $(OBJDIR)/%.o : src/%.cu | $$(@D)/.DIR
 	$(PETSC_COMPILE.cu) $(abspath $<) -o $@ # Compile first so that if there is an error, it comes from a normal compile
@@ -193,6 +229,7 @@ $(OBJDIR)/mat/f90-mod/petscmatmod.o   : $(OBJDIR)/vec/f90-mod/petscvecmod.o
 $(OBJDIR)/dm/f90-mod/petscdmmod.o     : $(OBJDIR)/mat/f90-mod/petscmatmod.o
 $(OBJDIR)/dm/f90-mod/petscdmdamod.o   : $(OBJDIR)/dm/f90-mod/petscdmmod.o
 $(OBJDIR)/dm/f90-mod/petscdmplexmod.o : $(OBJDIR)/dm/f90-mod/petscdmmod.o
+$(OBJDIR)/dm/f90-mod/petscdmswarmmod.o : $(OBJDIR)/dm/f90-mod/petscdmmod.o
 $(OBJDIR)/ksp/f90-mod/petsckspdefmod.o : $(OBJDIR)/dm/f90-mod/petscdmplexmod.o
 $(OBJDIR)/ksp/f90-mod/petscpcmod.o    : $(OBJDIR)/ksp/f90-mod/petsckspdefmod.o
 $(OBJDIR)/ksp/f90-mod/petsckspmod.o   : $(OBJDIR)/ksp/f90-mod/petscpcmod.o
@@ -202,6 +239,7 @@ $(OBJDIR)/tao/f90-mod/petsctaomod.o   : $(OBJDIR)/ts/f90-mod/petsctsmod.o
 # F2003 interface
 $(OBJDIR)/sys/objects/f2003-src/fsrc/optionenum.o   : $(OBJDIR)/sys/f90-mod/petscsysmod.o
 $(OBJDIR)/sys/classes/bag/f2003-src/fsrc/bagenum.o  : $(OBJDIR)/sys/f90-mod/petscsysmod.o
+src/sys/objects/init.c   : src/sys/objects/cupminit.inc
 
 # all sources should get recompiled when petscvariables changes (i.e when configure is rerun or when petscvariables is manually edited.)
 $(srcs.o) : $(petscvariables)

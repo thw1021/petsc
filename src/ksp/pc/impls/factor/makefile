@@ -1,4 +1,4 @@
--include ../petscdir.mk
+-include ../../../../../petscdir.mk
 ALL: lib
 
 CFLAGS    =
@@ -6,7 +6,7 @@ FFLAGS    =
 SOURCEC   = factor.c factimpl.c
 SOURCEH   = factor.h
 LIBBASE   = libpetscksp
-DIRS      = lu ilu icc cholesky
+DIRS      = lu ilu icc cholesky qr
 LOCDIR    = src/ksp/pc/impls/factor/
 MANSEC    = KSP
 SUBMANSEC = PC

@@ -16,7 +16,7 @@
   PetscInfoFilename determines where PetscInfo() output is piped.
   PetscInfoClassnames holds a char array of classes which are filtered out/for in PetscInfo() calls.
 */
-const char * const        PetscInfoCommFlags[] = {"all", "no_self", "only_self", "PetscInfoCommFlag", "PETSC_INFO_COMM_", 0};
+const char * const        PetscInfoCommFlags[] = {"all", "no_self", "only_self", "PetscInfoCommFlag", "PETSC_INFO_COMM_", NULL};
 static PetscBool          PetscInfoClassesLocked = PETSC_FALSE, PetscInfoInvertClasses = PETSC_FALSE, PetscInfoClassesSet = PETSC_FALSE;
 static char               **PetscInfoClassnames = NULL;
 static char               *PetscInfoFilename = NULL;
@@ -111,7 +111,7 @@ PetscErrorCode PetscInfoSetFile(const char filename[], const char mode[])
     PetscValidCharPointer(filename, 1);
     ierr = PetscFixFilename(filename, fname);CHKERRQ(ierr);
     ierr = PetscStrallocpy(fname, &PetscInfoFilename);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);CHKERRMPI(ierr);
     sprintf(tname, ".%d", rank);
     ierr = PetscStrcat(fname, tname);CHKERRQ(ierr);
     oldflag = PetscLogPrintInfo; PetscLogPrintInfo = PETSC_FALSE;
@@ -362,7 +362,7 @@ PetscErrorCode PetscInfoSetFromOptions(PetscOptions options)
 
   PetscFunctionBegin;
   ierr = PetscOptionsDeprecated_Private(NULL,"-info_exclude", NULL, "3.13", "Use -info instead");CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(options, NULL, "-info", optstring, PETSC_MAX_PATH_LEN, &set);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(options, NULL, "-info", optstring, sizeof(optstring), &set);CHKERRQ(ierr);
   if (set) {
     PetscInfoClassesSet = PETSC_TRUE;
     ierr = PetscInfoAllow(PETSC_TRUE);CHKERRQ(ierr);
@@ -531,7 +531,7 @@ $   -info [filename][:[~]<list,of,classnames>[:[~]self]]
     The optional <list,of,classnames> is a comma separated list of enabled classes, e.g. vec,mat,ksp.
     If this list is not specified, all classes are enabled.
     Prepending the list with ~ means inverted selection, i.e. all classes except the listed are enabled.
-    A special classname sys relates to PetscInfo() with obj being NULL. 
+    A special classname sys relates to PetscInfo() with obj being NULL.
 
     The optional self keyword specifies that PetscInfo() is enabled only for communicator size = 1 (e.g. PETSC_COMM_SELF), i.e. only PetscInfo() calls which print from every rank of PETSC_COMM_WORLD are enabled.
     By contrast, ~self means that PetscInfo() is enabled only for communicator size > 1 (e.g. PETSC_COMM_WORLD), i.e. those PetscInfo() calls which print from every rank of PETSC_COMM_WORLD are disabled.
@@ -584,8 +584,8 @@ PetscErrorCode  PetscInfo_Private(const char func[],PetscObject obj, const char 
   if (!enabled) PetscFunctionReturn(0);
   PetscValidCharPointer(message,3);
   if (obj) {
-    ierr = MPI_Comm_rank(obj->comm, &rank);CHKERRQ(ierr);
-    ierr = MPI_Comm_size(obj->comm, &size);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(obj->comm, &rank);CHKERRMPI(ierr);
+    ierr = MPI_Comm_size(obj->comm, &size);CHKERRMPI(ierr);
   }
   /* rank > 0 always jumps out */
   if (rank) PetscFunctionReturn(0);
@@ -598,7 +598,7 @@ PetscErrorCode  PetscInfo_Private(const char func[],PetscObject obj, const char 
   }
   /* Mute info messages within this function */
   oldflag = PetscLogPrintInfo; PetscLogPrintInfo = PETSC_FALSE;
-  ierr = MPI_Comm_rank(MPI_COMM_WORLD, &urank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(MPI_COMM_WORLD, &urank);CHKERRMPI(ierr);
   va_start(Argp, message);
   sprintf(string, "[%d] %s(): ",urank,func);
   ierr = PetscStrlen(string, &len);CHKERRQ(ierr);

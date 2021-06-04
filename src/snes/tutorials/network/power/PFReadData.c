@@ -28,7 +28,7 @@ PetscErrorCode PFReadMatPowerData(PFDATA *pf,char *filename)
   /* Check for valid file */
   if (!fp) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Can't open Matpower data file %s",filename);
   pf->nload=0;
-  while(fgets(line,MAXLINE,fp)) {
+  while (fgets(line,MAXLINE,fp)) {
     if (strstr(line,"mpc.bus = ["))    bus_start_line = line_counter+1; /* Bus data starts from next line */
     if (strstr(line,"mpc.gen") && gen_start_line == -1)    gen_start_line = line_counter+1; /* Generator data starts from next line */
     if (strstr(line,"mpc.branch")) br_start_line = line_counter+1; /* Branch data starts from next line */
@@ -51,8 +51,6 @@ PetscErrorCode PFReadMatPowerData(PFDATA *pf,char *filename)
   pf->nbus    = bus_end_line - bus_start_line;
   pf->ngen    = gen_end_line - gen_start_line;
   pf->nbranch = br_end_line  - br_start_line;
-
-  ierr = PetscPrintf(PETSC_COMM_SELF,"nb = %D, ngen = %D, nload = %D, nbranch = %D\n",pf->nbus,pf->ngen,pf->nload,pf->nbranch);CHKERRQ(ierr);
 
   ierr = PetscCalloc1(pf->nbus,&pf->bus);CHKERRQ(ierr);
   ierr = PetscCalloc1(pf->ngen,&pf->gen);CHKERRQ(ierr);
@@ -83,15 +81,15 @@ PetscErrorCode PFReadMatPowerData(PFDATA *pf,char *filename)
       busext2intmap[Bus[busi].bus_i] = busi;
 
       if (!((Pd == 0.0) && (Qd == 0.0))) {
-	Load[loadi].bus_i = Bus[busi].bus_i;
-	Load[loadi].status = 1;
-	Load[loadi].pl = Pd;
-	Load[loadi].ql = Qd;
-	Load[loadi].area = Bus[busi].area;
-	Load[loadi].internal_i = busi;
-	Bus[busi].lidx[Bus[busi].nload++] = loadi;
-	if (Bus[busi].nload > NLOAD_AT_BUS_MAX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Exceeded maximum number of loads allowed at bus");
-	loadi++;
+        Load[loadi].bus_i = Bus[busi].bus_i;
+        Load[loadi].status = 1;
+        Load[loadi].pl = Pd;
+        Load[loadi].ql = Qd;
+        Load[loadi].area = Bus[busi].area;
+        Load[loadi].internal_i = busi;
+        Bus[busi].lidx[Bus[busi].nload++] = loadi;
+        if (Bus[busi].nload > NLOAD_AT_BUS_MAX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Exceeded maximum number of loads allowed at bus");
+        loadi++;
       }
       busi++;
     }
@@ -125,7 +123,7 @@ PetscErrorCode PFReadMatPowerData(PFDATA *pf,char *filename)
       Branch[bri].rateA = rateA; Branch[bri].rateB = rateB; Branch[bri].rateC = rateC;
       Branch[bri].tapratio = tapratio; Branch[bri].phaseshift = phaseshift;
 
-      if(Branch[bri].tapratio == 0.0) Branch[bri].tapratio = 1.0;
+      if (Branch[bri].tapratio == 0.0) Branch[bri].tapratio = 1.0;
       Branch[bri].phaseshift *= PETSC_PI/180.0;
 
       intbusnum = busext2intmap[Branch[bri].fbus];
@@ -149,9 +147,9 @@ PetscErrorCode PFReadMatPowerData(PFDATA *pf,char *filename)
       tapr = tap*PetscCosScalar(shift);
       tapi = tap*PetscSinScalar(shift);
 
-      Branch[bri].yff[0] = G/tap2; 
+      Branch[bri].yff[0] = G/tap2;
       Branch[bri].yff[1] = (B+Bc/2.0)/tap2;
-      
+
       Branch[bri].yft[0] = -(G*tapr - B*tapi)/tap2;
       Branch[bri].yft[1] = -(B*tapr + G*tapi)/tap2;
 

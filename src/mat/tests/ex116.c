@@ -30,7 +30,7 @@ int main(int argc,char **args)
   PetscReal      tols[2];
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"This is a uniprocessor example only!");
 
   ierr = PetscOptionsHasName(NULL,NULL, "-test_syev", &flg);CHKERRQ(ierr);
@@ -39,7 +39,7 @@ int main(int argc,char **args)
   }
 
   /* Determine files from which we read the two matrices */
-  ierr = PetscOptionsGetString(NULL,NULL,"-f",file[0],PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-f",file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
 
   /* Load matrix A */
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[0],FILE_MODE_READ,&fd);CHKERRQ(ierr);
@@ -253,7 +253,6 @@ PetscErrorCode CkEigenSolutions(PetscInt cklvl,Mat A,PetscInt il,PetscInt iu,Pet
   ierr = VecDestroy(&vt1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*TEST
 

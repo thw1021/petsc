@@ -1,46 +1,20 @@
-#include <../src/mat/impls/elemental/matelemimpl.h> /*I "petscmat.h" I*/
+#include <petsc/private/petscelemental.h>
+
+const char ElementalCitation[] = "@Article{Elemental2012,\n"
+"  author  = {Jack Poulson and Bryan Marker and Jeff R. Hammond and Nichols A. Romero and Robert {v}an~{d}e~{G}eijn},\n"
+"  title   = {Elemental: A New Framework for Distributed Memory Dense Matrix Computations},\n"
+"  journal = {{ACM} Transactions on Mathematical Software},\n"
+"  volume  = {39},\n"
+"  number  = {2},\n"
+"  year    = {2013}\n"
+"}\n";
+static PetscBool ElementalCite = PETSC_FALSE;
 
 /*
     The variable Petsc_Elemental_keyval is used to indicate an MPI attribute that
   is attached to a communicator, in this case the attribute is a Mat_Elemental_Grid
 */
 static PetscMPIInt Petsc_Elemental_keyval = MPI_KEYVAL_INVALID;
-
-/*@C
-   PetscElementalInitializePackage - Initialize Elemental package
-
-   Logically Collective
-
-   Level: developer
-
-.seealso: MATELEMENTAL, PetscElementalFinalizePackage()
-@*/
-PetscErrorCode PetscElementalInitializePackage(void)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (El::Initialized()) PetscFunctionReturn(0);
-  El::Initialize();   /* called by the 1st call of MatCreate_Elemental */
-  ierr = PetscRegisterFinalize(PetscElementalFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-   PetscElementalFinalizePackage - Finalize Elemental package
-
-   Logically Collective
-
-   Level: developer
-
-.seealso: MATELEMENTAL, PetscElementalInitializePackage()
-@*/
-PetscErrorCode PetscElementalFinalizePackage(void)
-{
-  PetscFunctionBegin;
-  El::Finalize();  /* called by PetscFinalize() */
-  PetscFunctionReturn(0);
-}
 
 static PetscErrorCode MatView_Elemental(Mat A,PetscViewer viewer)
 {
@@ -65,7 +39,7 @@ static PetscErrorCode MatView_Elemental(Mat A,PetscViewer viewer)
 
     } else if (format == PETSC_VIEWER_DEFAULT) {
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
-      El::Print( *a->emat, "Elemental matrix (cyclic ordering)" );
+      El::Print( *a->emat, "Elemental matrix (cyclic ordering)");
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_TRUE);CHKERRQ(ierr);
       if (A->factortype == MAT_FACTOR_NONE){
         Mat Adense;
@@ -95,14 +69,14 @@ static PetscErrorCode MatGetInfo_Elemental(Mat A,MatInfoType flag,MatInfo *info)
     info->nz_allocated   = (*a->emat).AllocatedMemory(); /* locally allocated */
     info->nz_used        = info->nz_allocated;
   } else if (flag == MAT_GLOBAL_MAX) {
-    //ierr = MPIU_Allreduce(isend,irecv,5,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)matin));CHKERRQ(ierr);
+    //ierr = MPIU_Allreduce(isend,irecv,5,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)matin));CHKERRMPI(ierr);
     /* see MatGetInfo_MPIAIJ() for getting global info->nz_allocated! */
     //SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP," MAT_GLOBAL_MAX not written yet");
   } else if (flag == MAT_GLOBAL_SUM) {
     //SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP," MAT_GLOBAL_SUM not written yet");
     info->nz_allocated   = (*a->emat).AllocatedMemory(); /* locally allocated */
     info->nz_used        = info->nz_allocated; /* assume Elemental does accurate allocation */
-    //ierr = MPIU_Allreduce(isend,irecv,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)A));CHKERRQ(ierr);
+    //ierr = MPIU_Allreduce(isend,irecv,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)A));CHKERRMPI(ierr);
     //PetscPrintf(PETSC_COMM_SELF,"    ... [%d] locally allocated %g\n",rank,info->nz_allocated);
   }
 
@@ -158,7 +132,7 @@ static PetscErrorCode MatSetValues_Elemental(Mat A,PetscInt nr,const PetscInt *r
         P2RO(A,1,cols[j],&crank,&cidx);
         RO2E(A,1,crank,cidx,&ecol);
         if (crank < 0 || cidx < 0 || ecol < 0) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Incorrect col translation");
-        if (!a->emat->IsLocal(erow,ecol) ){ /* off-proc entry */
+        if (!a->emat->IsLocal(erow,ecol)){ /* off-proc entry */
           /* printf("Will later remotely update (%d,%d)\n",erow,ecol); */
           if (imode != ADD_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Only ADD_VALUES to off-processor entry is supported");
           ++numQueues;
@@ -174,7 +148,7 @@ static PetscErrorCode MatSetValues_Elemental(Mat A,PetscInt nr,const PetscInt *r
     }
 
     /* printf("numQueues=%d\n",numQueues); */
-    a->emat->Reserve( numQueues );
+    a->emat->Reserve( numQueues);
     for (i=0; i<nr; i++) {
       if (rows[i] < 0) continue;
       P2RO(A,0,rows[i],&rrank,&ridx);
@@ -183,9 +157,9 @@ static PetscErrorCode MatSetValues_Elemental(Mat A,PetscInt nr,const PetscInt *r
         if (cols[j] < 0) continue;
         P2RO(A,1,cols[j],&crank,&cidx);
         RO2E(A,1,crank,cidx,&ecol);
-        if ( !a->emat->IsLocal(erow,ecol) ) { /*off-proc entry*/
+        if (!a->emat->IsLocal(erow,ecol)) { /*off-proc entry*/
           /* printf("Queueing remotely update of (%d,%d)\n",erow,ecol); */
-          a->emat->QueueUpdate( erow, ecol, vals[i*nc+j] );
+          a->emat->QueueUpdate( erow, ecol, vals[i*nc+j]);
         }
       }
     }
@@ -200,7 +174,7 @@ static PetscErrorCode MatSetValues_Elemental(Mat A,PetscInt nr,const PetscInt *r
         P2RO(A,0,rows[i],&rrank,&ridx);
         RO2E(A,0,rrank,ridx,&erow);
         if (rrank < 0 || ridx < 0 || erow < 0) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Incorrect row translation");
-        if (!a->emat->IsLocal(erow,ecol) ){ /* off-proc entry */
+        if (!a->emat->IsLocal(erow,ecol)){ /* off-proc entry */
           /* printf("Will later remotely update (%d,%d)\n",erow,ecol); */
           if (imode != ADD_VALUES) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Only ADD_VALUES to off-processor entry is supported");
           ++numQueues;
@@ -216,7 +190,7 @@ static PetscErrorCode MatSetValues_Elemental(Mat A,PetscInt nr,const PetscInt *r
     }
 
     /* printf("numQueues=%d\n",numQueues); */
-    a->emat->Reserve( numQueues );
+    a->emat->Reserve( numQueues);
     for (j=0; j<nc; j++) {
       if (cols[j] < 0) continue;
       P2RO(A,1,cols[j],&crank,&cidx);
@@ -226,9 +200,9 @@ static PetscErrorCode MatSetValues_Elemental(Mat A,PetscInt nr,const PetscInt *r
         if (rows[i] < 0) continue;
         P2RO(A,0,rows[i],&rrank,&ridx);
         RO2E(A,0,rrank,ridx,&erow);
-        if ( !a->emat->IsLocal(erow,ecol) ) { /*off-proc entry*/
+        if (!a->emat->IsLocal(erow,ecol)) { /*off-proc entry*/
           /* printf("Queueing remotely update of (%d,%d)\n",erow,ecol); */
-          a->emat->QueueUpdate( erow, ecol, vals[i+j*nr] );
+          a->emat->QueueUpdate( erow, ecol, vals[i+j*nr]);
         }
       }
     }
@@ -402,7 +376,6 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_Elemental(Mat C)
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
-  ierr = MatSetType(C,MATELEMENTAL);CHKERRQ(ierr);
   switch (product->type) {
   case MATPRODUCT_AB:
     ierr = MatProductSetFromOptions_Elemental_AB(C);CHKERRQ(ierr);
@@ -410,7 +383,54 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_Elemental(Mat C)
   case MATPRODUCT_ABt:
     ierr = MatProductSetFromOptions_Elemental_ABt(C);CHKERRQ(ierr);
     break;
-  default: SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_SUP,"MatProduct type %s is not supported for Elemental and Elemental matrices",MatProductTypes[product->type]);
+  default:
+    break;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatMatMultNumeric_Elemental_MPIDense(Mat A,Mat B,Mat C)
+{
+  Mat            Be,Ce;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatConvert(B,MATELEMENTAL,MAT_INITIAL_MATRIX,&Be);CHKERRQ(ierr);
+  ierr = MatMatMult(A,Be,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&Ce);CHKERRQ(ierr);
+  ierr = MatConvert(Ce,MATMPIDENSE,MAT_REUSE_MATRIX,&C);CHKERRQ(ierr);
+  ierr = MatDestroy(&Be);CHKERRQ(ierr);
+  ierr = MatDestroy(&Ce);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatMatMultSymbolic_Elemental_MPIDense(Mat A,Mat B,PetscReal fill,Mat C)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatSetSizes(C,A->rmap->n,B->cmap->n,PETSC_DECIDE,PETSC_DECIDE);CHKERRQ(ierr);
+  ierr = MatSetType(C,MATMPIDENSE);CHKERRQ(ierr);
+  ierr = MatSetUp(C);CHKERRQ(ierr);
+  C->ops->matmultnumeric = MatMatMultNumeric_Elemental_MPIDense;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatProductSetFromOptions_Elemental_MPIDense_AB(Mat C)
+{
+  PetscFunctionBegin;
+  C->ops->matmultsymbolic = MatMatMultSymbolic_Elemental_MPIDense;
+  C->ops->productsymbolic = MatProductSymbolic_AB;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatProductSetFromOptions_Elemental_MPIDense(Mat C)
+{
+  PetscErrorCode ierr;
+  Mat_Product    *product = C->product;
+
+  PetscFunctionBegin;
+  if (product->type == MATPRODUCT_AB) {
+    ierr = MatProductSetFromOptions_Elemental_MPIDense_AB(C);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -638,13 +658,24 @@ static PetscErrorCode MatSolveAdd_Elemental(Mat A,Vec B,Vec Y,Vec X)
 
 static PetscErrorCode MatMatSolve_Elemental(Mat A,Mat B,Mat X)
 {
-  Mat_Elemental *a=(Mat_Elemental*)A->data;
-  Mat_Elemental *b=(Mat_Elemental*)B->data;
-  Mat_Elemental *x=(Mat_Elemental*)X->data;
-  PetscInt      pivoting = a->pivoting;
+  Mat_Elemental  *a = (Mat_Elemental*)A->data;
+  Mat_Elemental  *x;
+  Mat            C;
+  PetscInt       pivoting = a->pivoting;
+  PetscBool      flg;
+  MatType        type;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  El::Copy(*b->emat,*x->emat);
+  ierr = MatGetType(X,&type);CHKERRQ(ierr);
+  ierr = PetscStrcmp(type,MATELEMENTAL,&flg);CHKERRQ(ierr);
+  if (!flg) {
+    ierr = MatConvert(B,MATELEMENTAL,MAT_INITIAL_MATRIX,&C);CHKERRQ(ierr);
+    x = (Mat_Elemental*)C->data;
+  } else {
+    x = (Mat_Elemental*)X->data;
+    El::Copy(*((Mat_Elemental*)B->data)->emat,*x->emat);
+  }
   switch (A->factortype) {
   case MAT_FACTOR_LU:
     if (pivoting == 0) {
@@ -661,6 +692,10 @@ static PetscErrorCode MatMatSolve_Elemental(Mat A,Mat B,Mat X)
   default:
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unfactored Matrix or Unsupported MatFactorType");
     break;
+  }
+  if (!flg) {
+    ierr = MatConvert(C,type,MAT_REUSE_MATRIX,&X);CHKERRQ(ierr);
+    ierr = MatDestroy(&C);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -700,7 +735,7 @@ static PetscErrorCode  MatLUFactorNumeric_Elemental(Mat F,Mat A,const MatFactorI
 static PetscErrorCode  MatLUFactorSymbolic_Elemental(Mat F,Mat A,IS r,IS c,const MatFactorInfo *info)
 {
   PetscFunctionBegin;
-  /* F is create and allocated by MatGetFactor_elemental_petsc(), skip this routine. */
+  /* F is created and allocated by MatGetFactor_elemental_petsc(), skip this routine. */
   PetscFunctionReturn(0);
 }
 
@@ -733,7 +768,7 @@ static PetscErrorCode MatCholeskyFactorNumeric_Elemental(Mat F,Mat A,const MatFa
 static PetscErrorCode MatCholeskyFactorSymbolic_Elemental(Mat F,Mat A,IS perm,const MatFactorInfo *info)
 {
   PetscFunctionBegin;
-  /* F is create and allocated by MatGetFactor_elemental_petsc(), skip this routine. */
+  /* F is created and allocated by MatGetFactor_elemental_petsc(), skip this routine. */
   PetscFunctionReturn(0);
 }
 
@@ -756,6 +791,7 @@ static PetscErrorCode MatGetFactor_elemental_elemental(Mat A,MatFactorType ftype
   ierr = MatSetType(B,MATELEMENTAL);CHKERRQ(ierr);
   ierr = MatSetUp(B);CHKERRQ(ierr);
   B->factortype = ftype;
+  B->trivialsymbolic = PETSC_TRUE;
   ierr = PetscFree(B->solvertype);CHKERRQ(ierr);
   ierr = PetscStrallocpy(MATSOLVERELEMENTAL,&B->solvertype);CHKERRQ(ierr);
 
@@ -790,7 +826,7 @@ static PetscErrorCode MatNorm_Elemental(Mat A,NormType type,PetscReal *nrm)
     *nrm = El::InfinityNorm(*a->emat);
     break;
   default:
-    printf("Error: unsupported norm type!\n");
+    SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Unsupported norm type");
   }
   PetscFunctionReturn(0);
 }
@@ -1087,15 +1123,16 @@ static PetscErrorCode MatDestroy_Elemental(Mat A)
 
   El::mpi::Comm cxxcomm(PetscObjectComm((PetscObject)A));
   ierr = PetscCommDuplicate(cxxcomm.comm,&icomm,NULL);CHKERRQ(ierr);
-  ierr = MPI_Comm_get_attr(icomm,Petsc_Elemental_keyval,(void**)&commgrid,(int*)&flg);CHKERRQ(ierr);
+  ierr = MPI_Comm_get_attr(icomm,Petsc_Elemental_keyval,(void**)&commgrid,(int*)&flg);CHKERRMPI(ierr);
   if (--commgrid->grid_refct == 0) {
     delete commgrid->grid;
     ierr = PetscFree(commgrid);CHKERRQ(ierr);
-    ierr = MPI_Comm_free_keyval(&Petsc_Elemental_keyval);CHKERRQ(ierr);
+    ierr = MPI_Comm_free_keyval(&Petsc_Elemental_keyval);CHKERRMPI(ierr);
   }
   ierr = PetscCommDestroy(&icomm);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatGetOwnershipIS_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatFactorGetSolverType_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_elemental_mpidense_C",NULL);CHKERRQ(ierr);
   ierr = PetscFree(A->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1112,10 +1149,10 @@ PetscErrorCode MatSetUp_Elemental(Mat A)
   ierr = PetscLayoutSetUp(A->rmap);CHKERRQ(ierr);
   ierr = PetscLayoutSetUp(A->cmap);CHKERRQ(ierr);
 
-  /* Check if local row and clomun sizes are equally distributed.
+  /* Check if local row and column sizes are equally distributed.
      Jed: Elemental uses "element" cyclic ordering so the sizes need to match that
      exactly.  The strategy in MatElemental is for PETSc to implicitly permute to block ordering (like would be returned by
-     PetscSplitOwnership(comm,&n,&N)), at which point Elemental matrices can act on PETSc vectors without redistributing the vectors. */
+     PetscSplitOwnership(comm,&n,&N), at which point Elemental matrices can act on PETSc vectors without redistributing the vectors. */
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
   n = PETSC_DECIDE;
   ierr = PetscSplitOwnership(comm,&n,&A->rmap->N);CHKERRQ(ierr);
@@ -1128,8 +1165,8 @@ PetscErrorCode MatSetUp_Elemental(Mat A)
   a->emat->Resize(A->rmap->N,A->cmap->N);CHKERRQ(ierr);
   El::Zero(*a->emat);
 
-  ierr = MPI_Comm_size(A->rmap->comm,&rsize);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(A->cmap->comm,&csize);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(A->rmap->comm,&rsize);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(A->cmap->comm,&csize);CHKERRMPI(ierr);
   if (csize != rsize) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Cannot use row and column communicators of different sizes");
   a->commsize = rsize;
   a->mr[0] = A->rmap->N % rsize; if (!a->mr[0]) a->mr[0] = rsize;
@@ -1352,7 +1389,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_Elemental(Mat A)
   PetscInt           optv1;
 
   PetscFunctionBegin;
-  ierr = PetscElementalInitializePackage();CHKERRQ(ierr);
   ierr = PetscMemcpy(A->ops,&MatOps_Values,sizeof(struct _MatOps));CHKERRQ(ierr);
   A->insertmode = NOT_SET_VALUES;
 
@@ -1364,10 +1400,11 @@ PETSC_EXTERN PetscErrorCode MatCreate_Elemental(Mat A)
 
   /* Grid needs to be shared between multiple Mats on the same communicator, implement by attribute caching on the MPI_Comm */
   if (Petsc_Elemental_keyval == MPI_KEYVAL_INVALID) {
-    ierr = MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN,MPI_COMM_NULL_DELETE_FN,&Petsc_Elemental_keyval,(void*)0);CHKERRQ(ierr);
+    ierr = MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN,MPI_COMM_NULL_DELETE_FN,&Petsc_Elemental_keyval,(void*)0);CHKERRMPI(ierr);
+    ierr = PetscCitationsRegister(ElementalCitation,&ElementalCite);CHKERRQ(ierr);
   }
   ierr = PetscCommDuplicate(cxxcomm.comm,&icomm,NULL);CHKERRQ(ierr);
-  ierr = MPI_Comm_get_attr(icomm,Petsc_Elemental_keyval,(void**)&commgrid,(int*)&flg);CHKERRQ(ierr);
+  ierr = MPI_Comm_get_attr(icomm,Petsc_Elemental_keyval,(void**)&commgrid,(int*)&flg);CHKERRMPI(ierr);
   if (!flg) {
     ierr = PetscNewLog(A,&commgrid);CHKERRQ(ierr);
 
@@ -1375,16 +1412,14 @@ PETSC_EXTERN PetscErrorCode MatCreate_Elemental(Mat A)
     /* displayed default grid sizes (CommSize,1) are set by us arbitrarily until El::Grid() is called */
     ierr = PetscOptionsInt("-mat_elemental_grid_height","Grid Height","None",El::mpi::Size(cxxcomm),&optv1,&flg1);CHKERRQ(ierr);
     if (flg1) {
-      if (El::mpi::Size(cxxcomm) % optv1 != 0) {
-        SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Grid Height %D must evenly divide CommSize %D",optv1,(PetscInt)El::mpi::Size(cxxcomm));
-      }
+      if (El::mpi::Size(cxxcomm) % optv1) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Grid Height %D must evenly divide CommSize %D",optv1,(PetscInt)El::mpi::Size(cxxcomm));
       commgrid->grid = new El::Grid(cxxcomm,optv1); /* use user-provided grid height */
     } else {
       commgrid->grid = new El::Grid(cxxcomm); /* use Elemental default grid sizes */
       /* printf("new commgrid->grid = %p\n",commgrid->grid);  -- memory leak revealed by valgrind? */
     }
     commgrid->grid_refct = 1;
-    ierr = MPI_Comm_set_attr(icomm,Petsc_Elemental_keyval,(void*)commgrid);CHKERRQ(ierr);
+    ierr = MPI_Comm_set_attr(icomm,Petsc_Elemental_keyval,(void*)commgrid);CHKERRMPI(ierr);
 
     a->pivoting    = 1;
     ierr = PetscOptionsInt("-mat_elemental_pivoting","Pivoting","None",a->pivoting,&a->pivoting,NULL);CHKERRQ(ierr);
@@ -1399,6 +1434,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_Elemental(Mat A)
   a->roworiented = PETSC_TRUE;
 
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatGetOwnershipIS_C",MatGetOwnershipIS_Elemental);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_elemental_mpidense_C",MatProductSetFromOptions_Elemental_MPIDense);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)A,MATELEMENTAL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

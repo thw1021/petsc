@@ -154,12 +154,12 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)a_Prol,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = ISGetSize(selected_2, &nselected_2);CHKERRQ(ierr);
   if (nselected_2 == 1 || nselected_2 == 2) { /* 0 happens on idle processors */
     *a_worst_best = 100.0; /* this will cause a stop, but not globalized (should not happen) */
   } else *a_worst_best = 0.0;
-  ierr = MPIU_Allreduce(a_worst_best, &tm, 1, MPIU_REAL, MPIU_MAX, comm);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(a_worst_best, &tm, 1, MPIU_REAL, MPIU_MAX, comm);CHKERRMPI(ierr);
   if (tm > 0.0) {
     *a_worst_best = 100.0;
     PetscFunctionReturn(0);
@@ -187,34 +187,34 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
   in.numberofedges         = 0;
   in.numberofholes         = 0;
   in.numberofregions       = 0;
-  in.trianglelist          = 0;
-  in.segmentmarkerlist     = 0;
-  in.pointattributelist    = 0;
-  in.pointmarkerlist       = 0;
-  in.triangleattributelist = 0;
-  in.trianglearealist      = 0;
-  in.segmentlist           = 0;
-  in.holelist              = 0;
-  in.regionlist            = 0;
-  in.edgelist              = 0;
-  in.edgemarkerlist        = 0;
-  in.normlist              = 0;
+  in.trianglelist          = NULL;
+  in.segmentmarkerlist     = NULL;
+  in.pointattributelist    = NULL;
+  in.pointmarkerlist       = NULL;
+  in.triangleattributelist = NULL;
+  in.trianglearealist      = NULL;
+  in.segmentlist           = NULL;
+  in.holelist              = NULL;
+  in.regionlist            = NULL;
+  in.edgelist              = NULL;
+  in.edgemarkerlist        = NULL;
+  in.normlist              = NULL;
 
   /* triangulate */
-  mid.pointlist = 0;            /* Not needed if -N switch used. */
+  mid.pointlist = NULL;          /* Not needed if -N switch used. */
   /* Not needed if -N switch used or number of point attributes is zero: */
-  mid.pointattributelist = 0;
-  mid.pointmarkerlist    = 0; /* Not needed if -N or -B switch used. */
-  mid.trianglelist       = 0;    /* Not needed if -E switch used. */
+  mid.pointattributelist = NULL;
+  mid.pointmarkerlist    = NULL; /* Not needed if -N or -B switch used. */
+  mid.trianglelist       = NULL; /* Not needed if -E switch used. */
   /* Not needed if -E switch used or number of triangle attributes is zero: */
-  mid.triangleattributelist = 0;
-  mid.neighborlist          = 0; /* Needed only if -n switch used. */
+  mid.triangleattributelist = NULL;
+  mid.neighborlist          = NULL; /* Needed only if -n switch used. */
   /* Needed only if segments are output (-p or -c) and -P not used: */
-  mid.segmentlist = 0;
+  mid.segmentlist = NULL;
   /* Needed only if segments are output (-p or -c) and -P and -B not used: */
-  mid.segmentmarkerlist = 0;
-  mid.edgelist          = 0;    /* Needed only if -e switch used. */
-  mid.edgemarkerlist    = 0; /* Needed if -e used and -B not used. */
+  mid.segmentmarkerlist = NULL;
+  mid.edgelist          = NULL; /* Needed only if -e switch used. */
+  mid.edgemarkerlist    = NULL; /* Needed if -e used and -B not used. */
   mid.numberoftriangles = 0;
 
   /* Triangulate the points.  Switches are chosen to read and write a  */
@@ -280,9 +280,7 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
       level++;
     }
   }
-#if defined PETSC_GAMG_USE_LOG
   ierr = PetscLogEventBegin(petsc_gamg_setup_events[FIND_V],0,0,0,0);CHKERRQ(ierr);
-#endif
   { /* form P - setup some maps */
     PetscInt clid,mm,*nTri,*node_tri;
 
@@ -412,9 +410,7 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
 
     ierr = PetscFree2(node_tri,nTri);CHKERRQ(ierr);
   }
-#if defined PETSC_GAMG_USE_LOG
   ierr = PetscLogEventEnd(petsc_gamg_setup_events[FIND_V],0,0,0,0);CHKERRQ(ierr);
-#endif
   free(mid.trianglelist);
   free(mid.neighborlist);
   free(mid.segmentlist);
@@ -440,7 +436,7 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
    . a_Gmat_2 - graph that is squared of 'Gmat_1'
    . a_crsGID[a_selected_2.size()] - map of global IDs of coarse grid nodes
 */
-static PetscErrorCode getGIDsOnSquareGraph(PetscInt nselected_1,const PetscInt clid_lid_1[],const Mat Gmat1,IS *a_selected_2,Mat *a_Gmat_2,PetscInt **a_crsGID)
+static PetscErrorCode getGIDsOnSquareGraph(PC pc, PetscInt nselected_1,const PetscInt clid_lid_1[],const Mat Gmat1,IS *a_selected_2,Mat *a_Gmat_2,PetscInt **a_crsGID)
 {
   PetscErrorCode ierr;
   PetscMPIInt    size;
@@ -449,14 +445,14 @@ static PetscErrorCode getGIDsOnSquareGraph(PetscInt nselected_1,const PetscInt c
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)Gmat1,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = MatGetOwnershipRange(Gmat1,&my0,&Iend);CHKERRQ(ierr); /* AIJ */
   nloc = Iend - my0; /* this does not change */
 
   if (size == 1) { /* not much to do in serial */
     ierr = PetscMalloc1(nselected_1, &crsGID);CHKERRQ(ierr);
     for (kk=0; kk<nselected_1; kk++) crsGID[kk] = kk;
-    *a_Gmat_2 = 0;
+    *a_Gmat_2 = NULL;
     ierr      = ISCreateGeneral(PETSC_COMM_SELF,nselected_1,clid_lid_1,PETSC_COPY_VALUES,a_selected_2);CHKERRQ(ierr);
   } else {
     PetscInt    idx,num_fine_ghosts,num_crs_ghost,myCrs0;
@@ -467,17 +463,17 @@ static PetscErrorCode getGIDsOnSquareGraph(PetscInt nselected_1,const PetscInt c
 
     /* scan my coarse zero gid, set 'lid_state' with coarse GID */
     kk = nselected_1;
-    ierr = MPI_Scan(&kk, &myCrs0, 1, MPIU_INT, MPI_SUM, comm);CHKERRQ(ierr);
+    ierr = MPI_Scan(&kk, &myCrs0, 1, MPIU_INT, MPI_SUM, comm);CHKERRMPI(ierr);
     myCrs0 -= nselected_1;
 
     if (a_Gmat_2) { /* output */
       /* grow graph to get wider set of selected vertices to cover fine grid, invalidates 'llist' */
-      ierr      = MatTransposeMatMult(Gmat1, Gmat1, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Gmat2);CHKERRQ(ierr);
+      ierr = PCGAMGSquareGraph_GAMG(pc,Gmat1,&Gmat2);CHKERRQ(ierr);
       *a_Gmat_2 = Gmat2; /* output */
     } else Gmat2 = Gmat1;  /* use local to get crsGIDs at least */
     /* get coarse grid GIDS for selected (locals and ghosts) */
     mpimat2 = (Mat_MPIAIJ*)Gmat2->data;
-    ierr    = MatCreateVecs(Gmat2, &locState, 0);CHKERRQ(ierr);
+    ierr    = MatCreateVecs(Gmat2, &locState, NULL);CHKERRQ(ierr);
     ierr    = VecSet(locState, (PetscScalar)(PetscReal)(-1));CHKERRQ(ierr); /* set with UNKNOWN state */
     for (kk=0; kk<nselected_1; kk++) {
       PetscInt    fgid = clid_lid_1[kk] + my0;
@@ -519,7 +515,7 @@ static PetscErrorCode getGIDsOnSquareGraph(PetscInt nselected_1,const PetscInt c
       if (idx != nselected_1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"idx %D != nselected_1 %D",idx,nselected_1);
       ierr = VecRestoreArray(locState, &cpcol_state);CHKERRQ(ierr);
 
-      if (a_selected_2 != 0) { /* output */
+      if (a_selected_2 != NULL) { /* output */
         ierr = ISCreateGeneral(PETSC_COMM_SELF,(nselected_1+num_crs_ghost),selected_set,PETSC_OWN_POINTER,a_selected_2);CHKERRQ(ierr);
       } else {
         ierr = PetscFree(selected_set);CHKERRQ(ierr);
@@ -598,13 +594,13 @@ PetscErrorCode PCGAMGCoarsen_GEO(PC a_pc,Mat *a_Gmat,PetscCoarsenData **a_llist_
   ierr = PetscMalloc1(nloc, &permute);CHKERRQ(ierr);
 
   for (Ii=Istart; Ii<Iend; Ii++) { /* locals only? */
-    ierr = MatGetRow(Gmat,Ii,&ncols,0,0);CHKERRQ(ierr);
+    ierr = MatGetRow(Gmat,Ii,&ncols,NULL,NULL);CHKERRQ(ierr);
     {
       PetscInt lid = Ii - Istart;
       gnodes[lid].lid    = lid;
       gnodes[lid].degree = ncols;
     }
-    ierr = MatRestoreRow(Gmat,Ii,&ncols,0,0);CHKERRQ(ierr);
+    ierr = MatRestoreRow(Gmat,Ii,&ncols,NULL,NULL);CHKERRQ(ierr);
   }
   if (PETSC_TRUE) {
     PetscRandom  rand;
@@ -681,8 +677,8 @@ PetscErrorCode PCGAMGProlongator_GEO(PC pc,Mat Amat,Mat Gmat,PetscCoarsenData *a
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)Amat,&comm);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(PC_GAMGProlongator_GEO,0,0,0,0);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = MatGetOwnershipRange(Amat, &Istart, &Iend);CHKERRQ(ierr);
   ierr = MatGetBlockSize(Amat, &bs);CHKERRQ(ierr);
   nloc = (Iend-Istart)/bs; my0 = Istart/bs;
@@ -696,9 +692,9 @@ PetscErrorCode PCGAMGProlongator_GEO(PC pc,Mat Amat,Mat Gmat,PetscCoarsenData *a
   for (kk=0,nLocalSelected=0; kk<jj; kk++) {
     PetscInt lid = selected_idx[kk];
     if (lid<nloc) {
-      ierr = MatGetRow(Gmat,lid+my0,&ncols,0,0);CHKERRQ(ierr);
+      ierr = MatGetRow(Gmat,lid+my0,&ncols,NULL,NULL);CHKERRQ(ierr);
       if (ncols>1) clid_flid[nLocalSelected++] = lid; /* fiter out singletons */
-      ierr = MatRestoreRow(Gmat,lid+my0,&ncols,0,0);CHKERRQ(ierr);
+      ierr = MatRestoreRow(Gmat,lid+my0,&ncols,NULL,NULL);CHKERRQ(ierr);
     }
   }
   ierr = ISRestoreIndices(selected_1, &selected_idx);CHKERRQ(ierr);
@@ -731,15 +727,11 @@ PetscErrorCode PCGAMGProlongator_GEO(PC pc,Mat Amat,Mat Gmat,PetscCoarsenData *a
 
     if (dim != data_cols) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"dim %D != data_cols %D",dim,data_cols);
     /* grow ghost data for better coarse grid cover of fine grid */
-#if defined PETSC_GAMG_USE_LOG
     ierr = PetscLogEventBegin(petsc_gamg_setup_events[SET5],0,0,0,0);CHKERRQ(ierr);
-#endif
     /* messy method, squares graph and gets some data */
-    ierr = getGIDsOnSquareGraph(nLocalSelected, clid_flid, Gmat, &selected_2, &Gmat2, &crsGID);CHKERRQ(ierr);
+    ierr = getGIDsOnSquareGraph(pc, nLocalSelected, clid_flid, Gmat, &selected_2, &Gmat2, &crsGID);CHKERRQ(ierr);
     /* llist is now not valid wrt squared graph, but will work as iterator in 'triangulateAndFormProl' */
-#if defined PETSC_GAMG_USE_LOG
     ierr = PetscLogEventEnd(petsc_gamg_setup_events[SET5],0,0,0,0);CHKERRQ(ierr);
-#endif
     /* create global vector of coorindates in 'coords' */
     if (size > 1) {
       ierr = PCGAMGGetDataWithGhosts(Gmat2, dim, pc_gamg->data, &data_stride, &coords);CHKERRQ(ierr);
@@ -752,19 +744,15 @@ PetscErrorCode PCGAMGProlongator_GEO(PC pc,Mat Amat,Mat Gmat,PetscCoarsenData *a
     /* triangulate */
     if (dim == 2) {
       PetscReal metric,tm;
-#if defined PETSC_GAMG_USE_LOG
       ierr = PetscLogEventBegin(petsc_gamg_setup_events[SET6],0,0,0,0);CHKERRQ(ierr);
-#endif
       ierr = triangulateAndFormProl(selected_2, data_stride, coords,nLocalSelected, clid_flid, agg_lists, crsGID, bs, Prol, &metric);CHKERRQ(ierr);
-#if defined PETSC_GAMG_USE_LOG
       ierr = PetscLogEventEnd(petsc_gamg_setup_events[SET6],0,0,0,0);CHKERRQ(ierr);
-#endif
       ierr = PetscFree(crsGID);CHKERRQ(ierr);
 
       /* clean up and create coordinates for coarse grid (output) */
       if (size > 1) ierr = PetscFree(coords);CHKERRQ(ierr);
 
-      ierr = MPIU_Allreduce(&metric, &tm, 1, MPIU_REAL, MPIU_MAX, comm);CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(&metric, &tm, 1, MPIU_REAL, MPIU_MAX, comm);CHKERRMPI(ierr);
       if (tm > 1.) { /* needs to be globalized - should not happen */
         ierr = PetscInfo1(pc," failed metric for coarse grid %e\n",(double)tm);CHKERRQ(ierr);
         ierr = MatDestroy(&Prol);CHKERRQ(ierr);

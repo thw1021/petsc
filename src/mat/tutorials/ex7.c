@@ -14,7 +14,9 @@ int main(int argc, char **argv)
   PetscErrorCode  ierr;
   Mat             A, Aself;
   Vec             b, bself;
+#if defined(PETSC_USE_INFO)
   PetscInt        testarg = 1234;
+#endif
   int             numClasses;
   PetscClassId    testMatClassid, testVecClassid, testSysClassid;
   PetscBool       isEnabled = PETSC_FALSE, invert = PETSC_FALSE;
@@ -23,7 +25,7 @@ int main(int argc, char **argv)
   char            **testClassesStrArr;
   FILE            *infoFile;
 
-  ierr = PetscInitialize(&argc, &argv,(char *) 0, help);if(ierr){ return ierr;}
+  ierr = PetscInitialize(&argc, &argv,(char *) 0, help);if (ierr) return ierr;
 
   /*
      Examples on how to call PetscInfo() using different objects with or without arguments, and different communicators.
@@ -172,44 +174,45 @@ int main(int argc, char **argv)
       requires: define(PETSC_USE_INFO)
       suffix: 1
       args: -info
-      filter: grep -h -ve Running -ve communicator -ve MPI_Comm -ve OpenMP -ve PetscGetHostName
+      filter: grep -h -ve Running -ve communicator -ve MPI_Comm -ve OpenMP -ve PetscGetHostName -ve PetscDetermineInitialFPTrap -ve libpetscbamg
 
    test:
       requires: define(PETSC_USE_INFO)
       suffix: 2
-      args: -info ex7info
-      filter: grep -h -ve Running -ve communicator -ve MPI_Comm -ve OpenMP -ve PetscGetHostName "ex7info.0"
+      args: -info ex7info.2
+      filter: grep -h -ve Running -ve communicator -ve MPI_Comm -ve OpenMP -ve PetscGetHostName -ve PetscDetermineInitialFPTrap -ve libpetscbamg "ex7info.2.0"
 
    test:
       requires: define(PETSC_USE_INFO)
       suffix: 3
       nsize: 2
-      args: -info ex7info
-      filter: grep -h -ve Running -ve communicator -ve MPI_Comm -ve OpenMP -ve PetscGetHostName "ex7info.0" | sort -b
+      args: -info ex7info.3
+      filter: grep -h -ve Running -ve communicator -ve MPI_Comm -ve OpenMP -ve PetscGetHostName  -ve PetscDetermineInitialFPTrap -ve libpetscbamg "ex7info.3.0" | sort -b
 
    test:
       requires: define(PETSC_USE_INFO)
       suffix: 4
       args: -info :mat,vec:
-      filter: grep -h -ve Running -ve communicator -ve MPI_Comm -ve OpenMP -ve PetscGetHostName
+      filter: grep -h -ve Running -ve communicator -ve MPI_Comm -ve OpenMP -ve PetscGetHostName -ve PetscDetermineInitialFPTrap
 
    test:
       requires: define(PETSC_USE_INFO)
       suffix: 5
       args: -info :~sys:
+      filter: grep -h  -ve PetscDetermineInitialFPTrap
 
    test:
       requires: define(PETSC_USE_INFO)
       suffix: 6
       nsize: 2
-      args: -info ex7info:mat:self
-      filter: grep -h "ex7info.0" | sort -b
+      args: -info ex7info.6:mat:self
+      filter: grep -h "ex7info.6.0" | sort -b
 
    test:
       requires: define(PETSC_USE_INFO)
       suffix: 7
       nsize: 2
-      args: -info ex7info:mat:~self
-      filter: grep -h "ex7info.0" | sort -b
+      args: -info ex7info.7:mat:~self
+      filter: grep -h "ex7info.7.0" | sort -b
 
 TEST*/

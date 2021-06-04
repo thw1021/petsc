@@ -50,11 +50,11 @@ PETSC_EXTERN PetscErrorCode MatColoringTest(MatColoring mc,ISColoring coloring)
         ierr = PetscSFComputeDegreeBegin(etor,&degrees);CHKERRQ(ierr);
         ierr = PetscSFComputeDegreeEnd(etor,&degrees);CHKERRQ(ierr);
         nentries=0;
-        for(i=0;i<nrows;i++) {
+        for (i=0;i<nrows;i++) {
           nentries += degrees[i];
         }
         idx=0;
-        for(i=0;i<nrows;i++) {
+        for (i=0;i<nrows;i++) {
           for (j=0;j<degrees[i];j++) {
             stateleafrow[idx] = staterow[i];
             idx++;
@@ -71,11 +71,11 @@ PETSC_EXTERN PetscErrorCode MatColoringTest(MatColoring mc,ISColoring coloring)
         ierr = PetscSFComputeDegreeBegin(etoc,&degrees);CHKERRQ(ierr);
         ierr = PetscSFComputeDegreeEnd(etoc,&degrees);CHKERRQ(ierr);
         nentries=0;
-        for(i=0;i<ncols;i++) {
+        for (i=0;i<ncols;i++) {
           nentries += degrees[i];
         }
         idx=0;
-        for(i=0;i<ncols;i++) {
+        for (i=0;i<ncols;i++) {
           for (j=0;j<degrees[i];j++) {
             stateleafcol[idx] = statecol[i];
             idx++;
@@ -121,7 +121,7 @@ PETSC_EXTERN PetscErrorCode MatISColoringTest(Mat A,ISColoring iscoloring)
   ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&nn,&isis);CHKERRQ(ierr);
 
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support sequential matrix");
 
   ierr = MatGetColumnIJ(A,0,PETSC_FALSE,PETSC_FALSE,&N,&cia,&cja,&done);CHKERRQ(ierr);

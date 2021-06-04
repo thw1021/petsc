@@ -28,7 +28,6 @@
 
 #include <petsctao.h>
 
-
 static  char help[]=
 "Demonstrates use of the TAO package to solve \n\
 unconstrained minimization problems on a single processor.  This example \n\
@@ -87,7 +86,7 @@ PetscErrorCode main(int argc,char **argv)
   AppCtx             user;                /* application context */
   PetscMPIInt        size;                /* number of processes */
   PetscReal          one=1.0;
-  
+
   PetscBool          test_lmvm = PETSC_FALSE;
   KSP                ksp;
   PC                 pc;
@@ -97,7 +96,7 @@ PetscErrorCode main(int argc,char **argv)
 
   /* Initialize TAO,PETSc */
   ierr = PetscInitialize(&argc,&argv,(char *)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(MPI_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(MPI_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size >1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"Incorrect number of processors");
 
   /* Specify default parameters for the problem, check for command-line overrides */
@@ -108,7 +107,7 @@ PetscErrorCode main(int argc,char **argv)
   ierr = PetscOptionsGetBool(NULL,NULL,"-test_lmvm",&test_lmvm,&flg);CHKERRQ(ierr);
 
   ierr = PetscPrintf(PETSC_COMM_SELF,"\n---- Elastic-Plastic Torsion Problem -----\n");CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"mx: %D     my: %D   \n\n",mx,my); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"mx: %D     my: %D   \n\n",mx,my);CHKERRQ(ierr);
   user.ndim = mx * my; user.mx = mx; user.my = my;
   user.hx = one/(mx+1); user.hy = one/(my+1);
 
@@ -152,8 +151,8 @@ PetscErrorCode main(int argc,char **argv)
   ierr = TaoSetFromOptions(tao);CHKERRQ(ierr);
 
   /* SOLVE THE APPLICATION */
-  ierr = TaoSolve(tao); CHKERRQ(ierr);
-  
+  ierr = TaoSolve(tao);CHKERRQ(ierr);
+
   /* Test the LMVM matrix */
   if (test_lmvm) {
     ierr = TaoGetKSP(tao, &ksp);CHKERRQ(ierr);
@@ -306,7 +305,7 @@ PetscErrorCode FormFunction(Tao tao,Vec X,PetscReal *f,void *ptr)
   area = p5*hx*hy;
   *f = area*(p5*fquad+flin);
 
-  ierr = PetscLogFlops(nx*ny*24);CHKERRQ(ierr);
+  ierr = PetscLogFlops(24.0*nx*ny);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -402,7 +401,7 @@ PetscErrorCode FormGradient(Tao tao,Vec X,Vec G,void *ptr)
   /* Scale the gradient */
   area = p5*hx*hy;
   ierr = VecScale(G, area);CHKERRQ(ierr);
-  ierr = PetscLogFlops(nx*ny*24);CHKERRQ(ierr);
+  ierr = PetscLogFlops(24.0*nx*ny);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -439,7 +438,7 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat H,Mat Hpre, void *ptr)
 
   /* Initialize Hessian entries and work vector to zero */
   ierr = MatAssembled(H,&assembled);CHKERRQ(ierr);
-  if (assembled){ierr = MatZeroEntries(H); CHKERRQ(ierr);}
+  if (assembled){ierr = MatZeroEntries(H);CHKERRQ(ierr);}
 
   ierr = VecSet(user->s, zero);CHKERRQ(ierr);
 
@@ -611,10 +610,9 @@ PetscErrorCode HessianProduct(void *ptr,Vec svec,Vec y)
   /* Scale resulting vector by area */
   area = p5*hx*hy;
   ierr = VecScale(y, area);CHKERRQ(ierr);
-  ierr = PetscLogFlops(nx*ny*18);CHKERRQ(ierr);
+  ierr = PetscLogFlops(18.0*nx*ny);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*TEST
 
@@ -632,15 +630,15 @@ PetscErrorCode HessianProduct(void *ptr,Vec svec,Vec y)
    test:
       suffix: 3
       args: -tao_smonitor -tao_type bntr -tao_gatol 1.e-4 -my_tao_mf -tao_test_hessian
-      
+
    test:
      suffix: 4
      args: -tao_smonitor -tao_gatol 1e-3 -tao_type bqnls
-     
+
    test:
      suffix: 5
      args: -tao_smonitor -tao_gatol 1e-3 -tao_type blmvm
-     
+
    test:
      suffix: 6
      args: -tao_smonitor -tao_gatol 1e-3 -tao_type bqnktr -tao_bqnk_mat_type lmvmsr1

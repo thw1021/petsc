@@ -2,8 +2,8 @@
 #include <petscblaslapack.h>
 #include <petscdm.h>
 
-const char *const SNESNGMRESRestartTypes[] = {"NONE","PERIODIC","DIFFERENCE","SNESNGMRESRestartType","SNES_NGMRES_RESTART_",0};
-const char *const SNESNGMRESSelectTypes[] = {"NONE","DIFFERENCE","LINESEARCH","SNESNGMRESSelectType","SNES_NGMRES_SELECT_",0};
+const char *const SNESNGMRESRestartTypes[] = {"NONE","PERIODIC","DIFFERENCE","SNESNGMRESRestartType","SNES_NGMRES_RESTART_",NULL};
+const char *const SNESNGMRESSelectTypes[] = {"NONE","DIFFERENCE","LINESEARCH","SNESNGMRESSelectType","SNES_NGMRES_SELECT_",NULL};
 
 PetscErrorCode SNESReset_NGMRES(SNES snes)
 {
@@ -388,7 +388,6 @@ PetscErrorCode SNESNGMRESGetRestartFmRise_NGMRES(SNES snes,PetscBool *flg)
   PetscFunctionReturn(0);
 }
 
-
 /*@
     SNESNGMRESSetRestartType - Sets the restart type for SNESNGMRES.
 
@@ -503,11 +502,10 @@ PetscErrorCode SNESNGMRESSetRestartType_NGMRES(SNES snes,SNESNGMRESRestartType r
    Very similar to the SNESANDERSON algorithm.
 
    References:
-+  1. - C. W. Oosterlee and T. Washio, "Krylov Subspace Acceleration of Nonlinear Multigrid with Application to Recirculating Flows", 
++  1. - C. W. Oosterlee and T. Washio, "Krylov Subspace Acceleration of Nonlinear Multigrid with Application to Recirculating Flows",
    SIAM Journal on Scientific Computing, 21(5), 2000.
--  2. - Peter R. Brune, Matthew G. Knepley, Barry F. Smith, and Xuemin Tu, "Composing Scalable Nonlinear Algebraic Solvers", 
+-  2. - Peter R. Brune, Matthew G. Knepley, Barry F. Smith, and Xuemin Tu, "Composing Scalable Nonlinear Algebraic Solvers",
    SIAM Review, 57(4), 2015
-
 
 .seealso: SNESCreate(), SNES, SNESSetType(), SNESType (for list of available types)
 M*/

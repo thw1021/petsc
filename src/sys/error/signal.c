@@ -5,6 +5,7 @@
 */
 #include <petsc/private/petscimpl.h>             /*I   "petscsys.h"   I*/
 #include <signal.h>
+#include <stdlib.h> /* for _Exit() */
 
 static PetscClassId SIGNAL_CLASSID = 0;
 
@@ -16,6 +17,14 @@ struct SH {
 };
 static struct SH *sh       = NULL;
 static PetscBool SignalSet = PETSC_FALSE;
+
+/* Called by MPI_Abort() to suppress user-registered atexit()/on_exit() functions.
+   See discussion at https://gitlab.com/petsc/petsc/-/merge_requests/2745.
+*/
+static void MyExit(void)
+{
+  _Exit(MPI_ERR_OTHER);
+}
 
 /*
     PetscSignalHandler_Private - This is the signal handler called by the system. This calls
@@ -134,6 +143,9 @@ PetscErrorCode  PetscSignalHandlerDefault(int sig,void *ptr)
   (*PetscErrorPrintf)("Try option -start_in_debugger or -on_error_attach_debugger\n");
   (*PetscErrorPrintf)("or see https://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind\n");
   (*PetscErrorPrintf)("or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors\n");
+#if defined(PETSC_HAVE_CUDA)
+  (*PetscErrorPrintf)("or try https://docs.nvidia.com/cuda/cuda-memcheck/index.html on NVIDIA CUDA systems  to find memory corruption errors\n");
+#endif
   if (PetscDefined(USE_DEBUG)) {
     if (!PetscStackActive()) (*PetscErrorPrintf)("  or try option -log_stack\n");
     else {
@@ -147,7 +159,23 @@ PetscErrorCode  PetscSignalHandlerDefault(int sig,void *ptr)
     (*PetscErrorPrintf)("configure using --with-debugging=yes, recompile, link, and run \n");
     (*PetscErrorPrintf)("to get more information on the crash.\n");
   }
-  ierr =  PetscError(PETSC_COMM_SELF,0,"User provided function"," unknown file",PETSC_ERR_SIG,PETSC_ERROR_INITIAL,NULL);
+  ierr =  PetscError(PETSC_COMM_SELF,0,"User provided function","unknown file",PETSC_ERR_SIG,PETSC_ERROR_INITIAL,NULL);
+#if !defined(PETSC_MISSING_SIGBUS)
+  if (sig == SIGSEGV || sig == SIGBUS) {
+#else
+  if (sig == SIGSEGV) {
+#endif
+    PetscBool debug;
+
+    PetscMallocGetDebug(&debug,NULL,NULL);
+    if (debug) {
+      (*PetscErrorPrintf)("Checking the memory for corruption.\n");
+      PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__);
+    } else {
+      (*PetscErrorPrintf)("Run with -malloc_debug to check if memory corruption is causing the crash.\n");
+    }
+  }
+  atexit(MyExit);
   PETSCABORT(PETSC_COMM_WORLD,(int)ierr);
   PetscFunctionReturn(0);
 }
@@ -225,7 +253,10 @@ PetscErrorCode  PetscPushSignalHandler(PetscErrorCode (*routine)(int,void*),void
     signal(SIGSYS,  PETSC_SIGNAL_CAST PetscSignalHandler_Private);
 #endif
 #if !defined(PETSC_MISSING_SIGTERM)
+#if !defined(OMPI_MAJOR_VERSION)
+    /* OpenMPI may use SIGTERM to close down all its ranks; we don't want to generate many confusing PETSc error messages in that case */
     signal(SIGTERM,  PETSC_SIGNAL_CAST PetscSignalHandler_Private);
+#endif
 #endif
 #if !defined(PETSC_MISSING_SIGTRAP)
     signal(SIGTRAP,  PETSC_SIGNAL_CAST PetscSignalHandler_Private);

@@ -1,7 +1,6 @@
 
 static char help[] = "Tests various routines in MatMPIBAIJ format.\n";
 
-
 #include <petscmat.h>
 
 int main(int argc,char **args)
@@ -14,8 +13,8 @@ int main(int argc,char **args)
   PetscBool      flg;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   /* Test MatSetValues() and MatGetValues() */
   ierr = PetscOptionsGetInt(NULL,NULL,"-mat_block_size",&bs,NULL);CHKERRQ(ierr);
@@ -73,8 +72,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
-
 
 /*TEST
 

@@ -1,7 +1,6 @@
 #include <../src/tao/unconstrained/impls/neldermead/neldermead.h>
 #include <petscvec.h>
 
-
 /*------------------------------------------------------------*/
 static PetscErrorCode NelderMeadSort(TAO_NelderMead *nm)
 {
@@ -22,7 +21,6 @@ static PetscErrorCode NelderMeadSort(TAO_NelderMead *nm)
   }
   PetscFunctionReturn(0);
 }
-
 
 /*------------------------------------------------------------*/
 static PetscErrorCode NelderMeadReplace(TAO_NelderMead *nm, PetscInt index, Vec Xmu, PetscReal f)
@@ -61,7 +59,7 @@ static PetscErrorCode TaoSetUp_NM(Tao tao)
   ierr = VecDuplicate(tao->solution,&nm->Xmue);CHKERRQ(ierr);
   ierr = VecDuplicate(tao->solution,&nm->Xmuc);CHKERRQ(ierr);
 
-  tao->gradient=0;
+  tao->gradient=NULL;
   tao->step=0;
   PetscFunctionReturn(0);
 }
@@ -83,7 +81,6 @@ static PetscErrorCode TaoDestroy_NM(Tao tao)
   ierr = PetscFree(nm->indices);CHKERRQ(ierr);
   ierr = PetscFree(nm->f_values);CHKERRQ(ierr);
   ierr = PetscFree(tao->data);CHKERRQ(ierr);
-  tao->data = 0;
   PetscFunctionReturn(0);
 }
 
@@ -95,7 +92,7 @@ static PetscErrorCode TaoSetFromOptions_NM(PetscOptionItems *PetscOptionsObject,
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"Nelder-Mead options");CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-tao_nm_lamda","initial step length","",nm->lamda,&nm->lamda,NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-tao_nm_lamda","initial step length","",nm->lamda,&nm->lamda,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-tao_nm_mu","mu","",nm->mu_oc,&nm->mu_oc,NULL);CHKERRQ(ierr);
   nm->mu_ic = -nm->mu_oc;
   nm->mu_r = nm->mu_oc*2.0;
@@ -276,7 +273,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_NM(Tao tao)
   if (!tao->max_it_changed) tao->max_it = 2000;
   if (!tao->max_funcs_changed) tao->max_funcs = 4000;
 
-  nm->simplex = 0;
+  nm->simplex = NULL;
   nm->lamda = 1;
 
   nm->mu_ic = -0.5;

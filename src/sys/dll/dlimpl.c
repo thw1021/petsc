@@ -3,6 +3,13 @@
    Low-level routines for managing dynamic link libraries (DLLs).
 */
 
+#include <petscconf.h>
+#if defined(PETSC__GNU_SOURCE)
+  #if !defined(_GNU_SOURCE)
+    #define _GNU_SOURCE 1
+  #endif
+#endif
+
 #include <petsc/private/petscimpl.h>
 #include <petscvalgrind.h>
 
@@ -14,7 +21,8 @@
 
 #if defined(PETSC_HAVE_WINDOWS_H)
 #include <windows.h>
-#elif defined(PETSC_HAVE_DLFCN_H)
+#endif
+#if defined(PETSC_HAVE_DLFCN_H)
 #include <dlfcn.h>
 #endif
 
@@ -125,7 +133,6 @@ PetscErrorCode  PetscDLOpen(const char name[],PetscDLMode mode,PetscDLHandle *ha
   *handle = (PetscDLHandle) dlhandle;
   PetscFunctionReturn(0);
 }
-
 
 /*@C
    PetscDLClose -  closes a dynamic library
@@ -302,4 +309,46 @@ PetscErrorCode  PetscDLSym(PetscDLHandle handle,const char symbol[],void **value
   }
 #endif
   return(0);
+}
+
+/*@C
+  PetscDLAddr - find the name of a symbol in a dynamic library
+
+  Not Collective
+
+  Input Parameters:
++ handle - obtained with PetscDLOpen() or NULL
+- func   - pointer to the function, NULL if not found
+
+  Output Parameter:
+. name   - name of symbol, or NULL if name lookup is not supported.
+
+  Level: developer
+
+  Notes:
+  The caller must free the returned name.
+
+  In order to be dynamically loadable, the symbol has to be exported as such.  On many UNIX-like
+  systems this requires platform-specific linker flags.
+@*/
+PetscErrorCode PetscDLAddr(void (*func)(void), char **name)
+{
+  PetscFunctionBegin;
+  PetscValidCharPointer(name,2);
+  *name = NULL;
+#if defined(PETSC_HAVE_DLADDR)
+  dlerror(); /* clear any previous error */
+  {
+    Dl_info        info;
+    PetscErrorCode ierr;
+
+    ierr = dladdr(*(void **) &func, &info);if (!ierr) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Failed to lookup symbol: %s", dlerror());
+#ifdef PETSC_HAVE_CXX
+    ierr = PetscDemangleSymbol(info.dli_sname, name);CHKERRQ(ierr);
+#else
+    ierr = PetscStrallocpy(info.dli_sname, name);CHKERRQ(ierr);
+#endif
+  }
+#endif
+  PetscFunctionReturn(0);
 }

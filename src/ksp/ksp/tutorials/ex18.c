@@ -4,7 +4,7 @@ Input parameters include:\n\
   -random_exact_sol : use a random exact solution vector\n\
   -view_exact_sol   : write exact solution vector to stdout\n\
   -m <mesh_x>       : number of mesh points in x-direction\n\
-  -n <mesh_n>       : number of mesh points in y-direction\n\n";
+  -n <mesh_y>       : number of mesh points in y-direction\n\n";
 
 /*T
    Concepts: KSP^basic parallel example;
@@ -12,8 +12,6 @@ Input parameters include:\n\
    Concepts: Laplacian, 2d
    Processors: n
 T*/
-
-
 
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
@@ -199,7 +197,7 @@ int main(int argc,char **args)
        KSPSetFromOptions().  All of these defaults can be
        overridden at runtime, as indicated below.
   */
-  ierr = KSPSetTolerances(ksp,1.e-2/((m+1)*(n+1)),1.e-50,PETSC_DEFAULT,
+  ierr = KSPSetTolerances(ksp,1.e-2/((m+1)*(n+1)),PETSC_DEFAULT,PETSC_DEFAULT,
                           PETSC_DEFAULT);CHKERRQ(ierr);
 
   /*
@@ -255,7 +253,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

@@ -4,6 +4,8 @@ TS Object: 1 MPI processes
     Abscissa of A       =  0.000000  0.871733  0.731580  1.000000 
     Abscissa of A+Gamma =  0.435867  0.871733  0.731580  1.000000 
   maximum time=100000.
+  total number of I function evaluations=504
+  total number of I Jacobian evaluations=126
   total number of nonlinear solver iterations=2068
   total number of linear solver iterations=2068
   total number of linear solve failures=0
@@ -25,7 +27,6 @@ SNES Object: 1 MPI processes
   total number of linear solver iterations=1
   total number of function evaluations=1
   norm schedule ALWAYS
-  Jacobian is never rebuilt
   KSP Object: 1 MPI processes
     type: gmres
       restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
@@ -47,7 +48,6 @@ SNES Object: 1 MPI processes
             rows=4, cols=4
             package used to perform factorization: petsc
             total: nonzeros=16, allocated nonzeros=16
-            total number of mallocs used during MatSetValues calls=0
               using I-node routines: found 1 nodes, limit used is 5
     linear system matrix = precond matrix:
     Mat Object: 1 MPI processes

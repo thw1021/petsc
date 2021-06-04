@@ -99,7 +99,7 @@ static PetscErrorCode TaoSetup_LCL(Tao tao)
   IS             is_state, is_design;
 
   PetscFunctionBegin;
-  if (!tao->state_is) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONGSTATE,"LCL Solver requires an initial state index set -- use TaoSetStateIS()");
+  if (!tao->state_is) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"LCL Solver requires an initial state index set -- use TaoSetStateIS()");
   ierr = VecDuplicate(tao->solution, &tao->gradient);CHKERRQ(ierr);
   ierr = VecDuplicate(tao->solution, &tao->stepdirection);CHKERRQ(ierr);
   ierr = VecDuplicate(tao->solution, &lclP->W);CHKERRQ(ierr);
@@ -327,7 +327,6 @@ static PetscErrorCode TaoSolve_LCL(Tao tao)
       adec = lclP->eps1 * r2;
     }
 
-
     /*
        Check descent for aug. lagrangian
        r' (GUk - Ak'*yk - rho*Ak'*con) <= -eps1 ||r||^(2+eps2)
@@ -349,7 +348,7 @@ static PetscErrorCode TaoSolve_LCL(Tao tao)
       lclP->rho =  (rGL_U - adec)/rWU;
       if (lclP->rho > lclP->rhomax) {
         lclP->rho = lclP->rhomax;
-        SETERRQ1(PETSC_COMM_WORLD,0,"rho=%g > rhomax, case not implemented.  Increase rhomax (-tao_lcl_rhomax)",(double)lclP->rho);
+        SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"rho=%g > rhomax, case not implemented.  Increase rhomax (-tao_lcl_rhomax)",(double)lclP->rho);
       }
       if (lclP->verbose) {
         ierr = PetscPrintf(PETSC_COMM_WORLD,"  Increasing penalty parameter to %g\n",(double)lclP->rho);CHKERRQ(ierr);
@@ -624,7 +623,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_LCL(Tao tao)
   ierr = PetscObjectIncrementTabLevel((PetscObject)tao->ksp, (PetscObject)tao, 1);CHKERRQ(ierr);
   ierr = KSPSetOptionsPrefix(tao->ksp, tao->hdr.prefix);CHKERRQ(ierr);
   ierr = KSPSetFromOptions(tao->ksp);CHKERRQ(ierr);
-  
+
   ierr = MatCreate(((PetscObject)tao)->comm, &lclP->R);CHKERRQ(ierr);
   ierr = MatSetType(lclP->R, MATLMVMBFGS);CHKERRQ(ierr);
   PetscFunctionReturn(0);

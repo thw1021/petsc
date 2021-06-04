@@ -80,7 +80,7 @@ EXTERN_C_BEGIN
 #include <klu.h>
 EXTERN_C_END
 
-static const char *KluOrderingTypes[] = {"AMD","COLAMD","PETSC"};
+static const char *KluOrderingTypes[] = {"AMD","COLAMD"};
 static const char *scale[] ={"NONE","SUM","MAX"};
 
 typedef struct {
@@ -143,7 +143,7 @@ static PetscErrorCode MatSolve_KLU(Mat A,Vec b,Vec x)
   status = klu_K_tsolve(lu->Symbolic,lu->Numeric,A->rmap->n,1,(PetscReal*)xa,conj_solve,&lu->Common); /* conjugate solve */
 #else
   status = klu_K_tsolve(lu->Symbolic,lu->Numeric,A->rmap->n,1,xa,&lu->Common);
-#endif  
+#endif
   if (status != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"KLU Solve failed");
   ierr = VecRestoreArray(x,&xa);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -164,7 +164,7 @@ static PetscErrorCode MatLUFactorNumeric_KLU(Mat F,Mat A,const MatFactorInfo *in
     klu_K_free_numeric(&lu->Numeric,&lu->Common);
   }
   lu->Numeric = klu_K_factor(ai,aj,(PetscReal*)av,lu->Symbolic,&lu->Common);
-  if(!lu->Numeric) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"KLU Numeric factorization failed");
+  if (!lu->Numeric) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"KLU Numeric factorization failed");
 
   lu->flg                = SAME_NONZERO_PATTERN;
   lu->CleanUpKLU         = PETSC_TRUE;
@@ -176,7 +176,7 @@ static PetscErrorCode MatLUFactorNumeric_KLU(Mat F,Mat A,const MatFactorInfo *in
 static PetscErrorCode MatLUFactorSymbolic_KLU(Mat F,Mat A,IS r,IS c,const MatFactorInfo *info)
 {
   Mat_SeqAIJ     *a  = (Mat_SeqAIJ*)A->data;
-  Mat_KLU       *lu = (Mat_KLU*)(F->data);
+  Mat_KLU        *lu = (Mat_KLU*)(F->data);
   PetscErrorCode ierr;
   PetscInt       i,*ai = a->i,*aj = a->j,m=A->rmap->n,n=A->cmap->n;
   const PetscInt *ra,*ca;
@@ -195,7 +195,8 @@ static PetscErrorCode MatLUFactorSymbolic_KLU(Mat F,Mat A,IS r,IS c,const MatFac
 
   /* symbolic factorization of A' */
   /* ---------------------------------------------------------------------- */
-  if (lu->PetscMatOrdering) { /* use Petsc ordering */
+  if (r) {
+    lu->PetscMatOrdering = PETSC_TRUE;
     lu->Symbolic = klu_K_analyze_given(n,ai,aj,lu->perm_c,lu->perm_r,&lu->Common);
   } else { /* use klu internal ordering */
     lu->Symbolic = klu_K_analyze(n,ai,aj,&lu->Common);
@@ -215,15 +216,10 @@ static PetscErrorCode MatView_Info_KLU(Mat A,PetscViewer viewer)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  /* check if matrix is KLU type */
-  if (A->ops->solve != MatSolve_KLU) PetscFunctionReturn(0);
-
   ierr = PetscViewerASCIIPrintf(viewer,"KLU stats:\n");CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"  Number of diagonal blocks: %d\n",Numeric->nblocks);
   ierr = PetscViewerASCIIPrintf(viewer,"  Total nonzeros=%d\n",Numeric->lnz+Numeric->unz);CHKERRQ(ierr);
-
   ierr = PetscViewerASCIIPrintf(viewer,"KLU runtime parameters:\n");CHKERRQ(ierr);
-
   /* Control parameters used by numeric factorization */
   ierr = PetscViewerASCIIPrintf(viewer,"  Partial pivoting tolerance: %g\n",lu->Common.tol);CHKERRQ(ierr);
   /* BTF preordering */
@@ -231,8 +227,6 @@ static PetscErrorCode MatView_Info_KLU(Mat A,PetscViewer viewer)
   /* mat ordering */
   if (!lu->PetscMatOrdering) {
     ierr = PetscViewerASCIIPrintf(viewer,"  Ordering: %s (not using the PETSc ordering)\n",KluOrderingTypes[(int)lu->Common.ordering]);CHKERRQ(ierr);
-  } else {
-    ierr = PetscViewerASCIIPrintf(viewer,"  Using PETSc ordering\n");CHKERRQ(ierr);
   }
   /* matrix row scaling */
   ierr = PetscViewerASCIIPrintf(viewer, "  Matrix row scaling: %s\n",scale[(int)lu->Common.scale]);CHKERRQ(ierr);
@@ -263,7 +257,6 @@ PetscErrorCode MatFactorGetSolverType_seqaij_klu(Mat A,MatSolverType *type)
   PetscFunctionReturn(0);
 }
 
-
 /*MC
   MATSOLVERKLU = "klu" - A matrix type providing direct solvers (LU) for sequential matrices
   via the external package KLU.
@@ -278,7 +271,7 @@ PetscErrorCode MatFactorGetSolverType_seqaij_klu(Mat A,MatSolverType *type)
 + -mat_klu_pivot_tol <0.001>                  - Partial pivoting tolerance
 . -mat_klu_use_btf <1>                        - Use BTF preordering
 . -mat_klu_ordering <AMD>                     - KLU reordering scheme to reduce fill-in (choose one of) AMD COLAMD PETSC
-- -mat_klu_row_scale <NONE>                   - Matrix row scaling (choose one of) NONE SUM MAX 
+- -mat_klu_row_scale <NONE>                   - Matrix row scaling (choose one of) NONE SUM MAX
 
    Note: KLU is part of SuiteSparse http://faculty.cse.tamu.edu/davis/suitesparse.html
 
@@ -292,7 +285,7 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_klu(Mat A,MatFactorType ftype,Ma
   Mat            B;
   Mat_KLU       *lu;
   PetscErrorCode ierr;
-  PetscInt       m=A->rmap->n,n=A->cmap->n,idx,status;
+  PetscInt       m=A->rmap->n,n=A->cmap->n,idx = 0,status;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -318,12 +311,14 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_klu(Mat A,MatFactorType ftype,Ma
 
   ierr = PetscFree(B->solvertype);CHKERRQ(ierr);
   ierr = PetscStrallocpy(MATSOLVERKLU,&B->solvertype);CHKERRQ(ierr);
+  B->canuseordering = PETSC_TRUE;
+  ierr = PetscStrallocpy(MATORDERINGEXTERNAL,(char**)&B->preferredordering[MAT_FACTOR_LU]);CHKERRQ(ierr);
 
   /* initializations */
   /* ------------------------------------------------*/
   /* get the default control parameters */
   status = klu_K_defaults(&lu->Common);
-  if(status <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"KLU Initialization failed");
+  if (status <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"KLU Initialization failed");
 
   lu->Common.scale = 0; /* No row scaling */
 
@@ -334,10 +329,7 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_klu(Mat A,MatFactorType ftype,Ma
   ierr = PetscOptionsInt("-mat_klu_use_btf","Enable BTF preordering","None",(PetscInt)lu->Common.btf,(PetscInt*)&lu->Common.btf,NULL);CHKERRQ(ierr);
   /* Matrix reordering */
   ierr = PetscOptionsEList("-mat_klu_ordering","Internal ordering method","None",KluOrderingTypes,sizeof(KluOrderingTypes)/sizeof(KluOrderingTypes[0]),KluOrderingTypes[0],&idx,&flg);CHKERRQ(ierr);
-  if (flg) {
-    if ((int)idx == 2) lu->PetscMatOrdering = PETSC_TRUE;   /* use Petsc mat ordering (note: size is for the transpose, and PETSc r = Klu perm_c) */
-    else lu->Common.ordering = (int)idx;
-  }
+  lu->Common.ordering = (int)idx;
   /* Matrix row scaling */
   ierr = PetscOptionsEList("-mat_klu_row_scale","Matrix row scaling","None",scale,3,scale[0],&idx,&flg);CHKERRQ(ierr);
   PetscOptionsEnd();

@@ -17,8 +17,6 @@
    Processors: n
 T*/
 
-
-
 typedef struct {
   PetscInt n; /* Number of total variables */
   PetscInt m; /* Number of constraints */
@@ -50,7 +48,6 @@ typedef struct {
   Mat Div, Divwork;
   Mat DSG;
   Mat Diag,Ones;
-
 
   Vec q;
   Vec ur; /* reference */
@@ -492,7 +489,6 @@ PetscErrorCode DesignMatMultTranspose(Mat J_shell, Vec X, Vec Y)
     /* Twork = sdiag(Twork) * Swork */
     ierr = VecPointwiseMult(user->Twork,user->Swork,user->Twork);CHKERRQ(ierr);
 
-
     /* Swork = pointwisemult(Sdiag,Twork) */
     ierr = VecPointwiseMult(user->Swork,user->Twork,user->Sdiag);CHKERRQ(ierr);
 
@@ -619,7 +615,7 @@ PetscErrorCode EllipticInitialize(AppCtx *user)
                         0.9226,     0.5461,     0.4126,     0.2364,     0.6096,     0.7042,     0.3914,     0.0711};
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   ierr = PetscLogStageRegister("Elliptic Setup",&user->stages[0]);CHKERRQ(ierr);
   ierr = PetscLogStagePush(user->stages[0]);CHKERRQ(ierr);
 
@@ -1306,9 +1302,6 @@ PetscErrorCode EllipticMonitor(Tao tao, void *ptr)
   ierr = PetscPrintf(MPI_COMM_WORLD, "||u-ut||=%g ||y-yt||=%g\n",(double)unorm,(double)ynorm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-
-
 
 /*TEST
 

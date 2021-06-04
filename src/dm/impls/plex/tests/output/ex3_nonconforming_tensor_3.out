@@ -2226,6 +2226,7 @@ Process 3:
   (  21) dim  3 offset  54 0.5 0. 0.25
   (  22) dim  3 offset  57 0. 0.5 0.25
   (  23) dim  3 offset  60 0.5 0.5 0.25
+Labels:
 Label 'celltype':
 [0]: 4 (0)
 [0]: 5 (0)
@@ -2672,7 +2673,6 @@ Label 'celltype':
 [3]: 2 (7)
 PetscSF Object: 4 MPI processes
   type: basic
-    sort=rank-order
   [0] Number of roots=139, leaves=99, remote ranks=3
   [0] 4 <- (3,4)
   [0] 6 <- (3,5)
@@ -3091,6 +3091,7 @@ PetscSF Object: 4 MPI processes
   [2]    92 <- 74
   [2]    93 <- 75
   [3] Roots referenced by my leaves, by rank
+  MultiSF sort=rank-order
 Symmetric gradient null space: PASS
 Function tests pass for order 0 at tolerance 1e-10
 Function tests pass for order 0 derivatives at tolerance 1e-10

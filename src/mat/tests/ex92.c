@@ -21,8 +21,8 @@ int main(int argc,char **args)
 #endif
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   ierr = PetscOptionsGetInt(NULL,NULL,"-mat_block_size",&bs,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-mat_mbs",&mbs,NULL);CHKERRQ(ierr);
@@ -170,7 +170,7 @@ int main(int argc,char **args)
           ierr = ISSort(is2[i]);CHKERRQ(ierr);
           /* ISView(is2[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr); */
         }
-        SETERRQ1(PETSC_COMM_SELF,1,"i=%D, is1 != is2",i);
+        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"i=%D, is1 != is2",i);
       }
     }
   }
@@ -215,7 +215,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

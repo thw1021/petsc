@@ -123,6 +123,17 @@ static PetscErrorCode PCApply_SPAI(PC pc,Vec xx,Vec y)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PCMatApply_SPAI(PC pc,Mat X,Mat Y)
+{
+  PC_SPAI        *ispai = (PC_SPAI*)pc->data;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  /* Now using PETSc's multiply */
+  ierr = MatMatMult(ispai->PM,X,MAT_REUSE_MATRIX,PETSC_DEFAULT,&Y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /**********************************************************************/
 
 static PetscErrorCode PCDestroy_SPAI(PC pc)
@@ -132,7 +143,7 @@ static PetscErrorCode PCDestroy_SPAI(PC pc)
 
   PetscFunctionBegin;
   ierr = MatDestroy(&ispai->PM);CHKERRQ(ierr);
-  ierr = MPI_Comm_free(&(ispai->comm_spai));CHKERRQ(ierr);
+  ierr = MPI_Comm_free(&(ispai->comm_spai));CHKERRMPI(ierr);
   ierr = PetscFree(pc->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -383,7 +394,6 @@ PetscErrorCode  PCSPAISetMaxNew(PC pc,int maxnew1)
                  can lead to very significant improvement in
                  performance.
 
-
   Level: intermediate
 
 .seealso: PCSPAI, PCSetType()
@@ -466,7 +476,6 @@ PetscErrorCode  PCSPAISetVerbose(PC pc,int verbose)
                  symmetric nonzero pattern -sp 1 may well lead to good
                  results, but the code will not follow the published
                  SPAI algorithm exactly.
-
 
   Level: intermediate
 
@@ -569,6 +578,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_SPAI(PC pc)
 
   pc->ops->destroy         = PCDestroy_SPAI;
   pc->ops->apply           = PCApply_SPAI;
+  pc->ops->matapply        = PCMatApply_SPAI;
   pc->ops->applyrichardson = 0;
   pc->ops->setup           = PCSetUp_SPAI;
   pc->ops->view            = PCView_SPAI;
@@ -583,7 +593,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_SPAI(PC pc)
   ispai->verbose    = 0;
 
   ispai->sp = 1;
-  ierr      = MPI_Comm_dup(PetscObjectComm((PetscObject)pc),&(ispai->comm_spai));CHKERRQ(ierr);
+  ierr      = MPI_Comm_dup(PetscObjectComm((PetscObject)pc),&(ispai->comm_spai));CHKERRMPI(ierr);
 
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCSPAISetEpsilon_C",PCSPAISetEpsilon_SPAI);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCSPAISetNBSteps_C",PCSPAISetNBSteps_SPAI);CHKERRQ(ierr);
@@ -616,14 +626,14 @@ PetscErrorCode ConvertMatToMatrix(MPI_Comm comm, Mat A,Mat AT,matrix **B)
   struct compressed_lines *rows;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = MatGetSize(A,&n,&n);CHKERRQ(ierr);
   ierr = MatGetLocalSize(A,&mnl,&nnl);CHKERRQ(ierr);
 
   /*
     not sure why a barrier is required. commenting out
-  ierr = MPI_Barrier(comm);CHKERRQ(ierr);
+  ierr = MPI_Barrier(comm);CHKERRMPI(ierr);
   */
 
   M = new_matrix((SPAI_Comm)comm);
@@ -638,7 +648,7 @@ PetscErrorCode ConvertMatToMatrix(MPI_Comm comm, Mat A,Mat AT,matrix **B)
   M->block_sizes   = (int*)malloc(sizeof(int)*n);
   for (i=0; i<n; i++) M->block_sizes[i] = 1;
 
-  ierr = MPI_Allgather(&mnl,1,MPI_INT,M->mnls,1,MPI_INT,comm);CHKERRQ(ierr);
+  ierr = MPI_Allgather(&mnl,1,MPI_INT,M->mnls,1,MPI_INT,comm);CHKERRMPI(ierr);
 
   M->start_indices[0] = 0;
   for (i=1; i<size; i++) M->start_indices[i] = M->start_indices[i-1] + M->mnls[i-1];
@@ -696,7 +706,6 @@ PetscErrorCode ConvertMatToMatrix(MPI_Comm comm, Mat A,Mat AT,matrix **B)
     ierr = MatRestoreRow(A,i,&nz,&cols,&vals);CHKERRQ(ierr);
   }
 
-
   /************************************************************/
   /************** Set up the column structure *****************/
   /*********************************************************/
@@ -745,8 +754,8 @@ PetscErrorCode ConvertMatrixToMat(MPI_Comm comm,matrix *B,Mat *PB)
   PetscScalar    val;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   m    = n = B->mnls[rank];
   d_nz = o_nz = 0;
@@ -803,17 +812,16 @@ PetscErrorCode ConvertVectorToVec(MPI_Comm comm,vector *v,Vec *Pv)
   int            m,M,i,*mnls,*start_indices,*global_indices;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   m = v->mnl;
   M = v->n;
 
-
   ierr = VecCreateMPI(comm,m,M,Pv);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(size,&mnls);CHKERRQ(ierr);
-  ierr = MPI_Allgather(&v->mnl,1,MPI_INT,mnls,1,MPI_INT,comm);CHKERRQ(ierr);
+  ierr = MPI_Allgather(&v->mnl,1,MPI_INT,mnls,1,MPI_INT,comm);CHKERRMPI(ierr);
 
   ierr = PetscMalloc1(size,&start_indices);CHKERRQ(ierr);
 
@@ -833,7 +841,3 @@ PetscErrorCode ConvertVectorToVec(MPI_Comm comm,vector *v,Vec *Pv)
   ierr = PetscFree(global_indices);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-
-
-

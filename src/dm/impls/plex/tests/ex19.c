@@ -2,7 +2,7 @@ static char help[] = "Tests mesh adaptation with DMPlex and pragmatic.\n";
 
 #include <petsc/private/dmpleximpl.h>
 
-#include <petscksp.h>
+#include <petscsnes.h>
 
 typedef struct {
   DM        dm;
@@ -213,7 +213,7 @@ static PetscErrorCode TestL2Projection(DM dm, DM dma, AppCtx *user)
   ierr = PetscPrintf(PETSC_COMM_WORLD, "Interpolated L2 Error: %g\n", (double) error);CHKERRQ(ierr);
 
   ierr = VecSet(ones, 1.0);CHKERRQ(ierr);
-  ierr = DMPlexComputeJacobianAction(dma, NULL, 0, 0, ua, NULL, ones, massLumped, user);CHKERRQ(ierr);
+  ierr = DMSNESComputeJacobianAction(dma, ua, ones, massLumped, user);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) massLumped, "Lumped mass");CHKERRQ(ierr);
   ierr = VecViewFromOptions(massLumped, NULL, "-mass_vec_view");CHKERRQ(ierr);
   ierr = DMCreateMassMatrix(dm, dma, &mass);CHKERRQ(ierr);
@@ -290,58 +290,51 @@ int main (int argc, char * argv[]) {
 
 /*TEST
 
+  build:
+    requires: pragmatic
+
   test:
     suffix: 0
-    requires: pragmatic
     TODO: broken
     args: -dim 2 -nbrVerEdge 5 -dm_plex_separate_marker 0 -met 2 -init_dm_view -adapt_dm_view
   test:
     suffix: 1
-    requires: pragmatic
     TODO: broken
     args: -dim 2 -nbrVerEdge 5 -dm_plex_separate_marker 1 -bdLabel marker -met 2 -init_dm_view -adapt_dm_view
   test:
     suffix: 2
-    requires: pragmatic
     TODO: broken
     args: -dim 3 -nbrVerEdge 5 -met 2 -init_dm_view -adapt_dm_view
   test:
     suffix: 3
-    requires: pragmatic
     TODO: broken
     args: -dim 3 -nbrVerEdge 5 -bdLabel marker -met 2 -init_dm_view -adapt_dm_view
   test:
     suffix: 4
-    requires: pragmatic
     TODO: broken
     nsize: 2
     args: -dim 2 -nbrVerEdge 3 -dm_plex_separate_marker 0 -met 2 -init_dm_view -adapt_dm_view
   test:
     suffix: 5
-    requires: pragmatic
     TODO: broken
     nsize: 4
     args: -dim 2 -nbrVerEdge 3 -dm_plex_separate_marker 0 -met 2 -init_dm_view -adapt_dm_view
   test:
     suffix: 6
-    requires: pragmatic
     TODO: broken
     nsize: 2
     args: -dim 3 -nbrVerEdge 10 -dm_plex_separate_marker 0 -met 0 -hmin 0.01 -hmax 0.03 -init_dm_view -adapt_dm_view
   test:
     suffix: 7
-    requires: pragmatic
     TODO: broken
     nsize: 5
     args: -dim 2 -nbrVerEdge 20 -dm_plex_separate_marker 0 -met 2 -hmax 0.5 -hmin 0.001 -init_dm_view -adapt_dm_view
   test:
     suffix: proj_0
-    requires: pragmatic
     TODO: broken
     args: -dim 2 -nbrVerEdge 3 -dm_plex_separate_marker 0 -init_dm_view -adapt_dm_view -do_L2 -petscspace_degree 1 -petscfe_default_quadrature_order 1 -dm_plex_hash_location -pc_type lu
   test:
     suffix: proj_1
-    requires: pragmatic
     TODO: broken
     args: -dim 2 -nbrVerEdge 5 -dm_plex_separate_marker 0 -init_dm_view -adapt_dm_view -do_L2 -petscspace_degree 2 -petscfe_default_quadrature_order 4 -dm_plex_hash_location -pc_type lu
 

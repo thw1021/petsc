@@ -1,6 +1,5 @@
 !
-!
-!  Include file for Fortran use of the Mat package in PETSc
+!  Used by petscmatmod.F90 to create Fortran module file
 !
 #include "petsc/finclude/petscmat.h"
 
@@ -46,7 +45,7 @@
       PetscEnum, parameter :: MAT_ROW_ORIENTED = -1
       PetscEnum, parameter :: MAT_SYMMETRIC = 1
       PetscEnum, parameter :: MAT_STRUCTURALLY_SYMMETRIC = 2
-      PetscEnum, parameter :: MAT_NEW_DIAGONALS = 3
+      PetscEnum, parameter :: MAT_FORCE_DIAGONAL_ENTRIES = 3
       PetscEnum, parameter :: MAT_IGNORE_OFF_PROC_ENTRIES = 4
       PetscEnum, parameter :: MAT_USE_HASH_TABLE = 5
       PetscEnum, parameter :: MAT_KEEP_NONZERO_PATTERN = 6
@@ -66,7 +65,9 @@
       PetscEnum, parameter :: MAT_SUBSET_OFF_PROC_ENTRIES = 20
       PetscEnum, parameter :: MAT_SUBMAT_SINGLEIS = 21
       PetscEnum, parameter :: MAT_STRUCTURE_ONLY = 22
-      PetscEnum, parameter :: MAT_OPTION_MAX = 23
+      PetscEnum, parameter :: MAT_SORTED_FULL = 23
+      PetscEnum, parameter :: MAT_FORM_EXPLICIT_TRANSPOSE = 24
+      PetscEnum, parameter :: MAT_OPTION_MAX = 25
 !
 !  MatFactorShiftType
 !
@@ -92,8 +93,9 @@
 !  Flags for MatCopy, MatAXPY
 !
       PetscEnum, parameter :: DIFFERENT_NONZERO_PATTERN = 0
-      PetscEnum, parameter :: SUBSET_NONZERO_PATTERN=1
+      PetscEnum, parameter :: SUBSET_NONZERO_PATTERN = 1
       PetscEnum, parameter :: SAME_NONZERO_PATTERN = 2
+      PetscEnum, parameter :: UNKNOWN_NONZERO_PATTERN = 3
 
 #include "../src/mat/f90-mod/petscmatinfosize.h"
 
@@ -190,7 +192,7 @@
       PetscEnum, parameter :: MATOP_ILUFACTOR_SYMBOLIC=30
       PetscEnum, parameter :: MATOP_ICCFACTOR_SYMBOLIC=31
       PetscEnum, parameter :: MATOP_GET_DIAGONAL_BLOCK=32
-!     PetscEnum, parameter :: MATOP_FREE_INTER_STRUCT=33
+      PetscEnum, parameter :: MATOP_PLACEHOLDER_33=33
       PetscEnum, parameter :: MATOP_DUPLICATE=34
       PetscEnum, parameter :: MATOP_FORWARD_SOLVE=35
       PetscEnum, parameter :: MATOP_BACKWARD_SOLVE=36
@@ -256,9 +258,9 @@
       PetscEnum, parameter :: MATOP_MAT_TRANSPOSE_MULT_SYMBO=96
       PetscEnum, parameter :: MATOP_MAT_TRANSPOSE_MULT_NUMER=97
 !     PetscEnum, parameter :: MATOP_PLACEHOLDER_98=98
-!     PetscEnum, parameter :: MATOP_PRODUCTSETFROMOPTIONS=99
-!     PetscEnum, parameter :: MATOP_PRODUCTSYMBOLIC=100
-!     PetscEnum, parameter :: MATOP_PRODUCTNUMERIC=101
+      PetscEnum, parameter :: MATOP_PRODUCTSETFROMOPTIONS=99
+      PetscEnum, parameter :: MATOP_PRODUCTSYMBOLIC=100
+      PetscEnum, parameter :: MATOP_PRODUCTNUMERIC=101
       PetscEnum, parameter :: MATOP_CONJUGATE=102
 !     PetscEnum, parameter :: MATOP_PLACEHOLDER_103=103
       PetscEnum, parameter :: MATOP_SET_VALUES_ROW=104
@@ -347,9 +349,7 @@
       PetscEnum, parameter :: MAT_CUSPARSE_MULT=2
       PetscEnum, parameter :: MAT_CUSPARSE_ALL=3
 #endif
-!
-!  End of Fortran include file for the Mat package in PETSc
-!
+
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_MAT
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_MATFDCOLORING
@@ -368,7 +368,7 @@
 !DEC$ ATTRIBUTES DLLEXPORT::MAT_ROW_ORIENTED
 !DEC$ ATTRIBUTES DLLEXPORT::MAT_SYMMETRIC
 !DEC$ ATTRIBUTES DLLEXPORT::MAT_STRUCTURALLY_SYMMETRIC
-!DEC$ ATTRIBUTES DLLEXPORT::MAT_NEW_DIAGONALS
+!DEC$ ATTRIBUTES DLLEXPORT::MAT_FORCE_DIAGONAL_ENTRIES
 !DEC$ ATTRIBUTES DLLEXPORT::MAT_IGNORE_OFF_PROC_ENTRIES
 !DEC$ ATTRIBUTES DLLEXPORT::MAT_USE_HASH_TABLE
 !DEC$ ATTRIBUTES DLLEXPORT::MAT_KEEP_NONZERO_PATTERN

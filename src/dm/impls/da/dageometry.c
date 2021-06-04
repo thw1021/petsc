@@ -1,7 +1,6 @@
 #include <petscsf.h>
 #include <petsc/private/dmdaimpl.h>     /*I  "petscdmda.h"   I*/
 
-
 /*@
   DMDAConvertToCell - Convert (i,j,k) to local cell number
 
@@ -15,8 +14,6 @@
 . cell - the local cell number
 
   Level: developer
-
-.seealso: DMDAVecGetClosure()
 @*/
 PetscErrorCode DMDAConvertToCell(DM dm, MatStencil s, PetscInt *cell)
 {
@@ -48,8 +45,8 @@ PetscErrorCode private_DMDALocatePointsIS_2D_Regular(DM dmregular,Vec pos,IS *is
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = DMDAGetCorners(dmregular,&xs,&ys,0,&xe,&ye,0);CHKERRQ(ierr);
-  ierr = DMDAGetGhostCorners(dmregular,&Xs,&Ys,0,&Xe,&Ye,0);CHKERRQ(ierr);
+  ierr = DMDAGetCorners(dmregular,&xs,&ys,NULL,&xe,&ye,NULL);CHKERRQ(ierr);
+  ierr = DMDAGetGhostCorners(dmregular,&Xs,&Ys,NULL,&Xe,&Ye,NULL);CHKERRQ(ierr);
   xe += xs; Xe += Xs; if (xs != Xs) xs -= 1;
   ye += ys; Ye += Ys; if (ys != Ys) ys -= 1;
 
@@ -95,7 +92,7 @@ PetscErrorCode private_DMDALocatePointsIS_2D_Regular(DM dmregular,Vec pos,IS *is
     if (coor_p[1] > gmax_l[1]) { continue; }
 
     for (d=0; d<2; d++) {
-      mi[d] = (PetscInt)( (coor_p[d] - gmin[d])/dx[d] );
+      mi[d] = (PetscInt)((coor_p[d] - gmin[d])/dx[d]);
     }
 
     if (mi[0] < xs)     { continue; }
@@ -183,7 +180,7 @@ PetscErrorCode private_DMDALocatePointsIS_3D_Regular(DM dmregular,Vec pos,IS *is
     if (coor_p[2] > gmax_l[2]) { continue; }
 
     for (d=0; d<3; d++) {
-      mi[d] = (PetscInt)( (coor_p[d] - gmin[d])/dx[d] );
+      mi[d] = (PetscInt)((coor_p[d] - gmin[d])/dx[d]);
     }
 
     if (mi[0] < xs)     { continue; }
@@ -217,7 +214,6 @@ PetscErrorCode DMLocatePoints_DA_Regular(DM dm,Vec pos,DMPointLocationType ltype
   switch (dim) {
     case 1:
       SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Support not provided for 1D");
-      break;
     case 2:
       ierr = private_DMDALocatePointsIS_2D_Regular(dm,pos,&iscell);CHKERRQ(ierr);
       break;
@@ -226,7 +222,6 @@ PetscErrorCode DMLocatePoints_DA_Regular(DM dm,Vec pos,DMPointLocationType ltype
       break;
     default:
       SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupport spatial dimension");
-      break;
   }
 
   ierr = VecGetLocalSize(pos,&npoints);CHKERRQ(ierr);

@@ -18,8 +18,8 @@ int main(int argc, char **args)
   PetscErrorCode  ierr;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   nemptyranks = 10;
   nbigranks   = 10;
@@ -69,9 +69,6 @@ int main(int argc, char **args)
 }
 
 /*TEST
-
-   build:
-      requires: c99
 
    test:
       nsize: 8

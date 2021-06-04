@@ -214,7 +214,7 @@ PetscErrorCode InitialConditions(DM da,Vec U)
     y = j*hy;
     for (i=xs; i<xs+xm; i++) {
       x = i*hx;
-      if ((1.0 <= x) && (x <= 1.5) && (1.0 <= y) && (y <= 1.5)) u[j][i].v = .25*PetscPowReal(PetscSinReal(4.0*PETSC_PI*x),2.0)*PetscPowReal(PetscSinReal(4.0*PETSC_PI*y),2.0);
+      if (PetscGTE(x,1.0) && PetscLTE(x,1.5) && PetscGTE(y,1.0) && PetscLTE(y,1.5)) u[j][i].v = PetscPowReal(PetscSinReal(4.0*PETSC_PI*x),2.0)*PetscPowReal(PetscSinReal(4.0*PETSC_PI*y),2.0)/4.0;
       else u[j][i].v = 0.0;
 
       u[j][i].u = 1.0 - 2.0*u[j][i].v;
@@ -233,8 +233,8 @@ PetscErrorCode InitializeLambda(DM da,Vec lambda,PetscReal x,PetscReal y)
    PetscInt i,j,Mx,My,xs,ys,xm,ym;
    PetscErrorCode ierr;
    Field **l;
-   PetscFunctionBegin;
 
+   PetscFunctionBegin;
    ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);CHKERRQ(ierr);
    /* locate the global i index for x and j index for y */
    i = (PetscInt)(x*(Mx-1));
@@ -279,7 +279,7 @@ PetscErrorCode IFunctionLocalPassive(DMDALocalInfo *info,PetscReal t,Field**u,Fi
       f[j][i].v = udot[j][i].v - appctx->D2*(vxx + vyy) - uc*vc*vc + (appctx->gamma + appctx->kappa)*vc;
     }
   }
-  ierr = PetscLogFlops(16*xm*ym);CHKERRQ(ierr);
+  ierr = PetscLogFlops(16.0*xm*ym);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -298,7 +298,6 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
   PetscScalar    dummy;
 
   PetscFunctionBegin;
-
   ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
   ierr = DMGetLocalVector(da,&localU);CHKERRQ(ierr);
@@ -388,12 +387,14 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
     }
   }
   trace_off();  /* End of active section */
-  ierr = PetscLogFlops(16*xm*ym);CHKERRQ(ierr);
+  ierr = PetscLogFlops(16.0*xm*ym);CHKERRQ(ierr);
 
   /* Restore vectors */
   ierr = DMDAVecRestoreArray(da,F,&f);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArrayRead(da,localU,&u);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArrayRead(da,Udot,&udot);CHKERRQ(ierr);
+
+  ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
 
   /* Destroy AFields appropriately */
   f_a += info.gys;
@@ -402,7 +403,6 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
   delete[] u_a;
   delete[] f_c;
   delete[] u_c;
-
   PetscFunctionReturn(0);
 }
 

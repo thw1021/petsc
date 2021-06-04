@@ -15,7 +15,7 @@ int main(int argc,char **args)
   IS             isrow,iscol,irow[n],icol[n];
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-f",file,sizeof(file),&flg);CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file,FILE_MODE_READ,&viewer);CHKERRQ(ierr);
 
   ierr = MatCreate(PETSC_COMM_WORLD,&BAIJ);CHKERRQ(ierr);
@@ -44,7 +44,7 @@ int main(int argc,char **args)
   ierr = MatCreateSubMatrices(SBAIJ,n,irow,icol,MAT_INITIAL_MATRIX,&subSBAIJ);CHKERRQ(ierr);
   ierr = MatCreateSubMatrices(SBAIJ,n,irow,icol,MAT_REUSE_MATRIX,&subSBAIJ);CHKERRQ(ierr);
 
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   if (!rank) {
     ierr = MatView(subBAIJ[0],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
     ierr = MatView(subSBAIJ[0],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
@@ -61,5 +61,4 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 

@@ -13,10 +13,10 @@ int main(int argc,char **args)
   char           mtype[256];
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   /* This example does not work correctly for np > 2 */
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size > 2) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"Use np <= 2");
 
   /* Create the matrix for the five point stencil, YET AGAIN */
@@ -43,7 +43,7 @@ int main(int argc,char **args)
   ierr = MatView(C,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   ierr = PetscStrcpy(mtype,MATSAME);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL,NULL,"-conv_mat_type",mtype,256,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-conv_mat_type",mtype,sizeof(mtype),NULL);CHKERRQ(ierr);
   ierr = MatConvert(C,mtype,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
   ierr = PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD,PETSC_VIEWER_ASCII_INFO);CHKERRQ(ierr);
   ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
@@ -59,7 +59,6 @@ int main(int argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

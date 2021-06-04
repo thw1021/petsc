@@ -59,7 +59,7 @@ PetscErrorCode PFSetFromOptions_Matlab(PetscOptionItems *PetscOptionsObject,PF p
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"Matlab function options");CHKERRQ(ierr);
-  ierr = PetscOptionsString("-pf_matlab","Matlab function","None","",value,256,&flag);CHKERRQ(ierr);
+  ierr = PetscOptionsString("-pf_matlab","Matlab function","None","",value,sizeof(value),&flag);CHKERRQ(ierr);
   if (flag) {
     ierr = PetscStrallocpy((char*)value,&matlab->string);CHKERRQ(ierr);
   }
@@ -87,8 +87,4 @@ PETSC_EXTERN PetscErrorCode PFCreate_Matlab(PF pf,void *value)
   pf->ops->setfromoptions = PFSetFromOptions_Matlab;
   PetscFunctionReturn(0);
 }
-
-
-
-
 

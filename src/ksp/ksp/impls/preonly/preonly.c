@@ -20,19 +20,54 @@ static PetscErrorCode  KSPSolve_PREONLY(KSP ksp)
                you probably want a KSP type of Richardson");
   ksp->its = 0;
   ierr     = KSP_PCApply(ksp,ksp->vec_rhs,ksp->vec_sol);CHKERRQ(ierr);
-  ierr     = PCGetFailedReason(ksp->pc,&pcreason);CHKERRQ(ierr); 
+  ierr     = PCGetFailedReasonRank(ksp->pc,&pcreason);CHKERRQ(ierr);
+  /* Note: only some ranks may have this set; this may lead to problems if the caller assumes ksp->reason is set on all processes or just uses the result */
   if (pcreason) {
+    ierr = VecSetInf(ksp->vec_sol);CHKERRQ(ierr);
     ksp->reason = KSP_DIVERGED_PC_FAILED;
   } else {
     ksp->its    = 1;
     ksp->reason = KSP_CONVERGED_ITS;
-    if (PetscDefined(USE_DEBUG)) {
-      PetscReal norm;
-      ierr = VecNorm(ksp->vec_sol,NORM_2,&norm);CHKERRQ(ierr);
-      if (PetscIsInfOrNanReal(norm)) {
-        ksp->reason = KSP_DIVERGED_NANORINF;
-      }
-    }
+  }
+  if (ksp->numbermonitors) {
+    Vec       v;
+    PetscReal norm;
+    Mat       A;
+
+    ierr = VecNorm(ksp->vec_rhs,NORM_2,&norm);CHKERRQ(ierr);
+    ierr = KSPMonitor(ksp,0,norm);CHKERRQ(ierr);
+    ierr = VecDuplicate(ksp->vec_rhs,&v);CHKERRQ(ierr);
+    ierr = PCGetOperators(ksp->pc,&A,NULL);CHKERRQ(ierr);
+    ierr = KSP_MatMult(ksp,A,ksp->vec_sol,v);CHKERRQ(ierr);
+    ierr = VecAYPX(v,-1.0,ksp->vec_rhs);CHKERRQ(ierr);
+    ierr = VecNorm(v,NORM_2,&norm);CHKERRQ(ierr);
+    ierr = VecDestroy(&v);CHKERRQ(ierr);
+    ierr = KSPMonitor(ksp,1,norm);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode KSPMatSolve_PREONLY(KSP ksp, Mat B, Mat X)
+{
+  PetscErrorCode ierr;
+  PetscBool      diagonalscale;
+  PCFailedReason pcreason;
+
+  PetscFunctionBegin;
+  ierr = PCGetDiagonalScale(ksp->pc,&diagonalscale);CHKERRQ(ierr);
+  if (diagonalscale) SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
+  if (!ksp->guess_zero) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Running KSP of preonly doesn't make sense with nonzero initial guess\n\
+               you probably want a KSP type of Richardson");
+  ksp->its = 0;
+  ierr     = PCMatApply(ksp->pc,B,X);CHKERRQ(ierr);
+  ierr     = PCGetFailedReason(ksp->pc,&pcreason);CHKERRQ(ierr);
+  /* Note: only some ranks may have this set; this may lead to problems if the caller assumes ksp->reason is set on all processes or just uses the result */
+  if (pcreason) {
+    ierr = MatSetInf(X);CHKERRQ(ierr);
+    ksp->reason = KSP_DIVERGED_PC_FAILED;
+  } else {
+    ksp->its    = 1;
+    ksp->reason = KSP_CONVERGED_ITS;
   }
   PetscFunctionReturn(0);
 }
@@ -78,10 +113,11 @@ PETSC_EXTERN PetscErrorCode KSPCreate_PREONLY(KSP ksp)
   ksp->data                = NULL;
   ksp->ops->setup          = KSPSetUp_PREONLY;
   ksp->ops->solve          = KSPSolve_PREONLY;
+  ksp->ops->matsolve       = KSPMatSolve_PREONLY;
   ksp->ops->destroy        = KSPDestroyDefault;
   ksp->ops->buildsolution  = KSPBuildSolutionDefault;
   ksp->ops->buildresidual  = KSPBuildResidualDefault;
-  ksp->ops->setfromoptions = 0;
-  ksp->ops->view           = 0;
+  ksp->ops->setfromoptions = NULL;
+  ksp->ops->view           = NULL;
   PetscFunctionReturn(0);
 }

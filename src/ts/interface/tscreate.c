@@ -12,7 +12,7 @@ const char *const TSConvergedReasons_Shifted[] = {
   "CONVERGED_EVENT",
   "CONVERGED_PSEUDO_FATOL",
   "CONVERGED_PSEUDO_FATOL",
-  "TSConvergedReason","TS_",0};
+  "TSConvergedReason","TS_",NULL};
 const char *const*TSConvergedReasons = TSConvergedReasons_Shifted + 4;
 
 /*@C
@@ -44,7 +44,7 @@ PetscErrorCode  TSCreate(MPI_Comm comm, TS *ts)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(ts,1);
+  PetscValidPointer(ts,2);
   *ts = NULL;
   ierr = TSInitializePackage();CHKERRQ(ierr);
 
@@ -80,6 +80,7 @@ PetscErrorCode  TSCreate(MPI_Comm comm, TS *ts)
 
   t->num_rhs_splits     = 0;
 
+  t->axpy_pattern       = UNKNOWN_NONZERO_PATTERN;
   *ts = t;
   PetscFunctionReturn(0);
 }

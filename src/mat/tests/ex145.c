@@ -19,8 +19,8 @@ int main(int argc,char **argv)
   MatFactorInfo  finfo;
 
   ierr = PetscInitialize(&argc,&argv,(char*) 0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rand);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rand);CHKERRQ(ierr);
@@ -132,9 +132,9 @@ int main(int argc,char **argv)
   ierr = PetscPrintf(PETSC_COMM_WORLD," Create Elemental matrix Aher\n");CHKERRQ(ierr);
   ierr = MatHermitianTranspose(A,MAT_INITIAL_MATRIX,&Aher);CHKERRQ(ierr);
   ierr = MatAXPY(Aher,1.0,A,SAME_NONZERO_PATTERN);CHKERRQ(ierr); /* Aher = A + A^T */
-  if(!rank) { /* add 100.0 to diagonals of Aher to make it spd */
+  if (!rank) { /* add 100.0 to diagonals of Aher to make it spd */
 
-    /* TODO: Replace this with a call to El::ShiftDiagonal( A, 100. ),
+    /* TODO: Replace this with a call to El::ShiftDiagonal( A, 100.),
              or at least pre-allocate the right amount of space */
     PetscInt M,N;
     ierr = MatGetSize(Aher,&M,&N);CHKERRQ(ierr);

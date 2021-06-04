@@ -46,8 +46,8 @@ static PetscErrorCode PhysicsRiemann_Advect(void *vctx,PetscInt m,const PetscSca
 
   PetscFunctionBeginUser;
   speed = ctx->a;
-  if(x==0 || x == xmin || x == xmax) flux[0] = PetscMax(0,(speed[0]+speed[1])/2.0)*uL[0] + PetscMin(0,(speed[0]+speed[1])/2.0)*uR[0]; /* if condition need to be changed base on different problem, '0' is the discontinuous point of a */
-  else if(x<0) flux[0] = PetscMax(0,speed[0])*uL[0] + PetscMin(0,speed[0])*uR[0];  /* else if condition need to be changed based on diferent problem, 'x = 0' is discontinuous point of a */
+  if (x==0 || x == xmin || x == xmax) flux[0] = PetscMax(0,(speed[0]+speed[1])/2.0)*uL[0] + PetscMin(0,(speed[0]+speed[1])/2.0)*uR[0]; /* if condition need to be changed base on different problem, '0' is the discontinuous point of a */
+  else if (x<0) flux[0] = PetscMax(0,speed[0])*uL[0] + PetscMin(0,speed[0])*uR[0];  /* else if condition need to be changed based on diferent problem, 'x = 0' is discontinuous point of a */
   else flux[0] = PetscMax(0,speed[1])*uL[0] + PetscMin(0,speed[1])*uR[0];
   *maxspeed = *speed;
   PetscFunctionReturn(0);
@@ -60,7 +60,7 @@ static PetscErrorCode PhysicsCharacteristic_Advect(void *vctx,PetscInt m,const P
   PetscFunctionBeginUser;
   X[0]      = 1.;
   Xi[0]     = 1.;
-  if(x<0) speeds[0] = ctx->a[0];  /* x is discontinuous point of a */
+  if (x<0) speeds[0] = ctx->a[0];  /* x is discontinuous point of a */
   else    speeds[0] = ctx->a[1];
   PetscFunctionReturn(0);
 }
@@ -71,7 +71,7 @@ static PetscErrorCode PhysicsSample_Advect(void *vctx,PetscInt initial,FVBCType 
   PetscReal *a    = ctx->a,x0;
 
   PetscFunctionBeginUser;
-  if(x<0){   /* x is cell center */
+  if (x<0){   /* x is cell center */
     switch (bctype) {
       case FVBC_OUTFLOW:  x0 = x-a[0]*t; break;
       case FVBC_PERIODIC: x0 = RangeMod(x-a[0]*t,xmin,xmax); break;
@@ -625,13 +625,13 @@ int main(int argc,char *argv[])
 
   /* Choose the limiter from the list of registered limiters */
   ierr = PetscFunctionListFind(limiters,lname,&ctx.limit);CHKERRQ(ierr);
-  if (!ctx.limit) SETERRQ1(PETSC_COMM_SELF,1,"Limiter '%s' not found",lname);
+  if (!ctx.limit) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Limiter '%s' not found",lname);
 
   /* Choose the physics from the list of registered models */
   {
     PetscErrorCode (*r)(FVCtx*);
     ierr = PetscFunctionListFind(physics,physname,&r);CHKERRQ(ierr);
-    if (!r) SETERRQ1(PETSC_COMM_SELF,1,"Physics '%s' not found",physname);
+    if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Physics '%s' not found",physname);
     /* Create the physics, will set the number of fields and their names */
     ierr = (*r)(&ctx);CHKERRQ(ierr);
   }
@@ -735,6 +735,7 @@ int main(int argc,char *argv[])
       Vec          XR;
       PetscReal    nrm1,nrmsup;
       PetscBool    flg;
+
       ierr = PetscOptionsGetString(NULL,NULL,"-f",filename,sizeof(filename),&flg);CHKERRQ(ierr);
       if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"Must indicate binary file with the -f option");
       ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&fd);CHKERRQ(ierr);
@@ -795,7 +796,7 @@ int main(int argc,char *argv[])
 
 /*TEST
     build:
-      requires: !complex c99
+      requires: !complex
       depends: finitevolume1d.c
 
     test:

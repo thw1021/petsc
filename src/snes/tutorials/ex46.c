@@ -7,9 +7,6 @@ static char help[] = "Surface processes in geophysics.\n\n";
    Processors: n
 T*/
 
-
-
-
 #include <petscsnes.h>
 #include <petscdm.h>
 #include <petscdmda.h>
@@ -77,7 +74,6 @@ int main(int argc,char **argv)
      Customize solver; set runtime options
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
-
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve nonlinear system
@@ -165,7 +161,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar
     }
   }
   ierr = DMDAVecRestoreArray(coordDA, coordinates, &coords);CHKERRQ(ierr);
-  ierr = PetscLogFlops(11*info->ym*info->xm);CHKERRQ(ierr);
+  ierr = PetscLogFlops(11.0*info->ym*info->xm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -240,7 +236,6 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat jac,App
   ierr = MatSetOption(jac,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*TEST
 

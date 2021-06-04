@@ -47,7 +47,6 @@ typedef struct {
 extern PetscErrorCode FormFunction(SNES,Vec,Vec,void*);
 extern PetscErrorCode Monitor(SNES,PetscInt,PetscReal,void*);
 
-
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
@@ -64,11 +63,11 @@ int main(int argc,char **argv)
   ierr = DMCompositeAddDM(user.packer,user.red1);CHKERRQ(ierr);
   ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,5,1,1,NULL,&user.da1);CHKERRQ(ierr);
   ierr = DMSetFromOptions(user.da1);CHKERRQ(ierr);
-  ierr = DMSetUp(user.da1);CHKERRQ(ierr);  
+  ierr = DMSetUp(user.da1);CHKERRQ(ierr);
   ierr = DMCompositeAddDM(user.packer,user.da1);CHKERRQ(ierr);
   ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,5,1,1,NULL,&user.da2);CHKERRQ(ierr);
   ierr = DMSetFromOptions(user.da2);CHKERRQ(ierr);
-  ierr = DMSetUp(user.da2);CHKERRQ(ierr);  
+  ierr = DMSetUp(user.da2);CHKERRQ(ierr);
   ierr = DMDASetFieldName(user.da1,0,"u");CHKERRQ(ierr);
   ierr = DMDASetFieldName(user.da2,0,"lambda");CHKERRQ(ierr);
   ierr = DMCompositeAddDM(user.packer,user.da2);CHKERRQ(ierr);
@@ -80,7 +79,6 @@ int main(int argc,char **argv)
   ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD,0,"lambda - Lagrange multipliers",-1,-1,-1,-1,&user.lambda_viewer);CHKERRQ(ierr);
   ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD,0,"fu - derivate w.r.t. state variables",-1,-1,-1,-1,&user.fu_viewer);CHKERRQ(ierr);
   ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD,0,"flambda - derivate w.r.t. Lagrange multipliers",-1,-1,-1,-1,&user.flambda_viewer);CHKERRQ(ierr);
-
 
   /* create nonlinear solver */
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);

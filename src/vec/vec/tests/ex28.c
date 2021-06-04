@@ -11,20 +11,16 @@ int main(int argc,char **argv)
   PetscScalar    result1a,result2a;
   PetscReal      result3,result4,result[2],result3a,result4a,resulta[2];
   Vec            x,y,vecs[40];
-  PetscRandom    rctx;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
 
-  /* create vector */
+  /* create vectors */
   ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
   ierr = VecSetSizes(x,n,PETSC_DECIDE);CHKERRQ(ierr);
   ierr = VecSetFromOptions(x);CHKERRQ(ierr);
   ierr = VecDuplicate(x,&y);CHKERRQ(ierr);
-
-  ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx);CHKERRQ(ierr);
-  ierr = PetscRandomSetFromOptions(rctx);CHKERRQ(ierr);
-  ierr = VecSetRandom(x,rctx);CHKERRQ(ierr);
-  ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
+  ierr = VecSetRandom(x,NULL);CHKERRQ(ierr);
+  ierr = VecViewFromOptions(x,NULL,"-x_view");CHKERRQ(ierr);
   ierr = VecSet(y,two);CHKERRQ(ierr);
 
   /*
@@ -151,34 +147,46 @@ int main(int argc,char **argv)
   return ierr;
 }
 
-
-
-
-
-
 /*TEST
 
    test:
       nsize: 3
 
-   test:
-      suffix: 2
-      nsize: 3
-      args: -splitreduction_async
-      output_file: output/ex28_1.out
+   testset:
+     nsize: 3
+     output_file: output/ex28_1.out
 
-   test:
-      suffix: 2_cuda
-      nsize: 3
-      args: -splitreduction_async -vec_type cuda
-      requires: cuda
-      output_file: output/ex28_1.out
+     test:
+        suffix: 2
+        args: -splitreduction_async
 
-   test:
-      suffix: cuda
-      nsize: 3
-      args: -vec_type cuda
-      requires: cuda
-      output_file: output/ex28_1.out
- 
+     test:
+        suffix: 2_cuda
+        args: -splitreduction_async -vec_type cuda
+        requires: cuda
+
+     test:
+        suffix: cuda
+        args: -vec_type cuda
+        requires: cuda
+
+     test:
+        suffix: 2_hip
+        args: -splitreduction_async -vec_type hip
+        requires: hip
+
+     test:
+        suffix: hip
+        args: -vec_type hip
+        requires: hip
+
+     test:
+        suffix: 2_kokkos
+        args: -splitreduction_async -vec_type kokkos
+        requires: kokkos_kernels
+
+     test:
+        suffix: kokkos
+        args: -vec_type kokkos
+        requires: kokkos_kernels
 TEST*/

@@ -9,7 +9,7 @@
 typedef struct {
   /* context for time stepping */
   PetscReal    stage_time;
-  Vec          X0,X,Xdot;                /* Storage for stages and time derivative */
+  Vec          X0,X,Xdot;                /* Storage for stage solution, u^n + dt a_{11} k_1, and time derivative u^{n+1}_t */
   Vec          affine;                   /* Affine vector needed for residual at beginning of step in endpoint formulation */
   PetscReal    Theta;
   PetscReal    shift;                    /* Shift parameter for SNES Jacobian, used by forward, TLM and adjoint */
@@ -293,7 +293,7 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
 
   /* Build RHS for first-order adjoint lambda_{n+1}/h + r_u^T(n+1) */
   if (quadts) {
-    ierr = TSComputeRHSJacobian(quadts,th->stage_time,th->X,quadJ,NULL);CHKERRQ(ierr);
+    ierr = TSComputeRHSJacobian(quadts,th->stage_time,ts->vec_sol,quadJ,NULL);CHKERRQ(ierr);
   }
 
   for (nadj=0; nadj<ts->numcost; nadj++) {
@@ -309,7 +309,8 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
   }
 
   /* Build LHS for first-order adjoint */
-  ierr = TSComputeSNESJacobian(ts,th->X,J,Jpre);CHKERRQ(ierr);
+  th->shift = 1./adjoint_time_step;
+  ierr = TSComputeSNESJacobian(ts,ts->vec_sol,J,Jpre);CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
 
   /* Solve stage equation LHS*lambda_s = RHS for first-order adjoint */
@@ -328,9 +329,9 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
     ierr = MatDenseGetColumn(ts->mat_sensip,0,&xarr);CHKERRQ(ierr);
     ierr = VecPlaceArray(ts->vec_sensip_col,xarr);CHKERRQ(ierr);
     /* lambda_s^T F_UU w_1 */
-    ierr = TSComputeIHessianProductFunctionUU(ts,th->stage_time,th->X,VecsDeltaLam,ts->vec_sensip_col,ts->vecs_fuu);CHKERRQ(ierr);
+    ierr = TSComputeIHessianProductFunctionUU(ts,th->stage_time,ts->vec_sol,VecsDeltaLam,ts->vec_sensip_col,ts->vecs_fuu);CHKERRQ(ierr);
     /* lambda_s^T F_UP w_2 */
-    ierr = TSComputeIHessianProductFunctionUP(ts,th->stage_time,th->X,VecsDeltaLam,ts->vec_dir,ts->vecs_fup);CHKERRQ(ierr);
+    ierr = TSComputeIHessianProductFunctionUP(ts,th->stage_time,ts->vec_sol,VecsDeltaLam,ts->vec_dir,ts->vecs_fup);CHKERRQ(ierr);
     for (nadj=0; nadj<ts->numcost; nadj++) { /* compute the residual */
       ierr = VecCopy(ts->vecs_sensi2[nadj],VecsSensi2Temp[nadj]);CHKERRQ(ierr);
       ierr = VecScale(VecsSensi2Temp[nadj],1./adjoint_time_step);CHKERRQ(ierr);
@@ -354,7 +355,7 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
   /* Update sensitivities, and evaluate integrals if there is any */
   if (!isexplicitode) {
     th->shift = 0.0;
-    ierr = TSComputeSNESJacobian(ts,th->X,J,Jpre);CHKERRQ(ierr);
+    ierr = TSComputeSNESJacobian(ts,ts->vec_sol,J,Jpre);CHKERRQ(ierr);
     ierr = KSPSetOperators(ksp,J,Jpre);CHKERRQ(ierr);
     ierr = MatScale(J,-1.);CHKERRQ(ierr);
     for (nadj=0; nadj<ts->numcost; nadj++) {
@@ -370,15 +371,16 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
     }
   }
   if (ts->vecs_sensip) {
-    ierr = TSComputeIJacobianP(ts,th->stage_time,th->X,th->Xdot,1./adjoint_time_step,ts->Jacp,PETSC_FALSE);CHKERRQ(ierr); /* get -f_p */
+    ierr = VecAXPBYPCZ(th->Xdot,-1./adjoint_time_step,1.0/adjoint_time_step,0,th->X0,ts->vec_sol);CHKERRQ(ierr);
+    ierr = TSComputeIJacobianP(ts,th->stage_time,ts->vec_sol,th->Xdot,1./adjoint_time_step,ts->Jacp,PETSC_FALSE);CHKERRQ(ierr); /* get -f_p */
     if (quadts) {
-      ierr = TSComputeRHSJacobianP(quadts,th->stage_time,th->X,quadJp);CHKERRQ(ierr);
+      ierr = TSComputeRHSJacobianP(quadts,th->stage_time,ts->vec_sol,quadJp);CHKERRQ(ierr);
     }
     if (ts->vecs_sensi2p) {
       /* lambda_s^T F_PU w_1 */
-      ierr = TSComputeIHessianProductFunctionPU(ts,th->stage_time,th->X,VecsDeltaLam,ts->vec_sensip_col,ts->vecs_fpu);CHKERRQ(ierr);
+      ierr = TSComputeIHessianProductFunctionPU(ts,th->stage_time,ts->vec_sol,VecsDeltaLam,ts->vec_sensip_col,ts->vecs_fpu);CHKERRQ(ierr);
       /* lambda_s^T F_PP w_2 */
-      ierr = TSComputeIHessianProductFunctionPP(ts,th->stage_time,th->X,VecsDeltaLam,ts->vec_dir,ts->vecs_fpp);CHKERRQ(ierr);
+      ierr = TSComputeIHessianProductFunctionPP(ts,th->stage_time,ts->vec_sol,VecsDeltaLam,ts->vec_dir,ts->vecs_fpp);CHKERRQ(ierr);
     }
 
     for (nadj=0; nadj<ts->numcost; nadj++) {
@@ -442,6 +444,11 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
   th->stage_time    = th->endpoint ? ts->ptime : (ts->ptime+(1.-th->Theta)*ts->time_step);
   adjoint_ptime     = ts->ptime + ts->time_step;
   adjoint_time_step = -ts->time_step;  /* always positive since time_step is negative */
+
+  if (!th->endpoint) {
+    /* recover th->X0 using vec_sol and the stage value th->X */
+    ierr = VecAXPBYPCZ(th->X0,1.0/(1.0-th->Theta),th->Theta/(th->Theta-1.0),0,th->X,ts->vec_sol);CHKERRQ(ierr);
+  }
 
   /* Build RHS for first-order adjoint */
   /* Cost function has an integral term */
@@ -518,7 +525,7 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
   }
 
   /* Update sensitivities, and evaluate integrals if there is any */
-  if(th->endpoint) { /* two-stage Theta methods with th->Theta!=1, th->Theta==1 leads to BEuler */
+  if (th->endpoint) { /* two-stage Theta methods with th->Theta!=1, th->Theta==1 leads to BEuler */
     th->shift      = 1./((th->Theta-1.)*adjoint_time_step);
     th->stage_time = adjoint_ptime;
     ierr           = TSComputeSNESJacobian(ts,th->X0,J,Jpre);CHKERRQ(ierr);
@@ -565,6 +572,8 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
 
     if (ts->vecs_sensip) { /* sensitivities wrt parameters */
       /* U_{n+1} */
+      th->shift = 1.0/(adjoint_time_step*th->Theta);
+      ierr = VecAXPBYPCZ(th->Xdot,-th->shift,th->shift,0,th->X0,ts->vec_sol);CHKERRQ(ierr);
       ierr = TSComputeIJacobianP(ts,th->stage_time,ts->vec_sol,th->Xdot,-1./(th->Theta*adjoint_time_step),ts->Jacp,PETSC_FALSE);CHKERRQ(ierr);
       if (quadts) {
         ierr = TSComputeRHSJacobianP(quadts,th->stage_time,ts->vec_sol,quadJp);CHKERRQ(ierr);
@@ -572,6 +581,13 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
       for (nadj=0; nadj<ts->numcost; nadj++) {
         ierr = MatMultTranspose(ts->Jacp,VecsDeltaLam[nadj],VecsDeltaMu[nadj]);CHKERRQ(ierr);
         ierr = VecAXPY(ts->vecs_sensip[nadj],-adjoint_time_step*th->Theta,VecsDeltaMu[nadj]);CHKERRQ(ierr);
+        if (quadJp) {
+          ierr = MatDenseGetColumn(quadJp,nadj,&xarr);CHKERRQ(ierr);
+          ierr = VecPlaceArray(ts->vec_drdp_col,xarr);CHKERRQ(ierr);
+          ierr = VecAXPY(ts->vecs_sensip[nadj],adjoint_time_step*th->Theta,ts->vec_drdp_col);CHKERRQ(ierr);
+          ierr = VecResetArray(ts->vec_drdp_col);CHKERRQ(ierr);
+          ierr = MatDenseRestoreColumn(quadJp,&xarr);CHKERRQ(ierr);
+        }
       }
       if (ts->vecs_sensi2p) { /* second-order */
         /* Get w1 at t_{n+1} from TLM matrix */
@@ -598,6 +614,7 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
       }
 
       /* U_s */
+      ierr = VecZeroEntries(th->Xdot);CHKERRQ(ierr);
       ierr = TSComputeIJacobianP(ts,adjoint_ptime,th->X0,th->Xdot,1./((th->Theta-1.0)*adjoint_time_step),ts->Jacp,PETSC_FALSE);CHKERRQ(ierr);
       if (quadts) {
         ierr = TSComputeRHSJacobianP(quadts,adjoint_ptime,th->X0,quadJp);CHKERRQ(ierr);
@@ -605,6 +622,13 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
       for (nadj=0; nadj<ts->numcost; nadj++) {
         ierr = MatMultTranspose(ts->Jacp,VecsDeltaLam[nadj],VecsDeltaMu[nadj]);CHKERRQ(ierr);
         ierr = VecAXPY(ts->vecs_sensip[nadj],-adjoint_time_step*(1.0-th->Theta),VecsDeltaMu[nadj]);CHKERRQ(ierr);
+        if (quadJp) {
+          ierr = MatDenseGetColumn(quadJp,nadj,&xarr);CHKERRQ(ierr);
+          ierr = VecPlaceArray(ts->vec_drdp_col,xarr);CHKERRQ(ierr);
+          ierr = VecAXPY(ts->vecs_sensip[nadj],adjoint_time_step*(1.0-th->Theta),ts->vec_drdp_col);CHKERRQ(ierr);
+          ierr = VecResetArray(ts->vec_drdp_col);CHKERRQ(ierr);
+          ierr = MatDenseRestoreColumn(quadJp,&xarr);CHKERRQ(ierr);
+        }
         if (ts->vecs_sensi2p) { /* second-order */
           /* Get w1 at t_n from TLM matrix */
           ierr = MatDenseGetColumn(th->MatFwdSensip0,0,&xarr);CHKERRQ(ierr);
@@ -648,6 +672,8 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
       }
     }
     if (ts->vecs_sensip) {
+      th->shift = 1.0/(adjoint_time_step*th->Theta);
+      ierr = VecAXPBYPCZ(th->Xdot,-th->shift,th->shift,0,th->X0,th->X);CHKERRQ(ierr);
       ierr = TSComputeIJacobianP(ts,th->stage_time,th->X,th->Xdot,th->shift,ts->Jacp,PETSC_FALSE);CHKERRQ(ierr);
       if (quadts) {
         ierr = TSComputeRHSJacobianP(quadts,th->stage_time,th->X,quadJp);CHKERRQ(ierr);
@@ -767,8 +793,11 @@ static PetscErrorCode TSForwardStep_Theta(TS ts)
 
     /* Add the f_p forcing terms */
     if (ts->Jacp) {
+      ierr = VecZeroEntries(th->Xdot);CHKERRQ(ierr);
       ierr = TSComputeIJacobianP(ts,th->ptime0,th->X0,th->Xdot,th->shift,ts->Jacp,PETSC_FALSE);CHKERRQ(ierr);
       ierr = MatAXPY(MatDeltaFwdSensip,(th->Theta-1.)/th->Theta,ts->Jacp,SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
+      th->shift = previous_shift;
+      ierr = VecAXPBYPCZ(th->Xdot,-th->shift,th->shift,0,th->X0,ts->vec_sol);CHKERRQ(ierr);
       ierr = TSComputeIJacobianP(ts,th->stage_time,ts->vec_sol,th->Xdot,th->shift,ts->Jacp,PETSC_FALSE);CHKERRQ(ierr);
       ierr = MatAXPY(MatDeltaFwdSensip,-1.,ts->Jacp,SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
     }
@@ -780,6 +809,8 @@ static PetscErrorCode TSForwardStep_Theta(TS ts)
 
     /* Add the f_p forcing terms */
     if (ts->Jacp) {
+      th->shift = previous_shift;
+      ierr = VecAXPBYPCZ(th->Xdot,-th->shift,th->shift,0,th->X0,th->X);CHKERRQ(ierr);
       ierr = TSComputeIJacobianP(ts,th->stage_time,th->X,th->Xdot,th->shift,ts->Jacp,PETSC_FALSE);CHKERRQ(ierr);
       ierr = MatAXPY(MatDeltaFwdSensip,-1.,ts->Jacp,SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
     }
@@ -866,7 +897,9 @@ static PetscErrorCode TSForwardGetStages_Theta(TS ts,PetscInt *ns,Mat **stagesen
 
   PetscFunctionBegin;
   if (ns) *ns = 1;
-  if (stagesensip) *stagesensip = th->endpoint ? &(th->MatFwdSensip0) : &(th->MatDeltaFwdSensip);
+  if (stagesensip) {
+    *stagesensip = (!th->endpoint && th->Theta != 1.0) ? &(th->MatDeltaFwdSensip) : &(th->MatFwdSensip0);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -925,6 +958,10 @@ static PetscErrorCode TSDestroy_Theta(TS ts)
 /*
   This defines the nonlinear equation that is to be solved with SNES
   G(U) = F[t0+Theta*dt, U, (U-U0)*shift] = 0
+
+  Note that U here is the stage argument. This means that U = U_{n+1} only if endpoint = true,
+  otherwise U = theta U_{n+1} + (1 - theta) U0, which for the case of implicit midpoint is
+  U = (U_{n+1} + U0)/2
 */
 static PetscErrorCode SNESTSFormFunction_Theta(SNES snes,Vec x,Vec y,TS ts)
 {
@@ -1172,7 +1209,9 @@ static PetscErrorCode TSGetStages_Theta(TS ts,PetscInt *ns,Vec **Y)
 
   PetscFunctionBegin;
   if (ns) *ns = 1;
-  if (Y)  *Y  = th->endpoint ? &(th->X0) : &(th->X);
+  if (Y) {
+    *Y = (!th->endpoint && th->Theta != 1.0) ? &(th->X) : &(th->X0);
+  }
   PetscFunctionReturn(0);
 }
 

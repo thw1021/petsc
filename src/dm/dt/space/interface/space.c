@@ -183,7 +183,9 @@ PetscErrorCode PetscSpaceView(PetscSpace sp, PetscViewer v)
 . sp - the PetscSpace object to set options for
 
   Options Database:
-. -petscspace_degree the approximation order of the space
++ -petscspace_degree <deg> - the approximation order of the space
+. -petscspace_variables <n> - the number of different variables, e.g. x and y
+- -petscspace_components <c> - the number of components, say d for a vector field
 
   Level: intermediate
 
@@ -271,7 +273,7 @@ PetscErrorCode PetscSpaceDestroy(PetscSpace *sp)
   if (!*sp) PetscFunctionReturn(0);
   PetscValidHeaderSpecific((*sp), PETSCSPACE_CLASSID, 1);
 
-  if (--((PetscObject)(*sp))->refct > 0) {*sp = 0; PetscFunctionReturn(0);}
+  if (--((PetscObject)(*sp))->refct > 0) {*sp = NULL; PetscFunctionReturn(0);}
   ((PetscObject) (*sp))->refct = 0;
   ierr = DMDestroy(&(*sp)->dm);CHKERRQ(ierr);
 
@@ -356,7 +358,6 @@ PetscErrorCode PetscSpaceGetDimension(PetscSpace sp, PetscInt *dim)
   Output Parameter:
 + minDegree - The degree of the largest polynomial space contained in the space
 - maxDegree - The degree of the smallest polynomial space containing the space
-
 
   Level: intermediate
 

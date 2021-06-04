@@ -1,12 +1,12 @@
 static char help[] = "Solves a ODE-constrained optimization problem -- finding the optimal initial conditions for the van der Pol equation.\n";
 
-/**
+/*
   Concepts: TS^time-dependent nonlinear problems
   Concepts: TS^van der Pol equation DAE equivalent
-  Concepts: Optimization using adjoint sensitivities
+  Concepts: TS^Optimization using adjoint sensitivity analysis
   Processors: 1
 */
-/**
+/*
   Notes:
   This code demonstrates how to solve an ODE-constrained optimization problem with TAO, TSAdjoint and TS.
   The nonlinear problem is written in an ODE equivalent form.
@@ -104,7 +104,7 @@ static PetscErrorCode RHSHessianProductUU(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr
   for (j=0;j<2;j++) {
     vhv[j] = 0;
     for (k=0;k<2;k++)
-      for (i=0;i<2;i++ )
+      for (i=0;i<2;i++)
         vhv[j] += vl[i]*dJdU[i][j][k]*vr[k];
   }
   ierr = VecRestoreArrayRead(U,&u);CHKERRQ(ierr);
@@ -205,7 +205,7 @@ static PetscErrorCode IHessianProductUU(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr,V
   for (j=0;j<2;j++) {
     vhv[j] = 0;
     for (k=0;k<2;k++)
-      for (i=0;i<2;i++ )
+      for (i=0;i<2;i++)
         vhv[j] += vl[i]*dJdU[i][j][k]*vr[k];
   }
   ierr          = VecRestoreArrayRead(U,&u);CHKERRQ(ierr);
@@ -297,7 +297,7 @@ static PetscErrorCode MatrixFreeHessian(Tao tao,Vec U,Mat H,Mat Hpre,void *ctx)
 
 /* ------------ Routines calculating second-order derivatives -------------- */
 
-/**
+/*
   Compute the Hessian-vector product for the cost function using Second-order adjoint
 */
 PetscErrorCode Adjoint2(Vec U,PetscScalar arr[],User ctx)
@@ -428,7 +428,7 @@ int main(int argc,char **argv)
 
   /* Initialize program */
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
 
   /* Set runtime options */
@@ -554,7 +554,7 @@ int main(int argc,char **argv)
       /* Set initial solution guess */
       ierr = TaoSetInitialVector(tao,x);CHKERRQ(ierr);
       ierr = TaoSetFromOptions(tao);CHKERRQ(ierr);
-      ierr = TaoSolve(tao); CHKERRQ(ierr);
+      ierr = TaoSolve(tao);CHKERRQ(ierr);
       ierr = TaoDestroy(&tao);CHKERRQ(ierr);
       ierr = MatDestroy(&user.H);CHKERRQ(ierr);
       break;

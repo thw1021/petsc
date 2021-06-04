@@ -89,7 +89,6 @@ PetscErrorCode  KSPQCGGetQuadratic(KSP ksp,PetscReal *quadratic)
   PetscFunctionReturn(0);
 }
 
-
 PetscErrorCode KSPSolve_QCG(KSP ksp)
 {
 /*
@@ -103,9 +102,9 @@ PetscErrorCode KSPSolve_QCG(KSP ksp)
   Mat            Amat,Pmat;
   Vec            W,WA,WA2,R,P,ASP,BS,X,B;
   PetscScalar    scal,beta,rntrn,step;
-  PetscReal      q1,q2,xnorm,step1,step2,rnrm,btx,xtax;
+  PetscReal      q1,q2,xnorm,step1,step2,rnrm = 0.0,btx,xtax;
   PetscReal      ptasp,rtr,wtasp,bstp;
-  PetscReal      dzero = 0.0,bsnrm;
+  PetscReal      dzero = 0.0,bsnrm = 0.0;
   PetscErrorCode ierr;
   PetscInt       i,maxit;
   PC             pc = ksp->pc;
@@ -141,8 +140,10 @@ PetscErrorCode KSPSolve_QCG(KSP ksp)
   /* Compute:  BS = D^{-1} B */
   ierr = PCApplySymmetricLeft(pc,B,BS);CHKERRQ(ierr);
 
-  ierr       = VecNorm(BS,NORM_2,&bsnrm);CHKERRQ(ierr);
-  KSPCheckNorm(ksp,bsnrm);
+  if (ksp->normtype != KSP_NORM_NONE) {
+    ierr = VecNorm(BS,NORM_2,&bsnrm);CHKERRQ(ierr);
+    KSPCheckNorm(ksp,bsnrm);
+  }
   ierr       = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
   ksp->its   = 0;
   ksp->rnorm = bsnrm;
@@ -237,8 +238,10 @@ PetscErrorCode KSPSolve_QCG(KSP ksp)
         /* Evaluate the current step */
         ierr = VecCopy(X,W);CHKERRQ(ierr);  /* update interior iterate */
         ierr = VecAXPY(R,-step,ASP);CHKERRQ(ierr); /* r <- -step*asp + r */
-        ierr = VecNorm(R,NORM_2,&rnrm);CHKERRQ(ierr);
-        KSPCheckNorm(ksp,rnrm);
+        if (ksp->normtype != KSP_NORM_NONE) {
+          ierr = VecNorm(R,NORM_2,&rnrm);CHKERRQ(ierr);
+          KSPCheckNorm(ksp,rnrm);
+        }
         ierr       = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
         ksp->rnorm = rnrm;
         ierr       = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
@@ -370,7 +373,6 @@ $  KSP_CONVERGED_CG_NEG_CURVE if convergence is reached along a negative curvatu
 $  KSP_CONVERGED_CG_CONSTRAINED if convergence is reached along a constrained step,
 $  other KSP converged/diverged reasons
 
-
   Notes:
   Currently we allow symmetric preconditioning with the following scaling matrices:
       PCNONE:   D = Identity matrix
@@ -393,6 +395,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_QCG(KSP ksp)
 
   PetscFunctionBegin;
   ierr = KSPSetSupportedNorm(ksp,KSP_NORM_PRECONDITIONED,PC_SYMMETRIC,3);CHKERRQ(ierr);
+  ierr = KSPSetSupportedNorm(ksp,KSP_NORM_NONE,PC_SYMMETRIC,1);CHKERRQ(ierr);
   ierr = PetscNewLog(ksp,&cgP);CHKERRQ(ierr);
 
   ksp->data                = (void*)cgP;
@@ -402,7 +405,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_QCG(KSP ksp)
   ksp->ops->destroy        = KSPDestroy_QCG;
   ksp->ops->buildsolution  = KSPBuildSolutionDefault;
   ksp->ops->buildresidual  = KSPBuildResidualDefault;
-  ksp->ops->view           = 0;
+  ksp->ops->view           = NULL;
 
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPQCGGetQuadratic_C",KSPQCGGetQuadratic_QCG);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPQCGGetTrialStepNorm_C",KSPQCGGetTrialStepNorm_QCG);CHKERRQ(ierr);

@@ -13,8 +13,6 @@ The command line options include:\n\
    Processors: n
 T*/
 
-
-
 /*
    Include "petscdm.h" so that we can use data management objects (DMs)
    Include "petscdmda.h" so that we can use distributed arrays (DMDAs).
@@ -94,16 +92,16 @@ int main(int argc,char **argv)
   PetscErrorCode ierr;
   PetscInt       its,N = 5,i,maxit,maxf,xs,xm;
   PetscReal      abstol,rtol,stol,norm;
-  PetscBool      flg;
-
+  PetscBool      flg,viewinitial = PETSC_FALSE;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr  = MPI_Comm_rank(PETSC_COMM_WORLD,&ctx.rank);CHKERRQ(ierr);
-  ierr  = MPI_Comm_size(PETSC_COMM_WORLD,&ctx.size);CHKERRQ(ierr);
+  ierr  = MPI_Comm_rank(PETSC_COMM_WORLD,&ctx.rank);CHKERRMPI(ierr);
+  ierr  = MPI_Comm_size(PETSC_COMM_WORLD,&ctx.size);CHKERRMPI(ierr);
   ierr  = PetscOptionsGetInt(NULL,NULL,"-n",&N,NULL);CHKERRQ(ierr);
   ctx.h = 1.0/(N-1);
   ctx.sjerr = PETSC_FALSE;
   ierr  = PetscOptionsGetBool(NULL,NULL,"-test_jacobian_domain_error",&ctx.sjerr,NULL);CHKERRQ(ierr);
+  ierr  = PetscOptionsGetBool(NULL,NULL,"-view_initial",&viewinitial,NULL);CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create nonlinear solver context
@@ -266,6 +264,10 @@ int main(int argc,char **argv)
   */
   ierr = DMDAVecRestoreArray(ctx.da,F,&FF);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(ctx.da,U,&UU);CHKERRQ(ierr);
+  if (viewinitial) {
+    ierr = VecView(U,0);CHKERRQ(ierr);
+    ierr = VecView(F,0);CHKERRQ(ierr);
+  }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Evaluate initial guess; then solve nonlinear system
@@ -691,7 +693,6 @@ PetscErrorCode MatrixFreePreconditioner(PC pc,Vec x,Vec y)
   return 0;
 }
 
-
 /*TEST
 
    test:
@@ -751,6 +752,11 @@ PetscErrorCode MatrixFreePreconditioner(PC pc,Vec x,Vec y)
       suffix: 11
       requires: double !complex !single
       nsize: 4
-      args: -test_jacobian_domain_error -snes_converged_reason -snes_type ms -snes_check_jacobian_domain_error 1
+      args: -test_jacobian_domain_error -snes_converged_reason -snes_type ms -snes_ms_type m62 -snes_ms_damping 0.9 -snes_check_jacobian_domain_error 1
+
+   test:
+      suffix: 12
+      args: -view_initial
+      filter: grep -v "type:"
 
 TEST*/

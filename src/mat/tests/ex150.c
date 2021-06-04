@@ -4,7 +4,7 @@ static char help[]="This program illustrates the use of PETSc-fftw interface for
 
 extern PetscErrorCode InputTransformFFT(Mat,Vec,Vec);
 extern PetscErrorCode OutputTransformFFT(Mat,Vec,Vec);
-PetscInt main(PetscInt argc,char **args)
+int main(int argc,char **args)
 {
   PetscErrorCode ierr;
   PetscMPIInt    rank,size;
@@ -22,8 +22,8 @@ PetscInt main(PetscInt argc,char **args)
   SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP, "This example requires real numbers");
 #endif
 
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
 
   ierr = PetscRandomCreate(PETSC_COMM_WORLD, &rdm);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rdm);CHKERRQ(ierr);
@@ -73,11 +73,8 @@ PetscInt main(PetscInt argc,char **args)
 /*  if (enorm > 1.e-14) { */
   if (!rank) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"  Error norm of |x - z| %e\n",enorm);CHKERRQ(ierr);
-  } 
+  }
 /*      } */
-
-
-
 
 /* ierr = MatCreateVecs(A,&z,NULL);CHKERRQ(ierr); */
 /*  printf("Vector size from ex148 %d\n",vsize); */
@@ -95,6 +92,3 @@ PetscInt main(PetscInt argc,char **args)
   ierr = PetscFinalize();
   return ierr;
 }
-
-
-

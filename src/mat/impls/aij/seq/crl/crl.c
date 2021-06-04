@@ -30,7 +30,6 @@ PetscErrorCode MatDuplicate_AIJCRL(Mat A, MatDuplicateOption op, Mat *M)
 {
   PetscFunctionBegin;
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot duplicate AIJCRL matrices yet");
-  PetscFunctionReturn(0);
 }
 
 PetscErrorCode MatSeqAIJCRL_create_aijcrl(Mat A)
@@ -148,7 +147,6 @@ PetscErrorCode MatMult_AIJCRL(Mat A,Vec xx,Vec yy)
   PetscFunctionReturn(0);
 }
 
-
 /* MatConvert_SeqAIJ_SeqAIJCRL converts a SeqAIJ matrix into a
  * SeqAIJCRL matrix.  This routine is called by the MatCreate_SeqAIJCRL()
  * routine, but can also be used to convert an assembled SeqAIJ matrix
@@ -237,5 +235,4 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJCRL(Mat A)
   ierr = MatConvert_SeqAIJ_SeqAIJCRL(A,MATSEQAIJCRL,MAT_INPLACE_MATRIX,&A);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 

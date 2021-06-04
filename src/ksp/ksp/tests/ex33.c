@@ -2,7 +2,7 @@ static char help[] = "Test MatGetInertia().\n\n";
 
 /*
   Examples of command line options:
-  ./ex33 -sigma 2.0 -pc_factor_mat_solver_type mumps -mat_mumps_icntl_13 1 -mat_mumps_icntl_24 1 
+  ./ex33 -sigma 2.0 -pc_factor_mat_solver_type mumps -mat_mumps_icntl_13 1 -mat_mumps_icntl_24 1
   ./ex33 -sigma <shift> -fA <matrix_file>
 */
 
@@ -25,14 +25,14 @@ int main(int argc,char **args)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Compute the matrices that define the eigensystem, Ax=kBx
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = PetscOptionsGetString(NULL,NULL,"-fA",file[0],PETSC_MAX_PATH_LEN,&loadA);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL,NULL,"-fA",file[0],sizeof(file[0]),&loadA);CHKERRQ(ierr);
   if (loadA) {
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[0],FILE_MODE_READ,&viewer);CHKERRQ(ierr);
     ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
     ierr = MatLoad(A,viewer);CHKERRQ(ierr);
     ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
 
-    ierr = PetscOptionsGetString(NULL,NULL,"-fB",file[1],PETSC_MAX_PATH_LEN,&loadB);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL,NULL,"-fB",file[1],sizeof(file[1]),&loadB);CHKERRQ(ierr);
     if (loadB) {
       /* load B to get A = A + sigma*B */
       ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[1],FILE_MODE_READ,&viewer);CHKERRQ(ierr);
@@ -108,7 +108,7 @@ int main(int argc,char **args)
   ierr = PCFactorGetMatrix(pc,&F);CHKERRQ(ierr);
   ierr = MatGetInertia(F,&nneg,&nzero,&npos);CHKERRQ(ierr);
 
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   if (!rank) {
     ierr = PetscPrintf(PETSC_COMM_SELF," MatInertia: nneg: %D, nzero: %D, npos: %D\n",nneg,nzero,npos);CHKERRQ(ierr);
   }

@@ -141,7 +141,7 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidHeaderSpecific(X,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(G,VEC_CLASSID,2);
+  PetscValidHeaderSpecific(G,VEC_CLASSID,3);
   PetscCheckSameComm(tao,1,X,2);
   PetscCheckSameComm(tao,1,G,3);
   ierr = VecLockReadPush(X);CHKERRQ(ierr);
@@ -340,7 +340,7 @@ $      func (Tao tao, Vec x, Vec f, void *ctx);
 PetscErrorCode TaoSetResidualRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Tao, Vec, Vec, void*),void *ctx)
 {
   PetscErrorCode ierr;
-  
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidHeaderSpecific(res,VEC_CLASSID,2);
@@ -351,7 +351,7 @@ PetscErrorCode TaoSetResidualRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Ta
   tao->ls_res = res;
   tao->user_lsresP = ctx;
   tao->ops->computeresidual = func;
-  
+
   PetscFunctionReturn(0);
 }
 
@@ -367,8 +367,6 @@ PetscErrorCode TaoSetResidualRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Ta
 . rows    - index list of rows for sigma_w
 . cols    - index list of columns for sigma_w
 - vals - array of weights
-
-
 
   Note: Either sigma_v or sigma_w (or both) should be NULL
 
@@ -407,8 +405,8 @@ PetscErrorCode TaoSetResidualWeights(Tao tao, Vec sigma_v, PetscInt n, PetscInt 
     }
   } else {
     tao->res_weights_n=0;
-    tao->res_weights_rows=0;
-    tao->res_weights_cols=0;
+    tao->res_weights_rows=NULL;
+    tao->res_weights_cols=NULL;
   }
   PetscFunctionReturn(0);
 }
@@ -538,7 +536,7 @@ PetscErrorCode TaoIsObjectiveDefined(Tao tao, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  if (tao->ops->computeobjective == 0) *flg = PETSC_FALSE;
+  if (tao->ops->computeobjective == NULL) *flg = PETSC_FALSE;
   else *flg = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -562,7 +560,7 @@ PetscErrorCode TaoIsGradientDefined(Tao tao, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  if (tao->ops->computegradient == 0) *flg = PETSC_FALSE;
+  if (tao->ops->computegradient == NULL) *flg = PETSC_FALSE;
   else *flg = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -586,7 +584,7 @@ PetscErrorCode TaoIsObjectiveAndGradientDefined(Tao tao, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  if (tao->ops->computeobjectiveandgradient == 0) *flg = PETSC_FALSE;
+  if (tao->ops->computeobjectiveandgradient == NULL) *flg = PETSC_FALSE;
   else *flg = PETSC_TRUE;
   PetscFunctionReturn(0);
 }

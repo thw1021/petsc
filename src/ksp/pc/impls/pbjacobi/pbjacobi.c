@@ -14,7 +14,6 @@ typedef struct {
   PetscInt        bs,mbs;
 } PC_PBJacobi;
 
-
 static PetscErrorCode PCApply_PBJacobi_1(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi       *jac = (PC_PBJacobi*)pc->data;
@@ -257,12 +256,12 @@ static PetscErrorCode PCSetUp_PBJacobi(PC pc)
   Mat            A = pc->pmat;
   MatFactorError err;
   PetscInt       nlocal;
-  
+
   PetscFunctionBegin;
   ierr = MatInvertBlockDiagonal(A,&jac->diag);CHKERRQ(ierr);
   ierr = MatFactorGetError(A,&err);CHKERRQ(ierr);
   if (err) pc->failedreason = (PCFailedReason)err;
- 
+
   ierr = MatGetBlockSize(A,&jac->bs);CHKERRQ(ierr);
   ierr = MatGetLocalSize(A,&nlocal,NULL);CHKERRQ(ierr);
   jac->mbs = nlocal/jac->bs;
@@ -326,7 +325,6 @@ static PetscErrorCode PCView_PBJacobi(PC pc,PetscViewer viewer)
 /*MC
      PCPBJACOBI - Point block Jacobi preconditioner
 
-
    Notes:
     See PCJACOBI for point Jacobi preconditioning
 
@@ -345,7 +343,6 @@ static PetscErrorCode PCView_PBJacobi(PC pc,PetscViewer viewer)
    even if a block is singular as the PCJACOBI does.
 
    Level: beginner
-
 
 .seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC, PCJACOBI
 
@@ -368,7 +365,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_PBJacobi(PC pc)
      Initialize the pointers to vectors to ZERO; these will be used to store
      diagonal entries of the matrix for fast preconditioner application.
   */
-  jac->diag = 0;
+  jac->diag = NULL;
 
   /*
       Set the pointers for the functions that are provided above.
@@ -377,16 +374,14 @@ PETSC_EXTERN PetscErrorCode PCCreate_PBJacobi(PC pc)
       choose not to provide a couple of these functions since they are
       not needed.
   */
-  pc->ops->apply               = 0; /*set depending on the block size */
-  pc->ops->applytranspose      = 0;
+  pc->ops->apply               = NULL; /*set depending on the block size */
+  pc->ops->applytranspose      = NULL;
   pc->ops->setup               = PCSetUp_PBJacobi;
   pc->ops->destroy             = PCDestroy_PBJacobi;
-  pc->ops->setfromoptions      = 0;
+  pc->ops->setfromoptions      = NULL;
   pc->ops->view                = PCView_PBJacobi;
-  pc->ops->applyrichardson     = 0;
-  pc->ops->applysymmetricleft  = 0;
-  pc->ops->applysymmetricright = 0;
+  pc->ops->applyrichardson     = NULL;
+  pc->ops->applysymmetricleft  = NULL;
+  pc->ops->applysymmetricright = NULL;
   PetscFunctionReturn(0);
 }
-
-

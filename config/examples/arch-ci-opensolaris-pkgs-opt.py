@@ -13,6 +13,8 @@ configure_options = [
   'FFLAGS=-ftrap=%none',
 
   '--download-mpich=1',
+  '--download-mpich-device=ch3:sock',
+
   '--with-c2html=0',
 
   #'-download-fblaslapack=1',
@@ -28,11 +30,12 @@ configure_options = [
   '--download-parms=1',
   #'--download-elemental=1', breaks with solaris compilers
   #'--download-hdf5',
-  #'--download-sundials=1', breaks when built via ssh - but not on terminal?
+  #'--download-sundials2=1', breaks when built via ssh - but not on terminal?
   '--download-hypre=1',
   '--download-suitesparse=1',
   '--download-chaco=1',
   '--download-spai=1',
+  '--with-mpi-f90module-visibility=0',
   ]
 
 if __name__ == '__main__':

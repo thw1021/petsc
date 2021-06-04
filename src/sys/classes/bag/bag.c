@@ -254,7 +254,7 @@ PetscErrorCode PetscBagRegisterInt64(PetscBag bag,void *addr,PetscInt64 mdefault
   PetscBool      printhelp;
   PetscInt       odefault = (PetscInt)mdefault;
   PetscBool      flg;
-  
+
   PetscFunctionBegin;
   nname[0] = '-';
   nname[1] = 0;
@@ -439,7 +439,6 @@ PetscErrorCode PetscBagRegisterReal(PetscBag bag,void *addr,PetscReal mdefault, 
 .  name - name of the variable
 -  help - longer string with more information about the value
 
-
    Level: beginner
 
 .seealso: PetscBag, PetscBagSetName(), PetscBagView(), PetscBagLoad(), PetscBagGetData()
@@ -486,7 +485,6 @@ PetscErrorCode PetscBagRegisterScalar(PetscBag bag,void *addr,PetscScalar mdefau
 .  mdefault - the initial value
 .  name - name of the variable
 -  help - longer string with more information about the value
-
 
    Level: beginner
 
@@ -760,6 +758,46 @@ PetscErrorCode  PetscBagView(PetscBag bag,PetscViewer view)
 }
 
 /*@C
+  PetscBagViewFromOptions - Processes command line options to determine if/how a PetscBag is to be viewed.
+
+  Collective on PetscBag
+
+  Input Parameters:
++ obj   - the object
+. bobj  - optional other object that provides prefix (if NULL then the prefix in obj is used)
+- optionname - option to activate viewing
+
+  Level: intermediate
+
+.seealso: PetscBagCreate(), PetscBag, PetscViewer
+@*/
+PetscErrorCode PetscBagViewFromOptions(PetscBag bag, PetscObject bobj, const char optionname[])
+{
+  static PetscBool  incall = PETSC_FALSE;
+  PetscViewer       viewer;
+  PetscViewerFormat format;
+  const char       *prefix, *bprefix = NULL;
+  PetscBool         flg;
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  if (incall) PetscFunctionReturn(0);
+  incall = PETSC_TRUE;
+  if (bobj) {ierr = PetscObjectGetOptionsPrefix(bobj, &bprefix);CHKERRQ(ierr);}
+  prefix = bobj ? bprefix : bag->bagprefix;
+  ierr   = PetscOptionsGetViewer(bag->bagcomm, NULL, prefix, optionname, &viewer, &format, &flg);CHKERRQ(ierr);
+  if (flg) {
+    ierr = PetscViewerPushFormat(viewer, format);CHKERRQ(ierr);
+    ierr = PetscBagView(bag, viewer);CHKERRQ(ierr);
+    ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
+    ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+  }
+  incall = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+/*@C
    PetscBagLoad - Loads a bag of values from a binary file
 
    Collective on PetscViewer
@@ -791,7 +829,7 @@ PetscErrorCode  PetscBagLoad(PetscViewer view,PetscBag bag)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)view,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_compare(comm,bag->bagcomm,&flag);CHKERRQ(ierr);
+  ierr = MPI_Comm_compare(comm,bag->bagcomm,&flag);CHKERRMPI(ierr);
   if (flag != MPI_CONGRUENT && flag != MPI_IDENT) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMECOMM,"Different communicators in the viewer and bag"); \
   ierr = PetscObjectTypeCompare((PetscObject)view,PETSCVIEWERBINARY,&isbinary);CHKERRQ(ierr);
   if (!isbinary) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for this viewer type");
@@ -900,7 +938,6 @@ PetscErrorCode PetscBagSetName(PetscBag bag, const char *name, const char *help)
   ierr = PetscStrncpy(bag->baghelp,help,PETSC_BAG_HELP_LENGTH-1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*@C
     PetscBagGetName - Gets the name of a bag of values

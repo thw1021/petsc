@@ -29,43 +29,62 @@ int main(int argc,char **args)
   PetscViewer    viewer;
   PetscErrorCode ierr;
   PetscMPIInt    size,rank;
-  PetscInt       i,j,*idxn,M,N,nzp,PN,rstart,rend;
+  PetscInt       i,j,*idxn,PM,PN = PETSC_DECIDE,rstart,rend;
   PetscReal      norm;
   PetscRandom    rdm;
-  char           file[2][128];
+  char           file[2][PETSC_MAX_PATH_LEN] = { "", ""};
   PetscScalar    *a,rval,alpha;
   PetscBool      Test_MatMatMult=PETSC_TRUE,Test_MatTrMat=PETSC_TRUE,Test_MatMatTr=PETSC_TRUE;
-  PetscBool      Test_MatPtAP=PETSC_TRUE,Test_MatRARt=PETSC_TRUE,flg,seqaij;
+  PetscBool      Test_MatPtAP=PETSC_TRUE,Test_MatRARt=PETSC_TRUE,flg,seqaij,flgA,flgB;
   MatInfo        info;
+  PetscInt       nzp  = 5; /* num of nonzeros in each row of P */
   MatType        mattype;
+  const char     *deft = MATAIJ;
+  char           A_mattype[256], B_mattype[256];
+  PetscInt       mcheck = 10;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   /*  Load the matrices A_save and B */
-  ierr = PetscOptionsGetString(NULL,NULL,"-fA",file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"Must indicate a file name for small matrix A with the -fA option.");
-  ierr = PetscOptionsGetString(NULL,NULL,"-fB",file[1],sizeof(file[1]),&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,1,"Must indicate a file name for small matrix B with the -fB option.");
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","","");CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-PN","Number of columns of P","",PN,&PN,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-mcheck","Number of matmult checks","",mcheck,&mcheck,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsString("-fA","Path for matrix A","",file[0],file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must indicate a file name for matrix A with the -fA option.");
+  ierr = PetscOptionsString("-fB","Path for matrix B","",file[1],file[1],sizeof(file[1]),&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsFList("-A_mat_type","Matrix type","MatSetType",MatList,deft,A_mattype,256,&flgA);CHKERRQ(ierr);
+  ierr = PetscOptionsFList("-B_mat_type","Matrix type","MatSetType",MatList,deft,B_mattype,256,&flgB);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[0],FILE_MODE_READ,&viewer);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&A_save);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A_save);CHKERRQ(ierr);
   ierr = MatLoad(A_save,viewer);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
 
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[1],FILE_MODE_READ,&viewer);CHKERRQ(ierr);
-  ierr = MatCreate(PETSC_COMM_WORLD,&B);CHKERRQ(ierr);
+  if (flg) {
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[1],FILE_MODE_READ,&viewer);CHKERRQ(ierr);
+    ierr = MatCreate(PETSC_COMM_WORLD,&B);CHKERRQ(ierr);
+    ierr = MatLoad(B,viewer);CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+  } else {
+    ierr = PetscObjectReference((PetscObject)A_save);CHKERRQ(ierr);
+    B = A_save;
+  }
+
+  if (flgA) {
+    ierr = MatConvert(A_save,A_mattype,MAT_INPLACE_MATRIX,&A_save);CHKERRQ(ierr);
+  }
+  if (flgB) {
+    ierr = MatConvert(B,B_mattype,MAT_INPLACE_MATRIX,&B);CHKERRQ(ierr);
+  }
+  ierr = MatSetFromOptions(A_save);CHKERRQ(ierr);
   ierr = MatSetFromOptions(B);CHKERRQ(ierr);
-  ierr = MatLoad(B,viewer);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
 
   ierr = MatGetType(B,&mattype);CHKERRQ(ierr);
 
-  ierr = MatGetSize(B,&M,&N);CHKERRQ(ierr);
-  nzp  = PetscMax((PetscInt)(0.1*M),5);
-  ierr = PetscMalloc((nzp+1)*(sizeof(PetscInt)+sizeof(PetscScalar)),&idxn);CHKERRQ(ierr);
+  ierr = PetscMalloc(nzp*(sizeof(PetscInt)+sizeof(PetscScalar)),&idxn);CHKERRQ(ierr);
   a    = (PetscScalar*)(idxn + nzp);
 
   ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rdm);CHKERRQ(ierr);
@@ -80,18 +99,22 @@ int main(int argc,char **args)
     ierr = MatProductCreate(A,B,NULL,&C);CHKERRQ(ierr);
     ierr = MatSetOptionsPrefix(C,"AB_");CHKERRQ(ierr);
     ierr = MatProductSetType(C,MATPRODUCT_AB);CHKERRQ(ierr);
-    ierr = MatProductSetAlgorithm(C,"default");CHKERRQ(ierr);
+    ierr = MatProductSetAlgorithm(C,MATPRODUCTALGORITHM_DEFAULT);CHKERRQ(ierr);
     ierr = MatProductSetFill(C,PETSC_DEFAULT);CHKERRQ(ierr);
     ierr = MatProductSetFromOptions(C);CHKERRQ(ierr);
+    /* we can inquire about MATOP_PRODUCTSYMBOLIC even if the destination matrix type has not been set yet */
+    ierr = MatHasOperation(C,MATOP_PRODUCTSYMBOLIC,&flg);CHKERRQ(ierr);
     ierr = MatProductSymbolic(C);CHKERRQ(ierr);
     ierr = MatProductNumeric(C);CHKERRQ(ierr);
+    ierr = MatMatMultEqual(A,B,C,mcheck,&flg);CHKERRQ(ierr);
+    if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in C=A*B");
 
     /* Test reuse symbolic C */
     alpha = 0.9;
     ierr = MatScale(A,alpha);CHKERRQ(ierr);
     ierr = MatProductNumeric(C);CHKERRQ(ierr);
 
-    ierr = MatMatMultEqual(A,B,C,10,&flg);CHKERRQ(ierr);
+    ierr = MatMatMultEqual(A,B,C,mcheck,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in C=A*B");
     ierr = MatDestroy(&C);CHKERRQ(ierr);
 
@@ -105,7 +128,7 @@ int main(int argc,char **args)
       ierr   = MatScale(A,alpha);CHKERRQ(ierr);
       ierr   = MatMatMult(A,B,MAT_REUSE_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
     }
-    ierr = MatMatMultEqual(A,B,C,10,&flg);CHKERRQ(ierr);
+    ierr = MatMatMultEqual(A,B,C,mcheck,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error: MatMatMult()");
     ierr = MatDestroy(&A);CHKERRQ(ierr);
 
@@ -114,19 +137,21 @@ int main(int argc,char **args)
     ierr = MatDestroy(&C);CHKERRQ(ierr);
 
     /* Test MatMatMult() for dense and aij matrices */
-    ierr = MatConvert(A_save,MATDENSE,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
-    ierr = MatMatMult(A,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
-    ierr = MatDestroy(&C);CHKERRQ(ierr);
-    ierr = MatDestroy(&A);CHKERRQ(ierr);
-
+    ierr = PetscObjectTypeCompareAny((PetscObject)A,&flg,MATSEQAIJ,MATMPIAIJ,"");CHKERRQ(ierr);
+    if (flg) {
+      ierr = MatConvert(A_save,MATDENSE,MAT_INITIAL_MATRIX,&A);CHKERRQ(ierr);
+      ierr = MatMatMult(A,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
+      ierr = MatDestroy(&C);CHKERRQ(ierr);
+      ierr = MatDestroy(&A);CHKERRQ(ierr);
+    }
   }
 
   /* Create P and R = P^T  */
   /* --------------------- */
-  PN   = M/2;
-  nzp  = 5; /* num of nonzeros in each row of P */
+  ierr = MatGetSize(B,&PM,NULL);CHKERRQ(ierr);
+  if (PN < 0) PN = PM/2;
   ierr = MatCreate(PETSC_COMM_WORLD,&P);CHKERRQ(ierr);
-  ierr = MatSetSizes(P,PETSC_DECIDE,PETSC_DECIDE,M,PN);CHKERRQ(ierr);
+  ierr = MatSetSizes(P,PETSC_DECIDE,PETSC_DECIDE,PM,PN);CHKERRQ(ierr);
   ierr = MatSetType(P,mattype);CHKERRQ(ierr);
   ierr = MatSeqAIJSetPreallocation(P,nzp,NULL);CHKERRQ(ierr);
   ierr = MatMPIAIJSetPreallocation(P,nzp,NULL,nzp,NULL);CHKERRQ(ierr);
@@ -143,8 +168,10 @@ int main(int argc,char **args)
   }
   ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatSetFromOptions(P);CHKERRQ(ierr);
 
   ierr = MatTranspose(P,MAT_INITIAL_MATRIX,&R);CHKERRQ(ierr);
+  ierr = MatSetFromOptions(R);CHKERRQ(ierr);
 
   /* 2) MatTransposeMatMult() */
   /* ------------------------ */
@@ -153,15 +180,15 @@ int main(int argc,char **args)
     ierr = MatProductCreate(P,B,NULL,&C);CHKERRQ(ierr);
     ierr = MatSetOptionsPrefix(C,"AtB_");CHKERRQ(ierr);
     ierr = MatProductSetType(C,MATPRODUCT_AtB);CHKERRQ(ierr);
-    ierr = MatProductSetAlgorithm(C,"default");CHKERRQ(ierr);
+    ierr = MatProductSetAlgorithm(C,MATPRODUCTALGORITHM_DEFAULT);CHKERRQ(ierr);
     ierr = MatProductSetFill(C,PETSC_DEFAULT);CHKERRQ(ierr);
     ierr = MatProductSetFromOptions(C);CHKERRQ(ierr);
-    ierr = MatSetOption(C,MAT_USE_INODES,PETSC_FALSE);CHKERRQ(ierr); /* illustrate how to call MatSetOption() */
     ierr = MatProductSymbolic(C);CHKERRQ(ierr); /* equivalent to MatSetUp() */
+    ierr = MatSetOption(C,MAT_USE_INODES,PETSC_FALSE);CHKERRQ(ierr); /* illustrate how to call MatSetOption() */
     ierr = MatProductNumeric(C);CHKERRQ(ierr);
     ierr = MatProductNumeric(C);CHKERRQ(ierr); /* test reuse symbolic C */
 
-    ierr = MatTransposeMatMultEqual(P,B,C,10,&flg);CHKERRQ(ierr);
+    ierr = MatTransposeMatMultEqual(P,B,C,mcheck,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error: developer driver C = P^T*B");
     ierr = MatDestroy(&C);CHKERRQ(ierr);
 
@@ -169,7 +196,7 @@ int main(int argc,char **args)
     ierr = MatTransposeMatMult(P,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
     ierr = MatTransposeMatMult(P,B,MAT_REUSE_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
     ierr = MatGetInfo(C,MAT_GLOBAL_SUM,&info);CHKERRQ(ierr);
-    ierr = MatFreeIntermediateDataStructures(C);CHKERRQ(ierr);
+    ierr = MatProductClear(C);CHKERRQ(ierr);
 
     /* Compare P^T*B and R*B */
     ierr = MatMatMult(R,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C1);CHKERRQ(ierr);
@@ -187,8 +214,8 @@ int main(int argc,char **args)
   /* ------------------------ */
   if (Test_MatMatTr) {
     /* C = B*R^T */
-    ierr = PetscObjectTypeCompare((PetscObject)B,MATSEQAIJ,&seqaij);CHKERRQ(ierr);
-    if (size == 1 && seqaij) {
+    ierr = PetscObjectBaseTypeCompare((PetscObject)B,MATSEQAIJ,&seqaij);CHKERRQ(ierr);
+    if (seqaij) {
       ierr = MatMatTransposeMult(B,R,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
       ierr = MatSetOptionsPrefix(C,"ABt_");CHKERRQ(ierr); /* enable '-ABt_' for matrix C */
       ierr = MatGetInfo(C,MAT_GLOBAL_SUM,&info);CHKERRQ(ierr);
@@ -214,14 +241,16 @@ int main(int argc,char **args)
     ierr = MatProductCreate(A,P,NULL,&C);CHKERRQ(ierr);
     ierr = MatSetOptionsPrefix(C,"PtAP_");CHKERRQ(ierr);
     ierr = MatProductSetType(C,MATPRODUCT_PtAP);CHKERRQ(ierr);
-    ierr = MatProductSetAlgorithm(C,"default");CHKERRQ(ierr);
+    ierr = MatProductSetAlgorithm(C,MATPRODUCTALGORITHM_DEFAULT);CHKERRQ(ierr);
     ierr = MatProductSetFill(C,PETSC_DEFAULT);CHKERRQ(ierr);
     ierr = MatProductSetFromOptions(C);CHKERRQ(ierr);
     ierr = MatProductSymbolic(C);CHKERRQ(ierr);
     ierr = MatProductNumeric(C);CHKERRQ(ierr);
+    ierr = MatPtAPMultEqual(A,P,C,mcheck,&flg);CHKERRQ(ierr);
+    if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatProduct_PtAP");
     ierr = MatProductNumeric(C);CHKERRQ(ierr); /* reuse symbolic C */
 
-    ierr = MatPtAPMultEqual(A,P,C,10,&flg);CHKERRQ(ierr);
+    ierr = MatPtAPMultEqual(A,P,C,mcheck,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatProduct_PtAP");
     ierr = MatDestroy(&C);CHKERRQ(ierr);
 
@@ -229,14 +258,13 @@ int main(int argc,char **args)
     ierr = MatPtAP(A,P,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
 
     /* Test MAT_REUSE_MATRIX - reuse symbolic C */
-    alpha=1.0;
+    alpha = 1.0;
     for (i=0; i<2; i++) {
       alpha -= 0.1;
       ierr   = MatScale(A,alpha);CHKERRQ(ierr);
       ierr   = MatPtAP(A,P,MAT_REUSE_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
     }
-
-    ierr = MatPtAPMultEqual(A,P,C,10,&flg);CHKERRQ(ierr);
+    ierr = MatPtAPMultEqual(A,P,C,mcheck,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatPtAP");
 
     /* 5) Test MatRARt() */
@@ -249,11 +277,11 @@ int main(int argc,char **args)
       ierr = MatProductCreate(A,R,NULL,&RARt);CHKERRQ(ierr);
       ierr = MatSetOptionsPrefix(RARt,"RARt_");CHKERRQ(ierr);
       ierr = MatProductSetType(RARt,MATPRODUCT_RARt);CHKERRQ(ierr);
-      ierr = MatProductSetAlgorithm(RARt,"default");CHKERRQ(ierr);
+      ierr = MatProductSetAlgorithm(RARt,MATPRODUCTALGORITHM_DEFAULT);CHKERRQ(ierr);
       ierr = MatProductSetFill(RARt,PETSC_DEFAULT);CHKERRQ(ierr);
       ierr = MatProductSetFromOptions(RARt);CHKERRQ(ierr);
-      ierr = MatSetOption(RARt,MAT_USE_INODES,PETSC_FALSE);CHKERRQ(ierr); /* illustrate how to call MatSetOption() */
       ierr = MatProductSymbolic(RARt);CHKERRQ(ierr); /* equivalent to MatSetUp() */
+      ierr = MatSetOption(RARt,MAT_USE_INODES,PETSC_FALSE);CHKERRQ(ierr); /* illustrate how to call MatSetOption() */
       ierr = MatProductNumeric(RARt);CHKERRQ(ierr);
       ierr = MatProductNumeric(RARt);CHKERRQ(ierr); /* test reuse symbolic RARt */
       ierr = MatDestroy(&RARt);CHKERRQ(ierr);
@@ -334,10 +362,24 @@ int main(int argc,char **args)
      output_file: output/ex62_1.out
 
    test:
+     suffix: 9_mkl
+     TODO: broken MatScale?
+     requires: mkl datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+     args: -fA ${DATAFILESPATH}/matrices/medium -fB ${DATAFILESPATH}/matrices/medium -A_mat_type aijmkl -B_mat_type aijmkl
+     output_file: output/ex62_1.out
+
+   test:
      suffix: 10
      requires: datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
      nsize: 3
      args: -fA ${DATAFILESPATH}/matrices/medium -fB ${DATAFILESPATH}/matrices/medium
+     output_file: output/ex62_1.out
+
+   test:
+     suffix: 10_backend
+     requires: datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+     nsize: 3
+     args: -fA ${DATAFILESPATH}/matrices/medium -AB_matproduct_ab_via backend -matmatmult_via backend -AtB_matproduct_atb_via backend -mattransposematmult_via backend -PtAP_matproduct_ptap_via backend -matptap_via backend
      output_file: output/ex62_1.out
 
    test:
@@ -359,6 +401,59 @@ int main(int argc,char **args)
      requires: hypre datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
      nsize: 3
      args: -fA ${DATAFILESPATH}/matrices/medium -fB ${DATAFILESPATH}/matrices/medium -AB_matproduct_ab_via hypre -matmatmult_via hypre -PtAP_matproduct_ptap_via hypre -matptap_via hypre
+     output_file: output/ex62_1.out
+
+   test:
+     suffix: 14_seqaij
+     requires: !complex double !define(PETSC_USE_64BIT_INDICES)
+     args: -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     output_file: output/ex62_1.out
+
+   test:
+     suffix: 14_seqaijcusparse
+     requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES)
+     args: -A_mat_type aijcusparse -B_mat_type aijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     output_file: output/ex62_1.out
+
+   test:
+     suffix: 14_mpiaijcusparse_seq
+     nsize: 1
+     requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES)
+     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     output_file: output/ex62_1.out
+
+   test:
+     suffix: 14_mpiaijcusparse
+     nsize: 3
+     requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES)
+     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     output_file: output/ex62_1.out
+
+   test:
+     suffix: 14_seqaijkokkos
+     requires: kokkos_kernels !complex double !define(PETSC_USE_64BIT_INDICES)
+     args: -A_mat_type aijkokkos -B_mat_type aijkokkos -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system
+     output_file: output/ex62_1.out
+
+   # these tests use matrices with many zero rows
+   test:
+     suffix: 15_seqaijcusparse
+     requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES) datafilespath
+     args: -A_mat_type aijcusparse -mat_form_explicit_transpose -fA ${DATAFILESPATH}/matrices/matmatmult/A4.BGriffith
+     output_file: output/ex62_1.out
+
+   test:
+     suffix: 15_mpiaijcusparse_seq
+     nsize: 1
+     requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES) datafilespath
+     args: -A_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${DATAFILESPATH}/matrices/matmatmult/A4.BGriffith
+     output_file: output/ex62_1.out
+
+   test:
+     nsize: 3
+     suffix: 15_mpiaijcusparse
+     requires: cuda !complex double !define(PETSC_USE_64BIT_INDICES) datafilespath
+     args: -A_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${DATAFILESPATH}/matrices/matmatmult/A4.BGriffith
      output_file: output/ex62_1.out
 
 TEST*/

@@ -33,16 +33,6 @@ PETSC_EXTERN PetscErrorCode ISGetType(IS, ISType *);
 PETSC_EXTERN PetscErrorCode ISRegister(const char[],PetscErrorCode (*)(IS));
 PETSC_EXTERN PetscErrorCode ISCreate(MPI_Comm,IS*);
 
-/*
-    Default index set data structures that PETSc provides.
-*/
-PETSC_EXTERN PetscErrorCode ISCreateGeneral(MPI_Comm,PetscInt,const PetscInt[],PetscCopyMode,IS *);
-PETSC_EXTERN PetscErrorCode ISGeneralSetIndices(IS,PetscInt,const PetscInt[],PetscCopyMode);
-PETSC_EXTERN PetscErrorCode ISCreateBlock(MPI_Comm,PetscInt,PetscInt,const PetscInt[],PetscCopyMode,IS *);
-PETSC_EXTERN PetscErrorCode ISBlockSetIndices(IS,PetscInt,PetscInt,const PetscInt[],PetscCopyMode);
-PETSC_EXTERN PetscErrorCode ISCreateStride(MPI_Comm,PetscInt,PetscInt,PetscInt,IS *);
-PETSC_EXTERN PetscErrorCode ISStrideSetStride(IS,PetscInt,PetscInt,PetscInt);
-
 PETSC_EXTERN PetscErrorCode ISDestroy(IS*);
 PETSC_EXTERN PetscErrorCode ISSetPermutation(IS);
 PETSC_EXTERN PetscErrorCode ISPermutation(IS,PetscBool *);
@@ -106,14 +96,8 @@ PETSC_EXTERN PetscErrorCode ISGetPointRange(IS,PetscInt*,PetscInt*,const PetscIn
 PETSC_EXTERN PetscErrorCode ISRestorePointRange(IS,PetscInt*,PetscInt*,const PetscInt**);
 PETSC_EXTERN PetscErrorCode ISGetPointSubrange(IS,PetscInt,PetscInt,const PetscInt*);
 
-PETSC_EXTERN PetscErrorCode ISBlockGetIndices(IS,const PetscInt *[]);
-PETSC_EXTERN PetscErrorCode ISBlockRestoreIndices(IS,const PetscInt *[]);
-PETSC_EXTERN PetscErrorCode ISBlockGetLocalSize(IS,PetscInt *);
-PETSC_EXTERN PetscErrorCode ISBlockGetSize(IS,PetscInt *);
 PETSC_EXTERN PetscErrorCode ISGetBlockSize(IS,PetscInt*);
 PETSC_EXTERN PetscErrorCode ISSetBlockSize(IS,PetscInt);
-
-PETSC_EXTERN PetscErrorCode ISStrideGetInfo(IS,PetscInt *,PetscInt*);
 
 PETSC_EXTERN PetscErrorCode ISToGeneral(IS);
 
@@ -130,7 +114,23 @@ PETSC_EXTERN PetscErrorCode ISOnComm(IS,MPI_Comm,PetscCopyMode,IS*);
 PETSC_EXTERN PetscErrorCode ISRenumber(IS,IS,PetscInt*,IS*);
 PETSC_EXTERN PetscErrorCode ISCreateSubIS(IS,IS,IS*);
 
+/* ISGENERAL specific */
+PETSC_EXTERN PetscErrorCode ISCreateGeneral(MPI_Comm,PetscInt,const PetscInt[],PetscCopyMode,IS *);
+PETSC_EXTERN PetscErrorCode ISGeneralSetIndices(IS,PetscInt,const PetscInt[],PetscCopyMode);
 PETSC_EXTERN PetscErrorCode ISGeneralFilter(IS,PetscInt,PetscInt);
+
+/* ISBLOCK specific */
+PETSC_EXTERN PetscErrorCode ISCreateBlock(MPI_Comm,PetscInt,PetscInt,const PetscInt[],PetscCopyMode,IS *);
+PETSC_EXTERN PetscErrorCode ISBlockSetIndices(IS,PetscInt,PetscInt,const PetscInt[],PetscCopyMode);
+PETSC_EXTERN PetscErrorCode ISBlockGetIndices(IS,const PetscInt *[]);
+PETSC_EXTERN PetscErrorCode ISBlockRestoreIndices(IS,const PetscInt *[]);
+PETSC_EXTERN PetscErrorCode ISBlockGetLocalSize(IS,PetscInt *);
+PETSC_EXTERN PetscErrorCode ISBlockGetSize(IS,PetscInt *);
+
+/* ISSTRIDE specific */
+PETSC_EXTERN PetscErrorCode ISCreateStride(MPI_Comm,PetscInt,PetscInt,PetscInt,IS *);
+PETSC_EXTERN PetscErrorCode ISStrideSetStride(IS,PetscInt,PetscInt,PetscInt);
+PETSC_EXTERN PetscErrorCode ISStrideGetInfo(IS,PetscInt *,PetscInt*);
 
 /* --------------------------------------------------------------------------*/
 PETSC_EXTERN PetscClassId IS_LTOGM_CLASSID;
@@ -193,7 +193,6 @@ PETSC_EXTERN PetscErrorCode ISLocalToGlobalMappingGetBlockSize(ISLocalToGlobalMa
 PETSC_EXTERN PetscErrorCode ISLocalToGlobalMappingSetBlockSize(ISLocalToGlobalMapping,PetscInt);
 PETSC_EXTERN PetscErrorCode ISLocalToGlobalMappingDuplicate(ISLocalToGlobalMapping,ISLocalToGlobalMapping*);
 
-
 /* --------------------------------------------------------------------------*/
 /*E
     ISColoringType - determines if the coloring is for the entire parallel grid/graph/matrix
@@ -213,7 +212,9 @@ $                         with DMDA and if you call MatFDColoringSetFunction() w
 E*/
 typedef enum {IS_COLORING_GLOBAL,IS_COLORING_LOCAL} ISColoringType;
 PETSC_EXTERN const char *const ISColoringTypes[];
-typedef unsigned PETSC_IS_COLOR_VALUE_TYPE ISColoringValue;
+typedef unsigned PETSC_IS_COLORING_VALUE_TYPE ISColoringValue;
+#define IS_COLORING_MAX PETSC_IS_COLORING_MAX
+#define MPIU_COLORING_VALUE PETSC_MPIU_IS_COLORING_VALUE_TYPE
 PETSC_EXTERN PetscErrorCode ISAllGatherColors(MPI_Comm,PetscInt,ISColoringValue*,PetscInt*,ISColoringValue*[]);
 
 PETSC_EXTERN PetscErrorCode ISColoringCreate(MPI_Comm,PetscInt,PetscInt,const ISColoringValue[],PetscCopyMode,ISColoring*);
@@ -236,9 +237,9 @@ PETSC_EXTERN PetscErrorCode ISCompressIndicesGeneral(PetscInt,PetscInt,PetscInt,
 PETSC_EXTERN PetscErrorCode ISCompressIndicesSorted(PetscInt,PetscInt,PetscInt,const IS[],IS[]);
 PETSC_EXTERN PetscErrorCode ISExpandIndicesGeneral(PetscInt,PetscInt,PetscInt,PetscInt,const IS[],IS[]);
 
-
 struct _n_PetscLayout{
   MPI_Comm               comm;
+  PetscMPIInt            size;
   PetscInt               n,N;         /* local, global vector size */
   PetscInt               rstart,rend; /* local start, local end + 1 */
   PetscInt               *range;      /* the offset of each processor */
@@ -274,14 +275,15 @@ struct _n_PetscLayout{
 @*/
 PETSC_STATIC_INLINE PetscErrorCode PetscLayoutFindOwner(PetscLayout map,PetscInt idx,PetscMPIInt *owner)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    lo = 0,hi,t;
+  PetscMPIInt lo = 0,hi,t;
 
   PetscFunctionBegin;
   *owner = -1;                  /* GCC erroneously issues warning about possibly uninitialized use when error condition */
+#if defined(PETSC_USE_DEBUG)
   if (!((map->n >= 0) && (map->N >= 0) && (map->range))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscLayoutSetUp() must be called first");
   if (idx < 0 || idx > map->N) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Index %D is out of range",idx);
-  ierr = MPI_Comm_size(map->comm,&hi);CHKERRQ(ierr);
+#endif
+  hi = map->size;
   while (hi - lo > 1) {
     t = lo + (hi - lo) / 2;
     if (idx < map->range[t]) hi = t;
@@ -312,20 +314,21 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLayoutFindOwner(PetscLayout map,PetscInt
 @*/
 PETSC_STATIC_INLINE PetscErrorCode PetscLayoutFindOwnerIndex(PetscLayout map,PetscInt idx,PetscMPIInt *owner,PetscInt *lidx)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    lo = 0,hi,t;
+  PetscMPIInt lo = 0,hi,t;
 
   PetscFunctionBegin;
+#if defined(PETSC_USE_DEBUG)
   if (!((map->n >= 0) && (map->N >= 0) && (map->range))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscLayoutSetUp() must be called first");
   if (idx < 0 || idx > map->N) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Index %D is out of range",idx);
-  ierr = MPI_Comm_size(map->comm,&hi);CHKERRQ(ierr);
+#endif
+  hi = map->size;
   while (hi - lo > 1) {
     t = lo + (hi - lo) / 2;
     if (idx < map->range[t]) hi = t;
     else                     lo = t;
   }
   if (owner) *owner = lo;
-  if (lidx) *lidx  = idx-map->range[lo];
+  if (lidx) *lidx  = idx - map->range[lo];
   PetscFunctionReturn(0);
 }
 
@@ -347,16 +350,9 @@ PETSC_EXTERN PetscErrorCode PetscLayoutGetRanges(PetscLayout,const PetscInt *[])
 PETSC_EXTERN PetscErrorCode PetscLayoutCompare(PetscLayout,PetscLayout,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscLayoutSetISLocalToGlobalMapping(PetscLayout,ISLocalToGlobalMapping);
 PETSC_EXTERN PetscErrorCode PetscLayoutMapLocal(PetscLayout,PetscInt,const PetscInt[],PetscInt*,PetscInt**,PetscInt**);
-PETSC_EXTERN PetscErrorCode PetscSFSetGraphLayout(PetscSF,PetscLayout,PetscInt,const PetscInt*,PetscCopyMode,const PetscInt*);
 
 PETSC_EXTERN PetscErrorCode PetscParallelSortInt(PetscLayout, PetscLayout, PetscInt*, PetscInt*);
 
 PETSC_EXTERN PetscErrorCode ISGetLayout(IS, PetscLayout *);
-
-/* PetscSF support */
-PETSC_EXTERN PetscErrorCode PetscSFConvertPartition(PetscSF, PetscSection, IS, ISLocalToGlobalMapping *, PetscSF *);
-PETSC_EXTERN PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF, PetscSection, PetscSection, PetscInt **);
-PETSC_EXTERN PetscErrorCode PetscSFDistributeSection(PetscSF, PetscSection, PetscInt **, PetscSection);
-PETSC_EXTERN PetscErrorCode PetscSFCreateSectionSF(PetscSF, PetscSection, PetscInt [], PetscSection, PetscSF *);
 
 #endif

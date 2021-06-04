@@ -89,16 +89,16 @@ PetscErrorCode  PFCreate(MPI_Comm comm,PetscInt dimin,PetscInt dimout,PF *pf)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(pf,1);
+  PetscValidPointer(pf,4);
   *pf = NULL;
   ierr = PFInitializePackage();CHKERRQ(ierr);
 
   ierr = PetscHeaderCreate(newpf,PF_CLASSID,"PF","Mathematical functions","Vec",comm,PFDestroy,PFView);CHKERRQ(ierr);
-  newpf->data          = 0;
-  newpf->ops->destroy  = 0;
-  newpf->ops->apply    = 0;
-  newpf->ops->applyvec = 0;
-  newpf->ops->view     = 0;
+  newpf->data          = NULL;
+  newpf->ops->destroy  = NULL;
+  newpf->ops->apply    = NULL;
+  newpf->ops->applyvec = NULL;
+  newpf->ops->view     = NULL;
   newpf->dimin         = dimin;
   newpf->dimout        = dimout;
 
@@ -204,8 +204,8 @@ PetscErrorCode  PFApply(PF pf,PetscInt n,const PetscScalar *x,PetscScalar *y)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pf,PF_CLASSID,1);
-  PetscValidScalarPointer(x,2);
-  PetscValidScalarPointer(y,3);
+  PetscValidScalarPointer(x,3);
+  PetscValidScalarPointer(y,4);
   if (x == y) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"x and y must be different arrays");
   if (!pf->ops->apply) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"No function has been provided for this PF");
 
@@ -287,7 +287,6 @@ PetscErrorCode  PFView(PF pf,PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-
 /*@C
    PFRegister - Adds a method to the mathematical function package.
 
@@ -350,7 +349,6 @@ PetscErrorCode  PFGetType(PF pf,PFType *type)
   PetscFunctionReturn(0);
 }
 
-
 /*@C
    PFSetType - Builds PF for a particular function
 
@@ -363,7 +361,6 @@ PetscErrorCode  PFGetType(PF pf,PFType *type)
 
    Options Database Key:
 .  -pf_type <type> - Sets PF type
-
 
   Notes:
   See "petsc/include/petscpf.h" for available methods (for instance,
@@ -387,15 +384,15 @@ PetscErrorCode  PFSetType(PF pf,PFType type,void *ctx)
   if (match) PetscFunctionReturn(0);
 
   if (pf->ops->destroy) {ierr =  (*pf->ops->destroy)(pf);CHKERRQ(ierr);}
-  pf->data = 0;
+  pf->data = NULL;
 
   /* Determine the PFCreateXXX routine for a particular function */
   ierr = PetscFunctionListFind(PFList,type,&r);CHKERRQ(ierr);
   if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested PF type %s",type);
-  pf->ops->destroy  = 0;
-  pf->ops->view     = 0;
-  pf->ops->apply    = 0;
-  pf->ops->applyvec = 0;
+  pf->ops->destroy  = NULL;
+  pf->ops->view     = NULL;
+  pf->ops->apply    = NULL;
+  pf->ops->applyvec = NULL;
 
   /* Call the PFCreateXXX routine for this particular function */
   ierr = (*r)(pf,ctx);CHKERRQ(ierr);
@@ -432,7 +429,7 @@ PetscErrorCode  PFSetFromOptions(PF pf)
   PetscValidHeaderSpecific(pf,PF_CLASSID,1);
 
   ierr = PetscObjectOptionsBegin((PetscObject)pf);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-pf_type","Type of function","PFSetType",PFList,0,type,256,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsFList("-pf_type","Type of function","PFSetType",PFList,NULL,type,256,&flg);CHKERRQ(ierr);
   if (flg) {
     ierr = PFSetType(pf,type,NULL);CHKERRQ(ierr);
   }
@@ -505,12 +502,4 @@ PetscErrorCode  PFInitializePackage(void)
   ierr = PetscRegisterFinalize(PFFinalizePackage);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-
-
-
-
-
-
-
 

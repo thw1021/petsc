@@ -23,6 +23,8 @@ TS Object: 1 MPI processes
     Abscissa of A+Gamma =  0.435867  0.871733  0.731580  1.000000 
   maximum steps=3
   maximum time=100.
+  total number of RHS function evaluations=12
+  total number of RHS Jacobian evaluations=12
   total number of linear solver iterations=12
   total number of linear solve failures=0
   total number of rejected steps=0
@@ -43,7 +45,6 @@ TS Object: 1 MPI processes
     total number of linear solver iterations=1
     total number of function evaluations=1
     norm schedule ALWAYS
-    Jacobian is never rebuilt
     KSP Object: 1 MPI processes
       type: gmres
         restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
@@ -65,7 +66,6 @@ TS Object: 1 MPI processes
               rows=60, cols=60
               package used to perform factorization: petsc
               total: nonzeros=176, allocated nonzeros=176
-              total number of mallocs used during MatSetValues calls=0
                 not using I-node routines
       linear system matrix followed by preconditioner matrix:
       Mat Object: 1 MPI processes

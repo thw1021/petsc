@@ -116,7 +116,7 @@ PetscErrorCode PetscBoxAuthorize(MPI_Comm comm,char access_token[],char refresh_
   PetscBool      flg,found;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   if (!rank) {
     if (!isatty(fileno(PETSC_STDOUT))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"Requires users input/output");
     ierr = PetscPrintf(comm,"Cut and paste the following into your browser:\n\n"
@@ -165,7 +165,7 @@ PetscErrorCode PetscBoxAuthorize(MPI_Comm comm,char access_token[],char refresh_
 
    Input Parameters:
 +   comm - MPI communicator
-.   refresh token - obtained with PetscBoxAuthorize(), if NULL PETSc will first look for one in the options data 
+.   refresh token - obtained with PetscBoxAuthorize(), if NULL PETSc will first look for one in the options data
                     if not found it will call PetscBoxAuthorize()
 -   tokensize - size of the output string access_token
 
@@ -190,12 +190,12 @@ PetscErrorCode PetscBoxRefresh(MPI_Comm comm,const char refresh_token[],char acc
   PetscBool      found;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   if (!rank) {
     if (!refresh_token) {
       PetscBool set;
       ierr = PetscMalloc1(512,&refreshtoken);CHKERRQ(ierr);
-      ierr = PetscOptionsGetString(NULL,NULL,"-box_refresh_token",refreshtoken,512,&set);CHKERRQ(ierr);
+      ierr = PetscOptionsGetString(NULL,NULL,"-box_refresh_token",refreshtoken,sizeof(refreshtoken),&set);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_SAWS)
       if (!set) {
         ierr = PetscBoxAuthorize(comm,access_token,new_refresh_token,512*sizeof(char));CHKERRQ(ierr);
@@ -284,17 +284,18 @@ PetscErrorCode PetscBoxUpload(MPI_Comm comm,const char access_token[],const char
   struct stat    sb;
   size_t         len,blen,rd;
   FILE           *fd;
+  int            err;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   if (!rank) {
     ierr = PetscStrcpy(head,"Authorization: Bearer ");CHKERRQ(ierr);
     ierr = PetscStrcat(head,access_token);CHKERRQ(ierr);
     ierr = PetscStrcat(head,"\r\n");CHKERRQ(ierr);
     ierr = PetscStrcat(head,"uploadType: multipart\r\n");CHKERRQ(ierr);
 
-    ierr = stat(filename,&sb);
-    if (ierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to stat file: %s",filename);
+    err = stat(filename,&sb);
+    if (err) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to stat file: %s",filename);
     len = 1024 + sb.st_size;
     ierr = PetscMalloc1(len,&body);CHKERRQ(ierr);
     ierr = PetscStrcpy(body,"--foo_bar_baz\r\n"
@@ -328,5 +329,3 @@ PetscErrorCode PetscBoxUpload(MPI_Comm comm,const char access_token[],const char
   }
   PetscFunctionReturn(0);
 }
-
-

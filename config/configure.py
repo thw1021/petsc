@@ -6,8 +6,19 @@ extraLogs = []
 petsc_arch = ''
 
 # Use en_US as language so that BuildSystem parses compiler messages in english
-if 'LC_LOCAL' in os.environ and os.environ['LC_LOCAL'] != '' and os.environ['LC_LOCAL'] != 'en_US' and os.environ['LC_LOCAL']!= 'en_US.UTF-8': os.environ['LC_LOCAL'] = 'en_US.UTF-8'
-if 'LANG' in os.environ and os.environ['LANG'] != '' and os.environ['LANG'] != 'en_US' and os.environ['LANG'] != 'en_US.UTF-8': os.environ['LANG'] = 'en_US.UTF-8'
+def fixLang(lang):
+  if lang in os.environ and os.environ[lang] != '':
+    lv = os.environ[lang]
+    enc = ''
+    try: lv,enc = lv.split('.')
+    except: pass
+    if lv not in ['en_US','C']: lv = 'en_US'
+    if enc: lv = lv+'.'+enc
+    os.environ[lang] = lv
+
+fixLang('LC_LOCAL')
+fixLang('LANG')
+
 
 def check_for_option_mistakes(opts):
   for opt in opts[1:]:
@@ -41,6 +52,8 @@ def check_for_option_changed(opts):
             ('c-blas-lapack','f2cblaslapack'),
             ('cholmod','suitesparse'),
             ('umfpack','suitesparse'),
+            ('matlabengine','matlab-engine'),
+            ('sundials','sundials2'),
             ('f-blas-lapack','fblaslapack'),
             ('with-cuda-arch',
              'CUDAFLAGS=-arch'),
@@ -52,7 +65,7 @@ def check_for_option_changed(opts):
   for opt in opts[1:]:
     optname = opt.split('=')[0].strip('-')
     for oldname,newname in optMap:
-      if optname.find(oldname) >=0:
+      if optname.find(oldname) >=0 and not optname.find(newname):
         raise ValueError('The option '+opt+' should probably be '+opt.replace(oldname,newname))
   return
 
@@ -135,42 +148,47 @@ def chksynonyms():
   for l in range(0,len(sys.argv)):
     name = sys.argv[l]
 
-    if name.find('with-blas-lapack') >= 0:
-      sys.argv[l] = name.replace('with-blas-lapack','with-blaslapack')
+    name = name.replace('download-petsc4py','with-petsc4py')
+    name = name.replace('with-openmpi','with-mpi')
+    name = name.replace('with-mpich','with-mpi')
+    name = name.replace('with-blas-lapack','with-blaslapack')
 
     if name.find('with-debug=') >= 0 or name.endswith('with-debug'):
       if name.find('=') == -1:
-        sys.argv[l] = name.replace('with-debug','with-debugging')+'=1'
+        name = name.replace('with-debug','with-debugging')+'=1'
       else:
         head, tail = name.split('=', 1)
-        sys.argv[l] = head.replace('with-debug','with-debugging')+'='+tail
+        name = head.replace('with-debug','with-debugging')+'='+tail
 
     if name.find('with-shared=') >= 0 or name.endswith('with-shared'):
       if name.find('=') == -1:
-        sys.argv[l] = name.replace('with-shared','with-shared-libraries')+'=1'
+        name = name.replace('with-shared','with-shared-libraries')+'=1'
       else:
         head, tail = name.split('=', 1)
-        sys.argv[l] = head.replace('with-shared','with-shared-libraries')+'='+tail
+        name = head.replace('with-shared','with-shared-libraries')+'='+tail
 
     if name.find('with-index-size=') >=0:
       head,tail = name.split('=',1)
       if int(tail)==32:
-        sys.argv[l] = '--with-64-bit-indices=0'
+        name = '--with-64-bit-indices=0'
       elif int(tail)==64:
-        sys.argv[l] = '--with-64-bit-indices=1'
+        name = '--with-64-bit-indices=1'
       else:
         raise RuntimeError('--with-index-size= must be 32 or 64')
 
     if name.find('with-precision=') >=0:
       head,tail = name.split('=',1)
       if tail.find('quad')>=0:
-        sys.argv[l]='--with-precision=__float128'
+        name='--with-precision=__float128'
 
     for i,j in simplereplacements.items():
       if name.find(i+'=') >= 0:
-        sys.argv[l] = name.replace(i+'=',j+'=')
+        name = name.replace(i+'=',j+'=')
       elif name.find('with-'+i.lower()+'=') >= 0:
-        sys.argv[l] = name.replace(i.lower()+'=',j.lower()+'=')
+        name = name.replace(i.lower()+'=',j.lower()+'=')
+
+    # restore 'sys.argv[l]' from the intermediate var 'name'
+    sys.argv[l] = name
 
 def chkwincompilerusinglink():
   for arg in sys.argv:

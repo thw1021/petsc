@@ -14,7 +14,7 @@ PetscErrorCode FormJacobian(Mat A)
   ierr = MatGetOwnershipRange(A,&ownbegin,&ownend);CHKERRQ(ierr);
 
   for (i=ownbegin; i<ownend; i++) {
-    for(j=i-3; j<i+3; j++) {
+    for (j=i-3; j<i+3; j++) {
       if (j >= 0 && j < M) {
         ierr = MatSetValues(A,1,&i,1,&j,&dummy,INSERT_VALUES);CHKERRQ(ierr);
       }
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
   MatColoring    coloring;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   ierr= MatCreate(PETSC_COMM_WORLD,&J);CHKERRQ(ierr);
   ierr= MatSetSizes(J, PETSC_DECIDE, PETSC_DECIDE, M, M);CHKERRQ(ierr);

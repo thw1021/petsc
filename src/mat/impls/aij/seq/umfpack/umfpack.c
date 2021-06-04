@@ -84,7 +84,6 @@ typedef struct {
   PetscInt     *Wi,*perm_c;
   Mat          A;               /* Matrix used for factorization */
   MatStructure flg;
-  PetscBool    PetscMatOrdering;
 
   /* Flag to clean up UMFPACK objects during Destroy */
   PetscBool CleanUpUMFPACK;
@@ -206,9 +205,6 @@ static PetscErrorCode MatLUFactorNumeric_UMFPACK(Mat F,Mat A,const MatFactorInfo
   PetscFunctionReturn(0);
 }
 
-/*
-   Note the r permutation is ignored
-*/
 static PetscErrorCode MatLUFactorSymbolic_UMFPACK(Mat F,Mat A,IS r,IS c,const MatFactorInfo *info)
 {
   Mat_SeqAIJ     *a  = (Mat_SeqAIJ*)A->data;
@@ -224,7 +220,7 @@ static PetscErrorCode MatLUFactorSymbolic_UMFPACK(Mat F,Mat A,IS r,IS c,const Ma
   PetscFunctionBegin;
   (F)->ops->lufactornumeric = MatLUFactorNumeric_UMFPACK;
   if (!n) PetscFunctionReturn(0);
-  if (lu->PetscMatOrdering) {
+  if (r) {
     ierr = ISGetIndices(r,&ra);CHKERRQ(ierr);
     ierr = PetscMalloc1(m,&lu->perm_c);CHKERRQ(ierr);
     /* we cannot simply memcpy on 64 bit archs */
@@ -237,7 +233,7 @@ static PetscErrorCode MatLUFactorSymbolic_UMFPACK(Mat F,Mat A,IS r,IS c,const Ma
 
   /* symbolic factorization of A' */
   /* ---------------------------------------------------------------------- */
-  if (lu->PetscMatOrdering) { /* use Petsc row ordering */
+  if (r) { /* use Petsc row ordering */
 #if !defined(PETSC_USE_COMPLEX)
     status = umfpack_UMF_qsymbolic(n,m,ai,aj,av,lu->perm_c,&lu->Symbolic,lu->Control,lu->Info);
 #else
@@ -296,8 +292,8 @@ static PetscErrorCode MatView_Info_UMFPACK(Mat A,PetscViewer viewer)
   ierr = PetscViewerASCIIPrintf(viewer,"  Control[UMFPACK_IRSTEP]: %g\n",lu->Control[UMFPACK_IRSTEP]);CHKERRQ(ierr);
 
   /* mat ordering */
-  if (!lu->PetscMatOrdering) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  Control[UMFPACK_ORDERING]: %s (not using the PETSc ordering)\n",UmfpackOrderingTypes[(int)lu->Control[UMFPACK_ORDERING]]);CHKERRQ(ierr);
+  if (!lu->perm_c) {
+    ierr = PetscViewerASCIIPrintf(viewer,"  Control[UMFPACK_ORDERING]: AMD (not using the PETSc ordering)\n",UmfpackOrderingTypes[(int)lu->Control[UMFPACK_ORDERING]]);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -325,7 +321,6 @@ PetscErrorCode MatFactorGetSolverType_seqaij_umfpack(Mat A,MatSolverType *type)
   *type = MATSOLVERUMFPACK;
   PetscFunctionReturn(0);
 }
-
 
 /*MC
   MATSOLVERUMFPACK = "umfpack" - A matrix type providing direct solvers (LU) for sequential matrices
@@ -369,10 +364,9 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_umfpack(Mat A,MatFactorType ftyp
   Mat_UMFPACK    *lu;
   PetscErrorCode ierr;
   PetscInt       m=A->rmap->n,n=A->cmap->n,idx;
-
-  const char *strategy[]={"AUTO","UNSYMMETRIC","SYMMETRIC"};
-  const char *scale[]   ={"NONE","SUM","MAX"};
-  PetscBool  flg;
+  const char     *strategy[]={"AUTO","UNSYMMETRIC","SYMMETRIC"};
+  const char     *scale[]   ={"NONE","SUM","MAX"};
+  PetscBool      flg;
 
   PetscFunctionBegin;
   /* Create the factorization matrix F */
@@ -398,6 +392,8 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_umfpack(Mat A,MatFactorType ftyp
 
   ierr = PetscFree(B->solvertype);CHKERRQ(ierr);
   ierr = PetscStrallocpy(MATSOLVERUMFPACK,&B->solvertype);CHKERRQ(ierr);
+  B->canuseordering = PETSC_TRUE;
+  ierr = PetscStrallocpy(MATORDERINGEXTERNAL,(char**)&B->preferredordering[MAT_FACTOR_LU]);CHKERRQ(ierr);
 
   /* initializations */
   /* ------------------------------------------------*/
@@ -445,9 +441,6 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_umfpack(Mat A,MatFactorType ftyp
 
   /* Control parameters used by solve */
   ierr = PetscOptionsReal("-mat_umfpack_irstep","Control[UMFPACK_IRSTEP]","None",lu->Control[UMFPACK_IRSTEP],&lu->Control[UMFPACK_IRSTEP],NULL);CHKERRQ(ierr);
-
-  /* use Petsc mat ordering (note: size is for the transpose, and PETSc r = Umfpack perm_c) */
-  ierr = PetscOptionsName("-pc_factor_mat_ordering_type","Ordering to do factorization in","MatGetOrdering",&lu->PetscMatOrdering);CHKERRQ(ierr);
   PetscOptionsEnd();
   *F = B;
   PetscFunctionReturn(0);
@@ -456,6 +449,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_umfpack(Mat A,MatFactorType ftyp
 PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_cholmod(Mat,MatFactorType,Mat*);
 PETSC_INTERN PetscErrorCode MatGetFactor_seqsbaij_cholmod(Mat,MatFactorType,Mat*);
 PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_klu(Mat,MatFactorType,Mat*);
+PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_spqr(Mat,MatFactorType,Mat*);
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuiteSparse(void)
 {
@@ -466,5 +460,6 @@ PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuiteSparse(void)
   ierr = MatSolverTypeRegister(MATSOLVERCHOLMOD,MATSEQAIJ,  MAT_FACTOR_CHOLESKY,MatGetFactor_seqaij_cholmod);CHKERRQ(ierr);
   ierr = MatSolverTypeRegister(MATSOLVERCHOLMOD,MATSEQSBAIJ,MAT_FACTOR_CHOLESKY,MatGetFactor_seqsbaij_cholmod);CHKERRQ(ierr);
   ierr = MatSolverTypeRegister(MATSOLVERKLU,MATSEQAIJ,      MAT_FACTOR_LU,MatGetFactor_seqaij_klu);CHKERRQ(ierr);
+  ierr = MatSolverTypeRegister(MATSOLVERSPQR,MATSEQAIJ,     MAT_FACTOR_QR,MatGetFactor_seqaij_spqr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

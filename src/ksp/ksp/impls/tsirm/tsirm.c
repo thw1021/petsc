@@ -1,6 +1,5 @@
 
-
-#include <petsc/private/kspimpl.h>	/*I "petscksp.h" I*/
+#include <petsc/private/kspimpl.h>      /*I "petscksp.h" I*/
 
 typedef struct {
   PetscReal tol_ls;
@@ -165,7 +164,6 @@ PetscErrorCode KSPDestroy_TSIRM(KSP ksp)
 /*MC
      KSPTSIRM - Implements the two-stage iteration with least-squares residual minimization method.
 
-
    Options Database Keys:
 +  -ksp_ksp_type <solver> -         the type of the inner solver (GMRES or any of its variants for instance)
 .  -ksp_pc_type <preconditioner> - the type of the preconditioner applied to the inner solver
@@ -215,9 +213,10 @@ PETSC_EXTERN PetscErrorCode KSPCreate_TSIRM(KSP ksp)
   ksp->ops->buildsolution  = KSPBuildSolutionDefault;
   ksp->ops->buildresidual  = KSPBuildResidualDefault;
   ksp->ops->setfromoptions = KSPSetFromOptions_TSIRM;
-  ksp->ops->view           = 0;
+  ksp->ops->view           = NULL;
 #if defined(PETSC_USE_COMPLEX)
   SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"This is not supported for complex numbers");
-#endif
+#else
   PetscFunctionReturn(0);
+#endif
 }

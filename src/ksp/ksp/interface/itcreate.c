@@ -1,4 +1,3 @@
-
 /*
      The basic KSP routines, Create, View etc. are here.
 */
@@ -8,13 +7,21 @@
 PetscClassId  KSP_CLASSID;
 PetscClassId  DMKSP_CLASSID;
 PetscClassId  KSPGUESS_CLASSID;
-PetscLogEvent KSP_GMRESOrthogonalization, KSP_SetUp, KSP_Solve, KSP_SolveTranspose;
+PetscLogEvent KSP_GMRESOrthogonalization, KSP_SetUp, KSP_Solve, KSP_SolveTranspose, KSP_MatSolve;
 
 /*
    Contains the list of registered KSP routines
 */
-PetscFunctionList KSPList              = 0;
+PetscFunctionList KSPList              = NULL;
 PetscBool         KSPRegisterAllCalled = PETSC_FALSE;
+
+/*
+   Contains the list of registered KSP monitors
+*/
+PetscFunctionList KSPMonitorList              = NULL;
+PetscFunctionList KSPMonitorCreateList        = NULL;
+PetscFunctionList KSPMonitorDestroyList       = NULL;
+PetscBool         KSPMonitorRegisterAllCalled = PETSC_FALSE;
 
 /*@C
   KSPLoad - Loads a KSP that has been stored in binary  with KSPView().
@@ -82,7 +89,7 @@ PetscErrorCode  KSPLoad(KSP newdm, PetscViewer viewer)
 -  viewer - visualization context
 
    Options Database Keys:
-.  -ksp_view - print the ksp data structure at the end of a KSPSolve call
+.  -ksp_view - print the KSP data structure at the end of a KSPSolve call
 
    Note:
    The available visualization contexts include
@@ -92,8 +99,14 @@ PetscErrorCode  KSPLoad(KSP newdm, PetscViewer viewer)
          the file.  All other processors send their
          data to the first processor to print.
 
+   The available formats include
++     PETSC_VIEWER_DEFAULT - standard output (default)
+-     PETSC_VIEWER_ASCII_INFO_DETAIL - more verbose output for PCBJACOBI and PCASM
+
    The user can open an alternative visualization context with
    PetscViewerASCIIOpen() - output to a specified file.
+
+  In the debugger you can do "call KSPView(ksp,0)" to display the KSP. (The same holds for any PETSc object viewer).
 
    Level: beginner
 
@@ -157,7 +170,7 @@ PetscErrorCode  KSPView(KSP ksp,PetscViewer viewer)
     char        type[256];
 
     ierr = PetscObjectGetComm((PetscObject)ksp,&comm);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
     if (!rank) {
       ierr = PetscViewerBinaryWrite(viewer,&classid,1,PETSC_INT);CHKERRQ(ierr);
       ierr = PetscStrncpy(type,((PetscObject)ksp)->type_name,256);CHKERRQ(ierr);
@@ -195,7 +208,7 @@ PetscErrorCode  KSPView(KSP ksp,PetscViewer viewer)
     const char  *name;
 
     ierr = PetscObjectGetName((PetscObject)ksp,&name);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
     if (!((PetscObject)ksp)->amsmem && !rank) {
       char       dir[1024];
 
@@ -212,8 +225,7 @@ PetscErrorCode  KSPView(KSP ksp,PetscViewer viewer)
   } else if (ksp->ops->view) {
     ierr = (*ksp->ops->view)(ksp,viewer);CHKERRQ(ierr);
   }
-  if (!ksp->skippcsetfromoptions) {
-    if (!ksp->pc) {ierr = KSPGetPC(ksp,&ksp->pc);CHKERRQ(ierr);}
+  if (ksp->pc) {
     ierr = PCView(ksp->pc,viewer);CHKERRQ(ierr);
   }
   if (isdraw) {
@@ -260,12 +272,11 @@ $                 the Krylov method as a smoother with a fixed small number of i
 $                 Implicitly sets KSPConvergedSkip() as KSP convergence test.
 $                 Note that certain algorithms such as KSPGMRES ALWAYS require the norm calculation,
 $                 for these methods the norms are still computed, they are just not used in
-$                 the convergence test. 
+$                 the convergence test.
 $   KSP_NORM_PRECONDITIONED - the default for left preconditioned solves, uses the l2 norm
 $                 of the preconditioned residual P^{-1}(b - A x)
 $   KSP_NORM_UNPRECONDITIONED - uses the l2 norm of the true b - Ax residual.
 $   KSP_NORM_NATURAL - supported  by KSPCG, KSPCR, KSPCGNE, KSPCGS
-
 
    Options Database Key:
 .   -ksp_norm_type <none,preconditioned,unpreconditioned,natural>
@@ -325,7 +336,6 @@ PetscErrorCode  KSPSetCheckNormIteration(KSP ksp,PetscInt it)
    KSPSetLagNorm - Lags the residual norm calculation so that it is computed as part of the MPI_Allreduce() for
    computing the inner products for the next iteration.  This can reduce communication costs at the expense of doing
    one additional iteration.
-
 
    Logically Collective on ksp
 
@@ -681,7 +691,7 @@ PetscErrorCode  KSPCreate(MPI_Comm comm,KSP *inksp)
 
   PetscFunctionBegin;
   PetscValidPointer(inksp,2);
-  *inksp = 0;
+  *inksp = NULL;
   ierr = KSPInitializePackage();CHKERRQ(ierr);
 
   ierr = PetscHeaderCreate(ksp,KSP_CLASSID,"KSP","Krylov Method","KSP",comm,KSPDestroy,KSPView);CHKERRQ(ierr);
@@ -707,20 +717,27 @@ PetscErrorCode  KSPCreate(MPI_Comm comm,KSP *inksp)
   ksp->res_hist_len   = 0;
   ksp->res_hist_max   = 0;
   ksp->res_hist_reset = PETSC_TRUE;
+  ksp->err_hist       = NULL;
+  ksp->err_hist_alloc = NULL;
+  ksp->err_hist_len   = 0;
+  ksp->err_hist_max   = 0;
+  ksp->err_hist_reset = PETSC_TRUE;
   ksp->numbermonitors = 0;
+  ksp->numberreasonviews = 0;
   ksp->setfromoptionscalled = 0;
+  ksp->nmax = PETSC_DECIDE;
 
   ierr                    = KSPConvergedDefaultCreate(&ctx);CHKERRQ(ierr);
   ierr                    = KSPSetConvergenceTest(ksp,KSPConvergedDefault,ctx,KSPConvergedDefaultDestroy);CHKERRQ(ierr);
   ksp->ops->buildsolution = KSPBuildSolutionDefault;
   ksp->ops->buildresidual = KSPBuildResidualDefault;
 
-  ksp->vec_sol    = 0;
-  ksp->vec_rhs    = 0;
-  ksp->pc         = 0;
-  ksp->data       = 0;
+  ksp->vec_sol    = NULL;
+  ksp->vec_rhs    = NULL;
+  ksp->pc         = NULL;
+  ksp->data       = NULL;
   ksp->nwork      = 0;
-  ksp->work       = 0;
+  ksp->work       = NULL;
   ksp->reason     = KSP_CONVERGED_ITERATING;
   ksp->setupstage = KSP_SETUP_NEW;
 
@@ -791,10 +808,11 @@ PetscErrorCode  KSPSetType(KSP ksp, KSPType type)
   ksp->ops->buildsolution = KSPBuildSolutionDefault;
   ksp->ops->buildresidual = KSPBuildResidualDefault;
   ierr                    = KSPNormSupportTableReset_Private(ksp);CHKERRQ(ierr);
+  ksp->setupnewmatrix     = PETSC_FALSE; // restore default (setup not called in case of new matrix)
   /* Call the KSPCreate_XXX routine for this particular Krylov solver */
   ksp->setupstage = KSP_SETUP_NEW;
-  ierr            = PetscObjectChangeTypeName((PetscObject)ksp,type);CHKERRQ(ierr);
   ierr            = (*r)(ksp);CHKERRQ(ierr);
+  ierr            = PetscObjectChangeTypeName((PetscObject)ksp,type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -855,5 +873,65 @@ PetscErrorCode  KSPRegister(const char sname[],PetscErrorCode (*function)(KSP))
   PetscFunctionBegin;
   ierr = KSPInitializePackage();CHKERRQ(ierr);
   ierr = PetscFunctionListAdd(&KSPList,sname,function);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode KSPMonitorMakeKey_Internal(const char name[], PetscViewerType vtype, PetscViewerFormat format, char key[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscStrncpy(key, name, PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  ierr = PetscStrlcat(key, ":", PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  ierr = PetscStrlcat(key, vtype, PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  ierr = PetscStrlcat(key, ":", PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  ierr = PetscStrlcat(key, PetscViewerFormats[format], PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  KSPMonitorRegister -  Adds Krylov subspace solver monitor routine.
+
+  Not Collective
+
+  Input Parameters:
++ name    - name of a new monitor routine
+. vtype   - A PetscViewerType for the output
+. format  - A PetscViewerFormat for the output
+. monitor - Monitor routine
+. create  - Creation routine, or NULL
+- destroy - Destruction routine, or NULL
+
+  Notes:
+  KSPMonitorRegister() may be called multiple times to add several user-defined monitors.
+
+  Sample usage:
+.vb
+  KSPMonitorRegister("my_monitor",PETSCVIEWERASCII,PETSC_VIEWER_ASCII_INFO_DETAIL,MyMonitor,NULL,NULL);
+.ve
+
+  Then, your monitor can be chosen with the procedural interface via
+$     KSPMonitorSetFromOptions(ksp,"-ksp_monitor_my_monitor","my_monitor",NULL)
+  or at runtime via the option
+$     -ksp_monitor_my_monitor
+
+   Level: advanced
+
+.seealso: KSPMonitorRegisterAll()
+@*/
+PetscErrorCode KSPMonitorRegister(const char name[], PetscViewerType vtype, PetscViewerFormat format,
+                                  PetscErrorCode (*monitor)(KSP, PetscInt, PetscReal, PetscViewerAndFormat *),
+                                  PetscErrorCode (*create)(PetscViewer, PetscViewerFormat, void *, PetscViewerAndFormat **),
+                                  PetscErrorCode (*destroy)(PetscViewerAndFormat **))
+{
+  char           key[PETSC_MAX_PATH_LEN];
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = KSPInitializePackage();CHKERRQ(ierr);
+  ierr = KSPMonitorMakeKey_Internal(name, vtype, format, key);CHKERRQ(ierr);
+  ierr = PetscFunctionListAdd(&KSPMonitorList, key, monitor);CHKERRQ(ierr);
+  if (create)  {ierr = PetscFunctionListAdd(&KSPMonitorCreateList,  key, create);CHKERRQ(ierr);}
+  if (destroy) {ierr = PetscFunctionListAdd(&KSPMonitorDestroyList, key, destroy);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }

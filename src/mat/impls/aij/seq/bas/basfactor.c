@@ -71,9 +71,9 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ_Bas(Mat fact,Mat A,IS perm,const MatF
 
   b->j    = uj;
   b->i    = ui;
-  b->diag = 0;
-  b->ilen = 0;
-  b->imax = 0;
+  b->diag = NULL;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = perm;
   b->col  = perm;
 
@@ -98,7 +98,6 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ_Bas(Mat fact,Mat A,IS perm,const MatF
   /*  (fact)->ops->choleskyfactornumeric = MatCholeskyFactorNumeric_SeqAIJ_inplace; */
   PetscFunctionReturn(0);
 }
-
 
 PetscErrorCode MatCholeskyFactorNumeric_SeqAIJ_Bas(Mat B,Mat A,const MatFactorInfo *info)
 {
@@ -198,11 +197,15 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_bas(Mat A,MatFactorType ftype,Ma
 
     (*B)->ops->iccfactorsymbolic     = MatICCFactorSymbolic_SeqAIJ_Bas;
     (*B)->ops->choleskyfactornumeric = MatCholeskyFactorNumeric_SeqAIJ_Bas;
-     ierr = PetscObjectComposeFunction((PetscObject)*B,"MatFactorGetSolverType_C",MatFactorGetSolverType_seqaij_bas);CHKERRQ(ierr);
+    ierr = PetscObjectComposeFunction((PetscObject)*B,"MatFactorGetSolverType_C",MatFactorGetSolverType_seqaij_bas);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(MATORDERINGND,(char**)&(*B)->preferredordering[MAT_FACTOR_LU]);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(MATORDERINGND,(char**)&(*B)->preferredordering[MAT_FACTOR_CHOLESKY]);CHKERRQ(ierr);
   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Factor type not supported");
   (*B)->factortype = ftype;
-  
+
   ierr = PetscFree((*B)->solvertype);CHKERRQ(ierr);
   ierr = PetscStrallocpy(MATSOLVERBAS,&(*B)->solvertype);CHKERRQ(ierr);
+  (*B)->canuseordering = PETSC_TRUE;
+  ierr = PetscStrallocpy(MATORDERINGNATURAL,(char**)&(*B)->preferredordering[MAT_FACTOR_ICC]);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

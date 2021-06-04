@@ -111,7 +111,6 @@
       PetscScalar unormb,unormbp,unormbu
       PetscScalar unormbv,unormbw
 
-
 !
 ! Loop over the edges and fill the matrix
 ! First just zero it out
@@ -170,7 +169,7 @@
 ! {1,0,0} is close to unity, use {0,1,0}
 !
          dot = xnorm
-         if(abs(dot).lt.0.95d0)then
+         if (abs(dot).lt.0.95d0)then
           X1 = 1.d0 - dot*xnorm
           Y1 =    - dot*ynorm
           Z1 =    - dot*znorm
@@ -256,10 +255,10 @@
 !
           eigeps  = .1d0*(abs(ubar) + abs(c))
 !
-!         if(eig1.lt.eigeps)eig1 = .5*(eig1**2/eigeps + eigeps)
-!         if(eig2.lt.eigeps)eig2 = .5*(eig2**2/eigeps + eigeps)
-!         if(eig3.lt.eigeps)eig3 = .5*(eig3**2/eigeps + eigeps)
-!         if(eig4.lt.eigeps)eig4 = .5*(eig4**2/eigeps + eigeps)
+!         if (eig1.lt.eigeps)eig1 = .5*(eig1**2/eigeps + eigeps)
+!         if (eig2.lt.eigeps)eig2 = .5*(eig2**2/eigeps + eigeps)
+!         if (eig3.lt.eigeps)eig3 = .5*(eig3**2/eigeps + eigeps)
+!         if (eig4.lt.eigeps)eig4 = .5*(eig4**2/eigeps + eigeps)
 !
           eig1 = rlen*eig1
           eig2 = rlen*eig2
@@ -558,7 +557,7 @@
 ! If this is not a diagonal zero it out
 ! (This way we dont disturb the row for the coninuity equation
 !
-!         if(j.ne.idiag)then
+!         if (j.ne.idiag)then
 !          A(j,1,1) = 0.0
 !          A(j,1,2) = 0.0
 !          A(j,1,3) = 0.0
@@ -620,7 +619,7 @@
 ! {1,0,0} is close to unity, use {0,1,0}
 !
          dot = xnorm
-         if(abs(dot).lt.0.95d0)then
+         if (abs(dot).lt.0.95d0)then
           X1 = 1.d0 - dot*xnorm
           Y1 =    - dot*ynorm
           Z1 =    - dot*znorm
@@ -710,7 +709,7 @@
 ! If ubar is negative, take the reference condition from outside
 !
 !
-         if(unorm.gt.0.0d0)then
+         if (unorm.gt.0.0d0)then
           pr = pi
            prp = 1.0d0
           ur = ui
@@ -860,8 +859,4 @@
       endif
       return
       end
-
-
-
-
 

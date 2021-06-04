@@ -303,6 +303,85 @@ static PetscErrorCode DMPlexGetPointMFEMVertexIDs_Internal(DM dm, PetscInt p, Pe
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode GLVisCreateFE(PetscFE femIn,char name[32],PetscFE *fem)
+{
+  DM              K;
+  PetscSpace      P;
+  PetscDualSpace  Q;
+  PetscQuadrature q,fq;
+  PetscInt        dim,deg,dof;
+  DMPolytopeType  ptype;
+  PetscBool       isSimplex,isTensor;
+  PetscBool       continuity = PETSC_FALSE;
+  PetscDTNodeType nodeType   = PETSCDTNODES_GAUSSJACOBI;
+  PetscBool       endpoint   = PETSC_TRUE;
+  MPI_Comm        comm;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  comm = PetscObjectComm((PetscObject)femIn);
+  ierr = PetscFEGetBasisSpace(femIn,&P);CHKERRQ(ierr);
+  ierr = PetscFEGetDualSpace(femIn,&Q);CHKERRQ(ierr);
+  ierr = PetscDualSpaceGetDM(Q,&K);CHKERRQ(ierr);
+  ierr = DMGetDimension(K,&dim);CHKERRQ(ierr);
+  ierr = PetscSpaceGetDegree(P,&deg,NULL);CHKERRQ(ierr);
+  ierr = PetscSpaceGetNumComponents(P,&dof);CHKERRQ(ierr);
+  ierr = DMPlexGetCellType(K,0,&ptype);CHKERRQ(ierr);
+  switch (ptype) {
+  case DM_POLYTOPE_QUADRILATERAL:
+  case DM_POLYTOPE_HEXAHEDRON:
+    isSimplex = PETSC_FALSE; break;
+  default:
+    isSimplex = PETSC_TRUE; break;
+  }
+  isTensor = isSimplex ? PETSC_FALSE : PETSC_TRUE;
+  /* Create space */
+  ierr = PetscSpaceCreate(comm,&P);CHKERRQ(ierr);
+  ierr = PetscSpaceSetType(P,PETSCSPACEPOLYNOMIAL);CHKERRQ(ierr);
+  ierr = PetscSpacePolynomialSetTensor(P,isTensor);CHKERRQ(ierr);
+  ierr = PetscSpaceSetNumComponents(P,dof);CHKERRQ(ierr);
+  ierr = PetscSpaceSetNumVariables(P,dim);CHKERRQ(ierr);
+  ierr = PetscSpaceSetDegree(P,deg,PETSC_DETERMINE);CHKERRQ(ierr);
+  ierr = PetscSpaceSetUp(P);CHKERRQ(ierr);
+  /* Create dual space */
+  ierr = PetscDualSpaceCreate(comm,&Q);CHKERRQ(ierr);
+  ierr = PetscDualSpaceSetType(Q,PETSCDUALSPACELAGRANGE);CHKERRQ(ierr);
+  ierr = PetscDualSpaceLagrangeSetTensor(Q,isTensor);CHKERRQ(ierr);
+  ierr = PetscDualSpaceLagrangeSetContinuity(Q,continuity);CHKERRQ(ierr);
+  ierr = PetscDualSpaceLagrangeSetNodeType(Q,nodeType,endpoint,0);CHKERRQ(ierr);
+  ierr = PetscDualSpaceSetNumComponents(Q,dof);CHKERRQ(ierr);
+  ierr = PetscDualSpaceSetOrder(Q,deg);CHKERRQ(ierr);
+  ierr = PetscDualSpaceCreateReferenceCell(Q,dim,isSimplex,&K);CHKERRQ(ierr);
+  ierr = PetscDualSpaceSetDM(Q,K);CHKERRQ(ierr);
+  ierr = DMDestroy(&K);CHKERRQ(ierr);
+  ierr = PetscDualSpaceSetUp(Q);CHKERRQ(ierr);
+  /* Create quadrature */
+  if (isSimplex) {
+    ierr = PetscDTStroudConicalQuadrature(dim,  1,deg+1,-1,+1,&q);CHKERRQ(ierr);
+    ierr = PetscDTStroudConicalQuadrature(dim-1,1,deg+1,-1,+1,&fq);CHKERRQ(ierr);
+  } else {
+    ierr = PetscDTGaussTensorQuadrature(dim,  1,deg+1,-1,+1,&q);CHKERRQ(ierr);
+    ierr = PetscDTGaussTensorQuadrature(dim-1,1,deg+1,-1,+1,&fq);CHKERRQ(ierr);
+  }
+  /* Create finite element */
+  ierr = PetscFECreate(comm,fem);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(name,32,"L2_T1_%DD_P%D",dim,deg);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)*fem,name);CHKERRQ(ierr);
+  ierr = PetscFESetType(*fem,PETSCFEBASIC);CHKERRQ(ierr);
+  ierr = PetscFESetNumComponents(*fem,dof);CHKERRQ(ierr);
+  ierr = PetscFESetBasisSpace(*fem,P);CHKERRQ(ierr);
+  ierr = PetscFESetDualSpace(*fem,Q);CHKERRQ(ierr);
+  ierr = PetscFESetQuadrature(*fem,q);CHKERRQ(ierr);
+  ierr = PetscFESetFaceQuadrature(*fem,fq);CHKERRQ(ierr);
+  ierr = PetscFESetUp(*fem);CHKERRQ(ierr);
+  /* Cleanup */
+  ierr = PetscSpaceDestroy(&P);CHKERRQ(ierr);
+  ierr = PetscDualSpaceDestroy(&Q);CHKERRQ(ierr);
+  ierr = PetscQuadratureDestroy(&q);CHKERRQ(ierr);
+  ierr = PetscQuadratureDestroy(&fq);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*
    ASCII visualization/dump: full support for simplices and tensor product cells. It supports AMR
    Higher order meshes are also supported
@@ -331,7 +410,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (!isascii) SETERRQ(PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Viewer must be of type VIEWERASCII");
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)viewer),&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)viewer),&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Use single sequential viewers for parallel visualization");
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
 
@@ -348,6 +427,39 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
   /* Users can attach a coordinate vector to the DM in case they have a higher-order mesh
      DMPlex does not currently support HO meshes, so there's no API for this */
   ierr = PetscObjectQuery((PetscObject)dm,"_glvis_mesh_coords",(PetscObject*)&hovec);CHKERRQ(ierr);
+  ierr = PetscObjectReference((PetscObject)hovec);CHKERRQ(ierr);
+  if (!hovec) {
+    DM           cdm;
+    PetscFE      disc;
+    PetscClassId classid;
+
+    ierr = DMGetCoordinateDM(dm,&cdm);CHKERRQ(ierr);
+    ierr = DMGetField(cdm,0,NULL,(PetscObject*)&disc);CHKERRQ(ierr);
+    ierr = PetscObjectGetClassId((PetscObject)disc,&classid);CHKERRQ(ierr);
+    if (classid == PETSCFE_CLASSID) {
+      DM      hocdm;
+      PetscFE hodisc;
+      Vec     vec;
+      Mat     mat;
+      char    name[32],fec_type[64];
+
+      ierr = GLVisCreateFE(disc,name,&hodisc);CHKERRQ(ierr);
+      ierr = DMClone(cdm,&hocdm);CHKERRQ(ierr);
+      ierr = DMSetField(hocdm,0,NULL,(PetscObject)hodisc);CHKERRQ(ierr);
+      ierr = PetscFEDestroy(&hodisc);CHKERRQ(ierr);
+      ierr = DMCreateDS(hocdm);CHKERRQ(ierr);
+
+      ierr = DMGetCoordinates(dm,&vec);CHKERRQ(ierr);
+      ierr = DMCreateGlobalVector(hocdm,&hovec);CHKERRQ(ierr);
+      ierr = DMCreateInterpolation(cdm,hocdm,&mat,NULL);CHKERRQ(ierr);
+      ierr = MatInterpolate(mat,vec,hovec);CHKERRQ(ierr);
+      ierr = MatDestroy(&mat);CHKERRQ(ierr);
+      ierr = DMDestroy(&hocdm);CHKERRQ(ierr);
+
+      ierr = PetscSNPrintf(fec_type,sizeof(fec_type),"FiniteElementCollection: %s", name);CHKERRQ(ierr);
+      ierr = PetscObjectSetName((PetscObject)hovec,fec_type);CHKERRQ(ierr);
+    }
+  }
 
   ierr = DMPlexGetHeightStratum(dm,0,&cStart,&cEnd);CHKERRQ(ierr);
   ierr = DMPlexGetGhostCellStratum(dm,&p,NULL);CHKERRQ(ierr);
@@ -383,7 +495,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   if (enable_bmark) enable_boundary = PETSC_TRUE;
 
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)dm),&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)dm),&size);CHKERRMPI(ierr);
   if (enable_ncmesh && size > 1) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Not supported in parallel");
   ierr = DMPlexGetDepth(dm,&depth);CHKERRQ(ierr);
   if (enable_boundary && depth >= 0 && dim != depth) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Mesh must be interpolated. "
@@ -434,9 +546,15 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     ierr = ISRestoreIndices(globalNum,&gNum);CHKERRQ(ierr);
   }
 
+  /* vertex_parents (Non-conforming meshes) */
+  parentSection  = NULL;
+  if (enable_ncmesh) {
+    ierr = DMPlexGetTree(dm,&parentSection,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+    enable_ncmesh = (PetscBool)(enable_ncmesh && parentSection);
+  }
   /* return if this process is disabled */
   if (!enabled) {
-    ierr = PetscViewerASCIIPrintf(viewer,"MFEM mesh v1.1\n");CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"MFEM mesh %s\n",enable_ncmesh ? "v1.1" : "v1.0");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"\ndimension\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"%D\n",dim);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"\nelements\n");CHKERRQ(ierr);
@@ -447,6 +565,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"%D\n",0);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"%D\n",sdim);CHKERRQ(ierr);
     ierr = PetscBTDestroy(&pown);CHKERRQ(ierr);
+    ierr = VecDestroy(&hovec);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
 
@@ -482,7 +601,6 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
                 break;
               default:
                 SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unhandled case: faces per cell %D",fpc);
-                break;
             }
             break;
           case 3:
@@ -491,7 +609,6 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
                 vpc = 4;
                 dof = tetv;
                 SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unhandled tethraedral case");
-                break;
               case 6:
                 if (cellvertex) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unhandled case: vertices per cell %D",fpc);
                 vpc = 8;
@@ -504,19 +621,15 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
                 break;
               default:
                 SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unhandled case: faces per cell %D",fpc);
-                break;
             }
             break;
           default:
             SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unhandled dim");
-            break;
         }
         ierr = DMPlexReorderCell(dm,cStart,vids);CHKERRQ(ierr);
       }
       if (!dof) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Missing dofs");
       ierr = VecCreateSeq(PETSC_COMM_SELF,(cEnd-cStart-novl)*vpc*sdim,&hovec);CHKERRQ(ierr);
-      ierr = PetscObjectCompose((PetscObject)dm,"_glvis_mesh_coords",(PetscObject)hovec);CHKERRQ(ierr);
-      ierr = PetscObjectDereference((PetscObject)hovec);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject)hovec,fec);CHKERRQ(ierr);
       ierr = VecGetArray(hovec,&array);CHKERRQ(ierr);
       ptr  = array;
@@ -542,7 +655,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
   if (hovec && dim == 3) enable_boundary = PETSC_TRUE;
 
   /* header */
-  ierr = PetscViewerASCIIPrintf(viewer,"MFEM mesh v1.1\n");CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"MFEM mesh %s\n",enable_ncmesh ? "v1.1" : "v1.0");CHKERRQ(ierr);
 
   /* topological dimension */
   ierr = PetscViewerASCIIPrintf(viewer,"\ndimension\n");CHKERRQ(ierr);
@@ -565,7 +678,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
       ierr = ISDestroy(&vals);CHKERRQ(ierr);
       lminl = PetscMin(ldef,lminl);
     }
-    ierr = MPIU_Allreduce(&lminl,&minl,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&lminl,&minl,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
     if (minl == PETSC_MAX_INT) minl = 1;
   }
   ierr = PetscViewerASCIIPrintf(viewer,"\nelements\n");CHKERRQ(ierr);
@@ -615,7 +728,6 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
 
           uvpc = DMPolytopeTypeGetNumVertices(cellType);
           if (dof%sdim) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Incompatible number of cell dofs %D and space dimension %D",dof,sdim);
-          if (dof/sdim != uvpc) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"Incompatible number of cell dofs %D, vertices %D and space dim %D",dof/sdim,uvpc,sdim);
           ierr = DMPlexVecGetClosure(dm,coordSection,coordinates,p,&csize,&vals);CHKERRQ(ierr);
           ierr = DMPlexGetTransitiveClosure(dm,p,PETSC_TRUE,&cellClosureSize,&cellClosure);CHKERRQ(ierr);
           for (v=0;v<cellClosureSize;v++)
@@ -772,7 +884,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
         ierr = ISDestroy(&vals);CHKERRQ(ierr);
         lminl = PetscMin(ldef,lminl);
       }
-      ierr = MPIU_Allreduce(&lminl,&minl,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(&lminl,&minl,1,MPIU_INT,MPI_MIN,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
       if (minl == PETSC_MAX_INT) minl = 1;
     }
     ierr = PetscViewerASCIIPrintf(viewer,"%D\n",bf);CHKERRQ(ierr);
@@ -848,11 +960,6 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     }
   }
 
-  /* vertex_parents (Non-conforming meshes) */
-  parentSection  = NULL;
-  if (enable_ncmesh) {
-    ierr = DMPlexGetTree(dm,&parentSection,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
-  }
   if (parentSection) {
     PetscInt vp,gvp;
 
@@ -866,7 +973,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
       ierr = DMPlexGetTreeParent(dm,p,&parent,NULL);CHKERRQ(ierr);
       if (parent != p) vp++;
     }
-    ierr = MPIU_Allreduce(&vp,&gvp,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&vp,&gvp,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
     if (gvp) {
       PetscInt  maxsupp;
       PetscBool *skip = NULL;
@@ -1007,6 +1114,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     }
     ierr = VecRestoreArrayRead(coordinates,&array);CHKERRQ(ierr);
   }
+  ierr = VecDestroy(&hovec);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

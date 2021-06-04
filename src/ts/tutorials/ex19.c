@@ -35,30 +35,30 @@ Input parameters include:\n";
 
    so
 
-   [ G(u',u,t) ] = [ u_1' ] + [         u_2           ]
+   [ F(u',u,t) ] = [ u_1' ] + [         u_2           ]
                    [  0   ]   [ (u_2^3/3 - u_2) - u_1 ]
 
-   Using the definition of the Jacobian of G (from the PETSc user manual),
-   in the equation G(u',u,t) = F(u,t),
+   Using the definition of the Jacobian of F (from the PETSc user manual),
+   in the equation F(u',u,t) = G(u,t),
 
-              dG   dG
-   J(G) = a * -- - --
+              dF   dF
+   J(F) = a * -- - --
               du'  du
 
    where d is the partial derivative. In this example,
 
-   dG   [ 1 ; 0 ]
+   dF   [ 1 ; 0 ]
    -- = [       ]
    du'  [ 0 ; 0 ]
 
-   dG   [  0 ;      1     ]
+   dF   [  0 ;      1     ]
    -- = [                 ]
    du   [ -1 ; 1 - u_2^2  ]
 
    Hence,
 
           [ a ;    -1     ]
-   J(G) = [               ]
+   J(F) = [               ]
           [ 1 ; u_2^2 - 1 ]
 
   ------------------------------------------------------------------------- */
@@ -71,7 +71,7 @@ struct _n_User {
 };
 
 /*
-*  User-defined routines
+   User-defined routines
 */
 
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
@@ -176,7 +176,7 @@ int main(int argc,char **argv)
      Initialize program
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
 
   ierr = RegisterMyARK2();CHKERRQ(ierr);
@@ -263,5 +263,10 @@ int main(int argc,char **argv)
       suffix: c
       args: -monitor -ts_type bdf -ts_rtol 1e-6 -ts_atol 1e-6 -ts_view -ts_adapt_type dsp -ts_adapt_dsp_pid 0.4,0.2
       output_file: output/ex19_pi42.out
+
+   test:
+      requires: !single
+      suffix: bdf_reject
+      args: -ts_type bdf -ts_dt 0.5 -ts_max_steps 1 -ts_max_reject {{0 1 2}separate_output} -ts_error_if_step_fails false -ts_adapt_monitor
 
 TEST*/

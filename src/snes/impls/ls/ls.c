@@ -69,7 +69,7 @@ static PetscErrorCode SNESNEWTONLSCheckResidual_Private(SNES snes,Mat A,Vec F,Ve
     if (a1 != 0.0) {
       ierr = PetscInfo1(snes,"||J^T(F-Ax)||/||F-AX|| %14.12e near zero implies inconsistent rhs\n",(double)(a2/a1));CHKERRQ(ierr);
     }
-    ierr = VecDestroy(&W1);CHKERRQ(ierr);    
+    ierr = VecDestroy(&W1);CHKERRQ(ierr);
     ierr = VecDestroy(&W2);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -252,6 +252,12 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
         snes->reason = SNES_DIVERGED_LINE_SEARCH;
         ierr         = SNESNEWTONLSCheckLocalMin_Private(snes,snes->jacobian,F,fnorm,&ismin);CHKERRQ(ierr);
         if (ismin) snes->reason = SNES_DIVERGED_LOCAL_MIN;
+        if (snes->errorifnotconverged && snes->reason) {
+          PetscViewer monitor;
+          ierr = SNESLineSearchGetDefaultMonitor(linesearch,&monitor);CHKERRQ(ierr);
+          if (!monitor) SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_NOT_CONVERGED,"SNESSolve has not converged due to %s. Suggest running with -snes_linesearch_monitor",SNESConvergedReasons[snes->reason]);
+          else SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_NOT_CONVERGED,"SNESSolve has not converged due %s.",SNESConvergedReasons[snes->reason]);
+        }
         break;
       }
     }

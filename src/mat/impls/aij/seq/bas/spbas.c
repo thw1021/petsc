@@ -15,7 +15,7 @@
    Contributed by: Bas van 't Hof
 
    Notes:
-    Since this currently hooked up to use drop tolerance it should produce the same factors and hence convergence as the PETSc ICC, for higher 
+    Since this currently hooked up to use drop tolerance it should produce the same factors and hence convergence as the PETSc ICC, for higher
      levels of fill it does not. This needs to be investigated. Unless you are interested in drop tolerance ICC and willing to work through the code
      we recommend not using this functionality.
 
@@ -243,8 +243,6 @@ PetscErrorCode spbas_mergesort_icols(PetscInt nrows, PetscInt * irow_in, PetscIn
   PetscFunctionReturn(0);
 }
 
-
-
 /*
   spbas_compress_pattern:
      calculate a compressed sparseness pattern for a sparseness pattern
@@ -441,7 +439,6 @@ PetscErrorCode spbas_matrix_to_crs(spbas_matrix matrix_A,MatScalar **val_out, Pe
   PetscFunctionReturn(0);
 }
 
-
 /*
     spbas_transpose
        return the transpose of a matrix
@@ -565,7 +562,6 @@ PetscErrorCode spbas_mergesort(PetscInt nnz, PetscInt *icol, PetscScalar *val)
     vhlp2 = val;
   }
 
-
   /* Sorted array chunks are first 1 long, and increase until they are the complete array */
   for (istep=1; istep<nnz; istep*=2) {
     /*
@@ -674,7 +670,6 @@ PetscErrorCode spbas_apply_reordering_rows(spbas_matrix *matrix_A, const PetscIn
   PetscFunctionReturn(0);
 }
 
-
 /*
   spbas_apply_reordering_cols:
     apply the given reordering to the columns:  matrix_A(:,perm) = matrix_A;
@@ -751,7 +746,6 @@ PetscErrorCode spbas_pattern_only(PetscInt nrows, PetscInt ncols, PetscInt *ai, 
   PetscFunctionReturn(0);
 }
 
-
 /*
    spbas_mark_row_power:
       Mark the columns in row 'row' which are nonzero in
@@ -788,7 +782,6 @@ PetscErrorCode spbas_mark_row_power(PetscInt *iwork,             /* marker-vecto
   }
   PetscFunctionReturn(0);
 }
-
 
 /*
    spbas_power
@@ -863,8 +856,6 @@ PetscErrorCode spbas_power(spbas_matrix in_matrix,PetscInt power, spbas_matrix *
   PetscFunctionReturn(0);
 }
 
-
-
 /*
    spbas_keep_upper:
       remove the lower part of the matrix: keep the upper part
@@ -901,4 +892,3 @@ PetscErrorCode spbas_keep_upper(spbas_matrix * inout_matrix)
   }
   PetscFunctionReturn(0);
 }
-

@@ -9,7 +9,7 @@
 
 PetscBool PetscLogSyncOn = PETSC_FALSE;
 PetscBool PetscLogMemory = PETSC_FALSE;
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) 
+#if defined(PETSC_HAVE_DEVICE)
 PetscBool PetscLogGpuTraffic = PETSC_FALSE;
 #endif
 
@@ -163,7 +163,7 @@ PetscErrorCode PetscEventPerfInfoClear(PetscEventPerfInfo *eventInfo)
   eventInfo->numMessages   = 0.0;
   eventInfo->messageLength = 0.0;
   eventInfo->numReductions = 0.0;
-  #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) 
+  #if defined(PETSC_HAVE_DEVICE)
   eventInfo->CpuToGpuCount = 0.0;
   eventInfo->GpuToCpuCount = 0.0;
   eventInfo->CpuToGpuSize  = 0.0;
@@ -327,7 +327,7 @@ PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog eventLog,const char ena
     eventLog->eventInfo[e].mpe_id_begin = beginID;
     eventLog->eventInfo[e].mpe_id_end   = endID;
 
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
     if (!rank) {
       ierr = PetscLogMPEGetRGBColor(&color);CHKERRQ(ierr);
       MPE_Describe_state(beginID,endID,str,(char*)color);
@@ -362,7 +362,7 @@ PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog eventLog,const char ena
 
   Level: developer
 
-.seealso: PetscEventPerfLogDeactivate()
+.seealso: PetscEventPerfLogDeactivate(), PetscEventPerfLogDeactivatePop(), PetscEventPerfLogDeactivatePush()
 @*/
 PetscErrorCode PetscEventPerfLogActivate(PetscEventPerfLog eventLog,PetscLogEvent event)
 {
@@ -394,12 +394,76 @@ PetscErrorCode PetscEventPerfLogActivate(PetscEventPerfLog eventLog,PetscLogEven
 
   Level: developer
 
-.seealso: PetscEventPerfLogActivate()
+.seealso: PetscEventPerfLogActivate(), PetscEventPerfLogDeactivatePop(), PetscEventPerfLogDeactivatePush()
 @*/
 PetscErrorCode PetscEventPerfLogDeactivate(PetscEventPerfLog eventLog,PetscLogEvent event)
 {
   PetscFunctionBegin;
   eventLog->eventInfo[event].active = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscEventPerfLogDeactivatePush - Indicates that a particular event should not be logged.
+
+  Not Collective
+
+  Input Parameters:
++ eventLog - The PetscEventPerfLog
+- event    - The event
+
+   Usage:
+.vb
+      PetscEventPerfLogDeactivatePush(log, VEC_SetValues);
+        [code where you do not want to log VecSetValues()]
+      PetscEventPerfLogDeactivatePop(log, VEC_SetValues);
+        [code where you do want to log VecSetValues()]
+.ve
+
+  Note:
+  The event may be either a pre-defined PETSc event (found in
+  include/petsclog.h) or an event number obtained with PetscEventRegLogRegister().
+
+  Level: developer
+
+.seealso: PetscEventPerfLogDeactivate(), PetscEventPerfLogActivate(), PetscEventPerfLogDeactivatePop()
+@*/
+PetscErrorCode PetscEventPerfLogDeactivatePush(PetscEventPerfLog eventLog,PetscLogEvent event)
+{
+  PetscFunctionBegin;
+  eventLog->eventInfo[event].depth++;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscEventPerfLogDeactivatePop - Indicates that a particular event should  be logged.
+
+  Not Collective
+
+  Input Parameters:
++ eventLog - The PetscEventPerfLog
+- event    - The event
+
+   Usage:
+.vb
+      PetscEventPerfLogDeactivatePush(log, VEC_SetValues);
+        [code where you do not want to log VecSetValues()]
+      PetscEventPerfLogDeactivatePop(log, VEC_SetValues);
+        [code where you do want to log VecSetValues()]
+.ve
+
+  Note:
+  The event may be either a pre-defined PETSc event (found in
+  include/petsclog.h) or an event number obtained with PetscEventRegLogRegister().
+
+  Level: developer
+
+.seealso: PetscEventPerfLogDeactivate(), PetscEventPerfLogActivate(), PetscEventPerfLogDeactivatePush()
+@*/
+PetscErrorCode PetscEventPerfLogDeactivatePop(PetscEventPerfLog eventLog,PetscLogEvent event)
+{
+  PetscFunctionBegin;
+  eventLog->eventInfo[event].depth--;
   PetscFunctionReturn(0);
 }
 
@@ -538,7 +602,7 @@ PetscErrorCode PetscEventPerfLogSetVisible(PetscEventPerfLog eventLog,PetscLogEv
 PetscErrorCode PetscEventPerfLogGetVisible(PetscEventPerfLog eventLog,PetscLogEvent event,PetscBool  *isVisible)
 {
   PetscFunctionBegin;
-  PetscValidIntPointer(isVisible,3);
+  PetscValidBoolPointer(isVisible,3);
   *isVisible = eventLog->eventInfo[event].visible;
   PetscFunctionReturn(0);
 }
@@ -626,7 +690,7 @@ PetscErrorCode PetscLogEventSynchronize(PetscLogEvent event,MPI_Comm comm)
   if (eventLog->eventInfo[event].depth > 0) PetscFunctionReturn(0);
 
   PetscTimeSubtract(&time);
-  ierr = MPI_Barrier(comm);CHKERRQ(ierr);
+  ierr = MPI_Barrier(comm);CHKERRMPI(ierr);
   PetscTimeAdd(&time);
   eventLog->eventInfo[event].syncTime += time;
   PetscFunctionReturn(0);
@@ -652,8 +716,7 @@ PetscErrorCode PetscLogEventBeginDefault(PetscLogEvent event,int t,PetscObject o
   eventLog->eventInfo[event].count++;
   eventLog->eventInfo[event].timeTmp = 0.0;
   PetscTimeSubtract(&eventLog->eventInfo[event].timeTmp);
-  eventLog->eventInfo[event].flopsTmp       = 0.0;
-  eventLog->eventInfo[event].flopsTmp      -= petsc_TotalFlops;
+  eventLog->eventInfo[event].flopsTmp       = -petsc_TotalFlops;
   eventLog->eventInfo[event].numMessages   -= petsc_irecv_ct  + petsc_isend_ct  + petsc_recv_ct  + petsc_send_ct;
   eventLog->eventInfo[event].messageLength -= petsc_irecv_len + petsc_isend_len + petsc_recv_len + petsc_send_len;
   eventLog->eventInfo[event].numReductions -= petsc_allreduce_ct + petsc_gather_ct + petsc_scatter_ct;
@@ -667,7 +730,7 @@ PetscErrorCode PetscLogEventBeginDefault(PetscLogEvent event,int t,PetscObject o
     eventLog->eventInfo[event].mallocIncrease -= usage;
     ierr = PetscMallocPushMaximumUsage((int)event);CHKERRQ(ierr);
   }
-  #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) 
+  #if defined(PETSC_HAVE_DEVICE)
   eventLog->eventInfo[event].CpuToGpuCount -= petsc_ctog_ct;
   eventLog->eventInfo[event].GpuToCpuCount -= petsc_gtoc_ct;
   eventLog->eventInfo[event].CpuToGpuSize  -= petsc_ctog_sz;
@@ -714,7 +777,7 @@ PetscErrorCode PetscLogEventEndDefault(PetscLogEvent event,int t,PetscObject o1,
     ierr = PetscMallocGetMaximumUsage(&usage);CHKERRQ(ierr);
     eventLog->eventInfo[event].mallocIncrease += usage;
   }
-  #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) 
+  #if defined(PETSC_HAVE_DEVICE)
   eventLog->eventInfo[event].CpuToGpuCount += petsc_ctog_ct;
   eventLog->eventInfo[event].GpuToCpuCount += petsc_gtoc_ct;
   eventLog->eventInfo[event].CpuToGpuSize  += petsc_ctog_sz;
@@ -860,7 +923,7 @@ PetscErrorCode PetscLogEventBeginTrace(PetscLogEvent event,int t,PetscObject o1,
   if (!petsc_tracetime) PetscTime(&petsc_tracetime);
 
   petsc_tracelevel++;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscLogGetStageLog(&stageLog);CHKERRQ(ierr);
   ierr = PetscStageLogGetCurrent(stageLog,&stage);CHKERRQ(ierr);
   ierr = PetscStageLogGetEventRegLog(stageLog,&eventRegLog);CHKERRQ(ierr);
@@ -892,7 +955,7 @@ PetscErrorCode PetscLogEventEndTrace(PetscLogEvent event,int t,PetscObject o1,Pe
 
   PetscFunctionBegin;
   petsc_tracelevel--;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscLogGetStageLog(&stageLog);CHKERRQ(ierr);
   ierr = PetscStageLogGetCurrent(stageLog,&stage);CHKERRQ(ierr);
   ierr = PetscStageLogGetEventRegLog(stageLog,&eventRegLog);CHKERRQ(ierr);

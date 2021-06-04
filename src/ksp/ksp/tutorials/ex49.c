@@ -5,13 +5,13 @@ Options: \n"
 "\
      -mx : number of elements in x-direction \n\
      -my : number of elements in y-direction \n\
-     -c_str : indicates the structure of the coefficients to use. \n"
+     -c_str : structure of the coefficients to use. \n"
 "\
-          -c_str 0 => Setup for an isotropic material with constant coefficients. \n\
+          -c_str 0 => isotropic material with constant coefficients. \n\
                          Parameters: \n\
                              -iso_E  : Youngs modulus \n\
                              -iso_nu : Poisson ratio \n\
-          -c_str 1 => Setup for a step function in the material properties in x. \n\
+          -c_str 1 => step function in the material properties in x. \n\
                          Parameters: \n\
                               -step_E0  : Youngs modulus to the left of the step \n\
                               -step_nu0 : Poisson ratio to the left of the step \n\
@@ -19,7 +19,7 @@ Options: \n"
                               -step_n1  : Poisson ratio to the right of the step \n\
                               -step_xc  : x coordinate of the step \n"
 "\
-          -c_str 2 => Setup for a checkerboard material with alternating properties. \n\
+          -c_str 2 => checkerboard material with alternating properties. \n\
                       Repeats the following pattern throughout the domain. For example with 4 materials specified, we would heve \n\
                       -------------------------\n\
                       |  D  |  A  |  B  |  C  |\n\
@@ -35,7 +35,7 @@ Options: \n"
                               -brick_E    : a comma separated list of Young's modulii \n\
                               -brick_nu   : a comma separated list of Poisson ratios  \n\
                               -brick_span : the number of elements in x and y each brick will span \n\
-          -c_str 3 => Setup for a sponge-like material with alternating properties. \n\
+          -c_str 3 => sponge-like material with alternating properties. \n\
                       Repeats the following pattern throughout the domain \n"
 "\
                       -----------------------------\n\
@@ -74,7 +74,6 @@ Options: \n"
 static PetscErrorCode DMDABCApplyCompression(DM,Mat,Vec);
 static PetscErrorCode DMDABCApplySymmetricCompression(DM elas_da,Mat A,Vec f,IS *dofs,Mat *AA,Vec *ff);
 
-
 #define NSD            2 /* number of spatial dimensions */
 #define NODES_PER_EL   4 /* nodes per element */
 #define U_DOFS         2 /* degrees of freedom per displacement node */
@@ -98,7 +97,6 @@ typedef struct {
   PetscScalar ux_dof;
   PetscScalar uy_dof;
 } ElasticityDOF;
-
 
 /*
 
@@ -169,7 +167,6 @@ static void ConstructQ12D_GNx(PetscScalar GNi[][NODES_PER_EL],PetscScalar GNx[][
   iJ01 = -J01/J;
   iJ10 = -J10/J;
   iJ11 =  J00/J;
-
 
   for (i = 0; i < NODES_PER_EL; i++) {
     GNx[0][i] = GNi[0][i]*iJ00+GNi[1][i]*iJ01;
@@ -268,7 +265,7 @@ static PetscErrorCode DMDACoordViewGnuplot2d(DM da,const char prefix[])
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscSNPrintf(fname,sizeof(fname),"%s-p%1.4d.dat",prefix,rank);CHKERRQ(ierr);
   ierr = PetscFOpen(PETSC_COMM_SELF,fname,"w",&fp);CHKERRQ(ierr);
   if (!fp) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot open file");
@@ -322,7 +319,6 @@ static PetscErrorCode DMDAViewGnuplot2d(DM da,Vec fields,const char comment[],co
   }
   ierr = PetscFPrintf(PETSC_COMM_SELF,fp,"###\n");CHKERRQ(ierr);
 
-
   ierr = DMGetCoordinateDM(da,&cda);CHKERRQ(ierr);
   ierr = DMGetCoordinatesLocal(da,&coords);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(cda,coords,&_coords);CHKERRQ(ierr);
@@ -372,7 +368,7 @@ static PetscErrorCode DMDAViewCoefficientsGnuplot2d(DM da,Vec fields,const char 
   PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscSNPrintf(fname,sizeof(fname),"%s-p%1.4d.dat",prefix,rank);CHKERRQ(ierr);
   ierr = PetscFOpen(PETSC_COMM_SELF,fname,"w",&fp);CHKERRQ(ierr);
   if (!fp) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot open file");
@@ -385,7 +381,6 @@ static PetscErrorCode DMDAViewCoefficientsGnuplot2d(DM da,Vec fields,const char 
     ierr = PetscFPrintf(PETSC_COMM_SELF,fp,"%s ",field_name);CHKERRQ(ierr);
   }
   ierr = PetscFPrintf(PETSC_COMM_SELF,fp,"###\n");CHKERRQ(ierr);
-
 
   ierr = DMGetCoordinateDM(da,&cda);CHKERRQ(ierr);
   ierr = DMDAGetGhostCorners(cda,&si,&sj,0,&nx,&ny,0);CHKERRQ(ierr);
@@ -601,7 +596,6 @@ static PetscErrorCode AssembleA_Elasticity(Mat A,DM elas_da,DM properties_da,Vec
   ierr = VecDestroy(&local_properties);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode DMDASetValuesLocalStencil_ADD_VALUES(ElasticityDOF **fields_F,MatStencil u_eqn[],PetscScalar Fe_u[])
 {
@@ -1279,7 +1273,6 @@ static PetscErrorCode DMDABCApplySymmetricCompression(DM elas_da,Mat A,Vec f,IS 
   PetscFunctionReturn(0);
 }
 
-
 /*TEST
 
    build:
@@ -1358,7 +1351,7 @@ static PetscErrorCode DMDABCApplySymmetricCompression(DM elas_da,Mat A,Vec f,IS 
    test:
       nsize: 4
       suffix: bddc_subdomainjump
-      args: -mx 40 -my 40 -elas_ksp_monitor_short -no_view -c_str 2 -brick_E 1,1000 -brick_nu 0.4,0.2 -brick_span 20  -elas_ksp_type cg -elas_pc_type bddc -elas_pc_bddc_monolithic -dm_mat_type is -elas_pc_is_use_stiffness_scaling -elas_ksp_norm_type natural 
+      args: -mx 40 -my 40 -elas_ksp_monitor_short -no_view -c_str 2 -brick_E 1,1000 -brick_nu 0.4,0.2 -brick_span 20  -elas_ksp_type cg -elas_pc_type bddc -elas_pc_bddc_monolithic -dm_mat_type is -elas_pc_is_use_stiffness_scaling -elas_ksp_norm_type natural
 
    test:
       nsize: 9

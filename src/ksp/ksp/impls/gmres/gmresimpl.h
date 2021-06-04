@@ -46,7 +46,9 @@
   PetscInt    it;              /* Current iteration: inside restart */  \
   PetscInt    fullcycle;       /* Current number of complete cycle */ \
   PetscScalar *nrs;            /* temp that holds the coefficients of the Krylov vectors that form the minimum residual solution */ \
-  Vec         sol_temp;        /* used to hold temporary solution */
+  Vec         sol_temp;        /* used to hold temporary solution */ \
+  PetscReal   rnorm0;          /* residual norm at beginning of the GMRESCycle */ \
+  PetscReal   breakdowntol;    /* A relative tolerance is used for breakdown check in GMRESCycle */
 
 typedef struct {
   KSPGMRESHEADER

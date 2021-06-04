@@ -5,11 +5,10 @@ class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
     self.minversion       = '6.1.1'
-    self.version          = '6.3.0'
+    self.version          = '6.4.0'
     self.versionname      = 'SUPERLU_DIST_MAJOR_VERSION.SUPERLU_DIST_MINOR_VERSION.SUPERLU_DIST_PATCH_VERSION'
     self.gitcommit        = 'v'+self.version
     self.download         = ['git://https://github.com/xiaoyeli/superlu_dist','https://github.com/xiaoyeli/superlu_dist/archive/'+self.gitcommit+'.tar.gz']
-    self.downloaddirnames = ['SuperLU_DIST','superlu_dist']
     self.functions        = ['set_default_options_dist']
     self.includes         = ['superlu_ddefs.h']
     self.liblist          = [['libsuperlu_dist.a']]
@@ -46,7 +45,7 @@ class Configure(config.package.CMakePackage):
       # SuperLU_DIST CMake doesn't know about GPU builds
       for place,item in enumerate(args):
         if item.find('CMAKE_C_FLAGS') >= 0:
-          args[place]=item[:-1]+' -DGPU_ACC '+self.headers.toString(self.cuda.include)+'"'
+          args[place]=item[:-1]+' -DGPU_ACC '+self.headers.toString(self.cuda.include)+' -DDEBUGlevel=0 -DPRNTlevel=0"'
     args.append('-DUSE_XSDK_DEFAULTS=YES')
     args.append('-DTPL_BLAS_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
     args.append('-DTPL_LAPACK_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
@@ -65,14 +64,10 @@ class Configure(config.package.CMakePackage):
 
     args.append('-Denable_tests=0')
     args.append('-Denable_examples=0')
-    #  CMake in SuperLU should set this; but like many other packages it does not
-    args.append('-DCMAKE_INSTALL_NAME_DIR:STRING="'+os.path.join(self.installDir,self.libdir)+'"')
-    args.append('-DMPI_C_COMPILER:STRING="'+self.framework.getCompiler()+'"')
     args.append('-DMPI_C_COMPILE_FLAGS:STRING=""')
     args.append('-DMPI_C_INCLUDE_PATH:STRING=""')
     args.append('-DMPI_C_HEADER_DIR:STRING=""')
     args.append('-DMPI_C_LIBRARIES:STRING=""')
-    args.append('-DCMAKE_INSTALL_LIBDIR:STRING="'+os.path.join(self.installDir,self.libdir)+'"')
 
     # Add in fortran mangling flag
     if self.blasLapack.mangling == 'underscore':

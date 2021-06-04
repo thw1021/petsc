@@ -33,8 +33,13 @@ all:
 	+@${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} chk_petscdir chk_upgrade | tee ${PETSC_ARCH}/lib/petsc/conf/make.log
 	@ln -sf ${PETSC_ARCH}/lib/petsc/conf/make.log make.log
 	+@${OMAKE_SELF_PRINTDIR} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} all-local 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log;
+	@egrep '(out of memory allocating.*after a total of|gfortran: fatal error: Killed signal terminated program f951|f95: fatal error: Killed signal terminated program f951)' ${PETSC_ARCH}/lib/petsc/conf/make.log | tee ${PETSC_ARCH}/lib/petsc/conf/memoryerror.log > /dev/null
 	@egrep -i "( error | error: |no such file or directory)" ${PETSC_ARCH}/lib/petsc/conf/make.log | tee ${PETSC_ARCH}/lib/petsc/conf/error.log > /dev/null
-	+@if test -s ${PETSC_ARCH}/lib/petsc/conf/error.log; then \
+	+@if test -s ${PETSC_ARCH}/lib/petsc/conf/memoryerror.log; then \
+           printf ${PETSC_TEXT_HILIGHT}"**************************ERROR*************************************\n" 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log; \
+           echo "  Error during compile, you need to increase the memory allocated to the VM and rerun " 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log; \
+           printf "********************************************************************"${PETSC_TEXT_NORMAL}"\n" 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log;\
+         elif test -s ${PETSC_ARCH}/lib/petsc/conf/error.log; then \
            printf ${PETSC_TEXT_HILIGHT}"**************************ERROR*************************************\n" 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log; \
            echo "  Error during compile, check ${PETSC_ARCH}/lib/petsc/conf/make.log" 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log; \
            echo "  Send it and ${PETSC_ARCH}/lib/petsc/conf/configure.log to petsc-maint@mcs.anl.gov" 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log;\
@@ -45,7 +50,7 @@ all:
 	@echo "Finishing make run at `date +'%a, %d %b %Y %H:%M:%S %z'`" >> ${PETSC_ARCH}/lib/petsc/conf/make.log
 	@if test -s ${PETSC_ARCH}/lib/petsc/conf/error.log; then exit 1; fi
 
-all-local: info libs matlabbin mpi4py-build petsc4py-build libmesh-build mfem-build slepc-build hpddm-build amrex-build
+all-local: info libs matlabbin mpi4py-build petsc4py-build libmesh-build mfem-build slepc-build hpddm-build amrex-build bamg-build
 
 #
 # Prints information about the system and version of PETSc being compiled
@@ -73,27 +78,27 @@ info:
 	-@echo "Using configuration flags:"
 	-@grep "\#define " ${PETSCCONF_H}
 	-@echo "-----------------------------------------"
-	-@echo "Using C compile: ${PETSC_CCOMPILE}"
+	-@echo "Using C compile: ${PETSC_CCOMPILE_SINGLE}"
 	-@if [  "${MPICC_SHOW}" != "" ]; then \
              printf  "mpicc -show: %b\n" "${MPICC_SHOW}";\
           fi; \
         printf  "C compiler version: %b\n" "${C_VERSION}"; \
-        if [ "${PETSC_CXXCOMPILE}" != "" ]; then \
-        echo "Using C++ compile: ${PETSC_CXXCOMPILE}";\
+        if [ "${CXX}" != "" ]; then \
+        echo "Using C++ compile: ${PETSC_CXXCOMPILE_SINGLE}";\
         if [ "${MPICXX_SHOW}" != "" ]; then \
                printf "mpicxx -show: %b\n" "${MPICXX_SHOW}"; \
             fi;\
             printf  "C++ compiler version: %b\n" "${Cxx_VERSION}"; \
           fi
 	-@if [ "${FC}" != "" ]; then \
-	   echo "Using Fortran compile: ${PETSC_FCOMPILE}";\
+	   echo "Using Fortran compile: ${PETSC_FCOMPILE_SINGLE}";\
            if [ "${MPIFC_SHOW}" != "" ]; then \
              printf "mpif90 -show: %b\n" "${MPIFC_SHOW}"; \
            fi; \
              printf  "Fortran compiler version: %b\n" "${FC_VERSION}"; \
          fi
 	-@if [ "${CUDAC}" != "" ]; then \
-	   echo "Using CUDA compile: ${PETSC_CUCOMPILE}";\
+	   echo "Using CUDA compile: ${PETSC_CUCOMPILE_SINGLE}";\
          fi
 	-@if [ "${CLANGUAGE}" = "CXX" ]; then \
            echo "Using C++ compiler to compile PETSc";\
@@ -120,6 +125,7 @@ info:
 	-@echo "------------------------------------------"
 	-@echo "Using mpiexec: ${MPIEXEC}"
 	-@echo "------------------------------------------"
+	-@echo "Using MAKE: $(MAKE)"
 	-@echo "Using MAKEFLAGS: -j$(MAKE_NP) -l$(MAKE_LOAD) $(MAKEFLAGS)"
 	-@echo "=========================================="
 
@@ -150,6 +156,12 @@ check_build:
 	+@if [ "${HYPRE_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ] &&  [ "${PETSC_SCALAR}" = "real" ]; then \
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex19_hypre; \
          fi;
+	+@if [ "${CUDA_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ] &&  [ "${PETSC_SCALAR}" = "real" ]; then \
+          cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex19_cuda; \
+         fi;
+	+@if [ "${KOKKOS_KERNELS_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ] &&  [ "${PETSC_SCALAR}" = "real" ] && [ "${PETSC_PRECISION}" = "double" ] && [ "${MPI_IS_MPIUNI}" = "0" ]; then \
+          cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex3k_kokkos; \
+         fi;
 	+@if [ "${MUMPS_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ]; then \
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR}  DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex19_fieldsplit_mumps; \
          fi;
@@ -175,6 +187,10 @@ check_build:
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex19_suitesparse; \
          fi;
 	+@cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} ex19.rm
+	+@if [ "${MPI4PY}" = "yes" ]; then \
+          cd src/sys/tests >/dev/null; \
+          ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} testex55; \
+         fi;
 	+@if [ "${PETSC4PY}" = "yes" ]; then \
           cd src/ksp/ksp/tutorials >/dev/null; \
           ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} clean-legacy; \
@@ -184,6 +200,10 @@ check_build:
 	+@egrep "^#define PETSC_HAVE_FORTRAN 1" ${PETSCCONF_H} | tee .ftn.log > /dev/null; \
          if test -s .ftn.log; then \
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} testex5f; \
+         fi; ${RM} .ftn.log;
+	+@egrep "^#define PETSC_HAVE_MATLAB_ENGINE 1" ${PETSCCONF_H} | tee .ftn.log > /dev/null; \
+         if test -s .ftn.log; then \
+          cd src/vec/vec/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} testex31; \
          fi; ${RM} .ftn.log;
 	+@cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} clean-legacy
 	-@echo "Completed test examples"
@@ -276,7 +296,7 @@ reconfigure:
 #
 install:
 	@${PYTHON} ./config/install.py -destDir=${DESTDIR}
-	+${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} mpi4py-install petsc4py-install libmesh-install mfem-install slepc-install hpddm-install amrex-install
+	+${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} mpi4py-install petsc4py-install libmesh-install mfem-install slepc-install hpddm-install amrex-install bamg-install
 
 mpistreams:
 	+@cd src/benchmarks/streams; ${OMAKE_SELF} PATH="${PETSC_DIR}/${PETSC_ARCH}/lib:${PATH}" PETSC_DIR=${PETSC_DIR} PETSC_ARCH=${PETSC_ARCH} mpistreams
@@ -306,9 +326,9 @@ alletags:
 	-@${PYTHON} lib/petsc/bin/maint/generateetags.py
 	-@find config -type f -name "*.py" |grep -v SCCS | xargs etags -o TAGS_PYTHON
 
-# obtain gtags from http://www.gnu.org/s/global/
+# obtain gtags from https://www.gnu.org/software/global/
 allgtags:
-	-@find ${PETSC_DIR}/include ${PETSC_DIR}/src -regex '\(.*makefile\|.*\.\(cc\|hh\|cpp\|C\|hpp\|c\|h\|cu\|m\)$$\)' | grep -v ftn-auto  | gtags -f -
+	-@find ${PETSC_DIR}/include ${PETSC_DIR}/src -regex '\(.*makefile\|.*\.\(cc\|hh\|cpp\|cxx\|C\|hpp\|c\|h\|cu\|m\)$$\)' | grep -v ftn-auto  | gtags -f -
 
 allfortranstubs:
 	-@${RM} -rf ${PETSC_ARCH}/include/petsc/finclude/ftn-auto/*-tmpdir
@@ -319,7 +339,7 @@ deletefortranstubs:
 	-@find . -type d -name ftn-auto | xargs rm -rf
 
 # Builds all the documentation - should be done every night
-alldoc: allcite allpdf alldoc1 alldoc2 docsetdate
+alldoc: allcite sphinx-docs-all alldoc1 alldoc2 docsetdate
 
 # Build just citations
 allcite: chk_loc deletemanualpages
@@ -327,11 +347,6 @@ allcite: chk_loc deletemanualpages
 	-${OMAKE_SELF} ACTION=manualpages_buildcite tree_basic LOC=${LOC}
 	-@sed -e s%man+../%man+manualpages/% ${LOC}/docs/manualpages/manualpages.cit > ${LOC}/docs/manualpages/htmlmap
 	-@cat ${PETSC_DIR}/src/docs/mpi.www.index >> ${LOC}/docs/manualpages/htmlmap
-
-# Build just PDF manuals + prerequisites
-allpdf: chk_loc allcite
-	-cd src/docs/tex/manual; ${OMAKE_SELF} manual.pdf LOC=${LOC}
-	-cd src/docs/tao_tex/manual; ${OMAKE_SELF} manual.pdf LOC=${LOC}
 
 # Build just manual pages + prerequisites
 allmanpages: chk_loc allcite
@@ -354,6 +369,8 @@ alldoc1: chk_loc chk_concepts_dir allcite allmanpages allmanexamples
 alldoc2: chk_loc allcite
 	-${OMAKE_SELF} ACTION=html PETSC_DIR=${PETSC_DIR} alltree LOC=${LOC}
 	-${PYTHON} lib/petsc/bin/maint/update-docs.py ${PETSC_DIR} ${LOC}
+
+alldoc12: alldoc1 alldoc2
 #
 # Makes links for all manual pages in $LOC/docs/manualpages/all
 allman:
@@ -369,7 +386,7 @@ docsetdate: chk_petscdir
         version_minor=`grep '^#define PETSC_VERSION_MINOR ' include/petscversion.h |tr -s ' ' | cut -d ' ' -f 3`; \
         version_subminor=`grep '^#define PETSC_VERSION_SUBMINOR ' include/petscversion.h |tr -s ' ' | cut -d ' ' -f 3`; \
         if  [ $${version_release} = 0 ]; then \
-          petscversion=petsc-master; \
+          petscversion=petsc-main; \
           export petscversion; \
         elif [ $${version_release} = 1 ]; then \
           petscversion=petsc-$${version_major}.$${version_minor}.$${version_subminor}; \
@@ -394,7 +411,52 @@ docsetdate: chk_petscdir
           -exec perl -pi -e 's^(<head>)^$$1 <link rel="canonical" href="http://www.mcs.anl.gov/petsc/petsc-current/{}" />^i' {} \; ; \
         echo "Done fixing version number, date, canonical URL info"
 
-alldocclean: deletemanualpages allcleanhtml
+# Use Sphinx to build some documentation.  This uses Python's venv, which should
+# behave similarly to what happens on e.g. ReadTheDocs. You may prefer to use
+# your own Python environment and directly build the Sphinx docs by using
+# the makefile in ${PETSC_SPHINX_ROOT}, paying attention to the requirements.txt
+# there.
+PETSC_SPHINX_ROOT=doc
+PETSC_SPHINX_ENV=${PETSC_ARCH}/sphinx_docs_env
+PETSC_SPHINX_DEST=docs/sphinx_docs
+
+sphinx-docs-all: sphinx-docs-manual sphinx-docs-html
+
+sphinx-docs-fast: chk_loc sphinx-docs-env
+	@. ${PETSC_SPHINX_ENV}/bin/activate && ${OMAKE} -C ${PETSC_SPHINX_ROOT} \
+		BUILDDIR=${LOC}/${PETSC_SPHINX_DEST} html
+
+sphinx-docs-html: chk_loc allcite sphinx-docs-env
+	@. ${PETSC_SPHINX_ENV}/bin/activate && ${OMAKE} -C ${PETSC_SPHINX_ROOT} \
+		BUILDDIR=${LOC}/${PETSC_SPHINX_DEST} html
+
+sphinx-docs-manual: chk_loc sphinx-docs-env
+	@. ${PETSC_SPHINX_ENV}/bin/activate && ${OMAKE} -C ${PETSC_SPHINX_ROOT}  BUILDDIR=${LOC}/${PETSC_SPHINX_DEST} latexpdf
+	@mv ${LOC}/${PETSC_SPHINX_DEST}/latex/manual.pdf ${LOC}/docs/manual.pdf
+	@${RM} -rf ${LOC}/${PETSC_SPHINX_DEST}/latex
+
+sphinx-docs-env: sphinx-docs-check-python sphinx-docs-check-rsvg-convert
+	@if [ ! -d  "${PETSC_SPHINX_ENV}" ]; then \
+        ${PYTHON} -m venv ${PETSC_SPHINX_ENV}; \
+        . ${PETSC_SPHINX_ENV}/bin/activate; \
+        pip install -r ${PETSC_SPHINX_ROOT}/requirements.txt; \
+      fi
+
+sphinx-docs-check-rsvg-convert:
+	@if ! command -v rsvg-convert 2>&1 > /dev/null; then \
+		    printf "rsvg-convert is required for the sphinxcontrib-svg2pdfconverter extension for the Sphinx docs\n"; \
+			  false; \
+	    fi
+
+sphinx-docs-check-python:
+	@${PYTHON} -c 'import sys; sys.exit(sys.version_info[:2] < (3,3))' || \
+    (printf 'Working Python 3.3 or later is required to build the Sphinx docs in a virtual environment\nTry e.g.\n  make ... PYTHON=python3\n' && false)
+
+sphinx-docs-clean: chk_loc
+	${RM} -rf ${PETSC_SPHINX_ENV}
+	${RM} -rf ${LOC}/${PETSC_SPHINX_DEST}
+
+alldocclean: deletemanualpages allcleanhtml sphinx-docs-clean
 
 # Deletes man pages (HTML version)
 deletemanualpages: chk_loc
@@ -412,30 +474,34 @@ chk_concepts_dir: chk_loc
 	@if [ ! -d "${LOC}/docs/manualpages/concepts" ]; then \
 	  echo Making directory ${LOC}/docs/manualpages/concepts for library; ${MKDIR} ${LOC}/docs/manualpages/concepts; fi
 
+# Builds simple html versions of the source without links into the $PETSC_ARCH/obj directory, used by make mergecov
+srchtml:
+	-${OMAKE_SELF} ACTION=simplehtml PETSC_DIR=${PETSC_DIR} alltree_src
+
 ###########################################################
 # targets to build distribution and update docs
 ###########################################################
 
-# Creates ${HOME}/petsc.tar.gz [and petsc-lite.tar.gz]
+# Creates ${HOME}/petsc.tar.gz [and petsc-with-docs.tar.gz]
 dist:
-	${PETSC_DIR}/lib/petsc/bin/maint/builddist ${PETSC_DIR} master
+	${PETSC_DIR}/lib/petsc/bin/maint/builddist ${PETSC_DIR} main
 
 # This target works only if you can do 'ssh petsc@login.mcs.anl.gov'
 # also copy the file over to ftp site.
 web-snapshot:
-	@if [ ! -f "${HOME}/petsc-master.tar.gz" ]; then \
-	    echo "~/petsc-master.tar.gz missing! cannot update petsc-master snapshot on mcs-web-site"; \
+	@if [ ! -f "${HOME}/petsc-with-docs-main.tar.gz" ]; then \
+	    echo "~/petsc-with-docs-main.tar.gz missing! cannot update petsc-main snapshot on mcs-web-site"; \
 	  else \
-            echo "updating petsc-master snapshot on mcs-web-site"; \
+            echo "updating petsc-main snapshot on mcs-web-site"; \
 	    tmpdir=`mktemp -d -t petsc-doc.XXXXXXXX`; \
-	    cd $${tmpdir}; tar -xzf ${HOME}/petsc-master.tar.gz; \
-	    /usr/bin/rsync  -e ssh -az --delete $${tmpdir}/petsc-master/ \
-              petsc@login.mcs.anl.gov:/mcs/web/research/projects/petsc/petsc-master ;\
-	    /bin/cp -f /home/petsc/petsc-master.tar.gz /mcs/ftp/pub/petsc/petsc-master.tar.gz;\
+	    cd $${tmpdir}; tar -xzf ${HOME}/petsc-with-docs-main.tar.gz; \
+	    /usr/bin/rsync  -e ssh -az --delete $${tmpdir}/petsc-main/ \
+              petsc@login.mcs.anl.gov:/mcs/web/research/projects/petsc/petsc-main ;\
+	    /bin/cp -f /home/petsc/petsc-main.tar.gz /mcs/ftp/pub/petsc/petsc-main.tar.gz;\
 	    ${RM} -rf $${tmpdir} ;\
 	  fi
 
-# build the tarfile - and then update petsc-master snapshot on mcs-web-site
+# build the tarfile - and then update petsc-main snapshot on mcs-web-site
 update-web-snapshot: dist web-snapshot
 
 # This target updates website main pages
@@ -451,10 +517,10 @@ update-web:
 #  See script for details
 #
 gcov:
-	-@$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --run_gcov --petsc_arch ${PETSC_ARCH}
+	@$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --run_gcov --petsc_arch ${PETSC_ARCH}
 
 mergegcov:
-	-@$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --merge_gcov --loc=${LOC} --petsc_arch ${PETSC_ARCH}
+	@$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --merge_gcov  --petsc_arch ${PETSC_ARCH} --merge_branch `lib/petsc/bin/maint/check-merge-branch.sh`
 
 
 ########################

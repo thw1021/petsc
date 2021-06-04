@@ -59,7 +59,6 @@ PetscErrorCode  TSPseudoComputeTimeStep(TS ts,PetscReal *dt)
   PetscFunctionReturn(0);
 }
 
-
 /* ------------------------------------------------------------------------------*/
 /*@C
    TSPseudoVerifyTimeStepDefault - Default code to verify the quality of the last timestep.
@@ -90,7 +89,6 @@ PetscErrorCode  TSPseudoVerifyTimeStepDefault(TS ts,Vec update,void *dtctx,Petsc
   PetscFunctionReturn(0);
 }
 
-
 /*@
     TSPseudoVerifyTimeStep - Verifies whether the last timestep was acceptable.
 
@@ -119,7 +117,7 @@ PetscErrorCode  TSPseudoVerifyTimeStep(TS ts,Vec update,PetscReal *dt,PetscBool 
 
   PetscFunctionBegin;
   *flag = PETSC_TRUE;
-  if(pseudo->verify) {
+  if (pseudo->verify) {
     ierr = (*pseudo->verify)(ts,update,pseudo->verifyctx,dt,flag);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -283,7 +281,6 @@ static PetscErrorCode SNESTSFormJacobian_Pseudo(SNES snes,Vec X,Mat AA,Mat BB,TS
   ierr = TSComputeIJacobian(ts,ts->ptime+ts->time_step,X,Xdot,1./ts->time_step,AA,BB,PETSC_FALSE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode TSSetUp_Pseudo(TS ts)
 {
@@ -482,7 +479,6 @@ PetscErrorCode  TSPseudoIncrementDtFromInitialDt(TS ts)
   ierr = PetscTryMethod(ts,"TSPseudoIncrementDtFromInitialDt_C",(TS),(ts));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*@C
    TSPseudoSetTimeStep - Sets the user-defined routine to be

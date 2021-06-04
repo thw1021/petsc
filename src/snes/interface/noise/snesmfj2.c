@@ -133,7 +133,6 @@ PetscErrorCode SNESMatrixFreeMult2_Private(Mat mat,Vec a,Vec y)
       ierr = VecNormEnd(a,NORM_1,&sum);CHKERRQ(ierr);
       ierr = VecNormEnd(a,NORM_2,&norm);CHKERRQ(ierr);
 
-
       /* Safeguard for step sizes too small */
       if (sum == 0.0) {
         dot  = 1.0;
@@ -215,7 +214,7 @@ PetscErrorCode  SNESDefaultMatrixFreeCreate2(SNES snes,Vec x,Mat *J)
 
   PetscFunctionBegin;
   ierr                    = PetscNewLog(snes,&mfctx);CHKERRQ(ierr);
-  mfctx->sp               = 0;
+  mfctx->sp               = NULL;
   mfctx->snes             = snes;
   mfctx->error_rel        = PETSC_SQRT_MACHINE_EPSILON;
   mfctx->umin             = 1.e-6;
@@ -240,7 +239,7 @@ PetscErrorCode  SNESDefaultMatrixFreeCreate2(SNES snes,Vec x,Mat *J)
   if (mfctx->compute_err) mfctx->need_err = PETSC_TRUE;
   if (mfctx->jorge || mfctx->compute_err) {
     ierr = SNESDiffParameterCreate_More(snes,x,&mfctx->data);CHKERRQ(ierr);
-  } else mfctx->data = 0;
+  } else mfctx->data = NULL;
 
   ierr = PetscOptionsHasHelp(((PetscObject)snes)->options,&flg);CHKERRQ(ierr);
   ierr = PetscStrncpy(p,"-",sizeof(p));CHKERRQ(ierr);

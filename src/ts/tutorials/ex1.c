@@ -3,7 +3,7 @@ static char help[] ="Solves the time independent Bratu problem using pseudo-time
 
 /*
    Concepts: TS^pseudo-timestepping
-   Concepts: pseudo-timestepping
+   Concepts: TS^pseudo-timestepping
    Concepts: TS^nonlinear problems
    Processors: 1
 
@@ -61,7 +61,7 @@ int main(int argc,char **argv)
   PetscMPIInt    size;
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"This is a uniprocessor example only");
 
   user.mx    = 4;
@@ -280,7 +280,6 @@ PetscErrorCode FormJacobian(TS ts,PetscReal t,Vec X,Mat J,Mat B,void *ptr)
   const PetscScalar *x;
   PetscReal         hx,hy,hxdhy,hydhx;
 
-
   mx     = user->mx;
   my     = user->my;
   lambda = user->param;
@@ -317,7 +316,6 @@ PetscErrorCode FormJacobian(TS ts,PetscReal t,Vec X,Mat J,Mat B,void *ptr)
   return 0;
 }
 
-
 /*TEST
 
     test:
@@ -325,7 +323,6 @@ PetscErrorCode FormJacobian(TS ts,PetscReal t,Vec X,Mat J,Mat B,void *ptr)
 
     test:
       suffix: 2
-      args: -ts_monitor_pseudo -ts_pseudo_frtol 1.e-5 
+      args: -ts_monitor_pseudo -ts_pseudo_frtol 1.e-5
 
 TEST*/
-

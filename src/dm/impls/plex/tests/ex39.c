@@ -1,5 +1,4 @@
-const char help[] =
-  "A test of H-div conforming discretizations on different cell types.\n";
+const char help[] = "A test of H-div conforming discretizations on different cell types.\n";
 
 #include <petscdmplex.h>
 #include <petscds.h>
@@ -9,18 +8,18 @@ const char help[] =
 #include <petsc/private/petscfeimpl.h>
 
 /*
-* We are using the system
-*
-* \vec{u} = \vec{\hat{u}}
-* p = \div{\vec{u}} in low degree approximation space
-* d = \div{\vec{u}} - p == 0 in higher degree approximation space
-*
-* That is, we are using the field d to compute the error between \div{\vec{u}}
-* computed in a space 1 degree higher than p and the value of p which is
-* \div{u} computed in the low degree space. If H-div
-* elements are implemented correctly then this should be identically zero since
-* the divergence of a function in H(div) should be exactly representable in L_2
-* by definition.
+  We are using the system
+
+  \vec{u} = \vec{\hat{u}}
+  p = \div{\vec{u}} in low degree approximation space
+  d = \div{\vec{u}} - p == 0 in higher degree approximation space
+
+  That is, we are using the field d to compute the error between \div{\vec{u}}
+  computed in a space 1 degree higher than p and the value of p which is
+  \div{u} computed in the low degree space. If H-div
+  elements are implemented correctly then this should be identically zero since
+  the divergence of a function in H(div) should be exactly representable in L_2
+  by definition.
 */
 static PetscErrorCode zero_func(PetscInt dim,PetscReal time,const PetscReal x[],PetscInt Nc,PetscScalar *u,void *ctx)
 {
@@ -193,8 +192,6 @@ const char* const SolutionTypes[] = {"linear","sinusoidal","Solution","",NULL};
 
 typedef struct
 {
-  PetscBool simplex;
-  PetscInt  dim;
   Transform mesh_transform;
   Solution  sol_form;
 } UserCtx;
@@ -206,14 +203,10 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm,UserCtx * user)
 
   PetscFunctionBegin;
   /* Default to  2D, unperturbed triangle mesh and Linear solution.*/
-  user->simplex        = PETSC_TRUE;
-  user->dim            = 2;
   user->mesh_transform = NONE;
   user->sol_form       = LINEAR;
 
   ierr = PetscOptionsBegin(comm,"","H-div Test Options","DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-simplex","Whether to use simplices (true) or tensor-product (false) cells in " "the mesh","ex39.c",user->simplex,&user->simplex,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dim","Number of solution dimensions","ex39.c",user->dim,&user->dim,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnum("-mesh_transform","Method used to perturb the mesh vertices. Options are skew, perturb, skew_perturb,or none","ex39.c",TransformTypes,(PetscEnum) user->mesh_transform,(PetscEnum*) &user->mesh_transform,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnum("-sol_form","Form of the exact solution. Options are Linear or Sinusoidal","ex39.c",SolutionTypes,(PetscEnum) user->sol_form,(PetscEnum*) &user->sol_form,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
@@ -225,7 +218,7 @@ static PetscErrorCode PerturbMesh(DM *mesh,PetscScalar *coordVals,PetscInt npoin
 {
   PetscInt       i,j,k;
   PetscErrorCode ierr;
-  PetscReal      minCoords[3],maxCoords[3],maxPert[3],randVal,phase,amp;
+  PetscReal      minCoords[3],maxCoords[3],maxPert[3],randVal,amp;
   PetscRandom    ran;
 
   PetscFunctionBegin;
@@ -233,22 +226,19 @@ static PetscErrorCode PerturbMesh(DM *mesh,PetscScalar *coordVals,PetscInt npoin
   ierr = DMGetLocalBoundingBox(*mesh,minCoords,maxCoords);CHKERRQ(ierr);
   ierr = PetscRandomCreate(PETSC_COMM_WORLD,&ran);CHKERRQ(ierr);
 
-/* Compute something approximately equal to half an edge length. This is the
- * most we can perturb points and gaurantee that there won't be any topology
- * issues. */
-  for (k = 0; k < dim; ++k) maxPert[k] = 0.5 * (maxCoords[k] - minCoords[k]) / (PetscPowReal(npoints,1. / dim) - 1);
+  /* Compute something approximately equal to half an edge length. This is the
+   * most we can perturb points and gaurantee that there won't be any topology
+   * issues. */
+  for (k = 0; k < dim; ++k) maxPert[k] = 0.025 * (maxCoords[k] - minCoords[k]) / (PetscPowReal(npoints,1. / dim) - 1);
   /* For each mesh vertex */
   for (i = 0; i < npoints; ++i) {
     /* For each coordinate of the vertex */
     for (j = 0; j < dim; ++j) {
-      /* Generate random phase in [-0.5\pi, 0.5\pi] */
-      ierr  = PetscRandomGetValueReal(ran,&randVal);CHKERRQ(ierr);
-      phase = PETSC_PI * (randVal - 0.5);
       /* Generate a random amplitude in [-0.5*maxPert, 0.5*maxPert] */
       ierr = PetscRandomGetValueReal(ran,&randVal);CHKERRQ(ierr);
       amp  = maxPert[j] * (randVal - 0.5);
       /* Add the perturbation to the vertex*/
-      coordVals[dim * i + j] += amp * PetscSinReal(2 * PETSC_PI / maxCoords[j] * coordVals[dim * i + j] + phase);
+      coordVals[dim * i + j] += amp;
     }
   }
 
@@ -274,7 +264,7 @@ static PetscErrorCode SkewMesh(DM * mesh,PetscScalar * coordVals,PetscInt npoint
   for (i = 0; i < dim; ++i) {
     for (j = 0; j < dim; ++j) {
       ierr = PetscRandomGetValueReal(ran,&randVal);CHKERRQ(ierr);
-      if (i == j) transMat[i * dim + j] = randVal;
+      if (i == j) transMat[i * dim + j] = 1.;
       else if (j < i) transMat[i * dim + j] = 2 * (j + i)*randVal;
       else transMat[i * dim + j] = 0;
     }
@@ -330,33 +320,12 @@ static PetscErrorCode TransformMesh(UserCtx * user,DM * mesh)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm,UserCtx * user,DM * mesh)
 {
-  PetscErrorCode   ierr;
-  DMLabel          label;
-  const char       *name  = "marker";
-  DM               dmDist = NULL;
-  PetscPartitioner part;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  /* Create box mesh from user parameters */
-  ierr = DMPlexCreateBoxMesh(comm,user->dim,user->simplex,NULL,NULL,NULL,NULL,PETSC_TRUE,mesh);CHKERRQ(ierr);
-
-  /* Make sure the mesh gets properly distributed if running in parallel */
-  ierr = DMPlexGetPartitioner(*mesh,&part);CHKERRQ(ierr);
-  ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
-  ierr = DMPlexDistribute(*mesh,0,NULL,&dmDist);CHKERRQ(ierr);
-  if (dmDist) {
-    ierr  = DMDestroy(mesh);CHKERRQ(ierr);
-    *mesh = dmDist;
-  }
-
-  /* Mark the boundaries, we will need this later when setting up the system of
-   * equations */
-  ierr = DMCreateLabel(*mesh,name);CHKERRQ(ierr);
-  ierr = DMGetLabel(*mesh,name,&label);CHKERRQ(ierr);
-  ierr = DMPlexMarkBoundaryFaces(*mesh,1,label);CHKERRQ(ierr);
-  ierr = DMPlexLabelComplete(*mesh,label);CHKERRQ(ierr);
-  ierr = DMLocalizeCoordinates(*mesh);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) *mesh,"Mesh");CHKERRQ(ierr);
+  ierr = DMCreate(comm, mesh);CHKERRQ(ierr);
+  ierr = DMSetType(*mesh, DMPLEX);CHKERRQ(ierr);
+  ierr = DMSetFromOptions(*mesh);CHKERRQ(ierr);
 
   /* Perform any mesh transformations if specified by user */
   if (user->mesh_transform != NONE) {
@@ -365,10 +334,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm,UserCtx * user,DM * mesh)
 
   /* Get any other mesh options from the command line */
   ierr = DMSetApplicationContext(*mesh,user);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(*mesh);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*mesh,NULL,"-dm_view");CHKERRQ(ierr);
-
-  ierr = DMDestroy(&dmDist);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -376,6 +342,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm,UserCtx * user,DM * mesh)
 static PetscErrorCode SetupProblem(DM dm,UserCtx * user)
 {
   PetscDS        prob;
+  DMLabel        label;
   PetscErrorCode ierr;
   const PetscInt id=1;
 
@@ -412,7 +379,8 @@ static PetscErrorCode SetupProblem(DM dm,UserCtx * user)
     PetscFunctionReturn(-1);
   }
 
-  ierr = PetscDSAddBoundary(prob,DM_BC_NATURAL,"Boundary Integral","marker",0,0,NULL,(void (*)(void))NULL,1,&id,user);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "marker", &label);CHKERRQ(ierr);
+  ierr = PetscDSAddBoundary(prob,DM_BC_NATURAL,"Boundary Integral",label,1,&id,0,0,NULL,(void (*)(void))NULL,NULL,user,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -421,21 +389,23 @@ static PetscErrorCode SetupDiscretization(DM mesh,PetscErrorCode (*setup)(DM,Use
 {
   DM             cdm = mesh;
   PetscFE        fevel,fepres,fedivErr;
-  const PetscInt dim = user->dim;
+  PetscInt       dim;
+  PetscBool      simplex;
   PetscErrorCode ierr;
 
-
   PetscFunctionBegin;
+  ierr = DMGetDimension(mesh, &dim);CHKERRQ(ierr);
+  ierr = DMPlexIsSimplex(mesh, &simplex);CHKERRQ(ierr);
   /* Create FE objects and give them names so that options can be set from
    * command line */
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) mesh),dim,dim,user->simplex,"velocity_",-1,&fevel);CHKERRQ(ierr);
+  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) mesh),dim,dim,simplex,"velocity_",-1,&fevel);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) fevel,"velocity");CHKERRQ(ierr);
 
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) mesh),dim,1,user->simplex,"pressure_",-1,&fepres);CHKERRQ(ierr);
+  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) mesh),dim,1,simplex,"pressure_",-1,&fepres);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) fepres,"pressure");CHKERRQ(ierr);
 
   ierr = PetscFECreateDefault(PetscObjectComm((PetscObject)
-                                              mesh),dim,1,user->simplex,"divErr_",-1,&fedivErr);CHKERRQ(ierr);
+                                              mesh),dim,1,simplex,"divErr_",-1,&fedivErr);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) fedivErr,"divErr");CHKERRQ(ierr);
 
   ierr = PetscFECopyQuadrature(fevel,fepres);CHKERRQ(ierr);
@@ -462,8 +432,6 @@ static PetscErrorCode SetupDiscretization(DM mesh,PetscErrorCode (*setup)(DM,Use
   PetscFunctionReturn(0);
 }
 
-
-
 int main(int argc,char **argv)
 {
   PetscInt        i;
@@ -475,7 +443,7 @@ int main(int argc,char **argv)
   PetscErrorCode  ierr;
   IS              * fieldIS;
   PetscBool       exampleSuccess = PETSC_FALSE;
-  const PetscReal errTol         = 1e-10;
+  const PetscReal errTol         = 10. * PETSC_SMALL;
 
   char stdFormat[] = "L2 Norm of the Divergence Error is: %g\n H(div) elements working correctly: %s\n";
 
@@ -510,13 +478,11 @@ int main(int argc,char **argv)
    * this vector which should be zero if the H(div) spaces are implemented
    * correctly. */
   ierr           = VecGetSubVector(computed,fieldIS[2],&divErr);CHKERRQ(ierr);
-  ierr           = VecNorm(divErr,NORM_2,&divErrNorm); CHKERRQ(ierr);
+  ierr           = VecNorm(divErr,NORM_2,&divErrNorm);CHKERRQ(ierr);
   ierr           = VecRestoreSubVector(computed,fieldIS[2],&divErr);CHKERRQ(ierr);
   exampleSuccess = (PetscBool)(divErrNorm <= errTol);
 
-
   ierr = PetscPrintf(PETSC_COMM_WORLD,stdFormat,divErrNorm,exampleSuccess ? "true" : "false");CHKERRQ(ierr);
-
 
   /* Tear down */
   ierr = VecDestroy(&divErr);CHKERRQ(ierr);
@@ -535,13 +501,11 @@ int main(int argc,char **argv)
   testset:
     suffix: 2d_bdm
     requires: triangle
-    args: -dim 2 \
-      - simplex true \
+    args: -velocity_petscfe_default_quadrature_order 1 \
       -velocity_petscspace_degree 1 \
       -velocity_petscdualspace_type bdm \
       -divErr_petscspace_degree 1 \
       -divErr_petscdualspace_lagrange_continuity false \
-      -dm_refine 0 \
       -snes_error_if_not_converged \
       -ksp_rtol 1e-10 \
       -ksp_error_if_not_converged \
@@ -568,13 +532,12 @@ int main(int argc,char **argv)
   testset:
     TODO: broken
     suffix: 2d_bdmq
-    args: -dim 2 \
-      - simplex false \
+    args: -dm_plex_simplex false \
       -velocity_petscspace_degree 1 \
       -velocity_petscdualspace_type bdm \
+      -velocity_petscdualspace_lagrange_tensor 1 \
       -divErr_petscspace_degree 1 \
       -divErr_petscdualspace_lagrange_continuity false \
-      -dm_refine 0 \
       -snes_error_if_not_converged \
       -ksp_rtol 1e-10 \
       -ksp_error_if_not_converged \
@@ -599,16 +562,13 @@ int main(int argc,char **argv)
       args: -sol_form sinusoidal -mesh_transform skew_perturb
 
   testset:
-    TODO: broken
     suffix: 3d_bdm
     requires: ctetgen
-    args: -dim 3 \
-      -simplex true \
+    args: -dm_plex_dim 3 \
       -velocity_petscspace_degree 1 \
       -velocity_petscdualspace_type bdm \
       -divErr_petscspace_degree 1 \
       -divErr_petscdualspace_lagrange_continuity false \
-      -dm_refine 0 \
       -snes_error_if_not_converged \
       -ksp_rtol 1e-10 \
       -ksp_error_if_not_converged \
@@ -636,13 +596,13 @@ int main(int argc,char **argv)
     TODO: broken
     suffix: 3d_bdmq
     requires: ctetgen
-    args: -dim 3 \
-      -simplex false \
+    args: -dm_plex_dim 3 \
+      -dm_plex_simplex false \
       -velocity_petscspace_degree 1 \
       -velocity_petscdualspace_type bdm \
+      -velocity_petscdualspace_lagrange_tensor 1 \
       -divErr_petscspace_degree 1 \
       -divErr_petscdualspace_lagrange_continuity false \
-      -dm_refine 0 \
       -snes_error_if_not_converged \
       -ksp_rtol 1e-10 \
       -ksp_error_if_not_converged \
@@ -665,4 +625,38 @@ int main(int argc,char **argv)
     test:
       suffix: sinusoidal_skew_perturb
       args: -sol_form sinusoidal -mesh_transform skew_perturb
+
+  test:
+    suffix: quad_rt_0
+    args: -dm_plex_simplex false -mesh_transform skew \
+          -divErr_petscspace_degree 1 \
+          -divErr_petscdualspace_lagrange_continuity false \
+          -snes_error_if_not_converged \
+          -ksp_rtol 1e-10 \
+          -ksp_error_if_not_converged \
+          -pc_type fieldsplit\
+          -pc_fieldsplit_detect_saddle_point\
+          -pc_fieldsplit_type schur\
+          -pc_fieldsplit_schur_precondition full \
+          -velocity_petscfe_default_quadrature_order 1 \
+          -velocity_petscspace_type sum \
+          -velocity_petscspace_variables 2 \
+          -velocity_petscspace_components 2 \
+          -velocity_petscspace_sum_spaces 2 \
+          -velocity_petscspace_sum_concatenate true \
+          -velocity_subspace0_petscspace_variables 2 \
+          -velocity_subspace0_petscspace_type tensor \
+          -velocity_subspace0_petscspace_tensor_spaces 2 \
+          -velocity_subspace0_petscspace_tensor_uniform false \
+          -velocity_subspace0_subspace_0_petscspace_degree 1 \
+          -velocity_subspace0_subspace_1_petscspace_degree 0 \
+          -velocity_subspace1_petscspace_variables 2 \
+          -velocity_subspace1_petscspace_type tensor \
+          -velocity_subspace1_petscspace_tensor_spaces 2 \
+          -velocity_subspace1_petscspace_tensor_uniform false \
+          -velocity_subspace1_subspace_0_petscspace_degree 0 \
+          -velocity_subspace1_subspace_1_petscspace_degree 1 \
+          -velocity_petscdualspace_form_degree -1 \
+          -velocity_petscdualspace_order 1 \
+          -velocity_petscdualspace_lagrange_trimmed true
 TEST*/

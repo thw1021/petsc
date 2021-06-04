@@ -13,7 +13,6 @@
 !  Processors: n
 !T*/
 
-
 !
 !  --------------------------------------------------------------------------
 !
@@ -182,7 +181,6 @@
          write(6,100) its
       endif
   100 format('Number of SNES iterations = ',i5)
-
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Free work space.  All PETSc objects should be destroyed when they
@@ -415,13 +413,12 @@
 
 #include "ex5f.h"
       DM da
-      
+
 !  Input/output variables:
       PetscScalar x(gxs:gxe,gys:gye)
       Mat         A,jac
       PetscErrorCode  ierr
       DMDALocalInfo info(DMDA_LOCAL_INFO_SIZE)
-
 
 !  Local variables:
       PetscInt  row,col(5),i,j,i1,i5

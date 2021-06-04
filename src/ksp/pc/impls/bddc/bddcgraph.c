@@ -358,7 +358,6 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
         if (dist > mdist) { mdist = dist; point2 = j; }
       }
 
-
       /* find the third point maximizing the triangle area */
       point3 = point2;
       if (cdim > 2) {
@@ -410,7 +409,7 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
   }
 
   /* check consistency of connected components among neighbouring subdomains -> it adapt them in case it is needed */
-  ierr = MPI_Comm_size(interface_comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(interface_comm,&size);CHKERRMPI(ierr);
   adapt_interface_reduced = PETSC_FALSE;
   if (size > 1) {
     PetscInt i;
@@ -420,7 +419,7 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
          with two connected components, the latters be the same among sharing subdomains */
       if (graph->subset_ncc[i] > 1) adapt_interface = PETSC_TRUE;
     }
-    ierr = MPIU_Allreduce(&adapt_interface,&adapt_interface_reduced,1,MPIU_BOOL,MPI_LOR,interface_comm);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&adapt_interface,&adapt_interface_reduced,1,MPIU_BOOL,MPI_LOR,interface_comm);CHKERRMPI(ierr);
   }
 
   if (graph->n_subsets && adapt_interface_reduced) {
@@ -490,13 +489,13 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
       for (k=0;k<count;k++) {
 
         ierr = PetscMPIIntCast(neighs[k],&neigh);CHKERRQ(ierr);
-        ierr = MPI_Isend(send_buffer_bool + i,           1,MPIU_BOOL,neigh,tag,interface_comm,&send_requests[sum_requests]);CHKERRQ(ierr);
-        ierr = MPI_Irecv(recv_buffer_bool + sum_requests,1,MPIU_BOOL,neigh,tag,interface_comm,&recv_requests[sum_requests]);CHKERRQ(ierr);
+        ierr = MPI_Isend(send_buffer_bool + i,           1,MPIU_BOOL,neigh,tag,interface_comm,&send_requests[sum_requests]);CHKERRMPI(ierr);
+        ierr = MPI_Irecv(recv_buffer_bool + sum_requests,1,MPIU_BOOL,neigh,tag,interface_comm,&recv_requests[sum_requests]);CHKERRMPI(ierr);
         sum_requests++;
       }
     }
-    ierr = MPI_Waitall(sum_requests,recv_requests,MPI_STATUSES_IGNORE);CHKERRQ(ierr);
-    ierr = MPI_Waitall(sum_requests,send_requests,MPI_STATUSES_IGNORE);CHKERRQ(ierr);
+    ierr = MPI_Waitall(sum_requests,recv_requests,MPI_STATUSES_IGNORE);CHKERRMPI(ierr);
+    ierr = MPI_Waitall(sum_requests,send_requests,MPI_STATUSES_IGNORE);CHKERRMPI(ierr);
 
     /* determine the subsets I have to adapt (those having more than 1 cc) */
     ierr = PetscBTCreate(graph->n_subsets,&subset_cc_adapt);CHKERRQ(ierr);
@@ -556,15 +555,15 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
         ierr = PetscMPIIntCast(2*graph->subset_ref_node[i]+1,&tag);CHKERRQ(ierr);
         for (k=0;k<graph->count[j];k++) {
           ierr = PetscMPIIntCast(graph->neighbours_set[j][k],&neigh);CHKERRQ(ierr);
-          ierr = MPI_Isend(&send_buffer[start_of_send],size_of_send,MPIU_INT,neigh,tag,interface_comm,&send_requests[sum_requests]);CHKERRQ(ierr);
-          ierr = MPI_Irecv(&recv_buffer[start_of_recv],size_of_send,MPIU_INT,neigh,tag,interface_comm,&recv_requests[sum_requests]);CHKERRQ(ierr);
+          ierr = MPI_Isend(&send_buffer[start_of_send],size_of_send,MPIU_INT,neigh,tag,interface_comm,&send_requests[sum_requests]);CHKERRMPI(ierr);
+          ierr = MPI_Irecv(&recv_buffer[start_of_recv],size_of_send,MPIU_INT,neigh,tag,interface_comm,&recv_requests[sum_requests]);CHKERRMPI(ierr);
           start_of_recv += size_of_send;
           sum_requests++;
         }
         start_of_send += size_of_send;
       }
     }
-    ierr = MPI_Waitall(sum_requests,recv_requests,MPI_STATUSES_IGNORE);CHKERRQ(ierr);
+    ierr = MPI_Waitall(sum_requests,recv_requests,MPI_STATUSES_IGNORE);CHKERRMPI(ierr);
 
     /* refine connected components */
     start_of_recv = 0;
@@ -646,7 +645,7 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
       ierr = PetscFree(refine_buffer);CHKERRQ(ierr);
     }
     ierr = PetscFree(labels);CHKERRQ(ierr);
-    ierr = MPI_Waitall(sum_requests,send_requests,MPI_STATUSES_IGNORE);CHKERRQ(ierr);
+    ierr = MPI_Waitall(sum_requests,send_requests,MPI_STATUSES_IGNORE);CHKERRMPI(ierr);
     ierr = PetscFree2(send_requests,recv_requests);CHKERRQ(ierr);
     ierr = PetscFree2(send_buffer,recv_buffer);CHKERRQ(ierr);
     ierr = PetscFree(cum_recv_counts);CHKERRQ(ierr);
@@ -665,12 +664,11 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
         break;
       }
     }
-    ierr = MPIU_Allreduce(&twodim,&graph->twodim,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)graph->l2gmap));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&twodim,&graph->twodim,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)graph->l2gmap));CHKERRMPI(ierr);
     graph->twodimset = PETSC_TRUE;
   }
   PetscFunctionReturn(0);
 }
-
 
 PETSC_STATIC_INLINE PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph,PetscInt pid,PetscInt* queue_tip,PetscInt n_prev,PetscInt* n_added)
 {
@@ -771,7 +769,7 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponentsLocal(PCBDDCGraph graph)
 
   /* reset any previous search of connected components */
   ierr = PetscBTMemzero(graph->nvtxs,graph->touched);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)graph->l2gmap),&commsize);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)graph->l2gmap),&commsize);CHKERRMPI(ierr);
   if (commsize > graph->commsizelimit) {
     PetscInt i;
     for (i=0;i<graph->nvtxs;i++) {
@@ -852,7 +850,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
     PetscCheckSameComm(graph->l2gmap,1,custom_primal_vertices,7);
   }
   ierr = PetscObjectGetComm((PetscObject)(graph->l2gmap),&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&commsize);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm,&commsize);CHKERRMPI(ierr);
 
   /* custom_minimal_size */
   graph->custom_minimal_size = custom_minimal_size;
@@ -888,7 +886,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
     /* allocate space for mirrors */
     ierr = PetscMalloc2(graph->nvtxs,&graph->mirrors,graph->nvtxs,&graph->mirrors_set);CHKERRQ(ierr);
     ierr = PetscArrayzero(graph->mirrors,graph->nvtxs);CHKERRQ(ierr);
-    graph->mirrors_set[0] = 0;
+    graph->mirrors_set[0] = NULL;
 
     k=0;
     for (i=0;i<n_shared[0];i++) {
@@ -915,7 +913,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
       if (graph->mirrors[i] > 0) {
         ierr = PetscFindInt(graph->mirrors_set[i][0],graph->nvtxs,global_indices,&k);CHKERRQ(ierr);
         j = global_indices[k];
-        while ( k > 0 && global_indices[k-1] == j) k--;
+        while (k > 0 && global_indices[k-1] == j) k--;
         for (j=0;j<graph->mirrors[i];j++) {
           graph->mirrors_set[i][j]=local_indices[k+j];
         }
@@ -1292,11 +1290,11 @@ PetscErrorCode PCBDDCGraphInit(PCBDDCGraph graph, ISLocalToGlobalMapping l2gmap,
   ierr = PetscArrayzero(graph->special_dof,graph->nvtxs);CHKERRQ(ierr);
   /* zeroes first pointer to neighbour set */
   if (graph->nvtxs) {
-    graph->neighbours_set[0] = 0;
+    graph->neighbours_set[0] = NULL;
   }
   /* zeroes workspace for values of ncc */
-  graph->subset_ncc = 0;
-  graph->subset_ref_node = 0;
+  graph->subset_ncc = NULL;
+  graph->subset_ref_node = NULL;
   /* maxcount for cc */
   graph->maxcount = maxcount;
   PetscFunctionReturn(0);

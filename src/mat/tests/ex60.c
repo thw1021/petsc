@@ -15,8 +15,8 @@ int main(int argc,char **args)
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL,"-col",&col,NULL);CHKERRQ(ierr);
 
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   n    = 2*size;
 
   /* create the matrix for the five point stencil, YET AGAIN*/
@@ -41,8 +41,7 @@ int main(int argc,char **args)
   ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatView(C,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
-  ierr = VecCreate(PETSC_COMM_WORLD,&yy);CHKERRQ(ierr);
-  ierr = VecSetSizes(yy,PETSC_DECIDE,m*n);CHKERRQ(ierr);
+  ierr = MatCreateVecs(C,NULL,&yy);CHKERRQ(ierr);
   ierr = VecSetFromOptions(yy);CHKERRQ(ierr);
 
   ierr = MatGetColumnVector(C,yy,col);CHKERRQ(ierr);
@@ -55,7 +54,6 @@ int main(int argc,char **args)
   return ierr;
 }
 
-
 /*TEST
 
    test:
@@ -65,6 +63,15 @@ int main(int argc,char **args)
    test:
       suffix: dense
       nsize: 3
-      args: -col 7 -mat_type dense
+      args: -col 7 -mat_type dense -vec_type {{mpi standard}}
+      filter: grep -v type
+
+   test:
+      requires: cuda
+      suffix: dense_cuda
+      nsize: 3
+      output_file: output/ex60_dense.out
+      args: -col 7 -mat_type {{mpidense mpidensecuda}} -vec_type {{mpi standard cuda mpicuda}}
+      filter: grep -v type
 
 TEST*/

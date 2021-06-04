@@ -193,7 +193,7 @@ static PetscErrorCode FVRHSFunction(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
       if (i < xs+xm) {
         for (j=0; j<dof; j++) f[i*dof+j] += ctx->flux[j]/hs;
       }
-    } else if(i == sf) {
+    } else if (i == sf) {
       u = &ctx->u[0];
       alpha[0] = hs*hf/(hs+hs)/(hs+hs+hf);
       gamma[0] = hs*(hs+hs)/(hs+hf)/(hs+hs+hf);
@@ -278,16 +278,14 @@ static PetscErrorCode FVRHSFunction(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
   ierr = DMDAVecRestoreArray(da,Xloc,&x);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da,F,&f);CHKERRQ(ierr);
   ierr = DMRestoreLocalVector(da,&Xloc);CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&cfl_idt,&ctx->cfl_idt,1,MPIU_SCALAR,MPIU_MAX,PetscObjectComm((PetscObject)da));CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&cfl_idt,&ctx->cfl_idt,1,MPIU_SCALAR,MPIU_MAX,PetscObjectComm((PetscObject)da));CHKERRMPI(ierr);
   if (0) {
-    /* We need to a way to inform the TS of a CFL constraint, this is a debugging fragment */
+    /* We need a way to inform the TS of a CFL constraint, this is a debugging fragment */
     PetscReal dt,tnow;
     ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
     ierr = TSGetTime(ts,&tnow);CHKERRQ(ierr);
     if (dt > 0.5/ctx->cfl_idt) {
-      if (1) {
-        ierr = PetscPrintf(ctx->comm,"Stability constraint exceeded at t=%g, dt %g > %g\n",(double)tnow,(double)dt,(double)(0.5/ctx->cfl_idt));CHKERRQ(ierr);
-      } else SETERRQ2(PETSC_COMM_SELF,1,"Stability constraint exceeded, %g > %g",(double)dt,(double)(ctx->cfl/ctx->cfl_idt));
+      ierr = PetscPrintf(ctx->comm,"Stability constraint exceeded at t=%g, dt %g > %g\n",(double)tnow,(double)dt,(double)(0.5/ctx->cfl_idt));CHKERRQ(ierr);
     }
   }
   ierr = PetscFree4(r,min,alpha,gamma);CHKERRQ(ierr);
@@ -341,10 +339,10 @@ static PetscErrorCode FVRHSFunctionslow(TS ts,PetscReal time,Vec X,Vec F,void *v
       }
       ierr = (*ctx->physics.flux)(ctx->physics.user,u,ctx->flux,&maxspeed);CHKERRQ(ierr);
       if (i > xs) {
-        for (j=0; j<dof; j++) f[(i-1)*dof+j] -= ctx->flux[j]/hs;
+        for (j=0; j<dof; j++) f[(islow-1)*dof+j] -= ctx->flux[j]/hs;
       }
       if (i < xs+xm) {
-        for (j=0; j<dof; j++) f[i*dof+j] += ctx->flux[j]/hs;
+        for (j=0; j<dof; j++) f[islow*dof+j] += ctx->flux[j]/hs;
         islow++;
       }
     } else if (i == sf) {
@@ -357,9 +355,8 @@ static PetscErrorCode FVRHSFunctionslow(TS ts,PetscReal time,Vec X,Vec F,void *v
         u[j] = x[(i-1)*dof+j]+PetscMax(0,PetscMin(min[j],alpha[0]+gamma[0]*r[j]))*(x[(i-1)*dof+j]-x[(i-2)*dof+j]);
       }
       ierr = (*ctx->physics.flux)(ctx->physics.user,u,ctx->flux,&maxspeed);CHKERRQ(ierr);
-      if (i < xs+xm) {
-        for (j=0; j<dof; j++) f[(i-1)*dof+j] -= ctx->flux[j]/hs;
-        islow++;
+      if (i > xs) {
+        for (j=0; j<dof; j++) f[(islow-1)*dof+j] -= ctx->flux[j]/hs;
       }
     } else if (i == fs) {
       u = &ctx->u[0];
@@ -372,7 +369,7 @@ static PetscErrorCode FVRHSFunctionslow(TS ts,PetscReal time,Vec X,Vec F,void *v
       }
       ierr = (*ctx->physics.flux)(ctx->physics.user,u,ctx->flux,&maxspeed);CHKERRQ(ierr);
       if (i < xs+xm) {
-        for (j=0; j<dof; j++)  f[i*dof+j-fs+sf] += ctx->flux[j]/hs;
+        for (j=0; j<dof; j++)  f[islow*dof+j] += ctx->flux[j]/hs;
         islow++;
       }
     } else if (i == fs+1) {
@@ -386,10 +383,11 @@ static PetscErrorCode FVRHSFunctionslow(TS ts,PetscReal time,Vec X,Vec F,void *v
       }
       ierr = (*ctx->physics.flux)(ctx->physics.user,u,ctx->flux,&maxspeed);CHKERRQ(ierr);
       if (i > xs) {
-        for (j=0; j<dof; j++) f[(i-fs+sf-1)*dof+j] -= ctx->flux[j]/hs;
+        for (j=0; j<dof; j++) f[(islow-1)*dof+j] -= ctx->flux[j]/hs;
       }
       if (i < xs+xm) {
-        for (j=0; j<dof; j++) f[(i-fs+sf)*dof+j] += ctx->flux[j]/hs;
+        for (j=0; j<dof; j++) f[islow*dof+j] += ctx->flux[j]/hs;
+        islow++;
       }
     } else if (i > fs+1) {
       u = &ctx->u[0];
@@ -402,10 +400,11 @@ static PetscErrorCode FVRHSFunctionslow(TS ts,PetscReal time,Vec X,Vec F,void *v
       }
       ierr = (*ctx->physics.flux)(ctx->physics.user,u,ctx->flux,&maxspeed);CHKERRQ(ierr);
       if (i > xs) {
-        for (j=0; j<dof; j++) f[(i-fs+sf-1)*dof+j] -= ctx->flux[j]/hs;
+        for (j=0; j<dof; j++) f[(islow-1)*dof+j] -= ctx->flux[j]/hs;
       }
       if (i < xs+xm) {
-        for (j=0; j<dof; j++) f[(i-fs+sf)*dof+j] += ctx->flux[j]/hs;
+        for (j=0; j<dof; j++) f[islow*dof+j] += ctx->flux[j]/hs;
+        islow++;
       }
     }
   }
@@ -463,7 +462,7 @@ static PetscErrorCode FVRHSFunctionfast(TS ts,PetscReal time,Vec X,Vec F,void *v
       }
       ierr = (*ctx->physics.flux)(ctx->physics.user,u,ctx->flux,&maxspeed);CHKERRQ(ierr);
       if (i < xs+xm) {
-        for (j=0; j<dof; j++) f[(i-sf)*dof+j] += ctx->flux[j]/hf;
+        for (j=0; j<dof; j++) f[ifast*dof+j] += ctx->flux[j]/hf;
         ifast++;
       }
     } else if (i == sf+1) {
@@ -477,10 +476,10 @@ static PetscErrorCode FVRHSFunctionfast(TS ts,PetscReal time,Vec X,Vec F,void *v
       }
       ierr = (*ctx->physics.flux)(ctx->physics.user,u,ctx->flux,&maxspeed);CHKERRQ(ierr);
       if (i > xs) {
-        for (j=0; j<dof; j++) f[(i-sf-1)*dof+j] -= ctx->flux[j]/hf;
+        for (j=0; j<dof; j++) f[(ifast-1)*dof+j] -= ctx->flux[j]/hf;
       }
       if (i < xs+xm) {
-        for (j=0; j<dof; j++) f[(i-sf)*dof+j] += ctx->flux[j]/hf;
+        for (j=0; j<dof; j++) f[ifast*dof+j] += ctx->flux[j]/hf;
         ifast++;
       }
     } else if (i > sf+1 && i < fs) {
@@ -494,10 +493,10 @@ static PetscErrorCode FVRHSFunctionfast(TS ts,PetscReal time,Vec X,Vec F,void *v
       }
       ierr = (*ctx->physics.flux)(ctx->physics.user,u,ctx->flux,&maxspeed);CHKERRQ(ierr);
       if (i > xs) {
-        for (j=0; j<dof; j++) f[(i-sf-1)*dof+j] -= ctx->flux[j]/hf;
+        for (j=0; j<dof; j++) f[(ifast-1)*dof+j] -= ctx->flux[j]/hf;
       }
       if (i < xs+xm) {
-        for (j=0; j<dof; j++) f[(i-sf)*dof+j] += ctx->flux[j]/hf;
+        for (j=0; j<dof; j++) f[ifast*dof+j] += ctx->flux[j]/hf;
         ifast++;
       }
     } else if (i == fs) {
@@ -510,8 +509,8 @@ static PetscErrorCode FVRHSFunctionfast(TS ts,PetscReal time,Vec X,Vec F,void *v
         u[j] = x[(i-1)*dof+j]+PetscMax(0,PetscMin(min[j],alpha[0]+gamma[0]*r[j]))*(x[(i-1)*dof+j]-x[(i-2)*dof+j]);
       }
       ierr =  (*ctx->physics.flux)(ctx->physics.user,u,ctx->flux,&maxspeed);CHKERRQ(ierr);
-      if (i>xs) {
-        for (j=0; j<dof; j++) f[(i-sf-1)*dof+j] -= ctx->flux[j]/hf;
+      if (i > xs) {
+        for (j=0; j<dof; j++) f[(ifast-1)*dof+j] -= ctx->flux[j]/hf;
       }
     }
   }
@@ -600,7 +599,7 @@ static PetscErrorCode SolutionStatsView(DM da,Vec X,PetscViewer viewer)
     for (i=xs; i<xs+xm; i++) {
       for (j=0; j<dof; j++) tvsum += PetscAbsScalar(x[i*dof+j]-x[(i-1)*dof+j]);
     }
-    ierr = MPI_Allreduce(&tvsum,&tvgsum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)da));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&tvsum,&tvgsum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)da));CHKERRMPI(ierr);
     ierr = DMDAVecRestoreArrayRead(da,Xloc,(void*)&x);CHKERRQ(ierr);
     ierr = DMRestoreLocalVector(da,&Xloc);CHKERRQ(ierr);
 
@@ -682,7 +681,7 @@ int main(int argc,char *argv[])
   {
     PetscErrorCode (*r)(FVCtx*);
     ierr = PetscFunctionListFind(physics,physname,&r);CHKERRQ(ierr);
-    if (!r) SETERRQ1(PETSC_COMM_SELF,1,"Physics '%s' not found",physname);
+    if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Physics '%s' not found",physname);
     /* Create the physics, will set the number of fields and their names */
     ierr = (*r)(&ctx);CHKERRQ(ierr);
   }
@@ -751,8 +750,8 @@ int main(int argc,char *argv[])
     PetscInt          steps;
     PetscScalar       mass_initial,mass_final,mass_difference,mass_differenceg;
     const PetscScalar *ptr_X,*ptr_X0;
-    const PetscReal   hs  = (ctx.xmax-ctx.xmin)/2.0*(ctx.hratio+1.0)/Mx;
-    const PetscReal   hf  = (ctx.xmax-ctx.xmin)/2.0*(1.0+1.0/ctx.hratio)/Mx;
+    const PetscReal   hs  = (ctx.xmax-ctx.xmin)/2.0/count_slow;
+    const PetscReal   hf  = (ctx.xmax-ctx.xmin)/2.0/count_fast;
     ierr = TSSolve(ts,X);CHKERRQ(ierr);
     ierr = TSGetSolveTime(ts,&ptime);CHKERRQ(ierr);
     ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
@@ -761,28 +760,32 @@ int main(int argc,char *argv[])
     mass_final   = 0.0;
     ierr = DMDAVecGetArrayRead(da,X0,(void*)&ptr_X0);CHKERRQ(ierr);
     ierr = DMDAVecGetArrayRead(da,X,(void*)&ptr_X);CHKERRQ(ierr);
-    for(i=0; i<Mx; i++) {
-      if(i < count_slow/2 || i > count_slow/2+count_fast-1){
-        mass_initial = mass_initial+hs*ptr_X0[i];
-        mass_final = mass_final+hs*ptr_X[i];
+    for (i=xs; i<xs+xm; i++) {
+      if (i < ctx.sf || i > ctx.fs-1) {
+        for (k=0; k<dof; k++) {
+          mass_initial = mass_initial+hs*ptr_X0[i*dof+k];
+          mass_final = mass_final+hs*ptr_X[i*dof+k];
+        }
       } else {
-        mass_initial = mass_initial+hf*ptr_X0[i];
-        mass_final = mass_final+hf*ptr_X[i];
+        for (k=0; k<dof; k++) {
+          mass_initial = mass_initial+hf*ptr_X0[i*dof+k];
+          mass_final = mass_final+hf*ptr_X[i*dof+k];
+        }
       }
     }
     ierr = DMDAVecRestoreArrayRead(da,X0,(void*)&ptr_X0);CHKERRQ(ierr);
     ierr = DMDAVecRestoreArrayRead(da,X,(void*)&ptr_X);CHKERRQ(ierr);
     mass_difference = mass_final-mass_initial;
-    ierr = MPI_Allreduce(&mass_difference,&mass_differenceg,1,MPIU_SCALAR,MPIU_SUM,comm);CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&mass_difference,&mass_differenceg,1,MPIU_SCALAR,MPIU_SUM,comm);CHKERRMPI(ierr);
     ierr = PetscPrintf(comm,"Mass difference %g\n",(double)mass_differenceg);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Final time %g, steps %D\n",(double)ptime,steps);CHKERRQ(ierr);
     if (ctx.exact) {
-      PetscReal nrm1=0;
+      PetscReal nrm1 = 0;
       ierr = SolutionErrorNorms(&ctx,da,ptime,X,&nrm1);CHKERRQ(ierr);
       ierr = PetscPrintf(comm,"Error ||x-x_e||_1 %g\n",(double)nrm1);CHKERRQ(ierr);
     }
     if (ctx.simulation) {
-      PetscReal         nrm1=0;
+      PetscReal         nrm1 = 0;
       PetscViewer       fd;
       char              filename[PETSC_MAX_PATH_LEN] = "binaryoutput";
       Vec               XR;
@@ -796,8 +799,8 @@ int main(int argc,char *argv[])
       ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
       ierr = VecGetArrayRead(X,&ptr_X);CHKERRQ(ierr);
       ierr = VecGetArrayRead(XR,&ptr_XR);CHKERRQ(ierr);
-      for(i=0; i<Mx; i++) {
-        if(i < count_slow/2 || i > count_slow/2+count_fast-1) nrm1 = nrm1 + hs*PetscAbs(ptr_X[i]-ptr_XR[i]);
+      for (i=0; i<Mx; i++) {
+        if (i < count_slow/2 || i > count_slow/2+count_fast-1) nrm1 = nrm1 + hs*PetscAbs(ptr_X[i]-ptr_XR[i]);
         else nrm1 = nrm1 + hf*PetscAbs(ptr_X[i]-ptr_XR[i]);
       }
       ierr = VecRestoreArrayRead(X,&ptr_X);CHKERRQ(ierr);
@@ -849,7 +852,7 @@ int main(int argc,char *argv[])
 /*TEST
 
     build:
-      requires: !complex c99
+      requires: !complex
 
     test:
       args: -da_grid_x 60 -initial 7 -xmin -1 -xmax 1 -hratio 2 -ts_dt 0.025 -ts_max_steps 24 -ts_type rk -ts_rk_type 2a -ts_rk_dtratio 2 -ts_rk_multirate -ts_use_splitrhsfunction 0
@@ -865,6 +868,12 @@ int main(int argc,char *argv[])
 
     test:
       suffix: 4
+      args: -da_grid_x 60 -initial 7 -xmin -1 -xmax 1 -hratio 2 -ts_dt 0.025 -ts_max_steps 24 -ts_type mprk -ts_mprk_type 2a22 -ts_use_splitrhsfunction 1
+      output_file: output/ex7_3.out
+
+    test:
+      suffix: 5
+      nsize: 2
       args: -da_grid_x 60 -initial 7 -xmin -1 -xmax 1 -hratio 2 -ts_dt 0.025 -ts_max_steps 24 -ts_type mprk -ts_mprk_type 2a22 -ts_use_splitrhsfunction 1
       output_file: output/ex7_3.out
 TEST*/

@@ -204,7 +204,7 @@ static PetscErrorCode CECreate(Problem p)
 }
 
 /*
-*  Stiff 3-variable oscillatory system from chemical reactions. problem OREGO in Hairer&Wanner
+   Stiff 3-variable oscillatory system from chemical reactions. problem OREGO in Hairer&Wanner
 */
 static PetscErrorCode OregoFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
@@ -285,9 +285,8 @@ static PetscErrorCode OregoCreate(Problem p)
   PetscFunctionReturn(0);
 }
 
-
 /*
-*  User-defined monitor for comparing to exact solutions when possible
+   User-defined monitor for comparing to exact solutions when possible
 */
 typedef struct {
   MPI_Comm comm;
@@ -316,7 +315,6 @@ static PetscErrorCode MonitorError(TS ts,PetscInt step,PetscReal t,Vec x,void *c
   PetscFunctionReturn(0);
 }
 
-
 int main(int argc,char **argv)
 {
   PetscFunctionList plist = NULL;
@@ -325,7 +323,8 @@ int main(int argc,char **argv)
   Vec               x,r;           /* solution, residual vectors */
   Mat               A;             /* Jacobian matrix */
   Problem           problem;
-  PetscBool         use_monitor;
+  PetscBool         use_monitor = PETSC_FALSE;
+  PetscBool         use_result = PETSC_FALSE;
   PetscInt          steps,nonlinits,linits,snesfails,rejects;
   PetscReal         ftime;
   MonitorCtx        mon;
@@ -336,7 +335,7 @@ int main(int argc,char **argv)
      Initialize program
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"Only for sequential runs");
 
   /* Register the available problems */
@@ -353,6 +352,7 @@ int main(int argc,char **argv)
     ierr        = PetscOptionsFList("-problem_type","Name of problem to run","",plist,pname,pname,sizeof(pname),NULL);CHKERRQ(ierr);
     use_monitor = PETSC_FALSE;
     ierr        = PetscOptionsBool("-monitor_error","Display errors relative to exact solutions","",use_monitor,&use_monitor,NULL);CHKERRQ(ierr);
+    ierr        = PetscOptionsBool("-monitor_result","Display result","",use_result,&use_result,NULL);CHKERRQ(ierr);
   }
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
@@ -363,7 +363,7 @@ int main(int argc,char **argv)
     PetscErrorCode (*pcreate)(Problem);
 
     ierr = PetscFunctionListFind(plist,pname,&pcreate);CHKERRQ(ierr);
-    if (!pcreate) SETERRQ1(PETSC_COMM_SELF,1,"No problem '%s'",pname);
+    if (!pcreate) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"No problem '%s'",pname);
     ierr = (*pcreate)(problem);CHKERRQ(ierr);
   }
 
@@ -420,7 +420,9 @@ int main(int argc,char **argv)
   ierr = TSGetStepRejections(ts,&rejects);CHKERRQ(ierr);
   ierr = TSGetSNESIterations(ts,&nonlinits);CHKERRQ(ierr);
   ierr = TSGetKSPIterations(ts,&linits);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"steps %D (%D rejected, %D SNES fails), ftime %g, nonlinits %D, linits %D\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits);CHKERRQ(ierr);
+  if (use_result) {
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"steps %D (%D rejected, %D SNES fails), ftime %g, nonlinits %D, linits %D\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits);CHKERRQ(ierr);
+  }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.  All PETSc objects should be destroyed when they
@@ -445,16 +447,23 @@ int main(int argc,char **argv)
 
     test:
       requires: !complex
-      args: -monitor_error -ts_atol 1e-2 -ts_rtol 1e-2 -ts_exact_final_time interpolate -ts_type arkimex
+      args:  -monitor_result -monitor_error -ts_atol 1e-2 -ts_rtol 1e-2 -ts_exact_final_time interpolate -ts_type arkimex
 
     test:
       suffix: 2
       requires: !single !complex
-      args: -ts_atol 1e-2 -ts_rtol 1e-2 -ts_max_time 15 -ts_type arkimex -ts_arkimex_type 2e -problem_type orego -ts_arkimex_initial_guess_extrapolate 0 -ts_adapt_time_step_increase_delay 4
+      args: -monitor_result -ts_atol 1e-2 -ts_rtol 1e-2 -ts_max_time 15 -ts_type arkimex -ts_arkimex_type 2e -problem_type orego -ts_arkimex_initial_guess_extrapolate 0 -ts_adapt_time_step_increase_delay 4
 
     test:
       suffix: 3
       requires: !single !complex
-      args: -ts_atol 1e-2 -ts_rtol 1e-2 -ts_max_time 15 -ts_type arkimex -ts_arkimex_type 2e -problem_type orego -ts_arkimex_initial_guess_extrapolate 1
+      args: -monitor_result -ts_atol 1e-2 -ts_rtol 1e-2 -ts_max_time 15 -ts_type arkimex -ts_arkimex_type 2e -problem_type orego -ts_arkimex_initial_guess_extrapolate 1
+
+    test:
+      suffix: 4
+
+    test:
+      suffix: 5
+      args: -snes_lag_jacobian 20 -snes_lag_jacobian_persists
 
 TEST*/

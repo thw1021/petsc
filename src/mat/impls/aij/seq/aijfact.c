@@ -89,6 +89,13 @@ PetscErrorCode MatGetOrdering_Flow_SeqAIJ(Mat mat,MatOrderingType type,IS *irow,
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode MatFactorGetSolverType_petsc(Mat A,MatSolverType *type)
+{
+  PetscFunctionBegin;
+  *type = MATSOLVERPETSC;
+  PetscFunctionReturn(0);
+}
+
 PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_petsc(Mat A,MatFactorType ftype,Mat *B)
 {
   PetscInt       n = A->rmap->n;
@@ -107,17 +114,24 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_petsc(Mat A,MatFactorType ftype,
     (*B)->ops->lufactorsymbolic  = MatLUFactorSymbolic_SeqAIJ;
 
     ierr = MatSetBlockSizesFromMats(*B,A,A);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(MATORDERINGND,(char**)&(*B)->preferredordering[MAT_FACTOR_LU]);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(MATORDERINGNATURAL,(char**)&(*B)->preferredordering[MAT_FACTOR_ILU]);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(MATORDERINGNATURAL,(char**)&(*B)->preferredordering[MAT_FACTOR_ILUDT]);CHKERRQ(ierr);
   } else if (ftype == MAT_FACTOR_CHOLESKY || ftype == MAT_FACTOR_ICC) {
     ierr = MatSetType(*B,MATSEQSBAIJ);CHKERRQ(ierr);
     ierr = MatSeqSBAIJSetPreallocation(*B,1,MAT_SKIP_ALLOCATION,NULL);CHKERRQ(ierr);
 
     (*B)->ops->iccfactorsymbolic      = MatICCFactorSymbolic_SeqAIJ;
     (*B)->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_SeqAIJ;
+    ierr = PetscStrallocpy(MATORDERINGND,(char**)&(*B)->preferredordering[MAT_FACTOR_CHOLESKY]);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(MATORDERINGNATURAL,(char**)&(*B)->preferredordering[MAT_FACTOR_ICC]);CHKERRQ(ierr);
   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Factor type not supported");
   (*B)->factortype = ftype;
 
   ierr = PetscFree((*B)->solvertype);CHKERRQ(ierr);
   ierr = PetscStrallocpy(MATSOLVERPETSC,&(*B)->solvertype);CHKERRQ(ierr);
+  (*B)->canuseordering = PETSC_TRUE;
+  ierr = PetscObjectComposeFunction((PetscObject)*B,"MatFactorGetSolverType_C",MatFactorGetSolverType_petsc);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -244,8 +258,8 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ_inplace(Mat B,Mat A,IS isrow,IS iscol,
   b->j    = bj;
   b->i    = bi;
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -384,8 +398,8 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B,Mat A,IS isrow,IS iscol,const Ma
   b->j    = bj;
   b->i    = bi;
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -532,7 +546,7 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ(Mat B,Mat A,const MatFactorInfo *info)
           nz = bdiag[row]-bdiag[row+1]-1; /* num of entries in U(row,:) excluding diag */
 
           for (j=0; j<nz; j++) rtmp[pj[j]] -= multiplier * pv[j];
-          ierr = PetscLogFlops(1+2*nz);CHKERRQ(ierr);
+          ierr = PetscLogFlops(1+2.0*nz);CHKERRQ(ierr);
         }
         row = *bjtmp++;
       }
@@ -686,7 +700,7 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ_inplace(Mat B,Mat A,const MatFactorInfo
           *pc        = multiplier;
           nz         = bi[row+1] - diag_offset[row] - 1;
           for (j=0; j<nz; j++) rtmp[pj[j]] -= multiplier * pv[j];
-          ierr = PetscLogFlops(1+2*nz);CHKERRQ(ierr);
+          ierr = PetscLogFlops(1+2.0*nz);CHKERRQ(ierr);
         }
         row = *bjtmp++;
       }
@@ -873,7 +887,7 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ_InplaceWithPerm(Mat B,Mat A,const MatFa
           *pc        = multiplier;
           nz         = ai[r[row]+1] - diag[r[row]] - 1;
           for (j=0; j<nz; j++) rtmp[pj[j]] -= multiplier * pv[j];
-          ierr = PetscLogFlops(1+2*nz);CHKERRQ(ierr);
+          ierr = PetscLogFlops(1+2.0*nz);CHKERRQ(ierr);
         }
         row = *ajtmp++;
       }
@@ -957,7 +971,6 @@ PetscErrorCode MatLUFactor_SeqAIJ(Mat A,IS row,IS col,const MatFactorInfo *info)
 }
 /* ----------------------------------------------------------- */
 
-
 PetscErrorCode MatSolve_SeqAIJ_inplace(Mat A,Vec bb,Vec xx)
 {
   Mat_SeqAIJ        *a    = (Mat_SeqAIJ*)A->data;
@@ -1016,30 +1029,26 @@ PetscErrorCode MatMatSolve_SeqAIJ_inplace(Mat A,Mat B,Mat X)
   IS                iscol = a->col,isrow = a->row;
   PetscErrorCode    ierr;
   PetscInt          i, n = A->rmap->n,*vi,*ai = a->i,*aj = a->j;
-  PetscInt          nz,neq;
+  PetscInt          nz,neq,ldb,ldx;
   const PetscInt    *rout,*cout,*r,*c;
-  PetscScalar       *x,*tmp,*tmps,sum;
-  const PetscScalar *aa = a->a,*v;
-  const PetscScalar *b;
-  PetscBool         bisdense,xisdense;
+  PetscScalar       *x,*tmp = a->solve_work,*tmps,sum;
+  const PetscScalar *b,*aa = a->a,*v;
+  PetscBool         isdense;
 
   PetscFunctionBegin;
   if (!n) PetscFunctionReturn(0);
-
-  ierr = PetscObjectTypeCompare((PetscObject)B,MATSEQDENSE,&bisdense);CHKERRQ(ierr);
-  if (!bisdense) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"B matrix must be a SeqDense matrix");
+  ierr = PetscObjectTypeCompare((PetscObject)B,MATSEQDENSE,&isdense);CHKERRQ(ierr);
+  if (!isdense) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"B matrix must be a SeqDense matrix");
   if (X != B) {
-    ierr = PetscObjectTypeCompare((PetscObject)X,MATSEQDENSE,&xisdense);CHKERRQ(ierr);
-    if (!xisdense) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"X matrix must be a SeqDense matrix");
+    ierr = PetscObjectTypeCompare((PetscObject)X,MATSEQDENSE,&isdense);CHKERRQ(ierr);
+    if (!isdense) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"X matrix must be a SeqDense matrix");
   }
-
   ierr = MatDenseGetArrayRead(B,&b);CHKERRQ(ierr);
+  ierr = MatDenseGetLDA(B,&ldb);CHKERRQ(ierr);
   ierr = MatDenseGetArray(X,&x);CHKERRQ(ierr);
-
-  tmp  = a->solve_work;
+  ierr = MatDenseGetLDA(X,&ldx);CHKERRQ(ierr);
   ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
   ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
-
   for (neq=0; neq<B->cmap->n; neq++) {
     /* forward solve the lower triangular */
     tmp[0] = b[r[0]];
@@ -1061,9 +1070,8 @@ PetscErrorCode MatMatSolve_SeqAIJ_inplace(Mat A,Mat B,Mat X)
       PetscSparseDenseMinusDot(sum,tmps,v,vi,nz);
       x[c[i]] = tmp[i] = sum*aa[a->diag[i]];
     }
-
-    b += n;
-    x += n;
+    b += ldb;
+    x += ldx;
   }
   ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
   ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
@@ -1079,30 +1087,26 @@ PetscErrorCode MatMatSolve_SeqAIJ(Mat A,Mat B,Mat X)
   IS                iscol = a->col,isrow = a->row;
   PetscErrorCode    ierr;
   PetscInt          i, n = A->rmap->n,*vi,*ai = a->i,*aj = a->j,*adiag = a->diag;
-  PetscInt          nz,neq;
+  PetscInt          nz,neq,ldb,ldx;
   const PetscInt    *rout,*cout,*r,*c;
-  PetscScalar       *x,*tmp,sum;
-  const PetscScalar *b;
-  const PetscScalar *aa = a->a,*v;
-  PetscBool         bisdense,xisdense;
+  PetscScalar       *x,*tmp = a->solve_work,sum;
+  const PetscScalar *b,*aa = a->a,*v;
+  PetscBool         isdense;
 
   PetscFunctionBegin;
   if (!n) PetscFunctionReturn(0);
-
-  ierr = PetscObjectTypeCompare((PetscObject)B,MATSEQDENSE,&bisdense);CHKERRQ(ierr);
-  if (!bisdense) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"B matrix must be a SeqDense matrix");
+  ierr = PetscObjectTypeCompare((PetscObject)B,MATSEQDENSE,&isdense);CHKERRQ(ierr);
+  if (!isdense) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"B matrix must be a SeqDense matrix");
   if (X != B) {
-    ierr = PetscObjectTypeCompare((PetscObject)X,MATSEQDENSE,&xisdense);CHKERRQ(ierr);
-    if (!xisdense) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"X matrix must be a SeqDense matrix");
+    ierr = PetscObjectTypeCompare((PetscObject)X,MATSEQDENSE,&isdense);CHKERRQ(ierr);
+    if (!isdense) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"X matrix must be a SeqDense matrix");
   }
-
   ierr = MatDenseGetArrayRead(B,&b);CHKERRQ(ierr);
+  ierr = MatDenseGetLDA(B,&ldb);CHKERRQ(ierr);
   ierr = MatDenseGetArray(X,&x);CHKERRQ(ierr);
-
-  tmp  = a->solve_work;
+  ierr = MatDenseGetLDA(X,&ldx);CHKERRQ(ierr);
   ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
   ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
-
   for (neq=0; neq<B->cmap->n; neq++) {
     /* forward solve the lower triangular */
     tmp[0] = b[r[0]];
@@ -1115,7 +1119,6 @@ PetscErrorCode MatMatSolve_SeqAIJ(Mat A,Mat B,Mat X)
       tmp[i] = sum;
       v     += nz; vi += nz;
     }
-
     /* backward solve the upper triangular */
     for (i=n-1; i>=0; i--) {
       v   = aa + adiag[i+1]+1;
@@ -1125,9 +1128,8 @@ PetscErrorCode MatMatSolve_SeqAIJ(Mat A,Mat B,Mat X)
       PetscSparseDenseMinusDot(sum,tmp,v,vi,nz);
       x[c[i]] = tmp[i] = sum*v[nz]; /* v[nz] = aa[adiag[i]] */
     }
-
-    b += n;
-    x += n;
+    b += ldb;
+    x += ldx;
   }
   ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
   ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
@@ -1555,7 +1557,6 @@ PetscErrorCode MatSolveTransposeAdd_SeqAIJ(Mat A,Vec bb,Vec zz,Vec xx)
     tmp[i] = s1;
   }
 
-
   /* backward solve the L^T */
   for (i=n-1; i>=0; i--) {
     v  = aa + ai[i];
@@ -1823,8 +1824,8 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS isrow,IS iscol,cons
   b->j    = bj;
   b->i    = bi;
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -2019,8 +2020,8 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS isrow,IS is
   b->i = bi;
   for (i=0; i<n; i++) bdiag[i] += bi[i];
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -2408,7 +2409,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const MatFacto
       aj    = a->j + a->diag[i] + 1; /* 1st entry of U(i,:) without diagonal */
       ncols = ai[i+1] - a->diag[i] -1;
       for (j=0; j<ncols; j++) *cols++ = aj[j];
-      *cols++ = i; /* diagoanl is located as the last entry of U(i,:) */
+      *cols++ = i; /* diagonal is located as the last entry of U(i,:) */
     }
   } else { /* case: levels>0 || (levels=0 && !perm_identity) */
     ierr = ISGetIndices(iperm,&riip);CHKERRQ(ierr);
@@ -2531,8 +2532,8 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const MatFacto
   b->i             = ui;
   b->diag          = udiag;
   b->free_diag     = PETSC_TRUE;
-  b->ilen          = 0;
-  b->imax          = 0;
+  b->ilen          = NULL;
+  b->imax          = NULL;
   b->row           = perm;
   b->col           = perm;
   ierr             = PetscObjectReference((PetscObject)perm);CHKERRQ(ierr);
@@ -2744,8 +2745,8 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS perm,const 
   b->i         = ui;
   b->diag      = udiag;
   b->free_diag = PETSC_TRUE;
-  b->ilen      = 0;
-  b->imax      = 0;
+  b->ilen      = NULL;
+  b->imax      = NULL;
   b->row       = perm;
   b->col       = perm;
 
@@ -2904,8 +2905,8 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const Mat
   b->i         = ui;
   b->diag      = udiag;
   b->free_diag = PETSC_TRUE;
-  b->ilen      = 0;
-  b->imax      = 0;
+  b->ilen      = NULL;
+  b->imax      = NULL;
   b->row       = perm;
   b->col       = perm;
 
@@ -3081,9 +3082,9 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS perm,c
 
   b->j    = uj;
   b->i    = ui;
-  b->diag = 0;
-  b->ilen = 0;
-  b->imax = 0;
+  b->diag = NULL;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = perm;
   b->col  = perm;
 
@@ -3201,7 +3202,7 @@ PetscErrorCode MatSolve_SeqAIJ(Mat A,Vec bb,Vec xx)
   ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
   ierr = VecRestoreArrayWrite(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2*a->nz - A->cmap->n);CHKERRQ(ierr);
+  ierr = PetscLogFlops(2.0*a->nz - A->cmap->n);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -3266,8 +3267,8 @@ PetscErrorCode MatILUDTFactor_SeqAIJ(Mat A,IS isrow,IS iscol,const MatFactorInfo
   b->j    = bj;
   b->i    = bi;
   b->diag = bdiag;
-  b->ilen = 0;
-  b->imax = 0;
+  b->ilen = NULL;
+  b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
   ierr    = PetscObjectReference((PetscObject)isrow);CHKERRQ(ierr);
@@ -3342,7 +3343,7 @@ PetscErrorCode MatILUDTFactor_SeqAIJ(Mat A,IS isrow,IS iscol,const MatFactorInfo
         pv = ba + bdiag[row+1] + 1;
         nz = bdiag[row] - bdiag[row+1] - 1;         /* num of entries in U(row,:), excluding diagonal */
         for (j=0; j<nz; j++) rtmp[*pj++] -= multiplier * (*pv++);
-        ierr = PetscLogFlops(1+2*nz);CHKERRQ(ierr);
+        ierr = PetscLogFlops(1+2.0*nz);CHKERRQ(ierr);
       }
       row = *bjtmp++;
     }
@@ -3430,10 +3431,10 @@ PetscErrorCode MatILUDTFactor_SeqAIJ(Mat A,IS isrow,IS iscol,const MatFactorInfo
     B->ops->solve = MatSolve_SeqAIJ;
   }
 
-  B->ops->solveadd          = 0;
-  B->ops->solvetranspose    = 0;
-  B->ops->solvetransposeadd = 0;
-  B->ops->matsolve          = 0;
+  B->ops->solveadd          = NULL;
+  B->ops->solvetranspose    = NULL;
+  B->ops->solvetransposeadd = NULL;
+  B->ops->matsolve          = NULL;
   B->assembled              = PETSC_TRUE;
   B->preallocated           = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -3513,7 +3514,7 @@ PetscErrorCode  MatILUDTFactorNumeric_SeqAIJ(Mat fact,Mat A,const MatFactorInfo 
         pv = b->a + bdiag[row+1] + 1;
         nz = bdiag[row] - bdiag[row+1] - 1;         /* num of entries in U(row,:), excluding diagonal */
         for (j=0; j<nz; j++) rtmp[*pj++] -= multiplier * (*pv++);
-        ierr = PetscLogFlops(1+2*nz);CHKERRQ(ierr);
+        ierr = PetscLogFlops(1+2.0*nz);CHKERRQ(ierr);
       }
       k++;
     }
@@ -3551,10 +3552,10 @@ PetscErrorCode  MatILUDTFactorNumeric_SeqAIJ(Mat fact,Mat A,const MatFactorInfo 
   } else {
     C->ops->solve = MatSolve_SeqAIJ;
   }
-  C->ops->solveadd          = 0;
-  C->ops->solvetranspose    = 0;
-  C->ops->solvetransposeadd = 0;
-  C->ops->matsolve          = 0;
+  C->ops->solveadd          = NULL;
+  C->ops->solvetranspose    = NULL;
+  C->ops->solvetransposeadd = NULL;
+  C->ops->matsolve          = NULL;
   C->assembled              = PETSC_TRUE;
   C->preallocated           = PETSC_TRUE;
 

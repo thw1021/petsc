@@ -8,7 +8,6 @@ static char help[] = "Tests DMSwarm with DMShell\n\n";
 #include <petscdmswarm.h>
 #include <petsc/private/dmimpl.h>
 
-
 PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
 {
   PetscInt       p,n,bs,npoints,si,sj,milocal,mjlocal,mx,my;
@@ -19,7 +18,7 @@ PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
   PetscErrorCode ierr;
   PetscMPIInt    rank;
 
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = VecGetLocalSize(pos,&n);CHKERRQ(ierr);
   ierr = VecGetBlockSize(pos,&bs);CHKERRQ(ierr);
   npoints = n/bs;
@@ -40,8 +39,8 @@ PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
     coorx = PetscRealPart(coor[2*p]);
     coory = PetscRealPart(coor[2*p+1]);
 
-    mi = (PetscInt)( (coorx - (-1.0))/dx );
-    mj = (PetscInt)( (coory - (-1.0))/dy );
+    mi = (PetscInt)( (coorx - (-1.0))/dx);
+    mj = (PetscInt)( (coory - (-1.0))/dy);
 
     cellidx[p] = DMLOCATEPOINT_POINT_NOT_FOUND;
 
@@ -109,7 +108,7 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
   PetscMPIInt    rank;
   PetscErrorCode ierr;
 
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"%s-rank%d.gp",prefix,rank);CHKERRQ(ierr);
   fp = fopen(name,"w");
   if (!fp) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open file %s",name);
@@ -140,8 +139,7 @@ PetscErrorCode ex3_1(void)
   PetscRandom    rand;
   PetscErrorCode ierr;
 
-
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   /* Create a regularly spaced DMDA */
   mx = 40;
@@ -219,7 +217,7 @@ PetscErrorCode ex3_1(void)
   dt = 0.1;
   for (tk=1; tk<20; tk++) {
     char prefix[PETSC_MAX_PATH_LEN];
-    PetscPrintf(PETSC_COMM_WORLD,"Step %D \n",tk);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Step %D \n",tk);CHKERRQ(ierr);
     /* push points */
     ierr = DMSwarmGetLocalSize(dms,&nlocal);CHKERRQ(ierr);
     ierr = DMSwarmGetField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);

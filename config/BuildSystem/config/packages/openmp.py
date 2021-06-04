@@ -10,6 +10,7 @@ class Configure(config.package.Package):
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
+    self.function     = framework.require('config.functions',self)
     self.mpi          = framework.require('config.packages.MPI',self)
     self.pthread      = framework.require('config.packages.pthread',self)
     self.hwloc        = framework.require('config.packages.hwloc',self)
@@ -41,7 +42,7 @@ class Configure(config.package.Package):
         # OpenMP compile flag is also needed at link time
         self.setCompilers.LDFLAGS += ' '+ompflag
         oldFlags = self.compilers.CPPFLAGS
-        self.compilers.CPPFLAGS += ompflag
+        self.compilers.CPPFLAGS += ' '+ompflag
         try:
           output,err,status  = self.preprocess('#if defined(_OPENMP)\nopmv=_OPENMP\n#else\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
         except:
@@ -50,15 +51,18 @@ class Configure(config.package.Package):
         for i in loutput:
           if i.startswith('opmv='):
             self.foundversion = i[5:]
+            self.ompflag = ompflag
             break
           if i.startswith('opmv ='):
             self.foundversion = i[6:]
+            self.ompflag = ompflag
             break
         self.compilers.CPPFLAGS = oldFlags
         break
     if not self.found:
       raise RuntimeError('C Compiler has no support for OpenMP')
     self.setCompilers.addCompilerFlag(ompflag)
+    self.setCompilers.addLinkerFlag(ompflag)
     self.setCompilers.popLanguage()
 
     if hasattr(self.compilers, 'FC'):
@@ -69,7 +73,7 @@ class Configure(config.package.Package):
           ompflag = flag
           self.found = 1
           oldFlags = self.compilers.CPPFLAGS
-          self.compilers.CPPFLAGS += ompflag
+          self.compilers.CPPFLAGS += ' '+ompflag
           try:
             output,err,status  = self.preprocess('#if !defined(_OPENMP)\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
           except:
@@ -89,7 +93,7 @@ class Configure(config.package.Package):
           ompflag = flag
           self.found = 1
           oldFlags = self.compilers.CPPFLAGS
-          self.compilers.CPPFLAGS += ompflag
+          self.compilers.CPPFLAGS += ' '+ompflag
           try:
             output,err,status  = self.preprocess('#if !defined(_OPENMP)\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
           except:
@@ -99,6 +103,7 @@ class Configure(config.package.Package):
       if not self.found:
         raise RuntimeError('CXX Compiler has no support for OpenMP')
       self.setCompilers.addCompilerFlag(ompflag)
+      self.compilers.CXXPPFLAGS += ' '+ompflag # OpenMP flag is also a preprocessor flag
       self.setCompilers.popLanguage()
 
     # register package since config.package.Package.configureLibrary(self) will not work since there is no library to find
@@ -109,4 +114,6 @@ class Configure(config.package.Package):
     # this is different from HAVE_OPENMP. HAVE_OPENMP_SUPPORT checks if we have facilities to support
     # running PETSc in flat-MPI mode and third party libraries in MPI+OpenMP hybrid mode
     if self.mpi.found and self.mpi.support_mpi3_shm and self.pthread.found and self.hwloc.found:
-      self.addDefine('HAVE_OPENMP_SUPPORT', 1)
+      #  Apple pthread does not provide this functionality
+      if self.function.check('pthread_barrier_init', libraries = 'pthread'):
+        self.addDefine('HAVE_OPENMP_SUPPORT', 1)

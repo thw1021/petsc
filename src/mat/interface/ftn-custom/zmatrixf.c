@@ -106,6 +106,7 @@
 #define matgetownershipis_               MATGETOWNERSHIPIS
 #define matgetownershiprangecolumn_      MATGETOWNERSHIPRANGECOLUMN
 #define matviewfromoptions_              MATVIEWFROMOPTIONS
+#define matdestroy_                      MATDESTROY
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
 #define matsetvalues_                    matsetvalues
 #define matsetvaluesnnnn_                matsetvaluesnnnn
@@ -208,6 +209,7 @@
 #define matgetownershipis_               matgetownershipis
 #define matgetownershiprangecolumn_      matgetownershiprangecolumn
 #define matviewfromoptions_              matviewfromoptions
+#define matdestroy_                      matdestroy
 #endif
 
 PETSC_EXTERN void matgetvalues_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[],PetscScalar v[], int *ierr)
@@ -245,100 +247,100 @@ PETSC_EXTERN void matgetvaluesn1_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt
   matgetvalues_(mat,m,idxm,n,idxn,v,ierr);
 }
 
-PETSC_EXTERN void  matgetownershiprange_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetownershiprange_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetOwnershipRange(*mat,m,n);
 }
 
-PETSC_EXTERN void  matgetownershiprange00_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetownershiprange00_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetOwnershipRange(*mat,m,n);
 }
 
-PETSC_EXTERN void  matgetownershiprange10_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetownershiprange10_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetOwnershipRange(*mat,m,n);
 }
 
-PETSC_EXTERN void  matgetownershiprange01_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetownershiprange01_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetOwnershipRange(*mat,m,n);
 }
 
-PETSC_EXTERN void  matgetownershiprange11_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetownershiprange11_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetOwnershipRange(*mat,m,n);
 }
 
-PETSC_EXTERN void  matgetownershipis_(Mat *mat,IS *m,IS *n, int *ierr )
+PETSC_EXTERN void  matgetownershipis_(Mat *mat,IS *m,IS *n, int *ierr)
 {
   CHKFORTRANNULLOBJECT(m);
   CHKFORTRANNULLOBJECT(n);
   *ierr = MatGetOwnershipIS(*mat,m,n);
 }
 
-PETSC_EXTERN void  matgetownershiprangecolumn_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetownershiprangecolumn_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetOwnershipRangeColumn(*mat,m,n);
 }
 
-PETSC_EXTERN void  matgetsize_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetsize_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetSize(*mat,m,n);
 }
 
-PETSC_EXTERN void  matgetsize00_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetsize00_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   matgetsize_(mat,m,n,ierr);
 }
 
-PETSC_EXTERN void  matgetsize10_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetsize10_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   matgetsize_(mat,m,n,ierr);
 }
 
-PETSC_EXTERN void  matgetsize01_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetsize01_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   matgetsize_(mat,m,n,ierr);
 }
 
-PETSC_EXTERN void  matgetlocalsize_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetlocalsize_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetLocalSize(*mat,m,n);
 }
 
-PETSC_EXTERN void  matgetlocalsize00_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetlocalsize00_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   matgetlocalsize_(mat,m,n,ierr);
 }
 
-PETSC_EXTERN void  matgetlocalsize10_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetlocalsize10_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   matgetlocalsize_(mat,m,n,ierr);
 }
 
-PETSC_EXTERN void  matgetlocalsize01_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr )
+PETSC_EXTERN void  matgetlocalsize01_(Mat *mat,PetscInt *m,PetscInt *n, int *ierr)
 {
   matgetlocalsize_(mat,m,n,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblocked_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblocked_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   *ierr = MatSetValuesBlocked(*mat,*m,idxm,*n,idxn,v,*addv);
 }
 
@@ -348,140 +350,140 @@ PETSC_EXTERN void  matsetvaluesblocked2_(Mat *mat,PetscInt *m, PetscInt idxm[],P
   matsetvaluesblocked_(mat,m,idxm,n,idxn,fa,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblocked0_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblocked0_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblocked_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblocked11_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblocked11_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblocked_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblocked111_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblocked111_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblocked_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblocked1n_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblocked1n_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblocked_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblockedn1_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblockedn1_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblocked_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblockedlocal_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvaluesblockedlocal_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr)
 {
   *ierr = MatSetValuesBlockedLocal(*mat,*nrow,irow,*ncol,icol,y,*addv);
 }
 
-PETSC_EXTERN void  matsetvaluesblockedlocal0_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblockedlocal0_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblockedlocal_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblockedlocal11_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblockedlocal11_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblockedlocal_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblockedlocal111_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblockedlocal111_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblockedlocal_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblockedlocal1n_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblockedlocal1n_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblockedlocal_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesblockedlocaln1_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr ){
+PETSC_EXTERN void  matsetvaluesblockedlocaln1_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr){
   matsetvaluesblockedlocal_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalues_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalues_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr)
 {
   *ierr = MatSetValues(*mat,*m,idxm,*n,idxn,v,*addv);
 }
 
-PETSC_EXTERN void  matsetvaluesnnnn_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvaluesnnnn_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr)
 {
   matsetvalues_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalues0_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalues0_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr)
 {
   matsetvalues_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesnn1_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvaluesnn1_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr)
 {
   matsetvalues_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalues11_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalues11_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr)
 {
   matsetvalues_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvaluesn1_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvaluesn1_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr)
 {
   matsetvalues_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalues1n_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalues1n_(Mat *mat,PetscInt *m, PetscInt idxm[],PetscInt *n, PetscInt idxn[], PetscScalar v[],InsertMode *addv, int *ierr)
 {
   matsetvalues_(mat,m,idxm,n,idxn,v,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalueslocal_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalueslocal_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr)
 {
   *ierr = MatSetValuesLocal(*mat,*nrow,irow,*ncol,icol,y,*addv);
 }
 
-PETSC_EXTERN void  matsetvalueslocal0_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalueslocal0_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr)
 {
   matsetvalueslocal_(mat,nrow,irow,ncol,icol,y,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalueslocal11_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalueslocal11_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr)
 {
   matsetvalueslocal_(mat,nrow,irow,ncol,icol,y,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalueslocal11nn_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalueslocal11nn_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr)
 {
   matsetvalueslocal_(mat,nrow,irow,ncol,icol,y,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalueslocal111_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalueslocal111_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr)
 {
   matsetvalueslocal_(mat,nrow,irow,ncol,icol,y,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalueslocal1n_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalueslocal1n_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr)
 {
   matsetvalueslocal_(mat,nrow,irow,ncol,icol,y,addv,ierr);
 }
 
-PETSC_EXTERN void  matsetvalueslocaln1_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr )
+PETSC_EXTERN void  matsetvalueslocaln1_(Mat *mat,PetscInt *nrow, PetscInt irow[],PetscInt *ncol, PetscInt icol[], PetscScalar y[],InsertMode *addv, int *ierr)
 {
   matsetvalueslocal_(mat,nrow,irow,ncol,icol,y,addv,ierr);
 }
 
-PETSC_EXTERN void  matgetrowmin_(Mat *mat,Vec *v,PetscInt idx[], int *ierr )
+PETSC_EXTERN void  matgetrowmin_(Mat *mat,Vec *v,PetscInt idx[], int *ierr)
 {
   CHKFORTRANNULLINTEGER(idx);
   *ierr = MatGetRowMin(*mat,*v,idx);
 }
 
-PETSC_EXTERN void  matgetrowminabs_(Mat *mat,Vec *v,PetscInt idx[], int *ierr )
+PETSC_EXTERN void  matgetrowminabs_(Mat *mat,Vec *v,PetscInt idx[], int *ierr)
 {
   CHKFORTRANNULLINTEGER(idx);
   *ierr = MatGetRowMinAbs(*mat,*v,idx);
 }
 
-PETSC_EXTERN void  matgetrowmax_(Mat *mat,Vec *v,PetscInt idx[], int *ierr )
+PETSC_EXTERN void  matgetrowmax_(Mat *mat,Vec *v,PetscInt idx[], int *ierr)
 {
   CHKFORTRANNULLINTEGER(idx);
   *ierr = MatGetRowMax(*mat,*v,idx);
 }
 
-PETSC_EXTERN void  matgetrowmaxabs_(Mat *mat,Vec *v,PetscInt idx[], int *ierr )
+PETSC_EXTERN void  matgetrowmaxabs_(Mat *mat,Vec *v,PetscInt idx[], int *ierr)
 {
   CHKFORTRANNULLINTEGER(idx);
   *ierr = MatGetRowMaxAbs(*mat,*v,idx);
@@ -641,7 +643,6 @@ PETSC_EXTERN void matdensegetarrayread_(Mat *mat,PetscScalar *fa,size_t *ia,Pets
   *ierr = PetscScalarAddressToFortran((PetscObject)*mat,1,fa,(PetscScalar*)mm,m*n,ia); if (*ierr) return;
 }
 
-
 PETSC_EXTERN void matdenserestorearrayread_(Mat *mat,PetscScalar *fa,size_t *ia,PetscErrorCode *ierr)
 {
   const PetscScalar *lx;
@@ -731,7 +732,9 @@ PETSC_EXTERN void matdestroymatrices_(PetscInt *n,Mat *smat,PetscErrorCode *ierr
   PetscInt i;
 
   for (i=0; i<*n; i++) {
+    PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL(&smat[i]);
     *ierr = MatDestroy(&smat[i]);if (*ierr) return;
+    PETSC_FORTRAN_OBJECT_C_NULL_TO_F_DESTROYED(&smat[i]);
   }
 }
 
@@ -747,9 +750,20 @@ PETSC_EXTERN void matdestroysubmatrices_(PetscInt *n,Mat *smat,PetscErrorCode *i
 
   *ierr = PetscMalloc1(*n+1,&lsmat);
   for (i=0; i<=*n; i++) {
+      PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL(&smat[i]);
       lsmat[i] = smat[i];
   }
   *ierr = MatDestroySubMatrices(*n,&lsmat);
+  for (i=0; i<=*n; i++) {
+    PETSC_FORTRAN_OBJECT_C_NULL_TO_F_DESTROYED(&smat[i]);
+  }
+}
+
+PETSC_EXTERN void matdestroy_(Mat *x,int *ierr)
+{
+  PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL(x);
+  *ierr = MatDestroy(x); if (*ierr) return;
+  PETSC_FORTRAN_OBJECT_C_NULL_TO_F_DESTROYED(x);
 }
 
 PETSC_EXTERN void matsetoptionsprefix_(Mat *mat,char* prefix,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
@@ -843,6 +857,7 @@ PETSC_EXTERN void matviewfromoptions_(Mat *ao,PetscObject obj,char* type,PetscEr
   char *t;
 
   FIXCHAR(type,len,t);
+  CHKFORTRANNULLOBJECT(obj);
   *ierr = MatViewFromOptions(*ao,obj,t);if (*ierr) return;
   FREECHAR(type,t);
 }

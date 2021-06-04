@@ -287,7 +287,6 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_7_inplace(Mat C,Mat A,const MatFactorI
   PetscFunctionReturn(0);
 }
 
-
 PetscErrorCode MatLUFactorNumeric_SeqBAIJ_7(Mat B,Mat A,const MatFactorInfo *info)
 {
   Mat            C     =B;
@@ -363,7 +362,7 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_7(Mat B,Mat A,const MatFactorInfo *inf
           ierr = PetscKernel_A_gets_A_minus_B_times_C_7(v,pc,pv);CHKERRQ(ierr);
           pv  += bs2;
         }
-        ierr = PetscLogFlops(686*nz+637);CHKERRQ(ierr); /* flops = 2*bs^3*nz + 2*bs^3 - bs2) */
+        ierr = PetscLogFlops(686.0*nz+637);CHKERRQ(ierr); /* flops = 2*bs^3*nz + 2*bs^3 - bs2) */
       }
     }
 
@@ -750,7 +749,7 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_7_NaturalOrdering(Mat B,Mat A,const Ma
           ierr = PetscKernel_A_gets_A_minus_B_times_C_7(v,pc,pv);CHKERRQ(ierr);
           pv  += bs2;
         }
-        ierr = PetscLogFlops(686*nz+637);CHKERRQ(ierr); /* flops = 2*bs^3*nz + 2*bs^3 - bs2) */
+        ierr = PetscLogFlops(686.0*nz+637);CHKERRQ(ierr); /* flops = 2*bs^3*nz + 2*bs^3 - bs2) */
       }
     }
 

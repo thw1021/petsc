@@ -37,7 +37,7 @@ static PetscErrorCode DMPlexLabelToVolumeConstraint(DM dm, DMLabel adaptLabel, P
       case DM_ADAPT_DETERMINE:
         break;
       default:
-        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP, "DMPlex does not support refinement flag %D\n", refFlag);break;
+        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP, "DMPlex does not support refinement flag %D\n", refFlag);
       }
       if (anyRefine) break;
     }
@@ -160,28 +160,20 @@ static PetscErrorCode DMPlexLabelToMetricConstraint(DM dm, DMLabel adaptLabel, P
 /*
    Contains the list of registered DMPlexGenerators routines
 */
-extern PetscFunctionList DMPlexGenerateList;
-
-struct _n_PetscFunctionList {
-  PetscErrorCode    (*generate)(DM, PetscBool, DM*);
-  PetscErrorCode    (*refine)(DM,PetscReal*, DM*);
-  char              *name;               /* string to identify routine */
-  PetscInt          dim;
-  PetscFunctionList next;                /* next pointer */
-};
+extern PlexGeneratorFunctionList DMPlexGenerateList;
 
 PetscErrorCode DMPlexRefine_Internal(DM dm, DMLabel adaptLabel, DM *dmRefined)
 {
-  PetscErrorCode    (*refinementFunc)(const PetscReal [], PetscReal *);
-  PetscReal         refinementLimit;
-  PetscInt          dim, cStart, cEnd;
-  char              genname[1024], *name = NULL;
-  PetscBool         flg, localized;
-  PetscErrorCode    ierr;
-  PetscErrorCode    (*refine)(DM,PetscReal*,DM*);
-  PetscFunctionList fl;
-  PetscReal         *maxVolumes;
-  PetscInt          c;
+  PlexGeneratorFunctionList fl;
+  PetscErrorCode          (*refine)(DM,PetscReal*,DM*);
+  PetscErrorCode          (*adapt)(DM,DMLabel,DM*);
+  PetscErrorCode          (*refinementFunc)(const PetscReal [], PetscReal *);
+  char                      genname[PETSC_MAX_PATH_LEN], *name = NULL;
+  PetscReal                 refinementLimit;
+  PetscReal                *maxVolumes;
+  PetscInt                  dim, cStart, cEnd, c;
+  PetscBool                 flg, flg2, localized;
+  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   ierr = DMGetCoordinatesLocalized(dm, &localized);CHKERRQ(ierr);
@@ -190,8 +182,12 @@ PetscErrorCode DMPlexRefine_Internal(DM dm, DMLabel adaptLabel, DM *dmRefined)
   if (refinementLimit == 0.0 && !refinementFunc && !adaptLabel) PetscFunctionReturn(0);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(((PetscObject) dm)->options,((PetscObject) dm)->prefix, "-dm_plex_generator", genname, 1024, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(((PetscObject) dm)->options,((PetscObject) dm)->prefix, "-dm_plex_adaptor", genname, sizeof(genname), &flg);CHKERRQ(ierr);
   if (flg) name = genname;
+  else {
+    ierr = PetscOptionsGetString(((PetscObject) dm)->options,((PetscObject) dm)->prefix, "-dm_plex_generator", genname, sizeof(genname), &flg2);CHKERRQ(ierr);
+    if (flg2) name = genname;
+  }
 
   fl = DMPlexGenerateList;
   if (name) {
@@ -199,15 +195,17 @@ PetscErrorCode DMPlexRefine_Internal(DM dm, DMLabel adaptLabel, DM *dmRefined)
       ierr = PetscStrcmp(fl->name,name,&flg);CHKERRQ(ierr);
       if (flg) {
         refine = fl->refine;
+        adapt  = fl->adaptlabel;
         goto gotit;
       }
       fl = fl->next;
     }
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Grid refiner %g not registered",name);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Grid refiner %s not registered",name);
   } else {
     while (fl) {
       if (dim-1 == fl->dim) {
         refine = fl->refine;
+        adapt  = fl->adaptlabel;
         goto gotit;
       }
       fl = fl->next;
@@ -215,47 +213,33 @@ PetscErrorCode DMPlexRefine_Internal(DM dm, DMLabel adaptLabel, DM *dmRefined)
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No grid refiner of dimension %D registered",dim);
   }
 
-  gotit: switch (dim) {
-  case 2:
-      ierr = PetscMalloc1(cEnd - cStart, &maxVolumes);CHKERRQ(ierr);
-      if (adaptLabel) {
-        ierr = DMPlexLabelToVolumeConstraint(dm, adaptLabel, cStart, cEnd, PETSC_DEFAULT, maxVolumes);CHKERRQ(ierr);
-      } else if (refinementFunc) {
-        for (c = cStart; c < cEnd; ++c) {
-          PetscReal vol, centroid[3];
-          PetscReal maxVol;
-
-          ierr = DMPlexComputeCellGeometryFVM(dm, c, &vol, centroid, NULL);CHKERRQ(ierr);
-          ierr = (*refinementFunc)(centroid, &maxVol);CHKERRQ(ierr);
-          maxVolumes[c - cStart] = (double) maxVol;
-        }
+  gotit:
+  switch (dim) {
+    case 2:
+    case 3:
+      if (adapt) {
+        ierr = (*adapt)(dm, adaptLabel, dmRefined);CHKERRQ(ierr);
       } else {
-        for (c = 0; c < cEnd-cStart; ++c) maxVolumes[c] = refinementLimit;
-      }
-      ierr = (*refine)(dm, maxVolumes, dmRefined);CHKERRQ(ierr);
-      ierr = PetscFree(maxVolumes);CHKERRQ(ierr);
-    break;
-  case 3:
-      ierr = PetscMalloc1(cEnd - cStart, &maxVolumes);CHKERRQ(ierr);
-      if (adaptLabel) {
-        ierr = DMPlexLabelToVolumeConstraint(dm, adaptLabel, cStart, cEnd, PETSC_DEFAULT, maxVolumes);CHKERRQ(ierr);
-      } else if (refinementFunc) {
-        for (c = cStart; c < cEnd; ++c) {
-          PetscReal vol, centroid[3];
+        ierr = PetscMalloc1(cEnd - cStart, &maxVolumes);CHKERRQ(ierr);
+        if (adaptLabel) {
+          ierr = DMPlexLabelToVolumeConstraint(dm, adaptLabel, cStart, cEnd, PETSC_DEFAULT, maxVolumes);CHKERRQ(ierr);
+        } else if (refinementFunc) {
+          for (c = cStart; c < cEnd; ++c) {
+            PetscReal vol, centroid[3];
 
-          ierr = DMPlexComputeCellGeometryFVM(dm, c, &vol, centroid, NULL);CHKERRQ(ierr);
-          ierr = (*refinementFunc)(centroid, &maxVolumes[c-cStart]);CHKERRQ(ierr);
+            ierr = DMPlexComputeCellGeometryFVM(dm, c, &vol, centroid, NULL);CHKERRQ(ierr);
+            ierr = (*refinementFunc)(centroid, &maxVolumes[c-cStart]);CHKERRQ(ierr);
+          }
+        } else {
+          for (c = 0; c < cEnd-cStart; ++c) maxVolumes[c] = refinementLimit;
         }
-      } else {
-        for (c = 0; c < cEnd-cStart; ++c) maxVolumes[c] = refinementLimit;
+        ierr = (*refine)(dm, maxVolumes, dmRefined);CHKERRQ(ierr);
+        ierr = PetscFree(maxVolumes);CHKERRQ(ierr);
       }
-      ierr = (*refine)(dm, maxVolumes, dmRefined);CHKERRQ(ierr);
-      ierr = PetscFree(maxVolumes);CHKERRQ(ierr);
-    break;
-  default:
-    SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Mesh refinement in dimension %d is not supported.", dim);
+      break;
+    default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Mesh refinement in dimension %D is not supported.", dim);
   }
-  ierr = DMCopyBoundary(dm, *dmRefined);CHKERRQ(ierr);
+  ierr = DMCopyDisc(dm, *dmRefined);CHKERRQ(ierr);
   if (localized) {ierr = DMLocalizeCoordinates(*dmRefined);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
@@ -274,7 +258,7 @@ PetscErrorCode DMPlexCoarsen_Internal(DM dm, DMLabel adaptLabel, DM *dmCoarsened
   ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
   ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
   ierr = DMPlexLabelToMetricConstraint(dm, adaptLabel, cStart, cEnd, vStart, vEnd, PETSC_DEFAULT, &metricVec);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL, dm->hdr.prefix, "-dm_plex_coarsen_bd_label", bdLabelName, PETSC_MAX_PATH_LEN-1, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsGetString(NULL, dm->hdr.prefix, "-dm_plex_coarsen_bd_label", bdLabelName, sizeof(bdLabelName), &flg);CHKERRQ(ierr);
   if (flg) {ierr = DMGetLabel(dm, bdLabelName, &bdLabel);CHKERRQ(ierr);}
   ierr = DMAdaptMetric_Plex(dm, metricVec, bdLabel, dmCoarsened);CHKERRQ(ierr);
   ierr = VecDestroy(&metricVec);CHKERRQ(ierr);
@@ -309,7 +293,7 @@ PetscErrorCode DMAdaptLabel_Plex(DM dm, DMLabel adaptLabel, DM *dmAdapted)
 
     minMaxFlag[0] =  minFlag;
     minMaxFlag[1] = -maxFlag;
-    ierr = MPI_Allreduce(minMaxFlag, minMaxFlagGlobal, 2, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+    ierr = MPI_Allreduce(minMaxFlag, minMaxFlagGlobal, 2, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
     minFlag =  minMaxFlagGlobal[0];
     maxFlag = -minMaxFlagGlobal[1];
   }
@@ -323,7 +307,7 @@ PetscErrorCode DMAdaptLabel_Plex(DM dm, DMLabel adaptLabel, DM *dmAdapted)
     case DM_ADAPT_COARSEN:
       ierr = DMCoarsen(dm, MPI_COMM_NULL, dmAdapted);CHKERRQ(ierr);break;
     default:
-      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP,"DMPlex does not support refinement flag %D\n", minFlag);break;
+      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP,"DMPlex does not support refinement flag %D\n", minFlag);
     }
   } else {
     ierr = DMPlexSetRefinementUniform(dm, PETSC_FALSE);CHKERRQ(ierr);
@@ -370,7 +354,7 @@ PetscErrorCode DMAdaptMetric_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *
   PetscInt           off, maxConeSize, numBdFaces, f, bdSize;
   PetscBool          flg;
   DMLabel            bdLabelNew;
-  double            *coordsNew;
+  PetscReal         *coordsNew;
   PetscInt          *bdTags;
   PetscReal         *xNew[3] = {NULL, NULL, NULL};
   PetscInt          *cellsNew;
@@ -382,7 +366,7 @@ PetscErrorCode DMAdaptMetric_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *
   PetscFunctionBegin;
   /* Check for FEM adjacency flags */
   ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &numProcs);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &numProcs);CHKERRMPI(ierr);
   if (bdLabel) {
     ierr = PetscObjectGetName((PetscObject) bdLabel, &bdLabelName);CHKERRQ(ierr);
     ierr = PetscStrcmp(bdLabelName, bdName, &flg);CHKERRQ(ierr);
@@ -479,7 +463,7 @@ PetscErrorCode DMAdaptMetric_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *
     pragmatic_2d_mpi_init(&numVertices, &numCells, cells, x, y, l2gv, numLocVertices, comm);break;
   case 3:
     pragmatic_3d_mpi_init(&numVertices, &numCells, cells, x, y, z, l2gv, numLocVertices, comm);break;
-  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No Pragmatic adaptation defined for dimension %d", dim);
+  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No Pragmatic adaptation defined for dimension %D", dim);
   }
   pragmatic_set_boundary(&numBdFaces, bdFaces, bdFaceIds);
   pragmatic_set_metric(metric);
@@ -500,12 +484,12 @@ PetscErrorCode DMAdaptMetric_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *
     pragmatic_get_coords_3d_mpi(xNew[0], xNew[1], xNew[2]);
     break;
   default:
-    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No Pragmatic adaptation defined for dimension %d", dim);
+    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No Pragmatic adaptation defined for dimension %D", dim);
   }
-  for (v = 0; v < numVerticesNew; ++v) {for (d = 0; d < dim; ++d) coordsNew[v*dim+d] = (double) xNew[d][v];}
+  for (v = 0; v < numVerticesNew; ++v) {for (d = 0; d < dim; ++d) coordsNew[v*dim+d] = xNew[d][v];}
   ierr = PetscMalloc1(numCellsNew*(dim+1), &cellsNew);CHKERRQ(ierr);
   pragmatic_get_elements(cellsNew);
-  ierr = DMPlexCreateFromCellListParallel(comm, dim, numCellsNew, numVerticesNew, numCornersNew, PETSC_TRUE, cellsNew, dim, coordsNew, NULL, dmNew);CHKERRQ(ierr);
+  ierr = DMPlexCreateFromCellListParallelPetsc(comm, dim, numCellsNew, numVerticesNew, PETSC_DECIDE, numCornersNew, PETSC_TRUE, cellsNew, dim, coordsNew, NULL, dmNew);CHKERRQ(ierr);
   /* Read out boundary label */
   pragmatic_get_boundaryTags(&bdTags);
   ierr = DMCreateLabel(*dmNew, bdLabel ? bdLabelName : bdName);CHKERRQ(ierr);
@@ -542,6 +526,5 @@ PetscErrorCode DMAdaptMetric_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *
 #else
   PetscFunctionBegin;
   SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Remeshing needs external package support.\nPlease reconfigure with --download-pragmatic.");
-  PetscFunctionReturn(0);
 #endif
 }

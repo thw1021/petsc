@@ -55,7 +55,6 @@ static PetscErrorCode KSPSetUp_CGNE(KSP ksp)
 .     ksp - the Krylov space object that was set to use conjugate gradient, by, for
             example, KSPCreate(MPI_Comm,KSP *ksp); KSPSetType(ksp,KSPCG);
 
-
     Virtually identical to the KSPSolve_CG, it should definitely reuse the same code.
 
 */
@@ -63,7 +62,7 @@ static PetscErrorCode  KSPSolve_CGNE(KSP ksp)
 {
   PetscErrorCode ierr;
   PetscInt       i,stored_max_it,eigs;
-  PetscScalar    dpi,a = 1.0,beta,betaold = 1.0,b = 0,*e = 0,*d = 0;
+  PetscScalar    dpi,a = 1.0,beta,betaold = 1.0,b = 0,*e = NULL,*d = NULL;
   PetscReal      dp = 0.0;
   Vec            X,B,Z,R,P,T;
   KSP_CG         *cg;
@@ -169,9 +168,7 @@ static PetscErrorCode  KSPSolve_CGNE(KSP ksp)
       ierr = VecNorm(R,NORM_2,&dp);CHKERRQ(ierr);
     } else if (ksp->normtype == KSP_NORM_NATURAL) {
       dp = PetscSqrtReal(PetscAbsScalar(beta));
-    } else {
-      dp = 0.0;
-    }
+    } else dp = 0.0;
     ksp->rnorm = dp;
     ierr = KSPLogResidualHistory(ksp,dp);CHKERRQ(ierr);
     if (eigs) cg->ned = ksp->its;
@@ -206,13 +203,11 @@ static PetscErrorCode  KSPSolve_CGNE(KSP ksp)
    Options Database Keys:
 .   -ksp_cg_type <Hermitian or symmetric - (for complex matrices only) indicates the matrix is Hermitian or symmetric
 
-
    Level: beginner
 
    Notes:
     eigenvalue computation routines will return information about the
           spectrum of A^t*A, rather than A.
-
 
    CGNE is a general-purpose non-symmetric method. It works well when the singular values are much better behaved than
    eigenvalues. A unitary matrix is a classic example where CGNE converges in one iteration, but GMRES and CGS need N
@@ -251,6 +246,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_CGNE(KSP ksp)
   ierr      = KSPSetSupportedNorm(ksp,KSP_NORM_PRECONDITIONED,PC_LEFT,3);CHKERRQ(ierr);
   ierr      = KSPSetSupportedNorm(ksp,KSP_NORM_UNPRECONDITIONED,PC_LEFT,2);CHKERRQ(ierr);
   ierr      = KSPSetSupportedNorm(ksp,KSP_NORM_NATURAL,PC_LEFT,2);CHKERRQ(ierr);
+  ierr      = KSPSetSupportedNorm(ksp,KSP_NORM_NONE,PC_LEFT,1);CHKERRQ(ierr);
 
   /*
        Sets the functions that are associated with this data structure
@@ -272,7 +268,3 @@ PETSC_EXTERN PetscErrorCode KSPCreate_CGNE(KSP ksp)
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPCGSetType_C",KSPCGSetType_CGNE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-
-
-

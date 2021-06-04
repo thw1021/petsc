@@ -2,7 +2,7 @@
 !   Solves the time dependent Bratu problem using pseudo-timestepping
 !
 !   Concepts: TS^pseudo-timestepping
-!   Concepts: pseudo-timestepping
+!   Concepts: TS^pseudo-timestepping
 !   Concepts: TS^nonlinear problems
 !   Processors: 1
 !
@@ -380,5 +380,4 @@
 !      args: -ksp_gmres_cgs_refinement_type refine_always -snes_type newtonls -ts_monitor_pseudo -ts_max_snes_failures 3 -ts_pseudo_frtol 1.e-5  -snes_stol 1e-5
 !
 !TEST*/
-
 

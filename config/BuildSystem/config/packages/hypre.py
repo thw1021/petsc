@@ -4,13 +4,12 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    #self.version         = '2.18.2'
+    self.version         = '2.20.0'
     self.minversion      = '2.14'
     self.versionname     = 'HYPRE_RELEASE_VERSION'
     self.versioninclude  = 'HYPRE_config.h'
     self.requiresversion = 1
-    #self.gitcommit       = 'v'+self.version
-    self.gitcommit       = '93baaa8c9' # v2.18.2+valgrind-fix
+    self.gitcommit       = 'v'+self.version
     self.download        = ['git://https://github.com/hypre-space/hypre','https://github.com/hypre-space/hypre/archive/'+self.gitcommit+'.tar.gz']
     self.functions       = ['HYPRE_IJMatrixCreate']
     self.includes        = ['HYPRE.h']
@@ -34,7 +33,7 @@ class Configure(config.package.GNUPackage):
     self.scalar     = framework.require('PETSc.options.scalarTypes',self)
     self.deps       = [self.mpi,self.blasLapack,self.cxxlibs,self.mathlib]
     if self.setCompilers.isCrayKNL(None,self.log):
-      self.installwithbatch  = 0
+      self.installwithbatch = 0
 
   def formGNUConfigureArgs(self):
     self.packageDir = os.path.join(self.packageDir,'src')
@@ -122,8 +121,11 @@ class Configure(config.package.GNUPackage):
       msg  = '--with-64-bit-indices option requires Hypre built with --enable-bigint or --enable-mixedint.\n'
     else:
       code = '#if defined(HYPRE_BIGINT)\n#error HYPRE_BIGINT defined!\n#endif\n#if defined(HYPRE_MIXEDINT)\n#error HYPRE_MIXEDINT defined!\n#endif\n'
-      msg  = 'Hypre with --enable-bigint/--enable-mixedint appears to be specified for a default 32-bit-indices build of PETSc.\n'
+      msg  = 'Hypre with --enable-bigint/--enable-mixedint appears to be specified for a 32-bit-indices build of PETSc.\n'
     if not self.checkCompile('#include "HYPRE_config.h"',code):
       raise RuntimeError('Hypre specified is incompatible!\n'+msg+'Suggest using --download-hypre for a compatible hypre')
+    code = '#if defined(HYPRE_MIXEDINT)\n#error HYPRE_MIXEDINT defined!\n#endif\n'
+    if not self.checkCompile('#include "HYPRE_config.h"',code):
+      self.addDefine('HAVE_HYPRE_MIXEDINT', 1)
     setattr(self.compilers, flagsArg,oldFlags)
     return

@@ -89,7 +89,7 @@ PetscErrorCode PetscSSLInitializeContext(SSL_CTX **octx)
 }
 
 /*@C
-     PetscSSLDestroyContext - frees a SSL_CTX obtained with PetscSSLInitializeContext() 
+     PetscSSLDestroyContext - frees a SSL_CTX obtained with PetscSSLInitializeContext()
 
      Input Parameter:
 .     ctx - the SSL_CTX
@@ -160,7 +160,6 @@ static PetscErrorCode PetscHTTPBuildRequest(const char type[],const char url[],c
   *outrequest = request;
   PetscFunctionReturn(0);
 }
-
 
 /*@C
      PetscHTTPSRequest - Send a request to an HTTPS server

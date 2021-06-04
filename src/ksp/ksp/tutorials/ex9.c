@@ -11,8 +11,6 @@ structures throughout the process.  Note the various stages of event logging.\n\
    Processors: n
 T*/
 
-
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -51,8 +49,8 @@ int main(int argc,char **args)
   ierr = PetscOptionsGetInt(NULL,NULL,"-m",&m,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-t",&ntimes,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-unsym",&unsym,NULL);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   n    = 2*size;
 
   /*
@@ -433,8 +431,6 @@ PetscErrorCode MyKSPMonitor(KSP ksp,PetscInt n,PetscReal rnorm,void *dummy)
   return 0;
 }
 
-
-
 /*TEST
 
    test:
@@ -459,9 +455,9 @@ PetscErrorCode MyKSPMonitor(KSP ksp,PetscInt n,PetscReal rnorm,void *dummy)
          args: -ksp_type cg -s2_ksp_type cg
       test:
          suffix: hpddm_cg_p_h
-         args: -ksp_type cg -s2_ksp_type hpddm -s2_ksp_hpddm_type cg
+         args: -ksp_type cg -s2_ksp_type hpddm -s2_ksp_hpddm_type {{cg bcg bfbcg}shared output}
       test:
          suffix: hpddm_cg_h_h
-         args: -ksp_type hpddm -ksp_hpddm_type cg -s2_ksp_type hpddm -s2_ksp_hpddm_type cg
+         args: -ksp_type hpddm -ksp_hpddm_type cg -s2_ksp_type hpddm -s2_ksp_hpddm_type {{cg bcg bfbcg}shared output}
 
 TEST*/

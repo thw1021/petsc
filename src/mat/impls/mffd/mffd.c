@@ -2,7 +2,7 @@
 #include <petsc/private/matimpl.h>
 #include <../src/mat/impls/mffd/mffdimpl.h>   /*I  "petscmat.h"   I*/
 
-PetscFunctionList MatMFFDList              = 0;
+PetscFunctionList MatMFFDList              = NULL;
 PetscBool         MatMFFDRegisterAllCalled = PETSC_FALSE;
 
 PetscClassId  MATMFFD_CLASSID;
@@ -383,7 +383,7 @@ static PetscErrorCode MatMult_MFFD(Mat mat,Vec a,Vec y)
   }
   ierr = (*ctx->func)(ctx->funcctx,w,y);CHKERRQ(ierr);
 
-#if defined(PETSC_USE_COMPLEX)  
+#if defined(PETSC_USE_COMPLEX)
   if (ctx->usecomplex) {
     ierr = VecImaginaryPart(y);CHKERRQ(ierr);
     h    = PetscImaginaryPart(h);
@@ -473,7 +473,6 @@ PETSC_EXTERN PetscErrorCode MatMFFDSetBase_MFFD(Mat J,Vec U,Vec F)
     ctx->current_f_allocated = PETSC_FALSE;
   } else if (!ctx->current_f_allocated) {
     ierr = MatCreateVecs(J,NULL,&ctx->current_f);CHKERRQ(ierr);
-
     ctx->current_f_allocated = PETSC_TRUE;
   }
   if (!ctx->w) {
@@ -537,22 +536,22 @@ static PetscErrorCode  MatSetFromOptions_MFFD(PetscOptionItems *PetscOptionsObje
   char           ftype[256];
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
+  PetscValidHeaderSpecific(mat,MAT_CLASSID,2);
   ierr = MatShellGetContext(mat,&mfctx);CHKERRQ(ierr);
-  PetscValidHeaderSpecific(mfctx,MATMFFD_CLASSID,1);
+  PetscValidHeaderSpecific(mfctx,MATMFFD_CLASSID,2);
   ierr = PetscObjectOptionsBegin((PetscObject)mfctx);CHKERRQ(ierr);
   ierr = PetscOptionsFList("-mat_mffd_type","Matrix free type","MatMFFDSetType",MatMFFDList,((PetscObject)mfctx)->type_name,ftype,256,&flg);CHKERRQ(ierr);
   if (flg) {
     ierr = MatMFFDSetType(mat,ftype);CHKERRQ(ierr);
   }
 
-  ierr = PetscOptionsReal("-mat_mffd_err","set sqrt relative error in function","MatMFFDSetFunctionError",mfctx->error_rel,&mfctx->error_rel,0);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-mat_mffd_period","how often h is recomputed","MatMFFDSetPeriod",mfctx->recomputeperiod,&mfctx->recomputeperiod,0);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-mat_mffd_err","set sqrt relative error in function","MatMFFDSetFunctionError",mfctx->error_rel,&mfctx->error_rel,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-mat_mffd_period","how often h is recomputed","MatMFFDSetPeriod",mfctx->recomputeperiod,&mfctx->recomputeperiod,NULL);CHKERRQ(ierr);
 
   flg  = PETSC_FALSE;
   ierr = PetscOptionsBool("-mat_mffd_check_positivity","Insure that U + h*a is nonnegative","MatMFFDSetCheckh",flg,&flg,NULL);CHKERRQ(ierr);
   if (flg) {
-    ierr = MatMFFDSetCheckh(mat,MatMFFDCheckPositivity,0);CHKERRQ(ierr);
+    ierr = MatMFFDSetCheckh(mat,MatMFFDCheckPositivity,NULL);CHKERRQ(ierr);
   }
 #if defined(PETSC_USE_COMPLEX)
   ierr = PetscOptionsBool("-mat_mffd_complex","Use Lyness complex number trick to compute the matrix-vector product","None",mfctx->usecomplex,&mfctx->usecomplex,NULL);CHKERRQ(ierr);
@@ -618,7 +617,7 @@ PetscErrorCode  MatMFFDSetHHistory_MFFD(Mat J,PetscScalar history[],PetscInt nhi
 
   Developers Note: This is implemented on top of MATSHELL to get support for scaling and shifting without requiring duplicate code
 
-.seealso: MatCreateMFFD(), MatCreateSNESMF(), MatMFFDSetFunction(), MatMFFDSetType(),  
+.seealso: MatCreateMFFD(), MatCreateSNESMF(), MatMFFDSetFunction(), MatMFFDSetType(),
           MatMFFDSetFunctionError(), MatMFFDDSSetUmin(), MatMFFDSetFunction()
           MatMFFDSetHHistory(), MatMFFDResetHHistory(), MatCreateSNESMF(),
           MatMFFDGetH(),
@@ -640,7 +639,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
   mfctx->historyh                 = NULL;
   mfctx->ncurrenth                = 0;
   mfctx->maxcurrenth              = 0;
-  ((PetscObject)mfctx)->type_name = 0;
+  ((PetscObject)mfctx)->type_name = NULL;
 
   /*
      Create the empty data structure to contain compute-h routines.
@@ -648,14 +647,14 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
      a later call with MatMFFDSetType() or if that is not called
      then it will default in the first use of MatMult_MFFD()
   */
-  mfctx->ops->compute        = 0;
-  mfctx->ops->destroy        = 0;
-  mfctx->ops->view           = 0;
-  mfctx->ops->setfromoptions = 0;
-  mfctx->hctx                = 0;
+  mfctx->ops->compute        = NULL;
+  mfctx->ops->destroy        = NULL;
+  mfctx->ops->view           = NULL;
+  mfctx->ops->setfromoptions = NULL;
+  mfctx->hctx                = NULL;
 
-  mfctx->func    = 0;
-  mfctx->funcctx = 0;
+  mfctx->func    = NULL;
+  mfctx->funcctx = NULL;
   mfctx->w       = NULL;
   mfctx->mat     = A;
 
@@ -698,7 +697,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
 .  M - number of global rows (or PETSC_DETERMINE to have calculated if m is given)
 -  N - number of global columns (or PETSC_DETERMINE to have calculated if n is given)
 
-
    Output Parameter:
 .  J - the matrix-free matrix
 
@@ -709,7 +707,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
 .  -mat_mffd_check_positivity - possibly decrease h until U + h*a has only positive values
 -  -mat_mffd_complex - use the Lyness trick with complex numbers to compute the matrix-vector product instead of differencing
                        (requires real valued functions but that PETSc be configured for complex numbers)
-
 
    Level: advanced
 
@@ -871,7 +868,6 @@ PetscErrorCode  MatMFFDSetFunctioni(Mat mat,PetscErrorCode (*funci)(void*,PetscI
     matrix inside your compute Jacobian routine.
     This function is necessary to compute the diagonal of the matrix.
 
-
 .seealso: MatCreateSNESMF(),MatMFFDGetH(), MatCreateMFFD(), MATMFFD
           MatMFFDSetHHistory(), MatMFFDResetHHistory(), SNESetFunction(), MatGetDiagonal()
 @*/
@@ -898,7 +894,6 @@ PetscErrorCode  MatMFFDSetFunctioniBase(Mat mat,PetscErrorCode (*func)(void*,Vec
 .  -mat_mffd_period <period>
 
    Level: advanced
-
 
 .seealso: MatCreateSNESMF(),MatMFFDGetH(),
           MatMFFDSetHHistory(), MatMFFDResetHHistory()
@@ -1129,7 +1124,7 @@ PetscErrorCode  MatMFFDCheckPositivity(void *dummy,Vec U,Vec a,PetscScalar *h)
   }
   ierr = VecRestoreArray(U,&u_vec);CHKERRQ(ierr);
   ierr = VecRestoreArray(a,&a_vec);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&minval,&val,1,MPIU_REAL,MPIU_MIN,comm);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&minval,&val,1,MPIU_REAL,MPIU_MIN,comm);CHKERRMPI(ierr);
   if (val <= PetscAbsScalar(*h)) {
     ierr = PetscInfo2(U,"Scaling back h from %g to %g\n",(double)PetscRealPart(*h),(double)(.99*val));CHKERRQ(ierr);
     if (PetscRealPart(*h) > 0.0) *h =  0.99*val;

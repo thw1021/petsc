@@ -293,8 +293,8 @@ PETSC_EXTERN PetscErrorCode PetscDrawHGGetDraw(PetscDrawHG,PetscDraw*);
 PETSC_EXTERN PetscErrorCode PetscDrawHGSetLimits(PetscDrawHG,PetscReal,PetscReal,int,int);
 PETSC_EXTERN PetscErrorCode PetscDrawHGSetNumberBins(PetscDrawHG,int);
 PETSC_EXTERN PetscErrorCode PetscDrawHGSetColor(PetscDrawHG,int);
-PETSC_EXTERN PetscErrorCode PetscDrawHGCalcStats(PetscDrawHG, PetscBool );
-PETSC_EXTERN PetscErrorCode PetscDrawHGIntegerBins(PetscDrawHG, PetscBool );
+PETSC_EXTERN PetscErrorCode PetscDrawHGCalcStats(PetscDrawHG, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscDrawHGIntegerBins(PetscDrawHG, PetscBool);
 
 PETSC_EXTERN PetscClassId PETSC_DRAWBAR_CLASSID;
 
@@ -335,23 +335,23 @@ PETSC_EXTERN PetscXIOErrorHandler PetscSetXIOErrorHandler(PetscXIOErrorHandler);
     _Petsc_ierr = PetscMemcpy(&_Petsc_jmpbuf,&PetscXIOErrorHandlerJumpBuf,sizeof(_Petsc_jmpbuf));CHKERRQ(_Petsc_ierr); \
     _Petsc_xioerrhdl = PetscSetXIOErrorHandler(PetscXIOErrorHandlerJump); \
     if (setjmp(PetscXIOErrorHandlerJumpBuf)) {_Petsc_xioerr_local = PETSC_TRUE; do {_Petsc_ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(_Petsc_ierr);} \
-  } do {} while(0)
+  } do {} while (0)
 
 #define PetscDrawCollectiveEnd(draw) 0; \
   if (_Petsc_isdrawx) { \
     (void)PetscSetXIOErrorHandler(_Petsc_xioerrhdl); \
     _Petsc_ierr = PetscMemcpy(&PetscXIOErrorHandlerJumpBuf,&_Petsc_jmpbuf,sizeof(PetscXIOErrorHandlerJumpBuf));CHKERRQ(_Petsc_ierr); \
-    _Petsc_ierr = MPI_Allreduce(&_Petsc_xioerr_local,&_Petsc_xioerr,1,MPIU_BOOL,MPI_LOR,PetscObjectComm((PetscObject)(draw)));CHKERRQ(_Petsc_ierr); \
+    _Petsc_ierr = MPI_Allreduce(&_Petsc_xioerr_local,&_Petsc_xioerr,1,MPIU_BOOL,MPI_LOR,PetscObjectComm((PetscObject)(draw)));CHKERRMPI(_Petsc_ierr); \
     if (_Petsc_xioerr) { \
       _Petsc_ierr = PetscDrawSetType((draw),PETSC_DRAW_NULL);CHKERRQ(_Petsc_ierr); \
       PetscFunctionReturn(0); \
     } \
-  } } while(0)
+  } } while (0)
 
 #else
 
-#define PetscDrawCollectiveBegin(draw) 0; do {} while(0)
-#define PetscDrawCollectiveEnd(draw)   0; do {} while(0)
+#define PetscDrawCollectiveBegin(draw) 0; do {} while (0)
+#define PetscDrawCollectiveEnd(draw)   0; do {} while (0)
 
 #endif
 

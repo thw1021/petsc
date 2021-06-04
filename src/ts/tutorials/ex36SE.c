@@ -70,7 +70,7 @@ static PetscErrorCode IJacobianSemiExplicit(TS ts,PetscReal t,Vec Y,Vec Ydot,Pet
   ierr    = VecGetArrayRead(Ydot,&ydot);CHKERRQ(ierr);
 
   ierr = PetscMemzero(J,sizeof(J));CHKERRQ(ierr);
- 
+
   J[0][0]=a;
   J[0][3]=1000;
   J[1][0]=250/(13.* PetscExpReal((500*(y[0] + y[1] - y[3]))/13.));
@@ -91,7 +91,7 @@ static PetscErrorCode IJacobianSemiExplicit(TS ts,PetscReal t,Vec Y,Vec Ydot,Pet
   J[4][4]=-0.00022222222222222223;
 
   ierr    = MatSetValues(B,5,rowcol,5,rowcol,&J[0][0],INSERT_VALUES);CHKERRQ(ierr);
-  
+
   ierr    = VecRestoreArrayRead(Y,&y);CHKERRQ(ierr);
   ierr    = VecRestoreArrayRead(Ydot,&ydot);CHKERRQ(ierr);
 
@@ -113,12 +113,12 @@ int main(int argc,char **argv)
   PetscMPIInt    size;
   PetscInt       n = 5;
   PetscScalar    *y;
- 
+
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize program
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Only for sequential runs");
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -138,7 +138,7 @@ int main(int argc,char **argv)
   y[3] =  0.0;
   y[4] =  6.0;
   ierr = VecRestoreArray(Y,&y);CHKERRQ(ierr);
-  
+
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create timestepping solver context
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -168,7 +168,7 @@ int main(int argc,char **argv)
      Do Time stepping
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = TSSolve(ts,Y);CHKERRQ(ierr);
-  
+
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.  All PETSc objects should be destroyed when they are no longer needed.
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */

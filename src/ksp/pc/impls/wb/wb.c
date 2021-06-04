@@ -10,8 +10,7 @@ typedef struct {
   KSP          ksp;
 } PC_Exotic;
 
-const char *const PCExoticTypes[] = {"face","wirebasket","PCExoticType","PC_Exotic",0};
-
+const char *const PCExoticTypes[] = {"face","wirebasket","PCExoticType","PC_Exotic",NULL};
 
 /*
       DMDAGetWireBasketInterpolation - Gets the interpolation for a wirebasket based coarse space
@@ -36,10 +35,10 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
   PetscTable             ht;
 
   PetscFunctionBegin;
-  ierr = DMDAGetInfo(da,&dim,0,0,0,&mp,&np,&pp,&dof,0,0,0,0,0);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(da,&dim,NULL,NULL,NULL,&mp,&np,&pp,&dof,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
   if (dof != 1) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only for single field problems");
   if (dim != 3) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only coded for 3d problems");
-  ierr   = DMDAGetCorners(da,0,0,0,&m,&n,&p);CHKERRQ(ierr);
+  ierr   = DMDAGetCorners(da,NULL,NULL,NULL,&m,&n,&p);CHKERRQ(ierr);
   ierr   = DMDAGetGhostCorners(da,&istart,&jstart,&kstart,&mwidth,&nwidth,&pwidth);CHKERRQ(ierr);
   istart = istart ? -1 : 0;
   jstart = jstart ? -1 : 0;
@@ -121,7 +120,6 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
   for (i=1; i<m-istart-1; i++) xsurf[cnt++ + 24*Nsurf] = 1;
   xsurf[cnt++ + 25*Nsurf] = 1;
 
-
   /* interpolations only sum to 1 when using direct solver */
 #if defined(PETSC_USE_DEBUG_foo)
   for (i=0; i<Nsurf; i++) {
@@ -132,7 +130,6 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
 #endif
   ierr = MatDenseRestoreArray(Xsurf,&xsurf);CHKERRQ(ierr);
   /* ierr = MatView(Xsurf,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);*/
-
 
   /*
        I are the indices for all the needed vertices (in global numbering)
@@ -200,9 +197,9 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
     PetscScalar *xint_tmp;
 
     ierr = MatDenseGetArray(Xint,&xint);CHKERRQ(ierr);
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,Nint,0,&x);CHKERRQ(ierr);
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,Nint,NULL,&x);CHKERRQ(ierr);
     ierr = MatDenseGetArray(Xint_tmp,&xint_tmp);CHKERRQ(ierr);
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,Nint,0,&b);CHKERRQ(ierr);
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,Nint,NULL,&b);CHKERRQ(ierr);
     ierr = KSPSetOperators(exotic->ksp,Aii,Aii);CHKERRQ(ierr);
     for (i=0; i<26; i++) {
       ierr = VecPlaceArray(x,xint+i*Nint);CHKERRQ(ierr);
@@ -231,7 +228,6 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
   /* ierr =MatView(Xint,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr); */
 #endif
 
-
   /*         total vertices             total faces                                  total edges */
   Ntotal = (mp + 1)*(np + 1)*(pp + 1) + mp*np*(pp+1) + mp*pp*(np+1) + np*pp*(mp+1) + mp*(np+1)*(pp+1) + np*(mp+1)*(pp+1) +  pp*(mp+1)*(np+1);
 
@@ -257,7 +253,7 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
   ierr = ISLocalToGlobalMappingApply(ltg,26,gl,gl);CHKERRQ(ierr);
   /* PetscIntView(26,gl,PETSC_VIEWER_STDOUT_WORLD); */
   ierr = PetscMalloc1(26*mp*np*pp,&globals);CHKERRQ(ierr);
-  ierr = MPI_Allgather(gl,26,MPIU_INT,globals,26,MPIU_INT,PetscObjectComm((PetscObject)da));CHKERRQ(ierr);
+  ierr = MPI_Allgather(gl,26,MPIU_INT,globals,26,MPIU_INT,PetscObjectComm((PetscObject)da));CHKERRMPI(ierr);
 
   /* Number the coarse grid points from 0 to Ntotal */
   ierr = MatGetSize(Aglobal,&Nt,NULL);CHKERRQ(ierr);
@@ -346,10 +342,10 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
   PetscTable             ht;
 
   PetscFunctionBegin;
-  ierr = DMDAGetInfo(da,&dim,0,0,0,&mp,&np,&pp,&dof,0,0,0,0,0);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(da,&dim,NULL,NULL,NULL,&mp,&np,&pp,&dof,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
   if (dof != 1) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only for single field problems");
   if (dim != 3) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only coded for 3d problems");
-  ierr   = DMDAGetCorners(da,0,0,0,&m,&n,&p);CHKERRQ(ierr);
+  ierr   = DMDAGetCorners(da,NULL,NULL,NULL,&m,&n,&p);CHKERRQ(ierr);
   ierr   = DMDAGetGhostCorners(da,&istart,&jstart,&kstart,&mwidth,&nwidth,&pwidth);CHKERRQ(ierr);
   istart = istart ? -1 : 0;
   jstart = jstart ? -1 : 0;
@@ -413,7 +409,6 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
 #endif
   ierr = MatDenseRestoreArray(Xsurf,&xsurf);CHKERRQ(ierr);
   /* ierr = MatView(Xsurf,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);*/
-
 
   /*
        I are the indices for all the needed vertices (in global numbering)
@@ -483,9 +478,9 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
     PetscScalar *xint_tmp;
 
     ierr = MatDenseGetArray(Xint,&xint);CHKERRQ(ierr);
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,Nint,0,&x);CHKERRQ(ierr);
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,Nint,NULL,&x);CHKERRQ(ierr);
     ierr = MatDenseGetArray(Xint_tmp,&xint_tmp);CHKERRQ(ierr);
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,Nint,0,&b);CHKERRQ(ierr);
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,Nint,NULL,&b);CHKERRQ(ierr);
     ierr = KSPSetOperators(exotic->ksp,Aii,Aii);CHKERRQ(ierr);
     for (i=0; i<6; i++) {
       ierr = VecPlaceArray(x,xint+i*Nint);CHKERRQ(ierr);
@@ -514,7 +509,6 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
   /* ierr =MatView(Xint,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr); */
 #endif
 
-
   /*         total faces    */
   Ntotal =  mp*np*(pp+1) + mp*pp*(np+1) + np*pp*(mp+1);
 
@@ -535,7 +529,7 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
   ierr = ISLocalToGlobalMappingApply(ltg,6,gl,gl);CHKERRQ(ierr);
   /* PetscIntView(6,gl,PETSC_VIEWER_STDOUT_WORLD); */
   ierr = PetscMalloc1(6*mp*np*pp,&globals);CHKERRQ(ierr);
-  ierr = MPI_Allgather(gl,6,MPIU_INT,globals,6,MPIU_INT,PetscObjectComm((PetscObject)da));CHKERRQ(ierr);
+  ierr = MPI_Allgather(gl,6,MPIU_INT,globals,6,MPIU_INT,PetscObjectComm((PetscObject)da));CHKERRMPI(ierr);
 
   /* Number the coarse grid points from 0 to Ntotal */
   ierr = MatGetSize(Aglobal,&Nt,NULL);CHKERRQ(ierr);
@@ -571,7 +565,6 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
   ierr = MatAssemblyEnd(*P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = PetscFree2(IIint,IIsurf);CHKERRQ(ierr);
 
-
 #if defined(PETSC_USE_DEBUG_foo)
   {
     Vec         x,y;
@@ -602,7 +595,6 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
   PetscFunctionReturn(0);
 }
 
-
 /*@
    PCExoticSetType - Sets the type of coarse grid interpolation to use
 
@@ -627,7 +619,6 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
      Both interpolations are suitable for only scalar problems.
 
    Level: intermediate
-
 
 .seealso: PCEXOTIC, PCExoticType()
 @*/
@@ -710,7 +701,7 @@ PetscErrorCode PCView_Exotic(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);  /* should not need to push this twice? */
       ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
-      ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank);CHKERRQ(ierr);
+      ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank);CHKERRMPI(ierr);
       if (!rank) {
         ierr = KSPView(ctx->ksp,sviewer);CHKERRQ(ierr);
       }
@@ -755,7 +746,6 @@ PetscErrorCode PCSetFromOptions_Exotic(PetscOptionItems *PetscOptionsObject,PC p
   PetscFunctionReturn(0);
 }
 
-
 /*MC
      PCEXOTIC - Two level overlapping Schwarz preconditioner with exotic (non-standard) coarse grid spaces
 
@@ -769,7 +759,7 @@ PetscErrorCode PCSetFromOptions_Exotic(PetscOptionItems *PetscOptionsObject,PC p
 +  1. - These coarse grid spaces originate in the work of Bramble, Pasciak  and Schatz, "The Construction
    of Preconditioners for Elliptic Problems by Substructing IV", Mathematics of Computation, volume 53, 1989.
 .  2. - They were generalized slightly in "Domain Decomposition Method for Linear Elasticity", Ph. D. thesis, Barry Smith,
-   New York University, 1990. 
+   New York University, 1990.
 .  3. - They were then explored in great detail in Dryja, Smith, Widlund, "Schwarz Analysis
    of Iterative Substructuring Methods for Elliptic Problems in Three Dimensions, SIAM Journal on Numerical
    Analysis, volume 31. 1994. These were developed in the context of iterative substructuring preconditioners.
@@ -809,12 +799,12 @@ PETSC_EXTERN PetscErrorCode PCCreate_Exotic(PC pc)
 
   PetscFunctionBegin;
   /* if type was previously mg; must manually destroy it because call to PCSetType(pc,PCMG) will not destroy it */
-  if (pc->ops->destroy) { 
+  if (pc->ops->destroy) {
     ierr =  (*pc->ops->destroy)(pc);CHKERRQ(ierr);
-    pc->data = 0;
+    pc->data = NULL;
   }
   ierr = PetscFree(((PetscObject)pc)->type_name);CHKERRQ(ierr);
-  ((PetscObject)pc)->type_name = 0;
+  ((PetscObject)pc)->type_name = NULL;
 
   ierr         = PCSetType(pc,PCMG);CHKERRQ(ierr);
   ierr         = PCMGSetLevels(pc,2,NULL);CHKERRQ(ierr);
@@ -823,7 +813,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_Exotic(PC pc)
   ex->type     = PC_EXOTIC_FACE;
   mg           = (PC_MG*) pc->data;
   mg->innerctx = ex;
-
 
   pc->ops->setfromoptions = PCSetFromOptions_Exotic;
   pc->ops->view           = PCView_Exotic;

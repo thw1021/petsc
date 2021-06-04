@@ -12,7 +12,7 @@
 #include <mpfr.h>
 #endif
 
-const char *const PetscDTNodeTypes[] = {"gaussjacobi", "equispaced", "tanhsinh", "PETSCDTNODES_", 0};
+const char *const PetscDTNodeTypes[] = {"gaussjacobi", "equispaced", "tanhsinh", "PETSCDTNODES_", NULL};
 
 static PetscBool GolubWelschCite       = PETSC_FALSE;
 const char       GolubWelschCitation[] = "@article{GolubWelsch1969,\n"
@@ -92,7 +92,7 @@ PetscErrorCode PetscQuadratureDuplicate(PetscQuadrature q, PetscQuadrature *r)
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(q, 2);
+  PetscValidPointer(q, 1);
   ierr = PetscQuadratureCreate(PetscObjectComm((PetscObject) q), r);CHKERRQ(ierr);
   ierr = PetscQuadratureGetOrder(q, &order);CHKERRQ(ierr);
   ierr = PetscQuadratureSetOrder(*r, order);CHKERRQ(ierr);
@@ -476,11 +476,11 @@ PetscErrorCode PetscQuadratureSetData(PetscQuadrature q, PetscInt dim, PetscInt 
   if (Nc >= 0)      q->Nc        = Nc;
   if (npoints >= 0) q->numPoints = npoints;
   if (points) {
-    PetscValidPointer(points, 4);
+    PetscValidPointer(points, 5);
     q->points = points;
   }
   if (weights) {
-    PetscValidPointer(weights, 5);
+    PetscValidPointer(weights, 6);
     q->weights = weights;
   }
   PetscFunctionReturn(0);
@@ -1052,7 +1052,6 @@ PetscErrorCode PetscDTPKDEvalJet(PetscInt dim, PetscInt npoints, const PetscReal
     for (e = 0, degsum = 0; e < d; e++) degsum += degtup[e];
     alpha = 2 * degsum + d;
     PetscDTJacobiRecurrence_Internal(n,alpha,0.,cnm1,cnm1x,cnm2);
-
 
     scales[degidx] = initscale;
     for (e = 0, degsum = 0; e < dim; e++) {

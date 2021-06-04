@@ -49,7 +49,7 @@ static PetscErrorCode PostEvent(TS ts,PetscInt nevents,PetscInt event_list[],Pet
 
   PetscFunctionBegin;
   if (!nevents) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   if (event_list[0] == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"Processor [%d]: Ball hit the ground at t = %5.2f seconds\n",rank,(double)t);CHKERRQ(ierr);
     /* Set new initial conditions with .9 attenuation */
@@ -131,7 +131,7 @@ int main(int argc,char **argv)
   PetscErrorCode ierr;
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   app.Cd = 0.0;
   app.Cr = 0.9;
@@ -192,6 +192,7 @@ int main(int argc,char **argv)
 
     test:
       suffix: a
+      args: -ts_alpha_radius {{1.0 0.5}}
       output_file: output/ex44.out
 
     test:
@@ -206,5 +207,10 @@ int main(int argc,char **argv)
       output_file: output/ex44_2.out
       filter: sort -b
       filter_output: sort -b
+
+    test:
+      requires: !single
+      args: -ts_dt 0.25 -ts_adapt_type basic -ts_adapt_wnormtype INFINITY -ts_adapt_monitor
+      args: -ts_max_steps 1 -ts_max_reject {{0 1 2}separate_output} -ts_error_if_step_fails false
 
 TEST*/
