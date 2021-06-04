@@ -28,8 +28,8 @@ struct _n_SplitCSRMat {
     #define PetscAtomicAdd(a,b) {       \
       PetscReal *_a = (PetscReal*)(a);  \
       PetscReal *_b = (PetscReal*)&(b); \
-      atomicAdd(_a  ,_b[0]);            \
-      atomicAdd(_a+1,_b[1]);            \
+      atomicAdd(&_a[0],_b[0]);            \
+      atomicAdd(&_a[1],_b[1]);            \
   }
   #else
     #define PetscAtomicAdd(a,b) atomicAdd(a,b)
