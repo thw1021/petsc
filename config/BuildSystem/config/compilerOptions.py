@@ -256,8 +256,7 @@ class CompilerOptions(config.base.Configure):
         if bopt == '':
           flags.append('-threads')
         elif bopt == 'g':
-          flags.extend(['-debug:full'])
-          flags.append('-O0')
+          flags.extend(['-debug:full','-O0'])
         elif bopt == 'O':
           flags.extend(['-optimize:5', '-fast'])
     # Generic
