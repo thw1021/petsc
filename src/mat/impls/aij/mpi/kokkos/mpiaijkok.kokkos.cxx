@@ -230,9 +230,6 @@ PetscErrorCode  MatCreateAIJKokkos(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt 
 // get GPU pointer to stripped down Mat. For both Seq and MPI Mat.
 PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
 {
-  #if defined(PETSC_USE_CTABLE)
-  SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Device metadata does not support ctable (--with-ctable=0)");
-  #else
   PetscMPIInt                size,rank;
   MPI_Comm                   comm;
   PetscErrorCode             ierr;
@@ -264,6 +261,7 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
     Mat_SeqAIJ            *jaca;
     PetscInt              n = A->rmap->n, nnz;
     Mat                   Amat;
+    PetscInt              *colmap;
 
     /* create and copy h_mat */
     ierr = PetscInfo(A,"Create device matrix in Kokkos\n");CHKERRQ(ierr);
@@ -291,15 +289,12 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
       jaca = (Mat_SeqAIJ*)aij->A->data;
       if (!aij->garray) SETERRQ(comm,PETSC_ERR_PLIB,"MPIAIJ Matrix was assembled but is missing garray");
       if (aij->B->rmap->n != aij->A->rmap->n) SETERRQ(comm,PETSC_ERR_SUP,"Only support aij->B->rmap->n == aij->A->rmap->n");
-      // create colmap - this is ussually done (lazy) in MatSetValues
       aij->donotstash = PETSC_TRUE;
       aij->A->nooffprocentries = aij->B->nooffprocentries = A->nooffprocentries = PETSC_TRUE;
       jaca->nonew = jacb->nonew = PETSC_TRUE; // no more dissassembly
-      ierr = PetscCalloc1(A->cmap->N+1,&aij->colmap);CHKERRQ(ierr);
-      aij->colmap[A->cmap->N] = -9;
-      ierr = PetscLogObjectMemory((PetscObject)A,(A->cmap->N+1)*sizeof(PetscInt));CHKERRQ(ierr);
-      for (ii=0; ii<aij->B->cmap->n; ii++) aij->colmap[aij->garray[ii]] = ii+1;
-      if (aij->colmap[A->cmap->N] != -9) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"aij->colmap[A->cmap->N] != -9");
+      ierr = PetscCalloc1(A->cmap->N,&colmap);CHKERRQ(ierr);
+      ierr = PetscLogObjectMemory((PetscObject)A,(A->cmap->N)*sizeof(PetscInt));CHKERRQ(ierr);
+      for (ii=0; ii<aij->B->cmap->n; ii++) colmap[aij->garray[ii]] = ii+1;
       // allocate B copy data
       h_mat.rstart = A->rmap->rstart; h_mat.rend = A->rmap->rend;
       h_mat.cstart = A->cmap->rstart; h_mat.cend = A->cmap->rend;
@@ -309,21 +304,18 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
         aijkokB->i_uncompressed_d = new Kokkos::View<PetscInt*>(Kokkos::create_mirror(DefaultMemorySpace(),h_i_k));
         Kokkos::deep_copy (*aijkokB->i_uncompressed_d, h_i_k);
         h_mat.offdiag.i = aijkokB->i_uncompressed_d->data();
-        //err = cudaMalloc((void **)&h_mat.offdiag.i,               (n+1)*sizeof(int));CHKERRCUDA(err); // kernel input
-        //err = cudaMemcpy(          h_mat.offdiag.i,    jacb->i,   (n+1)*sizeof(int), cudaMemcpyHostToDevice);CHKERRCUDA(err);
       } else {
          h_mat.offdiag.i = (PetscInt*)aijkokB->i_d.data();
       }
       h_mat.offdiag.j = (PetscInt*)aijkokB->j_d.data();
       h_mat.offdiag.a = aijkokB->a_d.data();
       {
-        Kokkos::View<PetscInt*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_colmap_k (aij->colmap,A->cmap->N);
+        Kokkos::View<PetscInt*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_colmap_k (colmap,A->cmap->N);
         aijkokB->colmap_d = new Kokkos::View<PetscInt*>(Kokkos::create_mirror(DefaultMemorySpace(),h_colmap_k));
         Kokkos::deep_copy (*aijkokB->colmap_d, h_colmap_k);
         h_mat.colmap = aijkokB->colmap_d->data();
+        PetscFree(colmap);CHKERRQ(ierr);
       }
-      //err = cudaMalloc((void **)&h_mat.colmap,                  (A->cmap->N+1)*sizeof(PetscInt));CHKERRCUDA(err); // kernel output
-      //err = cudaMemcpy(          h_mat.colmap,    aij->colmap,  (A->cmap->N+1)*sizeof(PetscInt), cudaMemcpyHostToDevice);CHKERRCUDA(err);
       h_mat.offdiag.ignorezeroentries = jacb->ignorezeroentries;
       h_mat.offdiag.n = n;
     }
@@ -348,5 +340,4 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
   *B = d_mat; // return it, set it in Mat, and set it up
   A->assembled = PETSC_FALSE; // ready to write with matsetvalues - this done (lazy) in normal MatSetValues
   PetscFunctionReturn(0);
-  #endif
 }
