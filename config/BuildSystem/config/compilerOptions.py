@@ -168,8 +168,7 @@ class CompilerOptions(config.base.Configure):
           else:
             flags.extend(['-MT','-GR','-EHsc']) # removing GX in favor of EHsc
         elif bopt in ['g']:
-          flags.extend(['-Z7'])
-          flags.append('-O0')
+          flags.extend(['-Z7','-O0'])
         elif bopt in ['O']:
           flags.extend(['-O3', '-QxW'])
       # Windows Microsoft
