@@ -179,8 +179,7 @@ class CompilerOptions(config.base.Configure):
           else:
             flags.extend(['-MT','-GR','-EHsc']) # removing GX in favor of EHsc
         elif bopt == 'g':
-          flags.extend(['-Z7','-Zm200'])
-          flags.append('-O0')
+          flags.extend(['-Z7','-Zm200','-O0'])
         elif bopt == 'O':
           flags.extend(['-O2','-QxW','-Zm200'])
       # Windows Borland
