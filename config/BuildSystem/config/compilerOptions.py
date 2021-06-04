@@ -80,8 +80,7 @@ class CompilerOptions(config.base.Configure):
           else:
             flags.extend(['-MT','-wd4996'])
         elif bopt == 'g':
-          flags.extend(['-Z7'])
-          flags.append('-O0')
+          flags.extend(['-Z7','-O0'])
         elif bopt == 'O':
           flags.extend(['-O2', '-QxW'])
       # Windows Borland
