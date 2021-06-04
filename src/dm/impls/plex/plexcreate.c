@@ -2566,24 +2566,25 @@ const char *const DMPlexTPSTypes[] = {"SCHWARZ_P", "GYROID", "DMPlexTPSType", "D
 
 .seealso: DMPlexCreateSphereMesh(), DMSetType(), DMCreate()
 @*/
-PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const PetscInt extent[], const DMBoundaryType periodic[], PetscReal thickness, PetscInt refinements, DM *dm)
+PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const PetscInt extent[], const DMBoundaryType periodic[], PetscInt refinements, PetscInt layers, PetscReal thickness, DM *dm)
 {
   PetscErrorCode ierr;
   PetscMPIInt rank;
   PetscInt topoDim = 2, spaceDim = 3, numFaces = 0, numVertices = 0, numEdges = 0;
   PetscInt (*edges)[2] = NULL, *edgeSets = NULL;
-  int *cells_flat = NULL;
-  double *vtxCoords = NULL;
+  PetscInt *cells_flat = NULL;
+  PetscReal *vtxCoords = NULL;
   TPSEvaluateFunc evalFunc = 0;
   DMLabel label;
 
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  if ((layers != 0) ^ (thickness != 0.)) SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Layers %D must be nonzero when thickness %g is nonzero", layers, (double)thickness);
   switch (tpstype) {
   case DMPLEX_TPS_SCHWARZ_P:
     if (periodic && (periodic[0] != DM_BOUNDARY_NONE || periodic[1] != DM_BOUNDARY_NONE || periodic[2] != DM_BOUNDARY_NONE)) SETERRQ(comm, PETSC_ERR_SUP, "Schwarz P does not support periodic meshes");
     if (!rank) {
-      int (*cells)[6][4][4] = NULL; // [junction, junction-face, cell, conn]
+      PetscInt (*cells)[6][4][4] = NULL; // [junction, junction-face, cell, conn]
       PetscInt Njunctions = 0, Ncuts = 0, Npipes[3], vcount;
       PetscReal L = 1;
 
@@ -2842,7 +2843,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
           /* Cq */ {1.5,.75,1.75},
           /* Dq */ {1.5,1.75,1.75},
         };
-      int      (*cells)[64][4] = NULL;
+      PetscInt  (*cells)[64][4] = NULL;
       PetscBool *seen;
       PetscInt  *vertToTrueVert;
       PetscInt  count;
@@ -2932,7 +2933,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
       for (PetscInt edge = 0, i = 0; i < numFaces; i++) {
         for (PetscInt e = 0; e < 4; e++) {
           PetscInt ev[] = {cells_flat[i*4 + e], cells_flat[i*4 + ((e+1)%4)]};
-          const double *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
+          const PetscReal *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
 
           for (PetscInt d = 0; d < 3; d++) {
             if (!periodic || periodic[d] != DM_BOUNDARY_PERIODIC) {
@@ -2955,7 +2956,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
     break;
   }
 
-  ierr = DMPlexCreateFromCellList(comm, topoDim, numFaces, numVertices, 4, PETSC_TRUE, cells_flat, spaceDim, vtxCoords, dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateFromCellListPetsc(comm, topoDim, numFaces, numVertices, 4, PETSC_TRUE, cells_flat, spaceDim, vtxCoords, dm);CHKERRQ(ierr);
   ierr = PetscFree(vtxCoords);CHKERRQ(ierr);
   ierr = PetscFree(cells_flat);CHKERRQ(ierr);
 
@@ -3008,7 +3009,12 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
   ierr = DMGetLabel(*dm, "Face Sets", &label);CHKERRQ(ierr);
   ierr = DMPlexLabelComplete(*dm, label);CHKERRQ(ierr);
 
-  if (thickness > 0) SETERRQ1(comm, PETSC_ERR_SUP, "Thickness %g > 0 not implemented", (double)thickness);
+  if (thickness > 0) {
+    DM dm3;
+    ierr = DMPlexExtrude(*dm, layers, thickness, PETSC_FALSE, NULL, PETSC_TRUE, &dm3);CHKERRQ(ierr);
+    ierr = DMDestroy(dm);CHKERRQ(ierr);
+    *dm = dm3;
+  }
   PetscFunctionReturn(0);
 }
 
