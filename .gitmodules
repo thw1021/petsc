@@ -1,3 +1,5 @@
 [submodule "doc/images"]
 	path = doc/images
 	url = https://gitlab.com/petsc/images
+	branch = main
+	shallow = true
