@@ -1,5 +1,5 @@
 [submodule "doc/images"]
 	path = doc/images
-	url = https://gitlab.com/petsc/images
+	url = https://gitlab.com/petsc/images.git
 	branch = main
 	shallow = true
