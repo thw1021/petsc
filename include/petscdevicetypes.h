@@ -53,25 +53,25 @@ typedef const char* PetscDeviceContextType;
 #define PETSCDEVICECONTEXTHIP  "hip"
 
 /*E
-  PetscStreamMode - Stream blocking mode, indicates how a strea implementation will interact with the default "NULL"
+  PetscStreamType - Stream blocking mode, indicates how a strea implementation will interact with the default "NULL"
   stream, which is usually blocking.
 
-$ PETSC_STREAM_GLOBAL_BLOCKING - Alias for NULL stream. Any stream of this type will block the hostfor all other streams to finish work before starting its operations.
+$ PETSC_STREAM_GLOBAL_BLOCKING - Alias for NULL stream. Any stream of this type will block the host for all other streams to finish work before starting its operations.
 $ PETSC_STREAM_DEFAULT_BLOCKING - Stream will act independent of other streams, but will still be blocked by actions on the NULL stream.
 $ PETSC_STREAM_GLOBAL_NONBLOCKING - Stream is truly asynchronous, and is blocked by nothing, not even the NULL stream.
-$ PETSC_STREAM_MAX_MODE - Always 1 greater than the largest PetscStreamMode
+$ PETSC_STREAM_MAX_TYPE - Always 1 greater than the largest PetscStreamType
 
   Level: intermediate
 
-.seealso: PetscDeviceContextSetMode(), PetscDeviceContextGetMode()
+.seealso: PetscDeviceContextSetStreamType(), PetscDeviceContextGetStreamType()
 E*/
 typedef enum {
   PETSC_STREAM_GLOBAL_BLOCKING    = 0,
   PETSC_STREAM_DEFAULT_BLOCKING   = 1,
   PETSC_STREAM_GLOBAL_NONBLOCKING = 2,
-  PETSC_STREAM_MAX_MODE           = 3
-} PetscStreamMode;
-PETSC_EXTERN const char *const PetscStreamModes[];
+  PETSC_STREAM_MAX_TYPE           = 3
+} PetscStreamType;
+PETSC_EXTERN const char *const PetscStreamTypes[];
 
 /*S
   PetscDeviceContext - Container for efficient management of a device streams and solver contexts.
