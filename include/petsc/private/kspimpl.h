@@ -74,6 +74,7 @@ typedef enum {KSP_SETUP_NEW, KSP_SETUP_NEWMATRIX, KSP_SETUP_NEWRHS} KSPSetUpStag
 */
 struct _p_KSP {
   PETSCHEADER(struct _KSPOps);
+  PetscBool       async; /* dummy only used for demonstration, to be properly integrated */
   DM              dm;
   PetscBool       dmAuto;       /* DM was created automatically by KSP */
   PetscBool       dmActive;     /* KSP should use DM for computing operators */
