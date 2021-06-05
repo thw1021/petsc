@@ -153,6 +153,8 @@ PetscErrorCode MatSetValuesDevice(PetscSplitCSRDataStructure d_mat, PetscInt m,c
         nrow2    = bi[row+1] - bi[row];
         low2     = 0;
         high2    = nrow2;
+      } else {
+        high2 = low2 = 0;
       }
       for (j=0; j<n; j++) {
         value = roworiented ? v[i*n+j] : v[i+j*m];
