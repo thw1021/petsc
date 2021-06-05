@@ -357,6 +357,8 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
 
   ierr = KSPRegisterAll();CHKERRQ(ierr);
   ierr = PetscObjectOptionsBegin((PetscObject)ksp);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-ksp_async","Use asynchronous KSP","KSPSetAsyncREMOVEME",ksp->async,&ksp->async,NULL);CHKERRQ(ierr);
+  ierr = PetscInfo1(ksp,"Using async: %s\n",ksp->async ? "PETSC_TRUE" : "PETSC_FALSE");CHKERRQ(ierr);
   ierr = PetscOptionsFList("-ksp_type","Krylov method","KSPSetType",KSPList,(char*)(((PetscObject)ksp)->type_name ? ((PetscObject)ksp)->type_name : KSPGMRES),type,256,&flg);CHKERRQ(ierr);
   if (flg) {
     ierr = KSPSetType(ksp,type);CHKERRQ(ierr);

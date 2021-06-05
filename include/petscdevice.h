@@ -150,8 +150,8 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext,PetscDeviceContextType);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext,PetscDeviceContextType*);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextSetMode(PetscDeviceContext,PetscStreamMode);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextGetMode(PetscDeviceContext,PetscStreamMode*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetBLASHandle(PetscDeviceContext,void*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextRestoreBLASHandle(PetscDeviceContext,void*);
@@ -162,6 +162,6 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext,
 PETSC_EXTERN PetscErrorCode PetscDeviceContextFork(PetscDeviceContext,PetscInt,PetscDeviceContext**);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext,PetscBool,PetscInt,PetscDeviceContext**);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextGetActiveContext(PetscDeviceContext*);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextRestoreActiveContext(PetscDeviceContext*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
 #endif /* PETSCDEVICE_H */
