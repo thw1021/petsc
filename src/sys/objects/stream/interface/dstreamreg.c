@@ -138,7 +138,7 @@ PetscErrorCode PetscDeviceFinalizePackage(void)
 
 .seealso: PetscInitialize(), PetscDeviceFinalizePackage()
 @*/
-PetscErrorCode PetsDeviceInitializePackage(void)
+PetscErrorCode PetscDeviceInitializePackage(void)
 {
   PetscErrorCode ierr;
 
