@@ -22,20 +22,23 @@ struct _n_SplitCSRMat {
   PetscMPIInt           rank;
 };
 
-/* no atomicAdd for complex numbers */
 #if defined(__CUDA_ARCH__)
-  #if defined(PETSC_USE_COMPLEX)
-    #define PetscAtomicAdd(a,b) {       \
-      PetscReal *_a = (PetscReal*)(a);  \
-      PetscReal *_b = (PetscReal*)&(b); \
-      atomicAdd(&_a[0],_b[0]);            \
-      atomicAdd(&_a[1],_b[1]);            \
-  }
+  #if defined(KOKKOS_INLINE_FUNCTION)
+    #define PetscAtomicAdd(a,b) Kokkos::atomic_fetch_add(a, b)
   #else
-    #define PetscAtomicAdd(a,b) atomicAdd(a,b)
+    #if defined(PETSC_USE_COMPLEX)
+      #define PetscAtomicAdd(a,b) {       \
+        PetscReal *_a = (PetscReal*)(a);  \
+        PetscReal *_b = (PetscReal*)&(b); \
+        atomicAdd(&_a[0],_b[0]);            \
+        atomicAdd(&_a[1],_b[1]);            \
+      }
+    #else
+      #define PetscAtomicAdd(a,b) atomicAdd(a,b)
+    #endif
   #endif
 #else
-#define PetscAtomicAdd(a,b) *(a) += b
+  #define PetscAtomicAdd(a,b) *(a) += b
 #endif
 
 #define MatSetValues_SeqAIJ_A_Private(row,col,value,addv)              \

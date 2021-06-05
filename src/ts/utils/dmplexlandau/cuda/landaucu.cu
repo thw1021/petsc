@@ -9,10 +9,6 @@
 #include <petscmat.h>
 #include <petsccublas.h>
 
-// hack to avoid configure problems in CI. Delete when resolved
-#if !defined (PETSC_HAVE_CUDA_ATOMIC)
-#define atomicAdd(e, f) (*e) += f
-#endif
 #include "../land_tensors.h"
 #include <petscaijdevice.h>
 

@@ -11,9 +11,7 @@
 #include <cstdio>
 typedef Kokkos::TeamPolicy<>::member_type team_member;
 #include "../land_tensors.h"
-#define atomicAdd(e, f) Kokkos::atomic_fetch_add(e, f)
 #include <petscaijdevice.h>
-#undef atomicAdd
 
 namespace landau_inner_red {  // namespace helps with name resolution in reduction identity
   template< class ScalarType >
