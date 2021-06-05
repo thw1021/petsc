@@ -69,7 +69,7 @@ struct _n_PetscDeviceContext {
   PetscBool                 idle;
   PetscInt                 *childIDs;
   PetscInt                  id,numChildren,maxNumChildren;
-  PetscStreamMode           mode;
+  PetscStreamType           streamType;
   PetscBool                 setup;
 };
 
