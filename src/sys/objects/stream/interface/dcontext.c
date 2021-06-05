@@ -1,6 +1,6 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
-const char *const PetscStreamModes[] = {"global_blocking","default_blocking","global_nonblocking","MAX_MODE","PetscStreamMode","PETSC_STREAM_",NULL};
+const char *const PetscStreamTypes[] = {"global_blocking","default_blocking","global_nonblocking","MAX_TYPE","PetscStreamType","PETSC_STREAM_",NULL};
 
 /* initial global context will have ID = 0 */
 static PetscInt PetscDeviceContextID = 0;
@@ -12,13 +12,13 @@ PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext *dctx)
 
   PetscFunctionBegin;
   PetscValidPointer(dctx,1);
-  ierr  = PetscDeviceInitializePackage();CHKERRQ(ierr);
-  *dctx = NULL;
-  ierr  = PetscNew(&dc);CHKERRQ(ierr);
-  dc->id   = PetscDeviceContextID++;
-  dc->idle = PETSC_TRUE;
-  dc->mode = PETSC_STREAM_DEFAULT_BLOCKING;
-  *dctx = dc;
+  ierr           = PetscDeviceInitializePackage();CHKERRQ(ierr);
+  *dctx          = NULL;
+  ierr           = PetscNew(&dc);CHKERRQ(ierr);
+  dc->id         = PetscDeviceContextID++;
+  dc->idle       = PETSC_TRUE;
+  dc->streamType = PETSC_STREAM_DEFAULT_BLOCKING;
+  *dctx          = dc;
   PetscFunctionReturn(0);
 }
 
@@ -38,26 +38,26 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
   PetscFunctionReturn(0);
 }
 
-/* See PetscDeviceContextMode in petscdevicetypes.h */
-PetscErrorCode PetscDeviceContextSetMode(PetscDeviceContext dctx, PetscStreamMode mode)
+/* See PetscStreamType in petscdevicetypes.h */
+PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStreamType type)
 {
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(mode >= PETSC_STREAM_MAX_MODE) || PetscUnlikelyDebug(mode < 0)) {
-    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscStreamMode %d is invalid, out of range of [0,%d)",(int)mode,(int)PETSC_STREAM_MAX_MODE);
+  if (PetscUnlikelyDebug(type >= PETSC_STREAM_MAX_TYPE) || PetscUnlikelyDebug(type < 0)) {
+    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscStreamType %d is invalid, out of range of [0,%d)",(int)type,(int)PETSC_STREAM_MAX_TYPE);
   }
-  dctx->mode = mode;
+  dctx->streamType = type;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscDeviceContextGetMode(PetscDeviceContext dctx, PetscStreamMode *mode)
+PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStreamType *type)
 {
   PetscFunctionBegin;
-  PetscValidPointer(mode,2);
-  *mode = dctx->mode;
+  PetscValidPointer(type,2);
+  *type = dctx->streamType;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscDeviceContextSetup(PetscDeviceContext dctx)
+PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 {
   PetscErrorCode ierr;
 
@@ -86,7 +86,7 @@ PetscErrorCode PetscDeviceContextSetup(PetscDeviceContext dctx)
   This is a shorthand method for creating a PetscDeviceContext in the immage of another, insofar that the duplicated
   PetscDeviceContext does not share any of the underlying objects with the original.
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetMode()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetStreamType()
 @*/
 PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext dctx, PetscDeviceContext *dctxdup)
 {
@@ -97,7 +97,7 @@ PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext dctx, PetscDeviceC
   PetscValidPointer(dctxdup,2);
   ierr = PetscDeviceContextCreate(dctxdup);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetType(*dctxdup,dctx->type);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetMode(*dctxdup,dctx->mode);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSetStreamType(*dctxdup,dctx->streamType);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetUp(*dctxdup);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -118,7 +118,7 @@ PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext dctx, PetscDeviceC
 
   Level: advanced
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetMode(), PetscDeviceContextRestoreBLASHandle()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetStreamType(), PetscDeviceContextRestoreBLASHandle()
 @*/
 PetscErrorCode PetscDeviceContextGetBLASHandle(PetscDeviceContext dctx, void *handle)
 {
@@ -147,7 +147,7 @@ PetscErrorCode PetscDeviceContextGetBLASHandle(PetscDeviceContext dctx, void *ha
 
   Level: advanced
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetMode(), PetscDeviceContextGetBLASHandle()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetStreamType(), PetscDeviceContextGetBLASHandle()
 @*/
 PetscErrorCode PetscDeviceContextRestoreBLASHandle(PetscDeviceContext dctx, void *handle)
 {
@@ -295,6 +295,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
   PetscValidStreamType(dctx,1);
   PetscValidPointer(dsub,3);
   if (PetscUnlikelyDebug(n < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of contexts requested %D < 0",n);
+  ierr = PetscInfo2(NULL,"Forking %D children from parent %D\n",n,dctx->id);CHKERRQ(ierr);
   /* update new child totals */
   dctx->numChildren += n;
   /* now to find out if we have room */
@@ -317,7 +318,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
       /* create the child context in the image of its parent */
       ierr = PetscDeviceContextCreate(dsubTmp+i);CHKERRQ(ierr);
       ierr = PetscDeviceContextSetType(dsubTmp[i],dctx->type);CHKERRQ(ierr);
-      ierr = PetscDeviceContextSetMode(dsubTmp[i],dctx->mode);CHKERRQ(ierr);
+      ierr = PetscDeviceContextSetStreamType(dsubTmp[i],dctx->streamType);CHKERRQ(ierr);
       ierr = PetscDeviceContextSetUp(dsubTmp[i]);CHKERRQ(ierr);
       ierr = PetscDeviceContextWaitForContext(dsubTmp[i],dctx);CHKERRQ(ierr);
       /* register the child with its parent */
@@ -361,6 +362,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscBool destroy
   PetscValidStreamType(dctx,1);
   PetscValidPointer(dsub,4);
   if (PetscUnlikelyDebug(n < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of contexts merged %D < 0",n);
+  ierr = PetscInfo3(NULL,"Joining %D sub contexts to context %D, destroy? %s\n",n,dctx->id,destroyEdges ? "yes" : "no");CHKERRQ(ierr);
   for (PetscInt i = 0; i < n; ++i) {
     PetscCheckValidSameStreamType(dctx,1,(*dsub)[i],4);
     ierr = PetscDeviceContextWaitForContext(dctx,(*dsub)[i]);CHKERRQ(ierr);
@@ -415,7 +417,8 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
 
 static PetscDeviceContext globalContext = NULL;
 static PetscBool          globalContextSetup = PETSC_FALSE;
-static PetscStreamMode    defaultStreamMode  = PETSC_STREAM_DEFAULT_BLOCKING;
+/* default context should act just like the NULL stream, i.e. fully synchronous */
+static PetscStreamType    defaultStreamType  = PETSC_STREAM_GLOBAL_BLOCKING;
 #if PetscDefined(HAVE_CUDA)
 static PetscDeviceContextType defaultContextType = PETSCDEVICECONTEXTCUDA;
 #elif PetscDefined(HAVE_HIP)
@@ -432,7 +435,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Intern
   PetscFunctionBegin;
   ierr = PetscDeviceContextDestroy(&globalContext);CHKERRQ(ierr);
   /* reset everything to defaults */
-  defaultStreamMode  = PETSC_STREAM_DEFAULT_BLOCKING;
+  defaultStreamType  = PETSC_STREAM_GLOBAL_BLOCKING;
 #if PetscDefined(HAVE_CUDA)
   defaultContextType = PETSCDEVICECONTEXTCUDA;
 #elif PetscDefined(HAVE_HIP)
@@ -469,9 +472,9 @@ PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
 
     ierr = PetscRegisterFinalize(PetscDeviceContextDestroyGlobalContext_Internal);CHKERRQ(ierr);
     ierr = PetscDeviceContextCreate(&globalContext);CHKERRQ(ierr);
-    ierr = PetscDeviceContextSetMode(globalContext,defaultStreamMode);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetStreamType(globalContext,defaultStreamType);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetType(globalContext,defaultContextType);CHKERRQ(ierr);
-    ierr = PetscDeviceContextSetup(globalContext);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetUp(globalContext);CHKERRQ(ierr);
     globalContextSetup = PETSC_TRUE;
   }
   *dctx = globalContext;
@@ -495,8 +498,11 @@ PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
 @*/
 PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidStreamType(dctx,1);
   globalContext = dctx;
+  ierr = PetscInfo1(NULL,"Set global device context id %D\n",dctx->id);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

@@ -194,7 +194,21 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetUp_CUDA(PetscDeviceConte
   cudaError_t             cerr;
 
   PetscFunctionBegin;
-  cerr = cudaStreamCreate(&dcu->stream);CHKERRCUDA(cerr);
+  switch (dctx->streamType) {
+  case PETSC_STREAM_GLOBAL_BLOCKING:
+    /* don't create a stream for global blocking */
+    dcu->stream = NULL;
+    break;
+  case PETSC_STREAM_DEFAULT_BLOCKING:
+    cerr = cudaStreamCreate(&dcu->stream);CHKERRCUDA(cerr);
+    break;
+  case PETSC_STREAM_GLOBAL_NONBLOCKING:
+    cerr = cudaStreamCreateWithFlags(&dcu->stream,cudaStreamNonBlocking);CHKERRCUDA(cerr);
+    break;
+  default:
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %D",(PetscInt)dctx->streamType);
+    break;
+  }
   cerr = cudaEventCreate(&dcu->event);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
