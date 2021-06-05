@@ -72,6 +72,8 @@ class Configure(config.package.Package):
     config.package.Package.setupDependencies(self, framework)
     self.mpich   = framework.require('config.packages.MPICH', self)
     self.openmpi = framework.require('config.packages.OpenMPI', self)
+    self.cuda    = framework.require('config.packages.cuda',self)
+    self.odeps   = [self.cuda]
     return
 
   def __str__(self):
@@ -665,7 +667,8 @@ Unable to run hostname to check the network')
       self.setCompilers.CUDA_CXXFLAGS += ' ' + self.includepaths
     else:
       self.setCompilers.CUDA_CXXFLAGS = self.includepaths
-    self.addMakeMacro('CUDA_CXXFLAGS',self.setCompilers.CUDA_CXXFLAGS)
+    if self.cuda.found:
+      self.cuda.addMakeMacro('CUDA_CXXFLAGS',self.setCompilers.CUDA_CXXFLAGS)
     return
 
   def log_print_mpi_h_line(self,buf):
