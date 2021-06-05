@@ -38,7 +38,11 @@ struct _n_SplitCSRMat {
     #endif
   #endif
 #else
-  #define PetscAtomicAdd(a,b) *(a) += b
+  #if defined(KOKKOS_INLINE_FUNCTION)
+    #define PetscAtomicAdd(a,b) Kokkos::atomic_fetch_add(a, b)
+  #else
+    #define PetscAtomicAdd(a,b) *(a) += b
+  #endif
 #endif
 
 #define MatSetValues_SeqAIJ_A_Private(row,col,value,addv)              \
