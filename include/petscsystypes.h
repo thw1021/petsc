@@ -215,7 +215,6 @@ M*/
 
           Complex numbers are automatically available if PETSc was able to find a working complex implementation
 
-
     Petsc has a 'fix' for complex numbers to support expressions such as std::complex<PetscReal> + PetscInt, which are not supported by the standard
     C++ library, but are convenient for petsc users. If the C++ compiler is able to compile code in petsccxxcomplexfix.h (This is checked by
     configure), we include petsccxxcomplexfix.h to provide this convenience.
