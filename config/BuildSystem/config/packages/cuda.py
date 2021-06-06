@@ -37,6 +37,8 @@ class Configure(config.package.Package):
       output += '  CUDA underlying compiler: CUDA_CXX ' + self.setCompilers.CUDA_CXX + '\n'
     if hasattr(self.setCompilers,'CUDA_CXXFLAGS'):
       output += '  CUDA underlying compiler flags: CUDA_CXXFLAGS ' + self.setCompilers.CUDA_CXXFLAGS + '\n'
+    if hasattr(self.setCompilers,'CUDA_CXXLIBS'):
+      output += '  CUDA underlying linker libraries: CUDA_CXXLIBS ' + self.setCompilers.CUDA_CXXLIBS + '\n'
     return output
 
   def setupDependencies(self, framework):
@@ -245,8 +247,10 @@ to set the right generation for your hardware.')
     # determine the compiler used by nvcc
     (out, err, ret) = Configure.executeShellCommand(petscNvcc + ' ' + self.setCompilers.CUDAFLAGS + ' --dryrun dummy.cu 2>&1 | grep D__CUDACC__ | head -1 | cut -f2 -d" "')
     if out:
+      # MPI.py adds its include paths and libraries to these lists and saves them again
       self.setCompilers.CUDA_CXX = out
       self.setCompilers.CUDA_CXXFLAGS = ''
+      self.setCompilers.CUDA_CXXLIBS = ''
       self.logPrint('Determined the compiler nvcc uses is ' + out);
       self.logPrint('PETSc C compiler '+self.compilers.CC)
       self.logPrint('PETSc C++ compiler '+self.compilers.CXX)
