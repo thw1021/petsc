@@ -80,8 +80,9 @@ class Configure(config.package.Package):
   def __str__(self):
     output  = config.package.Package.__str__(self)
     if self.mpiexec: output  += '  mpiexec: '+self.mpiexec.replace(' -n 1','')+'\n'
-    if self.includepaths: output  += '  MPI include paths: '+ self.includepaths+'\n'
-    if self.libpaths or self.mpilibs: output += '  MPI libraries: '+ self.libpaths + ' ' + self.mpilibs+'\n'
+    if hasattr(self,'includepaths'):
+      output  += '  MPI include paths: '+ self.includepaths+'\n'
+      output += '  MPI libraries: '+ self.libpaths + ' ' + self.mpilibs+'\n'
     return output+self.mpi_pkg_version
 
   def generateLibList(self, directory):
