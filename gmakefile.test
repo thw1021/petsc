@@ -202,17 +202,22 @@ $(TESTDIR)/snes/tests/ex1: PETSC_TEST_LIB = $(PETSC_SNES_LIB)
 $(TESTDIR)/ts/tests/ex2: PETSC_TEST_LIB = $(PETSC_TS_LIB)
 $(TESTDIR)/tao/tutorials/ex1: PETSC_TEST_LIB = $(PETSC_TAO_LIB)
 
-# if run with MACOS_FIREWALL=1 or MACOS_FIREWALL_REFRESH=1, ensure mpiexec.hydra and test executable is on firewall list
+# MACOS FIREWALL HANDLING
+# If run with MACOS_FIREWALL=1 or MACOS_FIREWALL_REFRESH=1, ensure mpiexec.hydra and test executable is on firewall list
 ifeq ($(MACOS_FIREWALL_REFRESH),1)
 # MACOS_FIREWALL_REFRESH=1 imply MACOS_FIREWALL=1
 MACOS_FIREWALL := 1
 endif
-
+#
 ifeq ($(MACOS_FIREWALL),1)
 FW := /usr/libexec/ApplicationFirewall/socketfilterfw
+# There is no reliable realpath command in macOS without need for 3rd party tools like homebrew coreutils
+# Using Python's realpath seems like the most robust way here
+realpath-py = $(shell $(PYTHON) -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' $(1))
+#
 ifeq ($(MACOS_FIREWALL_REFRESH),1)
 define macos-firewall-register
-  @APP=$(call abspath, $(1)); \
+  @APP=$(call realpath-py, $(1)); \
     echo "MACOS_FIREWALL_REFRESH set => refresh firewall rule"; \
     if ! sudo -n true 2>/dev/null; then printf "Asking for sudo password to add new firewall rule for\n  $$APP\n"; fi; \
     sudo $(FW) --remove $$APP && \
@@ -221,7 +226,7 @@ define macos-firewall-register
 endef
 else
 define macos-firewall-register
-  @APP=$(call abspath, $(1)); \
+  @APP=$(call realpath-py, $(1)); \
     ANS=`$(FW) --getappblocked $$APP`; \
     if ! echo $$ANS | grep "$$APP" &> /dev/null; then \
       if ! sudo -n true 2>/dev/null; then printf "Asking for sudo password to add new firewall rule for\n  $$APP\n"; fi; \
@@ -232,6 +237,7 @@ define macos-firewall-register
     fi
 endef
 endif
+#
 define macos-firewall-fix
   $(call macos-firewall-register, $(MPIEXECEXECUTABLE))
   $(call macos-firewall-register, $(1))
