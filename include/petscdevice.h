@@ -162,6 +162,8 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext,
 PETSC_EXTERN PetscErrorCode PetscDeviceContextFork(PetscDeviceContext,PetscInt,PetscDeviceContext**);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext,PetscBool,PetscInt,PetscDeviceContext**);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDeviceContextType,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDeviceContextType*,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
 #endif /* PETSCDEVICE_H */
