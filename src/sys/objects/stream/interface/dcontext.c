@@ -5,6 +5,16 @@ const char *const PetscStreamTypes[] = {"global_blocking","default_blocking","gl
 /* initial global context will have ID = 0 */
 static PetscInt PetscDeviceContextID = 0;
 
+/*@C
+  PetscDeviceContextCreate - Creates a PetscDeviceContext
+
+  Not Collective, Asynchronous
+
+  Ouput Paramemters:
+. dctx - The PetscDeviceContext
+
+.seealso: PetscDeviceContextSetType(), PetscDeviceContextSetStreamType(), PetscDeviceContextSetUp(), PetscDeviceContextDestroy()
+@*/
 PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext *dctx)
 {
   PetscDeviceContext dc;
@@ -22,6 +32,21 @@ PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext *dctx)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscDeviceContextDestroy - Frees a PetscDeviceContext
+
+  Not Collective, Asynchronous
+
+  Input Parameters:
+. dctx - The PetscDeviceContext
+
+  Notes:
+  No implicit synchronization occurs due to this routine, all resources are released completely asynchronously
+  w.r.t. the host. If one needs to guarantee access to the data produced on this contexts stream one should perform the
+  appropriate synchronization before calling this routine.
+
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetUp(), PetscDeviceContextSynchronize()
+@*/
 PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 {
   PetscErrorCode ierr;
@@ -38,7 +63,20 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
   PetscFunctionReturn(0);
 }
 
-/* See PetscStreamType in petscdevicetypes.h */
+/*@C
+  PetscDeviceContextSetStreamType - Set the implementation type of the underlying stream for a PetscDeviceContext
+
+  Not Collective, Asynchronous
+
+  Input Paramaters:
++ dctx - The PetscDeviceContext
+- type - The PetscStreamType
+
+  Notes:
+  See PetscStreamType in include/petscdevicetypes.h for more information on the available types and their interactions
+
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextGetStreamType()
+@*/
 PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStreamType type)
 {
   PetscFunctionBegin;
@@ -49,6 +87,22 @@ PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStr
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscDeviceContextGetStreamType - Get the implementation type of the underlying stream for a PetscDeviceContext
+
+  Not Collective, Asynchronous
+
+  Input Paramater:
+. dctx - The PetscDeviceContext
+
+  Output Parameter:
+. type - The PetscStreamType
+
+  Notes:
+  See PetscStreamType in include/petscdevicetypes.h for more information on the available types and their interactions
+
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetStreamType()
+@*/
 PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStreamType *type)
 {
   PetscFunctionBegin;
@@ -57,6 +111,22 @@ PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStr
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscDeviceContextSetUp - Prepares a PetscDeviceContext for use
+
+  Not Collective, Asynchronous
+
+  Intput Parameter:
+. dctx - The PetscDeviceContext
+
+  Level: beginner
+
+  Developer Notes:
+  This routine is usually the stage where a PetscDeviceContext acquires device-side data structures such as streams,
+  events, and (possibly) handles.
+
+.seealso: PetscDeviceContextTypes, PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextDestroy()
+@*/
 PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 {
   PetscErrorCode ierr;
@@ -200,14 +270,13 @@ PetscErrorCode PetscDeviceContextRestoreSOLVERHandle(PetscDeviceContext dctx, vo
 . idle - PETSC_TRUE if PetscDeviceContext has NO work, PETSC_FALSE if it has work
 
   Notes:
-  This routine only refers a singular context and does NOT take any of its children into
-  account. That is, if dctx is idle but has dependents who do have work, this routine
-  still returns PETSC_TRUE.
+  This routine only refers a singular context and does NOT take any of its children into account. That is, if dctx is
+  idle but has dependents who do have work, this routine still returns PETSC_TRUE.
 
-  Results of PetscDeviceContextQueryIdle() are cached on return, allowing this function to be
-  called repeatedly in an efficient manner.
+  Results of PetscDeviceContextQueryIdle() are cached on return, allowing this function to be called repeatedly in an
+  efficient manner.
 
-  Level: advanced
+  Level: intermediate
 
 .seealso: PetscDeviceContextCreate(), PetscDeviceContextWaitForContext()
 @*/
@@ -262,7 +331,7 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
 }
 
 /*@C
-  PetscDeviceContextFork - Create a set of child contexts from a parent context
+  PetscDeviceContextFork - Create a set of dependent child contexts from a parent context
 
   Not Collective, Asynchronous
 
@@ -274,12 +343,22 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
 . dsub - The created child context(s)
 
   Notes:
-  This routine effectively creates n edges of a DAG from a source node, meaning that work queued on child contexts will
-  not start until the parent context finishes its work. This accounts for work queued on the parent up until calling
-  this function, any subsequent work enqueued on the parent has no effect on the children.
+  This routine creates n edges of a DAG from a source node which are causually dependent on the source node, meaning
+  that work queued on child contexts will not start until the parent context finishes its work. This accounts for work
+  queued on the parent up until calling this function, any subsequent work enqueued on the parent has no effect on the children.
 
   Any children created with this routine have their lifetimes bounded by the parent. That is, the parent context expects
   to free all of it's children (and __only__ its children) before itself is freed.
+
+  DAG representation:
+.vb
+  time ->
+
+  -> dctx \---------------> dctx
+           \---> dsub[0]
+            \--> ...
+             \-> dsub[n-1]
+.ve
 
   Level: intermediate
 
@@ -345,10 +424,21 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
 
   Notes:
   If PetscDeviceContextFork() creates n edges from a source node which all depend on the source node, then this routine
-  is the exact mirror. That is, it creates a source node (represented in dctx) which recieves n edges (and optionally
-  destroys them) and is dependent on the completion of all edges.
+  is the exact mirror. That is, it creates a node (represented in dctx) which recieves n edges (and optionally destroys
+  them) which is dependent on the completion of all incoming edges.
 
-  If destroyEdges is PETSC_TRUE then all sub contexts must have been created with the dctx passed to this function.
+  If destroyEdges is PETSC_TRUE then all sub contexts must have been created with the dctx passed to this function. If
+  destroyEdges is PETSC_FALSE then one is free to queue additional work on the sub contexts.
+
+  DAG representation:
+.vb
+  time ->
+
+  -> dctx ---------/ dctx ->
+  -> dsub[0]   ---/[------->]
+  ->  ...      --/[-------->]
+  -> dsub[n-1] -/[--------->]
+.ve
 
   Level: intermediate
 
@@ -391,7 +481,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscBool destroy
 }
 
 /*@C
-  PetscDeviceContextSynchronize() - Block the host until all work queued on a PetscDeviceContext has finished
+  PetscDeviceContextSynchronize() - Block the host until all work queued on or associated with a PetscDeviceContext has finished
 
   Not Collective, Synchronous
 
@@ -428,11 +518,66 @@ static PetscDeviceContextType defaultContextType = PETSCDEVICECONTEXTHIP;
 static PetscDeviceContextType defaultContextType = PETSCDEVICECONTEXTCUDA;
 #endif
 
+/*@C
+  PetscDeviceContextSetDefaultContextSettings - Set the default settings for the root global context
+
+  Input Parameters:
++ type  - The PetscDeviceContextType, NULL if not needed
+- stype - The PetscStreamType, PETSC_STREAM_MAX_TYPE if not needed
+
+  Notes:
+  This is one of the few functions that one should ideally call before PetscInitialize(), as calling this routine after
+  the root PetscDeviceContext has already been created will have no effect. It is highly unlikely that the user would
+  need to call this routine however, the default values are automatically optimally chosen based on availability.
+
+  Level: advanced
+
+.seealso: PetscDeviceContextGetDefaultRootContextSettings(), PetscDeviceContextGetCurrentContext()
+@*/
+PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDeviceContextType type, PetscStreamType stype)
+{
+  PetscFunctionBegin;
+  if (PetscUnlikelyDebug(globalContextSetup)) {
+    PetscErrorCode ierr;
+    ierr = PetscInfo(NULL,"Root PetscDeviceContext has already been setup and created, setting default has no effect\n");CHKERRQ(ierr);
+  } else {
+    if (type) defaultContextType = type;
+    if (stype != PETSC_STREAM_MAX_TYPE) defaultStreamType = stype;
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscDeviceContextGetDefaultRootContextSettings - Get the current default root context settings
+
+  Output Parameters:
++ type  - The default PetscDeviceContextType, NULL if not needed
+- stype - The default PetscStreamType, NULL if not needed
+
+  Level: advanced
+
+.seealso: PetscDeviceContextSetDefaultRootContextSettings(), PetscDeviceContextGetCurrentContext()
+@*/
+PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDeviceContextType *type, PetscStreamType *stype)
+{
+  PetscFunctionBegin;
+  if (type) {
+    PetscValidPointer(type,1);
+    *type = defaultContextType;
+  }
+  if (stype) {
+    PetscValidPointer(stype,2);
+    *stype = defaultStreamType;
+  }
+  PetscFunctionReturn(0);
+}
+
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Internal(void)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = PetscDeviceContextSynchronize(globalContext);CHKERRQ(ierr);
   ierr = PetscDeviceContextDestroy(&globalContext);CHKERRQ(ierr);
   /* reset everything to defaults */
   defaultStreamType  = PETSC_STREAM_GLOBAL_BLOCKING;
@@ -443,7 +588,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Intern
 #else
   defaultContextType = PETSCDEVICECONTEXTCUDA;
 #endif
-  globalContextSetup = PETSC_FALSE;
+  /* reset the ID counter, the first PetscDeviceContext created (i.e. the root) should always expect to have ID 0 */
+  PetscDeviceContextID = 0;
+  globalContextSetup   = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -472,6 +619,7 @@ PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
 
     ierr = PetscRegisterFinalize(PetscDeviceContextDestroyGlobalContext_Internal);CHKERRQ(ierr);
     ierr = PetscDeviceContextCreate(&globalContext);CHKERRQ(ierr);
+    if (PetscUnlikelyDebug(globalContext->id != 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"The root current PetscDeviceContext should have id = 0, however it has id = %D",globalContext->id);
     ierr = PetscDeviceContextSetStreamType(globalContext,defaultStreamType);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetType(globalContext,defaultContextType);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetUp(globalContext);CHKERRQ(ierr);
@@ -493,6 +641,8 @@ PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
   The old context is not stored in any way by this routine; if one is overriding a context that they themselves do not
   control, one should take care to temporarily store it by calling PetscDeviceContextGetCurrentContext() before calling
   this routine.
+
+  Level: beginner
 
 .seealso: PetscDeviceContextGetCurrentContext()
 @*/
