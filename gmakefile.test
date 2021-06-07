@@ -237,29 +237,27 @@ define macos-firewall-register
     fi
 endef
 endif
-#
-define macos-firewall-fix
-  $(call macos-firewall-register, $(MPIEXECEXECUTABLE))
-  $(call macos-firewall-register, $(1))
-endef
 endif
+#
+macos-firewall-register-mpiexec:
+	-$(call macos-firewall-register, $(MPIEXECEXECUTABLE))
 
 # Test executables
 $(testexe.F) $(testexe.F90) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
 	$(call quiet,FLINKER) -o $@ $^ $(PETSC_TEST_LIB)
-	-$(call macos-firewall-fix,$@)
+	-$(call macos-firewall-register,$@)
 
 $(testexe.c) $(testexe.cu) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
 	$(call quiet,CLINKER) -o $@ $^ $(PETSC_TEST_LIB)
-	-$(call macos-firewall-fix,$@)
+	-$(call macos-firewall-register,$@)
 
 $(testexe.kokkos.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
 	$(call quiet,PETSC_LINK.kokkos.cxx) -o $@ $^ $(PETSC_TEST_LIB)
-	-$(call macos-firewall-fix,$@)
+	-$(call macos-firewall-register,$@)
 
 $(testexe.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
 	$(call quiet,CXXLINKER) -o $@ $^ $(PETSC_TEST_LIB)
-	-$(call macos-firewall-fix,$@)
+	-$(call macos-firewall-register,$@)
 
 # Fortran source files need petsc*.mod, which isn't explicitly managed in the makefile.
 $(foreach pkg, $(pkgs), $(call concattestlang,$(pkg),F F90)) : $(libpetscall)
@@ -384,7 +382,7 @@ show-fail:
 $(alltesttargets:%=$(TESTDIR)/counts/%.counts) : starttime
 
 # Ensure that libpetsc (if it is a prerequisite) has been built and clean the counts/logs before starting timer
-starttime: pre-clean $(libpetscall)
+starttime: pre-clean $(libpetscall) macos-firewall-register-mpiexec
 	@$(eval STARTTIME := $(shell date +%s))
 
 report_tests: starttime $(TESTTARGETS)
