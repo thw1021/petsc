@@ -354,7 +354,8 @@ cdef class Vec(Object):
             shape_arr[i] = shape[i]
             strides_arr[i] = strides[i]
         self.set_attr('__dltensor_ctx__', (ptr.dl_tensor.ctx.device_type, ptr.dl_tensor.ctx.device_id, ndim, s1, s2))
-        ptr.manager_deleter(ptr) # free the manager
+        if ptr.manager_deleter != NULL:
+            ptr.manager_deleter(ptr) # free the manager
         return self
 
     def attachDLPackInfo(self, Vec vec=None, object dltensor=None):
