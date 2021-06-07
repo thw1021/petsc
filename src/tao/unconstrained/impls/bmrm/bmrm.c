@@ -7,7 +7,6 @@ static PetscReal phi(PetscReal*,PetscInt,PetscReal,PetscReal*,PetscReal,PetscRea
 static PetscInt project(PetscInt,PetscReal*,PetscReal,PetscReal*,PetscReal*,PetscReal*,PetscReal*,PetscReal*,TAO_DF*);
 static PetscErrorCode solve(TAO_DF*);
 
-
 /*------------------------------------------------------------*/
 /* The main solver function
 
@@ -44,7 +43,6 @@ static PetscErrorCode destroy_grad_list(Vec_Chain *head)
   head->next = NULL;
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode TaoSolve_BMRM(Tao tao)
 {
@@ -199,7 +197,6 @@ static PetscErrorCode TaoSolve_BMRM(Tao tao)
   ierr = VecScatterDestroy(&bmrm->scatter);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /* ---------------------------------------------------------- */
 
@@ -609,7 +606,6 @@ PetscInt project(PetscInt n,PetscReal *a,PetscReal b,PetscReal *c,PetscReal *l,P
   return innerIter;
 }
 
-
 PetscErrorCode solve(TAO_DF *df)
 {
   PetscErrorCode ierr;
@@ -623,7 +619,7 @@ PetscErrorCode solve(TAO_DF *df)
   PetscReal      **Q = df->Q, *f = df->f, *t = df->t;
   PetscInt       dim = df->dim, *ipt = df->ipt, *ipt2 = df->ipt2, *uv = df->uv;
 
-  /*** variables for the adaptive nonmonotone linesearch ***/
+  /* variables for the adaptive nonmonotone linesearch */
   PetscInt    L, llast;
   PetscReal   fr, fbest, fv, fc, fv0;
 
@@ -657,7 +653,6 @@ PetscErrorCode solve(TAO_DF *df)
     g[i] = t[i] + f[i];
   }
 
-
   /* y = -(x_{k} - g_{k}) */
   for (i = 0; i < dim; i++){
     y[i] = g[i] - x[i];
@@ -683,7 +678,7 @@ PetscErrorCode solve(TAO_DF *df)
   fv0   = 0.0;
   for (i = 0; i < dim; i++) fv0 += x[i] * (0.5*t[i] + f[i]);
 
-  /*** adaptive nonmonotone linesearch ***/
+  /* adaptive nonmonotone linesearch */
   L     = 2;
   fr    = ALPHA_MAX;
   fbest = fv0;
@@ -691,7 +686,7 @@ PetscErrorCode solve(TAO_DF *df)
   llast = 0;
   akold = bkold = 0.0;
 
-  /***      Iterator begins     ***/
+  /*     Iterator begins     */
   for (innerIter = 1; innerIter <= df->maxPGMIter; innerIter++) {
 
     /* tempv = -(x_{k} - alpha*g_{k}) */
@@ -699,7 +694,6 @@ PetscErrorCode solve(TAO_DF *df)
 
     /* Project x_{k} - alpha*g_{k} */
     projcount += project(dim, a, b, tempv, l, u, y, &lam_ext, df);
-
 
     /* gd = \inner{d_{k}}{g_{k}}
         d = P(x_{k} - alpha*g_{k}) - x_{k}
@@ -807,7 +801,7 @@ PetscErrorCode solve(TAO_DF *df)
     akold = ak;
     bkold = bk;
 
-    /*** stopping criterion based on KKT conditions ***/
+    /* stopping criterion based on KKT conditions */
     /* at optimal, gradient of lagrangian w.r.t. x is zero */
 
     bk = 0.0;

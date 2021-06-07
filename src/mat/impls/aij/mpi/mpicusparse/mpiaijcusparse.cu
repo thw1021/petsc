@@ -1,5 +1,4 @@
 #define PETSC_SKIP_SPINLOCK
-#define PETSC_SKIP_CXX_COMPLEX_FIX
 #define PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND 1
 
 #include <petscconf.h>
@@ -25,7 +24,6 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE(Mat A, const PetscScalar v[
   Mat_MPIAIJCUSPARSE *cusp = (Mat_MPIAIJCUSPARSE*)a->spptr;
   PetscInt           n = cusp->coo_nd + cusp->coo_no;
   PetscErrorCode     ierr;
-  cudaError_t        cerr;
 
   PetscFunctionBegin;
   if (cusp->coo_p && v) {
@@ -47,7 +45,6 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE(Mat A, const PetscScalar v[
                                                               cusp->coo_pw->end()));
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     thrust::for_each(zibit,zieit,VecCUDAEquals());
-    cerr = WaitForCUDA();CHKERRCUDA(cerr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     delete w;
     ierr = MatSetValuesCOO_SeqAIJCUSPARSE(a->A,cusp->coo_pw->data().get(),imode);CHKERRQ(ierr);
@@ -148,7 +145,6 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat B, PetscInt n, c
   /* from global to local */
   thrust::transform(thrust::device,d_i.begin(),d_i.end(),d_i.begin(),GlobToLoc(B->rmap->rstart));
   thrust::transform(thrust::device,d_j.begin(),firstoffd,d_j.begin(),GlobToLoc(B->cmap->rstart));
-  cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
 
   /* copy offdiag column indices to map on the CPU */
@@ -159,7 +155,6 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat B, PetscInt n, c
   thrust::advance(o_j,cusp->coo_nd);
   thrust::sort(thrust::device,o_j,d_j.end());
   auto wit = thrust::unique(thrust::device,o_j,d_j.end());
-  cerr = WaitForCUDA();CHKERRCUDA(cerr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   noff = thrust::distance(o_j,wit);
   ierr = PetscMalloc1(noff+1,&b->garray);CHKERRQ(ierr);

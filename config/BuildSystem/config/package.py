@@ -902,6 +902,8 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     foundHeader  = 0
 
     for location, directory, lib, incl in self.generateGuesses():
+      #  directory is not used in the search, it is used only in logging messages about where the
+      #  searching is taking place. It has to already be embedded inside the lib argument
       if self.builtafterpetsc:
         self.found = 1
         return
@@ -920,7 +922,12 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
           incl.append(loc)
       if self.functions:
         self.logPrint('Checking for library in '+location+': '+str(lib))
-        if directory: self.logPrint('Contents: '+str(os.listdir(directory)))
+        if directory:
+          self.logPrint('Contents of '+directory+': '+str(os.listdir(directory)))
+          if os.path.isdir(os.path.join(directory, self.libdir)):
+            self.logPrint('Contents '+os.path.join(directory,self.libdir)+': '+str(os.listdir(os.path.join(directory,self.libdir))))
+          if os.path.isdir(os.path.join(directory, self.altlibdir)):
+            self.logPrint('Contents '+os.path.join(directory,self.altlibdir)+': '+str(os.listdir(os.path.join(directory,self.altlibdir))))
       else:
         self.logPrint('Not checking for library in '+location+': '+str(lib)+' because no functions given to check for')
 
@@ -1628,15 +1635,18 @@ class GNUPackage(Package):
         raise RuntimeError('libtoolize required for ' + self.PACKAGE+' not found! Use your package manager to install libtool')
       try:
         self.logPrintBox('Running libtoolize on ' +self.PACKAGE+'; this may take several minutes')
-        output,err,ret  = config.base.Configure.executeShellCommand(self.programs.libtoolize, cwd=self.packageDir, timeout=100, log=self.log)
+        output,err,ret  = config.base.Configure.executeShellCommand([self.programs.libtoolize, '--install'], cwd=self.packageDir, timeout=100, log=self.log)
         if ret:
-          raise RuntimeError('Error in libtoolize: ' + str(e))
+          raise RuntimeError('Error in libtoolize: ' + output+err)
+      except RuntimeError as e:
+        raise RuntimeError('Error running libtoolize on ' + self.PACKAGE+': '+str(e))
+      try:
         self.logPrintBox('Running autoreconf on ' +self.PACKAGE+'; this may take several minutes')
         output,err,ret  = config.base.Configure.executeShellCommand([self.programs.autoreconf, '--force', '--install'], cwd=self.packageDir, timeout=200, log = self.log)
         if ret:
-          raise RuntimeError('Error in autoreconf: ' + str(e))
+          raise RuntimeError('Error in autoreconf: ' + output+err)
       except RuntimeError as e:
-        raise RuntimeError('Error running libtoolize or autoreconf on ' + self.PACKAGE+': '+str(e))
+        raise RuntimeError('Error running autoreconf on ' + self.PACKAGE+': '+str(e))
 
 
   def Install(self):

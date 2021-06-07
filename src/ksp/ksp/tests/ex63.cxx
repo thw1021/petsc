@@ -39,7 +39,7 @@
 // ***********************************************************************
 //
 
-/**
+/*
    \file   quick_solve.cpp
    \author Eric Bavier <etbavie@sandia.gov>
    \date   Thu Jul 14 16:24:46 MDT 2011
@@ -217,7 +217,6 @@ int main(int argc, char *argv[]) {
   ierr = PetscFinalize();
   return ierr;
 }
-
 
 /*TEST
 

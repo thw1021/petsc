@@ -86,7 +86,6 @@ $     SETERRQ(PETSC_COMM_SELF,number,p,mess)
    Developer Note:
    Since this is an error handler it cannot call CHKERRQ(); thus we just return if an error is detected.
 
-
 .seealso: PetscError(), PetscPushErrorHandler(), PetscPopErrorHandler(), PetscAttachDebuggerErrorHandler(),
           PetscAbortErrorHandler(), PetscMPIAbortErrorHandler(), PetscTraceBackErrorHandler(), PetscReturnErrorHandler()
  @*/
@@ -554,7 +553,7 @@ PetscErrorCode  PetscRealView(PetscInt N,const PetscReal idx[],PetscViewer viewe
   PetscFunctionBegin;
   if (!viewer) viewer = PETSC_VIEWER_STDOUT_SELF;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,3);
-  PetscValidScalarPointer(idx,2);
+  PetscValidRealPointer(idx,2);
   ierr = PetscObjectGetComm((PetscObject)viewer,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);

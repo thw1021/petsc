@@ -13,7 +13,6 @@ class Configure(config.package.Package):
     self.functions              = []
     self.includes               = ['HPDDM.hpp']
     self.skippackagewithoptions = 1
-    self.useddirectly           = 1
     self.linkedbypetsc          = 0
     self.builtafterpetsc        = 1
     self.precisions             = ['single','double']

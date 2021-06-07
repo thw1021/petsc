@@ -124,7 +124,6 @@ PETSC_EXTERN void dmsetmattype_(DM *dm,char* prefix, PetscErrorCode *ierr,PETSC_
   FREECHAR(prefix,t);
 }
 
-
 PETSC_EXTERN void dmsetvectype_(DM *dm,char* prefix, PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
 {
   char *t;
@@ -256,6 +255,11 @@ PETSC_EXTERN void dmcreateinterpolation_(DM *dmc,DM *dmf,Mat *mat,Vec *vec, int 
 {
   CHKFORTRANNULLOBJECT(vec);
   *ierr = DMCreateInterpolation(*dmc,*dmf,mat,vec);
+}
+
+PETSC_EXTERN void dmcreatesuperdm_(DM dms[], PetscInt *len, IS ***is, DM *superdm, int *ierr)
+{
+  *ierr = DMCreateSuperDM(dms, *len, *is, superdm);
 }
 
 PETSC_EXTERN void dmdestroy_(DM *x,int *ierr)

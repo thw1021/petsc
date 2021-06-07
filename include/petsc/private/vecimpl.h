@@ -14,7 +14,8 @@
 
 PETSC_EXTERN PetscBool VecRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecRegisterAll(void);
-PETSC_EXTERN MPI_Op MPIU_MAXINDEX_OP, MPIU_MININDEX_OP;
+PETSC_EXTERN MPI_Op MPIU_MAXLOC;
+PETSC_EXTERN MPI_Op MPIU_MINLOC;
 
 /* ----------------------------------------------------------------------------*/
 
@@ -212,7 +213,6 @@ PETSC_EXTERN PetscErrorCode VecCUDACopyFromGPU(Vec v);
 PETSC_EXTERN PetscErrorCode VecHIPAllocateCheckHost(Vec v);
 PETSC_EXTERN PetscErrorCode VecHIPCopyFromGPU(Vec v);
 #endif
-
 
 /*
      Common header shared by array based vectors,

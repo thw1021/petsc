@@ -62,7 +62,6 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_DelTmpShared(MPI_Comm comm,PetscMPIInt key
 
    Level: developer
 
-
    If the environmental variable PETSC_TMP is set it will use this directory
   as the "/tmp" directory.
 
@@ -192,7 +191,7 @@ PetscErrorCode  PetscSharedTmp(MPI_Comm comm,PetscBool  *shared)
         }
       } else cnt = 0;
 
-      ierr = MPIU_Allreduce(&cnt,&sum,1,MPI_INT,MPI_SUM,comm);CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(&cnt,&sum,1,MPI_INT,MPI_SUM,comm);CHKERRMPI(ierr);
       if (rank == i) unlink(filename);
 
       if (sum == size) {
@@ -307,7 +306,7 @@ PetscErrorCode  PetscSharedWorkingDirectory(MPI_Comm comm,PetscBool  *shared)
         }
       } else cnt = 0;
 
-      ierr = MPIU_Allreduce(&cnt,&sum,1,MPI_INT,MPI_SUM,comm);CHKERRQ(ierr);
+      ierr = MPIU_Allreduce(&cnt,&sum,1,MPI_INT,MPI_SUM,comm);CHKERRMPI(ierr);
       if (rank == i) unlink(filename);
 
       if (sum == size) {
@@ -320,7 +319,6 @@ PetscErrorCode  PetscSharedWorkingDirectory(MPI_Comm comm,PetscBool  *shared)
   ierr = PetscInfo1(NULL,"processors %s working directory\n",(*shared) ? "shared" : "do NOT share");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 /*@C
     PetscFileRetrieve - Obtains a file from a URL or compressed

@@ -159,7 +159,7 @@ check_build:
 	+@if [ "${CUDA_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ] &&  [ "${PETSC_SCALAR}" = "real" ]; then \
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex19_cuda; \
          fi;
-	+@if [ "${KOKKOS_KERNELS_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ] &&  [ "${PETSC_SCALAR}" = "real" ] && [ "${PETSC_PRECISION}" = "double" ]; then \
+	+@if [ "${KOKKOS_KERNELS_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ] &&  [ "${PETSC_SCALAR}" = "real" ] && [ "${PETSC_PRECISION}" = "double" ] && [ "${MPI_IS_MPIUNI}" = "0" ]; then \
           cd src/snes/tutorials >/dev/null; ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH}  PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff runex3k_kokkos; \
          fi;
 	+@if [ "${MUMPS_LIB}" != "" ] && [ "${PETSC_WITH_BATCH}" = "" ]; then \
@@ -489,12 +489,12 @@ dist:
 # This target works only if you can do 'ssh petsc@login.mcs.anl.gov'
 # also copy the file over to ftp site.
 web-snapshot:
-	@if [ ! -f "${HOME}/petsc-main.tar.gz" ]; then \
-	    echo "~/petsc-main.tar.gz missing! cannot update petsc-main snapshot on mcs-web-site"; \
+	@if [ ! -f "${HOME}/petsc-with-docs-main.tar.gz" ]; then \
+	    echo "~/petsc-with-docs-main.tar.gz missing! cannot update petsc-main snapshot on mcs-web-site"; \
 	  else \
             echo "updating petsc-main snapshot on mcs-web-site"; \
 	    tmpdir=`mktemp -d -t petsc-doc.XXXXXXXX`; \
-	    cd $${tmpdir}; tar -xzf ${HOME}/petsc-main.tar.gz; \
+	    cd $${tmpdir}; tar -xzf ${HOME}/petsc-with-docs-main.tar.gz; \
 	    /usr/bin/rsync  -e ssh -az --delete $${tmpdir}/petsc-main/ \
               petsc@login.mcs.anl.gov:/mcs/web/research/projects/petsc/petsc-main ;\
 	    /bin/cp -f /home/petsc/petsc-main.tar.gz /mcs/ftp/pub/petsc/petsc-main.tar.gz;\

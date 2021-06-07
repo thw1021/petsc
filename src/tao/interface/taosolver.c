@@ -500,7 +500,6 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
       ierr = TaoSetMonitor(tao,TaoDefaultCMonitor,monviewer,(PetscErrorCode (*)(void**))PetscViewerDestroy);CHKERRQ(ierr);
     }
 
-
     flg = PETSC_FALSE;
     ierr = PetscOptionsBool("-tao_cancelmonitors","cancel all monitors and call any registered destroy routines","TaoCancelMonitors",flg,&flg,NULL);CHKERRQ(ierr);
     if (flg) {ierr = TaoCancelMonitors(tao);CHKERRQ(ierr);}
@@ -1520,7 +1519,6 @@ $     PetscErrorCode mymonitor(Tao tao,void *mctx)
 +    tao - the Tao solver context
 -    mctx - [optional] monitoring context
 
-
    Options Database Keys:
 +    -tao_monitor        - sets TaoMonitorDefault()
 .    -tao_smonitor       - sets short monitor
@@ -1529,7 +1527,6 @@ $     PetscErrorCode mymonitor(Tao tao,void *mctx)
 .    -tao_view_gradient   - view gradient at each iteration
 .    -tao_view_ls_residual - view least-squares residual vector at each iteration
 -    -tao_cancelmonitors - cancels all monitors that have been hardwired into a code by calls to TaoSetMonitor(), but does not cancel those set via the options database.
-
 
    Notes:
    Several different monitoring routines may be set by calling
@@ -1551,7 +1548,7 @@ PetscErrorCode TaoSetMonitor(Tao tao, PetscErrorCode (*func)(Tao, void*), void *
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  if (tao->numbermonitors >= MAXTAOMONITORS) SETERRQ1(PetscObjectComm((PetscObject)tao),1,"Cannot attach another monitor -- max=",MAXTAOMONITORS);
+  if (tao->numbermonitors >= MAXTAOMONITORS) SETERRQ1(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Cannot attach another monitor -- max=%d",MAXTAOMONITORS);
 
   for (i=0; i<tao->numbermonitors;i++) {
     ierr = PetscMonitorCompare((PetscErrorCode (*)(void))func,ctx,dest,(PetscErrorCode (*)(void))tao->monitor[i],tao->monitorcontext[i],tao->monitordestroy[i],&identical);CHKERRQ(ierr);
@@ -2075,7 +2072,6 @@ PetscErrorCode TaoDefaultConvergenceTest(Tao tao,void *dummy)
    TaoSetOptionsPrefix - Sets the prefix used for searching for all
    TAO options in the database.
 
-
    Logically Collective on Tao
 
    Input Parameters:
@@ -2098,7 +2094,6 @@ PetscErrorCode TaoDefaultConvergenceTest(Tao tao,void *dummy)
       -sys1_tao_method blmvm -sys1_tao_gtol 1.e-3
       -sys2_tao_method lmvm  -sys2_tao_gtol 1.e-4
 .ve
-
 
    Level: advanced
 
@@ -2124,7 +2119,6 @@ PetscErrorCode TaoSetOptionsPrefix(Tao tao, const char p[])
    TaoAppendOptionsPrefix - Appends to the prefix used for searching for all
    TAO options in the database.
 
-
    Logically Collective on Tao
 
    Input Parameters:
@@ -2134,7 +2128,6 @@ PetscErrorCode TaoSetOptionsPrefix(Tao tao, const char p[])
    Notes:
    A hyphen (-) must NOT be given at the beginning of the prefix name.
    The first character of all runtime options is AUTOMATICALLY the hyphen.
-
 
    Level: advanced
 
@@ -2319,7 +2312,6 @@ PetscErrorCode TaoRegisterDestroy(void)
 
    Notes:
    For example, during the computation of iteration 2 this would return 1.
-
 
    Level: intermediate
 
@@ -2696,9 +2688,9 @@ PetscErrorCode TaoSetConvergenceHistory(Tao tao, PetscReal obj[], PetscReal resi
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  if (obj) PetscValidScalarPointer(obj,2);
-  if (resid) PetscValidScalarPointer(resid,3);
-  if (cnorm) PetscValidScalarPointer(cnorm,4);
+  if (obj) PetscValidRealPointer(obj,2);
+  if (resid) PetscValidRealPointer(resid,3);
+  if (cnorm) PetscValidRealPointer(cnorm,4);
   if (lits) PetscValidIntPointer(lits,5);
 
   if (na == PETSC_DECIDE || na == PETSC_DEFAULT) na = 1000;

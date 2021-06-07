@@ -358,7 +358,6 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
         if (dist > mdist) { mdist = dist; point2 = j; }
       }
 
-
       /* find the third point maximizing the triangle area */
       point3 = point2;
       if (cdim > 2) {
@@ -420,7 +419,7 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
          with two connected components, the latters be the same among sharing subdomains */
       if (graph->subset_ncc[i] > 1) adapt_interface = PETSC_TRUE;
     }
-    ierr = MPIU_Allreduce(&adapt_interface,&adapt_interface_reduced,1,MPIU_BOOL,MPI_LOR,interface_comm);CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&adapt_interface,&adapt_interface_reduced,1,MPIU_BOOL,MPI_LOR,interface_comm);CHKERRMPI(ierr);
   }
 
   if (graph->n_subsets && adapt_interface_reduced) {
@@ -665,12 +664,11 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
         break;
       }
     }
-    ierr = MPIU_Allreduce(&twodim,&graph->twodim,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)graph->l2gmap));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(&twodim,&graph->twodim,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)graph->l2gmap));CHKERRMPI(ierr);
     graph->twodimset = PETSC_TRUE;
   }
   PetscFunctionReturn(0);
 }
-
 
 PETSC_STATIC_INLINE PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph,PetscInt pid,PetscInt* queue_tip,PetscInt n_prev,PetscInt* n_added)
 {
