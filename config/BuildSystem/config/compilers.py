@@ -1469,7 +1469,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
     }
     """
     self.setCompilers.pushLanguage('C')
-    flags_to_try = ['','-std=c99','-std=gnu99','-std=c11','-std=gnu11','-c99']
+    flags_to_try = ['-std=c11','','-std=c99','-std=gnu99','-std=c11','-std=gnu11','-c99']
     for flag in flags_to_try:
       self.setCompilers.saveLog()
       if self.setCompilers.checkCompilerFlag(flag, includes, body):

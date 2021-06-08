@@ -901,7 +901,7 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
   component = &network->component[network->ncomponent];
 
   ierr = PetscStrcpy(component->name,name);CHKERRQ(ierr);
-  component->size = size/sizeof(DMNetworkComponentGenericDataType);
+  component->size = (PetscInt)(size/sizeof(DMNetworkComponentGenericDataType));
   *key = network->ncomponent;
   network->ncomponent++;
   PetscFunctionReturn(0);

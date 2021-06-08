@@ -1507,7 +1507,7 @@ PetscErrorCode DMLabelDistribute(DMLabel label, PetscSF sf, DMLabel *labelNew)
     ierr = PetscObjectGetName((PetscObject) label, &lname);CHKERRQ(ierr);
     ierr = PetscStrlen(lname, &len);CHKERRQ(ierr);
   }
-  nameSize = len;
+  nameSize = (PetscInt)len;
   ierr = MPI_Bcast(&nameSize, 1, MPIU_INT, 0, comm);CHKERRMPI(ierr);
   ierr = PetscMalloc1(nameSize+1, &name);CHKERRQ(ierr);
   if (!rank) {ierr = PetscArraycpy(name, lname, nameSize+1);CHKERRQ(ierr);}
@@ -1624,7 +1624,7 @@ PetscErrorCode DMLabelGather(DMLabel label, PetscSF sf, DMLabel *labelNew)
     ierr = PetscObjectGetName((PetscObject) label, &lname);CHKERRQ(ierr);
     ierr = PetscStrlen(lname, &len);CHKERRQ(ierr);
   }
-  nameSize = len;
+  nameSize = (PetscInt)len;
   ierr = MPI_Bcast(&nameSize, 1, MPIU_INT, 0, comm);CHKERRMPI(ierr);
   ierr = PetscMalloc1(nameSize+1, &name);CHKERRQ(ierr);
   if (!rank) {ierr = PetscArraycpy(name, lname, nameSize+1);CHKERRQ(ierr);}

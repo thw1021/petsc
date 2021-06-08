@@ -56,7 +56,7 @@ static PetscErrorCode PetscChunkBufferCreateChunk(PetscChunkBuffer *buffer, Pets
     ierr = PetscFree(buffer->array);CHKERRQ(ierr);
     buffer->array = tmp;
   }
-  chunk->start    = buffer->size*buffer->unitbytes;
+  chunk->start    = (PetscInt)(buffer->size*buffer->unitbytes);
   chunk->size     = size;
   chunk->reserved = size;
   buffer->size   += size;
@@ -75,7 +75,7 @@ static PetscErrorCode PetscChunkBufferEnlargeChunk(PetscChunkBuffer *buffer, Pet
 
     /* TODO Here if we had a chunk list, we could update them all to reclaim unused space */
     while (reserved < chunk->size+size) reserved *= 2;
-    ierr = PetscChunkBufferCreateChunk(buffer, (size_t) reserved, &newchunk);CHKERRQ(ierr);
+    ierr = PetscChunkBufferCreateChunk(buffer, reserved, &newchunk);CHKERRQ(ierr);
     newchunk.size = chunk->size+size;
     ierr = PetscMemcpy(&buffer->array[newchunk.start], &buffer->array[chunk->start], chunk->size * buffer->unitbytes);CHKERRQ(ierr);
     *chunk = newchunk;

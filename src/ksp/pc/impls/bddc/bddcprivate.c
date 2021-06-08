@@ -7606,11 +7606,9 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
   /* MPI */
   MPI_Comm               comm,comm_n;
   PetscSubcomm           subcomm;
-  PetscMPICount          n_sends;
-  PetscMPIInt            size,n_recvs;
+  PetscMPIInt            size,n_recvs,n_sends;
   PetscMPIInt            *iflags,*ilengths_idxs,*ilengths_vals,*ilengths_idxs_is;
-  PetscMPIInt            *onodes,*onodes_is,*olengths_idxs,*olengths_idxs_is,*olengths_vals;
-  PetscMPICount          len;
+  PetscMPIInt            *onodes,*onodes_is,*olengths_idxs,*olengths_idxs_is,*olengths_vals,len;
   PetscMPIInt            tag_idxs,tag_idxs_is,tag_vals,tag_vecs,source_dest;
   MPI_Request            *send_req_idxs,*send_req_idxs_is,*send_req_vals,*send_req_vecs;
   MPI_Request            *recv_req_idxs,*recv_req_idxs_is,*recv_req_vals,*recv_req_vecs;
@@ -7663,7 +7661,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
 
   /* compute number of sends */
   ierr = ISGetLocalSize(is_sends_internal,&i);CHKERRQ(ierr);
-  ierr = PetscMPICountCast(i,&n_sends);CHKERRQ(ierr);
+  ierr = PetscMPIIntCast(i,&n_sends);CHKERRQ(ierr);
 
   /* compute number of receives */
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
@@ -7742,7 +7740,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
     ierr = ISLocalToGlobalMappingGetIndices(mat->rmap->mapping,(const PetscInt**)&ptr_idxs);CHKERRQ(ierr);
     ierr = PetscArraycpy(&send_buffer_idxs[2],ptr_idxs,i);CHKERRQ(ierr);
     ierr = ISLocalToGlobalMappingRestoreIndices(mat->rmap->mapping,(const PetscInt**)&ptr_idxs);CHKERRQ(ierr);
-    ierr = PetscMPICountCast(i,&len);CHKERRQ(ierr);
+    ierr = PetscMPIIntCast(i,&len);CHKERRQ(ierr);
     for (i=0;i<n_sends;i++) {
       ilengths_vals[is_indices[i]] = len*len;
       ilengths_idxs[is_indices[i]] = len+2;
@@ -7756,7 +7754,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
     for (j=0,psum=0;j<nis;j++) {
       PetscInt plen;
       ierr = ISGetLocalSize(isarray[j],&plen);CHKERRQ(ierr);
-      ierr = PetscMPICountCast(plen,&len);CHKERRQ(ierr);
+      ierr = PetscMPIIntCast(plen,&len);CHKERRQ(ierr);
       psum += len+1; /* indices + lenght */
     }
     ierr = PetscMalloc1(psum,&send_buffer_idxs_is);CHKERRQ(ierr);

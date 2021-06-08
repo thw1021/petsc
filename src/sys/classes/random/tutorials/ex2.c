@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 {
   PetscReal      r,dt;
   PetscInt       n;
-  unsigned long  i,myNumSim,totalNumSim,numdim;
+  PetscInt       i,myNumSim,totalNumSim,numdim;
   PetscReal      *vol, *St0, x, totalx;
   PetscMPIInt    size,rank;
   PetscReal      *eps;

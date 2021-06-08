@@ -17,7 +17,7 @@ class CompilerOptions(config.base.Configure):
       else:
         self.framework.addMakeMacro('MPICC_SHOW',"Unavailable")
 
-    flags = []
+    flags = ['-Wshorten-64-to-32'] # ['-Wconversion','-Wno-sign-conversion','-Wno-float-conversion']
     # GNU gcc
     if config.setCompilers.Configure.isGNU(compiler, self.log) or config.setCompilers.Configure.isClang(compiler, self.log):
       if bopt == '':

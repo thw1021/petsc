@@ -626,7 +626,7 @@ static PetscErrorCode GmshReadEntities_v40(GmshFile *gmsh, GmshMesh *mesh)
   PetscFunctionBegin;
   ierr = PetscViewerRead(viewer, lbuf, 4, NULL, PETSC_LONG);CHKERRQ(ierr);
   if (byteSwap) {ierr = PetscByteSwap(lbuf, PETSC_LONG, 4);CHKERRQ(ierr);}
-  for (i = 0; i < 4; ++i) count[i] = lbuf[i];
+  for (i = 0; i < 4; ++i) count[i] = (PetscInt)lbuf[i];
   ierr = GmshEntitiesCreate(count, &mesh->entities);CHKERRQ(ierr);
   for (dim = 0; dim < 4; ++dim) {
     for (index = 0; index < count[dim]; ++index) {

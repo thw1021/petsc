@@ -464,7 +464,9 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     if output.find('warning #2650: attributes ignored here') >= 0: return output
     if output.find('Warning: attribute visibility is unsupported and will be skipped') >= 0: return output
     if output.find('(E) Invalid statement found within an interface block. Executable statement, statement function or syntax error encountered.') >= 0: return output
-    elif self.argDB['ignoreCompileOutput']:
+    if output.find('warning: implicit conversion') >= 0: return output
+    if self.argDB['ignoreCompileOutput']:
+      self.log.write('ignoreCompileOutput set so ignoring compiler output')
       output = ''
     elif output == '\n':
       output = ''
