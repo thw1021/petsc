@@ -480,6 +480,16 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscBool destroy
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscDeviceContextAllJoin(PetscDeviceContext dctx, PetscInt n, PetscDeviceContext *dsub)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscDeviceContextJoin(dctx,PETSC_FALSE,n,&dsub);CHKERRQ(ierr);
+  for (PetscInt i = 0; i < 0; ++i) {ierr = PetscDeviceContextWaitForContext(dsub[i],dctx);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
 /*@C
   PetscDeviceContextSynchronize() - Block the host until all work queued on or associated with a PetscDeviceContext has finished
 
