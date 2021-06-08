@@ -147,7 +147,7 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
 static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 {
   PetscInt      *cellid;
-  PetscInt       dim, cStart, cEnd, c, Np = user->particlesPerCell, p;
+  PetscInt       dim, cStart, cEnd, c, Np, p;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
@@ -155,7 +155,7 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = DMCreate(PetscObjectComm((PetscObject) dm), sw);CHKERRQ(ierr);
   ierr = DMSetType(*sw, DMSWARM);CHKERRQ(ierr);
   ierr = DMSetDimension(*sw, dim);CHKERRQ(ierr);
-
+  Np = user->particlesPerCell;
   ierr = DMSwarmSetType(*sw, DMSWARM_PIC);CHKERRQ(ierr);
   ierr = DMSwarmSetCellDM(*sw, dm);CHKERRQ(ierr);
   ierr = DMSwarmRegisterPetscDatatypeField(*sw, "kinematics", 2, PETSC_REAL);CHKERRQ(ierr);
@@ -373,7 +373,7 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U , Mat J, Mat P, void
 PetscErrorCode Sfunc(TS ts, PetscReal t, Vec U, Mat S, void *ctx)
 {
   AppCtx            *user = (AppCtx *) ctx;
-  PetscInt           Np = user->numberOfCells * user->particlesPerCell;
+  PetscInt           Np;
   PetscInt           i, m, n;
 
   const PetscScalar *u;
@@ -383,6 +383,8 @@ PetscErrorCode Sfunc(TS ts, PetscReal t, Vec U, Mat S, void *ctx)
   PetscFunctionBeginUser;
 
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
+  ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
+  Np /= 2;
   ierr = MatGetOwnershipRange(S, &m, &n);CHKERRQ(ierr);
   for (i = 0; i < Np; ++i) {
     const PetscInt rows[2] = {2*i, 2*i+1};
@@ -399,7 +401,7 @@ PetscErrorCode Ffunc(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ctx)
   AppCtx            *user = (AppCtx *) ctx;
   DM                 dm;
   const PetscScalar *u;
-  PetscInt           Np = user->numberOfCells * user->particlesPerCell;
+  PetscInt           Np;
   PetscInt           p;
   PetscErrorCode     ierr;
 
@@ -408,6 +410,8 @@ PetscErrorCode Ffunc(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ctx)
 
   /*Define F*/
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
+  ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
+  Np /= 2;
   for (p = 0; p < Np; ++p) {
     *F += 0.5*PetscSqr(user->omega)*PetscSqr(u[p*2+0]) + 0.5*PetscSqr(u[p*2+1]);
   }
@@ -421,13 +425,15 @@ PetscErrorCode gradFfunc(TS ts, PetscReal t, Vec U, Vec gradF, void *ctx)
   DM                 dm;
   const PetscScalar *u;
   PetscScalar       *g;
-  PetscInt           Np = user->numberOfCells * user->particlesPerCell;
+  PetscInt           Np;
   PetscInt           p;
   PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
+  ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
+  Np /= 2;
   /*Define gradF*/
   ierr = VecGetArray(gradF, &g);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
