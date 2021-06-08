@@ -146,7 +146,7 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
     Level: intermediate
 
     Notes:
-     If the MPI supports the use of MPI_Count then it is MPI_Count (whose size is usually 8 bytes for 64 bit systems), otherwise it int
+     If the MPI supports the use of MPI_Count then it is MPI_Count (whose size is usually 8 bytes for 64 bit systems), otherwise it is int.
 
     PetscMPICIntCast(a,&b) checks if the given PetscInt a will fit in a PetscMPIInt, if not it
       generates a PETSC_ERR_ARG_OUTOFRANGE error.
