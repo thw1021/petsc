@@ -65,8 +65,8 @@ PETSC_INTERN PetscErrorCode PetscSFSetUp_Basic(PetscSF sf)
     ierr = MPI_Irecv(bas->irootloc+bas->ioffset[i],bas->ioffset[i+1]-bas->ioffset[i],MPIU_INT,bas->iranks[i],tag,comm,&rootreqs[i-bas->ndiranks]);CHKERRMPI(ierr);
   }
   for (i=0; i<sf->nranks; i++) {
-    PetscMPIInt npoints;
-    ierr = PetscMPIIntCast(sf->roffset[i+1] - sf->roffset[i],&npoints);CHKERRQ(ierr);
+    PetscMPICount npoints;
+    ierr = PetscMPICountCast(sf->roffset[i+1] - sf->roffset[i],&npoints);CHKERRQ(ierr);
     if (i < sf->ndranks) {
       if (sf->ranks[i] != rank) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot interpret distinguished leaf rank");
       if (bas->iranks[0] != rank) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot interpret distinguished root rank");

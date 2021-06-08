@@ -120,8 +120,9 @@ static PetscErrorCode PetscCommBuildTwoSided_Ibarrier(MPI_Comm comm,PetscMPIInt 
       nrecvs++;
     }
     if (!barrier_started) {
-      PetscMPIInt sent,nsends;
-      ierr = PetscMPIIntCast(nto,&nsends);CHKERRQ(ierr);
+      PetscMPICount nsends;
+      PetscMPIInt   sent;
+      ierr = PetscMPICountCast(nto,&nsends);CHKERRQ(ierr);
       ierr = MPI_Testall(nsends,sendreqs,&sent,MPI_STATUSES_IGNORE);CHKERRMPI(ierr);
       if (sent) {
         ierr = MPI_Ibarrier(comm,&barrier);CHKERRMPI(ierr);
@@ -420,8 +421,9 @@ static PetscErrorCode PetscCommBuildTwoSidedFReq_Ibarrier(MPI_Comm comm,PetscMPI
       nrecvs++;
     }
     if (!barrier_started) {
-      PetscMPIInt sent,nsends;
-      ierr = PetscMPIIntCast(nto,&nsends);CHKERRQ(ierr);
+      PetscMPIInt   sent;
+      PetscMPICount nsends;
+      ierr = PetscMPICountCast(nto,&nsends);CHKERRQ(ierr);
       ierr = MPI_Testall(nsends,sendreqs,&sent,MPI_STATUSES_IGNORE);CHKERRMPI(ierr);
       if (sent) {
         ierr = MPI_Ibarrier(comm,&barrier);CHKERRMPI(ierr);

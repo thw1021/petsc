@@ -1849,7 +1849,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
       ierr = PetscMalloc1(size, &counts);CHKERRQ(ierr);
       ierr = PetscMalloc1(size+1, &mpiCumSumVertices);CHKERRQ(ierr);
       for (i=0; i<size; i++) {
-        ierr = PetscMPIIntCast(cumSumVertices[i+1] - cumSumVertices[i], &(counts[i]));CHKERRQ(ierr);
+        ierr = PetscMPICountCast(cumSumVertices[i+1] - cumSumVertices[i], &(counts[i]));CHKERRQ(ierr);
       }
       for (i=0; i<=size; i++) {
         ierr = PetscMPIIntCast(cumSumVertices[i], &(mpiCumSumVertices[i]));CHKERRQ(ierr);

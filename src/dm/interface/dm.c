@@ -4068,13 +4068,13 @@ PetscErrorCode DMGetBoundingBox(DM dm, PetscReal gmin[], PetscReal gmax[])
 {
   PetscReal      lmin[3], lmax[3];
   PetscInt       cdim;
-  PetscMPIInt    count;
+  PetscMPICount  count;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   ierr = DMGetCoordinateDim(dm, &cdim);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(cdim, &count);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(cdim, &count);CHKERRQ(ierr);
   ierr = DMGetLocalBoundingBox(dm, lmin, lmax);CHKERRQ(ierr);
   if (gmin) {ierr = MPIU_Allreduce(lmin, gmin, count, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject) dm));CHKERRMPI(ierr);}
   if (gmax) {ierr = MPIU_Allreduce(lmax, gmax, count, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject) dm));CHKERRMPI(ierr);}
