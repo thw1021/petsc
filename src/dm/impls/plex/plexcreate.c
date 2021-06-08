@@ -2914,6 +2914,24 @@ static PetscErrorCode DMSetFromOptions_Plex(PetscOptionItems *PetscOptionsObject
   /* Handle automatic creation */
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   if (dim < 0) {ierr = DMPlexCreateFromOptions_Internal(PetscOptionsObject, &coordSpace, dm);CHKERRQ(ierr);created = PETSC_TRUE;}
+  /* Handle interpolation before distribution */
+  ierr = PetscOptionsBool("-dm_plex_interpolate_pre", "Flag to interpolate mesh before distribution", "", interpolate, &interpolate, &flg);CHKERRQ(ierr);
+  if (flg) {
+    DMPlexInterpolatedFlag interpolated;
+
+    ierr = DMPlexIsInterpolated(dm, &interpolated);CHKERRQ(ierr);
+    if (interpolated == DMPLEX_INTERPOLATED_FULL && !interpolate) {
+      DM udm;
+
+      ierr = DMPlexUninterpolate(dm, &udm);CHKERRQ(ierr);
+      ierr = DMPlexReplace_Static(dm, &udm);CHKERRQ(ierr);
+    } else if (interpolated != DMPLEX_INTERPOLATED_FULL && interpolate) {
+      DM idm;
+
+      ierr = DMPlexInterpolate(dm, &idm);CHKERRQ(ierr);
+      ierr = DMPlexReplace_Static(dm, &idm);CHKERRQ(ierr);
+    }
+  }
   /* Handle DMPlex refinement before distribution */
   ierr = DMPlexGetRefinementUniform(dm, &uniformOrig);CHKERRQ(ierr);
   ierr = PetscOptionsBoundedInt("-dm_refine_pre", "The number of refinements before distribution", "DMCreate", prerefine, &prerefine, NULL,0);CHKERRQ(ierr);
