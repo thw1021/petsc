@@ -19,6 +19,7 @@ filePath = {}
 filePath['absoluteGraphs'] = '/home/arcowie/research/graphs/'
 filePath['absoluteData']   = '/home/arcowie/research/data/ex13/'
 
+
 fieldNames = {}
 fieldNames['ex62'] = {}
 fieldNames['ex62']['field 0'] = 'Velocity'
