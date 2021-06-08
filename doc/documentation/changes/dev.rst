@@ -90,6 +90,8 @@ Changes: Development
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
+-  Add ``TSDiscGradSetGonzalez()`` to set whether to use DG Gonzalez term
+-  Add ``TSDiscGradGetGonzalez()`` to get whether to use DG Gonzalez term
 
 .. rubric:: TAO:
 
