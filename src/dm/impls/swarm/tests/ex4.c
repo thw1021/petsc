@@ -373,7 +373,6 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U , Mat J, Mat P, void
 
 PetscErrorCode Sfunc(TS ts, PetscReal t, Vec U, Mat S, void *ctx)
 {
-  AppCtx            *user = (AppCtx *) ctx;
   PetscInt           Np;
   PetscInt           i, m, n;
 
@@ -549,30 +548,30 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: 1
-     args: -dm_plex_box_faces 1,1 -ts_type basicsymplectic -ts_basicsymplectic_type 1 -ts_convergence_estimate -convest_num_refine 2 -dm_view -sw_view -monitor -output_step 50 -error
+     args: -dm_plex_box_faces 1,1 -ts_type basicsymplectic -ts_basicsymplectic_type 1 -ts_convergence_estimate -convest_num_refine 2 -dm_view  -monitor -output_step 50 -error
 
    test:
      suffix: 2
-     args: -dm_plex_box_faces 1,1 -ts_type basicsymplectic -ts_basicsymplectic_type 2 -ts_convergence_estimate -convest_num_refine 2 -dm_view -sw_view -monitor -output_step 50 -error
+     args: -dm_plex_box_faces 1,1 -ts_type basicsymplectic -ts_basicsymplectic_type 2 -ts_convergence_estimate -convest_num_refine 2 -dm_view  -monitor -output_step 50 -error
 
    test:
      suffix: 3
-     args: -dm_plex_box_faces 1,1 -ts_type basicsymplectic -ts_basicsymplectic_type 3 -ts_convergence_estimate -convest_num_refine 2 -ts_dt 0.0001 -dm_view -sw_view -monitor -output_step 50 -error
+     args: -dm_plex_box_faces 1,1 -ts_type basicsymplectic -ts_basicsymplectic_type 3 -ts_convergence_estimate -convest_num_refine 2 -ts_dt 0.0001 -dm_view -monitor -output_step 50 -error
 
    test:
      suffix: 4
-     args: -dm_plex_box_faces 1,1 -ts_type basicsymplectic -ts_basicsymplectic_type 4 -ts_convergence_estimate -convest_num_refine 2 -ts_dt 0.0001 -dm_view -sw_view -monitor -output_step 50 -error
+     args: -dm_plex_box_faces 1,1 -ts_type basicsymplectic -ts_basicsymplectic_type 4 -ts_convergence_estimate -convest_num_refine 2 -ts_dt 0.0001 -dm_view  -monitor -output_step 50 -error
 
    test:
      suffix: 5
-     args: -dm_plex_box_faces 1,1 -ts_type theta -ts_theta_theta 0.5 -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2
+     args: -dm_plex_box_faces 1,1 -ts_type theta -ts_theta_theta 0.5 -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2 -dm_view
 
    test:
      suffix: 6
-     args: -dm_plex_box_faces 1,1 -ts_type discgrad -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2
+     args: -dm_plex_box_faces 1,1 -ts_type discgrad -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2 -dm_view
 
    test:
      suffix: 7
-     args: -dm_plex_box_faces 1,1 -ts_type discgrad -ts_discgrad_gonzalez -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2
+     args: -dm_plex_box_faces 1,1 -ts_type discgrad -ts_discgrad_gonzalez -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2 -dm_view 
 
 TEST*/

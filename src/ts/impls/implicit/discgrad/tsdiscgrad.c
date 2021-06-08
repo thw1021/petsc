@@ -301,7 +301,7 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscInt       n;
   Vec            X0, Xdot, Xp, Xdiff;
   Mat            S;
-  PetscScalar    F, F0, Gp;
+  PetscScalar    F=0, F0=0, Gp;
   Vec            G, SgF;
   DM             dm, dmsave;
   PetscErrorCode ierr;
@@ -328,7 +328,7 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   ierr = VecAXPBYPCZ(Xp, -1, 2, 0, X0, x);CHKERRQ(ierr); /* Xp = 2*x - X0 + (0)*Xmid */
   ierr = VecAXPBYPCZ(Xdiff, -1, 1, 0, X0, Xp);CHKERRQ(ierr); /* Xdiff = xp - X0 + (0)*Xdiff */
 
-  if (dg->gonzalez){
+  if (dg->gonzalez) {
     ierr = (*dg->Sfunc)(ts, dg->stage_time, x ,   S,  dg->funcCtx);CHKERRQ(ierr);
     ierr = (*dg->Ffunc)(ts, dg->stage_time, Xp,  &F,  dg->funcCtx);CHKERRQ(ierr);
     ierr = (*dg->Ffunc)(ts, dg->stage_time, X0,  &F0, dg->funcCtx);CHKERRQ(ierr);
