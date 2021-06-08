@@ -173,12 +173,13 @@ static struct _AOOps AOOps_Basic = {
 PETSC_EXTERN PetscErrorCode AOCreate_Basic(AO ao)
 {
   AO_Basic       *aobasic;
-  PetscMPIInt    size,rank,count,*lens,*disp;
-  PetscInt       napp,*allpetsc,*allapp,ip,ia,N,i,*petsc=NULL,start;
+  PetscMPIInt    size,rank,*lens,*disp;
+  PetscMPICount  count;
+  PetscInt       napp,*allpetsc,*allapp,ip,ia,N,i,*petsc = NULL,start;
   PetscErrorCode ierr;
   IS             isapp=ao->isapp,ispetsc=ao->ispetsc;
   MPI_Comm       comm;
-  const PetscInt *myapp,*mypetsc=NULL;
+  const PetscInt *myapp,*mypetsc = NULL;
 
   PetscFunctionBegin;
   /* create special struct aobasic */
@@ -190,7 +191,7 @@ PETSC_EXTERN PetscErrorCode AOCreate_Basic(AO ao)
   ierr = ISGetLocalSize(isapp,&napp);CHKERRQ(ierr);
   ierr = ISGetIndices(isapp,&myapp);CHKERRQ(ierr);
 
-  ierr = PetscMPIIntCast(napp,&count);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(napp,&count);CHKERRQ(ierr);
 
   /* transmit all lengths to all processors */
   ierr = PetscObjectGetComm((PetscObject)isapp,&comm);CHKERRQ(ierr);

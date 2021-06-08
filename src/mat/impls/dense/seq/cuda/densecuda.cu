@@ -407,6 +407,131 @@ PETSC_EXTERN PetscErrorCode MatSeqDenseCUDAInvertFactors_Private(Mat A)
 #endif
 }
 
+static PetscErrorCode MatMatSolve_SeqDenseCUDA(Mat A,Mat B,Mat X)
+{
+  Mat_SeqDense       *a = (Mat_SeqDense*)A->data;
+  Mat_SeqDense       *x = (Mat_SeqDense*)X->data;
+  Mat_SeqDenseCUDA   *dA = (Mat_SeqDenseCUDA*)A->spptr;
+  const PetscScalar  *da;
+  PetscScalar        *dx;
+  cusolverDnHandle_t handle;
+  PetscBool          iscuda;
+  int                nrhs,n,lda,ldx;
+#if defined(PETSC_USE_DEBUG)
+  int                info;
+#endif
+  cudaError_t        ccer;
+  cusolverStatus_t   cerr;
+  PetscErrorCode     ierr;
+
+  PetscFunctionBegin;
+  if (A->factortype == MAT_FACTOR_NONE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
+  if (!dA->d_fact_work) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
+  ierr = PetscObjectTypeCompareAny((PetscObject)X,&iscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
+  if (X != B) {
+    ierr = MatCopy(B,X,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+  }
+  ierr = MatDenseCUDAGetArrayRead(A,&da);CHKERRQ(ierr);
+  /* MatMatSolve does not have a dispatching mechanism, we may end up with a MATSEQDENSE here */
+  ierr = PetscObjectTypeCompare((PetscObject)X,MATSEQDENSECUDA,&iscuda);CHKERRQ(ierr);
+  if (!iscuda) {
+    ierr = MatConvert(X,MATSEQDENSECUDA,MAT_INPLACE_MATRIX,&X);CHKERRQ(ierr);
+  }
+  ierr = MatDenseCUDAGetArray(X,&dx);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(A->rmap->n,&n);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(X->cmap->n,&nrhs);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(a->lda,&lda);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(x->lda,&ldx);CHKERRQ(ierr);
+  ierr = PetscCUSOLVERDnGetHandle(&handle);CHKERRQ(ierr);
+  ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
+  if (A->factortype == MAT_FACTOR_LU) {
+    ierr = PetscInfo2(A,"LU solve %d x %d on backend\n",n,n);CHKERRQ(ierr);
+    cerr = cusolverDnXgetrs(handle,CUBLAS_OP_N,n,nrhs,da,lda,dA->d_fact_ipiv,dx,ldx,dA->d_fact_info);CHKERRCUSOLVER(cerr);
+  } else if (A->factortype == MAT_FACTOR_CHOLESKY) {
+    ierr = PetscInfo2(A,"Cholesky solve %d x %d on backend\n",n,n);CHKERRQ(ierr);
+    if (!dA->d_fact_ipiv) { /* spd */
+      /* ========= Program hit cudaErrorNotReady (error 34) due to "device not ready" on CUDA API call to cudaEventQuery. */
+      cerr = cusolverDnXpotrs(handle,CUBLAS_FILL_MODE_LOWER,n,nrhs,da,lda,dx,ldx,dA->d_fact_info);CHKERRCUSOLVER(cerr);
+    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"cusolverDnsytrs not implemented");
+  } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unknown factor type %d",A->factortype);
+  ccer = WaitForCUDA();CHKERRCUDA(ccer);
+  ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+  ierr = MatDenseCUDARestoreArrayRead(A,&da);CHKERRQ(ierr);
+  ierr = MatDenseCUDARestoreArray(X,&dx);CHKERRQ(ierr);
+  if (!iscuda) {
+    ierr = MatConvert(X,MATSEQDENSE,MAT_INPLACE_MATRIX,&X);CHKERRQ(ierr);
+  }
+#if defined(PETSC_USE_DEBUG)
+  ccer = cudaMemcpy(&info, dA->d_fact_info, sizeof(int), cudaMemcpyDeviceToHost);CHKERRCUDA(ccer);
+  if (info > 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
+  else if (info < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
+#endif
+  ierr = PetscLogGpuFlops(nrhs*(2.0*n*n - n));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode MatSolve_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,PetscBool trans)
+{
+  Mat_SeqDense       *a = (Mat_SeqDense*)A->data;
+  Mat_SeqDenseCUDA   *dA = (Mat_SeqDenseCUDA*)A->spptr;
+  const PetscScalar  *da;
+  PetscScalar        *y;
+  cusolverDnHandle_t handle;
+  int                one = 1,n,lda;
+#if defined(PETSC_USE_DEBUG)
+  int                info;
+#endif
+  cudaError_t        ccer;
+  cusolverStatus_t   cerr;
+  PetscBool          iscuda;
+  PetscErrorCode     ierr;
+
+  PetscFunctionBegin;
+  if (A->factortype == MAT_FACTOR_NONE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
+  if (!dA->d_fact_work) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
+  ierr = PetscMPICountCast(A->rmap->n,&n);CHKERRQ(ierr);
+  /* MatSolve does not have a dispatching mechanism, we may end up with a VECSTANDARD here */
+  ierr = PetscObjectTypeCompareAny((PetscObject)yy,&iscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
+  if (iscuda) {
+    ierr = VecCopy(xx,yy);CHKERRQ(ierr);
+    ierr = VecCUDAGetArray(yy,&y);CHKERRQ(ierr);
+  } else {
+    if (!dA->workvec) {
+      ierr = MatCreateVecs(A,&dA->workvec,NULL);CHKERRQ(ierr);
+    }
+    ierr = VecCopy(xx,dA->workvec);CHKERRQ(ierr);
+    ierr = VecCUDAGetArray(dA->workvec,&y);CHKERRQ(ierr);
+  }
+  ierr = MatDenseCUDAGetArrayRead(A,&da);CHKERRQ(ierr);
+  ierr = PetscMPICountCast(a->lda,&lda);CHKERRQ(ierr);
+  ierr = PetscCUSOLVERDnGetHandle(&handle);CHKERRQ(ierr);
+  ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
+  if (A->factortype == MAT_FACTOR_LU) {
+    ierr = PetscInfo2(A,"LU solve %d x %d on backend\n",n,n);CHKERRQ(ierr);
+    cerr = cusolverDnXgetrs(handle,trans ? CUBLAS_OP_T : CUBLAS_OP_N,n,one,da,lda,dA->d_fact_ipiv,y,n,dA->d_fact_info);CHKERRCUSOLVER(cerr);
+  } else if (A->factortype == MAT_FACTOR_CHOLESKY) {
+    ierr = PetscInfo2(A,"Cholesky solve %d x %d on backend\n",n,n);CHKERRQ(ierr);
+    if (!dA->d_fact_ipiv) { /* spd */
+      /* ========= Program hit cudaErrorNotReady (error 34) due to "device not ready" on CUDA API call to cudaEventQuery. */
+      cerr = cusolverDnXpotrs(handle,CUBLAS_FILL_MODE_LOWER,n,one,da,lda,y,n,dA->d_fact_info);CHKERRCUSOLVER(cerr);
+    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"cusolverDnsytrs not implemented");
+  } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unknown factor type %d",A->factortype);
+  ccer = WaitForCUDA();CHKERRCUDA(ccer);
+  ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+  if (iscuda) {
+    ierr = VecCUDARestoreArray(yy,&y);CHKERRQ(ierr);
+  } else {
+    ierr = VecCUDARestoreArray(dA->workvec,&y);CHKERRQ(ierr);
+    ierr = VecCopy(dA->workvec,yy);CHKERRQ(ierr);
+  }
+  ierr = MatDenseCUDARestoreArrayRead(A,&da);CHKERRQ(ierr);
+#if defined(PETSC_USE_DEBUG)
+  ccer = cudaMemcpy(&info, dA->d_fact_info, sizeof(int), cudaMemcpyDeviceToHost);CHKERRCUDA(ccer);
+  if (info > 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
+  else if (info < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
+#endif
+}
+
 static PetscErrorCode MatSolve_SeqDenseCUDA_Internal(Mat A, Vec xx, Vec yy, PetscBool transpose,
                                                      PetscErrorCode (*matsolve)(Mat,PetscScalar*,PetscCuBLASInt,PetscCuBLASInt,PetscCuBLASInt,PetscCuBLASInt,PetscBool))
 {

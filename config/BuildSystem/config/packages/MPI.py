@@ -77,6 +77,7 @@ class Configure(config.package.Package):
   def __str__(self):
     output  = config.package.Package.__str__(self)
     if output and self.mpiexec: output  += '  Mpiexec: '+self.mpiexec.replace(' -n 1','')+'\n'
+    if hasattr(self,'mpi_count_size'): output  += '  Size of MPI_Count: '+str(self.mpi_count_size)+' bytes\n'
     return output+self.mpi_pkg_version
 
   def generateLibList(self, directory):
@@ -547,6 +548,16 @@ Unable to run hostname to check the network')
     self.compilers.CPPFLAGS = oldFlags
     return
 
+  def checkMPICount(self):
+    '''Checks if MPI_Count is supported'''
+    self.setCompilers.pushLanguage('C')
+    includes = '#include <mpi.h>'
+    body = 'MPI_Count cnt = 12;double x[22];MPI_Send(x,cnt,MPI_DOUBLE,0,0,MPI_COMM_WORLD);\n'
+    if self.checkCompile(includes,body):
+      self.addDefine('HAVE_MPI_COUNT','1')
+      self.mpi_count_size = self.types.checkSizeof('MPI_Count', (8,4), otherInclude = 'mpi.h', lang='C')
+    self.setCompilers.popLanguage()
+
   def checkMPIDistro(self):
     '''Determine if MPICH_NUMVERSION, OMPI_MAJOR_VERSION or MSMPI_VER exist in mpi.h
        Used for consistency checking of MPI installation at compile time'''
@@ -730,6 +741,7 @@ You may need to set the environmental variable HWLOC_COMPONENTS to -x86 to preve
     self.executeTest(self.configureIO) #depends on checkMPIDistro
     self.executeTest(self.findMPIInc)
     self.executeTest(self.PetscArchMPICheck)
+    self.executeTest(self.checkMPICount)
     funcs = '''MPI_Type_get_envelope  MPI_Type_dup MPI_Init_thread MPI_Iallreduce MPI_Ibarrier MPI_Finalized MPI_Exscan MPI_Reduce_scatter MPI_Reduce_scatter_block'''.split()
     found, missing = self.libraries.checkClassify(self.dlib, funcs)
     for f in found:

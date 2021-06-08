@@ -14,6 +14,8 @@ Changes: Development
 -  Change ``MPIU_Allreduce()`` to always returns a MPI error code that
    should be checked with ``CHKERRMPI(ierr)``
 
+-  Add ``PetscMPICount`` and ``PetscMPICountCast``
+
 .. rubric:: Configure/Build:
 -  Remove --with-kokkos-cuda-arch. One can use -with-cuda-gencodearch to specify the cuda arch for Kokkos. Usually not needed since PETSc auto detects that
 -  For --download-hdf5, disable --download-hdf5-fortran-bindings by default

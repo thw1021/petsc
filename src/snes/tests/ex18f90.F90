@@ -62,6 +62,7 @@ end module Function_module
 
 program ex18f90
 
+  use petscsnes
   use Base_module
   use Extended_module
   use Function_module
