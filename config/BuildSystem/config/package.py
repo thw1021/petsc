@@ -1209,6 +1209,8 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     self.compilers.saveLog()
     self.compilers.configure()
     self.logWrite(self.compilers.restoreLog())
+    if self.cuda.found:
+      self.cuda.configureLibrary()
     return
 
   def rmArgs(self,args,rejects):
