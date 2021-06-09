@@ -81,8 +81,8 @@ class Configure(config.package.Package):
     output  = config.package.Package.__str__(self)
     if self.mpiexec: output  += '  mpiexec: '+self.mpiexec.replace(' -n 1','')+'\n'
     if hasattr(self,'includepaths'):
-      output  += '  MPI include paths: '+ self.includepaths+'\n'
-      output += '  MPI libraries: '+ self.libpaths + ' ' + self.mpilibs+'\n'
+      output  += '  MPI C++ include paths: '+ self.includepaths+'\n'
+      output += '  MPI C++ libraries: '+ self.libpaths + ' ' + self.mpilibs+'\n'
     return output+self.mpi_pkg_version
 
   def generateLibList(self, directory):
@@ -660,14 +660,6 @@ Unable to run hostname to check the network')
         m = re.match(r'^-I.*$', arg)
         if m:
           self.logPrint('Found include option: '+arg, 4, 'compilers')
-          if hasattr(self.compilers, 'CUDAC'):
-            self.setCompilers.pushLanguage('CUDA')
-            self.setCompilers.addCompilerFlag(arg)
-            self.setCompilers.popLanguage()
-          if hasattr(self.compilers, 'HIPC'):
-            self.setCompilers.pushLanguage('HIP')
-            self.setCompilers.addCompilerFlag(arg)
-            self.setCompilers.popLanguage()
           self.includepaths += arg + ' '
           continue
     except StopIteration:
@@ -691,8 +683,8 @@ Unable to run hostname to check the network')
           self.mpilibs += arg + ' '
     except StopIteration:
       pass
-    self.addMakeMacro('MPI_INCLUDES',self.includepaths)
-    self.addMakeMacro('MPI_LIBS',self.libpaths + ' ' + self.mpilibs)
+    self.addMakeMacro('MPICXX_INCLUDES',self.includepaths)
+    self.addMakeMacro('MPICXX_LIBS',self.libpaths + ' ' + self.mpilibs)
     return
 
   def log_print_mpi_h_line(self,buf):
