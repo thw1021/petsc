@@ -692,9 +692,9 @@ Unable to run hostname to check the network')
     except StopIteration:
       pass
     self.setCompilers.MPI_INCLUDES = self.includepaths
-    self.cuda.addMakeMacro('MPI_INCLUDES',self.setCompilers.MPI_INCLUDES)
+    self.addMakeMacro('MPI_INCLUDES',self.setCompilers.MPI_INCLUDES)
     self.setCompilers.MPI_LIBS = self.libpaths + ' ' + self.mpilibs
-    self.cuda.addMakeMacro('MPI_LIBS',self.setCompilers.MPI_LIBS)
+    self.addMakeMacro('MPI_LIBS',self.setCompilers.MPI_LIBS)
     return
 
   def log_print_mpi_h_line(self,buf):
