@@ -11,9 +11,7 @@
 #include <KokkosSparse_sptrsv.hpp>
 
 #include <../src/mat/impls/aij/seq/aij.h>
-
 #include <../src/mat/impls/aij/seq/kokkos/aijkokkosimpl.hpp>
-#include <petscmat.h>
 
 static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat); /* Forward declaration */
 
@@ -106,14 +104,13 @@ static PetscErrorCode MatSeqAIJGetArray_SeqAIJKokkos(Mat A,PetscScalar *array[])
 }
 
 // MatSeqAIJKokkosSetDeviceMat takes a PetscSplitCSRDataStructure with device data and copies it to the device. Note, "deep_copy" here is really a shallow copy
-PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosSetDeviceMat(Mat A, PetscSplitCSRDataStructure *h_mat)
+PetscErrorCode MatSeqAIJKokkosSetDeviceMat(Mat A, PetscSplitCSRDataStructure h_mat)
 {
-  Mat_SeqAIJKokkos *aijkok;
-  Kokkos::View<PetscSplitCSRDataStructure, Kokkos::HostSpace> h_mat_k(h_mat);
+  Mat_SeqAIJKokkos                             *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
+  Kokkos::View<SplitCSRMat, Kokkos::HostSpace> h_mat_k(h_mat);
 
   PetscFunctionBegin;
   // ierr    = MatSeqAIJKokkosSyncDevice(A);CHKERRQ(ierr);
-  aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
   if (!aijkok) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"no Mat_SeqAIJKokkos");
   aijkok->device_mat_d = create_mirror(DefaultMemorySpace(),h_mat_k);
   Kokkos::deep_copy (aijkok->device_mat_d, h_mat_k);
@@ -121,12 +118,11 @@ PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosSetDeviceMat(Mat A, PetscSplitCSRData
 }
 
 // MatSeqAIJKokkosGetDeviceMat gets the device if it is here, otherwise it creates a place for it and returns NULL
-PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat A, PetscSplitCSRDataStructure **d_mat)
+PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat A, PetscSplitCSRDataStructure *d_mat)
 {
-  Mat_SeqAIJKokkos *aijkok;
+  Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
-  aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
   if (aijkok && aijkok->device_mat_d.data()) {
     *d_mat = aijkok->device_mat_d.data();
   } else {
