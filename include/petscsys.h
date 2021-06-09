@@ -154,7 +154,7 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
     PetscMPICountCast(a,&b) checks if the given PetscInt a will fit in a PetscMPICount, if not it
       generates a PETSC_ERR_ARG_OUTOFRANGE error.
 
-.seealso: PetscBLASInt, PetscInt, PetscMPICountCast(), PetscBLASIntCast(), PetscMPIIntCaste()
+.seealso: PetscBLASInt, PetscInt, PetscMPICountCast(), PetscBLASIntCast(), PetscMPIIntCast()
 
 M*/
 #if defined(PETSC_HAVE_MPI_COUNT)
