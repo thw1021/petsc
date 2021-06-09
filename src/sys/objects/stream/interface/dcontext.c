@@ -354,10 +354,10 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
 .vb
   time ->
 
-  -> dctx \---------------> dctx
-           \---> dsub[0]
-            \--> ...
-             \-> dsub[n-1]
+  -> dctx \----> dctx ------>
+           \---> dsub[0] --->
+            \--> ... ------->
+             \-> dsub[n-1] ->
 .ve
 
   Level: intermediate
@@ -418,6 +418,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
 
   Input Parameters:
 + dctx         - A PetscDeviceContext to converge on
+. allJoin      - Join convergent sub contexts with all other sub contexts
 . destroyEdges - Whether to destroy the convergent sub contexts
 . n            - The number of sub contexts to converge
 - dsub         - The sub contexts to converge
@@ -430,21 +431,42 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
   If destroyEdges is PETSC_TRUE then all sub contexts must have been created with the dctx passed to this function. If
   destroyEdges is PETSC_FALSE then one is free to queue additional work on the sub contexts.
 
-  DAG representation:
+  If allJoin is PETSC_TRUE all sub contexts will additionally wait on dctx after converging. In DAG terminology this has
+  the effect of "synchronizing" the outgoing edges. Note that is destroyEdges is PETSC_TRUE then allJoin is ignored; it
+  doesn't matter if outgoing edges are synchronized if they are destroyed anyways.
+
+  DAG representations:
+  If destroyEdges is PETSC_TRUE (regardless of allJoin)
 .vb
   time ->
 
-  -> dctx ---------/ dctx ->
-  -> dsub[0]   ---/[------->]
-  ->  ...      --/[-------->]
-  -> dsub[n-1] -/[--------->]
+  -> dctx ---------/- dctx ->
+  -> dsub[0] -----/
+  ->  ... -------/
+  -> dsub[n-1] -/
+.ve
+  If destroyEdges is PETSC_FALSE and allJoin is PETSC_FALSE
+.vb
+  time ->
+
+  -> dctx ---------/- dctx ->
+  -> dsub[0] -----/--------->
+  ->  ... -------/---------->
+  -> dsub[n-1] -/----------->
+.ve
+  If destroyEdges is PETSC_FALSE and allJoin is PETSC_TRUE
+.vb
+  -> dctx ---------/- dctx -\----> dctx ------>
+  -> dsub[0] -----/          \---> dsub[0] --->
+  ->  ... -------/            \--> ... ------->
+  -> dsub[n-1] -/              \-> dsub[n-1] ->
 .ve
 
   Level: intermediate
 
 .seealso: PetscDeviceContextFork(), PetscDeviceContextSynchronize()
 @*/
-PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscBool destroyEdges, PetscInt n, PetscDeviceContext **dsub)
+PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscBool allJoin, PetscBool destroyEdges, PetscInt n, PetscDeviceContext **dsub)
 {
   PetscErrorCode ierr;
 
@@ -476,17 +498,9 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscBool destroy
     /* gone through the loop but did not find every child, if this triggers (or well, doesn't) on perf-builds we leak the remaining contexts memory */
     if (PetscUnlikelyDebug(j != n)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%D contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checkout out in.",n-j);
     ierr = PetscFree(*dsub);CHKERRQ(ierr);
+  } else if (allJoin) {
+    for (PetscInt i = 0; i < n; ++i) {ierr = PetscDeviceContextWaitForContext(dsub[i],dctx);CHKERRQ(ierr);}
   }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscDeviceContextAllJoin(PetscDeviceContext dctx, PetscInt n, PetscDeviceContext *dsub)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = PetscDeviceContextJoin(dctx,PETSC_FALSE,n,&dsub);CHKERRQ(ierr);
-  for (PetscInt i = 0; i < 0; ++i) {ierr = PetscDeviceContextWaitForContext(dsub[i],dctx);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
