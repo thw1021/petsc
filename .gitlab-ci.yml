@@ -419,7 +419,6 @@ freebsd-cxx-cmplx-pkgs-dbg:
     - os:fbsd
   variables:
     TEST_ARCH: arch-ci-freebsd-cxx-cmplx-pkgs-dbg
-    MAKE_CXXFLAGS: " "
 
 freebsd-cxx-pkgs-opt:
   extends:
@@ -802,7 +801,6 @@ linux-gcc-ifc-cmplx:
   variables:
     TEST_ARCH: arch-ci-linux-gcc-ifc-cmplx
     LOAD_MODULES: intel/19.0-nompilib cmake/3.20.0-vov726r
-    MAKE_CXXFLAGS: " "
 
 linux-opt-cxx-quad:
   extends:

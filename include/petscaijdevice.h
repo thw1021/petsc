@@ -129,7 +129,7 @@ PetscErrorCode MatSetValuesDevice(PetscSplitCSRDataStructure d_mat, PetscInt m,c
   const int       *rp1,*rp2 = NULL,*ai = d_mat->diag.i, *aj = d_mat->diag.j;
   const int       *bi = d_mat->offdiag.i, *bj = d_mat->offdiag.j;
   MatScalar       *ba = d_mat->offdiag.a, *aa = d_mat->diag.a;
-  int             nrow1,nrow2,_i,low1,high1,low2 = 0,high2 = 0,t,lastcol1,lastcol2 = 0,inserted;
+  int             nrow1,nrow2 = 0,_i,low1,high1,low2 = 0,high2 = 0,t,lastcol1,lastcol2 = 0,inserted;
   MatScalar       *ap1,*ap2 = NULL;
   PetscBool       roworiented = PETSC_TRUE;
   int             i,j,row,col;
