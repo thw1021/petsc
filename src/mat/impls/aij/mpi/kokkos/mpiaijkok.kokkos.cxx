@@ -328,8 +328,6 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
     else {
       h_mat.diag.i = (PetscInt*)aijkokA->i_d.data();
     }
-    //h_mat.diag.j = aj;
-    //h_mat.diag.a = aa;
     h_mat.diag.j = (PetscInt*)aijkokA->j_d.data();
     h_mat.diag.a = aijkokA->a_d.data();
     // copy pointers and metdata to device
