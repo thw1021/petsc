@@ -314,7 +314,7 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
         aijkokB->colmap_d = new Kokkos::View<PetscInt*>(Kokkos::create_mirror(DefaultMemorySpace(),h_colmap_k));
         Kokkos::deep_copy (*aijkokB->colmap_d, h_colmap_k);
         h_mat.colmap = aijkokB->colmap_d->data();
-        PetscFree(colmap);CHKERRQ(ierr);
+        ierr = PetscFree(colmap);CHKERRQ(ierr);
       }
       h_mat.offdiag.ignorezeroentries = jacb->ignorezeroentries;
       h_mat.offdiag.n = n;
