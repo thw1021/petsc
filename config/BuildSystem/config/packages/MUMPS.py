@@ -51,7 +51,7 @@ class Configure(config.package.Package):
 
   def configureLibrary(self):
     for arg in ['with-64-bit-blas-indices','known-64-bit-blas-indices']:
-      if arg in self.argDB and self.argDB[arg]:
+      if self.argDB.get(arg):
         raise RuntimeError('MUMPS cannot be used with %s' % arg)
     config.package.Package.configureLibrary(self)
 
