@@ -21,6 +21,7 @@ class Configure(config.package.Package):
     self.hastests          = 0
     self.hastestsdatafiles = 0
     self.functionsDefine   = ['cusolverDnDpotri']
+    self.testoptions       = '-use_gpu_aware_mpi 0'
     return
 
   def setupHelp(self, help):
