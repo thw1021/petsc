@@ -127,13 +127,59 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Async(Mat A, Vec xx, Vec yy)
   PetscScalar      *y;
   PetscCuBLASInt   m=0, k=0;
   PetscErrorCode   ierr;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(A->factortype == MAT_FACTOR_NONE)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
   ierr = PetscCuBLASIntCast(A->rmap->n,&m);CHKERRQ(ierr);
-  ierr = VecCUDAGetArrayWrite(xx,&y);CHKERRQ(ierr);
+  ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+  {
+    cudaError_t cerr;
+    const PetscScalar *x;
+    PetscBool xishost = PETSC_TRUE;
+    PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA*)dctx->data;
+
+    /* The logic here is to try to minimize the amount of memory copying:
+       if we call VecCUDAGetArrayRead(X,&x) every time xiscuda and the
+       data is not offloaded to the GPU yet, then the data is copied to the
+       GPU.  But we are only trying to get the data in order to copy it into the y
+       array.  So the array x will be wherever the data already is so that
+       only one memcpy is performed */
+    if (xx->offloadmask & PETSC_OFFLOAD_GPU) {
+      ierr = VecCUDAGetArrayRead(xx, &x);CHKERRQ(ierr);
+      xishost =  PETSC_FALSE;
+    } else {
+      ierr = VecGetArrayRead(xx, &x);CHKERRQ(ierr);
+    }
+    ierr = VecCUDAGetArrayWrite(yy,&y);CHKERRQ(ierr);
+    cerr = cudaMemcpyAsync(y,x,m*sizeof(PetscScalar),xishost ? cudaMemcpyHostToDevice : cudaMemcpyDeviceToDevice,dcu->stream);CHKERRCUDA(cerr);
+  }
   ierr = MatSolve_SeqDenseCUDA_Internal_LU_Async(A,y,m,m,1,k,PETSC_FALSE);CHKERRQ(ierr);
-  ierr = VecCUDARestoreArrayWrite(xx,&y);CHKERRQ(ierr);
+  ierr = VecCUDARestoreArrayWrite(yy,&y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode VecClose(Vec vref, Vec vtest)
+{
+  PetscErrorCode    ierr;
+  PetscBool         equal;
+  PetscInt          n;
+  const PetscScalar *arrRef, *arrTest;
+
+  PetscFunctionBegin;
+  ierr = VecEqual(vref,vtest,&equal);CHKERRQ(ierr);
+  if (equal) PetscFunctionReturn(0);
+  ierr = VecGetLocalSize(vref,&n);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(vref,&arrRef);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(vtest,&arrTest);CHKERRQ(ierr);
+  for (PetscInt i = 0; i < n; ++i) {
+    const PetscReal realRef = PetscRealPart(arrRef[i]), realTest = PetscRealPart(arrTest[i]);
+    if (!PetscIsCloseAtTol(realRef,realTest,1e-7,1e-7)) {
+      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Vectors don't match. refVector[%D]: %.10g != testVector[%D]: %.10g",i,(double)realRef,i,(double)realTest);
+    }
+  }
+  ierr = VecRestoreArrayRead(vref,&arrRef);CHKERRQ(ierr);
+  ierr = VecRestoreArrayRead(vtest,&arrTest);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -152,8 +198,8 @@ int main(int argc, char **argv)
 {
   PetscErrorCode ierr;
   MPI_Comm       comm;
-  Mat            *mats;
-  Vec            *xx,*yy;
+  Mat            *mats,*matsref;
+  Vec            *xx,*xxref,*yy,*yyref;
   PetscInt       nMat = 10,matSize = 2000;
   PetscDeviceContext dctx;
   PetscDeviceContext *subCtx;
@@ -165,7 +211,7 @@ int main(int argc, char **argv)
   ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
   ierr = PetscDeviceContextFork(dctx,nMat,&subCtx);CHKERRQ(ierr);
 
-  ierr = PetscMalloc3(nMat,&mats,nMat,&xx,nMat,&yy);CHKERRQ(ierr);
+  ierr = PetscMalloc6(nMat,&mats,nMat,&matsref,nMat,&xx,nMat,&xxref,nMat,&yy,nMat,&yyref);CHKERRQ(ierr);
   for (PetscInt i = 0; i < nMat; ++i) {
     cusolverDnHandle_t dummyHandle;
     PetscScalar        *dummy;
@@ -178,13 +224,19 @@ int main(int argc, char **argv)
     ierr = MatCreateVecs(mats[i],xx+i,yy+i);CHKERRQ(ierr);
     ierr = MatAssemblyBegin(mats[i],MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(mats[i],MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatConvert(mats[i],MATSAME,MAT_INITIAL_MATRIX,matsref+i);CHKERRQ(ierr);
     ierr = MatLUFactor(mats[i],NULL,NULL,NULL);CHKERRQ(ierr);
+    ierr = MatLUFactor(matsref[i],NULL,NULL,NULL);CHKERRQ(ierr);
     ierr = MatSetOperation(mats[i],MATOP_SOLVE,(void(*)(void))MatSolve_SeqDenseCUDA_Async);CHKERRQ(ierr);
     ierr = VecZeroEntries(yy[i]);CHKERRQ(ierr);
     ierr = VecAssemblyBegin(xx[i]);CHKERRQ(ierr);
     ierr = VecAssemblyEnd(xx[i]);CHKERRQ(ierr);
     ierr = VecAssemblyBegin(yy[i]);CHKERRQ(ierr);
     ierr = VecAssemblyEnd(yy[i]);CHKERRQ(ierr);
+    ierr = VecDuplicate(xx[i],xxref+i);CHKERRQ(ierr);
+    ierr = VecDuplicate(yy[i],yyref+i);CHKERRQ(ierr);
+    ierr = VecCopy(xx[i],xxref[i]);CHKERRQ(ierr);
+    ierr = VecCopy(yy[i],yyref[i]);CHKERRQ(ierr);
     // Move any data down onto the GPU now
     ierr = MatSeqDenseCUDACopyToGPU(mats[i]);CHKERRQ(ierr);
     ierr = VecCUDAGetArrayWrite(xx[i],&dummy);CHKERRQ(ierr);
@@ -204,19 +256,28 @@ int main(int argc, char **argv)
     // uncomment below to get the current synchronous version
     //ierr = HostDeviceBarrier();CHKERRQ(ierr);
   }
+
   ierr = HostDeviceBarrier();CHKERRQ(ierr);
   cerr = cudaProfilerStop();CHKERRCUDA(cerr);
-
   ierr = PetscDeviceContextJoin(dctx,PETSC_FALSE,PETSC_TRUE,nMat,&subCtx);CHKERRQ(ierr);
   ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetCurrentContext(dctx);CHKERRQ(ierr);
 
   for (PetscInt i = 0; i < nMat; ++i) {
+    // reference solve goes here so that it does not interfere with async solves, we want
+    // those to overlap as much as possible
+    ierr = MatSolve(matsref[i],xxref[i],yyref[i]);CHKERRQ(ierr);
+    ierr = VecClose(yyref[i],yy[i]);CHKERRQ(ierr);
+    ierr = VecClose(xxref[i],xx[i]);CHKERRQ(ierr);
     ierr = MatDestroy(mats+i);CHKERRQ(ierr);
+    ierr = MatDestroy(matsref+i);CHKERRQ(ierr);
     ierr = VecDestroy(xx+i);CHKERRQ(ierr);
+    ierr = VecDestroy(xxref+i);CHKERRQ(ierr);
     ierr = VecDestroy(yy+i);CHKERRQ(ierr);
+    ierr = VecDestroy(yyref+i);CHKERRQ(ierr);
   }
-  ierr = PetscFree3(mats,xx,yy);CHKERRQ(ierr);
+  ierr = PetscFree6(mats,matsref,xx,xxref,yy,yyref);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"All tests successful\n");CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
