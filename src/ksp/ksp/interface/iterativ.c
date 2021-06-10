@@ -1943,11 +1943,3 @@ PetscErrorCode KSPCheckSolve(KSP ksp,PC pc,Vec vec)
   }
   PetscFunctionReturn(0);
 }
-
-PetscErrorCode KSPSetAsyncREMOVEME(KSP ksp, PetscBool async)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  ksp->async = async;
-  PetscFunctionReturn(0);
-}
