@@ -50,11 +50,9 @@ class Configure(config.package.Package):
     return
 
   def configureLibrary(self):
-    if self.argDB['with-64-bit-blas-indices']:
-      raise RuntimeError('PETSc and MUMPS can not be used together when you have -with-64-bit-blas-indices')
-    if hasattr(self.argDB,'known-64-bit-blas-indices') and self.argDB['known-64-bit-blas-indices']:
-      raise RuntimeError('PETSc and MUMPS can not be used together when you have -known-64-bit-blas-indices')
-    config.package.Package.configureLibrary(self)
+    for arg in ['with-64-bit-blas-indices','known-64-bit-blas-indices']:
+      if self.argDB[arg]:
+        raise RuntimeError('MUMPS cannot be used with %s' % arg)
 
   def consistencyChecks(self):
     config.package.Package.consistencyChecks(self)
