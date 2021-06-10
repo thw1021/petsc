@@ -899,7 +899,6 @@ static PetscErrorCode PCSetUpOnBlocks_BJacobi_Multiblock(PC pc)
   PetscFunctionReturn(0);
 }
 
-#include <petscdevice.h>
 /*
       Preconditioner for block Jacobi
 */
@@ -911,14 +910,10 @@ static PetscErrorCode PCApply_BJacobi_Multiblock(PC pc,Vec x,Vec y)
   PC_BJacobi_Multiblock *bjac = (PC_BJacobi_Multiblock*)jac->data;
   PetscScalar           *yin;
   const PetscScalar     *xin;
-  PetscDeviceContext    parCtx;
-  PetscDeviceContext    *subCtx;
 
   PetscFunctionBegin;
   ierr = VecGetArrayRead(x,&xin);CHKERRQ(ierr);
   ierr = VecGetArray(y,&yin);CHKERRQ(ierr);
-  ierr = PetscDeviceContextGetCurrentContext(&parCtx);CHKERRQ(ierr);
-  ierr = PetscDeviceContextFork(parCtx,n_local,&subCtx);CHKERRQ(ierr);
   for (i=0; i<n_local; i++) {
     /*
        To avoid copying the subvector from x into a workspace we instead
@@ -927,7 +922,7 @@ static PetscErrorCode PCApply_BJacobi_Multiblock(PC pc,Vec x,Vec y)
     */
     ierr = VecPlaceArray(bjac->x[i],xin+bjac->starts[i]);CHKERRQ(ierr);
     ierr = VecPlaceArray(bjac->y[i],yin+bjac->starts[i]);CHKERRQ(ierr);
-    ierr = PetscDeviceContextSetCurrentContext(subCtx[i]);CHKERRQ(ierr);
+
     ierr = PetscLogEventBegin(PC_ApplyOnBlocks,jac->ksp[i],bjac->x[i],bjac->y[i],0);CHKERRQ(ierr);
     ierr = KSPSolve(jac->ksp[i],bjac->x[i],bjac->y[i]);CHKERRQ(ierr);
     ierr = KSPCheckSolve(jac->ksp[i],pc,bjac->y[i]);CHKERRQ(ierr);
@@ -936,9 +931,6 @@ static PetscErrorCode PCApply_BJacobi_Multiblock(PC pc,Vec x,Vec y)
     ierr = VecResetArray(bjac->x[i]);CHKERRQ(ierr);
     ierr = VecResetArray(bjac->y[i]);CHKERRQ(ierr);
   }
-  ierr = PetscDeviceContextJoin(parCtx,PETSC_TRUE,n_local,&subCtx);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSynchronize(parCtx);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetCurrentContext(parCtx);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(x,&xin);CHKERRQ(ierr);
   ierr = VecRestoreArray(y,&yin);CHKERRQ(ierr);
   PetscFunctionReturn(0);

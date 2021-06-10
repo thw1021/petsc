@@ -499,7 +499,9 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscBool allJoin
     if (PetscUnlikelyDebug(j != n)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%D contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checkout out in.",n-j);
     ierr = PetscFree(*dsub);CHKERRQ(ierr);
   } else if (allJoin) {
-    for (PetscInt i = 0; i < n; ++i) {ierr = PetscDeviceContextWaitForContext(dsub[i],dctx);CHKERRQ(ierr);}
+    for (PetscInt i = 0; i < n; ++i) {
+      ierr = PetscDeviceContextWaitForContext((*dsub)[i],dctx);CHKERRQ(ierr);
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -532,7 +534,7 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
 static PetscDeviceContext globalContext = NULL;
 static PetscBool          globalContextSetup = PETSC_FALSE;
 /* default context should act just like the NULL stream, i.e. fully synchronous */
-static PetscStreamType    defaultStreamType  = PETSC_STREAM_GLOBAL_BLOCKING;
+static PetscStreamType    defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
 #if PetscDefined(HAVE_CUDA)
 static PetscDeviceContextType defaultContextType = PETSCDEVICECONTEXTCUDA;
 #elif PetscDefined(HAVE_HIP)
@@ -560,15 +562,21 @@ static PetscDeviceContextType defaultContextType = PETSCDEVICECONTEXTCUDA;
 @*/
 PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDeviceContextType type, PetscStreamType stype)
 {
-  PetscFunctionBegin;
   if (PetscUnlikelyDebug(globalContextSetup)) {
-    PetscErrorCode ierr;
-    ierr = PetscInfo(NULL,"Root PetscDeviceContext has already been setup and created, setting default has no effect\n");CHKERRQ(ierr);
+    PetscBool petscInit;
+
+    PetscInitialized(&petscInit);
+    if (petscInit) {
+      PetscFunctionBegin;
+      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Root PetscDeviceContext has already been setup and created, setting default has no effect");
+    }
+    /* Since this may be called before PetscInitialize() we can't use error checking */
+    printf("Root PetscDeviceContext has already been setup and created, setting default has no effect\n");
   } else {
     if (type) defaultContextType = type;
     if (stype != PETSC_STREAM_MAX_TYPE) defaultStreamType = stype;
   }
-  PetscFunctionReturn(0);
+  return 0;
 }
 
 /*@C
@@ -578,22 +586,35 @@ PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDeviceContex
 + type  - The default PetscDeviceContextType, NULL if not needed
 - stype - The default PetscStreamType, NULL if not needed
 
+  Note:
+  Can be called prior to PetscInitialize(), but does no error checking
+
   Level: advanced
 
 .seealso: PetscDeviceContextSetDefaultRootContextSettings(), PetscDeviceContextGetCurrentContext()
 @*/
 PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDeviceContextType *type, PetscStreamType *stype)
 {
-  PetscFunctionBegin;
-  if (type) {
-    PetscValidPointer(type,1);
-    *type = defaultContextType;
+#if PetscDefined(USE_DEBUG)
+  PetscBool petscInit;
+
+  PetscInitialized(&petscInit);
+  if (petscInit) {
+    PetscFunctionBegin;
+    if (type) {
+      PetscValidPointer(type,1);
+      *type = defaultContextType;
+    }
+    if (stype) {
+      PetscValidPointer(stype,2);
+      *stype = defaultStreamType;
+    }
+    PetscFunctionReturn(0);
   }
-  if (stype) {
-    PetscValidPointer(stype,2);
-    *stype = defaultStreamType;
-  }
-  PetscFunctionReturn(0);
+#endif
+  if (type) *type = defaultContextType;
+  if (stype) *stype = defaultStreamType;
+  return 0;
 }
 
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Internal(void)
