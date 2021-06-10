@@ -211,7 +211,7 @@ static int processPackets(MLINK link)
       errors++;
     } else if (packetType == RETURNPKT) {
       ierr = processPacket(link, 0);
-      if (ierr == 1) CHKERRQ(ierr);
+      if (ierr == 1) SETERRQ(ierr);
       if (ierr == 2) loop = 0;
     } else {
       fprintf(stderr, "Invalid packet type %d\n", packetType);
