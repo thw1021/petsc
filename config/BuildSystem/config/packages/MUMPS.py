@@ -49,6 +49,13 @@ class Configure(config.package.Package):
     self.openmp           = framework.require('config.packages.openmp',self)
     return
 
+  def configureLibrary(self):
+    if self.argDB['with-64-bit-blas-indices']:
+      raise RuntimeError('PETSc and MUMPS can not be used together when you have -with-64-bit-blas-indices')
+    if hasattr(self.argDB,'known-64-bit-blas-indices') and self.argDB['known-64-bit-blas-indices']:
+      raise RuntimeError('PETSc and MUMPS can not be used together when you have -known-64-bit-blas-indices')
+    config.package.Package.configureLibrary(self)
+
   def consistencyChecks(self):
     config.package.Package.consistencyChecks(self)
     if self.argDB['with-'+self.package] or self.argDB['download-'+self.package]:
