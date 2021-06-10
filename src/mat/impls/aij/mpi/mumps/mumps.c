@@ -2946,7 +2946,7 @@ $          MatMumpsGetInfog(mat,....); etc.
       requires all dependent libraries MPI, ScaLAPACK, LAPACK and BLAS built the same way with 64-bit integers (for example ILP64 Intel MKL and MPI).
 
       selective 64-bit: with the default MUMPS build, 64-bit integers have been introduced where needed. Speaking in PETSc's MATAIJ format, MUMPS
-      would store column indices in 32-bit, but row offsets in 64-bit, so you can have a huge number of non-zeros, but < 2^31 rows/columns. This can
+      stores column indices in 32-bit, but row offsets in 64-bit, so you can have a huge number of non-zeros, but must have less than 2^31 rows and columns. This can
       lead to significant memory and performance gains with respect to a full 64-bit integer MUMPS version. This requires a regular (32-bit integer)
       build of all dependent libraries MPI, ScaLAPACK, LAPACK and BLAS.
 
