@@ -1081,7 +1081,6 @@ static PetscErrorCode MatMultAdd_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,Vec zz
   cublasHandle_t    cublasv2handle;
   cublasStatus_t    berr;
   PetscErrorCode    ierr;
-  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
   if (yy && yy != zz) { /* mult add */
@@ -1097,17 +1096,15 @@ static PetscErrorCode MatMultAdd_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,Vec zz
   ierr = PetscCuBLASIntCast(A->rmap->n,&m);CHKERRQ(ierr);
   ierr = PetscCuBLASIntCast(A->cmap->n,&n);CHKERRQ(ierr);
   ierr = PetscCuBLASIntCast(mat->lda,&lda);CHKERRQ(ierr);
+  ierr = PetscCUBLASGetHandle(&cublasv2handle);CHKERRQ(ierr);
   ierr = MatDenseCUDAGetArrayRead(A,&da);CHKERRQ(ierr);
   ierr = VecCUDAGetArrayRead(xx,&xarray);CHKERRQ(ierr);
   ierr = VecCUDAGetArray(zz,&zarray);CHKERRQ(ierr);
-  ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
-  ierr = PetscDeviceContextGetBLASHandle(dctx,&cublasv2handle);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   berr = cublasXgemv(cublasv2handle,trans ? CUBLAS_OP_T : CUBLAS_OP_N,
                      m,n,&one,da,lda,xarray,1,(yy ? &one : &zero),zarray,1);CHKERRCUBLAS(berr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(2.0*A->rmap->n*A->cmap->n - (yy ? 0 : A->rmap->n));CHKERRQ(ierr);
-  ierr = PetscDeviceContextRestoreBLASHandle(dctx,&cublasv2handle);CHKERRQ(ierr);
   ierr = VecCUDARestoreArrayRead(xx,&xarray);CHKERRQ(ierr);
   ierr = VecCUDARestoreArray(zz,&zarray);CHKERRQ(ierr);
   ierr = MatDenseCUDARestoreArrayRead(A,&da);CHKERRQ(ierr);
