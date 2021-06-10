@@ -861,6 +861,4 @@ PETSC_EXTERN PetscErrorCode DMProjectField(DM, PetscReal, Vec,
 
 PETSC_EXTERN PetscErrorCode DMAdaptInterpolator(DM, DM, Mat, KSP, PetscInt, Vec[], Vec[], Mat *, void *);
 PETSC_EXTERN PetscErrorCode DMCheckInterpolator(DM, Mat, PetscInt, Vec[], Vec[], PetscReal);
-
-PETSC_EXTERN PetscErrorCode KSPSetAsyncREMOVEME(KSP,PetscBool);
 #endif
