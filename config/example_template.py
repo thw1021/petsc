@@ -24,6 +24,7 @@ petsc_bindir='@PETSC_BINDIR@'
 args='@ARGS@'
 diff_args='@DIFF_ARGS@'
 timeoutfactor=@TIMEOUTFACTOR@
+export PETSC_OPTIONS="@PETSC_OPTIONS@ @PETSC_TEST_OPTIONS@"
 
 mpiexec=${PETSCMPIEXEC:-"@MPIEXEC@"}
 diffexec=${PETSCDIFF:-"${petsc_bindir}/petscdiff"}
