@@ -212,8 +212,7 @@ $     SETERRQ(comm,number,mess)
  @*/
 PetscErrorCode  PetscReturnErrorHandler(MPI_Comm comm,int line,const char *fun,const char *file,PetscErrorCode n,PetscErrorType p,const char *mess,void *ctx)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(n);
+  return n;
 }
 
 static char PetscErrorBaseMessage[1024];
@@ -378,7 +377,6 @@ PetscErrorCode PetscError(MPI_Comm comm,int line,const char *func,const char *fi
   PetscBool      ismain;
   PetscErrorCode ierr;
 
-  PetscFunctionBegin;
   if (!func) func = "User provided function";
   if (!file) file = "User file";
   if (comm == MPI_COMM_NULL) comm = PETSC_COMM_SELF;
@@ -395,8 +393,10 @@ PetscErrorCode PetscError(MPI_Comm comm,int line,const char *func,const char *fi
   if (p == PETSC_ERROR_INITIAL && n != PETSC_ERR_MEMC) PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__);
 
   if (!eh) ierr = PetscTraceBackErrorHandler(comm,line,func,file,n,p,lbuf,NULL);
-  else     ierr = (*eh->handler)(comm,line,func,file,n,p,lbuf,eh->ctx);
-
+  else {
+    ierr = (*eh->handler)(comm,line,func,file,n,p,lbuf,eh->ctx);
+    PetscStackClearTop;
+  }
   /*
       If this is called from the main() routine we call MPI_Abort() instead of
     return to allow the parallel program to be properly shutdown.
@@ -416,7 +416,7 @@ PetscErrorCode PetscError(MPI_Comm comm,int line,const char *func,const char *fi
     PetscCxxErrorThrow();
   }
 #endif
-  PetscFunctionReturn(ierr);
+  return ierr;
 }
 
 /* -------------------------------------------------------------------------*/

@@ -1125,8 +1125,10 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   /*
       Setup building of stack frames for all function calls
   */
+  flg  = PETSC_FALSE;
+  ierr = PetscOptionsGetBool(NULL,NULL,"-checkstack",&flg,NULL);CHKERRQ(ierr);
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
-  ierr = PetscStackCreate();CHKERRQ(ierr);
+  ierr = PetscStackCreate(flg);CHKERRQ(ierr);
 #endif
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
