@@ -456,6 +456,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     return output
 
   def filterCompileOutput(self, output):
+    if output.find('unknown pragma') >= 0: return output
     if output.find('warning:  attribute "deprecated" is unknown, ignored') >= 0: return output
     if output.find('PGC-W-0129-Floating point overflow') >= 0: return output
     if output.find('warning #264: floating-point value does not fit in required floating-point type') >= 0: return output
@@ -847,9 +848,14 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.outputMakeMacros(f, self)
     for child in self.childGraph.vertices:
       self.outputMakeMacros(f, child)
+    # The testoptions are provided in packages/
+    testoptions = ''
+    for child in self.childGraph.vertices:
+        if hasattr(child,'found') and child.found and hasattr(child,'testoptions') and child.testoptions:
+          testoptions += ' '+child.testoptions
+    f.write('PETSC_TEST_OPTIONS = '+testoptions+'\n')
     if not hasattr(name, 'close'):
       f.close()
-    return
 
   def outputMakeRuleHeader(self, name):
     '''Write the make configuration header (bmake file)'''
