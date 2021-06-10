@@ -253,16 +253,25 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetCUSOLVERHandle_CUDA(Pets
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
 
   PetscFunctionBegin;
+#if 0
   if (!dcu->cusolverdnhandle) {
+    cudaStream_t     cusolverStream;
     cusolverStatus_t cserr;
     PetscErrorCode   ierr;
 
     ierr = cusolverHandlePool.get(dcu->cusolverdnhandle);CHKERRQ(ierr);
-    /* no need to do the checks as with blas, docs make no mention of workspace reset so
-       we take their (implicit) word for it */
-    cserr = cusolverDnSetStream(dcu->cusolverdnhandle,dcu->stream);CHKERRCUSOLVER(cserr);
+    cserr = cusolverDnGetStream(dcu->cusolverdnhandle,&cusolverStream);CHKERRCUSOLVER(cserr);
+    if (cusolverStream != dcu->stream) {
+      cserr = cusolverDnSetStream(dcu->cusolverdnhandle,dcu->stream);CHKERRCUSOLVER(cserr);
+    }
   }
   *((cusolverDnHandle_t *)handle) = dcu->cusolverdnhandle;
+#else
+  {
+    PetscErrorCode ierr;
+    ierr = PetscCUSOLVERDnGetHandle((cusolverDnHandle_t*)handle);CHKERRQ(ierr);
+  }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -271,9 +280,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextRestoreCUSOLVERHandle_CUDA(
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
 
   PetscFunctionBegin;
+#if 0
   if (PetscUnlikelyDebug(*((cusolverDnHandle_t *)handle) != dcu->cusolverdnhandle)) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"cusolver handle is not the same as the one that was checked out");
   }
+#endif
   PetscFunctionReturn(0);
 }
 
