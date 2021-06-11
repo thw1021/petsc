@@ -4,8 +4,8 @@ ALL: lib
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
-SOURCEC	  = dcontext.c dstreamreg.c
-SOURCECXX =
+SOURCEC	  = dstreamreg.c
+SOURCECXX = dcontext.cxx
 SOURCEF	  =
 SOURCEH	  =
 MANSEC	  = Sys
