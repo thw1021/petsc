@@ -354,8 +354,8 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
       ierr = VecGetLocalSize(tao->solution,&K);CHKERRQ(ierr); /* If user does not setup dict matrix, use identiy matrix, K=N */
     }
     if (!gn->y) {
-      ierr = VecCreate(PETSC_COMM_SELF,&gn->y);CHKERRQ(ierr);
-      ierr = VecSetSizes(gn->y,PETSC_DECIDE,K);CHKERRQ(ierr);
+      ierr = VecCreate(PetscObjectComm((PetscObject)tao->solution),&gn->y);CHKERRQ(ierr);
+      ierr = VecSetSizes(gn->y,K,PETSC_DECIDE);CHKERRQ(ierr);
       ierr = VecSetFromOptions(gn->y);CHKERRQ(ierr);
       ierr = VecSet(gn->y,0.0);CHKERRQ(ierr);
 
