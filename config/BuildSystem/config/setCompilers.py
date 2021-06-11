@@ -1260,23 +1260,18 @@ class Configure(config.base.Configure):
 
   def containsInvalidFlag(self, output):
     '''If the output contains evidence that an invalid flag was used, return True'''
-    if (output.find('Unrecognized command line option') >= 0 or output.find('Unrecognised command line option') >= 0 or
-        output.find('unrecognized command line option') >= 0 or output.find('unrecognized option') >= 0 or output.find('unrecognised option') >= 0 or
-        output.find('not recognized') >= 0 or output.find('not recognised') >= 0 or
-        output.find('unknown option') >= 0 or output.find('unknown flag') >= 0 or output.find('Unknown switch') >= 0 or
-        output.find('ignoring option') >= 0 or output.find('ignored') >= 0 or
-        output.find('argument unused') >= 0 or output.find('not supported') >= 0 or
-        # When checking for the existence of 'attribute'
-        output.find('is unsupported and will be skipped') >= 0 or
-        output.find('illegal option') >= 0 or output.find('Invalid option') >= 0 or
-        (output.find('bad ') >= 0 and output.find(' option') >= 0) or
-        output.find('linker input file unused because linking not done') >= 0 or
-        output.find('PETSc Error') >= 0 or
-        output.find('Unbekannte Option') >= 0 or
-        output.find('warning: // comments are not allowed in this language') >= 0 or
-        output.find('no se reconoce la opci') >= 0) or output.find('non reconnue') >= 0:
-      return 1
-    return 0
+    # ALL STRINGS IN SUBSTRINGS MUST BE LOWERCASE!
+    substrings = ('unrecognized command line option','unrecognised command line option',
+                  'unrecognized option','unrecognised option','not recognized',
+                  'not recognised','unknown option','unknown warning option',
+                  'unknown flag','unknown switch','ignoring option','ignored','argument unused',
+                  'not supported','is unsupported and will be skipped','illegal option',
+                  'invalid option','invalid suboption','bad ',' option','petsc error',
+                  'unbekannte option','linker input file unused because linking not done',
+                  'warning: // comments are not allowed in this language',
+                  'no se reconoce la opci','non reconnue')
+    outlo = output.lower()
+    return any(sub in outlo for sub in substrings)
 
   def checkCompilerFlag(self, flag, includes = '', body = '', compilerOnly = 0):
     '''Determine whether the compiler accepts the given flag'''
@@ -1286,19 +1281,15 @@ class Configure(config.base.Configure):
     (output, error, status) = self.outputCompile(includes, body)
     output += error
     self.logPrint('Output from compiling with '+oldFlags+' '+flag+'\n'+output)
-    valid   = 1
     setattr(self, flagsArg, oldFlags)
     # Please comment each entry and provide an example line
     if status:
-      valid = 0
       self.logPrint('Rejecting compiler flag '+flag+' due to nonzero status from link')
-    # Lahaye F95
-    if output.find('Invalid suboption') >= 0:
-      valid = 0
-    if self.containsInvalidFlag(output):
-      valid = 0
+      return False
+    elif self.containsInvalidFlag(output):
       self.logPrint('Rejecting compiler flag '+flag+' due to \n'+output)
-    return valid
+      return False
+    return True
 
   def insertCompilerFlag(self, flag, compilerOnly):
     '''DANGEROUS: Put in the compiler flag without checking'''
