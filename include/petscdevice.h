@@ -153,10 +153,6 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext,PetscDe
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextGetBLASHandle(PetscDeviceContext,void*);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextRestoreBLASHandle(PetscDeviceContext,void*);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextGetSOLVERHandle(PetscDeviceContext,void*);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextRestoreSOLVERHandle(PetscDeviceContext,void*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextQueryIdle(PetscDeviceContext,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextFork(PetscDeviceContext,PetscInt,PetscDeviceContext**);

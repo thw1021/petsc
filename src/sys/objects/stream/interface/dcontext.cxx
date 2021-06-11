@@ -1,9 +1,62 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
+#include "objpool.hpp"
 
 const char *const PetscStreamTypes[] = {"global_blocking","default_blocking","global_nonblocking","MAX_TYPE","PetscStreamType","PETSC_STREAM_",NULL};
 
-/* initial global context will have ID = 0 */
 static PetscInt PetscDeviceContextID = 0;
+
+/* Define the allocator */
+struct PetscDeviceContextAllocator : public Petsc::allocator<PetscDeviceContext>
+{
+  static PETSC_NODISCARD PetscErrorCode create(PetscDeviceContext *dctx) PETSC_NOEXCEPT
+  {
+    PetscDeviceContext dc;
+    PetscErrorCode     ierr;
+
+    PetscFunctionBegin;
+    *dctx          = NULL;
+    ierr           = PetscNew(&dc);CHKERRQ(ierr);
+    dc->id         = PetscDeviceContextID++;
+    dc->idle       = PETSC_TRUE;
+    dc->streamType = PETSC_STREAM_DEFAULT_BLOCKING;
+    *dctx          = dc;
+    PetscFunctionReturn(0);
+  }
+
+  static PETSC_NODISCARD PetscErrorCode destroy(PetscDeviceContext &dctx) PETSC_NOEXCEPT
+  {
+    PetscErrorCode ierr;
+
+    PetscFunctionBegin;
+    if (PetscUnlikelyDebug(dctx->numChildren)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Device context still has %D un-restored children, must call PetscDeviceContextRestore() on all children before destroying",dctx->numChildren);
+    ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);
+    ierr = PetscFree(dctx->type);CHKERRQ(ierr);
+    ierr = PetscFree(dctx->childIDs);CHKERRQ(ierr);
+    ierr = PetscFree(dctx);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+};
+
+static Petsc::objectPool<PetscDeviceContext,PetscDeviceContextAllocator> contextPool;
+
+/* finalizer also needs its specialization */
+template <>
+PetscErrorCode Petsc::objectPool<PetscDeviceContext,PetscDeviceContextAllocator>::finalize(void) PETSC_NOEXCEPT
+{
+  PetscFunctionBegin;
+  try {
+    while (!contextPool._stack.empty()) {
+      PetscErrorCode ierr;
+
+      ierr = PetscDeviceContextAllocator::destroy(contextPool._stack.top());CHKERRQ(ierr);
+      contextPool._stack.pop();
+    }
+  } catch (std::exception const &ex) {
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
+  }
+  contextPool._registered = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
 
 /*@C
   PetscDeviceContextCreate - Creates a PetscDeviceContext
@@ -17,18 +70,12 @@ static PetscInt PetscDeviceContextID = 0;
 @*/
 PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext *dctx)
 {
-  PetscDeviceContext dc;
-  PetscErrorCode     ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(dctx,1);
-  ierr           = PetscDeviceInitializePackage();CHKERRQ(ierr);
-  *dctx          = NULL;
-  ierr           = PetscNew(&dc);CHKERRQ(ierr);
-  dc->id         = PetscDeviceContextID++;
-  dc->idle       = PETSC_TRUE;
-  dc->streamType = PETSC_STREAM_DEFAULT_BLOCKING;
-  *dctx          = dc;
+  ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
+  ierr = contextPool.get(*dctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -52,14 +99,8 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!dctx) PetscFunctionReturn(0);
-  PetscValidPointer(dctx,1);
   if (!*dctx) PetscFunctionReturn(0);
-  if (PetscUnlikelyDebug((*dctx)->numChildren)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Device context still has %D un-restored children, must call PetscDeviceContextRestore() on all children before destroying",(*dctx)->numChildren);
-  ierr = (*(*dctx)->ops->destroy)(*dctx);CHKERRQ(ierr);
-  ierr = PetscFree((*dctx)->type);CHKERRQ(ierr);
-  ierr = PetscFree((*dctx)->childIDs);CHKERRQ(ierr);
-  ierr = PetscFree(*dctx);CHKERRQ(ierr);
+  ierr = contextPool.reclaim(*dctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -169,92 +210,6 @@ PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext dctx, PetscDeviceC
   ierr = PetscDeviceContextSetType(*dctxdup,dctx->type);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetStreamType(*dctxdup,dctx->streamType);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetUp(*dctxdup);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-  PetscDeviceContextGetBLASHandle - Retrieves the implementation specific BLAS handle
-
-  Not Collective, Asynchronous
-
-  Input Parameter:
-. dctx - The PetscDeviceContext object
-
-  Output Parameter:
-. handle - The handle
-
-  Notes:
-  This is a borrowed reference, the user should not destroy it themselves
-
-  Level: advanced
-
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetStreamType(), PetscDeviceContextRestoreBLASHandle()
-@*/
-PetscErrorCode PetscDeviceContextGetBLASHandle(PetscDeviceContext dctx, void *handle)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidStreamType(dctx,1);
-  PetscValidPointer(handle,2);
-  if (PetscUnlikelyDebug(!dctx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscDeviceContext is not setup yet, must call PetscDeviceContextSetUp()");
-  ierr = (*dctx->ops->getblashandle)(dctx,handle);CHKERRQ(ierr);
-  dctx->idle = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-/*@C
-  PetscDeviceContextRestoreBLASHandle - Restores the implementation specific BLAS handle
-
-  Not Collective, Asynchronous
-
-  Input Parameter:
-+ dctx   - The PetscDeviceContext object
-- handle - The handle
-
-  Notes:
-  The restored handle must be the same handle that was checked out via PetscDeviceContextGetBLASHandle()
-
-  Level: advanced
-
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetStreamType(), PetscDeviceContextGetBLASHandle()
-@*/
-PetscErrorCode PetscDeviceContextRestoreBLASHandle(PetscDeviceContext dctx, void *handle)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidStreamType(dctx,1);
-  PetscValidPointer(handle,2);
-  ierr = (*dctx->ops->restoreblashandle)(dctx,handle);CHKERRQ(ierr);
-  /* In case the handle is checked out, sync'ed while checked out, then work queued onto stream */
-  dctx->idle = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscDeviceContextGetSOLVERHandle(PetscDeviceContext dctx, void *handle)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidStreamType(dctx,1);
-  PetscValidPointer(handle,2);
-  if (PetscUnlikelyDebug(!dctx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscDeviceContext is not setup yet, must call PetscDeviceContextSetUp()");
-  ierr = (*dctx->ops->getsolverhandle)(dctx,handle);CHKERRQ(ierr);
-  dctx->idle = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscDeviceContextRestoreSOLVERHandle(PetscDeviceContext dctx, void *handle)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidStreamType(dctx,1);
-  PetscValidPointer(handle,2);
-  ierr = (*dctx->ops->restoresolverhandle)(dctx,handle);CHKERRQ(ierr);
-  /* In case the handle is checked out, sync'ed while checked out, then work queued onto stream */
-  dctx->idle = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -662,6 +617,7 @@ PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
   if (!globalContextSetup) {
     PetscErrorCode ierr;
 
+    ierr = PetscInfo(NULL,"Initializing root PetscDeviceContext\n");CHKERRQ(ierr);
     ierr = PetscRegisterFinalize(PetscDeviceContextDestroyGlobalContext_Internal);CHKERRQ(ierr);
     ierr = PetscDeviceContextCreate(&globalContext);CHKERRQ(ierr);
     if (PetscUnlikelyDebug(globalContext->id != 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"The root current PetscDeviceContext should have id = 0, however it has id = %D",globalContext->id);

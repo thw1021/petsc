@@ -7,8 +7,8 @@
 typedef struct {
   cudaStream_t       stream;
   cudaEvent_t        event;
-  cublasHandle_t     cublasv2handle;
-  cusolverDnHandle_t cusolverdnhandle;
+  cublasHandle_t     blas;
+  cusolverDnHandle_t solver;
 } PetscDeviceContext_CUDA;
 
 /* Silence undefined identifier errors for the op structs */
