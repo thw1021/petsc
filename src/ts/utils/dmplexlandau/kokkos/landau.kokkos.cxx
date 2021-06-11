@@ -543,7 +543,6 @@ extern "C"  {
                     Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,Nb), [=] (int g) {
                         PetscScalar     vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
                         PetscInt        q,d,nc,idx = Idxs[g];
-                        PetscErrorCode  ierr = 0;
                         if (idx >= 0) {
                           nc = 1;
                         } else {
@@ -554,8 +553,7 @@ extern "C"  {
                             vals[q*nc + d] = s_scale(f,q)*s_scale(g,d)*s_fieldMats(f,g);
                           }
                         }
-                        MatSetValuesDevice(d_mat,nr,&s_idx(f,0),nc,&s_idx(g,0),vals,ADD_VALUES,&ierr);
-                        if (ierr) return;
+                        MatSetValuesDevice(d_mat,nr,&s_idx(f,0),nc,&s_idx(g,0),vals,ADD_VALUES);
                       });
                   });
               }
@@ -621,7 +619,6 @@ extern "C"  {
                   Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,0,Nb), [=] (int g) {
                       PetscScalar vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
                       PetscInt    q,d,nc,idx = Idxs[g];
-                      PetscErrorCode  ierr = 0;
                       if (idx >= 0) {
                         nc = 1;
                       } else {
