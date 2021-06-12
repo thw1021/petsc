@@ -78,7 +78,8 @@ class Configure(config.package.Package):
   def __str__(self):
     output  = config.package.Package.__str__(self)
     if output and self.mpiexec: output  += '  Mpiexec: '+self.mpiexec.replace(' -n 1','')+'\n'
-    if hasattr(self,'mpi_pkg'): output  += '  Implementation: '+self.mpi_pkg+'\n'
+    if self.mpi_pkg: output  += '  Implementation: '+self.mpi_pkg+'
+'
     return output+self.mpi_pkg_version
 
   def generateLibList(self, directory):
