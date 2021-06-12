@@ -119,7 +119,6 @@ PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, PetscReal nu_
     cerr = cudaMalloc((void **)&SData_d->dfdz,   nip*Nf*szs);CHKERRCUDA(cerr);     // kernel input
 #endif
     cerr = cudaMalloc((void **)&SData_d->IPf,    nip*Nf*szs);CHKERRCUDA(cerr); // Nq==Nb
-    cerr = cudaMalloc((void **)&SData_d->ierr, sizeof(PetscErrorCode));CHKERRCUDA(cerr); // not used
   }
   PetscFunctionReturn(0);
 }
@@ -154,7 +153,6 @@ PetscErrorCode LandauCUDAStaticDataClear(LandauGeomData *SData_d)
     if (SData_d->IPf) {
       cerr = cudaFree(SData_d->IPf);CHKERRCUDA(cerr);
     }
-    cerr = cudaFree(SData_d->ierr);CHKERRCUDA(cerr);
   }
   PetscFunctionReturn(0);
 }
