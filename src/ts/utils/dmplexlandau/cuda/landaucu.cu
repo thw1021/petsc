@@ -752,7 +752,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
     ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
   }
 
-  // First time assembly even with GPU assembly, or not GPU assembly
+  // First time assembly with or without GPU assembly
   if (d_elemMats) {
     PetscScalar *elemMats=NULL,*elMat;
     ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
