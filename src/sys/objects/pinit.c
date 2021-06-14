@@ -3,8 +3,12 @@
    This file defines the initialization of PETSc, including PetscInitialize()
 */
 #include <petsc/private/petscimpl.h>        /*I  "petscsys.h"   I*/
-#include <petscvalgrind.h>
 #include <petscviewer.h>
+
+#if !defined(PETSC_HAVE_WINDOWS_COMPILERS)
+#include <petsc/private/valgrind/valgrind.h>
+PetscBool PETSC_RUNNING_ON_VALGRIND = PETSC_FALSE;
+#endif
 
 #if defined(PETSC_HAVE_CUDA)
 #include <petsccublas.h>
@@ -1153,6 +1157,10 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   ierr = adios_declare_group(&Petsc_adios_group,"PETSc","",adios_stat_default);CHKERRQ(ierr);
   ierr = adios_select_method(Petsc_adios_group,"MPI","","");CHKERRQ(ierr);
   ierr = adios_read_init_method(ADIOS_READ_METHOD_BP,PETSC_COMM_WORLD,"");CHKERRQ(ierr);
+#endif
+
+#if defined(__VALGRIND_H)
+  PETSC_RUNNING_ON_VALGRIND = RUNNING_ON_VALGRIND? PETSC_TRUE: PETSC_FALSE;
 #endif
 
   /*
