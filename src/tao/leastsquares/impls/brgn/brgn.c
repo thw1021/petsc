@@ -351,11 +351,9 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
     if (!gn->y) {
       if (gn->D) {
         ierr = MatGetSize(gn->D,&K,&N);CHKERRQ(ierr); /* Shell matrices still must have sizes defined. K = N for identity matrix, K=N-1 or N for gradient matrix */
-        ierr = VecCreate(PetscObjectComm((PetscObject)tao->solution),&gn->y);CHKERRQ(ierr);
-        ierr = VecSetSizes(gn->y,K,PETSC_DECIDE);CHKERRQ(ierr);
-        ierr = VecSetFromOptions(gn->y);CHKERRQ(ierr);
+        ierr = MatCreateVecs(gn->D,NULL,&gn->y);CHKERRQ(ierr);
       } else {
-        ierr = VecDuplicate(tao->solution,&gn->y);CHKERRQ(ierr);
+        ierr = VecDuplicate(tao->solution,&gn->y);CHKERRQ(ierr); /* If user does not setup dict matrix, use identiy matrix, K=N */
       }
       ierr = VecSet(gn->y,0.0);CHKERRQ(ierr);
     }
