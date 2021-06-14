@@ -666,10 +666,8 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
     ierr = MPI_Comm_size(PetscObjectComm((PetscObject)Factor),&size);CHKERRMPI(ierr);
     if (Factor->ops->getinertia) {
 #if defined(PETSC_HAVE_MUMPS)
-      MatSolverType     stype;
       PetscBool         isMUMPS;
-      ierr = PCFactorGetMatSolverType(pc,&stype);CHKERRQ(ierr);
-      ierr = PetscStrcmp(stype, MATSOLVERMUMPS, &isMUMPS);CHKERRQ(ierr);
+      ierr = PetscObjectTypeCompare((PetscObject)Factor,"mumps",&isMUMPS);CHKERRQ(ierr);
       if (isMUMPS) { /* must set mumps ICNTL(13)=1 and ICNTL(24)=1 to call MatGetInertia() */
         ierr = MatMumpsSetIcntl(Factor,24,1);CHKERRQ(ierr);
         if (size > 1) {

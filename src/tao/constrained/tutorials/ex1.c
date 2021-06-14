@@ -25,7 +25,7 @@ Input parameters include:\n\
   -snes_compare_explicit : compare user Jacobian with finite difference Jacobian \n\
   -tao_cmonitor      : convergence monitor with constraint norm \n\
   -tao_view_solution : view exact solution at each itteration\n\
-  Note: external package MUMPS is required to run pdipm. This is designed for a maximum of 2 processors, the code will error if size > 2.\n";
+  Note: external package MUMPS is required to run pdipm in parallel. This is designed for a maximum of 2 processors, the code will error if size > 2.\n";
 
 /*
    User-defined application context - contains data needed by the application
@@ -59,13 +59,13 @@ PetscErrorCode main(int argc,char **argv)
   PC             pc;
   AppCtx         user;  /* application context */
   Vec            x;
-  PetscMPIInt    rank;
+  PetscMPIInt    size;
   TaoType        type;
   PetscBool      pdipm;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
-  if (rank>1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,"More than 2 processors detected. Example written to use max of 2 processors.\n");
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  if (size>2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,"More than 2 processors detected. Example written to use max of 2 processors.\n");
 
   ierr = PetscPrintf(PETSC_COMM_WORLD,"---- Constrained Problem -----\n");CHKERRQ(ierr);
   ierr = InitializeProblem(&user);CHKERRQ(ierr); /* sets up problem, function below */
@@ -93,7 +93,9 @@ PetscErrorCode main(int argc,char **argv)
       This algorithm produces matrices with zeros along the diagonal therefore we use
     MUMPS which provides solver for indefinite matrices
   */
+#if defined(PETSC_HAVE_MUMPS)
   ierr = PCFactorSetMatSolverType(pc,MATSOLVERMUMPS);CHKERRQ(ierr);  /* requires mumps to solve pdipm */
+#endif
   ierr = KSPSetType(ksp,KSPPREONLY);CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
 
@@ -129,6 +131,7 @@ PetscErrorCode InitializeProblem(AppCtx *user)
   ierr = PetscOptionsGetBool(NULL,NULL,"-no_eq",&user->noeqflag,NULL);CHKERRQ(ierr);
 
   if (!user->noeqflag) {
+    /* Tell user the correct solution, not an error checking */
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Solution should be f(1,1)=-2\n");CHKERRQ(ierr);
   }
 
@@ -149,10 +152,10 @@ PetscErrorCode InitializeProblem(AppCtx *user)
   /* create scater to zero */
   ierr = VecScatterCreateToZero(user->x,&user->scat,&user->Xseq);CHKERRQ(ierr);
 
-    user->ne = 1;
-    user->ni = 2;
-    neloc = (rank==0)?user->ne:0;
-    niloc = (rank==0)?user->ni:0;
+  user->ne = 1;
+  user->ni = 2;
+  neloc = (rank==0)?user->ne:0;
+  niloc = (rank==0)?user->ni:0;
 
   if (!user->noeqflag) {
     ierr = VecCreate(PETSC_COMM_WORLD,&user->ce);CHKERRQ(ierr); /* a 1x1 vec for equality constraints */
@@ -192,7 +195,7 @@ PetscErrorCode DestroyProblem(AppCtx *user)
 
   PetscFunctionBegin;
   if (!user->noeqflag) {
-   ierr = MatDestroy(&user->Ae);CHKERRQ(ierr);
+    ierr = MatDestroy(&user->Ae);CHKERRQ(ierr);
   }
   ierr = MatDestroy(&user->Ai);CHKERRQ(ierr);
   ierr = MatDestroy(&user->H);CHKERRQ(ierr);
@@ -450,7 +453,7 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
 /*TEST
 
    build:
-      requires: !complex !define(PETSC_USE_CXX) mumps
+      requires: !complex !define(PETSC_USE_CXX)
 
    test:
       args: -tao_converged_reason -tao_pdipm_kkt_shift_pd
@@ -459,6 +462,7 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
       suffix: 2
       nsize: 2
       args: -tao_converged_reason -tao_pdipm_kkt_shift_pd
+      requires: mumps
 
    test:
       suffix: 3
@@ -468,6 +472,7 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
       suffix: 4
       nsize: 2
       args: -tao_converged_reason -no_eq
+      requires: mumps
 
    test:
       suffix: 5
@@ -480,22 +485,25 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
    test:
       suffix: 7
       nsize: 2
+      requires: mumps
       args: -tao_cmonitor -tao_type almm
 
    test:
       suffix: 8
       nsize: 2
-      requires: cuda
+      requires: cuda mumps
       args: -tao_cmonitor -tao_type almm -vec_type cuda -mat_type aijcusparse
 
    test:
       suffix: 9
       nsize: 2
       args: -tao_cmonitor -tao_type almm -no_eq
+      requires: mumps
 
    test:
       suffix: 10
       nsize: 2
       args: -tao_cmonitor -tao_type almm -tao_almm_type phr -no_eq
+      requires: mumps
 
 TEST*/
