@@ -1,4 +1,5 @@
 import config.package
+import os
 
 class Configure(config.package.Package):
   def __init__(self, framework):
@@ -21,7 +22,6 @@ class Configure(config.package.Package):
     return
 
   def Install(self):
-    import os
     installLibPath = os.path.join(self.installDir, 'lib')
     if self.setCompilers.isDarwin(self.log):
       apple = 'You may need to\n (csh/tcsh) setenv MACOSX_DEPLOYMENT_TARGET 10.X\n (sh/bash) MACOSX_DEPLOYMENT_TARGET=10.X; export MACOSX_DEPLOYMENT_TARGET\nbefore running make on PETSc'
@@ -52,16 +52,6 @@ class Configure(config.package.Package):
     output,err,ret  = config.base.Configure.executeShellCommand(installcmd, cwd=self.packageDir, timeout=100, log=self.log)
     if ret: raise RuntimeError('Error installing mpi4py. Check '+logfile)
     self.framework.popLanguage()
-
-    if 'PYTHONPATH' in os.environ:
-      self.logPrintBox('To use mpi4py, do\nexport PYTHONPATH=${PYTHONPATH}'+os.pathsep+installLibPath,rmDir = 0)
-      os.environ['PYTHONPATH'] = os.environ['PYTHONPATH']+os.pathsep+installLibPath
-    else:
-      self.logPrintBox('To use mpi4py, do\nexport PYTHONPATH='+installLibPath,rmDir = 0)
-      os.environ['PYTHONPATH'] = installLibPath
-    self.addMakeMacro('MPI4PY',"yes")
-    self.addMakeMacro('PETSC_MPI4PY_PYTHONPATH',installLibPath)
-    self.found = 1
     return self.installDir
 
   def configureLibrary(self):
@@ -72,4 +62,13 @@ class Configure(config.package.Package):
         raise RuntimeError('mpi4py, in the context of PETSc,requires Python with numpy module installed.\n'
                            'Please install using package managers - for ex: "apt" or "dnf" (on linux),\n'
                            'or  using: %s -m pip install %s' % (self.python.pyexe, 'numpy'))
-
+    installLibPath = os.path.join(self.installDir, 'lib')
+    if 'PYTHONPATH' in os.environ:
+      self.logPrintBox('To use mpi4py, do\nexport PYTHONPATH=${PYTHONPATH}'+os.pathsep+installLibPath,rmDir = 0)
+      os.environ['PYTHONPATH'] = os.environ['PYTHONPATH']+os.pathsep+installLibPath
+    else:
+      self.logPrintBox('To use mpi4py, do\nexport PYTHONPATH='+installLibPath,rmDir = 0)
+      os.environ['PYTHONPATH'] = installLibPath
+    self.addMakeMacro('MPI4PY',"yes")
+    self.addMakeMacro('PETSC_MPI4PY_PYTHONPATH',installLibPath)
+    self.found = 1
