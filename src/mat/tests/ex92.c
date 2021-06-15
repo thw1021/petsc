@@ -166,9 +166,7 @@ int main(int argc,char **args)
       if (!flg) {
         if (!rank) {
           ierr = ISSort(is1[i]);CHKERRQ(ierr);
-          /* ierr = ISView(is1[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr); */
           ierr = ISSort(is2[i]);CHKERRQ(ierr);
-          /* ierr = ISView(is2[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr); */
         }
         SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"i=%D, is1 != is2",i);
       }
