@@ -50,7 +50,7 @@ class Configure(config.base.Configure):
     help.addArgument('Compilers', '-with-fortranlib-autodetect=<bool>',     nargs.ArgBool(None, 1, 'Autodetect Fortran compiler libraries'))
     help.addArgument('Compilers', '-with-cxxlib-autodetect=<bool>',         nargs.ArgBool(None, 1, 'Autodetect C++ compiler libraries'))
     help.addArgument('Compilers', '-with-dependencies=<bool>',              nargs.ArgBool(None, 1, 'Compile with -MMD or equivalent flag if possible'))
-    help.addArgument('Compilers', '-with-cxx-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile C++ sources (auto,cxx14,cxx11,0)'))
+    help.addArgument('Compilers', '-with-cxx-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile C++ sources (auto,cxx17,cxx14,cxx11,0)'))
     help.addArgument('Compilers', '-with-hip-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile HIP sources (auto,cxx14,cxx11,0)'))
     help.addArgument('Compilers', '-with-cuda-dialect=<dialect>',           nargs.Arg(None, 'auto', 'Dialect under which to compile CUDA sources (auto,cxx14,cxx11,0)'))
     return
@@ -473,29 +473,16 @@ class Configure(config.base.Configure):
     isGNU indicates if the compiler is g++.
     -with-<lang>-dialect can take options:
       auto: use highest dialect configure can determine
-      cxx17: [future?]
+      cxx20: [future!]
+      cxx17: gnu++17 or c++17
       cxx14: gnu++14 or c++14
       cxx11: gnu++11 or c++11
       0: disable CxxDialect check and use compiler default
     """
-    lang      = language.lower()
-    LANG      = language.upper()
-    TESTCXX14 = 0
-    TESTCXX11 = 0
+    lang = language.lower()
+    LANG = language.upper()
     with_lang_dialect = self.argDB.get('with-'+lang+'-dialect','').upper().replace('X','+') # configure value
-    if with_lang_dialect in ['','0','NONE']: return
-    elif with_lang_dialect == 'AUTO':
-      TESTCXX14 = 1
-      TESTCXX11 = 1
-    elif with_lang_dialect == 'C++14':
-      TESTCXX14 = 1
-    elif with_lang_dialect == 'C++11':
-      TESTCXX11 = 1
-    else:
-      raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
-
-    cxxdialect  = '' # tmp var storing test result
-    # Test borrowed from Jack Poulson (Elemental)
+    if with_lang_dialect in {'','0','NONE'}: return
     includes = """
           #include <random>
           #include <iostream>
@@ -507,60 +494,58 @@ class Configure(config.base.Configure):
           std::mt19937 mt(rd());
           std::normal_distribution<double> dist(0,1);
           const double x = dist(mt);
-          std::cout << x;
+          std::cout << x << std::endl;
           """
     body14 = """
           constexpr std::complex<double> I(0.0,1.0);
           auto lambda = [](auto x, auto y) {return x + y;};
           return lambda(3,4) + (int)std::real(I);
           """
-    self.setCompilers.saveLog()
-    self.setCompilers.pushLanguage(language)
-    if TESTCXX14:
-      flags_to_try = ['']
-      if isGNU: flags_to_try += ['-std=gnu++14']
-      else: flags_to_try += ['-std=c++14']
-      for flag in flags_to_try:
-        self.logWrite(self.setCompilers.restoreLog())
-        self.logPrint('checkCxxDialect: checking CXX14 for '+language+ ' with flag: '+flag)
-        self.setCompilers.saveLog()
-        if self.setCompilers.checkCompilerFlag(flag, includes, body+body14):
-          newflag = getattr(self.setCompilers,LANG+'FLAGS') + ' ' + flag # append flag to the old
-          setattr(self.setCompilers,LANG+'FLAGS',newflag)
-          newflag = getattr(self.setCompilers,LANG+'PPFLAGS') + ' ' + flag # append flag to the old
-          setattr(self.setCompilers,LANG+'PPFLAGS',newflag)
-          cxxdialect = 'C++14'
-          self.addDefine('HAVE_'+LANG+'_DIALECT_CXX14',1)
-          self.addDefine('HAVE_'+LANG+'_DIALECT_CXX11',1)
-          break
+    includes17 = """
+         #include <type_traits>
+         struct S2 { void f(int i); };
+         void S2::f(int i)
+         {
+           [=, *this]{}; // until C++17: Error: invalid syntax
+                         // since C++17: OK: captures the enclosing S2 by copy
+         }
+         """
+    body17 = """
+         S2 foo;
+         foo.f(1);
+         if constexpr (std::is_arithmetic_v<int>) std::cout << "c++17" << std::endl;
+         """
+    dialects = (
+      {'num': '03', 'includes': includes, 'body': body},                          # 1 = c++03
+      {'num': '11', 'includes': includes, 'body': body},                          # 2 = c++11
+      {'num': '14', 'includes': includes, 'body': body+body14},                   # 3 = c++14
+      {'num': '17', 'includes': includes+includes17, 'body': body+body14+body17}, # 4 = c++17
+    )
+    maxDialect = 4
+    if with_lang_dialect != "AUTO":
+      if with_lang_dialect == 'C++14':
+        maxDialect = 3
+      elif with_lang_dialect == 'C++11':
+        maxDialect = 2
+      else:
+        raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
 
-    if with_lang_dialect == 'C++14' and cxxdialect != 'C++14':
+    baseFlag = '-std=gnu++' if isGNU else '-std=c++'
+    self.pushLanguage('C++')
+    for dlct in reversed(dialects[:maxDialect]):
+      flag = ''.join([baseFlag,dlct['num']])
+      self.setCompilers.saveLog()
+      self.logPrint(' '.join(['checkCxxDialect: checking CXX14 for',language,'with flag:',flag]))
       self.logWrite(self.setCompilers.restoreLog())
-      raise RuntimeError('Could not determine compiler flag for with-'+lang+'-dialect=%s,\nIf you know the flag, set it with '+LANG+'FLAGS option')
-    elif not cxxdialect and TESTCXX11:
-      flags_to_try = ['']
-      if isGNU: flags_to_try += ['-std=gnu++11']
-      else: flags_to_try += ['-std=c++11','-std=c++0x']
-      for flag in flags_to_try:
-        self.logWrite(self.setCompilers.restoreLog())
-        self.logPrint('checkCxxDialect: checking CXX11 for '+language+ ' with flag: '+flag)
-        self.setCompilers.saveLog()
-        if self.setCompilers.checkCompilerFlag(flag, includes, body):
-          newflag = getattr(self.setCompilers,LANG+'FLAGS') + ' ' + flag # append flag to the old
-          setattr(self.setCompilers,LANG+'FLAGS',newflag)
-          newflag = getattr(self.setCompilers,LANG+'PPFLAGS') + ' ' + flag # append flag to the old
-          setattr(self.setCompilers,LANG+'PPFLAGS',newflag)
-          cxxdialect = 'C++11'
-          self.addDefine('HAVE_'+LANG+'_DIALECT_CXX11',1)
+      with self.setCompilers.extraCompilerFlags([flag], lang = LANG.replace('X','+')) as skipFlags:
+        if not skipFlags and self.checkCompile(includes = dlct['includes'], body = dlct['body']):
           break
-
-    if with_lang_dialect == 'C++11' and cxxdialect != 'C++11':
-      self.logWrite(self.setCompilers.restoreLog())
-      raise RuntimeError('Could not determine compiler flag for with-'+lang+'-dialect=%s,\nIf you know the flag, set it with '+LANG+'FLAGS option')
-
-    setattr(self,lang+'dialect',cxxdialect) # record the result
-    self.setCompilers.popLanguage()
-    self.logWrite(self.setCompilers.restoreLog())
+      maxDialect -= 1
+    self.popLanguage()
+    maxDialect = max(1,maxDialect) # in case we go < 0
+    for dlct in dialects[:maxDialect]:
+      self.addDefine('HAVE_{}_DIALECT_CXX{}'.format(LANG,dlct['num']),1)
+    setattr(self,lang+'dialect','C++'+dialects[maxDialect-1]['num']) # record the result
     return
 
   def checkCxxComplexFix(self):
