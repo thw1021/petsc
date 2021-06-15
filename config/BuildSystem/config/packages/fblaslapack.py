@@ -14,7 +14,6 @@ class Configure(config.package.Package):
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
-    self.valgrind = framework.require('config.packages.valgrind',self)
     return
 
   def configureLibrary(self):
@@ -26,7 +25,7 @@ class Configure(config.package.Package):
 
   def alternateConfigureLibrary(self):
     '''The Apple Accelerate library uses threads that valgrind cannot handle'''
-    if self.valgrind.found and config.setCompilers.Configure.isDarwin(self.log):
+    if config.setCompilers.Configure.isDarwin(self.log):
       if not self.argDB['download-f2cblaslapack']:
         self.logPrintBox('WARNING: If you plan to use valgrind you must use --download-fblaslapack or --download-f2cblaslapack')
 
