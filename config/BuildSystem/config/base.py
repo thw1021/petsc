@@ -339,6 +339,29 @@ class Configure(script.Script):
       yield
       self.popLanguage()
 
+  @contextlib.contextmanager
+  def extraCompilerFlags(self, extraFlags):
+    assert isinstance(extraFlags,(list,tuple)),"extraFlags must be either a list or tuple"
+    lang = self.language[-1]
+    compilerObject = self.getCompilerObject(lang)
+    oldFlags  = compilerObject.getFlags()
+    compilers = self.getCompilers()
+    compilers.setCompilers.pushLanguage(lang)
+    skipFlags = []
+    try:
+      for i,flag in enumerate(extraFlags):
+        try:
+          compilers.setCompilers.addCompilerFlag(flag)
+        except RuntimeError:
+          skipFlags.append((i,flag))
+      yield skipFlags
+    finally:
+      # This last finally is a bit of deep magic, it makes it so that if the code in the
+      # resulting yield throws some unrelated exception which is meant to be caught
+      # outside this ctx manager then the flags and languages are still reset
+      compilers.setCompilers.popLanguage()
+      compilerObject.setFlags(oldFlags)
+
   def getHeaders(self):
     self.compilerDefines = os.path.join(self.tmpDir, 'confdefs.h')
     self.compilerFixes   = os.path.join(self.tmpDir, 'conffix.h')
@@ -532,9 +555,8 @@ class Configure(script.Script):
     command = self.getCompilerCmd()
     if self.compilerDefines: self.framework.outputHeader(self.compilerDefines)
     self.framework.outputCHeader(self.compilerFixes)
-    f = open(self.compilerSource, 'w')
-    f.write(self.getCode(includes, body, codeBegin, codeEnd))
-    f.close()
+    with open(self.compilerSource, 'w') as f:
+      f.write(self.getCode(includes, body, codeBegin, codeEnd))
     (out, err, ret) = Configure.executeShellCommand(command, checkCommand = report, log = self.log)
     if not os.path.isfile(self.compilerObj):
       err += '\nPETSc Error: No output file produced'

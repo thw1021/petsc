@@ -1263,7 +1263,7 @@ class Configure(config.base.Configure):
     if (output.find('Unrecognized command line option') >= 0 or output.find('Unrecognised command line option') >= 0 or
         output.find('unrecognized command line option') >= 0 or output.find('unrecognized option') >= 0 or output.find('unrecognised option') >= 0 or
         output.find('not recognized') >= 0 or output.find('not recognised') >= 0 or
-        output.find('unknown option') >= 0 or output.find('unknown flag') >= 0 or output.find('Unknown switch') >= 0 or
+        output.find('unknown option') >= 0 or output.find('unknown warning option') >= 0 or output.find('unknown flag') >= 0 or output.find('Unknown switch') >= 0 or
         output.find('ignoring option') >= 0 or output.find('ignored') >= 0 or
         output.find('argument unused') >= 0 or output.find('not supported') >= 0 or
         # When checking for the existence of 'attribute'
