@@ -2118,7 +2118,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
 
   ierr = TSGetStages(ts,&numY,PETSC_IGNORE);CHKERRQ(ierr);
   if (stack->solution_only) {
-    if (tjsch->max_units_ram) tjsch->max_cps_ram = tjsch->max_cps_ram;
+    if (tjsch->max_units_ram) tjsch->max_cps_ram = tjsch->max_units_ram;
     else tjsch->max_units_ram = tjsch->max_cps_ram;
     if (tjsch->max_units_disk) tjsch->max_cps_disk = tjsch->max_units_disk;
   } else {
