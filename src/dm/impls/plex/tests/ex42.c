@@ -281,8 +281,8 @@ static PetscErrorCode LibCeedSetupByDegree(DM dm, AppCtx *ctx, CeedData *data)
   ierr = PetscDSGetDiscretization(ds, 0, (PetscObject *) &cfe);CHKERRQ(ierr);
   ierr = PetscFEGetCeedBasis(cfe, &basisx);CHKERRQ(ierr);
 
-  ierr = DMPlexGetCeedRestriction(cdm, &Erestrictx);CHKERRQ(ierr);
-  ierr = DMPlexGetCeedRestriction(dm,  &Erestrictu);CHKERRQ(ierr);
+  ierr = DMPlexGetCeedRestriction(cdm, NULL, 0, 0, 0, &Erestrictx);CHKERRQ(ierr);
+  ierr = DMPlexGetCeedRestriction(dm,  NULL, 0, 0, 0, &Erestrictu);CHKERRQ(ierr);
   ierr = CeedBasisGetNumQuadraturePoints(basisu, &nqpts);CHKERRQ(ierr);
   ierr = CeedBasisGetNumQuadraturePoints(basisx, &nqptsx);CHKERRQ(ierr);
   if (nqptsx != nqpts) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Number of qpoints for u %D != %D Number of qpoints for x", nqpts, nqptsx);
@@ -341,7 +341,7 @@ int main(int argc, char **argv)
   DM             dm;
   AppCtx         ctx;
   Vec            U, Uloc, V, Vloc;
-  PetscScalar   *v;
+  PetscScalar    *v;
   PetscScalar    area;
   CeedData       ceeddata;
   PetscErrorCode ierr;
@@ -360,6 +360,7 @@ int main(int argc, char **argv)
   ierr = VecDuplicate(Uloc, &Vloc);CHKERRQ(ierr);
 
   /**/
+  ierr = VecSet(Uloc, 1.);CHKERRQ(ierr);
   ierr = VecZeroEntries(V);CHKERRQ(ierr);
   ierr = VecZeroEntries(Vloc);CHKERRQ(ierr);
   ierr = VecGetArray(Vloc, &v);CHKERRQ(ierr);
