@@ -6,6 +6,14 @@
 #include <petsc/private/dmpleximpl.h>  /*I  "petscdmplex.h"  I*/
 #include <petscctable.h>
 
+typedef struct {
+  PetscInt size;    /* component data struct size */
+  PetscInt key;     /* component key */
+  PetscInt offset;  /* component offset in the vector */
+  PetscInt nvar;    /* number of variabes for the component */
+  PetscInt offsetvarrel; /* relative offset from the first component at this point */
+} DMNetworkComponentMetaData;
+
 typedef struct _p_DMNetworkComponentHeader *DMNetworkComponentHeader;
 struct _p_DMNetworkComponentHeader {
   PetscInt index;    /* index for user input global edge and vertex */
@@ -15,15 +23,13 @@ struct _p_DMNetworkComponentHeader {
   PetscInt maxcomps; /* Maximum components at this point (ndata <= maxcomps). maxcomps
                         is set initially to a default value and is incremented every time
                         ndata exceeds maxcomps */
-  /* The following arrays store the different attributes for each component at the given point.
-     The length of these arrays equals maxcomps. The arrays are resized every time
+
+  /* The following array of structs stores the different attributes for each component at the given point.
+     The length of these array equals maxcomps. The array gets resized every time
      ndata exceeds maxcomps
   */
-  PetscInt *size;    /* component data struct sizes */
-  PetscInt *key;     /* component keys */
-  PetscInt *offset;  /* component offset in the vector */
-  PetscInt *nvar;    /* number of variabes for the component */
-  PetscInt *offsetvarrel; /* relative offset from the first component at this point */
+  DMNetworkComponentMetaData *metadata;
+  
 } PETSC_ATTRIBUTEALIGNED(PetscMax(sizeof(double),sizeof(PetscScalar)));
 
 typedef struct _p_DMNetworkComponentValue *DMNetworkComponentValue;
