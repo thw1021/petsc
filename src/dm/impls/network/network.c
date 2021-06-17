@@ -885,7 +885,7 @@ PetscErrorCode DMNetworkRegisterComponent(DM dm,const char *name,size_t size,Pet
 
   if (network->ncomponent == network->max_comps_registered) {
     /* Reached max allowed so resize component */
-    network->max_comps_registered += 2;
+    network->max_comps_registered *= 2;
     ierr = PetscCalloc1(network->max_comps_registered,&newcomponent);CHKERRQ(ierr);
     /* Copy over the previous component info */
     for (i=0; i < network->ncomponent; i++) {
