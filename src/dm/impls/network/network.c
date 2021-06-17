@@ -8,13 +8,13 @@ static PetscErrorCode SetUpNetworkHeaderComponentValue(DM dm,DMNetworkComponentH
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  /* Allocate arrays for component information */
-  ierr = PetscCalloc5(header->maxcomps,&header->size,header->maxcomps,&header->key,header->maxcomps,&header->offset,header->maxcomps,&header->nvar,header->maxcomps,&header->offsetvarrel);CHKERRQ(ierr);
+  /* Allocate metadata array for component information */
+  ierr = PetscCalloc1(header->maxcomps,&header->metadata);CHKERRQ(ierr);
   ierr = PetscCalloc1(header->maxcomps,&cvalue->data);CHKERRQ(ierr);
 
-  /* The size of the header is the size of struct _p_DMNetworkComponentHeader. Since the struct contains PetscInt pointers we cannot use sizeof(struct). So, we need to explicitly calculate the size.
-   If the data header struct changes then this header size calculation needs to be updated. */
-  header->hsize = sizeof(struct _p_DMNetworkComponentHeader) + 5*header->maxcomps*sizeof(PetscInt);
+  /* The size of the header is the size of struct _p_DMNetworkComponentHeader. Since the struct contains DMNetworkComponentMetaData array we cannot use sizeof(struct). So, we need to explicitly calculate the size.
+  */
+  header->hsize = sizeof(struct _p_DMNetworkComponentHeader) + header->maxcomps*sizeof(DMNetworkComponentMetaData);
   header->hsize /= sizeof(DMNetworkComponentGenericDataType);
   PetscFunctionReturn(0);
 }
@@ -528,8 +528,8 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
       network->header[e].subnetid = i;                 /* Subnetwork id */
       network->subnet[i].edges[j] = e;
       network->header[e].ndata           = 0;
-      network->header[e].offset[0]       = 0;
-      network->header[e].offsetvarrel[0] = 0;
+      network->header[e].metadata[0].offset       = 0;
+      network->header[e].metadata[0].offsetvarrel = 0;
       ierr = PetscSectionAddDof(network->DataSection,e,network->header[e].hsize);CHKERRQ(ierr);
 
       /* connected vertices */
@@ -555,8 +555,8 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   k = 0;
   for (v=vStart; v<network->vEnd; v++) { /* local vertices, including ghosts */
     network->header[v].ndata           = 0;
-    network->header[v].offset[0]       = 0;
-    network->header[v].offsetvarrel[0] = 0;
+    network->header[v].metadata[0].offset       = 0;
+    network->header[v].metadata[0].offsetvarrel = 0;
     ierr = PetscSectionAddDof(network->DataSection,v,network->header[v].hsize);CHKERRQ(ierr);
 
     /* shared vertex */
@@ -698,8 +698,8 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
       network->subnet[i].edges[j] = e;
 
       network->header[e].ndata           = 0;
-      network->header[e].offset[0]       = 0;
-      network->header[e].offsetvarrel[0] = 0;
+      network->header[e].metadata[0].offset       = 0;
+      network->header[e].metadata[0].offsetvarrel = 0;
       ierr = PetscSectionAddDof(network->DataSection,e,network->header[e].hsize);CHKERRQ(ierr);
 
       /* connected vertices */
@@ -724,8 +724,8 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 
   for (v = network->vStart; v < network->vEnd; v++) {
     network->header[v].ndata           = 0;
-    network->header[v].offset[0]       = 0;
-    network->header[v].offsetvarrel[0] = 0;
+    network->header[v].metadata[0].offset       = 0;
+    network->header[v].metadata[0].offsetvarrel = 0;
     ierr = PetscSectionAddDof(network->DataSection,v,network->header[e].hsize);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -1085,7 +1085,7 @@ PetscErrorCode DMNetworkGetLocalVecOffset(DM dm,PetscInt p,PetscInt compnum,Pets
 
   ierr = PetscSectionGetOffset(network->DataSection,p,&offsetd);CHKERRQ(ierr);
   header = (DMNetworkComponentHeader)(network->componentdataarray+offsetd);
-  *offset = offsetp + header->offsetvarrel[compnum];
+  *offset = offsetp + header->metadata[compnum].offsetvarrel;
   PetscFunctionReturn(0);
 }
 
@@ -1123,7 +1123,7 @@ PetscErrorCode DMNetworkGetGlobalVecOffset(DM dm,PetscInt p,PetscInt compnum,Pet
   }
   ierr = PetscSectionGetOffset(network->DataSection,p,&offsetd);CHKERRQ(ierr);
   header = (DMNetworkComponentHeader)(network->componentdataarray+offsetd);
-  *offsetg = offsetp + header->offsetvarrel[compnum];
+  *offsetg = offsetp + header->metadata[compnum].offsetvarrel;
   PetscFunctionReturn(0);
 }
 
@@ -1205,7 +1205,7 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   DMNetworkComponentValue  cvalue;
   PetscBool                sharedv=PETSC_FALSE;
   PetscInt                 compnum;
-  PetscInt                 *compsize,*compkey,*compoffset,*compnvar,*compoffsetvarrel;
+  DMNetworkComponentMetaData *metadata;
   void*                    *compdata;
 
   PetscFunctionBegin;
@@ -1223,43 +1223,35 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   cvalue = &network->cvalue[p];
   if (header->ndata == header->maxcomps) {
     /* Reached limit so resize header component arrays */
-    header->maxcomps += 2;
+    header->maxcomps *= 2;
 
     /* Allocate arrays for component information and value */
-    ierr = PetscCalloc5(header->maxcomps,&compsize,header->maxcomps,&compkey,header->maxcomps,&compoffset,header->maxcomps,&compnvar,header->maxcomps,&compoffsetvarrel);CHKERRQ(ierr);
+    ierr = PetscCalloc1(header->maxcomps,&metadata);CHKERRQ(ierr);
     ierr = PetscMalloc1(header->maxcomps,&compdata);CHKERRQ(ierr);
 
     /* Recalculate header size */
-    header->hsize = sizeof(struct _p_DMNetworkComponentHeader) + 5*header->maxcomps*sizeof(PetscInt);
+    header->hsize = sizeof(struct _p_DMNetworkComponentHeader) + header->maxcomps*sizeof(DMNetworkComponentMetaData);
 
     header->hsize /= sizeof(DMNetworkComponentGenericDataType);
 
-    /* Copy over component info */
-    ierr = PetscMemcpy(compsize,header->size,header->ndata*sizeof(PetscInt));CHKERRQ(ierr);
-    ierr = PetscMemcpy(compkey,header->key,header->ndata*sizeof(PetscInt));CHKERRQ(ierr);
-    ierr = PetscMemcpy(compoffset,header->offset,header->ndata*sizeof(PetscInt));CHKERRQ(ierr);
-    ierr = PetscMemcpy(compnvar,header->nvar,header->ndata*sizeof(PetscInt));CHKERRQ(ierr);
-    ierr = PetscMemcpy(compoffsetvarrel,header->offsetvarrel,header->ndata*sizeof(PetscInt));CHKERRQ(ierr);
-
+    /* Copy over component meta data */
+    ierr = PetscMemcpy(metadata,header->metadata,header->ndata*sizeof(DMNetworkComponentMetaData));CHKERRQ(ierr);
+    
     /* Copy over component data pointers */
     ierr = PetscMemcpy(compdata,cvalue->data,header->ndata*sizeof(void*));CHKERRQ(ierr);
 
     /* Free old arrays */
-    ierr = PetscFree5(header->size,header->key,header->offset,header->nvar,header->offsetvarrel);CHKERRQ(ierr);
+    ierr = PetscFree(header->metadata);CHKERRQ(ierr);
     ierr = PetscFree(cvalue->data);CHKERRQ(ierr);
 
     /* Update pointers */
-    header->size = compsize;
-    header->key  = compkey;
-    header->offset = compoffset;
-    header->nvar = compnvar;
-    header->offsetvarrel = compoffsetvarrel;
+    header->metadata = metadata;
 
     cvalue->data = compdata;
 
     /* Update DataSection Dofs */
     /* The dofs for datasection point p equals sizeof the header (i.e. header->hsize) + sizes of the components added at point p. With the resizing of the header, we need to update the dofs for point p. Hence, we add the extra size added for the header */
-    PetscInt additional_size = (5*(header->maxcomps - header->ndata)*sizeof(PetscInt))/sizeof(DMNetworkComponentGenericDataType);
+    PetscInt additional_size = ((header->maxcomps - header->ndata)*sizeof(DMNetworkComponentMetaData))/sizeof(DMNetworkComponentGenericDataType);
     ierr = PetscSectionAddDof(network->DataSection,p,additional_size);CHKERRQ(ierr);
   }
   header = &network->header[p];
@@ -1267,15 +1259,15 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
 
   compnum = header->ndata;
 
-  header->size[compnum] = component->size;
+  header->metadata[compnum].size = component->size;
   ierr = PetscSectionAddDof(network->DataSection,p,component->size);CHKERRQ(ierr);
-  header->key[compnum] = componentkey;
-  if (compnum != 0) header->offset[compnum] = header->offset[compnum-1] + header->size[compnum-1];
+  header->metadata[compnum].key = componentkey;
+  if (compnum != 0) header->metadata[compnum].offset = header->metadata[compnum-1].offset + header->metadata[compnum-1].size;
   cvalue->data[compnum] = (void*)compvalue;
 
   /* variables */
-  header->nvar[compnum] += nvar;
-  if (compnum != 0) header->offsetvarrel[compnum] = header->offsetvarrel[compnum-1] + header->nvar[compnum-1];
+  header->metadata[compnum].nvar += nvar;
+  if (compnum != 0) header->metadata[compnum].offsetvarrel = header->metadata[compnum-1].offsetvarrel + header->metadata[compnum-1].nvar;
 
   header->ndata++;
   PetscFunctionReturn(0);
@@ -1317,14 +1309,14 @@ PetscErrorCode DMNetworkGetComponent(DM dm,PetscInt p,PetscInt compnum,PetscInt 
   header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
 
   if (compnum >= 0) {
-    if (compkey) *compkey = header->key[compnum];
+    if (compkey) *compkey = header->metadata[compnum].key;
     if (component) {
-      offset += header->hsize+header->offset[compnum];
+      offset += header->hsize+header->metadata[compnum].offset;
       *component = network->componentdataarray+offset;
     }
   }
 
-  if (nvar) *nvar = header->nvar[compnum];
+  if (nvar) *nvar = header->metadata[compnum].nvar;
 
   PetscFunctionReturn(0);
 }
@@ -1401,24 +1393,16 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
     header = &network->header[p];
     DMNetworkComponentHeader headerinfo=(DMNetworkComponentHeader)(componentdataarray+offsetp);
     ierr = PetscMemcpy(headerinfo,header,sizeof(struct _p_DMNetworkComponentHeader));CHKERRQ(ierr);
-    PetscInt *headerarr = (PetscInt*)(headerinfo+1);
-    ierr = PetscMemcpy(headerarr,header->size,header->maxcomps*sizeof(PetscInt));CHKERRQ(ierr);
-    headerarr += header->maxcomps;
-    ierr = PetscMemcpy(headerarr,header->key,header->maxcomps*sizeof(PetscInt));CHKERRQ(ierr);
-    headerarr += header->maxcomps;
-    ierr = PetscMemcpy(headerarr,header->offset,header->maxcomps*sizeof(PetscInt));CHKERRQ(ierr);
-    headerarr += header->maxcomps;
-    ierr = PetscMemcpy(headerarr,header->nvar,header->maxcomps*sizeof(PetscInt));CHKERRQ(ierr);
-    headerarr += header->maxcomps;
-    ierr = PetscMemcpy(headerarr,header->offsetvarrel,header->maxcomps*sizeof(PetscInt));CHKERRQ(ierr);
+    DMNetworkComponentMetaData *headerarr = (DMNetworkComponentMetaData*)(headerinfo+1);
+    ierr = PetscMemcpy(headerarr,header->metadata,header->maxcomps*sizeof(DMNetworkComponentMetaData));CHKERRQ(ierr);
 
     /* Copy data */
     cvalue = &network->cvalue[p];
     ncomp  = header->ndata;
 
     for (i = 0; i < ncomp; i++) {
-      offset = offsetp + header->hsize + header->offset[i];
-      ierr = PetscMemcpy(componentdataarray+offset,cvalue->data[i],header->size[i]*sizeof(DMNetworkComponentGenericDataType));CHKERRQ(ierr);
+      offset = offsetp + header->hsize + header->metadata[i].offset;
+      ierr = PetscMemcpy(componentdataarray+offset,cvalue->data[i],header->metadata[i].size*sizeof(DMNetworkComponentGenericDataType));CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -1694,11 +1678,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
     ierr = PetscSectionGetOffset(newDMnetwork->DataSection,e,&offset);CHKERRQ(ierr);
     header = (DMNetworkComponentHeader)(newDMnetwork->componentdataarray+offset);
     /* Update pointers */
-    header->size          = (PetscInt*)(header + 1);
-    header->key           = header->size   + header->maxcomps;
-    header->offset        = header->key    + header->maxcomps;
-    header->nvar          = header->offset + header->maxcomps;
-    header->offsetvarrel  = header->nvar   + header->maxcomps;
+    header->metadata      = (DMNetworkComponentMetaData*)(header+1);
 
     newDMnetwork->subnet[header->subnetid].nedge++;
   }
@@ -1708,11 +1688,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
     header = (DMNetworkComponentHeader)(newDMnetwork->componentdataarray+offset);CHKERRQ(ierr);
 
     /* Update pointers */
-    header->size          = (PetscInt*)(header + 1);
-    header->key           = header->size   + header->maxcomps;
-    header->offset        = header->key    + header->maxcomps;
-    header->nvar          = header->offset + header->maxcomps;
-    header->offsetvarrel  = header->nvar   + header->maxcomps;
+    header->metadata      = (DMNetworkComponentMetaData*)(header + 1);
 
     /* shared vertices: use gidx = header->index to check if v is a shared vertex */
     gidx = header->index;
@@ -2658,7 +2634,7 @@ PetscErrorCode DMDestroy_Network(DM dm)
   if (network->header) {
     np = network->pEnd - network->pStart;
     for (j=0; j < np; j++) {
-      ierr = PetscFree5(network->header[j].size,network->header[j].key,network->header[j].offset,network->header[j].nvar,network->header[j].offsetvarrel);CHKERRQ(ierr);
+      ierr = PetscFree(network->header[j].metadata);CHKERRQ(ierr);
       ierr = PetscFree(network->cvalue[j].data);CHKERRQ(ierr);
     }
     ierr = PetscFree2(network->header,network->cvalue);CHKERRQ(ierr);
@@ -2938,8 +2914,8 @@ PETSC_STATIC_INLINE PetscErrorCode DMISAddSize_private(DM_Network *network,Petsc
   header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
 
   for (i=0; i<ncomps; i++) {
-    key  = header->key[i];
-    nvar = header->nvar[i];
+    key  = header->metadata[i].key;
+    nvar = header->metadata[i].nvar;
     for (j=0; j<numkeys; j++) {
       if (key == keys[j]) {
         if (!blocksize || blocksize[j] == -1) {
@@ -2966,8 +2942,8 @@ PETSC_STATIC_INLINE PetscErrorCode DMISComputeIdx_private(DM dm,PetscInt p,Petsc
   header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
 
   for (i=0; i<ncomps; i++) {
-    key  = header->key[i];
-    nvar = header->nvar[i];
+    key  = header->metadata[i].key;
+    nvar = header->metadata[i].nvar;
     for (j=0; j<numkeys; j++) {
       if (key != keys[j]) continue;
 
@@ -3069,8 +3045,8 @@ PETSC_STATIC_INLINE PetscErrorCode DMISComputeLocalIdx_private(DM dm,PetscInt p,
   header = (DMNetworkComponentHeader)(network->componentdataarray+offset);
 
   for (i=0; i<ncomps; i++) {
-    key  = header->key[i];
-    nvar = header->nvar[i];
+    key  = header->metadata[i].key;
+    nvar = header->metadata[i].nvar;
     for (j=0; j<numkeys; j++) {
       if (key != keys[j]) continue;
 
