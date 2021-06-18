@@ -91,6 +91,9 @@ Changes: Development
 
 .. rubric:: TS:
 
+-  Add ``TSTrajectory`` interface to the CAMS library for optimal offline checkpointing for multistage time stepping schemes
+-  Add option ``-ts_trajectory_max_units_ram`` that will supercede ``-ts_trajectory_max_cps_ram`` in future
+
 .. rubric:: TAO:
 
 .. rubric:: DM/DA:
