@@ -159,6 +159,9 @@ int main(int argc,char **argv)
 
 /*TEST
 
+   build:
+     depends: reaction_diffusion.c
+
    test:
       args: -ts_view  -ts_monitor -ts_max_time 500
       requires: double
