@@ -774,7 +774,7 @@ PETSC_EXTERN const char* PetscCUSolverGetErrorName(cusolverStatus_t status)
 }
 PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult result)
 {
- switch (error) {
+ switch (result) {
  case CUFFT_SUCCESS:                   return "CUFFT_SUCCESS";
  case CUFFT_INVALID_PLAN:              return "CUFFT_INVALID_PLAN";
  case CUFFT_ALLOC_FAILED:              return "CUFFT_ALLOC_FAILED";

@@ -1,17 +1,17 @@
-#requirespackage 'PETSC_HAVE_CUDA'
+
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
-SOURCEC	  =
-SOURCECU  = contextcuda.cu
+SOURCEC	  = devicereg.c
+SOURCECXX = dcontext.cxx
 SOURCEF	  =
-SOURCEHXX = contextcuda.hpp
+SOURCEH   = objpool.hpp
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 DIRS	  =
-LOCDIR	  = src/sys/objects/stream/impls/cupm/
+LOCDIR	  = src/sys/objects/device/interface/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

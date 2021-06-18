@@ -53,10 +53,6 @@ struct _DeviceContextOps {
   PetscErrorCode (*create)(PetscDeviceContext);
   PetscErrorCode (*destroy)(PetscDeviceContext);
   PetscErrorCode (*setup)(PetscDeviceContext);
-  PetscErrorCode (*getblashandle)(PetscDeviceContext,void*);
-  PetscErrorCode (*restoreblashandle)(PetscDeviceContext,void*);
-  PetscErrorCode (*getsolverhandle)(PetscDeviceContext,void*);
-  PetscErrorCode (*restoresolverhandle)(PetscDeviceContext,void*);
   PetscErrorCode (*query)(PetscDeviceContext,PetscBool*);
   PetscErrorCode (*waitforctx)(PetscDeviceContext,PetscDeviceContext);
   PetscErrorCode (*synchronize)(PetscDeviceContext);
