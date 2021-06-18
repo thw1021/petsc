@@ -1340,7 +1340,7 @@ class Configure(config.base.Configure):
         with self.extraCompilerFlags(['-Wunknown-pragmas']) as skipFlags:
           if not skipFlags:
             self.usePragma[language] = self.checkCompile('#pragma GCC poison TEST')
-    if all(self.usePragma.values()): self.framework.enabepoison = True
+    if all(self.usePragma.values()): self.framework.enablepoison = True
     return
 
   def generatePICGuesses(self):
