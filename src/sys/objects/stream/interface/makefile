@@ -4,10 +4,10 @@ ALL: lib
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
-SOURCEC	  = dstreamreg.c
+SOURCEC	  = devicereg.c
 SOURCECXX = dcontext.cxx
 SOURCEF	  =
-SOURCEH	  =
+SOURCEHXX = objpool.hxx
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 DIRS	  =

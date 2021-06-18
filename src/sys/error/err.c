@@ -758,9 +758,41 @@ PETSC_EXTERN const char* PetscCUSolverGetErrorName(cusolverStatus_t status)
     case CUSOLVER_STATUS_INVALID_VALUE:    return "CUSOLVER_STATUS_INVALID_VALUE";
     case CUSOLVER_STATUS_ARCH_MISMATCH:    return "CUSOLVER_STATUS_ARCH_MISMATCH";
     case CUSOLVER_STATUS_INTERNAL_ERROR:   return "CUSOLVER_STATUS_INTERNAL_ERROR";
+#if (CUDART_VERSION >= 9000) /* CUDA 9.0 had these defined on Summit June 2021 */
+    case CUSOLVER_STATUS_ALLOC_FAILED:     return "CUSOLVER_STATUS_ALLOC_FAILED";
+    case CUSOLVER_STATUS_MAPPING_ERROR:    return "CUSOLVER_STATUS_MAPPING_ERROR";
+    case CUSOLVER_STATUS_EXECUTION_FAILED: return "CUSOLVER_STATUS_EXECUTION_FAILED";
+    case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED: return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+    case CUSOLVER_STATUS_NOT_SUPPORTED :  return "CUSOLVER_STATUS_NOT_SUPPORTED ";
+    case CUSOLVER_STATUS_ZERO_PIVOT:      return "CUSOLVER_STATUS_ZERO_PIVOT";
+    case CUSOLVER_STATUS_INVALID_LICENSE: return "CUSOLVER_STATUS_INVALID_LICENSE";
+#endif
 #endif
     default:                             return "unknown error";
   }
+}
+PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult result)
+{
+ switch (error) {
+ case CUFFT_SUCCESS:                   return "CUFFT_SUCCESS";
+ case CUFFT_INVALID_PLAN:              return "CUFFT_INVALID_PLAN";
+ case CUFFT_ALLOC_FAILED:              return "CUFFT_ALLOC_FAILED";
+ case CUFFT_INVALID_TYPE:              return "CUFFT_INVALID_TYPE";
+ case CUFFT_INVALID_VALUE:             return "CUFFT_INVALID_VALUE";
+ case CUFFT_INTERNAL_ERROR:            return "CUFFT_INTERNAL_ERROR";
+ case CUFFT_EXEC_FAILED:               return "CUFFT_EXEC_FAILED";
+ case CUFFT_SETUP_FAILED:              return "CUFFT_SETUP_FAILED";
+ case CUFFT_INVALID_SIZE:              return "CUFFT_INVALID_SIZE";
+ case CUFFT_UNALIGNED_DATA:            return "CUFFT_UNALIGNED_DATA";
+ case CUFFT_INCOMPLETE_PARAMETER_LIST: return "CUFFT_INCOMPLETE_PARAMETER_LIST";
+ case CUFFT_INVALID_DEVICE:            return "CUFFT_INVALID_DEVICE";
+ case CUFFT_PARSE_ERROR:               return "CUFFT_PARSE_ERROR";
+ case CUFFT_NO_WORKSPACE:              return "CUFFT_NO_WORKSPACE";
+ case CUFFT_NOT_IMPLEMENTED:           return "CUFFT_NOT_IMPLEMENTED";
+ case CUFFT_LICENSE_ERROR:             return "CUFFT_LICENSE_ERROR";
+ case CUFFT_NOT_SUPPORTED:             return "CUFFT_NOT_SUPPORTED";
+ default:                              return "unknown error";
+ }
 }
 #endif
 
