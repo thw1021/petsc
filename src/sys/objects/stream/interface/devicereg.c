@@ -5,18 +5,20 @@ static PetscBool         PetscDeviceRegisterAllCalled  = PETSC_FALSE;
 static PetscBool         PetscDevicePackageInitialized = PETSC_FALSE;
 
 /*@C
-  PetscDeviceContextSetType - Builds a PetscDeviceContext for a particular stream implementation
+  PetscDeviceContextSetType - Builds a PetscDeviceContext for a particular implementation
 
-  Not Collective
+  Not Collective, Synchronous on PetscDeviceContext
 
   Input Parameters:
 + dctx - The PetscDeviceContext object
 - type - The PetscDeviceContextType
 
   Notes:
-  See "include/petscdevicetypes.h" for available stream types.
+  See "include/petscdevicetypes.h" for available context types. When converting types this routine should be considered
+  synchronous. It is possible that during destruction of the previous type it deallocates device-side memory which is
+  synchronous.
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: PetscDeviceContextCreate(), PetscDeviceContextGetType()
 @*/
@@ -43,7 +45,7 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscDeviceCon
 /*@C
   PetscDeviceContextGetType - Gets the typename of a PetscDeviceContext
 
-  Not Collective
+  Not Collective, Asynchronous
 
   Input Parameter:
 . strm - The PetscDeviceContext object
@@ -54,7 +56,7 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscDeviceCon
   Notes:
   See "include/petscdevicetypes.h" for available stream types.
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType()
 @*/
@@ -67,6 +69,33 @@ PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext dctx, PetscDeviceCon
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscDeviceContextRegister - Adds a new PetscDeviceContext implementation
+
+  Not Collective, Asynchronous
+
+  Input Parameters:
++ name     - The name of a new user-defined creation routine
+- function - The creation routine itself
+
+  Notes:
+  PetscDeviceContextRegister() may be called multiple times to add several user-defined vectors
+
+  Sample usage:
+.vb
+    PetscDeviceContextRegister("my_pdc_name",MyPetscDeviceContextCreate);
+.ve
+
+  Then, your PetscDeviceContext type can be chosen with the procedural interface via
+.vb
+    PetscDeviceContextCreate(PetscDeviceContext *);
+    PetscDeviceContextSetType(PetscDeviceContext,"my_pdc_name");
+.ve
+
+  Level: advanced
+
+.seealso: PetscDeviceContextRegisterAll()
+@*/
 PetscErrorCode PetscDeviceContextRegister(const char sname[], PetscErrorCode (*function)(PetscDeviceContext))
 {
   PetscErrorCode ierr;
@@ -88,9 +117,9 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
 
   Not Collective
 
-  Level: advanced
+  Level: developer
 
-.seealso:  PetscEventCreate(), PetscStreamCreate(), PetscDeviceContextCreate(), PetscDeviceFinalizePackage()
+.seealso:  PetscDeviceContextCreate(), PetscDeviceFinalizePackage()
 @*/
 PetscErrorCode PetscDeviceRegisterAll(void)
 {
@@ -149,67 +178,3 @@ PetscErrorCode PetscDeviceInitializePackage(void)
   ierr = PetscRegisterFinalize(PetscDeviceFinalizePackage);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-#if 0
-/*@C
-  PetscEventSetFromOptions - Configures a PetscEvent from the options database.
-
-  Collective on comm
-
-  Input Parameters:
-+ comm - The communicator on which to query the options database
-. prefix - Optional prefix to prepend to all queries using this call
-- event - The PetscEvent
-
-  Options Database Keys:
-+ -stream_type <type> - cuda, hip, see PetscDeviceContextType for complete list
-. -event_create_flag <int> - Flags for special event behavior, such as disabling timing. See PetscEventSetFlags() for
-more information
-- -event_wait_flag <int> - Flags for special wait-on-event behavior. See PetscEventSetFlags() for more information
-
-  Notes:
-  Must be called after creating the PetscEvent, but before the PetscEvent is used. Run with -help to see all available
-  options for a particular stream type.
-
-  Level: beginner
-
-.seealso: PetscEventCreate(), PetscEventSetType(), PetscEventSetFlags()
-@*/
-PetscErrorCode PetscEventSetFromOptions(MPI_Comm comm, const char prefix[], PetscEvent event)
-{
-  PetscErrorCode  ierr;
-  PetscDeviceContextType defaultType;
-
-  PetscFunctionBegin;
-  if (event->setfromoptionscalled) PetscFunctionReturn(0);
-  event->setfromoptionscalled = PETSC_TRUE;
-  if (event->type) {defaultType = event->type;}
-  else {
-#if PetscDefined(HAVE_CUDA)
-    defaultType = PETSCDEVICECONTEXTCUDA;
-#elif PetscDefined(HAVE_HIP)
-    defaultType = PETSCDEVICECONTEXTHIP;
-#else
-    SETERRQ(comm,PETSC_ERR_SUP,"No suitable default stream type exists");
-    defaultType = "invalidType";
-#endif
-  }
-  {
-    PetscBool opt;
-    char      typeName[256];
-
-    ierr = PetscOptionsBegin(comm,prefix,"PetscEvent Options","Sys");CHKERRQ(ierr);
-    ierr = PetscOptionsFList("-event_type","PetscStream type","PetscEventSetType",PetscEventList,defaultType,typeName,256,&opt);CHKERRQ(ierr);
-    ierr = PetscEventSetType(event,opt ? typeName : defaultType);CHKERRQ(ierr);
-    if (event->ops->setfromoptions) {
-      ierr = (*event->ops->setfromoptions)(PetscOptionsObject,event);CHKERRQ(ierr);
-    }
-    /* Use PetscOptionsRangeInt since the flag variables are unsigned */
-    ierr = PetscOptionsRangeInt("-event_create_flag","PetscEvent creation flag","PetscEventSetFlags",(PetscInt)event->eventFlags,(PetscInt*)&event->eventFlags,NULL,0,PETSC_MAX_INT);CHKERRQ(ierr);
-    ierr = PetscOptionsRangeInt("-event_wait_flag","PetscEvent wait flag","PetscEventSetFlags",(PetscInt)event->waitFlags,(PetscInt*)&event->waitFlags,NULL,0,PETSC_MAX_INT);CHKERRQ(ierr);
-    ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  }
-  ierr = PetscEventSetUp(event);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-#endif
