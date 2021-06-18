@@ -10,6 +10,7 @@
 #include <cublas_v2.h>
 #include <cusolverDn.h>
 #include <cusolverSp.h>
+#include <cufft.h>
 
 PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
 PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
@@ -17,6 +18,7 @@ PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
 /* cuBLAS does not have cublasGetErrorName(). We create one on our own. */
 PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRCUBLAS macro */
 PETSC_EXTERN const char *PetscCUSolverGetErrorName(cusolverStatus_t);
+PETSC_EXTERN const char *PetscCUFFTGetErrorName(cufftResult);
 
 #define WaitForCUDA() PetscCUDASynchronize ? cudaDeviceSynchronize() : cudaSuccess;
 
@@ -51,6 +53,15 @@ PETSC_EXTERN const char *PetscCUSolverGetErrorName(cusolverStatus_t);
       const char *name = PetscCUSolverGetErrorName(stat);               \
       if ((stat == CUSOLVER_STATUS_NOT_INITIALIZED) || (stat == CUSOLVER_STATUS_ALLOC_FAILED) || (stat == CUSOLVER_STATUS_INTERNAL_ERROR)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSolver error %d (%s). This indicates the GPU has run out resources",(int)stat,name); \
       else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSolver error %d (%s)",(int)stat,name); \
+    }                                                                   \
+  } while (0)
+
+#define CHKERRCUFFT(res)                                                \
+  do {                                                                  \
+    if (PetscUnlikely(res)) {                                           \
+      const char *name = PetscCUFFTGetErrorName(res);                   \
+      if (((res == CUFFT_SETUP_FAILED) || (res == CUFFT_ALLOC_FAILED)) && PetscCUDAInitialized) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuFFT error %d (%s). Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)res,name); \
+      else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuFFT error %d (%s)",(int)res,name); \
     }                                                                   \
   } while (0)
 

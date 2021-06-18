@@ -1,5 +1,5 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
-#include "objpool.hpp"
+#include "objpool.hxx"
 
 const char *const PetscStreamTypes[] = {"global_blocking","default_blocking","global_nonblocking","MAX_TYPE","PetscStreamType","PETSC_STREAM_",NULL};
 
