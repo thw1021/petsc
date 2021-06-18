@@ -1332,15 +1332,15 @@ class Configure(config.base.Configure):
 
   def checkPragma(self):
     '''Check for all available applicable languages whether they complain (including warnings!) about potentially unknown pragmas'''
-    self.usePragma = {'C':False}
+    usePragma = {'C':False}
     if hasattr(self,'Cxx'):
-      self.usePragma['Cxx'] = False
-    for language in self.usePragma.keys():
+      usePragma['Cxx'] = False
+    for language in usePragma.keys():
       with self.Language(language):
         with self.extraCompilerFlags(['-Wunknown-pragmas']) as skipFlags:
           if not skipFlags:
-            self.usePragma[language] = self.checkCompile('#pragma GCC poison TEST')
-    if all(self.usePragma.values()): self.framework.enablepoison = True
+            usePragma[language] = self.checkCompile('#pragma GCC poison TEST')
+    if all(usePragma.values()): self.framework.enablepoison = True
     return
 
   def generatePICGuesses(self):
