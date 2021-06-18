@@ -346,7 +346,7 @@ int main(int argc,char **argv)
   ierr = TSSetTimeStep(ts,0.5);CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
-  
+
   ierr = PetscTime(&v1);CHKERRQ(ierr);
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve ODE system
@@ -457,6 +457,7 @@ PetscErrorCode InitialConditions(DM da,Vec U)
 /*TEST
 
    build:
+      depends: reaction_diffusion.c
       requires: !complex !single
 
    test:
