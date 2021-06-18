@@ -1,17 +1,16 @@
-#requirespackage 'PETSC_HAVE_HIP'
+
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
-SOURCEHIP = streamhip.hip.cpp eventhip.hip.cpp
 SOURCEF	  =
-SOURCEH	  = streamhip.h
+SOURCEH	  =
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
-DIRS	  =
-LOCDIR	  = src/sys/objects/stream/impls/hip/
+DIRS	  = cupm
+LOCDIR	  = src/sys/objects/device/impls/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
