@@ -2,6 +2,7 @@ from __future__ import generators
 import config.base
 import config
 import os
+import contextlib
 from functools import reduce
 
 # not sure how to handle this with 'self' so its outside the class
@@ -1260,7 +1261,6 @@ class Configure(config.base.Configure):
 
   def containsInvalidFlag(self, output):
     '''If the output contains evidence that an invalid flag was used, return True'''
-    # ALL STRINGS IN SUBSTRINGS MUST BE LOWERCASE!
     substrings = ('unrecognized command line option','unrecognised command line option',
                   'unrecognized option','unrecognised option','not recognized',
                   'not recognised','unknown option','unknown warning option',
@@ -1271,7 +1271,7 @@ class Configure(config.base.Configure):
                   'warning: // comments are not allowed in this language',
                   'no se reconoce la opci','non reconnue')
     outlo = output.lower()
-    return any(sub in outlo for sub in substrings)
+    return any(sub.lower() in outlo for sub in substrings)
 
   def checkCompilerFlag(self, flag, includes = '', body = '', compilerOnly = 0):
     '''Determine whether the compiler accepts the given flag'''
@@ -1305,6 +1305,42 @@ class Configure(config.base.Configure):
       self.insertCompilerFlag(flag, compilerOnly)
       return
     raise RuntimeError('Bad compiler flag: '+flag)
+
+  @contextlib.contextmanager
+  def extraCompilerFlags(self, extraFlags, lang = None):
+    assert isinstance(extraFlags,(list,tuple)), "extraFlags must be either a list or tuple"
+    if lang:
+      self.pushLanguage(lang)
+    flagsArg  = self.getCompilerFlagsArg()
+    oldCompilerFlags = getattr(self,flagsArg)
+    skipFlags = []
+    try:
+      for i,flag in enumerate(extraFlags):
+        try:
+          self.addCompilerFlag(flag)
+        except RuntimeError:
+          skipFlags.append((i,flag))
+      yield skipFlags
+    finally:
+      # This last finally is a bit of deep magic, it makes it so that if the code in the
+      # resulting yield throws some unrelated exception which is meant to be caught
+      # outside this ctx manager then the flags and languages are still reset
+      if not lang:
+        oldLang = self.popLanguage()
+        assert oldLang == lang, "Popped language '%s' is not the same as pushed language '%s'" % (oldLang,lang)
+      setattr(self,flagsArg,oldCompilerFlags)
+
+  def checkPragma(self):
+    '''Check for all available applicable languages whether they complain (including warnings!) about potentially unknown pragmas'''
+    self.usePragma = {'C':False}
+    if hasattr(self,'CXX'):
+      self.usePragma['CXX'] = False
+    for language in self.usePragma.keys():
+      with self.Language(language):
+        with self.extraCompilerFlags(['-Wunknown-pragmas']) as skipFlags:
+          if not skipFlags:
+            self.usePragma[language] = self.checkCompile('#pragma GCC poison TEST')
+    return
 
   def generatePICGuesses(self):
     if self.language[-1] == 'CUDA':
@@ -2066,6 +2102,7 @@ if (dlclose(handle)) {
     self.executeTest(self.checkSharedLinkerPaths)
     self.executeTest(self.checkLibC)
     self.executeTest(self.checkDynamicLinker)
+    self.executeTest(self.checkPragma)
     self.executeTest(self.output)
     return
 
