@@ -19,14 +19,14 @@ PETSC_STATIC_INLINE PetscErrorCode PetscRevolveIntCast(PetscInt a,PetscRevolveIn
   PetscFunctionReturn(0);
 }
 #endif
-#if defined(PETSC_HAVE_ACMS)
+#if defined(PETSC_HAVE_CAMS)
 #include <offline_schedule.h>
 #endif
 
 PetscLogEvent TSTrajectory_DiskWrite, TSTrajectory_DiskRead;
 static PetscErrorCode TSTrajectorySet_Memory(TSTrajectory,TS,PetscInt,PetscReal,Vec);
 
-typedef enum {NONE,TWO_LEVEL_NOREVOLVE,TWO_LEVEL_REVOLVE,TWO_LEVEL_TWO_REVOLVE,REVOLVE_OFFLINE,REVOLVE_ONLINE,REVOLVE_MULTISTAGE,ACMS_OFFLINE} SchedulerType;
+typedef enum {NONE,TWO_LEVEL_NOREVOLVE,TWO_LEVEL_REVOLVE,TWO_LEVEL_TWO_REVOLVE,REVOLVE_OFFLINE,REVOLVE_ONLINE,REVOLVE_MULTISTAGE,CAMS_OFFLINE} SchedulerType;
 
 typedef enum {UNSET=-1,SOLUTIONONLY=0,STAGESONLY=1,SOLUTION_STAGES=2} CheckpointType;
 
@@ -57,8 +57,8 @@ typedef struct _RevolveCTX {
 } RevolveCTX;
 #endif
 
-#if defined(PETSC_HAVE_ACMS)
-typedef struct _ACMSCTX {
+#if defined(PETSC_HAVE_CAMS)
+typedef struct _CAMSCTX {
   PetscInt lastcheckpointstep;
   PetscInt lastcheckpointtype;
   PetscInt num_units_avail;
@@ -67,7 +67,7 @@ typedef struct _ACMSCTX {
   PetscInt nextcheckpointstep;
   PetscInt nextcheckpointtype; /* (0) solution only (1) stages (2) solution+stages */
   PetscInt info;
-} ACMSCTX;
+} CAMSCTX;
 #endif
 
 typedef struct _Stack {
@@ -93,8 +93,8 @@ typedef struct _TJScheduler {
   PetscBool     use_online;
   PetscInt      store_stride;
 #endif
-#if defined(PETSC_HAVE_ACMS)
-  ACMSCTX       *actx;
+#if defined(PETSC_HAVE_CAMS)
+  CAMSCTX       *actx;
 #endif
   PetscBool     recompute;
   PetscBool     skip_trajectory;
@@ -1641,7 +1641,7 @@ static PetscErrorCode GetTrajRMS(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
 }
 #endif
 
-#if defined(PETSC_HAVE_ACMS)
+#if defined(PETSC_HAVE_CAMS)
 /* Optimal offline adjoint checkpointing for multistage time integration methods */
 static PetscErrorCode SetTrajAOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
@@ -1652,10 +1652,10 @@ static PetscErrorCode SetTrajAOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   PetscFunctionBegin;
   if (stepnum == 0) {
     if (stack->solution_only) {
-      ierr = offline_ac(-1,tjsch->actx->num_units_avail,tjsch->actx->endstep,&tjsch->actx->nextcheckpointstep);CHKERRQ(ierr);
+      ierr = offline_ca(-1,tjsch->actx->num_units_avail,tjsch->actx->endstep,&tjsch->actx->nextcheckpointstep);CHKERRQ(ierr);
     } else {
-      /* First two arguments must be -1 when first time calling acms */
-      ierr = offline_acms(-1,-1,tjsch->actx->num_units_avail,tjsch->actx->endstep,tjsch->actx->num_stages,&tjsch->actx->nextcheckpointstep,&tjsch->actx->nextcheckpointtype);CHKERRQ(ierr);
+      /* First two arguments must be -1 when first time calling cams */
+      ierr = offline_cams(-1,-1,tjsch->actx->num_units_avail,tjsch->actx->endstep,tjsch->actx->num_stages,&tjsch->actx->nextcheckpointstep,&tjsch->actx->nextcheckpointtype);CHKERRQ(ierr);
     }
   }
 
@@ -1689,11 +1689,11 @@ static PetscErrorCode SetTrajAOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
     ierr = StackPush(stack,e);CHKERRQ(ierr);
 
     if (stack->solution_only) {
-      ierr = offline_ac(tjsch->actx->lastcheckpointstep,tjsch->actx->num_units_avail,tjsch->actx->endstep,&tjsch->actx->nextcheckpointstep);CHKERRQ(ierr);
+      ierr = offline_ca(tjsch->actx->lastcheckpointstep,tjsch->actx->num_units_avail,tjsch->actx->endstep,&tjsch->actx->nextcheckpointstep);CHKERRQ(ierr);
       tjsch->actx->num_units_avail--;
     } else {
       tjsch->actx->lastcheckpointtype = tjsch->actx->nextcheckpointtype;
-      ierr = offline_acms(tjsch->actx->lastcheckpointstep,tjsch->actx->lastcheckpointtype,tjsch->actx->num_units_avail,tjsch->actx->endstep,tjsch->actx->num_stages,&tjsch->actx->nextcheckpointstep,&tjsch->actx->nextcheckpointtype);CHKERRQ(ierr);
+      ierr = offline_cams(tjsch->actx->lastcheckpointstep,tjsch->actx->lastcheckpointtype,tjsch->actx->num_units_avail,tjsch->actx->endstep,tjsch->actx->num_stages,&tjsch->actx->nextcheckpointstep,&tjsch->actx->nextcheckpointtype);CHKERRQ(ierr);
       if (tjsch->actx->lastcheckpointtype == 2) tjsch->actx->num_units_avail -= tjsch->actx->num_stages+1;
       if (tjsch->actx->lastcheckpointtype == 1) tjsch->actx->num_units_avail -= tjsch->actx->num_stages;
       if (tjsch->actx->lastcheckpointtype == 0) tjsch->actx->num_units_avail--;
@@ -1741,10 +1741,10 @@ static PetscErrorCode GetTrajAOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   tjsch->actx->lastcheckpointstep = estepnum;
   tjsch->actx->endstep = stepnum;
   if (stack->solution_only) { /* start with restoring a checkpoint */
-    ierr = offline_ac(tjsch->actx->lastcheckpointstep,tjsch->actx->num_units_avail,tjsch->actx->endstep,&tjsch->actx->nextcheckpointstep);CHKERRQ(ierr);
+    ierr = offline_ca(tjsch->actx->lastcheckpointstep,tjsch->actx->num_units_avail,tjsch->actx->endstep,&tjsch->actx->nextcheckpointstep);CHKERRQ(ierr);
   } else { /* 2 revolve actions: restore a checkpoint and then advance */
     tjsch->actx->lastcheckpointtype = e->cptype;
-    ierr = offline_acms(tjsch->actx->lastcheckpointstep,tjsch->actx->lastcheckpointtype,tjsch->actx->num_units_avail,tjsch->actx->endstep,tjsch->actx->num_stages,&tjsch->actx->nextcheckpointstep, &tjsch->actx->nextcheckpointtype);CHKERRQ(ierr);
+    ierr = offline_cams(tjsch->actx->lastcheckpointstep,tjsch->actx->lastcheckpointtype,tjsch->actx->num_units_avail,tjsch->actx->endstep,tjsch->actx->num_stages,&tjsch->actx->nextcheckpointstep, &tjsch->actx->nextcheckpointtype);CHKERRQ(ierr);
   }
   /* Discard the checkpoint if not needed, decrease the number of available checkpoints if it still stays in stack */
   if (HaveStages(e->cptype)) {
@@ -1815,8 +1815,8 @@ static PetscErrorCode TSTrajectorySet_Memory(TSTrajectory tj,TS ts,PetscInt step
       ierr = SetTrajRMS(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       break;
 #endif
-#if defined(PETSC_HAVE_ACMS)
-    case ACMS_OFFLINE:
+#if defined(PETSC_HAVE_CAMS)
+    case CAMS_OFFLINE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       ierr = SetTrajAOF(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       break;
@@ -1871,8 +1871,8 @@ static PetscErrorCode TSTrajectoryGet_Memory(TSTrajectory tj,TS ts,PetscInt step
       ierr = GetTrajRMS(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
       break;
 #endif
-#if defined(PETSC_HAVE_ACMS)
-    case ACMS_OFFLINE:
+#if defined(PETSC_HAVE_CAMS)
+    case CAMS_OFFLINE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       ierr = GetTrajAOF(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
       break;
@@ -2140,9 +2140,9 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
       if (tjsch->max_cps_ram >= tjsch->total_steps-1 || tjsch->max_cps_ram == -1)
         tjsch->stype = NONE; /* checkpoint all */
       else
-#if defined(PETSC_HAVE_ACMS)
-      /* ACMS has the priority over revolve */
-        tjsch->stype = ACMS_OFFLINE;
+#if defined(PETSC_HAVE_CAMS)
+      /* CAMS has the priority over revolve */
+        tjsch->stype = CAMS_OFFLINE;
 #else
         tjsch->stype = (tjsch->max_cps_disk>1) ? REVOLVE_MULTISTAGE : REVOLVE_OFFLINE;
 #endif
@@ -2152,17 +2152,17 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
 #endif
   }
   if (tjsch->stype != NONE && tjsch->max_cps_ram < 1 && tjsch->max_cps_disk < 1) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"The specified storage capacity is insufficient for one checkpoint, which is the minimum");
-  if (tjsch->stype >= ACMS_OFFLINE) {
-#ifndef PETSC_HAVE_ACMS
-    SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"ACMS is needed when there is not enough memory to checkpoint all time steps according to the user's settings, please reconfigure with the additional option --download-acms.");
+  if (tjsch->stype >= CAMS_OFFLINE) {
+#ifndef PETSC_HAVE_CAMS
+    SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"CAMS is needed when there is not enough memory to checkpoint all time steps according to the user's settings, please reconfigure with the additional option --download-cams.");
 #else
-    ACMSCTX  *actx;
+    CAMSCTX  *actx;
     PetscInt ns = 0;
     if (stack->solution_only) {
-      offline_ac_create(tjsch->total_steps,tjsch->max_cps_ram);
+      offline_ca_create(tjsch->total_steps,tjsch->max_cps_ram);
     } else {
       ierr = TSGetStages(ts,&ns,NULL);CHKERRQ(ierr);
-      offline_acms_create(tjsch->total_steps,tjsch->max_units_ram,ns,ts->stifflyaccurate);
+      offline_cams_create(tjsch->total_steps,tjsch->max_units_ram,ns,ts->stifflyaccurate);
     }
     ierr = PetscNew(&actx);CHKERRQ(ierr);
     actx->lastcheckpointstep    = 0;
@@ -2264,7 +2264,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
 
 static PetscErrorCode TSTrajectoryReset_Memory(TSTrajectory tj)
 {
-#if defined (PETSC_HAVE_REVOLVE) || defined (PETSC_HAVE_ACMS)
+#if defined (PETSC_HAVE_REVOLVE) || defined (PETSC_HAVE_CAMS)
   TJScheduler    *tjsch = (TJScheduler*)tj->data;
   PetscErrorCode ierr;
 #endif
@@ -2285,10 +2285,10 @@ static PetscErrorCode TSTrajectoryReset_Memory(TSTrajectory tj)
 #else
   PetscFunctionBegin;
 #endif
-#if defined(PETSC_HAVE_ACMS)
-  if (tjsch->stype == ACMS_OFFLINE) {
-    if (tjsch->stack.solution_only) offline_ac_destroy();
-    else offline_ac_destroy();
+#if defined(PETSC_HAVE_CAMS)
+  if (tjsch->stype == CAMS_OFFLINE) {
+    if (tjsch->stack.solution_only) offline_ca_destroy();
+    else offline_ca_destroy();
     ierr = PetscFree(tjsch->actx);CHKERRQ(ierr);
   }
 #endif

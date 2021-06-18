@@ -3,11 +3,11 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit = '3bc898effd9f8e31cbcf11ccd33742ab27490487' #main mar-29-2021
-    self.download  = ['git://https://github.com/caidao22/pkg-acms.git']
-    self.functions = ['offline_acms_create']
+    self.gitcommit = 'baa7d400003c906fe8ba72076190d4445f40c0f9' #main june-18-2021
+    self.download  = ['git://https://github.com/caidao22/pkg-cams.git']
+    self.functions = ['offline_cams_create']
     self.includes  = ['offline_schedule.h']
-    self.liblist   = [['libacms.a']]
+    self.liblist   = [['libcams.a']]
     self.hastests  = 1
     return
 
@@ -41,7 +41,7 @@ class Configure(config.package.Package):
     g.close()
 
     if self.installNeeded('make.inc'):
-      self.logPrintBox('Configuring, compiling and installing acms; this may take several seconds')
+      self.logPrintBox('Configuring, compiling and installing cams; this may take several seconds')
       self.installDirProvider.printSudoPasswordMessage()
       output1,err1,ret1  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make clean && make lib',timeout=500, log = self.log)
       output2,err2,ret2  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && '+self.installSudo+' make install ',timeout=250, log = self.log)
