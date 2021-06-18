@@ -379,6 +379,9 @@ def petsc_configure(configure_options):
     petscdir = os.environ['PETSC_DIR']
     if petscdir.find(' ') > -1:
       raise RuntimeError('Your PETSC_DIR '+petscdir+' has spaces in it; this is not allowed.\n Change the directory with PETSc to not have spaces in it')
+    if not os.path.abspath(petscdir) == petscdir:
+      raise RuntimeError('Use and absolute path for PETSC_DIR, not a relative path')
+
     try:
       sys.path.append(os.path.join(petscdir,'lib','petsc','bin'))
       import petscnagupgrade
