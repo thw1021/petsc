@@ -29,7 +29,7 @@ static PetscErrorCode PetscCUSOLVERDnDestroyHandle_Internal(void)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscCUBLASGetHandle_Internal(PetscDeviceContext_CUDA &dcu)
+static PetscErrorCode PetscCUBLASGetHandle_Internal(PetscDeviceContext_CUDA *dcu)
 {
   cudaStream_t   cublasStream;
   cublasStatus_t cberr;
@@ -56,7 +56,7 @@ static PetscErrorCode PetscCUBLASGetHandle_Internal(PetscDeviceContext_CUDA &dcu
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscCUSOLVERDnGetHandle_Internal(PetscDeviceContext_CUDA &dcu)
+static PetscErrorCode PetscCUSOLVERDnGetHandle_Internal(PetscDeviceContext_CUDA *dcu)
 {
   cudaStream_t     cusolverStream;
   cusolverStatus_t cerr;
@@ -82,7 +82,7 @@ static PetscErrorCode PetscCUSOLVERDnGetHandle_Internal(PetscDeviceContext_CUDA 
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroy_CUDA(PetscDeviceContext dctx)
+static PetscErrorCode PetscDeviceContextDestroy_CUDA(PetscDeviceContext dctx)
 {
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
   PetscErrorCode          ierr;
@@ -96,10 +96,10 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroy_CUDA(PetscDeviceCon
   PetscFunctionReturn(0);
 }
 
-/* don't also create solver contexts here since they aren't always used, and given the limited real estate frugality is prudent */
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetUp_CUDA(PetscDeviceContext dctx)
+static PetscErrorCode PetscDeviceContextSetUp_CUDA(PetscDeviceContext dctx)
 {
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
+  PetscErrorCode          ierr;
   cudaError_t             cerr;
 
   PetscFunctionBegin;
@@ -124,7 +124,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetUp_CUDA(PetscDeviceConte
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextQuery_CUDA(PetscDeviceContext dctx, PetscBool *idle)
+static PetscErrorCode PetscDeviceContextQuery_CUDA(PetscDeviceContext dctx, PetscBool *idle)
 {
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
 
@@ -133,7 +133,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextQuery_CUDA(PetscDeviceConte
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextWaitForContext_CUDA(PetscDeviceContext dctxa, PetscDeviceContext dctxb)
+static PetscErrorCode PetscDeviceContextWaitForContext_CUDA(PetscDeviceContext dctxa, PetscDeviceContext dctxb)
 {
   PetscDeviceContext_CUDA *dcua = (PetscDeviceContext_CUDA *)dctxa->data;
   PetscDeviceContext_CUDA *dcub = (PetscDeviceContext_CUDA *)dctxb->data;
@@ -149,7 +149,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextWaitForContext_CUDA(PetscDe
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSynchronize_CUDA(PetscDeviceContext dctx)
+static PetscErrorCode PetscDeviceContextSynchronize_CUDA(PetscDeviceContext dctx)
 {
   PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA *)dctx->data;
   cudaError_t             cerr;
