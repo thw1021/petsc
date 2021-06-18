@@ -7,11 +7,11 @@ CPPFLAGS  =
 SOURCEC	  =
 SOURCECU  = contextcuda.cu
 SOURCEF	  =
-SOURCEH	  = contextcuda.hpp
+SOURCEHXX = contextcuda.hpp
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 DIRS	  =
-LOCDIR	  = src/sys/objects/stream/impls/cuda/
+LOCDIR	  = src/sys/objects/stream/impls/cupm/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
