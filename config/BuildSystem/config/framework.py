@@ -84,6 +84,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.makeMacroHeader = ''
     self.makeRuleHeader  = ''
     self.cHeader         = 'matt_fix.h'
+    self.enabepoison     = False
+    self.poisonheader    = 'matt_poison.h'
     self.headerPrefix    = ''
     self.substPrefix     = ''
     self.pkgheader       = ''
@@ -903,15 +905,14 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       if dir and not os.path.exists(dir):
         os.makedirs(dir)
       if self.file_create_pause: time.sleep(1)
-      poisonName = '_'.join([name[:-2],'poison.h'])
-      with open(poisonName,'w') as fpoison:
+      with open(self.poisonheader,'w') as fpoison:
         if self.file_create_pause: time.sleep(1)
-        if all(self.compilers.setCompilers.usePragma.values()):
+        if self.enabepoison:
           # it is safe to write the poison file
           self.outputPoisons(defineDict,fpoison)
         else:
           # at least 1 of the languages/compilers didn't like poison
-          poisonFileName = os.path.basename(poisonName)
+          poisonFileName = os.path.basename(self.poisonheader,)
           poisonGuard = 'INCLUDED_'+poisonFileName.upper().replace('.', '_')
           lines = [''.join(['#if !defined(',poisonGuard,')\n']),
                    ''.join(['#define ',poisonGuard,'\n']),
