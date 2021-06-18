@@ -1,5 +1,5 @@
-#if !defined(PETSCOBJECTPOOL_HXX)
-#define PETSCOBJECTPOOL_HXX
+#if !defined(PETSCOBJECTPOOL_HPP)
+#define PETSCOBJECTPOOL_HPP
 
 #include <petscsys.h>
 #include <stack>
@@ -82,4 +82,4 @@ PetscErrorCode objectPool<T,_Allocator>::reclaim(T &obj) PETSC_NOEXCEPT
 
 } // namespace Petsc
 
-#endif /* PETSCOBJECTPOOL_HXX */
+#endif /* PETSCOBJECTPOOL_HPP */
