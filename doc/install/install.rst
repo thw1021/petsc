@@ -682,6 +682,7 @@ Notes on usage:
   - to install Kokkos (with ``--download-kokkos --download-kokkos-kernels``, set CUDA_ROOT before running configure - i.e: ``export CUDA_ROOT=$CUDA_DIR/11.0``
   - Log into interactive compute nodes with ``qsub -I -t TimeInMinutes -n 1 -A AProjectName`` (for example, ``gpu_hack``) (``-q single-gpu`` will give you access to one GPU, and is often much quicker; otherwise you get access to all eight GPUs on a node)
   - Run executables with ``$CUDA_DIR/../comm_libs/mpi/bin/mpirun``
+  - It's also possible to build petsc on compute nodes. For this - one can use ``qsub --attrs=pubnet`` to obtain a compute node with network access enabled (for the build) as an alternative to setting up ``http_proxy/https_proxy``
 
 
 OLCF - Oak Ridge National Laboratory - Summit machine - NVIDIA GPUs and IBM Power PC processors
