@@ -459,6 +459,7 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
 
    test:
       args: -tao_converged_reason -tao_pdipm_kkt_shift_pd
+      requires: mumps
 
    test:
       suffix: 2
@@ -469,6 +470,7 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
    test:
       suffix: 3
       args: -tao_converged_reason -no_eq
+      requires: mumps
 
    test:
       suffix: 4
@@ -479,10 +481,12 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
    test:
       suffix: 5
       args: -tao_cmonitor -tao_type almm
+      requires: mumps
 
    test:
       suffix: 6
       args: -tao_cmonitor -tao_type almm -tao_almm_type phr
+      requires: mumps
 
    test:
       suffix: 7
