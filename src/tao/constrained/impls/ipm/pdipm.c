@@ -926,7 +926,6 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)tao,&comm);CHKERRQ(ierr);
-  //ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
 
   /* (1) Setup Bounds and create Tao vectors */
