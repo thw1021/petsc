@@ -1,4 +1,5 @@
 #requiresdefine 'PETSC_HAVE_CXX'
+#requirespackage 'PETSC_HAVE_CUDA'
 ALL: lib
 
 CFLAGS    =
