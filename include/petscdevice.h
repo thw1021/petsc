@@ -107,6 +107,12 @@ do { \
    } \
 } while (0)
 
+/* TODO: SEK:  Need to figure out the hipsolver issues */
+#define CHKERRHIPSOLVER(err)                                            \
+  do {                                                                  \
+    if (PetscUnlikely(err)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"HIPSOLVER error %d",err); \
+  } while (0)
+
 /* hipSolver does not exist yet so we work around it
    rocSOLVER users rocBLAS for the handle
  * */
