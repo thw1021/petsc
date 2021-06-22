@@ -468,9 +468,9 @@ class Configure(config.base.Configure):
     return
 
 
-  def checkCxxDialect(self,language,isGNU):
+  def checkCxxDialect(self,language,isGNUish):
     """Determine the CXX dialect supported by the compiler(language) [and correspoding compiler option - if any].
-    isGNU indicates if the compiler is g++.
+    isGNUish indicates if the compiler is gnu compliant (i.e. clang).
     -with-<lang>-dialect can take options:
       auto: use highest dialect configure can determine
       cxx20: [future!]
@@ -521,27 +521,39 @@ class Configure(config.base.Configure):
       {'num': '14', 'includes': includes, 'body': body+body14},                   # 3 = c++14
       {'num': '17', 'includes': includes+includes17, 'body': body+body14+body17}, # 4 = c++17
     )
-    maxDialect = 4
-    if with_lang_dialect != "AUTO":
-      if with_lang_dialect == 'C++14':
-        maxDialect = 3
-      elif with_lang_dialect == 'C++11':
-        maxDialect = 2
-      else:
-        raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
 
-    baseFlag = '-std=gnu++' if isGNU else '-std=c++'
-    self.pushLanguage('C++')
-    for dlct in reversed(dialects[:maxDialect]):
-      flag = ''.join([baseFlag,dlct['num']])
-      self.setCompilers.saveLog()
-      self.logPrint(' '.join(['checkCxxDialect: checking CXX14 for',language,'with flag:',flag]))
-      self.logWrite(self.setCompilers.restoreLog())
-      with self.setCompilers.extraCompilerFlags([flag], lang = LANG.replace('X','+')) as skipFlags:
-        if not skipFlags and self.checkCompile(includes = dlct['includes'], body = dlct['body']):
-          break
-      maxDialect -= 1
-    self.popLanguage()
+    if with_lang_dialect in {'AUTO','C++17'}:
+      maxDialect = 4
+    elif with_lang_dialect == 'C++14':
+      maxDialect = 3
+    elif with_lang_dialect == 'C++11':
+      maxDialect = 2
+    else:
+      raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
+
+    baseFlag = '-std=gnu++' if isGNUish else '-std=c++'
+    with self.Language('C++'):
+      for dlct in reversed(dialects[:maxDialect]):
+        flag = ''.join([baseFlag,dlct['num']])
+        self.setCompilers.saveLog()
+        self.logPrint(' '.join(['checkCxxDialect: checking CXX',dlct['num'],'for',language,'with flag:',flag]))
+        self.logWrite(self.setCompilers.restoreLog())
+        # test with flag
+        with self.setCompilers.Language('C++'):
+          try:
+            self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'])
+          except RuntimeError:
+            # failure
+            maxDialect -= 1
+          else:
+            # success, also update preprocessor flag?
+            ppFlagsArg = self.setCompilers.getPreprocessorFlagsArg()
+            # should really have an 'insert' preprocessor flag routine here
+            newflag = ' '.join([getattr(self.setCompilers,ppFlagsArg),flag])
+            setattr(self.setCompilers,ppFlagsArg,newflag)
+            break
+    if maxDialect < 0:
+      raise RuntimeError("C++ compiler does not appear to be compliant with C++03, or does not accept -std=c++03 flag")
     maxDialect = max(1,maxDialect) # in case we go < 0
     for dlct in dialects[:maxDialect]:
       self.addDefine('HAVE_{lng}_DIALECT_CXX{ver}'.format(lng = LANG, ver = dlct['num']),1)
@@ -1489,7 +1501,8 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
     if hasattr(self.setCompilers, 'CXX'):
       self.isGCXX = config.setCompilers.Configure.isGNU(self.setCompilers.CXX, self.log)
       self.executeTest(self.checkRestrict,['Cxx'])
-      self.executeTest(self.checkCxxDialect,['Cxx',self.isGCXX])
+      isClang = config.setCompilers.Configure.isClang(self.setCompilers.CXX,self.log)
+      self.executeTest(self.checkCxxDialect,['Cxx',self.isGCXX or isClang])
       self.executeTest(self.checkCxxOptionalExtensions)
       self.executeTest(self.checkCxxInline)
       self.executeTest(self.checkCxxComplexFix)
