@@ -1502,7 +1502,10 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       self.isGCXX = config.setCompilers.Configure.isGNU(self.setCompilers.CXX, self.log)
       self.executeTest(self.checkRestrict,['Cxx'])
       isClang = config.setCompilers.Configure.isClang(self.setCompilers.CXX,self.log)
-      self.executeTest(self.checkCxxDialect,['Cxx',self.isGCXX or isClang])
+      # CUDA does not support gcc extensions well enough so turn them off if we also have
+      # nvcc
+      isGNUIsh = (self.isGCXX or isClang) and not hasattr(self.setCompilers,'CUDAC')
+      self.executeTest(self.checkCxxDialect,['Cxx',isGNUIsh])
       self.executeTest(self.checkCxxOptionalExtensions)
       self.executeTest(self.checkCxxInline)
       self.executeTest(self.checkCxxComplexFix)
