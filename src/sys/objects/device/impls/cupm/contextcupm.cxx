@@ -1,11 +1,11 @@
 #include "contextcupm.hpp" /*I "petscdevice.h" I*/
-
+#include <type_traits>
 #define CHKERRCUPM(cerr)                                                \
   do {                                                                  \
     if (PetscUnlikely(cerr)) {                                          \
       const char *name  = cupmGetErrorName(cerr);                       \
       const char *descr = cupmGetErrorString(cerr);                     \
-      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",cupmName,(int)cerr,name,descr); \
+      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",cupmName,(int)cerr,name,descr); \
     }                                                                   \
   } while (0)
 
@@ -13,10 +13,20 @@ enum class PetscDeviceBackends {CUDA, HIP};
 
 template <PetscDeviceBackends T> struct cupmTypeTraits;
 
+template <class Fn, Fn func> struct wrapper;
+template <class Ret, class... Args,Ret (*func)(Args...)>
+struct wrapper<Ret (*)(Args...),func>
+{
+  static Ret wrap(Args... args) { return func(args...);}
+};
+
+#define WRAP_FUNCTION(func_) wrapper<decltype(&func_),func_>::wrap
+
+#if PetscDefined(HAVE_CUDA)
 template <>
 struct cupmTypeTraits<PetscDeviceBackends::CUDA>
 {
-  static constexpr char name[] = "HIP";
+  static constexpr char cupmName[] = "CUDA";
 
   typedef cudaError_t        cupmError_t;
   typedef cudaEvent_t        cupmEvent_t;
@@ -26,16 +36,24 @@ struct cupmTypeTraits<PetscDeviceBackends::CUDA>
   typedef cusolverDnHandle_t cupmSolverHandle_t;
   typedef cusolverStatus_t   cupmSolverError_t;
 
-  static constexpr auto cupmGetErrorName   = cudaGetErrorName;
-  static constexpr auto cupmGetErrorString = cudaGetErrorString;
-  static constexpr auto cupmErrorNotReady  = cudaErrorNotReady;
+  // Error functions
+  static constexpr auto cupmGetErrorName      = WRAP_FUNCTION(cudaGetErrorName);
+  static constexpr auto cupmGetErrorString    = WRAP_FUNCTION(cudaGetErrorString);
 
-  static constexpr auto cupmEventCreate     = cudaEventCreate;
-  static constexpr auto cupmEventDestroy    = cudaEventDestroy;
-  static constexpr auto cupmEventRecord     = cudaEventRecord;
-  static constexpr auto cupmStreamCreate    = cudaStreamCreate;
-  static constexpr auto cupmStreamDestroy   = cudaStreamDestroy;
-  static constexpr auto cupmStreamWaitEvent = cudaStreamWaitEvent;
+  // Values
+  static constexpr auto cupmErrorNotReady     = cudaErrorNotReady;
+  static constexpr auto cupmStreamNonBlocking = cudaStreamNonBlocking;
+
+  // Regular functions
+  static cupmError_t cupmEventCreate(cupmEvent_t *e) { return cudaEventCreate(e);}
+  static constexpr auto cupmEventDestroy          = WRAP_FUNCTION(cudaEventDestroy);
+  static constexpr auto cupmEventRecord           = WRAP_FUNCTION(cudaEventRecord);
+  static constexpr auto cupmStreamCreate          = WRAP_FUNCTION(cudaStreamCreate);
+  static constexpr auto cupmStreamCreateWithFlags = WRAP_FUNCTION(cudaStreamCreateWithFlags);
+  static constexpr auto cupmStreamDestroy         = WRAP_FUNCTION(cudaStreamDestroy);
+  static constexpr auto cupmStreamWaitEvent       = WRAP_FUNCTION(cudaStreamWaitEvent);
+  static constexpr auto cupmStreamQuery           = WRAP_FUNCTION(cudaStreamQuery);
+  static constexpr auto cupmStreamSynchronize     = WRAP_FUNCTION(cudaStreamSynchronize);
 
   // There isn't a good way to auto-template this stuff between the cublas handle and
   // cusolver handle, not in the least because CHKERRCUBLAS and CHKERRCUSOLVER (not to
@@ -45,7 +63,7 @@ struct cupmTypeTraits<PetscDeviceBackends::CUDA>
   {
     PetscFunctionBegin;
     if (!handle) {
-      cupmBlasStatus_t cberr;
+      cupmBlasError_t cberr;
 
       for (int i=0; i<3; ++i) {
         PetscErrorCode ierr;
@@ -64,7 +82,7 @@ struct cupmTypeTraits<PetscDeviceBackends::CUDA>
   {
     PetscFunctionBegin;
     if (!handle) {
-      cupmSolverStatus_t cerr;
+      cupmSolverError_t cerr;
 
       for (int i=0; i<3; i++) {
         PetscErrorCode ierr;
@@ -129,7 +147,9 @@ struct cupmTypeTraits<PetscDeviceBackends::CUDA>
     PetscFunctionReturn(0);
   }
 };
+#endif
 
+#if PetscDefined(HAVE_HIP)
 template <>
 struct cupmTypeTraits<PetscDeviceBackends::HIP>
 {
@@ -159,7 +179,7 @@ struct cupmTypeTraits<PetscDeviceBackends::HIP>
   {
     PetscFunctionBegin;
     if (!handle) {
-      cupmBlasStatus_t cberr;
+      cupmBlasError_t cberr;
       cberr = hipblasCreate(&handle);CHKERRHIPBLAS(cberr);
     }
     PetscFunctionReturn(0);
@@ -169,7 +189,7 @@ struct cupmTypeTraits<PetscDeviceBackends::HIP>
   {
     PetscFunctionBegin;
     if (!handle) {
-      cupmSolverStatus_t cerr;
+      cupmSolverError_t cerr;
       cerr = hipsolverCreate(&handle);CHKERRHIPSOLVER(cerr);
     }
     PetscFunctionReturn(0);
@@ -225,25 +245,27 @@ struct cupmTypeTraits<PetscDeviceBackends::HIP>
     PetscFunctionReturn(0);
   }
 };
+#endif
 
 template <PetscDeviceBackends T>
 class cupmContext : cupmTypeTraits<T>
 {
 public:
   using cupmType_t = cupmTypeTraits<T>;
-  using cupmName   = cupmType_t::name;
 
   // types
-  using cupmType_t::cupmError_t;
-  using cupmType_t::cupmEvent_t;
-  using cupmType_t::cupmStream_t;
-  using cupmType_t::cupmBlasError_t;
-  using cupmType_t::cupmSolverError_t;
-  using cupmType_t::cupmBlasHandle_t;
-  using cupmType_t::cupmSolverHandle_t;
+  using typename cupmType_t::cupmError_t;
+  using typename cupmType_t::cupmEvent_t;
+  using typename cupmType_t::cupmStream_t;
+  using typename cupmType_t::cupmBlasError_t;
+  using typename cupmType_t::cupmSolverError_t;
+  using typename cupmType_t::cupmBlasHandle_t;
+  using typename cupmType_t::cupmSolverHandle_t;
 
   // vars
+  using cupmType_t::cupmName;
   using cupmType_t::cupmErrorNotReady;
+  using cupmType_t::cupmStreamNonBlocking;
 
   // functions
   using cupmType_t::cupmGetErrorName;
@@ -252,20 +274,29 @@ public:
   using cupmType_t::cupmEventDestroy;
   using cupmType_t::cupmEventRecord;
   using cupmType_t::cupmStreamCreate;
+  using cupmType_t::cupmStreamCreateWithFlags;
   using cupmType_t::cupmStreamDestroy;
   using cupmType_t::cupmStreamWaitEvent;
+  using cupmType_t::cupmStreamQuery;
+  using cupmType_t::cupmStreamSynchronize;
 
+  struct PetscDeviceContext_IMPLS
+  {
+    typename cupmType_t::cupmStream_t       stream;
+    typename cupmType_t::cupmEvent_t        event;
+    typename cupmType_t::cupmBlasHandle_t   blas;
+    typename cupmType_t::cupmSolverHandle_t solver;
+  };
 protected:
   using cupmType_t::InitializeHandle;
   using cupmType_t::SetHandleStream;
-  using cupmType_t::DestroyBLASHandle;
-  using cupmType_t::DestroySOLVERHandle;
+  using cupmType_t::DestroyHandle;
 
   static cupmBlasHandle_t   _blashandle;
   static cupmSolverHandle_t _solverhandle;
 
-  static inline PETSC_NODISCARD PetscErrorCode FinalizeBLASHandle(void) PETSC_NOEXCEPT { return DestroyHandle(_blashandle);}
-  static inline PETSC_NODISCARD PetscErrorCode FinalizeSOLVERHandle(void) PETSC_NOEXCEPT { return DestroyHandle(_solverhandle);}
+  static PETSC_NODISCARD PetscErrorCode FinalizeBLASHandle(void) PETSC_NOEXCEPT { return DestroyHandle(_blashandle);}
+  static PETSC_NODISCARD PetscErrorCode FinalizeSOLVERHandle(void) PETSC_NOEXCEPT { return DestroyHandle(_solverhandle);}
 
   static PETSC_NODISCARD PetscErrorCode GetHandles(PetscDeviceContext_IMPLS *dci) PETSC_NOEXCEPT
   {
@@ -280,26 +311,18 @@ protected:
       ierr = InitializeHandle(_solverhandle);CHKERRQ(ierr);
       ierr = PetscRegisterFinalize(FinalizeSOLVERHandle);CHKERRQ(ierr);
     }
-    ierr = SetStream(_blashandle,dci->stream);CHKERRQ(ierr);
-    ierr = SetStream(_solverhandle,dci->stream);CHKERRQ(ierr);
+    ierr = SetHandleStream(_blashandle,dci->stream);CHKERRQ(ierr);
+    ierr = SetHandleStream(_solverhandle,dci->stream);CHKERRQ(ierr);
     dci->blas   = _blashandle;
     dci->solver = _solverhandle;
     PetscFunctionReturn(0);
   }
 
 public:
-  struct PetscDeviceContext_IMPLS
-  {
-    cupmStream_t       stream;
-    cupmEvent_t        event;
-    cupmBlasHandle_t   blas;
-    cupmSolverHandle_t solver;
-  };
-
-  static const struct _DeviceContextOps ops;
+  const struct _DeviceContextOps ops;
 
   explicit PETSC_CONSTEXPR cupmContext(PetscErrorCode (*create)(PetscDeviceContext)) PETSC_NOEXCEPT
-    : _blashandle(NULL), _solverhandle(NULL), ops{create, destroy, setUp, query, waitForContext, synchronize} {}
+    : ops{create, destroy, setUp, query, waitForContext, synchronize} {}
 
   static PETSC_NODISCARD PetscErrorCode destroy(PetscDeviceContext) PETSC_NOEXCEPT;
   static PETSC_NODISCARD PetscErrorCode setUp(PetscDeviceContext) PETSC_NOEXCEPT;
@@ -308,7 +331,8 @@ public:
   static PETSC_NODISCARD PetscErrorCode synchronize(PetscDeviceContext) PETSC_NOEXCEPT;
 };
 
-static PETSC_NODISCARD PetscErrorCode cupmContext::destroy(PetscDeviceContext dctx) PETSC_NOEXCEPT
+template <PetscDeviceBackends T>
+PETSC_NODISCARD PetscErrorCode cupmContext<T>::destroy(PetscDeviceContext dctx) PETSC_NOEXCEPT
 {
   PetscDeviceContext_IMPLS *dci = (PetscDeviceContext_IMPLS *)dctx->data;
   cupmError_t              cerr;
@@ -321,7 +345,8 @@ static PETSC_NODISCARD PetscErrorCode cupmContext::destroy(PetscDeviceContext dc
   PetscFunctionReturn(0);
 }
 
-static PETSC_NODISCARD PetscErrorCode cupmContext::setUp(PetscDeviceContext dctx) PETSC_NOEXCEPT
+template <PetscDeviceBackends T>
+PETSC_NODISCARD PetscErrorCode cupmContext<T>::setUp(PetscDeviceContext dctx) PETSC_NOEXCEPT
 {
   PetscDeviceContext_IMPLS *dci = (PetscDeviceContext_IMPLS *)dctx->data;
   PetscErrorCode           ierr;
@@ -348,7 +373,8 @@ static PETSC_NODISCARD PetscErrorCode cupmContext::setUp(PetscDeviceContext dctx
   PetscFunctionReturn(0);
 }
 
-static PETSC_NODISCARD PetscErrorCode cupmContext::query(PetscDeviceContext dctx, PetscBool *idle) PETSC_NOEXCEPT
+template <PetscDeviceBackends T>
+PETSC_NODISCARD PetscErrorCode cupmContext<T>::query(PetscDeviceContext dctx, PetscBool *idle) PETSC_NOEXCEPT
 {
   PetscDeviceContext_IMPLS *dci = (PetscDeviceContext_IMPLS *)dctx->data;
 
@@ -357,45 +383,40 @@ static PETSC_NODISCARD PetscErrorCode cupmContext::query(PetscDeviceContext dctx
   PetscFunctionReturn(0);
 }
 
-static PETSC_NODISCARD PetscErrorCode cupmContext::waitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb) PETSC_NOEXCEPT
+template <PetscDeviceBackends T>
+PETSC_NODISCARD PetscErrorCode cupmContext<T>::waitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb) PETSC_NOEXCEPT
 {
   PetscDeviceContext_IMPLS *dcia = (PetscDeviceContext_IMPLS *)dctxa->data;
   PetscDeviceContext_IMPLS *dcib = (PetscDeviceContext_IMPLS *)dctxb->data;
   cupmError_t               cerr;
 
   PetscFunctionBegin;
-  cerr = cupmEventRecord(dcub->event,dcub->stream);CHKERRCUPM(cerr);
-  cerr = cupmStreamWaitEvent(dcia->stream,dcib->event);CHKERRCUPM(cerr);
+  cerr = cupmEventRecord(dcib->event,dcib->stream);CHKERRCUPM(cerr);
+  cerr = cupmStreamWaitEvent(dcia->stream,dcib->event,0);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
-static PETSC_NODISCARD PetscErrorCode cupmContext::synchronize(PetscDeviceContext dctx) PETSC_NOEXCEPT
+template <PetscDeviceBackends T>
+PETSC_NODISCARD PetscErrorCode cupmContext<T>::synchronize(PetscDeviceContext dctx) PETSC_NOEXCEPT
 {
   PetscDeviceContext_IMPLS *dci = (PetscDeviceContext_IMPLS *)dctx->data;
   cupmError_t               cerr;
 
   PetscFunctionBegin;
   /* in case anything was queued on the event */
-  cerr = cupmStreamWaitEvent(dci->stream,dci->event);CHKERRCUPM(cerr);
+  cerr = cupmStreamWaitEvent(dci->stream,dci->event,0);CHKERRCUPM(cerr);
   cerr = cupmStreamSynchronize(dci->stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
-static const cupmContext<CUDA> contextCuda(PetscDeviceContextCreate_CUDA);
+static const cupmContext<PetscDeviceBackends::CUDA> contextCuda(PetscDeviceContextCreate_CUDAM);
 
-// static const struct _DeviceContextOps cuops = {
-//   PetscDeviceContextCreate_CUDA,
-//   contextCuda.destroy,
-//   contextCuda.setUp,
-//   contextCuda.query,
-//   contextCuda.waitForContext,
-//   contextCuda.synchronize,
-// };
+#define PetscDeviceContext_(impls_) struct cupmContext<PetscDeviceBackends::impls_>::PetscDeviceContext_IMPLS
 
-PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext dctx)
+PetscErrorCode PetscDeviceContextCreate_CUDAM(PetscDeviceContext dctx)
 {
-  contextCuda::PetscDeviceContext_IMPLS *dci;
-  PetscErrorCode                         ierr;
+  PetscDeviceContext_(CUDA) *dci;
+  PetscErrorCode             ierr;
 
   PetscFunctionBegin;
   ierr = PetscNew(&dci);CHKERRQ(ierr);
