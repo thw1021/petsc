@@ -467,8 +467,30 @@ class Configure(config.base.Configure):
     self.logWrite(self.setCompilers.restoreLog())
     return
 
+  def checkDeviceHostCompiler(self,language):
+    """Set the host compiler for device compiler (DC) to the current host compiler (HC). This may be needed if the default compiler used by DC is ancient. If the DC already contains a flag that sets the corresponding HC this routine does nothing"""
+    if language == 'CUDA':
+      setHostFlag = '-ccbin'
+    else:
+      raise NotImplemtedError
+    with self.Language(language):
+      if setHostFlag in self.getCompilerFlags():
+        # don't want to override this if it is already set
+        return
+    hostLanguage = 'Cxx' if hasattr(self.setCompilers,'CXX') else 'C'
+    compilerName = self.getCompiler(hostLanguage)
+    hostCCFlag = '{shf} {cc}'.format(shf = setHostFlag, cc = compilerName)
+    with self.setCompilers.Language(language):
+      self.setCompilers.saveLog()
+      self.logPrint(' '.join(['checkDeviceHostCompiler: checking',self.setCompilers.getCompiler(),'accepts host compiler',compilerName]))
+      self.logWrite(self.setCompilers.restoreLog())
+      try:
+        self.setCompilers.addCompilerFlag(hostCCFlag)
+      except RuntimeError:
+        pass
+    return
 
-  def checkCxxDialect(self,language,isGNUish,hasNVCC):
+  def checkCxxDialect(self,language,isGNUish):
     """Determine the CXX dialect supported by the compiler(language) [and correspoding compiler option - if any].
     isGNUish indicates if the compiler is gnu compliant (i.e. clang).
     -with-<lang>-dialect can take options:
@@ -480,7 +502,6 @@ class Configure(config.base.Configure):
       0: disable CxxDialect check and use compiler default
     """
     lang = language.lower()
-    import ipdb; ipdb.set_trace()
     try:
       # see if we've done this before for this language.
       # - If we DON'T have the attribute -- we haven't done this before (for example we
@@ -495,7 +516,6 @@ class Configure(config.base.Configure):
       # we have not
       pass
     LANG = language.upper()
-    langReal = LANG.replace('X','+')
     # configure value
     with_lang_dialect = self.argDB.get('with-'+lang+'-dialect','').upper().replace('X','+')
     if with_lang_dialect in {'','0','NONE'}: return
@@ -548,25 +568,21 @@ class Configure(config.base.Configure):
       raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
 
     baseFlag = '-std=gnu++' if isGNUish else '-std=c++'
-    with self.Language(langReal):
+    with self.Language(language):
       for dlct in reversed(dialects[:maxDialect]):
         flag = ''.join([baseFlag,dlct['num']])
         self.setCompilers.saveLog()
         self.logPrint(' '.join(['checkCxxDialect: checking CXX',dlct['num'],'for',language,'with flag:',flag]))
         self.logWrite(self.setCompilers.restoreLog())
         # test with flag
-        with self.setCompilers.Language(langReal):
+        with self.setCompilers.Language(language):
           try:
             self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'])
           except RuntimeError:
             # failure
             maxDialect -= 1
           else:
-            # success, also update preprocessor flag?
-            ppFlagsArg = self.setCompilers.getPreprocessorFlagsArg()
-            # should really have an 'insert' preprocessor flag routine here
-            newflag = ' '.join([getattr(self.setCompilers,ppFlagsArg),flag])
-            setattr(self.setCompilers,ppFlagsArg,newflag)
+            # success
             break
     if maxDialect < 0:
       raise RuntimeError("C++ compiler does not appear to be compliant with C++03, or does not accept -std=c++03 flag")
@@ -1514,14 +1530,19 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       self.executeTest(self.checkDependencyGenerationFlag)
     else:
       self.isGCC = 0
+
+    if hasattr(self.setCompilers, 'CUDAC'):
+      self.executeTest(self.checkDeviceHostCompiler,['CUDA'])
+      self.executeTest(self.checkCxxDialect,['CUDA',False]) # Not GNU
+
+    if hasattr(self.setCompilers, 'HIPC'):
+      self.executeTest(self.checkCxxDialect,['HIP',False]) # Not GNU
+
     if hasattr(self.setCompilers, 'CXX'):
       self.isGCXX = config.setCompilers.Configure.isGNU(self.setCompilers.CXX, self.log)
       self.executeTest(self.checkRestrict,['Cxx'])
       isClang = config.setCompilers.Configure.isClang(self.setCompilers.CXX,self.log)
-      # CUDA does not support gcc extensions well enough so turn them off if we also have
-      # nvcc
-      isGNUIsh = (self.isGCXX or isClang) and not hasattr(self.setCompilers,'CUDAC')
-      self.executeTest(self.checkCxxDialect,['Cxx',isGNUIsh])
+      self.executeTest(self.checkCxxDialect,['Cxx',self.isGCXX or isClang])
       self.executeTest(self.checkCxxOptionalExtensions)
       self.executeTest(self.checkCxxInline)
       self.executeTest(self.checkCxxComplexFix)
@@ -1540,11 +1561,6 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       if hasattr(self.setCompilers, 'CXX'):
         self.executeTest(self.checkFortranLinkingCxx)
 
-    if hasattr(self.setCompilers, 'CUDAC'):
-      self.executeTest(self.checkCxxDialect,['CUDA',False]) # Not GNU
-
-    if hasattr(self.setCompilers, 'HIPC'):
-      self.executeTest(self.checkCxxDialect,['HIP',False]) # Not GNU
     if hasattr(self.setCompilers, 'SYCL'):
         #Placeholder in case further checks are needed
         pass
