@@ -468,7 +468,7 @@ class Configure(config.base.Configure):
     return
 
 
-  def checkCxxDialect(self,language,isGNUish):
+  def checkCxxDialect(self,language,isGNUish,hasNVCC):
     """Determine the CXX dialect supported by the compiler(language) [and correspoding compiler option - if any].
     isGNUish indicates if the compiler is gnu compliant (i.e. clang).
     -with-<lang>-dialect can take options:
@@ -480,8 +480,24 @@ class Configure(config.base.Configure):
       0: disable CxxDialect check and use compiler default
     """
     lang = language.lower()
+    import ipdb; ipdb.set_trace()
+    try:
+      # see if we've done this before for this language.
+      # - If we DON'T have the attribute -- we haven't done this before (for example we
+      #   dont have self.cudadialect) -- then getattr raises AttributeError, we catch and
+      #   this routine continues as planned.
+      # - If we DO have the attribute:
+      #   - It's empty, no error is raised and we continue.
+      #   - It's not empty, and we return.
+      if getattr(self,lang+'dialect'):
+        return
+    except AttributeError:
+      # we have not
+      pass
     LANG = language.upper()
-    with_lang_dialect = self.argDB.get('with-'+lang+'-dialect','').upper().replace('X','+') # configure value
+    langReal = LANG.replace('X','+')
+    # configure value
+    with_lang_dialect = self.argDB.get('with-'+lang+'-dialect','').upper().replace('X','+')
     if with_lang_dialect in {'','0','NONE'}: return
     includes = """
           #include <random>
@@ -532,14 +548,14 @@ class Configure(config.base.Configure):
       raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
 
     baseFlag = '-std=gnu++' if isGNUish else '-std=c++'
-    with self.Language('C++'):
+    with self.Language(langReal):
       for dlct in reversed(dialects[:maxDialect]):
         flag = ''.join([baseFlag,dlct['num']])
         self.setCompilers.saveLog()
         self.logPrint(' '.join(['checkCxxDialect: checking CXX',dlct['num'],'for',language,'with flag:',flag]))
         self.logWrite(self.setCompilers.restoreLog())
         # test with flag
-        with self.setCompilers.Language('C++'):
+        with self.setCompilers.Language(langReal):
           try:
             self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'])
           except RuntimeError:
