@@ -1,12 +1,11 @@
-#requiresdefine 'PETSC_HAVE_CXX'
-#requirespackage 'PETSC_HAVE_CUDA'
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
-SOURCECXX = contextcupm.cxx
+SOURCECU  = contextcupm.cu
+SOURCEHIP = contextcupm.hip.cpp
 SOURCEF	  =
 SOURCEH   = contextcupm.hpp
 MANSEC	  = Sys
