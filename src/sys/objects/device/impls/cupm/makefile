@@ -4,13 +4,11 @@ CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
-SOURCECU  = contextcupm.cu
-SOURCEHIP = contextcupm.hip.cpp
 SOURCEF	  =
 SOURCEH   = contextcupm.hpp
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
-DIRS	  =
+DIRS	  = cuda hip
 LOCDIR	  = src/sys/objects/device/impls/cupm/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

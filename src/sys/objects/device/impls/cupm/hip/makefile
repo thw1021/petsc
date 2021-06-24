@@ -5,13 +5,13 @@ CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
-SOURCEHIP = contexthip.hip.cpp
+SOURCEHIP = contextcupm.hip.cpp
 SOURCEF	  =
-SOURCEH	  = contexthip.h
+SOURCEH   =
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 DIRS	  =
-LOCDIR	  = src/sys/objects/device/impls/hip/
+LOCDIR	  = src/sys/objects/device/impls/cupm/hip/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

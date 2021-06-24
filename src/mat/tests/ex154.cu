@@ -1,10 +1,11 @@
 static char help[] = "Example showing concurrent solves for PetscDeviceContext\n";
 
-#include <petscdevice.h>
-#include <../src/sys/objects/stream/impls/cuda/contextcuda.hpp>
 #include <petsc/private/vecimpl.h>
 #include <../src/mat/impls/dense/seq/dense.h>
 #include <cuda_profiler_api.h>
+#include <../src/sys/objects/device/impls/cupm/contextcupm.hpp>
+
+using namespace Petsc; /* needed for PetscDeviceContext_(IMPLS) macro to work */
 
 typedef struct {
   PetscScalar *d_v; /* pointer to the matrix on the GPU */
@@ -21,7 +22,7 @@ typedef struct {
   Vec         workvec;
 } Mat_SeqDenseCUDA;
 
-PetscErrorCode MatSeqDenseCUDACopyToGPU(Mat A)
+PetscErrorCode MatSeqDenseCUDACopyToGPU_IMPLS(Mat A)
 {
   Mat_SeqDense     *cA = (Mat_SeqDense*)A->data;
   Mat_SeqDenseCUDA *dA = (Mat_SeqDenseCUDA*)A->spptr;
@@ -70,7 +71,7 @@ static PetscErrorCode MatSeqDenseCUDAGetArrayReadAsync(Mat A, const PetscScalar 
   ierr = PetscInfo3(A,"%s matrix %d x %d\n",copy ? "Copy" : "Reusing",A->rmap->n,A->cmap->n);CHKERRQ(ierr);
   ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
   if (copy) {
-    PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA*)dctx->data;
+    PetscDeviceContext_(CUDA) *dcu = (PetscDeviceContext_(CUDA)*)dctx->data;
 
     if (!dA->d_v) { /* Allocate GPU memory if not present */
       ierr = MatSeqDenseCUDASetPreallocation(A,NULL);CHKERRQ(ierr);
@@ -98,7 +99,7 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Internal_LU_Async(Mat A, PetscScalar
   Mat_SeqDenseCUDA   *dA = (Mat_SeqDenseCUDA*)A->spptr;
   const PetscScalar  *da;
   PetscCuBLASInt     lda;
-  cusolverDnHandle_t handle;
+  //cusolverDnHandle_t handle;
   cudaError_t        ccer;
   cusolverStatus_t   cerr;
   int                info;
@@ -110,9 +111,7 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Internal_LU_Async(Mat A, PetscScalar
   ierr = MatSeqDenseCUDAGetArrayReadAsync(A,&da);CHKERRQ(ierr);
   ierr = PetscInfo2(A,"LU ASYNC solve %d x %d on backend\n",m,k);CHKERRQ(ierr);
   ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
-  ierr = PetscDeviceContextGetSOLVERHandle(dctx,&handle);CHKERRQ(ierr);
-  cerr = cusolverDnDgetrs(handle,T ? CUBLAS_OP_T : CUBLAS_OP_N,m,nrhs,da,lda,dA->d_fact_ipiv,x,ldx,dA->d_fact_info);CHKERRCUSOLVER(cerr);
-  ierr = PetscDeviceContextRestoreSOLVERHandle(dctx,&handle);CHKERRQ(ierr);
+  cerr = cusolverDnDgetrs(((PetscDeviceContext_(CUDA)*)dctx->data)->solver,T ? CUBLAS_OP_T : CUBLAS_OP_N,m,nrhs,da,lda,dA->d_fact_ipiv,x,ldx,dA->d_fact_info);CHKERRCUSOLVER(cerr);
   if (PetscDefined(USE_DEBUG)) {
     ccer = cudaDeviceSynchronize();CHKERRCUDA(ccer);
     ccer = cudaMemcpy(&info, dA->d_fact_info, sizeof(PetscCuBLASInt), cudaMemcpyDeviceToHost);CHKERRCUDA(ccer);
@@ -137,7 +136,7 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Async(Mat A, Vec xx, Vec yy)
     cudaError_t cerr;
     const PetscScalar *x;
     PetscBool xishost = PETSC_TRUE;
-    PetscDeviceContext_CUDA *dcu = (PetscDeviceContext_CUDA*)dctx->data;
+    PetscDeviceContext_(CUDA) *dcu = (PetscDeviceContext_(CUDA)*)dctx->data;
 
     /* The logic here is to try to minimize the amount of memory copying:
        if we call VecCUDAGetArrayRead(X,&x) every time xiscuda and the
@@ -213,8 +212,7 @@ int main(int argc, char **argv)
 
   ierr = PetscMalloc6(nMat,&mats,nMat,&matsref,nMat,&xx,nMat,&xxref,nMat,&yy,nMat,&yyref);CHKERRQ(ierr);
   for (PetscInt i = 0; i < nMat; ++i) {
-    cusolverDnHandle_t dummyHandle;
-    PetscScalar        *dummy;
+    PetscScalar *dummy;
 
     ierr = MatCreate(comm,mats+i);CHKERRQ(ierr);
     ierr = MatSetSizes(mats[i],matSize,matSize,PETSC_DECIDE,PETSC_DECIDE);CHKERRQ(ierr);
@@ -238,14 +236,11 @@ int main(int argc, char **argv)
     ierr = VecCopy(xx[i],xxref[i]);CHKERRQ(ierr);
     ierr = VecCopy(yy[i],yyref[i]);CHKERRQ(ierr);
     // Move any data down onto the GPU now
-    ierr = MatSeqDenseCUDACopyToGPU(mats[i]);CHKERRQ(ierr);
+    ierr = MatSeqDenseCUDACopyToGPU_IMPLS(mats[i]);CHKERRQ(ierr);
     ierr = VecCUDAGetArrayWrite(xx[i],&dummy);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayWrite(xx[i],&dummy);CHKERRQ(ierr);
     ierr = VecCUDAGetArrayWrite(yy[i],&dummy);CHKERRQ(ierr);
     ierr = VecCUDARestoreArrayWrite(yy[i],&dummy);CHKERRQ(ierr);
-    // Initialize the handles beforehand
-    ierr = PetscDeviceContextGetSOLVERHandle(subCtx[i],&dummyHandle);CHKERRQ(ierr);
-    ierr = PetscDeviceContextRestoreSOLVERHandle(subCtx[i],&dummyHandle);CHKERRQ(ierr);
   }
   cerr = cudaProfilerStart();CHKERRCUDA(cerr);
   ierr = HostDeviceBarrier();CHKERRQ(ierr);
