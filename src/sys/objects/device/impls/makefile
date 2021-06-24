@@ -9,7 +9,7 @@ SOURCEF	  =
 SOURCEH	  =
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
-DIRS	  = cuda hip cupm
+DIRS	  = cupm
 LOCDIR	  = src/sys/objects/device/impls/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

@@ -4,6 +4,13 @@
 #include <petscsys.h>
 #include <stack>
 
+#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+#include <type_traits>
+#define PETSC_STATIC_ASSERT_BASE_CLASS(base_,derived_) static_assert(std::is_base_of<base_,derived_>::value,"")
+#else
+#define PETSC_STATIC_ASSERT_BASE_CLASS(base_,derived_)
+#endif
+
 namespace Petsc {
 
 // generic allocator for interorperability with C "constructors" and "destructors"
