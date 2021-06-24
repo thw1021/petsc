@@ -83,7 +83,11 @@ PetscErrorCode objectPool<T,_Allocator>::reclaim(T &obj) PETSC_NOEXCEPT
   } catch (std::exception const &ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
   }
+#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+  obj = nullptr;
+#else
   obj = NULL;
+#endif
   PetscFunctionReturn(0);
 }
 
