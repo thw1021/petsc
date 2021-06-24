@@ -1,10 +1,10 @@
-#include "contextcupm.hpp" /*I "petscdevice.h" I*/
+#include "../contextcupm.hpp" /*I "petscdevice.h" I*/
 
 using namespace Petsc;
 
-static const cupmContextCuda contextCuda(PetscDeviceContextCreate_CUDAM);
+static const cupmContextCuda contextCuda(PetscDeviceContextCreate_CUDA);
 
-PetscErrorCode PetscDeviceContextCreate_CUDAM(PetscDeviceContext dctx)
+PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext dctx)
 {
   PetscDeviceContext_(CUDA) *dci;
   PetscErrorCode             ierr;
