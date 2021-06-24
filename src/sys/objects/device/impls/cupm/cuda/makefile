@@ -5,13 +5,13 @@ CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
-SOURCECU  = contextcuda.cu
+SOURCECU  = contextcupm.cu
 SOURCEF	  =
-SOURCEHXX = contextcuda.hpp
+SOURCEH   =
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 DIRS	  =
-LOCDIR	  = src/sys/objects/device/impls/cuda/
+LOCDIR	  = src/sys/objects/device/impls/cupm/cuda/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
