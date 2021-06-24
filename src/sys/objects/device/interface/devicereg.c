@@ -1,5 +1,7 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
+const char *const PetscStreamTypes[] = {"global_blocking","default_blocking","global_nonblocking","MAX_TYPE","PetscStreamType","PETSC_STREAM_",NULL};
+
 static PetscFunctionList PetscDeviceContextList        = NULL;
 static PetscBool         PetscDeviceRegisterAllCalled  = PETSC_FALSE;
 static PetscBool         PetscDevicePackageInitialized = PETSC_FALSE;
