@@ -29,4 +29,4 @@ fieldNames['ex62']['field 1'] = 'Pressure'
 fieldNames['chrest'] = {}
 fieldNames['chrest']['field 0'] = 'Velocity'
 fieldNames['chrest']['field 1'] = 'Pressure'
-fieldNames['chrest']['field 2'] = 'Velocity'
+fieldNames['chrest']['field 2'] = 'Temperature'

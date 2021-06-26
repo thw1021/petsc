@@ -24,7 +24,6 @@ def main(cmdLineArgs):
     if len(files['csv']) != 0:
         for fileName in files['csv']:
             data.append(dataProcesCSV(cmdLineArgs, fileName ))
-    #files = dataProcesCSV(cmdLineArgs)
     for item in data:
         graphGen(item, cmdLineArgs.enable_graphs, cmdLineArgs.graph_flops_scaling, cmdLineArgs.dim)
 
