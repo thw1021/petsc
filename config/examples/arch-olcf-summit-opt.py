@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # Specify BLAS and LAPACK.
     ############################################################
 
-    # Note that ESSL does not require all functions used by PETSc, so we link netlib LAPACK as well.
+    # Note: ESSL does not provide all functions used by PETSc, so we link netlib LAPACK as well.
     # On ORNL's Summit, one must 'module load' both the essl AND netlib-lapack modules:
     '--with-blaslapack-lib=-L' + os.environ['OLCF_ESSL_ROOT'] + '/lib64 -lessl -llapack -lessl',
 
