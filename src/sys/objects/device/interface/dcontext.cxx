@@ -1,11 +1,10 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 #include "objpool.hpp"
 
-static PetscInt PetscDeviceContextID = 0;
-
 /* Define the allocator */
 struct PetscDeviceContextAllocator : public Petsc::allocator<PetscDeviceContext>
 {
+  static PetscInt PetscDeviceContextID;
   static PETSC_NODISCARD PetscErrorCode create(PetscDeviceContext *dctx) PETSC_NOEXCEPT
   {
     PetscDeviceContext dc;
@@ -34,6 +33,7 @@ struct PetscDeviceContextAllocator : public Petsc::allocator<PetscDeviceContext>
     PetscFunctionReturn(0);
   }
 };
+PetscInt PetscDeviceContextAllocator::PetscDeviceContextID = 0;
 
 static Petsc::objectPool<PetscDeviceContext,PetscDeviceContextAllocator> contextPool;
 
@@ -52,6 +52,9 @@ PetscErrorCode Petsc::objectPool<PetscDeviceContext,PetscDeviceContextAllocator>
   } catch (std::exception const &ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
   }
+  /* reset the ID counter, the first PetscDeviceContext created (i.e. the root) should
+     always expect to have ID 0 */
+  PetscDeviceContextAllocator::PetscDeviceContextID = 0;
   contextPool._registered = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -379,25 +382,25 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
 
   Input Parameters:
 + dctx         - A PetscDeviceContext to converge on
-. allJoin      - Join convergent sub contexts with all other sub contexts
-. destroyEdges - Whether to destroy the convergent sub contexts
 . n            - The number of sub contexts to converge
+. joinMode     - The type of join to perform
 - dsub         - The sub contexts to converge
 
   Notes:
-  If PetscDeviceContextFork() creates n edges from a source node which all depend on the source node, then this routine
-  is the exact mirror. That is, it creates a node (represented in dctx) which recieves n edges (and optionally destroys
-  them) which is dependent on the completion of all incoming edges.
+  If PetscDeviceContextFork() creates n edges from a source node which all depend on the
+  source node, then this routine is the exact mirror. That is, it creates a node
+  (represented in dctx) which recieves n edges (and optionally destroys them) which is
+  dependent on the completion of all incoming edges.
 
-  If destroyEdges is PETSC_TRUE then all sub contexts must have been created with the dctx passed to this function. If
-  destroyEdges is PETSC_FALSE then one is free to queue additional work on the sub contexts.
+  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_DESTROY then all sub contexts must have
+  been created with the dctx passed to this function.
 
-  If allJoin is PETSC_TRUE all sub contexts will additionally wait on dctx after converging. In DAG terminology this has
-  the effect of "synchronizing" the outgoing edges. Note that is destroyEdges is PETSC_TRUE then allJoin is ignored; it
-  doesn't matter if outgoing edges are synchronized if they are destroyed anyways.
+  If joinMode is  PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC all sub contexts will additionally
+  wait on dctx after converging. In DAG terminology this has the effect of "synchronizing"
+  the outgoing edges.
 
   DAG representations:
-  If destroyEdges is PETSC_TRUE (regardless of allJoin)
+  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_DESTROY
 .vb
   time ->
 
@@ -406,7 +409,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
   ->  ... -------/
   -> dsub[n-1] -/
 .ve
-  If destroyEdges is PETSC_FALSE and allJoin is PETSC_FALSE
+  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC
 .vb
   time ->
 
@@ -415,7 +418,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
   ->  ... -------/---------->
   -> dsub[n-1] -/----------->
 .ve
-  If destroyEdges is PETSC_FALSE and allJoin is PETSC_TRUE
+  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_SYNC
 .vb
   -> dctx ---------/- dctx -\----> dctx ------>
   -> dsub[0] -----/          \---> dsub[0] --->
@@ -425,9 +428,9 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
 
   Level: intermediate
 
-.seealso: PetscDeviceContextFork(), PetscDeviceContextSynchronize()
+.seealso: PetscDeviceContextFork(), PetscDeviceContextSynchronize(), PetscDeviceContextJoinMode
 @*/
-PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscBool allJoin, PetscBool destroyEdges, PetscInt n, PetscDeviceContext **dsub)
+PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, PetscDeviceContextJoinMode joinMode, PetscDeviceContext **dsub)
 {
   PetscErrorCode ierr;
 
@@ -435,34 +438,43 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscBool allJoin
   PetscValidStreamType(dctx,1);
   PetscValidPointer(dsub,4);
   if (PetscUnlikelyDebug(n < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of contexts merged %D < 0",n);
-  ierr = PetscInfo3(NULL,"Joining %D sub contexts to context %D, destroy? %s\n",n,dctx->id,destroyEdges ? "yes" : "no");CHKERRQ(ierr);
+  ierr = PetscInfo3(NULL,"Joining %D sub contexts to context %D, using mode %s\n",n,dctx->id,PetscDeviceContextJoinModes[joinMode]);CHKERRQ(ierr);
   for (PetscInt i = 0; i < n; ++i) {
     PetscCheckValidSameStreamType(dctx,1,(*dsub)[i],4);
     ierr = PetscDeviceContextWaitForContext(dctx,(*dsub)[i]);CHKERRQ(ierr);
   }
-  if (destroyEdges) {
-    PetscInt i = 0, j = 0;
+  switch (joinMode) {
+  case PETSC_DEVICE_CONTEXT_JOIN_DESTROY:
+    {
+      PetscInt i = 0, j = 0;
 
-    if (PetscUnlikelyDebug(n > dctx->numChildren)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy %D children of a parent context that only has %D children, likely trying to restore to wrong parent",n,dctx->numChildren);
-    /* update child count while it's still fresh in memory */
-    dctx->numChildren -= n;
-    while (i != dctx->maxNumChildren) {
-      if (dctx->childIDs[i] && (dctx->childIDs[i] == (*dsub)[j]->id)) {
-        /* child is one of ours, can destroy it */
-        ierr = PetscDeviceContextDestroy((*dsub)+j);CHKERRQ(ierr);
-        /* reset the child slot */
-        dctx->childIDs[i] = 0;
-        if (++j == n) break;
+      if (PetscUnlikelyDebug(n > dctx->numChildren)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy %D children of a parent context that only has %D children, likely trying to restore to wrong parent",n,dctx->numChildren);
+      /* update child count while it's still fresh in memory */
+      dctx->numChildren -= n;
+      while (i != dctx->maxNumChildren) {
+        if (dctx->childIDs[i] && (dctx->childIDs[i] == (*dsub)[j]->id)) {
+          /* child is one of ours, can destroy it */
+          ierr = PetscDeviceContextDestroy((*dsub)+j);CHKERRQ(ierr);
+          /* reset the child slot */
+          dctx->childIDs[i] = 0;
+          if (++j == n) break;
+        }
+        ++i;
       }
-      ++i;
+      /* gone through the loop but did not find every child, if this triggers (or well, doesn't) on perf-builds we leak the remaining contexts memory */
+      if (PetscUnlikelyDebug(j != n)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%D contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checkout out in.",n-j);
+      ierr = PetscFree(*dsub);CHKERRQ(ierr);
     }
-    /* gone through the loop but did not find every child, if this triggers (or well, doesn't) on perf-builds we leak the remaining contexts memory */
-    if (PetscUnlikelyDebug(j != n)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%D contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checkout out in.",n-j);
-    ierr = PetscFree(*dsub);CHKERRQ(ierr);
-  } else if (allJoin) {
+    break;
+  case PETSC_DEVICE_CONTEXT_JOIN_SYNC:
     for (PetscInt i = 0; i < n; ++i) {
       ierr = PetscDeviceContextWaitForContext((*dsub)[i],dctx);CHKERRQ(ierr);
     }
+  case PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC:
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscDeviceContextJoinMode given");
+    break;
   }
   PetscFunctionReturn(0);
 }
@@ -594,8 +606,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Intern
 #else
   defaultContextType = PETSCDEVICECONTEXTCUDA;
 #endif
-  /* reset the ID counter, the first PetscDeviceContext created (i.e. the root) should always expect to have ID 0 */
-  PetscDeviceContextID = 0;
   globalContextSetup   = PETSC_FALSE;
   PetscFunctionReturn(0);
 }

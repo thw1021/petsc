@@ -157,6 +157,8 @@ PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 #endif /* PETSC_HAVE_HIP */
 
+/* Cannot use the device context api without C++ */
+#if defined(PETSC_HAVE_CXX)
 PETSC_EXTERN PetscErrorCode PetscDeviceRegisterAll(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
@@ -173,10 +175,11 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextQueryIdle(PetscDeviceContext,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextFork(PetscDeviceContext,PetscInt,PetscDeviceContext**);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext,PetscBool,PetscBool,PetscInt,PetscDeviceContext**);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext,PetscInt,PetscDeviceContextJoinMode,PetscDeviceContext**);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDeviceContextType,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDeviceContextType*,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
+#endif
 #endif /* PETSCDEVICE_H */
