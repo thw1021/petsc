@@ -254,7 +254,7 @@ int main(int argc, char **argv)
 
   ierr = HostDeviceBarrier();CHKERRQ(ierr);
   cerr = cudaProfilerStop();CHKERRCUDA(cerr);
-  ierr = PetscDeviceContextJoin(dctx,PETSC_FALSE,PETSC_TRUE,nMat,&subCtx);CHKERRQ(ierr);
+  ierr = PetscDeviceContextJoin(dctx,nMat,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&subCtx);CHKERRQ(ierr);
   ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetCurrentContext(dctx);CHKERRQ(ierr);
 
