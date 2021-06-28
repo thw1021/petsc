@@ -59,7 +59,7 @@ if __name__ == '__main__':
     # For this case, use ESSL. (ESSL does *not* work for builds with GCC and PGI.)
     # Note that ESSL does not provide some of the LAPACK functions required by PETSc!
     # On ORNL's Summit, one must 'module load' both the essl AND netlib-lapack modules:
-    #'--with-blaslapack-lib=-L' + os.environ['OLCF_ESSL_ROOT'] + '/lib64 -lessl -llapack',
+    #'--with-blaslapack-lib=-L' + os.environ['OLCF_ESSL_ROOT'] + '/lib64 -lessl -llapack -lessl',
 
     ############################################################
     # Enable GPU support through CUDA/CUSPARSE and ViennaCL.
