@@ -37,9 +37,11 @@ PetscInt PetscDeviceContextAllocator::PetscDeviceContextID = 0;
 
 static Petsc::objectPool<PetscDeviceContext,PetscDeviceContextAllocator> contextPool;
 
+namespace Petsc {
+
 /* finalizer also needs its specialization */
 template <>
-PetscErrorCode Petsc::objectPool<PetscDeviceContext,PetscDeviceContextAllocator>::finalize(void) PETSC_NOEXCEPT
+PetscErrorCode objectPool<PetscDeviceContext,PetscDeviceContextAllocator>::finalize(void) PETSC_NOEXCEPT
 {
   PetscFunctionBegin;
   try {
@@ -58,6 +60,8 @@ PetscErrorCode Petsc::objectPool<PetscDeviceContext,PetscDeviceContextAllocator>
   contextPool._registered = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
+
+} /* namespace Petsc */
 
 /*@C
   PetscDeviceContextCreate - Creates a PetscDeviceContext
