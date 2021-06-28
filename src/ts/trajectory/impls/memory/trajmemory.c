@@ -1996,7 +1996,7 @@ PetscErrorCode TSTrajectorySetMaxCpsRAM(TSTrajectory tj,PetscInt max_cps_ram)
 
   Level: intermediate
 
-.seealso: TSTrajectorySetMaxUnitsDisk()
+.seealso: TSTrajectorySetMaxUnitsDisk(), TSTrajectorySetMaxUnitsRAM()
 @*/
 PetscErrorCode TSTrajectorySetMaxCpsDisk(TSTrajectory tj,PetscInt max_cps_disk)
 {
@@ -2065,23 +2065,23 @@ static PetscErrorCode TSTrajectorySetFromOptions_Memory(PetscOptionItems *PetscO
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"Memory based TS trajectory options");CHKERRQ(ierr);
   {
-    ierr = PetscOptionsInt("-ts_trajectory_max_cps_ram","Maximum number of checkpoints in RAM","TSTrajectorySetMaxCpsRAM_Memory",tjsch->max_cps_ram,&max_cps_ram,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-ts_trajectory_max_cps_ram","Maximum number of checkpoints in RAM","TSTrajectorySetMaxCpsRAM",tjsch->max_cps_ram,&max_cps_ram,&flg);CHKERRQ(ierr);
     if (flg) {
       ierr = TSTrajectorySetMaxCpsRAM(tj,max_cps_ram);CHKERRQ(ierr);
     }
-    ierr = PetscOptionsInt("-ts_trajectory_max_cps_disk","Maximum number of checkpoints on disk","TSTrajectorySetMaxCpsDisk_Memory",tjsch->max_cps_disk,&max_cps_disk,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-ts_trajectory_max_cps_disk","Maximum number of checkpoints on disk","TSTrajectorySetMaxCpsDisk",tjsch->max_cps_disk,&max_cps_disk,&flg);CHKERRQ(ierr);
     if (flg) {
       ierr = TSTrajectorySetMaxCpsDisk(tj,max_cps_disk);CHKERRQ(ierr);
     }
-    ierr = PetscOptionsInt("-ts_trajectory_max_units_ram","Maximum number of checkpointing units in RAM","TSTrajectorySetMaxUnitsRAM_Memory",tjsch->max_units_ram,&max_units_ram,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-ts_trajectory_max_units_ram","Maximum number of checkpointing units in RAM","TSTrajectorySetMaxUnitsRAM",tjsch->max_units_ram,&max_units_ram,&flg);CHKERRQ(ierr);
     if (flg) {
       ierr = TSTrajectorySetMaxUnitsRAM(tj,max_units_ram);CHKERRQ(ierr);
     }
-    ierr = PetscOptionsInt("-ts_trajectory_max_units_disk","Maximum number of checkpointing units on disk","TSTrajectorySetMaxUnitsDisk_Memory",tjsch->max_units_disk,&max_units_disk,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-ts_trajectory_max_units_disk","Maximum number of checkpointing units on disk","TSTrajectorySetMaxUnitsDisk",tjsch->max_units_disk,&max_units_disk,&flg);CHKERRQ(ierr);
     if (flg) {
       ierr = TSTrajectorySetMaxUnitsDisk(tj,max_units_disk);CHKERRQ(ierr);
     }
-    ierr = PetscOptionsInt("-ts_trajectory_stride","Stride to save checkpoints to file","TSTrajectorySetStride_Memory",tjsch->stride,&tjsch->stride,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-ts_trajectory_stride","Stride to save checkpoints to file","TSTrajectorySetStride",tjsch->stride,&tjsch->stride,NULL);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_REVOLVE)
     ierr = PetscOptionsBool("-ts_trajectory_revolve_online","Trick TS trajectory into using online mode of revolve","TSTrajectorySetRevolveOnline",tjsch->use_online,&tjsch->use_online,NULL);CHKERRQ(ierr);
 #endif
