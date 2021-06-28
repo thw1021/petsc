@@ -145,7 +145,7 @@ static PetscErrorCode TurnBackward(TS ts)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode ElementCreate(TS ts,Stack *stack,StackElement *e,PetscInt cptype)
+static PetscErrorCode ElementCreate(TS ts,PetscInt cptype,Stack *stack,StackElement *e)
 {
   Vec            X;
   Vec            *Y;
@@ -412,7 +412,7 @@ static PetscErrorCode StackLoadAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
   ierr = PetscViewerBinarySetSkipInfo(viewer,PETSC_TRUE);CHKERRQ(ierr);
   ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);
   for (i=0;i<stack->stacksize;i++) {
-    ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+    ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
     ierr = StackPush(stack,e);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(TSTrajectory_DiskRead,tj,ts,0,0);CHKERRQ(ierr);
     ierr = ReadFromDisk(&e->stepnum,&e->time,&e->timeprev,e->X,e->Y,stack->numY,stack->solution_only,viewer);CHKERRQ(ierr);
@@ -680,7 +680,7 @@ static PetscErrorCode SetTrajN(TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscRe
     SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
   }
   cptype = stack->solution_only ? SOLUTIONONLY : STAGESONLY;
-  ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+  ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
   ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
   ierr = StackPush(stack,e);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -704,7 +704,7 @@ static PetscErrorCode SetTrajN_2(TS ts,TJScheduler *tjsch,PetscInt stepnum,Petsc
   }
   if (stepnum < stack->top) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
   cptype = stack->solution_only ? SOLUTIONONLY : STAGESONLY;
-  ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+  ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
   ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
   ierr = StackPush(stack,e);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -776,7 +776,7 @@ static PetscErrorCode SetTrajTLNR(TSTrajectory tj,TS ts,TJScheduler *tjsch,Petsc
   if (stack->solution_only && localstepnum == tjsch->stride-1) PetscFunctionReturn(0); /* skip last step in each stride at recompute stage or last stride */
 
   cptype = stack->solution_only ? SOLUTIONONLY : STAGESONLY;
-  ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+  ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
   ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
   ierr = StackPush(stack,e);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -831,7 +831,7 @@ static PetscErrorCode GetTrajTLNR(TSTrajectory tj,TS ts,TJScheduler *tjsch,Petsc
         ierr = StackLoadAll(tj,ts,stack,id);CHKERRQ(ierr);
       } else {
         ierr = LoadSingle(tj,ts,stack,id);CHKERRQ(ierr);
-        ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+        ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
         ierr = ElementSet(ts,stack,&e,(id-1)*tjsch->stride+1,ts->ptime,ts->vec_sol);CHKERRQ(ierr);
         ierr = StackPush(stack,e);CHKERRQ(ierr);
         ierr = TurnForward(ts);CHKERRQ(ierr);
@@ -1034,7 +1034,7 @@ static PetscErrorCode SetTrajROF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   if (store == 1) {
     if (stepnum < stack->top) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
     cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
-    ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+    ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
     ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
     ierr = StackPush(stack,e);CHKERRQ(ierr);
   }
@@ -1123,7 +1123,7 @@ static PetscErrorCode SetTrajRON(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
     } else {
       if (stepnum < stack->top) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
       cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
-      ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+      ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
       ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
       ierr = StackPush(stack,e);CHKERRQ(ierr);
     }
@@ -1219,7 +1219,7 @@ static PetscErrorCode SetTrajTLR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   if (store == 1) {
     if (localstepnum < stack->top) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
     cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
-    ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+    ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
     ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
     ierr = StackPush(stack,e);CHKERRQ(ierr);
   }
@@ -1300,7 +1300,7 @@ static PetscErrorCode GetTrajTLR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
           ierr = PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel);CHKERRQ(ierr);
         }
         cptype = SOLUTION_STAGES;
-        ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+        ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
         ierr = ElementSet(ts,stack,&e,(stridenum-1)*tjsch->stride+1,ts->ptime,ts->vec_sol);CHKERRQ(ierr);
         ierr = StackPush(stack,e);CHKERRQ(ierr);
         ierr = TurnForward(ts);CHKERRQ(ierr);
@@ -1385,7 +1385,7 @@ static PetscErrorCode SetTrajTLTR(TSTrajectory tj,TS ts,TJScheduler *tjsch,Petsc
     CheckpointType cptype;
     if (localstepnum < stack->top) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
     cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
-    ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+    ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
     ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
     ierr = StackPush(stack,e);CHKERRQ(ierr);
   }
@@ -1497,7 +1497,7 @@ static PetscErrorCode GetTrajTLTR(TSTrajectory tj,TS ts,TJScheduler *tjsch,Petsc
             ierr = PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %D to %D (stage values already checkpointed)\n",(restoredstridenum-1)*tjsch->stride,(restoredstridenum-1)*tjsch->stride+1);CHKERRQ(ierr);
             ierr = PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel);CHKERRQ(ierr);
           }
-          ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+          ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
           ierr = ElementSet(ts,stack,&e,(restoredstridenum-1)*tjsch->stride+1,ts->ptime,ts->vec_sol);CHKERRQ(ierr);
           ierr = StackPush(stack,e);CHKERRQ(ierr);
         }
@@ -1573,7 +1573,7 @@ static PetscErrorCode SetTrajRMS(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
     CheckpointType cptype;
     if (stepnum < stack->top) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
     cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
-    ierr = ElementCreate(ts,stack,&e,cptype);CHKERRQ(ierr);
+    ierr = ElementCreate(ts,cptype,stack,&e);CHKERRQ(ierr);
     ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
     ierr = StackPush(stack,e);CHKERRQ(ierr);
   } else if (store == 2) {
@@ -1669,21 +1669,21 @@ static PetscErrorCode SetTrajAOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
       if (tj->monitor) {
         ierr = PetscViewerASCIIPrintf(tj->monitor,"Store in checkpoint number %D with stage values and solution (located in RAM)\n",stepnum);CHKERRQ(ierr);
       }
-      ierr = ElementCreate(ts,stack,&e,SOLUTION_STAGES);CHKERRQ(ierr);
+      ierr = ElementCreate(ts,SOLUTION_STAGES,stack,&e);CHKERRQ(ierr);
       ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
     }
     if (tjsch->actx->nextcheckpointtype == 1) {
       if (tj->monitor) {
         ierr = PetscViewerASCIIPrintf(tj->monitor,"Store in checkpoint number %D with stage values (located in RAM)\n",stepnum);CHKERRQ(ierr);
       }
-      ierr = ElementCreate(ts,stack,&e,STAGESONLY);CHKERRQ(ierr);
+      ierr = ElementCreate(ts,STAGESONLY,stack,&e);CHKERRQ(ierr);
       ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
     }
     if (tjsch->actx->nextcheckpointtype == 0) { /* solution only */
       if (tj->monitor) {
         ierr = PetscViewerASCIIPrintf(tj->monitor,"Store in checkpoint number %D (located in RAM)\n",stepnum);CHKERRQ(ierr);
       }
-      ierr = ElementCreate(ts,stack,&e,SOLUTIONONLY);CHKERRQ(ierr);
+      ierr = ElementCreate(ts,SOLUTIONONLY,stack,&e);CHKERRQ(ierr);
       ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
     }
     ierr = StackPush(stack,e);CHKERRQ(ierr);
