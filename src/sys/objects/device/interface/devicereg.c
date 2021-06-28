@@ -2,6 +2,8 @@
 
 const char *const PetscStreamTypes[] = {"global_blocking","default_blocking","global_nonblocking","MAX_TYPE","PetscStreamType","PETSC_STREAM_",NULL};
 
+const char *const PetscDeviceContextJoinModes[] = {"destroy","sync","no_sync","PetscDeviceContextJoinMode","PETSC_DEVICE_CONTEXT_JOIN_",NULL};
+
 static PetscFunctionList PetscDeviceContextList        = NULL;
 static PetscBool         PetscDeviceRegisterAllCalled  = PETSC_FALSE;
 static PetscBool         PetscDevicePackageInitialized = PETSC_FALSE;
