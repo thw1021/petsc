@@ -118,33 +118,57 @@ do { \
  * */
 #if defined(__HIP_PLATFORM_NVCC__)
 typedef cusolverDnHandle_t hipsolverHandle_t;
-typedef cusolverStatus_t hipsolverStatus_t;
+typedef cusolverStatus_t   hipsolverStatus_t;
 
-/* Alias hipsolverDestroy to cusolverDnDestroy*/
-PETSC_STATIC_INLINE cusolverStatus_t hipsolverDestroy(hipsolverHandle_t *hipsolverhandle)
+/* Alias hipsolverDestroy to cusolverDnDestroy */
+PETSC_STATIC_INLINE hipsolverStatus_t hipsolverDestroy(hipsolverHandle_t *hipsolverhandle)
 {
   return cusolverDnDestroy(hipsolverhandle)
 }
 
-/* Alias hipsolverCreate to cusolverDnCreate*/
-PETSC_STATIC_INLINE cusolverStatus_t hipsolverCreate(hipsolverHandle_t *hipsolverhandle)
+/* Alias hipsolverCreate to cusolverDnCreate */
+PETSC_STATIC_INLINE hipsolverStatus_t hipsolverCreate(hipsolverHandle_t *hipsolverhandle)
 {
   return cusolverDnCreate(hipsolverhandle)
+}
+
+/* Alias hipsolverGetStream to cusolverDnGetStream */
+PETSC_STATIC_INLINE hipsolverStatus_t hipsolverGetStream(hipsolverHandle_t handle, hipStream_t *stream)
+{
+  return cusolverDnGetStream(handle,stream);
+}
+
+/* Alias hipsolverSetStream to cusolverDnSetStream */
+PETSC_STATIC_INLINE hipsolverStatus_t hipsolverSetStream(hipsolverHandle_t handle, hipStream_t stream)
+{
+  return cusolveDnSetStream(handle,stream);
 }
 #else /* __HIP_PLATFORM_NVCC__ */
 typedef rocblas_handle hipsolverHandle_t;
 typedef rocblas_status hipsolverStatus_t;
 
-/* Alias hipsolverDestroy to rocblas_destroy_handle*/
-PETSC_STATIC_INLINE rocblas_status hipsolverDestroy(rocblas_handle hipsolverhandle)
+/* Alias hipsolverDestroy to rocblas_destroy_handle */
+PETSC_STATIC_INLINE hipsolverStatus_t hipsolverDestroy(hipsolveHandle_t  hipsolverhandle)
 {
   return rocblas_destroy_handle(hipsolverhandle);
 }
 
-/* Alias hipsolverCreate to rocblas_destroy_handle*/
-PETSC_STATIC_INLINE rocblas_status hipsolverCreate(hipsolverHandle_t *hipsolverhandle)
+/* Alias hipsolverCreate to rocblas_destroy_handle */
+PETSC_STATIC_INLINE hipsolverStatus_t hipsolverCreate(hipsolverHandle_t *hipsolverhandle)
 {
   return rocblas_create_handle(hipsolverhandle);
+}
+
+/* Alias hipsolverGetStream to rocblas_get_stream */
+PETSC_STATIC_INLINE hipsolverStatus_t hipsolverGetStream(hipsolverHandle_t handle, hipStream_t *stream)
+{
+  return rocblas_get_stream(handle,stream);
+}
+
+/* Alias hipsolverSetStream to rocblas_set_stream */
+PETSC_STATIC_INLINE hipsolverStatus_t hipsolverSetStream(hipsolverHandle_t handle, hipStream_t stream)
+{
+  return rocblas_set_stream(handle,stream);
 }
 #endif /* __HIP_PLATFORM_NVCC__ */
 
