@@ -304,11 +304,11 @@ public:
   using typename cupmType_t::cupmSolverHandle_t;
 
   // vars
-  using cupmType_t::cupmName;
   using cupmType_t::cupmErrorNotReady;
   using cupmType_t::cupmStreamNonBlocking;
 
   // functions
+  using cupmType_t::cupmName;
   using cupmType_t::cupmGetErrorName;
   using cupmType_t::cupmGetErrorString;
   using cupmType_t::cupmEventCreate;

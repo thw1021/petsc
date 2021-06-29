@@ -75,6 +75,7 @@ PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
 
 #if PetscDefined(HAVE_HIP)
 #include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 #include <hipblas.h>
 #if defined(__HIP_PLATFORM_NVCC__)
 #include <cusolverDn.h>
@@ -171,11 +172,9 @@ PETSC_STATIC_INLINE hipsolverStatus_t hipsolverSetStream(hipsolverHandle_t handl
   return rocblas_set_stream(handle,stream);
 }
 #endif /* __HIP_PLATFORM_NVCC__ */
-
 PETSC_EXTERN hipStream_t    PetscDefaultHipStream; /* The default stream used by PETSc */
 PETSC_INTERN PetscErrorCode PetscHIPBLASInitializeHandle(void);
 PETSC_INTERN PetscErrorCode PetscHIPSOLVERInitializeHandle(void);
-
 
 PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
