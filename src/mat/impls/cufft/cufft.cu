@@ -62,6 +62,7 @@ PetscErrorCode MatMultTranspose_SeqCUFFT(Mat A, Vec x, Vec y)
   PetscInt       ndim      = cufft->ndim, *dim = cufft->dim;
   PetscScalar    *x_array, *y_array;
   cufftResult    result;
+  cudaError_t    cerr;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
