@@ -10,27 +10,22 @@
 namespace Petsc {
 
 namespace {
-// Forward declare
-template <class Fn, Fn func> struct wrapper;
 
-template <class Ret, class... Args,Ret (*func)(Args...)>
-struct wrapper<Ret (*)(Args...),func>
-{
-  PETSC_STATIC_INLINE Ret wrap(Args... args) { return func(args...);}
-};
-
-// A useful template to serve as a function wrapper. Given a NON-OVERLOADED function "foo"
-// which you'd like to thinly wrap as "bar" doing
+// A useful template to serve as a function wrapper factory. Given a NON-OVERLOADED
+// function "foo" which you'd like to thinly wrap as "bar", simply doing:
 //
-// auto bar = WRAP_FUNCTION(foo);
+// ALIAS_FUNCTION(bar,foo);
 //
 // essentially creates
 //
 // returnType bar(argType1 arg1, argType2 arg2, ..., argTypeN argn)
 // { return foo(arg1,arg2,...,argn);}
 //
-// for you
-#define WRAP_FUNCTION(func_) wrapper<decltype(&func_),func_>::wrap
+// for you. You may then call bar exactly as you would foo.
+#define ALIAS_FUNCTION(Alias_,Original_)                                \
+  template <typename... Args> decltype(auto) Alias_(Args&&... args)     \
+  { return Original_(std::forward<Args>(args)...);}
+
 } // hidden namspace
 
 // Available PetscDeviceContext backend implementations
@@ -72,25 +67,23 @@ struct cupmTypeTraits<PetscDeviceContextBackend::CUDA>
   typedef cusolverStatus_t   cupmSolverError_t;
 
   // Error functions
-  static PETSC_CONSTEXPR auto cupmGetErrorName      = WRAP_FUNCTION(cudaGetErrorName);
-  static PETSC_CONSTEXPR auto cupmGetErrorString    = WRAP_FUNCTION(cudaGetErrorString);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,cudaGetErrorName);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,cudaGetErrorString);
 
   // Values
   static PETSC_CONSTEXPR auto cupmErrorNotReady     = cudaErrorNotReady;
   static PETSC_CONSTEXPR auto cupmStreamNonBlocking = cudaStreamNonBlocking;
 
-  // Overloaded function not handled by wrapper
-  static cupmError_t cupmEventCreate(cupmEvent_t *e) { return cudaEventCreate(e);}
-
   // Regular functions
-  static PETSC_CONSTEXPR auto cupmEventDestroy          = WRAP_FUNCTION(cudaEventDestroy);
-  static PETSC_CONSTEXPR auto cupmEventRecord           = WRAP_FUNCTION(cudaEventRecord);
-  static PETSC_CONSTEXPR auto cupmStreamCreate          = WRAP_FUNCTION(cudaStreamCreate);
-  static PETSC_CONSTEXPR auto cupmStreamCreateWithFlags = WRAP_FUNCTION(cudaStreamCreateWithFlags);
-  static PETSC_CONSTEXPR auto cupmStreamDestroy         = WRAP_FUNCTION(cudaStreamDestroy);
-  static PETSC_CONSTEXPR auto cupmStreamWaitEvent       = WRAP_FUNCTION(cudaStreamWaitEvent);
-  static PETSC_CONSTEXPR auto cupmStreamQuery           = WRAP_FUNCTION(cudaStreamQuery);
-  static PETSC_CONSTEXPR auto cupmStreamSynchronize     = WRAP_FUNCTION(cudaStreamSynchronize);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,cudaEventCreate);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,cudaEventDestroy);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,cudaEventRecord);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreate,cudaStreamCreate);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreateWithFlags,cudaStreamCreateWithFlags);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamDestroy,cudaStreamDestroy);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamWaitEvent,cudaStreamWaitEvent);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamQuery,cudaStreamQuery);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamSynchronize,cudaStreamSynchronize);
 
   // There isn't a good way to auto-template this stuff between the cublas handle and
   // cusolver handle, not in the least because CHKERRCUBLAS and CHKERRCUSOLVER (not to
@@ -202,23 +195,23 @@ struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
   typedef hipsolverStatus_t cupmSolverError_t;
 
   // Error functions
-  static PETSC_CONSTEXPR auto cupmGetErrorName   = WRAP_FUNCTION(hipGetErrorName);
-  static PETSC_CONSTEXPR auto cupmGetErrorString = WRAP_FUNCTION(hipGetErrorString);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,hipGetErrorName);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,hipGetErrorString);
 
   // Values
   static PETSC_CONSTEXPR auto cupmErrorNotReady     = hipErrorNotReady;
   static PETSC_CONSTEXPR auto cupmStreamNonBlocking = hipStreamNonBlocking;
 
   // Functions
-  static cupmError_t cupmEventCreate(cupmEvent_t *e) { return hipEventCreate(e);}
-  static PETSC_CONSTEXPR auto cupmEventDestroy          = WRAP_FUNCTION(hipEventDestroy);
-  static PETSC_CONSTEXPR auto cupmEventRecord           = WRAP_FUNCTION(hipEventRecord);
-  static PETSC_CONSTEXPR auto cupmStreamCreate          = WRAP_FUNCTION(hipStreamCreate);
-  static PETSC_CONSTEXPR auto cupmStreamCreateWithFlags = WRAP_FUNCTION(hipStreamCreateWithFlags);
-  static PETSC_CONSTEXPR auto cupmStreamDestroy         = WRAP_FUNCTION(hipStreamDestroy);
-  static PETSC_CONSTEXPR auto cupmStreamWaitEvent       = WRAP_FUNCTION(hipStreamWaitEvent);
-  static PETSC_CONSTEXPR auto cupmStreamQuery           = WRAP_FUNCTION(hipStreamQuery);
-  static PETSC_CONSTEXPR auto cupmStreamSynchronize     = WRAP_FUNCTION(hipStreamSynchronize);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,hipEventCreate);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,hipEventDestroy);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,hipEventRecord);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreate,hipStreamCreate);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreateWithFlags,hipStreamCreateWithFlags);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamDestroy,hipStreamDestroy);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamWaitEvent,hipStreamWaitEvent);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamQuery,hipStreamQuery);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamSynchronize,hipStreamSynchronize);
 
   PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
   {
