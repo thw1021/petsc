@@ -458,6 +458,7 @@ PetscErrorCode InitialConditions(DM da,Vec U)
 /*TEST
 
    build:
+      depends: reaction_diffusion.c
       requires: !complex !single
 
    test:

@@ -385,6 +385,7 @@ PetscErrorCode FormFunctionAndGradient(Tao tao,Vec P,PetscReal *f,Vec G,void *ct
 /*TEST
 
    build:
+      depends: reaction_diffusion.c
       requires: !complex !single
 
    test:
