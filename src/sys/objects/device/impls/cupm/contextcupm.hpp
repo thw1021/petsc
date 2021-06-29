@@ -191,13 +191,13 @@ template <>
 struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
 {
   static PETSC_NODISCARD PETSC_CONSTEXPR const char* cupmName(void)
-  { return PetscDeviceContextBackends[static_cast<int>(PetscDeviceContextBackend::CUDA)];}
+  { return PetscDeviceContextBackends[static_cast<int>(PetscDeviceContextBackend::HIP)];}
 
   typedef hipError_t        cupmError_t;
   typedef hipEvent_t        cupmEvent_t;
   typedef hipStream_t       cupmStream_t;
-  typedef rocblas_handle    cupmBlasHandle_t;
-  typedef roblas_status     cupmBlasError_t;
+  typedef hipblasHandle_t   cupmBlasHandle_t;
+  typedef hipblasStatus_t   cupmBlasError_t;
   typedef hipsolverHandle_t cupmSolverHandle_t;
   typedef hipsolverStatus_t cupmSolverError_t;
 
@@ -246,7 +246,7 @@ struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
     cupmBlasError_t cberr;
 
     PetscFunctionBegin;
-    cberr = hiplasGetStream(handle,&cupmStream);CHKERRHIPBLAS(cberr);
+    cberr = hipblasGetStream(handle,&cupmStream);CHKERRHIPBLAS(cberr);
     if (cupmStream != stream) {
       cberr = hipblasSetStream(handle,stream);CHKERRHIPBLAS(cberr);
     }
