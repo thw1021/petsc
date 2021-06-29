@@ -7,9 +7,7 @@
 #error PetscDeviceContext backends for CUDA and HIP requires C++11
 #endif
 
-namespace Petsc {
-
-namespace {
+PETSC_INTERN const char *const PetscDeviceContextBackends[];
 
 // A useful template to serve as a function wrapper factory. Given a NON-OVERLOADED
 // function "foo" which you'd like to thinly wrap as "bar", simply doing:
@@ -26,12 +24,10 @@ namespace {
   template <typename... Args> decltype(auto) Alias_(Args&&... args)     \
   { return Original_(std::forward<Args>(args)...);}
 
-} // hidden namspace
+namespace Petsc {
 
 // Available PetscDeviceContext backend implementations
 enum class PetscDeviceContextBackend : int {CUDA, HIP};
-
-PETSC_CONSTEXPR const char *const PetscDeviceContextBackends[] = {"cuda","hip","PetscDeviceContextBackend","PetscDeviceContextBackend::",NULL};
 
 #if defined(CHKERRCUPM)
 #error "Invalid redefinition of CHKERRCUPM, perhaps change order of header-file includes"
@@ -71,10 +67,8 @@ struct cupmTypeTraits<PetscDeviceContextBackend::CUDA>
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,cudaGetErrorString);
 
   // Values
-  static PETSC_CONSTEXPR auto cupmErrorNotReady     = cudaErrorNotReady;
-  static PETSC_CONSTEXPR auto cupmStreamNonBlocking = cudaStreamNonBlocking;
-  static_assert(cudaStreamNonBlocking,"");
-  static_assert(cupmStreamNonBlocking,"");
+  static PETSC_CONSTEXPR const auto cupmErrorNotReady     = cudaErrorNotReady;
+  static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = cudaStreamNonBlocking;
 
   // Regular functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,cudaEventCreate);
@@ -201,10 +195,8 @@ struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,hipGetErrorString);
 
   // Values
-  static PETSC_CONSTEXPR auto cupmErrorNotReady     = hipErrorNotReady;
-  static PETSC_CONSTEXPR auto cupmStreamNonBlocking = hipStreamNonBlocking;
-  static_assert(hipStreamNonBlocking,"");
-  static_assert(cupmStreamNonBlocking,"");
+  static PETSC_CONSTEXPR const auto cupmErrorNotReady     = hipErrorNotReady;
+  static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = hipStreamNonBlocking;
 
   // Functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,hipEventCreate);
@@ -348,7 +340,7 @@ protected:
   PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode FinalizeSOLVERHandle(void) PETSC_NOEXCEPT
   { return DestroyHandle(_solverhandle);}
 
-  PETSC_STATIC_INLINE  PETSC_NODISCARD PetscErrorCode GetHandles(PetscDeviceContext_IMPLS *dci) PETSC_NOEXCEPT
+  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode GetHandles(PetscDeviceContext_IMPLS *dci) PETSC_NOEXCEPT
   {
     PetscErrorCode  ierr;
 
@@ -372,7 +364,7 @@ public:
   const struct _DeviceContextOps ops;
 
   explicit PETSC_CONSTEXPR cupmContext(PetscErrorCode (*create)(PetscDeviceContext)) PETSC_NOEXCEPT
-    : ops{create, destroy, setUp, query, waitForContext, synchronize} {}
+    : ops{create,destroy,setUp,query,waitForContext,synchronize} {}
 
   static PETSC_NODISCARD PetscErrorCode destroy(PetscDeviceContext) PETSC_NOEXCEPT;
   static PETSC_NODISCARD PetscErrorCode setUp(PetscDeviceContext) PETSC_NOEXCEPT;
@@ -470,12 +462,14 @@ typename cupmContext<T>::cupmSolverHandle_t cupmContext<T>::_solverhandle = NULL
 typedef cupmContext<PetscDeviceContextBackend::CUDA> cupmContextCuda;
 typedef cupmContext<PetscDeviceContextBackend::HIP>  cupmContextHip;
 
-// shorthand for what is an EXTREMELY long name
-#define PetscDeviceContext_(impls_) cupmContext<PetscDeviceContextBackend::impls_>::PetscDeviceContext_IMPLS
-
-// make sure this doesn't leak out
-#undef CHKERRCUPM
 } // namespace Petsc
+
+// make sure these doesn't leak out
+#undef CHKERRCUPM
+#undef ALIAS_FUNCTION
+
+// shorthand for what is an EXTREMELY long name
+#define PetscDeviceContext_(impls_) Petsc::cupmContext<Petsc::PetscDeviceContextBackend::impls_>::PetscDeviceContext_IMPLS
 
 /* Silence undefined identifier errors for the op structs */
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
