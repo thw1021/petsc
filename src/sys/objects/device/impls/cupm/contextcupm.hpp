@@ -73,6 +73,8 @@ struct cupmTypeTraits<PetscDeviceContextBackend::CUDA>
   // Values
   static PETSC_CONSTEXPR auto cupmErrorNotReady     = cudaErrorNotReady;
   static PETSC_CONSTEXPR auto cupmStreamNonBlocking = cudaStreamNonBlocking;
+  static_assert(cudaStreamNonBlocking,"");
+  static_assert(cupmStreamNonBlocking,"");
 
   // Regular functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,cudaEventCreate);
@@ -201,6 +203,8 @@ struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
   // Values
   static PETSC_CONSTEXPR auto cupmErrorNotReady     = hipErrorNotReady;
   static PETSC_CONSTEXPR auto cupmStreamNonBlocking = hipStreamNonBlocking;
+  static_assert(hipStreamNonBlocking,"");
+  static_assert(cupmStreamNonBlocking,"");
 
   // Functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,hipEventCreate);
@@ -277,7 +281,7 @@ struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
     if (handle) {
       cupmSolverError_t cerr;
 
-      cerr  = hipsolverDestroy(handle);CHKERRHIPSOLVER(cerr);
+      cerr   = hipsolverDestroy(handle);CHKERRHIPSOLVER(cerr);
       handle = NULL;
     }
     PetscFunctionReturn(0);
@@ -304,11 +308,11 @@ public:
   using typename cupmType_t::cupmSolverHandle_t;
 
   // vars
-  using cupmType_t::cupmName;
   using cupmType_t::cupmErrorNotReady;
   using cupmType_t::cupmStreamNonBlocking;
 
   // functions
+  using cupmType_t::cupmName;
   using cupmType_t::cupmGetErrorName;
   using cupmType_t::cupmGetErrorString;
   using cupmType_t::cupmEventCreate;
