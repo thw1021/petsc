@@ -1272,6 +1272,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
 
       # note, only classes derived from package.py have this attribute
       if hasattr(child,'deps'):
+        print("framework",child.name,child.minCxxVersion)
         found = 0
         if child.required or child.lookforbydefault: found = 1
         if 'download-'+child.package in self.framework.clArgDB and self.argDB['download-'+child.package]: found = 1

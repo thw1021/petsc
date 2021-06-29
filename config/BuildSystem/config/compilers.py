@@ -29,6 +29,7 @@ class Configure(config.base.Configure):
     self.cRestrict = ' '
     self.cxxRestrict = ' '
     self.cxxdialect = ''
+    self.cxxDialectRange = (3,17) # min and maxx version range
     self.c99flag = None
     return
 
