@@ -13,7 +13,7 @@ class Configure(config.package.CMakePackage):
     self.includes         = ['StrumpackSparseSolver.h']
     self.liblist          = [['libstrumpack.a']]
     self.cxx              = 1
-    self.requirescxx11    = 1
+    self.minCxxVersion    = 11
     self.fc               = 1
     self.hastests         = 1
     return
