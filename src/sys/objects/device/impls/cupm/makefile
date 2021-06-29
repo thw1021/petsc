@@ -4,6 +4,7 @@ CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
+SOURCECXX = contextcupm.cxx
 SOURCEF	  =
 SOURCEH   = contextcupm.hpp
 MANSEC	  = Sys
