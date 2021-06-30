@@ -6,12 +6,17 @@
 
 #if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
 #include <type_traits>
+#define PETSC_NULLPTR nullptr
 #define PETSC_STATIC_ASSERT_BASE_CLASS(base_,derived_) static_assert(std::is_base_of<base_,derived_>::value,"")
 #else
+#define PETSC_NULLPTR NULL
 #define PETSC_STATIC_ASSERT_BASE_CLASS(base_,derived_)
 #endif
 
 namespace Petsc {
+
+// forward declare
+template <typename T> struct allocator;
 
 // generic allocator for interorperability with C "constructors" and "destructors"
 template <typename T>
@@ -19,6 +24,9 @@ struct allocator {
   static PETSC_NODISCARD PetscErrorCode create(T*)  PETSC_NOEXCEPT;
   static PETSC_NODISCARD PetscErrorCode destroy(T&) PETSC_NOEXCEPT;
 };
+
+// forward declare
+template <typename T, class _Allocator> class objectPool;
 
 // default implementation, use the petsc allocator
 template <typename T, class _Allocator = allocator<T> > class objectPool;
@@ -83,11 +91,7 @@ PetscErrorCode objectPool<T,_Allocator>::reclaim(T &obj) PETSC_NOEXCEPT
   } catch (std::exception const &ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
   }
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
-  obj = nullptr;
-#else
-  obj = NULL;
-#endif
+  obj = PETSC_NULLPTR;
   PetscFunctionReturn(0);
 }
 

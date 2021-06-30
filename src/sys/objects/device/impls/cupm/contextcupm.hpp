@@ -7,7 +7,9 @@
 #error PetscDeviceContext backends for CUDA and HIP requires C++11
 #endif
 
-static PETSC_CONSTEXPR const char *const PetscDeviceContextBackends[] = {"cuda","hip","PetscDeviceContextBackend","PetscDeviceContextBackend::",nullptr};
+#define PETSC_NULLPTR nullptr
+
+static PETSC_CONSTEXPR const char *const PetscDeviceContextBackends[] = {"cuda","hip","PetscDeviceContextBackend","PetscDeviceContextBackend::",PETSC_NULLPTR};
 
 // A useful template to serve as a function wrapper factory. Given a NON-OVERLOADED
 // function "foo" which you'd like to thinly wrap as "bar", simply doing:
@@ -164,11 +166,7 @@ struct cupmTypeTraits<PetscDeviceContextBackend::CUDA>
       cupmBlasError_t cberr;
 
       cberr  = cublasDestroy(handle);CHKERRCUBLAS(cberr);
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
-      handle = nullptr;
-#else
-      handle = NULL;
-#endif
+      handle = PETSC_NULLPTR;
     }
     PetscFunctionReturn(0);
   }
@@ -180,11 +178,7 @@ struct cupmTypeTraits<PetscDeviceContextBackend::CUDA>
       cupmSolverError_t cerr;
 
       cerr  = cusolverDnDestroy(handle);CHKERRCUSOLVER(cerr);
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
-      handle = nullptr;
-#else
-      handle = NULL;
-#endif
+      handle = PETSC_NULLPTR;
     }
     PetscFunctionReturn(0);
   }
@@ -278,11 +272,7 @@ struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
       cupmBlasError_t cberr;
 
       cberr  = hipblasDestroy(handle);CHKERRHIPBLAS(cberr);
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
-      handle = nullptr;
-#else
-      handle = NULL;
-#endif
+      handle = PETSC_NULLPTR;
     }
     PetscFunctionReturn(0);
   }
@@ -294,11 +284,7 @@ struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
       cupmSolverError_t cerr;
 
       cerr   = hipsolverDestroy(handle);CHKERRHIPSOLVER(cerr);
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
-      handle = nullptr;
-#else
-      handle = NULL;
-#endif
+      handle = PETSC_NULLPTR;
     }
     PetscFunctionReturn(0);
   }
@@ -424,7 +410,7 @@ PetscErrorCode cupmContext<T>::setUp(PetscDeviceContext dctx) PETSC_NOEXCEPT
   switch (dctx->streamType) {
   case PETSC_STREAM_GLOBAL_BLOCKING:
     /* don't create a stream for global blocking */
-    dci->stream = NULL;
+    dci->stream = PETSC_NULLPTR;
     break;
   case PETSC_STREAM_DEFAULT_BLOCKING:
     cerr = cupmStreamCreate(&dci->stream);CHKERRCUPM(cerr);
@@ -477,10 +463,10 @@ PetscErrorCode cupmContext<T>::synchronize(PetscDeviceContext dctx) PETSC_NOEXCE
 
 // initialize the static member variables
 template <PetscDeviceContextBackend T>
-typename cupmContext<T>::cupmBlasHandle_t   cupmContext<T>::_blashandle   = NULL;
+typename cupmContext<T>::cupmBlasHandle_t   cupmContext<T>::_blashandle   = PETSC_NULLPTR;
 
 template <PetscDeviceContextBackend T>
-typename cupmContext<T>::cupmSolverHandle_t cupmContext<T>::_solverhandle = NULL;
+typename cupmContext<T>::cupmSolverHandle_t cupmContext<T>::_solverhandle = PETSC_NULLPTR;
 
 // shorten this one up a bit
 typedef cupmContext<PetscDeviceContextBackend::CUDA> cupmContextCuda;
@@ -488,10 +474,12 @@ typedef cupmContext<PetscDeviceContextBackend::HIP>  cupmContextHip;
 
 // make sure these doesn't leak out
 #undef CHKERRCUPM
-#undef ALIAS_FUNCTION
 #undef IMPLS_RCAST_
 
 } // namespace Petsc
+
+#undef PETSC_NULLPTR
+#undef ALIAS_FUNCTION
 
 // shorthand for what is an EXTREMELY long name
 #define PetscDeviceContext_(impls_) Petsc::cupmContext<Petsc::PetscDeviceContextBackend::impls_>::PetscDeviceContext_IMPLS

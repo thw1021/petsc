@@ -79,7 +79,6 @@ PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
 #if defined(__HIP_PLATFORM_NVCC__)
 #include <cusolverDn.h>
 #else /* __HIP_PLATFORM_HCC__ */
-#include <hip/hcc_detail/hip_runtime_api.h>
 #include <rocsolver.h>
 #endif /* __HIP_PLATFORM_NVCC__ */
 
@@ -144,7 +143,7 @@ PETSC_STATIC_INLINE hipsolverStatus_t hipsolverSetStream(hipsolverHandle_t handl
 {
   return cusolveDnSetStream(handle,stream);
 }
-#else /* __HIP_PLATFORM_NVCC__ */
+#else /* __HIP_PLATFORM_HCC__ */
 typedef rocblas_handle hipsolverHandle_t;
 typedef rocblas_status hipsolverStatus_t;
 
@@ -195,6 +194,7 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext,PetscDe
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext,PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextQueryIdle(PetscDeviceContext,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextFork(PetscDeviceContext,PetscInt,PetscDeviceContext**);
@@ -204,5 +204,5 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(Pets
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDeviceContextType*,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
-#endif
+#endif /* PETSC_HAVE_CXX */
 #endif /* PETSCDEVICE_H */

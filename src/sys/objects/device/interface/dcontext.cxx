@@ -11,7 +11,7 @@ struct PetscDeviceContextAllocator : public Petsc::allocator<PetscDeviceContext>
     PetscErrorCode     ierr;
 
     PetscFunctionBegin;
-    *dctx          = NULL;
+    *dctx          = PETSC_NULLPTR;
     ierr           = PetscNew(&dc);CHKERRQ(ierr);
     dc->id         = PetscDeviceContextID++;
     dc->idle       = PETSC_TRUE;
@@ -334,7 +334,7 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
 @*/
 PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, PetscDeviceContext **dsub)
 {
-  PetscDeviceContext *dsubTmp = NULL;
+  PetscDeviceContext *dsubTmp = PETSC_NULLPTR;
   PetscInt           i = 0;
   PetscErrorCode     ierr;
 
@@ -508,7 +508,7 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
   PetscFunctionReturn(0);
 }
 
-static PetscDeviceContext globalContext = NULL;
+static PetscDeviceContext globalContext = PETSC_NULLPTR;
 static PetscBool          globalContextSetup = PETSC_FALSE;
 /* default context should act just like the NULL stream, i.e. fully synchronous */
 static PetscStreamType    defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
