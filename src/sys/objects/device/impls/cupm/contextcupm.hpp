@@ -7,8 +7,7 @@
 #error PetscDeviceContext backends for CUDA and HIP requires C++11
 #endif
 
-#define NUM_BACKENDS 5
-PETSC_INTERN const char *const PetscDeviceContextBackends[NUM_BACKENDS];
+static PETSC_CONSTEXPR const char *const PetscDeviceContextBackends[] = {"cuda","hip","PetscDeviceContextBackend","PetscDeviceContextBackend::",nullptr};
 
 // A useful template to serve as a function wrapper factory. Given a NON-OVERLOADED
 // function "foo" which you'd like to thinly wrap as "bar", simply doing:
@@ -60,7 +59,7 @@ template <PetscDeviceContextBackend T> struct cupmTypeTraits;
 template <>
 struct cupmTypeTraits<PetscDeviceContextBackend::CUDA>
 {
-  PETSC_STATIC_INLINE PETSC_NODISCARD PETSC_CONSTEXPR const char* cupmName(void)
+  PETSC_STATIC_INLINE PETSC_NODISCARD PETSC_CONSTEXPR const char* cupmName(void) PETSC_NOEXCEPT
   { return PetscDeviceContextBackends[static_cast<int>(PetscDeviceContextBackend::CUDA)];}
 
   typedef cudaError_t        cupmError_t;
@@ -196,7 +195,7 @@ struct cupmTypeTraits<PetscDeviceContextBackend::CUDA>
 template <>
 struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
 {
-  static PETSC_NODISCARD PETSC_CONSTEXPR const char* cupmName(void)
+  PETSC_STATIC_INLINE PETSC_NODISCARD PETSC_CONSTEXPR const char* cupmName(void) PETSC_NOEXCEPT
   { return PetscDeviceContextBackends[static_cast<int>(PetscDeviceContextBackend::HIP)];}
 
   typedef hipError_t        cupmError_t;
@@ -398,11 +397,12 @@ public:
   static PETSC_NODISCARD PetscErrorCode synchronize(PetscDeviceContext) PETSC_NOEXCEPT;
 };
 
-#define IMPLS_CAST(obj_) reinterpret_cast<PetscDeviceContext_IMPLS*>(obj_)
+#define IMPLS_RCAST_(obj_) reinterpret_cast<PetscDeviceContext_IMPLS*>(obj_)
+
 template <PetscDeviceContextBackend T>
 PetscErrorCode cupmContext<T>::destroy(PetscDeviceContext dctx) PETSC_NOEXCEPT
 {
-  PetscDeviceContext_IMPLS *dci = IMPLS_CAST(dctx->data);
+  PetscDeviceContext_IMPLS *dci = IMPLS_RCAST_(dctx->data);
   cupmError_t              cerr;
   PetscErrorCode           ierr;
 
@@ -416,7 +416,7 @@ PetscErrorCode cupmContext<T>::destroy(PetscDeviceContext dctx) PETSC_NOEXCEPT
 template <PetscDeviceContextBackend T>
 PetscErrorCode cupmContext<T>::setUp(PetscDeviceContext dctx) PETSC_NOEXCEPT
 {
-  PetscDeviceContext_IMPLS *dci = IMPLS_CAST(dctx->data);
+  PetscDeviceContext_IMPLS *dci = IMPLS_RCAST_(dctx->data);
   PetscErrorCode           ierr;
   cupmError_t              cerr;
 
@@ -445,15 +445,15 @@ template <PetscDeviceContextBackend T>
 PetscErrorCode cupmContext<T>::query(PetscDeviceContext dctx, PetscBool *idle) PETSC_NOEXCEPT
 {
   PetscFunctionBegin;
-  *idle = cupmStreamQuery(IMPLS_CAST(dctx->data)->stream) == cupmErrorNotReady ? PETSC_FALSE : PETSC_TRUE;
+  *idle = cupmStreamQuery(IMPLS_RCAST_(dctx->data)->stream) == cupmErrorNotReady ? PETSC_FALSE : PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
 template <PetscDeviceContextBackend T>
 PetscErrorCode cupmContext<T>::waitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb) PETSC_NOEXCEPT
 {
-  PetscDeviceContext_IMPLS *dcia = IMPLS_CAST(dctxa->data);
-  PetscDeviceContext_IMPLS *dcib = IMPLS_CAST(dctxb->data);
+  PetscDeviceContext_IMPLS *dcia = IMPLS_RCAST_(dctxa->data);
+  PetscDeviceContext_IMPLS *dcib = IMPLS_RCAST_(dctxb->data);
   cupmError_t               cerr;
 
   PetscFunctionBegin;
@@ -465,7 +465,7 @@ PetscErrorCode cupmContext<T>::waitForContext(PetscDeviceContext dctxa, PetscDev
 template <PetscDeviceContextBackend T>
 PetscErrorCode cupmContext<T>::synchronize(PetscDeviceContext dctx) PETSC_NOEXCEPT
 {
-  PetscDeviceContext_IMPLS *dci = IMPLS_CAST(dctx->data);
+  PetscDeviceContext_IMPLS *dci = IMPLS_RCAST_(dctx->data);
   cupmError_t               cerr;
 
   PetscFunctionBegin;
@@ -474,7 +474,6 @@ PetscErrorCode cupmContext<T>::synchronize(PetscDeviceContext dctx) PETSC_NOEXCE
   cerr = cupmStreamSynchronize(dci->stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
-#undef IMPLS_CAST
 
 // initialize the static member variables
 template <PetscDeviceContextBackend T>
@@ -487,14 +486,18 @@ typename cupmContext<T>::cupmSolverHandle_t cupmContext<T>::_solverhandle = NULL
 typedef cupmContext<PetscDeviceContextBackend::CUDA> cupmContextCuda;
 typedef cupmContext<PetscDeviceContextBackend::HIP>  cupmContextHip;
 
-} // namespace Petsc
-
 // make sure these doesn't leak out
 #undef CHKERRCUPM
 #undef ALIAS_FUNCTION
+#undef IMPLS_RCAST_
+
+} // namespace Petsc
 
 // shorthand for what is an EXTREMELY long name
 #define PetscDeviceContext_(impls_) Petsc::cupmContext<Petsc::PetscDeviceContextBackend::impls_>::PetscDeviceContext_IMPLS
+
+// shorthand for casting dctx->data to the appropriate object to access the handles
+#define PDC_IMPLS_RCAST(impls_,obj_) reinterpret_cast<PetscDeviceContext_(impls_) *>(obj_)
 
 /* Silence undefined identifier errors for the op structs */
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
