@@ -1,0 +1,5 @@
+  Linear solve converged due to CONVERGED_RTOL iterations 21
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Linear solve converged due to CONVERGED_RTOL iterations 32
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+[0] 1) N=        4557, max displ=5.9705005e+01, disp diff= 7.62e+00, error=2.702e-01, rate=4.9
