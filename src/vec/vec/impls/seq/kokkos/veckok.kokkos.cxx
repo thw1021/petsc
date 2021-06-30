@@ -740,8 +740,13 @@ static PetscErrorCode VecKokkosUpdateAfterChangingHostArray_Private(Vec v)
 
   PetscFunctionBegin;
   /* Rebuild v_h and v_dual with the new host array*/
-  veckok->v_h    = PetscScalarKokkosViewHost(vecseq->array,v->map->n);
-  veckok->v_dual = PetscScalarKokkosDualView(veckok->v_d,veckok->v_h);
+  veckok->v_h = PetscScalarKokkosViewHost(vecseq->array,v->map->n);
+  if (std::is_same<DefaultMemorySpace,Kokkos::HostSpace>::value) {
+    /* Kokkos said they would add error-checking so that users won't accidently pass two different Views in this case */
+    veckok->v_dual = PetscScalarKokkosDualView(veckok->v_h,veckok->v_h);
+  } else {
+    veckok->v_dual = PetscScalarKokkosDualView(veckok->v_d,veckok->v_h);
+  }
   veckok->v_dual.modify_host();
   PetscFunctionReturn(0);
 }
