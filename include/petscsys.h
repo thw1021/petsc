@@ -114,6 +114,20 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_INTERN extern PETSC_VISIBILITY_INTERNAL
 #endif
 
+#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+#  define PETSC_CONSTEXPR constexpr
+#  define PETSC_NOEXCEPT  noexcept
+#else
+#  define PETSC_CONSTEXPR
+#  define PETSC_NOEXCEPT
+#endif
+
+#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX17)
+#  define PETSC_NODISCARD [[nodiscard]]
+#else
+#  define PETSC_NODISCARD
+#endif
+
 #include <petscversion.h>
 #define PETSC_AUTHOR_INFO  "       The PETSc Team\n    petsc-maint@mcs.anl.gov\n https://www.mcs.anl.gov/petsc/\n"
 
