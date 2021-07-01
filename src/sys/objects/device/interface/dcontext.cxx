@@ -546,11 +546,12 @@ PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDeviceContex
     if (petscInit) {
       PetscFunctionBegin; /* PetscFunctionBegin so SETERRQ knows where we are */
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Root PetscDeviceContext has already been setup and created, setting default has no effect");
+    } else {
+      /* Since this may be called before PetscInitialize() we can't use error checking */
+      printf("Root PetscDeviceContext has already been setup and created, setting default has no effect\n");
     }
-    /* Since this may be called before PetscInitialize() we can't use error checking */
-    printf("Root PetscDeviceContext has already been setup and created, setting default has no effect\n");
   } else {
-    if (type) defaultContextType = type;
+    defaultContextType = type;
     if (stype != PETSC_STREAM_MAX_TYPE) defaultStreamType = stype;
   }
   return 0;

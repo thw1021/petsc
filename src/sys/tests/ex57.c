@@ -5,6 +5,7 @@ static const char help[] = "Tests creation and descruction of PetscDeviceContext
 /* test duplication creates the same object type */
 static PetscErrorCode testDuplicate(PetscDeviceContext dctx)
 {
+  PetscBool              same;
   PetscStreamType        stype,dupSType;
   PetscDeviceContext     dtmp,ddup;
   PetscDeviceContextType type,dupType;
@@ -25,7 +26,8 @@ static PetscErrorCode testDuplicate(PetscDeviceContext dctx)
 
   ierr = PetscDeviceContextGetType(ddup,&dupType);CHKERRQ(ierr);
   ierr = PetscDeviceContextGetType(dtmp,&type);CHKERRQ(ierr);
-  if (dupType != type) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContextTypes %s and %s do not match",dupType,type);
+  ierr = PetscStrcmp(type,dupType,&same);CHKERRQ(ierr);
+  if (!same) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMETYPE,"PetscDeviceContextTypes %s and %s do not match",dupType,type);
 
   ierr = PetscDeviceContextGetStreamType(ddup,&dupSType);CHKERRQ(ierr);
   ierr = PetscDeviceContextGetStreamType(dtmp,&stype);CHKERRQ(ierr);
@@ -36,6 +38,24 @@ static PetscErrorCode testDuplicate(PetscDeviceContext dctx)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode testNestedForkJoin(PetscDeviceContext *sub)
+{
+  const PetscInt      nsub = 4;
+  PetscDeviceContext *subsub;
+  PetscDeviceContext  parCtx;
+  PetscErrorCode      ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscDeviceContextGetCurrentContext(&parCtx);CHKERRQ(ierr);
+  if (parCtx != sub[0]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Current global context does not match expected global context");
+  ierr = PetscDeviceContextFork(parCtx,nsub,&subsub);CHKERRQ(ierr);
+  /* join on a different sub */
+  ierr = PetscDeviceContextJoin(sub[1],nsub-2,PETSC_DEVICE_CONTEXT_JOIN_SYNC,&subsub);CHKERRQ(ierr);
+  ierr = PetscDeviceContextJoin(parCtx,nsub,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&subsub);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/* test fork-join */
 static PetscErrorCode testForkJoin(PetscDeviceContext dctx)
 {
   PetscDeviceContext *sub;
@@ -47,21 +67,19 @@ static PetscErrorCode testForkJoin(PetscDeviceContext dctx)
   ierr = PetscDeviceContextFork(dctx,n,&sub);CHKERRQ(ierr);
   ierr = PetscDeviceContextJoin(dctx,n,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&sub);CHKERRQ(ierr);
 
+  /* create some children */
   ierr = PetscDeviceContextFork(dctx,n+1,&sub);CHKERRQ(ierr);
-  /* test nesting */
-  {
-    const PetscInt      nsub = 4;
-    PetscDeviceContext *subsub;
 
-    ierr = PetscDeviceContextFork(sub[0],nsub,&subsub);CHKERRQ(ierr);
-    /* join on a different sub */
-    ierr = PetscDeviceContextJoin(sub[1],nsub-2,PETSC_DEVICE_CONTEXT_JOIN_SYNC,&subsub);CHKERRQ(ierr);
-    ierr = PetscDeviceContextJoin(sub[0],nsub,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&subsub);CHKERRQ(ierr);
-  }
+  /* make the first child the new current context, and test forking within nested function */
+  ierr = PetscDeviceContextSetCurrentContext(sub[0]);CHKERRQ(ierr);
+  ierr = testNestedForkJoin(sub);CHKERRQ(ierr);
+  /* should always reset global context when finished */
+  ierr = PetscDeviceContextSetCurrentContext(dctx);CHKERRQ(ierr);
+
   /* join a subset */
-  ierr = PetscDeviceContextJoin(dctx,n-1,PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC,&subsub);CHKERRQ(ierr);
+  ierr = PetscDeviceContextJoin(dctx,n-1,PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC,&sub);CHKERRQ(ierr);
   /* back to the ether from whence they came */
-  ierr = PetscDeviceContextJoin(dctx,n+1,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&subsub);CHKERRQ(ierr);
+  ierr = PetscDeviceContextJoin(dctx,n+1,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&sub);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -80,34 +98,45 @@ static PetscErrorCode testForkJoin(PetscDeviceContext dctx)
 
 int main(int argc, char *argv[])
 {
-  PetscDeviceContextType defaultType,type,stype;
-  PetscStreamType        defaultSType;
+#if PetscDefined(HAVE_CUDA)
+  /* we have cuda backend only */
+  PetscDeviceContextType wrongType = PETSCDEVICECONTEXTHIP;
+#else
+  /* we may or may not have hip */
+  PetscDeviceContextType wrongType= PETSCDEVICECONTEXTCUDA;
+#endif
+  PetscDeviceContextType defaultType,type;
+  PetscStreamType        defaultSType,stype;
   PetscDeviceContext     dctx;
+  PetscBool              same;
   PetscErrorCode         ierr;
 
   /* test setting different root context settings */
   ierr = PetscDeviceContextGetDefaultRootContextSettings(&defaultType,&defaultSType);CHKERRABORT2(ierr);
-  /* purposefully set to hip */
-  ierr = PetscDeviceContextSetDefaultRootContextSettings(PETSCDEVICECONTEXTHIP,PETSC_STREAM_GLOBAL_BLOCKING);CHKERRABORT2(ierr);
-  ierr = PetscDeviceContextGetDefaultContextSettings(&type,&stype);CHKERRABORT2(ierr);
-  if (type != PETSCDEVICECONTEXTHIP) CHKERRABORT2(PETSC_ERR_PLIB);
-  if (stype != PETSC_STREAM_GLOBAL_BLOCKING) CHKERRABORT2(PETSC_ERR_PLIB);
+  /* purposefully set to wrong backend type */
+  ierr = PetscDeviceContextSetDefaultRootContextSettings(wrongType,PETSC_STREAM_GLOBAL_BLOCKING);CHKERRABORT2(ierr);
+  ierr = PetscDeviceContextGetDefaultRootContextSettings(&type,&stype);CHKERRABORT2(ierr);
+  ierr = PetscStrcmp(type,wrongType,&same);CHKERRABORT2(ierr);
+  if (!same) CHKERRABORT2(PETSC_ERR_ARG_NOTSAMETYPE);
+  if (stype != PETSC_STREAM_GLOBAL_BLOCKING) CHKERRABORT2(PETSC_ERR_ARG_NOTSAMETYPE);
   /* reset everything back to normal */
-  ierr = PetscDeviceContextSetDefaultRootContextSettings(type,stype);CHKERRABORT2(ierr);
+  ierr = PetscDeviceContextSetDefaultRootContextSettings(defaultType,defaultSType);CHKERRABORT2(ierr);
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
 
-  ierr = PetscDeviceContextGetDefaultContextSettings(&type,&stype);CHKERRQ(ierr);
-  if (type != defaultType) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Default root context type does not match default type");
-  if (stype != defaultSType) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Default root context stream type does not match default stream type");
+  ierr = PetscDeviceContextGetDefaultRootContextSettings(&type,&stype);CHKERRQ(ierr);
+  ierr = PetscStrcmp(type,defaultType,&same);CHKERRQ(ierr);
+  if (!same) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_NOTSAMETYPE,"Default root context type %s does not match default type %s",type,defaultType);
+  if (stype != defaultSType) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_NOTSAMETYPE,"Default root context stream type does not match default stream type");
 
   /* check getting and setting */
   ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
   /* check one last time that these wen back to normal */
   ierr = PetscDeviceContextGetType(dctx,&type);CHKERRQ(ierr);
   ierr = PetscDeviceContextGetStreamType(dctx,&stype);CHKERRQ(ierr);
-  if (type != defaultType) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Default root context type does not match default type");
-  if (stype != defaultSType) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Default root context stream type does not match default stream type");
+  ierr = PetscStrcmp(type,defaultType,&same);CHKERRQ(ierr);
+  if (!same) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_NOTSAMETYPE,"Default root context type %s does not match default type %s",type,defaultType);
+  if (stype != defaultSType) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_NOTSAMETYPE,"Default root context stream type does not match default stream type");
   ierr = PetscDeviceContextSetCurrentContext(dctx);CHKERRQ(ierr);
 
   /* we keep this around from now on */
@@ -117,7 +146,21 @@ int main(int argc, char *argv[])
   ierr = testDuplicate(dctx);CHKERRQ(ierr);
   ierr = testForkJoin(dctx);CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"SUCCESS\n");CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"EXIT_SUCCESS\n");CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
+
+/*TEST
+
+  build:
+    requires: cxx
+
+  test:
+    requires: cuda
+    suffix: cuda
+
+  test:
+    requires: hip
+    suffix: hip
+TEST*/
