@@ -17,8 +17,8 @@ PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
 
 /* cuBLAS does not have cublasGetErrorName(). We create one on our own. */
 PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRCUBLAS macro */
-PETSC_EXTERN const char *PetscCUSolverGetErrorName(cusolverStatus_t);
-PETSC_EXTERN const char *PetscCUFFTGetErrorName(cufftResult);
+PETSC_EXTERN const char* PetscCUSolverGetErrorName(cusolverStatus_t);
+PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult);
 
 #define WaitForCUDA() PetscCUDASynchronize ? cudaDeviceSynchronize() : cudaSuccess;
 
