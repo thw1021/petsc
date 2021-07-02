@@ -4,8 +4,6 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
-PETSC_EXTERN PetscErrorCode PetscDeviceRegisterAll(void);
-
 /* non-error returning version for the inline macro */
 PETSC_STATIC_INLINE PetscBool PetscDeviceContextTypeCompare_Internal(const char type_ref[], const char type_name[])
 {
@@ -71,14 +69,18 @@ struct _DeviceContextOps {
 struct _n_PetscDeviceContext {
   struct _DeviceContextOps  ops[1];
   char                     *type;
-  void                     *data; // solver contexts, event, stream
-  PetscBool                 idle;
-  PetscInt                 *childIDs;
-  PetscInt                  id,numChildren,maxNumChildren;
+  void                     *data;            /* solver contexts, event, stream */
+  PetscBool                 idle;            /* does this context think it has work? this value non-binding in debug mode */
+  PetscInt                 *childIDs;        /* array containing ids of context forked from this one */
+  PetscInt                  id;              /* unique id per created context */
+  PetscInt                  numChildren;     /* how many children does this context expect to destroy */
+  PetscInt                  maxNumChildren;  /* how many children can this context have room for without realloc'ing */
   PetscStreamType           streamType;
   PetscBool                 setup;
 };
 
+/* Called in debug-mode when a context claims it is idle to check that it isn't lying. A no-op when debugging is
+ disabled */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(PetscDeviceContext dctx)
 {
   PetscFunctionBegin;

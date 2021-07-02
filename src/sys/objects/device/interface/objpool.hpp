@@ -53,10 +53,11 @@ protected:
 public:
   explicit PETSC_CONSTEXPR objectPool() PETSC_NOEXCEPT : _registered(PETSC_FALSE) {}
 
-  PETSC_NODISCARD PetscErrorCode get(T&) PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode get(T&)     PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode reclaim(T&) PETSC_NOEXCEPT;
 };
 
+// Retrieve an object from the pool, if the pool is empty a new object is created instead
 template <typename T, class _Allocator>
 PetscErrorCode objectPool<T,_Allocator>::get(T &obj) PETSC_NOEXCEPT
 {
@@ -82,6 +83,7 @@ PetscErrorCode objectPool<T,_Allocator>::get(T &obj) PETSC_NOEXCEPT
   PetscFunctionReturn(0);
 }
 
+// Return an object to the pool
 template <typename T, class _Allocator>
 PetscErrorCode objectPool<T,_Allocator>::reclaim(T &obj) PETSC_NOEXCEPT
 {
