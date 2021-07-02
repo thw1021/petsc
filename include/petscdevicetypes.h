@@ -53,13 +53,13 @@ typedef const char* PetscDeviceContextType;
 #define PETSCDEVICECONTEXTHIP  "hip"
 
 /*E
-  PetscStreamType - Stream blocking mode, indicates how a strea implementation will interact with the default "NULL"
+  PetscStreamType - Stream blocking mode, indicates how a stream implementation will interact with the default "NULL"
   stream, which is usually blocking.
 
-$ PETSC_STREAM_GLOBAL_BLOCKING - Alias for NULL stream. Any stream of this type will block the host for all other streams to finish work before starting its operations.
-$ PETSC_STREAM_DEFAULT_BLOCKING - Stream will act independent of other streams, but will still be blocked by actions on the NULL stream.
+$ PETSC_STREAM_GLOBAL_BLOCKING    - Alias for NULL stream. Any stream of this type will block the host for all other streams to finish work before starting its operations.
+$ PETSC_STREAM_DEFAULT_BLOCKING   - Stream will act independent of other streams, but will still be blocked by actions on the NULL stream.
 $ PETSC_STREAM_GLOBAL_NONBLOCKING - Stream is truly asynchronous, and is blocked by nothing, not even the NULL stream.
-$ PETSC_STREAM_MAX_TYPE - Always 1 greater than the largest PetscStreamType
+$ PETSC_STREAM_MAX_TYPE           - Always 1 greater than the largest PetscStreamType
 
   Level: intermediate
 
@@ -81,7 +81,7 @@ $ PETSC_CINTEXT_JOIN_SYNC      - Synchronize incoming sub-contexts after join.
 $ PETSC_CONTEXT_JOIN_NO_SYNC   - Do not synchronize incoming sub-contexts after join.
   Level: beginner
 
-.seealso: PetscDeviceContextJoin()
+.seealso: PetscDeviceContextFork(), PetscDeviceContextJoin()
 E*/
 typedef enum {
   PETSC_DEVICE_CONTEXT_JOIN_DESTROY,
@@ -95,7 +95,8 @@ PETSC_EXTERN const char *const PetscDeviceContextJoinModes[];
 
   level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextType, PetscDeviceContextSetType(), PetscDeviceContextDestroy()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextType, PetscDeviceContextSetType(), PetscDeviceContextDestroy(),
+PetscDeviceContextFork(), PetscDeviceContextJoin()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
 #endif /* PETSCDEVICETYPES_H */

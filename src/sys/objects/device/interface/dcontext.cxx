@@ -99,6 +99,11 @@ PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext *dctx)
   w.r.t. the host. If one needs to guarantee access to the data produced on this contexts stream one should perform the
   appropriate synchronization before calling this routine.
 
+  Developer Notes:
+  The context is never actually "destroyed", only returned to an ever growing pool of
+  contexts. There are currently no safeguards on the size of the pool, this should perhaps
+  be implemented.
+
   Level: beginner
 
 .seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetUp(), PetscDeviceContextSynchronize()
@@ -123,7 +128,10 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 - type - The PetscStreamType
 
   Notes:
-  See PetscStreamType in include/petscdevicetypes.h for more information on the available types and their interactions
+  Changing the stream type of an already setup PetscDeviceContext is not yet supported.
+
+  See PetscStreamType in include/petscdevicetypes.h for more information on the available
+  types and their interactions.
 
   Level: intermediate
 
@@ -135,6 +143,7 @@ PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStr
   if (PetscUnlikelyDebug(type >= PETSC_STREAM_MAX_TYPE) || PetscUnlikelyDebug(type < 0)) {
     SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscStreamType %d is invalid, out of range of [0,%d)",(int)type,(int)PETSC_STREAM_MAX_TYPE);
   }
+  if (PetscUnlikelyDebug(dctx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Can't change the stream type of an already setup context");
   dctx->streamType = type;
   PetscFunctionReturn(0);
 }
@@ -199,14 +208,16 @@ PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
   Not Collective, Asynchronous
 
   Input Parameter:
-. dctx - The PetscDeviceContext object to duplicate
+. dctx - The PetscDeviceContext to duplicate
 
   Output Paramter:
 . strmdup - The duplicated PetscDeviceContext
 
   Notes:
-  This is a shorthand method for creating a PetscDeviceContext in the immage of another, insofar that the duplicated
-  PetscDeviceContext does not share any of the underlying objects with the original.
+  This is a shorthand method for creating a PetscDeviceContext with the exact same
+  settings as another. Note however that the duplicated PetscDeviceContext does not "share"
+  any of the underlying data with the original, (including its current stream-state) they
+  are completely separate objects.
 
   Level: beginner
 
@@ -242,11 +253,12 @@ PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext dctx, PetscDeviceC
   idle but has dependents who do have work, this routine still returns PETSC_TRUE.
 
   Results of PetscDeviceContextQueryIdle() are cached on return, allowing this function to be called repeatedly in an
-  efficient manner.
+  efficient manner. When debug mode is enabled this cache is verified on every call to
+  this routine, but is blindly believed when debugging is disabled.
 
   Level: intermediate
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextWaitForContext()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextWaitForContext(), PetscDeviceContextFork()
 @*/
 PetscErrorCode PetscDeviceContextQueryIdle(PetscDeviceContext dctx, PetscBool *idle)
 {
@@ -280,7 +292,7 @@ PetscErrorCode PetscDeviceContextQueryIdle(PetscDeviceContext dctx, PetscBool *i
 
   Level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextQueryIdle()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextQueryIdle(), PetscDeviceContextJoin()
 @*/
 PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb)
 {
@@ -311,12 +323,12 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
 . dsub - The created child context(s)
 
   Notes:
-  This routine creates n edges of a DAG from a source node which are causually dependent on the source node, meaning
+  This routine creates n edges of a DAG from a source node which are causally dependent on the source node, meaning
   that work queued on child contexts will not start until the parent context finishes its work. This accounts for work
   queued on the parent up until calling this function, any subsequent work enqueued on the parent has no effect on the children.
 
   Any children created with this routine have their lifetimes bounded by the parent. That is, the parent context expects
-  to free all of it's children (and __only__ its children) before itself is freed.
+  to free all of it's children (and ONLY its children) before itself is freed.
 
   DAG representation:
 .vb
@@ -330,7 +342,7 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
 
   Level: intermediate
 
-.seealso: PetscDeviceContextJoin(), PetscDeviceContextSynchronize()
+.seealso: PetscDeviceContextJoin(), PetscDeviceContextSynchronize(), PetscDeviceContextQueryIdle()
 @*/
 PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, PetscDeviceContext **dsub)
 {
@@ -410,12 +422,16 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
   (represented in dctx) which recieves n edges (and optionally destroys them) which is
   dependent on the completion of all incoming edges.
 
-  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_DESTROY then all sub contexts must have
-  been created with the dctx passed to this function.
+  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_DESTROY all contexts in dsub will be destroyed
+  by this routine. Thus all sub contexts must have been created with the dctx passed to
+  this routine.
 
-  If joinMode is  PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC all sub contexts will additionally
-  wait on dctx after converging. In DAG terminology this has the effect of "synchronizing"
-  the outgoing edges.
+  if joinMode is PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC dctx waits for all sub contexts but the
+  sub contexts do not wait for one another afterwards.
+
+  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_SYNC all sub contexts will additionally
+  wait on dctx after converging. This has the effect of "synchronizing" the outgoing
+  edges.
 
   DAG representations:
   If joinMode is PETSC_DEVICE_CONTEXT_JOIN_DESTROY
@@ -438,6 +454,8 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
 .ve
   If joinMode is PETSC_DEVICE_CONTEXT_JOIN_SYNC
 .vb
+  time ->
+
   -> dctx ---------/- dctx -\----> dctx ------>
   -> dsub[0] -----/          \---> dsub[0] --->
   ->  ... -------/            \--> ... ------->
@@ -521,7 +539,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
 
   Level: beginner
 
-.seealso: PetscDeviceContextFork(), PetscDeviceContextJoin()
+.seealso: PetscDeviceContextFork(), PetscDeviceContextJoin(), PetscDeviceContextQueryIdle()
 @*/
 PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
 {
@@ -550,14 +568,14 @@ static PetscDeviceContextType defaultContextType = PETSCDEVICECONTEXTCUDA;
 #endif
 
 /*@C
-  PetscDeviceContextSetDefaultContextSettings - Set the default settings for the root global context
+  PetscDeviceContextSetDefaultRootContextSettings - Set the default settings for the root global context
 
   Input Parameters:
 + type  - The PetscDeviceContextType, NULL if not needed
 - stype - The PetscStreamType, PETSC_STREAM_MAX_TYPE if not needed
 
   Notes:
-  This is one of the few functions that one should ideally call before PetscInitialize(), as calling this routine after
+  This is one of the few functions that one should only call before PetscInitialize(), as calling this routine after
   the root PetscDeviceContext has already been created will have no effect. It is highly unlikely that the user would
   need to call this routine however, the default values are automatically optimally chosen based on availability.
 
@@ -575,7 +593,7 @@ PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDeviceContex
       PetscFunctionBegin; /* PetscFunctionBegin so SETERRQ knows where we are */
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Root PetscDeviceContext has already been setup and created, setting default has no effect");
     } else {
-      /* Since this may be called before PetscInitialize() we can't use error checking */
+      /* Since this may be called before PetscInitialize() we can't use PetscError() */
       printf("Root PetscDeviceContext has already been setup and created, setting default has no effect\n");
     }
   } else {
@@ -623,6 +641,8 @@ PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDeviceContex
   return 0;
 }
 
+/* automatically registered to PetscFinalize() when first context is instantiated, do not
+   call */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Internal(void)
 {
   PetscErrorCode ierr;
@@ -655,9 +675,14 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Intern
   The user generally should not destroy contexts retrieved with this routine unless they themselves have created
   them. There exists no protection against destroying the root context.
 
+  Developer Notes:
+  This routine creates the "root" context the first time it is called, registering its
+  destructor to PetscFinalize(). The root context is synchronized before being destroyed.
+
   Level: beginner
 
-.seealso: PetscDeviceContextSetCurrentContext()
+.seealso: PetscDeviceContextSetCurrentContext(), PetscDeviceContextFork(),
+PetscDeviceContextJoin(), PetscDeviceContextCreate()
 @*/
 PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
 {
@@ -694,7 +719,8 @@ PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
 
   Level: beginner
 
-.seealso: PetscDeviceContextGetCurrentContext()
+.seealso: PetscDeviceContextGetCurrentContext(), PetscDeviceContextFork(),
+PetscDeviceContextJoin(), PetscDeviceContextCreate()
 @*/
 PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
 {

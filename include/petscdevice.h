@@ -17,8 +17,8 @@ PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
 
 /* cuBLAS does not have cublasGetErrorName(). We create one on our own. */
 PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRCUBLAS macro */
-PETSC_EXTERN const char *PetscCUSolverGetErrorName(cusolverStatus_t);
-PETSC_EXTERN const char *PetscCUFFTGetErrorName(cufftResult);
+PETSC_EXTERN const char* PetscCUSolverGetErrorName(cusolverStatus_t);
+PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult);
 
 #define WaitForCUDA() PetscCUDASynchronize ? cudaDeviceSynchronize() : cudaSuccess;
 
@@ -179,8 +179,8 @@ PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 #endif /* PETSC_HAVE_HIP */
 
-/* Cannot use the device context api without C++ */
-#if defined(PETSC_HAVE_CXX)
+/* Cannot use the device context api without C++11 */
+#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
 PETSC_EXTERN PetscErrorCode PetscDeviceRegisterAll(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
