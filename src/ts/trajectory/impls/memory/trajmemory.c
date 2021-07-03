@@ -30,6 +30,9 @@ typedef enum {NONE,TWO_LEVEL_NOREVOLVE,TWO_LEVEL_REVOLVE,TWO_LEVEL_TWO_REVOLVE,R
 
 typedef enum {UNSET=-1,SOLUTIONONLY=0,STAGESONLY=1,SOLUTION_STAGES=2} CheckpointType;
 
+typedef enum {TJ_REVOLVE, TJ_CAMS} PackageName;
+static const char *const PackageNames[] = {"REVOLVE","CAMS","PackageName","TJ_",NULL};
+
 #define HaveSolution(m) ((m) == SOLUTIONONLY || (m) == SOLUTION_STAGES)
 #define HaveStages(m)   ((m) == STAGESONLY || (m) == SOLUTION_STAGES)
 
@@ -88,6 +91,7 @@ typedef struct _DiskStack {
 
 typedef struct _TJScheduler {
   SchedulerType stype;
+  PackageName   packagename;
 #if defined(PETSC_HAVE_REVOLVE)
   RevolveCTX    *rctx,*rctx2;
   PetscBool     use_online;
@@ -1946,6 +1950,16 @@ static PetscErrorCode TSTrajectorySetMaxUnitsDisk_Memory(TSTrajectory tj,PetscIn
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode TSTrajectorySetPackage_Memory(TSTrajectory tj,PackageName packagename)
+{
+  TJScheduler *tjsch = (TJScheduler*)tj->data;
+
+  PetscFunctionBegin;
+  if (tj->setupcalled) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot change package name after TSTrajectory has been setup or used");
+  tjsch->packagename = packagename;
+  PetscFunctionReturn(0);
+}
+
 #if defined(PETSC_HAVE_REVOLVE)
 PETSC_UNUSED static PetscErrorCode TSTrajectorySetRevolveOnline(TSTrajectory tj,PetscBool use_online)
 {
@@ -1972,6 +1986,32 @@ PETSC_UNUSED static PetscErrorCode TSTrajectorySetUseDRAM(TSTrajectory tj,PetscB
 
   PetscFunctionBegin;
   tjsch->stack.use_dram = use_dram;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+   TSTrajectorySetPackage - sets the software that is used to generate the checkpointing schedule.
+
+   Logically Collective on TSTrajectory
+
+   Input Parameters:
++  tj - the TSTrajectory context
+-  packagename - Revolve or CAMS
+
+   Options Database Key:
+.  -ts_trajectory_package <packagename> - revolve, cams
+
+   Level: intermediate
+
+   Note:
+     By default this will use Revolve if it exists
+@*/
+PetscErrorCode TSTrajectorySetPackage(TSTrajectory tj,PackageName packagename)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscTryMethod(tj,"TSTrajectorySetPackage_C",(TSTrajectory,PackageName),(tj,packagename));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2074,6 +2114,7 @@ PetscErrorCode TSTrajectorySetMaxUnitsDisk(TSTrajectory tj,PetscInt max_units_di
 static PetscErrorCode TSTrajectorySetFromOptions_Memory(PetscOptionItems *PetscOptionsObject,TSTrajectory tj)
 {
   TJScheduler    *tjsch = (TJScheduler*)tj->data;
+  PetscEnum      etmp;
   PetscInt       max_cps_ram,max_cps_disk,max_units_ram,max_units_disk;
   PetscBool      flg;
   PetscErrorCode ierr;
@@ -2103,6 +2144,10 @@ static PetscErrorCode TSTrajectorySetFromOptions_Memory(PetscOptionItems *PetscO
 #endif
     ierr = PetscOptionsBool("-ts_trajectory_save_stack","Save all stack to disk","TSTrajectorySetSaveStack",tjsch->save_stack,&tjsch->save_stack,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-ts_trajectory_use_dram","Use DRAM for checkpointing","TSTrajectorySetUseDRAM",tjsch->stack.use_dram,&tjsch->stack.use_dram,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-ts_trajectory_set_package","Checkpointing package to use","TSTrajectorySetPackage",PackageNames,(PetscEnum)(int)(tjsch->packagename),&etmp,&flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = TSTrajectorySetPackage(tj,(PackageName)etmp);CHKERRQ(ierr);
+    }
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   tjsch->stack.solution_only = tj->solution_only;
@@ -2155,13 +2200,10 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
     if (fixedtimestep) {
       if (tjsch->max_cps_ram >= tjsch->total_steps-1 || tjsch->max_cps_ram == -1)
         tjsch->stype = NONE; /* checkpoint all */
-      else
-#if defined(PETSC_HAVE_CAMS)
-      /* CAMS has the priority over revolve */
-        tjsch->stype = CAMS_OFFLINE;
-#else
-        tjsch->stype = (tjsch->max_cps_disk>1) ? REVOLVE_MULTISTAGE : REVOLVE_OFFLINE;
-#endif
+      else { /* choose the package for offline checkpointing */
+        if (tjsch->packagename == TJ_CAMS) tjsch->stype = CAMS_OFFLINE;
+        if (tjsch->packagename == TJ_REVOLVE) tjsch->stype = (tjsch->max_cps_disk>1) ? REVOLVE_MULTISTAGE : REVOLVE_OFFLINE;
+      }
     } else tjsch->stype = NONE; /* checkpoint all for adaptive time step */
 #if defined(PETSC_HAVE_REVOLVE)
     if (tjsch->use_online) tjsch->stype = REVOLVE_ONLINE; /* trick into online (for testing purpose only) */
@@ -2322,6 +2364,7 @@ static PetscErrorCode TSTrajectoryDestroy_Memory(TSTrajectory tj)
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsDisk_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsRAM_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsDisk_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetPackage_C",NULL);CHKERRQ(ierr);
   ierr = PetscFree(tjsch);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2367,6 +2410,7 @@ PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Memory(TSTrajectory tj,TS ts)
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsDisk_C",TSTrajectorySetMaxCpsDisk_Memory);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsRAM_C",TSTrajectorySetMaxUnitsRAM_Memory);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsDisk_C",TSTrajectorySetMaxUnitsDisk_Memory);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetPackage_C",TSTrajectorySetPackage_Memory);CHKERRQ(ierr);
   tj->data = tjsch;
   PetscFunctionReturn(0);
 }
