@@ -462,6 +462,5 @@ PetscErrorCode InitialConditions(DM da,Vec U)
 
    test:
       requires: cams
-      args: -mf -ts_max_steps 10 -ts_monitor -ts_adjoint_monitor -ts_trajectory_type memory -ts_trajectory_solution_only 0 -ts_trajectory_max_units_ram 6
-      output_file: output/ex5adj_3.out
+      args: -mf -ts_max_steps 10 -ts_monitor -ts_adjoint_monitor -ts_trajectory_type memory -ts_trajectory_solution_only 0 -ts_trajectory_max_units_ram 6 -ts_trajectory_set_package cams
 TEST*/
