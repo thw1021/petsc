@@ -6,7 +6,7 @@ pronounced PET-see (`/ˈpɛt-siː/ <https://en.wikipedia.org/wiki/Help:IPA/Engli
 data structures and routines for the scalable (parallel) solution of scientific
 applications modeled by partial differential equations. It supports MPI, and GPUs through
 CUDA or OpenCL, as well as hybrid MPI-GPU parallelism. PETSc (sometimes called PETSc/TAO)
-also contains the TAO optimization software library.
+also contains the TAO, the Toolkit for Advanced Optimization, software library.
 
 PETSc is developed as :ref:`open-source <doc_license>`, requests and contributions are welcome.
 
