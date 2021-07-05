@@ -898,11 +898,13 @@ static PetscErrorCode TSForwardGetStages_Theta(TS ts,PetscInt *ns,Mat *stagesens
   TS_Theta       *th = (TS_Theta*)ts->data;
 
   PetscFunctionBegin;
-  if (ns) *ns = 2;
+  if (ns) {
+    if (!th->endpoint && th->Theta != 1.0) *ns = 1; /* midpoint form */
+    else *ns = 2; /* endpoint form */
+  }
   if (stagesensip) {
     if (!th->endpoint && th->Theta != 1.0) {
-      th->MatFwdStages[0] = th->MatFwdSensip0;
-      th->MatFwdStages[1] = th->MatDeltaFwdSensip;
+      th->MatFwdStages[0] = th->MatDeltaFwdSensip;
     } else {
       th->MatFwdStages[0] = th->MatFwdSensip0;
       th->MatFwdStages[1] = ts->mat_sensip; /* stiffly accurate */
@@ -1219,11 +1221,13 @@ static PetscErrorCode TSGetStages_Theta(TS ts,PetscInt *ns,Vec *Y[])
   TS_Theta       *th = (TS_Theta*)ts->data;
 
   PetscFunctionBegin;
-  if (ns) *ns = 2;
+  if (ns) {
+    if (!th->endpoint && th->Theta != 1.0) *ns = 1; /* midpoint form */
+    else *ns = 2; /* endpoint form */
+  }
   if (Y) {
     if (!th->endpoint && th->Theta != 1.0) {
-      th->Stages[0] = th->X0; /* useful for recovering Xdot, which is needed for sensitivity analysis of systems involving a parameterized mass matrix. */
-      th->Stages[1] = th->X;
+      th->Stages[0] = th->X;
     } else {
       th->Stages[0] = th->X0;
       th->Stages[1] = ts->vec_sol; /* stiffly accurate */
