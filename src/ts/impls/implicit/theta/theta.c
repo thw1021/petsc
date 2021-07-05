@@ -1253,9 +1253,9 @@ $  -ts_type theta -ts_theta_theta 1.0 corresponds to backward Euler (TSBEULER)
 $  -ts_type theta -ts_theta_theta 0.5 corresponds to the implicit midpoint rule
 $  -ts_type theta -ts_theta_theta 0.5 -ts_theta_endpoint corresponds to Crank-Nicholson (TSCN)
 
-   This method can be applied to DAE.
+   The endpoint variant of the Theta method and backward Euler can be applied to DAE. The midpoint variant is not suitable for DAEs because it is not stiffly accurate.
 
-   This method is cast as a 1-stage implicit Runge-Kutta method.
+   The midpoint variant is cast as a 1-stage implicit Runge-Kutta method.
 
 .vb
   Theta | Theta
