@@ -41,8 +41,6 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscDeviceCon
   if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
   ierr = PetscMemzero(dctx->ops,sizeof(struct _DeviceContextOps));CHKERRQ(ierr);
   ierr = (*create)(dctx);CHKERRQ(ierr);
-  ierr = PetscFree(dctx->type);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(type,&dctx->type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

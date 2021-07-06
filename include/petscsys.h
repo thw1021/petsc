@@ -115,11 +115,15 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #endif
 
 #if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
-#  define PETSC_CONSTEXPR constexpr
-#  define PETSC_NOEXCEPT  noexcept
+#  define PETSC_NULLPTR            nullptr
+#  define PETSC_CONSTEXPR          constexpr
+#  define PETSC_NOEXCEPT           noexcept
+#  define PETSC_NOEXCEPT_ARG(cond) noexcept(cond)
 #else
+#  define PETSC_NULLPTR            NULL
 #  define PETSC_CONSTEXPR
 #  define PETSC_NOEXCEPT
+#  define PETSC_NOEXCEPT_ARG(cond)
 #endif
 
 #if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX17)

@@ -2,10 +2,11 @@
 #include "objpool.hpp"
 
 /* Define the allocator */
-struct PetscDeviceContextAllocator : public Petsc::allocator<PetscDeviceContext>
+struct PetscDeviceContextAllocator : Petsc::Allocator<PetscDeviceContext>
 {
   static PetscInt PetscDeviceContextID;
-  static PETSC_NODISCARD PetscErrorCode create(PetscDeviceContext *dctx) PETSC_NOEXCEPT
+
+  PETSC_NODISCARD PetscErrorCode create(PetscDeviceContext *dctx) PETSC_NOEXCEPT
   {
     PetscDeviceContext dc;
     PetscErrorCode     ierr;
@@ -20,7 +21,7 @@ struct PetscDeviceContextAllocator : public Petsc::allocator<PetscDeviceContext>
     PetscFunctionReturn(0);
   }
 
-  static PETSC_NODISCARD PetscErrorCode destroy(PetscDeviceContext &dctx) PETSC_NOEXCEPT
+  PETSC_NODISCARD PetscErrorCode destroy(PetscDeviceContext &dctx) const PETSC_NOEXCEPT
   {
     PetscErrorCode ierr;
 
@@ -30,6 +31,20 @@ struct PetscDeviceContextAllocator : public Petsc::allocator<PetscDeviceContext>
     ierr = PetscFree(dctx->type);CHKERRQ(ierr);
     ierr = PetscFree(dctx->childIDs);CHKERRQ(ierr);
     ierr = PetscFree(dctx);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_NODISCARD PetscErrorCode reset(PetscDeviceContext &dctx) const PETSC_NOEXCEPT
+  {
+    PetscErrorCode ierr;
+
+    PetscFunctionBegin;
+    /* don't deallocate the child array, rather just zero it out */
+    ierr = PetscArrayzero(dctx->childIDs,dctx->maxNumChildren);CHKERRQ(ierr);
+    dctx->setup       = PETSC_FALSE;
+    dctx->numChildren = 0;
+    dctx->idle        = PETSC_TRUE;
+    dctx->streamType  = PETSC_STREAM_DEFAULT_BLOCKING;
     PetscFunctionReturn(0);
   }
 };
@@ -43,12 +58,18 @@ namespace Petsc {
 template <>
 PetscErrorCode objectPool<PetscDeviceContext,PetscDeviceContextAllocator>::finalize(void) PETSC_NOEXCEPT
 {
+#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
+  auto         alloc = contextPool.getAllocator();
+#else
+  allocator_t& alloc = contextPool.getAllocator();
+#endif
+
   PetscFunctionBegin;
   try {
     while (!contextPool._stack.empty()) {
       PetscErrorCode ierr;
 
-      ierr = PetscDeviceContextAllocator::destroy(contextPool._stack.top());CHKERRQ(ierr);
+      ierr = alloc.destroy(contextPool._stack.top());CHKERRQ(ierr);
       contextPool._stack.pop();
     }
   } catch (std::exception const &ex) {
@@ -56,7 +77,7 @@ PetscErrorCode objectPool<PetscDeviceContext,PetscDeviceContextAllocator>::final
   }
   /* reset the ID counter, the first PetscDeviceContext created (i.e. the root) should
      always expect to have ID 0 */
-  PetscDeviceContextAllocator::PetscDeviceContextID = 0;
+  allocator_t::PetscDeviceContextID = 0;
   contextPool._registered = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -114,6 +135,7 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 
   PetscFunctionBegin;
   if (!*dctx) PetscFunctionReturn(0);
+  (*dctx)->setup = PETSC_FALSE;
   ierr = contextPool.reclaim(*dctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -169,6 +191,7 @@ PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStr
 PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStreamType *type)
 {
   PetscFunctionBegin;
+  PetscValidPointer(dctx,1);
   PetscValidPointer(type,2);
   *type = dctx->streamType;
   PetscFunctionReturn(0);
@@ -554,10 +577,10 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
   PetscFunctionReturn(0);
 }
 
-static PetscDeviceContext globalContext = PETSC_NULLPTR;
-static PetscBool          globalContextSetup = PETSC_FALSE;
+static PetscDeviceContext globalContext          = PETSC_NULLPTR;
+static PetscBool          globalContextSetup     = PETSC_FALSE;
 /* default context should act just like the NULL stream, i.e. fully synchronous */
-static PetscStreamType    defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
+static PetscStreamType    defaultStreamType      = PETSC_STREAM_DEFAULT_BLOCKING;
 #if PetscDefined(HAVE_CUDA)
 static PetscDeviceContextType defaultContextType = PETSCDEVICECONTEXTCUDA;
 #elif PetscDefined(HAVE_HIP)
@@ -625,18 +648,12 @@ PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDeviceContex
   PetscInitialized(&petscInit);
   if (petscInit) {
     PetscFunctionBegin;
-    if (type) {
-      PetscValidPointer(type,1);
-      *type = defaultContextType;
-    }
-    if (stype) {
-      PetscValidPointer(stype,2);
-      *stype = defaultStreamType;
-    }
+    if (type)   *type = defaultContextType;
+    if (stype) *stype = defaultStreamType;
     PetscFunctionReturn(0);
   }
 #endif
-  if (type) *type = defaultContextType;
+  if (type)   *type = defaultContextType;
   if (stype) *stype = defaultStreamType;
   return 0;
 }
