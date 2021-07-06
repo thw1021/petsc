@@ -25,6 +25,14 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextTypeCompare(const char type
   PetscFunctionReturn(0);
 }
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+template <typename T>
+void PetscValidStreamType(T,int);
+template <typename T>
+void PetscValidStreamTypeSpecific(T,int,const char[]);
+template <typename T>
+void PetscValidSameStreamType(T,int,T,int);
+#else /* PETSC_CLANG_STATIC_ANALYZER */
 #if PetscDefined(USE_DEBUG)
 #define PetscValidStreamType(_p_strm__,_p_arg__)                        \
   do {                                                                  \
@@ -33,7 +41,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextTypeCompare(const char type
     if (PetscUnlikely(!(_p_strm__)->type)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_TYPENOTSET,"PetscDeviceContextType is not set: Argument #%d",(_p_arg__)); \
   } while (0)
 
-#define PetscValidStreamTypeSpecific(_p_strm__,_p_arg__,_p_type__) \
+#define PetscValidStreamTypeSpecific(_p_strm__,_p_arg__,_p_type__)      \
   do {                                                                  \
     PetscBool      _type_same_strm_;                                    \
     PetscErrorCode _strm_ierr_;                                         \
@@ -50,11 +58,12 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextTypeCompare(const char type
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"PetscDeviceContextType %s is incompatible with PetscDeviceContextType %s: Arguments # %d and # %d",((_p_strm1__)->type),((_p_strm2__)->type),(_p_arg1__),(_p_arg2__)); \
     }                                                                   \
   } while (0)
-#else
+#else /* PETSC_USE_DEBUG */
 #define PetscValidStreamType(_p_strm__,_p_arg__)                   ((void)(_p_strm__))
 #define PetscValidStreamTypeSpecific(_p_strm__,_p_arg__,_p_type__) ((void)(_p_strm__))
 #define PetscCheckValidSameStreamType(_p_strm1__,_p_arg1__,_p_strm2__,_p_arg2__) (void)(_p_strm1__),(void)(_p_strm2__)
-#endif
+#endif /* PETSC_USE_DEBUG */
+#endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
