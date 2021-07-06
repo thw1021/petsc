@@ -7,12 +7,10 @@
 #error PetscDeviceContext backends for CUDA and HIP requires C++11
 #endif
 
-#define PETSC_NULLPTR nullptr
-
 static PETSC_CONSTEXPR const char *const PetscDeviceContextBackends[] = {"cuda","hip","PetscDeviceContextBackend","PetscDeviceContextBackend::",PETSC_NULLPTR};
 
-// A useful template to serve as a function wrapper factory. Given a NON-OVERLOADED
-// function "foo" which you'd like to thinly wrap as "bar", simply doing:
+// A useful template to serve as a function wrapper factory. Given a function "foo" which
+// you'd like to thinly wrap as "bar", simply doing:
 //
 // ALIAS_FUNCTION(bar,foo);
 //
@@ -22,7 +20,7 @@ static PETSC_CONSTEXPR const char *const PetscDeviceContextBackends[] = {"cuda",
 // { return foo(arg1,arg2,...,argn);}
 //
 // for you. You may then call bar exactly as you would foo.
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX14)
+#if PetscDefined(HAVE_CXX_DIALECT_CXX14)
 // decltype(auto) is c++14
 #define ALIAS_FUNCTION(Alias_,Original_)                                \
   template <typename... Args> decltype(auto) Alias_(Args&&... args)     \
@@ -419,7 +417,7 @@ PetscErrorCode cupmContext<T>::setUp(PetscDeviceContext dctx) PETSC_NOEXCEPT
     cerr = cupmStreamCreateWithFlags(&dci->stream,cupmStreamNonBlocking);CHKERRCUPM(cerr);
     break;
   default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %D",(PetscInt)dctx->streamType);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %d",dctx->streamType);
     break;
   }
   cerr = cupmEventCreate(&dci->event);CHKERRCUPM(cerr);
@@ -478,7 +476,6 @@ typedef cupmContext<PetscDeviceContextBackend::HIP>  cupmContextHip;
 
 } // namespace Petsc
 
-#undef PETSC_NULLPTR
 #undef ALIAS_FUNCTION
 
 // shorthand for what is an EXTREMELY long name
