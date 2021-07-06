@@ -20,6 +20,8 @@ PETSC_STATIC_INLINE PetscBool PetscDeviceContextTypeCompare_Internal(const char 
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextTypeCompare(const char type_ref[], const char type_name[], PetscBool *same)
 {
   PetscFunctionBegin;
+  PetscValidCharPointer(type_ref,1);
+  PetscValidCharPointer(type_name,2);
   PetscValidBoolPointer(same,3);
   *same = PetscDeviceContextTypeCompare_Internal(type_ref,type_name);
   PetscFunctionReturn(0);

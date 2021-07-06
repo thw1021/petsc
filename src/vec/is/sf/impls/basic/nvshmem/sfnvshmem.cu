@@ -1,5 +1,4 @@
 #include <petsc/private/cudavecimpl.h>
-#include <petscdevice.h>
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 #include <mpi.h>
 #include <nvshmem.h>

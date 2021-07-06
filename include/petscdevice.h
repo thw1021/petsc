@@ -193,6 +193,7 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext,PetscDe
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext,PetscDeviceContextType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext,PetscStreamType*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext,PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextQueryIdle(PetscDeviceContext,PetscBool*);

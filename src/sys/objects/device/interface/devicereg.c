@@ -41,6 +41,7 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscDeviceCon
   if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
   ierr = PetscMemzero(dctx->ops,sizeof(struct _DeviceContextOps));CHKERRQ(ierr);
   ierr = (*create)(dctx);CHKERRQ(ierr);
+  dctx->setup = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -68,6 +69,30 @@ PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext dctx, PetscDeviceCon
   PetscValidStreamType(dctx,1);
   PetscValidPointer(type,2);
   *type = dctx->type;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix[], PetscDeviceContext dctx)
+{
+  char                   type[256];
+  PetscBool              flag;
+  PetscInt               stype;
+  PetscDeviceContextType deft;
+  PetscErrorCode         ierr;
+
+  PetscFunctionBegin;
+  PetscValidPointer(dctx,2);
+  ierr = PetscOptionsBegin(comm,prefix,"PetscDeviceContext Options","Sys");CHKERRQ(ierr);
+#if PetscDefined(HAVE_HIP)
+  deft = dctx->type ? dctx->type : PETSCDEVICECONTEXTHIP;
+#else
+  deft = dctx->type ? dctx->type : PETSCDEVICECONTEXTCUDA;
+#endif
+  ierr = PetscOptionsFList("-device_context_type","PetscDeviceContext implementation type","PetscDeviceContextSetType",PetscDeviceContextList,deft,type,sizeof(type),&flag);CHKERRQ(ierr);
+  if (flag) {ierr = PetscDeviceContextSetType(dctx,type);CHKERRQ(ierr);}
+  ierr = PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,3,PetscStreamTypes[dctx->streamType],&stype,&flag);CHKERRQ(ierr);
+  if (flag) {ierr = PetscDeviceContextSetStreamType(dctx,(PetscStreamType)stype);CHKERRQ(ierr);}
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

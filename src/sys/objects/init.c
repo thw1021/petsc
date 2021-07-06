@@ -20,13 +20,8 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 #include <unistd.h>
 #endif
 
-#if defined(PETSC_HAVE_CUDA)
-  #include <cuda_runtime.h>
-  #include <petscdevice.h>
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-  #include <hip/hip_runtime.h>
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+#  include <petscdevice.h>
 #endif
 
 #if defined(PETSC_HAVE_DEVICE)

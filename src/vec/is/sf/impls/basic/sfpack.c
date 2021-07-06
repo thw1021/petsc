@@ -4,14 +4,6 @@
 
 /* This is a C file that contains packing facilities, with dispatches to device if enabled. */
 
-#if defined(PETSC_HAVE_CUDA)
-#include <cuda_runtime.h>
-#include <petscdevice.h>
-#endif
-#if defined(PETSC_HAVE_HIP)
-#include <hip/hip_runtime.h>
-#include <petscdevice.h>
-#endif
 /*
  * MPI_Reduce_local is not really useful because it can't handle sparse data and it vectorizes "in the wrong direction",
  * therefore we pack data types manually. This file defines packing routines for the standard data types.
