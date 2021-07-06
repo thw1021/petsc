@@ -1,6 +1,6 @@
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
 #include <hip/hip_runtime.h>
-#include <petschipblas.h> /* For CHKERRHIP */
+#include <petscdevice.h> /* For CHKERRHIP */
 
 /* compilation issues on SPOCK */
 #undef PETSC_HAVE_COMPLEX
