@@ -16,11 +16,11 @@ namespace Petsc {
 // Allocator ABC for interoperability with C ctors and dtors.
 template <typename T>
 struct Allocator {
-  typedef T obj_t;
+  typedef T value_type;
 
-  PETSC_NODISCARD PetscErrorCode create(obj_t*)  PETSC_NOEXCEPT;
-  PETSC_NODISCARD PetscErrorCode destroy(obj_t&) PETSC_NOEXCEPT;
-  PETSC_NODISCARD PetscErrorCode reset(obj_t&)   PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode create(value_type*)  PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode destroy(value_type&) PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode reset(value_type&)   PETSC_NOEXCEPT;
 };
 
 // Default allocator that performs the bare minimum of petsc object creation and
@@ -28,10 +28,10 @@ struct Allocator {
 template <typename T>
 struct DefaultAllocator : public Allocator<T>
 {
-  typedef Allocator<T> allocator_t;
-  using typename allocator_t::obj_t;
+  typedef Allocator<T>                     allocator_t;
+  typedef typename allocator_t::value_type value_type;
 
-  PETSC_NODISCARD PetscErrorCode create(obj_t *obj) const PETSC_NOEXCEPT
+  PETSC_NODISCARD PetscErrorCode create(value_type *obj) const PETSC_NOEXCEPT
   {
     PetscErrorCode ierr;
 
@@ -40,7 +40,7 @@ struct DefaultAllocator : public Allocator<T>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD PetscErrorCode destroy(obj_t &obj) const PETSC_NOEXCEPT
+  PETSC_NODISCARD PetscErrorCode destroy(value_type &obj) const PETSC_NOEXCEPT
   {
     PetscErrorCode ierr;
 
@@ -50,7 +50,7 @@ struct DefaultAllocator : public Allocator<T>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD PetscErrorCode reset(obj_t &obj) const PETSC_NOEXCEPT
+  PETSC_NODISCARD PetscErrorCode reset(value_type &obj) const PETSC_NOEXCEPT
   {
     PetscErrorCode ierr;
 
@@ -65,8 +65,8 @@ struct DefaultAllocator : public Allocator<T>
 template <typename T, class _Allocator>
 class objectPoolBase {
 public:
-  typedef _Allocator allocator_t;
-  typedef T          obj_t;
+  typedef _Allocator                       allocator_t;
+  typedef typename allocator_t::value_type value_type;
 
 protected:
   allocator_t _alloc;
@@ -85,7 +85,7 @@ protected:
 
   inline ~objectPoolBase()
   {
-    PETSC_STATIC_ASSERT_BASE_CLASS(Allocator<obj_t>,_Allocator,"Allocator type must be subclass of Petsc::Allocator");
+    PETSC_STATIC_ASSERT_BASE_CLASS(Allocator<value_type>,_Allocator,"Allocator type must be subclass of Petsc::Allocator");
   }
 };
 
@@ -101,12 +101,12 @@ protected:
   typedef objectPoolBase<T,_Allocator> base_t;
 
 public:
-  using typename base_t::allocator_t;
-  using typename base_t::obj_t;
+  typedef typename base_t::allocator_t allocator_t;
+  typedef typename base_t::value_type  value_type;
 
 protected:
-  std::stack<obj_t> _stack;
-  PetscBool         _registered;
+  std::stack<value_type> _stack;
+  PetscBool              _registered;
 
   // This exists to allow one to pass a function from C++ to PetscRegisterFinalize(). The
   // reasons for its construction are as follows:
@@ -123,13 +123,13 @@ public:
   objectPool(allocator_t &&alloc) PETSC_NOEXCEPT_ARG(std::is_nothrow_move_assignable<allocator_t>::value) : base_t(std::move(alloc)),_registered(PETSC_FALSE) {}
 #endif
 
-  PETSC_NODISCARD PetscErrorCode get(obj_t&)     PETSC_NOEXCEPT;
-  PETSC_NODISCARD PetscErrorCode reclaim(obj_t&) PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode get(value_type&)     PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode reclaim(value_type&) PETSC_NOEXCEPT;
 };
 
 // Retrieve an object from the pool, if the pool is empty a new object is created instead
 template <typename T, class _Allocator>
-PetscErrorCode objectPool<T,_Allocator>::get(obj_t &obj) PETSC_NOEXCEPT
+PetscErrorCode objectPool<T,_Allocator>::get(value_type &obj) PETSC_NOEXCEPT
 {
   PetscFunctionBegin;
   if (PetscUnlikely(!this->_registered)) {
@@ -150,7 +150,11 @@ PetscErrorCode objectPool<T,_Allocator>::get(obj_t &obj) PETSC_NOEXCEPT
 
       ierr = alloc.create(&obj);CHKERRQ(ierr);
     } else {
+#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
       obj = std::move(this->_stack.top());
+#else
+      obj = this->_stack.top();
+#endif
       this->_stack.pop();
     }
   } catch (std::exception const &ex) {
@@ -161,7 +165,7 @@ PetscErrorCode objectPool<T,_Allocator>::get(obj_t &obj) PETSC_NOEXCEPT
 
 // Return an object to the pool
 template <typename T, class _Allocator>
-PetscErrorCode objectPool<T,_Allocator>::reclaim(obj_t &obj) PETSC_NOEXCEPT
+PetscErrorCode objectPool<T,_Allocator>::reclaim(value_type &obj) PETSC_NOEXCEPT
 {
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
   // allows const allocator_t& to be used if allocator defines a const reset
@@ -174,7 +178,11 @@ PetscErrorCode objectPool<T,_Allocator>::reclaim(obj_t &obj) PETSC_NOEXCEPT
   PetscFunctionBegin;
   ierr = alloc.reset(obj);CHKERRQ(ierr);
   try {
+#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
     this->_stack.push(std::move(obj));
+#else
+    this->_stack.push(obj);
+#endif
   } catch (std::exception const &ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
   }
