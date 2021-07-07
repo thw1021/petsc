@@ -40,8 +40,8 @@ enum class PetscDeviceContextBackend : int {CUDA, HIP};
 #if defined(CHKERRCUPM)
 #error "Invalid redefinition of CHKERRCUPM, perhaps change order of header-file includes"
 #endif
-// A backend agnostic CHKERR() function, this will only work inside the member functions
-// of cupmContext
+// A backend agnostic CHKERRCUPM() function, this will only work inside the member
+// functions of cupmContext
 #define CHKERRCUPM(cerr)                                                \
   do {                                                                  \
     if (PetscUnlikely(cerr)) {                                          \
@@ -75,6 +75,7 @@ struct cupmTypeTraits<PetscDeviceContextBackend::CUDA>
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,cudaGetErrorString);
 
   // Values
+  static PETSC_CONSTEXPR const auto cupmSuccess           = cudaSuccess;
   static PETSC_CONSTEXPR const auto cupmErrorNotReady     = cudaErrorNotReady;
   static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = cudaStreamNonBlocking;
 
@@ -203,6 +204,7 @@ struct cupmTypeTraits<PetscDeviceContextBackend::HIP>
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,hipGetErrorString);
 
   // Values
+  static PETSC_CONSTEXPR const auto cupmSuccess           = hipSuccess;
   static PETSC_CONSTEXPR const auto cupmErrorNotReady     = hipErrorNotReady;
   static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = hipStreamNonBlocking;
 
@@ -308,6 +310,7 @@ public:
   using typename cupmType_t::cupmSolverHandle_t;
 
   // vars
+  using cupmType_t::cupmSuccess;
   using cupmType_t::cupmErrorNotReady;
   using cupmType_t::cupmStreamNonBlocking;
 
@@ -325,6 +328,10 @@ public:
   using cupmType_t::cupmStreamQuery;
   using cupmType_t::cupmStreamSynchronize;
 
+  // This is the canonical PETSc "impls" struct that normally resides in a standalone impls
+  // header, but since we are using the power of templates it must be declared part of
+  // this class to have easy access the same typedefs. Technically one can make a
+  // templated struct outside the class but it's more code for the same result.
   struct PetscDeviceContext_IMPLS
   {
     cupmStream_t       stream;
@@ -333,33 +340,33 @@ public:
     cupmSolverHandle_t solver;
   };
 
-protected:
+private:
+  static cupmBlasHandle_t   _blashandle;
+  static cupmSolverHandle_t _solverhandle;
+
   // handle manipulation functions
   using cupmType_t::InitializeHandle;
   using cupmType_t::SetHandleStream;
   using cupmType_t::DestroyHandle;
 
-  static cupmBlasHandle_t   _blashandle;
-  static cupmSolverHandle_t _solverhandle;
-
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode FinalizeBLASHandle(void) PETSC_NOEXCEPT
+  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode finalizeBLASHandle(void) PETSC_NOEXCEPT
   { return DestroyHandle(_blashandle);}
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode FinalizeSOLVERHandle(void) PETSC_NOEXCEPT
+  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode finalizeSOLVERHandle(void) PETSC_NOEXCEPT
   { return DestroyHandle(_solverhandle);}
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode GetHandles(PetscDeviceContext_IMPLS *dci) PETSC_NOEXCEPT
+  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode setupHandles(PetscDeviceContext_IMPLS *dci) PETSC_NOEXCEPT
   {
     PetscErrorCode  ierr;
 
     PetscFunctionBegin;
     if (!_blashandle) {
       ierr = InitializeHandle(_blashandle);CHKERRQ(ierr);
-      ierr = PetscRegisterFinalize(FinalizeBLASHandle);CHKERRQ(ierr);
+      ierr = PetscRegisterFinalize(finalizeBLASHandle);CHKERRQ(ierr);
     }
     if (!_solverhandle) {
       ierr = InitializeHandle(_solverhandle);CHKERRQ(ierr);
-      ierr = PetscRegisterFinalize(FinalizeSOLVERHandle);CHKERRQ(ierr);
+      ierr = PetscRegisterFinalize(finalizeSOLVERHandle);CHKERRQ(ierr);
     }
     ierr = SetHandleStream(_blashandle,dci->stream);CHKERRQ(ierr);
     ierr = SetHandleStream(_solverhandle,dci->stream);CHKERRQ(ierr);
@@ -372,9 +379,12 @@ public:
   const struct _DeviceContextOps ops;
 
   explicit PETSC_CONSTEXPR cupmContext(PetscErrorCode (*create)(PetscDeviceContext)) PETSC_NOEXCEPT
-    : ops{create,destroy,setUp,query,waitForContext,synchronize} {}
+    : ops{create,destroy,changeStreamType,setUp,query,waitForContext,synchronize} {}
 
+  // All of these functions MUST be static in order to be callable from C, otherwise they
+  // get the implicit 'this' pointer tacked on
   static PETSC_NODISCARD PetscErrorCode destroy(PetscDeviceContext) PETSC_NOEXCEPT;
+  static PETSC_NODISCARD PetscErrorCode changeStreamType(PetscDeviceContext,PetscStreamType) PETSC_NOEXCEPT;
   static PETSC_NODISCARD PetscErrorCode setUp(PetscDeviceContext) PETSC_NOEXCEPT;
   static PETSC_NODISCARD PetscErrorCode query(PetscDeviceContext,PetscBool*) PETSC_NOEXCEPT;
   static PETSC_NODISCARD PetscErrorCode waitForContext(PetscDeviceContext,PetscDeviceContext) PETSC_NOEXCEPT;
@@ -394,6 +404,22 @@ PetscErrorCode cupmContext<T>::destroy(PetscDeviceContext dctx) PETSC_NOEXCEPT
   if (dci->stream) {cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);}
   if (dci->event)  {cerr = cupmEventDestroy(dci->event);CHKERRCUPM(cerr);}
   ierr = PetscFree(dctx->data);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+template <PetscDeviceContextBackend T>
+PetscErrorCode cupmContext<T>::changeStreamType(PetscDeviceContext dctx, PetscStreamType stype) PETSC_NOEXCEPT
+{
+  PetscDeviceContext_IMPLS *dci = IMPLS_RCAST_(dctx->data);
+
+  PetscFunctionBegin;
+  if (dci->stream) {
+    cupmError_t cerr;
+    cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);
+  }
+  // set these to null so they aren't usable until setup is called again
+  dci->blas   = PETSC_NULLPTR;
+  dci->solver = PETSC_NULLPTR;
   PetscFunctionReturn(0);
 }
 
@@ -421,15 +447,25 @@ PetscErrorCode cupmContext<T>::setUp(PetscDeviceContext dctx) PETSC_NOEXCEPT
     break;
   }
   cerr = cupmEventCreate(&dci->event);CHKERRCUPM(cerr);
-  ierr = GetHandles(dci);CHKERRQ(ierr);
+  ierr = setupHandles(dci);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 template <PetscDeviceContextBackend T>
 PetscErrorCode cupmContext<T>::query(PetscDeviceContext dctx, PetscBool *idle) PETSC_NOEXCEPT
 {
+  cupmError_t cerr;
+
   PetscFunctionBegin;
-  *idle = cupmStreamQuery(IMPLS_RCAST_(dctx->data)->stream) == cupmErrorNotReady ? PETSC_FALSE : PETSC_TRUE;
+  cerr = cupmStreamQuery(IMPLS_RCAST_(dctx->data)->stream);
+  if (cerr == cupmSuccess)
+    *idle = PETSC_TRUE;
+  else if (cerr == cupmErrorNotReady) {
+    *idle = PETSC_FALSE;
+  } else {
+    // somethings gone wrong
+    CHKERRCUPM(cerr);
+  }
   PetscFunctionReturn(0);
 }
 

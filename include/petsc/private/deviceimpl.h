@@ -71,6 +71,7 @@ typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
   PetscErrorCode (*create)(PetscDeviceContext);
   PetscErrorCode (*destroy)(PetscDeviceContext);
+  PetscErrorCode (*changestreamtype)(PetscDeviceContext,PetscStreamType);
   PetscErrorCode (*setup)(PetscDeviceContext);
   PetscErrorCode (*query)(PetscDeviceContext,PetscBool*);
   PetscErrorCode (*waitforctx)(PetscDeviceContext,PetscDeviceContext);

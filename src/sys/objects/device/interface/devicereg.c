@@ -24,7 +24,7 @@ static PetscBool         PetscDevicePackageInitialized = PETSC_FALSE;
 
   Level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextGetType()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextGetType(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscDeviceContextType type)
 {
@@ -33,7 +33,8 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscDeviceCon
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(!type)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot set PetscDeviceContext to NULL type");
+  PetscValidPointer(dctx,1);
+  PetscValidCharPointer(type,2);
   ierr = PetscDeviceContextTypeCompare(dctx->type,type,&match);CHKERRQ(ierr);
   if (match) PetscFunctionReturn(0);
   ierr = PetscFunctionListFind(PetscDeviceContextList,type,&create);CHKERRQ(ierr);
@@ -41,6 +42,7 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscDeviceCon
   if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
   ierr = PetscMemzero(dctx->ops,sizeof(struct _DeviceContextOps));CHKERRQ(ierr);
   ierr = (*create)(dctx);CHKERRQ(ierr);
+  /* If we've swapped types we shouldn't be marked "setup" */
   dctx->setup = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -61,17 +63,43 @@ PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext dctx, PetscDeviceCon
 
   Level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext dctx, PetscDeviceContextType *type)
 {
   PetscFunctionBegin;
   PetscValidStreamType(dctx,1);
-  PetscValidPointer(type,2);
+  PetscValidCharPointer(type,2);
   *type = dctx->type;
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscDeviceContextSetFromOptions - Configure a PetscDeviceContext from the options database
+
+  Collective on comm, Possibly Synchronous
+
+  Input Parameters:
++ comm   - MPI communicator on which to query the options database
+. prefix - prefix to prepend to all options database queries, NULL if not needed
+- dctx   - The PetscDeviceContext to configure
+
+  Output Parameter:
+. dctx - The PetscDeviceContext
+
+  Notes:
+  Certain operations -- such as setting the type of the object -- incurs a rebuild of device-side data structures, which
+  may be synchronous. Care is therefore taken in this routine not to unnecessarily trigger these changes.
+
+  Options Database:
++ -device_context_type        - type of PetscDeviceContext to create - PetscDeviceContextSetType()
+- -device_context_stream_type - type of stream to create inside the PetscDeviceContext -
+  PetscDeviceContextSetStreamType()
+
+  Level: beginner
+
+.seealso: PetscDeviceContextSetStreamType(), PetscDeviceContextSetType()
+@*/
 PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix[], PetscDeviceContext dctx)
 {
   char                   type[256];
@@ -81,7 +109,8 @@ PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix
   PetscErrorCode         ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(dctx,2);
+  PetscValidCharPointer(prefix,2);
+  PetscValidPointer(dctx,3);
   ierr = PetscOptionsBegin(comm,prefix,"PetscDeviceContext Options","Sys");CHKERRQ(ierr);
 #if PetscDefined(HAVE_HIP)
   deft = dctx->type ? dctx->type : PETSCDEVICECONTEXTHIP;
@@ -106,7 +135,7 @@ PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix
 - function - The creation routine itself
 
   Notes:
-  PetscDeviceContextRegister() may be called multiple times to add several user-defined vectors
+  PetscDeviceContextRegister() may be called multiple times to add several user-defined implementations
 
   Sample usage:
 .vb
@@ -128,6 +157,8 @@ PetscErrorCode PetscDeviceContextRegister(const char sname[], PetscErrorCode (*f
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  PetscValidCharPointer(sname,1);
+  PetscValidFunction(function,2);
   ierr = PetscFunctionListAdd(&PetscDeviceContextList,sname,function);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -140,13 +171,13 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
 #endif
 
 /*@C
-  PetscDeviceRegisterAll - Registers all of the stream components in the PetscDevice package.
+  PetscDeviceRegisterAll - Registers all the components in the PetscDevice package.
 
   Not Collective
 
   Level: developer
 
-.seealso:  PetscDeviceContextCreate(), PetscDeviceFinalizePackage()
+.seealso:  PetscDeviceContextCreate(), PetscDeviceFinalizePackage(), PetscDeviceInitializePackage(), PetscDeviceContextRegister()
 @*/
 PetscErrorCode PetscDeviceRegisterAll(void)
 {
@@ -170,6 +201,10 @@ PetscErrorCode PetscDeviceRegisterAll(void)
   PetscDeviceFinalizePackage - This function cleans up all components of the PetscDevice package.
   It is called from PetscFinalize().
 
+  Developer Notes:
+  This function is automatically registered to be called during PetscFinalize() by PetscDeviceInitializePackage() so
+  there should be no need to call it yourself.
+
   Level: developer
 
 .seealso: PetscFinalize(), PetscDeviceInitializePackage()
@@ -187,12 +222,12 @@ PetscErrorCode PetscDeviceFinalizePackage(void)
 
 /*@C
   PetscDeviceInitializePackage - This function initializes everything in the PetscDevice package. It is called from
-  PetscDLLibraryRegister_petscsys() when using dynamic libraries, and on the first call to PetscEventCreate(),
-  PetscStreamCreate(), or PetscDeviceContextCreate() when using shared or static libraries.
+  PetscDLLibraryRegister_petscsys() when using dynamic libraries, and on the first call to PetscDeviceContextCreate()
+  when using shared or static libraries.
 
   Level: developer
 
-.seealso: PetscInitialize(), PetscDeviceFinalizePackage()
+.seealso: PetscInitialize(), PetscDeviceFinalizePackage(), PetscDeviceContextCreate()
 @*/
 PetscErrorCode PetscDeviceInitializePackage(void)
 {
@@ -201,7 +236,7 @@ PetscErrorCode PetscDeviceInitializePackage(void)
   PetscFunctionBegin;
   if (PetscDevicePackageInitialized) PetscFunctionReturn(0);
   PetscDevicePackageInitialized = PETSC_TRUE;
-  ierr = PetscDeviceRegisterAll();CHKERRQ(ierr);
   ierr = PetscRegisterFinalize(PetscDeviceFinalizePackage);CHKERRQ(ierr);
+  ierr = PetscDeviceRegisterAll();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
