@@ -1602,6 +1602,8 @@ checkFunctionMap = {
   "MatCheckProduect"                  : checkObjIdxGenericN,
   "MatCheckSameLocalSize"             : checkObjIdxGenericN,
   "MatCheckSameSize"                  : checkObjIdxGenericN,
+  "PetscValidStreamType"              : checkObjIdxGenericN,
+  "PetscValidSameStreamType"          : checkObjIdxGenericN,
 }
 
 """Utility and pre-check setup"""

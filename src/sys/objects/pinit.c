@@ -10,13 +10,13 @@
 #endif
 
 #if defined(PETSC_HAVE_CUDA)
-#include <petsccublas.h>
+#include <petsc/private/deviceimpl.h>
 PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
 PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-#include <petschipblas.h>
+#include <petsc/private/deviceimpl.h>
 PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
 PETSC_EXTERN hipEvent_t petsc_gputimer_end;
 #endif
@@ -1170,6 +1170,10 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 #endif
 #endif
 
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+  /* guard for cuda and hip since not all devices yet supported */
+  ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD,NULL);CHKERRQ(ierr);
+#endif
   /*
       Set flag that we are completely initialized
   */
