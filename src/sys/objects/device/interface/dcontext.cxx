@@ -94,7 +94,8 @@ PetscErrorCode objectPool<PetscDeviceContext,PetscDeviceContextAllocator>::final
 
   Level: beginner
 
-.seealso: PetscDeviceContextSetType(), PetscDeviceContextSetStreamType(), PetscDeviceContextSetUp(), PetscDeviceContextDestroy()
+.seealso: PetscDeviceContextSetType(), PetscDeviceContextSetStreamType(),
+PetscDeviceContextSetUp(), PetscDeviceContextDestroy(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext *dctx)
 {
@@ -150,22 +151,27 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 - type - The PetscStreamType
 
   Notes:
-  Changing the stream type of an already setup PetscDeviceContext is not yet supported.
-
   See PetscStreamType in include/petscdevicetypes.h for more information on the available
-  types and their interactions.
+  types and their interactions. If the PetscDeviceContext was previously set up and stream
+  type was changed, you must call PetscDeviceContextSetUp() again after this routine.
 
   Level: intermediate
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextGetStreamType()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(),
+PetscDeviceContextGetStreamType(), PetscDeviceContextSetUp(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStreamType type)
 {
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(type >= PETSC_STREAM_MAX_TYPE) || PetscUnlikelyDebug(type < 0)) {
-    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscStreamType %d is invalid, out of range of [0,%d)",(int)type,(int)PETSC_STREAM_MAX_TYPE);
+    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscStreamType %d is invalid, out of range of [0,%d)",type,PETSC_STREAM_MAX_TYPE);
   }
-  if (PetscUnlikelyDebug(dctx->setup)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Can't change the stream type of an already setup context");
+  /* only need to do complex swapping if the object has already been setup */
+  if (dctx->setup && (dctx->streamType != type)) {
+    PetscErrorCode ierr;
+    ierr = (*dctx->ops->changestreamtype)(dctx,type);CHKERRQ(ierr);
+    dctx->setup = PETSC_FALSE;
+  }
   dctx->streamType = type;
   PetscFunctionReturn(0);
 }
@@ -186,7 +192,8 @@ PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStr
 
   Level: intermediate
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetStreamType()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(),
+PetscDeviceContextSetStreamType(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStreamType *type)
 {
@@ -211,7 +218,8 @@ PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStr
 
   Level: beginner
 
-.seealso: PetscDeviceContextTypes, PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextDestroy()
+.seealso: PetscDeviceContextTypes, PetscDeviceContextCreate(),
+PetscDeviceContextSetType(), PetscDeviceContextDestroy(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 {
@@ -395,7 +403,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
 #if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
   idList.reserve(3*n);
 #endif
-  /* update new child totals */
+  /* update child totals */
   dctx->numChildren += n;
   /* now to find out if we have room */
   if (dctx->numChildren > dctx->maxNumChildren) {
@@ -403,7 +411,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
     if (dctx->childIDs) {
       /* have existing children, must reallocate them */
       ierr = PetscRealloc(dctx->numChildren*sizeof(*dctx->childIDs),&dctx->childIDs);CHKERRQ(ierr);
-      /* clear the new memory since realloc doesn't do it for us */
+      /* clear the extra memory since realloc doesn't do it for us */
       ierr = PetscArrayzero(dctx->childIDs+dctx->maxNumChildren,dctx->numChildren-dctx->maxNumChildren);CHKERRQ(ierr);
     } else {
       /* have no children */
@@ -596,13 +604,10 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
   PetscFunctionReturn(0);
 }
 
-static PetscDeviceContext globalContext          = PETSC_NULLPTR;
-static PetscBool          globalContextSetup     = PETSC_FALSE;
-/* default context should act just like the NULL stream, i.e. fully synchronous */
-static PetscStreamType    defaultStreamType      = PETSC_STREAM_DEFAULT_BLOCKING;
-#if PetscDefined(HAVE_CUDA)
-static PetscDeviceContextType defaultContextType = PETSCDEVICECONTEXTCUDA;
-#elif PetscDefined(HAVE_HIP)
+static PetscDeviceContext     globalContext      = PETSC_NULLPTR;
+static PetscBool              globalContextSetup = PETSC_FALSE;
+static PetscStreamType        defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
+#if PetscDefined(HAVE_HIP)
 static PetscDeviceContextType defaultContextType = PETSCDEVICECONTEXTHIP;
 #else
 /* default to cuda if neither? maybe there should be an "invalid" version */
@@ -639,8 +644,8 @@ PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDeviceContex
       printf("Root PetscDeviceContext has already been setup and created, setting default has no effect\n");
     }
   } else {
-    defaultContextType = type;
-    if (stype != PETSC_STREAM_MAX_TYPE) defaultStreamType = stype;
+    if (type)                           defaultContextType = type;
+    if (stype != PETSC_STREAM_MAX_TYPE) defaultStreamType  = stype;
   }
   return 0;
 }
@@ -687,15 +692,13 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Intern
   ierr = PetscDeviceContextSynchronize(globalContext);CHKERRQ(ierr);
   ierr = PetscDeviceContextDestroy(&globalContext);CHKERRQ(ierr);
   /* reset everything to defaults */
-  defaultStreamType  = PETSC_STREAM_GLOBAL_BLOCKING;
-#if PetscDefined(HAVE_CUDA)
-  defaultContextType = PETSCDEVICECONTEXTCUDA;
-#elif PetscDefined(HAVE_HIP)
+  defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
+#if PetscDefined(HAVE_HIP)
   defaultContextType = PETSCDEVICECONTEXTHIP;
 #else
   defaultContextType = PETSCDEVICECONTEXTCUDA;
 #endif
-  globalContextSetup   = PETSC_FALSE;
+  globalContextSetup = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
