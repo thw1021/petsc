@@ -79,9 +79,14 @@ protected:
   inline PETSC_NODISCARD const allocator_t& getAllocator() const PETSC_NOEXCEPT
   { return this->_alloc;}
 
+  // default constructor
   PETSC_CONSTEXPR objectPoolBase() PETSC_NOEXCEPT_ARG(std::is_nothrow_default_constructible<allocator_t>::value) : _alloc() {}
+
+  // const copy constructor
   explicit objectPoolBase(const allocator_t &alloc) : _alloc(alloc) {}
+
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
+  // move constructor
   explicit objectPoolBase(allocator_t &&alloc) PETSC_NOEXCEPT_ARG(std::is_nothrow_move_assignable<allocator_t>::value) : _alloc(std::move(alloc)) {}
 #endif
 
@@ -105,10 +110,11 @@ protected:
 public:
   typedef typename base_t::allocator_t allocator_t;
   typedef typename base_t::value_type  value_type;
+  typedef std::stack<value_type>       stack_type;
 
 protected:
-  std::stack<value_type> _stack;
-  PetscBool              _registered;
+  stack_type _stack;
+  PetscBool  _registered;
 
   // This exists to allow one to pass a function from C++ to PetscRegisterFinalize(). The
   // reasons for its construction are as follows:
@@ -123,14 +129,14 @@ public:
   PETSC_CONSTEXPR objectPool() PETSC_NOEXCEPT_ARG(std::is_nothrow_default_constructible<allocator_t>::value) : _registered(PETSC_FALSE) {}
 
   // copy constructor
-  objectPool(objectPool &other) PETSC_NOEXCEPT = default;
+  objectPool(objectPool &other) PETSC_NOEXCEPT_ARG(std::is_nothrow_copy_constructible<stack_type>::value) : _stack(other._stack),_registered(other._registered) {}
 
   // const copy constructor
-  objectPool(const objectPool&) PETSC_NOEXCEPT = default;
+  objectPool(const objectPool &other) PETSC_NOEXCEPT_ARG(std::is_nothrow_copy_constructible<stack_type>::value) : _stack(other._stack),_registered(other._registered) {}
 
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
   // move constructor
-  objectPool(objectPool&&) PETSC_NOEXCEPT_ARG(std::is_trivially_move_constructible<objectPool>::value) = default;
+  objectPool(objectPool &&other) PETSC_NOEXCEPT_ARG(std::is_trivially_move_constructible<stack_type>::value) : _stack(std::move(other._stack)),_registered(std::move(other._registered)) {}
 #endif
 
   // copy constructor with allocator
@@ -138,7 +144,7 @@ public:
 
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
   // move constructor with allocator
-  explicit objectPool(allocator_t &&alloc) PETSC_NOEXCEPT_ARG(std::is_nothrow_move_assignable<allocator_t>::value) : base_t(std::move(alloc)),_registered(PETSC_FALSE) {}
+  explicit objectPool(allocator_t &&alloc) PETSC_NOEXCEPT_ARG(std::is_nothrow_move_constructible<allocator_t>::value) : base_t(std::move(alloc)),_registered(PETSC_FALSE) {}
 #endif
 
   // Retrieve an object from the pool, if the pool is empty a new object is created instead
@@ -151,9 +157,48 @@ public:
 #endif
 
   // operators
-  PETSC_NODISCARD friend PetscBool operator==(const objectPool &l, const objectPool &r) { return static_cast<PetscBool>(l._stack == r._stack);}
-  PETSC_NODISCARD friend PetscBool operator< (const objectPool &l, const objectPool &r) { return static_cast<PetscBool>(l._stack <  r._stack);}
+  template <typename T_, class A_>
+  friend PetscBool operator==(const objectPool<T_,A_>&,const objectPool<T_,A_>&);
+
+  template <typename T_, class A_>
+  friend PetscBool operator< (const objectPool<T_,A_>&,const objectPool<T_,A_>&);
 };
+
+template <typename T, class _Allocator>
+inline PetscBool operator==(const objectPool<T,_Allocator> &l,const objectPool<T,_Allocator> &r)
+{
+  return static_cast<PetscBool>(l._stack == r._stack);
+}
+
+template <typename T, class _Allocator>
+inline PetscBool operator< (const objectPool<T,_Allocator> &l, const objectPool<T,_Allocator> &r)
+{
+  return static_cast<PetscBool>(l._stack < r._stack);
+}
+
+template <typename T, class _Allocator>
+inline PetscBool operator!=(const objectPool<T,_Allocator> &l, const objectPool<T,_Allocator> &r)
+{
+  return !(l._stack == r._stack);
+}
+
+template <typename T, class _Allocator>
+inline PetscBool operator> (const objectPool<T,_Allocator> &l, const objectPool<T,_Allocator> &r)
+{
+  return r._stack < l._stack;
+}
+
+template <typename T, class _Allocator>
+inline PetscBool operator>=(const objectPool<T,_Allocator> &l, const objectPool<T,_Allocator> &r)
+{
+  return !(l._stack < r._stack);
+}
+
+template <typename T, class _Allocator>
+inline PetscBool operator<=(const objectPool<T,_Allocator> &l, const objectPool<T,_Allocator> &r)
+{
+  return !(r._stack < l._stack);
+}
 
 template <typename T, class _Allocator>
 PetscErrorCode objectPool<T,_Allocator>::get(value_type &obj) PETSC_NOEXCEPT
