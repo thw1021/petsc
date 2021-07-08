@@ -3,6 +3,8 @@
     This file implements QMRCGS (QMRCGStab).
     Only allow right preconditioning.
 
+    Contributed by: Xiangmin Jiao (xiangmin.jiao@stonybrook.edu)
+
     References: Chan, Gallopoulos, Simoncini, Szeto, and Tong (SISC 1994),
                 Ghai, Lu, and Jiao (NLAA 2019)
 */
@@ -108,7 +110,7 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
     ierr = VecDot(V,RP,&rho2);CHKERRQ(ierr); /* rho2 <- (v,rp) */
     if (rho2 == 0) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"Divide by zero");
 
-    if (rho1 == 0){
+    if (rho1 == 0) {
       ksp->reason = KSP_DIVERGED_BREAKDOWN; /* Stagnation */
       break;
     }
@@ -154,7 +156,7 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
     if (NV == 0) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"Matrix is singular, breakdown because of the singularity");
 
     omega = uu / vv; /* omega <- uu/vv; */
-    if (omega == 0){
+    if (omega == 0) {
       ksp->reason = KSP_DIVERGED_BREAKDOWN;
       break;
     }
@@ -184,7 +186,7 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
     ierr = VecWAXPY(X,eta,D,X2);CHKERRQ(ierr);      /* x <- x2 + eta d */
 
     ierr =  VecDot(R,RP,&rho2);
-    if (rho2 == 0){
+    if (rho2 == 0) {
       ksp->reason = KSP_DIVERGED_BREAKDOWN;
       break;
     }
