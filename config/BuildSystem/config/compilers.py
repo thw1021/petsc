@@ -632,7 +632,7 @@ class Configure(config.base.Configure):
             # success
             success = True
             # record our max supported flag
-            self.cxxDialectRange[1] = int(dlct['num'])
+            self.cxxDialectRange = (self.cxxDialectRange[0],int(dlct['num']))
             break
     if not success:
       raise RuntimeError("C++ compiler does not appear to be compliant with {flg}, or does not accept {flg} flag".format(flg=flag))
