@@ -564,7 +564,8 @@ static PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 }
 
 /*
- Evaluate F(X), then compute tao->residual = norm2(F_x,F_z) and tao->cnorm = norm2(F_ce,F_ci)
+ Evaluate F(X), then compute tao->residual = norm2(F_x,F_z) and tao->cnorm = norm2(F_ce,F_ci),
+ update tao->gnorm0 and tao->step = mu
 */
 static PetscErrorCode TaoSNESFunction_PDIPM_residual(SNES snes,Vec X,Vec F,void *ctx)
 {
@@ -581,6 +582,8 @@ static PetscErrorCode TaoSNESFunction_PDIPM_residual(SNES snes,Vec X,Vec F,void 
   ierr = TaoSNESFunction_PDIPM(snes,X,F,(void*)tao);CHKERRQ(ierr);
   ierr = VecGetArrayWrite(F,&Farr);CHKERRQ(ierr);
   ierr = VecGetArrayRead(X,&Xarr);CHKERRQ(ierr);
+
+  tao->gnorm0 = tao->residual;
 
   /* compute norm2(F_x), norm2(F_z) */
   L1 = pdipm->x;
@@ -631,6 +634,7 @@ static PetscErrorCode TaoSNESFunction_PDIPM_residual(SNES snes,Vec X,Vec F,void 
 
   ierr = VecRestoreArrayWrite(F,&Farr);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(X,&Xarr);CHKERRQ(ierr);
+  tao->step = pdipm->mu;
   PetscFunctionReturn(0);
 }
 
@@ -802,6 +806,7 @@ static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
 
   /* if (PetscAbsReal(pdipm->gradL) < 0.9*pdipm->mu)  */
   pdipm->mu = pdipm->mu_update_factor * dot/pdipm->Nci;
+  /* printf("          alpha_p %g, alpha_d %g; normY %g; mu %g\n\n",alpha_p,alpha_d,norm,pdipm->mu); */
 
   /* Update F; get tao->residual and tao->cnorm */
   ierr = TaoSNESFunction_PDIPM_residual(snes,X,F,(void*)tao);CHKERRQ(ierr);
