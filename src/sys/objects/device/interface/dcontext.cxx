@@ -144,7 +144,12 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
   PetscFunctionBegin;
   if (!*dctx) PetscFunctionReturn(0);
   (*dctx)->setup = PETSC_FALSE;
+#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+  /* use move assignment whenever possible */
+  ierr = contextPool.reclaim(std::move(*dctx));CHKERRQ(ierr);
+#else
   ierr = contextPool.reclaim(*dctx);CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
