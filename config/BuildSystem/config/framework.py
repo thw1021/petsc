@@ -1259,9 +1259,20 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     import graph
 
     ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
+    foundSetCompilers = False
+    foundCompilers    = False
     for child in ndepGraph:
-      if hasattr(child,'setCompilers'): setCompilers = child.setCompilers
+      if hasattr(child,'setCompilers') and not foundSetCompilers:
+        setCompilers = child.setCompilers
+        foundSetCompilers = True
+      elif hasattr(child,'compilers') and not foundCompilers:
+        compilers      = child.compilers
+        foundCompilers = True
+      if foundCompilers and foundSetCompilers: break
 
+    minCxx,maxCxx = compilers.cxxDialectRange
+    minCxxVersionBlameList = {}
+    maxCxxVersionBlameList = {}
     ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
     for child in ndepGraph:
       if (self.argDB['with-batch'] and
@@ -1272,7 +1283,6 @@ class Framework(config.base.Configure, script.LanguageProcessor):
 
       # note, only classes derived from package.py have this attribute
       if hasattr(child,'deps'):
-        print("framework",child.name,child.minCxxVersion)
         found = 0
         if child.required or child.lookforbydefault: found = 1
         if 'download-'+child.package in self.framework.clArgDB and self.argDB['download-'+child.package]: found = 1
@@ -1288,7 +1298,20 @@ class Framework(config.base.Configure, script.LanguageProcessor):
           if 'with-'+dep.package in self.framework.clArgDB and self.argDB['with-'+dep.package]: found = 1
           if 'with-'+dep.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-lib']: found = 1
           if 'with-'+dep.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-dir']: found = 1
-          if not found:
+          if found:
+            if child.minCxxVersion > minCxx:
+              minCxx = child.minCxxVersion
+              try:
+                minCxxVersionBlameList[minCxx].add([child.name])
+              except KeyError:
+                minCxxVersionBlameList[minCxx] = set([child.name])
+            if child.maxCxxVersion < maxCxx:
+              maxCxx = child.maxCxxVersion
+              try:
+                maxCxxVersionBlameList[maxCxx].add([child.name])
+              except KeyError:
+                maxCxxVersionBlameList[maxCxx] = set([child.name])
+          else:
             if dep.download: emsg = '--download-'+dep.package+' or '
             else: emsg = ''
             msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. \n  Perhaps you want '+emsg+'--with-'+dep.package+'-dir=directory or --with-'+dep.package+'-lib=libraries and --with-'+dep.package+'-include=directory\n'
@@ -1296,6 +1319,13 @@ class Framework(config.base.Configure, script.LanguageProcessor):
         if child.cxx and ('with-cxx' in self.framework.clArgDB) and (self.argDB['with-cxx'] == '0'): raise RuntimeError('Package '+child.package+' requested requires C++ but compiler turned off.')
         if child.fc and ('with-fc' in self.framework.clArgDB) and (self.argDB['with-fc'] == '0'): raise RuntimeError('Package '+child.package+' requested requires Fortran but compiler turned off.')
 
+    if maxCxx < minCxx:
+      # low water mark
+      loPack = ', '.join(minCxxVersionBlameList[minCxx])
+      # high water mark
+      hiPack = ', '.join(maxCxxVersionBlameList[maxCxx])
+      raise RuntimeError('Requested package(s) have incompatible C++ requirements. Package(s) {loPacks} require at least {mincxx} but package(s) {hiPack} require at most {maxcxx}'.format(loPack=loPack,mincxx=minCxx,hiPack=hiPack,maxcxx=maxCxx))
+    compilers.cxxDialectPackageRanges = (minCxxVersionBlameList,maxCxxVersionBlameList)
     depGraph = graph.DirectedGraph.topologicalSort(depGraph)
     totaltime = 0
     starttime = time.time()
