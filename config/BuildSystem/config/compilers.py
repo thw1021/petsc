@@ -503,7 +503,6 @@ class Configure(config.base.Configure):
       cxx11: gnu++11 or c++11
       0: disable CxxDialect check and use compiler default
     """
-    print('IN CHECKCXXDIALECT')
     lang = language.lower()
     LANG = language.upper()
     try:
@@ -525,64 +524,94 @@ class Configure(config.base.Configure):
     if with_lang_dialect in {'','0','NONE'}:
       self.logPrint('checkCxxxDialect: user has requested NO cxx dialect')
       return
-    includes = """
-          #include <random>
-          #include <iostream>
-          #include <complex>
-          template<typename T> constexpr T Cubed( T x ) { return x*x*x; }
-          """
-    body = """
-          std::random_device rd;
-          std::mt19937 mt(rd());
-          std::normal_distribution<double> dist(0,1);
-          const double x = dist(mt);
-          std::cout << x << std::endl;
-          """
-    includes11 = """
-          enum class Shapes : int {SQUARE,CIRCLE};
-          """
-    body14 = """
-          constexpr std::complex<double> I(0.0,1.0);
-          auto lambda = [](auto x, auto y) {return x + y;};
-          return lambda(3,4) + (int)std::real(I);
-          """
-    includes17 = """
-         // headers introduced in c++17
-         #include <string_view>
-         #include <any>
-         #include <optional>
+    includes03 = """
+    // C++03 includes
+    #include <iostream>
+    class valClass
+    {
+    public:
+      int i;
+      valClass()
+      {
+        i = 1;
+        std::cout<<this->i<<std::endl;
+      }
+    };
+    """
+    # this really just tests whether we have a working c++ compiler, c++03 only introduced
+    # value initialization
+    body03 = """
+    // C++03 body
+    valClass cls = valClass(); // value initialization
+    int i = 3;                 // i is not declared const
+    const int& rci = i;        // but rci is
+    const_cast<int&>(rci) = 4;
+    """
+    includes11 = includes03+"""
+    // C++11 includes
+    #include <random>
+    #include <complex>
+    template<typename T> constexpr T Cubed( T x ) { return x*x*x; }
+    enum class Shapes : int {SQUARE,CIRCLE};
+    """
+    body11 = body03+"""
+    // C++11 body
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::normal_distribution<double> dist(0,1);
+    const double x = dist(mt);
+    std::cout << x << std::endl;
+    """
+    includes14 = includes11+"""
+    // C++14 includes
+    template<class T>
+    constexpr T pi = T(3.1415926535897932385L);  // variable template
+    """
+    body14 = body11+"""
+    // C++14 body
+    std::cout<<pi<double><<std::endl;
+    constexpr std::complex<double> I(0.0,1.0);
+    auto lambda = [](auto x, auto y) {return x + y;};
+    std::cout<<lambda(3,4) + (int)std::real(I)<<std::endl;
+    """
+    includes17 = includes14+"""
+    // C++17 includes
+    #include <string_view>
+    #include <any>
+    #include <optional>
 
-         #include <type_traits>
-         struct S2
-         {
-           // static inline member variables since c++17
-           static inline int var = 8675309;
-           void f(int i);
-         };
-         void S2::f(int i)
-         {
-           // until C++17: Error: invalid syntax
-           // since C++17: OK: captures the enclosing S2 by copy
-           [=, *this] {std::cout<<i<<" "<<this->var<<std::endl;};
-         }
-         """
-    body17 = """
-         S2 foo;
-         foo.f(1);
-         if constexpr (std::is_arithmetic_v<int>) std::cout << "c++17" << std::endl;
-         typedef std::integral_constant<Shapes,Shapes::SQUARE> squareShape;
-         // static_assert with no message since c++17
-         static_assert(std::is_same_v<squareShape,squareShape>);
-         """
+    struct S2
+    {
+      // static inline member variables since c++17
+      static inline int var = 8675309;
+      void f(int i);
+    };
+    void S2::f(int i)
+    {
+      // until C++17: Error: invalid syntax
+      // since C++17: OK: captures the enclosing S2 by copy
+      auto lmbd = [=, *this] {std::cout<<i<<" "<<this->var<<std::endl;};
+      lmbd();
+    }
+    """
+    body17 = body14+"""
+    // C++17 body
+    S2 foo;
+    foo.f(1);
+    if constexpr (std::is_arithmetic_v<int>) std::cout << "c++17" << std::endl;
+    typedef std::integral_constant<Shapes,Shapes::SQUARE> squareShape;
+    // static_assert with no message since c++17
+    static_assert(std::is_same_v<squareShape,squareShape>);
+    """
     dialects = (
       # 1 = c++03
-      {'num': '03', 'includes': includes, 'body': body},
+      {'num': '03', 'includes': includes03, 'body': body03},
       # 2 = c++11
-      {'num': '11', 'includes': includes+includes11, 'body': body},
+      {'num': '11', 'includes': includes11, 'body': body11},
       # 3 = c++14
-      {'num': '14', 'includes': includes+includes11, 'body': body+body14},
+      {'num': '14', 'includes': includes14, 'body': body14},
       # 4 = c++17
-      {'num': '17', 'includes': includes+includes11+includes17, 'body': body+body14+body17},
+      {'num': '17', 'includes': includes17, 'body': body17},
     )
 
     minDialect = 1
@@ -605,20 +634,22 @@ class Configure(config.base.Configure):
       raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
 
     startDialect = int(dialects[maxDialect-1]['num'])
-    self.logPrint('checkCxxDialect: user has {expl} selected {lang} dialect {dlct}'.format(expl='explicitly' if explicit else 'not explicitly',lang=LANG,dlct=startDialect))
+    self.logPrint('checkCxxDialect: user has {expl} selected {lang} dialect {dlct}'.format(expl='explicitly' if explicit else 'NOT explicitly',lang=LANG,dlct=startDialect))
     try:
       maxPackDlct = min(self.cxxDialectPackageRanges[1].keys())
     except ValueError:
       # ValueError: min() arg is an empty sequence
       maxPackDlct = startDialect
     if startDialect > maxPackDlct:
-      packageBlame = '\n'.join('- '+s for s in self.cxxDialectPackageRanges[1][maxPackDlct])
+      packageBlame = '\n'.join('\t- '+s for s in self.cxxDialectPackageRanges[1][maxPackDlct])
       if explicit:
         # they asked for a dialect, they'll probably want to know why that dialect doesn't
         # work
+        # remove the tabs, we're about to crash so who care about efficiency
+        packageBlame = packageBlame.replace('\t- ','- ')
         raise RuntimeError('Explicitly requested {lang} dialect -std=c++{dlct} but package(s):\n{packs}\nOnly support(s) up to -std=c++{packdlct}'.format(lang=LANG,dlct=startDialect,packs=packageBlame,packdlct=maxPackDlct))
       # if not explicit, we don't have to tell the user about it
-      self.logPrint('checkCxxDialect: using {lang} dialect auto-detect starting with -std=c++{dlct} but package(s):\n{packs}\nOnly support(s) up to -std=c++{packdlct}, using package requirement -std=c++{packdlct}'.format(lang=LANG,dlct=startDialect,packs=packageBlame,packdlct=maxPackDlct))
+      self.logPrint('checkCxxDialect: using {lang} dialect -std=c++{dlct} as upper bound but package(s):\n{packs}\n\tOnly support(s) up to -std=c++{packdlct}, using package requirement -std=c++{packdlct}'.format(lang=LANG,dlct=startDialect,packs=packageBlame,packdlct=maxPackDlct))
       while int(dialects[maxDialect-1]['num']) != maxPackDlct:
         # decrement maxDialect until we're starting at the right dialect
         maxDialect -= 1
@@ -631,17 +662,17 @@ class Configure(config.base.Configure):
       # ValueError: max() arg is an empty sequence
       minPackDlct = endDialect
     if endDialect < minPackDlct:
-      packageBlame = '\n'.join('- '+s for s in self.cxxDialectPackageRanges[0][minPackDlct])
+      packageBlame = '\n'.join('\t- '+s for s in self.cxxDialectPackageRanges[0][minPackDlct])
       if explicit:
+        packageBlame = packageBlame.replace('\t- ','- ')
         raise RuntimeError('Explicitly requested {lang} dialect -std=c++{dlct} but package(s):\n{packs}\nRequire(s) at least -std=c++{packdlct}'.format(lang=LANG,dlct=endDialect,packs=packageBlame,packdlct=minPackDlct))
-      self.logPrint('checkCxxDialect: using {lang} dialect -std=c++{dlct} as lower bound but package(s):\n{packs}\nRequire(s) at least -std=c++{packdlct}, using package requirement -std=c++{packdlct}'.format(lang=LANG,dlct=endDialect,packs=packageBlame,packdlct=minPackDlct))
+      self.logPrint('checkCxxDialect: using {lang} dialect -std=c++{dlct} as lower bound but package(s):\n{packs}\n\tRequire(s) at least -std=c++{packdlct}, using package requirement -std=c++{packdlct}'.format(lang=LANG,dlct=endDialect,packs=packageBlame,packdlct=minPackDlct))
       while int(dialects[minDialect]['num']) != minPackDlct:
         minDialect += 1
         assert (minDialect < len(dialects))
 
     baseFlag = '-std=gnu++' if isGNUish else '-std=c++'
-    self.logPrint('checkCxxDialect: compiler {gnuish} GNUish, using flag base {base}'.format(gnuish='is' if isGNUish else 'is not',base=baseFlag))
-    success  = False
+    self.logPrint('checkCxxDialect: compiler {gnuish} GNUish, using flag base {base}'.format(gnuish='is' if isGNUish else 'is NOT',base=baseFlag))
     with self.Language(language):
       for dlct in reversed(dialects[minDialect:maxDialect]):
         flag = ''.join([baseFlag,dlct['num']])
@@ -650,20 +681,34 @@ class Configure(config.base.Configure):
         self.logWrite(self.setCompilers.restoreLog())
         # test with flag
         with self.setCompilers.Language(language):
+          # How this works:
+          # 1. Try to compile the code without using the flag first, some compilers will
+          #    have a default std setting (e.g. clang6 by default uses -std=gnu++14).
+          #    - If this fails, add the flag and try, try, try again
+          #      - If the flag also fails it will throw RTE and be caught in the
+          #        except. We give up and continue on down to the next tier
+          #    - If any part above succeeds, we enter the else clause where we record the
+          #      result and break out of the loop
           try:
-            self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'])
+            # first try to compile without the flag, see if that works
+            if not self.checkCompile(includes=dlct['includes'],body=dlct['body']):
+              # didn't work
+              self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'])
           except RuntimeError:
-            # failure
+            # failure from addCompilerFlag
             maxDialect -= 1
           else:
-            # success
-            success = True
-            # record our max supported flag
+            # success, record our max supported flag
             self.cxxDialectRange = (self.cxxDialectRange[0],int(dlct['num']))
             break
-    if not success:
-      raise RuntimeError("C++ compiler does not appear to be compliant with {flg}, or does not accept {flg} flag".format(flg=flag))
-    maxDialect = max(1,maxDialect) # in case we go < 0
+
+    if maxDialect < minDialect:
+      # we were not successful
+      if explicit:
+        packageBlame = '\n'.join('\t- '+s for s in self.cxxDialectPackageRanges[0][minPackDlct])
+        raise RuntimeError('Using {lang} dialect {flag} as lower bound due to package(s):\n{packs}\n\tBut {lang} compiler does not appear to be compliant with {flag}, or does not accept {flag} flag'.format(lang=LANG,flag=flag,packs=packageBlame))
+      raise RuntimeError('{lang} compiler does not appear to be compliant with {flag}, or does not accept {flag} flag'.format(lang=LANG,flag=flag))
+
     for dlct in dialects[:maxDialect]:
       self.addDefine('HAVE_{lng}_DIALECT_CXX{ver}'.format(lng = LANG, ver = dlct['num']),1)
     setattr(self,lang+'dialect','C++'+dialects[maxDialect-1]['num']) # record the result
