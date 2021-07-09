@@ -22,6 +22,11 @@ public:
   PETSC_NODISCARD PetscErrorCode create(value_type*)  PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode destroy(value_type&) PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode reset(value_type&)   PETSC_NOEXCEPT;
+
+protected:
+  // make the constructor protected, this forces this class to be derived from to ever be
+  // instantiated
+  Allocator() {}
 };
 
 // Default allocator that performs the bare minimum of petsc object creation and
@@ -136,7 +141,7 @@ public:
 
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
   // move constructor
-  objectPool(objectPool &&other) PETSC_NOEXCEPT_ARG(std::is_trivially_move_constructible<stack_type>::value) : _stack(std::move(other._stack)),_registered(std::move(other._registered)) {}
+  objectPool(objectPool &&other) PETSC_NOEXCEPT_ARG(std::is_nothrow_move_constructible<stack_type>::value) : _stack(std::move(other._stack)),_registered(std::move(other._registered)) {}
 #endif
 
   // copy constructor with allocator
