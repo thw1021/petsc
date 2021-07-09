@@ -503,7 +503,9 @@ class Configure(config.base.Configure):
       cxx11: gnu++11 or c++11
       0: disable CxxDialect check and use compiler default
     """
+    print('IN CHECKCXXDIALECT')
     lang = language.lower()
+    LANG = language.upper()
     try:
       # see if we've done this before for this language.
       # - If we DON'T have the attribute -- we haven't done this before (for example we
@@ -513,14 +515,16 @@ class Configure(config.base.Configure):
       #   - It's empty, no error is raised and we continue.
       #   - It's not empty, and we return.
       if getattr(self,lang+'dialect'):
+        self.logPrint('checkCxxDialect: reusing previous result {res} for language {lang}'.format(res=getattr(self,lang+'dialect'),lang=LANG))
         return
     except AttributeError:
       # we have not
       pass
-    LANG = language.upper()
     # configure value
     with_lang_dialect = self.argDB.get('with-'+lang+'-dialect','').upper().replace('X','+')
-    if with_lang_dialect in {'','0','NONE'}: return
+    if with_lang_dialect in {'','0','NONE'}:
+      self.logPrint('checkCxxxDialect: user has requested NO cxx dialect')
+      return
     includes = """
           #include <random>
           #include <iostream>
@@ -534,30 +538,51 @@ class Configure(config.base.Configure):
           const double x = dist(mt);
           std::cout << x << std::endl;
           """
+    includes11 = """
+          enum class Shapes : int {SQUARE,CIRCLE};
+          """
     body14 = """
           constexpr std::complex<double> I(0.0,1.0);
           auto lambda = [](auto x, auto y) {return x + y;};
           return lambda(3,4) + (int)std::real(I);
           """
     includes17 = """
+         // headers introduced in c++17
+         #include <string_view>
+         #include <any>
+         #include <optional>
+
          #include <type_traits>
-         struct S2 { void f(int i); };
+         struct S2
+         {
+           // static inline member variables since c++17
+           static inline int var = 8675309;
+           void f(int i);
+         };
          void S2::f(int i)
          {
-           [=, *this]{}; // until C++17: Error: invalid syntax
-                         // since C++17: OK: captures the enclosing S2 by copy
+           // until C++17: Error: invalid syntax
+           // since C++17: OK: captures the enclosing S2 by copy
+           [=, *this] {std::cout<<i<<" "<<this->var<<std::endl;};
          }
          """
     body17 = """
          S2 foo;
          foo.f(1);
          if constexpr (std::is_arithmetic_v<int>) std::cout << "c++17" << std::endl;
+         typedef std::integral_constant<Shapes,Shapes::SQUARE> squareShape;
+         // static_assert with no message since c++17
+         static_assert(std::is_same_v<squareShape,squareShape>);
          """
     dialects = (
-      {'num': '03', 'includes': includes, 'body': body},                          # 1 = c++03
-      {'num': '11', 'includes': includes, 'body': body},                          # 2 = c++11
-      {'num': '14', 'includes': includes, 'body': body+body14},                   # 3 = c++14
-      {'num': '17', 'includes': includes+includes17, 'body': body+body14+body17}, # 4 = c++17
+      # 1 = c++03
+      {'num': '03', 'includes': includes, 'body': body},
+      # 2 = c++11
+      {'num': '11', 'includes': includes+includes11, 'body': body},
+      # 3 = c++14
+      {'num': '14', 'includes': includes+includes11, 'body': body+body14},
+      # 4 = c++17
+      {'num': '17', 'includes': includes+includes11+includes17, 'body': body+body14+body17},
     )
 
     minDialect = 1
@@ -580,6 +605,7 @@ class Configure(config.base.Configure):
       raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
 
     startDialect = int(dialects[maxDialect-1]['num'])
+    self.logPrint('checkCxxDialect: user has {expl} selected {lang} dialect {dlct}'.format(expl='explicitly' if explicit else 'not explicitly',lang=LANG,dlct=startDialect))
     try:
       maxPackDlct = min(self.cxxDialectPackageRanges[1].keys())
     except ValueError:
@@ -592,7 +618,7 @@ class Configure(config.base.Configure):
         # work
         raise RuntimeError('Explicitly requested {lang} dialect -std=c++{dlct} but package(s):\n{packs}\nOnly support(s) up to -std=c++{packdlct}'.format(lang=LANG,dlct=startDialect,packs=packageBlame,packdlct=maxPackDlct))
       # if not explicit, we don't have to tell the user about it
-      self.logPrint('Using {lang} dialect auto-detect starting with -std=c++{dlct} but package(s):\n{packs}\nOnly support(s) up to -std=c++{packdlct}, using package requirement -std=c++{packdlct}'.format(lang=LANG,dlct=startDialect,packs=packageBlame,packdlct=maxPackDlct))
+      self.logPrint('checkCxxDialect: using {lang} dialect auto-detect starting with -std=c++{dlct} but package(s):\n{packs}\nOnly support(s) up to -std=c++{packdlct}, using package requirement -std=c++{packdlct}'.format(lang=LANG,dlct=startDialect,packs=packageBlame,packdlct=maxPackDlct))
       while int(dialects[maxDialect-1]['num']) != maxPackDlct:
         # decrement maxDialect until we're starting at the right dialect
         maxDialect -= 1
@@ -608,12 +634,13 @@ class Configure(config.base.Configure):
       packageBlame = '\n'.join('- '+s for s in self.cxxDialectPackageRanges[0][minPackDlct])
       if explicit:
         raise RuntimeError('Explicitly requested {lang} dialect -std=c++{dlct} but package(s):\n{packs}\nRequire(s) at least -std=c++{packdlct}'.format(lang=LANG,dlct=endDialect,packs=packageBlame,packdlct=minPackDlct))
-      self.logPrint('Using {lang} dialect -std=c++{dlct} as lower bound but package(s):\n{packs}\nRequire(s) at least -std=c++{packdlct}, using package requirement -std=c++{packdlct}'.format(lang=LANG,dlct=endDialect,packs=packageBlame,packdlct=minPackDlct))
+      self.logPrint('checkCxxDialect: using {lang} dialect -std=c++{dlct} as lower bound but package(s):\n{packs}\nRequire(s) at least -std=c++{packdlct}, using package requirement -std=c++{packdlct}'.format(lang=LANG,dlct=endDialect,packs=packageBlame,packdlct=minPackDlct))
       while int(dialects[minDialect]['num']) != minPackDlct:
         minDialect += 1
         assert (minDialect < len(dialects))
 
     baseFlag = '-std=gnu++' if isGNUish else '-std=c++'
+    self.logPrint('checkCxxDialect: compiler {gnuish} GNUish, using flag base {base}'.format(gnuish='is' if isGNUish else 'is not',base=baseFlag))
     success  = False
     with self.Language(language):
       for dlct in reversed(dialects[minDialect:maxDialect]):

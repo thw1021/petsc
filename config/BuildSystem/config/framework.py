@@ -1271,6 +1271,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       if foundCompilers and foundSetCompilers: break
 
     minCxx,maxCxx = compilers.cxxDialectRange
+    self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange))
     minCxxVersionBlameList = {}
     maxCxxVersionBlameList = {}
     ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
@@ -1301,12 +1302,14 @@ class Framework(config.base.Configure, script.LanguageProcessor):
           if found:
             if child.minCxxVersion > minCxx:
               minCxx = child.minCxxVersion
+              self.logPrint('serialEvaluation: child {child} raised minimum cxx dialect version to {minver}'.format(child=child.name,minver=minCxx))
               try:
                 minCxxVersionBlameList[minCxx].add([child.name])
               except KeyError:
                 minCxxVersionBlameList[minCxx] = set([child.name])
             if child.maxCxxVersion < maxCxx:
               maxCxx = child.maxCxxVersion
+              self.logPrint('serialEvaluation: child {child} decreased maximum cxx dialect version to {maxver}'.format(child=child.name,maxver=maxCxx))
               try:
                 maxCxxVersionBlameList[maxCxx].add([child.name])
               except KeyError:
@@ -1326,6 +1329,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       hiPack = ', '.join(maxCxxVersionBlameList[maxCxx])
       raise RuntimeError('Requested package(s) have incompatible C++ requirements. Package(s) {loPacks} require at least {mincxx} but package(s) {hiPack} require at most {maxcxx}'.format(loPack=loPack,mincxx=minCxx,hiPack=hiPack,maxcxx=maxCxx))
     compilers.cxxDialectPackageRanges = (minCxxVersionBlameList,maxCxxVersionBlameList)
+    self.logPrint('serialEvaluation: new cxxDialectRanges {rng}'.format(rng=(minCxx,maxCxx)))
     depGraph = graph.DirectedGraph.topologicalSort(depGraph)
     totaltime = 0
     starttime = time.time()
