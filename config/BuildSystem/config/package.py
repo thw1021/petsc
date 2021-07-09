@@ -264,6 +264,16 @@ class Package(config.base.Configure):
         outflags.append(flag)
     return outflags
 
+  def removeStdCxxFlag(self,flags):
+    '''Remove the -std=[CXX_VERSION] flag from the list of flags, but only for CMake packages'''
+    if issubclass(type(self),config.package.CMakePackage):
+      # only cmake packages get their std flags removed since they use
+      # -DCMAKE_CXX_STANDARD to set the std flag
+      stdFlags = ('-std=c++','-std=gnu++')
+      return [f for f in flags if not f.startswith(stdFlags)]
+    return flags
+
+
   def updatePackageCFlags(self,flags):
     '''To turn off various warnings or errors the compilers may produce with external packages, remove or add appropriate compiler flags'''
     outflags = self.removeWarningFlags(flags.split())
@@ -283,6 +293,7 @@ class Package(config.base.Configure):
 
   def updatePackageCxxFlags(self,flags):
     outflags = self.removeWarningFlags(flags.split())
+    outflags = self.removeStdCxxFlag(outflags)
     return ' '.join(outflags)
 
   def getDefaultLanguage(self):
@@ -1753,9 +1764,11 @@ class CMakePackage(Package):
       self.framework.pushLanguage('Cxx')
       args.append('-DCMAKE_CXX_COMPILER="'+self.framework.getCompiler()+'"')
       args.append('-DMPI_CXX_COMPILER="'+self.framework.getCompiler()+'"')
-      args.append('-DCMAKE_CXX_FLAGS:STRING="'+self.updatePackageCxxFlags(self.framework.getCompilerFlags())+'"')
-      args.append('-DCMAKE_CXX_FLAGS_DEBUG:STRING="'+self.updatePackageCxxFlags(self.framework.getCompilerFlags())+'"')
-      args.append('-DCMAKE_CXX_FLAGS_RELEASE:STRING="'+self.updatePackageCxxFlags(self.framework.getCompilerFlags())+'"')
+      cxxFlags = self.updatePackageCxxFlags(self.framework.getCompilerFlags())
+      args.append('-DCMAKE_CXX_FLAGS:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
+      args.append('-DCMAKE_CXX_FLAGS_DEBUG:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
+      args.append('-DCMAKE_CXX_FLAGS_RELEASE:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
+      args.append('-DCMAKE_CXX_STANDARD="{stdver}"'.format(stdver=self.compilers.cxxdialect[-2:]))
       self.framework.popLanguage()
 
     if hasattr(self.compilers, 'FC'):
