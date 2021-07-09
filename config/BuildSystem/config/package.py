@@ -983,7 +983,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     def inVersionRange(myRange,reqRange):
       # my minimum needs to be less than the maximum and my maximum must be greater than
       # the minimum
-      return (myRange[0] <= reqRange[1]) and (myRange[1] >= reqRange[0])
+      return (myRange[0].lower() <= reqRange[1].lower()) and (myRange[1].lower() >= reqRange[0].lower())
 
     self.printTest(self.consistencyChecks)
     if 'with-'+self.package+'-dir' in self.argDB and ('with-'+self.package+'-include' in self.argDB or 'with-'+self.package+'-lib' in self.argDB):
@@ -996,12 +996,13 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
           blaslapackconflict = 1
 
     cxxVersionRange = (self.minCxxVersion,self.maxCxxVersion)
+    cxxVersionConflict = not inVersionRange(cxxVersionRange,self.compilers.cxxDialectRange)
     # if user did not request option, then turn it off if conflicts with configuration
     if self.lookforbydefault and 'with-'+self.package not in self.framework.clArgDB:
       if (self.cxx and not hasattr(self.compilers, 'CXX')) or \
          (self.fc and not hasattr(self.compilers, 'FC')) or \
          (self.noMPIUni and self.mpi.usingMPIUni) or \
-         (not inVersionRange(cxxVersionRange,self.compilers.cxxDialectRange)) or \
+         cxxVersionConflict or \
          (not self.defaultPrecision.lower() in self.precisions) or \
          (not self.complex and self.defaultScalarType.lower() == 'complex') or \
          (self.defaultIndexSize == 64 and self.requires32bitint) or \
@@ -1017,8 +1018,8 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
         raise RuntimeError('Cannot use '+self.name+' without Fortran, make sure you do NOT have --with-fc=0')
       if self.noMPIUni and self.mpi.usingMPIUni:
         raise RuntimeError('Cannot use '+self.name+' with MPIUNI, you need a real MPI')
-      if not inVersionRange(cxxVersionRange,self.compilers.cxxDialectRange):
-        raise RuntimeError('Cannot use '+self.name+' as it requires -std=c++['+','.join(map(str,cxxVersionRange))+'], while your compiler seemingly only supports -std=c++['+','.join(map(str,self.compilers.cxxDialectRange))+']')
+      if cxxVersionConflict:
+        raise RuntimeError('Cannot use '+self.name+' as it requires -std=['+','.join(map(str,cxxVersionRange))+'], while your compiler seemingly only supports -std=['+','.join(map(str,self.compilers.cxxDialectRange))+']')
       if self.download and self.argDB.get('download-'+self.downloadname.lower()) and not self.downloadonWindows and (self.setCompilers.CC.find('win32fe') >= 0):
         raise RuntimeError('External package '+self.name+' does not support --download-'+self.downloadname.lower()+' with Microsoft compilers')
       if not self.defaultPrecision.lower() in self.precisions:
