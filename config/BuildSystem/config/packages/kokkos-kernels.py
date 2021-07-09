@@ -98,5 +98,5 @@ class Configure(config.package.CMakePackage):
       raise RuntimeError('Did not properly determine C++ dialect for the '+lang.upper()+' Compiler')
     langdialect = getattr(self.compilers,lang+'dialect')
     args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
-    args.append('-DCMAKE_CXX_STANDARD="' + langdialect.split("C++",1)[1] + '"') # e.g., extract 14 from C++14
+    args.append('-DCMAKE_CXX_STANDARD='+langdialect.split("C++",1)[1]) # e.g., extract 14 from C++14
     return args
