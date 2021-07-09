@@ -9,8 +9,8 @@ class Configure(config.package.CMakePackage):
     self.includes         = ['El.hpp']
     self.precisions       = ['single','double']
     self.cxx              = 1
-    self.minCxxVersion    = 11
-    self.maxCxxVersion    = 14
+    self.minCxxVersion    = 'c++11'
+    self.maxCxxVersion    = 'c++14'
     self.downloadonWindows= 0
     self.hastests         = 1
     self.hastestsdatafiles= 1

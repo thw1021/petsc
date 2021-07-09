@@ -69,6 +69,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
       args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
     if self.cuda.found:
+      lang = 'cuda'
       self.system = 'CUDA'
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
       args.append('-DCMAKE_CXX_COMPILER='+os.path.join(KokkosRoot,'bin','nvcc_wrapper'))
@@ -77,6 +78,7 @@ class Configure(config.package.CMakePackage):
         args.append('-DKokkosKernels_ENABLE_TPL_CUBLAS=OFF')
         args.append('-DKokkosKernels_ENABLE_TPL_CUSPARSE=OFF')
     elif self.hip.found:
+      lang = 'hip'
       self.system = 'HIP'
       with self.Language('HIP'):
         petscHipc = self.getCompiler()
@@ -88,4 +90,18 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
       args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
       args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
+    else:
+      lang = 'cxx'
+
+    # set -DCMAKE_CXX_STANDARD=
+    if not hasattr(self.compilers,lang+'dialect'):
+      raise RuntimeError('Did not properly determine C++ dialect for the '+lang.upper()+' Compiler')
+    else:
+      langdialect = getattr(self.compilers,lang+'dialect')
+      if langdialect < self.minCxxVersion:
+        # can probably remove this since checkCxxDialect already does this check?
+        raise RuntimeError('Kokkos-kernels require '+self.minCxxVersion+' but the '+lang.upper()+ 'compiler only supports '+langdialect)
+      else:
+        args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
+        args.append('-DCMAKE_CXX_STANDARD="' + langdialect.split("C++",1)[1] + '"') # e.g., extract 14 from C++14
     return args

@@ -19,7 +19,6 @@ class Configure(config.package.CMakePackage):
     self.hastests         = 1
     self.requiresrpath    = 1
     self.precisions       = ['single','double']
-    self.kokkos_cxxdialect = 'C++14' # requirement for which compiler is used to compile Kokkos
     return
 
   def __str__(self):
@@ -155,11 +154,12 @@ class Configure(config.package.CMakePackage):
 
     # set -DCMAKE_CXX_STANDARD=
     if not hasattr(self.compilers,lang+'dialect'):
-      raise RuntimeError('Could not determine C++ dialect for the '+lang.upper()+' Compiler')
+      raise RuntimeError('Did not properly determine C++ dialect for the '+lang.upper()+' Compiler')
     else:
       langdialect = getattr(self.compilers,lang+'dialect')
-      if langdialect < self.kokkos_cxxdialect:
-        raise RuntimeError('Kokkos requires '+self.kokkos_cxxdialect+' but the '+lang.upper()+ 'compiler only supports '+langdialect)
+      if langdialect < self.minCxxVersion:
+        # can probably remove this since checkCxxDialect already does this check?
+        raise RuntimeError('Kokkos requires '+self.minCxxVersion+' but the '+lang.upper()+ 'compiler only supports '+langdialect)
       else:
         args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
         args.append('-DCMAKE_CXX_STANDARD="' + langdialect.split("C++",1)[1] + '"') # e.g., extract 14 from C++14
