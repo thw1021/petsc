@@ -702,7 +702,7 @@ class Configure(config.base.Configure):
                 self.logWrite(self.setCompilers.restoreLog())
               except RuntimeError:
                 pass
-              self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'])
+              self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'],compilerOnly=True)
           except RuntimeError:
             # failure from addCompilerFlag
             maxDialect -= 1
