@@ -1215,7 +1215,10 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
         pass
     # redo compiler detection
     self.setCompilers.updateMPICompilers(mpicc,mpicxx,mpifc)
+    # copy the package cxx dialect restrictions though
+    oldPackageRanges = self.compilers.cxxDialectPackageRanges
     self.compilers.__init__(self.framework)
+    self.compilers.cxxDialectPackageRanges = oldPackageRanges
     self.compilers.headerPrefix = self.headerPrefix
     self.compilers.setup()
     self.compilerFlags.saveLog()

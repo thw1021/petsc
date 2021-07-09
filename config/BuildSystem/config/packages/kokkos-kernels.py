@@ -96,12 +96,7 @@ class Configure(config.package.CMakePackage):
     # set -DCMAKE_CXX_STANDARD=
     if not hasattr(self.compilers,lang+'dialect'):
       raise RuntimeError('Did not properly determine C++ dialect for the '+lang.upper()+' Compiler')
-    else:
-      langdialect = getattr(self.compilers,lang+'dialect')
-      if langdialect < self.minCxxVersion:
-        # can probably remove this since checkCxxDialect already does this check?
-        raise RuntimeError('Kokkos-kernels require '+self.minCxxVersion+' but the '+lang.upper()+ 'compiler only supports '+langdialect)
-      else:
-        args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
-        args.append('-DCMAKE_CXX_STANDARD="' + langdialect.split("C++",1)[1] + '"') # e.g., extract 14 from C++14
+    langdialect = getattr(self.compilers,lang+'dialect')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
+    args.append('-DCMAKE_CXX_STANDARD="' + langdialect.split("C++",1)[1] + '"') # e.g., extract 14 from C++14
     return args
