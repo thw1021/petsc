@@ -1316,7 +1316,7 @@ PetscErrorCode VecSum_SeqCUDA(Vec v,PetscScalar *sum)
   dptr = thrust::device_pointer_cast(a);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   try {
-    *sum = thrust::reduce(dptr,dptr+n,0.0);
+    *sum = thrust::reduce(dptr,dptr+n,PetscScalar(0.0));
   } catch (char *ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
   }
