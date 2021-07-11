@@ -95,7 +95,7 @@ class CompilerOptions(config.base.Configure):
           #  -lineinfo: Generate line-number information for device code.
           # We use '-g -lineinfo' to generate debug info for both host and device code in *.cu files.
           # If users want to turn off all optimizations, they can use --CUDAOPTFLAGS="-G".
-          flags.extend(['-g -lineinfo'])
+          flags.extend(['-g', '-lineinfo'])
         elif bopt == 'O':
           flags.append('-O3')
     # Generic
