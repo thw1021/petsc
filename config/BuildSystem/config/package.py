@@ -1773,6 +1773,7 @@ class CMakePackage(Package):
       args.append('-DCMAKE_CXX_FLAGS_DEBUG:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
       args.append('-DCMAKE_CXX_FLAGS_RELEASE:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
       args.append('-DCMAKE_CXX_STANDARD={stdver}'.format(stdver=self.compilers.cxxdialect[-2:]))
+      args.append('-DCMAKE_CXX_STANDARD_REQUIRED=ON')
       self.framework.popLanguage()
 
     if hasattr(self.compilers, 'FC'):
