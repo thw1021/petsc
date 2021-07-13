@@ -564,8 +564,8 @@ static PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 }
 
 /*
- Evaluate F(X), then compute tao->residual = norm2(F_x,F_z) and tao->cnorm = norm2(F_ce,F_ci),
- update tao->gnorm0 and tao->step = mu
+  Evaluate F(X); then update update tao->gnorm0, tao->step = mu,
+  tao->residual = norm2(F_x,F_z) and tao->cnorm = norm2(F_ce,F_ci).
 */
 static PetscErrorCode TaoSNESFunction_PDIPM_residual(SNES snes,Vec X,Vec F,void *ctx)
 {
@@ -583,14 +583,13 @@ static PetscErrorCode TaoSNESFunction_PDIPM_residual(SNES snes,Vec X,Vec F,void 
   ierr = VecGetArrayWrite(F,&Farr);CHKERRQ(ierr);
   ierr = VecGetArrayRead(X,&Xarr);CHKERRQ(ierr);
 
-  tao->gnorm0 = tao->residual;
-
-  /* compute norm2(F_x), norm2(F_z) */
+  /* compute res[0] = norm2(F_x) */
   L1 = pdipm->x;
   ierr = VecPlaceArray(L1,Farr);CHKERRQ(ierr);
   ierr = VecNorm(L1,NORM_2,&res[0]);CHKERRQ(ierr);
   ierr = VecResetArray(L1);CHKERRQ(ierr);
 
+  /* compute res[1] = norm2(F_z), cnorm[1] = norm2(F_ci) */
   if (pdipm->z) {
     if (pdipm->solve_symmetric_kkt) {
       ierr = VecPlaceArray(pdipm->z,Farr+pdipm->off_z);CHKERRQ(ierr);
@@ -615,26 +614,28 @@ static PetscErrorCode TaoSNESFunction_PDIPM_residual(SNES snes,Vec X,Vec F,void 
       ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
       ierr = VecResetArray(pdipm->z);CHKERRQ(ierr);
     }
-  } else res[1] = 0.0;
 
-  tao->residual = PetscSqrtReal(res[0]*res[0] + res[1]*res[1]);
+    ierr = VecPlaceArray(pdipm->ci,Farr+pdipm->off_lambdai);CHKERRQ(ierr);
+    ierr = VecNorm(pdipm->ci,NORM_2,&cnorm[1]);CHKERRQ(ierr);
+    ierr = VecResetArray(pdipm->ci);CHKERRQ(ierr);
+  } else {
+    res[1] = 0.0; cnorm[1] = 0.0;
+  }
 
-  /* compute norm2(F_ce), norm2(F_ci) */
+  /* compute cnorm[0] = norm2(F_ce) */
   if (pdipm->Nce) {
     ierr = VecPlaceArray(pdipm->ce,Farr+pdipm->off_lambdae);CHKERRQ(ierr);
     ierr = VecNorm(pdipm->ce,NORM_2,&cnorm[0]);CHKERRQ(ierr);
     ierr = VecResetArray(pdipm->ce);CHKERRQ(ierr);
   } else cnorm[0] = 0.0;
 
-  ierr = VecPlaceArray(pdipm->ci,Farr+pdipm->off_lambdai);CHKERRQ(ierr);
-  ierr = VecNorm(pdipm->ci,NORM_2,&cnorm[1]);CHKERRQ(ierr);
-  ierr = VecResetArray(pdipm->ci);CHKERRQ(ierr);
-
-  tao->cnorm  = PetscSqrtReal(cnorm[0]*cnorm[0] + cnorm[1]*cnorm[1]);
-
   ierr = VecRestoreArrayWrite(F,&Farr);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(X,&Xarr);CHKERRQ(ierr);
-  tao->step = pdipm->mu;
+
+  tao->gnorm0   = tao->residual;
+  tao->residual = PetscSqrtReal(res[0]*res[0] + res[1]*res[1]);
+  tao->cnorm    = PetscSqrtReal(cnorm[0]*cnorm[0] + cnorm[1]*cnorm[1]);
+  tao->step     = pdipm->mu;
   PetscFunctionReturn(0);
 }
 
@@ -727,7 +728,7 @@ PetscErrorCode PCPreSolve_PDIPM(PC pc,KSP ksp)
    the slack variables (z) and inequality constraints Lagrange multipliers
    (lambdai) positive, i.e., z,lambdai >=0. It does this by calculating scalars
    alpha_p and alpha_d to keep z,lambdai non-negative. The decision (x), and the
-   slack variables are updated as X = X + alpha_d*dx. The constraint multipliers
+   slack variables are updated as X = X - alpha_d*dx. The constraint multipliers
    are updated as Lambdai = Lambdai + alpha_p*dLambdai. The barrier parameter mu
    is also updated as mu = mu + z'lambdai/Nci
 */
@@ -737,7 +738,7 @@ static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
   Tao               tao=(Tao)ctx;
   TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
   SNES              snes;
-  Vec               X,F,Y,W,G;
+  Vec               X,F,Y;
   PetscInt          i,iter;
   PetscReal         alpha_p=1.0,alpha_d=1.0,alpha[4];
   PetscScalar       *Xarr,*z,*lambdai,dot,*taosolarr;
@@ -748,25 +749,21 @@ static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
   ierr = SNESGetIterationNumber(snes,&iter);CHKERRQ(ierr);
 
   ierr = SNESLineSearchSetReason(linesearch,SNES_LINESEARCH_SUCCEEDED);CHKERRQ(ierr);
-  ierr = SNESLineSearchGetVecs(linesearch,&X,&F,&Y,&W,&G);CHKERRQ(ierr);
+  ierr = SNESLineSearchGetVecs(linesearch,&X,&F,&Y,NULL,NULL);CHKERRQ(ierr);
 
   ierr = VecGetArrayWrite(X,&Xarr);CHKERRQ(ierr);
   ierr = VecGetArrayRead(Y,&dXarr);CHKERRQ(ierr);
   z  = Xarr + pdipm->off_z;
   dz = dXarr + pdipm->off_z;
   for (i=0; i < pdipm->nci; i++) {
-    if (z[i] - dz[i] < 0.0) {
-      alpha_p = PetscMin(alpha_p,0.9999*z[i]/dz[i]);
-    }
+    if (z[i] - dz[i] < 0.0) alpha_p = PetscMin(alpha_p, 0.9999*z[i]/dz[i]);
   }
 
   lambdai  = Xarr + pdipm->off_lambdai;
   dlambdai = dXarr + pdipm->off_lambdai;
 
   for (i=0; i<pdipm->nci; i++) {
-    if (lambdai[i] - dlambdai[i] < 0.0) {
-      alpha_d = PetscMin(0.9999*lambdai[i]/dlambdai[i],alpha_d);
-    }
+    if (lambdai[i] - dlambdai[i] < 0.0) alpha_d = PetscMin(0.9999*lambdai[i]/dlambdai[i], alpha_d);
   }
 
   alpha[0] = alpha_p;
@@ -780,13 +777,11 @@ static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
   alpha_p = alpha[2];
   alpha_d = alpha[3];
 
+  /* X = X - alpha * Y */
   ierr = VecGetArrayWrite(X,&Xarr);CHKERRQ(ierr);
   ierr = VecGetArrayRead(Y,&dXarr);CHKERRQ(ierr);
   for (i=0; i<pdipm->nx; i++) Xarr[i] -= alpha_p * dXarr[i];
-
-  for (i=0; i<pdipm->nce; i++) {
-    Xarr[i+pdipm->off_lambdae] -= alpha_d * dXarr[i+pdipm->off_lambdae];
-  }
+  for (i=0; i<pdipm->nce; i++) Xarr[i+pdipm->off_lambdae] -= alpha_d * dXarr[i+pdipm->off_lambdae];
 
   for (i=0; i<pdipm->nci; i++) {
     Xarr[i+pdipm->off_lambdai] -= alpha_d * dXarr[i+pdipm->off_lambdai];
@@ -799,7 +794,7 @@ static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
   ierr = VecRestoreArrayWrite(X,&Xarr);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(Y,&dXarr);CHKERRQ(ierr);
 
-  /* update mu = mu_update_factor * dot(z,lambdai)/pdipm->nci at updated X */
+  /* Update mu = mu_update_factor * dot(z,lambdai)/pdipm->nci at updated X */
   if (pdipm->z) {
     ierr = VecDot(pdipm->z,pdipm->lambdai,&dot);CHKERRQ(ierr);
   } else dot = 0.0;
@@ -810,7 +805,6 @@ static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
 
   /* Update F; get tao->residual and tao->cnorm */
   ierr = TaoSNESFunction_PDIPM_residual(snes,X,F,(void*)tao);CHKERRQ(ierr);
-  ierr = SNESLineSearchComputeNorms(linesearch);CHKERRQ(ierr); /* must call this func, do not know why */
 
   tao->niter++;
   ierr = TaoLogConvergenceHistory(tao,pdipm->obj,tao->residual,tao->cnorm,tao->niter);CHKERRQ(ierr);
