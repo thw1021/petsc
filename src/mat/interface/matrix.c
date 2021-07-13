@@ -6196,18 +6196,22 @@ PetscErrorCode MatZeroRows(Mat mat,PetscInt numRows,const PetscInt rows[],PetscS
 @*/
 PetscErrorCode MatZeroRowsIS(Mat mat,IS is,PetscScalar diag,Vec x,Vec b)
 {
-  PetscInt       numRows;
-  const PetscInt *rows;
+  PetscInt       numRows = 0;
+  const PetscInt *rows = NULL;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
-  PetscValidHeaderSpecific(is,IS_CLASSID,2);
-  ierr = ISGetLocalSize(is,&numRows);CHKERRQ(ierr);
-  ierr = ISGetIndices(is,&rows);CHKERRQ(ierr);
+  if (is) {
+    PetscValidHeaderSpecific(is,IS_CLASSID,2);
+    ierr = ISGetLocalSize(is,&numRows);CHKERRQ(ierr);
+    ierr = ISGetIndices(is,&rows);CHKERRQ(ierr);
+  }
   ierr = MatZeroRows(mat,numRows,rows,diag,x,b);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(is,&rows);CHKERRQ(ierr);
+  if (is) {
+    ierr = ISRestoreIndices(is,&rows);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
