@@ -269,6 +269,25 @@ class Package(config.base.Configure):
     if issubclass(type(self),config.package.CMakePackage):
       # only cmake packages get their std flags removed since they use
       # -DCMAKE_CXX_STANDARD to set the std flag
+      cmakeLists = os.path.join(self.packageDir,self.cmakelistsdir,'cmakeLists.txt')
+      with open(cmakeLists,'r') as fd:
+        refcxxstd = re.compile('^\s*(?!#)(set\()(CMAKE_CXX_STANDARD\s[A-z0-9\s]*)')
+        for line in fd:
+          match = refcxxstd.search(line)
+          if match:
+            # from set(CMAKE_CXX_STANDARD <val> [CACHE <type> <docstring> [FORCE]]) extract
+            # <val> CACHE <type> <docstring> [FORCE]
+            cmakeSetCmd = match.groups()[1].split()[1:]
+            if (len(cmakeSetCmd) == 1) or 'CACHE' not in cmakeSetList:
+              # The worst behaved, we have a pure "set". we shouldn't rely on
+              # CMAKE_CXX_STANDARD, since the package overrides it unconditionally. Thus
+              # we leave the std flag in the compiler flags.
+              self.logPrint('removeStdCxxFlag: Cmake Package {pkg} had an overriding \'set\' command in their CmakeLists.txt:\n\t{cmd}\nLeaving std flags in'.format(pkg=self.name,cmd=line.strip()),indent=1)
+              return flags
+            self.logPrint('removeStdCxxFlag: Cmake Package {pkg} did NOT have an overriding \'set\' command in their CmakeLists.txt:\n\t{cmd}\nRemoving std flags'.format(pkg=self.name,cmd=line.strip()),indent=1)
+            # CACHE was found in the set command, meaning we can override it from the
+            # command line. So we continue on to remove the std flags.
+            break
       stdFlags = ('-std=c++','-std=gnu++')
       return [f for f in flags if not f.startswith(stdFlags)]
     return flags
