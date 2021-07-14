@@ -496,10 +496,11 @@ def graphGen(file, enable_graphs, graph_flops_scaling, dim):
     #file.writeCSV()
 
     if cmdLineArgs.enable_graphs == 1:
-        #Set up plots with labels
-        #petscDir = os.environ.get('PETSC_DIR') + '/share/petsc/xml/stylelib/' #needed to run on the cluster
-        plt.style.use('petsc_tas_style.mplstyle') #uses the specified style sheet for generating the plots
+        #Uses the specified style sheet for generating the plots
+        styleDir = os.path.join(os.environ.get('PETSC_DIR'), 'lib/petsc/bin')
+        plt.style.use(os.path.join(styleDir, 'petsc_tas_style.mplstyle'))
 
+        #Set up plots with labels
         meshConvFig = plt.figure()
         meshConvOrigHandles = []
         meshConvLstSqHandles = []
