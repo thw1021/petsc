@@ -8,10 +8,6 @@ Guide to PETSc Quick Start Tutorial on Time, Accuracy, Speed Analysis(TAS)
       .. code-block::
 
          make ex13
-include ${PETSC_DIR}/lib/petsc/conf/rules
-
-ex13: ex13.o
-	${CLINKER} -o $@ $^ ${PETSC_LIB}
 
 
 2. Run ex13 with the following command:
