@@ -6160,7 +6160,7 @@ PetscErrorCode MatZeroRows(Mat mat,PetscInt numRows,const PetscInt rows[],PetscS
 
    Input Parameters:
 +  mat - the matrix
-.  is - index set of rows to remove
+.  is - index set of rows to remove (if NULL then no row is removed)
 .  diag - value put in all diagonals of eliminated rows
 .  x - optional vector of solutions for zeroed rows (other entries in vector are not used)
 -  b - optional vector of right hand side, that will be adjusted by provided solution
