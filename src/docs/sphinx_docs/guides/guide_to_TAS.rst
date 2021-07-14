@@ -13,7 +13,6 @@ Below is the guide to running TAS using ex13, which is a Poisson Problem in 2D a
 
          make ex13
 
-
 2. Run ex13 with the following command:
 
    .. code-block::
