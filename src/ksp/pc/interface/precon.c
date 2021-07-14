@@ -429,7 +429,7 @@ PetscErrorCode  PCApply(PC pc,Vec x,Vec y)
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   if (x == y) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
   if (pc->erroriffailure) {ierr = VecValidValues(x,2,PETSC_TRUE);CHKERRQ(ierr);}
-  /* use pmat to check vector sizes since for KSPLQR the pmat may be of a different size than mat */
+  /* use pmat to check vector sizes since for KSPLSQR the pmat may be of a different size than mat */
   ierr = MatGetLocalSize(pc->pmat,&m,&n);CHKERRQ(ierr);
   ierr = VecGetLocalSize(x,&mv);CHKERRQ(ierr);
   ierr = VecGetLocalSize(y,&nv);CHKERRQ(ierr);
