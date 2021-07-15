@@ -408,21 +408,23 @@ PetscErrorCode KSPLSQRMonitorResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
-  ierr = PetscObjectGetTabLevel((PetscObject) ksp, &tablevel);CHKERRQ(ierr);
-  ierr = PetscObjectGetOptionsPrefix((PetscObject) ksp, &prefix);CHKERRQ(ierr);
-  ierr = PetscStrncpy(normtype, KSPNormTypes[ksp->normtype], sizeof(normtype));CHKERRQ(ierr);
-  ierr = PetscStrtolower(normtype);CHKERRQ(ierr);
-  ierr = PetscViewerPushFormat(viewer, format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIAddTab(viewer, tablevel);CHKERRQ(ierr);
-  if (n == 0 && prefix) {ierr = PetscViewerASCIIPrintf(viewer, "  Residual norm, norm of normal equations, and matrix norm for %s solve.\n", prefix);CHKERRQ(ierr);}
-  if (!n) {
-    ierr = PetscViewerASCIIPrintf(viewer,"%3D KSP resid norm %14.12e\n",n,(double)rnorm);CHKERRQ(ierr);
-  } else {
-    ierr = PetscViewerASCIIPrintf(viewer,"%3D KSP resid norm %14.12e normal eq resid norm %14.12e matrix norm %14.12e\n",n,(double)rnorm,(double)lsqr->arnorm,(double)lsqr->anorm);CHKERRQ(ierr);
+  if (lsqr) {
+    PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
+    ierr = PetscObjectGetTabLevel((PetscObject) ksp, &tablevel);CHKERRQ(ierr);
+    ierr = PetscObjectGetOptionsPrefix((PetscObject) ksp, &prefix);CHKERRQ(ierr);
+    ierr = PetscStrncpy(normtype, KSPNormTypes[ksp->normtype], sizeof(normtype));CHKERRQ(ierr);
+    ierr = PetscStrtolower(normtype);CHKERRQ(ierr);
+    ierr = PetscViewerPushFormat(viewer, format);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIAddTab(viewer, tablevel);CHKERRQ(ierr);
+    if (n == 0 && prefix) {ierr = PetscViewerASCIIPrintf(viewer, "  Residual norm, norm of normal equations, and matrix norm for %s solve.\n", prefix);CHKERRQ(ierr);}
+    if (!n) {
+      ierr = PetscViewerASCIIPrintf(viewer,"%3D KSP resid norm %14.12e\n",n,(double)rnorm);CHKERRQ(ierr);
+    } else {
+      ierr = PetscViewerASCIIPrintf(viewer,"%3D KSP resid norm %14.12e normal eq resid norm %14.12e matrix norm %14.12e\n",n,(double)rnorm,(double)lsqr->arnorm,(double)lsqr->anorm);CHKERRQ(ierr);
+    }
+    ierr = PetscViewerASCIISubtractTab(viewer, tablevel);CHKERRQ(ierr);
+    ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
   }
-  ierr = PetscViewerASCIISubtractTab(viewer, tablevel);CHKERRQ(ierr);
-  ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -455,23 +457,25 @@ PetscErrorCode KSPLSQRMonitorResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm
   PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
-  PetscValidHeaderSpecific(lg, PETSC_DRAWLG_CLASSID, 5);
-  ierr = PetscViewerPushFormat(viewer, format);CHKERRQ(ierr);
-  if (!n) {ierr = PetscDrawLGReset(lg);CHKERRQ(ierr);}
-  x[0] = (PetscReal) n;
-  if (rnorm > 0.0) y[0] = PetscLog10Real(rnorm);
-  else y[0] = -15.0;
-  x[1] = (PetscReal) n;
-  if (lsqr->arnorm > 0.0) y[1] = PetscLog10Real(lsqr->arnorm);
-  else y[1] = -15.0;
-  ierr = PetscDrawLGAddPoint(lg, x, y);CHKERRQ(ierr);
-  ierr = KSPGetConvergedReason(ksp, &reason);CHKERRQ(ierr);
-  if (n <= 20 || !(n % 5) || reason) {
-    ierr = PetscDrawLGDraw(lg);CHKERRQ(ierr);
-    ierr = PetscDrawLGSave(lg);CHKERRQ(ierr);
+  if (lsqr) {
+    PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
+    PetscValidHeaderSpecific(lg, PETSC_DRAWLG_CLASSID, 4);
+    ierr = PetscViewerPushFormat(viewer, format);CHKERRQ(ierr);
+    if (!n) {ierr = PetscDrawLGReset(lg);CHKERRQ(ierr);}
+    x[0] = (PetscReal) n;
+    if (rnorm > 0.0) y[0] = PetscLog10Real(rnorm);
+    else y[0] = -15.0;
+    x[1] = (PetscReal) n;
+    if (lsqr->arnorm > 0.0) y[1] = PetscLog10Real(lsqr->arnorm);
+    else y[1] = -15.0;
+    ierr = PetscDrawLGAddPoint(lg, x, y);CHKERRQ(ierr);
+    ierr = KSPGetConvergedReason(ksp, &reason);CHKERRQ(ierr);
+    if (n <= 20 || !(n % 5) || reason) {
+      ierr = PetscDrawLGDraw(lg);CHKERRQ(ierr);
+      ierr = PetscDrawLGSave(lg);CHKERRQ(ierr);
+    }
+    ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
   }
-  ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
