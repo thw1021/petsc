@@ -16,7 +16,7 @@ int main(int argc,char **args)
   PC             pc;
   PetscInt       in;
   Mat            F,B;
-  PetscBool      solve=PETSC_FALSE,sameA=PETSC_FALSE;
+  PetscBool      solve=PETSC_FALSE,sameA=PETSC_FALSE,lsqr=PETSC_FALSE;
 #if defined(PETSC_USE_LOG)
   PetscLogStage stage;
 #endif
@@ -92,6 +92,10 @@ int main(int argc,char **args)
 
   ierr = KSPSetTolerances(ksp,1.e-2/((m+1)*(n+1)),PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 
+  ierr = PetscOptionsGetBool(NULL,NULL,"-ksp_lsqr_monitor",&lsqr,NULL);CHKERRQ(ierr);
+  if (lsqr) {
+    ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+  }
   ierr = KSPSetType(ksp,KSPPREONLY);CHKERRQ(ierr);
   ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
   ierr = PCSetType(pc,PCCHOLESKY);CHKERRQ(ierr);
@@ -110,7 +114,9 @@ int main(int argc,char **args)
   if (size>1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Configure with MUMPS if you want to run this example in parallel");
 #endif
 
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+  if (!lsqr) {
+    ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+  }
 
   /* get inertia */
   ierr = PetscOptionsGetBool(NULL,NULL,"-solve",&solve,NULL);CHKERRQ(ierr);
@@ -129,11 +135,11 @@ int main(int argc,char **args)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   ierr = MatDuplicate(A,MAT_COPY_VALUES,&B);CHKERRQ(ierr);
   if (sameA) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Seting A\n");CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Setting A\n");CHKERRQ(ierr);
     ierr = MatAXPY(A,1.1,B,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
     ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
   } else {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Seting B\n");CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Setting B\n");CHKERRQ(ierr);
     ierr = MatAXPY(B,1.1,A,DIFFERENT_NONZERO_PATTERN);CHKERRQ(ierr);
     ierr = KSPSetOperators(ksp,B,B);CHKERRQ(ierr);
   }
@@ -164,5 +170,10 @@ int main(int argc,char **args)
     test:
       suffix: 2
       args: -sameA
+
+    test:
+      suffix: 3
+      args: -ksp_lsqr_monitor -ksp_type lsqr
+      output_file: output/ex8_1.out
 
 TEST*/
