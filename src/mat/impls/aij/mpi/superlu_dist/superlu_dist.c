@@ -7,6 +7,9 @@
 #include <petscpkg_version.h>
 
 EXTERN_C_BEGIN
+#if PETSC_PKG_SUPERLU_DIST_VERSION_GE(7,0,0)
+#include <supermatrix.h>
+#endif
 #if defined(PETSC_USE_COMPLEX)
 #include <superlu_zdefs.h>
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(6,3,0)
