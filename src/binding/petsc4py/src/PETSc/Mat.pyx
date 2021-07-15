@@ -168,6 +168,7 @@ class MatSolverType(object):
     BAS             = S_(MATSOLVERBAS)
     CUSPARSE        = S_(MATSOLVERCUSPARSE)
     CUDA            = S_(MATSOLVERCUDA)
+    SPQR            = S_(MATSOLVERSPQR)
 
 class MatFactorShiftType(object):
     # native
@@ -725,6 +726,18 @@ cdef class Mat(Object):
         CHKERR( MatTranspose(self.mat, reuse, &out.mat) )
         return out
 
+    def hermitianTranspose(self, Mat out=None):
+        cdef PetscMatReuse reuse = MAT_INITIAL_MATRIX
+        if out is None: out = self
+        if out.mat == self.mat:
+            reuse = MAT_INPLACE_MATRIX
+        elif out.mat == NULL:
+            reuse = MAT_INITIAL_MATRIX
+        else:
+            reuse = MAT_REUSE_MATRIX
+        CHKERR( MatHermitianTranspose(self.mat, reuse, &out.mat) )
+        return out
+
     def realPart(self, Mat out=None):
         if out is None:
             out = self
@@ -1031,6 +1044,22 @@ cdef class Mat(Object):
             rows = iarray_i(rows, &ni, &i)
             CHKERR( MatZeroRowsColumnsLocal(self.mat, ni, i, sval, xvec, bvec) )
 
+    def zeroRowsColumnsStencil(self, rows, diag=1, Vec x=None, Vec b=None):
+        cdef PetscScalar sval = asScalar(diag)
+        cdef PetscInt nrows = asInt(len(rows))
+        cdef PetscMatStencil st
+        cdef _Mat_Stencil r
+        cdef PetscMatStencil *crows = NULL
+        CHKERR( PetscMalloc(<size_t>(nrows+1)*sizeof(st), &crows) )
+        for i in range(nrows):
+            r = rows[i]
+            crows[i] = r.stencil
+        cdef PetscVec xvec = NULL, bvec = NULL
+        if x is not None: xvec = x.vec
+        if b is not None: bvec = b.vec
+        CHKERR( MatZeroRowsColumnsStencil(self.mat, nrows, crows, sval, xvec, bvec) )
+        CHKERR( PetscFree( crows ) )
+
     def storeValues(self):
         CHKERR( MatStoreValues(self.mat) )
 
@@ -1054,7 +1083,11 @@ cdef class Mat(Object):
         cdef PetscBool flag = PETSC_FALSE
         CHKERR( MatAssembled(self.mat, &flag) )
         return toBool(flag)
-    #
+
+    def findZeroRows(self):
+        cdef IS zerorows = IS()
+        CHKERR( MatFindZeroRows(self.mat, &zerorows.iset) )
+        return zerorows
 
     def createVecs(self, side=None):
         cdef Vec vecr, vecl

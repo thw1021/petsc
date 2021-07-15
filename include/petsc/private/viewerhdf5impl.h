@@ -8,6 +8,7 @@
 #  define H5_USE_18_API
 #endif
 #include <petscviewerhdf5.h>
+#include <petsc/private/viewerimpl.h>
 
 #if defined(PETSC_HAVE_HDF5)
 
@@ -35,11 +36,14 @@ typedef struct {
   PetscFileMode btype;
   hid_t         file_id;
   hid_t         dxpl_id;   /* H5P_DATASET_XFER property list controlling raw data transfer (read/write). Properties are modified using H5Pset_dxpl_* functions. */
+  PetscBool     timestepping;
   PetscInt      timestep;
   PetscViewerHDF5GroupList *groups;
   PetscBool     basedimension2;  /* save vectors and DMDA vectors with a dimension of at least 2 even if the bs/dof is 1 */
   PetscBool     spoutput;  /* write data in single precision even if PETSc is compiled with double precision PetscReal */
+  PetscBool     horizontal; /* store column vectors as blocks (needed for MATDENSE I/O) */
 } PetscViewer_HDF5;
 
+PETSC_EXTERN PetscErrorCode PetscViewerHDF5CheckTimestepping_Internal(PetscViewer, const char[]); /* currently used in src/dm/impls/da/gr2.c so needs to be extern */
 #endif
 #endif

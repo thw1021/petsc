@@ -13,7 +13,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscRevolveIntCast(PetscInt a,PetscRevolveIn
   PetscFunctionBegin;
 #if defined(PETSC_USE_64BIT_INDICES)
   *b = 0;
-  if ((a) > PETSC_REVOLVE_INT_MAX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Parameter is too large for Revolve, which is restricted to 32 bit integers");
+  if (a > PETSC_REVOLVE_INT_MAX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Parameter is too large for Revolve, which is restricted to 32 bit integers");
 #endif
   *b = (PetscRevolveInt)(a);
   PetscFunctionReturn(0);
@@ -1493,7 +1493,7 @@ static PetscErrorCode SetTrajRMS(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   ierr = PetscRevolveIntCast(tjsch->total_steps,&rtotal_steps);CHKERRQ(ierr);
   ierr = PetscRevolveIntCast(stepnum,&rstepnum);CHKERRQ(ierr);
   ierr = ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rstepnum,rstepnum,PETSC_FALSE,&store);CHKERRQ(ierr);
-  if (store == 1){
+  if (store == 1) {
     if (stepnum < stack->top) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
     ierr = ElementCreate(ts,stack,&e);CHKERRQ(ierr);
     ierr = ElementSet(ts,stack,&e,stepnum,time,X);CHKERRQ(ierr);
@@ -1888,6 +1888,8 @@ static PetscErrorCode TSTrajectoryReset_Memory(TSTrajectory tj)
     ierr = PetscFree(tjsch->rctx);CHKERRQ(ierr);
     ierr = PetscFree(tjsch->rctx2);CHKERRQ(ierr);
   }
+#else
+  PetscFunctionBegin;
 #endif
   PetscFunctionReturn(0);
 }

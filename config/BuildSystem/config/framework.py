@@ -84,6 +84,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.makeMacroHeader = ''
     self.makeRuleHeader  = ''
     self.cHeader         = 'matt_fix.h'
+    self.enablepoison    = False
+    self.poisonheader    = 'matt_poison.h'
     self.headerPrefix    = ''
     self.substPrefix     = ''
     self.pkgheader       = ''
@@ -695,8 +697,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     # we need to keep the libraries in this list and simply not print them at the end
     # because libraries.havelib() is used to find library in this list we had to list the libraries in the
     # list even though we don't need them in petscconf.h
-    # two packages have LIB in there name so we have to include them here
-    if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
+    # Some packages have LIB in their name, so we have to include them here
+    if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG','PETSC_HAVE_LIBCEED']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
     if value:
       if (condition):
         f.write('#if (%s)\n' % condition)
@@ -704,6 +706,12 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       if (condition):
         f.write('#endif\n')
     return
+
+  def outputPoison(self, f, name):
+    '''Outputs a poison version of name to prevent accidental usage, see outputHeader'''
+    if (name.startswith('PETSC_HAVE_LIB') and not name in {'PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG','PETSC_HAVE_LIBCEED'}) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
+    if name.startswith(('PETSC_USE_','PETSC_HAVE_','PETSC_SKIP_')):
+      f.write('#pragma GCC poison PETSC_%s\n' % name)
 
   def outputMakeMacro(self, f, name, value):
     f.write(name+' = '+str(value)+'\n')
@@ -767,6 +775,10 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       if petscconf and 'HIP_PLATFORM' in item:
         cond = '!defined(__HIP__)'
       self.outputDefine(f, *defineDict[item], condition=cond)
+
+  def outputPoisons(self, defineDict, f):
+    for item in sorted(defineDict):
+      self.outputPoison(f, defineDict[item][0])
 
   def outputPkgVersion(self, f, child):
     '''If the child contains a tuple named "version_tuple", the entries are output in the config package header.'''
@@ -889,6 +901,23 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self.processDefines(defineDict, child, prefix)
     if (petscconf):
       self.processPackageListDefine(defineDict)
+      dir = os.path.dirname(name)
+      if dir and not os.path.exists(dir):
+        os.makedirs(dir)
+      if self.file_create_pause: time.sleep(1)
+      with open(self.poisonheader,'w') as fpoison:
+        if self.file_create_pause: time.sleep(1)
+        if self.enablepoison:
+          # it is safe to write the poison file
+          self.outputPoisons(defineDict,fpoison)
+        else:
+          # at least 1 of the languages/compilers didn't like poison
+          poisonFileName = os.path.basename(self.poisonheader,)
+          poisonGuard = 'INCLUDED_'+poisonFileName.upper().replace('.', '_')
+          lines = [''.join(['#if !defined(',poisonGuard,')\n']),
+                   ''.join(['#define ',poisonGuard,'\n']),
+                   '#endif\n']
+          fpoison.writelines(lines)
     self.outputDefines(defineDict, f,petscconf)
     if hasattr(self, 'headerBottom'):
       f.write(str(self.headerBottom)+'\n')

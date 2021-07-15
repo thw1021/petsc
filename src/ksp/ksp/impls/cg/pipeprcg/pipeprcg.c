@@ -24,9 +24,9 @@ static PetscErrorCode KSPSetUp_PIPEPRCG(KSP ksp)
 
 static PetscErrorCode KSPSetFromOptions_PIPEPRCG(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscInt       ierr=0;
   KSP_CG_PIPE_PR *prcg=(KSP_CG_PIPE_PR*)ksp->data;
   PetscBool      flag=PETSC_FALSE;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"KSP PIPEPRCG options");CHKERRQ(ierr);
@@ -174,7 +174,6 @@ static PetscErrorCode  KSPSolve_PIPEPRCG(KSP ksp)
   if (!ksp->reason) ksp->reason = KSP_DIVERGED_ITS;
   PetscFunctionReturn(0);
 }
-
 
 /*MC
    KSPPIPEPRCG - Pipelined predict-and-recompute conjugate gradient method.
