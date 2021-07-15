@@ -57,11 +57,6 @@ cdef class MatPartitioning(Object):
     def apply(self, IS partitioning):
         CHKERR( MatPartitioningApply(self.matpartitioning, &partitioning.iset) )
 
-    # def apply(self):
-    #     cdef IS partitioning = IS()
-    #     CHKERR( MatPartitioningApply(self.matpartitioning, &partitioning.iset) )
-    #     return partitioning
-
 # --------------------------------------------------------------------
 
 del MatPartitioningType
