@@ -1,13 +1,13 @@
-#requiresdefine 'PETSC_HAVE_CXX'
+
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
-SOURCEC	  = devicereg.c
-SOURCECXX = dcontext.cxx
+SOURCEC	  =
+SOURCECXX = dcontext.cxx device.cxx devicereg.cxx
 SOURCEF	  =
-SOURCEH   = objpool.hpp
+SOURCEH   = objpool.hpp petscdevice.hpp
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 DIRS	  =

@@ -163,13 +163,6 @@ PetscErrorCode PetscDeviceContextRegister(const char sname[], PetscErrorCode (*f
   PetscFunctionReturn(0);
 }
 
-#if PetscDefined(HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
-#endif
-#if PetscDefined(HAVE_HIP)
-PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
-#endif
-
 /*@C
   PetscDeviceRegisterAll - Registers all the components in the PetscDevice package.
 

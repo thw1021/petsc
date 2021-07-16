@@ -4,15 +4,15 @@
 namespace Petsc {
 
 #if PetscDefined(HAVE_CUDA)
-const decltype(cudaSuccess)           cupmTypeTraits<PetscDeviceContextBackend::CUDA>::cupmSuccess;
-const decltype(cudaErrorNotReady)     cupmTypeTraits<PetscDeviceContextBackend::CUDA>::cupmErrorNotReady;
-const decltype(cudaStreamNonBlocking) cupmTypeTraits<PetscDeviceContextBackend::CUDA>::cupmStreamNonBlocking;
+const decltype(cudaSuccess)           CUPMTypeTraits<CUPMDeviceKind::CUDA>::cupmSuccess;
+const decltype(cudaErrorNotReady)     CUPMTypeTraits<CUPMDeviceKind::CUDA>::cupmErrorNotReady;
+const decltype(cudaStreamNonBlocking) CUPMTypeTraits<CUPMDeviceKind::CUDA>::cupmStreamNonBlocking;
 #endif
 
 #if PetscDefined(HAVE_HIP)
-const decltype(hipSuccess)           cupmTypeTraits<PetscDeviceContextBackend::HIP>::cupmSuccess;
-const decltype(hipErrorNotReady)     cupmTypeTraits<PetscDeviceContextBackend::HIP>::cupmErrorNotReady;
-const decltype(hipStreamNonBlocking) cupmTypeTraits<PetscDeviceContextBackend::HIP>::cupmStreamNonBlocking;
+const decltype(hipSuccess)           CUPMTypeTraits<CUPMDeviceKind::HIP>::cupmSuccess;
+const decltype(hipErrorNotReady)     CUPMTypeTraits<CUPMDeviceKind::HIP>::cupmErrorNotReady;
+const decltype(hipStreamNonBlocking) CUPMTypeTraits<CUPMDeviceKind::HIP>::cupmStreamNonBlocking;
 #endif
 
 } // namespace Petsc

@@ -99,4 +99,11 @@ PETSC_EXTERN const char *const PetscDeviceContextJoinModes[];
 PetscDeviceContextFork(), PetscDeviceContextJoin()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
+
+typedef enum {
+  PETSC_DEVICE_KIND_CUDA,
+  PETSC_DEVICE_KIND_HIP
+} PetscDeviceKind;
+
+typedef struct _n_PetscDevice *PetscDevice;
 #endif /* PETSCDEVICETYPES_H */

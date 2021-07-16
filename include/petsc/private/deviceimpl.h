@@ -4,6 +4,13 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
+#if PetscDefined(HAVE_CUDA)
+PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
+#endif
+#if PetscDefined(HAVE_HIP)
+PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
+#endif
+
 /* non-error returning version for the inline macro */
 PETSC_STATIC_INLINE PetscBool PetscDeviceContextTypeCompare_Internal(const char type_ref[], const char type_name[])
 {
@@ -64,6 +71,17 @@ void PetscValidSameStreamType(T,int,T,int);
 #define PetscCheckValidSameStreamType(_p_strm1__,_p_arg1__,_p_strm2__,_p_arg2__) (void)(_p_strm1__),(void)(_p_strm2__)
 #endif /* PETSC_USE_DEBUG */
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
+
+typedef struct _DeviceOps *DeviceOps;
+struct _DeviceOps {
+  PetscErrorCode (*configure)(PetscDevice);
+};
+
+struct _n_PetscDevice {
+  struct _DeviceOps ops[1];
+  PetscDeviceKind   kind;
+  void             *data;
+};
 
 typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
