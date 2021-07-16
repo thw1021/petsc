@@ -140,7 +140,7 @@ Changes: Development
 - Add ``DMSetLabel()``
 - Replace ``DMPlexComputeJacobianAction()`` with ``DMSNESComputeJacobianAction()``
 - Add ``DMSNESCreateJacobianMF()``
-- ``DMPlexComputeBdResidualSingle()`` now takes a ``PetscFormKey`` instead of explicit label/value/field arguments
+- Change ``DMPlexComputeBdResidualSingle()`` to take ``PetscFormKey`` instead of explicit label/value/field arguments
 
 .. rubric:: FE/FV:
 
