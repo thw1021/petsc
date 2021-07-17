@@ -46,6 +46,7 @@ struct CUPMTypeTraits<CUPMDeviceKind::CUDA>
   using cupmBlasError_t    = cublasStatus_t;
   using cupmSolverHandle_t = cusolverDnHandle_t;
   using cupmSolverError_t  = cusolverStatus_t;
+  using cupmDeviceProp_t   = cudaDeviceProp;
 
   // Error functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,cudaGetErrorName);
@@ -57,6 +58,7 @@ struct CUPMTypeTraits<CUPMDeviceKind::CUDA>
   static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = cudaStreamNonBlocking;
 
   // Regular functions
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,cudaGetDeviceCount);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,cudaEventCreate);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,cudaEventDestroy);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,cudaEventRecord);
@@ -177,6 +179,7 @@ struct CUPMTypeTraits<CUPMDeviceKind::HIP>
   using cupmBlasError_t    = hipblasStatus_t;
   using cupmSolverHandle_t = hipsolverHandle_t;
   using cupmSolverError_t  = hipsolverStatus_t;
+  using cupmDeviceProp_t   = hipDeviceProp;
 
   // Error functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,hipGetErrorName);
@@ -188,6 +191,7 @@ struct CUPMTypeTraits<CUPMDeviceKind::HIP>
   static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = hipStreamNonBlocking;
 
   // Functions
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,hipGetDeviceCount);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,hipEventCreate);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,hipEventDestroy);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,hipEventRecord);
@@ -267,9 +271,41 @@ struct CUPMTypeTraits<CUPMDeviceKind::HIP>
     }
     PetscFunctionReturn(0);
   }
+
 };
 #endif /* PetscDefined(HAVE_HIP) */
 
 } // namespace Petsc
+
+// shorthand for bringing all of the typedefs from the base CUPMTypeTraits class into your
+// own, it's annoying that c++ doesn't have a way to do this automatically
+#define PETSC_CUPM_INHERIT_TRAITS_TYPEDEFS_USING(base_name_)    \
+  /* types */                                                   \
+  using typename base_name_::cupmError_t;                       \
+  using typename base_name_::cupmEvent_t;                       \
+  using typename base_name_::cupmStream_t;                      \
+  using typename base_name_::cupmBlasError_t;                   \
+  using typename base_name_::cupmSolverError_t;                 \
+  using typename base_name_::cupmBlasHandle_t;                  \
+  using typename base_name_::cupmSolverHandle_t;                \
+  using typename base_name_::cupmDeviceProp_t;                  \
+  /* variables */                                               \
+  using base_name_::cupmSuccess;                                \
+  using base_name_::cupmErrorNotReady;                          \
+  using base_name_::cupmStreamNonBlocking;                      \
+  /* functions */                                               \
+  using base_name_::cupmName;                                   \
+  using base_name_::cupmGetDeviceCount;                         \
+  using base_name_::cupmGetErrorName;                           \
+  using base_name_::cupmGetErrorString;                         \
+  using base_name_::cupmEventCreate;                            \
+  using base_name_::cupmEventDestroy;                           \
+  using base_name_::cupmEventRecord;                            \
+  using base_name_::cupmStreamCreate;                           \
+  using base_name_::cupmStreamCreateWithFlags;                  \
+  using base_name_::cupmStreamDestroy;                          \
+  using base_name_::cupmStreamWaitEvent;                        \
+  using base_name_::cupmStreamQuery;                            \
+  using base_name_::cupmStreamSynchronize;
 
 #endif /* PETSC_CUPMTRAITS_HPP */

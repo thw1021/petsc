@@ -1,7 +1,13 @@
 #include "petscdevice.hpp"
 
-static Petsc::CUPMDevice<Petsc::CUPMDeviceKind::CUDA> cudaDevice;
-static Petsc::CUPMDevice<Petsc::CUPMDeviceKind::HIP>  hipDevice;
+using namespace Petsc;
+
+#if PetscDefined(HAVE_CUDA)
+static CUPMDevice<CUPMDeviceKind::CUDA> cudaDevice(PetscDeviceContextCreate_CUDA);
+#endif
+#if PetscDefined(HAVE_HIP)
+static CUPMDevice<CUPMDeviceKind::HIP>  hipDevice(PetscDeviceContextCreate_HIP);
+#endif
 
 PetscErrorCode PetscDeviceGetDevice(PetscDeviceKind kind, PetscDevice *device)
 {
@@ -14,13 +20,17 @@ PetscErrorCode PetscDeviceGetDevice(PetscDeviceKind kind, PetscDevice *device)
   dev->kind = kind;
   switch (kind) {
   case PETSC_DEVICE_KIND_CUDA:
+#if PetscDefined(HAVE_CUDA)
     ierr = cudaDevice.getDefaultDevice(dev);CHKERRQ(ierr);
     break;
+#endif
   case PETSC_DEVICE_KIND_HIP:
+#if PetscDefined(HAVE_HIP)
     ierr = hipDevice.getDefaultDevice(dev);CHKERRQ(ierr);
     break;
+#endif
   default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown PetscDeviceKind %d\n",kind);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown or invalid PetscDeviceKind %d\n",kind);
     break;
   }
   *device = dev;
@@ -34,13 +44,17 @@ PetscErrorCode PetscDeviceConfigure(PetscDevice device)
   PetscFunctionBegin;
   switch (device->kind) {
   case PETSC_DEVICE_KIND_CUDA:
+#if PetscDefined(HAVE_CUDA)
     ierr = cudaDevice.configureDevice(device);CHKERRQ(ierr);
     break;
+#endif
   case PETSC_DEVICE_KIND_HIP:
+#if PetscDefined(HAVE_HIP)
     ierr = hipDevice.configureDevice(device);CHKERRQ(ierr);
     break;
+#endif
   default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown PetscDeviceKind %d\n",device->kind);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown or invalid PetscDeviceKind %d\n",device->kind);
     break;
   }
   PetscFunctionReturn(0);

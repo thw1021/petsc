@@ -18,34 +18,7 @@ class CUPMContext : CUPMTypeTraits<T>
 {
 public:
   using cupmType_t = CUPMTypeTraits<T>;
-
-  // types
-  using typename cupmType_t::cupmError_t;
-  using typename cupmType_t::cupmEvent_t;
-  using typename cupmType_t::cupmStream_t;
-  using typename cupmType_t::cupmBlasError_t;
-  using typename cupmType_t::cupmSolverError_t;
-  using typename cupmType_t::cupmBlasHandle_t;
-  using typename cupmType_t::cupmSolverHandle_t;
-
-  // vars
-  using cupmType_t::cupmSuccess;
-  using cupmType_t::cupmErrorNotReady;
-  using cupmType_t::cupmStreamNonBlocking;
-
-  // functions
-  using cupmType_t::cupmName;
-  using cupmType_t::cupmGetErrorName;
-  using cupmType_t::cupmGetErrorString;
-  using cupmType_t::cupmEventCreate;
-  using cupmType_t::cupmEventDestroy;
-  using cupmType_t::cupmEventRecord;
-  using cupmType_t::cupmStreamCreate;
-  using cupmType_t::cupmStreamCreateWithFlags;
-  using cupmType_t::cupmStreamDestroy;
-  using cupmType_t::cupmStreamWaitEvent;
-  using cupmType_t::cupmStreamQuery;
-  using cupmType_t::cupmStreamSynchronize;
+  PETSC_CUPM_INHERIT_TRAITS_TYPEDEFS_USING(cupmType_t);
 
   // This is the canonical PETSc "impls" struct that normally resides in a standalone impls
   // header, but since we are using the power of templates it must be declared part of
@@ -222,8 +195,8 @@ template <CUPMDeviceKind T>
 typename CUPMContext<T>::cupmSolverHandle_t CUPMContext<T>::_solverhandle = PETSC_NULLPTR;
 
 // shorten this one up a bit
-using CUPMContexCuda = CUPMContext<CUPMDeviceKind::CUDA>;
-using CUPMContextHip = CUPMContext<CUPMDeviceKind::HIP>;
+using CUPMContextCuda = CUPMContext<CUPMDeviceKind::CUDA>;
+using CUPMContextHip  = CUPMContext<CUPMDeviceKind::HIP>;
 
 // make sure these doesn't leak out
 #undef CHKERRCUPM

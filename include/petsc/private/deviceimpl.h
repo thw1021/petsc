@@ -75,17 +75,23 @@ void PetscValidSameStreamType(T,int,T,int);
 typedef struct _DeviceOps *DeviceOps;
 struct _DeviceOps {
   PetscErrorCode (*configure)(PetscDevice);
+  PetscErrorCode (*createcontext)(PetscDeviceContext); /* the creation routine for the
+                                                          corresponding
+                                                          PetscDeviceContext, this is NOT
+                                                          intended to be called by the
+                                                          PetscDevice itself */
 };
 
 struct _n_PetscDevice {
   struct _DeviceOps ops[1];
   PetscDeviceKind   kind;
+  int               deviceId;
   void             *data;
 };
 
 typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
-  PetscErrorCode (*create)(PetscDeviceContext);
+  PetscErrorCode (*createcontext)(PetscDeviceContext);
   PetscErrorCode (*destroy)(PetscDeviceContext);
   PetscErrorCode (*changestreamtype)(PetscDeviceContext,PetscStreamType);
   PetscErrorCode (*setup)(PetscDeviceContext);
