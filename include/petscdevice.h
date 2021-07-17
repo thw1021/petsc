@@ -184,16 +184,20 @@ PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscDeviceRegisterAll(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
+
+/* PetscDevice */
+PETSC_EXTERN PetscErrorCode PetscDeviceGetDevice(PetscDeviceKind,PetscDevice*);
+PETSC_EXTERN PetscErrorCode PetscDeviceConfigure(PetscDevice);
+PETSC_EXTERN PetscErrorCode PetscDeviceDestroy(PetscDevice*);
 
 /* PetscDeviceContext */
-PETSC_EXTERN PetscErrorCode PetscDeviceContextRegister(const char[],PetscErrorCode(*)(PetscDeviceContext));
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext*);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextSetType(PetscDeviceContext,PetscDeviceContextType);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextGetType(PetscDeviceContext,PetscDeviceContextType*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetDevice(PetscDeviceContext,PetscDevice);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextGetDevice(PetscDeviceContext,PetscDevice*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext,PetscStreamType);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext,PetscStreamType*);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext,PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextQueryIdle(PetscDeviceContext,PetscBool*);
@@ -201,8 +205,8 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext,
 PETSC_EXTERN PetscErrorCode PetscDeviceContextFork(PetscDeviceContext,PetscInt,PetscDeviceContext**);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext,PetscInt,PetscDeviceContextJoinMode,PetscDeviceContext**);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDeviceContextType,PetscStreamType);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDeviceContextType*,PetscStreamType*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDevice,PetscStreamType);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDevice*,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
 #endif /* PETSC_HAVE_CXX */

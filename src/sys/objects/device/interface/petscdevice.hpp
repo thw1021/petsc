@@ -43,8 +43,10 @@ private:
   class  PetscDeviceInternal;
 
   // all known devices
-  static std::vector<PetscDeviceInternal> _devices;
+  static std::vector<std::unique_ptr<PetscDeviceInternal>> _devices;
 
+  // function to create a PetscDeviceContext (the (*create) function pointer usually set
+  // via XXXSetType() for other PETSc objects)
   createContextFunc_t _create;
 
   // have we tried looking for devices?
@@ -52,8 +54,6 @@ private:
 
   // look for devices
   static PETSC_NODISCARD PetscErrorCode __initialize() PETSC_NOEXCEPT;
-
-
 };
 
 template <CUPMDeviceKind T_>
