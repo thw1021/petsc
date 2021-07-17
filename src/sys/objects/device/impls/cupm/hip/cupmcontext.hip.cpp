@@ -11,7 +11,5 @@ PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext dctx)
   ierr = PetscNew(&dci);CHKERRQ(ierr);
   dctx->data = static_cast<void*>(dci);
   ierr = PetscMemcpy(dctx->ops,&contextHip.ops,sizeof(contextHip.ops));CHKERRQ(ierr);
-  ierr = PetscFree(dctx->type);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(PETSCDEVICECONTEXTHIP,&dctx->type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

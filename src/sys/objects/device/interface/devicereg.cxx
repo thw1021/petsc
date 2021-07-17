@@ -55,10 +55,6 @@ PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix
 @*/
 PetscErrorCode PetscDeviceRegisterAll(void)
 {
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
-  PetscErrorCode ierr;
-#endif
-
   PetscFunctionBegin;
   if (PetscDeviceRegisterAllCalled) PetscFunctionReturn(0);
   PetscDeviceRegisterAllCalled = PETSC_TRUE;

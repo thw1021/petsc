@@ -11,8 +11,8 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
 #endif
 
+#warning FIX ME! Need to change petsclanglinter to parse new error macros
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
-#error FIX ME
 void PetscValidDeviceKind(int,int);
 template <typename T>
 void PetscValidDevice(T,int);

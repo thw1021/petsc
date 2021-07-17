@@ -4,6 +4,7 @@
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cupmtraits.hpp>
 #include <vector>
+#include <memory>
 
 namespace Petsc {
 

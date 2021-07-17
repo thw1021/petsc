@@ -225,8 +225,18 @@ PetscErrorCode PetscDeviceContextSetDevice(PetscDeviceContext dctx, PetscDevice 
   if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
   ierr = PetscMemzero(dctx->ops,sizeof(struct _DeviceContextOps));CHKERRQ(ierr);
   ierr = (*device->ops->createcontext)(dctx);CHKERRQ(ierr);
+  #warning FIX ME! Needs to be a strong guarantee that function pointer passed to cudaDevice and contextCuda is the same!
   dctx->device = device;
   dctx->setup  = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceContextGetDevice(PetscDeviceContext dctx, PetscDevice *device)
+{
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
+  PetscValidPointer(device,2);
+  *device = dctx->device;
   PetscFunctionReturn(0);
 }
 
