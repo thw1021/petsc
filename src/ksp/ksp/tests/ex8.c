@@ -16,7 +16,7 @@ int main(int argc,char **args)
   PC             pc;
   PetscInt       in;
   Mat            F,B;
-  PetscBool      solve=PETSC_FALSE,sameA=PETSC_FALSE,lsqr=PETSC_FALSE;
+  PetscBool      solve=PETSC_FALSE,sameA=PETSC_FALSE,setfromoptions_first=PETSC_FALSE;
 #if defined(PETSC_USE_LOG)
   PetscLogStage stage;
 #endif
@@ -92,8 +92,9 @@ int main(int argc,char **args)
 
   ierr = KSPSetTolerances(ksp,1.e-2/((m+1)*(n+1)),PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 
-  ierr = PetscOptionsGetBool(NULL,NULL,"-ksp_lsqr_monitor",&lsqr,NULL);CHKERRQ(ierr);
-  if (lsqr) {
+  ierr = PetscOptionsGetBool(NULL,NULL,"-ksp_setfromoptions_first",&setfromoptions_first,NULL);CHKERRQ(ierr);
+  if (setfromoptions_first) {
+    /* code path for changing from KSPLSQR to KSPREONLY */
     ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
   }
   ierr = KSPSetType(ksp,KSPPREONLY);CHKERRQ(ierr);
@@ -105,7 +106,7 @@ int main(int argc,char **args)
 #endif
   ierr = PCFactorSetMatSolverType(pc,MATSOLVERMUMPS);CHKERRQ(ierr);
   /*
-     must use runtime option '-mat_mumps_icntl_13 1' (turn off scaLAPACK for
+     must use runtime option '-mat_mumps_icntl_13 1' (turn off ScaLAPACK for
      matrix inertia), currently there is no better way of setting this in program
   */
   ierr = PetscOptionsInsertString(NULL,"-mat_mumps_icntl_13 1");CHKERRQ(ierr);
@@ -114,7 +115,8 @@ int main(int argc,char **args)
   if (size>1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Configure with MUMPS if you want to run this example in parallel");
 #endif
 
-  if (!lsqr) {
+  if (!setfromoptions_first) {
+    /* when -ksp_setfromoptions_first is true, do not call KSPSetFromOptions() again and stick to KSPPREONLY */
     ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
   }
 
@@ -173,7 +175,7 @@ int main(int argc,char **args)
 
     test:
       suffix: 3
-      args: -ksp_lsqr_monitor -ksp_type lsqr
+      args: -ksp_lsqr_monitor -ksp_type lsqr -ksp_setfromoptions_first
       output_file: output/ex8_1.out
 
 TEST*/
